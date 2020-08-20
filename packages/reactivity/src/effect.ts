@@ -179,12 +179,8 @@ export function trigger(
   const add = (effectsToAdd: Set<ReactiveEffect> | undefined) => {
     if (effectsToAdd) {
       effectsToAdd.forEach(effect => {
-        if (effect !== activeEffect || !shouldTrack) {
+        if (effect !== activeEffect) {
           effects.add(effect)
-        } else {
-          // the effect mutated its own dependency during its execution.
-          // this can be caused by operations like foo.value++
-          // do not trigger or we end in an infinite loop
         }
       })
     }

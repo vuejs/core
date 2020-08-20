@@ -10,25 +10,25 @@ import { ParserPlugin } from '@babel/parser'
 
 export interface ParserOptions {
   /**
-   * e.g. platform native elements, e.g. <div> for browsers
+   * e.g. platform native elements, e.g. `<div>` for browsers
    */
   isNativeTag?: (tag: string) => boolean
   /**
-   * e.g. native elements that can self-close, e.g. <img>, <br>, <hr>
+   * e.g. native elements that can self-close, e.g. `<img>`, `<br>`, `<hr>`
    */
   isVoidTag?: (tag: string) => boolean
   /**
-   * e.g. elements that should preserve whitespace inside, e.g. <pre>
+   * e.g. elements that should preserve whitespace inside, e.g. `<pre>`
    */
   isPreTag?: (tag: string) => boolean
   /**
-   * Platform-specific built-in components e.g. <Transition>
+   * Platform-specific built-in components e.g. `<Transition>`
    */
   isBuiltInComponent?: (tag: string) => symbol | void
   /**
    * Separate option for end users to extend the native elements list
    */
-  isCustomElement?: (tag: string) => boolean
+  isCustomElement?: (tag: string) => boolean | void
   /**
    * Get tag namespace
    */
@@ -49,6 +49,10 @@ export interface ParserOptions {
    */
   decodeEntities?: (rawText: string, asAttr: boolean) => string
   onError?: (error: CompilerError) => void
+  /**
+   * Keep comments in the templates AST, even in production
+   */
+  comments?: boolean
 }
 
 export type HoistTransform = (
@@ -83,6 +87,10 @@ export interface TransformOptions {
    * for them.
    */
   isBuiltInComponent?: (tag: string) => symbol | void
+  /**
+   * Used by some transforms that expects only native elements
+   */
+  isCustomElement?: (tag: string) => boolean | void
   /**
    * Transform expressions like {{ foo }} to `_ctx.foo`.
    * If this option is false, the generated code will be wrapped in a
@@ -127,7 +135,7 @@ export interface TransformOptions {
    */
   ssr?: boolean
   /**
-   * SFC <style vars> injection string
+   * SFC `<style vars>` injection string
    * needed to render inline CSS variables on component root
    */
   ssrCssVars?: string

@@ -1,5 +1,10 @@
 import { currentRenderingInstance } from '../componentRenderUtils'
-import { currentInstance, Component, FunctionalComponent } from '../component'
+import {
+  currentInstance,
+  ConcreteComponent,
+  FunctionalComponent,
+  ComponentOptions
+} from '../component'
 import { Directive } from '../directives'
 import { camelize, capitalize, isString } from '@vue/shared'
 import { warn } from '../warning'
@@ -11,7 +16,9 @@ const DIRECTIVES = 'directives'
 /**
  * @private
  */
-export function resolveComponent(name: string): Component | string | undefined {
+export function resolveComponent(
+  name: string
+): ConcreteComponent | string | undefined {
   return resolveAsset(COMPONENTS, name) || name
 }
 
@@ -44,7 +51,7 @@ function resolveAsset(
   type: typeof COMPONENTS,
   name: string,
   warnMissing?: boolean
-): Component | undefined
+): ConcreteComponent | undefined
 // overload 2: directives
 function resolveAsset(
   type: typeof DIRECTIVES,
@@ -58,24 +65,27 @@ function resolveAsset(
 ) {
   const instance = currentRenderingInstance || currentInstance
   if (instance) {
-    let camelized, capitalized
-    const registry = instance[type]
-    let res =
-      registry[name] ||
-      registry[(camelized = camelize(name))] ||
-      registry[(capitalized = capitalize(camelized))]
-    if (!res && type === COMPONENTS) {
-      const self = instance.type
-      const selfName = (self as FunctionalComponent).displayName || self.name
+    const Component = instance.type
+
+    // self name has highest priority
+    if (type === COMPONENTS) {
+      const selfName =
+        (Component as FunctionalComponent).displayName || Component.name
       if (
         selfName &&
         (selfName === name ||
-          selfName === camelized ||
-          selfName === capitalized)
+          selfName === camelize(name) ||
+          selfName === capitalize(camelize(name)))
       ) {
-        res = self
+        return Component
       }
     }
+
+    const res =
+      // local registration
+      resolve((Component as ComponentOptions)[type], name) ||
+      // global registration
+      resolve(instance.appContext[type], name)
     if (__DEV__ && warnMissing && !res) {
       warn(`Failed to resolve ${type.slice(0, -1)}: ${name}`)
     }
@@ -86,4 +96,13 @@ function resolveAsset(
         `can only be used in render() or setup().`
     )
   }
+}
+
+function resolve(registry: Record<string, any> | undefined, name: string) {
+  return (
+    registry &&
+    (registry[name] ||
+      registry[camelize(name)] ||
+      registry[capitalize(camelize(name))])
+  )
 }

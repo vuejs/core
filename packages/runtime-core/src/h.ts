@@ -50,7 +50,7 @@ type RawProps = VNodeProps & {
   __v_isVNode?: never
   // used to differ from Array children
   [Symbol.iterator]?: never
-}
+} & { [key: string]: any }
 
 type RawChildren =
   | string
@@ -67,11 +67,6 @@ interface Constructor<P = any> {
   __isSuspense?: never
   new (): { $props: P }
 }
-
-// Excludes Component type from returned `defineComponent`
-type NotDefinedComponent<T extends Component> = T extends Constructor
-  ? never
-  : T
 
 // The following is a series of overloads for providing props validation of
 // manually written render functions.
@@ -117,9 +112,9 @@ export function h<P, E extends EmitsOptions = {}>(
 // catch-all for generic component types
 export function h(type: Component, children?: RawChildren): VNode
 
-// exclude `defineComponent`
-export function h<Options extends ComponentOptions | FunctionalComponent<{}>>(
-  type: NotDefinedComponent<Options>,
+// exclude `defineComponent` constructors
+export function h<T extends ComponentOptions | FunctionalComponent<{}>>(
+  type: T,
   props?: RawProps | null,
   children?: RawChildren | RawSlots
 ): VNode

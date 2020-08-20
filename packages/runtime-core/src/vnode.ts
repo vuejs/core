@@ -9,13 +9,15 @@ import {
   normalizeStyle,
   PatchFlags,
   ShapeFlags,
-  SlotFlags
+  SlotFlags,
+  isOn
 } from '@vue/shared'
 import {
   ComponentInternalInstance,
   Data,
-  Component,
-  ClassComponent
+  ConcreteComponent,
+  ClassComponent,
+  Component
 } from './component'
 import { RawSlots } from './componentSlots'
 import { isProxy, Ref, toRaw } from '@vue/reactivity'
@@ -34,6 +36,7 @@ import { currentRenderingInstance } from './componentRenderUtils'
 import { RendererNode, RendererElement } from './renderer'
 import { NULL_DYNAMIC_COMPONENT } from './helpers/resolveAssets'
 import { hmrDirtyComponents } from './hmr'
+import { isRenderingTemplateSlot } from './helpers/renderSlot'
 
 export const Fragment = (Symbol(__DEV__ ? 'Fragment' : undefined) as any) as {
   __isFragment: true
@@ -71,8 +74,8 @@ export type VNodeHook =
   | VNodeMountHook[]
   | VNodeUpdateHook[]
 
-export interface VNodeProps {
-  [key: string]: any
+// https://github.com/microsoft/TypeScript/issues/33099
+export type VNodeProps = {
   key?: string | number
   ref?: VNodeRef
 
@@ -104,7 +107,11 @@ export type VNodeNormalizedChildren =
   | RawSlots
   | null
 
-export interface VNode<HostNode = RendererNode, HostElement = RendererElement> {
+export interface VNode<
+  HostNode = RendererNode,
+  HostElement = RendererElement,
+  ExtraProps = { [key: string]: any }
+> {
   /**
    * @internal
    */
@@ -114,7 +121,7 @@ export interface VNode<HostNode = RendererNode, HostElement = RendererElement> {
    */
   __v_skip: true
   type: VNodeTypes
-  props: VNodeProps | null
+  props: (VNodeProps & ExtraProps) | null
   key: string | number | null
   ref: VNodeNormalizedRef | null
   scopeId: string | null // SFC only
@@ -204,7 +211,7 @@ export function setBlockTracking(value: number) {
  */
 export function createBlock(
   type: VNodeTypes | ClassComponent,
-  props?: { [key: string]: any } | null,
+  props?: Record<string, any> | null,
   children?: any,
   patchFlag?: number,
   dynamicProps?: string[]
@@ -238,7 +245,7 @@ export function isSameVNodeType(n1: VNode, n2: VNode): boolean {
   if (
     __DEV__ &&
     n2.shapeFlag & ShapeFlags.COMPONENT &&
-    hmrDirtyComponents.has(n2.type as Component)
+    hmrDirtyComponents.has(n2.type as ConcreteComponent)
   ) {
     // HMR only: if the component has been hot-updated, force a reload.
     return false
@@ -306,7 +313,11 @@ function _createVNode(
   }
 
   if (isVNode(type)) {
-    return cloneVNode(type, props, children)
+    const cloned = cloneVNode(type, props)
+    if (children) {
+      normalizeChildren(cloned, children)
+    }
+    return cloned
   }
 
   // class component normalization.
@@ -391,22 +402,20 @@ function _createVNode(
 
   normalizeChildren(vnode, children)
 
-  // presence of a patch flag indicates this node needs patching on updates.
-  // component nodes also should always be patched, because even if the
-  // component doesn't need to update, it needs to persist the instance on to
-  // the next vnode so that it can be properly unmounted later.
   if (
-    shouldTrack > 0 &&
+    (shouldTrack > 0 || isRenderingTemplateSlot) &&
+    // avoid a block node from tracking itself
     !isBlockNode &&
+    // has current parent block
     currentBlock &&
+    // presence of a patch flag indicates this node needs patching on updates.
+    // component nodes also should always be patched, because even if the
+    // component doesn't need to update, it needs to persist the instance on to
+    // the next vnode so that it can be properly unmounted later.
+    (patchFlag > 0 || shapeFlag & ShapeFlags.COMPONENT) &&
     // the EVENTS flag is only for hydration and if it is the only flag, the
     // vnode should not be considered dynamic due to handler caching.
-    patchFlag !== PatchFlags.HYDRATE_EVENTS &&
-    (patchFlag > 0 ||
-      shapeFlag & ShapeFlags.SUSPENSE ||
-      shapeFlag & ShapeFlags.TELEPORT ||
-      shapeFlag & ShapeFlags.STATEFUL_COMPONENT ||
-      shapeFlag & ShapeFlags.FUNCTIONAL_COMPONENT)
+    patchFlag !== PatchFlags.HYDRATE_EVENTS
   ) {
     currentBlock.push(vnode)
   }
@@ -416,22 +425,22 @@ function _createVNode(
 
 export function cloneVNode<T, U>(
   vnode: VNode<T, U>,
-  extraProps?: Data & VNodeProps | null,
-  children?: unknown
+  extraProps?: Data & VNodeProps | null
 ): VNode<T, U> {
-  const props = extraProps
-    ? vnode.props
-      ? mergeProps(vnode.props, extraProps)
-      : extend({}, extraProps)
-    : vnode.props
   // This is intentionally NOT using spread or extend to avoid the runtime
   // key enumeration cost.
-  const cloned: VNode<T, U> = {
+  const { props, patchFlag } = vnode
+  const mergedProps = extraProps
+    ? props
+      ? mergeProps(props, extraProps)
+      : extend({}, extraProps)
+    : props
+  return {
     __v_isVNode: true,
     __v_skip: true,
     type: vnode.type,
-    props,
-    key: props && normalizeKey(props),
+    props: mergedProps,
+    key: mergedProps && normalizeKey(mergedProps),
     ref: extraProps && extraProps.ref ? normalizeRef(extraProps) : vnode.ref,
     scopeId: vnode.scopeId,
     children: vnode.children,
@@ -440,14 +449,15 @@ export function cloneVNode<T, U>(
     staticCount: vnode.staticCount,
     shapeFlag: vnode.shapeFlag,
     // if the vnode is cloned with extra props, we can no longer assume its
-    // existing patch flag to be reliable and need to bail out of optimized mode.
-    // however we don't want block nodes to de-opt their children, so if the
-    // vnode is a block node, we only add the FULL_PROPS flag to it.
-    patchFlag: extraProps
-      ? vnode.dynamicChildren
-        ? vnode.patchFlag | PatchFlags.FULL_PROPS
-        : PatchFlags.BAIL
-      : vnode.patchFlag,
+    // existing patch flag to be reliable and need to add the FULL_PROPS flag.
+    // note: perserve flag for fragments since they use the flag for children
+    // fast paths only.
+    patchFlag:
+      extraProps && vnode.type !== Fragment
+        ? patchFlag === -1 // hoisted node
+          ? PatchFlags.FULL_PROPS
+          : patchFlag | PatchFlags.FULL_PROPS
+        : patchFlag,
     dynamicProps: vnode.dynamicProps,
     dynamicChildren: vnode.dynamicChildren,
     appContext: vnode.appContext,
@@ -463,10 +473,6 @@ export function cloneVNode<T, U>(
     el: vnode.el,
     anchor: vnode.anchor
   }
-  if (children) {
-    normalizeChildren(cloned, children)
-  }
-  return cloned
 }
 
 /**
@@ -578,8 +584,6 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
   vnode.shapeFlag |= type
 }
 
-const handlersRE = /^on|^vnode/
-
 export function mergeProps(...args: (Data & VNodeProps)[]) {
   const ret = extend({}, args[0])
   for (let i = 1; i < args.length; i++) {
@@ -591,13 +595,12 @@ export function mergeProps(...args: (Data & VNodeProps)[]) {
         }
       } else if (key === 'style') {
         ret.style = normalizeStyle([ret.style, toMerge.style])
-      } else if (handlersRE.test(key)) {
-        // on*, vnode*
+      } else if (isOn(key)) {
         const existing = ret[key]
         const incoming = toMerge[key]
         if (existing !== incoming) {
           ret[key] = existing
-            ? [].concat(existing as any, toMerge[key])
+            ? [].concat(existing as any, toMerge[key] as any)
             : incoming
         }
       } else {

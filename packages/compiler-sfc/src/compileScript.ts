@@ -2,7 +2,7 @@ import MagicString from 'magic-string'
 import { BindingMetadata } from '@vue/compiler-core'
 import { SFCDescriptor, SFCScriptBlock } from './parse'
 import { parse, ParserPlugin } from '@babel/parser'
-import { babelParserDefautPlugins, generateCodeFrame } from '@vue/shared'
+import { babelParserDefaultPlugins, generateCodeFrame } from '@vue/shared'
 import {
   Node,
   Declaration,
@@ -58,7 +58,7 @@ export function compileScript(
   const isTS = scriptLang === 'ts' || scriptSetupLang === 'ts'
   const plugins: ParserPlugin[] = [
     ...(options.babelParserPlugins || []),
-    ...babelParserDefautPlugins,
+    ...babelParserDefaultPlugins,
     ...(isTS ? (['typescript'] as const) : [])
   ]
 
@@ -555,7 +555,7 @@ export function compileScript(
     returned = `Object.assign(\n  ${returned}\n)`
   }
 
-  // inject `useCSSVars` calls
+  // inject `useCssVars` calls
   if (hasCssVars) {
     s.prepend(`import { useCssVars as __useCssVars__ } from 'vue'\n`)
     for (const style of styles) {
@@ -751,7 +751,7 @@ function inferRuntimeType(
       return ['Function']
     case 'TSArrayType':
     case 'TSTupleType':
-      // TODO (nice to have) genrate runtime element type/length checks
+      // TODO (nice to have) generate runtime element type/length checks
       return ['Array']
 
     case 'TSLiteralType':
@@ -876,7 +876,7 @@ function genRuntimeEmits(emits: Set<string>) {
 }
 
 /**
- * export default {} inside <script setup> cannot access variables declared
+ * export default {} inside `<script setup>` cannot access variables declared
  * inside since it's hoisted. Walk and check to make sure.
  */
 function checkDefaultExport(

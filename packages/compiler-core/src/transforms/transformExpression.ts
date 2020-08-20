@@ -16,21 +16,18 @@ import {
   CompoundExpressionNode,
   createCompoundExpression
 } from '../ast'
-import {
-  advancePositionWithClone,
-  isSimpleIdentifier,
-  parseJS,
-  walkJS
-} from '../utils'
+import { advancePositionWithClone, isSimpleIdentifier } from '../utils'
 import {
   isGloballyWhitelisted,
   makeMap,
-  babelParserDefautPlugins,
+  babelParserDefaultPlugins,
   hasOwn
 } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { Node, Function, Identifier, ObjectProperty } from '@babel/types'
 import { validateBrowserExpression } from '../validateExpression'
+import { parse } from '@babel/parser'
+import { walk } from 'estree-walker'
 
 const isLiteralWhitelisted = /*#__PURE__*/ makeMap('true,false,null,this')
 
@@ -137,8 +134,8 @@ export function processExpression(
     ? ` ${rawExp} `
     : `(${rawExp})${asParams ? `=>{}` : ``}`
   try {
-    ast = parseJS(source, {
-      plugins: [...context.expressionPlugins, ...babelParserDefautPlugins]
+    ast = parse(source, {
+      plugins: [...context.expressionPlugins, ...babelParserDefaultPlugins]
     }).program
   } catch (e) {
     context.onError(
@@ -158,8 +155,8 @@ export function processExpression(
     ids.some(id => id.start === node.start)
 
   // walk the AST and look for identifiers that need to be prefixed.
-  walkJS(ast, {
-    enter(node: Node & PrefixMeta, parent) {
+  ;(walk as any)(ast, {
+    enter(node: Node & PrefixMeta, parent: Node) {
       if (node.type === 'Identifier') {
         if (!isDuplicate(node)) {
           const needPrefix = shouldPrefix(node, parent)
@@ -186,8 +183,8 @@ export function processExpression(
         // walk function expressions and add its arguments to known identifiers
         // so that we don't prefix them
         node.params.forEach(p =>
-          walkJS(p, {
-            enter(child, parent) {
+          (walk as any)(p, {
+            enter(child: Node, parent: Node) {
               if (
                 child.type === 'Identifier' &&
                 // do not record as scope variable if is a destructured key

@@ -1,7 +1,7 @@
 import { track, trigger } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
-import { isObject, hasChanged } from '@vue/shared'
-import { reactive, isProxy, toRaw } from './reactive'
+import { isArray, isObject, hasChanged } from '@vue/shared'
+import { reactive, isProxy, toRaw, isReactive } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
 
 declare const RefSymbol: unique symbol
@@ -35,7 +35,10 @@ export function ref(value?: unknown) {
   return createRef(value)
 }
 
-export function shallowRef<T>(value: T): T extends Ref ? T : Ref<T>
+export function shallowRef<T extends object>(
+  value: T
+): T extends Ref ? T : Ref<T>
+export function shallowRef<T>(value: T): Ref<T>
 export function shallowRef<T = any>(): Ref<T | undefined>
 export function shallowRef(value?: unknown) {
   return createRef(value, true)
@@ -56,12 +59,7 @@ function createRef(rawValue: unknown, shallow = false) {
       if (hasChanged(toRaw(newVal), rawValue)) {
         rawValue = newVal
         value = shallow ? newVal : convert(newVal)
-        trigger(
-          r,
-          TriggerOpTypes.SET,
-          'value',
-          __DEV__ ? { newValue: newVal } : void 0
-        )
+        trigger(r, TriggerOpTypes.SET, 'value', newVal)
       }
     }
   }
@@ -69,16 +67,32 @@ function createRef(rawValue: unknown, shallow = false) {
 }
 
 export function triggerRef(ref: Ref) {
-  trigger(
-    ref,
-    TriggerOpTypes.SET,
-    'value',
-    __DEV__ ? { newValue: ref.value } : void 0
-  )
+  trigger(ref, TriggerOpTypes.SET, 'value', __DEV__ ? ref.value : void 0)
 }
 
 export function unref<T>(ref: T): T extends Ref<infer V> ? V : T {
   return isRef(ref) ? (ref.value as any) : ref
+}
+
+const shallowUnwrapHandlers: ProxyHandler<any> = {
+  get: (target, key, receiver) => unref(Reflect.get(target, key, receiver)),
+  set: (target, key, value, receiver) => {
+    const oldValue = target[key]
+    if (isRef(oldValue) && !isRef(value)) {
+      oldValue.value = value
+      return true
+    } else {
+      return Reflect.set(target, key, value, receiver)
+    }
+  }
+}
+
+export function proxyRefs<T extends object>(
+  objectWithRefs: T
+): ShallowUnwrapRef<T> {
+  return isReactive(objectWithRefs)
+    ? objectWithRefs
+    : new Proxy(objectWithRefs, shallowUnwrapHandlers)
 }
 
 export type CustomRefFactory<T> = (
@@ -110,7 +124,7 @@ export function toRefs<T extends object>(object: T): ToRefs<T> {
   if (__DEV__ && !isProxy(object)) {
     console.warn(`toRefs() expects a reactive object but received a plain one.`)
   }
-  const ret: any = {}
+  const ret: any = isArray(object) ? new Array(object.length) : {}
   for (const key in object) {
     ret[key] = toRef(object, key)
   }
@@ -155,6 +169,10 @@ type BaseTypes = string | number | boolean
  * to the final generated d.ts in our build process.
  */
 export interface RefUnwrapBailTypes {}
+
+export type ShallowUnwrapRef<T> = {
+  [K in keyof T]: T[K] extends Ref<infer V> ? V : T[K]
+}
 
 export type UnwrapRef<T> = T extends Ref<infer V>
   ? UnwrapRefSimple<V>

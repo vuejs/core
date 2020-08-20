@@ -243,6 +243,7 @@ export interface IfBranchNode extends Node {
   type: NodeTypes.IF_BRANCH
   condition: ExpressionNode | undefined // else
   children: TemplateChildNode[]
+  userKey?: AttributeNode | DirectiveNode
 }
 
 export interface ForNode extends Node {

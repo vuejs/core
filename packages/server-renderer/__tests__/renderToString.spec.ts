@@ -10,13 +10,10 @@ import {
   createTextVNode,
   createStaticVNode
 } from 'vue'
-import { escapeHtml, mockWarn } from '@vue/shared'
+import { escapeHtml } from '@vue/shared'
 import { renderToString } from '../src/renderToString'
 import { ssrRenderSlot, SSRSlot } from '../src/helpers/ssrRenderSlot'
 import { ssrRenderComponent } from '../src/helpers/ssrRenderComponent'
-
-mockWarn()
-
 describe('ssr: renderToString', () => {
   test('should apply app context', async () => {
     const app = createApp({

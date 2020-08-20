@@ -1,10 +1,7 @@
 import { render, h, nodeOps } from '@vue/runtime-test'
 import { useCssModule } from '../../src/helpers/useCssModule'
-import { mockWarn } from '@vue/shared'
 
 describe('useCssModule', () => {
-  mockWarn()
-
   function mountWithModule(modules: any, name?: string) {
     let res
     render(

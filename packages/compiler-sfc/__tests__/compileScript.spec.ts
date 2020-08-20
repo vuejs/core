@@ -1,6 +1,6 @@
 import { parse, SFCScriptCompileOptions, compileScript } from '../src'
 import { parse as babelParse } from '@babel/parser'
-import { babelParserDefautPlugins } from '@vue/shared'
+import { babelParserDefaultPlugins } from '@vue/shared'
 
 function compile(src: string, options?: SFCScriptCompileOptions) {
   const { descriptor } = parse(src)
@@ -12,7 +12,7 @@ function assertCode(code: string) {
   try {
     babelParse(code, {
       sourceType: 'module',
-      plugins: [...babelParserDefautPlugins, 'typescript']
+      plugins: [...babelParserDefaultPlugins, 'typescript']
     })
   } catch (e) {
     console.log(code)

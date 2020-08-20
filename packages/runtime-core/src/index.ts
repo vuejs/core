@@ -8,6 +8,7 @@ export {
   readonly,
   // utilities
   unref,
+  proxyRefs,
   isRef,
   toRef,
   toRefs,
@@ -125,8 +126,10 @@ export {
   ComputedRef,
   WritableComputedRef,
   UnwrapRef,
+  ShallowUnwrapRef,
   WritableComputedOptions,
-  ToRefs
+  ToRefs,
+  DeepReadonly
 } from '@vue/reactivity'
 export {
   // types
@@ -156,9 +159,12 @@ export {
 } from './vnode'
 export {
   Component,
+  ConcreteComponent,
   FunctionalComponent,
   ComponentInternalInstance,
-  SetupContext
+  SetupContext,
+  ComponentCustomProps,
+  AllowedComponentProps
 } from './component'
 export {
   ComponentOptions,
@@ -173,7 +179,7 @@ export {
 export {
   ComponentPublicInstance,
   ComponentCustomProperties
-} from './componentProxy'
+} from './componentPublicInstance'
 export {
   Renderer,
   RendererNode,

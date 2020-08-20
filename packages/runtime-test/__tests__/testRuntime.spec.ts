@@ -14,11 +14,8 @@ import {
   serialize,
   triggerEvent
 } from '../src'
-import { mockWarn } from '@vue/shared'
 
 describe('test renderer', () => {
-  mockWarn()
-
   it('should work', () => {
     const root = nodeOps.createElement('div')
     render(

@@ -263,6 +263,34 @@ describe('compiler: v-for', () => {
         })
       )
     })
+
+    test('<template v-for> key placement', () => {
+      const onError = jest.fn()
+      parseWithForTransform(
+        `
+      <template v-for="item in items">
+        <div :key="item.id"/>
+      </template>`,
+        { onError }
+      )
+
+      expect(onError).toHaveBeenCalledTimes(1)
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: ErrorCodes.X_V_FOR_TEMPLATE_KEY_PLACEMENT
+        })
+      )
+
+      // should not warn on nested v-for keys
+      parseWithForTransform(
+        `
+      <template v-for="item in items">
+        <div v-for="c in item.children" :key="c.id"/>
+      </template>`,
+        { onError }
+      )
+      expect(onError).toHaveBeenCalledTimes(1)
+    })
   })
 
   describe('source location', () => {
@@ -830,6 +858,44 @@ describe('compiler: v-for', () => {
                 returns: {
                   type: NodeTypes.VNODE_CALL,
                   tag: `"div"`,
+                  isBlock: true
+                }
+              }
+            ]
+          }
+        }
+      })
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
+    // 1637
+    test('v-if + v-for on <template>', () => {
+      const {
+        root,
+        node: { codegenNode }
+      } = parseWithForTransform(`<template v-if="ok" v-for="i in list"/>`)
+      expect(codegenNode).toMatchObject({
+        type: NodeTypes.JS_CONDITIONAL_EXPRESSION,
+        test: { content: `ok` },
+        consequent: {
+          type: NodeTypes.VNODE_CALL,
+          props: createObjectMatcher({
+            key: `[0]`
+          }),
+          isBlock: true,
+          disableTracking: true,
+          patchFlag: genFlagText(PatchFlags.UNKEYED_FRAGMENT),
+          children: {
+            type: NodeTypes.JS_CALL_EXPRESSION,
+            callee: RENDER_LIST,
+            arguments: [
+              { content: `list` },
+              {
+                type: NodeTypes.JS_FUNCTION_EXPRESSION,
+                params: [{ content: `i` }],
+                returns: {
+                  type: NodeTypes.VNODE_CALL,
+                  tag: FRAGMENT,
                   isBlock: true
                 }
               }

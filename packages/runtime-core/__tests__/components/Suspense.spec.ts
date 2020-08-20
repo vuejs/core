@@ -11,8 +11,7 @@ import {
   watch,
   watchEffect,
   onUnmounted,
-  onErrorCaptured,
-  Component
+  onErrorCaptured
 } from '@vue/runtime-test'
 
 describe('Suspense', () => {
@@ -31,7 +30,7 @@ describe('Suspense', () => {
       setup(props: any, { slots }: any) {
         const p = new Promise(resolve => {
           setTimeout(() => {
-            resolve(() => h<Component>(comp, props, slots))
+            resolve(() => h(comp, props, slots))
           }, delay)
         })
         // in Node 12, due to timer/nextTick mechanism change, we have to wait
@@ -170,7 +169,7 @@ describe('Suspense', () => {
         })
 
         const count = ref(0)
-        watch(count, v => {
+        watch(count, () => {
           calls.push('watch callback')
         })
         count.value++ // trigger the watcher now
@@ -367,7 +366,7 @@ describe('Suspense', () => {
     await nextTick()
     expect(serializeInner(root)).toBe(`<!---->`)
     // should discard effects (except for immediate ones)
-    expect(calls).toEqual(['immediate effect', 'watch callback', 'unmounted'])
+    expect(calls).toEqual(['immediate effect', 'unmounted'])
   })
 
   test('unmount suspense after resolve', async () => {

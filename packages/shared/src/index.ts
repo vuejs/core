@@ -6,7 +6,6 @@ export * from './shapeFlags'
 export * from './slotFlags'
 export * from './globalsWhitelist'
 export * from './codeframe'
-export * from './mockWarn'
 export * from './normalizeProp'
 export * from './domTagConfig'
 export * from './domAttrConfig'
@@ -20,7 +19,7 @@ export * from './toDisplayString'
  * for ES2020. This will need to be updated as the spec moves forward.
  * Full list at https://babeljs.io/docs/en/next/babel-parser#plugins
  */
-export const babelParserDefautPlugins = [
+export const babelParserDefaultPlugins = [
   'bigInt',
   'optionalChaining',
   'nullishCoalescingOperator'
@@ -40,6 +39,8 @@ export const NO = () => false
 
 const onRE = /^on[^a-z]/
 export const isOn = (key: string) => onRE.test(key)
+
+export const isModelListener = (key: string) => key.startsWith('onUpdate:')
 
 export const extend = Object.assign
 
@@ -145,4 +146,21 @@ export const def = (obj: object, key: string | symbol, value: any) => {
 export const toNumber = (val: any): any => {
   const n = parseFloat(val)
   return isNaN(n) ? val : n
+}
+
+let _globalThis: any
+export const getGlobalThis = (): any => {
+  return (
+    _globalThis ||
+    (_globalThis =
+      typeof globalThis !== 'undefined'
+        ? globalThis
+        : typeof self !== 'undefined'
+          ? self
+          : typeof window !== 'undefined'
+            ? window
+            : typeof global !== 'undefined'
+              ? global
+              : {})
+  )
 }

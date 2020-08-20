@@ -55,7 +55,7 @@ const DOMTransitionPropsValidators = {
   leaveToClass: String
 }
 
-export const TransitionPropsValidators = (Transition.props = extend(
+export const TransitionPropsValidators = (Transition.props = /*#__PURE__*/ extend(
   {},
   (BaseTransition as any).props,
   DOMTransitionPropsValidators

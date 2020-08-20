@@ -282,6 +282,29 @@ describe('compiler: v-if', () => {
         }
       ])
     })
+
+    test('error on user key', () => {
+      const onError = jest.fn()
+      // dynamic
+      parseWithIfTransform(
+        `<div v-if="ok" :key="a + 1" /><div v-else :key="a + 1" />`,
+        { onError }
+      )
+      expect(onError.mock.calls[0]).toMatchObject([
+        {
+          code: ErrorCodes.X_V_IF_SAME_KEY
+        }
+      ])
+      // static
+      parseWithIfTransform(`<div v-if="ok" key="1" /><div v-else key="1" />`, {
+        onError
+      })
+      expect(onError.mock.calls[1]).toMatchObject([
+        {
+          code: ErrorCodes.X_V_IF_SAME_KEY
+        }
+      ])
+    })
   })
 
   describe('codegen', () => {
@@ -579,18 +602,6 @@ describe('compiler: v-if', () => {
       const branch1 = codegenNode.consequent as VNodeCall
       expect(branch1.directives).not.toBeUndefined()
       expect(branch1.props).toMatchObject(createObjectMatcher({ key: `[0]` }))
-    })
-
-    test('v-if with key', () => {
-      const {
-        root,
-        node: { codegenNode }
-      } = parseWithIfTransform(`<div v-if="ok" key="some-key"/>`)
-      expect(codegenNode.consequent).toMatchObject({
-        tag: `"div"`,
-        props: createObjectMatcher({ key: 'some-key' })
-      })
-      expect(generate(root).code).toMatchSnapshot()
     })
 
     test('with comments', () => {

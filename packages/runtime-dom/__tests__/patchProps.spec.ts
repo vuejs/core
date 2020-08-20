@@ -1,10 +1,7 @@
 import { patchProp } from '../src/patchProp'
 import { render, h } from '../src'
-import { mockWarn } from '@vue/shared'
 
 describe('runtime-dom: props patching', () => {
-  mockWarn()
-
   test('basic', () => {
     const el = document.createElement('div')
     patchProp(el, 'id', null, 'foo')
@@ -123,5 +120,13 @@ describe('runtime-dom: props patching', () => {
 
     patchProp(el, 'id', null, '')
     expect(el.hasAttribute('id')).toBe(true)
+  })
+
+  test('form attribute', () => {
+    const el = document.createElement('input')
+    patchProp(el, 'form', null, 'foo')
+    // non existant element
+    expect(el.form).toBe(null)
+    expect(el.getAttribute('form')).toBe('foo')
   })
 })

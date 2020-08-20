@@ -7,7 +7,7 @@ import {
   ReactiveEffectOptions,
   isReactive
 } from '@vue/reactivity'
-import { queueJob } from './scheduler'
+import { SchedulerJob, queuePreFlushCb } from './scheduler'
 import {
   EMPTY_OBJ,
   isObject,
@@ -70,8 +70,6 @@ export interface WatchOptions<Immediate = boolean> extends WatchOptionsBase {
 }
 
 export type WatchStopHandle = () => void
-
-const invoke = (fn: Function) => fn()
 
 // Simple effect.
 export function watchEffect(
@@ -161,7 +159,13 @@ function doWatch(
   }
 
   let getter: () => any
-  if (isArray(source)) {
+  const isRefSource = isRef(source)
+  if (isRefSource) {
+    getter = () => (source as Ref).value
+  } else if (isReactive(source)) {
+    getter = () => source
+    deep = true
+  } else if (isArray(source)) {
     getter = () =>
       source.map(s => {
         if (isRef(s)) {
@@ -174,11 +178,6 @@ function doWatch(
           __DEV__ && warnInvalidSource(s)
         }
       })
-  } else if (isRef(source)) {
-    getter = () => source.value
-  } else if (isReactive(source)) {
-    getter = () => source
-    deep = true
   } else if (isFunction(source)) {
     if (cb) {
       // getter with cb
@@ -234,35 +233,45 @@ function doWatch(
   }
 
   let oldValue = isArray(source) ? [] : INITIAL_WATCHER_VALUE
-  const applyCb = cb
-    ? () => {
-        if (instance && instance.isUnmounted) {
-          return
+  const job: SchedulerJob = () => {
+    if (!runner.active) {
+      return
+    }
+    if (cb) {
+      // watch(source, cb)
+      const newValue = runner()
+      if (deep || isRefSource || hasChanged(newValue, oldValue)) {
+        // cleanup before running cb again
+        if (cleanup) {
+          cleanup()
         }
-        const newValue = runner()
-        if (deep || hasChanged(newValue, oldValue)) {
-          // cleanup before running cb again
-          if (cleanup) {
-            cleanup()
-          }
-          callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
-            newValue,
-            // pass undefined as the old value when it's changed for the first time
-            oldValue === INITIAL_WATCHER_VALUE ? undefined : oldValue,
-            onInvalidate
-          ])
-          oldValue = newValue
-        }
+        callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
+          newValue,
+          // pass undefined as the old value when it's changed for the first time
+          oldValue === INITIAL_WATCHER_VALUE ? undefined : oldValue,
+          onInvalidate
+        ])
+        oldValue = newValue
       }
-    : void 0
+    } else {
+      // watchEffect
+      runner()
+    }
+  }
+
+  // important: mark the job as a watcher callback so that scheduler knows it
+  // it is allowed to self-trigger (#1727)
+  job.allowRecurse = !!cb
 
   let scheduler: (job: () => any) => void
   if (flush === 'sync') {
-    scheduler = invoke
+    scheduler = job
   } else if (flush === 'pre') {
-    scheduler = job => {
+    // ensure it's queued before component updates (which have positive ids)
+    job.id = -1
+    scheduler = () => {
       if (!instance || instance.isMounted) {
-        queueJob(job)
+        queuePreFlushCb(job)
       } else {
         // with 'pre' option, the first call must happen before
         // the component is mounted so it is called synchronously.
@@ -270,22 +279,22 @@ function doWatch(
       }
     }
   } else {
-    scheduler = job => queuePostRenderEffect(job, instance && instance.suspense)
+    scheduler = () => queuePostRenderEffect(job, instance && instance.suspense)
   }
 
   const runner = effect(getter, {
     lazy: true,
     onTrack,
     onTrigger,
-    scheduler: applyCb ? () => scheduler(applyCb) : scheduler
+    scheduler
   })
 
   recordInstanceBoundEffect(runner)
 
   // initial run
-  if (applyCb) {
+  if (cb) {
     if (immediate) {
-      applyCb()
+      job()
     } else {
       oldValue = runner()
     }

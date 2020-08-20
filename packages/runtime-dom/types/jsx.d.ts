@@ -246,7 +246,7 @@ interface AriaAttributes {
 }
 
 export interface HTMLAttributes extends AriaAttributes {
-  domPropsInnerHTML?: string
+  innerHTML?: string
 
   class?: any
   style?: string | CSSProperties
@@ -735,7 +735,14 @@ export interface WebViewHTMLAttributes extends HTMLAttributes {
 }
 
 export interface SVGAttributes extends AriaAttributes {
-  domPropsInnerHTML?: string
+  innerHTML?: string
+
+  /**
+   * SVG Styling Attributes
+   * @see https://www.w3.org/TR/SVG/styling.html#ElementSpecificStyling
+   */
+  class?: any
+  style?: string | CSSProperties
 
   color?: string
   height?: number | string
@@ -1017,7 +1024,6 @@ interface IntrinsicElementAttributes {
   base: BaseHTMLAttributes
   bdi: HTMLAttributes
   bdo: HTMLAttributes
-  big: HTMLAttributes
   blockquote: BlockquoteHTMLAttributes
   body: HTMLAttributes
   br: HTMLAttributes
@@ -1071,7 +1077,6 @@ interface IntrinsicElementAttributes {
   map: MapHTMLAttributes
   mark: HTMLAttributes
   menu: MenuHTMLAttributes
-  menuitem: HTMLAttributes
   meta: MetaHTMLAttributes
   meter: MeterHTMLAttributes
   nav: HTMLAttributes
@@ -1336,7 +1341,7 @@ declare global {
     }
     interface IntrinsicElements extends NativeElements {
       // allow arbitrary elements
-      // @ts-ignore supress ts:2374 = Duplicate string index signature.
+      // @ts-ignore suppress ts:2374 = Duplicate string index signature.
       [name: string]: any
     }
     interface IntrinsicAttributes extends ReservedProps {}
