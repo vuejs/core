@@ -25,7 +25,8 @@ import {
   PatchFlagNames,
   isSymbol,
   isOn,
-  isObject
+  isObject,
+  isReservedProp
 } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
@@ -281,22 +282,31 @@ export function buildProps(
   let hasStyleBinding = false
   let hasHydrationEventBinding = false
   let hasDynamicKeys = false
+  let hasVnodeHook = false
   const dynamicPropNames: string[] = []
 
   const analyzePatchFlag = ({ key, value }: Property) => {
     if (isStaticExp(key)) {
       const name = key.content
+      const isEventHandler = isOn(name)
       if (
         !isComponent &&
-        isOn(name) &&
+        isEventHandler &&
         // omit the flag for click handlers because hydration gives click
         // dedicated fast path.
         name.toLowerCase() !== 'onclick' &&
         // omit v-model handlers
-        name !== 'onUpdate:modelValue'
+        name !== 'onUpdate:modelValue' &&
+        // omit onVnodeXXX hooks
+        !isReservedProp(name)
       ) {
         hasHydrationEventBinding = true
       }
+
+      if (isEventHandler && isReservedProp(name)) {
+        hasVnodeHook = true
+      }
+
       if (
         value.type === NodeTypes.JS_CACHE_EXPRESSION ||
         ((value.type === NodeTypes.SIMPLE_EXPRESSION ||
@@ -475,7 +485,7 @@ export function buildProps(
   }
   if (
     (patchFlag === 0 || patchFlag === PatchFlags.HYDRATE_EVENTS) &&
-    (hasRef || runtimeDirectives.length > 0)
+    (hasRef || hasVnodeHook || runtimeDirectives.length > 0)
   ) {
     patchFlag |= PatchFlags.NEED_PATCH
   }

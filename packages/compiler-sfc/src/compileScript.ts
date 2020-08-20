@@ -2,7 +2,7 @@ import MagicString from 'magic-string'
 import { BindingMetadata } from '@vue/compiler-core'
 import { SFCDescriptor, SFCScriptBlock } from './parse'
 import { parse, ParserPlugin } from '@babel/parser'
-import { babelParserDefautPlugins, generateCodeFrame } from '@vue/shared'
+import { babelParserDefaultPlugins, generateCodeFrame } from '@vue/shared'
 import {
   Node,
   Declaration,
@@ -58,7 +58,7 @@ export function compileScript(
   const isTS = scriptLang === 'ts' || scriptSetupLang === 'ts'
   const plugins: ParserPlugin[] = [
     ...(options.babelParserPlugins || []),
-    ...babelParserDefautPlugins,
+    ...babelParserDefaultPlugins,
     ...(isTS ? (['typescript'] as const) : [])
   ]
 

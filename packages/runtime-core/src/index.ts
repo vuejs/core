@@ -41,11 +41,7 @@ export {
 } from './apiLifecycle'
 export { provide, inject } from './apiInject'
 export { nextTick } from './scheduler'
-export {
-  defineComponent,
-  DefineComponent,
-  DefineComponentJSX
-} from './apiDefineComponent'
+export { defineComponent, DefineComponent } from './apiDefineComponent'
 export { defineAsyncComponent } from './apiAsyncComponent'
 
 // Advanced API ----------------------------------------------------------------
@@ -163,6 +159,7 @@ export {
 } from './vnode'
 export {
   Component,
+  ConcreteComponent,
   FunctionalComponent,
   ComponentInternalInstance,
   SetupContext,
@@ -181,9 +178,8 @@ export {
 } from './componentOptions'
 export {
   ComponentPublicInstance,
-  ComponentCustomProperties,
-  CreateComponentPublicInstance
-} from './componentProxy'
+  ComponentCustomProperties
+} from './componentPublicInstance'
 export {
   Renderer,
   RendererNode,

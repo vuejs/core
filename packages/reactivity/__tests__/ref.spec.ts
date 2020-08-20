@@ -266,12 +266,29 @@ describe('reactivity/ref', () => {
     expect(dummyY).toBe(5)
   })
 
-  test('toRefs pass a reactivity object', () => {
-    console.warn = jest.fn()
-    const obj = { x: 1 }
-    toRefs(obj)
-    expect(console.warn).toBeCalled()
+  test('toRefs should warn on plain object', () => {
+    toRefs({})
+    expect(`toRefs() expects a reactive object`).toHaveBeenWarned()
   })
+
+  test('toRefs should warn on plain array', () => {
+    toRefs([])
+    expect(`toRefs() expects a reactive object`).toHaveBeenWarned()
+  })
+
+  test('toRefs reactive array', () => {
+    const arr = reactive(['a', 'b', 'c'])
+    const refs = toRefs(arr)
+    
+    expect(Array.isArray(refs)).toBe(true)
+    
+    refs[0].value = '1'
+    expect(arr[0]).toBe('1')
+    
+    arr[1] = '2'
+    expect(refs[1].value).toBe('2')
+  })
+
   test('customRef', () => {
     let value = 1
     let _trigger: () => void

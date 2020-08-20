@@ -1024,7 +1024,6 @@ interface IntrinsicElementAttributes {
   base: BaseHTMLAttributes
   bdi: HTMLAttributes
   bdo: HTMLAttributes
-  big: HTMLAttributes
   blockquote: BlockquoteHTMLAttributes
   body: HTMLAttributes
   br: HTMLAttributes
@@ -1078,7 +1077,6 @@ interface IntrinsicElementAttributes {
   map: MapHTMLAttributes
   mark: HTMLAttributes
   menu: MenuHTMLAttributes
-  menuitem: HTMLAttributes
   meta: MetaHTMLAttributes
   meter: MeterHTMLAttributes
   nav: HTMLAttributes

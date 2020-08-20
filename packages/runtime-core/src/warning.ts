@@ -2,7 +2,7 @@ import { VNode } from './vnode'
 import {
   Data,
   ComponentInternalInstance,
-  Component,
+  ConcreteComponent,
   formatComponentName
 } from './component'
 import { isString, isFunction } from '@vue/shared'
@@ -10,7 +10,7 @@ import { toRaw, isRef, pauseTracking, resetTracking } from '@vue/reactivity'
 import { callWithErrorHandling, ErrorCodes } from './errorHandling'
 
 type ComponentVNode = VNode & {
-  type: Component
+  type: ConcreteComponent
 }
 
 const stack: VNode[] = []

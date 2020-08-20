@@ -19,14 +19,8 @@ import { isFunction } from '@vue/shared'
 import { VNodeProps } from './vnode'
 import {
   CreateComponentPublicInstance,
-  ComponentPublicInstance
-} from './componentProxy'
-
-export interface DefineComponentJSX<
-  T extends ComponentPublicInstance = ComponentPublicInstance
-> {
-  new (): T
-}
+  ComponentPublicInstanceConstructor
+} from './componentPublicInstance'
 
 export type PublicProps = VNodeProps &
   AllowedComponentProps &
@@ -45,7 +39,7 @@ export type DefineComponent<
   PP = PublicProps,
   RequiredProps = Readonly<ExtractPropTypes<PropsOrPropOptions>>,
   OptionalProps = Readonly<ExtractPropTypes<PropsOrPropOptions, false>>
-> = DefineComponentJSX<
+> = ComponentPublicInstanceConstructor<
   CreateComponentPublicInstance<
     OptionalProps,
     RawBindings,

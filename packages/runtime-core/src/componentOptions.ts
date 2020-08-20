@@ -3,8 +3,8 @@ import {
   Data,
   SetupContext,
   ComponentInternalOptions,
-  PublicAPIComponent,
   Component,
+  ConcreteComponent,
   InternalRenderFunction
 } from './component'
 import {
@@ -52,7 +52,7 @@ import { Directive } from './directives'
 import {
   CreateComponentPublicInstance,
   ComponentPublicInstance
-} from './componentProxy'
+} from './componentPublicInstance'
 import { warn } from './warning'
 import { VNodeChild } from './vnode'
 
@@ -103,7 +103,7 @@ export interface ComponentOptionsBase<
   // Luckily `render()` doesn't need any arguments nor does it care about return
   // type.
   render?: Function
-  components?: Record<string, PublicAPIComponent>
+  components?: Record<string, Component>
   directives?: Record<string, Directive>
   inheritAttrs?: boolean
   emits?: (E | EE[]) & ThisType<void>
@@ -132,7 +132,7 @@ export interface ComponentOptionsBase<
    * marker for AsyncComponentWrapper
    * @internal
    */
-  __asyncLoader?: () => Promise<Component>
+  __asyncLoader?: () => Promise<ConcreteComponent>
   /**
    * cache for merged $options
    * @internal
@@ -217,7 +217,7 @@ export type ComponentOptionsWithObjectProps<
   EE extends string = string,
   Props = Readonly<ExtractPropTypes<PropsOptions>>
 > = ComponentOptionsBase<Props, RawBindings, D, C, M, Mixin, Extends, E, EE> & {
-  props: PropsOptions
+  props: PropsOptions & ThisType<void>
 } & ThisType<
     CreateComponentPublicInstance<
       Props,

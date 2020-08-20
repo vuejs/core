@@ -5,7 +5,7 @@ import {
   setCurrentInstance,
   isInSSRComponentSetup
 } from './component'
-import { ComponentPublicInstance } from './componentProxy'
+import { ComponentPublicInstance } from './componentPublicInstance'
 import { callWithAsyncErrorHandling, ErrorTypeStrings } from './errorHandling'
 import { warn } from './warning'
 import { capitalize } from '@vue/shared'
