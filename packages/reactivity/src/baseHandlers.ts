@@ -63,9 +63,10 @@ function createGetter(isReadonly = false, shallow = false) {
 
     const res = Reflect.get(target, key, receiver)
 
+    const keyIsSymbol = isSymbol(key)
     if (
-      isSymbol(key)
-        ? builtInSymbols.has(key)
+      keyIsSymbol
+        ? builtInSymbols.has(key as symbol)
         : key === `__proto__` || key === `__v_isRef`
     ) {
       return res
@@ -82,7 +83,9 @@ function createGetter(isReadonly = false, shallow = false) {
     if (isRef(res)) {
       // ref unwrapping, only for Objects, not for Arrays.
       const shouldUnwrap =
-        !targetIsArray || isSymbol(key) || isNaN(key as any) || key === ''
+        !targetIsArray ||
+        keyIsSymbol ||
+        '' + parseInt(key as string, 10) !== key
 
       return shouldUnwrap ? res.value : res
     }
