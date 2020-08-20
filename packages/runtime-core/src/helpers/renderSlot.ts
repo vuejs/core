@@ -12,14 +12,6 @@ import { warn } from '../warning'
 
 export let templateSlotRendering = 0
 
-function setTemplateSlotRendering() {
-  templateSlotRendering++
-}
-
-function resetTemplateSlotRendering() {
-  templateSlotRendering--
-}
-
 /**
  * Compiler runtime helper for rendering `<slot/>`
  * @private
@@ -47,7 +39,7 @@ export function renderSlot(
   // invocation interfering with template-based block tracking, but in
   // `renderSlot` we can be sure that it's template-based so we can force
   // enable it.
-  setTemplateSlotRendering()
+  templateSlotRendering++
   const rendered = (openBlock(),
   createBlock(
     Fragment,
@@ -57,6 +49,6 @@ export function renderSlot(
       ? PatchFlags.STABLE_FRAGMENT
       : PatchFlags.BAIL
   ))
-  resetTemplateSlotRendering()
+  templateSlotRendering--
   return rendered
 }
