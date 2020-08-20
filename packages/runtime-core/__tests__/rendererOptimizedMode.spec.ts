@@ -253,8 +253,8 @@ describe('renderer: optimized mode', () => {
     )
   })
 
-  // Fragment as a block, since the `UNKEYED_FRAGMENT` flag will cause bail out of the optimization mode,
-  // so we disable tracking here.
+  // A Fragment with `UNKEYED_FRAGMENT` flag will always patch its children,
+  // so there's no need for tracking dynamicChildren.
   test('PatchFlags: PatchFlags.UNKEYED_FRAGMENT', async () => {
     const list = [{ tag: 'p', text: 'foo' }]
     render(
@@ -275,7 +275,7 @@ describe('renderer: optimized mode', () => {
 
     list.unshift({ tag: 'i', text: 'bar' })
     render(
-      (openBlock(),
+      (openBlock(true),
       createBlock(
         Fragment,
         null,
@@ -291,8 +291,8 @@ describe('renderer: optimized mode', () => {
     expect(block.dynamicChildren!.length).toBe(0)
   })
 
-  // Fragment as a block, since the `KEYED_FRAGMENT` flag will cause bail out of the optimization mode,
-  // so we disable tracking here.
+  // A Fragment with `KEYED_FRAGMENT` will always patch its children,
+  // so there's no need for tracking dynamicChildren.
   test('PatchFlags: PatchFlags.KEYED_FRAGMENT', async () => {
     const list = [{ tag: 'p', text: 'foo' }]
     render(
@@ -313,7 +313,7 @@ describe('renderer: optimized mode', () => {
 
     list.unshift({ tag: 'i', text: 'bar' })
     render(
-      (openBlock(),
+      (openBlock(true),
       createBlock(
         Fragment,
         null,
