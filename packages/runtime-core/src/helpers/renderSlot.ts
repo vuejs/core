@@ -10,7 +10,15 @@ import {
 import { PatchFlags, SlotFlags } from '@vue/shared'
 import { warn } from '../warning'
 
-export let isRenderingTemplateSlot = false
+export let templateSlotRendering = 0
+
+function setTemplateSlotRendering() {
+  templateSlotRendering++
+}
+
+function resetTemplateSlotRendering() {
+  templateSlotRendering--
+}
 
 /**
  * Compiler runtime helper for rendering `<slot/>`
@@ -39,7 +47,7 @@ export function renderSlot(
   // invocation interfering with template-based block tracking, but in
   // `renderSlot` we can be sure that it's template-based so we can force
   // enable it.
-  isRenderingTemplateSlot = true
+  setTemplateSlotRendering()
   const rendered = (openBlock(),
   createBlock(
     Fragment,
@@ -49,6 +57,6 @@ export function renderSlot(
       ? PatchFlags.STABLE_FRAGMENT
       : PatchFlags.BAIL
   ))
-  isRenderingTemplateSlot = false
+  resetTemplateSlotRendering()
   return rendered
 }
