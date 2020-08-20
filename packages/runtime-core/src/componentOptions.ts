@@ -240,47 +240,20 @@ export type ComponentOptions<
   Mixin extends ComponentOptionsMixin = any,
   Extends extends ComponentOptionsMixin = any,
   E extends EmitsOptions = any
-> =
-  // | ComponentOptionsWithoutProps<Props, RawBindings, D, C, M>
-  // | ComponentOptionsWithObjectProps<
-  //     any,
-  //     RawBindings,
-  //     D,
-  //     C,
-  //     M,
-  //     any,
-  //     any,
-  //     any,
-  //     any,
-  //     Props
-  //   >
-  // | ComponentOptionsWithArrayProps<
-  //     any,
-  //     RawBindings,
-  //     D,
-  //     C,
-  //     M,
-  //     any,
-  //     any,
-  //     any,
-  //     any,
-  //     Props
-  //   >
-  // |
-  ComponentOptionsBase<Props, RawBindings, D, C, M, Mixin, Extends, E> &
-    ThisType<
-      CreateComponentPublicInstance<
-        {},
-        RawBindings,
-        D,
-        C,
-        M,
-        Mixin,
-        Extends,
-        E,
-        Readonly<Props>
-      >
+> = ComponentOptionsBase<Props, RawBindings, D, C, M, Mixin, Extends, E> &
+  ThisType<
+    CreateComponentPublicInstance<
+      {},
+      RawBindings,
+      D,
+      C,
+      M,
+      Mixin,
+      Extends,
+      E,
+      Readonly<Props>
     >
+  >
 
 export type ComponentOptionsMixin = ComponentOptionsBase<
   any,
