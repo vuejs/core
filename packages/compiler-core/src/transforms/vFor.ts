@@ -146,7 +146,7 @@ export const transformFor = createStructuralDirectiveTransform(
           childBlock = (children[0] as PlainElementNode)
             .codegenNode as VNodeCall
           if (isTemplate && keyProperty) {
-            injectProp(forNode.codegenNode as VNodeCall, keyProperty, context)
+            injectProp(childBlock, keyProperty, context)
           }
           childBlock.isBlock = !isStableFragment
           if (childBlock.isBlock) {
