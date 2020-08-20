@@ -16,6 +16,7 @@ export const enum ReactiveFlags {
   SKIP = '__v_skip',
   IS_REACTIVE = '__v_isReactive',
   IS_READONLY = '__v_isReadonly',
+  IS_REF = '__v_isRef',
   RAW = '__v_raw',
   REACTIVE = '__v_reactive',
   READONLY = '__v_readonly'
@@ -25,6 +26,7 @@ export interface Target {
   [ReactiveFlags.SKIP]?: boolean
   [ReactiveFlags.IS_REACTIVE]?: boolean
   [ReactiveFlags.IS_READONLY]?: boolean
+  [ReactiveFlags.IS_REF]?: boolean
   [ReactiveFlags.RAW]?: any
   [ReactiveFlags.REACTIVE]?: any
   [ReactiveFlags.READONLY]?: any

@@ -66,7 +66,7 @@ function createGetter(isReadonly = false, shallow = false) {
     if (
       isSymbol(key)
         ? builtInSymbols.has(key)
-        : key === `__proto__` || key === `__v_isRef`
+        : key === `__proto__` || key === ReactiveFlags.IS_REF
     ) {
       return res
     }

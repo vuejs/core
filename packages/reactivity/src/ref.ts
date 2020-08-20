@@ -23,7 +23,7 @@ const convert = <T extends unknown>(val: T): T =>
 
 export function isRef<T>(r: Ref<T> | unknown): r is Ref<T>
 export function isRef(r: any): r is Ref {
-  return r ? r.__v_isRef === true : false
+  return r ? r[ReactiveFlags.IS_REF] === true : false
 }
 
 export function ref<T extends object>(
@@ -50,7 +50,7 @@ function createRef(rawValue: unknown, shallow = false) {
   }
   let value = shallow ? rawValue : convert(rawValue)
   const r = {
-    __v_isRef: true,
+    [ReactiveFlags.IS_REF]: true,
     get value() {
       track(r, TrackOpTypes.GET, 'value')
       return value
@@ -109,7 +109,7 @@ export function customRef<T>(factory: CustomRefFactory<T>): Ref<T> {
     () => trigger(r, TriggerOpTypes.SET, 'value')
   )
   const r = {
-    __v_isRef: true,
+    [ReactiveFlags.IS_REF]: true,
     get value() {
       return get()
     },
@@ -136,7 +136,7 @@ export function toRef<T extends object, K extends keyof T>(
   key: K
 ): Ref<T[K]> {
   return {
-    __v_isRef: true,
+    [ReactiveFlags.IS_REF]: true,
     get value(): any {
       return object[key]
     },

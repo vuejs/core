@@ -56,7 +56,7 @@ export function computed<T>(
     }
   })
   computed = {
-    __v_isRef: true,
+    [ReactiveFlags.IS_REF]: true,
     [ReactiveFlags.IS_READONLY]:
       isFunction(getterOrOptions) || !getterOrOptions.set,
 
