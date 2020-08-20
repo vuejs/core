@@ -600,5 +600,13 @@ describe('compiler: hoistStatic transform', () => {
         }).code
       ).toMatchSnapshot()
     })
+
+    test('should NOT hoist keyed template v-for with plain element child', () => {
+      const root = transformWithHoist(
+        `<div><template v-for="item in items" :key="item"><span/></template></div>`
+      )
+      expect(root.hoists.length).toBe(0)
+      expect(generate(root).code).toMatchSnapshot()
+    })
   })
 })
