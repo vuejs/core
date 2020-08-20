@@ -22,7 +22,6 @@ import {
   ComponentPublicInstance
 } from './componentProxy'
 
-declare const JSX: unique symbol
 export interface DefineComponentJSX<
   T extends ComponentPublicInstance = ComponentPublicInstance
 > {
