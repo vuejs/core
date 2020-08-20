@@ -112,13 +112,17 @@ export function h<P, E extends EmitsOptions = {}>(
 // catch-all for generic component types
 export function h(type: Component, children?: RawChildren): VNode
 
+// component without props
+export function h(
+  type: Component,
+  props: null,
+  children?: RawChildren | RawSlots
+): VNode
+
 // exclude `defineComponent` constructors
-export function h<
-  T extends ComponentOptions<P> | FunctionalComponent<P, any>,
-  P
->(
-  type: T,
-  props: (RawProps & P) | ({} extends P ? null : never),
+export function h<P>(
+  type: ComponentOptions<P>,
+  props?: (RawProps & P) | ({} extends P ? null : never),
   children?: RawChildren | RawSlots
 ): VNode
 
@@ -129,11 +133,12 @@ export function h<P>(
   props?: (RawProps & P) | ({} extends P ? null : never),
   children?: RawChildren | RawSlots
 ): VNode
+
 // fake constructor type returned by `defineComponent`
 export function h(type: DefineComponent, children?: RawChildren): VNode
 export function h<P>(
   type: DefineComponent<P>,
-  props: (RawProps & P) | ({} extends P ? null : never),
+  props?: (RawProps & P) | ({} extends P ? null : never),
   children?: RawChildren | RawSlots
 ): VNode
 

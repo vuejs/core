@@ -232,7 +232,7 @@ export type ComponentOptionsWithObjectProps<
   >
 
 export type ComponentOptions<
-  Props = any,
+  Props = {},
   RawBindings = any,
   D = any,
   C extends ComputedOptions = ComputedOptions,

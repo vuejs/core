@@ -122,7 +122,7 @@ export interface ClassComponent {
  * implementation code.
  */
 export type ConcreteComponent<
-  Props = any,
+  Props = {},
   RawBindings = any,
   D = any,
   C extends ComputedOptions = ComputedOptions,
@@ -136,14 +136,14 @@ export type ConcreteComponent<
  * The constructor type is an artificial type returned by defineComponent().
  */
 export type Component<
-  Props = any,
+  Props = {},
   RawBindings = any,
   D = any,
   C extends ComputedOptions = ComputedOptions,
   M extends MethodOptions = MethodOptions
 > =
   | ConcreteComponent<Props, RawBindings, D, C, M>
-  | ComponentPublicInstanceConstructor // TODO infer types
+  | ComponentPublicInstanceConstructor<Props> // This shouldn't work :thinking:
 
 export { ComponentOptions }
 

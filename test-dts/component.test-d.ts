@@ -8,7 +8,8 @@ import {
   expectError,
   expectType,
   ShallowUnwrapRef,
-  FunctionalComponent
+  FunctionalComponent,
+  ComponentPublicInstance
 } from './index'
 
 declare function extractComponentOptions<Props, RawBindings>(
@@ -398,6 +399,14 @@ describe('functional', () => {
   })
 })
 
+declare type VueClass<Props = {}> = {
+  new (): ComponentPublicInstance<Props>
+}
+
 describe('class', () => {
-  // TODO
+  const MyComponent: VueClass<{ foo: number }> = {} as any
+  
+  const { props } = extractComponentOptions(MyComponent)
+
+  expectType<number>(props.foo)
 })
