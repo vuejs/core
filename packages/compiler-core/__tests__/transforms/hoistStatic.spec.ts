@@ -398,6 +398,14 @@ describe('compiler: hoistStatic transform', () => {
     expect(generate(root).code).toMatchSnapshot()
   })
 
+  test('should not hoist keyed template v-for with plain element child', () => {
+    const root = transformWithHoist(
+      `<div><template v-for="item in items" :key="item"><span/></template></div>`
+    )
+    expect(root.hoists.length).toBe(0)
+    expect(generate(root).code).toMatchSnapshot()
+  })
+
   test('hoist static text node between elements', () => {
     const root = transformWithHoist(`<div>static<div>static</div></div>`)
     expect(root.hoists).toMatchObject([

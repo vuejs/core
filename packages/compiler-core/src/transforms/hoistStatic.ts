@@ -13,7 +13,11 @@ import {
 } from '../ast'
 import { TransformContext } from '../transform'
 import { PatchFlags, isString, isSymbol } from '@vue/shared'
-import { isSlotOutlet, findProp } from '../utils'
+import {
+  isSlotOutlet,
+  findProp,
+  hasDynamicKeyWithinCodegenNode
+} from '../utils'
 
 export function hoistStatic(root: RootNode, context: TransformContext) {
   walk(
@@ -93,6 +97,7 @@ function walk(
             (!flag ||
               flag === PatchFlags.NEED_PATCH ||
               flag === PatchFlags.TEXT) &&
+            !hasDynamicKeyWithinCodegenNode(codegenNode) &&
             !hasDynamicKeyOrRef(child) &&
             !hasCachedProps(child)
           ) {

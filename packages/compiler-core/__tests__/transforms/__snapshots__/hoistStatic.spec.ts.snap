@@ -387,3 +387,19 @@ return function render(_ctx, _cache) {
   }
 }"
 `;
+
+exports[`compiler: hoistStatic transform should not hoist keyed template v-for with child plain element 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, createVNode: _createVNode } = _Vue
+
+    return (_openBlock(), _createBlock(\\"div\\", null, [
+      (_openBlock(true), _createBlock(_Fragment, null, _renderList(items, (item) => {
+        return (_openBlock(), _createBlock(\\"span\\", { key: item }))
+      }), 128 /* KEYED_FRAGMENT */))
+    ]))
+  }
+}"
+`;

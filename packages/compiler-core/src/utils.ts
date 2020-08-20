@@ -21,7 +21,8 @@ import {
   TextNode,
   InterpolationNode,
   VNodeCall,
-  SimpleExpressionNode
+  SimpleExpressionNode,
+  PlainElementNode
 } from './ast'
 import { TransformContext } from './transform'
 import {
@@ -184,6 +185,24 @@ export function hasDynamicKeyVBind(node: ElementNode): boolean {
       p.arg.type !== NodeTypes.SIMPLE_EXPRESSION || // v-bind:[_ctx.foo]
         !p.arg.isStatic) // v-bind:[foo]
   )
+}
+
+export function hasDynamicKeyWithinCodegenNode(
+  node: PlainElementNode['codegenNode']
+): boolean {
+  const props = (node as VNodeCall).props
+  if (props && props.type === NodeTypes.JS_OBJECT_EXPRESSION) {
+    return !!props.properties.find(property => {
+      const { key, value } = property
+      if (
+        key.type === NodeTypes.SIMPLE_EXPRESSION &&
+        value.type === NodeTypes.SIMPLE_EXPRESSION
+      ) {
+        return key.content === 'key' && !value.isStatic
+      }
+    })
+  }
+  return false
 }
 
 export function isText(
