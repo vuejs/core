@@ -707,6 +707,7 @@ describe('api: watch', () => {
       newValue: 2
     })
 
+    // @ts-ignore
     delete obj.foo
     await nextTick()
     expect(dummy).toBeUndefined()

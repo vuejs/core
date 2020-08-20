@@ -258,7 +258,7 @@ export function createAppAPI<HostElement>(
       },
 
       provide(key, value) {
-        if (__DEV__ && key in context.provides) {
+        if (__DEV__ && (key as string | symbol) in context.provides) {
           warn(
             `App already provides property with key "${String(key)}". ` +
               `It will be overwritten with the new value.`
