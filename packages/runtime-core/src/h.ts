@@ -11,7 +11,7 @@ import { Suspense, SuspenseProps } from './components/Suspense'
 import { isObject, isArray } from '@vue/shared'
 import { RawSlots } from './componentSlots'
 import { FunctionalComponent, Component } from './component'
-import { ComponentOptions } from './componentOptions'
+import { ComponentOptionsBase } from './componentOptions'
 import { EmitsOptions } from './componentEmits'
 import { DefineComponent } from './apiDefineComponent'
 
@@ -114,9 +114,14 @@ export function h<P, E extends EmitsOptions = {}>(
 export function h(type: Component, children?: RawChildren): VNode
 
 // exclude `defineComponent` constructors
-export function h<T extends ComponentOptions | FunctionalComponent<{}>>(
+export function h<
+  T extends
+    | ComponentOptionsBase<P, any, any, any, any, any, any, any>
+    | FunctionalComponent<P, any>,
+  P
+>(
   type: T,
-  props?: RawProps | null,
+  props: (RawProps & P) | ({} extends P ? null : never),
   children?: RawChildren | RawSlots
 ): VNode
 
