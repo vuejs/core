@@ -10,8 +10,7 @@ import { Teleport, TeleportProps } from './components/Teleport'
 import { Suspense, SuspenseProps } from './components/Suspense'
 import { isObject, isArray } from '@vue/shared'
 import { RawSlots } from './componentSlots'
-import { FunctionalComponent, Component } from './component'
-import { ComponentOptionsBase } from './componentOptions'
+import { FunctionalComponent, Component, ComponentOptions } from './component'
 import { EmitsOptions } from './componentEmits'
 import { DefineComponent } from './apiDefineComponent'
 
@@ -115,9 +114,7 @@ export function h(type: Component, children?: RawChildren): VNode
 
 // exclude `defineComponent` constructors
 export function h<
-  T extends
-    | ComponentOptionsBase<P, any, any, any, any, any, any, any>
-    | FunctionalComponent<P, any>,
+  T extends ComponentOptions<P> | FunctionalComponent<P, any>,
   P
 >(
   type: T,

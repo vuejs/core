@@ -102,7 +102,18 @@ type UnwrapMixinsType<
 type EnsureNonVoid<T> = T extends void ? {} : T
 
 export type ComponentPublicInstanceConstructor<
-  T extends ComponentPublicInstance = ComponentPublicInstance<any>
+  T extends ComponentPublicInstance<
+    Props,
+    RawBindings,
+    D,
+    C,
+    M
+  > = ComponentPublicInstance<any>,
+  Props = any,
+  RawBindings = any,
+  D = any,
+  C extends ComputedOptions = ComputedOptions,
+  M extends MethodOptions = MethodOptions
 > = {
   __isFragment?: never
   __isTeleport?: never

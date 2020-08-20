@@ -231,10 +231,13 @@ export type ComponentOptionsWithObjectProps<
     >
   >
 
-export type ComponentOptions =
-  | ComponentOptionsWithoutProps<any, any, any, any, any>
-  | ComponentOptionsWithObjectProps<any, any, any, any, any>
-  | ComponentOptionsWithArrayProps<any, any, any, any, any>
+export type ComponentOptions<
+  Props = any,
+  RawBindings = any,
+  D = any,
+  C extends ComputedOptions = ComputedOptions,
+  M extends MethodOptions = MethodOptions
+> = ComponentOptionsBase<Props, RawBindings, D, C, M, any, any, any>
 
 export type ComponentOptionsMixin = ComponentOptionsBase<
   any,
