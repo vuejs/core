@@ -10,7 +10,7 @@ import {
 import { PatchFlags, SlotFlags } from '@vue/shared'
 import { warn } from '../warning'
 
-export let templateSlotRendering = 0
+export let shouldTrackInSlotRendering = 0
 
 /**
  * Compiler runtime helper for rendering `<slot/>`
@@ -39,7 +39,7 @@ export function renderSlot(
   // invocation interfering with template-based block tracking, but in
   // `renderSlot` we can be sure that it's template-based so we can force
   // enable it.
-  templateSlotRendering++
+  shouldTrackInSlotRendering++
   const rendered = (openBlock(),
   createBlock(
     Fragment,
@@ -49,6 +49,6 @@ export function renderSlot(
       ? PatchFlags.STABLE_FRAGMENT
       : PatchFlags.BAIL
   ))
-  templateSlotRendering--
+  shouldTrackInSlotRendering--
   return rendered
 }
