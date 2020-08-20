@@ -129,7 +129,9 @@ export function h<P>(
 
 // Actual implementation
 export function h(type: any, propsOrChildren?: any, children?: any): VNode {
-  if (arguments.length === 2) {
+  if (arguments.length > 3) {
+    return createVNode(type, propsOrChildren, Array.from(arguments).slice(2))
+  } else if (arguments.length === 2) {
     if (isObject(propsOrChildren) && !isArray(propsOrChildren)) {
       // single vnode without props
       if (isVNode(propsOrChildren)) {
