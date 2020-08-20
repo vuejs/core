@@ -36,7 +36,7 @@ import { currentRenderingInstance } from './componentRenderUtils'
 import { RendererNode, RendererElement } from './renderer'
 import { NULL_DYNAMIC_COMPONENT } from './helpers/resolveAssets'
 import { hmrDirtyComponents } from './hmr'
-import { isRenderingTemplateSlot } from './helpers/renderSlot'
+import { shouldTrackInSlotRendering } from './helpers/renderSlot'
 
 export const Fragment = (Symbol(__DEV__ ? 'Fragment' : undefined) as any) as {
   __isFragment: true
@@ -403,7 +403,7 @@ function _createVNode(
   normalizeChildren(vnode, children)
 
   if (
-    (shouldTrack > 0 || isRenderingTemplateSlot) &&
+    (shouldTrack > 0 || shouldTrackInSlotRendering > 0) &&
     // avoid a block node from tracking itself
     !isBlockNode &&
     // has current parent block
