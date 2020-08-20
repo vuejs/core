@@ -316,7 +316,7 @@ describe('renderer: teleport', () => {
       },
       render: compile(`
       <teleport :to="target" :disabled="disabled">
-        <div>teleported</div><span>{{ disabled }}</span>
+        <div>teleported</div><span v-if="disabled">{{ disabled }}</span>
       </teleport>
       <div>root</div>
       `)
@@ -326,7 +326,7 @@ describe('renderer: teleport', () => {
       `"<!--teleport start--><!--teleport end--><div>root</div>"`
     )
     expect(serializeInner(target)).toMatchInlineSnapshot(
-      `"<div>teleported</div><span>false</span>"`
+      `"<div>teleported</div><!--v-if-->"`
     )
 
     disabled.value = true
@@ -343,7 +343,7 @@ describe('renderer: teleport', () => {
       `"<!--teleport start--><!--teleport end--><div>root</div>"`
     )
     expect(serializeInner(target)).toMatchInlineSnapshot(
-      `"<div>teleported</div><span>false</span>"`
+      `"<div>teleported</div><!--v-if-->"`
     )
   })
 })
