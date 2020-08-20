@@ -110,6 +110,10 @@ export type ComponentPublicInstanceConstructor<
   new (): T
 }
 
+export type ExtractComponentInstance<
+  C
+> = C extends ComponentPublicInstanceConstructor<infer I> ? I : C
+
 export type CreateComponentPublicInstance<
   P = {},
   B = {},

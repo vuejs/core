@@ -10,7 +10,8 @@ import {
   expectType,
   ComponentPublicInstance,
   ComponentOptions,
-  SetupContext
+  SetupContext,
+  ExtractComponentInstance
 } from './index'
 
 describe('with object props', () => {
@@ -94,7 +95,7 @@ describe('with object props', () => {
       // default + function
       ffff: {
         type: Function as PropType<(a: number, b: string) => { a: boolean }>,
-        default: (a: number, b: string) => ({ a: true })
+        default: (a: number, b: string) => ({ a: a > +b })
       },
       validated: {
         type: String,
@@ -798,4 +799,71 @@ describe('componentOptions setup should be `SetupContext`', () => {
     props: Record<string, any>,
     ctx: SetupContext
   ) => any)
+})
+
+describe('extract the instance of a component', () => {
+  const Base = defineComponent({
+    methods: {
+      baseFn: () => true
+    },
+    computed: {
+      baseCp(): string {
+        return ''
+      }
+    }
+  })
+  const MixinA = defineComponent({
+    props: {
+      mixinPropA: {
+        type: Boolean,
+        default: true
+      }
+    },
+    data() {
+      return {
+        mixinDataA: 1
+      }
+    }
+  })
+  const Comp = defineComponent({
+    extends: Base,
+    mixins: [MixinA],
+    data() {
+      return {
+        a: 'foo',
+        b: 1
+      }
+    },
+    props: {
+      aa: String as PropType<'foo' | 'bar'>,
+      bb: {
+        type: Function,
+        required: true
+      }
+    },
+    methods: {
+      fn: () => 1
+    },
+    computed: {
+      cp(): string {
+        return this.$data.a
+      }
+    }
+  })
+
+  type VM = ExtractComponentInstance<typeof Comp>
+
+  const vm = {} as VM
+  expectType<string>(vm.a)
+  expectType<number>(vm.b)
+  expectType<'foo' | 'bar' | undefined>(vm.aa)
+  expectType<Function>(vm.bb)
+  expectType<() => number>(vm.fn)
+  expectType<string>(vm.cp)
+  // mixins
+  expectType<number>(vm.mixinDataA)
+  expectType<boolean>(vm.mixinPropA)
+  // extends
+  expectType<() => boolean>(vm.baseFn)
+  expectType<string>(vm.baseCp)
 })

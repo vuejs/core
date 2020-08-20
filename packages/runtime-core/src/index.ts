@@ -178,7 +178,8 @@ export {
 } from './componentOptions'
 export {
   ComponentPublicInstance,
-  ComponentCustomProperties
+  ComponentCustomProperties,
+  ExtractComponentInstance
 } from './componentPublicInstance'
 export {
   Renderer,
