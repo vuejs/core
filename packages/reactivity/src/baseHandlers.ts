@@ -81,12 +81,11 @@ function createGetter(isReadonly = false, shallow = false) {
     }
 
     if (isRef(res)) {
-      // ref unwrapping, only for Objects, not for Arrays.
+      // ref unwrapping - does not apply for Array + integer key.
       const shouldUnwrap =
         !targetIsArray ||
         keyIsSymbol ||
         '' + parseInt(key as string, 10) !== key
-
       return shouldUnwrap ? res.value : res
     }
 
