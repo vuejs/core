@@ -4,7 +4,8 @@ import {
   currentRenderingInstance
 } from '../componentRenderUtils'
 import { ComponentInternalInstance } from '../component'
-import { setBlockTracking } from '../vnode'
+import { isRenderingCompiledSlot } from './renderSlot'
+import { closeBlock, openBlock } from '../vnode'
 
 /**
  * Wrap a slot function to memoize current rendering instance
@@ -16,15 +17,19 @@ export function withCtx(
 ) {
   if (!ctx) return fn
   return function renderFnWithContext() {
-    // By default, compiled slots disables block tracking since the user may
-    // call it inside a template expression (#1745). It should only track when
-    // it's called by a template `<slot>`.
-    setBlockTracking(-1)
+    // If a user calls a compiled slot inside a template expression (#1745), it
+    // can mess up block tracking, so by default we need to push a null block to
+    // avoid that. This isn't necessary if rendering a compiled `<slot>`.
+    if (!isRenderingCompiledSlot) {
+      openBlock(true /* null block that disables tracking */)
+    }
     const owner = currentRenderingInstance
     setCurrentRenderingInstance(ctx)
     const res = fn.apply(null, arguments as any)
     setCurrentRenderingInstance(owner)
-    setBlockTracking(1)
+    if (!isRenderingCompiledSlot) {
+      closeBlock()
+    }
     return res
   }
 }
