@@ -91,7 +91,8 @@ export {
   useTransitionState,
   resolveTransitionHooks,
   setTransitionHooks,
-  getTransitionRawChildren
+  getTransitionRawChildren,
+  getTransitionDefaultSlot
 } from './components/BaseTransition'
 
 // For devtools

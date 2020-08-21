@@ -14,6 +14,7 @@ import {
   resolveTransitionHooks,
   useTransitionState,
   getTransitionRawChildren,
+  getTransitionDefaultSlot,
   getCurrentInstance,
   setTransitionHooks,
   createVNode,
@@ -100,7 +101,9 @@ const TransitionGroupImpl = {
       const cssTransitionProps = resolveTransitionProps(rawProps)
       const tag = rawProps.tag || Fragment
       prevChildren = children
-      children = slots.default ? getTransitionRawChildren(slots.default()) : []
+      children = slots.default
+        ? getTransitionRawChildren(getTransitionDefaultSlot(slots))
+        : []
 
       for (let i = 0; i < children.length; i++) {
         const child = children[i]

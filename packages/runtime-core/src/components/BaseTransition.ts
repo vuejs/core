@@ -18,6 +18,8 @@ import { callWithAsyncErrorHandling, ErrorCodes } from '../errorHandling'
 import { ShapeFlags, PatchFlags } from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import { RendererElement } from '../renderer'
+import { RawSlots, Slots } from '../componentSlots'
+import { renderSlot } from '../helpers/renderSlot'
 
 export interface BaseTransitionProps<HostElement = RendererElement> {
   mode?: 'in-out' | 'out-in' | 'default'
@@ -139,7 +141,8 @@ const BaseTransitionImpl = {
 
     return () => {
       const children =
-        slots.default && getTransitionRawChildren(slots.default(), true)
+        slots.default &&
+        getTransitionRawChildren(getTransitionDefaultSlot(slots), true)
       if (!children || !children.length) {
         return
       }
@@ -433,6 +436,14 @@ export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks) {
   } else {
     vnode.transition = hooks
   }
+}
+
+export function getTransitionDefaultSlot(slots: Slots) {
+  return (slots as RawSlots)._
+    ? // We need to use `renderSlot` to render the compiled slot,
+      // so that we can track the `dynamicChildren` correctly.
+      [renderSlot(slots, 'default')]
+    : slots.default!()
 }
 
 export function getTransitionRawChildren(
