@@ -143,7 +143,7 @@ export function h(type: any, propsOrChildren?: any, children?: any): VNode {
     }
   } else {
     if (isVNode(children)) {
-      children = [children]
+      children = [Array.from(arguments).slice(2)]
     }
     return createVNode(type, propsOrChildren, children)
   }
