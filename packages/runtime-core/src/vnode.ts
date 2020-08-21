@@ -20,7 +20,7 @@ import {
   Component
 } from './component'
 import { RawSlots } from './componentSlots'
-import { isProxy, Ref, toRaw } from '@vue/reactivity'
+import { isProxy, Ref, toRaw, ReactiveFlags } from '@vue/reactivity'
 import { AppContext } from './apiCreateApp'
 import {
   SuspenseImpl,
@@ -118,7 +118,7 @@ export interface VNode<
   /**
    * @internal
    */
-  __v_skip: true
+  [ReactiveFlags.SKIP]: true
   type: VNodeTypes
   props: (VNodeProps & ExtraProps) | null
   key: string | number | null
@@ -375,7 +375,7 @@ function _createVNode(
 
   const vnode: VNode = {
     __v_isVNode: true,
-    __v_skip: true,
+    [ReactiveFlags.SKIP]: true,
     type,
     props,
     key: props && normalizeKey(props),
@@ -440,7 +440,7 @@ export function cloneVNode<T, U>(
     : props
   return {
     __v_isVNode: true,
-    __v_skip: true,
+    [ReactiveFlags.SKIP]: true,
     type: vnode.type,
     props: mergedProps,
     key: mergedProps && normalizeKey(mergedProps),
