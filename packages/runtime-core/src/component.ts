@@ -143,7 +143,7 @@ export type Component<
   M extends MethodOptions = MethodOptions
 > =
   | ConcreteComponent<Props, RawBindings, D, C, M>
-  | ComponentPublicInstanceConstructor<Props> // This shouldn't work :thinking:
+  | ComponentPublicInstanceConstructor<Props>
 
 export { ComponentOptions }
 
