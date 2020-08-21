@@ -5578,9 +5578,9 @@ postcss-modules-values@^3.0.0:
     postcss "^7.0.6"
 
 postcss-modules@^3.1.0:
-  version "3.2.0"
-  resolved "https://registry.yarnpkg.com/postcss-modules/-/postcss-modules-3.2.0.tgz#1ca870d197cd09a7964253e12de2aac906c94256"
-  integrity sha512-ceodlVbBypGD3R7EI1xM7gz28J0syaXq0VKd7rJVXVlOSkxUIRBRJQjBgpoKnKVFNAcCjtLVgZqBA3mUNntWPA==
+  version "3.2.1"
+  resolved "https://registry.yarnpkg.com/postcss-modules/-/postcss-modules-3.2.1.tgz#5df699a8404825a588894354ad9f7e774e7af95c"
+  integrity sha512-gps89tImSS1z5Rtw7KnTUPes7UX0XstNkRwBklwwgFwGYrUd5OFBEWdjAB80JMhnybeeDTPAQ0+0OSujwr3NRg==
   dependencies:
     generic-names "^2.0.1"
     icss-replace-symbols "^1.1.0"
