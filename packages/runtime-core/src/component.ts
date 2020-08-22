@@ -259,6 +259,11 @@ export interface ComponentInternalInstance {
    */
   setupState: Data
   /**
+   * devtools access to additional info
+   * @internal
+   */
+  devtoolsRawSetupState?: any
+  /**
    * @internal
    */
   setupContext: SetupContext | null
@@ -549,6 +554,9 @@ export function handleSetupResult(
     }
     // setup returned bindings.
     // assuming a render function compiled from template is present.
+    if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+      instance.devtoolsRawSetupState = setupResult
+    }
     instance.setupState = proxyRefs(setupResult)
     if (__DEV__) {
       exposeSetupStateOnRenderContext(instance)
