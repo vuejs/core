@@ -61,6 +61,10 @@ function getTargetType(value: Target) {
 type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRef<T>
 
 export function reactive<T extends object>(target: T): UnwrapNestedRefs<T>
+// to provide better error when trying to infer type #1930
+export function reactive<T extends object, R extends UnwrapNestedRefs<T>>(
+  target: T
+): R
 export function reactive(target: object) {
   // if trying to observe a readonly proxy, return the readonly version.
   if (target && (target as Target)[ReactiveFlags.IS_READONLY]) {
