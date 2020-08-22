@@ -64,4 +64,20 @@ describe('renderer: h', () => {
       })
     )
   })
+
+  // for simple JSX compat
+  // note this signature is not supported in types; it's purely for usage with
+  // compiled code.
+  test('support variadic children', () => {
+    // @ts-ignore
+    const vnode = h('div', null, h('span'), h('span'))
+    expect(vnode.children).toMatchObject([
+      {
+        type: 'span'
+      },
+      {
+        type: 'span'
+      }
+    ])
+  })
 })
