@@ -1,5 +1,6 @@
 import {
   describe,
+  Component,
   defineComponent,
   PropType,
   ref,
@@ -29,6 +30,7 @@ describe('with object props', () => {
     fff: (a: number, b: string) => { a: boolean }
     hhh: boolean
     ggg: 'foo' | 'bar'
+    ffff: (a: number, b: string) => { a: boolean }
     validated?: string
   }
 
@@ -89,6 +91,11 @@ describe('with object props', () => {
         type: String as PropType<'foo' | 'bar'>,
         default: 'foo'
       },
+      // default + function
+      ffff: {
+        type: Function as PropType<(a: number, b: string) => { a: boolean }>,
+        default: (a: number, b: string) => ({ a: true })
+      },
       validated: {
         type: String,
         // validator requires explicit annotation
@@ -112,6 +119,7 @@ describe('with object props', () => {
       expectType<ExpectedProps['fff']>(props.fff)
       expectType<ExpectedProps['hhh']>(props.hhh)
       expectType<ExpectedProps['ggg']>(props.ggg)
+      expectType<ExpectedProps['ffff']>(props.ffff)
       expectType<ExpectedProps['validated']>(props.validated)
 
       // @ts-expect-error props should be readonly
@@ -179,6 +187,8 @@ describe('with object props', () => {
     }
   })
 
+  expectType<Component>(MyComponent)
+
   // Test TSX
   expectType<JSX.Element>(
     <MyComponent
@@ -202,6 +212,17 @@ describe('with object props', () => {
       key={'foo'}
       // should allow ref
       ref={'foo'}
+    />
+  )
+
+  expectType<Component>(
+    <MyComponent
+      b="b"
+      dd={{ n: 1 }}
+      ddd={['ddd']}
+      eee={() => ({ a: 'eee' })}
+      fff={(a, b) => ({ a: a > +b })}
+      hhh={false}
     />
   )
 

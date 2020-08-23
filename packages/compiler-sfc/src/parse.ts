@@ -176,7 +176,7 @@ export function parse(
             `its syntax will be ambiguous outside of the component.`
         )
       )
-      delete descriptor.scriptSetup
+      descriptor.scriptSetup = null
     }
     if (descriptor.script && descriptor.script.src) {
       errors.push(
@@ -185,7 +185,7 @@ export function parse(
             `also present because they must be processed together.`
         )
       )
-      delete descriptor.script
+      descriptor.script = null
     }
   }
 

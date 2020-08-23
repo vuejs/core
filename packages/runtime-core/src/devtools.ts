@@ -47,19 +47,19 @@ export function devtoolsUnmountApp(app: App) {
   devtools.emit(DevtoolsHooks.APP_UNMOUNT, app)
 }
 
-export const devtoolsComponentAdded = /*#__PURE__*/ createDevtoolsHook(
+export const devtoolsComponentAdded = /*#__PURE__*/ createDevtoolsComponentHook(
   DevtoolsHooks.COMPONENT_ADDED
 )
 
-export const devtoolsComponentUpdated = /*#__PURE__*/ createDevtoolsHook(
+export const devtoolsComponentUpdated = /*#__PURE__*/ createDevtoolsComponentHook(
   DevtoolsHooks.COMPONENT_UPDATED
 )
 
-export const devtoolsComponentRemoved = /*#__PURE__*/ createDevtoolsHook(
+export const devtoolsComponentRemoved = /*#__PURE__*/ createDevtoolsComponentHook(
   DevtoolsHooks.COMPONENT_REMOVED
 )
 
-function createDevtoolsHook(hook: DevtoolsHooks) {
+function createDevtoolsComponentHook(hook: DevtoolsHooks) {
   return (component: ComponentInternalInstance) => {
     if (!devtools) return
     devtools.emit(

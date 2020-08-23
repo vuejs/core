@@ -16,7 +16,7 @@ import {
 import {
   CreateComponentPublicInstance,
   ComponentPublicInstanceConstructor
-} from './componentProxy'
+} from './componentPublicInstance'
 import { ExtractPropTypes, ComponentPropsOptions } from './componentProps'
 import { EmitsOptions } from './componentEmits'
 import { isFunction } from '@vue/shared'
@@ -205,7 +205,5 @@ export function defineComponent<
 
 // implementation, close to no-op
 export function defineComponent(options: unknown) {
-  return isFunction(options)
-    ? { setup: options, name: options.name }
-    : options
+  return isFunction(options) ? { setup: options, name: options.name } : options
 }

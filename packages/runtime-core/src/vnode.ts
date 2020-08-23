@@ -15,11 +15,12 @@ import {
 import {
   ComponentInternalInstance,
   Data,
-  Component,
-  ClassComponent
+  ConcreteComponent,
+  ClassComponent,
+  Component
 } from './component'
 import { RawSlots } from './componentSlots'
-import { isProxy, Ref, toRaw } from '@vue/reactivity'
+import { isProxy, Ref, toRaw, ReactiveFlags } from '@vue/reactivity'
 import { AppContext } from './apiCreateApp'
 import {
   SuspenseImpl,
@@ -35,7 +36,6 @@ import { currentRenderingInstance } from './componentRenderUtils'
 import { RendererNode, RendererElement } from './renderer'
 import { NULL_DYNAMIC_COMPONENT } from './helpers/resolveAssets'
 import { hmrDirtyComponents } from './hmr'
-import { isRenderingTemplateSlot } from './helpers/renderSlot'
 
 export const Fragment = (Symbol(__DEV__ ? 'Fragment' : undefined) as any) as {
   __isFragment: true
@@ -118,7 +118,7 @@ export interface VNode<
   /**
    * @internal
    */
-  __v_skip: true
+  [ReactiveFlags.SKIP]: true
   type: VNodeTypes
   props: (VNodeProps & ExtraProps) | null
   key: string | number | null
@@ -152,7 +152,7 @@ export interface VNode<
 // can divide a template into nested blocks, and within each block the node
 // structure would be stable. This allows us to skip most children diffing
 // and only worry about the dynamic nodes (indicated by patch flags).
-const blockStack: (VNode[] | null)[] = []
+export const blockStack: (VNode[] | null)[] = []
 let currentBlock: VNode[] | null = null
 
 /**
@@ -173,6 +173,11 @@ let currentBlock: VNode[] | null = null
  */
 export function openBlock(disableTracking = false) {
   blockStack.push((currentBlock = disableTracking ? null : []))
+}
+
+export function closeBlock() {
+  blockStack.pop()
+  currentBlock = blockStack[blockStack.length - 1] || null
 }
 
 // Whether we should be tracking dynamic child nodes inside a block.
@@ -226,8 +231,7 @@ export function createBlock(
   // save current block children on the block vnode
   vnode.dynamicChildren = currentBlock || EMPTY_ARR
   // close block
-  blockStack.pop()
-  currentBlock = blockStack[blockStack.length - 1] || null
+  closeBlock()
   // a block is always going to be patched, so track it as a child of its
   // parent block
   if (currentBlock) {
@@ -244,7 +248,7 @@ export function isSameVNodeType(n1: VNode, n2: VNode): boolean {
   if (
     __DEV__ &&
     n2.shapeFlag & ShapeFlags.COMPONENT &&
-    hmrDirtyComponents.has(n2.type as Component)
+    hmrDirtyComponents.has(n2.type as ConcreteComponent)
   ) {
     // HMR only: if the component has been hot-updated, force a reload.
     return false
@@ -371,7 +375,7 @@ function _createVNode(
 
   const vnode: VNode = {
     __v_isVNode: true,
-    __v_skip: true,
+    [ReactiveFlags.SKIP]: true,
     type,
     props,
     key: props && normalizeKey(props),
@@ -402,7 +406,7 @@ function _createVNode(
   normalizeChildren(vnode, children)
 
   if (
-    (shouldTrack > 0 || isRenderingTemplateSlot) &&
+    shouldTrack > 0 &&
     // avoid a block node from tracking itself
     !isBlockNode &&
     // has current parent block
@@ -436,7 +440,7 @@ export function cloneVNode<T, U>(
     : props
   return {
     __v_isVNode: true,
-    __v_skip: true,
+    [ReactiveFlags.SKIP]: true,
     type: vnode.type,
     props: mergedProps,
     key: mergedProps && normalizeKey(mergedProps),

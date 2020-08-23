@@ -17,7 +17,7 @@ import { warn } from './warning'
 import { ComponentInternalInstance, Data } from './component'
 import { currentRenderingInstance } from './componentRenderUtils'
 import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
-import { ComponentPublicInstance } from './componentProxy'
+import { ComponentPublicInstance } from './componentPublicInstance'
 
 export interface DirectiveBinding<V = any> {
   instance: ComponentPublicInstance | null
@@ -57,12 +57,6 @@ export type Directive<T = any, V = any> =
   | FunctionDirective<T, V>
 
 export type DirectiveModifiers = Record<string, boolean>
-
-export type VNodeDirectiveData = [
-  unknown,
-  string | undefined,
-  DirectiveModifiers
-]
 
 const isBuiltInDirective = /*#__PURE__*/ makeMap(
   'bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,slot,text'

@@ -1,11 +1,11 @@
 import {
-  Component,
+  ConcreteComponent,
   Data,
   validateComponentName,
-  PublicAPIComponent
+  Component
 } from './component'
 import { ComponentOptions } from './componentOptions'
-import { ComponentPublicInstance } from './componentProxy'
+import { ComponentPublicInstance } from './componentPublicInstance'
 import { Directive, validateDirectiveName } from './directives'
 import { RootRenderFunction } from './renderer'
 import { InjectionKey } from './apiInject'
@@ -21,8 +21,8 @@ export interface App<HostElement = any> {
   config: AppConfig
   use(plugin: Plugin, ...options: any[]): this
   mixin(mixin: ComponentOptions): this
-  component(name: string): PublicAPIComponent | undefined
-  component(name: string, component: PublicAPIComponent): this
+  component(name: string): Component | undefined
+  component(name: string, component: Component): this
   directive(name: string): Directive | undefined
   directive(name: string, directive: Directive): this
   mount(
@@ -33,7 +33,7 @@ export interface App<HostElement = any> {
   provide<T>(key: InjectionKey<T> | string, value: T): this
 
   // internal, but we need to expose these for the server-renderer and devtools
-  _component: Component
+  _component: ConcreteComponent
   _props: Data | null
   _container: HostElement | null
   _context: AppContext
@@ -70,7 +70,7 @@ export interface AppContext {
   app: App // for devtools
   config: AppConfig
   mixins: ComponentOptions[]
-  components: Record<string, PublicAPIComponent>
+  components: Record<string, Component>
   directives: Record<string, Directive>
   provides: Record<string | symbol, any>
   reload?: () => void // HMR only
@@ -104,7 +104,7 @@ export function createAppContext(): AppContext {
 }
 
 export type CreateAppFunction<HostElement> = (
-  rootComponent: PublicAPIComponent,
+  rootComponent: Component,
   rootProps?: Data | null
 ) => App<HostElement>
 
@@ -124,7 +124,7 @@ export function createAppAPI<HostElement>(
     let isMounted = false
 
     const app: App = (context.app = {
-      _component: rootComponent as Component,
+      _component: rootComponent as ConcreteComponent,
       _props: rootProps,
       _container: null,
       _context: context,
@@ -177,7 +177,7 @@ export function createAppAPI<HostElement>(
         return app
       },
 
-      component(name: string, component?: PublicAPIComponent): any {
+      component(name: string, component?: Component): any {
         if (__DEV__) {
           validateComponentName(name, context.config)
         }
@@ -208,7 +208,10 @@ export function createAppAPI<HostElement>(
 
       mount(rootContainer: HostElement, isHydrate?: boolean): any {
         if (!isMounted) {
-          const vnode = createVNode(rootComponent as Component, rootProps)
+          const vnode = createVNode(
+            rootComponent as ConcreteComponent,
+            rootProps
+          )
           // store app context on the root VNode.
           // this will be set on the root instance on initial mount.
           vnode.appContext = context
@@ -248,14 +251,16 @@ export function createAppAPI<HostElement>(
       unmount() {
         if (isMounted) {
           render(null, app._container)
-          devtoolsUnmountApp(app)
+          if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+            devtoolsUnmountApp(app)
+          }
         } else if (__DEV__) {
           warn(`Cannot unmount an app that is not mounted.`)
         }
       },
 
       provide(key, value) {
-        if (__DEV__ && key in context.provides) {
+        if (__DEV__ && (key as string | symbol) in context.provides) {
           warn(
             `App already provides property with key "${String(key)}". ` +
               `It will be overwritten with the new value.`
