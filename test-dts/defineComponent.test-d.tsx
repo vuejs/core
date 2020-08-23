@@ -94,7 +94,7 @@ describe('with object props', () => {
       // default + function
       ffff: {
         type: Function as PropType<(a: number, b: string) => { a: boolean }>,
-        default: (a: number, b: string) => ({ a: true })
+        default: (_a: number, _b: string) => ({ a: true })
       },
       validated: {
         type: String,
@@ -699,6 +699,16 @@ describe('defineComponent', () => {
     const comp = defineComponent({})
     defineComponent({
       components: { comp }
+    })
+  })
+
+  test('should accept class components with receiving constructor arguments', () => {
+    class Comp {
+      static __vccOpts = {}
+      constructor(_props: { foo: string }) {}
+    }
+    defineComponent({
+      components: { Comp }
     })
   })
 })
