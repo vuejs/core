@@ -833,7 +833,7 @@ describe('extract instance type', () => {
     }
   })
 
-  const compA: InstanceType<typeof CompA> = {} as InstanceType<typeof CompA>
+  const compA = {} as InstanceType<typeof CompA>
 
   expectType<boolean>(compA.a)
   expectType<string>(compA.b)
@@ -842,4 +842,15 @@ describe('extract instance type', () => {
   expectType<string>(compA.mA)
   // extends
   expectType<number>(compA.baseA)
+
+  //  @ts-expect-error
+  expectError((compA.a = true))
+  //  @ts-expect-error
+  expectError((compA.b = 'foo'))
+  //  @ts-expect-error
+  expectError((compA.c = 1))
+  //  @ts-expect-error
+  expectError((compA.mA = 'foo'))
+  //  @ts-expect-error
+  expectError((compA.baseA = 1))
 })
