@@ -7,6 +7,7 @@ import {
   getCurrentInstance
 } from '@vue/runtime-test'
 import { normalizeVNode } from '../src/vnode'
+import { createSlots } from '../src/helpers/createSlots'
 
 describe('component: slots', () => {
   test('initSlots: instance.slots should be set correctly', () => {
@@ -93,6 +94,121 @@ describe('component: slots', () => {
     ).toHaveBeenWarned()
 
     expect(proxy.slots.default()).toMatchObject([normalizeVNode(h('span'))])
+  })
+
+  test('updateSlots: instance.slots should be update correctly (when slotType is number)', async () => {
+    const flag1 = ref(true)
+
+    let proxy: any
+    const Child = () => {
+      proxy = getCurrentInstance()
+      return 'child'
+    }
+
+    const Comp = {
+      setup() {
+        return () => [
+          h(
+            Child,
+            null,
+            createSlots({ _: 2 as any }, [
+              flag1.value
+                ? {
+                    name: 'one',
+                    fn: () => [h('span')]
+                  }
+                : {
+                    name: 'two',
+                    fn: () => [h('div')]
+                  }
+            ])
+          )
+        ]
+      }
+    }
+    render(h(Comp), nodeOps.createElement('div'))
+
+    expect(proxy.slots).toHaveProperty('one')
+    expect(proxy.slots).not.toHaveProperty('two')
+
+    flag1.value = false
+    await nextTick()
+
+    expect(proxy.slots).not.toHaveProperty('one')
+    expect(proxy.slots).toHaveProperty('two')
+  })
+
+  test('updateSlots: instance.slots should be update correctly (when slotType is null)', async () => {
+    const flag1 = ref(true)
+
+    let proxy: any
+    const Child = () => {
+      proxy = getCurrentInstance()
+      return 'child'
+    }
+
+    const oldChildren = {
+      header: 'header'
+    }
+    const newChildren = {
+      footer: 'footer'
+    }
+
+    const Comp = {
+      setup() {
+        return () => [
+          h(Child, { n: flag1.value }, flag1.value ? oldChildren : newChildren)
+        ]
+      }
+    }
+    render(h(Comp), nodeOps.createElement('div'))
+
+    expect(proxy.slots).toHaveProperty('header')
+    expect(proxy.slots).not.toHaveProperty('footer')
+
+    flag1.value = false
+    await nextTick()
+
+    expect(
+      '[Vue warn]: Non-function value encountered for slot "header". Prefer function slots for better performance.'
+    ).toHaveBeenWarned()
+
+    expect(
+      '[Vue warn]: Non-function value encountered for slot "footer". Prefer function slots for better performance.'
+    ).toHaveBeenWarned()
+
+    expect(proxy.slots).not.toHaveProperty('header')
+    expect(proxy.slots.footer()).toMatchObject([normalizeVNode('footer')])
+  })
+
+  test('updateSlots: instance.slots should be update correctly (when vnode.shapeFlag is not SLOTS_CHILDREN)', async () => {
+    const flag1 = ref(true)
+
+    let proxy: any
+    const Child = () => {
+      proxy = getCurrentInstance()
+      return 'child'
+    }
+
+    const Comp = {
+      setup() {
+        return () => [
+          h(Child, { n: flag1.value }, flag1.value ? ['header'] : ['footer'])
+        ]
+      }
+    }
+    render(h(Comp), nodeOps.createElement('div'))
+
+    expect(proxy.slots.default()).toMatchObject([normalizeVNode('header')])
+
+    flag1.value = false
+    await nextTick()
+
+    expect(
+      '[Vue warn]: Non-function value encountered for default slot. Prefer function slots for better performance.'
+    ).toHaveBeenWarned()
+
+    expect(proxy.slots.default()).toMatchObject([normalizeVNode('footer')])
   })
 
   test('should respect $stable flag', async () => {
