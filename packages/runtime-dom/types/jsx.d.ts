@@ -245,7 +245,7 @@ interface AriaAttributes {
   'aria-valuetext'?: string
 }
 
-export interface HTMLAttributes extends AriaAttributes {
+export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
   innerHTML?: string
 
   class?: any
@@ -1322,7 +1322,7 @@ type ReservedProps = {
     | ((ref: Element | RuntimeCore.ComponentInternalInstance | null) => void)
 }
 
-type ElementAttrs<T> = T & EventHandlers<Events> & ReservedProps
+type ElementAttrs<T> = T & ReservedProps
 
 type NativeElements = {
   [K in StringKeyOf<IntrinsicElementAttributes>]: ElementAttrs<
