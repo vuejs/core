@@ -153,7 +153,7 @@ export function updateProps(
   const rawCurrentProps = toRaw(props)
   const [options] = normalizePropsOptions(instance.type)
 
-  if ((optimized || patchFlag > 0) && !(patchFlag & PatchFlags.FULL_PROPS)) {
+  if (optimized && patchFlag > 0 && !(patchFlag & PatchFlags.FULL_PROPS)) {
     if (patchFlag & PatchFlags.PROPS) {
       // Compiler-generated props & no keys change, just set the updated
       // the props.
