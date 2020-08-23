@@ -14,7 +14,8 @@ const enum DevtoolsHooks {
   APP_UNMOUNT = 'app:unmount',
   COMPONENT_UPDATED = 'component:updated',
   COMPONENT_ADDED = 'component:added',
-  COMPONENT_REMOVED = 'component:removed'
+  COMPONENT_REMOVED = 'component:removed',
+  COMPONENT_EMIT = 'component:emit'
 }
 
 interface DevtoolsHook {
@@ -69,4 +70,19 @@ function createDevtoolsComponentHook(hook: DevtoolsHooks) {
       component.parent ? component.parent.uid : undefined
     )
   }
+}
+
+export function devtoolsComponentEmit(
+  component: ComponentInternalInstance,
+  event: string,
+  params: any[]
+) {
+  if (!devtools) return
+  devtools.emit(
+    DevtoolsHooks.COMPONENT_EMIT,
+    component.appContext.app,
+    component.uid,
+    event,
+    params
+  )
 }
