@@ -36,7 +36,6 @@ export function defineComponent<Props, RawBindings = object>(
   ) => RawBindings | RenderFunction
 ): ComponentPublicInstanceConstructor<
   CreateComponentPublicInstance<
-    undefined,
     Props,
     RawBindings,
     {},
