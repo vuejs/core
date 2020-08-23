@@ -574,6 +574,25 @@ describe('api: watch', () => {
     expect(dummy).toEqual([1, 2, 2, false])
   })
 
+  it('watching deep ref', async () => {
+    const count = ref(0)
+    const double = computed(() => count.value * 2)
+    const state = reactive([count, double])
+
+    let dummy
+    watch(
+      () => state,
+      state => {
+        dummy = [state[0].value, state[1].value]
+      },
+      { deep: true }
+    )
+
+    count.value++
+    await nextTick()
+    expect(dummy).toEqual([1, 2])
+  })
+
   it('immediate', async () => {
     const count = ref(0)
     const cb = jest.fn()
