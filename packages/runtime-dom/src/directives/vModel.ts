@@ -85,6 +85,9 @@ export const vModelText: ModelDirective<
         return
       }
     }
+    if (el.minLength && el.value === value) {
+      return
+    }
     el.value = value == null ? '' : value
   }
 }
