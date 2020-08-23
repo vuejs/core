@@ -77,7 +77,6 @@ export interface ComponentCustomOptions {}
 export type RenderFunction = () => VNodeChild
 
 export interface ComponentOptionsBase<
-  PropsOptions,
   Props,
   RawBindings,
   D,
@@ -88,7 +87,7 @@ export interface ComponentOptionsBase<
   E extends EmitsOptions,
   EE extends string = string
 >
-  extends LegacyOptions<PropsOptions, Props, D, C, M, Mixin, Extends>,
+  extends LegacyOptions<Props, D, C, M, Mixin, Extends>,
     ComponentInternalOptions,
     ComponentCustomOptions {
   setup?: (
@@ -164,22 +163,10 @@ export type ComponentOptionsWithoutProps<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string
-> = ComponentOptionsBase<
-  undefined,
-  Props,
-  RawBindings,
-  D,
-  C,
-  M,
-  Mixin,
-  Extends,
-  E,
-  EE
-> & {
+> = ComponentOptionsBase<Props, RawBindings, D, C, M, Mixin, Extends, E, EE> & {
   props?: undefined
 } & ThisType<
     CreateComponentPublicInstance<
-      undefined,
       {},
       RawBindings,
       D,
@@ -202,24 +189,11 @@ export type ComponentOptionsWithArrayProps<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
-  Props = Readonly<{ [key in PropNames]?: any }>,
-  PropsOptions = { [key in PropNames]?: { type: null } }
-> = ComponentOptionsBase<
-  PropsOptions,
-  Props,
-  RawBindings,
-  D,
-  C,
-  M,
-  Mixin,
-  Extends,
-  E,
-  EE
-> & {
+  Props = Readonly<{ [key in PropNames]?: any }>
+> = ComponentOptionsBase<Props, RawBindings, D, C, M, Mixin, Extends, E, EE> & {
   props: PropNames[]
 } & ThisType<
     CreateComponentPublicInstance<
-      PropsOptions,
       Props,
       RawBindings,
       D,
@@ -242,22 +216,10 @@ export type ComponentOptionsWithObjectProps<
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
   Props = Readonly<ExtractPropTypes<PropsOptions>>
-> = ComponentOptionsBase<
-  PropsOptions,
-  Props,
-  RawBindings,
-  D,
-  C,
-  M,
-  Mixin,
-  Extends,
-  E,
-  EE
-> & {
+> = ComponentOptionsBase<Props, RawBindings, D, C, M, Mixin, Extends, E, EE> & {
   props: PropsOptions & ThisType<void>
 } & ThisType<
     CreateComponentPublicInstance<
-      PropsOptions,
       Props,
       RawBindings,
       D,
@@ -318,7 +280,6 @@ type ComponentInjectOptions =
     >
 
 interface LegacyOptions<
-  PropsOptions,
   Props,
   D,
   C extends ComputedOptions,
@@ -334,8 +295,8 @@ interface LegacyOptions<
   // since that leads to some sort of circular inference and breaks ThisType
   // for the entire component.
   data?: (
-    this: CreateComponentPublicInstance<PropsOptions, Props>,
-    vm: CreateComponentPublicInstance<PropsOptions, Props>
+    this: CreateComponentPublicInstance<Props>,
+    vm: CreateComponentPublicInstance<Props>
   ) => D
   computed?: C
   methods?: M

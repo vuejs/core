@@ -78,7 +78,6 @@ export function defineComponent<
   >
 ): ComponentPublicInstanceConstructor<
   CreateComponentPublicInstance<
-    undefined,
     Props,
     RawBindings,
     D,
@@ -131,7 +130,6 @@ export function defineComponent<
   // array props technically doesn't place any constraints on props in TSX before,
   // but now we can export array props in TSX
   CreateComponentPublicInstance<
-    { [key in PropNames]?: { type: null } },
     Readonly<{ [key in PropNames]?: any }>,
     RawBindings,
     D,
@@ -183,7 +181,6 @@ export function defineComponent<
   >
 ): ComponentPublicInstanceConstructor<
   CreateComponentPublicInstance<
-    PropsOptions,
     ExtractPropTypes<PropsOptions, false>,
     RawBindings,
     D,
@@ -193,7 +190,8 @@ export function defineComponent<
     Extends,
     E,
     VNodeProps & AllowedComponentProps & ComponentCustomProps
-  >
+  > &
+    Readonly<ExtractPropTypes<PropsOptions>>
 > &
   ComponentOptionsWithObjectProps<
     PropsOptions,

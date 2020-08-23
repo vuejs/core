@@ -29,7 +29,7 @@ import {
   resolveMergedOptions,
   isInBeforeCreate
 } from './componentOptions'
-import { normalizePropsOptions, ExtractPropTypes } from './componentProps'
+import { normalizePropsOptions } from './componentProps'
 import { EmitsOptions, EmitFn } from './componentEmits'
 import { Slots } from './componentSlots'
 import {
@@ -71,7 +71,6 @@ type IsDefaultMixinComponent<T> = T extends ComponentOptionsMixin
   : false
 
 type MixinToOptionTypes<T> = T extends ComponentOptionsBase<
-  any,
   infer P,
   infer B,
   infer D,
@@ -103,7 +102,7 @@ type UnwrapMixinsType<
 type EnsureNonVoid<T> = T extends void ? {} : T
 
 export type ComponentPublicInstanceConstructor<
-  T extends ComponentPublicInstance = ComponentPublicInstance<any, any>
+  T extends ComponentPublicInstance = ComponentPublicInstance<any>
 > = {
   __isFragment?: never
   __isTeleport?: never
@@ -112,7 +111,6 @@ export type ComponentPublicInstanceConstructor<
 }
 
 export type CreateComponentPublicInstance<
-  PropsOptions,
   P = {},
   B = {},
   D = {},
@@ -131,7 +129,6 @@ export type CreateComponentPublicInstance<
   PublicM extends MethodOptions = UnwrapMixinsType<PublicMixin, 'M'> &
     EnsureNonVoid<M>
 > = ComponentPublicInstance<
-  PropsOptions,
   PublicP,
   PublicB,
   PublicD,
@@ -139,12 +136,11 @@ export type CreateComponentPublicInstance<
   PublicM,
   E,
   PublicProps,
-  ComponentOptionsBase<PropsOptions, P, B, D, C, M, Mixin, Extends, E>
+  ComponentOptionsBase<P, B, D, C, M, Mixin, Extends, E>
 >
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)
 export type ComponentPublicInstance<
-  PropsOptions = undefined,
   P = {}, // props type extracted from props option
   B = {}, // raw bindings returned from setup()
   D = {}, // return from data()
@@ -152,7 +148,7 @@ export type ComponentPublicInstance<
   M extends MethodOptions = {},
   E extends EmitsOptions = {},
   PublicProps = P,
-  Options = ComponentOptionsBase<any, any, any, any, any, any, any, any, any>
+  Options = ComponentOptionsBase<any, any, any, any, any, any, any, any>
 > = {
   $: ComponentInternalInstance
   $data: D
@@ -169,7 +165,6 @@ export type ComponentPublicInstance<
   $nextTick: typeof nextTick
   $watch: typeof instanceWatch
 } & P &
-  Readonly<ExtractPropTypes<PropsOptions>> &
   ShallowUnwrapRef<B> &
   D &
   ExtractComputedReturns<C> &
