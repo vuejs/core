@@ -29,7 +29,7 @@ export function patchDOMProp(
     // non-string values will be stringified.
     el._value = value
     const newValue = value == null ? '' : value
-    if (el.value !== newValue) {
+    if (el.value.length !== newValue.length || el.value !== newValue) {
       el.value = newValue
     }
     return

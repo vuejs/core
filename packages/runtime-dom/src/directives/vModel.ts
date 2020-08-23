@@ -85,10 +85,15 @@ export const vModelText: ModelDirective<
         return
       }
     }
-    if (el.minLength && el.value === value) {
+    const newValue = value == null ? '' : value
+    if (
+      el.minLength > 0 &&
+      el.value.length === newValue.length &&
+      el.value === newValue
+    ) {
       return
     }
-    el.value = value == null ? '' : value
+    el.value = newValue
   }
 }
 
