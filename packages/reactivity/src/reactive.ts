@@ -31,9 +31,9 @@ export interface Target {
 }
 
 const enum TargetType {
-  INVALID = 0,
-  COMMON = 1,
-  COLLECTION = 2
+  INVALID,
+  COMMON,
+  COLLECTION
 }
 
 function targetTypeMap(rawType: string) {
