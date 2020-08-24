@@ -244,6 +244,9 @@ export function createHydrationFunctions(
     const { props, patchFlag, shapeFlag, dirs } = vnode
     // skip props & children if this is hoisted static nodes
     if (patchFlag !== PatchFlags.HOISTED) {
+      if (dirs) {
+        invokeDirectiveHook(vnode, null, parentComponent, 'created')
+      }
       // props
       if (props) {
         if (
