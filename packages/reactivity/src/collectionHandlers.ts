@@ -145,17 +145,17 @@ function createForEach(isReadonly: boolean, isShallow: boolean) {
     callback: Function,
     thisArg?: unknown
   ) {
-    const observed = this
-    const target = toRaw(observed)
+    const observed = this as any
+    const target = observed[ReactiveFlags.RAW]
+    const rawTarget = toRaw(target)
     const wrap = isReadonly ? toReadonly : isShallow ? toShallow : toReactive
-    !isReadonly && track(target, TrackOpTypes.ITERATE, ITERATE_KEY)
-    // important: create sure the callback is
-    // 1. invoked with the reactive map as `this` and 3rd arg
-    // 2. the value received should be a corresponding reactive/readonly.
-    function wrappedCallback(value: unknown, key: unknown) {
+    !isReadonly && track(rawTarget, TrackOpTypes.ITERATE, ITERATE_KEY)
+    return target.forEach((value: unknown, key: unknown) => {
+      // important: make sure the callback is
+      // 1. invoked with the reactive map as `this` and 3rd arg
+      // 2. the value received should be a corresponding reactive/readonly.
       return callback.call(thisArg, wrap(value), wrap(key), observed)
-    }
-    return getProto(target).forEach.call(target, wrappedCallback)
+    })
   }
 }
 
