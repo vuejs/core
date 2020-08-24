@@ -81,7 +81,7 @@ export function devtoolsComponentEmit(
   devtools.emit(
     DevtoolsHooks.COMPONENT_EMIT,
     component.appContext.app,
-    component.uid,
+    component,
     event,
     params
   )
