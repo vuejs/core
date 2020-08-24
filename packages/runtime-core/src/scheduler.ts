@@ -151,8 +151,16 @@ export function flushPreFlushCbs(
 
 export function flushPostFlushCbs(seen?: CountMap) {
   if (pendingPostFlushCbs.length) {
-    activePostFlushCbs = [...new Set(pendingPostFlushCbs)]
+    const deduped = [...new Set(pendingPostFlushCbs)]
     pendingPostFlushCbs.length = 0
+
+    // #1947 already has active queue, nested flushPostFlushCbs call
+    if (activePostFlushCbs) {
+      activePostFlushCbs.push(...deduped)
+      return
+    }
+
+    activePostFlushCbs = deduped
     if (__DEV__) {
       seen = seen || new Map()
     }
@@ -167,6 +175,7 @@ export function flushPostFlushCbs(seen?: CountMap) {
       if (__DEV__) {
         checkRecursiveUpdates(seen!, activePostFlushCbs[postFlushIndex])
       }
+      console.log(postFlushIndex)
       activePostFlushCbs[postFlushIndex]()
     }
     activePostFlushCbs = null
