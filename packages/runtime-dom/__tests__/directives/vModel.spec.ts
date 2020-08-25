@@ -487,17 +487,17 @@ describe('vModel', () => {
     await nextTick()
     expect(data.value).toMatchObject(new Set())
 
-    data.value = ['foo']
+    data.value = new Set(['foo'])
     await nextTick()
     expect(bar.checked).toEqual(false)
     expect(foo.checked).toEqual(true)
 
-    data.value = ['bar']
+    data.value = new Set(['bar'])
     await nextTick()
     expect(foo.checked).toEqual(false)
     expect(bar.checked).toEqual(true)
 
-    data.value = []
+    data.value = new Set()
     await nextTick()
     expect(foo.checked).toEqual(false)
     expect(bar.checked).toEqual(false)
