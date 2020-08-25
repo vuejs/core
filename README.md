@@ -24,8 +24,6 @@ The documentation of Vue 3 can be found at https://v3.vuejs.org/
 - [Github](https://github.com/vuejs/vue-router-next)
 - [RFCs](https://github.com/vuejs/rfcs/pulls?q=is%3Apr+is%3Amerged+label%3Arouter)
 
-We still have a few minor router hook behavior consistency issues with `vue-router@3.x`, but these are the only things that is blocking the router from being marked as Beta. The router is usable for new, non-critical projects.
-
 ### Vuex
 
 - [![beta](https://img.shields.io/npm/v/vuex/next.svg)](https://www.npmjs.com/package/vuex/v/next)
