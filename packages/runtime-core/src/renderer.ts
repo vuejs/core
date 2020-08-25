@@ -882,8 +882,8 @@ function baseCreateRenderer(
             const prev = oldProps[key]
             const next = newProps[key]
             if (
-              (hostForcePatchProp && hostForcePatchProp(el, key)) ||
-              next !== prev
+              next !== prev ||
+              (hostForcePatchProp && hostForcePatchProp(el, key))
             ) {
               hostPatchProp(
                 el,
