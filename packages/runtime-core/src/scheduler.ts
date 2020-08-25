@@ -175,7 +175,6 @@ export function flushPostFlushCbs(seen?: CountMap) {
       if (__DEV__) {
         checkRecursiveUpdates(seen!, activePostFlushCbs[postFlushIndex])
       }
-      console.log(postFlushIndex)
       activePostFlushCbs[postFlushIndex]()
     }
     activePostFlushCbs = null
