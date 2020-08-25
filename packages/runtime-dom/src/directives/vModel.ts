@@ -199,7 +199,11 @@ function setSelected(el: HTMLSelectElement, value: any) {
     const option = el.options[i]
     const optionValue = getValue(option)
     if (isMultiple) {
-      option.selected = looseIndexOf(value, optionValue) > -1
+      if (isArray(value)) {
+        option.selected = looseIndexOf(value, optionValue) > -1
+      } else {
+        option.selected = looseHas(value, optionValue)
+      }
     } else {
       if (looseEqual(getValue(option), value)) {
         el.selectedIndex = i
