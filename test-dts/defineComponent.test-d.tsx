@@ -701,6 +701,16 @@ describe('defineComponent', () => {
       components: { comp }
     })
   })
+
+  test('should accept class components with receiving constructor arguments', () => {
+    class Comp {
+      static __vccOpts = {}
+      constructor(_props: { foo: string }) {}
+    }
+    defineComponent({
+      components: { Comp }
+    })
+  })
 })
 
 describe('emits', () => {
