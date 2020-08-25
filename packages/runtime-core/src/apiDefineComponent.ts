@@ -50,7 +50,8 @@ export type DefineComponent<
     Extends,
     E,
     PP & OptionalProps
-  >
+  > &
+    RequiredProps
 > &
   ComponentOptionsBase<
     RequiredProps,

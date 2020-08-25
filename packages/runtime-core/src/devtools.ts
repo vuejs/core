@@ -14,7 +14,8 @@ const enum DevtoolsHooks {
   APP_UNMOUNT = 'app:unmount',
   COMPONENT_UPDATED = 'component:updated',
   COMPONENT_ADDED = 'component:added',
-  COMPONENT_REMOVED = 'component:removed'
+  COMPONENT_REMOVED = 'component:removed',
+  COMPONENT_EMIT = 'component:emit'
 }
 
 interface DevtoolsHook {
@@ -47,19 +48,19 @@ export function devtoolsUnmountApp(app: App) {
   devtools.emit(DevtoolsHooks.APP_UNMOUNT, app)
 }
 
-export const devtoolsComponentAdded = /*#__PURE__*/ createDevtoolsHook(
+export const devtoolsComponentAdded = /*#__PURE__*/ createDevtoolsComponentHook(
   DevtoolsHooks.COMPONENT_ADDED
 )
 
-export const devtoolsComponentUpdated = /*#__PURE__*/ createDevtoolsHook(
+export const devtoolsComponentUpdated = /*#__PURE__*/ createDevtoolsComponentHook(
   DevtoolsHooks.COMPONENT_UPDATED
 )
 
-export const devtoolsComponentRemoved = /*#__PURE__*/ createDevtoolsHook(
+export const devtoolsComponentRemoved = /*#__PURE__*/ createDevtoolsComponentHook(
   DevtoolsHooks.COMPONENT_REMOVED
 )
 
-function createDevtoolsHook(hook: DevtoolsHooks) {
+function createDevtoolsComponentHook(hook: DevtoolsHooks) {
   return (component: ComponentInternalInstance) => {
     if (!devtools) return
     devtools.emit(
@@ -69,4 +70,19 @@ function createDevtoolsHook(hook: DevtoolsHooks) {
       component.parent ? component.parent.uid : undefined
     )
   }
+}
+
+export function devtoolsComponentEmit(
+  component: ComponentInternalInstance,
+  event: string,
+  params: any[]
+) {
+  if (!devtools) return
+  devtools.emit(
+    DevtoolsHooks.COMPONENT_EMIT,
+    component.appContext.app,
+    component,
+    event,
+    params
+  )
 }

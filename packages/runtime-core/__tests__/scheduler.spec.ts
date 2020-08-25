@@ -4,7 +4,8 @@ import {
   queuePostFlushCb,
   invalidateJob,
   queuePreFlushCb,
-  flushPreFlushCbs
+  flushPreFlushCbs,
+  flushPostFlushCbs
 } from '../src/scheduler'
 
 describe('scheduler', () => {
@@ -502,6 +503,26 @@ describe('scheduler', () => {
     job.cb = true
     queueJob(job)
     queueJob(job)
+    await nextTick()
+    expect(count).toBe(1)
+  })
+
+  // #1947 flushPostFlushCbs should handle nested calls
+  // e.g. app.mount inside app.mount
+  test('flushPostFlushCbs', async () => {
+    let count = 0
+
+    const queueAndFlush = (hook: Function) => {
+      queuePostFlushCb(hook)
+      flushPostFlushCbs()
+    }
+
+    queueAndFlush(() => {
+      queueAndFlush(() => {
+        count++
+      })
+    })
+
     await nextTick()
     expect(count).toBe(1)
   })

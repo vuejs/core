@@ -1,4 +1,12 @@
-import { reactive, readonly, toRaw, ReactiveFlags, Target } from './reactive'
+import {
+  reactive,
+  readonly,
+  toRaw,
+  ReactiveFlags,
+  Target,
+  readonlyMap,
+  reactiveMap
+} from './reactive'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { track, trigger, ITERATE_KEY } from './effect'
 import {
@@ -48,10 +56,7 @@ function createGetter(isReadonly = false, shallow = false) {
       return isReadonly
     } else if (
       key === ReactiveFlags.RAW &&
-      receiver ===
-        (isReadonly
-          ? target[ReactiveFlags.READONLY]
-          : target[ReactiveFlags.REACTIVE])
+      receiver === (isReadonly ? readonlyMap : reactiveMap).get(target)
     ) {
       return target
     }
@@ -63,9 +68,10 @@ function createGetter(isReadonly = false, shallow = false) {
 
     const res = Reflect.get(target, key, receiver)
 
+    const keyIsSymbol = isSymbol(key)
     if (
-      isSymbol(key)
-        ? builtInSymbols.has(key)
+      keyIsSymbol
+        ? builtInSymbols.has(key as symbol)
         : key === `__proto__` || key === `__v_isRef`
     ) {
       return res
@@ -80,8 +86,12 @@ function createGetter(isReadonly = false, shallow = false) {
     }
 
     if (isRef(res)) {
-      // ref unwrapping, only for Objects, not for Arrays.
-      return targetIsArray ? res : res.value
+      // ref unwrapping - does not apply for Array + integer key.
+      const shouldUnwrap =
+        !targetIsArray ||
+        keyIsSymbol ||
+        '' + parseInt(key as string, 10) !== key
+      return shouldUnwrap ? res.value : res
     }
 
     if (isObject(res)) {

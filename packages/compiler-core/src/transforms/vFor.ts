@@ -145,6 +145,9 @@ export const transformFor = createStructuralDirectiveTransform(
           // but mark it as a block.
           childBlock = (children[0] as PlainElementNode)
             .codegenNode as VNodeCall
+          if (isTemplate && keyProperty) {
+            injectProp(childBlock, keyProperty, context)
+          }
           childBlock.isBlock = !isStableFragment
           if (childBlock.isBlock) {
             helper(OPEN_BLOCK)
