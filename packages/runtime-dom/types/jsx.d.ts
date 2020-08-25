@@ -734,7 +734,7 @@ export interface WebViewHTMLAttributes extends HTMLAttributes {
   webpreferences?: string
 }
 
-export interface SVGAttributes extends AriaAttributes {
+export interface SVGAttributes extends AriaAttributes, EventHandlers<Events> {
   innerHTML?: string
 
   /**
