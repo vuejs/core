@@ -365,9 +365,11 @@ function injectToKeepAliveRoot(
   target: ComponentInternalInstance,
   keepAliveRoot: ComponentInternalInstance
 ) {
-  injectHook(type, hook, keepAliveRoot, true /* prepend */)
+  // injectHook wraps the original for error handling, so make sure to remove
+  // the wrapped version.
+  const injected = injectHook(type, hook, keepAliveRoot, true /* prepend */)
   onUnmounted(() => {
-    remove(keepAliveRoot[type]!, hook.__weh)
+    remove(keepAliveRoot[type]!, injected)
   }, target)
 }
 
