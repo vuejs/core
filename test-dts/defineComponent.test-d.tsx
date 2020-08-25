@@ -94,7 +94,7 @@ describe('with object props', () => {
       // default + function
       ffff: {
         type: Function as PropType<(a: number, b: string) => { a: boolean }>,
-        default: (a: number, b: string) => ({ a: true })
+        default: (a: number, b: string) => ({ a: a > +b })
       },
       validated: {
         type: String,
@@ -798,4 +798,59 @@ describe('componentOptions setup should be `SetupContext`', () => {
     props: Record<string, any>,
     ctx: SetupContext
   ) => any)
+})
+
+describe('extract instance type', () => {
+  const Base = defineComponent({
+    props: {
+      baseA: {
+        type: Number,
+        default: 1
+      }
+    }
+  })
+  const MixinA = defineComponent({
+    props: {
+      mA: {
+        type: String,
+        default: ''
+      }
+    }
+  })
+  const CompA = defineComponent({
+    extends: Base,
+    mixins: [MixinA],
+    props: {
+      a: {
+        type: Boolean,
+        default: false
+      },
+      b: {
+        type: String,
+        required: true
+      },
+      c: Number
+    }
+  })
+
+  const compA = {} as InstanceType<typeof CompA>
+
+  expectType<boolean>(compA.a)
+  expectType<string>(compA.b)
+  expectType<number | undefined>(compA.c)
+  // mixins
+  expectType<string>(compA.mA)
+  // extends
+  expectType<number>(compA.baseA)
+
+  //  @ts-expect-error
+  expectError((compA.a = true))
+  //  @ts-expect-error
+  expectError((compA.b = 'foo'))
+  //  @ts-expect-error
+  expectError((compA.c = 1))
+  //  @ts-expect-error
+  expectError((compA.mA = 'foo'))
+  //  @ts-expect-error
+  expectError((compA.baseA = 1))
 })
