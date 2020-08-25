@@ -495,11 +495,12 @@ export function applyOptions(
 
     if (asMixin) {
       deferredData.push(dataOptions as DataFn)
-    } else {
-      resolveData(instance, dataOptions, publicThis)
     }
   }
   if (!asMixin) {
+    if (dataOptions) {
+      deferredData.push(dataOptions as DataFn)
+    }
     if (deferredData.length) {
       deferredData.forEach(dataFn => resolveData(instance, dataFn, publicThis))
     }
