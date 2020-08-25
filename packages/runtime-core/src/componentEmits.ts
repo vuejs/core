@@ -13,6 +13,7 @@ import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
 import { warn } from './warning'
 import { normalizePropsOptions } from './componentProps'
 import { UnionToIntersection } from './helpers/typeUtils'
+import { devtoolsComponentEmit } from './devtools'
 
 export type ObjectEmitsOptions = Record<
   string,
@@ -65,6 +66,10 @@ export function emit(
         }
       }
     }
+  }
+
+  if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+    devtoolsComponentEmit(instance, event, args)
   }
 
   let handlerName = `on${capitalize(event)}`

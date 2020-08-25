@@ -189,7 +189,8 @@ export function defineComponent<
     Extends,
     E,
     VNodeProps & AllowedComponentProps & ComponentCustomProps
-  >
+  > &
+    Readonly<ExtractPropTypes<PropsOptions>>
 > &
   ComponentOptionsWithObjectProps<
     PropsOptions,

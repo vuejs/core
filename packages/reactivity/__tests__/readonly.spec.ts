@@ -228,7 +228,7 @@ describe('reactivity/readonly', () => {
         test('should retrieve readonly values on iteration', () => {
           const key1 = {}
           const key2 = {}
-          const original = new Collection([[key1, {}], [key2, {}]])
+          const original = new Map([[key1, {}], [key2, {}]])
           const wrapped: any = readonly(original)
           expect(wrapped.size).toBe(2)
           for (const [key, value] of wrapped) {
@@ -246,7 +246,7 @@ describe('reactivity/readonly', () => {
         test('should retrieve reactive + readonly values on iteration', () => {
           const key1 = {}
           const key2 = {}
-          const original = reactive(new Collection([[key1, {}], [key2, {}]]))
+          const original = reactive(new Map([[key1, {}], [key2, {}]]))
           const wrapped: any = readonly(original)
           expect(wrapped.size).toBe(2)
           for (const [key, value] of wrapped) {

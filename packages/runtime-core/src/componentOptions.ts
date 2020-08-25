@@ -485,23 +485,12 @@ export function applyOptions(
     }
   }
 
-  if (dataOptions) {
-    if (__DEV__ && !isFunction(dataOptions)) {
-      warn(
-        `The data option must be a function. ` +
-          `Plain object usage is no longer supported.`
-      )
-    }
-
-    if (asMixin) {
-      deferredData.push(dataOptions as DataFn)
-    } else {
-      resolveData(instance, dataOptions, publicThis)
-    }
-  }
   if (!asMixin) {
     if (deferredData.length) {
       deferredData.forEach(dataFn => resolveData(instance, dataFn, publicThis))
+    }
+    if (dataOptions) {
+      resolveData(instance, dataOptions, publicThis)
     }
     if (__DEV__) {
       const rawData = toRaw(instance.data)
@@ -518,6 +507,8 @@ export function applyOptions(
         }
       }
     }
+  } else if (dataOptions) {
+    deferredData.push(dataOptions as DataFn)
   }
 
   if (computedOptions) {
@@ -666,6 +657,12 @@ function resolveData(
   dataFn: DataFn,
   publicThis: ComponentPublicInstance
 ) {
+  if (__DEV__ && !isFunction(dataFn)) {
+    warn(
+      `The data option must be a function. ` +
+        `Plain object usage is no longer supported.`
+    )
+  }
   const data = dataFn.call(publicThis, publicThis)
   if (__DEV__ && isPromise(data)) {
     warn(
