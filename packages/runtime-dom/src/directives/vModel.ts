@@ -86,14 +86,9 @@ export const vModelText: ModelDirective<
       }
     }
     const newValue = value == null ? '' : value
-    if (
-      el.minLength > 0 &&
-      el.value.length === newValue.length &&
-      el.value === newValue
-    ) {
-      return
+    if (el.value !== newValue) {
+      el.value = newValue
     }
-    el.value = newValue
   }
 }
 
