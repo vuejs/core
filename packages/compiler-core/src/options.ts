@@ -61,8 +61,10 @@ export type HoistTransform = (
   parent: ParentNode
 ) => void
 
+export type BindingTypes = 'data' | 'props' | 'setup' | 'options'
+
 export interface BindingMetadata {
-  [key: string]: 'data' | 'props' | 'setup' | 'options'
+  [key: string]: BindingTypes
 }
 
 export interface TransformOptions {

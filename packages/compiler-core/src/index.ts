@@ -7,7 +7,8 @@ export {
   TransformOptions,
   CodegenOptions,
   HoistTransform,
-  BindingMetadata
+  BindingMetadata,
+  BindingTypes
 } from './options'
 export { baseParse, TextModes } from './parse'
 export {

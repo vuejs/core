@@ -1,4 +1,9 @@
-import { parse, SFCScriptCompileOptions, compileScript } from '../src'
+import {
+  parse,
+  SFCScriptCompileOptions,
+  compileScript,
+  analyzeScriptBindings
+} from '../src'
 import { parse as babelParse } from '@babel/parser'
 import { babelParserDefaultPlugins } from '@vue/shared'
 
@@ -514,6 +519,104 @@ describe('SFC compile <script setup>', () => {
       </script>
       `)
       ).toThrow(`Default export is already declared`)
+    })
+  })
+})
+
+describe('script bindings optimizations', () => {
+  it(`recognizes props as strings array`, () => {
+    const sfcScriptBlock = compile(`
+      <script>
+        export default {
+          props: ['foo', 'bar']
+        }
+      </script>
+    `)
+    const bindings = analyzeScriptBindings(sfcScriptBlock)
+    expect(bindings).toMatchObject({ foo: 'props', bar: 'props' })
+  })
+
+  it(`recognizes props as object`, () => {
+    const sfcScriptBlock = compile(`
+      <script>
+        export default {
+          props: {
+            foo: String,
+            bar: {
+              type: String,
+            },
+            baz: null,
+            qux: [String, Number]
+          }
+        }
+      </script>
+    `)
+    const bindings = analyzeScriptBindings(sfcScriptBlock)
+    expect(bindings).toMatchObject({
+      foo: 'props',
+      bar: 'props',
+      baz: 'props',
+      qux: 'props'
+    })
+  })
+
+  it(`recognizes synchronous setup return`, () => {
+    const sfcScriptBlock = compile(`
+      <script>
+        export default {
+          setup() {
+            return {
+              foo: 1
+            }
+          }
+        }
+      </script>
+    `)
+    const bindings = analyzeScriptBindings(sfcScriptBlock)
+    expect(bindings).toMatchObject({ foo: 'setup' })
+  })
+
+  it(`recognizes data return`, () => {
+    const sfcScriptBlock = compile(`
+      <script>
+        export default {
+          data() {
+            return {
+              foo: null
+            }
+          }
+        }
+      </script>
+    `)
+    const bindings = analyzeScriptBindings(sfcScriptBlock)
+    expect(bindings).toMatchObject({ foo: 'data' })
+  })
+
+  it(`works for mixed bindings`, () => {
+    const sfcScriptBlock = compile(`
+      <script>
+        export default {
+          props: {
+            foo: String,
+          },
+          setup() {
+            return {
+              bar: null,
+            }
+          },
+          data() {
+            return {
+              baz: null
+            }
+          }
+        }
+      </script>
+    `)
+    const bindings = analyzeScriptBindings(sfcScriptBlock)
+    expect(bindings).toMatchObject({
+      foo: 'props',
+      bar: 'setup',
+      baz: 'data'
     })
   })
 })

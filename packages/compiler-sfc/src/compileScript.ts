@@ -1,5 +1,5 @@
 import MagicString from 'magic-string'
-import { BindingMetadata } from '@vue/compiler-core'
+import { BindingMetadata, BindingTypes } from '@vue/compiler-core'
 import { SFCDescriptor, SFCScriptBlock } from './parse'
 import { parse, ParserPlugin } from '@babel/parser'
 import { babelParserDefaultPlugins, generateCodeFrame } from '@vue/shared'
@@ -7,6 +7,7 @@ import {
   Node,
   Declaration,
   ObjectPattern,
+  ObjectExpression,
   ArrayPattern,
   Identifier,
   ExpressionStatement,
@@ -56,11 +57,7 @@ export function compileScript(
   const scriptLang = script && script.lang
   const scriptSetupLang = scriptSetup && scriptSetup.lang
   const isTS = scriptLang === 'ts' || scriptSetupLang === 'ts'
-  const plugins: ParserPlugin[] = [
-    ...(options.babelParserPlugins || []),
-    ...babelParserDefaultPlugins,
-    ...(isTS ? (['typescript'] as const) : [])
-  ]
+  const plugins = createBabelPlugins(options.babelParserPlugins, isTS)
 
   if (!scriptSetup) {
     if (!script) {
@@ -620,6 +617,16 @@ export function compileScript(
   }
 }
 
+function createBabelPlugins(
+  babelParserPlugins: null | undefined | ParserPlugin[],
+  ts: boolean
+) {
+  let plugins: ParserPlugin[] = [...babelParserDefaultPlugins]
+  if (babelParserPlugins) plugins = [...babelParserPlugins]
+  if (ts) plugins.push('typescript')
+  return plugins
+}
+
 function walkDeclaration(node: Declaration, bindings: Record<string, boolean>) {
   if (node.type === 'VariableDeclaration') {
     // export const foo = ...
@@ -969,6 +976,22 @@ function isFunction(node: Node): node is FunctionNode {
   return /Function(?:Expression|Declaration)$|Method$/.test(node.type)
 }
 
+function populateObjectExpressionBindings(
+  bindings: BindingMetadata,
+  node: ObjectExpression,
+  type: BindingTypes
+) {
+  for (const prop of node.properties) {
+    if (
+      prop.type === 'ObjectProperty' &&
+      !prop.computed &&
+      prop.key.type === 'Identifier'
+    ) {
+      bindings[prop.key.name] = type
+    }
+  }
+}
+
 /**
  * Analyze bindings in normal `<script>`
  * Note that `compileScriptSetup` already analyzes bindings as part of its
@@ -977,7 +1000,71 @@ function isFunction(node: Node): node is FunctionNode {
 export function analyzeScriptBindings(
   _script: SFCScriptBlock
 ): BindingMetadata {
-  return {
-    // TODO
+  const plugins = createBabelPlugins(null, _script.lang === 'ts')
+  const ast = parse(_script.content, {
+    plugins,
+    sourceType: 'module'
+  }).program.body
+
+  const bindings: BindingMetadata = {}
+
+  for (const node of ast) {
+    if (
+      node.type === 'ExportDefaultDeclaration' &&
+      node.declaration.type === 'ObjectExpression'
+    ) {
+      for (const property of node.declaration.properties) {
+        // props
+        if (
+          property.type === 'ObjectProperty' &&
+          !property.computed &&
+          property.key.type === 'Identifier' &&
+          property.key.name === 'props'
+        ) {
+          // export default { props: [] }
+          if (property.value.type === 'ArrayExpression') {
+            for (const element of property.value.elements) {
+              if (element && element.type === 'StringLiteral') {
+                bindings[element.value] = 'props'
+              }
+            }
+          }
+
+          // export default { props: {} }
+          else if (property.value.type === 'ObjectExpression') {
+            populateObjectExpressionBindings(bindings, property.value, 'props')
+          }
+        }
+
+        // setup
+        if (
+          property.type === 'ObjectMethod' &&
+          !property.computed &&
+          property.key.type === 'Identifier' &&
+          (property.key.name === 'setup' || property.key.name === 'data')
+        ) {
+          for (const bodyItem of property.body.body) {
+            // setup() {
+            //   return {
+            //     foo: null
+            //   }
+            // }
+            if (
+              bodyItem.type === 'ReturnStatement' &&
+              bodyItem.argument &&
+              bodyItem.argument.type === 'ObjectExpression'
+            ) {
+              populateObjectExpressionBindings(
+                bindings,
+                bodyItem.argument,
+                property.key.name
+              )
+            }
+          }
+        }
+      }
+    }
   }
+
+  return bindings
 }
