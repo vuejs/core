@@ -1,5 +1,5 @@
 import MagicString from 'magic-string'
-import { BindingMetadata, BindingTypes } from '@vue/compiler-core'
+import { BindingMetadata } from '@vue/compiler-core'
 import { SFCDescriptor, SFCScriptBlock } from './parse'
 import { parse, ParserPlugin } from '@babel/parser'
 import { babelParserDefaultPlugins, generateCodeFrame } from '@vue/shared'
@@ -976,20 +976,18 @@ function isFunction(node: Node): node is FunctionNode {
   return /Function(?:Expression|Declaration)$|Method$/.test(node.type)
 }
 
-function populateObjectExpressionBindings(
-  bindings: BindingMetadata,
-  node: ObjectExpression,
-  type: BindingTypes
-) {
+function getObjectExpressionKeys(node: ObjectExpression) {
+  const keys = []
   for (const prop of node.properties) {
     if (
       prop.type === 'ObjectProperty' &&
       !prop.computed &&
       prop.key.type === 'Identifier'
     ) {
-      bindings[prop.key.name] = type
+      keys.push(prop.key.name)
     }
   }
+  return keys
 }
 
 /**
@@ -1032,7 +1030,9 @@ export function analyzeScriptBindings(
 
           // export default { props: {} }
           else if (property.value.type === 'ObjectExpression') {
-            populateObjectExpressionBindings(bindings, property.value, 'props')
+            for (const key of getObjectExpressionKeys(property.value)) {
+              bindings[key] = 'props'
+            }
           }
         }
 
@@ -1054,11 +1054,9 @@ export function analyzeScriptBindings(
               bodyItem.argument &&
               bodyItem.argument.type === 'ObjectExpression'
             ) {
-              populateObjectExpressionBindings(
-                bindings,
-                bodyItem.argument,
-                property.key.name
-              )
+              for (const key of getObjectExpressionKeys(bodyItem.argument)) {
+                bindings[key] = property.key.name
+              }
             }
           }
         }
