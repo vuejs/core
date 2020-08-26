@@ -1037,7 +1037,7 @@ export function analyzeScriptBindings(
         }
 
         // setup and data
-        if (
+        else if (
           property.type === 'ObjectMethod' &&
           !property.computed &&
           property.key.type === 'Identifier' &&
