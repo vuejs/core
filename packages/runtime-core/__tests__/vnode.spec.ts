@@ -266,24 +266,26 @@ describe('vnode', () => {
   })
 
   test('cloneVNode class normalization', () => {
-    const vnode = createVNode('div', { class: 'a' })
+    const vnode = createVNode('div')
     const expectedProps = {
       class: 'a b'
     }
-    expect(cloneVNode(vnode, { class: 'b' }).props).toMatchObject(expectedProps)
-    expect(cloneVNode(vnode, { class: ['b'] }).props).toMatchObject(
+    expect(cloneVNode(vnode, { class: 'a b' }).props).toMatchObject(
       expectedProps
     )
-    expect(cloneVNode(vnode, { class: { b: true } }).props).toMatchObject(
+    expect(cloneVNode(vnode, { class: ['a', 'b'] }).props).toMatchObject(
       expectedProps
     )
-    expect(cloneVNode(vnode, { class: [{ b: true }] }).props).toMatchObject(
-      expectedProps
-    )
+    expect(
+      cloneVNode(vnode, { class: { a: true, b: true } }).props
+    ).toMatchObject(expectedProps)
+    expect(
+      cloneVNode(vnode, { class: [{ a: true, b: true }] }).props
+    ).toMatchObject(expectedProps)
   })
 
   test('cloneVNode style normalization', () => {
-    const vnode = createVNode('div', { style: 'color: red;' })
+    const vnode = createVNode('div')
     const expectedProps = {
       style: {
         color: 'blue',
