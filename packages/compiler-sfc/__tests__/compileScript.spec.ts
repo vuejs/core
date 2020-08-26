@@ -664,26 +664,36 @@ describe('analyze script bindings', () => {
     const { bindings } = compile(`
       <script>
         export default {
+          inject: ['foo'],
           props: {
-            foo: String,
+            bar: String,
           },
           setup() {
             return {
-              bar: null,
+              baz: null,
             }
           },
           data() {
             return {
-              baz: null
+              qux: null
             }
+          },
+          methods: {
+            quux() {}
+          },
+          computed: {
+            quuz() {}
           }
         }
       </script>
     `)
     expect(bindings).toStrictEqual({
-      foo: 'props',
-      bar: 'setup',
-      baz: 'data'
+      foo: 'options',
+      bar: 'props',
+      baz: 'setup',
+      qux: 'data',
+      quux: 'options',
+      quuz: 'options'
     })
   })
 
@@ -694,23 +704,11 @@ describe('analyze script bindings', () => {
           props: {
             foo: String,
           },
-          setup() {
-            return {
-              bar: null,
-            }
-          },
-          data() {
-            return {
-              baz: null
-            }
-          }
         }
       </script>
     `)
     expect(bindings).toStrictEqual({
-      foo: 'props',
-      bar: 'setup',
-      baz: 'data'
+      foo: 'props'
     })
   })
 })
