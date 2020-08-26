@@ -10,37 +10,31 @@ import { normalizeVNode } from '../src/vnode'
 import { createSlots } from '../src/helpers/createSlots'
 
 describe('component: slots', () => {
-  test('initSlots: instance.slots should be set correctly', () => {
-    let proxy: any
+  function renderWithSlots(slots: any): any {
+    let instance: any
     const Comp = {
       render() {
-        proxy = getCurrentInstance()
+        instance = getCurrentInstance()
         return h('div')
       }
     }
 
-    render(h(Comp, null, { _: 1 }), nodeOps.createElement('div'))
-    expect(proxy.slots).toMatchObject({ _: 1 })
+    render(h(Comp, null, slots), nodeOps.createElement('div'))
+    return instance
+  }
+
+  test('initSlots: instance.slots should be set correctly', () => {
+    const { slots } = renderWithSlots({ _: 1 })
+    expect(slots).toMatchObject({ _: 1 })
   })
 
   test('initSlots: should normalize object slots (when value is null, string, array)', () => {
-    let proxy: any
-    const Comp = {
-      render() {
-        proxy = getCurrentInstance()
-        return h('div')
-      }
-    }
-
-    render(
-      h(Comp, null, {
-        _inner: '_inner',
-        foo: null,
-        header: 'header',
-        footer: ['f1', 'f2']
-      }),
-      nodeOps.createElement('div')
-    )
+    const { slots } = renderWithSlots({
+      _inner: '_inner',
+      foo: null,
+      header: 'header',
+      footer: ['f1', 'f2']
+    })
 
     expect(
       '[Vue warn]: Non-function value encountered for slot "header". Prefer function slots for better performance.'
@@ -50,10 +44,10 @@ describe('component: slots', () => {
       '[Vue warn]: Non-function value encountered for slot "footer". Prefer function slots for better performance.'
     ).toHaveBeenWarned()
 
-    expect(proxy.slots).not.toHaveProperty('_inner')
-    expect(proxy.slots).not.toHaveProperty('foo')
-    expect(proxy.slots.header()).toMatchObject([normalizeVNode('header')])
-    expect(proxy.slots.footer()).toMatchObject([
+    expect(slots).not.toHaveProperty('_inner')
+    expect(slots).not.toHaveProperty('foo')
+    expect(slots.header()).toMatchObject([normalizeVNode('header')])
+    expect(slots.footer()).toMatchObject([
       normalizeVNode('f1'),
       normalizeVNode('f2')
     ])
@@ -79,29 +73,21 @@ describe('component: slots', () => {
   })
 
   test('initSlots: instance.slots should be set correctly (when vnode.shapeFlag is not SLOTS_CHILDREN)', () => {
-    let proxy: any
-    const Comp = {
-      render() {
-        proxy = getCurrentInstance()
-        return h('div')
-      }
-    }
-
-    render(h(Comp, null, [h('span')]), nodeOps.createElement('div'))
+    const { slots } = renderWithSlots([h('span')])
 
     expect(
       '[Vue warn]: Non-function value encountered for default slot. Prefer function slots for better performance.'
     ).toHaveBeenWarned()
 
-    expect(proxy.slots.default()).toMatchObject([normalizeVNode(h('span'))])
+    expect(slots.default()).toMatchObject([normalizeVNode(h('span'))])
   })
 
   test('updateSlots: instance.slots should be update correctly (when slotType is number)', async () => {
     const flag1 = ref(true)
 
-    let proxy: any
+    let instance: any
     const Child = () => {
-      proxy = getCurrentInstance()
+      instance = getCurrentInstance()
       return 'child'
     }
 
@@ -128,43 +114,43 @@ describe('component: slots', () => {
     }
     render(h(Comp), nodeOps.createElement('div'))
 
-    expect(proxy.slots).toHaveProperty('one')
-    expect(proxy.slots).not.toHaveProperty('two')
+    expect(instance.slots).toHaveProperty('one')
+    expect(instance.slots).not.toHaveProperty('two')
 
     flag1.value = false
     await nextTick()
 
-    expect(proxy.slots).not.toHaveProperty('one')
-    expect(proxy.slots).toHaveProperty('two')
+    expect(instance.slots).not.toHaveProperty('one')
+    expect(instance.slots).toHaveProperty('two')
   })
 
   test('updateSlots: instance.slots should be update correctly (when slotType is null)', async () => {
     const flag1 = ref(true)
 
-    let proxy: any
+    let instance: any
     const Child = () => {
-      proxy = getCurrentInstance()
+      instance = getCurrentInstance()
       return 'child'
     }
 
-    const oldChildren = {
+    const oldSlots = {
       header: 'header'
     }
-    const newChildren = {
+    const newSlots = {
       footer: 'footer'
     }
 
     const Comp = {
       setup() {
         return () => [
-          h(Child, { n: flag1.value }, flag1.value ? oldChildren : newChildren)
+          h(Child, { n: flag1.value }, flag1.value ? oldSlots : newSlots)
         ]
       }
     }
     render(h(Comp), nodeOps.createElement('div'))
 
-    expect(proxy.slots).toHaveProperty('header')
-    expect(proxy.slots).not.toHaveProperty('footer')
+    expect(instance.slots).toHaveProperty('header')
+    expect(instance.slots).not.toHaveProperty('footer')
 
     flag1.value = false
     await nextTick()
@@ -177,16 +163,16 @@ describe('component: slots', () => {
       '[Vue warn]: Non-function value encountered for slot "footer". Prefer function slots for better performance.'
     ).toHaveBeenWarned()
 
-    expect(proxy.slots).not.toHaveProperty('header')
-    expect(proxy.slots.footer()).toMatchObject([normalizeVNode('footer')])
+    expect(instance.slots).not.toHaveProperty('header')
+    expect(instance.slots.footer()).toMatchObject([normalizeVNode('footer')])
   })
 
   test('updateSlots: instance.slots should be update correctly (when vnode.shapeFlag is not SLOTS_CHILDREN)', async () => {
     const flag1 = ref(true)
 
-    let proxy: any
+    let instance: any
     const Child = () => {
-      proxy = getCurrentInstance()
+      instance = getCurrentInstance()
       return 'child'
     }
 
@@ -199,7 +185,7 @@ describe('component: slots', () => {
     }
     render(h(Comp), nodeOps.createElement('div'))
 
-    expect(proxy.slots.default()).toMatchObject([normalizeVNode('header')])
+    expect(instance.slots.default()).toMatchObject([normalizeVNode('header')])
 
     flag1.value = false
     await nextTick()
@@ -208,7 +194,7 @@ describe('component: slots', () => {
       '[Vue warn]: Non-function value encountered for default slot. Prefer function slots for better performance.'
     ).toHaveBeenWarned()
 
-    expect(proxy.slots.default()).toMatchObject([normalizeVNode('footer')])
+    expect(instance.slots.default()).toMatchObject([normalizeVNode('footer')])
   })
 
   test('should respect $stable flag', async () => {
