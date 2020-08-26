@@ -17,7 +17,10 @@ import {
   TSType,
   TSTypeLiteral,
   TSFunctionType,
-  TSDeclareFunction
+  TSDeclareFunction,
+  ObjectProperty,
+  ArrayExpression,
+  Statement
 } from '@babel/types'
 import { walk } from 'estree-walker'
 import { RawSourceMap } from 'source-map'
@@ -57,7 +60,9 @@ export function compileScript(
   const scriptLang = script && script.lang
   const scriptSetupLang = scriptSetup && scriptSetup.lang
   const isTS = scriptLang === 'ts' || scriptSetupLang === 'ts'
-  const plugins = createBabelPlugins(options.babelParserPlugins, isTS)
+  const plugins: ParserPlugin[] = [...babelParserDefaultPlugins]
+  if (options.babelParserPlugins) plugins.push(...options.babelParserPlugins)
+  if (isTS) plugins.push('typescript')
 
   if (!scriptSetup) {
     if (!script) {
@@ -67,10 +72,15 @@ export function compileScript(
       // do not process non js/ts script blocks
       return script
     }
+    const scriptAst = parse(script.content, {
+      plugins,
+      sourceType: 'module'
+    }).program.body
     return {
       ...script,
       content: hasCssVars ? injectCssVarsCalls(sfc, plugins) : script.content,
-      bindings: analyzeScriptBindings(script)
+      bindings: analyzeScriptBindings(scriptAst),
+      scriptAst
     }
   }
 
@@ -115,15 +125,17 @@ export function compileScript(
   const scriptStartOffset = script && script.loc.start.offset
   const scriptEndOffset = script && script.loc.end.offset
 
+  let scriptAst
+
   // 1. process normal <script> first if it exists
   if (script) {
     // import dedupe between <script> and <script setup>
-    const scriptAST = parse(script.content, {
+    scriptAst = parse(script.content, {
       plugins,
       sourceType: 'module'
     }).program.body
 
-    for (const node of scriptAST) {
+    for (const node of scriptAst) {
       if (node.type === 'ImportDeclaration') {
         // record imports for dedupe
         for (const {
@@ -235,14 +247,16 @@ export function compileScript(
   }
 
   // 3. parse <script setup> and  walk over top level statements
-  for (const node of parse(scriptSetup.content, {
+  const scriptSetupAst = parse(scriptSetup.content, {
     plugins: [
       ...plugins,
       // allow top level await but only inside <script setup>
       'topLevelAwait'
     ],
     sourceType: 'module'
-  }).program.body) {
+  }).program.body
+
+  for (const node of scriptSetupAst) {
     const start = node.start! + startOffset
     let end = node.end! + startOffset
     // import or type declarations: move to top
@@ -592,8 +606,8 @@ export function compileScript(
   }
 
   // 8. expose bindings for template compiler optimization
-  if (script) {
-    Object.assign(bindings, analyzeScriptBindings(script))
+  if (scriptAst) {
+    Object.assign(bindings, analyzeScriptBindings(scriptAst))
   }
   Object.keys(setupExports).forEach(key => {
     bindings[key] = 'setup'
@@ -601,8 +615,7 @@ export function compileScript(
   Object.keys(typeDeclaredProps).forEach(key => {
     bindings[key] = 'props'
   })
-  // TODO analyze props if user declared props via `export default {}` inside
-  // <script setup>
+  Object.assign(bindings, analyzeScriptBindings(scriptSetupAst))
 
   s.trim()
   return {
@@ -613,18 +626,10 @@ export function compileScript(
       source: filename,
       hires: true,
       includeContent: true
-    }) as unknown) as RawSourceMap
+    }) as unknown) as RawSourceMap,
+    scriptAst,
+    scriptSetupAst
   }
-}
-
-function createBabelPlugins(
-  babelParserPlugins: null | undefined | ParserPlugin[],
-  ts: boolean
-) {
-  let plugins: ParserPlugin[] = [...babelParserDefaultPlugins]
-  if (babelParserPlugins) plugins = [...babelParserPlugins]
-  if (ts) plugins.push('typescript')
-  return plugins
 }
 
 function walkDeclaration(node: Declaration, bindings: Record<string, boolean>) {
@@ -976,18 +981,41 @@ function isFunction(node: Node): node is FunctionNode {
   return /Function(?:Expression|Declaration)$|Method$/.test(node.type)
 }
 
-function getObjectExpressionKeys(node: ObjectExpression) {
+function getObjectExpressionKeys(node: ObjectExpression): string[] {
   const keys = []
   for (const prop of node.properties) {
     if (
-      prop.type === 'ObjectProperty' &&
-      !prop.computed &&
-      prop.key.type === 'Identifier'
+      (prop.type === 'ObjectProperty' || prop.type === 'ObjectMethod') &&
+      !prop.computed
     ) {
-      keys.push(prop.key.name)
+      if (prop.key.type === 'Identifier') {
+        keys.push(prop.key.name)
+      } else if (prop.key.type === 'StringLiteral') {
+        keys.push(prop.key.value)
+      }
     }
   }
   return keys
+}
+
+function getArrayExpressionKeys(node: ArrayExpression): string[] {
+  const keys = []
+  for (const element of node.elements) {
+    if (element && element.type === 'StringLiteral') {
+      keys.push(element.value)
+    }
+  }
+  return keys
+}
+
+function getObjectOrArrayExpressionKeys(property: ObjectProperty): string[] {
+  if (property.value.type === 'ArrayExpression') {
+    return getArrayExpressionKeys(property.value)
+  }
+  if (property.value.type === 'ObjectExpression') {
+    return getObjectExpressionKeys(property.value)
+  }
+  return []
 }
 
 /**
@@ -995,15 +1023,7 @@ function getObjectExpressionKeys(node: ObjectExpression) {
  * Note that `compileScriptSetup` already analyzes bindings as part of its
  * compilation process so this should only be used on single `<script>` SFCs.
  */
-export function analyzeScriptBindings(
-  _script: SFCScriptBlock
-): BindingMetadata {
-  const plugins = createBabelPlugins(null, _script.lang === 'ts')
-  const ast = parse(_script.content, {
-    plugins,
-    sourceType: 'module'
-  }).program.body
-
+function analyzeScriptBindings(ast: Statement[]): BindingMetadata {
   const bindings: BindingMetadata = {}
 
   for (const node of ast) {
@@ -1012,34 +1032,46 @@ export function analyzeScriptBindings(
       node.declaration.type === 'ObjectExpression'
     ) {
       for (const property of node.declaration.properties) {
-        // props
         if (
           property.type === 'ObjectProperty' &&
           !property.computed &&
-          property.key.type === 'Identifier' &&
-          property.key.name === 'props'
+          property.key.type === 'Identifier'
         ) {
-          // export default { props: [] }
-          if (property.value.type === 'ArrayExpression') {
-            for (const element of property.value.elements) {
-              if (element && element.type === 'StringLiteral') {
-                bindings[element.value] = 'props'
-              }
+          // props
+          if (property.key.name === 'props') {
+            // props: ['foo']
+            // props: { foo: ... }
+            for (const key of getObjectOrArrayExpressionKeys(property)) {
+              bindings[key] = 'props'
             }
           }
 
-          // export default { props: {} }
-          else if (property.value.type === 'ObjectExpression') {
+          // inject
+          else if (property.key.name === 'inject') {
+            // inject: ['foo']
+            // inject: { foo: {} }
+            for (const key of getObjectOrArrayExpressionKeys(property)) {
+              bindings[key] = 'options'
+            }
+          }
+
+          // computed & methods
+          else if (
+            property.value.type === 'ObjectExpression' &&
+            (property.key.name === 'computed' ||
+              property.key.name === 'methods')
+          ) {
+            // methods: { foo() {} }
+            // computed: { foo() {} }
             for (const key of getObjectExpressionKeys(property.value)) {
-              bindings[key] = 'props'
+              bindings[key] = 'options'
             }
           }
         }
 
-        // setup and data
+        // setup & data
         else if (
           property.type === 'ObjectMethod' &&
-          !property.computed &&
           property.key.type === 'Identifier' &&
           (property.key.name === 'setup' || property.key.name === 'data')
         ) {

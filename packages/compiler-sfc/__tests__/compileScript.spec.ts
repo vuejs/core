@@ -1,9 +1,4 @@
-import {
-  parse,
-  SFCScriptCompileOptions,
-  compileScript,
-  analyzeScriptBindings
-} from '../src'
+import { parse, SFCScriptCompileOptions, compileScript } from '../src'
 import { parse as babelParse } from '@babel/parser'
 import { babelParserDefaultPlugins } from '@vue/shared'
 
@@ -195,6 +190,7 @@ describe('SFC compile <script setup>', () => {
       )
       assertCode(content)
       expect(bindings).toStrictEqual({
+        foo: 'props',
         y: 'setup'
       })
     })
@@ -525,19 +521,18 @@ describe('SFC compile <script setup>', () => {
 
 describe('analyze script bindings', () => {
   it('recognizes props array declaration', () => {
-    const sfcScriptBlock = compile(`
+    const { bindings } = compile(`
       <script>
         export default {
           props: ['foo', 'bar']
         }
       </script>
     `)
-    const bindings = analyzeScriptBindings(sfcScriptBlock)
-    expect(bindings).toMatchObject({ foo: 'props', bar: 'props' })
+    expect(bindings).toStrictEqual({ foo: 'props', bar: 'props' })
   })
 
   it('recognizes props object declaration', () => {
-    const sfcScriptBlock = compile(`
+    const { bindings } = compile(`
       <script>
         export default {
           props: {
@@ -551,8 +546,7 @@ describe('analyze script bindings', () => {
         }
       </script>
     `)
-    const bindings = analyzeScriptBindings(sfcScriptBlock)
-    expect(bindings).toMatchObject({
+    expect(bindings).toStrictEqual({
       foo: 'props',
       bar: 'props',
       baz: 'props',
@@ -561,7 +555,7 @@ describe('analyze script bindings', () => {
   })
 
   it('recognizes setup return', () => {
-    const sfcScriptBlock = compile(`
+    const { bindings } = compile(`
       <script>
         const bar = 2
         export default {
@@ -574,12 +568,11 @@ describe('analyze script bindings', () => {
         }
       </script>
     `)
-    const bindings = analyzeScriptBindings(sfcScriptBlock)
-    expect(bindings).toMatchObject({ foo: 'setup', bar: 'setup' })
+    expect(bindings).toStrictEqual({ foo: 'setup', bar: 'setup' })
   })
 
   it('recognizes async setup return', () => {
-    const sfcScriptBlock = compile(`
+    const { bindings } = compile(`
       <script>
         const bar = 2
         export default {
@@ -592,12 +585,11 @@ describe('analyze script bindings', () => {
         }
       </script>
     `)
-    const bindings = analyzeScriptBindings(sfcScriptBlock)
-    expect(bindings).toMatchObject({ foo: 'setup', bar: 'setup' })
+    expect(bindings).toStrictEqual({ foo: 'setup', bar: 'setup' })
   })
 
   it('recognizes data return', () => {
-    const sfcScriptBlock = compile(`
+    const { bindings } = compile(`
       <script>
         const bar = 2
         export default {
@@ -610,12 +602,66 @@ describe('analyze script bindings', () => {
         }
       </script>
     `)
-    const bindings = analyzeScriptBindings(sfcScriptBlock)
-    expect(bindings).toMatchObject({ foo: 'data', bar: 'data' })
+    expect(bindings).toStrictEqual({ foo: 'data', bar: 'data' })
+  })
+
+  it('recognizes methods', () => {
+    const { bindings } = compile(`
+      <script>
+        export default {
+          methods: {
+            foo() {}
+          }
+        }
+      </script>
+    `)
+    expect(bindings).toStrictEqual({ foo: 'options' })
+  })
+
+  it('recognizes computeds', () => {
+    const { bindings } = compile(`
+      <script>
+        export default {
+          computed: {
+            foo() {},
+            bar: {
+              get() {},
+              set() {},
+            }
+          }
+        }
+      </script>
+    `)
+    expect(bindings).toStrictEqual({ foo: 'options', bar: 'options' })
+  })
+
+  it('recognizes injections array declaration', () => {
+    const { bindings } = compile(`
+      <script>
+        export default {
+          inject: ['foo', 'bar']
+        }
+      </script>
+    `)
+    expect(bindings).toStrictEqual({ foo: 'options', bar: 'options' })
+  })
+
+  it('recognizes injections object declaration', () => {
+    const { bindings } = compile(`
+      <script>
+        export default {
+          inject: {
+            foo: {},
+            bar: {},
+          }
+        }
+      </script>
+    `)
+    expect(bindings).toStrictEqual({ foo: 'options', bar: 'options' })
   })
 
   it('works for mixed bindings', () => {
-    const sfcScriptBlock = compile(`
+    const { bindings } = compile(`
       <script>
         export default {
           props: {
@@ -634,8 +680,34 @@ describe('analyze script bindings', () => {
         }
       </script>
     `)
-    const bindings = analyzeScriptBindings(sfcScriptBlock)
-    expect(bindings).toMatchObject({
+    expect(bindings).toStrictEqual({
+      foo: 'props',
+      bar: 'setup',
+      baz: 'data'
+    })
+  })
+
+  it('works for script setup', () => {
+    const { bindings } = compile(`
+      <script setup>
+        export default {
+          props: {
+            foo: String,
+          },
+          setup() {
+            return {
+              bar: null,
+            }
+          },
+          data() {
+            return {
+              baz: null
+            }
+          }
+        }
+      </script>
+    `)
+    expect(bindings).toStrictEqual({
       foo: 'props',
       bar: 'setup',
       baz: 'data'
