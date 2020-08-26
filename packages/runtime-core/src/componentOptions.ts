@@ -369,6 +369,7 @@ export let isInBeforeCreate = false
 export function applyOptions(
   instance: ComponentInternalInstance,
   options: ComponentOptions,
+  childOptions?: ComponentOptions,
   deferredData: DataFn[] = [],
   deferredWatch: ComponentWatchOptions[] = [],
   asMixin: boolean = false
@@ -384,6 +385,9 @@ export function applyOptions(
     watch: watchOptions,
     provide: provideOptions,
     inject: injectOptions,
+    // assets
+    components,
+    directives,
     // lifecycle
     beforeMount,
     mounted,
@@ -407,22 +411,36 @@ export function applyOptions(
     instance.render = render as InternalRenderFunction
   }
 
+  if (asMixin && components) {
+    applyAssets(options, childOptions!, 'components')
+  }
+  if (asMixin && directives) {
+    applyAssets(options, childOptions!, 'directives')
+  }
+
   // applyOptions is called non-as-mixin once per instance
   if (!asMixin) {
     isInBeforeCreate = true
     callSyncHook('beforeCreate', options, publicThis, globalMixins)
     isInBeforeCreate = false
     // global mixins are applied first
-    applyMixins(instance, globalMixins, deferredData, deferredWatch)
+    applyMixins(instance, globalMixins, options, deferredData, deferredWatch)
   }
 
   // extending a base component...
   if (extendsOptions) {
-    applyOptions(instance, extendsOptions, deferredData, deferredWatch, true)
+    applyOptions(
+      instance,
+      extendsOptions,
+      options,
+      deferredData,
+      deferredWatch,
+      true
+    )
   }
   // local mixins
   if (mixins) {
-    applyMixins(instance, mixins, deferredData, deferredWatch)
+    applyMixins(instance, mixins, options, deferredData, deferredWatch)
   }
 
   const checkDuplicateProperties = __DEV__ ? createDuplicateChecker() : null
@@ -644,11 +662,33 @@ function callHookFromMixins(
 function applyMixins(
   instance: ComponentInternalInstance,
   mixins: ComponentOptions[],
+  options: ComponentOptions,
   deferredData: DataFn[],
   deferredWatch: ComponentWatchOptions[]
 ) {
   for (let i = 0; i < mixins.length; i++) {
-    applyOptions(instance, mixins[i], deferredData, deferredWatch, true)
+    applyOptions(
+      instance,
+      mixins[i],
+      options,
+      deferredData,
+      deferredWatch,
+      true
+    )
+  }
+}
+
+function applyAssets(
+  parentOptions: ComponentOptions,
+  childOptions: ComponentOptions,
+  assetsType: 'components' | 'directives'
+) {
+  const res = Object.create(parentOptions[assetsType] || null)
+  const childAsset = childOptions[assetsType]
+  if (childAsset) {
+    childOptions[assetsType] = extend(res, childAsset)
+  } else {
+    childOptions[assetsType] = res
   }
 }
 
