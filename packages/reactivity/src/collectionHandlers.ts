@@ -59,7 +59,9 @@ function has(this: CollectionTypes, key: unknown, isReadonly = false): boolean {
     !isReadonly && track(rawTarget, TrackOpTypes.HAS, key)
   }
   !isReadonly && track(rawTarget, TrackOpTypes.HAS, rawKey)
-  return target.has(key) || target.has(rawKey)
+  return key === rawKey
+    ? target.has(key)
+    : target.has(key) || target.has(rawKey)
 }
 
 function size(target: IterableCollections, isReadonly = false) {
