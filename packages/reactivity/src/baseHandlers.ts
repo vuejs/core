@@ -15,6 +15,7 @@ import {
   isSymbol,
   hasChanged,
   isArray,
+  isIntegerKey,
   extend
 } from '@vue/shared'
 import { isRef } from './ref'
@@ -126,7 +127,10 @@ function createSetter(shallow = false) {
       // in shallow mode, objects are set as-is regardless of reactive or not
     }
 
-    const hadKey = hasOwn(target, key)
+    const hadKey =
+      isArray(target) && isIntegerKey(key)
+        ? Number(key) < target.length
+        : hasOwn(target, key)
     const result = Reflect.set(target, key, value, receiver)
     // don't trigger if target is something up in the prototype chain of original
     if (target === toRaw(receiver)) {

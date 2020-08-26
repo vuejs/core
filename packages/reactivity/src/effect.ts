@@ -1,5 +1,5 @@
 import { TrackOpTypes, TriggerOpTypes } from './operations'
-import { EMPTY_OBJ, isArray } from '@vue/shared'
+import { EMPTY_OBJ, isArray, isIntegerKey } from '@vue/shared'
 
 // The main WeakMap that stores {target -> key -> dep} connections.
 // Conceptually, it's easier to think of a dependency as a Dep class
@@ -203,7 +203,8 @@ export function trigger(
     }
     // also run for iteration key on ADD | DELETE | Map.SET
     const isAddOrDelete =
-      type === TriggerOpTypes.ADD ||
+      (type === TriggerOpTypes.ADD &&
+        (!isArray(target) || isIntegerKey(key))) ||
       (type === TriggerOpTypes.DELETE && !isArray(target))
     if (
       isAddOrDelete ||
