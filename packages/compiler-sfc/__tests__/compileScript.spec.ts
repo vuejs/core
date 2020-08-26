@@ -523,7 +523,7 @@ describe('SFC compile <script setup>', () => {
   })
 })
 
-describe('script bindings optimizations', () => {
+describe('analyze script bindings', () => {
   it(`recognizes props as strings array`, () => {
     const sfcScriptBlock = compile(`
       <script>
