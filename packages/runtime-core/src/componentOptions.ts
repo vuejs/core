@@ -384,6 +384,9 @@ export function applyOptions(
     watch: watchOptions,
     provide: provideOptions,
     inject: injectOptions,
+    // assets
+    components,
+    directives,
     // lifecycle
     beforeMount,
     mounted,
@@ -565,6 +568,32 @@ export function applyOptions(
       : provideOptions
     for (const key in provides) {
       provide(key, provides[key])
+    }
+  }
+
+  // asset options.
+  // To reduce memory usage, only components with mixins or extends will have
+  // resolved asset registry attached to instance.
+  if (asMixin) {
+    if (components) {
+      extend(
+        instance.components ||
+          (instance.components = extend(
+            {},
+            (instance.type as ComponentOptions).components
+          ) as Record<string, ConcreteComponent>),
+        components
+      )
+    }
+    if (directives) {
+      extend(
+        instance.directives ||
+          (instance.directives = extend(
+            {},
+            (instance.type as ComponentOptions).directives
+          )),
+        directives
+      )
     }
   }
 
