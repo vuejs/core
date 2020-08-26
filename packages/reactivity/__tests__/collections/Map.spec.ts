@@ -436,5 +436,27 @@ describe('reactivity/collections', () => {
       map.set('b', 1)
       expect(spy).toHaveBeenCalledTimes(3)
     })
+
+    it('should trigger Map custom has correctly', () => {
+      const map = new Map()
+      const spy = jest.fn()
+      map.has = spy
+
+      let proxy = reactive(map)
+      proxy.has('k')
+
+      expect(spy).toBeCalledTimes(1)
+    })
+
+    it('should trigger WeakMap custom has correctly', () => {
+      const map = new WeakMap()
+      const spy = jest.fn()
+      map.has = spy
+
+      let proxy = reactive(map)
+      proxy.has(reactive({}))
+
+      expect(spy).toBeCalledTimes(2)
+    })
   })
 })
