@@ -437,7 +437,7 @@ describe('reactivity/collections', () => {
       expect(spy).toHaveBeenCalledTimes(3)
     })
 
-    it('should trigger Map custom has correctly', () => {
+    it('should trigger has only once for non-reactive keys', () => {
       const map = new Map()
       const spy = jest.fn()
       map.has = spy
@@ -446,17 +446,6 @@ describe('reactivity/collections', () => {
       proxy.has('k')
 
       expect(spy).toBeCalledTimes(1)
-    })
-
-    it('should trigger WeakMap custom has correctly', () => {
-      const map = new WeakMap()
-      const spy = jest.fn()
-      map.has = spy
-
-      let proxy = reactive(map)
-      proxy.has(reactive({}))
-
-      expect(spy).toBeCalledTimes(2)
     })
   })
 })
