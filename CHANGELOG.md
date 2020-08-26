@@ -1,3 +1,20 @@
+# [3.0.0-rc.9](https://github.com/vuejs/vue-next/compare/v3.0.0-rc.8...v3.0.0-rc.9) (2020-08-26)
+
+
+### Bug Fixes
+
+* **runtime-core:** class and style should be properly normalized in cloneVNode ([#1967](https://github.com/vuejs/vue-next/issues/1967)) ([9153fc2](https://github.com/vuejs/vue-next/commit/9153fc2d8a5c9d24d79161586c70840ae7b84b8b)), closes [#1964](https://github.com/vuejs/vue-next/issues/1964)
+* **runtime-core:** fix resolving assets from mixins and extends ([0cb7f7f](https://github.com/vuejs/vue-next/commit/0cb7f7f880961162a6ca0b51bf308fbf83160eb5)), closes [#1963](https://github.com/vuejs/vue-next/issues/1963)
+* **runtime-core:** properly call lifecycle hooks in chained mixins & extends ([#1974](https://github.com/vuejs/vue-next/issues/1974)) ([6df0e73](https://github.com/vuejs/vue-next/commit/6df0e738cb9ae6db0c0e9c3c70d81147521bfe7f)), closes [#1973](https://github.com/vuejs/vue-next/issues/1973)
+
+
+### Performance Improvements
+
+* **reactivity:** add existing index or non-integer prop on Array should not trigger length dependency ([#1969](https://github.com/vuejs/vue-next/issues/1969)) ([d5c4f6e](https://github.com/vuejs/vue-next/commit/d5c4f6ed4d6feea9be56dcc0859592f03b6a5d9a))
+* **reactivity:** avoid triggering Map.has twice on non-reactive keys ([#1972](https://github.com/vuejs/vue-next/issues/1972)) ([97bc30e](https://github.com/vuejs/vue-next/commit/97bc30edadb52e57e29b3c6e36c04ec71916103c))
+
+
+
 # [3.0.0-rc.8](https://github.com/vuejs/vue-next/compare/v3.0.0-rc.7...v3.0.0-rc.8) (2020-08-25)
 
 
