@@ -202,17 +202,17 @@ export function trigger(
       add(depsMap.get(key))
     }
     // also run for iteration key on ADD | DELETE | Map.SET
-    const isAddOrDelete =
+    const shouldTriggerIteration =
       (type === TriggerOpTypes.ADD &&
         (!isArray(target) || isIntegerKey(key))) ||
       (type === TriggerOpTypes.DELETE && !isArray(target))
     if (
-      isAddOrDelete ||
+      shouldTriggerIteration ||
       (type === TriggerOpTypes.SET && target instanceof Map)
     ) {
       add(depsMap.get(isArray(target) ? 'length' : ITERATE_KEY))
     }
-    if (isAddOrDelete && target instanceof Map) {
+    if (shouldTriggerIteration && target instanceof Map) {
       add(depsMap.get(MAP_KEY_ITERATE_KEY))
     }
   }
