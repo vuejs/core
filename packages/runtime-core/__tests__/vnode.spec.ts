@@ -265,6 +265,54 @@ describe('vnode', () => {
     setCurrentRenderingInstance(null)
   })
 
+  test('cloneVNode class normalization', () => {
+    const vnode = createVNode('div', { class: 'a' })
+    const expectedProps = {
+      class: 'a b'
+    }
+    expect(cloneVNode(vnode, { class: 'b' }).props).toMatchObject(expectedProps)
+    expect(cloneVNode(vnode, { class: ['b'] }).props).toMatchObject(
+      expectedProps
+    )
+    expect(cloneVNode(vnode, { class: { b: true } }).props).toMatchObject(
+      expectedProps
+    )
+    expect(cloneVNode(vnode, { class: [{ b: true }] }).props).toMatchObject(
+      expectedProps
+    )
+  })
+
+  test('cloneVNode style normalization', () => {
+    const vnode = createVNode('div', { style: 'color: red;' })
+    const expectedProps = {
+      style: {
+        color: 'blue',
+        width: '300px'
+      }
+    }
+    expect(
+      cloneVNode(vnode, { style: 'color: blue; width: 300px;' }).props
+    ).toMatchObject(expectedProps)
+    expect(
+      cloneVNode(vnode, {
+        style: {
+          color: 'blue',
+          width: '300px'
+        }
+      }).props
+    ).toMatchObject(expectedProps)
+    expect(
+      cloneVNode(vnode, {
+        style: [
+          {
+            color: 'blue',
+            width: '300px'
+          }
+        ]
+      }).props
+    ).toMatchObject(expectedProps)
+  })
+
   describe('mergeProps', () => {
     test('class', () => {
       let props1: Data = { class: 'c' }
