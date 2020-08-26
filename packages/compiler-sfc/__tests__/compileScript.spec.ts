@@ -560,11 +560,27 @@ describe('script bindings optimizations', () => {
     })
   })
 
-  it(`recognizes synchronous setup return`, () => {
+  it(`recognizes setup return`, () => {
     const sfcScriptBlock = compile(`
       <script>
         export default {
           setup() {
+            return {
+              foo: 1
+            }
+          }
+        }
+      </script>
+    `)
+    const bindings = analyzeScriptBindings(sfcScriptBlock)
+    expect(bindings).toMatchObject({ foo: 'setup' })
+  })
+
+  it(`recognizes async setup return`, () => {
+    const sfcScriptBlock = compile(`
+      <script>
+        export default {
+          async setup() {
             return {
               foo: 1
             }
