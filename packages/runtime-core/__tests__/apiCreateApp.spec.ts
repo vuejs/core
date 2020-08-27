@@ -460,6 +460,27 @@ describe('api: createApp', () => {
     expect(merged!).toBe('global,extends,mixin,local')
   })
 
+  test('config without optionMergeStrategies', () => {
+    let merged: string
+    const App = defineComponent({
+      render() {},
+      mixins: [{ foo: 'mixin' }],
+      extends: { foo: 'extends' },
+      foo: 'local',
+      beforeCreate() {
+        merged = this.$options.foo
+      }
+    })
+
+    const app = createApp(App)
+    app.mixin({
+      foo: 'global'
+    })
+
+    app.mount(nodeOps.createElement('div'))
+    expect(merged!).toBe('local')
+  })
+
   test('config.globalProperties', () => {
     const app = createApp({
       render() {
