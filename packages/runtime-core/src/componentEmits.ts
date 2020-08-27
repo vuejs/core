@@ -138,9 +138,13 @@ function normalizeEmitsOptions(
 // both considered matched listeners.
 export function isEmitListener(comp: ConcreteComponent, key: string): boolean {
   let emits: ObjectEmitsOptions | undefined
-  if (!isOn(key) || !(emits = normalizeEmitsOptions(comp))) {
+  if (isOn(key)) {
+    return true
+  }
+  if (!(emits = normalizeEmitsOptions(comp))) {
     return false
   }
+
   key = key.replace(/Once$/, '')
   return (
     hasOwn(emits, key[2].toLowerCase() + key.slice(3)) ||
