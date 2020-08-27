@@ -13,8 +13,8 @@ import {
   onBeforeUnmount,
   injectHook,
   onUnmounted,
-  onBeforeMount,
-  onBeforeUpdate
+  onMounted,
+  onUpdated
 } from '../apiLifecycle'
 import {
   isString,
@@ -187,8 +187,8 @@ const KeepAliveImpl = {
         cache.set(pendingCacheKey, instance.subTree)
       }
     }
-    onBeforeMount(cacheSubtree)
-    onBeforeUpdate(cacheSubtree)
+    onMounted(cacheSubtree)
+    onUpdated(cacheSubtree)
 
     onBeforeUnmount(() => {
       cache.forEach(cached => {
