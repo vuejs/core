@@ -24,7 +24,7 @@ import { Slots, initSlots, InternalSlots } from './componentSlots'
 import { warn } from './warning'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import { AppContext, createAppContext, AppConfig } from './apiCreateApp'
-import { validateDirectiveName } from './directives'
+import { Directive, validateDirectiveName } from './directives'
 import { applyOptions, ComponentOptions } from './componentOptions'
 import {
   EmitsOptions,
@@ -221,6 +221,17 @@ export interface ComponentInternalInstance {
    */
   renderCache: (Function | VNode)[]
 
+  /**
+   * Resolved component registry, only for components with mixins or extends
+   * @internal
+   */
+  components: Record<string, ConcreteComponent> | null
+  /**
+   * Resolved directive registry, only for components with mixins or extends
+   * @internal
+   */
+  directives: Record<string, Directive> | null
+
   // the rest are only for stateful components ---------------------------------
 
   /**
@@ -258,6 +269,11 @@ export interface ComponentInternalInstance {
    * @internal
    */
   setupState: Data
+  /**
+   * devtools access to additional info
+   * @internal
+   */
+  devtoolsRawSetupState?: any
   /**
    * @internal
    */
@@ -366,6 +382,10 @@ export function createComponentInstance(
     provides: parent ? parent.provides : Object.create(appContext.provides),
     accessCache: null!,
     renderCache: [],
+
+    // local resovled assets
+    components: null,
+    directives: null,
 
     // state
     ctx: EMPTY_OBJ,
@@ -549,6 +569,9 @@ export function handleSetupResult(
     }
     // setup returned bindings.
     // assuming a render function compiled from template is present.
+    if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+      instance.devtoolsRawSetupState = setupResult
+    }
     instance.setupState = proxyRefs(setupResult)
     if (__DEV__) {
       exposeSetupStateOnRenderContext(instance)
@@ -725,7 +748,8 @@ export function formatComponentName(
     }
     name =
       inferFromRegistry(
-        (instance.parent.type as ComponentOptions).components
+        instance.components ||
+          (instance.parent.type as ComponentOptions).components
       ) || inferFromRegistry(instance.appContext.components)
   }
 

@@ -81,6 +81,9 @@ export const toRawType = (value: unknown): string => {
 export const isPlainObject = (val: unknown): val is object =>
   toTypeString(val) === '[object Object]'
 
+export const isIntegerKey = (key: unknown) =>
+  isString(key) && key[0] !== '-' && '' + parseInt(key, 10) === key
+
 export const isReservedProp = /*#__PURE__*/ makeMap(
   'key,ref,' +
     'onVnodeBeforeMount,onVnodeMounted,' +

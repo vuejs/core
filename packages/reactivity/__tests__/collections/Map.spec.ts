@@ -436,5 +436,16 @@ describe('reactivity/collections', () => {
       map.set('b', 1)
       expect(spy).toHaveBeenCalledTimes(3)
     })
+
+    it('should trigger has only once for non-reactive keys', () => {
+      const map = new Map()
+      const spy = jest.fn()
+      map.has = spy
+
+      let proxy = reactive(map)
+      proxy.has('k')
+
+      expect(spy).toBeCalledTimes(1)
+    })
   })
 })

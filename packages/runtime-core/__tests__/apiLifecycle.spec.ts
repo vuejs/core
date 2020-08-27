@@ -356,6 +356,7 @@ describe('api: lifecycle hooks', () => {
       newValue: 2
     })
 
+    // @ts-ignore
     delete obj.bar
     await nextTick()
     expect(onTrigger).toHaveBeenCalledTimes(2)

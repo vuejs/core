@@ -28,7 +28,10 @@ export function patchDOMProp(
     // store value as _value as well since
     // non-string values will be stringified.
     el._value = value
-    el.value = value == null ? '' : value
+    const newValue = value == null ? '' : value
+    if (el.value !== newValue) {
+      el.value = newValue
+    }
     return
   }
   if (value === '' && typeof el[key] === 'boolean') {

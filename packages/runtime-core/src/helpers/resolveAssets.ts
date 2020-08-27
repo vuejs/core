@@ -83,7 +83,8 @@ function resolveAsset(
 
     const res =
       // local registration
-      resolve((Component as ComponentOptions)[type], name) ||
+      // check instance[type] first for components with mixin or extends.
+      resolve(instance[type] || (Component as ComponentOptions)[type], name) ||
       // global registration
       resolve(instance.appContext[type], name)
     if (__DEV__ && warnMissing && !res) {

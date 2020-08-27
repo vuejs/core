@@ -29,6 +29,7 @@ beforeEach(() => {
 
 describe('vModel', () => {
   it('should work with text input', async () => {
+    const manualListener = jest.fn()
     const component = defineComponent({
       data() {
         return { value: null }
@@ -37,7 +38,10 @@ describe('vModel', () => {
         return [
           withVModel(
             h('input', {
-              'onUpdate:modelValue': setValue.bind(this)
+              'onUpdate:modelValue': setValue.bind(this),
+              onInput: () => {
+                manualListener(data.value)
+              }
             }),
             this.value
           )
@@ -54,6 +58,8 @@ describe('vModel', () => {
     triggerEvent('input', input)
     await nextTick()
     expect(data.value).toEqual('foo')
+    // #1931
+    expect(manualListener).toHaveBeenCalledWith('foo')
 
     data.value = 'bar'
     await nextTick()

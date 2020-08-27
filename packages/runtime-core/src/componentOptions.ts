@@ -384,6 +384,9 @@ export function applyOptions(
     watch: watchOptions,
     provide: provideOptions,
     inject: injectOptions,
+    // assets
+    components,
+    directives,
     // lifecycle
     beforeMount,
     mounted,
@@ -485,23 +488,12 @@ export function applyOptions(
     }
   }
 
-  if (dataOptions) {
-    if (__DEV__ && !isFunction(dataOptions)) {
-      warn(
-        `The data option must be a function. ` +
-          `Plain object usage is no longer supported.`
-      )
-    }
-
-    if (asMixin) {
-      deferredData.push(dataOptions as DataFn)
-    } else {
-      resolveData(instance, dataOptions, publicThis)
-    }
-  }
   if (!asMixin) {
     if (deferredData.length) {
       deferredData.forEach(dataFn => resolveData(instance, dataFn, publicThis))
+    }
+    if (dataOptions) {
+      resolveData(instance, dataOptions, publicThis)
     }
     if (__DEV__) {
       const rawData = toRaw(instance.data)
@@ -518,6 +510,8 @@ export function applyOptions(
         }
       }
     }
+  } else if (dataOptions) {
+    deferredData.push(dataOptions as DataFn)
   }
 
   if (computedOptions) {
@@ -577,6 +571,32 @@ export function applyOptions(
     }
   }
 
+  // asset options.
+  // To reduce memory usage, only components with mixins or extends will have
+  // resolved asset registry attached to instance.
+  if (asMixin) {
+    if (components) {
+      extend(
+        instance.components ||
+          (instance.components = extend(
+            {},
+            (instance.type as ComponentOptions).components
+          ) as Record<string, ConcreteComponent>),
+        components
+      )
+    }
+    if (directives) {
+      extend(
+        instance.directives ||
+          (instance.directives = extend(
+            {},
+            (instance.type as ComponentOptions).directives
+          )),
+        directives
+      )
+    }
+  }
+
   // lifecycle options
   if (!asMixin) {
     callSyncHook('created', options, publicThis, globalMixins)
@@ -623,11 +643,11 @@ function callSyncHook(
   globalMixins: ComponentOptions[]
 ) {
   callHookFromMixins(name, globalMixins, ctx)
-  const baseHook = options.extends && options.extends[name]
-  if (baseHook) {
-    baseHook.call(ctx)
+
+  const { extends: base, mixins } = options
+  if (base) {
+    callHookFromExtends(name, base, ctx)
   }
-  const mixins = options.mixins
   if (mixins) {
     callHookFromMixins(name, mixins, ctx)
   }
@@ -637,12 +657,30 @@ function callSyncHook(
   }
 }
 
+function callHookFromExtends(
+  name: 'beforeCreate' | 'created',
+  base: ComponentOptions,
+  ctx: ComponentPublicInstance
+) {
+  if (base.extends) {
+    callHookFromExtends(name, base.extends, ctx)
+  }
+  const baseHook = base[name]
+  if (baseHook) {
+    baseHook.call(ctx)
+  }
+}
+
 function callHookFromMixins(
   name: 'beforeCreate' | 'created',
   mixins: ComponentOptions[],
   ctx: ComponentPublicInstance
 ) {
   for (let i = 0; i < mixins.length; i++) {
+    const chainedMixins = mixins[i].mixins
+    if (chainedMixins) {
+      callHookFromMixins(name, chainedMixins, ctx)
+    }
     const fn = mixins[i][name]
     if (fn) {
       fn.call(ctx)
@@ -666,6 +704,12 @@ function resolveData(
   dataFn: DataFn,
   publicThis: ComponentPublicInstance
 ) {
+  if (__DEV__ && !isFunction(dataFn)) {
+    warn(
+      `The data option must be a function. ` +
+        `Plain object usage is no longer supported.`
+    )
+  }
   const data = dataFn.call(publicThis, publicThis)
   if (__DEV__ && isPromise(data)) {
     warn(

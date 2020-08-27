@@ -107,7 +107,7 @@ export type ComponentPublicInstanceConstructor<
   __isFragment?: never
   __isTeleport?: never
   __isSuspense?: never
-  new (): T
+  new (...args: any[]): T
 }
 
 export type CreateComponentPublicInstance<
