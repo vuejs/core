@@ -121,7 +121,7 @@ export function initProps(
   setFullProps(instance, rawProps, props, attrs)
   // validation
   if (__DEV__) {
-    validateProps(props, instance.type)
+    validateProps(instance, props, instance.type)
   }
 
   if (isStateful) {
@@ -151,7 +151,7 @@ export function updateProps(
     vnode: { patchFlag }
   } = instance
   const rawCurrentProps = toRaw(props)
-  const [options] = normalizePropsOptions(instance.type)
+  const [options] = normalizePropsOptions(instance, instance.type)
 
   if (
     // always force full diff if hmr is enabled
@@ -236,7 +236,7 @@ export function updateProps(
   trigger(instance, TriggerOpTypes.SET, '$attrs')
 
   if (__DEV__ && rawProps) {
-    validateProps(props, instance.type)
+    validateProps(instance, props, instance.type)
   }
 }
 
@@ -246,7 +246,7 @@ function setFullProps(
   props: Data,
   attrs: Data
 ) {
-  const [options, needCastKeys] = normalizePropsOptions(instance.type)
+  const [options, needCastKeys] = normalizePropsOptions(instance, instance.type)
   if (rawProps) {
     for (const key in rawProps) {
       const value = rawProps[key]
@@ -315,7 +315,9 @@ function resolvePropValue(
 }
 
 export function normalizePropsOptions(
-  comp: ConcreteComponent
+  instance: ComponentInternalInstance,
+  comp: ConcreteComponent,
+  asMixins: boolean = false
 ): NormalizedPropsOptions | [] {
   if (comp.__props) {
     return comp.__props
@@ -329,10 +331,19 @@ export function normalizePropsOptions(
   let hasExtends = false
   if (__FEATURE_OPTIONS_API__ && !isFunction(comp)) {
     const extendProps = (raw: ComponentOptions) => {
-      const [props, keys] = normalizePropsOptions(raw)
+      const [props, keys] = normalizePropsOptions(instance, raw, true)
       extend(normalized, props)
       if (keys) needCastKeys.push(...keys)
     }
+    // apply global mixins props first
+    if (!asMixins) {
+      const globalMixins = instance.appContext.mixins
+      if (globalMixins.length) {
+        hasExtends = true
+        globalMixins.forEach(extendProps)
+      }
+    }
+
     if (comp.extends) {
       hasExtends = true
       extendProps(comp.extends)
@@ -416,9 +427,13 @@ function getTypeIndex(
 /**
  * dev only
  */
-function validateProps(props: Data, comp: ConcreteComponent) {
+function validateProps(
+  instance: ComponentInternalInstance,
+  props: Data,
+  comp: ConcreteComponent
+) {
   const rawValues = toRaw(props)
-  const options = normalizePropsOptions(comp)[0]
+  const options = normalizePropsOptions(instance, comp)[0]
   for (const key in options) {
     let opt = options[key]
     if (opt == null) continue

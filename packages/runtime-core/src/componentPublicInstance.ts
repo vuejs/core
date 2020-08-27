@@ -250,7 +250,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       } else if (
         // only cache other properties when instance has declared (thus stable)
         // props
-        (normalizedProps = normalizePropsOptions(type)[0]) &&
+        (normalizedProps = normalizePropsOptions(instance, type)[0]) &&
         hasOwn(normalizedProps, key)
       ) {
         accessCache![key] = AccessTypes.PROPS
@@ -352,18 +352,14 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     return true
   },
 
-  has(
-    {
-      _: { data, setupState, accessCache, ctx, type, appContext }
-    }: ComponentRenderContext,
-    key: string
-  ) {
+  has({ _: instance }: ComponentRenderContext, key: string) {
+    const { data, setupState, accessCache, ctx, type, appContext } = instance
     let normalizedProps
     return (
       accessCache![key] !== undefined ||
       (data !== EMPTY_OBJ && hasOwn(data, key)) ||
       (setupState !== EMPTY_OBJ && hasOwn(setupState, key)) ||
-      ((normalizedProps = normalizePropsOptions(type)[0]) &&
+      ((normalizedProps = normalizePropsOptions(instance, type)[0]) &&
         hasOwn(normalizedProps, key)) ||
       hasOwn(ctx, key) ||
       hasOwn(publicPropertiesMap, key) ||
@@ -451,7 +447,7 @@ export function exposePropsOnRenderContext(
   instance: ComponentInternalInstance
 ) {
   const { ctx, type } = instance
-  const propsOptions = normalizePropsOptions(type)[0]
+  const propsOptions = normalizePropsOptions(instance, type)[0]
   if (propsOptions) {
     Object.keys(propsOptions).forEach(key => {
       Object.defineProperty(ctx, key, {

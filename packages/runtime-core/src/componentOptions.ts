@@ -431,7 +431,7 @@ export function applyOptions(
   const checkDuplicateProperties = __DEV__ ? createDuplicateChecker() : null
 
   if (__DEV__) {
-    const propsOptions = normalizePropsOptions(options)[0]
+    const propsOptions = normalizePropsOptions(instance, options)[0]
     if (propsOptions) {
       for (const key in propsOptions) {
         checkDuplicateProperties!(OptionTypes.PROPS, key)
