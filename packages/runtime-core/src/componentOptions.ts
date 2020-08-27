@@ -783,7 +783,7 @@ function mergeOptions(to: any, from: any, instance: ComponentInternalInstance) {
   for (const key in from) {
     if (strats && hasOwn(strats, key)) {
       to[key] = strats[key](to[key], from[key], instance.proxy, key)
-    } else if (!hasOwn(to, key)) {
+    } else {
       to[key] = from[key]
     }
   }
