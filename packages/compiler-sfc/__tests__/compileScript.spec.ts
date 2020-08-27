@@ -519,7 +519,7 @@ describe('SFC compile <script setup>', () => {
   })
 })
 
-describe('analyze script bindings', () => {
+describe('SFC analyze <script> bindings', () => {
   it('recognizes props array declaration', () => {
     const { bindings } = compile(`
       <script>
