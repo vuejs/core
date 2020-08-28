@@ -49,7 +49,7 @@ const arrayInstrumentations: Record<string, Function> = {}
   }
 })
 
-function createGetter(isReadonly = false, shallow = false) {
+function createGetter(isReadonly = false, isShallow = false) {
   return function get(target: Target, key: string | symbol, receiver: object) {
     if (key === ReactiveFlags.IS_REACTIVE) {
       return !isReadonly
@@ -82,7 +82,7 @@ function createGetter(isReadonly = false, shallow = false) {
       track(target, TrackOpTypes.GET, key)
     }
 
-    if (shallow) {
+    if (isShallow) {
       return res
     }
 
@@ -106,7 +106,7 @@ function createGetter(isReadonly = false, shallow = false) {
 const set = /*#__PURE__*/ createSetter()
 const shallowSet = /*#__PURE__*/ createSetter(true)
 
-function createSetter(shallow = false) {
+function createSetter(isShallow = false) {
   return function set(
     target: object,
     key: string | symbol,
@@ -114,7 +114,7 @@ function createSetter(shallow = false) {
     receiver: object
   ): boolean {
     const oldValue = (target as any)[key]
-    if (!shallow) {
+    if (!isShallow) {
       value = toRaw(value)
       if (!isArray(target) && isRef(oldValue) && !isRef(value)) {
         oldValue.value = value
@@ -151,17 +151,27 @@ function deleteProperty(target: object, key: string | symbol): boolean {
   return result
 }
 
-function has(target: object, key: string | symbol): boolean {
-  const result = Reflect.has(target, key)
-  if (!isSymbol(key) || !builtInSymbols.has(key)) {
-    track(target, TrackOpTypes.HAS, key)
+const has = /*#__PURE__*/ createHas()
+const readonlyHas = /*#__PURE__*/ createHas(true)
+
+function createHas(isReadonly = false) {
+  return function has(target: object, key: string | symbol): boolean {
+    const result = Reflect.has(target, key)
+    if (!isSymbol(key) || !builtInSymbols.has(key)) {
+      !isReadonly && track(target, TrackOpTypes.HAS, key)
+    }
+    return result
   }
-  return result
 }
 
-function ownKeys(target: object): (string | number | symbol)[] {
-  track(target, TrackOpTypes.ITERATE, ITERATE_KEY)
-  return Reflect.ownKeys(target)
+const ownKeys = /*#__PURE__*/ createOwnKeys()
+const readonlyOwnKeys = /*#__PURE__*/ createOwnKeys(true)
+
+function createOwnKeys(isReadonly = false) {
+  return function ownKeys(target: object): (string | number | symbol)[] {
+    !isReadonly && track(target, TrackOpTypes.ITERATE, ITERATE_KEY)
+    return Reflect.ownKeys(target)
+  }
 }
 
 export const mutableHandlers: ProxyHandler<object> = {
@@ -174,8 +184,8 @@ export const mutableHandlers: ProxyHandler<object> = {
 
 export const readonlyHandlers: ProxyHandler<object> = {
   get: readonlyGet,
-  has,
-  ownKeys,
+  has: readonlyHas,
+  ownKeys: readonlyOwnKeys,
   set(target, key) {
     if (__DEV__) {
       console.warn(
