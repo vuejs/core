@@ -49,7 +49,7 @@ const arrayInstrumentations: Record<string, Function> = {}
   }
 })
 
-function createGetter(isReadonly = false, shallow = false) {
+function createGetter(isReadonly = false, isShallow = false) {
   return function get(target: Target, key: string | symbol, receiver: object) {
     if (key === ReactiveFlags.IS_REACTIVE) {
       return !isReadonly
@@ -82,7 +82,7 @@ function createGetter(isReadonly = false, shallow = false) {
       track(target, TrackOpTypes.GET, key)
     }
 
-    if (shallow) {
+    if (isShallow) {
       return res
     }
 
@@ -106,7 +106,7 @@ function createGetter(isReadonly = false, shallow = false) {
 const set = /*#__PURE__*/ createSetter()
 const shallowSet = /*#__PURE__*/ createSetter(true)
 
-function createSetter(shallow = false) {
+function createSetter(isShallow = false) {
   return function set(
     target: object,
     key: string | symbol,
@@ -114,7 +114,7 @@ function createSetter(shallow = false) {
     receiver: object
   ): boolean {
     const oldValue = (target as any)[key]
-    if (!shallow) {
+    if (!isShallow) {
       value = toRaw(value)
       if (!isArray(target) && isRef(oldValue) && !isRef(value)) {
         oldValue.value = value
