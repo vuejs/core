@@ -74,7 +74,9 @@ import { VNodeChild } from './vnode'
  */
 export interface ComponentCustomOptions {}
 
-export type RenderFunction = () => VNodeChild
+export type RenderFunction = (
+  context: ComponentInternalInstance | object
+) => VNodeChild
 
 export interface ComponentOptionsBase<
   Props,
