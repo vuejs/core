@@ -124,6 +124,8 @@ describe('reactivity/reactive/Array', () => {
     expect(fn).toHaveBeenCalledTimes(1)
     observed[-1] = 'x'
     expect(fn).toHaveBeenCalledTimes(1)
+    observed[NaN] = 'x'
+    expect(fn).toHaveBeenCalledTimes(1)
   })
 
   describe('Array methods w/ refs', () => {
