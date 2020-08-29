@@ -864,9 +864,9 @@
   integrity sha512-boy4xPNEtiw6N3abRhBi/e7hNvy3Tt8E9ZRAQrwAGzoCGZS/1wjo9KY7JHhnfnEsG5wSjDbymCozUM9a3ea7OQ==
 
 "@types/puppeteer@^2.0.0":
-  version "2.1.1"
-  resolved "https://registry.yarnpkg.com/@types/puppeteer/-/puppeteer-2.1.1.tgz#dfbec9de3db4328ec9b66ab2cbb1875033bc22f6"
-  integrity sha512-FqPZvUtnpTGrqbHvPUn76pvVcBPEVEqZftrdOjr6YRkaaxkjKQ8dQLNaQBjER7Lvd1Q6+0R0XR+N3tYGWBSzNw==
+  version "2.1.2"
+  resolved "https://registry.yarnpkg.com/@types/puppeteer/-/puppeteer-2.1.2.tgz#75b870c7f8fe4bdf76c3bb30c997c3904611d839"
+  integrity sha512-rNPCKZ+PuHR11au5Qu36TK63i9ppcdvREyEUd45jGc9Yj4AsoLpiCm22ebwDDRSzNc1N2+XOmaa5i6ZSW8FOMQ==
   dependencies:
     "@types/node" "*"
 
