@@ -65,7 +65,7 @@ interface Constructor<P = any> {
   __isFragment?: never
   __isTeleport?: never
   __isSuspense?: never
-  new (): { $props: P }
+  new (...args: any[]): { $props: P }
 }
 
 // The following is a series of overloads for providing props validation of

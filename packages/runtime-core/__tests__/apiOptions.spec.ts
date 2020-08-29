@@ -446,7 +446,7 @@ describe('api: options', () => {
         calls.push('mixinA created')
         expect(this.a).toBe(1)
         expect(this.b).toBe(2)
-        expect(this.c).toBe(3)
+        expect(this.c).toBe(4)
       },
       mounted() {
         calls.push('mixinA mounted')
@@ -468,7 +468,7 @@ describe('api: options', () => {
         expect(this.a).toBe(1)
         expect(this.b).toBe(2)
         expect(this.bP).toBeUndefined()
-        expect(this.c).toBe(3)
+        expect(this.c).toBe(4)
         expect(this.cP1).toBeUndefined()
       },
       mounted() {
@@ -484,7 +484,8 @@ describe('api: options', () => {
       },
       created() {
         calls.push('mixinC created')
-        expect(this.c).toBe(3)
+        // component data() should overwrite mixin field with same key
+        expect(this.c).toBe(4)
         expect(this.cP1).toBeUndefined()
       },
       mounted() {
@@ -498,6 +499,7 @@ describe('api: options', () => {
       mixins: [defineComponent(mixinA), defineComponent(mixinB), mixinC],
       data() {
         return {
+          c: 4,
           z: 4
         }
       },
@@ -506,7 +508,7 @@ describe('api: options', () => {
         expect(this.a).toBe(1)
         expect(this.b).toBe(2)
         expect(this.bP).toBeUndefined()
-        expect(this.c).toBe(3)
+        expect(this.c).toBe(4)
         expect(this.cP2).toBeUndefined()
         expect(this.z).toBe(4)
       },
@@ -517,7 +519,7 @@ describe('api: options', () => {
         return `${this.a}${this.b}${this.c}`
       }
     })
-    expect(renderToString(h(Comp))).toBe(`123`)
+    expect(renderToString(h(Comp))).toBe(`124`)
     expect(calls).toEqual([
       'mixinA created',
       'mixinB created',
@@ -546,7 +548,8 @@ describe('api: options', () => {
     const Base = {
       data() {
         return {
-          a: 1
+          a: 1,
+          b: 1
         }
       },
       methods: {
@@ -582,7 +585,8 @@ describe('api: options', () => {
     const Base = {
       data() {
         return {
-          a: 1
+          a: 1,
+          x: 'base'
         }
       },
       methods: {
@@ -595,22 +599,23 @@ describe('api: options', () => {
         calls.push('base')
       }
     }
-    const Base2 = {
+    const Mixin = {
       data() {
         return {
-          b: true
+          b: true,
+          x: 'mixin'
         }
       },
       mounted(this: any) {
         expect(this.a).toBe(1)
         expect(this.b).toBeTruthy()
         expect(this.c).toBe(2)
-        calls.push('base2')
+        calls.push('mixin')
       }
     }
     const Comp = defineComponent({
       extends: defineComponent(Base),
-      mixins: [defineComponent(Base2)],
+      mixins: [defineComponent(Mixin)],
       data() {
         return {
           c: 2
@@ -620,12 +625,77 @@ describe('api: options', () => {
         calls.push('comp')
       },
       render() {
-        return `${this.a}${this.b}${this.c}`
+        return `${this.a}${this.b}${this.c}${this.x}`
       }
     })
 
-    expect(renderToString(h(Comp))).toBe(`1true2`)
-    expect(calls).toEqual(['base', 'base2', 'comp'])
+    expect(renderToString(h(Comp))).toBe(`1true2mixin`)
+    expect(calls).toEqual(['base', 'mixin', 'comp'])
+  })
+
+  test('beforeCreate/created in extends and mixins', () => {
+    const calls: string[] = []
+    const BaseA = {
+      beforeCreate() {
+        calls.push('beforeCreateA')
+      },
+      created() {
+        calls.push('createdA')
+      }
+    }
+    const BaseB = {
+      extends: BaseA,
+      beforeCreate() {
+        calls.push('beforeCreateB')
+      },
+      created() {
+        calls.push('createdB')
+      }
+    }
+
+    const MixinA = {
+      beforeCreate() {
+        calls.push('beforeCreateC')
+      },
+      created() {
+        calls.push('createdC')
+      }
+    }
+    const MixinB = {
+      mixins: [MixinA],
+      beforeCreate() {
+        calls.push('beforeCreateD')
+      },
+      created() {
+        calls.push('createdD')
+      }
+    }
+
+    const Comp = {
+      extends: BaseB,
+      mixins: [MixinB],
+      beforeCreate() {
+        calls.push('selfBeforeCreate')
+      },
+      created() {
+        calls.push('selfCreated')
+      },
+      render() {}
+    }
+
+    renderToString(h(Comp))
+    expect(calls).toEqual([
+      'beforeCreateA',
+      'beforeCreateB',
+      'beforeCreateC',
+      'beforeCreateD',
+      'selfBeforeCreate',
+      'createdA',
+      'createdB',
+      'createdC',
+      'createdD',
+      'selfCreated'
+    ])
   })
 
   test('accessing setup() state from options', async () => {
