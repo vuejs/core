@@ -756,8 +756,14 @@ function baseCreateRenderer(
       }
     }
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-      el.__vnode = vnode
-      el.__vueParentComponent = parentComponent
+      Object.defineProperty(el, '__vnode', {
+        value: vnode,
+        enumerable: false
+      })
+      Object.defineProperty(el, '__vueParentComponent', {
+        value: parentComponent,
+        enumerable: false
+      })
     }
     if (dirs) {
       invokeDirectiveHook(vnode, null, parentComponent, 'beforeMount')
