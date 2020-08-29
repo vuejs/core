@@ -755,6 +755,10 @@ function baseCreateRenderer(
         hostSetScopeId(el, treeOwnerId + '-s')
       }
     }
+    if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+      el.__vnode = vnode
+      el.__vueParentComponent = parentComponent
+    }
     if (dirs) {
       invokeDirectiveHook(vnode, null, parentComponent, 'beforeMount')
     }
