@@ -12,7 +12,8 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vuejs/vue-next.git"
+    "url": "git+https://github.com/vuejs/vue-next.git",
+    "directory": "packages/runtime-test"
   },
   "keywords": [
     "vue"
