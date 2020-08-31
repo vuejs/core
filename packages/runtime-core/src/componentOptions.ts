@@ -42,11 +42,7 @@ import {
   WritableComputedOptions,
   toRaw
 } from '@vue/reactivity'
-import {
-  ComponentObjectPropsOptions,
-  ExtractPropTypes,
-  normalizePropsOptions
-} from './componentProps'
+import { ComponentObjectPropsOptions, ExtractPropTypes } from './componentProps'
 import { EmitsOptions } from './componentEmits'
 import { Directive } from './directives'
 import {
@@ -431,7 +427,7 @@ export function applyOptions(
   const checkDuplicateProperties = __DEV__ ? createDuplicateChecker() : null
 
   if (__DEV__) {
-    const propsOptions = normalizePropsOptions(options)[0]
+    const [propsOptions] = instance.propsOptions
     if (propsOptions) {
       for (const key in propsOptions) {
         checkDuplicateProperties!(OptionTypes.PROPS, key)

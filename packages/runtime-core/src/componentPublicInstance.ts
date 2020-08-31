@@ -29,7 +29,6 @@ import {
   resolveMergedOptions,
   isInBeforeCreate
 } from './componentOptions'
-import { normalizePropsOptions } from './componentProps'
 import { EmitsOptions, EmitFn } from './componentEmits'
 import { Slots } from './componentSlots'
 import {
@@ -250,7 +249,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       } else if (
         // only cache other properties when instance has declared (thus stable)
         // props
-        (normalizedProps = normalizePropsOptions(type)[0]) &&
+        (normalizedProps = instance.propsOptions[0]) &&
         hasOwn(normalizedProps, key)
       ) {
         accessCache![key] = AccessTypes.PROPS
@@ -354,7 +353,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
 
   has(
     {
-      _: { data, setupState, accessCache, ctx, type, appContext }
+      _: { data, setupState, accessCache, ctx, appContext, propsOptions }
     }: ComponentRenderContext,
     key: string
   ) {
@@ -363,8 +362,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       accessCache![key] !== undefined ||
       (data !== EMPTY_OBJ && hasOwn(data, key)) ||
       (setupState !== EMPTY_OBJ && hasOwn(setupState, key)) ||
-      ((normalizedProps = normalizePropsOptions(type)[0]) &&
-        hasOwn(normalizedProps, key)) ||
+      ((normalizedProps = propsOptions[0]) && hasOwn(normalizedProps, key)) ||
       hasOwn(ctx, key) ||
       hasOwn(publicPropertiesMap, key) ||
       hasOwn(appContext.config.globalProperties, key)
@@ -450,8 +448,10 @@ export function createRenderContext(instance: ComponentInternalInstance) {
 export function exposePropsOnRenderContext(
   instance: ComponentInternalInstance
 ) {
-  const { ctx, type } = instance
-  const propsOptions = normalizePropsOptions(type)[0]
+  const {
+    ctx,
+    propsOptions: [propsOptions]
+  } = instance
   if (propsOptions) {
     Object.keys(propsOptions).forEach(key => {
       Object.defineProperty(ctx, key, {
