@@ -297,6 +297,7 @@ export interface ComponentInternalInstance {
   isMounted: boolean
   isUnmounted: boolean
   isDeactivated: boolean
+  isHydrating: boolean
   /**
    * @internal
    */
@@ -407,6 +408,7 @@ export function createComponentInstance(
     isMounted: false,
     isUnmounted: false,
     isDeactivated: false,
+    isHydrating: false,
     bc: null,
     c: null,
     bm: null,
