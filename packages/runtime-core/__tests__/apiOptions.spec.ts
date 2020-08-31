@@ -633,6 +633,71 @@ describe('api: options', () => {
     expect(calls).toEqual(['base', 'mixin', 'comp'])
   })
 
+  test('beforeCreate/created in extends and mixins', () => {
+    const calls: string[] = []
+    const BaseA = {
+      beforeCreate() {
+        calls.push('beforeCreateA')
+      },
+      created() {
+        calls.push('createdA')
+      }
+    }
+    const BaseB = {
+      extends: BaseA,
+      beforeCreate() {
+        calls.push('beforeCreateB')
+      },
+      created() {
+        calls.push('createdB')
+      }
+    }
+
+    const MixinA = {
+      beforeCreate() {
+        calls.push('beforeCreateC')
+      },
+      created() {
+        calls.push('createdC')
+      }
+    }
+    const MixinB = {
+      mixins: [MixinA],
+      beforeCreate() {
+        calls.push('beforeCreateD')
+      },
+      created() {
+        calls.push('createdD')
+      }
+    }
+
+    const Comp = {
+      extends: BaseB,
+      mixins: [MixinB],
+      beforeCreate() {
+        calls.push('selfBeforeCreate')
+      },
+      created() {
+        calls.push('selfCreated')
+      },
+      render() {}
+    }
+
+    renderToString(h(Comp))
+    expect(calls).toEqual([
+      'beforeCreateA',
+      'beforeCreateB',
+      'beforeCreateC',
+      'beforeCreateD',
+      'selfBeforeCreate',
+      'createdA',
+      'createdB',
+      'createdC',
+      'createdD',
+      'selfCreated'
+    ])
+  })
+
   test('accessing setup() state from options', async () => {
     const Comp = defineComponent({
       setup() {

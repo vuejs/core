@@ -433,11 +433,7 @@ export function cloneVNode<T, U>(
   // This is intentionally NOT using spread or extend to avoid the runtime
   // key enumeration cost.
   const { props, patchFlag } = vnode
-  const mergedProps = extraProps
-    ? props
-      ? mergeProps(props, extraProps)
-      : extend({}, extraProps)
-    : props
+  const mergedProps = extraProps ? mergeProps(props || {}, extraProps) : props
   return {
     __v_isVNode: true,
     [ReactiveFlags.SKIP]: true,
