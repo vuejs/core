@@ -540,14 +540,15 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
   } else if (isArray(children)) {
     type = ShapeFlags.ARRAY_CHILDREN
   } else if (typeof children === 'object') {
-    // Normalize slot to plain children
-    if (
-      (shapeFlag & ShapeFlags.ELEMENT || shapeFlag & ShapeFlags.TELEPORT) &&
-      (children as any).default
-    ) {
-      setCompiledSlotRendering(1)
-      normalizeChildren(vnode, (children as any).default())
-      setCompiledSlotRendering(-1)
+    if (shapeFlag & ShapeFlags.ELEMENT || shapeFlag & ShapeFlags.TELEPORT) {
+      // Normalize slot to plain children for plain element and Teleport
+      const slot = (children as any).default
+      if (slot) {
+        // _c marker is added by withCtx() indicating this is a compiled slot
+        slot._c && setCompiledSlotRendering(1)
+        normalizeChildren(vnode, slot())
+        slot._c && setCompiledSlotRendering(-1)
+      }
       return
     } else {
       type = ShapeFlags.SLOTS_CHILDREN
