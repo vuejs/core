@@ -745,15 +745,31 @@ function baseCreateRenderer(
         }
       }
       // scopeId
-      if (scopeId) {
-        hostSetScopeId(el, scopeId)
-      }
-      const treeOwnerId = parentComponent && parentComponent.type.__scopeId
-      // vnode's own scopeId and the current patched component's scopeId is
-      // different - this is a slot content node.
-      if (treeOwnerId && treeOwnerId !== scopeId) {
-        hostSetScopeId(el, treeOwnerId + '-s')
-      }
+      setScopeId(el, scopeId, vnode, parentComponent)
+      // if (scopeId) {
+      //   hostSetScopeId(el, scopeId)
+      // }
+      // if (parentComponent) {
+      //   const treeOwnerId = parentComponent.type.__scopeId
+      //   // vnode's own scopeId and the current patched component's scopeId is
+      //   // different - this is a slot content node.
+      //   if (treeOwnerId && treeOwnerId !== scopeId) {
+      //     hostSetScopeId(el, treeOwnerId + '-s')
+      //   }
+      //   const parentScopeId =
+      //     vnode === parentComponent.subTree && parentComponent.vnode.scopeId
+      //   if (parentScopeId) {
+      //     hostSetScopeId(el, parentScopeId)
+      //     if (parentComponent.parent) {
+      //       const treeOwnerId = parentComponent.parent.type.__scopeId
+      //       // vnode's own scopeId and the current patched component's scopeId is
+      //       // different - this is a slot content node.
+      //       if (treeOwnerId && treeOwnerId !== parentScopeId) {
+      //         hostSetScopeId(el, treeOwnerId + '-s')
+      //       }
+      //     }
+      //   }
+      // }
     }
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
       Object.defineProperty(el, '__vnode', {
@@ -788,6 +804,33 @@ function baseCreateRenderer(
         needCallTransitionHooks && transition!.enter(el)
         dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
       }, parentSuspense)
+    }
+  }
+
+  const setScopeId = (
+    el: RendererElement,
+    scopeId: string | false | null,
+    vnode: VNode,
+    parentComponent: ComponentInternalInstance | null
+  ) => {
+    if (scopeId) {
+      hostSetScopeId(el, scopeId)
+    }
+    if (parentComponent) {
+      const treeOwnerId = parentComponent.type.__scopeId
+      // vnode's own scopeId and the current patched component's scopeId is
+      // different - this is a slot content node.
+      if (treeOwnerId && treeOwnerId !== scopeId) {
+        hostSetScopeId(el, treeOwnerId + '-s')
+      }
+      if (vnode === parentComponent.subTree) {
+        setScopeId(
+          el,
+          parentComponent.vnode.scopeId,
+          parentComponent.vnode,
+          parentComponent.parent
+        )
+      }
     }
   }
 

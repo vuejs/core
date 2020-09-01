@@ -551,7 +551,7 @@ describe('ssr: renderToString', () => {
       }
 
       expect(await renderToString(h(Parent))).toBe(
-        `<div data-v-test data-v-child><span data-v-test data-v-child-s>slot</span></div>`
+        `<div data-v-child data-v-test><span data-v-test data-v-child-s>slot</span></div>`
       )
     })
   })

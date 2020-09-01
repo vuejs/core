@@ -42,7 +42,6 @@ export function renderComponentRoot(
 ): VNode {
   const {
     type: Component,
-    parent,
     vnode,
     proxy,
     withProxy,
@@ -170,22 +169,6 @@ export function renderComponentRoot(
           }
         }
       }
-    }
-
-    // inherit scopeId
-    const scopeId = vnode.scopeId
-    // vite#536: if subtree root is created from parent slot if would already
-    // have the correct scopeId, in this case adding the scopeId will cause
-    // it to be removed if the original slot vnode is reused.
-    const needScopeId = scopeId && root.scopeId !== scopeId
-    const treeOwnerId = parent && parent.type.__scopeId
-    const slotScopeId =
-      treeOwnerId && treeOwnerId !== scopeId ? treeOwnerId + '-s' : null
-    if (needScopeId || slotScopeId) {
-      const extras: Data = {}
-      if (needScopeId) extras[scopeId!] = ''
-      if (slotScopeId) extras[slotScopeId] = ''
-      root = cloneVNode(root, extras)
     }
 
     // inherit directives

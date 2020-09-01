@@ -101,7 +101,11 @@ function renderComponentSubTree(
   const comp = instance.type as Component
   const { getBuffer, push } = createBuffer()
   if (isFunction(comp)) {
-    renderVNode(push, renderComponentRoot(instance), instance)
+    renderVNode(
+      push,
+      (instance.subTree = renderComponentRoot(instance)),
+      instance
+    )
   } else {
     if (!instance.render && !comp.ssrRender && isString(comp.template)) {
       comp.ssrRender = ssrCompile(comp.template, instance)
@@ -139,7 +143,11 @@ function renderComponentSubTree(
       )
       setCurrentRenderingInstance(null)
     } else if (instance.render) {
-      renderVNode(push, renderComponentRoot(instance), instance)
+      renderVNode(
+        push,
+        (instance.subTree = renderComponentRoot(instance)),
+        instance
+      )
     } else {
       warn(
         `Component ${
@@ -225,15 +233,7 @@ function renderElementVNode(
     openTag += ssrRenderAttrs(props, tag)
   }
 
-  if (scopeId) {
-    openTag += ` ${scopeId}`
-    const treeOwnerId = parentComponent && parentComponent.type.__scopeId
-    // vnode's own scopeId and the current rendering component's scopeId is
-    // different - this is a slot content node.
-    if (treeOwnerId && treeOwnerId !== scopeId) {
-      openTag += ` ${treeOwnerId}-s`
-    }
-  }
+  openTag += resolveScopeId(scopeId, vnode, parentComponent)
 
   push(openTag + `>`)
   if (!isVoidTag(tag)) {
@@ -263,6 +263,33 @@ function renderElementVNode(
     }
     push(`</${tag}>`)
   }
+}
+
+function resolveScopeId(
+  scopeId: string | null,
+  vnode: VNode,
+  parentComponent: ComponentInternalInstance | null
+) {
+  let res = ``
+  if (scopeId) {
+    res = ` ${scopeId}`
+  }
+  if (parentComponent) {
+    const treeOwnerId = parentComponent.type.__scopeId
+    // vnode's own scopeId and the current rendering component's scopeId is
+    // different - this is a slot content node.
+    if (treeOwnerId && treeOwnerId !== scopeId) {
+      res += ` ${treeOwnerId}-s`
+    }
+    if (vnode === parentComponent.subTree) {
+      res += resolveScopeId(
+        parentComponent.vnode.scopeId,
+        parentComponent.vnode,
+        parentComponent.parent
+      )
+    }
+  }
+  return res
 }
 
 function applySSRDirectives(
