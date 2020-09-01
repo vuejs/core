@@ -36,6 +36,7 @@ import { currentRenderingInstance } from './componentRenderUtils'
 import { RendererNode, RendererElement } from './renderer'
 import { NULL_DYNAMIC_COMPONENT } from './helpers/resolveAssets'
 import { hmrDirtyComponents } from './hmr'
+import { setCompiledSlotRendering } from './helpers/renderSlot'
 
 export const Fragment = (Symbol(__DEV__ ? 'Fragment' : undefined) as any) as {
   __isFragment: true
@@ -544,7 +545,9 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
       (shapeFlag & ShapeFlags.ELEMENT || shapeFlag & ShapeFlags.TELEPORT) &&
       (children as any).default
     ) {
+      setCompiledSlotRendering(1)
       normalizeChildren(vnode, (children as any).default())
+      setCompiledSlotRendering(-1)
       return
     } else {
       type = ShapeFlags.SLOTS_CHILDREN
