@@ -767,10 +767,8 @@ export function resolveMergedOptions(
   const globalMixins = instance.appContext.mixins
   if (!globalMixins.length && !mixins && !extendsOptions) return raw
   const options = {}
-  globalMixins.forEach(m => mergeOptions(options, m, instance))
-  extendsOptions && mergeOptions(options, extendsOptions, instance)
-  mixins && mixins.forEach(m => mergeOptions(options, m, instance))
   mergeOptions(options, raw, instance)
+  globalMixins.forEach(m => mergeOptions(options, m, instance))
   return (raw.__merged = options)
 }
 
@@ -783,4 +781,9 @@ function mergeOptions(to: any, from: any, instance: ComponentInternalInstance) {
       to[key] = from[key]
     }
   }
+  const { mixins, extends: extendsOptions } = from
+
+  extendsOptions && mergeOptions(to, extendsOptions, instance)
+  mixins &&
+    mixins.forEach((m: ComponentOptionsMixin) => mergeOptions(to, m, instance))
 }

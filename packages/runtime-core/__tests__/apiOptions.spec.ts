@@ -698,6 +698,50 @@ describe('api: options', () => {
     ])
   })
 
+  test('flatten merged options', async () => {
+    const MixinBase = {
+      msg1: 'base'
+    }
+    const ExtendsBase = {
+      msg2: 'base'
+    }
+    const Mixin = {
+      mixins: [MixinBase]
+    }
+    const Extends = {
+      extends: ExtendsBase
+    }
+    const Comp = defineComponent({
+      extends: defineComponent(Extends),
+      mixins: [defineComponent(Mixin)],
+      render() {
+        return `${this.$options.msg1},${this.$options.msg2}`
+      }
+    })
+
+    expect(renderToString(h(Comp))).toBe('base,base')
+  })
+
+  test('options defined in component have higher priority', async () => {
+    const Mixin = {
+      msg1: 'base'
+    }
+    const Extends = {
+      msg2: 'base'
+    }
+    const Comp = defineComponent({
+      msg1: 'local',
+      msg2: 'local',
+      extends: defineComponent(Extends),
+      mixins: [defineComponent(Mixin)],
+      render() {
+        return `${this.$options.msg1},${this.$options.msg2}`
+      }
+    })
+
+    expect(renderToString(h(Comp))).toBe('local,local')
+  })
+
   test('accessing setup() state from options', async () => {
     const Comp = defineComponent({
       setup() {

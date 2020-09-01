@@ -457,7 +457,7 @@ describe('api: createApp', () => {
     app.config.optionMergeStrategies.foo = (a, b) => (a ? `${a},` : ``) + b
 
     app.mount(nodeOps.createElement('div'))
-    expect(merged!).toBe('global,extends,mixin,local')
+    expect(merged!).toBe('local,extends,mixin,global')
   })
 
   test('config.globalProperties', () => {
