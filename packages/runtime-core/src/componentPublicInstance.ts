@@ -1,6 +1,6 @@
 import { ComponentInternalInstance, Data } from './component'
 import { nextTick, queueJob } from './scheduler'
-import { instanceWatch } from './apiWatch'
+import { instanceWatch, WatchOptions, WatchStopHandle } from './apiWatch'
 import {
   EMPTY_OBJ,
   hasOwn,
@@ -162,7 +162,11 @@ export type ComponentPublicInstance<
   $options: Options
   $forceUpdate: ReactiveEffect
   $nextTick: typeof nextTick
-  $watch: typeof instanceWatch
+  $watch(
+    source: string | Function,
+    cb: Function,
+    options?: WatchOptions
+  ): WatchStopHandle
 } & P &
   ShallowUnwrapRef<B> &
   D &
