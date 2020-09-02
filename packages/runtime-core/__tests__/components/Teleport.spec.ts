@@ -179,6 +179,36 @@ describe('renderer: teleport', () => {
     )
   })
 
+  test('should work when using template ref as target', async () => {
+    const root = nodeOps.createElement('div')
+    const target = ref(null)
+    const disabled = ref(true)
+
+    const App = {
+      setup() {
+        return () =>
+          h(Fragment, [
+            h('div', { ref: target }),
+            h(
+              Teleport,
+              { to: target.value, disabled: disabled.value },
+              h('div', 'teleported')
+            )
+          ])
+      }
+    }
+    render(h(App), root)
+    expect(serializeInner(root)).toMatchInlineSnapshot(
+      `"<div></div><!--teleport start--><div>teleported</div><!--teleport end-->"`
+    )
+
+    disabled.value = false
+    await nextTick()
+    expect(serializeInner(root)).toMatchInlineSnapshot(
+      `"<div><div>teleported</div></div><!--teleport start--><!--teleport end-->"`
+    )
+  })
+
   test('disabled', () => {
     const target = nodeOps.createElement('div')
     const root = nodeOps.createElement('div')
