@@ -128,7 +128,7 @@ export function renderComponentRoot(
           shapeFlag & ShapeFlags.COMPONENT
         ) {
           if (propsOptions && keys.some(isModelListener)) {
-            // If a v-model listener (onUpdate:xxx) has a corresponding decalred
+            // If a v-model listener (onUpdate:xxx) has a corresponding declared
             // prop, it indicates this component expects to handle v-model and
             // it should not fallthrough.
             // related: #1543, #1643, #1989
