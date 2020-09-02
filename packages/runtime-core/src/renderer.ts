@@ -2096,7 +2096,7 @@ function baseCreateRenderer(
       unregisterHMR(instance)
     }
 
-    const { bum, effects, update, subTree, um, da, isDeactivated } = instance
+    const { bum, effects, update, subTree, um } = instance
     // beforeUnmount hook
     if (bum) {
       invokeArrayFns(bum)
@@ -2115,14 +2115,6 @@ function baseCreateRenderer(
     // unmounted hook
     if (um) {
       queuePostRenderEffect(um, parentSuspense)
-    }
-    // deactivated hook
-    if (
-      da &&
-      !isDeactivated &&
-      instance.vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-    ) {
-      queuePostRenderEffect(da, parentSuspense)
     }
     queuePostRenderEffect(() => {
       instance.isUnmounted = true
