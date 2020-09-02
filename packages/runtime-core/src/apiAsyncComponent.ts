@@ -91,6 +91,7 @@ export function defineAsyncComponent<
           // interop module default
           if (
             comp &&
+            comp.default &&
             (__NODE_JS__ ||
               comp.__esModule ||
               comp[Symbol.toStringTag] === 'Module')
