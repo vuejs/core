@@ -11,8 +11,7 @@ import {
   createBlock,
   FunctionalComponent,
   createCommentVNode,
-  Fragment,
-  SetupContext
+  Fragment
 } from '@vue/runtime-dom'
 
 describe('attribute fallthrough', () => {
@@ -276,62 +275,6 @@ describe('attribute fallthrough', () => {
     expect(node.style.fontWeight).toBe('bold')
 
     expect(node.hasAttribute('foo')).toBe(false)
-  })
-
-  it('should not fallthrough the v-model listeners that already exists on the component', async () => {
-    let textFoo = ''
-    let textBar = ''
-    const click = jest.fn()
-
-    const App = {
-      setup() {
-        return () =>
-          h(Child, {
-            modelValue: textFoo,
-            'onUpdate:modelValue': (val: string) => {
-              textFoo = val
-            }
-          })
-      }
-    }
-
-    const Child = {
-      props: ['modelValue'],
-      setup(props: any, { emit }: SetupContext) {
-        return () =>
-          h(GrandChild, {
-            modelValue: textBar,
-            'onUpdate:modelValue': (val: string) => {
-              textBar = val
-              emit('update:modelValue', 'from Child')
-            }
-          })
-      }
-    }
-
-    const GrandChild = {
-      props: ['modelValue'],
-      setup(props: any, { emit }: SetupContext) {
-        return () =>
-          h('button', {
-            onClick() {
-              click()
-              emit('update:modelValue', 'from GrandChild')
-            }
-          })
-      }
-    }
-
-    const root = document.createElement('div')
-    document.body.appendChild(root)
-    render(h(App), root)
-
-    const node = root.children[0] as HTMLElement
-
-    node.dispatchEvent(new CustomEvent('click'))
-    expect(click).toHaveBeenCalled()
-    expect(textBar).toBe('from GrandChild')
-    expect(textFoo).toBe('from Child')
   })
 
   it('should not fallthrough with inheritAttrs: false', () => {
@@ -650,5 +593,62 @@ describe('attribute fallthrough', () => {
     const button = root.children[0] as HTMLElement
     button.dispatchEvent(new CustomEvent('click'))
     expect(click).toHaveBeenCalled()
+  })
+
+  // #1989
+  it('should not fallthrough v-model listeners with corresponding declared prop', () => {
+    let textFoo = ''
+    let textBar = ''
+    const click = jest.fn()
+
+    const App = defineComponent({
+      setup() {
+        return () =>
+          h(Child, {
+            modelValue: textFoo,
+            'onUpdate:modelValue': (val: string) => {
+              textFoo = val
+            }
+          })
+      }
+    })
+
+    const Child = defineComponent({
+      props: ['modelValue'],
+      setup(_props, { emit }) {
+        return () =>
+          h(GrandChild, {
+            modelValue: textBar,
+            'onUpdate:modelValue': (val: string) => {
+              textBar = val
+              emit('update:modelValue', 'from Child')
+            }
+          })
+      }
+    })
+
+    const GrandChild = defineComponent({
+      props: ['modelValue'],
+      setup(_props, { emit }) {
+        return () =>
+          h('button', {
+            onClick() {
+              click()
+              emit('update:modelValue', 'from GrandChild')
+            }
+          })
+      }
+    })
+
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    render(h(App), root)
+
+    const node = root.children[0] as HTMLElement
+
+    node.dispatchEvent(new CustomEvent('click'))
+    expect(click).toHaveBeenCalled()
+    expect(textBar).toBe('from GrandChild')
+    expect(textFoo).toBe('from Child')
   })
 })

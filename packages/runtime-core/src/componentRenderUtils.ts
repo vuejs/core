@@ -17,6 +17,7 @@ import { handleError, ErrorCodes } from './errorHandling'
 import { PatchFlags, ShapeFlags, isOn, isModelListener } from '@vue/shared'
 import { warn } from './warning'
 import { isHmrUpdating } from './hmr'
+import { NormalizedProps } from './componentProps'
 
 // mark the current rendering instance for asset resolution (e.g.
 // resolveComponent, resolveDirective) during render
@@ -46,6 +47,7 @@ export function renderComponentRoot(
     proxy,
     withProxy,
     props,
+    propsOptions: [propsOptions],
     slots,
     attrs,
     emit,
@@ -125,17 +127,15 @@ export function renderComponentRoot(
           shapeFlag & ShapeFlags.ELEMENT ||
           shapeFlag & ShapeFlags.COMPONENT
         ) {
-          if (keys.some(isModelListener)) {
-            fallthroughAttrs =
-              shapeFlag & ShapeFlags.ELEMENT
-                ? // #1643, #1543
-                  // component v-model listeners should only fallthrough for component
-                  // HOCs
-                  filterModelListeners(fallthroughAttrs)
-                : // #1989
-                  // if a component already has v-model listeners,
-                  // then it should not merge the v-model listeners that fallthrough by the parent component.
-                  filterModelListeners(fallthroughAttrs, root.props)
+          if (propsOptions && keys.some(isModelListener)) {
+            // If a v-model listener (onUpdate:xxx) has a corresponding decalred
+            // prop, it indicates this component expects to handle v-model and
+            // it should not fallthrough.
+            // related: #1543, #1643, #1989
+            fallthroughAttrs = filterModelListeners(
+              fallthroughAttrs,
+              propsOptions
+            )
           }
           root = cloneVNode(root, fallthroughAttrs)
         } else if (__DEV__ && !accessedAttrs && root.type !== Comment) {
@@ -257,13 +257,10 @@ const getFunctionalFallthrough = (attrs: Data): Data | undefined => {
   return res
 }
 
-const filterModelListeners = (
-  attrs: Data,
-  exsitingAttrs: Data | null = null
-): Data => {
+const filterModelListeners = (attrs: Data, props: NormalizedProps): Data => {
   const res: Data = {}
   for (const key in attrs) {
-    if (!isModelListener(key) || (exsitingAttrs && !exsitingAttrs[key])) {
+    if (!isModelListener(key) || !(key.slice(9) in props)) {
       res[key] = attrs[key]
     }
   }
