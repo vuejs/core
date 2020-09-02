@@ -2,6 +2,7 @@ import {
   Comment,
   Component,
   ComponentInternalInstance,
+  ComponentOptions,
   DirectiveBinding,
   Fragment,
   mergeProps,
@@ -84,12 +85,20 @@ export function renderComponentVNode(
 ): SSRBuffer | Promise<SSRBuffer> {
   const instance = createComponentInstance(vnode, parentComponent, null)
   const res = setupComponent(instance, true /* isSSR */)
-  if (isPromise(res)) {
-    return res
-      .catch(err => {
-        warn(`[@vue/server-renderer]: Uncaught error in async setup:\n`, err)
+  const hasAsyncSetup = isPromise(res)
+  const prefetch = (vnode.type as ComponentOptions).serverPrefetch
+  if (hasAsyncSetup || prefetch) {
+    let p = hasAsyncSetup
+      ? (res as Promise<void>).catch(err => {
+          warn(`[@vue/server-renderer]: Uncaught error in async setup:\n`, err)
+        })
+      : Promise.resolve()
+    if (prefetch) {
+      p = p.then(() => prefetch.call(instance.proxy)).catch(err => {
+        warn(`[@vue/server-renderer]: Uncaught error in serverPrefetch:\n`, err)
       })
-      .then(() => renderComponentSubTree(instance))
+    }
+    return p.then(() => renderComponentSubTree(instance))
   } else {
     return renderComponentSubTree(instance)
   }

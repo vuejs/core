@@ -103,6 +103,7 @@ export interface ComponentOptionsBase<
   directives?: Record<string, Directive>
   inheritAttrs?: boolean
   emits?: (E | EE[]) & ThisType<void>
+  serverPrefetch?(): Promise<any>
 
   // Internal ------------------------------------------------------------------
 
