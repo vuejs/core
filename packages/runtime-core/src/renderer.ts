@@ -745,15 +745,41 @@ function baseCreateRenderer(
         }
       }
       // scopeId
-      if (scopeId) {
-        hostSetScopeId(el, scopeId)
-      }
-      const treeOwnerId = parentComponent && parentComponent.type.__scopeId
-      // vnode's own scopeId and the current patched component's scopeId is
-      // different - this is a slot content node.
-      if (treeOwnerId && treeOwnerId !== scopeId) {
-        hostSetScopeId(el, treeOwnerId + '-s')
-      }
+      setScopeId(el, scopeId, vnode, parentComponent)
+      // if (scopeId) {
+      //   hostSetScopeId(el, scopeId)
+      // }
+      // if (parentComponent) {
+      //   const treeOwnerId = parentComponent.type.__scopeId
+      //   // vnode's own scopeId and the current patched component's scopeId is
+      //   // different - this is a slot content node.
+      //   if (treeOwnerId && treeOwnerId !== scopeId) {
+      //     hostSetScopeId(el, treeOwnerId + '-s')
+      //   }
+      //   const parentScopeId =
+      //     vnode === parentComponent.subTree && parentComponent.vnode.scopeId
+      //   if (parentScopeId) {
+      //     hostSetScopeId(el, parentScopeId)
+      //     if (parentComponent.parent) {
+      //       const treeOwnerId = parentComponent.parent.type.__scopeId
+      //       // vnode's own scopeId and the current patched component's scopeId is
+      //       // different - this is a slot content node.
+      //       if (treeOwnerId && treeOwnerId !== parentScopeId) {
+      //         hostSetScopeId(el, treeOwnerId + '-s')
+      //       }
+      //     }
+      //   }
+      // }
+    }
+    if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+      Object.defineProperty(el, '__vnode', {
+        value: vnode,
+        enumerable: false
+      })
+      Object.defineProperty(el, '__vueParentComponent', {
+        value: parentComponent,
+        enumerable: false
+      })
     }
     if (dirs) {
       invokeDirectiveHook(vnode, null, parentComponent, 'beforeMount')
@@ -778,6 +804,33 @@ function baseCreateRenderer(
         needCallTransitionHooks && transition!.enter(el)
         dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
       }, parentSuspense)
+    }
+  }
+
+  const setScopeId = (
+    el: RendererElement,
+    scopeId: string | false | null,
+    vnode: VNode,
+    parentComponent: ComponentInternalInstance | null
+  ) => {
+    if (scopeId) {
+      hostSetScopeId(el, scopeId)
+    }
+    if (parentComponent) {
+      const treeOwnerId = parentComponent.type.__scopeId
+      // vnode's own scopeId and the current patched component's scopeId is
+      // different - this is a slot content node.
+      if (treeOwnerId && treeOwnerId !== scopeId) {
+        hostSetScopeId(el, treeOwnerId + '-s')
+      }
+      if (vnode === parentComponent.subTree) {
+        setScopeId(
+          el,
+          parentComponent.vnode.scopeId,
+          parentComponent.vnode,
+          parentComponent.parent
+        )
+      }
     }
   }
 
@@ -2043,7 +2096,7 @@ function baseCreateRenderer(
       unregisterHMR(instance)
     }
 
-    const { bum, effects, update, subTree, um, da, isDeactivated } = instance
+    const { bum, effects, update, subTree, um } = instance
     // beforeUnmount hook
     if (bum) {
       invokeArrayFns(bum)
@@ -2062,14 +2115,6 @@ function baseCreateRenderer(
     // unmounted hook
     if (um) {
       queuePostRenderEffect(um, parentSuspense)
-    }
-    // deactivated hook
-    if (
-      da &&
-      !isDeactivated &&
-      instance.vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-    ) {
-      queuePostRenderEffect(da, parentSuspense)
     }
     queuePostRenderEffect(() => {
       instance.isUnmounted = true

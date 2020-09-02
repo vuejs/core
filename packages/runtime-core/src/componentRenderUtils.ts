@@ -17,6 +17,7 @@ import { handleError, ErrorCodes } from './errorHandling'
 import { PatchFlags, ShapeFlags, isOn, isModelListener } from '@vue/shared'
 import { warn } from './warning'
 import { isHmrUpdating } from './hmr'
+import { NormalizedProps } from './componentProps'
 
 // mark the current rendering instance for asset resolution (e.g.
 // resolveComponent, resolveDirective) during render
@@ -42,11 +43,11 @@ export function renderComponentRoot(
 ): VNode {
   const {
     type: Component,
-    parent,
     vnode,
     proxy,
     withProxy,
     props,
+    propsOptions: [propsOptions],
     slots,
     attrs,
     emit,
@@ -126,11 +127,15 @@ export function renderComponentRoot(
           shapeFlag & ShapeFlags.ELEMENT ||
           shapeFlag & ShapeFlags.COMPONENT
         ) {
-          if (shapeFlag & ShapeFlags.ELEMENT && keys.some(isModelListener)) {
-            // #1643, #1543
-            // component v-model listeners should only fallthrough for component
-            // HOCs
-            fallthroughAttrs = filterModelListeners(fallthroughAttrs)
+          if (propsOptions && keys.some(isModelListener)) {
+            // If a v-model listener (onUpdate:xxx) has a corresponding declared
+            // prop, it indicates this component expects to handle v-model and
+            // it should not fallthrough.
+            // related: #1543, #1643, #1989
+            fallthroughAttrs = filterModelListeners(
+              fallthroughAttrs,
+              propsOptions
+            )
           }
           root = cloneVNode(root, fallthroughAttrs)
         } else if (__DEV__ && !accessedAttrs && root.type !== Comment) {
@@ -170,22 +175,6 @@ export function renderComponentRoot(
           }
         }
       }
-    }
-
-    // inherit scopeId
-    const scopeId = vnode.scopeId
-    // vite#536: if subtree root is created from parent slot if would already
-    // have the correct scopeId, in this case adding the scopeId will cause
-    // it to be removed if the original slot vnode is reused.
-    const needScopeId = scopeId && root.scopeId !== scopeId
-    const treeOwnerId = parent && parent.type.__scopeId
-    const slotScopeId =
-      treeOwnerId && treeOwnerId !== scopeId ? treeOwnerId + '-s' : null
-    if (needScopeId || slotScopeId) {
-      const extras: Data = {}
-      if (needScopeId) extras[scopeId!] = ''
-      if (slotScopeId) extras[slotScopeId] = ''
-      root = cloneVNode(root, extras)
     }
 
     // inherit directives
@@ -268,10 +257,10 @@ const getFunctionalFallthrough = (attrs: Data): Data | undefined => {
   return res
 }
 
-const filterModelListeners = (attrs: Data): Data => {
+const filterModelListeners = (attrs: Data, props: NormalizedProps): Data => {
   const res: Data = {}
   for (const key in attrs) {
-    if (!isModelListener(key)) {
+    if (!isModelListener(key) || !(key.slice(9) in props)) {
       res[key] = attrs[key]
     }
   }

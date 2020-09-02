@@ -190,6 +190,7 @@ describe('SFC compile <script setup>', () => {
       )
       assertCode(content)
       expect(bindings).toStrictEqual({
+        foo: 'props',
         y: 'setup'
       })
     })
@@ -514,6 +515,200 @@ describe('SFC compile <script setup>', () => {
       </script>
       `)
       ).toThrow(`Default export is already declared`)
+    })
+  })
+})
+
+describe('SFC analyze <script> bindings', () => {
+  it('recognizes props array declaration', () => {
+    const { bindings } = compile(`
+      <script>
+        export default {
+          props: ['foo', 'bar']
+        }
+      </script>
+    `)
+    expect(bindings).toStrictEqual({ foo: 'props', bar: 'props' })
+  })
+
+  it('recognizes props object declaration', () => {
+    const { bindings } = compile(`
+      <script>
+        export default {
+          props: {
+            foo: String,
+            bar: {
+              type: String,
+            },
+            baz: null,
+            qux: [String, Number]
+          }
+        }
+      </script>
+    `)
+    expect(bindings).toStrictEqual({
+      foo: 'props',
+      bar: 'props',
+      baz: 'props',
+      qux: 'props'
+    })
+  })
+
+  it('recognizes setup return', () => {
+    const { bindings } = compile(`
+      <script>
+        const bar = 2
+        export default {
+          setup() {
+            return {
+              foo: 1,
+              bar
+            }
+          }
+        }
+      </script>
+    `)
+    expect(bindings).toStrictEqual({ foo: 'setup', bar: 'setup' })
+  })
+
+  it('recognizes async setup return', () => {
+    const { bindings } = compile(`
+      <script>
+        const bar = 2
+        export default {
+          async setup() {
+            return {
+              foo: 1,
+              bar
+            }
+          }
+        }
+      </script>
+    `)
+    expect(bindings).toStrictEqual({ foo: 'setup', bar: 'setup' })
+  })
+
+  it('recognizes data return', () => {
+    const { bindings } = compile(`
+      <script>
+        const bar = 2
+        export default {
+          data() {
+            return {
+              foo: null,
+              bar
+            }
+          }
+        }
+      </script>
+    `)
+    expect(bindings).toStrictEqual({ foo: 'data', bar: 'data' })
+  })
+
+  it('recognizes methods', () => {
+    const { bindings } = compile(`
+      <script>
+        export default {
+          methods: {
+            foo() {}
+          }
+        }
+      </script>
+    `)
+    expect(bindings).toStrictEqual({ foo: 'options' })
+  })
+
+  it('recognizes computeds', () => {
+    const { bindings } = compile(`
+      <script>
+        export default {
+          computed: {
+            foo() {},
+            bar: {
+              get() {},
+              set() {},
+            }
+          }
+        }
+      </script>
+    `)
+    expect(bindings).toStrictEqual({ foo: 'options', bar: 'options' })
+  })
+
+  it('recognizes injections array declaration', () => {
+    const { bindings } = compile(`
+      <script>
+        export default {
+          inject: ['foo', 'bar']
+        }
+      </script>
+    `)
+    expect(bindings).toStrictEqual({ foo: 'options', bar: 'options' })
+  })
+
+  it('recognizes injections object declaration', () => {
+    const { bindings } = compile(`
+      <script>
+        export default {
+          inject: {
+            foo: {},
+            bar: {},
+          }
+        }
+      </script>
+    `)
+    expect(bindings).toStrictEqual({ foo: 'options', bar: 'options' })
+  })
+
+  it('works for mixed bindings', () => {
+    const { bindings } = compile(`
+      <script>
+        export default {
+          inject: ['foo'],
+          props: {
+            bar: String,
+          },
+          setup() {
+            return {
+              baz: null,
+            }
+          },
+          data() {
+            return {
+              qux: null
+            }
+          },
+          methods: {
+            quux() {}
+          },
+          computed: {
+            quuz() {}
+          }
+        }
+      </script>
+    `)
+    expect(bindings).toStrictEqual({
+      foo: 'options',
+      bar: 'props',
+      baz: 'setup',
+      qux: 'data',
+      quux: 'options',
+      quuz: 'options'
+    })
+  })
+
+  it('works for script setup', () => {
+    const { bindings } = compile(`
+      <script setup>
+        export default {
+          props: {
+            foo: String,
+          },
+        }
+      </script>
+    `)
+    expect(bindings).toStrictEqual({
+      foo: 'props'
     })
   })
 })

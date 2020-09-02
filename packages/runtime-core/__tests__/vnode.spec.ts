@@ -130,10 +130,10 @@ describe('vnode', () => {
     })
 
     test('object', () => {
-      const vnode = createVNode('p', null, { foo: 'foo' })
+      const vnode = createVNode({}, null, { foo: 'foo' })
       expect(vnode.children).toMatchObject({ foo: 'foo' })
       expect(vnode.shapeFlag).toBe(
-        ShapeFlags.ELEMENT | ShapeFlags.SLOTS_CHILDREN
+        ShapeFlags.STATEFUL_COMPONENT | ShapeFlags.SLOTS_CHILDREN
       )
     })
 
