@@ -76,6 +76,10 @@ type OptionalKeys<T, MakeDefaultRequired> = Exclude<
   RequiredKeys<T, MakeDefaultRequired>
 >
 
+type DefaultKeys<T> = {
+  [K in keyof T]: T[K] extends { default: any } ? K : never
+}[keyof T]
+
 type InferPropType<T> = T extends null
   ? any // null & true would fail to infer
   : T extends { type: null | true }
@@ -98,6 +102,11 @@ const enum BooleanFlags {
   shouldCast,
   shouldCastTrue
 }
+
+// extract props which defined with default from prop options
+export type ExtractDefaultPropTypes<O> = O extends object
+  ? { [K in DefaultKeys<O>]: InferPropType<O[K]> }
+  : {}
 
 type NormalizedProp =
   | null

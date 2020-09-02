@@ -13,7 +13,11 @@ import {
   AllowedComponentProps,
   ComponentCustomProps
 } from './component'
-import { ExtractPropTypes, ComponentPropsOptions } from './componentProps'
+import {
+  ExtractPropTypes,
+  ComponentPropsOptions,
+  ExtractDefaultPropTypes
+} from './componentProps'
 import { EmitsOptions } from './componentEmits'
 import { isFunction } from '@vue/shared'
 import { VNodeProps } from './vnode'
@@ -37,11 +41,11 @@ export type DefineComponent<
   E extends EmitsOptions = Record<string, any>,
   EE extends string = string,
   PP = PublicProps,
-  RequiredProps = Readonly<ExtractPropTypes<PropsOrPropOptions>>,
-  OptionalProps = Readonly<ExtractPropTypes<PropsOrPropOptions, false>>
+  Props = Readonly<ExtractPropTypes<PropsOrPropOptions>>,
+  Defaults = ExtractDefaultPropTypes<PropsOrPropOptions>
 > = ComponentPublicInstanceConstructor<
   CreateComponentPublicInstance<
-    OptionalProps,
+    Props,
     RawBindings,
     D,
     C,
@@ -49,12 +53,14 @@ export type DefineComponent<
     Mixin,
     Extends,
     E,
-    PP & OptionalProps
+    PP & Props,
+    Defaults,
+    true
   > &
-    RequiredProps
+    Props
 > &
   ComponentOptionsBase<
-    RequiredProps,
+    Props,
     RawBindings,
     D,
     C,
@@ -62,7 +68,8 @@ export type DefineComponent<
     Mixin,
     Extends,
     E,
-    EE
+    EE,
+    Defaults
   > &
   PP
 

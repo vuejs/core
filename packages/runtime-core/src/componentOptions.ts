@@ -42,7 +42,11 @@ import {
   WritableComputedOptions,
   toRaw
 } from '@vue/reactivity'
-import { ComponentObjectPropsOptions, ExtractPropTypes } from './componentProps'
+import {
+  ComponentObjectPropsOptions,
+  ExtractPropTypes,
+  ExtractDefaultPropTypes
+} from './componentProps'
 import { EmitsOptions } from './componentEmits'
 import { Directive } from './directives'
 import {
@@ -81,7 +85,8 @@ export interface ComponentOptionsBase<
   Mixin extends ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin,
   E extends EmitsOptions,
-  EE extends string = string
+  EE extends string = string,
+  Defaults = {}
 >
   extends LegacyOptions<Props, D, C, M, Mixin, Extends>,
     ComponentInternalOptions,
@@ -148,6 +153,8 @@ export interface ComponentOptionsBase<
   __isFragment?: never
   __isTeleport?: never
   __isSuspense?: never
+
+  __defaults?: Defaults
 }
 
 export type ComponentOptionsWithoutProps<
@@ -159,8 +166,20 @@ export type ComponentOptionsWithoutProps<
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
-  EE extends string = string
-> = ComponentOptionsBase<Props, RawBindings, D, C, M, Mixin, Extends, E, EE> & {
+  EE extends string = string,
+  Defaults = {}
+> = ComponentOptionsBase<
+  Props,
+  RawBindings,
+  D,
+  C,
+  M,
+  Mixin,
+  Extends,
+  E,
+  EE,
+  Defaults
+> & {
   props?: undefined
 } & ThisType<
     CreateComponentPublicInstance<
@@ -172,7 +191,9 @@ export type ComponentOptionsWithoutProps<
       Mixin,
       Extends,
       E,
-      Readonly<Props>
+      Readonly<Props>,
+      Defaults,
+      false
     >
   >
 
@@ -187,7 +208,18 @@ export type ComponentOptionsWithArrayProps<
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
   Props = Readonly<{ [key in PropNames]?: any }>
-> = ComponentOptionsBase<Props, RawBindings, D, C, M, Mixin, Extends, E, EE> & {
+> = ComponentOptionsBase<
+  Props,
+  RawBindings,
+  D,
+  C,
+  M,
+  Mixin,
+  Extends,
+  E,
+  EE,
+  {}
+> & {
   props: PropNames[]
 } & ThisType<
     CreateComponentPublicInstance<
@@ -212,8 +244,20 @@ export type ComponentOptionsWithObjectProps<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
-  Props = Readonly<ExtractPropTypes<PropsOptions>>
-> = ComponentOptionsBase<Props, RawBindings, D, C, M, Mixin, Extends, E, EE> & {
+  Props = Readonly<ExtractPropTypes<PropsOptions>>,
+  Defaults = ExtractDefaultPropTypes<PropsOptions>
+> = ComponentOptionsBase<
+  Props,
+  RawBindings,
+  D,
+  C,
+  M,
+  Mixin,
+  Extends,
+  E,
+  EE,
+  Defaults
+> & {
   props: PropsOptions & ThisType<void>
 } & ThisType<
     CreateComponentPublicInstance<
@@ -224,7 +268,10 @@ export type ComponentOptionsWithObjectProps<
       M,
       Mixin,
       Extends,
-      E
+      E,
+      Props,
+      Defaults,
+      false
     >
   >
 
@@ -253,6 +300,7 @@ export type ComponentOptions<
   >
 
 export type ComponentOptionsMixin = ComponentOptionsBase<
+  any,
   any,
   any,
   any,
@@ -347,20 +395,22 @@ interface LegacyOptions<
   delimiters?: [string, string]
 }
 
-export type OptionTypesKeys = 'P' | 'B' | 'D' | 'C' | 'M'
+export type OptionTypesKeys = 'P' | 'B' | 'D' | 'C' | 'M' | 'Defaults'
 
 export type OptionTypesType<
   P = {},
   B = {},
   D = {},
   C extends ComputedOptions = {},
-  M extends MethodOptions = {}
+  M extends MethodOptions = {},
+  Defaults = {}
 > = {
   P: P
   B: B
   D: D
   C: C
   M: M
+  Defaults: Defaults
 }
 
 const enum OptionTypes {
