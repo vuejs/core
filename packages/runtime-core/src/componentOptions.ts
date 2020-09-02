@@ -634,13 +634,15 @@ export function applyOptions(
   if (renderTriggered) {
     onRenderTriggered(renderTriggered.bind(publicThis))
   }
-  if (beforeDestroy) {
+  if (__DEV__ && beforeDestroy) {
+    warn(`\`beforeDestroy\` has been renamed to \`beforeUnmount\`.`)
     onBeforeUnmount(beforeDestroy.bind(publicThis))
   }
   if (beforeUnmount) {
     onBeforeUnmount(beforeUnmount.bind(publicThis))
   }
-  if (destroyed) {
+  if (__DEV__ && destroyed) {
+    warn(`\`destroyed\` has been renamed to \`unmounted\`.`)
     onUnmounted(destroyed.bind(publicThis))
   }
   if (unmounted) {
