@@ -19,7 +19,8 @@ import {
   BlockCodegenNode,
   IfNode,
   createVNodeCall,
-  AttributeNode
+  AttributeNode,
+  locStub
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
@@ -222,7 +223,7 @@ function createChildrenCodegenNode(
   const { helper } = context
   const keyProperty = createObjectProperty(
     `key`,
-    createSimpleExpression(`${keyIndex}`, false)
+    createSimpleExpression(`${keyIndex}`, false, locStub, true)
   )
   const { children } = branch
   const firstChild = children[0]

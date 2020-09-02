@@ -74,6 +74,36 @@ describe('api: lifecycle hooks', () => {
     count.value++
     await nextTick()
     expect(fn).toHaveBeenCalledTimes(1)
+    expect(serializeInner(root)).toBe(`<div>1</div>`)
+  })
+
+  it('state mutation in onBeforeUpdate', async () => {
+    const count = ref(0)
+    const root = nodeOps.createElement('div')
+    const fn = jest.fn(() => {
+      // should be called before inner div is updated
+      expect(serializeInner(root)).toBe(`<div>0</div>`)
+      count.value++
+    })
+    const renderSpy = jest.fn()
+
+    const Comp = {
+      setup() {
+        onBeforeUpdate(fn)
+        return () => {
+          renderSpy()
+          return h('div', count.value)
+        }
+      }
+    }
+    render(h(Comp), root)
+    expect(renderSpy).toHaveBeenCalledTimes(1)
+
+    count.value++
+    await nextTick()
+    expect(fn).toHaveBeenCalledTimes(1)
+    expect(renderSpy).toHaveBeenCalledTimes(2)
+    expect(serializeInner(root)).toBe(`<div>2</div>`)
   })
 
   it('onUpdated', async () => {
@@ -326,6 +356,7 @@ describe('api: lifecycle hooks', () => {
       newValue: 2
     })
 
+    // @ts-ignore
     delete obj.bar
     await nextTick()
     expect(onTrigger).toHaveBeenCalledTimes(2)

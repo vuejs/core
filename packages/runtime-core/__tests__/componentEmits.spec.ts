@@ -178,40 +178,13 @@ describe('component: emit', () => {
     expect(fn).toHaveBeenCalledTimes(1)
   })
 
-  describe('isEmitListener', () => {
-    test('array option', () => {
-      const def1 = { emits: ['click'] }
-      expect(isEmitListener(def1, 'onClick')).toBe(true)
-      expect(isEmitListener(def1, 'onclick')).toBe(false)
-      expect(isEmitListener(def1, 'onBlick')).toBe(false)
-    })
-
-    test('object option', () => {
-      const def2 = { emits: { click: null } }
-      expect(isEmitListener(def2, 'onClick')).toBe(true)
-      expect(isEmitListener(def2, 'onclick')).toBe(false)
-      expect(isEmitListener(def2, 'onBlick')).toBe(false)
-    })
-
-    test('with mixins and extends', () => {
-      const mixin1 = { emits: ['foo'] }
-      const mixin2 = { emits: ['bar'] }
-      const extend = { emits: ['baz'] }
-      const def3 = {
-        mixins: [mixin1, mixin2],
-        extends: extend
-      }
-      expect(isEmitListener(def3, 'onFoo')).toBe(true)
-      expect(isEmitListener(def3, 'onBar')).toBe(true)
-      expect(isEmitListener(def3, 'onBaz')).toBe(true)
-      expect(isEmitListener(def3, 'onclick')).toBe(false)
-      expect(isEmitListener(def3, 'onBlick')).toBe(false)
-    })
-
-    test('.once listeners', () => {
-      const def2 = { emits: { click: null } }
-      expect(isEmitListener(def2, 'onClickOnce')).toBe(true)
-      expect(isEmitListener(def2, 'onclickOnce')).toBe(false)
-    })
+  test('isEmitListener', () => {
+    const options = { click: null }
+    expect(isEmitListener(options, 'onClick')).toBe(true)
+    expect(isEmitListener(options, 'onclick')).toBe(false)
+    expect(isEmitListener(options, 'onBlick')).toBe(false)
+    // .once listeners
+    expect(isEmitListener(options, 'onClickOnce')).toBe(true)
+    expect(isEmitListener(options, 'onclickOnce')).toBe(false)
   })
 })

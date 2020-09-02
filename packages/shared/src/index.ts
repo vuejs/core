@@ -19,7 +19,7 @@ export * from './toDisplayString'
  * for ES2020. This will need to be updated as the spec moves forward.
  * Full list at https://babeljs.io/docs/en/next/babel-parser#plugins
  */
-export const babelParserDefautPlugins = [
+export const babelParserDefaultPlugins = [
   'bigInt',
   'optionalChaining',
   'nullishCoalescingOperator'
@@ -80,6 +80,9 @@ export const toRawType = (value: unknown): string => {
 
 export const isPlainObject = (val: unknown): val is object =>
   toTypeString(val) === '[object Object]'
+
+export const isIntegerKey = (key: unknown) =>
+  isString(key) && key[0] !== '-' && '' + parseInt(key, 10) === key
 
 export const isReservedProp = /*#__PURE__*/ makeMap(
   'key,ref,' +

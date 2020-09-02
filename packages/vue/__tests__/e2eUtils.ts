@@ -6,6 +6,24 @@ const puppeteerOptions = process.env.CI
   ? { args: ['--no-sandbox', '--disable-setuid-sandbox'] }
   : {}
 
+const maxTries = 20
+export const timeout = (n: number) => new Promise(r => setTimeout(r, n))
+
+export async function expectByPolling(
+  poll: () => Promise<any>,
+  expected: string
+) {
+  for (let tries = 0; tries < maxTries; tries++) {
+    const actual = (await poll()) || ''
+    if (actual.indexOf(expected) > -1 || tries === maxTries - 1) {
+      expect(actual).toMatch(expected)
+      break
+    } else {
+      await timeout(50)
+    }
+  }
+}
+
 export function setupPuppeteer() {
   let browser: puppeteer.Browser
   let page: puppeteer.Page

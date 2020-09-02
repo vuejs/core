@@ -68,18 +68,21 @@ describe('reactivity/readonly', () => {
         `Set operation on key "Symbol(qux)" failed: target is readonly.`
       ).toHaveBeenWarnedLast()
 
+      // @ts-ignore
       delete wrapped.foo
       expect(wrapped.foo).toBe(1)
       expect(
         `Delete operation on key "foo" failed: target is readonly.`
       ).toHaveBeenWarnedLast()
 
+      // @ts-ignore
       delete wrapped.bar.baz
       expect(wrapped.bar.baz).toBe(2)
       expect(
         `Delete operation on key "baz" failed: target is readonly.`
       ).toHaveBeenWarnedLast()
 
+      // @ts-ignore
       delete wrapped[qux]
       expect(wrapped[qux]).toBe(3)
       expect(
@@ -225,7 +228,7 @@ describe('reactivity/readonly', () => {
         test('should retrieve readonly values on iteration', () => {
           const key1 = {}
           const key2 = {}
-          const original = new Collection([[key1, {}], [key2, {}]])
+          const original = new Map([[key1, {}], [key2, {}]])
           const wrapped: any = readonly(original)
           expect(wrapped.size).toBe(2)
           for (const [key, value] of wrapped) {
@@ -243,7 +246,7 @@ describe('reactivity/readonly', () => {
         test('should retrieve reactive + readonly values on iteration', () => {
           const key1 = {}
           const key2 = {}
-          const original = reactive(new Collection([[key1, {}], [key2, {}]]))
+          const original = reactive(new Map([[key1, {}], [key2, {}]]))
           const wrapped: any = readonly(original)
           expect(wrapped.size).toBe(2)
           for (const [key, value] of wrapped) {

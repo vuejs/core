@@ -1,7 +1,7 @@
 import { currentRenderingInstance } from '../componentRenderUtils'
 import {
   currentInstance,
-  Component,
+  ConcreteComponent,
   FunctionalComponent,
   ComponentOptions
 } from '../component'
@@ -16,7 +16,9 @@ const DIRECTIVES = 'directives'
 /**
  * @private
  */
-export function resolveComponent(name: string): Component | string | undefined {
+export function resolveComponent(
+  name: string
+): ConcreteComponent | string | undefined {
   return resolveAsset(COMPONENTS, name) || name
 }
 
@@ -49,7 +51,7 @@ function resolveAsset(
   type: typeof COMPONENTS,
   name: string,
   warnMissing?: boolean
-): Component | undefined
+): ConcreteComponent | undefined
 // overload 2: directives
 function resolveAsset(
   type: typeof DIRECTIVES,
@@ -81,7 +83,8 @@ function resolveAsset(
 
     const res =
       // local registration
-      resolve((Component as ComponentOptions)[type], name) ||
+      // check instance[type] first for components with mixin or extends.
+      resolve(instance[type] || (Component as ComponentOptions)[type], name) ||
       // global registration
       resolve(instance.appContext[type], name)
     if (__DEV__ && warnMissing && !res) {

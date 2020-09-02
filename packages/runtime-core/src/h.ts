@@ -65,13 +65,8 @@ interface Constructor<P = any> {
   __isFragment?: never
   __isTeleport?: never
   __isSuspense?: never
-  new (): { $props: P }
+  new (...args: any[]): { $props: P }
 }
-
-// Excludes Component type from returned `defineComponent`
-type NotDefinedComponent<T extends Component> = T extends Constructor
-  ? never
-  : T
 
 // The following is a series of overloads for providing props validation of
 // manually written render functions.
@@ -117,9 +112,9 @@ export function h<P, E extends EmitsOptions = {}>(
 // catch-all for generic component types
 export function h(type: Component, children?: RawChildren): VNode
 
-// exclude `defineComponent`
-export function h<Options extends ComponentOptions | FunctionalComponent<{}>>(
-  type: NotDefinedComponent<Options>,
+// exclude `defineComponent` constructors
+export function h<T extends ComponentOptions | FunctionalComponent<{}>>(
+  type: T,
   props?: RawProps | null,
   children?: RawChildren | RawSlots
 ): VNode
@@ -134,7 +129,8 @@ export function h<P>(
 
 // Actual implementation
 export function h(type: any, propsOrChildren?: any, children?: any): VNode {
-  if (arguments.length === 2) {
+  const l = arguments.length
+  if (l === 2) {
     if (isObject(propsOrChildren) && !isArray(propsOrChildren)) {
       // single vnode without props
       if (isVNode(propsOrChildren)) {
@@ -147,7 +143,9 @@ export function h(type: any, propsOrChildren?: any, children?: any): VNode {
       return createVNode(type, null, propsOrChildren)
     }
   } else {
-    if (isVNode(children)) {
+    if (l > 3) {
+      children = Array.prototype.slice.call(arguments, 2)
+    } else if (l === 3 && isVNode(children)) {
       children = [children]
     }
     return createVNode(type, propsOrChildren, children)

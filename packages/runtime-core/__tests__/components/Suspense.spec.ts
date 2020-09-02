@@ -11,8 +11,7 @@ import {
   watch,
   watchEffect,
   onUnmounted,
-  onErrorCaptured,
-  Component
+  onErrorCaptured
 } from '@vue/runtime-test'
 
 describe('Suspense', () => {
@@ -31,7 +30,7 @@ describe('Suspense', () => {
       setup(props: any, { slots }: any) {
         const p = new Promise(resolve => {
           setTimeout(() => {
-            resolve(() => h<Component>(comp, props, slots))
+            resolve(() => h(comp, props, slots))
           }, delay)
         })
         // in Node 12, due to timer/nextTick mechanism change, we have to wait

@@ -159,6 +159,7 @@ export {
 } from './vnode'
 export {
   Component,
+  ConcreteComponent,
   FunctionalComponent,
   ComponentInternalInstance,
   SetupContext,
@@ -178,7 +179,7 @@ export {
 export {
   ComponentPublicInstance,
   ComponentCustomProperties
-} from './componentProxy'
+} from './componentPublicInstance'
 export {
   Renderer,
   RendererNode,

@@ -1,5 +1,5 @@
 import {
-  Component,
+  ConcreteComponent,
   getCurrentInstance,
   FunctionalComponent,
   SetupContext,
@@ -33,7 +33,7 @@ import {
   invokeVNodeHook
 } from '../renderer'
 import { setTransitionHooks } from './BaseTransition'
-import { ComponentRenderContext } from '../componentProxy'
+import { ComponentRenderContext } from '../componentPublicInstance'
 
 type MatchPattern = string | RegExp | string[] | RegExp[]
 
@@ -43,7 +43,7 @@ export interface KeepAliveProps {
   max?: number | string
 }
 
-type CacheKey = string | number | Component
+type CacheKey = string | number | ConcreteComponent
 type Cache = Map<CacheKey, VNode>
 type Keys = Set<CacheKey>
 
@@ -151,7 +151,7 @@ const KeepAliveImpl = {
 
     function pruneCache(filter?: (name: string) => boolean) {
       cache.forEach((vnode, key) => {
-        const name = getName(vnode.type as Component)
+        const name = getName(vnode.type as ConcreteComponent)
         if (name && (!filter || !filter(name))) {
           pruneCacheEntry(key)
         }
@@ -228,7 +228,7 @@ const KeepAliveImpl = {
         return vnode
       }
 
-      const comp = vnode.type as Component
+      const comp = vnode.type as ConcreteComponent
       const name = getName(comp)
       const { include, exclude, max } = props
 
@@ -285,12 +285,13 @@ const KeepAliveImpl = {
 // export the public type for h/tsx inference
 // also to avoid inline import() in generated d.ts files
 export const KeepAlive = (KeepAliveImpl as any) as {
+  __isKeepAlive: true
   new (): {
     $props: VNodeProps & KeepAliveProps
   }
 }
 
-function getName(comp: Component): string | void {
+function getName(comp: ConcreteComponent): string | void {
   return (comp as FunctionalComponent).displayName || comp.name
 }
 
@@ -359,14 +360,16 @@ function registerKeepAliveHook(
 }
 
 function injectToKeepAliveRoot(
-  hook: Function,
+  hook: Function & { __weh?: Function },
   type: LifecycleHooks,
   target: ComponentInternalInstance,
   keepAliveRoot: ComponentInternalInstance
 ) {
-  injectHook(type, hook, keepAliveRoot, true /* prepend */)
+  // injectHook wraps the original for error handling, so make sure to remove
+  // the wrapped version.
+  const injected = injectHook(type, hook, keepAliveRoot, true /* prepend */)
   onUnmounted(() => {
-    remove(keepAliveRoot[type]!, hook)
+    remove(keepAliveRoot[type]!, injected)
   }, target)
 }
 

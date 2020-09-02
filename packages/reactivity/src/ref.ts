@@ -23,7 +23,7 @@ const convert = <T extends unknown>(val: T): T =>
 
 export function isRef<T>(r: Ref<T> | unknown): r is Ref<T>
 export function isRef(r: any): r is Ref {
-  return r ? r.__v_isRef === true : false
+  return Boolean(r && r.__v_isRef === true)
 }
 
 export function ref<T extends object>(
@@ -44,26 +44,34 @@ export function shallowRef(value?: unknown) {
   return createRef(value, true)
 }
 
+class RefImpl<T> {
+  private _value: T
+
+  public readonly __v_isRef = true
+
+  constructor(private _rawValue: T, private readonly _shallow = false) {
+    this._value = _shallow ? _rawValue : convert(_rawValue)
+  }
+
+  get value() {
+    track(toRaw(this), TrackOpTypes.GET, 'value')
+    return this._value
+  }
+
+  set value(newVal) {
+    if (hasChanged(toRaw(newVal), this._rawValue)) {
+      this._rawValue = newVal
+      this._value = this._shallow ? newVal : convert(newVal)
+      trigger(toRaw(this), TriggerOpTypes.SET, 'value', newVal)
+    }
+  }
+}
+
 function createRef(rawValue: unknown, shallow = false) {
   if (isRef(rawValue)) {
     return rawValue
   }
-  let value = shallow ? rawValue : convert(rawValue)
-  const r = {
-    __v_isRef: true,
-    get value() {
-      track(r, TrackOpTypes.GET, 'value')
-      return value
-    },
-    set value(newVal) {
-      if (hasChanged(toRaw(newVal), rawValue)) {
-        rawValue = newVal
-        value = shallow ? newVal : convert(newVal)
-        trigger(r, TriggerOpTypes.SET, 'value', newVal)
-      }
-    }
-  }
-  return r
+  return new RefImpl(rawValue, shallow)
 }
 
 export function triggerRef(ref: Ref) {
@@ -103,21 +111,32 @@ export type CustomRefFactory<T> = (
   set: (value: T) => void
 }
 
-export function customRef<T>(factory: CustomRefFactory<T>): Ref<T> {
-  const { get, set } = factory(
-    () => track(r, TrackOpTypes.GET, 'value'),
-    () => trigger(r, TriggerOpTypes.SET, 'value')
-  )
-  const r = {
-    __v_isRef: true,
-    get value() {
-      return get()
-    },
-    set value(v) {
-      set(v)
-    }
+class CustomRefImpl<T> {
+  private readonly _get: ReturnType<CustomRefFactory<T>>['get']
+  private readonly _set: ReturnType<CustomRefFactory<T>>['set']
+
+  public readonly __v_isRef = true
+
+  constructor(factory: CustomRefFactory<T>) {
+    const { get, set } = factory(
+      () => track(this, TrackOpTypes.GET, 'value'),
+      () => trigger(this, TriggerOpTypes.SET, 'value')
+    )
+    this._get = get
+    this._set = set
   }
-  return r as any
+
+  get value() {
+    return this._get()
+  }
+
+  set value(newVal) {
+    this._set(newVal)
+  }
+}
+
+export function customRef<T>(factory: CustomRefFactory<T>): Ref<T> {
+  return new CustomRefImpl(factory) as any
 }
 
 export function toRefs<T extends object>(object: T): ToRefs<T> {
@@ -131,19 +150,25 @@ export function toRefs<T extends object>(object: T): ToRefs<T> {
   return ret
 }
 
+class ObjectRefImpl<T extends object, K extends keyof T> {
+  public readonly __v_isRef = true
+
+  constructor(private readonly _object: T, private readonly _key: K) {}
+
+  get value() {
+    return this._object[this._key]
+  }
+
+  set value(newVal) {
+    this._object[this._key] = newVal
+  }
+}
+
 export function toRef<T extends object, K extends keyof T>(
   object: T,
   key: K
 ): Ref<T[K]> {
-  return {
-    __v_isRef: true,
-    get value(): any {
-      return object[key]
-    },
-    set value(newVal) {
-      object[key] = newVal
-    }
-  } as any
+  return new ObjectRefImpl(object, key) as any
 }
 
 // corner case when use narrows type

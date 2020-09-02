@@ -1,6 +1,6 @@
 {
   "private": true,
-  "version": "3.0.0-rc.5",
+  "version": "3.0.0-rc.9",
   "workspaces": [
     "packages/*"
   ],
@@ -43,7 +43,7 @@
   },
   "devDependencies": {
     "@ls-lint/ls-lint": "^1.8.0",
-    "@microsoft/api-extractor": "^7.3.9",
+    "@microsoft/api-extractor": "^7.9.7",
     "@rollup/plugin-commonjs": "^13.0.0",
     "@rollup/plugin-json": "^4.0.0",
     "@rollup/plugin-node-resolve": "^8.0.0",
@@ -51,13 +51,13 @@
     "@types/jest": "^26.0.0",
     "@types/node": "13.11.1",
     "@types/puppeteer": "^2.0.0",
-    "@typescript-eslint/parser": "^3.2.0",
+    "@typescript-eslint/parser": "^3.9.1",
     "brotli": "^1.3.2",
     "chalk": "^4.1.0",
     "conventional-changelog-cli": "^2.0.31",
     "csstype": "^2.6.8",
     "enquirer": "^2.3.2",
-    "eslint": "^7.2.0",
+    "eslint": "^7.7.0",
     "execa": "^4.0.2",
     "fs-extra": "^9.0.1",
     "jest": "^26.0.1",
@@ -70,11 +70,11 @@
     "rollup-plugin-node-builtins": "^2.1.2",
     "rollup-plugin-node-globals": "^1.4.0",
     "rollup-plugin-terser": "^6.1.0",
-    "rollup-plugin-typescript2": "^0.27.1",
+    "rollup-plugin-typescript2": "^0.27.2",
     "semver": "^7.3.2",
     "serve": "^11.3.0",
-    "ts-jest": "^26.1.0",
-    "typescript": "^3.9.3",
+    "ts-jest": "^26.2.0",
+    "typescript": "^4.0.2",
     "yorkie": "^2.0.0"
   }
 }

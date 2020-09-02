@@ -9,6 +9,7 @@ import {
 import * as CompilerDOM from '@vue/compiler-dom'
 import { RawSourceMap, SourceMapGenerator } from 'source-map'
 import { TemplateCompiler } from './compileTemplate'
+import { Statement } from '@babel/types'
 
 export interface SFCParseOptions {
   filename?: string
@@ -37,6 +38,8 @@ export interface SFCScriptBlock extends SFCBlock {
   type: 'script'
   setup?: string | boolean
   bindings?: BindingMetadata
+  scriptAst?: Statement[]
+  scriptSetupAst?: Statement[]
 }
 
 export interface SFCStyleBlock extends SFCBlock {
@@ -176,7 +179,7 @@ export function parse(
             `its syntax will be ambiguous outside of the component.`
         )
       )
-      delete descriptor.scriptSetup
+      descriptor.scriptSetup = null
     }
     if (descriptor.script && descriptor.script.src) {
       errors.push(
@@ -185,7 +188,7 @@ export function parse(
             `also present because they must be processed together.`
         )
       )
-      delete descriptor.script
+      descriptor.script = null
     }
   }
 

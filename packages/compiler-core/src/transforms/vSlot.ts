@@ -33,7 +33,7 @@ import {
 } from '../utils'
 import { CREATE_SLOTS, RENDER_LIST, WITH_CTX } from '../runtimeHelpers'
 import { parseForExpression, createForLoopParams } from './vFor'
-import { SlotFlags } from '@vue/shared/src'
+import { SlotFlags } from '@vue/shared'
 
 const defaultFallback = createSimpleExpression(`undefined`, false)
 

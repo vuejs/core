@@ -8,7 +8,7 @@ import {
   Fragment,
   unref
 } from '@vue/runtime-core'
-import { ShapeFlags } from '@vue/shared/src'
+import { ShapeFlags } from '@vue/shared'
 
 export function useCssVars(
   getter: (ctx: ComponentPublicInstance) => Record<string, string>,

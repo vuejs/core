@@ -66,7 +66,7 @@ import {
 import { createHydrationFunctions, RootHydrateFunction } from './hydration'
 import { invokeDirectiveHook } from './directives'
 import { startMeasure, endMeasure } from './profiling'
-import { ComponentPublicInstance } from './componentProxy'
+import { ComponentPublicInstance } from './componentPublicInstance'
 import { devtoolsComponentRemoved, devtoolsComponentUpdated } from './devtools'
 import { initFeatureFlags } from './featureFlags'
 
@@ -720,6 +720,9 @@ function baseCreateRenderer(
         )
       }
 
+      if (dirs) {
+        invokeDirectiveHook(vnode, null, parentComponent, 'created')
+      }
       // props
       if (props) {
         for (const key in props) {
@@ -741,20 +744,45 @@ function baseCreateRenderer(
           invokeVNodeHook(vnodeHook, parentComponent, vnode)
         }
       }
-      if (dirs) {
-        invokeDirectiveHook(vnode, null, parentComponent, 'beforeMount')
-      }
-
       // scopeId
-      if (scopeId) {
-        hostSetScopeId(el, scopeId)
-      }
-      const treeOwnerId = parentComponent && parentComponent.type.__scopeId
-      // vnode's own scopeId and the current patched component's scopeId is
-      // different - this is a slot content node.
-      if (treeOwnerId && treeOwnerId !== scopeId) {
-        hostSetScopeId(el, treeOwnerId + '-s')
-      }
+      setScopeId(el, scopeId, vnode, parentComponent)
+      // if (scopeId) {
+      //   hostSetScopeId(el, scopeId)
+      // }
+      // if (parentComponent) {
+      //   const treeOwnerId = parentComponent.type.__scopeId
+      //   // vnode's own scopeId and the current patched component's scopeId is
+      //   // different - this is a slot content node.
+      //   if (treeOwnerId && treeOwnerId !== scopeId) {
+      //     hostSetScopeId(el, treeOwnerId + '-s')
+      //   }
+      //   const parentScopeId =
+      //     vnode === parentComponent.subTree && parentComponent.vnode.scopeId
+      //   if (parentScopeId) {
+      //     hostSetScopeId(el, parentScopeId)
+      //     if (parentComponent.parent) {
+      //       const treeOwnerId = parentComponent.parent.type.__scopeId
+      //       // vnode's own scopeId and the current patched component's scopeId is
+      //       // different - this is a slot content node.
+      //       if (treeOwnerId && treeOwnerId !== parentScopeId) {
+      //         hostSetScopeId(el, treeOwnerId + '-s')
+      //       }
+      //     }
+      //   }
+      // }
+    }
+    if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+      Object.defineProperty(el, '__vnode', {
+        value: vnode,
+        enumerable: false
+      })
+      Object.defineProperty(el, '__vueParentComponent', {
+        value: parentComponent,
+        enumerable: false
+      })
+    }
+    if (dirs) {
+      invokeDirectiveHook(vnode, null, parentComponent, 'beforeMount')
     }
     // #1583 For inside suspense + suspense not resolved case, enter hook should call when suspense resolved
     // #1689 For inside suspense + suspense resolved case, just call it
@@ -776,6 +804,33 @@ function baseCreateRenderer(
         needCallTransitionHooks && transition!.enter(el)
         dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
       }, parentSuspense)
+    }
+  }
+
+  const setScopeId = (
+    el: RendererElement,
+    scopeId: string | false | null,
+    vnode: VNode,
+    parentComponent: ComponentInternalInstance | null
+  ) => {
+    if (scopeId) {
+      hostSetScopeId(el, scopeId)
+    }
+    if (parentComponent) {
+      const treeOwnerId = parentComponent.type.__scopeId
+      // vnode's own scopeId and the current patched component's scopeId is
+      // different - this is a slot content node.
+      if (treeOwnerId && treeOwnerId !== scopeId) {
+        hostSetScopeId(el, treeOwnerId + '-s')
+      }
+      if (vnode === parentComponent.subTree) {
+        setScopeId(
+          el,
+          parentComponent.vnode.scopeId,
+          parentComponent.vnode,
+          parentComponent.parent
+        )
+      }
     }
   }
 
@@ -1281,13 +1336,7 @@ function baseCreateRenderer(
         let vnodeHook: VNodeHook | null | undefined
         const { el, props } = initialVNode
         const { bm, m, parent } = instance
-        if (__DEV__) {
-          startMeasure(instance, `render`)
-        }
-        const subTree = (instance.subTree = renderComponentRoot(instance))
-        if (__DEV__) {
-          endMeasure(instance, `render`)
-        }
+
         // beforeMount hook
         if (bm) {
           invokeArrayFns(bm)
@@ -1296,6 +1345,16 @@ function baseCreateRenderer(
         if ((vnodeHook = props && props.onVnodeBeforeMount)) {
           invokeVNodeHook(vnodeHook, parent, initialVNode)
         }
+
+        // render
+        if (__DEV__) {
+          startMeasure(instance, `render`)
+        }
+        const subTree = (instance.subTree = renderComponentRoot(instance))
+        if (__DEV__) {
+          endMeasure(instance, `render`)
+        }
+
         if (el && hydrateNode) {
           if (__DEV__) {
             startMeasure(instance, `hydrate`)
@@ -1365,6 +1424,18 @@ function baseCreateRenderer(
         } else {
           next = vnode
         }
+        next.el = vnode.el
+
+        // beforeUpdate hook
+        if (bu) {
+          invokeArrayFns(bu)
+        }
+        // onVnodeBeforeUpdate
+        if ((vnodeHook = next.props && next.props.onVnodeBeforeUpdate)) {
+          invokeVNodeHook(vnodeHook, parent, next, vnode)
+        }
+
+        // render
         if (__DEV__) {
           startMeasure(instance, `render`)
         }
@@ -1374,15 +1445,7 @@ function baseCreateRenderer(
         }
         const prevTree = instance.subTree
         instance.subTree = nextTree
-        next.el = vnode.el
-        // beforeUpdate hook
-        if (bu) {
-          invokeArrayFns(bu)
-        }
-        // onVnodeBeforeUpdate
-        if ((vnodeHook = next.props && next.props.onVnodeBeforeUpdate)) {
-          invokeVNodeHook(vnodeHook, parent, next, vnode)
-        }
+
         // reset refs
         // only needed if previous patch had refs
         if (instance.refs !== EMPTY_OBJ) {
@@ -1441,9 +1504,6 @@ function baseCreateRenderer(
     nextVNode: VNode,
     optimized: boolean
   ) => {
-    if (__DEV__ && instance.type.__hmrId) {
-      optimized = false
-    }
     nextVNode.component = instance
     const prevProps = instance.vnode.props
     instance.vnode = nextVNode
@@ -2036,7 +2096,7 @@ function baseCreateRenderer(
       unregisterHMR(instance)
     }
 
-    const { bum, effects, update, subTree, um, da, isDeactivated } = instance
+    const { bum, effects, update, subTree, um } = instance
     // beforeUnmount hook
     if (bum) {
       invokeArrayFns(bum)
@@ -2055,14 +2115,6 @@ function baseCreateRenderer(
     // unmounted hook
     if (um) {
       queuePostRenderEffect(um, parentSuspense)
-    }
-    // deactivated hook
-    if (
-      da &&
-      !isDeactivated &&
-      instance.vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-    ) {
-      queuePostRenderEffect(da, parentSuspense)
     }
     queuePostRenderEffect(() => {
       instance.isUnmounted = true

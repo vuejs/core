@@ -5,7 +5,7 @@ import {
   setCurrentInstance,
   isInSSRComponentSetup
 } from './component'
-import { ComponentPublicInstance } from './componentProxy'
+import { ComponentPublicInstance } from './componentPublicInstance'
 import { callWithAsyncErrorHandling, ErrorTypeStrings } from './errorHandling'
 import { warn } from './warning'
 import { capitalize } from '@vue/shared'
@@ -18,7 +18,7 @@ export function injectHook(
   hook: Function & { __weh?: Function },
   target: ComponentInternalInstance | null = currentInstance,
   prepend: boolean = false
-) {
+): Function | undefined {
   if (target) {
     const hooks = target[type] || (target[type] = [])
     // cache the error handling wrapper for injected hooks so the same hook
@@ -47,6 +47,7 @@ export function injectHook(
     } else {
       hooks.push(wrappedHook)
     }
+    return wrappedHook
   } else if (__DEV__) {
     const apiName = `on${capitalize(
       ErrorTypeStrings[type].replace(/ hook$/, '')

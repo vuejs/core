@@ -1,5 +1,6 @@
 import {
   describe,
+  Component,
   defineComponent,
   PropType,
   ref,
@@ -29,6 +30,7 @@ describe('with object props', () => {
     fff: (a: number, b: string) => { a: boolean }
     hhh: boolean
     ggg: 'foo' | 'bar'
+    ffff: (a: number, b: string) => { a: boolean }
     validated?: string
   }
 
@@ -89,6 +91,11 @@ describe('with object props', () => {
         type: String as PropType<'foo' | 'bar'>,
         default: 'foo'
       },
+      // default + function
+      ffff: {
+        type: Function as PropType<(a: number, b: string) => { a: boolean }>,
+        default: (a: number, b: string) => ({ a: a > +b })
+      },
       validated: {
         type: String,
         // validator requires explicit annotation
@@ -112,6 +119,7 @@ describe('with object props', () => {
       expectType<ExpectedProps['fff']>(props.fff)
       expectType<ExpectedProps['hhh']>(props.hhh)
       expectType<ExpectedProps['ggg']>(props.ggg)
+      expectType<ExpectedProps['ffff']>(props.ffff)
       expectType<ExpectedProps['validated']>(props.validated)
 
       // @ts-expect-error props should be readonly
@@ -179,6 +187,8 @@ describe('with object props', () => {
     }
   })
 
+  expectType<Component>(MyComponent)
+
   // Test TSX
   expectType<JSX.Element>(
     <MyComponent
@@ -202,6 +212,17 @@ describe('with object props', () => {
       key={'foo'}
       // should allow ref
       ref={'foo'}
+    />
+  )
+
+  expectType<Component>(
+    <MyComponent
+      b="b"
+      dd={{ n: 1 }}
+      ddd={['ddd']}
+      eee={() => ({ a: 'eee' })}
+      fff={(a, b) => ({ a: a > +b })}
+      hhh={false}
     />
   )
 
@@ -680,6 +701,16 @@ describe('defineComponent', () => {
       components: { comp }
     })
   })
+
+  test('should accept class components with receiving constructor arguments', () => {
+    class Comp {
+      static __vccOpts = {}
+      constructor(_props: { foo: string }) {}
+    }
+    defineComponent({
+      components: { Comp }
+    })
+  })
 })
 
 describe('emits', () => {
@@ -777,4 +808,59 @@ describe('componentOptions setup should be `SetupContext`', () => {
     props: Record<string, any>,
     ctx: SetupContext
   ) => any)
+})
+
+describe('extract instance type', () => {
+  const Base = defineComponent({
+    props: {
+      baseA: {
+        type: Number,
+        default: 1
+      }
+    }
+  })
+  const MixinA = defineComponent({
+    props: {
+      mA: {
+        type: String,
+        default: ''
+      }
+    }
+  })
+  const CompA = defineComponent({
+    extends: Base,
+    mixins: [MixinA],
+    props: {
+      a: {
+        type: Boolean,
+        default: false
+      },
+      b: {
+        type: String,
+        required: true
+      },
+      c: Number
+    }
+  })
+
+  const compA = {} as InstanceType<typeof CompA>
+
+  expectType<boolean>(compA.a)
+  expectType<string>(compA.b)
+  expectType<number | undefined>(compA.c)
+  // mixins
+  expectType<string>(compA.mA)
+  // extends
+  expectType<number>(compA.baseA)
+
+  //  @ts-expect-error
+  expectError((compA.a = true))
+  //  @ts-expect-error
+  expectError((compA.b = 'foo'))
+  //  @ts-expect-error
+  expectError((compA.c = 1))
+  //  @ts-expect-error
+  expectError((compA.mA = 'foo'))
+  //  @ts-expect-error
+  expectError((compA.baseA = 1))
 })
