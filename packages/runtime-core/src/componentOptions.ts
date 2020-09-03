@@ -768,23 +768,24 @@ export function resolveMergedOptions(
   const globalMixins = instance.appContext.mixins
   if (!globalMixins.length && !mixins && !extendsOptions) return raw
   const options = {}
-  mergeOptions(options, raw, instance)
   globalMixins.forEach(m => mergeOptions(options, m, instance))
+  mergeOptions(options, raw, instance)
   return (raw.__merged = options)
 }
 
 function mergeOptions(to: any, from: any, instance: ComponentInternalInstance) {
   const strats = instance.appContext.config.optionMergeStrategies
-  for (const key in from) {
-    if (strats && hasOwn(strats, key)) {
-      to[key] = strats[key](to[key], from[key], instance.proxy, key)
-    } else if (!hasOwn(to, key)) {
-      to[key] = from[key]
-    }
-  }
   const { mixins, extends: extendsOptions } = from
 
   extendsOptions && mergeOptions(to, extendsOptions, instance)
   mixins &&
     mixins.forEach((m: ComponentOptionsMixin) => mergeOptions(to, m, instance))
+
+  for (const key in from) {
+    if (strats && hasOwn(strats, key)) {
+      to[key] = strats[key](to[key], from[key], instance.proxy, key)
+    } else {
+      to[key] = from[key]
+    }
+  }
 }
