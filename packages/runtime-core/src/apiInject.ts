@@ -1,3 +1,4 @@
+import { isFunction } from '@vue/shared'
 import { currentInstance } from './component'
 import { currentRenderingInstance } from './componentRenderUtils'
 import { warn } from './warning'
@@ -27,10 +28,15 @@ export function provide<T>(key: InjectionKey<T> | string, value: T) {
 }
 
 export function inject<T>(key: InjectionKey<T> | string): T | undefined
-export function inject<T>(key: InjectionKey<T> | string, defaultValue: T): T
+export function inject<T>(
+  key: InjectionKey<T> | string,
+  defaultValue: T,
+  treatDefaultAsFactory?: boolean
+): T
 export function inject(
   key: InjectionKey<any> | string,
-  defaultValue?: unknown
+  defaultValue?: unknown,
+  treatDefaultAsFactory = false
 ) {
   // fallback to `currentRenderingInstance` so that this can be called in
   // a functional component
@@ -41,7 +47,9 @@ export function inject(
       // TS doesn't allow symbol as index type
       return provides[key as string]
     } else if (arguments.length > 1) {
-      return defaultValue
+      return treatDefaultAsFactory && isFunction(defaultValue)
+        ? defaultValue()
+        : defaultValue
     } else if (__DEV__) {
       warn(`injection "${String(key)}" not found.`)
     }

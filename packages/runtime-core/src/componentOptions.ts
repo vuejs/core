@@ -457,7 +457,11 @@ export function applyOptions(
       for (const key in injectOptions) {
         const opt = injectOptions[key]
         if (isObject(opt)) {
-          ctx[key] = inject(opt.from, opt.default)
+          ctx[key] = inject(
+            opt.from,
+            opt.default,
+            true /* treat default function as factory */
+          )
         } else {
           ctx[key] = inject(opt)
         }
