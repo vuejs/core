@@ -19,7 +19,7 @@ export function ssrProcessTeleport(
   node: ComponentNode,
   context: SSRTransformContext
 ) {
-  const targetProp = findProp(node, 'target')
+  const targetProp = findProp(node, 'to')
   if (!targetProp) {
     context.onError(
       createSSRCompilerError(SSRErrorCodes.X_SSR_NO_TELEPORT_TARGET, node.loc)
