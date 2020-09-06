@@ -120,7 +120,7 @@ describe('ssr: scopeId', () => {
                     _createVNode(\\"span\\")
                   ]),
                   _: 1
-                })
+                }, 512 /* NEED_PATCH */)
               ]
             }
           }),

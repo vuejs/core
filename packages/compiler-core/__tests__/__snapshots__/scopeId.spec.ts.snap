@@ -30,7 +30,7 @@ export const render = /*#__PURE__*/_withId(function render(_ctx, _cache) {
       _createVNode(\\"div\\")
     ]),
     _: 1
-  }))
+  }, 512 /* NEED_PATCH */))
 })"
 `;
 
@@ -77,7 +77,7 @@ export const render = /*#__PURE__*/_withId(function render(_ctx, _cache) {
       _createVNode(\\"div\\")
     ]),
     _: 1
-  }))
+  }, 512 /* NEED_PATCH */))
 })"
 `;
 

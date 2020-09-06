@@ -486,7 +486,7 @@ describe('compiler: transform component slots', () => {
       if (shouldForce) {
         expect(flag).toBe(genFlagText(PatchFlags.DYNAMIC_SLOTS))
       } else {
-        expect(flag).toBeUndefined()
+        expect(flag).toBe(genFlagText(PatchFlags.NEED_PATCH))
       }
     }
 

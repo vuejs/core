@@ -26,6 +26,7 @@ import {
   isSymbol,
   isOn,
   isObject,
+  isString,
   isReservedProp
 } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
@@ -174,6 +175,17 @@ export const transformElement: NodeTransform = (node, context) => {
       } else {
         vnodeChildren = node.children
       }
+    }
+
+    // #2058
+    // when the component is not registered, it will resolve to plain element,
+    // we add the `NEED_PATCH` flag here to avoid accidental failure of tracking.
+    if (
+      isString(vnodeTag) &&
+      /^_component_/.test(vnodeTag) &&
+      patchFlag === 0
+    ) {
+      patchFlag |= PatchFlags.NEED_PATCH
     }
 
     // patchFlag & dynamicPropNames
