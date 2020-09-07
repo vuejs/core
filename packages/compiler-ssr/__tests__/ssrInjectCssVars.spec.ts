@@ -11,7 +11,7 @@ describe('ssr: inject <style vars>', () => {
       const { ssrResolveCssVars: _ssrResolveCssVars, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        const _cssVars = ssrResolveCssVars({ color: _ctx.color })
+        const _cssVars = _ssrResolveCssVars({ color: _ctx.color })
         _push(\`<div\${_ssrRenderAttrs(_mergeProps(_attrs, _cssVars))}></div>\`)
       }"
     `)
@@ -26,7 +26,7 @@ describe('ssr: inject <style vars>', () => {
       "const { ssrResolveCssVars: _ssrResolveCssVars, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        const _cssVars = ssrResolveCssVars({ color: _ctx.color })
+        const _cssVars = _ssrResolveCssVars({ color: _ctx.color })
         _push(\`<!--[--><div\${
           _ssrRenderAttrs(_cssVars)
         }></div><div\${
@@ -48,7 +48,7 @@ describe('ssr: inject <style vars>', () => {
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         const _component_foo = _resolveComponent(\\"foo\\")
 
-        const _cssVars = ssrResolveCssVars({ color: _ctx.color })
+        const _cssVars = _ssrResolveCssVars({ color: _ctx.color })
         _push(\`<!--[--><div\${_ssrRenderAttrs(_cssVars)}></div>\`)
         _push(_ssrRenderComponent(_component_foo, _cssVars, null, _parent))
         _push(\`<!--]-->\`)
@@ -66,7 +66,7 @@ describe('ssr: inject <style vars>', () => {
       const { ssrResolveCssVars: _ssrResolveCssVars, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        const _cssVars = ssrResolveCssVars({ color: _ctx.color })
+        const _cssVars = _ssrResolveCssVars({ color: _ctx.color })
         if (_ctx.ok) {
           _push(\`<div\${_ssrRenderAttrs(_mergeProps(_attrs, _cssVars))}></div>\`)
         } else {
@@ -91,7 +91,7 @@ describe('ssr: inject <style vars>', () => {
       const { ssrResolveCssVars: _ssrResolveCssVars, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        const _cssVars = ssrResolveCssVars({ color: _ctx.color }, \\"data-v-foo\\")
+        const _cssVars = _ssrResolveCssVars({ color: _ctx.color }, \\"data-v-foo\\")
         _push(\`<div\${_ssrRenderAttrs(_mergeProps(_attrs, _cssVars))} data-v-foo></div>\`)
       }"
     `)
