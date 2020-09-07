@@ -36,6 +36,7 @@ import { currentRenderingInstance } from './componentRenderUtils'
 import { RendererNode, RendererElement } from './renderer'
 import { NULL_DYNAMIC_COMPONENT } from './helpers/resolveAssets'
 import { hmrDirtyComponents } from './hmr'
+import { setCompiledSlotRendering } from './helpers/renderSlot'
 
 export const Fragment = (Symbol(__DEV__ ? 'Fragment' : undefined) as any) as {
   __isFragment: true
@@ -234,7 +235,7 @@ export function createBlock(
   closeBlock()
   // a block is always going to be patched, so track it as a child of its
   // parent block
-  if (currentBlock) {
+  if (shouldTrack > 0 && currentBlock) {
     currentBlock.push(vnode)
   }
   return vnode
@@ -539,12 +540,15 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
   } else if (isArray(children)) {
     type = ShapeFlags.ARRAY_CHILDREN
   } else if (typeof children === 'object') {
-    // Normalize slot to plain children
-    if (
-      (shapeFlag & ShapeFlags.ELEMENT || shapeFlag & ShapeFlags.TELEPORT) &&
-      (children as any).default
-    ) {
-      normalizeChildren(vnode, (children as any).default())
+    if (shapeFlag & ShapeFlags.ELEMENT || shapeFlag & ShapeFlags.TELEPORT) {
+      // Normalize slot to plain children for plain element and Teleport
+      const slot = (children as any).default
+      if (slot) {
+        // _c marker is added by withCtx() indicating this is a compiled slot
+        slot._c && setCompiledSlotRendering(1)
+        normalizeChildren(vnode, slot())
+        slot._c && setCompiledSlotRendering(-1)
+      }
       return
     } else {
       type = ShapeFlags.SLOTS_CHILDREN

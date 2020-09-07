@@ -241,7 +241,7 @@ describe('api: options', () => {
   })
 
   test('provide/inject', () => {
-    const Root = {
+    const Root = defineComponent({
       data() {
         return {
           a: 1
@@ -253,45 +253,38 @@ describe('api: options', () => {
         }
       },
       render() {
-        return [h(ChildA), h(ChildB), h(ChildC), h(ChildD)]
+        return [h(ChildA), h(ChildB), h(ChildC), h(ChildD), h(ChildE)]
       }
-    } as any
-    const ChildA = {
-      inject: ['a'],
-      render() {
-        return this.a
-      }
-    } as any
-    const ChildB = {
-      // object alias
-      inject: { b: 'a' },
-      render() {
-        return this.b
-      }
-    } as any
-    const ChildC = {
-      inject: {
-        b: {
-          from: 'a'
-        }
-      },
-      render() {
-        return this.b
-      }
-    } as any
-    const ChildD = {
-      inject: {
-        b: {
-          from: 'c',
-          default: 2
-        }
-      },
-      render() {
-        return this.b
-      }
-    } as any
+    })
 
-    expect(renderToString(h(Root))).toBe(`1112`)
+    const defineChild = (injectOptions: any, injectedKey = 'b') =>
+      ({
+        inject: injectOptions,
+        render() {
+          return this[injectedKey]
+        }
+      } as any)
+
+    const ChildA = defineChild(['a'], 'a')
+    const ChildB = defineChild({ b: 'a' })
+    const ChildC = defineChild({
+      b: {
+        from: 'a'
+      }
+    })
+    const ChildD = defineChild({
+      b: {
+        from: 'c',
+        default: 2
+      }
+    })
+    const ChildE = defineChild({
+      b: {
+        from: 'c',
+        default: () => 3
+      }
+    })
+    expect(renderToString(h(Root))).toBe(`11123`)
   })
 
   test('lifecycle', async () => {
@@ -696,6 +689,50 @@ describe('api: options', () => {
       'createdD',
       'selfCreated'
     ])
+  })
+
+  test('flatten merged options', async () => {
+    const MixinBase = {
+      msg1: 'base'
+    }
+    const ExtendsBase = {
+      msg2: 'base'
+    }
+    const Mixin = {
+      mixins: [MixinBase]
+    }
+    const Extends = {
+      extends: ExtendsBase
+    }
+    const Comp = defineComponent({
+      extends: defineComponent(Extends),
+      mixins: [defineComponent(Mixin)],
+      render() {
+        return `${this.$options.msg1},${this.$options.msg2}`
+      }
+    })
+
+    expect(renderToString(h(Comp))).toBe('base,base')
+  })
+
+  test('options defined in component have higher priority', async () => {
+    const Mixin = {
+      msg1: 'base'
+    }
+    const Extends = {
+      msg2: 'base'
+    }
+    const Comp = defineComponent({
+      msg1: 'local',
+      msg2: 'local',
+      extends: defineComponent(Extends),
+      mixins: [defineComponent(Mixin)],
+      render() {
+        return `${this.$options.msg1},${this.$options.msg2}`
+      }
+    })
+
+    expect(renderToString(h(Comp))).toBe('local,local')
   })
 
   test('accessing setup() state from options', async () => {

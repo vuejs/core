@@ -8,12 +8,16 @@ import {
   isFunction,
   extend
 } from '@vue/shared'
-import { ComponentInternalInstance, ConcreteComponent } from './component'
+import {
+  ComponentInternalInstance,
+  ComponentOptions,
+  ConcreteComponent
+} from './component'
 import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
 import { warn } from './warning'
-import { normalizePropsOptions } from './componentProps'
 import { UnionToIntersection } from './helpers/typeUtils'
 import { devtoolsComponentEmit } from './devtools'
+import { AppContext } from './apiCreateApp'
 
 export type ObjectEmitsOptions = Record<
   string,
@@ -44,10 +48,12 @@ export function emit(
   const props = instance.vnode.props || EMPTY_OBJ
 
   if (__DEV__) {
-    const options = normalizeEmitsOptions(instance.type)
-    if (options) {
-      if (!(event in options)) {
-        const propsOptions = normalizePropsOptions(instance.type)[0]
+    const {
+      emitsOptions,
+      propsOptions: [propsOptions]
+    } = instance
+    if (emitsOptions) {
+      if (!(event in emitsOptions)) {
         if (!propsOptions || !(`on` + capitalize(event) in propsOptions)) {
           warn(
             `Component emitted event "${event}" but it is neither declared in ` +
@@ -55,7 +61,7 @@ export function emit(
           )
         }
       } else {
-        const validator = options[event]
+        const validator = emitsOptions[event]
         if (isFunction(validator)) {
           const isValid = validator(...args)
           if (!isValid) {
@@ -98,11 +104,16 @@ export function emit(
   }
 }
 
-function normalizeEmitsOptions(
-  comp: ConcreteComponent
-): ObjectEmitsOptions | undefined {
-  if (hasOwn(comp, '__emits')) {
-    return comp.__emits
+export function normalizeEmitsOptions(
+  comp: ConcreteComponent,
+  appContext: AppContext,
+  asMixin = false
+): ObjectEmitsOptions | null {
+  const appId = appContext.app ? appContext.app._uid : -1
+  const cache = comp.__emits || (comp.__emits = {})
+  const cached = cache[appId]
+  if (cached !== undefined) {
+    return cached
   }
 
   const raw = comp.emits
@@ -111,18 +122,23 @@ function normalizeEmitsOptions(
   // apply mixin/extends props
   let hasExtends = false
   if (__FEATURE_OPTIONS_API__ && !isFunction(comp)) {
-    if (comp.extends) {
+    const extendEmits = (raw: ComponentOptions) => {
       hasExtends = true
-      extend(normalized, normalizeEmitsOptions(comp.extends))
+      extend(normalized, normalizeEmitsOptions(raw, appContext, true))
+    }
+    if (!asMixin && appContext.mixins.length) {
+      appContext.mixins.forEach(extendEmits)
+    }
+    if (comp.extends) {
+      extendEmits(comp.extends)
     }
     if (comp.mixins) {
-      hasExtends = true
-      comp.mixins.forEach(m => extend(normalized, normalizeEmitsOptions(m)))
+      comp.mixins.forEach(extendEmits)
     }
   }
 
   if (!raw && !hasExtends) {
-    return (comp.__emits = undefined)
+    return (cache[appId] = null)
   }
 
   if (isArray(raw)) {
@@ -130,20 +146,22 @@ function normalizeEmitsOptions(
   } else {
     extend(normalized, raw)
   }
-  return (comp.__emits = normalized)
+  return (cache[appId] = normalized)
 }
 
 // Check if an incoming prop key is a declared emit event listener.
 // e.g. With `emits: { click: null }`, props named `onClick` and `onclick` are
 // both considered matched listeners.
-export function isEmitListener(comp: ConcreteComponent, key: string): boolean {
-  let emits: ObjectEmitsOptions | undefined
-  if (!isOn(key) || !(emits = normalizeEmitsOptions(comp))) {
+export function isEmitListener(
+  options: ObjectEmitsOptions | null,
+  key: string
+): boolean {
+  if (!options || !isOn(key)) {
     return false
   }
   key = key.replace(/Once$/, '')
   return (
-    hasOwn(emits, key[2].toLowerCase() + key.slice(3)) ||
-    hasOwn(emits, key.slice(2))
+    hasOwn(options, key[2].toLowerCase() + key.slice(3)) ||
+    hasOwn(options, key.slice(2))
   )
 }

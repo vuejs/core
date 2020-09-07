@@ -17,6 +17,7 @@ import { handleError, ErrorCodes } from './errorHandling'
 import { PatchFlags, ShapeFlags, isOn, isModelListener } from '@vue/shared'
 import { warn } from './warning'
 import { isHmrUpdating } from './hmr'
+import { NormalizedProps } from './componentProps'
 
 // mark the current rendering instance for asset resolution (e.g.
 // resolveComponent, resolveDirective) during render
@@ -42,11 +43,11 @@ export function renderComponentRoot(
 ): VNode {
   const {
     type: Component,
-    parent,
     vnode,
     proxy,
     withProxy,
     props,
+    propsOptions: [propsOptions],
     slots,
     attrs,
     emit,
@@ -126,11 +127,15 @@ export function renderComponentRoot(
           shapeFlag & ShapeFlags.ELEMENT ||
           shapeFlag & ShapeFlags.COMPONENT
         ) {
-          if (shapeFlag & ShapeFlags.ELEMENT && keys.some(isModelListener)) {
-            // #1643, #1543
-            // component v-model listeners should only fallthrough for component
-            // HOCs
-            fallthroughAttrs = filterModelListeners(fallthroughAttrs)
+          if (propsOptions && keys.some(isModelListener)) {
+            // If a v-model listener (onUpdate:xxx) has a corresponding declared
+            // prop, it indicates this component expects to handle v-model and
+            // it should not fallthrough.
+            // related: #1543, #1643, #1989
+            fallthroughAttrs = filterModelListeners(
+              fallthroughAttrs,
+              propsOptions
+            )
           }
           root = cloneVNode(root, fallthroughAttrs)
         } else if (__DEV__ && !accessedAttrs && root.type !== Comment) {
@@ -172,22 +177,6 @@ export function renderComponentRoot(
       }
     }
 
-    // inherit scopeId
-    const scopeId = vnode.scopeId
-    // vite#536: if subtree root is created from parent slot if would already
-    // have the correct scopeId, in this case adding the scopeId will cause
-    // it to be removed if the original slot vnode is reused.
-    const needScopeId = scopeId && root.scopeId !== scopeId
-    const treeOwnerId = parent && parent.type.__scopeId
-    const slotScopeId =
-      treeOwnerId && treeOwnerId !== scopeId ? treeOwnerId + '-s' : null
-    if (needScopeId || slotScopeId) {
-      const extras: Data = {}
-      if (needScopeId) extras[scopeId!] = ''
-      if (slotScopeId) extras[slotScopeId] = ''
-      root = cloneVNode(root, extras)
-    }
-
     // inherit directives
     if (vnode.dirs) {
       if (__DEV__ && !isElementRoot(root)) {
@@ -225,6 +214,9 @@ export function renderComponentRoot(
 
 /**
  * dev only
+ * In dev mode, template root level comments are rendered, which turns the
+ * template into a fragment root, but we need to locate the single element
+ * root for attrs and scope id processing.
  */
 const getChildRoot = (
   vnode: VNode
@@ -234,17 +226,10 @@ const getChildRoot = (
   }
   const rawChildren = vnode.children as VNodeArrayChildren
   const dynamicChildren = vnode.dynamicChildren as VNodeArrayChildren
-  const children = rawChildren.filter(child => {
-    return !(
-      isVNode(child) &&
-      child.type === Comment &&
-      child.children !== 'v-if'
-    )
-  })
-  if (children.length !== 1) {
+  const childRoot = filterSingleRoot(rawChildren)
+  if (!childRoot) {
     return [vnode, undefined]
   }
-  const childRoot = children[0]
   const index = rawChildren.indexOf(childRoot)
   const dynamicIndex = dynamicChildren ? dynamicChildren.indexOf(childRoot) : -1
   const setRoot = (updatedRoot: VNode) => {
@@ -258,6 +243,20 @@ const getChildRoot = (
   return [normalizeVNode(childRoot), setRoot]
 }
 
+/**
+ * dev only
+ */
+export function filterSingleRoot(children: VNodeArrayChildren): VNode | null {
+  const filtered = children.filter(child => {
+    return !(
+      isVNode(child) &&
+      child.type === Comment &&
+      child.children !== 'v-if'
+    )
+  })
+  return filtered.length === 1 && isVNode(filtered[0]) ? filtered[0] : null
+}
+
 const getFunctionalFallthrough = (attrs: Data): Data | undefined => {
   let res: Data | undefined
   for (const key in attrs) {
@@ -268,10 +267,10 @@ const getFunctionalFallthrough = (attrs: Data): Data | undefined => {
   return res
 }
 
-const filterModelListeners = (attrs: Data): Data => {
+const filterModelListeners = (attrs: Data, props: NormalizedProps): Data => {
   const res: Data = {}
   for (const key in attrs) {
-    if (!isModelListener(key)) {
+    if (!isModelListener(key) || !(key.slice(9) in props)) {
       res[key] = attrs[key]
     }
   }

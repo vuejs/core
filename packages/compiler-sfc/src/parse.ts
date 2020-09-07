@@ -9,6 +9,7 @@ import {
 import * as CompilerDOM from '@vue/compiler-dom'
 import { RawSourceMap, SourceMapGenerator } from 'source-map'
 import { TemplateCompiler } from './compileTemplate'
+import { Statement } from '@babel/types'
 
 export interface SFCParseOptions {
   filename?: string
@@ -37,6 +38,8 @@ export interface SFCScriptBlock extends SFCBlock {
   type: 'script'
   setup?: string | boolean
   bindings?: BindingMetadata
+  scriptAst?: Statement[]
+  scriptSetupAst?: Statement[]
 }
 
 export interface SFCStyleBlock extends SFCBlock {
