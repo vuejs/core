@@ -300,6 +300,11 @@ export interface ComponentInternalInstance {
    */
   suspense: SuspenseBoundary | null
   /**
+   * suspense pending batch id
+   * @internal
+   */
+  suspenseId: number
+  /**
    * @internal
    */
   asyncDep: Promise<any> | null
@@ -422,6 +427,7 @@ export function createComponentInstance(
 
     // suspense related
     suspense,
+    suspenseId: suspense ? suspense.pendingId : 0,
     asyncDep: null,
     asyncResolved: false,
 

@@ -129,7 +129,6 @@ function mountSuspense(
   if (suspense.deps > 0) {
     // has async
     // mount the fallback tree
-    suspense.activeBranch = fallback
     patch(
       null,
       fallback,
@@ -140,8 +139,7 @@ function mountSuspense(
       isSVG,
       optimized
     )
-    vnode.el = fallback.el
-    // TODO HOC el
+    setActiveBranch(suspense, fallback)
   } else {
     // Suspense has no async deps. Just resolve.
     suspense.resolve()
@@ -192,8 +190,7 @@ function patchSuspense(
           isSVG,
           optimized
         )
-        suspense.activeBranch = newFallback
-        n2.el = newFallback.el
+        setActiveBranch(suspense, newFallback)
       }
     } else {
       // toggled before pending tree is resolved
@@ -232,8 +229,7 @@ function patchSuspense(
             isSVG,
             optimized
           )
-          suspense.activeBranch = newFallback
-          n2.el = newFallback.el
+          setActiveBranch(suspense, newFallback)
         }
       } else if (activeBranch && isSameVNodeType(newBranch, activeBranch)) {
         // toggled "back" to current active branch
@@ -279,9 +275,7 @@ function patchSuspense(
         isSVG,
         optimized
       )
-      suspense.activeBranch = newBranch
-      n2.el = newBranch.el
-      // TODO HOC el
+      setActiveBranch(suspense, newBranch)
     } else {
       // root node toggled
       // invoke @pending event
@@ -442,16 +436,9 @@ function createSuspenseBoundary(
         }
         // move content from off-dom container to actual container
         move(pendingBranch!, container, anchor, MoveType.ENTER)
-        const el = (vnode.el = pendingBranch!.el!)
-        // suspense as the root node of a component...
-        if (parentComponent && parentComponent.subTree === vnode) {
-          parentComponent.vnode.el = el
-          updateHOCHostEl(parentComponent, el)
-        }
+        setActiveBranch(suspense, pendingBranch!)
       }
 
-      // switch branch state
-      suspense.activeBranch = pendingBranch
       suspense.pendingBranch = null
       suspense.isInFallback = false
 
@@ -504,9 +491,11 @@ function createSuspenseBoundary(
       }
 
       // move content tree back to the off-dom container
+      // TODO should unmount here
       const anchor = next(activeBranch!)
       move(activeBranch!, hiddenContainer, null, MoveType.LEAVE)
-      // remount the fallback tree
+
+      // mount the fallback tree
       patch(
         null,
         fallbackVNode,
@@ -517,13 +506,7 @@ function createSuspenseBoundary(
         isSVG,
         optimized
       )
-      suspense.activeBranch = fallbackVNode
-      const el = (vnode.el = fallbackVNode.el!)
-      // suspense as the root node of a component...
-      if (parentComponent && parentComponent.subTree === vnode) {
-        parentComponent.vnode.el = el
-        updateHOCHostEl(parentComponent, el)
-      }
+      setActiveBranch(suspense, fallbackVNode)
     },
 
     move(container, anchor, type) {
@@ -541,7 +524,6 @@ function createSuspenseBoundary(
         return
       }
 
-      const id = suspense.pendingId
       const hydratedEl = instance.vnode.el
       suspense.deps++
       instance
@@ -554,7 +536,7 @@ function createSuspenseBoundary(
           if (
             instance.isUnmounted ||
             suspense.isUnmounted ||
-            suspense.pendingId !== id
+            suspense.pendingId !== instance.suspenseId
           ) {
             return
           }
@@ -717,5 +699,17 @@ export function queueEffectWithSuspense(
     }
   } else {
     queuePostFlushCb(fn)
+  }
+}
+
+function setActiveBranch(suspense: SuspenseBoundary, branch: VNode) {
+  suspense.activeBranch = branch
+  const { vnode, parentComponent } = suspense
+  const el = (vnode.el = branch.el)
+  // in case suspense is the root node of a component,
+  // recursively update the HOC el
+  if (parentComponent && parentComponent.subTree === vnode) {
+    parentComponent.vnode.el = el
+    updateHOCHostEl(parentComponent, el)
   }
 }
