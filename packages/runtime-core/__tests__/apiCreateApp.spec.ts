@@ -58,6 +58,11 @@ describe('api: createApp', () => {
 
     const root = nodeOps.createElement('div')
     const app = createApp(Comp)
+
+    // warning
+    app.unmount(root)
+    expect(`that is not mounted`).toHaveBeenWarned()
+
     app.mount(root)
 
     app.unmount(root)
