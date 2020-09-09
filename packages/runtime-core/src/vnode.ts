@@ -235,7 +235,7 @@ export function createBlock(
   closeBlock()
   // a block is always going to be patched, so track it as a child of its
   // parent block
-  if (currentBlock) {
+  if (shouldTrack > 0 && currentBlock) {
     currentBlock.push(vnode)
   }
   return vnode
