@@ -299,12 +299,16 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
         // to infinite warning loop
         key.indexOf('__v') !== 0)
     ) {
-      if (data !== EMPTY_OBJ && key[0] === '$' && hasOwn(data, key)) {
+      if (
+        data !== EMPTY_OBJ &&
+        (key[0] === '$' || key[0] === '_') &&
+        hasOwn(data, key)
+      ) {
         warn(
           `Property ${JSON.stringify(
             key
           )} must be accessed via $data because it starts with a reserved ` +
-            `character and is not proxied on the render context.`
+            `character ("$" or "_") and is not proxied on the render context.`
         )
       } else {
         warn(
@@ -474,6 +478,15 @@ export function exposeSetupStateOnRenderContext(
 ) {
   const { ctx, setupState } = instance
   Object.keys(toRaw(setupState)).forEach(key => {
+    if (key[0] === '$' || key[0] === '_') {
+      warn(
+        `setup() return property ${JSON.stringify(
+          key
+        )} should not start with "$" or "_" ` +
+          `which are reserved prefixes for Vue internals.`
+      )
+      return
+    }
     Object.defineProperty(ctx, key, {
       enumerable: true,
       configurable: true,

@@ -214,6 +214,9 @@ export function renderComponentRoot(
 
 /**
  * dev only
+ * In dev mode, template root level comments are rendered, which turns the
+ * template into a fragment root, but we need to locate the single element
+ * root for attrs and scope id processing.
  */
 const getChildRoot = (
   vnode: VNode
@@ -223,17 +226,10 @@ const getChildRoot = (
   }
   const rawChildren = vnode.children as VNodeArrayChildren
   const dynamicChildren = vnode.dynamicChildren as VNodeArrayChildren
-  const children = rawChildren.filter(child => {
-    return !(
-      isVNode(child) &&
-      child.type === Comment &&
-      child.children !== 'v-if'
-    )
-  })
-  if (children.length !== 1) {
+  const childRoot = filterSingleRoot(rawChildren)
+  if (!childRoot) {
     return [vnode, undefined]
   }
-  const childRoot = children[0]
   const index = rawChildren.indexOf(childRoot)
   const dynamicIndex = dynamicChildren ? dynamicChildren.indexOf(childRoot) : -1
   const setRoot = (updatedRoot: VNode) => {
@@ -245,6 +241,20 @@ const getChildRoot = (
     }
   }
   return [normalizeVNode(childRoot), setRoot]
+}
+
+/**
+ * dev only
+ */
+export function filterSingleRoot(children: VNodeArrayChildren): VNode | null {
+  const filtered = children.filter(child => {
+    return !(
+      isVNode(child) &&
+      child.type === Comment &&
+      child.children !== 'v-if'
+    )
+  })
+  return filtered.length === 1 && isVNode(filtered[0]) ? filtered[0] : null
 }
 
 const getFunctionalFallthrough = (attrs: Data): Data | undefined => {

@@ -12,7 +12,7 @@ import {
 } from '../src/vnode'
 import { Data } from '../src/component'
 import { ShapeFlags, PatchFlags } from '@vue/shared'
-import { h, reactive, isReactive } from '../src'
+import { h, reactive, isReactive, setBlockTracking } from '../src'
 import { createApp, nodeOps, serializeInner } from '@vue/runtime-test'
 import { setCurrentRenderingInstance } from '../src/componentRenderUtils'
 
@@ -534,6 +534,18 @@ describe('vnode', () => {
       ]))
       expect(vnode.dynamicChildren).toStrictEqual([vnode1])
       expect(vnode1.dynamicChildren).toStrictEqual([vnode2])
+    })
+
+    test('should not track openBlock() when tracking is disabled', () => {
+      let vnode1
+      const vnode = (openBlock(),
+      createBlock('div', null, [
+        setBlockTracking(-1),
+        (vnode1 = (openBlock(), createBlock('div'))),
+        setBlockTracking(1),
+        vnode1
+      ]))
+      expect(vnode.dynamicChildren).toStrictEqual([])
     })
   })
 
