@@ -479,7 +479,6 @@ function createSuspenseBoundary(
         activeBranch,
         parentComponent,
         container,
-        hiddenContainer,
         isSVG,
         optimized
       } = suspense
@@ -490,10 +489,14 @@ function createSuspenseBoundary(
         onFallback()
       }
 
-      // move content tree back to the off-dom container
-      // TODO should unmount here
       const anchor = next(activeBranch!)
-      move(activeBranch!, hiddenContainer, null, MoveType.LEAVE)
+      // unmount current active branch
+      unmount(
+        activeBranch!,
+        parentComponent,
+        null, // no suspense so unmount hooks fire now
+        true // shouldRemove
+      )
 
       // mount the fallback tree
       patch(
