@@ -1,6 +1,6 @@
 import { effect, ReactiveEffect, trigger, track } from './effect'
 import { TriggerOpTypes, TrackOpTypes } from './operations'
-import { Ref } from './ref'
+import { Ref, RefBaseImpl } from './ref'
 import { isFunction, NOOP } from '@vue/shared'
 import { ReactiveFlags, toRaw } from './reactive'
 
@@ -20,13 +20,12 @@ export interface WritableComputedOptions<T> {
   set: ComputedSetter<T>
 }
 
-class ComputedRefImpl<T> {
+class ComputedRefImpl<T> extends RefBaseImpl<T> {
   private _value!: T
   private _dirty = true
 
-  public readonly effect: ReactiveEffect<T>
+  public readonly effect: ReactiveEffect<T>;
 
-  public readonly __v_isRef = true;
   public readonly [ReactiveFlags.IS_READONLY]: boolean
 
   constructor(
@@ -34,6 +33,8 @@ class ComputedRefImpl<T> {
     private readonly _setter: ComputedSetter<T>,
     isReadonly: boolean
   ) {
+    super()
+
     this.effect = effect(getter, {
       lazy: true,
       scheduler: () => {

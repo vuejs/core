@@ -44,12 +44,20 @@ export function shallowRef(value?: unknown) {
   return createRef(value, true)
 }
 
-class RefImpl<T> {
+export class RefBaseImpl<T> {
+  public readonly __v_isRef: Boolean
+
+  constructor() {
+    this.__v_isRef = true
+  }
+}
+
+class RefImpl<T> extends RefBaseImpl<T> {
   private _value: T
 
-  public readonly __v_isRef = true
-
   constructor(private _rawValue: T, private readonly _shallow = false) {
+    super()
+
     this._value = _shallow ? _rawValue : convert(_rawValue)
   }
 
@@ -111,13 +119,13 @@ export type CustomRefFactory<T> = (
   set: (value: T) => void
 }
 
-class CustomRefImpl<T> {
+class CustomRefImpl<T> extends RefBaseImpl<T> {
   private readonly _get: ReturnType<CustomRefFactory<T>>['get']
   private readonly _set: ReturnType<CustomRefFactory<T>>['set']
 
-  public readonly __v_isRef = true
-
   constructor(factory: CustomRefFactory<T>) {
+    super()
+
     const { get, set } = factory(
       () => track(this, TrackOpTypes.GET, 'value'),
       () => trigger(this, TriggerOpTypes.SET, 'value')
@@ -150,10 +158,12 @@ export function toRefs<T extends object>(object: T): ToRefs<T> {
   return ret
 }
 
-class ObjectRefImpl<T extends object, K extends keyof T> {
-  public readonly __v_isRef = true
-
-  constructor(private readonly _object: T, private readonly _key: K) {}
+class ObjectRefImpl<T extends object, K extends keyof T> extends RefBaseImpl<
+  T
+> {
+  constructor(private readonly _object: T, private readonly _key: K) {
+    super()
+  }
 
   get value() {
     return this._object[this._key]
