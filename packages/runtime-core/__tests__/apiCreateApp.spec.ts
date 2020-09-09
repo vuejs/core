@@ -97,6 +97,13 @@ describe('api: createApp', () => {
     app.mount(root)
     expect(serializeInner(root)).toBe(`3,2`)
     expect('[Vue warn]: injection "__proto__" not found.').toHaveBeenWarned()
+
+    const app2 = createApp(Root)
+    app2.provide('bar', 1)
+    app2.provide('bar', 2)
+    const root2 = nodeOps.createElement('div')
+    app2.mount(root2)
+    expect(`App already provides property with key "bar".`).toHaveBeenWarned()
   })
 
   test('component', () => {
