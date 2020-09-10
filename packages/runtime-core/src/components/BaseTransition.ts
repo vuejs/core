@@ -52,10 +52,13 @@ export interface BaseTransitionProps<HostElement = RendererElement> {
 export interface TransitionHooks<
   HostElement extends RendererElement = RendererElement
 > {
+  mode: BaseTransitionProps['mode']
   persisted: boolean
   beforeEnter(el: HostElement): void
   enter(el: HostElement): void
   leave(el: HostElement, remove: () => void): void
+  clone(vnode: VNode): TransitionHooks<HostElement>
+  // optional
   afterLeave?(): void
   delayLeave?(
     el: HostElement,
@@ -271,8 +274,13 @@ function getLeavingNodesForType(
 // and will be called at appropriate timing in the renderer.
 export function resolveTransitionHooks(
   vnode: VNode,
-  {
+  props: BaseTransitionProps<any>,
+  state: TransitionState,
+  instance: ComponentInternalInstance
+): TransitionHooks {
+  const {
     appear,
+    mode,
     persisted = false,
     onBeforeEnter,
     onEnter,
@@ -286,10 +294,7 @@ export function resolveTransitionHooks(
     onAppear,
     onAfterAppear,
     onAppearCancelled
-  }: BaseTransitionProps<any>,
-  state: TransitionState,
-  instance: ComponentInternalInstance
-): TransitionHooks {
+  } = props
   const key = String(vnode.key)
   const leavingVNodesCache = getLeavingNodesForType(state, vnode)
 
@@ -304,6 +309,7 @@ export function resolveTransitionHooks(
   }
 
   const hooks: TransitionHooks<TransitionElement> = {
+    mode,
     persisted,
     beforeEnter(el) {
       let hook = onBeforeEnter
@@ -401,6 +407,10 @@ export function resolveTransitionHooks(
       } else {
         done()
       }
+    },
+
+    clone(vnode) {
+      return resolveTransitionHooks(vnode, props, state, instance)
     }
   }
 

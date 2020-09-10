@@ -195,6 +195,7 @@ function patchSuspense(
       }
     } else {
       // toggled before pending tree is resolved
+      suspense.pendingId++
       if (isHydrating) {
         // if toggled before hydration is finished, the current DOM tree is
         // no longer valid. set it as the active branch so it will be unmounted
@@ -205,7 +206,6 @@ function patchSuspense(
         unmount(pendingBranch, parentComponent, suspense)
       }
       // increment pending ID. this is used to invalidate async callbacks
-      suspense.pendingId++
       // reset suspense state
       suspense.deps = 0
       suspense.effects.length = 0
@@ -429,6 +429,7 @@ function createSuspenseBoundary(
         vnode,
         activeBranch,
         pendingBranch,
+        pendingId,
         effects,
         parentComponent,
         container
@@ -437,6 +438,10 @@ function createSuspenseBoundary(
       if (suspense.isHydrating) {
         suspense.isHydrating = false
       } else if (!resume) {
+        const delayEnter =
+          activeBranch &&
+          pendingBranch!.transition &&
+          pendingBranch!.transition.mode === 'out-in'
         // this is initial anchor on mount
         let { anchor } = suspense
         // unmount current active tree
@@ -444,10 +449,19 @@ function createSuspenseBoundary(
           // if the fallback tree was mounted, it may have been moved
           // as part of a parent suspense. get the latest anchor for insertion
           anchor = next(activeBranch)
+          if (delayEnter) {
+            activeBranch.transition!.afterLeave = () => {
+              if (pendingId === suspense.pendingId) {
+                move(pendingBranch!, container, anchor, MoveType.ENTER)
+              }
+            }
+          }
           unmount(activeBranch, parentComponent, suspense, true)
         }
-        // move content from off-dom container to actual container
-        move(pendingBranch!, container, anchor, MoveType.ENTER)
+        if (!delayEnter) {
+          // move content from off-dom container to actual container
+          move(pendingBranch!, container, anchor, MoveType.ENTER)
+        }
       }
 
       setActiveBranch(suspense, pendingBranch!)
@@ -502,6 +516,29 @@ function createSuspenseBoundary(
       }
 
       const anchor = next(activeBranch!)
+      const mountFallback = () => {
+        if (!suspense.isInFallback) {
+          return
+        }
+        // mount the fallback tree
+        patch(
+          null,
+          fallbackVNode,
+          container,
+          anchor,
+          parentComponent,
+          null, // fallback tree will not have suspense context
+          isSVG,
+          optimized
+        )
+        setActiveBranch(suspense, fallbackVNode)
+      }
+
+      const delayEnter =
+        fallbackVNode.transition && fallbackVNode.transition.mode === 'out-in'
+      if (delayEnter) {
+        activeBranch!.transition!.afterLeave = mountFallback
+      }
       // unmount current active branch
       unmount(
         activeBranch!,
@@ -509,19 +546,10 @@ function createSuspenseBoundary(
         null, // no suspense so unmount hooks fire now
         true // shouldRemove
       )
-
-      // mount the fallback tree
-      patch(
-        null,
-        fallbackVNode,
-        container,
-        anchor,
-        parentComponent,
-        null, // fallback tree will not have suspense context
-        isSVG,
-        optimized
-      )
-      setActiveBranch(suspense, fallbackVNode)
+      if (!delayEnter) {
+        mountFallback()
+      }
+      suspense.isInFallback = true
     },
 
     move(container, anchor, type) {
@@ -673,17 +701,23 @@ export function normalizeSuspenseChildren(
   content: VNode
   fallback: VNode
 } {
-  const { shapeFlag, children } = vnode
+  const { shapeFlag, children, transition } = vnode
+  let content: VNode
+  let fallback: VNode
   if (shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
-    return {
-      content: normalizeSuspenseSlot((children as Slots).default),
-      fallback: normalizeSuspenseSlot((children as Slots).fallback)
-    }
+    content = normalizeSuspenseSlot((children as Slots).default)
+    fallback = normalizeSuspenseSlot((children as Slots).fallback)
   } else {
-    return {
-      content: normalizeSuspenseSlot(children as VNodeChild),
-      fallback: normalizeVNode(null)
-    }
+    content = normalizeSuspenseSlot(children as VNodeChild)
+    fallback = normalizeVNode(null)
+  }
+  if (transition) {
+    content.transition = transition.clone(content)
+    fallback.transition = transition.clone(fallback)
+  }
+  return {
+    content,
+    fallback
   }
 }
 
