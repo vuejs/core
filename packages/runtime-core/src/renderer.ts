@@ -2170,7 +2170,7 @@ function baseCreateRenderer(
           }
           traverseStaticChildren(c1, c2)
         }
-        if (c2.type === Comment) {
+        if (__DEV__ && c2.type === Comment) {
           c2.el = c1.el
         }
       }
