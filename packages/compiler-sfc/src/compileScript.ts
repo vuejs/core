@@ -62,7 +62,7 @@ export function compileScript(
   const isTS = scriptLang === 'ts' || scriptSetupLang === 'ts'
   const plugins: ParserPlugin[] = [...babelParserDefaultPlugins]
   if (options.babelParserPlugins) plugins.push(...options.babelParserPlugins)
-  if (isTS) plugins.push('typescript')
+  if (isTS) plugins.push('typescript', 'decorators-legacy')
 
   if (!scriptSetup) {
     if (!script) {
