@@ -29,7 +29,6 @@ export function getBaseTransformPreset(
     [
       transformOnce,
       transformIf,
-      transformFor,
       ...(!__BROWSER__ && prefixIdentifiers
         ? [
             // order is important
@@ -39,6 +38,7 @@ export function getBaseTransformPreset(
         : __BROWSER__ && __DEV__
           ? [transformExpression]
           : []),
+      transformFor,
       transformSlotOutlet,
       transformElement,
       trackSlotScopes,
