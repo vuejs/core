@@ -113,11 +113,9 @@ function mountSuspense(
   ))
 
   // start mounting the content subtree in an off-dom container
-  const { content, fallback } = normalizeSuspenseChildren(vnode)
-  suspense.pendingBranch = content
   patch(
     null,
-    content,
+    (suspense.pendingBranch = suspense.contentVNode),
     hiddenContainer,
     null,
     parentComponent,
@@ -131,7 +129,7 @@ function mountSuspense(
     // mount the fallback tree
     patch(
       null,
-      fallback,
+      suspense.fallbackVNode,
       container,
       anchor,
       parentComponent,
@@ -139,7 +137,7 @@ function mountSuspense(
       isSVG,
       optimized
     )
-    setActiveBranch(suspense, fallback)
+    setActiveBranch(suspense, suspense.fallbackVNode)
   } else {
     // Suspense has no async deps. Just resolve.
     suspense.resolve()
@@ -158,11 +156,14 @@ function patchSuspense(
 ) {
   const suspense = (n2.suspense = n1.suspense)!
   suspense.vnode = n2
-  const { activeBranch, pendingBranch, isInFallback } = suspense
   const {
     content: newBranch,
     fallback: newFallback
   } = normalizeSuspenseChildren(n2)
+  suspense.contentVNode = newBranch
+  suspense.fallbackVNode = newFallback
+
+  const { activeBranch, pendingBranch, isInFallback, isHydrating } = suspense
   if (pendingBranch) {
     suspense.pendingBranch = newBranch
     if (isSameVNodeType(newBranch, pendingBranch)) {
@@ -194,10 +195,17 @@ function patchSuspense(
       }
     } else {
       // toggled before pending tree is resolved
-      // TODO what if this happens before hydration finishes?
+      if (isHydrating) {
+        // if toggled before hydration is finished, the current DOM tree is
+        // no longer valid. set it as the active branch so it will be unmounted
+        // when resolved
+        suspense.isHydrating = false
+        suspense.activeBranch = pendingBranch
+      } else {
+        unmount(pendingBranch, parentComponent, suspense)
+      }
       // increment pending ID. this is used to invalidate async callbacks
       suspense.pendingId++
-      unmount(pendingBranch, parentComponent, suspense)
       // reset suspense state
       suspense.deps = 0
       suspense.effects.length = 0
@@ -324,6 +332,8 @@ export interface SuspenseBoundary {
   container: RendererElement
   hiddenContainer: RendererElement
   anchor: RendererNode | null
+  contentVNode: VNode
+  fallbackVNode: VNode
   activeBranch: VNode | null
   pendingBranch: VNode | null
   deps: number
@@ -380,6 +390,7 @@ function createSuspenseBoundary(
   } = rendererInternals
 
   const timeout = toNumber(vnode.props && vnode.props.timeout)
+  const { content, fallback } = normalizeSuspenseChildren(vnode)
   const suspense: SuspenseBoundary = {
     vnode,
     parent,
@@ -392,6 +403,8 @@ function createSuspenseBoundary(
     deps: 0,
     pendingId: 0,
     timeout: typeof timeout === 'number' ? timeout : -1,
+    contentVNode: content,
+    fallbackVNode: fallback,
     activeBranch: null,
     pendingBranch: null,
     isInFallback: true,
@@ -423,7 +436,6 @@ function createSuspenseBoundary(
 
       if (suspense.isHydrating) {
         suspense.isHydrating = false
-        // TODO set el
       } else if (!resume) {
         // this is initial anchor on mount
         let { anchor } = suspense
@@ -436,9 +448,9 @@ function createSuspenseBoundary(
         }
         // move content from off-dom container to actual container
         move(pendingBranch!, container, anchor, MoveType.ENTER)
-        setActiveBranch(suspense, pendingBranch!)
       }
 
+      setActiveBranch(suspense, pendingBranch!)
       suspense.pendingBranch = null
       suspense.isInFallback = false
 
@@ -641,11 +653,9 @@ function hydrateSuspense(
   // however, on the client we don't really know if it has failed or not
   // attempt to hydrate the DOM assuming it has succeeded, but we still
   // need to construct a suspense boundary first
-  const { content } = normalizeSuspenseChildren(vnode)
-  suspense.activeBranch = content
   const result = hydrateNode(
     node,
-    content,
+    (suspense.pendingBranch = suspense.contentVNode),
     parentComponent,
     suspense,
     optimized
