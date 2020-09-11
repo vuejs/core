@@ -157,6 +157,7 @@ function patchSuspense(
 ) {
   const suspense = (n2.suspense = n1.suspense)!
   suspense.vnode = n2
+  n2.el = n1.el
   const newBranch = n2.ssContent!
   const newFallback = n2.ssFallback!
 
