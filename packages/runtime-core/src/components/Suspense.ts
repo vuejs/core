@@ -74,7 +74,8 @@ export const SuspenseImpl = {
       )
     }
   },
-  hydrate: hydrateSuspense
+  hydrate: hydrateSuspense,
+  create: createSuspenseBoundary
 }
 
 // Force-casted public typing for h and TSX props inference
@@ -115,7 +116,7 @@ function mountSuspense(
   // start mounting the content subtree in an off-dom container
   patch(
     null,
-    (suspense.pendingBranch = suspense.contentVNode),
+    (suspense.pendingBranch = vnode.ssContent!),
     hiddenContainer,
     null,
     parentComponent,
@@ -129,7 +130,7 @@ function mountSuspense(
     // mount the fallback tree
     patch(
       null,
-      suspense.fallbackVNode,
+      vnode.ssFallback!,
       container,
       anchor,
       parentComponent,
@@ -137,7 +138,7 @@ function mountSuspense(
       isSVG,
       optimized
     )
-    setActiveBranch(suspense, suspense.fallbackVNode)
+    setActiveBranch(suspense, vnode.ssFallback!)
   } else {
     // Suspense has no async deps. Just resolve.
     suspense.resolve()
@@ -156,12 +157,8 @@ function patchSuspense(
 ) {
   const suspense = (n2.suspense = n1.suspense)!
   suspense.vnode = n2
-  const {
-    content: newBranch,
-    fallback: newFallback
-  } = normalizeSuspenseChildren(n2)
-  suspense.contentVNode = newBranch
-  suspense.fallbackVNode = newFallback
+  const newBranch = n2.ssContent!
+  const newFallback = n2.ssFallback!
 
   const { activeBranch, pendingBranch, isInFallback, isHydrating } = suspense
   if (pendingBranch) {
@@ -332,8 +329,6 @@ export interface SuspenseBoundary {
   container: RendererElement
   hiddenContainer: RendererElement
   anchor: RendererNode | null
-  contentVNode: VNode
-  fallbackVNode: VNode
   activeBranch: VNode | null
   pendingBranch: VNode | null
   deps: number
@@ -390,7 +385,6 @@ function createSuspenseBoundary(
   } = rendererInternals
 
   const timeout = toNumber(vnode.props && vnode.props.timeout)
-  const { content, fallback } = normalizeSuspenseChildren(vnode)
   const suspense: SuspenseBoundary = {
     vnode,
     parent,
@@ -403,8 +397,6 @@ function createSuspenseBoundary(
     deps: 0,
     pendingId: 0,
     timeout: typeof timeout === 'number' ? timeout : -1,
-    contentVNode: content,
-    fallbackVNode: fallback,
     activeBranch: null,
     pendingBranch: null,
     isInFallback: true,
@@ -685,7 +677,7 @@ function hydrateSuspense(
   // need to construct a suspense boundary first
   const result = hydrateNode(
     node,
-    (suspense.pendingBranch = suspense.contentVNode),
+    (suspense.pendingBranch = vnode.ssContent!),
     parentComponent,
     suspense,
     optimized
@@ -703,7 +695,7 @@ export function normalizeSuspenseChildren(
   content: VNode
   fallback: VNode
 } {
-  const { shapeFlag, children, transition } = vnode
+  const { shapeFlag, children } = vnode
   let content: VNode
   let fallback: VNode
   if (shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
@@ -712,10 +704,6 @@ export function normalizeSuspenseChildren(
   } else {
     content = normalizeSuspenseSlot(children as VNodeChild)
     fallback = normalizeVNode(null)
-  }
-  if (transition) {
-    content.transition = transition.clone(content)
-    fallback.transition = transition.clone(fallback)
   }
   return {
     content,

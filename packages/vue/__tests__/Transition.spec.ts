@@ -1251,6 +1251,8 @@ describe('e2e: Transition', () => {
       },
       E2E_TIMEOUT
     )
+
+    test.todo('out-in mode with Suspense')
   })
 
   describe('transition with v-show', () => {
