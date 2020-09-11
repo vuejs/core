@@ -539,10 +539,11 @@ function createSuspenseBoundary(
         null, // no suspense so unmount hooks fire now
         true // shouldRemove
       )
+
+      suspense.isInFallback = true
       if (!delayEnter) {
         mountFallback()
       }
-      suspense.isInFallback = true
     },
 
     move(container, anchor, type) {

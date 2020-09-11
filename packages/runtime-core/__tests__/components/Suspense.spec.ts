@@ -11,7 +11,8 @@ import {
   watch,
   watchEffect,
   onUnmounted,
-  onErrorCaptured
+  onErrorCaptured,
+  shallowRef
 } from '@vue/runtime-test'
 
 describe('Suspense', () => {
@@ -745,13 +746,312 @@ describe('Suspense', () => {
     )
   })
 
-  test('switching branches', () => {
-    // TODO
+  test('switching branches', async () => {
+    const calls: string[] = []
+    const toggle = ref(true)
+
+    const Foo = defineAsyncComponent({
+      setup() {
+        onMounted(() => {
+          calls.push('foo mounted')
+        })
+        onUnmounted(() => {
+          calls.push('foo unmounted')
+        })
+        return () => h('div', ['foo', h(FooNested)])
+      }
+    })
+
+    const FooNested = defineAsyncComponent(
+      {
+        setup() {
+          onMounted(() => {
+            calls.push('foo nested mounted')
+          })
+          onUnmounted(() => {
+            calls.push('foo nested unmounted')
+          })
+          return () => h('div', 'foo nested')
+        }
+      },
+      10
+    )
+
+    const Bar = defineAsyncComponent(
+      {
+        setup() {
+          onMounted(() => {
+            calls.push('bar mounted')
+          })
+          onUnmounted(() => {
+            calls.push('bar unmounted')
+          })
+          return () => h('div', 'bar')
+        }
+      },
+      10
+    )
+
+    const Comp = {
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            default: toggle.value ? h(Foo) : h(Bar),
+            fallback: h('div', 'fallback')
+          })
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+    expect(calls).toEqual([])
+
+    await deps[0]
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+    expect(calls).toEqual([])
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(calls).toEqual([`foo mounted`, `foo nested mounted`])
+    expect(serializeInner(root)).toBe(`<div>foo<div>foo nested</div></div>`)
+
+    // toggle
+    toggle.value = false
+    await nextTick()
+    expect(deps.length).toBe(3)
+    // should remain on current view
+    expect(calls).toEqual([`foo mounted`, `foo nested mounted`])
+    expect(serializeInner(root)).toBe(`<div>foo<div>foo nested</div></div>`)
+
+    await Promise.all(deps)
+    await nextTick()
+    const tempCalls = [
+      `foo mounted`,
+      `foo nested mounted`,
+      `bar mounted`,
+      `foo nested unmounted`,
+      `foo unmounted`
+    ]
+    expect(calls).toEqual(tempCalls)
+    expect(serializeInner(root)).toBe(`<div>bar</div>`)
+
+    // toggle back
+    toggle.value = true
+    await nextTick()
+    // should remain
+    expect(calls).toEqual(tempCalls)
+    expect(serializeInner(root)).toBe(`<div>bar</div>`)
+
+    await deps[3]
+    await nextTick()
+    // still pending...
+    expect(calls).toEqual(tempCalls)
+    expect(serializeInner(root)).toBe(`<div>bar</div>`)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(calls).toEqual([
+      ...tempCalls,
+      `foo mounted`,
+      `foo nested mounted`,
+      `bar unmounted`
+    ])
+    expect(serializeInner(root)).toBe(`<div>foo<div>foo nested</div></div>`)
   })
 
-  test('timeout + fallback', () => {
-    // TODO
+  test('branch switch to 3rd branch before resolve', async () => {
+    const calls: string[] = []
+
+    const makeComp = (name: string, delay = 0) =>
+      defineAsyncComponent(
+        {
+          setup() {
+            onMounted(() => {
+              calls.push(`${name} mounted`)
+            })
+            onUnmounted(() => {
+              calls.push(`${name} unmounted`)
+            })
+            return () => h('div', [name])
+          }
+        },
+        delay
+      )
+
+    const One = makeComp('one')
+    const Two = makeComp('two', 10)
+    const Three = makeComp('three', 20)
+
+    const view = shallowRef(One)
+
+    const Comp = {
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            default: h(view.value),
+            fallback: h('div', 'fallback')
+          })
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+    expect(calls).toEqual([])
+
+    await deps[0]
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>one</div>`)
+    expect(calls).toEqual([`one mounted`])
+
+    view.value = Two
+    await nextTick()
+    expect(deps.length).toBe(2)
+
+    // switch before two resovles
+    view.value = Three
+    await nextTick()
+    expect(deps.length).toBe(3)
+
+    // dep for two resolves
+    await deps[1]
+    await nextTick()
+    // should still be on view one
+    expect(serializeInner(root)).toBe(`<div>one</div>`)
+    expect(calls).toEqual([`one mounted`])
+
+    await deps[2]
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>three</div>`)
+    expect(calls).toEqual([`one mounted`, `three mounted`, `one unmounted`])
   })
 
-  test.todo('teleport inside suspense')
+  test('branch switch back before resolve', async () => {
+    const calls: string[] = []
+
+    const makeComp = (name: string, delay = 0) =>
+      defineAsyncComponent(
+        {
+          setup() {
+            onMounted(() => {
+              calls.push(`${name} mounted`)
+            })
+            onUnmounted(() => {
+              calls.push(`${name} unmounted`)
+            })
+            return () => h('div', [name])
+          }
+        },
+        delay
+      )
+
+    const One = makeComp('one')
+    const Two = makeComp('two', 10)
+
+    const view = shallowRef(One)
+
+    const Comp = {
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            default: h(view.value),
+            fallback: h('div', 'fallback')
+          })
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+    expect(calls).toEqual([])
+
+    await deps[0]
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>one</div>`)
+    expect(calls).toEqual([`one mounted`])
+
+    view.value = Two
+    await nextTick()
+    expect(deps.length).toBe(2)
+
+    // switch back before two resovles
+    view.value = One
+    await nextTick()
+    expect(deps.length).toBe(2)
+
+    // dep for two resolves
+    await deps[1]
+    await nextTick()
+    // should still be on view one
+    expect(serializeInner(root)).toBe(`<div>one</div>`)
+    expect(calls).toEqual([`one mounted`])
+  })
+
+  test('branch switch timeout + fallback', async () => {
+    const calls: string[] = []
+
+    const makeComp = (name: string, delay = 0) =>
+      defineAsyncComponent(
+        {
+          setup() {
+            onMounted(() => {
+              calls.push(`${name} mounted`)
+            })
+            onUnmounted(() => {
+              calls.push(`${name} unmounted`)
+            })
+            return () => h('div', [name])
+          }
+        },
+        delay
+      )
+
+    const One = makeComp('one')
+    const Two = makeComp('two', 20)
+
+    const view = shallowRef(One)
+
+    const Comp = {
+      setup() {
+        return () =>
+          h(
+            Suspense,
+            {
+              timeout: 10
+            },
+            {
+              default: h(view.value),
+              fallback: h('div', 'fallback')
+            }
+          )
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+    expect(calls).toEqual([])
+
+    await deps[0]
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>one</div>`)
+    expect(calls).toEqual([`one mounted`])
+
+    view.value = Two
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>one</div>`)
+    expect(calls).toEqual([`one mounted`])
+
+    await new Promise(r => setTimeout(r, 10))
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+    expect(calls).toEqual([`one mounted`, `one unmounted`])
+
+    await deps[1]
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>two</div>`)
+    expect(calls).toEqual([`one mounted`, `one unmounted`, `two mounted`])
+  })
 })
