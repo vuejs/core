@@ -16,8 +16,8 @@ import {
   RendererElement
 } from '../renderer'
 import { queuePostFlushCb } from '../scheduler'
-import { updateHOCHostEl } from '../componentRenderUtils'
-import { pushWarningContext, popWarningContext } from '../warning'
+import { filterSingleRoot, updateHOCHostEl } from '../componentRenderUtils'
+import { pushWarningContext, popWarningContext, warn } from '../warning'
 import { handleError, ErrorCodes } from '../errorHandling'
 
 export interface SuspenseProps {
@@ -718,10 +718,11 @@ function normalizeSuspenseSlot(s: any) {
     s = s()
   }
   if (isArray(s)) {
-    if (__DEV__) {
-      // TODO warn invalid children
+    const singleChild = filterSingleRoot(s)
+    if (__DEV__ && !singleChild) {
+      warn(`<Suspense> slots expect a single root node.`)
     }
-    s = s[0]
+    s = singleChild
   }
   return normalizeVNode(s)
 }
