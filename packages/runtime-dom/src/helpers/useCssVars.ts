@@ -42,7 +42,7 @@ function setVarsOnVNode(
   if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
     const suspense = vnode.suspense!
     vnode = suspense.activeBranch!
-    if (!suspense.isResolved && !suspense.isHydrating) {
+    if (suspense.pendingBranch && !suspense.isHydrating) {
       suspense.effects.push(() => {
         setVarsOnVNode(suspense.activeBranch!, vars, prefix)
       })

@@ -406,7 +406,7 @@ describe('api: defineAsyncComponent', () => {
     const app = createApp({
       render: () =>
         h(Suspense, null, {
-          default: () => [h(Foo), ' & ', h(Foo)],
+          default: () => h('div', [h(Foo), ' & ', h(Foo)]),
           fallback: () => 'loading'
         })
     })
@@ -416,7 +416,7 @@ describe('api: defineAsyncComponent', () => {
 
     resolve!(() => 'resolved')
     await timeout()
-    expect(serializeInner(root)).toBe('resolved & resolved')
+    expect(serializeInner(root)).toBe('<div>resolved & resolved</div>')
   })
 
   test('suspensible: false', async () => {
@@ -433,18 +433,18 @@ describe('api: defineAsyncComponent', () => {
     const app = createApp({
       render: () =>
         h(Suspense, null, {
-          default: () => [h(Foo), ' & ', h(Foo)],
+          default: () => h('div', [h(Foo), ' & ', h(Foo)]),
           fallback: () => 'loading'
         })
     })
 
     app.mount(root)
     // should not show suspense fallback
-    expect(serializeInner(root)).toBe('<!----> & <!---->')
+    expect(serializeInner(root)).toBe('<div><!----> & <!----></div>')
 
     resolve!(() => 'resolved')
     await timeout()
-    expect(serializeInner(root)).toBe('resolved & resolved')
+    expect(serializeInner(root)).toBe('<div>resolved & resolved</div>')
   })
 
   test('suspense with error handling', async () => {
@@ -460,7 +460,7 @@ describe('api: defineAsyncComponent', () => {
     const app = createApp({
       render: () =>
         h(Suspense, null, {
-          default: () => [h(Foo), ' & ', h(Foo)],
+          default: () => h('div', [h(Foo), ' & ', h(Foo)]),
           fallback: () => 'loading'
         })
     })
@@ -472,7 +472,7 @@ describe('api: defineAsyncComponent', () => {
     reject!(new Error('no'))
     await timeout()
     expect(handler).toHaveBeenCalled()
-    expect(serializeInner(root)).toBe('<!----> & <!---->')
+    expect(serializeInner(root)).toBe('<div><!----> & <!----></div>')
   })
 
   test('retry (success)', async () => {

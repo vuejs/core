@@ -203,7 +203,7 @@ function patchSuspense(
         suspense.isHydrating = false
         suspense.activeBranch = pendingBranch
       } else {
-        unmount(pendingBranch, parentComponent, suspense)
+        unmount(pendingBranch, parentComponent, null)
       }
       // increment pending ID. this is used to invalidate async callbacks
       // reset suspense state
@@ -386,7 +386,7 @@ function createSuspenseBoundary(
     m: move,
     um: unmount,
     n: next,
-    o: { parentNode }
+    o: { parentNode, remove }
   } = rendererInternals
 
   const timeout = toNumber(vnode.props && vnode.props.timeout)
@@ -442,6 +442,13 @@ function createSuspenseBoundary(
           activeBranch &&
           pendingBranch!.transition &&
           pendingBranch!.transition.mode === 'out-in'
+        if (delayEnter) {
+          activeBranch!.transition!.afterLeave = () => {
+            if (pendingId === suspense.pendingId) {
+              move(pendingBranch!, container, anchor, MoveType.ENTER)
+            }
+          }
+        }
         // this is initial anchor on mount
         let { anchor } = suspense
         // unmount current active tree
@@ -449,13 +456,6 @@ function createSuspenseBoundary(
           // if the fallback tree was mounted, it may have been moved
           // as part of a parent suspense. get the latest anchor for insertion
           anchor = next(activeBranch)
-          if (delayEnter) {
-            activeBranch.transition!.afterLeave = () => {
-              if (pendingId === suspense.pendingId) {
-                move(pendingBranch!, container, anchor, MoveType.ENTER)
-              }
-            }
-          }
           unmount(activeBranch, parentComponent, suspense, true)
         }
         if (!delayEnter) {
@@ -596,15 +596,14 @@ function createSuspenseBoundary(
             // async dep is resolved.
             vnode.el = hydratedEl
           }
+          const placeholder = !hydratedEl && instance.subTree.el
           setupRenderEffect(
             instance,
             vnode,
             // component may have been moved before resolve.
             // if this is not a hydration, instance.subTree will be the comment
             // placeholder.
-            hydratedEl
-              ? parentNode(hydratedEl)!
-              : parentNode(instance.subTree.el!)!,
+            parentNode(hydratedEl || instance.subTree.el!)!,
             // anchor will not be used if this is hydration, so only need to
             // consider the comment placeholder case.
             hydratedEl ? null : next(instance.subTree),
@@ -612,6 +611,9 @@ function createSuspenseBoundary(
             isSVG,
             optimized
           )
+          if (placeholder) {
+            remove(placeholder)
+          }
           updateHOCHostEl(instance, vnode.el)
           if (__DEV__) {
             popWarningContext()

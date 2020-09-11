@@ -490,7 +490,7 @@ describe('Suspense', () => {
       setup() {
         return () =>
           h(Suspense, null, {
-            default: [h(AsyncOuter), h(Inner)],
+            default: h('div', [h(AsyncOuter), h(Inner)]),
             fallback: h('div', 'fallback outer')
           })
       }
@@ -503,14 +503,14 @@ describe('Suspense', () => {
     await deps[0]
     await nextTick()
     expect(serializeInner(root)).toBe(
-      `<div>async outer</div><div>fallback inner</div>`
+      `<div><div>async outer</div><div>fallback inner</div></div>`
     )
     expect(calls).toEqual([`outer mounted`])
 
     await Promise.all(deps)
     await nextTick()
     expect(serializeInner(root)).toBe(
-      `<div>async outer</div><div>async inner</div>`
+      `<div><div>async outer</div><div>async inner</div></div>`
     )
     expect(calls).toEqual([`outer mounted`, `inner mounted`])
   })
@@ -556,7 +556,7 @@ describe('Suspense', () => {
       setup() {
         return () =>
           h(Suspense, null, {
-            default: [h(AsyncOuter), h(Inner)],
+            default: h('div', [h(AsyncOuter), h(Inner)]),
             fallback: h('div', 'fallback outer')
           })
       }
@@ -574,7 +574,7 @@ describe('Suspense', () => {
     await Promise.all(deps)
     await nextTick()
     expect(serializeInner(root)).toBe(
-      `<div>async outer</div><div>async inner</div>`
+      `<div><div>async outer</div><div>async inner</div></div>`
     )
     expect(calls).toEqual([`inner mounted`, `outer mounted`])
   })
@@ -683,12 +683,12 @@ describe('Suspense', () => {
       setup() {
         return () =>
           h(Suspense, null, {
-            default: [
+            default: h('div', [
               h(MiddleComponent),
               h(AsyncChildParent, {
                 msg: 'root async'
               })
-            ],
+            ]),
             fallback: h('div', 'root fallback')
           })
       }
@@ -722,7 +722,7 @@ describe('Suspense', () => {
     await deps[3]
     await nextTick()
     expect(serializeInner(root)).toBe(
-      `<div>nested fallback</div><div>root async</div>`
+      `<div><div>nested fallback</div><div>root async</div></div>`
     )
     expect(calls).toEqual([0, 1, 3])
 
@@ -733,7 +733,7 @@ describe('Suspense', () => {
     await Promise.all(deps)
     await nextTick()
     expect(serializeInner(root)).toBe(
-      `<div>nested changed</div><div>root async</div>`
+      `<div><div>nested changed</div><div>root async</div></div>`
     )
     expect(calls).toEqual([0, 1, 3, 2])
 
@@ -741,50 +741,16 @@ describe('Suspense', () => {
     msg.value = 'nested changed again'
     await nextTick()
     expect(serializeInner(root)).toBe(
-      `<div>nested changed again</div><div>root async</div>`
+      `<div><div>nested changed again</div><div>root async</div></div>`
     )
   })
 
-  test('new async dep after resolve should cause suspense to restart', async () => {
-    const toggle = ref(false)
+  test('switching branches', () => {
+    // TODO
+  })
 
-    const ChildA = defineAsyncComponent({
-      setup() {
-        return () => h('div', 'Child A')
-      }
-    })
-
-    const ChildB = defineAsyncComponent({
-      setup() {
-        return () => h('div', 'Child B')
-      }
-    })
-
-    const Comp = {
-      setup() {
-        return () =>
-          h(Suspense, null, {
-            default: [h(ChildA), toggle.value ? h(ChildB) : null],
-            fallback: h('div', 'root fallback')
-          })
-      }
-    }
-
-    const root = nodeOps.createElement('div')
-    render(h(Comp), root)
-    expect(serializeInner(root)).toBe(`<div>root fallback</div>`)
-
-    await deps[0]
-    await nextTick()
-    expect(serializeInner(root)).toBe(`<div>Child A</div><!---->`)
-
-    toggle.value = true
-    await nextTick()
-    expect(serializeInner(root)).toBe(`<div>root fallback</div>`)
-
-    await deps[1]
-    await nextTick()
-    expect(serializeInner(root)).toBe(`<div>Child A</div><div>Child B</div>`)
+  test('timeout + fallback', () => {
+    // TODO
   })
 
   test.todo('teleport inside suspense')

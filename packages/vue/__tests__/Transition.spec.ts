@@ -1115,12 +1115,11 @@ describe('e2e: Transition', () => {
           createApp({
             template: `
             <div id="container">
-              <Suspense>
-                <transition @enter="onEnterSpy"
-                            @leave="onLeaveSpy">
+              <transition @enter="onEnterSpy" @leave="onLeaveSpy">
+                <Suspense>
                   <Comp v-if="toggle" class="test">content</Comp>
-                </transition>
-              </Suspense>
+                </Suspense>
+              </transition>
             </div>
             <button id="toggleBtn" @click="click">button</button>
           `,
@@ -1138,6 +1137,13 @@ describe('e2e: Transition', () => {
             }
           }).mount('#app')
         })
+
+        expect(onEnterSpy).toBeCalledTimes(1)
+        await nextFrame()
+        expect(await html('#container')).toBe(
+          '<div class="test v-enter-active v-enter-to">content</div>'
+        )
+        await transitionFinish()
         expect(await html('#container')).toBe('<div class="test">content</div>')
 
         // leave
@@ -1174,7 +1180,7 @@ describe('e2e: Transition', () => {
           'v-enter-active',
           'v-enter-from'
         ])
-        expect(onEnterSpy).toBeCalledTimes(1)
+        expect(onEnterSpy).toBeCalledTimes(2)
         await nextFrame()
         expect(await classList('.test')).toStrictEqual([
           'test',
@@ -1196,11 +1202,11 @@ describe('e2e: Transition', () => {
           createApp({
             template: `
             <div id="container">
-              <Suspense>
-                <transition>
+              <transition>
+                <Suspense>
                   <div v-if="toggle" class="test">content</div>
-                </transition>
-              </Suspense>
+                </Suspense>
+              </transition>
             </div>
             <button id="toggleBtn" @click="click">button</button>
           `,
