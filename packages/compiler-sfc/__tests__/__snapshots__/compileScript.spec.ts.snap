@@ -379,6 +379,19 @@ return {  }
 export default { setup }"
 `;
 
+exports[`SFC compile <script setup> should extract comment for import or type declarations 1`] = `
+"import a from 'a' // comment
+import b from 'b'
+
+export function setup() {
+
+
+return {  }
+}
+
+export default { setup }"
+`;
+
 exports[`SFC compile <script setup> should hoist imports 1`] = `
 "import { ref } from 'vue'
 export function setup() {
