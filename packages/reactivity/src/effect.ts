@@ -21,6 +21,7 @@ export interface ReactiveEffect<T = any> {
 
 export interface ReactiveEffectOptions {
   lazy?: boolean
+  computed?: true
   scheduler?: (job: ReactiveEffect) => void
   onTrack?: (event: DebuggerEvent) => void
   onTrigger?: (event: DebuggerEvent) => void
@@ -176,9 +177,16 @@ export function trigger(
   }
 
   const effects = new Set<ReactiveEffect>()
+  const computedRunners = new Set<ReactiveEffect>()
   const add = (effectsToAdd: Set<ReactiveEffect> | undefined) => {
     if (effectsToAdd) {
-      effectsToAdd.forEach(effect => effects.add(effect))
+      effectsToAdd.forEach(effect => {
+        if (effect.options.computed) {
+          computedRunners.add(effect)
+        } else {
+          effects.add(effect)
+        }
+      })
     }
   }
 
@@ -232,5 +240,6 @@ export function trigger(
     }
   }
 
+  computedRunners.forEach(run)
   effects.forEach(run)
 }

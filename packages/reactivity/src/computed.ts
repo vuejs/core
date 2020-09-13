@@ -36,6 +36,7 @@ class ComputedRefImpl<T> {
   ) {
     this.effect = effect(getter, {
       lazy: true,
+      computed: true,
       scheduler: () => {
         if (!this._dirty) {
           this._dirty = true
