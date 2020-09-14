@@ -6,7 +6,8 @@ import {
   capitalize,
   hasOwn,
   hasChanged,
-  toRawType
+  toRawType,
+  isMap
 } from '@vue/shared'
 
 export type CollectionTypes = IterableCollections | WeakCollections
@@ -129,7 +130,7 @@ function clear(this: IterableCollections) {
   const target = toRaw(this)
   const hadItems = target.size !== 0
   const oldTarget = __DEV__
-    ? target instanceof Map
+    ? isMap(target)
       ? new Map(target)
       : new Set(target)
     : undefined
@@ -185,9 +186,10 @@ function createIterableMethod(
   ): Iterable & Iterator {
     const target = (this as any)[ReactiveFlags.RAW]
     const rawTarget = toRaw(target)
-    const isMap = rawTarget instanceof Map
-    const isPair = method === 'entries' || (method === Symbol.iterator && isMap)
-    const isKeyOnly = method === 'keys' && isMap
+    const targetIsMap = isMap(rawTarget)
+    const isPair =
+      method === 'entries' || (method === Symbol.iterator && targetIsMap)
+    const isKeyOnly = method === 'keys' && targetIsMap
     const innerIterator = target[method](...args)
     const wrap = isReadonly ? toReadonly : isShallow ? toShallow : toReactive
     !isReadonly &&

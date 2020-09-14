@@ -16,7 +16,9 @@ import {
   isString,
   hasChanged,
   NOOP,
-  remove
+  remove,
+  isMap,
+  isSet
 } from '@vue/shared'
 import {
   currentInstance,
@@ -335,12 +337,12 @@ function traverse(value: unknown, seen: Set<unknown> = new Set()) {
     for (let i = 0; i < value.length; i++) {
       traverse(value[i], seen)
     }
-  } else if (value instanceof Map) {
-    value.forEach((v, key) => {
+  } else if (isMap(value)) {
+    value.forEach((_, key) => {
       // to register mutation dep for existing keys
       traverse(value.get(key), seen)
     })
-  } else if (value instanceof Set) {
+  } else if (isSet(value)) {
     value.forEach(v => {
       traverse(v, seen)
     })
