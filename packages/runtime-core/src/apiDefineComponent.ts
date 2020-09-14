@@ -5,7 +5,8 @@ import {
   ComponentOptionsWithArrayProps,
   ComponentOptionsWithObjectProps,
   ComponentOptionsMixin,
-  RenderFunction
+  RenderFunction,
+  UnwrapAsyncBindings
 } from './componentOptions'
 import {
   SetupContext,
@@ -37,7 +38,7 @@ export function defineComponent<Props, RawBindings = object>(
 ): ComponentPublicInstanceConstructor<
   CreateComponentPublicInstance<
     Props,
-    RawBindings,
+    UnwrapAsyncBindings<RawBindings>,
     {},
     {},
     {},
@@ -78,7 +79,7 @@ export function defineComponent<
 ): ComponentPublicInstanceConstructor<
   CreateComponentPublicInstance<
     Props,
-    RawBindings,
+    UnwrapAsyncBindings<RawBindings>,
     D,
     C,
     M,
@@ -130,7 +131,7 @@ export function defineComponent<
   // but now we can export array props in TSX
   CreateComponentPublicInstance<
     Readonly<{ [key in PropNames]?: any }>,
-    RawBindings,
+    UnwrapAsyncBindings<RawBindings>,
     D,
     C,
     M,
@@ -181,7 +182,7 @@ export function defineComponent<
 ): ComponentPublicInstanceConstructor<
   CreateComponentPublicInstance<
     ExtractPropTypes<PropsOptions, false>,
-    RawBindings,
+    UnwrapAsyncBindings<RawBindings>,
     D,
     C,
     M,

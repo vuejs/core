@@ -72,6 +72,8 @@ export interface ComponentCustomOptions {}
 
 export type RenderFunction = () => VNodeChild
 
+export type UnwrapAsyncBindings<T> = T extends Promise<infer S> ? S : T
+
 export interface ComponentOptionsBase<
   Props,
   RawBindings,

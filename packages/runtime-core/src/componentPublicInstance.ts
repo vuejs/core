@@ -27,7 +27,8 @@ import {
   OptionTypesType,
   OptionTypesKeys,
   resolveMergedOptions,
-  isInBeforeCreate
+  isInBeforeCreate,
+  UnwrapAsyncBindings
 } from './componentOptions'
 import { EmitsOptions, EmitFn } from './componentEmits'
 import { Slots } from './componentSlots'
@@ -168,7 +169,7 @@ export type ComponentPublicInstance<
     options?: WatchOptions
   ): WatchStopHandle
 } & P &
-  ShallowUnwrapRef<B> &
+  ShallowUnwrapRef<UnwrapAsyncBindings<B>> &
   D &
   ExtractComputedReturns<C> &
   M &
