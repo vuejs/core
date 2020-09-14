@@ -64,7 +64,14 @@ export type VNodeRef =
   | Ref
   | ((ref: object | null, refs: Record<string, any>) => void)
 
-export type VNodeNormalizedRef = [ComponentInternalInstance, VNodeRef]
+export type VNodeNormalizedRefAtom = {
+  i: ComponentInternalInstance
+  r: VNodeRef
+}
+
+export type VNodeNormalizedRef =
+  | VNodeNormalizedRefAtom
+  | (VNodeNormalizedRefAtom)[]
 
 type VNodeMountHook = (vnode: VNode) => void
 type VNodeUpdateHook = (vnode: VNode, oldVNode: VNode) => void
@@ -289,11 +296,11 @@ export const InternalObjectKey = `__vInternal`
 const normalizeKey = ({ key }: VNodeProps): VNode['key'] =>
   key != null ? key : null
 
-const normalizeRef = ({ ref }: VNodeProps): VNode['ref'] => {
+const normalizeRef = ({ ref }: VNodeProps): VNodeNormalizedRefAtom | null => {
   return (ref != null
     ? isArray(ref)
       ? ref
-      : [currentRenderingInstance!, ref]
+      : { i: currentRenderingInstance, r: ref }
     : null) as any
 }
 
@@ -317,7 +324,10 @@ function _createVNode(
   }
 
   if (isVNode(type)) {
-    const cloned = cloneVNode(type, props)
+    // createVNode receiving an existing vnode. This happens in cases like
+    // <component :is="vnode"/>
+    // #2078 make sure to merge refs during the clone instead of overwriting it
+    const cloned = cloneVNode(type, props, true /* mergeRef: true */)
     if (children) {
       normalizeChildren(cloned, children)
     }
@@ -429,11 +439,12 @@ function _createVNode(
 
 export function cloneVNode<T, U>(
   vnode: VNode<T, U>,
-  extraProps?: Data & VNodeProps | null
+  extraProps?: Data & VNodeProps | null,
+  mergeRef = false
 ): VNode<T, U> {
   // This is intentionally NOT using spread or extend to avoid the runtime
   // key enumeration cost.
-  const { props, patchFlag } = vnode
+  const { props, ref, patchFlag } = vnode
   const mergedProps = extraProps ? mergeProps(props || {}, extraProps) : props
   return {
     __v_isVNode: true,
@@ -441,7 +452,17 @@ export function cloneVNode<T, U>(
     type: vnode.type,
     props: mergedProps,
     key: mergedProps && normalizeKey(mergedProps),
-    ref: extraProps && extraProps.ref ? normalizeRef(extraProps) : vnode.ref,
+    ref:
+      extraProps && extraProps.ref
+        ? // #2078 in the case of <component :is="vnode" ref="extra"/>
+          // if the vnode itself already has a ref, cloneVNode will need to merge
+          // the refs so the single vnode can be set on multiple refs
+          mergeRef && ref
+          ? isArray(ref)
+            ? ref.concat(normalizeRef(extraProps)!)
+            : [ref, normalizeRef(extraProps)!]
+          : normalizeRef(extraProps)
+        : ref,
     scopeId: vnode.scopeId,
     children: vnode.children,
     target: vnode.target,
