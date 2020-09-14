@@ -1153,8 +1153,10 @@ function baseCreateRenderer(
           parentSuspense,
           isSVG
         )
-        if (__DEV__ && parentComponent && parentComponent.type.__hmrId) {
-          traverseStaticChildren(n1, n2)
+        // #2080 if the stable fragment has a key, it's a <template v-for> that may
+        //  get moved around. Make sure all root level vnodes inherit el.
+        if (n2.key != null) {
+          traverseStaticChildren(n1, n2, true /* shallow */)
         }
       } else {
         // keyed / unkeyed, or manual fragments.
@@ -2166,9 +2168,12 @@ function baseCreateRenderer(
    * inside a block also inherit the DOM element from the previous tree so that
    * HMR updates (which are full updates) can retrieve the element for patching.
    *
-   * Dev only.
+   * #2080
+   * Inside keyed `template` fragment static children, if a fragment is moved,
+   * the children will always moved so that need inherit el form previous nodes
+   * to ensure correct moved position.
    */
-  const traverseStaticChildren = (n1: VNode, n2: VNode) => {
+  const traverseStaticChildren = (n1: VNode, n2: VNode, shallow = false) => {
     const ch1 = n1.children
     const ch2 = n2.children
     if (isArray(ch1) && isArray(ch2)) {
@@ -2181,7 +2186,10 @@ function baseCreateRenderer(
           if (c2.patchFlag <= 0 || c2.patchFlag === PatchFlags.HYDRATE_EVENTS) {
             c2.el = c1.el
           }
-          traverseStaticChildren(c1, c2)
+          if (!shallow) traverseStaticChildren(c1, c2)
+        }
+        if (__DEV__ && c2.type === Comment) {
+          c2.el = c1.el
         }
       }
     }
