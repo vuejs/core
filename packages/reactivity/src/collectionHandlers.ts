@@ -305,7 +305,7 @@ function createInstrumentationGetter(isReadonly: boolean, shallow: boolean) {
 
   return (
     target: CollectionTypes,
-    key: string | symbol,
+    key: PropertyKey,
     receiver: CollectionTypes
   ) => {
     if (key === ReactiveFlags.IS_REACTIVE) {

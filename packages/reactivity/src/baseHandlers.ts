@@ -33,8 +33,8 @@ const shallowReadonlyGet = /*#__PURE__*/ createGetter(true, true)
 
 const arrayInstrumentations: Record<string, Function> = {}
 ;['includes', 'indexOf', 'lastIndexOf'].forEach(key => {
-  arrayInstrumentations[key] = function(...args: any[]): any {
-    const arr = toRaw(this) as any
+  arrayInstrumentations[key] = function(...args: any[]) {
+    const arr = toRaw(this)
     for (let i = 0, l = (this as any).length; i < l; i++) {
       track(arr, TrackOpTypes.GET, i + '')
     }
@@ -50,7 +50,7 @@ const arrayInstrumentations: Record<string, Function> = {}
 })
 
 function createGetter(isReadonly = false, shallow = false) {
-  return function get(target: Target, key: string | symbol, receiver: object) {
+  return function get(target: Target, key: PropertyKey, receiver: object) {
     if (key === ReactiveFlags.IS_REACTIVE) {
       return !isReadonly
     } else if (key === ReactiveFlags.IS_READONLY) {
@@ -109,7 +109,7 @@ const shallowSet = /*#__PURE__*/ createSetter(true)
 function createSetter(shallow = false) {
   return function set(
     target: object,
-    key: string | symbol,
+    key: PropertyKey,
     value: unknown,
     receiver: object
   ): boolean {
@@ -141,7 +141,7 @@ function createSetter(shallow = false) {
   }
 }
 
-function deleteProperty(target: object, key: string | symbol): boolean {
+function deleteProperty(target: object, key: PropertyKey): boolean {
   const hadKey = hasOwn(target, key)
   const oldValue = (target as any)[key]
   const result = Reflect.deleteProperty(target, key)
@@ -151,7 +151,7 @@ function deleteProperty(target: object, key: string | symbol): boolean {
   return result
 }
 
-function has(target: object, key: string | symbol): boolean {
+function has(target: object, key: PropertyKey): boolean {
   const result = Reflect.has(target, key)
   if (!isSymbol(key) || !builtInSymbols.has(key)) {
     track(target, TrackOpTypes.HAS, key)

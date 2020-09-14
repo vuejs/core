@@ -54,7 +54,7 @@ export const remove = <T>(arr: T[], el: T) => {
 const hasOwnProperty = Object.prototype.hasOwnProperty
 export const hasOwn = (
   val: object,
-  key: string | symbol
+  key: PropertyKey
 ): key is keyof typeof val => hasOwnProperty.call(val, key)
 
 export const isArray = Array.isArray
@@ -138,7 +138,7 @@ export const invokeArrayFns = (fns: Function[], arg?: any) => {
   }
 }
 
-export const def = (obj: object, key: string | symbol, value: any) => {
+export const def = (obj: object, key: PropertyKey, value: any) => {
   Object.defineProperty(obj, key, {
     configurable: true,
     enumerable: false,
