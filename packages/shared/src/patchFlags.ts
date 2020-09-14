@@ -68,7 +68,7 @@ export const enum PatchFlags {
 
   // Special flags are negative integers. They are never matched against using
   // bitwise operators (bitwise matching should only happen in branches where
-  // patchFlag > 0), and are mutually exclusive. When checking for a speical
+  // patchFlag > 0), and are mutually exclusive. When checking for a special
   // flag, simply check patchFlag === FLAG.
 
   // Indicates a hoisted static vnode. This is a hint for hydration to skip
@@ -76,9 +76,10 @@ export const enum PatchFlags {
   HOISTED = -1,
 
   // A special flag that indicates that the diffing algorithm should bail out
-  // of optimized mode. This is only on block fragments created by renderSlot()
+  // of optimized mode. For example, on block fragments created by renderSlot()
   // when encountering non-compiler generated slots (i.e. manually written
   // render functions, which should always be fully diffed)
+  // OR manually cloneVNodes
   BAIL = -2
 }
 

@@ -1,10 +1,7 @@
 import { createApp, h, Suspense } from 'vue'
 import { renderToString } from '../src/renderToString'
-import { mockWarn } from '@vue/shared'
 
 describe('SSR Suspense', () => {
-  mockWarn()
-
   const ResolvingAsync = {
     async setup() {
       return () => h('div', 'async')

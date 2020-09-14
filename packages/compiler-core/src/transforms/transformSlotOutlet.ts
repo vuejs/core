@@ -4,7 +4,8 @@ import {
   CallExpression,
   createCallExpression,
   ExpressionNode,
-  SlotOutletNode
+  SlotOutletNode,
+  createFunctionExpression
 } from '../ast'
 import { isSlotOutlet, findProp } from '../utils'
 import { buildProps, PropsExpression } from './transformElement'
@@ -29,7 +30,7 @@ export const transformSlotOutlet: NodeTransform = (node, context) => {
       if (!slotProps) {
         slotArgs.push(`{}`)
       }
-      slotArgs.push(children)
+      slotArgs.push(createFunctionExpression([], children, false, false, loc))
     }
 
     node.codegenNode = createCallExpression(

@@ -1,6 +1,6 @@
 {
   "name": "@vue/runtime-core",
-  "version": "3.0.0-beta.3",
+  "version": "3.0.0-rc.10",
   "description": "@vue/runtime-core",
   "main": "index.js",
   "module": "dist/runtime-core.esm-bundler.js",
@@ -19,7 +19,8 @@
   "sideEffects": false,
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vuejs/vue-next.git"
+    "url": "git+https://github.com/vuejs/vue-next.git",
+    "directory": "packages/runtime-core"
   },
   "keywords": [
     "vue"
@@ -31,7 +32,7 @@
   },
   "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/runtime-core#readme",
   "dependencies": {
-    "@vue/shared": "3.0.0-beta.3",
-    "@vue/reactivity": "3.0.0-beta.3"
+    "@vue/shared": "3.0.0-rc.10",
+    "@vue/reactivity": "3.0.0-rc.10"
   }
 }

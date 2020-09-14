@@ -1,21 +1,23 @@
-import { isString, hyphenate, capitalize } from '@vue/shared'
+import { isString, hyphenate, capitalize, isArray } from '@vue/shared'
 import { camelize } from '@vue/runtime-core'
 
-type Style = string | Partial<CSSStyleDeclaration> | null
+type Style = string | Record<string, string | string[]> | null
 
 export function patchStyle(el: Element, prev: Style, next: Style) {
   const style = (el as HTMLElement).style
   if (!next) {
     el.removeAttribute('style')
   } else if (isString(next)) {
-    style.cssText = next
+    if (prev !== next) {
+      style.cssText = next
+    }
   } else {
     for (const key in next) {
-      setStyle(style, key, next[key] as string)
+      setStyle(style, key, next[key])
     }
     if (prev && !isString(prev)) {
       for (const key in prev) {
-        if (!next[key]) {
+        if (next[key] == null) {
           setStyle(style, key, '')
         }
       }
@@ -25,21 +27,29 @@ export function patchStyle(el: Element, prev: Style, next: Style) {
 
 const importantRE = /\s*!important$/
 
-function setStyle(style: CSSStyleDeclaration, name: string, val: string) {
-  if (name.startsWith('--')) {
-    // custom property definition
-    style.setProperty(name, val)
+function setStyle(
+  style: CSSStyleDeclaration,
+  name: string,
+  val: string | string[]
+) {
+  if (isArray(val)) {
+    val.forEach(v => setStyle(style, name, v))
   } else {
-    const prefixed = autoPrefix(style, name)
-    if (importantRE.test(val)) {
-      // !important
-      style.setProperty(
-        hyphenate(prefixed),
-        val.replace(importantRE, ''),
-        'important'
-      )
+    if (name.startsWith('--')) {
+      // custom property definition
+      style.setProperty(name, val)
     } else {
-      style[prefixed as any] = val
+      const prefixed = autoPrefix(style, name)
+      if (importantRE.test(val)) {
+        // !important
+        style.setProperty(
+          hyphenate(prefixed),
+          val.replace(importantRE, ''),
+          'important'
+        )
+      } else {
+        style[prefixed as any] = val
+      }
     }
   }
 }

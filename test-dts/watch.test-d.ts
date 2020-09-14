@@ -1,5 +1,4 @@
-import { ref, computed, watch } from './index'
-import { expectType } from 'tsd'
+import { ref, computed, watch, expectType } from './index'
 
 const source = ref('foo')
 const source2 = computed(() => source.value)

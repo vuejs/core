@@ -197,7 +197,7 @@ function patchSuspense(
 }
 
 export interface SuspenseBoundary {
-  vnode: VNode
+  vnode: VNode<RendererNode, RendererElement, SuspenseProps>
   parent: SuspenseBoundary | null
   parentComponent: ComponentInternalInstance | null
   isSVG: boolean
@@ -227,6 +227,8 @@ export interface SuspenseBoundary {
   unmount(parentSuspense: SuspenseBoundary | null, doRemove?: boolean): void
 }
 
+let hasWarned = false
+
 function createSuspenseBoundary(
   vnode: VNode,
   parent: SuspenseBoundary | null,
@@ -239,6 +241,15 @@ function createSuspenseBoundary(
   rendererInternals: RendererInternals,
   isHydrating = false
 ): SuspenseBoundary {
+  /* istanbul ignore if */
+  if (__DEV__ && !__TEST__ && !hasWarned) {
+    hasWarned = true
+    // @ts-ignore `console.info` cannot be null error
+    console[console.info ? 'info' : 'log'](
+      `<Suspense> is an experimental feature and its API will likely change.`
+    )
+  }
+
   const {
     p: patch,
     m: move,
@@ -422,7 +433,7 @@ function createSuspenseBoundary(
           handleSetupResult(instance, asyncSetupResult, false)
           if (hydratedEl) {
             // vnode may have been replaced if an update happened before the
-            // async dep is reoslved.
+            // async dep is resolved.
             vnode.el = hydratedEl
           }
           setupRenderEffect(
@@ -484,6 +495,7 @@ function hydrateSuspense(
     optimized: boolean
   ) => Node | null
 ): Node | null {
+  /* eslint-disable no-restricted-globals */
   const suspense = (vnode.suspense = createSuspenseBoundary(
     vnode,
     parentSuspense,
@@ -513,6 +525,7 @@ function hydrateSuspense(
     suspense.resolve()
   }
   return result
+  /* eslint-enable no-restricted-globals */
 }
 
 export function normalizeSuspenseChildren(

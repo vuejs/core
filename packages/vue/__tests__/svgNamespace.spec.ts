@@ -3,7 +3,7 @@
 // the renderer and compiler implementations.
 // Related files:
 // - runtime-core/src/renderer.ts
-// - compiler-core/src/transoforms/transformElement.ts
+// - compiler-core/src/transforms/transformElement.ts
 
 import { render, h, ref, nextTick } from '../src'
 

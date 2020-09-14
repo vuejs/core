@@ -20,7 +20,14 @@ import {
   DirectiveArguments,
   createVNodeCall
 } from '../ast'
-import { PatchFlags, PatchFlagNames, isSymbol, isOn } from '@vue/shared'
+import {
+  PatchFlags,
+  PatchFlagNames,
+  isSymbol,
+  isOn,
+  isObject,
+  isReservedProp
+} from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
   RESOLVE_DIRECTIVE,
@@ -29,7 +36,8 @@ import {
   MERGE_PROPS,
   TO_HANDLERS,
   TELEPORT,
-  KEEP_ALIVE
+  KEEP_ALIVE,
+  SUSPENSE
 } from '../runtimeHelpers'
 import {
   getInnerRange,
@@ -37,10 +45,11 @@ import {
   findProp,
   isCoreComponent,
   isBindKey,
-  findDir
+  findDir,
+  isStaticExp
 } from '../utils'
 import { buildSlots } from './vSlot'
-import { isStaticNode } from './hoistStatic'
+import { getStaticType } from './hoistStatic'
 
 // some directive transforms (e.g. v-model) may return a symbol for runtime
 // import, which should be used instead of a resolveDirective call.
@@ -68,6 +77,8 @@ export const transformElement: NodeTransform = (node, context) => {
     const vnodeTag = isComponent
       ? resolveComponentType(node as ComponentNode, context)
       : `"${tag}"`
+    const isDynamicComponent =
+      isObject(vnodeTag) && vnodeTag.callee === RESOLVE_DYNAMIC_COMPONENT
 
     let vnodeProps: VNodeCall['props']
     let vnodeChildren: VNodeCall['children']
@@ -78,15 +89,19 @@ export const transformElement: NodeTransform = (node, context) => {
     let vnodeDirectives: VNodeCall['directives']
 
     let shouldUseBlock =
-      !isComponent &&
-      // <svg> and <foreignObject> must be forced into blocks so that block
-      // updates inside get proper isSVG flag at runtime. (#639, #643)
-      // This is technically web-specific, but splitting the logic out of core
-      // leads to too much unnecessary complexity.
-      (tag === 'svg' ||
-        tag === 'foreignObject' ||
-        // #938: elements with dynamic keys should be forced into blocks
-        findProp(node, 'key', true))
+      // dynamic component may resolve to plain elements
+      isDynamicComponent ||
+      vnodeTag === TELEPORT ||
+      vnodeTag === SUSPENSE ||
+      (!isComponent &&
+        // <svg> and <foreignObject> must be forced into blocks so that block
+        // updates inside get proper isSVG flag at runtime. (#639, #643)
+        // This is technically web-specific, but splitting the logic out of core
+        // leads to too much unnecessary complexity.
+        (tag === 'svg' ||
+          tag === 'foreignObject' ||
+          // #938: elements with dynamic keys should be forced into blocks
+          findProp(node, 'key', true)))
 
     // props
     if (props.length > 0) {
@@ -146,7 +161,7 @@ export const transformElement: NodeTransform = (node, context) => {
         const hasDynamicTextChild =
           type === NodeTypes.INTERPOLATION ||
           type === NodeTypes.COMPOUND_EXPRESSION
-        if (hasDynamicTextChild && !isStaticNode(child)) {
+        if (hasDynamicTextChild && !getStaticType(child)) {
           patchFlag |= PatchFlags.TEXT
         }
         // pass directly if the only child is a text node
@@ -193,7 +208,7 @@ export const transformElement: NodeTransform = (node, context) => {
       vnodeDynamicProps,
       vnodeDirectives,
       !!shouldUseBlock,
-      false /* isForBlock */,
+      false /* disableTracking */,
       node.loc
     )
   }
@@ -230,7 +245,12 @@ export function resolveComponentType(
     return builtIn
   }
 
-  // 3. user component (resolve)
+  // 3. user component (from setup bindings)
+  if (context.bindingMetadata[tag] === 'setup') {
+    return `$setup[${JSON.stringify(tag)}]`
+  }
+
+  // 4. user component (resolve)
   context.helper(RESOLVE_COMPONENT)
   context.components.add(tag)
   return toValidAssetId(tag, `component`)
@@ -262,27 +282,36 @@ export function buildProps(
   let hasStyleBinding = false
   let hasHydrationEventBinding = false
   let hasDynamicKeys = false
+  let hasVnodeHook = false
   const dynamicPropNames: string[] = []
 
   const analyzePatchFlag = ({ key, value }: Property) => {
-    if (key.type === NodeTypes.SIMPLE_EXPRESSION && key.isStatic) {
+    if (isStaticExp(key)) {
       const name = key.content
+      const isEventHandler = isOn(name)
       if (
         !isComponent &&
-        isOn(name) &&
-        // omit the flag for click handlers becaues hydration gives click
+        isEventHandler &&
+        // omit the flag for click handlers because hydration gives click
         // dedicated fast path.
         name.toLowerCase() !== 'onclick' &&
         // omit v-model handlers
-        name !== 'onUpdate:modelValue'
+        name !== 'onUpdate:modelValue' &&
+        // omit onVnodeXXX hooks
+        !isReservedProp(name)
       ) {
         hasHydrationEventBinding = true
       }
+
+      if (isEventHandler && isReservedProp(name)) {
+        hasVnodeHook = true
+      }
+
       if (
         value.type === NodeTypes.JS_CACHE_EXPRESSION ||
         ((value.type === NodeTypes.SIMPLE_EXPRESSION ||
           value.type === NodeTypes.COMPOUND_EXPRESSION) &&
-          isStaticNode(value))
+          getStaticType(value) > 0)
       ) {
         // skip if the prop is a cached handler or has constant value
         return
@@ -456,7 +485,7 @@ export function buildProps(
   }
   if (
     (patchFlag === 0 || patchFlag === PatchFlags.HYDRATE_EVENTS) &&
-    (hasRef || runtimeDirectives.length > 0)
+    (hasRef || hasVnodeHook || runtimeDirectives.length > 0)
   ) {
     patchFlag |= PatchFlags.NEED_PATCH
   }

@@ -11,7 +11,6 @@ import {
   buildSlots,
   FunctionExpression,
   TemplateChildNode,
-  TELEPORT,
   createIfStatement,
   createSimpleExpression,
   getBaseTransformPreset,
@@ -31,9 +30,12 @@ import {
   ExpressionNode,
   TemplateNode,
   SUSPENSE,
-  TRANSITION_GROUP
+  TELEPORT,
+  TRANSITION_GROUP,
+  CREATE_VNODE,
+  CallExpression
 } from '@vue/compiler-dom'
-import { SSR_RENDER_COMPONENT } from '../runtimeHelpers'
+import { SSR_RENDER_COMPONENT, SSR_RENDER_VNODE } from '../runtimeHelpers'
 import {
   SSRTransformContext,
   processChildren,
@@ -58,7 +60,10 @@ interface WIPSlotEntry {
   vnodeBranch: ReturnStatement
 }
 
-const componentTypeMap = new WeakMap<ComponentNode, symbol>()
+const componentTypeMap = new WeakMap<
+  ComponentNode,
+  string | symbol | CallExpression
+>()
 
 // ssr component transform is done in two phases:
 // In phase 1. we use `buildSlot` to analyze the children of the component into
@@ -75,8 +80,9 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
   }
 
   const component = resolveComponentType(node, context, true /* ssr */)
+  componentTypeMap.set(node, component)
+
   if (isSymbol(component)) {
-    componentTypeMap.set(node, component)
     if (component === SUSPENSE) {
       return ssrTransformSuspense(node, context)
     }
@@ -96,10 +102,12 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
     // Using the cloned node, build the normal VNode-based branches (for
     // fallback in case the child is render-fn based). Store them in an array
     // for later use.
-    buildSlots(clonedNode, context, (props, children) => {
-      vnodeBranches.push(createVNodeSlotBranch(props, children, context))
-      return createFunctionExpression(undefined)
-    })
+    if (clonedNode.children.length) {
+      buildSlots(clonedNode, context, (props, children) => {
+        vnodeBranches.push(createVNodeSlotBranch(props, children, context))
+        return createFunctionExpression(undefined)
+      })
+    }
 
     const props =
       node.props.length > 0
@@ -132,10 +140,28 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
       ? buildSlots(node, context, buildSSRSlotFn).slots
       : `null`
 
-    node.ssrCodegenNode = createCallExpression(
-      context.helper(SSR_RENDER_COMPONENT),
-      [component, props, slots, `_parent`]
-    )
+    if (typeof component !== 'string') {
+      // dynamic component that resolved to a `resolveDynamicComponent` call
+      // expression - since the resolved result may be a plain element (string)
+      // or a VNode, handle it with `renderVNode`.
+      node.ssrCodegenNode = createCallExpression(
+        context.helper(SSR_RENDER_VNODE),
+        [
+          `_push`,
+          createCallExpression(context.helper(CREATE_VNODE), [
+            component,
+            props,
+            slots
+          ]),
+          `_parent`
+        ]
+      )
+    } else {
+      node.ssrCodegenNode = createCallExpression(
+        context.helper(SSR_RENDER_COMPONENT),
+        [component, props, slots, `_parent`]
+      )
+    }
   }
 }
 
@@ -143,9 +169,9 @@ export function ssrProcessComponent(
   node: ComponentNode,
   context: SSRTransformContext
 ) {
+  const component = componentTypeMap.get(node)!
   if (!node.ssrCodegenNode) {
     // this is a built-in component that fell-through.
-    const component = componentTypeMap.get(node)!
     if (component === TELEPORT) {
       return ssrProcessTeleport(node, context)
     } else if (component === SUSPENSE) {
@@ -174,7 +200,16 @@ export function ssrProcessComponent(
         vnodeBranch
       )
     }
-    context.pushStatement(createCallExpression(`_push`, [node.ssrCodegenNode]))
+    if (typeof component === 'string') {
+      // static component
+      context.pushStatement(
+        createCallExpression(`_push`, [node.ssrCodegenNode])
+      )
+    } else {
+      // dynamic component (`resolveDynamicComponent` call)
+      // the codegen node is a `renderVNode` call
+      context.pushStatement(node.ssrCodegenNode)
+    }
   }
 }
 

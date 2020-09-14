@@ -99,6 +99,33 @@ describe('reactivity/reactive/Array', () => {
     expect(fn).toHaveBeenCalledTimes(1)
   })
 
+  test('add existing index on Array should not trigger length dependency', () => {
+    const array = new Array(3)
+    const observed = reactive(array)
+    const fn = jest.fn()
+    effect(() => {
+      fn(observed.length)
+    })
+    expect(fn).toHaveBeenCalledTimes(1)
+    observed[1] = 1
+    expect(fn).toHaveBeenCalledTimes(1)
+  })
+
+  test('add non-integer prop on Array should not trigger length dependency', () => {
+    const array = new Array(3)
+    const observed = reactive(array)
+    const fn = jest.fn()
+    effect(() => {
+      fn(observed.length)
+    })
+    expect(fn).toHaveBeenCalledTimes(1)
+    // @ts-ignore
+    observed.x = 'x'
+    expect(fn).toHaveBeenCalledTimes(1)
+    observed[-1] = 'x'
+    expect(fn).toHaveBeenCalledTimes(1)
+  })
+
   describe('Array methods w/ refs', () => {
     let original: any[]
     beforeEach(() => {
@@ -121,7 +148,7 @@ describe('reactivity/reactive/Array', () => {
       expect(isRef(raw[1])).toBe(true)
     })
 
-    test('read + indentity', () => {
+    test('read + identity', () => {
       const ref = original[1]
       expect(ref).toBe(toRaw(original)[1])
       expect(original.indexOf(ref)).toBe(1)

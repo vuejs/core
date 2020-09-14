@@ -1,6 +1,6 @@
 {
   "name": "@vue/runtime-dom",
-  "version": "3.0.0-beta.3",
+  "version": "3.0.0-rc.10",
   "description": "@vue/runtime-dom",
   "main": "index.js",
   "module": "dist/runtime-dom.esm-bundler.js",
@@ -18,14 +18,12 @@
       "esm-browser",
       "cjs",
       "global"
-    ],
-    "dts": [
-      "jsx.d.ts"
     ]
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vuejs/vue-next.git"
+    "url": "git+https://github.com/vuejs/vue-next.git",
+    "directory": "packages/runtime-dom"
   },
   "keywords": [
     "vue"
@@ -37,8 +35,8 @@
   },
   "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/runtime-dom#readme",
   "dependencies": {
-    "@vue/shared": "3.0.0-beta.3",
-    "@vue/runtime-core": "3.0.0-beta.3",
+    "@vue/shared": "3.0.0-rc.10",
+    "@vue/runtime-core": "3.0.0-rc.10",
     "csstype": "^2.6.8"
   }
 }

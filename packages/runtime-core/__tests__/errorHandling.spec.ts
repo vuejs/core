@@ -10,20 +10,8 @@ import {
   defineComponent,
   watchEffect
 } from '@vue/runtime-test'
-import { setErrorRecovery } from '../src/errorHandling'
-import { mockWarn } from '@vue/shared'
 
 describe('error handling', () => {
-  mockWarn()
-
-  beforeEach(() => {
-    setErrorRecovery(true)
-  })
-
-  afterEach(() => {
-    setErrorRecovery(false)
-  })
-
   test('propagation', () => {
     const err = new Error('foo')
     const fn = jest.fn()
@@ -473,8 +461,6 @@ describe('error handling', () => {
   })
 
   it('should warn unhandled', () => {
-    const onError = jest.spyOn(console, 'error')
-    onError.mockImplementation(() => {})
     const groupCollapsed = jest.spyOn(console, 'groupCollapsed')
     groupCollapsed.mockImplementation(() => {})
     const log = jest.spyOn(console, 'log')
@@ -499,14 +485,18 @@ describe('error handling', () => {
       render() {}
     }
 
-    render(h(Comp), nodeOps.createElement('div'))
+    let caughtError
+    try {
+      render(h(Comp), nodeOps.createElement('div'))
+    } catch (caught) {
+      caughtError = caught
+    }
     expect(fn).toHaveBeenCalledWith(err, 'setup function')
     expect(
       `Unhandled error during execution of setup function`
     ).toHaveBeenWarned()
-    expect(onError).toHaveBeenCalledWith(err)
+    expect(caughtError).toBe(err)
 
-    onError.mockRestore()
     groupCollapsed.mockRestore()
     log.mockRestore()
   })

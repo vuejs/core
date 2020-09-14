@@ -10,10 +10,17 @@ import { SourceMapConsumer, SourceMapGenerator, RawSourceMap } from 'source-map'
 import {
   transformAssetUrl,
   AssetURLOptions,
-  createAssetUrlTransformWithOptions
+  createAssetUrlTransformWithOptions,
+  AssetURLTagConfig,
+  normalizeOptions
 } from './templateTransformAssetUrl'
-import { transformSrcset } from './templateTransformSrcset'
+import {
+  transformSrcset,
+  createSrcsetTransformWithOptions
+} from './templateTransformSrcset'
 import { isObject } from '@vue/shared'
+import * as CompilerDOM from '@vue/compiler-dom'
+import * as CompilerSSR from '@vue/compiler-ssr'
 import consolidate from 'consolidate'
 
 export interface TemplateCompiler {
@@ -38,22 +45,42 @@ export interface SFCTemplateCompileOptions {
   compilerOptions?: CompilerOptions
   preprocessLang?: string
   preprocessOptions?: any
-  transformAssetUrls?: AssetURLOptions | boolean
+  /**
+   * In some cases, compiler-sfc may not be inside the project root (e.g. when
+   * linked or globally installed). In such cases a custom `require` can be
+   * passed to correctly resolve the preprocessors.
+   */
+  preprocessCustomRequire?: (id: string) => any
+  /**
+   * Configure what tags/attributes to transform into asset url imports,
+   * or disable the transform altogether with `false`.
+   */
+  transformAssetUrls?: AssetURLOptions | AssetURLTagConfig | boolean
+}
+
+interface PreProcessor {
+  render(
+    source: string,
+    options: any,
+    cb: (err: Error | null, res: string) => void
+  ): void
 }
 
 function preprocess(
   { source, filename, preprocessOptions }: SFCTemplateCompileOptions,
-  preprocessor: any
+  preprocessor: PreProcessor
 ): string {
   // Consolidate exposes a callback based API, but the callback is in fact
   // called synchronously for most templating engines. In our case, we have to
   // expose a synchronous API so that it is usable in Jest transforms (which
   // have to be sync because they are applied via Node.js require hooks)
-  let res: any, err
+  let res: string = ''
+  let err: Error | null = null
+
   preprocessor.render(
     source,
     { filename, ...preprocessOptions },
-    (_err: Error | null, _res: string) => {
+    (_err, _res) => {
       if (_err) err = _err
       res = _res
     }
@@ -66,9 +93,25 @@ function preprocess(
 export function compileTemplate(
   options: SFCTemplateCompileOptions
 ): SFCTemplateCompileResults {
-  const { preprocessLang } = options
-  const preprocessor =
-    preprocessLang && consolidate[preprocessLang as keyof typeof consolidate]
+  const { preprocessLang, preprocessCustomRequire } = options
+
+  if (
+    (__ESM_BROWSER__ || __GLOBAL__) &&
+    preprocessLang &&
+    !preprocessCustomRequire
+  ) {
+    throw new Error(
+      `[@vue/compiler-sfc] Template preprocessing in the browser build must ` +
+        `provide the \`preprocessCustomRequire\` option to return the in-browser ` +
+        `version of the preprocessor in the shape of { render(): string }.`
+    )
+  }
+
+  const preprocessor = preprocessLang
+    ? preprocessCustomRequire
+      ? preprocessCustomRequire(preprocessLang)
+      : require('consolidate')[preprocessLang as keyof typeof consolidate]
+    : false
   if (preprocessor) {
     try {
       return doCompileTemplate({
@@ -108,7 +151,7 @@ function doCompileTemplate({
   inMap,
   source,
   ssr = false,
-  compiler = ssr ? require('@vue/compiler-ssr') : require('@vue/compiler-dom'),
+  compiler = ssr ? (CompilerSSR as TemplateCompiler) : CompilerDOM,
   compilerOptions = {},
   transformAssetUrls
 }: SFCTemplateCompileOptions): SFCTemplateCompileResults {
@@ -116,9 +159,10 @@ function doCompileTemplate({
 
   let nodeTransforms: NodeTransform[] = []
   if (isObject(transformAssetUrls)) {
+    const assetOptions = normalizeOptions(transformAssetUrls)
     nodeTransforms = [
-      createAssetUrlTransformWithOptions(transformAssetUrls),
-      transformSrcset
+      createAssetUrlTransformWithOptions(assetOptions),
+      createSrcsetTransformWithOptions(assetOptions)
     ]
   } else if (transformAssetUrls !== false) {
     nodeTransforms = [transformAssetUrl, transformSrcset]

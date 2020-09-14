@@ -102,7 +102,7 @@ export const decodeHtml: ParserOptions['decodeEntities'] = (
 }
 
 // https://html.spec.whatwg.org/multipage/parsing.html#numeric-character-reference-end-state
-const CCR_REPLACEMENTS: { [key: number]: number | undefined } = {
+const CCR_REPLACEMENTS: Record<number, number | undefined> = {
   0x80: 0x20ac,
   0x82: 0x201a,
   0x83: 0x0192,

@@ -1,6 +1,6 @@
-# vue-next [![CircleCI](https://circleci.com/gh/vuejs/vue-next.svg?style=svg&circle-token=fb883a2d0a73df46e80b2e79fd430959d8f2b488)](https://circleci.com/gh/vuejs/vue-next)
+# vue-next [![beta](https://img.shields.io/npm/v/vue/next.svg)](https://www.npmjs.com/package/vue/v/next) [![CircleCI](https://circleci.com/gh/vuejs/vue-next.svg?style=svg&circle-token=fb883a2d0a73df46e80b2e79fd430959d8f2b488)](https://circleci.com/gh/vuejs/vue-next)
 
-## Status: Beta.
+## Status: Release Candidate
 
 - All planned RFCs have been merged.
 
@@ -14,34 +14,74 @@ Please note that there could still be undocumented behavior inconsistencies with
 
 In addition, the current implementation requires native ES2015+ in the runtime environment and does not support IE11 (yet). The IE11 compatible build will be worked on after we have reached RC stage.
 
-## Official Libraries Vue 3 Support Status
+The documentation of Vue 3 can be found at https://v3.vuejs.org/
 
-| Project | Status |
-|---------|--------|
-| vue-router          | Alpha [[Proposed RFCs][router-rfcs]] [[GitHub][router-code]] [[npm][router-npm]] |
-| vuex                | Alpha, with same API [[GitHub][vuex-code]] [[npm][vuex-npm]] |
-| vue-class-component | Alpha [[Github][vcc-code]] [[npm][vcc-npm]] |
-| vue-cli             | Experimental support via [vue-cli-plugin-vue-next][cli] |
-| eslint-plugin-vue   | Alpha [[Github][epv-code]] [[npm][epv-npm]] |
-| vue-test-utils      | Alpha [[Github][vtu-code]] [[npm][vtu-npm]] |
-| vue-devtools        | WIP |
-| jsx                 | WIP |
+## Status of the rest of the framework
 
-[router-code]: https://github.com/vuejs/vue-router-next
-[router-rfcs]: https://github.com/vuejs/rfcs/pulls?q=is%3Apr+is%3Aopen+label%3Arouter
-[router-npm]: https://unpkg.com/vue-router@next/
-[vuex-code]: https://github.com/vuejs/vuex/tree/4.0
-[vuex-npm]: https://unpkg.com/vuex@next/
-[cli]: https://github.com/vuejs/vue-cli-plugin-vue-next
-[vue-loader-code]: https://github.com/vuejs/vue-loader/tree/next
-[vue-loader-npm]: https://unpkg.com/vue-loader@next/
-[vcc-code]: https://github.com/vuejs/vue-class-component/tree/next
-[vcc-npm]: https://unpkg.com/vue-class-component@next/
-[vtu-code]: https://github.com/vuejs/vue-test-utils-next
-[vtu-npm]: https://www.npmjs.com/package/@vue/test-utils
+### Vue Router
+
+- [![beta](https://img.shields.io/npm/v/vue-router/next.svg)](https://www.npmjs.com/package/vue-router/v/next)
+- [Github](https://github.com/vuejs/vue-router-next)
+- [RFCs](https://github.com/vuejs/rfcs/pulls?q=is%3Apr+is%3Amerged+label%3Arouter)
+
+### Vuex
+
+- [![beta](https://img.shields.io/npm/v/vuex/next.svg)](https://www.npmjs.com/package/vuex/v/next)
+- [Github](https://github.com/vuejs/vuex/tree/4.0)
+
+The only difference between Vuex 4.0 and 3.x is that it's Vue 3 compatible! It is ready to enter RC together with Vue 3 core.
+
+### Vue CLI
+
+As of v4.5.0, `vue-cli` now provides built-in option to choose Vue 3 preset when creating a new project.
+
+### JSX Support
+
+There are currently two JSX transform implementations for Vue 3 with slightly differing syntax (for Vue specific features):
+
+- [vueComponent/jsx](https://github.com/vueComponent/jsx)
+- [HcySunYang/vue-next-jsx](https://github.com/HcySunYang/vue-next-jsx)
+
+We are using [this thread](https://github.com/vuejs/jsx/issues/141) to unify the design and land on an official specification of how Vue features should be handled in JSX. If you use Vue with JSX, please provide your feedback in that thread.
+
+### Other Projects
+
+| Project             | Status |
+| ------------------- | ------ |
+| vue-devtools        | [![alpha][vd-badge]][vd-npm] [[Github][vd-code]] |
+| eslint-plugin-vue   | [![alpha][epv-badge]][epv-npm] [[Github][epv-code]] |
+| @vue/test-utils     | [![alpha][vtu-badge]][vtu-npm] [[Github][vtu-code]] |
+| vue-class-component | [![alpha][vcc-badge]][vcc-npm] [[Github][vcc-code]] |
+| vue-loader          | [![alpha][vl-badge]][vl-npm] [[Github][vl-code]] |
+| rollup-plugin-vue   | [![alpha][rpv-badge]][rpv-npm] [[Github][rpv-code]] |
+
+[vd-badge]: https://img.shields.io/npm/v/@vue/devtools/beta.svg
+[vd-npm]: https://www.npmjs.com/package/@vue/devtools/v/beta
+[vd-code]: https://github.com/vuejs/vue-devtools/tree/next
+
+[epv-badge]: https://img.shields.io/npm/v/eslint-plugin-vue/next.svg
+[epv-npm]: https://www.npmjs.com/package/eslint-plugin-vue/v/next
 [epv-code]: https://github.com/vuejs/eslint-plugin-vue
-[epv-npm]: https://unpkg.com/browse/eslint-plugin-vue@7.0.0-alpha.0/
-[vue-devtools]:  https://github.com/vuejs/vue-devtools
+
+[vtu-badge]: https://img.shields.io/npm/v/@vue/test-utils/next.svg
+[vtu-npm]: https://www.npmjs.com/package/@vue/test-utils/v/next
+[vtu-code]: https://github.com/vuejs/vue-test-utils-next
+
+[jsx-badge]: https://img.shields.io/npm/v/@ant-design-vue/babel-plugin-jsx.svg
+[jsx-npm]: https://www.npmjs.com/package/@ant-design-vue/babel-plugin-jsx
+[jsx-code]: https://github.com/vueComponent/jsx
+
+[vcc-badge]: https://img.shields.io/npm/v/vue-class-component/next.svg
+[vcc-npm]: https://www.npmjs.com/package/vue-class-component/v/next
+[vcc-code]: https://github.com/vuejs/vue-class-component/tree/next
+
+[vl-badge]: https://img.shields.io/npm/v/vue-loader/next.svg
+[vl-npm]: https://www.npmjs.com/package/vue-loader/v/next
+[vl-code]: https://github.com/vuejs/vue-loader/tree/next
+
+[rpv-badge]: https://img.shields.io/npm/v/rollup-plugin-vue/next.svg
+[rpv-npm]: https://www.npmjs.com/package/rollup-plugin-vue/v/next
+[rpv-code]: https://github.com/vuejs/rollup-plugin-vue/tree/next
 
 ## Contribution
 

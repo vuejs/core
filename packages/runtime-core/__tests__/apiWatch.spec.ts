@@ -7,20 +7,18 @@ import {
   ref,
   h
 } from '../src/index'
-import { render, nodeOps, serializeInner } from '@vue/runtime-test'
+import { render, nodeOps, serializeInner, TestElement } from '@vue/runtime-test'
 import {
   ITERATE_KEY,
   DebuggerEvent,
   TrackOpTypes,
-  TriggerOpTypes
+  TriggerOpTypes,
+  triggerRef
 } from '@vue/reactivity'
-import { mockWarn } from '@vue/shared'
 
 // reference: https://vue-composition-api-rfc.netlify.com/api.html#watch
 
 describe('api: watch', () => {
-  mockWarn()
-
   it('effect', async () => {
     const state = reactive({ count: 0 })
     let dummy
@@ -69,6 +67,31 @@ describe('api: watch', () => {
     expect(dummy).toMatchObject([1, 0])
   })
 
+  it('watching single source: array', async () => {
+    const array = reactive([] as number[])
+    const spy = jest.fn()
+    watch(array, spy)
+    array.push(1)
+    await nextTick()
+    expect(spy).toBeCalledTimes(1)
+    expect(spy).toBeCalledWith([1], expect.anything(), expect.anything())
+  })
+
+  it('should not fire if watched getter result did not change', async () => {
+    const spy = jest.fn()
+    const n = ref(0)
+    watch(() => n.value % 2, spy)
+
+    n.value++
+    await nextTick()
+    expect(spy).toBeCalledTimes(1)
+
+    n.value += 2
+    await nextTick()
+    // should not be called again because getter result did not change
+    expect(spy).toBeCalledTimes(1)
+  })
+
   it('watching single source: computed ref', async () => {
     const count = ref(0)
     const plus = computed(() => count.value + 1)
@@ -101,6 +124,19 @@ describe('api: watch', () => {
     count.value++
     await nextTick()
     expect(dummy).toMatchObject([1, 0])
+  })
+
+  it('directly watching reactive object (with automatic deep: true)', async () => {
+    const src = reactive({
+      count: 0
+    })
+    let dummy
+    watch(src, ({ count }) => {
+      dummy = count
+    })
+    src.count++
+    await nextTick()
+    expect(dummy).toBe(1)
   })
 
   it('watching multiple sources', async () => {
@@ -140,6 +176,30 @@ describe('api: watch', () => {
     status.value = true
     await nextTick()
     expect(dummy).toMatchObject([[2, true], [1, false]])
+  })
+
+  it('watching multiple sources: reactive object (with automatic deep: true)', async () => {
+    const src = reactive({ count: 0 })
+    let dummy
+    watch([src], ([state]) => {
+      dummy = state
+      // assert types
+      state.count === 1
+    })
+    src.count++
+    await nextTick()
+    expect(dummy).toMatchObject({ count: 1 })
+  })
+
+  it('warn invalid watch source', () => {
+    // @ts-ignore
+    watch(1, () => {})
+    expect(`Invalid watch source`).toHaveBeenWarned()
+  })
+
+  it('warn invalid watch source: multiple sources', () => {
+    watch([1], () => {})
+    expect(`Invalid watch source`).toHaveBeenWarned()
   })
 
   it('stopping the watcher (effect)', async () => {
@@ -223,12 +283,13 @@ describe('api: watch', () => {
   it('flush timing: post (default)', async () => {
     const count = ref(0)
     let callCount = 0
+    let result
     const assertion = jest.fn(count => {
       callCount++
       // on mount, the watcher callback should be called before DOM render
       // on update, should be called after the count is updated
       const expectedDOM = callCount === 1 ? `` : `${count}`
-      expect(serializeInner(root)).toBe(expectedDOM)
+      result = serializeInner(root) === expectedDOM
     })
 
     const Comp = {
@@ -242,10 +303,12 @@ describe('api: watch', () => {
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
     expect(assertion).toHaveBeenCalledTimes(1)
+    expect(result).toBe(true)
 
     count.value++
     await nextTick()
     expect(assertion).toHaveBeenCalledTimes(2)
+    expect(result).toBe(true)
   })
 
   it('flush timing: pre', async () => {
@@ -253,16 +316,18 @@ describe('api: watch', () => {
     const count2 = ref(0)
 
     let callCount = 0
+    let result1
+    let result2
     const assertion = jest.fn((count, count2Value) => {
       callCount++
       // on mount, the watcher callback should be called before DOM render
       // on update, should be called before the count is updated
       const expectedDOM = callCount === 1 ? `` : `${count - 1}`
-      expect(serializeInner(root)).toBe(expectedDOM)
+      result1 = serializeInner(root) === expectedDOM
 
       // in a pre-flush callback, all state should have been updated
-      const expectedState = callCount === 1 ? 0 : 1
-      expect(count2Value).toBe(expectedState)
+      const expectedState = callCount - 1
+      result2 = count === expectedState && count2Value === expectedState
     })
 
     const Comp = {
@@ -281,12 +346,16 @@ describe('api: watch', () => {
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
     expect(assertion).toHaveBeenCalledTimes(1)
+    expect(result1).toBe(true)
+    expect(result2).toBe(true)
 
     count.value++
     count2.value++
     await nextTick()
     // two mutations should result in 1 callback execution
     expect(assertion).toHaveBeenCalledTimes(2)
+    expect(result1).toBe(true)
+    expect(result2).toBe(true)
   })
 
   it('flush timing: sync', async () => {
@@ -294,17 +363,19 @@ describe('api: watch', () => {
     const count2 = ref(0)
 
     let callCount = 0
+    let result1
+    let result2
     const assertion = jest.fn(count => {
       callCount++
       // on mount, the watcher callback should be called before DOM render
       // on update, should be called before the count is updated
       const expectedDOM = callCount === 1 ? `` : `${count - 1}`
-      expect(serializeInner(root)).toBe(expectedDOM)
+      result1 = serializeInner(root) === expectedDOM
 
       // in a sync callback, state mutation on the next line should not have
       // executed yet on the 2nd call, but will be on the 3rd call.
       const expectedState = callCount < 3 ? 0 : 1
-      expect(count2.value).toBe(expectedState)
+      result2 = count2.value === expectedState
     })
 
     const Comp = {
@@ -323,11 +394,140 @@ describe('api: watch', () => {
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
     expect(assertion).toHaveBeenCalledTimes(1)
+    expect(result1).toBe(true)
+    expect(result2).toBe(true)
 
     count.value++
     count2.value++
     await nextTick()
     expect(assertion).toHaveBeenCalledTimes(3)
+    expect(result1).toBe(true)
+    expect(result2).toBe(true)
+  })
+
+  it('should not fire on component unmount w/ flush: post', async () => {
+    const toggle = ref(true)
+    const cb = jest.fn()
+    const Comp = {
+      setup() {
+        watch(toggle, cb)
+      },
+      render() {}
+    }
+    const App = {
+      render() {
+        return toggle.value ? h(Comp) : null
+      }
+    }
+    render(h(App), nodeOps.createElement('div'))
+    expect(cb).not.toHaveBeenCalled()
+    toggle.value = false
+    await nextTick()
+    expect(cb).not.toHaveBeenCalled()
+  })
+
+  it('should fire on component unmount w/ flush: pre', async () => {
+    const toggle = ref(true)
+    const cb = jest.fn()
+    const Comp = {
+      setup() {
+        watch(toggle, cb, { flush: 'pre' })
+      },
+      render() {}
+    }
+    const App = {
+      render() {
+        return toggle.value ? h(Comp) : null
+      }
+    }
+    render(h(App), nodeOps.createElement('div'))
+    expect(cb).not.toHaveBeenCalled()
+    toggle.value = false
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(1)
+  })
+
+  // #1763
+  it('flush: pre watcher watching props should fire before child update', async () => {
+    const a = ref(0)
+    const b = ref(0)
+    const c = ref(0)
+    const calls: string[] = []
+
+    const Comp = {
+      props: ['a', 'b'],
+      setup(props: any) {
+        watch(
+          () => props.a + props.b,
+          () => {
+            calls.push('watcher 1')
+            c.value++
+          },
+          { flush: 'pre' }
+        )
+
+        // #1777 chained pre-watcher
+        watch(
+          c,
+          () => {
+            calls.push('watcher 2')
+          },
+          { flush: 'pre' }
+        )
+        return () => {
+          c.value
+          calls.push('render')
+        }
+      }
+    }
+
+    const App = {
+      render() {
+        return h(Comp, { a: a.value, b: b.value })
+      }
+    }
+
+    render(h(App), nodeOps.createElement('div'))
+    expect(calls).toEqual(['render'])
+
+    // both props are updated
+    // should trigger pre-flush watcher first and only once
+    // then trigger child render
+    a.value++
+    b.value++
+    await nextTick()
+    expect(calls).toEqual(['render', 'watcher 1', 'watcher 2', 'render'])
+  })
+
+  // #1852
+  it('flush: post watcher should fire after template refs updated', async () => {
+    const toggle = ref(false)
+    let dom: TestElement | null = null
+
+    const App = {
+      setup() {
+        const domRef = ref<TestElement | null>(null)
+
+        watch(
+          toggle,
+          () => {
+            dom = domRef.value
+          },
+          { flush: 'post' }
+        )
+
+        return () => {
+          return toggle.value ? h('p', { ref: domRef }) : null
+        }
+      }
+    }
+
+    render(h(App), nodeOps.createElement('div'))
+    expect(dom).toBe(null)
+
+    toggle.value = true
+    await nextTick()
+    expect(dom!.tag).toBe('p')
   })
 
   it('deep', async () => {
@@ -372,6 +572,25 @@ describe('api: watch', () => {
     state.set.delete(1)
     await nextTick()
     expect(dummy).toEqual([1, 2, 2, false])
+  })
+
+  it('watching deep ref', async () => {
+    const count = ref(0)
+    const double = computed(() => count.value * 2)
+    const state = reactive([count, double])
+
+    let dummy
+    watch(
+      () => state,
+      state => {
+        dummy = [state[0].value, state[1].value]
+      },
+      { deep: true }
+    )
+
+    count.value++
+    await nextTick()
+    expect(dummy).toEqual([1, 2])
   })
 
   it('immediate', async () => {
@@ -507,6 +726,7 @@ describe('api: watch', () => {
       newValue: 2
     })
 
+    // @ts-ignore
     delete obj.foo
     await nextTick()
     expect(dummy).toBeUndefined()
@@ -516,5 +736,47 @@ describe('api: watch', () => {
       key: 'foo',
       oldValue: 2
     })
+  })
+
+  it('should work sync', () => {
+    const v = ref(1)
+    let calls = 0
+
+    watch(
+      v,
+      () => {
+        ++calls
+      },
+      {
+        flush: 'sync'
+      }
+    )
+
+    expect(calls).toBe(0)
+    v.value++
+    expect(calls).toBe(1)
+  })
+
+  test('should force trigger on triggerRef when watching a ref', async () => {
+    const v = ref({ a: 1 })
+    let sideEffect = 0
+    watch(v, obj => {
+      sideEffect = obj.a
+    })
+
+    v.value = v.value
+    await nextTick()
+    // should not trigger
+    expect(sideEffect).toBe(0)
+
+    v.value.a++
+    await nextTick()
+    // should not trigger
+    expect(sideEffect).toBe(0)
+
+    triggerRef(v)
+    await nextTick()
+    // should trigger now
+    expect(sideEffect).toBe(2)
   })
 })

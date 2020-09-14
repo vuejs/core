@@ -11,15 +11,25 @@ import {
   CompilerOptions,
   IfStatement,
   CallExpression,
-  isText
+  isText,
+  processExpression,
+  createSimpleExpression,
+  createCompoundExpression,
+  createTransformContext,
+  createRoot
 } from '@vue/compiler-dom'
 import { isString, escapeHtml } from '@vue/shared'
-import { SSR_INTERPOLATE, ssrHelpers } from './runtimeHelpers'
+import {
+  SSR_INTERPOLATE,
+  ssrHelpers,
+  SSR_RESOLVE_CSS_VARS
+} from './runtimeHelpers'
 import { ssrProcessIf } from './transforms/ssrVIf'
 import { ssrProcessFor } from './transforms/ssrVFor'
 import { ssrProcessSlotOutlet } from './transforms/ssrTransformSlotOutlet'
 import { ssrProcessComponent } from './transforms/ssrTransformComponent'
 import { ssrProcessElement } from './transforms/ssrTransformElement'
+import { createSSRCompilerError, SSRErrorCodes } from './errors'
 
 // Because SSR codegen output is completely different from client-side output
 // (e.g. multiple elements can be concatenated into a single template literal
@@ -29,6 +39,25 @@ import { ssrProcessElement } from './transforms/ssrTransformElement'
 
 export function ssrCodegenTransform(ast: RootNode, options: CompilerOptions) {
   const context = createSSRTransformContext(ast, options)
+
+  // inject <style vars> resolution
+  // we do this instead of inlining the expression to ensure the vars are
+  // only resolved once per render
+  if (options.ssrCssVars) {
+    const varsExp = processExpression(
+      createSimpleExpression(options.ssrCssVars, false),
+      createTransformContext(createRoot([]), options)
+    )
+    context.body.push(
+      createCompoundExpression([
+        `const _cssVars = ${ssrHelpers[SSR_RESOLVE_CSS_VARS]}(`,
+        varsExp,
+        options.scopeId ? `, ${JSON.stringify(options.scopeId)}` : ``,
+        `)`
+      ])
+    )
+  }
+
   const isFragment =
     ast.children.length > 1 && ast.children.some(c => !isText(c))
   processChildren(ast.children, context, isFragment)
@@ -115,24 +144,70 @@ export function processChildren(
   }
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
-    if (child.type === NodeTypes.ELEMENT) {
-      if (child.tagType === ElementTypes.ELEMENT) {
-        ssrProcessElement(child, context)
-      } else if (child.tagType === ElementTypes.COMPONENT) {
-        ssrProcessComponent(child, context)
-      } else if (child.tagType === ElementTypes.SLOT) {
-        ssrProcessSlotOutlet(child, context)
-      }
-    } else if (child.type === NodeTypes.TEXT) {
-      context.pushStringPart(escapeHtml(child.content))
-    } else if (child.type === NodeTypes.INTERPOLATION) {
-      context.pushStringPart(
-        createCallExpression(context.helper(SSR_INTERPOLATE), [child.content])
-      )
-    } else if (child.type === NodeTypes.IF) {
-      ssrProcessIf(child, context)
-    } else if (child.type === NodeTypes.FOR) {
-      ssrProcessFor(child, context)
+    switch (child.type) {
+      case NodeTypes.ELEMENT:
+        switch (child.tagType) {
+          case ElementTypes.ELEMENT:
+            ssrProcessElement(child, context)
+            break
+          case ElementTypes.COMPONENT:
+            ssrProcessComponent(child, context)
+            break
+          case ElementTypes.SLOT:
+            ssrProcessSlotOutlet(child, context)
+            break
+          case ElementTypes.TEMPLATE:
+            // TODO
+            break
+          default:
+            context.onError(
+              createSSRCompilerError(
+                SSRErrorCodes.X_SSR_INVALID_AST_NODE,
+                (child as any).loc
+              )
+            )
+            // make sure we exhaust all possible types
+            const exhaustiveCheck: never = child
+            return exhaustiveCheck
+        }
+        break
+      case NodeTypes.TEXT:
+        context.pushStringPart(escapeHtml(child.content))
+        break
+      case NodeTypes.COMMENT:
+        // no need to escape comment here because the AST can only
+        // contain valid comments.
+        context.pushStringPart(`<!--${child.content}-->`)
+        break
+      case NodeTypes.INTERPOLATION:
+        context.pushStringPart(
+          createCallExpression(context.helper(SSR_INTERPOLATE), [child.content])
+        )
+        break
+      case NodeTypes.IF:
+        ssrProcessIf(child, context)
+        break
+      case NodeTypes.FOR:
+        ssrProcessFor(child, context)
+        break
+      case NodeTypes.IF_BRANCH:
+        // no-op - handled by ssrProcessIf
+        break
+      case NodeTypes.TEXT_CALL:
+      case NodeTypes.COMPOUND_EXPRESSION:
+        // no-op - these two types can never appear as template child node since
+        // `transformText` is not used during SSR compile.
+        break
+      default:
+        context.onError(
+          createSSRCompilerError(
+            SSRErrorCodes.X_SSR_INVALID_AST_NODE,
+            (child as any).loc
+          )
+        )
+        // make sure we exhaust all possible types
+        const exhaustiveCheck: never = child
+        return exhaustiveCheck
     }
   }
   if (asFragment) {

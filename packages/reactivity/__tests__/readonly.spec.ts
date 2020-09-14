@@ -10,7 +10,6 @@ import {
   shallowReadonly,
   isProxy
 } from '../src'
-import { mockWarn } from '@vue/shared'
 
 /**
  * @see https://www.typescriptlang.org/docs/handbook/release-notes/typescript-3-4.html
@@ -18,8 +17,6 @@ import { mockWarn } from '@vue/shared'
 type Writable<T> = { -readonly [P in keyof T]: T[P] }
 
 describe('reactivity/readonly', () => {
-  mockWarn()
-
   describe('Object', () => {
     it('should make nested values readonly', () => {
       const original = { foo: 1, bar: { baz: 2 } }
@@ -71,18 +68,21 @@ describe('reactivity/readonly', () => {
         `Set operation on key "Symbol(qux)" failed: target is readonly.`
       ).toHaveBeenWarnedLast()
 
+      // @ts-ignore
       delete wrapped.foo
       expect(wrapped.foo).toBe(1)
       expect(
         `Delete operation on key "foo" failed: target is readonly.`
       ).toHaveBeenWarnedLast()
 
+      // @ts-ignore
       delete wrapped.bar.baz
       expect(wrapped.bar.baz).toBe(2)
       expect(
         `Delete operation on key "baz" failed: target is readonly.`
       ).toHaveBeenWarnedLast()
 
+      // @ts-ignore
       delete wrapped[qux]
       expect(wrapped[qux]).toBe(3)
       expect(
@@ -208,12 +208,29 @@ describe('reactivity/readonly', () => {
         ).toHaveBeenWarned()
       })
 
+      // #1772
+      test('readonly + reactive should make get() value also readonly + reactive', () => {
+        const map = reactive(new Collection())
+        const roMap = readonly(map)
+        const key = {}
+        map.set(key, {})
+
+        const item = map.get(key)
+        expect(isReactive(item)).toBe(true)
+        expect(isReadonly(item)).toBe(false)
+
+        const roItem = roMap.get(key)
+        expect(isReactive(roItem)).toBe(true)
+        expect(isReadonly(roItem)).toBe(true)
+      })
+
       if (Collection === Map) {
         test('should retrieve readonly values on iteration', () => {
           const key1 = {}
           const key2 = {}
-          const original = new Collection([[key1, {}], [key2, {}]])
+          const original = new Map([[key1, {}], [key2, {}]])
           const wrapped: any = readonly(original)
+          expect(wrapped.size).toBe(2)
           for (const [key, value] of wrapped) {
             expect(isReadonly(key)).toBe(true)
             expect(isReadonly(value)).toBe(true)
@@ -223,6 +240,28 @@ describe('reactivity/readonly', () => {
           })
           for (const value of wrapped.values()) {
             expect(isReadonly(value)).toBe(true)
+          }
+        })
+
+        test('should retrieve reactive + readonly values on iteration', () => {
+          const key1 = {}
+          const key2 = {}
+          const original = reactive(new Map([[key1, {}], [key2, {}]]))
+          const wrapped: any = readonly(original)
+          expect(wrapped.size).toBe(2)
+          for (const [key, value] of wrapped) {
+            expect(isReadonly(key)).toBe(true)
+            expect(isReadonly(value)).toBe(true)
+            expect(isReactive(key)).toBe(true)
+            expect(isReactive(value)).toBe(true)
+          }
+          wrapped.forEach((value: any) => {
+            expect(isReadonly(value)).toBe(true)
+            expect(isReactive(value)).toBe(true)
+          })
+          for (const value of wrapped.values()) {
+            expect(isReadonly(value)).toBe(true)
+            expect(isReactive(value)).toBe(true)
           }
         })
       }
@@ -267,6 +306,7 @@ describe('reactivity/readonly', () => {
         test('should retrieve readonly values on iteration', () => {
           const original = new Collection([{}, {}])
           const wrapped: any = readonly(original)
+          expect(wrapped.size).toBe(2)
           for (const value of wrapped) {
             expect(isReadonly(value)).toBe(true)
           }
@@ -314,6 +354,42 @@ describe('reactivity/readonly', () => {
     expect(dummy).toBe(1)
     a.n++
     expect(b.n).toBe(2)
+    expect(dummy).toBe(2)
+  })
+
+  test('readonly collection should not track', () => {
+    const map = new Map()
+    map.set('foo', 1)
+
+    const reMap = reactive(map)
+    const roMap = readonly(map)
+
+    let dummy
+    effect(() => {
+      dummy = roMap.get('foo')
+    })
+    expect(dummy).toBe(1)
+    reMap.set('foo', 2)
+    expect(roMap.get('foo')).toBe(2)
+    // should not trigger
+    expect(dummy).toBe(1)
+  })
+
+  test('readonly should track and trigger if wrapping reactive original (collection)', () => {
+    const a = reactive(new Map())
+    const b = readonly(a)
+    // should return true since it's wrapping a reactive source
+    expect(isReactive(b)).toBe(true)
+
+    a.set('foo', 1)
+
+    let dummy
+    effect(() => {
+      dummy = b.get('foo')
+    })
+    expect(dummy).toBe(1)
+    a.set('foo', 2)
+    expect(b.get('foo')).toBe(2)
     expect(dummy).toBe(2)
   })
 

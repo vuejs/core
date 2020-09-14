@@ -6,6 +6,10 @@ This package contains lower level utilities that you can use if you are writing 
 
 The API surface is intentionally minimal - the goal is to reuse as much as possible while being as flexible as possible.
 
+## Browser Build Usage
+
+This package relies on `postcss`, `postcss-selector-parser` and `postcss-modules`
+
 ## API
 
 TODO

@@ -19,7 +19,7 @@ export const ssrTransformFor = createStructuralDirectiveTransform(
   processFor
 )
 
-// This is called during the 2nd transform pass to construct the SSR-sepcific
+// This is called during the 2nd transform pass to construct the SSR-specific
 // codegen nodes.
 export function ssrProcessFor(node: ForNode, context: SSRTransformContext) {
   const needFragmentWrapper =

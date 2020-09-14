@@ -7,19 +7,19 @@ import {
   PlainElementNode,
   ComponentNode,
   TemplateNode,
-  ElementNode,
-  VNodeCall
+  VNodeCall,
+  ParentNode
 } from '../ast'
 import { TransformContext } from '../transform'
 import { PatchFlags, isString, isSymbol } from '@vue/shared'
-import { isSlotOutlet, findProp } from '../utils'
+import { isSlotOutlet } from '../utils'
 
 export function hoistStatic(root: RootNode, context: TransformContext) {
   walk(
-    root.children,
+    root,
     context,
     new Map(),
-    // Root node is unfortuantely non-hoistable due to potential parent
+    // Root node is unfortunately non-hoistable due to potential parent
     // fallthrough attributes.
     isSingleElementRoot(root, root.children[0])
   )
@@ -37,27 +37,50 @@ export function isSingleElementRoot(
   )
 }
 
+const enum StaticType {
+  NOT_STATIC = 0,
+  FULL_STATIC,
+  HAS_RUNTIME_CONSTANT
+}
+
 function walk(
-  children: TemplateChildNode[],
+  node: ParentNode,
   context: TransformContext,
-  resultCache: Map<TemplateChildNode, boolean>,
+  resultCache: Map<TemplateChildNode, StaticType>,
   doNotHoistNode: boolean = false
 ) {
+  let hasHoistedNode = false
+  // Some transforms, e.g. transformAssetUrls from @vue/compiler-sfc, replaces
+  // static bindings with expressions. These expressions are guaranteed to be
+  // constant so they are still eligible for hoisting, but they are only
+  // available at runtime and therefore cannot be evaluated ahead of time.
+  // This is only a concern for pre-stringification (via transformHoist by
+  // @vue/compiler-dom), but doing it here allows us to perform only one full
+  // walk of the AST and allow `stringifyStatic` to stop walking as soon as its
+  // stringficiation threshold is met.
+  let hasRuntimeConstant = false
+
+  const { children } = node
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
-    // only plain elements are eligible for hoisting.
+    // only plain elements & text calls are eligible for hoisting.
     if (
       child.type === NodeTypes.ELEMENT &&
       child.tagType === ElementTypes.ELEMENT
     ) {
-      if (!doNotHoistNode && isStaticNode(child, resultCache)) {
+      let staticType
+      if (
+        !doNotHoistNode &&
+        (staticType = getStaticType(child, resultCache)) > 0
+      ) {
+        if (staticType === StaticType.HAS_RUNTIME_CONSTANT) {
+          hasRuntimeConstant = true
+        }
         // whole tree is static
         ;(child.codegenNode as VNodeCall).patchFlag =
           PatchFlags.HOISTED + (__DEV__ ? ` /* HOISTED */` : ``)
-        const hoisted = context.transformHoist
-          ? context.transformHoist(child, context)
-          : child.codegenNode!
-        child.codegenNode = context.hoist(hoisted)
+        child.codegenNode = context.hoist(child.codegenNode!)
+        hasHoistedNode = true
         continue
       } else {
         // node may contain dynamic children, but its props may be eligible for
@@ -69,8 +92,7 @@ function walk(
             (!flag ||
               flag === PatchFlags.NEED_PATCH ||
               flag === PatchFlags.TEXT) &&
-            !hasDynamicKeyOrRef(child) &&
-            !hasCachedProps(child)
+            !hasNonHoistableProps(child)
           ) {
             const props = getNodeProps(child)
             if (props) {
@@ -79,35 +101,49 @@ function walk(
           }
         }
       }
+    } else if (child.type === NodeTypes.TEXT_CALL) {
+      const staticType = getStaticType(child.content, resultCache)
+      if (staticType > 0) {
+        if (staticType === StaticType.HAS_RUNTIME_CONSTANT) {
+          hasRuntimeConstant = true
+        }
+        child.codegenNode = context.hoist(child.codegenNode)
+        hasHoistedNode = true
+      }
     }
+
+    // walk further
     if (child.type === NodeTypes.ELEMENT) {
-      walk(child.children, context, resultCache)
+      walk(child, context, resultCache)
     } else if (child.type === NodeTypes.FOR) {
       // Do not hoist v-for single child because it has to be a block
-      walk(child.children, context, resultCache, child.children.length === 1)
+      walk(child, context, resultCache, child.children.length === 1)
     } else if (child.type === NodeTypes.IF) {
       for (let i = 0; i < child.branches.length; i++) {
-        const branchChildren = child.branches[i].children
         // Do not hoist v-if single child because it has to be a block
-        walk(branchChildren, context, resultCache, branchChildren.length === 1)
+        walk(
+          child.branches[i],
+          context,
+          resultCache,
+          child.branches[i].children.length === 1
+        )
       }
-    } else if (
-      child.type === NodeTypes.TEXT_CALL &&
-      isStaticNode(child.content, resultCache)
-    ) {
-      child.codegenNode = context.hoist(child.codegenNode)
     }
+  }
+
+  if (!hasRuntimeConstant && hasHoistedNode && context.transformHoist) {
+    context.transformHoist(children, context, node)
   }
 }
 
-export function isStaticNode(
+export function getStaticType(
   node: TemplateChildNode | SimpleExpressionNode,
-  resultCache: Map<TemplateChildNode, boolean> = new Map()
-): boolean {
+  resultCache: Map<TemplateChildNode, StaticType> = new Map()
+): StaticType {
   switch (node.type) {
     case NodeTypes.ELEMENT:
       if (node.tagType !== ElementTypes.ELEMENT) {
-        return false
+        return StaticType.NOT_STATIC
       }
       const cached = resultCache.get(node)
       if (cached !== undefined) {
@@ -115,78 +151,108 @@ export function isStaticNode(
       }
       const codegenNode = node.codegenNode!
       if (codegenNode.type !== NodeTypes.VNODE_CALL) {
-        return false
+        return StaticType.NOT_STATIC
       }
       const flag = getPatchFlag(codegenNode)
-      if (!flag && !hasDynamicKeyOrRef(node) && !hasCachedProps(node)) {
+      if (!flag && !hasNonHoistableProps(node)) {
         // element self is static. check its children.
+        let returnType = StaticType.FULL_STATIC
         for (let i = 0; i < node.children.length; i++) {
-          if (!isStaticNode(node.children[i], resultCache)) {
-            resultCache.set(node, false)
-            return false
+          const childType = getStaticType(node.children[i], resultCache)
+          if (childType === StaticType.NOT_STATIC) {
+            resultCache.set(node, StaticType.NOT_STATIC)
+            return StaticType.NOT_STATIC
+          } else if (childType === StaticType.HAS_RUNTIME_CONSTANT) {
+            returnType = StaticType.HAS_RUNTIME_CONSTANT
           }
         }
-        // only svg/foreignObject could be block here, however if they are static
-        // then they don't need to be blocks since there will be no nested
-        // updates.
+
+        // check if any of the props contain runtime constants
+        if (returnType !== StaticType.HAS_RUNTIME_CONSTANT) {
+          for (let i = 0; i < node.props.length; i++) {
+            const p = node.props[i]
+            if (
+              p.type === NodeTypes.DIRECTIVE &&
+              p.name === 'bind' &&
+              p.exp &&
+              (p.exp.type === NodeTypes.COMPOUND_EXPRESSION ||
+                p.exp.isRuntimeConstant)
+            ) {
+              returnType = StaticType.HAS_RUNTIME_CONSTANT
+            }
+          }
+        }
+
+        // only svg/foreignObject could be block here, however if they are
+        // stati then they don't need to be blocks since there will be no
+        // nested updates.
         if (codegenNode.isBlock) {
           codegenNode.isBlock = false
         }
-        resultCache.set(node, true)
-        return true
+
+        resultCache.set(node, returnType)
+        return returnType
       } else {
-        resultCache.set(node, false)
-        return false
+        resultCache.set(node, StaticType.NOT_STATIC)
+        return StaticType.NOT_STATIC
       }
     case NodeTypes.TEXT:
     case NodeTypes.COMMENT:
-      return true
+      return StaticType.FULL_STATIC
     case NodeTypes.IF:
     case NodeTypes.FOR:
     case NodeTypes.IF_BRANCH:
-      return false
+      return StaticType.NOT_STATIC
     case NodeTypes.INTERPOLATION:
     case NodeTypes.TEXT_CALL:
-      return isStaticNode(node.content, resultCache)
+      return getStaticType(node.content, resultCache)
     case NodeTypes.SIMPLE_EXPRESSION:
       return node.isConstant
+        ? node.isRuntimeConstant
+          ? StaticType.HAS_RUNTIME_CONSTANT
+          : StaticType.FULL_STATIC
+        : StaticType.NOT_STATIC
     case NodeTypes.COMPOUND_EXPRESSION:
-      return node.children.every(child => {
-        return (
-          isString(child) || isSymbol(child) || isStaticNode(child, resultCache)
-        )
-      })
+      let returnType = StaticType.FULL_STATIC
+      for (let i = 0; i < node.children.length; i++) {
+        const child = node.children[i]
+        if (isString(child) || isSymbol(child)) {
+          continue
+        }
+        const childType = getStaticType(child, resultCache)
+        if (childType === StaticType.NOT_STATIC) {
+          return StaticType.NOT_STATIC
+        } else if (childType === StaticType.HAS_RUNTIME_CONSTANT) {
+          returnType = StaticType.HAS_RUNTIME_CONSTANT
+        }
+      }
+      return returnType
     default:
       if (__DEV__) {
         const exhaustiveCheck: never = node
         exhaustiveCheck
       }
-      return false
+      return StaticType.NOT_STATIC
   }
 }
 
-function hasDynamicKeyOrRef(node: ElementNode): boolean {
-  return !!(findProp(node, 'key', true) || findProp(node, 'ref', true))
-}
-
-function hasCachedProps(node: PlainElementNode): boolean {
-  if (__BROWSER__) {
-    return false
-  }
+/**
+ * Even for a node with no patch flag, it is possible for it to contain
+ * non-hoistable expressions that refers to scope variables, e.g. compiler
+ * injected keys or cached event handlers. Therefore we need to always check the
+ * codegenNode's props to be sure.
+ */
+function hasNonHoistableProps(node: PlainElementNode): boolean {
   const props = getNodeProps(node)
   if (props && props.type === NodeTypes.JS_OBJECT_EXPRESSION) {
     const { properties } = props
     for (let i = 0; i < properties.length; i++) {
-      const val = properties[i].value
-      if (val.type === NodeTypes.JS_CACHE_EXPRESSION) {
-        return true
-      }
-      // merged event handlers
+      const { key, value } = properties[i]
       if (
-        val.type === NodeTypes.JS_ARRAY_EXPRESSION &&
-        val.elements.some(
-          e => !isString(e) && e.type === NodeTypes.JS_CACHE_EXPRESSION
-        )
+        key.type !== NodeTypes.SIMPLE_EXPRESSION ||
+        !key.isStatic ||
+        (value.type !== NodeTypes.SIMPLE_EXPRESSION ||
+          (!value.isStatic && !value.isConstant))
       ) {
         return true
       }

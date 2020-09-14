@@ -103,7 +103,7 @@ export interface RootNode extends Node {
   helpers: symbol[]
   components: string[]
   directives: string[]
-  hoists: JSChildNode[]
+  hoists: (JSChildNode | null)[]
   imports: ImportItem[]
   cached: number
   temps: number
@@ -183,7 +183,9 @@ export interface DirectiveNode extends Node {
   exp: ExpressionNode | undefined
   arg: ExpressionNode | undefined
   modifiers: string[]
-  // optional property to cache the expression parse result for v-for
+  /**
+   * optional property to cache the expression parse result for v-for
+   */
   parseResult?: ForParseResult
 }
 
@@ -192,9 +194,21 @@ export interface SimpleExpressionNode extends Node {
   content: string
   isStatic: boolean
   isConstant: boolean
-  // an expression parsed as the params of a function will track
-  // the identifiers declared inside the function body.
+  /**
+   * Indicates this is an identifier for a hoist vnode call and points to the
+   * hoisted node.
+   */
+  hoisted?: JSChildNode
+  /**
+   * an expression parsed as the params of a function will track
+   * the identifiers declared inside the function body.
+   */
   identifiers?: string[]
+  /**
+   * some expressions (e.g. transformAssetUrls import identifiers) are constant,
+   * but cannot be stringified because they must be first evaluated at runtime.
+   */
+  isRuntimeConstant?: boolean
 }
 
 export interface InterpolationNode extends Node {
@@ -211,8 +225,11 @@ export interface CompoundExpressionNode extends Node {
     | TextNode
     | string
     | symbol)[]
-  // an expression parsed as the params of a function will track
-  // the identifiers declared inside the function body.
+
+  /**
+   * an expression parsed as the params of a function will track
+   * the identifiers declared inside the function body.
+   */
   identifiers?: string[]
 }
 
@@ -226,6 +243,7 @@ export interface IfBranchNode extends Node {
   type: NodeTypes.IF_BRANCH
   condition: ExpressionNode | undefined // else
   children: TemplateChildNode[]
+  userKey?: AttributeNode | DirectiveNode
 }
 
 export interface ForNode extends Node {
@@ -264,7 +282,7 @@ export interface VNodeCall extends Node {
   dynamicProps: string | undefined
   directives: DirectiveArguments | undefined
   isBlock: boolean
-  isForBlock: boolean
+  disableTracking: boolean
 }
 
 // JS Node Types ---------------------------------------------------------------
@@ -319,7 +337,10 @@ export interface FunctionExpression extends Node {
   returns?: TemplateChildNode | TemplateChildNode[] | JSChildNode
   body?: BlockStatement | IfStatement
   newline: boolean
-  // so that codegen knows it needs to generate ScopeId wrapper
+  /**
+   * This flag is for codegen to determine whether it needs to generate the
+   * withScopeId() wrapper
+   */
   isSlot: boolean
 }
 
@@ -472,7 +493,7 @@ export interface ForCodegenNode extends VNodeCall {
   props: undefined
   children: ForRenderListExpression
   patchFlag: string
-  isForBlock: true
+  disableTracking: boolean
 }
 
 export interface ForRenderListExpression extends CallExpression {
@@ -523,7 +544,7 @@ export function createVNodeCall(
   dynamicProps?: VNodeCall['dynamicProps'],
   directives?: VNodeCall['directives'],
   isBlock: VNodeCall['isBlock'] = false,
-  isForBlock: VNodeCall['isForBlock'] = false,
+  disableTracking: VNodeCall['disableTracking'] = false,
   loc = locStub
 ): VNodeCall {
   if (context) {
@@ -547,7 +568,7 @@ export function createVNodeCall(
     dynamicProps,
     directives,
     isBlock,
-    isForBlock,
+    disableTracking,
     loc
   }
 }

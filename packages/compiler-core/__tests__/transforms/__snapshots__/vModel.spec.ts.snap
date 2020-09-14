@@ -26,7 +26,26 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform v-model simple exprssion (with prefixIdentifiers) 1`] = `
+exports[`compiler: transform v-model simple expression (with multilines) 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
+    return (_openBlock(), _createBlock(\\"input\\", {
+      modelValue: 
+ model 
+,
+      \\"onUpdate:modelValue\\": $event => (
+ model 
+ = $event)
+    }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"]))
+  }
+}"
+`;
+
+exports[`compiler: transform v-model simple expression (with prefixIdentifiers) 1`] = `
 "import { createVNode as _createVNode, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
 
 export function render(_ctx, _cache) {
@@ -37,7 +56,7 @@ export function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform v-model simple exprssion 1`] = `
+exports[`compiler: transform v-model simple expression 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {

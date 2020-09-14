@@ -1,9 +1,6 @@
 import { toHandlers } from '../../src/helpers/toHandlers'
-import { mockWarn } from '@vue/shared'
 
 describe('toHandlers', () => {
-  mockWarn()
-
   it('should not accept non-objects', () => {
     toHandlers(null as any)
     toHandlers(undefined as any)
@@ -18,8 +15,8 @@ describe('toHandlers', () => {
     const change = () => {}
 
     expect(toHandlers({ input, change })).toStrictEqual({
-      oninput: input,
-      onchange: change
+      onInput: input,
+      onChange: change
     })
   })
 })

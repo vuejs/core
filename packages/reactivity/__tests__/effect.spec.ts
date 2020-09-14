@@ -6,8 +6,7 @@ import {
   TrackOpTypes,
   TriggerOpTypes,
   DebuggerEvent,
-  markRaw,
-  ref
+  markRaw
 } from '../src/index'
 import { ITERATE_KEY } from '../src/effect'
 
@@ -67,6 +66,7 @@ describe('reactivity/effect', () => {
     effect(() => (dummy = obj.prop))
 
     expect(dummy).toBe('value')
+    // @ts-ignore
     delete obj.prop
     expect(dummy).toBe(undefined)
   })
@@ -77,6 +77,7 @@ describe('reactivity/effect', () => {
     effect(() => (dummy = 'prop' in obj))
 
     expect(dummy).toBe(true)
+    // @ts-ignore
     delete obj.prop
     expect(dummy).toBe(false)
     obj.prop = 12
@@ -91,6 +92,7 @@ describe('reactivity/effect', () => {
     effect(() => (dummy = counter.num))
 
     expect(dummy).toBe(0)
+    // @ts-ignore
     delete counter.num
     expect(dummy).toBe(2)
     parentCounter.num = 4
@@ -107,8 +109,10 @@ describe('reactivity/effect', () => {
     effect(() => (dummy = 'num' in counter))
 
     expect(dummy).toBe(true)
+    // @ts-ignore
     delete counter.num
     expect(dummy).toBe(true)
+    // @ts-ignore
     delete parentCounter.num
     expect(dummy).toBe(false)
     counter.num = 3
@@ -220,6 +224,7 @@ describe('reactivity/effect', () => {
     expect(hasDummy).toBe(true)
     obj[key] = 'newValue'
     expect(dummy).toBe('newValue')
+    // @ts-ignore
     delete obj[key]
     expect(dummy).toBe(undefined)
     expect(hasDummy).toBe(false)
@@ -649,6 +654,7 @@ describe('reactivity/effect', () => {
       newValue: 2
     })
 
+    // @ts-ignore
     delete obj.foo
     expect(dummy).toBeUndefined()
     expect(onTrigger).toHaveBeenCalledTimes(2)
@@ -759,7 +765,7 @@ describe('reactivity/effect', () => {
     expect(fnSpy).toHaveBeenCalledTimes(1)
   })
 
-  it('should trigger all effects when array lenght is set 0', () => {
+  it('should trigger all effects when array length is set to 0', () => {
     const observed: any = reactive([1])
     let dummy, record
     effect(() => {
@@ -781,15 +787,5 @@ describe('reactivity/effect', () => {
     observed.length = 0
     expect(dummy).toBe(0)
     expect(record).toBeUndefined()
-  })
-
-  it('should handle self dependency mutations', () => {
-    const count = ref(0)
-    effect(() => {
-      count.value++
-    })
-    expect(count.value).toBe(1)
-    count.value = 10
-    expect(count.value).toBe(11)
   })
 })

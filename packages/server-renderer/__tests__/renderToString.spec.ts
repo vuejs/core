@@ -6,13 +6,14 @@ import {
   resolveComponent,
   ComponentOptions,
   ref,
-  defineComponent
+  defineComponent,
+  createTextVNode,
+  createStaticVNode
 } from 'vue'
-import { escapeHtml, mockWarn } from '@vue/shared'
-import { renderToString, renderComponent } from '../src/renderToString'
-import { ssrRenderSlot } from '../src/helpers/ssrRenderSlot'
-
-mockWarn()
+import { escapeHtml } from '@vue/shared'
+import { renderToString } from '../src/renderToString'
+import { ssrRenderSlot, SSRSlot } from '../src/helpers/ssrRenderSlot'
+import { ssrRenderComponent } from '../src/helpers/ssrRenderComponent'
 
 describe('ssr: renderToString', () => {
   test('should apply app context', async () => {
@@ -62,7 +63,7 @@ describe('ssr: renderToString', () => {
       expect(
         await renderToString(
           createApp(
-            defineComponent((props: {}) => {
+            defineComponent(() => {
               const msg = ref('hello')
               return () => h('div', msg.value)
             })
@@ -84,31 +85,6 @@ describe('ssr: renderToString', () => {
           })
         )
       ).toBe(`<div>hello</div>`)
-    })
-
-    describe('template components', () => {
-      test('render', async () => {
-        expect(
-          await renderToString(
-            createApp({
-              data() {
-                return { msg: 'hello' }
-              },
-              template: `<div>{{ msg }}</div>`
-            })
-          )
-        ).toBe(`<div>hello</div>`)
-      })
-
-      test('handle compiler errors', async () => {
-        await renderToString(createApp({ template: `<` }))
-
-        expect(
-          'Template compilation error: Unexpected EOF in tag.\n' +
-            '1  |  <\n' +
-            '   |   ^'
-        ).toHaveBeenWarned()
-      })
     })
 
     test('nested vnode components', async () => {
@@ -143,7 +119,7 @@ describe('ssr: renderToString', () => {
           createApp({
             ssrRender(_ctx, push, parent) {
               push(`<div>parent`)
-              push(renderComponent(Child, { msg: 'hello' }, null, parent))
+              push(ssrRenderComponent(Child, { msg: 'hello' }, null, parent))
               push(`</div>`)
             }
           })
@@ -192,11 +168,13 @@ describe('ssr: renderToString', () => {
             ssrRender(_ctx, push, parent) {
               push(`<div>parent`)
               push(
-                renderComponent(OptimizedChild, { msg: 'opt' }, null, parent)
+                ssrRenderComponent(OptimizedChild, { msg: 'opt' }, null, parent)
               )
-              push(renderComponent(VNodeChild, { msg: 'vnode' }, null, parent))
               push(
-                renderComponent(
+                ssrRenderComponent(VNodeChild, { msg: 'vnode' }, null, parent)
+              )
+              push(
+                ssrRenderComponent(
                   TemplateChild,
                   { msg: 'template' },
                   null,
@@ -237,14 +215,14 @@ describe('ssr: renderToString', () => {
             ssrRender(_ctx, push, parent) {
               push(`<div>parent`)
               push(
-                renderComponent(
+                ssrRenderComponent(
                   Child,
                   { msg: 'hello' },
                   {
                     // optimized slot using string push
-                    default: ({ msg }: any, push: any, p: any) => {
+                    default: (({ msg }, push, _p) => {
                       push(`<span>${msg}</span>`)
-                    },
+                    }) as SSRSlot,
                     // important to avoid slots being normalized
                     _: 1 as any
                   },
@@ -267,7 +245,7 @@ describe('ssr: renderToString', () => {
           createApp({
             ssrRender(_ctx, push, parent) {
               push(`<div>parent`)
-              push(renderComponent(Child, { msg: 'hello' }, null, parent))
+              push(ssrRenderComponent(Child, { msg: 'hello' }, null, parent))
               push(`</div>`)
             }
           })
@@ -300,7 +278,7 @@ describe('ssr: renderToString', () => {
             ssrRender(_ctx, push, parent) {
               push(`<div>parent`)
               push(
-                renderComponent(
+                ssrRenderComponent(
                   Child,
                   { msg: 'hello' },
                   {
@@ -370,7 +348,7 @@ describe('ssr: renderToString', () => {
 
     test('async components', async () => {
       const Child = {
-        // should wait for resovled render context from setup()
+        // should wait for resolved render context from setup()
         async setup() {
           return {
             msg: 'hello'
@@ -386,7 +364,7 @@ describe('ssr: renderToString', () => {
           createApp({
             ssrRender(_ctx, push, parent) {
               push(`<div>parent`)
-              push(renderComponent(Child, null, null, parent))
+              push(ssrRenderComponent(Child, null, null, parent))
               push(`</div>`)
             }
           })
@@ -425,9 +403,11 @@ describe('ssr: renderToString', () => {
             ssrRender(_ctx, push, parent) {
               push(`<div>parent`)
               push(
-                renderComponent(OptimizedChild, { msg: 'opt' }, null, parent)
+                ssrRenderComponent(OptimizedChild, { msg: 'opt' }, null, parent)
               )
-              push(renderComponent(VNodeChild, { msg: 'vnode' }, null, parent))
+              push(
+                ssrRenderComponent(VNodeChild, { msg: 'vnode' }, null, parent)
+              )
               push(`</div>`)
             }
           })
@@ -511,6 +491,33 @@ describe('ssr: renderToString', () => {
     })
   })
 
+  describe('raw vnode types', () => {
+    test('Text', async () => {
+      expect(await renderToString(createTextVNode('hello <div>'))).toBe(
+        `hello &lt;div&gt;`
+      )
+    })
+
+    test('Comment', async () => {
+      // https://www.w3.org/TR/html52/syntax.html#comments
+      expect(
+        await renderToString(
+          h('div', [
+            createCommentVNode('>foo'),
+            createCommentVNode('->foo'),
+            createCommentVNode('<!--foo-->'),
+            createCommentVNode('--!>foo<!-')
+          ])
+        )
+      ).toBe(`<div><!--foo--><!--foo--><!--foo--><!--foo--></div>`)
+    })
+
+    test('Static', async () => {
+      const content = `<div id="ok">hello<span>world</span></div>`
+      expect(await renderToString(createStaticVNode(content, 1))).toBe(content)
+    })
+  })
+
   describe('scopeId', () => {
     // note: here we are only testing scopeId handling for vdom serialization.
     // compiled srr render functions will include scopeId directly in strings.
@@ -545,8 +552,52 @@ describe('ssr: renderToString', () => {
       }
 
       expect(await renderToString(h(Parent))).toBe(
-        `<div data-v-test data-v-child><span data-v-test data-v-child-s>slot</span></div>`
+        `<div data-v-child data-v-test><span data-v-test data-v-child-s>slot</span></div>`
       )
     })
+  })
+
+  describe('integration w/ compiled template', () => {
+    test('render', async () => {
+      expect(
+        await renderToString(
+          createApp({
+            data() {
+              return { msg: 'hello' }
+            },
+            template: `<div>{{ msg }}</div>`
+          })
+        )
+      ).toBe(`<div>hello</div>`)
+    })
+
+    test('handle compiler errors', async () => {
+      await renderToString(createApp({ template: `<` }))
+
+      expect(
+        'Template compilation error: Unexpected EOF in tag.\n' +
+          '1  |  <\n' +
+          '   |   ^'
+      ).toHaveBeenWarned()
+    })
+  })
+
+  test('serverPrefetch', async () => {
+    const msg = Promise.resolve('hello')
+    const app = createApp({
+      data() {
+        return {
+          msg: ''
+        }
+      },
+      async serverPrefetch() {
+        this.msg = await msg
+      },
+      render() {
+        return h('div', this.msg)
+      }
+    })
+    const html = await renderToString(app)
+    expect(html).toBe(`<div>hello</div>`)
   })
 })

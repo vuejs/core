@@ -65,7 +65,7 @@ files.forEach(shortName => {
   "extends": "../../api-extractor.json",
   "mainEntryPointFilePath": "./dist/packages/<unscopedPackageName>/src/index.d.ts",
   "dtsRollup": {
-    "untrimmedFilePath": "./dist/<unscopedPackageName>.d.ts"
+    "publicTrimmedFilePath": "./dist/<unscopedPackageName>.d.ts"
   }
 }
 `.trim()

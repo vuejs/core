@@ -8,10 +8,6 @@ import {
   serialize,
   serializeInner
 } from '@vue/runtime-test'
-import { mockWarn } from '@vue/shared'
-
-mockWarn()
-
 function toSpan(content: any) {
   if (typeof content === 'string') {
     return h('span', content.toString())
@@ -40,7 +36,7 @@ function shuffle(array: Array<any>) {
   return array
 }
 
-it('should patch previously empty children', () => {
+test('should patch previously empty children', () => {
   const root = nodeOps.createElement('div')
 
   render(h('div', []), root)
@@ -50,13 +46,22 @@ it('should patch previously empty children', () => {
   expect(inner(root)).toBe('<div>hello</div>')
 })
 
-it('should patch previously null children', () => {
+test('should patch previously null children', () => {
   const root = nodeOps.createElement('div')
 
   render(h('div'), root)
   expect(inner(root)).toBe('<div></div>')
 
   render(h('div', ['hello']), root)
+  expect(inner(root)).toBe('<div>hello</div>')
+})
+
+test('array children -> text children', () => {
+  const root = nodeOps.createElement('div')
+  render(h('div', [h('div')]), root)
+  expect(inner(root)).toBe('<div><div></div></div>')
+
+  render(h('div', 'hello'), root)
   expect(inner(root)).toBe('<div>hello</div>')
 })
 

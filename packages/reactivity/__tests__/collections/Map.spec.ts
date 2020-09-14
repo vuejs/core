@@ -1,10 +1,7 @@
 import { reactive, effect, toRaw, isReactive } from '../../src'
-import { mockWarn } from '@vue/shared'
 
 describe('reactivity/collections', () => {
   describe('Map', () => {
-    mockWarn()
-
     test('instanceof', () => {
       const original = new Map()
       const observed = reactive(original)
@@ -438,6 +435,17 @@ describe('reactivity/collections', () => {
       // keys didn't change, should not trigger
       map.set('b', 1)
       expect(spy).toHaveBeenCalledTimes(3)
+    })
+
+    it('should trigger has only once for non-reactive keys', () => {
+      const map = new Map()
+      const spy = jest.fn()
+      map.has = spy
+
+      let proxy = reactive(map)
+      proxy.has('k')
+
+      expect(spy).toBeCalledTimes(1)
     })
   })
 })

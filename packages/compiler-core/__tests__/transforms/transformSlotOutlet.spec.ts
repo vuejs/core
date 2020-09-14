@@ -216,12 +216,16 @@ describe('compiler: transform <slot> outlets', () => {
         `$slots`,
         `"default"`,
         `{}`,
-        [
-          {
-            type: NodeTypes.ELEMENT,
-            tag: `div`
-          }
-        ]
+        {
+          type: NodeTypes.JS_FUNCTION_EXPRESSION,
+          params: [],
+          returns: [
+            {
+              type: NodeTypes.ELEMENT,
+              tag: `div`
+            }
+          ]
+        }
       ]
     })
   })
@@ -235,12 +239,16 @@ describe('compiler: transform <slot> outlets', () => {
         `$slots`,
         `"foo"`,
         `{}`,
-        [
-          {
-            type: NodeTypes.ELEMENT,
-            tag: `div`
-          }
-        ]
+        {
+          type: NodeTypes.JS_FUNCTION_EXPRESSION,
+          params: [],
+          returns: [
+            {
+              type: NodeTypes.ELEMENT,
+              tag: `div`
+            }
+          ]
+        }
       ]
     })
   })
@@ -268,12 +276,16 @@ describe('compiler: transform <slot> outlets', () => {
             }
           ]
         },
-        [
-          {
-            type: NodeTypes.ELEMENT,
-            tag: `div`
-          }
-        ]
+        {
+          type: NodeTypes.JS_FUNCTION_EXPRESSION,
+          params: [],
+          returns: [
+            {
+              type: NodeTypes.ELEMENT,
+              tag: `div`
+            }
+          ]
+        }
       ]
     })
   })
@@ -301,12 +313,16 @@ describe('compiler: transform <slot> outlets', () => {
             }
           ]
         },
-        [
-          {
-            type: NodeTypes.ELEMENT,
-            tag: `div`
-          }
-        ]
+        {
+          type: NodeTypes.JS_FUNCTION_EXPRESSION,
+          params: [],
+          returns: [
+            {
+              type: NodeTypes.ELEMENT,
+              tag: `div`
+            }
+          ]
+        }
       ]
     })
   })

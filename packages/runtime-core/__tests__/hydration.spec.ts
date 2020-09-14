@@ -11,9 +11,7 @@ import {
   defineAsyncComponent,
   defineComponent
 } from '@vue/runtime-dom'
-import { renderToString } from '@vue/server-renderer'
-import { mockWarn } from '@vue/shared'
-import { SSRContext } from 'packages/server-renderer/src/renderToString'
+import { renderToString, SSRContext } from '@vue/server-renderer'
 
 function mountWithHydration(html: string, render: () => any) {
   const container = document.createElement('div')
@@ -35,7 +33,9 @@ const triggerEvent = (type: string, el: Element) => {
 }
 
 describe('SSR hydration', () => {
-  mockWarn()
+  beforeEach(() => {
+    document.body.innerHTML = ''
+  })
 
   test('text', async () => {
     const msg = ref('foo')
@@ -56,10 +56,31 @@ describe('SSR hydration', () => {
   test('static', () => {
     const html = '<div><span>hello</span></div>'
     const { vnode, container } = mountWithHydration(html, () =>
-      createStaticVNode(html)
+      createStaticVNode('', 1)
     )
     expect(vnode.el).toBe(container.firstChild)
     expect(vnode.el.outerHTML).toBe(html)
+    expect(vnode.anchor).toBe(container.firstChild)
+    expect(vnode.children).toBe(html)
+  })
+
+  test('static (multiple elements)', () => {
+    const staticContent = '<div></div><span>hello</span>'
+    const html = `<div><div>hi</div>` + staticContent + `<div>ho</div></div>`
+
+    const n1 = h('div', 'hi')
+    const s = createStaticVNode('', 2)
+    const n2 = h('div', 'ho')
+
+    const { container } = mountWithHydration(html, () => h('div', [n1, s, n2]))
+
+    const div = container.firstChild!
+
+    expect(n1.el).toBe(div.firstChild)
+    expect(n2.el).toBe(div.lastChild)
+    expect(s.el).toBe(div.childNodes[1])
+    expect(s.anchor).toBe(div.childNodes[2])
+    expect(s.children).toBe(staticContent)
   })
 
   test('element with text children', async () => {
@@ -101,6 +122,15 @@ describe('SSR hydration', () => {
     msg.value = 'bar'
     await nextTick()
     expect(vnode.el.innerHTML).toBe(`<span>bar</span><span class="bar"></span>`)
+  })
+
+  test('element with ref', () => {
+    const el = ref()
+    const { vnode, container } = mountWithHydration('<div></div>', () =>
+      h('div', { ref: el })
+    )
+    expect(vnode.el).toBe(container.firstChild)
+    expect(el.value).toBe(vnode.el)
   })
 
   test('Fragment', async () => {
@@ -653,7 +683,19 @@ describe('SSR hydration', () => {
       // fragment ends early and attempts to hydrate the extra <div>bar</div>
       // as 2nd fragment child.
       expect(`Hydration text content mismatch`).toHaveBeenWarned()
-      // exccesive children removal
+      // excessive children removal
+      expect(`Hydration children mismatch`).toHaveBeenWarned()
+    })
+
+    test('Teleport target has empty children', () => {
+      const teleportContainer = document.createElement('div')
+      teleportContainer.id = 'teleport'
+      document.body.appendChild(teleportContainer)
+
+      mountWithHydration('<!--teleport start--><!--teleport end-->', () =>
+        h(Teleport, { to: '#teleport' }, [h('span', 'value')])
+      )
+      expect(teleportContainer.innerHTML).toBe(`<span>value</span>`)
       expect(`Hydration children mismatch`).toHaveBeenWarned()
     })
   })

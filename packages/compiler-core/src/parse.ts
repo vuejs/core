@@ -1,5 +1,5 @@
 import { ParserOptions } from './options'
-import { NO, isArray, makeMap } from '@vue/shared'
+import { NO, isArray, makeMap, extend } from '@vue/shared'
 import { ErrorCodes, createCompilerError, defaultOnError } from './errors'
 import {
   assert,
@@ -24,14 +24,13 @@ import {
   InterpolationNode,
   createRoot
 } from './ast'
-import { extend } from '@vue/shared'
 
 type OptionalOptions = 'isNativeTag' | 'isBuiltInComponent'
 type MergedParserOptions = Omit<Required<ParserOptions>, OptionalOptions> &
   Pick<ParserOptions, OptionalOptions>
 
 // The default decoder only provides escapes for characters reserved as part of
-// the tempalte syntax, and is only used if the custom renderer did not provide
+// the template syntax, and is only used if the custom renderer did not provide
 // a platform-specific decoder.
 const decodeRE = /&(gt|lt|amp|apos|quot);/g
 const decodeMap: Record<string, string> = {
@@ -51,14 +50,15 @@ export const defaultParserOptions: MergedParserOptions = {
   isCustomElement: NO,
   decodeEntities: (rawText: string): string =>
     rawText.replace(decodeRE, (_, p1) => decodeMap[p1]),
-  onError: defaultOnError
+  onError: defaultOnError,
+  comments: false
 }
 
 export const enum TextModes {
   //          | Elements | Entities | End sign              | Inside of
-  DATA, //    | ✔       | ✔       | End tags of ancestors |
-  RCDATA, //  | ✘       | ✔       | End tag of the parent | <textarea>
-  RAWTEXT, // | ✘       | ✘       | End tag of the parent | <style>,<script>
+  DATA, //    | ✔        | ✔        | End tags of ancestors |
+  RCDATA, //  | ✘        | ✔        | End tag of the parent | <textarea>
+  RAWTEXT, // | ✘        | ✘        | End tag of the parent | <style>,<script>
   CDATA,
   ATTRIBUTE_VALUE
 }
@@ -88,13 +88,15 @@ export function baseParse(
 
 function createParserContext(
   content: string,
-  options: ParserOptions
+  rawOptions: ParserOptions
 ): ParserContext {
+  const options = extend({}, defaultParserOptions)
+  for (const key in rawOptions) {
+    // @ts-ignore
+    options[key] = rawOptions[key] || defaultParserOptions[key]
+  }
   return {
-    options: {
-      ...defaultParserOptions,
-      ...options
-    },
+    options,
     column: 1,
     line: 1,
     offset: 0,
@@ -220,13 +222,21 @@ function parseChildren(
               removedWhitespace = true
               nodes[i] = null as any
             } else {
-              // Otherwise, condensed consecutive whitespace inside the text down to
-              // a single space
+              // Otherwise, condensed consecutive whitespace inside the text
+              // down to a single space
               node.content = ' '
             }
           } else {
             node.content = node.content.replace(/[\t\r\n\f ]+/g, ' ')
           }
+        } else if (
+          !__DEV__ &&
+          node.type === NodeTypes.COMMENT &&
+          !context.options.comments
+        ) {
+          // remove comment nodes in prod by default
+          removedWhitespace = true
+          nodes[i] = null as any
         }
       }
     } else if (parent && context.options.isPreTag(parent.tag)) {
@@ -243,12 +253,6 @@ function parseChildren(
 }
 
 function pushNode(nodes: TemplateChildNode[], node: TemplateChildNode): void {
-  // ignore comments in production
-  /* istanbul ignore next */
-  if (!__DEV__ && node.type === NodeTypes.COMMENT) {
-    return
-  }
-
   if (node.type === NodeTypes.TEXT) {
     const prev = last(nodes)
     // Merge if both this and the previous node are text and those are
@@ -373,7 +377,7 @@ function parseElement(
 
   // Children.
   ancestors.push(element)
-  const mode = context.options.getTextMode(element.tag, element.ns, parent)
+  const mode = context.options.getTextMode(element, parent)
   const children = parseChildren(context, mode, ancestors)
   ancestors.pop()
 
@@ -605,18 +609,27 @@ function parseAttribute(
   const loc = getSelection(context, start)
 
   if (!context.inVPre && /^(v-|:|@|#)/.test(name)) {
-    const match = /(?:^v-([a-z0-9-]+))?(?:(?::|^@|^#)([^\.]+))?(.+)?$/i.exec(
+    const match = /(?:^v-([a-z0-9-]+))?(?:(?::|^@|^#)(\[[^\]]+\]|[^\.]+))?(.+)?$/i.exec(
       name
     )!
+
+    const dirName =
+      match[1] ||
+      (startsWith(name, ':') ? 'bind' : startsWith(name, '@') ? 'on' : 'slot')
 
     let arg: ExpressionNode | undefined
 
     if (match[2]) {
+      const isSlot = dirName === 'slot'
       const startOffset = name.indexOf(match[2])
       const loc = getSelection(
         context,
         getNewPosition(context, start, startOffset),
-        getNewPosition(context, start, startOffset + match[2].length)
+        getNewPosition(
+          context,
+          start,
+          startOffset + match[2].length + ((isSlot && match[3]) || '').length
+        )
       )
       let content = match[2]
       let isStatic = true
@@ -632,6 +645,11 @@ function parseAttribute(
         }
 
         content = content.substr(1, content.length - 2)
+      } else if (isSlot) {
+        // #1241 special case for v-slot: vuetify relies extensively on slot
+        // names containing dots. v-slot doesn't have any modifiers and Vue 2.x
+        // supports such usage so we are keeping it consistent with 2.x.
+        content += match[3] || ''
       }
 
       arg = {
@@ -653,13 +671,7 @@ function parseAttribute(
 
     return {
       type: NodeTypes.DIRECTIVE,
-      name:
-        match[1] ||
-        (startsWith(name, ':')
-          ? 'bind'
-          : startsWith(name, '@')
-            ? 'on'
-            : 'slot'),
+      name: dirName,
       exp: value && {
         type: NodeTypes.SIMPLE_EXPRESSION,
         content: value.content,
@@ -948,6 +960,6 @@ function startsWithEndTagOpen(source: string, tag: string): boolean {
   return (
     startsWith(source, '</') &&
     source.substr(2, tag.length).toLowerCase() === tag.toLowerCase() &&
-    /[\t\n\f />]/.test(source[2 + tag.length] || '>')
+    /[\t\r\n\f />]/.test(source[2 + tag.length] || '>')
   )
 }

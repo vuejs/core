@@ -14,7 +14,6 @@ import {
   SourceLocation,
   createConditionalExpression,
   ConditionalExpression,
-  JSChildNode,
   SimpleExpressionNode,
   FunctionExpression,
   CallExpression,
@@ -24,12 +23,17 @@ import {
 } from '../ast'
 import { TransformContext, NodeTransform } from '../transform'
 import { createCompilerError, ErrorCodes } from '../errors'
-import { findDir, isTemplateNode, assert, isVSlot, hasScopeRef } from '../utils'
+import {
+  findDir,
+  isTemplateNode,
+  assert,
+  isVSlot,
+  hasScopeRef,
+  isStaticExp
+} from '../utils'
 import { CREATE_SLOTS, RENDER_LIST, WITH_CTX } from '../runtimeHelpers'
 import { parseForExpression, createForLoopParams } from './vFor'
-
-const isStaticExp = (p: JSChildNode): p is SimpleExpressionNode =>
-  p.type === NodeTypes.SIMPLE_EXPRESSION && p.isStatic
+import { SlotFlags } from '@vue/shared'
 
 const defaultFallback = createSimpleExpression(`undefined`, false)
 
@@ -135,7 +139,7 @@ export function buildSlots(
   let hasDynamicSlots = context.scopes.vSlot > 0 || context.scopes.vFor > 0
   // with `prefixIdentifiers: true`, this can be further optimized to make
   // it dynamic only when the slot actually uses the scope variables.
-  if (!__BROWSER__ && context.prefixIdentifiers) {
+  if (!__BROWSER__ && !context.ssr && context.prefixIdentifiers) {
     hasDynamicSlots = hasScopeRef(node, context.identifiers)
   }
 
@@ -144,6 +148,9 @@ export function buildSlots(
   const onComponentSlot = findDir(node, 'slot', true)
   if (onComponentSlot) {
     const { arg, exp } = onComponentSlot
+    if (arg && !isStaticExp(arg)) {
+      hasDynamicSlots = true
+    }
     slotsProperties.push(
       createObjectProperty(
         arg || createSimpleExpression('default', true),
@@ -315,9 +322,20 @@ export function buildSlots(
     }
   }
 
+  const slotFlag = hasDynamicSlots
+    ? SlotFlags.DYNAMIC
+    : hasForwardedSlots(node.children)
+      ? SlotFlags.FORWARDED
+      : SlotFlags.STABLE
+
   let slots = createObjectExpression(
     slotsProperties.concat(
-      createObjectProperty(`_`, createSimpleExpression(`1`, false))
+      createObjectProperty(
+        `_`,
+        // 2 = compiled but dynamic = can skip normalization, but must run diff
+        // 1 = compiled and static = can skip normalization AND diff as optimized
+        createSimpleExpression('' + slotFlag, false)
+      )
     ),
     loc
   ) as SlotsExpression
@@ -342,4 +360,20 @@ function buildDynamicSlot(
     createObjectProperty(`name`, name),
     createObjectProperty(`fn`, fn)
   ])
+}
+
+function hasForwardedSlots(children: TemplateChildNode[]): boolean {
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i]
+    if (child.type === NodeTypes.ELEMENT) {
+      if (
+        child.tagType === ElementTypes.SLOT ||
+        (child.tagType === ElementTypes.ELEMENT &&
+          hasForwardedSlots(child.children))
+      ) {
+        return true
+      }
+    }
+  }
+  return false
 }

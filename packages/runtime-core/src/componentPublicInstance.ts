@@ -1,21 +1,34 @@
 import { ComponentInternalInstance, Data } from './component'
 import { nextTick, queueJob } from './scheduler'
-import { instanceWatch } from './apiWatch'
-import { EMPTY_OBJ, hasOwn, isGloballyWhitelisted, NOOP } from '@vue/shared'
+import { instanceWatch, WatchOptions, WatchStopHandle } from './apiWatch'
+import {
+  EMPTY_OBJ,
+  hasOwn,
+  isGloballyWhitelisted,
+  NOOP,
+  extend,
+  isString
+} from '@vue/shared'
 import {
   ReactiveEffect,
-  UnwrapRef,
   toRaw,
-  shallowReadonly
+  shallowReadonly,
+  ReactiveFlags,
+  track,
+  TrackOpTypes,
+  ShallowUnwrapRef
 } from '@vue/reactivity'
 import {
   ExtractComputedReturns,
   ComponentOptionsBase,
   ComputedOptions,
   MethodOptions,
-  resolveMergedOptions
+  ComponentOptionsMixin,
+  OptionTypesType,
+  OptionTypesKeys,
+  resolveMergedOptions,
+  isInBeforeCreate
 } from './componentOptions'
-import { normalizePropsOptions } from './componentProps'
 import { EmitsOptions, EmitFn } from './componentEmits'
 import { Slots } from './componentSlots'
 import {
@@ -23,6 +36,7 @@ import {
   markAttrsAccessed
 } from './componentRenderUtils'
 import { warn } from './warning'
+import { UnionToIntersection } from './helpers/typeUtils'
 
 /**
  * Custom properties added to component instances in any way and can be accessed through `this`
@@ -51,6 +65,78 @@ import { warn } from './warning'
  */
 export interface ComponentCustomProperties {}
 
+type IsDefaultMixinComponent<T> = T extends ComponentOptionsMixin
+  ? ComponentOptionsMixin extends T ? true : false
+  : false
+
+type MixinToOptionTypes<T> = T extends ComponentOptionsBase<
+  infer P,
+  infer B,
+  infer D,
+  infer C,
+  infer M,
+  infer Mixin,
+  infer Extends,
+  any
+>
+  ? OptionTypesType<P & {}, B & {}, D & {}, C & {}, M & {}> &
+      IntersectionMixin<Mixin> &
+      IntersectionMixin<Extends>
+  : never
+
+// ExtractMixin(map type) is used to resolve circularly references
+type ExtractMixin<T> = {
+  Mixin: MixinToOptionTypes<T>
+}[T extends ComponentOptionsMixin ? 'Mixin' : never]
+
+type IntersectionMixin<T> = IsDefaultMixinComponent<T> extends true
+  ? OptionTypesType<{}, {}, {}, {}, {}>
+  : UnionToIntersection<ExtractMixin<T>>
+
+type UnwrapMixinsType<
+  T,
+  Type extends OptionTypesKeys
+> = T extends OptionTypesType ? T[Type] : never
+
+type EnsureNonVoid<T> = T extends void ? {} : T
+
+export type ComponentPublicInstanceConstructor<
+  T extends ComponentPublicInstance = ComponentPublicInstance<any>
+> = {
+  __isFragment?: never
+  __isTeleport?: never
+  __isSuspense?: never
+  new (...args: any[]): T
+}
+
+export type CreateComponentPublicInstance<
+  P = {},
+  B = {},
+  D = {},
+  C extends ComputedOptions = {},
+  M extends MethodOptions = {},
+  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
+  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
+  E extends EmitsOptions = {},
+  PublicProps = P,
+  PublicMixin = IntersectionMixin<Mixin> & IntersectionMixin<Extends>,
+  PublicP = UnwrapMixinsType<PublicMixin, 'P'> & EnsureNonVoid<P>,
+  PublicB = UnwrapMixinsType<PublicMixin, 'B'> & EnsureNonVoid<B>,
+  PublicD = UnwrapMixinsType<PublicMixin, 'D'> & EnsureNonVoid<D>,
+  PublicC extends ComputedOptions = UnwrapMixinsType<PublicMixin, 'C'> &
+    EnsureNonVoid<C>,
+  PublicM extends MethodOptions = UnwrapMixinsType<PublicMixin, 'M'> &
+    EnsureNonVoid<M>
+> = ComponentPublicInstance<
+  PublicP,
+  PublicB,
+  PublicD,
+  PublicC,
+  PublicM,
+  E,
+  PublicProps,
+  ComponentOptionsBase<P, B, D, C, M, Mixin, Extends, E>
+>
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)
 export type ComponentPublicInstance<
@@ -60,11 +146,12 @@ export type ComponentPublicInstance<
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
   E extends EmitsOptions = {},
-  PublicProps = P
+  PublicProps = P,
+  Options = ComponentOptionsBase<any, any, any, any, any, any, any, any>
 > = {
   $: ComponentInternalInstance
   $data: D
-  $props: PublicProps
+  $props: P & PublicProps
   $attrs: Data
   $refs: Data
   $slots: Slots
@@ -72,21 +159,24 @@ export type ComponentPublicInstance<
   $parent: ComponentPublicInstance | null
   $emit: EmitFn<E>
   $el: any
-  $options: ComponentOptionsBase<P, B, D, C, M, E>
+  $options: Options
   $forceUpdate: ReactiveEffect
   $nextTick: typeof nextTick
-  $watch: typeof instanceWatch
+  $watch(
+    source: string | Function,
+    cb: Function,
+    options?: WatchOptions
+  ): WatchStopHandle
 } & P &
-  UnwrapRef<B> &
+  ShallowUnwrapRef<B> &
   D &
   ExtractComputedReturns<C> &
   M &
   ComponentCustomProperties
 
-const publicPropertiesMap: Record<
-  string,
-  (i: ComponentInternalInstance) => any
-> = {
+type PublicPropertiesMap = Record<string, (i: ComponentInternalInstance) => any>
+
+const publicPropertiesMap: PublicPropertiesMap = extend(Object.create(null), {
   $: i => i,
   $el: i => i.vnode.el,
   $data: i => i.data,
@@ -97,11 +187,11 @@ const publicPropertiesMap: Record<
   $parent: i => i.parent && i.parent.proxy,
   $root: i => i.root && i.root.proxy,
   $emit: i => i.emit,
-  $options: i => (__FEATURE_OPTIONS__ ? resolveMergedOptions(i) : i.type),
+  $options: i => (__FEATURE_OPTIONS_API__ ? resolveMergedOptions(i) : i.type),
   $forceUpdate: i => () => queueJob(i.update),
   $nextTick: () => nextTick,
-  $watch: __FEATURE_OPTIONS__ ? i => instanceWatch.bind(i) : NOOP
-}
+  $watch: i => (__FEATURE_OPTIONS_API__ ? instanceWatch.bind(i) : NOOP)
+} as PublicPropertiesMap)
 
 const enum AccessTypes {
   SETUP,
@@ -128,12 +218,18 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       appContext
     } = instance
 
+    // let @vue/reactivity know it should never observe Vue public instances.
+    if (key === ReactiveFlags.SKIP) {
+      return true
+    }
+
     // data / props / ctx
     // This getter gets called for every property access on the render context
     // during render and is a major hotspot. The most expensive part of this
     // is the multiple hasOwn() calls. It's much faster to do a simple property
     // access on a plain object, so we use an accessCache object (with null
     // prototype) to memoize what access type a key corresponds to.
+    let normalizedProps
     if (key[0] !== '$') {
       const n = accessCache![key]
       if (n !== undefined) {
@@ -157,15 +253,15 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       } else if (
         // only cache other properties when instance has declared (thus stable)
         // props
-        type.props &&
-        hasOwn(normalizePropsOptions(type.props)[0]!, key)
+        (normalizedProps = instance.propsOptions[0]) &&
+        hasOwn(normalizedProps, key)
       ) {
         accessCache![key] = AccessTypes.PROPS
         return props![key]
       } else if (ctx !== EMPTY_OBJ && hasOwn(ctx, key)) {
         accessCache![key] = AccessTypes.CONTEXT
         return ctx[key]
-      } else {
+      } else if (!__FEATURE_OPTIONS_API__ || !isInBeforeCreate) {
         accessCache![key] = AccessTypes.OTHER
       }
     }
@@ -174,8 +270,9 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     let cssModule, globalProperties
     // public $xxx properties
     if (publicGetter) {
-      if (__DEV__ && key === '$attrs') {
-        markAttrsAccessed()
+      if (key === '$attrs') {
+        track(instance, TrackOpTypes.GET, key)
+        __DEV__ && markAttrsAccessed()
       }
       return publicGetter(instance)
     } else if (
@@ -194,11 +291,31 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       hasOwn(globalProperties, key))
     ) {
       return globalProperties[key]
-    } else if (__DEV__ && currentRenderingInstance) {
-      warn(
-        `Property ${JSON.stringify(key)} was accessed during render ` +
-          `but is not defined on instance.`
-      )
+    } else if (
+      __DEV__ &&
+      currentRenderingInstance &&
+      (!isString(key) ||
+        // #1091 avoid internal isRef/isVNode checks on component instance leading
+        // to infinite warning loop
+        key.indexOf('__v') !== 0)
+    ) {
+      if (
+        data !== EMPTY_OBJ &&
+        (key[0] === '$' || key[0] === '_') &&
+        hasOwn(data, key)
+      ) {
+        warn(
+          `Property ${JSON.stringify(
+            key
+          )} must be accessed via $data because it starts with a reserved ` +
+            `character ("$" or "_") and is not proxied on the render context.`
+        )
+      } else {
+        warn(
+          `Property ${JSON.stringify(key)} was accessed during render ` +
+            `but is not defined on instance.`
+        )
+      }
     }
   },
 
@@ -244,15 +361,16 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
 
   has(
     {
-      _: { data, setupState, accessCache, ctx, type, appContext }
+      _: { data, setupState, accessCache, ctx, appContext, propsOptions }
     }: ComponentRenderContext,
     key: string
   ) {
+    let normalizedProps
     return (
       accessCache![key] !== undefined ||
       (data !== EMPTY_OBJ && hasOwn(data, key)) ||
       (setupState !== EMPTY_OBJ && hasOwn(setupState, key)) ||
-      (type.props && hasOwn(normalizePropsOptions(type.props)[0]!, key)) ||
+      ((normalizedProps = propsOptions[0]) && hasOwn(normalizedProps, key)) ||
       hasOwn(ctx, key) ||
       hasOwn(publicPropertiesMap, key) ||
       hasOwn(appContext.config.globalProperties, key)
@@ -270,19 +388,30 @@ if (__DEV__ && !__TEST__) {
   }
 }
 
-export const RuntimeCompiledPublicInstanceProxyHandlers = {
-  ...PublicInstanceProxyHandlers,
-  get(target: ComponentRenderContext, key: string) {
-    // fast path for unscopables when using `with` block
-    if ((key as any) === Symbol.unscopables) {
-      return
+export const RuntimeCompiledPublicInstanceProxyHandlers = extend(
+  {},
+  PublicInstanceProxyHandlers,
+  {
+    get(target: ComponentRenderContext, key: string) {
+      // fast path for unscopables when using `with` block
+      if ((key as any) === Symbol.unscopables) {
+        return
+      }
+      return PublicInstanceProxyHandlers.get!(target, key, target)
+    },
+    has(_: ComponentRenderContext, key: string) {
+      const has = key[0] !== '_' && !isGloballyWhitelisted(key)
+      if (__DEV__ && !has && PublicInstanceProxyHandlers.has!(_, key)) {
+        warn(
+          `Property ${JSON.stringify(
+            key
+          )} should not start with _ which is a reserved prefix for Vue internals.`
+        )
+      }
+      return has
     }
-    return PublicInstanceProxyHandlers.get!(target, key, target)
-  },
-  has(_: ComponentRenderContext, key: string) {
-    return key[0] !== '_' && !isGloballyWhitelisted(key)
   }
-}
+)
 
 // In dev mode, the proxy target exposes the same properties as seen on `this`
 // for easier console inspection. In prod mode it will be an empty object so
@@ -329,10 +458,10 @@ export function exposePropsOnRenderContext(
 ) {
   const {
     ctx,
-    type: { props: propsOptions }
+    propsOptions: [propsOptions]
   } = instance
   if (propsOptions) {
-    Object.keys(normalizePropsOptions(propsOptions)[0]!).forEach(key => {
+    Object.keys(propsOptions).forEach(key => {
       Object.defineProperty(ctx, key, {
         enumerable: true,
         configurable: true,
@@ -349,6 +478,15 @@ export function exposeSetupStateOnRenderContext(
 ) {
   const { ctx, setupState } = instance
   Object.keys(toRaw(setupState)).forEach(key => {
+    if (key[0] === '$' || key[0] === '_') {
+      warn(
+        `setup() return property ${JSON.stringify(
+          key
+        )} should not start with "$" or "_" ` +
+          `which are reserved prefixes for Vue internals.`
+      )
+      return
+    }
     Object.defineProperty(ctx, key, {
       enumerable: true,
       configurable: true,

@@ -780,6 +780,11 @@ describe('compiler: element transform', () => {
       expect(node.patchFlag).toBe(genFlagText(PatchFlags.NEED_PATCH))
     })
 
+    test('NEED_PATCH (vnode hooks)', () => {
+      const { node } = parseWithBind(`<div @vnodeUpdated="foo" />`)
+      expect(node.patchFlag).toBe(genFlagText(PatchFlags.NEED_PATCH))
+    })
+
     test('HYDRATE_EVENTS', () => {
       // ignore click events (has dedicated fast path)
       const { node } = parseWithElementTransform(`<div @click="foo" />`, {
@@ -809,6 +814,7 @@ describe('compiler: element transform', () => {
       const { node, root } = parseWithBind(`<component is="foo" />`)
       expect(root.helpers).toContain(RESOLVE_DYNAMIC_COMPONENT)
       expect(node).toMatchObject({
+        isBlock: true,
         tag: {
           callee: RESOLVE_DYNAMIC_COMPONENT,
           arguments: [
@@ -826,6 +832,7 @@ describe('compiler: element transform', () => {
       const { node, root } = parseWithBind(`<component :is="foo" />`)
       expect(root.helpers).toContain(RESOLVE_DYNAMIC_COMPONENT)
       expect(node).toMatchObject({
+        isBlock: true,
         tag: {
           callee: RESOLVE_DYNAMIC_COMPONENT,
           arguments: [

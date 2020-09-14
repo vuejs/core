@@ -1,3 +1,6 @@
+/**
+ * This module is Node-only.
+ */
 import {
   NodeTypes,
   ElementNode,
@@ -7,70 +10,246 @@ import {
   createCallExpression,
   HoistTransform,
   CREATE_STATIC,
-  ExpressionNode
+  ExpressionNode,
+  ElementTypes,
+  PlainElementNode,
+  JSChildNode,
+  TextCallNode
 } from '@vue/compiler-core'
 import {
   isVoidTag,
   isString,
   isSymbol,
+  isKnownAttr,
   escapeHtml,
   toDisplayString,
   normalizeClass,
   normalizeStyle,
-  stringifyStyle
+  stringifyStyle,
+  makeMap
 } from '@vue/shared'
-
-// Turn eligible hoisted static trees into stringied static nodes, e.g.
-//   const _hoisted_1 = createStaticVNode(`<div class="foo">bar</div>`)
-// This is only performed in non-in-browser compilations.
-export const stringifyStatic: HoistTransform = (node, context) => {
-  if (shouldOptimize(node)) {
-    return createCallExpression(context.helper(CREATE_STATIC), [
-      JSON.stringify(stringifyElement(node, context))
-    ])
-  } else {
-    return node.codegenNode!
-  }
-}
 
 export const enum StringifyThresholds {
   ELEMENT_WITH_BINDING_COUNT = 5,
   NODE_COUNT = 20
 }
 
-// Opt-in heuristics based on:
-// 1. number of elements with attributes > 5.
-// 2. OR: number of total nodes > 20
-// For some simple trees, the performance can actually be worse.
-// it is only worth it when the tree is complex enough
-// (e.g. big piece of static content)
-function shouldOptimize(node: ElementNode): boolean {
-  let bindingThreshold = StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
-  let nodeThreshold = StringifyThresholds.NODE_COUNT
+type StringifiableNode = PlainElementNode | TextCallNode
+
+/**
+ * Turn eligible hoisted static trees into stringified static nodes, e.g.
+ *
+ * ```js
+ * const _hoisted_1 = createStaticVNode(`<div class="foo">bar</div>`)
+ * ```
+ *
+ * A single static vnode can contain stringified content for **multiple**
+ * consecutive nodes (element and plain text), called a "chunk".
+ * `@vue/runtime-dom` will create the content via innerHTML in a hidden
+ * container element and insert all the nodes in place. The call must also
+ * provide the number of nodes contained in the chunk so that during hydration
+ * we can know how many nodes the static vnode should adopt.
+ *
+ * The optimization scans a children list that contains hoisted nodes, and
+ * tries to find the largest chunk of consecutive hoisted nodes before running
+ * into a non-hoisted node or the end of the list. A chunk is then converted
+ * into a single static vnode and replaces the hoisted expression of the first
+ * node in the chunk. Other nodes in the chunk are considered "merged" and
+ * therefore removed from both the hoist list and the children array.
+ *
+ * This optimization is only performed in Node.js.
+ */
+export const stringifyStatic: HoistTransform = (children, context, parent) => {
+  if (
+    parent.type === NodeTypes.ELEMENT &&
+    (parent.tagType === ElementTypes.COMPONENT ||
+      parent.tagType === ElementTypes.TEMPLATE)
+  ) {
+    return
+  }
+
+  let nc = 0 // current node count
+  let ec = 0 // current element with binding count
+  const currentChunk: StringifiableNode[] = []
+
+  const stringifyCurrentChunk = (currentIndex: number): number => {
+    if (
+      nc >= StringifyThresholds.NODE_COUNT ||
+      ec >= StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+    ) {
+      // combine all currently eligible nodes into a single static vnode call
+      const staticCall = createCallExpression(context.helper(CREATE_STATIC), [
+        JSON.stringify(
+          currentChunk.map(node => stringifyNode(node, context)).join('')
+        ),
+        // the 2nd argument indicates the number of DOM nodes this static vnode
+        // will insert / hydrate
+        String(currentChunk.length)
+      ])
+      // replace the first node's hoisted expression with the static vnode call
+      replaceHoist(currentChunk[0], staticCall, context)
+
+      if (currentChunk.length > 1) {
+        for (let i = 1; i < currentChunk.length; i++) {
+          // for the merged nodes, set their hoisted expression to null
+          replaceHoist(currentChunk[i], null, context)
+        }
+
+        // also remove merged nodes from children
+        const deleteCount = currentChunk.length - 1
+        children.splice(currentIndex - currentChunk.length + 1, deleteCount)
+        return deleteCount
+      }
+    }
+    return 0
+  }
+
+  let i = 0
+  for (; i < children.length; i++) {
+    const child = children[i]
+    const hoisted = getHoistedNode(child)
+    if (hoisted) {
+      // presence of hoisted means child must be a stringifiable node
+      const node = child as StringifiableNode
+      const result = analyzeNode(node)
+      if (result) {
+        // node is stringifiable, record state
+        nc += result[0]
+        ec += result[1]
+        currentChunk.push(node)
+        continue
+      }
+    }
+    // we only reach here if we ran into a node that is not stringifiable
+    // check if currently analyzed nodes meet criteria for stringification.
+    // adjust iteration index
+    i -= stringifyCurrentChunk(i)
+    // reset state
+    nc = 0
+    ec = 0
+    currentChunk.length = 0
+  }
+  // in case the last node was also stringifiable
+  stringifyCurrentChunk(i)
+}
+
+const getHoistedNode = (node: TemplateChildNode) =>
+  ((node.type === NodeTypes.ELEMENT && node.tagType === ElementTypes.ELEMENT) ||
+    node.type == NodeTypes.TEXT_CALL) &&
+  node.codegenNode &&
+  node.codegenNode.type === NodeTypes.SIMPLE_EXPRESSION &&
+  node.codegenNode.hoisted
+
+const dataAriaRE = /^(data|aria)-/
+const isStringifiableAttr = (name: string) => {
+  return isKnownAttr(name) || dataAriaRE.test(name)
+}
+
+const replaceHoist = (
+  node: StringifiableNode,
+  replacement: JSChildNode | null,
+  context: TransformContext
+) => {
+  const hoistToReplace = (node.codegenNode as SimpleExpressionNode).hoisted!
+  context.hoists[context.hoists.indexOf(hoistToReplace)] = replacement
+}
+
+const isNonStringifiable = /*#__PURE__*/ makeMap(
+  `caption,thead,tr,th,tbody,td,tfoot,colgroup,col`
+)
+
+/**
+ * for a hoisted node, analyze it and return:
+ * - false: bailed (contains runtime constant)
+ * - [nc, ec] where
+ *   - nc is the number of nodes inside
+ *   - ec is the number of element with bindings inside
+ */
+function analyzeNode(node: StringifiableNode): [number, number] | false {
+  if (node.type === NodeTypes.ELEMENT && isNonStringifiable(node.tag)) {
+    return false
+  }
+
+  if (node.type === NodeTypes.TEXT_CALL) {
+    return [1, 0]
+  }
+
+  let nc = 1 // node count
+  let ec = node.props.length > 0 ? 1 : 0 // element w/ binding count
+  let bailed = false
+  const bail = (): false => {
+    bailed = true
+    return false
+  }
 
   // TODO: check for cases where using innerHTML will result in different
   // output compared to imperative node insertions.
   // probably only need to check for most common case
   // i.e. non-phrasing-content tags inside `<p>`
-  function walk(node: ElementNode) {
-    for (let i = 0; i < node.children.length; i++) {
-      if (--nodeThreshold === 0) {
-        return true
+  function walk(node: ElementNode): boolean {
+    for (let i = 0; i < node.props.length; i++) {
+      const p = node.props[i]
+      // bail on non-attr bindings
+      if (p.type === NodeTypes.ATTRIBUTE && !isStringifiableAttr(p.name)) {
+        return bail()
       }
-      const child = node.children[i]
-      if (child.type === NodeTypes.ELEMENT) {
-        if (child.props.length > 0 && --bindingThreshold === 0) {
-          return true
-        }
-        if (walk(child)) {
-          return true
+      if (p.type === NodeTypes.DIRECTIVE && p.name === 'bind') {
+        // bail on non-attr bindings
+        if (
+          p.arg &&
+          (p.arg.type === NodeTypes.COMPOUND_EXPRESSION ||
+            (p.arg.isStatic && !isStringifiableAttr(p.arg.content)))
+        ) {
+          return bail()
         }
       }
     }
-    return false
+    for (let i = 0; i < node.children.length; i++) {
+      nc++
+      const child = node.children[i]
+      if (child.type === NodeTypes.ELEMENT) {
+        if (child.props.length > 0) {
+          ec++
+        }
+        walk(child)
+        if (bailed) {
+          return false
+        }
+      }
+    }
+    return true
   }
 
-  return walk(node)
+  return walk(node) ? [nc, ec] : false
+}
+
+function stringifyNode(
+  node: string | TemplateChildNode,
+  context: TransformContext
+): string {
+  if (isString(node)) {
+    return node
+  }
+  if (isSymbol(node)) {
+    return ``
+  }
+  switch (node.type) {
+    case NodeTypes.ELEMENT:
+      return stringifyElement(node, context)
+    case NodeTypes.TEXT:
+      return escapeHtml(node.content)
+    case NodeTypes.COMMENT:
+      return `<!--${escapeHtml(node.content)}-->`
+    case NodeTypes.INTERPOLATION:
+      return escapeHtml(toDisplayString(evaluateConstant(node.content)))
+    case NodeTypes.COMPOUND_EXPRESSION:
+      return escapeHtml(evaluateConstant(node))
+    case NodeTypes.TEXT_CALL:
+      return stringifyNode(node.content, context)
+    default:
+      // static trees will not contain if/for nodes
+      return ''
+  }
 }
 
 function stringifyElement(
@@ -110,35 +289,6 @@ function stringifyElement(
     res += `</${node.tag}>`
   }
   return res
-}
-
-function stringifyNode(
-  node: string | TemplateChildNode,
-  context: TransformContext
-): string {
-  if (isString(node)) {
-    return node
-  }
-  if (isSymbol(node)) {
-    return ``
-  }
-  switch (node.type) {
-    case NodeTypes.ELEMENT:
-      return stringifyElement(node, context)
-    case NodeTypes.TEXT:
-      return escapeHtml(node.content)
-    case NodeTypes.COMMENT:
-      return `<!--${escapeHtml(node.content)}-->`
-    case NodeTypes.INTERPOLATION:
-      return escapeHtml(toDisplayString(evaluateConstant(node.content)))
-    case NodeTypes.COMPOUND_EXPRESSION:
-      return escapeHtml(evaluateConstant(node))
-    case NodeTypes.TEXT_CALL:
-      return stringifyNode(node.content, context)
-    default:
-      // static trees will not contain if/for nodes
-      return ''
-  }
 }
 
 // __UNSAFE__

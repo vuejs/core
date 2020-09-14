@@ -13,11 +13,8 @@ import {
   getCurrentInstance,
   defineComponent
 } from '@vue/runtime-test'
-import { mockWarn } from '@vue/shared'
 
 describe('api: createApp', () => {
-  mockWarn()
-
   test('mount', () => {
     const Comp = defineComponent({
       props: {

@@ -1,6 +1,6 @@
 import { render, h } from '@vue/runtime-dom'
 
-describe('customimized built-in elements support', () => {
+describe('customized built-in elements support', () => {
   let createElement: jest.SpyInstance
   afterEach(() => {
     createElement.mockRestore()

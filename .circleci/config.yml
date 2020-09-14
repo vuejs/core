@@ -34,7 +34,7 @@ jobs:
       - *install_deps
       - *save_cache
       - run: yarn ls-lint
-      - run: yarn test --ci --runInBand
+      - run: yarn test --ci
 
   test-dts:
     <<: *defaults

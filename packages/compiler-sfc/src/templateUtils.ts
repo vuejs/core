@@ -6,8 +6,19 @@ export function isRelativeUrl(url: string): boolean {
   return firstChar === '.' || firstChar === '~' || firstChar === '@'
 }
 
-// We need an extra transform context API for injecting arbitrary import
-// statements.
+const externalRE = /^https?:\/\//
+export function isExternalUrl(url: string): boolean {
+  return externalRE.test(url)
+}
+
+const dataUrlRE = /^\s*data:/i
+export function isDataUrl(url: string): boolean {
+  return dataUrlRE.test(url)
+}
+
+/**
+ * Parses string url into URL object.
+ */
 export function parseUrl(url: string): UrlWithStringQuery {
   const firstChar = url.charAt(0)
   if (firstChar === '~') {
