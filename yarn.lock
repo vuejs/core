@@ -586,20 +586,20 @@
   resolved "https://registry.yarnpkg.com/@ls-lint/ls-lint/-/ls-lint-1.9.2.tgz#689f1f4c06072823a726802ba167340efcefe19c"
   integrity sha512-sugEjWjSSy9OHF6t1ZBLZCAROj52cZthB9dIePmzZzzMwmWwy3qAEMSdJheHeS1FOwDZI7Ipm1H/bWgzJNnSAw==
 
-"@microsoft/api-extractor-model@7.8.22":
-  version "7.8.22"
-  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor-model/-/api-extractor-model-7.8.22.tgz#cec02dc6663208c14c4a1ecfb36acaf106414f6a"
-  integrity sha512-wca7qUwcA5wD2qVoCRLiWHl2XPspjJQHmEWSOTnyoYXmLMxgKsAxz1jN5rlAcLIm2U8DLX8DSzvSWBXnLH7OPg==
+"@microsoft/api-extractor-model@7.9.0":
+  version "7.9.0"
+  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor-model/-/api-extractor-model-7.9.0.tgz#9b0c0db3821937454bbd5d1441c0634801dacd31"
+  integrity sha512-zXBA4D/gE7BkNU5jjiKSoXGK+h6N+TQHa47ut/a5CYcVzjxXWVdLpew+tGnyRW/7eRhbS6qzzdQ/dAgraDfReA==
   dependencies:
     "@microsoft/tsdoc" "0.12.19"
     "@rushstack/node-core-library" "3.32.0"
 
 "@microsoft/api-extractor@^7.9.7":
-  version "7.9.14"
-  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor/-/api-extractor-7.9.14.tgz#d9ea209a8218040c3c02322a1ad99167fc0e33e0"
-  integrity sha512-B6pcw/CuvC8oxaLjTkVwHl4FLDbNx/8ezuR4RW+qfzT+yCwvyy0XCrnT025EqBha1bPKjNEjEmUgsNZKwhcDqw==
+  version "7.9.15"
+  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor/-/api-extractor-7.9.15.tgz#72fe4ccc2fe40c5114546b11d2aa3e8eb2bd6c19"
+  integrity sha512-j3BrAXTc3M51vUe32hC47i4JoJBqbR2iJaV6Vhew1+BzBkg4bJJziT6V3EbCdKt60rbEWSV/30EMwwdXVyqL5A==
   dependencies:
-    "@microsoft/api-extractor-model" "7.8.22"
+    "@microsoft/api-extractor-model" "7.9.0"
     "@microsoft/tsdoc" "0.12.19"
     "@rushstack/node-core-library" "3.32.0"
     "@rushstack/ts-command-line" "4.6.4"
