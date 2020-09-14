@@ -275,7 +275,7 @@ type ComponentInjectOptions =
   | string[]
   | Record<
       string | symbol,
-      string | symbol | { from: string | symbol; default?: unknown }
+      string | symbol | { from?: string | symbol; default?: unknown }
     >
 
 interface LegacyOptions<
@@ -460,7 +460,7 @@ export function applyOptions(
         const opt = injectOptions[key]
         if (isObject(opt)) {
           ctx[key] = inject(
-            opt.from,
+            opt.from || key,
             opt.default,
             true /* treat default function as factory */
           )
