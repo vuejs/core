@@ -113,6 +113,19 @@ describe('reactivity/reactive', () => {
     expect('foo' in original).toBe(false)
   })
 
+  test('original (Object) value change should effect to observed value', () => {
+    const original: any = { foo: 1 }
+    const observed = reactive(original)
+    // set
+    original.bar = 1
+    expect(original.bar).toBe(1)
+    expect(observed.bar).toBe(1)
+    // delete
+    delete original.foo
+    expect('foo' in original).toBe(false)
+    expect('foo' in observed).toBe(false)
+  })
+
   test('setting a property with an unobserved value should wrap with reactive', () => {
     const observed = reactive<{ foo?: object }>({})
     const raw = {}
