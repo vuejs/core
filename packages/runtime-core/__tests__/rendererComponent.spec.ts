@@ -81,4 +81,27 @@ describe('renderer: component', () => {
     render(h(Comp2), root)
     expect(serializeInner(root)).toBe('<span>foo</span>')
   })
+
+  // #2072
+  it('should not update Component if only changed props are declared emit listeners', () => {
+    const Comp1 = {
+      emits: ['foo'],
+      updated: jest.fn(),
+      render: () => null
+    }
+    const root = nodeOps.createElement('div')
+    render(
+      h(Comp1, {
+        onFoo: () => {}
+      }),
+      root
+    )
+    render(
+      h(Comp1, {
+        onFoo: () => {}
+      }),
+      root
+    )
+    expect(Comp1.updated).not.toHaveBeenCalled()
+  })
 })
