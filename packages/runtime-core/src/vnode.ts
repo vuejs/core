@@ -573,6 +573,9 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
   } else if (isFunction(children)) {
     children = { default: children, _ctx: currentRenderingInstance }
     type = ShapeFlags.SLOTS_CHILDREN
+  } else if (typeof children === 'boolean') {
+    type = ShapeFlags.ARRAY_CHILDREN
+    children = [createVNode(Comment)]
   } else {
     children = String(children)
     // force teleport children to array so it can be moved around

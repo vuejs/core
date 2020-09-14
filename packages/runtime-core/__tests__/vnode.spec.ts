@@ -153,6 +153,14 @@ describe('vnode', () => {
       )
     })
 
+    test('boolean', () => {
+      const vnode = createVNode('p', null, false)
+      expect(vnode.children).toMatchObject([createVNode(Comment)])
+      expect(vnode.shapeFlag).toBe(
+        ShapeFlags.ELEMENT | ShapeFlags.ARRAY_CHILDREN
+      )
+    })
+
     test('element with slots', () => {
       const children = [createVNode('span', null, 'hello')]
       const vnode = createVNode('div', null, {
