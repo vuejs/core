@@ -101,8 +101,6 @@ describe('api: createApp', () => {
     const app2 = createApp(Root)
     app2.provide('bar', 1)
     app2.provide('bar', 2)
-    const root2 = nodeOps.createElement('div')
-    app2.mount(root2)
     expect(`App already provides property with key "bar".`).toHaveBeenWarned()
   })
 
