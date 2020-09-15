@@ -131,6 +131,48 @@ describe('KeepAlive', () => {
     assertHookCalls(two, [1, 1, 2, 2, 1])
   })
 
+  test('should call correct lifecycle hooks when toggle the KeepAlive first', async () => {
+    const toggle = ref(true)
+    const viewRef = ref('one')
+    const App = {
+      render() {
+        return toggle.value ? h(KeepAlive, () => h(views[viewRef.value])) : null
+      }
+    }
+    render(h(App), root)
+
+    expect(serializeInner(root)).toBe(`<div>one</div>`)
+    assertHookCalls(one, [1, 1, 1, 0, 0])
+    assertHookCalls(two, [0, 0, 0, 0, 0])
+
+    // should unmount 'one' component when toggle the KeepAlive first
+    toggle.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<!---->`)
+    assertHookCalls(one, [1, 1, 1, 1, 1])
+    assertHookCalls(two, [0, 0, 0, 0, 0])
+
+    toggle.value = true
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>one</div>`)
+    assertHookCalls(one, [2, 2, 2, 1, 1])
+    assertHookCalls(two, [0, 0, 0, 0, 0])
+
+    // 1. the first time toggle kept-alive component
+    viewRef.value = 'two'
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>two</div>`)
+    assertHookCalls(one, [2, 2, 2, 2, 1])
+    assertHookCalls(two, [1, 1, 1, 0, 0])
+
+    // 2. should unmount all components including cached
+    toggle.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<!---->`)
+    assertHookCalls(one, [2, 2, 2, 2, 2])
+    assertHookCalls(two, [1, 1, 1, 1, 1])
+  })
+
   test('should call lifecycle hooks on nested components', async () => {
     one.render = () => h(two)
 
