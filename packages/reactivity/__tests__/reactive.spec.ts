@@ -113,7 +113,7 @@ describe('reactivity/reactive', () => {
     expect('foo' in original).toBe(false)
   })
 
-  test('original (Object) value change should effect to observed value', () => {
+  test('original value change should reflect in observed value (Object)', () => {
     const original: any = { foo: 1 }
     const observed = reactive(original)
     // set
