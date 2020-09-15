@@ -494,7 +494,25 @@ describe('KeepAlive', () => {
       return { viewRef, includeRef }
     }
 
-    test('on include/exclude change', async () => {
+    function setupExclude() {
+      const viewRef = ref('one')
+      const excludeRef = ref('')
+      const App = {
+        render() {
+          return h(
+            KeepAlive,
+            {
+              exclude: excludeRef.value
+            },
+            () => h(views[viewRef.value])
+          )
+        }
+      }
+      render(h(App), root)
+      return { viewRef, excludeRef }
+    }
+
+    test('on include change', async () => {
       const { viewRef, includeRef } = setup()
 
       viewRef.value = 'two'
@@ -513,7 +531,26 @@ describe('KeepAlive', () => {
       assertHookCalls(two, [1, 1, 1, 1, 0])
     })
 
-    test('on include/exclude change + view switch', async () => {
+    test('on exclude change', async () => {
+      const { viewRef, excludeRef } = setupExclude()
+
+      viewRef.value = 'two'
+      await nextTick()
+      assertHookCalls(one, [1, 1, 1, 1, 0])
+      assertHookCalls(two, [1, 1, 1, 0, 0])
+
+      excludeRef.value = 'one'
+      await nextTick()
+      assertHookCalls(one, [1, 1, 1, 1, 1])
+      assertHookCalls(two, [1, 1, 1, 0, 0])
+
+      viewRef.value = 'one'
+      await nextTick()
+      assertHookCalls(one, [2, 2, 1, 1, 1])
+      assertHookCalls(two, [1, 1, 1, 1, 0])
+    })
+
+    test('on include change + view switch', async () => {
       const { viewRef, includeRef } = setup()
 
       viewRef.value = 'two'
@@ -522,6 +559,22 @@ describe('KeepAlive', () => {
       assertHookCalls(two, [1, 1, 1, 0, 0])
 
       includeRef.value = 'one'
+      viewRef.value = 'one'
+      await nextTick()
+      assertHookCalls(one, [1, 1, 2, 1, 0])
+      // two should be pruned
+      assertHookCalls(two, [1, 1, 1, 1, 1])
+    })
+
+    test('on exclude change + view switch', async () => {
+      const { viewRef, excludeRef } = setupExclude()
+
+      viewRef.value = 'two'
+      await nextTick()
+      assertHookCalls(one, [1, 1, 1, 1, 0])
+      assertHookCalls(two, [1, 1, 1, 0, 0])
+
+      excludeRef.value = 'two'
       viewRef.value = 'one'
       await nextTick()
       assertHookCalls(one, [1, 1, 2, 1, 0])

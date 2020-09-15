@@ -175,7 +175,7 @@ const KeepAliveImpl = {
       () => [props.include, props.exclude],
       ([include, exclude]) => {
         include && pruneCache(name => matches(include, name))
-        exclude && pruneCache(name => matches(exclude, name))
+        exclude && pruneCache(name => !matches(exclude, name))
       }
     )
 
