@@ -1,7 +1,7 @@
 import MagicString from 'magic-string'
 import { BindingMetadata } from '@vue/compiler-core'
 import { SFCDescriptor, SFCScriptBlock } from './parse'
-import { parse, ParserPlugin } from '@babel/parser'
+import { parse, ParserPlugin, ParserOptions } from '@babel/parser'
 import { babelParserDefaultPlugins, generateCodeFrame } from '@vue/shared'
 import {
   Node,
@@ -72,15 +72,21 @@ export function compileScript(
       // do not process non js/ts script blocks
       return script
     }
-    const scriptAst = parse(script.content, {
-      plugins,
-      sourceType: 'module'
-    }).program.body
-    return {
-      ...script,
-      content: hasCssVars ? injectCssVarsCalls(sfc, plugins) : script.content,
-      bindings: analyzeScriptBindings(scriptAst),
-      scriptAst
+    try {
+      const scriptAst = parse(script.content, {
+        plugins,
+        sourceType: 'module'
+      }).program.body
+      return {
+        ...script,
+        content: hasCssVars ? injectCssVarsCalls(sfc, plugins) : script.content,
+        bindings: analyzeScriptBindings(scriptAst),
+        scriptAst
+      }
+    } catch (e) {
+      // silently fallback if parse fails since user may be using custom
+      // babel syntax
+      return script
     }
   }
 
