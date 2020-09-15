@@ -27,8 +27,7 @@ import {
   OptionTypesType,
   OptionTypesKeys,
   resolveMergedOptions,
-  isInBeforeCreate,
-  UnwrapAsyncBindings
+  isInBeforeCreate
 } from './componentOptions'
 import { EmitsOptions, EmitFn } from './componentEmits'
 import { Slots } from './componentSlots'
@@ -102,7 +101,18 @@ type UnwrapMixinsType<
 type EnsureNonVoid<T> = T extends void ? {} : T
 
 export type ComponentPublicInstanceConstructor<
-  T extends ComponentPublicInstance = ComponentPublicInstance<any>
+  T extends ComponentPublicInstance<
+    Props,
+    RawBindings,
+    D,
+    C,
+    M
+  > = ComponentPublicInstance<any>,
+  Props = any,
+  RawBindings = any,
+  D = any,
+  C extends ComputedOptions = ComputedOptions,
+  M extends MethodOptions = MethodOptions
 > = {
   __isFragment?: never
   __isTeleport?: never
@@ -138,6 +148,7 @@ export type CreateComponentPublicInstance<
   PublicProps,
   ComponentOptionsBase<P, B, D, C, M, Mixin, Extends, E>
 >
+
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)
 export type ComponentPublicInstance<
@@ -169,7 +180,7 @@ export type ComponentPublicInstance<
     options?: WatchOptions
   ): WatchStopHandle
 } & P &
-  ShallowUnwrapRef<UnwrapAsyncBindings<B>> &
+  ShallowUnwrapRef<B> &
   D &
   ExtractComputedReturns<C> &
   M &

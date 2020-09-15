@@ -26,7 +26,12 @@ import { warn } from './warning'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import { AppContext, createAppContext, AppConfig } from './apiCreateApp'
 import { Directive, validateDirectiveName } from './directives'
-import { applyOptions, ComponentOptions } from './componentOptions'
+import {
+  applyOptions,
+  ComponentOptions,
+  ComputedOptions,
+  MethodOptions
+} from './componentOptions'
 import {
   EmitsOptions,
   ObjectEmitsOptions,
@@ -118,13 +123,29 @@ export interface ClassComponent {
  * values, e.g. checking if its a function or not. This is mostly for internal
  * implementation code.
  */
-export type ConcreteComponent = ComponentOptions | FunctionalComponent<any, any>
+export type ConcreteComponent<
+  Props = {},
+  RawBindings = any,
+  D = any,
+  C extends ComputedOptions = ComputedOptions,
+  M extends MethodOptions = MethodOptions
+> =
+  | ComponentOptions<Props, RawBindings, D, C, M>
+  | FunctionalComponent<Props, any>
 
 /**
  * A type used in public APIs where a component type is expected.
  * The constructor type is an artificial type returned by defineComponent().
  */
-export type Component = ConcreteComponent | ComponentPublicInstanceConstructor
+export type Component<
+  Props = any,
+  RawBindings = any,
+  D = any,
+  C extends ComputedOptions = ComputedOptions,
+  M extends MethodOptions = MethodOptions
+> =
+  | ConcreteComponent<Props, RawBindings, D, C, M>
+  | ComponentPublicInstanceConstructor<Props>
 
 export { ComponentOptions }
 

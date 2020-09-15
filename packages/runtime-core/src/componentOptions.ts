@@ -72,8 +72,6 @@ export interface ComponentCustomOptions {}
 
 export type RenderFunction = () => VNodeChild
 
-export type UnwrapAsyncBindings<T> = T extends Promise<infer S> ? S : T
-
 export interface ComponentOptionsBase<
   Props,
   RawBindings,
@@ -92,7 +90,7 @@ export interface ComponentOptionsBase<
     this: void,
     props: Props,
     ctx: SetupContext<E>
-  ) => RawBindings | RenderFunction | void
+  ) => Promise<RawBindings> | RawBindings | RenderFunction | void
   name?: string
   template?: string | object // can be a direct DOM node
   // Note: we are intentionally using the signature-less `Function` type here
@@ -230,10 +228,29 @@ export type ComponentOptionsWithObjectProps<
     >
   >
 
-export type ComponentOptions =
-  | ComponentOptionsWithoutProps<any, any, any, any, any>
-  | ComponentOptionsWithObjectProps<any, any, any, any, any>
-  | ComponentOptionsWithArrayProps<any, any, any, any, any>
+export type ComponentOptions<
+  Props = {},
+  RawBindings = any,
+  D = any,
+  C extends ComputedOptions = any,
+  M extends MethodOptions = any,
+  Mixin extends ComponentOptionsMixin = any,
+  Extends extends ComponentOptionsMixin = any,
+  E extends EmitsOptions = any
+> = ComponentOptionsBase<Props, RawBindings, D, C, M, Mixin, Extends, E> &
+  ThisType<
+    CreateComponentPublicInstance<
+      {},
+      RawBindings,
+      D,
+      C,
+      M,
+      Mixin,
+      Extends,
+      E,
+      Readonly<Props>
+    >
+  >
 
 export type ComponentOptionsMixin = ComponentOptionsBase<
   any,
@@ -638,17 +655,13 @@ export function applyOptions(
     onRenderTriggered(renderTriggered.bind(publicThis))
   }
   if (__DEV__ && beforeDestroy) {
-    warn(
-      `\`beforeDestroy\` has been renamed to \`beforeUnmount\`.`
-    )
+    warn(`\`beforeDestroy\` has been renamed to \`beforeUnmount\`.`)
   }
   if (beforeUnmount) {
     onBeforeUnmount(beforeUnmount.bind(publicThis))
   }
   if (__DEV__ && destroyed) {
-    warn(
-      `\`destroyed\` has been renamed to \`unmounted\`.`
-    )
+    warn(`\`destroyed\` has been renamed to \`unmounted\`.`)
   }
   if (unmounted) {
     onUnmounted(unmounted.bind(publicThis))

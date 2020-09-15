@@ -10,9 +10,9 @@ import { Teleport, TeleportProps } from './components/Teleport'
 import { Suspense, SuspenseProps } from './components/Suspense'
 import { isObject, isArray } from '@vue/shared'
 import { RawSlots } from './componentSlots'
-import { FunctionalComponent, Component } from './component'
-import { ComponentOptions } from './componentOptions'
+import { FunctionalComponent, Component, ComponentOptions } from './component'
 import { EmitsOptions } from './componentEmits'
+import { DefineComponent } from './apiDefineComponent'
 
 // `h` is a more user-friendly version of `createVNode` that allows omitting the
 // props when possible. It is intended for manually written render functions.
@@ -50,7 +50,7 @@ type RawProps = VNodeProps & {
   __v_isVNode?: never
   // used to differ from Array children
   [Symbol.iterator]?: never
-} & { [key: string]: any }
+} & Record<string, any>
 
 type RawChildren =
   | string
@@ -112,10 +112,17 @@ export function h<P, E extends EmitsOptions = {}>(
 // catch-all for generic component types
 export function h(type: Component, children?: RawChildren): VNode
 
+// component without props
+export function h(
+  type: Component,
+  props: null,
+  children?: RawChildren | RawSlots
+): VNode
+
 // exclude `defineComponent` constructors
-export function h<T extends ComponentOptions | FunctionalComponent<{}>>(
-  type: T,
-  props?: RawProps | null,
+export function h<P>(
+  type: ComponentOptions<P>,
+  props?: (RawProps & P) | ({} extends P ? null : never),
   children?: RawChildren | RawSlots
 ): VNode
 
@@ -123,6 +130,14 @@ export function h<T extends ComponentOptions | FunctionalComponent<{}>>(
 export function h(type: Constructor, children?: RawChildren): VNode
 export function h<P>(
   type: Constructor<P>,
+  props?: (RawProps & P) | ({} extends P ? null : never),
+  children?: RawChildren | RawSlots
+): VNode
+
+// fake constructor type returned by `defineComponent`
+export function h(type: DefineComponent, children?: RawChildren): VNode
+export function h<P>(
+  type: DefineComponent<P>,
   props?: (RawProps & P) | ({} extends P ? null : never),
   children?: RawChildren | RawSlots
 ): VNode

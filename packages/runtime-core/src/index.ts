@@ -41,7 +41,7 @@ export {
 } from './apiLifecycle'
 export { provide, inject } from './apiInject'
 export { nextTick } from './scheduler'
-export { defineComponent } from './apiDefineComponent'
+export { defineComponent, DefineComponent } from './apiDefineComponent'
 export { defineAsyncComponent } from './apiAsyncComponent'
 
 // Advanced API ----------------------------------------------------------------
