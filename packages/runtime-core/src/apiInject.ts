@@ -31,7 +31,12 @@ export function inject<T>(key: InjectionKey<T> | string): T | undefined
 export function inject<T>(
   key: InjectionKey<T> | string,
   defaultValue: T,
-  treatDefaultAsFactory?: boolean
+  treatDefaultAsFactory?: false
+): T
+export function inject<T>(
+  key: InjectionKey<T> | string,
+  defaultValue: T | (() => T),
+  treatDefaultAsFactory: true
 ): T
 export function inject(
   key: InjectionKey<any> | string,
