@@ -635,15 +635,17 @@ export function applyOptions(
     onRenderTriggered(renderTriggered.bind(publicThis))
   }
   if (__DEV__ && beforeDestroy) {
-    warn(`\`beforeDestroy\` has been renamed to \`beforeUnmount\`.`)
-    onBeforeUnmount(beforeDestroy.bind(publicThis))
+    warn(
+      `\`beforeDestroy\` has been renamed to \`beforeUnmount\`.`
+    )
   }
   if (beforeUnmount) {
     onBeforeUnmount(beforeUnmount.bind(publicThis))
   }
   if (__DEV__ && destroyed) {
-    warn(`\`destroyed\` has been renamed to \`unmounted\`.`)
-    onUnmounted(destroyed.bind(publicThis))
+    warn(
+      `\`destroyed\` has been renamed to \`unmounted\`.`
+    )
   }
   if (unmounted) {
     onUnmounted(unmounted.bind(publicThis))
