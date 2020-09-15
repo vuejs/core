@@ -28,6 +28,15 @@ describe('SFC compile <script setup>', () => {
     )
   })
 
+  test('should extract comment for import or type declarations', () => {
+    assertCode(
+      compile(`<script setup>
+import a from 'a' // comment
+import b from 'b'
+</script>`).content
+    )
+  })
+
   test('explicit setup signature', () => {
     assertCode(
       compile(`<script setup="props, { emit }">emit('foo')</script>`).content

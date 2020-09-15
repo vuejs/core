@@ -266,6 +266,12 @@ export function compileScript(
     const start = node.start! + startOffset
     let end = node.end! + startOffset
     // import or type declarations: move to top
+    // locate comment
+    if (node.trailingComments && node.trailingComments.length > 0) {
+      const lastCommentNode =
+        node.trailingComments[node.trailingComments.length - 1]
+      end = lastCommentNode.end + startOffset
+    }
     // locate the end of whitespace between this statement and the next
     while (end <= source.length) {
       if (!/\s/.test(source.charAt(end))) {
