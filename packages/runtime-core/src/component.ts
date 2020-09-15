@@ -246,10 +246,7 @@ export interface ComponentInternalInstance {
 
   // the rest are only for stateful components ---------------------------------
 
-  /**
-   * main proxy that serves as the public instance (`this`)
-   * @internal
-   */
+  // main proxy that serves as the public instance (`this`)
   proxy: ComponentPublicInstance | null
 
   /**
