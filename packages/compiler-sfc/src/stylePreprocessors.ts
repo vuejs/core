@@ -24,7 +24,7 @@ const scss: StylePreprocessor = (source, map, options, load = require) => {
   const nodeSass = load('sass')
   const finalOptions = {
     ...options,
-    data: (options.data || '') + source,
+    data: (options.additionalData || '') + source,
     file: options.filename,
     outFile: options.filename,
     sourceMap: !!map
