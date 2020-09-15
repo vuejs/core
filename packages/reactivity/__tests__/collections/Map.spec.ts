@@ -1,6 +1,13 @@
 import { reactive, effect, toRaw, isReactive } from '../../src'
 
 describe('reactivity/collections', () => {
+  function coverCollectionFn(collection: Map<any, any>, fnName: string) {
+    const spy = jest.fn()
+    let proxy = reactive(collection)
+    ;(collection as any)[fnName] = spy
+    return [proxy as any, spy]
+  }
+
   describe('Map', () => {
     test('instanceof', () => {
       const original = new Map()
@@ -437,14 +444,27 @@ describe('reactivity/collections', () => {
       expect(spy).toHaveBeenCalledTimes(3)
     })
 
-    it('should trigger has only once for non-reactive keys', () => {
-      const map = new Map()
-      const spy = jest.fn()
-      map.has = spy
-
-      let proxy = reactive(map)
+    it('should trigger Map.has only once for non-reactive keys', () => {
+      const [proxy, spy] = coverCollectionFn(new Map(), 'has')
       proxy.has('k')
+      expect(spy).toBeCalledTimes(1)
+    })
 
+    it('should trigger Map.set only once for non-reactive keys', () => {
+      const [proxy, spy] = coverCollectionFn(new Map(), 'set')
+      proxy.set('k', 'v')
+      expect(spy).toBeCalledTimes(1)
+    })
+
+    it('should trigger Map.delete only once for non-reactive keys', () => {
+      const [proxy, spy] = coverCollectionFn(new Map(), 'delete')
+      proxy.delete('foo')
+      expect(spy).toBeCalledTimes(1)
+    })
+
+    it('should trigger Map.clear only once for non-reactive keys', () => {
+      const [proxy, spy] = coverCollectionFn(new Map(), 'clear')
+      proxy.clear()
       expect(spy).toBeCalledTimes(1)
     })
   })

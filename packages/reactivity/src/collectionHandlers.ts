@@ -76,7 +76,7 @@ function add(this: SetTypes, value: unknown) {
   const target = toRaw(this)
   const proto = getProto(target)
   const hadKey = proto.has.call(target, value)
-  const result = proto.add.call(target, value)
+  const result = target.add(value)
   if (!hadKey) {
     trigger(target, TriggerOpTypes.ADD, value, value)
   }
@@ -86,7 +86,7 @@ function add(this: SetTypes, value: unknown) {
 function set(this: MapTypes, key: unknown, value: unknown) {
   value = toRaw(value)
   const target = toRaw(this)
-  const { has, get, set } = getProto(target)
+  const { has, get } = getProto(target)
 
   let hadKey = has.call(target, key)
   if (!hadKey) {
@@ -97,7 +97,7 @@ function set(this: MapTypes, key: unknown, value: unknown) {
   }
 
   const oldValue = get.call(target, key)
-  const result = set.call(target, key, value)
+  const result = target.set(key, value)
   if (!hadKey) {
     trigger(target, TriggerOpTypes.ADD, key, value)
   } else if (hasChanged(value, oldValue)) {
@@ -108,7 +108,7 @@ function set(this: MapTypes, key: unknown, value: unknown) {
 
 function deleteEntry(this: CollectionTypes, key: unknown) {
   const target = toRaw(this)
-  const { has, get, delete: del } = getProto(target)
+  const { has, get } = getProto(target)
   let hadKey = has.call(target, key)
   if (!hadKey) {
     key = toRaw(key)
@@ -119,7 +119,7 @@ function deleteEntry(this: CollectionTypes, key: unknown) {
 
   const oldValue = get ? get.call(target, key) : undefined
   // forward the operation before queueing reactions
-  const result = del.call(target, key)
+  const result = target.delete(key)
   if (hadKey) {
     trigger(target, TriggerOpTypes.DELETE, key, undefined, oldValue)
   }
@@ -135,7 +135,7 @@ function clear(this: IterableCollections) {
       : new Set(target)
     : undefined
   // forward the operation before queueing reactions
-  const result = getProto(target).clear.call(target)
+  const result = target.clear()
   if (hadItems) {
     trigger(target, TriggerOpTypes.CLEAR, undefined, undefined, oldTarget)
   }
