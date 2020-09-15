@@ -25,7 +25,8 @@ import { AppContext } from './apiCreateApp'
 import {
   SuspenseImpl,
   isSuspense,
-  SuspenseBoundary
+  SuspenseBoundary,
+  normalizeSuspenseChildren
 } from './components/Suspense'
 import { DirectiveBinding } from './directives'
 import { TransitionHooks } from './components/BaseTransition'
@@ -134,7 +135,6 @@ export interface VNode<
   scopeId: string | null // SFC only
   children: VNodeNormalizedChildren
   component: ComponentInternalInstance | null
-  suspense: SuspenseBoundary | null
   dirs: DirectiveBinding[] | null
   transition: TransitionHooks<HostElement> | null
 
@@ -144,6 +144,11 @@ export interface VNode<
   target: HostElement | null // teleport target
   targetAnchor: HostNode | null // teleport target anchor
   staticCount: number // number of elements contained in a static vnode
+
+  // suspense
+  suspense: SuspenseBoundary | null
+  ssContent: VNode | null
+  ssFallback: VNode | null
 
   // optimization only
   shapeFlag: number
@@ -395,6 +400,8 @@ function _createVNode(
     children: null,
     component: null,
     suspense: null,
+    ssContent: null,
+    ssFallback: null,
     dirs: null,
     transition: null,
     el: null,
@@ -415,6 +422,13 @@ function _createVNode(
   }
 
   normalizeChildren(vnode, children)
+
+  // normalize suspense children
+  if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
+    const { content, fallback } = normalizeSuspenseChildren(vnode)
+    vnode.ssContent = content
+    vnode.ssFallback = fallback
+  }
 
   if (
     shouldTrack > 0 &&
@@ -491,6 +505,8 @@ export function cloneVNode<T, U>(
     // they will simply be overwritten.
     component: vnode.component,
     suspense: vnode.suspense,
+    ssContent: vnode.ssContent && cloneVNode(vnode.ssContent),
+    ssFallback: vnode.ssFallback && cloneVNode(vnode.ssFallback),
     el: vnode.el,
     anchor: vnode.anchor
   }

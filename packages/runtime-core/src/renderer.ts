@@ -778,7 +778,7 @@ function baseCreateRenderer(
     // #1583 For inside suspense + suspense not resolved case, enter hook should call when suspense resolved
     // #1689 For inside suspense + suspense resolved case, just call it
     const needCallTransitionHooks =
-      (!parentSuspense || (parentSuspense && parentSuspense!.isResolved)) &&
+      (!parentSuspense || (parentSuspense && !parentSuspense.pendingBranch)) &&
       transition &&
       !transition.persisted
     if (needCallTransitionHooks) {
@@ -1253,14 +1253,10 @@ function baseCreateRenderer(
     // setup() is async. This component relies on async logic to be resolved
     // before proceeding
     if (__FEATURE_SUSPENSE__ && instance.asyncDep) {
-      if (!parentSuspense) {
-        if (__DEV__) warn('async setup() is used without a suspense boundary!')
-        return
-      }
-
-      parentSuspense.registerDep(instance, setupRenderEffect)
+      parentSuspense && parentSuspense.registerDep(instance, setupRenderEffect)
 
       // Give it a placeholder if this is not hydration
+      // TODO handle self-defined fallback
       if (!initialVNode.el) {
         const placeholder = (instance.subTree = createVNode(Comment))
         processCommentNode(null, placeholder, container!, anchor)
@@ -2124,10 +2120,11 @@ function baseCreateRenderer(
     if (
       __FEATURE_SUSPENSE__ &&
       parentSuspense &&
-      !parentSuspense.isResolved &&
+      parentSuspense.pendingBranch &&
       !parentSuspense.isUnmounted &&
       instance.asyncDep &&
-      !instance.asyncResolved
+      !instance.asyncResolved &&
+      instance.suspenseId === parentSuspense.pendingId
     ) {
       parentSuspense.deps--
       if (parentSuspense.deps === 0) {
