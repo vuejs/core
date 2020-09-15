@@ -40,6 +40,7 @@ describe('object props', () => {
     ffff: (a: number, b: string) => { a: boolean }
     validated?: string
   }
+
   describe('defineComponent', () => {
     const MyComponent = defineComponent({
       props: {
@@ -99,7 +100,7 @@ describe('object props', () => {
         // default + function
         ffff: {
           type: Function as PropType<(a: number, b: string) => { a: boolean }>,
-          default: (a: number, b: string) => ({ a: true })
+          default: (_a: number, _b: string) => ({ a: true })
         },
         validated: {
           type: String,
@@ -250,7 +251,7 @@ describe('object props', () => {
         // default + function
         ffff: {
           type: Function as PropType<(a: number, b: string) => { a: boolean }>,
-          default: (a: number, b: string) => ({ a: true })
+          default: (_a: number, _b: string) => ({ a: true })
         },
         validated: {
           type: String,
@@ -405,7 +406,7 @@ declare type VueClass<Props = {}> = {
 
 describe('class', () => {
   const MyComponent: VueClass<{ foo: number }> = {} as any
-  
+
   const { props } = extractComponentOptions(MyComponent)
 
   expectType<number>(props.foo)

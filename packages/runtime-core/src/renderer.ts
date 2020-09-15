@@ -10,7 +10,8 @@ import {
   isSameVNodeType,
   Static,
   VNodeNormalizedRef,
-  VNodeHook
+  VNodeHook,
+  VNodeNormalizedRefAtom
 } from './vnode'
 import {
   ComponentInternalInstance,
@@ -19,6 +20,7 @@ import {
   setupComponent
 } from './component'
 import {
+  filterSingleRoot,
   renderComponentRoot,
   shouldUpdateComponent,
   updateHOCHostEl
@@ -283,6 +285,19 @@ export const setRef = (
   parentSuspense: SuspenseBoundary | null,
   vnode: VNode | null
 ) => {
+  if (isArray(rawRef)) {
+    rawRef.forEach((r, i) =>
+      setRef(
+        r,
+        oldRawRef && (isArray(oldRawRef) ? oldRawRef[i] : oldRawRef),
+        parentComponent,
+        parentSuspense,
+        vnode
+      )
+    )
+    return
+  }
+
   let value: ComponentPublicInstance | RendererNode | null
   if (!vnode) {
     value = null
@@ -294,7 +309,7 @@ export const setRef = (
     }
   }
 
-  const [owner, ref] = rawRef
+  const { i: owner, r: ref } = rawRef
   if (__DEV__ && !owner) {
     warn(
       `Missing ref owner context. ref cannot be used on hoisted vnodes. ` +
@@ -302,7 +317,7 @@ export const setRef = (
     )
     return
   }
-  const oldRef = oldRawRef && oldRawRef[1]
+  const oldRef = oldRawRef && (oldRawRef as VNodeNormalizedRefAtom).r
   const refs = owner.refs === EMPTY_OBJ ? (owner.refs = {}) : owner.refs
   const setupState = owner.setupState
 
@@ -745,15 +760,7 @@ function baseCreateRenderer(
         }
       }
       // scopeId
-      if (scopeId) {
-        hostSetScopeId(el, scopeId)
-      }
-      const treeOwnerId = parentComponent && parentComponent.type.__scopeId
-      // vnode's own scopeId and the current patched component's scopeId is
-      // different - this is a slot content node.
-      if (treeOwnerId && treeOwnerId !== scopeId) {
-        hostSetScopeId(el, treeOwnerId + '-s')
-      }
+      setScopeId(el, scopeId, vnode, parentComponent)
     }
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
       Object.defineProperty(el, '__vnode', {
@@ -788,6 +795,38 @@ function baseCreateRenderer(
         needCallTransitionHooks && transition!.enter(el)
         dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
       }, parentSuspense)
+    }
+  }
+
+  const setScopeId = (
+    el: RendererElement,
+    scopeId: string | false | null,
+    vnode: VNode,
+    parentComponent: ComponentInternalInstance | null
+  ) => {
+    if (scopeId) {
+      hostSetScopeId(el, scopeId)
+    }
+    if (parentComponent) {
+      const treeOwnerId = parentComponent.type.__scopeId
+      // vnode's own scopeId and the current patched component's scopeId is
+      // different - this is a slot content node.
+      if (treeOwnerId && treeOwnerId !== scopeId) {
+        hostSetScopeId(el, treeOwnerId + '-s')
+      }
+      let subTree = parentComponent.subTree
+      if (__DEV__ && subTree.type === Fragment) {
+        subTree =
+          filterSingleRoot(subTree.children as VNodeArrayChildren) || subTree
+      }
+      if (vnode === subTree) {
+        setScopeId(
+          el,
+          parentComponent.vnode.scopeId,
+          parentComponent.vnode,
+          parentComponent.parent
+        )
+      }
     }
   }
 
@@ -1114,8 +1153,10 @@ function baseCreateRenderer(
           parentSuspense,
           isSVG
         )
-        if (__DEV__ && parentComponent && parentComponent.type.__hmrId) {
-          traverseStaticChildren(n1, n2)
+        // #2080 if the stable fragment has a key, it's a <template v-for> that may
+        //  get moved around. Make sure all root level vnodes inherit el.
+        if (n2.key != null) {
+          traverseStaticChildren(n1, n2, true /* shallow */)
         }
       } else {
         // keyed / unkeyed, or manual fragments.
@@ -2053,7 +2094,7 @@ function baseCreateRenderer(
       unregisterHMR(instance)
     }
 
-    const { bum, effects, update, subTree, um, da, isDeactivated } = instance
+    const { bum, effects, update, subTree, um } = instance
     // beforeUnmount hook
     if (bum) {
       invokeArrayFns(bum)
@@ -2072,14 +2113,6 @@ function baseCreateRenderer(
     // unmounted hook
     if (um) {
       queuePostRenderEffect(um, parentSuspense)
-    }
-    // deactivated hook
-    if (
-      da &&
-      !isDeactivated &&
-      instance.vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-    ) {
-      queuePostRenderEffect(da, parentSuspense)
     }
     queuePostRenderEffect(() => {
       instance.isUnmounted = true
@@ -2135,9 +2168,12 @@ function baseCreateRenderer(
    * inside a block also inherit the DOM element from the previous tree so that
    * HMR updates (which are full updates) can retrieve the element for patching.
    *
-   * Dev only.
+   * #2080
+   * Inside keyed `template` fragment static children, if a fragment is moved,
+   * the children will always moved so that need inherit el form previous nodes
+   * to ensure correct moved position.
    */
-  const traverseStaticChildren = (n1: VNode, n2: VNode) => {
+  const traverseStaticChildren = (n1: VNode, n2: VNode, shallow = false) => {
     const ch1 = n1.children
     const ch2 = n2.children
     if (isArray(ch1) && isArray(ch2)) {
@@ -2150,7 +2186,10 @@ function baseCreateRenderer(
           if (c2.patchFlag <= 0 || c2.patchFlag === PatchFlags.HYDRATE_EVENTS) {
             c2.el = c1.el
           }
-          traverseStaticChildren(c1, c2)
+          if (!shallow) traverseStaticChildren(c1, c2)
+        }
+        if (__DEV__ && c2.type === Comment) {
+          c2.el = c1.el
         }
       }
     }

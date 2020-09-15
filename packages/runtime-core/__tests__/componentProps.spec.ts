@@ -7,7 +7,8 @@ import {
   FunctionalComponent,
   defineComponent,
   ref,
-  serializeInner
+  serializeInner,
+  createApp
 } from '@vue/runtime-test'
 import { render as domRender, nextTick } from 'vue'
 
@@ -305,6 +306,46 @@ describe('component props', () => {
 
     expect(serializeInner(root)).toMatch(
       `from self, from base, from mixin 1, from mixin 2`
+    )
+    expect(setupProps).toMatchObject(props)
+    expect(renderProxy.$props).toMatchObject(props)
+  })
+
+  test('merging props from global mixins', () => {
+    let setupProps: any
+    let renderProxy: any
+
+    const M1 = {
+      props: ['m1']
+    }
+    const M2 = {
+      props: { m2: null }
+    }
+    const Comp = {
+      props: ['self'],
+      setup(props: any) {
+        setupProps = props
+      },
+      render(this: any) {
+        renderProxy = this
+        return h('div', [this.self, this.m1, this.m2])
+      }
+    }
+
+    const props = {
+      self: 'from self, ',
+      m1: 'from mixin 1, ',
+      m2: 'from mixin 2'
+    }
+    const app = createApp(Comp, props)
+    app.mixin(M1)
+    app.mixin(M2)
+
+    const root = nodeOps.createElement('div')
+    app.mount(root)
+
+    expect(serializeInner(root)).toMatch(
+      `from self, from mixin 1, from mixin 2`
     )
     expect(setupProps).toMatchObject(props)
     expect(renderProxy.$props).toMatchObject(props)

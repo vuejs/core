@@ -131,6 +131,48 @@ describe('KeepAlive', () => {
     assertHookCalls(two, [1, 1, 2, 2, 1])
   })
 
+  test('should call correct lifecycle hooks when toggle the KeepAlive first', async () => {
+    const toggle = ref(true)
+    const viewRef = ref('one')
+    const App = {
+      render() {
+        return toggle.value ? h(KeepAlive, () => h(views[viewRef.value])) : null
+      }
+    }
+    render(h(App), root)
+
+    expect(serializeInner(root)).toBe(`<div>one</div>`)
+    assertHookCalls(one, [1, 1, 1, 0, 0])
+    assertHookCalls(two, [0, 0, 0, 0, 0])
+
+    // should unmount 'one' component when toggle the KeepAlive first
+    toggle.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<!---->`)
+    assertHookCalls(one, [1, 1, 1, 1, 1])
+    assertHookCalls(two, [0, 0, 0, 0, 0])
+
+    toggle.value = true
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>one</div>`)
+    assertHookCalls(one, [2, 2, 2, 1, 1])
+    assertHookCalls(two, [0, 0, 0, 0, 0])
+
+    // 1. the first time toggle kept-alive component
+    viewRef.value = 'two'
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>two</div>`)
+    assertHookCalls(one, [2, 2, 2, 2, 1])
+    assertHookCalls(two, [1, 1, 1, 0, 0])
+
+    // 2. should unmount all components including cached
+    toggle.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<!---->`)
+    assertHookCalls(one, [2, 2, 2, 2, 2])
+    assertHookCalls(two, [1, 1, 1, 1, 1])
+  })
+
   test('should call lifecycle hooks on nested components', async () => {
     one.render = () => h(two)
 
@@ -347,21 +389,33 @@ describe('KeepAlive', () => {
     })
 
     test('max', async () => {
-      const spyA = jest.fn()
-      const spyB = jest.fn()
-      const spyC = jest.fn()
-      const spyAD = jest.fn()
-      const spyBD = jest.fn()
-      const spyCD = jest.fn()
+      const spyAC = jest.fn()
+      const spyBC = jest.fn()
+      const spyCC = jest.fn()
+      const spyAA = jest.fn()
+      const spyBA = jest.fn()
+      const spyCA = jest.fn()
+      const spyADA = jest.fn()
+      const spyBDA = jest.fn()
+      const spyCDA = jest.fn()
+      const spyAUM = jest.fn()
+      const spyBUM = jest.fn()
+      const spyCUM = jest.fn()
 
       function assertCount(calls: number[]) {
         expect([
-          spyA.mock.calls.length,
-          spyAD.mock.calls.length,
-          spyB.mock.calls.length,
-          spyBD.mock.calls.length,
-          spyC.mock.calls.length,
-          spyCD.mock.calls.length
+          spyAC.mock.calls.length,
+          spyAA.mock.calls.length,
+          spyADA.mock.calls.length,
+          spyAUM.mock.calls.length,
+          spyBC.mock.calls.length,
+          spyBA.mock.calls.length,
+          spyBDA.mock.calls.length,
+          spyBUM.mock.calls.length,
+          spyCC.mock.calls.length,
+          spyCA.mock.calls.length,
+          spyCDA.mock.calls.length,
+          spyCUM.mock.calls.length
         ]).toEqual(calls)
       }
 
@@ -369,18 +423,24 @@ describe('KeepAlive', () => {
       const views: Record<string, ComponentOptions> = {
         a: {
           render: () => `one`,
-          created: spyA,
-          unmounted: spyAD
+          created: spyAC,
+          activated: spyAA,
+          deactivated: spyADA,
+          unmounted: spyAUM
         },
         b: {
           render: () => `two`,
-          created: spyB,
-          unmounted: spyBD
+          created: spyBC,
+          activated: spyBA,
+          deactivated: spyBDA,
+          unmounted: spyBUM
         },
         c: {
           render: () => `three`,
-          created: spyC,
-          unmounted: spyCD
+          created: spyCC,
+          activated: spyCA,
+          deactivated: spyCDA,
+          unmounted: spyCUM
         }
       }
 
@@ -392,26 +452,26 @@ describe('KeepAlive', () => {
         }
       }
       render(h(App), root)
-      assertCount([1, 0, 0, 0, 0, 0])
+      assertCount([1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
       viewRef.value = 'b'
       await nextTick()
-      assertCount([1, 0, 1, 0, 0, 0])
+      assertCount([1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0])
 
       viewRef.value = 'c'
       await nextTick()
       // should prune A because max cache reached
-      assertCount([1, 1, 1, 0, 1, 0])
+      assertCount([1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0])
 
       viewRef.value = 'b'
       await nextTick()
       // B should be reused, and made latest
-      assertCount([1, 1, 1, 0, 1, 0])
+      assertCount([1, 1, 1, 1, 1, 2, 1, 0, 1, 1, 1, 0])
 
       viewRef.value = 'a'
       await nextTick()
       // C should be pruned because B was used last so C is the oldest cached
-      assertCount([2, 1, 1, 0, 1, 1])
+      assertCount([2, 2, 1, 1, 1, 2, 2, 0, 1, 1, 1, 1])
     })
   })
 
@@ -434,7 +494,25 @@ describe('KeepAlive', () => {
       return { viewRef, includeRef }
     }
 
-    test('on include/exclude change', async () => {
+    function setupExclude() {
+      const viewRef = ref('one')
+      const excludeRef = ref('')
+      const App = {
+        render() {
+          return h(
+            KeepAlive,
+            {
+              exclude: excludeRef.value
+            },
+            () => h(views[viewRef.value])
+          )
+        }
+      }
+      render(h(App), root)
+      return { viewRef, excludeRef }
+    }
+
+    test('on include change', async () => {
       const { viewRef, includeRef } = setup()
 
       viewRef.value = 'two'
@@ -453,7 +531,26 @@ describe('KeepAlive', () => {
       assertHookCalls(two, [1, 1, 1, 1, 0])
     })
 
-    test('on include/exclude change + view switch', async () => {
+    test('on exclude change', async () => {
+      const { viewRef, excludeRef } = setupExclude()
+
+      viewRef.value = 'two'
+      await nextTick()
+      assertHookCalls(one, [1, 1, 1, 1, 0])
+      assertHookCalls(two, [1, 1, 1, 0, 0])
+
+      excludeRef.value = 'one'
+      await nextTick()
+      assertHookCalls(one, [1, 1, 1, 1, 1])
+      assertHookCalls(two, [1, 1, 1, 0, 0])
+
+      viewRef.value = 'one'
+      await nextTick()
+      assertHookCalls(one, [2, 2, 1, 1, 1])
+      assertHookCalls(two, [1, 1, 1, 1, 0])
+    })
+
+    test('on include change + view switch', async () => {
       const { viewRef, includeRef } = setup()
 
       viewRef.value = 'two'
@@ -462,6 +559,22 @@ describe('KeepAlive', () => {
       assertHookCalls(two, [1, 1, 1, 0, 0])
 
       includeRef.value = 'one'
+      viewRef.value = 'one'
+      await nextTick()
+      assertHookCalls(one, [1, 1, 2, 1, 0])
+      // two should be pruned
+      assertHookCalls(two, [1, 1, 1, 1, 1])
+    })
+
+    test('on exclude change + view switch', async () => {
+      const { viewRef, excludeRef } = setupExclude()
+
+      viewRef.value = 'two'
+      await nextTick()
+      assertHookCalls(one, [1, 1, 1, 1, 0])
+      assertHookCalls(two, [1, 1, 1, 0, 0])
+
+      excludeRef.value = 'two'
       viewRef.value = 'one'
       await nextTick()
       assertHookCalls(one, [1, 1, 2, 1, 0])

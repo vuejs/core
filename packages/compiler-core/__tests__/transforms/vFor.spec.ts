@@ -582,6 +582,61 @@ describe('compiler: v-for', () => {
         ]
       })
     })
+
+    test('element v-for key expression prefixing', () => {
+      const {
+        node: { codegenNode }
+      } = parseWithForTransform(
+        '<div v-for="item in items" :key="itemKey(item)">test</div>',
+        { prefixIdentifiers: true }
+      )
+      const innerBlock = codegenNode.children.arguments[1].returns
+      expect(innerBlock).toMatchObject({
+        type: NodeTypes.VNODE_CALL,
+        tag: `"div"`,
+        props: createObjectMatcher({
+          key: {
+            type: NodeTypes.COMPOUND_EXPRESSION,
+            children: [
+              // should prefix outer scope references
+              { content: `_ctx.itemKey` },
+              `(`,
+              // should NOT prefix in scope variables
+              { content: `item` },
+              `)`
+            ]
+          }
+        })
+      })
+    })
+
+    // #2085
+    test('template v-for key expression prefixing', () => {
+      const {
+        node: { codegenNode }
+      } = parseWithForTransform(
+        '<template v-for="item in items" :key="itemKey(item)">test</template>',
+        { prefixIdentifiers: true }
+      )
+      const innerBlock = codegenNode.children.arguments[1].returns
+      expect(innerBlock).toMatchObject({
+        type: NodeTypes.VNODE_CALL,
+        tag: FRAGMENT,
+        props: createObjectMatcher({
+          key: {
+            type: NodeTypes.COMPOUND_EXPRESSION,
+            children: [
+              // should prefix outer scope references
+              { content: `_ctx.itemKey` },
+              `(`,
+              // should NOT prefix in scope variables
+              { content: `item` },
+              `)`
+            ]
+          }
+        })
+      })
+    })
   })
 
   describe('codegen', () => {

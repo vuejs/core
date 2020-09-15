@@ -14,6 +14,7 @@ import { escapeHtml } from '@vue/shared'
 import { renderToString } from '../src/renderToString'
 import { ssrRenderSlot, SSRSlot } from '../src/helpers/ssrRenderSlot'
 import { ssrRenderComponent } from '../src/helpers/ssrRenderComponent'
+
 describe('ssr: renderToString', () => {
   test('should apply app context', async () => {
     const app = createApp({
@@ -551,7 +552,7 @@ describe('ssr: renderToString', () => {
       }
 
       expect(await renderToString(h(Parent))).toBe(
-        `<div data-v-test data-v-child><span data-v-test data-v-child-s>slot</span></div>`
+        `<div data-v-child data-v-test><span data-v-test data-v-child-s>slot</span></div>`
       )
     })
   })
@@ -579,5 +580,24 @@ describe('ssr: renderToString', () => {
           '   |   ^'
       ).toHaveBeenWarned()
     })
+  })
+
+  test('serverPrefetch', async () => {
+    const msg = Promise.resolve('hello')
+    const app = createApp({
+      data() {
+        return {
+          msg: ''
+        }
+      },
+      async serverPrefetch() {
+        this.msg = await msg
+      },
+      render() {
+        return h('div', this.msg)
+      }
+    })
+    const html = await renderToString(app)
+    expect(html).toBe(`<div>hello</div>`)
   })
 })

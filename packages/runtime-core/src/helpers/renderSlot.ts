@@ -11,6 +11,8 @@ import { PatchFlags, SlotFlags } from '@vue/shared'
 import { warn } from '../warning'
 
 export let isRenderingCompiledSlot = 0
+export const setCompiledSlotRendering = (n: number) =>
+  (isRenderingCompiledSlot += n)
 
 /**
  * Compiler runtime helper for rendering `<slot/>`

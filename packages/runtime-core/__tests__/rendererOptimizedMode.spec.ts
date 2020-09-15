@@ -11,9 +11,12 @@ import {
   serializeInner as inner,
   VNode,
   ref,
-  nextTick
+  nextTick,
+  defineComponent,
+  withCtx,
+  renderSlot
 } from '@vue/runtime-test'
-import { PatchFlags } from '@vue/shared'
+import { PatchFlags, SlotFlags } from '@vue/shared'
 
 describe('renderer: optimized mode', () => {
   let root: TestElement
@@ -397,5 +400,53 @@ describe('renderer: optimized mode', () => {
 
     expect(inner(root)).toBe('<div><i>bar</i></div>')
     expect(block!.dynamicChildren).toBe(null)
+  })
+
+  // #1980
+  test('dynamicChildren should be tracked correctly when normalizing slots to plain children', async () => {
+    let block: VNode
+    const Comp = defineComponent({
+      setup(_props, { slots }) {
+        return () => {
+          const vnode = (openBlock(),
+          (block = createBlock('div', null, {
+            default: withCtx(() => [renderSlot(slots, 'default')]),
+            _: SlotFlags.FORWARDED
+          })))
+
+          return vnode
+        }
+      }
+    })
+
+    const foo = ref(0)
+    const App = {
+      setup() {
+        return () => {
+          return createVNode(Comp, null, {
+            default: withCtx(() => [
+              createVNode('p', null, foo.value, PatchFlags.TEXT)
+            ]),
+            // Indicates that this is a stable slot to avoid bail out
+            _: SlotFlags.STABLE
+          })
+        }
+      }
+    }
+
+    render(h(App), root)
+    expect(inner(root)).toBe('<div><p>0</p></div>')
+    expect(block!.dynamicChildren!.length).toBe(1)
+    expect(block!.dynamicChildren![0].type).toBe(Fragment)
+    expect(block!.dynamicChildren![0].dynamicChildren!.length).toBe(1)
+    expect(
+      serialize(block!.dynamicChildren![0].dynamicChildren![0]
+        .el as TestElement)
+    ).toBe('<p>0</p>')
+
+    foo.value++
+    await nextTick()
+
+    expect(inner(root)).toBe('<div><p>1</p></div>')
   })
 })

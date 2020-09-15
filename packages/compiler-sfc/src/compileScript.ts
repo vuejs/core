@@ -60,9 +60,9 @@ export function compileScript(
   const scriptLang = script && script.lang
   const scriptSetupLang = scriptSetup && scriptSetup.lang
   const isTS = scriptLang === 'ts' || scriptSetupLang === 'ts'
-  const plugins: ParserPlugin[] = [...babelParserDefaultPlugins]
+  const plugins: ParserPlugin[] = [...babelParserDefaultPlugins, 'jsx']
   if (options.babelParserPlugins) plugins.push(...options.babelParserPlugins)
-  if (isTS) plugins.push('typescript')
+  if (isTS) plugins.push('typescript', 'decorators-legacy')
 
   if (!scriptSetup) {
     if (!script) {
@@ -72,15 +72,21 @@ export function compileScript(
       // do not process non js/ts script blocks
       return script
     }
-    const scriptAst = parse(script.content, {
-      plugins,
-      sourceType: 'module'
-    }).program.body
-    return {
-      ...script,
-      content: hasCssVars ? injectCssVarsCalls(sfc, plugins) : script.content,
-      bindings: analyzeScriptBindings(scriptAst),
-      scriptAst
+    try {
+      const scriptAst = parse(script.content, {
+        plugins,
+        sourceType: 'module'
+      }).program.body
+      return {
+        ...script,
+        content: hasCssVars ? injectCssVarsCalls(sfc, plugins) : script.content,
+        bindings: analyzeScriptBindings(scriptAst),
+        scriptAst
+      }
+    } catch (e) {
+      // silently fallback if parse fails since user may be using custom
+      // babel syntax
+      return script
     }
   }
 

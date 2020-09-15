@@ -18,7 +18,8 @@ import {
 import {
   ComponentPropsOptions,
   NormalizedPropsOptions,
-  initProps
+  initProps,
+  normalizePropsOptions
 } from './componentProps'
 import { Slots, initSlots, InternalSlots } from './componentSlots'
 import { warn } from './warning'
@@ -35,7 +36,8 @@ import {
   EmitsOptions,
   ObjectEmitsOptions,
   EmitFn,
-  emit
+  emit,
+  normalizeEmitsOptions
 } from './componentEmits'
 import {
   EMPTY_OBJ,
@@ -77,11 +79,11 @@ export interface ComponentInternalOptions {
   /**
    * @internal
    */
-  __props?: NormalizedPropsOptions | []
+  __props?: Record<number, NormalizedPropsOptions>
   /**
    * @internal
    */
-  __emits?: ObjectEmitsOptions
+  __emits?: Record<number, ObjectEmitsOptions | null>
   /**
    * @internal
    */
@@ -252,13 +254,20 @@ export interface ComponentInternalInstance {
    * @internal
    */
   directives: Record<string, Directive> | null
+  /**
+   * reoslved props options
+   * @internal
+   */
+  propsOptions: NormalizedPropsOptions
+  /**
+   * resolved emits options
+   * @internal
+   */
+  emitsOptions: ObjectEmitsOptions | null
 
   // the rest are only for stateful components ---------------------------------
 
-  /**
-   * main proxy that serves as the public instance (`this`)
-   * @internal
-   */
+  // main proxy that serves as the public instance (`this`)
   proxy: ComponentPublicInstance | null
 
   /**
@@ -275,14 +284,17 @@ export interface ComponentInternalInstance {
    */
   ctx: Data
 
-  // internal state
+  // state
   data: Data
   props: Data
   attrs: Data
   slots: InternalSlots
   refs: Data
   emit: EmitFn
-  // used for keeping track of .once event handlers on components
+  /**
+   * used for keeping track of .once event handlers on components
+   * @internal
+   */
   emitted: Record<string, boolean> | null
 
   /**
@@ -408,6 +420,14 @@ export function createComponentInstance(
     components: null,
     directives: null,
 
+    // resolved props and emits options
+    propsOptions: normalizePropsOptions(type, appContext),
+    emitsOptions: normalizeEmitsOptions(type, appContext),
+
+    // emit
+    emit: null as any, // to be set immediately
+    emitted: null,
+
     // state
     ctx: EMPTY_OBJ,
     data: EMPTY_OBJ,
@@ -440,9 +460,7 @@ export function createComponentInstance(
     a: null,
     rtg: null,
     rtc: null,
-    ec: null,
-    emit: null as any, // to be set immediately
-    emitted: null
+    ec: null
   }
   if (__DEV__) {
     instance.ctx = createRenderContext(instance)

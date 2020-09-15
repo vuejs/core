@@ -520,6 +520,22 @@ describe('SFC compile <script setup>', () => {
 })
 
 describe('SFC analyze <script> bindings', () => {
+  it('can parse decorators syntax in typescript block', () => {
+    const { scriptAst } = compile(`
+      <script lang="ts">
+        import { Options, Vue } from 'vue-class-component';
+        @Options({
+          components: {
+            HelloWorld,
+          },
+          props: ['foo', 'bar']
+        })
+        export default class Home extends Vue {}
+      </script>
+    `)
+
+    expect(scriptAst).toBeDefined()
+  })
   it('recognizes props array declaration', () => {
     const { bindings } = compile(`
       <script>

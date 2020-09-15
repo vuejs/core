@@ -1,6 +1,6 @@
 import { ComponentInternalInstance, Data } from './component'
 import { nextTick, queueJob } from './scheduler'
-import { instanceWatch } from './apiWatch'
+import { instanceWatch, WatchOptions, WatchStopHandle } from './apiWatch'
 import {
   EMPTY_OBJ,
   hasOwn,
@@ -29,7 +29,6 @@ import {
   resolveMergedOptions,
   isInBeforeCreate
 } from './componentOptions'
-import { normalizePropsOptions } from './componentProps'
 import { EmitsOptions, EmitFn } from './componentEmits'
 import { Slots } from './componentSlots'
 import {
@@ -149,6 +148,7 @@ export type CreateComponentPublicInstance<
   PublicProps,
   ComponentOptionsBase<P, B, D, C, M, Mixin, Extends, E>
 >
+
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)
 export type ComponentPublicInstance<
@@ -174,7 +174,11 @@ export type ComponentPublicInstance<
   $options: Options
   $forceUpdate: ReactiveEffect
   $nextTick: typeof nextTick
-  $watch: typeof instanceWatch
+  $watch(
+    source: string | Function,
+    cb: Function,
+    options?: WatchOptions
+  ): WatchStopHandle
 } & P &
   ShallowUnwrapRef<B> &
   D &
@@ -261,7 +265,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       } else if (
         // only cache other properties when instance has declared (thus stable)
         // props
-        (normalizedProps = normalizePropsOptions(type)[0]) &&
+        (normalizedProps = instance.propsOptions[0]) &&
         hasOwn(normalizedProps, key)
       ) {
         accessCache![key] = AccessTypes.PROPS
@@ -307,12 +311,16 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
         // to infinite warning loop
         key.indexOf('__v') !== 0)
     ) {
-      if (data !== EMPTY_OBJ && key[0] === '$' && hasOwn(data, key)) {
+      if (
+        data !== EMPTY_OBJ &&
+        (key[0] === '$' || key[0] === '_') &&
+        hasOwn(data, key)
+      ) {
         warn(
           `Property ${JSON.stringify(
             key
           )} must be accessed via $data because it starts with a reserved ` +
-            `character and is not proxied on the render context.`
+            `character ("$" or "_") and is not proxied on the render context.`
         )
       } else {
         warn(
@@ -365,7 +373,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
 
   has(
     {
-      _: { data, setupState, accessCache, ctx, type, appContext }
+      _: { data, setupState, accessCache, ctx, appContext, propsOptions }
     }: ComponentRenderContext,
     key: string
   ) {
@@ -374,8 +382,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       accessCache![key] !== undefined ||
       (data !== EMPTY_OBJ && hasOwn(data, key)) ||
       (setupState !== EMPTY_OBJ && hasOwn(setupState, key)) ||
-      ((normalizedProps = normalizePropsOptions(type)[0]) &&
-        hasOwn(normalizedProps, key)) ||
+      ((normalizedProps = propsOptions[0]) && hasOwn(normalizedProps, key)) ||
       hasOwn(ctx, key) ||
       hasOwn(publicPropertiesMap, key) ||
       hasOwn(appContext.config.globalProperties, key)
@@ -461,8 +468,10 @@ export function createRenderContext(instance: ComponentInternalInstance) {
 export function exposePropsOnRenderContext(
   instance: ComponentInternalInstance
 ) {
-  const { ctx, type } = instance
-  const propsOptions = normalizePropsOptions(type)[0]
+  const {
+    ctx,
+    propsOptions: [propsOptions]
+  } = instance
   if (propsOptions) {
     Object.keys(propsOptions).forEach(key => {
       Object.defineProperty(ctx, key, {
@@ -481,6 +490,15 @@ export function exposeSetupStateOnRenderContext(
 ) {
   const { ctx, setupState } = instance
   Object.keys(toRaw(setupState)).forEach(key => {
+    if (key[0] === '$' || key[0] === '_') {
+      warn(
+        `setup() return property ${JSON.stringify(
+          key
+        )} should not start with "$" or "_" ` +
+          `which are reserved prefixes for Vue internals.`
+      )
+      return
+    }
     Object.defineProperty(ctx, key, {
       enumerable: true,
       configurable: true,
