@@ -337,10 +337,10 @@ describe('SFC style preprocessors', () => {
     ])
   })
 
-  test('scss respect user-defined options.data', () => {
+  test('scss respect user-defined options.additionalData', () => {
     const res = compileStyle({
       preprocessOptions: {
-        data: `
+        additionalData: `
           @mixin square($size) {
             width: $size;
             height: $size;
