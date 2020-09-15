@@ -176,14 +176,3 @@ export function defineComponent<
 export function defineComponent(options: unknown) {
   return isFunction(options) ? { setup: options, name: options.name } : options
 }
-
-defineComponent({
-  async setup() {
-    return {
-      a: 123
-    }
-  },
-  render() {
-    this.a
-  }
-})
