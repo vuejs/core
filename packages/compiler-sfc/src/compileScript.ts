@@ -1,7 +1,7 @@
 import MagicString from 'magic-string'
 import { BindingMetadata } from '@vue/compiler-core'
 import { SFCDescriptor, SFCScriptBlock } from './parse'
-import { parse, ParserPlugin, ParserOptions } from '@babel/parser'
+import { parse, ParserPlugin } from '@babel/parser'
 import { babelParserDefaultPlugins, generateCodeFrame } from '@vue/shared'
 import {
   Node,
