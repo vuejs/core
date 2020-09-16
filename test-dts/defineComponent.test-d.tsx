@@ -597,7 +597,11 @@ describe('extends with mixins', () => {
         type: String,
         default: 'mP1'
       },
-      mP2: Boolean
+      mP2: Boolean,
+      mP3: {
+        type: Boolean,
+        required: true
+      }
     },
     data() {
       return {
@@ -611,6 +615,10 @@ describe('extends with mixins', () => {
       p2: {
         type: Number,
         default: 2
+      },
+      p3: {
+        type: Boolean,
+        required: true
       }
     },
     data() {
@@ -663,11 +671,20 @@ describe('extends with mixins', () => {
   })
 
   // Test TSX
-  expectType<JSX.Element>(<MyComponent mP1="p1" mP2 p1 p2={1} z={'z'} />)
+  expectType<JSX.Element>(<MyComponent mP1="p1" mP2 mP3 p1 p2={1} p3 z={'z'} />)
+
+  // mP1, mP2, p1, and p2 have default value. these are not required
+  expectType<JSX.Element>(<MyComponent mP3 p3 z={'z'} />)
 
   // missing required props
   // @ts-expect-error
-  expectError(<MyComponent />)
+  expectError(<MyComponent mP3 p3 /* z='z' */ />)
+  // missing required props from mixin
+  // @ts-expect-error
+  expectError(<MyComponent /* mP3 */ p3 z="z" />)
+  // missing required props from extends
+  // @ts-expect-error
+  expectError(<MyComponent mP3 /* p3 */ z="z" />)
 
   // wrong prop types
   // @ts-expect-error
