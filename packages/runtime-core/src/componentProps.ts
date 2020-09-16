@@ -63,18 +63,11 @@ type PropMethod<T, TConstructor = any> = T extends (...args: any) => any // if i
   ? { new (): TConstructor; (): T; readonly prototype: TConstructor } // Create Function like constructor
   : never
 
-type RequiredKeys<T, MakeDefaultRequired> = {
-  [K in keyof T]: T[K] extends
-    | { required: true }
-    | (MakeDefaultRequired extends true ? { default: any } : never)
-    ? K
-    : never
+type RequiredKeys<T> = {
+  [K in keyof T]: T[K] extends { required: true } | { default: any } ? K : never
 }[keyof T]
 
-type OptionalKeys<T, MakeDefaultRequired> = Exclude<
-  keyof T,
-  RequiredKeys<T, MakeDefaultRequired>
->
+type OptionalKeys<T> = Exclude<keyof T, RequiredKeys<T>>
 
 type DefaultKeys<T> = {
   [K in keyof T]: T[K] extends { default: any } ? K : never
@@ -90,12 +83,9 @@ type InferPropType<T> = T extends null
         ? boolean
         : T extends Prop<infer V, infer D> ? (unknown extends V ? D : V) : T
 
-export type ExtractPropTypes<
-  O,
-  MakeDefaultRequired extends boolean = true
-> = O extends object
-  ? { [K in RequiredKeys<O, MakeDefaultRequired>]: InferPropType<O[K]> } &
-      { [K in OptionalKeys<O, MakeDefaultRequired>]?: InferPropType<O[K]> }
+export type ExtractPropTypes<O> = O extends object
+  ? { [K in RequiredKeys<O>]: InferPropType<O[K]> } &
+      { [K in OptionalKeys<O>]?: InferPropType<O[K]> }
   : { [K in string]: any }
 
 const enum BooleanFlags {
