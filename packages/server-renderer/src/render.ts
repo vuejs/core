@@ -33,8 +33,7 @@ const {
   setCurrentRenderingInstance,
   setupComponent,
   renderComponentRoot,
-  normalizeVNode,
-  normalizeSuspenseChildren
+  normalizeVNode
 } = ssrUtils
 
 export type SSRBuffer = SSRBufferItem[] & { hasAsync?: boolean }
@@ -200,11 +199,7 @@ export function renderVNode(
       } else if (shapeFlag & ShapeFlags.TELEPORT) {
         renderTeleportVNode(push, vnode, parentComponent)
       } else if (shapeFlag & ShapeFlags.SUSPENSE) {
-        renderVNode(
-          push,
-          normalizeSuspenseChildren(vnode).content,
-          parentComponent
-        )
+        renderVNode(push, vnode.ssContent!, parentComponent)
       } else {
         warn(
           '[@vue/server-renderer] Invalid VNode type:',

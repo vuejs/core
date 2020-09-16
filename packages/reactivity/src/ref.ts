@@ -168,7 +168,9 @@ export function toRef<T extends object, K extends keyof T>(
   object: T,
   key: K
 ): Ref<T[K]> {
-  return new ObjectRefImpl(object, key) as any
+  return isRef(object[key])
+    ? object[key]
+    : (new ObjectRefImpl(object, key) as any)
 }
 
 // corner case when use narrows type

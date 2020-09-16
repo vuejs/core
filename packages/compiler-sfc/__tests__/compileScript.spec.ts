@@ -28,6 +28,15 @@ describe('SFC compile <script setup>', () => {
     )
   })
 
+  test('should extract comment for import or type declarations', () => {
+    assertCode(
+      compile(`<script setup>
+import a from 'a' // comment
+import b from 'b'
+</script>`).content
+    )
+  })
+
   test('explicit setup signature', () => {
     assertCode(
       compile(`<script setup="props, { emit }">emit('foo')</script>`).content
@@ -520,6 +529,22 @@ describe('SFC compile <script setup>', () => {
 })
 
 describe('SFC analyze <script> bindings', () => {
+  it('can parse decorators syntax in typescript block', () => {
+    const { scriptAst } = compile(`
+      <script lang="ts">
+        import { Options, Vue } from 'vue-class-component';
+        @Options({
+          components: {
+            HelloWorld,
+          },
+          props: ['foo', 'bar']
+        })
+        export default class Home extends Vue {}
+      </script>
+    `)
+
+    expect(scriptAst).toBeDefined()
+  })
   it('recognizes props array declaration', () => {
     const { bindings } = compile(`
       <script>

@@ -326,14 +326,14 @@ export function createHydrationFunctions(
 
   const hydrateChildren = (
     node: Node | null,
-    vnode: VNode,
+    parentVNode: VNode,
     container: Element,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
     optimized: boolean
   ): Node | null => {
-    optimized = optimized || !!vnode.dynamicChildren
-    const children = vnode.children as VNode[]
+    optimized = optimized || !!parentVNode.dynamicChildren
+    const children = parentVNode.children as VNode[]
     const l = children.length
     let hasWarned = false
     for (let i = 0; i < l; i++) {

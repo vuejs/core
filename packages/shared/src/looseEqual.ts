@@ -51,3 +51,10 @@ export function looseEqual(a: any, b: any): boolean {
 export function looseIndexOf(arr: any[], val: any): number {
   return arr.findIndex(item => looseEqual(item, val))
 }
+
+export function looseHas(set: Set<any>, val: any): boolean {
+  for (let item of set) {
+    if (looseEqual(item, val)) return true
+  }
+  return false
+}

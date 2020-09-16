@@ -90,7 +90,7 @@ export interface ComponentOptionsBase<
     this: void,
     props: Props,
     ctx: SetupContext<E>
-  ) => RawBindings | RenderFunction | void
+  ) => Promise<RawBindings> | RawBindings | RenderFunction | void
   name?: string
   template?: string | object // can be a direct DOM node
   // Note: we are intentionally using the signature-less `Function` type here
@@ -228,10 +228,29 @@ export type ComponentOptionsWithObjectProps<
     >
   >
 
-export type ComponentOptions =
-  | ComponentOptionsWithoutProps<any, any, any, any, any>
-  | ComponentOptionsWithObjectProps<any, any, any, any, any>
-  | ComponentOptionsWithArrayProps<any, any, any, any, any>
+export type ComponentOptions<
+  Props = {},
+  RawBindings = any,
+  D = any,
+  C extends ComputedOptions = any,
+  M extends MethodOptions = any,
+  Mixin extends ComponentOptionsMixin = any,
+  Extends extends ComponentOptionsMixin = any,
+  E extends EmitsOptions = any
+> = ComponentOptionsBase<Props, RawBindings, D, C, M, Mixin, Extends, E> &
+  ThisType<
+    CreateComponentPublicInstance<
+      {},
+      RawBindings,
+      D,
+      C,
+      M,
+      Mixin,
+      Extends,
+      E,
+      Readonly<Props>
+    >
+  >
 
 export type ComponentOptionsMixin = ComponentOptionsBase<
   any,
@@ -273,7 +292,7 @@ type ComponentInjectOptions =
   | string[]
   | Record<
       string | symbol,
-      string | symbol | { from: string | symbol; default?: unknown }
+      string | symbol | { from?: string | symbol; default?: unknown }
     >
 
 interface LegacyOptions<
@@ -314,7 +333,11 @@ interface LegacyOptions<
   updated?(): void
   activated?(): void
   deactivated?(): void
+  /** @deprecated use `beforeUnmount` instead */
+  beforeDestroy?(): void
   beforeUnmount?(): void
+  /** @deprecated use `unmounted` instead */
+  destroyed?(): void
   unmounted?(): void
   renderTracked?: DebuggerHook
   renderTriggered?: DebuggerHook
@@ -391,7 +414,9 @@ export function applyOptions(
     updated,
     activated,
     deactivated,
+    beforeDestroy,
     beforeUnmount,
+    destroyed,
     unmounted,
     render,
     renderTracked,
@@ -457,7 +482,11 @@ export function applyOptions(
       for (const key in injectOptions) {
         const opt = injectOptions[key]
         if (isObject(opt)) {
-          ctx[key] = inject(opt.from, opt.default)
+          ctx[key] = inject(
+            opt.from || key,
+            opt.default,
+            true /* treat default function as factory */
+          )
         } else {
           ctx[key] = inject(opt)
         }
@@ -625,8 +654,14 @@ export function applyOptions(
   if (renderTriggered) {
     onRenderTriggered(renderTriggered.bind(publicThis))
   }
+  if (__DEV__ && beforeDestroy) {
+    warn(`\`beforeDestroy\` has been renamed to \`beforeUnmount\`.`)
+  }
   if (beforeUnmount) {
     onBeforeUnmount(beforeUnmount.bind(publicThis))
+  }
+  if (__DEV__ && destroyed) {
+    warn(`\`destroyed\` has been renamed to \`unmounted\`.`)
   }
   if (unmounted) {
     onUnmounted(unmounted.bind(publicThis))
@@ -768,23 +803,24 @@ export function resolveMergedOptions(
   const globalMixins = instance.appContext.mixins
   if (!globalMixins.length && !mixins && !extendsOptions) return raw
   const options = {}
-  mergeOptions(options, raw, instance)
   globalMixins.forEach(m => mergeOptions(options, m, instance))
+  mergeOptions(options, raw, instance)
   return (raw.__merged = options)
 }
 
 function mergeOptions(to: any, from: any, instance: ComponentInternalInstance) {
   const strats = instance.appContext.config.optionMergeStrategies
-  for (const key in from) {
-    if (strats && hasOwn(strats, key)) {
-      to[key] = strats[key](to[key], from[key], instance.proxy, key)
-    } else if (!hasOwn(to, key)) {
-      to[key] = from[key]
-    }
-  }
   const { mixins, extends: extendsOptions } = from
 
   extendsOptions && mergeOptions(to, extendsOptions, instance)
   mixins &&
     mixins.forEach((m: ComponentOptionsMixin) => mergeOptions(to, m, instance))
+
+  for (const key in from) {
+    if (strats && hasOwn(strats, key)) {
+      to[key] = strats[key](to[key], from[key], instance.proxy, key)
+    } else {
+      to[key] = from[key]
+    }
+  }
 }

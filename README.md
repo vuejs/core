@@ -39,7 +39,7 @@ As of v4.5.0, `vue-cli` now provides built-in option to choose Vue 3 preset when
 
 There are currently two JSX transform implementations for Vue 3 with slightly differing syntax (for Vue specific features):
 
-- [vueComponent/jsx](https://github.com/vueComponent/jsx)
+- [vuejs/jsx-next](https://github.com/vuejs/jsx-next)
 - [HcySunYang/vue-next-jsx](https://github.com/HcySunYang/vue-next-jsx)
 
 We are using [this thread](https://github.com/vuejs/jsx/issues/141) to unify the design and land on an official specification of how Vue features should be handled in JSX. If you use Vue with JSX, please provide your feedback in that thread.

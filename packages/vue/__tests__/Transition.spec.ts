@@ -1115,12 +1115,11 @@ describe('e2e: Transition', () => {
           createApp({
             template: `
             <div id="container">
-              <Suspense>
-                <transition @enter="onEnterSpy"
-                            @leave="onLeaveSpy">
+              <transition @enter="onEnterSpy" @leave="onLeaveSpy">
+                <Suspense>
                   <Comp v-if="toggle" class="test">content</Comp>
-                </transition>
-              </Suspense>
+                </Suspense>
+              </transition>
             </div>
             <button id="toggleBtn" @click="click">button</button>
           `,
@@ -1138,6 +1137,13 @@ describe('e2e: Transition', () => {
             }
           }).mount('#app')
         })
+
+        expect(onEnterSpy).toBeCalledTimes(1)
+        await nextFrame()
+        expect(await html('#container')).toBe(
+          '<div class="test v-enter-active v-enter-to">content</div>'
+        )
+        await transitionFinish()
         expect(await html('#container')).toBe('<div class="test">content</div>')
 
         // leave
@@ -1174,7 +1180,7 @@ describe('e2e: Transition', () => {
           'v-enter-active',
           'v-enter-from'
         ])
-        expect(onEnterSpy).toBeCalledTimes(1)
+        expect(onEnterSpy).toBeCalledTimes(2)
         await nextFrame()
         expect(await classList('.test')).toStrictEqual([
           'test',
@@ -1196,11 +1202,11 @@ describe('e2e: Transition', () => {
           createApp({
             template: `
             <div id="container">
-              <Suspense>
-                <transition>
+              <transition>
+                <Suspense>
                   <div v-if="toggle" class="test">content</div>
-                </transition>
-              </Suspense>
+                </Suspense>
+              </transition>
             </div>
             <button id="toggleBtn" @click="click">button</button>
           `,
@@ -1242,6 +1248,71 @@ describe('e2e: Transition', () => {
         ])
         await transitionFinish()
         expect(await html('#container')).toBe('<div class="test">content</div>')
+      },
+      E2E_TIMEOUT
+    )
+
+    test(
+      'out-in mode with Suspense',
+      async () => {
+        const onLeaveSpy = jest.fn()
+        const onEnterSpy = jest.fn()
+
+        await page().exposeFunction('onLeaveSpy', onLeaveSpy)
+        await page().exposeFunction('onEnterSpy', onEnterSpy)
+
+        await page().evaluate(() => {
+          const { createApp, shallowRef, h } = (window as any).Vue
+          const One = {
+            async setup() {
+              return () => h('div', { class: 'test' }, 'one')
+            }
+          }
+          const Two = {
+            async setup() {
+              return () => h('div', { class: 'test' }, 'two')
+            }
+          }
+          createApp({
+            template: `
+              <div id="container">
+                <transition mode="out-in">
+                  <Suspense>
+                    <component :is="view"/>
+                  </Suspense>
+                </transition>
+              </div>
+              <button id="toggleBtn" @click="click">button</button>
+            `,
+            setup: () => {
+              const view = shallowRef(One)
+              const click = () => {
+                view.value = view.value === One ? Two : One
+              }
+              return { view, click }
+            }
+          }).mount('#app')
+        })
+
+        await nextFrame()
+        expect(await html('#container')).toBe(
+          '<div class="test v-enter-active v-enter-to">one</div>'
+        )
+        await transitionFinish()
+        expect(await html('#container')).toBe('<div class="test">one</div>')
+
+        // leave
+        await classWhenTransitionStart()
+        await nextFrame()
+        expect(await html('#container')).toBe(
+          '<div class="test v-leave-active v-leave-to">one</div>'
+        )
+        await transitionFinish()
+        expect(await html('#container')).toBe(
+          '<div class="test v-enter-active v-enter-to">two</div>'
+        )
+        await transitionFinish()
+        expect(await html('#container')).toBe('<div class="test">two</div>')
       },
       E2E_TIMEOUT
     )
