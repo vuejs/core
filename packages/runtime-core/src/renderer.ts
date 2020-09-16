@@ -1157,7 +1157,12 @@ function baseCreateRenderer(
         )
         // #2080 if the stable fragment has a key, it's a <template v-for> that may
         //  get moved around. Make sure all root level vnodes inherit el.
-        if (n2.key != null) {
+        // #2134 or if it's a component root, it may also get moved around
+        // as the component is being moved.
+        if (
+          n2.key != null ||
+          (parentComponent && n2 === parentComponent.subTree)
+        ) {
           traverseStaticChildren(n1, n2, true /* shallow */)
         }
       } else {
