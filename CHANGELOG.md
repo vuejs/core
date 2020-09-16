@@ -1,3 +1,21 @@
+# [3.0.0-rc.12](https://github.com/vuejs/vue-next/compare/v3.0.0-rc.11...v3.0.0-rc.12) (2020-09-16)
+
+
+### Bug Fixes
+
+* **reactivity:** effect shoud only recursively self trigger with explicit options ([3810de7](https://github.com/vuejs/vue-next/commit/3810de7d6bd0044177f043285228c2e988093883)), closes [#2125](https://github.com/vuejs/vue-next/issues/2125)
+* **runtime-core:** ensure root stable fragments inherit elements for moving ([bebd44f](https://github.com/vuejs/vue-next/commit/bebd44f793ccd13bfdf90c7e45eac320a340650c)), closes [#2134](https://github.com/vuejs/vue-next/issues/2134)
+* **runtime-core:** should still do full traverse of stable fragment children in dev + hmr ([dd40ad8](https://github.com/vuejs/vue-next/commit/dd40ad8fca47af0e1f0a963be2f48c23f7457952))
+* **runtime-core/async-component:** fix error component when there are no error handlers ([c7b4a37](https://github.com/vuejs/vue-next/commit/c7b4a379cf8627c79a01d61039d3e3b283477dc1)), closes [#2129](https://github.com/vuejs/vue-next/issues/2129)
+* **types/tsx:** optional props from Mixin/Extends are treated as required ([#2048](https://github.com/vuejs/vue-next/issues/2048)) ([89e9ab8](https://github.com/vuejs/vue-next/commit/89e9ab8a2a387f26a370848db0b1ffb1d0ab9549))
+
+
+### Features
+
+* **compiler-sfc:** `additionalData` support for css preprocessors ([#2126](https://github.com/vuejs/vue-next/issues/2126)) ([066d514](https://github.com/vuejs/vue-next/commit/066d514d757fb7e8844104210d7d04cc11598fef))
+
+
+
 # [3.0.0-rc.11](https://github.com/vuejs/vue-next/compare/v3.0.0-rc.10...v3.0.0-rc.11) (2020-09-15)
 
 
