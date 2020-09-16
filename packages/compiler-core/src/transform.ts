@@ -287,8 +287,8 @@ export function transform(root: RootNode, options: TransformOptions) {
 function createRootCodegen(root: RootNode, context: TransformContext) {
   const { helper } = context
   const { children } = root
-  const child = children[0]
   if (children.length === 1) {
+    const child = children[0]
     // if the single child is an element, turn it into a block.
     if (isSingleElementRoot(root, child) && child.codegenNode) {
       // single element root is never hoisted so codegenNode will never be
@@ -399,6 +399,7 @@ export function traverseNode(
   }
 
   // exit transforms
+  context.currentNode = node
   let i = exitFns.length
   while (i--) {
     exitFns[i]()

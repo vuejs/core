@@ -49,6 +49,6 @@ expectError(<KeepAlive include={123} />)
 // Suspense
 expectType<JSX.Element>(<Suspense />)
 expectType<JSX.Element>(<Suspense key="1" />)
-expectType<JSX.Element>(<Suspense onResolve={() => {}} onRecede={() => {}} />)
+expectType<JSX.Element>(<Suspense onResolve={() => {}} onFallback={() => {}} />)
 // @ts-expect-error
 expectError(<Suspense onResolve={123} />)

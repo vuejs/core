@@ -52,10 +52,13 @@ export interface BaseTransitionProps<HostElement = RendererElement> {
 export interface TransitionHooks<
   HostElement extends RendererElement = RendererElement
 > {
+  mode: BaseTransitionProps['mode']
   persisted: boolean
   beforeEnter(el: HostElement): void
   enter(el: HostElement): void
   leave(el: HostElement, remove: () => void): void
+  clone(vnode: VNode): TransitionHooks<HostElement>
+  // optional
   afterLeave?(): void
   delayLeave?(
     el: HostElement,
@@ -174,12 +177,13 @@ const BaseTransitionImpl = {
         return emptyPlaceholder(child)
       }
 
-      const enterHooks = (innerChild.transition = resolveTransitionHooks(
+      const enterHooks = resolveTransitionHooks(
         innerChild,
         rawProps,
         state,
         instance
-      ))
+      )
+      setTransitionHooks(innerChild, enterHooks)
 
       const oldChild = instance.subTree
       const oldInnerChild = oldChild && getKeepAliveChild(oldChild)
@@ -271,8 +275,13 @@ function getLeavingNodesForType(
 // and will be called at appropriate timing in the renderer.
 export function resolveTransitionHooks(
   vnode: VNode,
-  {
+  props: BaseTransitionProps<any>,
+  state: TransitionState,
+  instance: ComponentInternalInstance
+): TransitionHooks {
+  const {
     appear,
+    mode,
     persisted = false,
     onBeforeEnter,
     onEnter,
@@ -286,10 +295,7 @@ export function resolveTransitionHooks(
     onAppear,
     onAfterAppear,
     onAppearCancelled
-  }: BaseTransitionProps<any>,
-  state: TransitionState,
-  instance: ComponentInternalInstance
-): TransitionHooks {
+  } = props
   const key = String(vnode.key)
   const leavingVNodesCache = getLeavingNodesForType(state, vnode)
 
@@ -304,6 +310,7 @@ export function resolveTransitionHooks(
   }
 
   const hooks: TransitionHooks<TransitionElement> = {
+    mode,
     persisted,
     beforeEnter(el) {
       let hook = onBeforeEnter
@@ -401,6 +408,10 @@ export function resolveTransitionHooks(
       } else {
         done()
       }
+    },
+
+    clone(vnode) {
+      return resolveTransitionHooks(vnode, props, state, instance)
     }
   }
 
@@ -430,6 +441,9 @@ function getKeepAliveChild(vnode: VNode): VNode | undefined {
 export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks) {
   if (vnode.shapeFlag & ShapeFlags.COMPONENT && vnode.component) {
     setTransitionHooks(vnode.component.subTree, hooks)
+  } else if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
+    vnode.ssContent!.transition = hooks.clone(vnode.ssContent!)
+    vnode.ssFallback!.transition = hooks.clone(vnode.ssFallback!)
   } else {
     vnode.transition = hooks
   }

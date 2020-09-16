@@ -336,4 +336,26 @@ describe('SFC style preprocessors', () => {
       path.join(__dirname, './fixture/import.scss')
     ])
   })
+
+  test('scss respect user-defined options.additionalData', () => {
+    const res = compileStyle({
+      preprocessOptions: {
+        additionalData: `
+          @mixin square($size) {
+            width: $size;
+            height: $size;
+          }`
+      },
+      source: `
+        .square {
+          @include square(100px);
+        }
+      `,
+      filename: path.resolve(__dirname, './fixture/test.scss'),
+      id: '',
+      preprocessLang: 'scss'
+    })
+
+    expect(res.errors.length).toBe(0)
+  })
 })

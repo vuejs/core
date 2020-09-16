@@ -1,4 +1,4 @@
-import { createApp, ref, nextTick } from '../src'
+import { createApp, ref, nextTick, reactive } from '../src'
 
 describe('compiler + runtime integration', () => {
   it('should support runtime template compilation', () => {
@@ -24,7 +24,7 @@ describe('compiler + runtime integration', () => {
       mounted: jest.fn(),
       activated: jest.fn(),
       deactivated: jest.fn(),
-      destroyed: jest.fn()
+      unmounted: jest.fn()
     }
 
     const toggle = ref(true)
@@ -50,7 +50,7 @@ describe('compiler + runtime integration', () => {
     expect(one.mounted).toHaveBeenCalledTimes(1)
     expect(one.activated).toHaveBeenCalledTimes(1)
     expect(one.deactivated).toHaveBeenCalledTimes(0)
-    expect(one.destroyed).toHaveBeenCalledTimes(0)
+    expect(one.unmounted).toHaveBeenCalledTimes(0)
 
     toggle.value = false
     await nextTick()
@@ -59,7 +59,7 @@ describe('compiler + runtime integration', () => {
     expect(one.mounted).toHaveBeenCalledTimes(1)
     expect(one.activated).toHaveBeenCalledTimes(1)
     expect(one.deactivated).toHaveBeenCalledTimes(1)
-    expect(one.destroyed).toHaveBeenCalledTimes(0)
+    expect(one.unmounted).toHaveBeenCalledTimes(0)
 
     toggle.value = true
     await nextTick()
@@ -68,7 +68,7 @@ describe('compiler + runtime integration', () => {
     expect(one.mounted).toHaveBeenCalledTimes(1)
     expect(one.activated).toHaveBeenCalledTimes(2)
     expect(one.deactivated).toHaveBeenCalledTimes(1)
-    expect(one.destroyed).toHaveBeenCalledTimes(0)
+    expect(one.unmounted).toHaveBeenCalledTimes(0)
   })
 
   it('should support runtime template via CSS ID selector', () => {
@@ -246,5 +246,39 @@ describe('compiler + runtime integration', () => {
     expect(target.innerHTML).toBe(``)
 
     document.querySelector = origin
+  })
+
+  test('v-if + v-once', async () => {
+    const ok = ref(true)
+    const App = {
+      setup() {
+        return { ok }
+      },
+      template: `<div>{{ ok }}<div v-if="ok" v-once>{{ ok }}</div></div>`
+    }
+    const container = document.createElement('div')
+    createApp(App).mount(container)
+
+    expect(container.innerHTML).toBe(`<div>true<div>true</div></div>`)
+    ok.value = false
+    await nextTick()
+    expect(container.innerHTML).toBe(`<div>false<div>true</div></div>`)
+  })
+
+  test('v-for + v-once', async () => {
+    const list = reactive([1])
+    const App = {
+      setup() {
+        return { list }
+      },
+      template: `<div>{{ list.length }}<div v-for="i in list" v-once>{{ i }}</div></div>`
+    }
+    const container = document.createElement('div')
+    createApp(App).mount(container)
+
+    expect(container.innerHTML).toBe(`<div>1<div>1</div></div>`)
+    list.push(2)
+    await nextTick()
+    expect(container.innerHTML).toBe(`<div>2<div>1</div></div>`)
   })
 })
