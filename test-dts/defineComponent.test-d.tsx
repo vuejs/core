@@ -10,7 +10,8 @@ import {
   expectType,
   ComponentPublicInstance,
   ComponentOptions,
-  SetupContext
+  SetupContext,
+  h
 } from './index'
 
 describe('with object props', () => {
@@ -900,3 +901,23 @@ describe('async setup', () => {
   // setup context properties should be mutable
   vm.a = 2
 })
+
+// check if defineComponent can be exported
+export default {
+  // function components
+  a: defineComponent(_ => h('div')),
+  // no props
+  b: defineComponent({
+    data() {
+      return {}
+    }
+  }),
+  c: defineComponent({
+    props: ['a']
+  }),
+  d: defineComponent({
+    props: {
+      a: Number
+    }
+  })
+}
