@@ -9,6 +9,7 @@
     "allowJs": false,
     "strict": true,
     "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "experimentalDecorators": true,
     "resolveJsonModule": true,
     "esModuleInterop": true,
