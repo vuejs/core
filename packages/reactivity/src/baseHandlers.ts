@@ -31,9 +31,12 @@ const shallowGet = /*#__PURE__*/ createGetter(false, true)
 const readonlyGet = /*#__PURE__*/ createGetter(true)
 const shallowReadonlyGet = /*#__PURE__*/ createGetter(true, true)
 
-const arrayInstrumentations: Record<string, Function> = {}
+const commonArrayInstrumentations: Record<string, Function> = {}
 ;(['includes', 'indexOf', 'lastIndexOf'] as const).forEach(key => {
-  arrayInstrumentations[key] = function(this: unknown[], ...args: unknown[]) {
+  commonArrayInstrumentations[key] = function(
+    this: unknown[],
+    ...args: unknown[]
+  ) {
     const arr = toRaw(this)
     for (let i = 0, l = this.length; i < l; i++) {
       track(arr, TrackOpTypes.GET, i + '')
@@ -74,8 +77,8 @@ function createGetter(isReadonly = false, shallow = false) {
 
     const targetIsArray = isArray(target)
     if (targetIsArray) {
-      if (hasOwn(arrayInstrumentations, key))
-        return Reflect.get(arrayInstrumentations, key, receiver)
+      if (hasOwn(commonArrayInstrumentations, key))
+        return Reflect.get(commonArrayInstrumentations, key, receiver)
       if (!isReadonly && hasOwn(mutableArrayInstrumentations, key))
         return Reflect.get(mutableArrayInstrumentations, key, receiver)
     }
