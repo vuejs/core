@@ -900,3 +900,10 @@ describe('async setup', () => {
   // setup context properties should be mutable
   vm.a = 2
 })
+
+// check if defineComponent can be exported
+export default defineComponent({
+  setup() {
+    return {}
+  }
+})
