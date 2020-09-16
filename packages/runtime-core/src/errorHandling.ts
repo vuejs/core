@@ -153,7 +153,7 @@ function logError(
     // crash in dev by default so it's more noticeable
     if (throwInDev) {
       throw err
-    } else {
+    } else if (!__TEST__) {
       console.error(err)
     }
   } else {
