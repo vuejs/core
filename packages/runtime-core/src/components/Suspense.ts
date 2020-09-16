@@ -502,7 +502,7 @@ function createSuspenseBoundary(
         optimized
       } = suspense
 
-      // invoke @recede event
+      // invoke @fallback event
       const onFallback = vnode.props && vnode.props.onFallback
       if (isFunction(onFallback)) {
         onFallback()
