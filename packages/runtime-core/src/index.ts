@@ -41,7 +41,7 @@ export {
 } from './apiLifecycle'
 export { provide, inject } from './apiInject'
 export { nextTick } from './scheduler'
-export { defineComponent, DefineComponent } from './apiDefineComponent'
+export { defineComponent } from './apiDefineComponent'
 export { defineAsyncComponent } from './apiAsyncComponent'
 
 // Advanced API ----------------------------------------------------------------
@@ -166,6 +166,7 @@ export {
   ComponentCustomProps,
   AllowedComponentProps
 } from './component'
+export { DefineComponent } from './apiDefineComponent'
 export {
   ComponentOptions,
   ComponentOptionsMixin,
@@ -174,8 +175,11 @@ export {
   ComponentOptionsWithArrayProps,
   ComponentCustomOptions,
   ComponentOptionsBase,
-  RenderFunction
+  RenderFunction,
+  MethodOptions,
+  ComputedOptions
 } from './componentOptions'
+export { EmitsOptions, ObjectEmitsOptions } from './componentEmits'
 export {
   ComponentPublicInstance,
   ComponentCustomProperties
@@ -195,7 +199,8 @@ export {
   PropType,
   ComponentPropsOptions,
   ComponentObjectPropsOptions,
-  ExtractPropTypes
+  ExtractPropTypes,
+  ExtractDefaultPropTypes
 } from './componentProps'
 export {
   Directive,

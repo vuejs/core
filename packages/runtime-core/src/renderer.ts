@@ -44,7 +44,6 @@ import {
   flushPostFlushCbs,
   invalidateJob,
   flushPreFlushCbs,
-  SchedulerJob,
   SchedulerCb
 } from './scheduler'
 import { effect, stop, ReactiveEffectOptions, isRef } from '@vue/reactivity'
@@ -261,7 +260,9 @@ export const enum MoveType {
 }
 
 const prodEffectOptions = {
-  scheduler: queueJob
+  scheduler: queueJob,
+  // #1801, #2043 component render effects should allow recursive updates
+  allowRecurse: true
 }
 
 function createDevEffectOptions(
@@ -269,6 +270,7 @@ function createDevEffectOptions(
 ): ReactiveEffectOptions {
   return {
     scheduler: queueJob,
+    allowRecurse: true,
     onTrack: instance.rtc ? e => invokeArrayFns(instance.rtc!, e) : void 0,
     onTrigger: instance.rtg ? e => invokeArrayFns(instance.rtg!, e) : void 0
   }
@@ -1489,8 +1491,6 @@ function baseCreateRenderer(
         }
       }
     }, __DEV__ ? createDevEffectOptions(instance) : prodEffectOptions)
-    // #1801 mark it to allow recursive updates
-    ;(instance.update as SchedulerJob).allowRecurse = true
   }
 
   const updateComponentPreRender = (

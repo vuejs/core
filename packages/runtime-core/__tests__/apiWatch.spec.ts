@@ -779,4 +779,17 @@ describe('api: watch', () => {
     // should trigger now
     expect(sideEffect).toBe(2)
   })
+
+  // #2125
+  test('watchEffect should not recursively trigger itself', async () => {
+    const spy = jest.fn()
+    const price = ref(10)
+    const history = ref<number[]>([])
+    watchEffect(() => {
+      history.value.push(price.value)
+      spy()
+    })
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
 })
