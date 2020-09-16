@@ -49,6 +49,16 @@ const arrayInstrumentations: Record<string, Function> = {}
   }
 })
 
+const mutableArrayInstrumentations: Record<string, Function> = {
+  push(this: unknown[], ...args: unknown[]) {
+    const arr = toRaw(this)
+    arr.push(...args)
+    const len = arr.length
+    trigger(arr, TriggerOpTypes.ADD, len + '')
+    return len
+  }
+}
+
 function createGetter(isReadonly = false, shallow = false) {
   return function get(target: Target, key: string | symbol, receiver: object) {
     if (key === ReactiveFlags.IS_REACTIVE) {
@@ -63,8 +73,11 @@ function createGetter(isReadonly = false, shallow = false) {
     }
 
     const targetIsArray = isArray(target)
-    if (targetIsArray && hasOwn(arrayInstrumentations, key)) {
-      return Reflect.get(arrayInstrumentations, key, receiver)
+    if (targetIsArray) {
+      if (hasOwn(arrayInstrumentations, key))
+        return Reflect.get(arrayInstrumentations, key, receiver)
+      if (!isReadonly && hasOwn(mutableArrayInstrumentations, key))
+        return Reflect.get(mutableArrayInstrumentations, key, receiver)
     }
 
     const res = Reflect.get(target, key, receiver)

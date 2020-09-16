@@ -358,6 +358,20 @@ describe('reactivity/effect', () => {
     expect(counterSpy).toHaveBeenCalledTimes(2)
   })
 
+  it('should avoid infinite recursive loops when use Array.prototype.push', () => {
+    const arr = reactive<number[]>([])
+
+    const counterSpy1 = jest.fn(() => arr.push(1))
+    const counterSpy2 = jest.fn(() => arr.push(2))
+    effect(counterSpy1)
+    effect(counterSpy2)
+    expect(arr.length).toBe(2)
+    expect(counterSpy1).toHaveBeenCalledTimes(1)
+    arr.push(3)
+    expect(arr.length).toBe(3)
+    expect(counterSpy1).toHaveBeenCalledTimes(1)
+  })
+
   it('should allow explicitly recursive raw function loops', () => {
     const counter = reactive({ num: 0 })
     const numSpy = jest.fn(() => {
