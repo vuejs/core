@@ -336,4 +336,54 @@ describe('SFC style preprocessors', () => {
       path.join(__dirname, './fixture/import.scss')
     ])
   })
+
+  test('scss respect user-defined string options.additionalData', () => {
+    const res = compileStyle({
+      preprocessOptions: {
+        additionalData: `
+          @mixin square($size) {
+            width: $size;
+            height: $size;
+          }`
+      },
+      source: `
+        .square {
+          @include square(100px);
+        }
+      `,
+      filename: path.resolve(__dirname, './fixture/test.scss'),
+      id: '',
+      preprocessLang: 'scss'
+    })
+
+    expect(res.errors.length).toBe(0)
+  })
+
+  test('scss respect user-defined function options.additionalData', () => {
+    const source = `
+        .square {
+          @include square(100px);
+        }
+      `
+    const filename = path.resolve(__dirname, './fixture/test.scss')
+    const res = compileStyle({
+      preprocessOptions: {
+        additionalData: (s: string, f: string) => {
+          expect(s).toBe(source)
+          expect(f).toBe(filename)
+          return `
+          @mixin square($size) {
+            width: $size;
+            height: $size;
+          }`
+        }
+      },
+      source,
+      filename,
+      id: '',
+      preprocessLang: 'scss'
+    })
+
+    expect(res.errors.length).toBe(0)
+  })
 })

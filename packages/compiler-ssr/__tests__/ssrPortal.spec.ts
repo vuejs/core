@@ -2,7 +2,7 @@ import { compile } from '../src'
 
 describe('ssr compile: teleport', () => {
   test('should work', () => {
-    expect(compile(`<teleport :target="target"><div/></teleport>`).code)
+    expect(compile(`<teleport :to="target"><div/></teleport>`).code)
       .toMatchInlineSnapshot(`
       "const { ssrRenderTeleport: _ssrRenderTeleport } = require(\\"@vue/server-renderer\\")
 
@@ -15,9 +15,8 @@ describe('ssr compile: teleport', () => {
   })
 
   test('disabled prop handling', () => {
-    expect(
-      compile(`<teleport :target="target" disabled><div/></teleport>`).code
-    ).toMatchInlineSnapshot(`
+    expect(compile(`<teleport :to="target" disabled><div/></teleport>`).code)
+      .toMatchInlineSnapshot(`
       "const { ssrRenderTeleport: _ssrRenderTeleport } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
@@ -28,8 +27,7 @@ describe('ssr compile: teleport', () => {
     `)
 
     expect(
-      compile(`<teleport :target="target" :disabled="foo"><div/></teleport>`)
-        .code
+      compile(`<teleport :to="target" :disabled="foo"><div/></teleport>`).code
     ).toMatchInlineSnapshot(`
       "const { ssrRenderTeleport: _ssrRenderTeleport } = require(\\"@vue/server-renderer\\")
 

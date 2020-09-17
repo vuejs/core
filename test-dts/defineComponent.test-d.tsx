@@ -10,7 +10,8 @@ import {
   expectType,
   ComponentPublicInstance,
   ComponentOptions,
-  SetupContext
+  SetupContext,
+  h
 } from './index'
 
 describe('with object props', () => {
@@ -596,7 +597,11 @@ describe('extends with mixins', () => {
         type: String,
         default: 'mP1'
       },
-      mP2: Boolean
+      mP2: Boolean,
+      mP3: {
+        type: Boolean,
+        required: true
+      }
     },
     data() {
       return {
@@ -610,6 +615,10 @@ describe('extends with mixins', () => {
       p2: {
         type: Number,
         default: 2
+      },
+      p3: {
+        type: Boolean,
+        required: true
       }
     },
     data() {
@@ -662,11 +671,20 @@ describe('extends with mixins', () => {
   })
 
   // Test TSX
-  expectType<JSX.Element>(<MyComponent mP1="p1" mP2 p1 p2={1} z={'z'} />)
+  expectType<JSX.Element>(<MyComponent mP1="p1" mP2 mP3 p1 p2={1} p3 z={'z'} />)
+
+  // mP1, mP2, p1, and p2 have default value. these are not required
+  expectType<JSX.Element>(<MyComponent mP3 p3 z={'z'} />)
 
   // missing required props
   // @ts-expect-error
-  expectError(<MyComponent />)
+  expectError(<MyComponent mP3 p3 /* z='z' */ />)
+  // missing required props from mixin
+  // @ts-expect-error
+  expectError(<MyComponent /* mP3 */ p3 z="z" />)
+  // missing required props from extends
+  // @ts-expect-error
+  expectError(<MyComponent mP3 /* p3 */ z="z" />)
 
   // wrong prop types
   // @ts-expect-error
@@ -864,3 +882,59 @@ describe('extract instance type', () => {
   //  @ts-expect-error
   expectError((compA.baseA = 1))
 })
+
+describe('async setup', () => {
+  type GT = string & { __brand: unknown }
+  const Comp = defineComponent({
+    async setup() {
+      // setup context
+      return {
+        a: ref(1),
+        b: {
+          c: ref('hi')
+        },
+        d: reactive({
+          e: ref('hello' as GT)
+        })
+      }
+    },
+    render() {
+      // assert setup context unwrapping
+      expectType<number>(this.a)
+      expectType<string>(this.b.c.value)
+      expectType<GT>(this.d.e)
+
+      // setup context properties should be mutable
+      this.a = 2
+    }
+  })
+
+  const vm = {} as InstanceType<typeof Comp>
+  // assert setup context unwrapping
+  expectType<number>(vm.a)
+  expectType<string>(vm.b.c.value)
+  expectType<GT>(vm.d.e)
+
+  // setup context properties should be mutable
+  vm.a = 2
+})
+
+// check if defineComponent can be exported
+export default {
+  // function components
+  a: defineComponent(_ => h('div')),
+  // no props
+  b: defineComponent({
+    data() {
+      return {}
+    }
+  }),
+  c: defineComponent({
+    props: ['a']
+  }),
+  d: defineComponent({
+    props: {
+      a: Number
+    }
+  })
+}

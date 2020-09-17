@@ -253,7 +253,16 @@ describe('api: options', () => {
         }
       },
       render() {
-        return [h(ChildA), h(ChildB), h(ChildC), h(ChildD), h(ChildE)]
+        return [
+          h(ChildA),
+          h(ChildB),
+          h(ChildC),
+          h(ChildD),
+          h(ChildE),
+          h(ChildF),
+          h(ChildG),
+          h(ChildH)
+        ]
       }
     })
 
@@ -272,19 +281,37 @@ describe('api: options', () => {
         from: 'a'
       }
     })
-    const ChildD = defineChild({
+    const ChildD = defineChild(
+      {
+        a: {
+          default: () => 0
+        }
+      },
+      'a'
+    )
+    const ChildE = defineChild({
       b: {
         from: 'c',
         default: 2
       }
     })
-    const ChildE = defineChild({
+    const ChildF = defineChild({
       b: {
         from: 'c',
         default: () => 3
       }
     })
-    expect(renderToString(h(Root))).toBe(`11123`)
+    const ChildG = defineChild({
+      b: {
+        default: 4
+      }
+    })
+    const ChildH = defineChild({
+      b: {
+        default: () => 5
+      }
+    })
+    expect(renderToString(h(Root))).toBe(`11112345`)
   })
 
   test('lifecycle', async () => {

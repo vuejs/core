@@ -18,6 +18,7 @@ import { PatchFlags, ShapeFlags, isOn, isModelListener } from '@vue/shared'
 import { warn } from './warning'
 import { isHmrUpdating } from './hmr'
 import { NormalizedProps } from './componentProps'
+import { isEmitListener } from './componentEmits'
 
 // mark the current rendering instance for asset resolution (e.g.
 // resolveComponent, resolveDirective) during render
@@ -290,8 +291,9 @@ export function shouldUpdateComponent(
   nextVNode: VNode,
   optimized?: boolean
 ): boolean {
-  const { props: prevProps, children: prevChildren } = prevVNode
+  const { props: prevProps, children: prevChildren, component } = prevVNode
   const { props: nextProps, children: nextChildren, patchFlag } = nextVNode
+  const emits = component!.emitsOptions
 
   // Parent component's render function was hot-updated. Since this may have
   // caused the child component's slots content to have changed, we need to
@@ -316,12 +318,15 @@ export function shouldUpdateComponent(
         return !!nextProps
       }
       // presence of this flag indicates props are always non-null
-      return hasPropsChanged(prevProps, nextProps!)
+      return hasPropsChanged(prevProps, nextProps!, emits)
     } else if (patchFlag & PatchFlags.PROPS) {
       const dynamicProps = nextVNode.dynamicProps!
       for (let i = 0; i < dynamicProps.length; i++) {
         const key = dynamicProps[i]
-        if (nextProps![key] !== prevProps![key]) {
+        if (
+          nextProps![key] !== prevProps![key] &&
+          !isEmitListener(emits, key)
+        ) {
           return true
         }
       }
@@ -343,20 +348,27 @@ export function shouldUpdateComponent(
     if (!nextProps) {
       return true
     }
-    return hasPropsChanged(prevProps, nextProps)
+    return hasPropsChanged(prevProps, nextProps, emits)
   }
 
   return false
 }
 
-function hasPropsChanged(prevProps: Data, nextProps: Data): boolean {
+function hasPropsChanged(
+  prevProps: Data,
+  nextProps: Data,
+  emitsOptions: ComponentInternalInstance['emitsOptions']
+): boolean {
   const nextKeys = Object.keys(nextProps)
   if (nextKeys.length !== Object.keys(prevProps).length) {
     return true
   }
   for (let i = 0; i < nextKeys.length; i++) {
     const key = nextKeys[i]
-    if (nextProps[key] !== prevProps[key]) {
+    if (
+      nextProps[key] !== prevProps[key] &&
+      !isEmitListener(emitsOptions, key)
+    ) {
       return true
     }
   }

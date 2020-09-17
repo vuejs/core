@@ -230,20 +230,20 @@ describe('vnode', () => {
 
     setCurrentRenderingInstance(mockInstance1)
     const original = createVNode('div', { ref: 'foo' })
-    expect(original.ref).toEqual([mockInstance1, 'foo'])
+    expect(original.ref).toStrictEqual({ i: mockInstance1, r: 'foo' })
 
     // clone and preserve original ref
     const cloned1 = cloneVNode(original)
-    expect(cloned1.ref).toEqual([mockInstance1, 'foo'])
+    expect(cloned1.ref).toStrictEqual({ i: mockInstance1, r: 'foo' })
 
     // cloning with new ref, but with same context instance
     const cloned2 = cloneVNode(original, { ref: 'bar' })
-    expect(cloned2.ref).toEqual([mockInstance1, 'bar'])
+    expect(cloned2.ref).toStrictEqual({ i: mockInstance1, r: 'bar' })
 
     // cloning and adding ref to original that has no ref
     const original2 = createVNode('div')
     const cloned3 = cloneVNode(original2, { ref: 'bar' })
-    expect(cloned3.ref).toEqual([mockInstance1, 'bar'])
+    expect(cloned3.ref).toStrictEqual({ i: mockInstance1, r: 'bar' })
 
     // cloning with different context instance
     setCurrentRenderingInstance(mockInstance2)
@@ -251,16 +251,35 @@ describe('vnode', () => {
     // clone and preserve original ref
     const cloned4 = cloneVNode(original)
     // #1311 should preserve original context instance!
-    expect(cloned4.ref).toEqual([mockInstance1, 'foo'])
+    expect(cloned4.ref).toStrictEqual({ i: mockInstance1, r: 'foo' })
 
     // cloning with new ref, but with same context instance
     const cloned5 = cloneVNode(original, { ref: 'bar' })
     // new ref should use current context instance and overwrite original
-    expect(cloned5.ref).toEqual([mockInstance2, 'bar'])
+    expect(cloned5.ref).toStrictEqual({ i: mockInstance2, r: 'bar' })
 
     // cloning and adding ref to original that has no ref
     const cloned6 = cloneVNode(original2, { ref: 'bar' })
-    expect(cloned6.ref).toEqual([mockInstance2, 'bar'])
+    expect(cloned6.ref).toStrictEqual({ i: mockInstance2, r: 'bar' })
+
+    setCurrentRenderingInstance(null)
+  })
+
+  test('cloneVNode ref merging', () => {
+    const mockInstance1 = {} as any
+    const mockInstance2 = {} as any
+
+    setCurrentRenderingInstance(mockInstance1)
+    const original = createVNode('div', { ref: 'foo' })
+    expect(original.ref).toStrictEqual({ i: mockInstance1, r: 'foo' })
+
+    // clone and preserve original ref
+    setCurrentRenderingInstance(mockInstance2)
+    const cloned1 = cloneVNode(original, { ref: 'bar' }, true)
+    expect(cloned1.ref).toStrictEqual([
+      { i: mockInstance1, r: 'foo' },
+      { i: mockInstance2, r: 'bar' }
+    ])
 
     setCurrentRenderingInstance(null)
   })

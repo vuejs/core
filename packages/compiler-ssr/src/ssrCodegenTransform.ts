@@ -50,7 +50,7 @@ export function ssrCodegenTransform(ast: RootNode, options: CompilerOptions) {
     )
     context.body.push(
       createCompoundExpression([
-        `const _cssVars = ${ssrHelpers[SSR_RESOLVE_CSS_VARS]}(`,
+        `const _cssVars = _${ssrHelpers[SSR_RESOLVE_CSS_VARS]}(`,
         varsExp,
         options.scopeId ? `, ${JSON.stringify(options.scopeId)}` : ``,
         `)`

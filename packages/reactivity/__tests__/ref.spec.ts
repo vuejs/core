@@ -236,6 +236,10 @@ describe('reactivity/ref', () => {
     // mutating source should trigger effect using the proxy refs
     a.x = 4
     expect(dummyX).toBe(4)
+
+    // should keep ref
+    const r = { x: ref(1) }
+    expect(toRef(r, 'x')).toBe(r.x)
   })
 
   test('toRefs', () => {
@@ -292,12 +296,12 @@ describe('reactivity/ref', () => {
   test('toRefs reactive array', () => {
     const arr = reactive(['a', 'b', 'c'])
     const refs = toRefs(arr)
-    
+
     expect(Array.isArray(refs)).toBe(true)
-    
+
     refs[0].value = '1'
     expect(arr[0]).toBe('1')
-    
+
     arr[1] = '2'
     expect(refs[1].value).toBe('2')
   })

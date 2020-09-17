@@ -13,8 +13,8 @@ import {
   onBeforeUnmount,
   injectHook,
   onUnmounted,
-  onBeforeMount,
-  onBeforeUpdate
+  onMounted,
+  onUpdated
 } from '../apiLifecycle'
 import {
   isString,
@@ -175,7 +175,7 @@ const KeepAliveImpl = {
       () => [props.include, props.exclude],
       ([include, exclude]) => {
         include && pruneCache(name => matches(include, name))
-        exclude && pruneCache(name => matches(exclude, name))
+        exclude && pruneCache(name => !matches(exclude, name))
       }
     )
 
@@ -184,20 +184,21 @@ const KeepAliveImpl = {
     const cacheSubtree = () => {
       // fix #1621, the pendingCacheKey could be 0
       if (pendingCacheKey != null) {
-        cache.set(pendingCacheKey, instance.subTree)
+        cache.set(pendingCacheKey, getInnerChild(instance.subTree))
       }
     }
-    onBeforeMount(cacheSubtree)
-    onBeforeUpdate(cacheSubtree)
+    onMounted(cacheSubtree)
+    onUpdated(cacheSubtree)
 
     onBeforeUnmount(() => {
       cache.forEach(cached => {
         const { subTree, suspense } = instance
-        if (cached.type === subTree.type) {
+        const vnode = getInnerChild(subTree)
+        if (cached.type === vnode.type) {
           // current instance will be unmounted as part of keep-alive's unmount
-          resetShapeFlag(subTree)
+          resetShapeFlag(vnode)
           // but invoke its deactivated hook here
-          const da = subTree.component!.da
+          const da = vnode.component!.da
           da && queuePostRenderEffect(da, suspense)
           return
         }
@@ -213,7 +214,7 @@ const KeepAliveImpl = {
       }
 
       const children = slots.default()
-      let vnode = children[0]
+      const rawVNode = children[0]
       if (children.length > 1) {
         if (__DEV__) {
           warn(`KeepAlive should contain exactly one component child.`)
@@ -221,13 +222,15 @@ const KeepAliveImpl = {
         current = null
         return children
       } else if (
-        !isVNode(vnode) ||
-        !(vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT)
+        !isVNode(rawVNode) ||
+        (!(rawVNode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) &&
+          !(rawVNode.shapeFlag & ShapeFlags.SUSPENSE))
       ) {
         current = null
-        return vnode
+        return rawVNode
       }
 
+      let vnode = getInnerChild(rawVNode)
       const comp = vnode.type as ConcreteComponent
       const name = getName(comp)
       const { include, exclude, max } = props
@@ -236,7 +239,8 @@ const KeepAliveImpl = {
         (include && (!name || !matches(include, name))) ||
         (exclude && name && matches(exclude, name))
       ) {
-        return (current = vnode)
+        current = vnode
+        return rawVNode
       }
 
       const key = vnode.key == null ? comp : vnode.key
@@ -245,6 +249,9 @@ const KeepAliveImpl = {
       // clone vnode if it's reused because we are going to mutate it
       if (vnode.el) {
         vnode = cloneVNode(vnode)
+        if (rawVNode.shapeFlag & ShapeFlags.SUSPENSE) {
+          rawVNode.ssContent = vnode
+        }
       }
       // #1513 it's possible for the returned vnode to be cloned due to attr
       // fallthrough or scopeId, so the vnode here may not be the final vnode
@@ -277,7 +284,7 @@ const KeepAliveImpl = {
       vnode.shapeFlag |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
 
       current = vnode
-      return vnode
+      return rawVNode
     }
   }
 }
@@ -382,4 +389,8 @@ function resetShapeFlag(vnode: VNode) {
     shapeFlag -= ShapeFlags.COMPONENT_KEPT_ALIVE
   }
   vnode.shapeFlag = shapeFlag
+}
+
+function getInnerChild(vnode: VNode) {
+  return vnode.shapeFlag & ShapeFlags.SUSPENSE ? vnode.ssContent! : vnode
 }

@@ -42,7 +42,11 @@ import {
   WritableComputedOptions,
   toRaw
 } from '@vue/reactivity'
-import { ComponentObjectPropsOptions, ExtractPropTypes } from './componentProps'
+import {
+  ComponentObjectPropsOptions,
+  ExtractPropTypes,
+  ExtractDefaultPropTypes
+} from './componentProps'
 import { EmitsOptions } from './componentEmits'
 import { Directive } from './directives'
 import {
@@ -81,7 +85,8 @@ export interface ComponentOptionsBase<
   Mixin extends ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin,
   E extends EmitsOptions,
-  EE extends string = string
+  EE extends string = string,
+  Defaults = {}
 >
   extends LegacyOptions<Props, D, C, M, Mixin, Extends>,
     ComponentInternalOptions,
@@ -90,7 +95,7 @@ export interface ComponentOptionsBase<
     this: void,
     props: Props,
     ctx: SetupContext<E>
-  ) => RawBindings | RenderFunction | void
+  ) => Promise<RawBindings> | RawBindings | RenderFunction | void
   name?: string
   template?: string | object // can be a direct DOM node
   // Note: we are intentionally using the signature-less `Function` type here
@@ -148,6 +153,8 @@ export interface ComponentOptionsBase<
   __isFragment?: never
   __isTeleport?: never
   __isSuspense?: never
+
+  __defaults?: Defaults
 }
 
 export type ComponentOptionsWithoutProps<
@@ -159,8 +166,20 @@ export type ComponentOptionsWithoutProps<
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
-  EE extends string = string
-> = ComponentOptionsBase<Props, RawBindings, D, C, M, Mixin, Extends, E, EE> & {
+  EE extends string = string,
+  Defaults = {}
+> = ComponentOptionsBase<
+  Props,
+  RawBindings,
+  D,
+  C,
+  M,
+  Mixin,
+  Extends,
+  E,
+  EE,
+  Defaults
+> & {
   props?: undefined
 } & ThisType<
     CreateComponentPublicInstance<
@@ -172,7 +191,9 @@ export type ComponentOptionsWithoutProps<
       Mixin,
       Extends,
       E,
-      Readonly<Props>
+      Readonly<Props>,
+      Defaults,
+      false
     >
   >
 
@@ -187,7 +208,18 @@ export type ComponentOptionsWithArrayProps<
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
   Props = Readonly<{ [key in PropNames]?: any }>
-> = ComponentOptionsBase<Props, RawBindings, D, C, M, Mixin, Extends, E, EE> & {
+> = ComponentOptionsBase<
+  Props,
+  RawBindings,
+  D,
+  C,
+  M,
+  Mixin,
+  Extends,
+  E,
+  EE,
+  {}
+> & {
   props: PropNames[]
 } & ThisType<
     CreateComponentPublicInstance<
@@ -212,8 +244,20 @@ export type ComponentOptionsWithObjectProps<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
-  Props = Readonly<ExtractPropTypes<PropsOptions>>
-> = ComponentOptionsBase<Props, RawBindings, D, C, M, Mixin, Extends, E, EE> & {
+  Props = Readonly<ExtractPropTypes<PropsOptions>>,
+  Defaults = ExtractDefaultPropTypes<PropsOptions>
+> = ComponentOptionsBase<
+  Props,
+  RawBindings,
+  D,
+  C,
+  M,
+  Mixin,
+  Extends,
+  E,
+  EE,
+  Defaults
+> & {
   props: PropsOptions & ThisType<void>
 } & ThisType<
     CreateComponentPublicInstance<
@@ -224,16 +268,39 @@ export type ComponentOptionsWithObjectProps<
       M,
       Mixin,
       Extends,
-      E
+      E,
+      Props,
+      Defaults,
+      false
     >
   >
 
-export type ComponentOptions =
-  | ComponentOptionsWithoutProps<any, any, any, any, any>
-  | ComponentOptionsWithObjectProps<any, any, any, any, any>
-  | ComponentOptionsWithArrayProps<any, any, any, any, any>
+export type ComponentOptions<
+  Props = {},
+  RawBindings = any,
+  D = any,
+  C extends ComputedOptions = any,
+  M extends MethodOptions = any,
+  Mixin extends ComponentOptionsMixin = any,
+  Extends extends ComponentOptionsMixin = any,
+  E extends EmitsOptions = any
+> = ComponentOptionsBase<Props, RawBindings, D, C, M, Mixin, Extends, E> &
+  ThisType<
+    CreateComponentPublicInstance<
+      {},
+      RawBindings,
+      D,
+      C,
+      M,
+      Mixin,
+      Extends,
+      E,
+      Readonly<Props>
+    >
+  >
 
 export type ComponentOptionsMixin = ComponentOptionsBase<
+  any,
   any,
   any,
   any,
@@ -273,7 +340,7 @@ type ComponentInjectOptions =
   | string[]
   | Record<
       string | symbol,
-      string | symbol | { from: string | symbol; default?: unknown }
+      string | symbol | { from?: string | symbol; default?: unknown }
     >
 
 interface LegacyOptions<
@@ -314,7 +381,11 @@ interface LegacyOptions<
   updated?(): void
   activated?(): void
   deactivated?(): void
+  /** @deprecated use `beforeUnmount` instead */
+  beforeDestroy?(): void
   beforeUnmount?(): void
+  /** @deprecated use `unmounted` instead */
+  destroyed?(): void
   unmounted?(): void
   renderTracked?: DebuggerHook
   renderTriggered?: DebuggerHook
@@ -324,20 +395,22 @@ interface LegacyOptions<
   delimiters?: [string, string]
 }
 
-export type OptionTypesKeys = 'P' | 'B' | 'D' | 'C' | 'M'
+export type OptionTypesKeys = 'P' | 'B' | 'D' | 'C' | 'M' | 'Defaults'
 
 export type OptionTypesType<
   P = {},
   B = {},
   D = {},
   C extends ComputedOptions = {},
-  M extends MethodOptions = {}
+  M extends MethodOptions = {},
+  Defaults = {}
 > = {
   P: P
   B: B
   D: D
   C: C
   M: M
+  Defaults: Defaults
 }
 
 const enum OptionTypes {
@@ -391,7 +464,9 @@ export function applyOptions(
     updated,
     activated,
     deactivated,
+    beforeDestroy,
     beforeUnmount,
+    destroyed,
     unmounted,
     render,
     renderTracked,
@@ -458,7 +533,7 @@ export function applyOptions(
         const opt = injectOptions[key]
         if (isObject(opt)) {
           ctx[key] = inject(
-            opt.from,
+            opt.from || key,
             opt.default,
             true /* treat default function as factory */
           )
@@ -629,8 +704,14 @@ export function applyOptions(
   if (renderTriggered) {
     onRenderTriggered(renderTriggered.bind(publicThis))
   }
+  if (__DEV__ && beforeDestroy) {
+    warn(`\`beforeDestroy\` has been renamed to \`beforeUnmount\`.`)
+  }
   if (beforeUnmount) {
     onBeforeUnmount(beforeUnmount.bind(publicThis))
+  }
+  if (__DEV__ && destroyed) {
+    warn(`\`destroyed\` has been renamed to \`unmounted\`.`)
   }
   if (unmounted) {
     onUnmounted(unmounted.bind(publicThis))
