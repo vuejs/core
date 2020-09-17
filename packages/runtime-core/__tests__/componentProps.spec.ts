@@ -8,7 +8,9 @@ import {
   defineComponent,
   ref,
   serializeInner,
-  createApp
+  createApp,
+  provide,
+  inject
 } from '@vue/runtime-test'
 import { render as domRender, nextTick } from 'vue'
 
@@ -210,6 +212,32 @@ describe('component props', () => {
     expect(proxy.foo).toBe(1)
     expect(proxy.bar).toEqual({ b: 4 })
     expect(defaultFn).toHaveBeenCalledTimes(1)
+  })
+
+  test('using inject in default value factory', () => {
+    const Child = defineComponent({
+      props: {
+        test: {
+          default: () => inject('test', 'default')
+        }
+      },
+      setup(props) {
+        return () => {
+          return h('div', props.test)
+        }
+      }
+    })
+
+    const Comp = {
+      setup() {
+        provide('test', 'injected')
+        return () => h(Child)
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>injected</div>`)
   })
 
   test('optimized props updates', async () => {
