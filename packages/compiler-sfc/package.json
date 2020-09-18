@@ -1,6 +1,6 @@
 {
   "name": "@vue/compiler-sfc",
-  "version": "3.0.0-rc.12",
+  "version": "3.0.0-rc.13",
   "description": "@vue/compiler-sfc",
   "main": "dist/compiler-sfc.cjs.js",
   "types": "dist/compiler-sfc.d.ts",
@@ -32,15 +32,15 @@
   },
   "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/compiler-sfc#readme",
   "peerDependencies": {
-    "vue": "3.0.0-rc.12"
+    "vue": "3.0.0-rc.13"
   },
   "dependencies": {
     "@babel/parser": "^7.11.5",
     "@babel/types": "^7.11.5",
-    "@vue/compiler-core": "3.0.0-rc.12",
-    "@vue/compiler-dom": "3.0.0-rc.12",
-    "@vue/compiler-ssr": "3.0.0-rc.12",
-    "@vue/shared": "3.0.0-rc.12",
+    "@vue/compiler-core": "3.0.0-rc.13",
+    "@vue/compiler-dom": "3.0.0-rc.13",
+    "@vue/compiler-ssr": "3.0.0-rc.13",
+    "@vue/shared": "3.0.0-rc.13",
     "consolidate": "^0.16.0",
     "estree-walker": "^2.0.1",
     "hash-sum": "^2.0.0",
