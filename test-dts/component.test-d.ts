@@ -190,6 +190,12 @@ describe('object props', () => {
     expectType<ExpectedProps['ggg']>(setup.setupProps.ggg)
     expectType<ExpectedProps['ffff']>(setup.setupProps.ffff)
     expectType<ExpectedProps['validated']>(setup.setupProps.validated)
+
+    // instance
+    const instance = new MyComponent()
+    expectType<number>(instance.setupA)
+    // @ts-expect-error
+    instance.notExist
   })
 
   describe('options', () => {
@@ -356,6 +362,12 @@ describe('no props', () => {
 
     expectType<number>(rawBindings.setupA)
     expectType<number>(setup.setupA)
+
+    // instance
+    const instance = new MyComponent()
+    expectType<number>(instance.setupA)
+    // @ts-expect-error
+    instance.notExist
   })
 
   describe('options', () => {
