@@ -59,6 +59,10 @@ We are working on a new version of the Devtools with a new UI and refactored int
 
 - For Firefox: [Download the signed extension](https://github.com/vuejs/vue-devtools/releases/tag/v6.0.0-beta.2) (`.xpi` file under Assets)
 
+### IDE Support
+
+It is recommended to use [VSCode](https://code.visualstudio.com/) with our official extension [Vetur](https://marketplace.visualstudio.com/items?itemName=octref.vetur), which provides comprehensive IDE support for Vue 3.
+
 ### Other Projects
 
 | Project               | NPM                           | Repo                 |
