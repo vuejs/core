@@ -380,8 +380,8 @@ describe('Suspense', () => {
     await Promise.all(deps)
     await nextTick()
     expect(serializeInner(root)).toBe(`<!---->`)
-    // should discard effects (except for unmount)
-    expect(calls).toEqual(['unmounted'])
+    // should discard effects
+    expect(calls).toEqual([])
   })
 
   test('unmount suspense after resolve', async () => {
