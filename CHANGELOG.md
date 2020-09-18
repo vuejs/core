@@ -11,7 +11,7 @@
 
 ### Code Refactoring
 
-* watch APIs default to trigger pre-flush [49bb447](https://github.com/vuejs/vue-next/commit/49bb44756fda0a7019c69f2fa6b880d9e41125aa), closes [#1706](https://github.com/vuejs/vue-next/issues/1706/issues/issuecomment-666258948)
+* watch APIs default to trigger pre-flush ([49bb447](https://github.com/vuejs/vue-next/commit/49bb44756fda0a7019c69f2fa6b880d9e41125aa))
 
 
 ### Features
