@@ -1,3 +1,7 @@
+# [3.0.0](https://github.com/vuejs/vue-next/compare/v3.0.0-rc.13...v3.0.0) (2020-09-18)
+
+
+
 # [3.0.0-rc.13](https://github.com/vuejs/vue-next/compare/v3.0.0-rc.12...v3.0.0-rc.13) (2020-09-18)
 
 

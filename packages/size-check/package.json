@@ -1,6 +1,6 @@
 {
   "name": "@vue/size-check",
-  "version": "3.0.0-rc.13",
+  "version": "3.0.0",
   "private": true,
   "buildOptions": {
     "name": "Vue",
