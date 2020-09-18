@@ -23,14 +23,7 @@
 ### BREAKING CHANGES
 
 * watch APIs now default to use `flush: 'pre'` instead of
-`flush: 'post'`.
-
-  - This change affects `watch`, `watchEffect`, the `watch` component
-    option, and `this.$watch`.
-
-  - As pointed out by @skirtles-code in
-
-
+`flush: 'post'`. This change affects `watch`, `watchEffect`, the `watch` component option, and `this.$watch`. See ([49bb447](https://github.com/vuejs/vue-next/commit/49bb44756fda0a7019c69f2fa6b880d9e41125aa)) for more details.
 
 # [3.0.0-rc.12](https://github.com/vuejs/vue-next/compare/v3.0.0-rc.11...v3.0.0-rc.12) (2020-09-16)
 
