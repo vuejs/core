@@ -25,6 +25,12 @@ export type ObjectEmitsOptions = Record<
 >
 export type EmitsOptions = ObjectEmitsOptions | string[]
 
+export type EmitListeners<E extends EmitsOptions> = E extends Array<infer V>
+  ? Record<V & string, (...args: any[]) => void>
+  : E extends Record<string, (...args: any[]) => void>
+    ? { [K in keyof E]: (...args: Parameters<E[K]>) => void }
+    : Record<string, (...args: any[]) => void>
+
 export type EmitFn<
   Options = ObjectEmitsOptions,
   Event extends keyof Options = keyof Options

@@ -98,7 +98,7 @@ export function defineComponent<
   M extends MethodOptions = {},
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = EmitsOptions,
+  E extends EmitsOptions = Record<string, (...args: any[]) => any>,
   EE extends string = string
 >(
   options: ComponentOptionsWithoutProps<
@@ -125,7 +125,7 @@ export function defineComponent<
   M extends MethodOptions = {},
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = Record<string, any>,
+  E extends EmitsOptions = Record<string, (...args: any[]) => any>,
   EE extends string = string
 >(
   options: ComponentOptionsWithArrayProps<

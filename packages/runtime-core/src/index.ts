@@ -182,7 +182,9 @@ export {
 export { EmitsOptions, ObjectEmitsOptions } from './componentEmits'
 export {
   ComponentPublicInstance,
-  ComponentCustomProperties
+  ComponentCustomProperties,
+  ComponentProps,
+  ComponentListeners
 } from './componentPublicInstance'
 export {
   Renderer,
