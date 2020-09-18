@@ -166,8 +166,7 @@ export type ComponentOptionsWithoutProps<
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
-  EE extends string = string,
-  Defaults = {}
+  EE extends string = string
 > = ComponentOptionsBase<
   Props,
   RawBindings,
@@ -178,23 +177,11 @@ export type ComponentOptionsWithoutProps<
   Extends,
   E,
   EE,
-  Defaults
+  {}
 > & {
   props?: undefined
 } & ThisType<
-    CreateComponentPublicInstance<
-      {},
-      RawBindings,
-      D,
-      C,
-      M,
-      Mixin,
-      Extends,
-      E,
-      Readonly<Props>,
-      Defaults,
-      false
-    >
+    CreateComponentPublicInstance<{}, RawBindings, D, C, M, Mixin, Extends, E>
   >
 
 export type ComponentOptionsWithArrayProps<
