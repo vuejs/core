@@ -171,15 +171,18 @@ const KeepAliveImpl = {
       keys.delete(key)
     }
 
+    // prune cache on include/exclude prop change
     watch(
       () => [props.include, props.exclude],
       ([include, exclude]) => {
         include && pruneCache(name => matches(include, name))
         exclude && pruneCache(name => !matches(exclude, name))
-      }
+      },
+      // prune post-render after `current` has been updated
+      { flush: 'post' }
     )
 
-    // cache sub tree in beforeMount/Update (i.e. right after the render)
+    // cache sub tree after render
     let pendingCacheKey: CacheKey | null = null
     const cacheSubtree = () => {
       // fix #1621, the pendingCacheKey could be 0
