@@ -816,7 +816,9 @@ function createWatcher(
   publicThis: ComponentPublicInstance,
   key: string
 ) {
-  const getter = () => (publicThis as any)[key]
+  const getter = key.includes('.')
+    ? createPathGetter(publicThis, key)
+    : () => (publicThis as any)[key]
   if (isString(raw)) {
     const handler = ctx[raw]
     if (isFunction(handler)) {
@@ -840,7 +842,18 @@ function createWatcher(
       }
     }
   } else if (__DEV__) {
-    warn(`Invalid watch option: "${key}"`)
+    warn(`Invalid watch option: "${key}"`, raw)
+  }
+}
+
+function createPathGetter(ctx: any, path: string) {
+  const segments = path.split('.')
+  return () => {
+    let cur = ctx
+    for (let i = 0; i < segments.length && cur; i++) {
+      cur = cur[segments[i]]
+    }
+    return cur
   }
 }
 
