@@ -27,12 +27,19 @@ const Bar: FunctionalComponent<
   expectType<number>(props.foo)
 
   emit('update', 123)
+
+  emit('update:foo', 123)
+
   //  @ts-expect-error
   expectError(emit('nope'))
   //  @ts-expect-error
   expectError(emit('update'))
   //  @ts-expect-error
   expectError(emit('update', 'nope'))
+  // @ts-expect-error
+  expectError(emit('update:foo'))
+  // @ts-expect-error
+  expectError(emit('update:foo', 'nope'))
 }
 
 // assigning runtime options

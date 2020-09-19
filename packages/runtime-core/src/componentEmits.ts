@@ -25,11 +25,14 @@ export type ObjectEmitsOptions = Record<
 >
 export type EmitsOptions = ObjectEmitsOptions | string[]
 
+export type EmitVModelUpdate<T, E extends keyof T & string = keyof T & string> = (event: `update:${E}`, value: T[E])=> void //{ [K in keyof T & string as `update:${K}`]: (value:T[K])=> void } 
+
 export type EmitFn<
   Options = ObjectEmitsOptions,
-  Event extends keyof Options = keyof Options
-> = Options extends any[]
-  ? (event: Options[0], ...args: any[]) => void
+  P = {},
+  Event extends keyof Options = keyof Options,
+> = (Options extends Array<infer V>
+  ? (event: V, ...args: any[]) => void
   : {} extends Options // if the emit is empty object (usually the default value for emit) should be converted to function
     ? (event: string, ...args: any[]) => void
     : UnionToIntersection<
@@ -38,7 +41,8 @@ export type EmitFn<
             ? (event: key, ...args: Args) => void
             : (event: key, ...args: any[]) => void
         }[Event]
-      >
+      > 
+) & EmitVModelUpdate<P>
 
 export function emit(
   instance: ComponentInternalInstance,

@@ -105,7 +105,7 @@ export interface ComponentInternalOptions {
 export interface FunctionalComponent<P = {}, E extends EmitsOptions = {}>
   extends ComponentInternalOptions {
   // use of any here is intentional so it can be a valid JSX Element constructor
-  (props: P, ctx: SetupContext<E>): any
+  (props: P, ctx: SetupContext<E, P>): any
   props?: ComponentPropsOptions<P>
   emits?: E | (keyof E)[]
   inheritAttrs?: boolean
@@ -167,10 +167,10 @@ export const enum LifecycleHooks {
   ERROR_CAPTURED = 'ec'
 }
 
-export interface SetupContext<E = EmitsOptions> {
+export interface SetupContext<E = EmitsOptions, P = {}> {
   attrs: Data
   slots: Slots
-  emit: EmitFn<E>
+  emit: EmitFn<E, P> 
 }
 
 /**
