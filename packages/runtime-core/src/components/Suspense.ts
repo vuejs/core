@@ -201,11 +201,12 @@ function patchSuspense(
         suspense.isHydrating = false
         suspense.activeBranch = pendingBranch
       } else {
-        unmount(pendingBranch, parentComponent, null)
+        unmount(pendingBranch, parentComponent, suspense)
       }
       // increment pending ID. this is used to invalidate async callbacks
       // reset suspense state
       suspense.deps = 0
+      // discard effects from pending branch
       suspense.effects.length = 0
       // discard previous container
       suspense.hiddenContainer = createElement('div')

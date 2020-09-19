@@ -148,6 +148,49 @@ describe('hot module replacement', () => {
     expect(mountSpy).toHaveBeenCalledTimes(1)
   })
 
+  test('reload class component', async () => {
+    const root = nodeOps.createElement('div')
+    const childId = 'test4-child'
+    const unmountSpy = jest.fn()
+    const mountSpy = jest.fn()
+
+    class Child {
+      static __vccOpts: ComponentOptions = {
+        __hmrId: childId,
+        data() {
+          return { count: 0 }
+        },
+        unmounted: unmountSpy,
+        render: compileToFunction(`<div @click="count++">{{ count }}</div>`)
+      }
+    }
+    createRecord(childId)
+
+    const Parent: ComponentOptions = {
+      render: () => h(Child)
+    }
+
+    render(h(Parent), root)
+    expect(serializeInner(root)).toBe(`<div>0</div>`)
+
+    class UpdatedChild {
+      static __vccOpts: ComponentOptions = {
+        __hmrId: childId,
+        data() {
+          return { count: 1 }
+        },
+        mounted: mountSpy,
+        render: compileToFunction(`<div @click="count++">{{ count }}</div>`)
+      }
+    }
+
+    reload(childId, UpdatedChild)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>1</div>`)
+    expect(unmountSpy).toHaveBeenCalledTimes(1)
+    expect(mountSpy).toHaveBeenCalledTimes(1)
+  })
+
   // #1156 - static nodes should retain DOM element reference across updates
   // when HMR is active
   test('static el reference', async () => {

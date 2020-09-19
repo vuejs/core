@@ -154,7 +154,7 @@ describe('Suspense', () => {
     expect(onResolve).toHaveBeenCalled()
   })
 
-  test('buffer mounted/updated hooks & watch callbacks', async () => {
+  test('buffer mounted/updated hooks & post flush watch callbacks', async () => {
     const deps: Promise<any>[] = []
     const calls: string[] = []
     const toggle = ref(true)
@@ -165,14 +165,21 @@ describe('Suspense', () => {
         // extra tick needed for Node 12+
         deps.push(p.then(() => Promise.resolve()))
 
-        watchEffect(() => {
-          calls.push('immediate effect')
-        })
+        watchEffect(
+          () => {
+            calls.push('watch effect')
+          },
+          { flush: 'post' }
+        )
 
         const count = ref(0)
-        watch(count, () => {
-          calls.push('watch callback')
-        })
+        watch(
+          count,
+          () => {
+            calls.push('watch callback')
+          },
+          { flush: 'post' }
+        )
         count.value++ // trigger the watcher now
 
         onMounted(() => {
@@ -201,12 +208,12 @@ describe('Suspense', () => {
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
     expect(serializeInner(root)).toBe(`<div>fallback</div>`)
-    expect(calls).toEqual([`immediate effect`])
+    expect(calls).toEqual([])
 
     await Promise.all(deps)
     await nextTick()
     expect(serializeInner(root)).toBe(`<div>async</div>`)
-    expect(calls).toEqual([`immediate effect`, `watch callback`, `mounted`])
+    expect(calls).toEqual([`watch effect`, `watch callback`, `mounted`])
 
     // effects inside an already resolved suspense should happen at normal timing
     toggle.value = false
@@ -214,7 +221,7 @@ describe('Suspense', () => {
     await nextTick()
     expect(serializeInner(root)).toBe(`<!---->`)
     expect(calls).toEqual([
-      `immediate effect`,
+      `watch effect`,
       `watch callback`,
       `mounted`,
       'unmounted'
@@ -319,14 +326,21 @@ describe('Suspense', () => {
         const p = new Promise(r => setTimeout(r, 1))
         deps.push(p)
 
-        watchEffect(() => {
-          calls.push('immediate effect')
-        })
+        watchEffect(
+          () => {
+            calls.push('watch effect')
+          },
+          { flush: 'post' }
+        )
 
         const count = ref(0)
-        watch(count, () => {
-          calls.push('watch callback')
-        })
+        watch(
+          count,
+          () => {
+            calls.push('watch callback')
+          },
+          { flush: 'post' }
+        )
         count.value++ // trigger the watcher now
 
         onMounted(() => {
@@ -355,7 +369,7 @@ describe('Suspense', () => {
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
     expect(serializeInner(root)).toBe(`<div>fallback</div>`)
-    expect(calls).toEqual(['immediate effect'])
+    expect(calls).toEqual([])
 
     // remove the async dep before it's resolved
     toggle.value = false
@@ -366,8 +380,8 @@ describe('Suspense', () => {
     await Promise.all(deps)
     await nextTick()
     expect(serializeInner(root)).toBe(`<!---->`)
-    // should discard effects (except for immediate ones)
-    expect(calls).toEqual(['immediate effect', 'unmounted'])
+    // should discard effects
+    expect(calls).toEqual([])
   })
 
   test('unmount suspense after resolve', async () => {
