@@ -137,11 +137,11 @@ export function h(
 ): VNode
 
 // exclude `defineComponent` constructors
-export function h<P>(
-  type: ComponentOptions<P>,
-  props?: (RawProps & P) | ({} extends P ? null : never),
+export function h<P, E extends EmitsOptions = {}>(
+  type: ComponentOptions<P, any, any, any, any, any, any, E>,
+  props?: (Partial<ExtractEmitEvents<E>> & RawProps & P ) | ({} extends P ? null : never),
   children?: RawChildren | RawSlots
-): VNode
+): E
 
 // fake constructor type returned by `defineComponent` or class component
 export function h(type: Constructor, children?: RawChildren): VNode
