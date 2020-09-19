@@ -549,7 +549,7 @@ describe('compiler: parse', () => {
       })
     })
 
-    test('v-is without `isNativeTag`', () => {
+    test('v-is with `isNativeTag`', () => {
       const ast = baseParse(
         `<div></div><div v-is="'foo'"></div><Comp></Comp>`,
         {
@@ -576,7 +576,7 @@ describe('compiler: parse', () => {
       })
     })
 
-    test('v-is with `isNativeTag`', () => {
+    test('v-is without `isNativeTag`', () => {
       const ast = baseParse(`<div></div><div v-is="'foo'"></div><Comp></Comp>`)
 
       expect(ast.children[0]).toMatchObject({
