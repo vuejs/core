@@ -8,7 +8,8 @@ import {
   Suspense,
   Component,
   expectError,
-  expectAssignable
+  expectAssignable,
+  FunctionalComponent
 } from './index'
 
 describe('h inference w/ element', () => {
@@ -69,12 +70,19 @@ describe('h inference w/ functional component', () => {
   const Func = (_props: { foo: string; bar?: number }) => ''
   h(Func, { foo: 'hello' })
   h(Func, { foo: 'hello', bar: 123 })
+
   //  @ts-expect-error
   expectError(h(Func, { foo: 123 }))
   //  @ts-expect-error
   expectError(h(Func, {}))
   //  @ts-expect-error
   expectError(h(Func, { bar: 123 }))
+
+  const Func2: FunctionalComponent<{}, ['foo', 'bar']> = () => {}
+  h(Func2, { onFoo() {}, onBar() {} })
+
+  // @ts-expect-error
+  h(Func2, { onFoo: 1 })
 })
 
 describe('h support w/ plain object component', () => {

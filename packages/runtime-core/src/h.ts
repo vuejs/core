@@ -68,6 +68,23 @@ interface Constructor<P = any> {
   new (...args: any[]): { $props: P }
 }
 
+
+// Converts emits value to object
+type ExtractEmitEvents<T> =
+    T extends Readonly<Array<infer V>>
+    ? ({ [K in V & string as `on${capitalize K}`]: (...args: any[]) => void })
+    : T extends any[]
+    ? ({ [K in T & string as `on${capitalize K}`]: (...args: any[]) => void })
+    : {} extends T // if the emit is empty object (usually the default value for emit) should be converted to function
+    ? {}
+    :
+     { [K in keyof T & string as `on${capitalize K}`]: T[K] extends ((...args: infer Args) => any)
+        ? (...args: Args) => void
+        : (...args: any[]) => void
+    }
+    
+
+
 // The following is a series of overloads for providing props validation of
 // manually written render functions.
 
@@ -105,7 +122,7 @@ export function h(
 // functional component
 export function h<P, E extends EmitsOptions = {}>(
   type: FunctionalComponent<P, E>,
-  props?: (RawProps & P) | ({} extends P ? null : never),
+  props?: (RawProps & P & Partial<ExtractEmitEvents<E>>) | ({} extends P ? null : never),
   children?: RawChildren | RawSlots
 ): VNode
 
