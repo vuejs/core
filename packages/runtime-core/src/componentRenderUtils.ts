@@ -238,6 +238,10 @@ const getChildRoot = (
     if (dynamicIndex > -1) {
       dynamicChildren[dynamicIndex] = updatedRoot
     } else if (dynamicChildren && updatedRoot.patchFlag > 0) {
+      // fix: #2169
+      // since we can guarantee that it is a single root,
+      // we can directly use it to replace the dynamicChildren to avoid redundant patches.
+      dynamicChildren.length = 0
       dynamicChildren.push(updatedRoot)
     }
   }
