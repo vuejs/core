@@ -18,7 +18,8 @@ import {
   VNodeCall,
   TemplateTextChildNode,
   DirectiveArguments,
-  createVNodeCall
+  createVNodeCall,
+  PlainElementNode
 } from '../ast'
 import {
   PatchFlags,
@@ -101,7 +102,9 @@ export const transformElement: NodeTransform = (node, context) => {
         (tag === 'svg' ||
           tag === 'foreignObject' ||
           // #938: elements with dynamic keys should be forced into blocks
-          findProp(node, 'key', true)))
+          findProp(node, 'key', true) ||
+          // #2169: elements with components as child should be forced into blocks
+          hasComponentChild(node as PlainElementNode)))
 
     // props
     if (props.length > 0) {
@@ -589,4 +592,19 @@ function stringifyDynamicPropNames(props: string[]): string {
     if (i < l - 1) propsNamesString += ', '
   }
   return propsNamesString + `]`
+}
+
+function hasComponentChild(node: PlainElementNode): boolean {
+  for (let i = 0; i < node.children.length; i++) {
+    const child = node.children[i]
+    if (child.type === NodeTypes.ELEMENT) {
+      switch (child.tagType) {
+        case ElementTypes.ELEMENT:
+          return hasComponentChild(child)
+        case ElementTypes.COMPONENT:
+          return true
+      }
+    }
+  }
+  return false
 }

@@ -143,9 +143,9 @@ return function render(_ctx, _cache) {
     const _component_Comp = _resolveComponent(\\"Comp\\")
 
     return (_openBlock(), _createBlock(\\"div\\", null, [
-      _createVNode(\\"div\\", _hoisted_1, [
+      (_openBlock(), _createBlock(\\"div\\", _hoisted_1, [
         _createVNode(_component_Comp)
-      ])
+      ]))
     ]))
   }
 }"
