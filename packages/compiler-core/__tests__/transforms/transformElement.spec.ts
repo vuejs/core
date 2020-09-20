@@ -890,4 +890,24 @@ describe('compiler: element transform', () => {
       isBlock: true
     })
   })
+
+  // #2169
+  test('elements with components child should be forced into blocks', () => {
+    const ast = parse(`<div><section><h1><Comp/></h1></section></div>`)
+    transform(ast, {
+      nodeTransforms: [transformElement]
+    })
+    expect((ast as any).children[0].children[0].codegenNode).toMatchObject({
+      type: NodeTypes.VNODE_CALL,
+      tag: `"section"`,
+      isBlock: false
+    })
+    expect(
+      (ast as any).children[0].children[0].children[0].codegenNode
+    ).toMatchObject({
+      type: NodeTypes.VNODE_CALL,
+      tag: `"h1"`,
+      isBlock: true
+    })
+  })
 })

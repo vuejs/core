@@ -103,7 +103,7 @@ export const transformElement: NodeTransform = (node, context) => {
           tag === 'foreignObject' ||
           // #938: elements with dynamic keys should be forced into blocks
           findProp(node, 'key', true) ||
-          // #2169: elements with components as child should be forced into blocks
+          // #2169: elements with components child should be forced into blocks
           hasComponentChild(node as PlainElementNode)))
 
     // props
@@ -597,7 +597,12 @@ function stringifyDynamicPropNames(props: string[]): string {
 function hasComponentChild(node: PlainElementNode): boolean {
   for (let i = 0; i < node.children.length; i++) {
     const child = node.children[i]
-    if (child.type === NodeTypes.ELEMENT) {
+    if (
+      child.type === NodeTypes.ELEMENT &&
+      child.codegenNode &&
+      child.codegenNode.type === NodeTypes.VNODE_CALL &&
+      !child.codegenNode.isBlock
+    ) {
       switch (child.tagType) {
         case ElementTypes.ELEMENT:
           return hasComponentChild(child)
