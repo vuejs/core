@@ -1,4 +1,5 @@
 import {
+  ref,
   render,
   useCssVars,
   h,
@@ -124,5 +125,30 @@ describe('useCssVars', () => {
       }),
       id
     )
+  })
+
+  test('with subTree changed', async () => {
+    const state = reactive({ color: 'red' })
+    const value = ref(true)
+    const root = document.createElement('div')
+
+    const App = {
+      setup() {
+        useCssVars(() => state)
+        return () => (value.value ? [h('div')] : [h('div'), h('div')])
+      }
+    }
+
+    render(h(App), root)
+    // css vars use with fallback tree
+    for (const c of [].slice.call(root.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe(`red`)
+    }
+
+    value.value = false
+    await nextTick()
+    for (const c of [].slice.call(root.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+    }
   })
 })

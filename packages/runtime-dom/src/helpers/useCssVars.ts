@@ -2,11 +2,11 @@ import {
   ComponentPublicInstance,
   getCurrentInstance,
   onMounted,
-  watchEffect,
   warn,
   VNode,
   Fragment,
-  unref
+  unref,
+  onUpdated
 } from '@vue/runtime-core'
 import { ShapeFlags } from '@vue/shared'
 
@@ -27,11 +27,10 @@ export function useCssVars(
       ? `${instance.type.__scopeId.replace(/^data-v-/, '')}-`
       : ``
 
-  onMounted(() => {
-    watchEffect(() => {
-      setVarsOnVNode(instance.subTree, getter(instance.proxy!), prefix)
-    })
-  })
+  const setVars = () =>
+    setVarsOnVNode(instance.subTree, getter(instance.proxy!), prefix)
+  onMounted(setVars)
+  onUpdated(setVars)
 }
 
 function setVarsOnVNode(
