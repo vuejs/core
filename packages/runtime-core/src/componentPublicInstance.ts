@@ -29,7 +29,7 @@ import {
   resolveMergedOptions,
   isInBeforeCreate
 } from './componentOptions'
-import { EmitsOptions, EmitFn } from './componentEmits'
+import { EmitsOptions, EmitFn, isEmitListener } from './componentEmits'
 import { Slots } from './componentSlots'
 import {
   currentRenderingInstance,
@@ -348,7 +348,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     key: string,
     value: any
   ): boolean {
-    const { data, setupState, ctx } = instance
+    const { data, setupState, ctx, vnode, emitsOptions } = instance
     if (setupState !== EMPTY_OBJ && hasOwn(setupState, key)) {
       setupState[key] = value
     } else if (data !== EMPTY_OBJ && hasOwn(data, key)) {
@@ -378,6 +378,27 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
         })
       } else {
         ctx[key] = value
+        /**
+         * #2155: allow add event handler by templateRef
+         * e.g.
+         * buttonRef.value.onClick = clickHandler
+         * listen <el-button ref="buttonRef"> component emitted click event
+         */
+        if (key.indexOf('on') === 0) {
+          if (isEmitListener(emitsOptions, key)) {
+            /* istanbul ignore else */
+            if (vnode.props) {
+              vnode.props[key] = value
+            }
+          } else {
+            __DEV__ &&
+              warn(
+                `Attempting to add handler "${key}". ` +
+                  `but it is neither declared by Component`,
+                instance
+              )
+          }
+        }
       }
     }
     return true

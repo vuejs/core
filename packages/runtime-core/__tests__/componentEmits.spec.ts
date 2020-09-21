@@ -1,7 +1,7 @@
 // Note: emits and listener fallthrough is tested in
 // ./rendererAttrsFallthrough.spec.ts.
 
-import { render, defineComponent, h, nodeOps } from '@vue/runtime-test'
+import { render, defineComponent, ref, h, nodeOps } from '@vue/runtime-test'
 import { isEmitListener } from '../src/componentEmits'
 
 describe('component: emit', () => {
@@ -26,6 +26,49 @@ describe('component: emit', () => {
     // only capitalized or special chars are considered event listeners
     expect(onBar).toHaveBeenCalled()
     expect(onBaz).toHaveBeenCalled()
+  })
+
+  test('trigger handlers by templateRef added', () => {
+    const root = nodeOps.createElement('div')
+    let innerCtx = {} as any
+    const CustomButton = defineComponent({
+      setup(_, ctx) {
+        innerCtx = ctx
+        return {
+          refKey: ref(null)
+        }
+      },
+      emits: ['click'],
+      render() {
+        return h('div')
+      }
+    })
+
+    const button = ref(null)
+    const Wrapper = defineComponent({
+      setup(_, ctx) {
+        innerCtx = ctx
+        return {
+          buttonRef: button
+        }
+      },
+      render() {
+        return h(CustomButton, { ref: 'buttonRef' })
+      }
+    })
+
+    render(h(Wrapper), root)
+    const clickHandler = jest.fn()
+    // @ts-ignore
+    button.value.onClick = clickHandler
+    innerCtx.emit('click')
+    expect(clickHandler).toHaveBeenCalled()
+
+    // @ts-ignore
+    button.value.onclick = clickHandler
+    expect(
+      `Attempting to add handler "onclick". but it is neither declared by Component`
+    ).toHaveBeenWarned()
   })
 
   // for v-model:foo-bar usage in DOM templates
