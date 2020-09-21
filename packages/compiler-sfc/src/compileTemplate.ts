@@ -52,25 +52,35 @@ export interface SFCTemplateCompileOptions {
    */
   preprocessCustomRequire?: (id: string) => any
   /**
-   * Configure what tags/attributes to trasnform into asset url imports,
+   * Configure what tags/attributes to transform into asset url imports,
    * or disable the transform altogether with `false`.
    */
   transformAssetUrls?: AssetURLOptions | AssetURLTagConfig | boolean
 }
 
+interface PreProcessor {
+  render(
+    source: string,
+    options: any,
+    cb: (err: Error | null, res: string) => void
+  ): void
+}
+
 function preprocess(
   { source, filename, preprocessOptions }: SFCTemplateCompileOptions,
-  preprocessor: any
+  preprocessor: PreProcessor
 ): string {
   // Consolidate exposes a callback based API, but the callback is in fact
   // called synchronously for most templating engines. In our case, we have to
   // expose a synchronous API so that it is usable in Jest transforms (which
   // have to be sync because they are applied via Node.js require hooks)
-  let res: any, err
+  let res: string = ''
+  let err: Error | null = null
+
   preprocessor.render(
     source,
     { filename, ...preprocessOptions },
-    (_err: Error | null, _res: string) => {
+    (_err, _res) => {
       if (_err) err = _err
       res = _res
     }

@@ -20,7 +20,8 @@ import {
   IfBranchNode,
   TextNode,
   InterpolationNode,
-  VNodeCall
+  VNodeCall,
+  SimpleExpressionNode
 } from './ast'
 import { TransformContext } from './transform'
 import {
@@ -31,9 +32,9 @@ import {
   BASE_TRANSITION
 } from './runtimeHelpers'
 import { isString, isObject, hyphenate, extend } from '@vue/shared'
-import { parse } from '@babel/parser'
-import { walk } from 'estree-walker'
-import { Node } from '@babel/types'
+
+export const isStaticExp = (p: JSChildNode): p is SimpleExpressionNode =>
+  p.type === NodeTypes.SIMPLE_EXPRESSION && p.isStatic
 
 export const isBuiltInType = (tag: string, expected: string): boolean =>
   tag === expected || tag === hyphenate(expected)
@@ -47,35 +48,6 @@ export function isCoreComponent(tag: string): symbol | void {
     return KEEP_ALIVE
   } else if (isBuiltInType(tag, 'BaseTransition')) {
     return BASE_TRANSITION
-  }
-}
-
-export const parseJS: typeof parse = (code, options) => {
-  if (__BROWSER__) {
-    assert(
-      !__BROWSER__,
-      `Expression AST analysis can only be performed in non-browser builds.`
-    )
-    return null as any
-  } else {
-    return parse(code, options)
-  }
-}
-
-interface Walker {
-  enter?(node: Node, parent: Node): void
-  leave?(node: Node): void
-}
-
-export const walkJS = (ast: Node, walker: Walker) => {
-  if (__BROWSER__) {
-    assert(
-      !__BROWSER__,
-      `Expression AST analysis can only be performed in non-browser builds.`
-    )
-    return null as any
-  } else {
-    return (walk as any)(ast, walker)
   }
 }
 
@@ -189,19 +161,18 @@ export function findProp(
       if (p.name === name && (p.value || allowEmpty)) {
         return p
       }
-    } else if (p.name === 'bind' && p.exp && isBindKey(p.arg, name)) {
+    } else if (
+      p.name === 'bind' &&
+      (p.exp || allowEmpty) &&
+      isBindKey(p.arg, name)
+    ) {
       return p
     }
   }
 }
 
 export function isBindKey(arg: DirectiveNode['arg'], name: string): boolean {
-  return !!(
-    arg &&
-    arg.type === NodeTypes.SIMPLE_EXPRESSION &&
-    arg.isStatic &&
-    arg.content === name
-  )
+  return !!(arg && isStaticExp(arg) && arg.content === name)
 }
 
 export function hasDynamicKeyVBind(node: ElementNode): boolean {

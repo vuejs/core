@@ -374,6 +374,16 @@ describe('compiler: parse', () => {
         }
       })
     })
+
+    test('comments option', () => {
+      __DEV__ = false
+      const astNoComment = baseParse('<!--abc-->')
+      const astWithComments = baseParse('<!--abc-->', { comments: true })
+      __DEV__ = true
+
+      expect(astNoComment.children).toHaveLength(0)
+      expect(astWithComments.children).toHaveLength(1)
+    })
   })
 
   describe('Element', () => {
@@ -1015,6 +1025,43 @@ describe('compiler: parse', () => {
       })
     })
 
+    test('directive with dynamic argument', () => {
+      const ast = baseParse('<div v-on:[event]/>')
+      const directive = (ast.children[0] as ElementNode).props[0]
+
+      expect(directive).toStrictEqual({
+        type: NodeTypes.DIRECTIVE,
+        name: 'on',
+        arg: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: 'event',
+          isStatic: false,
+          isConstant: false,
+
+          loc: {
+            source: '[event]',
+            start: {
+              column: 11,
+              line: 1,
+              offset: 10
+            },
+            end: {
+              column: 18,
+              line: 1,
+              offset: 17
+            }
+          }
+        },
+        modifiers: [],
+        exp: undefined,
+        loc: {
+          start: { offset: 5, line: 1, column: 6 },
+          end: { offset: 17, line: 1, column: 18 },
+          source: 'v-on:[event]'
+        }
+      })
+    })
+
     test('directive with a modifier', () => {
       const ast = baseParse('<div v-on.enter/>')
       const directive = (ast.children[0] as ElementNode).props[0]
@@ -1084,6 +1131,43 @@ describe('compiler: parse', () => {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 27, line: 1, column: 28 },
           source: 'v-on:click.enter.exact'
+        }
+      })
+    })
+
+    test('directive with dynamic argument and modifiers', () => {
+      const ast = baseParse('<div v-on:[a.b].camel/>')
+      const directive = (ast.children[0] as ElementNode).props[0]
+
+      expect(directive).toStrictEqual({
+        type: NodeTypes.DIRECTIVE,
+        name: 'on',
+        arg: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: 'a.b',
+          isStatic: false,
+          isConstant: false,
+
+          loc: {
+            source: '[a.b]',
+            start: {
+              column: 11,
+              line: 1,
+              offset: 10
+            },
+            end: {
+              column: 16,
+              line: 1,
+              offset: 15
+            }
+          }
+        },
+        modifiers: ['camel'],
+        exp: undefined,
+        loc: {
+          start: { offset: 5, line: 1, column: 6 },
+          end: { offset: 21, line: 1, column: 22 },
+          source: 'v-on:[a.b].camel'
         }
       })
     })
@@ -1323,6 +1407,36 @@ describe('compiler: parse', () => {
           start: { offset: 6, line: 1, column: 7 },
           end: { offset: 16, line: 1, column: 17 },
           source: '#a="{ b }"'
+        }
+      })
+    })
+
+    // #1241 special case for 2.x compat
+    test('v-slot arg containing dots', () => {
+      const ast = baseParse('<Comp v-slot:foo.bar="{ a }" />')
+      const directive = (ast.children[0] as ElementNode).props[0]
+
+      expect(directive).toMatchObject({
+        type: NodeTypes.DIRECTIVE,
+        name: 'slot',
+        arg: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: 'foo.bar',
+          isStatic: true,
+          isConstant: true,
+          loc: {
+            source: 'foo.bar',
+            start: {
+              column: 14,
+              line: 1,
+              offset: 13
+            },
+            end: {
+              column: 21,
+              line: 1,
+              offset: 20
+            }
+          }
         }
       })
     })

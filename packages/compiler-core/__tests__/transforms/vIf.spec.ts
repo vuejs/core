@@ -13,7 +13,8 @@ import {
   ConditionalExpression,
   IfConditionalExpression,
   VNodeCall,
-  ElementTypes
+  ElementTypes,
+  IfBranchNode
 } from '../../src/ast'
 import { ErrorCodes } from '../../src/errors'
 import { CompilerOptions, generate } from '../../src'
@@ -28,7 +29,8 @@ import { createObjectMatcher } from '../testUtils'
 function parseWithIfTransform(
   template: string,
   options: CompilerOptions = {},
-  returnIndex: number = 0
+  returnIndex: number = 0,
+  childrenLen: number = 1
 ) {
   const ast = parse(template, options)
   transform(ast, {
@@ -36,8 +38,10 @@ function parseWithIfTransform(
     ...options
   })
   if (!options.onError) {
-    expect(ast.children.length).toBe(1)
-    expect(ast.children[0].type).toBe(NodeTypes.IF)
+    expect(ast.children.length).toBe(childrenLen)
+    for (let i = 0; i < childrenLen; i++) {
+      expect(ast.children[i].type).toBe(NodeTypes.IF)
+    }
   }
   return {
     root: ast,
@@ -89,10 +93,12 @@ describe('compiler: v-if', () => {
       expect((node.branches[0].children[0] as ElementNode).tagType).toBe(
         ElementTypes.COMPONENT
       )
+      // #2058 since a component may fail to resolve and fallback to a plain
+      // element, it still needs to be made a block
       expect(
         ((node.branches[0].children[0] as ElementNode)!
           .codegenNode as VNodeCall)!.isBlock
-      ).toBe(false)
+      ).toBe(true)
     })
 
     test('v-if + v-else', () => {
@@ -278,6 +284,29 @@ describe('compiler: v-if', () => {
         }
       ])
     })
+
+    test('error on user key', () => {
+      const onError = jest.fn()
+      // dynamic
+      parseWithIfTransform(
+        `<div v-if="ok" :key="a + 1" /><div v-else :key="a + 1" />`,
+        { onError }
+      )
+      expect(onError.mock.calls[0]).toMatchObject([
+        {
+          code: ErrorCodes.X_V_IF_SAME_KEY
+        }
+      ])
+      // static
+      parseWithIfTransform(`<div v-if="ok" key="1" /><div v-else key="1" />`, {
+        onError
+      })
+      expect(onError.mock.calls[1]).toMatchObject([
+        {
+          code: ErrorCodes.X_V_IF_SAME_KEY
+        }
+      ])
+    })
   })
 
   describe('codegen', () => {
@@ -458,6 +487,68 @@ describe('compiler: v-if', () => {
       expect(generate(root).code).toMatchSnapshot()
     })
 
+    test('multiple v-if that are sibling nodes should have different keys', () => {
+      const { root } = parseWithIfTransform(
+        `<div v-if="ok"/><p v-if="orNot"/>`,
+        {},
+        0 /* returnIndex, just give the default value */,
+        2 /* childrenLen */
+      )
+
+      const ifNode = root.children[0] as IfNode & {
+        codegenNode: IfConditionalExpression
+      }
+      expect(ifNode.codegenNode.consequent).toMatchObject({
+        tag: `"div"`,
+        props: createObjectMatcher({ key: `[0]` })
+      })
+      const ifNode2 = root.children[1] as IfNode & {
+        codegenNode: IfConditionalExpression
+      }
+      expect(ifNode2.codegenNode.consequent).toMatchObject({
+        tag: `"p"`,
+        props: createObjectMatcher({ key: `[1]` })
+      })
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
+    test('increasing key: v-if + v-else-if + v-else', () => {
+      const { root } = parseWithIfTransform(
+        `<div v-if="ok"/><p v-else/><div v-if="another"/><p v-else-if="orNot"/><p v-else/>`,
+        {},
+        0 /* returnIndex, just give the default value */,
+        2 /* childrenLen */
+      )
+      const ifNode = root.children[0] as IfNode & {
+        codegenNode: IfConditionalExpression
+      }
+      expect(ifNode.codegenNode.consequent).toMatchObject({
+        tag: `"div"`,
+        props: createObjectMatcher({ key: `[0]` })
+      })
+      expect(ifNode.codegenNode.alternate).toMatchObject({
+        tag: `"p"`,
+        props: createObjectMatcher({ key: `[1]` })
+      })
+      const ifNode2 = root.children[1] as IfNode & {
+        codegenNode: IfConditionalExpression
+      }
+      expect(ifNode2.codegenNode.consequent).toMatchObject({
+        tag: `"div"`,
+        props: createObjectMatcher({ key: `[2]` })
+      })
+      const branch = ifNode2.codegenNode.alternate as IfConditionalExpression
+      expect(branch.consequent).toMatchObject({
+        tag: `"p"`,
+        props: createObjectMatcher({ key: `[3]` })
+      })
+      expect(branch.alternate).toMatchObject({
+        tag: `"p"`,
+        props: createObjectMatcher({ key: `[4]` })
+      })
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
     test('key injection (only v-bind)', () => {
       const {
         node: { codegenNode }
@@ -515,18 +606,50 @@ describe('compiler: v-if', () => {
       expect(branch1.props).toMatchObject(createObjectMatcher({ key: `[0]` }))
     })
 
-    test('v-if with key', () => {
-      const {
-        root,
-        node: { codegenNode }
-      } = parseWithIfTransform(`<div v-if="ok" key="some-key"/>`)
-      expect(codegenNode.consequent).toMatchObject({
-        tag: `"div"`,
-        props: createObjectMatcher({ key: 'some-key' })
-      })
-      expect(generate(root).code).toMatchSnapshot()
-    })
+    test('with comments', () => {
+      const { node } = parseWithIfTransform(`
+          <template v-if="ok">
+            <!--comment1-->
+            <div v-if="ok2">
+              <!--comment2-->
+            </div>
+            <!--comment3-->
+            <b v-else/>
+            <!--comment4-->
+            <p/>
+          </template>
+        `)
+      expect(node.type).toBe(NodeTypes.IF)
+      expect(node.branches.length).toBe(1)
 
-    test.todo('with comments')
+      const b1 = node.branches[0]
+      expect((b1.condition as SimpleExpressionNode).content).toBe(`ok`)
+      expect(b1.children.length).toBe(4)
+
+      expect(b1.children[0].type).toBe(NodeTypes.COMMENT)
+      expect((b1.children[0] as CommentNode).content).toBe(`comment1`)
+
+      expect(b1.children[1].type).toBe(NodeTypes.IF)
+      expect((b1.children[1] as IfNode).branches.length).toBe(2)
+      const b1b1: ElementNode = (b1.children[1] as IfNode).branches[0]
+        .children[0] as ElementNode
+      expect(b1b1.type).toBe(NodeTypes.ELEMENT)
+      expect(b1b1.tag).toBe('div')
+      expect(b1b1.children[0].type).toBe(NodeTypes.COMMENT)
+      expect((b1b1.children[0] as CommentNode).content).toBe('comment2')
+
+      const b1b2: IfBranchNode = (b1.children[1] as IfNode)
+        .branches[1] as IfBranchNode
+      expect(b1b2.children[0].type).toBe(NodeTypes.COMMENT)
+      expect((b1b2.children[0] as CommentNode).content).toBe(`comment3`)
+      expect(b1b2.children[1].type).toBe(NodeTypes.ELEMENT)
+      expect((b1b2.children[1] as ElementNode).tag).toBe(`b`)
+
+      expect(b1.children[2].type).toBe(NodeTypes.COMMENT)
+      expect((b1.children[2] as CommentNode).content).toBe(`comment4`)
+
+      expect(b1.children[3].type).toBe(NodeTypes.ELEMENT)
+      expect((b1.children[3] as ElementNode).tag).toBe(`p`)
+    })
   })
 })

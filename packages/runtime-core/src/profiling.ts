@@ -18,7 +18,7 @@ export function endMeasure(instance: ComponentInternalInstance, type: string) {
     const endTag = startTag + `:end`
     perf.mark(endTag)
     perf.measure(
-      `<${formatComponentName(instance.type)}> ${type}`,
+      `<${formatComponentName(instance, instance.type)}> ${type}`,
       startTag,
       endTag
     )

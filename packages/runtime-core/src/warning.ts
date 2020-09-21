@@ -2,7 +2,7 @@ import { VNode } from './vnode'
 import {
   Data,
   ComponentInternalInstance,
-  Component,
+  ConcreteComponent,
   formatComponentName
 } from './component'
 import { isString, isFunction } from '@vue/shared'
@@ -10,7 +10,7 @@ import { toRaw, isRef, pauseTracking, resetTracking } from '@vue/reactivity'
 import { callWithErrorHandling, ErrorCodes } from './errorHandling'
 
 type ComponentVNode = VNode & {
-  type: Component
+  type: ConcreteComponent
 }
 
 const stack: VNode[] = []
@@ -48,13 +48,16 @@ export function warn(msg: string, ...args: any[]) {
         msg + args.join(''),
         instance && instance.proxy,
         trace
-          .map(({ vnode }) => `at <${formatComponentName(vnode.type)}>`)
+          .map(
+            ({ vnode }) => `at <${formatComponentName(instance, vnode.type)}>`
+          )
           .join('\n'),
         trace
       ]
     )
   } else {
     const warnArgs = [`[Vue warn]: ${msg}`, ...args]
+    /* istanbul ignore if */
     if (
       trace.length &&
       // avoid spamming console during tests
@@ -97,6 +100,7 @@ function getComponentTrace(): ComponentTraceStack {
   return normalizedStack
 }
 
+/* istanbul ignore next */
 function formatTrace(trace: ComponentTraceStack): any[] {
   const logs: any[] = []
   trace.forEach((entry, i) => {
@@ -109,13 +113,18 @@ function formatTraceEntry({ vnode, recurseCount }: TraceEntry): any[] {
   const postfix =
     recurseCount > 0 ? `... (${recurseCount} recursive calls)` : ``
   const isRoot = vnode.component ? vnode.component.parent == null : false
-  const open = ` at <${formatComponentName(vnode.type, isRoot)}`
+  const open = ` at <${formatComponentName(
+    vnode.component,
+    vnode.type,
+    isRoot
+  )}`
   const close = `>` + postfix
   return vnode.props
     ? [open, ...formatProps(vnode.props), close]
     : [open + close]
 }
 
+/* istanbul ignore next */
 function formatProps(props: Data): any[] {
   const res: any[] = []
   const keys = Object.keys(props)
@@ -130,6 +139,7 @@ function formatProps(props: Data): any[] {
 
 function formatProp(key: string, value: unknown): any[]
 function formatProp(key: string, value: unknown, raw: true): any
+/* istanbul ignore next */
 function formatProp(key: string, value: unknown, raw?: boolean): any {
   if (isString(value)) {
     value = JSON.stringify(value)

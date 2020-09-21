@@ -11,10 +11,19 @@ import {
   CompilerOptions,
   IfStatement,
   CallExpression,
-  isText
+  isText,
+  processExpression,
+  createSimpleExpression,
+  createCompoundExpression,
+  createTransformContext,
+  createRoot
 } from '@vue/compiler-dom'
 import { isString, escapeHtml } from '@vue/shared'
-import { SSR_INTERPOLATE, ssrHelpers } from './runtimeHelpers'
+import {
+  SSR_INTERPOLATE,
+  ssrHelpers,
+  SSR_RESOLVE_CSS_VARS
+} from './runtimeHelpers'
 import { ssrProcessIf } from './transforms/ssrVIf'
 import { ssrProcessFor } from './transforms/ssrVFor'
 import { ssrProcessSlotOutlet } from './transforms/ssrTransformSlotOutlet'
@@ -30,6 +39,25 @@ import { createSSRCompilerError, SSRErrorCodes } from './errors'
 
 export function ssrCodegenTransform(ast: RootNode, options: CompilerOptions) {
   const context = createSSRTransformContext(ast, options)
+
+  // inject <style vars> resolution
+  // we do this instead of inlining the expression to ensure the vars are
+  // only resolved once per render
+  if (options.ssrCssVars) {
+    const varsExp = processExpression(
+      createSimpleExpression(options.ssrCssVars, false),
+      createTransformContext(createRoot([]), options)
+    )
+    context.body.push(
+      createCompoundExpression([
+        `const _cssVars = _${ssrHelpers[SSR_RESOLVE_CSS_VARS]}(`,
+        varsExp,
+        options.scopeId ? `, ${JSON.stringify(options.scopeId)}` : ``,
+        `)`
+      ])
+    )
+  }
+
   const isFragment =
     ast.children.length > 1 && ast.children.some(c => !isText(c))
   processChildren(ast.children, context, isFragment)

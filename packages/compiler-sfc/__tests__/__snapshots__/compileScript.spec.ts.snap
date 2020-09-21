@@ -1,0 +1,403 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`SFC compile <script setup> <script setup lang="ts"> extract emits 1`] = `
+"import { defineComponent as __define__ } from 'vue'
+import { Slots as __Slots__ } from 'vue'
+declare function __emit__(e: 'foo' | 'bar'): void
+      declare function __emit__(e: 'baz', id: number): void
+      
+export function setup(_: {}, { emit: myEmit }: {
+  emit: typeof __emit__,
+  slots: __Slots__,
+  attrs: Record<string, any>
+}) {
+
+      
+return {  }
+}
+
+export default __define__({
+  emits: [\\"foo\\", \\"bar\\", \\"baz\\"] as unknown as undefined,
+  setup
+})"
+`;
+
+exports[`SFC compile <script setup> <script setup lang="ts"> extract props 1`] = `
+"import { defineComponent as __define__ } from 'vue'
+import { Slots as __Slots__ } from 'vue'
+interface Test {}
+
+      type Alias = number[]
+
+      
+export function setup(myProps: {
+        string: string
+        number: number
+        boolean: boolean
+        object: object
+        objectLiteral: { a: number }
+        fn: (n: number) => void
+        functionRef: Function
+        objectRef: Object
+        array: string[]
+        arrayRef: Array<any>
+        tuple: [number, number]
+        set: Set<string>
+        literal: 'foo'
+        optional?: any
+        recordRef: Record<string, null>
+        interface: Test
+        alias: Alias
+
+        union: string | number
+        literalUnion: 'foo' | 'bar'
+        literalUnionMixed: 'foo' | 1 | boolean
+        intersection: Test & {}
+      }) {
+
+      
+return {  }
+}
+
+export default __define__({
+  props: {
+    string: { type: String, required: true },
+    number: { type: Number, required: true },
+    boolean: { type: Boolean, required: true },
+    object: { type: Object, required: true },
+    objectLiteral: { type: Object, required: true },
+    fn: { type: Function, required: true },
+    functionRef: { type: Function, required: true },
+    objectRef: { type: Object, required: true },
+    array: { type: Array, required: true },
+    arrayRef: { type: Array, required: true },
+    tuple: { type: Array, required: true },
+    set: { type: Set, required: true },
+    literal: { type: String, required: true },
+    optional: { type: null, required: false },
+    recordRef: { type: Object, required: true },
+    interface: { type: Object, required: true },
+    alias: { type: Array, required: true },
+    union: { type: [String, Number], required: true },
+    literalUnion: { type: [String, String], required: true },
+    literalUnionMixed: { type: [String, Number, Boolean], required: true },
+    intersection: { type: Object, required: true }
+  } as unknown as undefined,
+  setup
+})"
+`;
+
+exports[`SFC compile <script setup> <script setup lang="ts"> hoist type declarations 1`] = `
+"import { defineComponent as __define__ } from 'vue'
+import { Slots as __Slots__ } from 'vue'
+export interface Foo {}
+        type Bar = {}
+        
+export function setup() {
+
+        const a = 1
+      
+return { a }
+}
+
+export default __define__({
+  setup
+})"
+`;
+
+exports[`SFC compile <script setup> CSS vars injection <script> w/ default export 1`] = `
+"const __default__ = { setup() {} }
+import { useCssVars as __useCssVars__ } from 'vue'
+const __injectCSSVars__ = () => {
+__useCssVars__(_ctx => ({ color: _ctx.color }))
+}
+const __setup__ = __default__.setup
+__default__.setup = __setup__
+  ? (props, ctx) => { __injectCSSVars__();return __setup__(props, ctx) }
+  : __injectCSSVars__
+export default __default__"
+`;
+
+exports[`SFC compile <script setup> CSS vars injection <script> w/ default export in strings/comments 1`] = `
+"
+          // export default {}
+          const __default__ = {}
+        
+import { useCssVars as __useCssVars__ } from 'vue'
+const __injectCSSVars__ = () => {
+__useCssVars__(_ctx => ({ color: _ctx.color }))
+}
+const __setup__ = __default__.setup
+__default__.setup = __setup__
+  ? (props, ctx) => { __injectCSSVars__();return __setup__(props, ctx) }
+  : __injectCSSVars__
+export default __default__"
+`;
+
+exports[`SFC compile <script setup> CSS vars injection <script> w/ no default export 1`] = `
+"const a = 1
+const __default__ = {}
+import { useCssVars as __useCssVars__ } from 'vue'
+const __injectCSSVars__ = () => {
+__useCssVars__(_ctx => ({ color: _ctx.color }))
+}
+const __setup__ = __default__.setup
+__default__.setup = __setup__
+  ? (props, ctx) => { __injectCSSVars__();return __setup__(props, ctx) }
+  : __injectCSSVars__
+export default __default__"
+`;
+
+exports[`SFC compile <script setup> CSS vars injection w/ <script setup> 1`] = `
+"import { useCssVars as __useCssVars__ } from 'vue'
+
+export function setup() {
+const color = 'red'
+__useCssVars__(_ctx => ({ color }))
+return { color }
+}
+
+export default { setup }"
+`;
+
+exports[`SFC compile <script setup> errors should allow export default referencing imported binding 1`] = `
+"import { bar } from './bar'
+          
+export function setup() {
+
+          
+return { bar }
+}
+
+const __default__ = {
+            props: {
+              foo: {
+                default: () => bar
+              }
+            }
+          }
+        __default__.setup = setup
+export default __default__"
+`;
+
+exports[`SFC compile <script setup> errors should allow export default referencing re-exported binding 1`] = `
+"import { bar } from './bar'
+          
+export function setup() {
+
+          
+return { bar }
+}
+
+const __default__ = {
+            props: {
+              foo: {
+                default: () => bar
+              }
+            }
+          }
+        __default__.setup = setup
+export default __default__"
+`;
+
+exports[`SFC compile <script setup> errors should allow export default referencing scope var 1`] = `
+"export function setup() {
+
+          const bar = 1
+          
+return {  }
+}
+
+const __default__ = {
+            props: {
+              foo: {
+                default: bar => bar + 1
+              }
+            }
+          }
+        __default__.setup = setup
+export default __default__"
+`;
+
+exports[`SFC compile <script setup> explicit setup signature 1`] = `
+"export function setup(props, { emit }) {
+emit('foo')
+return {  }
+}
+
+export default { setup }"
+`;
+
+exports[`SFC compile <script setup> exports export * from './x' 1`] = `
+"import { toRefs as __toRefs__ } from 'vue'
+import * as __export_all_0__ from './x'
+          
+export function setup() {
+
+          const y = 1
+          
+return Object.assign(
+  { y },
+  __toRefs__(__export_all_0__)
+)
+}
+
+export default { setup }"
+`;
+
+exports[`SFC compile <script setup> exports export { x } 1`] = `
+"export function setup() {
+
+           const x = 1
+           const y = 2
+           
+return { x, y }
+}
+
+export default { setup }"
+`;
+
+exports[`SFC compile <script setup> exports export { x } from './x' 1`] = `
+"import { x, y } from './x'
+          
+export function setup() {
+
+           
+return { x, y }
+}
+
+export default { setup }"
+`;
+
+exports[`SFC compile <script setup> exports export { x as default } 1`] = `
+"import x from './x'
+          
+export function setup() {
+
+          const y = 1
+          
+return { y }
+}
+
+
+const __default__ = x
+__default__.setup = setup
+export default __default__"
+`;
+
+exports[`SFC compile <script setup> exports export { x as default } from './x' 1`] = `
+"import { x as __default__ } from './x'
+import { y } from './x'
+          
+export function setup() {
+
+          
+return { y }
+}
+
+__default__.setup = setup
+export default __default__"
+`;
+
+exports[`SFC compile <script setup> exports export class X() {} 1`] = `
+"export function setup() {
+class X {}
+return { X }
+}
+
+export default { setup }"
+`;
+
+exports[`SFC compile <script setup> exports export const { x } = ... (destructuring) 1`] = `
+"export function setup() {
+
+          const [a = 1, { b } = { b: 123 }, ...c] = useFoo()
+          const { d = 2, _: [e], ...f } = useBar()
+        
+return { a, b, c, d, e, f }
+}
+
+export default { setup }"
+`;
+
+exports[`SFC compile <script setup> exports export const x = ... 1`] = `
+"export function setup() {
+const x = 1
+return { x }
+}
+
+export default { setup }"
+`;
+
+exports[`SFC compile <script setup> exports export default from './x' 1`] = `
+"import __default__ from './x'
+          
+export function setup() {
+
+          
+return {  }
+}
+
+__default__.setup = setup
+export default __default__"
+`;
+
+exports[`SFC compile <script setup> exports export default in <script setup> 1`] = `
+"export function setup() {
+
+          const y = 1
+          
+return { y }
+}
+
+const __default__ = {
+            props: ['foo']
+          }
+          __default__.setup = setup
+export default __default__"
+`;
+
+exports[`SFC compile <script setup> exports export function x() {} 1`] = `
+"export function setup() {
+function x(){}
+return { x }
+}
+
+export default { setup }"
+`;
+
+exports[`SFC compile <script setup> import dedupe between <script> and <script setup> 1`] = `
+"import { x } from './x'
+      
+export function setup() {
+
+      x()
+      
+return {  }
+}
+
+export default { setup }"
+`;
+
+exports[`SFC compile <script setup> should extract comment for import or type declarations 1`] = `
+"import a from 'a' // comment
+import b from 'b'
+
+export function setup() {
+
+
+return {  }
+}
+
+export default { setup }"
+`;
+
+exports[`SFC compile <script setup> should hoist imports 1`] = `
+"import { ref } from 'vue'
+export function setup() {
+
+return {  }
+}
+
+export default { setup }"
+`;

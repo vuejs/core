@@ -8,6 +8,7 @@ export {
   readonly,
   // utilities
   unref,
+  proxyRefs,
   isRef,
   toRef,
   toRefs,
@@ -65,8 +66,6 @@ export {
 } from './components/BaseTransition'
 // For using custom directives
 export { withDirectives } from './directives'
-// SFC CSS Modules
-export { useCSSModule } from './helpers/useCssModule'
 // SSR context
 export { useSSRContext, ssrContextKey } from './helpers/useSsrContext'
 
@@ -91,10 +90,14 @@ export { registerRuntimeCompiler } from './component'
 export {
   useTransitionState,
   resolveTransitionHooks,
-  setTransitionHooks
+  setTransitionHooks,
+  getTransitionRawChildren
 } from './components/BaseTransition'
 
-// Types -----------------------------------------------------------------------
+// For devtools
+export { devtools, setDevtoolsHook } from './devtools'
+
+// Types -------------------------------------------------------------------------
 
 import { VNode } from './vnode'
 import { ComponentInternalInstance } from './component'
@@ -121,9 +124,12 @@ export {
   TriggerOpTypes,
   Ref,
   ComputedRef,
+  WritableComputedRef,
   UnwrapRef,
+  ShallowUnwrapRef,
   WritableComputedOptions,
-  ToRefs
+  ToRefs,
+  DeepReadonly
 } from '@vue/reactivity'
 export {
   // types
@@ -153,23 +159,31 @@ export {
 } from './vnode'
 export {
   Component,
+  ConcreteComponent,
   FunctionalComponent,
   ComponentInternalInstance,
-  SetupContext
+  SetupContext,
+  ComponentCustomProps,
+  AllowedComponentProps
 } from './component'
+export { DefineComponent } from './apiDefineComponent'
 export {
   ComponentOptions,
+  ComponentOptionsMixin,
   ComponentOptionsWithoutProps,
   ComponentOptionsWithObjectProps,
   ComponentOptionsWithArrayProps,
   ComponentCustomOptions,
   ComponentOptionsBase,
-  RenderFunction
+  RenderFunction,
+  MethodOptions,
+  ComputedOptions
 } from './componentOptions'
+export { EmitsOptions, ObjectEmitsOptions } from './componentEmits'
 export {
   ComponentPublicInstance,
   ComponentCustomProperties
-} from './componentProxy'
+} from './componentPublicInstance'
 export {
   Renderer,
   RendererNode,
@@ -185,7 +199,8 @@ export {
   PropType,
   ComponentPropsOptions,
   ComponentObjectPropsOptions,
-  ExtractPropTypes
+  ExtractPropTypes,
+  ExtractDefaultPropTypes
 } from './componentProps'
 export {
   Directive,
@@ -224,19 +239,7 @@ export {
   createCommentVNode,
   createStaticVNode
 } from './vnode'
-
-// a bit of ceremony to mark these internal only here because we need to include
-// them in @vue/shared's typings
-import { toDisplayString, camelize } from '@vue/shared'
-/**
- * @private
- */
-const _toDisplayString = toDisplayString
-/**
- * @private
- */
-const _camelize = camelize
-export { _toDisplayString as toDisplayString, _camelize as camelize }
+export { toDisplayString, camelize, capitalize } from '@vue/shared'
 
 // For test-utils
 export { transformVNodeArgs } from './vnode'
@@ -252,7 +255,6 @@ import {
   setCurrentRenderingInstance
 } from './componentRenderUtils'
 import { isVNode, normalizeVNode } from './vnode'
-import { normalizeSuspenseChildren } from './components/Suspense'
 
 const _ssrUtils = {
   createComponentInstance,
@@ -260,8 +262,7 @@ const _ssrUtils = {
   renderComponentRoot,
   setCurrentRenderingInstance,
   isVNode,
-  normalizeVNode,
-  normalizeSuspenseChildren
+  normalizeVNode
 }
 
 /**

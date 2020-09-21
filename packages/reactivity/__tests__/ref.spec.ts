@@ -109,21 +109,23 @@ describe('reactivity/ref', () => {
   })
 
   it('should NOT unwrap ref types nested inside arrays', () => {
-    const arr = ref([1, ref(1)]).value
-    ;(arr[0] as number)++
-    ;(arr[1] as Ref<number>).value++
+    const arr = ref([1, ref(3)]).value
+    expect(isRef(arr[0])).toBe(false)
+    expect(isRef(arr[1])).toBe(true)
+    expect((arr[1] as Ref).value).toBe(3)
+  })
 
-    const arr2 = ref([1, new Map<string, any>(), ref('1')]).value
-    const value = arr2[0]
-    if (isRef(value)) {
-      value + 'foo'
-    } else if (typeof value === 'number') {
-      value + 1
-    } else {
-      // should narrow down to Map type
-      // and not contain any Ref type
-      value.has('foo')
-    }
+  it('should unwrap ref types as props of arrays', () => {
+    const arr = [ref(0)]
+    const symbolKey = Symbol('')
+    arr['' as any] = ref(1)
+    arr[symbolKey as any] = ref(2)
+    const arrRef = ref(arr).value
+    expect(isRef(arrRef[0])).toBe(true)
+    expect(isRef(arrRef['' as any])).toBe(false)
+    expect(isRef(arrRef[symbolKey as any])).toBe(false)
+    expect(arrRef['' as any]).toBe(1)
+    expect(arrRef[symbolKey as any]).toBe(2)
   })
 
   it('should keep tuple types', () => {
@@ -234,6 +236,10 @@ describe('reactivity/ref', () => {
     // mutating source should trigger effect using the proxy refs
     a.x = 4
     expect(dummyX).toBe(4)
+
+    // should keep ref
+    const r = { x: ref(1) }
+    expect(toRef(r, 'x')).toBe(r.x)
   })
 
   test('toRefs', () => {
@@ -275,6 +281,29 @@ describe('reactivity/ref', () => {
     a.y = 5
     expect(dummyX).toBe(4)
     expect(dummyY).toBe(5)
+  })
+
+  test('toRefs should warn on plain object', () => {
+    toRefs({})
+    expect(`toRefs() expects a reactive object`).toHaveBeenWarned()
+  })
+
+  test('toRefs should warn on plain array', () => {
+    toRefs([])
+    expect(`toRefs() expects a reactive object`).toHaveBeenWarned()
+  })
+
+  test('toRefs reactive array', () => {
+    const arr = reactive(['a', 'b', 'c'])
+    const refs = toRefs(arr)
+
+    expect(Array.isArray(refs)).toBe(true)
+
+    refs[0].value = '1'
+    expect(arr[0]).toBe('1')
+
+    arr[1] = '2'
+    expect(refs[1].value).toBe('2')
   })
 
   test('customRef', () => {

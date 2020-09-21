@@ -6,14 +6,17 @@ import {
   ExpressionNode,
   NodeTypes,
   createCompoundExpression,
-  SimpleExpressionNode
+  SimpleExpressionNode,
+  ElementTypes
 } from '../ast'
 import { capitalize, camelize } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
+import { validateBrowserExpression } from '../validateExpression'
 import { isMemberExpression, hasScopeRef } from '../utils'
+import { CAPITALIZE } from '../runtimeHelpers'
 
-const fnExpRE = /^([\w$_]+|\([^)]*?\))\s*=>|^function(?:\s+[\w$]+)?\s*\(/
+const fnExpRE = /^\s*([\w$_]+|\([^)]*?\))\s*=>|^\s*function(?:\s+[\w$]+)?\s*\(/
 
 export interface VOnDirectiveNode extends DirectiveNode {
   // v-on without arg is handled directly in ./transformElements.ts due to it affecting
@@ -45,12 +48,16 @@ export const transformOn: DirectiveTransform = (
         : capitalize(rawName)
       eventName = createSimpleExpression(`on${normalizedName}`, true, arg.loc)
     } else {
-      eventName = createCompoundExpression([`"on" + (`, arg, `)`])
+      eventName = createCompoundExpression([
+        `"on" + ${context.helperString(CAPITALIZE)}(`,
+        arg,
+        `)`
+      ])
     }
   } else {
     // already a compound expression.
     eventName = arg
-    eventName.children.unshift(`"on" + (`)
+    eventName.children.unshift(`"on" + ${context.helperString(CAPITALIZE)}(`)
     eventName.children.push(`)`)
   }
 
@@ -61,7 +68,7 @@ export const transformOn: DirectiveTransform = (
   if (exp && !exp.content.trim()) {
     exp = undefined
   }
-  let isCacheable: boolean = !exp
+  let isCacheable: boolean = context.cacheHandlers && !exp
   if (exp) {
     const isMemberExp = isMemberExpression(exp.content)
     const isInlineStatement = !(isMemberExp || fnExpRE.test(exp.content))
@@ -69,30 +76,50 @@ export const transformOn: DirectiveTransform = (
 
     // process the expression since it's been skipped
     if (!__BROWSER__ && context.prefixIdentifiers) {
-      context.addIdentifiers(`$event`)
+      isInlineStatement && context.addIdentifiers(`$event`)
       exp = processExpression(exp, context, false, hasMultipleStatements)
-      context.removeIdentifiers(`$event`)
+      isInlineStatement && context.removeIdentifiers(`$event`)
       // with scope analysis, the function is hoistable if it has no reference
       // to scope variables.
       isCacheable =
-        context.cacheHandlers && !hasScopeRef(exp, context.identifiers)
+        context.cacheHandlers &&
+        // #1541 bail if this is a member exp handler passed to a component -
+        // we need to use the original function to preserve arity,
+        // e.g. <transition> relies on checking cb.length to determine
+        // transition end handling. Inline function is ok since its arity
+        // is preserved even when cached.
+        !(isMemberExp && node.tagType === ElementTypes.COMPONENT) &&
+        // bail if the function references closure variables (v-for, v-slot)
+        // it must be passed fresh to avoid stale values.
+        !hasScopeRef(exp, context.identifiers)
       // If the expression is optimizable and is a member expression pointing
       // to a function, turn it into invocation (and wrap in an arrow function
       // below) so that it always accesses the latest value when called - thus
       // avoiding the need to be patched.
       if (isCacheable && isMemberExp) {
         if (exp.type === NodeTypes.SIMPLE_EXPRESSION) {
-          exp.content += `($event)`
+          exp.content += `(...args)`
         } else {
-          exp.children.push(`($event)`)
+          exp.children.push(`(...args)`)
         }
       }
+    }
+
+    if (__DEV__ && __BROWSER__) {
+      validateBrowserExpression(
+        exp as SimpleExpressionNode,
+        context,
+        false,
+        hasMultipleStatements
+      )
     }
 
     if (isInlineStatement || (isCacheable && isMemberExp)) {
       // wrap inline statement in a function expression
       exp = createCompoundExpression([
-        `$event => ${hasMultipleStatements ? `{` : `(`}`,
+        `${isInlineStatement ? `$event` : `(...args)`} => ${
+          hasMultipleStatements ? `{` : `(`
+        }`,
         exp,
         hasMultipleStatements ? `}` : `)`
       ])

@@ -3,12 +3,9 @@ import {
   BaseTransitionProps,
   h,
   warn,
-  FunctionalComponent,
-  getCurrentInstance,
-  callWithAsyncErrorHandling
+  FunctionalComponent
 } from '@vue/runtime-core'
 import { isObject, toNumber, extend } from '@vue/shared'
-import { ErrorCodes } from 'packages/runtime-core/src/errorHandling'
 
 const TRANSITION = 'transition'
 const ANIMATION = 'animation'
@@ -37,7 +34,7 @@ export const Transition: FunctionalComponent<TransitionProps> = (
   { slots }
 ) => h(BaseTransition, resolveTransitionProps(props), slots)
 
-Transition.inheritRef = true
+Transition.displayName = 'Transition'
 
 const DOMTransitionPropsValidators = {
   name: String,
@@ -58,7 +55,7 @@ const DOMTransitionPropsValidators = {
   leaveToClass: String
 }
 
-export const TransitionPropsValidators = (Transition.props = extend(
+export const TransitionPropsValidators = (Transition.props = /*#__PURE__*/ extend(
   {},
   (BaseTransition as any).props,
   DOMTransitionPropsValidators
@@ -94,42 +91,49 @@ export function resolveTransitionProps(
     return baseProps
   }
 
-  const originEnterClass = [enterFromClass, enterActiveClass, enterToClass]
-  const instance = getCurrentInstance()!
   const durations = normalizeDuration(duration)
   const enterDuration = durations && durations[0]
   const leaveDuration = durations && durations[1]
-  const { appear, onBeforeEnter, onEnter, onLeave } = baseProps
+  const {
+    onBeforeEnter,
+    onEnter,
+    onEnterCancelled,
+    onLeave,
+    onLeaveCancelled,
+    onBeforeAppear = onBeforeEnter,
+    onAppear = onEnter,
+    onAppearCancelled = onEnterCancelled
+  } = baseProps
 
-  // is appearing
-  if (appear && !instance.isMounted) {
-    enterFromClass = appearFromClass
-    enterActiveClass = appearActiveClass
-    enterToClass = appearToClass
-  }
-
-  type Hook = (el: Element, done?: () => void) => void
-
-  const finishEnter: Hook = (el, done) => {
-    removeTransitionClass(el, enterToClass)
-    removeTransitionClass(el, enterActiveClass)
+  const finishEnter = (el: Element, isAppear: boolean, done?: () => void) => {
+    removeTransitionClass(el, isAppear ? appearToClass : enterToClass)
+    removeTransitionClass(el, isAppear ? appearActiveClass : enterActiveClass)
     done && done()
-    // reset enter class
-    if (appear) {
-      ;[enterFromClass, enterActiveClass, enterToClass] = originEnterClass
-    }
   }
 
-  const finishLeave: Hook = (el, done) => {
+  const finishLeave = (el: Element, done?: () => void) => {
     removeTransitionClass(el, leaveToClass)
     removeTransitionClass(el, leaveActiveClass)
     done && done()
   }
 
-  // only needed for user hooks called in nextFrame
-  // sync errors are already handled by BaseTransition
-  function callHookWithErrorHandling(hook: Hook, args: any[]) {
-    callWithAsyncErrorHandling(hook, instance, ErrorCodes.TRANSITION_HOOK, args)
+  const makeEnterHook = (isAppear: boolean) => {
+    return (el: Element, done: () => void) => {
+      const hook = isAppear ? onAppear : onEnter
+      const resolve = () => finishEnter(el, isAppear, done)
+      hook && hook(el, resolve)
+      nextFrame(() => {
+        removeTransitionClass(el, isAppear ? appearFromClass : enterFromClass)
+        addTransitionClass(el, isAppear ? appearToClass : enterToClass)
+        if (!(hook && hook.length > 1)) {
+          if (enterDuration) {
+            setTimeout(resolve, enterDuration)
+          } else {
+            whenTransitionEnds(el, type, resolve)
+          }
+        }
+      })
+    }
   }
 
   return extend(baseProps, {
@@ -138,27 +142,18 @@ export function resolveTransitionProps(
       addTransitionClass(el, enterActiveClass)
       addTransitionClass(el, enterFromClass)
     },
-    onEnter(el, done) {
-      nextFrame(() => {
-        const resolve = () => finishEnter(el, done)
-        onEnter && callHookWithErrorHandling(onEnter as Hook, [el, resolve])
-        removeTransitionClass(el, enterFromClass)
-        addTransitionClass(el, enterToClass)
-        if (!(onEnter && onEnter.length > 1)) {
-          if (enterDuration) {
-            setTimeout(resolve, enterDuration)
-          } else {
-            whenTransitionEnds(el, type, resolve)
-          }
-        }
-      })
+    onBeforeAppear(el) {
+      onBeforeAppear && onBeforeAppear(el)
+      addTransitionClass(el, appearActiveClass)
+      addTransitionClass(el, appearFromClass)
     },
+    onEnter: makeEnterHook(false),
+    onAppear: makeEnterHook(true),
     onLeave(el, done) {
+      const resolve = () => finishLeave(el, done)
       addTransitionClass(el, leaveActiveClass)
       addTransitionClass(el, leaveFromClass)
       nextFrame(() => {
-        const resolve = () => finishLeave(el, done)
-        onLeave && callHookWithErrorHandling(onLeave as Hook, [el, resolve])
         removeTransitionClass(el, leaveFromClass)
         addTransitionClass(el, leaveToClass)
         if (!(onLeave && onLeave.length > 1)) {
@@ -169,9 +164,20 @@ export function resolveTransitionProps(
           }
         }
       })
+      onLeave && onLeave(el, resolve)
     },
-    onEnterCancelled: finishEnter,
-    onLeaveCancelled: finishLeave
+    onEnterCancelled(el) {
+      finishEnter(el, false)
+      onEnterCancelled && onEnterCancelled(el)
+    },
+    onAppearCancelled(el) {
+      finishEnter(el, true)
+      onAppearCancelled && onAppearCancelled(el)
+    },
+    onLeaveCancelled(el) {
+      finishLeave(el)
+      onLeaveCancelled && onLeaveCancelled(el)
+    }
   } as BaseTransitionProps<Element>)
 }
 

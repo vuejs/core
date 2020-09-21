@@ -11,8 +11,8 @@ const HTML_TAGS =
   'time,u,var,wbr,area,audio,map,track,video,embed,object,param,source,' +
   'canvas,script,noscript,del,ins,caption,col,colgroup,table,thead,tbody,td,' +
   'th,tr,button,datalist,fieldset,form,input,label,legend,meter,optgroup,' +
-  'option,output,progress,select,textarea,details,dialog,menu,menuitem,' +
-  'summary,content,element,shadow,template,blockquote,iframe,tfoot'
+  'option,output,progress,select,textarea,details,dialog,menu,' +
+  'summary,template,blockquote,iframe,tfoot'
 
 // https://developer.mozilla.org/en-US/docs/Web/SVG/Element
 const SVG_TAGS =

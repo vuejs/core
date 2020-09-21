@@ -7,13 +7,12 @@ import {
   PlainElementNode,
   ComponentNode,
   TemplateNode,
-  ElementNode,
   VNodeCall,
   ParentNode
 } from '../ast'
 import { TransformContext } from '../transform'
 import { PatchFlags, isString, isSymbol } from '@vue/shared'
-import { isSlotOutlet, findProp } from '../utils'
+import { isSlotOutlet } from '../utils'
 
 export function hoistStatic(root: RootNode, context: TransformContext) {
   walk(
@@ -51,7 +50,7 @@ function walk(
   doNotHoistNode: boolean = false
 ) {
   let hasHoistedNode = false
-  // Some transforms, e.g. trasnformAssetUrls from @vue/compiler-sfc, replaces
+  // Some transforms, e.g. transformAssetUrls from @vue/compiler-sfc, replaces
   // static bindings with expressions. These expressions are guaranteed to be
   // constant so they are still eligible for hoisting, but they are only
   // available at runtime and therefore cannot be evaluated ahead of time.
@@ -93,8 +92,7 @@ function walk(
             (!flag ||
               flag === PatchFlags.NEED_PATCH ||
               flag === PatchFlags.TEXT) &&
-            !hasDynamicKeyOrRef(child) &&
-            !hasCachedProps(child)
+            !hasNonHoistableProps(child)
           ) {
             const props = getNodeProps(child)
             if (props) {
@@ -156,7 +154,7 @@ export function getStaticType(
         return StaticType.NOT_STATIC
       }
       const flag = getPatchFlag(codegenNode)
-      if (!flag && !hasDynamicKeyOrRef(node) && !hasCachedProps(node)) {
+      if (!flag && !hasNonHoistableProps(node)) {
         // element self is static. check its children.
         let returnType = StaticType.FULL_STATIC
         for (let i = 0; i < node.children.length; i++) {
@@ -238,28 +236,23 @@ export function getStaticType(
   }
 }
 
-function hasDynamicKeyOrRef(node: ElementNode): boolean {
-  return !!(findProp(node, 'key', true) || findProp(node, 'ref', true))
-}
-
-function hasCachedProps(node: PlainElementNode): boolean {
-  if (__BROWSER__) {
-    return false
-  }
+/**
+ * Even for a node with no patch flag, it is possible for it to contain
+ * non-hoistable expressions that refers to scope variables, e.g. compiler
+ * injected keys or cached event handlers. Therefore we need to always check the
+ * codegenNode's props to be sure.
+ */
+function hasNonHoistableProps(node: PlainElementNode): boolean {
   const props = getNodeProps(node)
   if (props && props.type === NodeTypes.JS_OBJECT_EXPRESSION) {
     const { properties } = props
     for (let i = 0; i < properties.length; i++) {
-      const val = properties[i].value
-      if (val.type === NodeTypes.JS_CACHE_EXPRESSION) {
-        return true
-      }
-      // merged event handlers
+      const { key, value } = properties[i]
       if (
-        val.type === NodeTypes.JS_ARRAY_EXPRESSION &&
-        val.elements.some(
-          e => !isString(e) && e.type === NodeTypes.JS_CACHE_EXPRESSION
-        )
+        key.type !== NodeTypes.SIMPLE_EXPRESSION ||
+        !key.isStatic ||
+        (value.type !== NodeTypes.SIMPLE_EXPRESSION ||
+          (!value.isStatic && !value.isConstant))
       ) {
         return true
       }

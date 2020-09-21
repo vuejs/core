@@ -115,6 +115,17 @@ describe('compiler: transform v-model', () => {
       )
     })
 
+    test('should allow usage on custom element', () => {
+      const onError = jest.fn()
+      const root = transformWithModel('<my-input v-model="model" />', {
+        onError,
+        isCustomElement: tag => tag.startsWith('my-')
+      })
+      expect(root.helpers).toContain(V_MODEL_TEXT)
+      expect(onError).not.toHaveBeenCalled()
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
     test('should raise error if used file input element', () => {
       const onError = jest.fn()
       transformWithModel(`<input type="file" v-model="test"/>`, {

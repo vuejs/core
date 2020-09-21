@@ -53,6 +53,12 @@ function mockProps(extra: BaseTransitionProps = {}, withKeepAlive = false) {
     }),
     onAfterLeave: jest.fn(),
     onLeaveCancelled: jest.fn(),
+    onBeforeAppear: jest.fn(),
+    onAppear: jest.fn((el, done) => {
+      cbs.doneEnter[serialize(el as TestElement)] = done
+    }),
+    onAfterAppear: jest.fn(),
+    onAppearCancelled: jest.fn(),
     ...extra
   }
   return {
@@ -132,8 +138,33 @@ function runTestWithKeepAlive(tester: TestFn) {
 }
 
 describe('BaseTransition', () => {
-  test('appear: true', () => {
-    const { props, cbs } = mockProps({ appear: true })
+  test('appear: true w/ appear hooks', () => {
+    const { props, cbs } = mockProps({
+      appear: true
+    })
+    mount(props, () => h('div'))
+    expect(props.onBeforeAppear).toHaveBeenCalledTimes(1)
+    expect(props.onAppear).toHaveBeenCalledTimes(1)
+    expect(props.onAfterAppear).not.toHaveBeenCalled()
+
+    // enter should not be called
+    expect(props.onBeforeEnter).not.toHaveBeenCalled()
+    expect(props.onEnter).not.toHaveBeenCalled()
+    expect(props.onAfterEnter).not.toHaveBeenCalled()
+
+    cbs.doneEnter[`<div></div>`]()
+    expect(props.onAfterAppear).toHaveBeenCalledTimes(1)
+    expect(props.onAfterEnter).not.toHaveBeenCalled()
+  })
+
+  test('appear: true w/ fallback to enter hooks', () => {
+    const { props, cbs } = mockProps({
+      appear: true,
+      onBeforeAppear: undefined,
+      onAppear: undefined,
+      onAfterAppear: undefined,
+      onAppearCancelled: undefined
+    })
     mount(props, () => h('div'))
     expect(props.onBeforeEnter).toHaveBeenCalledTimes(1)
     expect(props.onEnter).toHaveBeenCalledTimes(1)
@@ -207,11 +238,11 @@ describe('BaseTransition', () => {
       const { hooks } = mockPersistedHooks()
       mount(props, () => h('div', hooks))
 
-      expect(props.onBeforeEnter).toHaveBeenCalledTimes(1)
-      expect(props.onEnter).toHaveBeenCalledTimes(1)
-      expect(props.onAfterEnter).not.toHaveBeenCalled()
+      expect(props.onBeforeAppear).toHaveBeenCalledTimes(1)
+      expect(props.onAppear).toHaveBeenCalledTimes(1)
+      expect(props.onAfterAppear).not.toHaveBeenCalled()
       cbs.doneEnter[`<div></div>`]()
-      expect(props.onAfterEnter).toHaveBeenCalledTimes(1)
+      expect(props.onAfterAppear).toHaveBeenCalledTimes(1)
     })
   })
 

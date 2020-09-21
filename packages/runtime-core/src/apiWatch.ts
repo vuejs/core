@@ -7,7 +7,7 @@ import {
   ReactiveEffectOptions,
   isReactive
 } from '@vue/reactivity'
-import { queueJob } from './scheduler'
+import { SchedulerJob, queuePreFlushCb } from './scheduler'
 import {
   EMPTY_OBJ,
   isObject,
@@ -16,7 +16,9 @@ import {
   isString,
   hasChanged,
   NOOP,
-  remove
+  remove,
+  isMap,
+  isSet
 } from '@vue/shared'
 import {
   currentInstance,
@@ -29,7 +31,6 @@ import {
   callWithErrorHandling,
   callWithAsyncErrorHandling
 } from './errorHandling'
-import { onBeforeUnmount } from './apiLifecycle'
 import { queuePostRenderEffect } from './renderer'
 import { warn } from './warning'
 
@@ -71,8 +72,6 @@ export interface WatchOptions<Immediate = boolean> extends WatchOptionsBase {
 }
 
 export type WatchStopHandle = () => void
-
-const invoke = (fn: Function) => fn()
 
 // Simple effect.
 export function watchEffect(
@@ -134,7 +133,8 @@ export function watch<T = any>(
 function doWatch(
   source: WatchSource | WatchSource[] | WatchEffect,
   cb: WatchCallback | null,
-  { immediate, deep, flush, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ
+  { immediate, deep, flush, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ,
+  instance = currentInstance
 ): WatchStopHandle {
   if (__DEV__ && !cb) {
     if (immediate !== undefined) {
@@ -160,10 +160,14 @@ function doWatch(
     )
   }
 
-  const instance = currentInstance
-
   let getter: () => any
-  if (isArray(source)) {
+  const isRefSource = isRef(source)
+  if (isRefSource) {
+    getter = () => (source as Ref).value
+  } else if (isReactive(source)) {
+    getter = () => source
+    deep = true
+  } else if (isArray(source)) {
     getter = () =>
       source.map(s => {
         if (isRef(s)) {
@@ -176,11 +180,6 @@ function doWatch(
           __DEV__ && warnInvalidSource(s)
         }
       })
-  } else if (isRef(source)) {
-    getter = () => source.value
-  } else if (isReactive(source)) {
-    getter = () => source
-    deep = true
   } else if (isFunction(source)) {
     if (cb) {
       // getter with cb
@@ -236,63 +235,72 @@ function doWatch(
   }
 
   let oldValue = isArray(source) ? [] : INITIAL_WATCHER_VALUE
-  const applyCb = cb
-    ? () => {
-        if (instance && instance.isUnmounted) {
-          return
+  const job: SchedulerJob = () => {
+    if (!runner.active) {
+      return
+    }
+    if (cb) {
+      // watch(source, cb)
+      const newValue = runner()
+      if (deep || isRefSource || hasChanged(newValue, oldValue)) {
+        // cleanup before running cb again
+        if (cleanup) {
+          cleanup()
         }
-        const newValue = runner()
-        if (deep || hasChanged(newValue, oldValue)) {
-          // cleanup before running cb again
-          if (cleanup) {
-            cleanup()
-          }
-          callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
-            newValue,
-            // pass undefined as the old value when it's changed for the first time
-            oldValue === INITIAL_WATCHER_VALUE ? undefined : oldValue,
-            onInvalidate
-          ])
-          oldValue = newValue
-        }
+        callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
+          newValue,
+          // pass undefined as the old value when it's changed for the first time
+          oldValue === INITIAL_WATCHER_VALUE ? undefined : oldValue,
+          onInvalidate
+        ])
+        oldValue = newValue
       }
-    : void 0
+    } else {
+      // watchEffect
+      runner()
+    }
+  }
+
+  // important: mark the job as a watcher callback so that scheduler knows it
+  // it is allowed to self-trigger (#1727)
+  job.allowRecurse = !!cb
 
   let scheduler: (job: () => any) => void
   if (flush === 'sync') {
-    scheduler = invoke
-  } else if (flush === 'pre') {
-    scheduler = job => {
+    scheduler = job
+  } else if (flush === 'post') {
+    scheduler = () => queuePostRenderEffect(job, instance && instance.suspense)
+  } else {
+    // default: 'pre'
+    scheduler = () => {
       if (!instance || instance.isMounted) {
-        queueJob(job)
+        queuePreFlushCb(job)
       } else {
         // with 'pre' option, the first call must happen before
         // the component is mounted so it is called synchronously.
         job()
       }
     }
-  } else {
-    scheduler = job => queuePostRenderEffect(job, instance && instance.suspense)
   }
 
   const runner = effect(getter, {
     lazy: true,
-    // so it runs before component update effects in pre flush mode
-    computed: true,
     onTrack,
     onTrigger,
-    scheduler: applyCb ? () => scheduler(applyCb) : scheduler
+    scheduler
   })
 
   recordInstanceBoundEffect(runner)
 
   // initial run
-  if (applyCb) {
+  if (cb) {
     if (immediate) {
-      applyCb()
+      job()
     } else {
       oldValue = runner()
     }
+  } else if (flush === 'post') {
+    queuePostRenderEffect(runner, instance && instance.suspense)
   } else {
     runner()
   }
@@ -316,9 +324,7 @@ export function instanceWatch(
   const getter = isString(source)
     ? () => publicThis[source]
     : source.bind(publicThis)
-  const stop = watch(getter, cb.bind(publicThis), options)
-  onBeforeUnmount(stop, this)
-  return stop
+  return doWatch(getter, cb.bind(publicThis), options, this)
 }
 
 function traverse(value: unknown, seen: Set<unknown> = new Set()) {
@@ -326,16 +332,18 @@ function traverse(value: unknown, seen: Set<unknown> = new Set()) {
     return value
   }
   seen.add(value)
-  if (isArray(value)) {
+  if (isRef(value)) {
+    traverse(value.value, seen)
+  } else if (isArray(value)) {
     for (let i = 0; i < value.length; i++) {
       traverse(value[i], seen)
     }
-  } else if (value instanceof Map) {
-    value.forEach((v, key) => {
+  } else if (isMap(value)) {
+    value.forEach((_, key) => {
       // to register mutation dep for existing keys
       traverse(value.get(key), seen)
     })
-  } else if (value instanceof Set) {
+  } else if (isSet(value)) {
     value.forEach(v => {
       traverse(v, seen)
     })

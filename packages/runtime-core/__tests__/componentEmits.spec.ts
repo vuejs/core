@@ -1,13 +1,10 @@
 // Note: emits and listener fallthrough is tested in
 // ./rendererAttrsFallthrough.spec.ts.
 
-import { mockWarn } from '@vue/shared'
 import { render, defineComponent, h, nodeOps } from '@vue/runtime-test'
 import { isEmitListener } from '../src/componentEmits'
 
 describe('component: emit', () => {
-  mockWarn()
-
   test('trigger handlers', () => {
     const Foo = defineComponent({
       render() {},
@@ -26,13 +23,13 @@ describe('component: emit', () => {
     render(h(Comp), nodeOps.createElement('div'))
 
     expect(onfoo).not.toHaveBeenCalled()
-    // only capitalized or special chars are considerd event listeners
+    // only capitalized or special chars are considered event listeners
     expect(onBar).toHaveBeenCalled()
     expect(onBaz).toHaveBeenCalled()
   })
 
   // for v-model:foo-bar usage in DOM templates
-  test('trigger hyphendated events for update:xxx events', () => {
+  test('trigger hyphenated events for update:xxx events', () => {
     const Foo = defineComponent({
       render() {},
       created() {
@@ -143,12 +140,51 @@ describe('component: emit', () => {
     expect(`event validation failed for event "foo"`).toHaveBeenWarned()
   })
 
+  test('merging from mixins', () => {
+    const mixin = {
+      emits: {
+        foo: (arg: number) => arg > 0
+      }
+    }
+    const Foo = defineComponent({
+      mixins: [mixin],
+      render() {},
+      created() {
+        this.$emit('foo', -1)
+      }
+    })
+    render(h(Foo), nodeOps.createElement('div'))
+    expect(`event validation failed for event "foo"`).toHaveBeenWarned()
+  })
+
+  test('.once', () => {
+    const Foo = defineComponent({
+      render() {},
+      emits: {
+        foo: null
+      },
+      created() {
+        this.$emit('foo')
+        this.$emit('foo')
+      }
+    })
+    const fn = jest.fn()
+    render(
+      h(Foo, {
+        onFooOnce: fn
+      }),
+      nodeOps.createElement('div')
+    )
+    expect(fn).toHaveBeenCalledTimes(1)
+  })
+
   test('isEmitListener', () => {
-    expect(isEmitListener(['click'], 'onClick')).toBe(true)
-    expect(isEmitListener(['click'], 'onclick')).toBe(false)
-    expect(isEmitListener({ click: null }, 'onClick')).toBe(true)
-    expect(isEmitListener({ click: null }, 'onclick')).toBe(false)
-    expect(isEmitListener(['click'], 'onBlick')).toBe(false)
-    expect(isEmitListener({ click: null }, 'onBlick')).toBe(false)
+    const options = { click: null }
+    expect(isEmitListener(options, 'onClick')).toBe(true)
+    expect(isEmitListener(options, 'onclick')).toBe(false)
+    expect(isEmitListener(options, 'onBlick')).toBe(false)
+    // .once listeners
+    expect(isEmitListener(options, 'onClickOnce')).toBe(true)
+    expect(isEmitListener(options, 'onclickOnce')).toBe(false)
   })
 })

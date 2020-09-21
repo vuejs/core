@@ -33,9 +33,9 @@ describe('hot module replacement', () => {
   })
 
   test('createRecord', () => {
-    expect(createRecord('test1', {})).toBe(true)
+    expect(createRecord('test1')).toBe(true)
     // if id has already been created, should return false
-    expect(createRecord('test1', {})).toBe(false)
+    expect(createRecord('test1')).toBe(false)
   })
 
   test('rerender', async () => {
@@ -47,7 +47,7 @@ describe('hot module replacement', () => {
       __hmrId: childId,
       render: compileToFunction(`<div><slot/></div>`)
     }
-    createRecord(childId, Child)
+    createRecord(childId)
 
     const Parent: ComponentOptions = {
       __hmrId: parentId,
@@ -59,7 +59,7 @@ describe('hot module replacement', () => {
         `<div @click="count++">{{ count }}<Child>{{ count }}</Child></div>`
       )
     }
-    createRecord(parentId, Parent)
+    createRecord(parentId)
 
     render(h(Parent), root)
     expect(serializeInner(root)).toBe(`<div>0<div>0</div></div>`)
@@ -125,7 +125,7 @@ describe('hot module replacement', () => {
       unmounted: unmountSpy,
       render: compileToFunction(`<div @click="count++">{{ count }}</div>`)
     }
-    createRecord(childId, Child)
+    createRecord(childId)
 
     const Parent: ComponentOptions = {
       render: () => h(Child)
@@ -142,6 +142,49 @@ describe('hot module replacement', () => {
       mounted: mountSpy,
       render: compileToFunction(`<div @click="count++">{{ count }}</div>`)
     })
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>1</div>`)
+    expect(unmountSpy).toHaveBeenCalledTimes(1)
+    expect(mountSpy).toHaveBeenCalledTimes(1)
+  })
+
+  test('reload class component', async () => {
+    const root = nodeOps.createElement('div')
+    const childId = 'test4-child'
+    const unmountSpy = jest.fn()
+    const mountSpy = jest.fn()
+
+    class Child {
+      static __vccOpts: ComponentOptions = {
+        __hmrId: childId,
+        data() {
+          return { count: 0 }
+        },
+        unmounted: unmountSpy,
+        render: compileToFunction(`<div @click="count++">{{ count }}</div>`)
+      }
+    }
+    createRecord(childId)
+
+    const Parent: ComponentOptions = {
+      render: () => h(Child)
+    }
+
+    render(h(Parent), root)
+    expect(serializeInner(root)).toBe(`<div>0</div>`)
+
+    class UpdatedChild {
+      static __vccOpts: ComponentOptions = {
+        __hmrId: childId,
+        data() {
+          return { count: 1 }
+        },
+        mounted: mountSpy,
+        render: compileToFunction(`<div @click="count++">{{ count }}</div>`)
+      }
+    }
+
+    reload(childId, UpdatedChild)
     await nextTick()
     expect(serializeInner(root)).toBe(`<div>1</div>`)
     expect(unmountSpy).toHaveBeenCalledTimes(1)
@@ -166,7 +209,7 @@ describe('hot module replacement', () => {
       },
       render: compileToFunction(template)
     }
-    createRecord(id, Comp)
+    createRecord(id)
 
     render(h(Comp), root)
     expect(serializeInner(root)).toBe(
@@ -203,19 +246,90 @@ describe('hot module replacement', () => {
       },
       render: compileToFunction(`<div>{{ msg }}</div>`)
     }
-    createRecord(childId, Child)
+    createRecord(childId)
 
     const Parent: ComponentOptions = {
       __hmrId: parentId,
       components: { Child },
       render: compileToFunction(`<Child msg="foo" />`)
     }
-    createRecord(parentId, Parent)
+    createRecord(parentId)
 
     render(h(Parent), root)
     expect(serializeInner(root)).toBe(`<div>foo</div>`)
 
     rerender(parentId, compileToFunction(`<Child msg="bar" />`))
     expect(serializeInner(root)).toBe(`<div>bar</div>`)
+  })
+
+  // #1305 - component should remove class
+  test('remove static class from parent', () => {
+    const root = nodeOps.createElement('div')
+    const parentId = 'test-force-class-parent'
+    const childId = 'test-force-class-child'
+
+    const Child: ComponentOptions = {
+      __hmrId: childId,
+      render: compileToFunction(`<div>child</div>`)
+    }
+    createRecord(childId)
+
+    const Parent: ComponentOptions = {
+      __hmrId: parentId,
+      components: { Child },
+      render: compileToFunction(`<Child class="test" />`)
+    }
+    createRecord(parentId)
+
+    render(h(Parent), root)
+    expect(serializeInner(root)).toBe(`<div class="test">child</div>`)
+
+    rerender(parentId, compileToFunction(`<Child/>`))
+    expect(serializeInner(root)).toBe(`<div>child</div>`)
+  })
+
+  test('rerender if any parent in the parent chain', () => {
+    const root = nodeOps.createElement('div')
+    const parent = 'test-force-props-parent-'
+    const childId = 'test-force-props-child'
+
+    const numberOfParents = 5
+
+    const Child: ComponentOptions = {
+      __hmrId: childId,
+      render: compileToFunction(`<div>child</div>`)
+    }
+    createRecord(childId)
+
+    const components: ComponentOptions[] = []
+
+    for (let i = 0; i < numberOfParents; i++) {
+      const parentId = `${parent}${i}`
+      const parentComp: ComponentOptions = {
+        __hmrId: parentId
+      }
+      components.push(parentComp)
+      if (i === 0) {
+        parentComp.render = compileToFunction(`<Child />`)
+        parentComp.components = {
+          Child
+        }
+      } else {
+        parentComp.render = compileToFunction(`<Parent />`)
+        parentComp.components = {
+          Parent: components[i - 1]
+        }
+      }
+
+      createRecord(parentId)
+    }
+
+    const last = components[components.length - 1]
+
+    render(h(last), root)
+    expect(serializeInner(root)).toBe(`<div>child</div>`)
+
+    rerender(last.__hmrId!, compileToFunction(`<Parent class="test"/>`))
+    expect(serializeInner(root)).toBe(`<div class="test">child</div>`)
   })
 })

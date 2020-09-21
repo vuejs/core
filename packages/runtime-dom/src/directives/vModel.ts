@@ -11,7 +11,9 @@ import {
   looseEqual,
   looseIndexOf,
   invokeArrayFns,
-  toNumber
+  toNumber,
+  isSet,
+  looseHas
 } from '@vue/shared'
 
 type AssignerFn = (value: any) => void
@@ -46,8 +48,8 @@ type ModelDirective<T> = ObjectDirective<T & { _assign: AssignerFn }>
 export const vModelText: ModelDirective<
   HTMLInputElement | HTMLTextAreaElement
 > = {
-  beforeMount(el, { value, modifiers: { lazy, trim, number } }, vnode) {
-    el.value = value
+  created(el, { value, modifiers: { lazy, trim, number } }, vnode) {
+    el.value = value == null ? '' : value
     el._assign = getModelAssigner(vnode)
     const castToNumber = number || el.type === 'number'
     addEventListener(el, lazy ? 'change' : 'input', e => {
@@ -75,11 +77,8 @@ export const vModelText: ModelDirective<
       addEventListener(el, 'change', onCompositionEnd)
     }
   },
-  beforeUpdate(el, { value, oldValue, modifiers: { trim, number } }, vnode) {
+  beforeUpdate(el, { value, modifiers: { trim, number } }, vnode) {
     el._assign = getModelAssigner(vnode)
-    if (value === oldValue) {
-      return
-    }
     if (document.activeElement === el) {
       if (trim && el.value.trim() === value) {
         return
@@ -88,12 +87,15 @@ export const vModelText: ModelDirective<
         return
       }
     }
-    el.value = value
+    const newValue = value == null ? '' : value
+    if (el.value !== newValue) {
+      el.value = newValue
+    }
   }
 }
 
 export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
-  beforeMount(el, binding, vnode) {
+  created(el, binding, vnode) {
     setChecked(el, binding, vnode)
     el._assign = getModelAssigner(vnode)
     addEventListener(el, 'change', () => {
@@ -110,6 +112,14 @@ export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
           const filtered = [...modelValue]
           filtered.splice(index, 1)
           assign(filtered)
+        }
+      } else if (isSet(modelValue)) {
+        const found = modelValue.has(elementValue)
+        if (checked && !found) {
+          assign(modelValue.add(elementValue))
+        } else if (!checked && found) {
+          modelValue.delete(elementValue)
+          assign(modelValue)
         }
       } else {
         assign(getCheckboxValue(el, checked))
@@ -132,13 +142,15 @@ function setChecked(
   ;(el as any)._modelValue = value
   if (isArray(value)) {
     el.checked = looseIndexOf(value, vnode.props!.value) > -1
+  } else if (isSet(value)) {
+    el.checked = looseHas(value, vnode.props!.value)
   } else if (value !== oldValue) {
     el.checked = looseEqual(value, getCheckboxValue(el, true))
   }
 }
 
 export const vModelRadio: ModelDirective<HTMLInputElement> = {
-  beforeMount(el, { value }, vnode) {
+  created(el, { value }, vnode) {
     el.checked = looseEqual(value, vnode.props!.value)
     el._assign = getModelAssigner(vnode)
     addEventListener(el, 'change', () => {
@@ -154,16 +166,19 @@ export const vModelRadio: ModelDirective<HTMLInputElement> = {
 }
 
 export const vModelSelect: ModelDirective<HTMLSelectElement> = {
-  // use mounted & updated because <select> relies on its children <option>s.
-  mounted(el, { value }, vnode) {
-    setSelected(el, value)
-    el._assign = getModelAssigner(vnode)
+  created(el, binding, vnode) {
     addEventListener(el, 'change', () => {
       const selectedVal = Array.prototype.filter
         .call(el.options, (o: HTMLOptionElement) => o.selected)
         .map(getValue)
       el._assign(el.multiple ? selectedVal : selectedVal[0])
     })
+    el._assign = getModelAssigner(vnode)
+  },
+  // set value in mounted & updated because <select> relies on its children
+  // <option>s.
+  mounted(el, { value }) {
+    setSelected(el, value)
   },
   beforeUpdate(el, _binding, vnode) {
     el._assign = getModelAssigner(vnode)
@@ -175,10 +190,10 @@ export const vModelSelect: ModelDirective<HTMLSelectElement> = {
 
 function setSelected(el: HTMLSelectElement, value: any) {
   const isMultiple = el.multiple
-  if (isMultiple && !isArray(value)) {
+  if (isMultiple && !isArray(value) && !isSet(value)) {
     __DEV__ &&
       warn(
-        `<select multiple v-model> expects an Array value for its binding, ` +
+        `<select multiple v-model> expects an Array or Set value for its binding, ` +
           `but got ${Object.prototype.toString.call(value).slice(8, -1)}.`
       )
     return
@@ -187,7 +202,11 @@ function setSelected(el: HTMLSelectElement, value: any) {
     const option = el.options[i]
     const optionValue = getValue(option)
     if (isMultiple) {
-      option.selected = looseIndexOf(value, optionValue) > -1
+      if (isArray(value)) {
+        option.selected = looseIndexOf(value, optionValue) > -1
+      } else {
+        option.selected = looseHas(value, optionValue)
+      }
     } else {
       if (looseEqual(getValue(option), value)) {
         el.selectedIndex = i
@@ -217,8 +236,8 @@ function getCheckboxValue(
 export const vModelDynamic: ObjectDirective<
   HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
 > = {
-  beforeMount(el, binding, vnode) {
-    callModelHook(el, binding, vnode, null, 'beforeMount')
+  created(el, binding, vnode) {
+    callModelHook(el, binding, vnode, null, 'created')
   },
   mounted(el, binding, vnode) {
     callModelHook(el, binding, vnode, null, 'mounted')
@@ -236,7 +255,7 @@ function callModelHook(
   binding: DirectiveBinding,
   vnode: VNode,
   prevVNode: VNode | null,
-  hook: 'beforeMount' | 'mounted' | 'beforeUpdate' | 'updated'
+  hook: keyof ObjectDirective
 ) {
   let modelToUse: ObjectDirective
   switch (el.tagName) {
@@ -247,7 +266,7 @@ function callModelHook(
       modelToUse = vModelText
       break
     default:
-      switch (el.type) {
+      switch (vnode.props && vnode.props.type) {
         case 'checkbox':
           modelToUse = vModelCheckbox
           break
@@ -275,6 +294,10 @@ if (__NODE_JS__) {
   vModelCheckbox.getSSRProps = ({ value }, vnode) => {
     if (isArray(value)) {
       if (vnode.props && looseIndexOf(value, vnode.props.value) > -1) {
+        return { checked: true }
+      }
+    } else if (isSet(value)) {
+      if (vnode.props && looseHas(value, vnode.props.value)) {
         return { checked: true }
       }
     } else if (value) {

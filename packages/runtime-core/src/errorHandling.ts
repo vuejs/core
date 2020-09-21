@@ -99,7 +99,8 @@ export function callWithAsyncErrorHandling(
 export function handleError(
   err: unknown,
   instance: ComponentInternalInstance | null,
-  type: ErrorTypes
+  type: ErrorTypes,
+  throwInDev = true
 ) {
   const contextVNode = instance ? instance.vnode : null
   if (instance) {
@@ -131,28 +132,32 @@ export function handleError(
       return
     }
   }
-  logError(err, type, contextVNode)
+  logError(err, type, contextVNode, throwInDev)
 }
 
-// Test-only toggle for testing the unhandled warning behavior
-let forceRecover = false
-export function setErrorRecovery(value: boolean) {
-  forceRecover = value
-}
-
-function logError(err: unknown, type: ErrorTypes, contextVNode: VNode | null) {
-  // default behavior is crash in prod & test, recover in dev.
-  if (__DEV__ && (forceRecover || !__TEST__)) {
+function logError(
+  err: unknown,
+  type: ErrorTypes,
+  contextVNode: VNode | null,
+  throwInDev = true
+) {
+  if (__DEV__) {
     const info = ErrorTypeStrings[type]
     if (contextVNode) {
       pushWarningContext(contextVNode)
     }
     warn(`Unhandled error${info ? ` during execution of ${info}` : ``}`)
-    console.error(err)
     if (contextVNode) {
       popWarningContext()
     }
+    // crash in dev by default so it's more noticeable
+    if (throwInDev) {
+      throw err
+    } else if (!__TEST__) {
+      console.error(err)
+    }
   } else {
-    throw err
+    // recover in prod to reduce the impact on end-user
+    console.error(err)
   }
 }

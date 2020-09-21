@@ -6,10 +6,16 @@ export const ssrMode = ref(false)
 export const compilerOptions: CompilerOptions = reactive({
   mode: 'module',
   prefixIdentifiers: false,
-  optimizeBindings: false,
+  optimizeImports: false,
   hoistStatic: false,
   cacheHandlers: false,
-  scopeId: null
+  scopeId: null,
+  ssrCssVars: `{ color }`,
+  bindingMetadata: {
+    TestComponent: 'setup',
+    foo: 'setup',
+    bar: 'props'
+  }
 })
 
 const App = {
@@ -144,18 +150,18 @@ const App = {
               h('label', { for: 'scope-id' }, 'scopeId')
             ]),
 
-            // toggle optimizeBindings
+            // toggle optimizeImports
             h('li', [
               h('input', {
                 type: 'checkbox',
-                id: 'optimize-bindings',
+                id: 'optimize-imports',
                 disabled: !isModule || isSSR,
-                checked: isModule && !isSSR && compilerOptions.optimizeBindings,
+                checked: isModule && !isSSR && compilerOptions.optimizeImports,
                 onChange(e: Event) {
-                  compilerOptions.optimizeBindings = (e.target as HTMLInputElement).checked
+                  compilerOptions.optimizeImports = (e.target as HTMLInputElement).checked
                 }
               }),
-              h('label', { for: 'optimize-bindings' }, 'optimizeBindings')
+              h('label', { for: 'optimize-imports' }, 'optimizeImports')
             ])
           ])
         ])

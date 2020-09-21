@@ -263,6 +263,34 @@ describe('compiler: v-for', () => {
         })
       )
     })
+
+    test('<template v-for> key placement', () => {
+      const onError = jest.fn()
+      parseWithForTransform(
+        `
+      <template v-for="item in items">
+        <div :key="item.id"/>
+      </template>`,
+        { onError }
+      )
+
+      expect(onError).toHaveBeenCalledTimes(1)
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: ErrorCodes.X_V_FOR_TEMPLATE_KEY_PLACEMENT
+        })
+      )
+
+      // should not warn on nested v-for keys
+      parseWithForTransform(
+        `
+      <template v-for="item in items">
+        <div v-for="c in item.children" :key="c.id"/>
+      </template>`,
+        { onError }
+      )
+      expect(onError).toHaveBeenCalledTimes(1)
+    })
   })
 
   describe('source location', () => {
@@ -554,21 +582,79 @@ describe('compiler: v-for', () => {
         ]
       })
     })
+
+    test('element v-for key expression prefixing', () => {
+      const {
+        node: { codegenNode }
+      } = parseWithForTransform(
+        '<div v-for="item in items" :key="itemKey(item)">test</div>',
+        { prefixIdentifiers: true }
+      )
+      const innerBlock = codegenNode.children.arguments[1].returns
+      expect(innerBlock).toMatchObject({
+        type: NodeTypes.VNODE_CALL,
+        tag: `"div"`,
+        props: createObjectMatcher({
+          key: {
+            type: NodeTypes.COMPOUND_EXPRESSION,
+            children: [
+              // should prefix outer scope references
+              { content: `_ctx.itemKey` },
+              `(`,
+              // should NOT prefix in scope variables
+              { content: `item` },
+              `)`
+            ]
+          }
+        })
+      })
+    })
+
+    // #2085
+    test('template v-for key expression prefixing', () => {
+      const {
+        node: { codegenNode }
+      } = parseWithForTransform(
+        '<template v-for="item in items" :key="itemKey(item)">test</template>',
+        { prefixIdentifiers: true }
+      )
+      const innerBlock = codegenNode.children.arguments[1].returns
+      expect(innerBlock).toMatchObject({
+        type: NodeTypes.VNODE_CALL,
+        tag: FRAGMENT,
+        props: createObjectMatcher({
+          key: {
+            type: NodeTypes.COMPOUND_EXPRESSION,
+            children: [
+              // should prefix outer scope references
+              { content: `_ctx.itemKey` },
+              `(`,
+              // should NOT prefix in scope variables
+              { content: `item` },
+              `)`
+            ]
+          }
+        })
+      })
+    })
   })
 
   describe('codegen', () => {
     function assertSharedCodegen(
       node: ForCodegenNode,
       keyed: boolean = false,
-      customReturn: boolean = false
+      customReturn: boolean = false,
+      disableTracking: boolean = true
     ) {
       expect(node).toMatchObject({
         type: NodeTypes.VNODE_CALL,
         tag: FRAGMENT,
-        isForBlock: true,
-        patchFlag: keyed
-          ? genFlagText(PatchFlags.KEYED_FRAGMENT)
-          : genFlagText(PatchFlags.UNKEYED_FRAGMENT),
+        disableTracking,
+        patchFlag: !disableTracking
+          ? genFlagText(PatchFlags.STABLE_FRAGMENT)
+          : keyed
+            ? genFlagText(PatchFlags.KEYED_FRAGMENT)
+            : genFlagText(PatchFlags.UNKEYED_FRAGMENT),
         children: {
           type: NodeTypes.JS_CALL_EXPRESSION,
           callee: RENDER_LIST,
@@ -580,7 +666,7 @@ describe('compiler: v-for', () => {
                 ? {}
                 : {
                     type: NodeTypes.VNODE_CALL,
-                    isBlock: true
+                    isBlock: disableTracking
                   }
             }
           ]
@@ -658,6 +744,43 @@ describe('compiler: v-for', () => {
       expect(generate(root).code).toMatchSnapshot()
     })
 
+    test('v-for with constant expression', () => {
+      const {
+        root,
+        node: { codegenNode }
+      } = parseWithForTransform('<p v-for="item in 10">{{item}}</p>', {
+        prefixIdentifiers: true
+      })
+
+      expect(
+        assertSharedCodegen(
+          codegenNode,
+          false /* keyed */,
+          false /* customReturn */,
+          false /* disableTracking */
+        )
+      ).toMatchObject({
+        source: { content: `10`, isConstant: true },
+        params: [{ content: `item` }],
+        innerVNodeCall: {
+          tag: `"p"`,
+          props: undefined,
+          isBlock: false,
+          children: {
+            type: NodeTypes.INTERPOLATION,
+            content: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'item',
+              isStatic: false,
+              isConstant: false
+            }
+          },
+          patchFlag: genFlagText(PatchFlags.TEXT)
+        }
+      })
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
     test('template v-for', () => {
       const {
         root,
@@ -697,6 +820,29 @@ describe('compiler: v-for', () => {
         returns: {
           type: NodeTypes.JS_CALL_EXPRESSION,
           callee: RENDER_SLOT
+        }
+      })
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
+    // #1907
+    test('template v-for key injection with single child', () => {
+      const {
+        root,
+        node: { codegenNode }
+      } = parseWithForTransform(
+        '<template v-for="item in items" :key="item.id"><span :id="item.id" /></template>'
+      )
+      expect(assertSharedCodegen(codegenNode, true)).toMatchObject({
+        source: { content: `items` },
+        params: [{ content: `item` }],
+        innerVNodeCall: {
+          type: NodeTypes.VNODE_CALL,
+          tag: `"span"`,
+          props: createObjectMatcher({
+            key: '[item.id]',
+            id: '[item.id]'
+          })
         }
       })
       expect(generate(root).code).toMatchSnapshot()
@@ -777,7 +923,7 @@ describe('compiler: v-for', () => {
             key: `[0]`
           }),
           isBlock: true,
-          isForBlock: true,
+          disableTracking: true,
           patchFlag: genFlagText(PatchFlags.UNKEYED_FRAGMENT),
           children: {
             type: NodeTypes.JS_CALL_EXPRESSION,
@@ -790,6 +936,44 @@ describe('compiler: v-for', () => {
                 returns: {
                   type: NodeTypes.VNODE_CALL,
                   tag: `"div"`,
+                  isBlock: true
+                }
+              }
+            ]
+          }
+        }
+      })
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
+    // 1637
+    test('v-if + v-for on <template>', () => {
+      const {
+        root,
+        node: { codegenNode }
+      } = parseWithForTransform(`<template v-if="ok" v-for="i in list"/>`)
+      expect(codegenNode).toMatchObject({
+        type: NodeTypes.JS_CONDITIONAL_EXPRESSION,
+        test: { content: `ok` },
+        consequent: {
+          type: NodeTypes.VNODE_CALL,
+          props: createObjectMatcher({
+            key: `[0]`
+          }),
+          isBlock: true,
+          disableTracking: true,
+          patchFlag: genFlagText(PatchFlags.UNKEYED_FRAGMENT),
+          children: {
+            type: NodeTypes.JS_CALL_EXPRESSION,
+            callee: RENDER_LIST,
+            arguments: [
+              { content: `list` },
+              {
+                type: NodeTypes.JS_FUNCTION_EXPRESSION,
+                params: [{ content: `i` }],
+                returns: {
+                  type: NodeTypes.VNODE_CALL,
+                  tag: FRAGMENT,
                   isBlock: true
                 }
               }

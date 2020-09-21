@@ -209,7 +209,7 @@ export function render(_ctx, _cache) {
   return (_openBlock(), _createBlock(\\"div\\", null, [
     _createVNode(\\"div\\", null, [
       _createVNode(\\"div\\", {
-        onClick: _cache[1] || (_cache[1] = $event => (_ctx.foo($event)))
+        onClick: _cache[1] || (_cache[1] = (...args) => (_ctx.foo(...args)))
       })
     ])
   ]))
@@ -266,6 +266,22 @@ return function render(_ctx, _cache) {
           _createVNode(\\"span\\", null, _toDisplayString(o), 1 /* TEXT */)
         ]))
       }), 256 /* UNKEYED_FRAGMENT */))
+    ]))
+  }
+}"
+`;
+
+exports[`compiler: hoistStatic transform prefixIdentifiers should NOT hoist keyed template v-for with plain element child 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, createVNode: _createVNode } = _Vue
+
+    return (_openBlock(), _createBlock(\\"div\\", null, [
+      (_openBlock(true), _createBlock(_Fragment, null, _renderList(items, (item) => {
+        return (_openBlock(), _createBlock(\\"span\\", { key: item }))
+      }), 128 /* KEYED_FRAGMENT */))
     ]))
   }
 }"

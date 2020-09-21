@@ -10,7 +10,6 @@ import {
   SimpleExpressionNode,
   createCallExpression,
   createFunctionExpression,
-  ElementTypes,
   createObjectExpression,
   createObjectProperty,
   ForCodegenNode,
@@ -41,6 +40,7 @@ import {
   FRAGMENT
 } from '../runtimeHelpers'
 import { processExpression } from './transformExpression'
+import { validateBrowserExpression } from '../validateExpression'
 import { PatchFlags, PatchFlagNames } from '@vue/shared'
 
 export const transformFor = createStructuralDirectiveTransform(
@@ -54,9 +54,35 @@ export const transformFor = createStructuralDirectiveTransform(
         forNode.source
       ]) as ForRenderListExpression
       const keyProp = findProp(node, `key`)
-      const fragmentFlag = keyProp
-        ? PatchFlags.KEYED_FRAGMENT
-        : PatchFlags.UNKEYED_FRAGMENT
+      const keyProperty = keyProp
+        ? createObjectProperty(
+            `key`,
+            keyProp.type === NodeTypes.ATTRIBUTE
+              ? createSimpleExpression(keyProp.value!.content, true)
+              : keyProp.exp!
+          )
+        : null
+
+      if (!__BROWSER__ && context.prefixIdentifiers && keyProperty) {
+        // #2085 process :key expression needs to be processed in order for it
+        // to behave consistently for <template v-for> and <div v-for>.
+        // In the case of `<template v-for>`, the node is discarded and never
+        // traversed so its key expression won't be processed by the normal
+        // transforms.
+        keyProperty.value = processExpression(
+          keyProperty.value as SimpleExpressionNode,
+          context
+        )
+      }
+
+      const isStableFragment =
+        forNode.source.type === NodeTypes.SIMPLE_EXPRESSION &&
+        forNode.source.isConstant
+      const fragmentFlag = isStableFragment
+        ? PatchFlags.STABLE_FRAGMENT
+        : keyProp
+          ? PatchFlags.KEYED_FRAGMENT
+          : PatchFlags.UNKEYED_FRAGMENT
       forNode.codegenNode = createVNodeCall(
         context,
         helper(FRAGMENT),
@@ -66,7 +92,7 @@ export const transformFor = createStructuralDirectiveTransform(
         undefined,
         undefined,
         true /* isBlock */,
-        true /* isForBlock */,
+        !isStableFragment /* disableTracking */,
         node.loc
       ) as ForCodegenNode
 
@@ -75,8 +101,27 @@ export const transformFor = createStructuralDirectiveTransform(
         let childBlock: BlockCodegenNode
         const isTemplate = isTemplateNode(node)
         const { children } = forNode
+
+        // check <template v-for> key placement
+        if ((__DEV__ || !__BROWSER__) && isTemplate) {
+          node.children.some(c => {
+            if (c.type === NodeTypes.ELEMENT) {
+              const key = findProp(c, 'key')
+              if (key) {
+                context.onError(
+                  createCompilerError(
+                    ErrorCodes.X_V_FOR_TEMPLATE_KEY_PLACEMENT,
+                    key.loc
+                  )
+                )
+                return true
+              }
+            }
+          })
+        }
+
         const needFragmentWrapper =
-          children.length > 1 || children[0].type !== NodeTypes.ELEMENT
+          children.length !== 1 || children[0].type !== NodeTypes.ELEMENT
         const slotOutlet = isSlotOutlet(node)
           ? node
           : isTemplate &&
@@ -84,14 +129,7 @@ export const transformFor = createStructuralDirectiveTransform(
             isSlotOutlet(node.children[0])
             ? (node.children[0] as SlotOutletNode) // api-extractor somehow fails to infer this
             : null
-        const keyProperty = keyProp
-          ? createObjectProperty(
-              `key`,
-              keyProp.type === NodeTypes.ATTRIBUTE
-                ? createSimpleExpression(keyProp.value!.content, true)
-                : keyProp.exp!
-            )
-          : null
+
         if (slotOutlet) {
           // <slot v-for="..."> or <template v-for="..."><slot/></template>
           childBlock = slotOutlet.codegenNode as RenderSlotCall
@@ -121,9 +159,14 @@ export const transformFor = createStructuralDirectiveTransform(
           // but mark it as a block.
           childBlock = (children[0] as PlainElementNode)
             .codegenNode as VNodeCall
-          childBlock.isBlock = true
-          helper(OPEN_BLOCK)
-          helper(CREATE_BLOCK)
+          if (isTemplate && keyProperty) {
+            injectProp(childBlock, keyProperty, context)
+          }
+          childBlock.isBlock = !isStableFragment
+          if (childBlock.isBlock) {
+            helper(OPEN_BLOCK)
+            helper(CREATE_BLOCK)
+          }
         }
 
         renderExp.arguments.push(createFunctionExpression(
@@ -175,7 +218,7 @@ export function processFor(
     keyAlias: key,
     objectIndexAlias: index,
     parseResult,
-    children: node.tagType === ElementTypes.TEMPLATE ? node.children : [node]
+    children: isTemplateNode(node) ? node.children : [node]
   }
 
   context.replaceNode(forNode)
@@ -243,6 +286,9 @@ export function parseForExpression(
       context
     )
   }
+  if (__DEV__ && __BROWSER__) {
+    validateBrowserExpression(result.source as SimpleExpressionNode, context)
+  }
 
   let valueContent = LHS.trim()
     .replace(stripParensRE, '')
@@ -260,6 +306,13 @@ export function parseForExpression(
       result.key = createAliasExpression(loc, keyContent, keyOffset)
       if (!__BROWSER__ && context.prefixIdentifiers) {
         result.key = processExpression(result.key, context, true)
+      }
+      if (__DEV__ && __BROWSER__) {
+        validateBrowserExpression(
+          result.key as SimpleExpressionNode,
+          context,
+          true
+        )
       }
     }
 
@@ -280,6 +333,13 @@ export function parseForExpression(
         if (!__BROWSER__ && context.prefixIdentifiers) {
           result.index = processExpression(result.index, context, true)
         }
+        if (__DEV__ && __BROWSER__) {
+          validateBrowserExpression(
+            result.index as SimpleExpressionNode,
+            context,
+            true
+          )
+        }
       }
     }
   }
@@ -288,6 +348,13 @@ export function parseForExpression(
     result.value = createAliasExpression(loc, valueContent, trimmedOffset)
     if (!__BROWSER__ && context.prefixIdentifiers) {
       result.value = processExpression(result.value, context, true)
+    }
+    if (__DEV__ && __BROWSER__) {
+      validateBrowserExpression(
+        result.value as SimpleExpressionNode,
+        context,
+        true
+      )
     }
   }
 

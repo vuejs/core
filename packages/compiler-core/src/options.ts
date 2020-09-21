@@ -10,25 +10,25 @@ import { ParserPlugin } from '@babel/parser'
 
 export interface ParserOptions {
   /**
-   * e.g. platform native elements, e.g. <div> for browsers
+   * e.g. platform native elements, e.g. `<div>` for browsers
    */
   isNativeTag?: (tag: string) => boolean
   /**
-   * e.g. native elements that can self-close, e.g. <img>, <br>, <hr>
+   * e.g. native elements that can self-close, e.g. `<img>`, `<br>`, `<hr>`
    */
   isVoidTag?: (tag: string) => boolean
   /**
-   * e.g. elements that should preserve whitespace inside, e.g. <pre>
+   * e.g. elements that should preserve whitespace inside, e.g. `<pre>`
    */
   isPreTag?: (tag: string) => boolean
   /**
-   * Platform-specific built-in components e.g. <Transition>
+   * Platform-specific built-in components e.g. `<Transition>`
    */
   isBuiltInComponent?: (tag: string) => symbol | void
   /**
    * Separate option for end users to extend the native elements list
    */
-  isCustomElement?: (tag: string) => boolean
+  isCustomElement?: (tag: string) => boolean | void
   /**
    * Get tag namespace
    */
@@ -49,6 +49,10 @@ export interface ParserOptions {
    */
   decodeEntities?: (rawText: string, asAttr: boolean) => string
   onError?: (error: CompilerError) => void
+  /**
+   * Keep comments in the templates AST, even in production
+   */
+  comments?: boolean
 }
 
 export type HoistTransform = (
@@ -57,9 +61,13 @@ export type HoistTransform = (
   parent: ParentNode
 ) => void
 
+export interface BindingMetadata {
+  [key: string]: 'data' | 'props' | 'setup' | 'options'
+}
+
 export interface TransformOptions {
   /**
-   * An array of node trasnforms to be applied to every AST node.
+   * An array of node transforms to be applied to every AST node.
    */
   nodeTransforms?: NodeTransform[]
   /**
@@ -79,6 +87,10 @@ export interface TransformOptions {
    * for them.
    */
   isBuiltInComponent?: (tag: string) => symbol | void
+  /**
+   * Used by some transforms that expects only native elements
+   */
+  isCustomElement?: (tag: string) => boolean | void
   /**
    * Transform expressions like {{ foo }} to `_ctx.foo`.
    * If this option is false, the generated code will be wrapped in a
@@ -118,10 +130,20 @@ export interface TransformOptions {
   scopeId?: string | null
   /**
    * Generate SSR-optimized render functions instead.
-   * The resulting funciton must be attached to the component via the
+   * The resulting function must be attached to the component via the
    * `ssrRender` option instead of `render`.
    */
   ssr?: boolean
+  /**
+   * SFC `<style vars>` injection string
+   * needed to render inline CSS variables on component root
+   */
+  ssrCssVars?: string
+  /**
+   * Optional binding metadata analyzed from script - used to optimize
+   * binding access when `prefixIdentifiers` is enabled.
+   */
+  bindingMetadata?: BindingMetadata
   onError?: (error: CompilerError) => void
 }
 
@@ -155,7 +177,7 @@ export interface CodegenOptions {
    * (only used for webpack code-split)
    * @default false
    */
-  optimizeBindings?: boolean
+  optimizeImports?: boolean
   /**
    * Customize where to import runtime helpers from.
    * @default 'vue'
@@ -169,6 +191,7 @@ export interface CodegenOptions {
   runtimeGlobalName?: string
   // we need to know this during codegen to generate proper preambles
   prefixIdentifiers?: boolean
+  bindingMetadata?: BindingMetadata
   // generate ssr-specific code?
   ssr?: boolean
 }

@@ -64,7 +64,8 @@ export interface CodegenResult {
   map?: RawSourceMap
 }
 
-export interface CodegenContext extends Required<CodegenOptions> {
+export interface CodegenContext
+  extends Omit<Required<CodegenOptions>, 'bindingMetadata'> {
   source: string
   code: string
   line: number
@@ -88,7 +89,7 @@ function createCodegenContext(
     sourceMap = false,
     filename = `template.vue.html`,
     scopeId = null,
-    optimizeBindings = false,
+    optimizeImports = false,
     runtimeGlobalName = `Vue`,
     runtimeModuleName = `vue`,
     ssr = false
@@ -100,7 +101,7 @@ function createCodegenContext(
     sourceMap,
     filename,
     scopeId,
-    optimizeBindings,
+    optimizeImports,
     runtimeGlobalName,
     runtimeModuleName,
     ssr,
@@ -179,9 +180,12 @@ function createCodegenContext(
 
 export function generate(
   ast: RootNode,
-  options: CodegenOptions = {}
+  options: CodegenOptions & {
+    onContextCreated?: (context: CodegenContext) => void
+  } = {}
 ): CodegenResult {
   const context = createCodegenContext(ast, options)
+  if (options.onContextCreated) options.onContextCreated(context)
   const {
     mode,
     push,
@@ -203,14 +207,21 @@ export function generate(
     genFunctionPreamble(ast, context)
   }
 
+  // binding optimizations
+  const optimizeSources = options.bindingMetadata
+    ? `, $props, $setup, $data, $options`
+    : ``
   // enter render function
-  if (genScopeId && !ssr) {
-    push(`const render = ${PURE_ANNOTATION}_withId(`)
-  }
   if (!ssr) {
-    push(`function render(_ctx, _cache) {`)
+    if (genScopeId) {
+      push(`const render = ${PURE_ANNOTATION}_withId(`)
+    }
+    push(`function render(_ctx, _cache${optimizeSources}) {`)
   } else {
-    push(`function ssrRender(_ctx, _push, _parent) {`)
+    if (genScopeId) {
+      push(`const ssrRender = ${PURE_ANNOTATION}_withId(`)
+    }
+    push(`function ssrRender(_ctx, _push, _parent, _attrs${optimizeSources}) {`)
   }
   indent()
 
@@ -272,7 +283,7 @@ export function generate(
   deindent()
   push(`}`)
 
-  if (genScopeId && !ssr) {
+  if (genScopeId) {
     push(`)`)
   }
 
@@ -330,7 +341,7 @@ function genFunctionPreamble(ast: RootNode, context: CodegenContext) {
   }
   // generate variables for ssr helpers
   if (!__BROWSER__ && ast.ssrHelpers && ast.ssrHelpers.length) {
-    // ssr guaruntees prefixIdentifier: true
+    // ssr guarantees prefixIdentifier: true
     push(
       `const { ${ast.ssrHelpers
         .map(aliasHelper)
@@ -352,7 +363,7 @@ function genModulePreamble(
     helper,
     newline,
     scopeId,
-    optimizeBindings,
+    optimizeImports,
     runtimeModuleName
   } = context
 
@@ -365,11 +376,11 @@ function genModulePreamble(
 
   // generate import statements for helpers
   if (ast.helpers.length) {
-    if (optimizeBindings) {
+    if (optimizeImports) {
       // when bundled with webpack with code-split, calling an import binding
       // as a function leads to it being wrapped with `Object(a.b)` or `(0,a.b)`,
       // incurring both payload size increase and potential perf overhead.
-      // therefore we assign the imports to vairables (which is a constant ~50b
+      // therefore we assign the imports to variables (which is a constant ~50b
       // cost per-component instead of scaling with template size)
       push(
         `import { ${ast.helpers
@@ -443,7 +454,7 @@ function genHoists(hoists: (JSChildNode | null)[], context: CodegenContext) {
   const genScopeId = !__BROWSER__ && scopeId != null && mode !== 'function'
   newline()
 
-  // push scope Id before initilaizing hoisted vnodes so that these vnodes
+  // push scope Id before initializing hoisted vnodes so that these vnodes
   // get the proper scopeId as well.
   if (genScopeId) {
     push(`${helper(PUSH_SCOPE_ID)}("${scopeId}")`)
@@ -698,13 +709,13 @@ function genVNodeCall(node: VNodeCall, context: CodegenContext) {
     dynamicProps,
     directives,
     isBlock,
-    isForBlock
+    disableTracking
   } = node
   if (directives) {
     push(helper(WITH_DIRECTIVES) + `(`)
   }
   if (isBlock) {
-    push(`(${helper(OPEN_BLOCK)}(${isForBlock ? `true` : ``}), `)
+    push(`(${helper(OPEN_BLOCK)}(${disableTracking ? `true` : ``}), `)
   }
   if (pure) {
     push(PURE_ANNOTATION)

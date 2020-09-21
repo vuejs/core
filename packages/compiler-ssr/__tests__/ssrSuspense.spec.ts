@@ -6,7 +6,7 @@ describe('ssr compile: suspense', () => {
       "const { resolveComponent: _resolveComponent, withCtx: _withCtx } = require(\\"vue\\")
       const { ssrRenderComponent: _ssrRenderComponent, ssrRenderSuspense: _ssrRenderSuspense } = require(\\"@vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent) {
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
         const _component_foo = _resolveComponent(\\"foo\\")
 
         _ssrRenderSuspense(_push, {
@@ -33,7 +33,7 @@ describe('ssr compile: suspense', () => {
       "const { resolveComponent: _resolveComponent, withCtx: _withCtx } = require(\\"vue\\")
       const { ssrRenderComponent: _ssrRenderComponent, ssrRenderSuspense: _ssrRenderSuspense } = require(\\"@vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent) {
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
         const _component_foo = _resolveComponent(\\"foo\\")
 
         _ssrRenderSuspense(_push, {

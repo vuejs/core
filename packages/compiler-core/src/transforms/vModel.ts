@@ -8,7 +8,12 @@ import {
   ElementTypes
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
-import { isMemberExpression, isSimpleIdentifier, hasScopeRef } from '../utils'
+import {
+  isMemberExpression,
+  isSimpleIdentifier,
+  hasScopeRef,
+  isStaticExp
+} from '../utils'
 
 export const transformModel: DirectiveTransform = (dir, node, context) => {
   const { exp, arg } = dir
@@ -43,7 +48,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
 
   const propName = arg ? arg : createSimpleExpression('modelValue', true)
   const eventName = arg
-    ? arg.type === NodeTypes.SIMPLE_EXPRESSION && arg.isStatic
+    ? isStaticExp(arg)
       ? `onUpdate:${arg.content}`
       : createCompoundExpression(['"onUpdate:" + ', arg])
     : `onUpdate:modelValue`
@@ -74,7 +79,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
       .map(m => (isSimpleIdentifier(m) ? m : JSON.stringify(m)) + `: true`)
       .join(`, `)
     const modifiersKey = arg
-      ? arg.type === NodeTypes.SIMPLE_EXPRESSION && arg.isStatic
+      ? isStaticExp(arg)
         ? `${arg.content}Modifiers`
         : createCompoundExpression([arg, ' + "Modifiers"'])
       : `modelModifiers`

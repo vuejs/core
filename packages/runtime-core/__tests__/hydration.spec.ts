@@ -11,9 +11,7 @@ import {
   defineAsyncComponent,
   defineComponent
 } from '@vue/runtime-dom'
-import { renderToString } from '@vue/server-renderer'
-import { mockWarn } from '@vue/shared'
-import { SSRContext } from 'packages/server-renderer/src/renderToString'
+import { renderToString, SSRContext } from '@vue/server-renderer'
 
 function mountWithHydration(html: string, render: () => any) {
   const container = document.createElement('div')
@@ -35,7 +33,9 @@ const triggerEvent = (type: string, el: Element) => {
 }
 
 describe('SSR hydration', () => {
-  mockWarn()
+  beforeEach(() => {
+    document.body.innerHTML = ''
+  })
 
   test('text', async () => {
     const msg = ref('foo')
@@ -506,8 +506,10 @@ describe('SSR hydration', () => {
     const App = {
       template: `
       <Suspense @resolve="done">
-        <AsyncChild :n="1" />
-        <AsyncChild :n="2" />
+        <div>
+          <AsyncChild :n="1" />
+          <AsyncChild :n="2" />
+        </div>
       </Suspense>`,
       components: {
         AsyncChild
@@ -521,7 +523,7 @@ describe('SSR hydration', () => {
     // server render
     container.innerHTML = await renderToString(h(App))
     expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<!--[--><span>1</span><span>2</span><!--]-->"`
+      `"<div><span>1</span><span>2</span></div>"`
     )
     // reset asyncDeps from ssr
     asyncDeps.length = 0
@@ -537,17 +539,23 @@ describe('SSR hydration', () => {
 
     // should flush buffered effects
     expect(mountedCalls).toMatchObject([1, 2])
-    expect(container.innerHTML).toMatch(`<span>1</span><span>2</span>`)
+    expect(container.innerHTML).toMatch(
+      `<div><span>1</span><span>2</span></div>`
+    )
 
     const span1 = container.querySelector('span')!
     triggerEvent('click', span1)
     await nextTick()
-    expect(container.innerHTML).toMatch(`<span>2</span><span>2</span>`)
+    expect(container.innerHTML).toMatch(
+      `<div><span>2</span><span>2</span></div>`
+    )
 
     const span2 = span1.nextSibling as Element
     triggerEvent('click', span2)
     await nextTick()
-    expect(container.innerHTML).toMatch(`<span>2</span><span>3</span>`)
+    expect(container.innerHTML).toMatch(
+      `<div><span>2</span><span>3</span></div>`
+    )
   })
 
   test('async component', async () => {
@@ -684,6 +692,18 @@ describe('SSR hydration', () => {
       // as 2nd fragment child.
       expect(`Hydration text content mismatch`).toHaveBeenWarned()
       // excessive children removal
+      expect(`Hydration children mismatch`).toHaveBeenWarned()
+    })
+
+    test('Teleport target has empty children', () => {
+      const teleportContainer = document.createElement('div')
+      teleportContainer.id = 'teleport'
+      document.body.appendChild(teleportContainer)
+
+      mountWithHydration('<!--teleport start--><!--teleport end-->', () =>
+        h(Teleport, { to: '#teleport' }, [h('span', 'value')])
+      )
+      expect(teleportContainer.innerHTML).toBe(`<span>value</span>`)
       expect(`Hydration children mismatch`).toHaveBeenWarned()
     })
   })
