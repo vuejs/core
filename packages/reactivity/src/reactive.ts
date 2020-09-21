@@ -187,7 +187,7 @@ export function isProxy(value: unknown): boolean {
   return isReactive(value) || isReadonly(value)
 }
 
-export function toRaw<T>(observed: T): T {
+export function toRaw<T>(observed: UnwrapNestedRefs<T>): T {
   return (
     (observed && toRaw((observed as Target)[ReactiveFlags.RAW])) || observed
   )
