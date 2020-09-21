@@ -87,7 +87,7 @@ export function watch<
   sources: T,
   cb: WatchCallback<
     MapSources<T>,
-    MapSources<T> | Immediate extends true ? undefined : never
+    MapSources<T> | (Immediate extends true ? undefined : never)
   >,
   options?: WatchOptions<Immediate>
 ): WatchStopHandle
@@ -110,10 +110,10 @@ export function watch<
 ): WatchStopHandle
 
 // implementation
-export function watch<T = any>(
-  source: WatchSource<T> | WatchSource<T>[],
-  cb: WatchCallback<T>,
-  options?: WatchOptions
+export function watch<T = any, Immediate extends Readonly<boolean> = false>(
+  source: T | WatchSource<T>,
+  cb: any,
+  options?: WatchOptions<Immediate>
 ): WatchStopHandle {
   if (__DEV__ && !isFunction(cb)) {
     warn(
@@ -122,11 +122,11 @@ export function watch<T = any>(
         `supports \`watch(source, cb, options?) signature.`
     )
   }
-  return doWatch(source, cb, options)
+  return doWatch(source as any, cb, options)
 }
 
 function doWatch(
-  source: WatchSource | WatchSource[] | WatchEffect,
+  source: WatchSource | WatchSource[] | WatchEffect | object,
   cb: WatchCallback | null,
   { immediate, deep, flush, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ,
   instance = currentInstance
