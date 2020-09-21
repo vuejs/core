@@ -20,7 +20,8 @@ import {
   IfNode,
   createVNodeCall,
   AttributeNode,
-  locStub
+  locStub,
+  CacheExpression
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
@@ -62,13 +63,7 @@ export const transformIf = createStructuralDirectiveTransform(
           ) as IfConditionalExpression
         } else {
           // attach this branch's codegen node to the v-if root.
-          let parentCondition = ifNode.codegenNode!
-          while (
-            parentCondition.alternate.type ===
-            NodeTypes.JS_CONDITIONAL_EXPRESSION
-          ) {
-            parentCondition = parentCondition.alternate
-          }
+          const parentCondition = getConditionExpression(ifNode.codegenNode!)
           parentCondition.alternate = createCodegenNodeForBranch(
             branch,
             key + ifNode.branches.length - 1,
@@ -292,4 +287,27 @@ function isSameKey(
     }
   }
   return true
+}
+
+function getConditionExpression(
+  node: IfConditionalExpression | CacheExpression
+): IfConditionalExpression {
+  const alternateNode =
+    node.type === NodeTypes.JS_CONDITIONAL_EXPRESSION
+      ? node.alternate.type === NodeTypes.JS_CONDITIONAL_EXPRESSION
+        ? (node.alternate as IfConditionalExpression)
+        : undefined
+      : node.type === NodeTypes.JS_CACHE_EXPRESSION
+        ? node.value.type === NodeTypes.JS_CONDITIONAL_EXPRESSION
+          ? node.value.alternate.type === NodeTypes.JS_CONDITIONAL_EXPRESSION
+            ? (node.value.alternate as IfConditionalExpression)
+            : undefined
+          : undefined
+        : undefined
+
+  return alternateNode
+    ? getConditionExpression(alternateNode)
+    : node.type === NodeTypes.JS_CONDITIONAL_EXPRESSION
+      ? node
+      : (node.value as IfConditionalExpression)
 }
