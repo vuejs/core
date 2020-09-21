@@ -153,10 +153,9 @@ export function h(type: any, propsOrChildren?: any, children?: any): VNode {
       }
       // props without children
       return createVNode(type, propsOrChildren)
-    } else {
-      // omit props
-      return createVNode(type, null, propsOrChildren)
     }
+    // omit props
+    return createVNode(type, null, propsOrChildren)
   } else {
     if (l > 3) {
       children = Array.prototype.slice.call(arguments, 2)

@@ -568,9 +568,8 @@ function styleValue(value: unknown, type: string): string {
     return `"${value}"`
   } else if (type === 'Number') {
     return `${Number(value)}`
-  } else {
-    return `${value}`
   }
+  return `${value}`
 }
 
 /**

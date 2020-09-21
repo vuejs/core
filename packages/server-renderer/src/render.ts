@@ -98,9 +98,8 @@ export function renderComponentVNode(
       })
     }
     return p.then(() => renderComponentSubTree(instance))
-  } else {
-    return renderComponentSubTree(instance)
   }
+  return renderComponentSubTree(instance)
 }
 
 function renderComponentSubTree(

@@ -745,12 +745,11 @@ function createSetupContext(instance: ComponentInternalInstance): SetupContext {
         return (event: string, ...args: any[]) => instance.emit(event, ...args)
       }
     })
-  } else {
-    return {
-      attrs: instance.attrs,
-      slots: instance.slots,
-      emit: instance.emit
-    }
+  }
+  return {
+    attrs: instance.attrs,
+    slots: instance.slots,
+    emit: instance.emit
   }
 }
 

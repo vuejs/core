@@ -30,10 +30,9 @@ export const NULL_DYNAMIC_COMPONENT = Symbol()
 export function resolveDynamicComponent(component: unknown): VNodeTypes {
   if (isString(component)) {
     return resolveAsset(COMPONENTS, component, false) || component
-  } else {
-    // invalid types will fallthrough to createVNode and raise warning
-    return (component || NULL_DYNAMIC_COMPONENT) as any
   }
+  // invalid types will fallthrough to createVNode and raise warning
+  return (component || NULL_DYNAMIC_COMPONENT) as any
 }
 
 /**

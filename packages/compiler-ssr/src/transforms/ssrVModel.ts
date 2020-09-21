@@ -124,10 +124,9 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
     }
 
     return res
-  } else {
-    // component v-model
-    return transformModel(dir, node, context)
   }
+  // component v-model
+  return transformModel(dir, node, context)
 }
 
 function findValueBinding(node: PlainElementNode): ExpressionNode {

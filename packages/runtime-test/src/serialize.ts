@@ -14,9 +14,8 @@ export function serialize(
 ): string {
   if (node.type === NodeTypes.ELEMENT) {
     return serializeElement(node, indent, depth)
-  } else {
-    return serializeText(node, indent, depth)
   }
+  return serializeText(node, indent, depth)
 }
 
 export function serializeInner(

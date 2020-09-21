@@ -52,9 +52,8 @@ const arrayInstrumentations: Record<string, Function> = {}
     if (res === -1 || res === false) {
       // if that didn't work, run it again using raw values.
       return method.apply(arr, args.map(toRaw))
-    } else {
-      return res
     }
+    return res
   }
 })
 // instrument length-altering mutation methods to avoid length being tracked

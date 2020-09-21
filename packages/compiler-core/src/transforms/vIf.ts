@@ -209,9 +209,8 @@ function createCodegenNodeForBranch(
         'true'
       ])
     ) as IfConditionalExpression
-  } else {
-    return createChildrenCodegenNode(branch, keyIndex, context)
   }
+  return createChildrenCodegenNode(branch, keyIndex, context)
 }
 
 function createChildrenCodegenNode(
@@ -234,22 +233,21 @@ function createChildrenCodegenNode(
       const vnodeCall = firstChild.codegenNode!
       injectProp(vnodeCall, keyProperty, context)
       return vnodeCall
-    } else {
-      return createVNodeCall(
-        context,
-        helper(FRAGMENT),
-        createObjectExpression([keyProperty]),
-        children,
-        `${PatchFlags.STABLE_FRAGMENT} /* ${
-          PatchFlagNames[PatchFlags.STABLE_FRAGMENT]
-        } */`,
-        undefined,
-        undefined,
-        true,
-        false,
-        branch.loc
-      )
     }
+    return createVNodeCall(
+      context,
+      helper(FRAGMENT),
+      createObjectExpression([keyProperty]),
+      children,
+      `${PatchFlags.STABLE_FRAGMENT} /* ${
+        PatchFlagNames[PatchFlags.STABLE_FRAGMENT]
+      } */`,
+      undefined,
+      undefined,
+      true,
+      false,
+      branch.loc
+    )
   } else {
     const vnodeCall = (firstChild as ElementNode)
       .codegenNode as BlockCodegenNode

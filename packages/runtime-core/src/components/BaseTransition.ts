@@ -317,9 +317,8 @@ export function resolveTransitionHooks(
       if (!state.isMounted) {
         if (appear) {
           hook = onBeforeAppear || onBeforeEnter
-        } else {
-          return
         }
+        return
       }
       // for same element (v-show)
       if (el._leaveCb) {
@@ -347,9 +346,8 @@ export function resolveTransitionHooks(
           hook = onAppear || onEnter
           afterHook = onAfterAppear || onAfterEnter
           cancelHook = onAppearCancelled || onEnterCancelled
-        } else {
-          return
         }
+        return
       }
       let called = false
       const done = (el._enterCb = (cancelled?) => {

@@ -26,11 +26,10 @@ async function unrollBuffer(buffer: SSRBuffer): Promise<string> {
       }
     }
     return ret
-  } else {
-    // sync buffer can be more efficiently unrolled without unnecessary await
-    // ticks
-    return unrollBufferSync(buffer)
   }
+  // sync buffer can be more efficiently unrolled without unnecessary await
+  // ticks
+  return unrollBufferSync(buffer)
 }
 
 function unrollBufferSync(buffer: SSRBuffer): string {
