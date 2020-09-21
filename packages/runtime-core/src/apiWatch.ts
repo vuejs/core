@@ -44,10 +44,12 @@ export type WatchCallback<V = any, OV = any> = (
   onInvalidate: InvalidateCbRegistrator
 ) => any
 
-type MapSources<T> = {
+type MapSources<T, Immediate> = {
   [K in keyof T]: T[K] extends WatchSource<infer V>
-    ? V
-    : T[K] extends object ? T[K] : never
+    ? Immediate extends true ? (V | undefined) : V
+    : T[K] extends object
+      ? Immediate extends true ? (T[K] | undefined) : T[K]
+      : never
 }
 
 type InvalidateCbRegistrator = (cb: () => void) => void
@@ -85,10 +87,7 @@ export function watch<
   Immediate extends Readonly<boolean> = false
 >(
   sources: T,
-  cb: WatchCallback<
-    MapSources<T>,
-    MapSources<T> | (Immediate extends true ? undefined : never)
-  >,
+  cb: WatchCallback<MapSources<T, false>, MapSources<T, Immediate>>,
   options?: WatchOptions<Immediate>
 ): WatchStopHandle
 
