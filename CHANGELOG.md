@@ -1,9 +1,40 @@
+# [3.0.0](https://github.com/vuejs/vue-next/compare/v3.0.0-rc.13...v3.0.0) (2020-09-18)
+
+
+
+# [3.0.0-rc.13](https://github.com/vuejs/vue-next/compare/v3.0.0-rc.12...v3.0.0-rc.13) (2020-09-18)
+
+
+### Bug Fixes
+
+* **hmr:** make hmr working with class components ([#2144](https://github.com/vuejs/vue-next/issues/2144)) ([422f05e](https://github.com/vuejs/vue-next/commit/422f05e085036e23ea3632c2ce75d86181a087b8))
+* **reactivity:** avoid length mutating array methods causing infinite updates ([#2138](https://github.com/vuejs/vue-next/issues/2138)) ([f316a33](https://github.com/vuejs/vue-next/commit/f316a332b055d3f448dc735365551d89041f1098)), closes [#2137](https://github.com/vuejs/vue-next/issues/2137)
+* **suspense:** should discard unmount effects of invalidated pending branch ([5bfcad1](https://github.com/vuejs/vue-next/commit/5bfcad155b444b2f7ffaac171c1f61bc23909287))
+* **types:** component instance inference without props ([#2145](https://github.com/vuejs/vue-next/issues/2145)) ([57bdaa2](https://github.com/vuejs/vue-next/commit/57bdaa2220afefbde21118659c1ce2377d6b86d6))
+
+
+### Code Refactoring
+
+* watch APIs default to trigger pre-flush ([49bb447](https://github.com/vuejs/vue-next/commit/49bb44756fda0a7019c69f2fa6b880d9e41125aa)), closes [/github.com/vuejs/vue-next/issues/1706#issuecomment-666258948](https://github.com//github.com/vuejs/vue-next/issues/1706/issues/issuecomment-666258948)
+
+
+### Features
+
+* **runtime-core:** support using inject() inside props default functions ([58c31e3](https://github.com/vuejs/vue-next/commit/58c31e36992d2647e5247de4904246fb2d6112ed))
+* **watch:** support dot-delimited path in watch option ([1c9a0b3](https://github.com/vuejs/vue-next/commit/1c9a0b3e195d144ac90d22d2cc2cef6a3fd8276d))
+
+
+### BREAKING CHANGES
+
+* watch APIs now default to use `flush: 'pre'` instead of
+`flush: 'post'`. This change affects `watch`, `watchEffect`, the `watch` component option, and `this.$watch`. See ([49bb447](https://github.com/vuejs/vue-next/commit/49bb44756fda0a7019c69f2fa6b880d9e41125aa)) for more details.
+
 # [3.0.0-rc.12](https://github.com/vuejs/vue-next/compare/v3.0.0-rc.11...v3.0.0-rc.12) (2020-09-16)
 
 
 ### Bug Fixes
 
-* **reactivity:** effect shoud only recursively self trigger with explicit options ([3810de7](https://github.com/vuejs/vue-next/commit/3810de7d6bd0044177f043285228c2e988093883)), closes [#2125](https://github.com/vuejs/vue-next/issues/2125)
+* **reactivity:** effect should only recursively self trigger with explicit options ([3810de7](https://github.com/vuejs/vue-next/commit/3810de7d6bd0044177f043285228c2e988093883)), closes [#2125](https://github.com/vuejs/vue-next/issues/2125)
 * **runtime-core:** ensure root stable fragments inherit elements for moving ([bebd44f](https://github.com/vuejs/vue-next/commit/bebd44f793ccd13bfdf90c7e45eac320a340650c)), closes [#2134](https://github.com/vuejs/vue-next/issues/2134)
 * **runtime-core:** should still do full traverse of stable fragment children in dev + hmr ([dd40ad8](https://github.com/vuejs/vue-next/commit/dd40ad8fca47af0e1f0a963be2f48c23f7457952))
 * **runtime-core/async-component:** fix error component when there are no error handlers ([c7b4a37](https://github.com/vuejs/vue-next/commit/c7b4a379cf8627c79a01d61039d3e3b283477dc1)), closes [#2129](https://github.com/vuejs/vue-next/issues/2129)

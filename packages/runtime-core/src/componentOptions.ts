@@ -166,8 +166,7 @@ export type ComponentOptionsWithoutProps<
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
-  EE extends string = string,
-  Defaults = {}
+  EE extends string = string
 > = ComponentOptionsBase<
   Props,
   RawBindings,
@@ -178,23 +177,11 @@ export type ComponentOptionsWithoutProps<
   Extends,
   E,
   EE,
-  Defaults
+  {}
 > & {
   props?: undefined
 } & ThisType<
-    CreateComponentPublicInstance<
-      {},
-      RawBindings,
-      D,
-      C,
-      M,
-      Mixin,
-      Extends,
-      E,
-      Readonly<Props>,
-      Defaults,
-      false
-    >
+    CreateComponentPublicInstance<{}, RawBindings, D, C, M, Mixin, Extends, E>
   >
 
 export type ComponentOptionsWithArrayProps<
@@ -816,7 +803,9 @@ function createWatcher(
   publicThis: ComponentPublicInstance,
   key: string
 ) {
-  const getter = () => (publicThis as any)[key]
+  const getter = key.includes('.')
+    ? createPathGetter(publicThis, key)
+    : () => (publicThis as any)[key]
   if (isString(raw)) {
     const handler = ctx[raw]
     if (isFunction(handler)) {
@@ -840,7 +829,18 @@ function createWatcher(
       }
     }
   } else if (__DEV__) {
-    warn(`Invalid watch option: "${key}"`)
+    warn(`Invalid watch option: "${key}"`, raw)
+  }
+}
+
+function createPathGetter(ctx: any, path: string) {
+  const segments = path.split('.')
+  return () => {
+    let cur = ctx
+    for (let i = 0; i < segments.length && cur; i++) {
+      cur = cur[segments[i]]
+    }
+    return cur
   }
 }
 
