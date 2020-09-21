@@ -6,7 +6,8 @@ import {
   VNode,
   Fragment,
   unref,
-  onUpdated
+  onUpdated,
+  watchEffect
 } from '@vue/runtime-core'
 import { ShapeFlags } from '@vue/shared'
 
@@ -29,7 +30,7 @@ export function useCssVars(
 
   const setVars = () =>
     setVarsOnVNode(instance.subTree, getter(instance.proxy!), prefix)
-  onMounted(setVars)
+  onMounted(() => watchEffect(setVars))
   onUpdated(setVars)
 }
 
