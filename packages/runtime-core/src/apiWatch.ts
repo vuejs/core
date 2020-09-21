@@ -64,6 +64,7 @@ export interface WatchOptionsBase {
   flush?: 'pre' | 'post' | 'sync'
   onTrack?: ReactiveEffectOptions['onTrack']
   onTrigger?: ReactiveEffectOptions['onTrigger']
+  lifecycle?: 'static' | 'instance'
 }
 
 export interface WatchOptions<Immediate = boolean> extends WatchOptionsBase {
@@ -133,7 +134,14 @@ export function watch<T = any>(
 function doWatch(
   source: WatchSource | WatchSource[] | WatchEffect,
   cb: WatchCallback | null,
-  { immediate, deep, flush, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ,
+  {
+    immediate,
+    deep,
+    flush,
+    onTrack,
+    onTrigger,
+    lifecycle
+  }: WatchOptions = EMPTY_OBJ,
   instance = currentInstance
 ): WatchStopHandle {
   if (__DEV__ && !cb) {
@@ -149,6 +157,17 @@ function doWatch(
           `watch(source, callback, options?) signature.`
       )
     }
+  }
+
+  const isStatic = lifecycle === 'static'
+  if (isStatic) {
+    if (__DEV__) {
+      warn(
+        'note that watchers of static lifecycle must be stopped manually ' +
+          'to prevent memory leaks.'
+      )
+    }
+    instance = null
   }
 
   const warnInvalidSource = (s: unknown) => {
@@ -290,7 +309,9 @@ function doWatch(
     scheduler
   })
 
-  recordInstanceBoundEffect(runner)
+  if (!isStatic) {
+    recordInstanceBoundEffect(runner)
+  }
 
   // initial run
   if (cb) {

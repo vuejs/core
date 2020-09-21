@@ -523,6 +523,69 @@ describe('api: watch', () => {
     expect(dom!.tag).toBe('p')
   })
 
+  it('detach watchers of static lifecycle from components and stop them manually', async () => {
+    const toggle = ref(false)
+    const val = ref(0)
+    const valPlus = ref(0)
+
+    let stopEffect: () => void
+
+    const newEffect = () => {
+      if (!stopEffect) {
+        stopEffect = watchEffect(
+          () => {
+            valPlus.value = val.value + 1
+          },
+          {
+            lifecycle: 'static'
+          }
+        )
+      }
+      return stopEffect
+    }
+
+    const Child = {
+      setup() {
+        newEffect()
+      },
+      render() {}
+    }
+
+    const App = {
+      setup() {
+        return () => {
+          return toggle.value ? h(Child) : null
+        }
+      }
+    }
+
+    toggle.value = true
+    render(h(App), nodeOps.createElement('div'))
+
+    expect(`must be stopped manually`).toHaveBeenWarned()
+
+    await nextTick()
+    expect(valPlus.value).toBe(1)
+
+    val.value++
+    await nextTick()
+    expect(valPlus.value).toBe(2)
+
+    toggle.value = false
+    await nextTick()
+    toggle.value = true
+    await nextTick()
+
+    val.value++
+    await nextTick()
+    expect(valPlus.value).toBe(3)
+
+    stopEffect!()
+    val.value++
+    await nextTick()
+    expect(valPlus.value).toBe(3)
+  })
+
   it('deep', async () => {
     const state = reactive({
       nested: {

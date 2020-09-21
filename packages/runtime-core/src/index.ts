@@ -24,7 +24,7 @@ export {
   markRaw,
   toRaw
 } from '@vue/reactivity'
-export { computed } from './apiComputed'
+export { computed, staticComputed } from './apiComputed'
 export { watch, watchEffect } from './apiWatch'
 export {
   onBeforeMount,
