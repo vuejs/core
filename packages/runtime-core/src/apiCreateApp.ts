@@ -49,8 +49,9 @@ export type OptionMergeFunction = (
 
 export interface AppConfig {
   // @private
-  readonly isNativeTag?: (tag: string) => boolean
-
+  readonly isNativeTag?: (tag: string) => boolean 
+  
+  devtools: boolean
   performance: boolean
   optionMergeStrategies: Record<string, OptionMergeFunction>
   globalProperties: Record<string, any>
