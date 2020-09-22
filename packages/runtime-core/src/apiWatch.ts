@@ -255,11 +255,11 @@ function doWatch(
     }
   }
 
-  // important: mark the job as a watcher callback so that scheduler knows it
+  // important: mark the job as a watcher callback so that scheduler knows
   // it is allowed to self-trigger (#1727)
   job.allowRecurse = !!cb
 
-  let scheduler: (job: () => any) => void
+  let scheduler: ReactiveEffectOptions['scheduler']
   if (flush === 'sync') {
     scheduler = job
   } else if (flush === 'post') {
@@ -311,7 +311,7 @@ function doWatch(
 export function instanceWatch(
   this: ComponentInternalInstance,
   source: string | Function,
-  cb: Function,
+  cb: WatchCallback,
   options?: WatchOptions
 ): WatchStopHandle {
   const publicThis = this.proxy as any
