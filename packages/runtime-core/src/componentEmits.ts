@@ -28,8 +28,8 @@ export type EmitsOptions = ObjectEmitsOptions | string[]
 export type EmitFn<
   Options = ObjectEmitsOptions,
   Event extends keyof Options = keyof Options
-> = Options extends any[]
-  ? (event: Options[0], ...args: any[]) => void
+> = Options extends Array<infer V>
+  ? (event: V, ...args: any[]) => void
   : {} extends Options // if the emit is empty object (usually the default value for emit) should be converted to function
     ? (event: string, ...args: any[]) => void
     : UnionToIntersection<
