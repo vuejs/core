@@ -147,6 +147,7 @@ export {
   AppContext,
   Plugin,
   CreateAppFunction,
+  CreateChildAppFunction,
   OptionMergeFunction
 } from './apiCreateApp'
 export {

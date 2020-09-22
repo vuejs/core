@@ -27,7 +27,8 @@ export interface App<HostElement = any> {
   directive(name: string, directive: Directive): this
   mount(
     rootContainer: HostElement | string,
-    isHydrate?: boolean
+    isHydrate?: boolean,
+    parentAppCtx?: AppContext
   ): ComponentPublicInstance
   unmount(rootContainer: HostElement | string): void
   provide<T>(key: InjectionKey<T> | string, value: T): this
@@ -105,6 +106,12 @@ export function createAppContext(): AppContext {
 }
 
 export type CreateAppFunction<HostElement> = (
+  rootComponent: Component,
+  rootProps?: Data | null
+) => App<HostElement>
+
+export type CreateChildAppFunction<HostElement> = (
+  parentApp: App<HostElement>,
   rootComponent: Component,
   rootProps?: Data | null
 ) => App<HostElement>
@@ -210,7 +217,11 @@ export function createAppAPI<HostElement>(
         return app
       },
 
-      mount(rootContainer: HostElement, isHydrate?: boolean): any {
+      mount(
+        rootContainer: HostElement,
+        isHydrate?: boolean,
+        parentAppCtx?: AppContext
+      ): any {
         if (!isMounted) {
           const vnode = createVNode(
             rootComponent as ConcreteComponent,
@@ -218,7 +229,8 @@ export function createAppAPI<HostElement>(
           )
           // store app context on the root VNode.
           // this will be set on the root instance on initial mount.
-          vnode.appContext = context
+          // if argument parentAppCtx is been provided, use it to create child app
+          vnode.appContext = parentAppCtx || context
 
           // HMR root reload
           if (__DEV__) {

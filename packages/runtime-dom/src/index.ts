@@ -4,6 +4,7 @@ import {
   warn,
   RootRenderFunction,
   CreateAppFunction,
+  CreateChildAppFunction,
   Renderer,
   HydrationRenderer,
   App,
@@ -75,6 +76,48 @@ export const createApp = ((...args) => {
 
   return app
 }) as CreateAppFunction<Element>
+
+export const createChildApp = ((parentApp, ...args) => {
+  if (!parentApp) {
+    if (__DEV__) {
+      warn(`Failed to create child app: argument parentApp must be provided.`)
+    }
+    return
+  }
+  const subapp = ensureRenderer().createApp(...args)
+  // methods is inherited from the father, except `mount` and `unmount` methods
+  const newSubapp = extend(subapp, {
+    use: parentApp.use,
+    mixin: parentApp.mixin,
+    component: parentApp.component,
+    directive: parentApp.directive,
+    provide: parentApp.provide,
+    config: parentApp.config,
+    _context: extend({}, parentApp._context, { app: subapp })
+  }) as App<Element>
+
+  if (__DEV__) {
+    injectNativeTagCheck(newSubapp)
+  }
+
+  const { mount } = newSubapp
+  newSubapp.mount = (containerOrSelector: Element | string): any => {
+    const container = normalizeContainer(containerOrSelector)
+    if (!container) return
+    const component = newSubapp._component
+    if (!isFunction(component) && !component.render && !component.template) {
+      component.template = container.innerHTML
+    }
+    // clear content before mounting
+    container.innerHTML = ''
+    const proxy = mount(container, false, newSubapp._context)
+    container.removeAttribute('v-cloak')
+    container.setAttribute('data-v-app', '')
+    return proxy
+  }
+
+  return newSubapp
+}) as CreateChildAppFunction<Element>
 
 export const createSSRApp = ((...args) => {
   const app = ensureHydrationRenderer().createApp(...args)
