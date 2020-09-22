@@ -80,7 +80,7 @@ export const toTypeString = (value: unknown): string =>
   objectToString.call(value)
 
 export const toRawType = (value: unknown): string => {
-  return toTypeString(value).slice(8, -1)
+  return toTypeString(value).slice('[object '.length, -1)
 }
 
 export const isPlainObject = (val: unknown): val is object =>
