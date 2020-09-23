@@ -8,7 +8,9 @@ import {
   VNode,
   provide,
   inject,
-  Ref
+  Ref,
+  watch,
+  SetupContext
 } from '@vue/runtime-test'
 
 describe('renderer: component', () => {
@@ -134,6 +136,45 @@ describe('renderer: component', () => {
     const root = nodeOps.createElement('div')
     render(h(App), root)
     expect(serializeInner(root)).toBe(`<div>0</div><div>1</div>`)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>1</div><div>1</div>`)
+  })
+
+  // #2200
+  test('component child updating parent state in pre-flush should trigger parent re-render', async () => {
+    const outer = ref(0)
+    const App = {
+      setup() {
+        const inner = ref(0)
+
+        return () => {
+          return [
+            h('div', inner.value),
+            h(Child, {
+              value: outer.value,
+              onUpdate: (val: number) => (inner.value = val)
+            })
+          ]
+        }
+      }
+    }
+
+    const Child = {
+      props: ['value'],
+      setup(props: any, { emit }: SetupContext) {
+        watch(() => props.value, (val: number) => emit('update', val))
+
+        return () => {
+          return h('div', props.value)
+        }
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<div>0</div><div>0</div>`)
+
+    outer.value++
     await nextTick()
     expect(serializeInner(root)).toBe(`<div>1</div><div>1</div>`)
   })
