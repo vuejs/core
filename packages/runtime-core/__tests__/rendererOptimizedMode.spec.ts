@@ -14,7 +14,8 @@ import {
   nextTick,
   defineComponent,
   withCtx,
-  renderSlot
+  renderSlot,
+  onBeforeUnmount
 } from '@vue/runtime-test'
 import { PatchFlags, SlotFlags } from '@vue/shared'
 
@@ -448,5 +449,30 @@ describe('renderer: optimized mode', () => {
     await nextTick()
 
     expect(inner(root)).toBe('<div><p>1</p></div>')
+  })
+
+  // #2169
+  // block
+  // - dynamic child (1)
+  //   - component (2)
+  // When unmounting (1), we know we are in optimized mode so no need to further
+  // traverse unmount its children
+  test('should not perform unnecessary unmount traversals', () => {
+    const spy = jest.fn()
+    const Child = {
+      setup() {
+        onBeforeUnmount(spy)
+        return () => 'child'
+      }
+    }
+    const Parent = () => (
+      openBlock(),
+      createBlock('div', null, [
+        createVNode('div', { style: {} }, [createVNode(Child)], 4 /* STYLE */)
+      ])
+    )
+    render(h(Parent), root)
+    render(null, root)
+    expect(spy).toHaveBeenCalledTimes(1)
   })
 })
