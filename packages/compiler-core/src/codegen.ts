@@ -528,17 +528,7 @@ function genNodeList(
     } else {
       genNode(node, context)
     }
-
-    const needComma =
-      // comments are discarded in production mode
-      (__DEV__ ||
-        isString(node) ||
-        isSymbol(node) ||
-        isArray(node) ||
-        node.type !== NodeTypes.COMMENT) &&
-      i < nodes.length - 1
-
-    if (needComma) {
+    if (i < nodes.length - 1) {
       if (multilines) {
         comma && push(',')
         newline()

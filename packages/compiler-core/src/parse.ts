@@ -246,6 +246,15 @@ function parseChildren(
       if (first && first.type === NodeTypes.TEXT) {
         first.content = first.content.replace(/^\r?\n/, '')
       }
+      if (!__DEV__ && !context.options.comments) {
+        for (let i = 0; i < nodes.length; i++) {
+          const node = nodes[i]
+          if (node.type === NodeTypes.COMMENT) {
+            removedWhitespace = true
+            nodes[i] = null as any
+          }
+        }
+      }
     }
   }
 
