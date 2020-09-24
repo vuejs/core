@@ -159,6 +159,25 @@ describe('DOM parser', () => {
       ])
     })
 
+    // #2217
+    test('comments in the <pre> tag should be removed in production mode', () => {
+      __DEV__ = false
+      const rawText = `<p/><!-- foo --><p/>`
+      const ast = parse(`<pre>${rawText}</pre>`, parserOptions)
+      __DEV__ = true
+
+      expect((ast.children[0] as ElementNode).children).toMatchObject([
+        {
+          type: NodeTypes.ELEMENT,
+          tag: 'p'
+        },
+        {
+          type: NodeTypes.ELEMENT,
+          tag: 'p'
+        }
+      ])
+    })
+
     // #945
     test('&nbsp; should not be condensed', () => {
       const nbsp = String.fromCharCode(160)
