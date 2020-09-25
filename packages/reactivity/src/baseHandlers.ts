@@ -13,7 +13,7 @@ import {
   trigger,
   ITERATE_KEY,
   pauseTracking,
-  enableTracking
+  resetTracking
 } from './effect'
 import {
   isObject,
@@ -64,7 +64,7 @@ const arrayInstrumentations: Record<string, Function> = {}
   arrayInstrumentations[key] = function(this: unknown[], ...args: unknown[]) {
     pauseTracking()
     const res = method.apply(this, args)
-    enableTracking()
+    resetTracking()
     return res
   }
 })
