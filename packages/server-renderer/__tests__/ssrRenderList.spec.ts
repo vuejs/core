@@ -24,11 +24,6 @@ describe('ssr: renderList', () => {
     expect(stack).toEqual(['node 0: 1', 'node 1: 2', 'node 2: 3'])
   })
 
-  it('should render integers 1 through N when given a non-integer N', () => {
-    ssrRenderList(2.1, (item, index) => stack.push(`node ${index}: ${item}`))
-    expect(stack).toEqual(['node 0: 1', 'node 1: 2', 'node 2: 3'])
-  })
-
   it('should warn when given a non-integer N', () => {
     ssrRenderList(3.1, () => {})
     expect(
