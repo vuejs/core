@@ -27,7 +27,7 @@ describe('ssr: renderList', () => {
   it('should warn when given a non-integer N', () => {
     ssrRenderList(3.1, () => {})
     expect(
-      'Please give a non-integer value for v-for range.'
+      'Please give an non-integer value for v-for range.'
     ).toHaveBeenWarned()
   })
 

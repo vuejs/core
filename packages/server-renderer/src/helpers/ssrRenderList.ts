@@ -10,8 +10,8 @@ export function ssrRenderList(
       renderItem(source[i], i)
     }
   } else if (typeof source === 'number') {
-    if (__DEV__ && Number.isInteger(source)) {
-      warn('Please give a non-integer value for v-for range.')
+    if (__DEV__ && !Number.isInteger(source)) {
+      warn('Please give an non-integer value for v-for range.')
       return
     }
     for (let i = 0; i < source; i++) {
