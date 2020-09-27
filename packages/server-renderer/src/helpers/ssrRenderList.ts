@@ -1,4 +1,4 @@
-import { isArray, isString, isObject, isInteger } from '@vue/shared'
+import { isArray, isString, isObject } from '@vue/shared'
 import { warn } from '@vue/runtime-core'
 
 export function ssrRenderList(
@@ -10,7 +10,7 @@ export function ssrRenderList(
       renderItem(source[i], i)
     }
   } else if (typeof source === 'number') {
-    if (__DEV__ && isInteger(source)) {
+    if (__DEV__ && Number.isInteger(source)) {
       warn('Please give a non-integer value for v-for range.')
       return
     }

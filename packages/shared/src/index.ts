@@ -92,8 +92,6 @@ export const isIntegerKey = (key: unknown) =>
   key[0] !== '-' &&
   '' + parseInt(key, 10) === key
 
-export const isInteger = (val: number): boolean => val !== Math.ceil(val)
-
 export const isReservedProp = /*#__PURE__*/ makeMap(
   'key,ref,' +
     'onVnodeBeforeMount,onVnodeMounted,' +
