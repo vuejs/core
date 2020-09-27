@@ -21,12 +21,11 @@ describe('renderList', () => {
     ])
   })
 
-  it('should render integers 1 through N when given a non-integer N', () => {
-    expect(renderList(2.1, (item, index) => `node ${index}: ${item}`)).toEqual([
-      'node 0: 1',
-      'node 1: 2',
-      'node 2: 3'
-    ])
+  it('should warn when given a non-integer N', () => {
+    renderList(3.1, () => {})
+    expect(
+      'Please give a non-integer value for v-for range.'
+    ).toHaveBeenWarned()
   })
 
   it('should render properties in an object', () => {

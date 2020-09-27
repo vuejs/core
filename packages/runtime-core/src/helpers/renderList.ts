@@ -1,5 +1,6 @@
 import { VNodeChild } from '../vnode'
-import { isArray, isString, isObject } from '@vue/shared'
+import { isArray, isString, isObject, isInteger } from '@vue/shared'
+import { warn } from '../warning'
 
 /**
  * v-for string
@@ -60,7 +61,11 @@ export function renderList(
       ret[i] = renderItem(source[i], i)
     }
   } else if (typeof source === 'number') {
-    ret = new Array(Math.ceil(source))
+    if (__DEV__ && isInteger(source)) {
+      warn('Please give a non-integer value for v-for range.')
+      return []
+    }
+    ret = new Array(source)
     for (let i = 0; i < source; i++) {
       ret[i] = renderItem(i + 1, i)
     }
