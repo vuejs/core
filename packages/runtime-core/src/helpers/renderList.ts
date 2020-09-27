@@ -62,7 +62,7 @@ export function renderList(
     }
   } else if (typeof source === 'number') {
     if (__DEV__ && !Number.isInteger(source)) {
-      warn('Please give an non-integer value for v-for range.')
+      warn('Please give an integer value for v-for range.')
       return []
     }
     ret = new Array(source)
