@@ -12,7 +12,7 @@ export function ssrRenderList(
   } else if (typeof source === 'number') {
     if (__DEV__ && isInteger(source)) {
       warn('Please give a non-integer value for v-for range.')
-      return []
+      return
     }
     for (let i = 0; i < source; i++) {
       renderItem(i + 1, i)
