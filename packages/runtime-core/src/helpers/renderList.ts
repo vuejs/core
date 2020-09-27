@@ -60,6 +60,7 @@ export function renderList(
       ret[i] = renderItem(source[i], i)
     }
   } else if (typeof source === 'number') {
+    source = Math.floor(source)
     ret = new Array(source)
     for (let i = 0; i < source; i++) {
       ret[i] = renderItem(i + 1, i)

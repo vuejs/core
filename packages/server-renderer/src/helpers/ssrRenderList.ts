@@ -9,7 +9,8 @@ export function ssrRenderList(
       renderItem(source[i], i)
     }
   } else if (typeof source === 'number') {
-    for (let i = 0; i < source; i++) {
+    source = Math.floor(source)
+    for (let i = 0; i < (source as number); i++) {
       renderItem(i + 1, i)
     }
   } else if (isObject(source)) {

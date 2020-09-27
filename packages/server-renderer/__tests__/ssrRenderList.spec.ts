@@ -24,6 +24,11 @@ describe('ssr: renderList', () => {
     expect(stack).toEqual(['node 0: 1', 'node 1: 2', 'node 2: 3'])
   })
 
+  it('should render integers 1 through N when given a non-integer N', () => {
+    ssrRenderList(3.1, (item, index) => stack.push(`node ${index}: ${item}`))
+    expect(stack).toEqual(['node 0: 1', 'node 1: 2', 'node 2: 3'])
+  })
+
   it('should render properties in an object', () => {
     ssrRenderList({ a: 1, b: 2, c: 3 }, (item, key, index) =>
       stack.push(`node ${index}/${key}: ${item}`)
