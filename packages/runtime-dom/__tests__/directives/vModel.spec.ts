@@ -681,6 +681,43 @@ describe('vModel', () => {
     expect(bar.selected).toEqual(true)
   })
 
+  it('v-model.number should work with select tag', async () => {
+    const component = defineComponent({
+      data() {
+        return { value: '' }
+      },
+      render() {
+        return [
+          withVModel(
+            h(
+              'select',
+              {
+                value: null,
+                'onUpdate:modelValue': setValue.bind(this)
+              },
+              [h('option', { value: '1' }), h('option', { value: '2' })]
+            ),
+            this.value,
+            {
+              number: true
+            }
+          )
+        ]
+      }
+    })
+    render(h(component), root)
+
+    const input = root.querySelector('select')
+    const one = root.querySelector('option[value="1"]')
+    const data = root._vnode.component.data
+
+    one.selected = true
+    triggerEvent('change', input)
+    await nextTick()
+    expect(typeof data.value).toEqual('number')
+    expect(data.value).toEqual(1)
+  })
+
   it('should work with composition session', async () => {
     const component = defineComponent({
       data() {
