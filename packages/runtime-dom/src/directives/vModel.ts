@@ -167,7 +167,7 @@ export const vModelRadio: ModelDirective<HTMLInputElement> = {
 }
 
 export const vModelSelect: ModelDirective<HTMLSelectElement> = {
-  created(el, { value, modifiers: { trim, number } }, vnode) {
+  created(el, { value, modifiers: { number } }, vnode) {
     debugger
     addEventListener(el, 'change', () => {
       const castToNumber = number
@@ -177,9 +177,7 @@ export const vModelSelect: ModelDirective<HTMLSelectElement> = {
 
       let domValue: string | number = el.multiple ? selectedVal : selectedVal[0]
 
-      if (trim) {
-        domValue = domValue.trim()
-      } else if (castToNumber) {
+      if (castToNumber) {
         domValue = toNumber(domValue)
       }
       el._assign(domValue)
