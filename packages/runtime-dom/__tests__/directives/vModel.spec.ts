@@ -566,7 +566,7 @@ describe('vModel', () => {
   it('should work with single select', async () => {
     const component = defineComponent({
       data() {
-        return { value: 0 }
+        return { value: null }
       },
       render() {
         return [
@@ -577,12 +577,9 @@ describe('vModel', () => {
                 value: null,
                 'onUpdate:modelValue': setValue.bind(this)
               },
-              [h('option', { value: 1 }), h('option', { value: 2 })]
+              [h('option', { value: 'foo' }), h('option', { value: 'bar' })]
             ),
-            this.value,
-            {
-              number: true
-            }
+            this.value
           )
         ]
       }
@@ -590,15 +587,14 @@ describe('vModel', () => {
     render(h(component), root)
 
     const input = root.querySelector('select')
-    const foo = root.querySelector('option[value="1"]')
-    const bar = root.querySelector('option[value="2"]')
+    const foo = root.querySelector('option[value=foo]')
+    const bar = root.querySelector('option[value=bar]')
     const data = root._vnode.component.data
 
     foo.selected = true
     triggerEvent('change', input)
     await nextTick()
-    expect(data.value).toEqual(1)
-    expect(typeof data.value).toEqual('number')
+    expect(data.value).toEqual('foo')
 
     foo.selected = false
     bar.selected = true
