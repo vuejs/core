@@ -1,61 +1,30 @@
 <script src="../../dist/vue.global.js"></script>
 
 <div id="demo">
-  <h1>Latest Vue.js Commits</h1>
-  <template v-for="branch in branches">
-    <input type="radio"
-      :id="branch"
-      :value="branch"
-      name="branch"
-      v-model="currentBranch">
-    <label :for="branch">{{ branch }}</label>
-  </template>
-  <p>vuejs/vue@{{ currentBranch }}</p>
-  <ul>
-    <li v-for="{ html_url, sha, author, commit } in commits">
-      <a :href="html_url" target="_blank" class="commit">{{ sha.slice(0, 7) }}</a>
-      - <span class="message">{{ truncate(commit.message) }}</span><br>
-      by <span class="author"><a :href="author.html_url" target="_blank">{{ commit.author.name }}</a></span>
-      at <span class="date">{{ formatDate(commit.author.date) }}</span>
-    </li>
-  </ul>
+  <div id="v-model-select" class="demo">
+    <select v-model.number="selected">
+      <option disabled value="">Please select one</option>
+      <option value="1">1</option>
+      <option value="2">2</option>
+      <option value="3">3</option>
+    </select>
+    <span>Type: {{ typeof selected }}</span>
+  
+  
+    <!-- <input type="text" v-model.number="selected2" />
+    <span>Type: {{ typeof selected2 }}</span> -->
+  </div>
 </div>
 
 <script>
-const API_URL = `https://api.github.com/repos/vuejs/vue-next/commits?per_page=3&sha=`
-
-Vue.createApp({
-  data: () => ({
-    branches: ['master', 'sync'],
-    currentBranch: 'master',
-    commits: null
-  }),
-
-  created() {
-    this.fetchData()
-  },
-
-  watch: {
-    currentBranch: 'fetchData'
-  },
-
-  methods: {
-    fetchData() {
-      fetch(`${API_URL}${this.currentBranch}`)
-        .then(res => res.json())
-        .then(data => {
-          this.commits = data
-        })
-    },
-    truncate(v) {
-      const newline = v.indexOf('\n')
-      return newline > 0 ? v.slice(0, newline) : v
-    },
-    formatDate(v) {
-      return v.replace(/T|Z/g, ' ')
+  Vue.createApp({
+    data() {
+      return {
+        selected: '',
+        selected2: 0
+      }
     }
-  }
-}).mount('#demo')
+  }).mount('#v-model-select')
 </script>
 
 <style>

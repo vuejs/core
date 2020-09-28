@@ -53,6 +53,7 @@ export const vModelText: ModelDirective<
     el._assign = getModelAssigner(vnode)
     const castToNumber = number || el.type === 'number'
     addEventListener(el, lazy ? 'change' : 'input', e => {
+      debugger
       if ((e.target as any).composing) return
       let domValue: string | number = el.value
       if (trim) {
@@ -166,12 +167,22 @@ export const vModelRadio: ModelDirective<HTMLInputElement> = {
 }
 
 export const vModelSelect: ModelDirective<HTMLSelectElement> = {
-  created(el, binding, vnode) {
+  created(el, { value, modifiers: { trim, number } }, vnode) {
+    debugger
     addEventListener(el, 'change', () => {
+      const castToNumber = number
       const selectedVal = Array.prototype.filter
         .call(el.options, (o: HTMLOptionElement) => o.selected)
         .map(getValue)
-      el._assign(el.multiple ? selectedVal : selectedVal[0])
+
+      let domValue: string | number = el.multiple ? selectedVal : selectedVal[0]
+
+      if (trim) {
+        domValue = domValue.trim()
+      } else if (castToNumber) {
+        domValue = toNumber(domValue)
+      }
+      el._assign(domValue)
     })
     el._assign = getModelAssigner(vnode)
   },
