@@ -11,7 +11,7 @@ export function ssrRenderList(
     }
   } else if (typeof source === 'number') {
     if (__DEV__ && !Number.isInteger(source)) {
-      warn('Please give an integer value for v-for range.')
+      warn(`The v-for range expect an integer value but got ${source}.`)
       return
     }
     for (let i = 0; i < source; i++) {

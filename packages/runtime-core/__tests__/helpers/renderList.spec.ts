@@ -23,7 +23,9 @@ describe('renderList', () => {
 
   it('should warn when given a non-integer N', () => {
     renderList(3.1, () => {})
-    expect('Please give an integer value for v-for range.').toHaveBeenWarned()
+    expect(
+      `The v-for range expect an integer value but got 3.1.`
+    ).toHaveBeenWarned()
   })
 
   it('should render properties in an object', () => {
