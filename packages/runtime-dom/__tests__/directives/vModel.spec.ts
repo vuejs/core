@@ -684,7 +684,7 @@ describe('vModel', () => {
   it('v-model.number should work with select tag', async () => {
     const component = defineComponent({
       data() {
-        return { value: '' }
+        return { value: null }
       },
       render() {
         return [
