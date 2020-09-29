@@ -240,6 +240,6 @@ describe('component: proxy', () => {
       `Property ${JSON.stringify(
         Symbol.unscopables
       )} was accessed during render ` + `but is not defined on instance.`
-    ).toHaveBeenWarned()
+    ).not.toHaveBeenWarned()
   })
 })

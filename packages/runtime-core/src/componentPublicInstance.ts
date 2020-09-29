@@ -241,7 +241,7 @@ export interface ComponentRenderContext {
 }
 
 export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
-  get({ _: instance }: ComponentRenderContext, key: string) {
+  get({ _: instance }: ComponentRenderContext, keyOrSymbol: string | symbol) {
     const {
       ctx,
       setupState,
@@ -251,10 +251,16 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       type,
       appContext
     } = instance
+    const key = keyOrSymbol as string
 
     // let @vue/reactivity know it should never observe Vue public instances.
     if (key === ReactiveFlags.SKIP) {
       return true
+    }
+
+    // this seems to come from the `with(_ctx) {}` used in render functions
+    if (keyOrSymbol === Symbol.unscopables) {
+      return undefined
     }
 
     // for internal formatters to know that this is a Vue instance
