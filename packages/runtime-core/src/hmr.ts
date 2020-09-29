@@ -1,16 +1,18 @@
 /* eslint-disable no-restricted-globals */
 import {
-  Component,
+  ConcreteComponent,
   ComponentInternalInstance,
   ComponentOptions,
-  InternalRenderFunction
+  InternalRenderFunction,
+  ClassComponent,
+  isClassComponent
 } from './component'
 import { queueJob, queuePostFlushCb } from './scheduler'
 import { extend } from '@vue/shared'
 
 export let isHmrUpdating = false
 
-export const hmrDirtyComponents = new Set<Component>()
+export const hmrDirtyComponents = new Set<ConcreteComponent>()
 
 export interface HMRRuntime {
   createRecord: typeof createRecord
@@ -83,7 +85,7 @@ function rerender(id: string, newRender?: Function) {
   })
 }
 
-function reload(id: string, newComp: ComponentOptions) {
+function reload(id: string, newComp: ComponentOptions | ClassComponent) {
   const record = map.get(id)
   if (!record) return
   // Array.from creates a snapshot which avoids the set being mutated during
@@ -92,6 +94,7 @@ function reload(id: string, newComp: ComponentOptions) {
     const comp = instance.type
     if (!hmrDirtyComponents.has(comp)) {
       // 1. Update existing comp definition to match new one
+      newComp = isClassComponent(newComp) ? newComp.__vccOpts : newComp
       extend(comp, newComp)
       for (const key in comp) {
         if (!(key in newComp)) {

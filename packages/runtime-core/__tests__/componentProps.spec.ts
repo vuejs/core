@@ -7,14 +7,14 @@ import {
   FunctionalComponent,
   defineComponent,
   ref,
-  serializeInner
+  serializeInner,
+  createApp,
+  provide,
+  inject
 } from '@vue/runtime-test'
 import { render as domRender, nextTick } from 'vue'
-import { mockWarn } from '@vue/shared'
 
 describe('component props', () => {
-  mockWarn()
-
   test('stateful', () => {
     let props: any
     let attrs: any
@@ -45,7 +45,7 @@ describe('component props', () => {
     render(h(Comp, { 'foo-bar': 3, bar: 3, baz: 4, barBaz: 5 }), root)
     expect(proxy.fooBar).toBe(3)
     expect(proxy.barBaz).toBe(5)
-    expect(props).toEqual({ fooBar: 3,barBaz: 5 })
+    expect(props).toEqual({ fooBar: 3, barBaz: 5 })
     expect(attrs).toEqual({ bar: 3, baz: 4 })
 
     render(h(Comp, { qux: 5 }), root)
@@ -214,6 +214,32 @@ describe('component props', () => {
     expect(defaultFn).toHaveBeenCalledTimes(1)
   })
 
+  test('using inject in default value factory', () => {
+    const Child = defineComponent({
+      props: {
+        test: {
+          default: () => inject('test', 'default')
+        }
+      },
+      setup(props) {
+        return () => {
+          return h('div', props.test)
+        }
+      }
+    })
+
+    const Comp = {
+      setup() {
+        provide('test', 'injected')
+        return () => h(Child)
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>injected</div>`)
+  })
+
   test('optimized props updates', async () => {
     const Child = defineComponent({
       props: ['foo'],
@@ -308,6 +334,46 @@ describe('component props', () => {
 
     expect(serializeInner(root)).toMatch(
       `from self, from base, from mixin 1, from mixin 2`
+    )
+    expect(setupProps).toMatchObject(props)
+    expect(renderProxy.$props).toMatchObject(props)
+  })
+
+  test('merging props from global mixins', () => {
+    let setupProps: any
+    let renderProxy: any
+
+    const M1 = {
+      props: ['m1']
+    }
+    const M2 = {
+      props: { m2: null }
+    }
+    const Comp = {
+      props: ['self'],
+      setup(props: any) {
+        setupProps = props
+      },
+      render(this: any) {
+        renderProxy = this
+        return h('div', [this.self, this.m1, this.m2])
+      }
+    }
+
+    const props = {
+      self: 'from self, ',
+      m1: 'from mixin 1, ',
+      m2: 'from mixin 2'
+    }
+    const app = createApp(Comp, props)
+    app.mixin(M1)
+    app.mixin(M2)
+
+    const root = nodeOps.createElement('div')
+    app.mount(root)
+
+    expect(serializeInner(root)).toMatch(
+      `from self, from mixin 1, from mixin 2`
     )
     expect(setupProps).toMatchObject(props)
     expect(renderProxy.$props).toMatchObject(props)

@@ -10,7 +10,6 @@ import {
   SimpleExpressionNode,
   createCallExpression,
   createFunctionExpression,
-  ElementTypes,
   createObjectExpression,
   createObjectProperty,
   ForCodegenNode,
@@ -55,6 +54,27 @@ export const transformFor = createStructuralDirectiveTransform(
         forNode.source
       ]) as ForRenderListExpression
       const keyProp = findProp(node, `key`)
+      const keyProperty = keyProp
+        ? createObjectProperty(
+            `key`,
+            keyProp.type === NodeTypes.ATTRIBUTE
+              ? createSimpleExpression(keyProp.value!.content, true)
+              : keyProp.exp!
+          )
+        : null
+
+      if (!__BROWSER__ && context.prefixIdentifiers && keyProperty) {
+        // #2085 process :key expression needs to be processed in order for it
+        // to behave consistently for <template v-for> and <div v-for>.
+        // In the case of `<template v-for>`, the node is discarded and never
+        // traversed so its key expression won't be processed by the normal
+        // transforms.
+        keyProperty.value = processExpression(
+          keyProperty.value as SimpleExpressionNode,
+          context
+        )
+      }
+
       const isStableFragment =
         forNode.source.type === NodeTypes.SIMPLE_EXPRESSION &&
         forNode.source.isConstant
@@ -81,8 +101,27 @@ export const transformFor = createStructuralDirectiveTransform(
         let childBlock: BlockCodegenNode
         const isTemplate = isTemplateNode(node)
         const { children } = forNode
+
+        // check <template v-for> key placement
+        if ((__DEV__ || !__BROWSER__) && isTemplate) {
+          node.children.some(c => {
+            if (c.type === NodeTypes.ELEMENT) {
+              const key = findProp(c, 'key')
+              if (key) {
+                context.onError(
+                  createCompilerError(
+                    ErrorCodes.X_V_FOR_TEMPLATE_KEY_PLACEMENT,
+                    key.loc
+                  )
+                )
+                return true
+              }
+            }
+          })
+        }
+
         const needFragmentWrapper =
-          children.length > 1 || children[0].type !== NodeTypes.ELEMENT
+          children.length !== 1 || children[0].type !== NodeTypes.ELEMENT
         const slotOutlet = isSlotOutlet(node)
           ? node
           : isTemplate &&
@@ -90,14 +129,7 @@ export const transformFor = createStructuralDirectiveTransform(
             isSlotOutlet(node.children[0])
             ? (node.children[0] as SlotOutletNode) // api-extractor somehow fails to infer this
             : null
-        const keyProperty = keyProp
-          ? createObjectProperty(
-              `key`,
-              keyProp.type === NodeTypes.ATTRIBUTE
-                ? createSimpleExpression(keyProp.value!.content, true)
-                : keyProp.exp!
-            )
-          : null
+
         if (slotOutlet) {
           // <slot v-for="..."> or <template v-for="..."><slot/></template>
           childBlock = slotOutlet.codegenNode as RenderSlotCall
@@ -127,6 +159,9 @@ export const transformFor = createStructuralDirectiveTransform(
           // but mark it as a block.
           childBlock = (children[0] as PlainElementNode)
             .codegenNode as VNodeCall
+          if (isTemplate && keyProperty) {
+            injectProp(childBlock, keyProperty, context)
+          }
           childBlock.isBlock = !isStableFragment
           if (childBlock.isBlock) {
             helper(OPEN_BLOCK)
@@ -183,7 +218,7 @@ export function processFor(
     keyAlias: key,
     objectIndexAlias: index,
     parseResult,
-    children: node.tagType === ElementTypes.TEMPLATE ? node.children : [node]
+    children: isTemplateNode(node) ? node.children : [node]
   }
 
   context.replaceNode(forNode)

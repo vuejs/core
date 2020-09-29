@@ -1,6 +1,6 @@
 {
   "name": "@vue/server-renderer",
-  "version": "3.0.0-beta.17",
+  "version": "3.0.0",
   "description": "@vue/server-renderer",
   "main": "index.js",
   "types": "dist/server-renderer.d.ts",
@@ -15,7 +15,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vuejs/vue-next.git"
+    "url": "git+https://github.com/vuejs/vue-next.git",
+    "directory": "packages/server-renderer"
   },
   "keywords": [
     "vue"
@@ -27,10 +28,10 @@
   },
   "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/server-renderer#readme",
   "peerDependencies": {
-    "vue": "3.0.0-beta.17"
+    "vue": "3.0.0"
   },
   "dependencies": {
-    "@vue/shared": "3.0.0-beta.17",
-    "@vue/compiler-ssr": "3.0.0-beta.17"
+    "@vue/shared": "3.0.0",
+    "@vue/compiler-ssr": "3.0.0"
   }
 }

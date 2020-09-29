@@ -38,7 +38,7 @@ describe('h inference w/ Fragment', () => {
   // only accepts array children
   h(Fragment, ['hello'])
   h(Fragment, { key: 123 }, ['hello'])
-  //  @ts-expect-error
+  // @ts-expect-error
   expectError(h(Fragment, 'foo'))
   //  @ts-expect-error
   expectError(h(Fragment, { key: 123 }, 'bar'))
@@ -46,11 +46,11 @@ describe('h inference w/ Fragment', () => {
 
 describe('h inference w/ Teleport', () => {
   h(Teleport, { to: '#foo' }, 'hello')
-  //  @ts-expect-error
+  // @ts-expect-error
   expectError(h(Teleport))
-  //  @ts-expect-error
+  // @ts-expect-error
   expectError(h(Teleport, {}))
-  //  @ts-expect-error
+  // @ts-expect-error
   expectError(h(Teleport, { to: '#foo' }))
 })
 
@@ -148,6 +148,7 @@ describe('h support for generic component type', () => {
   function foo(bar: Component) {
     h(bar)
     h(bar, 'hello')
+    // @ts-expect-error
     h(bar, { id: 'ok' }, 'hello')
   }
   foo({})

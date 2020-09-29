@@ -1,11 +1,8 @@
 import { parse } from '../src'
-import { mockWarn } from '@vue/shared'
 import { baseParse, baseCompile } from '@vue/compiler-core'
 import { SourceMapConsumer } from 'source-map'
 
 describe('compiler:sfc', () => {
-  mockWarn()
-
   describe('source map', () => {
     test('style block', () => {
       // Padding determines how many blank lines will there be before the style block
@@ -36,6 +33,20 @@ describe('compiler:sfc', () => {
         expect(mapping.originalLine - mapping.generatedLine).toBe(padding)
       })
     })
+
+    test('custom block', () => {
+      const padding = Math.round(Math.random() * 10)
+      const custom = parse(
+        `${'\n'.repeat(padding)}<i18n>\n{\n  "greeting": "hello"\n}\n</i18n>\n`
+      ).descriptor.customBlocks[0]
+
+      expect(custom!.map).not.toBeUndefined()
+
+      const consumer = new SourceMapConsumer(custom!.map!)
+      consumer.eachMapping(mapping => {
+        expect(mapping.originalLine - mapping.generatedLine).toBe(padding)
+      })
+    })
   })
 
   test('pad content', () => {
@@ -48,11 +59,16 @@ export default {}
 </script>
 <style>
 h1 { color: red }
-</style>`
+</style>
+<i18n>
+{ "greeting": "hello" }
+</i18n>
+`
     const padFalse = parse(content.trim(), { pad: false }).descriptor
     expect(padFalse.template!.content).toBe('\n<div></div>\n')
     expect(padFalse.script!.content).toBe('\nexport default {}\n')
     expect(padFalse.styles[0].content).toBe('\nh1 { color: red }\n')
+    expect(padFalse.customBlocks[0].content).toBe('\n{ "greeting": "hello" }\n')
 
     const padTrue = parse(content.trim(), { pad: true }).descriptor
     expect(padTrue.script!.content).toBe(
@@ -61,6 +77,9 @@ h1 { color: red }
     expect(padTrue.styles[0].content).toBe(
       Array(6 + 1).join('\n') + '\nh1 { color: red }\n'
     )
+    expect(padTrue.customBlocks[0].content).toBe(
+      Array(9 + 1).join('\n') + '\n{ "greeting": "hello" }\n'
+    )
 
     const padLine = parse(content.trim(), { pad: 'line' }).descriptor
     expect(padLine.script!.content).toBe(
@@ -68,6 +87,9 @@ h1 { color: red }
     )
     expect(padLine.styles[0].content).toBe(
       Array(6 + 1).join('\n') + '\nh1 { color: red }\n'
+    )
+    expect(padLine.customBlocks[0].content).toBe(
+      Array(9 + 1).join('\n') + '\n{ "greeting": "hello" }\n'
     )
 
     const padSpace = parse(content.trim(), { pad: 'space' }).descriptor
@@ -80,6 +102,12 @@ h1 { color: red }
         /./g,
         ' '
       ) + '\nh1 { color: red }\n'
+    )
+    expect(padSpace.customBlocks[0].content).toBe(
+      `<template>\n<div></div>\n</template>\n<script>\nexport default {}\n</script>\n<style>\nh1 { color: red }\n</style>\n<i18n>`.replace(
+        /./g,
+        ' '
+      ) + '\n{ "greeting": "hello" }\n'
     )
   })
 
@@ -143,18 +171,40 @@ h1 { color: red }
   })
 
   describe('warnings', () => {
+    function assertWarning(errors: Error[], msg: string) {
+      expect(errors.some(e => e.message.match(msg))).toBe(true)
+    }
+
     test('should only allow single template element', () => {
-      parse(`<template><div/></template><template><div/></template>`)
-      expect(
-        `Single file component can contain only one template element`
-      ).toHaveBeenWarned()
+      assertWarning(
+        parse(`<template><div/></template><template><div/></template>`).errors,
+        `Single file component can contain only one <template> element`
+      )
     })
 
     test('should only allow single script element', () => {
-      parse(`<script>console.log(1)</script><script>console.log(1)</script>`)
+      assertWarning(
+        parse(`<script>console.log(1)</script><script>console.log(1)</script>`)
+          .errors,
+        `Single file component can contain only one <script> element`
+      )
+    })
+
+    test('should only allow single script setup element', () => {
+      assertWarning(
+        parse(
+          `<script setup>console.log(1)</script><script setup>console.log(1)</script>`
+        ).errors,
+        `Single file component can contain only one <script setup> element`
+      )
+    })
+
+    test('should not warn script & script setup', () => {
       expect(
-        `Single file component can contain only one script element`
-      ).toHaveBeenWarned()
+        parse(
+          `<script setup>console.log(1)</script><script>console.log(1)</script>`
+        ).errors.length
+      ).toBe(0)
     })
   })
 })

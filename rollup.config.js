@@ -212,8 +212,13 @@ function createReplacePlugin(
     __ESM_BROWSER__: isBrowserESMBuild,
     // is targeting Node (SSR)?
     __NODE_JS__: isNodeBuild,
-    __FEATURE_OPTIONS__: true,
+
+    // feature flags
     __FEATURE_SUSPENSE__: true,
+    __FEATURE_OPTIONS_API__: isBundlerESMBuild ? `__VUE_OPTIONS_API__` : true,
+    __FEATURE_PROD_DEVTOOLS__: isBundlerESMBuild
+      ? `__VUE_PROD_DEVTOOLS__`
+      : false,
     ...(isProduction && isBrowserBuild
       ? {
           'context.onError(': `/*#__PURE__*/ context.onError(`,

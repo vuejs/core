@@ -12,11 +12,11 @@ import {
 
 function compileWithSrcset(template: string, options?: AssetURLOptions) {
   const ast = baseParse(template)
-  const srcsetTrasnform = options
+  const srcsetTransform = options
     ? createSrcsetTransformWithOptions(normalizeOptions(options))
     : transformSrcset
   transform(ast, {
-    nodeTransforms: [srcsetTrasnform, transformElement],
+    nodeTransforms: [srcsetTransform, transformElement],
     directiveTransforms: {
       bind: transformBind
     }

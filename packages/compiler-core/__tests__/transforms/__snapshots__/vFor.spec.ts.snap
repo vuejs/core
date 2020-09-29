@@ -104,6 +104,23 @@ return function render(_ctx, _cache) {
 }"
 `;
 
+exports[`compiler: v-for codegen template v-for key injection with single child 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, createVNode: _createVNode } = _Vue
+
+    return (_openBlock(true), _createBlock(_Fragment, null, _renderList(items, (item) => {
+      return (_openBlock(), _createBlock(\\"span\\", {
+        key: item.id,
+        id: item.id
+      }, null, 8 /* PROPS */, [\\"id\\"]))
+    }), 128 /* KEYED_FRAGMENT */))
+  }
+}"
+`;
+
 exports[`compiler: v-for codegen template v-for w/ <slot/> 1`] = `
 "const _Vue = Vue
 
@@ -174,6 +191,22 @@ return function render(_ctx, _cache) {
     return ok
       ? (_openBlock(true), _createBlock(_Fragment, { key: 0 }, _renderList(list, (i) => {
           return (_openBlock(), _createBlock(\\"div\\"))
+        }), 256 /* UNKEYED_FRAGMENT */))
+      : _createCommentVNode(\\"v-if\\", true)
+  }
+}"
+`;
+
+exports[`compiler: v-for codegen v-if + v-for on <template> 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, createCommentVNode: _createCommentVNode } = _Vue
+
+    return ok
+      ? (_openBlock(true), _createBlock(_Fragment, { key: 0 }, _renderList(list, (i) => {
+          return (_openBlock(), _createBlock(_Fragment, null, [], 64 /* STABLE_FRAGMENT */))
         }), 256 /* UNKEYED_FRAGMENT */))
       : _createCommentVNode(\\"v-if\\", true)
   }

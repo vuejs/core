@@ -1,6 +1,9 @@
-import { isArray, isObject, isPlainObject } from './index'
+import { isArray, isMap, isObject, isPlainObject, isSet } from './index'
 
-// For converting {{ interpolation }} values to displayed strings.
+/**
+ * For converting {{ interpolation }} values to displayed strings.
+ * @private
+ */
 export const toDisplayString = (val: unknown): string => {
   return val == null
     ? ''
@@ -10,14 +13,14 @@ export const toDisplayString = (val: unknown): string => {
 }
 
 const replacer = (_key: string, val: any) => {
-  if (val instanceof Map) {
+  if (isMap(val)) {
     return {
       [`Map(${val.size})`]: [...val.entries()].reduce((entries, [key, val]) => {
         ;(entries as any)[`${key} =>`] = val
         return entries
       }, {})
     }
-  } else if (val instanceof Set) {
+  } else if (isSet(val)) {
     return {
       [`Set(${val.size})`]: [...val.values()]
     }

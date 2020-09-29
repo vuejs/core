@@ -2,6 +2,7 @@ import {
   Comment,
   Component,
   ComponentInternalInstance,
+  ComponentOptions,
   DirectiveBinding,
   Fragment,
   mergeProps,
@@ -32,8 +33,7 @@ const {
   setCurrentRenderingInstance,
   setupComponent,
   renderComponentRoot,
-  normalizeVNode,
-  normalizeSuspenseChildren
+  normalizeVNode
 } = ssrUtils
 
 export type SSRBuffer = SSRBufferItem[] & { hasAsync?: boolean }
@@ -84,12 +84,20 @@ export function renderComponentVNode(
 ): SSRBuffer | Promise<SSRBuffer> {
   const instance = createComponentInstance(vnode, parentComponent, null)
   const res = setupComponent(instance, true /* isSSR */)
-  if (isPromise(res)) {
-    return res
-      .catch(err => {
-        warn(`[@vue/server-renderer]: Uncaught error in async setup:\n`, err)
+  const hasAsyncSetup = isPromise(res)
+  const prefetch = (vnode.type as ComponentOptions).serverPrefetch
+  if (hasAsyncSetup || prefetch) {
+    let p = hasAsyncSetup
+      ? (res as Promise<void>).catch(err => {
+          warn(`[@vue/server-renderer]: Uncaught error in async setup:\n`, err)
+        })
+      : Promise.resolve()
+    if (prefetch) {
+      p = p.then(() => prefetch.call(instance.proxy)).catch(err => {
+        warn(`[@vue/server-renderer]: Uncaught error in serverPrefetch:\n`, err)
       })
-      .then(() => renderComponentSubTree(instance))
+    }
+    return p.then(() => renderComponentSubTree(instance))
   } else {
     return renderComponentSubTree(instance)
   }
@@ -101,7 +109,11 @@ function renderComponentSubTree(
   const comp = instance.type as Component
   const { getBuffer, push } = createBuffer()
   if (isFunction(comp)) {
-    renderVNode(push, renderComponentRoot(instance), instance)
+    renderVNode(
+      push,
+      (instance.subTree = renderComponentRoot(instance)),
+      instance
+    )
   } else {
     if (!instance.render && !comp.ssrRender && isString(comp.template)) {
       comp.ssrRender = ssrCompile(comp.template, instance)
@@ -126,10 +138,24 @@ function renderComponentSubTree(
 
       // set current rendering instance for asset resolution
       setCurrentRenderingInstance(instance)
-      comp.ssrRender(instance.proxy, push, instance, attrs)
+      comp.ssrRender(
+        instance.proxy,
+        push,
+        instance,
+        attrs,
+        // compiler-optimized bindings
+        instance.props,
+        instance.setupState,
+        instance.data,
+        instance.ctx
+      )
       setCurrentRenderingInstance(null)
     } else if (instance.render) {
-      renderVNode(push, renderComponentRoot(instance), instance)
+      renderVNode(
+        push,
+        (instance.subTree = renderComponentRoot(instance)),
+        instance
+      )
     } else {
       warn(
         `Component ${
@@ -142,7 +168,7 @@ function renderComponentSubTree(
   return getBuffer()
 }
 
-function renderVNode(
+export function renderVNode(
   push: PushFn,
   vnode: VNode,
   parentComponent: ComponentInternalInstance
@@ -173,11 +199,7 @@ function renderVNode(
       } else if (shapeFlag & ShapeFlags.TELEPORT) {
         renderTeleportVNode(push, vnode, parentComponent)
       } else if (shapeFlag & ShapeFlags.SUSPENSE) {
-        renderVNode(
-          push,
-          normalizeSuspenseChildren(vnode).content,
-          parentComponent
-        )
+        renderVNode(push, vnode.ssContent!, parentComponent)
       } else {
         warn(
           '[@vue/server-renderer] Invalid VNode type:',
@@ -215,15 +237,7 @@ function renderElementVNode(
     openTag += ssrRenderAttrs(props, tag)
   }
 
-  if (scopeId) {
-    openTag += ` ${scopeId}`
-    const treeOwnerId = parentComponent && parentComponent.type.__scopeId
-    // vnode's own scopeId and the current rendering component's scopeId is
-    // different - this is a slot content node.
-    if (treeOwnerId && treeOwnerId !== scopeId) {
-      openTag += ` ${treeOwnerId}-s`
-    }
-  }
+  openTag += resolveScopeId(scopeId, vnode, parentComponent)
 
   push(openTag + `>`)
   if (!isVoidTag(tag)) {
@@ -253,6 +267,33 @@ function renderElementVNode(
     }
     push(`</${tag}>`)
   }
+}
+
+function resolveScopeId(
+  scopeId: string | null,
+  vnode: VNode,
+  parentComponent: ComponentInternalInstance | null
+) {
+  let res = ``
+  if (scopeId) {
+    res = ` ${scopeId}`
+  }
+  if (parentComponent) {
+    const treeOwnerId = parentComponent.type.__scopeId
+    // vnode's own scopeId and the current rendering component's scopeId is
+    // different - this is a slot content node.
+    if (treeOwnerId && treeOwnerId !== scopeId) {
+      res += ` ${treeOwnerId}-s`
+    }
+    if (vnode === parentComponent.subTree) {
+      res += resolveScopeId(
+        parentComponent.vnode.scopeId,
+        parentComponent.vnode,
+        parentComponent.parent
+      )
+    }
+  }
+  return res
 }
 
 function applySSRDirectives(

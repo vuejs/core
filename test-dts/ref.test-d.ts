@@ -1,4 +1,13 @@
-import { Ref, ref, isRef, unref, reactive, expectType } from './index'
+import {
+  Ref,
+  ref,
+  shallowRef,
+  isRef,
+  unref,
+  reactive,
+  expectType,
+  proxyRefs
+} from './index'
 
 function plainType(arg: number | Ref<number>) {
   // ref coercing
@@ -76,11 +85,13 @@ function bailType(arg: HTMLElement | Ref<HTMLElement>) {
   expectType<HTMLElement>(unref(arg))
 
   // ref inner type should be unwrapped
+  // eslint-disable-next-line no-restricted-globals
   const nestedRef = ref({ foo: ref(document.createElement('DIV')) })
 
   expectType<Ref<{ foo: HTMLElement }>>(nestedRef)
   expectType<{ foo: HTMLElement }>(nestedRef.value)
 }
+// eslint-disable-next-line no-restricted-globals
 const el = document.createElement('DIV')
 bailType(el)
 
@@ -109,3 +120,37 @@ const state = reactive({
 })
 
 expectType<string>(state.foo.label)
+
+// shallowRef
+type Status = 'initial' | 'ready' | 'invalidating'
+const shallowStatus = shallowRef<Status>('initial')
+if (shallowStatus.value === 'initial') {
+  expectType<Ref<Status>>(shallowStatus)
+  expectType<Status>(shallowStatus.value)
+  shallowStatus.value = 'invalidating'
+}
+
+const refStatus = ref<Status>('initial')
+if (refStatus.value === 'initial') {
+  expectType<Ref<Status>>(shallowStatus)
+  expectType<Status>(shallowStatus.value)
+  refStatus.value = 'invalidating'
+}
+
+// proxyRefs: should return `reactive` directly
+const r1 = reactive({
+  k: 'v'
+})
+const p1 = proxyRefs(r1)
+expectType<typeof r1>(p1)
+
+// proxyRefs: `ShallowUnwrapRef`
+const r2 = {
+  a: ref(1),
+  obj: {
+    k: ref('foo')
+  }
+}
+const p2 = proxyRefs(r2)
+expectType<number>(p2.a)
+expectType<Ref<string>>(p2.obj.k)

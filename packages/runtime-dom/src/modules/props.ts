@@ -4,7 +4,7 @@
 
 import { warn } from '@vue/runtime-core'
 
-// functions. The user is reponsible for using them with only trusted content.
+// functions. The user is responsible for using them with only trusted content.
 export function patchDOMProp(
   el: any,
   key: string,
@@ -28,7 +28,10 @@ export function patchDOMProp(
     // store value as _value as well since
     // non-string values will be stringified.
     el._value = value
-    el.value = value == null ? '' : value
+    const newValue = value == null ? '' : value
+    if (el.value !== newValue) {
+      el.value = newValue
+    }
     return
   }
   if (value === '' && typeof el[key] === 'boolean') {
@@ -37,6 +40,7 @@ export function patchDOMProp(
   } else if (value == null && typeof el[key] === 'string') {
     // e.g. <div :id="null">
     el[key] = ''
+    el.removeAttribute(key)
   } else {
     // some properties perform value validation and throw
     try {

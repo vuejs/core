@@ -68,11 +68,11 @@ describe('compiler: codegen', () => {
     expect(code).toMatchSnapshot()
   })
 
-  test('module mode preamble w/ optimizeBindings: true', () => {
+  test('module mode preamble w/ optimizeImports: true', () => {
     const root = createRoot({
       helpers: [CREATE_VNODE, RESOLVE_DIRECTIVE]
     })
-    const { code } = generate(root, { mode: 'module', optimizeBindings: true })
+    const { code } = generate(root, { mode: 'module', optimizeImports: true })
     expect(code).toMatch(
       `import { ${helperNameMap[CREATE_VNODE]}, ${
         helperNameMap[RESOLVE_DIRECTIVE]

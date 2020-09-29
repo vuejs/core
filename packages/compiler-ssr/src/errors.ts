@@ -26,6 +26,6 @@ export const enum SSRErrorCodes {
 export const SSRErrorMessages: { [code: number]: string } = {
   [SSRErrorCodes.X_SSR_CUSTOM_DIRECTIVE_NO_TRANSFORM]: `Custom directive is missing corresponding SSR transform and will be ignored.`,
   [SSRErrorCodes.X_SSR_UNSAFE_ATTR_NAME]: `Unsafe attribute name for SSR.`,
-  [SSRErrorCodes.X_SSR_NO_TELEPORT_TARGET]: `No target prop on teleport element.`,
-  [SSRErrorCodes.X_SSR_INVALID_AST_NODE]: `Invalid AST node during ssr transform`
+  [SSRErrorCodes.X_SSR_NO_TELEPORT_TARGET]: `Missing the 'to' prop on teleport element.`,
+  [SSRErrorCodes.X_SSR_INVALID_AST_NODE]: `Invalid AST node during SSR transform.`
 }

@@ -412,7 +412,7 @@ describe('compiler: expression transform', () => {
       })
     })
 
-    test('nullish colescing', () => {
+    test('nullish coalescing', () => {
       const node = parseWithExpressionTransform(
         `{{ a ?? b }}`
       ) as InterpolationNode

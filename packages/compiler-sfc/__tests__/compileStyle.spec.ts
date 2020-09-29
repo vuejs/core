@@ -1,15 +1,25 @@
-import { compileStyle, compileStyleAsync } from '../src/compileStyle'
-import { mockWarn } from '@vue/shared'
+/**
+ * @jest-environment node
+ */
+
+import {
+  compileStyle,
+  compileStyleAsync,
+  SFCStyleCompileOptions
+} from '../src/compileStyle'
+import path from 'path'
 
 describe('SFC scoped CSS', () => {
-  mockWarn()
-
-  function compileScoped(source: string): string {
+  function compileScoped(
+    source: string,
+    options?: Partial<SFCStyleCompileOptions>
+  ): string {
     const res = compileStyle({
       source,
       filename: 'test.css',
       id: 'test',
-      scoped: true
+      scoped: true,
+      ...options
     })
     if (res.errors.length) {
       res.errors.forEach(err => {
@@ -60,6 +70,10 @@ describe('SFC scoped CSS', () => {
   })
 
   test('::v-deep', () => {
+    expect(compileScoped(`:deep(.foo) { color: red; }`)).toMatchInlineSnapshot(`
+      "[test] .foo { color: red;
+      }"
+    `)
     expect(compileScoped(`::v-deep(.foo) { color: red; }`))
       .toMatchInlineSnapshot(`
       "[test] .foo { color: red;
@@ -78,6 +92,11 @@ describe('SFC scoped CSS', () => {
   })
 
   test('::v-slotted', () => {
+    expect(compileScoped(`:slotted(.foo) { color: red; }`))
+      .toMatchInlineSnapshot(`
+    ".foo[test-s] { color: red;
+    }"
+  `)
     expect(compileScoped(`::v-slotted(.foo) { color: red; }`))
       .toMatchInlineSnapshot(`
       ".foo[test-s] { color: red;
@@ -96,6 +115,11 @@ describe('SFC scoped CSS', () => {
   })
 
   test('::v-global', () => {
+    expect(compileScoped(`:global(.foo) { color: red; }`))
+      .toMatchInlineSnapshot(`
+    ".foo { color: red;
+    }"
+  `)
     expect(compileScoped(`::v-global(.foo) { color: red; }`))
       .toMatchInlineSnapshot(`
       ".foo { color: red;
@@ -133,7 +157,8 @@ describe('SFC scoped CSS', () => {
   })
 
   test('scoped keyframes', () => {
-    const style = compileScoped(`
+    const style = compileScoped(
+      `
 .anim {
   animation: color 5s infinite, other 5s;
 }
@@ -168,23 +193,27 @@ describe('SFC scoped CSS', () => {
   from { opacity: 0; }
   to { opacity: 1; }
 }
-    `)
+    `,
+      { id: 'data-v-test' }
+    )
 
     expect(style).toContain(
-      `.anim[test] {\n  animation: color-test 5s infinite, other 5s;`
+      `.anim[data-v-test] {\n  animation: color-test 5s infinite, other 5s;`
     )
-    expect(style).toContain(`.anim-2[test] {\n  animation-name: color-test`)
     expect(style).toContain(
-      `.anim-3[test] {\n  animation: 5s color-test infinite, 5s other;`
+      `.anim-2[data-v-test] {\n  animation-name: color-test`
+    )
+    expect(style).toContain(
+      `.anim-3[data-v-test] {\n  animation: 5s color-test infinite, 5s other;`
     )
     expect(style).toContain(`@keyframes color-test {`)
     expect(style).toContain(`@-webkit-keyframes color-test {`)
 
     expect(style).toContain(
-      `.anim-multiple[test] {\n  animation: color-test 5s infinite,opacity-test 2s;`
+      `.anim-multiple[data-v-test] {\n  animation: color-test 5s infinite,opacity-test 2s;`
     )
     expect(style).toContain(
-      `.anim-multiple-2[test] {\n  animation-name: color-test,opacity-test;`
+      `.anim-multiple-2[data-v-test] {\n  animation-name: color-test,opacity-test;`
     )
     expect(style).toContain(`@keyframes opacity-test {`)
     expect(style).toContain(`@-webkit-keyframes opacity-test {`)
@@ -237,6 +266,27 @@ describe('SFC scoped CSS', () => {
       ).toHaveBeenWarned()
     })
   })
+
+  describe('<style vars>', () => {
+    test('should rewrite CSS vars in scoped mode', () => {
+      const code = compileScoped(
+        `.foo {
+        color: var(--color);
+        font-size: var(--global:font);
+      }`,
+        {
+          id: 'data-v-test',
+          vars: true
+        }
+      )
+      expect(code).toMatchInlineSnapshot(`
+        ".foo[data-v-test] {
+                color: var(--test-color);
+                font-size: var(--font);
+        }"
+      `)
+    })
+  })
 })
 
 describe('SFC CSS modules', () => {
@@ -268,5 +318,72 @@ describe('SFC CSS modules', () => {
     expect(result.modules).toBeDefined()
     expect(result.modules!.fooBar).toMatch('__foo-bar__')
     expect(result.modules!.bazQux).toBeUndefined()
+  })
+})
+
+describe('SFC style preprocessors', () => {
+  test('scss @import', () => {
+    const res = compileStyle({
+      source: `
+        @import "./import.scss";
+      `,
+      filename: path.resolve(__dirname, './fixture/test.scss'),
+      id: '',
+      preprocessLang: 'scss'
+    })
+
+    expect([...res.dependencies]).toStrictEqual([
+      path.join(__dirname, './fixture/import.scss')
+    ])
+  })
+
+  test('scss respect user-defined string options.additionalData', () => {
+    const res = compileStyle({
+      preprocessOptions: {
+        additionalData: `
+          @mixin square($size) {
+            width: $size;
+            height: $size;
+          }`
+      },
+      source: `
+        .square {
+          @include square(100px);
+        }
+      `,
+      filename: path.resolve(__dirname, './fixture/test.scss'),
+      id: '',
+      preprocessLang: 'scss'
+    })
+
+    expect(res.errors.length).toBe(0)
+  })
+
+  test('scss respect user-defined function options.additionalData', () => {
+    const source = `
+        .square {
+          @include square(100px);
+        }
+      `
+    const filename = path.resolve(__dirname, './fixture/test.scss')
+    const res = compileStyle({
+      preprocessOptions: {
+        additionalData: (s: string, f: string) => {
+          expect(s).toBe(source)
+          expect(f).toBe(filename)
+          return `
+          @mixin square($size) {
+            width: $size;
+            height: $size;
+          }`
+        }
+      },
+      source,
+      filename,
+      id: '',
+      preprocessLang: 'scss'
+    })
+
+    expect(res.errors.length).toBe(0)
   })
 })

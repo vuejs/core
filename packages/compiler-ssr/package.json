@@ -1,6 +1,6 @@
 {
   "name": "@vue/compiler-ssr",
-  "version": "3.0.0-beta.17",
+  "version": "3.0.0",
   "description": "@vue/compiler-ssr",
   "main": "dist/compiler-ssr.cjs.js",
   "types": "dist/compiler-ssr.d.ts",
@@ -15,7 +15,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vuejs/vue-next.git"
+    "url": "git+https://github.com/vuejs/vue-next.git",
+    "directory": "packages/compiler-ssr"
   },
   "keywords": [
     "vue"
@@ -27,7 +28,7 @@
   },
   "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/compiler-ssr#readme",
   "dependencies": {
-    "@vue/shared": "3.0.0-beta.17",
-    "@vue/compiler-dom": "3.0.0-beta.17"
+    "@vue/shared": "3.0.0",
+    "@vue/compiler-dom": "3.0.0"
   }
 }

@@ -1,10 +1,14 @@
 import { reactive, effect, isReactive, toRaw } from '../../src'
-import { mockWarn } from '@vue/shared'
 
 describe('reactivity/collections', () => {
-  describe('Set', () => {
-    mockWarn()
+  function coverCollectionFn(collection: Set<any>, fnName: string) {
+    const spy = jest.fn()
+    let proxy = reactive(collection)
+    ;(collection as any)[fnName] = spy
+    return [proxy as any, spy]
+  }
 
+  describe('Set', () => {
     it('instanceof', () => {
       const original = new Set()
       const observed = reactive(original)
@@ -425,6 +429,30 @@ describe('reactivity/collections', () => {
         expect(set).toBe(proxy)
       }, thisArg)
       expect(count).toBe(1)
+    })
+
+    it('should trigger Set.has only once for non-reactive keys', () => {
+      const [proxy, spy] = coverCollectionFn(new Set(), 'has')
+      proxy.has('foo')
+      expect(spy).toBeCalledTimes(1)
+    })
+
+    it('should trigger Set.add only once for non-reactive keys', () => {
+      const [proxy, spy] = coverCollectionFn(new Set(), 'add')
+      proxy.add('foo')
+      expect(spy).toBeCalledTimes(1)
+    })
+
+    it('should trigger Set.delete only once for non-reactive keys', () => {
+      const [proxy, spy] = coverCollectionFn(new Set(), 'delete')
+      proxy.delete('foo')
+      expect(spy).toBeCalledTimes(1)
+    })
+
+    it('should trigger Set.clear only once for non-reactive keys', () => {
+      const [proxy, spy] = coverCollectionFn(new Set(), 'clear')
+      proxy.clear()
+      expect(spy).toBeCalledTimes(1)
     })
   })
 })

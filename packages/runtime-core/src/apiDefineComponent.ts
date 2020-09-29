@@ -5,17 +5,73 @@ import {
   ComponentOptionsWithArrayProps,
   ComponentOptionsWithObjectProps,
   ComponentOptionsMixin,
-  RenderFunction
+  RenderFunction,
+  ComponentOptionsBase
 } from './componentOptions'
-import { SetupContext, FunctionalComponent } from './component'
 import {
-  CreateComponentPublicInstance,
-  ComponentPublicInstanceConstructor
-} from './componentProxy'
-import { ExtractPropTypes, ComponentPropsOptions } from './componentProps'
+  SetupContext,
+  AllowedComponentProps,
+  ComponentCustomProps
+} from './component'
+import {
+  ExtractPropTypes,
+  ComponentPropsOptions,
+  ExtractDefaultPropTypes
+} from './componentProps'
 import { EmitsOptions } from './componentEmits'
 import { isFunction } from '@vue/shared'
 import { VNodeProps } from './vnode'
+import {
+  CreateComponentPublicInstance,
+  ComponentPublicInstanceConstructor
+} from './componentPublicInstance'
+
+export type PublicProps = VNodeProps &
+  AllowedComponentProps &
+  ComponentCustomProps
+
+export type DefineComponent<
+  PropsOrPropOptions = {},
+  RawBindings = {},
+  D = {},
+  C extends ComputedOptions = ComputedOptions,
+  M extends MethodOptions = MethodOptions,
+  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
+  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
+  E extends EmitsOptions = Record<string, any>,
+  EE extends string = string,
+  PP = PublicProps,
+  Props = Readonly<ExtractPropTypes<PropsOrPropOptions>>,
+  Defaults = ExtractDefaultPropTypes<PropsOrPropOptions>
+> = ComponentPublicInstanceConstructor<
+  CreateComponentPublicInstance<
+    Props,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    PP & Props,
+    Defaults,
+    true
+  > &
+    Props
+> &
+  ComponentOptionsBase<
+    Props,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    EE,
+    Defaults
+  > &
+  PP
 
 // defineComponent is a utility that is primarily used for type inference
 // when declaring components. Type inference is provided in the component
@@ -29,21 +85,7 @@ export function defineComponent<Props, RawBindings = object>(
     props: Readonly<Props>,
     ctx: SetupContext
   ) => RawBindings | RenderFunction
-): ComponentPublicInstanceConstructor<
-  CreateComponentPublicInstance<
-    Props,
-    RawBindings,
-    {},
-    {},
-    {},
-    {},
-    {},
-    {},
-    // public props
-    VNodeProps & Props
-  >
-> &
-  FunctionalComponent<Props>
+): DefineComponent<Props, RawBindings>
 
 // overload 2: object format with no props
 // (uses user defined props interface)
@@ -56,7 +98,7 @@ export function defineComponent<
   M extends MethodOptions = {},
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = Record<string, any>,
+  E extends EmitsOptions = EmitsOptions,
   EE extends string = string
 >(
   options: ComponentOptionsWithoutProps<
@@ -70,30 +112,7 @@ export function defineComponent<
     E,
     EE
   >
-): ComponentPublicInstanceConstructor<
-  CreateComponentPublicInstance<
-    Props,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    VNodeProps & Props
-  >
-> &
-  ComponentOptionsWithoutProps<
-    Props,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    EE
-  >
+): DefineComponent<Props, RawBindings, D, C, M, Mixin, Extends, E, EE>
 
 // overload 3: object format with array props declaration
 // props inferred as { [key in PropNames]?: any }
@@ -120,31 +139,17 @@ export function defineComponent<
     E,
     EE
   >
-): ComponentPublicInstanceConstructor<
-  // array props technically doesn't place any contraints on props in TSX before,
-  // but now we can export array props in TSX
-  CreateComponentPublicInstance<
-    Readonly<{ [key in PropNames]?: any }>,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E
-  >
-> &
-  ComponentOptionsWithArrayProps<
-    PropNames,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    EE
-  >
+): DefineComponent<
+  Readonly<{ [key in PropNames]?: any }>,
+  RawBindings,
+  D,
+  C,
+  M,
+  Mixin,
+  Extends,
+  E,
+  EE
+>
 
 // overload 4: object format with object props declaration
 // see `ExtractPropTypes` in ./componentProps.ts
@@ -172,32 +177,9 @@ export function defineComponent<
     E,
     EE
   >
-): ComponentPublicInstanceConstructor<
-  CreateComponentPublicInstance<
-    ExtractPropTypes<PropsOptions, false>,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    VNodeProps
-  >
-> &
-  ComponentOptionsWithObjectProps<
-    PropsOptions,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    EE
-  >
+): DefineComponent<PropsOptions, RawBindings, D, C, M, Mixin, Extends, E, EE>
 
 // implementation, close to no-op
 export function defineComponent(options: unknown) {
-  return isFunction(options) ? { setup: options } : options
+  return isFunction(options) ? { setup: options, name: options.name } : options
 }

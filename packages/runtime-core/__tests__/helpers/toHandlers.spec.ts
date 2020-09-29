@@ -1,9 +1,6 @@
 import { toHandlers } from '../../src/helpers/toHandlers'
-import { mockWarn } from '@vue/shared'
 
 describe('toHandlers', () => {
-  mockWarn()
-
   it('should not accept non-objects', () => {
     toHandlers(null as any)
     toHandlers(undefined as any)

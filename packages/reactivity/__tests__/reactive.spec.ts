@@ -1,11 +1,9 @@
 import { ref, isRef } from '../src/ref'
 import { reactive, isReactive, toRaw, markRaw } from '../src/reactive'
-import { mockWarn } from '@vue/shared'
 import { computed } from '../src/computed'
+import { effect } from '../src/effect'
 
 describe('reactivity/reactive', () => {
-  mockWarn()
-
   test('Object', () => {
     const original = { foo: 1 }
     const observed = reactive(original)
@@ -47,6 +45,61 @@ describe('reactivity/reactive', () => {
     expect(isReactive(observed.array[0])).toBe(true)
   })
 
+  test('observing subtypes of IterableCollections(Map, Set)', () => {
+    // subtypes of Map
+    class CustomMap extends Map {}
+    const cmap = reactive(new CustomMap())
+
+    expect(cmap instanceof Map).toBe(true)
+    expect(isReactive(cmap)).toBe(true)
+
+    cmap.set('key', {})
+    expect(isReactive(cmap.get('key'))).toBe(true)
+
+    // subtypes of Set
+    class CustomSet extends Set {}
+    const cset = reactive(new CustomSet())
+
+    expect(cset instanceof Set).toBe(true)
+    expect(isReactive(cset)).toBe(true)
+
+    let dummy
+    effect(() => (dummy = cset.has('value')))
+    expect(dummy).toBe(false)
+    cset.add('value')
+    expect(dummy).toBe(true)
+    cset.delete('value')
+    expect(dummy).toBe(false)
+  })
+
+  test('observing subtypes of WeakCollections(WeakMap, WeakSet)', () => {
+    // subtypes of WeakMap
+    class CustomMap extends WeakMap {}
+    const cmap = reactive(new CustomMap())
+
+    expect(cmap instanceof WeakMap).toBe(true)
+    expect(isReactive(cmap)).toBe(true)
+
+    const key = {}
+    cmap.set(key, {})
+    expect(isReactive(cmap.get(key))).toBe(true)
+
+    // subtypes of WeakSet
+    class CustomSet extends WeakSet {}
+    const cset = reactive(new CustomSet())
+
+    expect(cset instanceof WeakSet).toBe(true)
+    expect(isReactive(cset)).toBe(true)
+
+    let dummy
+    effect(() => (dummy = cset.has(key)))
+    expect(dummy).toBe(false)
+    cset.add(key)
+    expect(dummy).toBe(true)
+    cset.delete(key)
+    expect(dummy).toBe(false)
+  })
+
   test('observed value should proxy mutations to original (Object)', () => {
     const original: any = { foo: 1 }
     const observed = reactive(original)
@@ -58,6 +111,19 @@ describe('reactivity/reactive', () => {
     delete observed.foo
     expect('foo' in observed).toBe(false)
     expect('foo' in original).toBe(false)
+  })
+
+  test('original value change should reflect in observed value (Object)', () => {
+    const original: any = { foo: 1 }
+    const observed = reactive(original)
+    // set
+    original.bar = 1
+    expect(original.bar).toBe(1)
+    expect(observed.bar).toBe(1)
+    // delete
+    delete original.foo
+    expect('foo' in original).toBe(false)
+    expect('foo' in observed).toBe(false)
   })
 
   test('setting a property with an unobserved value should wrap with reactive', () => {
@@ -186,11 +252,16 @@ describe('reactivity/reactive', () => {
     expect(isReactive(obj.bar)).toBe(false)
   })
 
-  test('should not observe frozen objects', () => {
+  test('should not observe non-extensible objects', () => {
     const obj = reactive({
-      foo: Object.freeze({ a: 1 })
+      foo: Object.preventExtensions({ a: 1 }),
+      // sealed or frozen objects are considered non-extensible as well
+      bar: Object.freeze({ a: 1 }),
+      baz: Object.seal({ a: 1 })
     })
     expect(isReactive(obj.foo)).toBe(false)
+    expect(isReactive(obj.bar)).toBe(false)
+    expect(isReactive(obj.baz)).toBe(false)
   })
 
   test('should not observe objects with __v_skip', () => {

@@ -1,21 +1,22 @@
 import { ComponentInternalInstance, Data } from './component'
 import { nextTick, queueJob } from './scheduler'
-import { instanceWatch } from './apiWatch'
+import { instanceWatch, WatchOptions, WatchStopHandle } from './apiWatch'
 import {
   EMPTY_OBJ,
   hasOwn,
   isGloballyWhitelisted,
   NOOP,
-  extend
+  extend,
+  isString
 } from '@vue/shared'
 import {
   ReactiveEffect,
-  UnwrapRef,
   toRaw,
   shallowReadonly,
   ReactiveFlags,
   track,
-  TrackOpTypes
+  TrackOpTypes,
+  ShallowUnwrapRef
 } from '@vue/reactivity'
 import {
   ExtractComputedReturns,
@@ -25,9 +26,9 @@ import {
   ComponentOptionsMixin,
   OptionTypesType,
   OptionTypesKeys,
-  resolveMergedOptions
+  resolveMergedOptions,
+  isInBeforeCreate
 } from './componentOptions'
-import { normalizePropsOptions } from './componentProps'
 import { EmitsOptions, EmitFn } from './componentEmits'
 import { Slots } from './componentSlots'
 import {
@@ -76,9 +77,11 @@ type MixinToOptionTypes<T> = T extends ComponentOptionsBase<
   infer M,
   infer Mixin,
   infer Extends,
-  any
+  any,
+  any,
+  infer Defaults
 >
-  ? OptionTypesType<P & {}, B & {}, D & {}, C & {}, M & {}> &
+  ? OptionTypesType<P & {}, B & {}, D & {}, C & {}, M & {}, Defaults & {}> &
       IntersectionMixin<Mixin> &
       IntersectionMixin<Extends>
   : never
@@ -99,6 +102,26 @@ type UnwrapMixinsType<
 
 type EnsureNonVoid<T> = T extends void ? {} : T
 
+export type ComponentPublicInstanceConstructor<
+  T extends ComponentPublicInstance<
+    Props,
+    RawBindings,
+    D,
+    C,
+    M
+  > = ComponentPublicInstance<any>,
+  Props = any,
+  RawBindings = any,
+  D = any,
+  C extends ComputedOptions = ComputedOptions,
+  M extends MethodOptions = MethodOptions
+> = {
+  __isFragment?: never
+  __isTeleport?: never
+  __isSuspense?: never
+  new (...args: any[]): T
+}
+
 export type CreateComponentPublicInstance<
   P = {},
   B = {},
@@ -109,6 +132,8 @@ export type CreateComponentPublicInstance<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = {},
   PublicProps = P,
+  Defaults = {},
+  MakeDefaultsOptional extends boolean = false,
   PublicMixin = IntersectionMixin<Mixin> & IntersectionMixin<Extends>,
   PublicP = UnwrapMixinsType<PublicMixin, 'P'> & EnsureNonVoid<P>,
   PublicB = UnwrapMixinsType<PublicMixin, 'B'> & EnsureNonVoid<B>,
@@ -116,7 +141,9 @@ export type CreateComponentPublicInstance<
   PublicC extends ComputedOptions = UnwrapMixinsType<PublicMixin, 'C'> &
     EnsureNonVoid<C>,
   PublicM extends MethodOptions = UnwrapMixinsType<PublicMixin, 'M'> &
-    EnsureNonVoid<M>
+    EnsureNonVoid<M>,
+  PublicDefaults = UnwrapMixinsType<PublicMixin, 'Defaults'> &
+    EnsureNonVoid<Defaults>
 > = ComponentPublicInstance<
   PublicP,
   PublicB,
@@ -125,8 +152,11 @@ export type CreateComponentPublicInstance<
   PublicM,
   E,
   PublicProps,
-  ComponentOptionsBase<P, B, D, C, M, Mixin, Extends, E>
+  PublicDefaults,
+  MakeDefaultsOptional,
+  ComponentOptionsBase<P, B, D, C, M, Mixin, Extends, E, string, Defaults>
 >
+
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)
 export type ComponentPublicInstance<
@@ -137,11 +167,15 @@ export type ComponentPublicInstance<
   M extends MethodOptions = {},
   E extends EmitsOptions = {},
   PublicProps = P,
-  Options = ComponentOptionsBase<any, any, any, any, any, any, any, any>
+  Defaults = {},
+  MakeDefaultsOptional extends boolean = false,
+  Options = ComponentOptionsBase<any, any, any, any, any, any, any, any, any>
 > = {
   $: ComponentInternalInstance
   $data: D
-  $props: P & PublicProps
+  $props: MakeDefaultsOptional extends true
+    ? Partial<Defaults> & Omit<P & PublicProps, keyof Defaults>
+    : P & PublicProps
   $attrs: Data
   $refs: Data
   $slots: Slots
@@ -152,24 +186,21 @@ export type ComponentPublicInstance<
   $options: Options
   $forceUpdate: ReactiveEffect
   $nextTick: typeof nextTick
-  $watch: typeof instanceWatch
+  $watch(
+    source: string | Function,
+    cb: Function,
+    options?: WatchOptions
+  ): WatchStopHandle
 } & P &
-  UnwrapRef<B> &
+  ShallowUnwrapRef<B> &
   D &
   ExtractComputedReturns<C> &
   M &
   ComponentCustomProperties
 
-export type ComponentPublicInstanceConstructor<
-  T extends ComponentPublicInstance
-> = {
-  new (): T
-}
+type PublicPropertiesMap = Record<string, (i: ComponentInternalInstance) => any>
 
-const publicPropertiesMap: Record<
-  string,
-  (i: ComponentInternalInstance) => any
-> = {
+const publicPropertiesMap: PublicPropertiesMap = extend(Object.create(null), {
   $: i => i,
   $el: i => i.vnode.el,
   $data: i => i.data,
@@ -180,11 +211,11 @@ const publicPropertiesMap: Record<
   $parent: i => i.parent && i.parent.proxy,
   $root: i => i.root && i.root.proxy,
   $emit: i => i.emit,
-  $options: i => (__FEATURE_OPTIONS__ ? resolveMergedOptions(i) : i.type),
+  $options: i => (__FEATURE_OPTIONS_API__ ? resolveMergedOptions(i) : i.type),
   $forceUpdate: i => () => queueJob(i.update),
   $nextTick: () => nextTick,
-  $watch: __FEATURE_OPTIONS__ ? i => instanceWatch.bind(i) : NOOP
-}
+  $watch: i => (__FEATURE_OPTIONS_API__ ? instanceWatch.bind(i) : NOOP)
+} as PublicPropertiesMap)
 
 const enum AccessTypes {
   SETUP,
@@ -211,7 +242,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       appContext
     } = instance
 
-    // let @vue/reatvitiy know it should never observe Vue public instances.
+    // let @vue/reactivity know it should never observe Vue public instances.
     if (key === ReactiveFlags.SKIP) {
       return true
     }
@@ -246,7 +277,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       } else if (
         // only cache other properties when instance has declared (thus stable)
         // props
-        (normalizedProps = normalizePropsOptions(type)[0]) &&
+        (normalizedProps = instance.propsOptions[0]) &&
         hasOwn(normalizedProps, key)
       ) {
         accessCache![key] = AccessTypes.PROPS
@@ -254,7 +285,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       } else if (ctx !== EMPTY_OBJ && hasOwn(ctx, key)) {
         accessCache![key] = AccessTypes.CONTEXT
         return ctx[key]
-      } else {
+      } else if (!__FEATURE_OPTIONS_API__ || !isInBeforeCreate) {
         accessCache![key] = AccessTypes.OTHER
       }
     }
@@ -287,16 +318,21 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     } else if (
       __DEV__ &&
       currentRenderingInstance &&
-      // #1091 avoid internal isRef/isVNode checks on component instance leading
-      // to infinite warning loop
-      key.indexOf('__v') !== 0
+      (!isString(key) ||
+        // #1091 avoid internal isRef/isVNode checks on component instance leading
+        // to infinite warning loop
+        key.indexOf('__v') !== 0)
     ) {
-      if (data !== EMPTY_OBJ && key[0] === '$' && hasOwn(data, key)) {
+      if (
+        data !== EMPTY_OBJ &&
+        (key[0] === '$' || key[0] === '_') &&
+        hasOwn(data, key)
+      ) {
         warn(
           `Property ${JSON.stringify(
             key
           )} must be accessed via $data because it starts with a reserved ` +
-            `character and is not proxied on the render context.`
+            `character ("$" or "_") and is not proxied on the render context.`
         )
       } else {
         warn(
@@ -349,7 +385,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
 
   has(
     {
-      _: { data, setupState, accessCache, ctx, type, appContext }
+      _: { data, setupState, accessCache, ctx, appContext, propsOptions }
     }: ComponentRenderContext,
     key: string
   ) {
@@ -358,8 +394,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       accessCache![key] !== undefined ||
       (data !== EMPTY_OBJ && hasOwn(data, key)) ||
       (setupState !== EMPTY_OBJ && hasOwn(setupState, key)) ||
-      ((normalizedProps = normalizePropsOptions(type)[0]) &&
-        hasOwn(normalizedProps, key)) ||
+      ((normalizedProps = propsOptions[0]) && hasOwn(normalizedProps, key)) ||
       hasOwn(ctx, key) ||
       hasOwn(publicPropertiesMap, key) ||
       hasOwn(appContext.config.globalProperties, key)
@@ -445,8 +480,10 @@ export function createRenderContext(instance: ComponentInternalInstance) {
 export function exposePropsOnRenderContext(
   instance: ComponentInternalInstance
 ) {
-  const { ctx, type } = instance
-  const propsOptions = normalizePropsOptions(type)[0]
+  const {
+    ctx,
+    propsOptions: [propsOptions]
+  } = instance
   if (propsOptions) {
     Object.keys(propsOptions).forEach(key => {
       Object.defineProperty(ctx, key, {
@@ -465,6 +502,15 @@ export function exposeSetupStateOnRenderContext(
 ) {
   const { ctx, setupState } = instance
   Object.keys(toRaw(setupState)).forEach(key => {
+    if (key[0] === '$' || key[0] === '_') {
+      warn(
+        `setup() return property ${JSON.stringify(
+          key
+        )} should not start with "$" or "_" ` +
+          `which are reserved prefixes for Vue internals.`
+      )
+      return
+    }
     Object.defineProperty(ctx, key, {
       enumerable: true,
       configurable: true,

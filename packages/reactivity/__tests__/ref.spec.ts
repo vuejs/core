@@ -115,6 +115,19 @@ describe('reactivity/ref', () => {
     expect((arr[1] as Ref).value).toBe(3)
   })
 
+  it('should unwrap ref types as props of arrays', () => {
+    const arr = [ref(0)]
+    const symbolKey = Symbol('')
+    arr['' as any] = ref(1)
+    arr[symbolKey as any] = ref(2)
+    const arrRef = ref(arr).value
+    expect(isRef(arrRef[0])).toBe(true)
+    expect(isRef(arrRef['' as any])).toBe(false)
+    expect(isRef(arrRef[symbolKey as any])).toBe(false)
+    expect(arrRef['' as any]).toBe(1)
+    expect(arrRef[symbolKey as any]).toBe(2)
+  })
+
   it('should keep tuple types', () => {
     const tuple: [number, string, { a: number }, () => number, Ref<number>] = [
       0,
@@ -223,6 +236,10 @@ describe('reactivity/ref', () => {
     // mutating source should trigger effect using the proxy refs
     a.x = 4
     expect(dummyX).toBe(4)
+
+    // should keep ref
+    const r = { x: ref(1) }
+    expect(toRef(r, 'x')).toBe(r.x)
   })
 
   test('toRefs', () => {
@@ -266,12 +283,29 @@ describe('reactivity/ref', () => {
     expect(dummyY).toBe(5)
   })
 
-  test('toRefs pass a reactivity object', () => {
-    console.warn = jest.fn()
-    const obj = { x: 1 }
-    toRefs(obj)
-    expect(console.warn).toBeCalled()
+  test('toRefs should warn on plain object', () => {
+    toRefs({})
+    expect(`toRefs() expects a reactive object`).toHaveBeenWarned()
   })
+
+  test('toRefs should warn on plain array', () => {
+    toRefs([])
+    expect(`toRefs() expects a reactive object`).toHaveBeenWarned()
+  })
+
+  test('toRefs reactive array', () => {
+    const arr = reactive(['a', 'b', 'c'])
+    const refs = toRefs(arr)
+
+    expect(Array.isArray(refs)).toBe(true)
+
+    refs[0].value = '1'
+    expect(arr[0]).toBe('1')
+
+    arr[1] = '2'
+    expect(refs[1].value).toBe('2')
+  })
+
   test('customRef', () => {
     let value = 1
     let _trigger: () => void

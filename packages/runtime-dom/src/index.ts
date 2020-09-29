@@ -25,12 +25,12 @@ const rendererOptions = extend({ patchProp, forcePatchProp }, nodeOps)
 
 // lazy create the renderer - this makes core renderer logic tree-shakable
 // in case the user only imports reactivity utilities from Vue.
-let renderer: Renderer | HydrationRenderer
+let renderer: Renderer<Element> | HydrationRenderer
 
 let enabledHydration = false
 
 function ensureRenderer() {
-  return renderer || (renderer = createRenderer(rendererOptions))
+  return renderer || (renderer = createRenderer<Node, Element>(rendererOptions))
 }
 
 function ensureHydrationRenderer() {
@@ -69,6 +69,7 @@ export const createApp = ((...args) => {
     container.innerHTML = ''
     const proxy = mount(container)
     container.removeAttribute('v-cloak')
+    container.setAttribute('data-v-app', '')
     return proxy
   }
 
@@ -112,6 +113,10 @@ function normalizeContainer(container: Element | string): Element | null {
   }
   return container
 }
+
+// SFC CSS utilities
+export { useCssModule } from './helpers/useCssModule'
+export { useCssVars } from './helpers/useCssVars'
 
 // DOM-only components
 export { Transition, TransitionProps } from './components/Transition'

@@ -1,4 +1,4 @@
-import { isObject, toRawType, def, hasOwn, makeMap } from '@vue/shared'
+import { isObject, toRawType, def } from '@vue/shared'
 import {
   mutableHandlers,
   readonlyHandlers,
@@ -16,31 +16,44 @@ export const enum ReactiveFlags {
   SKIP = '__v_skip',
   IS_REACTIVE = '__v_isReactive',
   IS_READONLY = '__v_isReadonly',
-  RAW = '__v_raw',
-  REACTIVE = '__v_reactive',
-  READONLY = '__v_readonly'
+  RAW = '__v_raw'
 }
 
-interface Target {
+export interface Target {
   [ReactiveFlags.SKIP]?: boolean
   [ReactiveFlags.IS_REACTIVE]?: boolean
   [ReactiveFlags.IS_READONLY]?: boolean
   [ReactiveFlags.RAW]?: any
-  [ReactiveFlags.REACTIVE]?: any
-  [ReactiveFlags.READONLY]?: any
 }
 
-const collectionTypes = new Set<Function>([Set, Map, WeakMap, WeakSet])
-const isObservableType = /*#__PURE__*/ makeMap(
-  'Object,Array,Map,Set,WeakMap,WeakSet'
-)
+export const reactiveMap = new WeakMap<Target, any>()
+export const readonlyMap = new WeakMap<Target, any>()
 
-const canObserve = (value: Target): boolean => {
-  return (
-    !value[ReactiveFlags.SKIP] &&
-    isObservableType(toRawType(value)) &&
-    !Object.isFrozen(value)
-  )
+const enum TargetType {
+  INVALID = 0,
+  COMMON = 1,
+  COLLECTION = 2
+}
+
+function targetTypeMap(rawType: string) {
+  switch (rawType) {
+    case 'Object':
+    case 'Array':
+      return TargetType.COMMON
+    case 'Map':
+    case 'Set':
+    case 'WeakMap':
+    case 'WeakSet':
+      return TargetType.COLLECTION
+    default:
+      return TargetType.INVALID
+  }
+}
+
+function getTargetType(value: Target) {
+  return value[ReactiveFlags.SKIP] || !Object.isExtensible(value)
+    ? TargetType.INVALID
+    : targetTypeMap(toRawType(value))
 }
 
 // only unwrap nested ref
@@ -72,9 +85,31 @@ export function shallowReactive<T extends object>(target: T): T {
   )
 }
 
+type Primitive = string | number | boolean | bigint | symbol | undefined | null
+type Builtin = Primitive | Function | Date | Error | RegExp
+export type DeepReadonly<T> = T extends Builtin
+  ? T
+  : T extends Map<infer K, infer V>
+    ? ReadonlyMap<DeepReadonly<K>, DeepReadonly<V>>
+    : T extends ReadonlyMap<infer K, infer V>
+      ? ReadonlyMap<DeepReadonly<K>, DeepReadonly<V>>
+      : T extends WeakMap<infer K, infer V>
+        ? WeakMap<DeepReadonly<K>, DeepReadonly<V>>
+        : T extends Set<infer U>
+          ? ReadonlySet<DeepReadonly<U>>
+          : T extends ReadonlySet<infer U>
+            ? ReadonlySet<DeepReadonly<U>>
+            : T extends WeakSet<infer U>
+              ? WeakSet<DeepReadonly<U>>
+              : T extends Promise<infer U>
+                ? Promise<DeepReadonly<U>>
+                : T extends {}
+                  ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
+                  : Readonly<T>
+
 export function readonly<T extends object>(
   target: T
-): Readonly<UnwrapNestedRefs<T>> {
+): DeepReadonly<UnwrapNestedRefs<T>> {
   return createReactiveObject(
     target,
     true,
@@ -119,27 +154,22 @@ function createReactiveObject(
     return target
   }
   // target already has corresponding Proxy
-  if (
-    hasOwn(target, isReadonly ? ReactiveFlags.READONLY : ReactiveFlags.REACTIVE)
-  ) {
-    return isReadonly
-      ? target[ReactiveFlags.READONLY]
-      : target[ReactiveFlags.REACTIVE]
+  const proxyMap = isReadonly ? readonlyMap : reactiveMap
+  const existingProxy = proxyMap.get(target)
+  if (existingProxy) {
+    return existingProxy
   }
   // only a whitelist of value types can be observed.
-  if (!canObserve(target)) {
+  const targetType = getTargetType(target)
+  if (targetType === TargetType.INVALID) {
     return target
   }
-  const observed = new Proxy(
+  const proxy = new Proxy(
     target,
-    collectionTypes.has(target.constructor) ? collectionHandlers : baseHandlers
+    targetType === TargetType.COLLECTION ? collectionHandlers : baseHandlers
   )
-  def(
-    target,
-    isReadonly ? ReactiveFlags.READONLY : ReactiveFlags.REACTIVE,
-    observed
-  )
-  return observed
+  proxyMap.set(target, proxy)
+  return proxy
 }
 
 export function isReactive(value: unknown): boolean {
