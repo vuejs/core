@@ -5,7 +5,8 @@ import {
   stop,
   ref,
   WritableComputedRef,
-  isReadonly
+  isReadonly,
+  ReactiveEffect
 } from '../src'
 
 describe('reactivity/computed', () => {
@@ -192,5 +193,41 @@ describe('reactivity/computed', () => {
     })
     expect(isReadonly(z)).toBe(false)
     expect(isReadonly(z.value.a)).toBe(false)
+  })
+
+  it('should be dereferenced after being triggered', () => {
+    const value = reactive<{ foo?: number }>({})
+    const cValue = computed(() => value.foo)
+
+    const onTrigger = jest.fn(() => {})
+    const effect = cValue.effect as ReactiveEffect
+    effect.options.onTrigger = onTrigger
+
+    expect(effect.deps.length).toBe(0)
+    expect(onTrigger).toHaveBeenCalledTimes(0)
+
+    expect(cValue.value).toBe(undefined)
+
+    // Should lay the dependency.
+    expect(effect.deps.length).toBe(1)
+
+    const depsMap = effect.deps[0]
+    expect(depsMap).toContain(effect)
+
+    onTrigger.mockReset()
+
+    // Should only trigger once.
+    value.foo = 1
+    value.foo = 2
+    value.foo = 3
+
+    expect(depsMap).not.toContain(effect)
+    expect(onTrigger).toHaveBeenCalledTimes(1)
+
+    // Should still give the correct result.
+    expect(cValue.value).toBe(3)
+
+    // After invoking, should be linked again.
+    expect(depsMap).toContain(effect)
   })
 })
