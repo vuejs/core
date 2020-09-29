@@ -246,6 +246,11 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     if (key === ReactiveFlags.SKIP) {
       return true
     }
+  
+    // this seems to come from the `with(_ctx) {}` used in render functions
+    if (key === Symbol.unscopables) {
+      return undefined;
+    }
 
     // data / props / ctx
     // This getter gets called for every property access on the render context
