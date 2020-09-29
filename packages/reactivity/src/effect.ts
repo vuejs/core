@@ -182,6 +182,9 @@ export function trigger(
       effectsToAdd.forEach(effect => {
         if (effect !== activeEffect || effect.options.allowRecurse) {
           effects.add(effect)
+
+          // unlink effect to dereference stale computeds
+          effectsToAdd.delete(effect)
         }
       })
     }
