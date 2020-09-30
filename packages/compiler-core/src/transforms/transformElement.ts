@@ -120,7 +120,13 @@ export const transformElement: NodeTransform = (node, context) => {
 
     // props
     if (props.length > 0) {
-      const propsBuildResult = buildProps(node, context)
+      const propsBuildResult = buildProps(
+        node,
+        context,
+        node.props,
+        false,
+        isDynamicComponent
+      )
       vnodeProps = propsBuildResult.props
       patchFlag = propsBuildResult.patchFlag
       dynamicPropNames = propsBuildResult.dynamicPropNames
@@ -358,7 +364,8 @@ export function buildProps(
   node: ElementNode,
   context: TransformContext,
   props: ElementNode['props'] = node.props,
-  ssr = false
+  ssr = false,
+  isDynamicComponent = false
 ): {
   props: PropsExpression | undefined
   directives: DirectiveNode[]
@@ -441,10 +448,13 @@ export function buildProps(
           isStatic = false
         }
       }
-      // skip is on <component>, or is="vue:xxx"
+      // skip :is on <component>
       if (
         name === 'is' &&
-        (isComponentTag(tag) || (value && value.content.startsWith('vue:')))
+        (
+          isComponentTag(tag) &&
+          (context.ssr || !hasDynamicKeyVBind(node) || isDynamicComponent)
+        ) || (value && value.content.startsWith('vue:'))
       ) {
         continue
       }

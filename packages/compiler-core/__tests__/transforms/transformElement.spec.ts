@@ -911,9 +911,49 @@ describe('compiler: element transform', () => {
       })
     })
 
-    test('component tag with v-bind and the `is` prop has a higher priority', () => {
+    test('component tag with v-bind and `is` prop', () => {
       const { node, root } = parseWithBind(
-        `<component v-bind="{ is: 'p' }" is="h1" />`
+        `<component is="h1" v-bind="{ is: 'p' }" />`
+      )
+      expect(root.helpers).toContain(RESOLVE_COMPONENT)
+      expect(node).toMatchObject({
+        isBlock: false,
+        tag: '_component_component',
+        props: {
+          type: NodeTypes.JS_CALL_EXPRESSION,
+          callee: MERGE_PROPS,
+          arguments: [
+            {
+              type: NodeTypes.JS_OBJECT_EXPRESSION,
+              properties: [
+                {
+                  type: NodeTypes.JS_PROPERTY,
+                  key: {
+                    type: NodeTypes.SIMPLE_EXPRESSION,
+                    content: 'is',
+                    isStatic: true
+                  },
+                  value: {
+                    type: NodeTypes.SIMPLE_EXPRESSION,
+                    content: 'h1',
+                    isStatic: true
+                  }
+                }
+              ]
+            },
+            {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: "{ is: 'p' }",
+              isStatic: false
+            }
+          ]
+        }
+      })
+    })
+
+    test('component tag with v-bind and `is`, the `is` prop has a higher priority', () => {
+      const { node, root } = parseWithBind(
+        `<component v-bind="{ foo: 1 }" is="h1" />`
       )
       expect(root.helpers).toContain(RESOLVE_DYNAMIC_COMPONENT)
       expect(node).toMatchObject({
@@ -927,6 +967,11 @@ describe('compiler: element transform', () => {
               isStatic: true
             }
           ]
+        },
+        props: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          isStatic: false,
+          content: '{ foo: 1 }'
         }
       })
     })
