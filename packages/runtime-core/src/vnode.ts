@@ -349,6 +349,14 @@ function _createVNode(
     type = Comment
   }
 
+  // #2279
+  // when using v-bind like <component v-bind="{ is: 'p' }" >,
+  // the compiler will treat it as a normal component, not a dynamic component.
+  if (type === 'component' && props && props.is) {
+    type = props.is as VNodeTypes
+    delete props.is
+  }
+
   if (isVNode(type)) {
     // createVNode receiving an existing vnode. This happens in cases like
     // <component :is="vnode"/>

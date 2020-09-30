@@ -80,4 +80,20 @@ describe('renderer: h', () => {
       }
     ])
   })
+
+  // #2279
+  test('component tag with the `is` prop', () => {
+    expect(h('component', { is: 'p' }, 'foo')).toMatchObject(
+      createVNode('p', {}, 'foo')
+    )
+    expect(
+      h(
+        'component',
+        { is: 'p' },
+        {
+          default: () => 'foo'
+        }
+      )
+    ).toMatchObject(createVNode('p', {}, 'foo'))
+  })
 })
