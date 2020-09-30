@@ -896,6 +896,41 @@ describe('compiler: element transform', () => {
       })
     })
 
+    test('component tag with v-bind', () => {
+      const { node, root } = parseWithBind(`<component v-bind="{ is: 'p' }" />`)
+      expect(root.helpers).toContain(RESOLVE_COMPONENT)
+      expect(node).toMatchObject({
+        isBlock: false,
+        tag: '_component_component',
+        props: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: "{ is: 'p' }",
+          isConstant: false,
+          isStatic: false
+        }
+      })
+    })
+
+    test('component tag with v-bind and the `is` prop has a higher priority', () => {
+      const { node, root } = parseWithBind(
+        `<component v-bind="{ is: 'p' }" is="h1" />`
+      )
+      expect(root.helpers).toContain(RESOLVE_DYNAMIC_COMPONENT)
+      expect(node).toMatchObject({
+        isBlock: true,
+        tag: {
+          callee: RESOLVE_DYNAMIC_COMPONENT,
+          arguments: [
+            {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'h1',
+              isStatic: true
+            }
+          ]
+        }
+      })
+    })
+
     test('v-is', () => {
       const { node, root } = parseWithBind(`<div v-is="'foo'" />`)
       expect(root.helpers).toContain(RESOLVE_DYNAMIC_COMPONENT)

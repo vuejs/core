@@ -243,10 +243,17 @@ export function resolveComponentType(
   const isExplicitDynamic = isComponentTag(tag)
   const isProp =
     findProp(node, 'is') || (!isExplicitDynamic && findDir(node, 'is'))
+  const dynamicKeyVBind = hasDynamicKeyVBind(node)
   // if the component tag has the v-bind with dynamic key, it may potentially overwrite the `is` prop,
   // we do not treat it as a dynamic component, but as a normal component,
   // and leave it to the runtime to process.
-  if (isProp && (context.ssr || !hasDynamicKeyVBind(node))) {
+  if (
+    isProp &&
+    (context.ssr ||
+      !dynamicKeyVBind ||
+      // priority
+      node.props.indexOf(isProp) > node.props.indexOf(dynamicKeyVBind!))
+  ) {
     if (!isExplicitDynamic && isProp.type === NodeTypes.ATTRIBUTE) {
       // <button is="vue:xxx">
       // if not <component>, only is value that starts with "vue:" will be
