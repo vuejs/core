@@ -1,5 +1,6 @@
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import { isArray } from '@vue/shared'
+import { ComponentInternalInstance, currentInstance } from './component'
 
 export interface SchedulerJob {
   (): void
@@ -50,7 +51,7 @@ type CountMap = Map<SchedulerJob | SchedulerCb, number>
 
 export function nextTick(fn?: () => void): Promise<void> {
   const p = currentFlushPromise || resolvedPromise
-  return fn ? p.then(fn) : p
+  return fn ? p.then(fn.bind(currentInstance && currentInstance.proxy)) : p
 }
 
 export function queueJob(job: SchedulerJob) {
