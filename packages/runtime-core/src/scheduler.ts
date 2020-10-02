@@ -51,7 +51,11 @@ type CountMap = Map<SchedulerJob | SchedulerCb, number>
 
 export function nextTick(fn?: () => void): Promise<void> {
   const p = currentFlushPromise || resolvedPromise
-  return fn ? p.then(fn.bind(currentInstance && currentInstance.proxy)) : p
+  return fn
+    ? currentInstance
+      ? p.then(fn.bind(currentInstance.proxy))
+      : p.then(fn)
+    : p
 }
 
 export function queueJob(job: SchedulerJob) {
