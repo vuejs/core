@@ -42,10 +42,8 @@ export const transformOn: DirectiveTransform = (
   if (arg.type === NodeTypes.SIMPLE_EXPRESSION) {
     if (arg.isStatic) {
       const rawName = arg.content
-      // for @vnode-xxx event listeners, auto convert it to camelCase
-      const normalizedName = rawName.startsWith(`vnode`)
-        ? capitalize(camelize(rawName))
-        : capitalize(rawName)
+      // for all event listeners, auto convert it to camelCase. See issue #2249
+      const normalizedName = capitalize(camelize(rawName))
       eventName = createSimpleExpression(`on${normalizedName}`, true, arg.loc)
     } else {
       eventName = createCompoundExpression([
