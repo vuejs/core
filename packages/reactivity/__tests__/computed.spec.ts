@@ -7,6 +7,7 @@ import {
   WritableComputedRef,
   isReadonly
 } from '../src'
+import { isComputed } from '../src/computed'
 
 describe('reactivity/computed', () => {
   it('should return updated value', () => {
@@ -192,5 +193,28 @@ describe('reactivity/computed', () => {
     })
     expect(isReadonly(z)).toBe(false)
     expect(isReadonly(z.value.a)).toBe(false)
+  })
+
+  it('isComputed', () => {
+    expect(isComputed(computed(() => 1))).toBe(true)
+    expect(
+      isComputed(
+        computed({
+          get: () => 1,
+          set: () => undefined
+        })
+      )
+    ).toBe(true)
+
+    expect(isComputed(ref(1))).toBe(false)
+    expect(isComputed(0)).toBe(false)
+    expect(isComputed(1)).toBe(false)
+    // an object that looks like a computed ref isn't necessarily a computed ref
+    expect(
+      isComputed({
+        value: 0,
+        effect: () => undefined
+      })
+    ).toBe(false)
   })
 })
