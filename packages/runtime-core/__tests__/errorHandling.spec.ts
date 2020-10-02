@@ -20,7 +20,7 @@ describe('error handling', () => {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info, 'root')
-          return true
+          return false
         })
         return () => h(Child)
       }
@@ -58,7 +58,7 @@ describe('error handling', () => {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info, 'root')
-          return true
+          return false
         })
         return () => h(Child)
       }
@@ -68,7 +68,7 @@ describe('error handling', () => {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info, 'child')
-          return true
+          return false
         })
         return () => h(GrandChild)
       }
@@ -96,7 +96,7 @@ describe('error handling', () => {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info)
-          return true
+          return false
         })
         return () => h(Child)
       }
@@ -126,7 +126,7 @@ describe('error handling', () => {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info)
-          return true
+          return false
         })
         return () => h(Child)
       }
@@ -164,7 +164,7 @@ describe('error handling', () => {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info)
-          return true
+          return false
         })
         return () => h(Child)
       }
@@ -189,7 +189,7 @@ describe('error handling', () => {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info)
-          return true
+          return false
         })
         return () => h(Child)
       }
@@ -218,7 +218,7 @@ describe('error handling', () => {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info)
-          return true
+          return false
         })
         return () => h(Child)
       }
@@ -238,7 +238,7 @@ describe('error handling', () => {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info)
-          return true
+          return false
         })
         return () => h(Child)
       }
@@ -265,7 +265,7 @@ describe('error handling', () => {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info)
-          return true
+          return false
         })
         return () => h(Child)
       }
@@ -295,7 +295,7 @@ describe('error handling', () => {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info)
-          return true
+          return false
         })
         return () => h(Child)
       }
@@ -330,7 +330,7 @@ describe('error handling', () => {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info)
-          return true
+          return false
         })
         return () => h(Child)
       }
@@ -363,7 +363,7 @@ describe('error handling', () => {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info)
-          return true
+          return false
         })
         return () =>
           h(Child, {
@@ -393,7 +393,7 @@ describe('error handling', () => {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info)
-          return true
+          return false
         })
         return () =>
           h(Child, {
@@ -431,7 +431,7 @@ describe('error handling', () => {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info)
-          return true
+          return false
         })
         return () =>
           h(Child, {
