@@ -785,4 +785,17 @@ describe('api: watch', () => {
     await nextTick()
     expect(spy).toHaveBeenCalledTimes(1)
   })
+
+  // #2231
+  test('computed refs should not trigger watch if value has no change', async () => {
+    const spy = jest.fn()
+    const source = ref(0)
+    const price = computed(() => source.value === 0)
+    watch(price, spy)
+    source.value++
+    await nextTick()
+    source.value++
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
 })

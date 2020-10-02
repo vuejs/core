@@ -89,3 +89,8 @@ export function computed<T>(
     isFunction(getterOrOptions) || !getterOrOptions.set
   ) as any
 }
+
+export function isComputed<T>(r: ComputedRef<T> | unknown): r is ComputedRef<T>
+export function isComputed(r: any): r is ComputedRef {
+  return Boolean(r && r instanceof ComputedRefImpl)
+}

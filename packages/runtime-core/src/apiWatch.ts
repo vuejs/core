@@ -33,6 +33,7 @@ import {
 } from './errorHandling'
 import { queuePostRenderEffect } from './renderer'
 import { warn } from './warning'
+import { isComputed } from '../../reactivity/src/computed'
 
 export type WatchEffect = (onInvalidate: InvalidateCbRegistrator) => void
 
@@ -161,9 +162,12 @@ function doWatch(
   }
 
   let getter: () => any
-  const isRefSource = isRef(source)
-  if (isRefSource) {
+  // Skip value comparison only for non-computed refs. because computed refs always
+  // trigger SET no matter whether the value has changed or not. #2231
+  let skipCompare = false
+  if (isRef(source)) {
     getter = () => (source as Ref).value
+    skipCompare = !isComputed(source)
   } else if (isReactive(source)) {
     getter = () => source
     deep = true
@@ -242,7 +246,7 @@ function doWatch(
     if (cb) {
       // watch(source, cb)
       const newValue = runner()
-      if (deep || isRefSource || hasChanged(newValue, oldValue)) {
+      if (deep || skipCompare || hasChanged(newValue, oldValue)) {
         // cleanup before running cb again
         if (cleanup) {
           cleanup()
