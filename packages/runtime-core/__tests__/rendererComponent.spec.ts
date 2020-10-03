@@ -137,4 +137,83 @@ describe('renderer: component', () => {
     await nextTick()
     expect(serializeInner(root)).toBe(`<div>1</div><div>1</div>`)
   })
+
+  // #2170
+  test('should have access to instance’s “$el” property in watcher when setting instance data', async () => {
+    function returnThis(this: any) {
+      return this
+    }
+    const dataWatchSpy = jest.fn(returnThis)
+    let instance: any
+    const Comp = {
+      data() {
+        return {
+          testData: undefined
+        }
+      },
+
+      watch: {
+        testData() {
+          // @ts-ignore
+          dataWatchSpy(this.$el)
+        }
+      },
+
+      created() {
+        instance = this
+      },
+
+      render() {
+        return h('div')
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+
+    expect(dataWatchSpy).not.toHaveBeenCalled()
+    instance.testData = 'data'
+
+    await nextTick()
+    expect(dataWatchSpy).toHaveBeenCalledWith(instance.$el)
+  })
+
+  // #2170
+  test('should have access to instance’s “$el” property in watcher when rendereing with watched prop', async () => {
+    function returnThis(this: any) {
+      return this
+    }
+    const propWatchSpy = jest.fn(returnThis)
+    let instance: any
+    const Comp = {
+      props: {
+        testProp: String
+      },
+
+      watch: {
+        testProp() {
+          // @ts-ignore
+          propWatchSpy(this.$el)
+        }
+      },
+
+      created() {
+        instance = this
+      },
+
+      render() {
+        return h('div')
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+
+    render(h(Comp), root)
+    await nextTick()
+    expect(propWatchSpy).not.toHaveBeenCalled()
+
+    render(h(Comp, { testProp: 'prop ' }), root)
+    await nextTick()
+    expect(propWatchSpy).toHaveBeenCalledWith(instance.$el)
+  })
 })
