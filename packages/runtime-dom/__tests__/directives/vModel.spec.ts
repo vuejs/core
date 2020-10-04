@@ -681,6 +681,108 @@ describe('vModel', () => {
     expect(bar.selected).toEqual(true)
   })
 
+  it('v-model.number should work with single select', async () => {
+    const component = defineComponent({
+      data() {
+        return { value: null }
+      },
+      render() {
+        return [
+          withVModel(
+            h(
+              'select',
+              {
+                value: null,
+                'onUpdate:modelValue': setValue.bind(this)
+              },
+              [h('option', { value: '1' }), h('option', { value: '2' })]
+            ),
+            this.value,
+            {
+              number: true
+            }
+          )
+        ]
+      }
+    })
+    render(h(component), root)
+
+    const input = root.querySelector('select')
+    const one = root.querySelector('option[value="1"]')
+    const data = root._vnode.component.data
+
+    one.selected = true
+    triggerEvent('change', input)
+    await nextTick()
+    expect(typeof data.value).toEqual('number')
+    expect(data.value).toEqual(1)
+  })
+
+  it('v-model.number should work with multiple select', async () => {
+    const component = defineComponent({
+      data() {
+        return { value: [] }
+      },
+      render() {
+        return [
+          withVModel(
+            h(
+              'select',
+              {
+                value: null,
+                multiple: true,
+                'onUpdate:modelValue': setValue.bind(this)
+              },
+              [h('option', { value: '1' }), h('option', { value: '2' })]
+            ),
+            this.value,
+            {
+              number: true
+            }
+          )
+        ]
+      }
+    })
+    render(h(component), root)
+
+    const input = root.querySelector('select')
+    const one = root.querySelector('option[value="1"]')
+    const two = root.querySelector('option[value="2"]')
+    const data = root._vnode.component.data
+
+    one.selected = true
+    two.selected = false
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toMatchObject([1])
+
+    one.selected = false
+    two.selected = true
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toMatchObject([2])
+
+    one.selected = true
+    two.selected = true
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toMatchObject([1, 2])
+
+    one.selected = false
+    two.selected = false
+    data.value = [1]
+    await nextTick()
+    expect(one.selected).toEqual(true)
+    expect(two.selected).toEqual(false)
+
+    one.selected = false
+    two.selected = false
+    data.value = [1, 2]
+    await nextTick()
+    expect(one.selected).toEqual(true)
+    expect(two.selected).toEqual(true)
+  })
+
   it('should work with composition session', async () => {
     const component = defineComponent({
       data() {
