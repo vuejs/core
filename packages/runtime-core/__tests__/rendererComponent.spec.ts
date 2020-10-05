@@ -140,6 +140,44 @@ describe('renderer: component', () => {
     expect(serializeInner(root)).toBe(`<div>1</div><div>1</div>`)
   })
 
+  // #2170
+  test('should have access to instance’s “$el” property in watcher when rendereing with watched prop', async () => {
+    function returnThis(this: any) {
+      return this
+    }
+    const propWatchSpy = jest.fn(returnThis)
+    let instance: any
+    const Comp = {
+      props: {
+        testProp: String
+      },
+
+      watch: {
+        testProp() {
+          // @ts-ignore
+          propWatchSpy(this.$el)
+        }
+      },
+
+      created() {
+        instance = this
+      },
+
+      render() {
+        return h('div')
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    await nextTick()
+    expect(propWatchSpy).not.toHaveBeenCalled()
+
+    render(h(Comp, { testProp: 'prop ' }), root)
+    await nextTick()
+    expect(propWatchSpy).toHaveBeenCalledWith(instance.$el)
+  })
+
   // #2200
   test('component child updating parent state in pre-flush should trigger parent re-render', async () => {
     const outer = ref(0)

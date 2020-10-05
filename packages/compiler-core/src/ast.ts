@@ -236,7 +236,7 @@ export interface CompoundExpressionNode extends Node {
 export interface IfNode extends Node {
   type: NodeTypes.IF
   branches: IfBranchNode[]
-  codegenNode?: IfConditionalExpression
+  codegenNode?: IfConditionalExpression | CacheExpression // <div v-if v-once>
 }
 
 export interface IfBranchNode extends Node {
