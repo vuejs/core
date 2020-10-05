@@ -63,7 +63,7 @@ export const transformIf = createStructuralDirectiveTransform(
           ) as IfConditionalExpression
         } else {
           // attach this branch's codegen node to the v-if root.
-          const parentCondition = getConditionExpression(ifNode.codegenNode!)
+          const parentCondition = getParentCondition(ifNode.codegenNode!)
           parentCondition.alternate = createCodegenNodeForBranch(
             branch,
             key + ifNode.branches.length - 1,
@@ -289,25 +289,18 @@ function isSameKey(
   return true
 }
 
-function getConditionExpression(
+function getParentCondition(
   node: IfConditionalExpression | CacheExpression
 ): IfConditionalExpression {
-  const alternateNode =
-    node.type === NodeTypes.JS_CONDITIONAL_EXPRESSION
-      ? node.alternate.type === NodeTypes.JS_CONDITIONAL_EXPRESSION
-        ? (node.alternate as IfConditionalExpression)
-        : undefined
-      : node.type === NodeTypes.JS_CACHE_EXPRESSION
-        ? node.value.type === NodeTypes.JS_CONDITIONAL_EXPRESSION
-          ? node.value.alternate.type === NodeTypes.JS_CONDITIONAL_EXPRESSION
-            ? (node.value.alternate as IfConditionalExpression)
-            : undefined
-          : undefined
-        : undefined
-
-  return alternateNode
-    ? getConditionExpression(alternateNode)
-    : node.type === NodeTypes.JS_CONDITIONAL_EXPRESSION
-      ? node
-      : (node.value as IfConditionalExpression)
+  while (true) {
+    if (node.type === NodeTypes.JS_CONDITIONAL_EXPRESSION) {
+      if (node.alternate.type === NodeTypes.JS_CONDITIONAL_EXPRESSION) {
+        node = node.alternate
+      } else {
+        return node
+      }
+    } else if (node.type === NodeTypes.JS_CACHE_EXPRESSION) {
+      node = node.value as IfConditionalExpression
+    }
+  }
 }
