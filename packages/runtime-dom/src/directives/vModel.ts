@@ -166,11 +166,15 @@ export const vModelRadio: ModelDirective<HTMLInputElement> = {
 }
 
 export const vModelSelect: ModelDirective<HTMLSelectElement> = {
-  created(el, binding, vnode) {
+  created(el, { modifiers: { number } }, vnode) {
+    const castToNumber = number
     addEventListener(el, 'change', () => {
       const selectedVal = Array.prototype.filter
         .call(el.options, (o: HTMLOptionElement) => o.selected)
-        .map(getValue)
+        .map((o: HTMLOptionElement) => {
+          const domValue = getValue(o)
+          return castToNumber ? toNumber(domValue) : domValue
+        })
       el._assign(el.multiple ? selectedVal : selectedVal[0])
     })
     el._assign = getModelAssigner(vnode)
