@@ -22,3 +22,11 @@ declare namespace jest {
     toHaveBeenWarnedTimes(n: number): R
   }
 }
+
+// for vue components
+declare module '*.vue' {
+  import { defineComponent } from 'vue'
+
+  const component: ReturnType<typeof defineComponent>
+  export default component
+}
