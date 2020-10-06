@@ -630,6 +630,14 @@ export function applyOptions(
       ? provideOptions.call(publicThis)
       : provideOptions
     for (const key in provides) {
+      //#2306
+      if (
+        instance.provides &&
+        (key in instance.provides) &&
+        asMixin
+      ) {
+        continue
+      }
       provide(key, provides[key])
     }
   }
