@@ -982,11 +982,6 @@ describe('api: options', () => {
 
       const Comp2 = {
         name: "Comp2",
-        provide() {
-          return {
-            App: null
-          }
-        },
         inject: ["App"],
         render() {
           return [this.App ? "app" : "noapp"]
