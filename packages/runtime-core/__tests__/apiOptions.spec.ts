@@ -962,6 +962,56 @@ describe('api: options', () => {
       ).toHaveBeenWarned()
     })
 
+    test('provide added with mixin should not overrides local injections', () => {
+      const compMixin = {
+        provide() {
+          return {
+            App: null
+          }
+        }
+      };
+
+      const Comp = {
+        name: "Comp",
+        mixins: [compMixin],
+        inject: ["App"],
+        render() {
+          return [this.App ? "app" : "noapp"]
+        }
+      } as any;
+
+      const Comp2 = {
+        name: "Comp2",
+        provide() {
+          return {
+            App: null
+          }
+        },
+        inject: ["App"],
+        render() {
+          return [this.App ? "app" : "noapp"]
+        }
+      } as any;
+
+      const Root = defineComponent({
+        name: "App",
+        provide() {
+          return {
+            App: this
+          };
+        },
+        data() {
+          return {
+            value: "app"
+          };
+        },
+        render() {
+          return [h(Comp), " ", h(Comp2)];
+        }
+      })
+      expect(renderToString(h(Root))).toBe(`app app`)
+    })
+
     test('methods property is not a function', () => {
       const Comp = {
         methods: {
