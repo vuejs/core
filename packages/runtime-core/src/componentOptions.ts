@@ -563,7 +563,6 @@ export function applyOptions(
       if (__DEV__) {
         checkDuplicateProperties!(OptionTypes.DATA, key)
       }
-      // expose data on ctx during dev
       if (key[0] !== '$' && key[0] !== '_') {
         Object.defineProperty(ctx, key, {
           configurable: true,
