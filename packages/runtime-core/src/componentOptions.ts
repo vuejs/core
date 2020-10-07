@@ -558,19 +558,19 @@ export function applyOptions(
     if (dataOptions) {
       resolveData(instance, dataOptions, publicThis)
     }
-    if (__DEV__) {
-      const rawData = toRaw(instance.data)
-      for (const key in rawData) {
+    const rawData = toRaw(instance.data)
+    for (const key in rawData) {
+      if (__DEV__) {
         checkDuplicateProperties!(OptionTypes.DATA, key)
-        // expose data on ctx during dev
-        if (key[0] !== '$' && key[0] !== '_') {
-          Object.defineProperty(ctx, key, {
-            configurable: true,
-            enumerable: true,
-            get: () => rawData[key],
-            set: NOOP
-          })
-        }
+      }
+      // expose data on ctx during dev
+      if (key[0] !== '$' && key[0] !== '_') {
+        Object.defineProperty(ctx, key, {
+          configurable: true,
+          enumerable: true,
+          get: () => rawData[key],
+          set: NOOP
+        })
       }
     }
   } else if (dataOptions) {
