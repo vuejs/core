@@ -5,7 +5,8 @@ import {
   ComponentInternalOptions,
   Component,
   ConcreteComponent,
-  InternalRenderFunction
+  InternalRenderFunction,
+  LifecycleHooks
 } from './component'
 import {
   isFunction,
@@ -55,6 +56,7 @@ import {
 } from './componentPublicInstance'
 import { warn } from './warning'
 import { VNodeChild } from './vnode'
+import { callWithAsyncErrorHandling } from './errorHandling'
 
 /**
  * Interface for declaring custom options.
@@ -472,7 +474,13 @@ export function applyOptions(
   // applyOptions is called non-as-mixin once per instance
   if (!asMixin) {
     isInBeforeCreate = true
-    callSyncHook('beforeCreate', options, publicThis, globalMixins)
+    callSyncHook(
+      'beforeCreate',
+      LifecycleHooks.BEFORE_CREATE,
+      options,
+      instance,
+      globalMixins
+    )
     isInBeforeCreate = false
     // global mixins are applied first
     applyMixins(instance, globalMixins, deferredData, deferredWatch)
@@ -662,7 +670,13 @@ export function applyOptions(
 
   // lifecycle options
   if (!asMixin) {
-    callSyncHook('created', options, publicThis, globalMixins)
+    callSyncHook(
+      'created',
+      LifecycleHooks.CREATED,
+      options,
+      instance,
+      globalMixins
+    )
   }
   if (beforeMount) {
     onBeforeMount(beforeMount.bind(publicThis))
@@ -707,52 +721,54 @@ export function applyOptions(
 
 function callSyncHook(
   name: 'beforeCreate' | 'created',
+  type: LifecycleHooks,
   options: ComponentOptions,
-  ctx: ComponentPublicInstance,
+  instance: ComponentInternalInstance,
   globalMixins: ComponentOptions[]
 ) {
-  callHookFromMixins(name, globalMixins, ctx)
-
+  callHookFromMixins(name, type, globalMixins, instance)
   const { extends: base, mixins } = options
   if (base) {
-    callHookFromExtends(name, base, ctx)
+    callHookFromExtends(name, type, base, instance)
   }
   if (mixins) {
-    callHookFromMixins(name, mixins, ctx)
+    callHookFromMixins(name, type, mixins, instance)
   }
   const selfHook = options[name]
   if (selfHook) {
-    selfHook.call(ctx)
+    callWithAsyncErrorHandling(selfHook.bind(instance.proxy!), instance, type)
   }
 }
 
 function callHookFromExtends(
   name: 'beforeCreate' | 'created',
+  type: LifecycleHooks,
   base: ComponentOptions,
-  ctx: ComponentPublicInstance
+  instance: ComponentInternalInstance
 ) {
   if (base.extends) {
-    callHookFromExtends(name, base.extends, ctx)
+    callHookFromExtends(name, type, base.extends, instance)
   }
   const baseHook = base[name]
   if (baseHook) {
-    baseHook.call(ctx)
+    callWithAsyncErrorHandling(baseHook.bind(instance.proxy!), instance, type)
   }
 }
 
 function callHookFromMixins(
   name: 'beforeCreate' | 'created',
+  type: LifecycleHooks,
   mixins: ComponentOptions[],
-  ctx: ComponentPublicInstance
+  instance: ComponentInternalInstance
 ) {
   for (let i = 0; i < mixins.length; i++) {
     const chainedMixins = mixins[i].mixins
     if (chainedMixins) {
-      callHookFromMixins(name, chainedMixins, ctx)
+      callHookFromMixins(name, type, chainedMixins, instance)
     }
     const fn = mixins[i][name]
     if (fn) {
-      fn.call(ctx)
+      callWithAsyncErrorHandling(fn.bind(instance.proxy!), instance, type)
     }
   }
 }

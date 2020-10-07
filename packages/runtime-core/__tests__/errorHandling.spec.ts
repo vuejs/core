@@ -181,6 +181,41 @@ describe('error handling', () => {
     expect(fn).toHaveBeenCalledWith(err, 'setup function')
   })
 
+  // unlike other lifecycle hooks, created/beforeCreate are called as part of
+  // the options API initiualization process instead of by the renderer.
+  test('in created/beforeCreate hook', () => {
+    const err = new Error('foo')
+    const fn = jest.fn()
+
+    const Comp = {
+      setup() {
+        onErrorCaptured((err, instance, info) => {
+          fn(err, info)
+          return false
+        })
+        return () => [h(Child1), h(Child2)]
+      }
+    }
+
+    const Child1 = {
+      created() {
+        throw err
+      },
+      render() {}
+    }
+
+    const Child2 = {
+      beforeCreate() {
+        throw err
+      },
+      render() {}
+    }
+
+    render(h(Comp), nodeOps.createElement('div'))
+    expect(fn).toHaveBeenCalledWith(err, 'created hook')
+    expect(fn).toHaveBeenCalledWith(err, 'beforeCreate hook')
+  })
+
   test('in render function', () => {
     const err = new Error('foo')
     const fn = jest.fn()
