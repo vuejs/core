@@ -340,4 +340,31 @@ describe('directives', () => {
     expect(beforeUnmount).toHaveBeenCalledTimes(1)
     expect(unmounted).toHaveBeenCalledTimes(1)
   })
+
+  // #2298
+  it('directive merging on component root', () => {
+    const d1 = {
+      mounted: jest.fn()
+    }
+    const d2 = {
+      mounted: jest.fn()
+    }
+    const Comp = {
+      render() {
+        return withDirectives(h('div'), [[d2]])
+      }
+    }
+
+    const App = {
+      name: 'App',
+      render() {
+        return h('div', [withDirectives(h(Comp), [[d1]])])
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(d1.mounted).toHaveBeenCalled()
+    expect(d2.mounted).toHaveBeenCalled()
+  })
 })
