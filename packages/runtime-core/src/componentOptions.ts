@@ -660,7 +660,6 @@ export function applyOptions(
         if (
           instance.provides &&
           (key in instance.provides) &&
-          asMixin
         ) {
           continue
         }
