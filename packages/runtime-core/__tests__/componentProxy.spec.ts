@@ -69,7 +69,7 @@ describe('component: proxy', () => {
     expect('count' in instanceProxy).toBe(false)
   })
 
-  test('public properties', () => {
+  test('public properties', async () => {
     let instance: ComponentInternalInstance
     let instanceProxy: any
     const Comp = {
@@ -96,6 +96,11 @@ describe('component: proxy', () => {
     expect(instanceProxy.$options).toBe(instance!.type)
     expect(() => (instanceProxy.$data = {})).toThrow(TypeError)
     expect(`Attempting to mutate public property "$data"`).toHaveBeenWarned()
+
+    const nextTickThis = await instanceProxy.$nextTick(function(this: any) {
+      return this
+    })
+    expect(nextTickThis).toBe(instanceProxy)
   })
 
   test('user attached properties', async () => {

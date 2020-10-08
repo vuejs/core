@@ -11,7 +11,8 @@ module.exports = {
     __ESM_BROWSER__: false,
     __NODE_JS__: true,
     __FEATURE_OPTIONS_API__: true,
-    __FEATURE_SUSPENSE__: true
+    __FEATURE_SUSPENSE__: true,
+    __FEATURE_PROD_DEVTOOLS__: false
   },
   coverageDirectory: 'coverage',
   coverageReporters: ['html', 'lcov', 'text'],

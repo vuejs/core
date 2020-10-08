@@ -384,6 +384,25 @@ describe('compiler: parse', () => {
       expect(astNoComment.children).toHaveLength(0)
       expect(astWithComments.children).toHaveLength(1)
     })
+
+    // #2217
+    test('comments in the <pre> tag should be removed in production mode', () => {
+      __DEV__ = false
+      const rawText = `<p/><!-- foo --><p/>`
+      const ast = baseParse(`<pre>${rawText}</pre>`)
+      __DEV__ = true
+
+      expect((ast.children[0] as ElementNode).children).toMatchObject([
+        {
+          type: NodeTypes.ELEMENT,
+          tag: 'p'
+        },
+        {
+          type: NodeTypes.ELEMENT,
+          tag: 'p'
+        }
+      ])
+    })
   })
 
   describe('Element', () => {

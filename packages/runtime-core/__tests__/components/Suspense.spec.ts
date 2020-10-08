@@ -609,7 +609,7 @@ describe('Suspense', () => {
             err instanceof Error
               ? err.message
               : `A non-Error value thrown: ${err}`
-          return true
+          return false
         })
 
         return () =>

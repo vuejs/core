@@ -6,12 +6,14 @@ import {
   capitalize,
   hyphenate,
   isFunction,
-  extend
+  extend,
+  camelize
 } from '@vue/shared'
 import {
   ComponentInternalInstance,
   ComponentOptions,
-  ConcreteComponent
+  ConcreteComponent,
+  formatComponentName
 } from './component'
 import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
 import { warn } from './warning'
@@ -78,7 +80,24 @@ export function emit(
     devtoolsComponentEmit(instance, event, args)
   }
 
-  let handlerName = `on${capitalize(event)}`
+  if (__DEV__) {
+    const lowerCaseEvent = event.toLowerCase()
+    if (lowerCaseEvent !== event && props[`on` + capitalize(lowerCaseEvent)]) {
+      warn(
+        `Event "${lowerCaseEvent}" is emitted in component ` +
+          `${formatComponentName(
+            instance,
+            instance.type
+          )} but the handler is registered for "${event}". ` +
+          `Note that HTML attributes are case-insensitive and you cannot use ` +
+          `v-on to listen to camelCase events when using in-DOM templates. ` +
+          `You should probably use "${hyphenate(event)}" instead of "${event}".`
+      )
+    }
+  }
+
+  // convert handler name to camelCase. See issue #2249
+  let handlerName = `on${capitalize(camelize(event))}`
   let handler = props[handlerName]
   // for v-model update:xxx events, also trigger kebab-case equivalent
   // for props passed via kebab-case
@@ -109,11 +128,8 @@ export function normalizeEmitsOptions(
   appContext: AppContext,
   asMixin = false
 ): ObjectEmitsOptions | null {
-  const appId = appContext.app ? appContext.app._uid : -1
-  const cache = comp.__emits || (comp.__emits = {})
-  const cached = cache[appId]
-  if (cached !== undefined) {
-    return cached
+  if (!appContext.deopt && comp.__emits !== undefined) {
+    return comp.__emits
   }
 
   const raw = comp.emits
@@ -138,7 +154,7 @@ export function normalizeEmitsOptions(
   }
 
   if (!raw && !hasExtends) {
-    return (cache[appId] = null)
+    return (comp.__emits = null)
   }
 
   if (isArray(raw)) {
@@ -146,7 +162,7 @@ export function normalizeEmitsOptions(
   } else {
     extend(normalized, raw)
   }
-  return (cache[appId] = normalized)
+  return (comp.__emits = normalized)
 }
 
 // Check if an incoming prop key is a declared emit event listener.

@@ -406,6 +406,22 @@ describe('compiler: transform v-on', () => {
     expect(onError).not.toHaveBeenCalled()
   })
 
+  test('case conversion for kebab-case events', () => {
+    const { node } = parseWithVOn(`<div v-on:foo-bar="onMount"/>`)
+    expect((node.codegenNode as VNodeCall).props).toMatchObject({
+      properties: [
+        {
+          key: {
+            content: `onFooBar`
+          },
+          value: {
+            content: `onMount`
+          }
+        }
+      ]
+    })
+  })
+
   test('case conversion for vnode hooks', () => {
     const { node } = parseWithVOn(`<div v-on:vnode-mounted="onMount"/>`)
     expect((node.codegenNode as VNodeCall).props).toMatchObject({
