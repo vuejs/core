@@ -1,19 +1,27 @@
 import {
-  h,
-  ref,
-  Suspense,
+  Comment,
   ComponentOptions,
-  render,
-  nodeOps,
-  serializeInner,
+  createVNode,
+  defineComponent,
+  h,
   nextTick,
-  onMounted,
-  watch,
-  watchEffect,
-  onUnmounted,
+  nodeOps,
   onErrorCaptured,
-  shallowRef
+  onMounted,
+  onUnmounted,
+  ref,
+  render,
+  resolveDynamicComponent,
+  serializeInner,
+  shallowRef,
+  Suspense,
+  watch,
+  watchEffect
 } from '@vue/runtime-test'
+import {
+  normalizeSuspenseChildren,
+  SuspenseImpl
+} from '../../src/components/Suspense'
 
 describe('Suspense', () => {
   const deps: Promise<any>[] = []
@@ -1067,5 +1075,38 @@ describe('Suspense', () => {
     await nextTick()
     expect(serializeInner(root)).toBe(`<div>two</div>`)
     expect(calls).toEqual([`one mounted`, `one unmounted`, `two mounted`])
+  })
+
+  describe('warn for non-single root node', () => {
+    test('should warn for several root nodes', () => {
+      // <Suspense><div/><div/></Suspense>
+      const div = createVNode('div')
+      normalizeSuspenseChildren(createVNode(SuspenseImpl, null, [div, div]))
+      expect('<Suspense> slots expect a single root node.').toHaveBeenWarned()
+    })
+    test('should not warn for single root nodes', () => {
+      // <Suspense><div/></Suspense>
+      const div = createVNode('div')
+      normalizeSuspenseChildren(createVNode(SuspenseImpl, null, [div]))
+      expect(
+        '<Suspense> slots expect a single root node.'
+      ).not.toHaveBeenWarned()
+    })
+    test('should warn for single comment node', () => {
+      // <Suspense><!-- --></Suspense>
+      const comment = createVNode(Comment)
+      normalizeSuspenseChildren(createVNode(SuspenseImpl, null, [comment]))
+      expect('<Suspense> slots expect a single root node.').toHaveBeenWarned()
+    })
+    test('should not warn for single dynamic component node', () => {
+      // <Suspense><component is="foo"></Suspense>
+      const component = resolveDynamicComponent(
+        defineComponent({ name: 'foo' })
+      )
+      normalizeSuspenseChildren(createVNode(SuspenseImpl, null, [component]))
+      expect(
+        '<Suspense> slots expect a single root node.'
+      ).not.toHaveBeenWarned()
+    })
   })
 })
