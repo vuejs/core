@@ -145,9 +145,15 @@ export const TeleportImpl = {
         if (n2.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
           const oldChildren = n1.children as VNode[]
           const children = n2.children as VNode[]
-          for (let i = 0; i < children.length; i++) {
-            // only inherit for non-patched nodes (i.e. static ones)
-            if (!children[i].el) {
+          if (n2.dynamicChildren.length) {
+            for (let i = 0; i < children.length; i++) {
+              // only inherit for non-patched nodes (i.e. static ones)
+              if (!children[i].el) {
+                children[i].el = oldChildren[i].el
+              }
+            }
+          } else {
+            for (let i = 0; i < children.length; i++) {
               children[i].el = oldChildren[i].el
             }
           }
