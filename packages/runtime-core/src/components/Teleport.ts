@@ -130,7 +130,7 @@ export const TeleportImpl = {
       const currentAnchor = wasDisabled ? mainAnchor : targetAnchor
 
       if (n2.dynamicChildren) {
-        // fast path when the teleport happens to be a block root
+        // fast patch when the teleport happens to be a block root
         patchBlockChildren(
           n1.dynamicChildren!,
           n2.dynamicChildren,
@@ -145,6 +145,7 @@ export const TeleportImpl = {
         if (n2.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
           const oldChildren = n1.children as VNode[]
           const children = n2.children as VNode[]
+          // #2324
           if (n2.dynamicChildren.length) {
             for (let i = 0; i < children.length; i++) {
               // only inherit for non-patched nodes (i.e. static ones)
