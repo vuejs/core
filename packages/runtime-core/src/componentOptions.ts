@@ -659,7 +659,7 @@ export function applyOptions(
         //#2306
         if (
           instance.provides &&
-          (key in instance.provides) &&
+          (key in instance.provides)
         ) {
           continue
         }
