@@ -430,6 +430,7 @@ export function applyOptions(
   options: ComponentOptions,
   deferredData: DataFn[] = [],
   deferredWatch: ComponentWatchOptions[] = [],
+  deferredProvide: (Data | Function)[] = [],
   asMixin: boolean = false
 ) {
   const {
@@ -483,16 +484,29 @@ export function applyOptions(
     )
     isInBeforeCreate = false
     // global mixins are applied first
-    applyMixins(instance, globalMixins, deferredData, deferredWatch)
+    applyMixins(
+      instance,
+      globalMixins,
+      deferredData,
+      deferredWatch,
+      deferredProvide
+    )
   }
 
   // extending a base component...
   if (extendsOptions) {
-    applyOptions(instance, extendsOptions, deferredData, deferredWatch, true)
+    applyOptions(
+      instance,
+      extendsOptions,
+      deferredData,
+      deferredWatch,
+      deferredProvide,
+      true
+    )
   }
   // local mixins
   if (mixins) {
-    applyMixins(instance, mixins, deferredData, deferredWatch)
+    applyMixins(instance, mixins, deferredData, deferredWatch, deferredProvide)
   }
 
   const checkDuplicateProperties = __DEV__ ? createDuplicateChecker() : null
@@ -634,12 +648,17 @@ export function applyOptions(
   }
 
   if (provideOptions) {
-    const provides = isFunction(provideOptions)
-      ? provideOptions.call(publicThis)
-      : provideOptions
-    for (const key in provides) {
-      provide(key, provides[key])
-    }
+    deferredProvide.push(provideOptions)
+  }
+  if (!asMixin && deferredProvide.length) {
+    deferredProvide.forEach(provideOptions => {
+      const provides = isFunction(provideOptions)
+        ? provideOptions.call(publicThis)
+        : provideOptions
+      for (const key in provides) {
+        provide(key, provides[key])
+      }
+    })
   }
 
   // asset options.
@@ -777,10 +796,18 @@ function applyMixins(
   instance: ComponentInternalInstance,
   mixins: ComponentOptions[],
   deferredData: DataFn[],
-  deferredWatch: ComponentWatchOptions[]
+  deferredWatch: ComponentWatchOptions[],
+  deferredProvide: (Data | Function)[]
 ) {
   for (let i = 0; i < mixins.length; i++) {
-    applyOptions(instance, mixins[i], deferredData, deferredWatch, true)
+    applyOptions(
+      instance,
+      mixins[i],
+      deferredData,
+      deferredWatch,
+      deferredProvide,
+      true
+    )
   }
 }
 
