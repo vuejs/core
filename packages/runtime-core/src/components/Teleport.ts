@@ -130,7 +130,7 @@ export const TeleportImpl = {
       const currentAnchor = wasDisabled ? mainAnchor : targetAnchor
 
       if (n2.dynamicChildren) {
-        // fast patch when the teleport happens to be a block root
+        // fast path when the teleport happens to be a block root
         patchBlockChildren(
           n1.dynamicChildren!,
           n2.dynamicChildren,
