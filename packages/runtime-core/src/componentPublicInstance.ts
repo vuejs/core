@@ -212,7 +212,7 @@ const publicPropertiesMap: PublicPropertiesMap = extend(Object.create(null), {
   $root: i => i.root && i.root.proxy,
   $emit: i => i.emit,
   $options: i => (__FEATURE_OPTIONS_API__ ? resolveMergedOptions(i) : i.type),
-  $forceUpdate: i => () => queueJob(i.update),
+  $forceUpdate: i => () => queueJob(i.update.executor),
   $nextTick: i => nextTick.bind(i.proxy!),
   $watch: i => (__FEATURE_OPTIONS_API__ ? instanceWatch.bind(i) : NOOP)
 } as PublicPropertiesMap)

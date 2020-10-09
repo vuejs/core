@@ -423,8 +423,8 @@ describe('reactivity/effect', () => {
     }
     const effect1 = effect(greet)
     const effect2 = effect(greet)
-    expect(typeof effect1).toBe('function')
-    expect(typeof effect2).toBe('function')
+    expect(typeof effect1).toBe('object')
+    expect(typeof effect2).toBe('object')
     expect(effect1).not.toBe(greet)
     expect(effect1).not.toBe(effect2)
   })
@@ -460,10 +460,10 @@ describe('reactivity/effect', () => {
     })
 
     expect(dummy).toBe('other')
-    runner()
+    runner.run()
     expect(dummy).toBe('other')
     run = true
-    runner()
+    runner.run()
     expect(dummy).toBe('value')
     obj.prop = 'World'
     expect(dummy).toBe('World')
@@ -490,7 +490,7 @@ describe('reactivity/effect', () => {
 
   it('should not double wrap if the passed function is a effect', () => {
     const runner = effect(() => {})
-    const otherRunner = effect(runner)
+    const otherRunner = effect(runner.executor)
     expect(runner).not.toBe(otherRunner)
     expect(runner.raw).toBe(otherRunner.raw)
   })
@@ -520,7 +520,7 @@ describe('reactivity/effect', () => {
     const childeffect = effect(childSpy)
     const parentSpy = jest.fn(() => {
       dummy.num2 = nums.num2
-      childeffect()
+      childeffect.run()
       dummy.num3 = nums.num3
     })
     effect(parentSpy)
@@ -581,7 +581,7 @@ describe('reactivity/effect', () => {
     const runner = effect(() => (dummy = obj.foo), { lazy: true })
     expect(dummy).toBe(undefined)
 
-    expect(runner()).toBe(1)
+    expect(runner.run()).toBe(1)
     expect(dummy).toBe(1)
     obj.foo = 2
     expect(dummy).toBe(2)
@@ -703,7 +703,7 @@ describe('reactivity/effect', () => {
     expect(dummy).toBe(2)
 
     // stopped effect should still be manually callable
-    runner()
+    runner.run()
     expect(dummy).toBe(3)
   })
 
@@ -752,7 +752,7 @@ describe('reactivity/effect', () => {
     // observed value in inner stopped effect
     // will track outer effect as an dependency
     effect(() => {
-      runner()
+      runner.run()
     })
     expect(dummy).toBe(2)
 

@@ -9,20 +9,63 @@ type Dep = Set<ReactiveEffect>
 type KeyToDepMap = Map<any, Dep>
 const targetMap = new WeakMap<any, KeyToDepMap>()
 
-export interface ReactiveEffect<T = any> {
-  (): T
-  _isEffect: true
-  id: number
-  active: boolean
-  raw: () => T
-  deps: Array<Dep>
-  options: ReactiveEffectOptions
+export class ReactiveEffect<T = any> {
+  public allowRecurse = !!this.options.allowRecurse
+  public id = uid++
+  public active = true
+  public deps: Dep[] = []
+  private runner?: ReactiveEffectFunction<T>
+
+  constructor(public raw: () => T, public options: ReactiveEffectOptions) {}
+
+  public run() {
+    if (!this.active) {
+      return this.options.scheduler ? undefined : this.raw()
+    }
+    if (!effectStack.includes(this)) {
+      cleanup(this)
+      try {
+        enableTracking()
+        effectStack.push(this)
+        activeEffect = this
+        return this.raw()
+      } finally {
+        effectStack.pop()
+        resetTracking()
+        activeEffect = effectStack[effectStack.length - 1]
+      }
+    }
+  }
+
+  public get executor(): ReactiveEffectFunction<T> {
+    if (!this.runner) {
+      const runner = () => {
+        return this.run()
+      }
+      runner._effect = this
+      runner.allowRecurse = this.allowRecurse
+      this.runner = runner
+    }
+    return this.runner
+  }
+}
+
+export interface ReactiveEffectFunction<T = any> {
+  (): T | undefined
+  _effect: ReactiveEffect<T>
   allowRecurse: boolean
+}
+
+function createReactiveEffect<T = any>(
+  fn: () => T,
+  options: ReactiveEffectOptions
+): ReactiveEffect<T> {
+  return new ReactiveEffect(fn, options)
 }
 
 export interface ReactiveEffectOptions {
   lazy?: boolean
-  scheduler?: (job: ReactiveEffect) => void
+  scheduler?: (job: () => void) => void
   onTrack?: (event: DebuggerEvent) => void
   onTrigger?: (event: DebuggerEvent) => void
   onStop?: () => void
@@ -48,8 +91,8 @@ let activeEffect: ReactiveEffect | undefined
 export const ITERATE_KEY = Symbol(__DEV__ ? 'iterate' : '')
 export const MAP_KEY_ITERATE_KEY = Symbol(__DEV__ ? 'Map key iterate' : '')
 
-export function isEffect(fn: any): fn is ReactiveEffect {
-  return fn && fn._isEffect === true
+export function isEffect(fn: any): fn is ReactiveEffectFunction {
+  return fn && !!fn._effect
 }
 
 export function effect<T = any>(
@@ -57,11 +100,12 @@ export function effect<T = any>(
   options: ReactiveEffectOptions = EMPTY_OBJ
 ): ReactiveEffect<T> {
   if (isEffect(fn)) {
-    fn = fn.raw
+    fn = fn._effect.raw
   }
   const effect = createReactiveEffect(fn, options)
+
   if (!options.lazy) {
-    effect()
+    effect.run()
   }
   return effect
 }
@@ -77,38 +121,6 @@ export function stop(effect: ReactiveEffect) {
 }
 
 let uid = 0
-
-function createReactiveEffect<T = any>(
-  fn: () => T,
-  options: ReactiveEffectOptions
-): ReactiveEffect<T> {
-  const effect = function reactiveEffect(): unknown {
-    if (!effect.active) {
-      return options.scheduler ? undefined : fn()
-    }
-    if (!effectStack.includes(effect)) {
-      cleanup(effect)
-      try {
-        enableTracking()
-        effectStack.push(effect)
-        activeEffect = effect
-        return fn()
-      } finally {
-        effectStack.pop()
-        resetTracking()
-        activeEffect = effectStack[effectStack.length - 1]
-      }
-    }
-  } as ReactiveEffect
-  effect.id = uid++
-  effect.allowRecurse = !!options.allowRecurse
-  effect._isEffect = true
-  effect.active = true
-  effect.raw = fn
-  effect.deps = []
-  effect.options = options
-  return effect
-}
 
 function cleanup(effect: ReactiveEffect) {
   const { deps } = effect
@@ -247,9 +259,9 @@ export function trigger(
       })
     }
     if (effect.options.scheduler) {
-      effect.options.scheduler(effect)
+      effect.options.scheduler(effect.executor)
     } else {
-      effect()
+      effect.run()
     }
   }
 

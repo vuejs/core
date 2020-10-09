@@ -220,7 +220,7 @@ const BaseTransitionImpl = {
           // return placeholder node and queue update when leave finishes
           leavingHooks.afterLeave = () => {
             state.isLeaving = false
-            instance.update()
+            instance.update.run()
           }
           return emptyPlaceholder(child)
         } else if (mode === 'in-out') {

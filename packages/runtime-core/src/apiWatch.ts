@@ -236,7 +236,7 @@ function doWatch(
     }
     if (cb) {
       // watch(source, cb)
-      const newValue = runner()
+      const newValue = runner.run()
       if (deep || forceTrigger || hasChanged(newValue, oldValue)) {
         // cleanup before running cb again
         if (cleanup) {
@@ -252,7 +252,7 @@ function doWatch(
       }
     } else {
       // watchEffect
-      runner()
+      runner.run()
     }
   }
 
@@ -292,12 +292,12 @@ function doWatch(
     if (immediate) {
       job()
     } else {
-      oldValue = runner()
+      oldValue = runner.run()
     }
   } else if (flush === 'post') {
-    queuePostRenderEffect(runner, instance && instance.suspense)
+    queuePostRenderEffect(runner.executor, instance && instance.suspense)
   } else {
-    runner()
+    runner.run()
   }
 
   return () => {
