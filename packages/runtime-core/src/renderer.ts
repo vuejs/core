@@ -538,6 +538,7 @@ function baseCreateRenderer(
             parentComponent,
             parentSuspense,
             isSVG,
+            //#2214
             (optimized = false),
             internals
           )
