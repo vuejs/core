@@ -538,7 +538,7 @@ function baseCreateRenderer(
             parentComponent,
             parentSuspense,
             isSVG,
-            optimized,
+            (optimized = false),
             internals
           )
         } else if (__DEV__) {
