@@ -186,7 +186,7 @@ export function renderComponentRoot(
             `The directives will not function as intended.`
         )
       }
-      root.dirs = vnode.dirs
+      root.dirs = root.dirs ? root.dirs.concat(vnode.dirs) : vnode.dirs
     }
     // inherit transition data
     if (vnode.transition) {

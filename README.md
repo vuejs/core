@@ -68,7 +68,7 @@ It is recommended to use [VSCode](https://code.visualstudio.com/) with our offic
 | Project               | NPM                           | Repo                 |
 | --------------------- | ----------------------------- | -------------------- |
 | @vue/babel-plugin-jsx | [![rc][jsx-badge]][jsx-npm]   | [[Github][jsx-code]] |
-| eslint-plugin-vue     | [![beta][epv-badge]][epv-npm] | [[Github][epv-code]] |
+| eslint-plugin-vue     | [![stable][epv-badge]][epv-npm] | [[Github][epv-code]] |
 | @vue/test-utils       | [![beta][vtu-badge]][vtu-npm] | [[Github][vtu-code]] |
 | vue-class-component   | [![beta][vcc-badge]][vcc-npm] | [[Github][vcc-code]] |
 | vue-loader            | [![beta][vl-badge]][vl-npm]   | [[Github][vl-code]]  |
@@ -80,8 +80,8 @@ It is recommended to use [VSCode](https://code.visualstudio.com/) with our offic
 [vd-badge]: https://img.shields.io/npm/v/@vue/devtools/beta.svg
 [vd-npm]: https://www.npmjs.com/package/@vue/devtools/v/beta
 [vd-code]: https://github.com/vuejs/vue-devtools/tree/next
-[epv-badge]: https://img.shields.io/npm/v/eslint-plugin-vue/next.svg
-[epv-npm]: https://www.npmjs.com/package/eslint-plugin-vue/v/next
+[epv-badge]: https://img.shields.io/npm/v/eslint-plugin-vue.svg
+[epv-npm]: https://www.npmjs.com/package/eslint-plugin-vue
 [epv-code]: https://github.com/vuejs/eslint-plugin-vue
 [vtu-badge]: https://img.shields.io/npm/v/@vue/test-utils/next.svg
 [vtu-npm]: https://www.npmjs.com/package/@vue/test-utils/v/next

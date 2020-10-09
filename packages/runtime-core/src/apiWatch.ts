@@ -161,9 +161,10 @@ function doWatch(
   }
 
   let getter: () => any
-  const isRefSource = isRef(source)
-  if (isRefSource) {
+  let forceTrigger = false
+  if (isRef(source)) {
     getter = () => (source as Ref).value
+    forceTrigger = !!(source as Ref)._shallow
   } else if (isReactive(source)) {
     getter = () => source
     deep = true
@@ -242,7 +243,7 @@ function doWatch(
     if (cb) {
       // watch(source, cb)
       const newValue = runner()
-      if (deep || isRefSource || hasChanged(newValue, oldValue)) {
+      if (deep || forceTrigger || hasChanged(newValue, oldValue)) {
         // cleanup before running cb again
         if (cleanup) {
           cleanup()

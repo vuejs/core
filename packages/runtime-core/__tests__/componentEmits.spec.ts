@@ -28,6 +28,24 @@ describe('component: emit', () => {
     expect(onBaz).toHaveBeenCalled()
   })
 
+  test('trigger camelize event', () => {
+    const Foo = defineComponent({
+      render() {},
+      created() {
+        this.$emit('test-event')
+      }
+    })
+
+    const fooSpy = jest.fn()
+    const Comp = () =>
+      h(Foo, {
+        onTestEvent: fooSpy
+      })
+    render(h(Comp), nodeOps.createElement('div'))
+
+    expect(fooSpy).toHaveBeenCalled()
+  })
+
   // for v-model:foo-bar usage in DOM templates
   test('trigger hyphenated events for update:xxx events', () => {
     const Foo = defineComponent({

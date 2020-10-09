@@ -606,6 +606,27 @@ describe('compiler: v-if', () => {
       expect(branch1.props).toMatchObject(createObjectMatcher({ key: `[0]` }))
     })
 
+    test('with spaces between branches', () => {
+      const {
+        node: { codegenNode }
+      } = parseWithIfTransform(
+        `<div v-if="ok"/> <div v-else-if="no"/> <div v-else/>`
+      )
+      expect(codegenNode.consequent).toMatchObject({
+        tag: `"div"`,
+        props: createObjectMatcher({ key: `[0]` })
+      })
+      const branch = codegenNode.alternate as ConditionalExpression
+      expect(branch.consequent).toMatchObject({
+        tag: `"div"`,
+        props: createObjectMatcher({ key: `[1]` })
+      })
+      expect(branch.alternate).toMatchObject({
+        tag: `"div"`,
+        props: createObjectMatcher({ key: `[2]` })
+      })
+    })
+
     test('with comments', () => {
       const { node } = parseWithIfTransform(`
           <template v-if="ok">
