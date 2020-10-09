@@ -324,6 +324,36 @@ describe('api: options', () => {
     expect(renderToString(h(Root))).toBe(`11112345`)
   })
 
+  test('provide accessing data in extends', () => {
+    const Base = defineComponent({
+      data() {
+        return {
+          a: 1
+        }
+      },
+      provide() {
+        return {
+          a: this.a
+        }
+      }
+    })
+
+    const Child = {
+      inject: ['a'],
+      render() {
+        return (this as any).a
+      }
+    }
+
+    const Root = defineComponent({
+      extends: Base,
+      render() {
+        return h(Child)
+      }
+    })
+    expect(renderToString(h(Root))).toBe(`1`)
+  })
+
   test('lifecycle', async () => {
     const count = ref(0)
     const root = nodeOps.createElement('div')

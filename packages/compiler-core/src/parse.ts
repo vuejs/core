@@ -198,48 +198,48 @@ function parseChildren(
   // (same as v2 whitespace: 'condense')
   let removedWhitespace = false
   if (mode !== TextModes.RAWTEXT) {
-    if (!context.inPre) {
-      for (let i = 0; i < nodes.length; i++) {
-        const node = nodes[i]
-        if (node.type === NodeTypes.TEXT) {
-          if (!/[^\t\r\n\f ]/.test(node.content)) {
-            const prev = nodes[i - 1]
-            const next = nodes[i + 1]
-            // If:
-            // - the whitespace is the first or last node, or:
-            // - the whitespace is adjacent to a comment, or:
-            // - the whitespace is between two elements AND contains newline
-            // Then the whitespace is ignored.
-            if (
-              !prev ||
-              !next ||
-              prev.type === NodeTypes.COMMENT ||
-              next.type === NodeTypes.COMMENT ||
-              (prev.type === NodeTypes.ELEMENT &&
-                next.type === NodeTypes.ELEMENT &&
-                /[\r\n]/.test(node.content))
-            ) {
-              removedWhitespace = true
-              nodes[i] = null as any
-            } else {
-              // Otherwise, condensed consecutive whitespace inside the text
-              // down to a single space
-              node.content = ' '
-            }
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i]
+      if (!context.inPre && node.type === NodeTypes.TEXT) {
+        if (!/[^\t\r\n\f ]/.test(node.content)) {
+          const prev = nodes[i - 1]
+          const next = nodes[i + 1]
+          // If:
+          // - the whitespace is the first or last node, or:
+          // - the whitespace is adjacent to a comment, or:
+          // - the whitespace is between two elements AND contains newline
+          // Then the whitespace is ignored.
+          if (
+            !prev ||
+            !next ||
+            prev.type === NodeTypes.COMMENT ||
+            next.type === NodeTypes.COMMENT ||
+            (prev.type === NodeTypes.ELEMENT &&
+              next.type === NodeTypes.ELEMENT &&
+              /[\r\n]/.test(node.content))
+          ) {
+            removedWhitespace = true
+            nodes[i] = null as any
           } else {
-            node.content = node.content.replace(/[\t\r\n\f ]+/g, ' ')
+            // Otherwise, condensed consecutive whitespace inside the text
+            // down to a single space
+            node.content = ' '
           }
-        } else if (
-          !__DEV__ &&
-          node.type === NodeTypes.COMMENT &&
-          !context.options.comments
-        ) {
-          // remove comment nodes in prod by default
-          removedWhitespace = true
-          nodes[i] = null as any
+        } else {
+          node.content = node.content.replace(/[\t\r\n\f ]+/g, ' ')
         }
       }
-    } else if (parent && context.options.isPreTag(parent.tag)) {
+      // also remove comment nodes in prod by default
+      if (
+        !__DEV__ &&
+        node.type === NodeTypes.COMMENT &&
+        !context.options.comments
+      ) {
+        removedWhitespace = true
+        nodes[i] = null as any
+      }
+    }
+    if (context.inPre && parent && context.options.isPreTag(parent.tag)) {
       // remove leading newline per html spec
       // https://html.spec.whatwg.org/multipage/grouping-content.html#the-pre-element
       const first = nodes[0]
