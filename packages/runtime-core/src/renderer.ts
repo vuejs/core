@@ -1324,7 +1324,7 @@ function baseCreateRenderer(
         instance.next = n2
         // in case the child component is also queued, remove it to avoid
         // double updating the same child component in the same flush.
-        invalidateJob(instance.update.executor)
+        invalidateJob(instance.update.func)
         // instance.update is the reactive effect runner.
         instance.update.run()
       }
@@ -1521,10 +1521,7 @@ function baseCreateRenderer(
 
     // props update may have triggered pre-flush watchers.
     // flush them before the render update.
-    flushPreFlushCbs(
-      undefined,
-      instance.update ? instance.update.executor : null
-    )
+    flushPreFlushCbs(undefined, instance.update ? instance.update.func : null)
   }
 
   const patchChildren: PatchChildrenFn = (

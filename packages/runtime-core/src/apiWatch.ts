@@ -278,12 +278,15 @@ function doWatch(
     }
   }
 
-  const runner = effect(getter, {
-    lazy: true,
-    onTrack,
-    onTrigger,
-    scheduler
-  })
+  const runner = effect(
+    getter,
+    {
+      onTrack,
+      onTrigger,
+      scheduler
+    },
+    true
+  )
 
   recordInstanceBoundEffect(runner)
 
@@ -295,7 +298,7 @@ function doWatch(
       oldValue = runner.run()
     }
   } else if (flush === 'post') {
-    queuePostRenderEffect(runner.executor, instance && instance.suspense)
+    queuePostRenderEffect(runner.func, instance && instance.suspense)
   } else {
     runner.run()
   }

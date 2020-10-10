@@ -37,7 +37,7 @@ export class ReactiveEffect<T = any> {
     }
   }
 
-  public get executor(): ReactiveEffectFunction<T> {
+  public get func(): ReactiveEffectFunction<T> {
     if (!this.runner) {
       const runner = () => {
         return this.run()
@@ -64,7 +64,6 @@ function createReactiveEffect<T = any>(
 }
 
 export interface ReactiveEffectOptions {
-  lazy?: boolean
   scheduler?: (job: () => void) => void
   onTrack?: (event: DebuggerEvent) => void
   onTrigger?: (event: DebuggerEvent) => void
@@ -97,14 +96,15 @@ export function isEffect(fn: any): fn is ReactiveEffectFunction {
 
 export function effect<T = any>(
   fn: () => T,
-  options: ReactiveEffectOptions = EMPTY_OBJ
+  options: ReactiveEffectOptions = EMPTY_OBJ,
+  lazy: boolean = false
 ): ReactiveEffect<T> {
   if (isEffect(fn)) {
     fn = fn._effect.raw
   }
   const effect = createReactiveEffect(fn, options)
 
-  if (!options.lazy) {
+  if (!lazy) {
     effect.run()
   }
   return effect
@@ -259,7 +259,7 @@ export function trigger(
       })
     }
     if (effect.options.scheduler) {
-      effect.options.scheduler(effect.executor)
+      effect.options.scheduler(effect.func)
     } else {
       effect.run()
     }

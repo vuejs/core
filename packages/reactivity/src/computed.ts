@@ -34,15 +34,18 @@ class ComputedRefImpl<T> {
     private readonly _setter: ComputedSetter<T>,
     isReadonly: boolean
   ) {
-    this.effect = effect(getter, {
-      lazy: true,
-      scheduler: () => {
-        if (!this._dirty) {
-          this._dirty = true
-          trigger(toRaw(this), TriggerOpTypes.SET, 'value')
+    this.effect = effect(
+      getter,
+      {
+        scheduler: () => {
+          if (!this._dirty) {
+            this._dirty = true
+            trigger(toRaw(this), TriggerOpTypes.SET, 'value')
+          }
         }
-      }
-    })
+      },
+      true
+    )
 
     this[ReactiveFlags.IS_READONLY] = isReadonly
   }

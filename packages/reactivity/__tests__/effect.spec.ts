@@ -490,7 +490,7 @@ describe('reactivity/effect', () => {
 
   it('should not double wrap if the passed function is a effect', () => {
     const runner = effect(() => {})
-    const otherRunner = effect(runner.executor)
+    const otherRunner = effect(runner.func)
     expect(runner).not.toBe(otherRunner)
     expect(runner.raw).toBe(otherRunner.raw)
   })
@@ -578,7 +578,7 @@ describe('reactivity/effect', () => {
   it('lazy', () => {
     const obj = reactive({ foo: 1 })
     let dummy
-    const runner = effect(() => (dummy = obj.foo), { lazy: true })
+    const runner = effect(() => (dummy = obj.foo), {}, true)
     expect(dummy).toBe(undefined)
 
     expect(runner.run()).toBe(1)

@@ -125,7 +125,7 @@ function reload(id: string, newComp: ComponentOptions | ClassComponent) {
       // 4. Force the parent instance to re-render. This will cause all updated
       // components to be unmounted and re-mounted. Queue the update so that we
       // don't end up forcing the same parent to re-render multiple times.
-      queueJob(instance.parent.update.executor)
+      queueJob(instance.parent.update.func)
     } else if (instance.appContext.reload) {
       // root instance mounted via createApp() has a reload method
       instance.appContext.reload()
