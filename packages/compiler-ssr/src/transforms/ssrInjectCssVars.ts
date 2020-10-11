@@ -15,8 +15,8 @@ export const ssrInjectCssVars: NodeTransform = (node, context) => {
     return
   }
 
-  // _cssVars is initailized once per render function
-  // the code is injected in ssrCodegenTrasnform when creating the
+  // _cssVars is initialized once per render function
+  // the code is injected in ssrCodegenTransform when creating the
   // ssr transform context
   if (node.type === NodeTypes.ROOT) {
     context.identifiers._cssVars = 1
