@@ -112,6 +112,15 @@ describe('ssr: element', () => {
       `)
     })
 
+    test('v-bind:class + static class', () => {
+      expect(getCompiledString(`<div :class="bar" class="foo"></div>`))
+        .toMatchInlineSnapshot(`
+        "\`<div class=\\"\${
+            _ssrRenderClass([_ctx.bar, \\"foo\\"])
+          }\\"></div>\`"
+      `)
+    })
+
     test('v-bind:style', () => {
       expect(getCompiledString(`<div id="foo" :style="bar"></div>`))
         .toMatchInlineSnapshot(`
