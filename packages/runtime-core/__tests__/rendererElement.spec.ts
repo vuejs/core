@@ -67,7 +67,7 @@ describe('renderer: element', () => {
           },
           delayInitProp(el: Element, key: string) {
             return key.startsWith('delay')
-              ? key.startsWith('delay-important')
+              ? key.startsWith('delay-weak')
                 ? -1
                 : 1
               : 0
@@ -79,21 +79,21 @@ describe('renderer: element', () => {
 
     render(
       h('div', {
-        id: 'baz',
         'delay-a': 'a',
-        'delay-important-a': 'a',
-        'delay-b': 'b'
+        'delay-b': 'b',
+        'delay-weak-a': 'a',
+        id: 'baz'
       }),
       root
     )
     expect(queue.length).toBe(4)
     expect(queue[0]).toBe('id')
-    expect(queue[1]).toBe('delay-important-a')
+    expect(queue[1]).toBe('delay-weak-a')
     expect(queue[2]).toBe('delay-a')
     expect(queue[3]).toBe('delay-b')
 
     expect(inner(root)).toBe(
-      '<div id="baz" delay-important-a="a" delay-a="a" delay-b="b"></div>'
+      '<div id="baz" delay-weak-a="a" delay-a="a" delay-b="b"></div>'
     )
   })
 })
