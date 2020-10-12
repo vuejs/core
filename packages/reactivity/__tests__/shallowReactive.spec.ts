@@ -68,6 +68,9 @@ describe('shallowReactive', () => {
         () => {
           a = Array.from(shallowSet)
         },
+        undefined,
+        false,
+        false,
         {
           onTrack: onTrackFn
         }
@@ -113,6 +116,9 @@ describe('shallowReactive', () => {
         () => {
           a = Array.from(shallowArray)
         },
+        undefined,
+        false,
+        false,
         {
           onTrack: onTrackFn
         }

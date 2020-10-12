@@ -36,12 +36,10 @@ class ComputedRefImpl<T> {
   ) {
     this.effect = effect(
       getter,
-      {
-        scheduler: () => {
-          if (!this._dirty) {
-            this._dirty = true
-            trigger(toRaw(this), TriggerOpTypes.SET, 'value')
-          }
+      () => {
+        if (!this._dirty) {
+          this._dirty = true
+          trigger(toRaw(this), TriggerOpTypes.SET, 'value')
         }
       },
       false,

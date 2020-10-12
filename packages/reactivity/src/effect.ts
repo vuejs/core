@@ -9,21 +9,37 @@ type Dep = Set<ReactiveEffect>
 type KeyToDepMap = Map<any, Dep>
 const targetMap = new WeakMap<any, KeyToDepMap>()
 
+type EffectScheduler = (job: () => void) => void
+
 export class ReactiveEffect<T = any> {
   public id = uid++
-  public active = true
   public deps: Dep[] = []
   private runner?: ReactiveEffectFunction<T>
 
   constructor(
     public raw: () => T,
-    public allowRecurse: boolean,
-    public options: ReactiveEffectOptions
-  ) {}
+    allowRecurse: boolean,
+    public scheduler: EffectScheduler | undefined,
+    options: ReactiveEffectOptions | undefined
+  ) {
+    if (allowRecurse) {
+      this.allowRecurse = true
+    }
+    if (options) {
+      this.options = options
+    }
+  }
+
+  public setOnStop(func: () => void) {
+    if (this.options === EMPTY_OBJ) {
+      this.options = {}
+    }
+    this.options.onStop = func
+  }
 
   public run() {
     if (!this.active) {
-      return this.options.scheduler ? undefined : this.raw()
+      return this.scheduler ? undefined : this.raw()
     }
     if (!effectStack.includes(this)) {
       cleanup(this)
@@ -53,6 +69,17 @@ export class ReactiveEffect<T = any> {
   }
 }
 
+// Use prototype for optional properties to minimize memory usage.
+export interface ReactiveEffect {
+  active: boolean
+  allowRecurse: boolean
+  options: ReactiveEffectOptions
+}
+
+ReactiveEffect.prototype.active = true
+ReactiveEffect.prototype.allowRecurse = false
+ReactiveEffect.prototype.options = EMPTY_OBJ
+
 export interface ReactiveEffectFunction<T = any> {
   (): T | undefined
   _effect: ReactiveEffect<T>
@@ -62,13 +89,13 @@ export interface ReactiveEffectFunction<T = any> {
 function createReactiveEffect<T = any>(
   fn: () => T,
   allowRecurse: boolean,
-  options: ReactiveEffectOptions
+  scheduler: EffectScheduler | undefined,
+  options: ReactiveEffectOptions | undefined
 ): ReactiveEffect<T> {
-  return new ReactiveEffect(fn, allowRecurse, options)
+  return new ReactiveEffect(fn, allowRecurse, scheduler, options)
 }
 
 export interface ReactiveEffectOptions {
-  scheduler?: (job: () => void) => void
   onTrack?: (event: DebuggerEvent) => void
   onTrigger?: (event: DebuggerEvent) => void
   onStop?: () => void
@@ -99,14 +126,15 @@ export function isEffect(fn: any): fn is ReactiveEffectFunction {
 
 export function effect<T = any>(
   fn: () => T,
-  options: ReactiveEffectOptions = EMPTY_OBJ,
+  scheduler: EffectScheduler | undefined = undefined,
   allowRecurse: boolean = false,
-  lazy: boolean = false
+  lazy: boolean = false,
+  options: ReactiveEffectOptions | undefined = undefined
 ): ReactiveEffect<T> {
   if (isEffect(fn)) {
     fn = fn._effect.raw
   }
-  const effect = createReactiveEffect(fn, allowRecurse, options)
+  const effect = createReactiveEffect(fn, allowRecurse, scheduler, options)
 
   if (!lazy) {
     effect.run()
@@ -262,8 +290,8 @@ export function trigger(
         oldTarget
       })
     }
-    if (effect.options.scheduler) {
-      effect.options.scheduler(effect.func)
+    if (effect.scheduler) {
+      effect.scheduler(effect.func)
     } else {
       effect.run()
     }

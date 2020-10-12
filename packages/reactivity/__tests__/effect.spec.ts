@@ -578,7 +578,7 @@ describe('reactivity/effect', () => {
   it('lazy', () => {
     const obj = reactive({ foo: 1 })
     let dummy
-    const runner = effect(() => (dummy = obj.foo), {}, false, true)
+    const runner = effect(() => (dummy = obj.foo), undefined, false, true)
     expect(dummy).toBe(undefined)
 
     expect(runner.run()).toBe(1)
@@ -593,12 +593,9 @@ describe('reactivity/effect', () => {
       runner = _runner
     })
     const obj = reactive({ foo: 1 })
-    effect(
-      () => {
-        dummy = obj.foo
-      },
-      { scheduler }
-    )
+    effect(() => {
+      dummy = obj.foo
+    }, scheduler)
     expect(scheduler).not.toHaveBeenCalled()
     expect(dummy).toBe(1)
     // should be called on first trigger
@@ -625,6 +622,9 @@ describe('reactivity/effect', () => {
         dummy = 'bar' in obj
         dummy = Object.keys(obj)
       },
+      undefined,
+      false,
+      false,
       { onTrack }
     )
     expect(dummy).toEqual(['foo', 'bar'])
@@ -662,6 +662,9 @@ describe('reactivity/effect', () => {
       () => {
         dummy = obj.foo
       },
+      undefined,
+      false,
+      false,
       { onTrigger }
     )
 
@@ -715,9 +718,7 @@ describe('reactivity/effect', () => {
       () => {
         dummy = obj.prop
       },
-      {
-        scheduler: e => queue.push(e)
-      }
+      e => queue.push(e)
     )
     obj.prop = 2
     expect(dummy).toBe(1)
@@ -731,7 +732,7 @@ describe('reactivity/effect', () => {
 
   it('events: onStop', () => {
     const onStop = jest.fn()
-    const runner = effect(() => {}, {
+    const runner = effect(() => {}, undefined, false, false, {
       onStop
     })
 

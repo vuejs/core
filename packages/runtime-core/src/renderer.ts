@@ -265,15 +265,10 @@ export const enum MoveType {
   REORDER
 }
 
-const prodEffectOptions = {
-  scheduler: queueJob
-}
-
 function createDevEffectOptions(
   instance: ComponentInternalInstance
 ): ReactiveEffectOptions {
   return {
-    scheduler: queueJob,
     onTrack: instance.rtc ? e => invokeArrayFns(instance.rtc!, e) : void 0,
     onTrigger: instance.rtg ? e => invokeArrayFns(instance.rtg!, e) : void 0
   }
@@ -1503,8 +1498,10 @@ function baseCreateRenderer(
           }
         }
       },
-      __DEV__ ? createDevEffectOptions(instance) : prodEffectOptions,
-      true // #1801, #2043 component render effects should allow recursive updates
+      queueJob,
+      true, // #1801, #2043 component render effects should allow recursive updates
+      false,
+      __DEV__ ? createDevEffectOptions(instance) : undefined
     )
   }
 

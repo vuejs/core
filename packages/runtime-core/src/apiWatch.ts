@@ -209,9 +209,10 @@ function doWatch(
 
   let cleanup: () => void
   const onInvalidate: InvalidateCbRegistrator = (fn: () => void) => {
-    cleanup = runner.options.onStop = () => {
+    cleanup = () => {
       callWithErrorHandling(fn, instance, ErrorCodes.WATCH_CLEANUP)
     }
+    runner.setOnStop(cleanup)
   }
 
   // in SSR there is no need to setup an actual effect, and it should be noop
@@ -278,16 +279,11 @@ function doWatch(
     }
   }
 
-  const runner = effect(
-    getter,
-    {
-      onTrack,
-      onTrigger,
-      scheduler
-    },
-    false,
-    true
-  )
+  let options: ReactiveEffectOptions | undefined = undefined
+  if (onTrack || onTrigger) {
+    options = { onTrack, onTrigger }
+  }
+  const runner = effect(getter, scheduler, false, true, options)
 
   recordInstanceBoundEffect(runner)
 
