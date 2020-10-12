@@ -61,7 +61,7 @@ export class ReactiveEffect<T = any> {
       const runner = () => {
         return this.run()
       }
-      runner._effect = this
+      runner.effect = this
       runner.allowRecurse = this.allowRecurse
       this.runner = runner
     }
@@ -82,7 +82,7 @@ ReactiveEffect.prototype.options = EMPTY_OBJ
 
 export interface ReactiveEffectFunction<T = any> {
   (): T | undefined
-  _effect: ReactiveEffect<T>
+  effect: ReactiveEffect<T>
   allowRecurse: boolean
 }
 
@@ -121,7 +121,7 @@ export const ITERATE_KEY = Symbol(__DEV__ ? 'iterate' : '')
 export const MAP_KEY_ITERATE_KEY = Symbol(__DEV__ ? 'Map key iterate' : '')
 
 export function isEffect(fn: any): fn is ReactiveEffectFunction {
-  return fn && !!fn._effect
+  return fn && !!fn.effect
 }
 
 export function effect<T = any>(
@@ -132,7 +132,7 @@ export function effect<T = any>(
   options: ReactiveEffectOptions | undefined = undefined
 ): ReactiveEffect<T> {
   if (isEffect(fn)) {
-    fn = fn._effect.raw
+    fn = fn.effect.raw
   }
   const effect = createReactiveEffect(fn, allowRecurse, scheduler, options)
 
