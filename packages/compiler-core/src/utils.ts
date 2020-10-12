@@ -29,7 +29,8 @@ import {
   TELEPORT,
   SUSPENSE,
   KEEP_ALIVE,
-  BASE_TRANSITION
+  BASE_TRANSITION,
+  TO_HANDLERS
 } from './runtimeHelpers'
 import { isString, isObject, hyphenate, extend } from '@vue/shared'
 
@@ -215,7 +216,7 @@ export function injectProp(
   prop: Property,
   context: TransformContext
 ) {
-  let propsWithInjection: ObjectExpression | CallExpression
+  let propsWithInjection: ObjectExpression | CallExpression | undefined
   const props =
     node.type === NodeTypes.VNODE_CALL ? node.props : node.arguments[2]
   if (props == null || isString(props)) {
@@ -228,9 +229,16 @@ export function injectProp(
     if (!isString(first) && first.type === NodeTypes.JS_OBJECT_EXPRESSION) {
       first.properties.unshift(prop)
     } else {
-      props.arguments.unshift(createObjectExpression([prop]))
+      if (props.callee === TO_HANDLERS) {
+        propsWithInjection = createCallExpression(context.helper(MERGE_PROPS), [
+          props,
+          createObjectExpression([prop])
+        ])
+      } else {
+        props.arguments.unshift(createObjectExpression([prop]))
+      }
     }
-    propsWithInjection = props
+    !propsWithInjection && (propsWithInjection = props)
   } else if (props.type === NodeTypes.JS_OBJECT_EXPRESSION) {
     let alreadyExists = false
     // check existing key to avoid overriding user provided keys
