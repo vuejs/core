@@ -266,9 +266,7 @@ export const enum MoveType {
 }
 
 const prodEffectOptions = {
-  scheduler: queueJob,
-  // #1801, #2043 component render effects should allow recursive updates
-  allowRecurse: true
+  scheduler: queueJob
 }
 
 function createDevEffectOptions(
@@ -276,7 +274,6 @@ function createDevEffectOptions(
 ): ReactiveEffectOptions {
   return {
     scheduler: queueJob,
-    allowRecurse: true,
     onTrack: instance.rtc ? e => invokeArrayFns(instance.rtc!, e) : void 0,
     onTrigger: instance.rtg ? e => invokeArrayFns(instance.rtg!, e) : void 0
   }
@@ -1346,53 +1343,132 @@ function baseCreateRenderer(
     optimized
   ) => {
     // create reactive effect for rendering
-    instance.update = effect(function componentEffect() {
-      if (!instance.isMounted) {
-        let vnodeHook: VNodeHook | null | undefined
-        const { el, props } = initialVNode
-        const { bm, m, parent } = instance
+    instance.update = effect(
+      function componentEffect() {
+        if (!instance.isMounted) {
+          let vnodeHook: VNodeHook | null | undefined
+          const { el, props } = initialVNode
+          const { bm, m, parent } = instance
 
-        // beforeMount hook
-        if (bm) {
-          invokeArrayFns(bm)
-        }
-        // onVnodeBeforeMount
-        if ((vnodeHook = props && props.onVnodeBeforeMount)) {
-          invokeVNodeHook(vnodeHook, parent, initialVNode)
-        }
-
-        // render
-        if (__DEV__) {
-          startMeasure(instance, `render`)
-        }
-        const subTree = (instance.subTree = renderComponentRoot(instance))
-        if (__DEV__) {
-          endMeasure(instance, `render`)
-        }
-
-        if (el && hydrateNode) {
-          if (__DEV__) {
-            startMeasure(instance, `hydrate`)
+          // beforeMount hook
+          if (bm) {
+            invokeArrayFns(bm)
           }
-          // vnode has adopted host node - perform hydration instead of mount.
-          hydrateNode(
-            initialVNode.el as Node,
-            subTree,
-            instance,
-            parentSuspense
-          )
-          if (__DEV__) {
-            endMeasure(instance, `hydrate`)
+          // onVnodeBeforeMount
+          if ((vnodeHook = props && props.onVnodeBeforeMount)) {
+            invokeVNodeHook(vnodeHook, parent, initialVNode)
           }
+
+          // render
+          if (__DEV__) {
+            startMeasure(instance, `render`)
+          }
+          const subTree = (instance.subTree = renderComponentRoot(instance))
+          if (__DEV__) {
+            endMeasure(instance, `render`)
+          }
+
+          if (el && hydrateNode) {
+            if (__DEV__) {
+              startMeasure(instance, `hydrate`)
+            }
+            // vnode has adopted host node - perform hydration instead of mount.
+            hydrateNode(
+              initialVNode.el as Node,
+              subTree,
+              instance,
+              parentSuspense
+            )
+            if (__DEV__) {
+              endMeasure(instance, `hydrate`)
+            }
+          } else {
+            if (__DEV__) {
+              startMeasure(instance, `patch`)
+            }
+            patch(
+              null,
+              subTree,
+              container,
+              anchor,
+              instance,
+              parentSuspense,
+              isSVG
+            )
+            if (__DEV__) {
+              endMeasure(instance, `patch`)
+            }
+            initialVNode.el = subTree.el
+          }
+          // mounted hook
+          if (m) {
+            queuePostRenderEffect(m, parentSuspense)
+          }
+          // onVnodeMounted
+          if ((vnodeHook = props && props.onVnodeMounted)) {
+            queuePostRenderEffect(() => {
+              invokeVNodeHook(vnodeHook!, parent, initialVNode)
+            }, parentSuspense)
+          }
+          // activated hook for keep-alive roots.
+          // #1742 activated hook must be accessed after first render
+          // since the hook may be injected by a child keep-alive
+          const { a } = instance
+          if (
+            a &&
+            initialVNode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+          ) {
+            queuePostRenderEffect(a, parentSuspense)
+          }
+          instance.isMounted = true
         } else {
+          // updateComponent
+          // This is triggered by mutation of component's own state (next: null)
+          // OR parent calling processComponent (next: VNode)
+          let { next, bu, u, parent, vnode } = instance
+          let originNext = next
+          let vnodeHook: VNodeHook | null | undefined
+          if (__DEV__) {
+            pushWarningContext(next || instance.vnode)
+          }
+
+          if (next) {
+            next.el = vnode.el
+            updateComponentPreRender(instance, next, optimized)
+          } else {
+            next = vnode
+          }
+
+          // beforeUpdate hook
+          if (bu) {
+            invokeArrayFns(bu)
+          }
+          // onVnodeBeforeUpdate
+          if ((vnodeHook = next.props && next.props.onVnodeBeforeUpdate)) {
+            invokeVNodeHook(vnodeHook, parent, next, vnode)
+          }
+
+          // render
+          if (__DEV__) {
+            startMeasure(instance, `render`)
+          }
+          const nextTree = renderComponentRoot(instance)
+          if (__DEV__) {
+            endMeasure(instance, `render`)
+          }
+          const prevTree = instance.subTree
+          instance.subTree = nextTree
+
           if (__DEV__) {
             startMeasure(instance, `patch`)
           }
           patch(
-            null,
-            subTree,
-            container,
-            anchor,
+            prevTree,
+            nextTree,
+            // parent may have changed if it's in a teleport
+            hostParentNode(prevTree.el!)!,
+            // anchor may have changed if it's in a fragment
+            getNextHostNode(prevTree),
             instance,
             parentSuspense,
             isSVG
@@ -1400,111 +1476,36 @@ function baseCreateRenderer(
           if (__DEV__) {
             endMeasure(instance, `patch`)
           }
-          initialVNode.el = subTree.el
-        }
-        // mounted hook
-        if (m) {
-          queuePostRenderEffect(m, parentSuspense)
-        }
-        // onVnodeMounted
-        if ((vnodeHook = props && props.onVnodeMounted)) {
-          queuePostRenderEffect(() => {
-            invokeVNodeHook(vnodeHook!, parent, initialVNode)
-          }, parentSuspense)
-        }
-        // activated hook for keep-alive roots.
-        // #1742 activated hook must be accessed after first render
-        // since the hook may be injected by a child keep-alive
-        const { a } = instance
-        if (
-          a &&
-          initialVNode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-        ) {
-          queuePostRenderEffect(a, parentSuspense)
-        }
-        instance.isMounted = true
-      } else {
-        // updateComponent
-        // This is triggered by mutation of component's own state (next: null)
-        // OR parent calling processComponent (next: VNode)
-        let { next, bu, u, parent, vnode } = instance
-        let originNext = next
-        let vnodeHook: VNodeHook | null | undefined
-        if (__DEV__) {
-          pushWarningContext(next || instance.vnode)
-        }
+          next.el = nextTree.el
+          if (originNext === null) {
+            // self-triggered update. In case of HOC, update parent component
+            // vnode el. HOC is indicated by parent instance's subTree pointing
+            // to child component's vnode
+            updateHOCHostEl(instance, nextTree.el)
+          }
+          // updated hook
+          if (u) {
+            queuePostRenderEffect(u, parentSuspense)
+          }
+          // onVnodeUpdated
+          if ((vnodeHook = next.props && next.props.onVnodeUpdated)) {
+            queuePostRenderEffect(() => {
+              invokeVNodeHook(vnodeHook!, parent, next!, vnode)
+            }, parentSuspense)
+          }
 
-        if (next) {
-          next.el = vnode.el
-          updateComponentPreRender(instance, next, optimized)
-        } else {
-          next = vnode
-        }
+          if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+            devtoolsComponentUpdated(instance)
+          }
 
-        // beforeUpdate hook
-        if (bu) {
-          invokeArrayFns(bu)
+          if (__DEV__) {
+            popWarningContext()
+          }
         }
-        // onVnodeBeforeUpdate
-        if ((vnodeHook = next.props && next.props.onVnodeBeforeUpdate)) {
-          invokeVNodeHook(vnodeHook, parent, next, vnode)
-        }
-
-        // render
-        if (__DEV__) {
-          startMeasure(instance, `render`)
-        }
-        const nextTree = renderComponentRoot(instance)
-        if (__DEV__) {
-          endMeasure(instance, `render`)
-        }
-        const prevTree = instance.subTree
-        instance.subTree = nextTree
-
-        if (__DEV__) {
-          startMeasure(instance, `patch`)
-        }
-        patch(
-          prevTree,
-          nextTree,
-          // parent may have changed if it's in a teleport
-          hostParentNode(prevTree.el!)!,
-          // anchor may have changed if it's in a fragment
-          getNextHostNode(prevTree),
-          instance,
-          parentSuspense,
-          isSVG
-        )
-        if (__DEV__) {
-          endMeasure(instance, `patch`)
-        }
-        next.el = nextTree.el
-        if (originNext === null) {
-          // self-triggered update. In case of HOC, update parent component
-          // vnode el. HOC is indicated by parent instance's subTree pointing
-          // to child component's vnode
-          updateHOCHostEl(instance, nextTree.el)
-        }
-        // updated hook
-        if (u) {
-          queuePostRenderEffect(u, parentSuspense)
-        }
-        // onVnodeUpdated
-        if ((vnodeHook = next.props && next.props.onVnodeUpdated)) {
-          queuePostRenderEffect(() => {
-            invokeVNodeHook(vnodeHook!, parent, next!, vnode)
-          }, parentSuspense)
-        }
-
-        if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-          devtoolsComponentUpdated(instance)
-        }
-
-        if (__DEV__) {
-          popWarningContext()
-        }
-      }
-    }, __DEV__ ? createDevEffectOptions(instance) : prodEffectOptions)
+      },
+      __DEV__ ? createDevEffectOptions(instance) : prodEffectOptions,
+      true // #1801, #2043 component render effects should allow recursive updates
+    )
   }
 
   const updateComponentPreRender = (

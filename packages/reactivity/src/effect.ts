@@ -10,13 +10,16 @@ type KeyToDepMap = Map<any, Dep>
 const targetMap = new WeakMap<any, KeyToDepMap>()
 
 export class ReactiveEffect<T = any> {
-  public allowRecurse = !!this.options.allowRecurse
   public id = uid++
   public active = true
   public deps: Dep[] = []
   private runner?: ReactiveEffectFunction<T>
 
-  constructor(public raw: () => T, public options: ReactiveEffectOptions) {}
+  constructor(
+    public raw: () => T,
+    public allowRecurse: boolean,
+    public options: ReactiveEffectOptions
+  ) {}
 
   public run() {
     if (!this.active) {
@@ -58,9 +61,10 @@ export interface ReactiveEffectFunction<T = any> {
 
 function createReactiveEffect<T = any>(
   fn: () => T,
+  allowRecurse: boolean,
   options: ReactiveEffectOptions
 ): ReactiveEffect<T> {
-  return new ReactiveEffect(fn, options)
+  return new ReactiveEffect(fn, allowRecurse, options)
 }
 
 export interface ReactiveEffectOptions {
@@ -68,7 +72,6 @@ export interface ReactiveEffectOptions {
   onTrack?: (event: DebuggerEvent) => void
   onTrigger?: (event: DebuggerEvent) => void
   onStop?: () => void
-  allowRecurse?: boolean
 }
 
 export type DebuggerEvent = {
@@ -97,12 +100,13 @@ export function isEffect(fn: any): fn is ReactiveEffectFunction {
 export function effect<T = any>(
   fn: () => T,
   options: ReactiveEffectOptions = EMPTY_OBJ,
+  allowRecurse: boolean = false,
   lazy: boolean = false
 ): ReactiveEffect<T> {
   if (isEffect(fn)) {
     fn = fn._effect.raw
   }
-  const effect = createReactiveEffect(fn, options)
+  const effect = createReactiveEffect(fn, allowRecurse, options)
 
   if (!lazy) {
     effect.run()

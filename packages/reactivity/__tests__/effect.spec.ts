@@ -578,7 +578,7 @@ describe('reactivity/effect', () => {
   it('lazy', () => {
     const obj = reactive({ foo: 1 })
     let dummy
-    const runner = effect(() => (dummy = obj.foo), {}, true)
+    const runner = effect(() => (dummy = obj.foo), {}, false, true)
     expect(dummy).toBe(undefined)
 
     expect(runner.run()).toBe(1)

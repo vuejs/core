@@ -285,6 +285,7 @@ function doWatch(
       onTrigger,
       scheduler
     },
+    false,
     true
   )
 

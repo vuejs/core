@@ -44,6 +44,7 @@ class ComputedRefImpl<T> {
           }
         }
       },
+      false,
       true
     )
 
