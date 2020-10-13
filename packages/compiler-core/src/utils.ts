@@ -230,9 +230,10 @@ export function injectProp(
       first.properties.unshift(prop)
     } else {
       if (props.callee === TO_HANDLERS) {
+        // #2366
         propsWithInjection = createCallExpression(context.helper(MERGE_PROPS), [
-          props,
-          createObjectExpression([prop])
+          createObjectExpression([prop]),
+          props
         ])
       } else {
         props.arguments.unshift(createObjectExpression([prop]))

@@ -685,12 +685,12 @@ describe('compiler: v-if', () => {
       NodeTypes.JS_CALL_EXPRESSION
     )
     expect((codegenNode.consequent as any).props.callee).toBe(MERGE_PROPS)
-    expect((codegenNode.consequent as any).props.arguments[0].callee).toBe(
-      TO_HANDLERS
-    )
     expect(
-      (codegenNode.consequent as any).props.arguments[1].properties[0].value
+      (codegenNode.consequent as any).props.arguments[0].properties[0].value
         .content
     ).toBe('0')
+    expect((codegenNode.consequent as any).props.arguments[1].callee).toBe(
+      TO_HANDLERS
+    )
   })
 })
