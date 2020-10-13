@@ -12,8 +12,7 @@ import {
   looseIndexOf,
   invokeArrayFns,
   toNumber,
-  isSet,
-  looseHas
+  isSet
 } from '@vue/shared'
 
 type AssignerFn = (value: any) => void
@@ -119,12 +118,10 @@ export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
           assign(filtered)
         }
       } else if (isSet(modelValue)) {
-        const found = modelValue.has(elementValue)
-        if (checked && !found) {
-          assign(modelValue.add(elementValue))
-        } else if (!checked && found) {
+        if (checked) {
+          modelValue.add(elementValue)
+        } else {
           modelValue.delete(elementValue)
-          assign(modelValue)
         }
       } else {
         assign(getCheckboxValue(el, checked))
@@ -148,7 +145,7 @@ function setChecked(
   if (isArray(value)) {
     el.checked = looseIndexOf(value, vnode.props!.value) > -1
   } else if (isSet(value)) {
-    el.checked = looseHas(value, vnode.props!.value)
+    el.checked = value.has(vnode.props!.value)
   } else if (value !== oldValue) {
     el.checked = looseEqual(value, getCheckboxValue(el, true))
   }
@@ -213,7 +210,7 @@ function setSelected(el: HTMLSelectElement, value: any) {
       if (isArray(value)) {
         option.selected = looseIndexOf(value, optionValue) > -1
       } else {
-        option.selected = looseHas(value, optionValue)
+        option.selected = value.has(optionValue)
       }
     } else {
       if (looseEqual(getValue(option), value)) {
@@ -305,7 +302,7 @@ if (__NODE_JS__) {
         return { checked: true }
       }
     } else if (isSet(value)) {
-      if (vnode.props && looseHas(value, vnode.props.value)) {
+      if (vnode.props && value.has(vnode.props.value)) {
         return { checked: true }
       }
     } else if (value) {
