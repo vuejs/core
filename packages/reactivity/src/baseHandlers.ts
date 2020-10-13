@@ -89,9 +89,8 @@ function createGetter(isReadonly = false, shallow = false) {
 
     const res = Reflect.get(target, key, receiver)
 
-    const keyIsSymbol = isSymbol(key)
     if (
-      keyIsSymbol
+      isSymbol(key)
         ? builtInSymbols.has(key as symbol)
         : key === `__proto__` || key === `__v_isRef`
     ) {
