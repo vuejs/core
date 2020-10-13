@@ -350,7 +350,7 @@ function checkIdentityKeys(
     const type = toRawType(target)
     console.warn(
       `Reactive ${type} contains both the raw and reactive ` +
-        `versions of the same object${type === `Map` ? `as keys` : ``}, ` +
+        `versions of the same object${type === `Map` ? ` as keys` : ``}, ` +
         `which can lead to inconsistencies. ` +
         `Avoid differentiating between the raw and reactive versions ` +
         `of an object and only use the reactive version if possible.`
