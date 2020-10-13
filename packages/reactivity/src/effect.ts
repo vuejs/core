@@ -52,7 +52,8 @@ export class ReactiveEffect<T = any> {
       } finally {
         effectStack.pop()
         resetTracking()
-        activeEffect = effectStack[effectStack.length - 1]
+        const n = effectStack.length
+        activeEffect = n ? effectStack[n - 1] : undefined
       }
     }
   }
