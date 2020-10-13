@@ -1,4 +1,4 @@
-import { setDevtoolsHook } from '@vue/runtime-dom'
+import { setDevtoolsHook, initCustomFormatter } from '@vue/runtime-dom'
 import { getGlobalThis } from '@vue/shared'
 
 export function initDev() {
@@ -12,5 +12,7 @@ export function initDev() {
       `You are running a development build of Vue.\n` +
         `Make sure to use the production build (*.prod.js) when deploying for production.`
     )
+
+    initCustomFormatter()
   }
 }

@@ -247,6 +247,11 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       return true
     }
 
+    // for internal formatters to know that this is a Vue instance
+    if (__DEV__ && key === '__isVue') {
+      return true
+    }
+
     // data / props / ctx
     // This getter gets called for every property access on the render context
     // during render and is a major hotspot. The most expensive part of this

@@ -93,6 +93,7 @@ export {
   setTransitionHooks,
   getTransitionRawChildren
 } from './components/BaseTransition'
+export { initCustomFormatter } from './customFormatter'
 
 // For devtools
 export { devtools, setDevtoolsHook } from './devtools'

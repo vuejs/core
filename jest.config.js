@@ -22,6 +22,7 @@ module.exports = {
     '!packages/template-explorer/**',
     '!packages/size-check/**',
     '!packages/runtime-core/src/profiling.ts',
+    '!packages/runtome-core/src/customFormatter.ts',
     // DOM transitions are tested via e2e so no coverage is collected
     '!packages/runtime-dom/src/components/Transition*',
     // only called in browsers
