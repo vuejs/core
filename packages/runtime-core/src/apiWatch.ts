@@ -145,15 +145,6 @@ function doWatch(
     }
   }
 
-  const warnInvalidSource = (s: unknown) => {
-    warn(
-      `Invalid watch source: `,
-      s,
-      `A watch source can only be a getter/effect function, a ref, ` +
-        `a reactive object, or an array of these types.`
-    )
-  }
-
   let getter: () => any
   let forceTrigger = false
   if (isRef(source)) {
@@ -306,6 +297,15 @@ function doWatch(
       remove(instance.effects!, runner)
     }
   }
+}
+
+function warnInvalidSource(s: unknown) {
+  warn(
+    `Invalid watch source: `,
+    s,
+    `A watch source can only be a getter/effect function, a ref, ` +
+      `a reactive object, or an array of these types.`
+  )
 }
 
 // this.$watch
