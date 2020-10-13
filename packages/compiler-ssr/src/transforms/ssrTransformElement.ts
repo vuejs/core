@@ -324,9 +324,10 @@ function removeStaticBinding(
   tag: TemplateLiteral['elements'],
   binding: string
 ) {
-  const i = tag.findIndex(
-    e => typeof e === 'string' && e.startsWith(` ${binding}=`)
-  )
+  const regExp = new RegExp(`^ ${binding}=".+"$`)
+
+  const i = tag.findIndex(e => typeof e === 'string' && regExp.test(e))
+
   if (i > -1) {
     tag.splice(i, 1)
   }

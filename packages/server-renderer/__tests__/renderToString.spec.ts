@@ -142,6 +142,24 @@ describe('ssr: renderToString', () => {
       )
     })
 
+    test('template components with dynamic class attribute after static', async () => {
+      const app = createApp({
+        template: `<div><div class="child" :class="'dynamic'"></div></div>`
+      })
+      expect(await renderToString(app)).toBe(
+        `<div><div class="dynamic child"></div></div>`
+      )
+    })
+
+    test('template components with dynamic class attribute before static', async () => {
+      const app = createApp({
+        template: `<div><div :class="'dynamic'" class="child"></div></div>`
+      })
+      expect(await renderToString(app)).toBe(
+        `<div><div class="dynamic child"></div></div>`
+      )
+    })
+
     test('mixing optimized / vnode / template components', async () => {
       const OptimizedChild = {
         props: ['msg'],
