@@ -1,8 +1,12 @@
-import { effect, ReactiveEffect, trigger, track } from './effect'
-import { TriggerOpTypes, TrackOpTypes } from './operations'
+import {
+  effect,
+  ReactiveEffect,
+  trackRefTarget,
+  triggerRefTarget
+} from './effect'
 import { Ref } from './ref'
 import { isFunction, NOOP } from '@vue/shared'
-import { ReactiveFlags, toRaw } from './reactive'
+import { ReactiveFlags } from './reactive'
 
 export interface ComputedRef<T = any> extends WritableComputedRef<T> {
   readonly value: T
@@ -39,7 +43,7 @@ class ComputedRefImpl<T> {
       () => {
         if (!this._dirty) {
           this._dirty = true
-          trigger(toRaw(this), TriggerOpTypes.SET, 'value')
+          triggerRefTarget(this)
         }
       },
       false,
@@ -54,7 +58,7 @@ class ComputedRefImpl<T> {
       this._value = this.effect.run() as T
       this._dirty = false
     }
-    track(toRaw(this), TrackOpTypes.GET, 'value')
+    trackRefTarget(this)
     return this._value
   }
 

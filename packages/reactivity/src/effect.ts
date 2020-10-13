@@ -1,5 +1,6 @@
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { EMPTY_OBJ, isArray, isIntegerKey, isMap } from '@vue/shared'
+import { toRaw } from './reactive'
 
 // The main WeakMap that stores {target -> key -> dep} connections.
 // Conceptually, it's easier to think of a dependency as a Dep class
@@ -208,6 +209,32 @@ export function track(target: object, type: TrackOpTypes, key: unknown) {
   }
 }
 
+export function trackRefTarget(ref: any) {
+  if (!shouldTrack || activeEffect === undefined) {
+    return
+  }
+
+  ref = toRaw(ref)
+
+  if (!ref.dep) {
+    ref.dep = new Set<ReactiveEffect>()
+  }
+
+  const dep = ref.dep
+  if (!dep.has(activeEffect)) {
+    dep.add(activeEffect)
+    activeEffect.deps.push(dep)
+    if (__DEV__ && activeEffect.options.onTrack) {
+      activeEffect.options.onTrack({
+        effect: activeEffect,
+        target: ref,
+        type: TrackOpTypes.GET,
+        key: 'value'
+      })
+    }
+  }
+}
+
 export function trigger(
   target: object,
   type: TriggerOpTypes,
@@ -298,4 +325,43 @@ export function trigger(
   }
 
   effects.forEach(run)
+}
+
+export function triggerRefTarget(
+  ref: any,
+  newValue?: unknown,
+  oldValue?: unknown,
+  oldTarget?: Map<unknown, unknown> | Set<unknown>
+) {
+  ref = toRaw(ref)
+
+  if (!ref.dep) {
+    return
+  }
+
+  const run = (effect: ReactiveEffect) => {
+    if (__DEV__ && effect.options.onTrigger) {
+      effect.options.onTrigger({
+        effect,
+        target: ref,
+        key: 'value',
+        type: TriggerOpTypes.SET,
+        newValue,
+        oldValue,
+        oldTarget
+      })
+    }
+    if (effect.scheduler) {
+      effect.scheduler(effect.func)
+    } else {
+      effect.run()
+    }
+  }
+
+  const immutableDeps = [...ref.dep]
+  immutableDeps.forEach(effect => {
+    if (effect !== activeEffect || effect.allowRecurse) {
+      run(effect)
+    }
+  })
 }

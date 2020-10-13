@@ -1,5 +1,4 @@
-import { track, trigger } from './effect'
-import { TrackOpTypes, TriggerOpTypes } from './operations'
+import { trackRefTarget, triggerRefTarget } from './effect'
 import { isArray, isObject, hasChanged } from '@vue/shared'
 import { reactive, isProxy, toRaw, isReactive } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
@@ -57,7 +56,7 @@ class RefImpl<T> {
   }
 
   get value() {
-    track(toRaw(this), TrackOpTypes.GET, 'value')
+    trackRefTarget(this)
     return this._value
   }
 
@@ -65,7 +64,7 @@ class RefImpl<T> {
     if (hasChanged(toRaw(newVal), this._rawValue)) {
       this._rawValue = newVal
       this._value = this._shallow ? newVal : convert(newVal)
-      trigger(toRaw(this), TriggerOpTypes.SET, 'value', newVal)
+      triggerRefTarget(this, newVal)
     }
   }
 }
@@ -78,7 +77,7 @@ function createRef(rawValue: unknown, shallow = false) {
 }
 
 export function triggerRef(ref: Ref) {
-  trigger(toRaw(ref), TriggerOpTypes.SET, 'value', __DEV__ ? ref.value : void 0)
+  triggerRefTarget(ref, __DEV__ ? ref.value : void 0)
 }
 
 export function unref<T>(ref: T): T extends Ref<infer V> ? V : T {
@@ -122,8 +121,8 @@ class CustomRefImpl<T> {
 
   constructor(factory: CustomRefFactory<T>) {
     const { get, set } = factory(
-      () => track(this, TrackOpTypes.GET, 'value'),
-      () => trigger(this, TriggerOpTypes.SET, 'value')
+      () => trackRefTarget(this),
+      () => triggerRefTarget(this)
     )
     this._get = get
     this._set = set
