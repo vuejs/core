@@ -141,21 +141,32 @@ describe('renderer: component', () => {
   })
 
   // #2170
-  test('should have access to instance’s “$el” property in watcher when rendereing with watched prop', async () => {
+  test('instance.$el should be exposed to watch options', async () => {
     function returnThis(this: any) {
       return this
     }
     const propWatchSpy = jest.fn(returnThis)
+    const dataWatchSpy = jest.fn(returnThis)
     let instance: any
     const Comp = {
       props: {
         testProp: String
       },
 
+      data() {
+        return {
+          testData: undefined
+        }
+      },
+
       watch: {
         testProp() {
           // @ts-ignore
           propWatchSpy(this.$el)
+        },
+        testData() {
+          // @ts-ignore
+          dataWatchSpy(this.$el)
         }
       },
 
@@ -172,10 +183,15 @@ describe('renderer: component', () => {
     render(h(Comp), root)
     await nextTick()
     expect(propWatchSpy).not.toHaveBeenCalled()
+    expect(dataWatchSpy).not.toHaveBeenCalled()
 
     render(h(Comp, { testProp: 'prop ' }), root)
     await nextTick()
     expect(propWatchSpy).toHaveBeenCalledWith(instance.$el)
+
+    instance.testData = 1
+    await nextTick()
+    expect(dataWatchSpy).toHaveBeenCalledWith(instance.$el)
   })
 
   // #2200
