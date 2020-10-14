@@ -119,8 +119,7 @@ async function build(target) {
         )
         await fs.writeFile(dtsPath, existing + '\n' + toAdd.join('\n'))
       }
-    if (buildTypes && pkg.types) {
-      console.log()
+
       console.log(
         chalk.bold(chalk.yellow(`Rolling up type definitions for ${target}...`))
       )
