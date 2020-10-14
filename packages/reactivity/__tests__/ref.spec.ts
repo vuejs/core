@@ -283,6 +283,47 @@ describe('reactivity/ref', () => {
     expect(dummyY).toBe(5)
   })
 
+  test('toRefs on ref object', () => {
+    const a = ref({
+      x: 1,
+      y: 2
+    })
+
+    const { x, y } = toRefs(a.value)
+
+    expect(isRef(x)).toBe(true)
+    expect(isRef(y)).toBe(true)
+    expect(x.value).toBe(1)
+    expect(y.value).toBe(2)
+
+    // source -> proxy
+    a.value.x = 2
+    a.value.y = 3
+    expect(x.value).toBe(2)
+    expect(y.value).toBe(3)
+
+    // proxy -> source
+    x.value = 3
+    y.value = 4
+    expect(a.value.x).toBe(3)
+    expect(a.value.y).toBe(4)
+
+    // reactivity
+    let dummyX, dummyY
+    effect(() => {
+      dummyX = x.value
+      dummyY = y.value
+    })
+    expect(dummyX).toBe(x.value)
+    expect(dummyY).toBe(y.value)
+
+    // mutating source should trigger effect using the proxy refs
+    a.value.x = 4
+    a.value.y = 5
+    expect(dummyX).toBe(4)
+    expect(dummyY).toBe(5)
+  })
+
   test('toRefs should warn on plain object', () => {
     toRefs({})
     expect(`toRefs() expects a reactive object`).toHaveBeenWarned()
@@ -293,7 +334,7 @@ describe('reactivity/ref', () => {
     expect(`toRefs() expects a reactive object`).toHaveBeenWarned()
   })
 
-  test('toRefs reactive array', () => {
+  test('toRefs on reactive array', () => {
     const arr = reactive(['a', 'b', 'c'])
     const refs = toRefs(arr)
 
@@ -303,6 +344,19 @@ describe('reactivity/ref', () => {
     expect(arr[0]).toBe('1')
 
     arr[1] = '2'
+    expect(refs[1].value).toBe('2')
+  })
+
+  test('toRefs on ref array', () => {
+    const arr = ref(['a', 'b', 'c'])
+    const refs = toRefs(arr.value)
+
+    expect(Array.isArray(refs)).toBe(true)
+
+    refs[0].value = '1'
+    expect(arr.value[0]).toBe('1')
+
+    arr.value[1] = '2'
     expect(refs[1].value).toBe('2')
   })
 
