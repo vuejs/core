@@ -38,7 +38,10 @@ import {
   currentScopeId
 } from './componentRenderContext'
 import { RendererNode, RendererElement } from './renderer'
-import { NULL_DYNAMIC_COMPONENT } from './helpers/resolveAssets'
+import {
+  NULL_DYNAMIC_COMPONENT,
+  resolveDynamicComponent
+} from './helpers/resolveAssets'
 import { hmrDirtyComponents } from './hmr'
 import { setCompiledSlotRendering } from './helpers/renderSlot'
 import { convertLegacyComponent } from './compat/component'
@@ -353,7 +356,7 @@ function _createVNode(
   // when using v-bind like <component v-bind="{ is: 'p' }" >,
   // the compiler will treat it as a normal component, not a dynamic component.
   if (type === 'component' && props && props.is) {
-    type = props.is as VNodeTypes
+    type = resolveDynamicComponent(props.is)
     delete props.is
   }
 

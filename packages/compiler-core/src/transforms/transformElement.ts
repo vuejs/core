@@ -255,8 +255,7 @@ export function resolveComponentType(
   // and leave it to the runtime to process.
   if (
     isProp &&
-    (context.ssr ||
-      !dynamicKeyVBind ||
+    (!dynamicKeyVBind ||
       // priority
       node.props.indexOf(isProp) > node.props.indexOf(dynamicKeyVBind!))
   ) {
@@ -432,7 +431,6 @@ export function buildProps(
       hasDynamicKeys = true
     }
   }
-
   for (let i = 0; i < props.length; i++) {
     // static attribute
     const prop = props[i]
@@ -453,7 +451,7 @@ export function buildProps(
         name === 'is' &&
         (
           isComponentTag(tag) &&
-          (context.ssr || !hasDynamicKeyVBind(node) || isDynamicComponent)
+          (!hasDynamicKeyVBind(node) || isDynamicComponent)
         ) || (value && value.content.startsWith('vue:'))
       ) {
         continue
@@ -494,7 +492,7 @@ export function buildProps(
       // skip v-is and :is on <component>
       if (
         name === 'is' ||
-        (isVBind && isComponentTag(tag) && isBindKey(arg, 'is'))
+        (isVBind && isComponentTag(tag) && isBindKey(arg, 'is') && (!hasDynamicKeyVBind(node) || isDynamicComponent))
       ) {
         continue
       }
