@@ -158,8 +158,12 @@ export function updateProps(
   if (
     // always force full diff in dev
     // - #1942 if hmr is enabled with sfc component
-    // - vite#872 non-sfc component
-    !__DEV__ &&
+    // - vite#872 non-sfc component used by sfc component
+    !(
+      __DEV__ &&
+      (instance.type.__hmrId ||
+        (instance.parent && instance.parent.type.__hmrId))
+    ) &&
     (optimized || patchFlag > 0) &&
     !(patchFlag & PatchFlags.FULL_PROPS)
   ) {
