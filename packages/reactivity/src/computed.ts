@@ -1,10 +1,5 @@
-import {
-  effect,
-  ReactiveEffect,
-  trackRefTarget,
-  triggerRefTarget
-} from './effect'
-import { Ref } from './ref'
+import { effect, ReactiveEffect } from './effect'
+import { Ref, trackRefValue, triggerRefValue } from './ref'
 import { isFunction, NOOP } from '@vue/shared'
 import { ReactiveFlags } from './reactive'
 
@@ -28,9 +23,8 @@ class ComputedRefImpl<T> {
   private _value!: T
   private _dirty = true
 
-  public readonly effect: ReactiveEffect<T>
+  public readonly effect: ReactiveEffect<T>;
 
-  public readonly __v_isRef = true;
   public readonly [ReactiveFlags.IS_READONLY]: boolean
 
   constructor(
@@ -43,7 +37,7 @@ class ComputedRefImpl<T> {
       () => {
         if (!this._dirty) {
           this._dirty = true
-          triggerRefTarget(this)
+          triggerRefValue(this)
         }
       },
       false,
@@ -58,7 +52,7 @@ class ComputedRefImpl<T> {
       this._value = this.effect.run() as T
       this._dirty = false
     }
-    trackRefTarget(this)
+    trackRefValue(this)
     return this._value
   }
 
@@ -66,6 +60,9 @@ class ComputedRefImpl<T> {
     this._setter(newValue)
   }
 }
+
+ComputedRefImpl.prototype.__v_isRef = true
+interface ComputedRefImpl<T> extends Ref<T> {}
 
 export function computed<T>(getter: ComputedGetter<T>): ComputedRef<T>
 export function computed<T>(

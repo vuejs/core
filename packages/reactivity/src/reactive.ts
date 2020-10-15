@@ -218,9 +218,8 @@ export function isProxy(value: unknown): boolean {
 }
 
 export function toRaw<T>(observed: T): T {
-  return (
-    (observed && toRaw((observed as Target)[ReactiveFlags.RAW])) || observed
-  )
+  const raw = observed && (observed as Target)[ReactiveFlags.RAW]
+  return raw ? toRaw(raw) : observed
 }
 
 export function markRaw<T extends object>(value: T): T {
