@@ -818,7 +818,14 @@ function baseCreateRenderer(
           let priority
           for (const key in props) {
             if (!isReservedProp(key)) {
-              if (!(priority = hostDelayInitProp(el, key))) {
+              if ((priority = hostDelayInitProp(el, key))) {
+                !delayed && (delayed = [])
+                if (priority > 0 || priority === true) {
+                  delayed.push(key)
+                } else {
+                  delayed.unshift(key)
+                }
+              } else {
                 hostPatchProp(
                   el,
                   key,
@@ -830,17 +837,11 @@ function baseCreateRenderer(
                   parentSuspense,
                   unmountChildren
                 )
-              } else {
-                !delayed && (delayed = [])
-                ;(priority > 0 || priority === true
-                  ? Array.prototype.push
-                  : Array.prototype.unshift
-                ).call(delayed, key)
               }
             }
           }
-          delayed &&
-            delayed.forEach(key =>
+          if (delayed) {
+            for (const key of delayed) {
               hostPatchProp(
                 el,
                 key,
@@ -852,7 +853,8 @@ function baseCreateRenderer(
                 parentSuspense,
                 unmountChildren
               )
-            )
+            }
+          }
         }
 
         if ((vnodeHook = props.onVnodeBeforeMount)) {
