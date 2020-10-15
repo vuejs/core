@@ -50,7 +50,11 @@ export default postcss.plugin('vue-scoped', (id: any) => (root: Root) => {
               if (n.nodes.length) {
                 // .foo ::v-deep(.bar) -> .foo[xxxxxxx] .bar
                 // replace the current node with ::v-deep's inner selector
-                selector.insertAfter(n, n.nodes[0])
+                let last: Selector['nodes'][0] = n
+                n.nodes[0].each(ss => {
+                  selector.insertAfter(last, ss)
+                  last = ss
+                })
                 // insert a space combinator before if it doesn't already have one
                 const prev = selector.at(selector.index(n) - 1)
                 if (!prev || !isSpaceCombinator(prev)) {
@@ -82,8 +86,13 @@ export default postcss.plugin('vue-scoped', (id: any) => (root: Root) => {
             // instead.
             // ::v-slotted(.foo) -> .foo[xxxxxxx-s]
             if (value === ':slotted' || value === '::v-slotted') {
-              rewriteSelector(n.nodes[0] as Selector, true /* slotted */)
-              selector.insertAfter(n, n.nodes[0])
+              rewriteSelector(n.nodes[0], true /* slotted */)
+              let last: Selector['nodes'][0] = n
+              n.nodes[0].each(ss => {
+                selector.insertAfter(last, ss)
+                last = ss
+              })
+              // selector.insertAfter(n, n.nodes[0])
               selector.removeChild(n)
               // since slotted attribute already scopes the selector there's no
               // need for the non-slot attribute.
@@ -129,7 +138,7 @@ export default postcss.plugin('vue-scoped', (id: any) => (root: Root) => {
           )
         }
       }
-      selectors.each(selector => rewriteSelector(selector as Selector))
+      selectors.each(selector => rewriteSelector(selector))
     }).processSync(node.selector)
   })
 

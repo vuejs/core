@@ -49,7 +49,7 @@
     "merge-source-map": "^1.1.0",
     "postcss": "^7.0.32",
     "postcss-modules": "^3.2.2",
-    "postcss-selector-parser": "^6.0.2",
+    "postcss-selector-parser": "^6.0.4",
     "source-map": "^0.6.1"
   },
   "devDependencies": {
