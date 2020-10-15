@@ -160,7 +160,7 @@ export function compileScript(
         )
       } else if (node.type === 'ExportNamedDeclaration' && node.specifiers) {
         const defaultSpecifier = node.specifiers.find(
-          s => s.exported.name === 'default'
+          s => s.exported.type === 'Identifier' && s.exported.name === 'default'
         ) as ExportSpecifier
         if (defaultSpecifier) {
           defaultExport = node
@@ -334,7 +334,10 @@ export function compileScript(
               specifier.exported.start! + startOffset + 7,
               defaultTempVar
             )
-          } else if (specifier.type === 'ExportSpecifier') {
+          } else if (
+            specifier.type === 'ExportSpecifier' &&
+            specifier.exported.type === 'Identifier'
+          ) {
             if (specifier.exported.name === 'default') {
               checkDuplicateDefaultExport(node)
               defaultExport = node

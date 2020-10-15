@@ -42,6 +42,7 @@
     "node": ">=10.0.0"
   },
   "devDependencies": {
+    "@babel/types": "^7.12.0",
     "@ls-lint/ls-lint": "^1.9.2",
     "@microsoft/api-extractor": "^7.9.15",
     "@rollup/plugin-commonjs": "^15.0.0",
