@@ -1,4 +1,4 @@
-import { CodegenOptions } from './options'
+import { CodegenOptions, MetadataType } from './options'
 import {
   RootNode,
   TemplateChildNode,
@@ -208,9 +208,27 @@ export function generate(
   }
 
   // binding optimizations
-  const optimizeSources = options.bindingMetadata
-    ? `, $props, $setup, $data, $options`
-    : ``
+  let optimizeSources = ''
+  const bindingMetadata = options.bindingMetadata
+  if (bindingMetadata) {
+    const bindingMetadataRank: MetadataType[] = [
+      'props',
+      'setup',
+      'data',
+      'options'
+    ]
+    const bindingMetadataValues = [...new Set(Object.values(bindingMetadata))]
+    let metadataArgs: MetadataType[] = []
+    for (let i = bindingMetadataRank.length - 1; i > 0; i--) {
+      if (bindingMetadataValues.includes(bindingMetadataRank[i])) {
+        metadataArgs = bindingMetadataRank.slice(0, i + 1)
+        break
+      }
+    }
+    optimizeSources = `, ${metadataArgs
+      .map(metadataName => `$${metadataName}`)
+      .join(', ')}`
+  }
   // enter render function
   if (!ssr) {
     if (genScopeId) {
