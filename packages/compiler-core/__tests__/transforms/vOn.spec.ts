@@ -76,9 +76,10 @@ describe('compiler: transform v-on', () => {
           key: {
             type: NodeTypes.COMPOUND_EXPRESSION,
             children: [
-              `"on" + _${helperNameMap[CAPITALIZE]}(`,
               { content: `event` },
-              `)`
+              ` ? "on" + _${helperNameMap[CAPITALIZE]}(`,
+              { content: `event` },
+              `) : ""`
             ]
           },
           value: {
@@ -101,9 +102,10 @@ describe('compiler: transform v-on', () => {
           key: {
             type: NodeTypes.COMPOUND_EXPRESSION,
             children: [
-              `"on" + _${helperNameMap[CAPITALIZE]}(`,
               { content: `_ctx.event` },
-              `)`
+              ` ? "on" + _${helperNameMap[CAPITALIZE]}(`,
+              { content: `_ctx.event` },
+              `) : ""`
             ]
           },
           value: {
@@ -124,6 +126,7 @@ describe('compiler: transform v-on', () => {
       properties: [
         {
           key: {
+            // [event(foo) ? "on" + _capitalize(event(foo)) : '']
             type: NodeTypes.COMPOUND_EXPRESSION,
             children: [
               `"on" + _${helperNameMap[CAPITALIZE]}(`,

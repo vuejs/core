@@ -46,10 +46,12 @@ export const transformOn: DirectiveTransform = (
       const normalizedName = capitalize(camelize(rawName))
       eventName = createSimpleExpression(`on${normalizedName}`, true, arg.loc)
     } else {
+      // #2388
       eventName = createCompoundExpression([
-        `"on" + ${context.helperString(CAPITALIZE)}(`,
         arg,
-        `)`
+        ` ? "on" + ${context.helperString(CAPITALIZE)}(`,
+        arg,
+        `) : ""`
       ])
     }
   } else {

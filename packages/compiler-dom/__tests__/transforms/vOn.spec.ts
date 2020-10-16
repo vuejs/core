@@ -195,24 +195,26 @@ describe('compiler-dom: transform v-on', () => {
     const {
       props: [prop2]
     } = parseWithVOn(`<div @[event].right="test"/>`)
-    // ("on" + (event)).toLowerCase() === "onclick" ? "onContextmenu" : ("on" + (event))
+    // (event ? "on" + _capitalize(event) : '').toLowerCase() === "onclick" ? "onContextmenu" : (event ? "on" + _capitalize(event) : '')
     expect(prop2.key).toMatchObject({
       type: NodeTypes.COMPOUND_EXPRESSION,
       children: [
         `(`,
         {
           children: [
-            `"on" + _${helperNameMap[CAPITALIZE]}(`,
             { content: 'event' },
-            `)`
+            ` ? "on" + _${helperNameMap[CAPITALIZE]}(`,
+            { content: 'event' },
+            `) : ""`
           ]
         },
         `) === "onClick" ? "onContextmenu" : (`,
         {
           children: [
-            `"on" + _${helperNameMap[CAPITALIZE]}(`,
             { content: 'event' },
-            `)`
+            ` ? "on" + _${helperNameMap[CAPITALIZE]}(`,
+            { content: 'event' },
+            `) : ""`
           ]
         },
         `)`
@@ -233,24 +235,26 @@ describe('compiler-dom: transform v-on', () => {
     const {
       props: [prop2]
     } = parseWithVOn(`<div @[event].middle="test"/>`)
-    // ("on" + (event)).toLowerCase() === "onclick" ? "onMouseup" : ("on" + (event))
+    // (event ? "on" + _capitalize(event) : "").toLowerCase() === "onclick" ? "onMouseup" : (event ? "on" + _capitalize(event) : "")
     expect(prop2.key).toMatchObject({
       type: NodeTypes.COMPOUND_EXPRESSION,
       children: [
         `(`,
         {
           children: [
-            `"on" + _${helperNameMap[CAPITALIZE]}(`,
             { content: 'event' },
-            `)`
+            ` ? "on" + _${helperNameMap[CAPITALIZE]}(`,
+            { content: 'event' },
+            `) : ""`
           ]
         },
         `) === "onClick" ? "onMouseup" : (`,
         {
           children: [
-            `"on" + _${helperNameMap[CAPITALIZE]}(`,
             { content: 'event' },
-            `)`
+            ` ? "on" + _${helperNameMap[CAPITALIZE]}(`,
+            { content: 'event' },
+            `) : ""`
           ]
         },
         `)`
