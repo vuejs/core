@@ -64,6 +64,7 @@ class ComputedRefImpl<T> {
   cleanup() {
     cleanup(this.effect)
     this._dirty = true
+    this._value = undefined!
   }
 }
 
