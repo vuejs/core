@@ -202,6 +202,14 @@ return function render(_ctx, _cache) {
 }"
 `;
 
+exports[`compiler: codegen with bindingMetadata data 1`] = `
+"import { createVNode as _createVNode, resolveDirective as _resolveDirective } from \\"vue\\"
+
+export function render(_ctx, _cache, $props, $setup, $data) {
+  return null
+}"
+`;
+
 exports[`compiler: codegen with bindingMetadata includes props,setup,data,options 1`] = `
 "import { createVNode as _createVNode, resolveDirective as _resolveDirective } from \\"vue\\"
 
@@ -210,10 +218,34 @@ export function render(_ctx, _cache, $props, $setup, $data, $options) {
 }"
 `;
 
-exports[`compiler: codegen with some of the bindingMetadata 1`] = `
+exports[`compiler: codegen with bindingMetadata options 1`] = `
 "import { createVNode as _createVNode, resolveDirective as _resolveDirective } from \\"vue\\"
 
-export function render(_ctx, _cache, $props, $setup, $data) {
+export function render(_ctx, _cache, $props, $setup, $data, $options) {
+  return null
+}"
+`;
+
+exports[`compiler: codegen with bindingMetadata props 1`] = `
+"import { createVNode as _createVNode, resolveDirective as _resolveDirective } from \\"vue\\"
+
+export function render(_ctx, _cache, $props) {
+  return null
+}"
+`;
+
+exports[`compiler: codegen with bindingMetadata setup 1`] = `
+"import { createVNode as _createVNode, resolveDirective as _resolveDirective } from \\"vue\\"
+
+export function render(_ctx, _cache, $props, $setup) {
+  return null
+}"
+`;
+
+exports[`compiler: codegen with no bindingMetadata 1`] = `
+"import { createVNode as _createVNode, resolveDirective as _resolveDirective } from \\"vue\\"
+
+export function render(_ctx, _cache) {
   return null
 }"
 `;

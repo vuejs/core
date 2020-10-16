@@ -219,7 +219,7 @@ export function generate(
     ]
     const bindingMetadataValues = [...new Set(Object.values(bindingMetadata))]
     let metadataArgs: MetadataType[] = []
-    for (let i = bindingMetadataRank.length - 1; i > 0; i--) {
+    for (let i = bindingMetadataRank.length - 1; i >= 0; i--) {
       if (bindingMetadataValues.includes(bindingMetadataRank[i])) {
         metadataArgs = bindingMetadataRank.slice(0, i + 1)
         break

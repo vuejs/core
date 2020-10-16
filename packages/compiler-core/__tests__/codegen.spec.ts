@@ -142,20 +142,74 @@ describe('compiler: codegen', () => {
     expect(code).toMatchSnapshot()
   })
 
-  test('with some of the bindingMetadata', () => {
+  test('with bindingMetadata options', () => {
     const root = createRoot({
       helpers: [CREATE_VNODE, RESOLVE_DIRECTIVE]
     })
     const { code } = generate(root, {
       mode: 'module',
       bindingMetadata: {
-        props: 'props',
+        options: 'options'
+      }
+    })
+    expect(code).toMatch(
+      `export function render(_ctx, _cache, $props, $setup, $data, $options)`
+    )
+    expect(code).toMatchSnapshot()
+  })
+
+  test('with bindingMetadata data', () => {
+    const root = createRoot({
+      helpers: [CREATE_VNODE, RESOLVE_DIRECTIVE]
+    })
+    const { code } = generate(root, {
+      mode: 'module',
+      bindingMetadata: {
         data: 'data'
       }
     })
     expect(code).toMatch(
       `export function render(_ctx, _cache, $props, $setup, $data)`
     )
+    expect(code).toMatchSnapshot()
+  })
+
+  test('with bindingMetadata setup', () => {
+    const root = createRoot({
+      helpers: [CREATE_VNODE, RESOLVE_DIRECTIVE]
+    })
+    const { code } = generate(root, {
+      mode: 'module',
+      bindingMetadata: {
+        setup: 'setup'
+      }
+    })
+    expect(code).toMatch(`export function render(_ctx, _cache, $props, $setup)`)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('with bindingMetadata props', () => {
+    const root = createRoot({
+      helpers: [CREATE_VNODE, RESOLVE_DIRECTIVE]
+    })
+    const { code } = generate(root, {
+      mode: 'module',
+      bindingMetadata: {
+        props: 'props'
+      }
+    })
+    expect(code).toMatch(`export function render(_ctx, _cache, $props)`)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('with no bindingMetadata', () => {
+    const root = createRoot({
+      helpers: [CREATE_VNODE, RESOLVE_DIRECTIVE]
+    })
+    const { code } = generate(root, {
+      mode: 'module'
+    })
+    expect(code).toMatch(`export function render(_ctx, _cache)`)
     expect(code).toMatchSnapshot()
   })
 
