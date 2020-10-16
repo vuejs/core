@@ -1,4 +1,4 @@
-import { effect, ReactiveEffect, trigger, track } from './effect'
+import { effect, ReactiveEffect, trigger, track, cleanup } from './effect'
 import { TriggerOpTypes, TrackOpTypes } from './operations'
 import { Ref } from './ref'
 import { isFunction, NOOP } from '@vue/shared'
@@ -6,6 +6,7 @@ import { ReactiveFlags, toRaw } from './reactive'
 
 export interface ComputedRef<T = any> extends WritableComputedRef<T> {
   readonly value: T
+  cleanup(): void
 }
 
 export interface WritableComputedRef<T> extends Ref<T> {
@@ -58,6 +59,11 @@ class ComputedRefImpl<T> {
 
   set value(newValue: T) {
     this._setter(newValue)
+  }
+
+  cleanup() {
+    cleanup(this.effect)
+    this._dirty = true
   }
 }
 

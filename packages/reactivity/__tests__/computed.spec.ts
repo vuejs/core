@@ -5,7 +5,9 @@ import {
   stop,
   ref,
   WritableComputedRef,
-  isReadonly
+  isReadonly,
+  ReactiveEffect,
+  ComputedRef
 } from '../src'
 
 describe('reactivity/computed', () => {
@@ -192,5 +194,59 @@ describe('reactivity/computed', () => {
     })
     expect(isReadonly(z)).toBe(false)
     expect(isReadonly(z.value.a)).toBe(false)
+  })
+
+  describe('cleanup', () => {
+    let value: { foo: number }
+    let cValue: ComputedRef<number>
+    let onTrigger: any
+    let effect: ReactiveEffect
+    beforeEach(() => {
+      value = reactive<{ foo: number }>({ foo: 123 })
+      cValue = computed(() => value.foo)
+
+      onTrigger = jest.fn(() => {})
+      effect = cValue.effect as ReactiveEffect
+    })
+
+    it('should be dereferenced after cleanup', () => {
+      // Initially, no references should be present.
+      expect(effect.deps.length).toBe(0)
+
+      expect(cValue.value).toBe(123)
+
+      // Should create the dependency.
+      expect(effect.deps.length).toBe(1)
+
+      const reactiveDeps = effect.deps[0]
+      expect(reactiveDeps).toContain(effect)
+
+      onTrigger.mockReset()
+
+      // After cleanup, the dependencies should be cleared.
+      cValue.cleanup()
+
+      expect(reactiveDeps).not.toContain(effect)
+      expect(effect.deps).toEqual([])
+    })
+
+    it('should recover when used after cleanup', () => {
+      expect(cValue.value).toBe(123)
+
+      const reactiveDeps = effect.deps[0]
+      expect(reactiveDeps).toContain(effect)
+
+      cValue.cleanup()
+
+      // Should still be 'active' as it still fully functional (can recover).
+      expect(effect.active).toBe(true)
+
+      value.foo = 4
+      expect(cValue.value).toBe(4)
+
+      // After invoking, should be linked again.
+      expect(reactiveDeps).toContain(effect)
+      expect(effect.deps).toEqual([reactiveDeps])
+    })
   })
 })

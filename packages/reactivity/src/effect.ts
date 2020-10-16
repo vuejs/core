@@ -110,7 +110,7 @@ function createReactiveEffect<T = any>(
   return effect
 }
 
-function cleanup(effect: ReactiveEffect) {
+export function cleanup(effect: ReactiveEffect) {
   const { deps } = effect
   if (deps.length) {
     for (let i = 0; i < deps.length; i++) {
