@@ -763,7 +763,7 @@ function baseCreateRenderer(
       // props
       if (props) {
         for (const key in props) {
-          if (!isReservedProp(key)) {
+          if (key && !isReservedProp(key)) {
             hostPatchProp(
               el,
               key,
