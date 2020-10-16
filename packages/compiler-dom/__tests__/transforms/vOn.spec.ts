@@ -1,16 +1,16 @@
 import {
   baseParse as parse,
-  transform,
   CompilerOptions,
   ElementNode,
-  ObjectExpression,
-  NodeTypes,
-  VNodeCall,
+  EVENT_NAMING,
   helperNameMap,
-  CAPITALIZE
+  NodeTypes,
+  ObjectExpression,
+  transform,
+  VNodeCall
 } from '@vue/compiler-core'
 import { transformOn } from '../../src/transforms/vOn'
-import { V_ON_WITH_MODIFIERS, V_ON_WITH_KEYS } from '../../src/runtimeHelpers'
+import { V_ON_WITH_KEYS, V_ON_WITH_MODIFIERS } from '../../src/runtimeHelpers'
 import { transformElement } from '../../../compiler-core/src/transforms/transformElement'
 import { transformExpression } from '../../../compiler-core/src/transforms/transformExpression'
 import { genFlagText } from '../../../compiler-core/__tests__/testUtils'
@@ -195,26 +195,24 @@ describe('compiler-dom: transform v-on', () => {
     const {
       props: [prop2]
     } = parseWithVOn(`<div @[event].right="test"/>`)
-    // (event ? "on" + _capitalize(event) : '').toLowerCase() === "onclick" ? "onContextmenu" : (event ? "on" + _capitalize(event) : '')
+    // (_eventNaming(event)).toLowerCase() === "onclick" ? "onContextmenu" : (_eventNaming(event))
     expect(prop2.key).toMatchObject({
       type: NodeTypes.COMPOUND_EXPRESSION,
       children: [
         `(`,
         {
           children: [
+            `_${helperNameMap[EVENT_NAMING]}(`,
             { content: 'event' },
-            ` ? "on" + _${helperNameMap[CAPITALIZE]}(`,
-            { content: 'event' },
-            `) : ""`
+            `)`
           ]
         },
         `) === "onClick" ? "onContextmenu" : (`,
         {
           children: [
+            `_${helperNameMap[EVENT_NAMING]}(`,
             { content: 'event' },
-            ` ? "on" + _${helperNameMap[CAPITALIZE]}(`,
-            { content: 'event' },
-            `) : ""`
+            `)`
           ]
         },
         `)`
@@ -235,26 +233,24 @@ describe('compiler-dom: transform v-on', () => {
     const {
       props: [prop2]
     } = parseWithVOn(`<div @[event].middle="test"/>`)
-    // (event ? "on" + _capitalize(event) : "").toLowerCase() === "onclick" ? "onMouseup" : (event ? "on" + _capitalize(event) : "")
+    // (_eventNaming(event)).toLowerCase() === "onclick" ? "onMouseup" : (_eventNaming(event))
     expect(prop2.key).toMatchObject({
       type: NodeTypes.COMPOUND_EXPRESSION,
       children: [
         `(`,
         {
           children: [
+            `_${helperNameMap[EVENT_NAMING]}(`,
             { content: 'event' },
-            ` ? "on" + _${helperNameMap[CAPITALIZE]}(`,
-            { content: 'event' },
-            `) : ""`
+            `)`
           ]
         },
         `) === "onClick" ? "onMouseup" : (`,
         {
           children: [
+            `_${helperNameMap[EVENT_NAMING]}(`,
             { content: 'event' },
-            ` ? "on" + _${helperNameMap[CAPITALIZE]}(`,
-            { content: 'event' },
-            `) : ""`
+            `)`
           ]
         },
         `)`

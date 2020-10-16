@@ -1,20 +1,20 @@
 import { DirectiveTransform, DirectiveTransformResult } from '../transform'
 import {
-  DirectiveNode,
+  createCompoundExpression,
   createObjectProperty,
   createSimpleExpression,
+  DirectiveNode,
+  ElementTypes,
   ExpressionNode,
   NodeTypes,
-  createCompoundExpression,
-  SimpleExpressionNode,
-  ElementTypes
+  SimpleExpressionNode
 } from '../ast'
-import { capitalize, camelize } from '@vue/shared'
+import { camelize, eventNaming } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
-import { isMemberExpression, hasScopeRef } from '../utils'
-import { CAPITALIZE } from '../runtimeHelpers'
+import { hasScopeRef, isMemberExpression } from '../utils'
+import { EVENT_NAMING } from '../runtimeHelpers'
 
 const fnExpRE = /^\s*([\w$_]+|\([^)]*?\))\s*=>|^\s*function(?:\s+[\w$]+)?\s*\(/
 
@@ -43,21 +43,23 @@ export const transformOn: DirectiveTransform = (
     if (arg.isStatic) {
       const rawName = arg.content
       // for all event listeners, auto convert it to camelCase. See issue #2249
-      const normalizedName = capitalize(camelize(rawName))
-      eventName = createSimpleExpression(`on${normalizedName}`, true, arg.loc)
+      eventName = createSimpleExpression(
+        eventNaming(camelize(rawName)),
+        true,
+        arg.loc
+      )
     } else {
       // #2388
       eventName = createCompoundExpression([
+        `${context.helperString(EVENT_NAMING)}(`,
         arg,
-        ` ? "on" + ${context.helperString(CAPITALIZE)}(`,
-        arg,
-        `) : ""`
+        `)`
       ])
     }
   } else {
     // already a compound expression.
     eventName = arg
-    eventName.children.unshift(`"on" + ${context.helperString(CAPITALIZE)}(`)
+    eventName.children.unshift(`${context.helperString(EVENT_NAMING)}(`)
     eventName.children.push(`)`)
   }
 

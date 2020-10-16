@@ -1,15 +1,15 @@
 import {
   ComponentInternalInstance,
-  LifecycleHooks,
   currentInstance,
-  setCurrentInstance,
-  isInSSRComponentSetup
+  isInSSRComponentSetup,
+  LifecycleHooks,
+  setCurrentInstance
 } from './component'
 import { ComponentPublicInstance } from './componentPublicInstance'
 import { callWithAsyncErrorHandling, ErrorTypeStrings } from './errorHandling'
 import { warn } from './warning'
-import { capitalize } from '@vue/shared'
-import { pauseTracking, resetTracking, DebuggerEvent } from '@vue/reactivity'
+import { eventNaming } from '@vue/shared'
+import { DebuggerEvent, pauseTracking, resetTracking } from '@vue/reactivity'
 
 export { onActivated, onDeactivated } from './components/KeepAlive'
 
@@ -49,9 +49,7 @@ export function injectHook(
     }
     return wrappedHook
   } else if (__DEV__) {
-    const apiName = `on${capitalize(
-      ErrorTypeStrings[type].replace(/ hook$/, '')
-    )}`
+    const apiName = eventNaming(ErrorTypeStrings[type].replace(/ hook$/, ''))
     warn(
       `${apiName} is called when there is no active component instance to be ` +
         `associated with. ` +
