@@ -218,16 +218,15 @@ export function generate(
       'options'
     ]
     const bindingMetadataValues = [...new Set(Object.values(bindingMetadata))]
-    let metadataArgs: MetadataType[] = []
     for (let i = bindingMetadataRank.length - 1; i >= 0; i--) {
       if (bindingMetadataValues.includes(bindingMetadataRank[i])) {
-        metadataArgs = bindingMetadataRank.slice(0, i + 1)
+        optimizeSources = `, ${bindingMetadataRank
+          .slice(0, i + 1)
+          .map(metadataName => `$${metadataName}`)
+          .join(', ')}`
         break
       }
     }
-    optimizeSources = `, ${metadataArgs
-      .map(metadataName => `$${metadataName}`)
-      .join(', ')}`
   }
   // enter render function
   if (!ssr) {
