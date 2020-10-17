@@ -19,6 +19,7 @@ describe('with object props', () => {
     a?: number | undefined
     b: string
     e?: Function
+    h: Boolean
     bb: string
     bbb: string
     cc?: string[] | undefined
@@ -46,6 +47,7 @@ describe('with object props', () => {
         required: true
       },
       e: Function,
+      h: Boolean,
       // default value should infer type and make it non-void
       bb: {
         default: 'hello'
@@ -108,6 +110,7 @@ describe('with object props', () => {
       expectType<ExpectedProps['a']>(props.a)
       expectType<ExpectedProps['b']>(props.b)
       expectType<ExpectedProps['e']>(props.e)
+      expectType<ExpectedProps['h']>(props.h)
       expectType<ExpectedProps['bb']>(props.bb)
       expectType<ExpectedProps['bbb']>(props.bbb)
       expectType<ExpectedProps['cc']>(props.cc)
@@ -142,6 +145,7 @@ describe('with object props', () => {
       expectType<ExpectedProps['a']>(props.a)
       expectType<ExpectedProps['b']>(props.b)
       expectType<ExpectedProps['e']>(props.e)
+      expectType<ExpectedProps['h']>(props.h)
       expectType<ExpectedProps['bb']>(props.bb)
       expectType<ExpectedProps['cc']>(props.cc)
       expectType<ExpectedProps['dd']>(props.dd)
@@ -161,6 +165,7 @@ describe('with object props', () => {
       expectType<ExpectedProps['a']>(this.a)
       expectType<ExpectedProps['b']>(this.b)
       expectType<ExpectedProps['e']>(this.e)
+      expectType<ExpectedProps['h']>(this.h)
       expectType<ExpectedProps['bb']>(this.bb)
       expectType<ExpectedProps['cc']>(this.cc)
       expectType<ExpectedProps['dd']>(this.dd)
