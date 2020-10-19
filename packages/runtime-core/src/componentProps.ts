@@ -378,7 +378,7 @@ export function normalizePropsOptions(
   }
 
   if (!raw && !hasExtends) {
-    return (comp.__props = EMPTY_ARR)
+    return (comp.__props = EMPTY_ARR as any)
   }
 
   if (isArray(raw)) {

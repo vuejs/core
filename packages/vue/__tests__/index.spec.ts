@@ -1,3 +1,4 @@
+import { EMPTY_ARR } from '@vue/shared'
 import { createApp, ref, nextTick, reactive } from '../src'
 
 describe('compiler + runtime integration', () => {
@@ -280,5 +281,15 @@ describe('compiler + runtime integration', () => {
     list.push(2)
     await nextTick()
     expect(container.innerHTML).toBe(`<div>2<div>1</div></div>`)
+  })
+
+  // #2413
+  it('EMPTY_ARR should not change', () => {
+    const App = {
+      template: `<div v-for="v of ['a']">{{ v }}</div>`
+    }
+    const container = document.createElement('div')
+    createApp(App).mount(container)
+    expect(EMPTY_ARR.length).toBe(0)
   })
 })
