@@ -18,6 +18,7 @@ import {
   PatchFlags,
   makeMap,
   isReservedProp,
+  EMPTY_ARR,
   def,
   extend
 } from '@vue/shared'
@@ -362,7 +363,7 @@ export function normalizePropsOptions(
   }
 
   if (!raw && !hasExtends) {
-    return (comp.__props = [])
+    return (comp.__props = EMPTY_ARR as any)
   }
 
   if (isArray(raw)) {
