@@ -92,7 +92,7 @@ function resolveAsset(
         return Component
       }
 
-      if (name === 'component') return 'component'
+      if (name === 'component') return name
 
       const selfName = getComponentName(Component)
       if (
