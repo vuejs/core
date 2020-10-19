@@ -28,7 +28,7 @@ import {
 type OptionalOptions = 'isNativeTag' | 'isBuiltInComponent'
 type MergedParserOptions = Omit<Required<ParserOptions>, OptionalOptions> &
   Pick<ParserOptions, OptionalOptions>
-type AttributeValueType =
+type AttributeValue =
   | {
       content: string
       isQuoted: boolean
@@ -596,7 +596,7 @@ function parseAttribute(
   advanceBy(context, name.length)
 
   // Value
-  let value: AttributeValueType = undefined
+  let value: AttributeValue = undefined
 
   if (/^[\t\r\n\f ]*=/.test(context.source)) {
     advanceSpaces(context)
@@ -700,7 +700,7 @@ function parseAttribute(
   }
 }
 
-function parseAttributeValue(context: ParserContext): AttributeValueType {
+function parseAttributeValue(context: ParserContext): AttributeValue {
   const start = getCursor(context)
   let content: string
 
