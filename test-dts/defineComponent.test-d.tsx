@@ -19,7 +19,7 @@ describe('with object props', () => {
     a?: number | undefined
     b: string
     e?: Function
-    h: Boolean
+    h: boolean
     bb: string
     bbb: string
     cc?: string[] | undefined
