@@ -18,6 +18,7 @@ import { callWithAsyncErrorHandling, ErrorCodes } from '../errorHandling'
 import { ShapeFlags, PatchFlags } from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import { RendererElement } from '../renderer'
+import { filterSingleRoot } from '../componentRenderUtils'
 
 export interface BaseTransitionProps<HostElement = RendererElement> {
   mode?: 'in-out' | 'out-in' | 'default'
@@ -327,13 +328,21 @@ export function resolveTransitionHooks(
       }
       // for toggled element with same key (v-if)
       const leavingVNode = leavingVNodesCache[key]
-      if (
-        leavingVNode &&
-        isSameVNodeType(vnode, leavingVNode) &&
-        leavingVNode.el!._leaveCb
-      ) {
+      if (leavingVNode && isSameVNodeType(vnode, leavingVNode)) {
         // force early removal (not cancelled)
-        leavingVNode.el!._leaveCb()
+        if (leavingVNode.el!._leaveCb) {
+          leavingVNode.el!._leaveCb()
+        } else if (
+          leavingVNode.shapeFlag & ShapeFlags.COMPONENT &&
+          leavingVNode.component &&
+          leavingVNode.component.subTree.type === Fragment
+        ) {
+          const elementRoot = filterSingleRoot(leavingVNode.component.subTree
+            .children as VNodeArrayChildren)
+          if (elementRoot && elementRoot.el!._leaveCb) {
+            elementRoot.el!._leaveCb()
+          }
+        }
       }
       callHook(hook, [el])
     },
@@ -444,6 +453,16 @@ export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks) {
   } else if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
     vnode.ssContent!.transition = hooks.clone(vnode.ssContent!)
     vnode.ssFallback!.transition = hooks.clone(vnode.ssFallback!)
+  } else if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+    const elementRoot = filterSingleRoot(vnode.children as VNodeArrayChildren)
+    if (elementRoot) {
+      elementRoot.transition = hooks
+    } else if (__DEV__) {
+      warn(
+        '<transition> can only be used on a single element or component. Use ' +
+          '<transition-group> for lists.'
+      )
+    }
   } else {
     vnode.transition = hooks
   }

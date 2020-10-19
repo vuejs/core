@@ -313,6 +313,15 @@ describe('BaseTransition', () => {
       })
     })
 
+    test('fragment with single element node', async () => {
+      await testToggleOnOff({
+        trueBranch: () => [h('div')],
+        trueSerialized: `<div></div>`,
+        falseBranch: () => null,
+        falseSerialized: `<!---->`
+      })
+    })
+
     test('w/ component', async () => {
       const Comp = ({ msg }: { msg: string }) => h('div', msg)
       await testToggleOnOff({

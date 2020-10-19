@@ -2064,9 +2064,14 @@ function baseCreateRenderer(
   }
 
   const remove: RemoveFn = vnode => {
-    const { type, el, anchor, transition } = vnode
+    const { type, el, anchor, transition, children } = vnode
     if (type === Fragment) {
-      removeFragment(el!, anchor!)
+      const elementRoot = filterSingleRoot(children as VNodeArrayChildren)
+      if (elementRoot) {
+        remove(elementRoot)
+      } else {
+        removeFragment(el!, anchor!)
+      }
       return
     }
 
@@ -2074,7 +2079,6 @@ function baseCreateRenderer(
       removeStaticNode(vnode)
       return
     }
-
     const performRemove = () => {
       hostRemove(el!)
       if (transition && !transition.persisted && transition.afterLeave) {
