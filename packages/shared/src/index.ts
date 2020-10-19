@@ -94,7 +94,8 @@ export const isIntegerKey = (key: unknown) =>
   '' + parseInt(key, 10) === key
 
 export const isReservedProp = /*#__PURE__*/ makeMap(
-  'key,ref,' +
+  // the leading comma is intentional so empty string "" is also included
+  ',key,ref,' +
     'onVnodeBeforeMount,onVnodeMounted,' +
     'onVnodeBeforeUpdate,onVnodeUpdated,' +
     'onVnodeBeforeUnmount,onVnodeUnmounted'

@@ -104,37 +104,23 @@ export interface RendererOptions<
     parentSuspense?: SuspenseBoundary | null,
     unmountChildren?: UnmountChildrenFn
   ): void
-
   forcePatchProp?(el: HostElement, key: string): boolean
-
   insert(el: HostNode, parent: HostElement, anchor?: HostNode | null): void
-
   remove(el: HostNode): void
-
   createElement(
     type: string,
     isSVG?: boolean,
     isCustomizedBuiltIn?: string
   ): HostElement
-
   createText(text: string): HostNode
-
   createComment(text: string): HostNode
-
   setText(node: HostNode, text: string): void
-
   setElementText(node: HostElement, text: string): void
-
   parentNode(node: HostNode): HostElement | null
-
   nextSibling(node: HostNode): HostNode | null
-
   querySelector?(selector: string): HostElement | null
-
   setScopeId?(el: HostElement, id: string): void
-
   cloneNode?(node: HostNode): HostNode
-
   insertStaticContent?(
     content: string,
     parent: HostElement,
@@ -763,7 +749,7 @@ function baseCreateRenderer(
       // props
       if (props) {
         for (const key in props) {
-          if (key && !isReservedProp(key)) {
+          if (!isReservedProp(key)) {
             hostPatchProp(
               el,
               key,
@@ -1085,7 +1071,7 @@ function baseCreateRenderer(
     if (oldProps !== newProps) {
       for (const key in newProps) {
         // empty string is not valid prop
-        if (!key || isReservedProp(key)) continue
+        if (isReservedProp(key)) continue
         const next = newProps[key]
         const prev = oldProps[key]
         if (
