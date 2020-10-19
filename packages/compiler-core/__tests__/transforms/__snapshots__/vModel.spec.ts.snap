@@ -35,10 +35,14 @@ return function render(_ctx, _cache) {
 
     return (_openBlock(), _createBlock(\\"input\\", {
       modelValue: 
- model 
+ model
+.
+foo 
 ,
       \\"onUpdate:modelValue\\": $event => (
- model 
+ model
+.
+foo 
  = $event)
     }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"]))
   }
