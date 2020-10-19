@@ -1070,6 +1070,7 @@ function baseCreateRenderer(
   ) => {
     if (oldProps !== newProps) {
       for (const key in newProps) {
+        // empty string is not valid prop
         if (isReservedProp(key)) continue
         const next = newProps[key]
         const prev = oldProps[key]

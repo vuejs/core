@@ -1,13 +1,13 @@
 import {
-  isArray,
-  isOn,
-  hasOwn,
+  camelize,
   EMPTY_OBJ,
-  capitalize,
-  hyphenate,
-  isFunction,
+  toHandlerKey,
   extend,
-  camelize
+  hasOwn,
+  hyphenate,
+  isArray,
+  isFunction,
+  isOn
 } from '@vue/shared'
 import {
   ComponentInternalInstance,
@@ -56,10 +56,10 @@ export function emit(
     } = instance
     if (emitsOptions) {
       if (!(event in emitsOptions)) {
-        if (!propsOptions || !(`on` + capitalize(event) in propsOptions)) {
+        if (!propsOptions || !(toHandlerKey(event) in propsOptions)) {
           warn(
             `Component emitted event "${event}" but it is neither declared in ` +
-              `the emits option nor as an "on${capitalize(event)}" prop.`
+              `the emits option nor as an "${toHandlerKey(event)}" prop.`
           )
         }
       } else {
@@ -82,7 +82,7 @@ export function emit(
 
   if (__DEV__) {
     const lowerCaseEvent = event.toLowerCase()
-    if (lowerCaseEvent !== event && props[`on` + capitalize(lowerCaseEvent)]) {
+    if (lowerCaseEvent !== event && props[toHandlerKey(lowerCaseEvent)]) {
       warn(
         `Event "${lowerCaseEvent}" is emitted in component ` +
           `${formatComponentName(
@@ -97,12 +97,12 @@ export function emit(
   }
 
   // convert handler name to camelCase. See issue #2249
-  let handlerName = `on${capitalize(camelize(event))}`
+  let handlerName = toHandlerKey(camelize(event))
   let handler = props[handlerName]
   // for v-model update:xxx events, also trigger kebab-case equivalent
   // for props passed via kebab-case
   if (!handler && event.startsWith('update:')) {
-    handlerName = `on${capitalize(hyphenate(event))}`
+    handlerName = toHandlerKey(hyphenate(event))
     handler = props[handlerName]
   }
   if (!handler) {
