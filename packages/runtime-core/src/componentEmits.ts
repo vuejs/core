@@ -1,7 +1,7 @@
 import {
   camelize,
   EMPTY_OBJ,
-  eventNaming,
+  toHandlerKey,
   extend,
   hasOwn,
   hyphenate,
@@ -56,10 +56,10 @@ export function emit(
     } = instance
     if (emitsOptions) {
       if (!(event in emitsOptions)) {
-        if (!propsOptions || !(eventNaming(event) in propsOptions)) {
+        if (!propsOptions || !(toHandlerKey(event) in propsOptions)) {
           warn(
             `Component emitted event "${event}" but it is neither declared in ` +
-              `the emits option nor as an "${eventNaming(event)}" prop.`
+              `the emits option nor as an "${toHandlerKey(event)}" prop.`
           )
         }
       } else {
@@ -82,7 +82,7 @@ export function emit(
 
   if (__DEV__) {
     const lowerCaseEvent = event.toLowerCase()
-    if (lowerCaseEvent !== event && props[eventNaming(lowerCaseEvent)]) {
+    if (lowerCaseEvent !== event && props[toHandlerKey(lowerCaseEvent)]) {
       warn(
         `Event "${lowerCaseEvent}" is emitted in component ` +
           `${formatComponentName(
@@ -97,12 +97,12 @@ export function emit(
   }
 
   // convert handler name to camelCase. See issue #2249
-  let handlerName = eventNaming(camelize(event))
+  let handlerName = toHandlerKey(camelize(event))
   let handler = props[handlerName]
   // for v-model update:xxx events, also trigger kebab-case equivalent
   // for props passed via kebab-case
   if (!handler && event.startsWith('update:')) {
-    handlerName = eventNaming(hyphenate(event))
+    handlerName = toHandlerKey(hyphenate(event))
     handler = props[handlerName]
   }
   if (!handler) {

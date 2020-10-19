@@ -122,28 +122,22 @@ const hyphenateRE = /\B([A-Z])/g
 /**
  * @private
  */
-export const hyphenate = cacheStringFunction(
-  (str: string): string => {
-    return str.replace(hyphenateRE, '-$1').toLowerCase()
-  }
+export const hyphenate = cacheStringFunction((str: string) =>
+  str.replace(hyphenateRE, '-$1').toLowerCase()
 )
 
 /**
  * @private
  */
 export const capitalize = cacheStringFunction(
-  (str: string): string => {
-    return str.charAt(0).toUpperCase() + str.slice(1)
-  }
+  (str: string) => str.charAt(0).toUpperCase() + str.slice(1)
 )
 
 /**
  * @private
  */
-export const eventNaming = cacheStringFunction(
-  (str: string): string => {
-    return (str || '') && 'on' + str.charAt(0).toUpperCase() + str.slice(1)
-  }
+export const toHandlerKey = cacheStringFunction(
+  (str: string) => (str ? `on${capitalize(str)}` : ``)
 )
 
 // compare whether a value has changed, accounting for NaN.

@@ -240,7 +240,12 @@ export {
   createCommentVNode,
   createStaticVNode
 } from './vnode'
-export { toDisplayString, camelize, capitalize, eventNaming } from '@vue/shared'
+export {
+  toDisplayString,
+  camelize,
+  capitalize,
+  toHandlerKey
+} from '@vue/shared'
 
 // For test-utils
 export { transformVNodeArgs } from './vnode'

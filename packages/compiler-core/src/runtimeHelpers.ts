@@ -23,7 +23,7 @@ export const MERGE_PROPS = Symbol(__DEV__ ? `mergeProps` : ``)
 export const TO_HANDLERS = Symbol(__DEV__ ? `toHandlers` : ``)
 export const CAMELIZE = Symbol(__DEV__ ? `camelize` : ``)
 export const CAPITALIZE = Symbol(__DEV__ ? `capitalize` : ``)
-export const EVENT_NAMING = Symbol(__DEV__ ? `eventNaming` : ``)
+export const TO_HANDLER_KEY = Symbol(__DEV__ ? `toHandlerKey` : ``)
 export const SET_BLOCK_TRACKING = Symbol(__DEV__ ? `setBlockTracking` : ``)
 export const PUSH_SCOPE_ID = Symbol(__DEV__ ? `pushScopeId` : ``)
 export const POP_SCOPE_ID = Symbol(__DEV__ ? `popScopeId` : ``)
@@ -57,7 +57,7 @@ export const helperNameMap: any = {
   [TO_HANDLERS]: `toHandlers`,
   [CAMELIZE]: `camelize`,
   [CAPITALIZE]: `capitalize`,
-  [EVENT_NAMING]: `eventNaming`,
+  [TO_HANDLER_KEY]: `toHandlerKey`,
   [SET_BLOCK_TRACKING]: `setBlockTracking`,
   [PUSH_SCOPE_ID]: `pushScopeId`,
   [POP_SCOPE_ID]: `popScopeId`,

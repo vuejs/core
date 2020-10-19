@@ -9,12 +9,12 @@ import {
   NodeTypes,
   SimpleExpressionNode
 } from '../ast'
-import { camelize, eventNaming } from '@vue/shared'
+import { camelize, toHandlerKey } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
 import { hasScopeRef, isMemberExpression } from '../utils'
-import { EVENT_NAMING } from '../runtimeHelpers'
+import { TO_HANDLER_KEY } from '../runtimeHelpers'
 
 const fnExpRE = /^\s*([\w$_]+|\([^)]*?\))\s*=>|^\s*function(?:\s+[\w$]+)?\s*\(/
 
@@ -44,14 +44,14 @@ export const transformOn: DirectiveTransform = (
       const rawName = arg.content
       // for all event listeners, auto convert it to camelCase. See issue #2249
       eventName = createSimpleExpression(
-        eventNaming(camelize(rawName)),
+        toHandlerKey(camelize(rawName)),
         true,
         arg.loc
       )
     } else {
       // #2388
       eventName = createCompoundExpression([
-        `${context.helperString(EVENT_NAMING)}(`,
+        `${context.helperString(TO_HANDLER_KEY)}(`,
         arg,
         `)`
       ])
@@ -59,7 +59,7 @@ export const transformOn: DirectiveTransform = (
   } else {
     // already a compound expression.
     eventName = arg
-    eventName.children.unshift(`${context.helperString(EVENT_NAMING)}(`)
+    eventName.children.unshift(`${context.helperString(TO_HANDLER_KEY)}(`)
     eventName.children.push(`)`)
   }
 

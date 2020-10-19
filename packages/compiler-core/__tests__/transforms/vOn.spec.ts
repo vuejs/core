@@ -3,7 +3,7 @@ import {
   CompilerOptions,
   ElementNode,
   ErrorCodes,
-  EVENT_NAMING,
+  TO_HANDLER_KEY,
   helperNameMap,
   NodeTypes,
   ObjectExpression,
@@ -76,7 +76,7 @@ describe('compiler: transform v-on', () => {
           key: {
             type: NodeTypes.COMPOUND_EXPRESSION,
             children: [
-              `_${helperNameMap[EVENT_NAMING]}(`,
+              `_${helperNameMap[TO_HANDLER_KEY]}(`,
               { content: `event` },
               `)`
             ]
@@ -101,7 +101,7 @@ describe('compiler: transform v-on', () => {
           key: {
             type: NodeTypes.COMPOUND_EXPRESSION,
             children: [
-              `_${helperNameMap[EVENT_NAMING]}(`,
+              `_${helperNameMap[TO_HANDLER_KEY]}(`,
               { content: `_ctx.event` },
               `)`
             ]
@@ -126,7 +126,7 @@ describe('compiler: transform v-on', () => {
           key: {
             type: NodeTypes.COMPOUND_EXPRESSION,
             children: [
-              `_${helperNameMap[EVENT_NAMING]}(`,
+              `_${helperNameMap[TO_HANDLER_KEY]}(`,
               { content: `_ctx.event` },
               `(`,
               { content: `_ctx.foo` },

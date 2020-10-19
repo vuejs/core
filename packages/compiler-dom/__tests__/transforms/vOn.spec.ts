@@ -2,7 +2,7 @@ import {
   baseParse as parse,
   CompilerOptions,
   ElementNode,
-  EVENT_NAMING,
+  TO_HANDLER_KEY,
   helperNameMap,
   NodeTypes,
   ObjectExpression,
@@ -195,14 +195,14 @@ describe('compiler-dom: transform v-on', () => {
     const {
       props: [prop2]
     } = parseWithVOn(`<div @[event].right="test"/>`)
-    // (_eventNaming(event)).toLowerCase() === "onclick" ? "onContextmenu" : (_eventNaming(event))
+    // (_toHandlerKey(event)).toLowerCase() === "onclick" ? "onContextmenu" : (_toHandlerKey(event))
     expect(prop2.key).toMatchObject({
       type: NodeTypes.COMPOUND_EXPRESSION,
       children: [
         `(`,
         {
           children: [
-            `_${helperNameMap[EVENT_NAMING]}(`,
+            `_${helperNameMap[TO_HANDLER_KEY]}(`,
             { content: 'event' },
             `)`
           ]
@@ -210,7 +210,7 @@ describe('compiler-dom: transform v-on', () => {
         `) === "onClick" ? "onContextmenu" : (`,
         {
           children: [
-            `_${helperNameMap[EVENT_NAMING]}(`,
+            `_${helperNameMap[TO_HANDLER_KEY]}(`,
             { content: 'event' },
             `)`
           ]
@@ -240,7 +240,7 @@ describe('compiler-dom: transform v-on', () => {
         `(`,
         {
           children: [
-            `_${helperNameMap[EVENT_NAMING]}(`,
+            `_${helperNameMap[TO_HANDLER_KEY]}(`,
             { content: 'event' },
             `)`
           ]
@@ -248,7 +248,7 @@ describe('compiler-dom: transform v-on', () => {
         `) === "onClick" ? "onMouseup" : (`,
         {
           children: [
-            `_${helperNameMap[EVENT_NAMING]}(`,
+            `_${helperNameMap[TO_HANDLER_KEY]}(`,
             { content: 'event' },
             `)`
           ]
