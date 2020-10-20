@@ -69,7 +69,6 @@ export const SuspenseImpl = {
         anchor,
         parentComponent,
         isSVG,
-        optimized,
         rendererInternals
       )
     }
@@ -121,8 +120,7 @@ function mountSuspense(
     null,
     parentComponent,
     suspense,
-    isSVG,
-    optimized
+    isSVG
   )
   // now check if we have encountered any async deps
   if (suspense.deps > 0) {
@@ -135,8 +133,7 @@ function mountSuspense(
       anchor,
       parentComponent,
       null, // fallback tree will not have suspense context
-      isSVG,
-      optimized
+      isSVG
     )
     setActiveBranch(suspense, vnode.ssFallback!)
   } else {
@@ -152,7 +149,6 @@ function patchSuspense(
   anchor: RendererNode | null,
   parentComponent: ComponentInternalInstance | null,
   isSVG: boolean,
-  optimized: boolean,
   { p: patch, um: unmount, o: { createElement } }: RendererInternals
 ) {
   const suspense = (n2.suspense = n1.suspense)!
@@ -173,8 +169,7 @@ function patchSuspense(
         null,
         parentComponent,
         suspense,
-        isSVG,
-        optimized
+        isSVG
       )
       if (suspense.deps <= 0) {
         suspense.resolve()
@@ -186,8 +181,7 @@ function patchSuspense(
           anchor,
           parentComponent,
           null, // fallback tree will not have suspense context
-          isSVG,
-          optimized
+          isSVG
         )
         setActiveBranch(suspense, newFallback)
       }
@@ -220,8 +214,7 @@ function patchSuspense(
           null,
           parentComponent,
           suspense,
-          isSVG,
-          optimized
+          isSVG
         )
         if (suspense.deps <= 0) {
           suspense.resolve()
@@ -233,8 +226,7 @@ function patchSuspense(
             anchor,
             parentComponent,
             null, // fallback tree will not have suspense context
-            isSVG,
-            optimized
+            isSVG
           )
           setActiveBranch(suspense, newFallback)
         }
@@ -247,8 +239,7 @@ function patchSuspense(
           anchor,
           parentComponent,
           suspense,
-          isSVG,
-          optimized
+          isSVG
         )
         // force resolve
         suspense.resolve(true)
@@ -261,8 +252,7 @@ function patchSuspense(
           null,
           parentComponent,
           suspense,
-          isSVG,
-          optimized
+          isSVG
         )
         if (suspense.deps <= 0) {
           suspense.resolve()
@@ -279,8 +269,7 @@ function patchSuspense(
         anchor,
         parentComponent,
         suspense,
-        isSVG,
-        optimized
+        isSVG
       )
       setActiveBranch(suspense, newBranch)
     } else {
@@ -300,8 +289,7 @@ function patchSuspense(
         null,
         parentComponent,
         suspense,
-        isSVG,
-        optimized
+        isSVG
       )
       if (suspense.deps <= 0) {
         // incoming branch has no async deps, resolve now.
@@ -327,7 +315,6 @@ export interface SuspenseBoundary {
   parent: SuspenseBoundary | null
   parentComponent: ComponentInternalInstance | null
   isSVG: boolean
-  optimized: boolean
   container: RendererElement
   hiddenContainer: RendererElement
   anchor: RendererNode | null
@@ -392,7 +379,6 @@ function createSuspenseBoundary(
     parent,
     parentComponent,
     isSVG,
-    optimized,
     container,
     hiddenContainer,
     anchor,
@@ -499,8 +485,7 @@ function createSuspenseBoundary(
         activeBranch,
         parentComponent,
         container,
-        isSVG,
-        optimized
+        isSVG
       } = suspense
 
       // invoke @fallback event
@@ -522,8 +507,7 @@ function createSuspenseBoundary(
           anchor,
           parentComponent,
           null, // fallback tree will not have suspense context
-          isSVG,
-          optimized
+          isSVG
         )
         setActiveBranch(suspense, fallbackVNode)
       }

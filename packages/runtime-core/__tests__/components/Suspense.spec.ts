@@ -14,6 +14,7 @@ import {
   onErrorCaptured,
   shallowRef
 } from '@vue/runtime-test'
+import { createApp } from 'vue'
 
 describe('Suspense', () => {
   const deps: Promise<any>[] = []
@@ -1067,5 +1068,29 @@ describe('Suspense', () => {
     await nextTick()
     expect(serializeInner(root)).toBe(`<div>two</div>`)
     expect(calls).toEqual([`one mounted`, `one unmounted`, `two mounted`])
+  })
+
+  // #2214
+  // Since suspense renders its own root like a component, it should not patch
+  // its content in optimized mode.
+  test('should not miss nested element updates when used in templates', async () => {
+    const n = ref(1)
+    const Comp = {
+      setup() {
+        return { n }
+      },
+      template: `
+      <Suspense>
+        <div><span>{{ n }}</span></div>
+      </Suspense>
+      `
+    }
+    const root = document.createElement('div')
+    createApp(Comp).mount(root)
+    expect(root.innerHTML).toBe(`<div><span>1</span></div>`)
+
+    n.value++
+    await nextTick()
+    expect(root.innerHTML).toBe(`<div><span>2</span></div>`)
   })
 })
