@@ -8,7 +8,8 @@ import {
   Suspense,
   Component,
   expectError,
-  expectAssignable
+  expectAssignable,
+  resolveComponent
 } from './index'
 
 describe('h inference w/ element', () => {
@@ -223,4 +224,12 @@ describe('Boolean prop implicit false', () => {
   })
   // @ts-expect-error
   expectError(h(RequiredComponent, {}))
+})
+
+// #2357
+describe('resolveComponent should work', () => {
+  h(resolveComponent('test'))
+  h(resolveComponent('test'), {
+    message: '1'
+  })
 })

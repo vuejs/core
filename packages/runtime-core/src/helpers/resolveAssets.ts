@@ -16,9 +16,7 @@ const DIRECTIVES = 'directives'
 /**
  * @private
  */
-export function resolveComponent(
-  name: string
-): ConcreteComponent | string | undefined {
+export function resolveComponent(name: string): ConcreteComponent | string {
   return resolveAsset(COMPONENTS, name) || name
 }
 

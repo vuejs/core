@@ -10,7 +10,12 @@ import { Teleport, TeleportProps } from './components/Teleport'
 import { Suspense, SuspenseProps } from './components/Suspense'
 import { isObject, isArray } from '@vue/shared'
 import { RawSlots } from './componentSlots'
-import { FunctionalComponent, Component, ComponentOptions } from './component'
+import {
+  FunctionalComponent,
+  Component,
+  ComponentOptions,
+  ConcreteComponent
+} from './component'
 import { EmitsOptions } from './componentEmits'
 import { DefineComponent } from './apiDefineComponent'
 
@@ -111,6 +116,17 @@ export function h<P, E extends EmitsOptions = {}>(
 
 // catch-all for generic component types
 export function h(type: Component, children?: RawChildren): VNode
+
+// concrete component
+export function h<P>(
+  type: ConcreteComponent | string,
+  children?: RawChildren
+): VNode
+export function h<P>(
+  type: ConcreteComponent<P> | string,
+  props?: (RawProps & P) | ({} extends P ? null : never),
+  children?: RawChildren
+): VNode
 
 // component without props
 export function h(
