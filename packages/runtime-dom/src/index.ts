@@ -58,7 +58,7 @@ export const createApp = ((...args) => {
   }
 
   const { mount } = app
-  app.mount = (containerOrSelector: Element | string): any => {
+  app.mount = (containerOrSelector: Element | ShadowRoot | string): any => {
     const container = normalizeContainer(containerOrSelector)
     if (!container) return
     const component = app._component
@@ -68,8 +68,10 @@ export const createApp = ((...args) => {
     // clear content before mounting
     container.innerHTML = ''
     const proxy = mount(container)
-    container.removeAttribute('v-cloak')
-    container.setAttribute('data-v-app', '')
+    if (!container.__isShadowRoot) {
+      container.removeAttribute('v-cloak')
+      container.setAttribute('data-v-app', '')
+    }
     return proxy
   }
 
@@ -84,7 +86,7 @@ export const createSSRApp = ((...args) => {
   }
 
   const { mount } = app
-  app.mount = (containerOrSelector: Element | string): any => {
+  app.mount = (containerOrSelector: Element | ShadowRoot | string): any => {
     const container = normalizeContainer(containerOrSelector)
     if (container) {
       return mount(container, true)
@@ -103,13 +105,24 @@ function injectNativeTagCheck(app: App) {
   })
 }
 
-function normalizeContainer(container: Element | string): Element | null {
+function normalizeContainer(
+  container: Element | ShadowRoot | string
+): Element & { __isShadowRoot?: boolean } | null {
   if (isString(container)) {
     const res = document.querySelector(container)
     if (__DEV__ && !res) {
       warn(`Failed to mount app: mount target selector returned null.`)
     }
     return res
+  }
+  if (container instanceof ShadowRoot) {
+    if (__DEV__ && container.mode === 'closed') {
+      warn(
+        `mounting on a ShadowRoot with \`{mode: "closed"}\` may lead to unpredictable bugs`
+      )
+    }
+    ;(container as any).__isShadowRoot = true
+    return container as any
   }
   return container
 }
