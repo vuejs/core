@@ -56,7 +56,7 @@ const nonIdentifierRE = /^\d|[^\$\w]/
 export const isSimpleIdentifier = (name: string): boolean =>
   !nonIdentifierRE.test(name)
 
-const memberExpRE = /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\[[^\]]+\])*$/
+const memberExpRE = /^[A-Za-z_$][\w$]*(?:\s*\.\s*[A-Za-z_$][\w$]*|\[[^\]]+\])*$/
 export const isMemberExpression = (path: string): boolean => {
   if (!path) return false
   return memberExpRE.test(path.trim())
