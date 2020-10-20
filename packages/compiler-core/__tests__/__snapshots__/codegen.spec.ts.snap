@@ -201,3 +201,15 @@ return function render(_ctx, _cache) {
   }
 }"
 `;
+
+exports[`compiler: codegen with bindingMetadata 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache, $props, $setup, $data, $options) {
+  with (_ctx) {
+    const { createVNode: _createVNode, resolveDirective: _resolveDirective } = _Vue
+
+    return null
+  }
+}"
+`;

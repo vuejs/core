@@ -123,6 +123,24 @@ describe('compiler: codegen', () => {
     expect(code).toMatchSnapshot()
   })
 
+  test('with bindingMetadata', () => {
+    const root = createRoot({
+      helpers: [CREATE_VNODE, RESOLVE_DIRECTIVE]
+    })
+    const { code } = generate(root, {
+      bindingMetadata: {
+        props: 'props',
+        setup: 'setup',
+        data: 'data',
+        options: 'options'
+      }
+    })
+    expect(code).toMatch(
+      `function render(_ctx, _cache, $props, $setup, $data, $options)`
+    )
+    expect(code).toMatchSnapshot()
+  })
+
   test('assets + temps', () => {
     const root = createRoot({
       components: [`Foo`, `bar-baz`, `barbaz`],
