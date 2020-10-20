@@ -196,6 +196,30 @@ describe('component: emit', () => {
     expect(fn).toHaveBeenCalledTimes(1)
   })
 
+  test('.once with normal listener of the same name', () => {
+    const Foo = defineComponent({
+      render() {},
+      emits: {
+        foo: null
+      },
+      created() {
+        this.$emit('foo')
+        this.$emit('foo')
+      }
+    })
+    const onFoo = jest.fn()
+    const onFooOnce = jest.fn()
+    render(
+      h(Foo, {
+        onFoo,
+        onFooOnce
+      }),
+      nodeOps.createElement('div')
+    )
+    expect(onFoo).toHaveBeenCalledTimes(2)
+    expect(onFooOnce).toHaveBeenCalledTimes(1)
+  })
+
   test('isEmitListener', () => {
     const options = { click: null }
     expect(isEmitListener(options, 'onClick')).toBe(true)

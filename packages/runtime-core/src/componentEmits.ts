@@ -105,17 +105,25 @@ export function emit(
     handlerName = toHandlerKey(hyphenate(event))
     handler = props[handlerName]
   }
-  if (!handler) {
-    handler = props[handlerName + `Once`]
+
+  if (handler) {
+    callWithAsyncErrorHandling(
+      handler,
+      instance,
+      ErrorCodes.COMPONENT_EVENT_HANDLER,
+      args
+    )
+  }
+
+  const onceHandler = props[handlerName + `Once`]
+  if (onceHandler) {
     if (!instance.emitted) {
       ;(instance.emitted = {} as Record<string, boolean>)[handlerName] = true
     } else if (instance.emitted[handlerName]) {
       return
     }
-  }
-  if (handler) {
     callWithAsyncErrorHandling(
-      handler,
+      onceHandler,
       instance,
       ErrorCodes.COMPONENT_EVENT_HANDLER,
       args
