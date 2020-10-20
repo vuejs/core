@@ -68,7 +68,7 @@ export const createApp = ((...args) => {
     // clear content before mounting
     container.innerHTML = ''
     const proxy = mount(container)
-    if (!container.__isShadowRoot) {
+    if (container instanceof Element) {
       container.removeAttribute('v-cloak')
       container.setAttribute('data-v-app', '')
     }
@@ -107,7 +107,7 @@ function injectNativeTagCheck(app: App) {
 
 function normalizeContainer(
   container: Element | ShadowRoot | string
-): Element & { __isShadowRoot?: boolean } | null {
+): Element | null {
   if (isString(container)) {
     const res = document.querySelector(container)
     if (__DEV__ && !res) {
@@ -115,16 +115,16 @@ function normalizeContainer(
     }
     return res
   }
-  if (container instanceof ShadowRoot) {
-    if (__DEV__ && container.mode === 'closed') {
-      warn(
-        `mounting on a ShadowRoot with \`{mode: "closed"}\` may lead to unpredictable bugs`
-      )
-    }
-    ;(container as any).__isShadowRoot = true
-    return container as any
+  if (
+    __DEV__ &&
+    container instanceof ShadowRoot &&
+    container.mode === 'closed'
+  ) {
+    warn(
+      `mounting on a ShadowRoot with \`{mode: "closed"}\` may lead to unpredictable bugs`
+    )
   }
-  return container
+  return container as any
 }
 
 // SFC CSS utilities
