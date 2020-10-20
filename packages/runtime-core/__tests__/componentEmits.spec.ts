@@ -220,6 +220,68 @@ describe('component: emit', () => {
     expect(onFooOnce).toHaveBeenCalledTimes(1)
   })
 
+  test('.number modifier should work with v-model on component', () => {
+    const Foo = defineComponent({
+      render() {},
+      created() {
+        this.$emit('update:modelValue', '1')
+        this.$emit('update:foo', '2')
+      }
+    })
+
+    const fn1 = jest.fn()
+    const fn2 = jest.fn()
+
+    const Comp = () =>
+      h(Foo, {
+        modelValue: null,
+        modelModifiers: { number: true },
+        'onUpdate:modelValue': fn1,
+
+        foo: null,
+        fooModifiers: { number: true },
+        'onUpdate:foo': fn2
+      })
+
+    render(h(Comp), nodeOps.createElement('div'))
+
+    expect(fn1).toHaveBeenCalledTimes(1)
+    expect(fn1).toHaveBeenCalledWith(1)
+    expect(fn2).toHaveBeenCalledTimes(1)
+    expect(fn2).toHaveBeenCalledWith(2)
+  })
+
+  test('.trim modifier should work with v-model on component', () => {
+    const Foo = defineComponent({
+      render() {},
+      created() {
+        this.$emit('update:modelValue', ' one ')
+        this.$emit('update:foo', '  two  ')
+      }
+    })
+
+    const fn1 = jest.fn()
+    const fn2 = jest.fn()
+
+    const Comp = () =>
+      h(Foo, {
+        modelValue: null,
+        modelModifiers: { trim: true },
+        'onUpdate:modelValue': fn1,
+
+        foo: null,
+        fooModifiers: { trim: true },
+        'onUpdate:foo': fn2
+      })
+
+    render(h(Comp), nodeOps.createElement('div'))
+
+    expect(fn1).toHaveBeenCalledTimes(1)
+    expect(fn1).toHaveBeenCalledWith('one')
+    expect(fn2).toHaveBeenCalledTimes(1)
+    expect(fn2).toHaveBeenCalledWith('two')
+  })
+
   test('isEmitListener', () => {
     const options = { click: null }
     expect(isEmitListener(options, 'onClick')).toBe(true)

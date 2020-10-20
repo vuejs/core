@@ -7,7 +7,8 @@ import {
   hyphenate,
   isArray,
   isFunction,
-  isOn
+  isOn,
+  toNumber
 } from '@vue/shared'
 import {
   ComponentInternalInstance,
@@ -45,7 +46,7 @@ export type EmitFn<
 export function emit(
   instance: ComponentInternalInstance,
   event: string,
-  ...args: any[]
+  ...rawArgs: any[]
 ) {
   const props = instance.vnode.props || EMPTY_OBJ
 
@@ -65,7 +66,7 @@ export function emit(
       } else {
         const validator = emitsOptions[event]
         if (isFunction(validator)) {
-          const isValid = validator(...args)
+          const isValid = validator(...rawArgs)
           if (!isValid) {
             warn(
               `Invalid event arguments: event validation failed for event "${event}".`
@@ -73,6 +74,23 @@ export function emit(
           }
         }
       }
+    }
+  }
+
+  let args = rawArgs
+  const isModelListener = event.startsWith('update:')
+
+  // for v-model update:xxx events, apply modifiers on args
+  const modelArg = isModelListener && event.slice(7)
+  if (modelArg && modelArg in props) {
+    const modifiersKey = `${
+      modelArg === 'modelValue' ? 'model' : modelArg
+    }Modifiers`
+    const { number, trim } = props[modifiersKey] || EMPTY_OBJ
+    if (trim) {
+      args = rawArgs.map(a => a.trim())
+    } else if (number) {
+      args = rawArgs.map(toNumber)
     }
   }
 
@@ -101,7 +119,7 @@ export function emit(
   let handler = props[handlerName]
   // for v-model update:xxx events, also trigger kebab-case equivalent
   // for props passed via kebab-case
-  if (!handler && event.startsWith('update:')) {
+  if (!handler && isModelListener) {
     handlerName = toHandlerKey(hyphenate(event))
     handler = props[handlerName]
   }
