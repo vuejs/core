@@ -78,9 +78,10 @@ export function emit(
   }
 
   let args = rawArgs
+  const isModelListener = event.startsWith('update:')
 
   // for v-model update:xxx events, apply modifiers on args
-  const modelArg = event.startsWith('update:') && event.slice(7)
+  const modelArg = isModelListener && event.slice(7)
   if (modelArg && modelArg in props) {
     const modifiersKey = `${
       modelArg === 'modelValue' ? 'model' : modelArg
@@ -118,7 +119,7 @@ export function emit(
   let handler = props[handlerName]
   // for v-model update:xxx events, also trigger kebab-case equivalent
   // for props passed via kebab-case
-  if (!handler && event.startsWith('update:')) {
+  if (!handler && isModelListener) {
     handlerName = toHandlerKey(hyphenate(event))
     handler = props[handlerName]
   }
