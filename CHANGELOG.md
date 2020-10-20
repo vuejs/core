@@ -1,3 +1,27 @@
+## [3.0.2](https://github.com/vuejs/vue-next/compare/v3.0.1...v3.0.2) (2020-10-20)
+
+
+### Bug Fixes
+
+* **compiler:** stringify values on v-text ([#2432](https://github.com/vuejs/vue-next/issues/2432)) ([314ab2c](https://github.com/vuejs/vue-next/commit/314ab2c7c5dec56d9b117ac3bb988f19d92cf126)), closes [#2430](https://github.com/vuejs/vue-next/issues/2430)
+* **compiler-core:** fix multiline member expression check ([#2436](https://github.com/vuejs/vue-next/issues/2436)) ([6d2a1cb](https://github.com/vuejs/vue-next/commit/6d2a1cb64d090c482ed2cde7311f81b33e0f8d90)), closes [#2426](https://github.com/vuejs/vue-next/issues/2426)
+* **reactivity:** track length on for in iteration on Array ([0e5a3c4](https://github.com/vuejs/vue-next/commit/0e5a3c47a7398dfd0107fccf9b615772dd01aa74)), closes [#2427](https://github.com/vuejs/vue-next/issues/2427)
+* **runtime-core:** avoid mutating EMPTY_ARR when setting dev root ([#2419](https://github.com/vuejs/vue-next/issues/2419)) ([edd49dc](https://github.com/vuejs/vue-next/commit/edd49dcab40eb3faa44248772b176d5eebfd30fe)), closes [#2413](https://github.com/vuejs/vue-next/issues/2413)
+* **runtime-core:** avoid object prototype keys in property access cache ([#2416](https://github.com/vuejs/vue-next/issues/2416)) ([ba881f9](https://github.com/vuejs/vue-next/commit/ba881f9190510c613f04950b69d78f6af1a90e06))
+* **runtime-core:** fix component .once listener logic ([4bbb2b2](https://github.com/vuejs/vue-next/commit/4bbb2b2ee6866ed80cb542c2ff24207b4bd09bda))
+* **runtime-core:** non-stable Fragment should always unmount its children ([#2445](https://github.com/vuejs/vue-next/issues/2445)) ([fff62e2](https://github.com/vuejs/vue-next/commit/fff62e2ee8accf31bb5ac5abdb4c0636216cfd0e)), closes [#2444](https://github.com/vuejs/vue-next/issues/2444)
+* **runtime-core:** prevent self-injection ([#2424](https://github.com/vuejs/vue-next/issues/2424)) ([111d04f](https://github.com/vuejs/vue-next/commit/111d04f119a2b2d0b1a1790a063b152c17787943)), closes [#2400](https://github.com/vuejs/vue-next/issues/2400)
+* **suspense:** fix suspense nested child updates in template mode ([0227b4a](https://github.com/vuejs/vue-next/commit/0227b4a697afd598f6fa279a1a7ce84242e68f43)), closes [#2214](https://github.com/vuejs/vue-next/issues/2214)
+* **types:** h support for resolveComponent ([#2402](https://github.com/vuejs/vue-next/issues/2402)) ([1f2a652](https://github.com/vuejs/vue-next/commit/1f2a652a9d2e3bec472fb1786a4c16d6ccfa1fb1)), closes [#2357](https://github.com/vuejs/vue-next/issues/2357)
+* **v-model:** built in modifiers support on component  ([#2348](https://github.com/vuejs/vue-next/issues/2348)) ([128ec46](https://github.com/vuejs/vue-next/commit/128ec460ec00ca8672352d019b264c80dfd0c3b0)), closes [#2326](https://github.com/vuejs/vue-next/issues/2326)
+
+
+### Features
+
+* **compile-core:** handle falsy dynamic args for v-on and v-bind ([#2393](https://github.com/vuejs/vue-next/issues/2393)) ([052a621](https://github.com/vuejs/vue-next/commit/052a621762c5f7c420464747ebbbed27c7350593)), closes [#2388](https://github.com/vuejs/vue-next/issues/2388)
+
+
+
 ## [3.0.1](https://github.com/vuejs/vue-next/compare/v3.0.0...v3.0.1) (2020-10-15)
 
 
