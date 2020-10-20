@@ -243,7 +243,7 @@ export function createBlock(
     true /* isBlock: prevent a block from tracking itself */
   )
   // save current block children on the block vnode
-  vnode.dynamicChildren = currentBlock || EMPTY_ARR
+  vnode.dynamicChildren = currentBlock || (EMPTY_ARR as any)
   // close block
   closeBlock()
   // a block is always going to be patched, so track it as a child of its
@@ -644,7 +644,7 @@ export function mergeProps(...args: (Data & VNodeProps)[]) {
             ? [].concat(existing as any, toMerge[key] as any)
             : incoming
         }
-      } else {
+      } else if (key !== '') {
         ret[key] = toMerge[key]
       }
     }

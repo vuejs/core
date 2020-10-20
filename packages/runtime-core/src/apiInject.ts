@@ -47,8 +47,15 @@ export function inject(
   // a functional component
   const instance = currentInstance || currentRenderingInstance
   if (instance) {
-    const provides = instance.provides
-    if ((key as string | symbol) in provides) {
+    // #2400
+    // to support `app.use` plugins,
+    // fallback to appContext's `provides` if the intance is at root
+    const provides =
+      instance.parent == null
+        ? instance.vnode.appContext && instance.vnode.appContext.provides
+        : instance.parent.provides
+
+    if (provides && (key as string | symbol) in provides) {
       // TS doesn't allow symbol as index type
       return provides[key as string]
     } else if (arguments.length > 1) {

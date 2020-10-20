@@ -31,7 +31,9 @@ describe('compiler: v-text transform', () => {
     expect((ast.children[0] as PlainElementNode).codegenNode).toMatchObject({
       tag: `"div"`,
       props: createObjectMatcher({
-        textContent: `[test]`
+        textContent: {
+          arguments: [{ content: 'test' }]
+        }
       }),
       children: undefined,
       patchFlag: genFlagText(PatchFlags.PROPS),
@@ -50,7 +52,9 @@ describe('compiler: v-text transform', () => {
     expect((ast.children[0] as PlainElementNode).codegenNode).toMatchObject({
       tag: `"div"`,
       props: createObjectMatcher({
-        textContent: `[test]`
+        textContent: {
+          arguments: [{ content: 'test' }]
+        }
       }),
       children: undefined, // <-- children should have been removed
       patchFlag: genFlagText(PatchFlags.PROPS),

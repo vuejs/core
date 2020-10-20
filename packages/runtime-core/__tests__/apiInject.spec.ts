@@ -303,4 +303,19 @@ describe('api: provide/inject', () => {
     render(h(Provider), root)
     expect(`injection "foo" not found.`).not.toHaveBeenWarned()
   })
+
+  // #2400
+  it('should not self-inject', () => {
+    const Comp = {
+      setup() {
+        provide('foo', 'foo')
+        const injection = inject('foo', null)
+        return () => injection
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serialize(root)).toBe(`<div><!----></div>`)
+  })
 })

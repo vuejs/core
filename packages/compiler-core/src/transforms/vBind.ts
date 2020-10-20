@@ -10,6 +10,14 @@ import { CAMELIZE } from '../runtimeHelpers'
 export const transformBind: DirectiveTransform = (dir, node, context) => {
   const { exp, modifiers, loc } = dir
   const arg = dir.arg!
+
+  if (arg.type !== NodeTypes.SIMPLE_EXPRESSION) {
+    arg.children.unshift(`(`)
+    arg.children.push(`) || ""`)
+  } else if (!arg.isStatic) {
+    arg.content = `${arg.content} || ""`
+  }
+
   // .prop is no longer necessary due to new patch behavior
   // .sync is replaced by v-model:arg
   if (modifiers.includes('camel')) {

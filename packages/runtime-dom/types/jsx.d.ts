@@ -1004,6 +1004,7 @@ export interface SVGAttributes extends AriaAttributes, EventHandlers<Events> {
   xlinkShow?: string
   xlinkTitle?: string
   xlinkType?: string
+  xmlns?: string
   y1?: number | string
   y2?: number | string
   y?: number | string

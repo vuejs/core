@@ -161,7 +161,7 @@ describe('ssr: element', () => {
       expect(getCompiledString(`<div v-bind:[key]="value"></div>`))
         .toMatchInlineSnapshot(`
         "\`<div\${
-            _ssrRenderAttrs({ [_ctx.key]: _ctx.value })
+            _ssrRenderAttrs({ [_ctx.key || \\"\\"]: _ctx.value })
           }></div>\`"
       `)
 
@@ -170,7 +170,7 @@ describe('ssr: element', () => {
         "\`<div\${
             _ssrRenderAttrs({
               class: \\"foo\\",
-              [_ctx.key]: _ctx.value
+              [_ctx.key || \\"\\"]: _ctx.value
             })
           }></div>\`"
       `)
@@ -180,7 +180,7 @@ describe('ssr: element', () => {
         "\`<div\${
             _ssrRenderAttrs({
               id: _ctx.id,
-              [_ctx.key]: _ctx.value
+              [_ctx.key || \\"\\"]: _ctx.value
             })
           }></div>\`"
       `)
@@ -212,7 +212,7 @@ describe('ssr: element', () => {
       expect(getCompiledString(`<div :[key]="id" v-bind="obj"></div>`))
         .toMatchInlineSnapshot(`
         "\`<div\${
-            _ssrRenderAttrs(_mergeProps({ [_ctx.key]: _ctx.id }, _ctx.obj))
+            _ssrRenderAttrs(_mergeProps({ [_ctx.key || \\"\\"]: _ctx.id }, _ctx.obj))
           }></div>\`"
       `)
 

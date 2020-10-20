@@ -475,4 +475,46 @@ describe('renderer: optimized mode', () => {
     render(null, root)
     expect(spy).toHaveBeenCalledTimes(1)
   })
+
+  // #2444
+  // `KEYED_FRAGMENT` and `UNKEYED_FRAGMENT` always need to diff its children
+  test('non-stable Fragment always need to diff its children', () => {
+    const spyA = jest.fn()
+    const spyB = jest.fn()
+    const ChildA = {
+      setup() {
+        onBeforeUnmount(spyA)
+        return () => 'child'
+      }
+    }
+    const ChildB = {
+      setup() {
+        onBeforeUnmount(spyB)
+        return () => 'child'
+      }
+    }
+    const Parent = () => (
+      openBlock(),
+      createBlock('div', null, [
+        (openBlock(true),
+        createBlock(
+          Fragment,
+          null,
+          [createVNode(ChildA, { key: 0 })],
+          128 /* KEYED_FRAGMENT */
+        )),
+        (openBlock(true),
+        createBlock(
+          Fragment,
+          null,
+          [createVNode(ChildB)],
+          256 /* UNKEYED_FRAGMENT */
+        ))
+      ])
+    )
+    render(h(Parent), root)
+    render(null, root)
+    expect(spyA).toHaveBeenCalledTimes(1)
+    expect(spyB).toHaveBeenCalledTimes(1)
+  })
 })

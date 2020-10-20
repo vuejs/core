@@ -1,13 +1,14 @@
 import {
-  isArray,
-  isOn,
-  hasOwn,
+  camelize,
   EMPTY_OBJ,
-  capitalize,
-  hyphenate,
-  isFunction,
+  toHandlerKey,
   extend,
-  camelize
+  hasOwn,
+  hyphenate,
+  isArray,
+  isFunction,
+  isOn,
+  toNumber
 } from '@vue/shared'
 import {
   ComponentInternalInstance,
@@ -45,7 +46,7 @@ export type EmitFn<
 export function emit(
   instance: ComponentInternalInstance,
   event: string,
-  ...args: any[]
+  ...rawArgs: any[]
 ) {
   const props = instance.vnode.props || EMPTY_OBJ
 
@@ -56,16 +57,16 @@ export function emit(
     } = instance
     if (emitsOptions) {
       if (!(event in emitsOptions)) {
-        if (!propsOptions || !(`on` + capitalize(event) in propsOptions)) {
+        if (!propsOptions || !(toHandlerKey(event) in propsOptions)) {
           warn(
             `Component emitted event "${event}" but it is neither declared in ` +
-              `the emits option nor as an "on${capitalize(event)}" prop.`
+              `the emits option nor as an "${toHandlerKey(event)}" prop.`
           )
         }
       } else {
         const validator = emitsOptions[event]
         if (isFunction(validator)) {
-          const isValid = validator(...args)
+          const isValid = validator(...rawArgs)
           if (!isValid) {
             warn(
               `Invalid event arguments: event validation failed for event "${event}".`
@@ -76,13 +77,30 @@ export function emit(
     }
   }
 
+  let args = rawArgs
+  const isModelListener = event.startsWith('update:')
+
+  // for v-model update:xxx events, apply modifiers on args
+  const modelArg = isModelListener && event.slice(7)
+  if (modelArg && modelArg in props) {
+    const modifiersKey = `${
+      modelArg === 'modelValue' ? 'model' : modelArg
+    }Modifiers`
+    const { number, trim } = props[modifiersKey] || EMPTY_OBJ
+    if (trim) {
+      args = rawArgs.map(a => a.trim())
+    } else if (number) {
+      args = rawArgs.map(toNumber)
+    }
+  }
+
   if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
     devtoolsComponentEmit(instance, event, args)
   }
 
   if (__DEV__) {
     const lowerCaseEvent = event.toLowerCase()
-    if (lowerCaseEvent !== event && props[`on` + capitalize(lowerCaseEvent)]) {
+    if (lowerCaseEvent !== event && props[toHandlerKey(lowerCaseEvent)]) {
       warn(
         `Event "${lowerCaseEvent}" is emitted in component ` +
           `${formatComponentName(
@@ -97,25 +115,33 @@ export function emit(
   }
 
   // convert handler name to camelCase. See issue #2249
-  let handlerName = `on${capitalize(camelize(event))}`
+  let handlerName = toHandlerKey(camelize(event))
   let handler = props[handlerName]
   // for v-model update:xxx events, also trigger kebab-case equivalent
   // for props passed via kebab-case
-  if (!handler && event.startsWith('update:')) {
-    handlerName = `on${capitalize(hyphenate(event))}`
+  if (!handler && isModelListener) {
+    handlerName = toHandlerKey(hyphenate(event))
     handler = props[handlerName]
   }
-  if (!handler) {
-    handler = props[handlerName + `Once`]
+
+  if (handler) {
+    callWithAsyncErrorHandling(
+      handler,
+      instance,
+      ErrorCodes.COMPONENT_EVENT_HANDLER,
+      args
+    )
+  }
+
+  const onceHandler = props[handlerName + `Once`]
+  if (onceHandler) {
     if (!instance.emitted) {
       ;(instance.emitted = {} as Record<string, boolean>)[handlerName] = true
     } else if (instance.emitted[handlerName]) {
       return
     }
-  }
-  if (handler) {
     callWithAsyncErrorHandling(
-      handler,
+      onceHandler,
       instance,
       ErrorCodes.COMPONENT_EVENT_HANDLER,
       args
