@@ -66,7 +66,7 @@ export type Data = Record<string, unknown>
 export interface ComponentCustomProps {}
 
 /**
- * Default allowed non-declared props on ocmponent in TSX
+ * Default allowed non-declared props on component in TSX
  */
 export interface AllowedComponentProps {
   class?: unknown
