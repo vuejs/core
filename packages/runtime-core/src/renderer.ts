@@ -2038,7 +2038,12 @@ function baseCreateRenderer(
           false,
           true
         )
-      } else if (!optimized && shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      } else if (
+        (type === Fragment &&
+          (patchFlag & PatchFlags.KEYED_FRAGMENT ||
+            patchFlag & PatchFlags.UNKEYED_FRAGMENT)) ||
+        (!optimized && shapeFlag & ShapeFlags.ARRAY_CHILDREN)
+      ) {
         unmountChildren(children as VNode[], parentComponent, parentSuspense)
       }
 
