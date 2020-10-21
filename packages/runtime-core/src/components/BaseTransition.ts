@@ -9,7 +9,8 @@ import {
   isSameVNodeType,
   VNode,
   VNodeArrayChildren,
-  Fragment
+  Fragment,
+  isVNode
 } from '../vnode'
 import { warn } from '../warning'
 import { isKeepAlive } from './KeepAlive'
@@ -18,7 +19,6 @@ import { callWithAsyncErrorHandling, ErrorCodes } from '../errorHandling'
 import { ShapeFlags, PatchFlags } from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import { RendererElement } from '../renderer'
-import { filterSingleRoot } from '../componentRenderUtils'
 
 export interface BaseTransitionProps<HostElement = RendererElement> {
   mode?: 'in-out' | 'out-in' | 'default'
@@ -148,12 +148,19 @@ const BaseTransitionImpl = {
         return
       }
 
+      let elementChilds = filterNonCommentRoots(children)
+
       // warn multiple elements
-      if (__DEV__ && children.length > 1) {
+      if (__DEV__ && elementChilds && elementChilds.length > 1) {
         warn(
           '<transition> can only be used on a single element or component. Use ' +
             '<transition-group> for lists.'
         )
+      }
+
+      // indicates that children are all comment nodes
+      if (!elementChilds) {
+        elementChilds = children
       }
 
       // there's no need to track reactivity for these props so use the raw
@@ -166,7 +173,7 @@ const BaseTransitionImpl = {
       }
 
       // at this point children has a guaranteed length of 1.
-      const child = children[0]
+      const child = elementChilds[0]
       if (state.isLeaving) {
         return emptyPlaceholder(child)
       }
@@ -272,6 +279,19 @@ function getLeavingNodesForType(
   return leavingVNodesCache
 }
 
+function performEarlyRemoval(vnode: VNode) {
+  if (vnode.el!._leaveCb) {
+    vnode.el!._leaveCb()
+  } else if (vnode.type === Fragment) {
+    const elementChilds = filterNonCommentRoots(
+      vnode.children as VNodeArrayChildren
+    )
+    if (elementChilds) performEarlyRemoval(elementChilds[0])
+  } else if (vnode.shapeFlag & ShapeFlags.COMPONENT && vnode.component) {
+    performEarlyRemoval(vnode.component.subTree)
+  }
+}
+
 // The transition hooks are attached to the vnode as vnode.transition
 // and will be called at appropriate timing in the renderer.
 export function resolveTransitionHooks(
@@ -326,23 +346,12 @@ export function resolveTransitionHooks(
       if (el._leaveCb) {
         el._leaveCb(true /* cancelled */)
       }
+
       // for toggled element with same key (v-if)
       const leavingVNode = leavingVNodesCache[key]
       if (leavingVNode && isSameVNodeType(vnode, leavingVNode)) {
         // force early removal (not cancelled)
-        if (leavingVNode.el!._leaveCb) {
-          leavingVNode.el!._leaveCb()
-        } else if (
-          leavingVNode.shapeFlag & ShapeFlags.COMPONENT &&
-          leavingVNode.component &&
-          leavingVNode.component.subTree.type === Fragment
-        ) {
-          const elementRoot = filterSingleRoot(leavingVNode.component.subTree
-            .children as VNodeArrayChildren)
-          if (elementRoot && elementRoot.el!._leaveCb) {
-            elementRoot.el!._leaveCb()
-          }
-        }
+        performEarlyRemoval(leavingVNode)
       }
       callHook(hook, [el])
     },
@@ -453,15 +462,20 @@ export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks) {
   } else if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
     vnode.ssContent!.transition = hooks.clone(vnode.ssContent!)
     vnode.ssFallback!.transition = hooks.clone(vnode.ssFallback!)
-  } else if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-    const elementRoot = filterSingleRoot(vnode.children as VNodeArrayChildren)
-    if (elementRoot) {
-      elementRoot.transition = hooks
-    } else if (__DEV__) {
+  } else if (
+    vnode.type === Fragment &&
+    vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN
+  ) {
+    const elementChilds = filterNonCommentRoots(
+      vnode.children as VNodeArrayChildren
+    )
+    if (__DEV__ && elementChilds && elementChilds.length > 1) {
       warn(
         '<transition> can only be used on a single element or component. Use ' +
           '<transition-group> for lists.'
       )
+    } else if (elementChilds) {
+      setTransitionHooks(elementChilds[0], hooks)
     }
   } else {
     vnode.transition = hooks
@@ -498,4 +512,11 @@ export function getTransitionRawChildren(
     }
   }
   return ret
+}
+
+function filterNonCommentRoots(children: VNodeArrayChildren): VNode[] | null {
+  const filtered = children.filter(
+    child => isVNode(child) && child.type !== Comment
+  )
+  return !filtered.length ? null : (filtered as VNode[])
 }

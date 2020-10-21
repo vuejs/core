@@ -10,7 +10,8 @@ import {
   serialize,
   VNodeProps,
   KeepAlive,
-  TestElement
+  TestElement,
+  createCommentVNode
 } from '@vue/runtime-test'
 
 function mount(
@@ -313,9 +314,9 @@ describe('BaseTransition', () => {
       })
     })
 
-    test('fragment with single element node', async () => {
+    test('ignore comment', async () => {
       await testToggleOnOff({
-        trueBranch: () => [h('div')],
+        trueBranch: () => [createCommentVNode('foo'), h('div')],
         trueSerialized: `<div></div>`,
         falseBranch: () => null,
         falseSerialized: `<!---->`
@@ -326,6 +327,27 @@ describe('BaseTransition', () => {
       const Comp = ({ msg }: { msg: string }) => h('div', msg)
       await testToggleOnOff({
         trueBranch: () => h(Comp, { msg: 'hello' }),
+        trueSerialized: `<div>hello</div>`,
+        falseBranch: () => null,
+        falseSerialized: `<!---->`
+      })
+    })
+
+    test('w/ component that renders a fragment', async () => {
+      const Comp = ({ msg }: { msg: string }) => [h('div', msg)]
+      await testToggleOnOff({
+        trueBranch: () => h(Comp, { msg: 'hello' }),
+        trueSerialized: `<div>hello</div>`,
+        falseBranch: () => null,
+        falseSerialized: `<!---->`
+      })
+    })
+
+    test('w/ component that nested and renders fragment', async () => {
+      const CompA = () => h(CompB, { msg: 'hello' })
+      const CompB = ({ msg }: { msg: string }) => [h('div', msg)]
+      await testToggleOnOff({
+        trueBranch: () => h(CompA),
         trueSerialized: `<div>hello</div>`,
         falseBranch: () => null,
         falseSerialized: `<!---->`
