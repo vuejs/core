@@ -26,7 +26,9 @@ import {
   isSymbol,
   isOn,
   isObject,
-  isReservedProp
+  isReservedProp,
+  camelize,
+  capitalize
 } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
@@ -246,7 +248,14 @@ export function resolveComponentType(
   }
 
   // 3. user component (from setup bindings)
-  if (context.bindingMetadata[tag] === 'setup') {
+  // Make sure tag is not found in the option bindings
+  if (
+    context.bindingMetadata[tag] === 'setup' &&
+    !(
+      context.bindingMetadata[camelize(tag)] === 'options' ||
+      context.bindingMetadata[capitalize(camelize(tag))] === 'options'
+    )
+  ) {
     return `$setup[${JSON.stringify(tag)}]`
   }
 

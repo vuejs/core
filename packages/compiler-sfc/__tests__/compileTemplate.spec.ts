@@ -127,3 +127,36 @@ test('preprocessor errors', () => {
     `The end of the string reached with no closing bracket ) found.`
   )
 })
+
+test('resolve component with setup bindings', () => {
+  const template = parse(`<template><foo/></template>`).descriptor
+    .template as SFCTemplateBlock
+
+  const result = compileTemplate({
+    filename: 'example.vue',
+    source: template.content,
+    compilerOptions: {
+      bindingMetadata: {
+        foo: 'setup'
+      }
+    }
+  })
+  expect(result.code).toMatchSnapshot()
+})
+
+test('resolve component with user component', () => {
+  const template = parse(`<template><foo/></template>`).descriptor
+    .template as SFCTemplateBlock
+
+  const result = compileTemplate({
+    filename: 'example.vue',
+    source: template.content,
+    compilerOptions: {
+      bindingMetadata: {
+        foo: 'setup',
+        Foo: 'options'
+      }
+    }
+  })
+  expect(result.code).toMatchSnapshot()
+})

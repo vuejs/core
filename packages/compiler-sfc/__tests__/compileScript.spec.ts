@@ -630,6 +630,19 @@ describe('SFC analyze <script> bindings', () => {
     expect(bindings).toStrictEqual({ foo: 'data', bar: 'data' })
   })
 
+  it('recognizes components', () => {
+    const { bindings } = compile(`
+      <script>
+        export default {
+          components: {
+            foo: Foo
+          }
+        }
+      </script>
+    `)
+    expect(bindings).toStrictEqual({ foo: 'options' })
+  })
+
   it('recognizes methods', () => {
     const { bindings } = compile(`
       <script>

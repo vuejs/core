@@ -1070,12 +1070,14 @@ function analyzeScriptBindings(ast: Statement[]): BindingMetadata {
             }
           }
 
-          // computed & methods
+          // components & computed & methods
           else if (
             property.value.type === 'ObjectExpression' &&
-            (property.key.name === 'computed' ||
+            (property.key.name === 'components' ||
+              property.key.name === 'computed' ||
               property.key.name === 'methods')
           ) {
+            // components: { foo: Foo }
             // methods: { foo() {} }
             // computed: { foo() {} }
             for (const key of getObjectExpressionKeys(property.value)) {

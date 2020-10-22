@@ -1,5 +1,23 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`resolve component with setup bindings 1`] = `
+"import { createVNode as _createVNode, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
+
+export function render(_ctx, _cache, $props, $setup, $data, $options) {
+  return (_openBlock(), _createBlock($setup[\\"foo\\"]))
+}"
+`;
+
+exports[`resolve component with user component 1`] = `
+"import { resolveComponent as _resolveComponent, createVNode as _createVNode, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
+
+export function render(_ctx, _cache, $props, $setup, $data, $options) {
+  const _component_foo = _resolveComponent(\\"foo\\")
+
+  return (_openBlock(), _createBlock(_component_foo))
+}"
+`;
+
 exports[`source map 1`] = `
 Object {
   "mappings": ";;;wBACE,aAA8B;IAAzB,aAAmB,4BAAbA,WAAM",
