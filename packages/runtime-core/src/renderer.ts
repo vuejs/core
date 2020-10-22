@@ -1408,8 +1408,9 @@ function baseCreateRenderer(
         }
         // onVnodeMounted
         if ((vnodeHook = props && props.onVnodeMounted)) {
+          const scopedInitialVNode = initialVNode
           queuePostRenderEffect(() => {
-            invokeVNodeHook(vnodeHook!, parent, initialVNode)
+            invokeVNodeHook(vnodeHook!, parent, scopedInitialVNode)
           }, parentSuspense)
         }
         // activated hook for keep-alive roots.
