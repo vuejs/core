@@ -309,7 +309,7 @@ export function shouldUpdateComponent(
     return true
   }
 
-  if (optimized && patchFlag > 0) {
+  if (optimized && patchFlag >= 0) {
     if (patchFlag & PatchFlags.DYNAMIC_SLOTS) {
       // slot content that references values that might have changed,
       // e.g. in a v-for
