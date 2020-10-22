@@ -1423,6 +1423,11 @@ function baseCreateRenderer(
           queuePostRenderEffect(a, parentSuspense)
         }
         instance.isMounted = true
+
+        // #2458: deference mount-only object parameters to prevent memleaks
+        initialVNode = undefined as any
+        container = null as any
+        anchor = null
       } else {
         // updateComponent
         // This is triggered by mutation of component's own state (next: null)
