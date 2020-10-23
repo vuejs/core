@@ -39,8 +39,13 @@ class ComputedRefImpl<T> {
       scheduler: () => {
         if (!this._dirty) {
           this._dirty = true
+          this._value = undefined!
           trigger(toRaw(this), TriggerOpTypes.SET, 'value')
         }
+      },
+      onStop: () => {
+        this._dirty = true
+        this._value = undefined!
       }
     })
 
