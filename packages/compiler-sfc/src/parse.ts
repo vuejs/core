@@ -134,7 +134,7 @@ export function parse(
     if (node.type !== NodeTypes.ELEMENT) {
       return
     }
-    if (!node.children.length && !hasSrc(node)) {
+    if (!node.children.length && !hasSrc(node) && node.tag !== 'template') {
       return
     }
     switch (node.tag) {
