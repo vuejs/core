@@ -440,6 +440,11 @@ describe('with mixins', () => {
   const MixinD = defineComponent({
     mixins: [MixinA],
     data() {
+      //@ts-expect-error computed are not available on data()
+      expectError<number>(this.dC1)
+      //@ts-expect-error computed are not available on data()
+      expectError<string>(this.dC2)
+
       return {
         d: 4
       }
@@ -480,8 +485,6 @@ describe('with mixins', () => {
       expectType<any>(this.bP1)
       expectType<number>(this.c)
       expectType<number>(this.d)
-      expectType<number>(this.dC1)
-      expectType<string>(this.dC2)
 
       return {}
     },

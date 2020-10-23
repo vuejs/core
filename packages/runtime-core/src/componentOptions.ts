@@ -368,7 +368,7 @@ interface LegacyOptions<
       Props,
       {},
       {},
-      ComputedOptions,
+      {},
       MethodOptions,
       Mixin,
       Extends
@@ -377,7 +377,7 @@ interface LegacyOptions<
       Props,
       {},
       {},
-      ComputedOptions,
+      {},
       MethodOptions,
       Mixin,
       Extends
