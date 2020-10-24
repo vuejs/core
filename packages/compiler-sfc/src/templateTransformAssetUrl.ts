@@ -122,8 +122,9 @@ export const transformAssetUrl: NodeTransform = (
         ) {
           // Allow for full hostnames provided in options.base
           const base = parseUrl(options.base)
-          const host = base.host ? base.protocol + '//' + base.host : ''
-          const basePath = base.path || options.base
+          const protocol = base.protocol || ''
+          const host = base.host ? protocol + '//' + base.host : ''
+          const basePath = base.path || '/'
 
           // when packaged in the browser, path will be using the posix-
           // only version provided by rollup-plugin-node-builtins.

@@ -118,4 +118,12 @@ describe('compiler sfc: transform asset url', () => {
 
     expect(code).toMatchSnapshot()
   })
+
+  test('should allow for full base URLs, without protocol', () => {
+    const { code } = compileWithAssetUrls(`<img src="./logo.png" />`, {
+      base: '//localhost'
+    })
+
+    expect(code).toMatchSnapshot()
+  })
 })
