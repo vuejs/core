@@ -1,5 +1,6 @@
 import { Data } from '../component'
 import { Slots, RawSlots } from '../componentSlots'
+import { Comment, isVNode } from '../vnode'
 import {
   VNodeArrayChildren,
   openBlock,
@@ -37,6 +38,8 @@ export function renderSlot(
     slot = () => []
   }
 
+  let validSlotContent: VNodeArrayChildren | null = null
+
   // a compiled slot disables block tracking by default to avoid manual
   // invocation interfering with template-based block tracking, but in
   // `renderSlot` we can be sure that it's template-based so we can force
@@ -46,11 +49,37 @@ export function renderSlot(
   createBlock(
     Fragment,
     { key: props.key },
-    slot ? slot(props) : fallback ? fallback() : [],
-    (slots as RawSlots)._ === SlotFlags.STABLE
-      ? PatchFlags.STABLE_FRAGMENT
+    slot
+      ? (validSlotContent = filterValidVNode(slot(props)))
+        ? validSlotContent
+        : fallback
+          ? fallback()
+          : []
+      : fallback
+        ? fallback()
+        : [],
+
+    validSlotContent
+      ? (slots as RawSlots)._ === SlotFlags.STABLE
+        ? PatchFlags.STABLE_FRAGMENT
+        : PatchFlags.BAIL
       : PatchFlags.BAIL
   ))
+
   isRenderingCompiledSlot--
   return rendered
+}
+
+function filterValidVNode(vnodes: VNodeArrayChildren) {
+  const filtered = vnodes.filter(child => {
+    if (!isVNode(child)) return true
+    if (child.type === Comment) return false
+    if (
+      child.type === Fragment &&
+      !filterValidVNode(child.children as VNodeArrayChildren)
+    )
+      return false
+    return true
+  })
+  return filtered.length ? vnodes : null
 }
