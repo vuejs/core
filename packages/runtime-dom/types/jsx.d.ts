@@ -1320,7 +1320,7 @@ type ReservedProps = {
   ref?:
     | string
     | RuntimeCore.Ref
-    | ((ref: Element | RuntimeCore.ComponentInternalInstance | null) => void)
+    | ((ref: Element | RuntimeCore.ComponentPublicInstance | null) => void)
 }
 
 type ElementAttrs<T> = T & ReservedProps
