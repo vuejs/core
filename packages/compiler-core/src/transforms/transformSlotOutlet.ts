@@ -11,6 +11,7 @@ import { isSlotOutlet, findProp } from '../utils'
 import { buildProps, PropsExpression } from './transformElement'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { RENDER_SLOT } from '../runtimeHelpers'
+import { camelize } from '@vue/shared/'
 
 export const transformSlotOutlet: NodeTransform = (node, context) => {
   if (isSlotOutlet(node)) {
@@ -71,6 +72,19 @@ export function processSlotOutlet(
   if (propsWithoutName.length > 0) {
     const { props, directives } = buildProps(node, context, propsWithoutName)
     slotProps = props
+
+    //#2488
+    if (
+      slotProps &&
+      (slotProps as any).properties &&
+      (slotProps as any).properties.length > 0
+    ) {
+      for (let i = 0; i < (slotProps as any).properties.length; i++) {
+        const prop = (slotProps as any).properties[i]
+        prop.key.content = camelize(prop.key.content)
+      }
+    }
+
     if (directives.length) {
       context.onError(
         createCompilerError(
