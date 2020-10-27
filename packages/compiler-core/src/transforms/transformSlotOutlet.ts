@@ -73,9 +73,11 @@ export function processSlotOutlet(
   if (propsWithoutName.length > 0) {
     //#2488
     propsWithoutName.forEach(prop => {
-      const arg = (prop as any).arg
-      if (arg) {
-        arg.content = camelize(arg.content)
+      if (prop.type === NodeTypes.DIRECTIVE) {
+        const arg = prop.arg as any
+        if (arg) {
+          arg.content = camelize(arg.content)
+        }
       }
     })
 

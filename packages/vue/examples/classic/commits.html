@@ -1,76 +1,39 @@
 <script src="../../dist/vue.global.js"></script>
 
+<script type="text/x-template" id="template">
+  <button @click="hasBeenClicked = true">Click me</button>
+  <slot name="boolean" :has-been-clicked="hasBeenClicked"></slot>
+  <slot name="object" :props="{ hasBeenClicked }"></slot>
+</script>
 <div id="demo">
-  <h1>Latest Vue.js Commits</h1>
-  <template v-for="branch in branches">
-    <input type="radio"
-      :id="branch"
-      :value="branch"
-      name="branch"
-      v-model="currentBranch">
-    <label :for="branch">{{ branch }}</label>
-  </template>
-  <p>vuejs/vue@{{ currentBranch }}</p>
-  <ul>
-    <li v-for="{ html_url, sha, author, commit } in commits">
-      <a :href="html_url" target="_blank" class="commit">{{ sha.slice(0, 7) }}</a>
-      - <span class="message">{{ truncate(commit.message) }}</span><br>
-      by <span class="author"><a :href="author.html_url" target="_blank">{{ commit.author.name }}</a></span>
-      at <span class="date">{{ formatDate(commit.author.date) }}</span>
-    </li>
-  </ul>
+  <Child>
+    <template #boolean="{ hasBeenClicked }">
+      <p>Has child been clicked? (boolean)</p>
+      <pre>{{ hasBeenClicked }}</pre>
+    </template>
+  
+    <template #object="{ props }">
+      <p>Has child been clicked? (nested object)</p>
+      <pre>{{ props.hasBeenClicked }}</pre>
+    </template>
+  </Child>
 </div>
 
 <script>
-const API_URL = `https://api.github.com/repos/vuejs/vue-next/commits?per_page=3&sha=`
-
-Vue.createApp({
-  data: () => ({
-    branches: ['master', 'sync'],
-    currentBranch: 'master',
-    commits: null
-  }),
-
-  created() {
-    this.fetchData()
+const {createApp} = Vue
+const Child = {
+  template:'#template',
+  data() {
+    return {
+      hasBeenClicked: false,
+    };
   },
+}
 
-  watch: {
-    currentBranch: 'fetchData'
+createApp({
+  components: {
+    Child,
   },
-
-  methods: {
-    fetchData() {
-      fetch(`${API_URL}${this.currentBranch}`)
-        .then(res => res.json())
-        .then(data => {
-          this.commits = data
-        })
-    },
-    truncate(v) {
-      const newline = v.indexOf('\n')
-      return newline > 0 ? v.slice(0, newline) : v
-    },
-    formatDate(v) {
-      return v.replace(/T|Z/g, ' ')
-    }
-  }
 }).mount('#demo')
-</script>
 
-<style>
-  #demo {
-    font-family: 'Helvetica', Arial, sans-serif;
-  }
-  a {
-    text-decoration: none;
-    color: #f66;
-  }
-  li {
-    line-height: 1.5em;
-    margin-bottom: 20px;
-  }
-  .author, .date {
-    font-weight: bold;
-  }
-</style>
+</script>
