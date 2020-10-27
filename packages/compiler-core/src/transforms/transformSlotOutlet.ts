@@ -71,13 +71,15 @@ export function processSlotOutlet(
     : node.props
 
   if (propsWithoutName.length > 0) {
+    debugger
     //#2488
     propsWithoutName.forEach(prop => {
-      if (prop.type === NodeTypes.DIRECTIVE) {
-        const arg = prop.arg as any
-        if (arg) {
-          arg.content = camelize(arg.content)
-        }
+      if (
+        prop.type === NodeTypes.DIRECTIVE &&
+        prop.arg &&
+        prop.arg.type === NodeTypes.SIMPLE_EXPRESSION
+      ) {
+        prop.arg.content = camelize(prop.arg.content)
       }
     })
 
