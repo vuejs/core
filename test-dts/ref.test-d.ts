@@ -6,7 +6,9 @@ import {
   unref,
   reactive,
   expectType,
-  proxyRefs
+  proxyRefs,
+  toRef,
+  toRefs
 } from './index'
 
 function plainType(arg: number | Ref<number>) {
@@ -154,3 +156,18 @@ const r2 = {
 const p2 = proxyRefs(r2)
 expectType<number>(p2.a)
 expectType<Ref<string>>(p2.obj.k)
+
+// toRef
+const obj = {
+  a: 1,
+  b: ref(1)
+}
+expectType<Ref<number>>(toRef(obj, 'a'))
+expectType<Ref<number>>(toRef(obj, 'b'))
+
+// toRefs
+const objRefs = toRefs(obj)
+expectType<{
+  a: Ref<number>
+  b: Ref<number>
+}>(objRefs)
