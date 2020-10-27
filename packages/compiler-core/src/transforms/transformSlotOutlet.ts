@@ -71,7 +71,6 @@ export function processSlotOutlet(
     : node.props
 
   if (propsWithoutName.length > 0) {
-    debugger
     //#2488
     propsWithoutName.forEach(prop => {
       if (
