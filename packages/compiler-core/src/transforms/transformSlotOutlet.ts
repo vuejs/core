@@ -69,21 +69,18 @@ export function processSlotOutlet(
   const propsWithoutName = name
     ? node.props.filter(p => p !== name)
     : node.props
+
+  //#2488
+  propsWithoutName.forEach(prop => {
+    const arg = (prop as any).arg
+    if (arg) {
+      arg.content = camelize(arg.content)
+    }
+  })
+
   if (propsWithoutName.length > 0) {
     const { props, directives } = buildProps(node, context, propsWithoutName)
     slotProps = props
-
-    //#2488
-    if (
-      slotProps &&
-      (slotProps as any).properties &&
-      (slotProps as any).properties.length > 0
-    ) {
-      for (let i = 0; i < (slotProps as any).properties.length; i++) {
-        const prop = (slotProps as any).properties[i]
-        prop.key.content = camelize(prop.key.content)
-      }
-    }
 
     if (directives.length) {
       context.onError(
