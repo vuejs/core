@@ -2,6 +2,7 @@ import {
   describe,
   Component,
   defineComponent,
+  Prop,
   PropType,
   ref,
   Ref,
@@ -39,6 +40,7 @@ describe('object props', () => {
     ggg: 'foo' | 'bar'
     ffff: (a: number, b: string) => { a: boolean }
     validated?: string
+    typecasted: string
   }
 
   describe('defineComponent', () => {
@@ -106,7 +108,10 @@ describe('object props', () => {
           type: String,
           // validator requires explicit annotation
           validator: (val: unknown) => val !== ''
-        }
+        },
+        typecasted: {
+          type: String
+        } as Prop<string>
       },
       setup(props) {
         return {
@@ -140,6 +145,7 @@ describe('object props', () => {
     expectType<ExpectedProps['ggg']>(props.ggg)
     expectType<ExpectedProps['ffff']>(props.ffff)
     expectType<ExpectedProps['validated']>(props.validated)
+    expectType<ExpectedProps['typecasted']>(props.typecasted)
 
     // raw bindings
     expectType<Number>(rawBindings.setupA)

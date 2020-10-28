@@ -65,7 +65,8 @@ type PropMethod<T, TConstructor = any> = T extends (...args: any) => any // if i
   : never
 
 type RequiredKeys<T> = {
-  [K in keyof T]: T[K] extends Prop<infer V, infer D>
+  [K in keyof T]: T[K] extends Prop<unknown, infer D>
+  // if D isn't unknown then T either has default or was defined explicitly as Prop<something>
   ? unknown extends D
     ? T[K] extends
       | { required: true }
