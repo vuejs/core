@@ -161,9 +161,9 @@ export function processExpression(
         if (!isDuplicate(node)) {
           const needPrefix = shouldPrefix(node, parent)
           if (!knownIds[node.name] && needPrefix) {
-            if (isPropertyShorthand(node, parent)) {
-              // property shorthand like { foo }, we need to add the key since we
-              // rewrite the value
+            if (isStaticProperty(parent) && parent.shorthand) {
+              // property shorthand like { foo }, we need to add the key since
+              // we rewrite the value
               node.prefix = `${node.name}: `
             }
             node.name = prefix(node.name)
@@ -278,46 +278,65 @@ const isStaticProperty = (node: Node): node is ObjectProperty =>
   (node.type === 'ObjectProperty' || node.type === 'ObjectMethod') &&
   !node.computed
 
-const isPropertyShorthand = (node: Node, parent: Node) => {
-  return (
-    isStaticProperty(parent) &&
-    parent.value === node &&
-    parent.key.type === 'Identifier' &&
-    parent.key.name === (node as Identifier).name &&
-    parent.key.start === node.start
-  )
-}
-
 const isStaticPropertyKey = (node: Node, parent: Node) =>
   isStaticProperty(parent) && parent.key === node
 
-function shouldPrefix(identifier: Identifier, parent: Node) {
+function shouldPrefix(id: Identifier, parent: Node) {
+  // declaration id
   if (
-    !(
-      isFunction(parent) &&
-      // not id of a FunctionDeclaration
-      ((parent as any).id === identifier ||
-        // not a params of a function
-        parent.params.includes(identifier))
-    ) &&
-    // not a key of Property
-    !isStaticPropertyKey(identifier, parent) &&
-    // not a property of a MemberExpression
-    !(
-      (parent.type === 'MemberExpression' ||
-        parent.type === 'OptionalMemberExpression') &&
-      parent.property === identifier &&
-      !parent.computed
-    ) &&
-    // not in an Array destructure pattern
-    !(parent.type === 'ArrayPattern') &&
-    // skip whitelisted globals
-    !isGloballyWhitelisted(identifier.name) &&
-    // special case for webpack compilation
-    identifier.name !== `require` &&
-    // is a special keyword but parsed as identifier
-    identifier.name !== `arguments`
+    (parent.type === 'VariableDeclarator' ||
+      parent.type === 'ClassDeclaration') &&
+    parent.id === id
   ) {
-    return true
+    return false
   }
+
+  if (isFunction(parent)) {
+    // function decalration/expression id
+    if ((parent as any).id === id) {
+      return false
+    }
+    // params list
+    if (parent.params.includes(id)) {
+      return false
+    }
+  }
+
+  // property key
+  // this also covers object destructure pattern
+  if (isStaticPropertyKey(id, parent)) {
+    return false
+  }
+
+  // array destructure pattern
+  if (parent.type === 'ArrayPattern') {
+    return false
+  }
+
+  // member expression property
+  if (
+    (parent.type === 'MemberExpression' ||
+      parent.type === 'OptionalMemberExpression') &&
+    parent.property === id &&
+    !parent.computed
+  ) {
+    return false
+  }
+
+  // is a special keyword but parsed as identifier
+  if (id.name === 'arguments') {
+    return false
+  }
+
+  // skip whitelisted globals
+  if (isGloballyWhitelisted(id.name)) {
+    return false
+  }
+
+  // special case for webpack compilation
+  if (id.name === 'require') {
+    return false
+  }
+
+  return true
 }

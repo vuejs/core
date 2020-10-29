@@ -20,7 +20,9 @@ import {
   TSDeclareFunction,
   ObjectProperty,
   ArrayExpression,
-  Statement
+  Statement,
+  Expression,
+  LabeledStatement
 } from '@babel/types'
 import { walk } from 'estree-walker'
 import { RawSourceMap } from 'source-map'
@@ -31,6 +33,7 @@ export interface SFCScriptCompileOptions {
    * https://babeljs.io/docs/en/babel-parser#plugins
    */
   babelParserPlugins?: ParserPlugin[]
+  refSugar?: boolean
 }
 
 let hasWarned = false
@@ -102,28 +105,16 @@ export function compileScript(
   }
 
   const defaultTempVar = `__default__`
-  const bindings: BindingMetadata = {}
-  const imports: Record<string, string> = {}
-  const setupScopeVars: Record<string, boolean> = {}
-  const setupExports: Record<string, boolean> = {}
-  let exportAllIndex = 0
+  const bindingMetadata: BindingMetadata = {}
+  const helperImports: Set<string> = new Set()
+  const userImports: Record<string, string> = Object.create(null)
+  const setupBindings: Record<string, boolean> = Object.create(null)
+  const refBindings: Record<string, boolean> = Object.create(null)
+  const refIdentifiers: Set<Identifier> = new Set()
+  const enableRefSugar = options.refSugar !== false
   let defaultExport: Node | undefined
   let needDefaultExportRefCheck = false
   let hasAwait = false
-
-  const checkDuplicateDefaultExport = (node: Node) => {
-    if (defaultExport) {
-      // <script> already has export default
-      throw new Error(
-        `Default export is already declared in normal <script>.\n\n` +
-          generateCodeFrame(
-            source,
-            node.start! + startOffset,
-            node.start! + startOffset + `export default`.length
-          )
-      )
-    }
-  }
 
   const s = new MagicString(source)
   const startOffset = scriptSetup.loc.start.offset
@@ -131,9 +122,142 @@ export function compileScript(
   const scriptStartOffset = script && script.loc.start.offset
   const scriptEndOffset = script && script.loc.end.offset
 
-  let scriptAst
+  function error(
+    msg: string,
+    node: Node,
+    end: number = node.end! + startOffset
+  ) {
+    throw new Error(
+      msg + `\n\n` + generateCodeFrame(source, node.start! + startOffset, end)
+    )
+  }
+
+  function processRefExpression(exp: Expression, statement: LabeledStatement) {
+    if (exp.type === 'AssignmentExpression') {
+      helperImports.add('ref')
+      const { left, right } = exp
+      if (left.type === 'Identifier') {
+        if (left.name[0] === '$') {
+          error(`ref variable identifiers cannot start with $.`, left)
+        }
+        refBindings[left.name] = setupBindings[left.name] = true
+        refIdentifiers.add(left)
+        s.prependRight(right.start! + startOffset, `ref(`)
+        s.appendLeft(right.end! + startOffset, ')')
+      } else if (left.type === 'ObjectPattern') {
+        // remove wrapping parens
+        for (let i = left.start!; i > 0; i--) {
+          const char = source[i + startOffset]
+          if (char === '(') {
+            s.remove(i + startOffset, i + startOffset + 1)
+            break
+          }
+        }
+        for (let i = left.end!; i > 0; i++) {
+          const char = source[i + startOffset]
+          if (char === ')') {
+            s.remove(i + startOffset, i + startOffset + 1)
+            break
+          }
+        }
+        processRefObjectPattern(left, statement)
+      } else if (left.type === 'ArrayPattern') {
+        processRefArrayPattern(left, statement)
+      }
+    } else if (exp.type === 'SequenceExpression') {
+      // possible multiple declarations
+      // ref: x = 1, y = 2
+      exp.expressions.forEach(e => processRefExpression(e, statement))
+    } else {
+      error(`ref: statements can only contain assignment expressions.`, exp)
+    }
+  }
+
+  function processRefObjectPattern(
+    pattern: ObjectPattern,
+    statement: LabeledStatement
+  ) {
+    for (const p of pattern.properties) {
+      let nameId: Identifier | undefined
+      if (p.type === 'ObjectProperty') {
+        if (p.key.start! === p.value.start!) {
+          // shorthand { foo } --> { foo: __foo }
+          nameId = p.key as Identifier
+          s.appendLeft(nameId.end! + startOffset, `: __${nameId.name}`)
+          if (p.value.type === 'AssignmentPattern') {
+            // { foo = 1 }
+            refIdentifiers.add(p.value.left as Identifier)
+          }
+        } else {
+          if (p.value.type === 'Identifier') {
+            // { foo: bar } --> { foo: __bar }
+            nameId = p.value
+            s.prependRight(nameId.start! + startOffset, `__`)
+          } else if (p.value.type === 'ObjectPattern') {
+            processRefObjectPattern(p.value, statement)
+          } else if (p.value.type === 'ArrayPattern') {
+            processRefArrayPattern(p.value, statement)
+          } else if (p.value.type === 'AssignmentPattern') {
+            // { foo: bar = 1 } --> { foo: __bar = 1 }
+            nameId = p.value.left as Identifier
+            s.prependRight(nameId.start! + startOffset, `__`)
+          }
+        }
+      } else {
+        // rest element { ...foo } --> { ...__foo }
+        nameId = p.argument as Identifier
+        s.prependRight(nameId.start! + startOffset, `__`)
+      }
+      if (nameId) {
+        // register binding
+        refBindings[nameId.name] = setupBindings[nameId.name] = true
+        refIdentifiers.add(nameId)
+        // append binding declarations after the parent statement
+        s.appendLeft(
+          statement.end! + startOffset,
+          `\nconst ${nameId.name} = ref(__${nameId.name});`
+        )
+      }
+    }
+  }
+
+  function processRefArrayPattern(
+    pattern: ArrayPattern,
+    statement: LabeledStatement
+  ) {
+    for (const e of pattern.elements) {
+      if (!e) continue
+      let nameId: Identifier | undefined
+      if (e.type === 'Identifier') {
+        // [a] --> [__a]
+        nameId = e
+      } else if (e.type === 'AssignmentPattern') {
+        // [a = 1] --> [__a = 1]
+        nameId = e.left as Identifier
+      } else if (e.type === 'RestElement') {
+        // [...a] --> [...__a]
+        nameId = e.argument as Identifier
+      } else if (e.type === 'ObjectPattern') {
+        processRefObjectPattern(e, statement)
+      } else if (e.type === 'ArrayPattern') {
+        processRefArrayPattern(e, statement)
+      }
+      if (nameId) {
+        s.prependRight(nameId.start! + startOffset, `__`)
+        // register binding
+        refBindings[nameId.name] = setupBindings[nameId.name] = true
+        refIdentifiers.add(nameId)
+        // append binding declarations after the parent statement
+        s.appendLeft(
+          statement.end! + startOffset,
+          `\nconst ${nameId.name} = ref(__${nameId.name});`
+        )
+      }
+    }
+  }
 
   // 1. process normal <script> first if it exists
+  let scriptAst
   if (script) {
     // import dedupe between <script> and <script setup>
     scriptAst = parse(script.content, {
@@ -147,7 +271,7 @@ export function compileScript(
         for (const {
           local: { name }
         } of node.specifiers) {
-          imports[name] = node.source.value
+          userImports[name] = node.source.value
         }
       } else if (node.type === 'ExportDefaultDeclaration') {
         // export default
@@ -280,6 +404,21 @@ export function compileScript(
       end++
     }
 
+    // process `ref: x` bindings (convert to refs)
+    if (
+      enableRefSugar &&
+      node.type === 'LabeledStatement' &&
+      node.label.name === 'ref' &&
+      node.body.type === 'ExpressionStatement'
+    ) {
+      s.overwrite(
+        node.label.start! + startOffset,
+        node.body.start! + startOffset,
+        'const '
+      )
+      processRefExpression(node.body.expression, node)
+    }
+
     if (node.type === 'ImportDeclaration') {
       // import declarations are moved to top
       s.move(start, end, 0)
@@ -287,7 +426,7 @@ export function compileScript(
       let prev
       let removed = 0
       for (const specifier of node.specifiers) {
-        if (imports[specifier.local.name]) {
+        if (userImports[specifier.local.name]) {
           // already imported in <script setup>, dedupe
           removed++
           s.remove(
@@ -295,7 +434,7 @@ export function compileScript(
             specifier.end! + startOffset
           )
         } else {
-          imports[specifier.local.name] = node.source.value
+          userImports[specifier.local.name] = node.source.value
         }
         prev = specifier
       }
@@ -305,106 +444,23 @@ export function compileScript(
     }
 
     if (node.type === 'ExportNamedDeclaration' && node.exportKind !== 'type') {
-      // named exports
-      if (node.declaration) {
-        // variable/function/class declarations.
-        // remove leading `export ` keyword
-        s.remove(start, start + 7)
-        walkDeclaration(node.declaration, setupExports)
-      }
-      if (node.specifiers.length) {
-        // named export with specifiers
-        if (node.source) {
-          // export { x } from './x'
-          // change it to import and move to top
-          s.overwrite(start, start + 6, 'import')
-          s.move(start, end, 0)
-        } else {
-          // export { x }
-          s.remove(start, end)
-        }
-        for (const specifier of node.specifiers) {
-          if (specifier.type === 'ExportDefaultSpecifier') {
-            // export default from './x'
-            // rewrite to `import __default__ from './x'`
-            checkDuplicateDefaultExport(node)
-            defaultExport = node
-            s.overwrite(
-              specifier.exported.start! + startOffset,
-              specifier.exported.start! + startOffset + 7,
-              defaultTempVar
-            )
-          } else if (
-            specifier.type === 'ExportSpecifier' &&
-            specifier.exported.type === 'Identifier'
-          ) {
-            if (specifier.exported.name === 'default') {
-              checkDuplicateDefaultExport(node)
-              defaultExport = node
-              // 1. remove specifier
-              if (node.specifiers.length > 1) {
-                // removing the default specifier from a list of specifiers.
-                // look ahead until we reach the first non , or whitespace char.
-                let end = specifier.end! + startOffset
-                while (end < source.length) {
-                  if (/[^,\s]/.test(source.charAt(end))) {
-                    break
-                  }
-                  end++
-                }
-                s.remove(specifier.start! + startOffset, end)
-              } else {
-                s.remove(node.start! + startOffset!, node.end! + startOffset!)
-              }
-              if (!node.source) {
-                // export { x as default, ... }
-                const local = specifier.local.name
-                if (setupScopeVars[local] || setupExports[local]) {
-                  throw new Error(
-                    `Cannot export locally defined variable as default in <script setup>.\n` +
-                      `Default export must be an object literal with no reference to local scope.\n` +
-                      generateCodeFrame(
-                        source,
-                        specifier.start! + startOffset,
-                        specifier.end! + startOffset
-                      )
-                  )
-                }
-                // rewrite to `const __default__ = x` and move to end
-                s.append(`\nconst ${defaultTempVar} = ${local}\n`)
-              } else {
-                // export { x as default } from './x'
-                // rewrite to `import { x as __default__ } from './x'` and
-                // add to top
-                s.prepend(
-                  `import { ${
-                    specifier.local.name
-                  } as ${defaultTempVar} } from '${node.source.value}'\n`
-                )
-              }
-            } else {
-              setupExports[specifier.exported.name] = true
-              if (node.source) {
-                imports[specifier.exported.name] = node.source.value
-              }
-            }
-          }
-        }
-      }
+      // TODO warn
+      error(`<script setup> cannot contain non-type named exports.`, node)
     }
 
     if (node.type === 'ExportAllDeclaration') {
-      // export * from './x'
-      s.overwrite(
-        start,
-        node.source.start! + startOffset,
-        `import * as __export_all_${exportAllIndex++}__ from `
-      )
-      s.move(start, end, 0)
+      // TODO warn
     }
 
     if (node.type === 'ExportDefaultDeclaration') {
-      checkDuplicateDefaultExport(node)
+      if (defaultExport) {
+        // <script> already has export default
+        error(
+          `Default export is already declared in normal <script>.`,
+          node,
+          node.start! + startOffset + `export default`.length
+        )
+      }
       // export default {} inside <script setup>
       // this should be kept in module scope - move it to the end
       s.move(start, end, source.length)
@@ -421,7 +477,7 @@ export function compileScript(
         node.type === 'ClassDeclaration') &&
       !node.declare
     ) {
-      walkDeclaration(node, setupScopeVars)
+      walkDeclaration(node, setupBindings)
     }
 
     // Type declarations
@@ -483,9 +539,6 @@ export function compileScript(
     // await
     if (
       node.type === 'VariableDeclaration' ||
-      (node.type === 'ExportNamedDeclaration' &&
-        node.declaration &&
-        node.declaration.type === 'VariableDeclaration') ||
       node.type.endsWith('Statement')
     ) {
       ;(walk as any)(node, {
@@ -501,20 +554,50 @@ export function compileScript(
     }
   }
 
-  // 4. check default export to make sure it doesn't reference setup scope
-  // variables
-  if (needDefaultExportRefCheck) {
-    checkDefaultExport(
-      defaultExport!,
-      setupScopeVars,
-      imports,
-      setupExports,
-      source,
-      startOffset
-    )
+  // 4. Do a full walk to rewrite identifiers referencing let exports with ref
+  // value access
+  if (enableRefSugar && Object.keys(refBindings).length) {
+    for (const node of scriptSetupAst) {
+      if (node.type !== 'ImportDeclaration') {
+        walkIdentifiers(node, (id, parent) => {
+          if (refBindings[id.name] && !refIdentifiers.has(id)) {
+            if (isStaticProperty(parent) && parent.shorthand) {
+              // let binding used in a property shorthand
+              // { foo } -> { foo: foo.value }
+              // skip for destructure patterns
+              if (!(parent as any).inPattern) {
+                s.appendLeft(id.end! + startOffset, `: ${id.name}.value`)
+              }
+            } else {
+              s.appendLeft(id.end! + startOffset, '.value')
+            }
+          } else if (id.name[0] === '$' && refBindings[id.name.slice(1)]) {
+            // $xxx raw ref access variables, remove the $ prefix
+            s.remove(id.start! + startOffset, id.start! + startOffset + 1)
+          }
+        })
+      }
+    }
   }
 
-  // 5. remove non-script content
+  // 5. check default export to make sure it doesn't reference setup scope
+  // variables
+  if (needDefaultExportRefCheck) {
+    walkIdentifiers(defaultExport!, id => {
+      if (setupBindings[id.name]) {
+        error(
+          `\`export default\` in <script setup> cannot reference locally ` +
+            `declared variables because it will be hoisted outside of the ` +
+            `setup() function. If your component options requires initialization ` +
+            `in the module scope, use a separate normal <script> to export ` +
+            `the options instead.`,
+          id
+        )
+      }
+    })
+  }
+
+  // 6. remove non-script content
   if (script) {
     if (startOffset < scriptStartOffset!) {
       // <script setup> before <script>
@@ -532,11 +615,11 @@ export function compileScript(
     s.remove(endOffset, source.length)
   }
 
-  // 5. finalize setup argument signature.
+  // 7. finalize setup argument signature.
   let args = ``
   if (isTS) {
     if (slotsType === '__Slots__') {
-      s.prepend(`import { Slots as __Slots__ } from 'vue'\n`)
+      helperImports.add('Slots')
     }
     const ctxType = `{
   emit: ${emitType},
@@ -560,7 +643,7 @@ export function compileScript(
     args = hasExplicitSignature ? (setupValue as string) : ``
   }
 
-  // 6. wrap setup code with function.
+  // 8. wrap setup code with function.
   // export the content of <script setup> as a named export, `setup`.
   // this allows `import { setup } from '*.vue'` for testing purposes.
   s.prependLeft(
@@ -569,27 +652,18 @@ export function compileScript(
   )
 
   // generate return statement
-  let returned = `{ ${Object.keys(setupExports).join(', ')} }`
-
-  // handle `export * from`. We need to call `toRefs` on the imported module
-  // object before merging.
-  if (exportAllIndex > 0) {
-    s.prepend(`import { toRefs as __toRefs__ } from 'vue'\n`)
-    for (let i = 0; i < exportAllIndex; i++) {
-      returned += `,\n  __toRefs__(__export_all_${i}__)`
-    }
-    returned = `Object.assign(\n  ${returned}\n)`
-  }
+  const exposedBindings = { ...userImports, ...setupBindings }
+  let returned = `{ ${Object.keys(exposedBindings).join(', ')} }`
 
   // inject `useCssVars` calls
   if (hasCssVars) {
-    s.prepend(`import { useCssVars as __useCssVars__ } from 'vue'\n`)
+    helperImports.add(`useCssVars`)
     for (const style of styles) {
       const vars = style.attrs.vars
       if (typeof vars === 'string') {
         s.prependRight(
           endOffset,
-          `\n${genCssVarsCode(vars, !!style.scoped, setupExports)}`
+          `\n${genCssVarsCode(vars, !!style.scoped, exposedBindings)}`
         )
       }
     }
@@ -597,18 +671,18 @@ export function compileScript(
 
   s.appendRight(endOffset, `\nreturn ${returned}\n}\n\n`)
 
-  // 7. finalize default export
+  // 9. finalize default export
   if (isTS) {
     // for TS, make sure the exported type is still valid type with
     // correct props information
-    s.prepend(`import { defineComponent as __define__ } from 'vue'\n`)
+    helperImports.add(`defineComponent`)
     // we have to use object spread for types to be merged properly
     // user's TS setting should compile it down to proper targets
     const def = defaultExport ? `\n  ...${defaultTempVar},` : ``
     const runtimeProps = genRuntimeProps(typeDeclaredProps)
     const runtimeEmits = genRuntimeEmits(typeDeclaredEmits)
     s.append(
-      `export default __define__({${def}${runtimeProps}${runtimeEmits}\n  setup\n})`
+      `export default __defineComponent__({${def}${runtimeProps}${runtimeEmits}\n  setup\n})`
     )
   } else {
     if (defaultExport) {
@@ -620,22 +694,28 @@ export function compileScript(
     }
   }
 
-  // 8. expose bindings for template compiler optimization
-  if (scriptAst) {
-    Object.assign(bindings, analyzeScriptBindings(scriptAst))
+  // 10. finalize Vue helper imports
+  const helpers = [...helperImports].filter(i => userImports[i] !== 'vue')
+  if (helpers.length) {
+    s.prepend(`import { ${helpers.join(', ')} } from 'vue'\n`)
   }
-  Object.keys(setupExports).forEach(key => {
-    bindings[key] = 'setup'
+
+  // 11. expose bindings for template compiler optimization
+  if (scriptAst) {
+    Object.assign(bindingMetadata, analyzeScriptBindings(scriptAst))
+  }
+  Object.keys(exposedBindings).forEach(key => {
+    bindingMetadata[key] = 'setup'
   })
   Object.keys(typeDeclaredProps).forEach(key => {
-    bindings[key] = 'props'
+    bindingMetadata[key] = 'props'
   })
-  Object.assign(bindings, analyzeScriptBindings(scriptSetupAst))
+  Object.assign(bindingMetadata, analyzeScriptBindings(scriptSetupAst))
 
   s.trim()
   return {
     ...scriptSetup,
-    bindings,
+    bindings: bindingMetadata,
     content: s.toString(),
     map: (s.generateMap({
       source: filename,
@@ -903,38 +983,21 @@ function genRuntimeEmits(emits: Set<string>) {
 }
 
 /**
- * export default {} inside `<script setup>` cannot access variables declared
- * inside since it's hoisted. Walk and check to make sure.
+ * Walk an AST and find identifiers that are variable references.
+ * This is largely the same logic with `transformExpressions` in compiler-core
+ * but with some subtle differences as this needs to handle a wider range of
+ * possible syntax.
  */
-function checkDefaultExport(
+function walkIdentifiers(
   root: Node,
-  scopeVars: Record<string, boolean>,
-  imports: Record<string, string>,
-  exports: Record<string, boolean>,
-  source: string,
-  offset: number
+  onIdentifier: (node: Identifier, parent: Node) => void
 ) {
   const knownIds: Record<string, number> = Object.create(null)
   ;(walk as any)(root, {
     enter(node: Node & { scopeIds?: Set<string> }, parent: Node) {
       if (node.type === 'Identifier') {
-        if (
-          !knownIds[node.name] &&
-          !isStaticPropertyKey(node, parent) &&
-          (scopeVars[node.name] || (!imports[node.name] && exports[node.name]))
-        ) {
-          throw new Error(
-            `\`export default\` in <script setup> cannot reference locally ` +
-              `declared variables because it will be hoisted outside of the ` +
-              `setup() function. If your component options requires initialization ` +
-              `in the module scope, use a separate normal <script> to export ` +
-              `the options instead.\n\n` +
-              generateCodeFrame(
-                source,
-                node.start! + offset,
-                node.end! + offset
-              )
-          )
+        if (!knownIds[node.name] && isRefIdentifier(node, parent)) {
+          onIdentifier(node, parent)
         }
       } else if (isFunction(node)) {
         // walk function expressions and add its arguments to known identifiers
@@ -968,6 +1031,12 @@ function checkDefaultExport(
             }
           })
         )
+      } else if (
+        node.type === 'ObjectProperty' &&
+        parent.type === 'ObjectPattern'
+      ) {
+        // mark property in destructure pattern
+        ;(node as any).inPattern = true
       }
     },
     leave(node: Node & { scopeIds?: Set<string> }) {
@@ -983,14 +1052,63 @@ function checkDefaultExport(
   })
 }
 
-function isStaticPropertyKey(node: Node, parent: Node): boolean {
-  return (
-    parent &&
-    (parent.type === 'ObjectProperty' || parent.type === 'ObjectMethod') &&
-    !parent.computed &&
-    parent.key === node
-  )
+function isRefIdentifier(id: Identifier, parent: Node) {
+  // declaration id
+  if (
+    (parent.type === 'VariableDeclarator' ||
+      parent.type === 'ClassDeclaration') &&
+    parent.id === id
+  ) {
+    return false
+  }
+
+  if (isFunction(parent)) {
+    // function decalration/expression id
+    if ((parent as any).id === id) {
+      return false
+    }
+    // params list
+    if (parent.params.includes(id)) {
+      return false
+    }
+  }
+
+  // property key
+  // this also covers object destructure pattern
+  if (isStaticPropertyKey(id, parent)) {
+    return false
+  }
+
+  // array destructure pattern
+  if (parent.type === 'ArrayPattern') {
+    return false
+  }
+
+  // member expression property
+  if (
+    (parent.type === 'MemberExpression' ||
+      parent.type === 'OptionalMemberExpression') &&
+    parent.property === id &&
+    !parent.computed
+  ) {
+    return false
+  }
+
+  // is a special keyword but parsed as identifier
+  if (id.name === 'arguments') {
+    return false
+  }
+
+  return true
 }
+
+const isStaticProperty = (node: Node): node is ObjectProperty =>
+  node &&
+  (node.type === 'ObjectProperty' || node.type === 'ObjectMethod') &&
+  !node.computed
+
+const isStaticPropertyKey = (node: Node, parent: Node) =>
+  isStaticProperty(parent) && parent.key === node
 
 function isFunction(node: Node): node is FunctionNode {
   return /Function(?:Expression|Declaration)$|Method$/.test(node.type)

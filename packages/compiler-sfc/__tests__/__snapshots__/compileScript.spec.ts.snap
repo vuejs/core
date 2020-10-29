@@ -1,8 +1,7 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`SFC compile <script setup> <script setup lang="ts"> extract emits 1`] = `
-"import { defineComponent as __define__ } from 'vue'
-import { Slots as __Slots__ } from 'vue'
+"import { Slots, defineComponent } from 'vue'
 declare function __emit__(e: 'foo' | 'bar'): void
       declare function __emit__(e: 'baz', id: number): void
       
@@ -16,15 +15,14 @@ export function setup(_: {}, { emit: myEmit }: {
 return {  }
 }
 
-export default __define__({
+export default __defineComponent__({
   emits: [\\"foo\\", \\"bar\\", \\"baz\\"] as unknown as undefined,
   setup
 })"
 `;
 
 exports[`SFC compile <script setup> <script setup lang="ts"> extract props 1`] = `
-"import { defineComponent as __define__ } from 'vue'
-import { Slots as __Slots__ } from 'vue'
+"import { Slots, defineComponent } from 'vue'
 interface Test {}
 
       type Alias = number[]
@@ -59,7 +57,7 @@ export function setup(myProps: {
 return {  }
 }
 
-export default __define__({
+export default __defineComponent__({
   props: {
     string: { type: String, required: true },
     number: { type: Number, required: true },
@@ -88,19 +86,17 @@ export default __define__({
 `;
 
 exports[`SFC compile <script setup> <script setup lang="ts"> hoist type declarations 1`] = `
-"import { defineComponent as __define__ } from 'vue'
-import { Slots as __Slots__ } from 'vue'
+"import { Slots, defineComponent } from 'vue'
 export interface Foo {}
         type Bar = {}
-        
+      
 export function setup() {
 
-        const a = 1
-      
-return { a }
+        
+return {  }
 }
 
-export default __define__({
+export default __defineComponent__({
   setup
 })"
 `;
@@ -149,7 +145,7 @@ export default __default__"
 `;
 
 exports[`SFC compile <script setup> CSS vars injection w/ <script setup> 1`] = `
-"import { useCssVars as __useCssVars__ } from 'vue'
+"import { useCssVars } from 'vue'
 
 export function setup() {
 const color = 'red'
@@ -180,32 +176,12 @@ const __default__ = {
 export default __default__"
 `;
 
-exports[`SFC compile <script setup> errors should allow export default referencing re-exported binding 1`] = `
-"import { bar } from './bar'
-          
-export function setup() {
-
-          
-return { bar }
-}
-
-const __default__ = {
-            props: {
-              foo: {
-                default: () => bar
-              }
-            }
-          }
-        __default__.setup = setup
-export default __default__"
-`;
-
 exports[`SFC compile <script setup> errors should allow export default referencing scope var 1`] = `
 "export function setup() {
 
           const bar = 1
           
-return {  }
+return { bar }
 }
 
 const __default__ = {
@@ -228,175 +204,220 @@ return {  }
 export default { setup }"
 `;
 
-exports[`SFC compile <script setup> exports export * from './x' 1`] = `
-"import { toRefs as __toRefs__ } from 'vue'
-import * as __export_all_0__ from './x'
-          
+exports[`SFC compile <script setup> imports dedupe between user & helper 1`] = `
+"import { ref } from 'vue'
+  
 export function setup() {
 
-          const y = 1
-          
-return Object.assign(
-  { y },
-  __toRefs__(__export_all_0__)
-)
+  const foo = ref(1)
+  
+return { ref, foo }
 }
 
 export default { setup }"
 `;
 
-exports[`SFC compile <script setup> exports export { x } 1`] = `
-"export function setup() {
-
-           const x = 1
-           const y = 2
-           
-return { x, y }
-}
-
-export default { setup }"
-`;
-
-exports[`SFC compile <script setup> exports export { x } from './x' 1`] = `
-"import { x, y } from './x'
-          
-export function setup() {
-
-           
-return { x, y }
-}
-
-export default { setup }"
-`;
-
-exports[`SFC compile <script setup> exports export { x as default } 1`] = `
-"import x from './x'
-          
-export function setup() {
-
-          const y = 1
-          
-return { y }
-}
-
-
-const __default__ = x
-__default__.setup = setup
-export default __default__"
-`;
-
-exports[`SFC compile <script setup> exports export { x as default } from './x' 1`] = `
-"import { x as __default__ } from './x'
-import { y } from './x'
-          
-export function setup() {
-
-          
-return { y }
-}
-
-__default__.setup = setup
-export default __default__"
-`;
-
-exports[`SFC compile <script setup> exports export class X() {} 1`] = `
-"export function setup() {
-class X {}
-return { X }
-}
-
-export default { setup }"
-`;
-
-exports[`SFC compile <script setup> exports export const { x } = ... (destructuring) 1`] = `
-"export function setup() {
-
-          const [a = 1, { b } = { b: 123 }, ...c] = useFoo()
-          const { d = 2, _: [e], ...f } = useBar()
+exports[`SFC compile <script setup> imports import dedupe between <script> and <script setup> 1`] = `
+"import { x } from './x'
         
-return { a, b, c, d, e, f }
-}
+export function setup() {
 
-export default { setup }"
-`;
-
-exports[`SFC compile <script setup> exports export const x = ... 1`] = `
-"export function setup() {
-const x = 1
+        x()
+        
 return { x }
 }
 
 export default { setup }"
 `;
 
-exports[`SFC compile <script setup> exports export default from './x' 1`] = `
-"import __default__ from './x'
-          
+exports[`SFC compile <script setup> imports should extract comment for import or type declarations 1`] = `
+"import a from 'a' // comment
+  import b from 'b'
+  
 export function setup() {
 
-          
+  
+return { a, b }
+}
+
+export default { setup }"
+`;
+
+exports[`SFC compile <script setup> imports should hoist and expose imports 1`] = `
+"import { ref } from 'vue'
+export function setup() {
+
+return { ref }
+}
+
+export default { setup }"
+`;
+
+exports[`SFC compile <script setup> ref: syntax sugar accessing ref binding 1`] = `
+"import { ref } from 'vue'
+
+export function setup() {
+
+      const a = ref(1)
+      console.log(a.value)
+      function get() {
+        return a.value + 1
+      }
+      
+return { a, get }
+}
+
+export default { setup }"
+`;
+
+exports[`SFC compile <script setup> ref: syntax sugar array destructure 1`] = `
+"import { ref } from 'vue'
+
+export function setup() {
+
+      const n = ref(1), [__a, __b = 1, ...__c] = useFoo()
+const a = ref(__a);
+const b = ref(__b);
+const c = ref(__c);
+      console.log(n.value, a.value, b.value, c.value)
+      
+return { n, a, b, c }
+}
+
+export default { setup }"
+`;
+
+exports[`SFC compile <script setup> ref: syntax sugar convert ref declarations 1`] = `
+"import { ref } from 'vue'
+
+export function setup() {
+
+      const a = ref(1)
+      const b = ref({
+        count: 0
+      })
+      let c = () => {}
+      let d
+      
+return { a, b, c, d }
+}
+
+export default { setup }"
+`;
+
+exports[`SFC compile <script setup> ref: syntax sugar multi ref declarations 1`] = `
+"import { ref } from 'vue'
+
+export function setup() {
+
+      const a = ref(1), b = ref(2), c = ref({
+        count: 0
+      })
+      
+return { a, b, c }
+}
+
+export default { setup }"
+`;
+
+exports[`SFC compile <script setup> ref: syntax sugar mutating ref binding 1`] = `
+"import { ref } from 'vue'
+
+export function setup() {
+
+      const a = ref(1)
+      const b = ref({ count: 0 })
+      function inc() {
+        a.value++
+        a.value = a.value + 1
+        b.value.count++
+        b.value.count = b.value.count + 1
+      }
+      
+return { a, b, inc }
+}
+
+export default { setup }"
+`;
+
+exports[`SFC compile <script setup> ref: syntax sugar nested destructure 1`] = `
+"import { ref } from 'vue'
+
+export function setup() {
+
+      const [{ a: { b: __b }}] = useFoo()
+const b = ref(__b);
+      const { c: [__d, __e] } = useBar()
+const d = ref(__d);
+const e = ref(__e);
+      console.log(b.value, d.value, e.value)
+      
+return { b, d, e }
+}
+
+export default { setup }"
+`;
+
+exports[`SFC compile <script setup> ref: syntax sugar object destructure 1`] = `
+"import { ref } from 'vue'
+
+export function setup() {
+
+      const n = ref(1), { a: __a, b: __c, d: __d = 1, e: __f = 2, ...__g } = useFoo()
+const a = ref(__a);
+const c = ref(__c);
+const d = ref(__d);
+const f = ref(__f);
+const g = ref(__g);
+      console.log(n.value, a.value, c.value, d.value, f.value, g.value)
+      
+return { n, a, c, d, f, g }
+}
+
+export default { setup }"
+`;
+
+exports[`SFC compile <script setup> ref: syntax sugar should not convert non ref labels 1`] = `
+"export function setup() {
+
+      foo: a = 1, b = 2, c = {
+        count: 0
+      }
+      
 return {  }
 }
 
-__default__.setup = setup
-export default __default__"
+export default { setup }"
 `;
 
-exports[`SFC compile <script setup> exports export default in <script setup> 1`] = `
-"export function setup() {
+exports[`SFC compile <script setup> ref: syntax sugar using ref binding in property shorthand 1`] = `
+"import { ref } from 'vue'
 
-          const y = 1
-          
-return { y }
-}
+export function setup() {
 
-const __default__ = {
-            props: ['foo']
-          }
-          __default__.setup = setup
-export default __default__"
-`;
-
-exports[`SFC compile <script setup> exports export function x() {} 1`] = `
-"export function setup() {
-function x(){}
-return { x }
+      const a = ref(1)
+      const b = { a: a.value }
+      function test() {
+        const { a } = b
+      }
+      
+return { a, b, test }
 }
 
 export default { setup }"
 `;
 
-exports[`SFC compile <script setup> import dedupe between <script> and <script setup> 1`] = `
+exports[`SFC compile <script setup> should expose top level declarations 1`] = `
 "import { x } from './x'
       
 export function setup() {
 
-      x()
+      let a = 1
+      const b = 2
+      function c() {}
+      class d {}
       
-return {  }
-}
-
-export default { setup }"
-`;
-
-exports[`SFC compile <script setup> should extract comment for import or type declarations 1`] = `
-"import a from 'a' // comment
-import b from 'b'
-
-export function setup() {
-
-
-return {  }
-}
-
-export default { setup }"
-`;
-
-exports[`SFC compile <script setup> should hoist imports 1`] = `
-"import { ref } from 'vue'
-export function setup() {
-
-return {  }
+return { x, a, b, c, d }
 }
 
 export default { setup }"
