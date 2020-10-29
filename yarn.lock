@@ -592,20 +592,20 @@
   resolved "https://registry.yarnpkg.com/@ls-lint/ls-lint/-/ls-lint-1.9.2.tgz#689f1f4c06072823a726802ba167340efcefe19c"
   integrity sha512-sugEjWjSSy9OHF6t1ZBLZCAROj52cZthB9dIePmzZzzMwmWwy3qAEMSdJheHeS1FOwDZI7Ipm1H/bWgzJNnSAw==
 
-"@microsoft/api-extractor-model@7.10.5":
-  version "7.10.5"
-  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor-model/-/api-extractor-model-7.10.5.tgz#6b8a706ca5c66e1b62ee7c5bdfd55c443d5b3aa9"
-  integrity sha512-ZDZ0wuD0d6mIddBuriLTyeCm5cjCR+VL6hla9D0uICdXimY3OoL838MYDZ+UkOLLR9z2GwNxciczRTIrjdQ0oA==
+"@microsoft/api-extractor-model@7.10.6":
+  version "7.10.6"
+  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor-model/-/api-extractor-model-7.10.6.tgz#2d20a5fffefd4063dfda747504ce3c810a3d78b5"
+  integrity sha512-kOhL5fjRIRJYKX5tQcijPcyejA3l29Lg+sbnpM+4owngdbM91O4PcysS6MrzKEvZrLN6+v8LkOlNre8n/sDZPA==
   dependencies:
     "@microsoft/tsdoc" "0.12.19"
     "@rushstack/node-core-library" "3.34.5"
 
 "@microsoft/api-extractor@^7.9.15":
-  version "7.10.6"
-  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor/-/api-extractor-7.10.6.tgz#b47fc89555837acb624c7c950be8d5de80e86190"
-  integrity sha512-3/c5znYqn8ewJPgf4t5MsIKYq40ORMsToaoAamuqYCCt3mWfDjvArRuosnLl7mLYAs6SbkxPCwh6vEczlZx8Tw==
+  version "7.11.0"
+  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor/-/api-extractor-7.11.0.tgz#5f1355c1152035c177081eb4127371fa7ade4531"
+  integrity sha512-VZ77kHn0CNWiPqe/yVY2XxL9AvDSy/Pvc7RqhVxy9OHiWV3Qkwh9gRssz+Wf5XLLWylduwg/Ikl9sneUJ2FVVw==
   dependencies:
-    "@microsoft/api-extractor-model" "7.10.5"
+    "@microsoft/api-extractor-model" "7.10.6"
     "@microsoft/tsdoc" "0.12.19"
     "@rushstack/node-core-library" "3.34.5"
     "@rushstack/rig-package" "0.2.5"
@@ -615,7 +615,7 @@
     resolve "~1.17.0"
     semver "~7.3.0"
     source-map "~0.6.1"
-    typescript "~3.9.7"
+    typescript "~4.0.5"
 
 "@microsoft/tsdoc@0.12.19":
   version "0.12.19"
@@ -7358,15 +7358,10 @@ typedarray@^0.0.6:
   resolved "https://registry.yarnpkg.com/typedarray/-/typedarray-0.0.6.tgz#867ac74e3864187b1d3d47d996a78ec5c8830777"
   integrity sha1-hnrHTjhkGHsdPUfZlqeOxciDB3c=
 
-typescript@^4.0.2:
+typescript@^4.0.2, typescript@~4.0.5:
   version "4.0.5"
   resolved "https://registry.yarnpkg.com/typescript/-/typescript-4.0.5.tgz#ae9dddfd1069f1cb5beb3ef3b2170dd7c1332389"
   integrity sha512-ywmr/VrTVCmNTJ6iV2LwIrfG1P+lv6luD8sUJs+2eI9NLGigaN+nUQc13iHqisq7bra9lnmUSYqbJvegraBOPQ==
-
-typescript@~3.9.7:
-  version "3.9.7"
-  resolved "https://registry.yarnpkg.com/typescript/-/typescript-3.9.7.tgz#98d600a5ebdc38f40cb277522f12dc800e9e25fa"
-  integrity sha512-BLbiRkiBzAwsjut4x/dsibSTB6yWpwT5qWmC2OfuCg3GgVQCSgMs4vEctYPhsaGtd0AeuuHMkjZ2h2WG8MSzRw==
 
 uglify-js@^2.6.1:
   version "2.8.29"
