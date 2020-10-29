@@ -118,7 +118,7 @@ export function resolveTransitionProps(
   }
 
   const makeEnterHook = (isAppear: boolean) => {
-    return (el: Element, done: () => void) => {
+    return (el: Element & { _timeoutID?: number }, done: () => void) => {
       const hook = isAppear ? onAppear : onEnter
       const resolve = () => finishEnter(el, isAppear, done)
       hook && hook(el, resolve)
@@ -127,7 +127,10 @@ export function resolveTransitionProps(
         addTransitionClass(el, isAppear ? appearToClass : enterToClass)
         if (!(hook && hook.length > 1)) {
           if (enterDuration) {
-            setTimeout(resolve, enterDuration)
+            el._timeoutID = (setTimeout(
+              resolve,
+              enterDuration
+            ) as unknown) as number
           } else {
             whenTransitionEnds(el, type, resolve)
           }
@@ -149,7 +152,7 @@ export function resolveTransitionProps(
     },
     onEnter: makeEnterHook(false),
     onAppear: makeEnterHook(true),
-    onLeave(el, done) {
+    onLeave(el: Element & { _timeoutID?: number }, done) {
       const resolve = () => finishLeave(el, done)
       addTransitionClass(el, leaveActiveClass)
       addTransitionClass(el, leaveFromClass)
@@ -158,7 +161,10 @@ export function resolveTransitionProps(
         addTransitionClass(el, leaveToClass)
         if (!(onLeave && onLeave.length > 1)) {
           if (leaveDuration) {
-            setTimeout(resolve, leaveDuration)
+            el._timeoutID = (setTimeout(
+              resolve,
+              leaveDuration
+            ) as unknown) as number
           } else {
             whenTransitionEnds(el, type, resolve)
           }
@@ -166,15 +172,18 @@ export function resolveTransitionProps(
       })
       onLeave && onLeave(el, resolve)
     },
-    onEnterCancelled(el) {
+    onEnterCancelled(el: Element & { _timeoutID?: number }) {
+      el._timeoutID && clearTimeout(el._timeoutID)
       finishEnter(el, false)
       onEnterCancelled && onEnterCancelled(el)
     },
-    onAppearCancelled(el) {
+    onAppearCancelled(el: Element & { _timeoutID?: number }) {
+      el._timeoutID && clearTimeout(el._timeoutID)
       finishEnter(el, true)
       onAppearCancelled && onAppearCancelled(el)
     },
-    onLeaveCancelled(el) {
+    onLeaveCancelled(el: Element & { _timeoutID?: number }) {
+      el._timeoutID && clearTimeout(el._timeoutID)
       finishLeave(el)
       onLeaveCancelled && onLeaveCancelled(el)
     }
@@ -248,7 +257,7 @@ function nextFrame(cb: () => void) {
 }
 
 function whenTransitionEnds(
-  el: Element,
+  el: Element & { _timeoutID?: number },
   expectedType: TransitionProps['type'] | undefined,
   cb: () => void
 ) {
@@ -257,10 +266,10 @@ function whenTransitionEnds(
     return cb()
   }
 
-  const endEvent = type + 'end'
+  const endEvent = 'on' + type + 'end'
   let ended = 0
   const end = () => {
-    el.removeEventListener(endEvent, onEnd)
+    ;(el as any)[endEvent] = null
     cb()
   }
   const onEnd = (e: Event) => {
@@ -270,12 +279,12 @@ function whenTransitionEnds(
       }
     }
   }
-  setTimeout(() => {
+  el._timeoutID = (setTimeout(() => {
     if (ended < propCount) {
       end()
     }
-  }, timeout + 1)
-  el.addEventListener(endEvent, onEnd)
+  }, timeout + 1) as unknown) as number
+  ;(el as any)[endEvent] = onEnd
 }
 
 interface CSSTransitionInfo {
