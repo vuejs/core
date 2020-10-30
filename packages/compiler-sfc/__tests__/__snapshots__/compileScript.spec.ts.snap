@@ -292,6 +292,7 @@ exports[`SFC compile <script setup> ref: syntax sugar convert ref declarations 1
 
 export function setup() {
 
+      const foo = ref()
       const a = ref(1)
       const b = ref({
         count: 0
@@ -299,7 +300,7 @@ export function setup() {
       let c = () => {}
       let d
       
-return { a, b, c, d }
+return { foo, a, b, c, d }
 }
 
 export default { setup }"

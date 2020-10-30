@@ -259,6 +259,7 @@ describe('SFC compile <script setup>', () => {
   describe('ref: syntax sugar', () => {
     test('convert ref declarations', () => {
       const { content, bindings } = compile(`<script setup>
+      ref: foo
       ref: a = 1
       ref: b = {
         count: 0
@@ -267,7 +268,10 @@ describe('SFC compile <script setup>', () => {
       let d
       </script>`)
       expect(content).toMatch(`import { ref } from 'vue'`)
+      expect(content).not.toMatch(`ref: foo`)
       expect(content).not.toMatch(`ref: a`)
+      expect(content).not.toMatch(`ref: b`)
+      expect(content).toMatch(`const foo = ref()`)
       expect(content).toMatch(`const a = ref(1)`)
       expect(content).toMatch(`
       const b = ref({
@@ -279,6 +283,7 @@ describe('SFC compile <script setup>', () => {
       expect(content).toMatch(`let d`)
       assertCode(content)
       expect(bindings).toStrictEqual({
+        foo: 'setup',
         a: 'setup',
         b: 'setup',
         c: 'setup',

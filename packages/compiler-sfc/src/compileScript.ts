@@ -155,11 +155,7 @@ export function compileScript(
       helperImports.add('ref')
       const { left, right } = exp
       if (left.type === 'Identifier') {
-        if (left.name[0] === '$') {
-          error(`ref variable identifiers cannot start with $.`, left)
-        }
-        refBindings[left.name] = setupBindings[left.name] = true
-        refIdentifiers.add(left)
+        registerRefBinding(left)
         s.prependRight(right.start! + startOffset, `ref(`)
         s.appendLeft(right.end! + startOffset, ')')
       } else if (left.type === 'ObjectPattern') {
@@ -186,9 +182,20 @@ export function compileScript(
       // possible multiple declarations
       // ref: x = 1, y = 2
       exp.expressions.forEach(e => processRefExpression(e, statement))
+    } else if (exp.type === 'Identifier') {
+      registerRefBinding(exp)
+      s.appendLeft(exp.end! + startOffset, ` = ref()`)
     } else {
       error(`ref: statements can only contain assignment expressions.`, exp)
     }
+  }
+
+  function registerRefBinding(id: Identifier) {
+    if (id.name[0] === '$') {
+      error(`ref variable identifiers cannot start with $.`, id)
+    }
+    refBindings[id.name] = setupBindings[id.name] = true
+    refIdentifiers.add(id)
   }
 
   function processRefObjectPattern(
@@ -227,9 +234,7 @@ export function compileScript(
         s.prependRight(nameId.start! + startOffset, `__`)
       }
       if (nameId) {
-        // register binding
-        refBindings[nameId.name] = setupBindings[nameId.name] = true
-        refIdentifiers.add(nameId)
+        registerRefBinding(nameId)
         // append binding declarations after the parent statement
         s.appendLeft(
           statement.end! + startOffset,
@@ -261,10 +266,9 @@ export function compileScript(
         processRefArrayPattern(e, statement)
       }
       if (nameId) {
+        registerRefBinding(nameId)
+        // prefix original
         s.prependRight(nameId.start! + startOffset, `__`)
-        // register binding
-        refBindings[nameId.name] = setupBindings[nameId.name] = true
-        refIdentifiers.add(nameId)
         // append binding declarations after the parent statement
         s.appendLeft(
           statement.end! + startOffset,
