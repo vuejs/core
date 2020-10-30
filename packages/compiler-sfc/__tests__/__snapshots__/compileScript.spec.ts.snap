@@ -7,7 +7,7 @@ declare function __emit__(e: 'foo' | 'bar'): void
       
 export function setup(_: {}, { emit: myEmit }: {
   emit: typeof __emit__,
-  slots: __Slots__,
+  slots: Slots,
   attrs: Record<string, any>
 }) {
 
@@ -15,7 +15,7 @@ export function setup(_: {}, { emit: myEmit }: {
 return {  }
 }
 
-export default __defineComponent__({
+export default defineComponent({
   emits: [\\"foo\\", \\"bar\\", \\"baz\\"] as unknown as undefined,
   setup
 })"
@@ -57,7 +57,7 @@ export function setup(myProps: {
 return {  }
 }
 
-export default __defineComponent__({
+export default defineComponent({
   props: {
     string: { type: String, required: true },
     number: { type: Number, required: true },
@@ -96,7 +96,7 @@ export function setup() {
 return {  }
 }
 
-export default __defineComponent__({
+export default defineComponent({
   setup
 })"
 `;
