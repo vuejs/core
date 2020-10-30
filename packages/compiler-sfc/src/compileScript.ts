@@ -358,7 +358,7 @@ export function compileScript(
 
   let propsType = `{}`
   let emitType = `(e: string, ...args: any[]) => void`
-  let slotsType = `__Slots__`
+  let slotsType = `Slots`
   let attrsType = `Record<string, any>`
 
   let propsASTNode
@@ -662,7 +662,7 @@ export function compileScript(
   // 7. finalize setup argument signature.
   let args = ``
   if (isTS) {
-    if (slotsType === '__Slots__') {
+    if (slotsType === 'Slots') {
       helperImports.add('Slots')
     }
     const ctxType = `{
@@ -726,7 +726,7 @@ export function compileScript(
     const runtimeProps = genRuntimeProps(typeDeclaredProps)
     const runtimeEmits = genRuntimeEmits(typeDeclaredEmits)
     s.append(
-      `export default __defineComponent__({${def}${runtimeProps}${runtimeEmits}\n  setup\n})`
+      `export default defineComponent({${def}${runtimeProps}${runtimeEmits}\n  setup\n})`
     )
   } else {
     if (defaultExport) {
