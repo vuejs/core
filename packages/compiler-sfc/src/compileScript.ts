@@ -1,7 +1,7 @@
 import MagicString from 'magic-string'
 import { BindingMetadata } from '@vue/compiler-core'
 import { SFCDescriptor, SFCScriptBlock } from './parse'
-import { parse, ParserPlugin } from '@babel/parser'
+import { parse as _parse, ParserOptions, ParserPlugin } from '@babel/parser'
 import { babelParserDefaultPlugins, generateCodeFrame } from '@vue/shared'
 import {
   Node,
@@ -69,14 +69,14 @@ export function compileScript(
 
   if (!scriptSetup) {
     if (!script) {
-      throw new Error(`SFC contains no <script> tags.`)
+      throw new Error(`[@vue/compiler-sfc] SFC contains no <script> tags.`)
     }
     if (scriptLang && scriptLang !== 'ts') {
       // do not process non js/ts script blocks
       return script
     }
     try {
-      const scriptAst = parse(script.content, {
+      const scriptAst = _parse(script.content, {
         plugins,
         sourceType: 'module'
       }).program.body
@@ -95,7 +95,7 @@ export function compileScript(
 
   if (script && scriptLang !== scriptSetupLang) {
     throw new Error(
-      `<script> and <script setup> must have the same language type.`
+      `[@vue/compiler-sfc] <script> and <script setup> must have the same language type.`
     )
   }
 
@@ -122,13 +122,31 @@ export function compileScript(
   const scriptStartOffset = script && script.loc.start.offset
   const scriptEndOffset = script && script.loc.end.offset
 
+  function parse(
+    input: string,
+    options: ParserOptions,
+    offset: number
+  ): Statement[] {
+    try {
+      return _parse(input, options).program.body
+    } catch (e) {
+      e.message = `[@vue/compiler-sfc] ${e.message}\n\n${generateCodeFrame(
+        source,
+        e.pos + offset,
+        e.pos + offset + 1
+      )}`
+      throw e
+    }
+  }
+
   function error(
     msg: string,
     node: Node,
     end: number = node.end! + startOffset
   ) {
     throw new Error(
-      msg + `\n\n` + generateCodeFrame(source, node.start! + startOffset, end)
+      `[@vue/compiler-sfc] ${msg}\n\n` +
+        generateCodeFrame(source, node.start! + startOffset, end)
     )
   }
 
@@ -260,10 +278,14 @@ export function compileScript(
   let scriptAst
   if (script) {
     // import dedupe between <script> and <script setup>
-    scriptAst = parse(script.content, {
-      plugins,
-      sourceType: 'module'
-    }).program.body
+    scriptAst = parse(
+      script.content,
+      {
+        plugins,
+        sourceType: 'module'
+      },
+      scriptStartOffset!
+    )
 
     for (const node of scriptAst) {
       if (node.type === 'ImportDeclaration') {
@@ -348,8 +370,18 @@ export function compileScript(
     // <script setup="xxx" lang="ts">
     // parse the signature to extract the props/emit variables the user wants
     // we need them to find corresponding type declarations.
-    const signatureAST = parse(`(${setupValue})=>{}`, { plugins }).program
-      .body[0]
+    let signatureAST
+    try {
+      signatureAST = _parse(`(${setupValue})=>{}`, { plugins }).program.body[0]
+    } catch (e) {
+      throw new Error(
+        `[@vue/compiler-sfc] Invalid <script setup> signature: ${setupValue}\n\n${generateCodeFrame(
+          source,
+          startOffset - 1,
+          startOffset
+        )}`
+      )
+    }
     const params = ((signatureAST as ExpressionStatement)
       .expression as ArrowFunctionExpression).params
     if (params[0] && params[0].type === 'Identifier') {
@@ -377,14 +409,18 @@ export function compileScript(
   }
 
   // 3. parse <script setup> and  walk over top level statements
-  const scriptSetupAst = parse(scriptSetup.content, {
-    plugins: [
-      ...plugins,
-      // allow top level await but only inside <script setup>
-      'topLevelAwait'
-    ],
-    sourceType: 'module'
-  }).program.body
+  const scriptSetupAst = parse(
+    scriptSetup.content,
+    {
+      plugins: [
+        ...plugins,
+        // allow top level await but only inside <script setup>
+        'topLevelAwait'
+      ],
+      sourceType: 'module'
+    },
+    startOffset
+  )
 
   for (const node of scriptSetupAst) {
     const start = node.start! + startOffset
