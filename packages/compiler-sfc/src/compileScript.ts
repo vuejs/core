@@ -366,10 +366,8 @@ export function compileScript(
   // record declared types for runtime props type generation
   const declaredTypes: Record<string, string[]> = {}
 
-  if (isTS && hasExplicitSignature) {
-    // <script setup="xxx" lang="ts">
-    // parse the signature to extract the props/emit variables the user wants
-    // we need them to find corresponding type declarations.
+  // <script setup="xxx">
+  if (hasExplicitSignature) {
     let signatureAST
     try {
       signatureAST = _parse(`(${setupValue})=>{}`, { plugins }).program.body[0]
@@ -382,26 +380,32 @@ export function compileScript(
         )}`
       )
     }
-    const params = ((signatureAST as ExpressionStatement)
-      .expression as ArrowFunctionExpression).params
-    if (params[0] && params[0].type === 'Identifier') {
-      propsASTNode = params[0]
-      propsVar = propsASTNode.name
-    }
-    if (params[1] && params[1].type === 'ObjectPattern') {
-      setupCtxASTNode = params[1]
-      for (const p of params[1].properties) {
-        if (
-          p.type === 'ObjectProperty' &&
-          p.key.type === 'Identifier' &&
-          p.value.type === 'Identifier'
-        ) {
-          if (p.key.name === 'emit') {
-            emitVar = p.value.name
-          } else if (p.key.name === 'slots') {
-            slotsVar = p.value.name
-          } else if (p.key.name === 'attrs') {
-            attrsVar = p.value.name
+
+    if (isTS) {
+      // <script setup="xxx" lang="ts">
+      // parse the signature to extract the props/emit variables the user wants
+      // we need them to find corresponding type declarations.
+      const params = ((signatureAST as ExpressionStatement)
+        .expression as ArrowFunctionExpression).params
+      if (params[0] && params[0].type === 'Identifier') {
+        propsASTNode = params[0]
+        propsVar = propsASTNode.name
+      }
+      if (params[1] && params[1].type === 'ObjectPattern') {
+        setupCtxASTNode = params[1]
+        for (const p of params[1].properties) {
+          if (
+            p.type === 'ObjectProperty' &&
+            p.key.type === 'Identifier' &&
+            p.value.type === 'Identifier'
+          ) {
+            if (p.key.name === 'emit') {
+              emitVar = p.value.name
+            } else if (p.key.name === 'slots') {
+              slotsVar = p.value.name
+            } else if (p.key.name === 'attrs') {
+              attrsVar = p.value.name
+            }
           }
         }
       }
