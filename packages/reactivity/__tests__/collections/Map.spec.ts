@@ -467,5 +467,11 @@ describe('reactivity/collections', () => {
       proxy.clear()
       expect(spy).toBeCalledTimes(1)
     })
+
+    it('should return proxy from Map.set call', () => {
+      const map = reactive(new Map())
+      const result = map.set('a', 'a')
+      expect(result).toBe(map)
+    })
   })
 })
