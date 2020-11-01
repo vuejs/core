@@ -168,18 +168,21 @@ export function getStaticType(
         }
 
         // check if any of the props contain runtime constants
-        if (returnType !== StaticType.HAS_RUNTIME_CONSTANT) {
-          for (let i = 0; i < node.props.length; i++) {
-            const p = node.props[i]
-            if (
-              p.type === NodeTypes.DIRECTIVE &&
-              p.name === 'bind' &&
-              p.exp &&
-              (p.exp.type === NodeTypes.COMPOUND_EXPRESSION ||
-                p.exp.isRuntimeConstant)
-            ) {
-              returnType = StaticType.HAS_RUNTIME_CONSTANT
-            }
+        for (
+          let i = 0;
+          returnType !== StaticType.HAS_RUNTIME_CONSTANT &&
+          i < node.props.length;
+          i++
+        ) {
+          const p = node.props[i]
+          if (
+            p.type === NodeTypes.DIRECTIVE &&
+            p.name === 'bind' &&
+            p.exp &&
+            (p.exp.type === NodeTypes.COMPOUND_EXPRESSION ||
+              p.exp.isRuntimeConstant)
+          ) {
+            returnType = StaticType.HAS_RUNTIME_CONSTANT
           }
         }
 
