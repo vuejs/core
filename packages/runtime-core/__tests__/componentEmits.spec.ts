@@ -290,5 +290,8 @@ describe('component: emit', () => {
     // .once listeners
     expect(isEmitListener(options, 'onClickOnce')).toBe(true)
     expect(isEmitListener(options, 'onclickOnce')).toBe(false)
+    // kebab-case listener
+    const kebabOptions = { 'test-event': null }
+    expect(isEmitListener(kebabOptions, 'onTestEvent')).toBe(true)
   })
 })

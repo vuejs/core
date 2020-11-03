@@ -204,6 +204,7 @@ export function isEmitListener(
   key = key.replace(/Once$/, '')
   return (
     hasOwn(options, key[2].toLowerCase() + key.slice(3)) ||
-    hasOwn(options, key.slice(2))
+    hasOwn(options, key.slice(2)) ||
+    hasOwn(options, hyphenate(key.slice(2)))
   )
 }
