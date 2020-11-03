@@ -306,7 +306,9 @@ function createGlobalPropertiesProxy() {
     set(target, key, value: any, receiver) {
       if (protectedPropertyNames.includes(key)) {
         warn(
-          `Property '_' can't be set on app.config.globalProprties as it is a reserved name.
+          `Property '${String(
+            key
+          )}' can't be set on \`app.config.globalProperties\` as it is a reserved name.
           Please use another name for this globalProperty entry`
         )
         return false
