@@ -179,7 +179,7 @@ const KeepAliveImpl = {
         exclude && pruneCache(name => !matches(exclude, name))
       },
       // prune post-render after `current` has been updated
-      { flush: 'post' }
+      { flush: 'post', deep: true }
     )
 
     // cache sub tree after render
