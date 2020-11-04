@@ -650,9 +650,6 @@ function baseCreateRenderer(
     hostInsert(end, container, anchor)
   }
 
-  /**
-   * Dev / HMR only
-   */
   const removeStaticNode = (vnode: VNode) => {
     let cur = vnode.el
     while (cur && cur !== vnode.anchor) {
@@ -2076,7 +2073,7 @@ function baseCreateRenderer(
       return
     }
 
-    if (__DEV__ && type === Static) {
+    if (type === Static) {
       removeStaticNode(vnode)
       return
     }
