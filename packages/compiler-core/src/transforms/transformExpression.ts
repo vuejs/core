@@ -154,12 +154,15 @@ export function processExpression(
   const isDuplicate = (node: Node & PrefixMeta): boolean =>
     ids.some(id => id.start === node.start)
 
+  const targetNode = node
   // walk the AST and look for identifiers that need to be prefixed.
   ;(walk as any)(ast, {
     enter(node: Node & PrefixMeta, parent: Node) {
       if (node.type === 'Identifier') {
         if (!isDuplicate(node)) {
           const needPrefix = shouldPrefix(node, parent)
+          targetNode.hasRefToParentScope =
+            targetNode.hasRefToParentScope || !!knownIds[node.name]
           if (!knownIds[node.name] && needPrefix) {
             if (isPropertyShorthand(node, parent)) {
               // property shorthand like { foo }, we need to add the key since we

@@ -209,6 +209,7 @@ export interface SimpleExpressionNode extends Node {
    * but cannot be stringified because they must be first evaluated at runtime.
    */
   isRuntimeConstant?: boolean
+  hasRefToParentScope?: boolean
 }
 
 export interface InterpolationNode extends Node {
@@ -231,6 +232,7 @@ export interface CompoundExpressionNode extends Node {
    * the identifiers declared inside the function body.
    */
   identifiers?: string[]
+  hasRefToParentScope?: boolean
 }
 
 export interface IfNode extends Node {

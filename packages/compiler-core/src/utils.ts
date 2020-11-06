@@ -310,9 +310,10 @@ export function hasScopeRef(
       return node.children.some(c => hasScopeRef(c, ids))
     case NodeTypes.SIMPLE_EXPRESSION:
       return (
-        !node.isStatic &&
-        isSimpleIdentifier(node.content) &&
-        !!ids[node.content]
+        (!node.isStatic &&
+          isSimpleIdentifier(node.content) &&
+          !!ids[node.content]) ||
+        !!node.hasRefToParentScope
       )
     case NodeTypes.COMPOUND_EXPRESSION:
       return node.children.some(c => isObject(c) && hasScopeRef(c, ids))
