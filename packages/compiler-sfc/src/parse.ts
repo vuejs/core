@@ -112,13 +112,14 @@ export function parse(
       if (
         (!parent && tag !== 'template') ||
         // <template lang="xxx"> should also be treated as raw text
-        props.some(
-          p =>
-            p.type === NodeTypes.ATTRIBUTE &&
-            p.name === 'lang' &&
-            p.value &&
-            p.value.content !== 'html'
-        )
+        (tag === 'template' &&
+          props.some(
+            p =>
+              p.type === NodeTypes.ATTRIBUTE &&
+              p.name === 'lang' &&
+              p.value &&
+              p.value.content !== 'html'
+          ))
       ) {
         return TextModes.RAWTEXT
       } else {
