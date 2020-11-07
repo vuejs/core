@@ -144,19 +144,25 @@ h1 { color: red }
     expect(descriptor.template!.content).toBe(content)
   })
 
+  //#2566
+  test('only template lang be treated as plain text', () => {
+    const { errors } = parse(`
+    <template lang="pug">
+      <div lang="">
+        <div></div>
+      </div>
+    </template>
+    `)
+    expect(errors.length).toBe(0)
+  })
+
   test('error tolerance', () => {
     const { errors } = parse(`<template>`)
     expect(errors.length).toBe(1)
   })
 
   test('should parse as DOM by default', () => {
-    const { errors } = parse(`
-    <template>
-      <div lang="">
-        <div></div>
-      </div>
-    </template>
-    `)
+    const { errors } = parse(`<template><input></template>`)
     expect(errors.length).toBe(0)
   })
 
