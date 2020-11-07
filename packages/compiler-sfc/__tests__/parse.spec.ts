@@ -145,7 +145,7 @@ h1 { color: red }
   })
 
   //#2566
-  test('only template lang be treated as plain text', () => {
+  test('div lang should not be treated as plain text', () => {
     const { errors } = parse(`
     <template lang="pug">
       <div lang="">
