@@ -132,7 +132,7 @@ export function initProps(
   isStateful: number, // result of bitwise flag comparison
   isSSR = false
 ) {
-  const props: Data = {}
+  const props: Data = Object.create(null)
   const attrs: Data = {}
   def(attrs, InternalObjectKey, 1)
   setFullProps(instance, rawProps, props, attrs)
