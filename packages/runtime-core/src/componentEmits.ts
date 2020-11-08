@@ -159,7 +159,7 @@ export function normalizeEmitsOptions(
   }
 
   const raw = comp.emits
-  let normalized: ObjectEmitsOptions = {}
+  let normalized: ObjectEmitsOptions = Object.create(null)
 
   // apply mixin/extends props
   let hasExtends = false
