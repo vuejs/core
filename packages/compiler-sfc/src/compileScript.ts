@@ -41,7 +41,7 @@ const hasWarned: Record<string, boolean> = {}
 function warnOnce(msg: string) {
   if (!hasWarned[msg]) {
     hasWarned[msg] = true
-    console.log(`\n\x1b[33m[@vue/compiler-sfc] %s\x1b[0m\n`, msg)
+    console.log(`\x1b[33m[@vue/compiler-sfc] %s\x1b[0m\n`, msg)
   }
 }
 
@@ -59,7 +59,7 @@ export function compileScript(
   if (__DEV__ && !__TEST__ && scriptSetup) {
     warnOnce(
       `<script setup> is still an experimental proposal.\n` +
-        `Follow https://github.com/vuejs/rfcs/pull/227 for its status.`
+        `Follow its status at https://github.com/vuejs/rfcs/pull/227.`
     )
   }
 
@@ -461,9 +461,9 @@ export function compileScript(
     ) {
       if (enableRefSugar) {
         warnOnce(
-          `ref: sugar is still an experimental proposal and is not\n` +
+          `ref: sugar is still an experimental proposal and is not ` +
             `guaranteed to be a part of <script setup>.\n` +
-            `Follow its status at https://github.com/vuejs/rfcs/pull/228`
+            `Follow its status at https://github.com/vuejs/rfcs/pull/228.`
         )
         s.overwrite(
           node.label.start! + startOffset,

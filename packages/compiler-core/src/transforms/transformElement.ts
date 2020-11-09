@@ -26,7 +26,10 @@ import {
   isSymbol,
   isOn,
   isObject,
-  isReservedProp
+  isReservedProp,
+  capitalize,
+  camelize,
+  EMPTY_OBJ
 } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
@@ -246,8 +249,15 @@ export function resolveComponentType(
   }
 
   // 3. user component (from setup bindings)
-  if (context.bindingMetadata[tag] === 'setup') {
-    return `$setup[${JSON.stringify(tag)}]`
+  let tagFromSetup = tag
+  const bindings = context.bindingMetadata
+  if (
+    bindings !== EMPTY_OBJ &&
+    (bindings[tagFromSetup] === 'setup' ||
+      bindings[(tagFromSetup = camelize(tag))] === 'setup' ||
+      bindings[(tagFromSetup = capitalize(camelize(tag)))] === 'setup')
+  ) {
+    return `$setup[${JSON.stringify(tagFromSetup)}]`
   }
 
   // 4. user component (resolve)
