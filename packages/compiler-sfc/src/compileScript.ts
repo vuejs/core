@@ -36,7 +36,14 @@ export interface SFCScriptCompileOptions {
   refSugar?: boolean
 }
 
-let hasWarned = false
+const hasWarned: Record<string, boolean> = {}
+
+function warnOnce(msg: string) {
+  if (!hasWarned[msg]) {
+    hasWarned[msg] = true
+    console.log(`\n\x1b[33m[@vue/compiler-sfc] %s\x1b[0m\n`, msg)
+  }
+}
 
 /**
  * Compile `<script setup>`
@@ -49,12 +56,10 @@ export function compileScript(
 ): SFCScriptBlock {
   const { script, scriptSetup, styles, source, filename } = sfc
 
-  if (__DEV__ && !__TEST__ && !hasWarned && scriptSetup) {
-    hasWarned = true
-    // @ts-ignore `console.info` cannot be null error
-    console[console.info ? 'info' : 'log'](
-      `\n[@vue/compiler-sfc] <script setup> is still an experimental proposal.\n` +
-        `Follow https://github.com/vuejs/rfcs/pull/182 for its status.\n`
+  if (__DEV__ && !__TEST__ && scriptSetup) {
+    warnOnce(
+      `<script setup> is still an experimental proposal.\n` +
+        `Follow https://github.com/vuejs/rfcs/pull/227 for its status.`
     )
   }
 
@@ -450,17 +455,30 @@ export function compileScript(
 
     // process `ref: x` bindings (convert to refs)
     if (
-      enableRefSugar &&
       node.type === 'LabeledStatement' &&
       node.label.name === 'ref' &&
       node.body.type === 'ExpressionStatement'
     ) {
-      s.overwrite(
-        node.label.start! + startOffset,
-        node.body.start! + startOffset,
-        'const '
-      )
-      processRefExpression(node.body.expression, node)
+      if (enableRefSugar) {
+        warnOnce(
+          `ref: sugar is still an experimental proposal and is not\n` +
+            `guaranteed to be a part of <script setup>.\n` +
+            `Follow its status at https://github.com/vuejs/rfcs/pull/228`
+        )
+        s.overwrite(
+          node.label.start! + startOffset,
+          node.body.start! + startOffset,
+          'const '
+        )
+        processRefExpression(node.body.expression, node)
+      } else {
+        // TODO if we end up shipping ref: sugar as an opt-in feature,
+        // need to proxy the option in vite, vue-loader and rollup-plugin-vue.
+        error(
+          `ref: sugar needs to be explicitly enabled via vite or vue-loader options.`,
+          node
+        )
+      }
     }
 
     if (node.type === 'ImportDeclaration') {
@@ -487,13 +505,16 @@ export function compileScript(
       }
     }
 
-    if (node.type === 'ExportNamedDeclaration' && node.exportKind !== 'type') {
-      // TODO warn
-      error(`<script setup> cannot contain non-type named exports.`, node)
-    }
-
-    if (node.type === 'ExportAllDeclaration') {
-      // TODO warn
+    if (
+      (node.type === 'ExportNamedDeclaration' && node.exportKind !== 'type') ||
+      node.type === 'ExportAllDeclaration'
+    ) {
+      error(
+        `<script setup> cannot contain non-type named or * exports. ` +
+          `If you are using a previous version of <script setup>, please ` +
+          `consult the updated RFC at https://github.com/vuejs/rfcs/pull/227.`,
+        node
+      )
     }
 
     if (node.type === 'ExportDefaultDeclaration') {
