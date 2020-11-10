@@ -257,10 +257,12 @@ export function resolveComponentType(
       bindings[(tagFromSetup = camelize(tag))] === 'setup' ||
       bindings[(tagFromSetup = capitalize(camelize(tag)))] === 'setup')
   ) {
-    return `$setup[${JSON.stringify(tagFromSetup)}]`
+    return context.inline
+      ? tagFromSetup
+      : `$setup[${JSON.stringify(tagFromSetup)}]`
   }
 
-  // 4. user component (resolve)
+  // 5. user component (resolve)
   context.helper(RESOLVE_COMPONENT)
   context.components.add(tag)
   return toValidAssetId(tag, `component`)
