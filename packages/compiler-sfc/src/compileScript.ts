@@ -736,7 +736,7 @@ export function compileScript(
     `\nexport ${hasAwait ? `async ` : ``}function setup(${args}) {\n`
   )
 
-  const exposedBindings = { ...userImports, ...setupBindings }
+  const allBindings = { ...userImports, ...setupBindings }
 
   // 9. inject `useCssVars` calls
   if (hasCssVars) {
@@ -746,7 +746,7 @@ export function compileScript(
       if (typeof vars === 'string') {
         s.prependRight(
           endOffset,
-          `\n${genCssVarsCode(vars, !!style.scoped, exposedBindings)}`
+          `\n${genCssVarsCode(vars, !!style.scoped, allBindings)}`
         )
       }
     }
@@ -756,12 +756,23 @@ export function compileScript(
   if (scriptAst) {
     Object.assign(bindingMetadata, analyzeScriptBindings(scriptAst))
   }
-  Object.keys(exposedBindings).forEach(key => {
-    bindingMetadata[key] = 'setup'
-  })
-  Object.keys(typeDeclaredProps).forEach(key => {
+  if (options.inlineTemplate) {
+    for (const [key, value] of Object.entries(userImports)) {
+      bindingMetadata[key] = value.endsWith('.vue')
+        ? 'component-import'
+        : 'setup'
+    }
+    for (const key in setupBindings) {
+      bindingMetadata[key] = 'setup'
+    }
+  } else {
+    for (const key in allBindings) {
+      bindingMetadata[key] = 'setup'
+    }
+  }
+  for (const key in typeDeclaredProps) {
     bindingMetadata[key] = 'props'
-  })
+  }
   Object.assign(bindingMetadata, analyzeScriptBindings(scriptSetupAst))
 
   // 11. generate return statement
@@ -799,7 +810,7 @@ export function compileScript(
     }
   } else {
     // return bindings from setup
-    returned = `{ ${Object.keys(exposedBindings).join(', ')} }`
+    returned = `{ ${Object.keys(allBindings).join(', ')} }`
   }
   s.appendRight(endOffset, `\nreturn ${returned}\n}\n\n`)
 

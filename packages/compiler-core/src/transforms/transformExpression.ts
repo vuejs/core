@@ -107,6 +107,8 @@ export function processExpression(
         return `${inlinePropsIdentifier}.${raw}`
       } else if (type === 'setup') {
         return `${context.helperString(UNREF)}(${raw})`
+      } else if (type === 'component-import') {
+        return raw
       }
     }
     // fallback to normal

@@ -40,7 +40,8 @@ import {
   TO_HANDLERS,
   TELEPORT,
   KEEP_ALIVE,
-  SUSPENSE
+  SUSPENSE,
+  UNREF
 } from '../runtimeHelpers'
 import {
   getInnerRange,
@@ -53,6 +54,7 @@ import {
 } from '../utils'
 import { buildSlots } from './vSlot'
 import { getStaticType } from './hoistStatic'
+import { BindingMetadata } from '../options'
 
 // some directive transforms (e.g. v-model) may return a symbol for runtime
 // import, which should be used instead of a resolveDirective call.
@@ -249,20 +251,33 @@ export function resolveComponentType(
   }
 
   // 3. user component (from setup bindings)
-  let tagFromSetup = tag
   const bindings = context.bindingMetadata
-  if (
-    bindings !== EMPTY_OBJ &&
-    (bindings[tagFromSetup] === 'setup' ||
-      bindings[(tagFromSetup = camelize(tag))] === 'setup' ||
-      bindings[(tagFromSetup = capitalize(camelize(tag)))] === 'setup')
-  ) {
-    return context.inline
-      ? tagFromSetup
-      : `$setup[${JSON.stringify(tagFromSetup)}]`
+  if (bindings !== EMPTY_OBJ) {
+    const checkType = (type: BindingMetadata[string]) => {
+      let resolvedTag = tag
+      if (
+        bindings[resolvedTag] === type ||
+        bindings[(resolvedTag = camelize(tag))] === type ||
+        bindings[(resolvedTag = capitalize(camelize(tag)))] === type
+      ) {
+        return resolvedTag
+      }
+    }
+    const tagFromSetup = checkType('setup')
+    if (tagFromSetup) {
+      return context.inline
+        ? // setup scope bindings may be refs so they need to be unrefed
+          `${context.helperString(UNREF)}(${tagFromSetup})`
+        : `$setup[${JSON.stringify(tagFromSetup)}]`
+    }
+    const tagFromImport = checkType('component-import')
+    if (tagFromImport) {
+      // imports can be used as-is
+      return tagFromImport
+    }
   }
 
-  // 5. user component (resolve)
+  // 4. user component (resolve)
   context.helper(RESOLVE_COMPONENT)
   context.components.add(tag)
   return toValidAssetId(tag, `component`)
