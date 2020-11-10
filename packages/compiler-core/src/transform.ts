@@ -124,6 +124,8 @@ export function createTransformContext(
     ssr = false,
     ssrCssVars = ``,
     bindingMetadata = EMPTY_OBJ,
+    inline = false,
+    inlinePropsIdentifier = `$props`,
     onError = defaultOnError
   }: TransformOptions
 ): TransformContext {
@@ -142,6 +144,8 @@ export function createTransformContext(
     ssr,
     ssrCssVars,
     bindingMetadata,
+    inline,
+    inlinePropsIdentifier,
     onError,
 
     // state

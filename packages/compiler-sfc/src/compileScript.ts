@@ -27,13 +27,28 @@ import {
 import { walk } from 'estree-walker'
 import { RawSourceMap } from 'source-map'
 import { genCssVarsCode, injectCssVarsCalls } from './genCssVars'
+import { compileTemplate, SFCTemplateCompileOptions } from './compileTemplate'
 
 export interface SFCScriptCompileOptions {
   /**
    * https://babeljs.io/docs/en/babel-parser#plugins
    */
   babelParserPlugins?: ParserPlugin[]
+  /**
+   * Enable ref: label sugar
+   * https://github.com/vuejs/rfcs/pull/228
+   * @default true
+   */
   refSugar?: boolean
+  /**
+   * Compile the template and inline the resulting render function
+   * directly inside setup().
+   * - Only affects <script setup>
+   * - This should only be used in production because it prevents the template
+   * from being hot-reloaded separately from component state.
+   */
+  inlineTemplate?: boolean
+  templateOptions?: SFCTemplateCompileOptions
 }
 
 const hasWarned: Record<string, boolean> = {}
@@ -356,10 +371,10 @@ export function compileScript(
   const setupValue = scriptSetup.setup
   const hasExplicitSignature = typeof setupValue === 'string'
 
-  let propsVar: string | undefined
-  let emitVar: string | undefined
-  let slotsVar: string | undefined
-  let attrsVar: string | undefined
+  let propsIdentifier: string | undefined
+  let emitIdentifier: string | undefined
+  let slotsIdentifier: string | undefined
+  let attrsIdentifier: string | undefined
 
   let propsType = `{}`
   let emitType = `(e: string, ...args: any[]) => void`
@@ -390,16 +405,20 @@ export function compileScript(
       )
     }
 
+    // parse the signature to extract the identifiers users are assigning to
+    // the arguments. props identifier is always needed for inline mode
+    // template compilation
+    const params = ((signatureAST as ExpressionStatement)
+      .expression as ArrowFunctionExpression).params
+    if (params[0] && params[0].type === 'Identifier') {
+      propsASTNode = params[0]
+      propsIdentifier = propsASTNode.name
+    }
+
     if (isTS) {
       // <script setup="xxx" lang="ts">
-      // parse the signature to extract the props/emit variables the user wants
-      // we need them to find corresponding type declarations.
-      const params = ((signatureAST as ExpressionStatement)
-        .expression as ArrowFunctionExpression).params
-      if (params[0] && params[0].type === 'Identifier') {
-        propsASTNode = params[0]
-        propsVar = propsASTNode.name
-      }
+      // additional identifiers are needed for TS in order to match declared
+      // types
       if (params[1] && params[1].type === 'ObjectPattern') {
         setupCtxASTNode = params[1]
         for (const p of params[1].properties) {
@@ -409,11 +428,11 @@ export function compileScript(
             p.value.type === 'Identifier'
           ) {
             if (p.key.name === 'emit') {
-              emitVar = p.value.name
+              emitIdentifier = p.value.name
             } else if (p.key.name === 'slots') {
-              slotsVar = p.value.name
+              slotsIdentifier = p.value.name
             } else if (p.key.name === 'attrs') {
-              attrsVar = p.value.name
+              attrsIdentifier = p.value.name
             }
           }
         }
@@ -560,16 +579,16 @@ export function compileScript(
               typeNode.end! + startOffset
             )
             if (typeNode.type === 'TSTypeLiteral') {
-              if (id.name === propsVar) {
+              if (id.name === propsIdentifier) {
                 propsType = typeString
                 extractRuntimeProps(typeNode, typeDeclaredProps, declaredTypes)
-              } else if (id.name === slotsVar) {
+              } else if (id.name === slotsIdentifier) {
                 slotsType = typeString
-              } else if (id.name === attrsVar) {
+              } else if (id.name === attrsIdentifier) {
                 attrsType = typeString
               }
             } else if (
-              id.name === emitVar &&
+              id.name === emitIdentifier &&
               typeNode.type === 'TSFunctionType'
             ) {
               emitType = typeString
@@ -583,10 +602,10 @@ export function compileScript(
     if (
       node.type === 'TSDeclareFunction' &&
       node.id &&
-      node.id.name === emitVar
+      node.id.name === emitIdentifier
     ) {
       const index = node.id.start! + startOffset
-      s.overwrite(index, index + emitVar.length, '__emit__')
+      s.overwrite(index, index + emitIdentifier.length, '__emit__')
       emitType = `typeof __emit__`
       extractRuntimeEmits(node, typeDeclaredEmits)
     }
@@ -681,7 +700,7 @@ export function compileScript(
   }
 
   // 7. finalize setup argument signature.
-  let args = ``
+  let args = options.inlineTemplate ? `$props` : ``
   if (isTS) {
     if (slotsType === 'Slots') {
       helperImports.add('Slots')
@@ -704,8 +723,8 @@ export function compileScript(
       }
       args = ss.toString()
     }
-  } else {
-    args = hasExplicitSignature ? (setupValue as string) : ``
+  } else if (hasExplicitSignature) {
+    args = setupValue as string
   }
 
   // 8. wrap setup code with function.
@@ -716,11 +735,9 @@ export function compileScript(
     `\nexport ${hasAwait ? `async ` : ``}function setup(${args}) {\n`
   )
 
-  // generate return statement
   const exposedBindings = { ...userImports, ...setupBindings }
-  let returned = `{ ${Object.keys(exposedBindings).join(', ')} }`
 
-  // inject `useCssVars` calls
+  // 9. inject `useCssVars` calls
   if (hasCssVars) {
     helperImports.add(`useCssVars`)
     for (const style of styles) {
@@ -734,9 +751,58 @@ export function compileScript(
     }
   }
 
+  // 10. analyze binding metadata
+  if (scriptAst) {
+    Object.assign(bindingMetadata, analyzeScriptBindings(scriptAst))
+  }
+  Object.keys(exposedBindings).forEach(key => {
+    bindingMetadata[key] = 'setup'
+  })
+  Object.keys(typeDeclaredProps).forEach(key => {
+    bindingMetadata[key] = 'props'
+  })
+  Object.assign(bindingMetadata, analyzeScriptBindings(scriptSetupAst))
+
+  // 11. generate return statement
+  let returned
+  if (options.inlineTemplate) {
+    if (sfc.template) {
+      // inline render function mode - we are going to compile the template and
+      // inline it right here
+      const { code, preamble, tips, errors } = compileTemplate({
+        ...options.templateOptions,
+        filename,
+        source: sfc.template.content,
+        compilerOptions: {
+          inline: true,
+          inlinePropsIdentifier: propsIdentifier,
+          bindingMetadata
+        }
+        // TODO source map
+      })
+      if (tips.length) {
+        tips.forEach(warnOnce)
+      }
+      const err = errors[0]
+      if (typeof err === 'string') {
+        throw new Error(err)
+      } else if (err) {
+        throw err
+      }
+      if (preamble) {
+        s.prepend(preamble)
+      }
+      returned = code
+    } else {
+      returned = `() => {}`
+    }
+  } else {
+    // return bindings from setup
+    returned = `{ ${Object.keys(exposedBindings).join(', ')} }`
+  }
   s.appendRight(endOffset, `\nreturn ${returned}\n}\n\n`)
 
-  // 9. finalize default export
+  // 12. finalize default export
   if (isTS) {
     // for TS, make sure the exported type is still valid type with
     // correct props information
@@ -759,23 +825,11 @@ export function compileScript(
     }
   }
 
-  // 10. finalize Vue helper imports
+  // 13. finalize Vue helper imports
   const helpers = [...helperImports].filter(i => userImports[i] !== 'vue')
   if (helpers.length) {
     s.prepend(`import { ${helpers.join(', ')} } from 'vue'\n`)
   }
-
-  // 11. expose bindings for template compiler optimization
-  if (scriptAst) {
-    Object.assign(bindingMetadata, analyzeScriptBindings(scriptAst))
-  }
-  Object.keys(exposedBindings).forEach(key => {
-    bindingMetadata[key] = 'setup'
-  })
-  Object.keys(typeDeclaredProps).forEach(key => {
-    bindingMetadata[key] = 'props'
-  })
-  Object.assign(bindingMetadata, analyzeScriptBindings(scriptSetupAst))
 
   s.trim()
   return {

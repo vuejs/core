@@ -28,6 +28,7 @@ import { Node, Function, Identifier, ObjectProperty } from '@babel/types'
 import { validateBrowserExpression } from '../validateExpression'
 import { parse } from '@babel/parser'
 import { walk } from 'estree-walker'
+import { UNREF } from '../runtimeHelpers'
 
 const isLiteralWhitelisted = /*#__PURE__*/ makeMap('true,false,null,this')
 
@@ -97,12 +98,21 @@ export function processExpression(
     return node
   }
 
-  const { bindingMetadata } = context
+  const { inline, inlinePropsIdentifier, bindingMetadata } = context
   const prefix = (raw: string) => {
-    const source = hasOwn(bindingMetadata, raw)
-      ? `$` + bindingMetadata[raw]
-      : `_ctx`
-    return `${source}.${raw}`
+    if (inline) {
+      // setup inline mode, it's either props or setup
+      if (bindingMetadata[raw] !== 'setup') {
+        return `${inlinePropsIdentifier}.${raw}`
+      } else {
+        return `${context.helperString(UNREF)}(${raw})`
+      }
+    } else {
+      const source = hasOwn(bindingMetadata, raw)
+        ? `$` + bindingMetadata[raw]
+        : `_ctx`
+      return `${source}.${raw}`
+    }
   }
 
   // fast path if expression is a simple identifier.

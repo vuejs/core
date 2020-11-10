@@ -464,14 +464,20 @@ describe('SFC compile <script setup>', () => {
         compile(`<script setup>
         export const a = 1
         </script>`)
-      ).toThrow(`cannot contain non-type named exports`)
+      ).toThrow(`cannot contain non-type named or * exports`)
+
+      expect(() =>
+        compile(`<script setup>
+        export * from './foo'
+        </script>`)
+      ).toThrow(`cannot contain non-type named or * exports`)
 
       expect(() =>
         compile(`<script setup>
           const bar = 1
           export { bar as default }
         </script>`)
-      ).toThrow(`cannot contain non-type named exports`)
+      ).toThrow(`cannot contain non-type named or * exports`)
     })
 
     test('ref: non-assignment expressions', () => {
