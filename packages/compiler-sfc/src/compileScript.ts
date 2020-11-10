@@ -685,6 +685,7 @@ export function compileScript(
   if (script) {
     if (startOffset < scriptStartOffset!) {
       // <script setup> before <script>
+      s.remove(0, startOffset)
       s.remove(endOffset, scriptStartOffset!)
       s.remove(scriptEndOffset!, source.length)
     } else {

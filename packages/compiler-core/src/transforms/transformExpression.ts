@@ -100,19 +100,17 @@ export function processExpression(
 
   const { inline, inlinePropsIdentifier, bindingMetadata } = context
   const prefix = (raw: string) => {
+    const type = hasOwn(bindingMetadata, raw) && bindingMetadata[raw]
     if (inline) {
-      // setup inline mode, it's either props or setup
-      if (bindingMetadata[raw] !== 'setup') {
+      // setup inline mode
+      if (type === 'props') {
         return `${inlinePropsIdentifier}.${raw}`
-      } else {
+      } else if (type === 'setup') {
         return `${context.helperString(UNREF)}(${raw})`
       }
-    } else {
-      const source = hasOwn(bindingMetadata, raw)
-        ? `$` + bindingMetadata[raw]
-        : `_ctx`
-      return `${source}.${raw}`
     }
+    // fallback to normal
+    return `${type ? `$${type}` : `_ctx`}.${raw}`
   }
 
   // fast path if expression is a simple identifier.

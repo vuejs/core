@@ -227,7 +227,7 @@ export function generate(
       if (genScopeId) {
         push(`${PURE_ANNOTATION}_withId(`)
       }
-      push(`() => {`)
+      push(`(_ctx, _cache${optimizeSources}) => {`)
     } else {
       if (genScopeId) {
         push(`const render = ${PURE_ANNOTATION}_withId(`)
