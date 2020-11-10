@@ -57,16 +57,19 @@ function setVarsOnVNode(
   if (vnode.shapeFlag & ShapeFlags.ELEMENT && vnode.el) {
     const style = vnode.el.style
     for (const key in vars) {
-      const valueType = typeof vars[key]
-      if (valueType === 'string' || valueType === 'number') {
-        style.setProperty(`--${prefix}${key}`, unref(vars[key]))
-      } else {
+      if (
+        __DEV__ &&
+        vars[key] !== null &&
+        typeof vars[key] !== 'string' &&
+        typeof vars[key] !== 'number'
+      ) {
         warn(
-          `CSS variable creation skipped: --${prefix}${key} value is of type ${typeof vars[
+          `The value of CSS variable --${prefix}${key} should be type string or number, but received ${typeof vars[
             key
-          ]}. Expecting string or number.`
+          ]}.`
         )
       }
+      style.setProperty(`--${prefix}${key}`, unref(vars[key]))
     }
   } else if (vnode.type === Fragment) {
     ;(vnode.children as VNode[]).forEach(c => setVarsOnVNode(c, vars, prefix))
