@@ -4,12 +4,17 @@ import { camelize } from '@vue/runtime-core'
 type Style = string | Record<string, string | string[]> | null
 
 export function patchStyle(el: Element, prev: Style, next: Style) {
+  debugger
   const style = (el as HTMLElement).style
   if (!next) {
     el.removeAttribute('style')
   } else if (isString(next)) {
     if (prev !== next) {
-      style.cssText = next
+      if (prev !== null) {
+        style.cssText = style.cssText.replace(prev, next)
+      } else {
+        style.cssText = next
+      }
     }
   } else {
     for (const key in next) {
