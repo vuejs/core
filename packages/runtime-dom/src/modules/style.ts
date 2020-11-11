@@ -4,7 +4,8 @@ import {
   capitalize,
   isArray,
   parseStringStyle,
-  extend
+  extend,
+  isObject
 } from '@vue/shared'
 import { camelize } from '@vue/runtime-core'
 
@@ -19,11 +20,18 @@ export function patchStyle(el: Element, prev: Style, next: Style) {
       if (prev === null) {
         style.cssText = next
       } else {
-        const nextStyle = extend(
-          parseStringStyle(style.cssText),
-          parseStringStyle(next)
-        ) as Style
-        updateStyle(style, prev, nextStyle)
+        const oldStyle = parseStringStyle(style.cssText)
+        const prevStyle = isObject(prev)
+          ? prev
+          : parseStringStyle(prev as string)
+        let keepStyle: any = {}
+        for (const key in oldStyle) {
+          if (!(key in prevStyle)) {
+            keepStyle[key] = oldStyle[key]
+          }
+        }
+        const nextStyle = extend(keepStyle, parseStringStyle(next)) as Style
+        updateStyle(style, prevStyle, nextStyle)
       }
     }
   } else {
