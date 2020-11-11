@@ -26,7 +26,7 @@ export function patchStyle(el: Element, prev: Style, next: Style) {
         // #2583
         // `display: xxx` is transformed via vShow and it not in `props.style`.
         // should keep it
-        let keepStyle: NormalizedStyle = {}
+        const keepStyle: NormalizedStyle = {}
         for (const key in computedStyle) {
           if (!(key in prevStyle)) {
             keepStyle[key] = computedStyle[key]
