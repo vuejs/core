@@ -5,7 +5,8 @@ import {
   isArray,
   parseStringStyle,
   extend,
-  isObject
+  isObject,
+  NormalizedStyle
 } from '@vue/shared'
 import { camelize } from '@vue/runtime-core'
 
@@ -20,20 +21,18 @@ export function patchStyle(el: Element, prev: Style, next: Style) {
       if (prev === null) {
         style.cssText = next
       } else {
-        const oldStyle = parseStringStyle(style.cssText)
-        const prevStyle = isObject(prev)
-          ? prev
-          : parseStringStyle(prev as string)
+        const computedStyle = parseStringStyle(style.cssText)
+        const prevStyle = isObject(prev) ? prev : parseStringStyle(prev)
         // #2583
-        // "display:false" is transformed via vShow and it not in `props.style`.
-        // we should keep it
-        let keepStyle: any = {}
-        for (const key in oldStyle) {
+        // `display: xxx` is transformed via vShow and it not in `props.style`.
+        // should keep it
+        let keepStyle: NormalizedStyle = {}
+        for (const key in computedStyle) {
           if (!(key in prevStyle)) {
-            keepStyle[key] = oldStyle[key]
+            keepStyle[key] = computedStyle[key]
           }
         }
-        const nextStyle = extend(keepStyle, parseStringStyle(next)) as Style
+        const nextStyle = extend(keepStyle, parseStringStyle(next))
         updateStyle(style, prevStyle, nextStyle)
       }
     }
