@@ -25,7 +25,7 @@ export function patchStyle(el: Element, prev: Style, next: Style) {
           ? prev
           : parseStringStyle(prev as string)
         // #2583
-        // "display:false" is transformed via vShow and it not in `prop.style`.
+        // "display:false" is transformed via vShow and it not in `props.style`.
         // we should keep it
         let keepStyle: any = {}
         for (const key in oldStyle) {
