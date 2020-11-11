@@ -91,10 +91,6 @@ interface SharedTransformCodegenOptions {
    * This allows the function to directly access setup() local bindings.
    */
   inline?: boolean
-  /**
-   * Identifier for props in setup() inline mode.
-   */
-  inlinePropsIdentifier?: string
 }
 
 export interface TransformOptions extends SharedTransformCodegenOptions {

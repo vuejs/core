@@ -98,14 +98,12 @@ export function processExpression(
     return node
   }
 
-  const { inline, inlinePropsIdentifier, bindingMetadata } = context
+  const { inline, bindingMetadata } = context
   const prefix = (raw: string) => {
     const type = hasOwn(bindingMetadata, raw) && bindingMetadata[raw]
     if (inline) {
       // setup inline mode
-      if (type === 'props') {
-        return `${inlinePropsIdentifier}.${raw}`
-      } else if (type === 'setup') {
+      if (type === 'setup') {
         return `${context.helperString(UNREF)}(${raw})`
       } else if (type === 'component-import') {
         return raw

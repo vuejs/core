@@ -405,20 +405,16 @@ export function compileScript(
       )
     }
 
-    // parse the signature to extract the identifiers users are assigning to
-    // the arguments. props identifier is always needed for inline mode
-    // template compilation
-    const params = ((signatureAST as ExpressionStatement)
-      .expression as ArrowFunctionExpression).params
-    if (params[0] && params[0].type === 'Identifier') {
-      propsASTNode = params[0]
-      propsIdentifier = propsASTNode.name
-    }
-
     if (isTS) {
       // <script setup="xxx" lang="ts">
-      // additional identifiers are needed for TS in order to match declared
-      // types
+      // parse the signature to extract the identifiers users are assigning to
+      // the arguments. They are needed for matching type delcarations.
+      const params = ((signatureAST as ExpressionStatement)
+        .expression as ArrowFunctionExpression).params
+      if (params[0] && params[0].type === 'Identifier') {
+        propsASTNode = params[0]
+        propsIdentifier = propsASTNode.name
+      }
       if (params[1] && params[1].type === 'ObjectPattern') {
         setupCtxASTNode = params[1]
         for (const p of params[1].properties) {
@@ -701,7 +697,7 @@ export function compileScript(
   }
 
   // 7. finalize setup argument signature.
-  let args = options.inlineTemplate ? `$props` : ``
+  let args = ``
   if (isTS) {
     if (slotsType === 'Slots') {
       helperImports.add('Slots')
@@ -787,7 +783,6 @@ export function compileScript(
         source: sfc.template.content,
         compilerOptions: {
           inline: true,
-          inlinePropsIdentifier: propsIdentifier,
           bindingMetadata
         }
         // TODO source map
