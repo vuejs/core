@@ -19,8 +19,8 @@ import { version } from '.'
 export interface App<HostElement = any> {
   version: string
   config: AppConfig
-  use<P extends Plugin_2>(plugin: P, options: Parameters<P extends PluginInstallFunction ? P : P['install']>[1]): this
-  use(plugin: Plugin_2): this
+  use<P extends Plugin>(plugin: P, options: Parameters<P extends PluginInstallFunction ? P : P['install']>[1]): this
+  use(plugin: Plugin): this
   mixin(mixin: ComponentOptions): this
   component(name: string): Component | undefined
   component(name: string, component: Component): this
