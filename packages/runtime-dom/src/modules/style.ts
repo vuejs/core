@@ -1,4 +1,11 @@
-import { isString, hyphenate, capitalize, isArray } from '@vue/shared'
+import {
+  isString,
+  hyphenate,
+  capitalize,
+  isArray,
+  parseStringStyle,
+  extend
+} from '@vue/shared'
 import { camelize } from '@vue/runtime-core'
 
 type Style = string | Record<string, string | string[]> | null
@@ -9,21 +16,29 @@ export function patchStyle(el: Element, prev: Style, next: Style) {
     el.removeAttribute('style')
   } else if (isString(next)) {
     if (prev !== next) {
-      style.cssText =
-        prev !== null
-          ? //#2583
-            style.cssText.replace(prev, next)
-          : next
+      if (prev === null) {
+        style.cssText = next
+      } else {
+        const nextStyle = extend(
+          parseStringStyle(style.cssText),
+          parseStringStyle(next)
+        ) as Style
+        updateStyle(style, prev, nextStyle)
+      }
     }
   } else {
-    for (const key in next) {
-      setStyle(style, key, next[key])
-    }
-    if (prev && !isString(prev)) {
-      for (const key in prev) {
-        if (next[key] == null) {
-          setStyle(style, key, '')
-        }
+    updateStyle(style, prev, next)
+  }
+}
+
+function updateStyle(style: CSSStyleDeclaration, prev: any, next: any) {
+  for (const key in next) {
+    setStyle(style, key, next[key])
+  }
+  if (prev && !isString(prev)) {
+    for (const key in prev) {
+      if (next[key] == null) {
+        setStyle(style, key, '')
       }
     }
   }
