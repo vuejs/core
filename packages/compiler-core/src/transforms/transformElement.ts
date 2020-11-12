@@ -272,8 +272,10 @@ export function resolveComponentType(
     }
     const tagFromConst = checkType(BindingTypes.CONST)
     if (tagFromConst) {
-      // constant setup bindings (e.g. imports) can be used as-is
-      return tagFromConst
+      return context.inline
+        ? // in inline mode, const setup bindings (e.g. imports) can be used as-is
+          tagFromConst
+        : `$setup[${JSON.stringify(tagFromConst)}]`
     }
   }
 

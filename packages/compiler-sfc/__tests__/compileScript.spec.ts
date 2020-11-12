@@ -22,12 +22,6 @@ function assertCode(code: string) {
 }
 
 describe('SFC compile <script setup>', () => {
-  test('explicit setup signature', () => {
-    assertCode(
-      compile(`<script setup="props, { emit }">emit('foo')</script>`).content
-    )
-  })
-
   test('should expose top level declarations', () => {
     const { content } = compile(`
       <script setup>
@@ -39,7 +33,43 @@ describe('SFC compile <script setup>', () => {
       </script>
       `)
     assertCode(content)
-    expect(content).toMatch('return { x, a, b, c, d }')
+    expect(content).toMatch('return { a, b, c, d, x }')
+  })
+
+  test('defineContext()', () => {
+    const { content, bindings } = compile(`
+<script setup>
+import { defineContext } from 'vue'
+const { props, emit } = defineContext({
+  props: {
+    foo: String
+  },
+  emit: ['a', 'b']
+})
+
+const bar = 1
+</script>
+  `)
+    // should generate working code
+    assertCode(content)
+    // should anayze bindings
+    expect(bindings).toStrictEqual({
+      foo: 'props',
+      bar: 'const',
+      props: 'const',
+      emit: 'const'
+    })
+
+    // should remove defineContext import and call
+    expect(content).not.toMatch('defineContext')
+    // should generate correct setup signature
+    expect(content).toMatch(`setup(__props, { props, emit }) {`)
+    // should include context options in default export
+    expect(content).toMatch(`export default {
+  props: {
+    foo: String
+  },
+  emit: ['a', 'b'],`)
   })
 
   describe('imports', () => {
@@ -51,18 +81,22 @@ describe('SFC compile <script setup>', () => {
 
     test('should extract comment for import or type declarations', () => {
       assertCode(
-        compile(`<script setup>
-  import a from 'a' // comment
-  import b from 'b'
-  </script>`).content
+        compile(`
+        <script setup>
+        import a from 'a' // comment
+        import b from 'b'
+        </script>
+        `).content
       )
     })
 
     test('dedupe between user & helper', () => {
-      const { content } = compile(`<script setup>
-  import { ref } from 'vue'
-  ref: foo = 1
-  </script>`)
+      const { content } = compile(`
+      <script setup>
+      import { ref } from 'vue'
+      ref: foo = 1
+      </script>
+      `)
       assertCode(content)
       expect(content).toMatch(`import { ref } from 'vue'`)
     })
@@ -84,7 +118,62 @@ describe('SFC compile <script setup>', () => {
     })
   })
 
-  describe('<script setup lang="ts">', () => {
+  describe('inlineTemplate mode', () => {
+    test('should work', () => {
+      const { content } = compile(
+        `
+        <script setup>
+        import { ref } from 'vue'
+        const count = ref(0)
+        </script>
+        <template>
+          <div>{{ count }}</div>
+          <div>static</div>
+        </template>
+        `,
+        { inlineTemplate: true }
+      )
+      // check snapshot and make sure helper imports and
+      // hoists are placed correctly.
+      assertCode(content)
+    })
+
+    test('avoid unref() when necessary', () => {
+      // function, const, component import
+      const { content } = compile(
+        `
+        <script setup>
+        import { ref, defineContext } from 'vue'
+        import Foo from './Foo.vue'
+        import other from './util'
+        const count = ref(0)
+        const constant = {}
+        function fn() {}
+        </script>
+        <template>
+          <Foo/>
+          <div @click="fn">{{ count }} {{ constant }} {{ other }}</div>
+        </template>
+        `,
+        { inlineTemplate: true }
+      )
+      assertCode(content)
+      // no need to unref vue component import
+      expect(content).toMatch(`createVNode(Foo)`)
+      // should unref other imports
+      expect(content).toMatch(`unref(other)`)
+      // no need to unref constant literals
+      expect(content).not.toMatch(`unref(constant)`)
+      // should unref const w/ call init (e.g. ref())
+      expect(content).toMatch(`unref(count)`)
+      // no need to unref function declarations
+      expect(content).toMatch(`{ onClick: fn }`)
+      // no need to mark constant fns in patch flag
+      expect(content).not.toMatch(`PROPS`)
+    })
+  })
+
+  describe('with TypeScript', () => {
     test('hoist type declarations', () => {
       const { content } = compile(`
       <script setup lang="ts">
@@ -94,37 +183,57 @@ describe('SFC compile <script setup>', () => {
       assertCode(content)
     })
 
-    test('extract props', () => {
+    test('defineContext w/ runtime options', () => {
       const { content } = compile(`
-      <script setup="myProps" lang="ts">
+<script setup lang="ts">
+import { defineContext } from 'vue'
+const { props, emit } = defineContext({
+  props: { foo: String },
+  emits: ['a', 'b']
+})
+</script>
+      `)
+      assertCode(content)
+      expect(content).toMatch(`export default defineComponent({
+  props: { foo: String },
+  emits: ['a', 'b'],
+  setup(__props, { props, emit }) {`)
+    })
+
+    test('defineContext w/ type / extract props', () => {
+      const { content, bindings } = compile(`
+      <script setup lang="ts">
+      import { defineContext } from 'vue'
       interface Test {}
 
       type Alias = number[]
 
-      declare const myProps: {
-        string: string
-        number: number
-        boolean: boolean
-        object: object
-        objectLiteral: { a: number }
-        fn: (n: number) => void
-        functionRef: Function
-        objectRef: Object
-        array: string[]
-        arrayRef: Array<any>
-        tuple: [number, number]
-        set: Set<string>
-        literal: 'foo'
-        optional?: any
-        recordRef: Record<string, null>
-        interface: Test
-        alias: Alias
+      defineContext<{
+        props: {
+          string: string
+          number: number
+          boolean: boolean
+          object: object
+          objectLiteral: { a: number }
+          fn: (n: number) => void
+          functionRef: Function
+          objectRef: Object
+          array: string[]
+          arrayRef: Array<any>
+          tuple: [number, number]
+          set: Set<string>
+          literal: 'foo'
+          optional?: any
+          recordRef: Record<string, null>
+          interface: Test
+          alias: Alias
 
-        union: string | number
-        literalUnion: 'foo' | 'bar'
-        literalUnionMixed: 'foo' | 1 | boolean
-        intersection: Test & {}
-      }
+          union: string | number
+          literalUnion: 'foo' | 'bar'
+          literalUnionMixed: 'foo' | 1 | boolean
+          intersection: Test & {}
+        }
+      }>()
       </script>`)
       assertCode(content)
       expect(content).toMatch(`string: { type: String, required: true }`)
@@ -154,21 +263,57 @@ describe('SFC compile <script setup>', () => {
         `literalUnionMixed: { type: [String, Number, Boolean], required: true }`
       )
       expect(content).toMatch(`intersection: { type: Object, required: true }`)
+      expect(bindings).toStrictEqual({
+        string: 'props',
+        number: 'props',
+        boolean: 'props',
+        object: 'props',
+        objectLiteral: 'props',
+        fn: 'props',
+        functionRef: 'props',
+        objectRef: 'props',
+        array: 'props',
+        arrayRef: 'props',
+        tuple: 'props',
+        set: 'props',
+        literal: 'props',
+        optional: 'props',
+        recordRef: 'props',
+        interface: 'props',
+        alias: 'props',
+        union: 'props',
+        literalUnion: 'props',
+        literalUnionMixed: 'props',
+        intersection: 'props'
+      })
     })
 
-    test('extract emits', () => {
+    test('defineContext w/ type / extract emits', () => {
       const { content } = compile(`
-      <script setup="_, { emit: myEmit }" lang="ts">
-      declare function myEmit(e: 'foo' | 'bar'): void
-      declare function myEmit(e: 'baz', id: number): void
+      <script setup lang="ts">
+      import { defineContext } from 'vue'
+      const { emit } = defineContext<{
+        emit: (e: 'foo' | 'bar') => void
+      }>()
+      </script>
+      `)
+      assertCode(content)
+      expect(content).toMatch(`props: {},\n  emit: (e: 'foo' | 'bar') => void,`)
+      expect(content).toMatch(`emits: ["foo", "bar"] as unknown as undefined`)
+    })
+
+    test('defineContext w/ type / extract emits (union)', () => {
+      const { content } = compile(`
+      <script setup lang="ts">
+      import { defineContext } from 'vue'
+      const { emit } = defineContext<{
+        emit: ((e: 'foo' | 'bar') => void) | ((e: 'baz', id: number) => void)
+      }>()
       </script>
       `)
       assertCode(content)
       expect(content).toMatch(
-        `declare function __emit__(e: 'foo' | 'bar'): void`
-      )
-      expect(content).toMatch(
-        `declare function __emit__(e: 'baz', id: number): void`
+        `props: {},\n  emit: ((e: 'foo' | 'bar') => void) | ((e: 'baz', id: number) => void),`
       )
       expect(content).toMatch(
         `emits: ["foo", "bar", "baz"] as unknown as undefined`
@@ -220,9 +365,7 @@ describe('SFC compile <script setup>', () => {
   describe('async/await detection', () => {
     function assertAwaitDetection(code: string, shouldAsync = true) {
       const { content } = compile(`<script setup>${code}</script>`)
-      expect(content).toMatch(
-        `export ${shouldAsync ? `async ` : ``}function setup`
-      )
+      expect(content).toMatch(`${shouldAsync ? `async ` : ``}setup()`)
     }
 
     test('expression statement', () => {
@@ -459,25 +602,27 @@ describe('SFC compile <script setup>', () => {
       ).toThrow(`<script> and <script setup> must have the same language type`)
     })
 
+    const moduleErrorMsg = `cannot contain ES module exports`
+
     test('non-type named exports', () => {
       expect(() =>
         compile(`<script setup>
         export const a = 1
         </script>`)
-      ).toThrow(`cannot contain non-type named or * exports`)
+      ).toThrow(moduleErrorMsg)
 
       expect(() =>
         compile(`<script setup>
         export * from './foo'
         </script>`)
-      ).toThrow(`cannot contain non-type named or * exports`)
+      ).toThrow(moduleErrorMsg)
 
       expect(() =>
         compile(`<script setup>
           const bar = 1
           export { bar as default }
         </script>`)
-      ).toThrow(`cannot contain non-type named or * exports`)
+      ).toThrow(moduleErrorMsg)
     })
 
     test('ref: non-assignment expressions', () => {
@@ -488,96 +633,73 @@ describe('SFC compile <script setup>', () => {
       ).toThrow(`ref: statements can only contain assignment expressions`)
     })
 
-    test('export default referencing local var', () => {
+    test('defineContext() w/ both type and non-type args', () => {
+      expect(() => {
+        compile(`<script setup lang="ts">
+        import { defineContext } from 'vue'
+        defineContext<{}>({})
+        </script>`)
+      }).toThrow(`cannot accept both type and non-type arguments`)
+    })
+
+    test('defineContext() referencing local var', () => {
       expect(() =>
         compile(`<script setup>
-          const bar = 1
-          export default {
-            props: {
-              foo: {
-                default: () => bar
-              }
+        import { defineContext } from 'vue'
+        const bar = 1
+        defineContext({
+          props: {
+            foo: {
+              default: () => bar
             }
           }
+        })
         </script>`)
       ).toThrow(`cannot reference locally declared variables`)
     })
 
-    test('export default referencing ref declarations', () => {
+    test('defineContext() referencing ref declarations', () => {
       expect(() =>
         compile(`<script setup>
+        import { defineContext } from 'vue'
         ref: bar = 1
-        export default {
-          props: bar
-        }
+        defineContext({
+          props: { bar }
+        })
       </script>`)
       ).toThrow(`cannot reference locally declared variables`)
     })
 
-    test('should allow export default referencing scope var', () => {
+    test('should allow defineContext() referencing scope var', () => {
       assertCode(
         compile(`<script setup>
+          import { defineContext } from 'vue'
           const bar = 1
-          export default {
+          defineContext({
             props: {
               foo: {
                 default: bar => bar + 1
               }
             }
-          }
+          })
         </script>`).content
       )
     })
 
-    test('should allow export default referencing imported binding', () => {
+    test('should allow defineContext() referencing imported binding', () => {
       assertCode(
         compile(`<script setup>
+          import { defineContext } from 'vue'
           import { bar } from './bar'
-          export default {
+          defineContext({
             props: {
               foo: {
                 default: () => bar
               }
             }
-          }
+          })
         </script>`).content
       )
-    })
-
-    test('error on duplicated default export', () => {
-      expect(() =>
-        compile(`
-      <script>
-      export default {}
-      </script>
-      <script setup>
-      export default {}
-      </script>
-      `)
-      ).toThrow(`Default export is already declared`)
-
-      expect(() =>
-        compile(`
-      <script>
-      export { x as default } from './y'
-      </script>
-      <script setup>
-      export default {}
-      </script>
-      `)
-      ).toThrow(`Default export is already declared`)
-
-      expect(() =>
-        compile(`
-      <script>
-      const x = {}
-      export { x as default }
-      </script>
-      <script setup>
-      export default {}
-      </script>
-      `)
-      ).toThrow(`Default export is already declared`)
     })
   })
 })
@@ -779,11 +901,12 @@ describe('SFC analyze <script> bindings', () => {
   it('works for script setup', () => {
     const { bindings } = compile(`
       <script setup>
-        export default {
-          props: {
-            foo: String,
-          },
+      import { defineContext } from 'vue'
+      defineContext({
+        props: {
+          foo: String,
         }
+      })
       </script>
     `)
     expect(bindings).toStrictEqual({

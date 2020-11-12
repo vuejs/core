@@ -15,12 +15,12 @@ import {
   TSType,
   TSTypeLiteral,
   TSFunctionType,
-  TSDeclareFunction,
   ObjectProperty,
   ArrayExpression,
   Statement,
   Expression,
-  LabeledStatement
+  LabeledStatement,
+  TSUnionType
 } from '@babel/types'
 import { walk } from 'estree-walker'
 import { RawSourceMap } from 'source-map'
@@ -143,6 +143,7 @@ export function compileScript(
   const refIdentifiers: Set<Identifier> = new Set()
   const enableRefSugar = options.refSugar !== false
   let defaultExport: Node | undefined
+  let hasContextCall = false
   let setupContextExp: string | undefined
   let setupContextArg: ObjectExpression | undefined
   let setupContextType: TSTypeLiteral | undefined
@@ -180,6 +181,48 @@ export function compileScript(
       `[@vue/compiler-sfc] ${msg}\n\n` +
         generateCodeFrame(source, node.start! + startOffset, end)
     )
+  }
+
+  function processContextCall(node: Node): boolean {
+    if (
+      node.type === 'CallExpression' &&
+      node.callee.type === 'Identifier' &&
+      node.callee.name === CTX_FN_NAME
+    ) {
+      if (hasContextCall) {
+        error('duplicate defineContext() call', node)
+      }
+      hasContextCall = true
+      const optsArg = node.arguments[0]
+      if (optsArg) {
+        if (optsArg.type === 'ObjectExpression') {
+          setupContextArg = optsArg
+        } else {
+          error(`${CTX_FN_NAME}() argument must be an object literal.`, optsArg)
+        }
+      }
+      // context call has type parameters - infer runtime types from it
+      if (node.typeParameters) {
+        if (setupContextArg) {
+          error(
+            `${CTX_FN_NAME}() cannot accept both type and non-type arguments ` +
+              `at the same time. Use one or the other.`,
+            node
+          )
+        }
+        const typeArg = node.typeParameters.params[0]
+        if (typeArg.type === 'TSTypeLiteral') {
+          setupContextType = typeArg
+        } else {
+          error(
+            `type argument passed to ${CTX_FN_NAME}() must be a literal type.`,
+            typeArg
+          )
+        }
+      }
+      return true
+    }
+    return false
   }
 
   function processRefExpression(exp: Expression, statement: LabeledStatement) {
@@ -500,51 +543,24 @@ export function compileScript(
       }
     }
 
+    if (
+      node.type === 'ExpressionStatement' &&
+      processContextCall(node.expression)
+    ) {
+      s.remove(node.start! + startOffset, node.end! + startOffset)
+    }
+
     if (node.type === 'VariableDeclaration' && !node.declare) {
       for (const decl of node.declarations) {
-        if (
-          decl.init &&
-          decl.init.type === 'CallExpression' &&
-          decl.init.callee.type === 'Identifier' &&
-          decl.init.callee.name === CTX_FN_NAME
-        ) {
-          if (node.declarations.length === 1) {
-            s.remove(node.start! + startOffset, node.end! + startOffset)
-          } else {
-            s.remove(decl.start! + startOffset, decl.end! + startOffset)
-          }
+        if (decl.init && processContextCall(decl.init)) {
           setupContextExp = scriptSetup.content.slice(
             decl.id.start!,
             decl.id.end!
           )
-          const optsArg = decl.init.arguments[0]
-          if (optsArg.type === 'ObjectExpression') {
-            setupContextArg = optsArg
+          if (node.declarations.length === 1) {
+            s.remove(node.start! + startOffset, node.end! + startOffset)
           } else {
-            error(
-              `${CTX_FN_NAME}() argument must be an object literal.`,
-              optsArg
-            )
-          }
-
-          // useSetupContext() has type parameters - infer runtime types from it
-          if (decl.init.typeParameters) {
-            if (setupContextArg) {
-              error(
-                `${CTX_FN_NAME}() cannot accept both type and non-type arguments ` +
-                  `at the same time. Use one or the other.`,
-                decl.init
-              )
-            }
-            const typeArg = decl.init.typeParameters.params[0]
-            if (typeArg.type === 'TSTypeLiteral') {
-              setupContextType = typeArg
-            } else {
-              error(
-                `type argument passed to ${CTX_FN_NAME}() must be a literal type.`,
-                typeArg
-              )
-            }
+            s.remove(decl.start! + startOffset, decl.end! + startOffset)
           }
         }
       }
@@ -641,7 +657,8 @@ export function compileScript(
           typeNode.start!,
           typeNode.end!
         )
-        if (m.key.name === 'props') {
+        const key = m.key.name
+        if (key === 'props') {
           propsType = typeString
           if (typeNode.type === 'TSTypeLiteral') {
             extractRuntimeProps(typeNode, typeDeclaredProps, declaredTypes)
@@ -649,18 +666,23 @@ export function compileScript(
             // TODO be able to trace references
             error(`props type must be an object literal type`, typeNode)
           }
-        } else if (m.key.name === 'emit') {
+        } else if (key === 'emit') {
           emitType = typeString
-          if (typeNode.type === 'TSFunctionType') {
+          if (
+            typeNode.type === 'TSFunctionType' ||
+            typeNode.type === 'TSUnionType'
+          ) {
             extractRuntimeEmits(typeNode, typeDeclaredEmits)
           } else {
             // TODO be able to trace references
             error(`emit type must be a function type`, typeNode)
           }
-        } else if (m.key.name === 'attrs') {
+        } else if (key === 'attrs') {
           attrsType = typeString
-        } else if (m.key.name === 'slots') {
+        } else if (key === 'slots') {
           slotsType = typeString
+        } else {
+          error(`invalid setup context property: "${key}"`, m.key)
         }
       }
     }
@@ -747,19 +769,13 @@ export function compileScript(
   if (setupContextArg) {
     Object.assign(bindingMetadata, analyzeBindingsFromOptions(setupContextArg))
   }
-  if (options.inlineTemplate) {
-    for (const [key, { source }] of Object.entries(userImports)) {
-      bindingMetadata[key] = source.endsWith('.vue')
-        ? BindingTypes.CONST
-        : BindingTypes.SETUP
-    }
-    for (const key in setupBindings) {
-      bindingMetadata[key] = setupBindings[key]
-    }
-  } else {
-    for (const key in allBindings) {
-      bindingMetadata[key] = BindingTypes.SETUP
-    }
+  for (const [key, { source }] of Object.entries(userImports)) {
+    bindingMetadata[key] = source.endsWith('.vue')
+      ? BindingTypes.CONST
+      : BindingTypes.SETUP
+  }
+  for (const key in setupBindings) {
+    bindingMetadata[key] = setupBindings[key]
   }
 
   // 11. generate return statement
@@ -1135,11 +1151,20 @@ function toRuntimeTypeString(types: string[]) {
 }
 
 function extractRuntimeEmits(
-  node: TSFunctionType | TSDeclareFunction,
+  node: TSFunctionType | TSUnionType,
   emits: Set<string>
 ) {
-  const eventName =
-    node.type === 'TSDeclareFunction' ? node.params[0] : node.parameters[0]
+  if (node.type === 'TSUnionType') {
+    for (let t of node.types) {
+      if (t.type === 'TSParenthesizedType') t = t.typeAnnotation
+      if (t.type === 'TSFunctionType') {
+        extractRuntimeEmits(t, emits)
+      }
+    }
+    return
+  }
+
+  const eventName = node.parameters[0]
   if (
     eventName.type === 'Identifier' &&
     eventName.typeAnnotation &&
