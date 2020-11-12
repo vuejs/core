@@ -13,7 +13,7 @@ import { ParserPlugin } from '@babel/parser'
 export function genCssVarsCode(
   varsExp: string,
   scoped: boolean,
-  knownBindings?: Record<string, string | boolean>
+  knownBindings?: Record<string, any>
 ) {
   const exp = createSimpleExpression(varsExp, false)
   const context = createTransformContext(createRoot([]), {

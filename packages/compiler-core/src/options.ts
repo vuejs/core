@@ -61,8 +61,16 @@ export type HoistTransform = (
   parent: ParentNode
 ) => void
 
+export const enum BindingTypes {
+  DATA = 'data',
+  PROPS = 'props',
+  SETUP = 'setup',
+  CONST = 'const',
+  OPTIONS = 'options'
+}
+
 export interface BindingMetadata {
-  [key: string]: 'data' | 'props' | 'setup' | 'options' | 'setup-raw'
+  [key: string]: BindingTypes
 }
 
 interface SharedTransformCodegenOptions {

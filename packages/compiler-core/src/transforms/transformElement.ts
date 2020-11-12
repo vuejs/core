@@ -54,7 +54,7 @@ import {
 } from '../utils'
 import { buildSlots } from './vSlot'
 import { getStaticType } from './hoistStatic'
-import { BindingMetadata } from '../options'
+import { BindingTypes } from '../options'
 
 // some directive transforms (e.g. v-model) may return a symbol for runtime
 // import, which should be used instead of a resolveDirective call.
@@ -253,7 +253,7 @@ export function resolveComponentType(
   // 3. user component (from setup bindings)
   const bindings = context.bindingMetadata
   if (bindings !== EMPTY_OBJ) {
-    const checkType = (type: BindingMetadata[string]) => {
+    const checkType = (type: BindingTypes) => {
       let resolvedTag = tag
       if (
         bindings[resolvedTag] === type ||
@@ -263,17 +263,17 @@ export function resolveComponentType(
         return resolvedTag
       }
     }
-    const tagFromSetup = checkType('setup')
+    const tagFromSetup = checkType(BindingTypes.SETUP)
     if (tagFromSetup) {
       return context.inline
         ? // setup scope bindings may be refs so they need to be unrefed
           `${context.helperString(UNREF)}(${tagFromSetup})`
         : `$setup[${JSON.stringify(tagFromSetup)}]`
     }
-    const tagFromImport = checkType('setup-raw')
-    if (tagFromImport) {
-      // raw setup bindings (e.g. imports) can be used as-is
-      return tagFromImport
+    const tagFromConst = checkType(BindingTypes.CONST)
+    if (tagFromConst) {
+      // constant setup bindings (e.g. imports) can be used as-is
+      return tagFromConst
     }
   }
 

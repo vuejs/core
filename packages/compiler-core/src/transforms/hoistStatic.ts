@@ -207,11 +207,11 @@ export function getStaticType(
     case NodeTypes.TEXT_CALL:
       return getStaticType(node.content, resultCache)
     case NodeTypes.SIMPLE_EXPRESSION:
-      return node.isConstant
-        ? node.isRuntimeConstant
-          ? StaticType.HAS_RUNTIME_CONSTANT
-          : StaticType.FULL_STATIC
-        : StaticType.NOT_STATIC
+      return node.isRuntimeConstant
+        ? StaticType.HAS_RUNTIME_CONSTANT
+        : node.isConstant
+          ? StaticType.FULL_STATIC
+          : StaticType.NOT_STATIC
     case NodeTypes.COMPOUND_EXPRESSION:
       let returnType = StaticType.FULL_STATIC
       for (let i = 0; i < node.children.length; i++) {

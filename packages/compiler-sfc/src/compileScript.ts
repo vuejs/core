@@ -26,6 +26,7 @@ import { walk } from 'estree-walker'
 import { RawSourceMap } from 'source-map'
 import { genCssVarsCode, injectCssVarsCalls } from './genCssVars'
 import { compileTemplate, SFCTemplateCompileOptions } from './compileTemplate'
+import { BindingTypes } from 'packages/compiler-core/src/options'
 
 const CTX_FN_NAME = 'defineContext'
 
@@ -134,8 +135,11 @@ export function compileScript(
       source: string
     }
   > = Object.create(null)
-  const setupBindings: Record<string, 'var' | 'const'> = Object.create(null)
-  const refBindings: Record<string, 'var'> = Object.create(null)
+  const setupBindings: Record<
+    string,
+    BindingTypes.SETUP | BindingTypes.CONST
+  > = Object.create(null)
+  const refBindings: Record<string, BindingTypes.SETUP> = Object.create(null)
   const refIdentifiers: Set<Identifier> = new Set()
   const enableRefSugar = options.refSugar !== false
   let defaultExport: Node | undefined
@@ -222,7 +226,7 @@ export function compileScript(
     if (id.name[0] === '$') {
       error(`ref variable identifiers cannot start with $.`, id)
     }
-    refBindings[id.name] = setupBindings[id.name] = 'var'
+    refBindings[id.name] = setupBindings[id.name] = BindingTypes.SETUP
     refIdentifiers.add(id)
   }
 
@@ -712,9 +716,9 @@ export function compileScript(
 }`
   }
 
-  const allBindings = { ...setupBindings }
+  const allBindings: Record<string, any> = { ...setupBindings }
   for (const key in userImports) {
-    allBindings[key] = 'var'
+    allBindings[key] = true
   }
 
   // 9. inject `useCssVars` calls
@@ -737,7 +741,7 @@ export function compileScript(
   }
   if (setupContextType) {
     for (const key in typeDeclaredProps) {
-      bindingMetadata[key] = 'props'
+      bindingMetadata[key] = BindingTypes.PROPS
     }
   }
   if (setupContextArg) {
@@ -745,15 +749,16 @@ export function compileScript(
   }
   if (options.inlineTemplate) {
     for (const [key, { source }] of Object.entries(userImports)) {
-      bindingMetadata[key] = source.endsWith('.vue') ? 'setup-raw' : 'setup'
+      bindingMetadata[key] = source.endsWith('.vue')
+        ? BindingTypes.CONST
+        : BindingTypes.SETUP
     }
     for (const key in setupBindings) {
-      bindingMetadata[key] =
-        setupBindings[key] === 'var' ? 'setup' : 'setup-raw'
+      bindingMetadata[key] = setupBindings[key]
     }
   } else {
     for (const key in allBindings) {
-      bindingMetadata[key] = 'setup'
+      bindingMetadata[key] = BindingTypes.SETUP
     }
   }
 
@@ -867,25 +872,36 @@ export function compileScript(
   }
 }
 
-function walkDeclaration(node: Declaration, bindings: Record<string, string>) {
+function walkDeclaration(
+  node: Declaration,
+  bindings: Record<string, BindingTypes>
+) {
   if (node.type === 'VariableDeclaration') {
     const isConst = node.kind === 'const'
     // export const foo = ...
     for (const { id, init } of node.declarations) {
+      const isContextCall = !!(
+        isConst &&
+        init &&
+        init.type === 'CallExpression' &&
+        init.callee.type === 'Identifier' &&
+        init.callee.name === CTX_FN_NAME
+      )
       if (id.type === 'Identifier') {
         bindings[id.name] =
           // if a declaration is a const literal, we can mark it so that
           // the generated render fn code doesn't need to unref() it
-          isConst &&
+          isContextCall ||
+          (isConst &&
           init!.type !== 'Identifier' && // const a = b
           init!.type !== 'CallExpression' && // const a = ref()
-          init!.type !== 'MemberExpression' // const a = b.c
-            ? 'const'
-            : 'var'
+            init!.type !== 'MemberExpression') // const a = b.c
+            ? BindingTypes.CONST
+            : BindingTypes.SETUP
       } else if (id.type === 'ObjectPattern') {
-        walkObjectPattern(id, bindings, isConst)
+        walkObjectPattern(id, bindings, isConst, isContextCall)
       } else if (id.type === 'ArrayPattern') {
-        walkArrayPattern(id, bindings, isConst)
+        walkArrayPattern(id, bindings, isConst, isContextCall)
       }
     }
   } else if (
@@ -894,14 +910,15 @@ function walkDeclaration(node: Declaration, bindings: Record<string, string>) {
   ) {
     // export function foo() {} / export class Foo {}
     // export declarations must be named.
-    bindings[node.id!.name] = 'const'
+    bindings[node.id!.name] = BindingTypes.CONST
   }
 }
 
 function walkObjectPattern(
   node: ObjectPattern,
-  bindings: Record<string, string>,
-  isConst: boolean
+  bindings: Record<string, BindingTypes>,
+  isConst: boolean,
+  isContextCall = false
 ) {
   for (const p of node.properties) {
     if (p.type === 'ObjectProperty') {
@@ -909,46 +926,58 @@ function walkObjectPattern(
       if (p.key.type === 'Identifier') {
         if (p.key === p.value) {
           // const { x } = ...
-          bindings[p.key.name] = 'var'
+          bindings[p.key.name] = isContextCall
+            ? BindingTypes.CONST
+            : BindingTypes.SETUP
         } else {
-          walkPattern(p.value, bindings, isConst)
+          walkPattern(p.value, bindings, isConst, isContextCall)
         }
       }
     } else {
       // ...rest
       // argument can only be identifer when destructuring
-      bindings[(p.argument as Identifier).name] = isConst ? 'const' : 'var'
+      bindings[(p.argument as Identifier).name] = isConst
+        ? BindingTypes.CONST
+        : BindingTypes.SETUP
     }
   }
 }
 
 function walkArrayPattern(
   node: ArrayPattern,
-  bindings: Record<string, string>,
-  isConst: boolean
+  bindings: Record<string, BindingTypes>,
+  isConst: boolean,
+  isContextCall = false
 ) {
   for (const e of node.elements) {
-    e && walkPattern(e, bindings, isConst)
+    e && walkPattern(e, bindings, isConst, isContextCall)
   }
 }
 
 function walkPattern(
   node: Node,
-  bindings: Record<string, string>,
-  isConst: boolean
+  bindings: Record<string, BindingTypes>,
+  isConst: boolean,
+  isContextCall = false
 ) {
   if (node.type === 'Identifier') {
-    bindings[node.name] = 'var'
+    bindings[node.name] = isContextCall
+      ? BindingTypes.CONST
+      : BindingTypes.SETUP
   } else if (node.type === 'RestElement') {
     // argument can only be identifer when destructuring
-    bindings[(node.argument as Identifier).name] = isConst ? 'const' : 'var'
+    bindings[(node.argument as Identifier).name] = isConst
+      ? BindingTypes.CONST
+      : BindingTypes.SETUP
   } else if (node.type === 'ObjectPattern') {
     walkObjectPattern(node, bindings, isConst)
   } else if (node.type === 'ArrayPattern') {
     walkArrayPattern(node, bindings, isConst)
   } else if (node.type === 'AssignmentPattern') {
     if (node.left.type === 'Identifier') {
-      bindings[node.left.name] = 'var'
+      bindings[node.left.name] = isContextCall
+        ? BindingTypes.CONST
+        : BindingTypes.SETUP
     } else {
       walkPattern(node.left, bindings, isConst)
     }
@@ -1336,7 +1365,7 @@ function analyzeBindingsFromOptions(node: ObjectExpression): BindingMetadata {
         // props: ['foo']
         // props: { foo: ... }
         for (const key of getObjectOrArrayExpressionKeys(property)) {
-          bindings[key] = 'props'
+          bindings[key] = BindingTypes.PROPS
         }
       }
 
@@ -1345,7 +1374,7 @@ function analyzeBindingsFromOptions(node: ObjectExpression): BindingMetadata {
         // inject: ['foo']
         // inject: { foo: {} }
         for (const key of getObjectOrArrayExpressionKeys(property)) {
-          bindings[key] = 'options'
+          bindings[key] = BindingTypes.OPTIONS
         }
       }
 
@@ -1357,7 +1386,7 @@ function analyzeBindingsFromOptions(node: ObjectExpression): BindingMetadata {
         // methods: { foo() {} }
         // computed: { foo() {} }
         for (const key of getObjectExpressionKeys(property.value)) {
-          bindings[key] = 'options'
+          bindings[key] = BindingTypes.OPTIONS
         }
       }
     }
@@ -1380,7 +1409,10 @@ function analyzeBindingsFromOptions(node: ObjectExpression): BindingMetadata {
           bodyItem.argument.type === 'ObjectExpression'
         ) {
           for (const key of getObjectExpressionKeys(bodyItem.argument)) {
-            bindings[key] = property.key.name
+            bindings[key] =
+              property.key.name === 'setup'
+                ? BindingTypes.SETUP
+                : BindingTypes.DATA
           }
         }
       }
