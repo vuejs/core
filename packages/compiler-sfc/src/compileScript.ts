@@ -10,8 +10,6 @@ import {
   ObjectExpression,
   ArrayPattern,
   Identifier,
-  ExpressionStatement,
-  ArrowFunctionExpression,
   ExportSpecifier,
   Function as FunctionNode,
   TSType,
@@ -28,6 +26,8 @@ import { walk } from 'estree-walker'
 import { RawSourceMap } from 'source-map'
 import { genCssVarsCode, injectCssVarsCalls } from './genCssVars'
 import { compileTemplate, SFCTemplateCompileOptions } from './compileTemplate'
+
+const CTX_FN_NAME = 'defineContext'
 
 export interface SFCScriptCompileOptions {
   /**
@@ -127,13 +127,21 @@ export function compileScript(
   const defaultTempVar = `__default__`
   const bindingMetadata: BindingMetadata = {}
   const helperImports: Set<string> = new Set()
-  const userImports: Record<string, string> = Object.create(null)
+  const userImports: Record<
+    string,
+    {
+      imported: string | null
+      source: string
+    }
+  > = Object.create(null)
   const setupBindings: Record<string, boolean> = Object.create(null)
   const refBindings: Record<string, boolean> = Object.create(null)
   const refIdentifiers: Set<Identifier> = new Set()
   const enableRefSugar = options.refSugar !== false
   let defaultExport: Node | undefined
-  let needDefaultExportRefCheck = false
+  let setupContextExp: string | undefined
+  let setupContextArg: Node | undefined
+  let setupContextType: TSTypeLiteral | undefined
   let hasAwait = false
 
   const s = new MagicString(source)
@@ -314,10 +322,16 @@ export function compileScript(
     for (const node of scriptAst) {
       if (node.type === 'ImportDeclaration') {
         // record imports for dedupe
-        for (const {
-          local: { name }
-        } of node.specifiers) {
-          userImports[name] = node.source.value
+        for (const specifier of node.specifiers) {
+          const name = specifier.local.name
+          const imported =
+            specifier.type === 'ImportSpecifier' &&
+            specifier.imported.type === 'Identifier' &&
+            specifier.imported.name
+          userImports[name] = {
+            imported: imported || null,
+            source: node.source.value
+          }
         }
       } else if (node.type === 'ExportDefaultDeclaration') {
         // export default
@@ -367,74 +381,16 @@ export function compileScript(
     }
   }
 
-  // 2. check <script setup="xxx"> function signature
-  const setupValue = scriptSetup.setup
-  const hasExplicitSignature = typeof setupValue === 'string'
-
-  let propsIdentifier: string | undefined
-  let emitIdentifier: string | undefined
-  let slotsIdentifier: string | undefined
-  let attrsIdentifier: string | undefined
-
   let propsType = `{}`
   let emitType = `(e: string, ...args: any[]) => void`
   let slotsType = `Slots`
   let attrsType = `Record<string, any>`
-
-  let propsASTNode
-  let setupCtxASTNode
 
   // props/emits declared via types
   const typeDeclaredProps: Record<string, PropTypeData> = {}
   const typeDeclaredEmits: Set<string> = new Set()
   // record declared types for runtime props type generation
   const declaredTypes: Record<string, string[]> = {}
-
-  // <script setup="xxx">
-  if (hasExplicitSignature) {
-    let signatureAST
-    try {
-      signatureAST = _parse(`(${setupValue})=>{}`, { plugins }).program.body[0]
-    } catch (e) {
-      throw new Error(
-        `[@vue/compiler-sfc] Invalid <script setup> signature: ${setupValue}\n\n${generateCodeFrame(
-          source,
-          startOffset - 1,
-          startOffset
-        )}`
-      )
-    }
-
-    if (isTS) {
-      // <script setup="xxx" lang="ts">
-      // parse the signature to extract the identifiers users are assigning to
-      // the arguments. They are needed for matching type delcarations.
-      const params = ((signatureAST as ExpressionStatement)
-        .expression as ArrowFunctionExpression).params
-      if (params[0] && params[0].type === 'Identifier') {
-        propsASTNode = params[0]
-        propsIdentifier = propsASTNode.name
-      }
-      if (params[1] && params[1].type === 'ObjectPattern') {
-        setupCtxASTNode = params[1]
-        for (const p of params[1].properties) {
-          if (
-            p.type === 'ObjectProperty' &&
-            p.key.type === 'Identifier' &&
-            p.value.type === 'Identifier'
-          ) {
-            if (p.key.name === 'emit') {
-              emitIdentifier = p.value.name
-            } else if (p.key.name === 'slots') {
-              slotsIdentifier = p.value.name
-            } else if (p.key.name === 'attrs') {
-              attrsIdentifier = p.value.name
-            }
-          }
-        }
-      }
-    }
-  }
 
   // 3. parse <script setup> and  walk over top level statements
   const scriptSetupAst = parse(
@@ -503,15 +459,35 @@ export function compileScript(
       let prev
       let removed = 0
       for (const specifier of node.specifiers) {
-        if (userImports[specifier.local.name]) {
-          // already imported in <script setup>, dedupe
+        const local = specifier.local.name
+        const imported =
+          specifier.type === 'ImportSpecifier' &&
+          specifier.imported.type === 'Identifier' &&
+          specifier.imported.name
+        const source = node.source.value
+        const existing = userImports[local]
+        if (source === 'vue' && imported === CTX_FN_NAME) {
           removed++
           s.remove(
             prev ? prev.end! + startOffset : specifier.start! + startOffset,
             specifier.end! + startOffset
           )
+        } else if (existing) {
+          if (existing.source === source && existing.imported === imported) {
+            // already imported in <script setup>, dedupe
+            removed++
+            s.remove(
+              prev ? prev.end! + startOffset : specifier.start! + startOffset,
+              specifier.end! + startOffset
+            )
+          } else {
+            error(`different imports aliased to same local name.`, specifier)
+          }
         } else {
-          userImports[specifier.local.name] = node.source.value
+          userImports[local] = {
+            imported: imported || null,
+            source: node.source.value
+          }
         }
         prev = specifier
       }
@@ -520,37 +496,42 @@ export function compileScript(
       }
     }
 
-    if (
-      (node.type === 'ExportNamedDeclaration' && node.exportKind !== 'type') ||
-      node.type === 'ExportAllDeclaration'
-    ) {
-      error(
-        `<script setup> cannot contain non-type named or * exports. ` +
-          `If you are using a previous version of <script setup>, please ` +
-          `consult the updated RFC at https://github.com/vuejs/rfcs/pull/227.`,
-        node
-      )
-    }
+    if (node.type === 'VariableDeclaration' && !node.declare) {
+      for (const decl of node.declarations) {
+        if (
+          decl.init &&
+          decl.init.type === 'CallExpression' &&
+          decl.init.callee.type === 'Identifier' &&
+          decl.init.callee.name === CTX_FN_NAME
+        ) {
+          if (node.declarations.length === 1) {
+            s.remove(node.start! + startOffset, node.end! + startOffset)
+          } else {
+            s.remove(decl.start! + startOffset, decl.end! + startOffset)
+          }
+          setupContextExp = scriptSetup.content.slice(
+            decl.id.start!,
+            decl.id.end!
+          )
+          setupContextArg = decl.init.arguments[0]
 
-    if (node.type === 'ExportDefaultDeclaration') {
-      if (defaultExport) {
-        // <script> already has export default
-        error(
-          `Default export is already declared in normal <script>.`,
-          node,
-          node.start! + startOffset + `export default`.length
-        )
+          // useSetupContext() has type parameters - infer runtime types from it
+          if (decl.init.typeParameters) {
+            const typeArg = decl.init.typeParameters.params[0]
+            if (typeArg.type === 'TSTypeLiteral') {
+              setupContextType = typeArg
+            } else {
+              error(
+                `type argument passed to ${CTX_FN_NAME}() must be a literal type.`,
+                typeArg
+              )
+            }
+          }
+        }
       }
-      // export default {} inside <script setup>
-      // this should be kept in module scope - move it to the end
-      s.move(start, end, source.length)
-      s.overwrite(start, start + `export default`.length, `const __default__ =`)
-      // save it for analysis when all imports and variable declarations have
-      // been recorded
-      defaultExport = node
-      needDefaultExportRefCheck = true
     }
 
+    // walk decalrations to record declared bindings
     if (
       (node.type === 'VariableDeclaration' ||
         node.type === 'FunctionDeclaration' ||
@@ -563,47 +544,6 @@ export function compileScript(
     // Type declarations
     if (node.type === 'VariableDeclaration' && node.declare) {
       s.remove(start, end)
-      for (const { id } of node.declarations) {
-        if (id.type === 'Identifier') {
-          if (
-            id.typeAnnotation &&
-            id.typeAnnotation.type === 'TSTypeAnnotation'
-          ) {
-            const typeNode = id.typeAnnotation.typeAnnotation
-            const typeString = source.slice(
-              typeNode.start! + startOffset,
-              typeNode.end! + startOffset
-            )
-            if (typeNode.type === 'TSTypeLiteral') {
-              if (id.name === propsIdentifier) {
-                propsType = typeString
-                extractRuntimeProps(typeNode, typeDeclaredProps, declaredTypes)
-              } else if (id.name === slotsIdentifier) {
-                slotsType = typeString
-              } else if (id.name === attrsIdentifier) {
-                attrsType = typeString
-              }
-            } else if (
-              id.name === emitIdentifier &&
-              typeNode.type === 'TSFunctionType'
-            ) {
-              emitType = typeString
-              extractRuntimeEmits(typeNode, typeDeclaredEmits)
-            }
-          }
-        }
-      }
-    }
-
-    if (
-      node.type === 'TSDeclareFunction' &&
-      node.id &&
-      node.id.name === emitIdentifier
-    ) {
-      const index = node.id.start! + startOffset
-      s.overwrite(index, index + emitIdentifier.length, '__emit__')
-      emitType = `typeof __emit__`
-      extractRuntimeEmits(node, typeDeclaredEmits)
     }
 
     // move all type declarations to outer scope
@@ -618,7 +558,7 @@ export function compileScript(
     // walk statements & named exports / variable declarations for top level
     // await
     if (
-      node.type === 'VariableDeclaration' ||
+      (node.type === 'VariableDeclaration' && !node.declare) ||
       node.type.endsWith('Statement')
     ) {
       ;(walk as any)(node, {
@@ -631,6 +571,19 @@ export function compileScript(
           }
         }
       })
+    }
+
+    if (
+      (node.type === 'ExportNamedDeclaration' && node.exportKind !== 'type') ||
+      node.type === 'ExportAllDeclaration' ||
+      node.type === 'ExportDefaultDeclaration'
+    ) {
+      error(
+        `<script setup> cannot contain ES module exports. ` +
+          `If you are using a previous version of <script setup>, please ` +
+          `consult the updated RFC at https://github.com/vuejs/rfcs/pull/227.`,
+        node
+      )
     }
   }
 
@@ -660,13 +613,47 @@ export function compileScript(
     }
   }
 
-  // 5. check default export to make sure it doesn't reference setup scope
+  // 5. extract runtime props/emits code from setup context type
+  if (setupContextType) {
+    for (const m of setupContextType.members) {
+      if (m.type === 'TSPropertySignature' && m.key.type === 'Identifier') {
+        const typeNode = m.typeAnnotation!.typeAnnotation
+        const typeString = scriptSetup.content.slice(
+          typeNode.start!,
+          typeNode.end!
+        )
+        if (m.key.name === 'props') {
+          propsType = typeString
+          if (typeNode.type === 'TSTypeLiteral') {
+            extractRuntimeProps(typeNode, typeDeclaredProps, declaredTypes)
+          } else {
+            // TODO be able to trace references
+            error(`props type must be an object literal type`, typeNode)
+          }
+        } else if (m.key.name === 'emit') {
+          emitType = typeString
+          if (typeNode.type === 'TSFunctionType') {
+            extractRuntimeEmits(typeNode, typeDeclaredEmits)
+          } else {
+            // TODO be able to trace references
+            error(`emit type must be a function type`, typeNode)
+          }
+        } else if (m.key.name === 'attrs') {
+          attrsType = typeString
+        } else if (m.key.name === 'slots') {
+          slotsType = typeString
+        }
+      }
+    }
+  }
+
+  // 5. check useSetupContext args to make sure it doesn't reference setup scope
   // variables
-  if (needDefaultExportRefCheck) {
-    walkIdentifiers(defaultExport!, id => {
+  if (setupContextArg) {
+    walkIdentifiers(setupContextArg, id => {
       if (setupBindings[id.name]) {
         error(
-          `\`export default\` in <script setup> cannot reference locally ` +
+          `\`${CTX_FN_NAME}()\` in <script setup> cannot reference locally ` +
             `declared variables because it will be hoisted outside of the ` +
             `setup() function. If your component options requires initialization ` +
             `in the module scope, use a separate normal <script> to export ` +
@@ -697,31 +684,30 @@ export function compileScript(
   }
 
   // 7. finalize setup argument signature.
-  let args = ``
+  let args = setupContextExp ? `__props, ${setupContextExp}` : ``
   if (isTS) {
     if (slotsType === 'Slots') {
       helperImports.add('Slots')
     }
-    const ctxType = `{
+    args += `: {
+  props: ${propsType},
   emit: ${emitType},
   slots: ${slotsType},
   attrs: ${attrsType}
 }`
-    if (hasExplicitSignature) {
-      // inject types to user signature
-      args = setupValue as string
-      const ss = new MagicString(args)
-      if (propsASTNode) {
-        // compensate for () wraper offset
-        ss.appendRight(propsASTNode.end! - 1, `: ${propsType}`)
-      }
-      if (setupCtxASTNode) {
-        ss.appendRight(setupCtxASTNode.end! - 1!, `: ${ctxType}`)
-      }
-      args = ss.toString()
-    }
-  } else if (hasExplicitSignature) {
-    args = setupValue as string
+    // if (hasExplicitSignature) {
+    //   // inject types to user signature
+    //   args = setupValue as string
+    //   const ss = new MagicString(args)
+    //   if (propsASTNode) {
+    //     // compensate for () wraper offset
+    //     ss.appendRight(propsASTNode.end! - 1, `: ${propsType}`)
+    //   }
+    //   if (setupCtxASTNode) {
+    //     ss.appendRight(setupCtxASTNode.end! - 1!, `: ${ctxType}`)
+    //   }
+    //   args = ss.toString()
+    // }
   }
 
   // 8. wrap setup code with function.
@@ -732,7 +718,10 @@ export function compileScript(
     `\nexport ${hasAwait ? `async ` : ``}function setup(${args}) {\n`
   )
 
-  const allBindings = { ...userImports, ...setupBindings }
+  const allBindings = { ...setupBindings }
+  for (const key in userImports) {
+    allBindings[key] = true
+  }
 
   // 9. inject `useCssVars` calls
   if (hasCssVars) {
@@ -753,8 +742,8 @@ export function compileScript(
     Object.assign(bindingMetadata, analyzeScriptBindings(scriptAst))
   }
   if (options.inlineTemplate) {
-    for (const [key, value] of Object.entries(userImports)) {
-      bindingMetadata[key] = value.endsWith('.vue')
+    for (const [key, { source }] of Object.entries(userImports)) {
+      bindingMetadata[key] = source.endsWith('.vue')
         ? 'component-import'
         : 'setup'
     }
@@ -769,7 +758,6 @@ export function compileScript(
   for (const key in typeDeclaredProps) {
     bindingMetadata[key] = 'props'
   }
-  Object.assign(bindingMetadata, analyzeScriptBindings(scriptSetupAst))
 
   // 11. generate return statement
   let returned
@@ -833,7 +821,9 @@ export function compileScript(
   }
 
   // 13. finalize Vue helper imports
-  const helpers = [...helperImports].filter(i => userImports[i] !== 'vue')
+  // TODO account for cases where user imports a helper with the same name
+  // from a non-vue source
+  const helpers = [...helperImports].filter(i => !userImports[i])
   if (helpers.length) {
     s.prepend(`import { ${helpers.join(', ')} } from 'vue'\n`)
   }

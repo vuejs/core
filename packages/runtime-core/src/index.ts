@@ -261,6 +261,8 @@ import {
   setCurrentRenderingInstance
 } from './componentRenderUtils'
 import { isVNode, normalizeVNode } from './vnode'
+import { Slots } from './componentSlots'
+import { EMPTY_OBJ } from '@vue/shared/src'
 
 const _ssrUtils = {
   createComponentInstance,
