@@ -123,6 +123,7 @@ export function resolveTransitionProps(
       const resolve = () => finishEnter(el, isAppear, done)
       hook && hook(el, resolve)
       nextFrame(() => {
+        addTransitionClass(el, isAppear ? appearActiveClass : enterActiveClass)
         removeTransitionClass(el, isAppear ? appearFromClass : enterFromClass)
         addTransitionClass(el, isAppear ? appearToClass : enterToClass)
         if (!(hook && hook.length > 1)) {
@@ -135,12 +136,10 @@ export function resolveTransitionProps(
   return extend(baseProps, {
     onBeforeEnter(el) {
       onBeforeEnter && onBeforeEnter(el)
-      addTransitionClass(el, enterActiveClass)
       addTransitionClass(el, enterFromClass)
     },
     onBeforeAppear(el) {
       onBeforeAppear && onBeforeAppear(el)
-      addTransitionClass(el, appearActiveClass)
       addTransitionClass(el, appearFromClass)
     },
     onEnter: makeEnterHook(false),

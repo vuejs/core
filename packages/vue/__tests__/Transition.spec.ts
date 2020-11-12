@@ -74,7 +74,6 @@ describe('e2e: Transition', () => {
         // enter
         expect(await classWhenTransitionStart()).toStrictEqual([
           'test',
-          'v-enter-active',
           'v-enter-from'
         ])
         await nextFrame()
@@ -130,7 +129,6 @@ describe('e2e: Transition', () => {
         // enter
         expect(await classWhenTransitionStart()).toStrictEqual([
           'test',
-          'test-enter-active',
           'test-enter-from'
         ])
         await nextFrame()
@@ -191,7 +189,6 @@ describe('e2e: Transition', () => {
         // enter
         expect(await classWhenTransitionStart()).toStrictEqual([
           'test',
-          'hello-active',
           'hello-from'
         ])
         await nextFrame()
@@ -253,7 +250,6 @@ describe('e2e: Transition', () => {
         })
         expect(await classWhenTransitionStart()).toStrictEqual([
           'test',
-          'changed-enter-active',
           'changed-enter-from'
         ])
         await nextFrame()
@@ -353,7 +349,6 @@ describe('e2e: Transition', () => {
         // enter
         expect(await classWhenTransitionStart()).toStrictEqual([
           'test',
-          'test-enter-active',
           'test-enter-from'
         ])
         expect(beforeEnterSpy).toBeCalled()
@@ -408,7 +403,6 @@ describe('e2e: Transition', () => {
       // enter
       expect(await classWhenTransitionStart()).toStrictEqual([
         'test',
-        'test-enter-active',
         'test-enter-from'
       ])
       await nextFrame()
@@ -464,11 +458,7 @@ describe('e2e: Transition', () => {
           })
         })
         // appear
-        expect(appearClass).toStrictEqual([
-          'test',
-          'test-appear-active',
-          'test-appear-from'
-        ])
+        expect(appearClass).toStrictEqual(['test', 'test-appear-from'])
         await nextFrame()
         expect(await classList('.test')).toStrictEqual([
           'test',
@@ -496,7 +486,6 @@ describe('e2e: Transition', () => {
         // enter
         expect(await classWhenTransitionStart()).toStrictEqual([
           'test',
-          'test-enter-active',
           'test-enter-from'
         ])
         await nextFrame()
@@ -593,11 +582,7 @@ describe('e2e: Transition', () => {
           })
         })
         // appear
-        expect(appearClass).toStrictEqual([
-          'test',
-          'test-appear-active',
-          'test-appear-from'
-        ])
+        expect(appearClass).toStrictEqual(['test', 'test-appear-from'])
         expect(beforeAppearSpy).toBeCalled()
         expect(onAppearSpy).toBeCalled()
         expect(afterAppearSpy).not.toBeCalled()
@@ -639,7 +624,6 @@ describe('e2e: Transition', () => {
         // enter
         expect(await classWhenTransitionStart()).toStrictEqual([
           'test',
-          'test-enter-active',
           'test-enter-from'
         ])
         expect(beforeEnterSpy).toBeCalled()
@@ -770,7 +754,6 @@ describe('e2e: Transition', () => {
 
         // enter
         expect(await classWhenTransitionStart()).toStrictEqual([
-          'noop-enter-active',
           'noop-enter-from'
         ])
         await nextFrame()
@@ -817,7 +800,6 @@ describe('e2e: Transition', () => {
 
         // enter
         expect(await classWhenTransitionStart()).toStrictEqual([
-          'test-anim-enter-active',
           'test-anim-enter-from'
         ])
         await nextFrame()
@@ -872,7 +854,6 @@ describe('e2e: Transition', () => {
 
         // enter
         expect(await classWhenTransitionStart()).toStrictEqual([
-          'test-anim-long-enter-active',
           'test-anim-long-enter-from'
         ])
         await nextFrame()
@@ -947,7 +928,6 @@ describe('e2e: Transition', () => {
         // enter
         expect(await svgTransitionStart()).toStrictEqual([
           'test',
-          'test-enter-active',
           'test-enter-from'
         ])
         await nextFrame()
@@ -1006,7 +986,6 @@ describe('e2e: Transition', () => {
         // enter
         expect(await classWhenTransitionStart()).toStrictEqual([
           'test',
-          'test-enter-active',
           'test-enter-from'
         ])
         await nextFrame()
@@ -1063,7 +1042,6 @@ describe('e2e: Transition', () => {
         // enter
         expect(await classWhenTransitionStart()).toStrictEqual([
           'test',
-          'test-enter-active',
           'test-enter-from'
         ])
         await nextFrame()
@@ -1175,11 +1153,7 @@ describe('e2e: Transition', () => {
             .querySelector('#container div')!
             .className.split(/\s+/g)
         })
-        expect(enterClass).toStrictEqual([
-          'test',
-          'v-enter-active',
-          'v-enter-from'
-        ])
+        expect(enterClass).toStrictEqual(['test', 'v-enter-from'])
         expect(onEnterSpy).toBeCalledTimes(2)
         await nextFrame()
         expect(await classList('.test')).toStrictEqual([
@@ -1237,7 +1211,6 @@ describe('e2e: Transition', () => {
         // enter
         expect(await classWhenTransitionStart()).toStrictEqual([
           'test',
-          'v-enter-active',
           'v-enter-from'
         ])
         await nextFrame()
@@ -1361,7 +1334,6 @@ describe('e2e: Transition', () => {
         // enter
         expect(await classWhenTransitionStart()).toStrictEqual([
           'test',
-          'test-enter-active',
           'test-enter-from'
         ])
         await nextFrame()
@@ -1462,7 +1434,6 @@ describe('e2e: Transition', () => {
         // enter
         expect(await classWhenTransitionStart()).toStrictEqual([
           'test',
-          'test-enter-active',
           'test-enter-from'
         ])
         expect(beforeEnterSpy).toBeCalled()
@@ -1528,7 +1499,6 @@ describe('e2e: Transition', () => {
         // cancel (enter)
         expect(await classWhenTransitionStart()).toStrictEqual([
           'test',
-          'test-enter-active',
           'test-enter-from'
         ])
         expect(onLeaveCancelledSpy).toBeCalled()
@@ -1575,11 +1545,7 @@ describe('e2e: Transition', () => {
           })
         })
         // appear
-        expect(appearClass).toStrictEqual([
-          'test',
-          'test-appear-active',
-          'test-appear-from'
-        ])
+        expect(appearClass).toStrictEqual(['test', 'test-appear-from'])
         await nextFrame()
         expect(await classList('.test')).toStrictEqual([
           'test',
@@ -1607,7 +1573,6 @@ describe('e2e: Transition', () => {
         // enter
         expect(await classWhenTransitionStart()).toStrictEqual([
           'test',
-          'test-enter-active',
           'test-enter-from'
         ])
         await nextFrame()
@@ -1684,7 +1649,6 @@ describe('e2e: Transition', () => {
         // enter
         expect(await classWhenTransitionStart()).toStrictEqual([
           'test',
-          'test-enter-active',
           'test-enter-from'
         ])
         await nextFrame()
@@ -1740,7 +1704,6 @@ describe('e2e: Transition', () => {
         // enter
         expect(await classWhenTransitionStart()).toStrictEqual([
           'test',
-          'test-enter-active',
           'test-enter-from'
         ])
         await nextFrame()
@@ -1796,7 +1759,6 @@ describe('e2e: Transition', () => {
         // enter
         expect(await classWhenTransitionStart()).toStrictEqual([
           'test',
-          'test-enter-active',
           'test-enter-from'
         ])
         await nextFrame()
@@ -1855,7 +1817,6 @@ describe('e2e: Transition', () => {
         // enter
         expect(await classWhenTransitionStart()).toStrictEqual([
           'test',
-          'test-enter-active',
           'test-enter-from'
         ])
         await nextFrame()
