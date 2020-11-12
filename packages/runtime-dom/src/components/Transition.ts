@@ -146,9 +146,9 @@ export function resolveTransitionProps(
     onAppear: makeEnterHook(true),
     onLeave(el, done) {
       const resolve = () => finishLeave(el, done)
-      addTransitionClass(el, leaveActiveClass)
       addTransitionClass(el, leaveFromClass)
       nextFrame(() => {
+        addTransitionClass(el, leaveActiveClass)
         removeTransitionClass(el, leaveFromClass)
         addTransitionClass(el, leaveToClass)
         if (!(onLeave && onLeave.length > 1)) {
