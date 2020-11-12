@@ -134,13 +134,13 @@ export function compileScript(
       source: string
     }
   > = Object.create(null)
-  const setupBindings: Record<string, boolean> = Object.create(null)
-  const refBindings: Record<string, boolean> = Object.create(null)
+  const setupBindings: Record<string, 'var' | 'const'> = Object.create(null)
+  const refBindings: Record<string, 'var'> = Object.create(null)
   const refIdentifiers: Set<Identifier> = new Set()
   const enableRefSugar = options.refSugar !== false
   let defaultExport: Node | undefined
   let setupContextExp: string | undefined
-  let setupContextArg: Node | undefined
+  let setupContextArg: ObjectExpression | undefined
   let setupContextType: TSTypeLiteral | undefined
   let hasAwait = false
 
@@ -222,7 +222,7 @@ export function compileScript(
     if (id.name[0] === '$') {
       error(`ref variable identifiers cannot start with $.`, id)
     }
-    refBindings[id.name] = setupBindings[id.name] = true
+    refBindings[id.name] = setupBindings[id.name] = 'var'
     refIdentifiers.add(id)
   }
 
@@ -513,10 +513,25 @@ export function compileScript(
             decl.id.start!,
             decl.id.end!
           )
-          setupContextArg = decl.init.arguments[0]
+          const optsArg = decl.init.arguments[0]
+          if (optsArg.type === 'ObjectExpression') {
+            setupContextArg = optsArg
+          } else {
+            error(
+              `${CTX_FN_NAME}() argument must be an object literal.`,
+              optsArg
+            )
+          }
 
           // useSetupContext() has type parameters - infer runtime types from it
           if (decl.init.typeParameters) {
+            if (setupContextArg) {
+              error(
+                `${CTX_FN_NAME}() cannot accept both type and non-type arguments ` +
+                  `at the same time. Use one or the other.`,
+                decl.init
+              )
+            }
             const typeArg = decl.init.typeParameters.params[0]
             if (typeArg.type === 'TSTypeLiteral') {
               setupContextType = typeArg
@@ -685,7 +700,7 @@ export function compileScript(
 
   // 7. finalize setup argument signature.
   let args = setupContextExp ? `__props, ${setupContextExp}` : ``
-  if (isTS) {
+  if (setupContextExp && setupContextType) {
     if (slotsType === 'Slots') {
       helperImports.add('Slots')
     }
@@ -695,32 +710,11 @@ export function compileScript(
   slots: ${slotsType},
   attrs: ${attrsType}
 }`
-    // if (hasExplicitSignature) {
-    //   // inject types to user signature
-    //   args = setupValue as string
-    //   const ss = new MagicString(args)
-    //   if (propsASTNode) {
-    //     // compensate for () wraper offset
-    //     ss.appendRight(propsASTNode.end! - 1, `: ${propsType}`)
-    //   }
-    //   if (setupCtxASTNode) {
-    //     ss.appendRight(setupCtxASTNode.end! - 1!, `: ${ctxType}`)
-    //   }
-    //   args = ss.toString()
-    // }
   }
-
-  // 8. wrap setup code with function.
-  // export the content of <script setup> as a named export, `setup`.
-  // this allows `import { setup } from '*.vue'` for testing purposes.
-  s.prependLeft(
-    startOffset,
-    `\nexport ${hasAwait ? `async ` : ``}function setup(${args}) {\n`
-  )
 
   const allBindings = { ...setupBindings }
   for (const key in userImports) {
-    allBindings[key] = true
+    allBindings[key] = 'var'
   }
 
   // 9. inject `useCssVars` calls
@@ -741,22 +735,26 @@ export function compileScript(
   if (scriptAst) {
     Object.assign(bindingMetadata, analyzeScriptBindings(scriptAst))
   }
+  if (setupContextType) {
+    for (const key in typeDeclaredProps) {
+      bindingMetadata[key] = 'props'
+    }
+  }
+  if (setupContextArg) {
+    Object.assign(bindingMetadata, analyzeBindingsFromOptions(setupContextArg))
+  }
   if (options.inlineTemplate) {
     for (const [key, { source }] of Object.entries(userImports)) {
-      bindingMetadata[key] = source.endsWith('.vue')
-        ? 'component-import'
-        : 'setup'
+      bindingMetadata[key] = source.endsWith('.vue') ? 'setup-raw' : 'setup'
     }
     for (const key in setupBindings) {
-      bindingMetadata[key] = 'setup'
+      bindingMetadata[key] =
+        setupBindings[key] === 'var' ? 'setup' : 'setup-raw'
     }
   } else {
     for (const key in allBindings) {
       bindingMetadata[key] = 'setup'
     }
-  }
-  for (const key in typeDeclaredProps) {
-    bindingMetadata[key] = 'props'
   }
 
   // 11. generate return statement
@@ -798,6 +796,16 @@ export function compileScript(
   s.appendRight(endOffset, `\nreturn ${returned}\n}\n\n`)
 
   // 12. finalize default export
+  let runtimeOptions = ``
+  if (setupContextArg) {
+    runtimeOptions = `\n  ${scriptSetup.content
+      .slice(setupContextArg.start! + 1, setupContextArg.end! - 1)
+      .trim()},`
+  } else if (setupContextType) {
+    runtimeOptions =
+      genRuntimeProps(typeDeclaredProps) + genRuntimeEmits(typeDeclaredEmits)
+  }
+
   if (isTS) {
     // for TS, make sure the exported type is still valid type with
     // correct props information
@@ -805,18 +813,34 @@ export function compileScript(
     // we have to use object spread for types to be merged properly
     // user's TS setting should compile it down to proper targets
     const def = defaultExport ? `\n  ...${defaultTempVar},` : ``
-    const runtimeProps = genRuntimeProps(typeDeclaredProps)
-    const runtimeEmits = genRuntimeEmits(typeDeclaredEmits)
-    s.append(
-      `export default defineComponent({${def}${runtimeProps}${runtimeEmits}\n  setup\n})`
+    // wrap setup code with function.
+    // export the content of <script setup> as a named export, `setup`.
+    // this allows `import { setup } from '*.vue'` for testing purposes.
+    s.prependLeft(
+      startOffset,
+      `\nexport default defineComponent({${def}${runtimeOptions}\n  ${
+        hasAwait ? `async ` : ``
+      }setup(${args}) {\n`
     )
+    s.append(`})`)
   } else {
     if (defaultExport) {
+      // can't rely on spread operator in non ts mode
+      s.prependLeft(
+        startOffset,
+        `\n${hasAwait ? `async ` : ``}function setup(${args}) {\n`
+      )
       s.append(
-        `${defaultTempVar}.setup = setup\nexport default ${defaultTempVar}`
+        `/*#__PURE__*/ Object.assign(${defaultTempVar}, {${runtimeOptions}\n  setup\n})\n` +
+          `export default ${defaultTempVar}`
       )
     } else {
-      s.append(`export default { setup }`)
+      s.prependLeft(
+        startOffset,
+        `\nexport default {${runtimeOptions}\n  ` +
+          `${hasAwait ? `async ` : ``}setup(${args}) {\n`
+      )
+      s.append(`}`)
     }
   }
 
@@ -843,16 +867,25 @@ export function compileScript(
   }
 }
 
-function walkDeclaration(node: Declaration, bindings: Record<string, boolean>) {
+function walkDeclaration(node: Declaration, bindings: Record<string, string>) {
   if (node.type === 'VariableDeclaration') {
+    const isConst = node.kind === 'const'
     // export const foo = ...
-    for (const { id } of node.declarations) {
+    for (const { id, init } of node.declarations) {
       if (id.type === 'Identifier') {
-        bindings[id.name] = true
+        bindings[id.name] =
+          // if a declaration is a const literal, we can mark it so that
+          // the generated render fn code doesn't need to unref() it
+          isConst &&
+          init!.type !== 'Identifier' && // const a = b
+          init!.type !== 'CallExpression' && // const a = ref()
+          init!.type !== 'MemberExpression' // const a = b.c
+            ? 'const'
+            : 'var'
       } else if (id.type === 'ObjectPattern') {
-        walkObjectPattern(id, bindings)
+        walkObjectPattern(id, bindings, isConst)
       } else if (id.type === 'ArrayPattern') {
-        walkArrayPattern(id, bindings)
+        walkArrayPattern(id, bindings, isConst)
       }
     }
   } else if (
@@ -861,13 +894,14 @@ function walkDeclaration(node: Declaration, bindings: Record<string, boolean>) {
   ) {
     // export function foo() {} / export class Foo {}
     // export declarations must be named.
-    bindings[node.id!.name] = true
+    bindings[node.id!.name] = 'const'
   }
 }
 
 function walkObjectPattern(
   node: ObjectPattern,
-  bindings: Record<string, boolean>
+  bindings: Record<string, string>,
+  isConst: boolean
 ) {
   for (const p of node.properties) {
     if (p.type === 'ObjectProperty') {
@@ -875,43 +909,48 @@ function walkObjectPattern(
       if (p.key.type === 'Identifier') {
         if (p.key === p.value) {
           // const { x } = ...
-          bindings[p.key.name] = true
+          bindings[p.key.name] = 'var'
         } else {
-          walkPattern(p.value, bindings)
+          walkPattern(p.value, bindings, isConst)
         }
       }
     } else {
       // ...rest
       // argument can only be identifer when destructuring
-      bindings[(p.argument as Identifier).name] = true
+      bindings[(p.argument as Identifier).name] = isConst ? 'const' : 'var'
     }
   }
 }
 
 function walkArrayPattern(
   node: ArrayPattern,
-  bindings: Record<string, boolean>
+  bindings: Record<string, string>,
+  isConst: boolean
 ) {
   for (const e of node.elements) {
-    e && walkPattern(e, bindings)
+    e && walkPattern(e, bindings, isConst)
   }
 }
 
-function walkPattern(node: Node, bindings: Record<string, boolean>) {
+function walkPattern(
+  node: Node,
+  bindings: Record<string, string>,
+  isConst: boolean
+) {
   if (node.type === 'Identifier') {
-    bindings[node.name] = true
+    bindings[node.name] = 'var'
   } else if (node.type === 'RestElement') {
     // argument can only be identifer when destructuring
-    bindings[(node.argument as Identifier).name] = true
+    bindings[(node.argument as Identifier).name] = isConst ? 'const' : 'var'
   } else if (node.type === 'ObjectPattern') {
-    walkObjectPattern(node, bindings)
+    walkObjectPattern(node, bindings, isConst)
   } else if (node.type === 'ArrayPattern') {
-    walkArrayPattern(node, bindings)
+    walkArrayPattern(node, bindings, isConst)
   } else if (node.type === 'AssignmentPattern') {
     if (node.left.type === 'Identifier') {
-      bindings[node.left.name] = true
+      bindings[node.left.name] = 'var'
     } else {
-      walkPattern(node.left, bindings)
+      walkPattern(node.left, bindings, isConst)
     }
   }
 }
@@ -1273,72 +1312,75 @@ function getObjectOrArrayExpressionKeys(property: ObjectProperty): string[] {
  * compilation process so this should only be used on single `<script>` SFCs.
  */
 function analyzeScriptBindings(ast: Statement[]): BindingMetadata {
-  const bindings: BindingMetadata = {}
-
   for (const node of ast) {
     if (
       node.type === 'ExportDefaultDeclaration' &&
       node.declaration.type === 'ObjectExpression'
     ) {
-      for (const property of node.declaration.properties) {
-        if (
-          property.type === 'ObjectProperty' &&
-          !property.computed &&
-          property.key.type === 'Identifier'
-        ) {
-          // props
-          if (property.key.name === 'props') {
-            // props: ['foo']
-            // props: { foo: ... }
-            for (const key of getObjectOrArrayExpressionKeys(property)) {
-              bindings[key] = 'props'
-            }
-          }
+      return analyzeBindingsFromOptions(node.declaration)
+    }
+  }
+  return {}
+}
 
-          // inject
-          else if (property.key.name === 'inject') {
-            // inject: ['foo']
-            // inject: { foo: {} }
-            for (const key of getObjectOrArrayExpressionKeys(property)) {
-              bindings[key] = 'options'
-            }
-          }
-
-          // computed & methods
-          else if (
-            property.value.type === 'ObjectExpression' &&
-            (property.key.name === 'computed' ||
-              property.key.name === 'methods')
-          ) {
-            // methods: { foo() {} }
-            // computed: { foo() {} }
-            for (const key of getObjectExpressionKeys(property.value)) {
-              bindings[key] = 'options'
-            }
-          }
+function analyzeBindingsFromOptions(node: ObjectExpression): BindingMetadata {
+  const bindings: BindingMetadata = {}
+  for (const property of node.properties) {
+    if (
+      property.type === 'ObjectProperty' &&
+      !property.computed &&
+      property.key.type === 'Identifier'
+    ) {
+      // props
+      if (property.key.name === 'props') {
+        // props: ['foo']
+        // props: { foo: ... }
+        for (const key of getObjectOrArrayExpressionKeys(property)) {
+          bindings[key] = 'props'
         }
+      }
 
-        // setup & data
-        else if (
-          property.type === 'ObjectMethod' &&
-          property.key.type === 'Identifier' &&
-          (property.key.name === 'setup' || property.key.name === 'data')
+      // inject
+      else if (property.key.name === 'inject') {
+        // inject: ['foo']
+        // inject: { foo: {} }
+        for (const key of getObjectOrArrayExpressionKeys(property)) {
+          bindings[key] = 'options'
+        }
+      }
+
+      // computed & methods
+      else if (
+        property.value.type === 'ObjectExpression' &&
+        (property.key.name === 'computed' || property.key.name === 'methods')
+      ) {
+        // methods: { foo() {} }
+        // computed: { foo() {} }
+        for (const key of getObjectExpressionKeys(property.value)) {
+          bindings[key] = 'options'
+        }
+      }
+    }
+
+    // setup & data
+    else if (
+      property.type === 'ObjectMethod' &&
+      property.key.type === 'Identifier' &&
+      (property.key.name === 'setup' || property.key.name === 'data')
+    ) {
+      for (const bodyItem of property.body.body) {
+        // setup() {
+        //   return {
+        //     foo: null
+        //   }
+        // }
+        if (
+          bodyItem.type === 'ReturnStatement' &&
+          bodyItem.argument &&
+          bodyItem.argument.type === 'ObjectExpression'
         ) {
-          for (const bodyItem of property.body.body) {
-            // setup() {
-            //   return {
-            //     foo: null
-            //   }
-            // }
-            if (
-              bodyItem.type === 'ReturnStatement' &&
-              bodyItem.argument &&
-              bodyItem.argument.type === 'ObjectExpression'
-            ) {
-              for (const key of getObjectExpressionKeys(bodyItem.argument)) {
-                bindings[key] = property.key.name
-              }
-            }
+          for (const key of getObjectExpressionKeys(bodyItem.argument)) {
+            bindings[key] = property.key.name
           }
         }
       }

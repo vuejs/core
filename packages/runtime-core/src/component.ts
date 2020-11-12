@@ -105,7 +105,7 @@ export interface ComponentInternalOptions {
 export interface FunctionalComponent<P = {}, E extends EmitsOptions = {}>
   extends ComponentInternalOptions {
   // use of any here is intentional so it can be a valid JSX Element constructor
-  (props: P, ctx: SetupContext<E>): any
+  (props: P, ctx: SetupContext<E, P>): any
   props?: ComponentPropsOptions<P>
   emits?: E | (keyof E)[]
   inheritAttrs?: boolean
@@ -167,7 +167,8 @@ export const enum LifecycleHooks {
   ERROR_CAPTURED = 'ec'
 }
 
-export interface SetupContext<E = EmitsOptions> {
+export interface SetupContext<E = EmitsOptions, P = Data> {
+  props: P
   attrs: Data
   slots: Slots
   emit: EmitFn<E>
@@ -735,6 +736,9 @@ function createSetupContext(instance: ComponentInternalInstance): SetupContext {
     // We use getters in dev in case libs like test-utils overwrite instance
     // properties (overwrites should not be done in prod)
     return Object.freeze({
+      get props() {
+        return instance.props
+      },
       get attrs() {
         return new Proxy(instance.attrs, attrHandlers)
       },
@@ -747,6 +751,7 @@ function createSetupContext(instance: ComponentInternalInstance): SetupContext {
     })
   } else {
     return {
+      props: instance.props,
       attrs: instance.attrs,
       slots: instance.slots,
       emit: instance.emit

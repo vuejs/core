@@ -62,7 +62,7 @@ export type HoistTransform = (
 ) => void
 
 export interface BindingMetadata {
-  [key: string]: 'data' | 'props' | 'setup' | 'options' | 'component-import'
+  [key: string]: 'data' | 'props' | 'setup' | 'options' | 'setup-raw'
 }
 
 interface SharedTransformCodegenOptions {

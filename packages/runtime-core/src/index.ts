@@ -43,6 +43,7 @@ export { provide, inject } from './apiInject'
 export { nextTick } from './scheduler'
 export { defineComponent } from './apiDefineComponent'
 export { defineAsyncComponent } from './apiAsyncComponent'
+export { defineContext } from './apiDefineContext'
 
 // Advanced API ----------------------------------------------------------------
 
@@ -261,8 +262,6 @@ import {
   setCurrentRenderingInstance
 } from './componentRenderUtils'
 import { isVNode, normalizeVNode } from './vnode'
-import { Slots } from './componentSlots'
-import { EMPTY_OBJ } from '@vue/shared/src'
 
 const _ssrUtils = {
   createComponentInstance,

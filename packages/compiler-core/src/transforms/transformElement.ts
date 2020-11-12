@@ -270,9 +270,9 @@ export function resolveComponentType(
           `${context.helperString(UNREF)}(${tagFromSetup})`
         : `$setup[${JSON.stringify(tagFromSetup)}]`
     }
-    const tagFromImport = checkType('component-import')
+    const tagFromImport = checkType('setup-raw')
     if (tagFromImport) {
-      // imports can be used as-is
+      // raw setup bindings (e.g. imports) can be used as-is
       return tagFromImport
     }
   }
