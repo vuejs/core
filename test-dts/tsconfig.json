@@ -4,5 +4,5 @@
     "noEmit": true,
     "declaration": true
   },
-  "exclude": ["../packages/*/__tests__"]
+  "exclude": ["../packages/*/__tests__", "../packages/template-explorer"]
 }

@@ -7,7 +7,11 @@
       "vue": ["../packages/vue/dist"]
     }
   },
-  "exclude": ["../packages/*/__tests__", "../packages/*/src"],
+  "exclude": [
+    "../packages/*/__tests__",
+    "../packages/*/src",
+    "../packages/template-explorer"
+  ],
   "include": [
     "../packages/global.d.ts",
     "../packages/*/dist",
