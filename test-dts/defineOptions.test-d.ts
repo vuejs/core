@@ -1,7 +1,7 @@
-import { expectType, useOptions, Slots, describe } from './index'
+import { expectType, defineOptions, Slots, describe } from './index'
 
 describe('no args', () => {
-  const { props, attrs, emit, slots } = useOptions()
+  const { props, attrs, emit, slots } = defineOptions()
   expectType<{}>(props)
   expectType<Record<string, unknown>>(attrs)
   expectType<(...args: any[]) => void>(emit)
@@ -15,7 +15,7 @@ describe('no args', () => {
 })
 
 describe('with type arg', () => {
-  const { props, attrs, emit, slots } = useOptions<{
+  const { props, attrs, emit, slots } = defineOptions<{
     props: {
       foo: string
     }
@@ -40,7 +40,7 @@ describe('with type arg', () => {
 
 // with runtime arg
 describe('with runtime arg (array syntax)', () => {
-  const { props, emit } = useOptions({
+  const { props, emit } = defineOptions({
     props: ['foo', 'bar'],
     emits: ['foo', 'bar']
   })
@@ -59,7 +59,7 @@ describe('with runtime arg (array syntax)', () => {
 })
 
 describe('with runtime arg (object syntax)', () => {
-  const { props, emit } = useOptions({
+  const { props, emit } = defineOptions({
     props: {
       foo: String,
       bar: {

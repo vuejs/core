@@ -1,11 +1,8 @@
-import { EmitFn, EmitsOptions } from '../componentEmits'
-import {
-  ComponentObjectPropsOptions,
-  ExtractPropTypes
-} from '../componentProps'
-import { Slots } from '../componentSlots'
-import { Directive } from '../directives'
-import { warn } from '../warning'
+import { EmitFn, EmitsOptions } from './componentEmits'
+import { ComponentObjectPropsOptions, ExtractPropTypes } from './componentProps'
+import { Slots } from './componentSlots'
+import { Directive } from './directives'
+import { warn } from './warning'
 
 interface DefaultContext {
   props: {}
@@ -45,7 +42,7 @@ interface Options<E extends EmitsOptions, EE extends string> {
  * called at runtime.
  */
 // overload 1: no props
-export function useOptions<
+export function defineOptions<
   T extends Partial<DefaultContext> = {},
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string
@@ -56,7 +53,7 @@ export function useOptions<
 ): InferContext<T, {}, E>
 
 // overload 2: object props
-export function useOptions<
+export function defineOptions<
   T extends Partial<DefaultContext> = {},
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
@@ -69,7 +66,7 @@ export function useOptions<
 ): InferContext<T, P, E>
 
 // overload 3: object props
-export function useOptions<
+export function defineOptions<
   T extends Partial<DefaultContext> = {},
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
@@ -82,7 +79,7 @@ export function useOptions<
 ): InferContext<T, P, E>
 
 // implementation
-export function useOptions() {
+export function defineOptions() {
   if (__DEV__) {
     warn(
       `defineContext() is a compiler-hint helper that is only usable inside ` +

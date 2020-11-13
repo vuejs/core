@@ -43,7 +43,7 @@ export { provide, inject } from './apiInject'
 export { nextTick } from './scheduler'
 export { defineComponent } from './apiDefineComponent'
 export { defineAsyncComponent } from './apiAsyncComponent'
-export { useOptions } from './helpers/useOptions'
+export { defineOptions } from './apiDefineOptions'
 
 // Advanced API ----------------------------------------------------------------
 

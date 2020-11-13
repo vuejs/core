@@ -36,11 +36,11 @@ describe('SFC compile <script setup>', () => {
     expect(content).toMatch('return { a, b, c, d, x }')
   })
 
-  test('useOptions()', () => {
+  test('defineOptions()', () => {
     const { content, bindings } = compile(`
 <script setup>
-import { useOptions } from 'vue'
-const { props, emit } = useOptions({
+import { defineOptions } from 'vue'
+const { props, emit } = defineOptions({
   props: {
     foo: String
   },
@@ -60,8 +60,8 @@ const bar = 1
       emit: 'const'
     })
 
-    // should remove useOptions import and call
-    expect(content).not.toMatch('useOptions')
+    // should remove defineOptions import and call
+    expect(content).not.toMatch('defineOptions')
     // should generate correct setup signature
     expect(content).toMatch(`setup(__props, { props, emit }) {`)
     // should include context options in default export
@@ -143,7 +143,7 @@ const bar = 1
       const { content } = compile(
         `
         <script setup>
-        import { ref, useOptions } from 'vue'
+        import { ref, defineOptions } from 'vue'
         import Foo from './Foo.vue'
         import other from './util'
         const count = ref(0)
@@ -183,11 +183,11 @@ const bar = 1
       assertCode(content)
     })
 
-    test('useOptions w/ runtime options', () => {
+    test('defineOptions w/ runtime options', () => {
       const { content } = compile(`
 <script setup lang="ts">
-import { useOptions } from 'vue'
-const { props, emit } = useOptions({
+import { defineOptions } from 'vue'
+const { props, emit } = defineOptions({
   props: { foo: String },
   emits: ['a', 'b']
 })
@@ -200,15 +200,15 @@ const { props, emit } = useOptions({
   setup(__props, { props, emit }) {`)
     })
 
-    test('useOptions w/ type / extract props', () => {
+    test('defineOptions w/ type / extract props', () => {
       const { content, bindings } = compile(`
       <script setup lang="ts">
-      import { useOptions } from 'vue'
+      import { defineOptions } from 'vue'
       interface Test {}
 
       type Alias = number[]
 
-      useOptions<{
+      defineOptions<{
         props: {
           string: string
           number: number
@@ -288,11 +288,11 @@ const { props, emit } = useOptions({
       })
     })
 
-    test('useOptions w/ type / extract emits', () => {
+    test('defineOptions w/ type / extract emits', () => {
       const { content } = compile(`
       <script setup lang="ts">
-      import { useOptions } from 'vue'
-      const { emit } = useOptions<{
+      import { defineOptions } from 'vue'
+      const { emit } = defineOptions<{
         emit: (e: 'foo' | 'bar') => void
       }>()
       </script>
@@ -302,11 +302,11 @@ const { props, emit } = useOptions({
       expect(content).toMatch(`emits: ["foo", "bar"] as unknown as undefined`)
     })
 
-    test('useOptions w/ type / extract emits (union)', () => {
+    test('defineOptions w/ type / extract emits (union)', () => {
       const { content } = compile(`
       <script setup lang="ts">
-      import { useOptions } from 'vue'
-      const { emit } = useOptions<{
+      import { defineOptions } from 'vue'
+      const { emit } = defineOptions<{
         emit: ((e: 'foo' | 'bar') => void) | ((e: 'baz', id: number) => void)
       }>()
       </script>
@@ -633,21 +633,21 @@ const { props, emit } = useOptions({
       ).toThrow(`ref: statements can only contain assignment expressions`)
     })
 
-    test('useOptions() w/ both type and non-type args', () => {
+    test('defineOptions() w/ both type and non-type args', () => {
       expect(() => {
         compile(`<script setup lang="ts">
-        import { useOptions } from 'vue'
-        useOptions<{}>({})
+        import { defineOptions } from 'vue'
+        defineOptions<{}>({})
         </script>`)
       }).toThrow(`cannot accept both type and non-type arguments`)
     })
 
-    test('useOptions() referencing local var', () => {
+    test('defineOptions() referencing local var', () => {
       expect(() =>
         compile(`<script setup>
-        import { useOptions } from 'vue'
+        import { defineOptions } from 'vue'
         const bar = 1
-        useOptions({
+        defineOptions({
           props: {
             foo: {
               default: () => bar
@@ -658,24 +658,24 @@ const { props, emit } = useOptions({
       ).toThrow(`cannot reference locally declared variables`)
     })
 
-    test('useOptions() referencing ref declarations', () => {
+    test('defineOptions() referencing ref declarations', () => {
       expect(() =>
         compile(`<script setup>
-        import { useOptions } from 'vue'
+        import { defineOptions } from 'vue'
         ref: bar = 1
-        useOptions({
+        defineOptions({
           props: { bar }
         })
       </script>`)
       ).toThrow(`cannot reference locally declared variables`)
     })
 
-    test('should allow useOptions() referencing scope var', () => {
+    test('should allow defineOptions() referencing scope var', () => {
       assertCode(
         compile(`<script setup>
-          import { useOptions } from 'vue'
+          import { defineOptions } from 'vue'
           const bar = 1
-          useOptions({
+          defineOptions({
             props: {
               foo: {
                 default: bar => bar + 1
@@ -686,12 +686,12 @@ const { props, emit } = useOptions({
       )
     })
 
-    test('should allow useOptions() referencing imported binding', () => {
+    test('should allow defineOptions() referencing imported binding', () => {
       assertCode(
         compile(`<script setup>
-          import { useOptions } from 'vue'
+          import { defineOptions } from 'vue'
           import { bar } from './bar'
-          useOptions({
+          defineOptions({
             props: {
               foo: {
                 default: () => bar
@@ -901,8 +901,8 @@ describe('SFC analyze <script> bindings', () => {
   it('works for script setup', () => {
     const { bindings } = compile(`
       <script setup>
-      import { useOptions } from 'vue'
-      useOptions({
+      import { defineOptions } from 'vue'
+      defineOptions({
         props: {
           foo: String,
         }

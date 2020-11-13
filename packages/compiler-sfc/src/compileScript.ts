@@ -27,7 +27,7 @@ import { RawSourceMap } from 'source-map'
 import { genCssVarsCode, injectCssVarsCalls } from './genCssVars'
 import { compileTemplate, SFCTemplateCompileOptions } from './compileTemplate'
 
-const USE_OPTIONS = 'useOptions'
+const DEFINE_OPTIONS = 'defineOptions'
 
 export interface SFCScriptCompileOptions {
   /**
@@ -147,7 +147,18 @@ export function compileScript(
   let optionsArg: ObjectExpression | undefined
   let optionsType: TSTypeLiteral | undefined
   let hasAwait = false
+  // context types to generate
+  let propsType = `{}`
+  let emitType = `(e: string, ...args: any[]) => void`
+  let slotsType = `Slots`
+  let attrsType = `Record<string, any>`
+  // props/emits declared via types
+  const typeDeclaredProps: Record<string, PropTypeData> = {}
+  const typeDeclaredEmits: Set<string> = new Set()
+  // record declared types for runtime props type generation
+  const declaredTypes: Record<string, string[]> = {}
 
+  // magic-string state
   const s = new MagicString(source)
   const startOffset = scriptSetup.loc.start.offset
   const endOffset = scriptSetup.loc.end.offset
@@ -182,14 +193,14 @@ export function compileScript(
     )
   }
 
-  function processUseOptions(node: Node): boolean {
+  function processDefineOptions(node: Node): boolean {
     if (
       node.type === 'CallExpression' &&
       node.callee.type === 'Identifier' &&
-      node.callee.name === USE_OPTIONS
+      node.callee.name === DEFINE_OPTIONS
     ) {
       if (hasOptionsCall) {
-        error(`duplicate ${USE_OPTIONS}() call`, node)
+        error(`duplicate ${DEFINE_OPTIONS}() call`, node)
       }
       hasOptionsCall = true
       const optsArg = node.arguments[0]
@@ -197,14 +208,17 @@ export function compileScript(
         if (optsArg.type === 'ObjectExpression') {
           optionsArg = optsArg
         } else {
-          error(`${USE_OPTIONS}() argument must be an object literal.`, optsArg)
+          error(
+            `${DEFINE_OPTIONS}() argument must be an object literal.`,
+            optsArg
+          )
         }
       }
       // context call has type parameters - infer runtime types from it
       if (node.typeParameters) {
         if (optionsArg) {
           error(
-            `${USE_OPTIONS}() cannot accept both type and non-type arguments ` +
+            `${DEFINE_OPTIONS}() cannot accept both type and non-type arguments ` +
               `at the same time. Use one or the other.`,
             node
           )
@@ -214,7 +228,7 @@ export function compileScript(
           optionsType = typeArg
         } else {
           error(
-            `type argument passed to ${USE_OPTIONS}() must be a literal type.`,
+            `type argument passed to ${DEFINE_OPTIONS}() must be a literal type.`,
             typeArg
           )
         }
@@ -427,18 +441,7 @@ export function compileScript(
     }
   }
 
-  let propsType = `{}`
-  let emitType = `(e: string, ...args: any[]) => void`
-  let slotsType = `Slots`
-  let attrsType = `Record<string, any>`
-
-  // props/emits declared via types
-  const typeDeclaredProps: Record<string, PropTypeData> = {}
-  const typeDeclaredEmits: Set<string> = new Set()
-  // record declared types for runtime props type generation
-  const declaredTypes: Record<string, string[]> = {}
-
-  // 3. parse <script setup> and  walk over top level statements
+  // 2. parse <script setup> and  walk over top level statements
   const scriptSetupAst = parse(
     scriptSetup.content,
     {
@@ -512,7 +515,7 @@ export function compileScript(
           specifier.imported.name
         const source = node.source.value
         const existing = userImports[local]
-        if (source === 'vue' && imported === USE_OPTIONS) {
+        if (source === 'vue' && imported === DEFINE_OPTIONS) {
           removed++
           s.remove(
             prev ? prev.end! + startOffset : specifier.start! + startOffset,
@@ -544,14 +547,14 @@ export function compileScript(
 
     if (
       node.type === 'ExpressionStatement' &&
-      processUseOptions(node.expression)
+      processDefineOptions(node.expression)
     ) {
       s.remove(node.start! + startOffset, node.end! + startOffset)
     }
 
     if (node.type === 'VariableDeclaration' && !node.declare) {
       for (const decl of node.declarations) {
-        if (decl.init && processUseOptions(decl.init)) {
+        if (decl.init && processDefineOptions(decl.init)) {
           optionsExp = scriptSetup.content.slice(decl.id.start!, decl.id.end!)
           if (node.declarations.length === 1) {
             s.remove(node.start! + startOffset, node.end! + startOffset)
@@ -618,7 +621,7 @@ export function compileScript(
     }
   }
 
-  // 4. Do a full walk to rewrite identifiers referencing let exports with ref
+  // 3. Do a full walk to rewrite identifiers referencing let exports with ref
   // value access
   if (enableRefSugar && Object.keys(refBindings).length) {
     for (const node of scriptSetupAst) {
@@ -644,7 +647,7 @@ export function compileScript(
     }
   }
 
-  // 5. extract runtime props/emits code from setup context type
+  // 4. extract runtime props/emits code from setup context type
   if (optionsType) {
     for (const m of optionsType.members) {
       if (m.type === 'TSPropertySignature' && m.key.type === 'Identifier') {
@@ -690,7 +693,7 @@ export function compileScript(
     walkIdentifiers(optionsArg, id => {
       if (setupBindings[id.name]) {
         error(
-          `\`${USE_OPTIONS}()\` in <script setup> cannot reference locally ` +
+          `\`${DEFINE_OPTIONS}()\` in <script setup> cannot reference locally ` +
             `declared variables because it will be hoisted outside of the ` +
             `setup() function. If your component options requires initialization ` +
             `in the module scope, use a separate normal <script> to export ` +
@@ -739,7 +742,7 @@ export function compileScript(
     allBindings[key] = true
   }
 
-  // 9. inject `useCssVars` calls
+  // 8. inject `useCssVars` calls
   if (hasCssVars) {
     helperImports.add(`useCssVars`)
     for (const style of styles) {
@@ -753,7 +756,7 @@ export function compileScript(
     }
   }
 
-  // 10. analyze binding metadata
+  // 9. analyze binding metadata
   if (scriptAst) {
     Object.assign(bindingMetadata, analyzeScriptBindings(scriptAst))
   }
@@ -774,7 +777,7 @@ export function compileScript(
     bindingMetadata[key] = setupBindings[key]
   }
 
-  // 11. generate return statement
+  // 10. generate return statement
   let returned
   if (options.inlineTemplate) {
     if (sfc.template) {
@@ -812,7 +815,7 @@ export function compileScript(
   }
   s.appendRight(endOffset, `\nreturn ${returned}\n}\n\n`)
 
-  // 12. finalize default export
+  // 11. finalize default export
   let runtimeOptions = ``
   if (optionsArg) {
     runtimeOptions = `\n  ${scriptSetup.content
@@ -822,7 +825,6 @@ export function compileScript(
     runtimeOptions =
       genRuntimeProps(typeDeclaredProps) + genRuntimeEmits(typeDeclaredEmits)
   }
-
   if (isTS) {
     // for TS, make sure the exported type is still valid type with
     // correct props information
@@ -861,7 +863,7 @@ export function compileScript(
     }
   }
 
-  // 13. finalize Vue helper imports
+  // 12. finalize Vue helper imports
   // TODO account for cases where user imports a helper with the same name
   // from a non-vue source
   const helpers = [...helperImports].filter(i => !userImports[i])
@@ -897,7 +899,7 @@ function walkDeclaration(
         init &&
         init.type === 'CallExpression' &&
         init.callee.type === 'Identifier' &&
-        init.callee.name === USE_OPTIONS
+        init.callee.name === DEFINE_OPTIONS
       )
       if (id.type === 'Identifier') {
         bindings[id.name] =
