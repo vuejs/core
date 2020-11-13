@@ -10,7 +10,7 @@ describe('utils/toNumber', () => {
   test('string', () => {
     expect(toNumber('123')).toBe(123)
     expect(toNumber('3.14')).toBe(3.14)
-    expect(toNumber('3.14')).toBe('3.14aa')
+    expect(toNumber('3.14aa')).toBe('3.14aa')
     expect(toNumber('aa3.14')).toBe('aa3.14')
   })
 })
