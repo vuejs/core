@@ -1,5 +1,5 @@
 import MagicString from 'magic-string'
-import { BindingMetadata } from '@vue/compiler-core'
+import { BindingMetadata, BindingTypes } from '@vue/compiler-core'
 import { SFCDescriptor, SFCScriptBlock } from './parse'
 import { parse as _parse, ParserOptions, ParserPlugin } from '@babel/parser'
 import { babelParserDefaultPlugins, generateCodeFrame } from '@vue/shared'
@@ -26,7 +26,6 @@ import { walk } from 'estree-walker'
 import { RawSourceMap } from 'source-map'
 import { genCssVarsCode, injectCssVarsCalls } from './genCssVars'
 import { compileTemplate, SFCTemplateCompileOptions } from './compileTemplate'
-import { BindingTypes } from 'packages/compiler-core/src/options'
 
 const USE_OPTIONS = 'useOptions'
 
