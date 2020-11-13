@@ -100,13 +100,6 @@ export function processExpression(
   }
 
   const { inline, bindingMetadata } = context
-
-  // const bindings exposed from setup - we know they never change
-  if (bindingMetadata[node.content] === BindingTypes.CONST) {
-    node.isRuntimeConstant = true
-    return node
-  }
-
   const prefix = (raw: string) => {
     const type = hasOwn(bindingMetadata, raw) && bindingMetadata[raw]
     if (inline) {
@@ -138,6 +131,10 @@ export function processExpression(
   // bail on parens to prevent any possible function invocations.
   const bailConstant = rawExp.indexOf(`(`) > -1
   if (isSimpleIdentifier(rawExp)) {
+    // const bindings exposed from setup - we know they never change
+    if (bindingMetadata[node.content] === BindingTypes.CONST) {
+      node.isRuntimeConstant = true
+    }
     if (
       !asParams &&
       !context.identifiers[rawExp] &&
