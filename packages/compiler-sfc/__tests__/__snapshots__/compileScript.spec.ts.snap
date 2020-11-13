@@ -56,25 +56,7 @@ return { color }
 }"
 `;
 
-exports[`SFC compile <script setup> defineContext() 1`] = `
-"export default {
-  props: {
-    foo: String
-  },
-  emit: ['a', 'b'],
-  setup(__props, { props, emit }) {
-
-
-
-const bar = 1
-
-return { props, emit, bar }
-}
-
-}"
-`;
-
-exports[`SFC compile <script setup> errors should allow defineContext() referencing imported binding 1`] = `
+exports[`SFC compile <script setup> errors should allow useOptions() referencing imported binding 1`] = `
 "import { bar } from './bar'
           
 export default {
@@ -93,7 +75,7 @@ return { bar }
 }"
 `;
 
-exports[`SFC compile <script setup> errors should allow defineContext() referencing scope var 1`] = `
+exports[`SFC compile <script setup> errors should allow useOptions() referencing scope var 1`] = `
 "export default {
   props: {
               foo: {
@@ -393,7 +375,40 @@ return { a, b, c, d, x }
 }"
 `;
 
-exports[`SFC compile <script setup> with TypeScript defineContext w/ runtime options 1`] = `
+exports[`SFC compile <script setup> useOptions() 1`] = `
+"export default {
+  props: {
+    foo: String
+  },
+  emit: ['a', 'b'],
+  setup(__props, { props, emit }) {
+
+
+
+const bar = 1
+
+return { props, emit, bar }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> with TypeScript hoist type declarations 1`] = `
+"import { defineComponent } from 'vue'
+export interface Foo {}
+        type Bar = {}
+      
+export default defineComponent({
+  setup() {
+
+        
+return {  }
+}
+
+})"
+`;
+
+exports[`SFC compile <script setup> with TypeScript useOptions w/ runtime options 1`] = `
 "import { defineComponent } from 'vue'
 
 
@@ -410,7 +425,7 @@ return { props, emit }
 })"
 `;
 
-exports[`SFC compile <script setup> with TypeScript defineContext w/ type / extract emits (union) 1`] = `
+exports[`SFC compile <script setup> with TypeScript useOptions w/ type / extract emits (union) 1`] = `
 "import { Slots, defineComponent } from 'vue'
 
       
@@ -431,7 +446,7 @@ return { emit }
 })"
 `;
 
-exports[`SFC compile <script setup> with TypeScript defineContext w/ type / extract emits 1`] = `
+exports[`SFC compile <script setup> with TypeScript useOptions w/ type / extract emits 1`] = `
 "import { Slots, defineComponent } from 'vue'
 
       
@@ -452,7 +467,7 @@ return { emit }
 })"
 `;
 
-exports[`SFC compile <script setup> with TypeScript defineContext w/ type / extract props 1`] = `
+exports[`SFC compile <script setup> with TypeScript useOptions w/ type / extract props 1`] = `
 "import { defineComponent } from 'vue'
 
       interface Test {}
@@ -488,21 +503,6 @@ export default defineComponent({
 
       
       
-return {  }
-}
-
-})"
-`;
-
-exports[`SFC compile <script setup> with TypeScript hoist type declarations 1`] = `
-"import { defineComponent } from 'vue'
-export interface Foo {}
-        type Bar = {}
-      
-export default defineComponent({
-  setup() {
-
-        
 return {  }
 }
 

@@ -1,5 +1,5 @@
-import { Slots } from './componentSlots'
-import { warn } from './warning'
+import { Slots } from '../componentSlots'
+import { warn } from '../warning'
 
 interface DefaultContext {
   props: Record<string, unknown>
@@ -8,7 +8,13 @@ interface DefaultContext {
   slots: Slots
 }
 
-export function defineContext<T extends Partial<DefaultContext> = {}>(
+/**
+ * Compile-time-only helper used for declaring options and retrieving props
+ * and the setup context inside <script setup>.
+ * This is stripped away in the compiled code and should never be actually
+ * called at runtime.
+ */
+export function useOptions<T extends Partial<DefaultContext> = {}>(
   opts?: any // TODO infer
 ): { [K in keyof DefaultContext]: T[K] extends {} ? T[K] : DefaultContext[K] } {
   if (__DEV__) {

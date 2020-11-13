@@ -28,7 +28,7 @@ import { genCssVarsCode, injectCssVarsCalls } from './genCssVars'
 import { compileTemplate, SFCTemplateCompileOptions } from './compileTemplate'
 import { BindingTypes } from 'packages/compiler-core/src/options'
 
-const CTX_FN_NAME = 'defineContext'
+const USE_OPTIONS = 'useOptions'
 
 export interface SFCScriptCompileOptions {
   /**
@@ -143,10 +143,10 @@ export function compileScript(
   const refIdentifiers: Set<Identifier> = new Set()
   const enableRefSugar = options.refSugar !== false
   let defaultExport: Node | undefined
-  let hasContextCall = false
-  let setupContextExp: string | undefined
-  let setupContextArg: ObjectExpression | undefined
-  let setupContextType: TSTypeLiteral | undefined
+  let hasOptionsCall = false
+  let optionsExp: string | undefined
+  let optionsArg: ObjectExpression | undefined
+  let optionsType: TSTypeLiteral | undefined
   let hasAwait = false
 
   const s = new MagicString(source)
@@ -183,39 +183,39 @@ export function compileScript(
     )
   }
 
-  function processContextCall(node: Node): boolean {
+  function processUseOptions(node: Node): boolean {
     if (
       node.type === 'CallExpression' &&
       node.callee.type === 'Identifier' &&
-      node.callee.name === CTX_FN_NAME
+      node.callee.name === USE_OPTIONS
     ) {
-      if (hasContextCall) {
-        error('duplicate defineContext() call', node)
+      if (hasOptionsCall) {
+        error(`duplicate ${USE_OPTIONS}() call`, node)
       }
-      hasContextCall = true
+      hasOptionsCall = true
       const optsArg = node.arguments[0]
       if (optsArg) {
         if (optsArg.type === 'ObjectExpression') {
-          setupContextArg = optsArg
+          optionsArg = optsArg
         } else {
-          error(`${CTX_FN_NAME}() argument must be an object literal.`, optsArg)
+          error(`${USE_OPTIONS}() argument must be an object literal.`, optsArg)
         }
       }
       // context call has type parameters - infer runtime types from it
       if (node.typeParameters) {
-        if (setupContextArg) {
+        if (optionsArg) {
           error(
-            `${CTX_FN_NAME}() cannot accept both type and non-type arguments ` +
+            `${USE_OPTIONS}() cannot accept both type and non-type arguments ` +
               `at the same time. Use one or the other.`,
             node
           )
         }
         const typeArg = node.typeParameters.params[0]
         if (typeArg.type === 'TSTypeLiteral') {
-          setupContextType = typeArg
+          optionsType = typeArg
         } else {
           error(
-            `type argument passed to ${CTX_FN_NAME}() must be a literal type.`,
+            `type argument passed to ${USE_OPTIONS}() must be a literal type.`,
             typeArg
           )
         }
@@ -513,7 +513,7 @@ export function compileScript(
           specifier.imported.name
         const source = node.source.value
         const existing = userImports[local]
-        if (source === 'vue' && imported === CTX_FN_NAME) {
+        if (source === 'vue' && imported === USE_OPTIONS) {
           removed++
           s.remove(
             prev ? prev.end! + startOffset : specifier.start! + startOffset,
@@ -545,18 +545,15 @@ export function compileScript(
 
     if (
       node.type === 'ExpressionStatement' &&
-      processContextCall(node.expression)
+      processUseOptions(node.expression)
     ) {
       s.remove(node.start! + startOffset, node.end! + startOffset)
     }
 
     if (node.type === 'VariableDeclaration' && !node.declare) {
       for (const decl of node.declarations) {
-        if (decl.init && processContextCall(decl.init)) {
-          setupContextExp = scriptSetup.content.slice(
-            decl.id.start!,
-            decl.id.end!
-          )
+        if (decl.init && processUseOptions(decl.init)) {
+          optionsExp = scriptSetup.content.slice(decl.id.start!, decl.id.end!)
           if (node.declarations.length === 1) {
             s.remove(node.start! + startOffset, node.end! + startOffset)
           } else {
@@ -649,8 +646,8 @@ export function compileScript(
   }
 
   // 5. extract runtime props/emits code from setup context type
-  if (setupContextType) {
-    for (const m of setupContextType.members) {
+  if (optionsType) {
+    for (const m of optionsType.members) {
       if (m.type === 'TSPropertySignature' && m.key.type === 'Identifier') {
         const typeNode = m.typeAnnotation!.typeAnnotation
         const typeString = scriptSetup.content.slice(
@@ -688,13 +685,13 @@ export function compileScript(
     }
   }
 
-  // 5. check useSetupContext args to make sure it doesn't reference setup scope
+  // 5. check useOptions args to make sure it doesn't reference setup scope
   // variables
-  if (setupContextArg) {
-    walkIdentifiers(setupContextArg, id => {
+  if (optionsArg) {
+    walkIdentifiers(optionsArg, id => {
       if (setupBindings[id.name]) {
         error(
-          `\`${CTX_FN_NAME}()\` in <script setup> cannot reference locally ` +
+          `\`${USE_OPTIONS}()\` in <script setup> cannot reference locally ` +
             `declared variables because it will be hoisted outside of the ` +
             `setup() function. If your component options requires initialization ` +
             `in the module scope, use a separate normal <script> to export ` +
@@ -725,8 +722,8 @@ export function compileScript(
   }
 
   // 7. finalize setup argument signature.
-  let args = setupContextExp ? `__props, ${setupContextExp}` : ``
-  if (setupContextExp && setupContextType) {
+  let args = optionsExp ? `__props, ${optionsExp}` : ``
+  if (optionsExp && optionsType) {
     if (slotsType === 'Slots') {
       helperImports.add('Slots')
     }
@@ -761,13 +758,13 @@ export function compileScript(
   if (scriptAst) {
     Object.assign(bindingMetadata, analyzeScriptBindings(scriptAst))
   }
-  if (setupContextType) {
+  if (optionsType) {
     for (const key in typeDeclaredProps) {
       bindingMetadata[key] = BindingTypes.PROPS
     }
   }
-  if (setupContextArg) {
-    Object.assign(bindingMetadata, analyzeBindingsFromOptions(setupContextArg))
+  if (optionsArg) {
+    Object.assign(bindingMetadata, analyzeBindingsFromOptions(optionsArg))
   }
   for (const [key, { source }] of Object.entries(userImports)) {
     bindingMetadata[key] = source.endsWith('.vue')
@@ -818,11 +815,11 @@ export function compileScript(
 
   // 12. finalize default export
   let runtimeOptions = ``
-  if (setupContextArg) {
+  if (optionsArg) {
     runtimeOptions = `\n  ${scriptSetup.content
-      .slice(setupContextArg.start! + 1, setupContextArg.end! - 1)
+      .slice(optionsArg.start! + 1, optionsArg.end! - 1)
       .trim()},`
-  } else if (setupContextType) {
+  } else if (optionsType) {
     runtimeOptions =
       genRuntimeProps(typeDeclaredProps) + genRuntimeEmits(typeDeclaredEmits)
   }
@@ -896,18 +893,18 @@ function walkDeclaration(
     const isConst = node.kind === 'const'
     // export const foo = ...
     for (const { id, init } of node.declarations) {
-      const isContextCall = !!(
+      const isUseOptionsCall = !!(
         isConst &&
         init &&
         init.type === 'CallExpression' &&
         init.callee.type === 'Identifier' &&
-        init.callee.name === CTX_FN_NAME
+        init.callee.name === USE_OPTIONS
       )
       if (id.type === 'Identifier') {
         bindings[id.name] =
           // if a declaration is a const literal, we can mark it so that
           // the generated render fn code doesn't need to unref() it
-          isContextCall ||
+          isUseOptionsCall ||
           (isConst &&
           init!.type !== 'Identifier' && // const a = b
           init!.type !== 'CallExpression' && // const a = ref()
@@ -915,9 +912,9 @@ function walkDeclaration(
             ? BindingTypes.CONST
             : BindingTypes.SETUP
       } else if (id.type === 'ObjectPattern') {
-        walkObjectPattern(id, bindings, isConst, isContextCall)
+        walkObjectPattern(id, bindings, isConst, isUseOptionsCall)
       } else if (id.type === 'ArrayPattern') {
-        walkArrayPattern(id, bindings, isConst, isContextCall)
+        walkArrayPattern(id, bindings, isConst, isUseOptionsCall)
       }
     }
   } else if (
@@ -934,7 +931,7 @@ function walkObjectPattern(
   node: ObjectPattern,
   bindings: Record<string, BindingTypes>,
   isConst: boolean,
-  isContextCall = false
+  isUseOptionsCall = false
 ) {
   for (const p of node.properties) {
     if (p.type === 'ObjectProperty') {
@@ -942,11 +939,11 @@ function walkObjectPattern(
       if (p.key.type === 'Identifier') {
         if (p.key === p.value) {
           // const { x } = ...
-          bindings[p.key.name] = isContextCall
+          bindings[p.key.name] = isUseOptionsCall
             ? BindingTypes.CONST
             : BindingTypes.SETUP
         } else {
-          walkPattern(p.value, bindings, isConst, isContextCall)
+          walkPattern(p.value, bindings, isConst, isUseOptionsCall)
         }
       }
     } else {
@@ -963,10 +960,10 @@ function walkArrayPattern(
   node: ArrayPattern,
   bindings: Record<string, BindingTypes>,
   isConst: boolean,
-  isContextCall = false
+  isUseOptionsCall = false
 ) {
   for (const e of node.elements) {
-    e && walkPattern(e, bindings, isConst, isContextCall)
+    e && walkPattern(e, bindings, isConst, isUseOptionsCall)
   }
 }
 
@@ -974,10 +971,10 @@ function walkPattern(
   node: Node,
   bindings: Record<string, BindingTypes>,
   isConst: boolean,
-  isContextCall = false
+  isUseOptionsCall = false
 ) {
   if (node.type === 'Identifier') {
-    bindings[node.name] = isContextCall
+    bindings[node.name] = isUseOptionsCall
       ? BindingTypes.CONST
       : BindingTypes.SETUP
   } else if (node.type === 'RestElement') {
@@ -991,7 +988,7 @@ function walkPattern(
     walkArrayPattern(node, bindings, isConst)
   } else if (node.type === 'AssignmentPattern') {
     if (node.left.type === 'Identifier') {
-      bindings[node.left.name] = isContextCall
+      bindings[node.left.name] = isUseOptionsCall
         ? BindingTypes.CONST
         : BindingTypes.SETUP
     } else {
