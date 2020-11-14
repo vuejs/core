@@ -18,9 +18,9 @@ import {
   setTransitionHooks,
   createVNode,
   onUpdated,
-  SetupContext
+  SetupContext,
+  toRaw
 } from '@vue/runtime-core'
-import { toRaw } from '@vue/reactivity'
 import { extend } from '@vue/shared'
 
 interface Position {

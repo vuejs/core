@@ -41,7 +41,9 @@ import {
   reactive,
   ComputedGetter,
   WritableComputedOptions,
-  toRaw
+  toRaw,
+  proxyRefs,
+  toRef
 } from '@vue/reactivity'
 import {
   ComponentObjectPropsOptions,
@@ -110,6 +112,8 @@ export interface ComponentOptionsBase<
   directives?: Record<string, Directive>
   inheritAttrs?: boolean
   emits?: (E | EE[]) & ThisType<void>
+  // TODO infer public instance type based on exposed keys
+  expose?: string[]
   serverPrefetch?(): Promise<any>
 
   // Internal ------------------------------------------------------------------
@@ -461,7 +465,9 @@ export function applyOptions(
     render,
     renderTracked,
     renderTriggered,
-    errorCaptured
+    errorCaptured,
+    // public API
+    expose
   } = options
 
   const publicThis = instance.proxy!
@@ -735,6 +741,13 @@ export function applyOptions(
   }
   if (unmounted) {
     onUnmounted(unmounted.bind(publicThis))
+  }
+
+  if (!asMixin && expose) {
+    const exposed = instance.exposed || (instance.exposed = proxyRefs({}))
+    expose.forEach(key => {
+      exposed[key] = toRef(publicThis, key as any)
+    })
   }
 }
 
