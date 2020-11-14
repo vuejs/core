@@ -816,13 +816,14 @@ export function compileScript(
   s.appendRight(endOffset, `\nreturn ${returned}\n}\n\n`)
 
   // 11. finalize default export
-  let runtimeOptions = ``
+  // expose: [] makes <script setup> components "closed" by default.
+  let runtimeOptions = `\n  expose: [],`
   if (optionsArg) {
-    runtimeOptions = `\n  ${scriptSetup.content
+    runtimeOptions += `\n  ${scriptSetup.content
       .slice(optionsArg.start! + 1, optionsArg.end! - 1)
       .trim()},`
   } else if (optionsType) {
-    runtimeOptions =
+    runtimeOptions +=
       genRuntimeProps(typeDeclaredProps) + genRuntimeEmits(typeDeclaredEmits)
   }
   if (isTS) {
