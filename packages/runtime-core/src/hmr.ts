@@ -56,6 +56,7 @@ export function registerHMR(instance: ComponentInternalInstance) {
     createRecord(id, instance.type as ComponentOptions)
     record = map.get(id)!
   }
+  if (!record.component) record.component = instance.type as ComponentOptions
   record.instances.add(instance)
 }
 
