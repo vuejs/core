@@ -95,4 +95,50 @@ describe('api: expose', () => {
     expect(childRef.value.bar).toBe(2)
     expect(childRef.value.baz).toBeUndefined()
   })
+
+  test('options: empty', () => {
+    const Child = defineComponent({
+      render() {},
+      expose: [],
+      data() {
+        return {
+          foo: 1
+        }
+      }
+    })
+
+    const childRef = ref()
+    const Parent = {
+      setup() {
+        return () => h(Child, { ref: childRef })
+      }
+    }
+    const root = nodeOps.createElement('div')
+    render(h(Parent), root)
+    expect(childRef.value).toBeTruthy()
+    expect('foo' in childRef.value).toBe(false)
+  })
+
+  test('options: empty + setup context', () => {
+    const Child = defineComponent({
+      render() {},
+      expose: [],
+      setup(_, { expose }) {
+        expose({
+          foo: 1
+        })
+      }
+    })
+
+    const childRef = ref()
+    const Parent = {
+      setup() {
+        return () => h(Child, { ref: childRef })
+      }
+    }
+    const root = nodeOps.createElement('div')
+    render(h(Parent), root)
+    expect(childRef.value).toBeTruthy()
+    expect(childRef.value.foo).toBe(1)
+  })
 })

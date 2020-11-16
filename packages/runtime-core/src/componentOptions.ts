@@ -743,11 +743,19 @@ export function applyOptions(
     onUnmounted(unmounted.bind(publicThis))
   }
 
-  if (!asMixin && expose) {
-    const exposed = instance.exposed || (instance.exposed = proxyRefs({}))
-    expose.forEach(key => {
-      exposed[key] = toRef(publicThis, key as any)
-    })
+  if (isArray(expose)) {
+    if (!asMixin) {
+      if (expose.length) {
+        const exposed = instance.exposed || (instance.exposed = proxyRefs({}))
+        expose.forEach(key => {
+          exposed[key] = toRef(publicThis, key as any)
+        })
+      } else if (!instance.exposed) {
+        instance.exposed = EMPTY_OBJ
+      }
+    } else if (__DEV__) {
+      warn(`The \`expose\` option is ignored when used in mixins.`)
+    }
   }
 }
 
