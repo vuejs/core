@@ -655,9 +655,9 @@ export function applyOptions(
       const provides = isFunction(provideOptions)
         ? provideOptions.call(publicThis)
         : provideOptions
-      for (const key in provides) {
+      Reflect.ownKeys(provides).forEach(key => {
         provide(key, provides[key])
-      }
+      })
     })
   }
 
