@@ -5,7 +5,8 @@ import {
   Ref,
   ComputedRef,
   ReactiveEffectOptions,
-  isReactive
+  isReactive,
+  EffectScheduler
 } from '@vue/reactivity'
 import { SchedulerJob, queuePreFlushCb } from './scheduler'
 import {
@@ -252,7 +253,7 @@ function doWatch(
   // it is allowed to self-trigger (#1727)
   job.allowRecurse = !!cb
 
-  let scheduler: ReactiveEffectOptions['scheduler']
+  let scheduler: EffectScheduler
   if (flush === 'sync') {
     scheduler = job
   } else if (flush === 'post') {

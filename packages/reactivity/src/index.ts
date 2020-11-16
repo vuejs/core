@@ -46,6 +46,7 @@ export {
   ITERATE_KEY,
   ReactiveEffect,
   ReactiveEffectOptions,
+  EffectScheduler,
   DebuggerEvent
 } from './effect'
 export { TrackOpTypes, TriggerOpTypes } from './operations'

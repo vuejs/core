@@ -12,7 +12,7 @@ type Dep = Set<ReactiveEffect>
 type KeyToDepMap = Map<any, Dep>
 const targetMap = new WeakMap<any, KeyToDepMap>()
 
-type EffectScheduler = (job: () => void) => void
+export type EffectScheduler = (job: () => void) => void
 
 export class ReactiveEffect<T = any> {
   public id = uid++
