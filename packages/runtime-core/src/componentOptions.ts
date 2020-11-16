@@ -41,7 +41,9 @@ import {
   reactive,
   ComputedGetter,
   WritableComputedOptions,
-  toRaw
+  toRaw,
+  proxyRefs,
+  toRef
 } from '@vue/reactivity'
 import {
   ComponentObjectPropsOptions,
@@ -96,7 +98,7 @@ export interface ComponentOptionsBase<
   setup?: (
     this: void,
     props: Props,
-    ctx: SetupContext<E>
+    ctx: SetupContext<E, Props>
   ) => Promise<RawBindings> | RawBindings | RenderFunction | void
   name?: string
   template?: string | object // can be a direct DOM node
@@ -110,6 +112,8 @@ export interface ComponentOptionsBase<
   directives?: Record<string, Directive>
   inheritAttrs?: boolean
   emits?: (E | EE[]) & ThisType<void>
+  // TODO infer public instance type based on exposed keys
+  expose?: string[]
   serverPrefetch?(): Promise<any>
 
   // Internal ------------------------------------------------------------------
@@ -461,7 +465,9 @@ export function applyOptions(
     render,
     renderTracked,
     renderTriggered,
-    errorCaptured
+    errorCaptured,
+    // public API
+    expose
   } = options
 
   const publicThis = instance.proxy!
@@ -735,6 +741,21 @@ export function applyOptions(
   }
   if (unmounted) {
     onUnmounted(unmounted.bind(publicThis))
+  }
+
+  if (isArray(expose)) {
+    if (!asMixin) {
+      if (expose.length) {
+        const exposed = instance.exposed || (instance.exposed = proxyRefs({}))
+        expose.forEach(key => {
+          exposed[key] = toRef(publicThis, key as any)
+        })
+      } else if (!instance.exposed) {
+        instance.exposed = EMPTY_OBJ
+      }
+    } else if (__DEV__) {
+      warn(`The \`expose\` option is ignored when used in mixins.`)
+    }
   }
 }
 

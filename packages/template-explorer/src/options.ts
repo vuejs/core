@@ -1,5 +1,6 @@
 import { h, reactive, createApp, ref } from 'vue'
 import { CompilerOptions } from '@vue/compiler-dom'
+import { BindingTypes } from '@vue/compiler-core'
 
 export const ssrMode = ref(false)
 
@@ -12,9 +13,9 @@ export const compilerOptions: CompilerOptions = reactive({
   scopeId: null,
   ssrCssVars: `{ color }`,
   bindingMetadata: {
-    TestComponent: 'setup',
-    foo: 'setup',
-    bar: 'props'
+    TestComponent: BindingTypes.SETUP,
+    foo: BindingTypes.SETUP,
+    bar: BindingTypes.PROPS
   }
 })
 

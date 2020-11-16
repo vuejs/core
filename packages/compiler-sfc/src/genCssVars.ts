@@ -10,10 +10,12 @@ import { SFCDescriptor } from './parse'
 import { rewriteDefault } from './rewriteDefault'
 import { ParserPlugin } from '@babel/parser'
 
+export const CSS_VARS_HELPER = `useCssVars`
+
 export function genCssVarsCode(
   varsExp: string,
   scoped: boolean,
-  knownBindings?: Record<string, boolean>
+  knownBindings?: Record<string, any>
 ) {
   const exp = createSimpleExpression(varsExp, false)
   const context = createTransformContext(createRoot([]), {
@@ -38,7 +40,7 @@ export function genCssVarsCode(
           })
           .join('')
 
-  return `__useCssVars__(_ctx => (${transformedString})${
+  return `_${CSS_VARS_HELPER}(_ctx => (${transformedString})${
     scoped ? `, true` : ``
   })`
 }
@@ -65,7 +67,7 @@ export function injectCssVarsCalls(
 
   return (
     script +
-    `\nimport { useCssVars as __useCssVars__ } from 'vue'\n` +
+    `\nimport { ${CSS_VARS_HELPER} as _${CSS_VARS_HELPER} } from 'vue'\n` +
     `const __injectCSSVars__ = () => {\n${calls}}\n` +
     `const __setup__ = __default__.setup\n` +
     `__default__.setup = __setup__\n` +

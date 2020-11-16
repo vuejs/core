@@ -26,7 +26,10 @@ import {
   isSymbol,
   isOn,
   isObject,
-  isReservedProp
+  isReservedProp,
+  capitalize,
+  camelize,
+  EMPTY_OBJ
 } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
@@ -37,7 +40,8 @@ import {
   TO_HANDLERS,
   TELEPORT,
   KEEP_ALIVE,
-  SUSPENSE
+  SUSPENSE,
+  UNREF
 } from '../runtimeHelpers'
 import {
   getInnerRange,
@@ -50,6 +54,7 @@ import {
 } from '../utils'
 import { buildSlots } from './vSlot'
 import { getStaticType } from './hoistStatic'
+import { BindingTypes } from '../options'
 
 // some directive transforms (e.g. v-model) may return a symbol for runtime
 // import, which should be used instead of a resolveDirective call.
@@ -246,8 +251,32 @@ export function resolveComponentType(
   }
 
   // 3. user component (from setup bindings)
-  if (context.bindingMetadata[tag] === 'setup') {
-    return `$setup[${JSON.stringify(tag)}]`
+  const bindings = context.bindingMetadata
+  if (bindings !== EMPTY_OBJ) {
+    const checkType = (type: BindingTypes) => {
+      let resolvedTag = tag
+      if (
+        bindings[resolvedTag] === type ||
+        bindings[(resolvedTag = camelize(tag))] === type ||
+        bindings[(resolvedTag = capitalize(camelize(tag)))] === type
+      ) {
+        return resolvedTag
+      }
+    }
+    const tagFromSetup = checkType(BindingTypes.SETUP)
+    if (tagFromSetup) {
+      return context.inline
+        ? // setup scope bindings may be refs so they need to be unrefed
+          `${context.helperString(UNREF)}(${tagFromSetup})`
+        : `$setup[${JSON.stringify(tagFromSetup)}]`
+    }
+    const tagFromConst = checkType(BindingTypes.CONST)
+    if (tagFromConst) {
+      return context.inline
+        ? // in inline mode, const setup bindings (e.g. imports) can be used as-is
+          tagFromConst
+        : `$setup[${JSON.stringify(tagFromConst)}]`
+    }
   }
 
   // 4. user component (resolve)

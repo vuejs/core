@@ -95,6 +95,7 @@ export function renderComponentRoot(
               props,
               __DEV__
                 ? {
+                    props,
                     get attrs() {
                       markAttrsAccessed()
                       return attrs
@@ -102,7 +103,7 @@ export function renderComponentRoot(
                     slots,
                     emit
                   }
-                : { attrs, slots, emit }
+                : { props, attrs, slots, emit }
             )
           : render(props, null as any /* we know it doesn't need it */)
       )
