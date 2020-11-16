@@ -24,7 +24,11 @@ import {
 } from '@babel/types'
 import { walk } from 'estree-walker'
 import { RawSourceMap } from 'source-map'
-import { genCssVarsCode, injectCssVarsCalls } from './genCssVars'
+import {
+  CSS_VARS_HELPER,
+  genCssVarsCode,
+  injectCssVarsCalls
+} from './genCssVars'
 import { compileTemplate, SFCTemplateCompileOptions } from './compileTemplate'
 
 const DEFINE_OPTIONS = 'defineOptions'
@@ -165,6 +169,11 @@ export function compileScript(
   const scriptStartOffset = script && script.loc.start.offset
   const scriptEndOffset = script && script.loc.end.offset
 
+  function helper(key: string): string {
+    helperImports.add(key)
+    return `_${key}`
+  }
+
   function parse(
     input: string,
     options: ParserOptions,
@@ -240,11 +249,10 @@ export function compileScript(
 
   function processRefExpression(exp: Expression, statement: LabeledStatement) {
     if (exp.type === 'AssignmentExpression') {
-      helperImports.add('ref')
       const { left, right } = exp
       if (left.type === 'Identifier') {
         registerRefBinding(left)
-        s.prependRight(right.start! + startOffset, `ref(`)
+        s.prependRight(right.start! + startOffset, `${helper('ref')}(`)
         s.appendLeft(right.end! + startOffset, ')')
       } else if (left.type === 'ObjectPattern') {
         // remove wrapping parens
@@ -272,7 +280,7 @@ export function compileScript(
       exp.expressions.forEach(e => processRefExpression(e, statement))
     } else if (exp.type === 'Identifier') {
       registerRefBinding(exp)
-      s.appendLeft(exp.end! + startOffset, ` = ref()`)
+      s.appendLeft(exp.end! + startOffset, ` = ${helper('ref')}()`)
     } else {
       error(`ref: statements can only contain assignment expressions.`, exp)
     }
@@ -326,7 +334,7 @@ export function compileScript(
         // append binding declarations after the parent statement
         s.appendLeft(
           statement.end! + startOffset,
-          `\nconst ${nameId.name} = ref(__${nameId.name});`
+          `\nconst ${nameId.name} = ${helper('ref')}(__${nameId.name});`
         )
       }
     }
@@ -360,7 +368,7 @@ export function compileScript(
         // append binding declarations after the parent statement
         s.appendLeft(
           statement.end! + startOffset,
-          `\nconst ${nameId.name} = ref(__${nameId.name});`
+          `\nconst ${nameId.name} = ${helper('ref')}(__${nameId.name});`
         )
       }
     }
@@ -744,7 +752,7 @@ export function compileScript(
 
   // 8. inject `useCssVars` calls
   if (hasCssVars) {
-    helperImports.add(`useCssVars`)
+    helperImports.add(CSS_VARS_HELPER)
     for (const style of styles) {
       const vars = style.attrs.vars
       if (typeof vars === 'string') {
@@ -829,7 +837,6 @@ export function compileScript(
   if (isTS) {
     // for TS, make sure the exported type is still valid type with
     // correct props information
-    helperImports.add(`defineComponent`)
     // we have to use object spread for types to be merged properly
     // user's TS setting should compile it down to proper targets
     const def = defaultExport ? `\n  ...${defaultTempVar},` : ``
@@ -838,7 +845,9 @@ export function compileScript(
     // this allows `import { setup } from '*.vue'` for testing purposes.
     s.prependLeft(
       startOffset,
-      `\nexport default defineComponent({${def}${runtimeOptions}\n  ${
+      `\nexport default ${helper(
+        `defineComponent`
+      )}({${def}${runtimeOptions}\n  ${
         hasAwait ? `async ` : ``
       }setup(${args}) {\n`
     )
@@ -865,11 +874,12 @@ export function compileScript(
   }
 
   // 12. finalize Vue helper imports
-  // TODO account for cases where user imports a helper with the same name
-  // from a non-vue source
-  const helpers = [...helperImports].filter(i => !userImports[i])
-  if (helpers.length) {
-    s.prepend(`import { ${helpers.join(', ')} } from 'vue'\n`)
+  if (helperImports.size > 0) {
+    s.prepend(
+      `import { ${[...helperImports]
+        .map(h => `${h} as _${h}`)
+        .join(', ')} } from 'vue'\n`
+    )
   }
 
   s.trim()

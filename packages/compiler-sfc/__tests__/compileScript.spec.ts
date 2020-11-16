@@ -66,6 +66,7 @@ const bar = 1
     expect(content).toMatch(`setup(__props, { props, emit }) {`)
     // should include context options in default export
     expect(content).toMatch(`export default {
+  expose: [],
   props: {
     foo: String
   },
@@ -194,7 +195,8 @@ const { props, emit } = defineOptions({
 </script>
       `)
       assertCode(content)
-      expect(content).toMatch(`export default defineComponent({
+      expect(content).toMatch(`export default _defineComponent({
+  expose: [],
   props: { foo: String },
   emits: ['a', 'b'],
   setup(__props, { props, emit }) {`)
@@ -410,14 +412,14 @@ const { props, emit } = defineOptions({
       let c = () => {}
       let d
       </script>`)
-      expect(content).toMatch(`import { ref } from 'vue'`)
+      expect(content).toMatch(`import { ref as _ref } from 'vue'`)
       expect(content).not.toMatch(`ref: foo`)
       expect(content).not.toMatch(`ref: a`)
       expect(content).not.toMatch(`ref: b`)
-      expect(content).toMatch(`const foo = ref()`)
-      expect(content).toMatch(`const a = ref(1)`)
+      expect(content).toMatch(`const foo = _ref()`)
+      expect(content).toMatch(`const a = _ref(1)`)
       expect(content).toMatch(`
-      const b = ref({
+      const b = _ref({
         count: 0
       })
       `)
@@ -441,7 +443,7 @@ const { props, emit } = defineOptions({
       }
       </script>`)
       expect(content).toMatch(`
-      const a = ref(1), b = ref(2), c = ref({
+      const a = _ref(1), b = _ref(2), c = _ref({
         count: 0
       })
       `)
@@ -526,15 +528,15 @@ const { props, emit } = defineOptions({
       console.log(n, a, c, d, f, g)
       </script>`)
       expect(content).toMatch(
-        `const n = ref(1), { a: __a, b: __c, d: __d = 1, e: __f = 2, ...__g } = useFoo()`
+        `const n = _ref(1), { a: __a, b: __c, d: __d = 1, e: __f = 2, ...__g } = useFoo()`
       )
-      expect(content).toMatch(`\nconst a = ref(__a);`)
-      expect(content).not.toMatch(`\nconst b = ref(__b);`)
-      expect(content).toMatch(`\nconst c = ref(__c);`)
-      expect(content).toMatch(`\nconst d = ref(__d);`)
-      expect(content).not.toMatch(`\nconst e = ref(__e);`)
-      expect(content).toMatch(`\nconst f = ref(__f);`)
-      expect(content).toMatch(`\nconst g = ref(__g);`)
+      expect(content).toMatch(`\nconst a = _ref(__a);`)
+      expect(content).not.toMatch(`\nconst b = _ref(__b);`)
+      expect(content).toMatch(`\nconst c = _ref(__c);`)
+      expect(content).toMatch(`\nconst d = _ref(__d);`)
+      expect(content).not.toMatch(`\nconst e = _ref(__e);`)
+      expect(content).toMatch(`\nconst f = _ref(__f);`)
+      expect(content).toMatch(`\nconst g = _ref(__g);`)
       expect(content).toMatch(
         `console.log(n.value, a.value, c.value, d.value, f.value, g.value)`
       )
@@ -556,11 +558,11 @@ const { props, emit } = defineOptions({
       console.log(n, a, b, c)
       </script>`)
       expect(content).toMatch(
-        `const n = ref(1), [__a, __b = 1, ...__c] = useFoo()`
+        `const n = _ref(1), [__a, __b = 1, ...__c] = useFoo()`
       )
-      expect(content).toMatch(`\nconst a = ref(__a);`)
-      expect(content).toMatch(`\nconst b = ref(__b);`)
-      expect(content).toMatch(`\nconst c = ref(__c);`)
+      expect(content).toMatch(`\nconst a = _ref(__a);`)
+      expect(content).toMatch(`\nconst b = _ref(__b);`)
+      expect(content).toMatch(`\nconst c = _ref(__c);`)
       expect(content).toMatch(`console.log(n.value, a.value, b.value, c.value)`)
       expect(content).toMatch(`return { n, a, b, c }`)
       expect(bindings).toStrictEqual({
@@ -580,11 +582,11 @@ const { props, emit } = defineOptions({
       </script>`)
       expect(content).toMatch(`const [{ a: { b: __b }}] = useFoo()`)
       expect(content).toMatch(`const { c: [__d, __e] } = useBar()`)
-      expect(content).not.toMatch(`\nconst a = ref(__a);`)
-      expect(content).not.toMatch(`\nconst c = ref(__c);`)
-      expect(content).toMatch(`\nconst b = ref(__b);`)
-      expect(content).toMatch(`\nconst d = ref(__d);`)
-      expect(content).toMatch(`\nconst e = ref(__e);`)
+      expect(content).not.toMatch(`\nconst a = _ref(__a);`)
+      expect(content).not.toMatch(`\nconst c = _ref(__c);`)
+      expect(content).toMatch(`\nconst b = _ref(__b);`)
+      expect(content).toMatch(`\nconst d = _ref(__d);`)
+      expect(content).toMatch(`\nconst e = _ref(__e);`)
       expect(content).toMatch(`return { b, d, e }`)
       expect(bindings).toStrictEqual({
         b: 'setup',

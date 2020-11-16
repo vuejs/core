@@ -2,9 +2,9 @@
 
 exports[`SFC compile <script setup> CSS vars injection <script> w/ default export 1`] = `
 "const __default__ = { setup() {} }
-import { useCssVars as __useCssVars__ } from 'vue'
+import { useCssVars as _useCssVars } from 'vue'
 const __injectCSSVars__ = () => {
-__useCssVars__(_ctx => ({ color: _ctx.color }))
+_useCssVars(_ctx => ({ color: _ctx.color }))
 }
 const __setup__ = __default__.setup
 __default__.setup = __setup__
@@ -18,9 +18,9 @@ exports[`SFC compile <script setup> CSS vars injection <script> w/ default expor
           // export default {}
           const __default__ = {}
         
-import { useCssVars as __useCssVars__ } from 'vue'
+import { useCssVars as _useCssVars } from 'vue'
 const __injectCSSVars__ = () => {
-__useCssVars__(_ctx => ({ color: _ctx.color }))
+_useCssVars(_ctx => ({ color: _ctx.color }))
 }
 const __setup__ = __default__.setup
 __default__.setup = __setup__
@@ -32,9 +32,9 @@ export default __default__"
 exports[`SFC compile <script setup> CSS vars injection <script> w/ no default export 1`] = `
 "const a = 1
 const __default__ = {}
-import { useCssVars as __useCssVars__ } from 'vue'
+import { useCssVars as _useCssVars } from 'vue'
 const __injectCSSVars__ = () => {
-__useCssVars__(_ctx => ({ color: _ctx.color }))
+_useCssVars(_ctx => ({ color: _ctx.color }))
 }
 const __setup__ = __default__.setup
 __default__.setup = __setup__
@@ -44,12 +44,13 @@ export default __default__"
 `;
 
 exports[`SFC compile <script setup> CSS vars injection w/ <script setup> 1`] = `
-"import { useCssVars } from 'vue'
+"import { useCssVars as _useCssVars } from 'vue'
 
 export default {
+  expose: [],
   setup() {
 const color = 'red'
-__useCssVars__(_ctx => ({ color }))
+_useCssVars(_ctx => ({ color }))
 return { color }
 }
 
@@ -58,6 +59,7 @@ return { color }
 
 exports[`SFC compile <script setup> defineOptions() 1`] = `
 "export default {
+  expose: [],
   props: {
     foo: String
   },
@@ -78,6 +80,7 @@ exports[`SFC compile <script setup> errors should allow defineOptions() referenc
 "import { bar } from './bar'
           
 export default {
+  expose: [],
   props: {
               foo: {
                 default: () => bar
@@ -95,6 +98,7 @@ return { bar }
 
 exports[`SFC compile <script setup> errors should allow defineOptions() referencing scope var 1`] = `
 "export default {
+  expose: [],
   props: {
               foo: {
                 default: bar => bar + 1
@@ -112,12 +116,14 @@ return { bar }
 `;
 
 exports[`SFC compile <script setup> imports dedupe between user & helper 1`] = `
-"import { ref } from 'vue'
+"import { ref as _ref } from 'vue'
+import { ref } from 'vue'
       
 export default {
+  expose: [],
   setup() {
 
-      const foo = ref(1)
+      const foo = _ref(1)
       
 return { foo, ref }
 }
@@ -129,6 +135,7 @@ exports[`SFC compile <script setup> imports import dedupe between <script> and <
 "import { x } from './x'
         
 export default {
+  expose: [],
   setup() {
 
         x()
@@ -144,6 +151,7 @@ exports[`SFC compile <script setup> imports should extract comment for import or
         import b from 'b'
         
 export default {
+  expose: [],
   setup() {
 
         
@@ -156,6 +164,7 @@ return { a, b }
 exports[`SFC compile <script setup> imports should hoist and expose imports 1`] = `
 "import { ref } from 'vue'
 export default {
+  expose: [],
   setup() {
 
 return { ref }
@@ -172,6 +181,7 @@ import { ref } from 'vue'
         import other from './util'
         
 export default {
+  expose: [],
   setup() {
 
         const count = ref(0)
@@ -197,6 +207,7 @@ const _hoisted_1 = /*#__PURE__*/_createVNode(\\"div\\", null, \\"static\\", -1 /
 import { ref } from 'vue'
         
 export default {
+  expose: [],
   setup() {
 
         const count = ref(0)
@@ -213,12 +224,13 @@ return (_ctx, _cache, $props, $setup, $data, $options) => {
 `;
 
 exports[`SFC compile <script setup> ref: syntax sugar accessing ref binding 1`] = `
-"import { ref } from 'vue'
+"import { ref as _ref } from 'vue'
 
 export default {
+  expose: [],
   setup() {
 
-      const a = ref(1)
+      const a = _ref(1)
       console.log(a.value)
       function get() {
         return a.value + 1
@@ -231,15 +243,16 @@ return { a, get }
 `;
 
 exports[`SFC compile <script setup> ref: syntax sugar array destructure 1`] = `
-"import { ref } from 'vue'
+"import { ref as _ref } from 'vue'
 
 export default {
+  expose: [],
   setup() {
 
-      const n = ref(1), [__a, __b = 1, ...__c] = useFoo()
-const a = ref(__a);
-const b = ref(__b);
-const c = ref(__c);
+      const n = _ref(1), [__a, __b = 1, ...__c] = useFoo()
+const a = _ref(__a);
+const b = _ref(__b);
+const c = _ref(__c);
       console.log(n.value, a.value, b.value, c.value)
       
 return { n, a, b, c }
@@ -249,14 +262,15 @@ return { n, a, b, c }
 `;
 
 exports[`SFC compile <script setup> ref: syntax sugar convert ref declarations 1`] = `
-"import { ref } from 'vue'
+"import { ref as _ref } from 'vue'
 
 export default {
+  expose: [],
   setup() {
 
-      const foo = ref()
-      const a = ref(1)
-      const b = ref({
+      const foo = _ref()
+      const a = _ref(1)
+      const b = _ref({
         count: 0
       })
       let c = () => {}
@@ -269,12 +283,13 @@ return { foo, a, b, c, d }
 `;
 
 exports[`SFC compile <script setup> ref: syntax sugar multi ref declarations 1`] = `
-"import { ref } from 'vue'
+"import { ref as _ref } from 'vue'
 
 export default {
+  expose: [],
   setup() {
 
-      const a = ref(1), b = ref(2), c = ref({
+      const a = _ref(1), b = _ref(2), c = _ref({
         count: 0
       })
       
@@ -285,13 +300,14 @@ return { a, b, c }
 `;
 
 exports[`SFC compile <script setup> ref: syntax sugar mutating ref binding 1`] = `
-"import { ref } from 'vue'
+"import { ref as _ref } from 'vue'
 
 export default {
+  expose: [],
   setup() {
 
-      const a = ref(1)
-      const b = ref({ count: 0 })
+      const a = _ref(1)
+      const b = _ref({ count: 0 })
       function inc() {
         a.value++
         a.value = a.value + 1
@@ -306,16 +322,17 @@ return { a, b, inc }
 `;
 
 exports[`SFC compile <script setup> ref: syntax sugar nested destructure 1`] = `
-"import { ref } from 'vue'
+"import { ref as _ref } from 'vue'
 
 export default {
+  expose: [],
   setup() {
 
       const [{ a: { b: __b }}] = useFoo()
-const b = ref(__b);
+const b = _ref(__b);
       const { c: [__d, __e] } = useBar()
-const d = ref(__d);
-const e = ref(__e);
+const d = _ref(__d);
+const e = _ref(__e);
       console.log(b.value, d.value, e.value)
       
 return { b, d, e }
@@ -325,17 +342,18 @@ return { b, d, e }
 `;
 
 exports[`SFC compile <script setup> ref: syntax sugar object destructure 1`] = `
-"import { ref } from 'vue'
+"import { ref as _ref } from 'vue'
 
 export default {
+  expose: [],
   setup() {
 
-      const n = ref(1), { a: __a, b: __c, d: __d = 1, e: __f = 2, ...__g } = useFoo()
-const a = ref(__a);
-const c = ref(__c);
-const d = ref(__d);
-const f = ref(__f);
-const g = ref(__g);
+      const n = _ref(1), { a: __a, b: __c, d: __d = 1, e: __f = 2, ...__g } = useFoo()
+const a = _ref(__a);
+const c = _ref(__c);
+const d = _ref(__d);
+const f = _ref(__f);
+const g = _ref(__g);
       console.log(n.value, a.value, c.value, d.value, f.value, g.value)
       
 return { n, a, c, d, f, g }
@@ -346,6 +364,7 @@ return { n, a, c, d, f, g }
 
 exports[`SFC compile <script setup> ref: syntax sugar should not convert non ref labels 1`] = `
 "export default {
+  expose: [],
   setup() {
 
       foo: a = 1, b = 2, c = {
@@ -359,12 +378,13 @@ return {  }
 `;
 
 exports[`SFC compile <script setup> ref: syntax sugar using ref binding in property shorthand 1`] = `
-"import { ref } from 'vue'
+"import { ref as _ref } from 'vue'
 
 export default {
+  expose: [],
   setup() {
 
-      const a = ref(1)
+      const a = _ref(1)
       const b = { a: a.value }
       function test() {
         const { a } = b
@@ -380,6 +400,7 @@ exports[`SFC compile <script setup> should expose top level declarations 1`] = `
 "import { x } from './x'
       
 export default {
+  expose: [],
   setup() {
 
       let a = 1
@@ -394,10 +415,11 @@ return { a, b, c, d, x }
 `;
 
 exports[`SFC compile <script setup> with TypeScript defineOptions w/ runtime options 1`] = `
-"import { defineComponent } from 'vue'
+"import { defineComponent as _defineComponent } from 'vue'
 
 
-export default defineComponent({
+export default _defineComponent({
+  expose: [],
   props: { foo: String },
   emits: ['a', 'b'],
   setup(__props, { props, emit }) {
@@ -411,10 +433,11 @@ return { props, emit }
 `;
 
 exports[`SFC compile <script setup> with TypeScript defineOptions w/ type / extract emits (union) 1`] = `
-"import { Slots, defineComponent } from 'vue'
+"import { Slots as _Slots, defineComponent as _defineComponent } from 'vue'
 
       
-export default defineComponent({
+export default _defineComponent({
+  expose: [],
   emits: [\\"foo\\", \\"bar\\", \\"baz\\"] as unknown as undefined,
   setup(__props, { emit }: {
   props: {},
@@ -432,10 +455,11 @@ return { emit }
 `;
 
 exports[`SFC compile <script setup> with TypeScript defineOptions w/ type / extract emits 1`] = `
-"import { Slots, defineComponent } from 'vue'
+"import { Slots as _Slots, defineComponent as _defineComponent } from 'vue'
 
       
-export default defineComponent({
+export default _defineComponent({
+  expose: [],
   emits: [\\"foo\\", \\"bar\\"] as unknown as undefined,
   setup(__props, { emit }: {
   props: {},
@@ -453,14 +477,15 @@ return { emit }
 `;
 
 exports[`SFC compile <script setup> with TypeScript defineOptions w/ type / extract props 1`] = `
-"import { defineComponent } from 'vue'
+"import { defineComponent as _defineComponent } from 'vue'
 
       interface Test {}
 
       type Alias = number[]
 
       
-export default defineComponent({
+export default _defineComponent({
+  expose: [],
   props: {
     string: { type: String, required: true },
     number: { type: Number, required: true },
@@ -495,11 +520,12 @@ return {  }
 `;
 
 exports[`SFC compile <script setup> with TypeScript hoist type declarations 1`] = `
-"import { defineComponent } from 'vue'
+"import { defineComponent as _defineComponent } from 'vue'
 export interface Foo {}
         type Bar = {}
       
-export default defineComponent({
+export default _defineComponent({
+  expose: [],
   setup() {
 
         
