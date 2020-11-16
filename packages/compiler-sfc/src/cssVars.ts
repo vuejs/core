@@ -4,30 +4,62 @@ import {
   createSimpleExpression,
   createRoot,
   NodeTypes,
-  SimpleExpressionNode
+  SimpleExpressionNode,
+  BindingMetadata
 } from '@vue/compiler-dom'
 import { SFCDescriptor } from './parse'
 import { rewriteDefault } from './rewriteDefault'
 import { ParserPlugin } from '@babel/parser'
+import postcss, { Root } from 'postcss'
 
 export const CSS_VARS_HELPER = `useCssVars`
+export const cssVarRE = /\bvar\(--(?:v-bind)?:([^)]+)\)/g
+
+export function convertCssVarCasing(raw: string): string {
+  return raw.replace(/([^\w-])/g, '_')
+}
+
+export function parseCssVars(sfc: SFCDescriptor): string[] {
+  const vars: string[] = []
+  sfc.styles.forEach(style => {
+    let match
+    while ((match = cssVarRE.exec(style.content))) {
+      vars.push(match[1])
+    }
+  })
+  return vars
+}
+
+// for compileStyle
+export const cssVarsPlugin = postcss.plugin(
+  'vue-scoped',
+  (id: any) => (root: Root) => {
+    const shortId = id.replace(/^data-v-/, '')
+    root.walkDecls(decl => {
+      // rewrite CSS variables
+      if (cssVarRE.test(decl.value)) {
+        decl.value = decl.value.replace(cssVarRE, (_, $1) => {
+          return `var(--${shortId}-${convertCssVarCasing($1)})`
+        })
+      }
+    })
+  }
+)
 
 export function genCssVarsCode(
-  varsExp: string,
-  scoped: boolean,
-  knownBindings?: Record<string, any>
+  vars: string[],
+  bindings: BindingMetadata,
+  id: string
 ) {
+  const varsExp = `{\n  ${vars
+    .map(v => `${convertCssVarCasing(v)}: (${v})`)
+    .join(',\n  ')}\n}`
   const exp = createSimpleExpression(varsExp, false)
   const context = createTransformContext(createRoot([]), {
-    prefixIdentifiers: true
+    prefixIdentifiers: true,
+    inline: true,
+    bindingMetadata: bindings
   })
-  if (knownBindings) {
-    // when compiling <script setup> we already know what bindings are exposed
-    // so we can avoid prefixing them from the ctx.
-    for (const key in knownBindings) {
-      context.identifiers[key] = 1
-    }
-  }
   const transformed = processExpression(exp, context)
   const transformedString =
     transformed.type === NodeTypes.SIMPLE_EXPRESSION
@@ -40,15 +72,16 @@ export function genCssVarsCode(
           })
           .join('')
 
-  return `_${CSS_VARS_HELPER}(_ctx => (${transformedString})${
-    scoped ? `, true` : ``
-  })`
+  return `_${CSS_VARS_HELPER}(_ctx => (${transformedString}), "${id}")`
 }
 
 // <script setup> already gets the calls injected as part of the transform
 // this is only for single normal <script>
 export function injectCssVarsCalls(
   sfc: SFCDescriptor,
+  cssVars: string[],
+  bindings: BindingMetadata,
+  id: string,
   parserPlugins: ParserPlugin[]
 ): string {
   const script = rewriteDefault(
@@ -57,18 +90,14 @@ export function injectCssVarsCalls(
     parserPlugins
   )
 
-  let calls = ``
-  for (const style of sfc.styles) {
-    const vars = style.attrs.vars
-    if (typeof vars === 'string') {
-      calls += genCssVarsCode(vars, !!style.scoped) + '\n'
-    }
-  }
-
   return (
     script +
     `\nimport { ${CSS_VARS_HELPER} as _${CSS_VARS_HELPER} } from 'vue'\n` +
-    `const __injectCSSVars__ = () => {\n${calls}}\n` +
+    `const __injectCSSVars__ = () => {\n${genCssVarsCode(
+      cssVars,
+      bindings,
+      id
+    )}}\n` +
     `const __setup__ = __default__.setup\n` +
     `__default__.setup = __setup__\n` +
     `  ? (props, ctx) => { __injectCSSVars__();return __setup__(props, ctx) }\n` +

@@ -30,6 +30,7 @@ export interface TemplateCompiler {
 
 export interface SFCTemplateCompileResults {
   code: string
+  ast?: RootNode
   preamble?: string
   source: string
   tips: string[]
@@ -169,7 +170,7 @@ function doCompileTemplate({
     nodeTransforms = [transformAssetUrl, transformSrcset]
   }
 
-  let { code, preamble, map } = compiler.compile(source, {
+  let { code, ast, preamble, map } = compiler.compile(source, {
     mode: 'module',
     prefixIdentifiers: true,
     hoistStatic: true,
@@ -193,7 +194,7 @@ function doCompileTemplate({
     }
   }
 
-  return { code, preamble, source, errors, tips: [], map }
+  return { code, ast, preamble, source, errors, tips: [], map }
 }
 
 function mapLines(oldMap: RawSourceMap, newMap: RawSourceMap): RawSourceMap {

@@ -45,7 +45,6 @@ export interface SFCScriptBlock extends SFCBlock {
 export interface SFCStyleBlock extends SFCBlock {
   type: 'style'
   scoped?: boolean
-  vars?: string
   module?: string | boolean
 }
 
@@ -269,8 +268,6 @@ function createBlock(
       } else if (type === 'style') {
         if (p.name === 'scoped') {
           ;(block as SFCStyleBlock).scoped = true
-        } else if (p.name === 'vars' && typeof attrs.vars === 'string') {
-          ;(block as SFCStyleBlock).vars = attrs.vars
         } else if (p.name === 'module') {
           ;(block as SFCStyleBlock).module = attrs[p.name]
         }

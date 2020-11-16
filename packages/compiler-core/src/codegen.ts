@@ -215,9 +215,10 @@ export function generate(
   }
 
   // binding optimizations
-  const optimizeSources = options.bindingMetadata
-    ? `, $props, $setup, $data, $options`
-    : ``
+  const optimizeSources =
+    options.bindingMetadata && !options.inline
+      ? `, $props, $setup, $data, $options`
+      : ``
   // enter render function
   if (!ssr) {
     if (isSetupInlined) {

@@ -1,25 +1,4 @@
-import { parse, SFCScriptCompileOptions, compileScript } from '../src'
-import { parse as babelParse } from '@babel/parser'
-import { babelParserDefaultPlugins } from '@vue/shared'
-
-function compile(src: string, options?: SFCScriptCompileOptions) {
-  const { descriptor } = parse(src)
-  return compileScript(descriptor, options)
-}
-
-function assertCode(code: string) {
-  // parse the generated code to make sure it is valid
-  try {
-    babelParse(code, {
-      sourceType: 'module',
-      plugins: [...babelParserDefaultPlugins, 'typescript']
-    })
-  } catch (e) {
-    console.log(code)
-    throw e
-  }
-  expect(code).toMatchSnapshot()
-}
+import { compileSFCScript as compile, assertCode } from './utils'
 
 describe('SFC compile <script setup>', () => {
   test('should expose top level declarations', () => {
@@ -323,51 +302,10 @@ const { props, emit } = defineOptions({
     })
   })
 
-  describe('CSS vars injection', () => {
-    test('<script> w/ no default export', () => {
-      assertCode(
-        compile(
-          `<script>const a = 1</script>\n` +
-            `<style vars="{ color }">div{ color: var(--color); }</style>`
-        ).content
-      )
-    })
-
-    test('<script> w/ default export', () => {
-      assertCode(
-        compile(
-          `<script>export default { setup() {} }</script>\n` +
-            `<style vars="{ color }">div{ color: var(--color); }</style>`
-        ).content
-      )
-    })
-
-    test('<script> w/ default export in strings/comments', () => {
-      assertCode(
-        compile(
-          `<script>
-          // export default {}
-          export default {}
-        </script>\n` +
-            `<style vars="{ color }">div{ color: var(--color); }</style>`
-        ).content
-      )
-    })
-
-    test('w/ <script setup>', () => {
-      assertCode(
-        compile(
-          `<script setup>const color = 'red'</script>\n` +
-            `<style vars="{ color }">div{ color: var(--color); }</style>`
-        ).content
-      )
-    })
-  })
-
   describe('async/await detection', () => {
     function assertAwaitDetection(code: string, shouldAsync = true) {
       const { content } = compile(`<script setup>${code}</script>`)
-      expect(content).toMatch(`${shouldAsync ? `async ` : ``}setup()`)
+      expect(content).toMatch(`${shouldAsync ? `async ` : ``}setup(`)
     }
 
     test('expression statement', () => {

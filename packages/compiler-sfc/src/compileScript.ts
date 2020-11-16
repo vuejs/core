@@ -1,5 +1,5 @@
 import MagicString from 'magic-string'
-import { BindingMetadata, BindingTypes } from '@vue/compiler-core'
+import { BindingMetadata, BindingTypes, UNREF } from '@vue/compiler-core'
 import { SFCDescriptor, SFCScriptBlock } from './parse'
 import { parse as _parse, ParserOptions, ParserPlugin } from '@babel/parser'
 import { babelParserDefaultPlugins, generateCodeFrame } from '@vue/shared'
@@ -26,14 +26,20 @@ import { walk } from 'estree-walker'
 import { RawSourceMap } from 'source-map'
 import {
   CSS_VARS_HELPER,
+  parseCssVars,
   genCssVarsCode,
   injectCssVarsCalls
-} from './genCssVars'
+} from './cssVars'
 import { compileTemplate, SFCTemplateCompileOptions } from './compileTemplate'
 
 const DEFINE_OPTIONS = 'defineOptions'
 
 export interface SFCScriptCompileOptions {
+  /**
+   * Scope ID for prefixing injected CSS varialbes.
+   * This must be consistent with the `id` passed to `compileStyle`.
+   */
+  id: string
   /**
    * https://babeljs.io/docs/en/babel-parser#plugins
    */
@@ -52,7 +58,7 @@ export interface SFCScriptCompileOptions {
    * from being hot-reloaded separately from component state.
    */
   inlineTemplate?: boolean
-  templateOptions?: SFCTemplateCompileOptions
+  templateOptions?: Partial<SFCTemplateCompileOptions>
 }
 
 const hasWarned: Record<string, boolean> = {}
@@ -71,19 +77,33 @@ function warnOnce(msg: string) {
  */
 export function compileScript(
   sfc: SFCDescriptor,
-  options: SFCScriptCompileOptions = {}
+  options: SFCScriptCompileOptions
 ): SFCScriptBlock {
-  const { script, scriptSetup, styles, source, filename } = sfc
+  const { script, scriptSetup, source, filename } = sfc
 
   if (__DEV__ && !__TEST__ && scriptSetup) {
     warnOnce(
       `<script setup> is still an experimental proposal.\n` +
-        `Follow its status at https://github.com/vuejs/rfcs/pull/227.`
+        `Follow its status at https://github.com/vuejs/rfcs/pull/227.\n` +
+        `It's also recommended to pin your vue dependencies to exact versions ` +
+        `to avoid breakage.`
     )
   }
 
-  const hasCssVars = styles.some(s => typeof s.attrs.vars === 'string')
+  // for backwards compat
+  if (!options) {
+    options = { id: '' }
+  }
+  if (!options.id) {
+    warnOnce(
+      `compileScript now requires passing the \`id\` option.\n` +
+        `Upgrade your vite or vue-loader version for compatibility with ` +
+        `the latest experimental proposals.`
+    )
+  }
 
+  const scopeId = options.id ? options.id.replace(/^data-v-/, '') : ''
+  const cssVars = parseCssVars(sfc)
   const scriptLang = script && script.lang
   const scriptSetupLang = scriptSetup && scriptSetup.lang
   const isTS = scriptLang === 'ts' || scriptSetupLang === 'ts'
@@ -104,10 +124,13 @@ export function compileScript(
         plugins,
         sourceType: 'module'
       }).program.body
+      const bindings = analyzeScriptBindings(scriptAst)
       return {
         ...script,
-        content: hasCssVars ? injectCssVarsCalls(sfc, plugins) : script.content,
-        bindings: analyzeScriptBindings(scriptAst),
+        content: cssVars.length
+          ? injectCssVarsCalls(sfc, cssVars, bindings, scopeId, plugins)
+          : script.content,
+        bindings,
         scriptAst
       }
     } catch (e) {
@@ -491,7 +514,9 @@ export function compileScript(
         warnOnce(
           `ref: sugar is still an experimental proposal and is not ` +
             `guaranteed to be a part of <script setup>.\n` +
-            `Follow its status at https://github.com/vuejs/rfcs/pull/228.`
+            `Follow its status at https://github.com/vuejs/rfcs/pull/228.\n` +
+            `It's also recommended to pin your vue dependencies to exact versions ` +
+            `to avoid breakage.`
         )
         s.overwrite(
           node.label.start! + startOffset,
@@ -512,10 +537,22 @@ export function compileScript(
     if (node.type === 'ImportDeclaration') {
       // import declarations are moved to top
       s.move(start, end, 0)
+
       // dedupe imports
-      let prev
       let removed = 0
-      for (const specifier of node.specifiers) {
+      let prev: Node | undefined, next: Node | undefined
+      const removeSpecifier = (node: Node) => {
+        removed++
+        s.remove(
+          prev ? prev.end! + startOffset : node.start! + startOffset,
+          next ? next.start! + startOffset : node.end! + startOffset
+        )
+      }
+
+      for (let i = 0; i < node.specifiers.length; i++) {
+        const specifier = node.specifiers[i]
+        prev = node.specifiers[i - 1]
+        next = node.specifiers[i + 1]
         const local = specifier.local.name
         const imported =
           specifier.type === 'ImportSpecifier' &&
@@ -524,19 +561,11 @@ export function compileScript(
         const source = node.source.value
         const existing = userImports[local]
         if (source === 'vue' && imported === DEFINE_OPTIONS) {
-          removed++
-          s.remove(
-            prev ? prev.end! + startOffset : specifier.start! + startOffset,
-            specifier.end! + startOffset
-          )
+          removeSpecifier(specifier)
         } else if (existing) {
           if (existing.source === source && existing.imported === imported) {
             // already imported in <script setup>, dedupe
-            removed++
-            s.remove(
-              prev ? prev.end! + startOffset : specifier.start! + startOffset,
-              specifier.end! + startOffset
-            )
+            removeSpecifier(specifier)
           } else {
             error(`different imports aliased to same local name.`, specifier)
           }
@@ -546,7 +575,6 @@ export function compileScript(
             source: node.source.value
           }
         }
-        prev = specifier
       }
       if (removed === node.specifiers.length) {
         s.remove(node.start! + startOffset, node.end! + startOffset)
@@ -732,7 +760,7 @@ export function compileScript(
   }
 
   // 7. finalize setup argument signature.
-  let args = optionsExp ? `__props, ${optionsExp}` : ``
+  let args = optionsExp ? `__props, ${optionsExp}` : `__props`
   if (optionsExp && optionsType) {
     if (slotsType === 'Slots') {
       helperImports.add('Slots')
@@ -745,26 +773,7 @@ export function compileScript(
 }`
   }
 
-  const allBindings: Record<string, any> = { ...setupBindings }
-  for (const key in userImports) {
-    allBindings[key] = true
-  }
-
-  // 8. inject `useCssVars` calls
-  if (hasCssVars) {
-    helperImports.add(CSS_VARS_HELPER)
-    for (const style of styles) {
-      const vars = style.attrs.vars
-      if (typeof vars === 'string') {
-        s.prependRight(
-          endOffset,
-          `\n${genCssVarsCode(vars, !!style.scoped, allBindings)}`
-        )
-      }
-    }
-  }
-
-  // 9. analyze binding metadata
+  // 8. analyze binding metadata
   if (scriptAst) {
     Object.assign(bindingMetadata, analyzeScriptBindings(scriptAst))
   }
@@ -785,13 +794,23 @@ export function compileScript(
     bindingMetadata[key] = setupBindings[key]
   }
 
+  // 9. inject `useCssVars` calls
+  if (cssVars.length) {
+    helperImports.add(CSS_VARS_HELPER)
+    helperImports.add('unref')
+    s.prependRight(
+      startOffset,
+      `\n${genCssVarsCode(cssVars, bindingMetadata, scopeId)}\n`
+    )
+  }
+
   // 10. generate return statement
   let returned
   if (options.inlineTemplate) {
     if (sfc.template) {
       // inline render function mode - we are going to compile the template and
       // inline it right here
-      const { code, preamble, tips, errors } = compileTemplate({
+      const { code, ast, preamble, tips, errors } = compileTemplate({
         ...options.templateOptions,
         filename,
         source: sfc.template.content,
@@ -813,12 +832,22 @@ export function compileScript(
       if (preamble) {
         s.prepend(preamble)
       }
+      // avoid duplicated unref import
+      // as this may get injected by the render function preamble OR the
+      // css vars codegen
+      if (ast && ast.helpers.includes(UNREF)) {
+        helperImports.delete('unref')
+      }
       returned = code
     } else {
       returned = `() => {}`
     }
   } else {
     // return bindings from setup
+    const allBindings: Record<string, any> = { ...setupBindings }
+    for (const key in userImports) {
+      allBindings[key] = true
+    }
     returned = `{ ${Object.keys(allBindings).join(', ')} }`
   }
   s.appendRight(endOffset, `\nreturn ${returned}\n}\n\n`)

@@ -9,27 +9,27 @@ import {
 } from '../src/compileStyle'
 import path from 'path'
 
-describe('SFC scoped CSS', () => {
-  function compileScoped(
-    source: string,
-    options?: Partial<SFCStyleCompileOptions>
-  ): string {
-    const res = compileStyle({
-      source,
-      filename: 'test.css',
-      id: 'test',
-      scoped: true,
-      ...options
+export function compileScoped(
+  source: string,
+  options?: Partial<SFCStyleCompileOptions>
+): string {
+  const res = compileStyle({
+    source,
+    filename: 'test.css',
+    id: 'test',
+    scoped: true,
+    ...options
+  })
+  if (res.errors.length) {
+    res.errors.forEach(err => {
+      console.error(err)
     })
-    if (res.errors.length) {
-      res.errors.forEach(err => {
-        console.error(err)
-      })
-      expect(res.errors.length).toBe(0)
-    }
-    return res.code
+    expect(res.errors.length).toBe(0)
   }
+  return res.code
+}
 
+describe('SFC scoped CSS', () => {
   test('simple selectors', () => {
     expect(compileScoped(`h1 { color: red; }`)).toMatch(
       `h1[test] { color: red;`
@@ -264,27 +264,6 @@ describe('SFC scoped CSS', () => {
       expect(
         `the >>> and /deep/ combinators have been deprecated.`
       ).toHaveBeenWarned()
-    })
-  })
-
-  describe('<style vars>', () => {
-    test('should rewrite CSS vars in scoped mode', () => {
-      const code = compileScoped(
-        `.foo {
-        color: var(--color);
-        font-size: var(--global:font);
-      }`,
-        {
-          id: 'data-v-test',
-          vars: true
-        }
-      )
-      expect(code).toMatchInlineSnapshot(`
-        ".foo[data-v-test] {
-                color: var(--test-color);
-                font-size: var(--font);
-        }"
-      `)
     })
   })
 })

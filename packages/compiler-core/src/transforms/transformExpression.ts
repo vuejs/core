@@ -113,17 +113,16 @@ export function processExpression(
         // it gets correct type
         return `__props.${raw}`
       }
-    }
-
-    if (type === BindingTypes.CONST) {
-      // setup const binding in non-inline mode
-      return `$setup.${raw}`
-    } else if (type) {
-      return `$${type}.${raw}`
     } else {
-      // fallback to ctx
-      return `_ctx.${raw}`
+      if (type === BindingTypes.CONST) {
+        // setup const binding in non-inline mode
+        return `$setup.${raw}`
+      } else if (type) {
+        return `$${type}.${raw}`
+      }
     }
+    // fallback to ctx
+    return `_ctx.${raw}`
   }
 
   // fast path if expression is a simple identifier.
