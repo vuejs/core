@@ -30,7 +30,7 @@ export function useCssVars(
 
   const setVars = () =>
     setVarsOnVNode(instance.subTree, getter(instance.proxy!), prefix)
-  onMounted(() => watchEffect(setVars))
+  onMounted(() => watchEffect(setVars, { flush: 'post' }))
   onUpdated(setVars)
 }
 
