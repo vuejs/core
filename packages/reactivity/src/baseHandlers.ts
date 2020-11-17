@@ -101,6 +101,7 @@ function createGetter(isReadonly = false, shallow = false) {
       track(
         target,
         TrackOpTypes.GET,
+        //#2619
         key === 'hasOwnProperty' ? ITERATE_KEY : key
       )
     }
