@@ -14,9 +14,6 @@ export interface Ref<T = any> {
    * autocomplete, so we use a private Symbol instead.
    */
   [RefSymbol]: true
-  /**
-   * @internal
-   */
   _shallow?: boolean
 }
 
