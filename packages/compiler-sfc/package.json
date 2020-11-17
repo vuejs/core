@@ -11,8 +11,7 @@
     "name": "VueCompilerSFC",
     "formats": [
       "cjs",
-      "global",
-      "esm-browser"
+      "global"
     ],
     "prod": false,
     "enableNonBrowserBranches": true
