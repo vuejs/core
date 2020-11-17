@@ -122,9 +122,13 @@ export const transformOn: DirectiveTransform = (
     if (isInlineStatement || (shouldCache && isMemberExp)) {
       // wrap inline statement in a function expression
       exp = createCompoundExpression([
-        `${isInlineStatement ? `$event` : `(...args)`} => ${
-          hasMultipleStatements ? `{` : `(`
-        }`,
+        `${
+          isInlineStatement
+            ? `$event`
+            : `${
+                !__BROWSER__ && context.isTS ? `\n//@ts-ignore\n` : ``
+              }(...args)`
+        } => ${hasMultipleStatements ? `{` : `(`}`,
         exp,
         hasMultipleStatements ? `}` : `)`
       ])

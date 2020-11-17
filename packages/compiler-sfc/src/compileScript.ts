@@ -814,11 +814,12 @@ export function compileScript(
         ...options.templateOptions,
         filename,
         source: sfc.template.content,
+        inMap: sfc.template.map,
         compilerOptions: {
           inline: true,
+          isTS,
           bindingMetadata
         }
-        // TODO source map
       })
       if (tips.length) {
         tips.forEach(warnOnce)
@@ -827,6 +828,16 @@ export function compileScript(
       if (typeof err === 'string') {
         throw new Error(err)
       } else if (err) {
+        if (err.loc) {
+          err.message +=
+            `\n` +
+            generateCodeFrame(
+              source,
+              err.loc.start.offset,
+              err.loc.end.offset
+            ) +
+            `\n`
+        }
         throw err
       }
       if (preamble) {

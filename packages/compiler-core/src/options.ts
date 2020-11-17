@@ -169,6 +169,10 @@ export interface TransformOptions extends SharedTransformCodegenOptions {
    * needed to render inline CSS variables on component root
    */
   ssrCssVars?: string
+  /**
+   * Indicates that transforms should try to output valid TS code
+   */
+  isTS?: boolean
   onError?: (error: CompilerError) => void
 }
 
