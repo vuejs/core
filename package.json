@@ -49,6 +49,7 @@
     "@rollup/plugin-json": "^4.0.0",
     "@rollup/plugin-node-resolve": "^9.0.0",
     "@rollup/plugin-replace": "^2.2.1",
+    "@types/hash-sum": "^1.0.0",
     "@types/jest": "^26.0.0",
     "@types/node": "^14.10.1",
     "@types/puppeteer": "^2.0.0",

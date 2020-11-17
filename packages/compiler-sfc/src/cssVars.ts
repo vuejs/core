@@ -11,12 +11,17 @@ import { SFCDescriptor } from './parse'
 import { rewriteDefault } from './rewriteDefault'
 import { ParserPlugin } from '@babel/parser'
 import postcss, { Root } from 'postcss'
+import hash from 'hash-sum'
 
 export const CSS_VARS_HELPER = `useCssVars`
 export const cssVarRE = /\bv-bind\(\s*(?:'([^']+)'|"([^"]+)"|([^'"][^)]*))\s*\)/g
 
-export function convertCssVarCasing(raw: string): string {
-  return raw.replace(/([^\w-])/g, '_')
+export function genVarName(id: string, raw: string, isProd: boolean): string {
+  if (isProd) {
+    return hash(id + raw)
+  } else {
+    return `${id}-${raw.replace(/([^\w-])/g, '_')}`
+  }
 }
 
 export function parseCssVars(sfc: SFCDescriptor): string[] {
@@ -31,15 +36,21 @@ export function parseCssVars(sfc: SFCDescriptor): string[] {
 }
 
 // for compileStyle
-export const cssVarsPlugin = postcss.plugin(
+export interface CssVarsPluginOptions {
+  id: string
+  isProd: boolean
+}
+
+export const cssVarsPlugin = postcss.plugin<CssVarsPluginOptions>(
   'vue-scoped',
-  (id: any) => (root: Root) => {
+  opts => (root: Root) => {
+    const { id, isProd } = opts!
     const shortId = id.replace(/^data-v-/, '')
     root.walkDecls(decl => {
       // rewrite CSS variables
       if (cssVarRE.test(decl.value)) {
         decl.value = decl.value.replace(cssVarRE, (_, $1, $2, $3) => {
-          return `var(--${shortId}-${convertCssVarCasing($1 || $2 || $3)})`
+          return `var(--${genVarName(shortId, $1 || $2 || $3, isProd)})`
         })
       }
     })
@@ -49,10 +60,11 @@ export const cssVarsPlugin = postcss.plugin(
 export function genCssVarsCode(
   vars: string[],
   bindings: BindingMetadata,
-  id: string
+  id: string,
+  isProd: boolean
 ) {
   const varsExp = `{\n  ${vars
-    .map(v => `"${id}-${convertCssVarCasing(v)}": (${v})`)
+    .map(v => `"${genVarName(id, v, isProd)}": (${v})`)
     .join(',\n  ')}\n}`
   const exp = createSimpleExpression(varsExp, false)
   const context = createTransformContext(createRoot([]), {
@@ -82,6 +94,7 @@ export function injectCssVarsCalls(
   cssVars: string[],
   bindings: BindingMetadata,
   id: string,
+  isProd: boolean,
   parserPlugins: ParserPlugin[]
 ): string {
   const script = rewriteDefault(
@@ -96,7 +109,8 @@ export function injectCssVarsCalls(
     `const __injectCSSVars__ = () => {\n${genCssVarsCode(
       cssVars,
       bindings,
-      id
+      id,
+      isProd
     )}}\n` +
     `const __setup__ = __default__.setup\n` +
     `__default__.setup = __setup__\n` +

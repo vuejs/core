@@ -23,6 +23,7 @@ export interface SFCStyleCompileOptions {
   map?: RawSourceMap
   scoped?: boolean
   trim?: boolean
+  isProd?: boolean
   preprocessLang?: PreprocessLang
   preprocessOptions?: any
   preprocessCustomRequire?: (id: string) => any
@@ -82,6 +83,7 @@ export function doCompileStyle(
     id,
     scoped = false,
     trim = true,
+    isProd = false,
     modules = false,
     modulesOptions = {},
     preprocessLang,
@@ -94,7 +96,7 @@ export function doCompileStyle(
   const source = preProcessedSource ? preProcessedSource.code : options.source
 
   const plugins = (postcssPlugins || []).slice()
-  plugins.unshift(cssVarsPlugin(id))
+  plugins.unshift(cssVarsPlugin({ id, isProd }))
   if (trim) {
     plugins.push(trimPlugin())
   }

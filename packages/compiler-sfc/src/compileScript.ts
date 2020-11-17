@@ -41,6 +41,10 @@ export interface SFCScriptCompileOptions {
    */
   id: string
   /**
+   * Production mode. Used to determine whether to generate hashed CSS variables
+   */
+  isProd?: boolean
+  /**
    * https://babeljs.io/docs/en/babel-parser#plugins
    */
   babelParserPlugins?: ParserPlugin[]
@@ -128,7 +132,14 @@ export function compileScript(
       return {
         ...script,
         content: cssVars.length
-          ? injectCssVarsCalls(sfc, cssVars, bindings, scopeId, plugins)
+          ? injectCssVarsCalls(
+              sfc,
+              cssVars,
+              bindings,
+              scopeId,
+              !!options.isProd,
+              plugins
+            )
           : script.content,
         bindings,
         scriptAst
@@ -511,13 +522,15 @@ export function compileScript(
       node.body.type === 'ExpressionStatement'
     ) {
       if (enableRefSugar) {
-        warnOnce(
-          `ref: sugar is still an experimental proposal and is not ` +
-            `guaranteed to be a part of <script setup>.\n` +
-            `Follow its status at https://github.com/vuejs/rfcs/pull/228.\n` +
-            `It's also recommended to pin your vue dependencies to exact versions ` +
-            `to avoid breakage.`
-        )
+        if (__DEV__ && !__TEST__) {
+          warnOnce(
+            `ref: sugar is still an experimental proposal and is not ` +
+              `guaranteed to be a part of <script setup>.\n` +
+              `Follow its status at https://github.com/vuejs/rfcs/pull/228.\n` +
+              `It's also recommended to pin your vue dependencies to exact versions ` +
+              `to avoid breakage.`
+          )
+        }
         s.overwrite(
           node.label.start! + startOffset,
           node.body.start! + startOffset,
@@ -800,7 +813,12 @@ export function compileScript(
     helperImports.add('unref')
     s.prependRight(
       startOffset,
-      `\n${genCssVarsCode(cssVars, bindingMetadata, scopeId)}\n`
+      `\n${genCssVarsCode(
+        cssVars,
+        bindingMetadata,
+        scopeId,
+        !!options.isProd
+      )}\n`
     )
   }
 

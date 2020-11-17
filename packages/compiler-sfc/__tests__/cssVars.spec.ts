@@ -52,7 +52,7 @@ describe('CSS vars injection', () => {
     assertCode(content)
   })
 
-  test('should rewrite CSS vars in scoped mode', () => {
+  test('should rewrite CSS vars in compileStyle', () => {
     const { code } = compileStyle({
       source: `.foo {
         color: v-bind(color);
@@ -65,6 +65,37 @@ describe('CSS vars injection', () => {
       ".foo {
               color: var(--test-color);
               font-size: var(--test-font_size);
+      }"
+    `)
+  })
+
+  test('prod mode', () => {
+    const { content } = compileSFCScript(
+      `<script>const a = 1</script>\n` +
+        `<style>div{
+          color: v-bind(color);
+          font-size: v-bind('font.size');
+        }</style>`,
+      { isProd: true }
+    )
+    expect(content).toMatch(`_useCssVars(_ctx => ({
+  "4003f1a6": (_ctx.color),
+  "41b6490a": (_ctx.font.size)
+}))}`)
+
+    const { code } = compileStyle({
+      source: `.foo {
+        color: v-bind(color);
+        font-size: v-bind('font.size');
+      }`,
+      filename: 'test.css',
+      id: mockId,
+      isProd: true
+    })
+    expect(code).toMatchInlineSnapshot(`
+      ".foo {
+              color: var(--4003f1a6);
+              font-size: var(--41b6490a);
       }"
     `)
   })
