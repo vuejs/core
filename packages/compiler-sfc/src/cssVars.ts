@@ -52,7 +52,7 @@ export function genCssVarsCode(
   id: string
 ) {
   const varsExp = `{\n  ${vars
-    .map(v => `${convertCssVarCasing(v)}: (${v})`)
+    .map(v => `"${id}-${convertCssVarCasing(v)}": (${v})`)
     .join(',\n  ')}\n}`
   const exp = createSimpleExpression(varsExp, false)
   const context = createTransformContext(createRoot([]), {
@@ -72,7 +72,7 @@ export function genCssVarsCode(
           })
           .join('')
 
-  return `_${CSS_VARS_HELPER}(_ctx => (${transformedString}), "${id}")`
+  return `_${CSS_VARS_HELPER}(_ctx => (${transformedString}))`
 }
 
 // <script setup> already gets the calls injected as part of the transform

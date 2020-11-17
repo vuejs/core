@@ -1,5 +1,5 @@
 import { compileStyle } from '../src'
-import { compileSFCScript, assertCode } from './utils'
+import { mockId, compileSFCScript, assertCode } from './utils'
 
 describe('CSS vars injection', () => {
   test('generating correct code for nested paths', () => {
@@ -11,8 +11,8 @@ describe('CSS vars injection', () => {
         }</style>`
     )
     expect(content).toMatch(`_useCssVars(_ctx => ({
-  color: (_ctx.color),
-  font_size: (_ctx.font.size)
+  "${mockId}-color": (_ctx.color),
+  "${mockId}-font_size": (_ctx.font.size)
 })`)
     assertCode(content)
   })
@@ -42,9 +42,9 @@ describe('CSS vars injection', () => {
     // 2. local potential ref bindings
     // 3. props bindings (analyzed)
     expect(content).toMatch(`_useCssVars(_ctx => ({
-  color: (color),
-  size: (_unref(size)),
-  foo: (__props.foo)
+  "${mockId}-color": (color),
+  "${mockId}-size": (_unref(size)),
+  "${mockId}-foo": (__props.foo)
 })`)
     expect(content).toMatch(
       `import { useCssVars as _useCssVars, unref as _unref } from 'vue'`

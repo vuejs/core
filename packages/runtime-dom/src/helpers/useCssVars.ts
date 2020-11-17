@@ -15,8 +15,7 @@ import { ShapeFlags } from '@vue/shared'
  * @private
  */
 export function useCssVars(
-  getter: (ctx: ComponentPublicInstance) => Record<string, string>,
-  scopeId: string
+  getter: (ctx: ComponentPublicInstance) => Record<string, string>
 ) {
   const instance = getCurrentInstance()
   /* istanbul ignore next */
@@ -27,22 +26,18 @@ export function useCssVars(
   }
 
   const setVars = () =>
-    setVarsOnVNode(instance.subTree, getter(instance.proxy!), scopeId)
+    setVarsOnVNode(instance.subTree, getter(instance.proxy!))
   onMounted(() => watchEffect(setVars, { flush: 'post' }))
   onUpdated(setVars)
 }
 
-function setVarsOnVNode(
-  vnode: VNode,
-  vars: Record<string, string>,
-  scopeId: string
-) {
+function setVarsOnVNode(vnode: VNode, vars: Record<string, string>) {
   if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
     const suspense = vnode.suspense!
     vnode = suspense.activeBranch!
     if (suspense.pendingBranch && !suspense.isHydrating) {
       suspense.effects.push(() => {
-        setVarsOnVNode(suspense.activeBranch!, vars, scopeId)
+        setVarsOnVNode(suspense.activeBranch!, vars)
       })
     }
   }
@@ -55,9 +50,9 @@ function setVarsOnVNode(
   if (vnode.shapeFlag & ShapeFlags.ELEMENT && vnode.el) {
     const style = vnode.el.style
     for (const key in vars) {
-      style.setProperty(`--${scopeId}-${key}`, vars[key])
+      style.setProperty(`--${key}`, vars[key])
     }
   } else if (vnode.type === Fragment) {
-    ;(vnode.children as VNode[]).forEach(c => setVarsOnVNode(c, vars, scopeId))
+    ;(vnode.children as VNode[]).forEach(c => setVarsOnVNode(c, vars))
   }
 }

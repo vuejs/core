@@ -2,6 +2,8 @@ import { parse, SFCScriptCompileOptions, compileScript } from '../src'
 import { parse as babelParse } from '@babel/parser'
 import { babelParserDefaultPlugins } from '@vue/shared'
 
+export const mockId = 'xxxxxxxx'
+
 export function compileSFCScript(
   src: string,
   options?: Partial<SFCScriptCompileOptions>
@@ -9,7 +11,7 @@ export function compileSFCScript(
   const { descriptor } = parse(src)
   return compileScript(descriptor, {
     ...options,
-    id: 'xxxxxxxx'
+    id: mockId
   })
 }
 
