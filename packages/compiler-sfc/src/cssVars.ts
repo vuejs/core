@@ -16,7 +16,30 @@ import hash from 'hash-sum'
 export const CSS_VARS_HELPER = `useCssVars`
 export const cssVarRE = /\bv-bind\(\s*(?:'([^']+)'|"([^"]+)"|([^'"][^)]*))\s*\)/g
 
-export function genVarName(id: string, raw: string, isProd: boolean): string {
+/**
+ * Given an SFC descriptor, generate the CSS variables object string that can be
+ * passed to `compileTemplate` as `compilerOptions.ssrCssVars`.
+ * @public
+ */
+export function generateCssVars(
+  sfc: SFCDescriptor,
+  id: string,
+  isProd: boolean
+): string {
+  return genCssVarsFromList(parseCssVars(sfc), id, isProd)
+}
+
+function genCssVarsFromList(
+  vars: string[],
+  id: string,
+  isProd: boolean
+): string {
+  return `{\n  ${vars
+    .map(v => `"${genVarName(id, v, isProd)}": (${v})`)
+    .join(',\n  ')}\n}`
+}
+
+function genVarName(id: string, raw: string, isProd: boolean): string {
   if (isProd) {
     return hash(id + raw)
   } else {
@@ -63,9 +86,7 @@ export function genCssVarsCode(
   id: string,
   isProd: boolean
 ) {
-  const varsExp = `{\n  ${vars
-    .map(v => `"${genVarName(id, v, isProd)}": (${v})`)
-    .join(',\n  ')}\n}`
+  const varsExp = genCssVarsFromList(vars, id, isProd)
   const exp = createSimpleExpression(varsExp, false)
   const context = createTransformContext(createRoot([]), {
     prefixIdentifiers: true,

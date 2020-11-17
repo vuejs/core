@@ -5,6 +5,7 @@ export { compileStyle, compileStyleAsync } from './compileStyle'
 export { compileScript } from './compileScript'
 export { rewriteDefault } from './rewriteDefault'
 export { generateCodeFrame } from '@vue/compiler-core'
+export { generateCssVars } from './cssVars'
 
 // Types
 export {

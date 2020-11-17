@@ -166,6 +166,7 @@ export interface TransformOptions extends SharedTransformCodegenOptions {
   scopeId?: string | null
   /**
    * SFC `<style vars>` injection string
+   * Should already be an object expression, e.g. `{ 'xxxx-color': color }`
    * needed to render inline CSS variables on component root
    */
   ssrCssVars?: string

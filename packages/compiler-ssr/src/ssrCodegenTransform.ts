@@ -19,11 +19,7 @@ import {
   createRoot
 } from '@vue/compiler-dom'
 import { isString, escapeHtml } from '@vue/shared'
-import {
-  SSR_INTERPOLATE,
-  ssrHelpers,
-  SSR_RESOLVE_CSS_VARS
-} from './runtimeHelpers'
+import { SSR_INTERPOLATE, ssrHelpers } from './runtimeHelpers'
 import { ssrProcessIf } from './transforms/ssrVIf'
 import { ssrProcessFor } from './transforms/ssrVFor'
 import { ssrProcessSlotOutlet } from './transforms/ssrTransformSlotOutlet'
@@ -40,7 +36,7 @@ import { createSSRCompilerError, SSRErrorCodes } from './errors'
 export function ssrCodegenTransform(ast: RootNode, options: CompilerOptions) {
   const context = createSSRTransformContext(ast, options)
 
-  // inject <style vars> resolution
+  // inject SFC <style> CSS variables
   // we do this instead of inlining the expression to ensure the vars are
   // only resolved once per render
   if (options.ssrCssVars) {
@@ -49,12 +45,7 @@ export function ssrCodegenTransform(ast: RootNode, options: CompilerOptions) {
       createTransformContext(createRoot([]), options)
     )
     context.body.push(
-      createCompoundExpression([
-        `const _cssVars = _${ssrHelpers[SSR_RESOLVE_CSS_VARS]}(`,
-        varsExp,
-        options.scopeId ? `, ${JSON.stringify(options.scopeId)}` : ``,
-        `)`
-      ])
+      createCompoundExpression([`const _cssVars = { style: `, varsExp, `}`])
     )
   }
 

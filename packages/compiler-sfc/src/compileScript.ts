@@ -31,6 +31,7 @@ import {
   injectCssVarsCalls
 } from './cssVars'
 import { compileTemplate, SFCTemplateCompileOptions } from './compileTemplate'
+import { warnOnce } from './warn'
 
 const DEFINE_OPTIONS = 'defineOptions'
 
@@ -63,15 +64,6 @@ export interface SFCScriptCompileOptions {
    */
   inlineTemplate?: boolean
   templateOptions?: Partial<SFCTemplateCompileOptions>
-}
-
-const hasWarned: Record<string, boolean> = {}
-
-function warnOnce(msg: string) {
-  if (!hasWarned[msg]) {
-    hasWarned[msg] = true
-    console.log(`\x1b[33m[@vue/compiler-sfc] %s\x1b[0m\n`, msg)
-  }
 }
 
 /**

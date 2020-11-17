@@ -245,7 +245,7 @@ export function resolveComponentType(
   const builtIn = isCoreComponent(tag) || context.isBuiltInComponent(tag)
   if (builtIn) {
     // built-ins are simply fallthroughs / have special handling during ssr
-    // no we don't need to import their runtime equivalents
+    // so we don't need to import their runtime equivalents
     if (!ssr) context.helper(builtIn)
     return builtIn
   }

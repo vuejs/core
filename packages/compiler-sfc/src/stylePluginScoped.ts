@@ -1,5 +1,6 @@
 import postcss, { Root } from 'postcss'
 import selectorParser, { Node, Selector } from 'postcss-selector-parser'
+import { warn } from './warn'
 
 const animationNameRE = /^(-\w+-)?animation-name$/
 const animationRE = /^(-\w+-)?animation$/
@@ -35,9 +36,9 @@ export default postcss.plugin('vue-scoped', (id: any) => (root: Root) => {
           ) {
             n.value = ' '
             n.spaces.before = n.spaces.after = ''
-            console.warn(
-              `[@vue/compiler-sfc] the >>> and /deep/ combinators have ` +
-                `been deprecated. Use ::v-deep instead.`
+            warn(
+              `the >>> and /deep/ combinators have been deprecated. ` +
+                `Use :deep() instead.`
             )
             return false
           }
@@ -69,9 +70,9 @@ export default postcss.plugin('vue-scoped', (id: any) => (root: Root) => {
               } else {
                 // DEPRECATED usage
                 // .foo ::v-deep .bar -> .foo[xxxxxxx] .bar
-                console.warn(
-                  `[@vue/compiler-sfc] ::v-deep usage as a combinator has ` +
-                    `been deprecated. Use ::v-deep(<inner-selector>) instead.`
+                warn(
+                  `::v-deep usage as a combinator has ` +
+                    `been deprecated. Use :deep(<inner-selector>) instead.`
                 )
                 const prev = selector.at(selector.index(n) - 1)
                 if (prev && isSpaceCombinator(prev)) {
