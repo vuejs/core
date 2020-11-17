@@ -47,7 +47,7 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
   },
 
   cloneNode(el) {
-    return el.cloneNode(true)
+    return el
   },
 
   // __UNSAFE__
