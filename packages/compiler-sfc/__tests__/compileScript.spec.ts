@@ -121,8 +121,7 @@ const bar = 1
     test('avoid unref() when necessary', () => {
       // function, const, component import
       const { content } = compile(
-        `
-        <script setup>
+        `<script setup>
         import { ref, defineOptions } from 'vue'
         import Foo from './Foo.vue'
         import other from './util'
@@ -150,6 +149,21 @@ const bar = 1
       expect(content).toMatch(`{ onClick: fn }`)
       // no need to mark constant fns in patch flag
       expect(content).not.toMatch(`PROPS`)
+    })
+
+    test('v-model codegen with unref()', () => {
+      const { content } = compile(
+        `<script setup>
+        import { ref } from 'vue'
+        const count = ref(0)
+        </script>
+        <template>
+          <input v-model="count">
+        </template>
+        `,
+        { inlineTemplate: true }
+      )
+      assertCode(content)
     })
   })
 

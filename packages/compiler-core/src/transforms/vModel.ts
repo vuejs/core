@@ -62,13 +62,13 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
 
   const assigmentExp = isUnrefExp
     ? // v-model used on a potentially ref binding in <script setup> inline mode.
-      // not the most beautiful codegen here but it gets the job done.
+      // the assignment needs to check whether the binding is actually a ref.
       createSimpleExpression(
-        `$event => { if (${context.helperString(IS_REF)}(${rawExp})) {` +
-          `${rawExp}.value = $event` +
-          ` } else {${context.isTS ? `\n//@ts-ignore\n` : ``}` +
-          `${rawExp} = $event` +
-          ` }}`,
+        `$event => (${context.helperString(IS_REF)}(${rawExp}) ` +
+          `? (${rawExp}.value = $event) ` +
+          `: ${context.isTS ? `//@ts-ignore\n` : ``}` +
+          `(${rawExp} = $event)` +
+          `)`,
         false,
         exp.loc
       )
