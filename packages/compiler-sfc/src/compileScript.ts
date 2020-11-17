@@ -545,7 +545,7 @@ export function compileScript(
         removed++
         s.remove(
           prev ? prev.end! + startOffset : node.start! + startOffset,
-          next ? next.start! + startOffset : node.end! + startOffset
+          next && !prev ? next.start! + startOffset : node.end! + startOffset
         )
       }
 
