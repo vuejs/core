@@ -13,7 +13,7 @@ import { ParserPlugin } from '@babel/parser'
 import postcss, { Root } from 'postcss'
 
 export const CSS_VARS_HELPER = `useCssVars`
-export const cssVarRE = /\bvar\(--(?:v-bind)?:([^)]+)\)/g
+export const cssVarRE = /\bv-bind\(\s*(?:'([^']+)'|"([^"]+)"|([^'"][^)]*))\s*\)/g
 
 export function convertCssVarCasing(raw: string): string {
   return raw.replace(/([^\w-])/g, '_')
@@ -24,7 +24,7 @@ export function parseCssVars(sfc: SFCDescriptor): string[] {
   sfc.styles.forEach(style => {
     let match
     while ((match = cssVarRE.exec(style.content))) {
-      vars.push(match[1])
+      vars.push(match[1] || match[2] || match[3])
     }
   })
   return vars
@@ -38,8 +38,8 @@ export const cssVarsPlugin = postcss.plugin(
     root.walkDecls(decl => {
       // rewrite CSS variables
       if (cssVarRE.test(decl.value)) {
-        decl.value = decl.value.replace(cssVarRE, (_, $1) => {
-          return `var(--${shortId}-${convertCssVarCasing($1)})`
+        decl.value = decl.value.replace(cssVarRE, (_, $1, $2, $3) => {
+          return `var(--${shortId}-${convertCssVarCasing($1 || $2 || $3)})`
         })
       }
     })

@@ -2,52 +2,12 @@ import { compileStyle } from '../src'
 import { compileSFCScript, assertCode } from './utils'
 
 describe('CSS vars injection', () => {
-  describe('codegen', () => {
-    test('<script> w/ no default export', () => {
-      assertCode(
-        compileSFCScript(
-          `<script>const a = 1</script>\n` +
-            `<style>div{ color: var(--v-bind:color); }</style>`
-        ).content
-      )
-    })
-
-    test('<script> w/ default export', () => {
-      assertCode(
-        compileSFCScript(
-          `<script>export default { setup() {} }</script>\n` +
-            `<style>div{ color: var(--:color); }</style>`
-        ).content
-      )
-    })
-
-    test('<script> w/ default export in strings/comments', () => {
-      assertCode(
-        compileSFCScript(
-          `<script>
-          // export default {}
-          export default {}
-        </script>\n` + `<style>div{ color: var(--:color); }</style>`
-        ).content
-      )
-    })
-
-    test('w/ <script setup>', () => {
-      assertCode(
-        compileSFCScript(
-          `<script setup>const color = 'red'</script>\n` +
-            `<style>div{ color: var(--:color); }</style>`
-        ).content
-      )
-    })
-  })
-
   test('generating correct code for nested paths', () => {
     const { content } = compileSFCScript(
       `<script>const a = 1</script>\n` +
         `<style>div{
-          color: var(--v-bind:color);
-          color: var(--v-bind:font.size);
+          color: v-bind(color);
+          font-size: v-bind('font.size');
         }</style>`
     )
     expect(content).toMatch(`_useCssVars(_ctx => ({
@@ -71,9 +31,9 @@ describe('CSS vars injection', () => {
         </script>\n` +
         `<style>
           div {
-            color: var(--:color);
-            font-size: var(--:size);
-            border: var(--:foo);
+            color: v-bind(color);
+            font-size: v-bind(size);
+            border: v-bind(foo);
           }
         </style>`
     )
@@ -95,8 +55,8 @@ describe('CSS vars injection', () => {
   test('should rewrite CSS vars in scoped mode', () => {
     const { code } = compileStyle({
       source: `.foo {
-        color: var(--v-bind:color);
-        font-size: var(--:font.size);
+        color: v-bind(color);
+        font-size: v-bind('font.size');
       }`,
       filename: 'test.css',
       id: 'data-v-test'
@@ -107,5 +67,45 @@ describe('CSS vars injection', () => {
               font-size: var(--test-font_size);
       }"
     `)
+  })
+
+  describe('codegen', () => {
+    test('<script> w/ no default export', () => {
+      assertCode(
+        compileSFCScript(
+          `<script>const a = 1</script>\n` +
+            `<style>div{ color: v-bind(color); }</style>`
+        ).content
+      )
+    })
+
+    test('<script> w/ default export', () => {
+      assertCode(
+        compileSFCScript(
+          `<script>export default { setup() {} }</script>\n` +
+            `<style>div{ color: v-bind(color); }</style>`
+        ).content
+      )
+    })
+
+    test('<script> w/ default export in strings/comments', () => {
+      assertCode(
+        compileSFCScript(
+          `<script>
+          // export default {}
+          export default {}
+        </script>\n` + `<style>div{ color: v-bind(color); }</style>`
+        ).content
+      )
+    })
+
+    test('w/ <script setup>', () => {
+      assertCode(
+        compileSFCScript(
+          `<script setup>const color = 'red'</script>\n` +
+            `<style>div{ color: v-bind(color); }</style>`
+        ).content
+      )
+    })
   })
 })
