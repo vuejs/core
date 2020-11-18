@@ -62,10 +62,31 @@ export type HoistTransform = (
 ) => void
 
 export const enum BindingTypes {
+  /**
+   * returned from data()
+   */
   DATA = 'data',
+  /**
+   * decalred as a prop
+   */
   PROPS = 'props',
-  SETUP = 'setup',
-  CONST = 'const',
+  /**
+   * a let binding (may or may not be a ref)
+   */
+  SETUP_LET = 'setup-let',
+  /**
+   * a const binding that can never be a ref.
+   * these bindings don't need `unref()` calls when processed in inlined
+   * template expressions.
+   */
+  SETUP_CONST = 'setup-const',
+  /**
+   * a const binding that may be a ref.
+   */
+  SETUP_CONST_REF = 'setup-const-ref',
+  /**
+   * declared by other options, e.g. computed, inject
+   */
   OPTIONS = 'options'
 }
 

@@ -1,3 +1,4 @@
+import { BindingTypes } from '@vue/compiler-dom/src'
 import { compileSFCScript as compile, assertCode } from './utils'
 
 describe('SFC compile <script setup>', () => {
@@ -33,10 +34,10 @@ const bar = 1
     assertCode(content)
     // should anayze bindings
     expect(bindings).toStrictEqual({
-      foo: 'props',
-      bar: 'const',
-      props: 'const',
-      emit: 'const'
+      foo: BindingTypes.PROPS,
+      bar: BindingTypes.SETUP_CONST,
+      props: BindingTypes.SETUP_CONST,
+      emit: BindingTypes.SETUP_CONST
     })
 
     // should remove defineOptions import and call
@@ -259,27 +260,27 @@ const { props, emit } = defineOptions({
       )
       expect(content).toMatch(`intersection: { type: Object, required: true }`)
       expect(bindings).toStrictEqual({
-        string: 'props',
-        number: 'props',
-        boolean: 'props',
-        object: 'props',
-        objectLiteral: 'props',
-        fn: 'props',
-        functionRef: 'props',
-        objectRef: 'props',
-        array: 'props',
-        arrayRef: 'props',
-        tuple: 'props',
-        set: 'props',
-        literal: 'props',
-        optional: 'props',
-        recordRef: 'props',
-        interface: 'props',
-        alias: 'props',
-        union: 'props',
-        literalUnion: 'props',
-        literalUnionMixed: 'props',
-        intersection: 'props'
+        string: BindingTypes.PROPS,
+        number: BindingTypes.PROPS,
+        boolean: BindingTypes.PROPS,
+        object: BindingTypes.PROPS,
+        objectLiteral: BindingTypes.PROPS,
+        fn: BindingTypes.PROPS,
+        functionRef: BindingTypes.PROPS,
+        objectRef: BindingTypes.PROPS,
+        array: BindingTypes.PROPS,
+        arrayRef: BindingTypes.PROPS,
+        tuple: BindingTypes.PROPS,
+        set: BindingTypes.PROPS,
+        literal: BindingTypes.PROPS,
+        optional: BindingTypes.PROPS,
+        recordRef: BindingTypes.PROPS,
+        interface: BindingTypes.PROPS,
+        alias: BindingTypes.PROPS,
+        union: BindingTypes.PROPS,
+        literalUnion: BindingTypes.PROPS,
+        literalUnionMixed: BindingTypes.PROPS,
+        intersection: BindingTypes.PROPS
       })
     })
 
@@ -380,11 +381,11 @@ const { props, emit } = defineOptions({
       expect(content).toMatch(`let d`)
       assertCode(content)
       expect(bindings).toStrictEqual({
-        foo: 'setup',
-        a: 'setup',
-        b: 'setup',
-        c: 'setup',
-        d: 'setup'
+        foo: BindingTypes.SETUP_CONST_REF,
+        a: BindingTypes.SETUP_CONST_REF,
+        b: BindingTypes.SETUP_CONST_REF,
+        c: BindingTypes.SETUP_LET,
+        d: BindingTypes.SETUP_LET
       })
     })
 
@@ -402,9 +403,9 @@ const { props, emit } = defineOptions({
       expect(content).toMatch(`return { a, b, c }`)
       assertCode(content)
       expect(bindings).toStrictEqual({
-        a: 'setup',
-        b: 'setup',
-        c: 'setup'
+        a: BindingTypes.SETUP_CONST_REF,
+        b: BindingTypes.SETUP_CONST_REF,
+        c: BindingTypes.SETUP_CONST_REF
       })
     })
 
@@ -494,12 +495,12 @@ const { props, emit } = defineOptions({
       )
       expect(content).toMatch(`return { n, a, c, d, f, g }`)
       expect(bindings).toStrictEqual({
-        n: 'setup',
-        a: 'setup',
-        c: 'setup',
-        d: 'setup',
-        f: 'setup',
-        g: 'setup'
+        n: BindingTypes.SETUP_CONST_REF,
+        a: BindingTypes.SETUP_CONST_REF,
+        c: BindingTypes.SETUP_CONST_REF,
+        d: BindingTypes.SETUP_CONST_REF,
+        f: BindingTypes.SETUP_CONST_REF,
+        g: BindingTypes.SETUP_CONST_REF
       })
       assertCode(content)
     })
@@ -518,10 +519,10 @@ const { props, emit } = defineOptions({
       expect(content).toMatch(`console.log(n.value, a.value, b.value, c.value)`)
       expect(content).toMatch(`return { n, a, b, c }`)
       expect(bindings).toStrictEqual({
-        n: 'setup',
-        a: 'setup',
-        b: 'setup',
-        c: 'setup'
+        n: BindingTypes.SETUP_CONST_REF,
+        a: BindingTypes.SETUP_CONST_REF,
+        b: BindingTypes.SETUP_CONST_REF,
+        c: BindingTypes.SETUP_CONST_REF
       })
       assertCode(content)
     })
@@ -541,9 +542,9 @@ const { props, emit } = defineOptions({
       expect(content).toMatch(`\nconst e = _ref(__e);`)
       expect(content).toMatch(`return { b, d, e }`)
       expect(bindings).toStrictEqual({
-        b: 'setup',
-        d: 'setup',
-        e: 'setup'
+        b: BindingTypes.SETUP_CONST_REF,
+        d: BindingTypes.SETUP_CONST_REF,
+        e: BindingTypes.SETUP_CONST_REF
       })
       assertCode(content)
     })
@@ -683,7 +684,10 @@ describe('SFC analyze <script> bindings', () => {
         }
       </script>
     `)
-    expect(bindings).toStrictEqual({ foo: 'props', bar: 'props' })
+    expect(bindings).toStrictEqual({
+      foo: BindingTypes.PROPS,
+      bar: BindingTypes.PROPS
+    })
   })
 
   it('recognizes props object declaration', () => {
@@ -702,10 +706,10 @@ describe('SFC analyze <script> bindings', () => {
       </script>
     `)
     expect(bindings).toStrictEqual({
-      foo: 'props',
-      bar: 'props',
-      baz: 'props',
-      qux: 'props'
+      foo: BindingTypes.PROPS,
+      bar: BindingTypes.PROPS,
+      baz: BindingTypes.PROPS,
+      qux: BindingTypes.PROPS
     })
   })
 
@@ -723,7 +727,10 @@ describe('SFC analyze <script> bindings', () => {
         }
       </script>
     `)
-    expect(bindings).toStrictEqual({ foo: 'setup', bar: 'setup' })
+    expect(bindings).toStrictEqual({
+      foo: BindingTypes.SETUP_CONST_REF,
+      bar: BindingTypes.SETUP_CONST_REF
+    })
   })
 
   it('recognizes async setup return', () => {
@@ -740,7 +747,10 @@ describe('SFC analyze <script> bindings', () => {
         }
       </script>
     `)
-    expect(bindings).toStrictEqual({ foo: 'setup', bar: 'setup' })
+    expect(bindings).toStrictEqual({
+      foo: BindingTypes.SETUP_CONST_REF,
+      bar: BindingTypes.SETUP_CONST_REF
+    })
   })
 
   it('recognizes data return', () => {
@@ -757,7 +767,10 @@ describe('SFC analyze <script> bindings', () => {
         }
       </script>
     `)
-    expect(bindings).toStrictEqual({ foo: 'data', bar: 'data' })
+    expect(bindings).toStrictEqual({
+      foo: BindingTypes.DATA,
+      bar: BindingTypes.DATA
+    })
   })
 
   it('recognizes methods', () => {
@@ -770,7 +783,7 @@ describe('SFC analyze <script> bindings', () => {
         }
       </script>
     `)
-    expect(bindings).toStrictEqual({ foo: 'options' })
+    expect(bindings).toStrictEqual({ foo: BindingTypes.OPTIONS })
   })
 
   it('recognizes computeds', () => {
@@ -787,7 +800,10 @@ describe('SFC analyze <script> bindings', () => {
         }
       </script>
     `)
-    expect(bindings).toStrictEqual({ foo: 'options', bar: 'options' })
+    expect(bindings).toStrictEqual({
+      foo: BindingTypes.OPTIONS,
+      bar: BindingTypes.OPTIONS
+    })
   })
 
   it('recognizes injections array declaration', () => {
@@ -798,7 +814,10 @@ describe('SFC analyze <script> bindings', () => {
         }
       </script>
     `)
-    expect(bindings).toStrictEqual({ foo: 'options', bar: 'options' })
+    expect(bindings).toStrictEqual({
+      foo: BindingTypes.OPTIONS,
+      bar: BindingTypes.OPTIONS
+    })
   })
 
   it('recognizes injections object declaration', () => {
@@ -812,7 +831,10 @@ describe('SFC analyze <script> bindings', () => {
         }
       </script>
     `)
-    expect(bindings).toStrictEqual({ foo: 'options', bar: 'options' })
+    expect(bindings).toStrictEqual({
+      foo: BindingTypes.OPTIONS,
+      bar: BindingTypes.OPTIONS
+    })
   })
 
   it('works for mixed bindings', () => {
@@ -843,12 +865,12 @@ describe('SFC analyze <script> bindings', () => {
       </script>
     `)
     expect(bindings).toStrictEqual({
-      foo: 'options',
-      bar: 'props',
-      baz: 'setup',
-      qux: 'data',
-      quux: 'options',
-      quuz: 'options'
+      foo: BindingTypes.OPTIONS,
+      bar: BindingTypes.PROPS,
+      baz: BindingTypes.SETUP_CONST_REF,
+      qux: BindingTypes.DATA,
+      quux: BindingTypes.OPTIONS,
+      quuz: BindingTypes.OPTIONS
     })
   })
 
@@ -864,7 +886,7 @@ describe('SFC analyze <script> bindings', () => {
       </script>
     `)
     expect(bindings).toStrictEqual({
-      foo: 'props'
+      foo: BindingTypes.PROPS
     })
   })
 })

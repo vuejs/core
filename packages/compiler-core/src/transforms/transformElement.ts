@@ -263,19 +263,21 @@ export function resolveComponentType(
         return resolvedTag
       }
     }
-    const tagFromSetup = checkType(BindingTypes.SETUP)
-    if (tagFromSetup) {
-      return context.inline
-        ? // setup scope bindings may be refs so they need to be unrefed
-          `${context.helperString(UNREF)}(${tagFromSetup})`
-        : `$setup[${JSON.stringify(tagFromSetup)}]`
-    }
-    const tagFromConst = checkType(BindingTypes.CONST)
+    const tagFromConst = checkType(BindingTypes.SETUP_CONST)
     if (tagFromConst) {
       return context.inline
         ? // in inline mode, const setup bindings (e.g. imports) can be used as-is
           tagFromConst
         : `$setup[${JSON.stringify(tagFromConst)}]`
+    }
+    const tagFromSetup =
+      checkType(BindingTypes.SETUP_LET) ||
+      checkType(BindingTypes.SETUP_CONST_REF)
+    if (tagFromSetup) {
+      return context.inline
+        ? // setup scope bindings that may be refs need to be unrefed
+          `${context.helperString(UNREF)}(${tagFromSetup})`
+        : `$setup[${JSON.stringify(tagFromSetup)}]`
     }
   }
 

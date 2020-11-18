@@ -159,11 +159,8 @@ export function compileScript(
       source: string
     }
   > = Object.create(null)
-  const setupBindings: Record<
-    string,
-    BindingTypes.SETUP | BindingTypes.CONST
-  > = Object.create(null)
-  const refBindings: Record<string, BindingTypes.SETUP> = Object.create(null)
+  const setupBindings: Record<string, BindingTypes> = Object.create(null)
+  const refBindings: Record<string, BindingTypes> = Object.create(null)
   const refIdentifiers: Set<Identifier> = new Set()
   const enableRefSugar = options.refSugar !== false
   let defaultExport: Node | undefined
@@ -311,7 +308,7 @@ export function compileScript(
     if (id.name[0] === '$') {
       error(`ref variable identifiers cannot start with $.`, id)
     }
-    refBindings[id.name] = setupBindings[id.name] = BindingTypes.SETUP
+    refBindings[id.name] = setupBindings[id.name] = BindingTypes.SETUP_CONST_REF
     refIdentifiers.add(id)
   }
 
@@ -787,8 +784,8 @@ export function compileScript(
   }
   for (const [key, { source }] of Object.entries(userImports)) {
     bindingMetadata[key] = source.endsWith('.vue')
-      ? BindingTypes.CONST
-      : BindingTypes.SETUP
+      ? BindingTypes.SETUP_CONST
+      : BindingTypes.SETUP_CONST_REF
   }
   for (const key in setupBindings) {
     bindingMetadata[key] = setupBindings[key]
@@ -966,8 +963,10 @@ function walkDeclaration(
           init!.type !== 'Identifier' && // const a = b
           init!.type !== 'CallExpression' && // const a = ref()
             init!.type !== 'MemberExpression') // const a = b.c
-            ? BindingTypes.CONST
-            : BindingTypes.SETUP
+            ? BindingTypes.SETUP_CONST
+            : isConst
+              ? BindingTypes.SETUP_CONST_REF
+              : BindingTypes.SETUP_LET
       } else if (id.type === 'ObjectPattern') {
         walkObjectPattern(id, bindings, isConst, isUseOptionsCall)
       } else if (id.type === 'ArrayPattern') {
@@ -980,7 +979,7 @@ function walkDeclaration(
   ) {
     // export function foo() {} / export class Foo {}
     // export declarations must be named.
-    bindings[node.id!.name] = BindingTypes.CONST
+    bindings[node.id!.name] = BindingTypes.SETUP_CONST
   }
 }
 
@@ -997,8 +996,10 @@ function walkObjectPattern(
         if (p.key === p.value) {
           // const { x } = ...
           bindings[p.key.name] = isUseOptionsCall
-            ? BindingTypes.CONST
-            : BindingTypes.SETUP
+            ? BindingTypes.SETUP_CONST
+            : isConst
+              ? BindingTypes.SETUP_CONST_REF
+              : BindingTypes.SETUP_LET
         } else {
           walkPattern(p.value, bindings, isConst, isUseOptionsCall)
         }
@@ -1007,8 +1008,8 @@ function walkObjectPattern(
       // ...rest
       // argument can only be identifer when destructuring
       bindings[(p.argument as Identifier).name] = isConst
-        ? BindingTypes.CONST
-        : BindingTypes.SETUP
+        ? BindingTypes.SETUP_CONST
+        : BindingTypes.SETUP_LET
     }
   }
 }
@@ -1032,13 +1033,15 @@ function walkPattern(
 ) {
   if (node.type === 'Identifier') {
     bindings[node.name] = isUseOptionsCall
-      ? BindingTypes.CONST
-      : BindingTypes.SETUP
+      ? BindingTypes.SETUP_CONST
+      : isConst
+        ? BindingTypes.SETUP_CONST_REF
+        : BindingTypes.SETUP_LET
   } else if (node.type === 'RestElement') {
     // argument can only be identifer when destructuring
     bindings[(node.argument as Identifier).name] = isConst
-      ? BindingTypes.CONST
-      : BindingTypes.SETUP
+      ? BindingTypes.SETUP_CONST
+      : BindingTypes.SETUP_LET
   } else if (node.type === 'ObjectPattern') {
     walkObjectPattern(node, bindings, isConst)
   } else if (node.type === 'ArrayPattern') {
@@ -1046,8 +1049,10 @@ function walkPattern(
   } else if (node.type === 'AssignmentPattern') {
     if (node.left.type === 'Identifier') {
       bindings[node.left.name] = isUseOptionsCall
-        ? BindingTypes.CONST
-        : BindingTypes.SETUP
+        ? BindingTypes.SETUP_CONST
+        : isConst
+          ? BindingTypes.SETUP_CONST_REF
+          : BindingTypes.SETUP_LET
     } else {
       walkPattern(node.left, bindings, isConst)
     }
@@ -1490,7 +1495,7 @@ function analyzeBindingsFromOptions(node: ObjectExpression): BindingMetadata {
           for (const key of getObjectExpressionKeys(bodyItem.argument)) {
             bindings[key] =
               property.key.name === 'setup'
-                ? BindingTypes.SETUP
+                ? BindingTypes.SETUP_CONST_REF
                 : BindingTypes.DATA
           }
         }
