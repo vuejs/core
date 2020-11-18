@@ -245,7 +245,10 @@ interface AriaAttributes {
   'aria-valuetext'?: string
 }
 
-export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
+export interface HTMLAttributes
+  extends JSX.IntrinsicAttributes,
+    AriaAttributes,
+    EventHandlers<Events> {
   innerHTML?: string
 
   class?: any
@@ -734,7 +737,10 @@ export interface WebViewHTMLAttributes extends HTMLAttributes {
   webpreferences?: string
 }
 
-export interface SVGAttributes extends AriaAttributes, EventHandlers<Events> {
+export interface SVGAttributes
+  extends JSX.IntrinsicAttributes,
+    AriaAttributes,
+    EventHandlers<Events> {
   innerHTML?: string
 
   /**
