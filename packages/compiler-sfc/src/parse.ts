@@ -10,6 +10,7 @@ import * as CompilerDOM from '@vue/compiler-dom'
 import { RawSourceMap, SourceMapGenerator } from 'source-map'
 import { TemplateCompiler } from './compileTemplate'
 import { Statement } from '@babel/types'
+import { parseCssVars } from './cssVars'
 
 export interface SFCParseOptions {
   filename?: string
@@ -56,6 +57,7 @@ export interface SFCDescriptor {
   scriptSetup: SFCScriptBlock | null
   styles: SFCStyleBlock[]
   customBlocks: SFCBlock[]
+  cssVars: string[]
 }
 
 export interface SFCParseResult {
@@ -96,7 +98,8 @@ export function parse(
     script: null,
     scriptSetup: null,
     styles: [],
-    customBlocks: []
+    customBlocks: [],
+    cssVars: []
   }
 
   const errors: (CompilerError | SyntaxError)[] = []
@@ -208,6 +211,9 @@ export function parse(
     descriptor.styles.forEach(genMap)
     descriptor.customBlocks.forEach(genMap)
   }
+
+  // parse CSS vars
+  descriptor.cssVars = parseCssVars(descriptor)
 
   const result = {
     descriptor,

@@ -24,12 +24,7 @@ import {
 } from '@babel/types'
 import { walk } from 'estree-walker'
 import { RawSourceMap } from 'source-map'
-import {
-  CSS_VARS_HELPER,
-  parseCssVars,
-  genCssVarsCode,
-  injectCssVarsCalls
-} from './cssVars'
+import { CSS_VARS_HELPER, genCssVarsCode, injectCssVarsCalls } from './cssVars'
 import { compileTemplate, SFCTemplateCompileOptions } from './compileTemplate'
 import { warnOnce } from './warn'
 
@@ -99,7 +94,7 @@ export function compileScript(
   }
 
   const scopeId = options.id ? options.id.replace(/^data-v-/, '') : ''
-  const cssVars = parseCssVars(sfc)
+  const cssVars = sfc.cssVars
   const scriptLang = script && script.lang
   const scriptSetupLang = scriptSetup && scriptSetup.lang
   const isTS = scriptLang === 'ts' || scriptSetupLang === 'ts'
