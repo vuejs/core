@@ -10,7 +10,7 @@ import {
   transform,
   VNodeCall
 } from '../../src'
-import { transformOn } from '../../src/transforms/vOn'
+import { transformOn, wrapExpressionContent } from '../../src/transforms/vOn'
 import { transformElement } from '../../src/transforms/transformElement'
 import { transformExpression } from '../../src/transforms/transformExpression'
 
@@ -30,6 +30,21 @@ function parseWithVOn(template: string, options: CompilerOptions = {}) {
 }
 
 describe('compiler: transform v-on', () => {
+  test('wrapper', () => {
+    const wrapedExp = wrapExpressionContent('onClick')
+    expect(wrapedExp).toMatch(
+      `
+      (() => {
+          if (typeof onClick === 'function') {
+              return onClick
+          } else {
+              console.warn('v-on expression is not a function.')
+              return () => { }
+          }
+      })()`.replace(/\s+/g, ' ')
+    )
+  })
+
   test('basic', () => {
     const { node } = parseWithVOn(`<div v-on:click="onClick"/>`)
     expect((node.codegenNode as VNodeCall).props).toMatchObject({
@@ -476,7 +491,11 @@ describe('compiler: transform v-on', () => {
         index: 1,
         value: {
           type: NodeTypes.COMPOUND_EXPRESSION,
-          children: [`(...args) => (`, { content: `_ctx.foo(...args)` }, `)`]
+          children: [
+            `(...args) => (`,
+            { content: wrapExpressionContent(`_ctx.foo`) },
+            `)`
+          ]
         }
       })
     })

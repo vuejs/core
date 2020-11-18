@@ -1,5 +1,6 @@
 import { DirectiveTransform, DirectiveTransformResult } from '../transform'
 import {
+  CompoundExpressionNode,
   createCompoundExpression,
   createObjectProperty,
   createSimpleExpression,
@@ -7,10 +8,11 @@ import {
   ElementTypes,
   ExpressionNode,
   NodeTypes,
-  SimpleExpressionNode
+  SimpleExpressionNode,
+  SourceLocation
 } from '../ast'
-import { camelize, toHandlerKey } from '@vue/shared'
-import { createCompilerError, ErrorCodes } from '../errors'
+import { camelize, isString, NOOP, toHandlerKey } from '@vue/shared'
+import { createCompilerError, ErrorCodes, errorMessages } from '../errors'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
 import { hasScopeRef, isMemberExpression } from '../utils'
@@ -26,6 +28,51 @@ export interface VOnDirectiveNode extends DirectiveNode {
   // exp is guaranteed to be a simple expression here because v-on w/ arg is
   // skipped by transformExpression as a special case.
   exp: SimpleExpressionNode | undefined
+}
+
+export const unfoldExpression = (
+  exp: CompoundExpressionNode
+): SimpleExpressionNode => {
+  let loc: SourceLocation = {
+    source: '',
+    start: { line: 1, column: 1, offset: 0 },
+    end: { line: 1, column: 1, offset: 0 }
+  }
+  let content = ''
+
+  for (let i = 0; i < exp.children!.length; i++) {
+    let node = exp.children[i]
+    if (isString(node)) {
+      loc.source += node
+      content += node
+    } else {
+      let simpleExp = node as SimpleExpressionNode
+      !i && (loc.start = simpleExp.loc.start)
+      loc.end = simpleExp.loc.end
+      loc.source += simpleExp.loc.source
+      content += simpleExp.content
+    }
+  }
+
+  return createSimpleExpression(content, false, loc)
+}
+
+// Event expression wrap to make sure it is a function.
+// See issue #2605.
+export const wrapExpressionContent = (content: string): string => {
+  return (
+    `
+  (() => {
+      if (typeof ${content} === 'function') {
+          return ${content}
+      } else {
+          console.warn('${
+            errorMessages[ErrorCodes.X_V_ON_EXPRESSION_NOT_FUNCTION]
+          }')
+          return ${NOOP}
+      }
+  })()`.replace(/\s+/g, ' ') + `(...args)`
+  )
 }
 
 export const transformOn: DirectiveTransform = (
@@ -102,11 +149,11 @@ export const transformOn: DirectiveTransform = (
       // below) so that it always accesses the latest value when called - thus
       // avoiding the need to be patched.
       if (shouldCache && isMemberExp) {
-        if (exp.type === NodeTypes.SIMPLE_EXPRESSION) {
-          exp.content += `(...args)`
-        } else {
-          exp.children.push(`(...args)`)
+        if (exp.type === NodeTypes.COMPOUND_EXPRESSION) {
+          exp = unfoldExpression(exp)
         }
+
+        exp.content = wrapExpressionContent(exp.content)
       }
     }
 

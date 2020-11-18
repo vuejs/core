@@ -70,6 +70,7 @@ export const enum ErrorCodes {
   X_V_FOR_TEMPLATE_KEY_PLACEMENT,
   X_V_BIND_NO_EXPRESSION,
   X_V_ON_NO_EXPRESSION,
+  X_V_ON_EXPRESSION_NOT_FUNCTION,
   X_V_SLOT_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET,
   X_V_SLOT_MIXED_SLOT_USAGE,
   X_V_SLOT_DUPLICATE_SLOT_NAMES,
@@ -144,6 +145,7 @@ export const errorMessages: { [code: number]: string } = {
   [ErrorCodes.X_V_FOR_TEMPLATE_KEY_PLACEMENT]: `<template v-for> key should be placed on the <template> tag.`,
   [ErrorCodes.X_V_BIND_NO_EXPRESSION]: `v-bind is missing expression.`,
   [ErrorCodes.X_V_ON_NO_EXPRESSION]: `v-on is missing expression.`,
+  [ErrorCodes.X_V_ON_EXPRESSION_NOT_FUNCTION]: `v-on expression is not a function.`,
   [ErrorCodes.X_V_SLOT_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET]: `Unexpected custom directive on <slot> outlet.`,
   [ErrorCodes.X_V_SLOT_MIXED_SLOT_USAGE]:
     `Mixed v-slot usage on both the component and nested <template>.` +
