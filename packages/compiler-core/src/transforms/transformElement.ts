@@ -364,8 +364,15 @@ export function buildProps(
     const prop = props[i]
     if (prop.type === NodeTypes.ATTRIBUTE) {
       const { loc, name, value } = prop
+      let isStatic = true
       if (name === 'ref') {
         hasRef = true
+        // in inline mode there is no setupState object, so we can't use string
+        // keys to set the ref. Instead, we need to transform it to pass the
+        // acrtual ref instead.
+        if (!__BROWSER__ && context.inline) {
+          isStatic = false
+        }
       }
       // skip :is on <component>
       if (name === 'is' && tag === 'component') {
@@ -380,7 +387,7 @@ export function buildProps(
           ),
           createSimpleExpression(
             value ? value.content : '',
-            true,
+            isStatic,
             value ? value.loc : loc
           )
         )
