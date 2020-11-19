@@ -43,7 +43,7 @@ describe('CSS vars injection', () => {
     // 3. props bindings (analyzed)
     expect(content).toMatch(`_useCssVars(_ctx => ({
   "${mockId}-color": (color),
-  "${mockId}-size": (_unref(size)),
+  "${mockId}-size": (size.value),
   "${mockId}-foo": (__props.foo)
 })`)
     expect(content).toMatch(

@@ -225,7 +225,7 @@ export function generate(
   const signature =
     !__BROWSER__ && options.isTS
       ? args.map(arg => `${arg}: any`).join(',')
-      : args.join(',')
+      : args.join(', ')
   // enter render function
   if (!ssr) {
     if (isSetupInlined) {

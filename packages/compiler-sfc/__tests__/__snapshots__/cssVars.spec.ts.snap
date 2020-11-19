@@ -92,7 +92,7 @@ export default {
 
 _useCssVars(_ctx => ({
   \\"xxxxxxxx-color\\": (color),
-  \\"xxxxxxxx-size\\": (_unref(size)),
+  \\"xxxxxxxx-size\\": (size.value),
   \\"xxxxxxxx-foo\\": (__props.foo)
 }))
 
