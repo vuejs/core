@@ -118,38 +118,32 @@ export function processExpression(
       // setup inline mode
       if (type === BindingTypes.SETUP_CONST) {
         return raw
-      } else if (type === BindingTypes.SETUP_REF) {
+      } else if (
+        type === BindingTypes.SETUP_REF ||
+        type === BindingTypes.SETUP_MAYBE_REF
+      ) {
+        // const binding that may or may not be ref
+        // if it's not a ref, then assignments don't make sense -
+        // so we ignore the non-ref assignment case and generate code
+        // that assumes the value to be a ref for more efficiency
         return isAssignmentLVal || isUpdateArg
           ? `${raw}.value`
           : `${context.helperString(UNREF)}(${raw})`
-      } else if (
-        type === BindingTypes.SETUP_MAYBE_REF ||
-        type === BindingTypes.SETUP_LET
-      ) {
+      } else if (type === BindingTypes.SETUP_LET) {
         if (isAssignmentLVal) {
-          if (type === BindingTypes.SETUP_MAYBE_REF) {
-            // const binding that may or may not be ref
-            // if it's not a ref, then the assignment doesn't make sense so
-            // just no-op it
-            // x = y ---> !isRef(x) ? null : x.value = y
-            return `!${context.helperString(
-              IS_REF
-            )}(${raw}) ? null : ${raw}.value`
-          } else {
-            // let binding.
-            // this is a bit more tricky as we need to cover the case where
-            // let is a local non-ref value, and we need to replicate the
-            // right hand side value.
-            // x = y --> isRef(x) ? x.value = y : x = y
-            const rVal = (parent as AssignmentExpression).right
-            const rExp = rawExp.slice(rVal.start! - 1, rVal.end! - 1)
-            const rExpString = stringifyExpression(
-              processExpression(createSimpleExpression(rExp, false), context)
-            )
-            return `${context.helperString(IS_REF)}(${raw})${
-              context.isTS ? ` //@ts-ignore\n` : ``
-            } ? ${raw}.value = ${rExpString} : ${raw}`
-          }
+          // let binding.
+          // this is a bit more tricky as we need to cover the case where
+          // let is a local non-ref value, and we need to replicate the
+          // right hand side value.
+          // x = y --> isRef(x) ? x.value = y : x = y
+          const rVal = (parent as AssignmentExpression).right
+          const rExp = rawExp.slice(rVal.start! - 1, rVal.end! - 1)
+          const rExpString = stringifyExpression(
+            processExpression(createSimpleExpression(rExp, false), context)
+          )
+          return `${context.helperString(IS_REF)}(${raw})${
+            context.isTS ? ` //@ts-ignore\n` : ``
+          } ? ${raw}.value = ${rExpString} : ${raw}`
         } else if (isUpdateArg) {
           // make id replace parent in the code range so the raw update operator
           // is removed
@@ -158,21 +152,11 @@ export function processExpression(
           const { prefix: isPrefix, operator } = parent as UpdateExpression
           const prefix = isPrefix ? operator : ``
           const postfix = isPrefix ? `` : operator
-          if (type === BindingTypes.SETUP_MAYBE_REF) {
-            // const binding that may or may not be ref
-            // if it's not a ref, then the assignment doesn't make sense so
-            // just no-op it
-            // x++ ---> !isRef(x) ? null : x.value++
-            return `!${context.helperString(
-              IS_REF
-            )}(${raw}) ? null : ${prefix}${raw}.value${postfix}`
-          } else {
-            // let binding.
-            // x++ --> isRef(a) ? a.value++ : a++
-            return `${context.helperString(IS_REF)}(${raw})${
-              context.isTS ? ` //@ts-ignore\n` : ``
-            } ? ${prefix}${raw}.value${postfix} : ${prefix}${raw}${postfix}`
-          }
+          // let binding.
+          // x++ --> isRef(a) ? a.value++ : a++
+          return `${context.helperString(IS_REF)}(${raw})${
+            context.isTS ? ` //@ts-ignore\n` : ``
+          } ? ${prefix}${raw}.value${postfix} : ${prefix}${raw}${postfix}`
         } else {
           return `${context.helperString(UNREF)}(${raw})`
         }

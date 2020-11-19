@@ -1,5 +1,4 @@
 import {
-  ComponentPublicInstance,
   getCurrentInstance,
   onMounted,
   warn,
@@ -14,9 +13,7 @@ import { ShapeFlags } from '@vue/shared'
  * Runtime helper for SFC's CSS variable injection feature.
  * @private
  */
-export function useCssVars(
-  getter: (ctx: ComponentPublicInstance) => Record<string, string>
-) {
+export function useCssVars(getter: (ctx: any) => Record<string, string>) {
   const instance = getCurrentInstance()
   /* istanbul ignore next */
   if (!instance) {

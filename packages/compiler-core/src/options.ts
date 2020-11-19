@@ -124,6 +124,10 @@ interface SharedTransformCodegenOptions {
    * This allows the function to directly access setup() local bindings.
    */
   inline?: boolean
+  /**
+   * Indicates that transforms and codegen should try to output valid TS code
+   */
+  isTS?: boolean
 }
 
 export interface TransformOptions extends SharedTransformCodegenOptions {
@@ -195,10 +199,6 @@ export interface TransformOptions extends SharedTransformCodegenOptions {
    * needed to render inline CSS variables on component root
    */
   ssrCssVars?: string
-  /**
-   * Indicates that transforms should try to output valid TS code
-   */
-  isTS?: boolean
   onError?: (error: CompilerError) => void
 }
 

@@ -124,7 +124,9 @@ export const transformOn: DirectiveTransform = (
       exp = createCompoundExpression([
         `${
           isInlineStatement
-            ? `$event`
+            ? !__BROWSER__ && context.isTS
+              ? `($event: any)`
+              : `$event`
             : `${
                 !__BROWSER__ && context.isTS ? `\n//@ts-ignore\n` : ``
               }(...args)`

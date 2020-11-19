@@ -66,7 +66,10 @@ export interface CodegenResult {
 }
 
 export interface CodegenContext
-  extends Omit<Required<CodegenOptions>, 'bindingMetadata' | 'inline'> {
+  extends Omit<
+      Required<CodegenOptions>,
+      'bindingMetadata' | 'inline' | 'isTS'
+    > {
   source: string
   code: string
   line: number
@@ -214,29 +217,33 @@ export function generate(
     genFunctionPreamble(ast, preambleContext)
   }
 
-  // binding optimizations
-  const optimizeSources =
-    options.bindingMetadata && !options.inline
-      ? `, $props, $setup, $data, $options`
-      : ``
+  const args = ssr ? ['_ctx', '_push', '_parent', '_attrs'] : ['_ctx', '_cache']
+  if (!__BROWSER__ && options.bindingMetadata && !options.inline) {
+    // binding optimization args
+    args.push('$props', '$setup', '$data', '$options')
+  }
+  const signature =
+    !__BROWSER__ && options.isTS
+      ? args.map(arg => `${arg}: any`).join(',')
+      : args.join(',')
   // enter render function
   if (!ssr) {
     if (isSetupInlined) {
       if (genScopeId) {
         push(`${PURE_ANNOTATION}_withId(`)
       }
-      push(`(_ctx, _cache${optimizeSources}) => {`)
+      push(`(${signature}) => {`)
     } else {
       if (genScopeId) {
         push(`const render = ${PURE_ANNOTATION}_withId(`)
       }
-      push(`function render(_ctx, _cache${optimizeSources}) {`)
+      push(`function render(${signature}) {`)
     }
   } else {
     if (genScopeId) {
       push(`const ssrRender = ${PURE_ANNOTATION}_withId(`)
     }
-    push(`function ssrRender(_ctx, _push, _parent, _attrs${optimizeSources}) {`)
+    push(`function ssrRender(${signature}) {`)
   }
   indent()
 
