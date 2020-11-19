@@ -930,7 +930,7 @@ export function compileScript(
         `\n${hasAwait ? `async ` : ``}function setup(${args}) {\n`
       )
       s.append(
-        `/*#__PURE__*/ Object.assign(${defaultTempVar}, {${runtimeOptions}\n  setup\n})\n` +
+        `\n/*#__PURE__*/ Object.assign(${defaultTempVar}, {${runtimeOptions}\n  setup\n})\n` +
           `export default ${defaultTempVar}`
       )
     } else {
