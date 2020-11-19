@@ -26,7 +26,7 @@ export function generateCssVars(
   id: string,
   isProd: boolean
 ): string {
-  return genCssVarsFromList(sfc.cssVars, id, isProd)
+  return sfc.cssVars.length ? genCssVarsFromList(sfc.cssVars, id, isProd) : ''
 }
 
 function genCssVarsFromList(
