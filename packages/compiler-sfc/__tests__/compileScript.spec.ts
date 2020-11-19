@@ -128,28 +128,34 @@ const bar = 1
         import other from './util'
         const count = ref(0)
         const constant = {}
+        const maybe = foo()
+        let lett = 1
         function fn() {}
         </script>
         <template>
           <Foo/>
-          <div @click="fn">{{ count }} {{ constant }} {{ other }}</div>
+          <div @click="fn">{{ count }} {{ constant }} {{ maybe }} {{ lett }} {{ other }}</div>
         </template>
         `,
         { inlineTemplate: true }
       )
-      assertCode(content)
       // no need to unref vue component import
       expect(content).toMatch(`createVNode(Foo)`)
       // should unref other imports
       expect(content).toMatch(`unref(other)`)
       // no need to unref constant literals
       expect(content).not.toMatch(`unref(constant)`)
-      // should unref const w/ call init (e.g. ref())
-      expect(content).toMatch(`unref(count)`)
+      // should directly use .value for known refs
+      expect(content).toMatch(`count.value`)
+      // should unref() on const bindings that may be refs
+      expect(content).toMatch(`unref(maybe)`)
+      // should unref() on let bindings
+      expect(content).toMatch(`unref(lett)`)
       // no need to unref function declarations
       expect(content).toMatch(`{ onClick: fn }`)
       // no need to mark constant fns in patch flag
       expect(content).not.toMatch(`PROPS`)
+      assertCode(content)
     })
 
     test('v-model codegen', () => {
@@ -170,8 +176,9 @@ const bar = 1
       )
       // known const ref: set value
       expect(content).toMatch(`count.value = $event`)
-      // const but maybe ref: only assign after check
-      expect(content).toMatch(`_isRef(maybe) ? maybe.value = $event : null`)
+      // const but maybe ref: also assign .value directly since non-ref
+      // won't work
+      expect(content).toMatch(`maybe.value = $event`)
       // let: handle both cases
       expect(content).toMatch(
         `_isRef(lett) ? lett.value = $event : lett = $event`
@@ -198,12 +205,10 @@ const bar = 1
       // known const ref: set value
       expect(content).toMatch(`count.value = 1`)
       // const but maybe ref: only assign after check
-      expect(content).toMatch(
-        `!_isRef(maybe) ? null : maybe.value = _unref(count)`
-      )
+      expect(content).toMatch(`maybe.value = count.value`)
       // let: handle both cases
       expect(content).toMatch(
-        `_isRef(lett) ? lett.value = _unref(count) : lett = _unref(count)`
+        `_isRef(lett) ? lett.value = count.value : lett = count.value`
       )
       assertCode(content)
     })
@@ -230,12 +235,38 @@ const bar = 1
       // known const ref: set value
       expect(content).toMatch(`count.value++`)
       expect(content).toMatch(`--count.value`)
-      // const but maybe ref: only assign after check
-      expect(content).toMatch(`!_isRef(maybe) ? null : maybe.value++`)
-      expect(content).toMatch(`!_isRef(maybe) ? null : --maybe.value`)
+      // const but maybe ref (non-ref case ignored)
+      expect(content).toMatch(`maybe.value++`)
+      expect(content).toMatch(`--maybe.value`)
       // let: handle both cases
       expect(content).toMatch(`_isRef(lett) ? lett.value++ : lett++`)
       expect(content).toMatch(`_isRef(lett) ? --lett.value : --lett`)
+      assertCode(content)
+    })
+
+    test('template destructure assignment codegen', () => {
+      const { content } = compile(
+        `<script setup>
+        import { ref } from 'vue'
+        const val = {}
+        const count = ref(0)
+        const maybe = foo()
+        let lett = 1
+        </script>
+        <template>
+          <div @click="({ count } = val)"/>
+          <div @click="[maybe] = val"/>
+          <div @click="({ lett } = val)"/>
+        </template>
+        `,
+        { inlineTemplate: true }
+      )
+      // known const ref: set value
+      expect(content).toMatch(`({ count: count.value } = val)`)
+      // const but maybe ref (non-ref case ignored)
+      expect(content).toMatch(`[maybe.value] = val`)
+      // let: assumes non-ref
+      expect(content).toMatch(`{ lett: lett } = val`)
       assertCode(content)
     })
   })
@@ -524,12 +555,16 @@ const { props, emit } = defineOptions({
         a = a + 1
         b.count++
         b.count = b.count + 1
+        ;({ a } = { a: 2 })
+        ;[a] = [1]
       }
       </script>`)
       expect(content).toMatch(`a.value++`)
       expect(content).toMatch(`a.value = a.value + 1`)
       expect(content).toMatch(`b.value.count++`)
       expect(content).toMatch(`b.value.count = b.value.count + 1`)
+      expect(content).toMatch(`;({ a: a.value } = { a: 2 })`)
+      expect(content).toMatch(`;[a.value] = [1]`)
       assertCode(content)
     })
 

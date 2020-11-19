@@ -117,7 +117,7 @@ return { ref }
 `;
 
 exports[`SFC compile <script setup> inlineTemplate mode avoid unref() when necessary 1`] = `
-"import { createVNode as _createVNode, unref as _unref, toDisplayString as _toDisplayString, Fragment as _Fragment, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
+"import { createVNode as _createVNode, toDisplayString as _toDisplayString, unref as _unref, Fragment as _Fragment, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
 
 import { ref } from 'vue'
         import Foo from './Foo.vue'
@@ -129,12 +129,14 @@ export default {
 
         const count = ref(0)
         const constant = {}
+        const maybe = foo()
+        let lett = 1
         function fn() {}
         
 return (_ctx, _cache) => {
   return (_openBlock(), _createBlock(_Fragment, null, [
     _createVNode(Foo),
-    _createVNode(\\"div\\", { onClick: fn }, _toDisplayString(_unref(count)) + \\" \\" + _toDisplayString(constant) + \\" \\" + _toDisplayString(_unref(other)), 1 /* TEXT */)
+    _createVNode(\\"div\\", { onClick: fn }, _toDisplayString(count.value) + \\" \\" + _toDisplayString(constant) + \\" \\" + _toDisplayString(_unref(maybe)) + \\" \\" + _toDisplayString(_unref(lett)) + \\" \\" + _toDisplayString(_unref(other)), 1 /* TEXT */)
   ], 64 /* STABLE_FRAGMENT */))
 }
 }
@@ -143,7 +145,7 @@ return (_ctx, _cache) => {
 `;
 
 exports[`SFC compile <script setup> inlineTemplate mode should work 1`] = `
-"import { unref as _unref, toDisplayString as _toDisplayString, createVNode as _createVNode, Fragment as _Fragment, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
+"import { toDisplayString as _toDisplayString, createVNode as _createVNode, Fragment as _Fragment, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
 
 const _hoisted_1 = /*#__PURE__*/_createVNode(\\"div\\", null, \\"static\\", -1 /* HOISTED */)
 
@@ -157,7 +159,7 @@ export default {
         
 return (_ctx, _cache) => {
   return (_openBlock(), _createBlock(_Fragment, null, [
-    _createVNode(\\"div\\", null, _toDisplayString(_unref(count)), 1 /* TEXT */),
+    _createVNode(\\"div\\", null, _toDisplayString(count.value), 1 /* TEXT */),
     _hoisted_1
   ], 64 /* STABLE_FRAGMENT */))
 }
@@ -167,7 +169,7 @@ return (_ctx, _cache) => {
 `;
 
 exports[`SFC compile <script setup> inlineTemplate mode template assignment expression codegen 1`] = `
-"import { createVNode as _createVNode, isRef as _isRef, unref as _unref, Fragment as _Fragment, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
+"import { createVNode as _createVNode, isRef as _isRef, Fragment as _Fragment, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
 
 import { ref } from 'vue'
         
@@ -185,10 +187,42 @@ return (_ctx, _cache) => {
       onClick: _cache[1] || (_cache[1] = $event => (count.value = 1))
     }),
     _createVNode(\\"div\\", {
-      onClick: _cache[2] || (_cache[2] = $event => (!_isRef(maybe) ? null : maybe.value = _unref(count)))
+      onClick: _cache[2] || (_cache[2] = $event => (maybe.value = count.value))
     }),
     _createVNode(\\"div\\", {
-      onClick: _cache[3] || (_cache[3] = $event => (_isRef(lett) ? lett.value = _unref(count) : lett = _unref(count)))
+      onClick: _cache[3] || (_cache[3] = $event => (_isRef(lett) ? lett.value = count.value : lett = count.value))
+    })
+  ], 64 /* STABLE_FRAGMENT */))
+}
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> inlineTemplate mode template destructure assignment codegen 1`] = `
+"import { createVNode as _createVNode, Fragment as _Fragment, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
+
+import { ref } from 'vue'
+        
+export default {
+  expose: [],
+  setup(__props) {
+
+        const val = {}
+        const count = ref(0)
+        const maybe = foo()
+        let lett = 1
+        
+return (_ctx, _cache) => {
+  return (_openBlock(), _createBlock(_Fragment, null, [
+    _createVNode(\\"div\\", {
+      onClick: _cache[1] || (_cache[1] = $event => (({ count: count.value } = val)))
+    }),
+    _createVNode(\\"div\\", {
+      onClick: _cache[2] || (_cache[2] = $event => ([maybe.value] = val))
+    }),
+    _createVNode(\\"div\\", {
+      onClick: _cache[3] || (_cache[3] = $event => (({ lett: lett } = val)))
     })
   ], 64 /* STABLE_FRAGMENT */))
 }
@@ -219,10 +253,10 @@ return (_ctx, _cache) => {
       onClick: _cache[2] || (_cache[2] = $event => (--count.value))
     }),
     _createVNode(\\"div\\", {
-      onClick: _cache[3] || (_cache[3] = $event => (!_isRef(maybe) ? null : maybe.value++))
+      onClick: _cache[3] || (_cache[3] = $event => (maybe.value++))
     }),
     _createVNode(\\"div\\", {
-      onClick: _cache[4] || (_cache[4] = $event => (!_isRef(maybe) ? null : --maybe.value))
+      onClick: _cache[4] || (_cache[4] = $event => (--maybe.value))
     }),
     _createVNode(\\"div\\", {
       onClick: _cache[5] || (_cache[5] = $event => (_isRef(lett) ? lett.value++ : lett++))
@@ -238,7 +272,7 @@ return (_ctx, _cache) => {
 `;
 
 exports[`SFC compile <script setup> inlineTemplate mode v-model codegen 1`] = `
-"import { unref as _unref, vModelText as _vModelText, createVNode as _createVNode, withDirectives as _withDirectives, isRef as _isRef, Fragment as _Fragment, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
+"import { vModelText as _vModelText, createVNode as _createVNode, withDirectives as _withDirectives, unref as _unref, isRef as _isRef, Fragment as _Fragment, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
 
 import { ref } from 'vue'
         
@@ -255,7 +289,7 @@ return (_ctx, _cache) => {
     _withDirectives(_createVNode(\\"input\\", {
       \\"onUpdate:modelValue\\": _cache[1] || (_cache[1] = $event => (count.value = $event))
     }, null, 512 /* NEED_PATCH */), [
-      [_vModelText, _unref(count)]
+      [_vModelText, count.value]
     ]),
     _withDirectives(_createVNode(\\"input\\", {
       \\"onUpdate:modelValue\\": _cache[2] || (_cache[2] = $event => (_isRef(maybe) ? maybe.value = $event : null))
@@ -364,6 +398,8 @@ export default {
         a.value = a.value + 1
         b.value.count++
         b.value.count = b.value.count + 1
+        ;({ a: a.value } = { a: 2 })
+        ;[a.value] = [1]
       }
       
 return { a, b, inc }

@@ -111,22 +111,26 @@ export function processExpression(
   const rewriteIdentifier = (raw: string, parent?: Node, id?: Identifier) => {
     const type = hasOwn(bindingMetadata, raw) && bindingMetadata[raw]
     if (inline) {
+      // x = y
       const isAssignmentLVal =
         parent && parent.type === 'AssignmentExpression' && parent.left === id
+      // x++
       const isUpdateArg =
         parent && parent.type === 'UpdateExpression' && parent.argument === id
-      // setup inline mode
+      // ({ x } = y)
+      const isDestructureAssignment =
+        parent && isInDestructureAssignment(parent, parentStack)
+
       if (type === BindingTypes.SETUP_CONST) {
         return raw
-      } else if (
-        type === BindingTypes.SETUP_REF ||
-        type === BindingTypes.SETUP_MAYBE_REF
-      ) {
+      } else if (type === BindingTypes.SETUP_REF) {
+        return `${raw}.value`
+      } else if (type === BindingTypes.SETUP_MAYBE_REF) {
         // const binding that may or may not be ref
         // if it's not a ref, then assignments don't make sense -
         // so we ignore the non-ref assignment case and generate code
         // that assumes the value to be a ref for more efficiency
-        return isAssignmentLVal || isUpdateArg
+        return isAssignmentLVal || isUpdateArg || isDestructureAssignment
           ? `${raw}.value`
           : `${context.helperString(UNREF)}(${raw})`
       } else if (type === BindingTypes.SETUP_LET) {
@@ -157,6 +161,13 @@ export function processExpression(
           return `${context.helperString(IS_REF)}(${raw})${
             context.isTS ? ` //@ts-ignore\n` : ``
           } ? ${prefix}${raw}.value${postfix} : ${prefix}${raw}${postfix}`
+        } else if (isDestructureAssignment) {
+          // TODO
+          // let binding in a destructure assignment - it's very tricky to
+          // handle both possible cases here without altering the original
+          // structure of the code, so we just assume it's not a ref here
+          // for now
+          return raw
         } else {
           return `${context.helperString(UNREF)}(${raw})`
         }
@@ -231,22 +242,24 @@ export function processExpression(
   const knownIds = Object.create(context.identifiers)
   const isDuplicate = (node: Node & PrefixMeta): boolean =>
     ids.some(id => id.start === node.start)
+  const parentStack: Node[] = []
 
   // walk the AST and look for identifiers that need to be prefixed.
   ;(walk as any)(ast, {
-    enter(node: Node & PrefixMeta, parent: Node) {
+    enter(node: Node & PrefixMeta, parent: Node | undefined) {
+      parent && parentStack.push(parent)
       if (node.type === 'Identifier') {
         if (!isDuplicate(node)) {
-          const needPrefix = shouldPrefix(node, parent)
+          const needPrefix = shouldPrefix(node, parent!, parentStack)
           if (!knownIds[node.name] && needPrefix) {
-            if (isStaticProperty(parent) && parent.shorthand) {
+            if (isStaticProperty(parent!) && parent.shorthand) {
               // property shorthand like { foo }, we need to add the key since
               // we rewrite the value
               node.prefix = `${node.name}: `
             }
             node.name = rewriteIdentifier(node.name, parent, node)
             ids.push(node)
-          } else if (!isStaticPropertyKey(node, parent)) {
+          } else if (!isStaticPropertyKey(node, parent!)) {
             // The identifier is considered constant unless it's pointing to a
             // scope variable (a v-for alias, or a v-slot prop)
             if (!(needPrefix && knownIds[node.name]) && !bailConstant) {
@@ -291,7 +304,8 @@ export function processExpression(
         )
       }
     },
-    leave(node: Node & PrefixMeta) {
+    leave(node: Node & PrefixMeta, parent: Node | undefined) {
+      parent && parentStack.pop()
       if (node !== ast.body[0].expression && node.scopeIds) {
         node.scopeIds.forEach((id: string) => {
           knownIds[id]--
@@ -359,7 +373,7 @@ const isStaticProperty = (node: Node): node is ObjectProperty =>
 const isStaticPropertyKey = (node: Node, parent: Node) =>
   isStaticProperty(parent) && parent.key === node
 
-function shouldPrefix(id: Identifier, parent: Node) {
+function shouldPrefix(id: Identifier, parent: Node, parentStack: Node[]) {
   // declaration id
   if (
     (parent.type === 'VariableDeclarator' ||
@@ -386,8 +400,11 @@ function shouldPrefix(id: Identifier, parent: Node) {
     return false
   }
 
-  // array destructure pattern
-  if (parent.type === 'ArrayPattern') {
+  // non-assignment array destructure pattern
+  if (
+    parent.type === 'ArrayPattern' &&
+    !isInDestructureAssignment(parent, parentStack)
+  ) {
     return false
   }
 
@@ -417,6 +434,24 @@ function shouldPrefix(id: Identifier, parent: Node) {
   }
 
   return true
+}
+
+function isInDestructureAssignment(parent: Node, parentStack: Node[]): boolean {
+  if (
+    parent &&
+    (parent.type === 'ObjectProperty' || parent.type === 'ArrayPattern')
+  ) {
+    let i = parentStack.length
+    while (i--) {
+      const p = parentStack[i]
+      if (p.type === 'AssignmentExpression') {
+        return true
+      } else if (p.type !== 'ObjectProperty' && !p.type.endsWith('Pattern')) {
+        break
+      }
+    }
+  }
+  return false
 }
 
 function stringifyExpression(exp: ExpressionNode | string): string {

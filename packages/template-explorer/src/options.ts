@@ -14,9 +14,11 @@ export const compilerOptions: CompilerOptions = reactive({
   inline: false,
   ssrCssVars: `{ color }`,
   bindingMetadata: {
-    TestComponent: BindingTypes.SETUP,
-    foo: BindingTypes.SETUP,
-    bar: BindingTypes.PROPS
+    TestComponent: BindingTypes.SETUP_CONST,
+    setupRef: BindingTypes.SETUP_REF,
+    setupLet: BindingTypes.SETUP_LET,
+    setupMaybeRef: BindingTypes.SETUP_MAYBE_REF,
+    setupProp: BindingTypes.PROPS
   }
 })
 

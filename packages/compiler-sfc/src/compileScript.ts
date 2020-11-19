@@ -670,7 +670,10 @@ export function compileScript(
               // let binding used in a property shorthand
               // { foo } -> { foo: foo.value }
               // skip for destructure patterns
-              if (!(parent as any).inPattern) {
+              if (
+                !(parent as any).inPattern ||
+                isInDestructureAssignment(parent, parentStack)
+              ) {
                 s.appendLeft(id.end! + startOffset, `: ${id.name}.value`)
               }
             } else {
@@ -1258,6 +1261,8 @@ function genRuntimeEmits(emits: Set<string>) {
     : ``
 }
 
+const parentStack: Node[] = []
+
 /**
  * Walk an AST and find identifiers that are variable references.
  * This is largely the same logic with `transformExpressions` in compiler-core
@@ -1270,10 +1275,11 @@ function walkIdentifiers(
 ) {
   const knownIds: Record<string, number> = Object.create(null)
   ;(walk as any)(root, {
-    enter(node: Node & { scopeIds?: Set<string> }, parent: Node) {
+    enter(node: Node & { scopeIds?: Set<string> }, parent: Node | undefined) {
+      parent && parentStack.push(parent)
       if (node.type === 'Identifier') {
-        if (!knownIds[node.name] && isRefIdentifier(node, parent)) {
-          onIdentifier(node, parent)
+        if (!knownIds[node.name] && isRefIdentifier(node, parent!)) {
+          onIdentifier(node, parent!)
         }
       } else if (isFunction(node)) {
         // walk function expressions and add its arguments to known identifiers
@@ -1309,13 +1315,14 @@ function walkIdentifiers(
         )
       } else if (
         node.type === 'ObjectProperty' &&
-        parent.type === 'ObjectPattern'
+        parent!.type === 'ObjectPattern'
       ) {
         // mark property in destructure pattern
         ;(node as any).inPattern = true
       }
     },
-    leave(node: Node & { scopeIds?: Set<string> }) {
+    leave(node: Node & { scopeIds?: Set<string> }, parent: Node | undefined) {
+      parent && parentStack.pop()
       if (node.scopeIds) {
         node.scopeIds.forEach((id: string) => {
           knownIds[id]--
@@ -1355,8 +1362,11 @@ function isRefIdentifier(id: Identifier, parent: Node) {
     return false
   }
 
-  // array destructure pattern
-  if (parent.type === 'ArrayPattern') {
+  // non-assignment array destructure pattern
+  if (
+    parent.type === 'ArrayPattern' &&
+    !isInDestructureAssignment(parent, parentStack)
+  ) {
     return false
   }
 
@@ -1462,6 +1472,27 @@ function canNeverBeRef(node: Node, userReactiveImport: string): boolean {
       }
       return false
   }
+}
+
+function isInDestructureAssignment(parent: Node, parentStack: Node[]): boolean {
+  if (
+    parent &&
+    (parent.type === 'ObjectProperty' || parent.type === 'ArrayPattern')
+  ) {
+    let i = parentStack.length
+    while (i--) {
+      const p = parentStack[i]
+      if (p.type === 'AssignmentExpression') {
+        const root = parentStack[0]
+        // if this is a ref: destructure, it should be treated like a
+        // variable decalration!
+        return !(root.type === 'LabeledStatement' && root.label.name === 'ref')
+      } else if (p.type !== 'ObjectProperty' && !p.type.endsWith('Pattern')) {
+        break
+      }
+    }
+  }
+  return false
 }
 
 /**
