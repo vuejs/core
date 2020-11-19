@@ -921,7 +921,7 @@ export function compileScript(
         hasAwait ? `async ` : ``
       }setup(${args}) {\n`
     )
-    s.append(`})`)
+    s.appendRight(endOffset, `})`)
   } else {
     if (defaultExport) {
       // can't rely on spread operator in non ts mode
@@ -939,7 +939,7 @@ export function compileScript(
         `\nexport default {${runtimeOptions}\n  ` +
           `${hasAwait ? `async ` : ``}setup(${args}) {\n`
       )
-      s.append(`}`)
+      s.appendRight(endOffset, `}`)
     }
   }
 

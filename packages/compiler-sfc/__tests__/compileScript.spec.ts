@@ -53,6 +53,34 @@ const bar = 1
   emit: ['a', 'b'],`)
   })
 
+  describe('<script> and <script setup> co-usage', () => {
+    test('script first', () => {
+      const { content } = compile(`
+      <script>
+      export const n = 1
+      </script>
+      <script setup>
+      import { x } from './x'
+      x()
+      </script>
+      `)
+      assertCode(content)
+    })
+
+    test('script setup first', () => {
+      const { content } = compile(`
+      <script setup>
+      import { x } from './x'
+      x()
+      </script>
+      <script>
+      export const n = 1
+      </script>
+      `)
+      assertCode(content)
+    })
+  })
+
   describe('imports', () => {
     test('should hoist and expose imports', () => {
       assertCode(

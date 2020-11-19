@@ -1,5 +1,38 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`SFC compile <script setup> <script> and <script setup> co-usage script first 1`] = `
+"import { x } from './x'
+      
+      export const n = 1
+      
+export default {
+  expose: [],
+  setup(__props) {
+
+      x()
+      
+return { x }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> <script> and <script setup> co-usage script setup first 1`] = `
+"import { x } from './x'
+      
+export default {
+  expose: [],
+  setup(__props) {
+
+      x()
+      
+return { x }
+}
+
+}
+      export const n = 1"
+`;
+
 exports[`SFC compile <script setup> defineOptions() 1`] = `
 "export default {
   expose: [],
