@@ -14,7 +14,13 @@ import {
   isVNode
 } from './vnode'
 import { handleError, ErrorCodes } from './errorHandling'
-import { PatchFlags, ShapeFlags, isOn, isModelListener } from '@vue/shared'
+import {
+  PatchFlags,
+  ShapeFlags,
+  isOn,
+  isModelListener,
+  isArray
+} from '@vue/shared'
 import { warn } from './warning'
 import { isHmrUpdating } from './hmr'
 import { NormalizedProps } from './componentProps'
@@ -117,7 +123,7 @@ export function renderComponentRoot(
     // to have comments along side the root element which makes it a fragment
     let root = result
     let setRoot: ((root: VNode) => void) | undefined = undefined
-    if (__DEV__) {
+    if (__DEV__ && isRootCommentEffectChild(root)) {
       ;[root, setRoot] = getChildRoot(result)
     }
 
@@ -245,6 +251,20 @@ const getChildRoot = (
     }
   }
   return [normalizeVNode(childRoot), setRoot]
+}
+
+const isRootCommentEffectChild = (vnode: VNode): boolean => {
+  const { children } = vnode
+  if (isArray(children)) {
+    let isFragmentChild = false
+    const comments = children.filter(child => {
+      if ((child as VNode).type === Fragment) isFragmentChild = true
+      return (child as VNode).type === Comment
+    })
+    return !isFragmentChild && comments.length === children.length - 1
+  }
+
+  return false
 }
 
 /**
