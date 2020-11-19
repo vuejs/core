@@ -152,18 +152,90 @@ const bar = 1
       expect(content).not.toMatch(`PROPS`)
     })
 
-    test('v-model codegen with unref()', () => {
+    test('v-model codegen', () => {
       const { content } = compile(
         `<script setup>
         import { ref } from 'vue'
         const count = ref(0)
+        const maybe = foo()
+        let lett = 1
         </script>
         <template>
           <input v-model="count">
+          <input v-model="maybe">
+          <input v-model="lett">
         </template>
         `,
         { inlineTemplate: true }
       )
+      // known const ref: set value
+      expect(content).toMatch(`count.value = $event`)
+      // const but maybe ref: only assign after check
+      expect(content).toMatch(`_isRef(maybe) ? maybe.value = $event : null`)
+      // let: handle both cases
+      expect(content).toMatch(
+        `_isRef(lett) ? lett.value = $event : lett = $event`
+      )
+      assertCode(content)
+    })
+
+    test('template assignment expression codegen', () => {
+      const { content } = compile(
+        `<script setup>
+        import { ref } from 'vue'
+        const count = ref(0)
+        const maybe = foo()
+        let lett = 1
+        </script>
+        <template>
+          <div @click="count = 1"/>
+          <div @click="maybe = count"/>
+          <div @click="lett = count"/>
+        </template>
+        `,
+        { inlineTemplate: true }
+      )
+      // known const ref: set value
+      expect(content).toMatch(`count.value = 1`)
+      // const but maybe ref: only assign after check
+      expect(content).toMatch(
+        `!_isRef(maybe) ? null : maybe.value = _unref(count)`
+      )
+      // let: handle both cases
+      expect(content).toMatch(
+        `_isRef(lett) ? lett.value = _unref(count) : lett = _unref(count)`
+      )
+      assertCode(content)
+    })
+
+    test('template update expression codegen', () => {
+      const { content } = compile(
+        `<script setup>
+        import { ref } from 'vue'
+        const count = ref(0)
+        const maybe = foo()
+        let lett = 1
+        </script>
+        <template>
+          <div @click="count++"/>
+          <div @click="--count"/>
+          <div @click="maybe++"/>
+          <div @click="--maybe"/>
+          <div @click="lett++"/>
+          <div @click="--lett"/>
+        </template>
+        `,
+        { inlineTemplate: true }
+      )
+      // known const ref: set value
+      expect(content).toMatch(`count.value++`)
+      expect(content).toMatch(`--count.value`)
+      // const but maybe ref: only assign after check
+      expect(content).toMatch(`!_isRef(maybe) ? null : maybe.value++`)
+      expect(content).toMatch(`!_isRef(maybe) ? null : --maybe.value`)
+      // let: handle both cases
+      expect(content).toMatch(`_isRef(lett) ? lett.value++ : lett++`)
+      expect(content).toMatch(`_isRef(lett) ? --lett.value : --lett`)
       assertCode(content)
     })
   })
@@ -381,9 +453,9 @@ const { props, emit } = defineOptions({
       expect(content).toMatch(`let d`)
       assertCode(content)
       expect(bindings).toStrictEqual({
-        foo: BindingTypes.SETUP_CONST_REF,
-        a: BindingTypes.SETUP_CONST_REF,
-        b: BindingTypes.SETUP_CONST_REF,
+        foo: BindingTypes.SETUP_REF,
+        a: BindingTypes.SETUP_REF,
+        b: BindingTypes.SETUP_REF,
         c: BindingTypes.SETUP_LET,
         d: BindingTypes.SETUP_LET
       })
@@ -403,9 +475,9 @@ const { props, emit } = defineOptions({
       expect(content).toMatch(`return { a, b, c }`)
       assertCode(content)
       expect(bindings).toStrictEqual({
-        a: BindingTypes.SETUP_CONST_REF,
-        b: BindingTypes.SETUP_CONST_REF,
-        c: BindingTypes.SETUP_CONST_REF
+        a: BindingTypes.SETUP_REF,
+        b: BindingTypes.SETUP_REF,
+        c: BindingTypes.SETUP_REF
       })
     })
 
@@ -495,12 +567,12 @@ const { props, emit } = defineOptions({
       )
       expect(content).toMatch(`return { n, a, c, d, f, g }`)
       expect(bindings).toStrictEqual({
-        n: BindingTypes.SETUP_CONST_REF,
-        a: BindingTypes.SETUP_CONST_REF,
-        c: BindingTypes.SETUP_CONST_REF,
-        d: BindingTypes.SETUP_CONST_REF,
-        f: BindingTypes.SETUP_CONST_REF,
-        g: BindingTypes.SETUP_CONST_REF
+        n: BindingTypes.SETUP_REF,
+        a: BindingTypes.SETUP_REF,
+        c: BindingTypes.SETUP_REF,
+        d: BindingTypes.SETUP_REF,
+        f: BindingTypes.SETUP_REF,
+        g: BindingTypes.SETUP_REF
       })
       assertCode(content)
     })
@@ -519,10 +591,10 @@ const { props, emit } = defineOptions({
       expect(content).toMatch(`console.log(n.value, a.value, b.value, c.value)`)
       expect(content).toMatch(`return { n, a, b, c }`)
       expect(bindings).toStrictEqual({
-        n: BindingTypes.SETUP_CONST_REF,
-        a: BindingTypes.SETUP_CONST_REF,
-        b: BindingTypes.SETUP_CONST_REF,
-        c: BindingTypes.SETUP_CONST_REF
+        n: BindingTypes.SETUP_REF,
+        a: BindingTypes.SETUP_REF,
+        b: BindingTypes.SETUP_REF,
+        c: BindingTypes.SETUP_REF
       })
       assertCode(content)
     })
@@ -542,9 +614,9 @@ const { props, emit } = defineOptions({
       expect(content).toMatch(`\nconst e = _ref(__e);`)
       expect(content).toMatch(`return { b, d, e }`)
       expect(bindings).toStrictEqual({
-        b: BindingTypes.SETUP_CONST_REF,
-        d: BindingTypes.SETUP_CONST_REF,
-        e: BindingTypes.SETUP_CONST_REF
+        b: BindingTypes.SETUP_REF,
+        d: BindingTypes.SETUP_REF,
+        e: BindingTypes.SETUP_REF
       })
       assertCode(content)
     })
@@ -728,8 +800,8 @@ describe('SFC analyze <script> bindings', () => {
       </script>
     `)
     expect(bindings).toStrictEqual({
-      foo: BindingTypes.SETUP_CONST_REF,
-      bar: BindingTypes.SETUP_CONST_REF
+      foo: BindingTypes.SETUP_MAYBE_REF,
+      bar: BindingTypes.SETUP_MAYBE_REF
     })
   })
 
@@ -748,8 +820,8 @@ describe('SFC analyze <script> bindings', () => {
       </script>
     `)
     expect(bindings).toStrictEqual({
-      foo: BindingTypes.SETUP_CONST_REF,
-      bar: BindingTypes.SETUP_CONST_REF
+      foo: BindingTypes.SETUP_MAYBE_REF,
+      bar: BindingTypes.SETUP_MAYBE_REF
     })
   })
 
@@ -867,7 +939,7 @@ describe('SFC analyze <script> bindings', () => {
     expect(bindings).toStrictEqual({
       foo: BindingTypes.OPTIONS,
       bar: BindingTypes.PROPS,
-      baz: BindingTypes.SETUP_CONST_REF,
+      baz: BindingTypes.SETUP_MAYBE_REF,
       qux: BindingTypes.DATA,
       quux: BindingTypes.OPTIONS,
       quuz: BindingTypes.OPTIONS
@@ -877,15 +949,28 @@ describe('SFC analyze <script> bindings', () => {
   it('works for script setup', () => {
     const { bindings } = compile(`
       <script setup>
-      import { defineOptions } from 'vue'
+      import { defineOptions, ref as r } from 'vue'
       defineOptions({
         props: {
           foo: String,
         }
       })
+
+      const a = r(1)
+      let b = 2
+      const c = 3
+      const { d } = someFoo()
+      let { e } = someBar()
       </script>
     `)
+
     expect(bindings).toStrictEqual({
+      r: BindingTypes.SETUP_CONST,
+      a: BindingTypes.SETUP_REF,
+      b: BindingTypes.SETUP_LET,
+      c: BindingTypes.SETUP_CONST,
+      d: BindingTypes.SETUP_MAYBE_REF,
+      e: BindingTypes.SETUP_LET,
       foo: BindingTypes.PROPS
     })
   })

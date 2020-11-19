@@ -166,8 +166,8 @@ return (_ctx, _cache) => {
 }"
 `;
 
-exports[`SFC compile <script setup> inlineTemplate mode v-model codegen with unref() 1`] = `
-"import { unref as _unref, isRef as _isRef, vModelText as _vModelText, createVNode as _createVNode, withDirectives as _withDirectives, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
+exports[`SFC compile <script setup> inlineTemplate mode template assignment expression codegen 1`] = `
+"import { createVNode as _createVNode, isRef as _isRef, unref as _unref, Fragment as _Fragment, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
 
 import { ref } from 'vue'
         
@@ -176,13 +176,98 @@ export default {
   setup(__props) {
 
         const count = ref(0)
+        const maybe = foo()
+        let lett = 1
         
 return (_ctx, _cache) => {
-  return _withDirectives((_openBlock(), _createBlock(\\"input\\", {
-    \\"onUpdate:modelValue\\": _cache[1] || (_cache[1] = $event => (_isRef(count) ? (count.value = $event) : (count = $event)))
-  }, null, 512 /* NEED_PATCH */)), [
-    [_vModelText, _unref(count)]
-  ])
+  return (_openBlock(), _createBlock(_Fragment, null, [
+    _createVNode(\\"div\\", {
+      onClick: _cache[1] || (_cache[1] = $event => (count.value = 1))
+    }),
+    _createVNode(\\"div\\", {
+      onClick: _cache[2] || (_cache[2] = $event => (!_isRef(maybe) ? null : maybe.value = _unref(count)))
+    }),
+    _createVNode(\\"div\\", {
+      onClick: _cache[3] || (_cache[3] = $event => (_isRef(lett) ? lett.value = _unref(count) : lett = _unref(count)))
+    })
+  ], 64 /* STABLE_FRAGMENT */))
+}
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> inlineTemplate mode template update expression codegen 1`] = `
+"import { createVNode as _createVNode, isRef as _isRef, Fragment as _Fragment, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
+
+import { ref } from 'vue'
+        
+export default {
+  expose: [],
+  setup(__props) {
+
+        const count = ref(0)
+        const maybe = foo()
+        let lett = 1
+        
+return (_ctx, _cache) => {
+  return (_openBlock(), _createBlock(_Fragment, null, [
+    _createVNode(\\"div\\", {
+      onClick: _cache[1] || (_cache[1] = $event => (count.value++))
+    }),
+    _createVNode(\\"div\\", {
+      onClick: _cache[2] || (_cache[2] = $event => (--count.value))
+    }),
+    _createVNode(\\"div\\", {
+      onClick: _cache[3] || (_cache[3] = $event => (!_isRef(maybe) ? null : maybe.value++))
+    }),
+    _createVNode(\\"div\\", {
+      onClick: _cache[4] || (_cache[4] = $event => (!_isRef(maybe) ? null : --maybe.value))
+    }),
+    _createVNode(\\"div\\", {
+      onClick: _cache[5] || (_cache[5] = $event => (_isRef(lett) ? lett.value++ : lett++))
+    }),
+    _createVNode(\\"div\\", {
+      onClick: _cache[6] || (_cache[6] = $event => (_isRef(lett) ? --lett.value : --lett))
+    })
+  ], 64 /* STABLE_FRAGMENT */))
+}
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> inlineTemplate mode v-model codegen 1`] = `
+"import { unref as _unref, vModelText as _vModelText, createVNode as _createVNode, withDirectives as _withDirectives, isRef as _isRef, Fragment as _Fragment, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
+
+import { ref } from 'vue'
+        
+export default {
+  expose: [],
+  setup(__props) {
+
+        const count = ref(0)
+        const maybe = foo()
+        let lett = 1
+        
+return (_ctx, _cache) => {
+  return (_openBlock(), _createBlock(_Fragment, null, [
+    _withDirectives(_createVNode(\\"input\\", {
+      \\"onUpdate:modelValue\\": _cache[1] || (_cache[1] = $event => (count.value = $event))
+    }, null, 512 /* NEED_PATCH */), [
+      [_vModelText, _unref(count)]
+    ]),
+    _withDirectives(_createVNode(\\"input\\", {
+      \\"onUpdate:modelValue\\": _cache[2] || (_cache[2] = $event => (_isRef(maybe) ? maybe.value = $event : null))
+    }, null, 512 /* NEED_PATCH */), [
+      [_vModelText, _unref(maybe)]
+    ]),
+    _withDirectives(_createVNode(\\"input\\", {
+      \\"onUpdate:modelValue\\": _cache[3] || (_cache[3] = $event => (_isRef(lett) ? lett.value = $event : lett = $event))
+    }, null, 512 /* NEED_PATCH */), [
+      [_vModelText, _unref(lett)]
+    ])
+  ], 64 /* STABLE_FRAGMENT */))
 }
 }
 

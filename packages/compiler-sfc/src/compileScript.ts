@@ -20,7 +20,8 @@ import {
   Statement,
   Expression,
   LabeledStatement,
-  TSUnionType
+  TSUnionType,
+  CallExpression
 } from '@babel/types'
 import { walk } from 'estree-walker'
 import { RawSourceMap } from 'source-map'
@@ -159,6 +160,7 @@ export function compileScript(
       source: string
     }
   > = Object.create(null)
+  const userImportAlias: Record<string, string> = Object.create(null)
   const setupBindings: Record<string, BindingTypes> = Object.create(null)
   const refBindings: Record<string, BindingTypes> = Object.create(null)
   const refIdentifiers: Set<Identifier> = new Set()
@@ -220,12 +222,22 @@ export function compileScript(
     )
   }
 
+  function registerUserImport(
+    source: string,
+    local: string,
+    imported: string | false
+  ) {
+    if (source === 'vue' && imported) {
+      userImportAlias[imported] = local
+    }
+    userImports[local] = {
+      imported: imported || null,
+      source
+    }
+  }
+
   function processDefineOptions(node: Node): boolean {
-    if (
-      node.type === 'CallExpression' &&
-      node.callee.type === 'Identifier' &&
-      node.callee.name === DEFINE_OPTIONS
-    ) {
+    if (isCallOf(node, DEFINE_OPTIONS)) {
       if (hasOptionsCall) {
         error(`duplicate ${DEFINE_OPTIONS}() call`, node)
       }
@@ -308,7 +320,7 @@ export function compileScript(
     if (id.name[0] === '$') {
       error(`ref variable identifiers cannot start with $.`, id)
     }
-    refBindings[id.name] = setupBindings[id.name] = BindingTypes.SETUP_CONST_REF
+    refBindings[id.name] = setupBindings[id.name] = BindingTypes.SETUP_REF
     refIdentifiers.add(id)
   }
 
@@ -409,15 +421,11 @@ export function compileScript(
       if (node.type === 'ImportDeclaration') {
         // record imports for dedupe
         for (const specifier of node.specifiers) {
-          const name = specifier.local.name
           const imported =
             specifier.type === 'ImportSpecifier' &&
             specifier.imported.type === 'Identifier' &&
             specifier.imported.name
-          userImports[name] = {
-            imported: imported || null,
-            source: node.source.value
-          }
+          registerUserImport(node.source.value, specifier.local.name, imported)
         }
       } else if (node.type === 'ExportDefaultDeclaration') {
         // export default
@@ -567,10 +575,7 @@ export function compileScript(
             error(`different imports aliased to same local name.`, specifier)
           }
         } else {
-          userImports[local] = {
-            imported: imported || null,
-            source: node.source.value
-          }
+          registerUserImport(source, local, imported)
         }
       }
       if (removed === node.specifiers.length) {
@@ -605,7 +610,7 @@ export function compileScript(
         node.type === 'ClassDeclaration') &&
       !node.declare
     ) {
-      walkDeclaration(node, setupBindings)
+      walkDeclaration(node, setupBindings, userImportAlias)
     }
 
     // Type declarations
@@ -783,9 +788,10 @@ export function compileScript(
     Object.assign(bindingMetadata, analyzeBindingsFromOptions(optionsArg))
   }
   for (const [key, { source }] of Object.entries(userImports)) {
-    bindingMetadata[key] = source.endsWith('.vue')
-      ? BindingTypes.SETUP_CONST
-      : BindingTypes.SETUP_CONST_REF
+    bindingMetadata[key] =
+      source.endsWith('.vue') || source === 'vue'
+        ? BindingTypes.SETUP_CONST
+        : BindingTypes.SETUP_MAYBE_REF
   }
   for (const key in setupBindings) {
     bindingMetadata[key] = setupBindings[key]
@@ -941,32 +947,34 @@ export function compileScript(
 
 function walkDeclaration(
   node: Declaration,
-  bindings: Record<string, BindingTypes>
+  bindings: Record<string, BindingTypes>,
+  userImportAlias: Record<string, string>
 ) {
   if (node.type === 'VariableDeclaration') {
     const isConst = node.kind === 'const'
     // export const foo = ...
     for (const { id, init } of node.declarations) {
-      const isUseOptionsCall = !!(
-        isConst &&
-        init &&
-        init.type === 'CallExpression' &&
-        init.callee.type === 'Identifier' &&
-        init.callee.name === DEFINE_OPTIONS
-      )
+      const isUseOptionsCall = !!(isConst && isCallOf(init, DEFINE_OPTIONS))
       if (id.type === 'Identifier') {
-        bindings[id.name] =
+        let bindingType
+        if (
           // if a declaration is a const literal, we can mark it so that
           // the generated render fn code doesn't need to unref() it
           isUseOptionsCall ||
           (isConst &&
-          init!.type !== 'Identifier' && // const a = b
-          init!.type !== 'CallExpression' && // const a = ref()
-            init!.type !== 'MemberExpression') // const a = b.c
-            ? BindingTypes.SETUP_CONST
-            : isConst
-              ? BindingTypes.SETUP_CONST_REF
-              : BindingTypes.SETUP_LET
+            canNeverBeRef(init!, userImportAlias['reactive'] || 'reactive'))
+        ) {
+          bindingType = BindingTypes.SETUP_CONST
+        } else if (isConst) {
+          if (isCallOf(init, userImportAlias['ref'] || 'ref')) {
+            bindingType = BindingTypes.SETUP_REF
+          } else {
+            bindingType = BindingTypes.SETUP_MAYBE_REF
+          }
+        } else {
+          bindingType = BindingTypes.SETUP_LET
+        }
+        bindings[id.name] = bindingType
       } else if (id.type === 'ObjectPattern') {
         walkObjectPattern(id, bindings, isConst, isUseOptionsCall)
       } else if (id.type === 'ArrayPattern') {
@@ -998,7 +1006,7 @@ function walkObjectPattern(
           bindings[p.key.name] = isUseOptionsCall
             ? BindingTypes.SETUP_CONST
             : isConst
-              ? BindingTypes.SETUP_CONST_REF
+              ? BindingTypes.SETUP_MAYBE_REF
               : BindingTypes.SETUP_LET
         } else {
           walkPattern(p.value, bindings, isConst, isUseOptionsCall)
@@ -1035,7 +1043,7 @@ function walkPattern(
     bindings[node.name] = isUseOptionsCall
       ? BindingTypes.SETUP_CONST
       : isConst
-        ? BindingTypes.SETUP_CONST_REF
+        ? BindingTypes.SETUP_MAYBE_REF
         : BindingTypes.SETUP_LET
   } else if (node.type === 'RestElement') {
     // argument can only be identifer when destructuring
@@ -1051,7 +1059,7 @@ function walkPattern(
       bindings[node.left.name] = isUseOptionsCall
         ? BindingTypes.SETUP_CONST
         : isConst
-          ? BindingTypes.SETUP_CONST_REF
+          ? BindingTypes.SETUP_MAYBE_REF
           : BindingTypes.SETUP_LET
     } else {
       walkPattern(node.left, bindings, isConst)
@@ -1419,6 +1427,43 @@ function getObjectOrArrayExpressionKeys(property: ObjectProperty): string[] {
   return []
 }
 
+function isCallOf(node: Node | null, name: string): node is CallExpression {
+  return !!(
+    node &&
+    node.type === 'CallExpression' &&
+    node.callee.type === 'Identifier' &&
+    node.callee.name === name
+  )
+}
+
+function canNeverBeRef(node: Node, userReactiveImport: string): boolean {
+  if (isCallOf(node, userReactiveImport)) {
+    return true
+  }
+  switch (node.type) {
+    case 'UnaryExpression':
+    case 'BinaryExpression':
+    case 'ArrayExpression':
+    case 'ObjectExpression':
+    case 'FunctionExpression':
+    case 'ArrowFunctionExpression':
+    case 'UpdateExpression':
+    case 'ClassExpression':
+    case 'TaggedTemplateExpression':
+      return true
+    case 'SequenceExpression':
+      return canNeverBeRef(
+        node.expressions[node.expressions.length - 1],
+        userReactiveImport
+      )
+    default:
+      if (node.type.endsWith('Literal')) {
+        return true
+      }
+      return false
+  }
+}
+
 /**
  * Analyze bindings in normal `<script>`
  * Note that `compileScriptSetup` already analyzes bindings as part of its
@@ -1495,7 +1540,7 @@ function analyzeBindingsFromOptions(node: ObjectExpression): BindingMetadata {
           for (const key of getObjectExpressionKeys(bodyItem.argument)) {
             bindings[key] =
               property.key.name === 'setup'
-                ? BindingTypes.SETUP_CONST_REF
+                ? BindingTypes.SETUP_MAYBE_REF
                 : BindingTypes.DATA
           }
         }

@@ -272,7 +272,8 @@ export function resolveComponentType(
     }
     const tagFromSetup =
       checkType(BindingTypes.SETUP_LET) ||
-      checkType(BindingTypes.SETUP_CONST_REF)
+      checkType(BindingTypes.SETUP_REF) ||
+      checkType(BindingTypes.SETUP_MAYBE_REF)
     if (tagFromSetup) {
       return context.inline
         ? // setup scope bindings that may be refs need to be unrefed

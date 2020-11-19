@@ -5,7 +5,8 @@ import {
   createCompoundExpression,
   NodeTypes,
   Property,
-  ElementTypes
+  ElementTypes,
+  ExpressionNode
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
@@ -14,7 +15,8 @@ import {
   hasScopeRef,
   isStaticExp
 } from '../utils'
-import { helperNameMap, IS_REF, UNREF } from '../runtimeHelpers'
+import { IS_REF } from '../runtimeHelpers'
+import { BindingTypes } from '../options'
 
 export const transformModel: DirectiveTransform = (dir, node, context) => {
   const { exp, arg } = dir
@@ -31,10 +33,14 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
 
   // im SFC <script setup> inline mode, the exp may have been transformed into
   // _unref(exp)
-  const isUnrefExp =
-    !__BROWSER__ && expString.startsWith(`_${helperNameMap[UNREF]}`)
+  const bindingType = context.bindingMetadata[rawExp]
+  const maybeRef =
+    !__BROWSER__ &&
+    context.inline &&
+    bindingType &&
+    bindingType !== BindingTypes.SETUP_CONST
 
-  if (!isMemberExpression(expString) && !isUnrefExp) {
+  if (!isMemberExpression(expString) && !maybeRef) {
     context.onError(
       createCompilerError(ErrorCodes.X_V_MODEL_MALFORMED_EXPRESSION, exp.loc)
     )
@@ -60,25 +66,40 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
       : createCompoundExpression(['"onUpdate:" + ', arg])
     : `onUpdate:modelValue`
 
-  const assigmentExp = isUnrefExp
-    ? // v-model used on a potentially ref binding in <script setup> inline mode.
+  let assignmentExp: ExpressionNode
+  const eventArg = context.isTS ? `($event: any)` : `$event`
+  if (maybeRef) {
+    if (bindingType === BindingTypes.SETUP_REF) {
+      // v-model used on known ref.
+      assignmentExp = createCompoundExpression([
+        `${eventArg} => (`,
+        createSimpleExpression(rawExp, false, exp.loc),
+        `.value = $event)`
+      ])
+    } else {
+      // v-model used on a potentially ref binding in <script setup> inline mode.
       // the assignment needs to check whether the binding is actually a ref.
-      createSimpleExpression(
-        `$event => (${context.helperString(IS_REF)}(${rawExp}) ` +
-          `? (${rawExp}.value = $event) ` +
-          `: ${context.isTS ? `//@ts-ignore\n` : ``}` +
-          `(${rawExp} = $event)` +
-          `)`,
-        false,
-        exp.loc
-      )
-    : createCompoundExpression([`$event => (`, exp, ` = $event)`])
+      const altAssignment =
+        bindingType === BindingTypes.SETUP_LET ? `${rawExp} = $event` : `null`
+      assignmentExp = createCompoundExpression([
+        `${eventArg} => (${context.helperString(IS_REF)}(${rawExp}) ? `,
+        createSimpleExpression(rawExp, false, exp.loc),
+        `.value = $event : ${altAssignment})`
+      ])
+    }
+  } else {
+    assignmentExp = createCompoundExpression([
+      `${eventArg} => (`,
+      exp,
+      ` = $event)`
+    ])
+  }
 
   const props = [
     // modelValue: foo
     createObjectProperty(propName, dir.exp!),
     // "onUpdate:modelValue": $event => (foo = $event)
-    createObjectProperty(eventName, assigmentExp)
+    createObjectProperty(eventName, assignmentExp)
   ]
 
   // cache v-model handler if applicable (when it doesn't refer any scope vars)

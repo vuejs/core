@@ -83,7 +83,11 @@ export const enum BindingTypes {
   /**
    * a const binding that may be a ref.
    */
-  SETUP_CONST_REF = 'setup-const-ref',
+  SETUP_MAYBE_REF = 'setup-maybe-ref',
+  /**
+   * bindings that are guaranteed to be refs
+   */
+  SETUP_REF = 'setup-ref',
   /**
    * declared by other options, e.g. computed, inject
    */
@@ -91,7 +95,7 @@ export const enum BindingTypes {
 }
 
 export interface BindingMetadata {
-  [key: string]: BindingTypes
+  [key: string]: BindingTypes | undefined
 }
 
 interface SharedTransformCodegenOptions {
