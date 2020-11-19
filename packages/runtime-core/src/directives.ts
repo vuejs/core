@@ -40,6 +40,17 @@ export type SSRDirectiveHook = (
   vnode: VNode
 ) => Data | undefined
 
+export type DirectiveValue<
+  E,
+  A extends string = never,
+  M extends string = never
+> = E | DirectiveValueFull<E, A, M> | DirectiveValueFull<E, A, M>[]
+export interface DirectiveValueFull<E, A extends string, M extends string> {
+  exp: E
+  arg?: A
+  modifiers?: M[]
+}
+
 export interface ObjectDirective<T = any, V = any> {
   created?: DirectiveHook<T, null, V>
   beforeMount?: DirectiveHook<T, null, V>

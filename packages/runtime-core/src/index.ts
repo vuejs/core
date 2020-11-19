@@ -206,6 +206,8 @@ export {
 } from './componentProps'
 export {
   Directive,
+  DirectiveValue,
+  DirectiveValueFull,
   DirectiveBinding,
   DirectiveHook,
   ObjectDirective,

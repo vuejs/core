@@ -245,6 +245,13 @@ interface AriaAttributes {
   'aria-valuetext'?: string
 }
 
+interface InputDirectiveAttribute {
+  'v-model'?:
+    | string
+    | RuntimeCore.DirectiveValue<string, never, 'lazy' | 'trim'>
+    | RuntimeCore.DirectiveValue<number, never, 'lazy' | 'trim' | 'number'>
+}
+
 export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
   innerHTML?: string
 
@@ -460,7 +467,9 @@ export interface InsHTMLAttributes extends HTMLAttributes {
   datetime?: string
 }
 
-export interface InputHTMLAttributes extends HTMLAttributes {
+export interface InputHTMLAttributes
+  extends HTMLAttributes,
+    InputDirectiveAttribute {
   accept?: string
   alt?: string
   autocomplete?: string
@@ -626,7 +635,9 @@ export interface ScriptHTMLAttributes extends HTMLAttributes {
   type?: string
 }
 
-export interface SelectHTMLAttributes extends HTMLAttributes {
+export interface SelectHTMLAttributes
+  extends HTMLAttributes,
+    InputDirectiveAttribute {
   autocomplete?: string
   autofocus?: boolean
   disabled?: boolean
@@ -659,7 +670,9 @@ export interface TableHTMLAttributes extends HTMLAttributes {
   summary?: string
 }
 
-export interface TextareaHTMLAttributes extends HTMLAttributes {
+export interface TextareaHTMLAttributes
+  extends HTMLAttributes,
+    InputDirectiveAttribute {
   autocomplete?: string
   autofocus?: boolean
   cols?: number
@@ -1323,6 +1336,62 @@ type ReservedProps = {
     | ((ref: Element | RuntimeCore.ComponentInternalInstance | null) => void)
 }
 
+type KeyAlias =
+  | 'Enter'
+  | 'Tab'
+  | 'ArrowDown'
+  | 'ArrowLeft'
+  | 'ArrowRight'
+  | 'ArrowUp'
+  | 'End'
+  | 'Home'
+  | 'PageDown'
+  | 'PageUp'
+  | 'Backspace'
+  | 'Alt'
+  | 'CapsLock'
+  | 'Control'
+  | 'Fn'
+  | 'FnLock'
+  | 'Hyper'
+  | 'Meta'
+  | 'NumLock'
+  | 'ScrollLock'
+  | 'Shift'
+  | 'Super'
+  | 'Symbol'
+  | 'SymbolLock'
+
+interface BuiltinDirectives {
+  'v-once'?: RuntimeCore.DirectiveValue<true>
+  'v-show'?: RuntimeCore.DirectiveValue<boolean>
+  'v-html'?: RuntimeCore.DirectiveValue<string>
+  'v-text'?: RuntimeCore.DirectiveValue<string>
+  'v-on'?: RuntimeCore.DirectiveValue<
+    (...args: any[]) => any,
+    keyof Events | string,
+    | 'stop'
+    | 'prevent'
+    | 'capture'
+    | 'self'
+    | 'once'
+    | 'left'
+    | 'right'
+    | 'middle'
+    | 'passive'
+    | KeyAlias
+  >
+  /* 
+   * NOTE:
+   * Some directives are intentionaly left out.
+   * - v-bind/v-pre/v-cloak/v-is: does not make sense in JSX
+   * - v-slot: use children prop
+   * - v-if/v-else-if/v-else: use conditional statement
+   * - v-for: use Array.map
+   * - v-model: supported on components but should be configured in userland.
+   */
+}
+
 type ElementAttrs<T> = T & ReservedProps
 
 type NativeElements = {
@@ -1345,7 +1414,7 @@ declare global {
       // @ts-ignore suppress ts:2374 = Duplicate string index signature.
       [name: string]: any
     }
-    interface IntrinsicAttributes extends ReservedProps {}
+    interface IntrinsicAttributes extends ReservedProps, BuiltinDirectives {}
   }
 }
 
