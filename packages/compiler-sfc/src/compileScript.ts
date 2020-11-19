@@ -156,6 +156,7 @@ export function compileScript(
   const userImports: Record<
     string,
     {
+      isType: boolean
       imported: string | null
       source: string
     }
@@ -202,11 +203,9 @@ export function compileScript(
     try {
       return _parse(input, options).program.body
     } catch (e) {
-      e.message = `[@vue/compiler-sfc] ${e.message}\n\n${generateCodeFrame(
-        source,
-        e.pos + offset,
-        e.pos + offset + 1
-      )}`
+      e.message = `[@vue/compiler-sfc] ${e.message}\n\n${
+        sfc.filename
+      }\n${generateCodeFrame(source, e.pos + offset, e.pos + offset + 1)}`
       throw e
     }
   }
@@ -217,20 +216,25 @@ export function compileScript(
     end: number = node.end! + startOffset
   ) {
     throw new Error(
-      `[@vue/compiler-sfc] ${msg}\n\n` +
-        generateCodeFrame(source, node.start! + startOffset, end)
+      `[@vue/compiler-sfc] ${msg}\n\n${sfc.filename}\n${generateCodeFrame(
+        source,
+        node.start! + startOffset,
+        end
+      )}`
     )
   }
 
   function registerUserImport(
     source: string,
     local: string,
-    imported: string | false
+    imported: string | false,
+    isType: boolean
   ) {
     if (source === 'vue' && imported) {
       userImportAlias[imported] = local
     }
     userImports[local] = {
+      isType,
       imported: imported || null,
       source
     }
@@ -425,7 +429,12 @@ export function compileScript(
             specifier.type === 'ImportSpecifier' &&
             specifier.imported.type === 'Identifier' &&
             specifier.imported.name
-          registerUserImport(node.source.value, specifier.local.name, imported)
+          registerUserImport(
+            node.source.value,
+            specifier.local.name,
+            imported,
+            node.importKind === 'type'
+          )
         }
       } else if (node.type === 'ExportDefaultDeclaration') {
         // export default
@@ -575,7 +584,12 @@ export function compileScript(
             error(`different imports aliased to same local name.`, specifier)
           }
         } else {
-          registerUserImport(source, local, imported)
+          registerUserImport(
+            source,
+            local,
+            imported,
+            node.importKind === 'type'
+          )
         }
       }
       if (removed === node.specifiers.length) {
@@ -790,7 +804,8 @@ export function compileScript(
   if (optionsArg) {
     Object.assign(bindingMetadata, analyzeBindingsFromOptions(optionsArg))
   }
-  for (const [key, { source }] of Object.entries(userImports)) {
+  for (const [key, { isType, source }] of Object.entries(userImports)) {
+    if (isType) continue
     bindingMetadata[key] =
       source.endsWith('.vue') || source === 'vue'
         ? BindingTypes.SETUP_CONST
@@ -841,7 +856,9 @@ export function compileScript(
       } else if (err) {
         if (err.loc) {
           err.message +=
-            `\n` +
+            `\n\n` +
+            sfc.filename +
+            '\n' +
             generateCodeFrame(
               source,
               err.loc.start.offset,
@@ -868,7 +885,9 @@ export function compileScript(
     // return bindings from setup
     const allBindings: Record<string, any> = { ...setupBindings }
     for (const key in userImports) {
-      allBindings[key] = true
+      if (!userImports[key].isType) {
+        allBindings[key] = true
+      }
     }
     returned = `{ ${Object.keys(allBindings).join(', ')} }`
   }
