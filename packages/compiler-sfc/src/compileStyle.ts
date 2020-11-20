@@ -1,10 +1,4 @@
-import postcss, {
-  ProcessOptions,
-  LazyResult,
-  Result,
-  ResultMap,
-  ResultMessage
-} from 'postcss'
+import postcss, { Message, ProcessOptions, Result, SourceMap } from 'postcss'
 import trimPlugin from './stylePluginTrim'
 import scopedPlugin from './stylePluginScoped'
 import {
@@ -15,6 +9,7 @@ import {
 } from './stylePreprocessors'
 import { RawSourceMap } from 'source-map'
 import { cssVarsPlugin } from './cssVars'
+import LazyResult from 'postcss/lib/lazy-result'
 
 export interface SFCStyleCompileOptions {
   source: string
@@ -140,7 +135,7 @@ export function doCompileStyle(
 
   let result: LazyResult | undefined
   let code: string | undefined
-  let outMap: ResultMap | undefined
+  let outMap: SourceMap | undefined
   // stylus output include plain css. so need remove the repeat item
   const dependencies = new Set(
     preProcessedSource ? preProcessedSource.dependencies : []
@@ -153,7 +148,7 @@ export function doCompileStyle(
     errors.push(...preProcessedSource.errors)
   }
 
-  const recordPlainCssDependencies = (messages: ResultMessage[]) => {
+  const recordPlainCssDependencies = (messages: Message[]) => {
     messages.forEach(msg => {
       if (msg.type === 'dependency') {
         // postcss output path is absolute position path
