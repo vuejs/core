@@ -10,7 +10,7 @@ import {
 import { SFCDescriptor } from './parse'
 import { rewriteDefault } from './rewriteDefault'
 import { ParserPlugin } from '@babel/parser'
-import postcss, { Root } from 'postcss'
+import { Root } from 'postcss'
 import hash from 'hash-sum'
 
 export const CSS_VARS_HELPER = `useCssVars`
@@ -64,9 +64,9 @@ export interface CssVarsPluginOptions {
   isProd: boolean
 }
 
-export const cssVarsPlugin = postcss.plugin<CssVarsPluginOptions>(
-  'vue-scoped',
-  opts => (root: Root) => {
+export const cssVarsPlugin = (opts: CssVarsPluginOptions) => ({
+  postcssPlugin: 'vue-scoped',
+  Root(root: Root) {
     const { id, isProd } = opts!
     const shortId = id.replace(/^data-v-/, '')
     root.walkDecls(decl => {
@@ -78,7 +78,7 @@ export const cssVarsPlugin = postcss.plugin<CssVarsPluginOptions>(
       }
     })
   }
-)
+})
 
 export function genCssVarsCode(
   vars: string[],
