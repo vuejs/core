@@ -80,6 +80,10 @@ export const TeleportImpl = {
 
     const disabled = isTeleportDisabled(n2.props)
     const { shapeFlag, children } = n2
+    // Verify whether the target is an SVGElement or not.
+    const targetIsSVG = (target: RendererElement) =>
+      Boolean(target && (target.tagName === 'svg' || target.ownerSVGElement))
+
     if (n1 == null) {
       // insert anchors in the main view
       const placeholder = (n2.el = __DEV__
@@ -90,11 +94,11 @@ export const TeleportImpl = {
         : createText(''))
       insert(placeholder, container, anchor)
       insert(mainAnchor, container, anchor)
-
       const target = (n2.target = resolveTarget(n2.props, querySelector))
       const targetAnchor = (n2.targetAnchor = createText(''))
       if (target) {
         insert(targetAnchor, target)
+        isSVG = isSVG || targetIsSVG(target)
       } else if (__DEV__ && !disabled) {
         warn('Invalid Teleport target on mount:', target, `(${typeof target})`)
       }
@@ -129,6 +133,7 @@ export const TeleportImpl = {
       const wasDisabled = isTeleportDisabled(n1.props)
       const currentContainer = wasDisabled ? container : target
       const currentAnchor = wasDisabled ? mainAnchor : targetAnchor
+      isSVG = isSVG || targetIsSVG(target)
 
       if (n2.dynamicChildren) {
         // fast path when the teleport happens to be a block root
