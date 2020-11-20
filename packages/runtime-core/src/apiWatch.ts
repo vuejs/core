@@ -329,11 +329,7 @@ function traverse(value: unknown, seen: Set<unknown> = new Set()) {
   seen.add(value)
   if (isRef(value)) {
     traverse(value.value, seen)
-  } else if (isArray(value)) {
-    for (let i = 0; i < value.length; i++) {
-      traverse(value[i], seen)
-    }
-  } else if (isSet(value) || isMap(value)) {
+  } else if (isArray(value) || isSet(value) || isMap(value)) {
     value.forEach((v: any) => {
       traverse(v, seen)
     })
