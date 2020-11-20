@@ -10,3 +10,5 @@ export default () => ({
   Rule: handleTrim,
   AtRule: handleTrim
 })
+
+module.exports.postcss = true

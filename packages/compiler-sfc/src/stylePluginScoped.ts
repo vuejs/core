@@ -182,3 +182,5 @@ export default (id: any) => ({
 function isSpaceCombinator(node: Node) {
   return node.type === 'combinator' && /^\s+$/.test(node.value)
 }
+
+module.exports.postcss = true

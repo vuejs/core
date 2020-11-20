@@ -140,3 +140,5 @@ export function injectCssVarsCalls(
     `export default __default__`
   )
 }
+
+module.exports.postcss = true
