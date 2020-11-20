@@ -49,13 +49,13 @@
     "merge-source-map": "^1.1.0",
     "postcss-modules": "^3.2.2",
     "postcss-selector-parser": "^6.0.4",
-    "source-map": "^0.6.1",
-    "postcss": "^8.1.8"
+    "source-map": "^0.6.1"
   },
   "devDependencies": {
     "@types/consolidate": "^0.14.0",
     "@types/lru-cache": "^5.1.0",
     "pug": "^2.0.4",
-    "sass": "^1.26.9"
+    "sass": "^1.26.9",
+    "postcss": "^8.1.8"
   }
 }
