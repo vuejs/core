@@ -79,6 +79,7 @@ export const cssVarsPlugin = (opts: CssVarsPluginOptions) => ({
     })
   }
 })
+cssVarsPlugin.postcss = true
 
 export function genCssVarsCode(
   vars: string[],
@@ -140,5 +141,3 @@ export function injectCssVarsCalls(
     `export default __default__`
   )
 }
-
-module.exports.postcss = true

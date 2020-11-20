@@ -5,10 +5,11 @@ const handleTrim = ({ raws }: Rule | AtRule) => {
   if (raws.after) raws.after = '\n'
 }
 
-export default () => ({
+const trimPlugin = () => ({
   postcssPlugin: 'trim',
   Rule: handleTrim,
   AtRule: handleTrim
 })
+trimPlugin.postcss = true
 
-module.exports.postcss = true
+export default trimPlugin

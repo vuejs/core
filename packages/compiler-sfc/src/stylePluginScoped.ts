@@ -5,7 +5,7 @@ import { warn } from './warn'
 const animationNameRE = /^(-\w+-)?animation-name$/
 const animationRE = /^(-\w+-)?animation$/
 
-export default (id: any) => ({
+const vueScopedPlugin = (id: any) => ({
   postcssPlugin: 'vue-scoped',
   Root(root: Root) {
     const keyframes = Object.create(null)
@@ -178,9 +178,10 @@ export default (id: any) => ({
     }
   }
 })
+vueScopedPlugin.postcss = true
+
+export default vueScopedPlugin
 
 function isSpaceCombinator(node: Node) {
   return node.type === 'combinator' && /^\s+$/.test(node.value)
 }
-
-module.exports.postcss = true
