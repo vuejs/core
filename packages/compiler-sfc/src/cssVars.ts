@@ -16,26 +16,13 @@ import hash from 'hash-sum'
 export const CSS_VARS_HELPER = `useCssVars`
 export const cssVarRE = /\bv-bind\(\s*(?:'([^']+)'|"([^"]+)"|([^'"][^)]*))\s*\)/g
 
-/**
- * Given an SFC descriptor, generate the CSS variables object string that can be
- * passed to `compileTemplate` as `compilerOptions.ssrCssVars`.
- * @public
- */
-export function generateCssVars(
-  sfc: SFCDescriptor,
-  id: string,
-  isProd: boolean
-): string {
-  return sfc.cssVars.length ? genCssVarsFromList(sfc.cssVars, id, isProd) : ''
-}
-
-function genCssVarsFromList(
+export function genCssVarsFromList(
   vars: string[],
   id: string,
   isProd: boolean
 ): string {
   return `{\n  ${vars
-    .map(v => `"${genVarName(id, v, isProd)}": (${v})`)
+    .map(key => `"${genVarName(id, key, isProd)}": (${key})`)
     .join(',\n  ')}\n}`
 }
 
@@ -68,12 +55,11 @@ export const cssVarsPlugin = postcss.plugin<CssVarsPluginOptions>(
   'vue-scoped',
   opts => (root: Root) => {
     const { id, isProd } = opts!
-    const shortId = id.replace(/^data-v-/, '')
     root.walkDecls(decl => {
       // rewrite CSS variables
       if (cssVarRE.test(decl.value)) {
         decl.value = decl.value.replace(cssVarRE, (_, $1, $2, $3) => {
-          return `var(--${genVarName(shortId, $1 || $2 || $3, isProd)})`
+          return `var(--${genVarName(id, $1 || $2 || $3, isProd)})`
         })
       }
     })

@@ -20,15 +20,19 @@ export interface SFCStyleCompileOptions {
   source: string
   filename: string
   id: string
-  map?: RawSourceMap
   scoped?: boolean
   trim?: boolean
   isProd?: boolean
+  inMap?: RawSourceMap
   preprocessLang?: PreprocessLang
   preprocessOptions?: any
   preprocessCustomRequire?: (id: string) => any
   postcssOptions?: any
   postcssPlugins?: any[]
+  /**
+   * @deprecated
+   */
+  map?: RawSourceMap
 }
 
 export interface SFCAsyncStyleCompileOptions extends SFCStyleCompileOptions {
@@ -92,16 +96,21 @@ export function doCompileStyle(
   } = options
   const preprocessor = preprocessLang && processors[preprocessLang]
   const preProcessedSource = preprocessor && preprocess(options, preprocessor)
-  const map = preProcessedSource ? preProcessedSource.map : options.map
+  const map = preProcessedSource
+    ? preProcessedSource.map
+    : options.inMap || options.map
   const source = preProcessedSource ? preProcessedSource.code : options.source
 
+  const shortId = id.replace(/^data-v-/, '')
+  const longId = `data-v-${shortId}`
+
   const plugins = (postcssPlugins || []).slice()
-  plugins.unshift(cssVarsPlugin({ id, isProd }))
+  plugins.unshift(cssVarsPlugin({ id: shortId, isProd }))
   if (trim) {
     plugins.push(trimPlugin())
   }
   if (scoped) {
-    plugins.push(scopedPlugin(id))
+    plugins.push(scopedPlugin(longId))
   }
   let cssModules: Record<string, string> | undefined
   if (modules) {

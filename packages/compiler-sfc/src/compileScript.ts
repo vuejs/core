@@ -167,6 +167,7 @@ export function compileScript(
   let optionsArg: ObjectExpression | undefined
   let optionsType: TSTypeLiteral | undefined
   let hasAwait = false
+  let hasInlinedSsrRenderFn = false
   // context types to generate
   let propsType = `{}`
   let emitType = `(e: string, ...args: any[]) => void`
@@ -820,15 +821,24 @@ export function compileScript(
   // 10. generate return statement
   let returned
   if (options.inlineTemplate) {
-    if (sfc.template) {
+    if (sfc.template && !sfc.template.src) {
+      if (options.templateOptions && options.templateOptions.ssr) {
+        hasInlinedSsrRenderFn = true
+      }
       // inline render function mode - we are going to compile the template and
       // inline it right here
       const { code, ast, preamble, tips, errors } = compileTemplate({
-        ...options.templateOptions,
         filename,
         source: sfc.template.content,
         inMap: sfc.template.map,
+        ...options.templateOptions,
+        id: scopeId,
+        scoped: sfc.styles.some(s => s.scoped),
+        isProd: options.isProd,
+        ssrCssVars: sfc.cssVars,
         compilerOptions: {
+          ...(options.templateOptions &&
+            options.templateOptions.compilerOptions),
           inline: true,
           isTS,
           bindingMetadata
@@ -883,6 +893,9 @@ export function compileScript(
   // 11. finalize default export
   // expose: [] makes <script setup> components "closed" by default.
   let runtimeOptions = `\n  expose: [],`
+  if (hasInlinedSsrRenderFn) {
+    runtimeOptions += `\n  __ssrInlineRender: true,`
+  }
   if (optionsArg) {
     runtimeOptions += `\n  ${scriptSetup.content
       .slice(optionsArg.start! + 1, optionsArg.end! - 1)
