@@ -2,7 +2,7 @@ import * as m from 'monaco-editor'
 import { compile, CompilerError, CompilerOptions } from '@vue/compiler-dom'
 import { compile as ssrCompile } from '@vue/compiler-ssr'
 import { compilerOptions, initOptions, ssrMode } from './options'
-import { watchEffect } from '@vue/runtime-dom'
+import { toRaw, watchEffect } from '@vue/runtime-dom'
 import { SourceMapConsumer } from 'source-map'
 import theme from './theme'
 
@@ -67,6 +67,7 @@ window.init = () => {
         errors.filter(e => e.loc).map(formatError)
       )
       console.log(`AST: `, ast)
+      console.log(`Options: `, toRaw(compilerOptions))
       lastSuccessfulCode = code + `\n\n// Check the console for the AST`
       lastSuccessfulMap = new SourceMapConsumer(map!)
       lastSuccessfulMap!.computeColumnSpans()

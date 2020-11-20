@@ -16,6 +16,7 @@ export const compilerOptions: CompilerOptions = reactive({
   bindingMetadata: {
     TestComponent: BindingTypes.SETUP_CONST,
     setupRef: BindingTypes.SETUP_REF,
+    setupConst: BindingTypes.SETUP_CONST,
     setupLet: BindingTypes.SETUP_LET,
     setupMaybeRef: BindingTypes.SETUP_MAYBE_REF,
     setupProp: BindingTypes.PROPS
