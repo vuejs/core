@@ -20,18 +20,6 @@ export interface SFCParseOptions {
   compiler?: TemplateCompiler
 }
 
-export interface SFCDescriptor {
-  filename: string
-  source: string
-  template: SFCTemplateBlock | null
-  script: SFCScriptBlock | null
-  scriptSetup: SFCScriptBlock | null
-  scriptCompiled: SFCScriptBlock | null
-  styles: SFCStyleBlock[]
-  customBlocks: SFCBlock[]
-  cssVars: string[]
-}
-
 export interface SFCBlock {
   type: string
   content: string
@@ -59,6 +47,17 @@ export interface SFCStyleBlock extends SFCBlock {
   type: 'style'
   scoped?: boolean
   module?: string | boolean
+}
+
+export interface SFCDescriptor {
+  filename: string
+  source: string
+  template: SFCTemplateBlock | null
+  script: SFCScriptBlock | null
+  scriptSetup: SFCScriptBlock | null
+  styles: SFCStyleBlock[]
+  customBlocks: SFCBlock[]
+  cssVars: string[]
 }
 
 export interface SFCParseResult {
@@ -98,7 +97,6 @@ export function parse(
     template: null,
     script: null,
     scriptSetup: null,
-    scriptCompiled: null,
     styles: [],
     customBlocks: [],
     cssVars: []
