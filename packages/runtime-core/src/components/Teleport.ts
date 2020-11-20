@@ -81,8 +81,11 @@ export const TeleportImpl = {
     const disabled = isTeleportDisabled(n2.props)
     const { shapeFlag, children } = n2
     // Verify whether the target is an SVGElement or not.
-    const targetIsSVG = (target: RendererElement) =>
-      Boolean(target && (target.tagName === 'svg' || target.ownerSVGElement))
+    const targetIsSVG = (target: RendererElement) => {
+      return Boolean(
+        target && (target instanceof SVGElement || target.ownerSVGElement)
+      )
+    }
 
     if (n1 == null) {
       // insert anchors in the main view
