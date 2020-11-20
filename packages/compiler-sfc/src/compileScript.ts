@@ -27,7 +27,7 @@ import { walk } from 'estree-walker'
 import { RawSourceMap } from 'source-map'
 import { CSS_VARS_HELPER, genCssVarsCode, injectCssVarsCalls } from './cssVars'
 import { compileTemplate, SFCTemplateCompileOptions } from './compileTemplate'
-import { warnOnce } from './warn'
+import { warnExperimental, warnOnce } from './warn'
 
 const DEFINE_OPTIONS = 'defineOptions'
 
@@ -73,13 +73,8 @@ export function compileScript(
 ): SFCScriptBlock {
   const { script, scriptSetup, source, filename } = sfc
 
-  if (__DEV__ && !__TEST__ && scriptSetup) {
-    warnOnce(
-      `<script setup> is still an experimental proposal.\n` +
-        `Follow its status at https://github.com/vuejs/rfcs/pull/227.\n` +
-        `It's also recommended to pin your vue dependencies to exact versions ` +
-        `to avoid breakage.`
-    )
+  if (scriptSetup) {
+    warnExperimental(`<script setup>`, 227)
   }
 
   // for backwards compat
@@ -523,15 +518,7 @@ export function compileScript(
       node.body.type === 'ExpressionStatement'
     ) {
       if (enableRefSugar) {
-        if (__DEV__ && !__TEST__) {
-          warnOnce(
-            `ref: sugar is still an experimental proposal and is not ` +
-              `guaranteed to be a part of <script setup>.\n` +
-              `Follow its status at https://github.com/vuejs/rfcs/pull/228.\n` +
-              `It's also recommended to pin your vue dependencies to exact versions ` +
-              `to avoid breakage.`
-          )
-        }
+        warnExperimental(`ref: sugar`, 228)
         s.overwrite(
           node.label.start! + startOffset,
           node.body.start! + startOffset,
