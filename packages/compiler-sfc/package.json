@@ -31,7 +31,8 @@
   },
   "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/compiler-sfc#readme",
   "peerDependencies": {
-    "vue": "3.0.2"
+    "vue": "3.0.2",
+    "postcss": "^8.1.8"
   },
   "dependencies": {
     "@babel/parser": "^7.12.0",
