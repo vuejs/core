@@ -188,7 +188,7 @@ export function normalizeEmitsOptions(
   } else {
     extend(normalized, raw)
   }
-  return (comp.__emits = normalized)
+  return (comp.__emits = raw ? normalized : null)
 }
 
 // Check if an incoming prop key is a declared emit event listener.
