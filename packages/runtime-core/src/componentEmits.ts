@@ -169,7 +169,11 @@ export function normalizeEmitsOptions(
       extend(normalized, normalizeEmitsOptions(raw, appContext, true))
     }
     if (!asMixin && appContext.mixins.length) {
-      appContext.mixins.forEach(extendEmits)
+      appContext.mixins.forEach(raw => {
+        if (Object.keys(raw).length) {
+          extendEmits(raw)
+        }
+      })
     }
     if (comp.extends) {
       extendEmits(comp.extends)
@@ -188,9 +192,7 @@ export function normalizeEmitsOptions(
   } else {
     extend(normalized, raw)
   }
-  // #2651 if normalized is empty and !raw should return null
-  return (comp.__emits =
-    !Object.keys(normalized).length && !raw ? null : normalized)
+  return (comp.__emits = normalized)
 }
 
 // Check if an incoming prop key is a declared emit event listener.
