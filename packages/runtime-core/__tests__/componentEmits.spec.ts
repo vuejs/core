@@ -1,7 +1,13 @@
 // Note: emits and listener fallthrough is tested in
 // ./rendererAttrsFallthrough.spec.ts.
 
-import { render, defineComponent, h, nodeOps } from '@vue/runtime-test'
+import {
+  createApp,
+  render,
+  defineComponent,
+  h,
+  nodeOps
+} from '@vue/runtime-test'
 import { isEmitListener } from '../src/componentEmits'
 
 describe('component: emit', () => {
@@ -126,6 +132,37 @@ describe('component: emit', () => {
     expect(
       `Component emitted event "bar" but it is neither declared`
     ).toHaveBeenWarned()
+  })
+
+  // #2651
+  test('should not warning if app mixin an empty object', () => {
+    const Foo = defineComponent({
+      props: ['modelValue'],
+      render() {},
+      created() {
+        // @ts-ignore
+        this.$emit('update:modelValue')
+      }
+    })
+
+    const Root = defineComponent({
+      components: {
+        Foo
+      },
+      render() {
+        return h('div', [h(Foo)])
+      }
+    })
+
+    const app = createApp(Root)
+    app.mixin({})
+
+    const root = nodeOps.createElement('div')
+    app.mount(root)
+
+    expect(
+      `Component emitted event "update:modelValue" but it is neither declared`
+    ).not.toHaveBeenWarned()
   })
 
   test('should not warn if has equivalent onXXX prop', () => {
