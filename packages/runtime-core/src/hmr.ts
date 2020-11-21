@@ -9,6 +9,7 @@ import {
 } from './component'
 import { queueJob, queuePostFlushCb } from './scheduler'
 import { extend } from '@vue/shared'
+import { warn } from './warning'
 
 export let isHmrUpdating = false
 
@@ -67,6 +68,14 @@ function createRecord(
   id: string,
   component: ComponentOptions | ClassComponent
 ): boolean {
+  if (!component) {
+    warn(
+      `HMR API usage is out of date.\n` +
+        `Please upgrade vue-loader/vite/rollup-plugin-vue or other relevant ` +
+        `depdendency that handles Vue SFC compilation.`
+    )
+    component = {}
+  }
   if (map.has(id)) {
     return false
   }
