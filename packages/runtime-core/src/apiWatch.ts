@@ -86,7 +86,7 @@ export function watch<
   T extends Readonly<Array<WatchSource<unknown> | object>>,
   Immediate extends Readonly<boolean> = false
 >(
-  sources: T,
+  sources: Readonly<[...T]>,
   cb: WatchCallback<MapSources<T, false>, MapSources<T, Immediate>>,
   options?: WatchOptions<Immediate>
 ): WatchStopHandle

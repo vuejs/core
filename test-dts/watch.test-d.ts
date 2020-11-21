@@ -10,12 +10,13 @@ watch(source, (value, oldValue) => {
   expectType<string>(oldValue)
 })
 
+// const array and normal array will be treated equally
 watch([source, source2, source3], (values, oldValues) => {
-  expectType<(string | number)[]>(values)
-  expectType<(string | number)[]>(oldValues)
+  expectType<[string, string, number]>(values)
+  expectType<[string, string, number]>(oldValues)
 })
 
-// const array
+// const array and normal array will be treated equally
 watch([source, source2, source3] as const, (values, oldValues) => {
   expectType<Readonly<[string, string, number]>>(values)
   expectType<Readonly<[string, string, number]>>(oldValues)
@@ -34,13 +35,15 @@ watch(
 watch(
   [source, source2, source3],
   (values, oldValues) => {
-    expectType<(string | number)[]>(values)
-    expectType<(string | number | undefined)[]>(oldValues)
+    expectType<[string, string, number]>(values)
+    expectType<[string | undefined, string | undefined, number | undefined]>(
+      oldValues
+    )
   },
   { immediate: true }
 )
 
-// const array
+// const array and normal array will be treated equally
 watch(
   [source, source2, source3] as const,
   (values, oldValues) => {
