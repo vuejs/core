@@ -825,4 +825,17 @@ describe('reactivity/effect', () => {
     expect(fnSpy).toHaveBeenCalledTimes(2)
     expect(has.value).toBe(true)
   })
+
+  it('should not track hasOwnProperty when Object.prototype.hasOwnProperty.call', () => {
+    const obj: any = reactive({})
+    const has = ref(false)
+    const fnSpy = jest.fn()
+    effect(() => {
+      fnSpy()
+      has.value = Object.prototype.hasOwnProperty.call(obj, 'foo')
+    })
+    obj.foo = 1
+    expect(fnSpy).toHaveBeenCalledTimes(1)
+    expect(has.value).toBe(false)
+  })
 })
