@@ -9,7 +9,7 @@ import {
   traverseStaticChildren
 } from '../renderer'
 import { VNode, VNodeArrayChildren, VNodeProps } from '../vnode'
-import { isString, ShapeFlags } from '@vue/shared'
+import { isString, isSVGTag, ShapeFlags } from '@vue/shared'
 import { warn } from '../warning'
 
 export type TeleportVNode = VNode<RendererNode, RendererElement, TeleportProps>
@@ -80,12 +80,6 @@ export const TeleportImpl = {
 
     const disabled = isTeleportDisabled(n2.props)
     const { shapeFlag, children } = n2
-    // Verify whether the target is an SVGElement or not.
-    const targetIsSVG = (target: RendererElement) => {
-      return Boolean(
-        target && (target instanceof SVGElement || target.ownerSVGElement)
-      )
-    }
 
     if (n1 == null) {
       // insert anchors in the main view
@@ -101,7 +95,7 @@ export const TeleportImpl = {
       const targetAnchor = (n2.targetAnchor = createText(''))
       if (target) {
         insert(targetAnchor, target)
-        isSVG = isSVG || targetIsSVG(target)
+        isSVG = isSVG || isSVGTag(target.tag)
       } else if (__DEV__ && !disabled) {
         warn('Invalid Teleport target on mount:', target, `(${typeof target})`)
       }
@@ -136,7 +130,7 @@ export const TeleportImpl = {
       const wasDisabled = isTeleportDisabled(n1.props)
       const currentContainer = wasDisabled ? container : target
       const currentAnchor = wasDisabled ? mainAnchor : targetAnchor
-      isSVG = isSVG || targetIsSVG(target)
+      isSVG = isSVG || (target && isSVGTag(target.tag))
 
       if (n2.dynamicChildren) {
         // fast path when the teleport happens to be a block root
