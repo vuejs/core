@@ -188,8 +188,9 @@ export function normalizeEmitsOptions(
   } else {
     extend(normalized, raw)
   }
-  // #2651 if raw is undefined should return null
-  return (comp.__emits = raw ? normalized : null)
+  // #2651 if normalized is empty should return null
+  return (comp.__emits =
+    Object.keys(normalized).length === 0 ? null : normalized)
 }
 
 // Check if an incoming prop key is a declared emit event listener.
