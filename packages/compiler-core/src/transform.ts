@@ -15,7 +15,8 @@ import {
   CacheExpression,
   createCacheExpression,
   TemplateLiteral,
-  createVNodeCall
+  createVNodeCall,
+  ConstantTypes
 } from './ast'
 import {
   isString,
@@ -245,7 +246,7 @@ export function createTransformContext(
         `_hoisted_${context.hoists.length}`,
         false,
         exp.loc,
-        true
+        ConstantTypes.CAN_HOIST
       )
       identifier.hoisted = exp
       return identifier

@@ -1,5 +1,6 @@
 import path from 'path'
 import {
+  ConstantTypes,
   createSimpleExpression,
   ExpressionNode,
   NodeTransform,
@@ -159,19 +160,26 @@ function getImportsExpressionExp(
       return existing.exp as ExpressionNode
     }
     const name = `_imports_${importsArray.length}`
-    const exp = createSimpleExpression(name, false, loc, true)
-    exp.isRuntimeConstant = true
+    const exp = createSimpleExpression(
+      name,
+      false,
+      loc,
+      ConstantTypes.CAN_HOIST
+    )
     context.imports.add({ exp, path })
     if (hash && path) {
-      const ret = context.hoist(
-        createSimpleExpression(`${name} + '${hash}'`, false, loc, true)
+      return context.hoist(
+        createSimpleExpression(
+          `${name} + '${hash}'`,
+          false,
+          loc,
+          ConstantTypes.CAN_HOIST
+        )
       )
-      ret.isRuntimeConstant = true
-      return ret
     } else {
       return exp
     }
   } else {
-    return createSimpleExpression(`''`, false, loc, true)
+    return createSimpleExpression(`''`, false, loc, ConstantTypes.CAN_HOIST)
   }
 }

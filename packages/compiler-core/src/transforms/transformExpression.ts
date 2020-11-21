@@ -14,7 +14,8 @@ import {
   ExpressionNode,
   SimpleExpressionNode,
   CompoundExpressionNode,
-  createCompoundExpression
+  createCompoundExpression,
+  ConstantTypes
 } from '../ast'
 import { advancePositionWithClone, isSimpleIdentifier } from '../utils'
 import {
@@ -190,25 +191,26 @@ export function processExpression(
 
   // fast path if expression is a simple identifier.
   const rawExp = node.content
-  // bail on parens to prevent any possible function invocations.
-  const bailConstant = rawExp.indexOf(`(`) > -1
+  // bail constant on parens (function invocation) and dot (member access)
+  const bailConstant = rawExp.indexOf(`(`) > -1 || rawExp.indexOf('.') > 0
+
   if (isSimpleIdentifier(rawExp)) {
-    // const bindings exposed from setup - we know they never change
-    // marking it as runtime constant will prevent it from being listed as
-    // a dynamic prop.
-    if (bindingMetadata[node.content] === BindingTypes.SETUP_CONST) {
-      node.isRuntimeConstant = true
-    }
-    if (
-      !asParams &&
-      !context.identifiers[rawExp] &&
-      !isGloballyWhitelisted(rawExp) &&
-      !isLiteralWhitelisted(rawExp)
-    ) {
+    const isScopeVarReference = context.identifiers[rawExp]
+    const isAllowedGlobal = isGloballyWhitelisted(rawExp)
+    const isLiteral = isLiteralWhitelisted(rawExp)
+    if (!asParams && !isScopeVarReference && !isAllowedGlobal && !isLiteral) {
+      // const bindings exposed from setup can be skipped for patching but
+      // cannot be hoisted to module scope
+      if (bindingMetadata[node.content] === BindingTypes.SETUP_CONST) {
+        node.constType = ConstantTypes.CAN_SKIP_PATCH
+      }
       node.content = rewriteIdentifier(rawExp)
-    } else if (!context.identifiers[rawExp] && !bailConstant) {
-      // mark node constant for hoisting unless it's referring a scope variable
-      node.isConstant = true
+    } else if (!isScopeVarReference) {
+      if (isLiteral) {
+        node.constType = ConstantTypes.CAN_STRINGIFY
+      } else {
+        node.constType = ConstantTypes.CAN_HOIST
+      }
     }
     return node
   }
@@ -342,7 +344,7 @@ export function processExpression(
           start: advancePositionWithClone(node.loc.start, source, start),
           end: advancePositionWithClone(node.loc.start, source, end)
         },
-        id.isConstant /* isConstant */
+        id.isConstant ? ConstantTypes.CAN_STRINGIFY : ConstantTypes.NOT_CONSTANT
       )
     )
     if (i === ids.length - 1 && end < rawExp.length) {
@@ -355,7 +357,9 @@ export function processExpression(
     ret = createCompoundExpression(children, node.loc)
   } else {
     ret = node
-    ret.isConstant = !bailConstant
+    ret.constType = bailConstant
+      ? ConstantTypes.NOT_CONSTANT
+      : ConstantTypes.CAN_STRINGIFY
   }
   ret.identifiers = Object.keys(knownIds)
   return ret
