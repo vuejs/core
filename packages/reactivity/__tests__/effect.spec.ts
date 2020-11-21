@@ -6,7 +6,8 @@ import {
   TrackOpTypes,
   TriggerOpTypes,
   DebuggerEvent,
-  markRaw
+  markRaw,
+  ref
 } from '../src/index'
 import { ITERATE_KEY } from '../src/effect'
 
@@ -810,5 +811,18 @@ describe('reactivity/effect', () => {
     observed.length = 0
     expect(dummy).toBe(0)
     expect(record).toBeUndefined()
+  })
+
+  it('should track hasOwnProperty when obj call it itself', () => {
+    const obj: any = reactive({})
+    const has = ref(false)
+    const fnSpy = jest.fn()
+    effect(() => {
+      fnSpy()
+      has.value = obj.hasOwnProperty('foo')
+    })
+    obj.foo = 1
+    expect(fnSpy).toHaveBeenCalledTimes(2)
+    expect(has.value).toBe(true)
   })
 })
