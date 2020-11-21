@@ -188,6 +188,7 @@ export function normalizeEmitsOptions(
   } else {
     extend(normalized, raw)
   }
+  // #2651 if raw is undefined should return null
   return (comp.__emits = raw ? normalized : null)
 }
 
