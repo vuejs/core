@@ -188,7 +188,7 @@ export function normalizeEmitsOptions(
   } else {
     extend(normalized, raw)
   }
-  // #2651 if normalized is empty should return null
+  // #2651 if normalized is empty and !raw should return null
   return (comp.__emits =
     !Object.keys(normalized).length && !raw ? null : normalized)
 }
