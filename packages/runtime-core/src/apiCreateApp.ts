@@ -176,6 +176,11 @@ export function createAppAPI<HostElement>(
 
       mixin(mixin: ComponentOptions) {
         if (__FEATURE_OPTIONS_API__) {
+          // #2651
+          if (Object.keys(mixin).length === 0) {
+            return app
+          }
+
           if (!context.mixins.includes(mixin)) {
             context.mixins.push(mixin)
             // global mixin with props/emits de-optimizes props/emits
