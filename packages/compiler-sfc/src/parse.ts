@@ -11,7 +11,7 @@ import { RawSourceMap, SourceMapGenerator } from 'source-map'
 import { TemplateCompiler } from './compileTemplate'
 import { Statement } from '@babel/types'
 import { parseCssVars } from './cssVars'
-import { warnExperimental, warnOnce } from './warn'
+import { warnExperimental } from './warn'
 
 export interface SFCParseOptions {
   filename?: string
@@ -168,9 +168,11 @@ export function parse(
       case 'style':
         const style = createBlock(node, source, pad) as SFCStyleBlock
         if (style.attrs.vars) {
-          warnOnce(
-            `<style vars> has been replaced by a new proposal: ` +
-              `https://github.com/vuejs/rfcs/pull/231`
+          errors.push(
+            new SyntaxError(
+              `<style vars> has been replaced by a new proposal: ` +
+                `https://github.com/vuejs/rfcs/pull/231`
+            )
           )
         }
         descriptor.styles.push(style)
