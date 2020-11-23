@@ -19,7 +19,8 @@ export const compilerOptions: CompilerOptions = reactive({
     setupConst: BindingTypes.SETUP_CONST,
     setupLet: BindingTypes.SETUP_LET,
     setupMaybeRef: BindingTypes.SETUP_MAYBE_REF,
-    setupProp: BindingTypes.PROPS
+    setupProp: BindingTypes.PROPS,
+    vMySetupDir: BindingTypes.SETUP_CONST
   }
 })
 

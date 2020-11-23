@@ -147,6 +147,29 @@ const bar = 1
       assertCode(content)
     })
 
+    test('referencing scope components and directives', () => {
+      const { content } = compile(
+        `
+        <script setup>
+        import ChildComp from './Child.vue'
+        import SomeOtherComp from './Other.vue'
+        import vMyDir from './my-dir'
+        </script>
+        <template>
+          <div v-my-dir></div>
+          <ChildComp/>
+          <some-other-comp/>
+        </template>
+        `,
+        { inlineTemplate: true }
+      )
+      expect(content).toMatch('[_unref(vMyDir)]')
+      expect(content).toMatch('_createVNode(ChildComp)')
+      // kebab-case component support
+      expect(content).toMatch('_createVNode(SomeOtherComp)')
+      assertCode(content)
+    })
+
     test('avoid unref() when necessary', () => {
       // function, const, component import
       const { content } = compile(

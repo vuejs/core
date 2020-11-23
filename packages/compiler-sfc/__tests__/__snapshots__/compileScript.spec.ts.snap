@@ -177,6 +177,32 @@ return (_ctx, _cache) => {
 }"
 `;
 
+exports[`SFC compile <script setup> inlineTemplate mode referencing scope components and directives 1`] = `
+"import { unref as _unref, createVNode as _createVNode, withDirectives as _withDirectives, Fragment as _Fragment, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
+
+import ChildComp from './Child.vue'
+        import SomeOtherComp from './Other.vue'
+        import vMyDir from './my-dir'
+        
+export default {
+  expose: [],
+  setup(__props) {
+
+        
+return (_ctx, _cache) => {
+  return (_openBlock(), _createBlock(_Fragment, null, [
+    _withDirectives(_createVNode(\\"div\\", null, null, 512 /* NEED_PATCH */), [
+      [_unref(vMyDir)]
+    ]),
+    _createVNode(ChildComp),
+    _createVNode(SomeOtherComp)
+  ], 64 /* STABLE_FRAGMENT */))
+}
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> inlineTemplate mode should work 1`] = `
 "import { toDisplayString as _toDisplayString, createVNode as _createVNode, Fragment as _Fragment, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
 
