@@ -1,4 +1,3 @@
-import { shallowReadonly } from '@vue/reactivity'
 import { getCurrentInstance, SetupContext } from './component'
 import { EmitFn, EmitsOptions } from './componentEmits'
 import { ComponentObjectPropsOptions, ExtractPropTypes } from './componentProps'
@@ -32,9 +31,7 @@ export function defineProps(props?: any) {
         `compiled away and passing it at runtime has no effect.`
     )
   }
-  return __DEV__
-    ? shallowReadonly(getCurrentInstance()!.props)
-    : getCurrentInstance()!.props
+  return null as any
 }
 
 export function defineEmit<
@@ -52,7 +49,7 @@ export function defineEmit(emitOptions?: any) {
         `compiled away and passing it at runtime has no effect.`
     )
   }
-  return getCurrentInstance()!.emit
+  return null as any
 }
 
 export function useContext(): SetupContext {
