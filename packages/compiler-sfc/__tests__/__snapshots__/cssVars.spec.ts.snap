@@ -86,8 +86,8 @@ import { ref } from 'vue'
 export default {
   expose: [],
   props: {
-            foo: String
-          },
+          foo: String
+        },
   setup(__props) {
 
 _useCssVars(_ctx => ({

@@ -33,38 +33,55 @@ return { x }
       export const n = 1"
 `;
 
-exports[`SFC compile <script setup> defineOptions() 1`] = `
+exports[`SFC compile <script setup> defineEmit() 1`] = `
 "export default {
   expose: [],
-  props: {
-    foo: String
-  },
-  emit: ['a', 'b'],
-  setup(__props, { props, emit }) {
+  emits: ['foo', 'bar'],
+  setup(__props, { emit: myEmit }) {
 
 
 
-const bar = 1
-
-return { props, emit, bar }
+return { myEmit }
 }
 
 }"
 `;
 
-exports[`SFC compile <script setup> errors should allow defineOptions() referencing imported binding 1`] = `
+exports[`SFC compile <script setup> defineProps() 1`] = `
+"export default {
+  expose: [],
+  props: {
+  foo: String
+},
+  setup(__props) {
+
+const props = __props
+
+const bar = 1
+
+return { props, bar }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> errors should allow defineProps/Emit() referencing imported binding 1`] = `
 "import { bar } from './bar'
-          
+        
 export default {
   expose: [],
   props: {
-              foo: {
-                default: () => bar
-              }
-            },
+          foo: {
+            default: () => bar
+          }
+        },
+  emits: {
+          foo: () => bar > 1
+        },
   setup(__props) {
 
-          
+        
+        
         
 return { bar }
 }
@@ -72,17 +89,21 @@ return { bar }
 }"
 `;
 
-exports[`SFC compile <script setup> errors should allow defineOptions() referencing scope var 1`] = `
+exports[`SFC compile <script setup> errors should allow defineProps/Emit() referencing scope var 1`] = `
 "export default {
   expose: [],
   props: {
-              foo: {
-                default: bar => bar + 1
-              }
-            },
+            foo: {
+              default: bar => bar + 1
+            }
+          },
+  emits: {
+            foo: bar => bar > 1
+          },
   setup(__props) {
 
           const bar = 1
+          
           
         
 return { bar }
@@ -594,37 +615,18 @@ return { a, b, c, d, x }
 }"
 `;
 
-exports[`SFC compile <script setup> with TypeScript defineOptions w/ runtime options 1`] = `
+exports[`SFC compile <script setup> with TypeScript defineEmit w/ type (union) 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
-
-
-export default _defineComponent({
-  expose: [],
-  props: { foo: String },
-  emits: ['a', 'b'],
-  setup(__props, { props, emit }) {
-
-
-
-return { props, emit }
-}
-
-})"
-`;
-
-exports[`SFC compile <script setup> with TypeScript defineOptions w/ type / extract emits (union) 1`] = `
-"import { Slots as _Slots, defineComponent as _defineComponent } from 'vue'
 
       
 export default _defineComponent({
   expose: [],
   emits: [\\"foo\\", \\"bar\\", \\"baz\\"] as unknown as undefined,
   setup(__props, { emit }: {
-  props: {},
-  emit: ((e: 'foo' | 'bar') => void) | ((e: 'baz', id: number) => void),
-  slots: Slots,
-  attrs: Record<string, any>
-}) {
+        emit: (((e: 'foo' | 'bar') => void) | ((e: 'baz', id: number) => void)),
+        slots: any,
+        attrs: any
+      }) {
 
       
       
@@ -634,19 +636,18 @@ return { emit }
 })"
 `;
 
-exports[`SFC compile <script setup> with TypeScript defineOptions w/ type / extract emits 1`] = `
-"import { Slots as _Slots, defineComponent as _defineComponent } from 'vue'
+exports[`SFC compile <script setup> with TypeScript defineEmit w/ type 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
 
       
 export default _defineComponent({
   expose: [],
   emits: [\\"foo\\", \\"bar\\"] as unknown as undefined,
   setup(__props, { emit }: {
-  props: {},
-  emit: (e: 'foo' | 'bar') => void,
-  slots: Slots,
-  attrs: Record<string, any>
-}) {
+        emit: ((e: 'foo' | 'bar') => void),
+        slots: any,
+        attrs: any
+      }) {
 
       
       
@@ -656,7 +657,7 @@ return { emit }
 })"
 `;
 
-exports[`SFC compile <script setup> with TypeScript defineOptions w/ type / extract props 1`] = `
+exports[`SFC compile <script setup> with TypeScript defineProps w/ type 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
       interface Test {}
@@ -689,11 +690,54 @@ export default _defineComponent({
     literalUnionMixed: { type: [String, Number, Boolean], required: true },
     intersection: { type: Object, required: true }
   } as unknown as undefined,
-  setup(__props) {
+  setup(__props: {
+        string: string
+        number: number
+        boolean: boolean
+        object: object
+        objectLiteral: { a: number }
+        fn: (n: number) => void
+        functionRef: Function
+        objectRef: Object
+        array: string[]
+        arrayRef: Array<any>
+        tuple: [number, number]
+        set: Set<string>
+        literal: 'foo'
+        optional?: any
+        recordRef: Record<string, null>
+        interface: Test
+        alias: Alias
+
+        union: string | number
+        literalUnion: 'foo' | 'bar'
+        literalUnionMixed: 'foo' | 1 | boolean
+        intersection: Test & {}
+      }) {
 
       
       
 return {  }
+}
+
+})"
+`;
+
+exports[`SFC compile <script setup> with TypeScript defineProps/Emit w/ runtime options 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+
+export default _defineComponent({
+  expose: [],
+  props: { foo: String },
+  emits: ['a', 'b'],
+  setup(__props, { emit }) {
+
+const props = __props
+
+
+
+return { props, emit }
 }
 
 })"

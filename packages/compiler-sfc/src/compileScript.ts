@@ -29,7 +29,8 @@ import { CSS_VARS_HELPER, genCssVarsCode, injectCssVarsCalls } from './cssVars'
 import { compileTemplate, SFCTemplateCompileOptions } from './compileTemplate'
 import { warnExperimental, warnOnce } from './warn'
 
-const DEFINE_OPTIONS = 'defineOptions'
+const DEFINE_PROPS = 'defineProps'
+const DEFINE_EMIT = 'defineEmit'
 
 export interface SFCScriptCompileOptions {
   /**
@@ -162,17 +163,16 @@ export function compileScript(
   const refIdentifiers: Set<Identifier> = new Set()
   const enableRefSugar = options.refSugar !== false
   let defaultExport: Node | undefined
-  let hasOptionsCall = false
-  let optionsExp: string | undefined
-  let optionsArg: ObjectExpression | undefined
-  let optionsType: TSTypeLiteral | undefined
+  let hasDefinePropsCall = false
+  let hasDefineEmitCall = false
+  let propsRuntimeDecl: Node | undefined
+  let propsTypeDecl: TSTypeLiteral | undefined
+  let propsIdentifier: string | undefined
+  let emitRuntimeDecl: Node | undefined
+  let emitTypeDecl: TSFunctionType | TSUnionType | undefined
+  let emitIdentifier: string | undefined
   let hasAwait = false
   let hasInlinedSsrRenderFn = false
-  // context types to generate
-  let propsType = `{}`
-  let emitType = `(e: string, ...args: any[]) => void`
-  let slotsType = `Slots`
-  let attrsType = `Record<string, any>`
   // props/emits declared via types
   const typeDeclaredProps: Record<string, PropTypeData> = {}
   const typeDeclaredEmits: Set<string> = new Set()
@@ -236,38 +236,28 @@ export function compileScript(
     }
   }
 
-  function processDefineOptions(node: Node): boolean {
-    if (isCallOf(node, DEFINE_OPTIONS)) {
-      if (hasOptionsCall) {
-        error(`duplicate ${DEFINE_OPTIONS}() call`, node)
+  function processDefineProps(node: Node): boolean {
+    if (isCallOf(node, DEFINE_PROPS)) {
+      if (hasDefinePropsCall) {
+        error(`duplicate ${DEFINE_PROPS}() call`, node)
       }
-      hasOptionsCall = true
-      const optsArg = node.arguments[0]
-      if (optsArg) {
-        if (optsArg.type === 'ObjectExpression') {
-          optionsArg = optsArg
-        } else {
-          error(
-            `${DEFINE_OPTIONS}() argument must be an object literal.`,
-            optsArg
-          )
-        }
-      }
+      hasDefinePropsCall = true
+      propsRuntimeDecl = node.arguments[0]
       // context call has type parameters - infer runtime types from it
       if (node.typeParameters) {
-        if (optionsArg) {
+        if (propsRuntimeDecl) {
           error(
-            `${DEFINE_OPTIONS}() cannot accept both type and non-type arguments ` +
+            `${DEFINE_PROPS}() cannot accept both type and non-type arguments ` +
               `at the same time. Use one or the other.`,
             node
           )
         }
         const typeArg = node.typeParameters.params[0]
         if (typeArg.type === 'TSTypeLiteral') {
-          optionsType = typeArg
+          propsTypeDecl = typeArg
         } else {
           error(
-            `type argument passed to ${DEFINE_OPTIONS}() must be a literal type.`,
+            `type argument passed to ${DEFINE_PROPS}() must be a literal type.`,
             typeArg
           )
         }
@@ -275,6 +265,56 @@ export function compileScript(
       return true
     }
     return false
+  }
+
+  function processDefineEmit(node: Node): boolean {
+    if (isCallOf(node, DEFINE_EMIT)) {
+      if (hasDefineEmitCall) {
+        error(`duplicate ${DEFINE_EMIT}() call`, node)
+      }
+      hasDefineEmitCall = true
+      emitRuntimeDecl = node.arguments[0]
+      if (node.typeParameters) {
+        if (emitRuntimeDecl) {
+          error(
+            `${DEFINE_EMIT}() cannot accept both type and non-type arguments ` +
+              `at the same time. Use one or the other.`,
+            node
+          )
+        }
+        const typeArg = node.typeParameters.params[0]
+        if (
+          typeArg.type === 'TSFunctionType' ||
+          typeArg.type === 'TSUnionType'
+        ) {
+          emitTypeDecl = typeArg
+        } else {
+          error(
+            `type argument passed to ${DEFINE_EMIT}() must be a function type ` +
+              `or a union of function types.`,
+            typeArg
+          )
+        }
+      }
+      return true
+    }
+    return false
+  }
+
+  function checkInvalidScopeReference(node: Node | undefined, method: string) {
+    if (!node) return
+    walkIdentifiers(node, id => {
+      if (setupBindings[id.name]) {
+        error(
+          `\`${method}()\` in <script setup> cannot reference locally ` +
+            `declared variables because it will be hoisted outside of the ` +
+            `setup() function. If your component options requires initialization ` +
+            `in the module scope, use a separate normal <script> to export ` +
+            `the options instead.`,
+          id
+        )
+      }
+    })
   }
 
   function processRefExpression(exp: Expression, statement: LabeledStatement) {
@@ -562,7 +602,10 @@ export function compileScript(
           specifier.imported.name
         const source = node.source.value
         const existing = userImports[local]
-        if (source === 'vue' && imported === DEFINE_OPTIONS) {
+        if (
+          source === 'vue' &&
+          (imported === DEFINE_PROPS || imported === DEFINE_EMIT)
+        ) {
           removeSpecifier(specifier)
         } else if (existing) {
           if (existing.source === source && existing.imported === imported) {
@@ -585,22 +628,37 @@ export function compileScript(
       }
     }
 
+    // process `defineProps` and `defineEmit` calls
     if (
       node.type === 'ExpressionStatement' &&
-      processDefineOptions(node.expression)
+      (processDefineProps(node.expression) ||
+        processDefineEmit(node.expression))
     ) {
       s.remove(node.start! + startOffset, node.end! + startOffset)
     }
-
     if (node.type === 'VariableDeclaration' && !node.declare) {
       for (const decl of node.declarations) {
-        if (decl.init && processDefineOptions(decl.init)) {
-          optionsExp = scriptSetup.content.slice(decl.id.start!, decl.id.end!)
-          if (node.declarations.length === 1) {
-            s.remove(node.start! + startOffset, node.end! + startOffset)
-          } else {
-            s.remove(decl.start! + startOffset, decl.end! + startOffset)
+        if (decl.init) {
+          const isDefineProps = processDefineProps(decl.init)
+          if (isDefineProps) {
+            propsIdentifier = scriptSetup.content.slice(
+              decl.id.start!,
+              decl.id.end!
+            )
           }
+          const isDefineEmit = processDefineEmit(decl.init)
+          if (isDefineEmit) {
+            emitIdentifier = scriptSetup.content.slice(
+              decl.id.start!,
+              decl.id.end!
+            )
+          }
+          if (isDefineProps || isDefineEmit)
+            if (node.declarations.length === 1) {
+              s.remove(node.start! + startOffset, node.end! + startOffset)
+            } else {
+              s.remove(decl.start! + startOffset, decl.end! + startOffset)
+            }
         }
       }
     }
@@ -691,61 +749,17 @@ export function compileScript(
   }
 
   // 4. extract runtime props/emits code from setup context type
-  if (optionsType) {
-    for (const m of optionsType.members) {
-      if (m.type === 'TSPropertySignature' && m.key.type === 'Identifier') {
-        const typeNode = m.typeAnnotation!.typeAnnotation
-        const typeString = scriptSetup.content.slice(
-          typeNode.start!,
-          typeNode.end!
-        )
-        const key = m.key.name
-        if (key === 'props') {
-          propsType = typeString
-          if (typeNode.type === 'TSTypeLiteral') {
-            extractRuntimeProps(typeNode, typeDeclaredProps, declaredTypes)
-          } else {
-            // TODO be able to trace references
-            error(`props type must be an object literal type`, typeNode)
-          }
-        } else if (key === 'emit') {
-          emitType = typeString
-          if (
-            typeNode.type === 'TSFunctionType' ||
-            typeNode.type === 'TSUnionType'
-          ) {
-            extractRuntimeEmits(typeNode, typeDeclaredEmits)
-          } else {
-            // TODO be able to trace references
-            error(`emit type must be a function type`, typeNode)
-          }
-        } else if (key === 'attrs') {
-          attrsType = typeString
-        } else if (key === 'slots') {
-          slotsType = typeString
-        } else {
-          error(`invalid setup context property: "${key}"`, m.key)
-        }
-      }
-    }
+  if (propsTypeDecl) {
+    extractRuntimeProps(propsTypeDecl, typeDeclaredProps, declaredTypes)
+  }
+  if (emitTypeDecl) {
+    extractRuntimeEmits(emitTypeDecl, typeDeclaredEmits)
   }
 
   // 5. check useOptions args to make sure it doesn't reference setup scope
   // variables
-  if (optionsArg) {
-    walkIdentifiers(optionsArg, id => {
-      if (setupBindings[id.name]) {
-        error(
-          `\`${DEFINE_OPTIONS}()\` in <script setup> cannot reference locally ` +
-            `declared variables because it will be hoisted outside of the ` +
-            `setup() function. If your component options requires initialization ` +
-            `in the module scope, use a separate normal <script> to export ` +
-            `the options instead.`,
-          id
-        )
-      }
-    })
-  }
+  checkInvalidScopeReference(propsRuntimeDecl, DEFINE_PROPS)
+  checkInvalidScopeReference(emitRuntimeDecl, DEFINE_PROPS)
 
   // 6. remove non-script content
   if (script) {
@@ -766,31 +780,17 @@ export function compileScript(
     s.remove(endOffset, source.length)
   }
 
-  // 7. finalize setup argument signature.
-  let args = optionsExp ? `__props, ${optionsExp}` : `__props`
-  if (optionsExp && optionsType) {
-    if (slotsType === 'Slots') {
-      helperImports.add('Slots')
-    }
-    args += `: {
-  props: ${propsType},
-  emit: ${emitType},
-  slots: ${slotsType},
-  attrs: ${attrsType}
-}`
-  }
-
-  // 8. analyze binding metadata
+  // 7. analyze binding metadata
   if (scriptAst) {
     Object.assign(bindingMetadata, analyzeScriptBindings(scriptAst))
   }
-  if (optionsType) {
-    for (const key in typeDeclaredProps) {
+  if (propsRuntimeDecl) {
+    for (const key of getObjectOrArrayExpressionKeys(propsRuntimeDecl)) {
       bindingMetadata[key] = BindingTypes.PROPS
     }
   }
-  if (optionsArg) {
-    Object.assign(bindingMetadata, analyzeBindingsFromOptions(optionsArg))
+  for (const key in typeDeclaredProps) {
+    bindingMetadata[key] = BindingTypes.PROPS
   }
   for (const [key, { isType, source }] of Object.entries(userImports)) {
     if (isType) continue
@@ -803,7 +803,7 @@ export function compileScript(
     bindingMetadata[key] = setupBindings[key]
   }
 
-  // 9. inject `useCssVars` calls
+  // 8. inject `useCssVars` calls
   if (cssVars.length) {
     helperImports.add(CSS_VARS_HELPER)
     helperImports.add('unref')
@@ -816,6 +816,35 @@ export function compileScript(
         !!options.isProd
       )}\n`
     )
+  }
+
+  // 9. finalize setup() argument signature
+  let args = `__props`
+  if (propsTypeDecl) {
+    args += `: ${scriptSetup.content.slice(
+      propsTypeDecl.start!,
+      propsTypeDecl.end!
+    )}`
+  }
+  // inject user assignment of props
+  // we use a default __props so that template expressions referencing props
+  // can use it directly
+  if (propsIdentifier) {
+    s.prependRight(startOffset, `\nconst ${propsIdentifier} = __props`)
+  }
+  if (emitIdentifier) {
+    args +=
+      emitIdentifier === `emit` ? `, { emit }` : `, { emit: ${emitIdentifier} }`
+    if (emitTypeDecl) {
+      args += `: {
+        emit: (${scriptSetup.content.slice(
+          emitTypeDecl.start!,
+          emitTypeDecl.end!
+        )}),
+        slots: any,
+        attrs: any
+      }`
+    }
   }
 
   // 10. generate return statement
@@ -896,13 +925,19 @@ export function compileScript(
   if (hasInlinedSsrRenderFn) {
     runtimeOptions += `\n  __ssrInlineRender: true,`
   }
-  if (optionsArg) {
-    runtimeOptions += `\n  ${scriptSetup.content
-      .slice(optionsArg.start! + 1, optionsArg.end! - 1)
+  if (propsRuntimeDecl) {
+    runtimeOptions += `\n  props: ${scriptSetup.content
+      .slice(propsRuntimeDecl.start!, propsRuntimeDecl.end!)
       .trim()},`
-  } else if (optionsType) {
-    runtimeOptions +=
-      genRuntimeProps(typeDeclaredProps) + genRuntimeEmits(typeDeclaredEmits)
+  } else if (propsTypeDecl) {
+    runtimeOptions += genRuntimeProps(typeDeclaredProps)
+  }
+  if (emitRuntimeDecl) {
+    runtimeOptions += `\n  emits: ${scriptSetup.content
+      .slice(emitRuntimeDecl.start!, emitRuntimeDecl.end!)
+      .trim()},`
+  } else if (emitTypeDecl) {
+    runtimeOptions += genRuntimeEmits(typeDeclaredEmits)
   }
   if (isTS) {
     // for TS, make sure the exported type is still valid type with
@@ -975,13 +1010,16 @@ function walkDeclaration(
     const isConst = node.kind === 'const'
     // export const foo = ...
     for (const { id, init } of node.declarations) {
-      const isUseOptionsCall = !!(isConst && isCallOf(init, DEFINE_OPTIONS))
+      const isDefineCall = !!(
+        isConst &&
+        (isCallOf(init, DEFINE_PROPS) || isCallOf(init, DEFINE_EMIT))
+      )
       if (id.type === 'Identifier') {
         let bindingType
         if (
           // if a declaration is a const literal, we can mark it so that
           // the generated render fn code doesn't need to unref() it
-          isUseOptionsCall ||
+          isDefineCall ||
           (isConst &&
             canNeverBeRef(init!, userImportAlias['reactive'] || 'reactive'))
         ) {
@@ -997,9 +1035,9 @@ function walkDeclaration(
         }
         bindings[id.name] = bindingType
       } else if (id.type === 'ObjectPattern') {
-        walkObjectPattern(id, bindings, isConst, isUseOptionsCall)
+        walkObjectPattern(id, bindings, isConst, isDefineCall)
       } else if (id.type === 'ArrayPattern') {
-        walkArrayPattern(id, bindings, isConst, isUseOptionsCall)
+        walkArrayPattern(id, bindings, isConst, isDefineCall)
       }
     }
   } else if (
@@ -1016,7 +1054,7 @@ function walkObjectPattern(
   node: ObjectPattern,
   bindings: Record<string, BindingTypes>,
   isConst: boolean,
-  isUseOptionsCall = false
+  isDefineCall = false
 ) {
   for (const p of node.properties) {
     if (p.type === 'ObjectProperty') {
@@ -1024,13 +1062,13 @@ function walkObjectPattern(
       if (p.key.type === 'Identifier') {
         if (p.key === p.value) {
           // const { x } = ...
-          bindings[p.key.name] = isUseOptionsCall
+          bindings[p.key.name] = isDefineCall
             ? BindingTypes.SETUP_CONST
             : isConst
               ? BindingTypes.SETUP_MAYBE_REF
               : BindingTypes.SETUP_LET
         } else {
-          walkPattern(p.value, bindings, isConst, isUseOptionsCall)
+          walkPattern(p.value, bindings, isConst, isDefineCall)
         }
       }
     } else {
@@ -1047,10 +1085,10 @@ function walkArrayPattern(
   node: ArrayPattern,
   bindings: Record<string, BindingTypes>,
   isConst: boolean,
-  isUseOptionsCall = false
+  isDefineCall = false
 ) {
   for (const e of node.elements) {
-    e && walkPattern(e, bindings, isConst, isUseOptionsCall)
+    e && walkPattern(e, bindings, isConst, isDefineCall)
   }
 }
 
@@ -1058,10 +1096,10 @@ function walkPattern(
   node: Node,
   bindings: Record<string, BindingTypes>,
   isConst: boolean,
-  isUseOptionsCall = false
+  isDefineCall = false
 ) {
   if (node.type === 'Identifier') {
-    bindings[node.name] = isUseOptionsCall
+    bindings[node.name] = isDefineCall
       ? BindingTypes.SETUP_CONST
       : isConst
         ? BindingTypes.SETUP_MAYBE_REF
@@ -1077,7 +1115,7 @@ function walkPattern(
     walkArrayPattern(node, bindings, isConst)
   } else if (node.type === 'AssignmentPattern') {
     if (node.left.type === 'Identifier') {
-      bindings[node.left.name] = isUseOptionsCall
+      bindings[node.left.name] = isDefineCall
         ? BindingTypes.SETUP_CONST
         : isConst
           ? BindingTypes.SETUP_MAYBE_REF
@@ -1418,43 +1456,6 @@ function isFunction(node: Node): node is FunctionNode {
   return /Function(?:Expression|Declaration)$|Method$/.test(node.type)
 }
 
-function getObjectExpressionKeys(node: ObjectExpression): string[] {
-  const keys = []
-  for (const prop of node.properties) {
-    if (
-      (prop.type === 'ObjectProperty' || prop.type === 'ObjectMethod') &&
-      !prop.computed
-    ) {
-      if (prop.key.type === 'Identifier') {
-        keys.push(prop.key.name)
-      } else if (prop.key.type === 'StringLiteral') {
-        keys.push(prop.key.value)
-      }
-    }
-  }
-  return keys
-}
-
-function getArrayExpressionKeys(node: ArrayExpression): string[] {
-  const keys = []
-  for (const element of node.elements) {
-    if (element && element.type === 'StringLiteral') {
-      keys.push(element.value)
-    }
-  }
-  return keys
-}
-
-function getObjectOrArrayExpressionKeys(property: ObjectProperty): string[] {
-  if (property.value.type === 'ArrayExpression') {
-    return getArrayExpressionKeys(property.value)
-  }
-  if (property.value.type === 'ObjectExpression') {
-    return getObjectExpressionKeys(property.value)
-  }
-  return []
-}
-
 function isCallOf(node: Node | null, name: string): node is CallExpression {
   return !!(
     node &&
@@ -1542,7 +1543,7 @@ function analyzeBindingsFromOptions(node: ObjectExpression): BindingMetadata {
       if (property.key.name === 'props') {
         // props: ['foo']
         // props: { foo: ... }
-        for (const key of getObjectOrArrayExpressionKeys(property)) {
+        for (const key of getObjectOrArrayExpressionKeys(property.value)) {
           bindings[key] = BindingTypes.PROPS
         }
       }
@@ -1551,7 +1552,7 @@ function analyzeBindingsFromOptions(node: ObjectExpression): BindingMetadata {
       else if (property.key.name === 'inject') {
         // inject: ['foo']
         // inject: { foo: {} }
-        for (const key of getObjectOrArrayExpressionKeys(property)) {
+        for (const key of getObjectOrArrayExpressionKeys(property.value)) {
           bindings[key] = BindingTypes.OPTIONS
         }
       }
@@ -1598,4 +1599,41 @@ function analyzeBindingsFromOptions(node: ObjectExpression): BindingMetadata {
   }
 
   return bindings
+}
+
+function getObjectExpressionKeys(node: ObjectExpression): string[] {
+  const keys = []
+  for (const prop of node.properties) {
+    if (
+      (prop.type === 'ObjectProperty' || prop.type === 'ObjectMethod') &&
+      !prop.computed
+    ) {
+      if (prop.key.type === 'Identifier') {
+        keys.push(prop.key.name)
+      } else if (prop.key.type === 'StringLiteral') {
+        keys.push(prop.key.value)
+      }
+    }
+  }
+  return keys
+}
+
+function getArrayExpressionKeys(node: ArrayExpression): string[] {
+  const keys = []
+  for (const element of node.elements) {
+    if (element && element.type === 'StringLiteral') {
+      keys.push(element.value)
+    }
+  }
+  return keys
+}
+
+function getObjectOrArrayExpressionKeys(value: Node): string[] {
+  if (value.type === 'ArrayExpression') {
+    return getArrayExpressionKeys(value)
+  }
+  if (value.type === 'ObjectExpression') {
+    return getObjectExpressionKeys(value)
+  }
+  return []
 }

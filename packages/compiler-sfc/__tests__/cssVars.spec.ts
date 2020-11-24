@@ -20,13 +20,11 @@ describe('CSS vars injection', () => {
   test('w/ <script setup> binding analysis', () => {
     const { content } = compileSFCScript(
       `<script setup>
-        import { defineOptions, ref } from 'vue'
+        import { defineProps, ref } from 'vue'
         const color = 'red'
         const size = ref('10px')
-        defineOptions({
-          props: {
-            foo: String
-          }
+        defineProps({
+          foo: String
         })
         </script>\n` +
         `<style>
