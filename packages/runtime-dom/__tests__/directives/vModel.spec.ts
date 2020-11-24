@@ -6,7 +6,8 @@ import {
   vModelDynamic,
   withDirectives,
   VNode,
-  ref
+  ref,
+  reactive
 } from '@vue/runtime-dom'
 
 const triggerEvent = (type: string, el: Element) => {
@@ -428,6 +429,78 @@ describe('vModel', () => {
     expect(bar.checked).toEqual(true)
 
     data.value = []
+    await nextTick()
+    expect(foo.checked).toEqual(false)
+    expect(bar.checked).toEqual(false)
+  })
+
+  it(`should support the reactive array in setup as a checkbox model`, async () => {
+    const value = reactive<string[]>([])
+
+    const component = defineComponent({
+      setup() {
+        return () => {
+          return [
+            withVModel(
+              h('input', {
+                type: 'checkbox',
+                class: 'foo',
+                value: 'foo',
+                'onUpdate:modelValue': setValue.bind(this)
+              }),
+              value
+            ),
+            withVModel(
+              h('input', {
+                type: 'checkbox',
+                class: 'bar',
+                value: 'bar',
+                'onUpdate:modelValue': setValue.bind(this)
+              }),
+              value
+            )
+          ]
+        }
+      }
+    })
+    render(h(component), root)
+
+    const foo = root.querySelector('.foo')
+    const bar = root.querySelector('.bar')
+
+    foo.checked = true
+    triggerEvent('change', foo)
+    await nextTick()
+    expect(value).toMatchObject(['foo'])
+
+    bar.checked = true
+    triggerEvent('change', bar)
+    await nextTick()
+    expect(value).toMatchObject(['foo', 'bar'])
+
+    bar.checked = false
+    triggerEvent('change', bar)
+    await nextTick()
+    expect(value).toMatchObject(['foo'])
+
+    foo.checked = false
+    triggerEvent('change', foo)
+    await nextTick()
+    expect(value).toMatchObject([])
+
+    value.length = 0
+    value.push('foo')
+    await nextTick()
+    expect(bar.checked).toEqual(false)
+    expect(foo.checked).toEqual(true)
+
+    value.length = 0
+    value.push('bar')
+    await nextTick()
+    expect(foo.checked).toEqual(false)
+    expect(bar.checked).toEqual(true)
+
+    value.length = 0
     await nextTick()
     expect(foo.checked).toEqual(false)
     expect(bar.checked).toEqual(false)
