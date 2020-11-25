@@ -14,7 +14,9 @@
 * **types:** ensure correct type for toRef and toRefs on existing refs ([8e20375](https://github.com/vuejs/vue-next/commit/8e2037537219219d5ab6456e8a29bd0235eac311))
 
 
-### Features
+### Experimental Features
+
+> Note: support for experimental features in SFCs have been updated according to changes in ongoing RFCs. This release may break existing usage of such experimental features.
 
 * **compiler-sfc:** compileScript inline render function mode ([886ed76](https://github.com/vuejs/vue-next/commit/886ed7681dd203c07ff3b504538328f43e14d9b0))
 * **compiler-sfc:** new script setup implementation ([556560f](https://github.com/vuejs/vue-next/commit/556560fae31d9e406cfae656089657b6332686c1))
