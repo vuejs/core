@@ -192,7 +192,7 @@ const myEmit = defineEmit(['foo', 'bar'])
         <script setup>
         import ChildComp from './Child.vue'
         import SomeOtherComp from './Other.vue'
-        import vMyDir from './my-dir'
+        import myDir from './my-dir'
         </script>
         <template>
           <div v-my-dir></div>
@@ -202,7 +202,7 @@ const myEmit = defineEmit(['foo', 'bar'])
         `,
         { inlineTemplate: true }
       )
-      expect(content).toMatch('[_unref(vMyDir)]')
+      expect(content).toMatch('[_unref(myDir)]')
       expect(content).toMatch('_createVNode(ChildComp)')
       // kebab-case component support
       expect(content).toMatch('_createVNode(SomeOtherComp)')

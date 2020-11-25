@@ -257,11 +257,7 @@ export function resolveComponentType(
   // this is skipped in browser build since browser builds do not perform
   // binding analysis.
   if (!__BROWSER__) {
-    const fromSetup = resolveSetupReference(
-      tag,
-      capitalize(camelize(tag)),
-      context
-    )
+    const fromSetup = resolveSetupReference(tag, context)
     if (fromSetup) {
       return fromSetup
     }
@@ -273,22 +269,23 @@ export function resolveComponentType(
   return toValidAssetId(tag, `component`)
 }
 
-function resolveSetupReference(
-  name: string,
-  interopName: string,
-  context: TransformContext
-) {
+function resolveSetupReference(name: string, context: TransformContext) {
   const bindings = context.bindingMetadata
   if (!bindings) {
     return
   }
 
+  const camelName = camelize(name)
+  const PascalName = capitalize(camelName)
   const checkType = (type: BindingTypes) => {
     if (bindings[name] === type) {
       return name
     }
-    if (bindings[interopName] === type) {
-      return interopName
+    if (bindings[camelName] === type) {
+      return camelName
+    }
+    if (bindings[PascalName] === type) {
+      return PascalName
     }
   }
 
@@ -615,15 +612,7 @@ function buildDirectiveArgs(
   } else {
     // user directive.
     // see if we have directives exposed via <script setup>
-    const fromSetup =
-      !__BROWSER__ &&
-      resolveSetupReference(
-        dir.name,
-        // v-my-dir -> vMyDir
-        'v' + capitalize(camelize(dir.name)),
-        context
-      )
-
+    const fromSetup = !__BROWSER__ && resolveSetupReference(dir.name, context)
     if (fromSetup) {
       dirArgs.push(fromSetup)
     } else {
