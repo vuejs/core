@@ -1,3 +1,34 @@
+## [3.0.3](https://github.com/vuejs/vue-next/compare/v3.0.2...v3.0.3) (2020-11-25)
+
+
+### Bug Fixes
+
+* **compiler-core/compiler-sfc:** handle destructure assignment expressions ([4c6078c](https://github.com/vuejs/vue-next/commit/4c6078ce25226ab9e10ec4eba5c745058f670b3d))
+* **compiler-sfc:** fix script setup ts helpers ([6e3abc8](https://github.com/vuejs/vue-next/commit/6e3abc86058f967bcf6fad94c62572989d4dbcbc))
+* **hmr:** fix updates for imported but not yet rendered components ([9c23ddf](https://github.com/vuejs/vue-next/commit/9c23ddf9c593dcf6d20bc911ec95d9b674f23dc8))
+* **runtime-core:** components with static props and slots should not be force updated ([51e43e0](https://github.com/vuejs/vue-next/commit/51e43e07998eeade153c42a9a9b3eda8fe885c88))
+* **runtime-core:** ensure scheduler queue is always non-null ([#2567](https://github.com/vuejs/vue-next/issues/2567)) ([af95604](https://github.com/vuejs/vue-next/commit/af9560455d9719a4c5f0d6588d04bfb4c06c8654))
+* **runtime-dom:** use correct import source ([f28ca55](https://github.com/vuejs/vue-next/commit/f28ca556925147bb109d5ba77c5dafaf17d57322))
+* **style-vars:** apply css vars in post flush effect ([3a6b120](https://github.com/vuejs/vue-next/commit/3a6b1207fa39cb35eed5bae0b5fdcdb465926bca))
+* handle case of ref declaration without initial value ([8485cd4](https://github.com/vuejs/vue-next/commit/8485cd48437bf47880a61b03c57090e8bfdf527b))
+* **types:** ensure correct type for toRef and toRefs on existing refs ([8e20375](https://github.com/vuejs/vue-next/commit/8e2037537219219d5ab6456e8a29bd0235eac311))
+
+
+### Features
+
+* **compiler-sfc:** compileScript inline render function mode ([886ed76](https://github.com/vuejs/vue-next/commit/886ed7681dd203c07ff3b504538328f43e14d9b0))
+* **compiler-sfc:** new script setup implementation ([556560f](https://github.com/vuejs/vue-next/commit/556560fae31d9e406cfae656089657b6332686c1))
+* **compiler-sfc:** new SFC css varaible injection implementation ([41bb7fa](https://github.com/vuejs/vue-next/commit/41bb7fa330e78c4a354a2e67742bd13bee2f4293))
+* **compiler-sfc:** support kebab-case components in `<script setup>` sfc template ([3f99e23](https://github.com/vuejs/vue-next/commit/3f99e239e03a8861c462d4ee91feb82066ab3e28))
+* **runtime-core:** explicit expose API ([0e59770](https://github.com/vuejs/vue-next/commit/0e59770b9282992f6a5af4d8fef33dafb948fc8b))
+
+
+### Reverts
+
+* Revert "wip: allow scriptCompiled to be cached on sfc descriptor" ([9db4288](https://github.com/vuejs/vue-next/commit/9db42889e65a0e80cdbae5c19d76dab4f9fadb6d))
+
+
+
 ## [3.0.2](https://github.com/vuejs/vue-next/compare/v3.0.1...v3.0.2) (2020-10-20)
 
 
