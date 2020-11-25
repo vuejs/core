@@ -11,6 +11,7 @@ const __setup__ = __default__.setup
 __default__.setup = __setup__
   ? (props, ctx) => { __injectCSSVars__();return __setup__(props, ctx) }
   : __injectCSSVars__
+
 export default __default__"
 `;
 
@@ -28,6 +29,7 @@ const __setup__ = __default__.setup
 __default__.setup = __setup__
   ? (props, ctx) => { __injectCSSVars__();return __setup__(props, ctx) }
   : __injectCSSVars__
+
 export default __default__"
 `;
 
@@ -43,6 +45,7 @@ const __setup__ = __default__.setup
 __default__.setup = __setup__
   ? (props, ctx) => { __injectCSSVars__();return __setup__(props, ctx) }
   : __injectCSSVars__
+
 export default __default__"
 `;
 
@@ -76,6 +79,7 @@ const __setup__ = __default__.setup
 __default__.setup = __setup__
   ? (props, ctx) => { __injectCSSVars__();return __setup__(props, ctx) }
   : __injectCSSVars__
+
 export default __default__"
 `;
 
