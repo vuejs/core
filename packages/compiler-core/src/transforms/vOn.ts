@@ -87,7 +87,7 @@ export const transformOn: DirectiveTransform = (
         context.cacheHandlers &&
         // runtime constants don't need to be cached
         // (this is analyzed by compileScript in SFC <script setup>)
-        !(exp.type === NodeTypes.SIMPLE_EXPRESSION && exp.isRuntimeConstant) &&
+        !(exp.type === NodeTypes.SIMPLE_EXPRESSION && exp.constType > 0) &&
         // #1541 bail if this is a member exp handler passed to a component -
         // we need to use the original function to preserve arity,
         // e.g. <transition> relies on checking cb.length to determine

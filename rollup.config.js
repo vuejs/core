@@ -129,7 +129,7 @@ function createConfig(format, output, plugins = []) {
         [
           ...Object.keys(pkg.dependencies || {}),
           ...Object.keys(pkg.peerDependencies || {}),
-          ...['path', 'url'] // for @vue/compiler-sfc
+          ...['path', 'url', 'stream'] // for @vue/compiler-sfc / server-renderer
         ]
 
   // the browser builds of @vue/compiler-sfc requires postcss to be available

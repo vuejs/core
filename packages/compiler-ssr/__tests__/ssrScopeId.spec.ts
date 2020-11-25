@@ -14,7 +14,7 @@ describe('ssr: scopeId', () => {
       import { ssrRenderAttrs as _ssrRenderAttrs } from \\"@vue/server-renderer\\"
       const _withId = /*#__PURE__*/_withScopeId(\\"data-v-xxxxxxx\\")
 
-      export const ssrRender = /*#__PURE__*/_withId(function ssrRender(_ctx, _push, _parent, _attrs) {
+      export const ssrRender = /*#__PURE__*/_withId((_ctx, _push, _parent, _attrs) => {
         _push(\`<div\${_ssrRenderAttrs(_attrs)} data-v-xxxxxxx><span data-v-xxxxxxx>hello</span></div>\`)
       })"
     `)
@@ -32,7 +32,7 @@ describe('ssr: scopeId', () => {
       import { ssrRenderComponent as _ssrRenderComponent } from \\"@vue/server-renderer\\"
       const _withId = /*#__PURE__*/_withScopeId(\\"data-v-xxxxxxx\\")
 
-      export const ssrRender = /*#__PURE__*/_withId(function ssrRender(_ctx, _push, _parent, _attrs) {
+      export const ssrRender = /*#__PURE__*/_withId((_ctx, _push, _parent, _attrs) => {
         const _component_foo = _resolveComponent(\\"foo\\")
 
         _push(_ssrRenderComponent(_component_foo, _attrs, {
@@ -62,7 +62,7 @@ describe('ssr: scopeId', () => {
       import { ssrRenderComponent as _ssrRenderComponent } from \\"@vue/server-renderer\\"
       const _withId = /*#__PURE__*/_withScopeId(\\"data-v-xxxxxxx\\")
 
-      export const ssrRender = /*#__PURE__*/_withId(function ssrRender(_ctx, _push, _parent, _attrs) {
+      export const ssrRender = /*#__PURE__*/_withId((_ctx, _push, _parent, _attrs) => {
         const _component_foo = _resolveComponent(\\"foo\\")
 
         _push(_ssrRenderComponent(_component_foo, _attrs, {
@@ -92,7 +92,7 @@ describe('ssr: scopeId', () => {
       import { ssrRenderComponent as _ssrRenderComponent } from \\"@vue/server-renderer\\"
       const _withId = /*#__PURE__*/_withScopeId(\\"data-v-xxxxxxx\\")
 
-      export const ssrRender = /*#__PURE__*/_withId(function ssrRender(_ctx, _push, _parent, _attrs) {
+      export const ssrRender = /*#__PURE__*/_withId((_ctx, _push, _parent, _attrs) => {
         const _component_foo = _resolveComponent(\\"foo\\")
         const _component_bar = _resolveComponent(\\"bar\\")
 

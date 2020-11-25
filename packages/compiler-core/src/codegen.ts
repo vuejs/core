@@ -203,7 +203,7 @@ export function generate(
   const hasHelpers = ast.helpers.length > 0
   const useWithBlock = !prefixIdentifiers && mode !== 'module'
   const genScopeId = !__BROWSER__ && scopeId != null && mode === 'module'
-  const isSetupInlined = !!options.inline
+  const isSetupInlined = !__BROWSER__ && !!options.inline
 
   // preambles
   // in setup() inline mode, the preamble is generated in a sub context
@@ -217,6 +217,8 @@ export function generate(
     genFunctionPreamble(ast, preambleContext)
   }
 
+  // enter render function
+  const functionName = ssr ? `ssrRender` : `render`
   const args = ssr ? ['_ctx', '_push', '_parent', '_attrs'] : ['_ctx', '_cache']
   if (!__BROWSER__ && options.bindingMetadata && !options.inline) {
     // binding optimization args
@@ -226,24 +228,18 @@ export function generate(
     !__BROWSER__ && options.isTS
       ? args.map(arg => `${arg}: any`).join(',')
       : args.join(', ')
-  // enter render function
-  if (!ssr) {
+
+  if (genScopeId) {
     if (isSetupInlined) {
-      if (genScopeId) {
-        push(`${PURE_ANNOTATION}_withId(`)
-      }
-      push(`(${signature}) => {`)
+      push(`${PURE_ANNOTATION}_withId(`)
     } else {
-      if (genScopeId) {
-        push(`const render = ${PURE_ANNOTATION}_withId(`)
-      }
-      push(`function render(${signature}) {`)
+      push(`const ${functionName} = ${PURE_ANNOTATION}_withId(`)
     }
+  }
+  if (isSetupInlined || genScopeId) {
+    push(`(${signature}) => {`)
   } else {
-    if (genScopeId) {
-      push(`const ssrRender = ${PURE_ANNOTATION}_withId(`)
-    }
-    push(`function ssrRender(${signature}) {`)
+    push(`function ${functionName}(${signature}) {`)
   }
   indent()
 

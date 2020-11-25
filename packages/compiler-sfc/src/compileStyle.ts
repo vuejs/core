@@ -1,4 +1,5 @@
-import postcss, { Message, ProcessOptions, Result, SourceMap } from 'postcss'
+import postcss, { ProcessOptions, Result, SourceMap, Message } from 'postcss'
+import LazyResult from 'postcss/lib/lazy-result'
 import trimPlugin from './stylePluginTrim'
 import scopedPlugin from './stylePluginScoped'
 import {
@@ -9,21 +10,39 @@ import {
 } from './stylePreprocessors'
 import { RawSourceMap } from 'source-map'
 import { cssVarsPlugin } from './cssVars'
-import LazyResult from 'postcss/lib/lazy-result'
 
 export interface SFCStyleCompileOptions {
   source: string
   filename: string
   id: string
-  map?: RawSourceMap
   scoped?: boolean
   trim?: boolean
   isProd?: boolean
+  inMap?: RawSourceMap
   preprocessLang?: PreprocessLang
   preprocessOptions?: any
   preprocessCustomRequire?: (id: string) => any
   postcssOptions?: any
   postcssPlugins?: any[]
+  /**
+   * @deprecated
+   */
+  map?: RawSourceMap
+}
+
+/**
+ * Aligns with postcss-modules
+ * https://github.com/css-modules/postcss-modules
+ */
+export interface CSSModulesOptions {
+  scopeBehaviour?: 'global' | 'local'
+  generateScopedName?:
+    | string
+    | ((name: string, filename: string, css: string) => string)
+  hashPrefix?: string
+  localsConvention?: 'camelCase' | 'camelCaseOnly' | 'dashes' | 'dashesOnly'
+  exportGlobals?: boolean
+  globalModulePaths?: string[]
 }
 
 export interface SFCAsyncStyleCompileOptions extends SFCStyleCompileOptions {
@@ -31,23 +50,13 @@ export interface SFCAsyncStyleCompileOptions extends SFCStyleCompileOptions {
   // css modules support, note this requires async so that we can get the
   // resulting json
   modules?: boolean
-  // maps to postcss-modules options
-  // https://github.com/css-modules/postcss-modules
-  modulesOptions?: {
-    scopeBehaviour?: 'global' | 'local'
-    globalModulePaths?: string[]
-    generateScopedName?:
-      | string
-      | ((name: string, filename: string, css: string) => string)
-    hashPrefix?: string
-    localsConvention?: 'camelCase' | 'camelCaseOnly' | 'dashes' | 'dashesOnly'
-  }
+  modulesOptions?: CSSModulesOptions
 }
 
 export interface SFCStyleCompileResults {
   code: string
   map: RawSourceMap | undefined
-  rawResult: LazyResult | Result | undefined
+  rawResult: Result | LazyResult | undefined
   errors: Error[]
   modules?: Record<string, string>
   dependencies: Set<string>
@@ -87,16 +96,21 @@ export function doCompileStyle(
   } = options
   const preprocessor = preprocessLang && processors[preprocessLang]
   const preProcessedSource = preprocessor && preprocess(options, preprocessor)
-  const map = preProcessedSource ? preProcessedSource.map : options.map
+  const map = preProcessedSource
+    ? preProcessedSource.map
+    : options.inMap || options.map
   const source = preProcessedSource ? preProcessedSource.code : options.source
 
+  const shortId = id.replace(/^data-v-/, '')
+  const longId = `data-v-${shortId}`
+
   const plugins = (postcssPlugins || []).slice()
-  plugins.unshift(cssVarsPlugin({ id, isProd }))
+  plugins.unshift(cssVarsPlugin({ id: shortId, isProd }))
   if (trim) {
     plugins.push(trimPlugin())
   }
   if (scoped) {
-    plugins.push(scopedPlugin(id))
+    plugins.push(scopedPlugin(longId))
   }
   let cssModules: Record<string, string> | undefined
   if (modules) {
@@ -212,7 +226,7 @@ function preprocess(
 
   return preprocessor(
     options.source,
-    options.map,
+    options.inMap || options.map,
     {
       filename: options.filename,
       ...options.preprocessOptions

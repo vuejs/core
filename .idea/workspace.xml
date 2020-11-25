@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="BranchesTreeState">
+    <expand>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="LOCAL_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="LOCAL_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="GROUP_NODE:fix" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="REMOTE_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="REMOTE_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="GROUP_NODE:origin" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="REMOTE_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="GROUP_NODE:origin" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="GROUP_NODE:&gt;linusborg" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="REMOTE_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="GROUP_NODE:origin" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="GROUP_NODE:dependabot" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="REMOTE_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="GROUP_NODE:origin" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="GROUP_NODE:dependabot" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="GROUP_NODE:npm_and_yarn" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="REMOTE_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="GROUP_NODE:origin" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="GROUP_NODE:dependabot" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="GROUP_NODE:npm_and_yarn" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="GROUP_NODE:babel" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="REMOTE_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="GROUP_NODE:origin" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="GROUP_NODE:feat" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="REMOTE_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="GROUP_NODE:origin" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="GROUP_NODE:fix" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="REMOTE_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="GROUP_NODE:origin" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="GROUP_NODE:linusborg" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="REMOTE_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="GROUP_NODE:origin" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="GROUP_NODE:test" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="REMOTE_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="GROUP_NODE:origin" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="GROUP_NODE:test" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="GROUP_NODE:types" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+    </expand>
+    <select />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="fa7f9290-f29e-4d97-b36f-cf7cff3815cb" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-core/__tests__/__snapshots__/parse.spec.ts.snap" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-core/__tests__/__snapshots__/parse.spec.ts.snap" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-core/__tests__/__snapshots__/scopeId.spec.ts.snap" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-core/__tests__/__snapshots__/scopeId.spec.ts.snap" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-core/__tests__/codegen.spec.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-core/__tests__/codegen.spec.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-core/__tests__/parse.spec.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-core/__tests__/parse.spec.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-core/__tests__/scopeId.spec.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-core/__tests__/scopeId.spec.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-core/__tests__/transforms/hoistStatic.spec.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-core/__tests__/transforms/hoistStatic.spec.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-core/__tests__/transforms/transformExpressions.spec.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-core/__tests__/transforms/transformExpressions.spec.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-core/__tests__/transforms/vFor.spec.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-core/__tests__/transforms/vFor.spec.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-core/src/ast.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-core/src/ast.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-core/src/codegen.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-core/src/codegen.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-core/src/parse.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-core/src/parse.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-core/src/transform.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-core/src/transform.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-core/src/transforms/hoistStatic.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-core/src/transforms/hoistStatic.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-core/src/transforms/transformElement.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-core/src/transforms/transformElement.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-core/src/transforms/transformExpression.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-core/src/transforms/transformExpression.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-core/src/transforms/transformText.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-core/src/transforms/transformText.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-core/src/transforms/vFor.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-core/src/transforms/vFor.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-core/src/transforms/vIf.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-core/src/transforms/vIf.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-core/src/transforms/vModel.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-core/src/transforms/vModel.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-core/src/transforms/vOn.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-core/src/transforms/vOn.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-dom/__tests__/parse.spec.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-dom/__tests__/parse.spec.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-dom/__tests__/transforms/stringifyStatic.spec.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-dom/__tests__/transforms/stringifyStatic.spec.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-dom/src/transforms/transformStyle.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-dom/src/transforms/transformStyle.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-sfc/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-sfc/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-sfc/__tests__/__snapshots__/compileScript.spec.ts.snap" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-sfc/__tests__/__snapshots__/compileScript.spec.ts.snap" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-sfc/__tests__/compileScript.spec.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-sfc/__tests__/compileScript.spec.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-sfc/__tests__/compileStyle.spec.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-sfc/__tests__/compileStyle.spec.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-sfc/__tests__/compileTemplate.spec.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-sfc/__tests__/compileTemplate.spec.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-sfc/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-sfc/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-sfc/src/compileScript.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-sfc/src/compileScript.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-sfc/src/compileStyle.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-sfc/src/compileStyle.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-sfc/src/compileTemplate.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-sfc/src/compileTemplate.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-sfc/src/cssVars.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-sfc/src/cssVars.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-sfc/src/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-sfc/src/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-sfc/src/parse.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-sfc/src/parse.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-sfc/src/stylePluginScoped.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-sfc/src/stylePluginScoped.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-sfc/src/stylePluginTrim.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-sfc/src/stylePluginTrim.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-sfc/src/templateTransformAssetUrl.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-sfc/src/templateTransformAssetUrl.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-sfc/src/templateTransformSrcset.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-sfc/src/templateTransformSrcset.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/compiler-ssr/__tests__/ssrScopeId.spec.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/compiler-ssr/__tests__/ssrScopeId.spec.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/runtime-core/src/component.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/runtime-core/src/component.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/runtime-core/src/componentOptions.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/runtime-core/src/componentOptions.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/runtime-core/src/hmr.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/runtime-core/src/hmr.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/runtime-dom/src/helpers/useCssVars.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/runtime-dom/src/helpers/useCssVars.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/server-renderer/src/render.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/server-renderer/src/render.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/template-explorer/src/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/template-explorer/src/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/template-explorer/src/options.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/template-explorer/src/options.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/rollup.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/rollup.config.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/yarn.lock" beforeDir="false" afterPath="$PROJECT_DIR$/yarn.lock" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="MavenImportPreferences">
+    <option name="generalSettings">
+      <MavenGeneralSettings>
+        <option name="mavenHome" value="$APPLICATION_HOME_DIR$/plugins/maven/lib/maven3" />
+      </MavenGeneralSettings>
+    </option>
+  </component>
+  <component name="ProjectId" id="1kXnGhyRyc11MwNzISanQ6XNYS2" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="Git.Branch.Popup.ShowAllRemotes" value="true" />
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="aspect.path.notification.shown" value="true" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="node.js.detected.package.eslint" value="true" />
+    <property name="node.js.path.for.package.eslint" value="project" />
+    <property name="node.js.selected.package.eslint" value="(autodetect)" />
+    <property name="nodejs_package_manager_path" value="yarn" />
+    <property name="ts.external.directory.path" value="$PROJECT_DIR$/node_modules/typescript/lib" />
+    <property name="vue.rearranger.settings.migration" value="true" />
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="fa7f9290-f29e-4d97-b36f-cf7cff3815cb" name="Default Changelist" comment="" />
+      <created>1605855709946</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1605855709946</updated>
+      <workItem from="1605855711173" duration="13897000" />
+      <workItem from="1605877008461" duration="6163000" />
+      <workItem from="1606056929137" duration="1683000" />
+      <workItem from="1606295024530" duration="2356000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+    <option name="includedJSSourcePackages">
+      <set>
+        <option value="postcss" />
+      </set>
+    </option>
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="WindowStateProjectService">
+    <state x="1779" y="-80" width="2360" height="1217" key="DiffContextDialog" timestamp="1606295666804">
+      <screen x="1680" y="-180" width="2560" height="1417" />
+    </state>
+    <state x="65" y="95" width="1549" height="883" key="DiffContextDialog/0.23.1680.1027@0.23.1680.1027" timestamp="1606055618443" />
+    <state x="1779" y="-80" width="2360" height="1217" key="DiffContextDialog/1680.-180.2560.1417/0.23.1680.1027@1680.-180.2560.1417" timestamp="1606295666804" />
+    <state x="2288" y="107" key="MergeDialog" timestamp="1606296446109">
+      <screen x="1680" y="-180" width="2560" height="1417" />
+    </state>
+    <state x="2288" y="107" key="MergeDialog/1680.-180.2560.1417/0.23.1680.1027@1680.-180.2560.1417" timestamp="1606296446109" />
+    <state x="2596" y="289" key="MultipleFileMergeDialog" timestamp="1606296446161">
+      <screen x="1680" y="-180" width="2560" height="1417" />
+    </state>
+    <state x="2596" y="289" key="MultipleFileMergeDialog/1680.-180.2560.1417/0.23.1680.1027@1680.-180.2560.1417" timestamp="1606296446161" />
+    <state x="2771" y="445" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2" timestamp="1605883862110">
+      <screen x="1680" y="-180" width="2560" height="1417" />
+    </state>
+    <state x="2771" y="445" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2/1680.-180.2560.1417/0.23.1680.1027@1680.-180.2560.1417" timestamp="1605883862110" />
+    <state x="2668" y="267" width="584" height="522" key="find.popup" timestamp="1605866790471">
+      <screen x="1680" y="-180" width="2560" height="1417" />
+    </state>
+    <state x="2668" y="267" width="584" height="522" key="find.popup/1680.-180.2560.1417/0.23.1680.1027@1680.-180.2560.1417" timestamp="1605866790471" />
+    <state width="394" height="319" key="javadoc.popup" timestamp="1606057374838">
+      <screen x="0" y="23" width="1680" height="1027" />
+    </state>
+    <state width="394" height="319" key="javadoc.popup/0.23.1680.1027@0.23.1680.1027" timestamp="1606057374838" />
+    <state width="600" height="440" key="javadoc.popup/1680.-180.2560.1417/0.23.1680.1027@1680.-180.2560.1417" timestamp="1605858805914" />
+    <state x="2625" y="145" width="670" height="676" key="search.everywhere.popup" timestamp="1605883111271">
+      <screen x="1680" y="-180" width="2560" height="1417" />
+    </state>
+    <state x="2625" y="145" width="670" height="676" key="search.everywhere.popup/1680.-180.2560.1417/0.23.1680.1027@1680.-180.2560.1417" timestamp="1605883111271" />
+  </component>
+</project>

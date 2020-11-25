@@ -77,7 +77,7 @@ export const transformFor = createStructuralDirectiveTransform(
 
       const isStableFragment =
         forNode.source.type === NodeTypes.SIMPLE_EXPRESSION &&
-        forNode.source.isConstant
+        forNode.source.constType > 0
       const fragmentFlag = isStableFragment
         ? PatchFlags.STABLE_FRAGMENT
         : keyProp

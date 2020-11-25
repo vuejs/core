@@ -10,32 +10,19 @@ import {
 import { SFCDescriptor } from './parse'
 import { rewriteDefault } from './rewriteDefault'
 import { ParserPlugin } from '@babel/parser'
-import { Root } from 'postcss'
+import { PluginCreator } from 'postcss'
 import hash from 'hash-sum'
 
 export const CSS_VARS_HELPER = `useCssVars`
 export const cssVarRE = /\bv-bind\(\s*(?:'([^']+)'|"([^"]+)"|([^'"][^)]*))\s*\)/g
 
-/**
- * Given an SFC descriptor, generate the CSS variables object string that can be
- * passed to `compileTemplate` as `compilerOptions.ssrCssVars`.
- * @public
- */
-export function generateCssVars(
-  sfc: SFCDescriptor,
-  id: string,
-  isProd: boolean
-): string {
-  return sfc.cssVars.length ? genCssVarsFromList(sfc.cssVars, id, isProd) : ''
-}
-
-function genCssVarsFromList(
+export function genCssVarsFromList(
   vars: string[],
   id: string,
   isProd: boolean
 ): string {
   return `{\n  ${vars
-    .map(v => `"${genVarName(id, v, isProd)}": (${v})`)
+    .map(key => `"${genVarName(id, key, isProd)}": (${key})`)
     .join(',\n  ')}\n}`
 }
 
@@ -64,21 +51,20 @@ export interface CssVarsPluginOptions {
   isProd: boolean
 }
 
-export const cssVarsPlugin = (opts: CssVarsPluginOptions) => ({
-  postcssPlugin: 'vue-scoped',
-  Root(root: Root) {
-    const { id, isProd } = opts!
-    const shortId = id.replace(/^data-v-/, '')
-    root.walkDecls(decl => {
+export const cssVarsPlugin: PluginCreator<CssVarsPluginOptions> = opts => {
+  const { id, isProd } = opts!
+  return {
+    postcssPlugin: 'vue-sfc-vars',
+    Declaration(decl) {
       // rewrite CSS variables
       if (cssVarRE.test(decl.value)) {
         decl.value = decl.value.replace(cssVarRE, (_, $1, $2, $3) => {
-          return `var(--${genVarName(shortId, $1 || $2 || $3, isProd)})`
+          return `var(--${genVarName(id, $1 || $2 || $3, isProd)})`
         })
       }
-    })
+    }
   }
-})
+}
 cssVarsPlugin.postcss = true
 
 export function genCssVarsCode(
