@@ -44,7 +44,7 @@ export function renderSlot(
   // enable it.
   isRenderingCompiledSlot++
   openBlock()
-  const validSlotContent = slot && filterValidVNode(slot(props))
+  const validSlotContent = slot && ensureValidVNode(slot(props))
   const rendered = createBlock(
     Fragment,
     { key: props.key },
@@ -57,16 +57,17 @@ export function renderSlot(
   return rendered
 }
 
-function filterValidVNode(vnodes: VNodeArrayChildren) {
-  const filtered = vnodes.filter(child => {
+function ensureValidVNode(vnodes: VNodeArrayChildren) {
+  return vnodes.some(child => {
     if (!isVNode(child)) return true
     if (child.type === Comment) return false
     if (
       child.type === Fragment &&
-      !filterValidVNode(child.children as VNodeArrayChildren)
+      !ensureValidVNode(child.children as VNodeArrayChildren)
     )
       return false
     return true
   })
-  return filtered.length ? vnodes : null
+    ? vnodes
+    : null
 }
