@@ -1,4 +1,8 @@
-import { getCurrentInstance, SetupContext } from './component'
+import {
+  getCurrentInstance,
+  SetupContext,
+  createSetupContext
+} from './component'
 import { EmitFn, EmitsOptions } from './componentEmits'
 import { ComponentObjectPropsOptions, ExtractPropTypes } from './componentProps'
 import { warn } from './warning'
@@ -53,5 +57,9 @@ export function defineEmit(emitOptions?: any) {
 }
 
 export function useContext(): SetupContext {
-  return getCurrentInstance()!.setupContext!
+  const i = getCurrentInstance()!
+  if (__DEV__ && !i) {
+    warn(`useContext() called without active instance.`)
+  }
+  return i.setupContext || (i.setupContext = createSetupContext(i))
 }
