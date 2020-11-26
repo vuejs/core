@@ -38,34 +38,21 @@ export function renderSlot(
     slot = () => []
   }
 
-  let validSlotContent: VNodeArrayChildren | null = null
-
   // a compiled slot disables block tracking by default to avoid manual
   // invocation interfering with template-based block tracking, but in
   // `renderSlot` we can be sure that it's template-based so we can force
   // enable it.
   isRenderingCompiledSlot++
-  const rendered = (openBlock(),
-  createBlock(
+  openBlock()
+  const validSlotContent = slot && filterValidVNode(slot(props))
+  const rendered = createBlock(
     Fragment,
     { key: props.key },
-    slot
-      ? (validSlotContent = filterValidVNode(slot(props)))
-        ? validSlotContent
-        : fallback
-          ? fallback()
-          : []
-      : fallback
-        ? fallback()
-        : [],
-
-    validSlotContent
-      ? (slots as RawSlots)._ === SlotFlags.STABLE
-        ? PatchFlags.STABLE_FRAGMENT
-        : PatchFlags.BAIL
+    validSlotContent || (fallback ? fallback() : []),
+    validSlotContent && (slots as RawSlots)._ === SlotFlags.STABLE
+      ? PatchFlags.STABLE_FRAGMENT
       : PatchFlags.BAIL
-  ))
-
+  )
   isRenderingCompiledSlot--
   return rendered
 }
