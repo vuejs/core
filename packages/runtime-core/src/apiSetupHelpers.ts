@@ -27,8 +27,8 @@ export function defineProps<
   InferredProps = ExtractPropTypes<PP>
 >(props?: PP): Readonly<TypeProps extends undefined ? InferredProps : TypeProps>
 // implementation
-export function defineProps(props?: any) {
-  if (__DEV__ && props) {
+export function defineProps() {
+  if (__DEV__) {
     warn(
       `defineProps() is a compiler-hint helper that is only usable inside ` +
         `<script setup> of a single file component. Its arguments should be ` +
@@ -45,8 +45,8 @@ export function defineEmit<
   InferredEmit = EmitFn<E>
 >(emitOptions?: E | EE[]): TypeEmit extends undefined ? InferredEmit : TypeEmit
 // implementation
-export function defineEmit(emitOptions?: any) {
-  if (__DEV__ && emitOptions) {
+export function defineEmit() {
+  if (__DEV__) {
     warn(
       `defineEmit() is a compiler-hint helper that is only usable inside ` +
         `<script setup> of a single file component. Its arguments should be ` +
