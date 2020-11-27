@@ -98,9 +98,11 @@ export function processExpression(
   // v-on handler values may contain multiple statements
   asRawStatements = false
 ): ExpressionNode {
-  if (__DEV__ && __BROWSER__) {
-    // simple in-browser validation (same logic in 2.x)
-    validateBrowserExpression(node, context, asParams, asRawStatements)
+  if (__BROWSER__) {
+    if (__DEV__) {
+      // simple in-browser validation (same logic in 2.x)
+      validateBrowserExpression(node, context, asParams, asRawStatements)
+    }
     return node
   }
 
