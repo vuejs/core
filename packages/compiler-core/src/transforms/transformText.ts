@@ -85,7 +85,8 @@ export const transformText: NodeTransform = (node, context) => {
             getConstantType(child) === ConstantTypes.NOT_CONSTANT
           ) {
             callArgs.push(
-              `${PatchFlags.TEXT} /* ${PatchFlagNames[PatchFlags.TEXT]} */`
+              PatchFlags.TEXT +
+                (__DEV__ ? ` /* ${PatchFlagNames[PatchFlags.TEXT]} */` : ``)
             )
           }
           children[i] = {

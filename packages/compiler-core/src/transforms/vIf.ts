@@ -251,9 +251,10 @@ function createChildrenCodegenNode(
         helper(FRAGMENT),
         createObjectExpression([keyProperty]),
         children,
-        `${PatchFlags.STABLE_FRAGMENT} /* ${
-          PatchFlagNames[PatchFlags.STABLE_FRAGMENT]
-        } */`,
+        PatchFlags.STABLE_FRAGMENT +
+          (__DEV__
+            ? ` /* ${PatchFlagNames[PatchFlags.STABLE_FRAGMENT]} */`
+            : ``),
         undefined,
         undefined,
         true,
