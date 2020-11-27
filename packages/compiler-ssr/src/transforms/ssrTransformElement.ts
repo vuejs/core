@@ -198,6 +198,9 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
               if (isStaticExp(key)) {
                 let attrName = key.content
                 // static key attr
+                if (attrName === 'key' || attrName === 'ref') {
+                  continue
+                }
                 if (attrName === 'class') {
                   openTag.push(
                     ` class="`,
@@ -274,6 +277,9 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
         if (node.tag === 'textarea' && prop.name === 'value' && prop.value) {
           rawChildrenMap.set(node, escapeHtml(prop.value.content))
         } else if (!hasDynamicVBind) {
+          if (prop.name === 'key' || prop.name === 'ref') {
+            continue
+          }
           // static prop
           if (prop.name === 'class' && prop.value) {
             staticClassBinding = JSON.stringify(prop.value.content)
