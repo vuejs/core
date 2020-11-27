@@ -614,7 +614,7 @@ export function handleSetupResult(
 ) {
   if (isFunction(setupResult)) {
     // setup returned an inline render function
-    if (!__BROWSER__ && (instance.type as ComponentOptions).__ssrInlineRender) {
+    if (__NODE_JS__ && (instance.type as ComponentOptions).__ssrInlineRender) {
       // when the function's name is `ssrRender` (compiled by SFC inline mode),
       // set it as ssrRender instead.
       instance.ssrRender = setupResult

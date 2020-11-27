@@ -889,7 +889,7 @@ function baseCreateRenderer(
       invokeDirectiveHook(n2, n1, parentComponent, 'beforeUpdate')
     }
 
-    if (__DEV__ && (__BROWSER__ || __TEST__) && isHmrUpdating) {
+    if (__DEV__ && isHmrUpdating) {
       // HMR updated, force full diff
       patchFlag = 0
       optimized = false
@@ -990,12 +990,7 @@ function baseCreateRenderer(
         parentSuspense,
         areChildrenSVG
       )
-      if (
-        __DEV__ &&
-        (__BROWSER__ || __TEST__) &&
-        parentComponent &&
-        parentComponent.type.__hmrId
-      ) {
+      if (__DEV__ && parentComponent && parentComponent.type.__hmrId) {
         traverseStaticChildren(n1, n2)
       }
     } else if (!optimized) {
@@ -1248,7 +1243,7 @@ function baseCreateRenderer(
       parentSuspense
     ))
 
-    if (__DEV__ && (__BROWSER__ || __TEST__) && instance.type.__hmrId) {
+    if (__DEV__ && instance.type.__hmrId) {
       registerHMR(instance)
     }
 
@@ -2122,7 +2117,7 @@ function baseCreateRenderer(
     parentSuspense: SuspenseBoundary | null,
     doRemove?: boolean
   ) => {
-    if (__DEV__ && (__BROWSER__ || __TEST__) && instance.type.__hmrId) {
+    if (__DEV__ && instance.type.__hmrId) {
       unregisterHMR(instance)
     }
 

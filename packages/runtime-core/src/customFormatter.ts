@@ -4,7 +4,8 @@ import { ComponentInternalInstance, ComponentOptions } from './component'
 import { ComponentPublicInstance } from './componentPublicInstance'
 
 export function initCustomFormatter() {
-  if (!__DEV__ || !__BROWSER__) {
+  /* eslint-disable no-restricted-globals */
+  if (!__DEV__ || typeof window === 'undefined') {
     return
   }
 
@@ -189,7 +190,6 @@ export function initCustomFormatter() {
     return `Ref`
   }
 
-  /* eslint-disable no-restricted-globals */
   if ((window as any).devtoolsFormatters) {
     ;(window as any).devtoolsFormatters.push(formatter)
   } else {
