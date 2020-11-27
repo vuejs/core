@@ -202,5 +202,9 @@ export function isEmitListener(
     return false
   }
   key = key.slice(2).replace(/Once$/, '')
-  return hasOwn(options, hyphenate(key)) || hasOwn(options, key)
+  return (
+    hasOwn(options, key[0].toLowerCase() + key.slice(1)) ||
+    hasOwn(options, hyphenate(key)) ||
+    hasOwn(options, key)
+  )
 }
