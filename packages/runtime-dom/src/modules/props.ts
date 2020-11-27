@@ -34,7 +34,6 @@ export function patchDOMProp(
     }
     return
   }
-  debugger
   if (value === '' && typeof el[key] === 'boolean') {
     // e.g. <select multiple> compiles to { multiple: '' }
     el[key] = true
