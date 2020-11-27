@@ -283,15 +283,23 @@ describe('component: emit', () => {
   })
 
   test('isEmitListener', () => {
-    const options = { click: null }
+    const options = {
+      click: null,
+      'test-event': null,
+      fooBar: null,
+      FooBaz: null
+    }
     expect(isEmitListener(options, 'onClick')).toBe(true)
     expect(isEmitListener(options, 'onclick')).toBe(false)
     expect(isEmitListener(options, 'onBlick')).toBe(false)
     // .once listeners
     expect(isEmitListener(options, 'onClickOnce')).toBe(true)
     expect(isEmitListener(options, 'onclickOnce')).toBe(false)
-    // kebab-case listener
-    const kebabOptions = { 'test-event': null }
-    expect(isEmitListener(kebabOptions, 'onTestEvent')).toBe(true)
+    // kebab-case option
+    expect(isEmitListener(options, 'onTestEvent')).toBe(true)
+    // camelCase option
+    expect(isEmitListener(options, 'onFooBar')).toBe(true)
+    // PascalCase option
+    expect(isEmitListener(options, 'onFooBaz')).toBe(true)
   })
 })
