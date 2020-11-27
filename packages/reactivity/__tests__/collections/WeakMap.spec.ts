@@ -133,5 +133,10 @@ describe('reactivity/collections', () => {
       map.set(key, NaN)
       expect(mapSpy).toHaveBeenCalledTimes(1)
     })
+    it('should return proxy from WeakMap.set call', () => {
+      const map = reactive(new WeakMap())
+      const result = map.set({}, 'a')
+      expect(result).toBe(map)
+    })
   })
 })
