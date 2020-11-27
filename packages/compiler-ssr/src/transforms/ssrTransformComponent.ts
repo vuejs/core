@@ -46,6 +46,7 @@ import {
   ssrProcessSuspense,
   ssrTransformSuspense
 } from './ssrTransformSuspense'
+import { ssrProcessTransitionGroup } from './ssrTransformTransitionGroup'
 import { isSymbol, isObject, isArray } from '@vue/shared'
 
 // We need to construct the slot functions in the 1st pass to ensure proper
@@ -176,9 +177,11 @@ export function ssrProcessComponent(
       return ssrProcessTeleport(node, context)
     } else if (component === SUSPENSE) {
       return ssrProcessSuspense(node, context)
+    } else if (component === TRANSITION_GROUP) {
+      return ssrProcessTransitionGroup(node, context)
     } else {
       // real fall-through (e.g. KeepAlive): just render its children.
-      processChildren(node.children, context, component === TRANSITION_GROUP)
+      processChildren(node.children, context)
     }
   } else {
     // finish up slot function expressions from the 1st pass.

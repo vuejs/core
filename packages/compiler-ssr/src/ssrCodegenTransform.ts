@@ -128,7 +128,8 @@ function createChildContext(
 export function processChildren(
   children: TemplateChildNode[],
   context: SSRTransformContext,
-  asFragment = false
+  asFragment = false,
+  disableNestedFragments = false
 ) {
   if (asFragment) {
     context.pushStringPart(`<!--[-->`)
@@ -176,10 +177,10 @@ export function processChildren(
         )
         break
       case NodeTypes.IF:
-        ssrProcessIf(child, context)
+        ssrProcessIf(child, context, disableNestedFragments)
         break
       case NodeTypes.FOR:
-        ssrProcessFor(child, context)
+        ssrProcessFor(child, context, disableNestedFragments)
         break
       case NodeTypes.IF_BRANCH:
         // no-op - handled by ssrProcessIf
