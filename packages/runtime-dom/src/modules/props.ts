@@ -34,10 +34,14 @@ export function patchDOMProp(
     }
     return
   }
+  debugger
   if (value === '' && typeof el[key] === 'boolean') {
     // e.g. <select multiple> compiles to { multiple: '' }
     el[key] = true
-  } else if (value == null && typeof el[key] === 'string') {
+  } else if (
+    (value == null || value == undefined) &&
+    (typeof el[key] === 'string' || typeof el[key] === 'number')
+  ) {
     // e.g. <div :id="null">
     el[key] = ''
     el.removeAttribute(key)
