@@ -140,7 +140,7 @@ describe('component: emit', () => {
     })
     render(h(Foo), nodeOps.createElement('div'))
     expect(
-      `Component emitted event "bar" but it is neither declared`
+      `Component emitted event "foo" but it is neither declared`
     ).not.toHaveBeenWarned()
   })
 
