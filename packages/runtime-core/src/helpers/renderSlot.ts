@@ -47,7 +47,7 @@ export function renderSlot(
   const validSlotContent = slot && ensureValidVNode(slot(props))
   const rendered = createBlock(
     Fragment,
-    { key: props.key },
+    { key: props.key || `_${name}` },
     validSlotContent || (fallback ? fallback() : []),
     validSlotContent && (slots as RawSlots)._ === SlotFlags.STABLE
       ? PatchFlags.STABLE_FRAGMENT
