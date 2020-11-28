@@ -181,10 +181,13 @@ return { a, b }
 
 exports[`SFC compile <script setup> imports should hoist and expose imports 1`] = `
 "import { ref } from 'vue'
+          import 'foo/css'
+        
 export default {
   expose: [],
   setup(__props) {
 
+          
 return { ref }
 }
 

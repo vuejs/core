@@ -638,7 +638,7 @@ export function compileScript(
           )
         }
       }
-      if (removed === node.specifiers.length) {
+      if (node.specifiers.length && removed === node.specifiers.length) {
         s.remove(node.start! + startOffset, node.end! + startOffset)
       }
     }

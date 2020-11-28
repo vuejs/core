@@ -123,7 +123,10 @@ const myEmit = defineEmit(['foo', 'bar'])
   describe('imports', () => {
     test('should hoist and expose imports', () => {
       assertCode(
-        compile(`<script setup>import { ref } from 'vue'</script>`).content
+        compile(`<script setup>
+          import { ref } from 'vue'
+          import 'foo/css'
+        </script>`).content
       )
     })
 
