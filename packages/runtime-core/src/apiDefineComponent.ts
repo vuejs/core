@@ -41,7 +41,7 @@ export type DefineComponent<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = Record<string, any>,
   EE extends string = string,
-  S = {},
+  S = any,
   PP = PublicProps,
   Props = Readonly<ExtractPropTypes<PropsOrPropOptions>>,
   Defaults = ExtractDefaultPropTypes<PropsOrPropOptions>
@@ -104,7 +104,7 @@ export function defineComponent<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
-  S = {}
+  S = any
 >(
   options: ComponentOptionsWithoutProps<
     Props,
@@ -133,7 +133,7 @@ export function defineComponent<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = Record<string, any>,
   EE extends string = string,
-  S = {}
+  S = any
 >(
   options: ComponentOptionsWithArrayProps<
     PropNames,
@@ -174,7 +174,7 @@ export function defineComponent<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = Record<string, any>,
   EE extends string = string,
-  S = {}
+  S = any
 >(
   options: ComponentOptionsWithObjectProps<
     PropsOptions,

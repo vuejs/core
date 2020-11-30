@@ -91,7 +91,7 @@ export interface ComponentOptionsBase<
   Extends extends ComponentOptionsMixin,
   E extends EmitsOptions,
   EE extends string = string,
-  S = {},
+  S = any,
   Defaults = {}
 >
   extends LegacyOptions<Props, D, C, M, Mixin, Extends>,
@@ -183,7 +183,7 @@ export type ComponentOptionsWithoutProps<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
-  S = {}
+  S = any
 > = ComponentOptionsBase<
   Props,
   RawBindings,
@@ -222,7 +222,7 @@ export type ComponentOptionsWithArrayProps<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
-  S = {},
+  S = any,
   Props = Readonly<{ [key in PropNames]?: any }>
 > = ComponentOptionsBase<
   Props,
@@ -262,7 +262,7 @@ export type ComponentOptionsWithObjectProps<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
-  S = {},
+  S = any,
   Props = Readonly<ExtractPropTypes<PropsOptions>>,
   Defaults = ExtractDefaultPropTypes<PropsOptions>
 > = ComponentOptionsBase<
