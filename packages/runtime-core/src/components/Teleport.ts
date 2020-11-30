@@ -24,6 +24,9 @@ export const isTeleport = (type: any): boolean => type.__isTeleport
 export const isTeleportDisabled = (props: VNode['props']): boolean =>
   props && (props.disabled || props.disabled === '')
 
+const isTargetSVG = (target: RendererElement): boolean =>
+  typeof SVGElement !== 'undefined' && target instanceof SVGElement
+
 const resolveTarget = <T = RendererElement>(
   props: TeleportProps | null,
   select: RendererOptions['querySelector']
@@ -95,8 +98,8 @@ export const TeleportImpl = {
       const targetAnchor = (n2.targetAnchor = createText(''))
       if (target) {
         insert(targetAnchor, target)
-        isSVG =
-          isSVG || Boolean(target && isSVGTag(target.tagName || target.tag))
+        // #2652 we could be teleporting from a non-SVG tree into an SVG tree
+        isSVG = isSVG || isTargetSVG(target)
       } else if (__DEV__ && !disabled) {
         warn('Invalid Teleport target on mount:', target, `(${typeof target})`)
       }
@@ -131,7 +134,7 @@ export const TeleportImpl = {
       const wasDisabled = isTeleportDisabled(n1.props)
       const currentContainer = wasDisabled ? container : target
       const currentAnchor = wasDisabled ? mainAnchor : targetAnchor
-      isSVG = isSVG || Boolean(target && isSVGTag(target.tagName || target.tag))
+      isSVG = isSVG || isTargetSVG(target)
 
       if (n2.dynamicChildren) {
         // fast path when the teleport happens to be a block root
