@@ -9,7 +9,7 @@ import {
   traverseStaticChildren
 } from '../renderer'
 import { VNode, VNodeArrayChildren, VNodeProps } from '../vnode'
-import { isString, isSVGTag, ShapeFlags } from '@vue/shared'
+import { isString, ShapeFlags } from '@vue/shared'
 import { warn } from '../warning'
 
 export type TeleportVNode = VNode<RendererNode, RendererElement, TeleportProps>
