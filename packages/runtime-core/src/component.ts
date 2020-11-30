@@ -811,7 +811,7 @@ export function formatComponentName(
     ? Component.displayName || Component.name
     : Component.name
   if (!name && Component.__file) {
-    const match = Component.__file.match(/([^/\\]+)\.vue$/)
+    const match = Component.__file.match(/([^/\\]+)\.\w+$/)
     if (match) {
       name = match[1]
     }

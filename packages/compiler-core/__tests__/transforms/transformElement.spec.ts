@@ -70,6 +70,14 @@ describe('compiler: element transform', () => {
     expect(root.components).toContain(`Foo`)
   })
 
+  test('resolve implcitly self-referencing component', () => {
+    const { root } = parseWithElementTransform(`<Example/>`, {
+      filename: `/foo/bar/Example.vue?vue&type=template`
+    })
+    expect(root.helpers).toContain(RESOLVE_COMPONENT)
+    expect(root.components).toContain(`_self`)
+  })
+
   test('static props', () => {
     const { node } = parseWithElementTransform(`<div id="foo" class="bar" />`)
     expect(node).toMatchObject({

@@ -263,7 +263,16 @@ export function resolveComponentType(
     }
   }
 
-  // 4. user component (resolve)
+  // 4. Self referencing component (inferred from filename)
+  if (!__BROWSER__ && context.selfName) {
+    if (capitalize(camelize(tag)) === context.selfName) {
+      context.helper(RESOLVE_COMPONENT)
+      context.components.add(`_self`)
+      return toValidAssetId(`_self`, `component`)
+    }
+  }
+
+  // 5. user component (resolve)
   context.helper(RESOLVE_COMPONENT)
   context.components.add(tag)
   return toValidAssetId(tag, `component`)

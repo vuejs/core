@@ -33,7 +33,7 @@ export interface SFCBlock {
 
 export interface SFCTemplateBlock extends SFCBlock {
   type: 'template'
-  functional?: boolean
+  ast: ElementNode
 }
 
 export interface SFCScriptBlock extends SFCBlock {
@@ -79,7 +79,7 @@ export function parse(
   source: string,
   {
     sourceMap = true,
-    filename = 'component.vue',
+    filename = 'anonymous.vue',
     sourceRoot = '',
     pad = false,
     compiler = CompilerDOM
@@ -143,31 +143,32 @@ export function parse(
     switch (node.tag) {
       case 'template':
         if (!descriptor.template) {
-          descriptor.template = createBlock(
+          const templateBlock = (descriptor.template = createBlock(
             node,
             source,
             false
-          ) as SFCTemplateBlock
+          ) as SFCTemplateBlock)
+          templateBlock.ast = node
         } else {
           errors.push(createDuplicateBlockError(node))
         }
         break
       case 'script':
-        const block = createBlock(node, source, pad) as SFCScriptBlock
-        const isSetup = !!block.attrs.setup
+        const scriptBlock = createBlock(node, source, pad) as SFCScriptBlock
+        const isSetup = !!scriptBlock.attrs.setup
         if (isSetup && !descriptor.scriptSetup) {
-          descriptor.scriptSetup = block
+          descriptor.scriptSetup = scriptBlock
           break
         }
         if (!isSetup && !descriptor.script) {
-          descriptor.script = block
+          descriptor.script = scriptBlock
           break
         }
         errors.push(createDuplicateBlockError(node, isSetup))
         break
       case 'style':
-        const style = createBlock(node, source, pad) as SFCStyleBlock
-        if (style.attrs.vars) {
+        const styleBlock = createBlock(node, source, pad) as SFCStyleBlock
+        if (styleBlock.attrs.vars) {
           errors.push(
             new SyntaxError(
               `<style vars> has been replaced by a new proposal: ` +
@@ -175,7 +176,7 @@ export function parse(
             )
           )
         }
-        descriptor.styles.push(style)
+        descriptor.styles.push(styleBlock)
         break
       default:
         descriptor.customBlocks.push(createBlock(node, source, pad))
@@ -290,8 +291,6 @@ function createBlock(
         } else if (p.name === 'module') {
           ;(block as SFCStyleBlock).module = attrs[p.name]
         }
-      } else if (type === 'template' && p.name === 'functional') {
-        ;(block as SFCTemplateBlock).functional = true
       } else if (type === 'script' && p.name === 'setup') {
         ;(block as SFCScriptBlock).setup = attrs.setup
       }

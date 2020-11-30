@@ -24,7 +24,9 @@ import {
   NOOP,
   PatchFlags,
   PatchFlagNames,
-  EMPTY_OBJ
+  EMPTY_OBJ,
+  capitalize,
+  camelize
 } from '@vue/shared'
 import { defaultOnError } from './errors'
 import {
@@ -79,7 +81,9 @@ export interface ImportItem {
   path: string
 }
 
-export interface TransformContext extends Required<TransformOptions> {
+export interface TransformContext
+  extends Required<Omit<TransformOptions, 'filename'>> {
+  selfName: string | null
   root: RootNode
   helpers: Set<symbol>
   components: Set<string>
@@ -112,6 +116,7 @@ export interface TransformContext extends Required<TransformOptions> {
 export function createTransformContext(
   root: RootNode,
   {
+    filename = '',
     prefixIdentifiers = false,
     hoistStatic = false,
     cacheHandlers = false,
@@ -130,8 +135,10 @@ export function createTransformContext(
     onError = defaultOnError
   }: TransformOptions
 ): TransformContext {
+  const nameMatch = filename.replace(/\?.*$/, '').match(/([^/\\]+)\.\w+$/)
   const context: TransformContext = {
     // options
+    selfName: nameMatch && capitalize(camelize(nameMatch[1])),
     prefixIdentifiers,
     hoistStatic,
     cacheHandlers,

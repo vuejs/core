@@ -128,6 +128,12 @@ interface SharedTransformCodegenOptions {
    * Indicates that transforms and codegen should try to output valid TS code
    */
   isTS?: boolean
+  /**
+   * Filename for source map generation.
+   * Also used for self-recursive reference in templates
+   * @default 'template.vue.html'
+   */
+  filename?: string
 }
 
 export interface TransformOptions extends SharedTransformCodegenOptions {
@@ -218,11 +224,6 @@ export interface CodegenOptions extends SharedTransformCodegenOptions {
    * @default false
    */
   sourceMap?: boolean
-  /**
-   * Filename for source map generation.
-   * @default 'template.vue.html'
-   */
-  filename?: string
   /**
    * SFC scoped styles ID
    */
