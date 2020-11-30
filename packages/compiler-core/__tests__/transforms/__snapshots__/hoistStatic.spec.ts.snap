@@ -247,7 +247,7 @@ return function render(_ctx, _cache) {
       default: _withCtx(({ foo }) => [
         _createTextVNode(_toDisplayString(_ctx.foo), 1 /* TEXT */)
       ]),
-      _: 1
+      _: 1 /* STABLE */
     }))
   }
 }"

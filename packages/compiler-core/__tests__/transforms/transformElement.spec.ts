@@ -329,13 +329,13 @@ describe('compiler: element transform', () => {
               fallback: {
                 type: NodeTypes.JS_FUNCTION_EXPRESSION
               },
-              _: `[1]`
+              _: `[1 /* STABLE */]`
             })
           : createObjectMatcher({
               default: {
                 type: NodeTypes.JS_FUNCTION_EXPRESSION
               },
-              _: `[1]`
+              _: `[1 /* STABLE */]`
             })
       })
     }
@@ -389,7 +389,7 @@ describe('compiler: element transform', () => {
           default: {
             type: NodeTypes.JS_FUNCTION_EXPRESSION
           },
-          _: `[1]`
+          _: `[1 /* STABLE */]`
         })
       })
     }

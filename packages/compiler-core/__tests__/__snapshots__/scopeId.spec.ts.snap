@@ -29,7 +29,7 @@ export const render = /*#__PURE__*/_withId((_ctx, _cache) => {
     default: _withId(() => [
       _createVNode(\\"div\\")
     ]),
-    _: 1
+    _: 1 /* STABLE */
   }))
 })"
 `;
@@ -41,7 +41,7 @@ const _withId = /*#__PURE__*/_withScopeId(\\"test\\")
 export const render = /*#__PURE__*/_withId((_ctx, _cache) => {
   const _component_Child = _resolveComponent(\\"Child\\")
 
-  return (_openBlock(), _createBlock(_component_Child, null, _createSlots({ _: 2 }, [
+  return (_openBlock(), _createBlock(_component_Child, null, _createSlots({ _: 2 /* DYNAMIC */ }, [
     (_ctx.ok)
       ? {
           name: \\"foo\\",
@@ -76,7 +76,7 @@ export const render = /*#__PURE__*/_withId((_ctx, _cache) => {
     bar: _withId(() => [
       _createVNode(\\"div\\")
     ]),
-    _: 1
+    _: 1 /* STABLE */
   }))
 })"
 `;
