@@ -22,11 +22,28 @@ import { isHmrUpdating } from './hmr'
 
 export type Slot = (...args: any[]) => VNode[]
 
-export type InternalSlots = {
-  [name: string]: Slot | undefined
+export type SlotTyped<T> = T extends null ? () => VNode[] : (arg: T) => VNode[]
+
+export type InternalSlots<T = any> = {
+  [K in keyof T]?: T[K] extends () => infer R ? SlotTyped<R> : SlotTyped<T[K]>
 }
 
-export type Slots = Readonly<InternalSlots>
+export type SlotsObject<T = any> = InternalSlots<T>
+export type SlotArray<V = PropertyKey> = V extends PropertyKey
+  ? Record<V, Slot>
+  : Record<string, Slot>
+
+export type Slots<T = any> = unknown extends T
+  ? Readonly<Partial<Record<string, Slot>>>
+  : T extends Array<infer V> ? Readonly<SlotArray<V>> : Readonly<SlotsObject<T>>
+
+// export type Slot = (...args: any[]) => VNode[]
+
+// export type InternalSlots = {
+//   [name: string]: Slot | undefined
+// }
+
+// export type Slots = Readonly<InternalSlots>
 
 export type RawSlots = {
   [name: string]: unknown

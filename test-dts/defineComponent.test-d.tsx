@@ -924,6 +924,31 @@ describe('async setup', () => {
   vm.a = 2
 })
 
+describe('typed slots', () => {
+  const xxx = defineComponent({
+    slots: {
+      test: null as Partial<null>,
+      item: Object as () => { item: { value: number }; i: number }
+    },
+
+    setup(_, { slots }) {
+      slots.test!()
+      slots.item!({
+        i: 22,
+        item: {
+          value: 22
+        }
+      })
+
+      // @ts-expect-error missing item prop
+      expectError(slots.item!({ i: 22 }))
+    }
+  })
+
+  // TODO add to `h`
+  h(xxx, {}, {})
+})
+
 // check if defineComponent can be exported
 export default {
   // function components

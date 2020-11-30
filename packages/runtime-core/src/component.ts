@@ -167,9 +167,9 @@ export const enum LifecycleHooks {
   ERROR_CAPTURED = 'ec'
 }
 
-export interface SetupContext<E = EmitsOptions> {
+export interface SetupContext<E = EmitsOptions, S extends Slots = Slots> {
   attrs: Data
-  slots: Slots
+  slots: S
   emit: EmitFn<E>
   expose: (exposed: Record<string, any>) => void
 }
