@@ -168,6 +168,6 @@ expectType<Ref<number>>(toRef(obj, 'b'))
 // toRefs
 const objRefs = toRefs(obj)
 expectType<{
-  a: Ref<number>
+  a: number
   b: Ref<number>
 }>(objRefs)
