@@ -521,6 +521,21 @@ describe('compiler: transform component slots', () => {
       </Comp>`,
       true
     )
+
+    // #2564
+    assertDynamicSlots(
+      `<div v-for="i in list">
+        <Comp v-slot="bar"><button @click="fn(i)" /></Comp>
+      </div>`,
+      true
+    )
+
+    assertDynamicSlots(
+      `<div v-for="i in list">
+        <Comp v-slot="bar"><button @click="fn()" /></Comp>
+      </div>`,
+      false
+    )
   })
 
   test('named slot with v-if', () => {
