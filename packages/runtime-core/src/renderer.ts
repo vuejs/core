@@ -74,6 +74,7 @@ import { startMeasure, endMeasure } from './profiling'
 import { ComponentPublicInstance } from './componentPublicInstance'
 import { devtoolsComponentRemoved, devtoolsComponentUpdated } from './devtools'
 import { initFeatureFlags } from './featureFlags'
+import { isAsyncWrapper } from './apiAsyncComponent'
 
 export interface Renderer<HostElement = RendererElement> {
   render: RootRenderFunction<HostElement>
@@ -289,7 +290,6 @@ export const queuePostRenderEffect = __FEATURE_SUSPENSE__
 export const setRef = (
   rawRef: VNodeNormalizedRef,
   oldRawRef: VNodeNormalizedRef | null,
-  parentComponent: ComponentInternalInstance,
   parentSuspense: SuspenseBoundary | null,
   vnode: VNode | null
 ) => {
@@ -298,7 +298,6 @@ export const setRef = (
       setRef(
         r,
         oldRawRef && (isArray(oldRawRef) ? oldRawRef[i] : oldRawRef),
-        parentComponent,
         parentSuspense,
         vnode
       )
@@ -307,7 +306,7 @@ export const setRef = (
   }
 
   let value: ComponentPublicInstance | RendererNode | Record<string, any> | null
-  if (!vnode) {
+  if (!vnode || isAsyncWrapper(vnode)) {
     value = null
   } else {
     if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
@@ -368,10 +367,7 @@ export const setRef = (
       doSet()
     }
   } else if (isFunction(ref)) {
-    callWithErrorHandling(ref, parentComponent, ErrorCodes.FUNCTION_REF, [
-      value,
-      refs
-    ])
+    callWithErrorHandling(ref, owner, ErrorCodes.FUNCTION_REF, [value, refs])
   } else if (__DEV__) {
     warn('Invalid template ref type:', value, `(${typeof value})`)
   }
@@ -552,7 +548,7 @@ function baseCreateRenderer(
 
     // set ref
     if (ref != null && parentComponent) {
-      setRef(ref, n1 && n1.ref, parentComponent, parentSuspense, n2)
+      setRef(ref, n1 && n1.ref, parentSuspense, n2)
     }
   }
 
@@ -1983,8 +1979,8 @@ function baseCreateRenderer(
       dirs
     } = vnode
     // unset ref
-    if (ref != null && parentComponent) {
-      setRef(ref, null, parentComponent, parentSuspense, null)
+    if (ref != null) {
+      setRef(ref, null, parentSuspense, null)
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
