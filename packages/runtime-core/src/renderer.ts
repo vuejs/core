@@ -632,32 +632,28 @@ function baseCreateRenderer(
     }
   }
 
-  /**
-   * Dev / HMR only
-   */
   const moveStaticNode = (
-    vnode: VNode,
+    { el, anchor }: VNode,
     container: RendererElement,
-    anchor: RendererNode | null
+    nextSibling: RendererNode | null
   ) => {
-    let cur = vnode.el
-    const end = vnode.anchor!
-    while (cur && cur !== end) {
-      const next = hostNextSibling(cur)
-      hostInsert(cur, container, anchor)
-      cur = next
+    let next
+    while (el && el !== anchor) {
+      next = hostNextSibling(el)
+      hostInsert(el, container, nextSibling)
+      el = next
     }
-    hostInsert(end, container, anchor)
+    hostInsert(anchor!, container, nextSibling)
   }
 
-  const removeStaticNode = (vnode: VNode) => {
-    let cur = vnode.el
-    while (cur && cur !== vnode.anchor) {
-      const next = hostNextSibling(cur)
-      hostRemove(cur)
-      cur = next
+  const removeStaticNode = ({ el, anchor }: VNode) => {
+    let next
+    while (el && el !== anchor) {
+      next = hostNextSibling(el)
+      hostRemove(el)
+      el = next
     }
-    hostRemove(vnode.anchor!)
+    hostRemove(anchor!)
   }
 
   const processElement = (
@@ -1934,8 +1930,7 @@ function baseCreateRenderer(
       return
     }
 
-    // static node move can only happen when force updating HMR
-    if (__DEV__ && type === Static) {
+    if (type === Static) {
       moveStaticNode(vnode, container, anchor)
       return
     }
