@@ -127,7 +127,11 @@ export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
     })
   },
   mounted(el, { value }) {
-    el._assign(getCheckboxValue(el, value))
+    // #2694
+    const modelValue = (el as any)._modelValue
+    if (typeof modelValue === 'boolean') {
+      el._assign(getCheckboxValue(el, value))
+    }
   },
   beforeUpdate(el, binding, vnode) {
     el._assign = getModelAssigner(vnode)
