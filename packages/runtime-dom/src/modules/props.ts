@@ -41,6 +41,10 @@ export function patchDOMProp(
     // e.g. <div :id="null">
     el[key] = ''
     el.removeAttribute(key)
+  } else if ((value == null || value === '') && typeof el[key] === 'number') {
+    // e.g. <img :width="null">
+    el[key] = 0
+    el.removeAttribute(key)
   } else {
     // some properties perform value validation and throw
     try {
