@@ -280,7 +280,7 @@ describe('vModel', () => {
   it('should work with checkbox and true-value/false-value', async () => {
     const component = defineComponent({
       data() {
-        return { value: null }
+        return { value: 'yes' }
       },
       render() {
         return [
@@ -301,23 +301,26 @@ describe('vModel', () => {
     const input = root.querySelector('input')
     const data = root._vnode.component.data
 
-    input.checked = true
-    triggerEvent('change', input)
-    await nextTick()
-    expect(data.value).toEqual('yes')
-
-    data.value = 'no'
-    await nextTick()
-    expect(input.checked).toEqual(false)
-
-    data.value = 'yes'
-    await nextTick()
+    // DOM checked state should respect initial true-value/false-value
     expect(input.checked).toEqual(true)
 
     input.checked = false
     triggerEvent('change', input)
     await nextTick()
     expect(data.value).toEqual('no')
+
+    data.value = 'yes'
+    await nextTick()
+    expect(input.checked).toEqual(true)
+
+    data.value = 'no'
+    await nextTick()
+    expect(input.checked).toEqual(false)
+
+    input.checked = true
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toEqual('yes')
   })
 
   it('should work with checkbox and true-value/false-value with object values', async () => {
