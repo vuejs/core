@@ -884,18 +884,21 @@ describe('vModel', () => {
     foo.selected = true
     triggerEvent('change', input)
     await nextTick()
+    expect(data.value).toBeInstanceOf(Set)
     expect(data.value).toMatchObject(new Set(['foo']))
 
     foo.selected = false
     bar.selected = true
     triggerEvent('change', input)
     await nextTick()
+    expect(data.value).toBeInstanceOf(Set)
     expect(data.value).toMatchObject(new Set(['bar']))
 
     foo.selected = true
     bar.selected = true
     triggerEvent('change', input)
     await nextTick()
+    expect(data.value).toBeInstanceOf(Set)
     expect(data.value).toMatchObject(new Set(['foo', 'bar']))
 
     foo.selected = false
