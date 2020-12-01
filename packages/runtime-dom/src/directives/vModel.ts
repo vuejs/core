@@ -100,6 +100,7 @@ export const vModelText: ModelDirective<
 
 export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
   created(el, binding, vnode) {
+    debugger
     setChecked(el, binding, vnode)
     el._assign = getModelAssigner(vnode)
     addEventListener(el, 'change', () => {
@@ -125,6 +126,9 @@ export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
         assign(getCheckboxValue(el, checked))
       }
     })
+  },
+  mounted(el, { value }) {
+    el._assign(getCheckboxValue(el, value))
   },
   beforeUpdate(el, binding, vnode) {
     el._assign = getModelAssigner(vnode)
