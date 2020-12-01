@@ -281,7 +281,7 @@ describe('vModel', () => {
   it('should work with checkbox and true-value/false-value', async () => {
     const component = defineComponent({
       data() {
-        return { value: null }
+        return { value: false }
       },
       render() {
         return [
@@ -301,6 +301,8 @@ describe('vModel', () => {
 
     const input = root.querySelector('input')
     const data = root._vnode.component.data
+
+    expect(data.value).toEqual('no')
 
     input.checked = true
     triggerEvent('change', input)
@@ -324,7 +326,7 @@ describe('vModel', () => {
   it('should work with checkbox and true-value/false-value with object values', async () => {
     const component = defineComponent({
       data() {
-        return { value: null }
+        return { value: false }
       },
       render() {
         return [
@@ -344,6 +346,8 @@ describe('vModel', () => {
 
     const input = root.querySelector('input')
     const data = root._vnode.component.data
+
+    expect(data.value).toEqual({ no: 'no' })
 
     input.checked = true
     triggerEvent('change', input)
