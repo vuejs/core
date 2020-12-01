@@ -217,7 +217,7 @@ const myEmit = defineEmit(['foo', 'bar'])
       const { content } = compile(
         `<script setup>
         import { ref } from 'vue'
-        import Foo from './Foo.vue'
+        import Foo, { bar } from './Foo.vue'
         import other from './util'
         const count = ref(0)
         const constant = {}
@@ -226,14 +226,16 @@ const myEmit = defineEmit(['foo', 'bar'])
         function fn() {}
         </script>
         <template>
-          <Foo/>
+          <Foo>{{ bar }}</Foo>
           <div @click="fn">{{ count }} {{ constant }} {{ maybe }} {{ lett }} {{ other }}</div>
         </template>
         `,
         { inlineTemplate: true }
       )
       // no need to unref vue component import
-      expect(content).toMatch(`createVNode(Foo)`)
+      expect(content).toMatch(`createVNode(Foo,`)
+      // #2699 should unref named imports from .vue
+      expect(content).toMatch(`unref(bar)`)
       // should unref other imports
       expect(content).toMatch(`unref(other)`)
       // no need to unref constant literals
