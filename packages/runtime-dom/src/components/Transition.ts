@@ -126,11 +126,7 @@ export function resolveTransitionProps(
         removeTransitionClass(el, isAppear ? appearFromClass : enterFromClass)
         addTransitionClass(el, isAppear ? appearToClass : enterToClass)
         if (!(hook && hook.length > 1)) {
-          if (enterDuration) {
-            setTimeout(resolve, enterDuration)
-          } else {
-            whenTransitionEnds(el, type, resolve)
-          }
+          whenTransitionEnds(el, type, enterDuration, resolve)
         }
       })
     }
@@ -157,11 +153,7 @@ export function resolveTransitionProps(
         removeTransitionClass(el, leaveFromClass)
         addTransitionClass(el, leaveToClass)
         if (!(onLeave && onLeave.length > 1)) {
-          if (leaveDuration) {
-            setTimeout(resolve, leaveDuration)
-          } else {
-            whenTransitionEnds(el, type, resolve)
-          }
+          whenTransitionEnds(el, type, leaveDuration, resolve)
         }
       })
       onLeave && onLeave(el, resolve)
@@ -247,27 +239,39 @@ function nextFrame(cb: () => void) {
   })
 }
 
+let endId = 0
+
 function whenTransitionEnds(
-  el: Element,
+  el: Element & { _endId?: number },
   expectedType: TransitionProps['type'] | undefined,
-  cb: () => void
+  explicitTimeout: number | null,
+  resolve: () => void
 ) {
+  const id = (el._endId = ++endId)
+  const resolveIfNotStale = () => {
+    if (id === el._endId) {
+      resolve()
+    }
+  }
+
+  if (explicitTimeout) {
+    return setTimeout(resolveIfNotStale, explicitTimeout)
+  }
+
   const { type, timeout, propCount } = getTransitionInfo(el, expectedType)
   if (!type) {
-    return cb()
+    return resolve()
   }
 
   const endEvent = type + 'end'
   let ended = 0
   const end = () => {
     el.removeEventListener(endEvent, onEnd)
-    cb()
+    resolveIfNotStale()
   }
   const onEnd = (e: Event) => {
-    if (e.target === el) {
-      if (++ended >= propCount) {
-        end()
-      }
+    if (e.target === el && ++ended >= propCount) {
+      end()
     }
   }
   setTimeout(() => {
