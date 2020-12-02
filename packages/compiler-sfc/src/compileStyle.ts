@@ -1,10 +1,5 @@
-import postcss, {
-  ProcessOptions,
-  LazyResult,
-  Result,
-  ResultMap,
-  ResultMessage
-} from 'postcss'
+import postcss, { ProcessOptions, Result, SourceMap, Message } from 'postcss'
+import LazyResult from 'postcss/lib/lazy-result'
 import trimPlugin from './stylePluginTrim'
 import scopedPlugin from './stylePluginScoped'
 import {
@@ -35,28 +30,33 @@ export interface SFCStyleCompileOptions {
   map?: RawSourceMap
 }
 
+/**
+ * Aligns with postcss-modules
+ * https://github.com/css-modules/postcss-modules
+ */
+export interface CSSModulesOptions {
+  scopeBehaviour?: 'global' | 'local'
+  generateScopedName?:
+    | string
+    | ((name: string, filename: string, css: string) => string)
+  hashPrefix?: string
+  localsConvention?: 'camelCase' | 'camelCaseOnly' | 'dashes' | 'dashesOnly'
+  exportGlobals?: boolean
+  globalModulePaths?: string[]
+}
+
 export interface SFCAsyncStyleCompileOptions extends SFCStyleCompileOptions {
   isAsync?: boolean
   // css modules support, note this requires async so that we can get the
   // resulting json
   modules?: boolean
-  // maps to postcss-modules options
-  // https://github.com/css-modules/postcss-modules
-  modulesOptions?: {
-    scopeBehaviour?: 'global' | 'local'
-    globalModulePaths?: string[]
-    generateScopedName?:
-      | string
-      | ((name: string, filename: string, css: string) => string)
-    hashPrefix?: string
-    localsConvention?: 'camelCase' | 'camelCaseOnly' | 'dashes' | 'dashesOnly'
-  }
+  modulesOptions?: CSSModulesOptions
 }
 
 export interface SFCStyleCompileResults {
   code: string
   map: RawSourceMap | undefined
-  rawResult: LazyResult | Result | undefined
+  rawResult: Result | LazyResult | undefined
   errors: Error[]
   modules?: Record<string, string>
   dependencies: Set<string>
@@ -149,7 +149,7 @@ export function doCompileStyle(
 
   let result: LazyResult | undefined
   let code: string | undefined
-  let outMap: ResultMap | undefined
+  let outMap: SourceMap | undefined
   // stylus output include plain css. so need remove the repeat item
   const dependencies = new Set(
     preProcessedSource ? preProcessedSource.dependencies : []
@@ -162,7 +162,7 @@ export function doCompileStyle(
     errors.push(...preProcessedSource.errors)
   }
 
-  const recordPlainCssDependencies = (messages: ResultMessage[]) => {
+  const recordPlainCssDependencies = (messages: Message[]) => {
     messages.forEach(msg => {
       if (msg.type === 'dependency') {
         // postcss output path is absolute position path
@@ -226,7 +226,7 @@ function preprocess(
 
   return preprocessor(
     options.source,
-    options.map,
+    options.inMap || options.map,
     {
       filename: options.filename,
       ...options.preprocessOptions
