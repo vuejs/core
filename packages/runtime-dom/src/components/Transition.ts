@@ -27,6 +27,14 @@ export interface TransitionProps extends BaseTransitionProps<Element> {
   leaveToClass?: string
 }
 
+export interface ElementWithTransition extends HTMLElement {
+  // _vtc = Vue Transition Classes.
+  // Store the temporarily-added transition classes on the element
+  // so that we can avoid overwriting them if the element's class is patched
+  // during the transition.
+  _vtc?: Set<string>
+}
+
 // DOM Transition is a higher-order-component based on the platform-agnostic
 // base Transition component, with DOM-specific logic.
 export const Transition: FunctionalComponent<TransitionProps> = (
@@ -149,7 +157,15 @@ export function resolveTransitionProps(
       const resolve = () => finishLeave(el, done)
       addTransitionClass(el, leaveActiveClass)
       addTransitionClass(el, leaveFromClass)
+      // ref #2531, #2593
+      // disabling the transition before nextFrame ensures styles from
+      // *-leave-from and *-enter-from classes are applied instantly before
+      // the transition starts. This is applied for enter transition as well
+      // so that it accounts for `visibility: hidden` cases.
+      const cachedTransition = (el as HTMLElement).style.transitionProperty
+      ;(el as HTMLElement).style.transitionProperty = 'none'
       nextFrame(() => {
+        ;(el as HTMLElement).style.transitionProperty = cachedTransition
         removeTransitionClass(el, leaveFromClass)
         addTransitionClass(el, leaveToClass)
         if (!(onLeave && onLeave.length > 1)) {
@@ -204,14 +220,6 @@ function validateDuration(val: unknown) {
         'the duration expression might be incorrect.'
     )
   }
-}
-
-export interface ElementWithTransition extends HTMLElement {
-  // _vtc = Vue Transition Classes.
-  // Store the temporarily-added transition classes on the element
-  // so that we can avoid overwriting them if the element's class is patched
-  // during the transition.
-  _vtc?: Set<string>
 }
 
 export function addTransitionClass(el: Element, cls: string) {

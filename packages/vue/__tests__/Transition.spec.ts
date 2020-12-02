@@ -1305,9 +1305,10 @@ describe('e2e: Transition', () => {
         await classWhenTransitionStart()
         await nextFrame()
         expect(await html('#container')).toBe(
-          '<div class="test v-leave-active v-leave-to">one</div>'
+          '<div class="test v-leave-active v-leave-to" style="">one</div>'
         )
         await transitionFinish()
+        await nextFrame()
         expect(await html('#container')).toBe(
           '<div class="test v-enter-active v-enter-to">two</div>'
         )
