@@ -3166,13 +3166,6 @@ generic-names@^2.0.1:
   dependencies:
     loader-utils "^1.1.0"
 
-generic-names@^3.0.0:
-  version "3.0.0"
-  resolved "https://registry.yarnpkg.com/generic-names/-/generic-names-3.0.0.tgz#c69a01700098e1215d5a0b820ac21ddd70a78dbb"
-  integrity sha512-4zZck5fpODoHpbiPaQqwhSWKk+dxHeCL7U1UpQsYwl9w5iNU4+K6uBHifOe7e0FCOuKMUiGUXxwJdsqHZBCVew==
-  dependencies:
-    loader-utils "^2.0.0"
-
 gensync@^1.0.0-beta.1:
   version "1.0.0-beta.1"
   resolved "https://registry.yarnpkg.com/gensync/-/gensync-1.0.0-beta.1.tgz#58f4361ff987e5ff6e1e7a210827aa371eaac269"
@@ -4742,15 +4735,6 @@ loader-utils@^1.1.0:
     big.js "^5.2.2"
     emojis-list "^3.0.0"
     json5 "^1.0.1"
-
-loader-utils@^2.0.0:
-  version "2.0.0"
-  resolved "https://registry.yarnpkg.com/loader-utils/-/loader-utils-2.0.0.tgz#e4cace5b816d425a166b5f097e10cd12b36064b0"
-  integrity sha512-rP4F0h2RaWSvPEkD7BLDFQnvSf+nK+wr3ESUjNTyAGobqrijmW92zc+SO6d4p4B1wh7+B/Jg1mkQe5NYUEHtHQ==
-  dependencies:
-    big.js "^5.2.2"
-    emojis-list "^3.0.0"
-    json5 "^2.1.2"
 
 locate-path@^2.0.0:
   version "2.0.0"
