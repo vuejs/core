@@ -123,7 +123,7 @@ export function resolveTransitionProps(
       const resolve = () => finishEnter(el, isAppear, done)
       hook && hook(el, resolve)
       nextFrame(() => {
-        addTransitionClass(el, isAppear ? appearActiveClass : enterActiveClass)
+        enableTransition(el)
         removeTransitionClass(el, isAppear ? appearFromClass : enterFromClass)
         addTransitionClass(el, isAppear ? appearToClass : enterToClass)
         if (!(hook && hook.length > 1)) {
@@ -133,22 +133,40 @@ export function resolveTransitionProps(
     }
   }
 
+  // see issue #2531, #2593
+  let cacheTransition: string
+  const disableTransition = (el: Element) => {
+    const style = (el as HTMLElement).style
+    cacheTransition = style.transition
+    style.transitionProperty = 'none'
+  }
+
+  const enableTransition = (el: Element) => {
+    ;(el as HTMLElement).style.transition = cacheTransition
+  }
+
   return extend(baseProps, {
     onBeforeEnter(el) {
       onBeforeEnter && onBeforeEnter(el)
+      addTransitionClass(el, enterActiveClass)
       addTransitionClass(el, enterFromClass)
+      disableTransition(el)
     },
     onBeforeAppear(el) {
       onBeforeAppear && onBeforeAppear(el)
+      addTransitionClass(el, appearActiveClass)
       addTransitionClass(el, appearFromClass)
+      disableTransition(el)
     },
     onEnter: makeEnterHook(false),
     onAppear: makeEnterHook(true),
     onLeave(el, done) {
       const resolve = () => finishLeave(el, done)
+      addTransitionClass(el, leaveActiveClass)
       addTransitionClass(el, leaveFromClass)
+      disableTransition(el)
       nextFrame(() => {
-        addTransitionClass(el, leaveActiveClass)
+        enableTransition(el)
         removeTransitionClass(el, leaveFromClass)
         addTransitionClass(el, leaveToClass)
         if (!(onLeave && onLeave.length > 1)) {

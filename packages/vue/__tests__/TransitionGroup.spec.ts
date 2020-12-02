@@ -55,24 +55,24 @@ describe('e2e: TransitionGroup', () => {
         `<div class="test">a</div>` +
           `<div class="test">b</div>` +
           `<div class="test">c</div>` +
-          `<div class="test test-enter-from">d</div>` +
-          `<div class="test test-enter-from">e</div>`
+          `<div class="test test-enter-active test-enter-from" style="transition-property: none;">d</div>` +
+          `<div class="test test-enter-active test-enter-from" style="transition-property: none;">e</div>`
       )
       await nextFrame()
       expect(await html('#container')).toBe(
         `<div class="test">a</div>` +
           `<div class="test">b</div>` +
           `<div class="test">c</div>` +
-          `<div class="test test-enter-active test-enter-to">d</div>` +
-          `<div class="test test-enter-active test-enter-to">e</div>`
+          `<div class="test test-enter-active test-enter-to" style="">d</div>` +
+          `<div class="test test-enter-active test-enter-to" style="">e</div>`
       )
       await transitionFinish()
       expect(await html('#container')).toBe(
         `<div class="test">a</div>` +
           `<div class="test">b</div>` +
           `<div class="test">c</div>` +
-          `<div class="test">d</div>` +
-          `<div class="test">e</div>`
+          `<div class="test" style="">d</div>` +
+          `<div class="test" style="">e</div>`
       )
     },
     E2E_TIMEOUT
@@ -106,15 +106,15 @@ describe('e2e: TransitionGroup', () => {
       )
 
       expect(await htmlWhenTransitionStart()).toBe(
-        `<div class="test test-leave-from">a</div>` +
+        `<div class="test test-leave-active test-leave-from" style="transition-property: none;">a</div>` +
           `<div class="test">b</div>` +
-          `<div class="test test-leave-from">c</div>`
+          `<div class="test test-leave-active test-leave-from" style="transition-property: none;">c</div>`
       )
       await nextFrame()
       expect(await html('#container')).toBe(
-        `<div class="test test-leave-active test-leave-to">a</div>` +
+        `<div class="test test-leave-active test-leave-to" style="">a</div>` +
           `<div class="test">b</div>` +
-          `<div class="test test-leave-active test-leave-to">c</div>`
+          `<div class="test test-leave-active test-leave-to" style="">c</div>`
       )
       await transitionFinish()
       expect(await html('#container')).toBe(`<div class="test">b</div>`)
@@ -150,23 +150,23 @@ describe('e2e: TransitionGroup', () => {
       )
 
       expect(await htmlWhenTransitionStart()).toBe(
-        `<div class="test test-leave-from">a</div>` +
+        `<div class="test test-leave-active test-leave-from" style="transition-property: none;">a</div>` +
           `<div class="test">b</div>` +
           `<div class="test">c</div>` +
-          `<div class="test test-enter-from">d</div>`
+          `<div class="test test-enter-active test-enter-from" style="transition-property: none;">d</div>`
       )
       await nextFrame()
       expect(await html('#container')).toBe(
-        `<div class="test test-leave-active test-leave-to">a</div>` +
+        `<div class="test test-leave-active test-leave-to" style="">a</div>` +
           `<div class="test">b</div>` +
           `<div class="test">c</div>` +
-          `<div class="test test-enter-active test-enter-to">d</div>`
+          `<div class="test test-enter-active test-enter-to" style="">d</div>`
       )
       await transitionFinish()
       expect(await html('#container')).toBe(
         `<div class="test">b</div>` +
           `<div class="test">c</div>` +
-          `<div class="test">d</div>`
+          `<div class="test" style="">d</div>`
       )
     },
     E2E_TIMEOUT
@@ -202,46 +202,46 @@ describe('e2e: TransitionGroup', () => {
       })
       // appear
       expect(appearHtml).toBe(
-        `<div class="test test-appear-from">a</div>` +
-          `<div class="test test-appear-from">b</div>` +
-          `<div class="test test-appear-from">c</div>`
+        `<div class="test test-appear-active test-appear-from" style="transition-property: none;">a</div>` +
+          `<div class="test test-appear-active test-appear-from" style="transition-property: none;">b</div>` +
+          `<div class="test test-appear-active test-appear-from" style="transition-property: none;">c</div>`
       )
       await nextFrame()
       expect(await html('#container')).toBe(
-        `<div class="test test-appear-active test-appear-to">a</div>` +
-          `<div class="test test-appear-active test-appear-to">b</div>` +
-          `<div class="test test-appear-active test-appear-to">c</div>`
+        `<div class="test test-appear-active test-appear-to" style="">a</div>` +
+          `<div class="test test-appear-active test-appear-to" style="">b</div>` +
+          `<div class="test test-appear-active test-appear-to" style="">c</div>`
       )
       await transitionFinish()
       expect(await html('#container')).toBe(
-        `<div class="test">a</div>` +
-          `<div class="test">b</div>` +
-          `<div class="test">c</div>`
+        `<div class="test" style="">a</div>` +
+          `<div class="test" style="">b</div>` +
+          `<div class="test" style="">c</div>`
       )
 
       // enter
       expect(await htmlWhenTransitionStart()).toBe(
-        `<div class="test">a</div>` +
-          `<div class="test">b</div>` +
-          `<div class="test">c</div>` +
-          `<div class="test test-enter-from">d</div>` +
-          `<div class="test test-enter-from">e</div>`
+        `<div class="test" style="">a</div>` +
+          `<div class="test" style="">b</div>` +
+          `<div class="test" style="">c</div>` +
+          `<div class="test test-enter-active test-enter-from" style="transition-property: none;">d</div>` +
+          `<div class="test test-enter-active test-enter-from" style="transition-property: none;">e</div>`
       )
       await nextFrame()
       expect(await html('#container')).toBe(
-        `<div class="test">a</div>` +
-          `<div class="test">b</div>` +
-          `<div class="test">c</div>` +
-          `<div class="test test-enter-active test-enter-to">d</div>` +
-          `<div class="test test-enter-active test-enter-to">e</div>`
+        `<div class="test" style="">a</div>` +
+          `<div class="test" style="">b</div>` +
+          `<div class="test" style="">c</div>` +
+          `<div class="test test-enter-active test-enter-to" style="">d</div>` +
+          `<div class="test test-enter-active test-enter-to" style="">e</div>`
       )
       await transitionFinish()
       expect(await html('#container')).toBe(
-        `<div class="test">a</div>` +
-          `<div class="test">b</div>` +
-          `<div class="test">c</div>` +
-          `<div class="test">d</div>` +
-          `<div class="test">e</div>`
+        `<div class="test" style="">a</div>` +
+          `<div class="test" style="">b</div>` +
+          `<div class="test" style="">c</div>` +
+          `<div class="test" style="">d</div>` +
+          `<div class="test" style="">e</div>`
       )
     },
     E2E_TIMEOUT
@@ -275,21 +275,21 @@ describe('e2e: TransitionGroup', () => {
       )
 
       expect(await htmlWhenTransitionStart()).toBe(
-        `<div class="test group-enter-from">d</div>` +
+        `<div class="test group-enter-active group-enter-from" style="transition-property: none;">d</div>` +
           `<div class="test">b</div>` +
           `<div class="test group-move" style="">a</div>` +
-          `<div class="test group-leave-from group-move" style="">c</div>`
+          `<div class="test group-leave-active group-leave-from group-move" style="transition-property: none;">c</div>`
       )
       await nextFrame()
       expect(await html('#container')).toBe(
-        `<div class="test group-enter-active group-enter-to">d</div>` +
+        `<div class="test group-enter-active group-enter-to" style="">d</div>` +
           `<div class="test">b</div>` +
           `<div class="test group-move" style="">a</div>` +
-          `<div class="test group-move group-leave-active group-leave-to" style="">c</div>`
+          `<div class="test group-leave-active group-move group-leave-to" style="">c</div>`
       )
       await transitionFinish(duration * 2)
       expect(await html('#container')).toBe(
-        `<div class="test">d</div>` +
+        `<div class="test" style="">d</div>` +
           `<div class="test">b</div>` +
           `<div class="test" style="">a</div>`
       )
@@ -440,31 +440,31 @@ describe('e2e: TransitionGroup', () => {
       expect(onAppearSpy).toBeCalled()
       expect(afterAppearSpy).not.toBeCalled()
       expect(appearHtml).toBe(
-        `<div class="test test-appear-from">a</div>` +
-          `<div class="test test-appear-from">b</div>` +
-          `<div class="test test-appear-from">c</div>`
+        `<div class="test test-appear-active test-appear-from" style="transition-property: none;">a</div>` +
+          `<div class="test test-appear-active test-appear-from" style="transition-property: none;">b</div>` +
+          `<div class="test test-appear-active test-appear-from" style="transition-property: none;">c</div>`
       )
       await nextFrame()
       expect(afterAppearSpy).not.toBeCalled()
       expect(await html('#container')).toBe(
-        `<div class="test test-appear-active test-appear-to">a</div>` +
-          `<div class="test test-appear-active test-appear-to">b</div>` +
-          `<div class="test test-appear-active test-appear-to">c</div>`
+        `<div class="test test-appear-active test-appear-to" style="">a</div>` +
+          `<div class="test test-appear-active test-appear-to" style="">b</div>` +
+          `<div class="test test-appear-active test-appear-to" style="">c</div>`
       )
       await transitionFinish()
       expect(afterAppearSpy).toBeCalled()
       expect(await html('#container')).toBe(
-        `<div class="test">a</div>` +
-          `<div class="test">b</div>` +
-          `<div class="test">c</div>`
+        `<div class="test" style="">a</div>` +
+          `<div class="test" style="">b</div>` +
+          `<div class="test" style="">c</div>`
       )
 
       // enter + leave
       expect(await htmlWhenTransitionStart()).toBe(
-        `<div class="test test-leave-from">a</div>` +
-          `<div class="test">b</div>` +
-          `<div class="test">c</div>` +
-          `<div class="test test-enter-from">d</div>`
+        `<div class="test test-leave-active test-leave-from" style="transition-property: none;">a</div>` +
+          `<div class="test" style="">b</div>` +
+          `<div class="test" style="">c</div>` +
+          `<div class="test test-enter-active test-enter-from" style="transition-property: none;">d</div>`
       )
       expect(beforeLeaveSpy).toBeCalled()
       expect(onLeaveSpy).toBeCalled()
@@ -474,18 +474,18 @@ describe('e2e: TransitionGroup', () => {
       expect(afterEnterSpy).not.toBeCalled()
       await nextFrame()
       expect(await html('#container')).toBe(
-        `<div class="test test-leave-active test-leave-to">a</div>` +
-          `<div class="test">b</div>` +
-          `<div class="test">c</div>` +
-          `<div class="test test-enter-active test-enter-to">d</div>`
+        `<div class="test test-leave-active test-leave-to" style="">a</div>` +
+          `<div class="test" style="">b</div>` +
+          `<div class="test" style="">c</div>` +
+          `<div class="test test-enter-active test-enter-to" style="">d</div>`
       )
       expect(afterLeaveSpy).not.toBeCalled()
       expect(afterEnterSpy).not.toBeCalled()
       await transitionFinish()
       expect(await html('#container')).toBe(
-        `<div class="test">b</div>` +
-          `<div class="test">c</div>` +
-          `<div class="test">d</div>`
+        `<div class="test" style="">b</div>` +
+          `<div class="test" style="">c</div>` +
+          `<div class="test" style="">d</div>`
       )
       expect(afterLeaveSpy).toBeCalled()
       expect(afterEnterSpy).toBeCalled()
