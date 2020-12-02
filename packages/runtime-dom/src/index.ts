@@ -58,7 +58,7 @@ export const createApp = ((...args) => {
   }
 
   const { mount } = app
-  app.mount = (containerOrSelector: Element | string): any => {
+  app.mount = (containerOrSelector: Element | ShadowRoot | string): any => {
     const container = normalizeContainer(containerOrSelector)
     if (!container) return
     const component = app._component
@@ -68,8 +68,10 @@ export const createApp = ((...args) => {
     // clear content before mounting
     container.innerHTML = ''
     const proxy = mount(container)
-    container.removeAttribute('v-cloak')
-    container.setAttribute('data-v-app', '')
+    if (container instanceof Element) {
+      container.removeAttribute('v-cloak')
+      container.setAttribute('data-v-app', '')
+    }
     return proxy
   }
 
@@ -84,7 +86,7 @@ export const createSSRApp = ((...args) => {
   }
 
   const { mount } = app
-  app.mount = (containerOrSelector: Element | string): any => {
+  app.mount = (containerOrSelector: Element | ShadowRoot | string): any => {
     const container = normalizeContainer(containerOrSelector)
     if (container) {
       return mount(container, true)
@@ -103,7 +105,27 @@ function injectNativeTagCheck(app: App) {
   })
 }
 
-function normalizeContainer(container: Element | string): Element | null {
+function isValidContainer(
+  container: any
+): container is Element | ShadowRoot | string {
+  return (
+    isString(container) ||
+    container instanceof Element ||
+    container instanceof ShadowRoot
+  )
+}
+
+function normalizeContainer(
+  container: Element | ShadowRoot | string
+): Element | null {
+  if (!isValidContainer(container)) {
+    if (__DEV__) {
+      warn(
+        `Failed to mount app: the first parameter of mount must be a string, Element or ShadowRoot.`
+      )
+    }
+    return null
+  }
   if (isString(container)) {
     const res = document.querySelector(container)
     if (__DEV__ && !res) {
@@ -111,15 +133,16 @@ function normalizeContainer(container: Element | string): Element | null {
     }
     return res
   }
-  if (!(container instanceof Element)) {
-    if (__DEV__) {
-      warn(
-        `Failed to mount app: the first parameter of mount must be a string or Element.`
-      )
-    }
-    return null
+  if (
+    __DEV__ &&
+    container instanceof ShadowRoot &&
+    container.mode === 'closed'
+  ) {
+    warn(
+      `mounting on a ShadowRoot with \`{mode: "closed"}\` may lead to unpredictable bugs`
+    )
   }
-  return container
+  return container as any
 }
 
 // SFC CSS utilities
