@@ -1,5 +1,10 @@
-import postcss, { ProcessOptions, Result, SourceMap, Message } from 'postcss'
-import LazyResult from 'postcss/lib/lazy-result'
+import postcss, {
+  ProcessOptions,
+  Result,
+  SourceMap,
+  Message,
+  LazyResult
+} from 'postcss'
 import trimPlugin from './stylePluginTrim'
 import scopedPlugin from './stylePluginScoped'
 import {

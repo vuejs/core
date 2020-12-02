@@ -46,7 +46,7 @@
     "lru-cache": "^5.1.1",
     "magic-string": "^0.25.7",
     "merge-source-map": "^1.1.0",
-    "postcss": "^8.1.9",
+    "postcss": "^8.1.10",
     "postcss-modules": "^4.0.0",
     "postcss-selector-parser": "^6.0.4",
     "source-map": "^0.6.1"
