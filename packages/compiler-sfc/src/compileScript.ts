@@ -168,7 +168,7 @@ export function compileScript(
     string,
     {
       isType: boolean
-      imported: string | null
+      imported: string
       source: string
     }
   > = Object.create(null)
@@ -246,7 +246,7 @@ export function compileScript(
     }
     userImports[local] = {
       isType,
-      imported: imported || null,
+      imported: imported || 'default',
       source
     }
   }
@@ -807,10 +807,12 @@ export function compileScript(
   for (const key in typeDeclaredProps) {
     bindingMetadata[key] = BindingTypes.PROPS
   }
-  for (const [key, { isType, source }] of Object.entries(userImports)) {
+  for (const [key, { isType, imported, source }] of Object.entries(
+    userImports
+  )) {
     if (isType) continue
     bindingMetadata[key] =
-      source.endsWith('.vue') || source === 'vue'
+      (imported === 'default' && source.endsWith('.vue')) || source === 'vue'
         ? BindingTypes.SETUP_CONST
         : BindingTypes.SETUP_MAYBE_REF
   }

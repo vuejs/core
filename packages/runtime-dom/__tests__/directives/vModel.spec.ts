@@ -6,8 +6,7 @@ import {
   vModelDynamic,
   withDirectives,
   VNode,
-  ref,
-  reactive
+  ref
 } from '@vue/runtime-dom'
 
 const triggerEvent = (type: string, el: Element) => {
@@ -281,7 +280,7 @@ describe('vModel', () => {
   it('should work with checkbox and true-value/false-value', async () => {
     const component = defineComponent({
       data() {
-        return { value: null }
+        return { value: 'yes' }
       },
       render() {
         return [
@@ -302,23 +301,26 @@ describe('vModel', () => {
     const input = root.querySelector('input')
     const data = root._vnode.component.data
 
-    input.checked = true
-    triggerEvent('change', input)
-    await nextTick()
-    expect(data.value).toEqual('yes')
-
-    data.value = 'no'
-    await nextTick()
-    expect(input.checked).toEqual(false)
-
-    data.value = 'yes'
-    await nextTick()
+    // DOM checked state should respect initial true-value/false-value
     expect(input.checked).toEqual(true)
 
     input.checked = false
     triggerEvent('change', input)
     await nextTick()
     expect(data.value).toEqual('no')
+
+    data.value = 'yes'
+    await nextTick()
+    expect(input.checked).toEqual(true)
+
+    data.value = 'no'
+    await nextTick()
+    expect(input.checked).toEqual(false)
+
+    input.checked = true
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toEqual('yes')
   })
 
   it('should work with checkbox and true-value/false-value with object values', async () => {
@@ -429,78 +431,6 @@ describe('vModel', () => {
     expect(bar.checked).toEqual(true)
 
     data.value = []
-    await nextTick()
-    expect(foo.checked).toEqual(false)
-    expect(bar.checked).toEqual(false)
-  })
-
-  it(`should support the reactive array in setup as a checkbox model`, async () => {
-    const value = reactive<string[]>([])
-
-    const component = defineComponent({
-      setup() {
-        return () => {
-          return [
-            withVModel(
-              h('input', {
-                type: 'checkbox',
-                class: 'foo',
-                value: 'foo',
-                'onUpdate:modelValue': setValue.bind(this)
-              }),
-              value
-            ),
-            withVModel(
-              h('input', {
-                type: 'checkbox',
-                class: 'bar',
-                value: 'bar',
-                'onUpdate:modelValue': setValue.bind(this)
-              }),
-              value
-            )
-          ]
-        }
-      }
-    })
-    render(h(component), root)
-
-    const foo = root.querySelector('.foo')
-    const bar = root.querySelector('.bar')
-
-    foo.checked = true
-    triggerEvent('change', foo)
-    await nextTick()
-    expect(value).toMatchObject(['foo'])
-
-    bar.checked = true
-    triggerEvent('change', bar)
-    await nextTick()
-    expect(value).toMatchObject(['foo', 'bar'])
-
-    bar.checked = false
-    triggerEvent('change', bar)
-    await nextTick()
-    expect(value).toMatchObject(['foo'])
-
-    foo.checked = false
-    triggerEvent('change', foo)
-    await nextTick()
-    expect(value).toMatchObject([])
-
-    value.length = 0
-    value.push('foo')
-    await nextTick()
-    expect(bar.checked).toEqual(false)
-    expect(foo.checked).toEqual(true)
-
-    value.length = 0
-    value.push('bar')
-    await nextTick()
-    expect(foo.checked).toEqual(false)
-    expect(bar.checked).toEqual(true)
-
-    value.length = 0
     await nextTick()
     expect(foo.checked).toEqual(false)
     expect(bar.checked).toEqual(false)
@@ -957,18 +887,21 @@ describe('vModel', () => {
     foo.selected = true
     triggerEvent('change', input)
     await nextTick()
+    expect(data.value).toBeInstanceOf(Set)
     expect(data.value).toMatchObject(new Set(['foo']))
 
     foo.selected = false
     bar.selected = true
     triggerEvent('change', input)
     await nextTick()
+    expect(data.value).toBeInstanceOf(Set)
     expect(data.value).toMatchObject(new Set(['bar']))
 
     foo.selected = true
     bar.selected = true
     triggerEvent('change', input)
     await nextTick()
+    expect(data.value).toBeInstanceOf(Set)
     expect(data.value).toMatchObject(new Set(['foo', 'bar']))
 
     foo.selected = false
