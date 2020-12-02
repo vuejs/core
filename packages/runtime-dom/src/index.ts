@@ -111,6 +111,14 @@ function normalizeContainer(container: Element | string): Element | null {
     }
     return res
   }
+  if (!(container instanceof Element)) {
+    if (__DEV__) {
+      warn(
+        `Failed to mount app: the first parameter of mount must be a string or Element.`
+      )
+    }
+    return null
+  }
   return container
 }
 
