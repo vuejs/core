@@ -13,7 +13,7 @@
  * if (flag & TEXT) { ... }
  * ```
  *
- * Check the `patchElement` function in 'packages/runtime-core/src/renderer.ts' to see how the
+ * Check the `patchElement` function in '../../runtime-core/src/renderer.ts' to see how the
  * flags are handled during diff.
  */
 export const enum PatchFlags {
