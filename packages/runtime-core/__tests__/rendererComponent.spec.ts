@@ -142,7 +142,7 @@ describe('renderer: component', () => {
 
   // #2170
   test('instance.$el should be exposed to watch options', async () => {
-    function returnThis(this: any) {
+    function returnThis(this: any, _arg: any) {
       return this
     }
     const propWatchSpy = jest.fn(returnThis)
