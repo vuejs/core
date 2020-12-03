@@ -163,9 +163,13 @@ export function resolveTransitionProps(
       // the transition starts. This is applied for enter transition as well
       // so that it accounts for `visibility: hidden` cases.
       const cachedTransition = (el as HTMLElement).style.transitionProperty
-      ;(el as HTMLElement).style.transitionProperty = 'none'
+      if (cachedTransition) {
+        ;(el as HTMLElement).style.transitionProperty = 'none'
+      }
       nextFrame(() => {
-        ;(el as HTMLElement).style.transitionProperty = cachedTransition
+        if (cachedTransition) {
+          ;(el as HTMLElement).style.transitionProperty = cachedTransition
+        }
         removeTransitionClass(el, leaveFromClass)
         addTransitionClass(el, leaveToClass)
         if (!(onLeave && onLeave.length > 1)) {
