@@ -885,6 +885,28 @@ describe('compiler: v-for', () => {
       expect(generate(root).code).toMatchSnapshot()
     })
 
+    test('keyed v-for (stable fragment)', () => {
+      const {
+        root,
+        node: { codegenNode }
+      } = parseWithForTransform('<span v-for="(item) in 10" :key="item" />', {
+        prefixIdentifiers: true
+      })
+      expect(
+        assertSharedCodegen(codegenNode, true, false, false)
+      ).toMatchObject({
+        source: { content: `10` },
+        params: [{ content: `item` }],
+        innerVNodeCall: {
+          tag: `"span"`,
+          props: createObjectMatcher({
+            key: `[item]`
+          })
+        }
+      })
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
     test('keyed template v-for', () => {
       const {
         root,
