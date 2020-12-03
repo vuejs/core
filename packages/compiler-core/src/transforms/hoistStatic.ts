@@ -14,12 +14,12 @@ import {
 import { TransformContext } from '../transform'
 import { PatchFlags, isString, isSymbol } from '@vue/shared'
 import { isSlotOutlet } from '../utils'
+import { CREATE_VNODE } from '../runtimeHelpers'
 
 export function hoistStatic(root: RootNode, context: TransformContext) {
   walk(
     root,
     context,
-    new Map(),
     // Root node is unfortunately non-hoistable due to potential parent
     // fallthrough attributes.
     isSingleElementRoot(root, root.children[0])
@@ -41,7 +41,6 @@ export function isSingleElementRoot(
 function walk(
   node: ParentNode,
   context: TransformContext,
-  resultCache: Map<TemplateChildNode, ConstantTypes>,
   doNotHoistNode: boolean = false
 ) {
   let hasHoistedNode = false
@@ -65,7 +64,7 @@ function walk(
     ) {
       const constantType = doNotHoistNode
         ? ConstantTypes.NOT_CONSTANT
-        : getConstantType(child, resultCache)
+        : getConstantType(child, context)
       if (constantType > ConstantTypes.NOT_CONSTANT) {
         if (constantType < ConstantTypes.CAN_STRINGIFY) {
           canStringify = false
@@ -87,7 +86,7 @@ function walk(
             (!flag ||
               flag === PatchFlags.NEED_PATCH ||
               flag === PatchFlags.TEXT) &&
-            getGeneratedPropsConstantType(child, resultCache) >=
+            getGeneratedPropsConstantType(child, context) >=
               ConstantTypes.CAN_HOIST
           ) {
             const props = getNodeProps(child)
@@ -98,7 +97,7 @@ function walk(
         }
       }
     } else if (child.type === NodeTypes.TEXT_CALL) {
-      const contentType = getConstantType(child.content, resultCache)
+      const contentType = getConstantType(child.content, context)
       if (contentType > 0) {
         if (contentType < ConstantTypes.CAN_STRINGIFY) {
           canStringify = false
@@ -112,17 +111,16 @@ function walk(
 
     // walk further
     if (child.type === NodeTypes.ELEMENT) {
-      walk(child, context, resultCache)
+      walk(child, context)
     } else if (child.type === NodeTypes.FOR) {
       // Do not hoist v-for single child because it has to be a block
-      walk(child, context, resultCache, child.children.length === 1)
+      walk(child, context, child.children.length === 1)
     } else if (child.type === NodeTypes.IF) {
       for (let i = 0; i < child.branches.length; i++) {
         // Do not hoist v-if single child because it has to be a block
         walk(
           child.branches[i],
           context,
-          resultCache,
           child.branches[i].children.length === 1
         )
       }
@@ -136,14 +134,15 @@ function walk(
 
 export function getConstantType(
   node: TemplateChildNode | SimpleExpressionNode,
-  resultCache: Map<TemplateChildNode, ConstantTypes> = new Map()
+  context: TransformContext
 ): ConstantTypes {
+  const { constantCache } = context
   switch (node.type) {
     case NodeTypes.ELEMENT:
       if (node.tagType !== ElementTypes.ELEMENT) {
         return ConstantTypes.NOT_CONSTANT
       }
-      const cached = resultCache.get(node)
+      const cached = constantCache.get(node)
       if (cached !== undefined) {
         return cached
       }
@@ -161,12 +160,9 @@ export function getConstantType(
         // non-hoistable expressions that refers to scope variables, e.g. compiler
         // injected keys or cached event handlers. Therefore we need to always
         // check the codegenNode's props to be sure.
-        const generatedPropsType = getGeneratedPropsConstantType(
-          node,
-          resultCache
-        )
+        const generatedPropsType = getGeneratedPropsConstantType(node, context)
         if (generatedPropsType === ConstantTypes.NOT_CONSTANT) {
-          resultCache.set(node, ConstantTypes.NOT_CONSTANT)
+          constantCache.set(node, ConstantTypes.NOT_CONSTANT)
           return ConstantTypes.NOT_CONSTANT
         }
         if (generatedPropsType < returnType) {
@@ -175,9 +171,9 @@ export function getConstantType(
 
         // 2. its children.
         for (let i = 0; i < node.children.length; i++) {
-          const childType = getConstantType(node.children[i], resultCache)
+          const childType = getConstantType(node.children[i], context)
           if (childType === ConstantTypes.NOT_CONSTANT) {
-            resultCache.set(node, ConstantTypes.NOT_CONSTANT)
+            constantCache.set(node, ConstantTypes.NOT_CONSTANT)
             return ConstantTypes.NOT_CONSTANT
           }
           if (childType < returnType) {
@@ -193,9 +189,9 @@ export function getConstantType(
           for (let i = 0; i < node.props.length; i++) {
             const p = node.props[i]
             if (p.type === NodeTypes.DIRECTIVE && p.name === 'bind' && p.exp) {
-              const expType = getConstantType(p.exp, resultCache)
+              const expType = getConstantType(p.exp, context)
               if (expType === ConstantTypes.NOT_CONSTANT) {
-                resultCache.set(node, ConstantTypes.NOT_CONSTANT)
+                constantCache.set(node, ConstantTypes.NOT_CONSTANT)
                 return ConstantTypes.NOT_CONSTANT
               }
               if (expType < returnType) {
@@ -210,12 +206,13 @@ export function getConstantType(
         // nested updates.
         if (codegenNode.isBlock) {
           codegenNode.isBlock = false
+          context.helper(CREATE_VNODE)
         }
 
-        resultCache.set(node, returnType)
+        constantCache.set(node, returnType)
         return returnType
       } else {
-        resultCache.set(node, ConstantTypes.NOT_CONSTANT)
+        constantCache.set(node, ConstantTypes.NOT_CONSTANT)
         return ConstantTypes.NOT_CONSTANT
       }
     case NodeTypes.TEXT:
@@ -227,7 +224,7 @@ export function getConstantType(
       return ConstantTypes.NOT_CONSTANT
     case NodeTypes.INTERPOLATION:
     case NodeTypes.TEXT_CALL:
-      return getConstantType(node.content, resultCache)
+      return getConstantType(node.content, context)
     case NodeTypes.SIMPLE_EXPRESSION:
       return node.constType
     case NodeTypes.COMPOUND_EXPRESSION:
@@ -237,7 +234,7 @@ export function getConstantType(
         if (isString(child) || isSymbol(child)) {
           continue
         }
-        const childType = getConstantType(child, resultCache)
+        const childType = getConstantType(child, context)
         if (childType === ConstantTypes.NOT_CONSTANT) {
           return ConstantTypes.NOT_CONSTANT
         } else if (childType < returnType) {
@@ -256,7 +253,7 @@ export function getConstantType(
 
 function getGeneratedPropsConstantType(
   node: PlainElementNode,
-  resultCache: Map<TemplateChildNode, ConstantTypes>
+  context: TransformContext
 ): ConstantTypes {
   let returnType = ConstantTypes.CAN_STRINGIFY
   const props = getNodeProps(node)
@@ -264,7 +261,7 @@ function getGeneratedPropsConstantType(
     const { properties } = props
     for (let i = 0; i < properties.length; i++) {
       const { key, value } = properties[i]
-      const keyType = getConstantType(key, resultCache)
+      const keyType = getConstantType(key, context)
       if (keyType === ConstantTypes.NOT_CONSTANT) {
         return keyType
       }
@@ -274,7 +271,7 @@ function getGeneratedPropsConstantType(
       if (value.type !== NodeTypes.SIMPLE_EXPRESSION) {
         return ConstantTypes.NOT_CONSTANT
       }
-      const valueType = getConstantType(value, resultCache)
+      const valueType = getConstantType(value, context)
       if (valueType === ConstantTypes.NOT_CONSTANT) {
         return valueType
       }

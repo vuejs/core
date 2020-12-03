@@ -111,6 +111,7 @@ export interface TransformContext
   removeIdentifiers(exp: ExpressionNode | string): void
   hoist(exp: JSChildNode): SimpleExpressionNode
   cache<T extends JSChildNode>(exp: T, isVNode?: boolean): CacheExpression | T
+  constantCache: Map<TemplateChildNode, ConstantTypes>
 }
 
 export function createTransformContext(
@@ -163,6 +164,7 @@ export function createTransformContext(
     directives: new Set(),
     hoists: [],
     imports: new Set(),
+    constantCache: new Map(),
     temps: 0,
     cached: 0,
     identifiers: Object.create(null),
