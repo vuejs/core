@@ -143,33 +143,23 @@ export function resolveTransitionProps(
   return extend(baseProps, {
     onBeforeEnter(el) {
       onBeforeEnter && onBeforeEnter(el)
-      addTransitionClass(el, enterActiveClass)
       addTransitionClass(el, enterFromClass)
+      addTransitionClass(el, enterActiveClass)
     },
     onBeforeAppear(el) {
       onBeforeAppear && onBeforeAppear(el)
-      addTransitionClass(el, appearActiveClass)
       addTransitionClass(el, appearFromClass)
+      addTransitionClass(el, appearActiveClass)
     },
     onEnter: makeEnterHook(false),
     onAppear: makeEnterHook(true),
     onLeave(el, done) {
       const resolve = () => finishLeave(el, done)
-      addTransitionClass(el, leaveActiveClass)
       addTransitionClass(el, leaveFromClass)
-      
-      const cachedTransition = (el as HTMLElement).style.transitionProperty
-      requestAnimationFrame(() => {
-        // ref #2531, #2593
-        // disabling the transition before nextFrame ensures styles from
-        // *-leave-from classes are applied instantly before the transition starts.
-        // ref #2712
-        // do this in an rAF to ensure styles from *-leave-active can trigger
-        // transition on the first frame when el has `transition` property itself.
-        ;(el as HTMLElement).style.transitionProperty = 'none'
-      })
+      // force reflow so *-leave-from classes immediately take effect (#2593)
+      forceReflow()
+      addTransitionClass(el, leaveActiveClass)
       nextFrame(() => {
-        ;(el as HTMLElement).style.transitionProperty = cachedTransition
         removeTransitionClass(el, leaveFromClass)
         addTransitionClass(el, leaveToClass)
         if (!(onLeave && onLeave.length > 1)) {
@@ -369,4 +359,9 @@ function getTimeout(delays: string[], durations: string[]): number {
 // (i.e. acting as a floor function) causing unexpected behaviors
 function toMs(s: string): number {
   return Number(s.slice(0, -1).replace(',', '.')) * 1000
+}
+
+// synchronously force layout to put elements into a certain state
+export function forceReflow() {
+  return document.body.offsetHeight
 }

@@ -5,7 +5,8 @@ import {
   ElementWithTransition,
   getTransitionInfo,
   resolveTransitionProps,
-  TransitionPropsValidators
+  TransitionPropsValidators,
+  forceReflow
 } from './Transition'
 import {
   Fragment,
@@ -170,11 +171,6 @@ function applyTranslation(c: VNode): VNode | undefined {
     s.transitionDuration = '0s'
     return c
   }
-}
-
-// this is put in a dedicated function to avoid the line from being treeshaken
-function forceReflow() {
-  return document.body.offsetHeight
 }
 
 function hasCSSTransform(
