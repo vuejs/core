@@ -37,7 +37,8 @@ import {
   RENDER_LIST,
   OPEN_BLOCK,
   CREATE_BLOCK,
-  FRAGMENT
+  FRAGMENT,
+  CREATE_VNODE
 } from '../runtimeHelpers'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
@@ -168,6 +169,8 @@ export const transformFor = createStructuralDirectiveTransform(
           if (childBlock.isBlock) {
             helper(OPEN_BLOCK)
             helper(CREATE_BLOCK)
+          } else {
+            helper(CREATE_VNODE)
           }
         }
 
