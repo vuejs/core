@@ -163,7 +163,12 @@ export function resolveTransitionProps(
       // the transition starts. This is applied for enter transition as well
       // so that it accounts for `visibility: hidden` cases.
       const cachedTransition = (el as HTMLElement).style.transitionProperty
-      ;(el as HTMLElement).style.transitionProperty = 'none'
+      // ref #2712
+      // ensure styles from *-leave-active can trigger transition
+      // on the first frame when el has `transition` property itself.
+      requestAnimationFrame(() => {
+        ;(el as HTMLElement).style.transitionProperty = 'none'
+      })
       nextFrame(() => {
         ;(el as HTMLElement).style.transitionProperty = cachedTransition
         removeTransitionClass(el, leaveFromClass)

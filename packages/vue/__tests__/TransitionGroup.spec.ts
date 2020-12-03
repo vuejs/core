@@ -8,7 +8,6 @@ describe('e2e: TransitionGroup', () => {
 
   const duration = 50
   const buffer = 5
-  const transitionDisableProp = `style="transition-property: none;"`
 
   const htmlWhenTransitionStart = () =>
     page().evaluate(() => {
@@ -107,9 +106,9 @@ describe('e2e: TransitionGroup', () => {
       )
 
       expect(await htmlWhenTransitionStart()).toBe(
-        `<div class="test test-leave-active test-leave-from" ${transitionDisableProp}>a</div>` +
+        `<div class="test test-leave-active test-leave-from">a</div>` +
           `<div class="test">b</div>` +
-          `<div class="test test-leave-active test-leave-from" ${transitionDisableProp}>c</div>`
+          `<div class="test test-leave-active test-leave-from">c</div>`
       )
       await nextFrame()
       expect(await html('#container')).toBe(
@@ -151,7 +150,7 @@ describe('e2e: TransitionGroup', () => {
       )
 
       expect(await htmlWhenTransitionStart()).toBe(
-        `<div class="test test-leave-active test-leave-from" ${transitionDisableProp}>a</div>` +
+        `<div class="test test-leave-active test-leave-from">a</div>` +
           `<div class="test">b</div>` +
           `<div class="test">c</div>` +
           `<div class="test test-enter-active test-enter-from">d</div>`
@@ -279,7 +278,7 @@ describe('e2e: TransitionGroup', () => {
         `<div class="test group-enter-active group-enter-from">d</div>` +
           `<div class="test">b</div>` +
           `<div class="test group-move" style="">a</div>` +
-          `<div class="test group-leave-active group-leave-from group-move" ${transitionDisableProp}>c</div>`
+          `<div class="test group-leave-active group-leave-from group-move" style="">c</div>`
       )
       await nextFrame()
       expect(await html('#container')).toBe(
@@ -462,7 +461,7 @@ describe('e2e: TransitionGroup', () => {
 
       // enter + leave
       expect(await htmlWhenTransitionStart()).toBe(
-        `<div class="test test-leave-active test-leave-from" ${transitionDisableProp}>a</div>` +
+        `<div class="test test-leave-active test-leave-from">a</div>` +
           `<div class="test">b</div>` +
           `<div class="test">c</div>` +
           `<div class="test test-enter-active test-enter-from">d</div>`
