@@ -1139,7 +1139,8 @@ function baseCreateRenderer(
       if (
         patchFlag > 0 &&
         patchFlag & PatchFlags.STABLE_FRAGMENT &&
-        dynamicChildren
+        dynamicChildren &&
+        n1.dynamicChildren
       ) {
         // a stable fragment (template root or <template v-for>) doesn't need to
         // patch children order, but it may contain dynamicChildren.
