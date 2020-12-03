@@ -157,16 +157,15 @@ export function resolveTransitionProps(
       const resolve = () => finishLeave(el, done)
       addTransitionClass(el, leaveActiveClass)
       addTransitionClass(el, leaveFromClass)
-      // ref #2531, #2593
-      // disabling the transition before nextFrame ensures styles from
-      // *-leave-from and *-enter-from classes are applied instantly before
-      // the transition starts. This is applied for enter transition as well
-      // so that it accounts for `visibility: hidden` cases.
+      
       const cachedTransition = (el as HTMLElement).style.transitionProperty
-      // ref #2712
-      // ensure styles from *-leave-active can trigger transition
-      // on the first frame when el has `transition` property itself.
       requestAnimationFrame(() => {
+        // ref #2531, #2593
+        // disabling the transition before nextFrame ensures styles from
+        // *-leave-from classes are applied instantly before the transition starts.
+        // ref #2712
+        // do this in an rAF to ensure styles from *-leave-active can trigger
+        // transition on the first frame when el has `transition` property itself.
         ;(el as HTMLElement).style.transitionProperty = 'none'
       })
       nextFrame(() => {
