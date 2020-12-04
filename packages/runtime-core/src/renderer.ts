@@ -240,7 +240,8 @@ export type MountComponentFn = (
   parentComponent: ComponentInternalInstance | null,
   parentSuspense: SuspenseBoundary | null,
   isSVG: boolean,
-  optimized: boolean
+  optimized: boolean,
+  hydrating?: boolean
 ) => void
 
 type ProcessTextOrCommentFn = (
@@ -1227,13 +1228,16 @@ function baseCreateRenderer(
     parentComponent,
     parentSuspense,
     isSVG,
-    optimized
+    optimized,
+    hydrating = false
   ) => {
     const instance: ComponentInternalInstance = (initialVNode.component = createComponentInstance(
       initialVNode,
       parentComponent,
       parentSuspense
     ))
+
+    instance.isHydrating = hydrating
 
     if (__DEV__ && instance.type.__hmrId) {
       registerHMR(instance)
@@ -1397,6 +1401,7 @@ function baseCreateRenderer(
         if ((vnodeHook = props && props.onVnodeMounted)) {
           queuePostRenderEffect(() => {
             invokeVNodeHook(vnodeHook!, parent, initialVNode)
+            instance.isHydrating = false
           }, parentSuspense)
         }
         // activated hook for keep-alive roots.

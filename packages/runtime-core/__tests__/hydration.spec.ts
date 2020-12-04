@@ -707,4 +707,44 @@ describe('SSR hydration', () => {
       expect(`Hydration children mismatch`).toHaveBeenWarned()
     })
   })
+
+  test('sets and removes internal hydration flag', async () => {
+    const checkHydration = jest.fn()
+
+    const container = document.createElement('div')
+    container.innerHTML = '<div>foo</div>'
+
+    const visible = ref(true)
+    const component = defineComponent({
+      render: () => h('div', 'foo'),
+      created() {
+        checkHydration(this.$.isHydrating)
+      },
+      beforeMount() {
+        checkHydration(this.$.isHydrating)
+      },
+      mounted() {
+        checkHydration(this.$.isHydrating)
+      }
+    })
+    const app = createSSRApp({
+      render: () => (visible.value ? h(component) : null)
+    })
+
+    app.mount(container)
+
+    visible.value = false
+    await nextTick()
+    visible.value = true
+    await nextTick()
+
+    expect(checkHydration.mock.calls).toMatchObject([
+      [true],
+      [true],
+      [true],
+      [false],
+      [false],
+      [false]
+    ])
+  })
 })
