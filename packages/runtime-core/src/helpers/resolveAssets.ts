@@ -2,8 +2,8 @@ import { currentRenderingInstance } from '../componentRenderUtils'
 import {
   currentInstance,
   ConcreteComponent,
-  FunctionalComponent,
-  ComponentOptions
+  ComponentOptions,
+  getComponentName
 } from '../component'
 import { Directive } from '../directives'
 import { camelize, capitalize, isString } from '@vue/shared'
@@ -73,8 +73,7 @@ function resolveAsset(
         return Component
       }
 
-      const selfName =
-        (Component as FunctionalComponent).displayName || Component.name
+      const selfName = getComponentName(Component)
       if (
         selfName &&
         (selfName === name ||

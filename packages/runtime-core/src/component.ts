@@ -801,15 +801,21 @@ const classifyRE = /(?:^|[-_])(\w)/g
 const classify = (str: string): string =>
   str.replace(classifyRE, c => c.toUpperCase()).replace(/[-_]/g, '')
 
+export function getComponentName(
+  Component: ConcreteComponent
+): string | undefined {
+  return isFunction(Component)
+    ? Component.displayName || Component.name
+    : Component.name
+}
+
 /* istanbul ignore next */
 export function formatComponentName(
   instance: ComponentInternalInstance | null,
   Component: ConcreteComponent,
   isRoot = false
 ): string {
-  let name = isFunction(Component)
-    ? Component.displayName || Component.name
-    : Component.name
+  let name = getComponentName(Component)
   if (!name && Component.__file) {
     const match = Component.__file.match(/([^/\\]+)\.\w+$/)
     if (match) {
