@@ -17,7 +17,12 @@ import {
 } from '../../src/ast'
 import { ErrorCodes } from '../../src/errors'
 import { CompilerOptions, generate } from '../../src'
-import { FRAGMENT, RENDER_LIST, RENDER_SLOT } from '../../src/runtimeHelpers'
+import {
+  CREATE_VNODE,
+  FRAGMENT,
+  RENDER_LIST,
+  RENDER_SLOT
+} from '../../src/runtimeHelpers'
 import { PatchFlags } from '@vue/shared'
 import { createObjectMatcher, genFlagText } from '../testUtils'
 
@@ -779,6 +784,7 @@ describe('compiler: v-for', () => {
           patchFlag: genFlagText(PatchFlags.TEXT)
         }
       })
+      expect(root.helpers).toContain(CREATE_VNODE)
       expect(generate(root).code).toMatchSnapshot()
     })
 
