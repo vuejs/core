@@ -59,6 +59,7 @@ import {
 import { warn } from './warning'
 import { VNodeChild } from './vnode'
 import { callWithAsyncErrorHandling } from './errorHandling'
+import { UnionToIntersection } from './helpers/typeUtils'
 
 /**
  * Interface for declaring custom options.
@@ -80,6 +81,19 @@ export interface ComponentCustomOptions {}
 
 export type RenderFunction = () => VNodeChild
 
+type ExtractOptionProp<T> = T extends ComponentOptionsBase<
+  infer P,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any
+>
+  ? unknown extends P ? {} : P
+  : {}
+
 export interface ComponentOptionsBase<
   Props,
   RawBindings,
@@ -97,7 +111,9 @@ export interface ComponentOptionsBase<
     ComponentCustomOptions {
   setup?: (
     this: void,
-    props: Props,
+    props: Props &
+      UnionToIntersection<ExtractOptionProp<Mixin>> &
+      UnionToIntersection<ExtractOptionProp<Extends>>,
     ctx: SetupContext<E>
   ) => Promise<RawBindings> | RawBindings | RenderFunction | void
   name?: string
@@ -358,8 +374,24 @@ interface LegacyOptions<
   // since that leads to some sort of circular inference and breaks ThisType
   // for the entire component.
   data?: (
-    this: CreateComponentPublicInstance<Props>,
-    vm: CreateComponentPublicInstance<Props>
+    this: CreateComponentPublicInstance<
+      Props,
+      {},
+      {},
+      {},
+      MethodOptions,
+      Mixin,
+      Extends
+    >,
+    vm: CreateComponentPublicInstance<
+      Props,
+      {},
+      {},
+      {},
+      MethodOptions,
+      Mixin,
+      Extends
+    >
   ) => D
   computed?: C
   methods?: M
@@ -590,6 +622,7 @@ export function applyOptions(
       deferredData.forEach(dataFn => resolveData(instance, dataFn, publicThis))
     }
     if (dataOptions) {
+      // @ts-ignore dataOptions is not fully type safe
       resolveData(instance, dataOptions, publicThis)
     }
     if (__DEV__) {
