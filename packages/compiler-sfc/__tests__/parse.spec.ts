@@ -111,8 +111,13 @@ h1 { color: red }
     )
   })
 
-  test('should ignore nodes with no content', () => {
-    expect(parse(`<template/>`).descriptor.template).toBe(null)
+  test('should keep template nodes with no content', () => {
+    const { descriptor } = parse(`<template/>`)
+    expect(descriptor.template).toBeTruthy()
+    expect(descriptor.template!.content).toBeFalsy()
+  })
+
+  test('should ignore other nodes with no content', () => {
     expect(parse(`<script/>`).descriptor.script).toBe(null)
     expect(parse(`<style/>`).descriptor.styles.length).toBe(0)
     expect(parse(`<custom/>`).descriptor.customBlocks.length).toBe(0)
