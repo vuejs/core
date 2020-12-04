@@ -121,12 +121,17 @@ export const transformAssetUrl: NodeTransform = (
           attr.value.content[0] !== '@' &&
           isRelativeUrl(attr.value.content)
         ) {
+          // Allow for full hostnames provided in options.base
+          const base = parseUrl(options.base)
+          const protocol = base.protocol || ''
+          const host = base.host ? protocol + '//' + base.host : ''
+          const basePath = base.path || '/'
+
           // when packaged in the browser, path will be using the posix-
           // only version provided by rollup-plugin-node-builtins.
-          attr.value.content = (path.posix || path).join(
-            options.base,
-            url.path + (url.hash || '')
-          )
+          attr.value.content =
+            host +
+            (path.posix || path).join(basePath, url.path + (url.hash || ''))
         }
         return
       }
