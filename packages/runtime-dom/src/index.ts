@@ -111,7 +111,9 @@ function normalizeContainer(
   if (isString(container)) {
     const res = document.querySelector(container)
     if (__DEV__ && !res) {
-      warn(`Failed to mount app: mount target selector returned null.`)
+      warn(
+        `Failed to mount app: mount target selector "${container}" returned null.`
+      )
     }
     return res
   }
