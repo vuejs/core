@@ -78,16 +78,27 @@ export function watchEffect(
 // initial value for watchers to trigger on undefined initial values
 const INITIAL_WATCHER_VALUE = {}
 
+type MultiWatchSources = (WatchSource<unknown> | object)[]
+
 // overload #1: array of multiple sources + cb
-// Readonly constraint helps the callback to correctly infer value types based
-// on position in the source array. Otherwise the values will get a union type
-// of all possible value types.
 export function watch<
-  T extends Readonly<Array<WatchSource<unknown> | object>>,
+  T extends MultiWatchSources,
   Immediate extends Readonly<boolean> = false
 >(
-  source: [...T],
-  cb: WatchCallback<MapSources<[...T], false>, MapSources<[...T], Immediate>>,
+  sources: [...T],
+  cb: WatchCallback<MapSources<T, false>, MapSources<T, Immediate>>,
+  options?: WatchOptions<Immediate>
+): WatchStopHandle
+
+// overload #2 for multiple sources w/ `as const`
+// watch([foo, bar] as const, () => {})
+// somehow [...T] breaks when the type is readonly
+export function watch<
+  T extends Readonly<MultiWatchSources>,
+  Immediate extends Readonly<boolean> = false
+>(
+  source: T,
+  cb: WatchCallback<MapSources<T, false>, MapSources<T, Immediate>>,
   options?: WatchOptions<Immediate>
 ): WatchStopHandle
 
