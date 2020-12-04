@@ -1426,9 +1426,7 @@ function baseCreateRenderer(
         instance.isMounted = true
 
         // #2458: deference mount-only object parameters to prevent memleaks
-        initialVNode = undefined as any
-        container = null as any
-        anchor = null
+        initialVNode = container = anchor = null as any
       } else {
         // updateComponent
         // This is triggered by mutation of component's own state (next: null)
