@@ -10,28 +10,21 @@ import {
 } from '@vue/runtime-dom'
 
 describe('useCssVars', () => {
-  async function assertCssVars(
-    getApp: (state: any) => ComponentOptions,
-    scopeId?: string
-  ) {
+  async function assertCssVars(getApp: (state: any) => ComponentOptions) {
     const state = reactive({ color: 'red' })
     const App = getApp(state)
     const root = document.createElement('div')
-    const prefix = scopeId ? `${scopeId.replace(/^data-v-/, '')}-` : ``
 
     render(h(App), root)
+    await nextTick()
     for (const c of [].slice.call(root.children as any)) {
-      expect(
-        (c as HTMLElement).style.getPropertyValue(`--${prefix}color`)
-      ).toBe(`red`)
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe(`red`)
     }
 
     state.color = 'green'
     await nextTick()
     for (const c of [].slice.call(root.children as any)) {
-      expect(
-        (c as HTMLElement).style.getPropertyValue(`--${prefix}color`)
-      ).toBe('green')
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('green')
     }
   }
 
@@ -74,9 +67,17 @@ describe('useCssVars', () => {
     const state = reactive({ color: 'red' })
     const root = document.createElement('div')
 
+    let resolveAsync: any
+    let asyncPromise: any
+
     const AsyncComp = {
-      async setup() {
-        return () => h('p', 'default')
+      setup() {
+        asyncPromise = new Promise(r => {
+          resolveAsync = () => {
+            r(() => h('p', 'default'))
+          }
+        })
+        return asyncPromise
       }
     }
 
@@ -92,12 +93,14 @@ describe('useCssVars', () => {
     }
 
     render(h(App), root)
+    await nextTick()
     // css vars use with fallback tree
     for (const c of [].slice.call(root.children as any)) {
       expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe(`red`)
     }
     // AsyncComp resolve
-    await nextTick()
+    resolveAsync()
+    await asyncPromise.then(() => {})
     // Suspense effects flush
     await nextTick()
     // css vars use with default tree
@@ -110,21 +113,6 @@ describe('useCssVars', () => {
     for (const c of [].slice.call(root.children as any)) {
       expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('green')
     }
-  })
-
-  test('with <style scoped>', async () => {
-    const id = 'data-v-12345'
-
-    await assertCssVars(
-      state => ({
-        __scopeId: id,
-        setup() {
-          useCssVars(() => state, true)
-          return () => h('div')
-        }
-      }),
-      id
-    )
   })
 
   test('with subTree changed', async () => {
@@ -140,6 +128,7 @@ describe('useCssVars', () => {
     }
 
     render(h(App), root)
+    await nextTick()
     // css vars use with fallback tree
     for (const c of [].slice.call(root.children as any)) {
       expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe(`red`)

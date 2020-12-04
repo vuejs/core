@@ -74,6 +74,7 @@ import { startMeasure, endMeasure } from './profiling'
 import { ComponentPublicInstance } from './componentPublicInstance'
 import { devtoolsComponentRemoved, devtoolsComponentUpdated } from './devtools'
 import { initFeatureFlags } from './featureFlags'
+import { isAsyncWrapper } from './apiAsyncComponent'
 
 export interface Renderer<HostElement = RendererElement> {
   render: RootRenderFunction<HostElement>
@@ -289,7 +290,6 @@ export const queuePostRenderEffect = __FEATURE_SUSPENSE__
 export const setRef = (
   rawRef: VNodeNormalizedRef,
   oldRawRef: VNodeNormalizedRef | null,
-  parentComponent: ComponentInternalInstance,
   parentSuspense: SuspenseBoundary | null,
   vnode: VNode | null
 ) => {
@@ -298,7 +298,6 @@ export const setRef = (
       setRef(
         r,
         oldRawRef && (isArray(oldRawRef) ? oldRawRef[i] : oldRawRef),
-        parentComponent,
         parentSuspense,
         vnode
       )
@@ -306,12 +305,12 @@ export const setRef = (
     return
   }
 
-  let value: ComponentPublicInstance | RendererNode | null
-  if (!vnode) {
+  let value: ComponentPublicInstance | RendererNode | Record<string, any> | null
+  if (!vnode || isAsyncWrapper(vnode)) {
     value = null
   } else {
     if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
-      value = vnode.component!.proxy
+      value = vnode.component!.exposed || vnode.component!.proxy
     } else {
       value = vnode.el
     }
@@ -368,10 +367,7 @@ export const setRef = (
       doSet()
     }
   } else if (isFunction(ref)) {
-    callWithErrorHandling(ref, parentComponent, ErrorCodes.FUNCTION_REF, [
-      value,
-      refs
-    ])
+    callWithErrorHandling(ref, owner, ErrorCodes.FUNCTION_REF, [value, refs])
   } else if (__DEV__) {
     warn('Invalid template ref type:', value, `(${typeof value})`)
   }
@@ -552,7 +548,7 @@ function baseCreateRenderer(
 
     // set ref
     if (ref != null && parentComponent) {
-      setRef(ref, n1 && n1.ref, parentComponent, parentSuspense, n2)
+      setRef(ref, n1 && n1.ref, parentSuspense, n2)
     }
   }
 
@@ -632,35 +628,28 @@ function baseCreateRenderer(
     }
   }
 
-  /**
-   * Dev / HMR only
-   */
   const moveStaticNode = (
-    vnode: VNode,
+    { el, anchor }: VNode,
     container: RendererElement,
-    anchor: RendererNode | null
+    nextSibling: RendererNode | null
   ) => {
-    let cur = vnode.el
-    const end = vnode.anchor!
-    while (cur && cur !== end) {
-      const next = hostNextSibling(cur)
-      hostInsert(cur, container, anchor)
-      cur = next
+    let next
+    while (el && el !== anchor) {
+      next = hostNextSibling(el)
+      hostInsert(el, container, nextSibling)
+      el = next
     }
-    hostInsert(end, container, anchor)
+    hostInsert(anchor!, container, nextSibling)
   }
 
-  /**
-   * Dev / HMR only
-   */
-  const removeStaticNode = (vnode: VNode) => {
-    let cur = vnode.el
-    while (cur && cur !== vnode.anchor) {
-      const next = hostNextSibling(cur)
-      hostRemove(cur)
-      cur = next
+  const removeStaticNode = ({ el, anchor }: VNode) => {
+    let next
+    while (el && el !== anchor) {
+      next = hostNextSibling(el)
+      hostRemove(el)
+      el = next
     }
-    hostRemove(vnode.anchor!)
+    hostRemove(anchor!)
   }
 
   const processElement = (
@@ -889,7 +878,7 @@ function baseCreateRenderer(
       invokeDirectiveHook(n2, n1, parentComponent, 'beforeUpdate')
     }
 
-    if (__DEV__ && (__BROWSER__ || __TEST__) && isHmrUpdating) {
+    if (__DEV__ && isHmrUpdating) {
       // HMR updated, force full diff
       patchFlag = 0
       optimized = false
@@ -990,12 +979,7 @@ function baseCreateRenderer(
         parentSuspense,
         areChildrenSVG
       )
-      if (
-        __DEV__ &&
-        (__BROWSER__ || __TEST__) &&
-        parentComponent &&
-        parentComponent.type.__hmrId
-      ) {
+      if (__DEV__ && parentComponent && parentComponent.type.__hmrId) {
         traverseStaticChildren(n1, n2)
       }
     } else if (!optimized) {
@@ -1155,12 +1139,15 @@ function baseCreateRenderer(
       if (
         patchFlag > 0 &&
         patchFlag & PatchFlags.STABLE_FRAGMENT &&
-        dynamicChildren
+        dynamicChildren &&
+        // #2715 the previous fragment could've been a BAILed one as a result
+        // of renderSlot() with no valid children
+        n1.dynamicChildren
       ) {
         // a stable fragment (template root or <template v-for>) doesn't need to
         // patch children order, but it may contain dynamicChildren.
         patchBlockChildren(
-          n1.dynamicChildren!,
+          n1.dynamicChildren,
           dynamicChildren,
           container,
           parentComponent,
@@ -1248,7 +1235,7 @@ function baseCreateRenderer(
       parentSuspense
     ))
 
-    if (__DEV__ && (__BROWSER__ || __TEST__) && instance.type.__hmrId) {
+    if (__DEV__ && instance.type.__hmrId) {
       registerHMR(instance)
     }
 
@@ -1942,8 +1929,7 @@ function baseCreateRenderer(
       return
     }
 
-    // static node move can only happen when force updating HMR
-    if (__DEV__ && type === Static) {
+    if (type === Static) {
       moveStaticNode(vnode, container, anchor)
       return
     }
@@ -1996,8 +1982,8 @@ function baseCreateRenderer(
       dirs
     } = vnode
     // unset ref
-    if (ref != null && parentComponent) {
-      setRef(ref, null, parentComponent, parentSuspense, null)
+    if (ref != null) {
+      setRef(ref, null, parentSuspense, null)
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
@@ -2076,7 +2062,7 @@ function baseCreateRenderer(
       return
     }
 
-    if (__DEV__ && type === Static) {
+    if (type === Static) {
       removeStaticNode(vnode)
       return
     }
@@ -2122,7 +2108,7 @@ function baseCreateRenderer(
     parentSuspense: SuspenseBoundary | null,
     doRemove?: boolean
   ) => {
-    if (__DEV__ && (__BROWSER__ || __TEST__) && instance.type.__hmrId) {
+    if (__DEV__ && instance.type.__hmrId) {
       unregisterHMR(instance)
     }
 

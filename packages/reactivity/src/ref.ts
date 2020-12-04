@@ -21,7 +21,11 @@ export interface Ref<T = any> {
 }
 
 export type ToRef<T> = T extends Ref ? T : Ref<UnwrapRef<T>>
-export type ToRefs<T = any> = { [K in keyof T]: ToRef<T[K]> }
+export type ToRefs<T = any> = {
+  // #2687: somehow using ToRef<T[K]> here turns the resulting type into
+  // a union of multiple Ref<*> types instead of a single Ref<* | *> type.
+  [K in keyof T]: T[K] extends Ref ? T[K] : Ref<UnwrapRef<T[K]>>
+}
 
 const convert = <T extends unknown>(val: T): T =>
   isObject(val) ? reactive(val) : val

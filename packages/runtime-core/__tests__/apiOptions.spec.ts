@@ -251,6 +251,7 @@ describe('api: options', () => {
   })
 
   test('provide/inject', () => {
+    const symbolKey = Symbol()
     const Root = defineComponent({
       data() {
         return {
@@ -259,7 +260,8 @@ describe('api: options', () => {
       },
       provide() {
         return {
-          a: this.a
+          a: this.a,
+          [symbolKey]: 2
         }
       },
       render() {
@@ -271,7 +273,9 @@ describe('api: options', () => {
           h(ChildE),
           h(ChildF),
           h(ChildG),
-          h(ChildH)
+          h(ChildH),
+          h(ChildI),
+          h(ChildJ)
         ]
       }
     })
@@ -321,7 +325,15 @@ describe('api: options', () => {
         default: () => 5
       }
     })
-    expect(renderToString(h(Root))).toBe(`11112345`)
+    const ChildI = defineChild({
+      b: symbolKey
+    })
+    const ChildJ = defineChild({
+      b: {
+        from: symbolKey
+      }
+    })
+    expect(renderToString(h(Root))).toBe(`1111234522`)
   })
 
   test('provide accessing data in extends', () => {

@@ -652,4 +652,49 @@ describe('api: defineAsyncComponent', () => {
     expect(loaderCallCount).toBe(2)
     expect(serializeInner(root)).toBe('<!---->')
   })
+
+  test('template ref forwarding', async () => {
+    let resolve: (comp: Component) => void
+    const Foo = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r as any
+        })
+    )
+
+    const fooRef = ref()
+    const toggle = ref(true)
+    const root = nodeOps.createElement('div')
+    createApp({
+      render: () => (toggle.value ? h(Foo, { ref: fooRef }) : null)
+    }).mount(root)
+
+    expect(serializeInner(root)).toBe('<!---->')
+    expect(fooRef.value).toBe(null)
+
+    resolve!({
+      data() {
+        return {
+          id: 'foo'
+        }
+      },
+      render: () => 'resolved'
+    })
+    // first time resolve, wait for macro task since there are multiple
+    // microtasks / .then() calls
+    await timeout()
+    expect(serializeInner(root)).toBe('resolved')
+    expect(fooRef.value.id).toBe('foo')
+
+    toggle.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe('<!---->')
+    expect(fooRef.value).toBe(null)
+
+    // already resolved component should update on nextTick
+    toggle.value = true
+    await nextTick()
+    expect(serializeInner(root)).toBe('resolved')
+    expect(fooRef.value.id).toBe('foo')
+  })
 })

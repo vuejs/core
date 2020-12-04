@@ -94,6 +94,18 @@ describe('ssr: element', () => {
       ).toMatchInlineSnapshot(`"\`<div id=\\"foo\\" class=\\"bar\\"></div>\`"`)
     })
 
+    test('ignore static key/ref', () => {
+      expect(
+        getCompiledString(`<div key="1" ref="el"></div>`)
+      ).toMatchInlineSnapshot(`"\`<div></div>\`"`)
+    })
+
+    test('ignore v-bind key/ref', () => {
+      expect(
+        getCompiledString(`<div :key="1" :ref="el"></div>`)
+      ).toMatchInlineSnapshot(`"\`<div></div>\`"`)
+    })
+
     test('v-bind:class', () => {
       expect(getCompiledString(`<div id="foo" :class="bar"></div>`))
         .toMatchInlineSnapshot(`
@@ -139,7 +151,7 @@ describe('ssr: element', () => {
       `)
     })
 
-    test('v-bind:key (boolean)', () => {
+    test('v-bind:arg (boolean)', () => {
       expect(getCompiledString(`<input type="checkbox" :checked="checked">`))
         .toMatchInlineSnapshot(`
         "\`<input type=\\"checkbox\\"\${
@@ -148,7 +160,7 @@ describe('ssr: element', () => {
       `)
     })
 
-    test('v-bind:key (non-boolean)', () => {
+    test('v-bind:arg (non-boolean)', () => {
       expect(getCompiledString(`<div :id="id" class="bar"></div>`))
         .toMatchInlineSnapshot(`
         "\`<div\${
@@ -157,7 +169,7 @@ describe('ssr: element', () => {
       `)
     })
 
-    test('v-bind:[key]', () => {
+    test('v-bind:[arg]', () => {
       expect(getCompiledString(`<div v-bind:[key]="value"></div>`))
         .toMatchInlineSnapshot(`
         "\`<div\${

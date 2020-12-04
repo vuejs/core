@@ -16,7 +16,6 @@ export const SSR_RENDER_DYNAMIC_MODEL = Symbol(`ssrRenderDynamicModel`)
 export const SSR_GET_DYNAMIC_MODEL_PROPS = Symbol(`ssrGetDynamicModelProps`)
 export const SSR_RENDER_TELEPORT = Symbol(`ssrRenderTeleport`)
 export const SSR_RENDER_SUSPENSE = Symbol(`ssrRenderSuspense`)
-export const SSR_RESOLVE_CSS_VARS = Symbol(`ssrResolveCssVars`)
 
 export const ssrHelpers = {
   [SSR_INTERPOLATE]: `ssrInterpolate`,
@@ -34,8 +33,7 @@ export const ssrHelpers = {
   [SSR_RENDER_DYNAMIC_MODEL]: `ssrRenderDynamicModel`,
   [SSR_GET_DYNAMIC_MODEL_PROPS]: `ssrGetDynamicModelProps`,
   [SSR_RENDER_TELEPORT]: `ssrRenderTeleport`,
-  [SSR_RENDER_SUSPENSE]: `ssrRenderSuspense`,
-  [SSR_RESOLVE_CSS_VARS]: `ssrResolveCssVars`
+  [SSR_RENDER_SUSPENSE]: `ssrRenderSuspense`
 }
 
 // Note: these are helpers imported from @vue/server-renderer

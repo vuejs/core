@@ -10,6 +10,8 @@ import * as CompilerDOM from '@vue/compiler-dom'
 import { RawSourceMap, SourceMapGenerator } from 'source-map'
 import { TemplateCompiler } from './compileTemplate'
 import { Statement } from '@babel/types'
+import { parseCssVars } from './cssVars'
+import { warnExperimental } from './warn'
 
 export interface SFCParseOptions {
   filename?: string
@@ -31,7 +33,7 @@ export interface SFCBlock {
 
 export interface SFCTemplateBlock extends SFCBlock {
   type: 'template'
-  functional?: boolean
+  ast: ElementNode
 }
 
 export interface SFCScriptBlock extends SFCBlock {
@@ -45,7 +47,6 @@ export interface SFCScriptBlock extends SFCBlock {
 export interface SFCStyleBlock extends SFCBlock {
   type: 'style'
   scoped?: boolean
-  vars?: string
   module?: string | boolean
 }
 
@@ -57,6 +58,7 @@ export interface SFCDescriptor {
   scriptSetup: SFCScriptBlock | null
   styles: SFCStyleBlock[]
   customBlocks: SFCBlock[]
+  cssVars: string[]
 }
 
 export interface SFCParseResult {
@@ -77,7 +79,7 @@ export function parse(
   source: string,
   {
     sourceMap = true,
-    filename = 'component.vue',
+    filename = 'anonymous.vue',
     sourceRoot = '',
     pad = false,
     compiler = CompilerDOM
@@ -97,7 +99,8 @@ export function parse(
     script: null,
     scriptSetup: null,
     styles: [],
-    customBlocks: []
+    customBlocks: [],
+    cssVars: []
   }
 
   const errors: (CompilerError | SyntaxError)[] = []
@@ -112,13 +115,14 @@ export function parse(
       if (
         (!parent && tag !== 'template') ||
         // <template lang="xxx"> should also be treated as raw text
-        props.some(
-          p =>
-            p.type === NodeTypes.ATTRIBUTE &&
-            p.name === 'lang' &&
-            p.value &&
-            p.value.content !== 'html'
-        )
+        (tag === 'template' &&
+          props.some(
+            p =>
+              p.type === NodeTypes.ATTRIBUTE &&
+              p.name === 'lang' &&
+              p.value &&
+              p.value.content !== 'html'
+          ))
       ) {
         return TextModes.RAWTEXT
       } else {
@@ -140,30 +144,40 @@ export function parse(
     switch (node.tag) {
       case 'template':
         if (!descriptor.template) {
-          descriptor.template = createBlock(
+          const templateBlock = (descriptor.template = createBlock(
             node,
             source,
             false
-          ) as SFCTemplateBlock
+          ) as SFCTemplateBlock)
+          templateBlock.ast = node
         } else {
           errors.push(createDuplicateBlockError(node))
         }
         break
       case 'script':
-        const block = createBlock(node, source, pad) as SFCScriptBlock
-        const isSetup = !!block.attrs.setup
+        const scriptBlock = createBlock(node, source, pad) as SFCScriptBlock
+        const isSetup = !!scriptBlock.attrs.setup
         if (isSetup && !descriptor.scriptSetup) {
-          descriptor.scriptSetup = block
+          descriptor.scriptSetup = scriptBlock
           break
         }
         if (!isSetup && !descriptor.script) {
-          descriptor.script = block
+          descriptor.script = scriptBlock
           break
         }
         errors.push(createDuplicateBlockError(node, isSetup))
         break
       case 'style':
-        descriptor.styles.push(createBlock(node, source, pad) as SFCStyleBlock)
+        const styleBlock = createBlock(node, source, pad) as SFCStyleBlock
+        if (styleBlock.attrs.vars) {
+          errors.push(
+            new SyntaxError(
+              `<style vars> has been replaced by a new proposal: ` +
+                `https://github.com/vuejs/rfcs/pull/231`
+            )
+          )
+        }
+        descriptor.styles.push(styleBlock)
         break
       default:
         descriptor.customBlocks.push(createBlock(node, source, pad))
@@ -208,6 +222,12 @@ export function parse(
     genMap(descriptor.script)
     descriptor.styles.forEach(genMap)
     descriptor.customBlocks.forEach(genMap)
+  }
+
+  // parse CSS vars
+  descriptor.cssVars = parseCssVars(descriptor)
+  if (descriptor.cssVars.length) {
+    warnExperimental(`v-bind() CSS variable injection`, 231)
   }
 
   const result = {
@@ -269,13 +289,9 @@ function createBlock(
       } else if (type === 'style') {
         if (p.name === 'scoped') {
           ;(block as SFCStyleBlock).scoped = true
-        } else if (p.name === 'vars' && typeof attrs.vars === 'string') {
-          ;(block as SFCStyleBlock).vars = attrs.vars
         } else if (p.name === 'module') {
           ;(block as SFCStyleBlock).module = attrs[p.name]
         }
-      } else if (type === 'template' && p.name === 'functional') {
-        ;(block as SFCTemplateBlock).functional = true
       } else if (type === 'script' && p.name === 'setup') {
         ;(block as SFCScriptBlock).setup = attrs.setup
       }

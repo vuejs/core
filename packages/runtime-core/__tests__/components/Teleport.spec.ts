@@ -7,10 +7,11 @@ import {
   Text,
   ref,
   nextTick,
-  markRaw
+  markRaw,
+  defineComponent
 } from '@vue/runtime-test'
 import { createVNode, Fragment } from '../../src/vnode'
-import { compile } from 'vue'
+import { compile, render as domRender } from 'vue'
 
 describe('renderer: teleport', () => {
   test('should work', () => {
@@ -31,6 +32,37 @@ describe('renderer: teleport', () => {
     expect(serializeInner(target)).toMatchInlineSnapshot(
       `"<div>teleported</div>"`
     )
+  })
+
+  test('should work with SVG', async () => {
+    const root = document.createElement('div')
+    const svg = ref()
+    const circle = ref()
+
+    const Comp = defineComponent({
+      setup() {
+        return {
+          svg,
+          circle
+        }
+      },
+      template: `
+      <svg ref="svg"></svg>
+      <teleport :to="svg" v-if="svg">
+      <circle ref="circle"></circle>
+      </teleport>`
+    })
+
+    domRender(h(Comp), root)
+
+    await nextTick()
+
+    expect(root.innerHTML).toMatchInlineSnapshot(
+      `"<svg><circle></circle></svg><!--teleport start--><!--teleport end-->"`
+    )
+
+    expect(svg.value.namespaceURI).toBe('http://www.w3.org/2000/svg')
+    expect(circle.value.namespaceURI).toBe('http://www.w3.org/2000/svg')
   })
 
   test('should update target', async () => {

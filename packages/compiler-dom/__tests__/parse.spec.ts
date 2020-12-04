@@ -6,7 +6,8 @@ import {
   ErrorCodes,
   ElementTypes,
   InterpolationNode,
-  AttributeNode
+  AttributeNode,
+  ConstantTypes
 } from '@vue/compiler-core'
 import { parserOptions, DOMNamespaces } from '../src/parserOptions'
 
@@ -253,7 +254,7 @@ describe('DOM parser', () => {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: `a < b`,
           isStatic: false,
-          isConstant: false,
+          constType: ConstantTypes.NOT_CONSTANT,
           loc: {
             start: { offset: 8, line: 1, column: 9 },
             end: { offset: 16, line: 1, column: 17 },

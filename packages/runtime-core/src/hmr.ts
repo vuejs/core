@@ -9,6 +9,7 @@ import {
 } from './component'
 import { queueJob, queuePostFlushCb } from './scheduler'
 import { extend } from '@vue/shared'
+import { warn } from './warning'
 
 export let isHmrUpdating = false
 
@@ -25,7 +26,7 @@ export interface HMRRuntime {
 // it easier to be used in toolings like vue-loader
 // Note: for a component to be eligible for HMR it also needs the __hmrId option
 // to be set so that its instances can be registered / removed.
-if (__DEV__ && (__BROWSER__ || __TEST__)) {
+if (__DEV__) {
   const globalObject: any =
     typeof global !== 'undefined'
       ? global
@@ -67,6 +68,14 @@ function createRecord(
   id: string,
   component: ComponentOptions | ClassComponent
 ): boolean {
+  if (!component) {
+    warn(
+      `HMR API usage is out of date.\n` +
+        `Please upgrade vue-loader/vite/rollup-plugin-vue or other relevant ` +
+        `depdendency that handles Vue SFC compilation.`
+    )
+    component = {}
+  }
   if (map.has(id)) {
     return false
   }

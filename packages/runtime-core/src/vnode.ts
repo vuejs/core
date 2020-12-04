@@ -21,7 +21,7 @@ import {
   isClassComponent
 } from './component'
 import { RawSlots } from './componentSlots'
-import { isProxy, Ref, toRaw, ReactiveFlags } from '@vue/reactivity'
+import { isProxy, Ref, toRaw, ReactiveFlags, isRef } from '@vue/reactivity'
 import { AppContext } from './apiCreateApp'
 import {
   SuspenseImpl,
@@ -304,9 +304,9 @@ const normalizeKey = ({ key }: VNodeProps): VNode['key'] =>
 
 const normalizeRef = ({ ref }: VNodeProps): VNodeNormalizedRefAtom | null => {
   return (ref != null
-    ? isArray(ref)
-      ? ref
-      : { i: currentRenderingInstance, r: ref }
+    ? isString(ref) || isRef(ref) || isFunction(ref)
+      ? { i: currentRenderingInstance, r: ref }
+      : ref
     : null) as any
 }
 

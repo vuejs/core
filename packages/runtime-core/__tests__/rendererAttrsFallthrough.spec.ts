@@ -13,6 +13,7 @@ import {
   createCommentVNode,
   Fragment
 } from '@vue/runtime-dom'
+import { PatchFlags } from '@vue/shared/src'
 
 describe('attribute fallthrough', () => {
   it('should allow attrs to fallthrough', async () => {
@@ -574,11 +575,16 @@ describe('attribute fallthrough', () => {
       setup() {
         return () => (
           openBlock(),
-          createBlock(Fragment, null, [
-            createCommentVNode('hello'),
-            h('button'),
-            createCommentVNode('world')
-          ])
+          createBlock(
+            Fragment,
+            null,
+            [
+              createCommentVNode('hello'),
+              h('button'),
+              createCommentVNode('world')
+            ],
+            PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT
+          )
         )
       }
     }

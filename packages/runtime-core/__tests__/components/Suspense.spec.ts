@@ -1093,4 +1093,36 @@ describe('Suspense', () => {
     await nextTick()
     expect(root.innerHTML).toBe(`<div><span>2</span></div>`)
   })
+
+  // #2215
+  test('toggling nested async setup component inside already resolved suspense', async () => {
+    const toggle = ref(false)
+    const Child = {
+      async setup() {
+        return () => h('div', 'child')
+      }
+    }
+    const Parent = () => h('div', ['parent', toggle.value ? h(Child) : null])
+    const Comp = {
+      setup() {
+        return () => h(Suspense, () => h(Parent))
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>parent<!----></div>`)
+
+    toggle.value = true
+    // wait for flush
+    await nextTick()
+    // wait for child async setup resolve
+    await nextTick()
+    // child should be rendered now instead of stuck in limbo
+    expect(serializeInner(root)).toBe(`<div>parent<div>child</div></div>`)
+
+    toggle.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>parent<!----></div>`)
+  })
 })
