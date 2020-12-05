@@ -134,6 +134,22 @@ describe('scheduler', () => {
       await nextTick()
       expect(calls).toEqual(['cb1', 'cb2'])
     })
+
+    it('queuePreFlushCb inside postFlushCbs', async () => {
+      const calls: string[] = []
+      const job1 = () => {
+        calls.push('job1')
+      }
+      const cb1 = () => {
+        // queuePreFlushCb in postFlushCbs
+        calls.push('cb1')
+        queuePreFlushCb(job1)
+      }
+
+      queuePostFlushCb(cb1)
+      await nextTick()
+      expect(calls).toEqual(['cb1', 'job1'])
+    })
   })
 
   describe('queueJob w/ queuePreFlushCb', () => {

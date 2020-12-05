@@ -227,7 +227,11 @@ function flushJobs(seen?: CountMap) {
     currentFlushPromise = null
     // some postFlushCb queued jobs!
     // keep flushing until it drains.
-    if (queue.length || pendingPostFlushCbs.length) {
+    if (
+      queue.length ||
+      pendingPostFlushCbs.length ||
+      pendingPreFlushCbs.length
+    ) {
       flushJobs(seen)
     }
   }
