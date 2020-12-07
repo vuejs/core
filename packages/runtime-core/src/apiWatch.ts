@@ -165,6 +165,8 @@ function doWatch(
     )
   }
 
+  const args = instance && instance.proxy ? (instance.proxy as any) : null
+
   let getter: () => any
   let forceTrigger = false
   if (isRef(source)) {
@@ -182,7 +184,7 @@ function doWatch(
           return traverse(s)
         } else if (isFunction(s)) {
           return callWithErrorHandling(s, instance, ErrorCodes.WATCH_GETTER, [
-            instance.proxy as any
+            args
           ])
         } else {
           __DEV__ && warnInvalidSource(s)
@@ -192,9 +194,7 @@ function doWatch(
     if (cb) {
       // getter with cb
       getter = () =>
-        callWithErrorHandling(source, instance, ErrorCodes.WATCH_GETTER, [
-          instance.proxy as any
-        ])
+        callWithErrorHandling(source, instance, ErrorCodes.WATCH_GETTER, [args])
     } else {
       // no cb -> simple effect
       getter = () => {
@@ -208,7 +208,7 @@ function doWatch(
           source,
           instance,
           ErrorCodes.WATCH_CALLBACK,
-          [instance.proxy as any, onInvalidate]
+          [args, onInvalidate]
         )
       }
     }
