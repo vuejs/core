@@ -208,7 +208,7 @@ function doWatch(
           source,
           instance,
           ErrorCodes.WATCH_CALLBACK,
-          [args, onInvalidate]
+          [onInvalidate]
         )
       }
     }
