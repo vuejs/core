@@ -860,12 +860,8 @@ describe('api: watch', () => {
   })
 
   test('this.$watch should pass `this.proxy` to watch source as the first argument ', () => {
-    let args: any = null
     let instance: any
-
-    const source = function() {
-      args = arguments
-    }
+    const source = jest.fn()
 
     const Comp = defineComponent({
       render() {},
@@ -878,7 +874,7 @@ describe('api: watch', () => {
     const root = nodeOps.createElement('div')
     createApp(Comp).mount(root)
 
-    expect(args.length > 0).toBe(true)
-    expect(instance === args[0]).toBe(true)
+    expect(instance).toBeDefined()
+    expect(source).toHaveBeenCalledWith(instance)
   })
 })
