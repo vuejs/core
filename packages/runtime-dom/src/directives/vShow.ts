@@ -31,6 +31,7 @@ export const vShow: ObjectDirective<VShowElement> = {
         })
       }
     } else {
+      if (!oldValue === !value) return
       setDisplay(el, value)
     }
   },
