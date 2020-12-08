@@ -5,7 +5,9 @@ import {
   Ref,
   ComputedRef,
   ReactiveEffectOptions,
-  isReactive
+  isReactive,
+  pauseTracking,
+  resetTracking
 } from '@vue/reactivity'
 import { SchedulerJob, queuePreFlushCb } from './scheduler'
 import {
@@ -249,6 +251,9 @@ function doWatch(
       // watch(source, cb)
       const newValue = runner()
       if (deep || forceTrigger || hasChanged(newValue, oldValue)) {
+        // ref #2728
+        // disable deps collection in watch callbacks
+        pauseTracking()
         // cleanup before running cb again
         if (cleanup) {
           cleanup()
@@ -259,6 +264,7 @@ function doWatch(
           oldValue === INITIAL_WATCHER_VALUE ? undefined : oldValue,
           onInvalidate
         ])
+        resetTracking()
         oldValue = newValue
       }
     } else {
