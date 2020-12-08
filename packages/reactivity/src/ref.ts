@@ -174,7 +174,7 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
 export function toRef<T extends object, K extends keyof T>(
   object: T,
   key: K
-): Ref<T[K]> {
+): Ref<UnwrapRef<ToRef<T[K]>>> {
   return isRef(object[key])
     ? object[key]
     : (new ObjectRefImpl(object, key) as any)
