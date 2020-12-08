@@ -160,10 +160,33 @@ expectType<Ref<string>>(p2.obj.k)
 // toRef
 const obj = {
   a: 1,
-  b: ref(1)
+  b: ref(1),
+  c: 0,
+  d: [1, 'd'],
+  f: { foo: 'f' },
+  g: ref('g'),
+  h: ref([{ foo: 'h' }, 'h'])
+} as {
+  a: number
+  b: Ref<number>
+  // union primitive type, array
+  c: number | string | (string | number)[]
+  // tuple
+  d: [number, string]
+  // union tuple & object
+  f: [number, string] | { foo: string }
+  // union ref
+  g: Ref<number | string | (string | number)[]>
+  // tuple ref
+  h: Ref<[{ foo: string }, string]>
 }
 expectType<Ref<number>>(toRef(obj, 'a'))
 expectType<Ref<number>>(toRef(obj, 'b'))
+expectType<Ref<number | string | (string | number)[]>>(toRef(obj, 'c'))
+expectType<Ref<[number, string]>>(toRef(obj, 'd'))
+expectType<Ref<[number, string] | { foo: string }>>(toRef(obj, 'f'))
+expectType<Ref<number | string | (string | number)[]>>(toRef(obj, 'g'))
+expectType<Ref<[{ foo: string }, string]>>(toRef(obj, 'h'))
 
 // toRefs
 const objRefs = toRefs(obj)
