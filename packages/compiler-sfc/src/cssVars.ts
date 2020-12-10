@@ -66,16 +66,16 @@ export const cssVarsPlugin = postcss.plugin<CssVarsPluginOptions>(
 
 export function genCssVarsCode(
   vars: string[],
-  bindings: BindingMetadata,
   id: string,
-  isProd: boolean
+  isProd: boolean,
+  bindings?: BindingMetadata
 ) {
   const varsExp = genCssVarsFromList(vars, id, isProd)
   const exp = createSimpleExpression(varsExp, false)
   const context = createTransformContext(createRoot([]), {
     prefixIdentifiers: true,
-    inline: true,
-    bindingMetadata: bindings
+    inline: !!bindings,
+    bindingMetadata: bindings || {}
   })
   const transformed = processExpression(exp, context)
   const transformedString =
@@ -96,7 +96,6 @@ export function genCssVarsCode(
 // this is only for single normal <script>
 export function genNormalScriptCssVarsCode(
   cssVars: string[],
-  bindings: BindingMetadata,
   id: string,
   isProd: boolean
 ): string {
@@ -104,7 +103,6 @@ export function genNormalScriptCssVarsCode(
     `\nimport { ${CSS_VARS_HELPER} as _${CSS_VARS_HELPER} } from 'vue'\n` +
     `const __injectCSSVars__ = () => {\n${genCssVarsCode(
       cssVars,
-      bindings,
       id,
       isProd
     )}}\n` +

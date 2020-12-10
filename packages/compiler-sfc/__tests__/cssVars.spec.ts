@@ -50,6 +50,44 @@ describe('CSS vars injection', () => {
     assertCode(content)
   })
 
+  test('w/ <script> do not use binding analysis', () => {
+    const { content } = compileSFCScript(
+      `<script>
+        import { ref } from 'vue'
+        export default {
+          props: {
+            foo: String
+          },
+          setup() {
+            const color = 'red'
+            const size = ref('10px')
+            return { color, size }
+          }
+        }
+        </script>\n` +
+        `<style>
+          div {
+            color: v-bind(color);
+            font-size: v-bind(size);
+            border: v-bind(foo);
+          }
+        </style>`
+    )
+    // should handle:
+    // 1. local const bindings
+    // 2. local potential ref bindings
+    // 3. props bindings (analyzed)
+
+    expect(content).toMatch(`_useCssVars(_ctx => ({
+  "${mockId}-color": (_ctx.color),
+  "${mockId}-size": (_ctx.size),
+  "${mockId}-foo": (_ctx.foo)
+})`)
+    expect(content).toMatch(`import { useCssVars as _useCssVars } from 'vue'`)
+
+    assertCode(content)
+  })
+
   test('should rewrite CSS vars in compileStyle', () => {
     const { code } = compileStyle({
       source: `.foo {

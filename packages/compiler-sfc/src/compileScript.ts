@@ -127,7 +127,6 @@ export function compileScript(
         if (cssVars.length) {
           content += genNormalScriptCssVarsCode(
             cssVars,
-            bindings,
             scopeId,
             !!options.isProd
           )
@@ -828,9 +827,9 @@ export function compileScript(
       startOffset,
       `\n${genCssVarsCode(
         cssVars,
-        bindingMetadata,
         scopeId,
-        !!options.isProd
+        !!options.isProd,
+        bindingMetadata
       )}\n`
     )
   }
