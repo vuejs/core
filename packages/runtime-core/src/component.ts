@@ -669,6 +669,7 @@ function finishComponentSetup(
 ) {
   const Component = instance.type as ComponentOptions
 
+  // #2791
   if (!Component.computed) {
     Component.computed = Object.create(null)
   }
