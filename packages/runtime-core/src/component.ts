@@ -669,6 +669,10 @@ function finishComponentSetup(
 ) {
   const Component = instance.type as ComponentOptions
 
+  if (!Component.computed) {
+    Component.computed = Object.create(null)
+  }
+
   // template / render function normalization
   if (__NODE_JS__ && isSSR) {
     if (Component.render) {
