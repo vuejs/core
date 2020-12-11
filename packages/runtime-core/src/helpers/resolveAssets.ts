@@ -17,7 +17,11 @@ const DIRECTIVES = 'directives'
  * @private
  */
 export function resolveComponent(name: string): ConcreteComponent | string {
-  return resolveAsset(COMPONENTS, name) || name
+  const instance = currentRenderingInstance || currentInstance
+  // #2779 skip custom element from jsx
+  return instance.appContext.config.isCustomElement(name)
+    ? name
+    : resolveAsset(COMPONENTS, name) || name
 }
 
 export const NULL_DYNAMIC_COMPONENT = Symbol()
