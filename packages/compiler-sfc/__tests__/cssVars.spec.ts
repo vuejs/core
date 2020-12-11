@@ -136,5 +136,26 @@ describe('CSS vars injection', () => {
         ).content
       )
     })
+
+    test('w/ <script setup> using the same var multiple times', () => {
+      const { content } = compileSFCScript(
+        `<script setup>
+        const color = 'red'
+        </script>\n` +
+          `<style>
+          div {
+            color: v-bind(color);
+          }
+          p {
+            color: v-bind(color);
+          }
+        </style>`
+      )
+      // color should only be injected once, even if it is twice in style
+      expect(content).toMatch(`_useCssVars(_ctx => ({
+  "${mockId}-color": (color)
+})`)
+      assertCode(content)
+    })
   })
 })
