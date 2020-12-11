@@ -19,7 +19,7 @@ const DIRECTIVES = 'directives'
 export function resolveComponent(name: string): ConcreteComponent | string {
   const instance = currentRenderingInstance || currentInstance
   // #2779 skip custom element from jsx
-  return instance.appContext.config.isCustomElement(name)
+  return instance && instance.appContext.config.isCustomElement(name)
     ? name
     : resolveAsset(COMPONENTS, name) || name
 }
