@@ -93,18 +93,6 @@ describe('runtime-dom: props patching', () => {
     expect(el.srcObject).toBe(initialValue)
   })
 
-  test('catch and warn prop set TypeError', () => {
-    const el = document.createElement('div')
-    Object.defineProperty(el, 'someProp', {
-      set() {
-        throw new TypeError('Invalid type')
-      }
-    })
-    patchProp(el, 'someProp', null, 'foo')
-
-    expect(`Failed setting prop "someProp" on <div>`).toHaveBeenWarnedLast()
-  })
-
   // #1576
   test('remove attribute when value is falsy', () => {
     const el = document.createElement('div')

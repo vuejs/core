@@ -2,8 +2,6 @@
 // Reason: potentially setting innerHTML.
 // This can come from explicit usage of v-html or innerHTML as a prop in render
 
-import { warn } from '@vue/runtime-core'
-
 // functions. The user is responsible for using them with only trusted content.
 export function patchDOMProp(
   el: any,
@@ -38,9 +36,9 @@ export function patchDOMProp(
 
   if (value === '' || value == null) {
     const type = typeof el[key]
-    if (value === '' && type === 'boolean') {
-      // e.g. <select multiple> compiles to { multiple: '' }
-      el[key] = true
+    if (type === 'boolean') {
+      // e.g. <select multiple> compiles to { multiple: '' } or { multiple: false }
+      el[key] = value != null
       return
     } else if (value == null && type === 'string') {
       // e.g. <div :id="null">
@@ -55,16 +53,5 @@ export function patchDOMProp(
     }
   }
 
-  // some properties perform value validation and throw
-  try {
-    el[key] = value
-  } catch (e) {
-    if (__DEV__) {
-      warn(
-        `Failed setting prop "${key}" on <${el.tagName.toLowerCase()}>: ` +
-          `value ${value} is invalid.`,
-        e
-      )
-    }
-  }
+  el.setAttribute(key, value)
 }
