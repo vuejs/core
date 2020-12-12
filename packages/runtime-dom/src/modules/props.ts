@@ -34,8 +34,8 @@ export function patchDOMProp(
     return
   }
 
+  const type = typeof el[key]
   if (value === '' || value == null) {
-    const type = typeof el[key]
     if (type === 'boolean') {
       // e.g. <select multiple> compiles to { multiple: '' } or { multiple: false }
       el[key] = value != null
@@ -53,5 +53,9 @@ export function patchDOMProp(
     }
   }
 
-  el.setAttribute(key, value)
+  if (type === 'function') {
+    el[key] = value
+  } else {
+    el.setAttribute(key, value)
+  }
 }
