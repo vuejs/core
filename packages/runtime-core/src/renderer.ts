@@ -11,7 +11,8 @@ import {
   Static,
   VNodeNormalizedRef,
   VNodeHook,
-  VNodeNormalizedRefAtom
+  VNodeNormalizedRefAtom,
+  isSameVNodeRef
 } from './vnode'
 import {
   ComponentInternalInstance,
@@ -1834,7 +1835,8 @@ function baseCreateRenderer(
           for (j = s2; j <= e2; j++) {
             if (
               newIndexToOldIndexMap[j - s2] === 0 &&
-              isSameVNodeType(prevChild, c2[j] as VNode)
+              isSameVNodeType(prevChild, c2[j] as VNode) &&
+              isSameVNodeRef(prevChild.ref, (c2[j] as VNode).ref)
             ) {
               newIndex = j
               break

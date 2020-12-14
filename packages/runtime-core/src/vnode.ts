@@ -270,6 +270,21 @@ export function isSameVNodeType(n1: VNode, n2: VNode): boolean {
   return n1.type === n2.type && n1.key === n2.key
 }
 
+export function isSameVNodeRef(
+  r1: VNodeNormalizedRef | null,
+  r2: VNodeNormalizedRef | null
+): boolean {
+  // both of them are null
+  if (r1 === r2) return true
+
+  if (!r1 || !r2) return false
+
+  return (
+    (r1 as VNodeNormalizedRefAtom).i.uid ===
+    (r2 as VNodeNormalizedRefAtom).i.uid
+  )
+}
+
 let vnodeArgsTransformer:
   | ((
       args: Parameters<typeof _createVNode>,

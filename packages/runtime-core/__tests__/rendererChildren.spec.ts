@@ -6,7 +6,9 @@ import {
   NodeTypes,
   TestElement,
   serialize,
-  serializeInner
+  serializeInner,
+  ref,
+  onMounted
 } from '@vue/runtime-test'
 function toSpan(content: any) {
   if (typeof content === 'string') {
@@ -624,5 +626,40 @@ describe('renderer: unkeyed children', () => {
     const postPatch = elm.children[1]
 
     expect(postPatch).toBe(original)
+  })
+
+  // #2790
+  test('should not reusing vnode when ref is different', async () => {
+    const dom = ref(null)
+    const renderHeadAndTail = ref(false)
+
+    const Comp = {
+      setup() {
+        onMounted(() => {
+          renderHeadAndTail.value = true
+        })
+      },
+      render() {
+        return [
+          renderHeadAndTail.value && h('div', 'head'),
+          h(
+            'div',
+            {
+              ref: dom
+            },
+            'body'
+          ),
+          renderHeadAndTail.value && h('div', 'tail')
+        ]
+      }
+    }
+
+    render(h(Comp), root)
+
+    // ensure div(head) can not reuse div(hello)
+    const origin = dom.value
+    await Promise.resolve()
+    const nextick = dom.value
+    expect(nextick).toBe(origin)
   })
 })
