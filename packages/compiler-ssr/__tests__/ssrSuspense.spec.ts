@@ -13,7 +13,7 @@ describe('ssr compile: suspense', () => {
           default: () => {
             _push(_ssrRenderComponent(_component_foo, null, null, _parent))
           },
-          _: 1
+          _: 1 /* STABLE */
         })
       }"
     `)
@@ -43,7 +43,7 @@ describe('ssr compile: suspense', () => {
           fallback: () => {
             _push(\` loading... \`)
           },
-          _: 1
+          _: 1 /* STABLE */
         })
       }"
     `)

@@ -515,7 +515,7 @@ describe('vnode', () => {
     //   slot content (called during the block node creation) to be missed
     test('element block should track normalized slot children', () => {
       const hoist = createVNode('div')
-      let vnode1
+      let vnode1: any
       const vnode = (openBlock(),
       createBlock('div', null, {
         default: () => {

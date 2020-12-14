@@ -37,7 +37,8 @@ import {
   RENDER_LIST,
   OPEN_BLOCK,
   CREATE_BLOCK,
-  FRAGMENT
+  FRAGMENT,
+  CREATE_VNODE
 } from '../runtimeHelpers'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
@@ -77,7 +78,7 @@ export const transformFor = createStructuralDirectiveTransform(
 
       const isStableFragment =
         forNode.source.type === NodeTypes.SIMPLE_EXPRESSION &&
-        forNode.source.isConstant
+        forNode.source.constType > 0
       const fragmentFlag = isStableFragment
         ? PatchFlags.STABLE_FRAGMENT
         : keyProp
@@ -88,7 +89,8 @@ export const transformFor = createStructuralDirectiveTransform(
         helper(FRAGMENT),
         undefined,
         renderExp,
-        `${fragmentFlag} /* ${PatchFlagNames[fragmentFlag]} */`,
+        fragmentFlag +
+          (__DEV__ ? ` /* ${PatchFlagNames[fragmentFlag]} */` : ``),
         undefined,
         undefined,
         true /* isBlock */,
@@ -147,9 +149,10 @@ export const transformFor = createStructuralDirectiveTransform(
             helper(FRAGMENT),
             keyProperty ? createObjectExpression([keyProperty]) : undefined,
             node.children,
-            `${PatchFlags.STABLE_FRAGMENT} /* ${
-              PatchFlagNames[PatchFlags.STABLE_FRAGMENT]
-            } */`,
+            PatchFlags.STABLE_FRAGMENT +
+              (__DEV__
+                ? ` /* ${PatchFlagNames[PatchFlags.STABLE_FRAGMENT]} */`
+                : ``),
             undefined,
             undefined,
             true
@@ -166,6 +169,8 @@ export const transformFor = createStructuralDirectiveTransform(
           if (childBlock.isBlock) {
             helper(OPEN_BLOCK)
             helper(CREATE_BLOCK)
+          } else {
+            helper(CREATE_VNODE)
           }
         }
 

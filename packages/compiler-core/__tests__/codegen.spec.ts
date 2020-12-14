@@ -20,7 +20,8 @@ import {
   IfConditionalExpression,
   createVNodeCall,
   VNodeCall,
-  DirectiveArguments
+  DirectiveArguments,
+  ConstantTypes
 } from '../src'
 import {
   CREATE_VNODE,
@@ -304,7 +305,12 @@ describe('compiler: codegen', () => {
         codegenNode: {
           type: NodeTypes.FOR,
           loc: locStub,
-          source: createSimpleExpression('1 + 2', false, locStub, true),
+          source: createSimpleExpression(
+            '1 + 2',
+            false,
+            locStub,
+            ConstantTypes.CAN_STRINGIFY
+          ),
           valueAlias: undefined,
           keyAlias: undefined,
           objectIndexAlias: undefined,

@@ -142,7 +142,7 @@ describe('renderer: component', () => {
 
   // #2170
   test('instance.$el should be exposed to watch options', async () => {
-    function returnThis(this: any) {
+    function returnThis(this: any, _arg: any) {
       return this
     }
     const propWatchSpy = jest.fn(returnThis)
@@ -231,5 +231,48 @@ describe('renderer: component', () => {
     outer.value++
     await nextTick()
     expect(serializeInner(root)).toBe(`<div>1</div><div>1</div>`)
+  })
+
+  // #2521
+  test('should pause tracking deps when initializing legacy options', async () => {
+    let childInstance = null as any
+    const Child = {
+      props: ['foo'],
+      data() {
+        return {
+          count: 0
+        }
+      },
+      watch: {
+        foo: {
+          immediate: true,
+          handler() {
+            ;(this as any).count
+          }
+        }
+      },
+      created() {
+        childInstance = this as any
+        childInstance.count
+      },
+      render() {
+        return h('h1', (this as any).count)
+      }
+    }
+
+    const App = {
+      setup() {
+        return () => h(Child)
+      },
+      updated: jest.fn()
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(App.updated).toHaveBeenCalledTimes(0)
+
+    childInstance.count++
+    await nextTick()
+    expect(App.updated).toHaveBeenCalledTimes(0)
   })
 })

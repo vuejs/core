@@ -99,5 +99,11 @@ describe('reactivity/collections', () => {
       expect(observed.has(value)).toBe(true)
       expect(set.has(value)).toBe(false)
     })
+
+    it('should return proxy from WeakSet.add call', () => {
+      const set = reactive(new WeakSet())
+      const result = set.add({})
+      expect(result).toBe(set)
+    })
   })
 })

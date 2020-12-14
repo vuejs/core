@@ -111,8 +111,13 @@ h1 { color: red }
     )
   })
 
-  test('should ignore nodes with no content', () => {
-    expect(parse(`<template/>`).descriptor.template).toBe(null)
+  test('should keep template nodes with no content', () => {
+    const { descriptor } = parse(`<template/>`)
+    expect(descriptor.template).toBeTruthy()
+    expect(descriptor.template!.content).toBeFalsy()
+  })
+
+  test('should ignore other nodes with no content', () => {
     expect(parse(`<script/>`).descriptor.script).toBe(null)
     expect(parse(`<style/>`).descriptor.styles.length).toBe(0)
     expect(parse(`<custom/>`).descriptor.customBlocks.length).toBe(0)
@@ -142,6 +147,18 @@ h1 { color: red }
     )
     expect(errors.length).toBe(0)
     expect(descriptor.template!.content).toBe(content)
+  })
+
+  //#2566
+  test('div lang should not be treated as plain text', () => {
+    const { errors } = parse(`
+    <template lang="pug">
+      <div lang="">
+        <div></div>
+      </div>
+    </template>
+    `)
+    expect(errors.length).toBe(0)
   })
 
   test('error tolerance', () => {
