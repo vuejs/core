@@ -656,10 +656,11 @@ describe('renderer: unkeyed children', () => {
 
     render(h(Comp), root)
 
-    // ensure div(head) can not reuse div(hello)
     const origin = dom.value
     await Promise.resolve()
     const nextick = dom.value
+    // next-div(body) reuse pre-div(body)
+    // not next-div(head) reuse pre-div(body)
     expect(nextick).toBe(origin)
   })
 })

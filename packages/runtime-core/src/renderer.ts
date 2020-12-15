@@ -1836,7 +1836,8 @@ function baseCreateRenderer(
             if (
               newIndexToOldIndexMap[j - s2] === 0 &&
               isSameVNodeType(prevChild, c2[j] as VNode) &&
-              isSameVNodeRef(prevChild.ref, (c2[j] as VNode).ref)
+              (!prevChild.ref ||
+                isSameVNodeRef(prevChild.ref, (c2[j] as VNode).ref))
             ) {
               newIndex = j
               break
