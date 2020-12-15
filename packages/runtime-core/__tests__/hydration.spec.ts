@@ -53,6 +53,16 @@ describe('SSR hydration', () => {
     expect(vnode.el.nodeType).toBe(8) // comment
   })
 
+  test('empty string', async () => {
+    const Comp = { render: () => '' }
+    const { vnode, container } = mountWithHydration('<div><!----></div>', () =>
+      h('div', h(Comp))
+    )
+    expect(vnode.el).toBe(container.firstChild)
+    expect(vnode.el.childNodes.length).toBe(1)
+    expect(vnode.el.childNodes[0].nodeType).toBe(8) // comment
+  })
+
   test('static', () => {
     const html = '<div><span>hello</span></div>'
     const { vnode, container } = mountWithHydration(html, () =>

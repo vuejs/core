@@ -561,7 +561,10 @@ export function normalizeVNode(child: VNodeChild): VNode {
     return child.el === null ? child : cloneVNode(child)
   } else {
     // strings and numbers
-    return createVNode(Text, null, String(child))
+    // render the empty string as a comment to avoid hydrate failure during SSR
+    return child === ''
+      ? createVNode(Comment)
+      : createVNode(Text, null, String(child))
   }
 }
 
