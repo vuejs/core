@@ -373,19 +373,24 @@ describe('scheduler', () => {
     }
     const job3 = () => {
       calls.push('job3')
+      invalidateJob(job1)
     }
     const job4 = () => {
       calls.push('job4')
+    }
+    const job5 = () => {
+      calls.push('job5')
     }
     // queue all jobs
     queueJob(job1)
     queueJob(job2)
     queueJob(job3)
-    queuePostFlushCb(job4)
+    queueJob(job4)
+    queuePostFlushCb(job5)
     expect(calls).toEqual([])
     await nextTick()
     // job2 should be called only once
-    expect(calls).toEqual(['job1', 'job2', 'job3', 'job4'])
+    expect(calls).toEqual(['job1', 'job2', 'job3', 'job4', 'job5'])
   })
 
   test('sort job based on id', async () => {
