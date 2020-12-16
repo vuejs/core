@@ -26,6 +26,7 @@ export interface Target {
   [ReactiveFlags.RAW]?: any
 }
 
+// 对已经代理的 Target 做缓存， 这里使用 WeakMap ，以便释放内存
 export const reactiveMap = new WeakMap<Target, any>()
 export const readonlyMap = new WeakMap<Target, any>()
 
@@ -190,6 +191,7 @@ function createReactiveObject(
     return existingProxy
   }
   // only a whitelist of value types can be observed.
+  // 这里要判断target 的类型，目前只能代理 Object、Array、WeakMap、Map、Set、WeakSet
   const targetType = getTargetType(target)
   if (targetType === TargetType.INVALID) {
     return target

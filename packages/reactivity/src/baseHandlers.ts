@@ -98,6 +98,7 @@ function createGetter(isReadonly = false, shallow = false) {
       return res
     }
 
+    // 这里要进行同值
     if (!isReadonly) {
       track(target, TrackOpTypes.GET, key)
     }
@@ -106,6 +107,7 @@ function createGetter(isReadonly = false, shallow = false) {
       return res
     }
 
+    // 所以在 reactive 中获取 ref，不用 .value, 这里已经自动解ref了
     if (isRef(res)) {
       // ref unwrapping - does not apply for Array + integer key.
       const shouldUnwrap = !targetIsArray || !isIntegerKey(key)
@@ -116,6 +118,7 @@ function createGetter(isReadonly = false, shallow = false) {
       // Convert returned value into a proxy as well. we do the isObject check
       // here to avoid invalid value warning. Also need to lazy access readonly
       // and reactive here to avoid circular dependency.
+      // 这里不用担心会嵌套 Proxy，因为 reactive 那里做了判断缓存
       return isReadonly ? readonly(res) : reactive(res)
     }
 
@@ -134,6 +137,7 @@ function createSetter(shallow = false) {
     receiver: object
   ): boolean {
     const oldValue = (target as any)[key]
+    // 不是浅reactive
     if (!shallow) {
       value = toRaw(value)
       if (!isArray(target) && isRef(oldValue) && !isRef(value)) {
