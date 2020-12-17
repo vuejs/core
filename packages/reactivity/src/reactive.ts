@@ -13,6 +13,7 @@ import {
 import { UnwrapRef, Ref } from './ref'
 
 export const enum ReactiveFlags {
+  /** to markRaw */
   SKIP = '__v_skip',
   IS_REACTIVE = '__v_isReactive',
   IS_READONLY = '__v_isReadonly',
@@ -30,6 +31,7 @@ export interface Target {
 export const reactiveMap = new WeakMap<Target, any>()
 export const readonlyMap = new WeakMap<Target, any>()
 
+// 要代理对象的类型
 const enum TargetType {
   INVALID = 0,
   COMMON = 1,
@@ -178,12 +180,18 @@ function createReactiveObject(
   }
   // target is already a Proxy, return it.
   // exception: calling readonly() on a reactive object
+  /**
+   * target[ReactiveFlags.RAW] 可以判断当前target 是不是一个由vue处理过的 Proxy
+   * bug: target[ReactiveFlags.RAW] 存在，target[ReactiveFlags.IS_REACTIVE] 也会存在，
+   */
   if (
     target[ReactiveFlags.RAW] &&
     !(isReadonly && target[ReactiveFlags.IS_REACTIVE])
   ) {
     return target
   }
+  // 走到这里，说明是一个 readonly 或者 代理的是一个普通的对象
+
   // target already has corresponding Proxy
   const proxyMap = isReadonly ? readonlyMap : reactiveMap
   const existingProxy = proxyMap.get(target)
@@ -191,7 +199,7 @@ function createReactiveObject(
     return existingProxy
   }
   // only a whitelist of value types can be observed.
-  // 这里要判断target 的类型，目前只能代理 Object、Array、WeakMap、Map、Set、WeakSet
+  // Proxy 类型也是一个 Object
   const targetType = getTargetType(target)
   if (targetType === TargetType.INVALID) {
     return target
@@ -205,6 +213,7 @@ function createReactiveObject(
 }
 
 export function isReactive(value: unknown): boolean {
+  // 因为用了 readonly 会额外的包裹一层，所以这里要使用 ReactiveFlags.RAW 取出被 readonly 包裹的对象，进行进一步的判断
   if (isReadonly(value)) {
     return isReactive((value as Target)[ReactiveFlags.RAW])
   }
@@ -219,6 +228,7 @@ export function isProxy(value: unknown): boolean {
   return isReactive(value) || isReadonly(value)
 }
 
+// 递归剥离代理对象
 export function toRaw<T>(observed: T): T {
   return (
     (observed && toRaw((observed as Target)[ReactiveFlags.RAW])) || observed

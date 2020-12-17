@@ -69,8 +69,13 @@ const arrayInstrumentations: Record<string, Function> = {}
   }
 })
 
+// 收集依赖用的
 function createGetter(isReadonly = false, shallow = false) {
   return function get(target: Target, key: string | symbol, receiver: object) {
+    /**
+     * 从这里可以看出，使用代理的好处就是，当我们代理 target 的时候，想在target 上，添加一些自定义 flags 时，不需要直接添加
+     * 只需要在 get handle 中进行拦截就可以了，同时结合闭包技术。
+     */
     if (key === ReactiveFlags.IS_REACTIVE) {
       return !isReadonly
     } else if (key === ReactiveFlags.IS_READONLY) {
@@ -84,6 +89,8 @@ function createGetter(isReadonly = false, shallow = false) {
 
     const targetIsArray = isArray(target)
 
+    // 可修改的数组 & key in ['push', 'pop', 'shift', 'unshift', 'splice', 'includes', 'indexOf', 'lastIndexOf']
+    // 这里就直接返回，不需要收集依赖
     if (!isReadonly && targetIsArray && hasOwn(arrayInstrumentations, key)) {
       return Reflect.get(arrayInstrumentations, key, receiver)
     }
@@ -98,7 +105,7 @@ function createGetter(isReadonly = false, shallow = false) {
       return res
     }
 
-    // 这里要进行同值
+    // 对 readonly 不需要收集依赖，因为其值不可变
     if (!isReadonly) {
       track(target, TrackOpTypes.GET, key)
     }
@@ -137,7 +144,7 @@ function createSetter(shallow = false) {
     receiver: object
   ): boolean {
     const oldValue = (target as any)[key]
-    // 不是浅reactive
+    // 不是浅reactive，
     if (!shallow) {
       value = toRaw(value)
       if (!isArray(target) && isRef(oldValue) && !isRef(value)) {

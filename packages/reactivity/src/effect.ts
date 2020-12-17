@@ -15,6 +15,7 @@ export interface ReactiveEffect<T = any> {
   id: number
   active: boolean
   raw: () => T
+  /** 存放 raw 中，每个属性的依赖集合 */
   deps: Array<Dep>
   options: ReactiveEffectOptions
   allowRecurse: boolean
@@ -42,7 +43,9 @@ export interface DebuggerEventExtraInfo {
   oldTarget?: Map<any, any> | Set<any>
 }
 
+// 防止多次触发
 const effectStack: ReactiveEffect[] = []
+// 用于标记是依赖收集的时候触发的 track
 let activeEffect: ReactiveEffect | undefined
 
 export const ITERATE_KEY = Symbol(__DEV__ ? 'iterate' : '')
@@ -52,6 +55,7 @@ export function isEffect(fn: any): fn is ReactiveEffect {
   return fn && fn._isEffect === true
 }
 
+/** 触发 get handler 函数，进行依赖收集 */
 export function effect<T = any>(
   fn: () => T,
   options: ReactiveEffectOptions = EMPTY_OBJ
@@ -82,16 +86,23 @@ function createReactiveEffect<T = any>(
   fn: () => T,
   options: ReactiveEffectOptions
 ): ReactiveEffect<T> {
+  // 一个 effect 对应一个 reactiveEffect
   const effect = function reactiveEffect(): unknown {
     if (!effect.active) {
       return options.scheduler ? undefined : fn()
     }
+    // trigger 的时候，只触发一次
     if (!effectStack.includes(effect)) {
       cleanup(effect)
       try {
         enableTracking()
         effectStack.push(effect)
         activeEffect = effect
+        /**
+         * 我们使用 effect 收集依赖的时候，第一个参数是一个函数：
+         * eg： effect(() => (dummy = counter.num))
+         * 此时执行 fn(), 就会触发 Proxy 的 get handler函数，从而触发 track 函数
+         */
         return fn()
       } finally {
         effectStack.pop()
@@ -110,10 +121,12 @@ function createReactiveEffect<T = any>(
   return effect
 }
 
+// 解除捆绑关系
 function cleanup(effect: ReactiveEffect) {
   const { deps } = effect
   if (deps.length) {
     for (let i = 0; i < deps.length; i++) {
+      // 去除key的订阅者effect
       deps[i].delete(effect)
     }
     deps.length = 0
@@ -121,6 +134,7 @@ function cleanup(effect: ReactiveEffect) {
 }
 
 let shouldTrack = true
+// 用于记录上一个shouldTrack的状态
 const trackStack: boolean[] = []
 
 export function pauseTracking() {
@@ -138,11 +152,15 @@ export function resetTracking() {
   shouldTrack = last === undefined ? true : last
 }
 
+/**
+ * 向 target->key->dep 中添加 activeEffect
+ */
 export function track(target: object, type: TrackOpTypes, key: unknown) {
   if (!shouldTrack || activeEffect === undefined) {
     return
   }
   let depsMap = targetMap.get(target)
+  // 如果当前对象没有依赖，则向
   if (!depsMap) {
     targetMap.set(target, (depsMap = new Map()))
   }
@@ -151,7 +169,9 @@ export function track(target: object, type: TrackOpTypes, key: unknown) {
     depsMap.set(key, (dep = new Set()))
   }
   if (!dep.has(activeEffect)) {
+    // 互相依赖
     dep.add(activeEffect)
+    // 将 dep 整体加入进去的好处是：cleanup 的时候，可以删除当前 activeEffect
     activeEffect.deps.push(dep)
     if (__DEV__ && activeEffect.options.onTrack) {
       activeEffect.options.onTrack({
@@ -164,6 +184,7 @@ export function track(target: object, type: TrackOpTypes, key: unknown) {
   }
 }
 
+/** 触发 key 中的所有 deps */
 export function trigger(
   target: object,
   type: TriggerOpTypes,
