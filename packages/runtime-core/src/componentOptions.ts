@@ -475,6 +475,7 @@ export function applyOptions(
   deferredProvide: (Data | Function)[] = [],
   asMixin: boolean = false
 ) {
+  const publicThis = instance.proxy!
   const {
     // composition
     mixins,
@@ -506,9 +507,7 @@ export function applyOptions(
     errorCaptured,
     // public API
     expose
-  } = options
-
-  const publicThis = instance.proxy!
+  } = asMixin ? options : publicThis.$options
   const ctx = instance.ctx
   const globalMixins = instance.appContext.mixins
 
