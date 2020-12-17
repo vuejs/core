@@ -4,6 +4,21 @@
 
 import { warn } from '@vue/runtime-core'
 
+// Set prop with error handling,throws warnings when change readonly prop.
+function setProp(el: any, key: string, value: any) {
+  try {
+    el[key] = value
+  } catch (e) {
+    if (__DEV__) {
+      warn(
+        `Failed setting prop "${key}" on <${el.tagName.toLowerCase()}>: ` +
+          `value ${value} is invalid.`,
+        e
+      )
+    }
+  }
+}
+
 // functions. The user is responsible for using them with only trusted content.
 export function patchDOMProp(
   el: any,
@@ -21,7 +36,7 @@ export function patchDOMProp(
     if (prevChildren) {
       unmountChildren(prevChildren, parentComponent, parentSuspense)
     }
-    el[key] = value == null ? '' : value
+    setProp(el, key, value == null ? '' : value)
     return
   }
 
@@ -40,31 +55,20 @@ export function patchDOMProp(
     const type = typeof el[key]
     if (value === '' && type === 'boolean') {
       // e.g. <select multiple> compiles to { multiple: '' }
-      el[key] = true
+      setProp(el, key, true)
       return
     } else if (value == null && type === 'string') {
       // e.g. <div :id="null">
-      el[key] = ''
+      setProp(el, key, '')
       el.removeAttribute(key)
       return
     } else if (type === 'number') {
       // e.g. <img :width="null">
-      el[key] = 0
+      setProp(el, key, 0)
       el.removeAttribute(key)
       return
     }
   }
 
-  // some properties perform value validation and throw
-  try {
-    el[key] = value
-  } catch (e) {
-    if (__DEV__) {
-      warn(
-        `Failed setting prop "${key}" on <${el.tagName.toLowerCase()}>: ` +
-          `value ${value} is invalid.`,
-        e
-      )
-    }
-  }
+  setProp(el, key, value)
 }
