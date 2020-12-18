@@ -145,5 +145,8 @@ describe('runtime-dom: props patching', () => {
     // non existant element
     expect(el.form).toBe(null)
     expect(el.getAttribute('form')).toBe('foo')
+    // remove attribute
+    patchProp(el, 'form', 'foo', null)
+    expect(el.getAttribute('form')).toBe(null)
   })
 })
