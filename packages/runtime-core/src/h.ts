@@ -157,7 +157,7 @@ export function h<P, E extends EmitsOptions = {}>(
   type: ComponentOptions<P, any, any, any, any, any, any, E>,
   props?: (Partial<ExtractEmitEvents<E>> & RawProps & P ) | ({} extends P ? null : never),
   children?: RawChildren | RawSlots
-): E
+): VNode
 
 // fake constructor type returned by `defineComponent` or class component
 export function h(type: Constructor, children?: RawChildren): VNode
