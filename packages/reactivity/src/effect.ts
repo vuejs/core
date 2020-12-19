@@ -100,28 +100,8 @@ function createReactiveEffect<T = any>(
     if (!effect.active) {
       return options.scheduler ? undefined : fn()
     }
-    // trigger 的时候，只触发一次
+    // 防止在当前 effect 中有出发了 trigger，导致递归
     if (!effectStack.includes(effect)) {
-      /**
-      * let dummy
-        const obj = reactive({ prop: 'value', run: true })
-
-        const conditionalSpy = jest.fn(() => {
-          dummy = obj.run ? obj.prop : 'other'
-        })
-        effect(conditionalSpy)
-
-        expect(dummy).toBe('value')
-        expect(conditionalSpy).toHaveBeenCalledTimes(1)
-        obj.run = false
-        expect(dummy).toBe('other')
-        expect(conditionalSpy).toHaveBeenCalledTimes(2)
-        obj.prop = 'value2'
-        expect(dummy).toBe('other')
-        expect(conditionalSpy).toHaveBeenCalledTimes(2)
-
-        这里每次 trigger 的时候，都要 cleanup 一下，重新收集最新的依赖，防止条件改变，以前的依赖没有用了
-      */
       cleanup(effect)
       try {
         enableTracking()
@@ -190,6 +170,7 @@ export function track(target: object, type: TrackOpTypes, key: unknown) {
   if (!shouldTrack || activeEffect === undefined) {
     return
   }
+  // key->Set<reactiveEffect>
   let depsMap = targetMap.get(target)
   // 如果当前对象没有依赖，则向
   if (!depsMap) {

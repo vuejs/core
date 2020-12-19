@@ -62,6 +62,7 @@ const arrayInstrumentations: Record<string, Function> = {}
 ;(['push', 'pop', 'shift', 'unshift', 'splice'] as const).forEach(key => {
   const method = Array.prototype[key] as any
   arrayInstrumentations[key] = function(this: unknown[], ...args: unknown[]) {
+    // 因为这些函数不止会一次触发 handler， 所有这里就不用 track
     pauseTracking()
     const res = method.apply(this, args)
     resetTracking()
@@ -88,9 +89,10 @@ function createGetter(isReadonly = false, shallow = false) {
 
     const targetIsArray = isArray(target)
 
-    // 可修改的数组 & key in ['push', 'pop', 'shift', 'unshift', 'splice', 'includes', 'indexOf', 'lastIndexOf']
-    // 这里就直接返回，不需要收集依赖
+    // 拦截 'push', 'pop', 'shift', 'unshift', 'splice', 'includes', 'indexOf', 'lastIndexOf'
+    // 因为这些方法会触发多次的 get，要做一些特殊处理
     if (!isReadonly && targetIsArray && hasOwn(arrayInstrumentations, key)) {
+      // 使用 Reflect 不会触发代理
       return Reflect.get(arrayInstrumentations, key, receiver)
     }
 
