@@ -1,6 +1,6 @@
 {
   // Use the project's typescript version
-  "typescript.tsdk": "c:\\dev\\vue-next\\node_modules\\typescript\\lib",
+  "typescript.tsdk": "node_modules/typescript/lib",
 
   "cSpell.enabledLanguageIds": ["markdown", "plaintext", "text", "yml"],
 
