@@ -13,12 +13,10 @@ import { RawSlots } from './componentSlots'
 import {
   FunctionalComponent,
   Component,
-  ComponentOptions,
   ConcreteComponent
 } from './component'
-import { EmitFn, EmitsOptions } from './componentEmits'
+import {  EmitsOptions } from './componentEmits'
 import { DefineComponent } from './apiDefineComponent'
-import { ExtractDefaultPropTypes, ExtractPropTypes, InferPropType } from './componentProps'
 
 // `h` is a more user-friendly version of `createVNode` that allows omitting the
 // props when possible. It is intended for manually written render functions.
@@ -90,13 +88,14 @@ type ExtractEmitEvents<T> =
         : (...args: any[]) => void
     }
 
-
-type ExtractEmitPropUpdate<P = {}> = 
+type ExtractEmitPropUpdate<P = {}, PK extends keyof P & string = keyof P & string> = 
   (P extends Readonly<Array<infer V>>
     ? ({ [K in V & string as `onUpdate:${K}`]?: (value: any) => void })
     : P extends any[]
     ? ({ [K in P & string as `onUpdate:${K}`]?: (value: any) => void })
-    :  { [K in keyof P & string as `onUpdate:${K}`]?: (value: P[K]) => void }
+    : 
+    // we need to omit if it infers emit as props
+    { [K in keyof Omit<P, `on${Capitalize<PK>}`> & string as `onUpdate:${K}`]?: (value: P[K]) => void }
     )
 
 type RenderProps<P, E extends EmitsOptions = {}> = 
@@ -105,64 +104,70 @@ type RenderProps<P, E extends EmitsOptions = {}> =
 // The following is a series of overloads for providing props validation of
 // manually written render functions.
 
-// // element
-// export function h(type: string, children?: RawChildren): VNode
-// export function h(
-//   type: string,
-//   props?: RawProps | null,
-//   children?: RawChildren | RawSlots
-// ): VNode
+// functional component
+// NOTE: is set on top to allow infer the props when doing
+/// const Func = (_props: { foo: string; bar?: number }) => ''
+/// h(Func, {})
+// otherwise it will default to `h(type: string)`
+export function h<P, E extends EmitsOptions = {}>(
+  type: FunctionalComponent<P, E>,
+  props?: RenderProps<P, E>, 
+  children?: RawChildren | RawSlots
+): VNode
+export function h(type: FunctionalComponent): VNode
 
-// // fragment
-// export function h(type: typeof Fragment, children?: VNodeArrayChildren): VNode
-// export function h(
-//   type: typeof Fragment,
-//   props?: RawProps | null,
-//   children?: VNodeArrayChildren
-// ): VNode
+// element
+export function h(type: string, children?: RawChildren): VNode
+export function h(
+  type: string,
+  props?: RawProps | null,
+  children?: RawChildren | RawSlots
+): VNode
 
-// // teleport (target prop is required)
-// export function h(
-//   type: typeof Teleport,
-//   props: RawProps & TeleportProps,
-//   children: RawChildren
-// ): VNode
+// fragment
+export function h(type: typeof Fragment, children?: VNodeArrayChildren): VNode
+export function h(
+  type: typeof Fragment,
+  props?: RawProps | null,
+  children?: VNodeArrayChildren
+): VNode
 
-// // suspense
-// export function h(type: typeof Suspense, children?: RawChildren): VNode
-// export function h(
-//   type: typeof Suspense,
-//   props?: (RawProps & SuspenseProps) | null,
-//   children?: RawChildren | RawSlots
-// ): VNode
+// teleport (target prop is required)
+export function h(
+  type: typeof Teleport,
+  props: RawProps & TeleportProps,
+  children: RawChildren
+): VNode
 
-// // functional component
-// export function h<P, E extends EmitsOptions = {}>(
-//   type: FunctionalComponent<P, E>,
-//   props?: (RawProps & P & Partial<ExtractEmitEvents<E>>) | ({} extends P ? null : never),
-//   children?: RawChildren | RawSlots
-// ): VNode
+// suspense
+export function h(type: typeof Suspense, children?: RawChildren): VNode
+export function h(
+  type: typeof Suspense,
+  props?: (RawProps & SuspenseProps) | null,
+  children?: RawChildren | RawSlots
+): VNode
 
-// // catch-all for generic component types
-// export function h(type: Component, children?: RawChildren): VNode
+// catch-all for generic component types
+export function h(type: Component, children?: RawChildren): VNode
 
-// // concrete component
-// export function h<P>(
-//   type: ConcreteComponent | string,
-//   children?: RawChildren
-// ): VNode
-// export function h<P, E extends EmitsOptions = {}>(
-//   type: ConcreteComponent<P, any, any, any, any, any, any, E> | string,
-//   props?: (RawProps & P & ExtractEmitEvents<E>) | ({} extends P ? null : never),
-//   children?: RawChildren
-// ): VNode
+// concrete component
+export function h<P, E extends EmitsOptions = {}>(
+  type: ConcreteComponent<P, any, any, any, any, any, any, E> | string,
+  props?: RenderProps<P, E>,
+  children?: RawChildren
+): VNode
 
-// // component without props
-// export function h(
-//   type: Component,
-//   props: null,
-//   children?: RawChildren | RawSlots
-// ): VNode
+export function h<P>(
+  type: ConcreteComponent | string,
+  children?: RawChildren
+): VNode
+
+// component without props
+export function h(
+  type: Component,
+  props: null,
+  children?: RawChildren | RawSlots
+): VNode
 
 // // exclude `defineComponent` constructors
 // export function h<P, E extends EmitsOptions = {}>(
@@ -171,17 +176,16 @@ type RenderProps<P, E extends EmitsOptions = {}> =
 //   children?: RawChildren | RawSlots
 // ): VNode
 
-// // fake constructor type returned by `defineComponent` or class component
-// export function h(type: Constructor, children?: RawChildren): VNode
-// export function h<P, E extends EmitsOptions = {}>(
-//   type: Constructor<P, E>,
-//   props?: (Partial<ExtractEmitEvents<E>> & RawProps & P) | ({} extends P ? null : never),
-//   children?: RawChildren | RawSlots
-// ): ExtractEmitEvents<E>
+// fake constructor type returned by `defineComponent` or class component
+export function h<P, E extends EmitsOptions = {}>(
+  type: Constructor<P, E>,
+  props?: null,//RenderProps<P,E>,
+  children?: RawChildren | RawSlots
+): ExtractEmitEvents<E>
+export function h(type: Constructor, children?: RawChildren): VNode
 
 // fake constructor type returned by `defineComponent`
-
-export function h<P, E extends EmitsOptions = {}, PP = {}, Props = {} ,Defaults = {}>(
+export function h<P, E extends EmitsOptions = {}, PP = {}, Props = {},Defaults = {}>(
   type: DefineComponent<P, any, any, any, any, any, any, E, any, PP, Props, Defaults>,
   props?: RenderProps<Partial<Defaults> & Omit<Props & PP, keyof Defaults>, E>,
   children?: RawChildren | RawSlots

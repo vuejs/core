@@ -73,6 +73,16 @@ describe('h inference w/ functional component', () => {
   h(Func, { foo: 'hello' })
   h(Func, { foo: 'hello', bar: 123 })
 
+  h(Func, {
+    foo: '',
+    'onUpdate:bar'(v) {
+      expectType<number | undefined>(v)
+    },
+    'onUpdate:foo'(v) {
+      expectType<string>(v)
+    }
+  })
+
   //  @ts-expect-error
   expectError(h(Func, { foo: 123 }))
   //  @ts-expect-error
@@ -93,30 +103,24 @@ describe('h support w/ plain object component', () => {
       foo: String
     }
   }
-  h(Foo, { foo: 'ok' })
-  h(Foo, { foo: 'ok', class: 'extra' })
-  // no inference in this case
-
-  h(
-    {
-      emits: {
-        foo(a: number) {
-          return true
-        }
-      }
-    },
-    {
-      onFoo(s) {
-        expectType<number>(s)
-      }
+  h(Foo, {
+    foo: 'ok',
+    'onUpdate:foo'(v) {
+      expectType<string>(v)
     }
-  )
+  })
+  h(Foo, {
+    foo: 'ok',
+    class: 'extra',
 
+    'onUpdate:foo'(v) {
+      expectType<string>(v)
+    }
+  })
+  
+  // no inference in this case
   h(
     {
-      props: {
-        foo: String
-      },
       emits: {
         foo(a: number) {
           return true
@@ -124,8 +128,6 @@ describe('h support w/ plain object component', () => {
       }
     },
     {
-      foo: 'ss',
-
       onFoo(s) {
         expectType<number>(s)
       }
@@ -168,6 +170,9 @@ describe('h inference w/ defineComponent', () => {
   expectError(h(Foo, { bar: 1, foo: 1 }))
 
   const FooEmit = defineComponent({
+    props: {
+      foo: String
+    },
     emits: {
       foo(a: number) {
         return true
