@@ -1,14 +1,14 @@
 import {
-  reactive,
-  readonly,
-  toRaw,
+  effect,
+  isProxy,
   isReactive,
   isReadonly,
   markRaw,
-  effect,
+  reactive,
+  readonly,
   ref,
   shallowReadonly,
-  isProxy
+  toRaw
 } from '../src'
 
 /**
@@ -460,6 +460,14 @@ describe('reactivity/readonly', () => {
       expect(
         `Set operation on key "foo" failed: target is readonly.`
       ).not.toHaveBeenWarned()
+    })
+
+    test('should allow shallow und normal reactive for same target', () => {
+      const target = { foo: 1 }
+      const shallowProxy = shallowReadonly(target)
+      const normalProxy = readonly(target)
+
+      expect(normalProxy).not.toBe(shallowProxy)
     })
   })
 })
