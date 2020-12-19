@@ -6,7 +6,10 @@ import {
   unref,
   reactive,
   expectType,
-  proxyRefs
+  proxyRefs,
+  toRef,
+  toRefs,
+  ToRefs
 } from './index'
 
 function plainType(arg: number | Ref<number>) {
@@ -26,7 +29,6 @@ function plainType(arg: number | Ref<number>) {
   const nestedRef = ref({
     foo: ref(1)
   })
-  expectType<Ref<{ foo: number }>>(nestedRef)
   expectType<{ foo: number }>(nestedRef.value)
 
   // ref boolean
@@ -154,3 +156,41 @@ const r2 = {
 const p2 = proxyRefs(r2)
 expectType<number>(p2.a)
 expectType<Ref<string>>(p2.obj.k)
+
+// toRef
+const obj = {
+  a: 1,
+  b: ref(1)
+}
+expectType<Ref<number>>(toRef(obj, 'a'))
+expectType<Ref<number>>(toRef(obj, 'b'))
+
+// toRefs
+const objRefs = toRefs(obj)
+expectType<{
+  a: Ref<number>
+  b: Ref<number>
+}>(objRefs)
+
+// #2687
+interface AppData {
+  state: 'state1' | 'state2' | 'state3'
+}
+
+const data: ToRefs<AppData> = toRefs(
+  reactive({
+    state: 'state1'
+  })
+)
+
+switch (data.state.value) {
+  case 'state1':
+    data.state.value = 'state2'
+    break
+  case 'state2':
+    data.state.value = 'state3'
+    break
+  case 'state3':
+    data.state.value = 'state1'
+    break
+}

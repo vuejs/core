@@ -226,8 +226,8 @@ export function createHydrationFunctions(
         }
     }
 
-    if (ref != null && parentComponent) {
-      setRef(ref, null, parentComponent, parentSuspense, vnode)
+    if (ref != null) {
+      setRef(ref, null, parentSuspense, vnode)
     }
 
     return nextNode

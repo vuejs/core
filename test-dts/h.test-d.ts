@@ -10,6 +10,7 @@ import {
   expectError,
   expectAssignable,
   FunctionalComponent,
+  resolveComponent,
   expectType
 } from './index'
 
@@ -260,4 +261,38 @@ describe('component w/ props w/ default value', () => {
   })
 
   h(MyComponent, {})
+})
+
+// #2338
+describe('Boolean prop implicit false', () => {
+  const MyComponent = defineComponent({
+    props: {
+      visible: Boolean
+    }
+  })
+
+  h(MyComponent, {})
+
+  const RequiredComponent = defineComponent({
+    props: {
+      visible: {
+        type: Boolean,
+        required: true
+      }
+    }
+  })
+
+  h(RequiredComponent, {
+    visible: true
+  })
+  // @ts-expect-error
+  expectError(h(RequiredComponent, {}))
+})
+
+// #2357
+describe('resolveComponent should work', () => {
+  h(resolveComponent('test'))
+  h(resolveComponent('test'), {
+    message: '1'
+  })
 })

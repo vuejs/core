@@ -22,12 +22,20 @@ import {
   TextNode,
   TemplateChildNode,
   InterpolationNode,
-  createRoot
+  createRoot,
+  ConstantTypes
 } from './ast'
 
 type OptionalOptions = 'isNativeTag' | 'isBuiltInComponent'
 type MergedParserOptions = Omit<Required<ParserOptions>, OptionalOptions> &
   Pick<ParserOptions, OptionalOptions>
+type AttributeValue =
+  | {
+      content: string
+      isQuoted: boolean
+      loc: SourceLocation
+    }
+  | undefined
 
 // The default decoder only provides escapes for characters reserved as part of
 // the template syntax, and is only used if the custom renderer did not provide
@@ -198,48 +206,48 @@ function parseChildren(
   // (same as v2 whitespace: 'condense')
   let removedWhitespace = false
   if (mode !== TextModes.RAWTEXT) {
-    if (!context.inPre) {
-      for (let i = 0; i < nodes.length; i++) {
-        const node = nodes[i]
-        if (node.type === NodeTypes.TEXT) {
-          if (!/[^\t\r\n\f ]/.test(node.content)) {
-            const prev = nodes[i - 1]
-            const next = nodes[i + 1]
-            // If:
-            // - the whitespace is the first or last node, or:
-            // - the whitespace is adjacent to a comment, or:
-            // - the whitespace is between two elements AND contains newline
-            // Then the whitespace is ignored.
-            if (
-              !prev ||
-              !next ||
-              prev.type === NodeTypes.COMMENT ||
-              next.type === NodeTypes.COMMENT ||
-              (prev.type === NodeTypes.ELEMENT &&
-                next.type === NodeTypes.ELEMENT &&
-                /[\r\n]/.test(node.content))
-            ) {
-              removedWhitespace = true
-              nodes[i] = null as any
-            } else {
-              // Otherwise, condensed consecutive whitespace inside the text
-              // down to a single space
-              node.content = ' '
-            }
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i]
+      if (!context.inPre && node.type === NodeTypes.TEXT) {
+        if (!/[^\t\r\n\f ]/.test(node.content)) {
+          const prev = nodes[i - 1]
+          const next = nodes[i + 1]
+          // If:
+          // - the whitespace is the first or last node, or:
+          // - the whitespace is adjacent to a comment, or:
+          // - the whitespace is between two elements AND contains newline
+          // Then the whitespace is ignored.
+          if (
+            !prev ||
+            !next ||
+            prev.type === NodeTypes.COMMENT ||
+            next.type === NodeTypes.COMMENT ||
+            (prev.type === NodeTypes.ELEMENT &&
+              next.type === NodeTypes.ELEMENT &&
+              /[\r\n]/.test(node.content))
+          ) {
+            removedWhitespace = true
+            nodes[i] = null as any
           } else {
-            node.content = node.content.replace(/[\t\r\n\f ]+/g, ' ')
+            // Otherwise, condensed consecutive whitespace inside the text
+            // down to a single space
+            node.content = ' '
           }
-        } else if (
-          !__DEV__ &&
-          node.type === NodeTypes.COMMENT &&
-          !context.options.comments
-        ) {
-          // remove comment nodes in prod by default
-          removedWhitespace = true
-          nodes[i] = null as any
+        } else {
+          node.content = node.content.replace(/[\t\r\n\f ]+/g, ' ')
         }
       }
-    } else if (parent && context.options.isPreTag(parent.tag)) {
+      // also remove comment nodes in prod by default
+      if (
+        !__DEV__ &&
+        node.type === NodeTypes.COMMENT &&
+        !context.options.comments
+      ) {
+        removedWhitespace = true
+        nodes[i] = null as any
+      }
+    }
+    if (context.inPre && parent && context.options.isPreTag(parent.tag)) {
       // remove leading newline per html spec
       // https://html.spec.whatwg.org/multipage/grouping-content.html#the-pre-element
       const first = nodes[0]
@@ -589,13 +597,7 @@ function parseAttribute(
   advanceBy(context, name.length)
 
   // Value
-  let value:
-    | {
-        content: string
-        isQuoted: boolean
-        loc: SourceLocation
-      }
-    | undefined = undefined
+  let value: AttributeValue = undefined
 
   if (/^[\t\r\n\f ]*=/.test(context.source)) {
     advanceSpaces(context)
@@ -656,7 +658,9 @@ function parseAttribute(
         type: NodeTypes.SIMPLE_EXPRESSION,
         content,
         isStatic,
-        isConstant: isStatic,
+        constType: isStatic
+          ? ConstantTypes.CAN_STRINGIFY
+          : ConstantTypes.NOT_CONSTANT,
         loc
       }
     }
@@ -677,8 +681,8 @@ function parseAttribute(
         content: value.content,
         isStatic: false,
         // Treat as non-constant by default. This can be potentially set to
-        // true by `transformExpression` to make it eligible for hoisting.
-        isConstant: false,
+        // other values by `transformExpression` to make it eligible for hoisting.
+        constType: ConstantTypes.NOT_CONSTANT,
         loc: value.loc
       },
       arg,
@@ -699,15 +703,7 @@ function parseAttribute(
   }
 }
 
-function parseAttributeValue(
-  context: ParserContext
-):
-  | {
-      content: string
-      isQuoted: boolean
-      loc: SourceLocation
-    }
-  | undefined {
+function parseAttributeValue(context: ParserContext): AttributeValue {
   const start = getCursor(context)
   let content: string
 
@@ -785,7 +781,7 @@ function parseInterpolation(
       type: NodeTypes.SIMPLE_EXPRESSION,
       isStatic: false,
       // Set `isConstant` to false by default and will decide in transformExpression
-      isConstant: false,
+      constType: ConstantTypes.NOT_CONSTANT,
       content,
       loc: getSelection(context, innerStart, innerEnd)
     },

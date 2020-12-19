@@ -42,6 +42,12 @@ describe('vnode', () => {
     expect(vnode.props).toBe(null)
   })
 
+  test('show warn when create with invalid type', () => {
+    const vnode = createVNode('')
+    expect('Invalid vnode type when creating vnode').toHaveBeenWarned()
+    expect(vnode.type).toBe(Comment)
+  })
+
   test('create from an existing vnode', () => {
     const vnode1 = createVNode('p', { id: 'foo' })
     const vnode2 = createVNode(vnode1, { class: 'bar' }, 'baz')
@@ -509,7 +515,7 @@ describe('vnode', () => {
     //   slot content (called during the block node creation) to be missed
     test('element block should track normalized slot children', () => {
       const hoist = createVNode('div')
-      let vnode1
+      let vnode1: any
       const vnode = (openBlock(),
       createBlock('div', null, {
         default: () => {

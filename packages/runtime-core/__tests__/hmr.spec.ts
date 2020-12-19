@@ -33,9 +33,9 @@ describe('hot module replacement', () => {
   })
 
   test('createRecord', () => {
-    expect(createRecord('test1')).toBe(true)
+    expect(createRecord('test1', {})).toBe(true)
     // if id has already been created, should return false
-    expect(createRecord('test1')).toBe(false)
+    expect(createRecord('test1', {})).toBe(false)
   })
 
   test('rerender', async () => {
@@ -47,7 +47,7 @@ describe('hot module replacement', () => {
       __hmrId: childId,
       render: compileToFunction(`<div><slot/></div>`)
     }
-    createRecord(childId)
+    createRecord(childId, Child)
 
     const Parent: ComponentOptions = {
       __hmrId: parentId,
@@ -59,7 +59,7 @@ describe('hot module replacement', () => {
         `<div @click="count++">{{ count }}<Child>{{ count }}</Child></div>`
       )
     }
-    createRecord(parentId)
+    createRecord(parentId, Parent)
 
     render(h(Parent), root)
     expect(serializeInner(root)).toBe(`<div>0<div>0</div></div>`)
@@ -125,7 +125,7 @@ describe('hot module replacement', () => {
       unmounted: unmountSpy,
       render: compileToFunction(`<div @click="count++">{{ count }}</div>`)
     }
-    createRecord(childId)
+    createRecord(childId, Child)
 
     const Parent: ComponentOptions = {
       render: () => h(Child)
@@ -164,7 +164,7 @@ describe('hot module replacement', () => {
         render: compileToFunction(`<div @click="count++">{{ count }}</div>`)
       }
     }
-    createRecord(childId)
+    createRecord(childId, Child)
 
     const Parent: ComponentOptions = {
       render: () => h(Child)
@@ -209,7 +209,7 @@ describe('hot module replacement', () => {
       },
       render: compileToFunction(template)
     }
-    createRecord(id)
+    createRecord(id, Comp)
 
     render(h(Comp), root)
     expect(serializeInner(root)).toBe(
@@ -246,14 +246,14 @@ describe('hot module replacement', () => {
       },
       render: compileToFunction(`<div>{{ msg }}</div>`)
     }
-    createRecord(childId)
+    createRecord(childId, Child)
 
     const Parent: ComponentOptions = {
       __hmrId: parentId,
       components: { Child },
       render: compileToFunction(`<Child msg="foo" />`)
     }
-    createRecord(parentId)
+    createRecord(parentId, Parent)
 
     render(h(Parent), root)
     expect(serializeInner(root)).toBe(`<div>foo</div>`)
@@ -272,14 +272,14 @@ describe('hot module replacement', () => {
       __hmrId: childId,
       render: compileToFunction(`<div>child</div>`)
     }
-    createRecord(childId)
+    createRecord(childId, Child)
 
     const Parent: ComponentOptions = {
       __hmrId: parentId,
       components: { Child },
       render: compileToFunction(`<Child class="test" />`)
     }
-    createRecord(parentId)
+    createRecord(parentId, Parent)
 
     render(h(Parent), root)
     expect(serializeInner(root)).toBe(`<div class="test">child</div>`)
@@ -299,7 +299,7 @@ describe('hot module replacement', () => {
       __hmrId: childId,
       render: compileToFunction(`<div>child</div>`)
     }
-    createRecord(childId)
+    createRecord(childId, Child)
 
     const components: ComponentOptions[] = []
 
@@ -321,7 +321,7 @@ describe('hot module replacement', () => {
         }
       }
 
-      createRecord(parentId)
+      createRecord(parentId, parentComp)
     }
 
     const last = components[components.length - 1]

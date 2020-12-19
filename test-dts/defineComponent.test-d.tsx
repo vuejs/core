@@ -19,6 +19,7 @@ describe('with object props', () => {
     a?: number | undefined
     b: string
     e?: Function
+    h: boolean
     bb: string
     bbb: string
     cc?: string[] | undefined
@@ -46,6 +47,7 @@ describe('with object props', () => {
         required: true
       },
       e: Function,
+      h: Boolean,
       // default value should infer type and make it non-void
       bb: {
         default: 'hello'
@@ -108,6 +110,7 @@ describe('with object props', () => {
       expectType<ExpectedProps['a']>(props.a)
       expectType<ExpectedProps['b']>(props.b)
       expectType<ExpectedProps['e']>(props.e)
+      expectType<ExpectedProps['h']>(props.h)
       expectType<ExpectedProps['bb']>(props.bb)
       expectType<ExpectedProps['bbb']>(props.bbb)
       expectType<ExpectedProps['cc']>(props.cc)
@@ -142,6 +145,7 @@ describe('with object props', () => {
       expectType<ExpectedProps['a']>(props.a)
       expectType<ExpectedProps['b']>(props.b)
       expectType<ExpectedProps['e']>(props.e)
+      expectType<ExpectedProps['h']>(props.h)
       expectType<ExpectedProps['bb']>(props.bb)
       expectType<ExpectedProps['cc']>(props.cc)
       expectType<ExpectedProps['dd']>(props.dd)
@@ -161,6 +165,7 @@ describe('with object props', () => {
       expectType<ExpectedProps['a']>(this.a)
       expectType<ExpectedProps['b']>(this.b)
       expectType<ExpectedProps['e']>(this.e)
+      expectType<ExpectedProps['h']>(this.h)
       expectType<ExpectedProps['bb']>(this.bb)
       expectType<ExpectedProps['cc']>(this.cc)
       expectType<ExpectedProps['dd']>(this.dd)
@@ -440,9 +445,17 @@ describe('with mixins', () => {
   const MixinD = defineComponent({
     mixins: [MixinA],
     data() {
+      //@ts-expect-error computed are not available on data()
+      expectError<number>(this.dC1)
+      //@ts-expect-error computed are not available on data()
+      expectError<string>(this.dC2)
+
       return {
         d: 4
       }
+    },
+    setup(props) {
+      expectType<string>(props.aP1)
     },
     computed: {
       dC1(): number {
@@ -461,6 +474,34 @@ describe('with mixins', () => {
         type: String,
         required: true
       }
+    },
+
+    data(vm) {
+      expectType<number>(vm.a)
+      expectType<number>(vm.b)
+      expectType<number>(vm.c)
+      expectType<number>(vm.d)
+
+      // should also expose declared props on `this`
+      expectType<number>(this.a)
+      expectType<string>(this.aP1)
+      expectType<boolean | undefined>(this.aP2)
+      expectType<number>(this.b)
+      expectType<any>(this.bP1)
+      expectType<number>(this.c)
+      expectType<number>(this.d)
+
+      return {}
+    },
+
+    setup(props) {
+      expectType<string>(props.z)
+      // props
+      expectType<string>(props.aP1)
+      expectType<boolean | undefined>(props.aP2)
+      expectType<any>(props.bP1)
+      expectType<any>(props.bP2)
+      expectType<string>(props.z)
     },
     render() {
       const props = this.$props

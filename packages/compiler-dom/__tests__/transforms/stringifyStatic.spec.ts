@@ -2,7 +2,8 @@ import {
   compile,
   NodeTypes,
   CREATE_STATIC,
-  createSimpleExpression
+  createSimpleExpression,
+  ConstantTypes
 } from '../../src'
 import {
   stringifyStatic,
@@ -176,9 +177,8 @@ describe('stringify static html', () => {
                 '_imports_0_',
                 false,
                 node.loc,
-                true
+                ConstantTypes.CAN_HOIST
               )
-              exp.isRuntimeConstant = true
               node.props[0] = {
                 type: NodeTypes.DIRECTIVE,
                 name: 'bind',

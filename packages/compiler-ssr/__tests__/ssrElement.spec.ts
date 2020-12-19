@@ -94,6 +94,18 @@ describe('ssr: element', () => {
       ).toMatchInlineSnapshot(`"\`<div id=\\"foo\\" class=\\"bar\\"></div>\`"`)
     })
 
+    test('ignore static key/ref', () => {
+      expect(
+        getCompiledString(`<div key="1" ref="el"></div>`)
+      ).toMatchInlineSnapshot(`"\`<div></div>\`"`)
+    })
+
+    test('ignore v-bind key/ref', () => {
+      expect(
+        getCompiledString(`<div :key="1" :ref="el"></div>`)
+      ).toMatchInlineSnapshot(`"\`<div></div>\`"`)
+    })
+
     test('v-bind:class', () => {
       expect(getCompiledString(`<div id="foo" :class="bar"></div>`))
         .toMatchInlineSnapshot(`
@@ -105,6 +117,15 @@ describe('ssr: element', () => {
 
     test('static class + v-bind:class', () => {
       expect(getCompiledString(`<div class="foo" :class="bar"></div>`))
+        .toMatchInlineSnapshot(`
+        "\`<div class=\\"\${
+            _ssrRenderClass([_ctx.bar, \\"foo\\"])
+          }\\"></div>\`"
+      `)
+    })
+
+    test('v-bind:class + static class', () => {
+      expect(getCompiledString(`<div :class="bar" class="foo"></div>`))
         .toMatchInlineSnapshot(`
         "\`<div class=\\"\${
             _ssrRenderClass([_ctx.bar, \\"foo\\"])
@@ -130,7 +151,7 @@ describe('ssr: element', () => {
       `)
     })
 
-    test('v-bind:key (boolean)', () => {
+    test('v-bind:arg (boolean)', () => {
       expect(getCompiledString(`<input type="checkbox" :checked="checked">`))
         .toMatchInlineSnapshot(`
         "\`<input type=\\"checkbox\\"\${
@@ -139,7 +160,7 @@ describe('ssr: element', () => {
       `)
     })
 
-    test('v-bind:key (non-boolean)', () => {
+    test('v-bind:arg (non-boolean)', () => {
       expect(getCompiledString(`<div :id="id" class="bar"></div>`))
         .toMatchInlineSnapshot(`
         "\`<div\${
@@ -148,11 +169,11 @@ describe('ssr: element', () => {
       `)
     })
 
-    test('v-bind:[key]', () => {
+    test('v-bind:[arg]', () => {
       expect(getCompiledString(`<div v-bind:[key]="value"></div>`))
         .toMatchInlineSnapshot(`
         "\`<div\${
-            _ssrRenderAttrs({ [_ctx.key]: _ctx.value })
+            _ssrRenderAttrs({ [_ctx.key || \\"\\"]: _ctx.value })
           }></div>\`"
       `)
 
@@ -161,7 +182,7 @@ describe('ssr: element', () => {
         "\`<div\${
             _ssrRenderAttrs({
               class: \\"foo\\",
-              [_ctx.key]: _ctx.value
+              [_ctx.key || \\"\\"]: _ctx.value
             })
           }></div>\`"
       `)
@@ -171,7 +192,7 @@ describe('ssr: element', () => {
         "\`<div\${
             _ssrRenderAttrs({
               id: _ctx.id,
-              [_ctx.key]: _ctx.value
+              [_ctx.key || \\"\\"]: _ctx.value
             })
           }></div>\`"
       `)
@@ -203,7 +224,7 @@ describe('ssr: element', () => {
       expect(getCompiledString(`<div :[key]="id" v-bind="obj"></div>`))
         .toMatchInlineSnapshot(`
         "\`<div\${
-            _ssrRenderAttrs(_mergeProps({ [_ctx.key]: _ctx.id }, _ctx.obj))
+            _ssrRenderAttrs(_mergeProps({ [_ctx.key || \\"\\"]: _ctx.id }, _ctx.obj))
           }></div>\`"
       `)
 

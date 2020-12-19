@@ -115,11 +115,17 @@ function renderComponentSubTree(
       instance
     )
   } else {
-    if (!instance.render && !comp.ssrRender && isString(comp.template)) {
+    if (
+      !instance.render &&
+      !instance.ssrRender &&
+      !comp.ssrRender &&
+      isString(comp.template)
+    ) {
       comp.ssrRender = ssrCompile(comp.template, instance)
     }
 
-    if (comp.ssrRender) {
+    const ssrRender = instance.ssrRender || comp.ssrRender
+    if (ssrRender) {
       // optimized
       // resolve fallthrough attrs
       let attrs =
@@ -138,7 +144,7 @@ function renderComponentSubTree(
 
       // set current rendering instance for asset resolution
       setCurrentRenderingInstance(instance)
-      comp.ssrRender(
+      ssrRender(
         instance.proxy,
         push,
         instance,

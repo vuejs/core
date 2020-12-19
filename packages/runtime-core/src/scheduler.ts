@@ -1,5 +1,6 @@
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import { isArray } from '@vue/shared'
+import { ComponentPublicInstance } from './componentPublicInstance'
 
 export interface SchedulerJob {
   (): void
@@ -29,7 +30,7 @@ export type SchedulerCbs = SchedulerCb | SchedulerCb[]
 let isFlushing = false
 let isFlushPending = false
 
-const queue: (SchedulerJob | null)[] = []
+const queue: SchedulerJob[] = []
 let flushIndex = 0
 
 const pendingPreFlushCbs: SchedulerCb[] = []
@@ -48,9 +49,12 @@ let currentPreFlushParentJob: SchedulerJob | null = null
 const RECURSION_LIMIT = 100
 type CountMap = Map<SchedulerJob | SchedulerCb, number>
 
-export function nextTick(fn?: () => void): Promise<void> {
+export function nextTick(
+  this: ComponentPublicInstance | void,
+  fn?: () => void
+): Promise<void> {
   const p = currentFlushPromise || resolvedPromise
-  return fn ? p.then(fn) : p
+  return fn ? p.then(this ? fn.bind(this) : fn) : p
 }
 
 export function queueJob(job: SchedulerJob) {
@@ -83,7 +87,7 @@ function queueFlush() {
 export function invalidateJob(job: SchedulerJob) {
   const i = queue.indexOf(job)
   if (i > -1) {
-    queue[i] = null
+    queue.splice(i, 1)
   }
 }
 
@@ -201,9 +205,7 @@ function flushJobs(seen?: CountMap) {
   //    priority number)
   // 2. If a component is unmounted during a parent component's update,
   //    its update can be skipped.
-  // Jobs can never be null before flush starts, since they are only invalidated
-  // during execution of another flushed job.
-  queue.sort((a, b) => getId(a!) - getId(b!))
+  queue.sort((a, b) => getId(a) - getId(b))
 
   try {
     for (flushIndex = 0; flushIndex < queue.length; flushIndex++) {

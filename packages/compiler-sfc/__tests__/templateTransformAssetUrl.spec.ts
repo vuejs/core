@@ -94,4 +94,36 @@ describe('compiler sfc: transform asset url', () => {
     // should not remove it
     expect(code).toMatch(`"xlink:href": "#myCircle"`)
   })
+
+  test('should allow for full base URLs, with paths', () => {
+    const { code } = compileWithAssetUrls(`<img src="./logo.png" />`, {
+      base: 'http://localhost:3000/src/'
+    })
+
+    expect(code).toMatchSnapshot()
+  })
+
+  test('should allow for full base URLs, without paths', () => {
+    const { code } = compileWithAssetUrls(`<img src="./logo.png" />`, {
+      base: 'http://localhost:3000'
+    })
+
+    expect(code).toMatchSnapshot()
+  })
+
+  test('should allow for full base URLs, without port', () => {
+    const { code } = compileWithAssetUrls(`<img src="./logo.png" />`, {
+      base: 'http://localhost'
+    })
+
+    expect(code).toMatchSnapshot()
+  })
+
+  test('should allow for full base URLs, without protocol', () => {
+    const { code } = compileWithAssetUrls(`<img src="./logo.png" />`, {
+      base: '//localhost'
+    })
+
+    expect(code).toMatchSnapshot()
+  })
 })

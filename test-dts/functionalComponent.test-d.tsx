@@ -70,3 +70,12 @@ const Baz: FunctionalComponent<{}, string[]> = (props, { emit }) => {
 }
 
 expectType<Component>(Baz)
+
+const Qux: FunctionalComponent<{}, ['foo', 'bar']> = (props, { emit }) => {
+  emit('foo')
+  emit('foo', 1, 2)
+  emit('bar')
+  emit('bar', 1, 2)
+}
+
+expectType<Component>(Qux)

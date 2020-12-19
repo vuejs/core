@@ -22,7 +22,7 @@ describe('scopeId compiler support', () => {
     expect(ast.helpers).toContain(WITH_SCOPE_ID)
     expect(code).toMatch(`const _withId = /*#__PURE__*/_withScopeId("test")`)
     expect(code).toMatch(
-      `export const render = /*#__PURE__*/_withId(function render(`
+      `export const render = /*#__PURE__*/_withId((_ctx, _cache) => {`
     )
     expect(code).toMatchSnapshot()
   })

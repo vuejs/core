@@ -22,6 +22,8 @@ import { isObject } from '@vue/shared'
 import * as CompilerDOM from '@vue/compiler-dom'
 import * as CompilerSSR from '@vue/compiler-ssr'
 import consolidate from 'consolidate'
+import { warnOnce } from './warn'
+import { genCssVarsFromList } from './cssVars'
 
 export interface TemplateCompiler {
   compile(template: string, options: CompilerOptions): CodegenResult
@@ -30,6 +32,8 @@ export interface TemplateCompiler {
 
 export interface SFCTemplateCompileResults {
   code: string
+  ast?: RootNode
+  preamble?: string
   source: string
   tips: string[]
   errors: (string | CompilerError)[]
@@ -39,7 +43,11 @@ export interface SFCTemplateCompileResults {
 export interface SFCTemplateCompileOptions {
   source: string
   filename: string
+  id: string
+  scoped?: boolean
+  isProd?: boolean
   ssr?: boolean
+  ssrCssVars?: string[]
   inMap?: RawSourceMap
   compiler?: TemplateCompiler
   compilerOptions?: CompilerOptions
@@ -148,9 +156,13 @@ export function compileTemplate(
 
 function doCompileTemplate({
   filename,
+  id,
+  scoped,
   inMap,
   source,
   ssr = false,
+  ssrCssVars,
+  isProd = false,
   compiler = ssr ? (CompilerSSR as TemplateCompiler) : CompilerDOM,
   compilerOptions = {},
   transformAssetUrls
@@ -168,11 +180,30 @@ function doCompileTemplate({
     nodeTransforms = [transformAssetUrl, transformSrcset]
   }
 
-  let { code, map } = compiler.compile(source, {
+  if (ssr && !ssrCssVars) {
+    warnOnce(
+      `compileTemplate is called with \`ssr: true\` but no ` +
+        `corresponding \`cssVars\` option.\`.`
+    )
+  }
+  if (!id) {
+    warnOnce(`compileTemplate now requires the \`id\` option.\`.`)
+    id = ''
+  }
+
+  const shortId = id.replace(/^data-v-/, '')
+  const longId = `data-v-${shortId}`
+
+  let { code, ast, preamble, map } = compiler.compile(source, {
     mode: 'module',
     prefixIdentifiers: true,
     hoistStatic: true,
     cacheHandlers: true,
+    ssrCssVars:
+      ssr && ssrCssVars && ssrCssVars.length
+        ? genCssVarsFromList(ssrCssVars, shortId, isProd)
+        : '',
+    scopeId: scoped ? longId : undefined,
     ...compilerOptions,
     nodeTransforms: nodeTransforms.concat(compilerOptions.nodeTransforms || []),
     filename,
@@ -192,7 +223,7 @@ function doCompileTemplate({
     }
   }
 
-  return { code, source, errors, tips: [], map }
+  return { code, ast, preamble, source, errors, tips: [], map }
 }
 
 function mapLines(oldMap: RawSourceMap, newMap: RawSourceMap): RawSourceMap {

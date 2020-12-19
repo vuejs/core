@@ -35,5 +35,5 @@ export function parseUrl(url: string): UrlWithStringQuery {
 function parseUriParts(urlString: string): UrlWithStringQuery {
   // A TypeError is thrown if urlString is not a string
   // @see https://nodejs.org/api/url.html#url_url_parse_urlstring_parsequerystring_slashesdenotehost
-  return uriParse(isString(urlString) ? urlString : '')
+  return uriParse(isString(urlString) ? urlString : '', false, true)
 }

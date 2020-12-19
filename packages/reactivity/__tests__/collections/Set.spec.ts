@@ -454,5 +454,11 @@ describe('reactivity/collections', () => {
       proxy.clear()
       expect(spy).toBeCalledTimes(1)
     })
+
+    it('should return proxy from Set.add call', () => {
+      const set = reactive(new Set())
+      const result = set.add('a')
+      expect(result).toBe(set)
+    })
   })
 })
