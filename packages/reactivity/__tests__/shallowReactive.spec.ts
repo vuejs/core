@@ -1,4 +1,5 @@
-import { shallowReactive, isReactive, reactive } from '../src/reactive'
+import { isReactive, reactive, shallowReactive } from '../src/reactive'
+
 import { effect } from '../src/effect'
 
 describe('shallowReactive', () => {
@@ -11,6 +12,14 @@ describe('shallowReactive', () => {
     const props: any = shallowReactive({ n: reactive({ foo: 1 }) })
     props.n = reactive({ foo: 2 })
     expect(isReactive(props.n)).toBe(true)
+  })
+
+  test('should allow shallow und normal reactive for same target', () => {
+    const target = { foo: 1 }
+    const shallowProxy = shallowReactive(target)
+    const normalProxy = reactive(target)
+
+    expect(normalProxy).not.toBe(shallowProxy)
   })
 
   describe('collections', () => {
