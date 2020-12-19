@@ -58,7 +58,10 @@ export type DefineComponent<
     true
   > &
     Props
-> & { __isDefineComponent: true } & ComponentOptionsBase<
+> & /**
+ * just typescript
+ */
+{ __isDefineComponent?: true } & ComponentOptionsBase<
     Props,
     RawBindings,
     D,
@@ -180,7 +183,20 @@ export function defineComponent<
     Props,
     Defaults
   >
-): DefineComponent<ExtractPropTypes<PropsOptions>, RawBindings, D, C, M, Mixin, Extends, E, EE, unknown, Props, Defaults>
+): DefineComponent<
+  ExtractPropTypes<PropsOptions>,
+  RawBindings,
+  D,
+  C,
+  M,
+  Mixin,
+  Extends,
+  E,
+  EE,
+  PublicProps,
+  Props,
+  Defaults
+>
 
 // implementation, close to no-op
 export function defineComponent(options: unknown) {

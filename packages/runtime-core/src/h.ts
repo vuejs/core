@@ -65,7 +65,7 @@ type RawChildren =
   | (() => any)
 
 // fake constructor type returned from `defineComponent`
-interface Constructor<P = {}, E extends EmitsOptions = {}> {
+interface Constructor<P = {}> {
   __isFragment?: never
   __isTeleport?: never
   __isSuspense?: never
@@ -176,14 +176,6 @@ export function h(
 //   children?: RawChildren | RawSlots
 // ): VNode
 
-// fake constructor type returned by `defineComponent` or class component
-export function h<P, E extends EmitsOptions = {}>(
-  type: Constructor<P, E>,
-  props?: null,//RenderProps<P,E>,
-  children?: RawChildren | RawSlots
-): ExtractEmitEvents<E>
-export function h(type: Constructor, children?: RawChildren): VNode
-
 // fake constructor type returned by `defineComponent`
 export function h<P, E extends EmitsOptions = {}, PP = {}, Props = {},Defaults = {}>(
   type: DefineComponent<P, any, any, any, any, any, any, E, any, PP, Props, Defaults>,
@@ -192,6 +184,15 @@ export function h<P, E extends EmitsOptions = {}, PP = {}, Props = {},Defaults =
 ): P
 export function h(type: DefineComponent): VNode
 export function h(type: DefineComponent, children?: RawChildren): VNode
+
+// fake constructor type returned by `defineComponent` or class component
+export function h<P, E extends EmitsOptions = {}>(
+  type: Constructor<P>,
+  props?: RenderProps<P,E>,
+  children?: RawChildren | RawSlots
+): ExtractEmitEvents<E>
+export function h(type: Constructor, children?: RawChildren): VNode
+
 
 // Actual implementation
 export function h(type: any, propsOrChildren?: any, children?: any): VNode {
