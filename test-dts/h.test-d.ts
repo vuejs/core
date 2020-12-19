@@ -148,6 +148,18 @@ describe('h inference w/ defineComponent', () => {
   h(Foo, { bar: 1, foo: 'ok' })
   // should allow extraneous props (attrs fallthrough)
   h(Foo, { bar: 1, foo: 'ok', class: 'extra' })
+
+  // should support model
+  h(Foo, {
+    bar: 1,
+    'onUpdate:bar'(v) {
+      expectType<number>(v)
+    },
+    'onUpdate:foo'(v) {
+      expectType<string | undefined>(v)
+    }
+  })
+
   // @ts-expect-error should fail on missing required prop
   expectError(h(Foo, {}))
   //  @ts-expect-error
@@ -166,6 +178,26 @@ describe('h inference w/ defineComponent', () => {
   h(FooEmit, {
     onFoo(a) {
       expectType<number>(a)
+    }
+  })
+
+  const BarPropEmit = defineComponent({
+    props: {
+      bar: Number
+    },
+    emits: {
+      bar(a: number) {
+        return true
+      }
+    }
+  })
+
+  h(BarPropEmit, {
+    onBar(a) {
+      expectType<number>(a)
+    },
+    'onUpdate:bar'(a) {
+      expectType<number | undefined>(a)
     }
   })
 })
