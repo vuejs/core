@@ -69,7 +69,6 @@ const arrayInstrumentations: Record<string, Function> = {}
   }
 })
 
-// 收集依赖用的
 function createGetter(isReadonly = false, shallow = false) {
   return function get(target: Target, key: string | symbol, receiver: object) {
     /**

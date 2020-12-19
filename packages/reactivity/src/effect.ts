@@ -21,6 +21,15 @@ export interface ReactiveEffect<T = any> {
   allowRecurse: boolean
 }
 
+export interface ReactiveEffct<T = any> {
+  (): T
+  _isEffect: true
+  id: number
+  active: boolean
+  raw: () => T
+  deps: Array<Dep>
+}
+
 export interface ReactiveEffectOptions {
   lazy?: boolean
   scheduler?: (job: ReactiveEffect) => void
@@ -93,6 +102,26 @@ function createReactiveEffect<T = any>(
     }
     // trigger 的时候，只触发一次
     if (!effectStack.includes(effect)) {
+      /**
+      * let dummy
+        const obj = reactive({ prop: 'value', run: true })
+
+        const conditionalSpy = jest.fn(() => {
+          dummy = obj.run ? obj.prop : 'other'
+        })
+        effect(conditionalSpy)
+
+        expect(dummy).toBe('value')
+        expect(conditionalSpy).toHaveBeenCalledTimes(1)
+        obj.run = false
+        expect(dummy).toBe('other')
+        expect(conditionalSpy).toHaveBeenCalledTimes(2)
+        obj.prop = 'value2'
+        expect(dummy).toBe('other')
+        expect(conditionalSpy).toHaveBeenCalledTimes(2)
+
+        这里每次 trigger 的时候，都要 cleanup 一下，重新收集最新的依赖，防止条件改变，以前的依赖没有用了
+      */
       cleanup(effect)
       try {
         enableTracking()
@@ -154,6 +183,8 @@ export function resetTracking() {
 
 /**
  * 向 target->key->dep 中添加 activeEffect
+ * 该函数只有是 effect 触发的get handler才会进行依赖收集
+ * 普通的 get 不会收集依赖，是通过 activeEffect 和 shouldTrack 来控制
  */
 export function track(target: object, type: TrackOpTypes, key: unknown) {
   if (!shouldTrack || activeEffect === undefined) {

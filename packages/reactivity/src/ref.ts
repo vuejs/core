@@ -61,6 +61,7 @@ class RefImpl<T> {
   }
 
   get value() {
+    // 这里使用 toRaw 的目的是，ref 是通过 reactive 包裹的
     track(toRaw(this), TrackOpTypes.GET, 'value')
     return this._value
   }
