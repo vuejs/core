@@ -77,13 +77,13 @@ interface Constructor<P = any> {
 // Converts emits value to object
 type ExtractEmitEvents<T> =
     T extends Readonly<Array<infer V>>
-    ? ({ [K in V & string as `on${capitalize K}`]: (...args: any[]) => void })
+    ? ({ [K in V & string as `on${Capitalize<K>}`]: (...args: any[]) => void })
     : T extends any[]
-    ? ({ [K in T & string as `on${capitalize K}`]: (...args: any[]) => void })
+    ? ({ [K in T & string as `on${Capitalize<K>}`]: (...args: any[]) => void })
     : {} extends T // if the emit is empty object (usually the default value for emit) should be converted to function
     ? {}
     :
-     { [K in keyof T & string as `on${capitalize K}`]: T[K] extends ((...args: infer Args) => any)
+     { [K in keyof T & string as `on${Capitalize<K>}`]: T[K] extends ((...args: infer Args) => any)
         ? (...args: Args) => void
         : (...args: any[]) => void
     }
