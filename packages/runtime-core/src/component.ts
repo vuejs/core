@@ -29,6 +29,7 @@ import { Directive, validateDirectiveName } from './directives'
 import {
   applyOptions,
   ComponentOptions,
+  ComponentOptionsMixin,
   ComputedOptions,
   MethodOptions
 } from './componentOptions'
@@ -128,10 +129,13 @@ export type ConcreteComponent<
   RawBindings = any,
   D = any,
   C extends ComputedOptions = ComputedOptions,
-  M extends MethodOptions = MethodOptions
+  M extends MethodOptions = MethodOptions,
+  Mixin extends ComponentOptionsMixin = any,
+  Extends extends ComponentOptionsMixin = any,
+  E extends EmitsOptions = any
 > =
-  | ComponentOptions<Props, RawBindings, D, C, M>
-  | FunctionalComponent<Props, any>
+  | ComponentOptions<Props, RawBindings, D, C, M, Mixin, Extends, E>
+  | FunctionalComponent<Props, E>
 
 /**
  * A type used in public APIs where a component type is expected.

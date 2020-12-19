@@ -16,7 +16,7 @@ import {
   ComponentOptions,
   ConcreteComponent
 } from './component'
-import { EmitsOptions } from './componentEmits'
+import { EmitFn, EmitsOptions } from './componentEmits'
 import { DefineComponent } from './apiDefineComponent'
 
 // `h` is a more user-friendly version of `createVNode` that allows omitting the
@@ -66,11 +66,11 @@ type RawChildren =
   | (() => any)
 
 // fake constructor type returned from `defineComponent`
-interface Constructor<P = any> {
+interface Constructor<P = {}, E extends EmitsOptions = {}> {
   __isFragment?: never
   __isTeleport?: never
   __isSuspense?: never
-  new (...args: any[]): { $props: P }
+  new (...args: any[]): { $props: P, $emit?: EmitFn<E, P> }
 }
 
 
@@ -139,9 +139,9 @@ export function h<P>(
   type: ConcreteComponent | string,
   children?: RawChildren
 ): VNode
-export function h<P>(
-  type: ConcreteComponent<P> | string,
-  props?: (RawProps & P) | ({} extends P ? null : never),
+export function h<P, E extends EmitsOptions = {}>(
+  type: ConcreteComponent<P, any, any, any, any, any, any, E> | string,
+  props?: (RawProps & P & ExtractEmitEvents<E>) | ({} extends P ? null : never),
   children?: RawChildren
 ): VNode
 
@@ -161,17 +161,17 @@ export function h<P, E extends EmitsOptions = {}>(
 
 // fake constructor type returned by `defineComponent` or class component
 export function h(type: Constructor, children?: RawChildren): VNode
-export function h<P>(
-  type: Constructor<P>,
-  props?: (RawProps & P) | ({} extends P ? null : never),
+export function h<P, E extends EmitsOptions = {}>(
+  type: Constructor<P, E>,
+  props?: (Partial<ExtractEmitEvents<E>> & RawProps & P) | ({} extends P ? null : never),
   children?: RawChildren | RawSlots
-): VNode
+): ExtractEmitEvents<E>
 
 // fake constructor type returned by `defineComponent`
 export function h(type: DefineComponent, children?: RawChildren): VNode
-export function h<P>(
-  type: DefineComponent<P>,
-  props?: (RawProps & P) | ({} extends P ? null : never),
+export function h<P, E extends EmitsOptions = {}>(
+  type: DefineComponent<P, any, any, any, any, any, any, E>,
+  props?: (Partial<ExtractEmitEvents<E>> & RawProps & P) | ({} extends P ? null : never),
   children?: RawChildren | RawSlots
 ): VNode
 

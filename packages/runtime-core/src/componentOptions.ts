@@ -298,7 +298,7 @@ export type ComponentOptions<
   M extends MethodOptions = any,
   Mixin extends ComponentOptionsMixin = any,
   Extends extends ComponentOptionsMixin = any,
-  E extends EmitsOptions = any
+  E extends EmitsOptions = {}
 > = ComponentOptionsBase<Props, RawBindings, D, C, M, Mixin, Extends, E> &
   ThisType<
     CreateComponentPublicInstance<

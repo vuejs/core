@@ -28,7 +28,7 @@ export type ObjectEmitsOptions = Record<
 >
 export type EmitsOptions = ObjectEmitsOptions | string[]
 
-export type EmitVModelUpdate<T, E extends keyof T & string = keyof T & string> = (event: `update:${E}`, value: T[E])=> void //{ [K in keyof T & string as `update:${K}`]: (value:T[K])=> void } 
+export type EmitVModelUpdate<T, E extends keyof T & string = keyof T & string> = (event: `update:${E}`, value: T[E])=> void 
 
 export type EmitFn<
   Options = ObjectEmitsOptions,

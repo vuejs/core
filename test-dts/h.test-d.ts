@@ -106,8 +106,6 @@ describe('h support w/ plain object component', () => {
       }
     },
     {
-      // NOTE this should at least infer `s` as number
-      // ERROR caused by `RawProps`
       onFoo(s) {
         expectType<number>(s)
       }
@@ -128,7 +126,6 @@ describe('h support w/ plain object component', () => {
     {
       foo: 'ss',
 
-      // NOTE this should at least infer `s` as number
       onFoo(s) {
         expectType<number>(s)
       }
@@ -167,8 +164,6 @@ describe('h inference w/ defineComponent', () => {
   })
 
   h(FooEmit, {
-    // NOTE it should infer the correct argument,
-    // it infers the key `onFoo` but not the argument type :thinking:
     onFoo(a) {
       expectType<number>(a)
     }
