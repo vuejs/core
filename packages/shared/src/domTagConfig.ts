@@ -31,7 +31,7 @@ const VOID_TAGS =
   'area,base,br,col,embed,hr,img,input,link,meta,param,source,track,wbr'
 
 const FORM_TAGS =
-  'button,datalist,fieldset,input,eygen,label,legend,meter,optgroup,option,' +
+  'button,datalist,fieldset,input,keygen,label,legend,meter,optgroup,option,' +
   'output,progress,select,textarea'
 
 export const isHTMLTag = /*#__PURE__*/ makeMap(HTML_TAGS)
