@@ -99,7 +99,8 @@ function shouldSetAsProp(
     return false
   }
 
-  // #1787, #2840
+  // #1787, #2840 the form property is readonly and can only be set as an
+  // attribute using a string value
   if (key === 'form' && isFormTag(el.tagName)) {
     return false
   }
