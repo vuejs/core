@@ -52,6 +52,7 @@ class ComputedRefImpl<T> {
       this._value = this.effect()
       this._dirty = false
     }
+    // 防止 value 在别的 effect 中使用
     track(toRaw(this), TrackOpTypes.GET, 'value')
     return this._value
   }
