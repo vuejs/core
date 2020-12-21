@@ -44,7 +44,6 @@ class ComputedRefImpl<T> {
         }
       },
       onStop: () => {
-        this._dirty = true
         this._value = undefined!
       }
     })
