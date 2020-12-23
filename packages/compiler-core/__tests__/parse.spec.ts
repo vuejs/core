@@ -2759,7 +2759,7 @@ foo
     }
   })
 
-  describe.only('Error Recovery', () => {
+  describe('Error Recovery', () => {
     test('incomplete tag followed by closing parent tag', () => {
       const ast = baseParse('<div><d</div>', { onError() {} })
 
