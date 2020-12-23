@@ -6,7 +6,7 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 - [Issue Reporting Guidelines](#issue-reporting-guidelines)
 - [Pull Request Guidelines](#pull-request-guidelines)
 - [Development Setup](#development-setup)
-- [Scripts](#Scripts)
+- [Scripts](#scripts)
 - [Project Structure](#project-structure)
 - [Contributing Tests](#contributing-tests)
 - [Financial Contribution](#financial-contribution)
