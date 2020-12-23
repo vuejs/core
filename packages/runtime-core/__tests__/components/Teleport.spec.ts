@@ -70,14 +70,17 @@ describe('renderer: teleport', () => {
     const targetB = nodeOps.createElement('div')
     const target = ref(targetA)
     const root = nodeOps.createElement('div')
+    const Comp = defineComponent({
+      props: ['children'],
+      setup(props) {
+        return () => [
+          h(Teleport, { to: target.value }, props.children),
+          h('div', 'root')
+        ]
+      }
+    })
 
-    render(
-      h(() => [
-        h(Teleport, { to: target.value }, h('div', 'teleported')),
-        h('div', 'root')
-      ]),
-      root
-    )
+    render(h(Comp, { children: [h('div', 'teleported')] }), root)
 
     expect(serializeInner(root)).toMatchInlineSnapshot(
       `"<!--teleport start--><!--teleport end--><div>root</div>"`
@@ -96,6 +99,13 @@ describe('renderer: teleport', () => {
     expect(serializeInner(targetA)).toMatchInlineSnapshot(`""`)
     expect(serializeInner(targetB)).toMatchInlineSnapshot(
       `"<div>teleported</div>"`
+    )
+
+    render(h(Comp, { children: [h('div', 'teleported'), h('span')] }), root)
+
+    // the right order should still be maintained
+    expect(serializeInner(targetB)).toMatchInlineSnapshot(
+      `"<div>teleported</div><span></span>"`
     )
   })
 

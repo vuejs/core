@@ -245,7 +245,7 @@ function moveTeleport(
   if (moveType === TeleportMoveTypes.TARGET_CHANGE) {
     insert(vnode.targetAnchor!, container, parentAnchor)
   }
-  const { el, anchor, shapeFlag, children, props } = vnode
+  const { el, anchor, shapeFlag, children, props, targetAnchor } = vnode
   const isReorder = moveType === TeleportMoveTypes.REORDER
   // move main view anchor if this is a re-order.
   if (isReorder) {
@@ -261,7 +261,7 @@ function moveTeleport(
         move(
           (children as VNode[])[i],
           container,
-          parentAnchor,
+          parentAnchor || targetAnchor,
           MoveType.REORDER
         )
       }
