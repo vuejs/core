@@ -141,6 +141,7 @@ describe('renderer: teleport', () => {
 
     render(null, root)
     expect(serializeInner(target)).toBe('')
+    expect(target.children.length).toBe(0)
   })
 
   test('multiple teleport with same target', () => {

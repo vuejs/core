@@ -215,8 +215,9 @@ export const TeleportImpl = {
     vnode: VNode,
     { r: remove, o: { remove: hostRemove } }: RendererInternals
   ) {
-    const { shapeFlag, children, anchor } = vnode
+    const { shapeFlag, children, anchor, targetAnchor } = vnode
     hostRemove(anchor!)
+    hostRemove(targetAnchor!)
     if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
       for (let i = 0; i < (children as VNode[]).length; i++) {
         remove((children as VNode[])[i])
