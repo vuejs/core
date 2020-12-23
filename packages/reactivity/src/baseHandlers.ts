@@ -115,7 +115,7 @@ function createGetter(isReadonly = false, shallow = false) {
       return res
     }
 
-    // 所以在 reactive 中获取 ref，不用 .value, 这里已经自动解ref了
+    //! 从这里可以看出，只要 ref 是作为 proxy 代理对象的属性，就会自动解 ref
     if (isRef(res)) {
       // ref unwrapping - does not apply for Array + integer key.
       const shouldUnwrap = !targetIsArray || !isIntegerKey(key)

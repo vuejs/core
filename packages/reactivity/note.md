@@ -33,6 +33,36 @@ key 与 Dep 是一一对应的，即：一个 Key 对应一个 Dep，而 Dep 是
 
 依赖函数是通过 `createReactiveEffect` 创建的
 
+**从源码可以看出，响应式的核心 API 就是 `reactive` 和 `ref`**
+
+## 可以转换为响应式数据的函数
+
+- reactive
+- ref
+- computed 返回值 `ComputedRefImpl` 类型 （在其他 effect 函数中使用时），_可以不考虑_
+
+`RefImpl` 类型的 Ref 会触发
+`ObjectRefImpl` 类型不会
+
+## toRef、 toRefs 说明
+
+```js
+const a = { a: 323 }
+const b = toRef(a, 'a')
+
+let dummy = 0
+watchEffect(() => {
+  // 这里读取 b.value 不会收集依赖，因为 a 不是响应式对象
+  dummy = b.value
+})
+
+// 以下都不会 trigger
+a.a = 100
+b.value = 32
+```
+
+由于 `toRef` 内部不会触发 trigger 和 track， 所以如果第一个参数是 plain object 的话，就不会触发依赖收集和监听。
+
 # 对数组的优化
 
 Vue 对数组原型的一些方法也进行了侦听，（不止数组）

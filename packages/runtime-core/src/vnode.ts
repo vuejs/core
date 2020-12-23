@@ -152,6 +152,7 @@ export interface VNode<
   ssFallback: VNode | null
 
   // optimization only
+  /** type + children type */
   shapeFlag: number
   patchFlag: number
   dynamicProps: string[] | null
@@ -359,6 +360,7 @@ function _createVNode(
       // reactive state objects need to be cloned since they are likely to be
       // mutated
       if (isProxy(style) && !isArray(style)) {
+        // 解除 proxy
         style = extend({}, style)
       }
       props.style = normalizeStyle(style)
@@ -588,6 +590,7 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
         slot._c && setCompiledSlotRendering(-1)
       }
       return
+      // type 为组件
     } else {
       type = ShapeFlags.SLOTS_CHILDREN
       const slotFlag = (children as RawSlots)._

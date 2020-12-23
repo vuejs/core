@@ -336,4 +336,17 @@ describe('reactivity/ref', () => {
     _trigger!()
     expect(dummy).toBe(2)
   })
+
+  test('f', () => {
+    const a = { a: 323 }
+    const b = toRef(a, 'a')
+
+    let dummy = 0
+    effect(() => {
+      dummy = b.value
+    })
+
+    a.a = 100
+    b.value = 32
+  })
 })
