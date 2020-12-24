@@ -97,14 +97,15 @@ export function renderComponentVNode(
         warn(`[@vue/server-renderer]: Uncaught error in serverPrefetch:\n`, err)
       })
     }
-    return p.then(() => renderComponentSubTree(instance))
+    return p.then(() => renderComponentSubTree(instance, parentComponent))
   } else {
-    return renderComponentSubTree(instance)
+    return renderComponentSubTree(instance, parentComponent)
   }
 }
 
 function renderComponentSubTree(
-  instance: ComponentInternalInstance
+  instance: ComponentInternalInstance,
+  parentComponent: ComponentInternalInstance | null = null
 ): SSRBuffer | Promise<SSRBuffer> {
   const comp = instance.type as Component
   const { getBuffer, push } = createBuffer()
@@ -155,7 +156,9 @@ function renderComponentSubTree(
         instance.data,
         instance.ctx
       )
-      setCurrentRenderingInstance(null)
+      if (parentComponent === null) {
+        setCurrentRenderingInstance(null)
+      }
     } else if (instance.render) {
       renderVNode(
         push,
