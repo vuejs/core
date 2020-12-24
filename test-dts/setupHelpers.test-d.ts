@@ -56,6 +56,18 @@ describe('defineEmit w/ type declaration', () => {
   emit()
   // @ts-expect-error
   emit('bar')
+
+  const emit2 = defineEmit<
+    ((e: 'foo') => void) & ((e: 'bar', num: number) => void)
+  >()
+  emit2('foo')
+  emit2('bar', 123)
+  // @ts-expect-error
+  emit2('foo', 123)
+  // @ts-expect-error
+  emit2('bar')
+  // @ts-expect-error
+  emit2('baz')
 })
 
 describe('defineEmit w/ runtime declaration', () => {

@@ -644,7 +644,7 @@ return { a, b, c, d, x }
 }"
 `;
 
-exports[`SFC compile <script setup> with TypeScript defineEmit w/ type (union) 1`] = `
+exports[`SFC compile <script setup> with TypeScript defineEmit w/ type (intersection) 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
       
@@ -652,7 +652,7 @@ export default _defineComponent({
   expose: [],
   emits: [\\"foo\\", \\"bar\\", \\"baz\\"] as unknown as undefined,
   setup(__props, { emit }: {
-        emit: (((e: 'foo' | 'bar') => void) | ((e: 'baz', id: number) => void)),
+        emit: (((e: 'foo' | 'bar') => void) & ((e: 'baz', id: number) => void)),
         slots: any,
         attrs: any
       }) {

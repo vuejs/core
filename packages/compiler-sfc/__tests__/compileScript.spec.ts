@@ -518,8 +518,8 @@ const emit = defineEmit(['a', 'b'])
       expect(content).toMatch(`emits: ["foo", "bar"] as unknown as undefined`)
     })
 
-    test('defineEmit w/ type (union)', () => {
-      const type = `((e: 'foo' | 'bar') => void) | ((e: 'baz', id: number) => void)`
+    test('defineEmit w/ type (intersection)', () => {
+      const type = `((e: 'foo' | 'bar') => void) & ((e: 'baz', id: number) => void)`
       const { content } = compile(`
       <script setup lang="ts">
       import { defineEmit } from 'vue'

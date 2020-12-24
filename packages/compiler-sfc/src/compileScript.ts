@@ -20,7 +20,7 @@ import {
   Statement,
   Expression,
   LabeledStatement,
-  TSUnionType,
+  TSIntersectionType,
   CallExpression
 } from '@babel/types'
 import { walk } from 'estree-walker'
@@ -184,7 +184,7 @@ export function compileScript(
   let propsTypeDecl: TSTypeLiteral | undefined
   let propsIdentifier: string | undefined
   let emitRuntimeDecl: Node | undefined
-  let emitTypeDecl: TSFunctionType | TSUnionType | undefined
+  let emitTypeDecl: TSFunctionType | TSIntersectionType | undefined
   let emitIdentifier: string | undefined
   let hasAwait = false
   let hasInlinedSsrRenderFn = false
@@ -300,13 +300,13 @@ export function compileScript(
         const typeArg = node.typeParameters.params[0]
         if (
           typeArg.type === 'TSFunctionType' ||
-          typeArg.type === 'TSUnionType'
+          typeArg.type === 'TSIntersectionType'
         ) {
           emitTypeDecl = typeArg
         } else {
           error(
             `type argument passed to ${DEFINE_EMIT}() must be a function type ` +
-              `or a union of function types.`,
+              `or an intersection of function types.`,
             typeArg
           )
         }
@@ -1297,10 +1297,10 @@ function toRuntimeTypeString(types: string[]) {
 }
 
 function extractRuntimeEmits(
-  node: TSFunctionType | TSUnionType,
+  node: TSFunctionType | TSIntersectionType,
   emits: Set<string>
 ) {
-  if (node.type === 'TSUnionType') {
+  if (node.type === 'TSIntersectionType') {
     for (let t of node.types) {
       if (t.type === 'TSParenthesizedType') t = t.typeAnnotation
       if (t.type === 'TSFunctionType') {
