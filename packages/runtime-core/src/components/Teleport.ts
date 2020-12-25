@@ -213,14 +213,22 @@ export const TeleportImpl = {
 
   remove(
     vnode: VNode,
-    { r: remove, o: { remove: hostRemove } }: RendererInternals
+    { r: remove, o: { remove: hostRemove } }: RendererInternals,
+    doRemove: Boolean
   ) {
-    const { shapeFlag, children, anchor, targetAnchor } = vnode
-    hostRemove(anchor!)
-    hostRemove(targetAnchor!)
-    if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-      for (let i = 0; i < (children as VNode[]).length; i++) {
-        remove((children as VNode[])[i])
+    const { shapeFlag, children, anchor, targetAnchor, target, props } = vnode
+
+    if (target) {
+      hostRemove(targetAnchor!)
+    }
+
+    // an unmounted teleport should always remove its children if not disabled
+    if (doRemove || !isTeleportDisabled(props)) {
+      hostRemove(anchor!)
+      if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        for (let i = 0; i < (children as VNode[]).length; i++) {
+          remove((children as VNode[])[i])
+        }
       }
     }
   },
