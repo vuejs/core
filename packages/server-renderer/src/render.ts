@@ -90,13 +90,11 @@ export function renderComponentVNode(
     let p = hasAsyncSetup
       ? (res as Promise<void>).catch(err => {
           warn(`[@vue/server-renderer]: Uncaught error in async setup:\n`, err)
-          throw new Error(err)
         })
       : Promise.resolve()
     if (prefetch) {
       p = p.then(() => prefetch.call(instance.proxy)).catch(err => {
         warn(`[@vue/server-renderer]: Uncaught error in serverPrefetch:\n`, err)
-        throw new Error(err)
       })
     }
     return p.then(() => renderComponentSubTree(instance))
