@@ -146,4 +146,11 @@ describe('runtime-dom: props patching', () => {
     expect(el.form).toBe(null)
     expect(el.getAttribute('form')).toBe('foo')
   })
+
+  test('readonly type prop on textarea', () => {
+    const el = document.createElement('textarea')
+    // just to verify that it doesn't throw when i.e. switching a dynamic :is from an 'input' to a 'textarea'
+    // see https://github.com/vuejs/vue-next/issues/2766
+    patchProp(el, 'type', 'text', null)
+  })
 })

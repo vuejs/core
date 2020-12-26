@@ -109,5 +109,10 @@ function shouldSetAsProp(
     return false
   }
 
+  // DOMprop "type" is readonly on textarea elements: https://github.com/vuejs/vue-next/issues/2766
+  if (key === 'type' && el.tagName === 'TEXTAREA') {
+    return false
+  }
+
   return key in el
 }
