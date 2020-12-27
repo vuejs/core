@@ -34,6 +34,7 @@ import {
   onActivated,
   onDeactivated,
   onRenderTriggered,
+  onServerPrefetch,
   DebuggerHook,
   ErrorCapturedHook
 } from './apiLifecycle'
@@ -504,6 +505,7 @@ export function applyOptions(
     renderTracked,
     renderTriggered,
     errorCaptured,
+    serverPrefetch,
     // public API
     expose
   } = options
@@ -780,6 +782,9 @@ export function applyOptions(
   }
   if (unmounted) {
     onUnmounted(unmounted.bind(publicThis))
+  }
+  if (serverPrefetch) {
+    onServerPrefetch(serverPrefetch.bind(publicThis))
   }
 
   if (isArray(expose)) {
