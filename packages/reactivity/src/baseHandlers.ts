@@ -134,8 +134,9 @@ function createSetter(shallow = false) {
     receiver: object
   ): boolean {
     const oldValue = (target as any)[key]
+    value = toRaw(value)
+
     if (!shallow) {
-      value = toRaw(value)
       if (!isArray(target) && isRef(oldValue) && !isRef(value)) {
         oldValue.value = value
         return true

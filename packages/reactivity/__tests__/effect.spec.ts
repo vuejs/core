@@ -6,7 +6,8 @@ import {
   TrackOpTypes,
   TriggerOpTypes,
   DebuggerEvent,
-  markRaw
+  markRaw,
+  shallowReactive
 } from '../src/index'
 import { ITERATE_KEY } from '../src/effect'
 
@@ -821,5 +822,14 @@ describe('reactivity/effect', () => {
 
     observed.obj = obj
     expect(fnSpy).toHaveBeenCalledTimes(1)
+
+    const obj2 = reactive({ foo: 1 })
+    const observed2: any = shallowReactive({ obj2 })
+    const fnSpy2 = jest.fn(() => observed2.obj2)
+
+    effect(fnSpy2)
+
+    observed2.obj2 = obj2
+    expect(fnSpy2).toHaveBeenCalledTimes(1)
   })
 })
