@@ -272,6 +272,7 @@ export function createAppAPI<HostElement>(
           if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
             devtoolsUnmountApp(app)
           }
+          delete app._container.__vue_app__
         } else if (__DEV__) {
           warn(`Cannot unmount an app that is not mounted.`)
         }
