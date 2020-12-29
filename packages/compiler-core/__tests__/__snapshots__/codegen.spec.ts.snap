@@ -102,6 +102,15 @@ return function render(_ctx, _cache) {
 }"
 `;
 
+exports[`compiler: codegen forNode with constant expression 1`] = `
+"
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    return (_openBlock(), _createBlock(_Fragment, null, _renderList(), 64 /* STABLE_FRAGMENT */))
+  }
+}"
+`;
+
 exports[`compiler: codegen function mode preamble 1`] = `
 "const _Vue = Vue
 
@@ -162,7 +171,7 @@ export function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: codegen module mode preamble w/ optimizeBindings: true 1`] = `
+exports[`compiler: codegen module mode preamble w/ optimizeImports: true 1`] = `
 "import { createVNode, resolveDirective } from \\"vue\\"
 
 // Binding optimization for webpack code-split

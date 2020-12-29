@@ -5,7 +5,9 @@ import {
   render,
   nextTick,
   defineComponent,
-  reactive
+  reactive,
+  serializeInner,
+  shallowRef
 } from '@vue/runtime-test'
 
 // reference: https://vue-composition-api-rfc.netlify.com/api.html#template-refs
@@ -217,5 +219,150 @@ describe('api: template refs', () => {
     }
     render(h(Comp), root)
     expect(state.refKey).toBe(root.children[0])
+  })
+
+  test('multiple root refs', () => {
+    const root = nodeOps.createElement('div')
+    const refKey1 = ref(null)
+    const refKey2 = ref(null)
+    const refKey3 = ref(null)
+
+    const Comp = {
+      setup() {
+        return {
+          refKey1,
+          refKey2,
+          refKey3
+        }
+      },
+      render() {
+        return [
+          h('div', { ref: 'refKey1' }),
+          h('div', { ref: 'refKey2' }),
+          h('div', { ref: 'refKey3' })
+        ]
+      }
+    }
+    render(h(Comp), root)
+    expect(refKey1.value).toBe(root.children[1])
+    expect(refKey2.value).toBe(root.children[2])
+    expect(refKey3.value).toBe(root.children[3])
+  })
+
+  // #1505
+  test('reactive template ref in the same template', async () => {
+    const Comp = {
+      setup() {
+        const el = ref()
+        return { el }
+      },
+      render(this: any) {
+        return h('div', { id: 'foo', ref: 'el' }, this.el && this.el.props.id)
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    // ref not ready on first render, but should queue an update immediately
+    expect(serializeInner(root)).toBe(`<div id="foo"></div>`)
+    await nextTick()
+    // ref should be updated
+    expect(serializeInner(root)).toBe(`<div id="foo">foo</div>`)
+  })
+
+  // #1834
+  test('exchange refs', async () => {
+    const refToggle = ref(false)
+    const spy = jest.fn()
+
+    const Comp = {
+      render(this: any) {
+        return [
+          h('p', { ref: refToggle.value ? 'foo' : 'bar' }),
+          h('i', { ref: refToggle.value ? 'bar' : 'foo' })
+        ]
+      },
+      mounted(this: any) {
+        spy(this.$refs.foo.tag, this.$refs.bar.tag)
+      },
+      updated(this: any) {
+        spy(this.$refs.foo.tag, this.$refs.bar.tag)
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+
+    expect(spy.mock.calls[0][0]).toBe('i')
+    expect(spy.mock.calls[0][1]).toBe('p')
+    refToggle.value = true
+    await nextTick()
+    expect(spy.mock.calls[1][0]).toBe('p')
+    expect(spy.mock.calls[1][1]).toBe('i')
+  })
+
+  // #1789
+  test('toggle the same ref to different elements', async () => {
+    const refToggle = ref(false)
+    const spy = jest.fn()
+
+    const Comp = {
+      render(this: any) {
+        return refToggle.value ? h('p', { ref: 'foo' }) : h('i', { ref: 'foo' })
+      },
+      mounted(this: any) {
+        spy(this.$refs.foo.tag)
+      },
+      updated(this: any) {
+        spy(this.$refs.foo.tag)
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+
+    expect(spy.mock.calls[0][0]).toBe('i')
+    refToggle.value = true
+    await nextTick()
+    expect(spy.mock.calls[1][0]).toBe('p')
+  })
+
+  // #2078
+  test('handling multiple merged refs', async () => {
+    const Foo = {
+      render: () => h('div', 'foo')
+    }
+    const Bar = {
+      render: () => h('div', 'bar')
+    }
+
+    const viewRef = shallowRef<any>(Foo)
+    const elRef1 = ref()
+    const elRef2 = ref()
+
+    const App = {
+      render() {
+        if (!viewRef.value) {
+          return null
+        }
+        const view = h(viewRef.value, { ref: elRef1 })
+        return h(view, { ref: elRef2 })
+      }
+    }
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+
+    expect(serializeInner(elRef1.value.$el)).toBe('foo')
+    expect(elRef1.value).toBe(elRef2.value)
+
+    viewRef.value = Bar
+    await nextTick()
+    expect(serializeInner(elRef1.value.$el)).toBe('bar')
+    expect(elRef1.value).toBe(elRef2.value)
+
+    viewRef.value = null
+    await nextTick()
+    expect(elRef1.value).toBeNull()
+    expect(elRef1.value).toBe(elRef2.value)
   })
 })

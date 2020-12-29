@@ -1,5 +1,5 @@
 import path from 'path'
-import { setupPuppeteer, E2E_TIMEOUT } from './e2eUtils'
+import { setupPuppeteer, E2E_TIMEOUT } from '../../__tests__/e2eUtils'
 
 describe('e2e: todomvc', () => {
   const {

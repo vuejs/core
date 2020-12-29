@@ -2,6 +2,9 @@
 export { parse } from './parse'
 export { compileTemplate } from './compileTemplate'
 export { compileStyle, compileStyleAsync } from './compileStyle'
+export { compileScript } from './compileScript'
+export { rewriteDefault } from './rewriteDefault'
+export { generateCodeFrame } from '@vue/compiler-core'
 
 // Types
 export {
@@ -22,8 +25,9 @@ export {
   SFCAsyncStyleCompileOptions,
   SFCStyleCompileResults
 } from './compileStyle'
+export { SFCScriptCompileOptions } from './compileScript'
 export {
   CompilerOptions,
   CompilerError,
-  generateCodeFrame
+  BindingMetadata
 } from '@vue/compiler-core'

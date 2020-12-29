@@ -1,15 +1,18 @@
 export {
   ref,
-  unref,
   shallowRef,
   isRef,
   toRef,
   toRefs,
+  unref,
+  proxyRefs,
   customRef,
   triggerRef,
   Ref,
+  ToRefs,
   UnwrapRef,
-  ToRefs
+  ShallowUnwrapRef,
+  RefUnwrapBailTypes
 } from './ref'
 export {
   reactive,
@@ -20,7 +23,9 @@ export {
   shallowReactive,
   shallowReadonly,
   markRaw,
-  toRaw
+  toRaw,
+  ReactiveFlags,
+  DeepReadonly
 } from './reactive'
 export {
   computed,

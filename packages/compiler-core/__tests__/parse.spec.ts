@@ -9,7 +9,8 @@ import {
   NodeTypes,
   Position,
   TextNode,
-  InterpolationNode
+  InterpolationNode,
+  ConstantTypes
 } from '../src/ast'
 
 describe('compiler: parse', () => {
@@ -123,7 +124,7 @@ describe('compiler: parse', () => {
       })
     })
 
-    test('lonly "<" don\'t separate nodes', () => {
+    test('lonely "<" doesn\'t separate nodes', () => {
       const ast = baseParse('a < b', {
         onError: err => {
           if (err.code !== ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME) {
@@ -144,7 +145,7 @@ describe('compiler: parse', () => {
       })
     })
 
-    test('lonly "{{" don\'t separate nodes', () => {
+    test('lonely "{{" doesn\'t separate nodes', () => {
       const ast = baseParse('a {{ b', {
         onError: error => {
           if (error.code !== ErrorCodes.X_MISSING_INTERPOLATION_END) {
@@ -177,7 +178,7 @@ describe('compiler: parse', () => {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: `message`,
           isStatic: false,
-          isConstant: false,
+          constType: ConstantTypes.NOT_CONSTANT,
           loc: {
             start: { offset: 2, line: 1, column: 3 },
             end: { offset: 9, line: 1, column: 10 },
@@ -202,7 +203,7 @@ describe('compiler: parse', () => {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: `a<b`,
           isStatic: false,
-          isConstant: false,
+          constType: ConstantTypes.NOT_CONSTANT,
           loc: {
             start: { offset: 3, line: 1, column: 4 },
             end: { offset: 6, line: 1, column: 7 },
@@ -228,7 +229,7 @@ describe('compiler: parse', () => {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: `a<b`,
           isStatic: false,
-          isConstant: false,
+          constType: ConstantTypes.NOT_CONSTANT,
           loc: {
             start: { offset: 3, line: 1, column: 4 },
             end: { offset: 6, line: 1, column: 7 },
@@ -247,7 +248,7 @@ describe('compiler: parse', () => {
         content: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           isStatic: false,
-          isConstant: false,
+          constType: ConstantTypes.NOT_CONSTANT,
           content: 'c>d',
           loc: {
             start: { offset: 12, line: 1, column: 13 },
@@ -273,8 +274,8 @@ describe('compiler: parse', () => {
         content: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           isStatic: false,
-          // The `isConstant` is the default value and will be determined in `transformExpression`.
-          isConstant: false,
+          // The `constType` is the default value and will be determined in `transformExpression`.
+          constType: ConstantTypes.NOT_CONSTANT,
           content: '"</div>"',
           loc: {
             start: { offset: 8, line: 1, column: 9 },
@@ -303,7 +304,7 @@ describe('compiler: parse', () => {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: `msg`,
           isStatic: false,
-          isConstant: false,
+          constType: ConstantTypes.NOT_CONSTANT,
           loc: {
             start: { offset: 4, line: 1, column: 5 },
             end: { offset: 7, line: 1, column: 8 },
@@ -373,6 +374,37 @@ describe('compiler: parse', () => {
           source: '<!--def-->'
         }
       })
+    })
+
+    test('comments option', () => {
+      __DEV__ = false
+      const astDefaultComment = baseParse('<!--abc-->')
+      const astNoComment = baseParse('<!--abc-->', { comments: false })
+      const astWithComments = baseParse('<!--abc-->', { comments: true })
+      __DEV__ = true
+
+      expect(astDefaultComment.children).toHaveLength(0)
+      expect(astNoComment.children).toHaveLength(0)
+      expect(astWithComments.children).toHaveLength(1)
+    })
+
+    // #2217
+    test('comments in the <pre> tag should be removed in production mode', () => {
+      __DEV__ = false
+      const rawText = `<p/><!-- foo --><p/>`
+      const ast = baseParse(`<pre>${rawText}</pre>`)
+      __DEV__ = true
+
+      expect((ast.children[0] as ElementNode).children).toMatchObject([
+        {
+          type: NodeTypes.ELEMENT,
+          tag: 'p'
+        },
+        {
+          type: NodeTypes.ELEMENT,
+          tag: 'p'
+        }
+      ])
     })
   })
 
@@ -539,7 +571,7 @@ describe('compiler: parse', () => {
       })
     })
 
-    test('v-is without `isNativeTag`', () => {
+    test('v-is with `isNativeTag`', () => {
       const ast = baseParse(
         `<div></div><div v-is="'foo'"></div><Comp></Comp>`,
         {
@@ -566,7 +598,7 @@ describe('compiler: parse', () => {
       })
     })
 
-    test('v-is with `isNativeTag`', () => {
+    test('v-is without `isNativeTag`', () => {
       const ast = baseParse(`<div></div><div v-is="'foo'"></div><Comp></Comp>`)
 
       expect(ast.children[0]).toMatchObject({
@@ -604,6 +636,40 @@ describe('compiler: parse', () => {
         type: NodeTypes.ELEMENT,
         tag: 'comp',
         tagType: ElementTypes.ELEMENT
+      })
+    })
+
+    test('built-in component', () => {
+      const ast = baseParse('<div></div><comp></comp>', {
+        isBuiltInComponent: tag => (tag === 'comp' ? Symbol() : void 0)
+      })
+
+      expect(ast.children[0]).toMatchObject({
+        type: NodeTypes.ELEMENT,
+        tag: 'div',
+        tagType: ElementTypes.ELEMENT
+      })
+
+      expect(ast.children[1]).toMatchObject({
+        type: NodeTypes.ELEMENT,
+        tag: 'comp',
+        tagType: ElementTypes.COMPONENT
+      })
+    })
+
+    test('slot element', () => {
+      const ast = baseParse('<slot></slot><Comp></Comp>')
+
+      expect(ast.children[0]).toMatchObject({
+        type: NodeTypes.ELEMENT,
+        tag: 'slot',
+        tagType: ElementTypes.SLOT
+      })
+
+      expect(ast.children[1]).toMatchObject({
+        type: NodeTypes.ELEMENT,
+        tag: 'Comp',
+        tagType: ElementTypes.COMPONENT
       })
     })
 
@@ -963,7 +1029,7 @@ describe('compiler: parse', () => {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'a',
           isStatic: false,
-          isConstant: false,
+          constType: ConstantTypes.NOT_CONSTANT,
           loc: {
             start: { offset: 11, line: 1, column: 12 },
             end: { offset: 12, line: 1, column: 13 },
@@ -989,7 +1055,7 @@ describe('compiler: parse', () => {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'click',
           isStatic: true,
-          isConstant: true,
+          constType: ConstantTypes.CAN_STRINGIFY,
 
           loc: {
             source: 'click',
@@ -1011,6 +1077,43 @@ describe('compiler: parse', () => {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 15, line: 1, column: 16 },
           source: 'v-on:click'
+        }
+      })
+    })
+
+    test('directive with dynamic argument', () => {
+      const ast = baseParse('<div v-on:[event]/>')
+      const directive = (ast.children[0] as ElementNode).props[0]
+
+      expect(directive).toStrictEqual({
+        type: NodeTypes.DIRECTIVE,
+        name: 'on',
+        arg: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: 'event',
+          isStatic: false,
+          constType: ConstantTypes.NOT_CONSTANT,
+
+          loc: {
+            source: '[event]',
+            start: {
+              column: 11,
+              line: 1,
+              offset: 10
+            },
+            end: {
+              column: 18,
+              line: 1,
+              offset: 17
+            }
+          }
+        },
+        modifiers: [],
+        exp: undefined,
+        loc: {
+          start: { offset: 5, line: 1, column: 6 },
+          end: { offset: 17, line: 1, column: 18 },
+          source: 'v-on:[event]'
         }
       })
     })
@@ -1062,7 +1165,7 @@ describe('compiler: parse', () => {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'click',
           isStatic: true,
-          isConstant: true,
+          constType: ConstantTypes.CAN_STRINGIFY,
 
           loc: {
             source: 'click',
@@ -1088,6 +1191,43 @@ describe('compiler: parse', () => {
       })
     })
 
+    test('directive with dynamic argument and modifiers', () => {
+      const ast = baseParse('<div v-on:[a.b].camel/>')
+      const directive = (ast.children[0] as ElementNode).props[0]
+
+      expect(directive).toStrictEqual({
+        type: NodeTypes.DIRECTIVE,
+        name: 'on',
+        arg: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: 'a.b',
+          isStatic: false,
+          constType: ConstantTypes.NOT_CONSTANT,
+
+          loc: {
+            source: '[a.b]',
+            start: {
+              column: 11,
+              line: 1,
+              offset: 10
+            },
+            end: {
+              column: 16,
+              line: 1,
+              offset: 15
+            }
+          }
+        },
+        modifiers: ['camel'],
+        exp: undefined,
+        loc: {
+          start: { offset: 5, line: 1, column: 6 },
+          end: { offset: 21, line: 1, column: 22 },
+          source: 'v-on:[a.b].camel'
+        }
+      })
+    })
+
     test('v-bind shorthand', () => {
       const ast = baseParse('<div :a=b />')
       const directive = (ast.children[0] as ElementNode).props[0]
@@ -1099,7 +1239,7 @@ describe('compiler: parse', () => {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'a',
           isStatic: true,
-          isConstant: true,
+          constType: ConstantTypes.CAN_STRINGIFY,
 
           loc: {
             source: 'a',
@@ -1120,7 +1260,7 @@ describe('compiler: parse', () => {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'b',
           isStatic: false,
-          isConstant: false,
+          constType: ConstantTypes.NOT_CONSTANT,
 
           loc: {
             start: { offset: 8, line: 1, column: 9 },
@@ -1147,7 +1287,7 @@ describe('compiler: parse', () => {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'a',
           isStatic: true,
-          isConstant: true,
+          constType: ConstantTypes.CAN_STRINGIFY,
 
           loc: {
             source: 'a',
@@ -1168,7 +1308,7 @@ describe('compiler: parse', () => {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'b',
           isStatic: false,
-          isConstant: false,
+          constType: ConstantTypes.NOT_CONSTANT,
 
           loc: {
             start: { offset: 13, line: 1, column: 14 },
@@ -1195,7 +1335,7 @@ describe('compiler: parse', () => {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'a',
           isStatic: true,
-          isConstant: true,
+          constType: ConstantTypes.CAN_STRINGIFY,
 
           loc: {
             source: 'a',
@@ -1216,7 +1356,7 @@ describe('compiler: parse', () => {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'b',
           isStatic: false,
-          isConstant: false,
+          constType: ConstantTypes.NOT_CONSTANT,
 
           loc: {
             start: { offset: 8, line: 1, column: 9 },
@@ -1243,7 +1383,7 @@ describe('compiler: parse', () => {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'a',
           isStatic: true,
-          isConstant: true,
+          constType: ConstantTypes.CAN_STRINGIFY,
 
           loc: {
             source: 'a',
@@ -1264,7 +1404,7 @@ describe('compiler: parse', () => {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'b',
           isStatic: false,
-          isConstant: false,
+          constType: ConstantTypes.NOT_CONSTANT,
 
           loc: {
             start: { offset: 14, line: 1, column: 15 },
@@ -1291,7 +1431,7 @@ describe('compiler: parse', () => {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'a',
           isStatic: true,
-          isConstant: true,
+          constType: ConstantTypes.CAN_STRINGIFY,
           loc: {
             source: 'a',
             start: {
@@ -1311,8 +1451,8 @@ describe('compiler: parse', () => {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: '{ b }',
           isStatic: false,
-          // The `isConstant` is the default value and will be determined in transformExpression
-          isConstant: false,
+          // The `constType` is the default value and will be determined in transformExpression
+          constType: ConstantTypes.NOT_CONSTANT,
           loc: {
             start: { offset: 10, line: 1, column: 11 },
             end: { offset: 15, line: 1, column: 16 },
@@ -1323,6 +1463,36 @@ describe('compiler: parse', () => {
           start: { offset: 6, line: 1, column: 7 },
           end: { offset: 16, line: 1, column: 17 },
           source: '#a="{ b }"'
+        }
+      })
+    })
+
+    // #1241 special case for 2.x compat
+    test('v-slot arg containing dots', () => {
+      const ast = baseParse('<Comp v-slot:foo.bar="{ a }" />')
+      const directive = (ast.children[0] as ElementNode).props[0]
+
+      expect(directive).toMatchObject({
+        type: NodeTypes.DIRECTIVE,
+        name: 'slot',
+        arg: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: 'foo.bar',
+          isStatic: true,
+          constType: ConstantTypes.CAN_STRINGIFY,
+          loc: {
+            source: 'foo.bar',
+            start: {
+              column: 14,
+              line: 1,
+              offset: 13
+            },
+            end: {
+              column: 21,
+              line: 1,
+              offset: 20
+            }
+          }
         }
       })
     })
@@ -1546,6 +1716,14 @@ foo
   })
 
   describe('decodeEntities option', () => {
+    test('use default map', () => {
+      const ast: any = baseParse('&gt;&lt;&amp;&apos;&quot;&foo;')
+
+      expect(ast.children.length).toBe(1)
+      expect(ast.children[0].type).toBe(NodeTypes.TEXT)
+      expect(ast.children[0].content).toBe('><&\'"&foo;')
+    })
+
     test('use the given map', () => {
       const ast: any = baseParse('&amp;&cups;', {
         decodeEntities: text => text.replace('&cups;', '\u222A\uFE00'),
@@ -1612,6 +1790,27 @@ foo
     it('should condense consecutive whitespaces in text', () => {
       const ast = baseParse(`   foo  \n    bar     baz     `)
       expect((ast.children[0] as TextNode).content).toBe(` foo bar baz `)
+    })
+
+    it('should remove leading newline character immediately following the pre element start tag', () => {
+      const ast = baseParse(`<pre>\n  foo  bar  </pre>`, {
+        isPreTag: tag => tag === 'pre'
+      })
+      expect(ast.children).toHaveLength(1)
+      const preElement = ast.children[0] as ElementNode
+      expect(preElement.children).toHaveLength(1)
+      expect((preElement.children[0] as TextNode).content).toBe(`  foo  bar  `)
+    })
+
+    it('should NOT remove leading newline character immediately following child-tag of pre element', () => {
+      const ast = baseParse(`<pre><span></span>\n  foo  bar  </pre>`, {
+        isPreTag: tag => tag === 'pre'
+      })
+      const preElement = ast.children[0] as ElementNode
+      expect(preElement.children).toHaveLength(2)
+      expect((preElement.children[1] as TextNode).content).toBe(
+        `\n  foo  bar  `
+      )
     })
   })
 
@@ -2089,6 +2288,15 @@ foo
               loc: { offset: 0, line: 1, column: 1 }
             }
           ]
+        },
+        {
+          code: '<div></div',
+          errors: [
+            {
+              type: ErrorCodes.EOF_IN_TAG,
+              loc: { offset: 10, line: 1, column: 11 }
+            }
+          ]
         }
       ],
       INCORRECTLY_CLOSED_COMMENT: [
@@ -2255,6 +2463,15 @@ foo
             {
               type: ErrorCodes.NESTED_COMMENT,
               loc: { offset: 20, line: 1, column: 21 }
+            }
+          ]
+        },
+        {
+          code: '<template><!--a<!--b<!----></template>',
+          errors: [
+            {
+              type: ErrorCodes.NESTED_COMMENT,
+              loc: { offset: 15, line: 1, column: 16 }
             }
           ]
         },
@@ -2515,7 +2732,7 @@ foo
                   }
                   return ns
                 },
-                getTextMode: tag => {
+                getTextMode: ({ tag }) => {
                   if (tag === 'textarea') {
                     return TextModes.RCDATA
                   }

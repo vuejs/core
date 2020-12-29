@@ -1,4 +1,9 @@
-import { toRaw, shallowReactive } from '@vue/reactivity'
+import {
+  toRaw,
+  shallowReactive,
+  trigger,
+  TriggerOpTypes
+} from '@vue/reactivity'
 import {
   EMPTY_OBJ,
   camelize,
@@ -14,12 +19,20 @@ import {
   makeMap,
   isReservedProp,
   EMPTY_ARR,
-  def
+  def,
+  extend
 } from '@vue/shared'
 import { warn } from './warning'
-import { Data, ComponentInternalInstance } from './component'
+import {
+  Data,
+  ComponentInternalInstance,
+  ComponentOptions,
+  ConcreteComponent,
+  setCurrentInstance
+} from './component'
 import { isEmitListener } from './componentEmits'
 import { InternalObjectKey } from './vnode'
+import { AppContext } from './apiCreateApp'
 
 export type ComponentPropsOptions<P = Data> =
   | ComponentObjectPropsOptions<P>
@@ -29,14 +42,14 @@ export type ComponentObjectPropsOptions<P = Data> = {
   [K in keyof P]: Prop<P[K]> | null
 }
 
-export type Prop<T> = PropOptions<T> | PropType<T>
+export type Prop<T, D = T> = PropOptions<T, D> | PropType<T>
 
-type DefaultFactory<T> = () => T | null | undefined
+type DefaultFactory<T> = (props: Data) => T | null | undefined
 
-interface PropOptions<T = any> {
+interface PropOptions<T = any, D = T> {
   type?: PropType<T> | true | null
   required?: boolean
-  default?: T | DefaultFactory<T> | null | undefined
+  default?: D | DefaultFactory<D> | null | undefined | object
   validator?(value: unknown): boolean
 }
 
@@ -47,43 +60,59 @@ type PropConstructor<T = any> =
   | { (): T }
   | PropMethod<T>
 
-type PropMethod<T> = T extends (...args: any) => any // if is function with args
-  ? { new (): T; (): T; readonly proptotype: Function } // Create Function like contructor
+type PropMethod<T, TConstructor = any> = T extends (...args: any) => any // if is function with args
+  ? { new (): TConstructor; (): T; readonly prototype: TConstructor } // Create Function like constructor
   : never
 
-type RequiredKeys<T, MakeDefaultRequired> = {
+type RequiredKeys<T> = {
   [K in keyof T]: T[K] extends
     | { required: true }
-    | (MakeDefaultRequired extends true ? { default: any } : never)
+    | { default: any }
+    // don't mark Boolean props as undefined
+    | BooleanConstructor
+    | { type: BooleanConstructor }
     ? K
     : never
 }[keyof T]
 
-type OptionalKeys<T, MakeDefaultRequired> = Exclude<
-  keyof T,
-  RequiredKeys<T, MakeDefaultRequired>
->
+type OptionalKeys<T> = Exclude<keyof T, RequiredKeys<T>>
+
+type DefaultKeys<T> = {
+  [K in keyof T]: T[K] extends
+    | { default: any }
+    // Boolean implicitly defaults to false
+    | BooleanConstructor
+    | { type: BooleanConstructor }
+    ? T[K] extends { type: BooleanConstructor; required: true } // not default if Boolean is marked as required
+      ? never
+      : K
+    : never
+}[keyof T]
 
 type InferPropType<T> = T extends null
   ? any // null & true would fail to infer
   : T extends { type: null | true }
-    ? any // somehow `ObjectConstructor` when inferred from { (): T } becomes `any`
+    ? any // As TS issue https://github.com/Microsoft/TypeScript/issues/14829 // somehow `ObjectConstructor` when inferred from { (): T } becomes `any` // `BooleanConstructor` when inferred from PropConstructor(with PropMethod) becomes `Boolean`
     : T extends ObjectConstructor | { type: ObjectConstructor }
-      ? { [key: string]: any }
-      : T extends Prop<infer V> ? V : T
+      ? Record<string, any>
+      : T extends BooleanConstructor | { type: BooleanConstructor }
+        ? boolean
+        : T extends Prop<infer V, infer D> ? (unknown extends V ? D : V) : T
 
-export type ExtractPropTypes<
-  O,
-  MakeDefaultRequired extends boolean = true
-> = O extends object
-  ? { [K in RequiredKeys<O, MakeDefaultRequired>]: InferPropType<O[K]> } &
-      { [K in OptionalKeys<O, MakeDefaultRequired>]?: InferPropType<O[K]> }
+export type ExtractPropTypes<O> = O extends object
+  ? { [K in RequiredKeys<O>]: InferPropType<O[K]> } &
+      { [K in OptionalKeys<O>]?: InferPropType<O[K]> }
   : { [K in string]: any }
 
 const enum BooleanFlags {
   shouldCast,
   shouldCastTrue
 }
+
+// extract props which defined with default from prop options
+export type ExtractDefaultPropTypes<O> = O extends object
+  ? { [K in DefaultKeys<O>]: InferPropType<O[K]> }
+  : {}
 
 type NormalizedProp =
   | null
@@ -94,7 +123,8 @@ type NormalizedProp =
 
 // normalized value is a tuple of the actual normalized options
 // and an array of prop keys that need value casting (booleans and defaults)
-type NormalizedPropsOptions = [Record<string, NormalizedProp>, string[]]
+export type NormalizedProps = Record<string, NormalizedProp>
+export type NormalizedPropsOptions = [NormalizedProps, string[]] | []
 
 export function initProps(
   instance: ComponentInternalInstance,
@@ -106,17 +136,16 @@ export function initProps(
   const attrs: Data = {}
   def(attrs, InternalObjectKey, 1)
   setFullProps(instance, rawProps, props, attrs)
-  const options = instance.type.props
   // validation
-  if (__DEV__ && options && rawProps) {
-    validateProps(props, options)
+  if (__DEV__) {
+    validateProps(props, instance)
   }
 
   if (isStateful) {
     // stateful
     instance.props = isSSR ? props : shallowReactive(props)
   } else {
-    if (!options) {
+    if (!instance.type.props) {
       // functional w/ optional props, props === attrs
       instance.props = attrs
     } else {
@@ -138,11 +167,21 @@ export function updateProps(
     attrs,
     vnode: { patchFlag }
   } = instance
-  const rawOptions = instance.type.props
   const rawCurrentProps = toRaw(props)
-  const { 0: options } = normalizePropsOptions(rawOptions)
+  const [options] = instance.propsOptions
 
-  if ((optimized || patchFlag > 0) && !(patchFlag & PatchFlags.FULL_PROPS)) {
+  if (
+    // always force full diff in dev
+    // - #1942 if hmr is enabled with sfc component
+    // - vite#872 non-sfc component used by sfc component
+    !(
+      __DEV__ &&
+      (instance.type.__hmrId ||
+        (instance.parent && instance.parent.type.__hmrId))
+    ) &&
+    (optimized || patchFlag > 0) &&
+    !(patchFlag & PatchFlags.FULL_PROPS)
+  ) {
     if (patchFlag & PatchFlags.PROPS) {
       // Compiler-generated props & no keys change, just set the updated
       // the props.
@@ -162,7 +201,8 @@ export function updateProps(
               options,
               rawCurrentProps,
               camelizedKey,
-              value
+              value,
+              instance
             )
           }
         } else {
@@ -179,18 +219,26 @@ export function updateProps(
     for (const key in rawCurrentProps) {
       if (
         !rawProps ||
+        // for camelCase
         (!hasOwn(rawProps, key) &&
           // it's possible the original props was passed in as kebab-case
           // and converted to camelCase (#955)
           ((kebabKey = hyphenate(key)) === key || !hasOwn(rawProps, kebabKey)))
       ) {
         if (options) {
-          if (rawPrevProps && rawPrevProps[kebabKey!] !== undefined) {
+          if (
+            rawPrevProps &&
+            // for camelCase
+            (rawPrevProps[key] !== undefined ||
+              // for kebab-case
+              rawPrevProps[kebabKey!] !== undefined)
+          ) {
             props[key] = resolvePropValue(
               options,
               rawProps || EMPTY_OBJ,
               key,
-              undefined
+              undefined,
+              instance
             )
           }
         } else {
@@ -209,8 +257,11 @@ export function updateProps(
     }
   }
 
-  if (__DEV__ && rawOptions && rawProps) {
-    validateProps(props, rawOptions)
+  // trigger updates for $attrs in case it's used in component slots
+  trigger(instance, TriggerOpTypes.SET, '$attrs')
+
+  if (__DEV__ && rawProps) {
+    validateProps(props, instance)
   }
 }
 
@@ -220,11 +271,7 @@ function setFullProps(
   props: Data,
   attrs: Data
 ) {
-  const { 0: options, 1: needCastKeys } = normalizePropsOptions(
-    instance.type.props
-  )
-  const emits = instance.type.emits
-
+  const [options, needCastKeys] = instance.propsOptions
   if (rawProps) {
     for (const key in rawProps) {
       const value = rawProps[key]
@@ -237,7 +284,7 @@ function setFullProps(
       let camelKey
       if (options && hasOwn(options, (camelKey = camelize(key)))) {
         props[camelKey] = value
-      } else if (!emits || !isEmitListener(emits, key)) {
+      } else if (!isEmitListener(instance.emitsOptions, key)) {
         // Any non-declared (either as a prop or an emitted event) props are put
         // into a separate `attrs` object for spreading. Make sure to preserve
         // original key casing
@@ -254,17 +301,19 @@ function setFullProps(
         options!,
         rawCurrentProps,
         key,
-        rawCurrentProps[key]
+        rawCurrentProps[key],
+        instance
       )
     }
   }
 }
 
 function resolvePropValue(
-  options: NormalizedPropsOptions[0],
+  options: NormalizedProps,
   props: Data,
   key: string,
-  value: unknown
+  value: unknown,
+  instance: ComponentInternalInstance
 ) {
   const opt = options[key]
   if (opt != null) {
@@ -272,7 +321,13 @@ function resolvePropValue(
     // default values
     if (hasDefault && value === undefined) {
       const defaultValue = opt.default
-      value = isFunction(defaultValue) ? defaultValue() : defaultValue
+      if (opt.type !== Function && isFunction(defaultValue)) {
+        setCurrentInstance(instance)
+        value = defaultValue(props)
+        setCurrentInstance(null)
+      } else {
+        value = defaultValue
+      }
     }
     // boolean casting
     if (opt[BooleanFlags.shouldCast]) {
@@ -290,16 +345,42 @@ function resolvePropValue(
 }
 
 export function normalizePropsOptions(
-  raw: ComponentPropsOptions | undefined
-): NormalizedPropsOptions | [] {
-  if (!raw) {
-    return EMPTY_ARR as any
+  comp: ConcreteComponent,
+  appContext: AppContext,
+  asMixin = false
+): NormalizedPropsOptions {
+  if (!appContext.deopt && comp.__props) {
+    return comp.__props
   }
-  if ((raw as any)._n) {
-    return (raw as any)._n
-  }
+
+  const raw = comp.props
   const normalized: NormalizedPropsOptions[0] = {}
   const needCastKeys: NormalizedPropsOptions[1] = []
+
+  // apply mixin/extends props
+  let hasExtends = false
+  if (__FEATURE_OPTIONS_API__ && !isFunction(comp)) {
+    const extendProps = (raw: ComponentOptions) => {
+      hasExtends = true
+      const [props, keys] = normalizePropsOptions(raw, appContext, true)
+      extend(normalized, props)
+      if (keys) needCastKeys.push(...keys)
+    }
+    if (!asMixin && appContext.mixins.length) {
+      appContext.mixins.forEach(extendProps)
+    }
+    if (comp.extends) {
+      extendProps(comp.extends)
+    }
+    if (comp.mixins) {
+      comp.mixins.forEach(extendProps)
+    }
+  }
+
+  if (!raw && !hasExtends) {
+    return (comp.__props = EMPTY_ARR as any)
+  }
+
   if (isArray(raw)) {
     for (let i = 0; i < raw.length; i++) {
       if (__DEV__ && !isString(raw[i])) {
@@ -310,7 +391,7 @@ export function normalizePropsOptions(
         normalized[normalizedKey] = EMPTY_OBJ
       }
     }
-  } else {
+  } else if (raw) {
     if (__DEV__ && !isObject(raw)) {
       warn(`invalid props options`, raw)
     }
@@ -334,9 +415,17 @@ export function normalizePropsOptions(
       }
     }
   }
-  const normalizedEntry: NormalizedPropsOptions = [normalized, needCastKeys]
-  def(raw, '_n', normalizedEntry)
-  return normalizedEntry
+
+  return (comp.__props = [normalized, needCastKeys])
+}
+
+function validatePropName(key: string) {
+  if (key[0] !== '$') {
+    return true
+  } else if (__DEV__) {
+    warn(`Invalid prop name: "${key}" is a reserved property.`)
+  }
+  return false
 }
 
 // use function string name to check type constructors
@@ -366,9 +455,12 @@ function getTypeIndex(
   return -1
 }
 
-function validateProps(props: Data, rawOptions: ComponentPropsOptions) {
+/**
+ * dev only
+ */
+function validateProps(props: Data, instance: ComponentInternalInstance) {
   const rawValues = toRaw(props)
-  const options = normalizePropsOptions(rawOptions)[0]
+  const options = instance.propsOptions[0]
   for (const key in options) {
     let opt = options[key]
     if (opt == null) continue
@@ -376,15 +468,9 @@ function validateProps(props: Data, rawOptions: ComponentPropsOptions) {
   }
 }
 
-function validatePropName(key: string) {
-  if (key[0] !== '$') {
-    return true
-  } else if (__DEV__) {
-    warn(`Invalid prop name: "${key}" is a reserved property.`)
-  }
-  return false
-}
-
+/**
+ * dev only
+ */
 function validateProp(
   name: string,
   value: unknown,
@@ -432,6 +518,9 @@ type AssertionResult = {
   expectedType: string
 }
 
+/**
+ * dev only
+ */
 function assertType(value: unknown, type: PropConstructor): AssertionResult {
   let valid
   const expectedType = getType(type)
@@ -443,7 +532,7 @@ function assertType(value: unknown, type: PropConstructor): AssertionResult {
       valid = value instanceof type
     }
   } else if (expectedType === 'Object') {
-    valid = toRawType(value) === 'Object'
+    valid = isObject(value)
   } else if (expectedType === 'Array') {
     valid = isArray(value)
   } else {
@@ -455,6 +544,9 @@ function assertType(value: unknown, type: PropConstructor): AssertionResult {
   }
 }
 
+/**
+ * dev only
+ */
 function getInvalidTypeMessage(
   name: string,
   value: unknown,
@@ -483,6 +575,9 @@ function getInvalidTypeMessage(
   return message
 }
 
+/**
+ * dev only
+ */
 function styleValue(value: unknown, type: string): string {
   if (type === 'String') {
     return `"${value}"`
@@ -493,11 +588,17 @@ function styleValue(value: unknown, type: string): string {
   }
 }
 
+/**
+ * dev only
+ */
 function isExplicable(type: string): boolean {
   const explicitTypes = ['string', 'number', 'boolean']
   return explicitTypes.some(elem => type.toLowerCase() === elem)
 }
 
+/**
+ * dev only
+ */
 function isBoolean(...args: string[]): boolean {
   return args.some(elem => elem.toLowerCase() === 'boolean')
 }

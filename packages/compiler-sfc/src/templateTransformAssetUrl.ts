@@ -1,4 +1,6 @@
+import path from 'path'
 import {
+  ConstantTypes,
   createSimpleExpression,
   ExpressionNode,
   NodeTransform,
@@ -6,65 +8,147 @@ import {
   SourceLocation,
   TransformContext
 } from '@vue/compiler-core'
-import { isRelativeUrl, parseUrl } from './templateUtils'
+import {
+  isRelativeUrl,
+  parseUrl,
+  isExternalUrl,
+  isDataUrl
+} from './templateUtils'
+import { isArray } from '@vue/shared'
 
-export interface AssetURLOptions {
+export interface AssetURLTagConfig {
   [name: string]: string[]
 }
 
-const defaultOptions: AssetURLOptions = {
-  video: ['src', 'poster'],
-  source: ['src'],
-  img: ['src'],
-  image: ['xlink:href', 'href'],
-  use: ['xlink:href', 'href']
+export interface AssetURLOptions {
+  /**
+   * If base is provided, instead of transforming relative asset urls into
+   * imports, they will be directly rewritten to absolute urls.
+   */
+  base?: string | null
+  /**
+   * If true, also processes absolute urls.
+   */
+  includeAbsolute?: boolean
+  tags?: AssetURLTagConfig
+}
+
+export const defaultAssetUrlOptions: Required<AssetURLOptions> = {
+  base: null,
+  includeAbsolute: false,
+  tags: {
+    video: ['src', 'poster'],
+    source: ['src'],
+    img: ['src'],
+    image: ['xlink:href', 'href'],
+    use: ['xlink:href', 'href']
+  }
+}
+
+export const normalizeOptions = (
+  options: AssetURLOptions | AssetURLTagConfig
+): Required<AssetURLOptions> => {
+  if (Object.keys(options).some(key => isArray((options as any)[key]))) {
+    // legacy option format which directly passes in tags config
+    return {
+      ...defaultAssetUrlOptions,
+      tags: options as any
+    }
+  }
+  return {
+    ...defaultAssetUrlOptions,
+    ...options
+  }
 }
 
 export const createAssetUrlTransformWithOptions = (
-  options: AssetURLOptions
+  options: Required<AssetURLOptions>
 ): NodeTransform => {
-  const mergedOptions = {
-    ...defaultOptions,
-    ...options
-  }
   return (node, context) =>
-    (transformAssetUrl as Function)(node, context, mergedOptions)
+    (transformAssetUrl as Function)(node, context, options)
 }
 
+/**
+ * A `@vue/compiler-core` plugin that transforms relative asset urls into
+ * either imports or absolute urls.
+ *
+ * ``` js
+ * // Before
+ * createVNode('img', { src: './logo.png' })
+ *
+ * // After
+ * import _imports_0 from './logo.png'
+ * createVNode('img', { src: _imports_0 })
+ * ```
+ */
 export const transformAssetUrl: NodeTransform = (
   node,
   context,
-  options: AssetURLOptions = defaultOptions
+  options: AssetURLOptions = defaultAssetUrlOptions
 ) => {
   if (node.type === NodeTypes.ELEMENT) {
-    for (const tag in options) {
-      if ((tag === '*' || node.tag === tag) && node.props.length) {
-        const attributes = options[tag]
-        attributes.forEach(item => {
-          node.props.forEach((attr, index) => {
-            if (attr.type !== NodeTypes.ATTRIBUTE) return
-            if (attr.name !== item) return
-            if (!attr.value) return
-            if (!isRelativeUrl(attr.value.content)) return
-            const url = parseUrl(attr.value.content)
-            const exp = getImportsExpressionExp(
-              url.path,
-              url.hash,
-              attr.loc,
-              context
-            )
-            node.props[index] = {
-              type: NodeTypes.DIRECTIVE,
-              name: 'bind',
-              arg: createSimpleExpression(item, true, attr.loc),
-              exp,
-              modifiers: [],
-              loc: attr.loc
-            }
-          })
-        })
-      }
+    if (!node.props.length) {
+      return
     }
+
+    const tags = options.tags || defaultAssetUrlOptions.tags
+    const attrs = tags[node.tag]
+    const wildCardAttrs = tags['*']
+    if (!attrs && !wildCardAttrs) {
+      return
+    }
+
+    const assetAttrs = (attrs || []).concat(wildCardAttrs || [])
+    node.props.forEach((attr, index) => {
+      if (
+        attr.type !== NodeTypes.ATTRIBUTE ||
+        !assetAttrs.includes(attr.name) ||
+        !attr.value ||
+        isExternalUrl(attr.value.content) ||
+        isDataUrl(attr.value.content) ||
+        attr.value.content[0] === '#' ||
+        (!options.includeAbsolute && !isRelativeUrl(attr.value.content))
+      ) {
+        return
+      }
+
+      const url = parseUrl(attr.value.content)
+      if (options.base) {
+        // explicit base - directly rewrite the url into absolute url
+        // does not apply to absolute urls or urls that start with `@`
+        // since they are aliases
+        if (
+          attr.value.content[0] !== '@' &&
+          isRelativeUrl(attr.value.content)
+        ) {
+          // Allow for full hostnames provided in options.base
+          const base = parseUrl(options.base)
+          const protocol = base.protocol || ''
+          const host = base.host ? protocol + '//' + base.host : ''
+          const basePath = base.path || '/'
+
+          // when packaged in the browser, path will be using the posix-
+          // only version provided by rollup-plugin-node-builtins.
+          attr.value.content =
+            host +
+            (path.posix || path).join(basePath, url.path + (url.hash || ''))
+        }
+        return
+      }
+
+      // otherwise, transform the url into an import.
+      // this assumes a bundler will resolve the import into the correct
+      // absolute url (e.g. webpack file-loader)
+      const exp = getImportsExpressionExp(url.path, url.hash, attr.loc, context)
+      node.props[index] = {
+        type: NodeTypes.DIRECTIVE,
+        name: 'bind',
+        arg: createSimpleExpression(attr.name, true, attr.loc),
+        exp,
+        modifiers: [],
+        loc: attr.loc
+      }
+    })
   }
 }
 
@@ -81,16 +165,26 @@ function getImportsExpressionExp(
       return existing.exp as ExpressionNode
     }
     const name = `_imports_${importsArray.length}`
-    const exp = createSimpleExpression(name, false, loc, true)
+    const exp = createSimpleExpression(
+      name,
+      false,
+      loc,
+      ConstantTypes.CAN_HOIST
+    )
     context.imports.add({ exp, path })
     if (hash && path) {
       return context.hoist(
-        createSimpleExpression(`${name} + '${hash}'`, false, loc, true)
+        createSimpleExpression(
+          `${name} + '${hash}'`,
+          false,
+          loc,
+          ConstantTypes.CAN_HOIST
+        )
       )
     } else {
       return exp
     }
   } else {
-    return createSimpleExpression(`''`, false, loc, true)
+    return createSimpleExpression(`''`, false, loc, ConstantTypes.CAN_HOIST)
   }
 }

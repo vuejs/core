@@ -1,0 +1,22 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "paths": {
+      "@vue/*": ["../packages/*/dist"],
+      "vue": ["../packages/vue/dist"]
+    }
+  },
+  "exclude": [
+    "../packages/*/__tests__",
+    "../packages/*/src",
+    "../packages/template-explorer"
+  ],
+  "include": [
+    "../packages/global.d.ts",
+    "../packages/*/dist",
+    "../packages/runtime-dom/types/jsx.d.ts",
+    "../packages/*/__tests__",
+    "../test-dts"
+  ]
+}

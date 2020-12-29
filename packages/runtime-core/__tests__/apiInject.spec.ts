@@ -10,13 +10,9 @@ import {
   reactive
 } from '../src/index'
 import { render, nodeOps, serialize } from '@vue/runtime-test'
-import { mockWarn } from '@vue/shared'
 
 // reference: https://vue-composition-api-rfc.netlify.com/api.html#provide-inject
-
 describe('api: provide/inject', () => {
-  mockWarn()
-
   it('string keys', () => {
     const Provider = {
       setup() {
@@ -306,5 +302,20 @@ describe('api: provide/inject', () => {
     const root = nodeOps.createElement('div')
     render(h(Provider), root)
     expect(`injection "foo" not found.`).not.toHaveBeenWarned()
+  })
+
+  // #2400
+  it('should not self-inject', () => {
+    const Comp = {
+      setup() {
+        provide('foo', 'foo')
+        const injection = inject('foo', null)
+        return () => injection
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serialize(root)).toBe(`<div><!----></div>`)
   })
 })

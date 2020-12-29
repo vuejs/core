@@ -1,6 +1,6 @@
 {
   "name": "@vue/compiler-dom",
-  "version": "3.0.0-beta.4",
+  "version": "3.0.4",
   "description": "@vue/compiler-dom",
   "main": "index.js",
   "module": "dist/compiler-dom.esm-bundler.js",
@@ -23,7 +23,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vuejs/vue-next.git"
+    "url": "git+https://github.com/vuejs/vue-next.git",
+    "directory": "packages/compiler-dom"
   },
   "keywords": [
     "vue"
@@ -35,7 +36,7 @@
   },
   "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/compiler-dom#readme",
   "dependencies": {
-    "@vue/shared": "3.0.0-beta.4",
-    "@vue/compiler-core": "3.0.0-beta.4"
+    "@vue/shared": "3.0.4",
+    "@vue/compiler-core": "3.0.4"
   }
 }

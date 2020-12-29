@@ -6,16 +6,8 @@
 <div id="source" class="editor"></div>
 <div id="output" class="editor"></div>
 
-<script src="../../node_modules/estree-walker/dist/estree-walker.umd.js"></script>
-<script src="../../node_modules/source-map/dist/source-map.js"></script>
 <script src="../../node_modules/monaco-editor/min/vs/loader.js"></script>
 <script>
-window._deps = {
-  // @babel/parser is injected by the bundle
-  'estree-walker': estreeWalker,
-  'source-map': sourceMap
-}
-
 require.config({
   paths: {
     'vs': '../../node_modules/monaco-editor/min/vs'

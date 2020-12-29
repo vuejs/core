@@ -62,7 +62,7 @@ export function createElementWithCodegen(
       dynamicProps,
       directives: undefined,
       isBlock: false,
-      isForBlock: false,
+      disableTracking: false,
       loc: locStub
     }
   }

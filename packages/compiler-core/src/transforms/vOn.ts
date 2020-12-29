@@ -1,19 +1,22 @@
 import { DirectiveTransform, DirectiveTransformResult } from '../transform'
 import {
-  DirectiveNode,
+  createCompoundExpression,
   createObjectProperty,
   createSimpleExpression,
+  DirectiveNode,
+  ElementTypes,
   ExpressionNode,
   NodeTypes,
-  createCompoundExpression,
   SimpleExpressionNode
 } from '../ast'
-import { capitalize, camelize } from '@vue/shared'
+import { camelize, toHandlerKey } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
-import { isMemberExpression, hasScopeRef } from '../utils'
+import { validateBrowserExpression } from '../validateExpression'
+import { hasScopeRef, isMemberExpression } from '../utils'
+import { TO_HANDLER_KEY } from '../runtimeHelpers'
 
-const fnExpRE = /^([\w$_]+|\([^)]*?\))\s*=>|^function(?:\s+[\w$]+)?\s*\(/
+const fnExpRE = /^\s*([\w$_]+|\([^)]*?\))\s*=>|^\s*function(?:\s+[\w$]+)?\s*\(/
 
 export interface VOnDirectiveNode extends DirectiveNode {
   // v-on without arg is handled directly in ./transformElements.ts due to it affecting
@@ -39,18 +42,24 @@ export const transformOn: DirectiveTransform = (
   if (arg.type === NodeTypes.SIMPLE_EXPRESSION) {
     if (arg.isStatic) {
       const rawName = arg.content
-      // for @vnode-xxx event listeners, auto convert it to camelCase
-      const normalizedName = rawName.startsWith(`vnode`)
-        ? capitalize(camelize(rawName))
-        : capitalize(rawName)
-      eventName = createSimpleExpression(`on${normalizedName}`, true, arg.loc)
+      // for all event listeners, auto convert it to camelCase. See issue #2249
+      eventName = createSimpleExpression(
+        toHandlerKey(camelize(rawName)),
+        true,
+        arg.loc
+      )
     } else {
-      eventName = createCompoundExpression([`"on" + (`, arg, `)`])
+      // #2388
+      eventName = createCompoundExpression([
+        `${context.helperString(TO_HANDLER_KEY)}(`,
+        arg,
+        `)`
+      ])
     }
   } else {
     // already a compound expression.
     eventName = arg
-    eventName.children.unshift(`"on" + (`)
+    eventName.children.unshift(`${context.helperString(TO_HANDLER_KEY)}(`)
     eventName.children.push(`)`)
   }
 
@@ -61,7 +70,7 @@ export const transformOn: DirectiveTransform = (
   if (exp && !exp.content.trim()) {
     exp = undefined
   }
-  let isCacheable: boolean = !exp
+  let shouldCache: boolean = context.cacheHandlers && !exp
   if (exp) {
     const isMemberExp = isMemberExpression(exp.content)
     const isInlineStatement = !(isMemberExp || fnExpRE.test(exp.content))
@@ -69,30 +78,64 @@ export const transformOn: DirectiveTransform = (
 
     // process the expression since it's been skipped
     if (!__BROWSER__ && context.prefixIdentifiers) {
-      context.addIdentifiers(`$event`)
-      exp = processExpression(exp, context, false, hasMultipleStatements)
-      context.removeIdentifiers(`$event`)
+      isInlineStatement && context.addIdentifiers(`$event`)
+      exp = dir.exp = processExpression(
+        exp,
+        context,
+        false,
+        hasMultipleStatements
+      )
+      isInlineStatement && context.removeIdentifiers(`$event`)
       // with scope analysis, the function is hoistable if it has no reference
       // to scope variables.
-      isCacheable =
-        context.cacheHandlers && !hasScopeRef(exp, context.identifiers)
+      shouldCache =
+        context.cacheHandlers &&
+        // runtime constants don't need to be cached
+        // (this is analyzed by compileScript in SFC <script setup>)
+        !(exp.type === NodeTypes.SIMPLE_EXPRESSION && exp.constType > 0) &&
+        // #1541 bail if this is a member exp handler passed to a component -
+        // we need to use the original function to preserve arity,
+        // e.g. <transition> relies on checking cb.length to determine
+        // transition end handling. Inline function is ok since its arity
+        // is preserved even when cached.
+        !(isMemberExp && node.tagType === ElementTypes.COMPONENT) &&
+        // bail if the function references closure variables (v-for, v-slot)
+        // it must be passed fresh to avoid stale values.
+        !hasScopeRef(exp, context.identifiers)
       // If the expression is optimizable and is a member expression pointing
       // to a function, turn it into invocation (and wrap in an arrow function
       // below) so that it always accesses the latest value when called - thus
       // avoiding the need to be patched.
-      if (isCacheable && isMemberExp) {
+      if (shouldCache && isMemberExp) {
         if (exp.type === NodeTypes.SIMPLE_EXPRESSION) {
-          exp.content += `($event)`
+          exp.content = `${exp.content} && ${exp.content}(...args)`
         } else {
-          exp.children.push(`($event)`)
+          exp.children = [...exp.children, ` && `, ...exp.children, `(...args)`]
         }
       }
     }
 
-    if (isInlineStatement || (isCacheable && isMemberExp)) {
+    if (__DEV__ && __BROWSER__) {
+      validateBrowserExpression(
+        exp as SimpleExpressionNode,
+        context,
+        false,
+        hasMultipleStatements
+      )
+    }
+
+    if (isInlineStatement || (shouldCache && isMemberExp)) {
       // wrap inline statement in a function expression
       exp = createCompoundExpression([
-        `$event => ${hasMultipleStatements ? `{` : `(`}`,
+        `${
+          isInlineStatement
+            ? !__BROWSER__ && context.isTS
+              ? `($event: any)`
+              : `$event`
+            : `${
+                !__BROWSER__ && context.isTS ? `\n//@ts-ignore\n` : ``
+              }(...args)`
+        } => ${hasMultipleStatements ? `{` : `(`}`,
         exp,
         hasMultipleStatements ? `}` : `)`
       ])
@@ -113,7 +156,7 @@ export const transformOn: DirectiveTransform = (
     ret = augmentor(ret)
   }
 
-  if (isCacheable) {
+  if (shouldCache) {
     // cache handlers so that it's always the same handler being passed down.
     // this avoids unnecessary re-renders when users use inline handlers on
     // components.

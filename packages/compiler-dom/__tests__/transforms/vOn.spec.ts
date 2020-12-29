@@ -1,20 +1,19 @@
 import {
   baseParse as parse,
-  transform,
   CompilerOptions,
   ElementNode,
-  ObjectExpression,
+  TO_HANDLER_KEY,
+  helperNameMap,
   NodeTypes,
+  ObjectExpression,
+  transform,
   VNodeCall
 } from '@vue/compiler-core'
 import { transformOn } from '../../src/transforms/vOn'
-import { V_ON_WITH_MODIFIERS, V_ON_WITH_KEYS } from '../../src/runtimeHelpers'
+import { V_ON_WITH_KEYS, V_ON_WITH_MODIFIERS } from '../../src/runtimeHelpers'
 import { transformElement } from '../../../compiler-core/src/transforms/transformElement'
 import { transformExpression } from '../../../compiler-core/src/transforms/transformExpression'
-import {
-  createObjectMatcher,
-  genFlagText
-} from '../../../compiler-core/__tests__/testUtils'
+import { genFlagText } from '../../../compiler-core/__tests__/testUtils'
 import { PatchFlags } from '@vue/shared'
 
 function parseWithVOn(template: string, options: CompilerOptions = {}) {
@@ -78,47 +77,42 @@ describe('compiler-dom: transform v-on', () => {
   it('should support multiple modifiers and event options w/ prefixIdentifiers: true', () => {
     const {
       props: [prop]
-    } = parseWithVOn(`<div @click.stop.capture.passive="test"/>`, {
+    } = parseWithVOn(`<div @click.stop.capture.once="test"/>`, {
       prefixIdentifiers: true
     })
     expect(prop).toMatchObject({
       type: NodeTypes.JS_PROPERTY,
-      value: createObjectMatcher({
-        handler: {
-          callee: V_ON_WITH_MODIFIERS,
-          arguments: [{ content: '_ctx.test' }, '["stop"]']
-        },
-        options: createObjectMatcher({
-          capture: { content: 'true', isStatic: false },
-          passive: { content: 'true', isStatic: false }
-        })
-      })
+      key: {
+        content: `onClickCaptureOnce`
+      },
+      value: {
+        callee: V_ON_WITH_MODIFIERS,
+        arguments: [{ content: '_ctx.test' }, '["stop"]']
+      }
     })
   })
 
   it('should wrap keys guard for keyboard events or dynamic events', () => {
     const {
       props: [prop]
-    } = parseWithVOn(`<div @keyDown.stop.capture.ctrl.a="test"/>`, {
+    } = parseWithVOn(`<div @keydown.stop.capture.ctrl.a="test"/>`, {
       prefixIdentifiers: true
     })
     expect(prop).toMatchObject({
       type: NodeTypes.JS_PROPERTY,
-      value: createObjectMatcher({
-        handler: {
-          callee: V_ON_WITH_KEYS,
-          arguments: [
-            {
-              callee: V_ON_WITH_MODIFIERS,
-              arguments: [{ content: '_ctx.test' }, '["stop","ctrl"]']
-            },
-            '["a"]'
-          ]
-        },
-        options: createObjectMatcher({
-          capture: { content: 'true', isStatic: false }
-        })
-      })
+      key: {
+        content: `onKeydownCapture`
+      },
+      value: {
+        callee: V_ON_WITH_KEYS,
+        arguments: [
+          {
+            callee: V_ON_WITH_MODIFIERS,
+            arguments: [{ content: '_ctx.test' }, '["stop","ctrl"]']
+          },
+          '["a"]'
+        ]
+      }
     })
   })
 
@@ -133,6 +127,42 @@ describe('compiler-dom: transform v-on', () => {
       value: {
         callee: V_ON_WITH_MODIFIERS,
         arguments: [{ content: '_ctx.test' }, '["exact"]']
+      }
+    })
+  })
+
+  it('should wrap keys guard for static key event w/ left/right modifiers', () => {
+    const {
+      props: [prop]
+    } = parseWithVOn(`<div @keyup.left="test"/>`, {
+      prefixIdentifiers: true
+    })
+    expect(prop).toMatchObject({
+      type: NodeTypes.JS_PROPERTY,
+      value: {
+        callee: V_ON_WITH_KEYS,
+        arguments: [{ content: '_ctx.test' }, '["left"]']
+      }
+    })
+  })
+
+  it('should wrap both for dynamic key event w/ left/right modifiers', () => {
+    const {
+      props: [prop]
+    } = parseWithVOn(`<div @[e].left="test"/>`, {
+      prefixIdentifiers: true
+    })
+    expect(prop).toMatchObject({
+      type: NodeTypes.JS_PROPERTY,
+      value: {
+        callee: V_ON_WITH_KEYS,
+        arguments: [
+          {
+            callee: V_ON_WITH_MODIFIERS,
+            arguments: [{ content: `_ctx.test` }, `["left"]`]
+          },
+          '["left"]'
+        ]
       }
     })
   })
@@ -165,14 +195,26 @@ describe('compiler-dom: transform v-on', () => {
     const {
       props: [prop2]
     } = parseWithVOn(`<div @[event].right="test"/>`)
-    // ("on" + (event)).toLowerCase() === "onclick" ? "onContextmenu" : ("on" + (event))
+    // (_toHandlerKey(event)).toLowerCase() === "onclick" ? "onContextmenu" : (_toHandlerKey(event))
     expect(prop2.key).toMatchObject({
       type: NodeTypes.COMPOUND_EXPRESSION,
       children: [
         `(`,
-        { children: [`"on" + (`, { content: 'event' }, `)`] },
-        `).toLowerCase() === "onclick" ? "onContextmenu" : (`,
-        { children: [`"on" + (`, { content: 'event' }, `)`] },
+        {
+          children: [
+            `_${helperNameMap[TO_HANDLER_KEY]}(`,
+            { content: 'event' },
+            `)`
+          ]
+        },
+        `) === "onClick" ? "onContextmenu" : (`,
+        {
+          children: [
+            `_${helperNameMap[TO_HANDLER_KEY]}(`,
+            { content: 'event' },
+            `)`
+          ]
+        },
         `)`
       ]
     })
@@ -191,14 +233,26 @@ describe('compiler-dom: transform v-on', () => {
     const {
       props: [prop2]
     } = parseWithVOn(`<div @[event].middle="test"/>`)
-    // ("on" + (event)).toLowerCase() === "onclick" ? "onMouseup" : ("on" + (event))
+    // (_eventNaming(event)).toLowerCase() === "onclick" ? "onMouseup" : (_eventNaming(event))
     expect(prop2.key).toMatchObject({
       type: NodeTypes.COMPOUND_EXPRESSION,
       children: [
         `(`,
-        { children: [`"on" + (`, { content: 'event' }, `)`] },
-        `).toLowerCase() === "onclick" ? "onMouseup" : (`,
-        { children: [`"on" + (`, { content: 'event' }, `)`] },
+        {
+          children: [
+            `_${helperNameMap[TO_HANDLER_KEY]}(`,
+            { content: 'event' },
+            `)`
+          ]
+        },
+        `) === "onClick" ? "onMouseup" : (`,
+        {
+          children: [
+            `_${helperNameMap[TO_HANDLER_KEY]}(`,
+            { content: 'event' },
+            `)`
+          ]
+        },
         `)`
       ]
     })
@@ -218,24 +272,17 @@ describe('compiler-dom: transform v-on', () => {
     expect((root as any).children[0].codegenNode.patchFlag).toBe(
       genFlagText(PatchFlags.HYDRATE_EVENTS)
     )
-    expect(prop.value).toMatchObject({
-      type: NodeTypes.JS_CACHE_EXPRESSION,
-      index: 1,
+    expect(prop).toMatchObject({
+      key: {
+        content: `onKeyupCapture`
+      },
       value: {
-        type: NodeTypes.JS_OBJECT_EXPRESSION,
-        properties: [
-          {
-            key: { content: 'handler' },
-            value: {
-              type: NodeTypes.JS_CALL_EXPRESSION,
-              callee: V_ON_WITH_KEYS
-            }
-          },
-          {
-            key: { content: 'options' },
-            value: { type: NodeTypes.JS_OBJECT_EXPRESSION }
-          }
-        ]
+        type: NodeTypes.JS_CACHE_EXPRESSION,
+        index: 1,
+        value: {
+          type: NodeTypes.JS_CALL_EXPRESSION,
+          callee: V_ON_WITH_KEYS
+        }
       }
     })
   })

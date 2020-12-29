@@ -19,11 +19,16 @@ export const ssrTransformFor = createStructuralDirectiveTransform(
   processFor
 )
 
-// This is called during the 2nd transform pass to construct the SSR-sepcific
+// This is called during the 2nd transform pass to construct the SSR-specific
 // codegen nodes.
-export function ssrProcessFor(node: ForNode, context: SSRTransformContext) {
+export function ssrProcessFor(
+  node: ForNode,
+  context: SSRTransformContext,
+  disableNestedFragments = false
+) {
   const needFragmentWrapper =
-    node.children.length !== 1 || node.children[0].type !== NodeTypes.ELEMENT
+    !disableNestedFragments &&
+    (node.children.length !== 1 || node.children[0].type !== NodeTypes.ELEMENT)
   const renderLoop = createFunctionExpression(
     createForLoopParams(node.parseResult)
   )
@@ -32,13 +37,17 @@ export function ssrProcessFor(node: ForNode, context: SSRTransformContext) {
     context,
     needFragmentWrapper
   )
-  // v-for always renders a fragment
-  context.pushStringPart(`<!--[-->`)
+  // v-for always renders a fragment unless explicitly disabled
+  if (!disableNestedFragments) {
+    context.pushStringPart(`<!--[-->`)
+  }
   context.pushStatement(
     createCallExpression(context.helper(SSR_RENDER_LIST), [
       node.source,
       renderLoop
     ])
   )
-  context.pushStringPart(`<!--]-->`)
+  if (!disableNestedFragments) {
+    context.pushStringPart(`<!--]-->`)
+  }
 }

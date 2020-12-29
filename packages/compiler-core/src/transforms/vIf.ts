@@ -18,45 +18,56 @@ import {
   IfConditionalExpression,
   BlockCodegenNode,
   IfNode,
-  createVNodeCall
+  createVNodeCall,
+  AttributeNode,
+  locStub,
+  CacheExpression,
+  ConstantTypes
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
+import { validateBrowserExpression } from '../validateExpression'
 import {
   CREATE_BLOCK,
   FRAGMENT,
   CREATE_COMMENT,
-  OPEN_BLOCK,
-  TELEPORT
+  OPEN_BLOCK
 } from '../runtimeHelpers'
-import { injectProp } from '../utils'
+import { injectProp, findDir, findProp } from '../utils'
 import { PatchFlags, PatchFlagNames } from '@vue/shared'
 
 export const transformIf = createStructuralDirectiveTransform(
   /^(if|else|else-if)$/,
   (node, dir, context) => {
     return processIf(node, dir, context, (ifNode, branch, isRoot) => {
+      // #1587: We need to dynamically increment the key based on the current
+      // node's sibling nodes, since chained v-if/else branches are
+      // rendered at the same depth
+      const siblings = context.parent!.children
+      let i = siblings.indexOf(ifNode)
+      let key = 0
+      while (i-- >= 0) {
+        const sibling = siblings[i]
+        if (sibling && sibling.type === NodeTypes.IF) {
+          key += sibling.branches.length
+        }
+      }
+
       // Exit callback. Complete the codegenNode when all children have been
       // transformed.
       return () => {
         if (isRoot) {
           ifNode.codegenNode = createCodegenNodeForBranch(
             branch,
-            0,
+            key,
             context
           ) as IfConditionalExpression
         } else {
           // attach this branch's codegen node to the v-if root.
-          let parentCondition = ifNode.codegenNode!
-          while (
-            parentCondition.alternate.type ===
-            NodeTypes.JS_CONDITIONAL_EXPRESSION
-          ) {
-            parentCondition = parentCondition.alternate
-          }
+          const parentCondition = getParentCondition(ifNode.codegenNode!)
           parentCondition.alternate = createCodegenNodeForBranch(
             branch,
-            ifNode.branches.length - 1,
+            key + ifNode.branches.length - 1,
             context
           )
         }
@@ -93,6 +104,10 @@ export function processIf(
     dir.exp = processExpression(dir.exp as SimpleExpressionNode, context)
   }
 
+  if (__DEV__ && __BROWSER__ && dir.exp) {
+    validateBrowserExpression(dir.exp as SimpleExpressionNode, context)
+  }
+
   if (dir.name === 'if') {
     const branch = createIfBranch(node, dir)
     const ifNode: IfNode = {
@@ -116,6 +131,16 @@ export function processIf(
         comments.unshift(sibling)
         continue
       }
+
+      if (
+        sibling &&
+        sibling.type === NodeTypes.TEXT &&
+        !sibling.content.trim().length
+      ) {
+        context.removeNode(sibling)
+        continue
+      }
+
       if (sibling && sibling.type === NodeTypes.IF) {
         // move the node to the if node's branches
         context.removeNode()
@@ -123,6 +148,24 @@ export function processIf(
         if (__DEV__ && comments.length) {
           branch.children = [...comments, ...branch.children]
         }
+
+        // check if user is forcing same key on different branches
+        if (__DEV__ || !__BROWSER__) {
+          const key = branch.userKey
+          if (key) {
+            sibling.branches.forEach(({ userKey }) => {
+              if (isSameKey(userKey, key)) {
+                context.onError(
+                  createCompilerError(
+                    ErrorCodes.X_V_IF_SAME_KEY,
+                    branch.userKey!.loc
+                  )
+                )
+              }
+            })
+          }
+        }
+
         sibling.branches.push(branch)
         const onExit = processCodegen && processCodegen(sibling, branch, false)
         // since the branch was removed, it will not be traversed.
@@ -148,19 +191,23 @@ function createIfBranch(node: ElementNode, dir: DirectiveNode): IfBranchNode {
     type: NodeTypes.IF_BRANCH,
     loc: node.loc,
     condition: dir.name === 'else' ? undefined : dir.exp,
-    children: node.tagType === ElementTypes.TEMPLATE ? node.children : [node]
+    children:
+      node.tagType === ElementTypes.TEMPLATE && !findDir(node, 'for')
+        ? node.children
+        : [node],
+    userKey: findProp(node, `key`)
   }
 }
 
 function createCodegenNodeForBranch(
   branch: IfBranchNode,
-  index: number,
+  keyIndex: number,
   context: TransformContext
 ): IfConditionalExpression | BlockCodegenNode {
   if (branch.condition) {
     return createConditionalExpression(
       branch.condition,
-      createChildrenCodegenNode(branch, index, context),
+      createChildrenCodegenNode(branch, keyIndex, context),
       // make sure to pass in asBlock: true so that the comment node call
       // closes the current block.
       createCallExpression(context.helper(CREATE_COMMENT), [
@@ -169,19 +216,24 @@ function createCodegenNodeForBranch(
       ])
     ) as IfConditionalExpression
   } else {
-    return createChildrenCodegenNode(branch, index, context)
+    return createChildrenCodegenNode(branch, keyIndex, context)
   }
 }
 
 function createChildrenCodegenNode(
   branch: IfBranchNode,
-  index: number,
+  keyIndex: number,
   context: TransformContext
 ): BlockCodegenNode {
   const { helper } = context
   const keyProperty = createObjectProperty(
     `key`,
-    createSimpleExpression(index + '', false)
+    createSimpleExpression(
+      `${keyIndex}`,
+      false,
+      locStub,
+      ConstantTypes.CAN_HOIST
+    )
   )
   const { children } = branch
   const firstChild = children[0]
@@ -199,9 +251,10 @@ function createChildrenCodegenNode(
         helper(FRAGMENT),
         createObjectExpression([keyProperty]),
         children,
-        `${PatchFlags.STABLE_FRAGMENT} /* ${
-          PatchFlagNames[PatchFlags.STABLE_FRAGMENT]
-        } */`,
+        PatchFlags.STABLE_FRAGMENT +
+          (__DEV__
+            ? ` /* ${PatchFlagNames[PatchFlags.STABLE_FRAGMENT]} */`
+            : ``),
         undefined,
         undefined,
         true,
@@ -213,14 +266,7 @@ function createChildrenCodegenNode(
     const vnodeCall = (firstChild as ElementNode)
       .codegenNode as BlockCodegenNode
     // Change createVNode to createBlock.
-    if (
-      vnodeCall.type === NodeTypes.VNODE_CALL &&
-      // component vnodes are always tracked and its children are
-      // compiled into slots so no need to make it a block
-      ((firstChild as ElementNode).tagType !== ElementTypes.COMPONENT ||
-        // teleport has component type but isn't always tracked
-        vnodeCall.tag === TELEPORT)
-    ) {
+    if (vnodeCall.type === NodeTypes.VNODE_CALL) {
       vnodeCall.isBlock = true
       helper(OPEN_BLOCK)
       helper(CREATE_BLOCK)
@@ -228,5 +274,50 @@ function createChildrenCodegenNode(
     // inject branch key
     injectProp(vnodeCall, keyProperty, context)
     return vnodeCall
+  }
+}
+
+function isSameKey(
+  a: AttributeNode | DirectiveNode | undefined,
+  b: AttributeNode | DirectiveNode
+): boolean {
+  if (!a || a.type !== b.type) {
+    return false
+  }
+  if (a.type === NodeTypes.ATTRIBUTE) {
+    if (a.value!.content !== (b as AttributeNode).value!.content) {
+      return false
+    }
+  } else {
+    // directive
+    const exp = a.exp!
+    const branchExp = (b as DirectiveNode).exp!
+    if (exp.type !== branchExp.type) {
+      return false
+    }
+    if (
+      exp.type !== NodeTypes.SIMPLE_EXPRESSION ||
+      (exp.isStatic !== (branchExp as SimpleExpressionNode).isStatic ||
+        exp.content !== (branchExp as SimpleExpressionNode).content)
+    ) {
+      return false
+    }
+  }
+  return true
+}
+
+function getParentCondition(
+  node: IfConditionalExpression | CacheExpression
+): IfConditionalExpression {
+  while (true) {
+    if (node.type === NodeTypes.JS_CONDITIONAL_EXPRESSION) {
+      if (node.alternate.type === NodeTypes.JS_CONDITIONAL_EXPRESSION) {
+        node = node.alternate
+      } else {
+        return node
+      }
+    } else if (node.type === NodeTypes.JS_CACHE_EXPRESSION) {
+      node = node.value as IfConditionalExpression
+    }
   }
 }

@@ -1,10 +1,5 @@
 import { ComponentInternalInstance, ssrContextKey } from 'vue'
-import {
-  SSRContext,
-  createBuffer,
-  PushFn,
-  SSRBufferItem
-} from '../renderToString'
+import { createBuffer, PushFn, SSRBufferItem, SSRContext } from '../render'
 
 export function ssrRenderTeleport(
   parentPush: PushFn,

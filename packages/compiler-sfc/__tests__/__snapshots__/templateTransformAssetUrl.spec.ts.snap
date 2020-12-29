@@ -1,5 +1,37 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`compiler sfc: transform asset url should allow for full base URLs, with paths 1`] = `
+"import { createVNode as _createVNode, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
+
+export function render(_ctx, _cache) {
+  return (_openBlock(), _createBlock(\\"img\\", { src: \\"http://localhost:3000/src/logo.png\\" }))
+}"
+`;
+
+exports[`compiler sfc: transform asset url should allow for full base URLs, without paths 1`] = `
+"import { createVNode as _createVNode, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
+
+export function render(_ctx, _cache) {
+  return (_openBlock(), _createBlock(\\"img\\", { src: \\"http://localhost:3000/logo.png\\" }))
+}"
+`;
+
+exports[`compiler sfc: transform asset url should allow for full base URLs, without port 1`] = `
+"import { createVNode as _createVNode, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
+
+export function render(_ctx, _cache) {
+  return (_openBlock(), _createBlock(\\"img\\", { src: \\"http://localhost/logo.png\\" }))
+}"
+`;
+
+exports[`compiler sfc: transform asset url should allow for full base URLs, without protocol 1`] = `
+"import { createVNode as _createVNode, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
+
+export function render(_ctx, _cache) {
+  return (_openBlock(), _createBlock(\\"img\\", { src: \\"//localhost/logo.png\\" }))
+}"
+`;
+
 exports[`compiler sfc: transform asset url support uri fragment 1`] = `
 "import { createVNode as _createVNode, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
 import _imports_0 from '@svg/file.svg'
@@ -32,7 +64,36 @@ export function render(_ctx, _cache) {
     _createVNode(\\"img\\", { src: _imports_1 }),
     _createVNode(\\"img\\", { src: _imports_1 }),
     _createVNode(\\"img\\", { src: \\"http://example.com/fixtures/logo.png\\" }),
-    _createVNode(\\"img\\", { src: \\"/fixtures/logo.png\\" })
+    _createVNode(\\"img\\", { src: \\"/fixtures/logo.png\\" }),
+    _createVNode(\\"img\\", { src: \\"data:image/png;base64,i\\" })
+  ], 64 /* STABLE_FRAGMENT */))
+}"
+`;
+
+exports[`compiler sfc: transform asset url with explicit base 1`] = `
+"import { createVNode as _createVNode, Fragment as _Fragment, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
+
+export function render(_ctx, _cache) {
+  return (_openBlock(), _createBlock(_Fragment, null, [
+    _createVNode(\\"img\\", { src: \\"/foo/bar.png\\" }),
+    _createVNode(\\"img\\", { src: \\"/foo/bar.png\\" }),
+    _createVNode(\\"img\\", { src: \\"bar.png\\" }),
+    _createVNode(\\"img\\", { src: \\"@theme/bar.png\\" })
+  ], 64 /* STABLE_FRAGMENT */))
+}"
+`;
+
+exports[`compiler sfc: transform asset url with includeAbsolute: true 1`] = `
+"import { createVNode as _createVNode, Fragment as _Fragment, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
+import _imports_0 from './bar.png'
+import _imports_1 from '/bar.png'
+
+
+export function render(_ctx, _cache) {
+  return (_openBlock(), _createBlock(_Fragment, null, [
+    _createVNode(\\"img\\", { src: _imports_0 }),
+    _createVNode(\\"img\\", { src: _imports_1 }),
+    _createVNode(\\"img\\", { src: \\"https://foo.bar/baz.png\\" })
   ], 64 /* STABLE_FRAGMENT */))
 }"
 `;

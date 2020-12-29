@@ -6,12 +6,9 @@ import {
   createApp,
   shallowReadonly
 } from '@vue/runtime-test'
-import { mockWarn } from '@vue/shared'
 import { ComponentInternalInstance } from '../src/component'
 
 describe('component: proxy', () => {
-  mockWarn()
-
   test('data', () => {
     let instance: ComponentInternalInstance
     let instanceProxy: any
@@ -72,7 +69,7 @@ describe('component: proxy', () => {
     expect('count' in instanceProxy).toBe(false)
   })
 
-  test('public properties', () => {
+  test('public properties', async () => {
     let instance: ComponentInternalInstance
     let instanceProxy: any
     const Comp = {
@@ -99,6 +96,11 @@ describe('component: proxy', () => {
     expect(instanceProxy.$options).toBe(instance!.type)
     expect(() => (instanceProxy.$data = {})).toThrow(TypeError)
     expect(`Attempting to mutate public property "$data"`).toHaveBeenWarned()
+
+    const nextTickThis = await instanceProxy.$nextTick(function(this: any) {
+      return this
+    })
+    expect(nextTickThis).toBe(instanceProxy)
   })
 
   test('user attached properties', async () => {
@@ -219,5 +221,25 @@ describe('component: proxy', () => {
     expect(
       `was accessed during render but is not defined`
     ).not.toHaveBeenWarned()
+  })
+
+  test('should allow symbol to access on render', () => {
+    const Comp = {
+      render() {
+        if ((this as any)[Symbol.unscopables]) {
+          return '1'
+        }
+        return '2'
+      }
+    }
+
+    const app = createApp(Comp)
+    app.mount(nodeOps.createElement('div'))
+
+    expect(
+      `Property ${JSON.stringify(
+        Symbol.unscopables
+      )} was accessed during render ` + `but is not defined on instance.`
+    ).toHaveBeenWarned()
   })
 })

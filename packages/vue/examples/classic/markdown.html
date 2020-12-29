@@ -8,7 +8,7 @@
 </div>
 
 <script>
-const delay = window.location.hash === '#test' ? 16 : 300
+const delay = window.location.hash === '#test' ? 50 : 300
 
 Vue.createApp({
   data: () => ({
@@ -37,7 +37,8 @@ html, body, #editor {
 
 textarea, #editor div {
   display: inline-block;
-  width: 49%;
+  overflow: auto;
+  width: 50%;
   height: 100%;
   vertical-align: top;
   -webkit-box-sizing: border-box;

@@ -1,5 +1,21 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`compiler: transform v-model errors should allow usage on custom element 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { vModelText: _vModelText, createVNode: _createVNode, withDirectives: _withDirectives, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
+    return _withDirectives((_openBlock(), _createBlock(\\"my-input\\", {
+      \\"onUpdate:modelValue\\": $event => (model = $event)
+    }, null, 8 /* PROPS */, [\\"onUpdate:modelValue\\"])), [
+      [_vModelText, model]
+    ])
+  }
+}"
+`;
+
 exports[`compiler: transform v-model input w/ dynamic v-bind 1`] = `
 "const _Vue = Vue
 

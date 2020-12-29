@@ -18,6 +18,8 @@ import { transformOn } from './transforms/vOn'
 import { transformShow } from './transforms/vShow'
 import { warnTransitionChildren } from './transforms/warnTransitionChildren'
 import { stringifyStatic } from './transforms/stringifyStatic'
+import { ignoreSideEffectTags } from './transforms/ignoreSideEffectTags'
+import { extend } from '@vue/shared'
 
 export { parserOptions }
 
@@ -39,23 +41,29 @@ export function compile(
   template: string,
   options: CompilerOptions = {}
 ): CodegenResult {
-  return baseCompile(template, {
-    ...parserOptions,
-    ...options,
-    nodeTransforms: [...DOMNodeTransforms, ...(options.nodeTransforms || [])],
-    directiveTransforms: {
-      ...DOMDirectiveTransforms,
-      ...(options.directiveTransforms || {})
-    },
-    transformHoist: __BROWSER__ ? null : stringifyStatic
-  })
+  return baseCompile(
+    template,
+    extend({}, parserOptions, options, {
+      nodeTransforms: [
+        // ignore <script> and <tag>
+        // this is not put inside DOMNodeTransforms because that list is used
+        // by compiler-ssr to generate vnode fallback branches
+        ignoreSideEffectTags,
+        ...DOMNodeTransforms,
+        ...(options.nodeTransforms || [])
+      ],
+      directiveTransforms: extend(
+        {},
+        DOMDirectiveTransforms,
+        options.directiveTransforms || {}
+      ),
+      transformHoist: __BROWSER__ ? null : stringifyStatic
+    })
+  )
 }
 
 export function parse(template: string, options: ParserOptions = {}): RootNode {
-  return baseParse(template, {
-    ...parserOptions,
-    ...options
-  })
+  return baseParse(template, extend({}, parserOptions, options))
 }
 
 export * from './runtimeHelpers'

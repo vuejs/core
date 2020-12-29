@@ -10,9 +10,13 @@ import {
   dumpOps,
   NodeOpTypes,
   serializeInner,
-  createTextVNode
+  createTextVNode,
+  createBlock,
+  openBlock,
+  createCommentVNode
 } from '@vue/runtime-test'
 import { PatchFlags } from '@vue/shared'
+import { renderList } from '../src/helpers/renderList'
 
 describe('renderer: fragment', () => {
   it('should allow returning multiple component root nodes', () => {
@@ -124,11 +128,25 @@ describe('renderer: fragment', () => {
           createTextVNode('bar'),
           createTextVNode('baz')
         ],
-        PatchFlags.KEYED_FRAGMENT
+        PatchFlags.UNKEYED_FRAGMENT
       ),
       root
     )
     expect(serializeInner(root)).toBe(`<div>foo</div>barbaz`)
+
+    render(
+      createVNode(
+        Fragment,
+        null,
+        [
+          createTextVNode('baz'),
+          createVNode('div', null, 'foo', PatchFlags.TEXT)
+        ],
+        PatchFlags.UNKEYED_FRAGMENT
+      ),
+      root
+    )
+    expect(serializeInner(root)).toBe(`baz<div>foo</div>`)
   })
 
   it('patch fragment children (compiler generated, keyed)', () => {
@@ -254,5 +272,47 @@ describe('renderer: fragment', () => {
     // should properly remove nested fragments
     render(null, root)
     expect(serializeInner(root)).toBe(``)
+  })
+
+  // #2080
+  test('`template` keyed fragment w/ comment + hoisted node', () => {
+    const root = nodeOps.createElement('div')
+    const hoisted = h('span')
+
+    const renderFn = (items: string[]) => {
+      return (
+        openBlock(true),
+        createBlock(
+          Fragment,
+          null,
+          renderList(items, item => {
+            return (
+              openBlock(),
+              createBlock(
+                Fragment,
+                { key: item },
+                [
+                  createCommentVNode('comment'),
+                  hoisted,
+                  createVNode('div', null, item, PatchFlags.TEXT)
+                ],
+                PatchFlags.STABLE_FRAGMENT
+              )
+            )
+          }),
+          PatchFlags.KEYED_FRAGMENT
+        )
+      )
+    }
+
+    render(renderFn(['one', 'two']), root)
+    expect(serializeInner(root)).toBe(
+      `<!--comment--><span></span><div>one</div><!--comment--><span></span><div>two</div>`
+    )
+
+    render(renderFn(['two', 'one']), root)
+    expect(serializeInner(root)).toBe(
+      `<!--comment--><span></span><div>two</div><!--comment--><span></span><div>one</div>`
+    )
   })
 })

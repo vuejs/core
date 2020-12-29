@@ -1,31 +1,43 @@
 import { VNodeChild } from '../vnode'
 import { isArray, isString, isObject } from '@vue/shared'
+import { warn } from '../warning'
 
-// v-for string
+/**
+ * v-for string
+ * @private
+ */
 export function renderList(
   source: string,
   renderItem: (value: string, index: number) => VNodeChild
 ): VNodeChild[]
 
-// v-for number
+/**
+ * v-for number
+ */
 export function renderList(
   source: number,
   renderItem: (value: number, index: number) => VNodeChild
 ): VNodeChild[]
 
-// v-for array
+/**
+ * v-for array
+ */
 export function renderList<T>(
   source: T[],
   renderItem: (value: T, index: number) => VNodeChild
 ): VNodeChild[]
 
-// v-for iterable
+/**
+ * v-for iterable
+ */
 export function renderList<T>(
   source: Iterable<T>,
   renderItem: (value: T, index: number) => VNodeChild
 ): VNodeChild[]
 
-// v-for object
+/**
+ * v-for object
+ */
 export function renderList<T>(
   source: T,
   renderItem: <K extends keyof T>(
@@ -35,7 +47,9 @@ export function renderList<T>(
   ) => VNodeChild
 ): VNodeChild[]
 
-// actual implementation
+/**
+ * Actual implementation
+ */
 export function renderList(
   source: any,
   renderItem: (...args: any[]) => VNodeChild
@@ -47,6 +61,10 @@ export function renderList(
       ret[i] = renderItem(source[i], i)
     }
   } else if (typeof source === 'number') {
+    if (__DEV__ && !Number.isInteger(source)) {
+      warn(`The v-for range expect an integer value but got ${source}.`)
+      return []
+    }
     ret = new Array(source)
     for (let i = 0; i < source; i++) {
       ret[i] = renderItem(i + 1, i)

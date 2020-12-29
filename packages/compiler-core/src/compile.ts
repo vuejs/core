@@ -3,7 +3,7 @@ import { baseParse } from './parse'
 import { transform, NodeTransform, DirectiveTransform } from './transform'
 import { generate, CodegenResult } from './codegen'
 import { RootNode } from './ast'
-import { isString } from '@vue/shared'
+import { isString, extend } from '@vue/shared'
 import { transformIf } from './transforms/vIf'
 import { transformFor } from './transforms/vFor'
 import { transformExpression } from './transforms/transformExpression'
@@ -36,7 +36,9 @@ export function getBaseTransformPreset(
             trackVForSlotScopes,
             transformExpression
           ]
-        : []),
+        : __BROWSER__ && __DEV__
+          ? [transformExpression]
+          : []),
       transformSlotOutlet,
       transformElement,
       trackSlotScopes,
@@ -80,21 +82,26 @@ export function baseCompile(
   const [nodeTransforms, directiveTransforms] = getBaseTransformPreset(
     prefixIdentifiers
   )
-  transform(ast, {
-    ...options,
-    prefixIdentifiers,
-    nodeTransforms: [
-      ...nodeTransforms,
-      ...(options.nodeTransforms || []) // user transforms
-    ],
-    directiveTransforms: {
-      ...directiveTransforms,
-      ...(options.directiveTransforms || {}) // user transforms
-    }
-  })
+  transform(
+    ast,
+    extend({}, options, {
+      prefixIdentifiers,
+      nodeTransforms: [
+        ...nodeTransforms,
+        ...(options.nodeTransforms || []) // user transforms
+      ],
+      directiveTransforms: extend(
+        {},
+        directiveTransforms,
+        options.directiveTransforms || {} // user transforms
+      )
+    })
+  )
 
-  return generate(ast, {
-    ...options,
-    prefixIdentifiers
-  })
+  return generate(
+    ast,
+    extend({}, options, {
+      prefixIdentifiers
+    })
+  )
 }

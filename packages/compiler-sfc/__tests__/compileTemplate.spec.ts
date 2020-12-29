@@ -1,10 +1,20 @@
-import { compileTemplate } from '../src/compileTemplate'
+import {
+  compileTemplate,
+  SFCTemplateCompileOptions
+} from '../src/compileTemplate'
 import { parse, SFCTemplateBlock } from '../src/parse'
+
+function compile(opts: Omit<SFCTemplateCompileOptions, 'id'>) {
+  return compileTemplate({
+    ...opts,
+    id: ''
+  })
+}
 
 test('should work', () => {
   const source = `<div><p>{{ render }}</p></div>`
 
-  const result = compileTemplate({ filename: 'example.vue', source })
+  const result = compile({ filename: 'example.vue', source })
 
   expect(result.errors.length).toBe(0)
   expect(result.source).toBe(source)
@@ -25,7 +35,7 @@ body
     { filename: 'example.vue', sourceMap: true }
   ).descriptor.template as SFCTemplateBlock
 
-  const result = compileTemplate({
+  const result = compile({
     filename: 'example.vue',
     source: template.content,
     preprocessLang: template.lang
@@ -40,7 +50,7 @@ test('warn missing preprocessor', () => {
     sourceMap: true
   }).descriptor.template as SFCTemplateBlock
 
-  const result = compileTemplate({
+  const result = compile({
     filename: 'example.vue',
     source: template.content,
     preprocessLang: template.lang
@@ -52,17 +62,29 @@ test('warn missing preprocessor', () => {
 test('transform asset url options', () => {
   const input = { source: `<foo bar="~baz"/>`, filename: 'example.vue' }
   // Object option
-  const { code: code1 } = compileTemplate({
+  const { code: code1 } = compile({
     ...input,
-    transformAssetUrls: { foo: ['bar'] }
+    transformAssetUrls: {
+      tags: { foo: ['bar'] }
+    }
   })
   expect(code1).toMatch(`import _imports_0 from 'baz'\n`)
+
+  // legacy object option (direct tags config)
+  const { code: code2 } = compile({
+    ...input,
+    transformAssetUrls: {
+      foo: ['bar']
+    }
+  })
+  expect(code2).toMatch(`import _imports_0 from 'baz'\n`)
+
   // false option
-  const { code: code2 } = compileTemplate({
+  const { code: code3 } = compile({
     ...input,
     transformAssetUrls: false
   })
-  expect(code2).not.toMatch(`import _imports_0 from 'baz'\n`)
+  expect(code3).not.toMatch(`import _imports_0 from 'baz'\n`)
 })
 
 test('source map', () => {
@@ -75,7 +97,7 @@ test('source map', () => {
     { filename: 'example.vue', sourceMap: true }
   ).descriptor.template as SFCTemplateBlock
 
-  const result = compileTemplate({
+  const result = compile({
     filename: 'example.vue',
     source: template.content
   })
@@ -84,7 +106,7 @@ test('source map', () => {
 })
 
 test('template errors', () => {
-  const result = compileTemplate({
+  const result = compile({
     filename: 'example.vue',
     source: `<div :foo
       :bar="a[" v-model="baz"/>`
@@ -102,7 +124,7 @@ test('preprocessor errors', () => {
     { filename: 'example.vue', sourceMap: true }
   ).descriptor.template as SFCTemplateBlock
 
-  const result = compileTemplate({
+  const result = compile({
     filename: 'example.vue',
     source: template.content,
     preprocessLang: template.lang

@@ -1,5 +1,5 @@
 import { ParserOptions } from './options'
-import { NO, isArray, makeMap } from '@vue/shared'
+import { NO, isArray, makeMap, extend } from '@vue/shared'
 import { ErrorCodes, createCompilerError, defaultOnError } from './errors'
 import {
   assert,
@@ -22,16 +22,23 @@ import {
   TextNode,
   TemplateChildNode,
   InterpolationNode,
-  createRoot
+  createRoot,
+  ConstantTypes
 } from './ast'
-import { extend } from '@vue/shared'
 
 type OptionalOptions = 'isNativeTag' | 'isBuiltInComponent'
 type MergedParserOptions = Omit<Required<ParserOptions>, OptionalOptions> &
   Pick<ParserOptions, OptionalOptions>
+type AttributeValue =
+  | {
+      content: string
+      isQuoted: boolean
+      loc: SourceLocation
+    }
+  | undefined
 
 // The default decoder only provides escapes for characters reserved as part of
-// the tempalte syntax, and is only used if the custom renderer did not provide
+// the template syntax, and is only used if the custom renderer did not provide
 // a platform-specific decoder.
 const decodeRE = /&(gt|lt|amp|apos|quot);/g
 const decodeMap: Record<string, string> = {
@@ -51,14 +58,15 @@ export const defaultParserOptions: MergedParserOptions = {
   isCustomElement: NO,
   decodeEntities: (rawText: string): string =>
     rawText.replace(decodeRE, (_, p1) => decodeMap[p1]),
-  onError: defaultOnError
+  onError: defaultOnError,
+  comments: false
 }
 
 export const enum TextModes {
   //          | Elements | Entities | End sign              | Inside of
-  DATA, //    | ✔       | ✔       | End tags of ancestors |
-  RCDATA, //  | ✘       | ✔       | End tag of the parent | <textarea>
-  RAWTEXT, // | ✘       | ✘       | End tag of the parent | <style>,<script>
+  DATA, //    | ✔        | ✔        | End tags of ancestors |
+  RCDATA, //  | ✘        | ✔        | End tag of the parent | <textarea>
+  RAWTEXT, // | ✘        | ✘        | End tag of the parent | <style>,<script>
   CDATA,
   ATTRIBUTE_VALUE
 }
@@ -88,13 +96,15 @@ export function baseParse(
 
 function createParserContext(
   content: string,
-  options: ParserOptions
+  rawOptions: ParserOptions
 ): ParserContext {
+  const options = extend({}, defaultParserOptions)
+  for (const key in rawOptions) {
+    // @ts-ignore
+    options[key] = rawOptions[key] || defaultParserOptions[key]
+  }
   return {
-    options: {
-      ...defaultParserOptions,
-      ...options
-    },
+    options,
     column: 1,
     line: 1,
     offset: 0,
@@ -196,40 +206,48 @@ function parseChildren(
   // (same as v2 whitespace: 'condense')
   let removedWhitespace = false
   if (mode !== TextModes.RAWTEXT) {
-    if (!context.inPre) {
-      for (let i = 0; i < nodes.length; i++) {
-        const node = nodes[i]
-        if (node.type === NodeTypes.TEXT) {
-          if (!/[^\t\r\n\f ]/.test(node.content)) {
-            const prev = nodes[i - 1]
-            const next = nodes[i + 1]
-            // If:
-            // - the whitespace is the first or last node, or:
-            // - the whitespace is adjacent to a comment, or:
-            // - the whitespace is between two elements AND contains newline
-            // Then the whitespace is ignored.
-            if (
-              !prev ||
-              !next ||
-              prev.type === NodeTypes.COMMENT ||
-              next.type === NodeTypes.COMMENT ||
-              (prev.type === NodeTypes.ELEMENT &&
-                next.type === NodeTypes.ELEMENT &&
-                /[\r\n]/.test(node.content))
-            ) {
-              removedWhitespace = true
-              nodes[i] = null as any
-            } else {
-              // Otherwise, condensed consecutive whitespace inside the text down to
-              // a single space
-              node.content = ' '
-            }
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i]
+      if (!context.inPre && node.type === NodeTypes.TEXT) {
+        if (!/[^\t\r\n\f ]/.test(node.content)) {
+          const prev = nodes[i - 1]
+          const next = nodes[i + 1]
+          // If:
+          // - the whitespace is the first or last node, or:
+          // - the whitespace is adjacent to a comment, or:
+          // - the whitespace is between two elements AND contains newline
+          // Then the whitespace is ignored.
+          if (
+            !prev ||
+            !next ||
+            prev.type === NodeTypes.COMMENT ||
+            next.type === NodeTypes.COMMENT ||
+            (prev.type === NodeTypes.ELEMENT &&
+              next.type === NodeTypes.ELEMENT &&
+              /[\r\n]/.test(node.content))
+          ) {
+            removedWhitespace = true
+            nodes[i] = null as any
           } else {
-            node.content = node.content.replace(/[\t\r\n\f ]+/g, ' ')
+            // Otherwise, condensed consecutive whitespace inside the text
+            // down to a single space
+            node.content = ' '
           }
+        } else {
+          node.content = node.content.replace(/[\t\r\n\f ]+/g, ' ')
         }
       }
-    } else if (parent && context.options.isPreTag(parent.tag)) {
+      // also remove comment nodes in prod by default
+      if (
+        !__DEV__ &&
+        node.type === NodeTypes.COMMENT &&
+        !context.options.comments
+      ) {
+        removedWhitespace = true
+        nodes[i] = null as any
+      }
+    }
+    if (context.inPre && parent && context.options.isPreTag(parent.tag)) {
       // remove leading newline per html spec
       // https://html.spec.whatwg.org/multipage/grouping-content.html#the-pre-element
       const first = nodes[0]
@@ -243,12 +261,6 @@ function parseChildren(
 }
 
 function pushNode(nodes: TemplateChildNode[], node: TemplateChildNode): void {
-  // ignore comments in production
-  /* istanbul ignore next */
-  if (!__DEV__ && node.type === NodeTypes.COMMENT) {
-    return
-  }
-
   if (node.type === NodeTypes.TEXT) {
     const prev = last(nodes)
     // Merge if both this and the previous node are text and those are
@@ -373,7 +385,7 @@ function parseElement(
 
   // Children.
   ancestors.push(element)
-  const mode = context.options.getTextMode(element.tag, element.ns, parent)
+  const mode = context.options.getTextMode(element, parent)
   const children = parseChildren(context, mode, ancestors)
   ancestors.pop()
 
@@ -585,13 +597,7 @@ function parseAttribute(
   advanceBy(context, name.length)
 
   // Value
-  let value:
-    | {
-        content: string
-        isQuoted: boolean
-        loc: SourceLocation
-      }
-    | undefined = undefined
+  let value: AttributeValue = undefined
 
   if (/^[\t\r\n\f ]*=/.test(context.source)) {
     advanceSpaces(context)
@@ -605,18 +611,27 @@ function parseAttribute(
   const loc = getSelection(context, start)
 
   if (!context.inVPre && /^(v-|:|@|#)/.test(name)) {
-    const match = /(?:^v-([a-z0-9-]+))?(?:(?::|^@|^#)([^\.]+))?(.+)?$/i.exec(
+    const match = /(?:^v-([a-z0-9-]+))?(?:(?::|^@|^#)(\[[^\]]+\]|[^\.]+))?(.+)?$/i.exec(
       name
     )!
+
+    const dirName =
+      match[1] ||
+      (startsWith(name, ':') ? 'bind' : startsWith(name, '@') ? 'on' : 'slot')
 
     let arg: ExpressionNode | undefined
 
     if (match[2]) {
+      const isSlot = dirName === 'slot'
       const startOffset = name.indexOf(match[2])
       const loc = getSelection(
         context,
         getNewPosition(context, start, startOffset),
-        getNewPosition(context, start, startOffset + match[2].length)
+        getNewPosition(
+          context,
+          start,
+          startOffset + match[2].length + ((isSlot && match[3]) || '').length
+        )
       )
       let content = match[2]
       let isStatic = true
@@ -632,13 +647,20 @@ function parseAttribute(
         }
 
         content = content.substr(1, content.length - 2)
+      } else if (isSlot) {
+        // #1241 special case for v-slot: vuetify relies extensively on slot
+        // names containing dots. v-slot doesn't have any modifiers and Vue 2.x
+        // supports such usage so we are keeping it consistent with 2.x.
+        content += match[3] || ''
       }
 
       arg = {
         type: NodeTypes.SIMPLE_EXPRESSION,
         content,
         isStatic,
-        isConstant: isStatic,
+        constType: isStatic
+          ? ConstantTypes.CAN_STRINGIFY
+          : ConstantTypes.NOT_CONSTANT,
         loc
       }
     }
@@ -653,20 +675,14 @@ function parseAttribute(
 
     return {
       type: NodeTypes.DIRECTIVE,
-      name:
-        match[1] ||
-        (startsWith(name, ':')
-          ? 'bind'
-          : startsWith(name, '@')
-            ? 'on'
-            : 'slot'),
+      name: dirName,
       exp: value && {
         type: NodeTypes.SIMPLE_EXPRESSION,
         content: value.content,
         isStatic: false,
         // Treat as non-constant by default. This can be potentially set to
-        // true by `transformExpression` to make it eligible for hoisting.
-        isConstant: false,
+        // other values by `transformExpression` to make it eligible for hoisting.
+        constType: ConstantTypes.NOT_CONSTANT,
         loc: value.loc
       },
       arg,
@@ -687,15 +703,7 @@ function parseAttribute(
   }
 }
 
-function parseAttributeValue(
-  context: ParserContext
-):
-  | {
-      content: string
-      isQuoted: boolean
-      loc: SourceLocation
-    }
-  | undefined {
+function parseAttributeValue(context: ParserContext): AttributeValue {
   const start = getCursor(context)
   let content: string
 
@@ -773,7 +781,7 @@ function parseInterpolation(
       type: NodeTypes.SIMPLE_EXPRESSION,
       isStatic: false,
       // Set `isConstant` to false by default and will decide in transformExpression
-      isConstant: false,
+      constType: ConstantTypes.NOT_CONSTANT,
       content,
       loc: getSelection(context, innerStart, innerEnd)
     },
@@ -948,6 +956,6 @@ function startsWithEndTagOpen(source: string, tag: string): boolean {
   return (
     startsWith(source, '</') &&
     source.substr(2, tag.length).toLowerCase() === tag.toLowerCase() &&
-    /[\t\n\f />]/.test(source[2 + tag.length] || '>')
+    /[\t\r\n\f />]/.test(source[2 + tag.length] || '>')
   )
 }

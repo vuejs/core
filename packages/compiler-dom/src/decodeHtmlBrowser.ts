@@ -1,3 +1,5 @@
+/* eslint-disable no-restricted-globals */
+
 let decoder: HTMLDivElement
 
 export function decodeHtmlBrowser(raw: string): string {

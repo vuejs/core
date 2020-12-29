@@ -1,5 +1,4 @@
-import { ref, computed, watch } from './index'
-import { expectType } from 'tsd'
+import { ref, computed, watch, expectType } from './index'
 
 const source = ref('foo')
 const source2 = computed(() => source.value)
@@ -12,8 +11,8 @@ watch(source, (value, oldValue) => {
 })
 
 watch([source, source2, source3], (values, oldValues) => {
-  expectType<(string | number)[]>(values)
-  expectType<(string | number)[]>(oldValues)
+  expectType<[string, string, number]>(values)
+  expectType<[string, string, number]>(oldValues)
 })
 
 // const array
@@ -35,8 +34,10 @@ watch(
 watch(
   [source, source2, source3],
   (values, oldValues) => {
-    expectType<(string | number)[]>(values)
-    expectType<(string | number | undefined)[]>(oldValues)
+    expectType<[string, string, number]>(values)
+    expectType<[string | undefined, string | undefined, number | undefined]>(
+      oldValues
+    )
   },
   { immediate: true }
 )
@@ -61,4 +62,16 @@ const nestedRefSource = ref({
 watch(nestedRefSource, (v, ov) => {
   expectType<{ foo: number }>(v)
   expectType<{ foo: number }>(ov)
+})
+
+const someRef = ref({ test: 'test' })
+const otherRef = ref({ a: 'b' })
+watch([someRef, otherRef], values => {
+  const value1 = values[0]
+  // no type error
+  console.log(value1.test)
+
+  const value2 = values[1]
+  // no type error
+  console.log(value2.a)
 })

@@ -40,6 +40,10 @@
     "tsdocMessageReporting": {
       "default": {
         "logLevel": "warning"
+      },
+
+      "tsdoc-undefined-tag": {
+        "logLevel": "none"
       }
     }
   }

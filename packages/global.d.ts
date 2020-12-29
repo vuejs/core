@@ -10,5 +10,15 @@ declare var __COMMIT__: string
 declare var __VERSION__: string
 
 // Feature flags
-declare var __FEATURE_OPTIONS__: boolean
+declare var __FEATURE_OPTIONS_API__: boolean
+declare var __FEATURE_PROD_DEVTOOLS__: boolean
 declare var __FEATURE_SUSPENSE__: boolean
+
+// for tests
+declare namespace jest {
+  interface Matchers<R, T> {
+    toHaveBeenWarned(): R
+    toHaveBeenWarnedLast(): R
+    toHaveBeenWarnedTimes(n: number): R
+  }
+}

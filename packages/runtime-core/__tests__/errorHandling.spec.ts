@@ -10,20 +10,8 @@ import {
   defineComponent,
   watchEffect
 } from '@vue/runtime-test'
-import { setErrorRecovery } from '../src/errorHandling'
-import { mockWarn } from '@vue/shared'
 
 describe('error handling', () => {
-  mockWarn()
-
-  beforeEach(() => {
-    setErrorRecovery(true)
-  })
-
-  afterEach(() => {
-    setErrorRecovery(false)
-  })
-
   test('propagation', () => {
     const err = new Error('foo')
     const fn = jest.fn()
@@ -32,7 +20,7 @@ describe('error handling', () => {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info, 'root')
-          return true
+          return false
         })
         return () => h(Child)
       }
@@ -70,7 +58,7 @@ describe('error handling', () => {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info, 'root')
-          return true
+          return false
         })
         return () => h(Child)
       }
@@ -80,7 +68,7 @@ describe('error handling', () => {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info, 'child')
-          return true
+          return false
         })
         return () => h(GrandChild)
       }
@@ -108,7 +96,7 @@ describe('error handling', () => {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info)
-          return true
+          return false
         })
         return () => h(Child)
       }
@@ -138,7 +126,7 @@ describe('error handling', () => {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info)
-          return true
+          return false
         })
         return () => h(Child)
       }
@@ -176,7 +164,7 @@ describe('error handling', () => {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info)
-          return true
+          return false
         })
         return () => h(Child)
       }
@@ -193,6 +181,41 @@ describe('error handling', () => {
     expect(fn).toHaveBeenCalledWith(err, 'setup function')
   })
 
+  // unlike other lifecycle hooks, created/beforeCreate are called as part of
+  // the options API initiualization process instead of by the renderer.
+  test('in created/beforeCreate hook', () => {
+    const err = new Error('foo')
+    const fn = jest.fn()
+
+    const Comp = {
+      setup() {
+        onErrorCaptured((err, instance, info) => {
+          fn(err, info)
+          return false
+        })
+        return () => [h(Child1), h(Child2)]
+      }
+    }
+
+    const Child1 = {
+      created() {
+        throw err
+      },
+      render() {}
+    }
+
+    const Child2 = {
+      beforeCreate() {
+        throw err
+      },
+      render() {}
+    }
+
+    render(h(Comp), nodeOps.createElement('div'))
+    expect(fn).toHaveBeenCalledWith(err, 'created hook')
+    expect(fn).toHaveBeenCalledWith(err, 'beforeCreate hook')
+  })
+
   test('in render function', () => {
     const err = new Error('foo')
     const fn = jest.fn()
@@ -201,7 +224,7 @@ describe('error handling', () => {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info)
-          return true
+          return false
         })
         return () => h(Child)
       }
@@ -230,7 +253,7 @@ describe('error handling', () => {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info)
-          return true
+          return false
         })
         return () => h(Child)
       }
@@ -250,7 +273,7 @@ describe('error handling', () => {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info)
-          return true
+          return false
         })
         return () => h(Child)
       }
@@ -277,7 +300,7 @@ describe('error handling', () => {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info)
-          return true
+          return false
         })
         return () => h(Child)
       }
@@ -307,7 +330,7 @@ describe('error handling', () => {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info)
-          return true
+          return false
         })
         return () => h(Child)
       }
@@ -342,7 +365,7 @@ describe('error handling', () => {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info)
-          return true
+          return false
         })
         return () => h(Child)
       }
@@ -375,7 +398,7 @@ describe('error handling', () => {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info)
-          return true
+          return false
         })
         return () =>
           h(Child, {
@@ -405,7 +428,7 @@ describe('error handling', () => {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info)
-          return true
+          return false
         })
         return () =>
           h(Child, {
@@ -443,7 +466,7 @@ describe('error handling', () => {
       setup() {
         onErrorCaptured((err, instance, info) => {
           fn(err, info)
-          return true
+          return false
         })
         return () =>
           h(Child, {
@@ -473,8 +496,6 @@ describe('error handling', () => {
   })
 
   it('should warn unhandled', () => {
-    const onError = jest.spyOn(console, 'error')
-    onError.mockImplementation(() => {})
     const groupCollapsed = jest.spyOn(console, 'groupCollapsed')
     groupCollapsed.mockImplementation(() => {})
     const log = jest.spyOn(console, 'log')
@@ -499,14 +520,18 @@ describe('error handling', () => {
       render() {}
     }
 
-    render(h(Comp), nodeOps.createElement('div'))
+    let caughtError
+    try {
+      render(h(Comp), nodeOps.createElement('div'))
+    } catch (caught) {
+      caughtError = caught
+    }
     expect(fn).toHaveBeenCalledWith(err, 'setup function')
     expect(
       `Unhandled error during execution of setup function`
     ).toHaveBeenWarned()
-    expect(onError).toHaveBeenCalledWith(err)
+    expect(caughtError).toBe(err)
 
-    onError.mockRestore()
     groupCollapsed.mockRestore()
     log.mockRestore()
   })
