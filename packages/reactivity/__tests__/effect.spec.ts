@@ -811,4 +811,15 @@ describe('reactivity/effect', () => {
     expect(dummy).toBe(0)
     expect(record).toBeUndefined()
   })
+
+  it('should trigger once effect when set the equal proxy', () => {
+    const obj = reactive({ foo: 1 })
+    const observed: any = reactive({ obj })
+    const fnSpy = jest.fn(() => observed.obj)
+
+    effect(fnSpy)
+
+    observed.obj = obj
+    expect(fnSpy).toHaveBeenCalledTimes(1)
+  })
 })
