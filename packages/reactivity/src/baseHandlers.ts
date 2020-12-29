@@ -153,7 +153,7 @@ function createSetter(shallow = false) {
     if (target === toRaw(receiver)) {
       if (!hadKey) {
         trigger(target, TriggerOpTypes.ADD, key, value)
-      } else if (hasChanged(value, oldValue)) {
+      } else if (hasChanged(value, toRaw(oldValue))) {
         trigger(target, TriggerOpTypes.SET, key, value, oldValue)
       }
     }
