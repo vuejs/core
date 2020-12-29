@@ -196,13 +196,110 @@ describe('component: emit', () => {
     expect(fn).toHaveBeenCalledTimes(1)
   })
 
+  test('.once with normal listener of the same name', () => {
+    const Foo = defineComponent({
+      render() {},
+      emits: {
+        foo: null
+      },
+      created() {
+        this.$emit('foo')
+        this.$emit('foo')
+      }
+    })
+    const onFoo = jest.fn()
+    const onFooOnce = jest.fn()
+    render(
+      h(Foo, {
+        onFoo,
+        onFooOnce
+      }),
+      nodeOps.createElement('div')
+    )
+    expect(onFoo).toHaveBeenCalledTimes(2)
+    expect(onFooOnce).toHaveBeenCalledTimes(1)
+  })
+
+  test('.number modifier should work with v-model on component', () => {
+    const Foo = defineComponent({
+      render() {},
+      created() {
+        this.$emit('update:modelValue', '1')
+        this.$emit('update:foo', '2')
+      }
+    })
+
+    const fn1 = jest.fn()
+    const fn2 = jest.fn()
+
+    const Comp = () =>
+      h(Foo, {
+        modelValue: null,
+        modelModifiers: { number: true },
+        'onUpdate:modelValue': fn1,
+
+        foo: null,
+        fooModifiers: { number: true },
+        'onUpdate:foo': fn2
+      })
+
+    render(h(Comp), nodeOps.createElement('div'))
+
+    expect(fn1).toHaveBeenCalledTimes(1)
+    expect(fn1).toHaveBeenCalledWith(1)
+    expect(fn2).toHaveBeenCalledTimes(1)
+    expect(fn2).toHaveBeenCalledWith(2)
+  })
+
+  test('.trim modifier should work with v-model on component', () => {
+    const Foo = defineComponent({
+      render() {},
+      created() {
+        this.$emit('update:modelValue', ' one ')
+        this.$emit('update:foo', '  two  ')
+      }
+    })
+
+    const fn1 = jest.fn()
+    const fn2 = jest.fn()
+
+    const Comp = () =>
+      h(Foo, {
+        modelValue: null,
+        modelModifiers: { trim: true },
+        'onUpdate:modelValue': fn1,
+
+        foo: null,
+        fooModifiers: { trim: true },
+        'onUpdate:foo': fn2
+      })
+
+    render(h(Comp), nodeOps.createElement('div'))
+
+    expect(fn1).toHaveBeenCalledTimes(1)
+    expect(fn1).toHaveBeenCalledWith('one')
+    expect(fn2).toHaveBeenCalledTimes(1)
+    expect(fn2).toHaveBeenCalledWith('two')
+  })
+
   test('isEmitListener', () => {
-    const options = { click: null }
+    const options = {
+      click: null,
+      'test-event': null,
+      fooBar: null,
+      FooBaz: null
+    }
     expect(isEmitListener(options, 'onClick')).toBe(true)
     expect(isEmitListener(options, 'onclick')).toBe(false)
     expect(isEmitListener(options, 'onBlick')).toBe(false)
     // .once listeners
     expect(isEmitListener(options, 'onClickOnce')).toBe(true)
     expect(isEmitListener(options, 'onclickOnce')).toBe(false)
+    // kebab-case option
+    expect(isEmitListener(options, 'onTestEvent')).toBe(true)
+    // camelCase option
+    expect(isEmitListener(options, 'onFooBar')).toBe(true)
+    // PascalCase option
+    expect(isEmitListener(options, 'onFooBaz')).toBe(true)
   })
 })

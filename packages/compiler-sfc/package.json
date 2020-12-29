@@ -1,6 +1,6 @@
 {
   "name": "@vue/compiler-sfc",
-  "version": "3.0.0",
+  "version": "3.0.4",
   "description": "@vue/compiler-sfc",
   "main": "dist/compiler-sfc.cjs.js",
   "types": "dist/compiler-sfc.d.ts",
@@ -11,8 +11,7 @@
     "name": "VueCompilerSFC",
     "formats": [
       "cjs",
-      "global",
-      "esm-browser"
+      "global"
     ],
     "prod": false,
     "enableNonBrowserBranches": true
@@ -32,15 +31,15 @@
   },
   "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/compiler-sfc#readme",
   "peerDependencies": {
-    "vue": "3.0.0"
+    "vue": "3.0.4"
   },
   "dependencies": {
-    "@babel/parser": "^7.11.5",
-    "@babel/types": "^7.11.5",
-    "@vue/compiler-core": "3.0.0",
-    "@vue/compiler-dom": "3.0.0",
-    "@vue/compiler-ssr": "3.0.0",
-    "@vue/shared": "3.0.0",
+    "@babel/parser": "^7.12.0",
+    "@babel/types": "^7.12.0",
+    "@vue/compiler-core": "3.0.4",
+    "@vue/compiler-dom": "3.0.4",
+    "@vue/compiler-ssr": "3.0.4",
+    "@vue/shared": "3.0.4",
     "consolidate": "^0.16.0",
     "estree-walker": "^2.0.1",
     "hash-sum": "^2.0.0",
@@ -49,7 +48,7 @@
     "merge-source-map": "^1.1.0",
     "postcss": "^7.0.32",
     "postcss-modules": "^3.2.2",
-    "postcss-selector-parser": "^6.0.2",
+    "postcss-selector-parser": "^6.0.4",
     "source-map": "^0.6.1"
   },
   "devDependencies": {

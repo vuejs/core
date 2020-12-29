@@ -120,6 +120,23 @@ describe('runtime-dom: props patching', () => {
 
     patchProp(el, 'id', null, '')
     expect(el.hasAttribute('id')).toBe(true)
+
+    // #2677
+    const img = document.createElement('img')
+    patchProp(img, 'width', null, '')
+    expect(el.hasAttribute('width')).toBe(false)
+    patchProp(img, 'width', null, 0)
+    expect(img.hasAttribute('width')).toBe(true)
+
+    patchProp(img, 'width', null, null)
+    expect(img.hasAttribute('width')).toBe(false)
+    patchProp(img, 'width', null, 0)
+    expect(img.hasAttribute('width')).toBe(true)
+
+    patchProp(img, 'width', null, undefined)
+    expect(img.hasAttribute('width')).toBe(false)
+    patchProp(img, 'width', null, 0)
+    expect(img.hasAttribute('width')).toBe(true)
   })
 
   test('form attribute', () => {

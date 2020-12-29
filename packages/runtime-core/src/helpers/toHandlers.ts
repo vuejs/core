@@ -1,4 +1,4 @@
-import { isObject, capitalize } from '@vue/shared'
+import { toHandlerKey, isObject } from '@vue/shared'
 import { warn } from '../warning'
 
 /**
@@ -12,7 +12,7 @@ export function toHandlers(obj: Record<string, any>): Record<string, any> {
     return ret
   }
   for (const key in obj) {
-    ret[`on${capitalize(key)}`] = obj[key]
+    ret[toHandlerKey(key)] = obj[key]
   }
   return ret
 }

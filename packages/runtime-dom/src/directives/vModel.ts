@@ -12,8 +12,7 @@ import {
   looseIndexOf,
   invokeArrayFns,
   toNumber,
-  isSet,
-  looseHas
+  isSet
 } from '@vue/shared'
 
 type AssignerFn = (value: any) => void
@@ -100,8 +99,7 @@ export const vModelText: ModelDirective<
 }
 
 export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
-  created(el, binding, vnode) {
-    setChecked(el, binding, vnode)
+  created(el, _, vnode) {
     el._assign = getModelAssigner(vnode)
     addEventListener(el, 'change', () => {
       const modelValue = (el as any)._modelValue
@@ -119,18 +117,20 @@ export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
           assign(filtered)
         }
       } else if (isSet(modelValue)) {
-        const found = modelValue.has(elementValue)
-        if (checked && !found) {
-          assign(modelValue.add(elementValue))
-        } else if (!checked && found) {
-          modelValue.delete(elementValue)
-          assign(modelValue)
+        const cloned = new Set(modelValue)
+        if (checked) {
+          cloned.add(elementValue)
+        } else {
+          cloned.delete(elementValue)
         }
+        assign(cloned)
       } else {
         assign(getCheckboxValue(el, checked))
       }
     })
   },
+  // set initial checked on mount to wait for true-value/false-value
+  mounted: setChecked,
   beforeUpdate(el, binding, vnode) {
     el._assign = getModelAssigner(vnode)
     setChecked(el, binding, vnode)
@@ -148,7 +148,7 @@ function setChecked(
   if (isArray(value)) {
     el.checked = looseIndexOf(value, vnode.props!.value) > -1
   } else if (isSet(value)) {
-    el.checked = looseHas(value, vnode.props!.value)
+    el.checked = value.has(vnode.props!.value)
   } else if (value !== oldValue) {
     el.checked = looseEqual(value, getCheckboxValue(el, true))
   }
@@ -171,7 +171,8 @@ export const vModelRadio: ModelDirective<HTMLInputElement> = {
 }
 
 export const vModelSelect: ModelDirective<HTMLSelectElement> = {
-  created(el, { modifiers: { number } }, vnode) {
+  created(el, { value, modifiers: { number } }, vnode) {
+    const isSetModel = isSet(value)
     addEventListener(el, 'change', () => {
       const selectedVal = Array.prototype.filter
         .call(el.options, (o: HTMLOptionElement) => o.selected)
@@ -179,7 +180,13 @@ export const vModelSelect: ModelDirective<HTMLSelectElement> = {
           (o: HTMLOptionElement) =>
             number ? toNumber(getValue(o)) : getValue(o)
         )
-      el._assign(el.multiple ? selectedVal : selectedVal[0])
+      el._assign(
+        el.multiple
+          ? isSetModel
+            ? new Set(selectedVal)
+            : selectedVal
+          : selectedVal[0]
+      )
     })
     el._assign = getModelAssigner(vnode)
   },
@@ -213,7 +220,7 @@ function setSelected(el: HTMLSelectElement, value: any) {
       if (isArray(value)) {
         option.selected = looseIndexOf(value, optionValue) > -1
       } else {
-        option.selected = looseHas(value, optionValue)
+        option.selected = value.has(optionValue)
       }
     } else {
       if (looseEqual(getValue(option), value)) {
@@ -305,7 +312,7 @@ if (__NODE_JS__) {
         return { checked: true }
       }
     } else if (isSet(value)) {
-      if (vnode.props && looseHas(value, vnode.props.value)) {
+      if (vnode.props && value.has(vnode.props.value)) {
         return { checked: true }
       }
     } else if (value) {

@@ -1471,6 +1471,58 @@ Object {
 }
 `;
 
+exports[`compiler: parse Errors EOF_IN_TAG <div></div 1`] = `
+Object {
+  "cached": 0,
+  "children": Array [
+    Object {
+      "children": Array [],
+      "codegenNode": undefined,
+      "isSelfClosing": false,
+      "loc": Object {
+        "end": Object {
+          "column": 11,
+          "line": 1,
+          "offset": 10,
+        },
+        "source": "<div></div",
+        "start": Object {
+          "column": 1,
+          "line": 1,
+          "offset": 0,
+        },
+      },
+      "ns": 0,
+      "props": Array [],
+      "tag": "div",
+      "tagType": 0,
+      "type": 1,
+    },
+  ],
+  "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
+  "hoists": Array [],
+  "imports": Array [],
+  "loc": Object {
+    "end": Object {
+      "column": 11,
+      "line": 1,
+      "offset": 10,
+    },
+    "source": "<div></div",
+    "start": Object {
+      "column": 1,
+      "line": 1,
+      "offset": 0,
+    },
+  },
+  "temps": 0,
+  "type": 0,
+}
+`;
+
 exports[`compiler: parse Errors EOF_IN_TAG <template><div  1`] = `
 Object {
   "cached": 0,
@@ -3270,8 +3322,8 @@ Object {
       "children": Array [
         Object {
           "content": Object {
+            "constType": 0,
             "content": "a < b",
-            "isConstant": false,
             "isStatic": false,
             "loc": Object {
               "end": Object {
@@ -4282,6 +4334,76 @@ Object {
       "offset": 31,
     },
     "source": "<template><!--a<!--></template>",
+    "start": Object {
+      "column": 1,
+      "line": 1,
+      "offset": 0,
+    },
+  },
+  "temps": 0,
+  "type": 0,
+}
+`;
+
+exports[`compiler: parse Errors NESTED_COMMENT <template><!--a<!--b<!----></template> 1`] = `
+Object {
+  "cached": 0,
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "content": "a<!--b<!--",
+          "loc": Object {
+            "end": Object {
+              "column": 28,
+              "line": 1,
+              "offset": 27,
+            },
+            "source": "<!--a<!--b<!---->",
+            "start": Object {
+              "column": 11,
+              "line": 1,
+              "offset": 10,
+            },
+          },
+          "type": 3,
+        },
+      ],
+      "codegenNode": undefined,
+      "isSelfClosing": false,
+      "loc": Object {
+        "end": Object {
+          "column": 39,
+          "line": 1,
+          "offset": 38,
+        },
+        "source": "<template><!--a<!--b<!----></template>",
+        "start": Object {
+          "column": 1,
+          "line": 1,
+          "offset": 0,
+        },
+      },
+      "ns": 0,
+      "props": Array [],
+      "tag": "template",
+      "tagType": 0,
+      "type": 1,
+    },
+  ],
+  "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
+  "hoists": Array [],
+  "imports": Array [],
+  "loc": Object {
+    "end": Object {
+      "column": 39,
+      "line": 1,
+      "offset": 38,
+    },
+    "source": "<template><!--a<!--b<!----></template>",
     "start": Object {
       "column": 1,
       "line": 1,
@@ -5962,8 +6084,8 @@ Object {
       "children": Array [
         Object {
           "content": Object {
+            "constType": 0,
             "content": "'</div>'",
-            "isConstant": false,
             "isStatic": false,
             "loc": Object {
               "end": Object {
@@ -6137,8 +6259,8 @@ Object {
       "props": Array [
         Object {
           "arg": Object {
+            "constType": 0,
             "content": "se",
-            "isConstant": false,
             "isStatic": false,
             "loc": Object {
               "end": Object {
@@ -6471,8 +6593,8 @@ Object {
   "children": Array [
     Object {
       "content": Object {
+        "constType": 0,
         "content": "",
-        "isConstant": false,
         "isStatic": false,
         "loc": Object {
           "end": Object {
@@ -6636,8 +6758,8 @@ Object {
       "props": Array [
         Object {
           "arg": Object {
+            "constType": 3,
             "content": "class",
-            "isConstant": true,
             "isStatic": true,
             "loc": Object {
               "end": Object {
@@ -6655,8 +6777,8 @@ Object {
             "type": 4,
           },
           "exp": Object {
+            "constType": 0,
             "content": "{ some: condition }",
-            "isConstant": false,
             "isStatic": false,
             "loc": Object {
               "end": Object {
@@ -6716,8 +6838,8 @@ Object {
       "props": Array [
         Object {
           "arg": Object {
+            "constType": 3,
             "content": "style",
-            "isConstant": true,
             "isStatic": true,
             "loc": Object {
               "end": Object {
@@ -6735,8 +6857,8 @@ Object {
             "type": 4,
           },
           "exp": Object {
+            "constType": 0,
             "content": "{ color: 'red' }",
-            "isConstant": false,
             "isStatic": false,
             "loc": Object {
               "end": Object {
@@ -6828,8 +6950,8 @@ Object {
           "props": Array [
             Object {
               "arg": Object {
+                "constType": 3,
                 "content": "style",
-                "isConstant": true,
                 "isStatic": true,
                 "loc": Object {
                   "end": Object {
@@ -6847,8 +6969,8 @@ Object {
                 "type": 4,
               },
               "exp": Object {
+                "constType": 0,
                 "content": "{ color: 'red' }",
-                "isConstant": false,
                 "isStatic": false,
                 "loc": Object {
                   "end": Object {
@@ -6927,8 +7049,8 @@ Object {
       "props": Array [
         Object {
           "arg": Object {
+            "constType": 3,
             "content": "class",
-            "isConstant": true,
             "isStatic": true,
             "loc": Object {
               "end": Object {
@@ -6946,8 +7068,8 @@ Object {
             "type": 4,
           },
           "exp": Object {
+            "constType": 0,
             "content": "{ some: condition }",
-            "isConstant": false,
             "isStatic": false,
             "loc": Object {
               "end": Object {

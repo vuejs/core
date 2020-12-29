@@ -71,19 +71,36 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
               ]
               break
             case 'checkbox':
-              res.props = [
-                createObjectProperty(
-                  `checked`,
-                  createConditionalExpression(
-                    createCallExpression(`Array.isArray`, [model]),
-                    createCallExpression(context.helper(SSR_LOOSE_CONTAIN), [
+              const trueValueBinding = findProp(node, 'true-value')
+              if (trueValueBinding) {
+                const trueValue =
+                  trueValueBinding.type === NodeTypes.ATTRIBUTE
+                    ? JSON.stringify(trueValueBinding.value!.content)
+                    : trueValueBinding.exp!
+                res.props = [
+                  createObjectProperty(
+                    `checked`,
+                    createCallExpression(context.helper(SSR_LOOSE_EQUAL), [
                       model,
-                      value
-                    ]),
-                    model
+                      trueValue
+                    ])
                   )
-                )
-              ]
+                ]
+              } else {
+                res.props = [
+                  createObjectProperty(
+                    `checked`,
+                    createConditionalExpression(
+                      createCallExpression(`Array.isArray`, [model]),
+                      createCallExpression(context.helper(SSR_LOOSE_CONTAIN), [
+                        model,
+                        value
+                      ]),
+                      model
+                    )
+                  )
+                ]
+              }
               break
             case 'file':
               context.onError(

@@ -70,7 +70,10 @@ function createSlotMatcher(obj: Record<string, any>, isDynamic = false) {
       })
       .concat({
         key: { content: `_` },
-        value: { content: isDynamic ? `2` : `1`, isStatic: false }
+        value: {
+          content: isDynamic ? `2 /* DYNAMIC */` : `1 /* STABLE */`,
+          isStatic: false
+        }
       })
   }
 }
@@ -518,6 +521,21 @@ describe('compiler: transform component slots', () => {
       </Comp>`,
       true
     )
+
+    // #2564
+    assertDynamicSlots(
+      `<div v-for="i in list">
+        <Comp v-slot="bar"><button @click="fn(i)" /></Comp>
+      </div>`,
+      true
+    )
+
+    assertDynamicSlots(
+      `<div v-for="i in list">
+        <Comp v-slot="bar"><button @click="fn()" /></Comp>
+      </div>`,
+      false
+    )
   })
 
   test('named slot with v-if', () => {
@@ -531,7 +549,7 @@ describe('compiler: transform component slots', () => {
       callee: CREATE_SLOTS,
       arguments: [
         createObjectMatcher({
-          _: `[2]`
+          _: `[2 /* DYNAMIC */]`
         }),
         {
           type: NodeTypes.JS_ARRAY_EXPRESSION,
@@ -573,7 +591,7 @@ describe('compiler: transform component slots', () => {
       callee: CREATE_SLOTS,
       arguments: [
         createObjectMatcher({
-          _: `[2]`
+          _: `[2 /* DYNAMIC */]`
         }),
         {
           type: NodeTypes.JS_ARRAY_EXPRESSION,
@@ -622,7 +640,7 @@ describe('compiler: transform component slots', () => {
       callee: CREATE_SLOTS,
       arguments: [
         createObjectMatcher({
-          _: `[2]`
+          _: `[2 /* DYNAMIC */]`
         }),
         {
           type: NodeTypes.JS_ARRAY_EXPRESSION,
@@ -681,7 +699,7 @@ describe('compiler: transform component slots', () => {
       callee: CREATE_SLOTS,
       arguments: [
         createObjectMatcher({
-          _: `[2]`
+          _: `[2 /* DYNAMIC */]`
         }),
         {
           type: NodeTypes.JS_ARRAY_EXPRESSION,
@@ -730,7 +748,7 @@ describe('compiler: transform component slots', () => {
         },
         {
           key: { content: `_` },
-          value: { content: `3` } // forwarded
+          value: { content: `3 /* FORWARDED */` }
         }
       ]
     })

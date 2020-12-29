@@ -6,17 +6,17 @@ import {
   createSimpleExpression,
   RootNode,
   TemplateChildNode,
-  findDir
+  findDir,
+  isBuiltInType
 } from '@vue/compiler-dom'
-import { SSR_RESOLVE_CSS_VARS } from '../runtimeHelpers'
 
 export const ssrInjectCssVars: NodeTransform = (node, context) => {
   if (!context.ssrCssVars) {
     return
   }
 
-  // _cssVars is initailized once per render function
-  // the code is injected in ssrCodegenTrasnform when creating the
+  // _cssVars is initialized once per render function
+  // the code is injected in ssrCodegenTransform when creating the
   // ssr transform context
   if (node.type === NodeTypes.ROOT) {
     context.identifiers._cssVars = 1
@@ -26,8 +26,6 @@ export const ssrInjectCssVars: NodeTransform = (node, context) => {
   if (!parent || parent.type !== NodeTypes.ROOT) {
     return
   }
-
-  context.helper(SSR_RESOLVE_CSS_VARS)
 
   if (node.type === NodeTypes.IF_BRANCH) {
     for (const child of node.children) {
@@ -45,13 +43,27 @@ function injectCssVars(node: RootNode | TemplateChildNode) {
       node.tagType === ElementTypes.COMPONENT) &&
     !findDir(node, 'for')
   ) {
-    node.props.push({
-      type: NodeTypes.DIRECTIVE,
-      name: 'bind',
-      arg: undefined,
-      exp: createSimpleExpression(`_cssVars`, false),
-      modifiers: [],
-      loc: locStub
-    })
+    if (isBuiltInType(node.tag, 'Suspense')) {
+      for (const child of node.children) {
+        if (
+          child.type === NodeTypes.ELEMENT &&
+          child.tagType === ElementTypes.TEMPLATE
+        ) {
+          // suspense slot
+          child.children.forEach(injectCssVars)
+        } else {
+          injectCssVars(child)
+        }
+      }
+    } else {
+      node.props.push({
+        type: NodeTypes.DIRECTIVE,
+        name: 'bind',
+        arg: undefined,
+        exp: createSimpleExpression(`_cssVars`, false),
+        modifiers: [],
+        loc: locStub
+      })
+    }
   }
 }

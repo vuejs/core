@@ -375,6 +375,16 @@ describe('reactivity/readonly', () => {
     expect(dummy).toBe(1)
   })
 
+  test('readonly array should not track', () => {
+    const arr = [1]
+    const roArr = readonly(arr)
+
+    const eff = effect(() => {
+      roArr.includes(2)
+    })
+    expect(eff.deps.length).toBe(0)
+  })
+
   test('readonly should track and trigger if wrapping reactive original (collection)', () => {
     const a = reactive(new Map())
     const b = readonly(a)

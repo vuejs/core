@@ -22,12 +22,20 @@ import {
   TextNode,
   TemplateChildNode,
   InterpolationNode,
-  createRoot
+  createRoot,
+  ConstantTypes
 } from './ast'
 
 type OptionalOptions = 'isNativeTag' | 'isBuiltInComponent'
 type MergedParserOptions = Omit<Required<ParserOptions>, OptionalOptions> &
   Pick<ParserOptions, OptionalOptions>
+type AttributeValue =
+  | {
+      content: string
+      isQuoted: boolean
+      loc: SourceLocation
+    }
+  | undefined
 
 // The default decoder only provides escapes for characters reserved as part of
 // the template syntax, and is only used if the custom renderer did not provide
@@ -589,13 +597,7 @@ function parseAttribute(
   advanceBy(context, name.length)
 
   // Value
-  let value:
-    | {
-        content: string
-        isQuoted: boolean
-        loc: SourceLocation
-      }
-    | undefined = undefined
+  let value: AttributeValue = undefined
 
   if (/^[\t\r\n\f ]*=/.test(context.source)) {
     advanceSpaces(context)
@@ -656,7 +658,9 @@ function parseAttribute(
         type: NodeTypes.SIMPLE_EXPRESSION,
         content,
         isStatic,
-        isConstant: isStatic,
+        constType: isStatic
+          ? ConstantTypes.CAN_STRINGIFY
+          : ConstantTypes.NOT_CONSTANT,
         loc
       }
     }
@@ -677,8 +681,8 @@ function parseAttribute(
         content: value.content,
         isStatic: false,
         // Treat as non-constant by default. This can be potentially set to
-        // true by `transformExpression` to make it eligible for hoisting.
-        isConstant: false,
+        // other values by `transformExpression` to make it eligible for hoisting.
+        constType: ConstantTypes.NOT_CONSTANT,
         loc: value.loc
       },
       arg,
@@ -699,15 +703,7 @@ function parseAttribute(
   }
 }
 
-function parseAttributeValue(
-  context: ParserContext
-):
-  | {
-      content: string
-      isQuoted: boolean
-      loc: SourceLocation
-    }
-  | undefined {
+function parseAttributeValue(context: ParserContext): AttributeValue {
   const start = getCursor(context)
   let content: string
 
@@ -785,7 +781,7 @@ function parseInterpolation(
       type: NodeTypes.SIMPLE_EXPRESSION,
       isStatic: false,
       // Set `isConstant` to false by default and will decide in transformExpression
-      isConstant: false,
+      constType: ConstantTypes.NOT_CONSTANT,
       content,
       loc: getSelection(context, innerStart, innerEnd)
     },

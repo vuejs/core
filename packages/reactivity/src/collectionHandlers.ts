@@ -76,11 +76,11 @@ function add(this: SetTypes, value: unknown) {
   const target = toRaw(this)
   const proto = getProto(target)
   const hadKey = proto.has.call(target, value)
-  const result = target.add(value)
+  target.add(value)
   if (!hadKey) {
     trigger(target, TriggerOpTypes.ADD, value, value)
   }
-  return result
+  return this
 }
 
 function set(this: MapTypes, key: unknown, value: unknown) {
@@ -97,13 +97,13 @@ function set(this: MapTypes, key: unknown, value: unknown) {
   }
 
   const oldValue = get.call(target, key)
-  const result = target.set(key, value)
+  target.set(key, value)
   if (!hadKey) {
     trigger(target, TriggerOpTypes.ADD, key, value)
   } else if (hasChanged(value, oldValue)) {
     trigger(target, TriggerOpTypes.SET, key, value, oldValue)
   }
-  return result
+  return this
 }
 
 function deleteEntry(this: CollectionTypes, key: unknown) {
@@ -350,7 +350,7 @@ function checkIdentityKeys(
     const type = toRawType(target)
     console.warn(
       `Reactive ${type} contains both the raw and reactive ` +
-        `versions of the same object${type === `Map` ? `as keys` : ``}, ` +
+        `versions of the same object${type === `Map` ? ` as keys` : ``}, ` +
         `which can lead to inconsistencies. ` +
         `Avoid differentiating between the raw and reactive versions ` +
         `of an object and only use the reactive version if possible.`

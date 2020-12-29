@@ -280,7 +280,7 @@ describe('vModel', () => {
   it('should work with checkbox and true-value/false-value', async () => {
     const component = defineComponent({
       data() {
-        return { value: null }
+        return { value: 'yes' }
       },
       render() {
         return [
@@ -301,23 +301,26 @@ describe('vModel', () => {
     const input = root.querySelector('input')
     const data = root._vnode.component.data
 
-    input.checked = true
-    triggerEvent('change', input)
-    await nextTick()
-    expect(data.value).toEqual('yes')
-
-    data.value = 'no'
-    await nextTick()
-    expect(input.checked).toEqual(false)
-
-    data.value = 'yes'
-    await nextTick()
+    // DOM checked state should respect initial true-value/false-value
     expect(input.checked).toEqual(true)
 
     input.checked = false
     triggerEvent('change', input)
     await nextTick()
     expect(data.value).toEqual('no')
+
+    data.value = 'yes'
+    await nextTick()
+    expect(input.checked).toEqual(true)
+
+    data.value = 'no'
+    await nextTick()
+    expect(input.checked).toEqual(false)
+
+    input.checked = true
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toEqual('yes')
   })
 
   it('should work with checkbox and true-value/false-value with object values', async () => {
@@ -619,7 +622,7 @@ describe('vModel', () => {
     expect(bar.selected).toEqual(true)
   })
 
-  it('should work with multiple select', async () => {
+  it('multiple select (model is Array)', async () => {
     const component = defineComponent({
       data() {
         return { value: [] }
@@ -781,6 +784,209 @@ describe('vModel', () => {
     await nextTick()
     expect(one.selected).toEqual(true)
     expect(two.selected).toEqual(true)
+  })
+
+  it('multiple select (model is Array, option value is object)', async () => {
+    const fooValue = { foo: 1 }
+    const barValue = { bar: 1 }
+
+    const component = defineComponent({
+      data() {
+        return { value: [] }
+      },
+      render() {
+        return [
+          withVModel(
+            h(
+              'select',
+              {
+                value: null,
+                multiple: true,
+                'onUpdate:modelValue': setValue.bind(this)
+              },
+              [
+                h('option', { value: fooValue }),
+                h('option', { value: barValue })
+              ]
+            ),
+            this.value
+          )
+        ]
+      }
+    })
+    render(h(component), root)
+
+    await nextTick()
+
+    const input = root.querySelector('select')
+    const [foo, bar] = root.querySelectorAll('option')
+    const data = root._vnode.component.data
+
+    foo.selected = true
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toMatchObject([fooValue])
+
+    foo.selected = false
+    bar.selected = true
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toMatchObject([barValue])
+
+    foo.selected = true
+    bar.selected = true
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toMatchObject([fooValue, barValue])
+
+    foo.selected = false
+    bar.selected = false
+    data.value = [fooValue, barValue]
+    await nextTick()
+    expect(foo.selected).toEqual(true)
+    expect(bar.selected).toEqual(true)
+
+    foo.selected = false
+    bar.selected = false
+    data.value = [{ foo: 1 }, { bar: 1 }]
+    await nextTick()
+    // looseEqual
+    expect(foo.selected).toEqual(true)
+    expect(bar.selected).toEqual(true)
+  })
+
+  it('multiple select (model is Set)', async () => {
+    const component = defineComponent({
+      data() {
+        return { value: new Set() }
+      },
+      render() {
+        return [
+          withVModel(
+            h(
+              'select',
+              {
+                value: null,
+                multiple: true,
+                'onUpdate:modelValue': setValue.bind(this)
+              },
+              [h('option', { value: 'foo' }), h('option', { value: 'bar' })]
+            ),
+            this.value
+          )
+        ]
+      }
+    })
+    render(h(component), root)
+
+    const input = root.querySelector('select')
+    const foo = root.querySelector('option[value=foo]')
+    const bar = root.querySelector('option[value=bar]')
+    const data = root._vnode.component.data
+
+    foo.selected = true
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toBeInstanceOf(Set)
+    expect(data.value).toMatchObject(new Set(['foo']))
+
+    foo.selected = false
+    bar.selected = true
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toBeInstanceOf(Set)
+    expect(data.value).toMatchObject(new Set(['bar']))
+
+    foo.selected = true
+    bar.selected = true
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toBeInstanceOf(Set)
+    expect(data.value).toMatchObject(new Set(['foo', 'bar']))
+
+    foo.selected = false
+    bar.selected = false
+    data.value = new Set(['foo'])
+    await nextTick()
+    expect(input.value).toEqual('foo')
+    expect(foo.selected).toEqual(true)
+    expect(bar.selected).toEqual(false)
+
+    foo.selected = false
+    bar.selected = false
+    data.value = new Set(['foo', 'bar'])
+    await nextTick()
+    expect(foo.selected).toEqual(true)
+    expect(bar.selected).toEqual(true)
+  })
+
+  it('multiple select (model is Set, option value is object)', async () => {
+    const fooValue = { foo: 1 }
+    const barValue = { bar: 1 }
+
+    const component = defineComponent({
+      data() {
+        return { value: new Set() }
+      },
+      render() {
+        return [
+          withVModel(
+            h(
+              'select',
+              {
+                value: null,
+                multiple: true,
+                'onUpdate:modelValue': setValue.bind(this)
+              },
+              [
+                h('option', { value: fooValue }),
+                h('option', { value: barValue })
+              ]
+            ),
+            this.value
+          )
+        ]
+      }
+    })
+    render(h(component), root)
+
+    await nextTick()
+
+    const input = root.querySelector('select')
+    const [foo, bar] = root.querySelectorAll('option')
+    const data = root._vnode.component.data
+
+    foo.selected = true
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toMatchObject(new Set([fooValue]))
+
+    foo.selected = false
+    bar.selected = true
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toMatchObject(new Set([barValue]))
+
+    foo.selected = true
+    bar.selected = true
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toMatchObject(new Set([fooValue, barValue]))
+
+    foo.selected = false
+    bar.selected = false
+    data.value = new Set([fooValue, barValue])
+    await nextTick()
+    expect(foo.selected).toEqual(true)
+    expect(bar.selected).toEqual(true)
+
+    foo.selected = false
+    bar.selected = false
+    data.value = new Set([{ foo: 1 }, { bar: 1 }])
+    await nextTick()
+    // whithout looseEqual, here is different from Array
+    expect(foo.selected).toEqual(false)
+    expect(bar.selected).toEqual(false)
   })
 
   it('should work with composition session', async () => {

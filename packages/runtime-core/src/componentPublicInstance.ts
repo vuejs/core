@@ -200,6 +200,16 @@ export type ComponentPublicInstance<
 
 type PublicPropertiesMap = Record<string, (i: ComponentInternalInstance) => any>
 
+/**
+ * #2437 In Vue 3, functional components do not have a public instance proxy but
+ * they exist in the internal parent chain. For code that relies on traversing
+ * public $parent chains, skip functional ones and go to the parent instead.
+ */
+const getPublicInstance = (
+  i: ComponentInternalInstance | null
+): ComponentPublicInstance | null =>
+  i && (i.proxy ? i.proxy : getPublicInstance(i.parent))
+
 const publicPropertiesMap: PublicPropertiesMap = extend(Object.create(null), {
   $: i => i,
   $el: i => i.vnode.el,
@@ -208,7 +218,7 @@ const publicPropertiesMap: PublicPropertiesMap = extend(Object.create(null), {
   $attrs: i => (__DEV__ ? shallowReadonly(i.attrs) : i.attrs),
   $slots: i => (__DEV__ ? shallowReadonly(i.slots) : i.slots),
   $refs: i => (__DEV__ ? shallowReadonly(i.refs) : i.refs),
-  $parent: i => i.parent && i.parent.proxy,
+  $parent: i => getPublicInstance(i.parent),
   $root: i => i.root && i.root.proxy,
   $emit: i => i.emit,
   $options: i => (__FEATURE_OPTIONS_API__ ? resolveMergedOptions(i) : i.type),
@@ -244,6 +254,11 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
 
     // let @vue/reactivity know it should never observe Vue public instances.
     if (key === ReactiveFlags.SKIP) {
+      return true
+    }
+
+    // for internal formatters to know that this is a Vue instance
+    if (__DEV__ && key === '__isVue') {
       return true
     }
 

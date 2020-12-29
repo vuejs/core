@@ -141,21 +141,32 @@ describe('renderer: component', () => {
   })
 
   // #2170
-  test('should have access to instance’s “$el” property in watcher when rendereing with watched prop', async () => {
-    function returnThis(this: any) {
+  test('instance.$el should be exposed to watch options', async () => {
+    function returnThis(this: any, _arg: any) {
       return this
     }
     const propWatchSpy = jest.fn(returnThis)
+    const dataWatchSpy = jest.fn(returnThis)
     let instance: any
     const Comp = {
       props: {
         testProp: String
       },
 
+      data() {
+        return {
+          testData: undefined
+        }
+      },
+
       watch: {
         testProp() {
           // @ts-ignore
           propWatchSpy(this.$el)
+        },
+        testData() {
+          // @ts-ignore
+          dataWatchSpy(this.$el)
         }
       },
 
@@ -172,10 +183,15 @@ describe('renderer: component', () => {
     render(h(Comp), root)
     await nextTick()
     expect(propWatchSpy).not.toHaveBeenCalled()
+    expect(dataWatchSpy).not.toHaveBeenCalled()
 
     render(h(Comp, { testProp: 'prop ' }), root)
     await nextTick()
     expect(propWatchSpy).toHaveBeenCalledWith(instance.$el)
+
+    instance.testData = 1
+    await nextTick()
+    expect(dataWatchSpy).toHaveBeenCalledWith(instance.$el)
   })
 
   // #2200
@@ -215,5 +231,48 @@ describe('renderer: component', () => {
     outer.value++
     await nextTick()
     expect(serializeInner(root)).toBe(`<div>1</div><div>1</div>`)
+  })
+
+  // #2521
+  test('should pause tracking deps when initializing legacy options', async () => {
+    let childInstance = null as any
+    const Child = {
+      props: ['foo'],
+      data() {
+        return {
+          count: 0
+        }
+      },
+      watch: {
+        foo: {
+          immediate: true,
+          handler() {
+            ;(this as any).count
+          }
+        }
+      },
+      created() {
+        childInstance = this as any
+        childInstance.count
+      },
+      render() {
+        return h('h1', (this as any).count)
+      }
+    }
+
+    const App = {
+      setup() {
+        return () => h(Child)
+      },
+      updated: jest.fn()
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(App.updated).toHaveBeenCalledTimes(0)
+
+    childInstance.count++
+    await nextTick()
+    expect(App.updated).toHaveBeenCalledTimes(0)
   })
 })

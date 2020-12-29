@@ -1,4 +1,5 @@
 import { isArray, isString, isObject } from '@vue/shared'
+import { warn } from '@vue/runtime-core'
 
 export function ssrRenderList(
   source: unknown,
@@ -9,6 +10,10 @@ export function ssrRenderList(
       renderItem(source[i], i)
     }
   } else if (typeof source === 'number') {
+    if (__DEV__ && !Number.isInteger(source)) {
+      warn(`The v-for range expect an integer value but got ${source}.`)
+      return
+    }
     for (let i = 0; i < source; i++) {
       renderItem(i + 1, i)
     }

@@ -61,11 +61,82 @@ export type HoistTransform = (
   parent: ParentNode
 ) => void
 
-export interface BindingMetadata {
-  [key: string]: 'data' | 'props' | 'setup' | 'options'
+export const enum BindingTypes {
+  /**
+   * returned from data()
+   */
+  DATA = 'data',
+  /**
+   * decalred as a prop
+   */
+  PROPS = 'props',
+  /**
+   * a let binding (may or may not be a ref)
+   */
+  SETUP_LET = 'setup-let',
+  /**
+   * a const binding that can never be a ref.
+   * these bindings don't need `unref()` calls when processed in inlined
+   * template expressions.
+   */
+  SETUP_CONST = 'setup-const',
+  /**
+   * a const binding that may be a ref.
+   */
+  SETUP_MAYBE_REF = 'setup-maybe-ref',
+  /**
+   * bindings that are guaranteed to be refs
+   */
+  SETUP_REF = 'setup-ref',
+  /**
+   * declared by other options, e.g. computed, inject
+   */
+  OPTIONS = 'options'
 }
 
-export interface TransformOptions {
+export interface BindingMetadata {
+  [key: string]: BindingTypes | undefined
+}
+
+interface SharedTransformCodegenOptions {
+  /**
+   * Transform expressions like {{ foo }} to `_ctx.foo`.
+   * If this option is false, the generated code will be wrapped in a
+   * `with (this) { ... }` block.
+   * - This is force-enabled in module mode, since modules are by default strict
+   * and cannot use `with`
+   * @default mode === 'module'
+   */
+  prefixIdentifiers?: boolean
+  /**
+   * Generate SSR-optimized render functions instead.
+   * The resulting function must be attached to the component via the
+   * `ssrRender` option instead of `render`.
+   */
+  ssr?: boolean
+  /**
+   * Optional binding metadata analyzed from script - used to optimize
+   * binding access when `prefixIdentifiers` is enabled.
+   */
+  bindingMetadata?: BindingMetadata
+  /**
+   * Compile the function for inlining inside setup().
+   * This allows the function to directly access setup() local bindings.
+   */
+  inline?: boolean
+  /**
+   * Indicates that transforms and codegen should try to output valid TS code
+   */
+  isTS?: boolean
+  /**
+   * Filename for source map generation.
+   * Also used for self-recursive reference in templates
+   * @default 'template.vue.html'
+   */
+  filename?: string
+}
+
+export interface TransformOptions extends SharedTransformCodegenOptions {
   /**
    * An array of node transforms to be applied to every AST node.
    */
@@ -129,25 +200,15 @@ export interface TransformOptions {
    */
   scopeId?: string | null
   /**
-   * Generate SSR-optimized render functions instead.
-   * The resulting function must be attached to the component via the
-   * `ssrRender` option instead of `render`.
-   */
-  ssr?: boolean
-  /**
    * SFC `<style vars>` injection string
+   * Should already be an object expression, e.g. `{ 'xxxx-color': color }`
    * needed to render inline CSS variables on component root
    */
   ssrCssVars?: string
-  /**
-   * Optional binding metadata analyzed from script - used to optimize
-   * binding access when `prefixIdentifiers` is enabled.
-   */
-  bindingMetadata?: BindingMetadata
   onError?: (error: CompilerError) => void
 }
 
-export interface CodegenOptions {
+export interface CodegenOptions extends SharedTransformCodegenOptions {
   /**
    * - `module` mode will generate ES module import statements for helpers
    * and export the render function as the default export.
@@ -163,11 +224,6 @@ export interface CodegenOptions {
    * @default false
    */
   sourceMap?: boolean
-  /**
-   * Filename for source map generation.
-   * @default 'template.vue.html'
-   */
-  filename?: string
   /**
    * SFC scoped styles ID
    */
@@ -189,11 +245,6 @@ export interface CodegenOptions {
    * @default 'Vue'
    */
   runtimeGlobalName?: string
-  // we need to know this during codegen to generate proper preambles
-  prefixIdentifiers?: boolean
-  bindingMetadata?: BindingMetadata
-  // generate ssr-specific code?
-  ssr?: boolean
 }
 
 export type CompilerOptions = ParserOptions & TransformOptions & CodegenOptions
