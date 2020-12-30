@@ -10,7 +10,6 @@
     "size": "node scripts/build.js vue runtime-dom size-check -p -f global",
     "lint": "eslint --ext .ts packages/*/src/**",
     "format": "prettier --write --parser typescript \"packages/**/*.ts?(x)\"",
-    "ls-lint": "ls-lint",
     "test": "node scripts/build.js vue -f global -d && jest --runInBand",
     "test-dts": "node scripts/build.js shared reactivity runtime-core runtime-dom -dt -f esm-bundler && yarn test-dts-only",
     "test-dts-only": "tsc -p ./test-dts/tsconfig.json && tsc -p ./test-dts/tsconfig.build.json",
@@ -26,7 +25,7 @@
     "directory": "test-dts"
   },
   "gitHooks": {
-    "pre-commit": "ls-lint && lint-staged",
+    "pre-commit": "lint-staged",
     "commit-msg": "node scripts/verifyCommit.js"
   },
   "lint-staged": {
@@ -43,7 +42,6 @@
   },
   "devDependencies": {
     "@babel/types": "^7.12.0",
-    "@ls-lint/ls-lint": "^1.9.2",
     "@microsoft/api-extractor": "^7.9.15",
     "@rollup/plugin-commonjs": "^17.0.0",
     "@rollup/plugin-json": "^4.0.0",
