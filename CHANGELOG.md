@@ -1,6 +1,7 @@
 ## [3.0.5](https://github.com/vuejs/vue-next/compare/v3.0.4...v3.0.5) (2020-12-30)
 
-
+**Note:** this release contains a type-only change that requires TypeScript 4.0+, which
+may cause build issues in projects still using TS 3.x.
 ### Bug Fixes
 
 * **compiler-core:** fix missing createVNode import on nested v-for ([ad4d391](https://github.com/vuejs/vue-next/commit/ad4d3915d39515a3e9ff2de691f82cb922a314b9)), closes [#2718](https://github.com/vuejs/vue-next/issues/2718)
