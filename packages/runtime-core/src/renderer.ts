@@ -805,13 +805,13 @@ function baseCreateRenderer(
       hostSetScopeId(el, scopeId)
     }
     if (parentComponent) {
-      const treeOwnerId = parentComponent.type.__scopeId
+      let subTree = parentComponent.subTree
+      const treeOwnerId = subTree.scopeId
       // vnode's own scopeId and the current patched component's scopeId is
       // different - this is a slot content node.
       if (treeOwnerId && treeOwnerId !== scopeId) {
         hostSetScopeId(el, treeOwnerId + '-s')
       }
-      let subTree = parentComponent.subTree
       if (__DEV__ && subTree.type === Fragment) {
         subTree =
           filterSingleRoot(subTree.children as VNodeArrayChildren) || subTree
