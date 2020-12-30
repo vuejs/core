@@ -1,3 +1,25 @@
+## [3.0.5](https://github.com/vuejs/vue-next/compare/v3.0.4...v3.0.5) (2020-12-30)
+
+
+### Bug Fixes
+
+* **compiler-core:** fix missing createVNode import on nested v-for ([ad4d391](https://github.com/vuejs/vue-next/commit/ad4d3915d39515a3e9ff2de691f82cb922a314b9)), closes [#2718](https://github.com/vuejs/vue-next/issues/2718)
+* **compiler-sfc:** should keep template nodes with no content ([#2468](https://github.com/vuejs/vue-next/issues/2468)) ([5b9b37f](https://github.com/vuejs/vue-next/commit/5b9b37fc9b363be2989c1e9d76ab6e950cdfe2ad)), closes [#2463](https://github.com/vuejs/vue-next/issues/2463)
+* **compiler-sfc:** support transforming asset urls with full base url. ([#2477](https://github.com/vuejs/vue-next/issues/2477)) ([db786b1](https://github.com/vuejs/vue-next/commit/db786b1afe41c26611a215e6d6599d50312b9c2f))
+* **runtime-core:** component mount anchor memory leak ([#2459](https://github.com/vuejs/vue-next/issues/2459)) ([3867bb4](https://github.com/vuejs/vue-next/commit/3867bb4c14131ef94098a62bffba97a5b7d1fe66)), closes [#2458](https://github.com/vuejs/vue-next/issues/2458)
+* **runtime-core:** skip patchBlockChildren if n1.dynamicChildren is null ([#2717](https://github.com/vuejs/vue-next/issues/2717)) ([c59897c](https://github.com/vuejs/vue-next/commit/c59897c7b0dbd82b5bbf3fbca945c0639ac37fb8)), closes [#2715](https://github.com/vuejs/vue-next/issues/2715) [#2485](https://github.com/vuejs/vue-next/issues/2485)
+* **runtime-dom:** support mounting app on ShadowRoot ([#2447](https://github.com/vuejs/vue-next/issues/2447)) ([b2189ba](https://github.com/vuejs/vue-next/commit/b2189ba2f3400ab6bf9ee75b56ac11e65f7bd061)), closes [#2399](https://github.com/vuejs/vue-next/issues/2399)
+* **ssr:** properly handle ssr empty slot and fallback ([88f6b33](https://github.com/vuejs/vue-next/commit/88f6b33d054c18802375ec99c4a57e4acc649a02))
+* **transition:** ensure manual style manipulation in transition leave hooks work ([cbaa380](https://github.com/vuejs/vue-next/commit/cbaa3805064cb581fc2007cf63774c91d39844fe)), closes [#2720](https://github.com/vuejs/vue-next/issues/2720)
+* **transition:** ensure styles from *-leave-active trigger transition ([#2716](https://github.com/vuejs/vue-next/issues/2716)) ([3f8f9b6](https://github.com/vuejs/vue-next/commit/3f8f9b67b3b54a7ae8405baf6d28be7ec074509d)), closes [#2712](https://github.com/vuejs/vue-next/issues/2712)
+
+
+### Features
+
+* **devtools:** send instance ([3626ff0](https://github.com/vuejs/vue-next/commit/3626ff07fe5107080c52e85018070562c84b796e))
+
+
+
 ## [3.0.4](https://github.com/vuejs/vue-next/compare/v3.0.3...v3.0.4) (2020-12-02)
 
 
