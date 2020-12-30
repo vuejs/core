@@ -825,4 +825,30 @@ describe('KeepAlive', () => {
     await nextTick()
     expect(serializeInner(root)).toBe(`<div foo>changed</div>`)
   })
+
+  // #2892
+  test('should work with slots + scopeId', async () => {
+    const withChildId = withScopeId('foo')
+    const withRootId = withScopeId('root')
+
+    const Child = {
+      render: withChildId(function(this: any) {
+        return h(KeepAlive, null, {
+          default: withChildId(() => h('div', this.$slots.default()))
+        })
+      })
+    }
+
+    const App = {
+      render: withRootId(() =>
+        h(Child, null, {
+          default: withRootId(() => h('div'))
+        })
+      )
+    }
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(
+      `<div foo root><div root foo-s></div></div>`
+    )
+  })
 })
