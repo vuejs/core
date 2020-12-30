@@ -42,7 +42,7 @@
   },
   "devDependencies": {
     "@babel/types": "^7.12.0",
-    "@microsoft/api-extractor": "^7.9.15",
+    "@microsoft/api-extractor": "^7.12.1",
     "@rollup/plugin-commonjs": "^17.0.0",
     "@rollup/plugin-json": "^4.0.0",
     "@rollup/plugin-node-resolve": "^11.0.0",
@@ -74,7 +74,7 @@
     "semver": "^7.3.2",
     "serve": "^11.3.0",
     "ts-jest": "^26.2.0",
-    "typescript": "^4.0.2",
+    "typescript": "^4.1.3",
     "yorkie": "^2.0.0"
   }
 }
