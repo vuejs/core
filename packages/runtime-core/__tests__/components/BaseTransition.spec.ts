@@ -1100,7 +1100,9 @@ describe('BaseTransition', () => {
       const Child = {
         render: withChildId(function(this: any) {
           return h(BaseTransition, null, {
-            default: withChildId(() => h('div', this.$slots.default()))
+            default: withChildId(() =>
+              h('div', null, h('div', this.$slots.default()))
+            )
           })
         })
       }
@@ -1115,7 +1117,7 @@ describe('BaseTransition', () => {
       const root = nodeOps.createElement('div')
       render(h(App), root)
       expect(serializeInner(root)).toBe(
-        `<div foo root><div root foo-s></div></div>`
+        `<div foo root><div foo><div root foo-s></div></div></div>`
       )
     })
   })
