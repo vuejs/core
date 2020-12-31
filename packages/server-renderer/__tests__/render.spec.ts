@@ -715,5 +715,63 @@ function testRender(type: string, render: typeof renderToString) {
       const html = await render(app)
       expect(html).toBe(`<div>hello</div>`)
     })
+
+    test('mixed in serverPrefetch', async () => {
+      const msg = Promise.resolve('hello')
+      const app = createApp({
+        data() {
+          return {
+            msg: ''
+          }
+        },
+        mixins: [
+          {
+            async serverPrefetch() {
+              this.msg = await msg
+            }
+          }
+        ],
+        render() {
+          return h('div', this.msg)
+        }
+      })
+      const html = await render(app)
+      expect(html).toBe(`<div>hello</div>`)
+    })
+
+    test('many serverPrefetch', async () => {
+      const foo = Promise.resolve('foo')
+      const bar = Promise.resolve('bar')
+      const baz = Promise.resolve('baz')
+      const app = createApp({
+        data() {
+          return {
+            foo: '',
+            bar: '',
+            baz: ''
+          }
+        },
+        mixins: [
+          {
+            async serverPrefetch() {
+              this.foo = await foo
+            }
+          },
+          {
+            async serverPrefetch() {
+              this.bar = await bar
+            }
+          }
+        ],
+        async serverPrefetch() {
+          this.baz = await baz
+        },
+        render() {
+          return h('div', `${this.foo}${this.bar}${this.baz}`)
+        }
+      })
+      const html = await render(app)
+      expect(html).toBe(`<div>foobarbaz</div>`)
+    })
   })
 }
