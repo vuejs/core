@@ -130,16 +130,24 @@ export interface VNode<
    */
   [ReactiveFlags.SKIP]: true
   type: VNodeTypes
+  /** @CT: vnode.props
+   * vue-compiler 会将 template 解析成 render，
+   * 当 render 运行时，
+   * 我们在元素上写的所有 attributes （ @click-> onClick 属性）最终结果
+   * 都会在 vnode.props 上
+   */
   props: (VNodeProps & ExtraProps) | null
   key: string | number | null
   ref: VNodeNormalizedRef | null
   scopeId: string | null // SFC only
   children: VNodeNormalizedChildren
+  /** @CT：有值说明这是个组件 */
   component: ComponentInternalInstance | null
   dirs: DirectiveBinding[] | null
   transition: TransitionHooks<HostElement> | null
 
   // DOM
+  //@CT：用于动态更新该 DOM 元素的内容
   el: HostNode | null
   anchor: HostNode | null // fragment anchor
   target: HostElement | null // teleport target
@@ -152,7 +160,7 @@ export interface VNode<
   ssFallback: VNode | null
 
   // optimization only
-  /** type + children type */
+  /** @CT：type + children type */
   shapeFlag: number
   patchFlag: number
   dynamicProps: string[] | null
@@ -244,6 +252,7 @@ export function createBlock(
     true /* isBlock: prevent a block from tracking itself */
   )
   // save current block children on the block vnode
+  // @CT: 当是 fo
   vnode.dynamicChildren = currentBlock || (EMPTY_ARR as any)
   // close block
   closeBlock()
@@ -550,6 +559,7 @@ export function createCommentVNode(
     : createVNode(Comment, null, text)
 }
 
+// @CT: VNode string number boolean  null  undefined  void
 export function normalizeVNode(child: VNodeChild): VNode {
   if (child == null || typeof child === 'boolean') {
     // empty placeholder
@@ -580,6 +590,7 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
   } else if (isArray(children)) {
     type = ShapeFlags.ARRAY_CHILDREN
   } else if (typeof children === 'object') {
+    // @CT: vnode 为 element 的话，只有默认插槽即： default
     if (shapeFlag & ShapeFlags.ELEMENT || shapeFlag & ShapeFlags.TELEPORT) {
       // Normalize slot to plain children for plain element and Teleport
       const slot = (children as any).default

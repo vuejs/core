@@ -62,7 +62,8 @@ const arrayInstrumentations: Record<string, Function> = {}
 ;(['push', 'pop', 'shift', 'unshift', 'splice'] as const).forEach(key => {
   const method = Array.prototype[key] as any
   arrayInstrumentations[key] = function(this: unknown[], ...args: unknown[]) {
-    // 因为这些函数不止会一次触发 handler， 所有这里就不用 track
+    // 因为这些函数执行的时候，会触发读取 length 属性，导致 length 属性变化的时候，这个方法又执行了，从而导致又改变了数组的内容
+    // 所以在 effect 函数中，不要将加入这些方法和length在一起收集依赖，否则会出现一些意想不到的bug
     pauseTracking()
     const res = method.apply(this, args)
     resetTracking()
@@ -147,6 +148,7 @@ function createSetter(shallow = false) {
     const oldValue = (target as any)[key]
     // 不是浅reactive，
     if (!shallow) {
+      // 当再次读取这个属性时，又会进行 reactive
       value = toRaw(value)
       if (!isArray(target) && isRef(oldValue) && !isRef(value)) {
         oldValue.value = value

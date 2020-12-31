@@ -163,9 +163,12 @@ export interface RendererInternals<
 // be directly exported. In order to avoid maintaining function signatures in
 // two places, we declare them once here and use them inside the closure.
 type PatchFn = (
+  /** old VNode */
   n1: VNode | null, // null means this is a mount
+  /** new VNode */
   n2: VNode,
   container: RendererElement,
+  // @CT: https://developer.mozilla.org/en-US/docs/Web/API/Node/insertBefore
   anchor?: RendererNode | null,
   parentComponent?: ComponentInternalInstance | null,
   parentSuspense?: SuspenseBoundary | null,
@@ -443,6 +446,9 @@ function baseCreateRenderer(
     insertStaticContent: hostInsertStaticContent
   } = options
 
+  // @CT: 当 patch(prevTree, nextTree...) 的时候
+  // nextTree 还只是一个 vnode tree， 其中的 component vnode 还没有 mount
+  // 只有当经过 mountComponent 的时候，vnode.component 才会有值
   // Note: functions inside this closure should use `const xxx = () => {}`
   // style in order to prevent being inlined by minifiers.
   const patch: PatchFn = (
@@ -459,6 +465,7 @@ function baseCreateRenderer(
     if (n1 && !isSameVNodeType(n1, n2)) {
       anchor = getNextHostNode(n1)
       unmount(n1, parentComponent, parentSuspense, true)
+      // @CT: 这里将 n1 设置为 null，目的是将 n2 进行挂载
       n1 = null
     }
 
@@ -841,6 +848,7 @@ function baseCreateRenderer(
       const child = (children[i] = optimized
         ? cloneIfMounted(children[i] as VNode)
         : normalizeVNode(children[i]))
+      // @CT: patch 的目的是 将 vnode 挂载到 vdom 上，即：给 vnode 绑定 el 元素
       patch(
         null,
         child,
@@ -1105,6 +1113,8 @@ function baseCreateRenderer(
     isSVG: boolean,
     optimized: boolean
   ) => {
+    // @CT: vue 允许使用 fragment 了，是通过在两边加上 text 元素来实现的
+    // n1 为 null 说明是挂载
     const fragmentStartAnchor = (n2.el = n1 ? n1.el : hostCreateText(''))!
     const fragmentEndAnchor = (n2.anchor = n1 ? n1.anchor : hostCreateText(''))!
 
@@ -1253,6 +1263,10 @@ function baseCreateRenderer(
     if (__DEV__) {
       startMeasure(instance, `init`)
     }
+    /**@CT:
+     * 执行 setup 函数
+     * 初始化生命周期函数 setup -> beforeCreate -> created
+     */
     setupComponent(instance)
     if (__DEV__) {
       endMeasure(instance, `init`)
@@ -1289,6 +1303,7 @@ function baseCreateRenderer(
   }
 
   const updateComponent = (n1: VNode, n2: VNode, optimized: boolean) => {
+    // @CT: 此时 n2 还只是 vnode tree 还没有挂载，所以 n2.component 为 null
     const instance = (n2.component = n1.component)!
     if (shouldUpdateComponent(n1, n2, optimized)) {
       if (
@@ -1375,6 +1390,15 @@ function baseCreateRenderer(
           if (__DEV__) {
             startMeasure(instance, `patch`)
           }
+          /**@CT: 这里要 patch 的原因：
+           * 此时 subTree 只是一个 vnode 组成的树，还没有与 el 形成对应关系，
+           * 所以要进一步的挂载组件和元素来构建 VDOM，即：patch 的过程就是 构建 VDOM 的过程。
+           * VDOM 只不过是 vnode + el 的绑定关系。
+           *
+           *
+           * 当 subTree.type 是一个 ELEMENT 时，
+           * patch 之后，subTree.el 就是该元素（通过 nodeOpts.createElement 创建的）
+           */
           patch(
             null,
             subTree,
@@ -1387,6 +1411,7 @@ function baseCreateRenderer(
           if (__DEV__) {
             endMeasure(instance, `patch`)
           }
+          // @CT: 将组件的 el 赋值到 vnode.el 中
           initialVNode.el = subTree.el
         }
         // mounted hook
@@ -1418,6 +1443,9 @@ function baseCreateRenderer(
         // updateComponent
         // This is triggered by mutation of component's own state (next: null)
         // OR parent calling processComponent (next: VNode)
+        // @CT: next 有值说明是 instance.vnode 更新了，即父组件调用了 renderComponentRoot 导致 vnode 重新生成
+        // 此时 instance.next 为 newVNode, instance.vnode 为 oldVNode
+        /** @CT: 当组件自我触发更新的时候，vnode 是不会有变化的，此时只是组件的属性发生了变化 */
         let { next, bu, u, parent, vnode } = instance
         let originNext = next
         let vnodeHook: VNodeHook | null | undefined
@@ -1425,6 +1453,8 @@ function baseCreateRenderer(
           pushWarningContext(next || instance.vnode)
         }
 
+        // @CT: 当 next 有值的时候，说明 parentComponent 触发的组件更新
+        // 此时要在 updateComponentPreRender 中将 instance.vnode 替换掉最新的虚拟节点
         if (next) {
           next.el = vnode.el
           updateComponentPreRender(instance, next, optimized)
@@ -1445,6 +1475,7 @@ function baseCreateRenderer(
         if (__DEV__) {
           startMeasure(instance, `render`)
         }
+        // @CT: 重新生成当前组件的 VDOM，
         const nextTree = renderComponentRoot(instance)
         if (__DEV__) {
           endMeasure(instance, `render`)
@@ -1515,6 +1546,9 @@ function baseCreateRenderer(
     flushPreFlushCbs(undefined, instance.update)
   }
 
+  // @CT: 比对元素的 children， children 只会有三种情况：
+  // text、null、array
+  // 如果是数组，就在分发到具体的 keyed or unkeyed 的比对处理
   const patchChildren: PatchChildrenFn = (
     n1,
     n2,
@@ -1563,6 +1597,7 @@ function baseCreateRenderer(
     }
 
     // children has 3 possibilities: text, array or no children.
+    // @CT：vnode.children 只有三种可能性
     if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
       // text children fast path
       if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
@@ -1742,9 +1777,13 @@ function baseCreateRenderer(
     // (a b)
     // c (a b)
     // i = 0, e1 = -1, e2 = 0
+    // (a, b), (e, f)
+    // (a, b), c, (e, f)
+    // i = 2, e1 = 1, e2 = 2
     if (i > e1) {
       if (i <= e2) {
         const nextPos = e2 + 1
+        // @CT: 找到未处理节点的下一个节点当作 anchor
         const anchor = nextPos < l2 ? (c2[nextPos] as VNode).el : parentAnchor
         while (i <= e2) {
           patch(
@@ -1805,6 +1844,7 @@ function baseCreateRenderer(
 
       // 5.2 loop through old children left to be patched and try to patch
       // matching nodes & remove nodes that are no longer present
+      // @CT: unmount + patch
       let j
       let patched = 0
       const toBePatched = e2 - s2 + 1
@@ -1819,6 +1859,10 @@ function baseCreateRenderer(
       const newIndexToOldIndexMap = new Array(toBePatched)
       for (i = 0; i < toBePatched; i++) newIndexToOldIndexMap[i] = 0
 
+      // @CT: 通过对 oldChildren 进行循环，在 newChildren 中找到对应的 key
+      // 进行 patch 进行更新
+      // 而 oldChildren 中没有找到的，就要进行 unmount
+      // 而 newChildren 中新增的，就要进行 mount
       for (i = s1; i <= e1; i++) {
         const prevChild = c1[i]
         if (patched >= toBePatched) {
@@ -1845,11 +1889,14 @@ function baseCreateRenderer(
           unmount(prevChild, parentComponent, parentSuspense, true)
         } else {
           newIndexToOldIndexMap[newIndex - s2] = i + 1
+          // @CT：indicate old vnode 的递增顺序和 new old 的递增顺序保持一致？
+          // 如果循环结束一直保持一致的话，moved 为 false，说明两者顺序保持一致，不需要移动新节点的顺序
           if (newIndex >= maxNewIndexSoFar) {
             maxNewIndexSoFar = newIndex
           } else {
             moved = true
           }
+          // @CT: 到达这一步说明 patch 的两个节点一定是相同元素的节点
           patch(
             prevChild,
             c2[newIndex] as VNode,
@@ -1864,6 +1911,7 @@ function baseCreateRenderer(
         }
       }
 
+      // @CT：到达这一步后就只剩下了，新节点、已经更新过的节点、已经更新过的节点+需要移动的节点
       // 5.3 move and mount
       // generate longest stable subsequence only when nodes have moved
       const increasingNewIndexSequence = moved
@@ -2176,6 +2224,7 @@ function baseCreateRenderer(
     }
   }
 
+  // @CT: 找到同下一个邻居元素节点
   const getNextHostNode: NextFn = vnode => {
     if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
       return getNextHostNode(vnode.component!.subTree)
@@ -2187,6 +2236,7 @@ function baseCreateRenderer(
   }
 
   const render: RootRenderFunction = (vnode, container) => {
+    // vnode, container
     if (vnode == null) {
       if (container._vnode) {
         unmount(container._vnode, null, null, true)

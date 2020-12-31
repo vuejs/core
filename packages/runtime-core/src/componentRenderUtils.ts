@@ -42,6 +42,7 @@ export function markAttrsAccessed() {
   accessedAttrs = true
 }
 
+/** @CT: 可以保证每次组件更新的时候，其组件树获取的是最新的状态 */
 export function renderComponentRoot(
   instance: ComponentInternalInstance
 ): VNode {
@@ -114,6 +115,7 @@ export function renderComponentRoot(
         : getFunctionalFallthrough(attrs)
     }
 
+    // @CT：合并 non-props
     // attr merging
     // in dev mode, comments are preserved, and it's possible for a template
     // to have comments along side the root element which makes it a fragment
@@ -123,10 +125,12 @@ export function renderComponentRoot(
       ;[root, setRoot] = getChildRoot(result)
     }
 
+    // @CT：默认继承 non-props
     if (Component.inheritAttrs !== false && fallthroughAttrs) {
       const keys = Object.keys(fallthroughAttrs)
       const { shapeFlag } = root
       if (keys.length) {
+        // @CT：当根元素是 element 或者 component 是则自动添加
         if (
           shapeFlag & ShapeFlags.ELEMENT ||
           shapeFlag & ShapeFlags.COMPONENT
@@ -297,6 +301,7 @@ const isElementRoot = (vnode: VNode) => {
   )
 }
 
+// @CT: 当 vnode 上的事件处理程序改变时，return false
 export function shouldUpdateComponent(
   prevVNode: VNode,
   nextVNode: VNode,

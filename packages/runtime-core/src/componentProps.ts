@@ -126,9 +126,13 @@ type NormalizedProp =
 export type NormalizedProps = Record<string, NormalizedProp>
 export type NormalizedPropsOptions = [NormalizedProps, string[]] | []
 
+/** @CT: 通过比较 vnode 上的 props 和 instnace.propsOptions、 instance.emitsOptions 初始化 instance.props、instance.attrs
+ * 将组件选项上声明的 props ，赋值到 instance.props 上
+ * 没有声明的 props，即 non-props 和 emits， 赋值到 instance.attrs 上
+ */
 export function initProps(
   instance: ComponentInternalInstance,
-  rawProps: Data | null,
+  rawProps: Data | null, // @CT: rawProps 为 vnode 上的属性
   isStateful: number, // result of bitwise flag comparison
   isSSR = false
 ) {
@@ -143,6 +147,9 @@ export function initProps(
 
   if (isStateful) {
     // stateful
+    // @CT: 这里只需要 shallowReactive，因为 props 中的对象不需要代理，默认就好
+    // 因为当 instance.update 执行的时候，会更新 instance.props 中的数据，且 instance.props 内嵌的对象一定是 proxy 代理过的
+    // 只需要通过 shallowReactive 代理就可以达到目的了
     instance.props = isSSR ? props : shallowReactive(props)
   } else {
     if (!instance.type.props) {
@@ -156,6 +163,9 @@ export function initProps(
   instance.attrs = attrs
 }
 
+// @CT: 父组件的 state 发生变化
+// 导致子组件 vnode 上的 attribute 发生变化
+// 所以要同步更新 instance.props， 从而触发该组件的 instance.update
 export function updateProps(
   instance: ComponentInternalInstance,
   rawProps: Data | null,
@@ -273,6 +283,8 @@ function setFullProps(
 ) {
   const [options, needCastKeys] = instance.propsOptions
   if (rawProps) {
+    // @CT: 从 vnode 上拿到最新的 props，更新到 instance.props 上
+    // @CT: vnode.props 上的属性值是这种形式 props.a-b props.b
     for (const key in rawProps) {
       const value = rawProps[key]
       // key, ref are reserved and never passed down
@@ -293,6 +305,7 @@ function setFullProps(
     }
   }
 
+  // @CT: propsOptions 上有校验
   if (needCastKeys) {
     const rawCurrentProps = toRaw(props)
     for (let i = 0; i < needCastKeys.length; i++) {
@@ -345,6 +358,7 @@ function resolvePropValue(
 }
 
 export function normalizePropsOptions(
+  // @CT: comp 是一个组件选项， 单文件 vue， import 之后也是一个组件选项
   comp: ConcreteComponent,
   appContext: AppContext,
   asMixin = false
@@ -381,11 +395,13 @@ export function normalizePropsOptions(
     return (comp.__props = EMPTY_ARR as any)
   }
 
+  // @CT: options api 中使用的是这种写法 props: ['a','b','c']
   if (isArray(raw)) {
     for (let i = 0; i < raw.length; i++) {
       if (__DEV__ && !isString(raw[i])) {
         warn(`props must be strings when using array syntax.`, raw[i])
       }
+      // @CT: ['a-b', 'b-c', 'c'] -> ['aB', 'bC', 'c']
       const normalizedKey = camelize(raw[i])
       if (validatePropName(normalizedKey)) {
         normalized[normalizedKey] = EMPTY_OBJ

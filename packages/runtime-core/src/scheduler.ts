@@ -33,6 +33,7 @@ let isFlushPending = false
 const queue: SchedulerJob[] = []
 let flushIndex = 0
 
+// @CT：这些队列主要是用于一些声明周期 hooks，watch 等。
 const pendingPreFlushCbs: SchedulerCb[] = []
 let activePreFlushCbs: SchedulerCb[] | null = null
 let preFlushIndex = 0
@@ -53,6 +54,8 @@ export function nextTick(
   this: ComponentPublicInstance | void,
   fn?: () => void
 ): Promise<void> {
+  // @CT: 如果 currentFlushPromise 存在，则表明
+  // 在当前 microtask 中存在要更新的组件，不用重复再向任务队列中添加任务
   const p = currentFlushPromise || resolvedPromise
   return fn ? p.then(this ? fn.bind(this) : fn) : p
 }
@@ -77,6 +80,8 @@ export function queueJob(job: SchedulerJob) {
   }
 }
 
+// @CT：向 microtask 中添加一个更新 VDOM 的集合
+// 入队之后，判断是否要向任务队列中添加一个刷新任务
 function queueFlush() {
   if (!isFlushing && !isFlushPending) {
     isFlushPending = true
@@ -102,6 +107,7 @@ function queueCb(
       !activeQueue ||
       !activeQueue.includes(
         cb,
+        // @CT：如果允许递归，则可重复添加，否则以当前下标开始
         (cb as SchedulerJob).allowRecurse ? index + 1 : index
       )
     ) {
@@ -143,6 +149,7 @@ export function flushPreFlushCbs(
       if (__DEV__) {
         checkRecursiveUpdates(seen!, activePreFlushCbs[preFlushIndex])
       }
+      // @CT：SchedulerJob 有可能再次触发当前函数
       activePreFlushCbs[preFlushIndex]()
     }
     activePreFlushCbs = null

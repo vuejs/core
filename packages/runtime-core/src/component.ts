@@ -196,6 +196,7 @@ export type InternalRenderFunction = {
  */
 export interface ComponentInternalInstance {
   uid: number
+  /** 对应 vnode 中的 type， 即 vue 单文件中的默认导出的选项对象 */
   type: ConcreteComponent
   parent: ComponentInternalInstance | null
   root: ComponentInternalInstance
@@ -402,6 +403,11 @@ const emptyAppContext = createAppContext()
 
 let uid = 0
 
+/** @CT: 创建一个组件实例对象，初始化组件实例的一些属性。
+ * 功能
+ *  1. 创建一个组件实例
+ *  2. 解析选项对象中的 props，emits ，初始化到实例属性（ propsOptions、emitsOptions ）上
+ */
 export function createComponentInstance(
   vnode: VNode,
   parent: ComponentInternalInstance | null,
@@ -517,12 +523,19 @@ export function validateComponentName(name: string, config: AppConfig) {
 
 export let isInSSRComponentSetup = false
 
+/** @CT: 属性化组件实例上的 props、emits、 slots，初始化状态组件
+ * 只有在选项对象中声明的 props 属性，其值才会出现再 instance.props 中
+ * 而没有声明的属性，但是 vnode.props 属性上有时，
+ * 其值会存在 instance.attrs（包括没有在 emits 选项上的事件） 中，
+ * 即官方所说的 non-props, 默认包括 class、style、id（如果声明的话）
+ */
 export function setupComponent(
   instance: ComponentInternalInstance,
   isSSR = false
 ) {
   isInSSRComponentSetup = isSSR
 
+  // @CT: props 是创建虚拟节点时元素上的 attributes
   const { props, children, shapeFlag } = instance.vnode
   const isStateful = shapeFlag & ShapeFlags.STATEFUL_COMPONENT
   initProps(instance, props, isStateful, isSSR)
@@ -572,7 +585,9 @@ function setupStatefulComponent(
     const setupContext = (instance.setupContext =
       setup.length > 1 ? createSetupContext(instance) : null)
 
+    // @CT：这里的设置是为了，在 setup 函数中写的生命周期函数可以挂载到当前实例上！
     currentInstance = instance
+    // @CT：执行 setup 不需要收集依赖
     pauseTracking()
     const setupResult = callWithErrorHandling(
       setup,
@@ -633,6 +648,7 @@ export function handleSetupResult(
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
       instance.devtoolsRawSetupState = setupResult
     }
+    // @CT: 这里对 setup 返回的值进行了代理，使在外部使用的时候，可以进行解套 ref
     instance.setupState = proxyRefs(setupResult)
     if (__DEV__) {
       exposeSetupStateOnRenderContext(instance)
@@ -662,6 +678,10 @@ export function registerRuntimeCompiler(_compile: any) {
   compile = _compile
 }
 
+/** @CT：设置 instance.render 即：
+ * 有 template？ -> render function
+ * 从这里可以看到最终组件的 VDOM 是通过 render 函数来构建的
+ */
 function finishComponentSetup(
   instance: ComponentInternalInstance,
   isSSR: boolean
@@ -763,6 +783,7 @@ export function createSetupContext(
     // properties (overwrites should not be done in prod)
     return Object.freeze({
       get props() {
+        // instance.props 本来就是 proxy， 所有不用再代理了
         return instance.props
       },
       get attrs() {

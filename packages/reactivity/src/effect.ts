@@ -280,6 +280,7 @@ export function trigger(
       })
     }
     if (effect.options.scheduler) {
+      // @CT: 将 effect 的执行时机交给其他调度器
       effect.options.scheduler(effect)
     } else {
       effect()

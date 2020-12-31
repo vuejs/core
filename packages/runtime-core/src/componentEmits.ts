@@ -48,6 +48,8 @@ export function emit(
   event: string,
   ...rawArgs: any[]
 ) {
+  // @CT: 在组件元素上声明的所有 attributes e.g: <my-component a="a" @click="onClick" />
+  // props = {a: 'a', onClick: () => instance.proxy.onClick() }
   const props = instance.vnode.props || EMPTY_OBJ
 
   if (__DEV__) {
@@ -80,6 +82,26 @@ export function emit(
   let args = rawArgs
   const isModelListener = event.startsWith('update:')
 
+  /**
+   * @CT: 当我们在组件上这样写时： <my-component v-model:show.trim="xxx" />
+   * 最终的这个 v-model 属性经过 compiler 过后，vnode.props 上将存在
+   * {
+   *    show: 'xx',
+   *    'onUpdate:show': () => {},
+   *    showModifiers: {
+   *        trim: true
+   *    }
+   * }
+   *
+   * 而默认的 <my-component v-model="xxx" /> 为这种形式
+   * {
+   *    modelValue: 'xx',
+   *    'onUpdate:modelValue': () => {},
+   *    modelModifiers: {
+   *        trim: true
+   *    }
+   * }
+   */
   // for v-model update:xxx events, apply modifiers on args
   const modelArg = isModelListener && event.slice(7)
   if (modelArg && modelArg in props) {
@@ -115,6 +137,7 @@ export function emit(
   }
 
   // convert handler name to camelCase. See issue #2249
+  // @CT: $emit("update:show") => $emit("onUpdate:show")
   let handlerName = toHandlerKey(camelize(event))
   let handler = props[handlerName]
   // for v-model update:xxx events, also trigger kebab-case equivalent
