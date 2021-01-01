@@ -9,6 +9,7 @@ export { generateCodeFrame } from '@vue/compiler-core'
 // Types
 export {
   SFCParseOptions,
+  SFCParseResult,
   SFCDescriptor,
   SFCBlock,
   SFCTemplateBlock,
