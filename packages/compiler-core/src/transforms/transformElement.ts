@@ -62,18 +62,21 @@ const directiveImportMap = new WeakMap<DirectiveNode, symbol>()
 
 // generate a JavaScript AST for this element's codegen
 export const transformElement: NodeTransform = (node, context) => {
-  if (
-    !(
-      node.type === NodeTypes.ELEMENT &&
-      (node.tagType === ElementTypes.ELEMENT ||
-        node.tagType === ElementTypes.COMPONENT)
-    )
-  ) {
-    return
-  }
   // perform the work on exit, after all child expressions have been
   // processed and merged.
   return function postTransformElement() {
+    node = context.currentNode!
+
+    if (
+      !(
+        node.type === NodeTypes.ELEMENT &&
+        (node.tagType === ElementTypes.ELEMENT ||
+          node.tagType === ElementTypes.COMPONENT)
+      )
+    ) {
+      return
+    }
+
     const { tag, props } = node
     const isComponent = node.tagType === ElementTypes.COMPONENT
 
