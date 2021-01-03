@@ -33,7 +33,7 @@ const enum DOMNodeTypes {
 
 let hasMismatch = false
 
-export const isSVGContainer = (container: Element) =>
+const isSVGContainer = (container: Element) =>
   /svg/.test(container.namespaceURI!) && container.tagName !== 'foreignObject'
 
 const isComment = (node: Node): node is Comment =>
