@@ -59,8 +59,7 @@ import {
 import {
   isTeleportDisabled,
   TeleportImpl,
-  TeleportVNode,
-  isTargetSVG
+  TeleportVNode
 } from './components/Teleport'
 import { isKeepAlive, KeepAliveContext } from './components/KeepAlive'
 import { registerHMR, unregisterHMR, isHmrUpdating } from './hmr'
@@ -670,7 +669,7 @@ function baseCreateRenderer(
     isSVG =
       isSVG ||
       (n2.type as string) === 'svg' ||
-      (isTargetSVG(container) && isSVGContainer(container as Element))
+      isSVGContainer(container as Element)
     if (n1 == null) {
       mountElement(
         n2,
