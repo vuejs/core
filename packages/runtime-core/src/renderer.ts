@@ -68,7 +68,11 @@ import {
   callWithErrorHandling,
   callWithAsyncErrorHandling
 } from './errorHandling'
-import { createHydrationFunctions, RootHydrateFunction } from './hydration'
+import {
+  createHydrationFunctions,
+  RootHydrateFunction,
+  isSVGContainer
+} from './hydration'
 import { invokeDirectiveHook } from './directives'
 import { startMeasure, endMeasure } from './profiling'
 import { ComponentPublicInstance } from './componentPublicInstance'
@@ -662,7 +666,7 @@ function baseCreateRenderer(
     isSVG: boolean,
     optimized: boolean
   ) => {
-    isSVG = isSVG || (n2.type as string) === 'svg'
+    isSVG = isSVG || (n2.type as string) === 'svg' || isSVGContainer(container)
     if (n1 == null) {
       mountElement(
         n2,
