@@ -67,7 +67,7 @@ export const createApp = ((...args) => {
     }
     // clear content before mounting
     container.innerHTML = ''
-    const proxy = mount(container)
+    const proxy = mount(container, false, container instanceof SVGElement)
     if (container instanceof Element) {
       container.removeAttribute('v-cloak')
       container.setAttribute('data-v-app', '')
@@ -89,7 +89,7 @@ export const createSSRApp = ((...args) => {
   app.mount = (containerOrSelector: Element | ShadowRoot | string): any => {
     const container = normalizeContainer(containerOrSelector)
     if (container) {
-      return mount(container, true)
+      return mount(container, true, container instanceof Element)
     }
   }
 
