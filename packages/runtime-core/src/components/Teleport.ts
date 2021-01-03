@@ -24,7 +24,7 @@ export const isTeleport = (type: any): boolean => type.__isTeleport
 export const isTeleportDisabled = (props: VNode['props']): boolean =>
   props && (props.disabled || props.disabled === '')
 
-const isTargetSVG = (target: RendererElement): boolean =>
+export const isTargetSVG = (target: RendererElement): boolean =>
   typeof SVGElement !== 'undefined' && target instanceof SVGElement
 
 const resolveTarget = <T = RendererElement>(

@@ -59,7 +59,8 @@ import {
 import {
   isTeleportDisabled,
   TeleportImpl,
-  TeleportVNode
+  TeleportVNode,
+  isTargetSVG
 } from './components/Teleport'
 import { isKeepAlive, KeepAliveContext } from './components/KeepAlive'
 import { registerHMR, unregisterHMR, isHmrUpdating } from './hmr'
@@ -68,11 +69,7 @@ import {
   callWithErrorHandling,
   callWithAsyncErrorHandling
 } from './errorHandling'
-import {
-  createHydrationFunctions,
-  RootHydrateFunction,
-  isSVGContainer
-} from './hydration'
+import { createHydrationFunctions, RootHydrateFunction } from './hydration'
 import { invokeDirectiveHook } from './directives'
 import { startMeasure, endMeasure } from './profiling'
 import { ComponentPublicInstance } from './componentPublicInstance'
@@ -666,7 +663,7 @@ function baseCreateRenderer(
     isSVG: boolean,
     optimized: boolean
   ) => {
-    isSVG = isSVG || (n2.type as string) === 'svg' || isSVGContainer(container)
+    isSVG = isSVG || (n2.type as string) === 'svg' || isTargetSVG(container)
     if (n1 == null) {
       mountElement(
         n2,
