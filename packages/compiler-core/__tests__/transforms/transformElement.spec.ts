@@ -3,7 +3,8 @@ import {
   baseParse as parse,
   transform,
   ErrorCodes,
-  BindingTypes
+  BindingTypes,
+  NodeTransform
 } from '../../src'
 import {
   RESOLVE_COMPONENT,
@@ -937,6 +938,37 @@ describe('compiler: element transform', () => {
       type: NodeTypes.VNODE_CALL,
       tag: `"div"`,
       isBlock: true
+    })
+  })
+
+  test('should process node when node has been replaced', () => {
+    // a NodeTransform that swaps out <div id="foo" /> with <span id="foo" />
+    const customNodeTransform: NodeTransform = (node, context) => {
+      if (
+        node.type === NodeTypes.ELEMENT &&
+        node.tag === 'div' &&
+        node.props.some(
+          prop =>
+            prop.type === NodeTypes.ATTRIBUTE &&
+            prop.name === 'id' &&
+            prop.value &&
+            prop.value.content === 'foo'
+        )
+      ) {
+        context.replaceNode({
+          ...node,
+          tag: 'span'
+        })
+      }
+    }
+    const ast = parse(`<div><div id="foo" /></div>`)
+    transform(ast, {
+      nodeTransforms: [transformElement, transformText, customNodeTransform]
+    })
+    expect((ast as any).children[0].children[0].codegenNode).toMatchObject({
+      type: NodeTypes.VNODE_CALL,
+      tag: '"span"',
+      isBlock: false
     })
   })
 })
