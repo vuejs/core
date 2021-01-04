@@ -228,7 +228,7 @@ export function createAppAPI<HostElement>(
       mount(
         rootContainer: HostElement,
         isHydrate?: boolean,
-        isSVG = false
+        isSVG?: boolean
       ): any {
         if (!isMounted) {
           const vnode = createVNode(
