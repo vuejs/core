@@ -108,6 +108,7 @@ function injectNativeTagCheck(app: App) {
   })
 }
 
+// dev only
 function injectCustomElementCheck(app: App) {
   if (isRuntimeOnly()) {
     const value = app.config.isCustomElement

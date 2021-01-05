@@ -654,6 +654,7 @@ type CompileFunction = (
 
 let compile: CompileFunction | undefined
 
+// dev only
 export const isRuntimeOnly = () => !compile
 
 /**
