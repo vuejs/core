@@ -249,7 +249,7 @@ export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
   innerHTML?: string
 
   class?: any
-  style?: string | CSSProperties
+  style?: string | CSSProperties | Array<string | CSSProperties>
 
   // Standard HTML Attributes
   accesskey?: string
