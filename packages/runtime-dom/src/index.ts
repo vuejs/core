@@ -119,7 +119,7 @@ function normalizeContainer(
   }
   if (
     __DEV__ &&
-    container instanceof ShadowRoot &&
+    container instanceof window.ShadowRoot &&
     container.mode === 'closed'
   ) {
     warn(
