@@ -654,6 +654,8 @@ type CompileFunction = (
 
 let compile: CompileFunction | undefined
 
+export const isRuntimeOnly = () => !compile
+
 /**
  * For runtime-dom to register the compiler.
  * Note the exported method uses any to avoid d.ts relying on the compiler types.
