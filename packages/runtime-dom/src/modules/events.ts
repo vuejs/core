@@ -19,9 +19,15 @@ let _getNow: () => number = Date.now
 // timestamp can either be hi-res (relative to page load) or low-res
 // (relative to UNIX epoch), so in order to compare time we have to use the
 // same timestamp type when saving the flush timestamp.
+
+// #2937, in firefox 53 and earlier versions, the timestamp is microseconds
+// of the current time, resulting in the binding event not being triggered
 if (
   typeof document !== 'undefined' &&
-  _getNow() > document.createEvent('Event').timeStamp
+  (_getNow() > document.createEvent('Event').timeStamp ||
+    _getNow().toString.length -
+      (document.createEvent('Event').timeStamp / 1000).toString.length >=
+      0)
 ) {
   // if the low-res timestamp which is bigger than the event timestamp
   // (which is evaluated AFTER) it means the event is using a hi-res timestamp,
