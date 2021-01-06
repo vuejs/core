@@ -261,7 +261,7 @@ export interface ComponentInternalInstance {
    */
   directives: Record<string, Directive> | null
   /**
-   * reoslved props options
+   * resolved props options
    * @internal
    */
   propsOptions: NormalizedPropsOptions
