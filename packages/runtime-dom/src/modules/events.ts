@@ -25,8 +25,8 @@ let _getNow: () => number = Date.now
 if (
   typeof document !== 'undefined' &&
   (_getNow() > document.createEvent('Event').timeStamp ||
-    _getNow().toString.length -
-      (document.createEvent('Event').timeStamp / 1000).toString.length >=
+    _getNow().toString().length -
+      (document.createEvent('Event').timeStamp / 1000).toString().length >=
       0)
 ) {
   // if the low-res timestamp which is bigger than the event timestamp
