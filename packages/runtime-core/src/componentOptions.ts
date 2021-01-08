@@ -186,7 +186,6 @@ export interface ComponentOptionsBase<
 }
 
 export type ComponentOptionsWithoutProps<
-  Props = {},
   RawBindings = {},
   D = {},
   C extends ComputedOptions = {},
@@ -196,7 +195,7 @@ export type ComponentOptionsWithoutProps<
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string
 > = ComponentOptionsBase<
-  Props,
+  /* Props */ {},
   RawBindings,
   D,
   C,
