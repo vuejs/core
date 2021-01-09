@@ -23,23 +23,23 @@ export function provide<T>(key: InjectionKey<T> | string | number, value: T) {
       provides = currentInstance.provides = Object.create(parentProvides)
     }
     // TS doesn't allow symbol as index type
-    provides[key as string] = value
+    provides[key as string | number] = value
   }
 }
 
-export function inject<T>(key: InjectionKey<T> | string): T | undefined
+export function inject<T>(key: InjectionKey<T> | string | number): T | undefined
 export function inject<T>(
-  key: InjectionKey<T> | string,
+  key: InjectionKey<T> | string | number,
   defaultValue: T,
   treatDefaultAsFactory?: false
 ): T
 export function inject<T>(
-  key: InjectionKey<T> | string,
+  key: InjectionKey<T> | string | number,
   defaultValue: T | (() => T),
   treatDefaultAsFactory: true
 ): T
 export function inject(
-  key: InjectionKey<any> | string,
+  key: InjectionKey<any> | string | number,
   defaultValue?: unknown,
   treatDefaultAsFactory = false
 ) {
@@ -55,9 +55,9 @@ export function inject(
         ? instance.vnode.appContext && instance.vnode.appContext.provides
         : instance.parent.provides
 
-    if (provides && (key as string | symbol) in provides) {
+    if (provides && (key as string | symbol | number) in provides) {
       // TS doesn't allow symbol as index type
-      return provides[key as string]
+      return provides[key as string | number]
     } else if (arguments.length > 1) {
       return treatDefaultAsFactory && isFunction(defaultValue)
         ? defaultValue()
