@@ -437,6 +437,7 @@ const emit = defineEmit(['a', 'b'])
         fn: (n: number) => void
         functionRef: Function
         objectRef: Object
+        dateRef: Date
         array: string[]
         arrayRef: Array<any>
         tuple: [number, number]
@@ -462,6 +463,7 @@ const emit = defineEmit(['a', 'b'])
       expect(content).toMatch(`fn: { type: Function, required: true }`)
       expect(content).toMatch(`functionRef: { type: Function, required: true }`)
       expect(content).toMatch(`objectRef: { type: Object, required: true }`)
+      expect(content).toMatch(`dateRef: { type: Date, required: true }`)
       expect(content).toMatch(`array: { type: Array, required: true }`)
       expect(content).toMatch(`arrayRef: { type: Array, required: true }`)
       expect(content).toMatch(`tuple: { type: Array, required: true }`)
@@ -490,6 +492,7 @@ const emit = defineEmit(['a', 'b'])
         fn: BindingTypes.PROPS,
         functionRef: BindingTypes.PROPS,
         objectRef: BindingTypes.PROPS,
+        dateRef: BindingTypes.PROPS,
         array: BindingTypes.PROPS,
         arrayRef: BindingTypes.PROPS,
         tuple: BindingTypes.PROPS,

@@ -1233,6 +1233,7 @@ function inferRuntimeType(
           case 'Map':
           case 'WeakSet':
           case 'WeakMap':
+          case 'Date':
             return [node.typeName.name]
           case 'Record':
           case 'Partial':

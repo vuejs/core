@@ -705,6 +705,7 @@ export default _defineComponent({
     fn: { type: Function, required: true },
     functionRef: { type: Function, required: true },
     objectRef: { type: Object, required: true },
+    dateRef: { type: Date, required: true },
     array: { type: Array, required: true },
     arrayRef: { type: Array, required: true },
     tuple: { type: Array, required: true },
@@ -728,6 +729,7 @@ export default _defineComponent({
         fn: (n: number) => void
         functionRef: Function
         objectRef: Object
+        dateRef: Date
         array: string[]
         arrayRef: Array<any>
         tuple: [number, number]
