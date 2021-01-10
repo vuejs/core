@@ -706,6 +706,8 @@ export default _defineComponent({
     functionRef: { type: Function, required: true },
     objectRef: { type: Object, required: true },
     dateRef: { type: Date, required: true },
+    regExpRef: { type: RegExp, required: true },
+    errorRef: { type: Error, required: true },
     array: { type: Array, required: true },
     arrayRef: { type: Array, required: true },
     tuple: { type: Array, required: true },
@@ -730,6 +732,8 @@ export default _defineComponent({
         functionRef: Function
         objectRef: Object
         dateRef: Date
+        regExpRef: RegExp
+        errorRef: Error
         array: string[]
         arrayRef: Array<any>
         tuple: [number, number]
