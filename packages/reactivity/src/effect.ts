@@ -194,11 +194,7 @@ export function trigger(
     // trigger all effects for target
     depsMap.forEach(add)
   } else if (key === 'length' && isArray(target)) {
-    depsMap.forEach((dep, key) => {
-      if (key === 'length' || key >= (newValue as number)) {
-        add(dep)
-      }
-    })
+    add(depsMap.get(key))
   } else {
     // schedule runs for SET | ADD | DELETE
     if (key !== void 0) {
