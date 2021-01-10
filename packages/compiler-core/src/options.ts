@@ -89,6 +89,10 @@ export const enum BindingTypes {
    */
   SETUP_REF = 'setup-ref',
   /**
+   * bindings that are guaranteed to be reactive
+   */
+  SETUP_REACTIVE = 'setup-reactive',
+  /**
    * declared by other options, e.g. computed, inject
    */
   OPTIONS = 'options'

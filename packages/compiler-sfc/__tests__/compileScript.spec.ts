@@ -1123,7 +1123,7 @@ describe('SFC analyze <script> bindings', () => {
   it('works for script setup', () => {
     const { bindings } = compile(`
       <script setup>
-      import { defineProps, ref as r } from 'vue'
+      import { defineProps, ref as r, reactive as rt } from 'vue'
       defineProps({
         foo: String
       })
@@ -1133,16 +1133,19 @@ describe('SFC analyze <script> bindings', () => {
       const c = 3
       const { d } = someFoo()
       let { e } = someBar()
+      const f = rt([])
       </script>
     `)
 
     expect(bindings).toStrictEqual({
       r: BindingTypes.SETUP_CONST,
+      rt: BindingTypes.SETUP_CONST,
       a: BindingTypes.SETUP_REF,
       b: BindingTypes.SETUP_LET,
       c: BindingTypes.SETUP_CONST,
       d: BindingTypes.SETUP_MAYBE_REF,
       e: BindingTypes.SETUP_LET,
+      f: BindingTypes.SETUP_REACTIVE,
       foo: BindingTypes.PROPS
     })
   })

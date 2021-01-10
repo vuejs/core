@@ -1036,17 +1036,23 @@ function walkDeclaration(
       )
       if (id.type === 'Identifier') {
         let bindingType
-        if (
-          // if a declaration is a const literal, we can mark it so that
-          // the generated render fn code doesn't need to unref() it
-          isDefineCall ||
-          (isConst &&
-            canNeverBeRef(init!, userImportAlias['reactive'] || 'reactive'))
-        ) {
+        if (isDefineCall) {
           bindingType = BindingTypes.SETUP_CONST
         } else if (isConst) {
           if (isCallOf(init, userImportAlias['ref'] || 'ref')) {
             bindingType = BindingTypes.SETUP_REF
+          } else if (
+            isCallOf(init, userImportAlias['reactive'] || 'reactive')
+          ) {
+            // mark it as setup-reactive and
+            // the generated render fn code doesn't need to unref() it
+            bindingType = BindingTypes.SETUP_REACTIVE
+          } else if (
+            canNeverBeRef(init!, userImportAlias['reactive'] || 'reactive')
+          ) {
+            // if a declaration is a const literal, we can mark it so that
+            // the generated render fn code doesn't need to unref() it
+            bindingType = BindingTypes.SETUP_CONST
           } else {
             bindingType = BindingTypes.SETUP_MAYBE_REF
           }
