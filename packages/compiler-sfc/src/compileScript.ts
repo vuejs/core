@@ -68,6 +68,8 @@ export interface SFCScriptCompileOptions {
   templateOptions?: Partial<SFCTemplateCompileOptions>
 }
 
+type ErrorFunction = (msg: string, node: Node, end?: number) => void
+
 /**
  * Compile `<script setup>`
  * It requires the whole SFC descriptor because we need to handle and merge
@@ -765,7 +767,7 @@ export function compileScript(
 
   // 4. extract runtime props/emits code from setup context type
   if (propsTypeDecl) {
-    extractRuntimeProps(propsTypeDecl, typeDeclaredProps, declaredTypes)
+    extractRuntimeProps(propsTypeDecl, typeDeclaredProps, declaredTypes, error)
   }
   if (emitTypeDecl) {
     extractRuntimeEmits(emitTypeDecl, typeDeclaredEmits)
@@ -1168,18 +1170,56 @@ function recordType(node: Node, declaredTypes: Record<string, string[]>) {
 function extractRuntimeProps(
   node: TSTypeLiteral,
   props: Record<string, PropTypeData>,
-  declaredTypes: Record<string, string[]>
+  declaredTypes: Record<string, string[]>,
+  error: ErrorFunction
 ) {
   for (const m of node.members) {
-    if (m.type === 'TSPropertySignature' && m.key.type === 'Identifier') {
-      props[m.key.name] = {
-        key: m.key.name,
-        required: !m.optional,
-        type:
-          __DEV__ && m.typeAnnotation
-            ? inferRuntimeType(m.typeAnnotation.typeAnnotation, declaredTypes)
-            : [`null`]
-      }
+    switch (m.type) {
+      case 'TSPropertySignature':
+        if (m.key.type === 'Identifier') {
+          props[m.key.name] = {
+            key: m.key.name,
+            required: !m.optional,
+            type:
+              __DEV__ && m.typeAnnotation
+                ? inferRuntimeType(
+                    m.typeAnnotation.typeAnnotation,
+                    declaredTypes
+                  )
+                : [`null`]
+          }
+        } else {
+          // use case: `{ 123: () => void }`
+          error(
+            `when using the TSPropertySignature type to declare a Prop, ` +
+              `the type of the key must be the Identifier type`,
+            m
+          )
+        }
+        break
+      case 'TSMethodSignature':
+        if (m.key.type === 'Identifier') {
+          props[m.key.name] = {
+            key: m.key.name,
+            required: !m.optional,
+            type: __DEV__ ? [`Function`] : [`null`]
+          }
+        } else {
+          // use case: `{ 123(): void }`
+          error(
+            `when using the TSMethodSignature type to declare a Prop, ` +
+              `the type of the key must be the Identifier type`,
+            m
+          )
+        }
+        break
+      default:
+        error(
+          `can't use the ${m.type} type to declare a Prop, ` +
+            `only TSPropertySignature and TSMethodSignature are valid prop types`,
+          m
+        )
+        break
     }
   }
 }

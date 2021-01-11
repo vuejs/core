@@ -435,6 +435,7 @@ const emit = defineEmit(['a', 'b'])
         object: object
         objectLiteral: { a: number }
         fn: (n: number) => void
+        func(): void
         functionRef: Function
         objectRef: Object
         array: string[]
@@ -460,6 +461,7 @@ const emit = defineEmit(['a', 'b'])
       expect(content).toMatch(`object: { type: Object, required: true }`)
       expect(content).toMatch(`objectLiteral: { type: Object, required: true }`)
       expect(content).toMatch(`fn: { type: Function, required: true }`)
+      expect(content).toMatch(`func: { type: Function, required: true }`)
       expect(content).toMatch(`functionRef: { type: Function, required: true }`)
       expect(content).toMatch(`objectRef: { type: Object, required: true }`)
       expect(content).toMatch(`array: { type: Array, required: true }`)
@@ -488,6 +490,7 @@ const emit = defineEmit(['a', 'b'])
         object: BindingTypes.PROPS,
         objectLiteral: BindingTypes.PROPS,
         fn: BindingTypes.PROPS,
+        func: BindingTypes.PROPS,
         functionRef: BindingTypes.PROPS,
         objectRef: BindingTypes.PROPS,
         array: BindingTypes.PROPS,

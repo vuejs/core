@@ -703,6 +703,7 @@ export default _defineComponent({
     object: { type: Object, required: true },
     objectLiteral: { type: Object, required: true },
     fn: { type: Function, required: true },
+    func: { type: Function, required: true },
     functionRef: { type: Function, required: true },
     objectRef: { type: Object, required: true },
     array: { type: Array, required: true },
@@ -726,6 +727,7 @@ export default _defineComponent({
         object: object
         objectLiteral: { a: number }
         fn: (n: number) => void
+        func(): void
         functionRef: Function
         objectRef: Object
         array: string[]
