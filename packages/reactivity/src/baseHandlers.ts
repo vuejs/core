@@ -44,12 +44,19 @@ const arrayInstrumentations: Record<string, Function> = {}
   const method = Array.prototype[key] as any
   arrayInstrumentations[key] = function(this: unknown[], ...args: unknown[]) {
     const arr = toRaw(this)
-    const doTrack = (len: number) => {
-      // for length
-      this.length
-      // for integer key
-      for (let i = 0, l = len; i <= l; i++) {
-        track(arr, TrackOpTypes.GET, i + '')
+    const doTrack = (index: number) => {
+      if (key === 'lastIndexOf') {
+        // tracking integer key and array length
+        for (let i = index; i < this.length; i++) {
+          track(arr, TrackOpTypes.GET, i + '')
+        }
+      } else {
+        // tracking array length
+        this.length
+        // tracking integer key
+        for (let i = 0; i <= index; i++) {
+          track(arr, TrackOpTypes.GET, i + '')
+        }
       }
     }
     // we run the method using the original args first (which may be reactive)
