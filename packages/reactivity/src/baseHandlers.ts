@@ -45,15 +45,14 @@ const arrayInstrumentations: Record<string, Function> = {}
   arrayInstrumentations[key] = function(this: unknown[], ...args: unknown[]) {
     const arr = toRaw(this)
     const doTrack = (index: number) => {
+      // tracking array length
+      const len = this.length
+      // tracking integer key
       if (key === 'lastIndexOf') {
-        // tracking integer key and array length
-        for (let i = index; i < this.length; i++) {
+        for (let i = index; i < len; i++) {
           track(arr, TrackOpTypes.GET, i + '')
         }
       } else {
-        // tracking array length
-        this.length
-        // tracking integer key
         for (let i = 0; i <= index; i++) {
           track(arr, TrackOpTypes.GET, i + '')
         }
