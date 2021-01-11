@@ -44,17 +44,24 @@ const arrayInstrumentations: Record<string, Function> = {}
   const method = Array.prototype[key] as any
   arrayInstrumentations[key] = function(this: unknown[], ...args: unknown[]) {
     const arr = toRaw(this)
-    for (let i = 0, l = this.length; i < l; i++) {
-      track(arr, TrackOpTypes.GET, i + '')
+    const doTrack = (len: number) => {
+      // for length
+      this.length
+      // for integer key
+      for (let i = 0, l = len; i <= l; i++) {
+        track(arr, TrackOpTypes.GET, i + '')
+      }
     }
     // we run the method using the original args first (which may be reactive)
-    const res = method.apply(arr, args)
+    let res = method.apply(arr, args)
     if (res === -1 || res === false) {
       // if that didn't work, run it again using raw values.
-      return method.apply(arr, args.map(toRaw))
-    } else {
-      return res
+      res = method.apply(arr, args.map(toRaw))
     }
+
+    doTrack(typeof res === 'number' && res > -1 ? res : this.length - 1)
+
+    return res
   }
 })
 // instrument length-altering mutation methods to avoid length being tracked
