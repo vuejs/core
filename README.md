@@ -20,6 +20,7 @@ We have achieved most of the architectural goals and new features planned for v3
   - [x] Fragments
   - [x] Portals
   - [x] Suspense w/ `async setup()`
+  - [x] 测试
 
 However, there are still some 2.x parity features not completed yet:
 
