@@ -46,7 +46,7 @@ export const transformSrcset: NodeTransform = (
         if (attr.name === 'srcset' && attr.type === NodeTypes.ATTRIBUTE) {
           if (!attr.value) return
           const value = attr.value.content
-
+          if (!value) return
           const imageCandidates: ImageCandidate[] = value.split(',').map(s => {
             // The attribute value arrives here with all whitespace, except
             // normal spaces, represented by escape sequences

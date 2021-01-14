@@ -25,6 +25,7 @@ function compileWithSrcset(template: string, options?: AssetURLOptions) {
 }
 
 const src = `
+<img src="./logo.png" srcset=""/>
 <img src="./logo.png" srcset="./logo.png"/>
 <img src="./logo.png" srcset="./logo.png 2x"/>
 <img src="./logo.png" srcset="./logo.png 2x"/>
