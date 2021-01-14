@@ -43,7 +43,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compile v-bind should work with HTML tag 1`] = `
+exports[`compile should work with v-bind + HTML tag 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
