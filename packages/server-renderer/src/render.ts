@@ -157,7 +157,7 @@ function renderComponentSubTree(
         instance.ctx
       )
       setCurrentRenderingInstance(null)
-    } else if (instance.render !== NOOP) {
+    } else if (instance.render && instance.render !== NOOP) {
       renderVNode(
         push,
         (instance.subTree = renderComponentRoot(instance)),
