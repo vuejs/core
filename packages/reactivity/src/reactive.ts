@@ -8,7 +8,8 @@ import {
 import {
   mutableCollectionHandlers,
   readonlyCollectionHandlers,
-  shallowCollectionHandlers
+  shallowCollectionHandlers,
+  shallowReadonlyCollectionHandlers
 } from './collectionHandlers'
 import { UnwrapRef, Ref } from './ref'
 
@@ -159,7 +160,7 @@ export function shallowReadonly<T extends object>(
     target,
     true,
     shallowReadonlyHandlers,
-    readonlyCollectionHandlers
+    shallowReadonlyCollectionHandlers
   )
 }
 
