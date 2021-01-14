@@ -341,7 +341,8 @@ export interface AreaHTMLAttributes extends HTMLAttributes {
   target?: string
 }
 
-export interface AudioHTMLAttributes extends MediaHTMLAttributes {}
+export interface AudioHTMLAttributes extends MediaHTMLAttributes {
+}
 
 export interface BaseHTMLAttributes extends HTMLAttributes {
   href?: string
@@ -1315,37 +1316,56 @@ type EventHandlers<E> = {
 // named imports.
 import * as RuntimeCore from '@vue/runtime-core'
 
+export type VueNode = RuntimeCore.VNodeChild | JSX.Element
+
+export interface SlotsProps {
+  [name: string]: () => VueNode;
+}
+
 type ReservedProps = {
+  id?: string | number
+  name?: string | number
   key?: string | number
   ref?:
     | string
     | RuntimeCore.Ref
     | ((ref: Element | RuntimeCore.ComponentInternalInstance | null) => void)
+  vModel?: [unknown[]] | unknown
+  vModels?: [...models: unknown[]]
+  vHtml?: string
+  vShow?: boolean
+  vSlots?: SlotsProps
+  vCustom?: unknown[]
 }
 
 type ElementAttrs<T> = T & ReservedProps
 
 type NativeElements = {
-  [K in StringKeyOf<IntrinsicElementAttributes>]: ElementAttrs<
-    IntrinsicElementAttributes[K]
-  >
+  [K in StringKeyOf<IntrinsicElementAttributes>]: ElementAttrs<IntrinsicElementAttributes[K]>
 }
+type JsxAttributes = EventHandlers<Events> & ReservedProps
 
 declare global {
   namespace JSX {
-    interface Element {}
+    interface Element {
+    }
+
     interface ElementClass {
       $props: {}
     }
+
     interface ElementAttributesProperty {
       $props: {}
     }
+
     interface IntrinsicElements extends NativeElements {
       // allow arbitrary elements
       // @ts-ignore suppress ts:2374 = Duplicate string index signature.
       [name: string]: any
     }
-    interface IntrinsicAttributes extends ReservedProps {}
+
+    interface IntrinsicAttributes extends JsxAttributes {
+    }
   }
 }
 
