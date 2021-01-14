@@ -329,7 +329,7 @@ export type ComponentOptionsMixin = ComponentOptionsBase<
 
 export type ComputedOptions = Record<
   string,
-  ComputedGetter<any> | WritableComputedOptions<any>
+  ComputedGetter<any> | WritableComputedOptions<any> | Function
 >
 
 export interface MethodOptions {
