@@ -22,7 +22,8 @@ import {
   isString,
   isVoidTag,
   ShapeFlags,
-  isArray
+  isArray,
+  NOOP
 } from '@vue/shared'
 import { ssrRenderAttrs } from './helpers/ssrRenderAttrs'
 import { ssrCompile } from './helpers/ssrCompile'
@@ -116,7 +117,7 @@ function renderComponentSubTree(
     )
   } else {
     if (
-      !instance.render &&
+      instance.render === NOOP &&
       !instance.ssrRender &&
       !comp.ssrRender &&
       isString(comp.template)
@@ -156,7 +157,7 @@ function renderComponentSubTree(
         instance.ctx
       )
       setCurrentRenderingInstance(null)
-    } else if (instance.render) {
+    } else if (instance.render !== NOOP) {
       renderVNode(
         push,
         (instance.subTree = renderComponentRoot(instance)),

@@ -97,6 +97,46 @@ function testRender(type: string, render: typeof renderToString) {
         ).toBe(`<div>hello</div>`)
       })
 
+      test('components using defineComponent with extends option', async () => {
+        expect(
+          await render(
+            createApp(
+              defineComponent({
+                extends: {
+                  data() {
+                    return { msg: 'hello' }
+                  },
+                  render(this: any) {
+                    return h('div', this.msg)
+                  }
+                }
+              })
+            )
+          )
+        ).toBe(`<div>hello</div>`)
+      })
+
+      test('components using defineComponent with mixins option', async () => {
+        expect(
+          await render(
+            createApp(
+              defineComponent({
+                mixins: [
+                  {
+                    data() {
+                      return { msg: 'hello' }
+                    },
+                    render(this: any) {
+                      return h('div', this.msg)
+                    }
+                  }
+                ]
+              })
+            )
+          )
+        ).toBe(`<div>hello</div>`)
+      })
+
       test('optimized components', async () => {
         expect(
           await render(

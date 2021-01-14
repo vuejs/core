@@ -669,8 +669,8 @@ function finishComponentSetup(
 
   // template / render function normalization
   if (__NODE_JS__ && isSSR) {
-    if (Component.render) {
-      instance.render = Component.render as InternalRenderFunction
+    if (!instance.render) {
+      instance.render = (Component.render || NOOP) as InternalRenderFunction
     }
   } else if (!instance.render) {
     // could be set from setup()
@@ -710,7 +710,7 @@ function finishComponentSetup(
   }
 
   // warn missing template/render
-  if (__DEV__ && !Component.render && instance.render === NOOP) {
+  if (__DEV__ && !Component.render && instance.render === NOOP && !isSSR) {
     /* istanbul ignore if */
     if (!compile && Component.template) {
       warn(
