@@ -38,10 +38,23 @@ export function inject<T>(
   defaultValue: T | (() => T),
   treatDefaultAsFactory: true
 ): T
+export function inject<T>(
+  key: InjectionKey<T> | string,
+  defaultValue: T,
+  treatDefaultAsFactory: false,
+  selfInject?: boolean
+): T
+export function inject<T>(
+  key: InjectionKey<T> | string,
+  defaultValue: T | (() => T),
+  treatDefaultAsFactory: true,
+  selfInject?: boolean
+): T
 export function inject(
   key: InjectionKey<any> | string,
   defaultValue?: unknown,
-  treatDefaultAsFactory = false
+  treatDefaultAsFactory = false,
+  selfInject = false
 ) {
   // fallback to `currentRenderingInstance` so that this can be called in
   // a functional component
@@ -50,8 +63,9 @@ export function inject(
     // #2400
     // to support `app.use` plugins,
     // fallback to appContext's `provides` if the intance is at root
-    const provides =
-      instance.parent == null
+    const provides = selfInject
+      ? instance.provides
+      : instance.parent == null
         ? instance.vnode.appContext && instance.vnode.appContext.provides
         : instance.parent.provides
 
