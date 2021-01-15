@@ -1315,7 +1315,6 @@ type EventHandlers<E> = {
 // named imports.
 import * as RuntimeCore from '@vue/runtime-core'
 
-
 export type VueNode = RuntimeCore.VNodeChild | JSX.Element
 
 export interface SlotsProps {
@@ -1343,7 +1342,7 @@ type ElementAttrs<T> = T & ReservedProps
 type NativeElements = {
   [K in StringKeyOf<IntrinsicElementAttributes>]: ElementAttrs<
     IntrinsicElementAttributes[K]
-    >
+  >
 }
 
 type JsxAttributes = EventHandlers<Events> & ReservedProps
