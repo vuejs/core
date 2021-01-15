@@ -1315,12 +1315,26 @@ type EventHandlers<E> = {
 // named imports.
 import * as RuntimeCore from '@vue/runtime-core'
 
+export type VueNode = RuntimeCore.VNodeChild | JSX.Element
+
+export interface SlotsProps {
+  [name: string]: () => VueNode;
+}
+
 type ReservedProps = {
   key?: string | number
   ref?:
     | string
     | RuntimeCore.Ref
     | ((ref: Element | RuntimeCore.ComponentInternalInstance | null) => void)
+  id?: string | number
+  name?: string | number
+  vModel?: unknown
+  vModels?: unknown
+  vCustom?: unknown
+  vShow?: boolean
+  vHtml?: string | VueNode
+  vSlots?: SlotsProps
 }
 
 type ElementAttrs<T> = T & ReservedProps
@@ -1330,6 +1344,8 @@ type NativeElements = {
     IntrinsicElementAttributes[K]
   >
 }
+
+type JsxAttributes = EventHandlers<Events> & ReservedProps
 
 declare global {
   namespace JSX {
@@ -1345,7 +1361,7 @@ declare global {
       // @ts-ignore suppress ts:2374 = Duplicate string index signature.
       [name: string]: any
     }
-    interface IntrinsicAttributes extends ReservedProps {}
+    interface IntrinsicAttributes extends JsxAttributes {}
   }
 }
 
