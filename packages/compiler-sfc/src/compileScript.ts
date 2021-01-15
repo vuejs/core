@@ -739,7 +739,7 @@ export function compileScript(
   if (enableRefSugar && Object.keys(refBindings).length) {
     for (const node of scriptSetupAst) {
       if (node.type !== 'ImportDeclaration') {
-        walkIdentifiers(node, (id, parent) => {
+        walkIdentifiers(node, (id, parent, parentStack) => {
           if (refBindings[id.name] && !refIdentifiers.has(id)) {
             if (isStaticProperty(parent) && parent.shorthand) {
               // let binding used in a property shorthand
@@ -1337,8 +1337,6 @@ function genRuntimeEmits(emits: Set<string>) {
     : ``
 }
 
-const parentStack: Node[] = []
-
 /**
  * Walk an AST and find identifiers that are variable references.
  * This is largely the same logic with `transformExpressions` in compiler-core
@@ -1347,15 +1345,19 @@ const parentStack: Node[] = []
  */
 function walkIdentifiers(
   root: Node,
-  onIdentifier: (node: Identifier, parent: Node) => void
+  onIdentifier: (node: Identifier, parent: Node, parentStack: Node[]) => void
 ) {
+  const parentStack: Node[] = []
   const knownIds: Record<string, number> = Object.create(null)
   ;(walk as any)(root, {
     enter(node: Node & { scopeIds?: Set<string> }, parent: Node | undefined) {
       parent && parentStack.push(parent)
       if (node.type === 'Identifier') {
-        if (!knownIds[node.name] && isRefIdentifier(node, parent!)) {
-          onIdentifier(node, parent!)
+        if (
+          !knownIds[node.name] &&
+          isRefIdentifier(node, parent!, parentStack)
+        ) {
+          onIdentifier(node, parent!, parentStack)
         }
       } else if (isFunction(node)) {
         // walk function expressions and add its arguments to known identifiers
@@ -1411,7 +1413,7 @@ function walkIdentifiers(
   })
 }
 
-function isRefIdentifier(id: Identifier, parent: Node) {
+function isRefIdentifier(id: Identifier, parent: Node, parentStack: Node[]) {
   // declaration id
   if (
     (parent.type === 'VariableDeclarator' ||
