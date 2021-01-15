@@ -20,6 +20,7 @@ export {
   isReactive,
   isReadonly,
   isProxy,
+  isShallow,
   shallowReactive,
   shallowReadonly,
   markRaw,
