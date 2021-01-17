@@ -113,8 +113,8 @@ export function defineAsyncComponent<
     name: 'AsyncComponentWrapper',
     setup() {
       const instance = currentInstance!
-      let delayTimer: NodeJS.Timeout
-      let timeoutTimer: NodeJS.Timeout
+      let delayTimer: number
+      let timeoutTimer: number
 
       // already resolved
       if (resolvedComp) {
