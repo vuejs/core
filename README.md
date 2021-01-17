@@ -28,7 +28,7 @@ Please consult the [Migration Guide](https://v3.vuejs.org/guide/migration/introd
 
 ## Supporting Libraries
 
-All of our official libraries and tools now support Vue 3, but most of them are still in beta status and distributed under the `next` dist tag on NPM. **We are planning to stabilize and switch all projects to use the `latest` dist tag by end of 2020.**
+All of our official libraries and tools now support Vue 3, but most of them are still in beta status and distributed under the `next` dist tag on NPM. **We are planning to switch all doc links, branches and dist tags to default to 3.0 in early 2021.**
 
 ### Vue CLI
 
