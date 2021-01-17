@@ -113,6 +113,8 @@ export function defineAsyncComponent<
     name: 'AsyncComponentWrapper',
     setup() {
       const instance = currentInstance!
+      let delayTimer: NodeJS.Timeout
+      let timeoutTimer: NodeJS.Timeout
 
       // already resolved
       if (resolvedComp) {
@@ -154,13 +156,13 @@ export function defineAsyncComponent<
       const delayed = ref(!!delay)
 
       if (delay) {
-        setTimeout(() => {
+        delayTimer = setTimeout(() => {
           delayed.value = false
         }, delay)
       }
 
       if (timeout != null) {
-        setTimeout(() => {
+        timeoutTimer = setTimeout(() => {
           if (!loaded.value && !error.value) {
             const err = new Error(
               `Async component timed out after ${timeout}ms.`
@@ -178,6 +180,14 @@ export function defineAsyncComponent<
         .catch(err => {
           onError(err)
           error.value = err
+        })
+        .finally(() => {
+          if (delayTimer != undefined) {
+            clearTimeout(delayTimer)
+          }
+          if (timeoutTimer != undefined) {
+            clearTimeout(timeoutTimer)
+          }
         })
 
       return () => {
