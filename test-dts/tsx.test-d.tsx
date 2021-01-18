@@ -5,7 +5,8 @@ import {
   Fragment,
   Teleport,
   expectError,
-  expectType
+  expectType,
+  defineComponent
 } from './index'
 
 expectType<JSX.Element>(<div />)
@@ -54,3 +55,18 @@ expectType<JSX.Element>(
 )
 // @ts-expect-error
 expectError(<Suspense onResolve={123} />)
+
+const Comp = defineComponent({
+  props: {
+    msg: String
+  },
+  setup(props) {
+    return () => <div>{props.msg}</div>
+  }
+})
+
+const Other = defineComponent({
+  setup() {
+    return () => <Comp msg={1} />
+  }
+})
