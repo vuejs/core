@@ -186,6 +186,8 @@ export function defineComponent<
   >
 ): DefineComponent<PropsOptions, RawBindings, D, C, M, Mixin, Extends, E, EE>
 
+// overload 5: Props interface passed as argument
+// see `ExtractPropTypes` in ./componentProps.ts
 export function defineComponent<
   Props extends Record<string, any>,
   RawBindings = {},
