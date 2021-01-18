@@ -5,8 +5,7 @@ import {
   Fragment,
   Teleport,
   expectError,
-  expectType,
-  defineComponent
+  expectType
 } from './index'
 
 expectType<JSX.Element>(<div />)
