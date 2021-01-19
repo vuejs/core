@@ -9,12 +9,9 @@ import {
   ReactiveFlags,
   Target,
   reactive,
-  reactiveMap,
   readonly,
-  readonlyMap,
-  shallowReactiveMap,
-  shallowReadonlyMap,
-  toRaw
+  toRaw,
+  getProxyMap
 } from './reactive'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import {
@@ -78,17 +75,11 @@ function createGetter(isReadonly = false, shallow = false) {
       return !isReadonly
     } else if (key === ReactiveFlags.IS_READONLY) {
       return isReadonly
+    } else if (key === ReactiveFlags.IS_SHALLOW) {
+      return shallow
     } else if (
       key === ReactiveFlags.RAW &&
-      receiver ===
-        (isReadonly
-          ? shallow
-            ? shallowReadonlyMap
-            : readonlyMap
-          : shallow
-            ? shallowReactiveMap
-            : reactiveMap
-        ).get(target)
+      receiver === getProxyMap(isReadonly, shallow).get(target)
     ) {
       return target
     }
