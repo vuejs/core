@@ -13,6 +13,7 @@ import { defineComponent } from './apiDefineComponent'
 import { warn } from './warning'
 import { ref } from '@vue/reactivity'
 import { handleError, ErrorCodes } from './errorHandling'
+import { onBeforeUnmount } from './apiLifecycle'
 
 export type AsyncComponentResolveResult<T = Component> = T | { default: T } // es modules
 
@@ -113,8 +114,8 @@ export function defineAsyncComponent<
     name: 'AsyncComponentWrapper',
     setup() {
       const instance = currentInstance!
-      let delayTimer: number | null = null
-      let timeoutTimer: number | null = null
+      let delayTimer: number | null | undefined
+      let timeoutTimer: number | null | undefined
 
       // already resolved
       if (resolvedComp) {
@@ -129,6 +130,15 @@ export function defineAsyncComponent<
           ErrorCodes.ASYNC_COMPONENT_LOADER,
           !errorComponent /* do not throw in dev if user provided error component */
         )
+      }
+
+      const clearTimers = () => {
+        if (delayTimer != null) {
+          clearTimeout(delayTimer)
+        }
+        if (timeoutTimer != null) {
+          clearTimeout(timeoutTimer)
+        }
       }
 
       // suspense-controlled or SSR.
@@ -154,6 +164,8 @@ export function defineAsyncComponent<
       const loaded = ref(false)
       const error = ref()
       const delayed = ref(!!delay)
+
+      onBeforeUnmount(clearTimers)
 
       if (delay) {
         delayTimer = (setTimeout(() => {
@@ -181,14 +193,7 @@ export function defineAsyncComponent<
           onError(err)
           error.value = err
         })
-        .finally(() => {
-          if (delayTimer != null) {
-            clearTimeout(delayTimer)
-          }
-          if (timeoutTimer != null) {
-            clearTimeout(timeoutTimer)
-          }
-        })
+        .finally(clearTimers)
 
       return () => {
         if (loaded.value && resolvedComp) {
