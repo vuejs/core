@@ -182,18 +182,26 @@ function createReactiveObject(
     }
     return target
   }
+  // target already has corresponding Proxy
+  const existingProxy = proxyMap.get(target)
+  if (existingProxy) {
+    return existingProxy
+  }
+  if (proxyMap.has(target)) {
+    return target
+  }
   // target is already a Proxy, return it.
   // exception: calling readonly() on a reactive object
   if (
     target[ReactiveFlags.RAW] &&
     !(isReadonly && target[ReactiveFlags.IS_REACTIVE])
   ) {
-    return target
-  }
-  // target already has corresponding Proxy
-  const existingProxy = proxyMap.get(target)
-  if (existingProxy) {
-    return existingProxy
+    //avoid duplication proxy
+    target = toRaw(target)
+    const existingProxy = proxyMap.get(target)
+    if (existingProxy) {
+      return existingProxy
+    }
   }
   // only a whitelist of value types can be observed.
   const targetType = getTargetType(target)
