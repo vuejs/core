@@ -113,8 +113,8 @@ export function defineAsyncComponent<
     name: 'AsyncComponentWrapper',
     setup() {
       const instance = currentInstance!
-      let delayTimer: NodeJS.Timeout | null = null
-      let timeoutTimer: NodeJS.Timeout | null = null
+      let delayTimer: number | null = null
+      let timeoutTimer: number | null = null
 
       // already resolved
       if (resolvedComp) {
@@ -158,7 +158,7 @@ export function defineAsyncComponent<
       if (delay) {
         delayTimer = (setTimeout(() => {
           delayed.value = false
-        }, delay) as unknown) as NodeJS.Timeout
+        }, delay) as unknown) as number
       }
 
       if (timeout != null) {
@@ -170,7 +170,7 @@ export function defineAsyncComponent<
             onError(err)
             error.value = err
           }
-        }, timeout) as unknown) as NodeJS.Timeout
+        }, timeout) as unknown) as number
       }
 
       load()
@@ -182,10 +182,10 @@ export function defineAsyncComponent<
           error.value = err
         })
         .finally(() => {
-          if (delayTimer) {
+          if (delayTimer != null) {
             clearTimeout(delayTimer)
           }
-          if (timeoutTimer) {
+          if (timeoutTimer != null) {
             clearTimeout(timeoutTimer)
           }
         })
