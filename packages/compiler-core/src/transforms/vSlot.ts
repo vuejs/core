@@ -199,7 +199,7 @@ export function buildSlots(
 
     // check if name is dynamic.
     let staticSlotName: string | undefined
-    if (isStaticExp(slotName)) {
+    if (!slotName || isStaticExp(slotName)) {
       staticSlotName = slotName ? slotName.content : `default`
     } else {
       hasDynamicSlots = true
