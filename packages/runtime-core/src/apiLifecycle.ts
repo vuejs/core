@@ -1,5 +1,6 @@
 import {
   ComponentInternalInstance,
+  ComponentOptions,
   currentInstance,
   isInSSRComponentSetup,
   LifecycleHooks,
@@ -94,4 +95,32 @@ export const onErrorCaptured = (
   target: ComponentInternalInstance | null = currentInstance
 ) => {
   injectHook(LifecycleHooks.ERROR_CAPTURED, hook, target)
+}
+
+export function onServerPrefetch<
+  T extends () => Promise<any> = () => Promise<unknown>
+>(handler: T) {
+  const target = currentInstance
+  if (target) {
+    if (isInSSRComponentSetup) {
+      const type = target.type as ComponentOptions
+      let hook = type.serverPrefetch
+      if (hook) {
+        // Merge hook
+        type.serverPrefetch = () => handler().then(() => (hook as Function)())
+      } else {
+        type.serverPrefetch = handler
+      }
+    }
+  } else if (__DEV__) {
+    warn(
+      `onServerPrefetch is called when there is no active component instance to be ` +
+        `associated with. ` +
+        `Lifecycle injection APIs can only be used during execution of setup().` +
+        (__FEATURE_SUSPENSE__
+          ? ` If you are using async setup(), make sure to register lifecycle ` +
+            `hooks before the first await statement.`
+          : ``)
+    )
+  }
 }

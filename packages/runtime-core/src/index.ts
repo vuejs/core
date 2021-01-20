@@ -37,7 +37,8 @@ export {
   onDeactivated,
   onRenderTracked,
   onRenderTriggered,
-  onErrorCaptured
+  onErrorCaptured,
+  onServerPrefetch
 } from './apiLifecycle'
 export { provide, inject } from './apiInject'
 export { nextTick } from './scheduler'

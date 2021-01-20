@@ -14,7 +14,8 @@ import {
   watchEffect,
   createVNode,
   resolveDynamicComponent,
-  renderSlot
+  renderSlot,
+  onServerPrefetch
 } from 'vue'
 import { escapeHtml } from '@vue/shared'
 import { renderToString } from '../src/renderToString'
@@ -858,6 +859,52 @@ function testRender(type: string, render: typeof renderToString) {
           })
         )
       ).toBe(`<div>A</div><div>B</div>`)
+    })
+
+    test('onServerPrefetch', async () => {
+      const msg = Promise.resolve('hello')
+      const app = createApp({
+        setup() {
+          const message = ref('')
+          onServerPrefetch(async () => {
+            message.value = await msg
+          })
+          return {
+            message
+          }
+        },
+        render() {
+          return h('div', this.message)
+        }
+      })
+      const html = await render(app)
+      expect(html).toBe(`<div>hello</div>`)
+    })
+
+    test('multiple onServerPrefetch', async () => {
+      const msg = Promise.resolve('hello')
+      const msg2 = Promise.resolve('hi')
+      const app = createApp({
+        setup() {
+          const message = ref('')
+          const message2 = ref('')
+          onServerPrefetch(async () => {
+            message.value = await msg
+          })
+          onServerPrefetch(async () => {
+            message2.value = await msg2
+          })
+          return {
+            message,
+            message2
+          }
+        },
+        render() {
+          return h('div', `${this.message} ${this.message2}`)
+        }
+      })
+      const html = await render(app)
+      expect(html).toBe(`<div>hello hi</div>`)
     })
   })
 }
