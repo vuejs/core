@@ -248,7 +248,22 @@ function doWatch(
     if (cb) {
       // watch(source, cb)
       const newValue = runner()
-      if (deep || forceTrigger || hasChanged(newValue, oldValue)) {
+      let change: boolean = false
+      if (isArray(newValue) && isArray(oldValue)) {
+        for (let i = 0; i < newValue.length && i < oldValue.length; i++) {
+          if (hasChanged(newValue[i], oldValue[i])) {
+            change = true
+            break
+          }
+          if (typeof newValue[i] === 'object') {
+            forceTrigger = true
+            break
+          }
+        }
+      } else {
+        change = hasChanged(newValue, oldValue)
+      }
+      if (deep || forceTrigger || change) {
         // cleanup before running cb again
         if (cleanup) {
           cleanup()
