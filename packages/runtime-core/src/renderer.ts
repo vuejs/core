@@ -1746,6 +1746,8 @@ function baseCreateRenderer(
     const seenKeys = {} as any
     for (let i = 0; i < children.length; i++) {
       const vnode = children[i] as VNode
+      if (!vnode) continue
+
       const key = vnode.key
       if (key) {
         if (seenKeys[key]) {
@@ -1893,13 +1895,6 @@ function baseCreateRenderer(
           ? cloneIfMounted(c2[i] as VNode)
           : normalizeVNode(c2[i]))
         if (nextChild.key != null) {
-          if (__DEV__ && keyToNewIndexMap.has(nextChild.key)) {
-            warn(
-              `Duplicate keys found during update:`,
-              JSON.stringify(nextChild.key),
-              `Make sure keys are unique.`
-            )
-          }
           keyToNewIndexMap.set(nextChild.key, i)
         }
       }
