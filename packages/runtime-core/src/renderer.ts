@@ -1753,7 +1753,7 @@ function baseCreateRenderer(
         if (seenKeys[key]) {
           warn(
             `Duplicate keys detected: '${key}'. This may cause an update error.`,
-            vnode.appContext
+            `Make sure keys are unique.`
           )
         } else {
           seenKeys[key] = true
