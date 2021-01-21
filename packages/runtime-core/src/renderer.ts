@@ -1742,6 +1742,24 @@ function baseCreateRenderer(
     }
   }
 
+  function checkDuplicateKeys(children: VNodeArrayChildren) {
+    const seenKeys = {} as any
+    for (let i = 0; i < children.length; i++) {
+      const vnode = children[i] as VNode
+      const key = vnode.key
+      if (key) {
+        if (seenKeys[key]) {
+          warn(
+            `Duplicate keys detected: '${key}'. This may cause an update error.`,
+            vnode.appContext
+          )
+        } else {
+          seenKeys[key] = true
+        }
+      }
+    }
+  }
+
   // can be all-keyed or mixed
   const patchKeyedChildren = (
     c1: VNode[],
@@ -1758,6 +1776,11 @@ function baseCreateRenderer(
     const l2 = c2.length
     let e1 = c1.length - 1 // prev ending index
     let e2 = l2 - 1 // next ending index
+
+    if (__DEV__) {
+      debugger
+      checkDuplicateKeys(c2)
+    }
 
     // 1. sync from start
     // (a b) c
