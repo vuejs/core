@@ -604,6 +604,8 @@ export function applyOptions(
     for (const key in methods) {
       const methodHandler = (methods as MethodOptions)[key]
       if (isFunction(methodHandler)) {
+        // In dev mode, we use the `createRenderContext` function to define methods to the proxy target,
+        // and those are read-only but reconfigurable, so it needs to be redefined here
         if (__DEV__) {
           Object.defineProperty(ctx, key, {
             value: methodHandler.bind(publicThis),
