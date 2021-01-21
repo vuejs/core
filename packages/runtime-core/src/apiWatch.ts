@@ -251,8 +251,7 @@ function doWatch(
       // watch(source, cb)
       const newValue = runner()
       let change: boolean = false
-      // isSourceArray
-      // if (isArray(newValue) && isArray(oldValue)) {
+
       if (isSourceArray && isArray(newValue) && isArray(oldValue)) {
         for (let i = 0; i < newValue.length && i < oldValue.length; i++) {
           if (hasChanged(newValue[i], oldValue[i])) {
