@@ -1778,7 +1778,6 @@ function baseCreateRenderer(
     let e2 = l2 - 1 // next ending index
 
     if (__DEV__) {
-      debugger
       checkDuplicateKeys(c2)
     }
 
