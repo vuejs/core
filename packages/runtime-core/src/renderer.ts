@@ -876,6 +876,10 @@ function baseCreateRenderer(
     slotScopeIds,
     start = 0
   ) => {
+    if (__DEV__) {
+      checkDuplicateKeys(children)
+    }
+
     for (let i = start; i < children.length; i++) {
       const child = (children[i] = optimized
         ? cloneIfMounted(children[i] as VNode)
