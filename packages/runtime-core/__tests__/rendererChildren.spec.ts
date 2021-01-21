@@ -429,8 +429,11 @@ describe('renderer: keyed children', () => {
 
   test('should warn with duplicate keys: patchKeyedChildren', () => {
     renderChildren([1, 2, 3, 4, 5])
-    renderChildren([6, 6, 6, 3, 5])
-    expect(`Duplicate keys`).toHaveBeenWarned()
+    renderChildren([1, 6, 6, 3, 5])
+    expect(`Duplicate keys detected: '6'`).toHaveBeenWarned()
+
+    renderChildren([7, 7, 7, 3, 5])
+    expect(`Duplicate keys detected: '7'`).toHaveBeenWarned()
   })
 })
 
