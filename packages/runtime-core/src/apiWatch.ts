@@ -167,6 +167,7 @@ function doWatch(
 
   let getter: () => any
   let forceTrigger = false
+  let isSourceArray: boolean = false
   if (isRef(source)) {
     getter = () => (source as Ref).value
     forceTrigger = !!(source as Ref)._shallow
@@ -174,6 +175,7 @@ function doWatch(
     getter = () => source
     deep = true
   } else if (isArray(source)) {
+    isSourceArray = true
     getter = () =>
       source.map(s => {
         if (isRef(s)) {
@@ -249,7 +251,9 @@ function doWatch(
       // watch(source, cb)
       const newValue = runner()
       let change: boolean = false
-      if (isArray(newValue) && isArray(oldValue)) {
+      // isSourceArray
+      // if (isArray(newValue) && isArray(oldValue)) {
+      if (isSourceArray && isArray(newValue) && isArray(oldValue)) {
         for (let i = 0; i < newValue.length && i < oldValue.length; i++) {
           if (hasChanged(newValue[i], oldValue[i])) {
             change = true

@@ -30,6 +30,17 @@ import {
 // reference: https://vue-composition-api-rfc.netlify.com/api.html#watch
 
 describe('api: watch', () => {
+  it('watching sources: ref<any[]>', async () => {
+    const foo = ref([1])
+    const spy = jest.fn()
+    watch(foo, () => {
+      spy()
+    })
+    foo.value = foo.value.slice()
+    await nextTick()
+    expect(spy).toBeCalledTimes(1)
+  })
+
   it('watching multiple sources: computed', async () => {
     let count = 0
     const value = ref('1')
