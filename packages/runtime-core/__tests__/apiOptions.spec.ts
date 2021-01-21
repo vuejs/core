@@ -8,7 +8,8 @@ import {
   nextTick,
   renderToString,
   ref,
-  defineComponent
+  defineComponent,
+  createApp
 } from '@vue/runtime-test'
 
 describe('api: options', () => {
@@ -103,6 +104,24 @@ describe('api: options', () => {
     triggerEvent(root.children[0] as TestElement, 'click')
     await nextTick()
     expect(serializeInner(root)).toBe(`<div>2</div>`)
+  })
+
+  test('component’s own methods have higher priority than global properties', async () => {
+    const app = createApp({
+      methods: {
+        foo() {
+          return 'foo'
+        }
+      },
+      render() {
+        return this.foo()
+      }
+    })
+    app.config.globalProperties.foo = () => 'bar'
+
+    const root = nodeOps.createElement('div')
+    app.mount(root)
+    expect(serializeInner(root)).toBe(`foo`)
   })
 
   test('watch', async () => {
