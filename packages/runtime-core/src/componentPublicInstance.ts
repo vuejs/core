@@ -461,7 +461,6 @@ export function createRenderContext(instance: ComponentInternalInstance) {
   // expose internal instance for proxy handlers
   Object.defineProperty(target, `_`, {
     configurable: true,
-    enumerable: false,
     get: () => instance
   })
 
@@ -469,7 +468,6 @@ export function createRenderContext(instance: ComponentInternalInstance) {
   Object.keys(publicPropertiesMap).forEach(key => {
     Object.defineProperty(target, key, {
       configurable: true,
-      enumerable: false,
       get: () => publicPropertiesMap[key](instance),
       // intercepted by the proxy so no need for implementation,
       // but needed to prevent set errors
@@ -482,7 +480,6 @@ export function createRenderContext(instance: ComponentInternalInstance) {
   Object.keys(globalProperties).forEach(key => {
     Object.defineProperty(target, key, {
       configurable: true,
-      enumerable: false,
       get: () => globalProperties[key],
       set: NOOP
     })
