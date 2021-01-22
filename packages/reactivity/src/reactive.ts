@@ -1,21 +1,22 @@
-import { isObject, toRawType, def } from '@vue/shared'
+import { Ref, UnwrapRef } from './ref'
+import { def, isObject, toRawType } from '@vue/shared'
+import {
+  mutableCollectionHandlers,
+  readonlyCollectionHandlers,
+  shallowCollectionHandlers
+} from './collectionHandlers'
 import {
   mutableHandlers,
   readonlyHandlers,
   shallowReactiveHandlers,
   shallowReadonlyHandlers
 } from './baseHandlers'
-import {
-  mutableCollectionHandlers,
-  readonlyCollectionHandlers,
-  shallowCollectionHandlers
-} from './collectionHandlers'
-import { UnwrapRef, Ref } from './ref'
 
 export const enum ReactiveFlags {
   SKIP = '__v_skip',
   IS_REACTIVE = '__v_isReactive',
   IS_READONLY = '__v_isReadonly',
+  IS_SHALLOW = '__v_isShallow',
   RAW = '__v_raw'
 }
 
@@ -23,11 +24,24 @@ export interface Target {
   [ReactiveFlags.SKIP]?: boolean
   [ReactiveFlags.IS_REACTIVE]?: boolean
   [ReactiveFlags.IS_READONLY]?: boolean
+  [ReactiveFlags.IS_SHALLOW]?: boolean
   [ReactiveFlags.RAW]?: any
 }
 
 export const reactiveMap = new WeakMap<Target, any>()
+export const shallowReactiveMap = new WeakMap<Target, any>()
 export const readonlyMap = new WeakMap<Target, any>()
+export const shallowReadonlyMap = new WeakMap<Target, any>()
+
+export function getProxyMap(isReadonly: boolean, shallow: boolean) {
+  return isReadonly
+    ? shallow
+      ? shallowReadonlyMap
+      : readonlyMap
+    : shallow
+      ? shallowReactiveMap
+      : reactiveMap
+}
 
 const enum TargetType {
   INVALID = 0,
@@ -86,6 +100,7 @@ export function reactive(target: object) {
   return createReactiveObject(
     target,
     false,
+    false,
     mutableHandlers,
     mutableCollectionHandlers
   )
@@ -100,6 +115,7 @@ export function shallowReactive<T extends object>(target: T): T {
   return createReactiveObject(
     target,
     false,
+    true,
     shallowReactiveHandlers,
     shallowCollectionHandlers
   )
@@ -137,6 +153,7 @@ export function readonly<T extends object>(
   return createReactiveObject(
     target,
     true,
+    false,
     readonlyHandlers,
     readonlyCollectionHandlers
   )
@@ -154,6 +171,7 @@ export function shallowReadonly<T extends object>(
   return createReactiveObject(
     target,
     true,
+    true,
     shallowReadonlyHandlers,
     readonlyCollectionHandlers
   )
@@ -162,6 +180,7 @@ export function shallowReadonly<T extends object>(
 function createReactiveObject(
   target: Target,
   isReadonly: boolean,
+  shallow: boolean,
   baseHandlers: ProxyHandler<any>,
   collectionHandlers: ProxyHandler<any>
 ) {
@@ -171,19 +190,28 @@ function createReactiveObject(
     }
     return target
   }
-  // target is already a Proxy, return it.
-  // exception: calling readonly() on a reactive object
-  if (
-    target[ReactiveFlags.RAW] &&
-    !(isReadonly && target[ReactiveFlags.IS_REACTIVE])
-  ) {
-    return target
-  }
+  const proxyMap = getProxyMap(isReadonly, shallow)
   // target already has corresponding Proxy
-  const proxyMap = isReadonly ? readonlyMap : reactiveMap
   const existingProxy = proxyMap.get(target)
   if (existingProxy) {
     return existingProxy
+  }
+  // target is already a Proxy, return it.
+  // exception: calling readonly() on a reactive object
+  if (target[ReactiveFlags.RAW]) {
+    if (
+      target[ReactiveFlags.IS_READONLY] === isReadonly &&
+      target[ReactiveFlags.IS_SHALLOW] === shallow
+    ) {
+      return target
+    }
+    if (!isReadonly || !target[ReactiveFlags.IS_REACTIVE]) {
+      target = toRaw(target)
+      const existingProxy = proxyMap.get(target)
+      if (existingProxy) {
+        return existingProxy
+      }
+    }
   }
   // only a whitelist of value types can be observed.
   const targetType = getTargetType(target)

@@ -1,29 +1,29 @@
 import {
+  ITERATE_KEY,
+  pauseTracking,
+  resetTracking,
+  track,
+  trigger
+} from './effect'
+import {
+  ReactiveFlags,
+  Target,
   reactive,
   readonly,
   toRaw,
-  ReactiveFlags,
-  Target,
-  readonlyMap,
-  reactiveMap
+  getProxyMap
 } from './reactive'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import {
-  track,
-  trigger,
-  ITERATE_KEY,
-  pauseTracking,
-  resetTracking
-} from './effect'
-import {
-  isObject,
-  hasOwn,
-  isSymbol,
+  extend,
   hasChanged,
+  hasOwn,
   isArray,
   isIntegerKey,
-  extend
+  isObject,
+  isSymbol
 } from '@vue/shared'
+
 import { isRef } from './ref'
 
 const builtInSymbols = new Set(
@@ -75,9 +75,11 @@ function createGetter(isReadonly = false, shallow = false) {
       return !isReadonly
     } else if (key === ReactiveFlags.IS_READONLY) {
       return isReadonly
+    } else if (key === ReactiveFlags.IS_SHALLOW) {
+      return shallow
     } else if (
       key === ReactiveFlags.RAW &&
-      receiver === (isReadonly ? readonlyMap : reactiveMap).get(target)
+      receiver === getProxyMap(isReadonly, shallow).get(target)
     ) {
       return target
     }
