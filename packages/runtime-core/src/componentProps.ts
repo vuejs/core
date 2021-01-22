@@ -67,7 +67,7 @@ type PropMethod<T, TConstructor = any> = T extends (...args: any) => any // if i
 type RequiredKeys<T> = {
   [K in keyof T]: T[K] extends
     | { required: true }
-    | { default: string | number | boolean | object | symbol | bigint; }
+    | { default: string | number | boolean | object | symbol | bigint | (() => any); }
     // don't mark Boolean props as undefined
     | BooleanConstructor
     | { type: BooleanConstructor }
@@ -79,7 +79,7 @@ type OptionalKeys<T> = Exclude<keyof T, RequiredKeys<T>>
 
 type DefaultKeys<T> = {
   [K in keyof T]: T[K] extends
-    | { default: string | number | boolean | object | symbol | bigint;}
+    | { default: string | number | boolean | object | symbol | bigint | (() => any);}
     // Boolean implicitly defaults to false
     | BooleanConstructor
     | { type: BooleanConstructor }
