@@ -164,6 +164,20 @@ return { x }
 }"
 `;
 
+exports[`SFC compile <script setup> imports remove the defineProps/defineEmit specifiers 1`] = `
+"import { ref } from 'vue'
+        
+export default {
+  expose: [],
+  setup(__props) {
+
+        
+return { ref }
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> imports should extract comment for import or type declarations 1`] = `
 "import a from 'a' // comment
         import b from 'b'

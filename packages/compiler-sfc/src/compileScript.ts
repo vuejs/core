@@ -600,10 +600,12 @@ export function compileScript(
       let prev: Node | undefined, next: Node | undefined
       const removeSpecifier = (node: Node) => {
         removed++
-        s.remove(
-          prev ? prev.end! + startOffset : node.start! + startOffset,
-          next && !prev ? next.start! + startOffset : node.end! + startOffset
-        )
+        const start = prev ? prev.end! + startOffset : node.start! + startOffset
+        const end =
+          (next ? node.end! + (next.start! - node.end!) : node.end!) +
+          startOffset
+
+        s.remove(start, end)
       }
 
       for (let i = 0; i < node.specifiers.length; i++) {
