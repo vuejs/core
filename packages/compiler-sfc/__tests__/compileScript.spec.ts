@@ -177,6 +177,16 @@ const myEmit = defineEmit(['foo', 'bar'])
       assertCode(content)
       expect(content).toMatch(`import { ref } from 'vue'`)
     })
+
+    test('remove the defineProps/defineEmit specifiers (on the right)', () => {
+      const { content } = compile(`
+        <script setup>
+        import { ref, defineProps, defineEmit } from 'vue'
+        </script>
+        `)
+      assertCode(content)
+      expect(content).toMatch(`import { ref } from 'vue'`)
+    })
   })
 
   describe('inlineTemplate mode', () => {
