@@ -10,7 +10,8 @@ import {
   Comment,
   cloneVNode,
   VNodeArrayChildren,
-  isVNode
+  isVNode,
+  removeBlocksForInstance
 } from './vnode'
 import { handleError, ErrorCodes } from './errorHandling'
 import { PatchFlags, ShapeFlags, isOn, isModelListener } from '@vue/shared'
@@ -208,6 +209,11 @@ export function renderComponentRoot(
       result = root
     }
   } catch (err) {
+    // #3100
+    // when component rendering encounters an error,
+    // we need to remove all blocks related to the current component instance
+    // to avoid memory leaks in ssr
+    removeBlocksForInstance(instance)
     handleError(err, instance, ErrorCodes.RENDER_FUNCTION)
     result = createVNode(Comment)
   }

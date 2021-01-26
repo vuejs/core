@@ -18,7 +18,8 @@ import {
   ConcreteComponent,
   ClassComponent,
   Component,
-  isClassComponent
+  isClassComponent,
+  currentInstance
 } from './component'
 import { RawSlots } from './componentSlots'
 import { isProxy, Ref, toRaw, ReactiveFlags, isRef } from '@vue/reactivity'
@@ -187,11 +188,18 @@ let currentBlock: VNode[] | null = null
  */
 export function openBlock(disableTracking = false) {
   blockStack.push((currentBlock = disableTracking ? null : []))
+  if (currentInstance && currentInstance.firstBlockIndex === -1) {
+    currentInstance.firstBlockIndex = blockStack.length - 1
+  }
 }
 
 export function closeBlock() {
   blockStack.pop()
   currentBlock = blockStack[blockStack.length - 1] || null
+}
+
+export function removeBlocksForInstance(instance: ComponentInternalInstance) {
+  blockStack.splice(instance.firstBlockIndex)
 }
 
 // Whether we should be tracking dynamic child nodes inside a block.

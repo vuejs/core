@@ -396,6 +396,10 @@ export interface ComponentInternalInstance {
    * @internal
    */
   [LifecycleHooks.ERROR_CAPTURED]: LifecycleHook
+  /**
+   * @internal
+   */
+  firstBlockIndex: number
 }
 
 const emptyAppContext = createAppContext()
@@ -476,7 +480,9 @@ export function createComponentInstance(
     a: null,
     rtg: null,
     rtc: null,
-    ec: null
+    ec: null,
+
+    firstBlockIndex: -1
   }
   if (__DEV__) {
     instance.ctx = createRenderContext(instance)
