@@ -13,7 +13,8 @@ import { RawSlots } from './componentSlots'
 import {
   FunctionalComponent,
   Component,
-  ConcreteComponent
+  ConcreteComponent,
+  ComponentOptions
 } from './component'
 import {  EmitsOptions } from './componentEmits'
 import { DefineComponent } from './apiDefineComponent'
@@ -169,12 +170,12 @@ export function h(
   children?: RawChildren | RawSlots
 ): VNode
 
-// // exclude `defineComponent` constructors
-// export function h<P, E extends EmitsOptions = {}>(
-//   type: ComponentOptions<P, any, any, any, any, any, any, E>,
-//   props?: (Partial<ExtractEmitEvents<E>> & RawProps & P ) | ({} extends P ? null : never),
-//   children?: RawChildren | RawSlots
-// ): VNode
+// exclude `defineComponent` constructors
+export function h<P, E extends EmitsOptions = {}>(
+  type: ComponentOptions<P, any, any, any, any, any, any, E>,
+  props?: (Partial<ExtractEmitEvents<E>> & RawProps & P ) | ({} extends P ? null : never),
+  children?: RawChildren | RawSlots
+): VNode
 
 // fake constructor type returned by `defineComponent`
 export function h<P, E extends EmitsOptions = {}, PP = {}, Props = {},Defaults = {}>(
