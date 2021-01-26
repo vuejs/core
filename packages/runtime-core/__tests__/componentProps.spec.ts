@@ -295,6 +295,10 @@ describe('component props', () => {
       ;(instance!.proxy as any).foo = 2
     }).toThrow(TypeError)
     expect(`Attempting to mutate prop "foo"`).toHaveBeenWarned()
+    // should not throw when overriding properties other than props
+    expect(() => {
+      ;(instance!.proxy as any).hasOwnProperty = () => {}
+    }).not.toThrow(TypeError)
   })
 
   test('merging props from mixins and extends', () => {
