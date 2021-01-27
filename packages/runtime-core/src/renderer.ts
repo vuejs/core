@@ -72,7 +72,7 @@ import { createHydrationFunctions, RootHydrateFunction } from './hydration'
 import { invokeDirectiveHook } from './directives'
 import { startMeasure, endMeasure } from './profiling'
 import { ComponentPublicInstance } from './componentPublicInstance'
-import { devtoolsComponentRemoved, devtoolsComponentUpdated } from './devtools'
+import { devtoolsComponentRemoved, devtoolsComponentUpdated, devtoolsComponentAdded } from './devtools'
 import { initFeatureFlags } from './featureFlags'
 import { isAsyncWrapper } from './apiAsyncComponent'
 
@@ -1285,6 +1285,10 @@ function baseCreateRenderer(
     if (__DEV__) {
       popWarningContext()
       endMeasure(instance, `mount`)
+    }
+
+    if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+      devtoolsComponentAdded(instance)
     }
   }
 
