@@ -3,7 +3,7 @@ import { currentInstance } from './component'
 import { currentRenderingInstance } from './componentRenderUtils'
 import { warn } from './warning'
 
-export interface InjectionKey<T> extends Symbol {}
+export type InjectionKey<T> = symbol
 
 export function provide<T>(key: InjectionKey<T> | string | number, value: T) {
   if (!currentInstance) {
