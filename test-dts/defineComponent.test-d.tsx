@@ -35,7 +35,7 @@ describe('with object props', () => {
     ggg: 'foo' | 'bar'
     ffff: (a: number, b: string) => { a: boolean }
     iii?: (() => string) | (() => number)
-    jjj?: ((arg1: string) => string) | ((arg1: string, arg2: string) => string)
+    jjj: ((arg1: string) => string) | ((arg1: string, arg2: string) => string)
     validated?: string
     date?: Date
   }
