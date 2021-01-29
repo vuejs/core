@@ -11,6 +11,7 @@ import {
   ComponentPublicInstance,
   ComponentOptions,
   SetupContext,
+  IsUnion,
   h
 } from './index'
 
@@ -34,7 +35,7 @@ describe('with object props', () => {
     ggg: 'foo' | 'bar'
     ffff: (a: number, b: string) => { a: boolean }
     iii?: (() => string) | (() => number)
-    jjj?: ((arg1: string) => string) | ((arg1: string, arg2: string) => number)
+    jjj?: ((arg1: string) => string) | ((arg1: string, arg2: string) => string)
     validated?: string
     date?: Date
   }
@@ -104,9 +105,9 @@ describe('with object props', () => {
       },
       // union + function with different return types
       iii: Function as PropType<(() => string) | (() => number)>,
-      // union + function with different args
+      // union + function with different args & same return type
       jjj: Function as PropType<
-        ((arg1: string) => string) | ((arg1: string, arg2: string) => number)
+        ((arg1: string) => string) | ((arg1: string, arg2: string) => string)
       >,
       validated: {
         type: String,
@@ -134,7 +135,16 @@ describe('with object props', () => {
       expectType<ExpectedProps['hhh']>(props.hhh)
       expectType<ExpectedProps['ggg']>(props.ggg)
       expectType<ExpectedProps['ffff']>(props.ffff)
+      if (typeof props.iii !== 'function') {
+        expectType<undefined>(props.iii)
+      }
       expectType<ExpectedProps['iii']>(props.iii)
+      const { jjj } = props
+      if (jjj !== undefined) {
+        type JjjType = typeof jjj
+        type JjjIsUnion = IsUnion<JjjType>
+        expectType<JjjIsUnion>(true)
+      }
       expectType<ExpectedProps['jjj']>(props.jjj)
       expectType<ExpectedProps['validated']>(props.validated)
       expectType<ExpectedProps['date']>(props.date)
