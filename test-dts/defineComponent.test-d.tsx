@@ -33,6 +33,8 @@ describe('with object props', () => {
     hhh: boolean
     ggg: 'foo' | 'bar'
     ffff: (a: number, b: string) => { a: boolean }
+    iii?: (() => string) | (() => number)
+    jjj?: ((arg1: string) => string) | ((arg1: string, arg2: string) => number)
     validated?: string
     date?: Date
   }
@@ -100,6 +102,12 @@ describe('with object props', () => {
         type: Function as PropType<(a: number, b: string) => { a: boolean }>,
         default: (a: number, b: string) => ({ a: a > +b })
       },
+      // union + function with different return types
+      iii: Function as PropType<(() => string) | (() => number)>,
+      // union + function with different args
+      jjj: Function as PropType<
+        ((arg1: string) => string) | ((arg1: string, arg2: string) => number)
+      >,
       validated: {
         type: String,
         // validator requires explicit annotation
@@ -126,6 +134,8 @@ describe('with object props', () => {
       expectType<ExpectedProps['hhh']>(props.hhh)
       expectType<ExpectedProps['ggg']>(props.ggg)
       expectType<ExpectedProps['ffff']>(props.ffff)
+      expectType<ExpectedProps['iii']>(props.iii)
+      expectType<ExpectedProps['jjj']>(props.jjj)
       expectType<ExpectedProps['validated']>(props.validated)
       expectType<ExpectedProps['date']>(props.date)
 

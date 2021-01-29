@@ -60,7 +60,7 @@ type PropConstructor<T = any> =
   | { (): T }
   | PropMethod<T>
 
-type PropMethod<T, TConstructor = any> = T extends (...args: any) => any // if is function with args
+type PropMethod<T, TConstructor = any> = [T] extends [(...args: any) => any] // if is function with args
   ? { new (): TConstructor; (): T; readonly prototype: TConstructor } // Create Function like constructor
   : never
 
@@ -89,17 +89,19 @@ type DefaultKeys<T> = {
     : never
 }[keyof T]
 
-type InferPropType<T> = T extends null
+type InferPropType<T> = [T] extends null
   ? any // null & true would fail to infer
-  : T extends { type: null | true }
+  : [T] extends [{ type: null | true }]
     ? any // As TS issue https://github.com/Microsoft/TypeScript/issues/14829 // somehow `ObjectConstructor` when inferred from { (): T } becomes `any` // `BooleanConstructor` when inferred from PropConstructor(with PropMethod) becomes `Boolean`
-    : T extends ObjectConstructor | { type: ObjectConstructor }
+    : [T] extends [ObjectConstructor | { type: ObjectConstructor }]
       ? Record<string, any>
-      : T extends BooleanConstructor | { type: BooleanConstructor }
+      : [T] extends [BooleanConstructor | { type: BooleanConstructor }]
         ? boolean
-        : T extends DateConstructor | { type: DateConstructor }
+        : [T] extends [DateConstructor | { type: DateConstructor }]
           ? Date
-          : T extends Prop<infer V, infer D> ? (unknown extends V ? D : V) : T
+          : [T] extends [Prop<infer V, infer D>]
+            ? (unknown extends V ? D : V)
+            : T
 
 export type ExtractPropTypes<O> = O extends object
   ? { [K in RequiredKeys<O>]: InferPropType<O[K]> } &
