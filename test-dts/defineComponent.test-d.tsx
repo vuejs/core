@@ -106,9 +106,12 @@ describe('with object props', () => {
       // union + function with different return types
       iii: Function as PropType<(() => string) | (() => number)>,
       // union + function with different args & same return type
-      jjj: Function as PropType<
-        ((arg1: string) => string) | ((arg1: string, arg2: string) => string)
-      >,
+      jjj: {
+        type: Function as PropType<
+          ((arg1: string) => string) | ((arg1: string, arg2: string) => string)
+        >,
+        required: true
+      },
       validated: {
         type: String,
         // validator requires explicit annotation
@@ -139,12 +142,7 @@ describe('with object props', () => {
         expectType<undefined>(props.iii)
       }
       expectType<ExpectedProps['iii']>(props.iii)
-      const { jjj } = props
-      if (jjj !== undefined) {
-        type JjjType = typeof jjj
-        type JjjIsUnion = IsUnion<JjjType>
-        expectType<JjjIsUnion>(true)
-      }
+      expectType<IsUnion<typeof props.jjj>>(true)
       expectType<ExpectedProps['jjj']>(props.jjj)
       expectType<ExpectedProps['validated']>(props.validated)
       expectType<ExpectedProps['date']>(props.date)
@@ -234,6 +232,7 @@ describe('with object props', () => {
       fff={(a, b) => ({ a: a > +b })}
       hhh={false}
       ggg="foo"
+      jjj={() => ''}
       // should allow class/style as attrs
       class="bar"
       style={{ color: 'red' }}
@@ -252,6 +251,7 @@ describe('with object props', () => {
       eee={() => ({ a: 'eee' })}
       fff={(a, b) => ({ a: a > +b })}
       hhh={false}
+      jjj={() => ''}
     />
   )
 
