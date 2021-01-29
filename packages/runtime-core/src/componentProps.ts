@@ -67,7 +67,6 @@ type PropMethod<T, TConstructor = any> = T extends (...args: any) => any // if i
 type RequiredKeys<T> = {
   [K in keyof T]: T[K] extends
     | { required: true }
-    | { default: any }
     // don't mark Boolean props as undefined
     | BooleanConstructor
     | { type: BooleanConstructor }
