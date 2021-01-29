@@ -36,6 +36,7 @@ describe('with object props', () => {
     ffff: (a: number, b: string) => { a: boolean }
     iii?: (() => string) | (() => number)
     jjj: ((arg1: string) => string) | ((arg1: string, arg2: string) => string)
+    kkk?: any
     validated?: string
     date?: Date
   }
@@ -112,6 +113,7 @@ describe('with object props', () => {
         >,
         required: true
       },
+      kkk: null,
       validated: {
         type: String,
         // validator requires explicit annotation
@@ -144,6 +146,7 @@ describe('with object props', () => {
       expectType<ExpectedProps['iii']>(props.iii)
       expectType<IsUnion<typeof props.jjj>>(true)
       expectType<ExpectedProps['jjj']>(props.jjj)
+      expectType<ExpectedProps['kkk']>(props.kkk)
       expectType<ExpectedProps['validated']>(props.validated)
       expectType<ExpectedProps['date']>(props.date)
 
@@ -178,6 +181,13 @@ describe('with object props', () => {
       expectType<ExpectedProps['fff']>(props.fff)
       expectType<ExpectedProps['hhh']>(props.hhh)
       expectType<ExpectedProps['ggg']>(props.ggg)
+      if (typeof props.iii !== 'function') {
+        expectType<undefined>(props.iii)
+      }
+      expectType<ExpectedProps['iii']>(props.iii)
+      expectType<IsUnion<typeof props.jjj>>(true)
+      expectType<ExpectedProps['jjj']>(props.jjj)
+      expectType<ExpectedProps['kkk']>(props.kkk)
 
       // @ts-expect-error props should be readonly
       expectError((props.a = 1))
@@ -198,6 +208,14 @@ describe('with object props', () => {
       expectType<ExpectedProps['fff']>(this.fff)
       expectType<ExpectedProps['hhh']>(this.hhh)
       expectType<ExpectedProps['ggg']>(this.ggg)
+      if (typeof this.iii !== 'function') {
+        expectType<undefined>(this.iii)
+      }
+      expectType<ExpectedProps['iii']>(this.iii)
+      const { jjj } = this
+      expectType<IsUnion<typeof jjj>>(true)
+      expectType<ExpectedProps['jjj']>(this.jjj)
+      expectType<ExpectedProps['kkk']>(this.kkk)
 
       // @ts-expect-error props on `this` should be readonly
       expectError((this.a = 1))
