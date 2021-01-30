@@ -63,7 +63,7 @@ export function normalizeClass(value: unknown): string {
   } else if (isArray(value)) {
     for (let i = 0; i < value.length; i++) {
       const normalized = normalizeClass(value[i])
-      if (normalized.length) {
+      if (normalized) {
         res += normalized + ' '
       }
     }
