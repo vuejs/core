@@ -7,9 +7,6 @@
   "files": [
     "dist"
   ],
-  "scripts": {
-    "prepare": "npm run build",
-  },
   "buildOptions": {
     "name": "VueCompilerSFC",
     "formats": [
