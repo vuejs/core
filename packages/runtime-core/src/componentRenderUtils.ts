@@ -119,7 +119,11 @@ export function renderComponentRoot(
     // to have comments along side the root element which makes it a fragment
     let root = result
     let setRoot: ((root: VNode) => void) | undefined = undefined
-    if (__DEV__ && result.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT) {
+    if (
+      __DEV__ &&
+      !result.transition &&
+      result.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
+    ) {
       ;[root, setRoot] = getChildRoot(result)
     }
 
