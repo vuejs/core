@@ -43,29 +43,13 @@ const arrayInstrumentations: Record<string, Function> = {}
 ;(['includes', 'indexOf', 'lastIndexOf'] as const).forEach(key => {
   const method = Array.prototype[key] as any
   arrayInstrumentations[key] = function(this: unknown[], ...args: unknown[]) {
-    const arr = toRaw(this)
-    const doTrack = (index: number) => {
-      // tracking array length
-      const len = this.length
-      // tracking integer key
-      if (key === 'lastIndexOf') {
-        for (let i = index; i < len; i++) {
-          track(arr, TrackOpTypes.GET, i + '')
-        }
-      } else {
-        for (let i = 0; i <= index; i++) {
-          track(arr, TrackOpTypes.GET, i + '')
-        }
-      }
-    }
-    // we run the method using the original args first (which may be reactive)
-    let res = method.apply(arr, args)
+    // first look up on the proxy,
+    // `this` should be the proxy object, it can already track `length` and integer keys
+    let res = method.apply(this, args)
+    // if that didn't work, run it again using raw values.
     if (res === -1 || res === false) {
-      // if that didn't work, run it again using raw values.
-      res = method.apply(arr, args.map(toRaw))
+      res = method.apply(toRaw(this), args)
     }
-
-    doTrack(typeof res === 'number' && res > -1 ? res : this.length - 1)
 
     return res
   }
