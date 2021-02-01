@@ -56,7 +56,6 @@ import {
   markAttrsAccessed
 } from './componentRenderUtils'
 import { startMeasure, endMeasure } from './profiling'
-import { devtoolsComponentAdded } from './devtools'
 
 export type Data = Record<string, unknown>
 
@@ -261,7 +260,7 @@ export interface ComponentInternalInstance {
    */
   directives: Record<string, Directive> | null
   /**
-   * reoslved props options
+   * resolved props options
    * @internal
    */
   propsOptions: NormalizedPropsOptions
@@ -485,10 +484,6 @@ export function createComponentInstance(
   }
   instance.root = parent ? parent.root : instance
   instance.emit = emit.bind(null, instance)
-
-  if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-    devtoolsComponentAdded(instance)
-  }
 
   return instance
 }

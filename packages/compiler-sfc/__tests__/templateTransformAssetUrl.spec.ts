@@ -59,13 +59,15 @@ describe('compiler sfc: transform asset url', () => {
   test('with explicit base', () => {
     const { code } = compileWithAssetUrls(
       `<img src="./bar.png"></img>` + // -> /foo/bar.png
-      `<img src="~bar.png"></img>` + // -> /foo/bar.png
       `<img src="bar.png"></img>` + // -> bar.png (untouched)
-        `<img src="@theme/bar.png"></img>`, // -> @theme/bar.png (untouched)
+      `<img src="~bar.png"></img>` + // -> still converts to import
+        `<img src="@theme/bar.png"></img>`, // -> still converts to import
       {
         base: '/foo'
       }
     )
+    expect(code).toMatch(`import _imports_0 from 'bar.png'`)
+    expect(code).toMatch(`import _imports_1 from '@theme/bar.png'`)
     expect(code).toMatchSnapshot()
   })
 
