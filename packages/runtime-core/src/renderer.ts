@@ -799,6 +799,15 @@ function baseCreateRenderer(
     }
   }
 
+  const getTreeOwnerWithScopeId = (
+    parent: ComponentInternalInstance
+  ): ComponentInternalInstance => {
+    if (parent.type.__inheritScopeId && parent.parent) {
+      return getTreeOwnerWithScopeId(parent.parent)
+    }
+    return parent
+  }
+
   const setScopeId = (
     el: RendererElement,
     scopeId: string | false | null,
@@ -809,13 +818,14 @@ function baseCreateRenderer(
       hostSetScopeId(el, scopeId)
     }
     if (parentComponent) {
-      const treeOwnerId = parentComponent.type.__scopeId
+      const treeOwner = getTreeOwnerWithScopeId(parentComponent)
+      const treeOwnerId = treeOwner.type.__scopeId
       // vnode's own scopeId and the current patched component's scopeId is
       // different - this is a slot content node.
       if (treeOwnerId && treeOwnerId !== scopeId) {
         hostSetScopeId(el, treeOwnerId + '-s')
       }
-      let subTree = parentComponent.subTree
+      let subTree = treeOwner.subTree
       if (__DEV__ && subTree.type === Fragment) {
         subTree =
           filterSingleRoot(subTree.children as VNodeArrayChildren) || subTree

@@ -43,6 +43,7 @@ export const Transition: FunctionalComponent<TransitionProps> = (
 ) => h(BaseTransition, resolveTransitionProps(props), slots)
 
 Transition.displayName = 'Transition'
+Transition.__inheritScopeId = true
 
 const DOMTransitionPropsValidators = {
   name: String,

@@ -1,5 +1,12 @@
 import { withScopeId } from '../../src/helpers/scopeId'
-import { h, render, nodeOps, serializeInner } from '@vue/runtime-test'
+import {
+  h,
+  render,
+  nodeOps,
+  serializeInner,
+  BaseTransition,
+  KeepAlive
+} from '@vue/runtime-test'
 
 describe('scopeId runtime support', () => {
   const withParentId = withScopeId('parent')
@@ -101,5 +108,55 @@ describe('scopeId runtime support', () => {
     render(h(App), root)
 
     expect(serializeInner(root)).toBe(`<div parent></div>`)
+  })
+
+  test("The Transition component should inherit its parent's scopeId", () => {
+    const Child = {
+      __scopeId: 'child',
+      render: withChildId(function(this: any) {
+        return h(BaseTransition, withChildId(() => this.$slots.default()))
+      })
+    }
+    const App = {
+      __scopeId: 'parent',
+      render: withParentId(() => {
+        return h(
+          'div',
+          h(Child, null, {
+            default: withParentId(() => h('span'))
+          })
+        )
+      })
+    }
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(
+      `<div parent><span parent child-s></span></div>`
+    )
+  })
+
+  test("The KeepAlive component should inherit its parent's scopeId", () => {
+    const Child = {
+      __scopeId: 'child',
+      render: withChildId(function(this: any) {
+        return h(KeepAlive, withChildId(() => this.$slots.default()))
+      })
+    }
+    const App = {
+      __scopeId: 'parent',
+      render: withParentId((ctx: any) => {
+        return h(
+          'div',
+          h(Child, null, {
+            default: withParentId(() => h('span'))
+          })
+        )
+      })
+    }
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(
+      `<div parent><span parent child-s></span></div>`
+    )
   })
 })

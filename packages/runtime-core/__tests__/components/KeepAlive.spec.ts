@@ -809,7 +809,9 @@ describe('KeepAlive', () => {
       __scopeId: 'foo',
       render: withId(() => {
         return h(KeepAlive, null, {
-          default: () => h(views[viewRef.value], { ref: instanceRef })
+          // since the children of the KeepAlive component will not be compiled as slots,
+          // so, the parent's scopeId should be attached to it's children
+          default: withId(() => h(views[viewRef.value], { ref: instanceRef }))
         })
       })
     }

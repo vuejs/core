@@ -70,6 +70,8 @@ const KeepAliveImpl = {
   // would prevent it from being tree-shaken.
   __isKeepAlive: true,
 
+  __inheritScopeId: true,
+
   inheritRef: true,
 
   props: {

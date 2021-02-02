@@ -90,6 +90,10 @@ export interface ComponentInternalOptions {
   /**
    * @internal
    */
+  __inheritScopeId?: boolean
+  /**
+   * @internal
+   */
   __cssModules?: Data
   /**
    * @internal

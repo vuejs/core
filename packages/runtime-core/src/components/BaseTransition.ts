@@ -113,6 +113,8 @@ const TransitionHookValidator = [Function, Array]
 const BaseTransitionImpl = {
   name: `BaseTransition`,
 
+  __inheritScopeId: true,
+
   props: {
     mode: String,
     appear: Boolean,
