@@ -181,6 +181,7 @@ function doWatch(
         if (isRef(s)) {
           return s.value
         } else if (isReactive(s)) {
+          deep = true
           return traverse(s)
         } else if (isFunction(s)) {
           return callWithErrorHandling(s, instance, ErrorCodes.WATCH_GETTER)
@@ -256,10 +257,6 @@ function doWatch(
         for (let i = 0; i < newValue.length && i < oldValue.length; i++) {
           if (hasChanged(newValue[i], oldValue[i])) {
             change = true
-            break
-          }
-          if (typeof newValue[i] === 'object') {
-            forceTrigger = true
             break
           }
         }

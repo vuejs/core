@@ -48,9 +48,6 @@ describe('api: watch', () => {
     watch([plus], () => {
       count++
     })
-    watch(plus, () => {
-      count++
-    })
     value.value = '2'
     await nextTick()
     expect(plus.value).toBe(true)
