@@ -884,27 +884,62 @@ function testRender(type: string, render: typeof renderToString) {
     test('multiple onServerPrefetch', async () => {
       const msg = Promise.resolve('hello')
       const msg2 = Promise.resolve('hi')
+      const msg3 = Promise.resolve('bonjour')
       const app = createApp({
         setup() {
           const message = ref('')
           const message2 = ref('')
+          const message3 = ref('')
           onServerPrefetch(async () => {
             message.value = await msg
           })
           onServerPrefetch(async () => {
             message2.value = await msg2
           })
+          onServerPrefetch(async () => {
+            message3.value = await msg3
+          })
           return {
             message,
-            message2
+            message2,
+            message3
           }
         },
         render() {
-          return h('div', `${this.message} ${this.message2}`)
+          return h('div', `${this.message} ${this.message2} ${this.message3}`)
         }
       })
       const html = await render(app)
-      expect(html).toBe(`<div>hello hi</div>`)
+      expect(html).toBe(`<div>hello hi bonjour</div>`)
+    })
+
+    test('onServerPrefetch are run in parallel', async () => {
+      const first = jest.fn(() => Promise.resolve())
+      const second = jest.fn(() => Promise.resolve())
+      let checkOther = [false, false]
+      let done = [false, false]
+      const app = createApp({
+        setup() {
+          onServerPrefetch(async () => {
+            checkOther[0] = done[1]
+            await first()
+            done[0] = true
+          })
+          onServerPrefetch(async () => {
+            checkOther[1] = done[0]
+            await second()
+            done[1] = true
+          })
+        },
+        render() {
+          return h('div', '')
+        }
+      })
+      await render(app)
+      expect(first).toHaveBeenCalled()
+      expect(second).toHaveBeenCalled()
+      expect(checkOther).toEqual([false, false])
+      expect(done).toEqual([true, true])
     })
   })
 }
