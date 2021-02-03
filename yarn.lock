@@ -218,9 +218,9 @@
     js-tokens "^4.0.0"
 
 "@babel/parser@^7.1.0", "@babel/parser@^7.12.0", "@babel/parser@^7.4.4", "@babel/parser@^7.5.5", "@babel/parser@^7.7.5", "@babel/parser@^7.8.6", "@babel/parser@^7.9.0":
-  version "7.12.7"
-  resolved "https://registry.yarnpkg.com/@babel/parser/-/parser-7.12.7.tgz#fee7b39fe809d0e73e5b25eecaf5780ef3d73056"
-  integrity sha512-oWR02Ubp4xTLCAqPRiNIuMVgNO5Aif/xpXtabhzW2HWUD47XJsAB4Zd/Rg30+XeQA3juXigV7hlquOTmwqLiwg==
+  version "7.12.13"
+  resolved "https://registry.yarnpkg.com/@babel/parser/-/parser-7.12.13.tgz#3ee7be4131fe657ba9143d5c5b3a9f253fdb75e9"
+  integrity sha512-z7n7ybOUzaRc3wwqLpAX8UFIXsrVXUJhtNGBwAnLz6d1KUapqyq7ad2La8gZ6CXhHmGAIL32cop8Tst4/PNWLw==
 
 "@babel/plugin-syntax-async-generators@^7.8.4":
   version "7.8.4"
