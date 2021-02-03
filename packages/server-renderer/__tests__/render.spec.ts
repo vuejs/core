@@ -941,5 +941,36 @@ function testRender(type: string, render: typeof renderToString) {
       expect(checkOther).toEqual([false, false])
       expect(done).toEqual([true, true])
     })
+
+    test('onServerPrefetch with serverPrefetch option', async () => {
+      const msg = Promise.resolve('hello')
+      const msg2 = Promise.resolve('hi')
+      const app = createApp({
+        data() {
+          return {
+            message: ''
+          }
+        },
+
+        async serverPrefetch() {
+          this.message = await msg
+        },
+
+        setup() {
+          const message2 = ref('')
+          onServerPrefetch(async () => {
+            message2.value = await msg2
+          })
+          return {
+            message2
+          }
+        },
+        render() {
+          return h('div', `${this.message} ${this.message2}`)
+        }
+      })
+      const html = await render(app)
+      expect(html).toBe(`<div>hello hi</div>`)
+    })
   })
 }

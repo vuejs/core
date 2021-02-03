@@ -108,7 +108,7 @@ export function onServerPrefetch<
       if (hook) {
         // Merge hook
         type.serverPrefetch = () =>
-          Promise.all([handler(), (hook as Function)()])
+          Promise.all([handler(), (hook as Function).call(target.proxy)])
       } else {
         type.serverPrefetch = handler
       }
