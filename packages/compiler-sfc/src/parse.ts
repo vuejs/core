@@ -121,6 +121,7 @@ export function parse(
               p.type === NodeTypes.ATTRIBUTE &&
               p.name === 'lang' &&
               p.value &&
+              p.value.content &&
               p.value.content !== 'html'
           ))
       ) {
