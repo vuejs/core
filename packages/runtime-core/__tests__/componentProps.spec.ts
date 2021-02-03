@@ -378,4 +378,25 @@ describe('component props', () => {
     expect(setupProps).toMatchObject(props)
     expect(renderProxy.$props).toMatchObject(props)
   })
+
+  test('props type support BigInt', () => {
+    const Comp = {
+      props: {
+        foo: BigInt
+      },
+      render(this: any) {
+        return h('div', [this.foo])
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(
+      h(Comp, {
+        foo: BigInt(BigInt(100000111)) + BigInt(2000000000) * BigInt(30000000)
+      }),
+      root
+    )
+
+    expect(serializeInner(root)).toMatch('<div>60000000100000111</div>')
+  })
 })

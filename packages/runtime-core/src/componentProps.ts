@@ -510,7 +510,7 @@ function validateProp(
 }
 
 const isSimpleType = /*#__PURE__*/ makeMap(
-  'String,Number,Boolean,Function,Symbol'
+  'String,Number,Boolean,Function,Symbol,BigInt'
 )
 
 type AssertionResult = {
