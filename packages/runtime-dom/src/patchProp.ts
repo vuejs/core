@@ -3,7 +3,13 @@ import { patchStyle } from './modules/style'
 import { patchAttr } from './modules/attrs'
 import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
-import { isOn, isString, isFunction, isModelListener } from '@vue/shared'
+import {
+  isOn,
+  isString,
+  isFunction,
+  isModelListener,
+  isFormTag
+} from '@vue/shared'
 import { RendererOptions } from '@vue/runtime-core'
 
 const nativeOnRE = /^on[a-z]/
@@ -93,9 +99,9 @@ function shouldSetAsProp(
     return false
   }
 
-  // #1787 form as an attribute must be a string, while it accepts an Element as
-  // a prop
-  if (key === 'form' && typeof value === 'string') {
+  // #1787, #2840 the form property is readonly and can only be set as an
+  // attribute using a string value
+  if (key === 'form' && isFormTag(el.tagName)) {
     return false
   }
 
