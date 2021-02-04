@@ -267,13 +267,11 @@ function createChildrenCodegenNode(
     const vnodeCall = (firstChild as ElementNode)
       .codegenNode as BlockCodegenNode
     // Change createVNode to createBlock.
-    if (vnodeCall.type === NodeTypes.VNODE_CALL) {
-      if (!vnodeCall.isBlock) {
-        removeHelper(CREATE_VNODE)
-        vnodeCall.isBlock = true
-        helper(OPEN_BLOCK)
-        helper(CREATE_BLOCK)
-      }
+    if (vnodeCall.type === NodeTypes.VNODE_CALL && !vnodeCall.isBlock) {
+      removeHelper(CREATE_VNODE)
+      vnodeCall.isBlock = true
+      helper(OPEN_BLOCK)
+      helper(CREATE_BLOCK)
     }
     // inject branch key
     injectProp(vnodeCall, keyProperty, context)

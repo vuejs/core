@@ -190,9 +190,10 @@ export function createTransformContext(
       const count = context.helpers.get(name)
       if (count) {
         const currentCount = count - 1
-        context.helpers.set(name, currentCount)
         if (!currentCount) {
           context.helpers.delete(name)
+        } else {
+          context.helpers.set(name, currentCount)
         }
       }
     },
