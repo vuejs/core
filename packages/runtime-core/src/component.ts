@@ -510,6 +510,10 @@ export function validateComponentName(name: string, config: AppConfig) {
   }
 }
 
+export function isStatefulComponent(instance: ComponentInternalInstance) {
+  return instance.vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT
+}
+
 export let isInSSRComponentSetup = false
 
 export function setupComponent(
@@ -518,8 +522,8 @@ export function setupComponent(
 ) {
   isInSSRComponentSetup = isSSR
 
-  const { props, children, shapeFlag } = instance.vnode
-  const isStateful = shapeFlag & ShapeFlags.STATEFUL_COMPONENT
+  const { props, children } = instance.vnode
+  const isStateful = isStatefulComponent(instance)
   initProps(instance, props, isStateful, isSSR)
   initSlots(instance, children)
 

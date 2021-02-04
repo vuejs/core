@@ -1,4 +1,8 @@
-import { ComponentInternalInstance, Data } from './component'
+import {
+  ComponentInternalInstance,
+  Data,
+  isStatefulComponent
+} from './component'
 import { nextTick, queueJob } from './scheduler'
 import { instanceWatch, WatchOptions, WatchStopHandle } from './apiWatch'
 import {
@@ -207,9 +211,11 @@ type PublicPropertiesMap = Record<string, (i: ComponentInternalInstance) => any>
  */
 const getPublicInstance = (
   i: ComponentInternalInstance | null
-): ComponentPublicInstance | ComponentInternalInstance['exposed'] | null =>
-  i &&
-  (i.proxy ? (i.exposed ? i.exposed : i.proxy) : getPublicInstance(i.parent))
+): ComponentPublicInstance | ComponentInternalInstance['exposed'] | null => {
+  if (!i) return null
+  if (isStatefulComponent(i)) return i.exposed ? i.exposed : i.proxy
+  return getPublicInstance(i.parent)
+}
 
 const publicPropertiesMap: PublicPropertiesMap = extend(Object.create(null), {
   $: i => i,
