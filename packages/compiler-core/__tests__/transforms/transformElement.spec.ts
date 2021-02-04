@@ -905,7 +905,6 @@ describe('compiler: element transform', () => {
         props: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: "{ is: 'p' }",
-          isConstant: false,
           isStatic: false
         }
       })
