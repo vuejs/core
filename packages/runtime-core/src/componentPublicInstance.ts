@@ -207,8 +207,9 @@ type PublicPropertiesMap = Record<string, (i: ComponentInternalInstance) => any>
  */
 const getPublicInstance = (
   i: ComponentInternalInstance | null
-): ComponentPublicInstance | null =>
-  i && (i.proxy ? i.proxy : getPublicInstance(i.parent))
+): ComponentPublicInstance | ComponentInternalInstance['exposed'] | null =>
+  i &&
+  (i.proxy ? (i.exposed ? i.exposed : i.proxy) : getPublicInstance(i.parent))
 
 const publicPropertiesMap: PublicPropertiesMap = extend(Object.create(null), {
   $: i => i,
@@ -219,7 +220,7 @@ const publicPropertiesMap: PublicPropertiesMap = extend(Object.create(null), {
   $slots: i => (__DEV__ ? shallowReadonly(i.slots) : i.slots),
   $refs: i => (__DEV__ ? shallowReadonly(i.refs) : i.refs),
   $parent: i => getPublicInstance(i.parent),
-  $root: i => i.root && i.root.proxy,
+  $root: i => getPublicInstance(i.root),
   $emit: i => i.emit,
   $options: i => (__FEATURE_OPTIONS_API__ ? resolveMergedOptions(i) : i.type),
   $forceUpdate: i => () => queueJob(i.update),
