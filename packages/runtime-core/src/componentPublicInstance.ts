@@ -349,7 +349,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
           )} must be accessed via $data because it starts with a reserved ` +
             `character ("$" or "_") and is not proxied on the render context.`
         )
-      } else {
+      } else if (instance === currentRenderingInstance) {
         warn(
           `Property ${JSON.stringify(key)} was accessed during render ` +
             `but is not defined on instance.`
