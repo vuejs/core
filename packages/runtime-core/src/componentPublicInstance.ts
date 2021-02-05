@@ -368,7 +368,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       setupState[key] = value
     } else if (data !== EMPTY_OBJ && hasOwn(data, key)) {
       data[key] = value
-    } else if (key in instance.props) {
+    } else if (hasOwn(instance.props, key)) {
       __DEV__ &&
         warn(
           `Attempting to mutate prop "${key}". Props are readonly.`,
