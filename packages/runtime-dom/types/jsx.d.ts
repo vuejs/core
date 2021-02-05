@@ -26,6 +26,7 @@
 //                 Kanitkorn Sujautra <https://github.com/lukyth>
 //                 Sebastian Silbermann <https://github.com/eps1lon>
 
+import { VNode } from '@vue/runtime-core'
 import * as CSS from 'csstype'
 
 export interface CSSProperties extends CSS.Properties<string | number> {
@@ -1338,7 +1339,7 @@ type NativeElements = {
 
 declare global {
   namespace JSX {
-    interface Element {}
+    interface Element extends VNode {}
     interface ElementClass {
       $props: {}
     }
