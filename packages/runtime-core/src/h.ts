@@ -5,7 +5,6 @@ import {
   VNodeArrayChildren,
   Fragment,
   Text,
-  Static,
   Comment,
   isVNode
 } from './vnode'
