@@ -1,4 +1,9 @@
-import { ComponentInternalInstance, Data } from './component'
+import {
+  ComponentInternalInstance,
+  Data,
+  FunctionalComponent,
+  Component
+} from './component'
 import { nextTick, queueJob } from './scheduler'
 import { instanceWatch, WatchOptions, WatchStopHandle } from './apiWatch'
 import {
@@ -29,7 +34,7 @@ import {
   resolveMergedOptions,
   isInBeforeCreate
 } from './componentOptions'
-import { EmitsOptions, EmitFn } from './componentEmits'
+import { EmitsOptions, EmitFn, EmitListeners } from './componentEmits'
 import { Slots } from './componentSlots'
 import {
   currentRenderingInstance,
@@ -534,3 +539,41 @@ export function exposeSetupStateOnRenderContext(
     })
   })
 }
+
+type CreateComponentProps<
+  P,
+  Defaults,
+  MixinsType,
+  PublicP = UnwrapMixinsType<MixinsType, 'P'> & EnsureNonVoid<P>,
+  PublicDefaults = UnwrapMixinsType<MixinsType, 'Defaults'> &
+    EnsureNonVoid<Defaults>
+> = Readonly<Partial<PublicDefaults> & Omit<PublicP, keyof PublicDefaults>>
+
+export type ComponentProps<
+  C extends Component<any, any>
+> = C extends ComponentOptionsBase<
+  infer P,
+  any,
+  any,
+  any,
+  any,
+  infer Mixin,
+  infer Extends,
+  any,
+  any,
+  infer Defaults
+>
+  ? CreateComponentProps<
+      P,
+      Defaults,
+      IntersectionMixin<Mixin> & IntersectionMixin<Extends>
+    >
+  : C extends FunctionalComponent<infer P, any> ? Readonly<P> : {}
+
+export type ComponentListeners<
+  C extends Component<any, any>
+> = C extends ComponentOptionsBase<any, any, any, any, any, any, any, infer E>
+  ? EmitListeners<E>
+  : C extends FunctionalComponent<any, infer E>
+    ? EmitListeners<E>
+    : EmitListeners<string[]>
