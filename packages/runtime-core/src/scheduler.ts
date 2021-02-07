@@ -57,7 +57,12 @@ export function nextTick(
   return fn ? p.then(this ? fn.bind(this) : fn) : p
 }
 
+// #2768
+// Use binary-search to find a suitable position in the queue,
+// so that the queue maintains the increasing order of job's id,
+// which can prevent the job from being skipped and also can avoid repeated patching.
 const findInsertionIndex = (job: SchedulerJob) => {
+  // the start index should be `flushIndex + 1`
   let start = flushIndex + 1
   let end = queue.length
   const jobId = getId(job)
