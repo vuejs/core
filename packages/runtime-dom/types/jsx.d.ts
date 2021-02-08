@@ -1309,8 +1309,24 @@ export interface Events {
 
 type StringKeyOf<T> = Extract<keyof T, string>
 
+type EventNames<T, K extends string = StringKeyOf<T>> = StringKeyOf<T> | (`${K}Once` | `${K}Capture` | `${K}OnceCapture`)
+
 type EventHandlers<E> = {
-  [K in StringKeyOf<E>]?: E[K] extends Function ? E[K] : (payload: E[K]) => void
+  [K in EventNames<E>]?: K extends `${infer ON}Once`
+    ? ON extends StringKeyOf<E>
+      ? E[ON] extends Function ? E[ON] : (payload: E[ON]) => void
+      : never
+    : K extends `${infer CN}OnceCapture`
+      ? CN extends StringKeyOf<E>
+        ? E[CN] extends Function ? E[CN] : (payload: E[CN]) => void
+        : never
+      : K extends `${infer OCN}Capture`
+        ? OCN extends StringKeyOf<E>
+          ? E[OCN] extends Function ? E[OCN] : (payload: E[OCN]) => void
+          : never
+        : K extends StringKeyOf<E>
+          ? E[K] extends Function ? E[K] : (payload: E[K]) => void
+          : never
 }
 
 // use namespace import to avoid collision with generated types which use
