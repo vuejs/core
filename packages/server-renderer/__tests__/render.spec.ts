@@ -15,6 +15,7 @@ import {
   createVNode,
   resolveDynamicComponent,
   renderSlot,
+  onErrorCaptured,
   onServerPrefetch
 } from 'vue'
 import { escapeHtml } from '@vue/shared'
@@ -971,6 +972,99 @@ function testRender(type: string, render: typeof renderToString) {
       })
       const html = await render(app)
       expect(html).toBe(`<div>hello hi</div>`)
+    })
+
+    test('mixed in serverPrefetch', async () => {
+      const msg = Promise.resolve('hello')
+      const app = createApp({
+        data() {
+          return {
+            msg: ''
+          }
+        },
+        mixins: [
+          {
+            async serverPrefetch() {
+              this.msg = await msg
+            }
+          }
+        ],
+        render() {
+          return h('div', this.msg)
+        }
+      })
+      const html = await render(app)
+      expect(html).toBe(`<div>hello</div>`)
+    })
+
+    test('many serverPrefetch', async () => {
+      const foo = Promise.resolve('foo')
+      const bar = Promise.resolve('bar')
+      const baz = Promise.resolve('baz')
+      const app = createApp({
+        data() {
+          return {
+            foo: '',
+            bar: '',
+            baz: ''
+          }
+        },
+        mixins: [
+          {
+            async serverPrefetch() {
+              this.foo = await foo
+            }
+          },
+          {
+            async serverPrefetch() {
+              this.bar = await bar
+            }
+          }
+        ],
+        async serverPrefetch() {
+          this.baz = await baz
+        },
+        render() {
+          return h('div', `${this.foo}${this.bar}${this.baz}`)
+        }
+      })
+      const html = await render(app)
+      expect(html).toBe(`<div>foobarbaz</div>`)
+    })
+
+    test('onServerPrefetch throwing error', async () => {
+      let renderError: Error | null = null
+      let capturedError: Error | null = null
+
+      const Child = {
+        setup() {
+          onServerPrefetch(async () => {
+            throw new Error('An error')
+          })
+        },
+        render() {
+          return h('span')
+        }
+      }
+
+      const app = createApp({
+        setup() {
+          onErrorCaptured(e => {
+            capturedError = e
+          })
+        },
+        render() {
+          return h('div', h(Child))
+        }
+      })
+      try {
+        await render(app)
+      } catch (e) {
+        renderError = e
+      }
+      expect(`Unhandled error`).toHaveBeenWarned()
+      expect(renderError).toBe(null)
+      expect(((capturedError as unknown) as Error).message).toBe('An error')
     })
   })
 }

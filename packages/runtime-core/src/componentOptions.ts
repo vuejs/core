@@ -40,7 +40,8 @@ import {
   onDeactivated,
   onRenderTriggered,
   DebuggerHook,
-  ErrorCapturedHook
+  ErrorCapturedHook,
+  onServerPrefetch
 } from './apiLifecycle'
 import {
   reactive,
@@ -555,6 +556,7 @@ export function applyOptions(
     renderTracked,
     renderTriggered,
     errorCaptured,
+    serverPrefetch,
     // public API
     expose
   } = options
@@ -797,6 +799,9 @@ export function applyOptions(
   }
   if (unmounted) {
     onUnmounted(unmounted.bind(publicThis))
+  }
+  if (serverPrefetch) {
+    onServerPrefetch(serverPrefetch.bind(publicThis))
   }
 
   if (__COMPAT__) {

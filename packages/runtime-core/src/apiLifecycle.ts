@@ -1,6 +1,5 @@
 import {
   ComponentInternalInstance,
-  ComponentOptions,
   currentInstance,
   isInSSRComponentSetup,
   LifecycleHooks,
@@ -66,8 +65,9 @@ export function injectHook(
 export const createHook = <T extends Function = () => any>(
   lifecycle: LifecycleHooks
 ) => (hook: T, target: ComponentInternalInstance | null = currentInstance) =>
-  // post-create lifecycle registrations are noops during SSR
-  !isInSSRComponentSetup && injectHook(lifecycle, hook, target)
+  // post-create lifecycle registrations are noops during SSR (except for serverPrefetch)
+  (!isInSSRComponentSetup || lifecycle === LifecycleHooks.SERVER_PREFETCH) &&
+  injectHook(lifecycle, hook, target)
 
 export const onBeforeMount = createHook(LifecycleHooks.BEFORE_MOUNT)
 export const onMounted = createHook(LifecycleHooks.MOUNTED)
@@ -75,6 +75,7 @@ export const onBeforeUpdate = createHook(LifecycleHooks.BEFORE_UPDATE)
 export const onUpdated = createHook(LifecycleHooks.UPDATED)
 export const onBeforeUnmount = createHook(LifecycleHooks.BEFORE_UNMOUNT)
 export const onUnmounted = createHook(LifecycleHooks.UNMOUNTED)
+export const onServerPrefetch = createHook(LifecycleHooks.SERVER_PREFETCH)
 
 export type DebuggerHook = (e: DebuggerEvent) => void
 export const onRenderTriggered = createHook<DebuggerHook>(
@@ -95,33 +96,4 @@ export function onErrorCaptured<TError = Error>(
   target: ComponentInternalInstance | null = currentInstance
 ) {
   injectHook(LifecycleHooks.ERROR_CAPTURED, hook, target)
-}
-
-export function onServerPrefetch<
-  T extends () => Promise<any> = () => Promise<unknown>
->(handler: T) {
-  const target = currentInstance
-  if (target) {
-    if (isInSSRComponentSetup) {
-      const type = target.type as ComponentOptions
-      let hook = type.serverPrefetch
-      if (hook) {
-        // Merge hook
-        type.serverPrefetch = () =>
-          Promise.all([handler(), (hook as Function).call(target.proxy)])
-      } else {
-        type.serverPrefetch = handler
-      }
-    }
-  } else if (__DEV__) {
-    warn(
-      `onServerPrefetch is called when there is no active component instance to be ` +
-        `associated with. ` +
-        `Lifecycle injection APIs can only be used during execution of setup().` +
-        (__FEATURE_SUSPENSE__
-          ? ` If you are using async setup(), make sure to register lifecycle ` +
-            `hooks before the first await statement.`
-          : ``)
-    )
-  }
 }
