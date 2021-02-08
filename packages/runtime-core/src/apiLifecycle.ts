@@ -84,16 +84,16 @@ export const onRenderTracked = createHook<DebuggerHook>(
   LifecycleHooks.RENDER_TRACKED
 )
 
-export type ErrorCapturedHook = (
-  err: unknown,
+export type ErrorCapturedHook<TError = unknown> = (
+  err: TError,
   instance: ComponentPublicInstance | null,
   info: string
 ) => boolean | void
 
-export const onErrorCaptured = (
-  hook: ErrorCapturedHook,
+export function onErrorCaptured<TError = Error>(
+  hook: ErrorCapturedHook<TError>,
   target: ComponentInternalInstance | null = currentInstance
-) => {
+) {
   injectHook(LifecycleHooks.ERROR_CAPTURED, hook, target)
 }
 
