@@ -310,9 +310,13 @@ export const setRef = (
   }
 
   let value: ComponentPublicInstance | RendererNode | Record<string, any> | null
-  if (!vnode || isAsyncWrapper(vnode)) {
+  if (!vnode) {
+    // means unmount
     value = null
   } else {
+    // when mounting async components, nothing needs to be done,
+    // because the template ref is forwarded to inner component
+    if (isAsyncWrapper(vnode)) return
     if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
       value = vnode.component!.exposed || vnode.component!.proxy
     } else {
