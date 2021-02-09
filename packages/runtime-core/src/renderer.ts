@@ -720,25 +720,6 @@ function baseCreateRenderer(
         props && props.is
       )
 
-      // mount children first, since some props may rely on child content
-      // being already rendered, e.g. `<select value>`
-      if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
-        hostSetElementText(el, vnode.children as string)
-      } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-        mountChildren(
-          vnode.children as VNodeArrayChildren,
-          el,
-          null,
-          parentComponent,
-          parentSuspense,
-          isSVG && type !== 'foreignObject',
-          optimized || !!vnode.dynamicChildren
-        )
-      }
-
-      if (dirs) {
-        invokeDirectiveHook(vnode, null, parentComponent, 'created')
-      }
       // props
       if (props) {
         for (const key in props) {
@@ -760,6 +741,27 @@ function baseCreateRenderer(
           invokeVNodeHook(vnodeHook, parentComponent, vnode)
         }
       }
+
+      // mount children first, since some props may rely on child content
+      // being already rendered, e.g. `<select value>`
+      if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
+        hostSetElementText(el, vnode.children as string)
+      } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        mountChildren(
+          vnode.children as VNodeArrayChildren,
+          el,
+          null,
+          parentComponent,
+          parentSuspense,
+          isSVG && type !== 'foreignObject',
+          optimized || !!vnode.dynamicChildren
+        )
+      }
+
+      if (dirs) {
+        invokeDirectiveHook(vnode, null, parentComponent, 'created')
+      }
+
       // scopeId
       setScopeId(el, scopeId, vnode, parentComponent)
     }
