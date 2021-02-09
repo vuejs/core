@@ -141,6 +141,7 @@ const myEmit = defineEmit(['foo', 'bar'])
       )
     })
 
+    // #2740
     test('should allow defineProps/Emit at the start of imports', () => {
       assertCode(
         compile(`<script setup>
