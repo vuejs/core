@@ -59,7 +59,6 @@ export function removeEventListener(
 export function patchEvent(
   el: Element & { _vei?: Record<string, Invoker | undefined> },
   rawName: string,
-  prevValue: EventValue | null,
   nextValue: EventValue | null,
   instance: ComponentInternalInstance | null = null
 ) {
