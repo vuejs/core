@@ -181,7 +181,9 @@ function doWatch(
         } else if (isReactive(s)) {
           return traverse(s)
         } else if (isFunction(s)) {
-          return callWithErrorHandling(s, instance, ErrorCodes.WATCH_GETTER)
+          return callWithErrorHandling(s, instance, ErrorCodes.WATCH_GETTER, [
+            instance && (instance.proxy as any)
+          ])
         } else {
           __DEV__ && warnInvalidSource(s)
         }
@@ -190,7 +192,9 @@ function doWatch(
     if (cb) {
       // getter with cb
       getter = () =>
-        callWithErrorHandling(source, instance, ErrorCodes.WATCH_GETTER)
+        callWithErrorHandling(source, instance, ErrorCodes.WATCH_GETTER, [
+          instance && (instance.proxy as any)
+        ])
     } else {
       // no cb -> simple effect
       getter = () => {
