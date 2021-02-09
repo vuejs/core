@@ -11,7 +11,8 @@ import {
   Static,
   VNodeNormalizedRef,
   VNodeHook,
-  VNodeNormalizedRefAtom
+  VNodeNormalizedRefAtom,
+  VNodeProps
 } from './vnode'
 import {
   ComponentInternalInstance,
@@ -114,7 +115,8 @@ export interface RendererOptions<
   createElement(
     type: string,
     isSVG?: boolean,
-    isCustomizedBuiltIn?: string
+    isCustomizedBuiltIn?: string,
+    vnodeProps?: (VNodeProps & { [key: string]: any }) | null
   ): HostElement
   createText(text: string): HostNode
   createComment(text: string): HostNode
@@ -738,22 +740,9 @@ function baseCreateRenderer(
       el = vnode.el = hostCreateElement(
         vnode.type as string,
         isSVG,
-        props && props.is
+        props && props.is,
+        props
       )
-
-      if (vnode.type === 'select' && props && props.multiple != null) {
-        hostPatchProp(
-          el,
-          'multiple',
-          null,
-          props.multiple,
-          false /* isSVG */,
-          vnode.children as VNode[],
-          parentComponent,
-          parentSuspense,
-          unmountChildren
-        )
-      }
 
       // mount children first, since some props may rely on child content
       // being already rendered, e.g. `<select value>`
