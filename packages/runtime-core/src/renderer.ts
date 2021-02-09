@@ -741,6 +741,20 @@ function baseCreateRenderer(
         props && props.is
       )
 
+      if (vnode.type === 'select' && props && props.multiple != null) {
+        hostPatchProp(
+          el,
+          'multiple',
+          null,
+          props.multiple,
+          false /* isSVG */,
+          vnode.children as VNode[],
+          parentComponent,
+          parentSuspense,
+          unmountChildren
+        )
+      }
+
       // mount children first, since some props may rely on child content
       // being already rendered, e.g. `<select value>`
       if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
