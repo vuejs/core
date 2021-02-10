@@ -117,7 +117,7 @@ function renderComponentSubTree(
     )
   } else {
     if (
-      instance.render === NOOP &&
+      (!instance.render || instance.render === NOOP) &&
       !instance.ssrRender &&
       !comp.ssrRender &&
       isString(comp.template)
