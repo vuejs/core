@@ -32,6 +32,37 @@ export function render(_ctx, _cache) {
 }"
 `;
 
+exports[`compiler sfc: transform asset url ssr should avoid generating duplicate imports in SSR 1`] = `
+"import { resolveComponent as _resolveComponent, withCtx as _withCtx, createVNode as _createVNode } from \\"vue\\"
+import { ssrRenderAttr as _ssrRenderAttr, ssrRenderComponent as _ssrRenderComponent } from \\"@vue/server-renderer\\"
+import _imports_0 from './logo.png'
+
+
+export function ssrRender(_ctx, _push, _parent, _attrs) {
+  const _component_Comp = _resolveComponent(\\"Comp\\")
+
+  _push(_ssrRenderComponent(_component_Comp, null, {
+    default: _withCtx((_, _push, _parent, _scopeId) => {
+      if (_push) {
+        _push(\`<img class=\\"logo\\"\${
+          _ssrRenderAttr(\\"src\\", _imports_0)
+        }\${
+          _scopeId
+        }></img>\`)
+      } else {
+        return [
+          _createVNode(\\"img\\", {
+            class: \\"logo\\",
+            src: _imports_0
+          })
+        ]
+      }
+    }),
+    _: 1 /* STABLE */
+  }, _parent))
+}"
+`;
+
 exports[`compiler sfc: transform asset url support uri fragment 1`] = `
 "import { createVNode as _createVNode, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
 import _imports_0 from '@svg/file.svg'

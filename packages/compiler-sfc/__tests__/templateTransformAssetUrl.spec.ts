@@ -1,4 +1,9 @@
-import { generate, baseParse, transform } from '@vue/compiler-core'
+import {
+  generate,
+  baseParse,
+  transform,
+  CompilerOptions
+} from '@vue/compiler-core'
 import {
   transformAssetUrl,
   createAssetUrlTransformWithOptions,
@@ -7,6 +12,12 @@ import {
 } from '../src/templateTransformAssetUrl'
 import { transformElement } from '../../compiler-core/src/transforms/transformElement'
 import { transformBind } from '../../compiler-core/src/transforms/vBind'
+import { ssrTransformElement } from '../../compiler-ssr/src/transforms/ssrTransformElement'
+import {
+  ssrTransformComponent,
+  rawOptionsMap
+} from '../../compiler-ssr/src/transforms/ssrTransformComponent'
+import { ssrCodegenTransform } from '../../compiler-ssr/src/ssrCodegenTransform'
 
 function compileWithAssetUrls(template: string, options?: AssetURLOptions) {
   const ast = baseParse(template)
@@ -20,6 +31,36 @@ function compileWithAssetUrls(template: string, options?: AssetURLOptions) {
     }
   })
   return generate(ast, { mode: 'module' })
+}
+
+function compileWithSSR(template: string, options?: AssetURLOptions) {
+  const ast = baseParse(template)
+  const t = options
+    ? createAssetUrlTransformWithOptions(normalizeOptions(options))
+    : transformAssetUrl
+  const rawOptions: CompilerOptions = {
+    mode: 'module',
+    ssr: true,
+    nodeTransforms: [t]
+  }
+  rawOptionsMap.set(ast, rawOptions)
+
+  transform(ast, {
+    ...rawOptions,
+    nodeTransforms: [
+      ssrTransformElement,
+      ssrTransformComponent,
+      ...(rawOptions.nodeTransforms || [])
+    ],
+    directiveTransforms: {
+      bind: transformBind
+    }
+  })
+  ssrCodegenTransform(ast, rawOptions)
+  const res = generate(ast, rawOptions)
+
+  rawOptionsMap.delete(ast)
+  return res
 }
 
 describe('compiler sfc: transform asset url', () => {
@@ -127,5 +168,15 @@ describe('compiler sfc: transform asset url', () => {
     })
 
     expect(code).toMatchSnapshot()
+  })
+
+  describe('ssr', () => {
+    // #2386
+    test('should avoid generating duplicate imports in SSR', () => {
+      const { code } = compileWithSSR(
+        `<Comp><img class='logo' src='./logo.png' /></Comp>`
+      )
+      expect(code).toMatchSnapshot()
+    })
   })
 })

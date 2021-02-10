@@ -293,7 +293,16 @@ function subTransform(
   ;(['helpers', 'components', 'directives', 'imports'] as const).forEach(
     key => {
       childContext[key].forEach((value: any) => {
-        ;(parentContext[key] as any).add(value)
+        if (key === 'imports') {
+          const i = Array.from(parentContext[key]).findIndex(
+            importItem => importItem.path === value.path
+          )
+          if (i === -1) {
+            ;(parentContext[key] as any).add(value)
+          }
+        } else {
+          ;(parentContext[key] as any).add(value)
+        }
       })
     }
   )
