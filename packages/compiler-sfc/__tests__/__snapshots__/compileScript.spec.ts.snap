@@ -164,6 +164,25 @@ return { x }
 }"
 `;
 
+exports[`SFC compile <script setup> imports should allow defineProps/Emit at the start of imports 1`] = `
+"import { ref } from 'vue'
+      
+export default {
+  expose: [],
+  props: ['foo'],
+  emits: ['bar'],
+  setup(__props) {
+
+      
+      
+      const r = ref(0)
+      
+return { r, ref }
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> imports should extract comment for import or type declarations 1`] = `
 "import a from 'a' // comment
         import b from 'b'

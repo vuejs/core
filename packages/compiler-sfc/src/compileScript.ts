@@ -597,19 +597,23 @@ export function compileScript(
 
       // dedupe imports
       let removed = 0
-      let prev: Node | undefined, next: Node | undefined
-      const removeSpecifier = (node: Node) => {
+      const removeSpecifier = (i: number) => {
+        const removeLeft = i > removed
         removed++
+        const current = node.specifiers[i]
+        const next = node.specifiers[i + 1]
         s.remove(
-          prev ? prev.end! + startOffset : node.start! + startOffset,
-          next && !prev ? next.start! + startOffset : node.end! + startOffset
+          removeLeft
+            ? node.specifiers[i - 1].end! + startOffset
+            : current.start! + startOffset,
+          next && !removeLeft
+            ? next.start! + startOffset
+            : current.end! + startOffset
         )
       }
 
       for (let i = 0; i < node.specifiers.length; i++) {
         const specifier = node.specifiers[i]
-        prev = node.specifiers[i - 1]
-        next = node.specifiers[i + 1]
         const local = specifier.local.name
         const imported =
           specifier.type === 'ImportSpecifier' &&
@@ -621,11 +625,11 @@ export function compileScript(
           source === 'vue' &&
           (imported === DEFINE_PROPS || imported === DEFINE_EMIT)
         ) {
-          removeSpecifier(specifier)
+          removeSpecifier(i)
         } else if (existing) {
           if (existing.source === source && existing.imported === imported) {
             // already imported in <script setup>, dedupe
-            removeSpecifier(specifier)
+            removeSpecifier(i)
           } else {
             error(`different imports aliased to same local name.`, specifier)
           }
