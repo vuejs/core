@@ -712,14 +712,7 @@ function baseCreateRenderer(
       // Only static vnodes can be reused, so its mounted DOM nodes should be
       // exactly the same, and we can simply do a clone here.
       // only do this in production since cloned trees cannot be HMR updated.
-      el = hostCloneNode(vnode.el)
-      // #3072
-      // should clone custom DOM props,
-      // one of the use cases is that the input tag or other form tags are hoisted,
-      // and for performance reasons, we intentionally avoid using the hostPatchProp
-      el._value = vnode.el._value
-
-      vnode.el = el
+      vnode.el = hostCloneNode(vnode.el)
     } else {
       el = vnode.el = hostCreateElement(
         vnode.type as string,
