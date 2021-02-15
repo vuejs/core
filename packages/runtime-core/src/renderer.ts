@@ -712,7 +712,7 @@ function baseCreateRenderer(
       // Only static vnodes can be reused, so its mounted DOM nodes should be
       // exactly the same, and we can simply do a clone here.
       // only do this in production since cloned trees cannot be HMR updated.
-      vnode.el = hostCloneNode(vnode.el)
+      el = vnode.el = hostCloneNode(vnode.el)
     } else {
       el = vnode.el = hostCreateElement(
         vnode.type as string,
