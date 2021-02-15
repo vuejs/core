@@ -459,7 +459,7 @@ export function cloneVNode<T, U>(
 ): VNode<T, U> {
   // This is intentionally NOT using spread or extend to avoid the runtime
   // key enumeration cost.
-  const { props, ref, patchFlag } = vnode
+  const { props, ref, patchFlag, children } = vnode
   const mergedProps = extraProps ? mergeProps(props || {}, extraProps) : props
   return {
     __v_isVNode: true,
@@ -479,7 +479,10 @@ export function cloneVNode<T, U>(
           : normalizeRef(extraProps)
         : ref,
     scopeId: vnode.scopeId,
-    children: vnode.children,
+    children:
+      __DEV__ && patchFlag === PatchFlags.HOISTED && isArray(children)
+        ? (children as VNode[]).map(deepCloneVNode)
+        : children,
     target: vnode.target,
     targetAnchor: vnode.targetAnchor,
     staticCount: vnode.staticCount,
@@ -511,6 +514,18 @@ export function cloneVNode<T, U>(
     el: vnode.el,
     anchor: vnode.anchor
   }
+}
+
+/**
+ * Dev only, for HMR of hoisted vnodes reused in v-for
+ * https://github.com/vitejs/vite/issues/2022
+ */
+function deepCloneVNode(vnode: VNode): VNode {
+  const cloned = cloneVNode(vnode)
+  if (isArray(vnode.children)) {
+    cloned.children = (vnode.children as VNode[]).map(deepCloneVNode)
+  }
+  return cloned
 }
 
 /**
