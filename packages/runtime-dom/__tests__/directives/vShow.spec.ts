@@ -128,7 +128,7 @@ describe('runtime-dom: v-show directive', () => {
   })
 
   // #2583
-  test('the dispaly attr set by v-show should not be overwritten by the style attribute when updated', async () => {
+  test('the value of `dispaly` set by v-show should not be overwritten by the style attribute when updated', async () => {
     const style = ref('width: 100px')
     const dispaly = ref(false)
     const component = defineComponent({
@@ -152,7 +152,7 @@ describe('runtime-dom: v-show directive', () => {
   })
 
   // #2583, #2757
-  test('the dispaly attr set by v-show should not be overwritten by the style attribute when updated (with Transition)', async () => {
+  test('the value of `dispaly` set by v-show should not be overwritten by the style attribute when updated (with Transition)', async () => {
     const style = ref('width: 100px')
     const dispaly = ref(false)
     const component = defineComponent({
