@@ -183,6 +183,7 @@ export function flushPostFlushCbs(seen?: CountMap) {
     }
     activePostFlushCbs = null
     postFlushIndex = 0
+    flushPostFlushCbs(seen)
   }
 }
 
