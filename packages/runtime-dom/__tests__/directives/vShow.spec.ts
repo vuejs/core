@@ -128,12 +128,12 @@ describe('runtime-dom: v-show directive', () => {
   })
 
   // #2583
-  test('the value of `dispaly` set by v-show should not be overwritten by the style attribute when updated', async () => {
+  test('the value of `display` set by v-show should not be overwritten by the style attribute when updated', async () => {
     const style = ref('width: 100px')
-    const dispaly = ref(false)
+    const display = ref(false)
     const component = defineComponent({
       render() {
-        return withVShow(h('div', { style: style.value }), dispaly.value)
+        return withVShow(h('div', { style: style.value }), display.value)
       }
     })
     render(h(component), root)
@@ -146,26 +146,26 @@ describe('runtime-dom: v-show directive', () => {
     await nextTick()
     expect($div.style.display).toEqual('none')
 
-    dispaly.value = true
+    display.value = true
     await nextTick()
     expect($div.style.display).toEqual('')
   })
 
   // #2583, #2757
-  test('the value of `dispaly` set by v-show should not be overwritten by the style attribute when updated (with Transition)', async () => {
+  test('the value of `display` set by v-show should not be overwritten by the style attribute when updated (with Transition)', async () => {
     const style = ref('width: 100px')
-    const dispaly = ref(false)
+    const display = ref(false)
     const component = defineComponent({
       setup() {
         const innerValue = ref(false)
-        watch(dispaly, val => {
+        watch(display, val => {
           innerValue.value = val
         })
         return () => {
           return h(Transition, () =>
             withVShow(
               h('div', { style: style.value }, innerValue.value),
-              dispaly.value
+              display.value
             )
           )
         }
@@ -181,7 +181,7 @@ describe('runtime-dom: v-show directive', () => {
     await nextTick()
     expect($div.style.display).toEqual('none')
 
-    dispaly.value = true
+    display.value = true
     await nextTick()
     expect($div.style.display).toEqual('')
   })
