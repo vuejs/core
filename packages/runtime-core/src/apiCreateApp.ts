@@ -19,7 +19,29 @@ import { version } from '.'
 export interface App<HostElement = any> {
   version: string
   config: AppConfig
-  use(plugin: Plugin, ...options: any[]): this
+
+  // plugin function
+  use<T extends PluginInstallFunction>(
+    plugin: T,
+    ...options: T extends PluginInstallFunction<infer O> ? O : unknown
+  ): this
+
+  // plugin install object
+  use<F extends PluginInstallFunction>(
+    plugin: {
+      install: F
+    },
+    ...options: F extends PluginInstallFunction<infer O> ? O : unknown
+  ): this
+
+  // Plugin type
+  use<F extends PluginInstallFunction>(
+    plugin: {
+      install?: F
+    },
+    ...options: F extends PluginInstallFunction<infer O> ? O : unknown
+  ): this
+
   mixin(mixin: ComponentOptions): this
   component(name: string): Component | undefined
   component(name: string, component: Component): this
@@ -86,13 +108,20 @@ export interface AppContext {
   reload?: () => void
 }
 
-type PluginInstallFunction = (app: App, ...options: any[]) => any
+export type PluginInstallFunction<TOptions extends Array<unknown> = any[]> = (
+  app: App,
+  ...options: TOptions
+) => any
+
+export type PluginInstall<
+  T extends PluginInstallFunction<any> = PluginInstallFunction<any>
+> = {
+  install: T
+}
 
 export type Plugin =
-  | PluginInstallFunction & { install?: PluginInstallFunction }
-  | {
-      install: PluginInstallFunction
-    }
+  | (PluginInstallFunction & { install?: PluginInstallFunction })
+  | PluginInstall
 
 export function createAppContext(): AppContext {
   return {

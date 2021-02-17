@@ -148,6 +148,8 @@ export {
   AppConfig,
   AppContext,
   Plugin,
+  PluginInstall,
+  PluginInstallFunction,
   CreateAppFunction,
   OptionMergeFunction
 } from './apiCreateApp'
