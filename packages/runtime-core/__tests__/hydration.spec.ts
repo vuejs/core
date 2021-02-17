@@ -9,7 +9,8 @@ import {
   Suspense,
   onMounted,
   defineAsyncComponent,
-  defineComponent
+  defineComponent,
+  createTextVNode
 } from '@vue/runtime-dom'
 import { renderToString, SSRContext } from '@vue/server-renderer'
 
@@ -45,6 +46,14 @@ describe('SSR hydration', () => {
     msg.value = 'bar'
     await nextTick()
     expect(container.textContent).toBe('bar')
+  })
+
+  test('mepty text', async () => {
+    const { container } = mountWithHydration('<div></div>', () =>
+      h('div', createTextVNode(''))
+    )
+    expect(container.textContent).toBe('')
+    expect(`Hydration children mismatch in <div>`).not.toHaveBeenWarned()
   })
 
   test('comment', () => {

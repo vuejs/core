@@ -348,6 +348,8 @@ export function createHydrationFunctions(
           parentSuspense,
           optimized
         )
+      } else if (vnode.type === Text && !vnode.children) {
+        continue
       } else {
         hasMismatch = true
         if (__DEV__ && !hasWarned) {
