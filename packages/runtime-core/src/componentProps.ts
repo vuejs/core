@@ -56,7 +56,7 @@ export interface PropOptions<T = any, D = T> {
   type?: PropType<T> | true | null
   required?: boolean
   default?: D | DefaultFactory<D> | null | undefined | object
-  validator?(value: unknown): boolean
+  validator?(value: unknown, props: Data): boolean
 }
 
 export type PropType<T> = PropConstructor<T> | PropConstructor<T>[]
@@ -575,6 +575,7 @@ function validateProps(
       key,
       resolvedValues[key],
       opt,
+      resolvedValues
       !hasOwn(rawProps, key) && !hasOwn(rawProps, hyphenate(key))
     )
   }
@@ -587,6 +588,7 @@ function validateProp(
   name: string,
   value: unknown,
   prop: PropOptions,
+  props: Data,
   isAbsent: boolean
 ) {
   const { type, required, validator } = prop
@@ -616,7 +618,7 @@ function validateProp(
     }
   }
   // custom validator
-  if (validator && !validator(value)) {
+  if (validator && !validator(value, props)) {
     warn('Invalid prop: custom validator check failed for prop "' + name + '".')
   }
 }
