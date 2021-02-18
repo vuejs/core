@@ -179,6 +179,20 @@ const myEmit = defineEmit(['foo', 'bar'])
         content.lastIndexOf(`import { x }`)
       )
     })
+
+    test('imports in <script> should not be exposed', () => {
+      assertCode(
+        compile(`
+      <script>
+      import { foo } from './foo'
+      import { a } from './bar'
+      </script>
+      <script setup>
+      import { b } from './bar'
+      </script>
+      `).content
+      )
+    })
   })
 
   describe('inlineTemplate mode', () => {
