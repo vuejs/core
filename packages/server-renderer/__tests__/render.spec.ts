@@ -16,6 +16,7 @@ import { renderToStream as _renderToStream } from '../src/renderToStream'
 import { ssrRenderSlot, SSRSlot } from '../src/helpers/ssrRenderSlot'
 import { ssrRenderComponent } from '../src/helpers/ssrRenderComponent'
 import { Readable } from 'stream'
+import { getCurrentInstance } from '@vue/runtime-test'
 
 const promisifyStream = (stream: Readable) => {
   return new Promise<string>((resolve, reject) => {
@@ -714,6 +715,38 @@ function testRender(type: string, render: typeof renderToString) {
       })
       const html = await render(app)
       expect(html).toBe(`<div>hello</div>`)
+    })
+
+    // #2863
+    test('set currentRenderingInstance to null correctly', async () => {
+      const Child1 = {
+        ssrRender(ctx: any, push: any) {
+          push(`<div>hello</div>`)
+        }
+      }
+
+      const Child2 = {
+        ssrRender(ctx: any, push: any) {
+          push(`<div>world</div>`)
+        }
+      }
+
+      const renderStr = await renderToString(
+        createApp({
+          ssrRender(_ctx, push, parent) {
+            push(`<div>`)
+            push(ssrRenderComponent(Child1, {}, null, parent))
+
+            expect(getCurrentInstance()).not.toBe(null)
+
+            push(ssrRenderComponent(Child2, {}, null, parent))
+            push(`</div>`)
+          }
+        })
+      )
+
+      expect(renderStr).toBe(`<div><div>hello</div><div>world</div></div>`)
+      expect(getCurrentInstance()).toBe(null)
     })
   })
 }
