@@ -8,7 +8,8 @@ import {
   ref,
   defineComponent,
   createTextVNode,
-  createStaticVNode
+  createStaticVNode,
+  KeepAlive
 } from 'vue'
 import { escapeHtml } from '@vue/shared'
 import { renderToString } from '../src/renderToString'
@@ -601,6 +602,17 @@ function testRender(type: string, render: typeof renderToString) {
             )
           )
         ).toBe(`<textarea>${escapeHtml(`<span>hello</span>`)}</textarea>`)
+      })
+    })
+
+    describe('vnode component', () => {
+      test('KeepAlive', async () => {
+        const MyComp = {
+          render: () => h('p', 'hello')
+        }
+        expect(await render(h(KeepAlive, () => h(MyComp)))).toBe(
+          `<!--[--><p>hello</p><!--]-->`
+        )
       })
     })
 
