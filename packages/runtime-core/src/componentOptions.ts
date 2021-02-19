@@ -54,7 +54,8 @@ import { EmitsOptions } from './componentEmits'
 import { Directive } from './directives'
 import {
   CreateComponentPublicInstance,
-  ComponentPublicInstance
+  ComponentPublicInstance,
+  isReservedKey
 } from './componentPublicInstance'
 import { warn } from './warning'
 import { VNodeChild } from './vnode'
@@ -640,7 +641,7 @@ export function applyOptions(
       for (const key in rawData) {
         checkDuplicateProperties!(OptionTypes.DATA, key)
         // expose data on ctx during dev
-        if (key[0] !== '$' && key[0] !== '_') {
+        if (!isReservedKey(key)) {
           Object.defineProperty(ctx, key, {
             configurable: true,
             enumerable: true,
