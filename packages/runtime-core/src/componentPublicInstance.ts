@@ -11,7 +11,8 @@ import {
   isGloballyWhitelisted,
   NOOP,
   extend,
-  isString
+  isString,
+  makeMap
 } from '@vue/shared'
 import {
   ReactiveEffect,
@@ -247,7 +248,7 @@ export interface ComponentRenderContext {
   _: ComponentInternalInstance
 }
 
-export const isReservedKey = (key: string) => key[0] === '_' || key[0] === '$'
+export const isReservedPrefix = /*#__PURE__*/ makeMap('_,$')
 
 export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
   get({ _: instance }: ComponentRenderContext, key: string) {
@@ -347,7 +348,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
         // to infinite warning loop
         key.indexOf('__v') !== 0)
     ) {
-      if (data !== EMPTY_OBJ && isReservedKey(key) && hasOwn(data, key)) {
+      if (data !== EMPTY_OBJ && isReservedPrefix(key[0]) && hasOwn(data, key)) {
         warn(
           `Property ${JSON.stringify(
             key
@@ -522,7 +523,7 @@ export function exposeSetupStateOnRenderContext(
 ) {
   const { ctx, setupState } = instance
   Object.keys(toRaw(setupState)).forEach(key => {
-    if (isReservedKey(key)) {
+    if (isReservedPrefix(key[0])) {
       warn(
         `setup() return property ${JSON.stringify(
           key

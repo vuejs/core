@@ -55,7 +55,7 @@ import { Directive } from './directives'
 import {
   CreateComponentPublicInstance,
   ComponentPublicInstance,
-  isReservedKey
+  isReservedPrefix
 } from './componentPublicInstance'
 import { warn } from './warning'
 import { VNodeChild } from './vnode'
@@ -641,7 +641,7 @@ export function applyOptions(
       for (const key in rawData) {
         checkDuplicateProperties!(OptionTypes.DATA, key)
         // expose data on ctx during dev
-        if (!isReservedKey(key)) {
+        if (!isReservedPrefix(key[0])) {
           Object.defineProperty(ctx, key, {
             configurable: true,
             enumerable: true,
