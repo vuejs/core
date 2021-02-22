@@ -662,9 +662,9 @@
     resolve "^1.19.0"
 
 "@rollup/plugin-replace@^2.3.4":
-  version "2.3.4"
-  resolved "https://registry.yarnpkg.com/@rollup/plugin-replace/-/plugin-replace-2.3.4.tgz#7dd84c17755d62b509577f2db37eb524d7ca88ca"
-  integrity sha512-waBhMzyAtjCL1GwZes2jaE9MjuQ/DQF2BatH3fRivUF3z0JBFrU0U6iBNC/4WR+2rLKhaAhPWDNPYp4mI6RqdQ==
+  version "2.4.0"
+  resolved "https://registry.yarnpkg.com/@rollup/plugin-replace/-/plugin-replace-2.4.0.tgz#ec80629a0a922ec53719f2dea2f7714fb9231031"
+  integrity sha512-QGuKCj9fTegKtLh1zsxNWP5uVmUctbFOG9S8wIir5dDO7qzGyISmwrQjlyEN0H7ptz60+CFeVFi5x4aDQ5+L6g==
   dependencies:
     "@rollup/pluginutils" "^3.1.0"
     magic-string "^0.25.7"
