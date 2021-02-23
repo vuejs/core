@@ -51,4 +51,5 @@ Note: the replacement value **must be boolean literals** and cannot be strings, 
 - **`vue.cjs(.prod).js`**:
   - For use in Node.js server-side rendering via `require()`.
   - If you bundle your app with webpack with `target: 'node'` and properly externalize `vue`, this is the build that will be loaded.
+    Note that `@vue/server-renderer` needs to be externalized as well.
   - The dev/prod files are pre-built, but the appropriate file is automatically required based on `process.env.NODE_ENV`.
