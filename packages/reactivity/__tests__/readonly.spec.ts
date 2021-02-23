@@ -325,12 +325,18 @@ describe('reactivity/readonly', () => {
     })
   })
 
-  test('calling reactive on an readonly should return readonly', () => {
+  test('calling reactive on an readonly should return reactive', () => {
     const a = readonly({})
     const b = reactive(a)
-    expect(isReadonly(b)).toBe(true)
+    expect(isReactive(b)).toBe(true)
     // should point to same original
     expect(toRaw(a)).toBe(toRaw(b))
+  })
+
+  test('calling reactive on an nesting object, if the object property is readonly, get the value of the property will get the readonly version', () => {
+    const a = readonly({})
+    const b = reactive({ a: a })
+    expect(isReadonly(b.a)).toBe(true)
   })
 
   test('calling readonly on a reactive object should return readonly', () => {

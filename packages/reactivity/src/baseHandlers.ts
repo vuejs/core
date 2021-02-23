@@ -118,7 +118,7 @@ function createGetter(isReadonly = false, shallow = false) {
       // Convert returned value into a proxy as well. we do the isObject check
       // here to avoid invalid value warning. Also need to lazy access readonly
       // and reactive here to avoid circular dependency.
-      return isReadonly ? readonly(res) : reactive(res)
+      return isReadonly ? readonly(res, false) : reactive(res, false)
     }
 
     return res

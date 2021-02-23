@@ -96,14 +96,20 @@ type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRef<T>
  * ```
  */
 export function reactive<T extends object>(target: T): UnwrapNestedRefs<T>
-export function reactive(target: object) {
+
+export function reactive<T extends object>(
+  target: T,
+  force: boolean
+): UnwrapNestedRefs<T>
+
+export function reactive(target: object, force: boolean = true) {
   return createReactiveObject(
     target,
     false,
     false,
     mutableHandlers,
     mutableCollectionHandlers,
-    false
+    force
   )
 }
 
@@ -112,14 +118,17 @@ export function reactive(target: object) {
  * level properties are reactive. It also does not auto-unwrap refs (even at the
  * root level).
  */
-export function shallowReactive<T extends object>(target: T): T {
+export function shallowReactive<T extends object>(
+  target: T,
+  force: boolean = true
+): T {
   return createReactiveObject(
     target,
     false,
     true,
     shallowReactiveHandlers,
     shallowCollectionHandlers,
-    false
+    force
   )
 }
 
@@ -150,7 +159,8 @@ export type DeepReadonly<T> = T extends Builtin
  * made reactive, but `readonly` can be called on an already reactive object.
  */
 export function readonly<T extends object>(
-  target: T
+  target: T,
+  force: boolean = true
 ): DeepReadonly<UnwrapNestedRefs<T>> {
   return createReactiveObject(
     target,
@@ -158,7 +168,7 @@ export function readonly<T extends object>(
     false,
     readonlyHandlers,
     readonlyCollectionHandlers,
-    false
+    force
   )
 }
 
@@ -169,7 +179,8 @@ export function readonly<T extends object>(
  * This is used for creating the props proxy object for stateful components.
  */
 export function shallowReadonly<T extends object>(
-  target: T
+  target: T,
+  force: boolean = true
 ): Readonly<{ [K in keyof T]: UnwrapNestedRefs<T[K]> }> {
   return createReactiveObject(
     target,
@@ -177,7 +188,7 @@ export function shallowReadonly<T extends object>(
     true,
     shallowReadonlyHandlers,
     readonlyCollectionHandlers,
-    false
+    force
   )
 }
 
@@ -187,7 +198,7 @@ function createReactiveObject(
   shallow: boolean,
   baseHandlers: ProxyHandler<any>,
   collectionHandlers: ProxyHandler<any>,
-  force: Boolean = false
+  force: boolean
 ) {
   if (!isObject(target)) {
     if (__DEV__) {

@@ -18,10 +18,10 @@ type MapTypes = Map<any, any> | WeakMap<any, any>
 type SetTypes = Set<any> | WeakSet<any>
 
 const toReactive = <T extends unknown>(value: T): T =>
-  isObject(value) ? reactive(value) : value
+  isObject(value) ? reactive(value, false) : value
 
 const toReadonly = <T extends unknown>(value: T): T =>
-  isObject(value) ? readonly(value as Record<any, any>) : value
+  isObject(value) ? readonly(value as Record<any, any>, false) : value
 
 const toShallow = <T extends unknown>(value: T): T => value
 
