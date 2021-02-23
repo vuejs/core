@@ -102,7 +102,8 @@ export function reactive(target: object) {
     false,
     false,
     mutableHandlers,
-    mutableCollectionHandlers
+    mutableCollectionHandlers,
+    false
   )
 }
 
@@ -117,7 +118,8 @@ export function shallowReactive<T extends object>(target: T): T {
     false,
     true,
     shallowReactiveHandlers,
-    shallowCollectionHandlers
+    shallowCollectionHandlers,
+    false
   )
 }
 
@@ -155,7 +157,8 @@ export function readonly<T extends object>(
     true,
     false,
     readonlyHandlers,
-    readonlyCollectionHandlers
+    readonlyCollectionHandlers,
+    false
   )
 }
 
@@ -173,7 +176,8 @@ export function shallowReadonly<T extends object>(
     true,
     true,
     shallowReadonlyHandlers,
-    readonlyCollectionHandlers
+    readonlyCollectionHandlers,
+    false
   )
 }
 
@@ -182,7 +186,8 @@ function createReactiveObject(
   isReadonly: boolean,
   shallow: boolean,
   baseHandlers: ProxyHandler<any>,
-  collectionHandlers: ProxyHandler<any>
+  collectionHandlers: ProxyHandler<any>,
+  force: Boolean = false
 ) {
   if (!isObject(target)) {
     if (__DEV__) {
@@ -206,10 +211,14 @@ function createReactiveObject(
       return target
     }
     if (!isReadonly || !target[ReactiveFlags.IS_REACTIVE]) {
-      target = toRaw(target)
-      const existingProxy = proxyMap.get(target)
-      if (existingProxy) {
-        return existingProxy
+      if (!force) {
+        return target
+      } else {
+        target = toRaw(target)
+        const existingProxy = proxyMap.get(target)
+        if (existingProxy) {
+          return existingProxy
+        }
       }
     }
   }
