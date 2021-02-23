@@ -5,8 +5,8 @@
   "main": "index.js",
   "module": "dist/compiler-dom.esm-bundler.js",
   "types": "dist/compiler-dom.d.ts",
-  "unpkg": "dist/compiler-dom/compiler-dom.global.js",
-  "jsdelivr": "dist/compiler-dom/compiler-dom.global.js",
+  "unpkg": "dist/compiler-dom.global.js",
+  "jsdelivr": "dist/compiler-dom.global.js",
   "files": [
     "index.js",
     "dist"
