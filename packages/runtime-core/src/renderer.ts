@@ -36,7 +36,8 @@ import {
   NOOP,
   hasOwn,
   invokeArrayFns,
-  isArray
+  isArray,
+  getGlobalThis
 } from '@vue/shared'
 import {
   queueJob,
@@ -75,7 +76,8 @@ import { ComponentPublicInstance } from './componentPublicInstance'
 import {
   devtoolsComponentAdded,
   devtoolsComponentRemoved,
-  devtoolsComponentUpdated
+  devtoolsComponentUpdated,
+  setDevtoolsHook
 } from './devtools'
 import { initFeatureFlags } from './featureFlags'
 import { isAsyncWrapper } from './apiAsyncComponent'
@@ -428,6 +430,12 @@ function baseCreateRenderer(
   // compile-time feature flags check
   if (__ESM_BUNDLER__ && !__TEST__) {
     initFeatureFlags()
+  }
+
+  if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+    const target = getGlobalThis()
+    target.__VUE__ = true
+    setDevtoolsHook(target.__VUE_DEVTOOLS_GLOBAL_HOOK__)
   }
 
   const {
