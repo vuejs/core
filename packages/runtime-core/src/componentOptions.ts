@@ -610,7 +610,7 @@ export function applyOptions(
           Object.defineProperty(ctx, key, {
             value: methodHandler.bind(publicThis),
             configurable: true,
-            enumerable: false,
+            enumerable: true,
             writable: true
           })
         } else {
