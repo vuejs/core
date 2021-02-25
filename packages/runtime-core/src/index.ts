@@ -87,7 +87,7 @@ export {
   resolveDynamicComponent
 } from './helpers/resolveAssets'
 // For integration with runtime compiler
-export { registerRuntimeCompiler } from './component'
+export { registerRuntimeCompiler, isRuntimeOnly } from './component'
 export {
   useTransitionState,
   resolveTransitionHooks,

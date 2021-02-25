@@ -153,4 +153,30 @@ describe(`runtime-dom: events patching`, () => {
     expect(prevFn).toHaveBeenCalledTimes(2)
     expect(nextFn).toHaveBeenCalledTimes(4)
   })
+
+  // #2841
+  test('should patch event correctly in web-components', async () => {
+    class TestElement extends HTMLElement {
+      constructor() {
+        super()
+      }
+    }
+    window.customElements.define('test-element', TestElement)
+    const testElement = document.createElement('test-element', {
+      is: 'test-element'
+    })
+    const fn1 = jest.fn()
+    const fn2 = jest.fn()
+
+    // in webComponents, @foo-bar will patch prop 'onFooBar'
+    // and @foobar will patch prop 'onFoobar'
+
+    patchProp(testElement, 'onFooBar', null, fn1)
+    testElement.dispatchEvent(new CustomEvent('foo-bar'))
+    expect(fn1).toHaveBeenCalledTimes(1)
+
+    patchProp(testElement, 'onFoobar', null, fn2)
+    testElement.dispatchEvent(new CustomEvent('foobar'))
+    expect(fn2).toHaveBeenCalledTimes(1)
+  })
 })

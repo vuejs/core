@@ -7,7 +7,8 @@ import {
   Renderer,
   HydrationRenderer,
   App,
-  RootHydrateFunction
+  RootHydrateFunction,
+  isRuntimeOnly
 } from '@vue/runtime-core'
 import { nodeOps } from './nodeOps'
 import { patchProp, forcePatchProp } from './patchProp'
@@ -55,6 +56,7 @@ export const createApp = ((...args) => {
 
   if (__DEV__) {
     injectNativeTagCheck(app)
+    injectCustomElementCheck(app)
   }
 
   const { mount } = app
@@ -83,6 +85,7 @@ export const createSSRApp = ((...args) => {
 
   if (__DEV__) {
     injectNativeTagCheck(app)
+    injectCustomElementCheck(app)
   }
 
   const { mount } = app
@@ -105,6 +108,25 @@ function injectNativeTagCheck(app: App) {
   })
 }
 
+// dev only
+function injectCustomElementCheck(app: App) {
+  if (isRuntimeOnly()) {
+    const value = app.config.isCustomElement
+    Object.defineProperty(app.config, 'isCustomElement', {
+      get() {
+        return value
+      },
+      set() {
+        warn(
+          `The \`isCustomElement\` config option is only respected when using the runtime compiler.` +
+            `If you are using the runtime-only build, \`isCustomElement\` must be passed to \`@vue/compiler-dom\` in the build setup instead` +
+            `- for example, via the \`compilerOptions\` option in vue-loader: https://vue-loader.vuejs.org/options.html#compileroptions.`
+        )
+      }
+    })
+  }
+}
+
 function normalizeContainer(
   container: Element | ShadowRoot | string
 ): Element | null {
@@ -119,7 +141,7 @@ function normalizeContainer(
   }
   if (
     __DEV__ &&
-    container instanceof ShadowRoot &&
+    container instanceof window.ShadowRoot &&
     container.mode === 'closed'
   ) {
     warn(

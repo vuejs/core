@@ -29,7 +29,7 @@ export interface App<HostElement = any> {
     rootContainer: HostElement | string,
     isHydrate?: boolean
   ): ComponentPublicInstance
-  unmount(rootContainer: HostElement | string): void
+  unmount(): void
   provide<T>(key: InjectionKey<T> | string, value: T): this
 
   // internal, but we need to expose these for the server-renderer and devtools
@@ -272,6 +272,7 @@ export function createAppAPI<HostElement>(
           if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
             devtoolsUnmountApp(app)
           }
+          delete app._container.__vue_app__
         } else if (__DEV__) {
           warn(`Cannot unmount an app that is not mounted.`)
         }

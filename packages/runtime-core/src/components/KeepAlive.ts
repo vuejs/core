@@ -72,8 +72,6 @@ const KeepAliveImpl = {
 
   __inheritScopeId: true,
 
-  inheritRef: true,
-
   props: {
     include: [String, RegExp, Array],
     exclude: [String, RegExp, Array],

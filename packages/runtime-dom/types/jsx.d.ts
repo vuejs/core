@@ -1214,6 +1214,8 @@ export interface Events {
 
   // focus events
   onFocus: FocusEvent
+  onFocusin: FocusEvent
+  onFocusout: FocusEvent
   onBlur: FocusEvent
 
   // form events
