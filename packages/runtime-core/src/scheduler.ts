@@ -61,7 +61,7 @@ export function nextTick(
 // Use binary-search to find a suitable position in the queue,
 // so that the queue maintains the increasing order of job's id,
 // which can prevent the job from being skipped and also can avoid repeated patching.
-const findInsertionIndex = (job: SchedulerJob) => {
+function findInsertionIndex(job: SchedulerJob) {
   // the start index should be `flushIndex + 1`
   let start = flushIndex + 1
   let end = queue.length
@@ -75,6 +75,7 @@ const findInsertionIndex = (job: SchedulerJob) => {
 
   return start
 }
+
 export function queueJob(job: SchedulerJob) {
   // the dedupe search uses the startIndex argument of Array.includes()
   // by default the search index includes the current job that is being run
