@@ -2297,7 +2297,7 @@ function getSequence(arr: number[]): number[] {
   const result = [0]
   let i, j, u, v, c
   const len = arr.length
-  for (i = 0; i < len; i++) {
+  for (i = 1; i < len; i++) {
     const arrI = arr[i]
     if (arrI !== 0) {
       j = result[result.length - 1]
