@@ -193,4 +193,32 @@ describe('reactivity/computed', () => {
     expect(isReadonly(z)).toBe(false)
     expect(isReadonly(z.value.a)).toBe(false)
   })
+
+  it('should only run on change', () => {
+    const loadingId = ref(0)
+
+    const update = () => {
+      loadingId.value = (loadingId.value + 1) % 3
+    }
+
+    const isLoading = computed(() => (loadingId.value === 0 ? 1 : 0))
+
+    let run = 0
+
+    const myObj = computed(() => {
+      console.log('computation', isLoading.value)
+      run++
+      return {
+        isLoading: isLoading.value
+      }
+    })
+
+    myObj.value
+    update()
+    myObj.value
+    update()
+    myObj.value
+
+    expect(run).toBe(1)
+  })
 })

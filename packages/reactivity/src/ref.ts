@@ -68,8 +68,9 @@ class RefImpl<T> {
   set value(newVal) {
     if (hasChanged(toRaw(newVal), this._rawValue)) {
       this._rawValue = newVal
+      const prev = this._value
       this._value = this._shallow ? newVal : convert(newVal)
-      trigger(toRaw(this), TriggerOpTypes.SET, 'value', newVal)
+      trigger(toRaw(this), TriggerOpTypes.SET, 'value', newVal, prev)
     }
   }
 }

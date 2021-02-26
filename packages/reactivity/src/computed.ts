@@ -1,5 +1,5 @@
 import { effect, ReactiveEffect, trigger, track } from './effect'
-import { TriggerOpTypes, TrackOpTypes } from './operations'
+import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { Ref } from './ref'
 import { isFunction, NOOP } from '@vue/shared'
 import { ReactiveFlags, toRaw } from './reactive'
@@ -20,10 +20,13 @@ export interface WritableComputedOptions<T> {
   set: ComputedSetter<T>
 }
 
-class ComputedRefImpl<T> {
-  private _value!: T
-  private _dirty = true
+const s = Symbol()
 
+class ComputedRefImpl<T> {
+  // @ts-ignore
+  private _value: T = s
+  private _dirty = true
+  private _prev: T | Symbol = s
   public readonly effect: ReactiveEffect<T>
 
   public readonly __v_isRef = true;
@@ -36,10 +39,18 @@ class ComputedRefImpl<T> {
   ) {
     this.effect = effect(getter, {
       lazy: true,
-      scheduler: () => {
-        if (!this._dirty) {
+      scheduler: (job, newValue, oldValue) => {
+        // NOTE check if oldValue is the symbol, if it is means it probably was the
+        // first run
+        if (!this._dirty && oldValue !== s && newValue !== oldValue) {
           this._dirty = true
-          trigger(toRaw(this), TriggerOpTypes.SET, 'value')
+          trigger(
+            toRaw(this),
+            TriggerOpTypes.SET,
+            'value',
+            this._value,
+            this._prev
+          )
         }
       }
     })
@@ -49,6 +60,7 @@ class ComputedRefImpl<T> {
 
   get value() {
     if (this._dirty) {
+      this._prev = this._value
       this._value = this.effect()
       this._dirty = false
     }

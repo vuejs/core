@@ -18,11 +18,13 @@ export interface ReactiveEffect<T = any> {
   deps: Array<Dep>
   options: ReactiveEffectOptions
   allowRecurse: boolean
+  onChange: (cb: (v: T) => void) => void
+  changed(v: T): void
 }
 
 export interface ReactiveEffectOptions {
   lazy?: boolean
-  scheduler?: (job: ReactiveEffect) => void
+  scheduler?: (job: ReactiveEffect, newValue?: any, oldValue?: any) => void
   onTrack?: (event: DebuggerEvent) => void
   onTrigger?: (event: DebuggerEvent) => void
   onStop?: () => void
@@ -107,6 +109,11 @@ function createReactiveEffect<T = any>(
   effect.raw = fn
   effect.deps = []
   effect.options = options
+  const a: Array<(v: T) => void> = []
+  effect.onChange = cb => {
+    a.push(cb)
+  }
+  effect.changed = v => a.forEach(x => x(v))
   return effect
 }
 
@@ -247,7 +254,7 @@ export function trigger(
       })
     }
     if (effect.options.scheduler) {
-      effect.options.scheduler(effect)
+      effect.options.scheduler(effect, newValue, oldValue)
     } else {
       effect()
     }
