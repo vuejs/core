@@ -11,6 +11,7 @@ import {
 import { VNode, VNodeArrayChildren, VNodeProps } from '../vnode'
 import { isString, ShapeFlags } from '@vue/shared'
 import { warn } from '../warning'
+import { isHmrUpdating } from '../hmr'
 
 export type TeleportVNode = VNode<RendererNode, RendererElement, TeleportProps>
 
@@ -84,6 +85,13 @@ export const TeleportImpl = {
     const disabled = isTeleportDisabled(n2.props)
     const { shapeFlag, children } = n2
 
+    // #3302
+    // HMR updated, force full diff
+    if (__DEV__ && isHmrUpdating) {
+      optimized = false
+      n2.dynamicChildren = null
+    }
+
     if (n1 == null) {
       // insert anchors in the main view
       const placeholder = (n2.el = __DEV__
@@ -135,9 +143,8 @@ export const TeleportImpl = {
       const currentContainer = wasDisabled ? container : target
       const currentAnchor = wasDisabled ? mainAnchor : targetAnchor
       isSVG = isSVG || isTargetSVG(target)
-      // #3302
-      // HMR updates will force fall back to non-optimized mode
-      if (n2.dynamicChildren && optimized) {
+
+      if (n2.dynamicChildren) {
         // fast path when the teleport happens to be a block root
         patchBlockChildren(
           n1.dynamicChildren!,
