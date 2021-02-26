@@ -135,8 +135,9 @@ export const TeleportImpl = {
       const currentContainer = wasDisabled ? container : target
       const currentAnchor = wasDisabled ? mainAnchor : targetAnchor
       isSVG = isSVG || isTargetSVG(target)
-
-      if (n2.dynamicChildren) {
+      // #3302
+      // HMR updates will force fall back to non-optimized mode
+      if (n2.dynamicChildren && optimized) {
         // fast path when the teleport happens to be a block root
         patchBlockChildren(
           n1.dynamicChildren!,
