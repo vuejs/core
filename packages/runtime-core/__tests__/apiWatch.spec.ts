@@ -10,6 +10,7 @@ import {
   ComponentInternalInstance,
   ComponentPublicInstance
 } from '../src/index'
+import { setupComponent } from '../src/component'
 import {
   render,
   nodeOps,
@@ -42,6 +43,28 @@ describe('api: watch', () => {
     state.count++
     await nextTick()
     expect(dummy).toBe(1)
+  })
+
+  // https://github.com/vuejs/vue-next/issues/3322
+  it('effect onInvalidate succeeds in ssr context', done => {
+    // XXX do this without double setup and generally less hackily!
+    let instance: ComponentInternalInstance | null
+    const noop = () => {}
+    const Comp = defineComponent({
+      setup() {
+        if (!instance) {
+          instance = getCurrentInstance()
+        } else {
+          watchEffect(onInvalidate => {
+            expect(() => onInvalidate(noop)).not.toThrow(ReferenceError)
+            done()
+          })
+        }
+      },
+      render: noop
+    })
+    createApp(Comp).mount(nodeOps.createElement('div'))
+    setupComponent(instance!, true)
   })
 
   it('watching single source: getter', async () => {

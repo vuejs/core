@@ -5,7 +5,8 @@ import {
   Ref,
   ComputedRef,
   ReactiveEffectOptions,
-  isReactive
+  isReactive,
+  ReactiveEffect
 } from '@vue/reactivity'
 import { SchedulerJob, queuePreFlushCb } from './scheduler'
 import {
@@ -167,6 +168,7 @@ function doWatch(
 
   let getter: () => any
   let forceTrigger = false
+  let runner: ReactiveEffect<any> | undefined
   if (isRef(source)) {
     getter = () => (source as Ref).value
     forceTrigger = !!(source as Ref)._shallow
@@ -224,6 +226,9 @@ function doWatch(
 
   let cleanup: () => void
   const onInvalidate: InvalidateCbRegistrator = (fn: () => void) => {
+    if (!runner) {
+      return
+    }
     cleanup = runner.options.onStop = () => {
       callWithErrorHandling(fn, instance, ErrorCodes.WATCH_CLEANUP)
     }
@@ -246,7 +251,7 @@ function doWatch(
 
   let oldValue = isArray(source) ? [] : INITIAL_WATCHER_VALUE
   const job: SchedulerJob = () => {
-    if (!runner.active) {
+    if (!runner || !runner.active) {
       return
     }
     if (cb) {
@@ -293,7 +298,7 @@ function doWatch(
     }
   }
 
-  const runner = effect(getter, {
+  runner = effect(getter, {
     lazy: true,
     onTrack,
     onTrigger,
@@ -316,9 +321,11 @@ function doWatch(
   }
 
   return () => {
-    stop(runner)
-    if (instance) {
-      remove(instance.effects!, runner)
+    if (runner) {
+      stop(runner)
+      if (instance) {
+        remove(instance.effects!, runner)
+      }
     }
   }
 }
