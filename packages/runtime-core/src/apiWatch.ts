@@ -5,8 +5,7 @@ import {
   Ref,
   ComputedRef,
   ReactiveEffectOptions,
-  isReactive,
-  ReactiveEffect
+  isReactive
 } from '@vue/reactivity'
 import { SchedulerJob, queuePreFlushCb } from './scheduler'
 import {
@@ -168,7 +167,6 @@ function doWatch(
 
   let getter: () => any
   let forceTrigger = false
-  let runner: ReactiveEffect<any> | undefined
   if (isRef(source)) {
     getter = () => (source as Ref).value
     forceTrigger = !!(source as Ref)._shallow
@@ -225,10 +223,7 @@ function doWatch(
   }
 
   let cleanup: () => void
-  const onInvalidate: InvalidateCbRegistrator = (fn: () => void) => {
-    if (!runner) {
-      return
-    }
+  let onInvalidate: InvalidateCbRegistrator = (fn: () => void) => {
     cleanup = runner.options.onStop = () => {
       callWithErrorHandling(fn, instance, ErrorCodes.WATCH_CLEANUP)
     }
@@ -237,6 +232,8 @@ function doWatch(
   // in SSR there is no need to setup an actual effect, and it should be noop
   // unless it's eager
   if (__NODE_JS__ && isInSSRComponentSetup) {
+    // we will also not call the invalidate callback (+ runner is not set up)
+    onInvalidate = NOOP
     if (!cb) {
       getter()
     } else if (immediate) {
@@ -251,7 +248,7 @@ function doWatch(
 
   let oldValue = isArray(source) ? [] : INITIAL_WATCHER_VALUE
   const job: SchedulerJob = () => {
-    if (!runner || !runner.active) {
+    if (!runner.active) {
       return
     }
     if (cb) {
@@ -298,7 +295,7 @@ function doWatch(
     }
   }
 
-  runner = effect(getter, {
+  const runner = effect(getter, {
     lazy: true,
     onTrack,
     onTrigger,
@@ -321,11 +318,9 @@ function doWatch(
   }
 
   return () => {
-    if (runner) {
-      stop(runner)
-      if (instance) {
-        remove(instance.effects!, runner)
-      }
+    stop(runner)
+    if (instance) {
+      remove(instance.effects!, runner)
     }
   }
 }
