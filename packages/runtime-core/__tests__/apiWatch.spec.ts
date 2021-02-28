@@ -56,7 +56,7 @@ describe('api: watch', () => {
           instance = getCurrentInstance()
         } else {
           watchEffect(onInvalidate => {
-            expect(() => onInvalidate(noop)).not.toThrow(ReferenceError)
+            expect(() => onInvalidate(noop)).not.toThrow(Error)
             done()
           })
         }
