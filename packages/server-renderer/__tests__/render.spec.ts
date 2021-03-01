@@ -8,7 +8,8 @@ import {
   ref,
   defineComponent,
   createTextVNode,
-  createStaticVNode
+  createStaticVNode,
+  watchEffect,
 } from 'vue'
 import { escapeHtml } from '@vue/shared'
 import { renderToString } from '../src/renderToString'
@@ -714,6 +715,16 @@ function testRender(type: string, render: typeof renderToString) {
       })
       const html = await render(app)
       expect(html).toBe(`<div>hello</div>`)
+    })
+
+    // https://github.com/vuejs/vue-next/issues/3322
+    test('effect onInvalidate does not error', async () => {
+      const noop = () => {}
+      const app = createApp({
+        setup: () => watchEffect(onInvalidate => onInvalidate(noop)),
+        render: noop,
+      })
+      expect(render(app)).resolves
     })
   })
 }
