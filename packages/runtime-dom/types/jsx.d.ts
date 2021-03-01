@@ -245,11 +245,14 @@ interface AriaAttributes {
   'aria-valuetext'?: string
 }
 
+// Vue's style normalization supports nested arrays
+type StyleValue = string | CSSProperties | Array<StyleValue>
+
 export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
   innerHTML?: string
 
   class?: any
-  style?: string | CSSProperties | Array<string | CSSProperties>
+  style?: StyleValue
 
   // Standard HTML Attributes
   accesskey?: string
