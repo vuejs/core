@@ -240,6 +240,7 @@ function createVNodeSlotBranch(
 ): ReturnStatement {
   // apply a sub-transform using vnode-based transforms.
   const rawOptions = rawOptionsMap.get(parentContext.root)!
+
   const subOptions = {
     ...rawOptions,
     // overwrite with vnode-based transforms

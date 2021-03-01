@@ -1,6 +1,6 @@
 import { baseCompile } from '../src/compile'
 import { PUSH_SCOPE_ID, POP_SCOPE_ID } from '../src/runtimeHelpers'
-import { PatchFlags } from '@vue/shared'
+import { PatchFlags, ShapeFlagNames, ShapeFlags } from '@vue/shared'
 import { genFlagText } from './testUtils'
 
 /**
@@ -73,11 +73,17 @@ describe('scopeId compiler support', () => {
     expect(code).toMatch(
       [
         `_pushScopeId("test")`,
-        `const _hoisted_1 = /*#__PURE__*/_createVNode("div", null, "hello", ${genFlagText(
+        `const _hoisted_1 = /*#__PURE__*/_createElementVNode("div", null, "hello", ${genFlagText(
           PatchFlags.HOISTED
+        )}, null, ${genFlagText(
+          [ShapeFlags.ELEMENT, ShapeFlags.TEXT_CHILDREN],
+          ShapeFlagNames
         )})`,
-        `const _hoisted_2 = /*#__PURE__*/_createVNode("div", null, "world", ${genFlagText(
+        `const _hoisted_2 = /*#__PURE__*/_createElementVNode("div", null, "world", ${genFlagText(
           PatchFlags.HOISTED
+        )}, null, ${genFlagText(
+          [ShapeFlags.ELEMENT, ShapeFlags.TEXT_CHILDREN],
+          ShapeFlagNames
         )})`,
         `_popScopeId()`
       ].join('\n')

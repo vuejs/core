@@ -28,14 +28,23 @@ import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
 import {
-  CREATE_BLOCK,
   FRAGMENT,
   CREATE_COMMENT,
   OPEN_BLOCK,
-  CREATE_VNODE
+  CREATE_VNODE,
+  CREATE_COMPONENT_BLOCK,
+  CREATE_ELEMENT_BLOCK,
+  CREATE_BLOCK,
+  CREATE_COMPONENT_VNODE,
+  CREATE_ELEMENT_VNODE
 } from '../runtimeHelpers'
 import { injectProp, findDir, findProp, isBuiltInType } from '../utils'
-import { PatchFlags, PatchFlagNames } from '@vue/shared'
+import {
+  PatchFlags,
+  PatchFlagNames,
+  ShapeFlags,
+  ShapeFlagNames
+} from '@vue/shared'
 
 export const transformIf = createStructuralDirectiveTransform(
   /^(if|else|else-if)$/,
@@ -278,6 +287,11 @@ function createChildrenCodegenNode(
         undefined,
         true,
         false,
+        false /* isComponent */,
+        ShapeFlags.ARRAY_CHILDREN +
+          (__DEV__
+            ? ` /* ${ShapeFlagNames[ShapeFlags.ARRAY_CHILDREN]} */`
+            : ``),
         branch.loc
       )
     }
@@ -286,10 +300,22 @@ function createChildrenCodegenNode(
       .codegenNode as BlockCodegenNode
     // Change createVNode to createBlock.
     if (vnodeCall.type === NodeTypes.VNODE_CALL && !vnodeCall.isBlock) {
-      removeHelper(CREATE_VNODE)
+      removeHelper(
+        context.forSSR
+          ? CREATE_VNODE
+          : vnodeCall.isComponent
+            ? CREATE_COMPONENT_VNODE
+            : CREATE_ELEMENT_VNODE
+      )
       vnodeCall.isBlock = true
       helper(OPEN_BLOCK)
-      helper(CREATE_BLOCK)
+      helper(
+        context.forSSR
+          ? CREATE_BLOCK
+          : vnodeCall.isComponent
+            ? CREATE_COMPONENT_BLOCK
+            : CREATE_ELEMENT_BLOCK
+      )
     }
     // inject branch key
     injectProp(vnodeCall, keyProperty, context)

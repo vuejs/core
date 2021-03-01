@@ -245,13 +245,23 @@ export {
   setBlockTracking,
   createTextVNode,
   createCommentVNode,
-  createStaticVNode
+  createStaticVNode,
+  createElementVNode,
+  createComponentVNode,
+  createElementBlock,
+  createComponentBlock,
+  guardReactiveProps
 } from './vnode'
 export {
   toDisplayString,
   camelize,
   capitalize,
-  toHandlerKey
+  toHandlerKey,
+  normalizeProps,
+  normalizeClass,
+  normalizeStyle,
+  normalizePropsForStyle,
+  normalizePropsForClass
 } from '@vue/shared'
 
 // For test-utils

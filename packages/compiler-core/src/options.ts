@@ -125,8 +125,17 @@ interface SharedTransformCodegenOptions {
    * Generate SSR-optimized render functions instead.
    * The resulting function must be attached to the component via the
    * `ssrRender` option instead of `render`.
+   * Note: it is used to indicate the runtime environment of the generated code
    */
   ssr?: boolean
+  /**
+   * Indicates whether the compiler generates code for SSR,
+   * when compiler generates code for the fallback branch of SSR:
+   *  - context.ssr = false
+   *  - context.forSSR = true
+   * see `subTransform` in `ssrTransformCompoent.ts`
+   */
+  forSSR?: boolean
   /**
    * Optional binding metadata analyzed from script - used to optimize
    * binding access when `prefixIdentifiers` is enabled.

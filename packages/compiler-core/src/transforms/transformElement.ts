@@ -29,7 +29,9 @@ import {
   isObject,
   isReservedProp,
   capitalize,
-  camelize
+  camelize,
+  ShapeFlags,
+  ShapeFlagNames
 } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
@@ -37,11 +39,17 @@ import {
   RESOLVE_COMPONENT,
   RESOLVE_DYNAMIC_COMPONENT,
   MERGE_PROPS,
+  NORMALIZE_CLASS,
+  NORMALIZE_STYLE,
+  NORMALIZE_PROPS,
+  NORMALIZE_PROPS_FOR_CLASS,
+  NORMALIZE_PROPS_FOR_STYLE,
   TO_HANDLERS,
   TELEPORT,
   KEEP_ALIVE,
   SUSPENSE,
-  UNREF
+  UNREF,
+  GUARD_REACTIVE_PROPS
 } from '../runtimeHelpers'
 import {
   getInnerRange,
@@ -101,6 +109,14 @@ export const transformElement: NodeTransform = (node, context) => {
     let vnodeDynamicProps: VNodeCall['dynamicProps']
     let dynamicPropNames: string[] | undefined
     let vnodeDirectives: VNodeCall['directives']
+    let vnodeShapeFlag: VNodeCall['shapeFlag']
+    let shapeFlag: number = !isComponent
+      ? ShapeFlags.ELEMENT
+      : vnodeTag === TELEPORT
+        ? ShapeFlags.TELEPORT
+        : vnodeTag === SUSPENSE
+          ? ShapeFlags.SUSPENSE
+          : 0
 
     let shouldUseBlock =
       // dynamic component may resolve to plain elements
@@ -185,11 +201,14 @@ export const transformElement: NodeTransform = (node, context) => {
         // (plain / interpolation / expression)
         if (hasDynamicTextChild || type === NodeTypes.TEXT) {
           vnodeChildren = child as TemplateTextChildNode
+          shapeFlag |= ShapeFlags.TEXT_CHILDREN
         } else {
           vnodeChildren = node.children
+          shapeFlag |= ShapeFlags.ARRAY_CHILDREN
         }
       } else {
         vnodeChildren = node.children
+        shapeFlag |= ShapeFlags.ARRAY_CHILDREN
       }
     }
 
@@ -216,6 +235,19 @@ export const transformElement: NodeTransform = (node, context) => {
       }
     }
 
+    if (shapeFlag > 1) {
+      if (__DEV__) {
+        // bitwise flags
+        const flagNames = Object.keys(ShapeFlagNames)
+          .map(Number)
+          .filter(n => shapeFlag & n)
+          .map(n => ShapeFlagNames[n])
+          .join(`, `)
+        vnodeShapeFlag = shapeFlag + ` /* ${flagNames} */`
+      } else {
+        vnodeShapeFlag = String(shapeFlag)
+      }
+    }
     node.codegenNode = createVNodeCall(
       context,
       vnodeTag,
@@ -226,6 +258,8 @@ export const transformElement: NodeTransform = (node, context) => {
       vnodeDirectives,
       !!shouldUseBlock,
       false /* disableTracking */,
+      isComponent,
+      vnodeShapeFlag,
       node.loc
     )
   }
@@ -401,13 +435,22 @@ export function buildProps(
         // skip if the prop is a cached handler or has constant value
         return
       }
+
       if (name === 'ref') {
         hasRef = true
-      } else if (name === 'class' && !isComponent) {
+      } else if (name === 'class') {
         hasClassBinding = true
-      } else if (name === 'style' && !isComponent) {
+      } else if (name === 'style') {
         hasStyleBinding = true
       } else if (name !== 'key' && !dynamicPropNames.includes(name)) {
+        dynamicPropNames.push(name)
+      }
+
+      if (
+        isComponent &&
+        (name === 'class' || name === 'style') &&
+        !dynamicPropNames.includes(name)
+      ) {
         dynamicPropNames.push(name)
       }
     } else {
@@ -627,10 +670,10 @@ export function buildProps(
   if (hasDynamicKeys) {
     patchFlag |= PatchFlags.FULL_PROPS
   } else {
-    if (hasClassBinding) {
+    if (hasClassBinding && !isComponent) {
       patchFlag |= PatchFlags.CLASS
     }
-    if (hasStyleBinding) {
+    if (hasStyleBinding && !isComponent) {
       patchFlag |= PatchFlags.STYLE
     }
     if (dynamicPropNames.length) {
@@ -647,12 +690,192 @@ export function buildProps(
     patchFlag |= PatchFlags.NEED_PATCH
   }
 
+  // pre-normalize props, SSR skip for now
+  if (!context.forSSR && propsExpression) {
+    switch (propsExpression.type) {
+      case NodeTypes.JS_OBJECT_EXPRESSION:
+        // indicates that there is no v-bind="obj" binding
+        const helperToUse = doNormalize(
+          context,
+          propsExpression.properties,
+          hasClassBinding,
+          hasStyleBinding
+        )
+
+        if (helperToUse) {
+          propsExpression = createCallExpression(context.helper(helperToUse), [
+            propsExpression
+          ])
+        }
+        break
+      case NodeTypes.JS_CALL_EXPRESSION:
+        // call of `mergeProps`
+        if (propsExpression.callee === MERGE_PROPS) {
+          let vBindIndex = -1
+          let lastObjectExpressionIndex = -1
+          const args = propsExpression.arguments as PropsExpression[]
+          // 1. find the index of v-bind and object express
+          for (let i = 0; i < propsExpression.arguments.length; i++) {
+            const arg = args[i]
+            if (
+              arg.type === NodeTypes.SIMPLE_EXPRESSION ||
+              arg.type === NodeTypes.COMPOUND_EXPRESSION
+            ) {
+              // v-bind="obj"   -->  SIMPLE_EXPRESSION
+              // v-bind="fn()"  -->  COMPOUND_EXPRESSION
+              vBindIndex = i
+            } else if (arg.type === NodeTypes.JS_OBJECT_EXPRESSION) {
+              lastObjectExpressionIndex = i
+            }
+          }
+          /**
+           * 1. <p v-bind="xx" class="xx" />
+           *    mergeProps(ExpressionNode, ObjectExpression)
+           *      - vBindIndex: 0
+           *      - objectExpressionIndex: 1
+           * 2. <p class="xx" v-bind="xx" />
+           *    mergeProps(ObjectExpression, ExpressionNode)
+           *      - vBindIndex: 1
+           *      - objectExpressionIndex: 0
+           * 3. <p class="xx" v-bind="xx" style="xx" />
+           *    mergeProps(ObjectExpression, ExpressionNode, ObjectExpression)
+           *       - vBindIndex: 1
+           *       - objectExpressionIndex: 2
+           */
+          if (vBindIndex < lastObjectExpressionIndex) {
+            const helperToUse = doNormalize(
+              context,
+              (args[lastObjectExpressionIndex] as ObjectExpression).properties,
+              hasClassBinding,
+              hasStyleBinding,
+              false
+            )
+            if (helperToUse) {
+              propsExpression = createCallExpression(
+                context.helper(helperToUse),
+                [propsExpression]
+              )
+            }
+          } else {
+            propsExpression = createCallExpression(
+              context.helper(NORMALIZE_PROPS),
+              [propsExpression]
+            )
+          }
+        }
+        break
+      default:
+        // single v-bind
+        propsExpression = createCallExpression(
+          context.helper(NORMALIZE_PROPS),
+          [
+            createCallExpression(context.helper(GUARD_REACTIVE_PROPS), [
+              propsExpression
+            ])
+          ]
+        )
+        break
+    }
+  }
+
   return {
     props: propsExpression,
     directives: runtimeDirectives,
     patchFlag,
     dynamicPropNames
   }
+}
+
+// normalization is only needed when the dynamic binding key is before the binding of class and style
+// i.e. <p :[dynamic]="val" :class="cls" :style="stl" />
+function doNormalize(
+  context: TransformContext,
+  properties: Property[],
+  hasClassBinding: boolean,
+  hasStyleBinding: boolean,
+  treatAbsentAsNormalized: boolean = true
+) {
+  let classKeyIndex = -1
+  let styleKeyIndex = -1
+  let dynamicKeyIndex = -1
+
+  for (let i = 0; i < properties.length; i++) {
+    const p = properties[i]
+    if (!isStaticExp(p.key)) dynamicKeyIndex = i
+    if (isStaticExp(p.key) && p.key.content === 'class') classKeyIndex = i
+    if (isStaticExp(p.key) && p.key.content === 'style') styleKeyIndex = i
+  }
+
+  /**
+   * 1. in the case of no dynamic binding key, e.g. <p :class="cls" :style="stl" />
+   *    shouldNormalizeClass = true
+   *    shouldNormalizeStyle = true
+   * 1. in the case of <p :[id]="foo" :class="cls" :style="stl" />
+   *    shouldNormalizeClass = true
+   *    shouldNormalizeStyle = true
+   * 2. in the case of <p :class="cls" :[id]="foo" :style="stl" />
+   *    shouldNormalizeClass = false
+   *    shouldNormalizeStyle = true
+   * 3. in the case of <p :class="cls" style="stl" :[id]="foo" />
+   *    shouldNormalizeClass = false
+   *    shouldNormalizeStyle = false
+   * 4. in the case of <p />
+   *    shouldNormalizeClass = false
+   *    shouldNormalizeStyle = false
+   */
+  const shouldNormalizeClass = dynamicKeyIndex < classKeyIndex
+  const shouldNormalizeStyle = dynamicKeyIndex < styleKeyIndex
+
+  if (shouldNormalizeClass || shouldNormalizeStyle) {
+    for (let i = 0; i < properties.length; i++) {
+      const p = properties[i]
+      if (
+        p.key.type !== NodeTypes.SIMPLE_EXPRESSION ||
+        (p.key.content !== 'class' && p.key.content !== 'style')
+      )
+        continue
+
+      // wrap with normalizeClass/normalizeStyle
+      let helperToUse = null
+      if (
+        p.key.content === 'class' &&
+        (hasClassBinding ||
+          // class may bind a constant and be skipped during patchFlag analysis,
+          // but it should still be normalized
+          // e.g. <p :class="{ bar: true }" />
+          !isStaticExp(p.value))
+      ) {
+        helperToUse = NORMALIZE_CLASS
+      } else if (
+        p.key.content === 'style' &&
+        (hasClassBinding || !isStaticExp(p.value))
+      ) {
+        helperToUse = NORMALIZE_STYLE
+      }
+
+      p.value = helperToUse
+        ? createCallExpression(context.helper(helperToUse), [p.value])
+        : p.value
+    }
+  }
+
+  const isClassNormalized =
+    shouldNormalizeClass || (treatAbsentAsNormalized && classKeyIndex === -1)
+  const isStyleNormalized =
+    shouldNormalizeStyle || (treatAbsentAsNormalized && styleKeyIndex === -1)
+  let helperToUse = null
+  if (!isClassNormalized && !isStyleNormalized) {
+    // normalize both
+    helperToUse = NORMALIZE_PROPS
+  } else if (isClassNormalized && !isStyleNormalized) {
+    // class has been normalized, only need to normalize style
+    helperToUse = NORMALIZE_PROPS_FOR_STYLE
+  } else if (isStyleNormalized && !isClassNormalized) {
+    // style has been normalized, only need to normalize class
+    helperToUse = NORMALIZE_PROPS_FOR_CLASS
+  }
+
+  return helperToUse
 }
 
 // Dedupe props in an object literal.

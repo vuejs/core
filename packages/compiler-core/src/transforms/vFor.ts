@@ -37,13 +37,22 @@ import {
 import {
   RENDER_LIST,
   OPEN_BLOCK,
-  CREATE_BLOCK,
   FRAGMENT,
+  CREATE_COMPONENT_BLOCK,
+  CREATE_ELEMENT_BLOCK,
+  CREATE_COMPONENT_VNODE,
+  CREATE_ELEMENT_VNODE,
+  CREATE_BLOCK,
   CREATE_VNODE
 } from '../runtimeHelpers'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
-import { PatchFlags, PatchFlagNames } from '@vue/shared'
+import {
+  PatchFlags,
+  PatchFlagNames,
+  ShapeFlags,
+  ShapeFlagNames
+} from '@vue/shared'
 
 export const transformFor = createStructuralDirectiveTransform(
   'for',
@@ -85,6 +94,7 @@ export const transformFor = createStructuralDirectiveTransform(
         : keyProp
           ? PatchFlags.KEYED_FRAGMENT
           : PatchFlags.UNKEYED_FRAGMENT
+
       forNode.codegenNode = createVNodeCall(
         context,
         helper(FRAGMENT),
@@ -96,6 +106,11 @@ export const transformFor = createStructuralDirectiveTransform(
         undefined,
         true /* isBlock */,
         !isStableFragment /* disableTracking */,
+        false /* isComponent */,
+        ShapeFlags.ARRAY_CHILDREN +
+          (__DEV__
+            ? ` /* ${ShapeFlagNames[ShapeFlags.ARRAY_CHILDREN]} */`
+            : ``),
         node.loc
       ) as ForCodegenNode
 
@@ -156,7 +171,13 @@ export const transformFor = createStructuralDirectiveTransform(
                 : ``),
             undefined,
             undefined,
-            true
+            true,
+            undefined,
+            false /* isComponent */,
+            ShapeFlags.ARRAY_CHILDREN +
+              (__DEV__
+                ? ` /* ${ShapeFlagNames[ShapeFlags.ARRAY_CHILDREN]} */`
+                : ``)
           )
         } else {
           // Normal element v-for. Directly use the child's codegenNode
@@ -179,9 +200,21 @@ export const transformFor = createStructuralDirectiveTransform(
           childBlock.isBlock = !isStableFragment
           if (childBlock.isBlock) {
             helper(OPEN_BLOCK)
-            helper(CREATE_BLOCK)
+            helper(
+              context.forSSR
+                ? CREATE_BLOCK
+                : childBlock.isComponent
+                  ? CREATE_COMPONENT_BLOCK
+                  : CREATE_ELEMENT_BLOCK
+            )
           } else {
-            helper(CREATE_VNODE)
+            helper(
+              context.forSSR
+                ? CREATE_VNODE
+                : childBlock.isComponent
+                  ? CREATE_COMPONENT_VNODE
+                  : CREATE_ELEMENT_VNODE
+            )
           }
         }
 

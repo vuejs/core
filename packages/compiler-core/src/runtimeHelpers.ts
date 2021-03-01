@@ -5,7 +5,15 @@ export const KEEP_ALIVE = Symbol(__DEV__ ? `KeepAlive` : ``)
 export const BASE_TRANSITION = Symbol(__DEV__ ? `BaseTransition` : ``)
 export const OPEN_BLOCK = Symbol(__DEV__ ? `openBlock` : ``)
 export const CREATE_BLOCK = Symbol(__DEV__ ? `createBlock` : ``)
+export const CREATE_ELEMENT_BLOCK = Symbol(__DEV__ ? `createElementBlock` : ``)
+export const CREATE_COMPONENT_BLOCK = Symbol(
+  __DEV__ ? `createComponentBlock` : ``
+)
 export const CREATE_VNODE = Symbol(__DEV__ ? `createVNode` : ``)
+export const CREATE_ELEMENT_VNODE = Symbol(__DEV__ ? `createElementVNode` : ``)
+export const CREATE_COMPONENT_VNODE = Symbol(
+  __DEV__ ? `createComponentVNode` : ``
+)
 export const CREATE_COMMENT = Symbol(__DEV__ ? `createCommentVNode` : ``)
 export const CREATE_TEXT = Symbol(__DEV__ ? `createTextVNode` : ``)
 export const CREATE_STATIC = Symbol(__DEV__ ? `createStaticVNode` : ``)
@@ -21,6 +29,16 @@ export const RENDER_SLOT = Symbol(__DEV__ ? `renderSlot` : ``)
 export const CREATE_SLOTS = Symbol(__DEV__ ? `createSlots` : ``)
 export const TO_DISPLAY_STRING = Symbol(__DEV__ ? `toDisplayString` : ``)
 export const MERGE_PROPS = Symbol(__DEV__ ? `mergeProps` : ``)
+export const NORMALIZE_CLASS = Symbol(__DEV__ ? `normalizeClass` : ``)
+export const NORMALIZE_STYLE = Symbol(__DEV__ ? `normalizeStyle` : ``)
+export const NORMALIZE_PROPS = Symbol(__DEV__ ? `normalizeProps` : ``)
+export const NORMALIZE_PROPS_FOR_CLASS = Symbol(
+  __DEV__ ? `normalizePropsForClass` : ``
+)
+export const NORMALIZE_PROPS_FOR_STYLE = Symbol(
+  __DEV__ ? `normalizePropsForStyle` : ``
+)
+export const GUARD_REACTIVE_PROPS = Symbol(__DEV__ ? `guardReactiveProps` : ``)
 export const TO_HANDLERS = Symbol(__DEV__ ? `toHandlers` : ``)
 export const CAMELIZE = Symbol(__DEV__ ? `camelize` : ``)
 export const CAPITALIZE = Symbol(__DEV__ ? `capitalize` : ``)
@@ -44,7 +62,11 @@ export const helperNameMap: any = {
   [BASE_TRANSITION]: `BaseTransition`,
   [OPEN_BLOCK]: `openBlock`,
   [CREATE_BLOCK]: `createBlock`,
+  [CREATE_ELEMENT_BLOCK]: `createElementBlock`,
+  [CREATE_COMPONENT_BLOCK]: `createComponentBlock`,
   [CREATE_VNODE]: `createVNode`,
+  [CREATE_ELEMENT_VNODE]: `createElementVNode`,
+  [CREATE_COMPONENT_VNODE]: `createComponentVNode`,
   [CREATE_COMMENT]: `createCommentVNode`,
   [CREATE_TEXT]: `createTextVNode`,
   [CREATE_STATIC]: `createStaticVNode`,
@@ -58,6 +80,12 @@ export const helperNameMap: any = {
   [CREATE_SLOTS]: `createSlots`,
   [TO_DISPLAY_STRING]: `toDisplayString`,
   [MERGE_PROPS]: `mergeProps`,
+  [NORMALIZE_CLASS]: `normalizeClass`,
+  [NORMALIZE_STYLE]: `normalizeStyle`,
+  [NORMALIZE_PROPS]: `normalizeProps`,
+  [NORMALIZE_PROPS_FOR_CLASS]: `normalizePropsForClass`,
+  [NORMALIZE_PROPS_FOR_STYLE]: `normalizePropsForStyle`,
+  [GUARD_REACTIVE_PROPS]: `guardReactiveProps`,
   [TO_HANDLERS]: `toHandlers`,
   [CAMELIZE]: `camelize`,
   [CAPITALIZE]: `capitalize`,

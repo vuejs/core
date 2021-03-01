@@ -11,3 +11,20 @@ export const enum ShapeFlags {
   COMPONENT_KEPT_ALIVE = 1 << 9,
   COMPONENT = ShapeFlags.STATEFUL_COMPONENT | ShapeFlags.FUNCTIONAL_COMPONENT
 }
+
+/**
+ * dev only ShapeFlag -> name mapping
+ */
+export const ShapeFlagNames = {
+  [ShapeFlags.ELEMENT]: `ELEMENT`,
+  [ShapeFlags.FUNCTIONAL_COMPONENT]: `FUNCTIONAL_COMPONENT`,
+  [ShapeFlags.STATEFUL_COMPONENT]: `STATEFUL_COMPONENT`,
+  [ShapeFlags.TEXT_CHILDREN]: `TEXT_CHILDREN`,
+  [ShapeFlags.ARRAY_CHILDREN]: `ARRAY_CHILDREN`,
+  [ShapeFlags.SLOTS_CHILDREN]: `SLOTS_CHILDREN`,
+  [ShapeFlags.TELEPORT]: `TELEPORT`,
+  [ShapeFlags.SUSPENSE]: `SUSPENSE`,
+  [ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE]: `COMPONENT_SHOULD_KEEP_ALIVE`,
+  [ShapeFlags.COMPONENT_KEPT_ALIVE]: `COMPONENT_KEPT_ALIVE`,
+  [ShapeFlags.COMPONENT]: `COMPONENT`
+}

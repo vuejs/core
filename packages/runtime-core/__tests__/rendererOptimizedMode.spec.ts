@@ -20,7 +20,13 @@ import {
   onBeforeUnmount,
   createTextVNode,
   SetupContext,
-  createApp
+  createApp,
+  createElementVNode,
+  reactive,
+  guardReactiveProps,
+  normalizeProps,
+  normalizeClass,
+  normalizeStyle
 } from '@vue/runtime-test'
 import { PatchFlags, SlotFlags } from '@vue/shared'
 import { SuspenseImpl } from '../src/components/Suspense'
@@ -820,5 +826,40 @@ describe('renderer: optimized mode', () => {
     show.value = true
     await nextTick()
     expect(inner(root)).toBe('<div><div>true</div></div>')
+  })
+  describe('optimized VNode creation', () => {
+    test('single v-bind', () => {
+      // in case <div v-bind="reactiveObj" />
+      // 1. use `guardReactiveProps` to make sure it gets rid of reactive data
+      // 2. use `normalizeProps` to normalize `class` and `style`
+      const p = createElementVNode(
+        'p',
+        normalizeProps(
+          guardReactiveProps(reactive({ class: ['foo', { bar: true }] }))
+        )
+      )
+      render(p, root)
+      expect(inner(root)).toBe('<p class="foo bar"></p>')
+    })
+
+    test('dynamic class binding', () => {
+      // in case <div :class="cls" class="bar" />
+      const p = createElementVNode('p', {
+        class: normalizeClass([{ foo: true }, 'bar'])
+      })
+      render(p, root)
+      expect(inner(root)).toBe('<p class="foo bar"></p>')
+    })
+
+    test('dynamic style binding', () => {
+      // in case <div :style="stl" style="color: red;" />
+      const p = createElementVNode('p', {
+        style: normalizeStyle([['background: green;'], { color: 'red' }])
+      })
+      render(p, root)
+      expect(inner(root)).toBe(
+        '<p style={"background":"green","color":"red"}></p>'
+      )
+    })
   })
 })

@@ -26,17 +26,23 @@ import {
   PatchFlagNames,
   EMPTY_OBJ,
   capitalize,
-  camelize
+  camelize,
+  ShapeFlags,
+  ShapeFlagNames
 } from '@vue/shared'
 import { defaultOnError, defaultOnWarn } from './errors'
 import {
   TO_DISPLAY_STRING,
   FRAGMENT,
   helperNameMap,
-  CREATE_BLOCK,
   CREATE_COMMENT,
   OPEN_BLOCK,
-  CREATE_VNODE
+  CREATE_ELEMENT_BLOCK,
+  CREATE_COMPONENT_BLOCK,
+  CREATE_BLOCK,
+  CREATE_VNODE,
+  CREATE_COMPONENT_VNODE,
+  CREATE_ELEMENT_VNODE
 } from './runtimeHelpers'
 import { isVSlot } from './utils'
 import { hoistStatic, isSingleElementRoot } from './transforms/hoistStatic'
@@ -139,6 +145,7 @@ export function createTransformContext(
     scopeId = null,
     slotted = true,
     ssr = false,
+    forSSR = false,
     ssrCssVars = ``,
     bindingMetadata = EMPTY_OBJ,
     inline = false,
@@ -164,6 +171,7 @@ export function createTransformContext(
     scopeId,
     slotted,
     ssr,
+    forSSR,
     ssrCssVars,
     bindingMetadata,
     inline,
@@ -346,10 +354,22 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
       const codegenNode = child.codegenNode
       if (codegenNode.type === NodeTypes.VNODE_CALL) {
         if (!codegenNode.isBlock) {
-          removeHelper(CREATE_VNODE)
           codegenNode.isBlock = true
+          removeHelper(
+            context.ssr
+              ? CREATE_VNODE
+              : codegenNode.isComponent
+                ? CREATE_COMPONENT_VNODE
+                : CREATE_ELEMENT_VNODE
+          )
           helper(OPEN_BLOCK)
-          helper(CREATE_BLOCK)
+          helper(
+            context.ssr
+              ? CREATE_BLOCK
+              : codegenNode.isComponent
+                ? CREATE_COMPONENT_BLOCK
+                : CREATE_ELEMENT_BLOCK
+          )
         }
       }
       root.codegenNode = codegenNode
@@ -380,7 +400,11 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
       patchFlag + (__DEV__ ? ` /* ${patchFlagText} */` : ``),
       undefined,
       undefined,
-      true
+      true,
+      undefined,
+      false /* isComponent */,
+      ShapeFlags.ARRAY_CHILDREN +
+        (__DEV__ ? ` /* ${ShapeFlagNames[ShapeFlags.ARRAY_CHILDREN]} */` : ``)
     )
   } else {
     // no children = noop. codegen will return null.

@@ -5,10 +5,14 @@ import {
   CREATE_SLOTS,
   RENDER_LIST,
   OPEN_BLOCK,
-  CREATE_BLOCK,
   FRAGMENT,
-  CREATE_VNODE,
-  WITH_DIRECTIVES
+  WITH_DIRECTIVES,
+  CREATE_COMPONENT_VNODE,
+  CREATE_ELEMENT_VNODE,
+  CREATE_COMPONENT_BLOCK,
+  CREATE_ELEMENT_BLOCK,
+  CREATE_BLOCK,
+  CREATE_VNODE
 } from './runtimeHelpers'
 import { PropsExpression } from './transforms/transformElement'
 import { ImportItem, TransformContext } from './transform'
@@ -293,6 +297,8 @@ export interface VNodeCall extends Node {
   directives: DirectiveArguments | undefined
   isBlock: boolean
   disableTracking: boolean
+  isComponent: boolean
+  shapeFlag: string | undefined
 }
 
 // JS Node Types ---------------------------------------------------------------
@@ -560,14 +566,28 @@ export function createVNodeCall(
   directives?: VNodeCall['directives'],
   isBlock: VNodeCall['isBlock'] = false,
   disableTracking: VNodeCall['disableTracking'] = false,
+  isComponent: VNodeCall['isComponent'] = false,
+  shapeFlag: VNodeCall['shapeFlag'] = undefined,
   loc = locStub
 ): VNodeCall {
   if (context) {
     if (isBlock) {
       context.helper(OPEN_BLOCK)
-      context.helper(CREATE_BLOCK)
+      context.helper(
+        context.forSSR
+          ? CREATE_BLOCK
+          : isComponent
+            ? CREATE_COMPONENT_BLOCK
+            : CREATE_ELEMENT_BLOCK
+      )
     } else {
-      context.helper(CREATE_VNODE)
+      context.helper(
+        context.forSSR
+          ? CREATE_VNODE
+          : isComponent
+            ? CREATE_COMPONENT_VNODE
+            : CREATE_ELEMENT_VNODE
+      )
     }
     if (directives) {
       context.helper(WITH_DIRECTIVES)
@@ -584,6 +604,8 @@ export function createVNodeCall(
     directives,
     isBlock,
     disableTracking,
+    isComponent,
+    shapeFlag,
     loc
   }
 }
