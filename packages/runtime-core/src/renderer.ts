@@ -316,15 +316,14 @@ export const setRef = (
   if (!vnode) {
     // means unmount
     value = null
-  } else {
+  } else if (isAsyncWrapper(vnode)) {
     // when mounting async components, nothing needs to be done,
     // because the template ref is forwarded to inner component
-    if (isAsyncWrapper(vnode)) return
-    if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
-      value = vnode.component!.exposed || vnode.component!.proxy
-    } else {
-      value = vnode.el
-    }
+    return
+  } else if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
+    value = vnode.component!.exposed || vnode.component!.proxy
+  } else {
+    value = vnode.el
   }
 
   const { i: owner, r: ref } = rawRef
