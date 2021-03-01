@@ -4,7 +4,8 @@ import {
   CompilerOptions,
   ElementNode,
   NodeTypes,
-  VNodeCall
+  VNodeCall,
+  NORMALIZE_STYLE
 } from '@vue/compiler-core'
 import { transformBind } from '../../../compiler-core/src/transforms/vBind'
 import { transformElement } from '../../../compiler-core/src/transforms/transformElement'
@@ -61,9 +62,15 @@ describe('compiler: style transform', () => {
             isStatic: true
           },
           value: {
-            type: NodeTypes.SIMPLE_EXPRESSION,
-            content: `{"color":"red"}`,
-            isStatic: false
+            type: NodeTypes.JS_CALL_EXPRESSION,
+            callee: NORMALIZE_STYLE,
+            arguments: [
+              {
+                type: NodeTypes.SIMPLE_EXPRESSION,
+                content: `{"color":"red"}`,
+                isStatic: false
+              }
+            ]
           }
         }
       ]

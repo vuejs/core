@@ -5,70 +5,70 @@ exports[`compiler: integration tests function mode 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { toDisplayString: _toDisplayString, openBlock: _openBlock, createBlock: _createBlock, createCommentVNode: _createCommentVNode, createTextVNode: _createTextVNode, Fragment: _Fragment, renderList: _renderList, createVNode: _createVNode } = _Vue
+    const { toDisplayString: _toDisplayString, createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode, createTextVNode: _createTextVNode, Fragment: _Fragment, renderList: _renderList, normalizeClass: _normalizeClass } = _Vue
 
-    return (_openBlock(), _createBlock(\\"div\\", {
+    return (_openBlock(), _createElementBlock(\\"div\\", {
       id: \\"foo\\",
-      class: bar.baz
+      class: _normalizeClass(bar.baz)
     }, [
       _createTextVNode(_toDisplayString(world.burn()) + \\" \\", 1 /* TEXT */),
       ok
-        ? (_openBlock(), _createBlock(\\"div\\", { key: 0 }, \\"yes\\"))
-        : (_openBlock(), _createBlock(_Fragment, { key: 1 }, [
+        ? (_openBlock(), _createElementBlock(\\"div\\", { key: 0 }, \\"yes\\", null, null, 9 /* ELEMENT, TEXT_CHILDREN */))
+        : (_openBlock(), _createElementBlock(_Fragment, { key: 1 }, [
             _createTextVNode(\\"no\\")
-          ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */)),
-      (_openBlock(true), _createBlock(_Fragment, null, _renderList(list, (value, index) => {
-        return (_openBlock(), _createBlock(\\"div\\", null, [
-          _createVNode(\\"span\\", null, _toDisplayString(value + index), 1 /* TEXT */)
-        ]))
-      }), 256 /* UNKEYED_FRAGMENT */))
-    ], 2 /* CLASS */))
+          ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */)),
+      (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(list, (value, index) => {
+        return (_openBlock(), _createElementBlock(\\"div\\", null, [
+          _createElementVNode(\\"span\\", null, _toDisplayString(value + index), 1 /* TEXT */, null, 9 /* ELEMENT, TEXT_CHILDREN */)
+        ], null, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
+      }), 256 /* UNKEYED_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */))
+    ], 2 /* CLASS */, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
   }
 }"
 `;
 
 exports[`compiler: integration tests function mode w/ prefixIdentifiers: true 1`] = `
-"const { toDisplayString: _toDisplayString, openBlock: _openBlock, createBlock: _createBlock, createCommentVNode: _createCommentVNode, createTextVNode: _createTextVNode, Fragment: _Fragment, renderList: _renderList, createVNode: _createVNode } = Vue
+"const { toDisplayString: _toDisplayString, createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode, createTextVNode: _createTextVNode, Fragment: _Fragment, renderList: _renderList, normalizeClass: _normalizeClass } = Vue
 
 return function render(_ctx, _cache) {
-  return (_openBlock(), _createBlock(\\"div\\", {
+  return (_openBlock(), _createElementBlock(\\"div\\", {
     id: \\"foo\\",
-    class: _ctx.bar.baz
+    class: _normalizeClass(_ctx.bar.baz)
   }, [
     _createTextVNode(_toDisplayString(_ctx.world.burn()) + \\" \\", 1 /* TEXT */),
     (_ctx.ok)
-      ? (_openBlock(), _createBlock(\\"div\\", { key: 0 }, \\"yes\\"))
-      : (_openBlock(), _createBlock(_Fragment, { key: 1 }, [
+      ? (_openBlock(), _createElementBlock(\\"div\\", { key: 0 }, \\"yes\\", null, null, 9 /* ELEMENT, TEXT_CHILDREN */))
+      : (_openBlock(), _createElementBlock(_Fragment, { key: 1 }, [
           _createTextVNode(\\"no\\")
-        ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */)),
-    (_openBlock(true), _createBlock(_Fragment, null, _renderList(_ctx.list, (value, index) => {
-      return (_openBlock(), _createBlock(\\"div\\", null, [
-        _createVNode(\\"span\\", null, _toDisplayString(value + index), 1 /* TEXT */)
-      ]))
-    }), 256 /* UNKEYED_FRAGMENT */))
-  ], 2 /* CLASS */))
+        ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */)),
+    (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.list, (value, index) => {
+      return (_openBlock(), _createElementBlock(\\"div\\", null, [
+        _createElementVNode(\\"span\\", null, _toDisplayString(value + index), 1 /* TEXT */, null, 9 /* ELEMENT, TEXT_CHILDREN */)
+      ], null, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
+    }), 256 /* UNKEYED_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */))
+  ], 2 /* CLASS */, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
 }"
 `;
 
 exports[`compiler: integration tests module mode 1`] = `
-"import { toDisplayString as _toDisplayString, openBlock as _openBlock, createBlock as _createBlock, createCommentVNode as _createCommentVNode, createTextVNode as _createTextVNode, Fragment as _Fragment, renderList as _renderList, createVNode as _createVNode } from \\"vue\\"
+"import { toDisplayString as _toDisplayString, createElementVNode as _createElementVNode, openBlock as _openBlock, createElementBlock as _createElementBlock, createCommentVNode as _createCommentVNode, createTextVNode as _createTextVNode, Fragment as _Fragment, renderList as _renderList, normalizeClass as _normalizeClass } from \\"vue\\"
 
 export function render(_ctx, _cache) {
-  return (_openBlock(), _createBlock(\\"div\\", {
+  return (_openBlock(), _createElementBlock(\\"div\\", {
     id: \\"foo\\",
-    class: _ctx.bar.baz
+    class: _normalizeClass(_ctx.bar.baz)
   }, [
     _createTextVNode(_toDisplayString(_ctx.world.burn()) + \\" \\", 1 /* TEXT */),
     (_ctx.ok)
-      ? (_openBlock(), _createBlock(\\"div\\", { key: 0 }, \\"yes\\"))
-      : (_openBlock(), _createBlock(_Fragment, { key: 1 }, [
+      ? (_openBlock(), _createElementBlock(\\"div\\", { key: 0 }, \\"yes\\", null, null, 9 /* ELEMENT, TEXT_CHILDREN */))
+      : (_openBlock(), _createElementBlock(_Fragment, { key: 1 }, [
           _createTextVNode(\\"no\\")
-        ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */)),
-    (_openBlock(true), _createBlock(_Fragment, null, _renderList(_ctx.list, (value, index) => {
-      return (_openBlock(), _createBlock(\\"div\\", null, [
-        _createVNode(\\"span\\", null, _toDisplayString(value + index), 1 /* TEXT */)
-      ]))
-    }), 256 /* UNKEYED_FRAGMENT */))
-  ], 2 /* CLASS */))
+        ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */)),
+    (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.list, (value, index) => {
+      return (_openBlock(), _createElementBlock(\\"div\\", null, [
+        _createElementVNode(\\"span\\", null, _toDisplayString(value + index), 1 /* TEXT */, null, 9 /* ELEMENT, TEXT_CHILDREN */)
+      ], null, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
+    }), 256 /* UNKEYED_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */))
+  ], 2 /* CLASS */, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
 }"
 `;

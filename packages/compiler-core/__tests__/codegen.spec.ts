@@ -401,8 +401,10 @@ describe('compiler: codegen', () => {
       [prop]: bar,
       [foo + bar]: bar
     }, [
-      _${helperNameMap[CREATE_ELEMENT_VNODE]}("p", { "some-key": "foo" })
-    ], ${PatchFlags.FULL_PROPS})`)
+      _${
+        helperNameMap[CREATE_ELEMENT_VNODE]
+      }("p", { "some-key": "foo" }, null, null, null, 1)
+    ], ${PatchFlags.FULL_PROPS}, null, 1)`)
     expect(code).toMatchSnapshot()
   })
 

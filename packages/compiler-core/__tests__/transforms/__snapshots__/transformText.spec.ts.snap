@@ -5,13 +5,13 @@ exports[`compiler: transform text <template v-for> 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, createTextVNode: _createTextVNode } = _Vue
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock, createTextVNode: _createTextVNode } = _Vue
 
-    return (_openBlock(true), _createBlock(_Fragment, null, _renderList(list, (i) => {
-      return (_openBlock(), _createBlock(_Fragment, null, [
+    return (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(list, (i) => {
+      return (_openBlock(), _createElementBlock(_Fragment, null, [
         _createTextVNode(\\"foo\\")
-      ], 64 /* STABLE_FRAGMENT */))
-    }), 256 /* UNKEYED_FRAGMENT */))
+      ], 64 /* STABLE_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */))
+    }), 256 /* UNKEYED_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */))
   }
 }"
 `;
@@ -33,13 +33,13 @@ exports[`compiler: transform text consecutive text between elements 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { createVNode: _createVNode, toDisplayString: _toDisplayString, createTextVNode: _createTextVNode, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+    const { createElementVNode: _createElementVNode, toDisplayString: _toDisplayString, createTextVNode: _createTextVNode, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
-    return (_openBlock(), _createBlock(_Fragment, null, [
-      _createVNode(\\"div\\"),
+    return (_openBlock(), _createElementBlock(_Fragment, null, [
+      _createElementVNode(\\"div\\"),
       _createTextVNode(_toDisplayString(foo) + \\" bar \\" + _toDisplayString(baz), 1 /* TEXT */),
-      _createVNode(\\"div\\")
-    ], 64 /* STABLE_FRAGMENT */))
+      _createElementVNode(\\"div\\")
+    ], 64 /* STABLE_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */))
   }
 }"
 `;
@@ -49,15 +49,15 @@ exports[`compiler: transform text consecutive text mixed with elements 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { createVNode: _createVNode, toDisplayString: _toDisplayString, createTextVNode: _createTextVNode, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+    const { createElementVNode: _createElementVNode, toDisplayString: _toDisplayString, createTextVNode: _createTextVNode, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
-    return (_openBlock(), _createBlock(_Fragment, null, [
-      _createVNode(\\"div\\"),
+    return (_openBlock(), _createElementBlock(_Fragment, null, [
+      _createElementVNode(\\"div\\"),
       _createTextVNode(_toDisplayString(foo) + \\" bar \\" + _toDisplayString(baz), 1 /* TEXT */),
-      _createVNode(\\"div\\"),
+      _createElementVNode(\\"div\\"),
       _createTextVNode(\\"hello\\"),
-      _createVNode(\\"div\\")
-    ], 64 /* STABLE_FRAGMENT */))
+      _createElementVNode(\\"div\\")
+    ], 64 /* STABLE_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */))
   }
 }"
 `;
@@ -97,13 +97,13 @@ exports[`compiler: transform text text between elements (static) 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { createVNode: _createVNode, createTextVNode: _createTextVNode, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+    const { createElementVNode: _createElementVNode, createTextVNode: _createTextVNode, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
-    return (_openBlock(), _createBlock(_Fragment, null, [
-      _createVNode(\\"div\\"),
+    return (_openBlock(), _createElementBlock(_Fragment, null, [
+      _createElementVNode(\\"div\\"),
       _createTextVNode(\\"hello\\"),
-      _createVNode(\\"div\\")
-    ], 64 /* STABLE_FRAGMENT */))
+      _createElementVNode(\\"div\\")
+    ], 64 /* STABLE_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */))
   }
 }"
 `;

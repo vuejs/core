@@ -204,11 +204,11 @@ export const transformElement: NodeTransform = (node, context) => {
           shapeFlag |= ShapeFlags.TEXT_CHILDREN
         } else {
           vnodeChildren = node.children
-          shapeFlag |= ShapeFlags.ARRAY_CHILDREN
+          vnodeTag !== KEEP_ALIVE && (shapeFlag |= ShapeFlags.ARRAY_CHILDREN)
         }
       } else {
         vnodeChildren = node.children
-        shapeFlag |= ShapeFlags.ARRAY_CHILDREN
+        vnodeTag !== KEEP_ALIVE && (shapeFlag |= ShapeFlags.ARRAY_CHILDREN)
       }
     }
 
