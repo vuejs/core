@@ -356,7 +356,7 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
         if (!codegenNode.isBlock) {
           codegenNode.isBlock = true
           removeHelper(
-            context.ssr
+            context.forSSR
               ? CREATE_VNODE
               : codegenNode.isComponent
                 ? CREATE_COMPONENT_VNODE
@@ -364,7 +364,7 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
           )
           helper(OPEN_BLOCK)
           helper(
-            context.ssr
+            context.forSSR
               ? CREATE_BLOCK
               : codegenNode.isComponent
                 ? CREATE_COMPONENT_BLOCK

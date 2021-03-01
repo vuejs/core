@@ -204,6 +204,7 @@ export const transformElement: NodeTransform = (node, context) => {
           shapeFlag |= ShapeFlags.TEXT_CHILDREN
         } else {
           vnodeChildren = node.children
+          // KeepAlive is a component, but no slot is built for it at compile time
           vnodeTag !== KEEP_ALIVE && (shapeFlag |= ShapeFlags.ARRAY_CHILDREN)
         }
       } else {
@@ -446,6 +447,7 @@ export function buildProps(
         dynamicPropNames.push(name)
       }
 
+      // treat the dynamic binding class and style of the component as dynamic props
       if (
         isComponent &&
         (name === 'class' || name === 'style') &&
@@ -690,7 +692,7 @@ export function buildProps(
     patchFlag |= PatchFlags.NEED_PATCH
   }
 
-  // pre-normalize props, SSR skip for now
+  // pre-normalize props, SSR is skipped for now
   if (!context.forSSR && propsExpression) {
     switch (propsExpression.type) {
       case NodeTypes.JS_OBJECT_EXPRESSION:
@@ -786,8 +788,8 @@ export function buildProps(
   }
 }
 
-// normalization is only needed when the dynamic binding key is before the binding of class and style
-// i.e. <p :[dynamic]="val" :class="cls" :style="stl" />
+// normalization is only needed when the dynamic binding key is before the class and style
+// e.g. <p :[dynamic]="val" :class="cls" :style="stl" />
 function doNormalize(
   context: TransformContext,
   properties: Property[],

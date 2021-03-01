@@ -329,9 +329,9 @@ export function injectProp(
       createObjectExpression([prop]),
       props
     ])
-    // in the case of `normalizeProps(guardReactiveProps(props))`,
-    // will be rewritten as `normalizeProps(mergeProps({ key: 0 }, props))`,
-    // `guardReactiveProps` will no longer be needed
+    // in the case of nested helper call, e.g. `normalizeProps(guardReactiveProps(props))`,
+    // it will be rewritten as `normalizeProps(mergeProps({ key: 0 }, props))`,
+    // the `guardReactiveProps` will no longer be needed
     if (parentCall && parentCall.callee === GUARD_REACTIVE_PROPS) {
       parentCall = callPath[callPath.length - 2]
     }

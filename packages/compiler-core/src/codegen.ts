@@ -776,7 +776,7 @@ function genVNodeCall(node: VNodeCall, context: CodegenContext) {
     push(PURE_ANNOTATION)
   }
   let callHelper: symbol = isBlock ? CREATE_BLOCK : CREATE_VNODE
-  if (!context.ssr) {
+  if (!context.forSSR) {
     callHelper = isBlock
       ? isComponent
         ? CREATE_COMPONENT_BLOCK
@@ -793,7 +793,7 @@ function genVNodeCall(node: VNodeCall, context: CodegenContext) {
       children,
       patchFlag,
       dynamicProps,
-      context.ssr ? null : shapeFlag
+      context.forSSR ? null : shapeFlag
     ]),
     context
   )
