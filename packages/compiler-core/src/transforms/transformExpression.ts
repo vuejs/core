@@ -361,7 +361,7 @@ function canPrefix(id: Identifier) {
   return true
 }
 
-function stringifyExpression(exp: ExpressionNode | string): string {
+export function stringifyExpression(exp: ExpressionNode | string): string {
   if (isString(exp)) {
     return exp
   } else if (exp.type === NodeTypes.SIMPLE_EXPRESSION) {
