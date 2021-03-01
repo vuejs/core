@@ -253,17 +253,7 @@ export function resolveComponentType(
     return builtIn
   }
 
-  // 3. user component (from setup bindings)
-  // this is skipped in browser build since browser builds do not perform
-  // binding analysis.
-  if (!__BROWSER__) {
-    const fromSetup = resolveSetupReference(tag, context)
-    if (fromSetup) {
-      return fromSetup
-    }
-  }
-
-  // 4. Self referencing component (inferred from filename)
+  // 3. Self referencing component (inferred from filename)
   if (!__BROWSER__ && context.selfName) {
     if (capitalize(camelize(tag)) === context.selfName) {
       context.helper(RESOLVE_COMPONENT)
@@ -272,7 +262,7 @@ export function resolveComponentType(
     }
   }
 
-  // 5. user component (resolve)
+  // 4. user component (resolve)
   context.helper(RESOLVE_COMPONENT)
   context.components.add(tag)
   return toValidAssetId(tag, `component`)
