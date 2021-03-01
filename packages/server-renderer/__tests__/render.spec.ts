@@ -724,7 +724,7 @@ function testRender(type: string, render: typeof renderToString) {
         setup: () => watchEffect(onInvalidate => onInvalidate(noop)),
         render: noop,
       })
-      expect(render(app)).resolves
+      expect(await render(app)).toBe('<!---->')
     })
   })
 }
