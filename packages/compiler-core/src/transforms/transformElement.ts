@@ -58,7 +58,8 @@ import {
   isCoreComponent,
   isBindKey,
   findDir,
-  isStaticExp
+  isStaticExp,
+  isConstantExp
 } from '../utils'
 import { buildSlots } from './vSlot'
 import { getConstantType } from './hoistStatic'
@@ -831,16 +832,17 @@ function doNormalize(
   if (shouldNormalizeClass || shouldNormalizeStyle) {
     for (let i = 0; i < properties.length; i++) {
       const p = properties[i]
+      const key = p.key
       if (
-        p.key.type !== NodeTypes.SIMPLE_EXPRESSION ||
-        (p.key.content !== 'class' && p.key.content !== 'style')
+        !isStaticExp(key) ||
+        (key.content !== 'class' && key.content !== 'style')
       )
         continue
 
       // wrap with normalizeClass/normalizeStyle
       let helperToUse = null
       if (
-        p.key.content === 'class' &&
+        key.content === 'class' &&
         (hasClassBinding ||
           // class may bind a constant and be skipped during patchFlag analysis,
           // but it should still be normalized
@@ -849,8 +851,8 @@ function doNormalize(
       ) {
         helperToUse = NORMALIZE_CLASS
       } else if (
-        p.key.content === 'style' &&
-        (hasClassBinding || !isStaticExp(p.value))
+        key.content === 'style' &&
+        ((hasClassBinding || !isStaticExp(p.value)) && !isConstantExp(p.value))
       ) {
         helperToUse = NORMALIZE_STYLE
       }
