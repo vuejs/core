@@ -183,6 +183,7 @@ export function updateProps(
     ) &&
     (optimized || patchFlag > 0) &&
     !(patchFlag & PatchFlags.FULL_PROPS) &&
+    //#3348
     !(patchFlag & PatchFlags.DYNAMIC_SLOTS)
   ) {
     if (patchFlag & PatchFlags.PROPS) {
