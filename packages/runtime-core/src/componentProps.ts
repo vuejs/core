@@ -182,7 +182,8 @@ export function updateProps(
         (instance.parent && instance.parent.type.__hmrId))
     ) &&
     (optimized || patchFlag > 0) &&
-    !(patchFlag & PatchFlags.FULL_PROPS)
+    !(patchFlag & PatchFlags.FULL_PROPS) &&
+    !(patchFlag & PatchFlags.DYNAMIC_SLOTS)
   ) {
     if (patchFlag & PatchFlags.PROPS) {
       // Compiler-generated props & no keys change, just set the updated
