@@ -21,7 +21,6 @@ import {
   NORMALIZE_CLASS,
   NORMALIZE_STYLE,
   NORMALIZE_PROPS,
-  NORMALIZE_PROPS_FOR_STYLE,
   GUARD_REACTIVE_PROPS
 } from '../../src/runtimeHelpers'
 import {
@@ -190,24 +189,17 @@ describe('compiler: element transform', () => {
       `<div id="foo" v-bind="obj" />`
     )
     expect(root.helpers).toContain(MERGE_PROPS)
-    expect(root.helpers).toContain(NORMALIZE_PROPS)
 
     expect(node.props).toMatchObject({
       type: NodeTypes.JS_CALL_EXPRESSION,
-      callee: NORMALIZE_PROPS,
+      callee: MERGE_PROPS,
       arguments: [
+        createObjectMatcher({
+          id: 'foo'
+        }),
         {
-          type: NodeTypes.JS_CALL_EXPRESSION,
-          callee: MERGE_PROPS,
-          arguments: [
-            createObjectMatcher({
-              id: 'foo'
-            }),
-            {
-              type: NodeTypes.SIMPLE_EXPRESSION,
-              content: `obj`
-            }
-          ]
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: `obj`
         }
       ]
     })
@@ -218,25 +210,18 @@ describe('compiler: element transform', () => {
       `<div v-bind="obj" id="foo" />`
     )
     expect(root.helpers).toContain(MERGE_PROPS)
-    expect(root.helpers).toContain(NORMALIZE_PROPS)
 
     expect(node.props).toMatchObject({
       type: NodeTypes.JS_CALL_EXPRESSION,
-      callee: NORMALIZE_PROPS,
+      callee: MERGE_PROPS,
       arguments: [
         {
-          type: NodeTypes.JS_CALL_EXPRESSION,
-          callee: MERGE_PROPS,
-          arguments: [
-            {
-              type: NodeTypes.SIMPLE_EXPRESSION,
-              content: `obj`
-            },
-            createObjectMatcher({
-              id: 'foo'
-            })
-          ]
-        }
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: `obj`
+        },
+        createObjectMatcher({
+          id: 'foo'
+        })
       ]
     })
   })
@@ -246,28 +231,21 @@ describe('compiler: element transform', () => {
       `<div id="foo" v-bind="obj" class="bar" />`
     )
     expect(root.helpers).toContain(MERGE_PROPS)
-    expect(root.helpers).toContain(NORMALIZE_PROPS_FOR_STYLE)
 
     expect(node.props).toMatchObject({
       type: NodeTypes.JS_CALL_EXPRESSION,
-      callee: NORMALIZE_PROPS_FOR_STYLE,
+      callee: MERGE_PROPS,
       arguments: [
+        createObjectMatcher({
+          id: 'foo'
+        }),
         {
-          type: NodeTypes.JS_CALL_EXPRESSION,
-          callee: MERGE_PROPS,
-          arguments: [
-            createObjectMatcher({
-              id: 'foo'
-            }),
-            {
-              type: NodeTypes.SIMPLE_EXPRESSION,
-              content: `obj`
-            },
-            createObjectMatcher({
-              class: 'bar'
-            })
-          ]
-        }
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: `obj`
+        },
+        createObjectMatcher({
+          class: 'bar'
+        })
       ]
     })
   })
@@ -277,34 +255,27 @@ describe('compiler: element transform', () => {
       `<div id="foo" v-on="obj" class="bar" />`
     )
     expect(root.helpers).toContain(MERGE_PROPS)
-    expect(root.helpers).toContain(NORMALIZE_PROPS_FOR_STYLE)
 
     expect(node.props).toMatchObject({
       type: NodeTypes.JS_CALL_EXPRESSION,
-      callee: NORMALIZE_PROPS_FOR_STYLE,
+      callee: MERGE_PROPS,
       arguments: [
+        createObjectMatcher({
+          id: 'foo'
+        }),
         {
           type: NodeTypes.JS_CALL_EXPRESSION,
-          callee: MERGE_PROPS,
+          callee: TO_HANDLERS,
           arguments: [
-            createObjectMatcher({
-              id: 'foo'
-            }),
             {
-              type: NodeTypes.JS_CALL_EXPRESSION,
-              callee: TO_HANDLERS,
-              arguments: [
-                {
-                  type: NodeTypes.SIMPLE_EXPRESSION,
-                  content: `obj`
-                }
-              ]
-            },
-            createObjectMatcher({
-              class: 'bar'
-            })
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: `obj`
+            }
           ]
-        }
+        },
+        createObjectMatcher({
+          class: 'bar'
+        })
       ]
     })
   })
@@ -314,34 +285,27 @@ describe('compiler: element transform', () => {
       `<div id="foo" v-on="handlers" v-bind="obj" />`
     )
     expect(root.helpers).toContain(MERGE_PROPS)
-    expect(root.helpers).toContain(NORMALIZE_PROPS)
 
     expect(node.props).toMatchObject({
       type: NodeTypes.JS_CALL_EXPRESSION,
-      callee: NORMALIZE_PROPS,
+      callee: MERGE_PROPS,
       arguments: [
+        createObjectMatcher({
+          id: 'foo'
+        }),
         {
           type: NodeTypes.JS_CALL_EXPRESSION,
-          callee: MERGE_PROPS,
+          callee: TO_HANDLERS,
           arguments: [
-            createObjectMatcher({
-              id: 'foo'
-            }),
-            {
-              type: NodeTypes.JS_CALL_EXPRESSION,
-              callee: TO_HANDLERS,
-              arguments: [
-                {
-                  type: NodeTypes.SIMPLE_EXPRESSION,
-                  content: `handlers`
-                }
-              ]
-            },
             {
               type: NodeTypes.SIMPLE_EXPRESSION,
-              content: `obj`
+              content: `handlers`
             }
           ]
+        },
+        {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: `obj`
         }
       ]
     })

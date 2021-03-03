@@ -32,12 +32,6 @@ export const MERGE_PROPS = Symbol(__DEV__ ? `mergeProps` : ``)
 export const NORMALIZE_CLASS = Symbol(__DEV__ ? `normalizeClass` : ``)
 export const NORMALIZE_STYLE = Symbol(__DEV__ ? `normalizeStyle` : ``)
 export const NORMALIZE_PROPS = Symbol(__DEV__ ? `normalizeProps` : ``)
-export const NORMALIZE_PROPS_FOR_CLASS = Symbol(
-  __DEV__ ? `normalizePropsForClass` : ``
-)
-export const NORMALIZE_PROPS_FOR_STYLE = Symbol(
-  __DEV__ ? `normalizePropsForStyle` : ``
-)
 export const GUARD_REACTIVE_PROPS = Symbol(__DEV__ ? `guardReactiveProps` : ``)
 export const TO_HANDLERS = Symbol(__DEV__ ? `toHandlers` : ``)
 export const CAMELIZE = Symbol(__DEV__ ? `camelize` : ``)
@@ -83,8 +77,6 @@ export const helperNameMap: any = {
   [NORMALIZE_CLASS]: `normalizeClass`,
   [NORMALIZE_STYLE]: `normalizeStyle`,
   [NORMALIZE_PROPS]: `normalizeProps`,
-  [NORMALIZE_PROPS_FOR_CLASS]: `normalizePropsForClass`,
-  [NORMALIZE_PROPS_FOR_STYLE]: `normalizePropsForStyle`,
   [GUARD_REACTIVE_PROPS]: `guardReactiveProps`,
   [TO_HANDLERS]: `toHandlers`,
   [CAMELIZE]: `camelize`,

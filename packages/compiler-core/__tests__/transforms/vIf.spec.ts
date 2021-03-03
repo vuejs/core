@@ -575,19 +575,13 @@ describe('compiler: v-if', () => {
       const branch1 = codegenNode.consequent as VNodeCall
       expect(branch1.props).toMatchObject({
         type: NodeTypes.JS_CALL_EXPRESSION,
-        callee: NORMALIZE_PROPS,
+        callee: MERGE_PROPS,
         arguments: [
-          {
-            type: NodeTypes.JS_CALL_EXPRESSION,
-            callee: MERGE_PROPS,
-            arguments: [
-              createObjectMatcher({
-                key: '[0]',
-                id: 'foo'
-              }),
-              { content: `obj` }
-            ]
-          }
+          createObjectMatcher({
+            key: '[0]',
+            id: 'foo'
+          }),
+          { content: `obj` }
         ]
       })
     })
@@ -599,19 +593,13 @@ describe('compiler: v-if', () => {
       const branch1 = codegenNode.consequent as VNodeCall
       expect(branch1.props).toMatchObject({
         type: NodeTypes.JS_CALL_EXPRESSION,
-        callee: NORMALIZE_PROPS,
+        callee: MERGE_PROPS,
         arguments: [
-          {
-            type: NodeTypes.JS_CALL_EXPRESSION,
-            callee: MERGE_PROPS,
-            arguments: [
-              createObjectMatcher({ key: `[0]` }),
-              { content: `obj` },
-              createObjectMatcher({
-                id: 'foo'
-              })
-            ]
-          }
+          createObjectMatcher({ key: `[0]` }),
+          { content: `obj` },
+          createObjectMatcher({
+            id: 'foo'
+          })
         ]
       })
     })

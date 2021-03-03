@@ -91,13 +91,13 @@ return function render(_ctx, _cache) {
 `;
 
 exports[`compiler: transform v-model with dynamic argument (with prefixIdentifiers) 1`] = `
-"import { openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
+"import { normalizeProps as _normalizeProps, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 
 export function render(_ctx, _cache) {
-  return (_openBlock(), _createElementBlock(\\"input\\", {
+  return (_openBlock(), _createElementBlock(\\"input\\", _normalizeProps({
     [_ctx.value]: _ctx.model,
     [\\"onUpdate:\\" + _ctx.value]: $event => (_ctx.model = $event)
-  }, null, 16 /* FULL_PROPS */))
+  }), null, 16 /* FULL_PROPS */))
 }"
 `;
 
@@ -106,12 +106,12 @@ exports[`compiler: transform v-model with dynamic argument 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
+    const { normalizeProps: _normalizeProps, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
-    return (_openBlock(), _createElementBlock(\\"input\\", {
+    return (_openBlock(), _createElementBlock(\\"input\\", _normalizeProps({
       [value]: model,
       [\\"onUpdate:\\" + value]: $event => (model = $event)
-    }, null, 16 /* FULL_PROPS */))
+    }), null, 16 /* FULL_PROPS */))
   }
 }"
 `;

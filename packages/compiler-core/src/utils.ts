@@ -32,8 +32,6 @@ import {
   BASE_TRANSITION,
   TO_HANDLERS,
   NORMALIZE_PROPS,
-  NORMALIZE_PROPS_FOR_CLASS,
-  NORMALIZE_PROPS_FOR_STYLE,
   GUARD_REACTIVE_PROPS
 } from './runtimeHelpers'
 import { isString, isObject, hyphenate, extend } from '@vue/shared'
@@ -41,8 +39,6 @@ import { PropsExpression } from './transforms/transformElement'
 
 export const isStaticExp = (p: JSChildNode): p is SimpleExpressionNode =>
   p.type === NodeTypes.SIMPLE_EXPRESSION && p.isStatic
-export const isConstantExp = (p: JSChildNode): p is SimpleExpressionNode =>
-  p.type === NodeTypes.SIMPLE_EXPRESSION && p.constType > 0
 
 export const isBuiltInType = (tag: string, expected: string): boolean =>
   tag === expected || tag === hyphenate(expected)
@@ -222,12 +218,7 @@ export function isSlotOutlet(
   return node.type === NodeTypes.ELEMENT && node.tagType === ElementTypes.SLOT
 }
 
-const propsHelperSet = new Set([
-  NORMALIZE_PROPS,
-  NORMALIZE_PROPS_FOR_CLASS,
-  NORMALIZE_PROPS_FOR_STYLE,
-  GUARD_REACTIVE_PROPS
-])
+const propsHelperSet = new Set([NORMALIZE_PROPS, GUARD_REACTIVE_PROPS])
 
 function getUnnormalizedProps(
   props: PropsExpression | '{}',
@@ -262,16 +253,8 @@ export function injectProp(
    * 2. toHandlers(...)
    *
    * 3. normalizeProps(...)
-   * 4. normalizeProps(mergeProps(...))
    *
-   * 5. normalizePropsForClass(...)
-   * 6. normalizePropsForClass(mergeProps(...))
-   *
-   * 7. normalizePropsForStyle(...)
-   * 8. normalizePropsForStyle(mergeProps(...))
-   *
-   * 9. guardReactiveProps(...)
-   * 10. normalizeProps(guardReactiveProps(...))
+   * 4. normalizeProps(guardReactiveProps(...))
    *
    * we need to get the real props before normalization
    */

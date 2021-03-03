@@ -259,9 +259,7 @@ export {
   toHandlerKey,
   normalizeProps,
   normalizeClass,
-  normalizeStyle,
-  normalizePropsForStyle,
-  normalizePropsForClass
+  normalizeStyle
 } from '@vue/shared'
 
 // For test-utils

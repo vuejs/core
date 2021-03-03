@@ -88,20 +88,3 @@ export function normalizeProps(props: Record<string, any> | null) {
   }
   return props
 }
-
-export function normalizePropsForStyle(props: Record<string, any> | null) {
-  if (!props) return null
-  if (props.style) {
-    props.style = normalizeStyle(props.style)
-  }
-  return props
-}
-
-export function normalizePropsForClass(props: Record<string, any> | null) {
-  if (!props) return null
-  const { class: klass } = props
-  if (klass && !isString(klass)) {
-    props.class = normalizeClass(klass)
-  }
-  return props
-}

@@ -5,11 +5,17 @@ import {
   ObjectExpression,
   CompilerOptions,
   ErrorCodes,
-  VNodeCall
+  VNodeCall,
+  NodeTypes,
+  CallExpression
 } from '../../src'
 import { transformBind } from '../../src/transforms/vBind'
 import { transformElement } from '../../src/transforms/transformElement'
-import { CAMELIZE, helperNameMap } from '../../src/runtimeHelpers'
+import {
+  CAMELIZE,
+  helperNameMap,
+  NORMALIZE_PROPS
+} from '../../src/runtimeHelpers'
 import { transformExpression } from '../../src/transforms/transformExpression'
 
 function parseWithVBind(
@@ -68,16 +74,27 @@ describe('compiler: transform v-bind', () => {
 
   test('dynamic arg', () => {
     const node = parseWithVBind(`<div v-bind:[id]="id"/>`)
-    const props = (node.codegenNode as VNodeCall).props as ObjectExpression
-    expect(props.properties[0]).toMatchObject({
-      key: {
-        content: `id || ""`,
-        isStatic: false
-      },
-      value: {
-        content: `id`,
-        isStatic: false
-      }
+    const props = (node.codegenNode as VNodeCall).props as CallExpression
+    expect(props).toMatchObject({
+      type: NodeTypes.JS_CALL_EXPRESSION,
+      callee: NORMALIZE_PROPS,
+      arguments: [
+        {
+          type: NodeTypes.JS_OBJECT_EXPRESSION,
+          properties: [
+            {
+              key: {
+                content: `id || ""`,
+                isStatic: false
+              },
+              value: {
+                content: `id`,
+                isStatic: false
+              }
+            }
+          ]
+        }
+      ]
     })
   })
 
@@ -127,16 +144,27 @@ describe('compiler: transform v-bind', () => {
 
   test('.camel modifier w/ dynamic arg', () => {
     const node = parseWithVBind(`<div v-bind:[foo].camel="id"/>`)
-    const props = (node.codegenNode as VNodeCall).props as ObjectExpression
-    expect(props.properties[0]).toMatchObject({
-      key: {
-        content: `_${helperNameMap[CAMELIZE]}(foo || "")`,
-        isStatic: false
-      },
-      value: {
-        content: `id`,
-        isStatic: false
-      }
+    const props = (node.codegenNode as VNodeCall).props as CallExpression
+    expect(props).toMatchObject({
+      type: NodeTypes.JS_CALL_EXPRESSION,
+      callee: NORMALIZE_PROPS,
+      arguments: [
+        {
+          type: NodeTypes.JS_OBJECT_EXPRESSION,
+          properties: [
+            {
+              key: {
+                content: `_${helperNameMap[CAMELIZE]}(foo || "")`,
+                isStatic: false
+              },
+              value: {
+                content: `id`,
+                isStatic: false
+              }
+            }
+          ]
+        }
+      ]
     })
   })
 

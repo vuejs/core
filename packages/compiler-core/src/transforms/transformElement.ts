@@ -42,8 +42,6 @@ import {
   NORMALIZE_CLASS,
   NORMALIZE_STYLE,
   NORMALIZE_PROPS,
-  NORMALIZE_PROPS_FOR_CLASS,
-  NORMALIZE_PROPS_FOR_STYLE,
   TO_HANDLERS,
   TELEPORT,
   KEEP_ALIVE,
@@ -58,8 +56,7 @@ import {
   isCoreComponent,
   isBindKey,
   findDir,
-  isStaticExp,
-  isConstantExp
+  isStaticExp
 } from '../utils'
 import { buildSlots } from './vSlot'
 import { getConstantType } from './hoistStatic'
@@ -448,7 +445,7 @@ export function buildProps(
         dynamicPropNames.push(name)
       }
 
-      // treat the dynamic binding class and style of the component as dynamic props
+      // treat the dynamic class and style binding of the component as dynamic props
       if (
         isComponent &&
         (name === 'class' || name === 'style') &&
@@ -697,75 +694,53 @@ export function buildProps(
   if (!context.forSSR && propsExpression) {
     switch (propsExpression.type) {
       case NodeTypes.JS_OBJECT_EXPRESSION:
-        // indicates that there is no v-bind="obj" binding
-        const helperToUse = doNormalize(
-          context,
-          propsExpression.properties,
-          hasClassBinding,
-          hasStyleBinding
-        )
+        // means that there is no v-bind,
+        // but still need to deal with dynamic key binding
+        let classKeyIndex = -1
+        let styleKeyIndex = -1
+        let dynamicKeyIndex = -1
 
-        if (helperToUse) {
-          propsExpression = createCallExpression(context.helper(helperToUse), [
-            propsExpression
-          ])
+        for (let i = 0; i < propsExpression.properties.length; i++) {
+          const p = propsExpression.properties[i]
+          if (p.key.type !== NodeTypes.SIMPLE_EXPRESSION) continue
+          if (!isStaticExp(p.key)) dynamicKeyIndex = i
+          if (isStaticExp(p.key) && p.key.content === 'class') classKeyIndex = i
+          if (isStaticExp(p.key) && p.key.content === 'style') styleKeyIndex = i
+        }
+
+        const classProp = propsExpression.properties[classKeyIndex]
+        const styleProp = propsExpression.properties[styleKeyIndex]
+
+        // no dynamic key
+        if (dynamicKeyIndex === -1) {
+          if (classProp && !isStaticExp(classProp.value)) {
+            classProp.value = createCallExpression(
+              context.helper(NORMALIZE_CLASS),
+              [classProp.value]
+            )
+          }
+          if (
+            styleProp &&
+            !isStaticExp(styleProp.value) &&
+            // the static style is compiled into an object,
+            // so use `hasStyleBinding` to ensure that it is a dynamic style binding
+            hasStyleBinding
+          ) {
+            styleProp.value = createCallExpression(
+              context.helper(NORMALIZE_STYLE),
+              [styleProp.value]
+            )
+          }
+        } else {
+          // dynamic key binding, wrap with `normalizeProps`
+          propsExpression = createCallExpression(
+            context.helper(NORMALIZE_PROPS),
+            [propsExpression]
+          )
         }
         break
       case NodeTypes.JS_CALL_EXPRESSION:
-        // call of `mergeProps`
-        if (propsExpression.callee === MERGE_PROPS) {
-          let vBindIndex = -1
-          let lastObjectExpressionIndex = -1
-          const args = propsExpression.arguments as PropsExpression[]
-          // 1. find the index of v-bind and object express
-          for (let i = 0; i < propsExpression.arguments.length; i++) {
-            const arg = args[i]
-            if (
-              arg.type === NodeTypes.SIMPLE_EXPRESSION ||
-              arg.type === NodeTypes.COMPOUND_EXPRESSION
-            ) {
-              // v-bind="obj"   -->  SIMPLE_EXPRESSION
-              // v-bind="fn()"  -->  COMPOUND_EXPRESSION
-              vBindIndex = i
-            } else if (arg.type === NodeTypes.JS_OBJECT_EXPRESSION) {
-              lastObjectExpressionIndex = i
-            }
-          }
-          /**
-           * 1. <p v-bind="xx" class="xx" />
-           *    mergeProps(ExpressionNode, ObjectExpression)
-           *      - vBindIndex: 0
-           *      - objectExpressionIndex: 1
-           * 2. <p class="xx" v-bind="xx" />
-           *    mergeProps(ObjectExpression, ExpressionNode)
-           *      - vBindIndex: 1
-           *      - objectExpressionIndex: 0
-           * 3. <p class="xx" v-bind="xx" style="xx" />
-           *    mergeProps(ObjectExpression, ExpressionNode, ObjectExpression)
-           *       - vBindIndex: 1
-           *       - objectExpressionIndex: 2
-           */
-          if (vBindIndex < lastObjectExpressionIndex) {
-            const helperToUse = doNormalize(
-              context,
-              (args[lastObjectExpressionIndex] as ObjectExpression).properties,
-              hasClassBinding,
-              hasStyleBinding,
-              false
-            )
-            if (helperToUse) {
-              propsExpression = createCallExpression(
-                context.helper(helperToUse),
-                [propsExpression]
-              )
-            }
-          } else {
-            propsExpression = createCallExpression(
-              context.helper(NORMALIZE_PROPS),
-              [propsExpression]
-            )
-          }
-        }
+        // mergeProps call, do nothing
         break
       default:
         // single v-bind
@@ -787,99 +762,6 @@ export function buildProps(
     patchFlag,
     dynamicPropNames
   }
-}
-
-// normalization is only needed when the dynamic binding key is before the class and style
-// e.g. <p :[dynamic]="val" :class="cls" :style="stl" />
-function doNormalize(
-  context: TransformContext,
-  properties: Property[],
-  hasClassBinding: boolean,
-  hasStyleBinding: boolean,
-  treatAbsentAsNormalized: boolean = true
-) {
-  let classKeyIndex = -1
-  let styleKeyIndex = -1
-  let dynamicKeyIndex = -1
-
-  for (let i = 0; i < properties.length; i++) {
-    const p = properties[i]
-    if (!isStaticExp(p.key)) dynamicKeyIndex = i
-    if (isStaticExp(p.key) && p.key.content === 'class') classKeyIndex = i
-    if (isStaticExp(p.key) && p.key.content === 'style') styleKeyIndex = i
-  }
-
-  /**
-   * 1. in the case of no dynamic binding key, e.g. <p :class="cls" :style="stl" />
-   *    shouldNormalizeClass = true
-   *    shouldNormalizeStyle = true
-   * 1. in the case of <p :[id]="foo" :class="cls" :style="stl" />
-   *    shouldNormalizeClass = true
-   *    shouldNormalizeStyle = true
-   * 2. in the case of <p :class="cls" :[id]="foo" :style="stl" />
-   *    shouldNormalizeClass = false
-   *    shouldNormalizeStyle = true
-   * 3. in the case of <p :class="cls" style="stl" :[id]="foo" />
-   *    shouldNormalizeClass = false
-   *    shouldNormalizeStyle = false
-   * 4. in the case of <p />
-   *    shouldNormalizeClass = false
-   *    shouldNormalizeStyle = false
-   */
-  const shouldNormalizeClass = dynamicKeyIndex < classKeyIndex
-  const shouldNormalizeStyle = dynamicKeyIndex < styleKeyIndex
-
-  if (shouldNormalizeClass || shouldNormalizeStyle) {
-    for (let i = 0; i < properties.length; i++) {
-      const p = properties[i]
-      const key = p.key
-      if (
-        !isStaticExp(key) ||
-        (key.content !== 'class' && key.content !== 'style')
-      )
-        continue
-
-      // wrap with normalizeClass/normalizeStyle
-      let helperToUse = null
-      if (
-        key.content === 'class' &&
-        (hasClassBinding ||
-          // class may bind a constant and be skipped during patchFlag analysis,
-          // but it should still be normalized
-          // e.g. <p :class="{ bar: true }" />
-          !isStaticExp(p.value))
-      ) {
-        helperToUse = NORMALIZE_CLASS
-      } else if (
-        key.content === 'style' &&
-        ((hasClassBinding || !isStaticExp(p.value)) && !isConstantExp(p.value))
-      ) {
-        helperToUse = NORMALIZE_STYLE
-      }
-
-      p.value = helperToUse
-        ? createCallExpression(context.helper(helperToUse), [p.value])
-        : p.value
-    }
-  }
-
-  const isClassNormalized =
-    shouldNormalizeClass || (treatAbsentAsNormalized && classKeyIndex === -1)
-  const isStyleNormalized =
-    shouldNormalizeStyle || (treatAbsentAsNormalized && styleKeyIndex === -1)
-  let helperToUse = null
-  if (!isClassNormalized && !isStyleNormalized) {
-    // normalize both
-    helperToUse = NORMALIZE_PROPS
-  } else if (isClassNormalized && !isStyleNormalized) {
-    // class has been normalized, only need to normalize style
-    helperToUse = NORMALIZE_PROPS_FOR_STYLE
-  } else if (isStyleNormalized && !isClassNormalized) {
-    // style has been normalized, only need to normalize class
-    helperToUse = NORMALIZE_PROPS_FOR_CLASS
-  }
-
-  return helperToUse
 }
 
 // Dedupe props in an object literal.

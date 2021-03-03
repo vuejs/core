@@ -21,11 +21,11 @@ exports[`compiler: transform v-model input w/ dynamic v-bind 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { vModelDynamic: _vModelDynamic, mergeProps: _mergeProps, normalizeProps: _normalizeProps, withDirectives: _withDirectives, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
+    const { vModelDynamic: _vModelDynamic, mergeProps: _mergeProps, withDirectives: _withDirectives, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
-    return _withDirectives((_openBlock(), _createElementBlock(\\"input\\", _normalizeProps(_mergeProps(obj, {
+    return _withDirectives((_openBlock(), _createElementBlock(\\"input\\", _mergeProps(obj, {
       \\"onUpdate:modelValue\\": $event => (model = $event)
-    })), null, 16 /* FULL_PROPS */, [\\"onUpdate:modelValue\\"])), [
+    }), null, 16 /* FULL_PROPS */, [\\"onUpdate:modelValue\\"])), [
       [_vModelDynamic, model]
     ])
   }
