@@ -54,7 +54,7 @@
   "devDependencies": {
     "@types/consolidate": "^0.14.0",
     "@types/lru-cache": "^5.1.0",
-    "pug": "^2.0.4",
+    "pug": "^3.0.1",
     "sass": "^1.26.9"
   }
 }
