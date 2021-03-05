@@ -301,6 +301,23 @@ describe('component props', () => {
     }).not.toThrow(TypeError)
   })
 
+  test('warn props missed', () => {
+    const Comp = {
+      props: {
+        bool: { type: Boolean, required: true },
+        str: { type: String, required: true },
+        num: { type: Number, required: true }
+      },
+      setup() {
+        return () => null
+      }
+    }
+    render(h(Comp), nodeOps.createElement('div'))
+    expect(`Missing required prop: "bool"`).toHaveBeenWarned()
+    expect(`Missing required prop: "str"`).toHaveBeenWarned()
+    expect(`Missing required prop: "num"`).toHaveBeenWarned()
+  })
+
   test('merging props from mixins and extends', () => {
     let setupProps: any
     let renderProxy: any
