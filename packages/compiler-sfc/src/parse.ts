@@ -237,7 +237,9 @@ export function parse(
 
   // check if the SFC uses :slotted
   const slottedRE = /(?:::v-|:)slotted\(/
-  descriptor.slotted = descriptor.styles.some(s => slottedRE.test(s.content))
+  descriptor.slotted = descriptor.styles.some(
+    s => s.scoped && slottedRE.test(s.content)
+  )
 
   const result = {
     descriptor,

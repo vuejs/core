@@ -177,12 +177,14 @@ h1 { color: red }
         .slotted
     ).toBe(false)
     expect(
-      parse(`<template>hi</template><style>:slotted(h1){color:red;}</style>`)
-        .descriptor.slotted
+      parse(
+        `<template>hi</template><style scoped>:slotted(h1){color:red;}</style>`
+      ).descriptor.slotted
     ).toBe(true)
     expect(
-      parse(`<template>hi</template><style>::v-slotted(h1){color:red;}</style>`)
-        .descriptor.slotted
+      parse(
+        `<template>hi</template><style scoped>::v-slotted(h1){color:red;}</style>`
+      ).descriptor.slotted
     ).toBe(true)
   })
 
