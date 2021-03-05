@@ -21,9 +21,11 @@ export const ssrTransformSlotOutlet: NodeTransform = (node, context) => {
         `_ctx.$slots`,
         slotName,
         slotProps || `{}`,
-        `null`, // fallback content placeholder.
+        // fallback content placeholder. will be replaced in the process phase
+        `null`,
         `_push`,
-        `_parent`
+        `_parent`,
+        context.scopeId ? `"${context.scopeId}-s"` : `null`
       ]
     )
   }
@@ -34,6 +36,7 @@ export function ssrProcessSlotOutlet(
   context: SSRTransformContext
 ) {
   const renderCall = node.ssrCodegenNode!
+
   // has fallback content
   if (node.children.length) {
     const fallbackRenderFn = createFunctionExpression([])
@@ -41,5 +44,13 @@ export function ssrProcessSlotOutlet(
     // _renderSlot(slots, name, props, fallback, ...)
     renderCall.arguments[3] = fallbackRenderFn
   }
+
+  // Forwarded <slot/>. Add slot scope id
+  if (context.withSlotScopeId) {
+    const scopeId = renderCall.arguments[6] as string
+    renderCall.arguments[6] =
+      scopeId === `null` ? `_scopeId` : `${scopeId} + _scopeId`
+  }
+
   context.pushStatement(node.ssrCodegenNode!)
 }

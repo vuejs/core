@@ -18,18 +18,7 @@ import { warn } from './warning'
 import { isHmrUpdating } from './hmr'
 import { NormalizedProps } from './componentProps'
 import { isEmitListener } from './componentEmits'
-
-/**
- * mark the current rendering instance for asset resolution (e.g.
- * resolveComponent, resolveDirective) during render
- */
-export let currentRenderingInstance: ComponentInternalInstance | null = null
-
-export function setCurrentRenderingInstance(
-  instance: ComponentInternalInstance | null
-) {
-  currentRenderingInstance = instance
-}
+import { setCurrentRenderingInstance } from './componentRenderContext'
 
 /**
  * dev only flag to track whether $attrs was used during render.
@@ -63,7 +52,7 @@ export function renderComponentRoot(
   } = instance
 
   let result
-  currentRenderingInstance = instance
+  setCurrentRenderingInstance(instance)
   if (__DEV__) {
     accessedAttrs = false
   }
@@ -215,8 +204,8 @@ export function renderComponentRoot(
     handleError(err, instance, ErrorCodes.RENDER_FUNCTION)
     result = createVNode(Comment)
   }
-  currentRenderingInstance = null
 
+  setCurrentRenderingInstance(null)
   return result
 }
 

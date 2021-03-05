@@ -1,10 +1,10 @@
-import { currentRenderingInstance } from '../componentRenderUtils'
 import {
   currentInstance,
   ConcreteComponent,
   ComponentOptions,
   getComponentName
 } from '../component'
+import { currentRenderingInstance } from '../componentRenderContext'
 import { Directive } from '../directives'
 import { camelize, capitalize, isString } from '@vue/shared'
 import { warn } from '../warning'
