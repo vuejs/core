@@ -15,18 +15,25 @@ import {
 export const ssrTransformSlotOutlet: NodeTransform = (node, context) => {
   if (isSlotOutlet(node)) {
     const { slotName, slotProps } = processSlotOutlet(node, context)
+
+    const args = [
+      `_ctx.$slots`,
+      slotName,
+      slotProps || `{}`,
+      // fallback content placeholder. will be replaced in the process phase
+      `null`,
+      `_push`,
+      `_parent`
+    ]
+
+    // inject slot scope id if current template uses :slotted
+    if (context.scopeId && context.slotted !== false) {
+      args.push(`"${context.scopeId}-s"`)
+    }
+
     node.ssrCodegenNode = createCallExpression(
       context.helper(SSR_RENDER_SLOT),
-      [
-        `_ctx.$slots`,
-        slotName,
-        slotProps || `{}`,
-        // fallback content placeholder. will be replaced in the process phase
-        `null`,
-        `_push`,
-        `_parent`,
-        context.scopeId ? `"${context.scopeId}-s"` : `null`
-      ]
+      args
     )
   }
 }
@@ -45,11 +52,12 @@ export function ssrProcessSlotOutlet(
     renderCall.arguments[3] = fallbackRenderFn
   }
 
-  // Forwarded <slot/>. Add slot scope id
+  // Forwarded <slot/>. Merge slot scope ids
   if (context.withSlotScopeId) {
-    const scopeId = renderCall.arguments[6] as string
-    renderCall.arguments[6] =
-      scopeId === `null` ? `_scopeId` : `${scopeId} + _scopeId`
+    const slotScopeId = renderCall.arguments[6]
+    renderCall.arguments[6] = slotScopeId
+      ? `${slotScopeId as string} + _scopeId`
+      : `_scopeId`
   }
 
   context.pushStatement(node.ssrCodegenNode!)
