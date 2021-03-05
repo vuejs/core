@@ -53,6 +53,10 @@ export function renderSlot(
       ? PatchFlags.STABLE_FRAGMENT
       : PatchFlags.BAIL
   )
+  // TODO (optimization) only add slot scope id if :slotted is used
+  if (rendered.scopeId) {
+    rendered.slotScopeIds = [rendered.scopeId + '-s']
+  }
   isRenderingCompiledSlot--
   return rendered
 }

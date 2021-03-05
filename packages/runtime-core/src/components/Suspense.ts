@@ -46,6 +46,7 @@ export const SuspenseImpl = {
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
     isSVG: boolean,
+    slotScopeIds: string[] | null,
     optimized: boolean,
     // platform-specific impl passed from renderer
     rendererInternals: RendererInternals
@@ -58,6 +59,7 @@ export const SuspenseImpl = {
         parentComponent,
         parentSuspense,
         isSVG,
+        slotScopeIds,
         optimized,
         rendererInternals
       )
@@ -69,6 +71,8 @@ export const SuspenseImpl = {
         anchor,
         parentComponent,
         isSVG,
+        slotScopeIds,
+        optimized,
         rendererInternals
       )
     }
@@ -92,6 +96,7 @@ function mountSuspense(
   parentComponent: ComponentInternalInstance | null,
   parentSuspense: SuspenseBoundary | null,
   isSVG: boolean,
+  slotScopeIds: string[] | null,
   optimized: boolean,
   rendererInternals: RendererInternals
 ) {
@@ -108,6 +113,7 @@ function mountSuspense(
     hiddenContainer,
     anchor,
     isSVG,
+    slotScopeIds,
     optimized,
     rendererInternals
   ))
@@ -120,7 +126,8 @@ function mountSuspense(
     null,
     parentComponent,
     suspense,
-    isSVG
+    isSVG,
+    slotScopeIds
   )
   // now check if we have encountered any async deps
   if (suspense.deps > 0) {
@@ -133,7 +140,8 @@ function mountSuspense(
       anchor,
       parentComponent,
       null, // fallback tree will not have suspense context
-      isSVG
+      isSVG,
+      slotScopeIds
     )
     setActiveBranch(suspense, vnode.ssFallback!)
   } else {
@@ -149,6 +157,8 @@ function patchSuspense(
   anchor: RendererNode | null,
   parentComponent: ComponentInternalInstance | null,
   isSVG: boolean,
+  slotScopeIds: string[] | null,
+  optimized: boolean,
   { p: patch, um: unmount, o: { createElement } }: RendererInternals
 ) {
   const suspense = (n2.suspense = n1.suspense)!
@@ -169,7 +179,9 @@ function patchSuspense(
         null,
         parentComponent,
         suspense,
-        isSVG
+        isSVG,
+        slotScopeIds,
+        optimized
       )
       if (suspense.deps <= 0) {
         suspense.resolve()
@@ -181,7 +193,9 @@ function patchSuspense(
           anchor,
           parentComponent,
           null, // fallback tree will not have suspense context
-          isSVG
+          isSVG,
+          slotScopeIds,
+          optimized
         )
         setActiveBranch(suspense, newFallback)
       }
@@ -214,7 +228,9 @@ function patchSuspense(
           null,
           parentComponent,
           suspense,
-          isSVG
+          isSVG,
+          slotScopeIds,
+          optimized
         )
         if (suspense.deps <= 0) {
           suspense.resolve()
@@ -226,7 +242,9 @@ function patchSuspense(
             anchor,
             parentComponent,
             null, // fallback tree will not have suspense context
-            isSVG
+            isSVG,
+            slotScopeIds,
+            optimized
           )
           setActiveBranch(suspense, newFallback)
         }
@@ -239,7 +257,9 @@ function patchSuspense(
           anchor,
           parentComponent,
           suspense,
-          isSVG
+          isSVG,
+          slotScopeIds,
+          optimized
         )
         // force resolve
         suspense.resolve(true)
@@ -252,7 +272,9 @@ function patchSuspense(
           null,
           parentComponent,
           suspense,
-          isSVG
+          isSVG,
+          slotScopeIds,
+          optimized
         )
         if (suspense.deps <= 0) {
           suspense.resolve()
@@ -269,7 +291,9 @@ function patchSuspense(
         anchor,
         parentComponent,
         suspense,
-        isSVG
+        isSVG,
+        slotScopeIds,
+        optimized
       )
       setActiveBranch(suspense, newBranch)
     } else {
@@ -289,7 +313,9 @@ function patchSuspense(
         null,
         parentComponent,
         suspense,
-        isSVG
+        isSVG,
+        slotScopeIds,
+        optimized
       )
       if (suspense.deps <= 0) {
         // incoming branch has no async deps, resolve now.
@@ -352,6 +378,7 @@ function createSuspenseBoundary(
   hiddenContainer: RendererElement,
   anchor: RendererNode | null,
   isSVG: boolean,
+  slotScopeIds: string[] | null,
   optimized: boolean,
   rendererInternals: RendererInternals,
   isHydrating = false
@@ -507,7 +534,9 @@ function createSuspenseBoundary(
           anchor,
           parentComponent,
           null, // fallback tree will not have suspense context
-          isSVG
+          isSVG,
+          slotScopeIds,
+          optimized
         )
         setActiveBranch(suspense, fallbackVNode)
       }
@@ -632,6 +661,7 @@ function hydrateSuspense(
   parentComponent: ComponentInternalInstance | null,
   parentSuspense: SuspenseBoundary | null,
   isSVG: boolean,
+  slotScopeIds: string[] | null,
   optimized: boolean,
   rendererInternals: RendererInternals,
   hydrateNode: (
@@ -639,6 +669,7 @@ function hydrateSuspense(
     vnode: VNode,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
+    slotScopeIds: string[] | null,
     optimized: boolean
   ) => Node | null
 ): Node | null {
@@ -651,6 +682,7 @@ function hydrateSuspense(
     document.createElement('div'),
     null,
     isSVG,
+    slotScopeIds,
     optimized,
     rendererInternals,
     true /* hydrating */
@@ -666,6 +698,7 @@ function hydrateSuspense(
     (suspense.pendingBranch = vnode.ssContent!),
     parentComponent,
     suspense,
+    slotScopeIds,
     optimized
   )
   if (suspense.deps === 0) {

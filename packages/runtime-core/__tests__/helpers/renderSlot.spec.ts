@@ -8,7 +8,7 @@ import {
   Fragment,
   createCommentVNode
 } from '../../src'
-import { PatchFlags } from '@vue/shared/src'
+import { PatchFlags } from '@vue/shared'
 
 describe('renderSlot', () => {
   it('should render slot', () => {
@@ -37,7 +37,7 @@ describe('renderSlot', () => {
         return [createVNode('div', null, 'foo', PatchFlags.TEXT)]
       },
       // mock instance
-      {} as any
+      { type: {} } as any
     )
 
     // manual invocation should not track
