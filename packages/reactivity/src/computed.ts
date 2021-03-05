@@ -71,7 +71,8 @@ export function computed<T>(
   let getter: ComputedGetter<T>
   let setter: ComputedSetter<T>
 
-  if (isFunction(getterOrOptions)) {
+  const isFn = isFunction(getterOrOptions)
+  if (isFn) {
     getter = getterOrOptions
     setter = __DEV__
       ? () => {
@@ -86,6 +87,6 @@ export function computed<T>(
   return new ComputedRefImpl(
     getter,
     setter,
-    isFunction(getterOrOptions) || !getterOrOptions.set
+    isFn || !getterOrOptions.set
   ) as any
 }
