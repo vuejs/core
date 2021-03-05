@@ -40,7 +40,7 @@ describe('scopeId runtime support', () => {
     const Child = {
       __scopeId: 'child',
       render(this: any) {
-        return h('div', renderSlot(this.$slots, 'default'))
+        return h('div', renderSlot(this.$slots, 'default', {}, undefined, true))
       }
     }
     const Child2 = {
@@ -92,7 +92,9 @@ describe('scopeId runtime support', () => {
       render(this: any) {
         // <Wrapper><slot/></Wrapper>
         return h(Wrapper, null, {
-          default: withCtx(() => [renderSlot(this.$slots, 'default')])
+          default: withCtx(() => [
+            renderSlot(this.$slots, 'default', {}, undefined, true)
+          ])
         })
       }
     }
@@ -118,8 +120,8 @@ describe('scopeId runtime support', () => {
     render(h(Root), root)
     expect(serializeInner(root)).toBe(
       `<div class="wrapper" wrapper slotted root>` +
-        `<div root wrapper-s slotted-s>hoisted</div>` +
-        `<div root wrapper-s slotted-s>dynamic</div>` +
+        `<div root slotted-s>hoisted</div>` +
+        `<div root slotted-s>dynamic</div>` +
         `</div>`
     )
 
@@ -144,9 +146,9 @@ describe('scopeId runtime support', () => {
     render(h(Root2), root2)
     expect(serializeInner(root2)).toBe(
       `<div class="wrapper" wrapper slotted root>` +
-        `<div class="wrapper" wrapper root wrapper-s slotted-s>` +
-        `<div root wrapper-s>hoisted</div>` +
-        `<div root wrapper-s>dynamic</div>` +
+        `<div class="wrapper" wrapper root slotted-s>` +
+        `<div root>hoisted</div>` +
+        `<div root>dynamic</div>` +
         `</div>` +
         `</div>`
     )

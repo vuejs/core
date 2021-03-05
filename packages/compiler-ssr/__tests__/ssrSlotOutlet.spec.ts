@@ -6,7 +6,7 @@ describe('ssr: <slot>', () => {
       "const { ssrRenderSlot: _ssrRenderSlot } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _ssrRenderSlot(_ctx.$slots, \\"default\\", {}, null, _push, _parent, null)
+        _ssrRenderSlot(_ctx.$slots, \\"default\\", {}, null, _push, _parent)
       }"
     `)
   })
@@ -16,7 +16,7 @@ describe('ssr: <slot>', () => {
       "const { ssrRenderSlot: _ssrRenderSlot } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _ssrRenderSlot(_ctx.$slots, \\"foo\\", {}, null, _push, _parent, null)
+        _ssrRenderSlot(_ctx.$slots, \\"foo\\", {}, null, _push, _parent)
       }"
     `)
   })
@@ -26,7 +26,7 @@ describe('ssr: <slot>', () => {
       "const { ssrRenderSlot: _ssrRenderSlot } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _ssrRenderSlot(_ctx.$slots, _ctx.bar.baz, {}, null, _push, _parent, null)
+        _ssrRenderSlot(_ctx.$slots, _ctx.bar.baz, {}, null, _push, _parent)
       }"
     `)
   })
@@ -40,7 +40,7 @@ describe('ssr: <slot>', () => {
         _ssrRenderSlot(_ctx.$slots, \\"foo\\", {
           p: 1,
           bar: \\"2\\"
-        }, null, _push, _parent, null)
+        }, null, _push, _parent)
       }"
     `)
   })
@@ -53,7 +53,7 @@ describe('ssr: <slot>', () => {
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _ssrRenderSlot(_ctx.$slots, \\"default\\", {}, () => {
           _push(\`some \${_ssrInterpolate(_ctx.fallback)} content\`)
-        }, _push, _parent, null)
+        }, _push, _parent)
       }"
     `)
   })
@@ -68,6 +68,21 @@ describe('ssr: <slot>', () => {
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _ssrRenderSlot(_ctx.$slots, \\"default\\", {}, null, _push, _parent, \\"hello-s\\")
+      }"
+    `)
+  })
+
+  test('with scopeId + slotted:false', async () => {
+    expect(
+      compile(`<slot/>`, {
+        scopeId: 'hello',
+        slotted: false
+      }).code
+    ).toMatchInlineSnapshot(`
+      "const { ssrRenderSlot: _ssrRenderSlot } = require(\\"@vue/server-renderer\\")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _ssrRenderSlot(_ctx.$slots, \\"default\\", {}, null, _push, _parent)
       }"
     `)
   })
@@ -90,7 +105,7 @@ describe('ssr: <slot>', () => {
               _ssrRenderSlot(_ctx.$slots, \\"default\\", {}, null, _push, _parent, \\"hello-s\\" + _scopeId)
             } else {
               return [
-                _renderSlot(_ctx.$slots, \\"default\\")
+                _renderSlot(_ctx.$slots, \\"default\\", {}, undefined, true)
               ]
             }
           }),
