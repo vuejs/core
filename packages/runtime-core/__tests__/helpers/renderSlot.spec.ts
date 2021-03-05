@@ -6,7 +6,8 @@ import {
   openBlock,
   createBlock,
   Fragment,
-  createCommentVNode
+  createCommentVNode,
+  Slot
 } from '../../src'
 import { PatchFlags } from '@vue/shared'
 
@@ -38,7 +39,7 @@ describe('renderSlot', () => {
       },
       // mock instance
       { type: {} } as any
-    )
+    ) as Slot
 
     // manual invocation should not track
     const manual = (openBlock(), createBlock(Fragment, null, slot()))

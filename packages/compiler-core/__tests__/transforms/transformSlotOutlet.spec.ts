@@ -16,6 +16,7 @@ import { transformSlotOutlet } from '../../src/transforms/transformSlotOutlet'
 function parseWithSlots(template: string, options: CompilerOptions = {}) {
   const ast = parse(template)
   transform(ast, {
+    slotted: false,
     nodeTransforms: [
       ...(options.prefixIdentifiers ? [transformExpression] : []),
       transformSlotOutlet,
