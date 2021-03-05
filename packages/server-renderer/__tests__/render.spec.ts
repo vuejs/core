@@ -715,5 +715,43 @@ function testRender(type: string, render: typeof renderToString) {
       const html = await render(app)
       expect(html).toBe(`<div>hello</div>`)
     })
+
+    // #2763
+    test('error handling w/ async setup', async () => {
+      const fn = jest.fn()
+      const fn2 = jest.fn()
+
+      const asyncChildren = defineComponent({
+        async setup() {
+          return Promise.reject('async child error')
+        },
+        template: `<div>asyncChildren</div>`
+      })
+      const app = createApp({
+        name: 'App',
+        components: {
+          asyncChildren
+        },
+        template: `<div class="app"><async-children /></div>`,
+        errorCaptured(error) {
+          fn(error)
+        }
+      })
+
+      app.config.errorHandler = error => {
+        fn2(error)
+      }
+
+      const html = await renderToString(app)
+      expect(html).toBe(`<div class="app"><div>asyncChildren</div></div>`)
+
+      expect(fn).toHaveBeenCalledTimes(1)
+      expect(fn).toBeCalledWith('async child error')
+
+      expect(fn2).toHaveBeenCalledTimes(1)
+      expect(fn2).toBeCalledWith('async child error')
+
+      expect('Uncaught error in async setup').toHaveBeenWarned()
+    })
   })
 }
