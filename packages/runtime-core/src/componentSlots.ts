@@ -70,7 +70,7 @@ const normalizeSlot = (
       )
     }
     return normalizeSlotValue(rawSlot(props))
-  }, ctx)
+  }, ctx) as Slot
 
 const normalizeObjectSlots = (rawSlots: RawSlots, slots: InternalSlots) => {
   const ctx = rawSlots._ctx
