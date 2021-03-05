@@ -1,4 +1,4 @@
-import { ChangeEvent, expectType } from './index'
+import { InputEvent, expectType } from './index'
 
-declare const inputEvent: ChangeEvent<HTMLInputElement>
+declare const inputEvent: InputEvent<HTMLInputElement>
 expectType<string>(inputEvent.target.value)

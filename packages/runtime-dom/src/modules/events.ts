@@ -147,6 +147,10 @@ export interface SyntheticEvent<T = Element, E = Event> extends Event {
   currentTarget: T & EventTarget
 }
 
+export interface InputEvent<T = Element> extends SyntheticEvent<T> {
+  target: EventTarget & T
+}
+
 // Event type helpers
 // https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/react/index.d.ts
 
