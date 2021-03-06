@@ -197,7 +197,14 @@ export const mutableHandlers: ProxyHandler<object> = {
 
 export const readonlyHandlers: ProxyHandler<object> = {
   get: readonlyGet,
-  set(target, key) {
+  set(target, key, value, receiver) {
+    // is computed()
+    if ((target as any).__v_isRef && (target as any).effect) {
+      // computed should be able to set its own private properties
+      if (key === '_dirty' || key === '_value') {
+        return set(target, key, value, receiver)
+      }
+    }
     if (__DEV__) {
       console.warn(
         `Set operation on key "${String(key)}" failed: target is readonly.`,

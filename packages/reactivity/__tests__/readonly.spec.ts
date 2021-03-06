@@ -8,7 +8,8 @@ import {
   effect,
   ref,
   shallowReadonly,
-  isProxy
+  isProxy,
+  computed
 } from '../src'
 
 /**
@@ -435,6 +436,21 @@ describe('reactivity/readonly', () => {
     ).toHaveBeenWarned()
   })
 
+  // https://github.com/vuejs/vue-next/issues/3376
+  test('calling readonly on computed should allow computed to set its private properties', () => {
+    const r = ref<boolean>(false)
+    const c = computed(() => r.value)
+    const rC = readonly(c)
+
+    r.value = true
+
+    expect(rC.value).toBe(true)
+    ;(rC as any).randomProperty = true
+
+    expect(
+      'Set operation on key "randomProperty" failed: target is readonly.'
+    ).toHaveBeenWarned()
+  })
   describe('shallowReadonly', () => {
     test('should not make non-reactive properties reactive', () => {
       const props = shallowReadonly({ n: { foo: 1 } })
