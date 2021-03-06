@@ -1485,7 +1485,10 @@ function isFunction(node: Node): node is FunctionNode {
   return /Function(?:Expression|Declaration)$|Method$/.test(node.type)
 }
 
-function isCallOf(node: Node | null, name: string): node is CallExpression {
+function isCallOf(
+  node: Node | null | undefined,
+  name: string
+): node is CallExpression {
   return !!(
     node &&
     node.type === 'CallExpression' &&

@@ -76,8 +76,8 @@ function add(this: SetTypes, value: unknown) {
   const target = toRaw(this)
   const proto = getProto(target)
   const hadKey = proto.has.call(target, value)
-  target.add(value)
   if (!hadKey) {
+    target.add(value)
     trigger(target, TriggerOpTypes.ADD, value, value)
   }
   return this
