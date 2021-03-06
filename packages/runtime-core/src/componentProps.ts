@@ -56,7 +56,7 @@ interface PropOptions<T = any, D = T> {
 export type PropType<T> = PropConstructor<T> | PropConstructor<T>[]
 
 type PropConstructor<T = any> =
-  | { new (...args: any[]): T & object }
+  | { new (...args: any[]): T & {} }
   | { (): T }
   | PropMethod<T>
 
