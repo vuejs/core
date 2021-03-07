@@ -312,6 +312,7 @@ function setFullProps(
 ) {
   const [options, needCastKeys] = instance.propsOptions
   let hasAttrsChanged = false
+  const rawCurrentProps = extend({}, toRaw(props))
   if (rawProps) {
     for (let key in rawProps) {
       // key, ref are reserved and never passed down
@@ -337,7 +338,7 @@ function setFullProps(
       // kebab -> camel conversion here we need to camelize the key.
       let camelKey
       if (options && hasOwn(options, (camelKey = camelize(key)))) {
-        props[camelKey] = value
+        rawCurrentProps[camelKey] = value
       } else if (!isEmitListener(instance.emitsOptions, key)) {
         // Any non-declared (either as a prop or an emitted event) props are put
         // into a separate `attrs` object for spreading. Make sure to preserve
@@ -358,7 +359,6 @@ function setFullProps(
   }
 
   if (needCastKeys) {
-    const rawCurrentProps = toRaw(props)
     for (let i = 0; i < needCastKeys.length; i++) {
       const key = needCastKeys[i]
       props[key] = resolvePropValue(
@@ -370,7 +370,12 @@ function setFullProps(
       )
     }
   }
-
+  if (options) {
+    for (const key in rawCurrentProps) {
+      if (!needCastKeys || !needCastKeys.includes(key))
+        props[key] = rawCurrentProps[key]
+    }
+  }
   return hasAttrsChanged
 }
 
