@@ -251,7 +251,7 @@ function setFullProps(
   attrs: Data
 ) {
   const [options, needCastKeys] = instance.propsOptions
-  const _props: Data = {}
+  const rawCurrentProps: Data = extend({}, toRaw(props))
 
   if (rawProps) {
     for (const key in rawProps) {
@@ -264,7 +264,7 @@ function setFullProps(
       // kebab -> camel conversion here we need to camelize the key.
       let camelKey
       if (options && hasOwn(options, (camelKey = camelize(key)))) {
-        _props[camelKey] = value
+        rawCurrentProps[camelKey] = value
       } else if (!isEmitListener(instance.emitsOptions, key)) {
         // Any non-declared (either as a prop or an emitted event) props are put
         // into a separate `attrs` object for spreading. Make sure to preserve
@@ -275,7 +275,6 @@ function setFullProps(
   }
 
   if (needCastKeys) {
-    const rawCurrentProps = toRaw(_props)
     for (let i = 0; i < needCastKeys.length; i++) {
       const key = needCastKeys[i]
       props[key] = resolvePropValue(
@@ -287,10 +286,11 @@ function setFullProps(
       )
     }
   }
-  // #3371 skip set props if key in needCardKeys
-  for (const key in _props) {
-    if (needCastKeys!.includes(key)) continue
-    props[key] = _props[key]
+  // #3371
+  // avoid set props repeatly if `key` in `needCastKeys`
+  for (const key in rawCurrentProps) {
+    if (needCastKeys && needCastKeys!.includes(key)) continue
+    props[key] = rawCurrentProps[key]
   }
 }
 
