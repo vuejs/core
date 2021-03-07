@@ -261,7 +261,13 @@ function setFullProps(
       // prop option names are camelized during normalization, so to support
       // kebab -> camel conversion here we need to camelize the key.
       let camelKey
-      if (options && hasOwn(options, (camelKey = camelize(key)))) {
+      if (
+        options &&
+        hasOwn(options, (camelKey = camelize(key))) &&
+        // #3371 if key in needCastKeys should skip
+        needCastKeys &&
+        !needCastKeys.includes(key)
+      ) {
         props[camelKey] = value
       } else if (!isEmitListener(instance.emitsOptions, key)) {
         // Any non-declared (either as a prop or an emitted event) props are put
