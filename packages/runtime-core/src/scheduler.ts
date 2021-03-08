@@ -91,7 +91,7 @@ export function queueJob(job: SchedulerJob) {
    * these jobs have the `job.allowRecurse` with the `true` value,
    * consider the job flush order is pre --> job --> post,
    * some pre-jobs may enqueue a job that allows recursive execution, for example,
-   * chaning the reactivity data in the watch callback:
+   * changing the reactivity data in the watch callback:
    *
    * ```
    * watch(refA, () => refB.value = xxx)
