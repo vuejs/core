@@ -239,7 +239,7 @@ function parseChildren(
       }
       // also remove comment nodes in prod by default
       if (
-        !__DEV__ &&
+        (__GLOBAL__ || !__DEV__) &&
         node.type === NodeTypes.COMMENT &&
         !context.options.comments
       ) {
