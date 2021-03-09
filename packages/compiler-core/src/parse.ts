@@ -241,7 +241,7 @@ function parseChildren(
           node.content = node.content.replace(/[\t\r\n\f ]+/g, ' ')
         }
       }
-      // also remove comment nodes in prod by default
+      // comment nodes handling
       if (node.type === NodeTypes.COMMENT && !context.options.comments) {
         removedWhitespace = true
         nodes[i] = null as any
