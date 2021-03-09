@@ -100,7 +100,8 @@ function createParserContext(
   rawOptions: ParserOptions
 ): ParserContext {
   const options = extend({}, defaultParserOptions)
-  for (const key in rawOptions) {
+  let key: keyof ParserOptions
+  for (key in rawOptions) {
     // @ts-ignore
     options[key] =
       rawOptions[key] === undefined
