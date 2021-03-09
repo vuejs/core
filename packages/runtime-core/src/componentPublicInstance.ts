@@ -83,6 +83,9 @@ type MixinToOptionTypes<T> = T extends ComponentOptionsBase<
   infer Extends,
   any,
   any,
+  any,
+  any,
+  any,
   infer Defaults
 >
   ? OptionTypesType<P & {}, B & {}, D & {}, C & {}, M & {}, Defaults & {}> &

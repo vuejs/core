@@ -346,7 +346,20 @@ export type ComponentOptions<
   LC extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string
-> = ComponentOptionsBase<Props, RawBindings, D, C, M, Mixin, Extends, E> &
+> = ComponentOptionsBase<
+  Props,
+  RawBindings,
+  D,
+  C,
+  M,
+  Mixin,
+  Extends,
+  E,
+  string,
+  LC,
+  Directives,
+  Exposed
+> &
   ThisType<
     CreateComponentPublicInstance<
       {},
@@ -361,8 +374,7 @@ export type ComponentOptions<
       {},
       false,
       LC,
-      Directives,
-      Exposed
+      Directives
     >
   >
 

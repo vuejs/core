@@ -718,6 +718,8 @@ describe('extends with mixins', () => {
   // Test TSX
   expectType<JSX.Element>(<MyComponent mP1="p1" mP2 mP3 p1 p2={1} p3 z={'z'} />)
 
+  expectType<JSX.Element>(<MyComponent mP1="p1" mP2 mP3 p1 p2={1} p3 z={'z'} />)
+
   // mP1, mP2, p1, and p2 have default value. these are not required
   expectType<JSX.Element>(<MyComponent mP3 p3 z={'z'} />)
 
