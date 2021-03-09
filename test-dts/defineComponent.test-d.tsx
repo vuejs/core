@@ -11,7 +11,8 @@ import {
   ComponentPublicInstance,
   ComponentOptions,
   SetupContext,
-  h
+  h,
+  Directive
 } from './index'
 
 describe('with object props', () => {
@@ -978,6 +979,23 @@ describe('expose component types', () => {
   })
 
   expect<typeof child>(parent.components!.child)
+})
+
+describe('directive typing', () => {
+  const customDirective: Directive = {
+    created(el) {}
+  }
+
+  const comp = defineComponent({
+    props: {
+      a: String
+    },
+    directives: {
+      customDirective
+    }
+  })
+
+  expect<typeof customDirective>(comp.directives!.customDirective)
 })
 
 // check if defineComponent can be exported

@@ -218,7 +218,22 @@ export type ComponentOptionsWithoutProps<
 > & {
   props?: undefined
 } & ThisType<
-    CreateComponentPublicInstance<{}, RawBindings, D, C, M, Mixin, Extends, E>
+    CreateComponentPublicInstance<
+      {},
+      RawBindings,
+      D,
+      C,
+      M,
+      Mixin,
+      Extends,
+      E,
+      Props,
+      {},
+      false,
+      LC,
+      Directives,
+      Exposed
+    >
   >
 
 export type ComponentOptionsWithArrayProps<

@@ -63,6 +63,11 @@ export type Data = Record<string, unknown>
 export interface ComponentCustomProps {}
 
 /**
+ * For globally defined Directives
+ */
+export interface ComponentCustomDirectives extends Record<string, Directive> {}
+
+/**
  * Default allowed non-declared props on component in TSX
  */
 export interface AllowedComponentProps {
