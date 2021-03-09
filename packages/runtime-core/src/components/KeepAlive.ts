@@ -112,6 +112,7 @@ const KeepAliveImpl = {
         instance,
         parentSuspense,
         isSVG,
+        vnode.slotScopeIds,
         optimized
       )
       queuePostRenderEffect(() => {

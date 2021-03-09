@@ -617,6 +617,20 @@ describe('SSR hydration', () => {
     expect(spy).toHaveBeenCalled()
   })
 
+  test('SVG as a mount container', () => {
+    const svgContainer = document.createElement('svg')
+    svgContainer.innerHTML = '<g></g>'
+    const app = createSSRApp({
+      render: () => h('g')
+    })
+
+    expect(
+      (app.mount(svgContainer).$.subTree as VNode<Node, Element> & {
+        el: Element
+      }).el instanceof SVGElement
+    )
+  })
+
   describe('mismatch handling', () => {
     test('text node', () => {
       const { container } = mountWithHydration(`foo`, () => 'bar')
