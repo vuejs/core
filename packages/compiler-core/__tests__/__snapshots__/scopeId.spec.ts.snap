@@ -9,7 +9,7 @@ const _hoisted_1 = /*#__PURE__*/_createElementVNode(\\"div\\", null, \\"hello\\"
 const _hoisted_2 = /*#__PURE__*/_createElementVNode(\\"div\\", null, \\"world\\", -1 /* HOISTED */, null, 9 /* ELEMENT, TEXT_CHILDREN */)
 _popScopeId(null)
 
-export function render(_ctx, _cache) => {
+export function render(_ctx, _cache) {
   return (_openBlock(), _createElementBlock(\\"div\\", null, [
     _hoisted_1,
     _createTextVNode(_toDisplayString(_ctx.foo), 1 /* TEXT */),
@@ -78,5 +78,5 @@ export const render = /*#__PURE__*/_withId((_ctx, _cache) => {
     ]),
     _: 1 /* STABLE */
   }))
-})"
+}"
 `;
