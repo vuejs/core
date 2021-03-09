@@ -377,23 +377,17 @@ describe('compiler: parse', () => {
     })
 
     test('comments option', () => {
-      __DEV__ = false
-      const astDefaultComment = baseParse('<!--abc-->')
-      const astNoComment = baseParse('<!--abc-->', { comments: false })
       const astWithComments = baseParse('<!--abc-->', { comments: true })
-      __DEV__ = true
+      const astNoComment = baseParse('<!--abc-->', { comments: false })
 
-      expect(astDefaultComment.children).toHaveLength(0)
-      expect(astNoComment.children).toHaveLength(0)
       expect(astWithComments.children).toHaveLength(1)
+      expect(astNoComment.children).toHaveLength(0)
     })
 
     // #2217
     test('comments in the <pre> tag should be removed in production mode', () => {
-      __DEV__ = false
       const rawText = `<p/><!-- foo --><p/>`
-      const ast = baseParse(`<pre>${rawText}</pre>`)
-      __DEV__ = true
+      const ast = baseParse(`<pre>${rawText}</pre>`, { comments: false })
 
       expect((ast.children[0] as ElementNode).children).toMatchObject([
         {
