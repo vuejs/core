@@ -998,6 +998,30 @@ describe('directive typing', () => {
   expect<typeof customDirective>(comp.directives!.customDirective)
 })
 
+describe('expose typing', () => {
+  const Comp = defineComponent({
+    expose: ['a', 'b'],
+    props: {
+      some: String
+    },
+    data() {
+      return { a: 1, b: '2', c: 1 }
+    }
+  })
+
+  expect<Array<'a' | 'b'>>(Comp.expose!)
+
+  const vm = new Comp()
+  // internal should still be exposed
+  vm.$props
+
+  expectType<number>(vm.a)
+  expectType<string>(vm.b)
+
+  // @ts-expect-error shouldn't be exposed
+  vm.c
+})
+
 // check if defineComponent can be exported
 export default {
   // function components

@@ -32,6 +32,8 @@ export type PublicProps = VNodeProps &
   AllowedComponentProps &
   ComponentCustomProps
 
+// TODO add Com
+
 export type DefineComponent<
   PropsOrPropOptions = {},
   RawBindings = {},
@@ -60,7 +62,10 @@ export type DefineComponent<
     E,
     PP & Props,
     Defaults,
-    true
+    true,
+    LC,
+    Directives,
+    Exposed
   > &
     Props
 > &

@@ -179,6 +179,11 @@ export type CreateComponentPublicInstance<
   Exposed
 >
 
+export type ExposedKeys<
+  T,
+  Exposed extends string & keyof T
+> = '' extends Exposed ? T : Pick<T, Exposed>
+
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)
 export type ComponentPublicInstance<
@@ -192,7 +197,7 @@ export type ComponentPublicInstance<
   Defaults = {},
   MakeDefaultsOptional extends boolean = false,
   Options = ComponentOptionsBase<any, any, any, any, any, any, any, any, any>,
-  Exposed extends string = string
+  Exposed extends string = ''
 > = {
   $: ComponentInternalInstance
   $data: D
@@ -214,12 +219,15 @@ export type ComponentPublicInstance<
     cb: Function,
     options?: WatchOptions
   ): WatchStopHandle
-} & P &
-  ShallowUnwrapRef<B> &
-  D &
-  ExtractComputedReturns<C> &
-  M &
-  ComponentCustomProperties
+} & ExposedKeys<
+  P &
+    ShallowUnwrapRef<B> &
+    D &
+    ExtractComputedReturns<C> &
+    M &
+    ComponentCustomProperties,
+  Exposed
+>
 
 type PublicPropertiesMap = Record<string, (i: ComponentInternalInstance) => any>
 

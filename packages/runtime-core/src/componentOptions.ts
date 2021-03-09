@@ -330,8 +330,7 @@ export type ComponentOptionsWithObjectProps<
       Defaults,
       false,
       LC,
-      Directives,
-      Exposed
+      Directives
     >
   >
 
