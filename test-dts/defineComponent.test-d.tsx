@@ -963,6 +963,23 @@ describe('async setup', () => {
   vm.a = 2
 })
 
+// #3367 expose components types
+describe('expose component types', () => {
+  const child = defineComponent({
+    props: {
+      a: String
+    }
+  })
+
+  const parent = defineComponent({
+    components: {
+      child
+    }
+  })
+
+  expect<typeof child>(parent.components!.child)
+})
+
 // check if defineComponent can be exported
 export default {
   // function components
