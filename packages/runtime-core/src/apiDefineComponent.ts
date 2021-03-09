@@ -12,7 +12,8 @@ import {
   SetupContext,
   AllowedComponentProps,
   ComponentCustomProps,
-  Component
+  Component,
+  ComponentCustomDirectives
 } from './component'
 import {
   ExtractPropTypes,
@@ -31,8 +32,6 @@ import { Directive } from './directives'
 export type PublicProps = VNodeProps &
   AllowedComponentProps &
   ComponentCustomProps
-
-// TODO add Com
 
 export type DefineComponent<
   PropsOrPropOptions = {},
@@ -64,7 +63,7 @@ export type DefineComponent<
     Defaults,
     true,
     LC,
-    Directives,
+    Directives & ComponentCustomDirectives,
     Exposed
   > &
     Props
@@ -80,7 +79,7 @@ export type DefineComponent<
     E,
     EE,
     LC,
-    Directives,
+    Directives & ComponentCustomDirectives,
     Exposed,
     Defaults
   > &

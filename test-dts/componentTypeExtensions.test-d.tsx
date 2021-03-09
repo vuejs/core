@@ -1,8 +1,12 @@
-import { defineComponent, expectError, expectType } from './index'
+import { defineComponent, Directive, expectError, expectType } from './index'
 
 declare module '@vue/runtime-core' {
   interface ComponentCustomOptions {
     test?(n: number): void
+  }
+
+  interface ComponentCustomDirectives {
+    test: Directive
   }
 
   interface ComponentCustomProperties {
@@ -41,6 +45,7 @@ export const Custom = defineComponent({
   }
 })
 
+expectType<Directive>(Custom.directives!.test)
 expectType<JSX.Element>(<Custom baz={1} />)
 expectType<JSX.Element>(<Custom custom={1} baz={1} />)
 expectType<JSX.Element>(<Custom bar="bar" baz={1} />)
