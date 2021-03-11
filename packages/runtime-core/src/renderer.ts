@@ -866,8 +866,8 @@ function baseCreateRenderer(
     parentComponent,
     parentSuspense,
     isSVG,
-    optimized,
     slotScopeIds,
+    optimized,
     start = 0
   ) => {
     for (let i = start; i < children.length; i++) {
@@ -882,8 +882,8 @@ function baseCreateRenderer(
         parentComponent,
         parentSuspense,
         isSVG,
-        optimized,
-        slotScopeIds
+        slotScopeIds,
+        optimized
       )
     }
   }
