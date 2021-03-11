@@ -64,8 +64,37 @@ export interface ComponentCustomProps {}
 
 /**
  * For globally defined Directives
+ * Here is an example of adding a directive `VTooltip` as global directive:
+ *
+ * @example
+ * ```ts
+ * import VTooltip from 'v-tooltip'
+ *
+ * declare module '@vue/runtime-core' {
+ *   interface GlobalDirectives {
+ *     VTooltip
+ *   }
+ * }
+ * ```
  */
-export interface ComponentCustomDirectives extends Record<string, Directive> {}
+export interface GlobalDirectives extends Record<string, Directive> {}
+
+/**
+ * For globally defined Components
+ * Here is an example of adding a component `RouterView` as global component:
+ *
+ * @example
+ * ```ts
+ * import { RouterView } from 'vue-router'
+ *
+ * declare module '@vue/runtime-core' {
+ *   interface GlobalComponents {
+ *     RouterView
+ *   }
+ * }
+ * ```
+ */
+export interface GlobalComponents extends Record<string, Component> {}
 
 /**
  * Default allowed non-declared props on component in TSX

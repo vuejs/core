@@ -131,7 +131,6 @@ export interface ComponentOptionsBase<
   directives?: Directives
   inheritAttrs?: boolean
   emits?: (E | EE[]) & ThisType<void>
-  // TODO infer public instance type based on exposed keys
   expose?: Exposed[]
   serverPrefetch?(): Promise<any>
 

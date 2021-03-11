@@ -13,7 +13,8 @@ import {
   AllowedComponentProps,
   ComponentCustomProps,
   Component,
-  ComponentCustomDirectives
+  GlobalDirectives,
+  GlobalComponents
 } from './component'
 import {
   ExtractPropTypes,
@@ -62,8 +63,8 @@ export type DefineComponent<
     PP & Props,
     Defaults,
     true,
-    LC,
-    Directives & ComponentCustomDirectives,
+    LC & GlobalComponents,
+    Directives & GlobalDirectives,
     Exposed
   > &
     Props
@@ -78,8 +79,8 @@ export type DefineComponent<
     Extends,
     E,
     EE,
-    LC,
-    Directives & ComponentCustomDirectives,
+    LC & GlobalComponents,
+    Directives & GlobalDirectives,
     Exposed,
     Defaults
   > &

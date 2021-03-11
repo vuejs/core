@@ -978,7 +978,7 @@ describe('expose component types', () => {
     }
   })
 
-  expect<typeof child>(parent.components!.child)
+  expectType<typeof child>(parent.components!.child)
 })
 
 describe('directive typing', () => {
@@ -995,7 +995,7 @@ describe('directive typing', () => {
     }
   })
 
-  expect<typeof customDirective>(comp.directives!.customDirective)
+  expectType<typeof customDirective>(comp.directives!.customDirective)
 })
 
 describe('expose typing', () => {
@@ -1009,7 +1009,7 @@ describe('expose typing', () => {
     }
   })
 
-  expect<Array<'a' | 'b'>>(Comp.expose!)
+  expectType<Array<'a' | 'b'>>(Comp.expose!)
 
   const vm = new Comp()
   // internal should still be exposed

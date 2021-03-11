@@ -167,7 +167,8 @@ export {
   SetupContext,
   ComponentCustomProps,
   AllowedComponentProps,
-  ComponentCustomDirectives
+  GlobalComponents,
+  GlobalDirectives
 } from './component'
 export { DefineComponent } from './apiDefineComponent'
 export {
