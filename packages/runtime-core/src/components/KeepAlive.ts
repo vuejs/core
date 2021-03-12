@@ -157,7 +157,7 @@ const KeepAliveImpl = {
 
     function pruneCache(filter?: (name: string) => boolean) {
       cache.forEach((vnode, key) => {
-        const name = getComponentName(vnode.type as ConcreteComponent)
+        const name = getMatchingName(vnode)
         if (name && (!filter || !filter(name))) {
           pruneCacheEntry(key)
         }
@@ -241,7 +241,7 @@ const KeepAliveImpl = {
 
       let vnode = getInnerChild(rawVNode)
       const comp = vnode.type as ConcreteComponent
-      const name = getComponentName(comp)
+      const name = getMatchingName(vnode)
       const { include, exclude, max } = props
 
       if (
@@ -398,4 +398,13 @@ function resetShapeFlag(vnode: VNode) {
 
 function getInnerChild(vnode: VNode) {
   return vnode.shapeFlag & ShapeFlags.SUSPENSE ? vnode.ssContent! : vnode
+}
+
+function getMatchingName(vnode: VNode) {
+  const comp = vnode.type as ConcreteComponent
+  let name = getComponentName(comp)
+  if (!name && vnode.key) {
+    name = String(vnode.key)
+  }
+  return name
 }
