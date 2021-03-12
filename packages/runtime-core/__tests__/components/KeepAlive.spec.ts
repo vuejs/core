@@ -320,13 +320,24 @@ describe('KeepAlive', () => {
     assertHookCalls(two, [1, 1, 4, 4, 0]) // should remain inactive
   })
 
-  async function assertNameMatch(props: KeepAliveProps) {
+  async function assertNameMatch(
+    props: KeepAliveProps,
+    useKey: boolean = false
+  ) {
+    if (useKey) {
+      delete one.name
+      delete two.name
+    }
     const outerRef = ref(true)
     const viewRef = ref('one')
     const App = {
       render() {
         return outerRef.value
-          ? h(KeepAlive, props, () => h(views[viewRef.value]))
+          ? h(KeepAlive, props, () =>
+              h(views[viewRef.value], {
+                key: useKey ? viewRef.value : undefined
+              })
+            )
           : null
       }
     }
@@ -389,6 +400,34 @@ describe('KeepAlive', () => {
 
     test('include + exclude', async () => {
       await assertNameMatch({ include: 'one,two', exclude: 'two' })
+    })
+
+    test('include (string) w/ key', async () => {
+      await assertNameMatch({ include: 'one' }, true)
+    })
+
+    test('include (regex) w/ key', async () => {
+      await assertNameMatch({ include: /^one$/ }, true)
+    })
+
+    test('include (array) w/ key', async () => {
+      await assertNameMatch({ include: ['one'] }, true)
+    })
+
+    test('exclude (string) w/ key', async () => {
+      await assertNameMatch({ exclude: 'two' }, true)
+    })
+
+    test('exclude (regex) w/ key', async () => {
+      await assertNameMatch({ exclude: /^two$/ }, true)
+    })
+
+    test('exclude (array) w/ key', async () => {
+      await assertNameMatch({ exclude: ['two'] }, true)
+    })
+
+    test('include + exclude w/ key', async () => {
+      await assertNameMatch({ include: 'one,two', exclude: 'two' }, true)
     })
 
     test('max', async () => {

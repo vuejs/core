@@ -174,7 +174,7 @@ const KeepAliveImpl: ComponentOptions = {
 
     function pruneCache(filter?: (name: string) => boolean) {
       cache.forEach((vnode, key) => {
-        const name = getComponentName(vnode.type as ConcreteComponent)
+        const name = getMatchingName(vnode)
         if (name && (!filter || !filter(name))) {
           pruneCacheEntry(key)
         }
@@ -258,15 +258,7 @@ const KeepAliveImpl: ComponentOptions = {
 
       let vnode = getInnerChild(rawVNode)
       const comp = vnode.type as ConcreteComponent
-
-      // for async components, name check should be based in its loaded
-      // inner component if available
-      const name = getComponentName(
-        isAsyncWrapper(vnode)
-          ? (vnode.type as ComponentOptions).__asyncResolved || {}
-          : comp
-      )
-
+      const name = getMatchingName(vnode)
       const { include, exclude, max } = props
 
       if (
@@ -427,4 +419,17 @@ function resetShapeFlag(vnode: VNode) {
 
 function getInnerChild(vnode: VNode) {
   return vnode.shapeFlag & ShapeFlags.SUSPENSE ? vnode.ssContent! : vnode
+}
+
+function getMatchingName(vnode: VNode) {
+  const comp = vnode.type as ConcreteComponent
+  let name = getComponentName(
+    isAsyncWrapper(vnode)
+      ? (vnode.type as ComponentOptions).__asyncResolved || {}
+      : comp
+  )
+  if (!name && vnode.key) {
+    name = String(vnode.key)
+  }
+  return name
 }
