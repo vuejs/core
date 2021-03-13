@@ -6,5 +6,6 @@ declare module '@vue/runtime-core' {
     Teleport: DefineComponent<TeleportProps>
     Suspense: DefineComponent<SuspenseProps>
     KeepAlive: DefineComponent<KeepAliveProps>
+    BaseTransition: DefineComponent<BaseTransitionProps>
   }
 }
