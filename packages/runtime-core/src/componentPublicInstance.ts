@@ -195,7 +195,7 @@ export type ComponentPublicInstance<
     : P & PublicProps
   $attrs: Data
   $refs: Data
-  $slots: Slots
+  $slots: Slots<S>
   $root: ComponentPublicInstance | null
   $parent: ComponentPublicInstance | null
   $emit: EmitFn<E>
