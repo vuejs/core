@@ -13,7 +13,8 @@ import {
   SetupContext,
   h,
   Directive,
-  KeepAliveProps
+  KeepAliveProps,
+  TransitionProps
 } from './index'
 
 describe('with object props', () => {
@@ -984,6 +985,10 @@ describe('expose component types', () => {
   // global components
   expectType<KeepAliveProps>(new parent.components!.KeepAlive().$props)
   expectType<KeepAliveProps>(new child.components!.KeepAlive().$props)
+
+  // runtime-dom components
+  expectType<TransitionProps>(new parent.components!.Transition().$props)
+  expectType<TransitionProps>(new parent.components!.Transition().$props)
 })
 
 describe('directive typing', () => {
