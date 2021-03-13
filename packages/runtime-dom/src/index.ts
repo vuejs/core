@@ -17,6 +17,7 @@ import { patchProp, forcePatchProp } from './patchProp'
 import { isFunction, isString, isHTMLTag, isSVGTag, extend } from '@vue/shared'
 import { TransitionProps } from './components/Transition'
 import { TransitionGroupProps } from './components/TransitionGroup'
+import { vShow } from './directives/vShow'
 
 declare module '@vue/reactivity' {
   export interface RefUnwrapBailTypes {
@@ -30,6 +31,10 @@ declare module '@vue/runtime-core' {
     // Note: if updating this, also update `types/globalComponents.d.ts`.
     Transition: DefineComponent<TransitionProps>
     TransitionGroup: DefineComponent<TransitionGroupProps>
+  }
+
+  interface GlobalDirectives {
+    vShow: typeof vShow
   }
 }
 

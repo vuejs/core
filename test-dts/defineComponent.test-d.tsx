@@ -14,7 +14,8 @@ import {
   h,
   Directive,
   KeepAliveProps,
-  TransitionProps
+  TransitionProps,
+  vShow
 } from './index'
 
 describe('with object props', () => {
@@ -1006,6 +1007,9 @@ describe('directive typing', () => {
   })
 
   expectType<typeof customDirective>(comp.directives!.customDirective)
+
+  // global directive
+  expectType<typeof vShow>(comp.directives!.vShow)
 })
 
 describe('expose typing', () => {
