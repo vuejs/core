@@ -118,6 +118,21 @@ declare module '@vue/reactivity' {
   }
 }
 
+// Augment GlobalComponents
+// Note: if updating this, also update `types/globalComponents.d.ts`.
+import { TeleportProps } from './components/Teleport'
+import { SuspenseProps } from './components/Suspense'
+import { KeepAliveProps } from './components/KeepAlive'
+import { DefineComponent } from './apiDefineComponent'
+
+declare module '@vue/runtime-core' {
+  export interface GlobalComponents {
+    Teleport: DefineComponent<TeleportProps>
+    Suspense: DefineComponent<SuspenseProps>
+    KeepAlive: DefineComponent<KeepAliveProps>
+  }
+}
+
 export {
   ReactiveEffect,
   ReactiveEffectOptions,
@@ -167,8 +182,8 @@ export {
   SetupContext,
   ComponentCustomProps,
   AllowedComponentProps,
-  GlobalComponents,
-  GlobalDirectives
+  GlobalDirectives,
+  GlobalComponents
 } from './component'
 export { DefineComponent } from './apiDefineComponent'
 export {

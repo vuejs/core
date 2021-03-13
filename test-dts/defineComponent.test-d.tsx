@@ -12,7 +12,8 @@ import {
   ComponentOptions,
   SetupContext,
   h,
-  Directive
+  Directive,
+  KeepAliveProps
 } from './index'
 
 describe('with object props', () => {
@@ -979,6 +980,10 @@ describe('expose component types', () => {
   })
 
   expectType<typeof child>(parent.components!.child)
+
+  // global components
+  expectType<KeepAliveProps>(new parent.components!.KeepAlive().$props)
+  expectType<KeepAliveProps>(new child.components!.KeepAlive().$props)
 })
 
 describe('directive typing', () => {
@@ -1009,7 +1014,7 @@ describe('expose typing', () => {
     }
   })
 
-  expectType<Array<'a' | 'b'>>(Comp.expose!)
+  expect<Array<'a' | 'b'>>(Comp.expose!)
 
   const vm = new Comp()
   // internal should still be exposed
