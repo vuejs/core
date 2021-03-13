@@ -24,7 +24,9 @@ import {
   NOOP,
   PatchFlags,
   PatchFlagNames,
-  EMPTY_OBJ
+  EMPTY_OBJ,
+  capitalize,
+  camelize
 } from '@vue/shared'
 import { defaultOnError } from './errors'
 import {
@@ -79,13 +81,15 @@ export interface ImportItem {
   path: string
 }
 
-export interface TransformContext extends Required<TransformOptions> {
+export interface TransformContext
+  extends Required<Omit<TransformOptions, 'filename'>> {
+  selfName: string | null
   root: RootNode
   helpers: Set<symbol>
   components: Set<string>
   directives: Set<string>
   hoists: (JSChildNode | null)[]
-  imports: Set<ImportItem>
+  imports: ImportItem[]
   temps: number
   cached: number
   identifiers: { [name: string]: number | undefined }
@@ -107,11 +111,13 @@ export interface TransformContext extends Required<TransformOptions> {
   removeIdentifiers(exp: ExpressionNode | string): void
   hoist(exp: JSChildNode): SimpleExpressionNode
   cache<T extends JSChildNode>(exp: T, isVNode?: boolean): CacheExpression | T
+  constantCache: Map<TemplateChildNode, ConstantTypes>
 }
 
 export function createTransformContext(
   root: RootNode,
   {
+    filename = '',
     prefixIdentifiers = false,
     hoistStatic = false,
     cacheHandlers = false,
@@ -122,6 +128,7 @@ export function createTransformContext(
     isCustomElement = NOOP,
     expressionPlugins = [],
     scopeId = null,
+    slotted = true,
     ssr = false,
     ssrCssVars = ``,
     bindingMetadata = EMPTY_OBJ,
@@ -130,8 +137,10 @@ export function createTransformContext(
     onError = defaultOnError
   }: TransformOptions
 ): TransformContext {
+  const nameMatch = filename.replace(/\?.*$/, '').match(/([^/\\]+)\.\w+$/)
   const context: TransformContext = {
     // options
+    selfName: nameMatch && capitalize(camelize(nameMatch[1])),
     prefixIdentifiers,
     hoistStatic,
     cacheHandlers,
@@ -142,6 +151,7 @@ export function createTransformContext(
     isCustomElement,
     expressionPlugins,
     scopeId,
+    slotted,
     ssr,
     ssrCssVars,
     bindingMetadata,
@@ -155,7 +165,8 @@ export function createTransformContext(
     components: new Set(),
     directives: new Set(),
     hoists: [],
-    imports: new Set(),
+    imports: [],
+    constantCache: new Map(),
     temps: 0,
     cached: 0,
     identifiers: Object.create(null),
@@ -284,7 +295,7 @@ export function transform(root: RootNode, options: TransformOptions) {
   root.helpers = [...context.helpers]
   root.components = [...context.components]
   root.directives = [...context.directives]
-  root.imports = [...context.imports]
+  root.imports = context.imports
   root.hoists = context.hoists
   root.temps = context.temps
   root.cached = context.cached

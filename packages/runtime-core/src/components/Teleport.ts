@@ -24,6 +24,9 @@ export const isTeleport = (type: any): boolean => type.__isTeleport
 export const isTeleportDisabled = (props: VNode['props']): boolean =>
   props && (props.disabled || props.disabled === '')
 
+const isTargetSVG = (target: RendererElement): boolean =>
+  typeof SVGElement !== 'undefined' && target instanceof SVGElement
+
 const resolveTarget = <T = RendererElement>(
   props: TeleportProps | null,
   select: RendererOptions['querySelector']
@@ -68,6 +71,7 @@ export const TeleportImpl = {
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
     isSVG: boolean,
+    slotScopeIds: string[] | null,
     optimized: boolean,
     internals: RendererInternals
   ) {
@@ -80,6 +84,7 @@ export const TeleportImpl = {
 
     const disabled = isTeleportDisabled(n2.props)
     const { shapeFlag, children } = n2
+
     if (n1 == null) {
       // insert anchors in the main view
       const placeholder = (n2.el = __DEV__
@@ -90,11 +95,12 @@ export const TeleportImpl = {
         : createText(''))
       insert(placeholder, container, anchor)
       insert(mainAnchor, container, anchor)
-
       const target = (n2.target = resolveTarget(n2.props, querySelector))
       const targetAnchor = (n2.targetAnchor = createText(''))
       if (target) {
         insert(targetAnchor, target)
+        // #2652 we could be teleporting from a non-SVG tree into an SVG tree
+        isSVG = isSVG || isTargetSVG(target)
       } else if (__DEV__ && !disabled) {
         warn('Invalid Teleport target on mount:', target, `(${typeof target})`)
       }
@@ -110,6 +116,7 @@ export const TeleportImpl = {
             parentComponent,
             parentSuspense,
             isSVG,
+            slotScopeIds,
             optimized
           )
         }
@@ -129,6 +136,7 @@ export const TeleportImpl = {
       const wasDisabled = isTeleportDisabled(n1.props)
       const currentContainer = wasDisabled ? container : target
       const currentAnchor = wasDisabled ? mainAnchor : targetAnchor
+      isSVG = isSVG || isTargetSVG(target)
 
       if (n2.dynamicChildren) {
         // fast path when the teleport happens to be a block root
@@ -138,7 +146,8 @@ export const TeleportImpl = {
           currentContainer,
           parentComponent,
           parentSuspense,
-          isSVG
+          isSVG,
+          slotScopeIds
         )
         // even in block tree mode we need to make sure all root-level nodes
         // in the teleport inherit previous DOM references so that they can
@@ -152,7 +161,9 @@ export const TeleportImpl = {
           currentAnchor,
           parentComponent,
           parentSuspense,
-          isSVG
+          isSVG,
+          slotScopeIds,
+          false
         )
       }
 
@@ -277,6 +288,7 @@ function hydrateTeleport(
   vnode: TeleportVNode,
   parentComponent: ComponentInternalInstance | null,
   parentSuspense: SuspenseBoundary | null,
+  slotScopeIds: string[] | null,
   optimized: boolean,
   {
     o: { nextSibling, parentNode, querySelector }
@@ -287,6 +299,7 @@ function hydrateTeleport(
     container: Element,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
+    slotScopeIds: string[] | null,
     optimized: boolean
   ) => Node | null
 ): Node | null {
@@ -307,6 +320,7 @@ function hydrateTeleport(
           parentNode(node)!,
           parentComponent,
           parentSuspense,
+          slotScopeIds,
           optimized
         )
         vnode.targetAnchor = targetNode
@@ -318,6 +332,7 @@ function hydrateTeleport(
           target,
           parentComponent,
           parentSuspense,
+          slotScopeIds,
           optimized
         )
       }

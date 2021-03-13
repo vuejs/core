@@ -78,27 +78,38 @@ export function watchEffect(
 // initial value for watchers to trigger on undefined initial values
 const INITIAL_WATCHER_VALUE = {}
 
-// overload #1: array of multiple sources + cb
-// Readonly constraint helps the callback to correctly infer value types based
-// on position in the source array. Otherwise the values will get a union type
-// of all possible value types.
+type MultiWatchSources = (WatchSource<unknown> | object)[]
+
+// overload: array of multiple sources + cb
 export function watch<
-  T extends Readonly<Array<WatchSource<unknown> | object>>,
+  T extends MultiWatchSources,
   Immediate extends Readonly<boolean> = false
 >(
-  sources: T,
+  sources: [...T],
   cb: WatchCallback<MapSources<T, false>, MapSources<T, Immediate>>,
   options?: WatchOptions<Immediate>
 ): WatchStopHandle
 
-// overload #2: single source + cb
+// overload: multiple sources w/ `as const`
+// watch([foo, bar] as const, () => {})
+// somehow [...T] breaks when the type is readonly
+export function watch<
+  T extends Readonly<MultiWatchSources>,
+  Immediate extends Readonly<boolean> = false
+>(
+  source: T,
+  cb: WatchCallback<MapSources<T, false>, MapSources<T, Immediate>>,
+  options?: WatchOptions<Immediate>
+): WatchStopHandle
+
+// overload: single source + cb
 export function watch<T, Immediate extends Readonly<boolean> = false>(
   source: WatchSource<T>,
   cb: WatchCallback<T, Immediate extends true ? (T | undefined) : T>,
   options?: WatchOptions<Immediate>
 ): WatchStopHandle
 
-// overload #3: watching reactive object w/ cb
+// overload: watching reactive object w/ cb
 export function watch<
   T extends object,
   Immediate extends Readonly<boolean> = false
@@ -170,7 +181,9 @@ function doWatch(
         } else if (isReactive(s)) {
           return traverse(s)
         } else if (isFunction(s)) {
-          return callWithErrorHandling(s, instance, ErrorCodes.WATCH_GETTER)
+          return callWithErrorHandling(s, instance, ErrorCodes.WATCH_GETTER, [
+            instance && (instance.proxy as any)
+          ])
         } else {
           __DEV__ && warnInvalidSource(s)
         }
@@ -179,7 +192,9 @@ function doWatch(
     if (cb) {
       // getter with cb
       getter = () =>
-        callWithErrorHandling(source, instance, ErrorCodes.WATCH_GETTER)
+        callWithErrorHandling(source, instance, ErrorCodes.WATCH_GETTER, [
+          instance && (instance.proxy as any)
+        ])
     } else {
       // no cb -> simple effect
       getter = () => {

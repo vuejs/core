@@ -168,7 +168,7 @@ export const transformElement: NodeTransform = (node, context) => {
           type === NodeTypes.COMPOUND_EXPRESSION
         if (
           hasDynamicTextChild &&
-          getConstantType(child) === ConstantTypes.NOT_CONSTANT
+          getConstantType(child, context) === ConstantTypes.NOT_CONSTANT
         ) {
           patchFlag |= PatchFlags.TEXT
         }
@@ -263,7 +263,16 @@ export function resolveComponentType(
     }
   }
 
-  // 4. user component (resolve)
+  // 4. Self referencing component (inferred from filename)
+  if (!__BROWSER__ && context.selfName) {
+    if (capitalize(camelize(tag)) === context.selfName) {
+      context.helper(RESOLVE_COMPONENT)
+      context.components.add(`_self`)
+      return toValidAssetId(`_self`, `component`)
+    }
+  }
+
+  // 5. user component (resolve)
   context.helper(RESOLVE_COMPONENT)
   context.components.add(tag)
   return toValidAssetId(tag, `component`)
@@ -364,7 +373,7 @@ export function buildProps(
         value.type === NodeTypes.JS_CACHE_EXPRESSION ||
         ((value.type === NodeTypes.SIMPLE_EXPRESSION ||
           value.type === NodeTypes.COMPOUND_EXPRESSION) &&
-          getConstantType(value) > 0)
+          getConstantType(value, context) > 0)
       ) {
         // skip if the prop is a cached handler or has constant value
         return

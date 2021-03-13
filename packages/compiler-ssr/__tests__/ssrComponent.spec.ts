@@ -59,7 +59,7 @@ describe('ssr: components', () => {
                 ]
               }
             }),
-            _: 1
+            _: 1 /* STABLE */
           }, _parent))
         }"
       `)
@@ -84,7 +84,7 @@ describe('ssr: components', () => {
                 ]
               }
             }),
-            _: 1
+            _: 1 /* STABLE */
           }, _parent))
         }"
       `)
@@ -122,7 +122,7 @@ describe('ssr: components', () => {
                 ]
               }
             }),
-            _: 1
+            _: 1 /* STABLE */
           }, _parent))
         }"
       `)
@@ -140,7 +140,7 @@ describe('ssr: components', () => {
         return function ssrRender(_ctx, _push, _parent, _attrs) {
           const _component_foo = _resolveComponent(\\"foo\\")
 
-          _push(_ssrRenderComponent(_component_foo, _attrs, _createSlots({ _: 2 }, [
+          _push(_ssrRenderComponent(_component_foo, _attrs, _createSlots({ _: 2 /* DYNAMIC */ }, [
             (_ctx.ok)
               ? {
                   name: \\"named\\",
@@ -172,7 +172,7 @@ describe('ssr: components', () => {
         return function ssrRender(_ctx, _push, _parent, _attrs) {
           const _component_foo = _resolveComponent(\\"foo\\")
 
-          _push(_ssrRenderComponent(_component_foo, _attrs, _createSlots({ _: 2 }, [
+          _push(_ssrRenderComponent(_component_foo, _attrs, _createSlots({ _: 2 /* DYNAMIC */ }, [
             _renderList(_ctx.names, (key) => {
               return {
                 name: key,
@@ -260,7 +260,7 @@ describe('ssr: components', () => {
                 ]
               }
             }),
-            _: 1
+            _: 1 /* STABLE */
           }, _parent))
         }"
       `)

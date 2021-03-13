@@ -23,7 +23,8 @@ import {
   VNodeCall,
   ForRenderListExpression,
   BlockCodegenNode,
-  ForIteratorExpression
+  ForIteratorExpression,
+  ConstantTypes
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
@@ -37,7 +38,8 @@ import {
   RENDER_LIST,
   OPEN_BLOCK,
   CREATE_BLOCK,
-  FRAGMENT
+  FRAGMENT,
+  CREATE_VNODE
 } from '../runtimeHelpers'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
@@ -77,7 +79,7 @@ export const transformFor = createStructuralDirectiveTransform(
 
       const isStableFragment =
         forNode.source.type === NodeTypes.SIMPLE_EXPRESSION &&
-        forNode.source.constType > 0
+        forNode.source.constType > ConstantTypes.NOT_CONSTANT
       const fragmentFlag = isStableFragment
         ? PatchFlags.STABLE_FRAGMENT
         : keyProp
@@ -168,6 +170,8 @@ export const transformFor = createStructuralDirectiveTransform(
           if (childBlock.isBlock) {
             helper(OPEN_BLOCK)
             helper(CREATE_BLOCK)
+          } else {
+            helper(CREATE_VNODE)
           }
         }
 

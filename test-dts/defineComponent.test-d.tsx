@@ -34,6 +34,7 @@ describe('with object props', () => {
     ggg: 'foo' | 'bar'
     ffff: (a: number, b: string) => { a: boolean }
     validated?: string
+    date?: Date
   }
 
   type GT = string & { __brand: unknown }
@@ -103,7 +104,8 @@ describe('with object props', () => {
         type: String,
         // validator requires explicit annotation
         validator: (val: unknown) => val !== ''
-      }
+      },
+      date: Date
     },
     setup(props) {
       // type assertion. See https://github.com/SamVerschueren/tsd
@@ -125,6 +127,7 @@ describe('with object props', () => {
       expectType<ExpectedProps['ggg']>(props.ggg)
       expectType<ExpectedProps['ffff']>(props.ffff)
       expectType<ExpectedProps['validated']>(props.validated)
+      expectType<ExpectedProps['date']>(props.date)
 
       // @ts-expect-error props should be readonly
       expectError((props.a = 1))
@@ -445,9 +448,17 @@ describe('with mixins', () => {
   const MixinD = defineComponent({
     mixins: [MixinA],
     data() {
+      //@ts-expect-error computed are not available on data()
+      expectError<number>(this.dC1)
+      //@ts-expect-error computed are not available on data()
+      expectError<string>(this.dC2)
+
       return {
         d: 4
       }
+    },
+    setup(props) {
+      expectType<string>(props.aP1)
     },
     computed: {
       dC1(): number {
@@ -466,6 +477,34 @@ describe('with mixins', () => {
         type: String,
         required: true
       }
+    },
+
+    data(vm) {
+      expectType<number>(vm.a)
+      expectType<number>(vm.b)
+      expectType<number>(vm.c)
+      expectType<number>(vm.d)
+
+      // should also expose declared props on `this`
+      expectType<number>(this.a)
+      expectType<string>(this.aP1)
+      expectType<boolean | undefined>(this.aP2)
+      expectType<number>(this.b)
+      expectType<any>(this.bP1)
+      expectType<number>(this.c)
+      expectType<number>(this.d)
+
+      return {}
+    },
+
+    setup(props) {
+      expectType<string>(props.z)
+      // props
+      expectType<string>(props.aP1)
+      expectType<boolean | undefined>(props.aP2)
+      expectType<any>(props.bP1)
+      expectType<any>(props.bP2)
+      expectType<string>(props.z)
     },
     render() {
       const props = this.$props

@@ -59,6 +59,7 @@ import {
 import { warn } from './warning'
 import { VNodeChild } from './vnode'
 import { callWithAsyncErrorHandling } from './errorHandling'
+import { UnionToIntersection } from './helpers/typeUtils'
 import { Slots } from './componentSlots'
 
 /**
@@ -81,6 +82,19 @@ export interface ComponentCustomOptions {}
 
 export type RenderFunction = () => VNodeChild
 
+type ExtractOptionProp<T> = T extends ComponentOptionsBase<
+  infer P,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any
+>
+  ? unknown extends P ? {} : P
+  : {}
+
 export interface ComponentOptionsBase<
   Props,
   RawBindings,
@@ -99,7 +113,9 @@ export interface ComponentOptionsBase<
     ComponentCustomOptions {
   setup?: (
     this: void,
-    props: Props,
+    props: Props &
+      UnionToIntersection<ExtractOptionProp<Mixin>> &
+      UnionToIntersection<ExtractOptionProp<Extends>>,
     ctx: SetupContext<E, Slots<S>>
   ) => Promise<RawBindings> | RawBindings | RenderFunction | void
   name?: string
@@ -380,8 +396,24 @@ interface LegacyOptions<
   // since that leads to some sort of circular inference and breaks ThisType
   // for the entire component.
   data?: (
-    this: CreateComponentPublicInstance<Props>,
-    vm: CreateComponentPublicInstance<Props>
+    this: CreateComponentPublicInstance<
+      Props,
+      {},
+      {},
+      {},
+      MethodOptions,
+      Mixin,
+      Extends
+    >,
+    vm: CreateComponentPublicInstance<
+      Props,
+      {},
+      {},
+      {},
+      MethodOptions,
+      Mixin,
+      Extends
+    >
   ) => D
   computed?: C
   methods?: M
@@ -594,7 +626,18 @@ export function applyOptions(
     for (const key in methods) {
       const methodHandler = (methods as MethodOptions)[key]
       if (isFunction(methodHandler)) {
-        ctx[key] = methodHandler.bind(publicThis)
+        // In dev mode, we use the `createRenderContext` function to define methods to the proxy target,
+        // and those are read-only but reconfigurable, so it needs to be redefined here
+        if (__DEV__) {
+          Object.defineProperty(ctx, key, {
+            value: methodHandler.bind(publicThis),
+            configurable: true,
+            enumerable: true,
+            writable: true
+          })
+        } else {
+          ctx[key] = methodHandler.bind(publicThis)
+        }
         if (__DEV__) {
           checkDuplicateProperties!(OptionTypes.METHODS, key)
         }
@@ -612,6 +655,7 @@ export function applyOptions(
       deferredData.forEach(dataFn => resolveData(instance, dataFn, publicThis))
     }
     if (dataOptions) {
+      // @ts-ignore dataOptions is not fully type safe
       resolveData(instance, dataOptions, publicThis)
     }
     if (__DEV__) {
@@ -689,9 +733,9 @@ export function applyOptions(
       const provides = isFunction(provideOptions)
         ? provideOptions.call(publicThis)
         : provideOptions
-      for (const key in provides) {
+      Reflect.ownKeys(provides).forEach(key => {
         provide(key, provides[key])
-      }
+      })
     })
   }
 

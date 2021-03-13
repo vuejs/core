@@ -53,7 +53,7 @@ window.init = () => {
       const compileFn = ssrMode.value ? ssrCompile : compile
       const start = performance.now()
       const { code, ast, map } = compileFn(source, {
-        filename: 'template.vue',
+        filename: 'ExampleTemplate.vue',
         ...compilerOptions,
         sourceMap: true,
         onError: err => {
@@ -150,7 +150,7 @@ window.init = () => {
       clearEditorDecos()
       if (lastSuccessfulMap) {
         const pos = lastSuccessfulMap.generatedPositionFor({
-          source: 'template.vue',
+          source: 'ExampleTemplate.vue',
           line: e.position.lineNumber,
           column: e.position.column - 1
         })

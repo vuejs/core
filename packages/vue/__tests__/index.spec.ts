@@ -205,7 +205,7 @@ describe('compiler + runtime integration', () => {
     createApp(App).mount('#not-exist-id')
 
     expect(
-      '[Vue warn]: Failed to mount app: mount target selector returned null.'
+      '[Vue warn]: Failed to mount app: mount target selector "#not-exist-id" returned null.'
     ).toHaveBeenWarned()
     document.querySelector = origin
   })
@@ -291,5 +291,14 @@ describe('compiler + runtime integration', () => {
     const container = document.createElement('div')
     createApp(App).mount(container)
     expect(EMPTY_ARR.length).toBe(0)
+  })
+
+  test('BigInt support', () => {
+    const app = createApp({
+      template: `<div>{{ BigInt(BigInt(100000111)) + BigInt(2000000000n) * 30000000n }}</div>`
+    })
+    const root = document.createElement('div')
+    app.mount(root)
+    expect(root.innerHTML).toBe('<div>60000000100000111</div>')
   })
 })

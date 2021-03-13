@@ -106,7 +106,7 @@ describe('ssr: inject <style vars>', () => {
           default: () => {
             _push(\`<div\${_ssrRenderAttrs(_cssVars)}>ok</div>\`)
           },
-          _: 1
+          _: 1 /* STABLE */
         })
       }"
     `)

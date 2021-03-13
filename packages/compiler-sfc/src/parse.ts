@@ -33,7 +33,7 @@ export interface SFCBlock {
 
 export interface SFCTemplateBlock extends SFCBlock {
   type: 'template'
-  functional?: boolean
+  ast: ElementNode
 }
 
 export interface SFCScriptBlock extends SFCBlock {
@@ -59,6 +59,9 @@ export interface SFCDescriptor {
   styles: SFCStyleBlock[]
   customBlocks: SFCBlock[]
   cssVars: string[]
+  // whether the SFC uses :slotted() modifier.
+  // this is used as a compiler optimization hint.
+  slotted: boolean
 }
 
 export interface SFCParseResult {
@@ -79,7 +82,7 @@ export function parse(
   source: string,
   {
     sourceMap = true,
-    filename = 'component.vue',
+    filename = 'anonymous.vue',
     sourceRoot = '',
     pad = false,
     compiler = CompilerDOM
@@ -100,7 +103,8 @@ export function parse(
     scriptSetup: null,
     styles: [],
     customBlocks: [],
-    cssVars: []
+    cssVars: [],
+    slotted: false
   }
 
   const errors: (CompilerError | SyntaxError)[] = []
@@ -115,13 +119,15 @@ export function parse(
       if (
         (!parent && tag !== 'template') ||
         // <template lang="xxx"> should also be treated as raw text
-        props.some(
-          p =>
-            p.type === NodeTypes.ATTRIBUTE &&
-            p.name === 'lang' &&
-            p.value &&
-            p.value.content !== 'html'
-        )
+        (tag === 'template' &&
+          props.some(
+            p =>
+              p.type === NodeTypes.ATTRIBUTE &&
+              p.name === 'lang' &&
+              p.value &&
+              p.value.content &&
+              p.value.content !== 'html'
+          ))
       ) {
         return TextModes.RAWTEXT
       } else {
@@ -137,37 +143,38 @@ export function parse(
     if (node.type !== NodeTypes.ELEMENT) {
       return
     }
-    if (!node.children.length && !hasSrc(node)) {
+    if (!node.children.length && !hasSrc(node) && node.tag !== 'template') {
       return
     }
     switch (node.tag) {
       case 'template':
         if (!descriptor.template) {
-          descriptor.template = createBlock(
+          const templateBlock = (descriptor.template = createBlock(
             node,
             source,
             false
-          ) as SFCTemplateBlock
+          ) as SFCTemplateBlock)
+          templateBlock.ast = node
         } else {
           errors.push(createDuplicateBlockError(node))
         }
         break
       case 'script':
-        const block = createBlock(node, source, pad) as SFCScriptBlock
-        const isSetup = !!block.attrs.setup
+        const scriptBlock = createBlock(node, source, pad) as SFCScriptBlock
+        const isSetup = !!scriptBlock.attrs.setup
         if (isSetup && !descriptor.scriptSetup) {
-          descriptor.scriptSetup = block
+          descriptor.scriptSetup = scriptBlock
           break
         }
         if (!isSetup && !descriptor.script) {
-          descriptor.script = block
+          descriptor.script = scriptBlock
           break
         }
         errors.push(createDuplicateBlockError(node, isSetup))
         break
       case 'style':
-        const style = createBlock(node, source, pad) as SFCStyleBlock
-        if (style.attrs.vars) {
+        const styleBlock = createBlock(node, source, pad) as SFCStyleBlock
+        if (styleBlock.attrs.vars) {
           errors.push(
             new SyntaxError(
               `<style vars> has been replaced by a new proposal: ` +
@@ -175,7 +182,7 @@ export function parse(
             )
           )
         }
-        descriptor.styles.push(style)
+        descriptor.styles.push(styleBlock)
         break
       default:
         descriptor.customBlocks.push(createBlock(node, source, pad))
@@ -227,6 +234,12 @@ export function parse(
   if (descriptor.cssVars.length) {
     warnExperimental(`v-bind() CSS variable injection`, 231)
   }
+
+  // check if the SFC uses :slotted
+  const slottedRE = /(?:::v-|:)slotted\(/
+  descriptor.slotted = descriptor.styles.some(
+    s => s.scoped && slottedRE.test(s.content)
+  )
 
   const result = {
     descriptor,
@@ -290,8 +303,6 @@ function createBlock(
         } else if (p.name === 'module') {
           ;(block as SFCStyleBlock).module = attrs[p.name]
         }
-      } else if (type === 'template' && p.name === 'functional') {
-        ;(block as SFCTemplateBlock).functional = true
       } else if (type === 'script' && p.name === 'setup') {
         ;(block as SFCScriptBlock).setup = attrs.setup
       }

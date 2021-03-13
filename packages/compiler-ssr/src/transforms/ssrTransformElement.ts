@@ -25,7 +25,8 @@ import {
   isBindKey,
   createSequenceExpression,
   InterpolationNode,
-  isStaticExp
+  isStaticExp,
+  AttributeNode
 } from '@vue/compiler-dom'
 import {
   escapeHtml,
@@ -159,6 +160,10 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
 
     for (let i = 0; i < node.props.length; i++) {
       const prop = node.props[i]
+      // ignore true-value/false-value on input
+      if (node.tag === 'input' && isTrueFalseValue(prop)) {
+        continue
+      }
       // special cases with children override
       if (prop.type === NodeTypes.DIRECTIVE) {
         if (prop.name === 'html' && prop.exp) {
@@ -303,6 +308,19 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
     }
 
     node.ssrCodegenNode = createTemplateLiteral(openTag)
+  }
+}
+
+function isTrueFalseValue(prop: DirectiveNode | AttributeNode) {
+  if (prop.type === NodeTypes.DIRECTIVE) {
+    return (
+      prop.name === 'bind' &&
+      prop.arg &&
+      isStaticExp(prop.arg) &&
+      (prop.arg.content === 'true-value' || prop.arg.content === 'false-value')
+    )
+  } else {
+    return prop.name === 'true-value' || prop.name === 'false-value'
   }
 }
 

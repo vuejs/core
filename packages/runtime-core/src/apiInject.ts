@@ -1,11 +1,11 @@
 import { isFunction } from '@vue/shared'
 import { currentInstance } from './component'
-import { currentRenderingInstance } from './componentRenderUtils'
+import { currentRenderingInstance } from './componentRenderContext'
 import { warn } from './warning'
 
 export interface InjectionKey<T> extends Symbol {}
 
-export function provide<T>(key: InjectionKey<T> | string, value: T) {
+export function provide<T>(key: InjectionKey<T> | string | number, value: T) {
   if (!currentInstance) {
     if (__DEV__) {
       warn(`provide() can only be used inside setup().`)

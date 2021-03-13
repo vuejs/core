@@ -22,9 +22,12 @@ import {
   hasChanged,
   isArray,
   isIntegerKey,
-  extend
+  extend,
+  makeMap
 } from '@vue/shared'
 import { isRef } from './ref'
+
+const isNonTrackableKeys = /*#__PURE__*/ makeMap(`__proto__,__v_isRef,__isVue`)
 
 const builtInSymbols = new Set(
   Object.getOwnPropertyNames(Symbol)
@@ -93,7 +96,7 @@ function createGetter(isReadonly = false, shallow = false) {
     if (
       isSymbol(key)
         ? builtInSymbols.has(key as symbol)
-        : key === `__proto__` || key === `__v_isRef`
+        : isNonTrackableKeys(key)
     ) {
       return res
     }
@@ -179,7 +182,7 @@ function has(target: object, key: string | symbol): boolean {
   return result
 }
 
-function ownKeys(target: object): (string | number | symbol)[] {
+function ownKeys(target: object): (string | symbol)[] {
   track(target, TrackOpTypes.ITERATE, isArray(target) ? 'length' : ITERATE_KEY)
   return Reflect.ownKeys(target)
 }

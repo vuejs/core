@@ -120,6 +120,23 @@ describe('runtime-dom: props patching', () => {
 
     patchProp(el, 'id', null, '')
     expect(el.hasAttribute('id')).toBe(true)
+
+    // #2677
+    const img = document.createElement('img')
+    patchProp(img, 'width', null, '')
+    expect(el.hasAttribute('width')).toBe(false)
+    patchProp(img, 'width', null, 0)
+    expect(img.hasAttribute('width')).toBe(true)
+
+    patchProp(img, 'width', null, null)
+    expect(img.hasAttribute('width')).toBe(false)
+    patchProp(img, 'width', null, 0)
+    expect(img.hasAttribute('width')).toBe(true)
+
+    patchProp(img, 'width', null, undefined)
+    expect(img.hasAttribute('width')).toBe(false)
+    patchProp(img, 'width', null, 0)
+    expect(img.hasAttribute('width')).toBe(true)
   })
 
   test('form attribute', () => {
@@ -128,5 +145,15 @@ describe('runtime-dom: props patching', () => {
     // non existant element
     expect(el.form).toBe(null)
     expect(el.getAttribute('form')).toBe('foo')
+    // remove attribute
+    patchProp(el, 'form', 'foo', null)
+    expect(el.getAttribute('form')).toBe(null)
+  })
+
+  test('readonly type prop on textarea', () => {
+    const el = document.createElement('textarea')
+    // just to verify that it doesn't throw when i.e. switching a dynamic :is from an 'input' to a 'textarea'
+    // see https://github.com/vuejs/vue-next/issues/2766
+    patchProp(el, 'type', 'text', null)
   })
 })

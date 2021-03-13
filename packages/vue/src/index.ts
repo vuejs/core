@@ -7,7 +7,9 @@ import * as runtimeDom from '@vue/runtime-dom'
 import { isString, NOOP, generateCodeFrame, extend } from '@vue/shared'
 import { InternalRenderFunction } from 'packages/runtime-core/src/component'
 
-__DEV__ && initDev()
+if (__DEV__) {
+  initDev()
+}
 
 const compileCache: Record<string, RenderFunction> = Object.create(null)
 

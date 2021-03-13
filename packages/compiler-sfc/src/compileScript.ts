@@ -168,7 +168,7 @@ export function compileScript(
     string,
     {
       isType: boolean
-      imported: string | null
+      imported: string
       source: string
     }
   > = Object.create(null)
@@ -246,7 +246,7 @@ export function compileScript(
     }
     userImports[local] = {
       isType,
-      imported: imported || null,
+      imported: imported || 'default',
       source
     }
   }
@@ -597,19 +597,23 @@ export function compileScript(
 
       // dedupe imports
       let removed = 0
-      let prev: Node | undefined, next: Node | undefined
-      const removeSpecifier = (node: Node) => {
+      const removeSpecifier = (i: number) => {
+        const removeLeft = i > removed
         removed++
+        const current = node.specifiers[i]
+        const next = node.specifiers[i + 1]
         s.remove(
-          prev ? prev.end! + startOffset : node.start! + startOffset,
-          next && !prev ? next.start! + startOffset : node.end! + startOffset
+          removeLeft
+            ? node.specifiers[i - 1].end! + startOffset
+            : current.start! + startOffset,
+          next && !removeLeft
+            ? next.start! + startOffset
+            : current.end! + startOffset
         )
       }
 
       for (let i = 0; i < node.specifiers.length; i++) {
         const specifier = node.specifiers[i]
-        prev = node.specifiers[i - 1]
-        next = node.specifiers[i + 1]
         const local = specifier.local.name
         const imported =
           specifier.type === 'ImportSpecifier' &&
@@ -621,11 +625,11 @@ export function compileScript(
           source === 'vue' &&
           (imported === DEFINE_PROPS || imported === DEFINE_EMIT)
         ) {
-          removeSpecifier(specifier)
+          removeSpecifier(i)
         } else if (existing) {
           if (existing.source === source && existing.imported === imported) {
             // already imported in <script setup>, dedupe
-            removeSpecifier(specifier)
+            removeSpecifier(i)
           } else {
             error(`different imports aliased to same local name.`, specifier)
           }
@@ -739,7 +743,7 @@ export function compileScript(
   if (enableRefSugar && Object.keys(refBindings).length) {
     for (const node of scriptSetupAst) {
       if (node.type !== 'ImportDeclaration') {
-        walkIdentifiers(node, (id, parent) => {
+        walkIdentifiers(node, (id, parent, parentStack) => {
           if (refBindings[id.name] && !refIdentifiers.has(id)) {
             if (isStaticProperty(parent) && parent.shorthand) {
               // let binding used in a property shorthand
@@ -807,10 +811,12 @@ export function compileScript(
   for (const key in typeDeclaredProps) {
     bindingMetadata[key] = BindingTypes.PROPS
   }
-  for (const [key, { isType, source }] of Object.entries(userImports)) {
+  for (const [key, { isType, imported, source }] of Object.entries(
+    userImports
+  )) {
     if (isType) continue
     bindingMetadata[key] =
-      source.endsWith('.vue') || source === 'vue'
+      (imported === 'default' && source.endsWith('.vue')) || source === 'vue'
         ? BindingTypes.SETUP_CONST
         : BindingTypes.SETUP_MAYBE_REF
   }
@@ -1034,12 +1040,15 @@ function walkDeclaration(
       )
       if (id.type === 'Identifier') {
         let bindingType
-        if (
+        const userReactiveBinding = userImportAlias['reactive'] || 'reactive'
+        if (isCallOf(init, userReactiveBinding)) {
+          // treat reactive() calls as let since it's meant to be mutable
+          bindingType = BindingTypes.SETUP_LET
+        } else if (
           // if a declaration is a const literal, we can mark it so that
           // the generated render fn code doesn't need to unref() it
           isDefineCall ||
-          (isConst &&
-            canNeverBeRef(init!, userImportAlias['reactive'] || 'reactive'))
+          (isConst && canNeverBeRef(init!, userReactiveBinding))
         ) {
           bindingType = BindingTypes.SETUP_CONST
         } else if (isConst) {
@@ -1335,8 +1344,6 @@ function genRuntimeEmits(emits: Set<string>) {
     : ``
 }
 
-const parentStack: Node[] = []
-
 /**
  * Walk an AST and find identifiers that are variable references.
  * This is largely the same logic with `transformExpressions` in compiler-core
@@ -1345,15 +1352,19 @@ const parentStack: Node[] = []
  */
 function walkIdentifiers(
   root: Node,
-  onIdentifier: (node: Identifier, parent: Node) => void
+  onIdentifier: (node: Identifier, parent: Node, parentStack: Node[]) => void
 ) {
+  const parentStack: Node[] = []
   const knownIds: Record<string, number> = Object.create(null)
   ;(walk as any)(root, {
     enter(node: Node & { scopeIds?: Set<string> }, parent: Node | undefined) {
       parent && parentStack.push(parent)
       if (node.type === 'Identifier') {
-        if (!knownIds[node.name] && isRefIdentifier(node, parent!)) {
-          onIdentifier(node, parent!)
+        if (
+          !knownIds[node.name] &&
+          isRefIdentifier(node, parent!, parentStack)
+        ) {
+          onIdentifier(node, parent!, parentStack)
         }
       } else if (isFunction(node)) {
         // walk function expressions and add its arguments to known identifiers
@@ -1409,7 +1420,7 @@ function walkIdentifiers(
   })
 }
 
-function isRefIdentifier(id: Identifier, parent: Node) {
+function isRefIdentifier(id: Identifier, parent: Node, parentStack: Node[]) {
   // declaration id
   if (
     (parent.type === 'VariableDeclarator' ||
@@ -1474,7 +1485,10 @@ function isFunction(node: Node): node is FunctionNode {
   return /Function(?:Expression|Declaration)$|Method$/.test(node.type)
 }
 
-function isCallOf(node: Node | null, name: string): node is CallExpression {
+function isCallOf(
+  node: Node | null | undefined,
+  name: string
+): node is CallExpression {
   return !!(
     node &&
     node.type === 'CallExpression' &&
