@@ -839,12 +839,15 @@ function callHookFromExtends(
   if (base.extends) {
     callHookFromExtends(name, type, base.extends, instance)
   }
+  if (base.mixins) {
+    callHookFromMixins(name, type, base.mixins, instance)
+  }
+
   const baseHook = base[name]
   if (baseHook) {
     callWithAsyncErrorHandling(baseHook.bind(instance.proxy!), instance, type)
   }
 }
-
 function callHookFromMixins(
   name: 'beforeCreate' | 'created',
   type: LifecycleHooks,
@@ -855,6 +858,10 @@ function callHookFromMixins(
     const chainedMixins = mixins[i].mixins
     if (chainedMixins) {
       callHookFromMixins(name, type, chainedMixins, instance)
+    }
+    const chainedExtends = mixins[i].extends
+    if (chainedExtends) {
+      callHookFromExtends(name, type, chainedExtends, instance)
     }
     const fn = mixins[i][name]
     if (fn) {

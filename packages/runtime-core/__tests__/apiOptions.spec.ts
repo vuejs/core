@@ -799,6 +799,88 @@ describe('api: options', () => {
     ])
   })
 
+  test('extends in mixins', () => {
+    const calls: string[] = []
+    const BaseA = {
+      beforeCreate() {
+        calls.push('beforeCreateA')
+      },
+      created() {
+        calls.push('createdA')
+      }
+    }
+    const MixinB = {
+      mixins: [BaseA],
+      beforeCreate() {
+        calls.push('beforeCreateB')
+      },
+      created() {
+        calls.push('createdB')
+      }
+    }
+    const Comp = {
+      extends: MixinB,
+      beforeCreate() {
+        calls.push('selfBeforeCreate')
+      },
+      created() {
+        calls.push('selfCreated')
+      },
+      render() {}
+    }
+
+    renderToString(h(Comp))
+    expect(calls).toEqual([
+      'beforeCreateA',
+      'beforeCreateB',
+      'selfBeforeCreate',
+      'createdA',
+      'createdB',
+      'selfCreated'
+    ])
+  })
+
+  test('mixins in extends', () => {
+    const calls: string[] = []
+    const BaseA = {
+      beforeCreate() {
+        calls.push('beforeCreateA')
+      },
+      created() {
+        calls.push('createdA')
+      }
+    }
+    const ExtendB = {
+      extends: BaseA,
+      beforeCreate() {
+        calls.push('beforeCreateB')
+      },
+      created() {
+        calls.push('createdB')
+      }
+    }
+    const Comp = {
+      mixins: [ExtendB],
+      beforeCreate() {
+        calls.push('selfBeforeCreate')
+      },
+      created() {
+        calls.push('selfCreated')
+      },
+      render() {}
+    }
+
+    renderToString(h(Comp))
+    expect(calls).toEqual([
+      'beforeCreateA',
+      'beforeCreateB',
+      'selfBeforeCreate',
+      'createdA',
+      'createdB',
+      'selfCreated'
+    ])
+  })
+
   test('flatten merged options', async () => {
     const MixinBase = {
       msg1: 'base'
