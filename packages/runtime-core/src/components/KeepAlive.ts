@@ -96,7 +96,9 @@ export class Cache implements KeepAliveCache {
       _keys.add(key)
       // prune oldest entry
       if (_max && _keys.size > _max) {
-        this.delete(_keys.values().next().value)
+        const staleKey = _keys.values().next().value
+        this.pruneCacheEntry(_cache.get(staleKey)!)
+        this.delete(staleKey)
       }
     }
     return cached
@@ -105,10 +107,8 @@ export class Cache implements KeepAliveCache {
     this._cache.set(key, value)
   }
   delete(key: CacheKey) {
-    const { _cache, _keys } = this
-    this.pruneCacheEntry(_cache.get(key)!)
-    _cache.delete(key)
-    _keys.delete(key)
+    this._cache.delete(key)
+    this._keys.delete(key)
   }
   forEach(
     fn: (value: VNode, key: CacheKey, map: Map<CacheKey, VNode>) => void,
@@ -238,6 +238,7 @@ const KeepAliveImpl = {
         const name = getMatchingName(vnode, props.matchBy!)
         if (name && (!filter || !filter(name))) {
           cache.delete(key)
+          pruneCacheEntry(vnode)
         }
       })
     }
@@ -267,6 +268,7 @@ const KeepAliveImpl = {
     onBeforeUnmount(() => {
       cache.forEach((cached, key) => {
         cache.delete(key)
+        pruneCacheEntry(cached)
         const { subTree, suspense } = instance
         const vnode = getInnerChild(subTree)
         if (cached.type === vnode.type) {
@@ -313,6 +315,7 @@ const KeepAliveImpl = {
       cache.forEach((cached, key) => {
         if (cached.type === vnode.type && cached.key !== vnode.key) {
           cache.delete(key)
+          pruneCacheEntry(cached)
         }
       })
 

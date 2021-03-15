@@ -937,17 +937,26 @@ describe('KeepAlive', () => {
     expect(serializeInner(root)).toBe(`<div>one</div>`)
     expect(_cache.size).toBe(1)
     expect([..._cache.keys()]).toEqual([one])
+    assertHookCalls(one, [1, 1, 1, 0, 0])
+    assertHookCalls(two, [0, 0, 0, 0, 0])
+
     instanceRef.value.msg = 'changed'
     await nextTick()
     expect(serializeInner(root)).toBe(`<div>changed</div>`)
+
     viewRef.value = 'two'
     await nextTick()
     expect(serializeInner(root)).toBe(`<div>two</div>`)
     expect(_cache.size).toBe(2)
     expect([..._cache.keys()]).toEqual([one, two])
+    assertHookCalls(one, [1, 1, 1, 1, 0])
+    assertHookCalls(two, [1, 1, 1, 0, 0])
+
     toggle.value = false
     await nextTick()
     expect(_cache.size).toBe(0)
+    assertHookCalls(one, [1, 1, 1, 1, 1])
+    assertHookCalls(two, [1, 1, 1, 1, 1])
   })
 
   test('warn custom cache with the `max` prop', () => {
