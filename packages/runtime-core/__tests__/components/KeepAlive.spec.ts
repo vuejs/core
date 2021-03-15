@@ -1003,10 +1003,26 @@ describe('KeepAlive', () => {
     assertHookCalls(one, [1, 1, 1, 1, 0])
     assertHookCalls(two, [1, 1, 1, 0, 0])
 
+    // delete the cache manually
+    const itr = _cache.keys()
+    const key1 = itr.next().value
+    cache.pruneCacheEntry!(_cache.get(key1))
+    _cache.delete(key1)
+    await nextTick()
+    assertHookCalls(one, [1, 1, 1, 1, 1])
+
+    viewRef.value = 'one'
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>one</div>`)
+    expect(_cache.size).toBe(2)
+    expect([..._cache.keys()]).toEqual([two, one])
+    assertHookCalls(one, [2, 2, 2, 1, 1])
+    assertHookCalls(two, [1, 1, 1, 1, 0])
+
     toggle.value = false
     await nextTick()
     expect(_cache.size).toBe(0)
-    assertHookCalls(one, [1, 1, 1, 1, 1])
+    assertHookCalls(one, [2, 2, 2, 2, 2])
     assertHookCalls(two, [1, 1, 1, 1, 1])
   })
 
