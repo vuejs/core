@@ -16,7 +16,11 @@ import {
   cloneVNode,
   provide
 } from '@vue/runtime-test'
-import { KeepAliveProps } from '../../src/components/KeepAlive'
+import {
+  KeepAliveProps,
+  KeepAliveCache,
+  Cache
+} from '../../src/components/KeepAlive'
 
 describe('KeepAlive', () => {
   let one: ComponentOptions
@@ -398,32 +402,35 @@ describe('KeepAlive', () => {
       await assertNameMatch({ include: 'one,two', exclude: 'two' })
     })
 
-    test('include (string) w/ key', async () => {
-      await assertNameMatch({ include: 'one' }, true)
+    test('include (string) w/ matchBy key', async () => {
+      await assertNameMatch({ include: 'one', matchBy: 'key' }, true)
     })
 
-    test('include (regex) w/ key', async () => {
-      await assertNameMatch({ include: /^one$/ }, true)
+    test('include (regex) w/ matchBy key', async () => {
+      await assertNameMatch({ include: /^one$/, matchBy: 'key' }, true)
     })
 
-    test('include (array) w/ key', async () => {
-      await assertNameMatch({ include: ['one'] }, true)
+    test('include (array) w/ matchBy key', async () => {
+      await assertNameMatch({ include: ['one'], matchBy: 'key' }, true)
     })
 
-    test('exclude (string) w/ key', async () => {
-      await assertNameMatch({ exclude: 'two' }, true)
+    test('exclude (string) w/ matchBy key', async () => {
+      await assertNameMatch({ exclude: 'two', matchBy: 'key' }, true)
     })
 
-    test('exclude (regex) w/ key', async () => {
-      await assertNameMatch({ exclude: /^two$/ }, true)
+    test('exclude (regex) w/ matchBy key', async () => {
+      await assertNameMatch({ exclude: /^two$/, matchBy: 'key' }, true)
     })
 
-    test('exclude (array) w/ key', async () => {
-      await assertNameMatch({ exclude: ['two'] }, true)
+    test('exclude (array) w/ matchBy key', async () => {
+      await assertNameMatch({ exclude: ['two'], matchBy: 'key' }, true)
     })
 
-    test('include + exclude w/ key', async () => {
-      await assertNameMatch({ include: 'one,two', exclude: 'two' }, true)
+    test('include + exclude w/ matchBy key', async () => {
+      await assertNameMatch(
+        { include: 'one,two', exclude: 'two', matchBy: 'key' },
+        true
+      )
     })
 
     test('max', async () => {
@@ -861,5 +868,169 @@ describe('KeepAlive', () => {
     viewRef.value = 'one'
     await nextTick()
     expect(serializeInner(root)).toBe(`<div foo>changed</div>`)
+  })
+
+  test('reuse vnode', async () => {
+    const Comp = {
+      render() {
+        return 'one'
+      },
+      activated: jest.fn()
+    }
+    const reused = h(Comp)
+
+    const App = {
+      render() {
+        return [
+          reused, // `reused.el` will exist, it will be cloned in subsequent rendering
+          h(KeepAlive, null, {
+            // reuse here
+            default: () => h(reused)
+          })
+        ]
+      }
+    }
+
+    render(h(App), root)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`oneone`)
+    expect(Comp.activated).toHaveBeenCalledTimes(1)
+  })
+
+  test('custom caching strategy', async () => {
+    const _cache = new Map()
+    const cache: KeepAliveCache = {
+      get(key) {
+        _cache.get(key)
+      },
+      set(key, value) {
+        _cache.set(key, value)
+      },
+      delete(key) {
+        _cache.delete(key)
+      },
+      forEach(fn) {
+        _cache.forEach(fn)
+      }
+    }
+
+    const viewRef = ref('one')
+    const toggle = ref(true)
+    const instanceRef = ref<any>(null)
+    const App = {
+      render: () => {
+        return toggle.value
+          ? h(
+              KeepAlive,
+              { cache },
+              {
+                default: () => h(views[viewRef.value], { ref: instanceRef })
+              }
+            )
+          : null
+      }
+    }
+
+    render(h(App), root)
+    expect(cache.pruneCacheEntry).toBeDefined()
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>one</div>`)
+    expect(_cache.size).toBe(1)
+    expect([..._cache.keys()]).toEqual([one])
+    instanceRef.value.msg = 'changed'
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>changed</div>`)
+    viewRef.value = 'two'
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>two</div>`)
+    expect(_cache.size).toBe(2)
+    expect([..._cache.keys()]).toEqual([one, two])
+    toggle.value = false
+    await nextTick()
+    expect(_cache.size).toBe(0)
+  })
+
+  test('warn custom cache with the `max` prop', () => {
+    const _cache = new Map()
+    const cache: KeepAliveCache = {
+      get(key) {
+        _cache.get(key)
+      },
+      set(key, value) {
+        _cache.set(key, value)
+      },
+      delete(key) {
+        _cache.delete(key)
+      },
+      forEach(fn) {
+        _cache.forEach(fn)
+      }
+    }
+    render(
+      h({
+        render: () => {
+          return h(
+            KeepAlive,
+            { cache, max: 10 },
+            {
+              default: () => h(one)
+            }
+          )
+        }
+      }),
+      root
+    )
+
+    expect(
+      'The `max` prop will be ignored if you provide a custom caching strategy'
+    ).toHaveBeenWarned()
+  })
+
+  test('dynamic key changes', async () => {
+    const cache = new Cache()
+    const dynamicKey = ref(0)
+    const Comp = {
+      mounted: jest.fn(),
+      activated: jest.fn(),
+      deactivated: jest.fn(),
+      unmounted: jest.fn(),
+      render() {
+        return 'one'
+      }
+    }
+    function assertCount(calls: number[]) {
+      expect([
+        Comp.mounted.mock.calls.length,
+        Comp.activated.mock.calls.length,
+        Comp.deactivated.mock.calls.length,
+        Comp.unmounted.mock.calls.length
+      ]).toEqual(calls)
+    }
+
+    const App = {
+      render: () => {
+        return h(
+          KeepAlive,
+          { cache, matchBy: 'key' },
+          {
+            default: () => h(Comp, { key: dynamicKey.value })
+          }
+        )
+      }
+    }
+
+    render(h(App), root)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`one`)
+    assertCount([1, 1, 0, 0])
+    expect((cache as any)._cache.size).toBe(1)
+    expect([...(cache as any)._cache.keys()]).toEqual([0])
+
+    dynamicKey.value = 1
+    await nextTick()
+    expect(serializeInner(root)).toBe(`one`)
+    assertCount([2, 2, 0, 1])
+    expect((cache as any)._cache.size).toBe(1)
+    expect([...(cache as any)._cache.keys()]).toEqual([1])
   })
 })
