@@ -22,7 +22,8 @@ import {
   isArray,
   ShapeFlags,
   remove,
-  invokeArrayFns
+  invokeArrayFns,
+  hasOwn
 } from '@vue/shared'
 import { watch } from '../apiWatch'
 import {
@@ -44,10 +45,11 @@ export interface KeepAliveProps {
   include?: MatchPattern
   exclude?: MatchPattern
   max?: number | string
+  matchBy?: 'name' | 'key'
+  cache?: KeepAliveCache
 }
 
 type CacheKey = string | number | symbol | ConcreteComponent
-type Cache = Map<CacheKey, VNode>
 type Keys = Set<CacheKey>
 
 export interface KeepAliveContext extends ComponentRenderContext {
@@ -65,6 +67,60 @@ export interface KeepAliveContext extends ComponentRenderContext {
 export const isKeepAlive = (vnode: VNode): boolean =>
   (vnode.type as any).__isKeepAlive
 
+export interface KeepAliveCache {
+  get(key: CacheKey): VNode | void
+  set(key: CacheKey, value: VNode): void
+  delete(key: CacheKey): void
+  forEach(
+    fn: (value: VNode, key: CacheKey, map: Map<CacheKey, VNode>) => void,
+    thisArg?: any
+  ): void
+  pruneCacheEntry?: (cached: VNode) => void
+}
+
+export class Cache implements KeepAliveCache {
+  private readonly _cache = new Map<CacheKey, VNode>()
+  private readonly _keys: Keys = new Set<CacheKey>()
+  private readonly _max?: number
+  public pruneCacheEntry!: (cached: VNode) => void
+
+  constructor(readonly max?: string | number) {
+    this._max = parseInt(max as string, 10)
+  }
+
+  get(key: CacheKey) {
+    const { _cache, _keys, _max } = this
+    const cached = _cache.get(key)
+    if (cached) {
+      // make this key the freshest
+      _keys.delete(key)
+      _keys.add(key)
+    } else {
+      _keys.add(key)
+      // prune oldest entry
+      if (_max && _keys.size > _max) {
+        this.delete(_keys.values().next().value)
+      }
+    }
+    return cached
+  }
+  set(key: CacheKey, value: VNode) {
+    this._cache.set(key, value)
+  }
+  delete(key: CacheKey) {
+    const { _cache, _keys } = this
+    this.pruneCacheEntry(_cache.get(key)!)
+    _cache.delete(key)
+    _keys.delete(key)
+  }
+  forEach(
+    fn: (value: VNode, key: CacheKey, map: Map<CacheKey, VNode>) => void,
+    thisArg?: any
+  ) {
+    this._cache.forEach(fn.bind(thisArg))
+  }
+}
+
 const KeepAliveImpl: ComponentOptions = {
   name: `KeepAlive`,
 
@@ -76,7 +132,12 @@ const KeepAliveImpl: ComponentOptions = {
   props: {
     include: [String, RegExp, Array],
     exclude: [String, RegExp, Array],
-    max: [String, Number]
+    max: [String, Number],
+    matchBy: {
+      type: String,
+      default: 'name'
+    },
+    cache: Object
   },
 
   setup(props: KeepAliveProps, { slots }: SetupContext) {
@@ -94,9 +155,26 @@ const KeepAliveImpl: ComponentOptions = {
       return slots.default
     }
 
-    const cache: Cache = new Map()
-    const keys: Keys = new Set()
+    if (__DEV__ && props.cache && hasOwn(props, 'max')) {
+      warn(
+        'The `max` prop will be ignored if you provide a custom caching strategy'
+      )
+    }
+
+    const cache = props.cache || new Cache(props.max)
+    cache.pruneCacheEntry = pruneCacheEntry
+
     let current: VNode | null = null
+    function pruneCacheEntry(cached: VNode) {
+      if (!current || cached.type !== current.type) {
+        unmount(cached)
+      } else if (current) {
+        // current active instance should no longer be kept-alive.
+        // we can't unmount it now but it might be later, so reset its flag now.
+        resetShapeFlag(current)
+      }
+    }
+    
 
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
       ;(instance as any).__v_cache = cache
@@ -174,29 +252,16 @@ const KeepAliveImpl: ComponentOptions = {
 
     function pruneCache(filter?: (name: string) => boolean) {
       cache.forEach((vnode, key) => {
-        const name = getMatchingName(vnode)
+        const name = getMatchingName(vnode, props.matchBy!)
         if (name && (!filter || !filter(name))) {
-          pruneCacheEntry(key)
+          cache.delete(key)
         }
       })
     }
 
-    function pruneCacheEntry(key: CacheKey) {
-      const cached = cache.get(key) as VNode
-      if (!current || cached.type !== current.type) {
-        unmount(cached)
-      } else if (current) {
-        // current active instance should no longer be kept-alive.
-        // we can't unmount it now but it might be later, so reset its flag now.
-        resetShapeFlag(current)
-      }
-      cache.delete(key)
-      keys.delete(key)
-    }
-
     // prune cache on include/exclude prop change
     watch(
-      () => [props.include, props.exclude],
+      () => [props.include, props.exclude, props.matchBy],
       ([include, exclude]) => {
         include && pruneCache(name => matches(include, name))
         exclude && pruneCache(name => !matches(exclude, name))
@@ -217,7 +282,8 @@ const KeepAliveImpl: ComponentOptions = {
     onUpdated(cacheSubtree)
 
     onBeforeUnmount(() => {
-      cache.forEach(cached => {
+      cache.forEach((cached, key) => {
+        cache.delete(key)
         const { subTree, suspense } = instance
         const vnode = getInnerChild(subTree)
         if (cached.type === vnode.type) {
@@ -228,7 +294,6 @@ const KeepAliveImpl: ComponentOptions = {
           da && queuePostRenderEffect(da, suspense)
           return
         }
-        unmount(cached)
       })
     })
 
@@ -258,8 +323,15 @@ const KeepAliveImpl: ComponentOptions = {
 
       let vnode = getInnerChild(rawVNode)
       const comp = vnode.type as ConcreteComponent
-      const name = getMatchingName(vnode)
-      const { include, exclude, max } = props
+      const name = getMatchingName(vnode, props.matchBy!)
+      const { include, exclude } = props
+
+      // in the case of the key changes, delete stale instances
+      cache.forEach((cached, key) => {
+        if (cached.type === vnode.type && cached.key !== vnode.key) {
+          cache.delete(key)
+        }
+      })
 
       if (
         (include && (!name || !matches(include, name))) ||
@@ -296,21 +368,12 @@ const KeepAliveImpl: ComponentOptions = {
         }
         // avoid vnode being mounted as fresh
         vnode.shapeFlag |= ShapeFlags.COMPONENT_KEPT_ALIVE
-        // make this key the freshest
-        keys.delete(key)
-        keys.add(key)
-      } else {
-        keys.add(key)
-        // prune oldest entry
-        if (max && keys.size > parseInt(max as string, 10)) {
-          pruneCacheEntry(keys.values().next().value)
-        }
       }
       // avoid vnode being unmounted
       vnode.shapeFlag |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
 
       current = vnode
-      return rawVNode
+      return rawVNode.shapeFlag & ShapeFlags.SUSPENSE ? rawVNode : vnode
     }
   }
 }
@@ -421,15 +484,14 @@ function getInnerChild(vnode: VNode) {
   return vnode.shapeFlag & ShapeFlags.SUSPENSE ? vnode.ssContent! : vnode
 }
 
-function getMatchingName(vnode: VNode) {
+function getMatchingName(vnode: VNode, matchBy: 'name' | 'key') {
   const comp = vnode.type as ConcreteComponent
-  let name = getComponentName(
-    isAsyncWrapper(vnode)
-      ? (vnode.type as ComponentOptions).__asyncResolved || {}
-      : comp
-  )
-  if (!name && vnode.key) {
-    name = String(vnode.key)
+  if (matchBy === 'name') {
+    return getComponentName(
+      isAsyncWrapper(vnode)
+        ? (vnode.type as ComponentOptions).__asyncResolved || {}
+        : comp
+    )
   }
-  return name
+  return String(vnode.key)
 }
