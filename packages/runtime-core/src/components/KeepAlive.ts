@@ -166,7 +166,11 @@ const KeepAliveImpl: ComponentOptions = {
 
     let current: VNode | null = null
     function pruneCacheEntry(cached: VNode) {
-      if (!current || cached.type !== current.type) {
+      if (
+        !current ||
+        cached.type !== current.type ||
+        (props.matchBy === 'key' && cached.key !== current.key)
+      ) {
         unmount(cached)
       } else if (current) {
         // current active instance should no longer be kept-alive.
@@ -288,7 +292,10 @@ const KeepAliveImpl: ComponentOptions = {
         pruneCacheEntry(cached)
         const { subTree, suspense } = instance
         const vnode = getInnerChild(subTree)
-        if (cached.type === vnode.type) {
+        if (
+          cached.type === vnode.type &&
+          (props.matchBy !== 'key' || cached.key === vnode.key)
+        ) {
           // current instance will be unmounted as part of keep-alive's unmount
           resetShapeFlag(vnode)
           // but invoke its deactivated hook here
@@ -327,14 +334,6 @@ const KeepAliveImpl: ComponentOptions = {
       const comp = vnode.type as ConcreteComponent
       const name = getMatchingName(vnode, props.matchBy!)
       const { include, exclude } = props
-
-      // in the case of the key changes, delete stale instances
-      cache.forEach((cached, key) => {
-        if (cached.type === vnode.type && cached.key !== vnode.key) {
-          cache.delete(key)
-          pruneCacheEntry(cached)
-        }
-      })
 
       if (
         (include && (!name || !matches(include, name))) ||

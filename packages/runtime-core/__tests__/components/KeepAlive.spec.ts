@@ -1065,6 +1065,7 @@ describe('KeepAlive', () => {
   test('dynamic key changes', async () => {
     const cache = new Cache()
     const dynamicKey = ref(0)
+    const toggle = ref(true)
     const Comp = {
       mounted: jest.fn(),
       activated: jest.fn(),
@@ -1085,13 +1086,15 @@ describe('KeepAlive', () => {
 
     const App = {
       render: () => {
-        return h(
-          KeepAlive,
-          { cache, matchBy: 'key' },
-          {
-            default: () => h(Comp, { key: dynamicKey.value })
-          }
-        )
+        return toggle.value
+          ? h(
+              KeepAlive,
+              { cache, matchBy: 'key' },
+              {
+                default: () => h(Comp, { key: dynamicKey.value })
+              }
+            )
+          : null
       }
     }
 
@@ -1105,8 +1108,14 @@ describe('KeepAlive', () => {
     dynamicKey.value = 1
     await nextTick()
     expect(serializeInner(root)).toBe(`one`)
-    assertCount([2, 2, 0, 1])
-    expect((cache as any)._cache.size).toBe(1)
-    expect([...(cache as any)._cache.keys()]).toEqual([1])
+    assertCount([2, 2, 1, 0])
+    expect((cache as any)._cache.size).toBe(2)
+    expect([...(cache as any)._cache.keys()]).toEqual([0, 1])
+
+    toggle.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<!---->`)
+    assertCount([2, 2, 2, 2])
+    expect((cache as any)._cache.size).toBe(0)
   })
 })
