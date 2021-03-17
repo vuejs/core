@@ -198,6 +198,12 @@ const KeepAliveImpl: ComponentOptions = {
 
     sharedContext.activate = (vnode, container, anchor, isSVG, optimized) => {
       const instance = vnode.component!
+      if (instance.ba) {
+        const currentState = instance.isDeactivated
+        instance.isDeactivated = false
+        invokeArrayFns(instance.ba)
+        instance.isDeactivated = currentState
+      }
       move(vnode, container, anchor, MoveType.ENTER, parentSuspense)
       // in case props have changed
       patch(
@@ -230,8 +236,14 @@ const KeepAliveImpl: ComponentOptions = {
 
     sharedContext.deactivate = (vnode: VNode) => {
       const instance = vnode.component!
+      if (instance.bda) {
+        invokeKeepAliveHooks(instance.bda)
+      }
       move(vnode, storageContainer, null, MoveType.LEAVE, parentSuspense)
       queuePostRenderEffect(() => {
+        if (instance.bda) {
+          resetHookState(instance.bda)
+        }
         if (instance.da) {
           invokeArrayFns(instance.da)
         }
@@ -296,6 +308,10 @@ const KeepAliveImpl: ComponentOptions = {
           cached.type === vnode.type &&
           (props.matchBy !== 'key' || cached.key === vnode.key)
         ) {
+          // invoke its beforeDeactivate hook here
+          if (vnode.component!.bda) {
+            invokeArrayFns(vnode.component!.bda)
+          }
           // current instance will be unmounted as part of keep-alive's unmount
           resetShapeFlag(vnode)
           // but invoke its deactivated hook here
@@ -405,11 +421,25 @@ function matches(pattern: MatchPattern, name: string): boolean {
   return false
 }
 
+export function onBeforeActivate(
+  hook: Function,
+  target?: ComponentInternalInstance | null
+) {
+  registerKeepAliveHook(hook, LifecycleHooks.BEFORE_ACTIVATE, target)
+}
+
 export function onActivated(
   hook: Function,
   target?: ComponentInternalInstance | null
 ) {
   registerKeepAliveHook(hook, LifecycleHooks.ACTIVATED, target)
+}
+
+export function onBeforeDeactivate(
+  hook: Function,
+  target?: ComponentInternalInstance | null
+) {
+  registerKeepAliveHook(hook, LifecycleHooks.BEFORE_DEACTIVATE, target)
 }
 
 export function onDeactivated(
@@ -419,6 +449,7 @@ export function onDeactivated(
   registerKeepAliveHook(hook, LifecycleHooks.DEACTIVATED, target)
 }
 
+export type WrappedHook = Function & { __called?: boolean }
 function registerKeepAliveHook(
   hook: Function & { __wdc?: Function },
   type: LifecycleHooks,
@@ -427,7 +458,7 @@ function registerKeepAliveHook(
   // cache the deactivate branch check wrapper for injected hooks so the same
   // hook can be properly deduped by the scheduler. "__wdc" stands for "with
   // deactivation check".
-  const wrappedHook =
+  const wrappedHook: WrappedHook =
     hook.__wdc ||
     (hook.__wdc = () => {
       // only fire the hook if the target instance is NOT in a deactivated branch.
@@ -440,6 +471,7 @@ function registerKeepAliveHook(
       }
       hook()
     })
+  wrappedHook.__called = false
   injectHook(type, wrappedHook, target)
   // In addition to registering it on the target instance, we walk up the parent
   // chain and register it on all ancestor instances that are keep-alive roots.
@@ -496,4 +528,18 @@ function getMatchingName(vnode: VNode, matchBy: 'name' | 'key') {
     )
   }
   return String(vnode.key)
+}
+
+export function invokeKeepAliveHooks(hooks: WrappedHook[]) {
+  for (let i = 0; i < hooks.length; i++) {
+    const hook = hooks[i]
+    if (!hook.__called) {
+      hook()
+      hook.__called = true
+    }
+  }
+}
+
+export function resetHookState(hooks: WrappedHook[]) {
+  hooks.forEach((hook: WrappedHook) => (hook.__called = false))
 }
