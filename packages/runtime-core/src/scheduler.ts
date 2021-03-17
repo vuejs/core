@@ -92,11 +92,8 @@ export function queueJob(job: SchedulerJob) {
     job !== currentPreFlushParentJob
   ) {
     const pos = findInsertionIndex(job)
-    if (pos > -1) {
-      queue.splice(pos, 0, job)
-    } else {
-      queue.push(job)
-    }
+    queue.splice(pos, 0, job)
+
     queueFlush()
   }
 }
