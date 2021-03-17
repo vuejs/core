@@ -449,6 +449,8 @@ export function onDeactivated(
   registerKeepAliveHook(hook, LifecycleHooks.DEACTIVATED, target)
 }
 
+// the beforeActivate/beforeDeactivate hook is called synchronously
+// and cannot be deduped by scheduler, so we need the `__called` flag
 export type WrappedHook = Function & { __called?: boolean }
 function registerKeepAliveHook(
   hook: Function & { __wdc?: Function },
