@@ -35,6 +35,7 @@ import {
 } from '../renderer'
 import { setTransitionHooks } from './BaseTransition'
 import { ComponentRenderContext } from '../componentPublicInstance'
+import { isSuspense } from './Suspense'
 
 type MatchPattern = string | RegExp | string[] | RegExp[]
 
@@ -323,7 +324,7 @@ const KeepAliveImpl = {
       } else if (
         !isVNode(rawVNode) ||
         (!(rawVNode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) &&
-          !(rawVNode.shapeFlag & ShapeFlags.SUSPENSE))
+          !isSuspense(rawVNode.type))
       ) {
         current = null
         return rawVNode
@@ -348,7 +349,7 @@ const KeepAliveImpl = {
       // clone vnode if it's reused because we are going to mutate it
       if (vnode.el) {
         vnode = cloneVNode(vnode)
-        if (rawVNode.shapeFlag & ShapeFlags.SUSPENSE) {
+        if (isSuspense(rawVNode.type)) {
           rawVNode.ssContent = vnode
         }
       }
@@ -374,7 +375,7 @@ const KeepAliveImpl = {
       vnode.shapeFlag |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
 
       current = vnode
-      return rawVNode.shapeFlag & ShapeFlags.SUSPENSE ? rawVNode : vnode
+      return isSuspense(rawVNode.type) ? rawVNode : vnode
     }
   }
 }
@@ -496,7 +497,7 @@ function resetShapeFlag(vnode: VNode) {
 }
 
 function getInnerChild(vnode: VNode) {
-  return vnode.shapeFlag & ShapeFlags.SUSPENSE ? vnode.ssContent! : vnode
+  return isSuspense(vnode.type) ? vnode.ssContent! : vnode
 }
 
 function getMatchingName(vnode: VNode, matchBy: 'name' | 'key') {
