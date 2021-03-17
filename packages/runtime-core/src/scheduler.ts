@@ -63,8 +63,9 @@ export function nextTick(
 // which can prevent the job from being skipped and also can avoid repeated patching.
 function findInsertionIndex(job: SchedulerJob) {
   // the start index should be `flushIndex + 1`
+  let len = queue.length
   let start = flushIndex + 1
-  let end = queue.length
+  let end = len
   const jobId = getId(job)
 
   while (start < end) {
@@ -73,7 +74,7 @@ function findInsertionIndex(job: SchedulerJob) {
     middleJobId < jobId ? (start = middle + 1) : (end = middle)
   }
 
-  return start
+  return start !== len ? start : -1
 }
 
 export function queueJob(job: SchedulerJob) {
