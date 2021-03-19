@@ -1344,6 +1344,23 @@ function genRuntimeEmits(emits: Set<string>) {
     : ``
 }
 
+function markScopeIdentifier(
+  node: Node & { scopeIds?: Set<string> },
+  child: Identifier,
+  knownIds: Record<string, number>
+) {
+  const { name } = child
+  if (node.scopeIds && node.scopeIds.has(name)) {
+    return
+  }
+  if (name in knownIds) {
+    knownIds[name]++
+  } else {
+    knownIds[name] = 1
+  }
+  ;(node.scopeIds || (node.scopeIds = new Set())).add(name)
+}
+
 /**
  * Walk an AST and find identifiers that are variable references.
  * This is largely the same logic with `transformExpressions` in compiler-core
@@ -1366,6 +1383,18 @@ function walkIdentifiers(
         ) {
           onIdentifier(node, parent!, parentStack)
         }
+      } else if (node.type === 'BlockStatement' && isFunction(parent!)) {
+        node.body.forEach(p => {
+          if (p.type === 'VariableDeclaration') {
+            ;(walk as any)(p, {
+              enter(child: Node, parent: Node) {
+                if (child.type === 'Identifier') {
+                  markScopeIdentifier(node, child, knownIds)
+                }
+              }
+            })
+          }
+        })
       } else if (isFunction(node)) {
         // walk function expressions and add its arguments to known identifiers
         // so that we don't prefix them
@@ -1384,16 +1413,7 @@ function walkIdentifiers(
                   parent.right === child
                 )
               ) {
-                const { name } = child
-                if (node.scopeIds && node.scopeIds.has(name)) {
-                  return
-                }
-                if (name in knownIds) {
-                  knownIds[name]++
-                } else {
-                  knownIds[name] = 1
-                }
-                ;(node.scopeIds || (node.scopeIds = new Set())).add(name)
+                markScopeIdentifier(node, child, knownIds)
               }
             }
           })
