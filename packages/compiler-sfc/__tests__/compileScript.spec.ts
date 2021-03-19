@@ -728,6 +728,7 @@ const emit = defineEmit(['a', 'b'])
       expect(content).toMatch('console.log(a)')
       expect(content).toMatch('console.log(b.value)')
       expect(content).toMatch('console.log(c)')
+      expect(content).toMatch('console.log($d)')
       assertCode(content)
     })
 
