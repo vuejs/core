@@ -15,7 +15,8 @@ import {
   nodeOps,
   serializeInner,
   TestElement,
-  h
+  h,
+  createApp
 } from '@vue/runtime-test'
 import {
   ITERATE_KEY,
@@ -856,5 +857,24 @@ describe('api: watch', () => {
     await nextTick()
 
     expect(instance!.effects![0].active).toBe(false)
+  })
+
+  test('this.$watch should pass `this.proxy` to watch source as the first argument ', () => {
+    let instance: any
+    const source = jest.fn()
+
+    const Comp = defineComponent({
+      render() {},
+      created(this: any) {
+        instance = this
+        this.$watch(source, function() {})
+      }
+    })
+
+    const root = nodeOps.createElement('div')
+    createApp(Comp).mount(root)
+
+    expect(instance).toBeDefined()
+    expect(source).toHaveBeenCalledWith(instance)
   })
 })

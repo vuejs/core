@@ -141,6 +141,18 @@ const myEmit = defineEmit(['foo', 'bar'])
       )
     })
 
+    // #2740
+    test('should allow defineProps/Emit at the start of imports', () => {
+      assertCode(
+        compile(`<script setup>
+      import { defineProps, defineEmit, ref } from 'vue'
+      defineProps(['foo'])
+      defineEmit(['bar'])
+      const r = ref(0)
+      </script>`).content
+      )
+    })
+
     test('dedupe between user & helper', () => {
       const { content } = compile(`
       <script setup>

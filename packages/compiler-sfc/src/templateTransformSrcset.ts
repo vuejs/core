@@ -46,7 +46,7 @@ export const transformSrcset: NodeTransform = (
         if (attr.name === 'srcset' && attr.type === NodeTypes.ATTRIBUTE) {
           if (!attr.value) return
           const value = attr.value.content
-
+          if (!value) return
           const imageCandidates: ImageCandidate[] = value.split(',').map(s => {
             // The attribute value arrives here with all whitespace, except
             // normal spaces, represented by escape sequences
@@ -99,8 +99,7 @@ export const transformSrcset: NodeTransform = (
               const { path } = parseUrl(url)
               let exp: SimpleExpressionNode
               if (path) {
-                const importsArray = Array.from(context.imports)
-                const existingImportsIndex = importsArray.findIndex(
+                const existingImportsIndex = context.imports.findIndex(
                   i => i.path === path
                 )
                 if (existingImportsIndex > -1) {
@@ -112,12 +111,12 @@ export const transformSrcset: NodeTransform = (
                   )
                 } else {
                   exp = createSimpleExpression(
-                    `_imports_${importsArray.length}`,
+                    `_imports_${context.imports.length}`,
                     false,
                     attr.loc,
                     ConstantTypes.CAN_HOIST
                   )
-                  context.imports.add({ exp, path })
+                  context.imports.push({ exp, path })
                 }
                 compoundExpression.children.push(exp)
               }

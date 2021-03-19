@@ -2,13 +2,13 @@ import {
   createApp,
   h,
   createCommentVNode,
-  withScopeId,
   resolveComponent,
   ComponentOptions,
   ref,
   defineComponent,
   createTextVNode,
-  createStaticVNode
+  createStaticVNode,
+  withCtx
 } from 'vue'
 import { escapeHtml } from '@vue/shared'
 import { renderToString } from '../src/renderToString'
@@ -634,34 +634,32 @@ function testRender(type: string, render: typeof renderToString) {
     describe('scopeId', () => {
       // note: here we are only testing scopeId handling for vdom serialization.
       // compiled srr render functions will include scopeId directly in strings.
-      const withId = withScopeId('data-v-test')
-      const withChildId = withScopeId('data-v-child')
 
       test('basic', async () => {
-        expect(
-          await render(
-            withId(() => {
-              return h('div')
-            })()
-          )
-        ).toBe(`<div data-v-test></div>`)
+        const Foo = {
+          __scopeId: 'data-v-test',
+          render() {
+            return h('div')
+          }
+        }
+        expect(await render(h(Foo))).toBe(`<div data-v-test></div>`)
       })
 
       test('with slots', async () => {
         const Child = {
           __scopeId: 'data-v-child',
-          render: withChildId(function(this: any) {
+          render: function(this: any) {
             return h('div', this.$slots.default())
-          })
+          }
         }
 
         const Parent = {
           __scopeId: 'data-v-test',
-          render: withId(() => {
+          render: () => {
             return h(Child, null, {
-              default: withId(() => h('span', 'slot'))
+              default: withCtx(() => h('span', 'slot'))
             })
-          })
+          }
         }
 
         expect(await render(h(Parent))).toBe(

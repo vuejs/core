@@ -59,6 +59,9 @@ export interface SFCDescriptor {
   styles: SFCStyleBlock[]
   customBlocks: SFCBlock[]
   cssVars: string[]
+  // whether the SFC uses :slotted() modifier.
+  // this is used as a compiler optimization hint.
+  slotted: boolean
 }
 
 export interface SFCParseResult {
@@ -100,7 +103,8 @@ export function parse(
     scriptSetup: null,
     styles: [],
     customBlocks: [],
-    cssVars: []
+    cssVars: [],
+    slotted: false
   }
 
   const errors: (CompilerError | SyntaxError)[] = []
@@ -121,6 +125,7 @@ export function parse(
               p.type === NodeTypes.ATTRIBUTE &&
               p.name === 'lang' &&
               p.value &&
+              p.value.content &&
               p.value.content !== 'html'
           ))
       ) {
@@ -229,6 +234,12 @@ export function parse(
   if (descriptor.cssVars.length) {
     warnExperimental(`v-bind() CSS variable injection`, 231)
   }
+
+  // check if the SFC uses :slotted
+  const slottedRE = /(?:::v-|:)slotted\(/
+  descriptor.slotted = descriptor.styles.some(
+    s => s.scoped && slottedRE.test(s.content)
+  )
 
   const result = {
     descriptor,

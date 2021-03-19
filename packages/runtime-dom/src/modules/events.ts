@@ -1,4 +1,4 @@
-import { isArray } from '@vue/shared'
+import { hyphenate, isArray } from '@vue/shared'
 import {
   ComponentInternalInstance,
   callWithAsyncErrorHandling
@@ -96,7 +96,7 @@ function parseName(name: string): [string, EventListenerOptions | undefined] {
       options
     }
   }
-  return [name.slice(2).toLowerCase(), options]
+  return [hyphenate(name.slice(2)), options]
 }
 
 function createInvoker(
