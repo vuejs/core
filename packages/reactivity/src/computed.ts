@@ -26,7 +26,9 @@ class ComputedRefImpl<T> {
 
   public readonly effect: ReactiveEffect<T>
 
-  public readonly __v_isRef = true;
+  public readonly __v_isRef = true
+  // flag to properly handle computed refs in readonly basehandlers
+  public readonly __v_isComputed = true;
   public readonly [ReactiveFlags.IS_READONLY]: boolean
 
   constructor(

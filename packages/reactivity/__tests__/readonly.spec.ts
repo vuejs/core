@@ -445,7 +445,11 @@ describe('reactivity/readonly', () => {
     r.value = true
 
     expect(rC.value).toBe(true)
-    ;(rC as any).randomProperty = true
+    expect(
+      'Set operation on key "_dirty" failed: target is readonly.'
+    ).not.toHaveBeenWarned()
+    // @ts-expect-error - non-existant property
+    rC.randomProperty = true
 
     expect(
       'Set operation on key "randomProperty" failed: target is readonly.'
