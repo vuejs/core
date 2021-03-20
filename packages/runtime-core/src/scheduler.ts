@@ -91,6 +91,7 @@ export function queueJob(job: SchedulerJob) {
       )) &&
     job !== currentPreFlushParentJob
   ) {
+    // #3435 pos is always > -1
     const pos = findInsertionIndex(job)
     queue.splice(pos, 0, job)
 
