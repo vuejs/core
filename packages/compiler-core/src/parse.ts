@@ -241,9 +241,8 @@ function parseChildren(
         } else {
           node.content = node.content.replace(/[\t\r\n\f ]+/g, ' ')
         }
-      }
-      // comment nodes handling
-      if (node.type === NodeTypes.COMMENT && !context.options.comments) {
+      } else if (node.type === NodeTypes.COMMENT && !context.options.comments) {
+        // comment nodes handling
         removedWhitespace = true
         nodes[i] = null as any
       }
