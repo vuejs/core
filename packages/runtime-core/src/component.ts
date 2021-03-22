@@ -51,10 +51,8 @@ import {
 } from '@vue/shared'
 import { SuspenseBoundary } from './components/Suspense'
 import { CompilerOptions } from '@vue/compiler-core'
-import {
-  currentRenderingInstance,
-  markAttrsAccessed
-} from './componentRenderUtils'
+import { markAttrsAccessed } from './componentRenderUtils'
+import { currentRenderingInstance } from './componentRenderContext'
 import { startMeasure, endMeasure } from './profiling'
 
 export type Data = Record<string, unknown>
@@ -652,6 +650,9 @@ type CompileFunction = (
 ) => InternalRenderFunction
 
 let compile: CompileFunction | undefined
+
+// dev only
+export const isRuntimeOnly = () => !compile
 
 /**
  * For runtime-dom to register the compiler.

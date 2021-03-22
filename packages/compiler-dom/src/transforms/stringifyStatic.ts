@@ -60,11 +60,8 @@ type StringifiableNode = PlainElementNode | TextCallNode
  * This optimization is only performed in Node.js.
  */
 export const stringifyStatic: HoistTransform = (children, context, parent) => {
-  if (
-    parent.type === NodeTypes.ELEMENT &&
-    (parent.tagType === ElementTypes.COMPONENT ||
-      parent.tagType === ElementTypes.TEMPLATE)
-  ) {
+  // bail stringification for slot content
+  if (context.scopes.vSlot > 0) {
     return
   }
 

@@ -80,7 +80,8 @@ export function createBuffer() {
 
 export function renderComponentVNode(
   vnode: VNode,
-  parentComponent: ComponentInternalInstance | null = null
+  parentComponent: ComponentInternalInstance | null = null,
+  slotScopeId?: string
 ): SSRBuffer | Promise<SSRBuffer> {
   const instance = createComponentInstance(vnode, parentComponent, null)
   const res = setupComponent(instance, true /* isSSR */)
@@ -97,14 +98,15 @@ export function renderComponentVNode(
         warn(`[@vue/server-renderer]: Uncaught error in serverPrefetch:\n`, err)
       })
     }
-    return p.then(() => renderComponentSubTree(instance))
+    return p.then(() => renderComponentSubTree(instance, slotScopeId))
   } else {
-    return renderComponentSubTree(instance)
+    return renderComponentSubTree(instance, slotScopeId)
   }
 }
 
 function renderComponentSubTree(
-  instance: ComponentInternalInstance
+  instance: ComponentInternalInstance,
+  slotScopeId?: string
 ): SSRBuffer | Promise<SSRBuffer> {
   const comp = instance.type as Component
   const { getBuffer, push } = createBuffer()
@@ -133,13 +135,10 @@ function renderComponentSubTree(
 
       // inherited scopeId
       const scopeId = instance.vnode.scopeId
-      const treeOwnerId = instance.parent && instance.parent.type.__scopeId
-      const slotScopeId =
-        treeOwnerId && treeOwnerId !== scopeId ? treeOwnerId + '-s' : null
       if (scopeId || slotScopeId) {
         attrs = { ...attrs }
         if (scopeId) attrs[scopeId] = ''
-        if (slotScopeId) attrs[slotScopeId] = ''
+        if (slotScopeId) attrs[slotScopeId.trim()] = ''
       }
 
       // set current rendering instance for asset resolution
