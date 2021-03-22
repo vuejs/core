@@ -1328,7 +1328,7 @@ type ReservedProps = {
     | ((ref: Element | RuntimeCore.ComponentInternalInstance | null) => void)
 }
 
-type ElementAttrs<T> = T & ReservedProps
+type ElementAttrs<T> = T & ReservedProps & CustomElementAttributes
 
 type NativeElements = {
   [K in StringKeyOf<IntrinsicElementAttributes>]: ElementAttrs<
@@ -1337,6 +1337,7 @@ type NativeElements = {
 }
 
 declare global {
+  interface CustomElementAttributes {}
   namespace JSX {
     interface Element {}
     interface ElementClass {
