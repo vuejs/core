@@ -1383,19 +1383,22 @@ function walkIdentifiers(
         ) {
           onIdentifier(node, parent!, parentStack)
         }
-      } else if (node.type === 'BlockStatement' && isFunction(parent!)) {
-        node.body.forEach(p => {
-          if (p.type === 'VariableDeclaration') {
-            ;(walk as any)(p, {
-              enter(child: Node, parent: Node) {
-                if (child.type === 'Identifier') {
-                  markScopeIdentifier(node, child, knownIds)
-                }
-              }
-            })
-          }
-        })
       } else if (isFunction(node)) {
+        // #3445
+        // should not rewrite local variables sharing a name with a top-level ref
+        if (node.body.type === 'BlockStatement') {
+          node.body.body.forEach(p => {
+            if (p.type === 'VariableDeclaration') {
+              ;(walk as any)(p, {
+                enter(child: Node) {
+                  if (child.type === 'Identifier') {
+                    markScopeIdentifier(node, child, knownIds)
+                  }
+                }
+              })
+            }
+          })
+        }
         // walk function expressions and add its arguments to known identifiers
         // so that we don't prefix them
         node.params.forEach(p =>

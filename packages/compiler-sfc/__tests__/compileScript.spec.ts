@@ -708,13 +708,13 @@ const emit = defineEmit(['a', 'b'])
       assertCode(content)
     })
 
-    // #3445
-    test('avoid rewrite variable if has same name scoped variable declaration in parent block', () => {
+    test('should not rewrite scope variable', () => {
       const { content } = compile(`
       <script setup>
         ref: a = 1
         ref: b = 1
         ref: d = 1
+        const e = 1
         function test() {
           const a = 2
           console.log(a)
@@ -723,12 +723,16 @@ const emit = defineEmit(['a', 'b'])
           console.log(c)
           let $d
           console.log($d)
+          console.log(d)
+          console.log(e)
         }
       </script>`)
       expect(content).toMatch('console.log(a)')
       expect(content).toMatch('console.log(b.value)')
       expect(content).toMatch('console.log(c)')
       expect(content).toMatch('console.log($d)')
+      expect(content).toMatch('console.log(d.value)')
+      expect(content).toMatch('console.log(e)')
       assertCode(content)
     })
 
