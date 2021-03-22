@@ -30,15 +30,6 @@ export function renderSlot(
 ): VNode {
   let slot = slots[name]
 
-  if (__DEV__ && slot && slot.length > 1) {
-    warn(
-      `SSR-optimized slot function detected in a non-SSR-optimized render ` +
-        `function. You need to mark this component with $dynamic-slots in the ` +
-        `parent template.`
-    )
-    slot = () => []
-  }
-
   // a compiled slot disables block tracking by default to avoid manual
   // invocation interfering with template-based block tracking, but in
   // `renderSlot` we can be sure that it's template-based so we can force
