@@ -9,7 +9,8 @@ import {
   createTextVNode,
   createStaticVNode,
   KeepAlive,
-  withCtx
+  withCtx,
+  Transition
 } from 'vue'
 import { escapeHtml } from '@vue/shared'
 import { renderToString } from '../src/renderToString'
@@ -612,6 +613,15 @@ function testRender(type: string, render: typeof renderToString) {
         }
         expect(await render(h(KeepAlive, () => h(MyComp)))).toBe(
           `<!--[--><p>hello</p><!--]-->`
+        )
+      })
+
+      test('Transition', async () => {
+        const MyComp = {
+          render: () => h('p', 'hello')
+        }
+        expect(await render(h(Transition, () => h(MyComp)))).toBe(
+          `<p>hello</p>`
         )
       })
     })
