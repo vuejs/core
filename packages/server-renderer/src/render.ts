@@ -30,7 +30,8 @@ import { ssrRenderTeleport } from './helpers/ssrRenderTeleport'
 
 const {
   createComponentInstance,
-  setCurrentRenderingInstance,
+  pushRenderingInstance,
+  popRenderingInstance,
   setupComponent,
   renderComponentRoot,
   normalizeVNode
@@ -142,7 +143,7 @@ function renderComponentSubTree(
       }
 
       // set current rendering instance for asset resolution
-      setCurrentRenderingInstance(instance)
+      pushRenderingInstance(instance)
       ssrRender(
         instance.proxy,
         push,
@@ -154,7 +155,7 @@ function renderComponentSubTree(
         instance.data,
         instance.ctx
       )
-      setCurrentRenderingInstance(null)
+      popRenderingInstance()
     } else if (instance.render) {
       renderVNode(
         push,

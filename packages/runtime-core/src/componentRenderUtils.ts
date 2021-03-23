@@ -18,7 +18,10 @@ import { warn } from './warning'
 import { isHmrUpdating } from './hmr'
 import { NormalizedProps } from './componentProps'
 import { isEmitListener } from './componentEmits'
-import { setCurrentRenderingInstance } from './componentRenderContext'
+import {
+  pushRenderingInstance,
+  popRenderingInstance
+} from './componentRenderContext'
 
 /**
  * dev only flag to track whether $attrs was used during render.
@@ -52,7 +55,7 @@ export function renderComponentRoot(
   } = instance
 
   let result
-  setCurrentRenderingInstance(instance)
+  pushRenderingInstance(instance)
   if (__DEV__) {
     accessedAttrs = false
   }
@@ -205,7 +208,7 @@ export function renderComponentRoot(
     result = createVNode(Comment)
   }
 
-  setCurrentRenderingInstance(null)
+  popRenderingInstance()
   return result
 }
 

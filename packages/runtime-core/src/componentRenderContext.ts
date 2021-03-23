@@ -8,12 +8,19 @@ import { closeBlock, openBlock } from './vnode'
  */
 export let currentRenderingInstance: ComponentInternalInstance | null = null
 export let currentScopeId: string | null = null
-
-export function setCurrentRenderingInstance(
-  instance: ComponentInternalInstance | null
-) {
+const currentRenderingInstanceStack: ComponentInternalInstance[] = []
+export function pushRenderingInstance(instance: ComponentInternalInstance) {
   currentRenderingInstance = instance
   currentScopeId = (instance && instance.type.__scopeId) || null
+  currentRenderingInstanceStack.push(instance)
+}
+export function popRenderingInstance() {
+  currentRenderingInstanceStack.pop()
+  currentRenderingInstance =
+    currentRenderingInstanceStack[currentRenderingInstanceStack.length - 1]
+  currentScopeId =
+    (currentRenderingInstance && currentRenderingInstance.type.__scopeId) ||
+    null
 }
 
 /**
@@ -40,10 +47,9 @@ export function withCtx(
     if (!isRenderingCompiledSlot) {
       openBlock(true /* null block that disables tracking */)
     }
-    const prevInstance = currentRenderingInstance
-    setCurrentRenderingInstance(ctx)
+    pushRenderingInstance(ctx)
     const res = fn(...args)
-    setCurrentRenderingInstance(prevInstance)
+    popRenderingInstance()
     if (!isRenderingCompiledSlot) {
       closeBlock()
     }

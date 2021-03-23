@@ -257,14 +257,18 @@ export { transformVNodeArgs } from './vnode'
 
 import { createComponentInstance, setupComponent } from './component'
 import { renderComponentRoot } from './componentRenderUtils'
-import { setCurrentRenderingInstance } from './componentRenderContext'
+import {
+  pushRenderingInstance,
+  popRenderingInstance
+} from './componentRenderContext'
 import { isVNode, normalizeVNode } from './vnode'
 
 const _ssrUtils = {
   createComponentInstance,
   setupComponent,
   renderComponentRoot,
-  setCurrentRenderingInstance,
+  pushRenderingInstance,
+  popRenderingInstance,
   isVNode,
   normalizeVNode
 }

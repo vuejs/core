@@ -14,7 +14,10 @@ import { Data } from '../src/component'
 import { ShapeFlags, PatchFlags } from '@vue/shared'
 import { h, reactive, isReactive, setBlockTracking } from '../src'
 import { createApp, nodeOps, serializeInner } from '@vue/runtime-test'
-import { setCurrentRenderingInstance } from '../src/componentRenderContext'
+import {
+  popRenderingInstance,
+  pushRenderingInstance
+} from '../src/componentRenderContext'
 
 describe('vnode', () => {
   test('create with just tag', () => {
@@ -234,7 +237,7 @@ describe('vnode', () => {
     const mockInstance1 = { type: {} } as any
     const mockInstance2 = { type: {} } as any
 
-    setCurrentRenderingInstance(mockInstance1)
+    pushRenderingInstance(mockInstance1)
     const original = createVNode('div', { ref: 'foo' })
     expect(original.ref).toStrictEqual({ i: mockInstance1, r: 'foo' })
 
@@ -250,9 +253,10 @@ describe('vnode', () => {
     const original2 = createVNode('div')
     const cloned3 = cloneVNode(original2, { ref: 'bar' })
     expect(cloned3.ref).toStrictEqual({ i: mockInstance1, r: 'bar' })
+    popRenderingInstance()
 
     // cloning with different context instance
-    setCurrentRenderingInstance(mockInstance2)
+    pushRenderingInstance(mockInstance2)
 
     // clone and preserve original ref
     const cloned4 = cloneVNode(original)
@@ -268,26 +272,27 @@ describe('vnode', () => {
     const cloned6 = cloneVNode(original2, { ref: 'bar' })
     expect(cloned6.ref).toStrictEqual({ i: mockInstance2, r: 'bar' })
 
-    setCurrentRenderingInstance(null)
+    popRenderingInstance()
   })
 
   test('cloneVNode ref merging', () => {
     const mockInstance1 = { type: {} } as any
     const mockInstance2 = { type: {} } as any
 
-    setCurrentRenderingInstance(mockInstance1)
+    pushRenderingInstance(mockInstance1)
     const original = createVNode('div', { ref: 'foo' })
     expect(original.ref).toStrictEqual({ i: mockInstance1, r: 'foo' })
+    popRenderingInstance()
 
     // clone and preserve original ref
-    setCurrentRenderingInstance(mockInstance2)
+    pushRenderingInstance(mockInstance2)
     const cloned1 = cloneVNode(original, { ref: 'bar' }, true)
     expect(cloned1.ref).toStrictEqual([
       { i: mockInstance1, r: 'foo' },
       { i: mockInstance2, r: 'bar' }
     ])
 
-    setCurrentRenderingInstance(null)
+    popRenderingInstance()
   })
 
   test('cloneVNode class normalization', () => {
