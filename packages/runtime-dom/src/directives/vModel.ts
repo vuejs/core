@@ -23,7 +23,7 @@ const getModelAssigner = (vnode: VNode): AssignerFn => {
 }
 
 function onCompositionStart(e: Event) {
-  ;(e.target as any).composing = true
+  (e.target as any).composing = true
 }
 
 function onCompositionEnd(e: Event) {
