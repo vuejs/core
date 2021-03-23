@@ -10,7 +10,9 @@ import {
   createStaticVNode,
   KeepAlive,
   withCtx,
-  Transition
+  Transition,
+  resolveDynamicComponent,
+  createVNode
 } from 'vue'
 import { escapeHtml } from '@vue/shared'
 import { renderToString } from '../src/renderToString'
@@ -18,6 +20,7 @@ import { renderToStream as _renderToStream } from '../src/renderToStream'
 import { ssrRenderSlot, SSRSlot } from '../src/helpers/ssrRenderSlot'
 import { ssrRenderComponent } from '../src/helpers/ssrRenderComponent'
 import { Readable } from 'stream'
+import { ssrRenderVNode } from '../src'
 
 const promisifyStream = (stream: Readable) => {
   return new Promise<string>((resolve, reject) => {
@@ -310,6 +313,35 @@ function testRender(type: string, render: typeof renderToString) {
             })
           )
         ).toBe(`<div>parent<div>opt!</div><div>vnode!</div></div>`)
+      })
+
+      // #2863
+      test('assets should be resolved correctly', async () => {
+        expect(
+          await render(
+            createApp({
+              components: {
+                A: {
+                  ssrRender(_ctx, _push) {
+                    _push(`<div>A</div>`)
+                  }
+                },
+                B: {
+                  render: () => h('div', 'B')
+                }
+              },
+              ssrRender(_ctx, _push, _parent) {
+                const A: any = resolveComponent('A')
+                _push(ssrRenderComponent(A, null, null, _parent))
+                ssrRenderVNode(
+                  _push,
+                  createVNode(resolveDynamicComponent('B'), null, null),
+                  _parent
+                )
+              }
+            })
+          )
+        ).toBe(`<div>A</div><div>B</div>`)
       })
     })
 
