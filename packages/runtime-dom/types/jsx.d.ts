@@ -265,7 +265,7 @@ export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
   lang?: string
   placeholder?: string
   spellcheck?: Booleanish
-  tabindex?: number
+  tabindex?: number | string
   title?: string
   translate?: 'yes' | 'no'
 
