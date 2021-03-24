@@ -121,6 +121,8 @@ type NormalizedProp =
   | (PropOptions & {
       [BooleanFlags.shouldCast]?: boolean
       [BooleanFlags.shouldCastTrue]?: boolean
+      // cache the return value from the default factory to avoid unnecessary watcher trigger
+      _defaultValue?: unknown
     })
 
 // normalized value is a tuple of the actual normalized options
@@ -324,9 +326,13 @@ function resolvePropValue(
     if (hasDefault && value === undefined) {
       const defaultValue = opt.default
       if (opt.type !== Function && isFunction(defaultValue)) {
-        setCurrentInstance(instance)
-        value = defaultValue(props)
-        setCurrentInstance(null)
+        if (opt._defaultValue) {
+          value = opt._defaultValue
+        } else {
+          setCurrentInstance(instance)
+          value = opt._defaultValue = defaultValue(props)
+          setCurrentInstance(null)
+        }
       } else {
         value = defaultValue
       }
