@@ -302,6 +302,11 @@ export interface ComponentInternalInstance {
    * @internal
    */
   emitted: Record<string, boolean> | null
+  /**
+   * used for cache the value returned from the default factory to avoid unnecessary watcher trigger
+   * @internal
+   */
+  propsDefaultValue: Data
 
   /**
    * setup related
@@ -439,6 +444,9 @@ export function createComponentInstance(
     // emit
     emit: null as any, // to be set immediately
     emitted: null,
+
+    // props default value
+    propsDefaultValue: EMPTY_OBJ,
 
     // state
     ctx: EMPTY_OBJ,

@@ -121,8 +121,6 @@ type NormalizedProp =
   | (PropOptions & {
       [BooleanFlags.shouldCast]?: boolean
       [BooleanFlags.shouldCastTrue]?: boolean
-      // cache the return value from the default factory to avoid unnecessary watcher trigger
-      _defaultValue?: unknown
     })
 
 // normalized value is a tuple of the actual normalized options
@@ -139,6 +137,7 @@ export function initProps(
   const props: Data = {}
   const attrs: Data = {}
   def(attrs, InternalObjectKey, 1)
+  instance.propsDefaultValue = Object.create(null)
   setFullProps(instance, rawProps, props, attrs)
   // validation
   if (__DEV__) {
@@ -319,6 +318,7 @@ function resolvePropValue(
   value: unknown,
   instance: ComponentInternalInstance
 ) {
+  const { propsDefaultValue } = instance
   const opt = options[key]
   if (opt != null) {
     const hasDefault = hasOwn(opt, 'default')
@@ -326,11 +326,11 @@ function resolvePropValue(
     if (hasDefault && value === undefined) {
       const defaultValue = opt.default
       if (opt.type !== Function && isFunction(defaultValue)) {
-        if (opt._defaultValue) {
-          value = opt._defaultValue
+        if (propsDefaultValue[key] !== undefined) {
+          value = propsDefaultValue[key]
         } else {
           setCurrentInstance(instance)
-          value = opt._defaultValue = defaultValue(props)
+          value = propsDefaultValue[key] = defaultValue(props)
           setCurrentInstance(null)
         }
       } else {
