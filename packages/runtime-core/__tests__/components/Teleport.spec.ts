@@ -128,19 +128,23 @@ describe('renderer: teleport', () => {
     const target = nodeOps.createElement('div')
     const root = nodeOps.createElement('div')
 
-    render(
-      h(() => [
-        h(Teleport, { to: target }, h('div', 'teleported')),
-        h('div', 'root')
-      ]),
-      root
-    )
-    expect(serializeInner(target)).toMatchInlineSnapshot(
-      `"<div>teleported</div>"`
-    )
+    function testUnmount(props: any) {
+      render(
+        h(() => [h(Teleport, props, h('div', 'teleported')), h('div', 'root')]),
+        root
+      )
+      expect(serializeInner(target)).toMatchInlineSnapshot(
+        props.disabled ? `""` : `"<div>teleported</div>"`
+      )
 
-    render(null, root)
-    expect(serializeInner(target)).toBe('')
+      render(null, root)
+      expect(serializeInner(target)).toBe('')
+      expect(target.children.length).toBe(0)
+    }
+
+    testUnmount({ to: target, disabled: false })
+    testUnmount({ to: target, disabled: true })
+    testUnmount({ to: null, disabled: true })
   })
 
   test('multiple teleport with same target', () => {
