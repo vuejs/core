@@ -21,7 +21,7 @@ export interface TeleportProps {
 
 export const isTeleport = (type: any): boolean => type.__isTeleport
 
-export const isTeleportDisabled = (props: VNode['props']): boolean =>
+const isTeleportDisabled = (props: VNode['props']): boolean =>
   props && (props.disabled || props.disabled === '')
 
 const isTargetSVG = (target: RendererElement): boolean =>
@@ -218,13 +218,31 @@ export const TeleportImpl = {
 
   remove(
     vnode: VNode,
-    { r: remove, o: { remove: hostRemove } }: RendererInternals
+    parentComponent: ComponentInternalInstance | null,
+    parentSuspense: SuspenseBoundary | null,
+    optimized: boolean,
+    { um: unmount, o: { remove: hostRemove } }: RendererInternals,
+    doRemove: Boolean
   ) {
-    const { shapeFlag, children, anchor } = vnode
-    hostRemove(anchor!)
-    if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-      for (let i = 0; i < (children as VNode[]).length; i++) {
-        remove((children as VNode[])[i])
+    const { shapeFlag, children, anchor, targetAnchor, target, props } = vnode
+
+    if (target) {
+      hostRemove(targetAnchor!)
+    }
+
+    // an unmounted teleport should always remove its children if not disabled
+    if (doRemove || !isTeleportDisabled(props)) {
+      hostRemove(anchor!)
+      if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        for (let i = 0; i < (children as VNode[]).length; i++) {
+          unmount(
+            (children as VNode[])[i],
+            parentComponent,
+            parentSuspense,
+            true,
+            optimized
+          )
+        }
       }
     }
   },

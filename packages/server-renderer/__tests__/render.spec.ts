@@ -8,8 +8,10 @@ import {
   defineComponent,
   createTextVNode,
   createStaticVNode,
-  watchEffect,
   withCtx,
+  KeepAlive,
+  Transition,
+  watchEffect
 } from 'vue'
 import { escapeHtml } from '@vue/shared'
 import { renderToString } from '../src/renderToString'
@@ -92,6 +94,46 @@ function testRender(type: string, render: typeof renderToString) {
               defineComponent(() => {
                 const msg = ref('hello')
                 return () => h('div', msg.value)
+              })
+            )
+          )
+        ).toBe(`<div>hello</div>`)
+      })
+
+      test('components using defineComponent with extends option', async () => {
+        expect(
+          await render(
+            createApp(
+              defineComponent({
+                extends: {
+                  data() {
+                    return { msg: 'hello' }
+                  },
+                  render(this: any) {
+                    return h('div', this.msg)
+                  }
+                }
+              })
+            )
+          )
+        ).toBe(`<div>hello</div>`)
+      })
+
+      test('components using defineComponent with mixins option', async () => {
+        expect(
+          await render(
+            createApp(
+              defineComponent({
+                mixins: [
+                  {
+                    data() {
+                      return { msg: 'hello' }
+                    },
+                    render(this: any) {
+                      return h('div', this.msg)
+                    }
+                  }
+                ]
               })
             )
           )
@@ -602,6 +644,26 @@ function testRender(type: string, render: typeof renderToString) {
             )
           )
         ).toBe(`<textarea>${escapeHtml(`<span>hello</span>`)}</textarea>`)
+      })
+    })
+
+    describe('vnode component', () => {
+      test('KeepAlive', async () => {
+        const MyComp = {
+          render: () => h('p', 'hello')
+        }
+        expect(await render(h(KeepAlive, () => h(MyComp)))).toBe(
+          `<!--[--><p>hello</p><!--]-->`
+        )
+      })
+
+      test('Transition', async () => {
+        const MyComp = {
+          render: () => h('p', 'hello')
+        }
+        expect(await render(h(Transition, () => h(MyComp)))).toBe(
+          `<p>hello</p>`
+        )
       })
     })
 

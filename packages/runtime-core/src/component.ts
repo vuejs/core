@@ -670,9 +670,13 @@ function finishComponentSetup(
 
   // template / render function normalization
   if (__NODE_JS__ && isSSR) {
-    if (Component.render) {
-      instance.render = Component.render as InternalRenderFunction
-    }
+    // 1. the render function may already exist, returned by `setup`
+    // 2. otherwise try to use the `Component.render`
+    // 3. if the component doesn't have a render function,
+    //    set `instance.render` to NOOP so that it can inherit the render function from mixins/extend
+    instance.render = (instance.render ||
+      Component.render ||
+      NOOP) as InternalRenderFunction
   } else if (!instance.render) {
     // could be set from setup()
     if (compile && Component.template && !Component.render) {
@@ -711,7 +715,8 @@ function finishComponentSetup(
   }
 
   // warn missing template/render
-  if (__DEV__ && !Component.render && instance.render === NOOP) {
+  // the runtime compilation of template in SSR is done by server-render
+  if (__DEV__ && !Component.render && instance.render === NOOP && !isSSR) {
     /* istanbul ignore if */
     if (!compile && Component.template) {
       warn(

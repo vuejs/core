@@ -293,6 +293,7 @@ function subTransform(
   // inherit parent scope analysis state
   childContext.scopes = { ...parentContext.scopes }
   childContext.identifiers = { ...parentContext.identifiers }
+  childContext.imports = parentContext.imports
   // traverse
   traverseNode(childRoot, childContext)
   // merge helpers/components/directives into parent context

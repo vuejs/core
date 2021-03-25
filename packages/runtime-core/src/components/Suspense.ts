@@ -33,6 +33,7 @@ export const isSuspense = (type: any): boolean => type.__isSuspense
 // in the compiler, but internally it's a special built-in type that hooks
 // directly into the renderer.
 export const SuspenseImpl = {
+  name: 'Suspense',
   // In order to make Suspense tree-shakable, we need to avoid importing it
   // directly in the renderer. The renderer checks for the __isSuspense flag
   // on a vnode's type and calls the `process` method, passing in renderer
