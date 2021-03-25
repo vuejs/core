@@ -63,6 +63,10 @@ We are working on a new version of the Devtools with a new UI and refactored int
 
 It is recommended to use [VSCode](https://code.visualstudio.com/) with our official extension [Vetur](https://marketplace.visualstudio.com/items?itemName=octref.vetur), which provides comprehensive IDE support for Vue 3.
 
+#### Other IDEs with Vue 3 support
+*  [WebStorm](https://www.jetbrains.com/webstorm/) with [Vue.js plugin](https://www.jetbrains.com/help/webstorm/vue-js.html).
+Note: Vue 3 Support in these IDEs is maintained by the respective vendors, not as part of the Vue project.
+
 ### Other Projects
 
 | Project               | NPM                           | Repo                 |
