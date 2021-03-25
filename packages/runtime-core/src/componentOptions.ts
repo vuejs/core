@@ -816,58 +816,30 @@ function callSyncHook(
   instance: ComponentInternalInstance,
   globalMixins: ComponentOptions[]
 ) {
-  callHookFromMixins(name, type, globalMixins, instance)
+  for (let i = 0; i < globalMixins.length; i++) {
+    callHookWithMixinAndExtends(name, type, globalMixins[i], instance)
+  }
+  callHookWithMixinAndExtends(name, type, options, instance)
+}
+
+function callHookWithMixinAndExtends(
+  name: 'beforeCreate' | 'created',
+  type: LifecycleHooks,
+  options: ComponentOptions,
+  instance: ComponentInternalInstance
+) {
   const { extends: base, mixins } = options
+  const selfHook = options[name]
   if (base) {
-    callHookFromExtends(name, type, base, instance)
+    callHookWithMixinAndExtends(name, type, base, instance)
   }
   if (mixins) {
-    callHookFromMixins(name, type, mixins, instance)
+    for (let i = 0; i < mixins.length; i++) {
+      callHookWithMixinAndExtends(name, type, mixins[i], instance)
+    }
   }
-  const selfHook = options[name]
   if (selfHook) {
     callWithAsyncErrorHandling(selfHook.bind(instance.proxy!), instance, type)
-  }
-}
-
-function callHookFromExtends(
-  name: 'beforeCreate' | 'created',
-  type: LifecycleHooks,
-  base: ComponentOptions,
-  instance: ComponentInternalInstance
-) {
-  if (base.extends) {
-    callHookFromExtends(name, type, base.extends, instance)
-  }
-  const chainedMixins = base.mixins
-  if (chainedMixins) {
-    callHookFromMixins(name, type, chainedMixins, instance)
-  }
-  const baseHook = base[name]
-  if (baseHook) {
-    callWithAsyncErrorHandling(baseHook.bind(instance.proxy!), instance, type)
-  }
-}
-
-function callHookFromMixins(
-  name: 'beforeCreate' | 'created',
-  type: LifecycleHooks,
-  mixins: ComponentOptions[],
-  instance: ComponentInternalInstance
-) {
-  for (let i = 0; i < mixins.length; i++) {
-    const chainedMixins = mixins[i].mixins
-    const chainedExtends = mixins[i].extends
-    if (chainedExtends) {
-      callHookFromExtends(name, type, chainedExtends, instance)
-    }
-    if (chainedMixins) {
-      callHookFromMixins(name, type, chainedMixins, instance)
-    }
-    const fn = mixins[i][name]
-    if (fn) {
-      callWithAsyncErrorHandling(fn.bind(instance.proxy!), instance, type)
-    }
   }
 }
 
