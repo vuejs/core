@@ -137,7 +137,9 @@ export function initProps(
   const props: Data = {}
   const attrs: Data = {}
   def(attrs, InternalObjectKey, 1)
-  instance.propsDefaultValue = Object.create(null)
+
+  instance.propsDefaults = Object.create(null)
+
   setFullProps(instance, rawProps, props, attrs)
   // validation
   if (__DEV__) {
@@ -318,7 +320,6 @@ function resolvePropValue(
   value: unknown,
   instance: ComponentInternalInstance
 ) {
-  const { propsDefaultValue } = instance
   const opt = options[key]
   if (opt != null) {
     const hasDefault = hasOwn(opt, 'default')
@@ -326,11 +327,12 @@ function resolvePropValue(
     if (hasDefault && value === undefined) {
       const defaultValue = opt.default
       if (opt.type !== Function && isFunction(defaultValue)) {
-        if (propsDefaultValue[key] !== undefined) {
-          value = propsDefaultValue[key]
+        const { propsDefaults } = instance
+        if (key in propsDefaults) {
+          value = propsDefaults[key]
         } else {
           setCurrentInstance(instance)
-          value = propsDefaultValue[key] = defaultValue(props)
+          value = propsDefaults[key] = defaultValue(props)
           setCurrentInstance(null)
         }
       } else {
