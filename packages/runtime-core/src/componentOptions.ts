@@ -465,7 +465,7 @@ function createDuplicateChecker() {
 
 type DataFn = (vm: ComponentPublicInstance) => any
 
-export let isInBeforeCreate = false
+export let shouldCacheAccess = true
 
 export function applyOptions(
   instance: ComponentInternalInstance,
@@ -518,7 +518,7 @@ export function applyOptions(
 
   // applyOptions is called non-as-mixin once per instance
   if (!asMixin) {
-    isInBeforeCreate = true
+    shouldCacheAccess = false
     callSyncHook(
       'beforeCreate',
       LifecycleHooks.BEFORE_CREATE,
@@ -526,7 +526,7 @@ export function applyOptions(
       instance,
       globalMixins
     )
-    isInBeforeCreate = false
+    shouldCacheAccess = true
     // global mixins are applied first
     applyMixins(
       instance,
@@ -893,7 +893,9 @@ function resolveData(
         `Plain object usage is no longer supported.`
     )
   }
+  shouldCacheAccess = false
   const data = dataFn.call(publicThis, publicThis)
+  shouldCacheAccess = true
   if (__DEV__ && isPromise(data)) {
     warn(
       `data() returned a Promise - note data() cannot be async; If you ` +
