@@ -379,7 +379,8 @@ describe('type inference w/ options API', () => {
       // here in data() - somehow that would mess up the inference
       expectType<number | undefined>(this.a)
       return {
-        c: this.a || 123
+        c: this.a || 123,
+        someRef: ref(0)
       }
     },
     computed: {
@@ -418,6 +419,7 @@ describe('type inference w/ options API', () => {
       expectType<number>(this.d)
       // computed get/set
       expectType<number>(this.e)
+      expectType<number>(this.someRef)
     },
     methods: {
       doSomething() {

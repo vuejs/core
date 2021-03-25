@@ -20,7 +20,8 @@ import {
   ReactiveFlags,
   track,
   TrackOpTypes,
-  ShallowUnwrapRef
+  ShallowUnwrapRef,
+  UnwrapNestedRefs
 } from '@vue/reactivity'
 import {
   ExtractComputedReturns,
@@ -195,7 +196,7 @@ export type ComponentPublicInstance<
   ): WatchStopHandle
 } & P &
   ShallowUnwrapRef<B> &
-  D &
+  UnwrapNestedRefs<D> &
   ExtractComputedReturns<C> &
   M &
   ComponentCustomProperties
