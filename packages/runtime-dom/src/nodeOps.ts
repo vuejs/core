@@ -49,12 +49,15 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
   cloneNode(el) {
     const cloned = el.cloneNode(true)
     // #3072
-    // should clone the custom DOM props,
-    // in `patchDOMProp`, we store the actual value in the `el._value` property,
-    // but these elements may be hoisted, and the hoisted elements will be cloned in the prod env,
-    // so we should keep it when cloning, and in the future,
-    // we may clone more custom DOM props when necessary, not just `_value`.
-    if (cloned.nodeType === Node.ELEMENT_NODE) {
+    // - in `patchDOMProp`, we store the actual value in the `el._value` property.
+    // - normally, elements using `:value` bindings will not be hoisted, but if
+    //   the bound value is a constant, e.g. `:value="true"` - they do get
+    //   hoisted.
+    // - in production, hoisted nodes are cloned when subsequent inserts, but
+    //   cloneNode() does not copy the custom property we attached.
+    // - This may need to account for other custom DOM properties we attach to
+    //   elements in addition to `_value` in the future.
+    if (`_value` in el) {
       ;(cloned as any)._value = (el as any)._value
     }
     return cloned
