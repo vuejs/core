@@ -2108,7 +2108,14 @@ function baseCreateRenderer(
       }
 
       if (shapeFlag & ShapeFlags.TELEPORT) {
-        ;(vnode.type as typeof TeleportImpl).remove(vnode, internals, doRemove)
+        ;(vnode.type as typeof TeleportImpl).remove(
+          vnode,
+          parentComponent,
+          parentSuspense,
+          optimized,
+          internals,
+          doRemove
+        )
       }
 
       if (doRemove) {

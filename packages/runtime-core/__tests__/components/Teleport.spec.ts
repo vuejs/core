@@ -147,6 +147,26 @@ describe('renderer: teleport', () => {
     testUnmount({ to: null, disabled: true })
   })
 
+  test('component with multi roots should be removed when unmounted', () => {
+    const target = nodeOps.createElement('div')
+    const root = nodeOps.createElement('div')
+
+    const Comp = {
+      render() {
+        return [h('p'), h('p')]
+      }
+    }
+
+    render(
+      h(() => [h(Teleport, { to: target }, h(Comp)), h('div', 'root')]),
+      root
+    )
+    expect(serializeInner(target)).toMatchInlineSnapshot(`"<p></p><p></p>"`)
+
+    render(null, root)
+    expect(serializeInner(target)).toBe('')
+  })
+
   test('multiple teleport with same target', () => {
     const target = nodeOps.createElement('div')
     const root = nodeOps.createElement('div')
