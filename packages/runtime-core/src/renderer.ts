@@ -11,7 +11,8 @@ import {
   Static,
   VNodeNormalizedRef,
   VNodeHook,
-  VNodeNormalizedRefAtom
+  VNodeNormalizedRefAtom,
+  VNodeProps
 } from './vnode'
 import {
   ComponentInternalInstance,
@@ -114,7 +115,8 @@ export interface RendererOptions<
   createElement(
     type: string,
     isSVG?: boolean,
-    isCustomizedBuiltIn?: string
+    isCustomizedBuiltIn?: string,
+    vnodeProps?: (VNodeProps & { [key: string]: any }) | null
   ): HostElement
   createText(text: string): HostNode
   createComment(text: string): HostNode
@@ -738,7 +740,8 @@ function baseCreateRenderer(
       el = vnode.el = hostCreateElement(
         vnode.type as string,
         isSVG,
-        props && props.is
+        props && props.is,
+        props
       )
 
       // mount children first, since some props may rely on child content

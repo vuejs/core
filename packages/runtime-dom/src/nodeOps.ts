@@ -19,10 +19,17 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
     }
   },
 
-  createElement: (tag, isSVG, is): Element =>
-    isSVG
+  createElement: (tag, isSVG, is, props): Element => {
+    const el = isSVG
       ? doc.createElementNS(svgNS, tag)
-      : doc.createElement(tag, is ? { is } : undefined),
+      : doc.createElement(tag, is ? { is } : undefined)
+
+    if (tag === 'select' && props && props.multiple != null) {
+      ;(el as HTMLSelectElement).setAttribute('multiple', props.multiple)
+    }
+
+    return el
+  },
 
   createText: text => doc.createTextNode(text),
 
