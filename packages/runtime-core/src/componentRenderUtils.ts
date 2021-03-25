@@ -10,7 +10,8 @@ import {
   Comment,
   cloneVNode,
   VNodeArrayChildren,
-  isVNode
+  isVNode,
+  blockStack
 } from './vnode'
 import { handleError, ErrorCodes } from './errorHandling'
 import { PatchFlags, ShapeFlags, isOn, isModelListener } from '@vue/shared'
@@ -201,6 +202,7 @@ export function renderComponentRoot(
       result = root
     }
   } catch (err) {
+    blockStack.length = 0
     handleError(err, instance, ErrorCodes.RENDER_FUNCTION)
     result = createVNode(Comment)
   }
