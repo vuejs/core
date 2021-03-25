@@ -10,7 +10,8 @@ import {
   serializeInner,
   createApp,
   provide,
-  inject
+  inject,
+  watch
 } from '@vue/runtime-test'
 import { render as domRender, nextTick } from 'vue'
 
@@ -419,5 +420,44 @@ describe('component props', () => {
     )
 
     expect(serializeInner(root)).toMatch('<div>60000000100000111</div>')
+  })
+
+  // #3474
+  test('should cache the value returned from the default factory to avoid unnecessary watcher trigger', async () => {
+    let count = 0
+    const Comp = {
+      props: {
+        foo: {
+          type: Object,
+          default: () => ({ val: 1 })
+        },
+        bar: Number
+      },
+      setup(props: any) {
+        watch(
+          () => props.foo,
+          () => {
+            count++
+          }
+        )
+        return () => h('h1', [props.foo.val, props.bar])
+      }
+    }
+
+    const foo = ref()
+    const bar = ref(0)
+    const app = createApp({
+      render: () => h(Comp, { foo: foo.value, bar: bar.value })
+    })
+
+    const root = nodeOps.createElement('div')
+    app.mount(root)
+    expect(serializeInner(root)).toMatch(`<h1>10</h1>`)
+    expect(count).toBe(0)
+
+    bar.value++
+    await nextTick()
+    expect(serializeInner(root)).toMatch(`<h1>11</h1>`)
+    expect(count).toBe(0)
   })
 })
