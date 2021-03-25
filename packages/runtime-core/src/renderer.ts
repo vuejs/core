@@ -2107,14 +2107,14 @@ function baseCreateRenderer(
         unmountChildren(children as VNode[], parentComponent, parentSuspense)
       }
 
-      // an unmounted teleport should always remove its children if not disabled
       if (shapeFlag & ShapeFlags.TELEPORT) {
         ;(vnode.type as typeof TeleportImpl).remove(
           vnode,
           parentComponent,
           parentSuspense,
           optimized,
-          internals
+          internals,
+          doRemove
         )
       }
 
