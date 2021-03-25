@@ -839,6 +839,10 @@ function callHookFromExtends(
   if (base.extends) {
     callHookFromExtends(name, type, base.extends, instance)
   }
+  const chainedMixins = base.mixins
+  if (chainedMixins) {
+    callHookFromMixins(name, type, chainedMixins, instance)
+  }
   const baseHook = base[name]
   if (baseHook) {
     callWithAsyncErrorHandling(baseHook.bind(instance.proxy!), instance, type)
@@ -853,6 +857,10 @@ function callHookFromMixins(
 ) {
   for (let i = 0; i < mixins.length; i++) {
     const chainedMixins = mixins[i].mixins
+    const chainedExtends = mixins[i].extends
+    if (chainedExtends) {
+      callHookFromExtends(name, type, chainedExtends, instance)
+    }
     if (chainedMixins) {
       callHookFromMixins(name, type, chainedMixins, instance)
     }
