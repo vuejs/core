@@ -301,7 +301,7 @@ describe('component props', () => {
     }).not.toThrow(TypeError)
   })
 
-  test('warn props missed', () => {
+  test('warn absent required props', () => {
     const Comp = {
       props: {
         bool: { type: Boolean, required: true },
