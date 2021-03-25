@@ -246,15 +246,24 @@ function createChildrenCodegenNode(
       injectProp(vnodeCall, keyProperty, context)
       return vnodeCall
     } else {
+      let patchFlag = PatchFlags.STABLE_FRAGMENT
+      let patchFlagText = PatchFlagNames[PatchFlags.STABLE_FRAGMENT]
+      // check if the fragment actually contains a single valid child with
+      // the rest being comments
+      if (
+        __DEV__ &&
+        children.filter(c => c.type !== NodeTypes.COMMENT).length === 1
+      ) {
+        patchFlag |= PatchFlags.DEV_ROOT_FRAGMENT
+        patchFlagText += `, ${PatchFlagNames[PatchFlags.DEV_ROOT_FRAGMENT]}`
+      }
+
       return createVNodeCall(
         context,
         helper(FRAGMENT),
         createObjectExpression([keyProperty]),
         children,
-        PatchFlags.STABLE_FRAGMENT +
-          (__DEV__
-            ? ` /* ${PatchFlagNames[PatchFlags.STABLE_FRAGMENT]} */`
-            : ``),
+        patchFlag + (__DEV__ ? ` /* ${patchFlagText} */` : ``),
         undefined,
         undefined,
         true,
