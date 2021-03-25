@@ -781,8 +781,10 @@ function testRender(type: string, render: typeof renderToString) {
     test('effect onInvalidate does not error', async () => {
       const noop = () => {}
       const app = createApp({
-        setup: () => watchEffect(onInvalidate => onInvalidate(noop)),
-        render: noop,
+        setup: () => {
+          watchEffect(onInvalidate => onInvalidate(noop))
+        },
+        render: noop
       })
       expect(await render(app)).toBe('<!---->')
     })

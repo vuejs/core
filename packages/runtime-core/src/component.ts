@@ -673,7 +673,8 @@ function finishComponentSetup(
     // 1. the render function may already exist, returned by `setup`
     // 2. otherwise try to use the `Component.render`
     // 3. if the component doesn't have a render function,
-    //    set `instance.render` to NOOP so that it can inherit the render function from mixins/extend
+    //    set `instance.render` to NOOP so that it can inherit the render
+    //    function from mixins/extend
     instance.render = (instance.render ||
       Component.render ||
       NOOP) as InternalRenderFunction
