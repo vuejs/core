@@ -111,7 +111,14 @@ function walk(
 
     // walk further
     if (child.type === NodeTypes.ELEMENT) {
+      const isComponent = child.tagType === ElementTypes.COMPONENT
+      if (isComponent) {
+        context.scopes.vSlot++
+      }
       walk(child, context)
+      if (isComponent) {
+        context.scopes.vSlot--
+      }
     } else if (child.type === NodeTypes.FOR) {
       // Do not hoist v-for single child because it has to be a block
       walk(child, context, child.children.length === 1)

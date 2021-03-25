@@ -80,7 +80,7 @@ return function render(_ctx, _cache) {
     const { renderSlot: _renderSlot, createCommentVNode: _createCommentVNode } = _Vue
 
     return ok
-      ? _renderSlot($slots, \\"default\\", { key: 0 })
+      ? _renderSlot($slots, \\"default\\", { key: 0 }, undefined, true)
       : _createCommentVNode(\\"v-if\\", true)
   }
 }"
@@ -111,7 +111,7 @@ return function render(_ctx, _cache) {
       ? (_openBlock(), _createBlock(\\"div\\", { key: 0 }))
       : orNot
         ? (_openBlock(), _createBlock(\\"p\\", { key: 1 }))
-        : (_openBlock(), _createBlock(_Fragment, { key: 2 }, [\\"fine\\"], 64 /* STABLE_FRAGMENT */))
+        : (_openBlock(), _createBlock(_Fragment, { key: 2 }, [\\"fine\\"], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */))
   }
 }"
 `;
@@ -140,7 +140,7 @@ return function render(_ctx, _cache) {
     const { renderSlot: _renderSlot, createCommentVNode: _createCommentVNode } = _Vue
 
     return ok
-      ? _renderSlot($slots, \\"default\\", { key: 0 })
+      ? _renderSlot($slots, \\"default\\", { key: 0 }, undefined, true)
       : _createCommentVNode(\\"v-if\\", true)
   }
 }"

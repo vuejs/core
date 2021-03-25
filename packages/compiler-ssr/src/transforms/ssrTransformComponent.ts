@@ -203,6 +203,12 @@ export function ssrProcessComponent(
         vnodeBranch
       )
     }
+
+    // component is inside a slot, inherit slot scope Id
+    if (context.withSlotScopeId) {
+      node.ssrCodegenNode!.arguments.push(`_scopeId`)
+    }
+
     if (typeof component === 'string') {
       // static component
       context.pushStatement(
@@ -287,6 +293,7 @@ function subTransform(
   // inherit parent scope analysis state
   childContext.scopes = { ...parentContext.scopes }
   childContext.identifiers = { ...parentContext.identifiers }
+  childContext.imports = parentContext.imports
   // traverse
   traverseNode(childRoot, childContext)
   // merge helpers/components/directives into parent context

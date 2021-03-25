@@ -78,6 +78,8 @@ describe('api: options', () => {
   test('methods', async () => {
     const Comp = defineComponent({
       data() {
+        // #3300 method on ctx should be overwritable
+        this.incBy = this.incBy.bind(this, 2)
         return {
           foo: 1
         }
@@ -85,13 +87,17 @@ describe('api: options', () => {
       methods: {
         inc() {
           this.foo++
+        },
+        incBy(n = 0) {
+          this.foo += n
         }
       },
       render() {
         return h(
           'div',
           {
-            onClick: this.inc
+            onClick: this.inc,
+            onFoo: this.incBy
           },
           this.foo
         )
@@ -104,6 +110,10 @@ describe('api: options', () => {
     triggerEvent(root.children[0] as TestElement, 'click')
     await nextTick()
     expect(serializeInner(root)).toBe(`<div>2</div>`)
+
+    triggerEvent(root.children[0] as TestElement, 'foo')
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>4</div>`)
   })
 
   test('component’s own methods have higher priority than global properties', async () => {
