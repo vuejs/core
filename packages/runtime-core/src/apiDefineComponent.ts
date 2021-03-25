@@ -71,10 +71,7 @@ export type DefineComponent<
     EE,
     Defaults
   > &
-  PP & {
-    // type-only, used to assist Mixin's type inference
-    __differentiator?: keyof D | keyof C | keyof M
-  }
+  PP
 
 // defineComponent is a utility that is primarily used for type inference
 // when declaring components. Type inference is provided in the component
