@@ -142,7 +142,7 @@ export function initProps(
   setFullProps(instance, rawProps, props, attrs)
   // validation
   if (__DEV__) {
-    validateProps(props, instance)
+    validateProps(rawProps || {}, props, instance)
   }
 
   if (isStateful) {
@@ -264,8 +264,8 @@ export function updateProps(
   // trigger updates for $attrs in case it's used in component slots
   trigger(instance, TriggerOpTypes.SET, '$attrs')
 
-  if (__DEV__ && rawProps) {
-    validateProps(props, instance)
+  if (__DEV__) {
+    validateProps(rawProps || {}, props, instance)
   }
 }
 
@@ -462,13 +462,17 @@ function getTypeIndex(
 /**
  * dev only
  */
-function validateProps(props: Data, instance: ComponentInternalInstance) {
-  const rawValues = toRaw(props)
+function validateProps(
+  rawProps: Data,
+  props: Data,
+  instance: ComponentInternalInstance
+) {
+  const resolvedValues = toRaw(props)
   const options = instance.propsOptions[0]
   for (const key in options) {
     let opt = options[key]
     if (opt == null) continue
-    validateProp(key, rawValues[key], opt, !hasOwn(rawValues, key))
+    validateProp(key, resolvedValues[key], opt, !hasOwn(rawProps, key))
   }
 }
 
