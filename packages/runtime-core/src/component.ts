@@ -23,7 +23,7 @@ import {
 } from './componentProps'
 import { Slots, initSlots, InternalSlots } from './componentSlots'
 import { warn } from './warning'
-import { ErrorCodes, callWithErrorHandling } from './errorHandling'
+import { ErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
 import { AppContext, createAppContext, AppConfig } from './apiCreateApp'
 import { Directive, validateDirectiveName } from './directives'
 import {
@@ -579,7 +579,7 @@ function setupStatefulComponent(
 
     currentInstance = instance
     pauseTracking()
-    const setupResult = callWithErrorHandling(
+    const setupResult = callWithAsyncErrorHandling(
       setup,
       instance,
       ErrorCodes.SETUP_FUNCTION,
