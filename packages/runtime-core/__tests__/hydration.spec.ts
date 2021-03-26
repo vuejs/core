@@ -48,7 +48,7 @@ describe('SSR hydration', () => {
     expect(container.textContent).toBe('bar')
   })
 
-  test('mepty text', async () => {
+  test('empty text', async () => {
     const { container } = mountWithHydration('<div></div>', () =>
       h('div', createTextVNode(''))
     )
