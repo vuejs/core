@@ -9,11 +9,23 @@ import { closeBlock, openBlock } from './vnode'
 export let currentRenderingInstance: ComponentInternalInstance | null = null
 export let currentScopeId: string | null = null
 
+/**
+ * Note: rendering calls maybe nested. The function returns the parent rendering
+ * instance if present, which should be restored after the render is done:
+ *
+ * ```js
+ * const prev = setCurrentRenderingInstance(i)
+ * // ...render
+ * setCurrentRenderingInstance(prev)
+ * ```
+ */
 export function setCurrentRenderingInstance(
   instance: ComponentInternalInstance | null
-) {
+): ComponentInternalInstance | null {
+  const prev = currentRenderingInstance
   currentRenderingInstance = instance
   currentScopeId = (instance && instance.type.__scopeId) || null
+  return prev
 }
 
 /**
@@ -40,8 +52,7 @@ export function withCtx(
     if (!isRenderingCompiledSlot) {
       openBlock(true /* null block that disables tracking */)
     }
-    const prevInstance = currentRenderingInstance
-    setCurrentRenderingInstance(ctx)
+    const prevInstance = setCurrentRenderingInstance(ctx)
     const res = fn(...args)
     setCurrentRenderingInstance(prevInstance)
     if (!isRenderingCompiledSlot) {

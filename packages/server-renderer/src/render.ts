@@ -139,7 +139,7 @@ function renderComponentSubTree(
       }
 
       // set current rendering instance for asset resolution
-      setCurrentRenderingInstance(instance)
+      const prev = setCurrentRenderingInstance(instance)
       ssrRender(
         instance.proxy,
         push,
@@ -151,7 +151,7 @@ function renderComponentSubTree(
         instance.data,
         instance.ctx
       )
-      setCurrentRenderingInstance(null)
+      setCurrentRenderingInstance(prev)
     } else if (instance.render && instance.render !== NOOP) {
       renderVNode(
         push,

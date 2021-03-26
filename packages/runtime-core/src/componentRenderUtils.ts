@@ -53,7 +53,7 @@ export function renderComponentRoot(
   } = instance
 
   let result
-  setCurrentRenderingInstance(instance)
+  const prev = setCurrentRenderingInstance(instance)
   if (__DEV__) {
     accessedAttrs = false
   }
@@ -207,7 +207,7 @@ export function renderComponentRoot(
     result = createVNode(Comment)
   }
 
-  setCurrentRenderingInstance(null)
+  setCurrentRenderingInstance(prev)
   return result
 }
 
