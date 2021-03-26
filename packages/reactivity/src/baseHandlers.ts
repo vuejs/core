@@ -182,7 +182,7 @@ function has(target: object, key: string | symbol): boolean {
   return result
 }
 
-function ownKeys(target: object): (string | number | symbol)[] {
+function ownKeys(target: object): (string | symbol)[] {
   track(target, TrackOpTypes.ITERATE, isArray(target) ? 'length' : ITERATE_KEY)
   return Reflect.ownKeys(target)
 }

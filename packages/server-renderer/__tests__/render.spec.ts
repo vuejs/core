@@ -2,13 +2,16 @@ import {
   createApp,
   h,
   createCommentVNode,
-  withScopeId,
   resolveComponent,
   ComponentOptions,
   ref,
   defineComponent,
   createTextVNode,
-  createStaticVNode
+  createStaticVNode,
+  withCtx,
+  KeepAlive,
+  Transition,
+  watchEffect
 } from 'vue'
 import { escapeHtml } from '@vue/shared'
 import { renderToString } from '../src/renderToString'
@@ -91,6 +94,46 @@ function testRender(type: string, render: typeof renderToString) {
               defineComponent(() => {
                 const msg = ref('hello')
                 return () => h('div', msg.value)
+              })
+            )
+          )
+        ).toBe(`<div>hello</div>`)
+      })
+
+      test('components using defineComponent with extends option', async () => {
+        expect(
+          await render(
+            createApp(
+              defineComponent({
+                extends: {
+                  data() {
+                    return { msg: 'hello' }
+                  },
+                  render(this: any) {
+                    return h('div', this.msg)
+                  }
+                }
+              })
+            )
+          )
+        ).toBe(`<div>hello</div>`)
+      })
+
+      test('components using defineComponent with mixins option', async () => {
+        expect(
+          await render(
+            createApp(
+              defineComponent({
+                mixins: [
+                  {
+                    data() {
+                      return { msg: 'hello' }
+                    },
+                    render(this: any) {
+                      return h('div', this.msg)
+                    }
+                  }
+                ]
               })
             )
           )
@@ -604,6 +647,26 @@ function testRender(type: string, render: typeof renderToString) {
       })
     })
 
+    describe('vnode component', () => {
+      test('KeepAlive', async () => {
+        const MyComp = {
+          render: () => h('p', 'hello')
+        }
+        expect(await render(h(KeepAlive, () => h(MyComp)))).toBe(
+          `<!--[--><p>hello</p><!--]-->`
+        )
+      })
+
+      test('Transition', async () => {
+        const MyComp = {
+          render: () => h('p', 'hello')
+        }
+        expect(await render(h(Transition, () => h(MyComp)))).toBe(
+          `<p>hello</p>`
+        )
+      })
+    })
+
     describe('raw vnode types', () => {
       test('Text', async () => {
         expect(await render(createTextVNode('hello <div>'))).toBe(
@@ -634,34 +697,32 @@ function testRender(type: string, render: typeof renderToString) {
     describe('scopeId', () => {
       // note: here we are only testing scopeId handling for vdom serialization.
       // compiled srr render functions will include scopeId directly in strings.
-      const withId = withScopeId('data-v-test')
-      const withChildId = withScopeId('data-v-child')
 
       test('basic', async () => {
-        expect(
-          await render(
-            withId(() => {
-              return h('div')
-            })()
-          )
-        ).toBe(`<div data-v-test></div>`)
+        const Foo = {
+          __scopeId: 'data-v-test',
+          render() {
+            return h('div')
+          }
+        }
+        expect(await render(h(Foo))).toBe(`<div data-v-test></div>`)
       })
 
       test('with slots', async () => {
         const Child = {
           __scopeId: 'data-v-child',
-          render: withChildId(function(this: any) {
+          render: function(this: any) {
             return h('div', this.$slots.default())
-          })
+          }
         }
 
         const Parent = {
           __scopeId: 'data-v-test',
-          render: withId(() => {
+          render: () => {
             return h(Child, null, {
-              default: withId(() => h('span', 'slot'))
+              default: withCtx(() => h('span', 'slot'))
             })
-          })
+          }
         }
 
         expect(await render(h(Parent))).toBe(
@@ -752,6 +813,18 @@ function testRender(type: string, render: typeof renderToString) {
       expect(fn2).toBeCalledWith('async child error')
 
       expect('Uncaught error in async setup').toHaveBeenWarned()
+    })
+    
+    // https://github.com/vuejs/vue-next/issues/3322
+    test('effect onInvalidate does not error', async () => {
+      const noop = () => {}
+      const app = createApp({
+        setup: () => {
+          watchEffect(onInvalidate => onInvalidate(noop))
+        },
+        render: noop
+      })
+      expect(await render(app)).toBe('<!---->')
     })
   })
 }
