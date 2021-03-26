@@ -434,9 +434,16 @@ function genAssets(
     type === 'component' ? RESOLVE_COMPONENT : RESOLVE_DIRECTIVE
   )
   for (let i = 0; i < assets.length; i++) {
-    const id = assets[i]
+    let id = assets[i]
+    // potential component implicit self-reference inferred from SFC filename
+    const maybeSelfReference = id.endsWith('__self')
+    if (maybeSelfReference) {
+      id = id.slice(0, -6)
+    }
     push(
-      `const ${toValidAssetId(id, type)} = ${resolver}(${JSON.stringify(id)})`
+      `const ${toValidAssetId(id, type)} = ${resolver}(${JSON.stringify(id)}${
+        maybeSelfReference ? `, true` : ``
+      })`
     )
     if (i < assets.length - 1) {
       newline()
