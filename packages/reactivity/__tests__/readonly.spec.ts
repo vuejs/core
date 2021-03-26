@@ -1,7 +1,6 @@
 import {
   reactive,
   readonly,
-  shallowReadonly,
   toRaw,
   isReactive,
   isReadonly,
@@ -454,24 +453,5 @@ describe('reactivity/readonly', () => {
     expect(
       'Set operation on key "randomProperty" failed: target is readonly.'
     ).toHaveBeenWarned()
-  })
-
-  // to retain 2.x behavior.
-  test('should NOT make nested properties readonly', () => {
-    const props = shallowReadonly({ n: { foo: 1 } })
-    // @ts-ignore
-    props.n.foo = 2
-    expect(props.n.foo).toBe(2)
-    expect(
-      `Set operation on key "foo" failed: target is readonly.`
-    ).not.toHaveBeenWarned()
-  })
-
-  test('should allow shallow und normal reactive for same target', () => {
-    const target = { foo: 1 }
-    const shallowProxy = shallowReadonly(target)
-    const normalProxy = readonly(target)
-
-    expect(normalProxy).not.toBe(shallowProxy)
   })
 })

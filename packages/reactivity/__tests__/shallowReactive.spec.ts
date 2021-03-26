@@ -14,12 +14,14 @@ describe('shallowReactive', () => {
     expect(isReactive(props.n)).toBe(true)
   })
 
-  test('should allow shallow und normal reactive for same target', () => {
-    const target = { foo: 1 }
-    const shallowProxy = shallowReactive(target)
-    const normalProxy = reactive(target)
-
-    expect(normalProxy).not.toBe(shallowProxy)
+  // #2843
+  test('should allow shallow und normal reactive for same target', async () => {
+    const original = { foo: {} }
+    const shallowProxy = shallowReactive(original)
+    const reactiveProxy = reactive(original)
+    expect(shallowProxy).not.toBe(reactiveProxy)
+    expect(isReactive(shallowProxy.foo)).toBe(false)
+    expect(isReactive(reactiveProxy.foo)).toBe(true)
   })
 
   describe('collections', () => {

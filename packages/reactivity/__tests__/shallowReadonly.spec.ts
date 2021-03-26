@@ -1,4 +1,4 @@
-import { isReactive, isReadonly, shallowReadonly } from '../src'
+import { isReactive, isReadonly, readonly, shallowReadonly } from '../src'
 
 describe('reactivity/shallowReadonly', () => {
   test('should not make non-reactive properties reactive', () => {
@@ -25,6 +25,16 @@ describe('reactivity/shallowReadonly', () => {
     expect(
       `Set operation on key "foo" failed: target is readonly.`
     ).not.toHaveBeenWarned()
+  })
+
+  // #2843
+  test('should differentiate from normal readonly calls', async () => {
+    const original = { foo: {} }
+    const shallowProxy = shallowReadonly(original)
+    const reactiveProxy = readonly(original)
+    expect(shallowProxy).not.toBe(reactiveProxy)
+    expect(isReadonly(shallowProxy.foo)).toBe(false)
+    expect(isReadonly(reactiveProxy.foo)).toBe(true)
   })
 
   describe('collection/Map', () => {
