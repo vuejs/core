@@ -48,7 +48,14 @@ import {
   flushPreFlushCbs,
   SchedulerCb
 } from './scheduler'
-import { effect, stop, ReactiveEffectOptions, isRef } from '@vue/reactivity'
+import {
+  effect,
+  stop,
+  ReactiveEffectOptions,
+  isRef,
+  pauseTracking,
+  resetTracking
+} from '@vue/reactivity'
 import { updateProps } from './componentProps'
 import { updateSlots } from './componentSlots'
 import { pushWarningContext, popWarningContext, warn } from './warning'
@@ -1567,9 +1574,11 @@ function baseCreateRenderer(
     updateProps(instance, nextVNode.props, prevProps, optimized)
     updateSlots(instance, nextVNode.children)
 
+    pauseTracking()
     // props update may have triggered pre-flush watchers.
     // flush them before the render update.
     flushPreFlushCbs(undefined, instance.update)
+    resetTracking()
   }
 
   const patchChildren: PatchChildrenFn = (
