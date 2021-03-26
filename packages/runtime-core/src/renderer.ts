@@ -11,7 +11,8 @@ import {
   Static,
   VNodeNormalizedRef,
   VNodeHook,
-  VNodeNormalizedRefAtom
+  VNodeNormalizedRefAtom,
+  VNodeProps
 } from './vnode'
 import {
   ComponentInternalInstance,
@@ -36,7 +37,8 @@ import {
   NOOP,
   hasOwn,
   invokeArrayFns,
-  isArray
+  isArray,
+  getGlobalThis
 } from '@vue/shared'
 import {
   queueJob,
@@ -56,11 +58,7 @@ import {
   queueEffectWithSuspense,
   SuspenseImpl
 } from './components/Suspense'
-import {
-  isTeleportDisabled,
-  TeleportImpl,
-  TeleportVNode
-} from './components/Teleport'
+import { TeleportImpl, TeleportVNode } from './components/Teleport'
 import { isKeepAlive, KeepAliveContext } from './components/KeepAlive'
 import { registerHMR, unregisterHMR, isHmrUpdating } from './hmr'
 import {
@@ -75,7 +73,8 @@ import { ComponentPublicInstance } from './componentPublicInstance'
 import {
   devtoolsComponentAdded,
   devtoolsComponentRemoved,
-  devtoolsComponentUpdated
+  devtoolsComponentUpdated,
+  setDevtoolsHook
 } from './devtools'
 import { initFeatureFlags } from './featureFlags'
 import { isAsyncWrapper } from './apiAsyncComponent'
@@ -91,7 +90,8 @@ export interface HydrationRenderer extends Renderer<Element> {
 
 export type RootRenderFunction<HostElement = RendererElement> = (
   vnode: VNode | null,
-  container: HostElement
+  container: HostElement,
+  isSVG?: boolean
 ) => void
 
 export interface RendererOptions<
@@ -115,7 +115,8 @@ export interface RendererOptions<
   createElement(
     type: string,
     isSVG?: boolean,
-    isCustomizedBuiltIn?: string
+    isCustomizedBuiltIn?: string,
+    vnodeProps?: (VNodeProps & { [key: string]: any }) | null
   ): HostElement
   createText(text: string): HostNode
   createComment(text: string): HostNode
@@ -174,6 +175,7 @@ type PatchFn = (
   parentComponent?: ComponentInternalInstance | null,
   parentSuspense?: SuspenseBoundary | null,
   isSVG?: boolean,
+  slotScopeIds?: string[] | null,
   optimized?: boolean
 ) => void
 
@@ -184,6 +186,7 @@ type MountChildrenFn = (
   parentComponent: ComponentInternalInstance | null,
   parentSuspense: SuspenseBoundary | null,
   isSVG: boolean,
+  slotScopeIds: string[] | null,
   optimized: boolean,
   start?: number
 ) => void
@@ -196,7 +199,8 @@ type PatchChildrenFn = (
   parentComponent: ComponentInternalInstance | null,
   parentSuspense: SuspenseBoundary | null,
   isSVG: boolean,
-  optimized?: boolean
+  slotScopeIds: string[] | null,
+  optimized: boolean
 ) => void
 
 type PatchBlockChildrenFn = (
@@ -205,7 +209,8 @@ type PatchBlockChildrenFn = (
   fallbackContainer: RendererElement,
   parentComponent: ComponentInternalInstance | null,
   parentSuspense: SuspenseBoundary | null,
-  isSVG: boolean
+  isSVG: boolean,
+  slotScopeIds: string[] | null
 ) => void
 
 type MoveFn = (
@@ -310,14 +315,17 @@ export const setRef = (
   }
 
   let value: ComponentPublicInstance | RendererNode | Record<string, any> | null
-  if (!vnode || isAsyncWrapper(vnode)) {
+  if (!vnode) {
+    // means unmount
     value = null
+  } else if (isAsyncWrapper(vnode)) {
+    // when mounting async components, nothing needs to be done,
+    // because the template ref is forwarded to inner component
+    return
+  } else if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
+    value = vnode.component!.exposed || vnode.component!.proxy
   } else {
-    if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
-      value = vnode.component!.exposed || vnode.component!.proxy
-    } else {
-      value = vnode.el
-    }
+    value = vnode.el
   }
 
   const { i: owner, r: ref } = rawRef
@@ -430,6 +438,12 @@ function baseCreateRenderer(
     initFeatureFlags()
   }
 
+  if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+    const target = getGlobalThis()
+    target.__VUE__ = true
+    setDevtoolsHook(target.__VUE_DEVTOOLS_GLOBAL_HOOK__)
+  }
+
   const {
     insert: hostInsert,
     remove: hostRemove,
@@ -457,6 +471,7 @@ function baseCreateRenderer(
     parentComponent = null,
     parentSuspense = null,
     isSVG = false,
+    slotScopeIds = null,
     optimized = false
   ) => {
     // patching & not same type, unmount old tree
@@ -495,6 +510,7 @@ function baseCreateRenderer(
           parentComponent,
           parentSuspense,
           isSVG,
+          slotScopeIds,
           optimized
         )
         break
@@ -508,6 +524,7 @@ function baseCreateRenderer(
             parentComponent,
             parentSuspense,
             isSVG,
+            slotScopeIds,
             optimized
           )
         } else if (shapeFlag & ShapeFlags.COMPONENT) {
@@ -519,6 +536,7 @@ function baseCreateRenderer(
             parentComponent,
             parentSuspense,
             isSVG,
+            slotScopeIds,
             optimized
           )
         } else if (shapeFlag & ShapeFlags.TELEPORT) {
@@ -530,6 +548,7 @@ function baseCreateRenderer(
             parentComponent,
             parentSuspense,
             isSVG,
+            slotScopeIds,
             optimized,
             internals
           )
@@ -542,6 +561,7 @@ function baseCreateRenderer(
             parentComponent,
             parentSuspense,
             isSVG,
+            slotScopeIds,
             optimized,
             internals
           )
@@ -664,6 +684,7 @@ function baseCreateRenderer(
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
     isSVG: boolean,
+    slotScopeIds: string[] | null,
     optimized: boolean
   ) => {
     isSVG = isSVG || (n2.type as string) === 'svg'
@@ -675,10 +696,19 @@ function baseCreateRenderer(
         parentComponent,
         parentSuspense,
         isSVG,
+        slotScopeIds,
         optimized
       )
     } else {
-      patchElement(n1, n2, parentComponent, parentSuspense, isSVG, optimized)
+      patchElement(
+        n1,
+        n2,
+        parentComponent,
+        parentSuspense,
+        isSVG,
+        slotScopeIds,
+        optimized
+      )
     }
   }
 
@@ -689,19 +719,12 @@ function baseCreateRenderer(
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
     isSVG: boolean,
+    slotScopeIds: string[] | null,
     optimized: boolean
   ) => {
     let el: RendererElement
     let vnodeHook: VNodeHook | undefined | null
-    const {
-      type,
-      props,
-      shapeFlag,
-      transition,
-      scopeId,
-      patchFlag,
-      dirs
-    } = vnode
+    const { type, props, shapeFlag, transition, patchFlag, dirs } = vnode
     if (
       !__DEV__ &&
       vnode.el &&
@@ -717,7 +740,8 @@ function baseCreateRenderer(
       el = vnode.el = hostCreateElement(
         vnode.type as string,
         isSVG,
-        props && props.is
+        props && props.is,
+        props
       )
 
       // mount children first, since some props may rely on child content
@@ -732,6 +756,7 @@ function baseCreateRenderer(
           parentComponent,
           parentSuspense,
           isSVG && type !== 'foreignObject',
+          slotScopeIds,
           optimized || !!vnode.dynamicChildren
         )
       }
@@ -761,7 +786,7 @@ function baseCreateRenderer(
         }
       }
       // scopeId
-      setScopeId(el, scopeId, vnode, parentComponent)
+      setScopeId(el, vnode, vnode.scopeId, slotScopeIds, parentComponent)
     }
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
       Object.defineProperty(el, '__vnode', {
@@ -801,30 +826,32 @@ function baseCreateRenderer(
 
   const setScopeId = (
     el: RendererElement,
-    scopeId: string | false | null,
     vnode: VNode,
+    scopeId: string | null,
+    slotScopeIds: string[] | null,
     parentComponent: ComponentInternalInstance | null
   ) => {
     if (scopeId) {
       hostSetScopeId(el, scopeId)
     }
-    if (parentComponent) {
-      const treeOwnerId = parentComponent.type.__scopeId
-      // vnode's own scopeId and the current patched component's scopeId is
-      // different - this is a slot content node.
-      if (treeOwnerId && treeOwnerId !== scopeId) {
-        hostSetScopeId(el, treeOwnerId + '-s')
+    if (slotScopeIds) {
+      for (let i = 0; i < slotScopeIds.length; i++) {
+        hostSetScopeId(el, slotScopeIds[i])
       }
+    }
+    if (parentComponent) {
       let subTree = parentComponent.subTree
-      if (__DEV__ && subTree.type === Fragment) {
+      if (__DEV__ && subTree.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT) {
         subTree =
           filterSingleRoot(subTree.children as VNodeArrayChildren) || subTree
       }
       if (vnode === subTree) {
+        const parentVNode = parentComponent.vnode
         setScopeId(
           el,
-          parentComponent.vnode.scopeId,
-          parentComponent.vnode,
+          parentVNode,
+          parentVNode.scopeId,
+          parentVNode.slotScopeIds,
           parentComponent.parent
         )
       }
@@ -839,6 +866,7 @@ function baseCreateRenderer(
     parentSuspense,
     isSVG,
     optimized,
+    slotScopeIds,
     start = 0
   ) => {
     for (let i = start; i < children.length; i++) {
@@ -853,7 +881,8 @@ function baseCreateRenderer(
         parentComponent,
         parentSuspense,
         isSVG,
-        optimized
+        optimized,
+        slotScopeIds
       )
     }
   }
@@ -864,6 +893,7 @@ function baseCreateRenderer(
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
     isSVG: boolean,
+    slotScopeIds: string[] | null,
     optimized: boolean
   ) => {
     const el = (n2.el = n1.el!)
@@ -981,7 +1011,8 @@ function baseCreateRenderer(
         el,
         parentComponent,
         parentSuspense,
-        areChildrenSVG
+        areChildrenSVG,
+        slotScopeIds
       )
       if (__DEV__ && parentComponent && parentComponent.type.__hmrId) {
         traverseStaticChildren(n1, n2)
@@ -995,7 +1026,9 @@ function baseCreateRenderer(
         null,
         parentComponent,
         parentSuspense,
-        areChildrenSVG
+        areChildrenSVG,
+        slotScopeIds,
+        false
       )
     }
 
@@ -1014,7 +1047,8 @@ function baseCreateRenderer(
     fallbackContainer,
     parentComponent,
     parentSuspense,
-    isSVG
+    isSVG,
+    slotScopeIds
   ) => {
     for (let i = 0; i < newChildren.length; i++) {
       const oldVNode = oldChildren[i]
@@ -1042,6 +1076,7 @@ function baseCreateRenderer(
         parentComponent,
         parentSuspense,
         isSVG,
+        slotScopeIds,
         true
       )
     }
@@ -1107,14 +1142,22 @@ function baseCreateRenderer(
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
     isSVG: boolean,
+    slotScopeIds: string[] | null,
     optimized: boolean
   ) => {
     const fragmentStartAnchor = (n2.el = n1 ? n1.el : hostCreateText(''))!
     const fragmentEndAnchor = (n2.anchor = n1 ? n1.anchor : hostCreateText(''))!
 
-    let { patchFlag, dynamicChildren } = n2
+    let { patchFlag, dynamicChildren, slotScopeIds: fragmentSlotScopeIds } = n2
     if (patchFlag > 0) {
       optimized = true
+    }
+
+    // check if this is a slot fragment with :slotted scope ids
+    if (fragmentSlotScopeIds) {
+      slotScopeIds = slotScopeIds
+        ? slotScopeIds.concat(fragmentSlotScopeIds)
+        : fragmentSlotScopeIds
     }
 
     if (__DEV__ && isHmrUpdating) {
@@ -1137,6 +1180,7 @@ function baseCreateRenderer(
         parentComponent,
         parentSuspense,
         isSVG,
+        slotScopeIds,
         optimized
       )
     } else {
@@ -1156,7 +1200,8 @@ function baseCreateRenderer(
           container,
           parentComponent,
           parentSuspense,
-          isSVG
+          isSVG,
+          slotScopeIds
         )
         if (__DEV__ && parentComponent && parentComponent.type.__hmrId) {
           traverseStaticChildren(n1, n2)
@@ -1183,6 +1228,7 @@ function baseCreateRenderer(
           parentComponent,
           parentSuspense,
           isSVG,
+          slotScopeIds,
           optimized
         )
       }
@@ -1197,8 +1243,10 @@ function baseCreateRenderer(
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
     isSVG: boolean,
+    slotScopeIds: string[] | null,
     optimized: boolean
   ) => {
+    n2.slotScopeIds = slotScopeIds
     if (n1 == null) {
       if (n2.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
         ;(parentComponent!.ctx as KeepAliveContext).activate(
@@ -1370,7 +1418,8 @@ function baseCreateRenderer(
             initialVNode.el as Node,
             subTree,
             instance,
-            parentSuspense
+            parentSuspense,
+            null
           )
           if (__DEV__) {
             endMeasure(instance, `hydrate`)
@@ -1531,6 +1580,7 @@ function baseCreateRenderer(
     parentComponent,
     parentSuspense,
     isSVG,
+    slotScopeIds,
     optimized = false
   ) => {
     const c1 = n1 && n1.children
@@ -1551,6 +1601,7 @@ function baseCreateRenderer(
           parentComponent,
           parentSuspense,
           isSVG,
+          slotScopeIds,
           optimized
         )
         return
@@ -1564,6 +1615,7 @@ function baseCreateRenderer(
           parentComponent,
           parentSuspense,
           isSVG,
+          slotScopeIds,
           optimized
         )
         return
@@ -1592,6 +1644,7 @@ function baseCreateRenderer(
             parentComponent,
             parentSuspense,
             isSVG,
+            slotScopeIds,
             optimized
           )
         } else {
@@ -1613,6 +1666,7 @@ function baseCreateRenderer(
             parentComponent,
             parentSuspense,
             isSVG,
+            slotScopeIds,
             optimized
           )
         }
@@ -1628,6 +1682,7 @@ function baseCreateRenderer(
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
     isSVG: boolean,
+    slotScopeIds: string[] | null,
     optimized: boolean
   ) => {
     c1 = c1 || EMPTY_ARR
@@ -1648,6 +1703,7 @@ function baseCreateRenderer(
         parentComponent,
         parentSuspense,
         isSVG,
+        slotScopeIds,
         optimized
       )
     }
@@ -1670,6 +1726,7 @@ function baseCreateRenderer(
         parentComponent,
         parentSuspense,
         isSVG,
+        slotScopeIds,
         optimized,
         commonLength
       )
@@ -1685,6 +1742,7 @@ function baseCreateRenderer(
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
     isSVG: boolean,
+    slotScopeIds: string[] | null,
     optimized: boolean
   ) => {
     let i = 0
@@ -1709,6 +1767,7 @@ function baseCreateRenderer(
           parentComponent,
           parentSuspense,
           isSVG,
+          slotScopeIds,
           optimized
         )
       } else {
@@ -1734,6 +1793,7 @@ function baseCreateRenderer(
           parentComponent,
           parentSuspense,
           isSVG,
+          slotScopeIds,
           optimized
         )
       } else {
@@ -1764,7 +1824,9 @@ function baseCreateRenderer(
             anchor,
             parentComponent,
             parentSuspense,
-            isSVG
+            isSVG,
+            slotScopeIds,
+            optimized
           )
           i++
         }
@@ -1866,6 +1928,7 @@ function baseCreateRenderer(
             parentComponent,
             parentSuspense,
             isSVG,
+            slotScopeIds,
             optimized
           )
           patched++
@@ -1893,7 +1956,9 @@ function baseCreateRenderer(
             anchor,
             parentComponent,
             parentSuspense,
-            isSVG
+            isSVG,
+            slotScopeIds,
+            optimized
           )
         } else if (moved) {
           // move if:
@@ -2045,12 +2110,15 @@ function baseCreateRenderer(
         unmountChildren(children as VNode[], parentComponent, parentSuspense)
       }
 
-      // an unmounted teleport should always remove its children if not disabled
-      if (
-        shapeFlag & ShapeFlags.TELEPORT &&
-        (doRemove || !isTeleportDisabled(vnode.props))
-      ) {
-        ;(vnode.type as typeof TeleportImpl).remove(vnode, internals)
+      if (shapeFlag & ShapeFlags.TELEPORT) {
+        ;(vnode.type as typeof TeleportImpl).remove(
+          vnode,
+          parentComponent,
+          parentSuspense,
+          optimized,
+          internals,
+          doRemove
+        )
       }
 
       if (doRemove) {
@@ -2194,13 +2262,13 @@ function baseCreateRenderer(
     return hostNextSibling((vnode.anchor || vnode.el)!)
   }
 
-  const render: RootRenderFunction = (vnode, container) => {
+  const render: RootRenderFunction = (vnode, container, isSVG) => {
     if (vnode == null) {
       if (container._vnode) {
         unmount(container._vnode, null, null, true)
       }
     } else {
-      patch(container._vnode || null, vnode, container)
+      patch(container._vnode || null, vnode, container, null, null, null, isSVG)
     }
     flushPostFlushCbs()
     container._vnode = vnode
