@@ -626,6 +626,15 @@ describe('SSR hydration', () => {
     expect(spy).toHaveBeenCalled()
   })
 
+  test('elements with camel-case in svg ', () => {
+    const { vnode, container } = mountWithHydration(
+      '<animateTransform></animateTransform>',
+      () => h('animateTransform')
+    )
+    expect(vnode.el).toBe(container.firstChild)
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+  })
+
   test('SVG as a mount container', () => {
     const svgContainer = document.createElement('svg')
     svgContainer.innerHTML = '<g></g>'
