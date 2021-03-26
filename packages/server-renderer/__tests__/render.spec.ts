@@ -811,10 +811,8 @@ function testRender(type: string, render: typeof renderToString) {
 
       expect(fn2).toHaveBeenCalledTimes(1)
       expect(fn2).toBeCalledWith('async child error')
-
-      expect('Uncaught error in async setup').toHaveBeenWarned()
     })
-    
+
     // https://github.com/vuejs/vue-next/issues/3322
     test('effect onInvalidate does not error', async () => {
       const noop = () => {}
