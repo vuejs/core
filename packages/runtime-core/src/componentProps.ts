@@ -480,7 +480,12 @@ function validateProps(
   for (const key in options) {
     let opt = options[key]
     if (opt == null) continue
-    validateProp(key, resolvedValues[key], opt, !hasOwn(rawProps, key))
+    validateProp(
+      key,
+      resolvedValues[key],
+      opt,
+      !hasOwn(rawProps, key) && !hasOwn(rawProps, hyphenate(key))
+    )
   }
 }
 
