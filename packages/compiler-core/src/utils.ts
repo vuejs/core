@@ -32,7 +32,13 @@ import {
   BASE_TRANSITION,
   TO_HANDLERS,
   NORMALIZE_PROPS,
-  GUARD_REACTIVE_PROPS
+  GUARD_REACTIVE_PROPS,
+  CREATE_BLOCK,
+  CREATE_COMPONENT_BLOCK,
+  CREATE_ELEMENT_BLOCK,
+  CREATE_VNODE,
+  CREATE_COMPONENT_VNODE,
+  CREATE_ELEMENT_VNODE
 } from './runtimeHelpers'
 import { isString, isObject, hyphenate, extend } from '@vue/shared'
 import { PropsExpression } from './transforms/transformElement'
@@ -218,6 +224,22 @@ export function isSlotOutlet(
   return node.type === NodeTypes.ELEMENT && node.tagType === ElementTypes.SLOT
 }
 
+export function getVNodeHelper(ssr: boolean, isComponent: boolean) {
+  return ssr
+    ? CREATE_VNODE
+    : isComponent
+      ? CREATE_COMPONENT_VNODE
+      : CREATE_ELEMENT_VNODE
+}
+
+export function getVNodeBlockHelper(ssr: boolean, isComponent: boolean) {
+  return ssr
+    ? CREATE_BLOCK
+    : isComponent
+      ? CREATE_COMPONENT_BLOCK
+      : CREATE_ELEMENT_BLOCK
+}
+
 const propsHelperSet = new Set([NORMALIZE_PROPS, GUARD_REACTIVE_PROPS])
 
 function getUnnormalizedProps(
@@ -251,9 +273,7 @@ export function injectProp(
   /**
    * 1. mergeProps(...)
    * 2. toHandlers(...)
-   *
    * 3. normalizeProps(...)
-   *
    * 4. normalizeProps(guardReactiveProps(...))
    *
    * we need to get the real props before normalization

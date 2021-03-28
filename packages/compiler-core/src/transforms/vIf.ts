@@ -30,15 +30,16 @@ import { validateBrowserExpression } from '../validateExpression'
 import {
   FRAGMENT,
   CREATE_COMMENT,
-  OPEN_BLOCK,
-  CREATE_VNODE,
-  CREATE_COMPONENT_BLOCK,
-  CREATE_ELEMENT_BLOCK,
-  CREATE_BLOCK,
-  CREATE_COMPONENT_VNODE,
-  CREATE_ELEMENT_VNODE
+  OPEN_BLOCK
 } from '../runtimeHelpers'
-import { injectProp, findDir, findProp, isBuiltInType } from '../utils'
+import {
+  injectProp,
+  findDir,
+  findProp,
+  isBuiltInType,
+  getVNodeHelper,
+  getVNodeBlockHelper
+} from '../utils'
 import {
   PatchFlags,
   PatchFlagNames,
@@ -300,22 +301,10 @@ function createChildrenCodegenNode(
       .codegenNode as BlockCodegenNode
     // Change createVNode to createBlock.
     if (vnodeCall.type === NodeTypes.VNODE_CALL && !vnodeCall.isBlock) {
-      removeHelper(
-        context.forSSR
-          ? CREATE_VNODE
-          : vnodeCall.isComponent
-            ? CREATE_COMPONENT_VNODE
-            : CREATE_ELEMENT_VNODE
-      )
+      removeHelper(getVNodeHelper(context.forSSR, vnodeCall.isComponent))
       vnodeCall.isBlock = true
       helper(OPEN_BLOCK)
-      helper(
-        context.forSSR
-          ? CREATE_BLOCK
-          : vnodeCall.isComponent
-            ? CREATE_COMPONENT_BLOCK
-            : CREATE_ELEMENT_BLOCK
-      )
+      helper(getVNodeBlockHelper(context.forSSR, vnodeCall.isComponent))
     }
     // inject branch key
     injectProp(vnodeCall, keyProperty, context)

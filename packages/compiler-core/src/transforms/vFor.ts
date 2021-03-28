@@ -32,19 +32,11 @@ import {
   findProp,
   isTemplateNode,
   isSlotOutlet,
-  injectProp
+  injectProp,
+  getVNodeBlockHelper,
+  getVNodeHelper
 } from '../utils'
-import {
-  RENDER_LIST,
-  OPEN_BLOCK,
-  FRAGMENT,
-  CREATE_COMPONENT_BLOCK,
-  CREATE_ELEMENT_BLOCK,
-  CREATE_COMPONENT_VNODE,
-  CREATE_ELEMENT_VNODE,
-  CREATE_BLOCK,
-  CREATE_VNODE
-} from '../runtimeHelpers'
+import { RENDER_LIST, OPEN_BLOCK, FRAGMENT } from '../runtimeHelpers'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
 import {
@@ -192,41 +184,21 @@ export const transformFor = createStructuralDirectiveTransform(
               // switch from block to vnode
               removeHelper(OPEN_BLOCK)
               removeHelper(
-                context.forSSR
-                  ? CREATE_BLOCK
-                  : childBlock.isComponent
-                    ? CREATE_COMPONENT_BLOCK
-                    : CREATE_ELEMENT_BLOCK
+                getVNodeBlockHelper(context.forSSR, childBlock.isComponent)
               )
             } else {
               // switch from vnode to block
               removeHelper(
-                context.forSSR
-                  ? CREATE_VNODE
-                  : childBlock.isComponent
-                    ? CREATE_COMPONENT_VNODE
-                    : CREATE_ELEMENT_VNODE
+                getVNodeHelper(context.forSSR, childBlock.isComponent)
               )
             }
           }
           childBlock.isBlock = !isStableFragment
           if (childBlock.isBlock) {
             helper(OPEN_BLOCK)
-            helper(
-              context.forSSR
-                ? CREATE_BLOCK
-                : childBlock.isComponent
-                  ? CREATE_COMPONENT_BLOCK
-                  : CREATE_ELEMENT_BLOCK
-            )
+            helper(getVNodeBlockHelper(context.forSSR, childBlock.isComponent))
           } else {
-            helper(
-              context.forSSR
-                ? CREATE_VNODE
-                : childBlock.isComponent
-                  ? CREATE_COMPONENT_VNODE
-                  : CREATE_ELEMENT_VNODE
-            )
+            helper(getVNodeHelper(context.forSSR, childBlock.isComponent))
           }
         }
 

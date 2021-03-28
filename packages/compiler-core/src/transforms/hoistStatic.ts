@@ -15,19 +15,13 @@ import {
 } from '../ast'
 import { TransformContext } from '../transform'
 import { PatchFlags, isString, isSymbol } from '@vue/shared'
-import { isSlotOutlet } from '../utils'
+import { getVNodeBlockHelper, getVNodeHelper, isSlotOutlet } from '../utils'
 import {
   OPEN_BLOCK,
-  CREATE_BLOCK,
-  CREATE_COMPONENT_VNODE,
-  CREATE_ELEMENT_VNODE,
-  CREATE_VNODE,
   GUARD_REACTIVE_PROPS,
   NORMALIZE_CLASS,
   NORMALIZE_PROPS,
-  NORMALIZE_STYLE,
-  CREATE_COMPONENT_BLOCK,
-  CREATE_ELEMENT_BLOCK
+  NORMALIZE_STYLE
 } from '../runtimeHelpers'
 
 export function hoistStatic(root: RootNode, context: TransformContext) {
@@ -228,19 +222,11 @@ export function getConstantType(
         if (codegenNode.isBlock) {
           context.removeHelper(OPEN_BLOCK)
           context.removeHelper(
-            context.forSSR
-              ? CREATE_BLOCK
-              : codegenNode.isComponent
-                ? CREATE_COMPONENT_BLOCK
-                : CREATE_ELEMENT_BLOCK
+            getVNodeBlockHelper(context.forSSR, codegenNode.isComponent)
           )
           codegenNode.isBlock = false
           context.helper(
-            context.forSSR
-              ? CREATE_VNODE
-              : codegenNode.isComponent
-                ? CREATE_COMPONENT_VNODE
-                : CREATE_ELEMENT_VNODE
+            getVNodeHelper(context.forSSR, codegenNode.isComponent)
           )
         }
 

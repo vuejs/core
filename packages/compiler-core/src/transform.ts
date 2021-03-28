@@ -36,15 +36,9 @@ import {
   FRAGMENT,
   helperNameMap,
   CREATE_COMMENT,
-  OPEN_BLOCK,
-  CREATE_ELEMENT_BLOCK,
-  CREATE_COMPONENT_BLOCK,
-  CREATE_BLOCK,
-  CREATE_VNODE,
-  CREATE_COMPONENT_VNODE,
-  CREATE_ELEMENT_VNODE
+  OPEN_BLOCK
 } from './runtimeHelpers'
-import { isVSlot } from './utils'
+import { getVNodeBlockHelper, getVNodeHelper, isVSlot } from './utils'
 import { hoistStatic, isSingleElementRoot } from './transforms/hoistStatic'
 import { CompilerCompatOptions } from './compat/compatConfig'
 
@@ -355,21 +349,9 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
       if (codegenNode.type === NodeTypes.VNODE_CALL) {
         if (!codegenNode.isBlock) {
           codegenNode.isBlock = true
-          removeHelper(
-            context.forSSR
-              ? CREATE_VNODE
-              : codegenNode.isComponent
-                ? CREATE_COMPONENT_VNODE
-                : CREATE_ELEMENT_VNODE
-          )
+          removeHelper(getVNodeHelper(context.forSSR, codegenNode.isComponent))
           helper(OPEN_BLOCK)
-          helper(
-            context.forSSR
-              ? CREATE_BLOCK
-              : codegenNode.isComponent
-                ? CREATE_COMPONENT_BLOCK
-                : CREATE_ELEMENT_BLOCK
-          )
+          helper(getVNodeBlockHelper(context.forSSR, codegenNode.isComponent))
         }
       }
       root.codegenNode = codegenNode

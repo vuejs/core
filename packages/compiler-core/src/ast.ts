@@ -6,16 +6,11 @@ import {
   RENDER_LIST,
   OPEN_BLOCK,
   FRAGMENT,
-  WITH_DIRECTIVES,
-  CREATE_COMPONENT_VNODE,
-  CREATE_ELEMENT_VNODE,
-  CREATE_COMPONENT_BLOCK,
-  CREATE_ELEMENT_BLOCK,
-  CREATE_BLOCK,
-  CREATE_VNODE
+  WITH_DIRECTIVES
 } from './runtimeHelpers'
 import { PropsExpression } from './transforms/transformElement'
 import { ImportItem, TransformContext } from './transform'
+import { getVNodeBlockHelper, getVNodeHelper } from './utils'
 
 // Vue template is a platform-agnostic superset of HTML (syntax only).
 // More namespaces like SVG and MathML are declared by platform specific
@@ -573,21 +568,9 @@ export function createVNodeCall(
   if (context) {
     if (isBlock) {
       context.helper(OPEN_BLOCK)
-      context.helper(
-        context.forSSR
-          ? CREATE_BLOCK
-          : isComponent
-            ? CREATE_COMPONENT_BLOCK
-            : CREATE_ELEMENT_BLOCK
-      )
+      context.helper(getVNodeBlockHelper(context.forSSR, isComponent))
     } else {
-      context.helper(
-        context.forSSR
-          ? CREATE_VNODE
-          : isComponent
-            ? CREATE_COMPONENT_VNODE
-            : CREATE_ELEMENT_VNODE
-      )
+      context.helper(getVNodeHelper(context.forSSR, isComponent))
     }
     if (directives) {
       context.helper(WITH_DIRECTIVES)

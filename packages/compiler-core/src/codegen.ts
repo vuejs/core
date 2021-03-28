@@ -30,6 +30,8 @@ import { SourceMapGenerator, RawSourceMap } from 'source-map'
 import {
   advancePositionWithMutation,
   assert,
+  getVNodeBlockHelper,
+  getVNodeHelper,
   isSimpleIdentifier,
   toValidAssetId
 } from './utils'
@@ -47,15 +49,11 @@ import {
   POP_SCOPE_ID,
   WITH_SCOPE_ID,
   WITH_DIRECTIVES,
-  CREATE_ELEMENT_BLOCK,
-  CREATE_COMPONENT_BLOCK,
   CREATE_ELEMENT_VNODE,
-  CREATE_COMPONENT_VNODE,
   OPEN_BLOCK,
   CREATE_STATIC,
   WITH_CTX,
-  RESOLVE_FILTER,
-  CREATE_BLOCK
+  RESOLVE_FILTER
 } from './runtimeHelpers'
 import { ImportItem } from './transform'
 
@@ -774,16 +772,9 @@ function genVNodeCall(node: VNodeCall, context: CodegenContext) {
   if (pure) {
     push(PURE_ANNOTATION)
   }
-  let callHelper: symbol = isBlock ? CREATE_BLOCK : CREATE_VNODE
-  if (!context.forSSR) {
-    callHelper = isBlock
-      ? isComponent
-        ? CREATE_COMPONENT_BLOCK
-        : CREATE_ELEMENT_BLOCK
-      : isComponent
-        ? CREATE_COMPONENT_VNODE
-        : CREATE_ELEMENT_VNODE
-  }
+  const callHelper: symbol = isBlock
+    ? getVNodeBlockHelper(context.forSSR, isComponent)
+    : getVNodeHelper(context.forSSR, isComponent)
   push(helper(callHelper) + `(`, node)
   genNodeList(
     genNullableArgs([
