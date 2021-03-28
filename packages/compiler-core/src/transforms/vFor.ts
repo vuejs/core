@@ -191,10 +191,22 @@ export const transformFor = createStructuralDirectiveTransform(
             if (childBlock.isBlock) {
               // switch from block to vnode
               removeHelper(OPEN_BLOCK)
-              removeHelper(CREATE_BLOCK)
+              removeHelper(
+                context.forSSR
+                  ? CREATE_BLOCK
+                  : childBlock.isComponent
+                    ? CREATE_COMPONENT_BLOCK
+                    : CREATE_ELEMENT_BLOCK
+              )
             } else {
               // switch from vnode to block
-              removeHelper(CREATE_VNODE)
+              removeHelper(
+                context.forSSR
+                  ? CREATE_VNODE
+                  : childBlock.isComponent
+                    ? CREATE_COMPONENT_VNODE
+                    : CREATE_ELEMENT_VNODE
+              )
             }
           }
           childBlock.isBlock = !isStableFragment

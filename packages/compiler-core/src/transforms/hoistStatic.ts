@@ -228,7 +228,7 @@ export function getConstantType(
         if (codegenNode.isBlock) {
           context.removeHelper(OPEN_BLOCK)
           context.removeHelper(
-            context.ssr
+            context.forSSR
               ? CREATE_BLOCK
               : codegenNode.isComponent
                 ? CREATE_COMPONENT_BLOCK

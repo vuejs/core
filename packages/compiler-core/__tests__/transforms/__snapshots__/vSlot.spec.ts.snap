@@ -15,7 +15,7 @@ return function render(_ctx, _cache) {
 `;
 
 exports[`compiler: transform component slots implicit default slot 1`] = `
-"const { createElementVNode: _createElementVNode, resolveComponent: _resolveComponent, withCtx: _withCtx, createComponentVNode: _createComponentVNode, openBlock: _openBlock, createComponentBlock: _createComponentBlock } = Vue
+"const { createElementVNode: _createElementVNode, resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createComponentBlock: _createComponentBlock } = Vue
 
 return function render(_ctx, _cache) {
   const _component_Comp = _resolveComponent(\\"Comp\\")
@@ -118,7 +118,7 @@ exports[`compiler: transform component slots named slots w/ implicit default slo
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { createElementVNode: _createElementVNode, resolveComponent: _resolveComponent, withCtx: _withCtx, createComponentVNode: _createComponentVNode, openBlock: _openBlock, createComponentBlock: _createComponentBlock } = _Vue
+    const { createElementVNode: _createElementVNode, resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createComponentBlock: _createComponentBlock } = _Vue
 
     const _component_Comp = _resolveComponent(\\"Comp\\")
 

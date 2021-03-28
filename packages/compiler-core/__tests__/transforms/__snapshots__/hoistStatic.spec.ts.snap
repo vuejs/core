@@ -132,7 +132,7 @@ return function render(_ctx, _cache) {
 
 exports[`compiler: hoistStatic transform hoist static props for elements with unhoistable children 1`] = `
 "const _Vue = Vue
-const { createElementVNode: _createElementVNode, createComponentVNode: _createComponentVNode } = _Vue
+const { createElementVNode: _createElementVNode } = _Vue
 
 const _hoisted_1 = { id: \\"foo\\" }
 
@@ -241,7 +241,7 @@ exports[`compiler: hoistStatic transform prefixIdentifiers should NOT hoist expr
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { toDisplayString: _toDisplayString, createTextVNode: _createTextVNode, resolveComponent: _resolveComponent, withCtx: _withCtx, createComponentVNode: _createComponentVNode, openBlock: _openBlock, createComponentBlock: _createComponentBlock } = _Vue
+    const { toDisplayString: _toDisplayString, createTextVNode: _createTextVNode, resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createComponentBlock: _createComponentBlock } = _Vue
 
     const _component_Comp = _resolveComponent(\\"Comp\\")
 
@@ -278,7 +278,7 @@ exports[`compiler: hoistStatic transform prefixIdentifiers should NOT hoist keye
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock, createElementVNode: _createElementVNode } = _Vue
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return (_openBlock(), _createElementBlock(\\"div\\", null, [
       (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(items, (item) => {
@@ -294,7 +294,7 @@ exports[`compiler: hoistStatic transform should NOT hoist components 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { resolveComponent: _resolveComponent, createComponentVNode: _createComponentVNode, createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
+    const { resolveComponent: _resolveComponent, createComponentVNode: _createComponentVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     const _component_Comp = _resolveComponent(\\"Comp\\")
 
@@ -310,7 +310,7 @@ exports[`compiler: hoistStatic transform should NOT hoist element with dynamic k
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { openBlock: _openBlock, createElementBlock: _createElementBlock, createElementVNode: _createElementVNode } = _Vue
+    const { openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return (_openBlock(), _createElementBlock(\\"div\\", null, [
       (_openBlock(), _createElementBlock(\\"div\\", { key: foo }))

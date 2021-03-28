@@ -362,7 +362,6 @@ function genFunctionPreamble(ast: RootNode, context: CodegenContext) {
         const staticHelpers = [
           CREATE_VNODE,
           CREATE_ELEMENT_VNODE,
-          CREATE_COMPONENT_VNODE,
           CREATE_COMMENT,
           CREATE_TEXT,
           CREATE_STATIC
