@@ -9,7 +9,23 @@ import {
 } from '@vue/compiler-sfc'
 
 const storeKey = 'sfc-code'
-const saved = localStorage.getItem(storeKey) || ''
+const saved =
+  localStorage.getItem(storeKey) ||
+  `
+<template>
+  <h1>{{ msg }}</h1>
+</template>
+
+<script setup>
+const msg = 'Hello World!'
+</script>
+
+<style scoped>
+h1 {
+  color: #42b983;
+}
+</style>
+`.trim()
 
 // @ts-ignore
 export const sandboxVueURL = import.meta.env.PROD
