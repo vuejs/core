@@ -38,6 +38,8 @@ function formatMessage(err: string | Error): string {
   border-radius: 6px;
   font-family: var(--font-code);
   white-space: pre-wrap;
+  max-height: calc(100% - 50px);
+  overflow-y: scroll;
 }
 
 .msg.err {

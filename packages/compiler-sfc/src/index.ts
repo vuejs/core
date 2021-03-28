@@ -11,6 +11,7 @@ export { parse as babelParse } from '@babel/parser'
 export { walkIdentifiers } from './compileScript'
 import MagicString from 'magic-string'
 export { MagicString }
+export { walk } from 'estree-walker'
 
 // Types
 export {

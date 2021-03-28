@@ -11,12 +11,11 @@
 
 <script setup lang="ts">
 import Message from '../Message.vue'
-import { ref, onMounted, onUnmounted, watchEffect, defineProps } from 'vue'
+import { ref, onMounted, onUnmounted, watchEffect } from 'vue'
 import srcdoc from './srcdoc.html?raw'
 import { PreviewProxy } from './PreviewProxy'
-import { sandboxVueURL } from '../store'
-
-const props = defineProps<{ code: string }>()
+import { MAIN_FILE, SANDBOX_VUE_URL } from '../store'
+import { compileModulesForPreview } from './moduleCompiler'
 
 const iframe = ref()
 const runtimeError = ref()
@@ -25,32 +24,35 @@ const runtimeWarning = ref()
 let proxy: PreviewProxy
 
 async function updatePreview() {
-  if (!props.code?.trim()) {
-    return
-  }
-  try {
-  proxy.eval(`
-  ${props.code}
-
-  if (window.vueApp) {
-    window.vueApp.unmount()
-  }
-  const container = document.getElementById('app')
-  container.innerHTML = ''
-
-  import { createApp as _createApp } from "${sandboxVueURL}"
-  const app = window.vueApp = _createApp(__comp)
-
-  app.config.errorHandler = e => console.error(e)
-
-  app.mount(container)
-  `)
-  } catch (e) {
-    runtimeError.value = e.message
-    return
-  }
   runtimeError.value = null
   runtimeWarning.value = null
+  try {
+    const modules = compileModulesForPreview()
+    console.log(`successfully compiled ${modules.length} modules.`)
+    // reset modules
+    await proxy.eval(`
+    window.__modules__ = {}
+    window.__css__ = ''
+    `)
+    // evaluate modules
+    for (const mod of modules) {
+      await proxy.eval(mod)
+    }
+    // reboot
+    await proxy.eval(`
+    import { createApp as _createApp } from "${SANDBOX_VUE_URL}"
+    if (window.__app__) {
+      window.__app__.unmount()
+      document.getElementById('app').innerHTML = ''
+    }
+    document.getElementById('__sfc-styles').innerHTML = window.__css__
+    const app = window.__app__ = _createApp(__modules__["${MAIN_FILE}"].default)
+    app.config.errorHandler = e => console.error(e)
+    app.mount('#app')
+    `)
+  } catch (e) {
+    runtimeError.value = e.stack
+  }
 }
 
 onMounted(() => {
@@ -59,7 +61,6 @@ onMounted(() => {
       // pending_imports = progress;
     },
     on_error: (event: any) => {
-      // push_logs({ level: 'error', args: [event.value] });
       runtimeError.value = event.value
     },
     on_unhandled_rejection: (event: any) => {
@@ -69,10 +70,17 @@ onMounted(() => {
     },
     on_console: (log: any) => {
       if (log.level === 'error') {
-        runtimeError.value = log.args.join('')
+        if (log.args[0] instanceof Error) {
+          runtimeError.value = log.args[0].stack
+        } else {
+          runtimeError.value = log.args
+        }
       } else if (log.level === 'warn') {
         if (log.args[0].toString().includes('[Vue warn]')) {
-          runtimeWarning.value = log.args.join('').replace(/\[Vue warn\]:/, '').trim()
+          runtimeWarning.value = log.args
+            .join('')
+            .replace(/\[Vue warn\]:/, '')
+            .trim()
         }
       }
     },
@@ -88,9 +96,9 @@ onMounted(() => {
   })
 
   iframe.value.addEventListener('load', () => {
-    proxy.handle_links();
+    proxy.handle_links()
     watchEffect(updatePreview)
-  });
+  })
 })
 
 onUnmounted(() => {

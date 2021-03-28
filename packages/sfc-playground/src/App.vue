@@ -29,6 +29,8 @@ body {
   background-color: #f8f8f8;
   --nav-height: 50px;
   --font-code: 'Source Code Pro', monospace;
+  --color-branding: #3ca877;
+  --color-branding-dark: #416f9c;
 }
 
 .wrapper {

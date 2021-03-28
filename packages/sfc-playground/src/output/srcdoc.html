@@ -8,76 +8,75 @@
 			}
 		</style>
 		<style id="__sfc-styles"></style>
-		<script>
-			(function(){
-				let scriptEl
+		<script type="module">
+			let scriptEl
 
-				function handle_message(ev) {
-					let { action, cmd_id } = ev.data;
-					const send_message = (payload) => parent.postMessage( { ...payload }, ev.origin);
-					const send_reply = (payload) => send_message({ ...payload, cmd_id });
-					const send_ok = () => send_reply({ action: 'cmd_ok' });
-					const send_error = (message, stack) => send_reply({ action: 'cmd_error', message, stack });
+			function handle_message(ev) {
+				let { action, cmd_id } = ev.data;
+				const send_message = (payload) => parent.postMessage( { ...payload }, ev.origin);
+				const send_reply = (payload) => send_message({ ...payload, cmd_id });
+				const send_ok = window.send_ok = () => send_reply({ action: 'cmd_ok' });
+				const send_error = (message, stack) => send_reply({ action: 'cmd_error', message, stack });
 
-					if (action === 'eval') {
-						try {
-							if (scriptEl) {
-								document.head.removeChild(scriptEl)	
-							}
-							scriptEl = document.createElement('script')
-							scriptEl.setAttribute('type', 'module')
-							scriptEl.innerHTML = ev.data.args.script
-							document.head.appendChild(scriptEl)
-							send_ok();
-						} catch (e) {
-							send_error(e.message, e.stack);
+				if (action === 'eval') {
+					try {
+						if (scriptEl) {
+							document.head.removeChild(scriptEl)	
 						}
+						scriptEl = document.createElement('script')
+						scriptEl.setAttribute('type', 'module')
+						// send ok in the module script to ensure sequential evaluation
+						// of multiple proxy.eval() calls
+						scriptEl.innerHTML = ev.data.args.script + `\nwindow.send_ok()`
+						document.head.appendChild(scriptEl)
+					} catch (e) {
+						send_error(e.message, e.stack);
 					}
+				}
 
-					if (action === 'catch_clicks') {
-						try {
-							const top_origin = ev.origin;
-							document.body.addEventListener('click', event => {
-								if (event.which !== 1) return;
-								if (event.metaKey || event.ctrlKey || event.shiftKey) return;
-								if (event.defaultPrevented) return;
+				if (action === 'catch_clicks') {
+					try {
+						const top_origin = ev.origin;
+						document.body.addEventListener('click', event => {
+							if (event.which !== 1) return;
+							if (event.metaKey || event.ctrlKey || event.shiftKey) return;
+							if (event.defaultPrevented) return;
 
-								// ensure target is a link
-								let el = event.target;
-								while (el && el.nodeName !== 'A') el = el.parentNode;
-								if (!el || el.nodeName !== 'A') return;
+							// ensure target is a link
+							let el = event.target;
+							while (el && el.nodeName !== 'A') el = el.parentNode;
+							if (!el || el.nodeName !== 'A') return;
 
-								if (el.hasAttribute('download') || el.getAttribute('rel') === 'external' || el.target) return;
+							if (el.hasAttribute('download') || el.getAttribute('rel') === 'external' || el.target) return;
 
-								event.preventDefault();
+							event.preventDefault();
 
-								if (el.href.startsWith(top_origin)) {
-									const url = new URL(el.href);
-									if (url.hash[0] === '#') {
-										window.location.hash = url.hash;
-										return;
-									}
+							if (el.href.startsWith(top_origin)) {
+								const url = new URL(el.href);
+								if (url.hash[0] === '#') {
+									window.location.hash = url.hash;
+									return;
 								}
+							}
 
-								window.open(el.href, '_blank');
-							});
-							send_ok();
-						} catch(e) {
-							send_error(e.message, e.stack);
-						}
+							window.open(el.href, '_blank');
+						});
+						send_ok();
+					} catch(e) {
+						send_error(e.message, e.stack);
 					}
 				}
+			}
 
-				window.addEventListener('message', handle_message, false);
+			window.addEventListener('message', handle_message, false);
 
-				window.onerror = function (msg, url, lineNo, columnNo, error) {
-					parent.postMessage({ action: 'error', value: error }, '*');
-				}
+			window.onerror = function (msg, url, lineNo, columnNo, error) {
+				parent.postMessage({ action: 'error', value: error }, '*');
+			}
 
-				window.addEventListener("unhandledrejection", event => {
-					parent.postMessage({ action: 'unhandledrejection', value: event.reason }, '*');
-				});
-			}).call(this);
+			window.addEventListener("unhandledrejection", event => {
+				parent.postMessage({ action: 'unhandledrejection', value: event.reason }, '*');
+			});
 
 			let previous = { level: null, args: null };
 

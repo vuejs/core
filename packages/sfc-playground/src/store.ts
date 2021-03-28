@@ -4,14 +4,12 @@ import {
   compileTemplate,
   compileStyleAsync,
   compileScript,
-  rewriteDefault,
-  CompilerError
+  rewriteDefault
 } from '@vue/compiler-sfc'
 
-const storeKey = 'sfc-code'
-const saved =
-  localStorage.getItem(storeKey) ||
-  `
+const STORAGE_KEY = 'vue-sfc-playground'
+
+const welcomeCode = `
 <template>
   <h1>{{ msg }}</h1>
 </template>
@@ -19,42 +17,93 @@ const saved =
 <script setup>
 const msg = 'Hello World!'
 </script>
-
-<style scoped>
-h1 {
-  color: #42b983;
-}
-</style>
 `.trim()
 
+export const MAIN_FILE = 'App.vue'
+export const COMP_IDENTIFIER = `__sfc__`
+
 // @ts-ignore
-export const sandboxVueURL = import.meta.env.PROD
+export const SANDBOX_VUE_URL = import.meta.env.PROD
   ? '/vue.runtime.esm-browser.js' // to be copied on build
   : '/src/vue-dev-proxy'
 
-export const store = reactive({
-  code: saved,
-  compiled: {
-    executed: '',
+export class File {
+  filename: string
+  code: string
+  compiled = {
     js: '',
-    css: '',
-    template: ''
+    css: ''
+  }
+
+  constructor(filename: string, code = '') {
+    this.filename = filename
+    this.code = code
+  }
+}
+
+interface Store {
+  files: Record<string, File>
+  activeFilename: string
+  readonly activeFile: File
+  errors: (string | Error)[]
+}
+
+const savedFiles = localStorage.getItem(STORAGE_KEY)
+const files = savedFiles
+  ? JSON.parse(savedFiles)
+  : {
+      'App.vue': new File(MAIN_FILE, welcomeCode)
+    }
+
+export const store: Store = reactive({
+  files,
+  activeFilename: MAIN_FILE,
+  get activeFile() {
+    return store.files[store.activeFilename]
   },
-  errors: [] as (string | CompilerError | SyntaxError)[]
+  errors: []
 })
 
-const filename = 'Playground.vue'
-const id = 'scope-id'
-const compIdentifier = `__comp`
+for (const file in store.files) {
+  if (file !== MAIN_FILE) {
+    compileFile(store.files[file])
+  }
+}
 
-watchEffect(async () => {
-  const { code, compiled } = store
+watchEffect(() => compileFile(store.activeFile))
+watchEffect(() => {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(store.files))
+})
+
+export function setActive(filename: string) {
+  store.activeFilename = filename
+}
+
+export function addFile(filename: string) {
+  store.files[filename] = new File(filename)
+  setActive(filename)
+}
+
+export function deleteFile(filename: string) {
+  if (confirm(`Are you sure you want to delete ${filename}?`)) {
+    if (store.activeFilename === filename) {
+      store.activeFilename = MAIN_FILE
+    }
+    delete store.files[filename]
+  }
+}
+
+async function compileFile({ filename, code, compiled }: File) {
   if (!code.trim()) {
     return
   }
 
-  localStorage.setItem(storeKey, code)
+  if (filename.endsWith('.js')) {
+    compiled.js = code
+    return
+  }
 
+  const id = await hashId(filename)
   const { errors, descriptor } = parse(code, { filename, sourceMap: true })
   if (errors.length) {
     store.errors = errors
@@ -84,20 +133,14 @@ watchEffect(async () => {
         refSugar: true,
         inlineTemplate: true
       })
-      compiled.js = compiledScript.content.trim()
       finalCode +=
-        `\n` +
-        rewriteDefault(
-          rewriteVueImports(compiledScript.content),
-          compIdentifier
-        )
+        `\n` + rewriteDefault(compiledScript.content, COMP_IDENTIFIER)
     } catch (e) {
       store.errors = [e]
       return
     }
   } else {
-    compiled.js = ''
-    finalCode += `\nconst ${compIdentifier} = {}`
+    finalCode += `\nconst ${COMP_IDENTIFIER} = {}`
   }
 
   // template
@@ -115,23 +158,23 @@ watchEffect(async () => {
       return
     }
 
-    compiled.template = templateResult.code.trim()
     finalCode +=
       `\n` +
-      rewriteVueImports(templateResult.code).replace(
+      templateResult.code.replace(
         /\nexport (function|const) render/,
         '$1 render'
       )
-    finalCode += `\n${compIdentifier}.render = render`
-  } else {
-    compiled.template = descriptor.scriptSetup
-      ? '/* inlined in JS (script setup) */'
-      : '/* no template present */'
+    finalCode += `\n${COMP_IDENTIFIER}.render = render`
   }
   if (hasScoped) {
-    finalCode += `\n${compIdentifier}.__scopeId = ${JSON.stringify(
+    finalCode += `\n${COMP_IDENTIFIER}.__scopeId = ${JSON.stringify(
       `data-v-${id}`
     )}`
+  }
+
+  if (finalCode) {
+    finalCode += `\nexport default ${COMP_IDENTIFIER}`
+    compiled.js = finalCode.trimStart()
   }
 
   // styles
@@ -162,25 +205,18 @@ watchEffect(async () => {
   }
   if (css) {
     compiled.css = css.trim()
-    finalCode += `\ndocument.getElementById('__sfc-styles').innerHTML = ${JSON.stringify(
-      css
-    )}`
   } else {
-    compiled.css = ''
+    compiled.css = '/* No <style> tags present */'
   }
 
+  // clear errors
   store.errors = []
-  if (finalCode) {
-    compiled.executed =
-      `/* Exact code being executed in the preview iframe (different from production bundler output) */\n` +
-      finalCode
-  }
-})
+}
 
-// TODO use proper parser
-function rewriteVueImports(code: string): string {
-  return code.replace(
-    /\b(import \{.*?\}\s+from\s+)(?:"vue"|'vue')/g,
-    `$1"${sandboxVueURL}"`
-  )
+async function hashId(filename: string) {
+  const msgUint8 = new TextEncoder().encode(filename) // encode as (utf-8) Uint8Array
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8) // hash the message
+  const hashArray = Array.from(new Uint8Array(hashBuffer)) // convert buffer to byte array
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('') // convert bytes to hex string
+  return hashHex.slice(0, 8)
 }
