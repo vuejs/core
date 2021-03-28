@@ -100,10 +100,12 @@ watchEffect(async () => {
     }
 
     compiled.template = templateResult.code.trim()
-    finalCode += rewriteVueImports(templateResult.code).replace(
-      /\nexport (function|const) render/,
-      '$1 render'
-    )
+    finalCode +=
+      `\n` +
+      rewriteVueImports(templateResult.code).replace(
+        /\nexport (function|const) render/,
+        '$1 render'
+      )
     finalCode += `\n${compIdentifier}.render = render`
   } else {
     compiled.template = descriptor.scriptSetup
