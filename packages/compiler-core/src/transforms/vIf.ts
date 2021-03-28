@@ -301,10 +301,10 @@ function createChildrenCodegenNode(
       .codegenNode as BlockCodegenNode
     // Change createVNode to createBlock.
     if (vnodeCall.type === NodeTypes.VNODE_CALL && !vnodeCall.isBlock) {
-      removeHelper(getVNodeHelper(context.forSSR, vnodeCall.isComponent))
+      removeHelper(getVNodeHelper(context.inSSR, vnodeCall.isComponent))
       vnodeCall.isBlock = true
       helper(OPEN_BLOCK)
-      helper(getVNodeBlockHelper(context.forSSR, vnodeCall.isComponent))
+      helper(getVNodeBlockHelper(context.inSSR, vnodeCall.isComponent))
     }
     // inject branch key
     injectProp(vnodeCall, keyProperty, context)

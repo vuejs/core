@@ -222,12 +222,10 @@ export function getConstantType(
         if (codegenNode.isBlock) {
           context.removeHelper(OPEN_BLOCK)
           context.removeHelper(
-            getVNodeBlockHelper(context.forSSR, codegenNode.isComponent)
+            getVNodeBlockHelper(context.inSSR, codegenNode.isComponent)
           )
           codegenNode.isBlock = false
-          context.helper(
-            getVNodeHelper(context.forSSR, codegenNode.isComponent)
-          )
+          context.helper(getVNodeHelper(context.inSSR, codegenNode.isComponent))
         }
 
         constantCache.set(node, returnType)

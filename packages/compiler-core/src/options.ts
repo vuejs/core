@@ -122,20 +122,25 @@ interface SharedTransformCodegenOptions {
    */
   prefixIdentifiers?: boolean
   /**
-   * Generate SSR-optimized render functions instead.
+   * Control whether generate SSR-optimized render functions instead.
    * The resulting function must be attached to the component via the
    * `ssrRender` option instead of `render`.
-   * Note: it is used to indicate the runtime environment of the generated code
+   *
+   * When compiler generates code for SSR's fallback branch, we need to set it to false:
+   *  - context.ssr = false
+   *
+   * see `subTransform` in `ssrTransformCompoent.ts`
    */
   ssr?: boolean
   /**
    * Indicates whether the compiler generates code for SSR,
-   * when compiler generates code for the fallback branch of SSR:
+   * it is always true when generating code for SSR,
+   * regardless of whether we are generating code for SSR's fallback branch,
+   * this means that when the compiler generates code for SSR's fallback branch:
    *  - context.ssr = false
-   *  - context.forSSR = true
-   * see `subTransform` in `ssrTransformCompoent.ts`
+   *  - context.inSSR = true
    */
-  forSSR?: boolean
+  inSSR?: boolean
   /**
    * Optional binding metadata analyzed from script - used to optimize
    * binding access when `prefixIdentifiers` is enabled.

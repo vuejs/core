@@ -139,7 +139,7 @@ export function createTransformContext(
     scopeId = null,
     slotted = true,
     ssr = false,
-    forSSR = false,
+    inSSR = false,
     ssrCssVars = ``,
     bindingMetadata = EMPTY_OBJ,
     inline = false,
@@ -165,7 +165,7 @@ export function createTransformContext(
     scopeId,
     slotted,
     ssr,
-    forSSR,
+    inSSR,
     ssrCssVars,
     bindingMetadata,
     inline,
@@ -349,9 +349,9 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
       if (codegenNode.type === NodeTypes.VNODE_CALL) {
         if (!codegenNode.isBlock) {
           codegenNode.isBlock = true
-          removeHelper(getVNodeHelper(context.forSSR, codegenNode.isComponent))
+          removeHelper(getVNodeHelper(context.inSSR, codegenNode.isComponent))
           helper(OPEN_BLOCK)
-          helper(getVNodeBlockHelper(context.forSSR, codegenNode.isComponent))
+          helper(getVNodeBlockHelper(context.inSSR, codegenNode.isComponent))
         }
       }
       root.codegenNode = codegenNode

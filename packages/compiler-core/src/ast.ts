@@ -568,9 +568,9 @@ export function createVNodeCall(
   if (context) {
     if (isBlock) {
       context.helper(OPEN_BLOCK)
-      context.helper(getVNodeBlockHelper(context.forSSR, isComponent))
+      context.helper(getVNodeBlockHelper(context.inSSR, isComponent))
     } else {
-      context.helper(getVNodeHelper(context.forSSR, isComponent))
+      context.helper(getVNodeHelper(context.inSSR, isComponent))
     }
     if (directives) {
       context.helper(WITH_DIRECTIVES)

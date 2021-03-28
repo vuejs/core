@@ -691,7 +691,7 @@ export function buildProps(
   }
 
   // pre-normalize props, SSR is skipped for now
-  if (!context.forSSR && propsExpression) {
+  if (!context.inSSR && propsExpression) {
     switch (propsExpression.type) {
       case NodeTypes.JS_OBJECT_EXPRESSION:
         // means that there is no v-bind,

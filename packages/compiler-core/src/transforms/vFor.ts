@@ -184,21 +184,21 @@ export const transformFor = createStructuralDirectiveTransform(
               // switch from block to vnode
               removeHelper(OPEN_BLOCK)
               removeHelper(
-                getVNodeBlockHelper(context.forSSR, childBlock.isComponent)
+                getVNodeBlockHelper(context.inSSR, childBlock.isComponent)
               )
             } else {
               // switch from vnode to block
               removeHelper(
-                getVNodeHelper(context.forSSR, childBlock.isComponent)
+                getVNodeHelper(context.inSSR, childBlock.isComponent)
               )
             }
           }
           childBlock.isBlock = !isStableFragment
           if (childBlock.isBlock) {
             helper(OPEN_BLOCK)
-            helper(getVNodeBlockHelper(context.forSSR, childBlock.isComponent))
+            helper(getVNodeBlockHelper(context.inSSR, childBlock.isComponent))
           } else {
-            helper(getVNodeHelper(context.forSSR, childBlock.isComponent))
+            helper(getVNodeHelper(context.inSSR, childBlock.isComponent))
           }
         }
 

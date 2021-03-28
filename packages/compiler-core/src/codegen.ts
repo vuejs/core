@@ -101,7 +101,7 @@ function createCodegenContext(
     runtimeGlobalName = `Vue`,
     runtimeModuleName = `vue`,
     ssr = false,
-    forSSR = false
+    inSSR = false
   }: CodegenOptions
 ): CodegenContext {
   const context: CodegenContext = {
@@ -114,7 +114,7 @@ function createCodegenContext(
     runtimeGlobalName,
     runtimeModuleName,
     ssr,
-    forSSR,
+    inSSR,
     source: ast.loc.source,
     code: ``,
     column: 1,
@@ -773,8 +773,8 @@ function genVNodeCall(node: VNodeCall, context: CodegenContext) {
     push(PURE_ANNOTATION)
   }
   const callHelper: symbol = isBlock
-    ? getVNodeBlockHelper(context.forSSR, isComponent)
-    : getVNodeHelper(context.forSSR, isComponent)
+    ? getVNodeBlockHelper(context.inSSR, isComponent)
+    : getVNodeHelper(context.inSSR, isComponent)
   push(helper(callHelper) + `(`, node)
   genNodeList(
     genNullableArgs([
@@ -783,7 +783,7 @@ function genVNodeCall(node: VNodeCall, context: CodegenContext) {
       children,
       patchFlag,
       dynamicProps,
-      context.forSSR ? null : shapeFlag
+      context.inSSR ? null : shapeFlag
     ]),
     context
   )
