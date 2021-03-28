@@ -22,3 +22,10 @@ declare namespace jest {
     toHaveBeenWarnedTimes(n: number): R
   }
 }
+
+declare module '*.vue' {
+
+}
+declare module '*?raw' {
+
+}

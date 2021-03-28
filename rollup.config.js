@@ -142,7 +142,7 @@ function createConfig(format, output, plugins = []) {
           require('@rollup/plugin-commonjs')({
             sourceMap: false
           }),
-          require('rollup-plugin-node-polyfills')(),
+          require('rollup-plugin-polyfill-node')(),
           require('@rollup/plugin-node-resolve').nodeResolve()
         ]
       : []

@@ -1367,7 +1367,7 @@ function markScopeIdentifier(
  * but with some subtle differences as this needs to handle a wider range of
  * possible syntax.
  */
-function walkIdentifiers(
+export function walkIdentifiers(
   root: Node,
   onIdentifier: (node: Identifier, parent: Node, parentStack: Node[]) => void
 ) {

@@ -3,6 +3,7 @@
   "version": "3.0.9",
   "description": "@vue/compiler-sfc",
   "main": "dist/compiler-sfc.cjs.js",
+  "module": "dist/compiler-sfc.esm-browser.js",
   "types": "dist/compiler-sfc.d.ts",
   "files": [
     "dist"
@@ -11,7 +12,7 @@
     "name": "VueCompilerSFC",
     "formats": [
       "cjs",
-      "global"
+      "esm-browser"
     ],
     "prod": false,
     "enableNonBrowserBranches": true
