@@ -55,9 +55,16 @@ onMounted(() => {
     editor.setOption('mode', props.mode)
   })
 
-  window.addEventListener('resize', debounce(() => {
+  window.addEventListener(
+    'resize',
+    debounce(() => {
+      editor.refresh()
+    })
+  )
+
+  setTimeout(() => {
     editor.refresh()
-  }))
+  }, 50)
 })
 </script>
 
@@ -70,7 +77,7 @@ onMounted(() => {
 }
 
 .CodeMirror {
-  font-family: "Source Code Pro", monospace;
+  font-family: 'Source Code Pro', monospace;
   height: 100%;
 }
 </style>
