@@ -187,6 +187,7 @@ async function compileFile({ filename, code, compiled }: File) {
   }
 
   if (finalCode) {
+    finalCode += `\n${COMP_IDENTIFIER}.__file = ${JSON.stringify(filename)}`
     finalCode += `\nexport default ${COMP_IDENTIFIER}`
     compiled.js = finalCode.trimStart()
   }
