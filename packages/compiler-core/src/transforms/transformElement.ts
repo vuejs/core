@@ -230,8 +230,9 @@ export function resolveComponentType(
   const { tag } = node
 
   // 1. dynamic component
-  const isProp =
-    node.tag === 'component' ? findProp(node, 'is') : findDir(node, 'is')
+  const isProp = isComponentTag(tag)
+    ? findProp(node, 'is')
+    : findDir(node, 'is')
   if (isProp) {
     const exp =
       isProp.type === NodeTypes.ATTRIBUTE
@@ -413,7 +414,7 @@ export function buildProps(
         }
       }
       // skip :is on <component>
-      if (name === 'is' && tag === 'component') {
+      if (name === 'is' && isComponentTag(tag)) {
         continue
       }
       properties.push(
@@ -452,7 +453,7 @@ export function buildProps(
       // skip v-is and :is on <component>
       if (
         name === 'is' ||
-        (isBind && tag === 'component' && isBindKey(arg, 'is'))
+        (isBind && isComponentTag(tag) && isBindKey(arg, 'is'))
       ) {
         continue
       }
@@ -671,4 +672,8 @@ function stringifyDynamicPropNames(props: string[]): string {
     if (i < l - 1) propsNamesString += ', '
   }
   return propsNamesString + `]`
+}
+
+function isComponentTag(tag: string) {
+  return tag.toLowerCase() === 'component'
 }
