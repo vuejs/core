@@ -2,7 +2,8 @@ import {
   CompilerOptions,
   baseParse as parse,
   transform,
-  ErrorCodes
+  ErrorCodes,
+  BindingTypes
 } from '../../src'
 import {
   RESOLVE_COMPONENT,
@@ -76,6 +77,28 @@ describe('compiler: element transform', () => {
     })
     expect(root.helpers).toContain(RESOLVE_COMPONENT)
     expect(root.components).toContain(`Example__self`)
+  })
+
+  test('resolve component from setup bindings', () => {
+    const { root, node } = parseWithElementTransform(`<Example/>`, {
+      bindingMetadata: {
+        Example: BindingTypes.SETUP_MAYBE_REF
+      }
+    })
+    expect(root.helpers).not.toContain(RESOLVE_COMPONENT)
+    expect(node.tag).toBe(`$setup["Example"]`)
+  })
+
+  test('do not resolve component from non-script-setup bindings', () => {
+    const bindingMetadata = {
+      Example: BindingTypes.SETUP_MAYBE_REF
+    }
+    Object.defineProperty(bindingMetadata, '__isScriptSetup', { value: false })
+    const { root } = parseWithElementTransform(`<Example/>`, {
+      bindingMetadata
+    })
+    expect(root.helpers).toContain(RESOLVE_COMPONENT)
+    expect(root.components).toContain(`Example`)
   })
 
   test('static props', () => {

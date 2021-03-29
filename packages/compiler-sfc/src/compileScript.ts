@@ -1586,6 +1586,12 @@ function analyzeScriptBindings(ast: Statement[]): BindingMetadata {
 
 function analyzeBindingsFromOptions(node: ObjectExpression): BindingMetadata {
   const bindings: BindingMetadata = {}
+  // #3270, #3275
+  // mark non-script-setup so we don't resolve components/directives from these
+  Object.defineProperty(bindings, '__isScriptSetup', {
+    enumerable: false,
+    value: false
+  })
   for (const property of node.properties) {
     if (
       property.type === 'ObjectProperty' &&

@@ -962,6 +962,7 @@ describe('SFC analyze <script> bindings', () => {
 
     expect(scriptAst).toBeDefined()
   })
+
   it('recognizes props array declaration', () => {
     const { bindings } = compile(`
       <script>
@@ -974,6 +975,7 @@ describe('SFC analyze <script> bindings', () => {
       foo: BindingTypes.PROPS,
       bar: BindingTypes.PROPS
     })
+    expect(bindings!.__isScriptSetup).toBe(false)
   })
 
   it('recognizes props object declaration', () => {
@@ -997,6 +999,7 @@ describe('SFC analyze <script> bindings', () => {
       baz: BindingTypes.PROPS,
       qux: BindingTypes.PROPS
     })
+    expect(bindings!.__isScriptSetup).toBe(false)
   })
 
   it('recognizes setup return', () => {
@@ -1017,6 +1020,7 @@ describe('SFC analyze <script> bindings', () => {
       foo: BindingTypes.SETUP_MAYBE_REF,
       bar: BindingTypes.SETUP_MAYBE_REF
     })
+    expect(bindings!.__isScriptSetup).toBe(false)
   })
 
   it('recognizes async setup return', () => {
@@ -1037,6 +1041,7 @@ describe('SFC analyze <script> bindings', () => {
       foo: BindingTypes.SETUP_MAYBE_REF,
       bar: BindingTypes.SETUP_MAYBE_REF
     })
+    expect(bindings!.__isScriptSetup).toBe(false)
   })
 
   it('recognizes data return', () => {

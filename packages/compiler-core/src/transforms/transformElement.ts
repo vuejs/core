@@ -286,7 +286,7 @@ export function resolveComponentType(
 
 function resolveSetupReference(name: string, context: TransformContext) {
   const bindings = context.bindingMetadata
-  if (!bindings) {
+  if (!bindings || bindings.__isScriptSetup === false) {
     return
   }
 
