@@ -675,5 +675,5 @@ function stringifyDynamicPropNames(props: string[]): string {
 }
 
 function isComponentTag(tag: string) {
-  return tag.toLowerCase() === 'component'
+  return tag[0].toLowerCase() + tag.slice(1) === 'component'
 }

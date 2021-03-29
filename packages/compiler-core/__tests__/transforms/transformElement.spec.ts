@@ -836,6 +836,24 @@ describe('compiler: element transform', () => {
       })
     })
 
+    test('capitalized version w/ static binding', () => {
+      const { node, root } = parseWithBind(`<Component is="foo" />`)
+      expect(root.helpers).toContain(RESOLVE_DYNAMIC_COMPONENT)
+      expect(node).toMatchObject({
+        isBlock: true,
+        tag: {
+          callee: RESOLVE_DYNAMIC_COMPONENT,
+          arguments: [
+            {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'foo',
+              isStatic: true
+            }
+          ]
+        }
+      })
+    })
+
     test('dynamic binding', () => {
       const { node, root } = parseWithBind(`<component :is="foo" />`)
       expect(root.helpers).toContain(RESOLVE_DYNAMIC_COMPONENT)
