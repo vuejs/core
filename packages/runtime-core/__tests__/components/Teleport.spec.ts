@@ -8,7 +8,9 @@ import {
   ref,
   nextTick,
   markRaw,
-  defineComponent
+  defineComponent,
+  withDirectives,
+  createApp
 } from '@vue/runtime-test'
 import { createVNode, Fragment } from '../../src/vnode'
 import { compile, render as domRender } from 'vue'
@@ -431,5 +433,43 @@ describe('renderer: teleport', () => {
     expect(serializeInner(target)).toMatchInlineSnapshot(
       `"<div>teleported</div><span>false</span><!--v-if-->"`
     )
+  })
+
+  // #3497
+  test(`the dir hooks of the Teleport's children should be called correctly`, async () => {
+    const target = nodeOps.createElement('div')
+    const root = nodeOps.createElement('div')
+    const toggle = ref(true)
+    const dir = {
+      mounted: jest.fn(),
+      unmounted: jest.fn()
+    }
+
+    const app = createApp({
+      setup() {
+        return () => {
+          return toggle.value
+            ? h(Teleport, { to: target }, [
+                withDirectives(h('div', ['foo']), [[dir]])
+              ])
+            : null
+        }
+      }
+    })
+    app.mount(root)
+
+    expect(serializeInner(root)).toMatchInlineSnapshot(
+      `"<!--teleport start--><!--teleport end-->"`
+    )
+    expect(serializeInner(target)).toMatchInlineSnapshot(`"<div>foo</div>"`)
+    expect(dir.mounted).toHaveBeenCalledTimes(1)
+    expect(dir.unmounted).toHaveBeenCalledTimes(0)
+
+    toggle.value = false
+    await nextTick()
+    expect(serializeInner(root)).toMatchInlineSnapshot(`"<!---->"`)
+    expect(serializeInner(target)).toMatchInlineSnapshot(`""`)
+    expect(dir.mounted).toHaveBeenCalledTimes(1)
+    expect(dir.unmounted).toHaveBeenCalledTimes(1)
   })
 })
