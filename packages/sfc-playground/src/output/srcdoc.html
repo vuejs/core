@@ -9,7 +9,7 @@
 		</style>
 		<style id="__sfc-styles"></style>
 		<script type="module">
-			let scriptEl
+			let scriptEls = []
 
 			window.__modules__ = {}
 
@@ -25,24 +25,41 @@
 				return Promise.resolve(window.__modules__[key])
 			}
 
-			function handle_message(ev) {
+			async function handle_message(ev) {
 				let { action, cmd_id } = ev.data;
 				const send_message = (payload) => parent.postMessage( { ...payload }, ev.origin);
 				const send_reply = (payload) => send_message({ ...payload, cmd_id });
-				const send_ok = window.send_ok = () => send_reply({ action: 'cmd_ok' });
+				const send_ok = () => send_reply({ action: 'cmd_ok' });
 				const send_error = (message, stack) => send_reply({ action: 'cmd_error', message, stack });
 
 				if (action === 'eval') {
 					try {
-						if (scriptEl) {
-							document.head.removeChild(scriptEl)	
+						if (scriptEls.length) {
+							scriptEls.forEach(el => {
+								document.head.removeChild(el)
+							})
+							scriptEls.length = 0
 						}
-						scriptEl = document.createElement('script')
-						scriptEl.setAttribute('type', 'module')
-						// send ok in the module script to ensure sequential evaluation
-						// of multiple proxy.eval() calls
-						scriptEl.innerHTML = ev.data.args.script + `\nwindow.send_ok()`
-						document.head.appendChild(scriptEl)
+
+						let { script: scripts } = ev.data.args
+						if (typeof scripts === 'string') scripts = [scripts]
+
+						for (const script of scripts) {
+							const scriptEl = document.createElement('script')
+							scriptEl.setAttribute('type', 'module')
+							// send ok in the module script to ensure sequential evaluation
+							// of multiple proxy.eval() calls
+							const done = new Promise((resolve, reject) => {
+								window.__next__ = resolve
+								scriptEl.onerror = reject
+							})
+							scriptEl.innerHTML = script + `\nwindow.__next__()`
+							document.head.appendChild(scriptEl)
+							scriptEls.push(scriptEl)
+							await done
+						}
+						window.__next__ = undefined
+						send_ok()
 					} catch (e) {
 						send_error(e.message, e.stack);
 					}

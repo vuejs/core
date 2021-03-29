@@ -50,7 +50,7 @@ let files: Store['files'] = {}
 
 const savedFiles = location.hash.slice(1)
 if (savedFiles) {
-  const saved = JSON.parse(decodeURIComponent(savedFiles))
+  const saved = JSON.parse(atob(savedFiles))
   for (const filename in saved) {
     files[filename] = new File(filename, saved[filename])
   }
@@ -78,7 +78,7 @@ for (const file in store.files) {
 }
 
 watchEffect(() => {
-  location.hash = encodeURIComponent(JSON.stringify(exportFiles()))
+  history.replaceState({}, '', '#' + btoa(JSON.stringify(exportFiles())))
 })
 
 export function exportFiles() {

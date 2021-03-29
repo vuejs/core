@@ -30,26 +30,22 @@ async function updatePreview() {
     const modules = compileModulesForPreview()
     console.log(`successfully compiled ${modules.length} modules.`)
     // reset modules
-    await proxy.eval(`
-    window.__modules__ = {}
-    window.__css__ = ''
-    `)
-    // evaluate modules
-    for (const mod of modules) {
-      await proxy.eval(mod)
-    }
-    // reboot
-    await proxy.eval(`
-    import { createApp as _createApp } from "${SANDBOX_VUE_URL}"
-    if (window.__app__) {
-      window.__app__.unmount()
-      document.getElementById('app').innerHTML = ''
-    }
-    document.getElementById('__sfc-styles').innerHTML = window.__css__
-    const app = window.__app__ = _createApp(__modules__["${MAIN_FILE}"].default)
-    app.config.errorHandler = e => console.error(e)
-    app.mount('#app')
-    `)
+    await proxy.eval([
+      `window.__modules__ = {};window.__css__ = ''`,
+      ...modules,
+      `
+import { createApp as _createApp } from "${SANDBOX_VUE_URL}"
+
+if (window.__app__) {
+  window.__app__.unmount()
+  document.getElementById('app').innerHTML = ''
+}
+
+document.getElementById('__sfc-styles').innerHTML = window.__css__
+const app = window.__app__ = _createApp(__modules__["${MAIN_FILE}"].default)
+app.config.errorHandler = e => console.error(e)
+app.mount('#app')`.trim()
+    ])
   } catch (e) {
     runtimeError.value = e.stack
   }
