@@ -28,29 +28,11 @@
 </template>
 
 <script setup lang="ts">
-import { exportFiles } from './store'
-import { saveAs } from 'file-saver'
+import { downloadProject } from './download/download'
 
 function copyLink() {
   navigator.clipboard.writeText(location.href)
   alert('Sharable URL has been copied to clipboard.')
-}
-
-async function downloadProject() {
-  const { default: JSZip } = await import('jszip')
-  const zip = new JSZip()
-
-  // basic structure
-
-  // project src
-  const src = zip.folder('src')!
-  const files = exportFiles()
-  for (const file in files) {
-    src.file(file, files[file])
-  }
-
-  const blob = await zip.generateAsync({ type: 'blob' })
-  saveAs(blob, 'vue-project.zip')
 }
 </script>
 
