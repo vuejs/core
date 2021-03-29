@@ -1,12 +1,12 @@
 <template>
   <nav>
-    <h1>Vue SFC Playground</h1>
+    <h1>
+      <img alt="logo" src="/icon.png">
+      <span>Vue SFC Playground</span>
+    </h1>
     <div class="links">
-      <a class="commit-link" :href="`https://github.com/vuejs/vue-next/tree/${commit}`" target="_blank">
-        vue@{{ commit }}
-      </a>
       <a class="commit-link" href="https://app.netlify.com/sites/vue-sfc-playground/deploys" target="_blank">
-        History
+        @{{ commit }}
       </a>
       <button class="share" @click="copyLink">
         <svg width="1.4em" height="1.4em" viewBox="0 0 24 24">
@@ -66,6 +66,20 @@ h1 {
   vertical-align: middle;
 }
 
+h1 img {
+  height: 24px;
+  vertical-align: middle;
+  margin-right: 10px;
+  position: relative;
+  top: -2px;
+}
+
+@media (max-width:400px) {
+  h1 span {
+    display: none;
+  }
+}
+
 .commit-link {
   color: var(--color-branding);
   text-decoration: none;
@@ -77,11 +91,13 @@ h1 {
 .share {
   position: relative;
   top: 6px;
+  margin: 0 2px;
 }
 
 .download {
   position: relative;
   top: 8px;
+  margin: 0 2px;
 }
 
 .commit-link {
