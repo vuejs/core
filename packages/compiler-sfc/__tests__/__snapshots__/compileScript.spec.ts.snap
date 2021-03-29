@@ -482,8 +482,11 @@ export default {
       function get() {
         return a.value + 1
       }
+      const foo = () => {
+        const x = a.value
+      };
       
-return { a, get }
+return { a, get, foo }
 }
 
 }"

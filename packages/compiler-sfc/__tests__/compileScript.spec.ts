@@ -655,9 +655,13 @@ const emit = defineEmit(['a', 'b'])
       function get() {
         return a + 1
       }
+      const foo = () => {
+        const x = a
+      };
       </script>`)
       expect(content).toMatch(`console.log(a.value)`)
       expect(content).toMatch(`return a.value + 1`)
+      expect(content).toMatch(`const x = a.value`)
       assertCode(content)
     })
 

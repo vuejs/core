@@ -743,26 +743,30 @@ export function compileScript(
   if (enableRefSugar && Object.keys(refBindings).length) {
     for (const node of scriptSetupAst) {
       if (node.type !== 'ImportDeclaration') {
-        walkIdentifiers(node, (id, parent, parentStack) => {
-          if (refBindings[id.name] && !refIdentifiers.has(id)) {
-            if (isStaticProperty(parent) && parent.shorthand) {
-              // let binding used in a property shorthand
-              // { foo } -> { foo: foo.value }
-              // skip for destructure patterns
-              if (
-                !(parent as any).inPattern ||
-                isInDestructureAssignment(parent, parentStack)
-              ) {
-                s.appendLeft(id.end! + startOffset, `: ${id.name}.value`)
+        walkIdentifiers(
+          node,
+          (id, parent, parentStack) => {
+            if (refBindings[id.name] && !refIdentifiers.has(id)) {
+              if (isStaticProperty(parent) && parent.shorthand) {
+                // let binding used in a property shorthand
+                // { foo } -> { foo: foo.value }
+                // skip for destructure patterns
+                if (
+                  !(parent as any).inPattern ||
+                  isInDestructureAssignment(parent, parentStack)
+                ) {
+                  s.appendLeft(id.end! + startOffset, `: ${id.name}.value`)
+                }
+              } else {
+                s.appendLeft(id.end! + startOffset, '.value')
               }
-            } else {
-              s.appendLeft(id.end! + startOffset, '.value')
+            } else if (id.name[0] === '$' && refBindings[id.name.slice(1)]) {
+              // $xxx raw ref access variables, remove the $ prefix
+              s.remove(id.start! + startOffset, id.start! + startOffset + 1)
             }
-          } else if (id.name[0] === '$' && refBindings[id.name.slice(1)]) {
-            // $xxx raw ref access variables, remove the $ prefix
-            s.remove(id.start! + startOffset, id.start! + startOffset + 1)
-          }
-        })
+          },
+          refBindings
+        )
       }
     }
   }
@@ -1369,7 +1373,8 @@ function markScopeIdentifier(
  */
 export function walkIdentifiers(
   root: Node,
-  onIdentifier: (node: Identifier, parent: Node, parentStack: Node[]) => void
+  onIdentifier: (node: Identifier, parent: Node, parentStack: Node[]) => void,
+  refBindings: Record<string, BindingTypes> = {}
 ) {
   const parentStack: Node[] = []
   const knownIds: Record<string, number> = Object.create(null)
@@ -1391,7 +1396,7 @@ export function walkIdentifiers(
             if (p.type === 'VariableDeclaration') {
               ;(walk as any)(p, {
                 enter(child: Node) {
-                  if (child.type === 'Identifier') {
+                  if (child.type === 'Identifier' && !refBindings[child.name]) {
                     markScopeIdentifier(node, child, knownIds)
                   }
                 }
