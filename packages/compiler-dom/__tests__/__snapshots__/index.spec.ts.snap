@@ -25,7 +25,7 @@ exports[`compile should work with v-bind + HTML tag 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { resolveComponent: _resolveComponent, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+    const { resolveComponent: _resolveComponent, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     const _component_list = _resolveComponent(\\"list\\")
 
