@@ -24,7 +24,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmit(['change'])
+const emit = defineEmit<(e: 'change', value: string) => void>()
 
 onMounted(() => {
   const addonOptions = {
