@@ -39,8 +39,8 @@ import { downloadProject } from './download/download'
 
 const commit = __COMMIT__
 
-function copyLink() {
-  navigator.clipboard.writeText(location.href)
+async function copyLink() {
+  await navigator.clipboard.writeText(location.href)
   alert('Sharable URL has been copied to clipboard.')
 }
 </script>
