@@ -147,6 +147,13 @@ async function compileFile({ filename, code, compiled }: File) {
         refSugar: true,
         inlineTemplate: true
       })
+      if (compiledScript.bindings) {
+        finalCode += `\n/* Analyzed bindings: ${JSON.stringify(
+          compiledScript.bindings,
+          null,
+          2
+        )} */`
+      }
       finalCode +=
         `\n` + rewriteDefault(compiledScript.content, COMP_IDENTIFIER)
     } catch (e) {
