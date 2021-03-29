@@ -424,6 +424,16 @@ interface LegacyOptions<
 
   // runtime compile only
   delimiters?: [string, string]
+
+  /**
+   * #3468
+   *
+   * type-only, used to assist Mixin's type inference,
+   * typescript will try to simplify the inferred `Mixin` type,
+   * with the `__differenciator`, typescript won't be able to combine different mixins,
+   * because the `__differenciator` will be different
+   */
+  __differentiator?: keyof D | keyof C | keyof M
 }
 
 export type OptionTypesKeys = 'P' | 'B' | 'D' | 'C' | 'M' | 'Defaults'

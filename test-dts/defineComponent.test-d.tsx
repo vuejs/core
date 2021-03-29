@@ -775,6 +775,41 @@ describe('extends with mixins', () => {
   expectError(<MyComponent p2={'wrong type'} z={'z'} />)
   // @ts-expect-error
   expectError(<MyComponent mP1={3} />)
+
+  // #3468
+  const CompWithD = defineComponent({
+    data() {
+      return { foo: 1 }
+    }
+  })
+  const CompWithC = defineComponent({
+    computed: {
+      foo() {
+        return 1
+      }
+    }
+  })
+  const CompWithM = defineComponent({ methods: { foo() {} } })
+  const CompEmpty = defineComponent({})
+
+  defineComponent({
+    mixins: [CompWithD, CompEmpty],
+    mounted() {
+      expectType<number>(this.foo)
+    }
+  })
+  defineComponent({
+    mixins: [CompWithC, CompEmpty],
+    mounted() {
+      expectType<number>(this.foo)
+    }
+  })
+  defineComponent({
+    mixins: [CompWithM, CompEmpty],
+    mounted() {
+      expectType<() => void>(this.foo)
+    }
+  })
 })
 
 describe('compatibility w/ createApp', () => {
