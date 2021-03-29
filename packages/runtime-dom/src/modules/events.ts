@@ -1,4 +1,4 @@
-import { hyphenate, isArray } from '@vue/shared'
+import { hyphenate, isArray, isFF } from '@vue/shared'
 import {
   ComponentInternalInstance,
   callWithAsyncErrorHandling
@@ -111,7 +111,13 @@ function createInvoker(
     // and the handler would only fire if the event passed to it was fired
     // AFTER it was attached.
     const timeStamp = e.timeStamp || _getNow()
-    if (timeStamp >= invoker.attached - 1) {
+
+    if (
+      timeStamp >= invoker.attached - 1 ||
+      // #3485: Firefox <= 53 has incorrect Event.timeStamp implementation
+      // and does not fire microtasks in between event propagation, so safe to exclude.
+      (isFF && Number(isFF[1]) <= 53)
+    ) {
       callWithAsyncErrorHandling(
         patchStopImmediatePropagation(e, invoker.value),
         instance,

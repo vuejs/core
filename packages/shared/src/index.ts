@@ -180,3 +180,7 @@ export const getGlobalThis = (): any => {
               : {})
   )
 }
+
+const UA =
+  typeof window !== 'undefined' && window.navigator.userAgent.toLowerCase()
+export const isFF = UA && UA.match(/firefox\/(\d+)/)
