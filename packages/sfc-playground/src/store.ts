@@ -7,8 +7,6 @@ import {
   rewriteDefault
 } from '@vue/compiler-sfc'
 
-const STORAGE_KEY = 'vue-sfc-playground'
-
 const welcomeCode = `
 <template>
   <h1>{{ msg }}</h1>
@@ -48,12 +46,19 @@ interface Store {
   errors: (string | Error)[]
 }
 
-const savedFiles = localStorage.getItem(STORAGE_KEY)
-const files = savedFiles
-  ? JSON.parse(savedFiles)
-  : {
-      'App.vue': new File(MAIN_FILE, welcomeCode)
-    }
+let files: Store['files'] = {}
+
+const savedFiles = location.hash.slice(1)
+if (savedFiles) {
+  const saved = JSON.parse(decodeURIComponent(savedFiles))
+  for (const filename in saved) {
+    files[filename] = new File(filename, saved[filename])
+  }
+} else {
+  files = {
+    'App.vue': new File(MAIN_FILE, welcomeCode)
+  }
+}
 
 export const store: Store = reactive({
   files,
@@ -64,16 +69,25 @@ export const store: Store = reactive({
   errors: []
 })
 
+watchEffect(() => compileFile(store.activeFile))
+
 for (const file in store.files) {
   if (file !== MAIN_FILE) {
     compileFile(store.files[file])
   }
 }
 
-watchEffect(() => compileFile(store.activeFile))
 watchEffect(() => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(store.files))
+  location.hash = encodeURIComponent(JSON.stringify(exportFiles()))
 })
+
+export function exportFiles() {
+  const exported: Record<string, string> = {}
+  for (const filename in store.files) {
+    exported[filename] = store.files[filename].code
+  }
+  return exported
+}
 
 export function setActive(filename: string) {
   store.activeFilename = filename

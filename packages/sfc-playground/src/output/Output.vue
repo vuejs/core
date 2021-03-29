@@ -38,15 +38,10 @@ const mode = ref<Modes>('preview')
   background-color: white;
 }
 .tab-buttons button {
-  margin: 0;
   font-size: 13px;
   font-family: var(--font-code);
-  border: none;
-  outline: none;
-  background-color: transparent;
   padding: 8px 16px 6px;
   text-transform: uppercase;
-  cursor: pointer;
   color: #999;
   box-sizing: border-box;
 }

@@ -22,8 +22,8 @@ import Output from './output/Output.vue'
 <style>
 body {
   font-size: 13px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
-    Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+    Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   color: #444;
   margin: 0;
   background-color: #f8f8f8;
@@ -35,5 +35,13 @@ body {
 
 .wrapper {
   height: calc(100vh - var(--nav-height));
+}
+
+button {
+  border: none;
+  outline: none;
+  cursor: pointer;
+  margin: 0;
+  background-color: transparent;
 }
 </style>

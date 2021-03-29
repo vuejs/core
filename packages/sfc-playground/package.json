@@ -19,5 +19,9 @@
     "@vitejs/plugin-vue": "^1.2.0",
     "codemirror": "^5.60.0",
     "vite": "^2.1.3"
+  },
+  "dependencies": {
+    "file-saver": "^2.0.5",
+    "jszip": "^3.6.0"
   }
 }

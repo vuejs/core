@@ -97,7 +97,8 @@
 			['clear', 'log', 'info', 'dir', 'warn', 'error', 'table'].forEach((level) => {
 				const original = console[level];
 				console[level] = (...args) => {
-					if (String(args[0]).includes('You are running a development build of Vue')) {
+					const msg = String(args[0])
+					if (msg.includes('You are running a development build of Vue')) {
 						return
 					}
 					const stringifiedArgs = stringify(args);

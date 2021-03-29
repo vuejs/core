@@ -101,14 +101,9 @@ function doneAddFile() {
   padding-left: 0;
 }
 .add {
-  margin: 0;
   font-size: 20px;
   font-family: var(--font-code);
   color: #999;
-  border: none;
-  outline: none;
-  background-color: transparent;
-  cursor: pointer;
   vertical-align: middle;
   margin-left: 6px;
 }
