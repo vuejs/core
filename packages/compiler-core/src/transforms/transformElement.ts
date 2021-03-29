@@ -230,8 +230,9 @@ export function resolveComponentType(
   const { tag } = node
 
   // 1. dynamic component
-  const isProp =
-    node.tag === 'component' ? findProp(node, 'is') : findDir(node, 'is')
+  const isProp = ['component', 'Component'].includes(node.tag)
+    ? findProp(node, 'is')
+    : findDir(node, 'is')
   if (isProp) {
     const exp =
       isProp.type === NodeTypes.ATTRIBUTE
@@ -413,7 +414,7 @@ export function buildProps(
         }
       }
       // skip :is on <component>
-      if (name === 'is' && tag === 'component') {
+      if (name === 'is' && ['component', 'Component'].includes(tag)) {
         continue
       }
       properties.push(
@@ -452,7 +453,9 @@ export function buildProps(
       // skip v-is and :is on <component>
       if (
         name === 'is' ||
-        (isBind && tag === 'component' && isBindKey(arg, 'is'))
+        (isBind &&
+          ['component', 'Component'].includes(tag) &&
+          isBindKey(arg, 'is'))
       ) {
         continue
       }
