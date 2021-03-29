@@ -89,14 +89,13 @@ export function h(
 // text/comment
 export function h(
   type: typeof Text | typeof Comment,
-  children?: RawChildren
+  children?: string
 ): VNode
 export function h(
   type: typeof Text | typeof Comment,
-  props?: RawProps | null,
-  children?: RawChildren | RawSlots
+  props?: null,
+  children?: string
 ): VNode
-
 // fragment
 export function h(type: typeof Fragment, children?: VNodeArrayChildren): VNode
 export function h(
