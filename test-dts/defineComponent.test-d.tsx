@@ -750,22 +750,22 @@ describe('extends with mixins', () => {
     }
   })
   const CompWithM = defineComponent({ methods: { foo() {} } })
-  const CompEnpty = defineComponent({})
+  const CompEmpty = defineComponent({})
 
   defineComponent({
-    mixins: [CompWithD, CompEnpty],
+    mixins: [CompWithD, CompEmpty],
     mounted() {
       expectType<number>(this.foo)
     }
   })
   defineComponent({
-    mixins: [CompWithC, CompEnpty],
+    mixins: [CompWithC, CompEmpty],
     mounted() {
       expectType<number>(this.foo)
     }
   })
   defineComponent({
-    mixins: [CompWithM, CompEnpty],
+    mixins: [CompWithM, CompEmpty],
     mounted() {
       expectType<() => void>(this.foo)
     }
