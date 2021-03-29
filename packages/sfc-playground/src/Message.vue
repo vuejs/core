@@ -1,16 +1,23 @@
 <template>
   <Transition name="fade">
-    <pre v-if="err || warn"
+    <pre v-if="!dismissed && (err || warn)"
       class="msg"
-      :class="err ? 'err' : 'warn'">{{ formatMessage(err || warn) }}</pre>
+      :class="err ? 'err' : 'warn'"
+      @click="dismissed = true">{{ formatMessage(err || warn) }}</pre>
   </Transition>
 </template>
 
 <script setup lang="ts">
-import { defineProps } from 'vue'
+import { defineProps, ref, watch } from 'vue'
 import type { CompilerError } from '@vue/compiler-sfc'
 
-defineProps(['err', 'warn'])
+const props = defineProps(['err', 'warn'])
+
+const dismissed = ref(false)
+
+watch(() => [props.err, props.warn], () => {
+  dismissed.value = false
+})
 
 function formatMessage(err: string | Error): string {
   if (typeof err === 'string') {
