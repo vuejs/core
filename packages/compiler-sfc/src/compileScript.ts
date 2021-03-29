@@ -20,8 +20,8 @@ import {
   Statement,
   Expression,
   LabeledStatement,
-  TSUnionType,
-  CallExpression
+  CallExpression,
+  RestElement
 } from '@babel/types'
 import { walk } from 'estree-walker'
 import { RawSourceMap } from 'source-map'
@@ -184,7 +184,7 @@ export function compileScript(
   let propsTypeDecl: TSTypeLiteral | undefined
   let propsIdentifier: string | undefined
   let emitRuntimeDecl: Node | undefined
-  let emitTypeDecl: TSFunctionType | TSUnionType | undefined
+  let emitTypeDecl: TSFunctionType | TSTypeLiteral | undefined
   let emitIdentifier: string | undefined
   let hasAwait = false
   let hasInlinedSsrRenderFn = false
@@ -300,13 +300,13 @@ export function compileScript(
         const typeArg = node.typeParameters.params[0]
         if (
           typeArg.type === 'TSFunctionType' ||
-          typeArg.type === 'TSUnionType'
+          typeArg.type === 'TSTypeLiteral'
         ) {
           emitTypeDecl = typeArg
         } else {
           error(
             `type argument passed to ${DEFINE_EMIT}() must be a function type ` +
-              `or a union of function types.`,
+              `or a literal type with call signatures.`,
             typeArg
           )
         }
@@ -1304,20 +1304,25 @@ function toRuntimeTypeString(types: string[]) {
 }
 
 function extractRuntimeEmits(
-  node: TSFunctionType | TSUnionType,
+  node: TSFunctionType | TSTypeLiteral,
   emits: Set<string>
 ) {
-  if (node.type === 'TSUnionType') {
-    for (let t of node.types) {
-      if (t.type === 'TSParenthesizedType') t = t.typeAnnotation
-      if (t.type === 'TSFunctionType') {
-        extractRuntimeEmits(t, emits)
+  if (node.type === 'TSTypeLiteral') {
+    for (let t of node.members) {
+      if (t.type === 'TSCallSignatureDeclaration') {
+        extractEventNames(t.parameters[0], emits)
       }
     }
     return
+  } else {
+    extractEventNames(node.parameters[0], emits)
   }
+}
 
-  const eventName = node.parameters[0]
+function extractEventNames(
+  eventName: Identifier | RestElement,
+  emits: Set<string>
+) {
   if (
     eventName.type === 'Identifier' &&
     eventName.typeAnnotation &&

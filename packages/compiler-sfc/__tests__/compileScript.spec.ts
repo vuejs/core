@@ -532,6 +532,18 @@ const emit = defineEmit(['a', 'b'])
 
     test('defineEmit w/ type (union)', () => {
       const type = `((e: 'foo' | 'bar') => void) | ((e: 'baz', id: number) => void)`
+      expect(() =>
+        compile(`
+      <script setup lang="ts">
+      import { defineEmit } from 'vue'
+      const emit = defineEmit<${type}>()
+      </script>
+      `)
+      ).toThrow()
+    })
+
+    test('defineEmit w/ type (type literal w/ call signatures)', () => {
+      const type = `{(e: 'foo' | 'bar'): void; (e: 'baz', id: number): void;}`
       const { content } = compile(`
       <script setup lang="ts">
       import { defineEmit } from 'vue'
