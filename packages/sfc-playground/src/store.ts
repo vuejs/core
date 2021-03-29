@@ -140,9 +140,10 @@ async function compileFile({ filename, code, compiled }: File) {
   }
 
   // script
+  let compiledScript
   if (descriptor.script || descriptor.scriptSetup) {
     try {
-      const compiledScript = compileScript(descriptor, {
+      compiledScript = compileScript(descriptor, {
         id,
         refSugar: true,
         inlineTemplate: true
@@ -172,7 +173,10 @@ async function compileFile({ filename, code, compiled }: File) {
       id,
       scoped: hasScoped,
       slotted: descriptor.slotted,
-      isProd: false
+      isProd: false,
+      compilerOptions: {
+        bindingMetadata: compiledScript && compiledScript.bindings
+      }
     })
     if (templateResult.errors.length) {
       store.errors = templateResult.errors
