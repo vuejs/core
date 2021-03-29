@@ -89,12 +89,12 @@ export function h(
 // text/comment
 export function h(
   type: typeof Text | typeof Comment,
-  children?: string
+  children?: string | number | boolean
 ): VNode
 export function h(
   type: typeof Text | typeof Comment,
   props?: null,
-  children?: string
+  children?: string | number | boolean
 ): VNode
 // fragment
 export function h(type: typeof Fragment, children?: VNodeArrayChildren): VNode
