@@ -11,6 +11,20 @@
 		<script type="module">
 			let scriptEl
 
+			window.__modules__ = {}
+
+			window.__export__ = (mod, key, get) => {
+				Object.defineProperty(mod, key, {
+					enumerable: true,
+					configurable: true,
+					get
+				})
+			}
+
+			window.__dynamic_import__ = key => {
+				return Promise.resolve(window.__modules__[key])
+			}
+
 			function handle_message(ev) {
 				let { action, cmd_id } = ev.data;
 				const send_message = (payload) => parent.postMessage( { ...payload }, ev.origin);
