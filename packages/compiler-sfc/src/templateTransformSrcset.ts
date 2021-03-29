@@ -131,9 +131,9 @@ export const transformSrcset: NodeTransform = (
             }
             const isNotLast = imageCandidates.length - 1 > index
             if (descriptor && isNotLast) {
-              compoundExpression.children.push(` + '${descriptor}, ' + `)
+              compoundExpression.children.push(` + ' ${descriptor}, ' + `)
             } else if (descriptor) {
-              compoundExpression.children.push(` + '${descriptor}'`)
+              compoundExpression.children.push(` + ' ${descriptor}'`)
             } else if (isNotLast) {
               compoundExpression.children.push(` + ', ' + `)
             }
