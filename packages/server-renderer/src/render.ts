@@ -22,7 +22,8 @@ import {
   isString,
   isVoidTag,
   ShapeFlags,
-  isArray
+  isArray,
+  NOOP
 } from '@vue/shared'
 import { ssrRenderAttrs } from './helpers/ssrRenderAttrs'
 import { ssrCompile } from './helpers/ssrCompile'
@@ -88,11 +89,7 @@ export function renderComponentVNode(
   const hasAsyncSetup = isPromise(res)
   const prefetch = (vnode.type as ComponentOptions).serverPrefetch
   if (hasAsyncSetup || prefetch) {
-    let p = hasAsyncSetup
-      ? (res as Promise<void>).catch(err => {
-          warn(`[@vue/server-renderer]: Uncaught error in async setup:\n`, err)
-        })
-      : Promise.resolve()
+    let p = hasAsyncSetup ? (res as Promise<void>) : Promise.resolve()
     if (prefetch) {
       p = p.then(() => prefetch.call(instance.proxy)).catch(err => {
         warn(`[@vue/server-renderer]: Uncaught error in serverPrefetch:\n`, err)
@@ -118,7 +115,7 @@ function renderComponentSubTree(
     )
   } else {
     if (
-      !instance.render &&
+      (!instance.render || instance.render === NOOP) &&
       !instance.ssrRender &&
       !comp.ssrRender &&
       isString(comp.template)
@@ -142,7 +139,7 @@ function renderComponentSubTree(
       }
 
       // set current rendering instance for asset resolution
-      setCurrentRenderingInstance(instance)
+      const prev = setCurrentRenderingInstance(instance)
       ssrRender(
         instance.proxy,
         push,
@@ -154,8 +151,8 @@ function renderComponentSubTree(
         instance.data,
         instance.ctx
       )
-      setCurrentRenderingInstance(null)
-    } else if (instance.render) {
+      setCurrentRenderingInstance(prev)
+    } else if (instance.render && instance.render !== NOOP) {
       renderVNode(
         push,
         (instance.subTree = renderComponentRoot(instance)),

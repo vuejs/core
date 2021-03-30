@@ -43,7 +43,9 @@ import {
   SET_BLOCK_TRACKING,
   CREATE_COMMENT,
   CREATE_TEXT,
-  SET_SCOPE_ID,
+  PUSH_SCOPE_ID,
+  POP_SCOPE_ID,
+  WITH_SCOPE_ID,
   WITH_DIRECTIVES,
   CREATE_BLOCK,
   OPEN_BLOCK,
@@ -53,6 +55,7 @@ import {
 import { ImportItem } from './transform'
 
 const PURE_ANNOTATION = `/*#__PURE__*/`
+const WITH_ID = `_withId`
 
 type CodegenNode = TemplateChildNode | JSChildNode | SSRCodegenNode
 
@@ -195,11 +198,13 @@ export function generate(
     indent,
     deindent,
     newline,
+    scopeId,
     ssr
   } = context
 
   const hasHelpers = ast.helpers.length > 0
   const useWithBlock = !prefixIdentifiers && mode !== 'module'
+  const genScopeId = !__BROWSER__ && scopeId != null && mode === 'module'
   const isSetupInlined = !__BROWSER__ && !!options.inline
 
   // preambles
@@ -209,7 +214,7 @@ export function generate(
     ? createCodegenContext(ast, options)
     : context
   if (!__BROWSER__ && mode === 'module') {
-    genModulePreamble(ast, preambleContext, isSetupInlined)
+    genModulePreamble(ast, preambleContext, genScopeId, isSetupInlined)
   } else {
     genFunctionPreamble(ast, preambleContext)
   }
@@ -226,7 +231,14 @@ export function generate(
       ? args.map(arg => `${arg}: any`).join(',')
       : args.join(', ')
 
-  if (isSetupInlined) {
+  if (genScopeId) {
+    if (isSetupInlined) {
+      push(`${PURE_ANNOTATION}${WITH_ID}(`)
+    } else {
+      push(`const ${functionName} = ${PURE_ANNOTATION}${WITH_ID}(`)
+    }
+  }
+  if (isSetupInlined || genScopeId) {
     push(`(${signature}) => {`)
   } else {
     push(`function ${functionName}(${signature}) {`)
@@ -290,6 +302,10 @@ export function generate(
 
   deindent()
   push(`}`)
+
+  if (genScopeId) {
+    push(`)`)
+  }
 
   return {
     ast,
@@ -361,6 +377,7 @@ function genFunctionPreamble(ast: RootNode, context: CodegenContext) {
 function genModulePreamble(
   ast: RootNode,
   context: CodegenContext,
+  genScopeId: boolean,
   inline?: boolean
 ) {
   const {
@@ -369,12 +386,14 @@ function genModulePreamble(
     optimizeImports,
     runtimeModuleName,
     scopeId,
-    mode
+    helper
   } = context
 
-  const genScopeId = !__BROWSER__ && scopeId != null && mode === 'module'
-  if (genScopeId && ast.hoists.length) {
-    ast.helpers.push(SET_SCOPE_ID)
+  if (genScopeId) {
+    ast.helpers.push(WITH_SCOPE_ID)
+    if (ast.hoists.length) {
+      ast.helpers.push(PUSH_SCOPE_ID, POP_SCOPE_ID)
+    }
   }
 
   // generate import statements for helpers
@@ -417,6 +436,17 @@ function genModulePreamble(
     newline()
   }
 
+  // we technically don't need this anymore since `withCtx` already sets the
+  // correct scopeId, but this is necessary for backwards compat
+  if (genScopeId) {
+    push(
+      `const ${WITH_ID} = ${PURE_ANNOTATION}${helper(
+        WITH_SCOPE_ID
+      )}("${scopeId}")`
+    )
+    newline()
+  }
+
   genHoists(ast.hoists, context)
   newline()
 
@@ -434,9 +464,16 @@ function genAssets(
     type === 'component' ? RESOLVE_COMPONENT : RESOLVE_DIRECTIVE
   )
   for (let i = 0; i < assets.length; i++) {
-    const id = assets[i]
+    let id = assets[i]
+    // potential component implicit self-reference inferred from SFC filename
+    const maybeSelfReference = id.endsWith('__self')
+    if (maybeSelfReference) {
+      id = id.slice(0, -6)
+    }
     push(
-      `const ${toValidAssetId(id, type)} = ${resolver}(${JSON.stringify(id)})`
+      `const ${toValidAssetId(id, type)} = ${resolver}(${JSON.stringify(id)}${
+        maybeSelfReference ? `, true` : ``
+      })`
     )
     if (i < assets.length - 1) {
       newline()
@@ -456,7 +493,7 @@ function genHoists(hoists: (JSChildNode | null)[], context: CodegenContext) {
   // push scope Id before initializing hoisted vnodes so that these vnodes
   // get the proper scopeId as well.
   if (genScopeId) {
-    push(`${helper(SET_SCOPE_ID)}("${scopeId}")`)
+    push(`${helper(PUSH_SCOPE_ID)}("${scopeId}")`)
     newline()
   }
 
@@ -469,7 +506,7 @@ function genHoists(hoists: (JSChildNode | null)[], context: CodegenContext) {
   })
 
   if (genScopeId) {
-    push(`${helper(SET_SCOPE_ID)}(null)`)
+    push(`${helper(POP_SCOPE_ID)}()`)
     newline()
   }
   context.pure = false
@@ -793,12 +830,15 @@ function genFunctionExpression(
   node: FunctionExpression,
   context: CodegenContext
 ) {
-  const { push, indent, deindent } = context
+  const { push, indent, deindent, scopeId, mode } = context
   const { params, returns, body, newline, isSlot } = node
+  // slot functions also need to push scopeId before rendering its content
+  const genScopeId =
+    !__BROWSER__ && isSlot && scopeId != null && mode !== 'function'
 
   if (isSlot) {
     // wrap slot functions with owner context
-    push(`_${helperNameMap[WITH_CTX]}(`)
+    push(genScopeId ? `${WITH_ID}(` : `_${helperNameMap[WITH_CTX]}(`)
   }
   push(`(`, node)
   if (isArray(params)) {

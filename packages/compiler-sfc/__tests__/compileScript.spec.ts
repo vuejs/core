@@ -532,6 +532,18 @@ const emit = defineEmit(['a', 'b'])
 
     test('defineEmit w/ type (union)', () => {
       const type = `((e: 'foo' | 'bar') => void) | ((e: 'baz', id: number) => void)`
+      expect(() =>
+        compile(`
+      <script setup lang="ts">
+      import { defineEmit } from 'vue'
+      const emit = defineEmit<${type}>()
+      </script>
+      `)
+      ).toThrow()
+    })
+
+    test('defineEmit w/ type (type literal w/ call signatures)', () => {
+      const type = `{(e: 'foo' | 'bar'): void; (e: 'baz', id: number): void;}`
       const { content } = compile(`
       <script setup lang="ts">
       import { defineEmit } from 'vue'
@@ -705,6 +717,34 @@ const emit = defineEmit(['a', 'b'])
       expect(content).toMatch(`const b = { a: a.value }`)
       // should not convert destructure
       expect(content).toMatch(`const { a } = b`)
+      assertCode(content)
+    })
+
+    test('should not rewrite scope variable', () => {
+      const { content } = compile(`
+      <script setup>
+        ref: a = 1
+        ref: b = 1
+        ref: d = 1
+        const e = 1
+        function test() {
+          const a = 2
+          console.log(a)
+          console.log(b)
+          let c = { c: 3 }
+          console.log(c)
+          let $d
+          console.log($d)
+          console.log(d)
+          console.log(e)
+        }
+      </script>`)
+      expect(content).toMatch('console.log(a)')
+      expect(content).toMatch('console.log(b.value)')
+      expect(content).toMatch('console.log(c)')
+      expect(content).toMatch('console.log($d)')
+      expect(content).toMatch('console.log(d.value)')
+      expect(content).toMatch('console.log(e)')
       assertCode(content)
     })
 
@@ -934,6 +974,7 @@ describe('SFC analyze <script> bindings', () => {
 
     expect(scriptAst).toBeDefined()
   })
+
   it('recognizes props array declaration', () => {
     const { bindings } = compile(`
       <script>
@@ -946,6 +987,7 @@ describe('SFC analyze <script> bindings', () => {
       foo: BindingTypes.PROPS,
       bar: BindingTypes.PROPS
     })
+    expect(bindings!.__isScriptSetup).toBe(false)
   })
 
   it('recognizes props object declaration', () => {
@@ -969,6 +1011,7 @@ describe('SFC analyze <script> bindings', () => {
       baz: BindingTypes.PROPS,
       qux: BindingTypes.PROPS
     })
+    expect(bindings!.__isScriptSetup).toBe(false)
   })
 
   it('recognizes setup return', () => {
@@ -989,6 +1032,7 @@ describe('SFC analyze <script> bindings', () => {
       foo: BindingTypes.SETUP_MAYBE_REF,
       bar: BindingTypes.SETUP_MAYBE_REF
     })
+    expect(bindings!.__isScriptSetup).toBe(false)
   })
 
   it('recognizes async setup return', () => {
@@ -1009,6 +1053,7 @@ describe('SFC analyze <script> bindings', () => {
       foo: BindingTypes.SETUP_MAYBE_REF,
       bar: BindingTypes.SETUP_MAYBE_REF
     })
+    expect(bindings!.__isScriptSetup).toBe(false)
   })
 
   it('recognizes data return', () => {

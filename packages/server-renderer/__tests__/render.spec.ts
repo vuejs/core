@@ -8,7 +8,12 @@ import {
   defineComponent,
   createTextVNode,
   createStaticVNode,
-  withCtx
+  withCtx,
+  KeepAlive,
+  Transition,
+  watchEffect,
+  createVNode,
+  resolveDynamicComponent
 } from 'vue'
 import { escapeHtml } from '@vue/shared'
 import { renderToString } from '../src/renderToString'
@@ -16,6 +21,7 @@ import { renderToStream as _renderToStream } from '../src/renderToStream'
 import { ssrRenderSlot, SSRSlot } from '../src/helpers/ssrRenderSlot'
 import { ssrRenderComponent } from '../src/helpers/ssrRenderComponent'
 import { Readable } from 'stream'
+import { ssrRenderVNode } from '../src'
 
 const promisifyStream = (stream: Readable) => {
   return new Promise<string>((resolve, reject) => {
@@ -91,6 +97,46 @@ function testRender(type: string, render: typeof renderToString) {
               defineComponent(() => {
                 const msg = ref('hello')
                 return () => h('div', msg.value)
+              })
+            )
+          )
+        ).toBe(`<div>hello</div>`)
+      })
+
+      test('components using defineComponent with extends option', async () => {
+        expect(
+          await render(
+            createApp(
+              defineComponent({
+                extends: {
+                  data() {
+                    return { msg: 'hello' }
+                  },
+                  render(this: any) {
+                    return h('div', this.msg)
+                  }
+                }
+              })
+            )
+          )
+        ).toBe(`<div>hello</div>`)
+      })
+
+      test('components using defineComponent with mixins option', async () => {
+        expect(
+          await render(
+            createApp(
+              defineComponent({
+                mixins: [
+                  {
+                    data() {
+                      return { msg: 'hello' }
+                    },
+                    render(this: any) {
+                      return h('div', this.msg)
+                    }
+                  }
+                ]
               })
             )
           )
@@ -604,6 +650,26 @@ function testRender(type: string, render: typeof renderToString) {
       })
     })
 
+    describe('vnode component', () => {
+      test('KeepAlive', async () => {
+        const MyComp = {
+          render: () => h('p', 'hello')
+        }
+        expect(await render(h(KeepAlive, () => h(MyComp)))).toBe(
+          `<!--[--><p>hello</p><!--]-->`
+        )
+      })
+
+      test('Transition', async () => {
+        const MyComp = {
+          render: () => h('p', 'hello')
+        }
+        expect(await render(h(Transition, () => h(MyComp)))).toBe(
+          `<p>hello</p>`
+        )
+      })
+    })
+
     describe('raw vnode types', () => {
       test('Text', async () => {
         expect(await render(createTextVNode('hello <div>'))).toBe(
@@ -712,6 +778,83 @@ function testRender(type: string, render: typeof renderToString) {
       })
       const html = await render(app)
       expect(html).toBe(`<div>hello</div>`)
+    })
+
+    // #2763
+    test('error handling w/ async setup', async () => {
+      const fn = jest.fn()
+      const fn2 = jest.fn()
+
+      const asyncChildren = defineComponent({
+        async setup() {
+          return Promise.reject('async child error')
+        },
+        template: `<div>asyncChildren</div>`
+      })
+      const app = createApp({
+        name: 'App',
+        components: {
+          asyncChildren
+        },
+        template: `<div class="app"><async-children /></div>`,
+        errorCaptured(error) {
+          fn(error)
+        }
+      })
+
+      app.config.errorHandler = error => {
+        fn2(error)
+      }
+
+      const html = await renderToString(app)
+      expect(html).toBe(`<div class="app"><div>asyncChildren</div></div>`)
+
+      expect(fn).toHaveBeenCalledTimes(1)
+      expect(fn).toBeCalledWith('async child error')
+
+      expect(fn2).toHaveBeenCalledTimes(1)
+      expect(fn2).toBeCalledWith('async child error')
+    })
+
+    // https://github.com/vuejs/vue-next/issues/3322
+    test('effect onInvalidate does not error', async () => {
+      const noop = () => {}
+      const app = createApp({
+        setup: () => {
+          watchEffect(onInvalidate => onInvalidate(noop))
+        },
+        render: noop
+      })
+      expect(await render(app)).toBe('<!---->')
+    })
+
+    // #2863
+    test('assets should be resolved correctly', async () => {
+      expect(
+        await render(
+          createApp({
+            components: {
+              A: {
+                ssrRender(_ctx, _push) {
+                  _push(`<div>A</div>`)
+                }
+              },
+              B: {
+                render: () => h('div', 'B')
+              }
+            },
+            ssrRender(_ctx, _push, _parent) {
+              const A: any = resolveComponent('A')
+              _push(ssrRenderComponent(A, null, null, _parent))
+              ssrRenderVNode(
+                _push,
+                createVNode(resolveDynamicComponent('B'), null, null),
+                _parent
+              )
+            }
+          })
+        )
+      ).toBe(`<div>A</div><div>B</div>`)
     })
   })
 }

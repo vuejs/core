@@ -158,7 +158,8 @@ export function createHydrationFunctions(
         if (shapeFlag & ShapeFlags.ELEMENT) {
           if (
             domType !== DOMNodeTypes.ELEMENT ||
-            vnode.type !== (node as Element).tagName.toLowerCase()
+            (vnode.type as string).toLowerCase() !==
+              (node as Element).tagName.toLowerCase()
           ) {
             nextNode = onMismatch()
           } else {
@@ -359,6 +360,8 @@ export function createHydrationFunctions(
           slotScopeIds,
           optimized
         )
+      } else if (vnode.type === Text && !vnode.children) {
+        continue
       } else {
         hasMismatch = true
         if (__DEV__ && !hasWarned) {

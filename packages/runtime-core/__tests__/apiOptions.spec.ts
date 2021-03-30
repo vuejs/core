@@ -644,6 +644,93 @@ describe('api: options', () => {
     expect(renderToString(h(Comp))).toBe('from mixin')
   })
 
+  test('chained mixins in extends', () => {
+    const calls: string[] = []
+    const mixinA = {
+      beforeCreate() {
+        calls.push('mixinA beforeCreate')
+      },
+      created() {
+        calls.push('mixinA created')
+      }
+    }
+
+    const extendA = {
+      mixins: [mixinA],
+      beforeCreate() {
+        calls.push('extendA beforeCreate')
+      },
+      created() {
+        calls.push('extendA created')
+      }
+    }
+
+    const Comp = {
+      extends: extendA,
+      render: () => '123',
+      beforeCreate() {
+        calls.push('self beforeCreate')
+      },
+      created() {
+        calls.push('self created')
+      }
+    }
+
+    expect(renderToString(h(Comp))).toBe(`123`)
+    expect(calls).toEqual([
+      'mixinA beforeCreate',
+      'extendA beforeCreate',
+      'self beforeCreate',
+      'mixinA created',
+      'extendA created',
+      'self created'
+    ])
+  })
+
+  test('chained extends in mixins', () => {
+    const calls: string[] = []
+
+    const extendA = {
+      beforeCreate() {
+        calls.push('extendA beforeCreate')
+      },
+      created() {
+        calls.push('extendA created')
+      }
+    }
+
+    const mixinA = {
+      extends: extendA,
+      beforeCreate() {
+        calls.push('mixinA beforeCreate')
+      },
+      created() {
+        calls.push('mixinA created')
+      }
+    }
+
+    const Comp = {
+      mixins: [mixinA],
+      render: () => '123',
+      beforeCreate() {
+        calls.push('self beforeCreate')
+      },
+      created() {
+        calls.push('self created')
+      }
+    }
+
+    expect(renderToString(h(Comp))).toBe(`123`)
+    expect(calls).toEqual([
+      'extendA beforeCreate',
+      'mixinA beforeCreate',
+      'self beforeCreate',
+      'extendA created',
+      'mixinA created',
+      'self created'
+    ])
+  })
+
   test('extends', () => {
     const calls: string[] = []
     const Base = {

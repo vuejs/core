@@ -487,6 +487,16 @@ interface LegacyOptions<
 
   // runtime compile only
   delimiters?: [string, string]
+
+  /**
+   * #3468
+   *
+   * type-only, used to assist Mixin's type inference,
+   * typescript will try to simplify the inferred `Mixin` type,
+   * with the `__differenciator`, typescript won't be able to combine different mixins,
+   * because the `__differenciator` will be different
+   */
+  __differentiator?: keyof D | keyof C | keyof M
 }
 
 export type OptionTypesKeys = 'P' | 'B' | 'D' | 'C' | 'M' | 'Defaults'
@@ -528,7 +538,7 @@ function createDuplicateChecker() {
 
 type DataFn = (vm: ComponentPublicInstance) => any
 
-export let isInBeforeCreate = false
+export let shouldCacheAccess = true
 
 export function applyOptions(
   instance: ComponentInternalInstance,
@@ -581,7 +591,7 @@ export function applyOptions(
 
   // applyOptions is called non-as-mixin once per instance
   if (!asMixin) {
-    isInBeforeCreate = true
+    shouldCacheAccess = false
     callSyncHook(
       'beforeCreate',
       LifecycleHooks.BEFORE_CREATE,
@@ -589,7 +599,7 @@ export function applyOptions(
       instance,
       globalMixins
     )
-    isInBeforeCreate = false
+    shouldCacheAccess = true
     // global mixins are applied first
     applyMixins(
       instance,
@@ -879,50 +889,30 @@ function callSyncHook(
   instance: ComponentInternalInstance,
   globalMixins: ComponentOptions[]
 ) {
-  callHookFromMixins(name, type, globalMixins, instance)
+  for (let i = 0; i < globalMixins.length; i++) {
+    callHookWithMixinAndExtends(name, type, globalMixins[i], instance)
+  }
+  callHookWithMixinAndExtends(name, type, options, instance)
+}
+
+function callHookWithMixinAndExtends(
+  name: 'beforeCreate' | 'created',
+  type: LifecycleHooks,
+  options: ComponentOptions,
+  instance: ComponentInternalInstance
+) {
   const { extends: base, mixins } = options
+  const selfHook = options[name]
   if (base) {
-    callHookFromExtends(name, type, base, instance)
+    callHookWithMixinAndExtends(name, type, base, instance)
   }
   if (mixins) {
-    callHookFromMixins(name, type, mixins, instance)
+    for (let i = 0; i < mixins.length; i++) {
+      callHookWithMixinAndExtends(name, type, mixins[i], instance)
+    }
   }
-  const selfHook = options[name]
   if (selfHook) {
     callWithAsyncErrorHandling(selfHook.bind(instance.proxy!), instance, type)
-  }
-}
-
-function callHookFromExtends(
-  name: 'beforeCreate' | 'created',
-  type: LifecycleHooks,
-  base: ComponentOptions,
-  instance: ComponentInternalInstance
-) {
-  if (base.extends) {
-    callHookFromExtends(name, type, base.extends, instance)
-  }
-  const baseHook = base[name]
-  if (baseHook) {
-    callWithAsyncErrorHandling(baseHook.bind(instance.proxy!), instance, type)
-  }
-}
-
-function callHookFromMixins(
-  name: 'beforeCreate' | 'created',
-  type: LifecycleHooks,
-  mixins: ComponentOptions[],
-  instance: ComponentInternalInstance
-) {
-  for (let i = 0; i < mixins.length; i++) {
-    const chainedMixins = mixins[i].mixins
-    if (chainedMixins) {
-      callHookFromMixins(name, type, chainedMixins, instance)
-    }
-    const fn = mixins[i][name]
-    if (fn) {
-      callWithAsyncErrorHandling(fn.bind(instance.proxy!), instance, type)
-    }
   }
 }
 
@@ -956,7 +946,9 @@ function resolveData(
         `Plain object usage is no longer supported.`
     )
   }
+  shouldCacheAccess = false
   const data = dataFn.call(publicThis, publicThis)
+  shouldCacheAccess = true
   if (__DEV__ && isPromise(data)) {
     warn(
       `data() returned a Promise - note data() cannot be async; If you ` +

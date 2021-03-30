@@ -94,8 +94,10 @@ export const enum BindingTypes {
   OPTIONS = 'options'
 }
 
-export interface BindingMetadata {
+export type BindingMetadata = {
   [key: string]: BindingTypes | undefined
+} & {
+  __isScriptSetup?: boolean
 }
 
 interface SharedTransformCodegenOptions {
