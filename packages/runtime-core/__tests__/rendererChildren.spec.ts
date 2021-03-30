@@ -422,7 +422,7 @@ describe('renderer: keyed children', () => {
     expect(serialize(elm.children[0])).toBe(`<div>four</div>`)
   })
 
-  it('should warn with duplicate keys: mountChildren', () => {
+  test('should warn with duplicate keys: mountChildren', () => {
     renderChildren([1, 1, 1, 4, 5])
     expect(`Duplicate keys`).toHaveBeenWarned()
   })
