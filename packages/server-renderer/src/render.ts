@@ -129,13 +129,31 @@ function renderComponentSubTree(
       // resolve fallthrough attrs
       let attrs =
         instance.type.inheritAttrs !== false ? instance.attrs : undefined
+      let hasCloned = false
 
-      // inherited scopeId
-      const scopeId = instance.vnode.scopeId
-      if (scopeId || slotScopeId) {
-        attrs = { ...attrs }
-        if (scopeId) attrs[scopeId] = ''
-        if (slotScopeId) attrs[slotScopeId.trim()] = ''
+      let cur = instance
+      while (true) {
+        const scopeId = cur.vnode.scopeId
+        if (scopeId) {
+          if (!hasCloned) {
+            attrs = { ...attrs }
+            hasCloned = true
+          }
+          attrs![scopeId] = ''
+        }
+        const parent = cur.parent
+        if (parent && parent.subTree && parent.subTree === cur.vnode) {
+          // parent is a non-SSR compiled component and is rendering this
+          // component as root. inherit its scopeId if present.
+          cur = parent
+        } else {
+          break
+        }
+      }
+
+      if (slotScopeId) {
+        if (!hasCloned) attrs = { ...attrs }
+        attrs![slotScopeId.trim()] = ''
       }
 
       // set current rendering instance for asset resolution
