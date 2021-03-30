@@ -13,7 +13,8 @@ import {
   Transition,
   watchEffect,
   createVNode,
-  resolveDynamicComponent
+  resolveDynamicComponent,
+  renderSlot
 } from 'vue'
 import { escapeHtml } from '@vue/shared'
 import { renderToString } from '../src/renderToString'
@@ -711,11 +712,11 @@ function testRender(type: string, render: typeof renderToString) {
         expect(await render(h(Foo))).toBe(`<div data-v-test></div>`)
       })
 
-      test('with slots', async () => {
+      test('with client-compiled vnode slots', async () => {
         const Child = {
           __scopeId: 'data-v-child',
           render: function(this: any) {
-            return h('div', this.$slots.default())
+            return h('div', null, [renderSlot(this.$slots, 'default')])
           }
         }
 
@@ -723,13 +724,15 @@ function testRender(type: string, render: typeof renderToString) {
           __scopeId: 'data-v-test',
           render: () => {
             return h(Child, null, {
-              default: withCtx(() => h('span', 'slot'))
+              default: withCtx(() => [h('span', 'slot')])
             })
           }
         }
 
         expect(await render(h(Parent))).toBe(
-          `<div data-v-child data-v-test><span data-v-test data-v-child-s>slot</span></div>`
+          `<div data-v-child data-v-test>` +
+            `<!--[--><span data-v-test data-v-child-s>slot</span><!--]-->` +
+            `</div>`
         )
       })
     })

@@ -16,7 +16,7 @@ export function ssrRenderSlot(
   fallbackRenderFn: (() => void) | null,
   push: PushFn,
   parentComponent: ComponentInternalInstance,
-  slotScopeId?: string | null
+  slotScopeId?: string
 ) {
   // template-compiled slots are always rendered as fragments
   push(`<!--[-->`)
@@ -34,7 +34,7 @@ export function ssrRenderSlot(
     )
     if (Array.isArray(ret)) {
       // normal slot
-      renderVNodeChildren(push, ret, parentComponent)
+      renderVNodeChildren(push, ret, parentComponent, slotScopeId)
     } else {
       // ssr slot.
       // check if the slot renders all comments, in which case use the fallback
