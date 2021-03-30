@@ -20,9 +20,9 @@ import CodeMirror from '../codemirror/CodeMirror.vue'
 import { store } from '../store'
 import { ref } from 'vue'
 
-type Modes = 'preview' | 'js' | 'css'
+type Modes = 'preview' | 'js' | 'css' | 'ssr'
 
-const modes: Modes[] = ['preview', 'js', 'css']
+const modes: Modes[] = ['preview', 'js', 'css', 'ssr']
 const mode = ref<Modes>('preview')
 </script>
 

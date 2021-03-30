@@ -1,4 +1,5 @@
-import { store, MAIN_FILE, SANDBOX_VUE_URL, File } from '../store'
+import { store, File } from '../store'
+import { MAIN_FILE, SANDBOX_VUE_URL } from '../sfcCompiler'
 import {
   babelParse,
   MagicString,

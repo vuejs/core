@@ -14,7 +14,7 @@ import Message from '../Message.vue'
 import { ref, onMounted, onUnmounted, watchEffect } from 'vue'
 import srcdoc from './srcdoc.html?raw'
 import { PreviewProxy } from './PreviewProxy'
-import { MAIN_FILE, SANDBOX_VUE_URL } from '../store'
+import { MAIN_FILE, SANDBOX_VUE_URL } from '../sfcCompiler'
 import { compileModulesForPreview } from './moduleCompiler'
 
 const iframe = ref()
