@@ -19,11 +19,13 @@ export const SANDBOX_VUE_URL = import.meta.env.PROD
 
 export async function compileFile({ filename, code, compiled }: File) {
   if (!code.trim()) {
+    store.errors = []
     return
   }
 
   if (filename.endsWith('.js')) {
     compiled.js = compiled.ssr = code
+    store.errors = []
     return
   }
 
