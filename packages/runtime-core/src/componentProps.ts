@@ -456,11 +456,7 @@ function getTypeIndex(
   expectedTypes: PropType<any> | void | null | true
 ): number {
   if (isArray(expectedTypes)) {
-    for (let i = 0, len = expectedTypes.length; i < len; i++) {
-      if (isSameType(expectedTypes[i], type)) {
-        return i
-      }
-    }
+    return expectedTypes.findIndex(t => isSameType(t, type))
   } else if (isFunction(expectedTypes)) {
     return isSameType(expectedTypes, type) ? 0 : -1
   }
