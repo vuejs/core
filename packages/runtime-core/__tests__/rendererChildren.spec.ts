@@ -68,7 +68,7 @@ test('array children -> text children', () => {
 describe('renderer: keyed children', () => {
   let root: TestElement
   let elm: TestElement
-  const renderChildren = (arr: number[]) => {
+  const renderChildren = (arr: any[]) => {
     render(h('div', arr.map(toSpan)), root)
     return root.children[0] as TestElement
   }
@@ -436,6 +436,9 @@ describe('renderer: keyed children', () => {
     expect(`Duplicate keys detected: '7'`).toHaveBeenWarned()
 
     renderChildren([0, 0, 7, 3, 5])
+    expect(`Duplicate keys detected: '0'`).toHaveBeenWarned()
+
+    renderChildren(['0', '0', 7, 3, 5])
     expect(`Duplicate keys detected: '0'`).toHaveBeenWarned()
   })
 })
