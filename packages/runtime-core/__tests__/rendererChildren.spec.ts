@@ -434,6 +434,9 @@ describe('renderer: keyed children', () => {
 
     renderChildren([7, 7, 7, 3, 5])
     expect(`Duplicate keys detected: '7'`).toHaveBeenWarned()
+
+    renderChildren([0, 0, 7, 3, 5])
+    expect(`Duplicate keys detected: '0'`).toHaveBeenWarned()
   })
 })
 

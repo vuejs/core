@@ -1747,20 +1747,22 @@ function baseCreateRenderer(
   }
 
   function checkDuplicateKeys(children: VNodeArrayChildren) {
-    const seenKeys = {} as any
+    const seenKeys = new Map()
     for (let i = 0; i < children.length; i++) {
       const vnode = children[i] as VNode
       if (!vnode) continue
 
       const key = vnode.key
-      if (key) {
-        if (seenKeys[key]) {
+      if (key !== undefined && key !== null) {
+        if (seenKeys.has(key)) {
           warn(
-            `Duplicate keys detected: '${key}'. This may cause an update error.`,
+            `Duplicate keys detected: '${JSON.stringify(
+              key
+            )}'. This may cause an update error.`,
             `Make sure keys are unique.`
           )
         } else {
-          seenKeys[key] = true
+          seenKeys.set(key, true)
         }
       }
     }
