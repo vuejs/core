@@ -19,26 +19,3 @@ return function render(_ctx, _cache) {
   }
 }"
 `;
-
-exports[`compile should work with v-bind + HTML tag 1`] = `
-"const _Vue = Vue
-
-return function render(_ctx, _cache) {
-  with (_ctx) {
-    const { resolveComponent: _resolveComponent, openBlock: _openBlock, createBlock: _createBlock } = _Vue
-
-    const _component_list = _resolveComponent(\\"list\\")
-
-    return (_openBlock(), _createBlock(_component_list, { model: {
-      widgets: [
-        {
-          a: 'Test',
-          b: \\"Test\\",
-          c: \\"<strong>Bold Text</strong>\\",
-          d: '<strong>Bold Text</strong>',
-        }
-      ]
-    } }, null, 8 /* PROPS */, [\\"model\\"]))
-  }
-}"
-`;
