@@ -115,8 +115,8 @@ export async function compileFile({ filename, code, compiled }: File) {
   let css = ''
   for (const style of descriptor.styles) {
     if (style.module) {
-      // TODO error
-      continue
+      store.errors = [`<style module> is not supported in the playground.`]
+      return
     }
 
     const styleResult = await compileStyleAsync({
