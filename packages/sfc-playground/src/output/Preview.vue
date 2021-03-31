@@ -12,6 +12,7 @@
 <script setup lang="ts">
 import Message from '../Message.vue'
 import { ref, onMounted, onUnmounted, watchEffect } from 'vue'
+import type { WatchStopHandle } from 'vue'
 import srcdoc from './srcdoc.html?raw'
 import { PreviewProxy } from './PreviewProxy'
 import { MAIN_FILE, SANDBOX_VUE_URL } from '../sfcCompiler'
@@ -22,6 +23,7 @@ const runtimeError = ref()
 const runtimeWarning = ref()
 
 let proxy: PreviewProxy
+let updateHandle: WatchStopHandle
 
 async function updatePreview() {
   runtimeError.value = null
@@ -93,12 +95,13 @@ onMounted(() => {
 
   iframe.value.addEventListener('load', () => {
     proxy.handle_links()
-    watchEffect(updatePreview)
+    updateHandle = watchEffect(updatePreview)
   })
 })
 
 onUnmounted(() => {
   proxy.destroy()
+  updateHandle && updateHandle()
 })
 </script>
 
