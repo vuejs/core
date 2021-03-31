@@ -96,7 +96,7 @@ function createSandbox() {
   }
   importMap.imports.vue = vueRuntimeUrl.value
   const sandboxSrc = srcdoc.replace(/<!--IMPORT_MAP-->/, JSON.stringify(importMap))
-  sandbox.setAttribute('srcdoc', sandboxSrc)
+  sandbox.srcdoc = sandboxSrc
   container.value.appendChild(sandbox)
 
   proxy = new PreviewProxy(sandbox, {
@@ -104,19 +104,30 @@ function createSandbox() {
       // pending_imports = progress;
     },
     on_error: (event: any) => {
-      runtimeError.value = event.value
+      const msg = event.value instanceof Error ? event.value.message : event.value
+      if (
+        msg.includes('Failed to resolve module specifier') ||
+        msg.includes('Error resolving module specifier')
+      ) {
+        runtimeError.value = msg.replace(/\. Relative references must.*$/, '') +
+        `.\nTip: add an "import-map.json" file to specify import paths for dependencies.`
+      } else {
+        runtimeError.value = event.value
+      }
     },
     on_unhandled_rejection: (event: any) => {
       let error = event.value
-      if (typeof error === 'string') error = { message: error }
+      if (typeof error === 'string') {
+        error = { message: error }
+      }
       runtimeError.value = 'Uncaught (in promise): ' + error.message
     },
     on_console: (log: any) => {
       if (log.level === 'error') {
         if (log.args[0] instanceof Error) {
-          runtimeError.value = log.args[0].stack
+          runtimeError.value = log.args[0].message
         } else {
-          runtimeError.value = log.args
+          runtimeError.value = log.args[0]
         }
       } else if (log.level === 'warn') {
         if (log.args[0].toString().includes('[Vue warn]')) {
@@ -145,6 +156,7 @@ function createSandbox() {
 }
 
 async function updatePreview() {
+  console.clear()
   runtimeError.value = null
   runtimeWarning.value = null
   try {
@@ -168,7 +180,7 @@ app.config.errorHandler = e => console.error(e)
 app.mount('#app')`.trim()
     ])
   } catch (e) {
-    runtimeError.value = e.stack
+    runtimeError.value = e.message
   }
 }
 </script>
