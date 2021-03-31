@@ -14,7 +14,7 @@
           <li v-for="version of publishedVersions">
             <a @click="setVueVersion(version)">v{{ version }}</a>
           </li>
-          <li><a @click="resetVueVersion">This Commit ({{ commit }})</a></li>
+          <li><a @click="resetVueVersion">This Commit ({{ currentCommit }})</a></li>
           <li>
             <a href="https://app.netlify.com/sites/vue-sfc-playground/deploys" target="_blank">Commits History</a>
           </li>
@@ -51,8 +51,8 @@ import { downloadProject } from './download/download'
 import { setVersion, resetVersion } from './sfcCompiler'
 import { ref, onMounted } from 'vue'
 
-const commit = __COMMIT__
-const activeVersion = ref(`@${commit}`)
+const currentCommit = __COMMIT__
+const activeVersion = ref(`@${currentCommit}`)
 const publishedVersions = ref<string[]>()
 const expanded = ref(false)
 
@@ -72,7 +72,7 @@ async function setVueVersion(v: string) {
 
 function resetVueVersion() {
   resetVersion()
-  activeVersion.value = `@${commit}`
+  activeVersion.value = `@${currentCommit}`
   expanded.value = false
 }
 

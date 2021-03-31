@@ -30,6 +30,7 @@ interface Store {
   files: Record<string, File>
   activeFilename: string
   readonly activeFile: File
+  readonly importMap: string | undefined
   errors: (string | Error)[]
 }
 
@@ -52,6 +53,10 @@ export const store: Store = reactive({
   activeFilename: MAIN_FILE,
   get activeFile() {
     return store.files[store.activeFilename]
+  },
+  get importMap() {
+    const file = store.files['import-map.json']
+    return file && file.code
   },
   errors: []
 })
@@ -81,7 +86,17 @@ export function setActive(filename: string) {
 }
 
 export function addFile(filename: string) {
-  store.files[filename] = new File(filename)
+  const file = (store.files[filename] = new File(filename))
+
+  if (filename === 'import-map.json') {
+    file.code = `
+{
+  "imports": {
+
+  }
+}`.trim()
+  }
+
   setActive(filename)
 }
 

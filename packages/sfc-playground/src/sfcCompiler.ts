@@ -1,6 +1,7 @@
 import { store, File } from './store'
 import { SFCDescriptor, BindingMetadata } from '@vue/compiler-sfc'
 import * as defaultCompiler from '@vue/compiler-sfc'
+import { ref } from 'vue'
 
 export const MAIN_FILE = 'App.vue'
 export const COMP_IDENTIFIER = `__sfc__`
@@ -16,23 +17,23 @@ const defaultVueUrl = import.meta.env.PROD
   ? '/vue.runtime.esm-browser.js' // to be copied on build
   : '/src/vue-dev-proxy'
 
-export let SANDBOX_VUE_URL = defaultVueUrl
+export const vueRuntimeUrl = ref(defaultVueUrl)
 
 export async function setVersion(version: string) {
   const compilerUrl = `https://unpkg.com/@vue/compiler-sfc@${version}/dist/compiler-sfc.esm-browser.js`
-  const runtimeUrl = `https://cdn.skypack.dev/@vue/runtime-dom@${version}`
+  const runtimeUrl = `https://unpkg.com/@vue/runtime-dom@${version}/dist/runtime-dom.esm-browser.js`
   const [compiler] = await Promise.all([
     import(/* @vite-ignore */ compilerUrl),
     import(/* @vite-ignore */ runtimeUrl)
   ])
   SFCCompiler = compiler
-  SANDBOX_VUE_URL = runtimeUrl
+  vueRuntimeUrl.value = runtimeUrl
   console.info(`Now using Vue version: ${version}`)
 }
 
 export function resetVersion() {
   SFCCompiler = defaultCompiler
-  SANDBOX_VUE_URL = defaultVueUrl
+  vueRuntimeUrl.value = defaultVueUrl
 }
 
 export async function compileFile({ filename, code, compiled }: File) {
@@ -41,7 +42,7 @@ export async function compileFile({ filename, code, compiled }: File) {
     return
   }
 
-  if (filename.endsWith('.js')) {
+  if (!filename.endsWith('.vue')) {
     compiled.js = compiled.ssr = code
     store.errors = []
     return
