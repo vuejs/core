@@ -7,7 +7,8 @@ import {
   TriggerOpTypes,
   DebuggerEvent,
   markRaw,
-  ref
+  ref,
+  shallowReactive
 } from '../src/index'
 import { ITERATE_KEY } from '../src/effect'
 
@@ -845,5 +846,25 @@ describe('reactivity/effect', () => {
     obj.foo = 1
     expect(fnSpy).toHaveBeenCalledTimes(1)
     expect(has.value).toBe(false)
+  })
+  
+  it('should trigger once effect when set the equal proxy', () => {
+    const obj = reactive({ foo: 1 })
+    const observed: any = reactive({ obj })
+    const fnSpy = jest.fn(() => observed.obj)
+
+    effect(fnSpy)
+
+    observed.obj = obj
+    expect(fnSpy).toHaveBeenCalledTimes(1)
+
+    const obj2 = reactive({ foo: 1 })
+    const observed2: any = shallowReactive({ obj2 })
+    const fnSpy2 = jest.fn(() => observed2.obj2)
+
+    effect(fnSpy2)
+
+    observed2.obj2 = obj2
+    expect(fnSpy2).toHaveBeenCalledTimes(1)
   })
 })

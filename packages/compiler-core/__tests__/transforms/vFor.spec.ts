@@ -12,7 +12,8 @@ import {
   SimpleExpressionNode,
   ElementNode,
   InterpolationNode,
-  ForCodegenNode
+  ForCodegenNode,
+  ConstantTypes
 } from '../../src/ast'
 import { ErrorCodes } from '../../src/errors'
 import { CompilerOptions, generate } from '../../src'
@@ -760,7 +761,7 @@ describe('compiler: v-for', () => {
           false /* disableTracking */
         )
       ).toMatchObject({
-        source: { content: `10`, isConstant: true },
+        source: { content: `10`, constType: ConstantTypes.CAN_STRINGIFY },
         params: [{ content: `item` }],
         innerVNodeCall: {
           tag: `"p"`,
@@ -772,7 +773,7 @@ describe('compiler: v-for', () => {
               type: NodeTypes.SIMPLE_EXPRESSION,
               content: 'item',
               isStatic: false,
-              isConstant: false
+              constType: ConstantTypes.NOT_CONSTANT
             }
           },
           patchFlag: genFlagText(PatchFlags.TEXT)

@@ -140,7 +140,7 @@ describe('component: emit', () => {
     })
     render(h(Foo), nodeOps.createElement('div'))
     expect(
-      `Component emitted event "bar" but it is neither declared`
+      `Component emitted event "foo" but it is neither declared`
     ).not.toHaveBeenWarned()
   })
 
@@ -173,6 +173,21 @@ describe('component: emit', () => {
     })
     render(h(Foo), nodeOps.createElement('div'))
     expect(`event validation failed for event "foo"`).toHaveBeenWarned()
+  })
+
+  // #2651
+  test('should not attach normalized object when mixins do not contain emits', () => {
+    const Foo = defineComponent({
+      mixins: [{}],
+      render() {},
+      created() {
+        this.$emit('foo')
+      }
+    })
+    render(h(Foo), nodeOps.createElement('div'))
+    expect(
+      `Component emitted event "foo" but it is neither declared`
+    ).not.toHaveBeenWarned()
   })
 
   test('.once', () => {
@@ -283,12 +298,23 @@ describe('component: emit', () => {
   })
 
   test('isEmitListener', () => {
-    const options = { click: null }
+    const options = {
+      click: null,
+      'test-event': null,
+      fooBar: null,
+      FooBaz: null
+    }
     expect(isEmitListener(options, 'onClick')).toBe(true)
     expect(isEmitListener(options, 'onclick')).toBe(false)
     expect(isEmitListener(options, 'onBlick')).toBe(false)
     // .once listeners
     expect(isEmitListener(options, 'onClickOnce')).toBe(true)
     expect(isEmitListener(options, 'onclickOnce')).toBe(false)
+    // kebab-case option
+    expect(isEmitListener(options, 'onTestEvent')).toBe(true)
+    // camelCase option
+    expect(isEmitListener(options, 'onFooBar')).toBe(true)
+    // PascalCase option
+    expect(isEmitListener(options, 'onFooBaz')).toBe(true)
   })
 })

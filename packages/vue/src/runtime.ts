@@ -3,7 +3,9 @@
 import { initDev } from './dev'
 import { warn } from '@vue/runtime-dom'
 
-__DEV__ && initDev()
+if (__DEV__) {
+  initDev()
+}
 
 export * from '@vue/runtime-dom'
 

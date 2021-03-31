@@ -3322,8 +3322,8 @@ Object {
       "children": Array [
         Object {
           "content": Object {
+            "constType": 0,
             "content": "a < b",
-            "isConstant": false,
             "isStatic": false,
             "loc": Object {
               "end": Object {
@@ -6084,8 +6084,8 @@ Object {
       "children": Array [
         Object {
           "content": Object {
+            "constType": 0,
             "content": "'</div>'",
-            "isConstant": false,
             "isStatic": false,
             "loc": Object {
               "end": Object {
@@ -6259,8 +6259,8 @@ Object {
       "props": Array [
         Object {
           "arg": Object {
+            "constType": 0,
             "content": "se",
-            "isConstant": false,
             "isStatic": false,
             "loc": Object {
               "end": Object {
@@ -6593,8 +6593,8 @@ Object {
   "children": Array [
     Object {
       "content": Object {
+        "constType": 0,
         "content": "",
-        "isConstant": false,
         "isStatic": false,
         "loc": Object {
           "end": Object {
@@ -6758,8 +6758,8 @@ Object {
       "props": Array [
         Object {
           "arg": Object {
+            "constType": 3,
             "content": "class",
-            "isConstant": true,
             "isStatic": true,
             "loc": Object {
               "end": Object {
@@ -6777,8 +6777,8 @@ Object {
             "type": 4,
           },
           "exp": Object {
+            "constType": 0,
             "content": "{ some: condition }",
-            "isConstant": false,
             "isStatic": false,
             "loc": Object {
               "end": Object {
@@ -6838,8 +6838,8 @@ Object {
       "props": Array [
         Object {
           "arg": Object {
+            "constType": 3,
             "content": "style",
-            "isConstant": true,
             "isStatic": true,
             "loc": Object {
               "end": Object {
@@ -6857,8 +6857,8 @@ Object {
             "type": 4,
           },
           "exp": Object {
+            "constType": 0,
             "content": "{ color: 'red' }",
-            "isConstant": false,
             "isStatic": false,
             "loc": Object {
               "end": Object {
@@ -6950,8 +6950,8 @@ Object {
           "props": Array [
             Object {
               "arg": Object {
+                "constType": 3,
                 "content": "style",
-                "isConstant": true,
                 "isStatic": true,
                 "loc": Object {
                   "end": Object {
@@ -6969,8 +6969,8 @@ Object {
                 "type": 4,
               },
               "exp": Object {
+                "constType": 0,
                 "content": "{ color: 'red' }",
-                "isConstant": false,
                 "isStatic": false,
                 "loc": Object {
                   "end": Object {
@@ -7049,8 +7049,8 @@ Object {
       "props": Array [
         Object {
           "arg": Object {
+            "constType": 3,
             "content": "class",
-            "isConstant": true,
             "isStatic": true,
             "loc": Object {
               "end": Object {
@@ -7068,8 +7068,8 @@ Object {
             "type": 4,
           },
           "exp": Object {
+            "constType": 0,
             "content": "{ some: condition }",
-            "isConstant": false,
             "isStatic": false,
             "loc": Object {
               "end": Object {

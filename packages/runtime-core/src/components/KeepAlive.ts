@@ -1,11 +1,11 @@
 import {
   ConcreteComponent,
   getCurrentInstance,
-  FunctionalComponent,
   SetupContext,
   ComponentInternalInstance,
   LifecycleHooks,
-  currentInstance
+  currentInstance,
+  getComponentName
 } from '../component'
 import { VNode, cloneVNode, isVNode, VNodeProps } from '../vnode'
 import { warn } from '../warning'
@@ -70,8 +70,6 @@ const KeepAliveImpl = {
   // would prevent it from being tree-shaken.
   __isKeepAlive: true,
 
-  inheritRef: true,
-
   props: {
     include: [String, RegExp, Array],
     exclude: [String, RegExp, Array],
@@ -79,19 +77,26 @@ const KeepAliveImpl = {
   },
 
   setup(props: KeepAliveProps, { slots }: SetupContext) {
-    const cache: Cache = new Map()
-    const keys: Keys = new Set()
-    let current: VNode | null = null
-
     const instance = getCurrentInstance()!
-    const parentSuspense = instance.suspense
-
     // KeepAlive communicates with the instantiated renderer via the
     // ctx where the renderer passes in its internals,
     // and the KeepAlive instance exposes activate/deactivate implementations.
     // The whole point of this is to avoid importing KeepAlive directly in the
     // renderer to facilitate tree-shaking.
     const sharedContext = instance.ctx as KeepAliveContext
+
+    // if the internal renderer is not registered, it indicates that this is server-side rendering,
+    // for KeepAlive, we just need to render its children
+    if (!sharedContext.renderer) {
+      return slots.default
+    }
+
+    const cache: Cache = new Map()
+    const keys: Keys = new Set()
+    let current: VNode | null = null
+
+    const parentSuspense = instance.suspense
+
     const {
       renderer: {
         p: patch,
@@ -114,6 +119,7 @@ const KeepAliveImpl = {
         instance,
         parentSuspense,
         isSVG,
+        vnode.slotScopeIds,
         optimized
       )
       queuePostRenderEffect(() => {
@@ -151,7 +157,7 @@ const KeepAliveImpl = {
 
     function pruneCache(filter?: (name: string) => boolean) {
       cache.forEach((vnode, key) => {
-        const name = getName(vnode.type as ConcreteComponent)
+        const name = getComponentName(vnode.type as ConcreteComponent)
         if (name && (!filter || !filter(name))) {
           pruneCacheEntry(key)
         }
@@ -179,7 +185,7 @@ const KeepAliveImpl = {
         exclude && pruneCache(name => !matches(exclude, name))
       },
       // prune post-render after `current` has been updated
-      { flush: 'post' }
+      { flush: 'post', deep: true }
     )
 
     // cache sub tree after render
@@ -235,7 +241,7 @@ const KeepAliveImpl = {
 
       let vnode = getInnerChild(rawVNode)
       const comp = vnode.type as ConcreteComponent
-      const name = getName(comp)
+      const name = getComponentName(comp)
       const { include, exclude, max } = props
 
       if (
@@ -299,10 +305,6 @@ export const KeepAlive = (KeepAliveImpl as any) as {
   new (): {
     $props: VNodeProps & KeepAliveProps
   }
-}
-
-function getName(comp: ConcreteComponent): string | void {
-  return (comp as FunctionalComponent).displayName || comp.name
 }
 
 function matches(pattern: MatchPattern, name: string): boolean {

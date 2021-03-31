@@ -165,8 +165,11 @@ export function normalizeEmitsOptions(
   let hasExtends = false
   if (__FEATURE_OPTIONS_API__ && !isFunction(comp)) {
     const extendEmits = (raw: ComponentOptions) => {
-      hasExtends = true
-      extend(normalized, normalizeEmitsOptions(raw, appContext, true))
+      const normalizedFromExtend = normalizeEmitsOptions(raw, appContext, true)
+      if (normalizedFromExtend) {
+        hasExtends = true
+        extend(normalized, normalizedFromExtend)
+      }
     }
     if (!asMixin && appContext.mixins.length) {
       appContext.mixins.forEach(extendEmits)
@@ -201,9 +204,10 @@ export function isEmitListener(
   if (!options || !isOn(key)) {
     return false
   }
-  key = key.replace(/Once$/, '')
+  key = key.slice(2).replace(/Once$/, '')
   return (
-    hasOwn(options, key[2].toLowerCase() + key.slice(3)) ||
-    hasOwn(options, key.slice(2))
+    hasOwn(options, key[0].toLowerCase() + key.slice(1)) ||
+    hasOwn(options, hyphenate(key)) ||
+    hasOwn(options, key)
   )
 }

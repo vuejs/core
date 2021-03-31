@@ -26,6 +26,7 @@
 //                 Kanitkorn Sujautra <https://github.com/lukyth>
 //                 Sebastian Silbermann <https://github.com/eps1lon>
 
+import { VNode } from '@vue/runtime-core'
 import * as CSS from 'csstype'
 
 export interface CSSProperties extends CSS.Properties<string | number> {
@@ -245,11 +246,14 @@ interface AriaAttributes {
   'aria-valuetext'?: string
 }
 
+// Vue's style normalization supports nested arrays
+type StyleValue = string | CSSProperties | Array<StyleValue>
+
 export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
   innerHTML?: string
 
   class?: any
-  style?: string | CSSProperties
+  style?: StyleValue
 
   // Standard HTML Attributes
   accesskey?: string
@@ -262,7 +266,7 @@ export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
   lang?: string
   placeholder?: string
   spellcheck?: Booleanish
-  tabindex?: number
+  tabindex?: number | string
   title?: string
   translate?: 'yes' | 'no'
 
@@ -1214,6 +1218,8 @@ export interface Events {
 
   // focus events
   onFocus: FocusEvent
+  onFocusin: FocusEvent
+  onFocusout: FocusEvent
   onBlur: FocusEvent
 
   // form events
@@ -1333,7 +1339,7 @@ type NativeElements = {
 
 declare global {
   namespace JSX {
-    interface Element {}
+    interface Element extends VNode {}
     interface ElementClass {
       $props: {}
     }

@@ -5,16 +5,27 @@ import {
   computed,
   nextTick,
   ref,
-  h
+  defineComponent,
+  getCurrentInstance,
+  ComponentInternalInstance,
+  ComponentPublicInstance
 } from '../src/index'
-import { render, nodeOps, serializeInner, TestElement } from '@vue/runtime-test'
+import {
+  render,
+  nodeOps,
+  serializeInner,
+  TestElement,
+  h,
+  createApp
+} from '@vue/runtime-test'
 import {
   ITERATE_KEY,
   DebuggerEvent,
   TrackOpTypes,
   TriggerOpTypes,
   triggerRef,
-  shallowRef
+  shallowRef,
+  Ref
 } from '@vue/reactivity'
 
 // reference: https://vue-composition-api-rfc.netlify.com/api.html#watch
@@ -798,5 +809,110 @@ describe('api: watch', () => {
     source.value++
     await nextTick()
     expect(spy).toHaveBeenCalledTimes(1)
+  })
+
+  // https://github.com/vuejs/vue-next/issues/2381
+  test('$watch should always register its effects with itw own instance', async () => {
+    let instance: ComponentInternalInstance | null
+    let _show: Ref<boolean>
+
+    const Child = defineComponent({
+      render: () => h('div'),
+      mounted() {
+        instance = getCurrentInstance()
+      },
+      unmounted() {}
+    })
+
+    const Comp = defineComponent({
+      setup() {
+        const comp = ref<ComponentPublicInstance | undefined>()
+        const show = ref(true)
+        _show = show
+        return { comp, show }
+      },
+      render() {
+        return this.show
+          ? h(Child, {
+              ref: vm => void (this.comp = vm as ComponentPublicInstance)
+            })
+          : null
+      },
+      mounted() {
+        // this call runs while Comp is currentInstance, but
+        // the effect for this `$watch` should nontheless be registered with Child
+        this.comp!.$watch(() => this.show, () => void 0)
+      }
+    })
+
+    render(h(Comp), nodeOps.createElement('div'))
+
+    expect(instance!).toBeDefined()
+    expect(instance!.effects).toBeInstanceOf(Array)
+    expect(instance!.effects!.length).toBe(1)
+
+    _show!.value = false
+
+    await nextTick()
+    await nextTick()
+
+    expect(instance!.effects![0].active).toBe(false)
+  })
+
+  test('this.$watch should pass `this.proxy` to watch source as the first argument ', () => {
+    let instance: any
+    const source = jest.fn()
+
+    const Comp = defineComponent({
+      render() {},
+      created(this: any) {
+        instance = this
+        this.$watch(source, function() {})
+      }
+    })
+
+    const root = nodeOps.createElement('div')
+    createApp(Comp).mount(root)
+
+    expect(instance).toBeDefined()
+    expect(source).toHaveBeenCalledWith(instance)
+  })
+
+  // #2728
+  test('pre watcher callbacks should not track dependencies', async () => {
+    const a = ref(0)
+    const b = ref(0)
+    const updated = jest.fn()
+
+    const Child = defineComponent({
+      props: ['a'],
+      updated,
+      watch: {
+        a() {
+          b.value
+        }
+      },
+      render() {
+        return h('div', this.a)
+      }
+    })
+
+    const Parent = defineComponent({
+      render() {
+        return h(Child, { a: a.value })
+      }
+    })
+
+    const root = nodeOps.createElement('div')
+    createApp(Parent).mount(root)
+
+    a.value++
+    await nextTick()
+    expect(updated).toHaveBeenCalledTimes(1)
+
+    b.value++
+    await nextTick()
+    // should not track b as dependency of Child
+    expect(updated).toHaveBeenCalledTimes(1)
   })
 })

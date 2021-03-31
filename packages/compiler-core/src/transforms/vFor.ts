@@ -23,7 +23,8 @@ import {
   VNodeCall,
   ForRenderListExpression,
   BlockCodegenNode,
-  ForIteratorExpression
+  ForIteratorExpression,
+  ConstantTypes
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
@@ -37,7 +38,8 @@ import {
   RENDER_LIST,
   OPEN_BLOCK,
   CREATE_BLOCK,
-  FRAGMENT
+  FRAGMENT,
+  CREATE_VNODE
 } from '../runtimeHelpers'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
@@ -46,7 +48,7 @@ import { PatchFlags, PatchFlagNames } from '@vue/shared'
 export const transformFor = createStructuralDirectiveTransform(
   'for',
   (node, dir, context) => {
-    const { helper } = context
+    const { helper, removeHelper } = context
     return processFor(node, dir, context, forNode => {
       // create the loop render function expression now, and add the
       // iterator on exit after all children have been traversed
@@ -77,7 +79,7 @@ export const transformFor = createStructuralDirectiveTransform(
 
       const isStableFragment =
         forNode.source.type === NodeTypes.SIMPLE_EXPRESSION &&
-        forNode.source.isConstant
+        forNode.source.constType > ConstantTypes.NOT_CONSTANT
       const fragmentFlag = isStableFragment
         ? PatchFlags.STABLE_FRAGMENT
         : keyProp
@@ -88,7 +90,8 @@ export const transformFor = createStructuralDirectiveTransform(
         helper(FRAGMENT),
         undefined,
         renderExp,
-        `${fragmentFlag} /* ${PatchFlagNames[fragmentFlag]} */`,
+        fragmentFlag +
+          (__DEV__ ? ` /* ${PatchFlagNames[fragmentFlag]} */` : ``),
         undefined,
         undefined,
         true /* isBlock */,
@@ -147,9 +150,10 @@ export const transformFor = createStructuralDirectiveTransform(
             helper(FRAGMENT),
             keyProperty ? createObjectExpression([keyProperty]) : undefined,
             node.children,
-            `${PatchFlags.STABLE_FRAGMENT} /* ${
-              PatchFlagNames[PatchFlags.STABLE_FRAGMENT]
-            } */`,
+            PatchFlags.STABLE_FRAGMENT +
+              (__DEV__
+                ? ` /* ${PatchFlagNames[PatchFlags.STABLE_FRAGMENT]} */`
+                : ``),
             undefined,
             undefined,
             true
@@ -162,10 +166,22 @@ export const transformFor = createStructuralDirectiveTransform(
           if (isTemplate && keyProperty) {
             injectProp(childBlock, keyProperty, context)
           }
+          if (childBlock.isBlock !== !isStableFragment) {
+            if (childBlock.isBlock) {
+              // switch from block to vnode
+              removeHelper(OPEN_BLOCK)
+              removeHelper(CREATE_BLOCK)
+            } else {
+              // switch from vnode to block
+              removeHelper(CREATE_VNODE)
+            }
+          }
           childBlock.isBlock = !isStableFragment
           if (childBlock.isBlock) {
             helper(OPEN_BLOCK)
             helper(CREATE_BLOCK)
+          } else {
+            helper(CREATE_VNODE)
           }
         }
 

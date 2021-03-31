@@ -67,7 +67,8 @@ function createDevtoolsComponentHook(hook: DevtoolsHooks) {
       hook,
       component.appContext.app,
       component.uid,
-      component.parent ? component.parent.uid : undefined
+      component.parent ? component.parent.uid : undefined,
+      component
     )
   }
 }

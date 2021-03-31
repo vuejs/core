@@ -342,5 +342,24 @@ describe('compiler: transform', () => {
         )
       )
     })
+
+    test('multiple children w/ single root + comments', () => {
+      const ast = transformWithCodegen(`<!--foo--><div/><!--bar-->`)
+      expect(ast.codegenNode).toMatchObject(
+        createBlockMatcher(
+          FRAGMENT,
+          undefined,
+          [
+            { type: NodeTypes.COMMENT },
+            { type: NodeTypes.ELEMENT, tag: `div` },
+            { type: NodeTypes.COMMENT }
+          ] as any,
+          genFlagText([
+            PatchFlags.STABLE_FRAGMENT,
+            PatchFlags.DEV_ROOT_FRAGMENT
+          ])
+        )
+      )
+    })
   })
 })

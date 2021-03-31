@@ -59,13 +59,15 @@ describe('compiler sfc: transform asset url', () => {
   test('with explicit base', () => {
     const { code } = compileWithAssetUrls(
       `<img src="./bar.png"></img>` + // -> /foo/bar.png
-      `<img src="~bar.png"></img>` + // -> /foo/bar.png
       `<img src="bar.png"></img>` + // -> bar.png (untouched)
-        `<img src="@theme/bar.png"></img>`, // -> @theme/bar.png (untouched)
+      `<img src="~bar.png"></img>` + // -> still converts to import
+        `<img src="@theme/bar.png"></img>`, // -> still converts to import
       {
         base: '/foo'
       }
     )
+    expect(code).toMatch(`import _imports_0 from 'bar.png'`)
+    expect(code).toMatch(`import _imports_1 from '@theme/bar.png'`)
     expect(code).toMatchSnapshot()
   })
 
@@ -93,5 +95,37 @@ describe('compiler sfc: transform asset url', () => {
     )
     // should not remove it
     expect(code).toMatch(`"xlink:href": "#myCircle"`)
+  })
+
+  test('should allow for full base URLs, with paths', () => {
+    const { code } = compileWithAssetUrls(`<img src="./logo.png" />`, {
+      base: 'http://localhost:3000/src/'
+    })
+
+    expect(code).toMatchSnapshot()
+  })
+
+  test('should allow for full base URLs, without paths', () => {
+    const { code } = compileWithAssetUrls(`<img src="./logo.png" />`, {
+      base: 'http://localhost:3000'
+    })
+
+    expect(code).toMatchSnapshot()
+  })
+
+  test('should allow for full base URLs, without port', () => {
+    const { code } = compileWithAssetUrls(`<img src="./logo.png" />`, {
+      base: 'http://localhost'
+    })
+
+    expect(code).toMatchSnapshot()
+  })
+
+  test('should allow for full base URLs, without protocol', () => {
+    const { code } = compileWithAssetUrls(`<img src="./logo.png" />`, {
+      base: '//localhost'
+    })
+
+    expect(code).toMatchSnapshot()
   })
 })

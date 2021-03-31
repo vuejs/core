@@ -9,7 +9,11 @@ This is the repository for Vue 3.0.
 - Scaffold via [Vite](https://github.com/vitejs/vite):
 
   ```bash
-  npm init vite-app hello-vue3 # OR yarn create vite-app hello-vue3
+  # npm
+  npm init @vitejs/app
+  # yarn
+  yarn create @vitejs/app
+  # select vue template
   ```
 
 - Scaffold via [vue-cli](https://cli.vuejs.org/):
@@ -28,7 +32,7 @@ Please consult the [Migration Guide](https://v3.vuejs.org/guide/migration/introd
 
 ## Supporting Libraries
 
-All of our official libraries and tools now support Vue 3, but most of them are still in beta status and distributed under the `next` dist tag on NPM. **We are planning to stabilize and switch all projects to use the `latest` dist tag by end of 2020.**
+All of our official libraries and tools now support Vue 3, but most of them are still in beta status and distributed under the `next` dist tag on NPM. **We are planning to stabilize and switch all projects to use the `latest` dist tag in early 2021.**
 
 ### Vue CLI
 
@@ -39,7 +43,7 @@ As of v4.5.0, `vue-cli` now provides built-in option to choose Vue 3 preset when
 Vue Router 4.0 provides Vue 3 support and has a number of breaking changes of its own. Check out its [Migration Guide](https://next.router.vuejs.org/guide/migration/) for full details.
 
 - [![beta](https://img.shields.io/npm/v/vue-router/next.svg)](https://www.npmjs.com/package/vue-router/v/next)
-- [Github](https://github.com/vuejs/vue-router-next)
+- [GitHub](https://github.com/vuejs/vue-router-next)
 - [RFCs](https://github.com/vuejs/rfcs/pulls?q=is%3Apr+is%3Amerged+label%3Arouter)
 
 ### Vuex
@@ -47,7 +51,7 @@ Vue Router 4.0 provides Vue 3 support and has a number of breaking changes of it
 Vuex 4.0 provides Vue 3 support with largely the same API as 3.x. The only breaking change is [how the plugin is installed](https://github.com/vuejs/vuex/tree/4.0#breaking-changes).
 
 - [![beta](https://img.shields.io/npm/v/vuex/next.svg)](https://www.npmjs.com/package/vuex/v/next)
-- [Github](https://github.com/vuejs/vuex/tree/4.0)
+- [GitHub](https://github.com/vuejs/vuex/tree/4.0)
 
 ### Devtools Extension
 
@@ -61,18 +65,27 @@ We are working on a new version of the Devtools with a new UI and refactored int
 
 ### IDE Support
 
-It is recommended to use [VSCode](https://code.visualstudio.com/) with our official extension [Vetur](https://marketplace.visualstudio.com/items?itemName=octref.vetur), which provides comprehensive IDE support for Vue 3.
+It is recommended to use [VSCode](https://code.visualstudio.com/). There are currently two viable extensions for Single-File Components (SFCs) support:
+
+- [Vetur](https://marketplace.visualstudio.com/items?itemName=octref.vetur) (recommended if you are used to Vetur features)
+- [Volar](https://marketplace.visualstudio.com/items?itemName=johnsoncodehk.volar) (recommended if using TypeScript with SFCs, or `<script setup>` syntax)
+
+### TypeScript Support
+
+- All Vue 3 packages ship with types.
+- [vue-tsc](https://github.com/johnsoncodehk/vue-tsc) perform TypeScript type checks / diagnostics on Vue SFCs via the command line.
+- [vue-dts-gen](https://github.com/egoist/vue-dts-gen): generate TypeScript definitions from Vue SFCs.
 
 ### Other Projects
 
-| Project               | NPM                           | Repo                 |
-| --------------------- | ----------------------------- | -------------------- |
-| @vue/babel-plugin-jsx | [![rc][jsx-badge]][jsx-npm]   | [[Github][jsx-code]] |
-| eslint-plugin-vue     | [![stable][epv-badge]][epv-npm] | [[Github][epv-code]] |
-| @vue/test-utils       | [![beta][vtu-badge]][vtu-npm] | [[Github][vtu-code]] |
-| vue-class-component   | [![beta][vcc-badge]][vcc-npm] | [[Github][vcc-code]] |
-| vue-loader            | [![beta][vl-badge]][vl-npm]   | [[Github][vl-code]]  |
-| rollup-plugin-vue     | [![beta][rpv-badge]][rpv-npm] | [[Github][rpv-code]] |
+| Project               | NPM                             | Repo                 |
+| --------------------- | ------------------------------- | -------------------- |
+| @vue/babel-plugin-jsx | [![rc][jsx-badge]][jsx-npm]     | [[GitHub][jsx-code]] |
+| eslint-plugin-vue     | [![stable][epv-badge]][epv-npm] | [[GitHub][epv-code]] |
+| @vue/test-utils       | [![beta][vtu-badge]][vtu-npm]   | [[GitHub][vtu-code]] |
+| vue-class-component   | [![beta][vcc-badge]][vcc-npm]   | [[GitHub][vcc-code]] |
+| vue-loader            | [![beta][vl-badge]][vl-npm]     | [[GitHub][vl-code]]  |
+| rollup-plugin-vue     | [![beta][rpv-badge]][rpv-npm]   | [[GitHub][rpv-code]] |
 
 [jsx-badge]: https://img.shields.io/npm/v/@vue/babel-plugin-jsx.svg
 [jsx-npm]: https://www.npmjs.com/package/@vue/babel-plugin-jsx

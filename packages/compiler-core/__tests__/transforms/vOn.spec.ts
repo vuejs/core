@@ -476,7 +476,47 @@ describe('compiler: transform v-on', () => {
         index: 1,
         value: {
           type: NodeTypes.COMPOUND_EXPRESSION,
-          children: [`(...args) => (`, { content: `_ctx.foo(...args)` }, `)`]
+          children: [
+            `(...args) => (`,
+            { content: `_ctx.foo && _ctx.foo(...args)` },
+            `)`
+          ]
+        }
+      })
+    })
+
+    test('compound member expression handler', () => {
+      const { root, node } = parseWithVOn(`<div v-on:click="foo.bar" />`, {
+        prefixIdentifiers: true,
+        cacheHandlers: true
+      })
+      expect(root.cached).toBe(1)
+      const vnodeCall = node.codegenNode as VNodeCall
+      // should not treat cached handler as dynamicProp, so no flags
+      expect(vnodeCall.patchFlag).toBeUndefined()
+      expect(
+        (vnodeCall.props as ObjectExpression).properties[0].value
+      ).toMatchObject({
+        type: NodeTypes.JS_CACHE_EXPRESSION,
+        index: 1,
+        value: {
+          type: NodeTypes.COMPOUND_EXPRESSION,
+          children: [
+            `(...args) => (`,
+            {
+              children: [
+                { content: `_ctx.foo` },
+                `.`,
+                { content: `bar` },
+                ` && `,
+                { content: `_ctx.foo` },
+                `.`,
+                { content: `bar` },
+                `(...args)`
+              ]
+            },
+            `)`
+          ]
         }
       })
     })

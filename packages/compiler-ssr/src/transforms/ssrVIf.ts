@@ -22,18 +22,26 @@ export const ssrTransformIf = createStructuralDirectiveTransform(
 
 // This is called during the 2nd transform pass to construct the SSR-specific
 // codegen nodes.
-export function ssrProcessIf(node: IfNode, context: SSRTransformContext) {
+export function ssrProcessIf(
+  node: IfNode,
+  context: SSRTransformContext,
+  disableNestedFragments = false
+) {
   const [rootBranch] = node.branches
   const ifStatement = createIfStatement(
     rootBranch.condition!,
-    processIfBranch(rootBranch, context)
+    processIfBranch(rootBranch, context, disableNestedFragments)
   )
   context.pushStatement(ifStatement)
 
   let currentIf = ifStatement
   for (let i = 1; i < node.branches.length; i++) {
     const branch = node.branches[i]
-    const branchBlockStatement = processIfBranch(branch, context)
+    const branchBlockStatement = processIfBranch(
+      branch,
+      context,
+      disableNestedFragments
+    )
     if (branch.condition) {
       // else-if
       currentIf = currentIf.alternate = createIfStatement(
@@ -55,10 +63,12 @@ export function ssrProcessIf(node: IfNode, context: SSRTransformContext) {
 
 function processIfBranch(
   branch: IfBranchNode,
-  context: SSRTransformContext
+  context: SSRTransformContext,
+  disableNestedFragments = false
 ): BlockStatement {
   const { children } = branch
   const needFragmentWrapper =
+    !disableNestedFragments &&
     (children.length !== 1 || children[0].type !== NodeTypes.ELEMENT) &&
     // optimize away nested fragments when the only child is a ForNode
     !(children.length === 1 && children[0].type === NodeTypes.FOR)
