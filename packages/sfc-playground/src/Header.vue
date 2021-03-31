@@ -129,7 +129,7 @@ h1 img {
   top: -2px;
 }
 
-@media (max-width: 400px) {
+@media (max-width: 480px) {
   h1 span {
     display: none;
   }
