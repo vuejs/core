@@ -1,3 +1,30 @@
+## [3.0.10](https://github.com/vuejs/vue-next/compare/v3.0.9...v3.0.10) (2021-03-31)
+
+
+### Bug Fixes
+
+* **compiler-core:** allow PascalCase dynamic component tag usage ([#3508](https://github.com/vuejs/vue-next/issues/3508)) ([555b016](https://github.com/vuejs/vue-next/commit/555b016dcb3b347a1d8b3d14df74c175115adb0b)), closes [#3507](https://github.com/vuejs/vue-next/issues/3507)
+* **compiler-core:** properly transform replaced nodes ([#2927](https://github.com/vuejs/vue-next/issues/2927)) ([0fe567a](https://github.com/vuejs/vue-next/commit/0fe567abfcb7c685954231995033d04c86b6ef8a))
+* **compiler-sfc:** do not resolve assets from setup bindings ([f5827fd](https://github.com/vuejs/vue-next/commit/f5827fdf781c97234e9f82095e5e0cdadd404338)), closes [#3270](https://github.com/vuejs/vue-next/issues/3270) [#3275](https://github.com/vuejs/vue-next/issues/3275)
+* **compiler-sfc:** fix function scope variable declaration marking ([69b4727](https://github.com/vuejs/vue-next/commit/69b4727204256795d37a29930be33ab4f864af38))
+* **compiler-sfc:** fix missing whitespace issue in srcsets ([#3132](https://github.com/vuejs/vue-next/issues/3132)) ([42b68c7](https://github.com/vuejs/vue-next/commit/42b68c773d1e1a04af223eb241329df50bac1d15)), closes [#3069](https://github.com/vuejs/vue-next/issues/3069)
+* **compiler-sfc:** support proper type arguments for defineEmit helper ([bb8cdca](https://github.com/vuejs/vue-next/commit/bb8cdcad9f91f099c12ad78afacfc909e6269a7c)), closes [#2874](https://github.com/vuejs/vue-next/issues/2874)
+* **reactivity:** should not trigger when setting value to same proxy ([#2904](https://github.com/vuejs/vue-next/issues/2904)) ([c61e767](https://github.com/vuejs/vue-next/commit/c61e7674221cd51df87aafc92367273c8815af6c))
+* **runtime-core:** avoid unmount teleport's children multiple times ([#3499](https://github.com/vuejs/vue-next/issues/3499)) ([3736496](https://github.com/vuejs/vue-next/commit/3736496006485e61614bef285ea89ea2a33134c4)), closes [#3497](https://github.com/vuejs/vue-next/issues/3497)
+* **runtime-core:** fix dev fragment root flag check ([9cf7525](https://github.com/vuejs/vue-next/commit/9cf75258c866bbdb2023c066cc3579fb86f15f40))
+* **runtime-dom:** fix event listeners call in firefox <= 53 ([#3501](https://github.com/vuejs/vue-next/issues/3501)) ([33ba0e3](https://github.com/vuejs/vue-next/commit/33ba0e3229de02b7f4dda9465e4df16e177ea8cc)), closes [#3485](https://github.com/vuejs/vue-next/issues/3485)
+* **ssr:** fix scopeId inheritance across mixed parent chain ([5e54081](https://github.com/vuejs/vue-next/commit/5e54081d5bfd0412fe4946c80b5c538f2afd7fb8)), closes [#3513](https://github.com/vuejs/vue-next/issues/3513)
+* **types:** add a type-only differentiator to assist Mixin's type infer ([#3481](https://github.com/vuejs/vue-next/issues/3481)) ([5db2b14](https://github.com/vuejs/vue-next/commit/5db2b141dcf20af5c762f7e40580904c43298764)), closes [#3468](https://github.com/vuejs/vue-next/issues/3468)
+* **types/tsx:** make JSX.Element extend VNode ([#3171](https://github.com/vuejs/vue-next/issues/3171)) ([4f26835](https://github.com/vuejs/vue-next/commit/4f26835dac5c345e6ccb2e2c2844f3560daa1de3))
+
+
+### Performance Improvements
+
+* **compiler-sfc:** skip srcset transform if all candidates are external ([b39208c](https://github.com/vuejs/vue-next/commit/b39208cf06a56b115016be18d5ee368a8f9dff74))
+* **runtime-core:** optimize the performance of getTypeIndex ([#3206](https://github.com/vuejs/vue-next/issues/3206)) ([2e50acf](https://github.com/vuejs/vue-next/commit/2e50acfbb89c29a071765d7f3967d2ccaf14f375))
+
+
+
 ## [3.0.9](https://github.com/vuejs/vue-next/compare/v3.0.8...v3.0.9) (2021-03-27)
 
 
