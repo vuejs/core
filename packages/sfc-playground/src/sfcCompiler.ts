@@ -1,21 +1,39 @@
 import { store, File } from './store'
-import {
-  parse,
-  compileTemplate,
-  compileStyleAsync,
-  compileScript,
-  rewriteDefault,
-  SFCDescriptor,
-  BindingMetadata
-} from '@vue/compiler-sfc'
+import { SFCDescriptor, BindingMetadata } from '@vue/compiler-sfc'
+import * as defaultCompiler from '@vue/compiler-sfc'
 
 export const MAIN_FILE = 'App.vue'
 export const COMP_IDENTIFIER = `__sfc__`
 
+/**
+ * The default SFC compiler we are using is built from each commit
+ * but we may swap it out with a version fetched from CDNs
+ */
+let SFCCompiler: typeof defaultCompiler = defaultCompiler
+
 // @ts-ignore
-export const SANDBOX_VUE_URL = import.meta.env.PROD
+const defaultVueUrl = import.meta.env.PROD
   ? '/vue.runtime.esm-browser.js' // to be copied on build
   : '/src/vue-dev-proxy'
+
+export let SANDBOX_VUE_URL = defaultVueUrl
+
+export async function setVersion(version: string) {
+  const compilerUrl = `https://unpkg.com/@vue/compiler-sfc@${version}/dist/compiler-sfc.esm-browser.js`
+  const runtimeUrl = `https://cdn.skypack.dev/@vue/runtime-dom@${version}`
+  const [compiler] = await Promise.all([
+    import(/* @vite-ignore */ compilerUrl),
+    import(/* @vite-ignore */ runtimeUrl)
+  ])
+  SFCCompiler = compiler
+  SANDBOX_VUE_URL = runtimeUrl
+  console.info(`Now using Vue version: ${version}`)
+}
+
+export function resetVersion() {
+  SFCCompiler = defaultCompiler
+  SANDBOX_VUE_URL = defaultVueUrl
+}
 
 export async function compileFile({ filename, code, compiled }: File) {
   if (!code.trim()) {
@@ -30,7 +48,10 @@ export async function compileFile({ filename, code, compiled }: File) {
   }
 
   const id = await hashId(filename)
-  const { errors, descriptor } = parse(code, { filename, sourceMap: true })
+  const { errors, descriptor } = SFCCompiler.parse(code, {
+    filename,
+    sourceMap: true
+  })
   if (errors.length) {
     store.errors = errors
     return
@@ -121,7 +142,7 @@ export async function compileFile({ filename, code, compiled }: File) {
       return
     }
 
-    const styleResult = await compileStyleAsync({
+    const styleResult = await SFCCompiler.compileStyleAsync({
       source: style.content,
       filename,
       id,
@@ -156,7 +177,7 @@ function doCompileScript(
 ): [string, BindingMetadata | undefined] | undefined {
   if (descriptor.script || descriptor.scriptSetup) {
     try {
-      const compiledScript = compileScript(descriptor, {
+      const compiledScript = SFCCompiler.compileScript(descriptor, {
         id,
         refSugar: true,
         inlineTemplate: true,
@@ -173,7 +194,9 @@ function doCompileScript(
           2
         )} */`
       }
-      code += `\n` + rewriteDefault(compiledScript.content, COMP_IDENTIFIER)
+      code +=
+        `\n` +
+        SFCCompiler.rewriteDefault(compiledScript.content, COMP_IDENTIFIER)
       return [code, compiledScript.bindings]
     } catch (e) {
       store.errors = [e]
@@ -190,7 +213,7 @@ function doCompileTemplate(
   bindingMetadata: BindingMetadata | undefined,
   ssr: boolean
 ) {
-  const templateResult = compileTemplate({
+  const templateResult = SFCCompiler.compileTemplate({
     source: descriptor.template!.content,
     filename: descriptor.filename,
     id,

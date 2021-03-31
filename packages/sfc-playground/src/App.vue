@@ -24,9 +24,10 @@ body {
   font-size: 13px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
     Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  color: #444;
+  color:var(--base);
   margin: 0;
   background-color: #f8f8f8;
+  --base: #444;
   --nav-height: 50px;
   --font-code: 'Source Code Pro', monospace;
   --color-branding: #3ca877;
