@@ -369,16 +369,10 @@ function hasPropsChanged(
   if (nextKeys.length !== Object.keys(prevProps).length) {
     return true
   }
-  for (let i = 0; i < nextKeys.length; i++) {
-    const key = nextKeys[i]
-    if (
-      nextProps[key] !== prevProps[key] &&
-      !isEmitListener(emitsOptions, key)
-    ) {
-      return true
-    }
-  }
-  return false
+  return nextKeys.some(
+    key =>
+      nextProps[key] !== prevProps[key] && !isEmitListener(emitsOptions, key)
+  )
 }
 
 export function updateHOCHostEl(
