@@ -327,15 +327,10 @@ export function shouldUpdateComponent(
       return hasPropsChanged(prevProps, nextProps!, emits)
     } else if (patchFlag & PatchFlags.PROPS) {
       const dynamicProps = nextVNode.dynamicProps!
-      for (let i = 0; i < dynamicProps.length; i++) {
-        const key = dynamicProps[i]
-        if (
-          nextProps![key] !== prevProps![key] &&
-          !isEmitListener(emits, key)
-        ) {
-          return true
-        }
-      }
+      return dynamicProps.some(
+        key =>
+          nextProps![key] !== prevProps![key] && !isEmitListener(emits, key)
+      )
     }
   } else {
     // this path is only taken by manually written render functions
