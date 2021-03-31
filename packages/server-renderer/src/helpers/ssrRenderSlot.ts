@@ -38,13 +38,13 @@ export function ssrRenderSlot(
     } else {
       // ssr slot.
       // check if the slot renders all comments, in which case use the fallback
-      let isEmptySlot = true
-      for (let i = 0; i < slotBuffer.length; i++) {
-        if (!isComment(slotBuffer[i])) {
-          isEmptySlot = false
-          break
-        }
-      }
+      let isEmptySlot = slotBuffer.every(s => isComment(s))
+      //   for (let i = 0; i < slotBuffer.length; i++) {
+      //     if (!isComment(slotBuffer[i])) {
+      //       isEmptySlot = false
+      //       break
+      //     }
+      //   }
       if (isEmptySlot) {
         if (fallbackRenderFn) {
           fallbackRenderFn()
