@@ -20,7 +20,12 @@ export interface Ref<T = any> {
   _shallow?: boolean
 }
 
-export type ToRefs<T = any> = { [K in keyof T]: Ref<T[K]> }
+export type ToRef<T> = [T] extends [Ref] ? T : Ref<UnwrapRef<T>>
+export type ToRefs<T = any> = {
+  // #2687: somehow using ToRef<T[K]> here turns the resulting type into
+  // a union of multiple Ref<*> types instead of a single Ref<* | *> type.
+  [K in keyof T]: T[K] extends Ref ? T[K] : Ref<UnwrapRef<T[K]>>
+}
 
 const convert = <T extends unknown>(val: T): T =>
   isObject(val) ? reactive(val) : val
@@ -30,9 +35,7 @@ export function isRef(r: any): r is Ref {
   return Boolean(r && r.__v_isRef === true)
 }
 
-export function ref<T extends object>(
-  value: T
-): T extends Ref ? T : Ref<UnwrapRef<T>>
+export function ref<T extends object>(value: T): ToRef<T>
 export function ref<T>(value: T): Ref<UnwrapRef<T>>
 export function ref<T = any>(): Ref<T | undefined>
 export function ref(value?: unknown) {
@@ -171,7 +174,7 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
 export function toRef<T extends object, K extends keyof T>(
   object: T,
   key: K
-): Ref<T[K]> {
+): ToRef<T[K]> {
   return isRef(object[key])
     ? object[key]
     : (new ObjectRefImpl(object, key) as any)

@@ -33,7 +33,7 @@ import {
 } from '../utils'
 import { CREATE_SLOTS, RENDER_LIST, WITH_CTX } from '../runtimeHelpers'
 import { parseForExpression, createForLoopParams } from './vFor'
-import { SlotFlags } from '@vue/shared'
+import { SlotFlags, slotFlagsText } from '@vue/shared'
 
 const defaultFallback = createSimpleExpression(`undefined`, false)
 
@@ -334,7 +334,10 @@ export function buildSlots(
         `_`,
         // 2 = compiled but dynamic = can skip normalization, but must run diff
         // 1 = compiled and static = can skip normalization AND diff as optimized
-        createSimpleExpression('' + slotFlag, false)
+        createSimpleExpression(
+          slotFlag + (__DEV__ ? ` /* ${slotFlagsText[slotFlag]} */` : ``),
+          false
+        )
       )
     ),
     loc
@@ -365,14 +368,25 @@ function buildDynamicSlot(
 function hasForwardedSlots(children: TemplateChildNode[]): boolean {
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
-    if (child.type === NodeTypes.ELEMENT) {
-      if (
-        child.tagType === ElementTypes.SLOT ||
-        (child.tagType === ElementTypes.ELEMENT &&
-          hasForwardedSlots(child.children))
-      ) {
-        return true
-      }
+    switch (child.type) {
+      case NodeTypes.ELEMENT:
+        if (
+          child.tagType === ElementTypes.SLOT ||
+          (child.tagType === ElementTypes.ELEMENT &&
+            hasForwardedSlots(child.children))
+        ) {
+          return true
+        }
+        break
+      case NodeTypes.IF:
+        if (hasForwardedSlots(child.branches)) return true
+        break
+      case NodeTypes.IF_BRANCH:
+      case NodeTypes.FOR:
+        if (hasForwardedSlots(child.children)) return true
+        break
+      default:
+        break
     }
   }
   return false

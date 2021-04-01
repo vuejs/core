@@ -1,20 +1,27 @@
 import { h, reactive, createApp, ref } from 'vue'
 import { CompilerOptions } from '@vue/compiler-dom'
+import { BindingTypes } from '@vue/compiler-core'
 
 export const ssrMode = ref(false)
 
 export const compilerOptions: CompilerOptions = reactive({
   mode: 'module',
+  filename: 'Foo.vue',
   prefixIdentifiers: false,
   optimizeImports: false,
   hoistStatic: false,
   cacheHandlers: false,
   scopeId: null,
+  inline: false,
   ssrCssVars: `{ color }`,
   bindingMetadata: {
-    TestComponent: 'setup',
-    foo: 'setup',
-    bar: 'props'
+    TestComponent: BindingTypes.SETUP_CONST,
+    setupRef: BindingTypes.SETUP_REF,
+    setupConst: BindingTypes.SETUP_CONST,
+    setupLet: BindingTypes.SETUP_LET,
+    setupMaybeRef: BindingTypes.SETUP_MAYBE_REF,
+    setupProp: BindingTypes.PROPS,
+    vMySetupDir: BindingTypes.SETUP_CONST
   }
 })
 
@@ -148,6 +155,19 @@ const App = {
                 }
               }),
               h('label', { for: 'scope-id' }, 'scopeId')
+            ]),
+
+            // inline mode
+            h('li', [
+              h('input', {
+                type: 'checkbox',
+                id: 'inline',
+                checked: compilerOptions.inline,
+                onChange(e: Event) {
+                  compilerOptions.inline = (e.target as HTMLInputElement).checked
+                }
+              }),
+              h('label', { for: 'inline' }, 'inline')
             ]),
 
             // toggle optimizeImports

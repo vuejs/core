@@ -21,7 +21,7 @@ import {
   isClassComponent
 } from './component'
 import { RawSlots } from './componentSlots'
-import { isProxy, Ref, toRaw, ReactiveFlags } from '@vue/reactivity'
+import { isProxy, Ref, toRaw, ReactiveFlags, isRef } from '@vue/reactivity'
 import { AppContext } from './apiCreateApp'
 import {
   SuspenseImpl,
@@ -32,9 +32,11 @@ import {
 import { DirectiveBinding } from './directives'
 import { TransitionHooks } from './components/BaseTransition'
 import { warn } from './warning'
-import { currentScopeId } from './helpers/scopeId'
 import { TeleportImpl, isTeleport } from './components/Teleport'
-import { currentRenderingInstance } from './componentRenderUtils'
+import {
+  currentRenderingInstance,
+  currentScopeId
+} from './componentRenderContext'
 import { RendererNode, RendererElement } from './renderer'
 import { NULL_DYNAMIC_COMPONENT } from './helpers/resolveAssets'
 import { hmrDirtyComponents } from './hmr'
@@ -133,7 +135,18 @@ export interface VNode<
   props: (VNodeProps & ExtraProps) | null
   key: string | number | null
   ref: VNodeNormalizedRef | null
-  scopeId: string | null // SFC only
+  /**
+   * SFC only. This is assigned on vnode creation using currentScopeId
+   * which is set alongside currentRenderingInstance.
+   */
+  scopeId: string | null
+  /**
+   * SFC only. This is assigned to:
+   * - Slot fragment vnodes with :slotted SFC styles.
+   * - Component vnodes (during patch/hydration) so that its root node can
+   *   inherit the component's slotScopeIds
+   */
+  slotScopeIds: string[] | null
   children: VNodeNormalizedChildren
   component: ComponentInternalInstance | null
   dirs: DirectiveBinding[] | null
@@ -304,9 +317,9 @@ const normalizeKey = ({ key }: VNodeProps): VNode['key'] =>
 
 const normalizeRef = ({ ref }: VNodeProps): VNodeNormalizedRefAtom | null => {
   return (ref != null
-    ? isArray(ref)
-      ? ref
-      : { i: currentRenderingInstance, r: ref }
+    ? isString(ref) || isRef(ref) || isFunction(ref)
+      ? { i: currentRenderingInstance, r: ref }
+      : ref
     : null) as any
 }
 
@@ -398,6 +411,7 @@ function _createVNode(
     key: props && normalizeKey(props),
     ref: props && normalizeRef(props),
     scopeId: currentScopeId,
+    slotScopeIds: null,
     children: null,
     component: null,
     suspense: null,
@@ -459,7 +473,7 @@ export function cloneVNode<T, U>(
 ): VNode<T, U> {
   // This is intentionally NOT using spread or extend to avoid the runtime
   // key enumeration cost.
-  const { props, ref, patchFlag } = vnode
+  const { props, ref, patchFlag, children } = vnode
   const mergedProps = extraProps ? mergeProps(props || {}, extraProps) : props
   return {
     __v_isVNode: true,
@@ -479,7 +493,11 @@ export function cloneVNode<T, U>(
           : normalizeRef(extraProps)
         : ref,
     scopeId: vnode.scopeId,
-    children: vnode.children,
+    slotScopeIds: vnode.slotScopeIds,
+    children:
+      __DEV__ && patchFlag === PatchFlags.HOISTED && isArray(children)
+        ? (children as VNode[]).map(deepCloneVNode)
+        : children,
     target: vnode.target,
     targetAnchor: vnode.targetAnchor,
     staticCount: vnode.staticCount,
@@ -511,6 +529,18 @@ export function cloneVNode<T, U>(
     el: vnode.el,
     anchor: vnode.anchor
   }
+}
+
+/**
+ * Dev only, for HMR of hoisted vnodes reused in v-for
+ * https://github.com/vitejs/vite/issues/2022
+ */
+function deepCloneVNode(vnode: VNode): VNode {
+  const cloned = cloneVNode(vnode)
+  if (isArray(vnode.children)) {
+    cloned.children = (vnode.children as VNode[]).map(deepCloneVNode)
+  }
+  return cloned
 }
 
 /**

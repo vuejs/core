@@ -223,7 +223,7 @@ const BaseTransitionImpl = {
             instance.update()
           }
           return emptyPlaceholder(child)
-        } else if (mode === 'in-out') {
+        } else if (mode === 'in-out' && innerChild.type !== Comment) {
           leavingHooks.delayLeave = (
             el: TransitionElement,
             earlyRemove,
@@ -471,7 +471,7 @@ export function getTransitionRawChildren(
   }
   // #1126 if a transition children list contains multiple sub fragments, these
   // fragments will be merged into a flat children array. Since each v-for
-  // fragment may contain different static bindings inside, we need to de-top
+  // fragment may contain different static bindings inside, we need to de-op
   // these children to force full diffs to ensure correct behavior.
   if (keyedFragmentCount > 1) {
     for (let i = 0; i < ret.length; i++) {

@@ -5,7 +5,10 @@ import {
   DirectiveNode,
   NodeTypes,
   CompilerOptions,
-  InterpolationNode
+  InterpolationNode,
+  ConstantTypes,
+  BindingTypes,
+  baseCompile
 } from '../../src'
 import { transformIf } from '../../src/transforms/vIf'
 import { transformExpression } from '../../src/transforms/transformExpression'
@@ -408,7 +411,7 @@ describe('compiler: expression transform', () => {
         type: NodeTypes.SIMPLE_EXPRESSION,
         content: `13000n`,
         isStatic: false,
-        isConstant: true
+        constType: ConstantTypes.CAN_STRINGIFY
       })
     })
 
@@ -454,6 +457,52 @@ describe('compiler: expression transform', () => {
         type: NodeTypes.COMPOUND_EXPRESSION,
         children: [{ content: `_ctx.a` }, ` |> `, { content: `_ctx.uppercase` }]
       })
+    })
+  })
+
+  describe('bindingMetadata', () => {
+    const bindingMetadata = {
+      props: BindingTypes.PROPS,
+      setup: BindingTypes.SETUP_MAYBE_REF,
+      setupConst: BindingTypes.SETUP_CONST,
+      data: BindingTypes.DATA,
+      options: BindingTypes.OPTIONS
+    }
+
+    function compileWithBindingMetadata(
+      template: string,
+      options?: CompilerOptions
+    ) {
+      return baseCompile(template, {
+        prefixIdentifiers: true,
+        bindingMetadata,
+        ...options
+      })
+    }
+
+    test('non-inline mode', () => {
+      const { code } = compileWithBindingMetadata(
+        `<div>{{ props }} {{ setup }} {{ data }} {{ options }}</div>`
+      )
+      expect(code).toMatch(`$props.props`)
+      expect(code).toMatch(`$setup.setup`)
+      expect(code).toMatch(`$data.data`)
+      expect(code).toMatch(`$options.options`)
+      expect(code).toMatch(`_ctx, _cache, $props, $setup, $data, $options`)
+      expect(code).toMatchSnapshot()
+    })
+
+    test('inline mode', () => {
+      const { code } = compileWithBindingMetadata(
+        `<div>{{ props }} {{ setup }} {{ setupConst }} {{ data }} {{ options }}</div>`,
+        { inline: true }
+      )
+      expect(code).toMatch(`__props.props`)
+      expect(code).toMatch(`_unref(setup)`)
+      expect(code).toMatch(`_toDisplayString(setupConst)`)
+      expect(code).toMatch(`_ctx.data`)
+      expect(code).toMatch(`_ctx.options`)
+      expect(code).toMatchSnapshot()
     })
   })
 })

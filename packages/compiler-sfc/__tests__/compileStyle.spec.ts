@@ -9,84 +9,84 @@ import {
 } from '../src/compileStyle'
 import path from 'path'
 
-describe('SFC scoped CSS', () => {
-  function compileScoped(
-    source: string,
-    options?: Partial<SFCStyleCompileOptions>
-  ): string {
-    const res = compileStyle({
-      source,
-      filename: 'test.css',
-      id: 'test',
-      scoped: true,
-      ...options
+export function compileScoped(
+  source: string,
+  options?: Partial<SFCStyleCompileOptions>
+): string {
+  const res = compileStyle({
+    source,
+    filename: 'test.css',
+    id: 'data-v-test',
+    scoped: true,
+    ...options
+  })
+  if (res.errors.length) {
+    res.errors.forEach(err => {
+      console.error(err)
     })
-    if (res.errors.length) {
-      res.errors.forEach(err => {
-        console.error(err)
-      })
-      expect(res.errors.length).toBe(0)
-    }
-    return res.code
+    expect(res.errors.length).toBe(0)
   }
+  return res.code
+}
 
+describe('SFC scoped CSS', () => {
   test('simple selectors', () => {
     expect(compileScoped(`h1 { color: red; }`)).toMatch(
-      `h1[test] { color: red;`
+      `h1[data-v-test] { color: red;`
     )
     expect(compileScoped(`.foo { color: red; }`)).toMatch(
-      `.foo[test] { color: red;`
+      `.foo[data-v-test] { color: red;`
     )
   })
 
   test('descendent selector', () => {
     expect(compileScoped(`h1 .foo { color: red; }`)).toMatch(
-      `h1 .foo[test] { color: red;`
+      `h1 .foo[data-v-test] { color: red;`
     )
   })
 
   test('multiple selectors', () => {
     expect(compileScoped(`h1 .foo, .bar, .baz { color: red; }`)).toMatch(
-      `h1 .foo[test], .bar[test], .baz[test] { color: red;`
+      `h1 .foo[data-v-test], .bar[data-v-test], .baz[data-v-test] { color: red;`
     )
   })
 
   test('pseudo class', () => {
     expect(compileScoped(`.foo:after { color: red; }`)).toMatch(
-      `.foo[test]:after { color: red;`
+      `.foo[data-v-test]:after { color: red;`
     )
   })
 
   test('pseudo element', () => {
     expect(compileScoped(`::selection { display: none; }`)).toMatch(
-      '[test]::selection {'
+      '[data-v-test]::selection {'
     )
   })
 
   test('spaces before pseudo element', () => {
     const code = compileScoped(`.abc, ::selection { color: red; }`)
-    expect(code).toMatch('.abc[test],')
-    expect(code).toMatch('[test]::selection {')
+    expect(code).toMatch('.abc[data-v-test],')
+    expect(code).toMatch('[data-v-test]::selection {')
   })
 
   test('::v-deep', () => {
     expect(compileScoped(`:deep(.foo) { color: red; }`)).toMatchInlineSnapshot(`
-      "[test] .foo { color: red;
+      "[data-v-test] .foo { color: red;
       }"
     `)
     expect(compileScoped(`::v-deep(.foo) { color: red; }`))
       .toMatchInlineSnapshot(`
-      "[test] .foo { color: red;
+      "[data-v-test] .foo { color: red;
       }"
     `)
     expect(compileScoped(`::v-deep(.foo .bar) { color: red; }`))
       .toMatchInlineSnapshot(`
-      "[test] .foo .bar { color: red;
+      "[data-v-test] .foo .bar { color: red;
       }"
     `)
     expect(compileScoped(`.baz .qux ::v-deep(.foo .bar) { color: red; }`))
       .toMatchInlineSnapshot(`
-      ".baz .qux[test] .foo .bar { color: red;
+      ".baz .qux[data-v-test] .foo .bar { color: red;
       }"
     `)
   })
@@ -94,22 +94,22 @@ describe('SFC scoped CSS', () => {
   test('::v-slotted', () => {
     expect(compileScoped(`:slotted(.foo) { color: red; }`))
       .toMatchInlineSnapshot(`
-    ".foo[test-s] { color: red;
+    ".foo[data-v-test-s] { color: red;
     }"
   `)
     expect(compileScoped(`::v-slotted(.foo) { color: red; }`))
       .toMatchInlineSnapshot(`
-      ".foo[test-s] { color: red;
+      ".foo[data-v-test-s] { color: red;
       }"
     `)
     expect(compileScoped(`::v-slotted(.foo .bar) { color: red; }`))
       .toMatchInlineSnapshot(`
-      ".foo .bar[test-s] { color: red;
+      ".foo .bar[data-v-test-s] { color: red;
       }"
     `)
     expect(compileScoped(`.baz .qux ::v-slotted(.foo .bar) { color: red; }`))
       .toMatchInlineSnapshot(`
-      ".baz .qux .foo .bar[test-s] { color: red;
+      ".baz .qux .foo .bar[data-v-test-s] { color: red;
       }"
     `)
   })
@@ -142,7 +142,7 @@ describe('SFC scoped CSS', () => {
     expect(compileScoped(`@media print { .foo { color: red }}`))
       .toMatchInlineSnapshot(`
       "@media print {
-      .foo[test] { color: red
+      .foo[data-v-test] { color: red
       }}"
     `)
   })
@@ -151,7 +151,7 @@ describe('SFC scoped CSS', () => {
     expect(compileScoped(`@supports(display: grid) { .foo { display: grid }}`))
       .toMatchInlineSnapshot(`
       "@supports(display: grid) {
-      .foo[test] { display: grid
+      .foo[data-v-test] { display: grid
       }}"
     `)
   })
@@ -215,14 +215,16 @@ describe('SFC scoped CSS', () => {
     expect(style).toContain(
       `.anim-multiple-2[data-v-test] {\n  animation-name: color-test,opacity-test;`
     )
-    expect(style).toContain(`@keyframes opacity-test {`)
-    expect(style).toContain(`@-webkit-keyframes opacity-test {`)
+    expect(style).toContain(`@keyframes opacity-test {\nfrom { opacity: 0;`)
+    expect(style).toContain(
+      `@-webkit-keyframes opacity-test {\nfrom { opacity: 0;`
+    )
   })
 
   // vue-loader/#1370
   test('spaces after selector', () => {
     expect(compileScoped(`.foo , .bar { color: red; }`)).toMatchInlineSnapshot(`
-      ".foo[test], .bar[test] { color: red;
+      ".foo[data-v-test], .bar[data-v-test] { color: red;
       }"
     `)
   })
@@ -231,12 +233,12 @@ describe('SFC scoped CSS', () => {
     test('::v-deep as combinator', () => {
       expect(compileScoped(`::v-deep .foo { color: red; }`))
         .toMatchInlineSnapshot(`
-        "[test] .foo { color: red;
+        "[data-v-test] .foo { color: red;
         }"
       `)
       expect(compileScoped(`.bar ::v-deep .foo { color: red; }`))
         .toMatchInlineSnapshot(`
-        ".bar[test] .foo { color: red;
+        ".bar[data-v-test] .foo { color: red;
         }"
       `)
       expect(
@@ -247,7 +249,7 @@ describe('SFC scoped CSS', () => {
     test('>>> (deprecated syntax)', () => {
       const code = compileScoped(`>>> .foo { color: red; }`)
       expect(code).toMatchInlineSnapshot(`
-        "[test] .foo { color: red;
+        "[data-v-test] .foo { color: red;
         }"
       `)
       expect(
@@ -258,33 +260,12 @@ describe('SFC scoped CSS', () => {
     test('/deep/ (deprecated syntax)', () => {
       const code = compileScoped(`/deep/ .foo { color: red; }`)
       expect(code).toMatchInlineSnapshot(`
-        "[test] .foo { color: red;
+        "[data-v-test] .foo { color: red;
         }"
       `)
       expect(
         `the >>> and /deep/ combinators have been deprecated.`
       ).toHaveBeenWarned()
-    })
-  })
-
-  describe('<style vars>', () => {
-    test('should rewrite CSS vars in scoped mode', () => {
-      const code = compileScoped(
-        `.foo {
-        color: var(--color);
-        font-size: var(--global:font);
-      }`,
-        {
-          id: 'data-v-test',
-          vars: true
-        }
-      )
-      expect(code).toMatchInlineSnapshot(`
-        ".foo[data-v-test] {
-                color: var(--test-color);
-                font-size: var(--font);
-        }"
-      `)
     })
   })
 })

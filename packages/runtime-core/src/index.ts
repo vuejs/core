@@ -43,6 +43,7 @@ export { provide, inject } from './apiInject'
 export { nextTick } from './scheduler'
 export { defineComponent } from './apiDefineComponent'
 export { defineAsyncComponent } from './apiAsyncComponent'
+export { defineProps, defineEmit, useContext } from './apiSetupHelpers'
 
 // Advanced API ----------------------------------------------------------------
 
@@ -86,7 +87,7 @@ export {
   resolveDynamicComponent
 } from './helpers/resolveAssets'
 // For integration with runtime compiler
-export { registerRuntimeCompiler } from './component'
+export { registerRuntimeCompiler, isRuntimeOnly } from './component'
 export {
   useTransitionState,
   resolveTransitionHooks,
@@ -225,13 +226,17 @@ export { HMRRuntime } from './hmr'
 // user code should avoid relying on them.
 
 // For compiler generated code
-// should sync with '@vue/compiler-core/src/runtimeConstants.ts'
-export { withCtx } from './helpers/withRenderContext'
+// should sync with '@vue/compiler-core/src/runtimeHelpers.ts'
+export {
+  withCtx,
+  pushScopeId,
+  popScopeId,
+  withScopeId
+} from './componentRenderContext'
 export { renderList } from './helpers/renderList'
 export { toHandlers } from './helpers/toHandlers'
 export { renderSlot } from './helpers/renderSlot'
 export { createSlots } from './helpers/createSlots'
-export { pushScopeId, popScopeId, withScopeId } from './helpers/scopeId'
 export {
   openBlock,
   createBlock,
@@ -256,10 +261,8 @@ export { transformVNodeArgs } from './vnode'
 // change without notice between versions. User code should never rely on them.
 
 import { createComponentInstance, setupComponent } from './component'
-import {
-  renderComponentRoot,
-  setCurrentRenderingInstance
-} from './componentRenderUtils'
+import { renderComponentRoot } from './componentRenderUtils'
+import { setCurrentRenderingInstance } from './componentRenderContext'
 import { isVNode, normalizeVNode } from './vnode'
 
 const _ssrUtils = {

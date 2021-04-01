@@ -2,7 +2,8 @@ import {
   compile,
   NodeTypes,
   CREATE_STATIC,
-  createSimpleExpression
+  createSimpleExpression,
+  ConstantTypes
 } from '../../src'
 import {
   stringifyStatic,
@@ -176,9 +177,8 @@ describe('stringify static html', () => {
                 '_imports_0_',
                 false,
                 node.loc,
-                true
+                ConstantTypes.CAN_HOIST
               )
-              exp.isRuntimeConstant = true
               node.props[0] = {
                 type: NodeTypes.DIRECTIVE,
                 name: 'bind',
@@ -292,6 +292,28 @@ describe('stringify static html', () => {
       expect(node).toMatchObject({
         type: NodeTypes.VNODE_CALL // not CALL_EXPRESSION
       })
+    })
+  })
+
+  test('should remove attribute for `null`', () => {
+    const { ast } = compileWithStringify(
+      `<div>${repeat(
+        `<span :title="null"></span>`,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+      )}</div>`
+    )
+    expect(ast.hoists[0]).toMatchObject({
+      type: NodeTypes.JS_CALL_EXPRESSION,
+      callee: CREATE_STATIC,
+      arguments: [
+        JSON.stringify(
+          `${repeat(
+            `<span></span>`,
+            StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+          )}`
+        ),
+        '5'
+      ]
     })
   })
 })

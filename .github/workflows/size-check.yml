@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v1
       - uses: bahmutov/npm-install@v1
 
-      - uses: posva/size-check-action@v1.1.0
+      - uses: posva/size-check-action@v1.1.2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           build_script: size

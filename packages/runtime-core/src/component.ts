@@ -23,7 +23,7 @@ import {
 } from './componentProps'
 import { Slots, initSlots, InternalSlots } from './componentSlots'
 import { warn } from './warning'
-import { ErrorCodes, callWithErrorHandling } from './errorHandling'
+import { ErrorCodes, callWithErrorHandling, handleError } from './errorHandling'
 import { AppContext, createAppContext, AppConfig } from './apiCreateApp'
 import { Directive, validateDirectiveName } from './directives'
 import {
@@ -51,12 +51,9 @@ import {
 } from '@vue/shared'
 import { SuspenseBoundary } from './components/Suspense'
 import { CompilerOptions } from '@vue/compiler-core'
-import {
-  currentRenderingInstance,
-  markAttrsAccessed
-} from './componentRenderUtils'
+import { markAttrsAccessed } from './componentRenderUtils'
+import { currentRenderingInstance } from './componentRenderContext'
 import { startMeasure, endMeasure } from './profiling'
-import { devtoolsComponentAdded } from './devtools'
 
 export type Data = Record<string, unknown>
 
@@ -105,7 +102,7 @@ export interface ComponentInternalOptions {
 export interface FunctionalComponent<P = {}, E extends EmitsOptions = {}>
   extends ComponentInternalOptions {
   // use of any here is intentional so it can be a valid JSX Element constructor
-  (props: P, ctx: SetupContext<E>): any
+  (props: P, ctx: Omit<SetupContext<E>, 'expose'>): any
   props?: ComponentPropsOptions<P>
   emits?: E | (keyof E)[]
   inheritAttrs?: boolean
@@ -171,6 +168,7 @@ export interface SetupContext<E = EmitsOptions> {
   attrs: Data
   slots: Slots
   emit: EmitFn<E>
+  expose: (exposed: Record<string, any>) => void
 }
 
 /**
@@ -222,6 +220,11 @@ export interface ComponentInternalInstance {
    */
   render: InternalRenderFunction | null
   /**
+   * SSR render function
+   * @internal
+   */
+  ssrRender?: Function | null
+  /**
    * Object containing values this component provides for its descendents
    * @internal
    */
@@ -255,7 +258,7 @@ export interface ComponentInternalInstance {
    */
   directives: Record<string, Directive> | null
   /**
-   * reoslved props options
+   * resolved props options
    * @internal
    */
   propsOptions: NormalizedPropsOptions
@@ -269,6 +272,9 @@ export interface ComponentInternalInstance {
 
   // main proxy that serves as the public instance (`this`)
   proxy: ComponentPublicInstance | null
+
+  // exposed properties via expose()
+  exposed: Record<string, any> | null
 
   /**
    * alternative proxy used only for runtime-compiled render functions using
@@ -296,7 +302,12 @@ export interface ComponentInternalInstance {
    * @internal
    */
   emitted: Record<string, boolean> | null
-
+  /**
+   * used for caching the value returned from props default factory functions to
+   * avoid unnecessary watcher trigger
+   * @internal
+   */
+  propsDefaults: Data
   /**
    * setup related
    * @internal
@@ -415,6 +426,7 @@ export function createComponentInstance(
     update: null!, // will be set synchronously right after creation
     render: null,
     proxy: null,
+    exposed: null,
     withProxy: null,
     effects: null,
     provides: parent ? parent.provides : Object.create(appContext.provides),
@@ -432,6 +444,9 @@ export function createComponentInstance(
     // emit
     emit: null as any, // to be set immediately
     emitted: null,
+
+    // props default value
+    propsDefaults: EMPTY_OBJ,
 
     // state
     ctx: EMPTY_OBJ,
@@ -476,10 +491,6 @@ export function createComponentInstance(
   instance.root = parent ? parent.root : instance
   instance.emit = emit.bind(null, instance)
 
-  if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-    devtoolsComponentAdded(instance)
-  }
-
   return instance
 }
 
@@ -505,6 +516,10 @@ export function validateComponentName(name: string, config: AppConfig) {
   }
 }
 
+export function isStatefulComponent(instance: ComponentInternalInstance) {
+  return instance.vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT
+}
+
 export let isInSSRComponentSetup = false
 
 export function setupComponent(
@@ -513,8 +528,8 @@ export function setupComponent(
 ) {
   isInSSRComponentSetup = isSSR
 
-  const { props, children, shapeFlag } = instance.vnode
-  const isStateful = shapeFlag & ShapeFlags.STATEFUL_COMPONENT
+  const { props, children } = instance.vnode
+  const isStateful = isStatefulComponent(instance)
   initProps(instance, props, isStateful, isSSR)
   initSlots(instance, children)
 
@@ -576,9 +591,13 @@ function setupStatefulComponent(
     if (isPromise(setupResult)) {
       if (isSSR) {
         // return the promise so server-renderer can wait on it
-        return setupResult.then((resolvedResult: unknown) => {
-          handleSetupResult(instance, resolvedResult, isSSR)
-        })
+        return setupResult
+          .then((resolvedResult: unknown) => {
+            handleSetupResult(instance, resolvedResult, isSSR)
+          })
+          .catch(e => {
+            handleError(e, instance, ErrorCodes.SETUP_FUNCTION)
+          })
       } else if (__FEATURE_SUSPENSE__) {
         // async setup returned Promise.
         // bail here and wait for re-entry.
@@ -604,7 +623,13 @@ export function handleSetupResult(
 ) {
   if (isFunction(setupResult)) {
     // setup returned an inline render function
-    instance.render = setupResult as InternalRenderFunction
+    if (__NODE_JS__ && (instance.type as ComponentOptions).__ssrInlineRender) {
+      // when the function's name is `ssrRender` (compiled by SFC inline mode),
+      // set it as ssrRender instead.
+      instance.ssrRender = setupResult
+    } else {
+      instance.render = setupResult as InternalRenderFunction
+    }
   } else if (isObject(setupResult)) {
     if (__DEV__ && isVNode(setupResult)) {
       warn(
@@ -638,6 +663,9 @@ type CompileFunction = (
 
 let compile: CompileFunction | undefined
 
+// dev only
+export const isRuntimeOnly = () => !compile
+
 /**
  * For runtime-dom to register the compiler.
  * Note the exported method uses any to avoid d.ts relying on the compiler types.
@@ -654,9 +682,14 @@ function finishComponentSetup(
 
   // template / render function normalization
   if (__NODE_JS__ && isSSR) {
-    if (Component.render) {
-      instance.render = Component.render as InternalRenderFunction
-    }
+    // 1. the render function may already exist, returned by `setup`
+    // 2. otherwise try to use the `Component.render`
+    // 3. if the component doesn't have a render function,
+    //    set `instance.render` to NOOP so that it can inherit the render
+    //    function from mixins/extend
+    instance.render = (instance.render ||
+      Component.render ||
+      NOOP) as InternalRenderFunction
   } else if (!instance.render) {
     // could be set from setup()
     if (compile && Component.template && !Component.render) {
@@ -688,12 +721,15 @@ function finishComponentSetup(
   // support for 2.x options
   if (__FEATURE_OPTIONS_API__) {
     currentInstance = instance
+    pauseTracking()
     applyOptions(instance, Component)
+    resetTracking()
     currentInstance = null
   }
 
   // warn missing template/render
-  if (__DEV__ && !Component.render && instance.render === NOOP) {
+  // the runtime compilation of template in SSR is done by server-render
+  if (__DEV__ && !Component.render && instance.render === NOOP && !isSSR) {
     /* istanbul ignore if */
     if (!compile && Component.template) {
       warn(
@@ -730,7 +766,16 @@ const attrHandlers: ProxyHandler<Data> = {
   }
 }
 
-function createSetupContext(instance: ComponentInternalInstance): SetupContext {
+export function createSetupContext(
+  instance: ComponentInternalInstance
+): SetupContext {
+  const expose: SetupContext['expose'] = exposed => {
+    if (__DEV__ && instance.exposed) {
+      warn(`expose() should be called only once per setup().`)
+    }
+    instance.exposed = proxyRefs(exposed)
+  }
+
   if (__DEV__) {
     // We use getters in dev in case libs like test-utils overwrite instance
     // properties (overwrites should not be done in prod)
@@ -743,22 +788,27 @@ function createSetupContext(instance: ComponentInternalInstance): SetupContext {
       },
       get emit() {
         return (event: string, ...args: any[]) => instance.emit(event, ...args)
-      }
+      },
+      expose
     })
   } else {
     return {
       attrs: instance.attrs,
       slots: instance.slots,
-      emit: instance.emit
+      emit: instance.emit,
+      expose
     }
   }
 }
 
 // record effects created during a component's setup() so that they can be
 // stopped when the component unmounts
-export function recordInstanceBoundEffect(effect: ReactiveEffect) {
-  if (currentInstance) {
-    ;(currentInstance.effects || (currentInstance.effects = [])).push(effect)
+export function recordInstanceBoundEffect(
+  effect: ReactiveEffect,
+  instance = currentInstance
+) {
+  if (instance) {
+    ;(instance.effects || (instance.effects = [])).push(effect)
   }
 }
 
@@ -766,17 +816,23 @@ const classifyRE = /(?:^|[-_])(\w)/g
 const classify = (str: string): string =>
   str.replace(classifyRE, c => c.toUpperCase()).replace(/[-_]/g, '')
 
+export function getComponentName(
+  Component: ConcreteComponent
+): string | undefined {
+  return isFunction(Component)
+    ? Component.displayName || Component.name
+    : Component.name
+}
+
 /* istanbul ignore next */
 export function formatComponentName(
   instance: ComponentInternalInstance | null,
   Component: ConcreteComponent,
   isRoot = false
 ): string {
-  let name = isFunction(Component)
-    ? Component.displayName || Component.name
-    : Component.name
+  let name = getComponentName(Component)
   if (!name && Component.__file) {
-    const match = Component.__file.match(/([^/\\]+)\.vue$/)
+    const match = Component.__file.match(/([^/\\]+)\.\w+$/)
     if (match) {
       name = match[1]
     }

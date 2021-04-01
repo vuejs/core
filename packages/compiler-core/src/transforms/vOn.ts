@@ -70,7 +70,7 @@ export const transformOn: DirectiveTransform = (
   if (exp && !exp.content.trim()) {
     exp = undefined
   }
-  let isCacheable: boolean = context.cacheHandlers && !exp
+  let shouldCache: boolean = context.cacheHandlers && !exp
   if (exp) {
     const isMemberExp = isMemberExpression(exp.content)
     const isInlineStatement = !(isMemberExp || fnExpRE.test(exp.content))
@@ -79,12 +79,20 @@ export const transformOn: DirectiveTransform = (
     // process the expression since it's been skipped
     if (!__BROWSER__ && context.prefixIdentifiers) {
       isInlineStatement && context.addIdentifiers(`$event`)
-      exp = processExpression(exp, context, false, hasMultipleStatements)
+      exp = dir.exp = processExpression(
+        exp,
+        context,
+        false,
+        hasMultipleStatements
+      )
       isInlineStatement && context.removeIdentifiers(`$event`)
       // with scope analysis, the function is hoistable if it has no reference
       // to scope variables.
-      isCacheable =
+      shouldCache =
         context.cacheHandlers &&
+        // runtime constants don't need to be cached
+        // (this is analyzed by compileScript in SFC <script setup>)
+        !(exp.type === NodeTypes.SIMPLE_EXPRESSION && exp.constType > 0) &&
         // #1541 bail if this is a member exp handler passed to a component -
         // we need to use the original function to preserve arity,
         // e.g. <transition> relies on checking cb.length to determine
@@ -98,11 +106,11 @@ export const transformOn: DirectiveTransform = (
       // to a function, turn it into invocation (and wrap in an arrow function
       // below) so that it always accesses the latest value when called - thus
       // avoiding the need to be patched.
-      if (isCacheable && isMemberExp) {
+      if (shouldCache && isMemberExp) {
         if (exp.type === NodeTypes.SIMPLE_EXPRESSION) {
-          exp.content += `(...args)`
+          exp.content = `${exp.content} && ${exp.content}(...args)`
         } else {
-          exp.children.push(`(...args)`)
+          exp.children = [...exp.children, ` && `, ...exp.children, `(...args)`]
         }
       }
     }
@@ -116,12 +124,18 @@ export const transformOn: DirectiveTransform = (
       )
     }
 
-    if (isInlineStatement || (isCacheable && isMemberExp)) {
+    if (isInlineStatement || (shouldCache && isMemberExp)) {
       // wrap inline statement in a function expression
       exp = createCompoundExpression([
-        `${isInlineStatement ? `$event` : `(...args)`} => ${
-          hasMultipleStatements ? `{` : `(`
-        }`,
+        `${
+          isInlineStatement
+            ? !__BROWSER__ && context.isTS
+              ? `($event: any)`
+              : `$event`
+            : `${
+                !__BROWSER__ && context.isTS ? `\n//@ts-ignore\n` : ``
+              }(...args)`
+        } => ${hasMultipleStatements ? `{` : `(`}`,
         exp,
         hasMultipleStatements ? `}` : `)`
       ])
@@ -142,7 +156,7 @@ export const transformOn: DirectiveTransform = (
     ret = augmentor(ret)
   }
 
-  if (isCacheable) {
+  if (shouldCache) {
     // cache handlers so that it's always the same handler being passed down.
     // this avoids unnecessary re-renders when users use inline handlers on
     // components.
