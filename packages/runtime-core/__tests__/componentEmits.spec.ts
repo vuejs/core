@@ -1,7 +1,13 @@
 // Note: emits and listener fallthrough is tested in
 // ./rendererAttrsFallthrough.spec.ts.
 
-import { render, defineComponent, h, nodeOps } from '@vue/runtime-test'
+import {
+  render,
+  defineComponent,
+  h,
+  nodeOps,
+  toHandlers
+} from '@vue/runtime-test'
 import { isEmitListener } from '../src/componentEmits'
 
 describe('component: emit', () => {
@@ -28,7 +34,7 @@ describe('component: emit', () => {
     expect(onBaz).toHaveBeenCalled()
   })
 
-  test('trigger camelize event', () => {
+  test('trigger camelCase handler', () => {
     const Foo = defineComponent({
       render() {},
       created() {
@@ -43,7 +49,52 @@ describe('component: emit', () => {
       })
     render(h(Comp), nodeOps.createElement('div'))
 
-    expect(fooSpy).toHaveBeenCalled()
+    expect(fooSpy).toHaveBeenCalledTimes(1)
+  })
+
+  test('trigger kebab-case handler', () => {
+    const Foo = defineComponent({
+      render() {},
+      created() {
+        this.$emit('test-event')
+      }
+    })
+
+    const fooSpy = jest.fn()
+    const Comp = () =>
+      h(Foo, {
+        'onTest-event': fooSpy
+      })
+    render(h(Comp), nodeOps.createElement('div'))
+
+    expect(fooSpy).toHaveBeenCalledTimes(1)
+  })
+
+  // #3527
+  test('trigger mixed case handlers', () => {
+    const Foo = defineComponent({
+      render() {},
+      created() {
+        this.$emit('test-event')
+        this.$emit('testEvent')
+      }
+    })
+
+    const fooSpy = jest.fn()
+    const barSpy = jest.fn()
+    const Comp = () =>
+      // simulate v-on="obj" usage
+      h(
+        Foo,
+        toHandlers({
+          'test-event': fooSpy,
+          testEvent: barSpy
+        })
+      )
+    render(h(Comp), nodeOps.createElement('div'))
+
+    expect(fooSpy).toHaveBeenCalledTimes(1)
+    expect(fooSpy).toHaveBeenCalledTimes(1)
   })
 
   // for v-model:foo-bar usage in DOM templates
