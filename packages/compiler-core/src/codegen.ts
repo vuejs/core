@@ -231,12 +231,12 @@ export function generate(
       ? args.map(arg => `${arg}: any`).join(',')
       : args.join(', ')
 
-  if (genScopeId) {
-    if (isSetupInlined) {
-      push(`${PURE_ANNOTATION}${WITH_ID}(`)
-    } else {
-      push(`const ${functionName} = ${PURE_ANNOTATION}${WITH_ID}(`)
-    }
+  if (genScopeId && !isSetupInlined) {
+    // root-level _withId wrapping is no longer necessary after 3.0.8 and is
+    // a noop, it's only kept so that code compiled with 3.0.8+ can run with
+    // runtime < 3.0.8.
+    // TODO: consider removing in 3.1
+    push(`const ${functionName} = ${PURE_ANNOTATION}${WITH_ID}(`)
   }
   if (isSetupInlined || genScopeId) {
     push(`(${signature}) => {`)
@@ -303,7 +303,7 @@ export function generate(
   deindent()
   push(`}`)
 
-  if (genScopeId) {
+  if (genScopeId && !isSetupInlined) {
     push(`)`)
   }
 
@@ -438,6 +438,7 @@ function genModulePreamble(
 
   // we technically don't need this anymore since `withCtx` already sets the
   // correct scopeId, but this is necessary for backwards compat
+  // TODO: consider removing in 3.1
   if (genScopeId) {
     push(
       `const ${WITH_ID} = ${PURE_ANNOTATION}${helper(
