@@ -1747,7 +1747,7 @@ function baseCreateRenderer(
   }
 
   function checkDuplicateKeys(children: VNodeArrayChildren) {
-    const seenKeys = new Map()
+    const seenKeys = new Set()
     for (let i = 0; i < children.length; i++) {
       const vnode = children[i] as VNode
       if (!vnode) continue
@@ -1762,7 +1762,7 @@ function baseCreateRenderer(
             `Make sure keys are unique.`
           )
         } else {
-          seenKeys.set(key, true)
+          seenKeys.add(key)
         }
       }
     }
