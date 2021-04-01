@@ -137,16 +137,6 @@ export function findDir(
   name: string | RegExp,
   allowEmpty: boolean = false
 ): DirectiveNode | undefined {
-  //   for (let i = 0; i < node.props.length; i++) {
-  //     const p = node.props[i]
-  //     if (
-  //       p.type === NodeTypes.DIRECTIVE &&
-  //       (allowEmpty || p.exp) &&
-  //       (isString(name) ? p.name === name : name.test(p.name))
-  //     ) {
-  //       return p
-  //     }
-  //   }
   const prop = node.props.find(
     p =>
       p.type === NodeTypes.DIRECTIVE &&
