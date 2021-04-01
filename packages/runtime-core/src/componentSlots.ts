@@ -130,7 +130,8 @@ export const initSlots = (
 
 export const updateSlots = (
   instance: ComponentInternalInstance,
-  children: VNodeNormalizedChildren
+  children: VNodeNormalizedChildren,
+  optimized: boolean
 ) => {
   const { vnode, slots } = instance
   let needDeletionCheck = true
@@ -143,7 +144,7 @@ export const updateSlots = (
         // Parent was HMR updated so slot content may have changed.
         // force update slots and mark instance for hmr as well
         extend(slots, children as Slots)
-      } else if (type === SlotFlags.STABLE) {
+      } else if (optimized && type === SlotFlags.STABLE) {
         // compiled AND stable.
         // no need to update, and skip stale slots removal.
         needDeletionCheck = false
@@ -151,6 +152,13 @@ export const updateSlots = (
         // compiled but dynamic (v-if/v-for on slots) - update slots, but skip
         // normalization.
         extend(slots, children as Slots)
+        // #2893
+        // when rendering the optimized slots by manually written render function,
+        // we need to delete the `slots._` flag if necessary to make subsequent updates reliable,
+        // i.e. let the `renderSlot` create the bailed Fragment
+        if (!optimized && type === SlotFlags.STABLE) {
+          delete slots._
+        }
       }
     } else {
       needDeletionCheck = !(children as RawSlots).$stable

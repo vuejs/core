@@ -1576,7 +1576,7 @@ function baseCreateRenderer(
     instance.vnode = nextVNode
     instance.next = null
     updateProps(instance, nextVNode.props, prevProps, optimized)
-    updateSlots(instance, nextVNode.children)
+    updateSlots(instance, nextVNode.children, optimized)
 
     pauseTracking()
     // props update may have triggered pre-flush watchers.
