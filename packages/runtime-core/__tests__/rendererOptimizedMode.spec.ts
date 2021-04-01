@@ -15,7 +15,10 @@ import {
   defineComponent,
   withCtx,
   renderSlot,
-  onBeforeUnmount
+  onBeforeUnmount,
+  createTextVNode,
+  SetupContext,
+  createApp
 } from '@vue/runtime-test'
 import { PatchFlags, SlotFlags } from '@vue/shared'
 
@@ -516,5 +519,61 @@ describe('renderer: optimized mode', () => {
     render(null, root)
     expect(spyA).toHaveBeenCalledTimes(1)
     expect(spyB).toHaveBeenCalledTimes(1)
+  })
+
+  // #2893
+  test('manually rendering the optimized slots should allow subsequent updates to exit the optimized mode correctly', async () => {
+    const state = ref(0)
+
+    const CompA = {
+      setup(props: any, { slots }: SetupContext) {
+        return () => {
+          return (
+            openBlock(),
+            createBlock('div', null, [renderSlot(slots, 'default')])
+          )
+        }
+      }
+    }
+
+    const Wrapper = {
+      setup(props: any, { slots }: SetupContext) {
+        // use the manually written render function to rendering the optimized slots,
+        // which should make subsequent updates exit the optimized mode correctly
+        return () => {
+          return slots.default!()[state.value]
+        }
+      }
+    }
+
+    const app = createApp({
+      setup() {
+        return () => {
+          return (
+            openBlock(),
+            createBlock(Wrapper, null, {
+              default: withCtx(() => [
+                createVNode(CompA, null, {
+                  default: withCtx(() => [createTextVNode('Hello')]),
+                  _: 1 /* STABLE */
+                }),
+                createVNode(CompA, null, {
+                  default: withCtx(() => [createTextVNode('World')]),
+                  _: 1 /* STABLE */
+                })
+              ]),
+              _: 1 /* STABLE */
+            })
+          )
+        }
+      }
+    })
+
+    app.mount(root)
+    expect(inner(root)).toBe('<div>Hello</div>')
+
+    state.value = 1
+    await nextTick()
+    expect(inner(root)).toBe('<div>World</div>')
   })
 })
