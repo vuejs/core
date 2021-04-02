@@ -143,6 +143,14 @@ export function initProps(
   instance.propsDefaults = Object.create(null)
 
   setFullProps(instance, rawProps, props, attrs)
+
+  // ensure all declared prop keys are present
+  for (const key in instance.propsOptions[0]) {
+    if (!(key in props)) {
+      props[key] = undefined
+    }
+  }
+
   // validation
   if (__DEV__) {
     validateProps(rawProps || {}, props, instance)
@@ -281,11 +289,11 @@ function setFullProps(
   const [options, needCastKeys] = instance.propsOptions
   if (rawProps) {
     for (const key in rawProps) {
-      const value = rawProps[key]
       // key, ref are reserved and never passed down
       if (isReservedProp(key)) {
         continue
       }
+      const value = rawProps[key]
       // prop option names are camelized during normalization, so to support
       // kebab -> camel conversion here we need to camelize the key.
       let camelKey
