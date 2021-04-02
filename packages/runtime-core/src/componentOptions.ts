@@ -186,6 +186,11 @@ export interface ComponentOptionsBase<
    */
   __asyncLoader?: () => Promise<ConcreteComponent>
   /**
+   * the inner component resolved by the AsyncComponentWrapper
+   * @internal
+   */
+  __resolvedComp?: ConcreteComponent
+  /**
    * cache for merged $options
    * @internal
    */

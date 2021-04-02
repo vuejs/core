@@ -36,6 +36,7 @@ import {
 import { setTransitionHooks } from './BaseTransition'
 import { ComponentRenderContext } from '../componentPublicInstance'
 import { devtoolsComponentAdded } from '../devtools'
+import { isAsyncWrapper } from '../apiAsyncComponent'
 
 type MatchPattern = string | RegExp | string[] | RegExp[]
 
@@ -257,7 +258,12 @@ const KeepAliveImpl: ComponentOptions = {
 
       let vnode = getInnerChild(rawVNode)
       const comp = vnode.type as ConcreteComponent
-      const name = getComponentName(comp)
+      const name = getComponentName(
+        isAsyncWrapper(vnode)
+          ? (vnode.type as ComponentOptions).__resolvedComp || {}
+          : comp
+      )
+
       const { include, exclude, max } = props
 
       if (
