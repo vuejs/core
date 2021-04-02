@@ -1,5 +1,5 @@
 import { TrackOpTypes, TriggerOpTypes } from './operations'
-import { EMPTY_OBJ, isArray, isIntegerKey, isMap } from '@vue/shared'
+import { isArray, isIntegerKey, isMap } from '@vue/shared'
 
 // The main WeakMap that stores {target -> key -> dep} connections.
 // Conceptually, it's easier to think of a dependency as a Dep class
@@ -27,6 +27,7 @@ export interface ReactiveEffectOptions {
   onTrigger?: (event: DebuggerEvent) => void
   onStop?: () => void
   allowRecurse?: boolean
+  allowInactiveRun?: boolean
 }
 
 export type DebuggerEvent = {
@@ -54,10 +55,13 @@ export function isEffect(fn: any): fn is ReactiveEffect {
 
 export function effect<T = any>(
   fn: () => T,
-  options: ReactiveEffectOptions = EMPTY_OBJ
+  options: ReactiveEffectOptions = Object.create(null)
 ): ReactiveEffect<T> {
   if (isEffect(fn)) {
     fn = fn.raw
+  }
+  if (!('allowInactiveRun' in options)) {
+    options.allowInactiveRun = !options.scheduler
   }
   const effect = createReactiveEffect(fn, options)
   if (!options.lazy) {
@@ -84,7 +88,7 @@ function createReactiveEffect<T = any>(
 ): ReactiveEffect<T> {
   const effect = function reactiveEffect(): unknown {
     if (!effect.active) {
-      return options.scheduler ? undefined : fn()
+      return options.allowInactiveRun ? fn() : undefined
     }
     if (!effectStack.includes(effect)) {
       cleanup(effect)

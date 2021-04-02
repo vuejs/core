@@ -730,6 +730,30 @@ describe('reactivity/effect', () => {
     expect(dummy).toBe(1)
   })
 
+  // #3099
+  it('create an effect with allowInactiveRun', () => {
+    let dummy
+    const obj = reactive({ prop: 1 })
+    const queue: (() => void)[] = []
+    const runner = effect(
+      () => {
+        dummy = obj.prop
+      },
+      {
+        scheduler: e => queue.push(e),
+        allowInactiveRun: true
+      }
+    )
+    obj.prop = 2
+    expect(dummy).toBe(1)
+    expect(queue.length).toBe(1)
+    stop(runner)
+
+    // an effect with allowInactiveRun should be executed even after it is stopped
+    queue.forEach(e => e())
+    expect(dummy).toBe(2)
+  })
+
   it('events: onStop', () => {
     const onStop = jest.fn()
     const runner = effect(() => {}, {
