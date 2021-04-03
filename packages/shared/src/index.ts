@@ -12,6 +12,7 @@ export * from './domAttrConfig'
 export * from './escapeHtml'
 export * from './looseEqual'
 export * from './toDisplayString'
+export * from './deprecations'
 
 /**
  * List of @babel/parser plugins that are used for template expression
