@@ -153,3 +153,22 @@ test('should generate the correct imports expression', () => {
   expect(code).toMatch(`_ssrRenderAttr(\"src\", _imports_1)`)
   expect(code).toMatch(`_createVNode(\"img\", { src: _imports_1 })`)
 })
+
+// #3536
+test('should generate the correct hoists expression', () => {
+  const { code } = compile({
+    filename: 'example.vue',
+    source: `
+    <picture>
+      <source srcset="./img/foo.svg"/>
+    </picture>
+    <router-link>
+      <picture>
+        <source srcset="./img/bar.svg"/>
+      </picture>
+    </router-link>
+    `,
+    ssr: true
+  })
+  expect(code).toMatchSnapshot()
+})

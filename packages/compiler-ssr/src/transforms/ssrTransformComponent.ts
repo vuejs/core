@@ -294,6 +294,7 @@ function subTransform(
   childContext.scopes = { ...parentContext.scopes }
   childContext.identifiers = { ...parentContext.identifiers }
   childContext.imports = parentContext.imports
+  childContext.hoists = parentContext.hoists
   // traverse
   traverseNode(childRoot, childContext)
   // merge helpers/components/directives into parent context
@@ -314,7 +315,6 @@ function subTransform(
   // imports/hoists are not merged because:
   // - imports are only used for asset urls and should be consistent between
   //   node/client branches
-  // - hoists are not enabled for the client branch here
 }
 
 function clone(v: any): any {
