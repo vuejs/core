@@ -25,19 +25,7 @@ export type RootHydrateFunction = (
   container: Element
 ) => void
 
-const enum DOMNodeTypes {
-  ELEMENT = 1,
-  TEXT = 3,
-  COMMENT = 8
-}
-
 let hasMismatch = false
-
-const isSVGContainer = (container: Element) =>
-  /svg/.test(container.namespaceURI!) && container.tagName !== 'foreignObject'
-
-const isComment = (node: Node): node is Comment =>
-  node.nodeType === DOMNodeTypes.COMMENT
 
 // Note: hydration is DOM-specific
 // But we have to place it in core due to tight coupling with core - splitting
@@ -91,13 +79,12 @@ export function createHydrationFunctions(
       )
 
     const { type, ref, shapeFlag } = vnode
-    const domType = node.nodeType
     vnode.el = node
 
     let nextNode: Node | null = null
     switch (type) {
       case Text:
-        if (domType !== DOMNodeTypes.TEXT) {
+        if (!isText(node)) {
           nextNode = onMismatch()
         } else {
           if ((node as Text).data !== vnode.children) {
@@ -114,14 +101,14 @@ export function createHydrationFunctions(
         }
         break
       case Comment:
-        if (domType !== DOMNodeTypes.COMMENT || isFragmentStart) {
+        if (!isComment(node) || isFragmentStart) {
           nextNode = onMismatch()
         } else {
           nextNode = nextSibling(node)
         }
         break
       case Static:
-        if (domType !== DOMNodeTypes.ELEMENT) {
+        if (!isElement(node)) {
           nextNode = onMismatch()
         } else {
           // determine anchor, adopt content
@@ -157,7 +144,7 @@ export function createHydrationFunctions(
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
           if (
-            domType !== DOMNodeTypes.ELEMENT ||
+            !isElement(node) ||
             (vnode.type as string).toLowerCase() !==
               (node as Element).tagName.toLowerCase()
           ) {
@@ -203,7 +190,7 @@ export function createHydrationFunctions(
             ? locateClosingAsyncAnchor(node)
             : nextSibling(node)
         } else if (shapeFlag & ShapeFlags.TELEPORT) {
-          if (domType !== DOMNodeTypes.COMMENT) {
+          if (!isComment(node)) {
             nextNode = onMismatch()
           } else {
             nextNode = (vnode.type as typeof TeleportImpl).hydrate(
@@ -334,6 +321,43 @@ export function createHydrationFunctions(
     return el.nextSibling
   }
 
+  const hydrateFragment = (
+    node: Comment,
+    vnode: VNode,
+    parentComponent: ComponentInternalInstance | null,
+    parentSuspense: SuspenseBoundary | null,
+    slotScopeIds: string[] | null,
+    optimized: boolean
+  ) => {
+    const { slotScopeIds: fragmentSlotScopeIds } = vnode
+    if (fragmentSlotScopeIds) {
+      slotScopeIds = slotScopeIds
+        ? slotScopeIds.concat(fragmentSlotScopeIds)
+        : fragmentSlotScopeIds
+    }
+
+    const container = parentNode(node)!
+    const next = hydrateChildren(
+      nextSibling(node)!,
+      vnode,
+      container,
+      parentComponent,
+      parentSuspense,
+      slotScopeIds,
+      optimized
+    )
+    if (next && isComment(next) && next.data === ']') {
+      return nextSibling((vnode.anchor = next))
+    } else {
+      // fragment didn't hydrate successfully, since we didn't get a end anchor
+      // back. This should have led to node/children mismatch warnings.
+      hasMismatch = true
+      // since the anchor is missing, we need to create one and insert it
+      insert((vnode.anchor = createComment(`]`)), container, next)
+      return next
+    }
+  }
+
   const hydrateChildren = (
     node: Node | null,
     parentVNode: VNode,
@@ -387,43 +411,6 @@ export function createHydrationFunctions(
     return node
   }
 
-  const hydrateFragment = (
-    node: Comment,
-    vnode: VNode,
-    parentComponent: ComponentInternalInstance | null,
-    parentSuspense: SuspenseBoundary | null,
-    slotScopeIds: string[] | null,
-    optimized: boolean
-  ) => {
-    const { slotScopeIds: fragmentSlotScopeIds } = vnode
-    if (fragmentSlotScopeIds) {
-      slotScopeIds = slotScopeIds
-        ? slotScopeIds.concat(fragmentSlotScopeIds)
-        : fragmentSlotScopeIds
-    }
-
-    const container = parentNode(node)!
-    const next = hydrateChildren(
-      nextSibling(node)!,
-      vnode,
-      container,
-      parentComponent,
-      parentSuspense,
-      slotScopeIds,
-      optimized
-    )
-    if (next && isComment(next) && next.data === ']') {
-      return nextSibling((vnode.anchor = next))
-    } else {
-      // fragment didn't hydrate successfully, since we didn't get a end anchor
-      // back. This should have led to node/children mismatch warnings.
-      hasMismatch = true
-      // since the anchor is missing, we need to create one and insert it
-      insert((vnode.anchor = createComment(`]`)), container, next)
-      return next
-    }
-  }
-
   const handleMismatch = (
     node: Node,
     vnode: VNode,
@@ -439,7 +426,7 @@ export function createHydrationFunctions(
         vnode.type,
         `\n- Server rendered DOM:`,
         node,
-        node.nodeType === DOMNodeTypes.TEXT
+        isText(node)
           ? `(text)`
           : isComment(node) && node.data === '['
             ? `(start of fragment)`
@@ -496,4 +483,21 @@ export function createHydrationFunctions(
   }
 
   return [hydrate, hydrateNode] as const
+}
+
+const isElement = (node: Node): node is Element =>
+  node.nodeType === DOMNodeTypes.ELEMENT
+
+const isText = (node: Node): node is Text => node.nodeType === DOMNodeTypes.TEXT
+
+const isComment = (node: Node): node is Comment =>
+  node.nodeType === DOMNodeTypes.COMMENT
+
+const isSVGContainer = (container: Element) =>
+  /svg/.test(container.namespaceURI!) && container.tagName !== 'foreignObject'
+
+const enum DOMNodeTypes {
+  ELEMENT = 1,
+  TEXT = 3,
+  COMMENT = 8
 }
