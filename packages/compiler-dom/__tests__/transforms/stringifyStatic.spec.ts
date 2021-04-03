@@ -314,9 +314,7 @@ describe('stringify static html', () => {
         StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
       )}</foo>`
     )
-    expect(ast.hoists.length).toBe(
-      StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
-    )
+    expect(ast.hoists.length).toBe(1)
     ast.hoists.forEach(node => {
       expect(node).toMatchObject({
         type: NodeTypes.VNODE_CALL // not CALL_EXPRESSION
@@ -329,9 +327,7 @@ describe('stringify static html', () => {
         StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
       )}</template></foo>`
     )
-    expect(ast2.hoists.length).toBe(
-      StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
-    )
+    expect(ast2.hoists.length).toBe(1)
     ast2.hoists.forEach(node => {
       expect(node).toMatchObject({
         type: NodeTypes.VNODE_CALL // not CALL_EXPRESSION
