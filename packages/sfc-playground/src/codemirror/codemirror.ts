@@ -1,3 +1,4 @@
+import { NOOP } from '@vue/shared'
 import CodeMirror from 'codemirror'
 import './codemirror.css'
 
@@ -15,5 +16,8 @@ import 'codemirror/addon/fold/foldgutter.js'
 import 'codemirror/addon/fold/brace-fold.js'
 import 'codemirror/addon/fold/indent-fold.js'
 import 'codemirror/addon/fold/comment-fold.js'
+
+// @ts-ignore
+CodeMirror.commands.save = NOOP
 
 export default CodeMirror
