@@ -72,17 +72,6 @@ export const createApp = ((...args) => {
     const container = normalizeContainer(containerOrSelector)
     if (!container) return
 
-    // 2.x compat check
-    if (__COMPAT__ && __DEV__) {
-      for (let i = 0; i < container.attributes.length; i++) {
-        const attr = container.attributes[i]
-        if (attr.name !== 'v-cloak' && /^(v-|:|@)/.test(attr.name)) {
-          warnDeprecation(DeprecationTypes.DOM_TEMPLATE_MOUNT)
-          break
-        }
-      }
-    }
-
     const component = app._component
     if (!isFunction(component) && !component.render && !component.template) {
       // __UNSAFE__
@@ -90,7 +79,18 @@ export const createApp = ((...args) => {
       // The user must make sure the in-DOM template is trusted. If it's
       // rendered by the server, the template should not contain any user data.
       component.template = container.innerHTML
+      // 2.x compat check
+      if (__COMPAT__ && __DEV__) {
+        for (let i = 0; i < container.attributes.length; i++) {
+          const attr = container.attributes[i]
+          if (attr.name !== 'v-cloak' && /^(v-|:|@)/.test(attr.name)) {
+            warnDeprecation(DeprecationTypes.DOM_TEMPLATE_MOUNT)
+            break
+          }
+        }
+      }
     }
+
     // clear content before mounting
     container.innerHTML = ''
     const proxy = mount(container, false, container instanceof SVGElement)

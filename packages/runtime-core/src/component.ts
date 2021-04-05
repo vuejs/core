@@ -674,9 +674,10 @@ export function registerRuntimeCompiler(_compile: any) {
   compile = _compile
 }
 
-function finishComponentSetup(
+export function finishComponentSetup(
   instance: ComponentInternalInstance,
-  isSSR: boolean
+  isSSR: boolean,
+  skipOptions?: boolean
 ) {
   const Component = instance.type as ComponentOptions
 
@@ -719,7 +720,7 @@ function finishComponentSetup(
   }
 
   // support for 2.x options
-  if (__FEATURE_OPTIONS_API__) {
+  if (__FEATURE_OPTIONS_API__ && !(__COMPAT__ && skipOptions)) {
     currentInstance = instance
     pauseTracking()
     applyOptions(instance, Component)

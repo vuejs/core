@@ -1292,11 +1292,16 @@ function baseCreateRenderer(
     isSVG,
     optimized
   ) => {
-    const instance: ComponentInternalInstance = (initialVNode.component = createComponentInstance(
-      initialVNode,
-      parentComponent,
-      parentSuspense
-    ))
+    // 2.x compat may pre-creaate the component instance before actually
+    // mounting
+    const compatMountInstance = __COMPAT__ && initialVNode.component
+    const instance: ComponentInternalInstance =
+      compatMountInstance ||
+      (initialVNode.component = createComponentInstance(
+        initialVNode,
+        parentComponent,
+        parentSuspense
+      ))
 
     if (__DEV__ && instance.type.__hmrId) {
       registerHMR(instance)
@@ -1313,12 +1318,14 @@ function baseCreateRenderer(
     }
 
     // resolve props and slots for setup context
-    if (__DEV__) {
-      startMeasure(instance, `init`)
-    }
-    setupComponent(instance)
-    if (__DEV__) {
-      endMeasure(instance, `init`)
+    if (!(__COMPAT__ && compatMountInstance)) {
+      if (__DEV__) {
+        startMeasure(instance, `init`)
+      }
+      setupComponent(instance)
+      if (__DEV__) {
+        endMeasure(instance, `init`)
+      }
     }
 
     // setup() is async. This component relies on async logic to be resolved

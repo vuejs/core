@@ -13,6 +13,7 @@ import {
   RenderFunction,
   isRuntimeOnly
 } from '@vue/runtime-dom'
+import { extend } from '@vue/shared'
 
 // TODO make these getter/setters and trigger deprecation warnings
 export type LegacyConfig = AppConfig & {
@@ -89,6 +90,7 @@ export type GlobalVue = Pick<App, 'version' | 'component' | 'directive'> & {
 
 export const Vue: GlobalVue = function Vue(options: ComponentOptions = {}) {
   const app = createApp(options)
+
   // copy over global config mutations
   for (const key in singletonApp.config) {
     if (
@@ -99,8 +101,13 @@ export const Vue: GlobalVue = function Vue(options: ComponentOptions = {}) {
       app.config[key] = singletonApp.config[key]
     }
   }
+
+  // TODO copy prototype augmentations as config.globalProperties
+
   if (options.el) {
     return app.mount(options.el)
+  } else {
+    return app._createRoot!(options)
   }
 } as any
 
@@ -109,7 +116,18 @@ const singletonApp = createApp({})
 Vue.version = __VERSION__
 Vue.config = singletonApp.config
 
-Vue.extend = defineComponent
+Vue.extend = ((baseOptions: ComponentOptions = {}) => {
+  return function ExtendedVueConstructor(inlineOptions?: ComponentOptions) {
+    if (!inlineOptions) {
+      return new Vue(baseOptions)
+    } else {
+      const mergedOptions = extend({}, baseOptions)
+      mergedOptions.mixins = [inlineOptions, ...(mergedOptions.mixins || [])]
+      return new Vue(mergedOptions)
+    }
+  }
+}) as any
+
 Vue.nextTick = nextTick
 
 Vue.set = (target, key, value) => {

@@ -11,7 +11,9 @@ import {
   isGloballyWhitelisted,
   NOOP,
   extend,
-  isString
+  isString,
+  warnDeprecation,
+  DeprecationTypes
 } from '@vue/shared'
 import {
   ReactiveEffect,
@@ -232,6 +234,25 @@ const publicPropertiesMap: PublicPropertiesMap = extend(Object.create(null), {
   $nextTick: i => nextTick.bind(i.proxy!),
   $watch: i => (__FEATURE_OPTIONS_API__ ? instanceWatch.bind(i) : NOOP)
 } as PublicPropertiesMap)
+
+if (__COMPAT__) {
+  extend(publicPropertiesMap, {
+    $mount: i => {
+      if (__DEV__) {
+        warnDeprecation(DeprecationTypes.$MOUNT)
+      }
+      // root mount override from apiCreateApp.ts
+      return i.ctx._compat_mount || NOOP
+    },
+    $destroy: i => {
+      if (__DEV__) {
+        warnDeprecation(DeprecationTypes.$DESTROY)
+      }
+      // root destroy override from apiCreateApp.ts
+      return i.ctx._compat_destroy || NOOP
+    }
+  } as PublicPropertiesMap)
+}
 
 const enum AccessTypes {
   SETUP,
