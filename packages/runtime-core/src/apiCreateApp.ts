@@ -15,8 +15,7 @@ import { RootHydrateFunction } from './hydration'
 import { devtoolsInitApp, devtoolsUnmountApp } from './devtools'
 import { isFunction, NO, isObject } from '@vue/shared'
 import { version } from '.'
-import { installCompatMount } from './compat/globalMount'
-import { installLegacyConfigTraps } from './compat/globalConfig'
+import { installCompatMount, installLegacyConfigTraps } from './compat/global'
 
 export interface App<HostElement = any> {
   version: string
@@ -307,7 +306,7 @@ export function createAppAPI<HostElement>(
 
     if (__COMPAT__) {
       installCompatMount(app, context, render, hydrate)
-      installLegacyConfigTraps(app.config)
+      if (__DEV__) installLegacyConfigTraps(app.config)
     }
 
     return app

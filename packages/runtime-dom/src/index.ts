@@ -78,7 +78,7 @@ export const createApp = ((...args) => {
         for (let i = 0; i < container.attributes.length; i++) {
           const attr = container.attributes[i]
           if (attr.name !== 'v-cloak' && /^(v-|:|@)/.test(attr.name)) {
-            warnDeprecation(DeprecationTypes.DOM_TEMPLATE_MOUNT)
+            warnDeprecation(DeprecationTypes.GLOBAL_DOM_TEMPLATE_MOUNT)
             break
           }
         }

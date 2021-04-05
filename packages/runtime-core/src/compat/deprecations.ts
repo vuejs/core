@@ -1,15 +1,22 @@
 import { isRuntimeOnly } from '../component'
 
 export const enum DeprecationTypes {
-  DOM_TEMPLATE_MOUNT,
-  $MOUNT,
-  $DESTROY,
-
   CONFIG_SILENT,
   CONFIG_DEVTOOLS,
   CONFIG_KEY_CODES,
   CONFIG_PRODUCTION_TIP,
-  CONFIG_IGNORED_ELEMENTS
+  CONFIG_IGNORED_ELEMENTS,
+
+  GLOBAL_PROTOTYPE,
+  GLOBAL_SET,
+  GLOBAL_DELETE,
+  GLOBAL_OBSERVABLE,
+  GLOBAL_DOM_TEMPLATE_MOUNT,
+
+  INSTANCE_SET,
+  INSTANCE_DELETE,
+  INSTANCE_MOUNT,
+  INSTANCE_DESTROY
 }
 
 type DeprecationData = {
@@ -18,26 +25,6 @@ type DeprecationData = {
 }
 
 const deprecations: Record<DeprecationTypes, DeprecationData> = {
-  [DeprecationTypes.DOM_TEMPLATE_MOUNT]: {
-    message:
-      `Vue detected directives on the mount container. ` +
-      `In Vue 3, the container is no longer considered part of the template ` +
-      `and will not be processed/replaced.`,
-    link: `https://v3.vuejs.org/guide/migration/mount-changes.html`
-  },
-
-  [DeprecationTypes.$MOUNT]: {
-    message:
-      `vm.$mount() has been removed. ` +
-      `Use createApp(RootComponent).mount() instead.`,
-    link: `https://v3.vuejs.org/guide/migration/global-api.html#mounting-app-instance`
-  },
-
-  [DeprecationTypes.$DESTROY]: {
-    message: `vm.$destroy() has been removed. Use app.unmount() instead.`,
-    link: `https://v3.vuejs.org/api/application-api.html#unmount`
-  },
-
   [DeprecationTypes.CONFIG_SILENT]: {
     message:
       `config.silent has been removed because it is not good practice to ` +
@@ -75,6 +62,64 @@ const deprecations: Record<DeprecationTypes, DeprecationData> = {
       return msg
     },
     link: `https://v3.vuejs.org/guide/migration/global-api.html#config-ignoredelements-is-now-config-iscustomelement`
+  },
+
+  [DeprecationTypes.GLOBAL_PROTOTYPE]: {
+    message:
+      `Vue.prototype is no longer available in Vue 3. ` +
+      `Use config.globalProperties instead.`,
+    link: `https://v3.vuejs.org/guide/migration/global-api.html#vue-prototype-replaced-by-config-globalproperties`
+  },
+
+  [DeprecationTypes.GLOBAL_SET]: {
+    message:
+      `Vue.set() has been removed as it is no longer needed in Vue 3. ` +
+      `Simply use native JavaScript mutations.`
+  },
+
+  [DeprecationTypes.GLOBAL_DELETE]: {
+    message:
+      `Vue.delete() has been removed as it is no longer needed in Vue 3. ` +
+      `Simply use native JavaScript mutations.`
+  },
+
+  [DeprecationTypes.GLOBAL_OBSERVABLE]: {
+    message:
+      `Vue.observable() has been removed. ` +
+      `Use \`import { reactive } from "vue"\` from Composition API instead.`,
+    link: `https://v3.vuejs.org/api/basic-reactivity.html`
+  },
+
+  [DeprecationTypes.GLOBAL_DOM_TEMPLATE_MOUNT]: {
+    message:
+      `Vue detected directives on the mount container. ` +
+      `In Vue 3, the container is no longer considered part of the template ` +
+      `and will not be processed/replaced.`,
+    link: `https://v3.vuejs.org/guide/migration/mount-changes.html`
+  },
+
+  [DeprecationTypes.INSTANCE_SET]: {
+    message:
+      `vm.$set() has been removed as it is no longer needed in Vue 3. ` +
+      `Simply use native JavaScript mutations.`
+  },
+
+  [DeprecationTypes.INSTANCE_DELETE]: {
+    message:
+      `vm.$delete() has been removed as it is no longer needed in Vue 3. ` +
+      `Simply use native JavaScript mutations.`
+  },
+
+  [DeprecationTypes.INSTANCE_MOUNT]: {
+    message:
+      `The global app boostrapping API has changed: vm.$mount() and the "el" ` +
+      `option have been removed. Use createApp(RootComponent).mount() instead.`,
+    link: `https://v3.vuejs.org/guide/migration/global-api.html#mounting-app-instance`
+  },
+
+  [DeprecationTypes.INSTANCE_DESTROY]: {
+    message: `vm.$destroy() has been removed. Use app.unmount() instead.`,
+    link: `https://v3.vuejs.org/api/application-api.html#unmount`
   }
 }
 

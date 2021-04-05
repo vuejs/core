@@ -41,7 +41,8 @@ import { markAttrsAccessed } from './componentRenderUtils'
 import { currentRenderingInstance } from './componentRenderContext'
 import { warn } from './warning'
 import { UnionToIntersection } from './helpers/typeUtils'
-import { warnDeprecation, DeprecationTypes } from './compat/deprecations'
+import { installCompatInstanceProperties } from './compat/instance'
+
 /**
  * Custom properties added to component instances in any way and can be accessed through `this`
  *
@@ -202,7 +203,10 @@ export type ComponentPublicInstance<
   M &
   ComponentCustomProperties
 
-type PublicPropertiesMap = Record<string, (i: ComponentInternalInstance) => any>
+export type PublicPropertiesMap = Record<
+  string,
+  (i: ComponentInternalInstance) => any
+>
 
 /**
  * #2437 In Vue 3, functional components do not have a public instance proxy but
@@ -235,22 +239,7 @@ const publicPropertiesMap: PublicPropertiesMap = extend(Object.create(null), {
 } as PublicPropertiesMap)
 
 if (__COMPAT__) {
-  extend(publicPropertiesMap, {
-    $mount: i => {
-      if (__DEV__) {
-        warnDeprecation(DeprecationTypes.$MOUNT)
-      }
-      // root mount override from apiCreateApp.ts
-      return i.ctx._compat_mount || NOOP
-    },
-    $destroy: i => {
-      if (__DEV__) {
-        warnDeprecation(DeprecationTypes.$DESTROY)
-      }
-      // root destroy override from apiCreateApp.ts
-      return i.ctx._compat_destroy || NOOP
-    }
-  } as PublicPropertiesMap)
+  installCompatInstanceProperties(publicPropertiesMap)
 }
 
 const enum AccessTypes {
