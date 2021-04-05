@@ -8,20 +8,14 @@ import {
   HydrationRenderer,
   App,
   RootHydrateFunction,
-  isRuntimeOnly
+  isRuntimeOnly,
+  warnDeprecation,
+  DeprecationTypes
 } from '@vue/runtime-core'
 import { nodeOps } from './nodeOps'
 import { patchProp, forcePatchProp } from './patchProp'
 // Importing from the compiler, will be tree-shaken in prod
-import {
-  isFunction,
-  isString,
-  isHTMLTag,
-  isSVGTag,
-  extend,
-  warnDeprecation,
-  DeprecationTypes
-} from '@vue/shared'
+import { isFunction, isString, isHTMLTag, isSVGTag, extend } from '@vue/shared'
 
 declare module '@vue/reactivity' {
   export interface RefUnwrapBailTypes {

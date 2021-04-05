@@ -279,3 +279,10 @@ const _ssrUtils = {
  * @internal
  */
 export const ssrUtils = (__NODE_JS__ ? _ssrUtils : null) as typeof _ssrUtils
+
+// 2.x COMPAT ------------------------------------------------------------------
+
+// Important: every function exported here must have `if (!__COMPAT__) return`
+// checks
+export { warnDeprecation, DeprecationTypes } from './compat/deprecations'
+export { createCompatVue, CompatVue } from './compat/global'

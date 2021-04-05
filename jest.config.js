@@ -12,7 +12,8 @@ module.exports = {
     __NODE_JS__: true,
     __FEATURE_OPTIONS_API__: true,
     __FEATURE_SUSPENSE__: true,
-    __FEATURE_PROD_DEVTOOLS__: false
+    __FEATURE_PROD_DEVTOOLS__: false,
+    __COMPAT__: true
   },
   coverageDirectory: 'coverage',
   coverageReporters: ['html', 'lcov', 'text'],

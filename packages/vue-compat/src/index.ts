@@ -2,11 +2,15 @@
 // and the compiler, and supports on-the-fly compilation of the template option.
 import { initDev } from './dev'
 import { compile, CompilerOptions, CompilerError } from '@vue/compiler-dom'
-import { registerRuntimeCompiler, RenderFunction, warn } from '@vue/runtime-dom'
+import {
+  registerRuntimeCompiler,
+  RenderFunction,
+  warn,
+  createCompatVue
+} from '@vue/runtime-dom'
 import { isString, NOOP, generateCodeFrame, extend } from '@vue/shared'
 import { InternalRenderFunction } from 'packages/runtime-core/src/component'
 import * as runtimeDom from '@vue/runtime-dom'
-import { Vue } from './apiGlobal'
 
 if (__DEV__) {
   initDev()
@@ -86,6 +90,8 @@ function compileToFunction(
 }
 
 registerRuntimeCompiler(compileToFunction)
+
+const Vue = createCompatVue()
 
 Vue.compile = compileToFunction
 extend(Vue, runtimeDom)

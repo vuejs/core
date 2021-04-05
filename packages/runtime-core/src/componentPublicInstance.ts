@@ -12,8 +12,7 @@ import {
   NOOP,
   extend,
   isString,
-  warnDeprecation,
-  DeprecationTypes
+  isFunction
 } from '@vue/shared'
 import {
   ReactiveEffect,
@@ -42,7 +41,7 @@ import { markAttrsAccessed } from './componentRenderUtils'
 import { currentRenderingInstance } from './componentRenderContext'
 import { warn } from './warning'
 import { UnionToIntersection } from './helpers/typeUtils'
-
+import { warnDeprecation, DeprecationTypes } from './compat/deprecations'
 /**
  * Custom properties added to component instances in any way and can be accessed through `this`
  *
@@ -356,7 +355,12 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       ((globalProperties = appContext.config.globalProperties),
       hasOwn(globalProperties, key))
     ) {
-      return globalProperties[key]
+      if (__COMPAT__) {
+        const val = globalProperties[key]
+        return isFunction(val) ? val.bind(instance.proxy) : val
+      } else {
+        return globalProperties[key]
+      }
     } else if (
       __DEV__ &&
       currentRenderingInstance &&
@@ -510,7 +514,10 @@ export function createRenderContext(instance: ComponentInternalInstance) {
     Object.defineProperty(target, key, {
       configurable: true,
       enumerable: false,
-      get: () => globalProperties[key],
+      get: () => {
+        const val = globalProperties[key]
+        return __COMPAT__ && isFunction(val) ? val.bind(instance.proxy) : val
+      },
       set: NOOP
     })
   })
