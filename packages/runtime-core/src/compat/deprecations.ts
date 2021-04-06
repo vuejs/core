@@ -22,7 +22,9 @@ export const enum DeprecationTypes {
   OPTIONS_DATA_FN,
   OPTIONS_DATA_MERGE,
   OPTIONS_BEFORE_DESTROY,
-  OPTIONS_DESTROYED
+  OPTIONS_DESTROYED,
+
+  PROPS_DEFAULT_THIS
 }
 
 type DeprecationData = {
@@ -137,7 +139,7 @@ const deprecations: Record<DeprecationTypes, DeprecationData> = {
 
   [DeprecationTypes.OPTIONS_DATA_MERGE]: {
     message: (key: string) =>
-      `Detected conflicting key "${key}" when merging "data" option values. ` +
+      `Detected conflicting key "${key}" when merging data option values. ` +
       `In Vue 3, data keys are merged shallowly and will override one another.`,
     link: `https://v3.vuejs.org/guide/migration/data-option.html#mixin-merge-behavior-change`
   },
@@ -148,6 +150,13 @@ const deprecations: Record<DeprecationTypes, DeprecationData> = {
 
   [DeprecationTypes.OPTIONS_DESTROYED]: {
     message: `\`destroyed\` has been renamed to \`unmounted\`.`
+  },
+
+  [DeprecationTypes.PROPS_DEFAULT_THIS]: {
+    message: (key: string) =>
+      `props default value function no longer has access to "this". ` +
+      `(found in prop "${key}")`,
+    link: `https://v3.vuejs.org/guide/migration/props-default-this.html`
   }
 }
 
