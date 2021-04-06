@@ -1,6 +1,7 @@
 import { extend, NOOP } from '@vue/shared'
 import { PublicPropertiesMap } from '../componentPublicInstance'
 import { DeprecationTypes, warnDeprecation } from './deprecations'
+import { off, on, once } from './eventEmitter'
 
 export function installCompatInstanceProperties(map: PublicPropertiesMap) {
   const set = (target: any, key: any, val: any) => {
@@ -29,6 +30,9 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
       __DEV__ && warnDeprecation(DeprecationTypes.INSTANCE_DESTROY)
       // root destroy override from ./global.ts in installCompatMount
       return i.ctx._compat_destroy || NOOP
-    }
+    },
+    $on: i => on.bind(null, i),
+    $once: i => once.bind(null, i),
+    $off: i => off.bind(null, i)
   } as PublicPropertiesMap)
 }

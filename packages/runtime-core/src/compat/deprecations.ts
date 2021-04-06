@@ -18,6 +18,8 @@ export const enum DeprecationTypes {
   INSTANCE_DELETE,
   INSTANCE_MOUNT,
   INSTANCE_DESTROY,
+  INSTANCE_EVENT_EMITTER,
+  INSTANCE_EVENT_HOOKS,
 
   OPTIONS_DATA_FN,
   OPTIONS_DATA_MERGE,
@@ -132,6 +134,20 @@ const deprecations: Record<DeprecationTypes, DeprecationData> = {
     link: `https://v3.vuejs.org/api/application-api.html#unmount`
   },
 
+  [DeprecationTypes.INSTANCE_EVENT_EMITTER]: {
+    message:
+      `vm.$on/$once/$off() have been removed. ` +
+      `Use an external event emitter library instead.`,
+    link: `https://v3.vuejs.org/guide/migration/events-api.html`
+  },
+
+  [DeprecationTypes.INSTANCE_EVENT_HOOKS]: {
+    message:
+      `"hook:x" lifecycle events are no longer supported. ` +
+      `Use Composition API to dynamically register lifecycle hooks.`,
+    link: `https://v3.vuejs.org/api/composition-api.html#lifecycle-hooks`
+  },
+
   [DeprecationTypes.OPTIONS_DATA_FN]: {
     message:
       `The "data" option can no longer be a plain object. ` +
@@ -169,10 +185,17 @@ const deprecations: Record<DeprecationTypes, DeprecationData> = {
   }
 }
 
+const hasWarned: Record<string, boolean> = {}
+
 export function warnDeprecation(key: DeprecationTypes, ...args: any[]) {
   if (!__COMPAT__ || !__DEV__) {
     return
   }
+  const dupKey = key + args.join('')
+  if (hasWarned[dupKey]) {
+    return
+  }
+  hasWarned[dupKey] = true
   const { message, link } = deprecations[key]
   warn(
     `[DEPRECATION] ${

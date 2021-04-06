@@ -1417,6 +1417,9 @@ function baseCreateRenderer(
         if ((vnodeHook = props && props.onVnodeBeforeMount)) {
           invokeVNodeHook(vnodeHook, parent, initialVNode)
         }
+        if (__COMPAT__) {
+          instance.emit('hook:beforeMount')
+        }
 
         // render
         if (__DEV__) {
@@ -1467,19 +1470,29 @@ function baseCreateRenderer(
         // onVnodeMounted
         if ((vnodeHook = props && props.onVnodeMounted)) {
           const scopedInitialVNode = initialVNode
-          queuePostRenderEffect(() => {
-            invokeVNodeHook(vnodeHook!, parent, scopedInitialVNode)
-          }, parentSuspense)
+          queuePostRenderEffect(
+            () => invokeVNodeHook(vnodeHook!, parent, scopedInitialVNode),
+            parentSuspense
+          )
         }
+        if (__COMPAT__) {
+          queuePostRenderEffect(
+            () => instance.emit('hook:mounted'),
+            parentSuspense
+          )
+        }
+
         // activated hook for keep-alive roots.
         // #1742 activated hook must be accessed after first render
         // since the hook may be injected by a child keep-alive
-        const { a } = instance
-        if (
-          a &&
-          initialVNode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-        ) {
-          queuePostRenderEffect(a, parentSuspense)
+        if (initialVNode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
+          instance.a && queuePostRenderEffect(instance.a, parentSuspense)
+          if (__COMPAT__) {
+            queuePostRenderEffect(
+              () => instance.emit('hook:activated'),
+              parentSuspense
+            )
+          }
         }
         instance.isMounted = true
 
@@ -1514,6 +1527,9 @@ function baseCreateRenderer(
         // onVnodeBeforeUpdate
         if ((vnodeHook = next.props && next.props.onVnodeBeforeUpdate)) {
           invokeVNodeHook(vnodeHook, parent, next, vnode)
+        }
+        if (__COMPAT__) {
+          instance.emit('hook:beforeUpdate')
         }
 
         // render
@@ -1557,9 +1573,16 @@ function baseCreateRenderer(
         }
         // onVnodeUpdated
         if ((vnodeHook = next.props && next.props.onVnodeUpdated)) {
-          queuePostRenderEffect(() => {
-            invokeVNodeHook(vnodeHook!, parent, next!, vnode)
-          }, parentSuspense)
+          queuePostRenderEffect(
+            () => invokeVNodeHook(vnodeHook!, parent, next!, vnode),
+            parentSuspense
+          )
+        }
+        if (__COMPAT__) {
+          queuePostRenderEffect(
+            () => instance.emit('hook:updated'),
+            parentSuspense
+          )
         }
 
         if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
@@ -2211,10 +2234,15 @@ function baseCreateRenderer(
     }
 
     const { bum, effects, update, subTree, um } = instance
+
     // beforeUnmount hook
     if (bum) {
       invokeArrayFns(bum)
     }
+    if (__COMPAT__) {
+      instance.emit('hook:beforeDestroy')
+    }
+
     if (effects) {
       for (let i = 0; i < effects.length; i++) {
         stop(effects[i])
@@ -2229,6 +2257,12 @@ function baseCreateRenderer(
     // unmounted hook
     if (um) {
       queuePostRenderEffect(um, parentSuspense)
+    }
+    if (__COMPAT__) {
+      queuePostRenderEffect(
+        () => instance.emit('hook:destroyed'),
+        parentSuspense
+      )
     }
     queuePostRenderEffect(() => {
       instance.isUnmounted = true

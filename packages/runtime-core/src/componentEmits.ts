@@ -21,6 +21,7 @@ import { warn } from './warning'
 import { UnionToIntersection } from './helpers/typeUtils'
 import { devtoolsComponentEmit } from './devtools'
 import { AppContext } from './apiCreateApp'
+import { emit as compatEmit } from './compat/eventEmitter'
 
 export type ObjectEmitsOptions = Record<
   string,
@@ -147,6 +148,10 @@ export function emit(
       ErrorCodes.COMPONENT_EVENT_HANDLER,
       args
     )
+  }
+
+  if (__COMPAT__) {
+    return compatEmit(instance, event, args)
   }
 }
 
