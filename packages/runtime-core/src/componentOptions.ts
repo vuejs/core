@@ -66,6 +66,7 @@ import { VNodeChild } from './vnode'
 import { callWithAsyncErrorHandling } from './errorHandling'
 import { UnionToIntersection } from './helpers/typeUtils'
 import { deepMergeData } from './compat/data'
+import { DeprecationTypes, warnDeprecation } from './compat/deprecations'
 
 /**
  * Interface for declaring custom options.
@@ -796,17 +797,22 @@ export function applyOptions(
   if (renderTriggered) {
     onRenderTriggered(renderTriggered.bind(publicThis))
   }
-  if (__DEV__ && beforeDestroy) {
-    warn(`\`beforeDestroy\` has been renamed to \`beforeUnmount\`.`)
-  }
   if (beforeUnmount) {
     onBeforeUnmount(beforeUnmount.bind(publicThis))
   }
-  if (__DEV__ && destroyed) {
-    warn(`\`destroyed\` has been renamed to \`unmounted\`.`)
-  }
   if (unmounted) {
     onUnmounted(unmounted.bind(publicThis))
+  }
+
+  if (__COMPAT__) {
+    if (beforeDestroy) {
+      __DEV__ && warnDeprecation(DeprecationTypes.OPTIONS_BEFORE_DESTROY)
+      onBeforeUnmount(beforeDestroy.bind(publicThis))
+    }
+    if (destroyed) {
+      __DEV__ && warnDeprecation(DeprecationTypes.OPTIONS_DESTROYED)
+      onUnmounted(destroyed.bind(publicThis))
+    }
   }
 
   if (isArray(expose)) {

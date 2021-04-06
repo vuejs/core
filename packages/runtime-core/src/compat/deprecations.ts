@@ -20,7 +20,9 @@ export const enum DeprecationTypes {
   INSTANCE_DESTROY,
 
   OPTIONS_DATA_FN,
-  OPTIONS_DATA_MERGE
+  OPTIONS_DATA_MERGE,
+  OPTIONS_BEFORE_DESTROY,
+  OPTIONS_DESTROYED
 }
 
 type DeprecationData = {
@@ -138,6 +140,14 @@ const deprecations: Record<DeprecationTypes, DeprecationData> = {
       `Detected conflicting key "${key}" when merging "data" option values. ` +
       `In Vue 3, data keys are merged shallowly and will override one another.`,
     link: `https://v3.vuejs.org/guide/migration/data-option.html#mixin-merge-behavior-change`
+  },
+
+  [DeprecationTypes.OPTIONS_BEFORE_DESTROY]: {
+    message: `\`beforeDestroy\` has been renamed to \`beforeUnmount\`.`
+  },
+
+  [DeprecationTypes.OPTIONS_DESTROYED]: {
+    message: `\`destroyed\` has been renamed to \`unmounted\`.`
   }
 }
 
