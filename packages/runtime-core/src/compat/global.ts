@@ -93,6 +93,12 @@ export function createCompatVue(
   const singletonApp = createApp({})
 
   function createCompatApp(options: ComponentOptions = {}, Ctor: any) {
+    const { data } = options
+    if (data && !isFunction(data)) {
+      __DEV__ && warnDeprecation(DeprecationTypes.OPTIONS_DATA_FN)
+      options.data = () => data
+    }
+
     const app = createApp(options)
 
     // copy over asset registries and deopt flag
@@ -142,14 +148,9 @@ export function createCompatVue(
       if (!inlineOptions) {
         return createCompatApp(options, SubVue)
       } else {
-        const { el, data } = inlineOptions
-        if (data && !isFunction(data)) {
-          __DEV__ && warnDeprecation(DeprecationTypes.OPTIONS_DATA_FN)
-          inlineOptions.data = () => data
-        }
         return createCompatApp(
           {
-            el,
+            el: inlineOptions.el,
             extends: options,
             mixins: [inlineOptions]
           },
