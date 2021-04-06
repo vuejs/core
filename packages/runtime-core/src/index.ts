@@ -286,3 +286,4 @@ export const ssrUtils = (__NODE_JS__ ? _ssrUtils : null) as typeof _ssrUtils
 // checks
 export { warnDeprecation, DeprecationTypes } from './compat/deprecations'
 export { createCompatVue, CompatVue } from './compat/global'
+export { LegacyConfig } from './compat/globalConfig'

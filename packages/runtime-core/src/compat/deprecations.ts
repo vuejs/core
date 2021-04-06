@@ -29,7 +29,9 @@ export const enum DeprecationTypes {
 
   PROPS_DEFAULT_THIS,
 
-  CUSTOM_DIR
+  CUSTOM_DIR,
+
+  V_ON_KEYCODE_MODIFIER
 }
 
 type DeprecationData = {
@@ -190,6 +192,13 @@ const deprecations: Record<DeprecationTypes, DeprecationData> = {
       `Custom directive hook "${legacyHook}" has been removed. ` +
       `Use "${newHook}" instead.`,
     link: `https://v3.vuejs.org/guide/migration/custom-directives.html`
+  },
+
+  [DeprecationTypes.V_ON_KEYCODE_MODIFIER]: {
+    message:
+      `Using keyCode as v-on modifier is no longer supported. ` +
+      `Use kebab-case key name modifiers instead.`,
+    link: `https://v3.vuejs.org/guide/migration/keycode-modifiers.html`
   }
 }
 

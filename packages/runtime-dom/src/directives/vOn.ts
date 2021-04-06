@@ -1,4 +1,10 @@
-import { hyphenate } from '@vue/shared'
+import {
+  DeprecationTypes,
+  warnDeprecation,
+  getCurrentInstance,
+  LegacyConfig
+} from '@vue/runtime-core'
+import { hyphenate, isArray } from '@vue/shared'
 
 const systemModifiers = ['ctrl', 'shift', 'alt', 'meta']
 
@@ -51,15 +57,43 @@ const keyNames: Record<string, string | string[]> = {
  * @private
  */
 export const withKeys = (fn: Function, modifiers: string[]) => {
+  let keyCodes: LegacyConfig['keyCodes']
+  if (__COMPAT__) {
+    keyCodes = ((getCurrentInstance()!.appContext
+      .config as any) as LegacyConfig).keyCodes
+    if (__DEV__ && modifiers.some(m => /^\d+$/.test(m))) {
+      warnDeprecation(DeprecationTypes.V_ON_KEYCODE_MODIFIER)
+    }
+  }
+
   return (event: KeyboardEvent) => {
-    if (!('key' in event)) return
-    const eventKey = hyphenate(event.key)
-    if (
-      // None of the provided key modifiers match the current event key
-      !modifiers.some(k => k === eventKey || keyNames[k] === eventKey)
-    ) {
+    if (!('key' in event)) {
       return
     }
-    return fn(event)
+
+    const eventKey = hyphenate(event.key)
+    if (modifiers.some(k => k === eventKey || keyNames[k] === eventKey)) {
+      return fn(event)
+    }
+
+    if (__COMPAT__) {
+      const keyCode = String(event.keyCode)
+      if (modifiers.some(mod => mod == keyCode)) {
+        return fn(event)
+      }
+      if (keyCodes) {
+        for (const mod of modifiers) {
+          const codes = keyCodes[mod]
+          if (codes) {
+            const matches = isArray(codes)
+              ? codes.some(code => String(code) === keyCode)
+              : String(codes) === keyCode
+            if (matches) {
+              return fn(event)
+            }
+          }
+        }
+      }
+    }
   }
 }
