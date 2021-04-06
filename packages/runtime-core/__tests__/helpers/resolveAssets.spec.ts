@@ -263,13 +263,13 @@ describe('resolveAssets', () => {
         return () => {
           component1 = resolveComponent('FooBar', false, false, FooBarFallBack)!
           component2 = resolveComponent(
-            'NoExist',
+            'notExist',
             false,
             false,
             FooBarFallBack
           )!
           directive1 = resolveDirective('BarBaz', false, BarBazFallBack)!
-          directive2 = resolveDirective('NoExist', false, BarBazFallBack)!
+          directive2 = resolveDirective('notExist', false, BarBazFallBack)!
         }
       }
     }
