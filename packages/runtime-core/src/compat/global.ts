@@ -28,6 +28,7 @@ import { nextTick } from '../scheduler'
 import { warnDeprecation, DeprecationTypes } from './deprecations'
 import { version } from '..'
 import { LegacyConfig } from './globalConfig'
+import { LegacyDirective } from './customDirective'
 
 /**
  * @deprecated the default `Vue` export has been removed in Vue 3. The type for
@@ -93,6 +94,12 @@ export function createCompatVue(
 
   function createCompatApp(options: ComponentOptions = {}, Ctor: any) {
     const app = createApp(options)
+
+    // copy over asset registries and deopt flag
+    ;['mixins', 'components', 'directives', 'deopt'].forEach(key => {
+      // @ts-ignore
+      app._context[key] = singletonApp._context[key]
+    })
 
     // copy over global config mutations
     isCopyingConfig = true
@@ -184,7 +191,7 @@ export function createCompatVue(
     return Vue
   }
 
-  Vue.component = ((name: string, comp: any) => {
+  Vue.component = ((name: string, comp: Component) => {
     if (comp) {
       singletonApp.component(name, comp)
       return Vue
@@ -193,9 +200,9 @@ export function createCompatVue(
     }
   }) as any
 
-  Vue.directive = ((name: string, dir: any) => {
+  Vue.directive = ((name: string, dir: Directive | LegacyDirective) => {
     if (dir) {
-      singletonApp.directive(name, dir)
+      singletonApp.directive(name, dir as Directive)
       return Vue
     } else {
       return singletonApp.directive(name)

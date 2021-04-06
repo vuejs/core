@@ -24,7 +24,9 @@ export const enum DeprecationTypes {
   OPTIONS_BEFORE_DESTROY,
   OPTIONS_DESTROYED,
 
-  PROPS_DEFAULT_THIS
+  PROPS_DEFAULT_THIS,
+
+  CUSTOM_DIR
 }
 
 type DeprecationData = {
@@ -157,6 +159,13 @@ const deprecations: Record<DeprecationTypes, DeprecationData> = {
       `props default value function no longer has access to "this". ` +
       `(found in prop "${key}")`,
     link: `https://v3.vuejs.org/guide/migration/props-default-this.html`
+  },
+
+  [DeprecationTypes.CUSTOM_DIR]: {
+    message: (legacyHook: string, newHook: string) =>
+      `Custom directive hook "${legacyHook}" has been removed. ` +
+      `Use "${newHook}" instead.`,
+    link: `https://v3.vuejs.org/guide/migration/custom-directives.html`
   }
 }
 
