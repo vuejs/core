@@ -35,6 +35,7 @@ module.exports = {
   watchPathIgnorePatterns: ['/node_modules/', '/dist/', '/.git/'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'json'],
   moduleNameMapper: {
+    '@vue/compat': '<rootDir>/packages/vue-compat/src',
     '^@vue/(.*?)$': '<rootDir>/packages/$1/src',
     vue: '<rootDir>/packages/vue/src'
   },

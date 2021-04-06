@@ -1,4 +1,4 @@
-import { isArray } from '@vue/shared/src'
+import { isArray } from '@vue/shared'
 import { ObjectDirective, DirectiveHook } from '../directives'
 import { DeprecationTypes, warnDeprecation } from './deprecations'
 

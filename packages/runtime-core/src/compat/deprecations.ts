@@ -122,7 +122,7 @@ const deprecations: Record<DeprecationTypes, DeprecationData> = {
 
   [DeprecationTypes.INSTANCE_MOUNT]: {
     message:
-      `The global app boostrapping API has changed: vm.$mount() and the "el" ` +
+      `The global app bootstrapping API has changed: vm.$mount() and the "el" ` +
       `option have been removed. Use createApp(RootComponent).mount() instead.`,
     link: `https://v3.vuejs.org/guide/migration/global-api.html#mounting-app-instance`
   },

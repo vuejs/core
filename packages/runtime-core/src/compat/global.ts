@@ -246,7 +246,7 @@ export function installCompatMount(
     if (hasNoRender) {
       instance.render = emptyRender
     }
-    setupComponent(instance, __NODE_JS__)
+    setupComponent(instance)
     vnode.component = instance
 
     // $mount & $destroy
@@ -312,7 +312,7 @@ export function installCompatMount(
         }
         instance.render = null
         ;(component as ComponentOptions).template = container.innerHTML
-        finishComponentSetup(instance, __NODE_JS__, true /* skip options */)
+        finishComponentSetup(instance, false, true /* skip options */)
       }
 
       // clear content before mounting
