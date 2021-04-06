@@ -307,7 +307,7 @@ function subTransform(
           parentContext.helpers.set(helperKey, value + parentCount)
         }
       } else {
-        ;(parentContext[key] as any).add(value)
+        ;(parentContext[key] as any).set(helperKey, value)
       }
     })
   })

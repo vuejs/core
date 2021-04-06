@@ -53,7 +53,7 @@ import {
   WITH_CTX,
   RESOLVE_FILTER
 } from './runtimeHelpers'
-import { ImportItem } from './transform'
+import { AssetData, ImportItem } from './transform'
 
 const PURE_ANNOTATION = `/*#__PURE__*/`
 const WITH_ID = `_withId`
@@ -464,7 +464,7 @@ function genModulePreamble(
 }
 
 function genAssets(
-  assets: string[],
+  assets: AssetData[],
   type: 'component' | 'directive' | 'filter',
   { helper, push, newline }: CodegenContext
 ) {
@@ -476,15 +476,22 @@ function genAssets(
         : RESOLVE_DIRECTIVE
   )
   for (let i = 0; i < assets.length; i++) {
-    let id = assets[i]
+    const data = assets[i]
+    let id = data.name
     // potential component implicit self-reference inferred from SFC filename
     const maybeSelfReference = id.endsWith('__self')
     if (maybeSelfReference) {
       id = id.slice(0, -6)
     }
+    const needFallbackArg = !!data.fallback
+    const needWarnArg = needFallbackArg || !data.warnMissing
+    const needMaybeSelfReferenceArg =
+      type === 'component' && (needWarnArg || maybeSelfReference)
     push(
       `const ${toValidAssetId(id, type)} = ${resolver}(${JSON.stringify(id)}${
-        maybeSelfReference ? `, true` : ``
+        needMaybeSelfReferenceArg ? `, ${JSON.stringify(data.warnMissing)}` : ``
+      }${needWarnArg ? `, ${JSON.stringify(data.warnMissing)}` : ``}${
+        needFallbackArg ? `, ${data.fallback}` : ``
       })`
     )
     if (i < assets.length - 1) {

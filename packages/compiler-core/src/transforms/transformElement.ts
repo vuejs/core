@@ -277,7 +277,13 @@ export function resolveComponentType(
   if (!__BROWSER__) {
     const fromSetup = resolveSetupReference(tag, context)
     if (fromSetup) {
-      return fromSetup
+      context.helper(RESOLVE_COMPONENT)
+      context.components.set(tag, {
+        name: tag,
+        warnMissing: false,
+        fallback: fromSetup
+      })
+      return `${toValidAssetId(tag, `component`)}`
     }
   }
 
@@ -291,13 +297,19 @@ export function resolveComponentType(
     // codegen.ts has special check for __self postfix when generating
     // component imports, which will pass additional `maybeSelfReference` flag
     // to `resolveComponent`.
-    context.components.add(tag + `__self`)
+    context.components.set(tag, {
+      name: tag + `__self`,
+      warnMissing: true
+    })
     return toValidAssetId(tag, `component`)
   }
 
   // 5. user component (resolve)
   context.helper(RESOLVE_COMPONENT)
-  context.components.add(tag)
+  context.components.set(tag, {
+    name: tag,
+    warnMissing: true
+  })
   return toValidAssetId(tag, `component`)
 }
 
@@ -708,16 +720,23 @@ function buildDirectiveArgs(
     dirArgs.push(context.helperString(runtime))
   } else {
     // user directive.
+    context.helper(RESOLVE_DIRECTIVE)
     // see if we have directives exposed via <script setup>
     const fromSetup = !__BROWSER__ && resolveSetupReference(dir.name, context)
     if (fromSetup) {
-      dirArgs.push(fromSetup)
+      context.directives.set(dir.name, {
+        name: dir.name,
+        warnMissing: false,
+        fallback: fromSetup
+      })
     } else {
       // inject statement for resolving directive
-      context.helper(RESOLVE_DIRECTIVE)
-      context.directives.add(dir.name)
-      dirArgs.push(toValidAssetId(dir.name, `directive`))
+      context.directives.set(dir.name, {
+        name: dir.name,
+        warnMissing: true
+      })
     }
+    dirArgs.push(toValidAssetId(dir.name, `directive`))
   }
   const { loc } = dir
   if (dir.exp) dirArgs.push(dir.exp)

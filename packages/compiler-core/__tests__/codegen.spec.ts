@@ -35,6 +35,7 @@ import {
 } from '../src/runtimeHelpers'
 import { createElementWithCodegen, genFlagText } from './testUtils'
 import { PatchFlags } from '@vue/shared'
+import { AssetData } from '../src/transform'
 
 function createRoot(options: Partial<RootNode> = {}): RootNode {
   return {
@@ -50,6 +51,13 @@ function createRoot(options: Partial<RootNode> = {}): RootNode {
     codegenNode: createSimpleExpression(`null`, false),
     loc: locStub,
     ...options
+  }
+}
+
+function createAsset(name: string): AssetData {
+  return {
+    name,
+    warnMissing: true
   }
 }
 
@@ -126,8 +134,13 @@ describe('compiler: codegen', () => {
 
   test('assets + temps', () => {
     const root = createRoot({
-      components: [`Foo`, `bar-baz`, `barbaz`, `Qux__self`],
-      directives: [`my_dir_0`, `my_dir_1`],
+      components: [
+        createAsset(`Foo`),
+        createAsset(`bar-baz`),
+        createAsset(`barbaz`),
+        createAsset(`Qux__self`)
+      ],
+      directives: [createAsset(`my_dir_0`), createAsset(`my_dir_1`)],
       temps: 3
     })
     const { code } = generate(root, { mode: 'function' })

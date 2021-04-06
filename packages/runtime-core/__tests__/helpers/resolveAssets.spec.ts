@@ -240,4 +240,47 @@ describe('resolveAssets', () => {
     expect(directive3!).toBe(BarBaz)
     expect(directive4!).toBe(BarBaz)
   })
+
+  test('resolving with fallback', () => {
+    const FooBar = () => null
+    const FooBarFallBack = () => null
+    const BarBaz = { mounted: () => null }
+    const BarBazFallBack = { mounted: () => null }
+
+    let component1: Component | string
+    let component2: Component | string
+    let directive1: Directive
+    let directive2: Directive
+
+    const Root = {
+      components: {
+        FooBar: FooBar
+      },
+      directives: {
+        BarBaz: BarBaz
+      },
+      setup() {
+        return () => {
+          component1 = resolveComponent('FooBar', false, false, FooBarFallBack)!
+          component2 = resolveComponent(
+            'NoExist',
+            false,
+            false,
+            FooBarFallBack
+          )!
+          directive1 = resolveDirective('BarBaz', false, BarBazFallBack)!
+          directive2 = resolveDirective('NoExist', false, BarBazFallBack)!
+        }
+      }
+    }
+
+    const app = createApp(Root)
+    const root = nodeOps.createElement('div')
+    app.mount(root)
+    expect(component1!).toBe(FooBar)
+    expect(component2!).toBe(FooBarFallBack)
+
+    expect(directive1!).toBe(BarBaz)
+    expect(directive2!).toBe(BarBazFallBack)
+  })
 })

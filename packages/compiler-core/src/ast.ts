@@ -11,7 +11,7 @@ import {
   WITH_DIRECTIVES
 } from './runtimeHelpers'
 import { PropsExpression } from './transforms/transformElement'
-import { ImportItem, TransformContext } from './transform'
+import { ImportItem, TransformContext, AssetData } from './transform'
 
 // Vue template is a platform-agnostic superset of HTML (syntax only).
 // More namespaces like SVG and MathML are declared by platform specific
@@ -101,8 +101,8 @@ export interface RootNode extends Node {
   type: NodeTypes.ROOT
   children: TemplateChildNode[]
   helpers: symbol[]
-  components: string[]
-  directives: string[]
+  components: AssetData[]
+  directives: AssetData[]
   hoists: (JSChildNode | null)[]
   imports: ImportItem[]
   cached: number

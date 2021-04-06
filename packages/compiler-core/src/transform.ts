@@ -83,6 +83,12 @@ export interface ImportItem {
   path: string
 }
 
+export interface AssetData {
+  name: string
+  warnMissing: boolean
+  fallback?: string
+}
+
 export interface TransformContext
   extends Required<
       Omit<TransformOptions, 'filename' | keyof CompilerCompatOptions>
@@ -91,8 +97,8 @@ export interface TransformContext
   selfName: string | null
   root: RootNode
   helpers: Map<symbol, number>
-  components: Set<string>
-  directives: Set<string>
+  components: Map<string, AssetData>
+  directives: Map<string, AssetData>
   hoists: (JSChildNode | null)[]
   imports: ImportItem[]
   temps: number
@@ -175,8 +181,8 @@ export function createTransformContext(
     // state
     root,
     helpers: new Map(),
-    components: new Set(),
-    directives: new Set(),
+    components: new Map(),
+    directives: new Map(),
     hoists: [],
     imports: [],
     constantCache: new Map(),
@@ -322,8 +328,8 @@ export function transform(root: RootNode, options: TransformOptions) {
   }
   // finalize meta information
   root.helpers = [...context.helpers.keys()]
-  root.components = [...context.components]
-  root.directives = [...context.directives]
+  root.components = [...context.components.values()]
+  root.directives = [...context.directives.values()]
   root.imports = context.imports
   root.hoists = context.hoists
   root.temps = context.temps

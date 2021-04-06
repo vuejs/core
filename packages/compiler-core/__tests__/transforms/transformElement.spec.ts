@@ -69,7 +69,7 @@ describe('compiler: element transform', () => {
   test('import + resolve component', () => {
     const { root } = parseWithElementTransform(`<Foo/>`)
     expect(root.helpers).toContain(RESOLVE_COMPONENT)
-    expect(root.components).toContain(`Foo`)
+    expect(root.components).toEqual([{ name: 'Foo', warnMissing: true }])
   })
 
   test('resolve implcitly self-referencing component', () => {
@@ -77,7 +77,9 @@ describe('compiler: element transform', () => {
       filename: `/foo/bar/Example.vue?vue&type=template`
     })
     expect(root.helpers).toContain(RESOLVE_COMPONENT)
-    expect(root.components).toContain(`Example__self`)
+    expect(root.components).toEqual([
+      { name: 'Example__self', warnMissing: true }
+    ])
   })
 
   test('resolve component from setup bindings', () => {
@@ -86,8 +88,8 @@ describe('compiler: element transform', () => {
         Example: BindingTypes.SETUP_MAYBE_REF
       }
     })
-    expect(root.helpers).not.toContain(RESOLVE_COMPONENT)
-    expect(node.tag).toBe(`$setup["Example"]`)
+    expect(root.helpers).toContain(RESOLVE_COMPONENT)
+    expect(node.tag).toBe(`_component_Example`)
   })
 
   test('do not resolve component from non-script-setup bindings', () => {
@@ -99,7 +101,7 @@ describe('compiler: element transform', () => {
       bindingMetadata
     })
     expect(root.helpers).toContain(RESOLVE_COMPONENT)
-    expect(root.components).toContain(`Example`)
+    expect(root.components).toEqual([{ name: 'Example', warnMissing: true }])
   })
 
   test('static props', () => {
@@ -476,7 +478,7 @@ describe('compiler: element transform', () => {
       }
     )
     expect(root.helpers).toContain(RESOLVE_DIRECTIVE)
-    expect(root.directives).toContain(`foo`)
+    expect(root.directives).toEqual([{ name: 'foo', warnMissing: true }])
     expect(node).toMatchObject({
       tag: `"div"`,
       props: undefined,
@@ -536,9 +538,11 @@ describe('compiler: element transform', () => {
       `<div v-foo v-bar="x" v-baz:[arg].mod.mad="y" />`
     )
     expect(root.helpers).toContain(RESOLVE_DIRECTIVE)
-    expect(root.directives).toContain(`foo`)
-    expect(root.directives).toContain(`bar`)
-    expect(root.directives).toContain(`baz`)
+    expect(root.directives).toEqual([
+      { name: 'foo', warnMissing: true },
+      { name: 'bar', warnMissing: true },
+      { name: 'baz', warnMissing: true }
+    ])
 
     expect(node).toMatchObject({
       directives: {

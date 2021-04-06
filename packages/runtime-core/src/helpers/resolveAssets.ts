@@ -21,9 +21,13 @@ export type AssetTypes = typeof COMPONENTS | typeof DIRECTIVES | typeof FILTERS
  */
 export function resolveComponent(
   name: string,
-  maybeSelfReference?: boolean
+  maybeSelfReference?: boolean,
+  warnMissing: boolean = true,
+  fallback: any = name
 ): ConcreteComponent | string {
-  return resolveAsset(COMPONENTS, name, true, maybeSelfReference) || name
+  return (
+    resolveAsset(COMPONENTS, name, warnMissing, maybeSelfReference) || fallback
+  )
 }
 
 export const NULL_DYNAMIC_COMPONENT = Symbol()
@@ -43,8 +47,12 @@ export function resolveDynamicComponent(component: unknown): VNodeTypes {
 /**
  * @private
  */
-export function resolveDirective(name: string): Directive | undefined {
-  return resolveAsset(DIRECTIVES, name)
+export function resolveDirective(
+  name: string,
+  warnMissing: boolean = true,
+  fallback: Directive | undefined = undefined
+): Directive | undefined {
+  return resolveAsset(DIRECTIVES, name, warnMissing) || fallback
 }
 
 /**
@@ -68,7 +76,8 @@ function resolveAsset(
 // overload 2: directives
 function resolveAsset(
   type: typeof DIRECTIVES,
-  name: string
+  name: string,
+  warnMissing?: boolean
 ): Directive | undefined
 // implementation
 // overload 3: filters (compat only)
