@@ -162,9 +162,14 @@ export function createCompatVue(
       if (!inlineOptions) {
         return createCompatApp(options, SubVue)
       } else {
+        const { el, data } = inlineOptions
+        if (data && !isFunction(data)) {
+          __DEV__ && warnDeprecation(DeprecationTypes.OPTIONS_DATA_FN)
+          inlineOptions.data = () => data
+        }
         return createCompatApp(
           {
-            el: inlineOptions.el,
+            el,
             extends: options,
             mixins: [inlineOptions]
           },

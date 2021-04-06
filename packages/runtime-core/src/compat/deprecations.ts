@@ -1,4 +1,5 @@
 import { isRuntimeOnly } from '../component'
+import { warn } from '../warning'
 
 export const enum DeprecationTypes {
   CONFIG_SILENT,
@@ -16,11 +17,14 @@ export const enum DeprecationTypes {
   INSTANCE_SET,
   INSTANCE_DELETE,
   INSTANCE_MOUNT,
-  INSTANCE_DESTROY
+  INSTANCE_DESTROY,
+
+  OPTIONS_DATA_FN,
+  OPTIONS_DATA_MERGE
 }
 
 type DeprecationData = {
-  message: string | (() => string)
+  message: string | ((...args: any[]) => string)
   link?: string
 }
 
@@ -120,17 +124,31 @@ const deprecations: Record<DeprecationTypes, DeprecationData> = {
   [DeprecationTypes.INSTANCE_DESTROY]: {
     message: `vm.$destroy() has been removed. Use app.unmount() instead.`,
     link: `https://v3.vuejs.org/api/application-api.html#unmount`
+  },
+
+  [DeprecationTypes.OPTIONS_DATA_FN]: {
+    message:
+      `The "data" option can no longer be a plain object. ` +
+      `Always use a function.`,
+    link: `https://v3.vuejs.org/guide/migration/data-option.html`
+  },
+
+  [DeprecationTypes.OPTIONS_DATA_MERGE]: {
+    message: (key: string) =>
+      `Detected conflicting key "${key}" when merging "data" option values. ` +
+      `In Vue 3, data keys are merged shallowly and will override one another.`,
+    link: `https://v3.vuejs.org/guide/migration/data-option.html#mixin-merge-behavior-change`
   }
 }
 
-export function warnDeprecation(key: DeprecationTypes) {
+export function warnDeprecation(key: DeprecationTypes, ...args: any[]) {
   if (!__COMPAT__ || !__DEV__) {
     return
   }
   const { message, link } = deprecations[key]
-  console.warn(
-    `[Vue Deprecation]: ${typeof message === 'function' ? message() : message}${
-      link ? `\nFor more details, see ${link}` : ``
-    }`
+  warn(
+    `[DEPRECATION] ${
+      typeof message === 'function' ? message(...args) : message
+    }${link ? `\nFor more details, see ${link}` : ``}`
   )
 }
