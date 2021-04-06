@@ -1,5 +1,6 @@
 import { extend, NOOP } from '@vue/shared'
 import { PublicPropertiesMap } from '../componentPublicInstance'
+import { getInstanceChildren } from './children'
 import { DeprecationTypes, warnDeprecation } from './deprecations'
 import { off, on, once } from './eventEmitter'
 
@@ -33,6 +34,7 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
     },
     $on: i => on.bind(null, i),
     $once: i => once.bind(null, i),
-    $off: i => off.bind(null, i)
+    $off: i => off.bind(null, i),
+    $children: getInstanceChildren
   } as PublicPropertiesMap)
 }

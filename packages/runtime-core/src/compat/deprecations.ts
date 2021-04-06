@@ -20,6 +20,7 @@ export const enum DeprecationTypes {
   INSTANCE_DESTROY,
   INSTANCE_EVENT_EMITTER,
   INSTANCE_EVENT_HOOKS,
+  INSTANCE_CHILDREN,
 
   OPTIONS_DATA_FN,
   OPTIONS_DATA_MERGE,
@@ -146,6 +147,13 @@ const deprecations: Record<DeprecationTypes, DeprecationData> = {
       `"hook:x" lifecycle events are no longer supported. ` +
       `Use Composition API to dynamically register lifecycle hooks.`,
     link: `https://v3.vuejs.org/api/composition-api.html#lifecycle-hooks`
+  },
+
+  [DeprecationTypes.INSTANCE_CHILDREN]: {
+    message:
+      `vm.$children has been removed. Consider refactoring your logic ` +
+      `to avoid relying on direct access to child components.`,
+    link: `https://v3.vuejs.org/guide/migration/children.html`
   },
 
   [DeprecationTypes.OPTIONS_DATA_FN]: {
