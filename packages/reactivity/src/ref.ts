@@ -252,4 +252,7 @@ type SymbolExtract<T> = (T extends { [Symbol.asyncIterator]: infer V }
     ? { [Symbol.unscopables]: V }
     : {})
 
-type UnwrappedObject<T> = { [P in keyof T]: UnwrapRef<T[P]> } & SymbolExtract<T>
+type UnwrappedObject<T> = {
+  [P in keyof T]: UnwrapRef<T[P]> & SymbolExtract<T[P]>
+} &
+  SymbolExtract<T>
