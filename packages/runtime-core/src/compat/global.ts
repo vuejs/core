@@ -27,6 +27,7 @@ import { Directive } from '../directives'
 import { nextTick } from '../scheduler'
 import { warnDeprecation, DeprecationTypes } from './deprecations'
 import { version } from '..'
+import { LegacyConfig } from './globalConfig'
 
 /**
  * @deprecated the default `Vue` export has been removed in Vue 3. The type for
@@ -71,34 +72,6 @@ export type CompatVue = Pick<App, 'version' | 'component' | 'directive'> & {
    * @deprecated filters have been removed from Vue 3.
    */
   filter(name: string, arg: any): null
-}
-
-// legacy config warnings
-export type LegacyConfig = {
-  /**
-   * @deprecated `config.silent` option has been removed
-   */
-  silent?: boolean
-  /**
-   * @deprecated use __VUE_PROD_DEVTOOLS__ compile-time feature flag instead
-   * https://github.com/vuejs/vue-next/tree/master/packages/vue#bundler-build-feature-flags
-   */
-  devtools?: boolean
-  /**
-   * @deprecated use `config.isCustomElement` instead
-   * https://v3.vuejs.org/guide/migration/global-api.html#config-ignoredelements-is-now-config-iscustomelement
-   */
-  ignoredElements?: (string | RegExp)[]
-  /**
-   * @deprecated
-   * https://v3.vuejs.org/guide/migration/keycode-modifiers.html
-   */
-  keyCodes?: Record<string, number | number[]>
-  /**
-   * @deprecated
-   * https://v3.vuejs.org/guide/migration/global-api.html#config-productiontip-removed
-   */
-  productionTip?: boolean
 }
 
 export let isCopyingConfig = false
@@ -361,31 +334,4 @@ export function installCompatMount(
 
     return instance.proxy!
   }
-}
-
-// dev only
-export function installLegacyConfigTraps(config: AppConfig) {
-  const legacyConfigOptions: Record<string, DeprecationTypes> = {
-    silent: DeprecationTypes.CONFIG_SILENT,
-    devtools: DeprecationTypes.CONFIG_DEVTOOLS,
-    ignoredElements: DeprecationTypes.CONFIG_IGNORED_ELEMENTS,
-    keyCodes: DeprecationTypes.CONFIG_KEY_CODES,
-    productionTip: DeprecationTypes.CONFIG_PRODUCTION_TIP
-  }
-
-  Object.keys(legacyConfigOptions).forEach(key => {
-    let val = (config as any)[key]
-    Object.defineProperty(config, key, {
-      enumerable: true,
-      get() {
-        return val
-      },
-      set(newVal) {
-        if (!isCopyingConfig) {
-          warnDeprecation(legacyConfigOptions[key])
-        }
-        val = newVal
-      }
-    })
-  })
 }

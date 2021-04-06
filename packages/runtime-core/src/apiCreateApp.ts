@@ -15,7 +15,8 @@ import { RootHydrateFunction } from './hydration'
 import { devtoolsInitApp, devtoolsUnmountApp } from './devtools'
 import { isFunction, NO, isObject } from '@vue/shared'
 import { version } from '.'
-import { installCompatMount, installLegacyConfigTraps } from './compat/global'
+import { installCompatMount } from './compat/global'
+import { installLegacyConfigTraps } from './compat/globalConfig'
 
 export interface App<HostElement = any> {
   version: string

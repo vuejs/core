@@ -149,6 +149,6 @@ export function warnDeprecation(key: DeprecationTypes, ...args: any[]) {
   warn(
     `[DEPRECATION] ${
       typeof message === 'function' ? message(...args) : message
-    }${link ? `\nFor more details, see ${link}` : ``}`
+    }${link ? `\n  Details: ${link}` : ``}`
   )
 }
