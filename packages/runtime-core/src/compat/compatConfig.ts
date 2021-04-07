@@ -16,11 +16,16 @@ export function configureCompat(config: CompatConfig) {
   extend(globalCompatConfig, config)
 }
 
-/**
- * @internal
- */
 export function getCompatConfig(
   key: DeprecationTypes
 ): DeprecationConfigItem | undefined {
   return globalCompatConfig[key]
+}
+
+/**
+ * @internal
+ */
+export function isCompatEnabled(key: DeprecationTypes): boolean {
+  const config = getCompatConfig(key)
+  return !config || config.mode !== 3
 }

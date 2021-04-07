@@ -33,6 +33,8 @@ import {
 } from './errorHandling'
 import { queuePostRenderEffect } from './renderer'
 import { warn } from './warning'
+import { DeprecationTypes, warnDeprecation } from './compat/deprecations'
+import { isCompatEnabled } from './compat/compatConfig'
 
 export type WatchEffect = (onInvalidate: InvalidateCbRegistrator) => void
 
@@ -217,6 +219,21 @@ function doWatch(
     __DEV__ && warnInvalidSource(source)
   }
 
+  // 2.x array mutation watch compat
+  if (__COMPAT__ && cb && !deep) {
+    const baseGetter = getter
+    getter = () => {
+      const val = baseGetter()
+      if (isArray(val)) {
+        __DEV__ && warnDeprecation(DeprecationTypes.WATCH_ARRAY)
+        if (isCompatEnabled(DeprecationTypes.WATCH_ARRAY)) {
+          traverse(val)
+        }
+      }
+      return val
+    }
+  }
+
   if (cb && deep) {
     const baseGetter = getter
     getter = () => traverse(baseGetter())
@@ -254,7 +271,14 @@ function doWatch(
     if (cb) {
       // watch(source, cb)
       const newValue = runner()
-      if (deep || forceTrigger || hasChanged(newValue, oldValue)) {
+      if (
+        deep ||
+        forceTrigger ||
+        hasChanged(newValue, oldValue) ||
+        (__COMPAT__ &&
+          isArray(newValue) &&
+          isCompatEnabled(DeprecationTypes.WATCH_ARRAY))
+      ) {
         // cleanup before running cb again
         if (cleanup) {
           cleanup()

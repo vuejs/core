@@ -28,11 +28,10 @@ export const enum DeprecationTypes {
   OPTIONS_BEFORE_DESTROY = 'OPTIONS_BEFORE_DESTROY',
   OPTIONS_DESTROYED = 'OPTIONS_DESTROYED',
 
+  V_ON_KEYCODE_MODIFIER = 'V_ON_KEYCODE_MODIFIER',
   PROPS_DEFAULT_THIS = 'PROPS_DEFAULT_THIS',
-
   CUSTOM_DIR = 'CUSTOM_DIR',
-
-  V_ON_KEYCODE_MODIFIER = 'V_ON_KEYCODE_MODIFIER'
+  WATCH_ARRAY = 'WATCH_ARRAY'
 }
 
 type DeprecationData = {
@@ -181,6 +180,13 @@ const deprecationMessages: Record<DeprecationTypes, DeprecationData> = {
     message: `\`destroyed\` has been renamed to \`unmounted\`.`
   },
 
+  [DeprecationTypes.V_ON_KEYCODE_MODIFIER]: {
+    message:
+      `Using keyCode as v-on modifier is no longer supported. ` +
+      `Use kebab-case key name modifiers instead.`,
+    link: `https://v3.vuejs.org/guide/migration/keycode-modifiers.html`
+  },
+
   [DeprecationTypes.PROPS_DEFAULT_THIS]: {
     message: (key: string) =>
       `props default value function no longer has access to "this". ` +
@@ -195,11 +201,15 @@ const deprecationMessages: Record<DeprecationTypes, DeprecationData> = {
     link: `https://v3.vuejs.org/guide/migration/custom-directives.html`
   },
 
-  [DeprecationTypes.V_ON_KEYCODE_MODIFIER]: {
+  [DeprecationTypes.WATCH_ARRAY]: {
     message:
-      `Using keyCode as v-on modifier is no longer supported. ` +
-      `Use kebab-case key name modifiers instead.`,
-    link: `https://v3.vuejs.org/guide/migration/keycode-modifiers.html`
+      `"watch" option or vm.$watch on an array value will no longer ` +
+      `trigger on array mutation unless the "deep" option is specified. ` +
+      `If current usage is intended, you can suppress this warning with:` +
+      `\n\n  configureCompat({ ${
+        DeprecationTypes.WATCH_ARRAY
+      }: { mode: 3 }})\n`,
+    link: `https://v3.vuejs.org/guide/migration/watch.html`
   }
 }
 
@@ -215,7 +225,10 @@ export function warnDeprecation(key: DeprecationTypes, ...args: any[]) {
 
   // check user config
   const config = getCompatConfig(key)
-  if (config && config.warning === false) {
+  if (
+    config &&
+    (config.warning === false || (config.mode === 3 && config.warning !== true))
+  ) {
     return
   }
 
