@@ -29,10 +29,14 @@ export const enum DeprecationTypes {
   OPTIONS_BEFORE_DESTROY = 'OPTIONS_BEFORE_DESTROY',
   OPTIONS_DESTROYED = 'OPTIONS_DESTROYED',
 
-  V_ON_KEYCODE_MODIFIER = 'V_ON_KEYCODE_MODIFIER',
-  PROPS_DEFAULT_THIS = 'PROPS_DEFAULT_THIS',
-  CUSTOM_DIR = 'CUSTOM_DIR',
   WATCH_ARRAY = 'WATCH_ARRAY',
+  PROPS_DEFAULT_THIS = 'PROPS_DEFAULT_THIS',
+
+  V_ON_KEYCODE_MODIFIER = 'V_ON_KEYCODE_MODIFIER',
+  CUSTOM_DIR = 'CUSTOM_DIR',
+
+  ATTR_FALSE_VALUE = 'ATTR_FALSE_VALUE',
+  ATTR_ENUMERATED_COERSION = 'ATTR_ENUMERATED_COERSION',
 
   TRANSITION_CLASSES = 'TRANSITION_CLASSES',
   TRANSITION_GROUP_ROOT = 'TRANSITION_GROUP_ROOT'
@@ -191,11 +195,16 @@ const deprecationData: Record<DeprecationTypes, DeprecationData> = {
     message: `\`destroyed\` has been renamed to \`unmounted\`.`
   },
 
-  [DeprecationTypes.V_ON_KEYCODE_MODIFIER]: {
+  [DeprecationTypes.WATCH_ARRAY]: {
     message:
-      `Using keyCode as v-on modifier is no longer supported. ` +
-      `Use kebab-case key name modifiers instead.`,
-    link: `https://v3.vuejs.org/guide/migration/keycode-modifiers.html`
+      `"watch" option or vm.$watch on an array value will no longer ` +
+      `trigger on array mutation unless the "deep" option is specified. ` +
+      `If current usage is intended, you can disable the compat behavior and ` +
+      `suppress this warning with:` +
+      `\n\n  configureCompat({ ${
+        DeprecationTypes.WATCH_ARRAY
+      }: { enabled: false }})\n`,
+    link: `https://v3.vuejs.org/guide/migration/watch.html`
   },
 
   [DeprecationTypes.PROPS_DEFAULT_THIS]: {
@@ -212,16 +221,38 @@ const deprecationData: Record<DeprecationTypes, DeprecationData> = {
     link: `https://v3.vuejs.org/guide/migration/custom-directives.html`
   },
 
-  [DeprecationTypes.WATCH_ARRAY]: {
+  [DeprecationTypes.V_ON_KEYCODE_MODIFIER]: {
     message:
-      `"watch" option or vm.$watch on an array value will no longer ` +
-      `trigger on array mutation unless the "deep" option is specified. ` +
-      `If current usage is intended, you can disable the compat behavior and ` +
-      `suppress this warning with:` +
+      `Using keyCode as v-on modifier is no longer supported. ` +
+      `Use kebab-case key name modifiers instead.`,
+    link: `https://v3.vuejs.org/guide/migration/keycode-modifiers.html`
+  },
+
+  [DeprecationTypes.ATTR_FALSE_VALUE]: {
+    message: (name: string) =>
+      `Attribute "${name}" with v-bind value \`false\` will render ` +
+      `${name}="false" instead of removing it in Vue 3. To remove the attribute, ` +
+      `use \`null\` or \`undefined\` instead. If the usage is intended, ` +
+      `you can disable the compat behavior and suppress this warning with:` +
       `\n\n  configureCompat({ ${
-        DeprecationTypes.WATCH_ARRAY
+        DeprecationTypes.ATTR_FALSE_VALUE
       }: { enabled: false }})\n`,
-    link: `https://v3.vuejs.org/guide/migration/watch.html`
+    link: `https://v3.vuejs.org/guide/migration/attribute-coercion.html`
+  },
+
+  [DeprecationTypes.ATTR_ENUMERATED_COERSION]: {
+    message: (name: string, value: any, coerced: string) =>
+      `Enumerated attribute "${name}" with v-bind value \`${value}\` will ` +
+      `${
+        value === null ? `be removed` : `render the value as-is`
+      } instead of coercing the value to "${coerced}" in Vue 3. ` +
+      `Always use explicit "true" or "false" values for enumerated attributes. ` +
+      `If the usage is intended, ` +
+      `you can disable the compat behavior and suppress this warning with:` +
+      `\n\n  configureCompat({ ${
+        DeprecationTypes.ATTR_ENUMERATED_COERSION
+      }: { enabled: false }})\n`,
+    link: `https://v3.vuejs.org/guide/migration/attribute-coercion.html`
   },
 
   [DeprecationTypes.TRANSITION_CLASSES]: {
