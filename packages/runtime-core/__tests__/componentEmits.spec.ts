@@ -94,7 +94,7 @@ describe('component: emit', () => {
     render(h(Comp), nodeOps.createElement('div'))
 
     expect(fooSpy).toHaveBeenCalledTimes(1)
-    expect(fooSpy).toHaveBeenCalledTimes(1)
+    expect(barSpy).toHaveBeenCalledTimes(1)
   })
 
   // for v-model:foo-bar usage in DOM templates
