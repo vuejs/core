@@ -2,12 +2,13 @@ import { ShapeFlags } from '@vue/shared/src'
 import { ComponentInternalInstance } from '../component'
 import { ComponentPublicInstance } from '../componentPublicInstance'
 import { VNode } from '../vnode'
-import { DeprecationTypes, warnDeprecation } from './deprecations'
+import { assertCompatEnabled } from './compatConfig'
+import { DeprecationTypes } from './deprecations'
 
 export function getInstanceChildren(
   instance: ComponentInternalInstance
 ): ComponentPublicInstance[] {
-  __DEV__ && warnDeprecation(DeprecationTypes.INSTANCE_CHILDREN)
+  assertCompatEnabled(DeprecationTypes.INSTANCE_CHILDREN)
   const root = instance.subTree
   const children: ComponentPublicInstance[] = []
   if (root) {

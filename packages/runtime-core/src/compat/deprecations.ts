@@ -3,21 +3,22 @@ import { warn } from '../warning'
 import { getCompatConfig } from './compatConfig'
 
 export const enum DeprecationTypes {
+  GLOBAL_MOUNT = 'GLOBAL_MOUNT',
+  GLOBAL_MOUNT_CONTAINER = 'GLOBAL_MOUNT_CONTAINER',
+  GLOBAL_EXTEND = 'GLOBAL_EXTEND',
+  GLOBAL_PROTOTYPE = 'GLOBAL_PROTOTYPE',
+  GLOBAL_SET = 'GLOBAL_SET',
+  GLOBAL_DELETE = 'GLOBAL_DELETE',
+  GLOBAL_OBSERVABLE = 'GLOBAL_OBSERVABLE',
+
   CONFIG_SILENT = 'CONFIG_SILENT',
   CONFIG_DEVTOOLS = 'CONFIG_DEVTOOLS',
   CONFIG_KEY_CODES = 'CONFIG_KEY_CODES',
   CONFIG_PRODUCTION_TIP = 'CONFIG_PRODUCTION_TIP',
   CONFIG_IGNORED_ELEMENTS = 'CONFIG_IGNORED_ELEMENTS',
 
-  GLOBAL_PROTOTYPE = 'GLOBAL_PROTOTYPE',
-  GLOBAL_SET = 'GLOBAL_SET',
-  GLOBAL_DELETE = 'GLOBAL_DELETE',
-  GLOBAL_OBSERVABLE = 'GLOBAL_OBSERVABLE',
-  GLOBAL_MOUNT_CONTAINER = 'GLOBAL_MOUNT_CONTAINER',
-
   INSTANCE_SET = 'INSTANCE_SET',
   INSTANCE_DELETE = 'INSTANCE_DELETE',
-  INSTANCE_MOUNT = 'INSTANCE_MOUNT',
   INSTANCE_DESTROY = 'INSTANCE_DESTROY',
   INSTANCE_EVENT_EMITTER = 'INSTANCE_EVENT_EMITTER',
   INSTANCE_EVENT_HOOKS = 'INSTANCE_EVENT_HOOKS',
@@ -39,7 +40,55 @@ type DeprecationData = {
   link?: string
 }
 
-const deprecationMessages: Record<DeprecationTypes, DeprecationData> = {
+const deprecationData: Record<DeprecationTypes, DeprecationData> = {
+  [DeprecationTypes.GLOBAL_MOUNT]: {
+    message:
+      `The global app bootstrapping API has changed: vm.$mount() and the "el" ` +
+      `option have been removed. Use createApp(RootComponent).mount() instead.`,
+    link: `https://v3.vuejs.org/guide/migration/global-api.html#mounting-app-instance`
+  },
+
+  [DeprecationTypes.GLOBAL_MOUNT_CONTAINER]: {
+    message:
+      `Vue detected directives on the mount container. ` +
+      `In Vue 3, the container is no longer considered part of the template ` +
+      `and will not be processed/replaced.`,
+    link: `https://v3.vuejs.org/guide/migration/mount-changes.html`
+  },
+
+  [DeprecationTypes.GLOBAL_EXTEND]: {
+    message:
+      `Vue.extend() has been removed in Vue 3. ` +
+      `Use defineComponent() instead.`,
+    link: `https://v3.vuejs.org/api/global-api.html#definecomponent`
+  },
+
+  [DeprecationTypes.GLOBAL_PROTOTYPE]: {
+    message:
+      `Vue.prototype is no longer available in Vue 3. ` +
+      `Use config.globalProperties instead.`,
+    link: `https://v3.vuejs.org/guide/migration/global-api.html#vue-prototype-replaced-by-config-globalproperties`
+  },
+
+  [DeprecationTypes.GLOBAL_SET]: {
+    message:
+      `Vue.set() has been removed as it is no longer needed in Vue 3. ` +
+      `Simply use native JavaScript mutations.`
+  },
+
+  [DeprecationTypes.GLOBAL_DELETE]: {
+    message:
+      `Vue.delete() has been removed as it is no longer needed in Vue 3. ` +
+      `Simply use native JavaScript mutations.`
+  },
+
+  [DeprecationTypes.GLOBAL_OBSERVABLE]: {
+    message:
+      `Vue.observable() has been removed. ` +
+      `Use \`import { reactive } from "vue"\` from Composition API instead.`,
+    link: `https://v3.vuejs.org/api/basic-reactivity.html`
+  },
+
   [DeprecationTypes.CONFIG_SILENT]: {
     message:
       `config.silent has been removed because it is not good practice to ` +
@@ -79,40 +128,6 @@ const deprecationMessages: Record<DeprecationTypes, DeprecationData> = {
     link: `https://v3.vuejs.org/guide/migration/global-api.html#config-ignoredelements-is-now-config-iscustomelement`
   },
 
-  [DeprecationTypes.GLOBAL_PROTOTYPE]: {
-    message:
-      `Vue.prototype is no longer available in Vue 3. ` +
-      `Use config.globalProperties instead.`,
-    link: `https://v3.vuejs.org/guide/migration/global-api.html#vue-prototype-replaced-by-config-globalproperties`
-  },
-
-  [DeprecationTypes.GLOBAL_SET]: {
-    message:
-      `Vue.set() has been removed as it is no longer needed in Vue 3. ` +
-      `Simply use native JavaScript mutations.`
-  },
-
-  [DeprecationTypes.GLOBAL_DELETE]: {
-    message:
-      `Vue.delete() has been removed as it is no longer needed in Vue 3. ` +
-      `Simply use native JavaScript mutations.`
-  },
-
-  [DeprecationTypes.GLOBAL_OBSERVABLE]: {
-    message:
-      `Vue.observable() has been removed. ` +
-      `Use \`import { reactive } from "vue"\` from Composition API instead.`,
-    link: `https://v3.vuejs.org/api/basic-reactivity.html`
-  },
-
-  [DeprecationTypes.GLOBAL_MOUNT_CONTAINER]: {
-    message:
-      `Vue detected directives on the mount container. ` +
-      `In Vue 3, the container is no longer considered part of the template ` +
-      `and will not be processed/replaced.`,
-    link: `https://v3.vuejs.org/guide/migration/mount-changes.html`
-  },
-
   [DeprecationTypes.INSTANCE_SET]: {
     message:
       `vm.$set() has been removed as it is no longer needed in Vue 3. ` +
@@ -123,13 +138,6 @@ const deprecationMessages: Record<DeprecationTypes, DeprecationData> = {
     message:
       `vm.$delete() has been removed as it is no longer needed in Vue 3. ` +
       `Simply use native JavaScript mutations.`
-  },
-
-  [DeprecationTypes.INSTANCE_MOUNT]: {
-    message:
-      `The global app bootstrapping API has changed: vm.$mount() and the "el" ` +
-      `option have been removed. Use createApp(RootComponent).mount() instead.`,
-    link: `https://v3.vuejs.org/guide/migration/global-api.html#mounting-app-instance`
   },
 
   [DeprecationTypes.INSTANCE_DESTROY]: {
@@ -227,7 +235,8 @@ export function warnDeprecation(key: DeprecationTypes, ...args: any[]) {
   const config = getCompatConfig(key)
   if (
     config &&
-    (config.warning === false || (config.mode === 3 && config.warning !== true))
+    (config.warning === false ||
+      (config.enabled === false && config.warning !== true))
   ) {
     return
   }
@@ -239,7 +248,7 @@ export function warnDeprecation(key: DeprecationTypes, ...args: any[]) {
   }
 
   hasWarned[dupKey] = true
-  const { message, link } = deprecationMessages[key]
+  const { message, link } = deprecationData[key]
   warn(
     `(DEPRECATION ${key}) ${
       typeof message === 'function' ? message(...args) : message

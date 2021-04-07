@@ -1,7 +1,8 @@
 import { isArray } from '@vue/shared'
 import { ComponentInternalInstance } from '../component'
 import { callWithAsyncErrorHandling, ErrorCodes } from '../errorHandling'
-import { DeprecationTypes, warnDeprecation } from './deprecations'
+import { assertCompatEnabled } from './compatConfig'
+import { DeprecationTypes } from './deprecations'
 
 interface EventRegistry {
   [event: string]: Function[] | undefined
@@ -30,15 +31,13 @@ export function on(
   if (isArray(event)) {
     event.forEach(e => on(instance, e, fn))
   } else {
+    if (event.startsWith('hook:')) {
+      assertCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS)
+    } else {
+      assertCompatEnabled(DeprecationTypes.INSTANCE_EVENT_EMITTER)
+    }
     const events = getRegistry(instance)
     ;(events[event] || (events[event] = [])).push(fn)
-    if (__DEV__) {
-      if (event.startsWith('hook:')) {
-        warnDeprecation(DeprecationTypes.INSTANCE_EVENT_HOOKS)
-      } else {
-        warnDeprecation(DeprecationTypes.INSTANCE_EVENT_EMITTER)
-      }
-    }
   }
   return instance.proxy
 }
@@ -62,7 +61,7 @@ export function off(
   event?: string,
   fn?: Function
 ) {
-  __DEV__ && warnDeprecation(DeprecationTypes.INSTANCE_EVENT_EMITTER)
+  assertCompatEnabled(DeprecationTypes.INSTANCE_EVENT_EMITTER)
   const vm = instance.proxy
   // all
   if (!arguments.length) {

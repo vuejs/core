@@ -33,8 +33,8 @@ import {
 } from './errorHandling'
 import { queuePostRenderEffect } from './renderer'
 import { warn } from './warning'
-import { DeprecationTypes, warnDeprecation } from './compat/deprecations'
-import { isCompatEnabled } from './compat/compatConfig'
+import { DeprecationTypes } from './compat/deprecations'
+import { isCompatEnabled, softAssertCompatEnabled } from './compat/compatConfig'
 
 export type WatchEffect = (onInvalidate: InvalidateCbRegistrator) => void
 
@@ -224,11 +224,11 @@ function doWatch(
     const baseGetter = getter
     getter = () => {
       const val = baseGetter()
-      if (isArray(val)) {
-        __DEV__ && warnDeprecation(DeprecationTypes.WATCH_ARRAY)
-        if (isCompatEnabled(DeprecationTypes.WATCH_ARRAY)) {
-          traverse(val)
-        }
+      if (
+        isArray(val) &&
+        softAssertCompatEnabled(DeprecationTypes.WATCH_ARRAY)
+      ) {
+        traverse(val)
       }
       return val
     }

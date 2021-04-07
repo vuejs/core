@@ -1,6 +1,7 @@
 import { isArray } from '@vue/shared'
 import { ObjectDirective, DirectiveHook } from '../directives'
-import { DeprecationTypes, warnDeprecation } from './deprecations'
+import { softAssertCompatEnabled } from './compatConfig'
+import { DeprecationTypes } from './deprecations'
 
 export interface LegacyDirective {
   bind?: DirectiveHook
@@ -33,15 +34,14 @@ export function mapCompatDirectiveHook(
       mappedName.forEach(name => {
         const mappedHook = dir[name]
         if (mappedHook) {
-          __DEV__ &&
-            warnDeprecation(DeprecationTypes.CUSTOM_DIR, mappedName, name)
+          softAssertCompatEnabled(DeprecationTypes.CUSTOM_DIR, mappedName, name)
           hook.push(mappedHook)
         }
       })
       return hook.length ? hook : undefined
     } else {
-      if (__DEV__ && dir[mappedName]) {
-        warnDeprecation(DeprecationTypes.CUSTOM_DIR, mappedName, name)
+      if (dir[mappedName]) {
+        softAssertCompatEnabled(DeprecationTypes.CUSTOM_DIR, mappedName, name)
       }
       return dir[mappedName]
     }

@@ -66,7 +66,8 @@ import { VNodeChild } from './vnode'
 import { callWithAsyncErrorHandling } from './errorHandling'
 import { UnionToIntersection } from './helpers/typeUtils'
 import { deepMergeData } from './compat/data'
-import { DeprecationTypes, warnDeprecation } from './compat/deprecations'
+import { DeprecationTypes } from './compat/deprecations'
+import { isCompatEnabled, softAssertCompatEnabled } from './compat/compatConfig'
 
 /**
  * Interface for declaring custom options.
@@ -805,12 +806,16 @@ export function applyOptions(
   }
 
   if (__COMPAT__) {
-    if (beforeDestroy) {
-      __DEV__ && warnDeprecation(DeprecationTypes.OPTIONS_BEFORE_DESTROY)
+    if (
+      beforeDestroy &&
+      softAssertCompatEnabled(DeprecationTypes.OPTIONS_BEFORE_DESTROY)
+    ) {
       onBeforeUnmount(beforeDestroy.bind(publicThis))
     }
-    if (destroyed) {
-      __DEV__ && warnDeprecation(DeprecationTypes.OPTIONS_DESTROYED)
+    if (
+      destroyed &&
+      softAssertCompatEnabled(DeprecationTypes.OPTIONS_DESTROYED)
+    ) {
       onUnmounted(destroyed.bind(publicThis))
     }
   }
@@ -911,7 +916,7 @@ function resolveData(
     instance.data = reactive(data)
   } else {
     // existing data: this is a mixin or extends.
-    if (__COMPAT__) {
+    if (__COMPAT__ && isCompatEnabled(DeprecationTypes.OPTIONS_DATA_MERGE)) {
       deepMergeData(instance.data, data)
     } else {
       extend(instance.data, data)

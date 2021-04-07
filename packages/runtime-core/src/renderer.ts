@@ -85,6 +85,11 @@ import {
 } from './devtools'
 import { initFeatureFlags } from './featureFlags'
 import { isAsyncWrapper } from './apiAsyncComponent'
+import { isCompatEnabled } from './compat/compatConfig'
+import { DeprecationTypes } from './compat/deprecations'
+
+const isHookEventCompatEnabled =
+  __COMPAT__ && isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS)
 
 export interface Renderer<HostElement = RendererElement> {
   render: RootRenderFunction<HostElement>
@@ -1417,7 +1422,7 @@ function baseCreateRenderer(
         if ((vnodeHook = props && props.onVnodeBeforeMount)) {
           invokeVNodeHook(vnodeHook, parent, initialVNode)
         }
-        if (__COMPAT__) {
+        if (__COMPAT__ && isHookEventCompatEnabled) {
           instance.emit('hook:beforeMount')
         }
 
@@ -1475,7 +1480,7 @@ function baseCreateRenderer(
             parentSuspense
           )
         }
-        if (__COMPAT__) {
+        if (__COMPAT__ && isHookEventCompatEnabled) {
           queuePostRenderEffect(
             () => instance.emit('hook:mounted'),
             parentSuspense
@@ -1487,7 +1492,7 @@ function baseCreateRenderer(
         // since the hook may be injected by a child keep-alive
         if (initialVNode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
           instance.a && queuePostRenderEffect(instance.a, parentSuspense)
-          if (__COMPAT__) {
+          if (__COMPAT__ && isHookEventCompatEnabled) {
             queuePostRenderEffect(
               () => instance.emit('hook:activated'),
               parentSuspense
@@ -1528,7 +1533,7 @@ function baseCreateRenderer(
         if ((vnodeHook = next.props && next.props.onVnodeBeforeUpdate)) {
           invokeVNodeHook(vnodeHook, parent, next, vnode)
         }
-        if (__COMPAT__) {
+        if (__COMPAT__ && isHookEventCompatEnabled) {
           instance.emit('hook:beforeUpdate')
         }
 
@@ -1578,7 +1583,7 @@ function baseCreateRenderer(
             parentSuspense
           )
         }
-        if (__COMPAT__) {
+        if (__COMPAT__ && isHookEventCompatEnabled) {
           queuePostRenderEffect(
             () => instance.emit('hook:updated'),
             parentSuspense
@@ -2239,7 +2244,7 @@ function baseCreateRenderer(
     if (bum) {
       invokeArrayFns(bum)
     }
-    if (__COMPAT__) {
+    if (__COMPAT__ && isHookEventCompatEnabled) {
       instance.emit('hook:beforeDestroy')
     }
 
@@ -2258,7 +2263,7 @@ function baseCreateRenderer(
     if (um) {
       queuePostRenderEffect(um, parentSuspense)
     }
-    if (__COMPAT__) {
+    if (__COMPAT__ && isHookEventCompatEnabled) {
       queuePostRenderEffect(
         () => instance.emit('hook:destroyed'),
         parentSuspense

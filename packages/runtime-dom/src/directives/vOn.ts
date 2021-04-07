@@ -57,10 +57,12 @@ const keyNames: Record<string, string | string[]> = {
  * @private
  */
 export const withKeys = (fn: Function, modifiers: string[]) => {
-  let keyCodes: LegacyConfig['keyCodes']
+  let globalKeyCodes: LegacyConfig['keyCodes']
   if (__COMPAT__) {
-    keyCodes = ((getCurrentInstance()!.appContext
-      .config as any) as LegacyConfig).keyCodes
+    if (compatUtils.isCompatEnabled(DeprecationTypes.CONFIG_KEY_CODES)) {
+      globalKeyCodes = ((getCurrentInstance()!.appContext
+        .config as any) as LegacyConfig).keyCodes
+    }
     if (__DEV__ && modifiers.some(m => /^\d+$/.test(m))) {
       compatUtils.warnDeprecation(DeprecationTypes.V_ON_KEYCODE_MODIFIER)
     }
@@ -78,12 +80,15 @@ export const withKeys = (fn: Function, modifiers: string[]) => {
 
     if (__COMPAT__) {
       const keyCode = String(event.keyCode)
-      if (modifiers.some(mod => mod == keyCode)) {
+      if (
+        compatUtils.isCompatEnabled(DeprecationTypes.V_ON_KEYCODE_MODIFIER) &&
+        modifiers.some(mod => mod == keyCode)
+      ) {
         return fn(event)
       }
-      if (keyCodes) {
+      if (globalKeyCodes) {
         for (const mod of modifiers) {
-          const codes = keyCodes[mod]
+          const codes = globalKeyCodes[mod]
           if (codes) {
             const matches = isArray(codes)
               ? codes.some(code => String(code) === keyCode)

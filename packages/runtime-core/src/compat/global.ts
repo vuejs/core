@@ -29,7 +29,12 @@ import { warnDeprecation, DeprecationTypes } from './deprecations'
 import { version } from '..'
 import { LegacyConfig } from './globalConfig'
 import { LegacyDirective } from './customDirective'
-import { configureCompat } from './compatConfig'
+import {
+  assertCompatEnabled,
+  configureCompat,
+  isCompatEnabled,
+  softAssertCompatEnabled
+} from './compatConfig'
 
 /**
  * @deprecated the default `Vue` export has been removed in Vue 3. The type for
@@ -91,9 +96,14 @@ export function createCompatVue(
   const singletonApp = createApp({})
 
   function createCompatApp(options: ComponentOptions = {}, Ctor: any) {
+    assertCompatEnabled(DeprecationTypes.GLOBAL_MOUNT)
+
     const { data } = options
-    if (data && !isFunction(data)) {
-      __DEV__ && warnDeprecation(DeprecationTypes.OPTIONS_DATA_FN)
+    if (
+      data &&
+      !isFunction(data) &&
+      softAssertCompatEnabled(DeprecationTypes.OPTIONS_DATA_FN)
+    ) {
       options.data = () => data
     }
 
@@ -119,15 +129,20 @@ export function createCompatVue(
     isCopyingConfig = false
 
     // copy prototype augmentations as config.globalProperties
+    const isPrototypeEnabled = isCompatEnabled(
+      DeprecationTypes.GLOBAL_PROTOTYPE
+    )
     let hasPrototypeAugmentations = false
     for (const key in Ctor.prototype) {
       if (key !== 'constructor') {
         hasPrototypeAugmentations = true
       }
-      app.config.globalProperties[key] = Ctor.prototype[key]
+      if (isPrototypeEnabled) {
+        app.config.globalProperties[key] = Ctor.prototype[key]
+      }
     }
-    if (hasPrototypeAugmentations) {
-      __DEV__ && warnDeprecation(DeprecationTypes.GLOBAL_PROTOTYPE)
+    if (__DEV__ && hasPrototypeAugmentations) {
+      warnDeprecation(DeprecationTypes.GLOBAL_PROTOTYPE)
     }
 
     const vm = app._createRoot!(options)
@@ -140,8 +155,11 @@ export function createCompatVue(
 
   Vue.version = __VERSION__
   Vue.config = singletonApp.config
+  Vue.nextTick = nextTick
 
   Vue.extend = ((options: ComponentOptions = {}) => {
+    assertCompatEnabled(DeprecationTypes.GLOBAL_EXTEND)
+
     function SubVue(inlineOptions?: ComponentOptions) {
       if (!inlineOptions) {
         return createCompatApp(options, SubVue)
@@ -161,24 +179,20 @@ export function createCompatVue(
     return SubVue
   }) as any
 
-  Vue.nextTick = nextTick
-
   Vue.set = (target, key, value) => {
-    __DEV__ && warnDeprecation(DeprecationTypes.GLOBAL_SET)
+    assertCompatEnabled(DeprecationTypes.GLOBAL_SET)
     target[key] = value
   }
 
   Vue.delete = (target, key) => {
-    __DEV__ && warnDeprecation(DeprecationTypes.GLOBAL_DELETE)
+    assertCompatEnabled(DeprecationTypes.GLOBAL_DELETE)
     delete target[key]
   }
 
-  Vue.observable = __DEV__
-    ? (target: any) => {
-        warnDeprecation(DeprecationTypes.GLOBAL_OBSERVABLE)
-        return reactive(target)
-      }
-    : reactive
+  Vue.observable = (target: any) => {
+    assertCompatEnabled(DeprecationTypes.GLOBAL_OBSERVABLE)
+    return reactive(target)
+  }
 
   Vue.use = (p, ...options) => {
     singletonApp.use(p, ...options)

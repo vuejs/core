@@ -34,6 +34,8 @@ import { isEmitListener } from './componentEmits'
 import { InternalObjectKey } from './vnode'
 import { AppContext } from './apiCreateApp'
 import { createPropsDefaultThis } from './compat/props'
+import { isCompatEnabled } from './compat/compatConfig'
+import { DeprecationTypes } from './compat/deprecations'
 
 export type ComponentPropsOptions<P = Data> =
   | ComponentObjectPropsOptions<P>
@@ -343,10 +345,14 @@ function resolvePropValue(
           value = propsDefaults[key]
         } else {
           setCurrentInstance(instance)
-          value = propsDefaults[key] =
-            __COMPAT__ && __DEV__
-              ? defaultValue.call(createPropsDefaultThis(key), props)
-              : defaultValue(props)
+          value = propsDefaults[key] = defaultValue.call(
+            __COMPAT__ &&
+            __DEV__ &&
+            isCompatEnabled(DeprecationTypes.PROPS_DEFAULT_THIS)
+              ? createPropsDefaultThis(key)
+              : null,
+            props
+          )
           setCurrentInstance(null)
         }
       } else {

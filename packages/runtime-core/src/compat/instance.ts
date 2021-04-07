@@ -1,7 +1,8 @@
 import { extend, NOOP } from '@vue/shared'
 import { PublicPropertiesMap } from '../componentPublicInstance'
 import { getInstanceChildren } from './children'
-import { DeprecationTypes, warnDeprecation } from './deprecations'
+import { assertCompatEnabled } from './compatConfig'
+import { DeprecationTypes } from './deprecations'
 import { off, on, once } from './eventEmitter'
 
 export function installCompatInstanceProperties(map: PublicPropertiesMap) {
@@ -15,20 +16,20 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
 
   extend(map, {
     $set: () => {
-      __DEV__ && warnDeprecation(DeprecationTypes.INSTANCE_SET)
+      assertCompatEnabled(DeprecationTypes.INSTANCE_SET)
       return set
     },
     $delete: () => {
-      __DEV__ && warnDeprecation(DeprecationTypes.INSTANCE_DELETE)
+      assertCompatEnabled(DeprecationTypes.INSTANCE_DELETE)
       return del
     },
     $mount: i => {
-      __DEV__ && warnDeprecation(DeprecationTypes.INSTANCE_MOUNT)
+      assertCompatEnabled(DeprecationTypes.GLOBAL_MOUNT)
       // root mount override from ./global.ts in installCompatMount
       return i.ctx._compat_mount || NOOP
     },
     $destroy: i => {
-      __DEV__ && warnDeprecation(DeprecationTypes.INSTANCE_DESTROY)
+      assertCompatEnabled(DeprecationTypes.INSTANCE_DESTROY)
       // root destroy override from ./global.ts in installCompatMount
       return i.ctx._compat_destroy || NOOP
     },

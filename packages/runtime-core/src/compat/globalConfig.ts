@@ -1,6 +1,7 @@
 import { isArray, isString } from '@vue/shared'
 import { AppConfig } from '../apiCreateApp'
 import { isRuntimeOnly } from '../component'
+import { isCompatEnabled } from './compatConfig'
 import { DeprecationTypes, warnDeprecation } from './deprecations'
 import { isCopyingConfig } from './global'
 
@@ -56,7 +57,12 @@ export function installLegacyConfigTraps(config: AppConfig) {
         val = newVal
 
         // compat for runtime ignoredElements -> isCustomElement
-        if (key === 'ignoredElements' && !isRuntimeOnly() && isArray(newVal)) {
+        if (
+          key === 'ignoredElements' &&
+          isCompatEnabled(DeprecationTypes.CONFIG_IGNORED_ELEMENTS) &&
+          !isRuntimeOnly() &&
+          isArray(newVal)
+        ) {
           config.isCustomElement = tag => {
             return newVal.some(
               val => (isString(val) ? val === tag : val.test(tag))
