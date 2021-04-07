@@ -3,7 +3,9 @@ import {
   BaseTransitionProps,
   h,
   warn,
-  FunctionalComponent
+  FunctionalComponent,
+  compatUtils,
+  DeprecationTypes
 } from '@vue/runtime-core'
 import { isObject, toNumber, extend } from '@vue/shared'
 
@@ -99,10 +101,13 @@ export function resolveTransitionProps(
   } = rawProps
 
   // legacy transition class compat
+  const legacyClassEnabled =
+    __COMPAT__ &&
+    compatUtils.isCompatEnabled(DeprecationTypes.TRANSITION_CLASSES)
   let legacyEnterFromClass: string
   let legacyAppearFromClass: string
   let legacyLeaveFromClass: string
-  if (__COMPAT__) {
+  if (__COMPAT__ && legacyClassEnabled) {
     const toLegacyClass = (cls: string) => cls.replace(/-from$/, '')
     if (!rawProps.enterFromClass) {
       legacyEnterFromClass = toLegacyClass(enterFromClass)
@@ -148,7 +153,7 @@ export function resolveTransitionProps(
       hook && hook(el, resolve)
       nextFrame(() => {
         removeTransitionClass(el, isAppear ? appearFromClass : enterFromClass)
-        if (__COMPAT__) {
+        if (__COMPAT__ && legacyClassEnabled) {
           removeTransitionClass(
             el,
             isAppear ? legacyAppearFromClass : legacyEnterFromClass
@@ -166,7 +171,7 @@ export function resolveTransitionProps(
     onBeforeEnter(el) {
       onBeforeEnter && onBeforeEnter(el)
       addTransitionClass(el, enterFromClass)
-      if (__COMPAT__) {
+      if (__COMPAT__ && legacyClassEnabled) {
         addTransitionClass(el, legacyEnterFromClass)
       }
       addTransitionClass(el, enterActiveClass)
@@ -174,7 +179,7 @@ export function resolveTransitionProps(
     onBeforeAppear(el) {
       onBeforeAppear && onBeforeAppear(el)
       addTransitionClass(el, appearFromClass)
-      if (__COMPAT__) {
+      if (__COMPAT__ && legacyClassEnabled) {
         addTransitionClass(el, legacyAppearFromClass)
       }
       addTransitionClass(el, appearActiveClass)
@@ -184,7 +189,7 @@ export function resolveTransitionProps(
     onLeave(el, done) {
       const resolve = () => finishLeave(el, done)
       addTransitionClass(el, leaveFromClass)
-      if (__COMPAT__) {
+      if (__COMPAT__ && legacyClassEnabled) {
         addTransitionClass(el, legacyLeaveFromClass)
       }
       // force reflow so *-leave-from classes immediately take effect (#2593)
@@ -192,7 +197,7 @@ export function resolveTransitionProps(
       addTransitionClass(el, leaveActiveClass)
       nextFrame(() => {
         removeTransitionClass(el, leaveFromClass)
-        if (__COMPAT__) {
+        if (__COMPAT__ && legacyClassEnabled) {
           removeTransitionClass(el, legacyLeaveFromClass)
         }
         addTransitionClass(el, leaveToClass)

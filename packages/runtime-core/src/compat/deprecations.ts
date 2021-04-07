@@ -32,7 +32,10 @@ export const enum DeprecationTypes {
   V_ON_KEYCODE_MODIFIER = 'V_ON_KEYCODE_MODIFIER',
   PROPS_DEFAULT_THIS = 'PROPS_DEFAULT_THIS',
   CUSTOM_DIR = 'CUSTOM_DIR',
-  WATCH_ARRAY = 'WATCH_ARRAY'
+  WATCH_ARRAY = 'WATCH_ARRAY',
+
+  TRANSITION_CLASSES = 'TRANSITION_CLASSES',
+  TRANSITION_GROUP_ROOT = 'TRANSITION_GROUP_ROOT'
 }
 
 type DeprecationData = {
@@ -213,11 +216,28 @@ const deprecationData: Record<DeprecationTypes, DeprecationData> = {
     message:
       `"watch" option or vm.$watch on an array value will no longer ` +
       `trigger on array mutation unless the "deep" option is specified. ` +
-      `If current usage is intended, you can suppress this warning with:` +
+      `If current usage is intended, you can disable the compat behavior and ` +
+      `suppress this warning with:` +
       `\n\n  configureCompat({ ${
         DeprecationTypes.WATCH_ARRAY
-      }: { mode: 3 }})\n`,
+      }: { enabled: false }})\n`,
     link: `https://v3.vuejs.org/guide/migration/watch.html`
+  },
+
+  [DeprecationTypes.TRANSITION_CLASSES]: {
+    message: `` // this feature cannot be runtime-detected
+  },
+
+  [DeprecationTypes.TRANSITION_GROUP_ROOT]: {
+    message:
+      `<TransitionGroup> no longer renders a root <span> element by ` +
+      `default if no "tag" prop is specified. If you do not rely on the span ` +
+      `for styling, you can disable the compat behavior and suppress this ` +
+      `warning with:` +
+      `\n\n  configureCompat({ ${
+        DeprecationTypes.TRANSITION_GROUP_ROOT
+      }: { enabled: false }})\n`,
+    link: `https://v3.vuejs.org/guide/migration/transition-group.html`
   }
 }
 
@@ -250,7 +270,7 @@ export function warnDeprecation(key: DeprecationTypes, ...args: any[]) {
   hasWarned[dupKey] = true
   const { message, link } = deprecationData[key]
   warn(
-    `(DEPRECATION ${key}) ${
+    `(deprecation ${key}) ${
       typeof message === 'function' ? message(...args) : message
     }${link ? `\n  Details: ${link}` : ``}`
   )
