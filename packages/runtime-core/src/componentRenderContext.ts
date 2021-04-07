@@ -1,6 +1,5 @@
 import { ComponentInternalInstance } from './component'
 import { devtoolsComponentUpdated } from './devtools'
-import { isRenderingCompiledSlot } from './helpers/renderSlot'
 import { closeBlock, openBlock } from './vnode'
 
 /**
@@ -56,6 +55,13 @@ export function popScopeId() {
  */
 export const withScopeId = (_id: string) => withCtx
 
+export type ContextualRenderFn = {
+  (...args: any[]): any
+  _c: boolean /* compiled */
+  _d: boolean /* disableTracking */
+  _nonScoped: boolean
+}
+
 /**
  * Wrap a slot function to memoize current rendering instance
  * @private compiler helper
@@ -66,17 +72,17 @@ export function withCtx(
   isNonScopedSlot?: boolean // __COMPAT__ only
 ) {
   if (!ctx) return fn
-  const renderFnWithContext = (...args: any[]) => {
+  const renderFnWithContext: ContextualRenderFn = (...args: any[]) => {
     // If a user calls a compiled slot inside a template expression (#1745), it
     // can mess up block tracking, so by default we need to push a null block to
     // avoid that. This isn't necessary if rendering a compiled `<slot>`.
-    if (!isRenderingCompiledSlot) {
+    if (renderFnWithContext._d) {
       openBlock(true /* null block that disables tracking */)
     }
     const prevInstance = setCurrentRenderingInstance(ctx)
     const res = fn(...args)
     setCurrentRenderingInstance(prevInstance)
-    if (!isRenderingCompiledSlot) {
+    if (renderFnWithContext._d) {
       closeBlock()
     }
 
@@ -90,7 +96,8 @@ export function withCtx(
   // this is used in vnode.ts -> normalizeChildren() to set the slot
   // rendering flag.
   // also used to cache the normalized results to avoid repeated normalization
-  renderFnWithContext._c = renderFnWithContext
+  renderFnWithContext._c = true
+  renderFnWithContext._d = true
   if (__COMPAT__ && isNonScopedSlot) {
     renderFnWithContext._nonScoped = true
   }

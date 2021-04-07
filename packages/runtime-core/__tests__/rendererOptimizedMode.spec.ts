@@ -576,4 +576,75 @@ describe('renderer: optimized mode', () => {
     await nextTick()
     expect(inner(root)).toBe('<div>World</div>')
   })
+
+  // #3548
+  test('should not track dynamic children when the user calls a compiled slot inside template expression', () => {
+    const Comp = {
+      setup(props: any, { slots }: SetupContext) {
+        return () => {
+          return (
+            openBlock(),
+            (block = createBlock('section', null, [
+              renderSlot(slots, 'default')
+            ]))
+          )
+        }
+      }
+    }
+
+    let dynamicVNode: VNode
+    const Wrapper = {
+      setup(props: any, { slots }: SetupContext) {
+        return () => {
+          return (
+            openBlock(),
+            createBlock(Comp, null, {
+              default: withCtx(() => {
+                return [
+                  (dynamicVNode = createVNode(
+                    'div',
+                    {
+                      class: {
+                        foo: !!slots.default!()
+                      }
+                    },
+                    null,
+                    PatchFlags.CLASS
+                  ))
+                ]
+              }),
+              _: 1
+            })
+          )
+        }
+      }
+    }
+    const app = createApp({
+      render() {
+        return (
+          openBlock(),
+          createBlock(Wrapper, null, {
+            default: withCtx(() => {
+              return [createVNode({}) /* component */]
+            }),
+            _: 1
+          })
+        )
+      }
+    })
+
+    app.mount(root)
+    expect(inner(root)).toBe('<section><div class="foo"></div></section>')
+    /**
+     * Block Tree:
+     *  - block(div)
+     *   - block(Fragment): renderSlots()
+     *    - dynamicVNode
+     */
+    expect(block!.dynamicChildren!.length).toBe(1)
+    expect(block!.dynamicChildren![0].dynamicChildren!.length).toBe(1)
+    expect(block!.dynamicChildren![0].dynamicChildren![0]).toEqual(
+      dynamicVNode!
+    )
+  })
 })
