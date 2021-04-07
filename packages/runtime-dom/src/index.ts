@@ -9,8 +9,8 @@ import {
   App,
   RootHydrateFunction,
   isRuntimeOnly,
-  warnDeprecation,
-  DeprecationTypes
+  DeprecationTypes,
+  compatUtils
 } from '@vue/runtime-core'
 import { nodeOps } from './nodeOps'
 import { patchProp, forcePatchProp } from './patchProp'
@@ -78,7 +78,7 @@ export const createApp = ((...args) => {
         for (let i = 0; i < container.attributes.length; i++) {
           const attr = container.attributes[i]
           if (attr.name !== 'v-cloak' && /^(v-|:|@)/.test(attr.name)) {
-            warnDeprecation(DeprecationTypes.GLOBAL_DOM_TEMPLATE_MOUNT)
+            compatUtils.warnDeprecation(DeprecationTypes.GLOBAL_MOUNT_CONTAINER)
             break
           }
         }

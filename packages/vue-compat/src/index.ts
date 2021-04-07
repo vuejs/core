@@ -7,7 +7,7 @@ import {
   RenderFunction,
   warn,
   createApp,
-  createCompatVue
+  compatUtils
 } from '@vue/runtime-dom'
 import { isString, NOOP, generateCodeFrame, extend } from '@vue/shared'
 import { InternalRenderFunction } from 'packages/runtime-core/src/component'
@@ -92,9 +92,10 @@ function compileToFunction(
 
 registerRuntimeCompiler(compileToFunction)
 
-const Vue = createCompatVue(createApp)
+const Vue = compatUtils.createCompatVue(createApp)
 
 Vue.compile = compileToFunction
+
 extend(Vue, runtimeDom)
 
 export default Vue

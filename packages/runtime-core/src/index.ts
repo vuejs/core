@@ -282,8 +282,20 @@ export const ssrUtils = (__NODE_JS__ ? _ssrUtils : null) as typeof _ssrUtils
 
 // 2.x COMPAT ------------------------------------------------------------------
 
-// Important: every function exported here must have `if (!__COMPAT__) return`
-// checks
-export { warnDeprecation, DeprecationTypes } from './compat/deprecations'
-export { createCompatVue, CompatVue } from './compat/global'
+export { DeprecationTypes } from './compat/deprecations'
+export { CompatVue } from './compat/global'
 export { LegacyConfig } from './compat/globalConfig'
+
+import { warnDeprecation } from './compat/deprecations'
+import { createCompatVue } from './compat/global'
+import { getCompatConfig } from './compat/compatConfig'
+
+const _compatUtils = {
+  warnDeprecation,
+  createCompatVue,
+  getCompatConfig
+}
+
+export const compatUtils = (__COMPAT__
+  ? _compatUtils
+  : null) as typeof _compatUtils

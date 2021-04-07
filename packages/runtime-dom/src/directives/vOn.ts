@@ -1,8 +1,8 @@
 import {
-  DeprecationTypes,
-  warnDeprecation,
   getCurrentInstance,
-  LegacyConfig
+  DeprecationTypes,
+  LegacyConfig,
+  compatUtils
 } from '@vue/runtime-core'
 import { hyphenate, isArray } from '@vue/shared'
 
@@ -62,7 +62,7 @@ export const withKeys = (fn: Function, modifiers: string[]) => {
     keyCodes = ((getCurrentInstance()!.appContext
       .config as any) as LegacyConfig).keyCodes
     if (__DEV__ && modifiers.some(m => /^\d+$/.test(m))) {
-      warnDeprecation(DeprecationTypes.V_ON_KEYCODE_MODIFIER)
+      compatUtils.warnDeprecation(DeprecationTypes.V_ON_KEYCODE_MODIFIER)
     }
   }
 

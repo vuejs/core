@@ -1,37 +1,38 @@
 import { isRuntimeOnly } from '../component'
 import { warn } from '../warning'
+import { getCompatConfig } from './compatConfig'
 
 export const enum DeprecationTypes {
-  CONFIG_SILENT,
-  CONFIG_DEVTOOLS,
-  CONFIG_KEY_CODES,
-  CONFIG_PRODUCTION_TIP,
-  CONFIG_IGNORED_ELEMENTS,
+  CONFIG_SILENT = 'CONFIG_SILENT',
+  CONFIG_DEVTOOLS = 'CONFIG_DEVTOOLS',
+  CONFIG_KEY_CODES = 'CONFIG_KEY_CODES',
+  CONFIG_PRODUCTION_TIP = 'CONFIG_PRODUCTION_TIP',
+  CONFIG_IGNORED_ELEMENTS = 'CONFIG_IGNORED_ELEMENTS',
 
-  GLOBAL_PROTOTYPE,
-  GLOBAL_SET,
-  GLOBAL_DELETE,
-  GLOBAL_OBSERVABLE,
-  GLOBAL_DOM_TEMPLATE_MOUNT,
+  GLOBAL_PROTOTYPE = 'GLOBAL_PROTOTYPE',
+  GLOBAL_SET = 'GLOBAL_SET',
+  GLOBAL_DELETE = 'GLOBAL_DELETE',
+  GLOBAL_OBSERVABLE = 'GLOBAL_OBSERVABLE',
+  GLOBAL_MOUNT_CONTAINER = 'GLOBAL_MOUNT_CONTAINER',
 
-  INSTANCE_SET,
-  INSTANCE_DELETE,
-  INSTANCE_MOUNT,
-  INSTANCE_DESTROY,
-  INSTANCE_EVENT_EMITTER,
-  INSTANCE_EVENT_HOOKS,
-  INSTANCE_CHILDREN,
+  INSTANCE_SET = 'INSTANCE_SET',
+  INSTANCE_DELETE = 'INSTANCE_DELETE',
+  INSTANCE_MOUNT = 'INSTANCE_MOUNT',
+  INSTANCE_DESTROY = 'INSTANCE_DESTROY',
+  INSTANCE_EVENT_EMITTER = 'INSTANCE_EVENT_EMITTER',
+  INSTANCE_EVENT_HOOKS = 'INSTANCE_EVENT_HOOKS',
+  INSTANCE_CHILDREN = 'INSTANCE_CHILDREN',
 
-  OPTIONS_DATA_FN,
-  OPTIONS_DATA_MERGE,
-  OPTIONS_BEFORE_DESTROY,
-  OPTIONS_DESTROYED,
+  OPTIONS_DATA_FN = 'OPTIONS_DATA_FN',
+  OPTIONS_DATA_MERGE = 'OPTIONS_DATA_MERGE',
+  OPTIONS_BEFORE_DESTROY = 'OPTIONS_BEFORE_DESTROY',
+  OPTIONS_DESTROYED = 'OPTIONS_DESTROYED',
 
-  PROPS_DEFAULT_THIS,
+  PROPS_DEFAULT_THIS = 'PROPS_DEFAULT_THIS',
 
-  CUSTOM_DIR,
+  CUSTOM_DIR = 'CUSTOM_DIR',
 
-  V_ON_KEYCODE_MODIFIER
+  V_ON_KEYCODE_MODIFIER = 'V_ON_KEYCODE_MODIFIER'
 }
 
 type DeprecationData = {
@@ -39,7 +40,7 @@ type DeprecationData = {
   link?: string
 }
 
-const deprecations: Record<DeprecationTypes, DeprecationData> = {
+const deprecationMessages: Record<DeprecationTypes, DeprecationData> = {
   [DeprecationTypes.CONFIG_SILENT]: {
     message:
       `config.silent has been removed because it is not good practice to ` +
@@ -105,7 +106,7 @@ const deprecations: Record<DeprecationTypes, DeprecationData> = {
     link: `https://v3.vuejs.org/api/basic-reactivity.html`
   },
 
-  [DeprecationTypes.GLOBAL_DOM_TEMPLATE_MOUNT]: {
+  [DeprecationTypes.GLOBAL_MOUNT_CONTAINER]: {
     message:
       `Vue detected directives on the mount container. ` +
       `In Vue 3, the container is no longer considered part of the template ` +
@@ -204,18 +205,30 @@ const deprecations: Record<DeprecationTypes, DeprecationData> = {
 
 const hasWarned: Record<string, boolean> = {}
 
+/**
+ * @internal
+ */
 export function warnDeprecation(key: DeprecationTypes, ...args: any[]) {
-  if (!__COMPAT__ || !__DEV__) {
+  if (!__DEV__) {
     return
   }
+
+  // check user config
+  const config = getCompatConfig(key)
+  if (config && config.warning === false) {
+    return
+  }
+
+  // avoid spamming the same message
   const dupKey = key + args.join('')
   if (hasWarned[dupKey]) {
     return
   }
+
   hasWarned[dupKey] = true
-  const { message, link } = deprecations[key]
+  const { message, link } = deprecationMessages[key]
   warn(
-    `[DEPRECATION] ${
+    `(DEPRECATION ${key}) ${
       typeof message === 'function' ? message(...args) : message
     }${link ? `\n  Details: ${link}` : ``}`
   )

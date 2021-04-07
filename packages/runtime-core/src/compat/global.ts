@@ -29,6 +29,7 @@ import { warnDeprecation, DeprecationTypes } from './deprecations'
 import { version } from '..'
 import { LegacyConfig } from './globalConfig'
 import { LegacyDirective } from './customDirective'
+import { configureCompat } from './compatConfig'
 
 /**
  * @deprecated the default `Vue` export has been removed in Vue 3. The type for
@@ -73,6 +74,8 @@ export type CompatVue = Pick<App, 'version' | 'component' | 'directive'> & {
    * @deprecated filters have been removed from Vue 3.
    */
   filter(name: string, arg: any): null
+
+  configureCompat: typeof configureCompat
 }
 
 export let isCopyingConfig = false
@@ -81,11 +84,6 @@ export let isCopyingConfig = false
 export function createCompatVue(
   createApp: CreateAppFunction<Element>
 ): CompatVue {
-  if (!__COMPAT__) {
-    // @ts-ignore this function will never be called in non-compat mode
-    return
-  }
-
   const Vue: CompatVue = function Vue(options: ComponentOptions = {}) {
     return createCompatApp(options, Vue)
   } as any
@@ -215,6 +213,8 @@ export function createCompatVue(
     // TODO compiler warning for filters (maybe behavior compat?)
   }) as any
 
+  Vue.configureCompat = configureCompat
+
   return Vue
 }
 
@@ -306,7 +306,7 @@ export function installCompatMount(
           for (let i = 0; i < container.attributes.length; i++) {
             const attr = container.attributes[i]
             if (attr.name !== 'v-cloak' && /^(v-|:|@)/.test(attr.name)) {
-              warnDeprecation(DeprecationTypes.GLOBAL_DOM_TEMPLATE_MOUNT)
+              warnDeprecation(DeprecationTypes.GLOBAL_MOUNT_CONTAINER)
               break
             }
           }

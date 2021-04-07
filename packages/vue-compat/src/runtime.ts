@@ -1,15 +1,18 @@
 // This entry exports the runtime only, and is built as
 // `dist/vue.esm-bundler.js` which is used by default for bundlers.
 import { initDev } from './dev'
-import { warn } from '@vue/runtime-dom'
+import { compatUtils, createApp, warn } from '@vue/runtime-dom'
+import { extend } from '@vue/shared'
 
 if (__DEV__) {
   initDev()
 }
 
-export * from '@vue/runtime-dom'
+import * as runtimeDom from '@vue/runtime-dom'
 
-export const compile = () => {
+const Vue = compatUtils.createCompatVue(createApp)
+
+Vue.compile = (() => {
   if (__DEV__) {
     warn(
       `Runtime compilation is not supported in this build of Vue.` +
@@ -22,4 +25,8 @@ export const compile = () => {
               : ``) /* should not happen */
     )
   }
-}
+}) as any
+
+extend(Vue, runtimeDom)
+
+export default Vue
