@@ -334,9 +334,22 @@ export function instanceWatch(
 ): WatchStopHandle {
   const publicThis = this.proxy as any
   const getter = isString(source)
-    ? () => publicThis[source]
+    ? source.includes('.')
+      ? createPathGetter(publicThis, source)
+      : () => publicThis[source]
     : source.bind(publicThis)
   return doWatch(getter, cb.bind(publicThis), options, this)
+}
+
+export function createPathGetter(ctx: any, path: string) {
+  const segments = path.split('.')
+  return () => {
+    let cur = ctx
+    for (let i = 0; i < segments.length && cur; i++) {
+      cur = cur[segments[i]]
+    }
+    return cur
+  }
 }
 
 function traverse(value: unknown, seen: Set<unknown> = new Set()) {

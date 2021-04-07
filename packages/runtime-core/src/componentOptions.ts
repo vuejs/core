@@ -20,7 +20,12 @@ import {
   isPromise
 } from '@vue/shared'
 import { computed } from './apiComputed'
-import { watch, WatchOptions, WatchCallback } from './apiWatch'
+import {
+  watch,
+  WatchOptions,
+  WatchCallback,
+  createPathGetter
+} from './apiWatch'
 import { provide, inject } from './apiInject'
 import {
   onBeforeMount,
@@ -936,17 +941,6 @@ function createWatcher(
     }
   } else if (__DEV__) {
     warn(`Invalid watch option: "${key}"`, raw)
-  }
-}
-
-function createPathGetter(ctx: any, path: string) {
-  const segments = path.split('.')
-  return () => {
-    let cur = ctx
-    for (let i = 0; i < segments.length && cur; i++) {
-      cur = cur[segments[i]]
-    }
-    return cur
   }
 }
 

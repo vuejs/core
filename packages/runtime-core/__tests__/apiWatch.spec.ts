@@ -915,4 +915,33 @@ describe('api: watch', () => {
     // should not track b as dependency of Child
     expect(updated).toHaveBeenCalledTimes(1)
   })
+
+  test('watching keypath', async () => {
+    const spy = jest.fn()
+    const Comp = defineComponent({
+      render() {},
+      data() {
+        return {
+          a: {
+            b: 1
+          }
+        }
+      },
+      watch: {
+        'a.b': spy
+      },
+      created(this: any) {
+        this.$watch('a.b', spy)
+      },
+      mounted(this: any) {
+        this.a.b++
+      }
+    })
+
+    const root = nodeOps.createElement('div')
+    createApp(Comp).mount(root)
+
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(2)
+  })
 })
