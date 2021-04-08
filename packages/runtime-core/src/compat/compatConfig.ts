@@ -1,13 +1,11 @@
 import { extend } from '@vue/shared'
+import { ComponentOptions, getCurrentInstance } from '../component'
 import { DeprecationTypes, warnDeprecation } from './deprecations'
 
 export type CompatConfig = Partial<
-  Record<DeprecationTypes, DeprecationConfigItem>
->
-
-export interface DeprecationConfigItem {
-  warning?: boolean // default: true
-  enabled?: boolean // default: true
+  Record<DeprecationTypes, boolean | 'suppress-warning'>
+> & {
+  MODE?: 2 | 3
 }
 
 const globalCompatConfig: CompatConfig = {}
@@ -16,15 +14,24 @@ export function configureCompat(config: CompatConfig) {
   extend(globalCompatConfig, config)
 }
 
-export function getCompatConfig(
-  key: DeprecationTypes
-): DeprecationConfigItem | undefined {
+export function getCompatConfigForKey(key: DeprecationTypes | 'MODE') {
+  const instance = getCurrentInstance()
+  const instanceConfig =
+    instance && (instance.type as ComponentOptions).compatConfig
+  if (instanceConfig && key in instanceConfig) {
+    return instanceConfig[key]
+  }
   return globalCompatConfig[key]
 }
 
 export function isCompatEnabled(key: DeprecationTypes): boolean {
-  const config = getCompatConfig(key)
-  return !config || config.enabled !== false
+  const mode = getCompatConfigForKey('MODE') || 2
+  const val = getCompatConfigForKey(key)
+  if (mode === 2) {
+    return val !== false
+  } else {
+    return val === true || val === 'suppress-warning'
+  }
 }
 
 export function assertCompatEnabled(key: DeprecationTypes, ...args: any[]) {
@@ -45,9 +52,9 @@ export function softAssertCompatEnabled(key: DeprecationTypes, ...args: any[]) {
 // disable features that conflict with v3 behavior
 if (__TEST__) {
   configureCompat({
-    COMPONENT_ASYNC: { enabled: false },
-    COMPONENT_FUNCTIONAL: { enabled: false },
-    WATCH_ARRAY: { enabled: false },
-    INSTANCE_ATTRS_CLASS_STYLE: { enabled: false }
+    COMPONENT_ASYNC: false,
+    COMPONENT_FUNCTIONAL: false,
+    WATCH_ARRAY: false,
+    INSTANCE_ATTRS_CLASS_STYLE: false
   })
 }

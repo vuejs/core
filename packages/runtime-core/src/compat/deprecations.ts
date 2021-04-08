@@ -5,7 +5,7 @@ import {
   isRuntimeOnly
 } from '../component'
 import { warn } from '../warning'
-import { getCompatConfig } from './compatConfig'
+import { getCompatConfigForKey, isCompatEnabled } from './compatConfig'
 
 export const enum DeprecationTypes {
   GLOBAL_MOUNT = 'GLOBAL_MOUNT',
@@ -203,10 +203,10 @@ const deprecationData: Record<DeprecationTypes, DeprecationData> = {
       `Components with inheritAttrs: false will no longer auto-inherit ` +
       `class/style on its root element. If your code relies on this behavior, ` +
       `you may see broken styling and need to adjust your CSS. Otherwise, ` +
-      `you can suppress this warning with:` +
+      `you can disable the compat behavior and suppress this warning with:` +
       `\n\n  configureCompat({ ${
         DeprecationTypes.INSTANCE_ATTRS_CLASS_STYLE
-      }: { warning: false }})\n`,
+      }: false )\n`,
     link: `https://v3.vuejs.org/guide/migration/attrs-includes-class-style.html`
   },
 
@@ -238,9 +238,7 @@ const deprecationData: Record<DeprecationTypes, DeprecationData> = {
       `trigger on array mutation unless the "deep" option is specified. ` +
       `If current usage is intended, you can disable the compat behavior and ` +
       `suppress this warning with:` +
-      `\n\n  configureCompat({ ${
-        DeprecationTypes.WATCH_ARRAY
-      }: { enabled: false }})\n`,
+      `\n\n  configureCompat({ ${DeprecationTypes.WATCH_ARRAY}: false })\n`,
     link: `https://v3.vuejs.org/guide/migration/watch.html`
   },
 
@@ -273,7 +271,7 @@ const deprecationData: Record<DeprecationTypes, DeprecationData> = {
       `you can disable the compat behavior and suppress this warning with:` +
       `\n\n  configureCompat({ ${
         DeprecationTypes.ATTR_FALSE_VALUE
-      }: { enabled: false }})\n`,
+      }: false })\n`,
     link: `https://v3.vuejs.org/guide/migration/attribute-coercion.html`
   },
 
@@ -288,7 +286,7 @@ const deprecationData: Record<DeprecationTypes, DeprecationData> = {
       `you can disable the compat behavior and suppress this warning with:` +
       `\n\n  configureCompat({ ${
         DeprecationTypes.ATTR_ENUMERATED_COERSION
-      }: { enabled: false }})\n`,
+      }: false })\n`,
     link: `https://v3.vuejs.org/guide/migration/attribute-coercion.html`
   },
 
@@ -304,7 +302,7 @@ const deprecationData: Record<DeprecationTypes, DeprecationData> = {
       `warning with:` +
       `\n\n  configureCompat({ ${
         DeprecationTypes.TRANSITION_GROUP_ROOT
-      }: { enabled: false }})\n`,
+      }: false })\n`,
     link: `https://v3.vuejs.org/guide/migration/transition-group.html`
   },
 
@@ -335,7 +333,7 @@ const deprecationData: Record<DeprecationTypes, DeprecationData> = {
         `then disable compat for legacy async components with:` +
         `\n\n  configureCompat({ ${
           DeprecationTypes.COMPONENT_ASYNC
-        }: { enabled: false }})\n`
+        }: false })\n`
       )
     },
     link: `https://v3.vuejs.org/guide/migration/functional-components.html`
@@ -354,12 +352,8 @@ export function warnDeprecation(key: DeprecationTypes, ...args: any[]) {
   }
 
   // check user config
-  const config = getCompatConfig(key)
-  if (
-    config &&
-    (config.warning === false ||
-      (config.enabled === false && config.warning !== true))
-  ) {
+  const config = getCompatConfigForKey(key)
+  if (config === 'suppress-warning') {
     return
   }
 
@@ -391,4 +385,10 @@ export function warnDeprecation(key: DeprecationTypes, ...args: any[]) {
       typeof message === 'function' ? message(...args) : message
     }${link ? `\n  Details: ${link}` : ``}`
   )
+  if (!isCompatEnabled(key)) {
+    console.error(
+      `^ The above deprecation's compat behavior is disabled and will likely ` +
+        `lead to runtime errors.`
+    )
+  }
 }

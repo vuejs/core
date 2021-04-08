@@ -88,9 +88,6 @@ import { isAsyncWrapper } from './apiAsyncComponent'
 import { isCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/deprecations'
 
-const isHookEventCompatEnabled =
-  __COMPAT__ && isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS)
-
 export interface Renderer<HostElement = RendererElement> {
   render: RootRenderFunction<HostElement>
   createApp: CreateAppFunction<HostElement>
@@ -445,6 +442,9 @@ function baseCreateRenderer(
   options: RendererOptions,
   createHydrationFns?: typeof createHydrationFunctions
 ): any {
+  const isHookEventCompatEnabled =
+    __COMPAT__ && isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS)
+
   // compile-time feature flags check
   if (__ESM_BUNDLER__ && !__TEST__) {
     initFeatureFlags()

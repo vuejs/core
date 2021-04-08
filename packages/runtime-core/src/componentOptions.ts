@@ -67,7 +67,11 @@ import { callWithAsyncErrorHandling } from './errorHandling'
 import { UnionToIntersection } from './helpers/typeUtils'
 import { deepMergeData } from './compat/data'
 import { DeprecationTypes } from './compat/deprecations'
-import { isCompatEnabled, softAssertCompatEnabled } from './compat/compatConfig'
+import {
+  CompatConfig,
+  isCompatEnabled,
+  softAssertCompatEnabled
+} from './compat/compatConfig'
 
 /**
  * Interface for declaring custom options.
@@ -374,6 +378,8 @@ interface LegacyOptions<
   Mixin extends ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin
 > {
+  compatConfig?: CompatConfig
+
   // allow any custom options
   [key: string]: any
 
