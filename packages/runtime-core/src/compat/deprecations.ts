@@ -1,4 +1,8 @@
-import { isRuntimeOnly } from '../component'
+import {
+  formatComponentName,
+  getCurrentInstance,
+  isRuntimeOnly
+} from '../component'
 import { warn } from '../warning'
 import { getCompatConfig } from './compatConfig'
 
@@ -301,7 +305,8 @@ const deprecationData: Record<DeprecationTypes, DeprecationData> = {
   }
 }
 
-const hasWarned: Record<string, boolean> = {}
+const instanceWarned: Record<string, true> = Object.create(null)
+const warnCount: Record<string, number> = Object.create(null)
 
 /**
  * @internal
@@ -321,13 +326,28 @@ export function warnDeprecation(key: DeprecationTypes, ...args: any[]) {
     return
   }
 
-  // avoid spamming the same message
   const dupKey = key + args.join('')
-  if (hasWarned[dupKey]) {
+  const instance = getCurrentInstance()
+  const compName = instance && formatComponentName(instance, instance.type)
+
+  // skip if the same warning is emitted for the same component type
+  if (compName !== `Anonymous`) {
+    const componentDupKey = dupKey + compName
+    if (componentDupKey in instanceWarned) {
+      return
+    }
+    instanceWarned[componentDupKey] = true
+  }
+
+  // same warning, but different component. skip the long message and just
+  // log the key and count.
+  if (dupKey in warnCount) {
+    warn(`(deprecation ${key}) (${++warnCount[dupKey] + 1})`)
     return
   }
 
-  hasWarned[dupKey] = true
+  warnCount[dupKey] = 0
+
   const { message, link } = deprecationData[key]
   warn(
     `(deprecation ${key}) ${
