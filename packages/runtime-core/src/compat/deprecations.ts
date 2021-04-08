@@ -343,9 +343,6 @@ const deprecationData: Record<DeprecationTypes, DeprecationData> = {
 const instanceWarned: Record<string, true> = Object.create(null)
 const warnCount: Record<string, number> = Object.create(null)
 
-/**
- * @internal
- */
 export function warnDeprecation(key: DeprecationTypes, ...args: any[]) {
   if (!__DEV__) {
     return

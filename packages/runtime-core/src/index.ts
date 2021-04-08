@@ -297,6 +297,9 @@ const _compatUtils = {
   softAssertCompatEnabled
 }
 
+/**
+ * @internal only exposed in compat builds.
+ */
 export const compatUtils = (__COMPAT__
   ? _compatUtils
   : null) as typeof _compatUtils
