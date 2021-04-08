@@ -1,5 +1,6 @@
 import {
   formatComponentName,
+  getComponentName,
   getCurrentInstance,
   isRuntimeOnly
 } from '../component'
@@ -46,7 +47,10 @@ export const enum DeprecationTypes {
   ATTR_ENUMERATED_COERSION = 'ATTR_ENUMERATED_COERSION',
 
   TRANSITION_CLASSES = 'TRANSITION_CLASSES',
-  TRANSITION_GROUP_ROOT = 'TRANSITION_GROUP_ROOT'
+  TRANSITION_GROUP_ROOT = 'TRANSITION_GROUP_ROOT',
+
+  COMPONENT_ASYNC = 'COMPONENT_ASYNC',
+  COMPONENT_FUNCTIONAL = 'COMPONENT_FUNCTIONAL'
 }
 
 type DeprecationData = {
@@ -302,6 +306,39 @@ const deprecationData: Record<DeprecationTypes, DeprecationData> = {
         DeprecationTypes.TRANSITION_GROUP_ROOT
       }: { enabled: false }})\n`,
     link: `https://v3.vuejs.org/guide/migration/transition-group.html`
+  },
+
+  [DeprecationTypes.COMPONENT_ASYNC]: {
+    message: (comp: any) => {
+      const name = getComponentName(comp)
+      return (
+        `Async component${
+          name ? ` <${name}>` : `s`
+        } should be explicitly created via \`defineAsyncComponent()\` ` +
+        `in Vue 3. Plain functions will be treated as functional components in ` +
+        `non-compat build.`
+      )
+    },
+    link: `https://v3.vuejs.org/guide/migration/async-components.html`
+  },
+
+  [DeprecationTypes.COMPONENT_FUNCTIONAL]: {
+    message: (comp: any) => {
+      const name = getComponentName(comp)
+      return (
+        `Functional component${
+          name ? ` <${name}>` : `s`
+        } should be defined as a plain function in Vue 3. The "functional" ` +
+        `option has been removed.\n` +
+        `NOTE: Before migrating, ensure that all async ` +
+        `components have been upgraded to use \`defineAsyncComponent()\` and ` +
+        `then disable compat for legacy async components with:` +
+        `\n\n  configureCompat({ ${
+          DeprecationTypes.COMPONENT_ASYNC
+        }: { enabled: false }})\n`
+      )
+    },
+    link: `https://v3.vuejs.org/guide/migration/functional-components.html`
   }
 }
 

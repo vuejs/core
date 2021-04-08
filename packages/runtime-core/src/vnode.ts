@@ -41,6 +41,7 @@ import { RendererNode, RendererElement } from './renderer'
 import { NULL_DYNAMIC_COMPONENT } from './helpers/resolveAssets'
 import { hmrDirtyComponents } from './hmr'
 import { setCompiledSlotRendering } from './helpers/renderSlot'
+import { convertLegacyComponent } from './compat/component'
 
 export const Fragment = (Symbol(__DEV__ ? 'Fragment' : undefined) as any) as {
   __isFragment: true
@@ -356,6 +357,11 @@ function _createVNode(
   // class component normalization.
   if (isClassComponent(type)) {
     type = type.__vccOpts
+  }
+
+  // 2.x async/functional component compat
+  if (__COMPAT__) {
+    type = convertLegacyComponent(type)
   }
 
   // class & style normalization.
