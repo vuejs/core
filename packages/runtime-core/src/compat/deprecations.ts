@@ -25,6 +25,7 @@ export const enum DeprecationTypes {
   INSTANCE_CHILDREN = 'INSTANCE_CHILDREN',
   INSTANCE_LISTENERS = 'INSTANCE_LISTENERS',
   INSTANCE_SCOPED_SLOTS = 'INSTANCE_SCOPED_SLOTS',
+  INSTANCE_ATTRS_CLASS_STYLE = 'INSTANCE_ATTRS_CLASS_STYLE',
 
   OPTIONS_DATA_FN = 'OPTIONS_DATA_FN',
   OPTIONS_DATA_MERGE = 'OPTIONS_DATA_MERGE',
@@ -186,6 +187,19 @@ const deprecationData: Record<DeprecationTypes, DeprecationData> = {
   [DeprecationTypes.INSTANCE_SCOPED_SLOTS]: {
     message: `vm.$scopedSlots has been removed. Use vm.$slots instead.`,
     link: `https://v3.vuejs.org/guide/migration/slots-unification.html`
+  },
+
+  [DeprecationTypes.INSTANCE_ATTRS_CLASS_STYLE]: {
+    message:
+      `vm.$attrs now includes class and style bindings passed from parent. ` +
+      `Components with inheritAttrs: false will no longer auto-inherit ` +
+      `class/style on its root element. If your code relies on this behavior, ` +
+      `you may see broken styling and need to adjust your CSS. Otherwise, ` +
+      `you can suppress this warning with:` +
+      `\n\n  configureCompat({ ${
+        DeprecationTypes.INSTANCE_ATTRS_CLASS_STYLE
+      }: { warning: false }})\n`,
+    link: `https://v3.vuejs.org/guide/migration/attrs-includes-class-style.html`
   },
 
   [DeprecationTypes.OPTIONS_DATA_FN]: {

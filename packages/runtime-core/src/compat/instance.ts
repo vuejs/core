@@ -2,9 +2,10 @@ import { extend, NOOP } from '@vue/shared'
 import { PublicPropertiesMap } from '../componentPublicInstance'
 import { getCompatChildren } from './instanceChildren'
 import { assertCompatEnabled } from './compatConfig'
-import { DeprecationTypes } from './deprecations'
+import { DeprecationTypes, warnDeprecation } from './deprecations'
 import { off, on, once } from './instanceEventEmitter'
 import { getCompatListeners } from './instanceListeners'
+import { shallowReadonly } from '@vue/reactivity'
 
 export function installCompatInstanceProperties(map: PublicPropertiesMap) {
   const set = (target: any, key: any, val: any) => {
@@ -40,7 +41,15 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
 
     $scopedSlots: i => {
       assertCompatEnabled(DeprecationTypes.INSTANCE_SCOPED_SLOTS)
-      return i.slots
+      return __DEV__ ? shallowReadonly(i.slots) : i.slots
+    },
+
+    // overrides existing accessor
+    $attrs: i => {
+      if (__DEV__ && i.type.inheritAttrs === false) {
+        warnDeprecation(DeprecationTypes.INSTANCE_ATTRS_CLASS_STYLE)
+      }
+      return __DEV__ ? shallowReadonly(i.attrs) : i.attrs
     },
 
     $on: i => on.bind(null, i),
