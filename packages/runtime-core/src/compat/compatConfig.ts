@@ -41,3 +41,13 @@ export function softAssertCompatEnabled(key: DeprecationTypes, ...args: any[]) {
   }
   return isCompatEnabled(key)
 }
+
+// disable features that conflict with v3 behavior
+if (__TEST__) {
+  configureCompat({
+    COMPONENT_ASYNC: { enabled: false },
+    COMPONENT_FUNCTIONAL: { enabled: false },
+    WATCH_ARRAY: { enabled: false },
+    INSTANCE_ATTRS_CLASS_STYLE: { enabled: false }
+  })
+}

@@ -1,4 +1,4 @@
-import { isArray, isFunction, isObject, isPromise } from '@vue/shared/src'
+import { isArray, isFunction, isObject, isPromise } from '@vue/shared'
 import { defineAsyncComponent } from '../apiAsyncComponent'
 import { Component, ComponentOptions, FunctionalComponent } from '../component'
 import { isVNode } from '../vnode'
