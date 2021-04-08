@@ -20,23 +20,33 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
       assertCompatEnabled(DeprecationTypes.INSTANCE_SET)
       return set
     },
+
     $delete: () => {
       assertCompatEnabled(DeprecationTypes.INSTANCE_DELETE)
       return del
     },
+
     $mount: i => {
       assertCompatEnabled(DeprecationTypes.GLOBAL_MOUNT)
       // root mount override from ./global.ts in installCompatMount
       return i.ctx._compat_mount || NOOP
     },
+
     $destroy: i => {
       assertCompatEnabled(DeprecationTypes.INSTANCE_DESTROY)
       // root destroy override from ./global.ts in installCompatMount
       return i.ctx._compat_destroy || NOOP
     },
+
+    $scopedSlots: i => {
+      assertCompatEnabled(DeprecationTypes.INSTANCE_SCOPED_SLOTS)
+      return i.slots
+    },
+
     $on: i => on.bind(null, i),
     $once: i => once.bind(null, i),
     $off: i => off.bind(null, i),
+
     $children: getCompatChildren,
     $listeners: getCompatListeners
   } as PublicPropertiesMap)

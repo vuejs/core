@@ -24,6 +24,7 @@ export const enum DeprecationTypes {
   INSTANCE_EVENT_HOOKS = 'INSTANCE_EVENT_HOOKS',
   INSTANCE_CHILDREN = 'INSTANCE_CHILDREN',
   INSTANCE_LISTENERS = 'INSTANCE_LISTENERS',
+  INSTANCE_SCOPED_SLOTS = 'INSTANCE_SCOPED_SLOTS',
 
   OPTIONS_DATA_FN = 'OPTIONS_DATA_FN',
   OPTIONS_DATA_MERGE = 'OPTIONS_DATA_MERGE',
@@ -180,6 +181,11 @@ const deprecationData: Record<DeprecationTypes, DeprecationData> = {
       `included in vm.$attrs and it is no longer necessary to separately use ` +
       `v-on="$listeners" if you are already using v-bind="$attrs".`,
     link: `https://v3.vuejs.org/guide/migration/listeners-removed.html`
+  },
+
+  [DeprecationTypes.INSTANCE_SCOPED_SLOTS]: {
+    message: `vm.$scopedSlots has been removed. Use vm.$slots instead.`,
+    link: `https://v3.vuejs.org/guide/migration/slots-unification.html`
   },
 
   [DeprecationTypes.OPTIONS_DATA_FN]: {
