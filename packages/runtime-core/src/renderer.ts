@@ -16,6 +16,7 @@ import {
 } from './vnode'
 import {
   ComponentInternalInstance,
+  ComponentOptions,
   createComponentInstance,
   Data,
   setupComponent
@@ -1414,6 +1415,8 @@ function baseCreateRenderer(
         let vnodeHook: VNodeHook | null | undefined
         const { el, props } = initialVNode
         const { bm, m, parent } = instance
+        const asyncWrapper = isAsyncWrapper(initialVNode)
+        const isHydration = el && hydrateNode
 
         // beforeMount hook
         if (bm) {
@@ -1434,23 +1437,37 @@ function baseCreateRenderer(
         if (__DEV__) {
           startMeasure(instance, `render`)
         }
-        const subTree = (instance.subTree = renderComponentRoot(instance))
+        if (!isHydration || !asyncWrapper) {
+          instance.subTree = renderComponentRoot(instance)
+        }
         if (__DEV__) {
           endMeasure(instance, `render`)
         }
 
-        if (el && hydrateNode) {
+        if (isHydration) {
           if (__DEV__) {
             startMeasure(instance, `hydrate`)
           }
+
           // vnode has adopted host node - perform hydration instead of mount.
-          hydrateNode(
-            initialVNode.el as Node,
-            subTree,
-            instance,
-            parentSuspense,
-            null
-          )
+          const hydrateSubTree = () => {
+            instance.subTree = renderComponentRoot(instance)
+            hydrateNode!(
+              el as Node,
+              instance.subTree,
+              instance,
+              parentSuspense,
+              null
+            )
+          }
+
+          if (asyncWrapper) {
+            (initialVNode.type as ComponentOptions).__asyncLoader!().then(
+              hydrateSubTree
+            )
+          } else {
+            hydrateSubTree()
+          }
           if (__DEV__) {
             endMeasure(instance, `hydrate`)
           }
@@ -1460,7 +1477,7 @@ function baseCreateRenderer(
           }
           patch(
             null,
-            subTree,
+            instance.subTree,
             container,
             anchor,
             instance,
@@ -1470,7 +1487,7 @@ function baseCreateRenderer(
           if (__DEV__) {
             endMeasure(instance, `patch`)
           }
-          initialVNode.el = subTree.el
+          initialVNode.el = instance.subTree.el
         }
         // mounted hook
         if (m) {
