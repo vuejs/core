@@ -23,6 +23,7 @@ export const enum DeprecationTypes {
   INSTANCE_EVENT_EMITTER = 'INSTANCE_EVENT_EMITTER',
   INSTANCE_EVENT_HOOKS = 'INSTANCE_EVENT_HOOKS',
   INSTANCE_CHILDREN = 'INSTANCE_CHILDREN',
+  INSTANCE_LISTENERS = 'INSTANCE_LISTENERS',
 
   OPTIONS_DATA_FN = 'OPTIONS_DATA_FN',
   OPTIONS_DATA_MERGE = 'OPTIONS_DATA_MERGE',
@@ -171,6 +172,14 @@ const deprecationData: Record<DeprecationTypes, DeprecationData> = {
       `vm.$children has been removed. Consider refactoring your logic ` +
       `to avoid relying on direct access to child components.`,
     link: `https://v3.vuejs.org/guide/migration/children.html`
+  },
+
+  [DeprecationTypes.INSTANCE_LISTENERS]: {
+    message:
+      `vm.$listeners has been removed. Parent v-on listeners are now ` +
+      `included in vm.$attrs and it is no longer necessary to separately use ` +
+      `v-on="$listeners" if you are already using v-bind="$attrs".`,
+    link: `https://v3.vuejs.org/guide/migration/listeners-removed.html`
   },
 
   [DeprecationTypes.OPTIONS_DATA_FN]: {

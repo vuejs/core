@@ -120,13 +120,13 @@ function createConfig(format, output, plugins = []) {
 
   let external = []
 
-  if (isGlobalBuild || isBrowserESMBuild) {
+  if (isGlobalBuild || isBrowserESMBuild || isCompatBuild) {
     if (!packageOptions.enableNonBrowserBranches) {
       // normal browser builds - non-browser only imports are tree-shaken,
       // they are only listed here to suppress warnings.
       external = ['source-map', '@babel/parser', 'estree-walker']
     }
-  } else if (!isCompatBuild) {
+  } else {
     // Node / esm-bundler builds.
     // externalize all deps unless it's the compat build.
     external = [

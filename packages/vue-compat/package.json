@@ -1,9 +1,9 @@
 {
   "name": "@vue/compat",
   "version": "3.0.11",
-  "description": "@vue/compat",
+  "description": "Vue 3 compatibility build for Vue 2",
   "main": "index.js",
-  "module": "dist/vue.esm-bundler.js",
+  "module": "dist/vue.runtime.esm-bundler.js",
   "types": "dist/vue.d.ts",
   "unpkg": "dist/vue.global.js",
   "jsdelivr": "dist/vue.global.js",

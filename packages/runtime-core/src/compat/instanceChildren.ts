@@ -5,7 +5,7 @@ import { VNode } from '../vnode'
 import { assertCompatEnabled } from './compatConfig'
 import { DeprecationTypes } from './deprecations'
 
-export function getInstanceChildren(
+export function getCompatChildren(
   instance: ComponentInternalInstance
 ): ComponentPublicInstance[] {
   assertCompatEnabled(DeprecationTypes.INSTANCE_CHILDREN)

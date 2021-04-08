@@ -21,7 +21,7 @@ import { warn } from './warning'
 import { UnionToIntersection } from './helpers/typeUtils'
 import { devtoolsComponentEmit } from './devtools'
 import { AppContext } from './apiCreateApp'
-import { emit as compatEmit } from './compat/eventEmitter'
+import { emit as compatEmit } from './compat/instanceEventEmitter'
 
 export type ObjectEmitsOptions = Record<
   string,

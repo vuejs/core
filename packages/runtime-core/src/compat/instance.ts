@@ -1,9 +1,10 @@
 import { extend, NOOP } from '@vue/shared'
 import { PublicPropertiesMap } from '../componentPublicInstance'
-import { getInstanceChildren } from './children'
+import { getCompatChildren } from './instanceChildren'
 import { assertCompatEnabled } from './compatConfig'
 import { DeprecationTypes } from './deprecations'
-import { off, on, once } from './eventEmitter'
+import { off, on, once } from './instanceEventEmitter'
+import { getCompatListeners } from './instanceListeners'
 
 export function installCompatInstanceProperties(map: PublicPropertiesMap) {
   const set = (target: any, key: any, val: any) => {
@@ -36,6 +37,7 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
     $on: i => on.bind(null, i),
     $once: i => once.bind(null, i),
     $off: i => off.bind(null, i),
-    $children: getInstanceChildren
+    $children: getCompatChildren,
+    $listeners: getCompatListeners
   } as PublicPropertiesMap)
 }
