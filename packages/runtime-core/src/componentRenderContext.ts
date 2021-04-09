@@ -1,6 +1,6 @@
 import { ComponentInternalInstance } from './component'
 import { isRenderingCompiledSlot } from './helpers/renderSlot'
-import { closeBlock, openBlock } from './vnode'
+import { closeBlock, openBlock, VNode } from './vnode'
 
 /**
  * mark the current rendering instance for asset resolution (e.g.
@@ -68,10 +68,20 @@ export function withCtx(
       openBlock(true /* null block that disables tracking */)
     }
     const prevInstance = setCurrentRenderingInstance(ctx)
-    const res = fn(...args)
+    const res: VNode[] = fn(...args)
     setCurrentRenderingInstance(prevInstance)
     if (!isRenderingCompiledSlot) {
       closeBlock()
+    }
+    // #3569
+    if (!isRenderingCompiledSlot) {
+      res.forEach(vnode => {
+        // when the user manually renders the compiled slot,
+        // it will be able to easily break the optimization update mode,
+        // so here we force to exit the optimization mode
+        vnode.dynamicChildren = null
+        vnode.patchFlag = 0
+      })
     }
     return res
   }
