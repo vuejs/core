@@ -1,5 +1,23 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`SFC analyze <script> bindings works for script setup TS 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+enum Foo { A, B }
+      const enum Bar { A, B }
+      declare enum Baz { A, B }
+      declare const enum Qux { A, B }
+      
+export default _defineComponent({
+  expose: [],
+  setup(__props) {
+
+      
+return { Foo }
+}
+
+})"
+`;
+
 exports[`SFC compile <script setup> <script> and <script setup> co-usage script first 1`] = `
 "import { x } from './x'
       

@@ -1229,4 +1229,21 @@ describe('SFC analyze <script> bindings', () => {
       foo: BindingTypes.PROPS
     })
   })
+
+  it('works for script setup TS', () => {
+    const { content, bindings } = compile(`
+      <script setup lang="ts">
+      enum Foo { A, B }
+      const enum Bar { A, B }
+      declare enum Baz { A, B }
+      declare const enum Qux { A, B }
+      </script>
+    `)
+
+    assertCode(content)
+    expect(content).toMatch(`return { Foo }`)
+    expect(bindings).toStrictEqual({
+      Foo: BindingTypes.SETUP_CONST
+    })
+  })
 })
