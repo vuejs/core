@@ -1,3 +1,4 @@
+import { ShapeFlags } from 'packages/shared/src/shapeFlags'
 import { ComponentInternalInstance } from './component'
 import { isRenderingCompiledSlot } from './helpers/renderSlot'
 import { closeBlock, openBlock, VNode } from './vnode'
@@ -75,13 +76,7 @@ export function withCtx(
     }
     // #3569
     if (!isRenderingCompiledSlot && res) {
-      res.forEach(vnode => {
-        // when the user manually renders the compiled slot,
-        // it will be able to easily break the optimization update mode,
-        // so here we force to exit the optimization mode
-        vnode.dynamicChildren = null
-        vnode.patchFlag = 0
-      })
+      forceBailout(res)
     }
     return res
   }
@@ -90,4 +85,17 @@ export function withCtx(
   // rendering flag.
   renderFnWithContext._c = true
   return renderFnWithContext
+}
+
+function forceBailout(vnodes: VNode[]) {
+  vnodes.forEach(vnode => {
+    // when the user manually renders the compiled slot,
+    // it will be able to easily break the optimization update mode,
+    // so here we force to exit the optimization mode
+    vnode.dynamicChildren = null
+    vnode.patchFlag = 0
+    if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      forceBailout(vnode.children as VNode[])
+    }
+  })
 }
