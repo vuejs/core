@@ -41,17 +41,21 @@ type LegacyVNodeChildren =
   | VNode
   | VNodeArrayChildren
 
-export function h(
+export function compatH(
   type: string | Component,
   children?: LegacyVNodeChildren
 ): VNode
-export function h(
+export function compatH(
   type: string | Component,
   props?: LegacyVNodeProps,
   children?: LegacyVNodeChildren
 ): VNode
 
-export function h(type: any, propsOrChildren?: any, children?: any): VNode {
+export function compatH(
+  type: any,
+  propsOrChildren?: any,
+  children?: any
+): VNode {
   const l = arguments.length
   if (l === 2) {
     if (isObject(propsOrChildren) && !isArray(propsOrChildren)) {
@@ -85,7 +89,7 @@ export function h(type: any, propsOrChildren?: any, children?: any): VNode {
 
 function convertLegacyProps(props: LegacyVNodeProps): Data & VNodeProps {
   // TODO
-  return {}
+  return props as any
 }
 
 function convertLegacyDirectives(vnode: VNode, props: LegacyVNodeProps): VNode {

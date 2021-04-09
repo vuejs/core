@@ -314,7 +314,13 @@ const deprecationData: Record<DeprecationTypes, DeprecationData> = {
           name ? ` <${name}>` : `s`
         } should be explicitly created via \`defineAsyncComponent()\` ` +
         `in Vue 3. Plain functions will be treated as functional components in ` +
-        `non-compat build.`
+        `non-compat build. If you have already migrated all async component ` +
+        `usage and intend to use plain functions for functional components, ` +
+        `you can disable the compat behavior and suppress this ` +
+        `warning with:` +
+        `\n\n  configureCompat({ ${
+          DeprecationTypes.COMPONENT_ASYNC
+        }: false })\n`
       )
     },
     link: `https://v3.vuejs.org/guide/migration/async-components.html`
@@ -327,13 +333,10 @@ const deprecationData: Record<DeprecationTypes, DeprecationData> = {
         `Functional component${
           name ? ` <${name}>` : `s`
         } should be defined as a plain function in Vue 3. The "functional" ` +
-        `option has been removed.\n` +
-        `NOTE: Before migrating, ensure that all async ` +
-        `components have been upgraded to use \`defineAsyncComponent()\` and ` +
-        `then disable compat for legacy async components with:` +
-        `\n\n  configureCompat({ ${
-          DeprecationTypes.COMPONENT_ASYNC
-        }: false })\n`
+        `option has been removed. NOTE: Before migrating to use plain ` +
+        `functions for functional components, first make sure that all async ` +
+        `components usage have been migrated and its compat behavior has ` +
+        `been disabled.`
       )
     },
     link: `https://v3.vuejs.org/guide/migration/functional-components.html`

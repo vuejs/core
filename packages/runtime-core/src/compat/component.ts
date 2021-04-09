@@ -1,16 +1,25 @@
 import { isArray, isFunction, isObject, isPromise } from '@vue/shared'
 import { defineAsyncComponent } from '../apiAsyncComponent'
-import { Component, ComponentOptions, FunctionalComponent } from '../component'
+import {
+  Component,
+  ComponentOptions,
+  FunctionalComponent,
+  getCurrentInstance
+} from '../component'
+import { resolveInjections } from '../componentOptions'
+import { InternalSlots } from '../componentSlots'
 import { isVNode } from '../vnode'
-import { softAssertCompatEnabled } from './compatConfig'
-import { DeprecationTypes } from './deprecations'
+import { isCompatEnabled, softAssertCompatEnabled } from './compatConfig'
+import { DeprecationTypes, warnDeprecation } from './deprecations'
+import { getCompatListeners } from './instanceListeners'
+import { compatH } from './renderFn'
 
 export function convertLegacyComponent(comp: any): Component {
   // 2.x async component
-  if (
-    isFunction(comp) &&
-    softAssertCompatEnabled(DeprecationTypes.COMPONENT_ASYNC, comp)
-  ) {
+  // since after disabling this, plain functions are still valid usage, do not
+  // use softAssert here.
+  if (isFunction(comp) && isCompatEnabled(DeprecationTypes.COMPONENT_ASYNC)) {
+    __DEV__ && warnDeprecation(DeprecationTypes.COMPONENT_ASYNC, comp)
     return convertLegacyAsyncComponent(comp)
   }
 
@@ -78,6 +87,56 @@ function convertLegacyAsyncComponent(comp: LegacyAsyncComponent) {
   return converted
 }
 
+const normalizedFunctionalComponentMap = new Map<
+  ComponentOptions,
+  FunctionalComponent
+>()
+
+const legacySlotProxyHandlers: ProxyHandler<InternalSlots> = {
+  get(target, key: string) {
+    const slot = target[key]
+    return slot && slot()
+  }
+}
+
 function convertLegacyFunctionalComponent(comp: ComponentOptions) {
-  return comp.render as FunctionalComponent
+  if (normalizedFunctionalComponentMap.has(comp)) {
+    return normalizedFunctionalComponentMap.get(comp)!
+  }
+
+  const legacyFn = comp.render as any
+
+  const Func: FunctionalComponent = (props, ctx) => {
+    const instance = getCurrentInstance()!
+
+    const legacyCtx = {
+      props,
+      children: instance.vnode.children || [],
+      data: instance.vnode.props || {},
+      scopedSlots: ctx.slots,
+      parent: instance.parent && instance.parent.proxy,
+      get slots() {
+        return new Proxy(ctx.slots, legacySlotProxyHandlers)
+      },
+      get listeners() {
+        return getCompatListeners(instance)
+      },
+      get injections() {
+        if (comp.inject) {
+          const injections = {}
+          resolveInjections(comp.inject, {})
+          return injections
+        }
+        return {}
+      }
+    }
+    return legacyFn(compatH, legacyCtx)
+  }
+  Func.props = comp.props
+  Func.displayName = comp.name
+  // v2 functional components do not inherit attrs
+  Func.inheritAttrs = false
+
+  normalizedFunctionalComponentMap.set(comp, Func)
+  return Func
 }

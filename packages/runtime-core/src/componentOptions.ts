@@ -597,31 +597,7 @@ export function applyOptions(
   // - watch (deferred since it relies on `this` access)
 
   if (injectOptions) {
-    if (isArray(injectOptions)) {
-      for (let i = 0; i < injectOptions.length; i++) {
-        const key = injectOptions[i]
-        ctx[key] = inject(key)
-        if (__DEV__) {
-          checkDuplicateProperties!(OptionTypes.INJECT, key)
-        }
-      }
-    } else {
-      for (const key in injectOptions) {
-        const opt = injectOptions[key]
-        if (isObject(opt)) {
-          ctx[key] = inject(
-            opt.from || key,
-            opt.default,
-            true /* treat default function as factory */
-          )
-        } else {
-          ctx[key] = inject(opt)
-        }
-        if (__DEV__) {
-          checkDuplicateProperties!(OptionTypes.INJECT, key)
-        }
-      }
-    }
+    resolveInjections(injectOptions, ctx, checkDuplicateProperties)
   }
 
   if (methods) {
@@ -838,6 +814,38 @@ export function applyOptions(
       }
     } else if (__DEV__) {
       warn(`The \`expose\` option is ignored when used in mixins.`)
+    }
+  }
+}
+
+export function resolveInjections(
+  injectOptions: ComponentInjectOptions,
+  ctx: any,
+  checkDuplicateProperties = NOOP as any
+) {
+  if (isArray(injectOptions)) {
+    for (let i = 0; i < injectOptions.length; i++) {
+      const key = injectOptions[i]
+      ctx[key] = inject(key)
+      if (__DEV__) {
+        checkDuplicateProperties!(OptionTypes.INJECT, key)
+      }
+    }
+  } else {
+    for (const key in injectOptions) {
+      const opt = injectOptions[key]
+      if (isObject(opt)) {
+        ctx[key] = inject(
+          opt.from || key,
+          opt.default,
+          true /* treat default function as factory */
+        )
+      } else {
+        ctx[key] = inject(opt)
+      }
+      if (__DEV__) {
+        checkDuplicateProperties!(OptionTypes.INJECT, key)
+      }
     }
   }
 }
