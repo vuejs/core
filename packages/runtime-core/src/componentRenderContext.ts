@@ -74,7 +74,7 @@ export function withCtx(
       closeBlock()
     }
     // #3569
-    if (!isRenderingCompiledSlot) {
+    if (!isRenderingCompiledSlot && res) {
       res.forEach(vnode => {
         // when the user manually renders the compiled slot,
         // it will be able to easily break the optimization update mode,
