@@ -361,7 +361,7 @@ function _createVNode(
 
   // 2.x async/functional component compat
   if (__COMPAT__) {
-    type = convertLegacyComponent(type)
+    type = convertLegacyComponent(type, currentRenderingInstance)
   }
 
   // class & style normalization.
@@ -677,7 +677,7 @@ export function mergeProps(...args: (Data & VNodeProps)[]) {
         const incoming = toMerge[key]
         if (existing !== incoming) {
           ret[key] = existing
-            ? [].concat(existing as any, toMerge[key] as any)
+            ? [].concat(existing as any, incoming as any)
             : incoming
         }
       } else if (key !== '') {

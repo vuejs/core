@@ -1,4 +1,5 @@
 import { isArray } from '@vue/shared'
+import { ComponentInternalInstance } from '../component'
 import { ObjectDirective, DirectiveHook } from '../directives'
 import { softAssertCompatEnabled } from './compatConfig'
 import { DeprecationTypes } from './deprecations'
@@ -25,7 +26,8 @@ const legacyDirectiveHookMap: Partial<
 
 export function mapCompatDirectiveHook(
   name: keyof ObjectDirective,
-  dir: ObjectDirective & LegacyDirective
+  dir: ObjectDirective & LegacyDirective,
+  instance: ComponentInternalInstance | null
 ): DirectiveHook | DirectiveHook[] | undefined {
   const mappedName = legacyDirectiveHookMap[name]
   if (mappedName) {
@@ -34,14 +36,24 @@ export function mapCompatDirectiveHook(
       mappedName.forEach(name => {
         const mappedHook = dir[name]
         if (mappedHook) {
-          softAssertCompatEnabled(DeprecationTypes.CUSTOM_DIR, mappedName, name)
+          softAssertCompatEnabled(
+            DeprecationTypes.CUSTOM_DIR,
+            instance,
+            mappedName,
+            name
+          )
           hook.push(mappedHook)
         }
       })
       return hook.length ? hook : undefined
     } else {
       if (dir[mappedName]) {
-        softAssertCompatEnabled(DeprecationTypes.CUSTOM_DIR, mappedName, name)
+        softAssertCompatEnabled(
+          DeprecationTypes.CUSTOM_DIR,
+          instance,
+          mappedName,
+          name
+        )
       }
       return dir[mappedName]
     }

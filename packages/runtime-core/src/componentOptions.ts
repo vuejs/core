@@ -790,13 +790,13 @@ export function applyOptions(
   if (__COMPAT__) {
     if (
       beforeDestroy &&
-      softAssertCompatEnabled(DeprecationTypes.OPTIONS_BEFORE_DESTROY)
+      softAssertCompatEnabled(DeprecationTypes.OPTIONS_BEFORE_DESTROY, instance)
     ) {
       onBeforeUnmount(beforeDestroy.bind(publicThis))
     }
     if (
       destroyed &&
-      softAssertCompatEnabled(DeprecationTypes.OPTIONS_DESTROYED)
+      softAssertCompatEnabled(DeprecationTypes.OPTIONS_DESTROYED, instance)
     ) {
       onUnmounted(destroyed.bind(publicThis))
     }
@@ -930,8 +930,11 @@ function resolveData(
     instance.data = reactive(data)
   } else {
     // existing data: this is a mixin or extends.
-    if (__COMPAT__ && isCompatEnabled(DeprecationTypes.OPTIONS_DATA_MERGE)) {
-      deepMergeData(instance.data, data)
+    if (
+      __COMPAT__ &&
+      isCompatEnabled(DeprecationTypes.OPTIONS_DATA_MERGE, instance)
+    ) {
+      deepMergeData(instance.data, data, instance)
     } else {
       extend(instance.data, data)
     }

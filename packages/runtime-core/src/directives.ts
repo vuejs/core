@@ -127,7 +127,7 @@ export function invokeDirectiveHook(
     }
     let hook = binding.dir[name] as DirectiveHook | DirectiveHook[] | undefined
     if (__COMPAT__ && !hook) {
-      hook = mapCompatDirectiveHook(name, binding.dir)
+      hook = mapCompatDirectiveHook(name, binding.dir, instance)
     }
     if (hook) {
       callWithAsyncErrorHandling(hook, instance, ErrorCodes.DIRECTIVE_HOOK, [

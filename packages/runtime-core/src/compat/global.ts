@@ -96,13 +96,13 @@ export function createCompatVue(
   const singletonApp = createApp({})
 
   function createCompatApp(options: ComponentOptions = {}, Ctor: any) {
-    assertCompatEnabled(DeprecationTypes.GLOBAL_MOUNT)
+    assertCompatEnabled(DeprecationTypes.GLOBAL_MOUNT, null)
 
     const { data } = options
     if (
       data &&
       !isFunction(data) &&
-      softAssertCompatEnabled(DeprecationTypes.OPTIONS_DATA_FN)
+      softAssertCompatEnabled(DeprecationTypes.OPTIONS_DATA_FN, null)
     ) {
       options.data = () => data
     }
@@ -130,7 +130,8 @@ export function createCompatVue(
 
     // copy prototype augmentations as config.globalProperties
     const isPrototypeEnabled = isCompatEnabled(
-      DeprecationTypes.GLOBAL_PROTOTYPE
+      DeprecationTypes.GLOBAL_PROTOTYPE,
+      null
     )
     let hasPrototypeAugmentations = false
     for (const key in Ctor.prototype) {
@@ -142,7 +143,7 @@ export function createCompatVue(
       }
     }
     if (__DEV__ && hasPrototypeAugmentations) {
-      warnDeprecation(DeprecationTypes.GLOBAL_PROTOTYPE)
+      warnDeprecation(DeprecationTypes.GLOBAL_PROTOTYPE, null)
     }
 
     const vm = app._createRoot!(options)
@@ -158,7 +159,7 @@ export function createCompatVue(
   Vue.nextTick = nextTick
 
   Vue.extend = ((options: ComponentOptions = {}) => {
-    assertCompatEnabled(DeprecationTypes.GLOBAL_EXTEND)
+    assertCompatEnabled(DeprecationTypes.GLOBAL_EXTEND, null)
 
     function SubVue(inlineOptions?: ComponentOptions) {
       if (!inlineOptions) {
@@ -180,17 +181,17 @@ export function createCompatVue(
   }) as any
 
   Vue.set = (target, key, value) => {
-    assertCompatEnabled(DeprecationTypes.GLOBAL_SET)
+    assertCompatEnabled(DeprecationTypes.GLOBAL_SET, null)
     target[key] = value
   }
 
   Vue.delete = (target, key) => {
-    assertCompatEnabled(DeprecationTypes.GLOBAL_DELETE)
+    assertCompatEnabled(DeprecationTypes.GLOBAL_DELETE, null)
     delete target[key]
   }
 
   Vue.observable = (target: any) => {
-    assertCompatEnabled(DeprecationTypes.GLOBAL_OBSERVABLE)
+    assertCompatEnabled(DeprecationTypes.GLOBAL_OBSERVABLE, null)
     return reactive(target)
   }
 
@@ -320,7 +321,7 @@ export function installCompatMount(
           for (let i = 0; i < container.attributes.length; i++) {
             const attr = container.attributes[i]
             if (attr.name !== 'v-cloak' && /^(v-|:|@)/.test(attr.name)) {
-              warnDeprecation(DeprecationTypes.GLOBAL_MOUNT_CONTAINER)
+              warnDeprecation(DeprecationTypes.GLOBAL_MOUNT_CONTAINER, null)
               break
             }
           }

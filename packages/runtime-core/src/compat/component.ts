@@ -2,6 +2,7 @@ import { isArray, isFunction, isObject, isPromise } from '@vue/shared'
 import { defineAsyncComponent } from '../apiAsyncComponent'
 import {
   Component,
+  ComponentInternalInstance,
   ComponentOptions,
   FunctionalComponent,
   getCurrentInstance
@@ -14,12 +15,18 @@ import { DeprecationTypes, warnDeprecation } from './deprecations'
 import { getCompatListeners } from './instanceListeners'
 import { compatH } from './renderFn'
 
-export function convertLegacyComponent(comp: any): Component {
+export function convertLegacyComponent(
+  comp: any,
+  instance: ComponentInternalInstance | null
+): Component {
   // 2.x async component
   // since after disabling this, plain functions are still valid usage, do not
   // use softAssert here.
-  if (isFunction(comp) && isCompatEnabled(DeprecationTypes.COMPONENT_ASYNC)) {
-    __DEV__ && warnDeprecation(DeprecationTypes.COMPONENT_ASYNC, comp)
+  if (
+    isFunction(comp) &&
+    isCompatEnabled(DeprecationTypes.COMPONENT_ASYNC, instance)
+  ) {
+    __DEV__ && warnDeprecation(DeprecationTypes.COMPONENT_ASYNC, instance, comp)
     return convertLegacyAsyncComponent(comp)
   }
 
@@ -27,7 +34,11 @@ export function convertLegacyComponent(comp: any): Component {
   if (
     isObject(comp) &&
     comp.functional &&
-    softAssertCompatEnabled(DeprecationTypes.COMPONENT_FUNCTIONAL, comp)
+    softAssertCompatEnabled(
+      DeprecationTypes.COMPONENT_FUNCTIONAL,
+      instance,
+      comp
+    )
   ) {
     return convertLegacyFunctionalComponent(comp)
   }
@@ -92,7 +103,7 @@ const normalizedFunctionalComponentMap = new Map<
   FunctionalComponent
 >()
 
-const legacySlotProxyHandlers: ProxyHandler<InternalSlots> = {
+export const legacySlotProxyHandlers: ProxyHandler<InternalSlots> = {
   get(target, key: string) {
     const slot = target[key]
     return slot && slot()

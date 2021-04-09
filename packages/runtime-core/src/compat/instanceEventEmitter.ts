@@ -32,9 +32,9 @@ export function on(
     event.forEach(e => on(instance, e, fn))
   } else {
     if (event.startsWith('hook:')) {
-      assertCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS)
+      assertCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
     } else {
-      assertCompatEnabled(DeprecationTypes.INSTANCE_EVENT_EMITTER)
+      assertCompatEnabled(DeprecationTypes.INSTANCE_EVENT_EMITTER, instance)
     }
     const events = getRegistry(instance)
     ;(events[event] || (events[event] = [])).push(fn)
@@ -61,7 +61,7 @@ export function off(
   event?: string,
   fn?: Function
 ) {
-  assertCompatEnabled(DeprecationTypes.INSTANCE_EVENT_EMITTER)
+  assertCompatEnabled(DeprecationTypes.INSTANCE_EVENT_EMITTER, instance)
   const vm = instance.proxy
   // all
   if (!arguments.length) {

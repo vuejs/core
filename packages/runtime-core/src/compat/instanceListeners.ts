@@ -4,7 +4,7 @@ import { assertCompatEnabled } from './compatConfig'
 import { DeprecationTypes } from './deprecations'
 
 export function getCompatListeners(instance: ComponentInternalInstance) {
-  assertCompatEnabled(DeprecationTypes.INSTANCE_LISTENERS)
+  assertCompatEnabled(DeprecationTypes.INSTANCE_LISTENERS, instance)
 
   const listeners: Record<string, Function | Function[]> = {}
   const rawProps = instance.vnode.props

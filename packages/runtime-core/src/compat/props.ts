@@ -5,7 +5,7 @@ export function createPropsDefaultThis(propKey: string) {
     {},
     {
       get() {
-        warnDeprecation(DeprecationTypes.PROPS_DEFAULT_THIS, propKey)
+        warnDeprecation(DeprecationTypes.PROPS_DEFAULT_THIS, null, propKey)
       }
     }
   )

@@ -1,11 +1,12 @@
 import { extend, NOOP } from '@vue/shared'
 import { PublicPropertiesMap } from '../componentPublicInstance'
 import { getCompatChildren } from './instanceChildren'
-import { assertCompatEnabled } from './compatConfig'
+import { assertCompatEnabled, isCompatEnabled } from './compatConfig'
 import { DeprecationTypes, warnDeprecation } from './deprecations'
 import { off, on, once } from './instanceEventEmitter'
 import { getCompatListeners } from './instanceListeners'
 import { shallowReadonly } from '@vue/reactivity'
+import { legacySlotProxyHandlers } from './component'
 
 export function installCompatInstanceProperties(map: PublicPropertiesMap) {
   const set = (target: any, key: any, val: any) => {
@@ -17,37 +18,48 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
   }
 
   extend(map, {
-    $set: () => {
-      assertCompatEnabled(DeprecationTypes.INSTANCE_SET)
+    $set: i => {
+      assertCompatEnabled(DeprecationTypes.INSTANCE_SET, i)
       return set
     },
 
-    $delete: () => {
-      assertCompatEnabled(DeprecationTypes.INSTANCE_DELETE)
+    $delete: i => {
+      assertCompatEnabled(DeprecationTypes.INSTANCE_DELETE, i)
       return del
     },
 
     $mount: i => {
-      assertCompatEnabled(DeprecationTypes.GLOBAL_MOUNT)
+      assertCompatEnabled(
+        DeprecationTypes.GLOBAL_MOUNT,
+        null /* this warning is global */
+      )
       // root mount override from ./global.ts in installCompatMount
       return i.ctx._compat_mount || NOOP
     },
 
     $destroy: i => {
-      assertCompatEnabled(DeprecationTypes.INSTANCE_DESTROY)
+      assertCompatEnabled(DeprecationTypes.INSTANCE_DESTROY, i)
       // root destroy override from ./global.ts in installCompatMount
       return i.ctx._compat_destroy || NOOP
     },
 
+    // overrides existing accessor
+    $slots: i => {
+      if (isCompatEnabled(DeprecationTypes.RENDER_FUNCTION, i)) {
+        return new Proxy(i.slots, legacySlotProxyHandlers)
+      }
+      return i.slots
+    },
+
     $scopedSlots: i => {
-      assertCompatEnabled(DeprecationTypes.INSTANCE_SCOPED_SLOTS)
+      assertCompatEnabled(DeprecationTypes.INSTANCE_SCOPED_SLOTS, i)
       return __DEV__ ? shallowReadonly(i.slots) : i.slots
     },
 
     // overrides existing accessor
     $attrs: i => {
       if (__DEV__ && i.type.inheritAttrs === false) {
-        warnDeprecation(DeprecationTypes.INSTANCE_ATTRS_CLASS_STYLE)
+        warnDeprecation(DeprecationTypes.INSTANCE_ATTRS_CLASS_STYLE, i)
       }
       return __DEV__ ? shallowReadonly(i.attrs) : i.attrs
     },

@@ -1,5 +1,5 @@
 import { extend } from '@vue/shared'
-import { ComponentOptions, getCurrentInstance } from '../component'
+import { ComponentInternalInstance, ComponentOptions } from '../component'
 import { DeprecationTypes, warnDeprecation } from './deprecations'
 
 export type CompatConfig = Partial<
@@ -14,8 +14,10 @@ export function configureCompat(config: CompatConfig) {
   extend(globalCompatConfig, config)
 }
 
-export function getCompatConfigForKey(key: DeprecationTypes | 'MODE') {
-  const instance = getCurrentInstance()
+export function getCompatConfigForKey(
+  key: DeprecationTypes | 'MODE',
+  instance: ComponentInternalInstance | null
+) {
   const instanceConfig =
     instance && (instance.type as ComponentOptions).compatConfig
   if (instanceConfig && key in instanceConfig) {
@@ -24,9 +26,12 @@ export function getCompatConfigForKey(key: DeprecationTypes | 'MODE') {
   return globalCompatConfig[key]
 }
 
-export function isCompatEnabled(key: DeprecationTypes): boolean {
-  const mode = getCompatConfigForKey('MODE') || 2
-  const val = getCompatConfigForKey(key)
+export function isCompatEnabled(
+  key: DeprecationTypes,
+  instance: ComponentInternalInstance | null
+): boolean {
+  const mode = getCompatConfigForKey('MODE', instance) || 2
+  const val = getCompatConfigForKey(key, instance)
   if (mode === 2) {
     return val !== false
   } else {
@@ -34,19 +39,27 @@ export function isCompatEnabled(key: DeprecationTypes): boolean {
   }
 }
 
-export function assertCompatEnabled(key: DeprecationTypes, ...args: any[]) {
-  if (!isCompatEnabled(key)) {
+export function assertCompatEnabled(
+  key: DeprecationTypes,
+  instance: ComponentInternalInstance | null,
+  ...args: any[]
+) {
+  if (!isCompatEnabled(key, instance)) {
     throw new Error(`${key} compat has been disabled.`)
   } else if (__DEV__) {
-    warnDeprecation(key, ...args)
+    warnDeprecation(key, instance, ...args)
   }
 }
 
-export function softAssertCompatEnabled(key: DeprecationTypes, ...args: any[]) {
+export function softAssertCompatEnabled(
+  key: DeprecationTypes,
+  instance: ComponentInternalInstance | null,
+  ...args: any[]
+) {
   if (__DEV__) {
-    warnDeprecation(key, ...args)
+    warnDeprecation(key, instance, ...args)
   }
-  return isCompatEnabled(key)
+  return isCompatEnabled(key, instance)
 }
 
 // disable features that conflict with v3 behavior

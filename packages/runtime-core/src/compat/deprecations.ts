@@ -1,4 +1,5 @@
 import {
+  ComponentInternalInstance,
   formatComponentName,
   getComponentName,
   getCurrentInstance,
@@ -50,7 +51,9 @@ export const enum DeprecationTypes {
   TRANSITION_GROUP_ROOT = 'TRANSITION_GROUP_ROOT',
 
   COMPONENT_ASYNC = 'COMPONENT_ASYNC',
-  COMPONENT_FUNCTIONAL = 'COMPONENT_FUNCTIONAL'
+  COMPONENT_FUNCTIONAL = 'COMPONENT_FUNCTIONAL',
+
+  RENDER_FUNCTION = 'RENDER_FUNCTION'
 }
 
 type DeprecationData = {
@@ -340,25 +343,41 @@ const deprecationData: Record<DeprecationTypes, DeprecationData> = {
       )
     },
     link: `https://v3.vuejs.org/guide/migration/functional-components.html`
+  },
+
+  [DeprecationTypes.RENDER_FUNCTION]: {
+    message:
+      `Vue 3's render function API has changed. ` +
+      `You can opt-in to the new API with:` +
+      `\n\n  configureCompat({ ${
+        DeprecationTypes.RENDER_FUNCTION
+      }: false })\n` +
+      `\n  (This can also be done per-component via the "compatConfig" option.)`,
+    link: `https://v3.vuejs.org/guide/migration/render-function-api.html`
   }
 }
 
 const instanceWarned: Record<string, true> = Object.create(null)
 const warnCount: Record<string, number> = Object.create(null)
 
-export function warnDeprecation(key: DeprecationTypes, ...args: any[]) {
+export function warnDeprecation(
+  key: DeprecationTypes,
+  instance: ComponentInternalInstance | null,
+  ...args: any[]
+) {
   if (!__DEV__) {
     return
   }
 
+  instance = instance || getCurrentInstance()
+
   // check user config
-  const config = getCompatConfigForKey(key)
+  const config = getCompatConfigForKey(key, instance)
   if (config === 'suppress-warning') {
     return
   }
 
   const dupKey = key + args.join('')
-  const instance = getCurrentInstance()
   const compName = instance && formatComponentName(instance, instance.type)
 
   // skip if the same warning is emitted for the same component type
@@ -385,7 +404,7 @@ export function warnDeprecation(key: DeprecationTypes, ...args: any[]) {
       typeof message === 'function' ? message(...args) : message
     }${link ? `\n  Details: ${link}` : ``}`
   )
-  if (!isCompatEnabled(key)) {
+  if (!isCompatEnabled(key, instance)) {
     console.error(
       `^ The above deprecation's compat behavior is disabled and will likely ` +
         `lead to runtime errors.`

@@ -52,14 +52,14 @@ export function installLegacyConfigTraps(config: AppConfig) {
       },
       set(newVal) {
         if (!isCopyingConfig) {
-          warnDeprecation(legacyConfigOptions[key])
+          warnDeprecation(legacyConfigOptions[key], null)
         }
         val = newVal
 
         // compat for runtime ignoredElements -> isCustomElement
         if (
           key === 'ignoredElements' &&
-          isCompatEnabled(DeprecationTypes.CONFIG_IGNORED_ELEMENTS) &&
+          isCompatEnabled(DeprecationTypes.CONFIG_IGNORED_ELEMENTS, null) &&
           !isRuntimeOnly() &&
           isArray(newVal)
         ) {
