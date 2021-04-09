@@ -156,4 +156,12 @@ describe('runtime-dom: props patching', () => {
     // see https://github.com/vuejs/vue-next/issues/2766
     patchProp(el, 'type', 'text', null)
   })
+
+  test('input with size', () => {
+    const el = document.createElement('input')
+    patchProp(el, 'size', null, 100)
+    expect(el.size).toBe(100)
+    patchProp(el, 'size', 100, null)
+    expect(el.getAttribute('size')).toBe(null)
+  })
 })
