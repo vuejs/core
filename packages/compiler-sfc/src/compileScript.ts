@@ -1070,13 +1070,12 @@ function walkDeclaration(
     }
   } else if (
     node.type === 'FunctionDeclaration' ||
-    node.type === 'ClassDeclaration'
+    node.type === 'ClassDeclaration' ||
+    // treat enums as const, e.g. enum Foo { A, B }
+    (node.type === 'TSEnumDeclaration' && !node.const)
   ) {
     // export function foo() {} / export class Foo {}
     // export declarations must be named.
-    bindings[node.id!.name] = BindingTypes.SETUP_CONST
-  } else if (node.type === 'TSEnumDeclaration' && !node.const) {
-    // treat enums as const, e.g. enum Foo { A, B }
     bindings[node.id!.name] = BindingTypes.SETUP_CONST
   }
 }
