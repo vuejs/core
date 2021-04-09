@@ -1311,10 +1311,8 @@ export interface Events {
   onTransitionstart: TransitionEvent
 }
 
-type StringKeyOf<T> = Extract<keyof T, string>
-
 type EventHandlers<E> = {
-  [K in StringKeyOf<E>]?: E[K] extends Function ? E[K] : (payload: E[K]) => void
+  [K in keyof E]?: E[K] extends Function ? E[K] : (payload: E[K]) => void
 }
 
 // use namespace import to avoid collision with generated types which use
@@ -1332,7 +1330,7 @@ type ReservedProps = {
 type ElementAttrs<T> = T & ReservedProps
 
 type NativeElements = {
-  [K in StringKeyOf<IntrinsicElementAttributes>]: ElementAttrs<
+  [K in keyof IntrinsicElementAttributes]: ElementAttrs<
     IntrinsicElementAttributes[K]
   >
 }
