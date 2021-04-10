@@ -656,6 +656,17 @@ const emit = defineEmit(['a', 'b'])
       })
     })
 
+    test('work with destructuring + arrow function expression', () => {
+      const { content } = compile(`
+      <script setup>
+      ref: ({} = () => 1);
+      ref: ({} = useSomthing(() => 1));
+      ref: ({} = useSomthing(computed(() => 1)));
+      </script>
+      `)
+      assertCode(content)
+    })
+
     test('multi ref declarations', () => {
       const { content, bindings } = compile(`<script setup>
       ref: a = 1, b = 2, c = {

@@ -693,6 +693,21 @@ return { a, b, test }
 }"
 `;
 
+exports[`SFC compile <script setup> ref: syntax sugar work with destructuring + arrow function expression 1`] = `
+"export default {
+  expose: [],
+  setup(__props) {
+
+      const {} = () => 1;
+      const {} = useSomthing(() => 1);
+      const {} = useSomthing(computed(() => 1));
+      
+return {  }
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> should expose top level declarations 1`] = `
 "import { x } from './x'
       

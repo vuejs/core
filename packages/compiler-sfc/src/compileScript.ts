@@ -348,10 +348,11 @@ export function compileScript(
             break
           }
         }
-        for (let i = left.end!; i > 0; i++) {
-          const char = source[i + startOffset]
+
+        for (let i = right.end! + startOffset; i > right.start!; i--) {
+          const char = source[i]
           if (char === ')') {
-            s.remove(i + startOffset, i + startOffset + 1)
+            s.remove(i, i + 1)
             break
           }
         }
