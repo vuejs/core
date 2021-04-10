@@ -1,5 +1,7 @@
+import { hasOwn, isArray } from '@vue/shared/src'
 import {
   ComponentInternalInstance,
+  ComponentOptions,
   formatComponentName,
   getComponentName,
   getCurrentInstance,
@@ -52,6 +54,7 @@ export const enum DeprecationTypes {
 
   COMPONENT_ASYNC = 'COMPONENT_ASYNC',
   COMPONENT_FUNCTIONAL = 'COMPONENT_FUNCTIONAL',
+  COMPONENT_V_MODEL = 'COMPONENT_V_MODEL',
 
   RENDER_FUNCTION = 'RENDER_FUNCTION'
 }
@@ -343,6 +346,32 @@ const deprecationData: Record<DeprecationTypes, DeprecationData> = {
       )
     },
     link: `https://v3.vuejs.org/guide/migration/functional-components.html`
+  },
+
+  [DeprecationTypes.COMPONENT_V_MODEL]: {
+    message: (comp: ComponentOptions) => {
+      const configMsg =
+        `opt-in to ` +
+        `Vue 3 behavior on a per-component basis with \`compatConfig: { ${
+          DeprecationTypes.COMPONENT_V_MODEL
+        }: false }\`.`
+      if (
+        comp.props && isArray(comp.props)
+          ? comp.props.includes('modelValue')
+          : hasOwn(comp.props, 'modelValue')
+      ) {
+        return (
+          `Component delcares "modelValue" prop, which is Vue 3 usage, but ` +
+          `is running under Vue 2 compat v-model behavior. You can ${configMsg}`
+        )
+      }
+      return (
+        `v-model usage on component has changed in Vue 3. Component that expects ` +
+        `to work with v-model should now use the "modelValue" prop and emit the ` +
+        `"update:modelValue" event. You can update the usage and then ${configMsg}`
+      )
+    },
+    link: `https://v3.vuejs.org/guide/migration/v-model.html`
   },
 
   [DeprecationTypes.RENDER_FUNCTION]: {

@@ -687,9 +687,9 @@ export function finishComponentSetup(
   if (
     __COMPAT__ &&
     Component.render &&
-    isCompatEnabled(DeprecationTypes.RENDER_FUNCTION)
+    isCompatEnabled(DeprecationTypes.RENDER_FUNCTION, instance)
   ) {
-    warnDeprecation(DeprecationTypes.RENDER_FUNCTION)
+    warnDeprecation(DeprecationTypes.RENDER_FUNCTION, instance)
     const originalRender = Component.render
     Component.render = function compatRender() {
       return originalRender.call(this, compatH)

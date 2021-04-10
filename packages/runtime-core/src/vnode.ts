@@ -42,6 +42,7 @@ import { NULL_DYNAMIC_COMPONENT } from './helpers/resolveAssets'
 import { hmrDirtyComponents } from './hmr'
 import { setCompiledSlotRendering } from './helpers/renderSlot'
 import { convertLegacyComponent } from './compat/component'
+import { convertLegacyVModelProps } from './compat/vModel'
 
 export const Fragment = (Symbol(__DEV__ ? 'Fragment' : undefined) as any) as {
   __isFragment: true
@@ -467,6 +468,10 @@ function _createVNode(
     patchFlag !== PatchFlags.HYDRATE_EVENTS
   ) {
     currentBlock.push(vnode)
+  }
+
+  if (__COMPAT__) {
+    convertLegacyVModelProps(vnode)
   }
 
   return vnode

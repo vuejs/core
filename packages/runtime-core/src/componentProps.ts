@@ -348,7 +348,7 @@ function resolvePropValue(
           value = propsDefaults[key] = defaultValue.call(
             __COMPAT__ &&
             __DEV__ &&
-            isCompatEnabled(DeprecationTypes.PROPS_DEFAULT_THIS)
+            isCompatEnabled(DeprecationTypes.PROPS_DEFAULT_THIS, instance)
               ? createPropsDefaultThis(key)
               : null,
             props

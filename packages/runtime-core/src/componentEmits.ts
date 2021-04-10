@@ -21,7 +21,8 @@ import { warn } from './warning'
 import { UnionToIntersection } from './helpers/typeUtils'
 import { devtoolsComponentEmit } from './devtools'
 import { AppContext } from './apiCreateApp'
-import { emit as compatEmit } from './compat/instanceEventEmitter'
+import { emit as compatInstanceEmit } from './compat/instanceEventEmitter'
+import { compatModelEventPrefix, compatModelEmit } from './compat/vModel'
 
 export type ObjectEmitsOptions = Record<
   string,
@@ -57,7 +58,14 @@ export function emit(
       propsOptions: [propsOptions]
     } = instance
     if (emitsOptions) {
-      if (!(event in emitsOptions) && !event.startsWith('hook:')) {
+      if (
+        !(event in emitsOptions) &&
+        !(
+          __COMPAT__ &&
+          (event.startsWith('hook:') ||
+            event.startsWith(compatModelEventPrefix))
+        )
+      ) {
         if (!propsOptions || !(toHandlerKey(event) in propsOptions)) {
           warn(
             `Component emitted event "${event}" but it is neither declared in ` +
@@ -151,7 +159,8 @@ export function emit(
   }
 
   if (__COMPAT__) {
-    return compatEmit(instance, event, args)
+    compatModelEmit(instance, event, args)
+    return compatInstanceEmit(instance, event, args)
   }
 }
 
