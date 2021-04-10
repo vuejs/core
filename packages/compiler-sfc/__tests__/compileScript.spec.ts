@@ -777,11 +777,13 @@ const emit = defineEmit(['a', 'b'])
     test('object destructure', () => {
       const { content, bindings } = compile(`<script setup>
       ref: n = 1, ({ a, b: c, d = 1, e: f = 2, ...g } = useFoo())
-      console.log(n, a, c, d, f, g)
+      ref: ({ foo } = useSomthing(() => 1));
+      console.log(n, a, c, d, f, g, foo)
       </script>`)
       expect(content).toMatch(
         `const n = _ref(1), { a: __a, b: __c, d: __d = 1, e: __f = 2, ...__g } = useFoo()`
       )
+      expect(content).toMatch(`const { foo: __foo } = useSomthing(() => 1)`)
       expect(content).toMatch(`\nconst a = _ref(__a);`)
       expect(content).not.toMatch(`\nconst b = _ref(__b);`)
       expect(content).toMatch(`\nconst c = _ref(__c);`)
@@ -789,17 +791,19 @@ const emit = defineEmit(['a', 'b'])
       expect(content).not.toMatch(`\nconst e = _ref(__e);`)
       expect(content).toMatch(`\nconst f = _ref(__f);`)
       expect(content).toMatch(`\nconst g = _ref(__g);`)
+      expect(content).toMatch(`\nconst foo = _ref(__foo);`)
       expect(content).toMatch(
-        `console.log(n.value, a.value, c.value, d.value, f.value, g.value)`
+        `console.log(n.value, a.value, c.value, d.value, f.value, g.value, foo.value)`
       )
-      expect(content).toMatch(`return { n, a, c, d, f, g }`)
+      expect(content).toMatch(`return { n, a, c, d, f, g, foo }`)
       expect(bindings).toStrictEqual({
         n: BindingTypes.SETUP_REF,
         a: BindingTypes.SETUP_REF,
         c: BindingTypes.SETUP_REF,
         d: BindingTypes.SETUP_REF,
         f: BindingTypes.SETUP_REF,
-        g: BindingTypes.SETUP_REF
+        g: BindingTypes.SETUP_REF,
+        foo: BindingTypes.SETUP_REF
       })
       assertCode(content)
     })
