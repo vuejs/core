@@ -443,7 +443,7 @@ function baseCreateRenderer(
   createHydrationFns?: typeof createHydrationFunctions
 ): any {
   const isHookEventCompatEnabled =
-    __COMPAT__ && isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS)
+    __COMPAT__ && isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, null)
 
   // compile-time feature flags check
   if (__ESM_BUNDLER__ && !__TEST__) {

@@ -107,7 +107,8 @@ const TransitionGroupImpl = {
         __COMPAT__ &&
         !rawProps.tag &&
         compatUtils.softAssertCompatEnabled(
-          DeprecationTypes.TRANSITION_GROUP_ROOT
+          DeprecationTypes.TRANSITION_GROUP_ROOT,
+          instance.parent
         )
       ) {
         tag = 'span'

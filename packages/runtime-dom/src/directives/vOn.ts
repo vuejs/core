@@ -2,7 +2,8 @@ import {
   getCurrentInstance,
   DeprecationTypes,
   LegacyConfig,
-  compatUtils
+  compatUtils,
+  ComponentInternalInstance
 } from '@vue/runtime-core'
 import { hyphenate, isArray } from '@vue/shared'
 
@@ -58,16 +59,22 @@ const keyNames: Record<string, string | string[]> = {
  */
 export const withKeys = (fn: Function, modifiers: string[]) => {
   let globalKeyCodes: LegacyConfig['keyCodes']
+  let instance: ComponentInternalInstance | null = null
   if (__COMPAT__) {
-    if (compatUtils.isCompatEnabled(DeprecationTypes.CONFIG_KEY_CODES)) {
-      const instance = getCurrentInstance()
+    instance = getCurrentInstance()
+    if (
+      compatUtils.isCompatEnabled(DeprecationTypes.CONFIG_KEY_CODES, instance)
+    ) {
       if (instance) {
         globalKeyCodes = ((instance.appContext.config as any) as LegacyConfig)
           .keyCodes
       }
     }
     if (__DEV__ && modifiers.some(m => /^\d+$/.test(m))) {
-      compatUtils.warnDeprecation(DeprecationTypes.V_ON_KEYCODE_MODIFIER)
+      compatUtils.warnDeprecation(
+        DeprecationTypes.V_ON_KEYCODE_MODIFIER,
+        instance
+      )
     }
   }
 
@@ -84,7 +91,10 @@ export const withKeys = (fn: Function, modifiers: string[]) => {
     if (__COMPAT__) {
       const keyCode = String(event.keyCode)
       if (
-        compatUtils.isCompatEnabled(DeprecationTypes.V_ON_KEYCODE_MODIFIER) &&
+        compatUtils.isCompatEnabled(
+          DeprecationTypes.V_ON_KEYCODE_MODIFIER,
+          instance
+        ) &&
         modifiers.some(mod => mod == keyCode)
       ) {
         return fn(event)

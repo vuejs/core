@@ -1,4 +1,4 @@
-import { hasOwn, isArray } from '@vue/shared/src'
+import { hasOwn, isArray } from '@vue/shared'
 import {
   ComponentInternalInstance,
   ComponentOptions,

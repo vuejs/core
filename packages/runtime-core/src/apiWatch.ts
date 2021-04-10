@@ -226,7 +226,7 @@ function doWatch(
       const val = baseGetter()
       if (
         isArray(val) &&
-        softAssertCompatEnabled(DeprecationTypes.WATCH_ARRAY)
+        softAssertCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance)
       ) {
         traverse(val)
       }
@@ -277,7 +277,7 @@ function doWatch(
         hasChanged(newValue, oldValue) ||
         (__COMPAT__ &&
           isArray(newValue) &&
-          isCompatEnabled(DeprecationTypes.WATCH_ARRAY))
+          isCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance))
       ) {
         // cleanup before running cb again
         if (cleanup) {

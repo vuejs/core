@@ -103,7 +103,7 @@ export function resolveTransitionProps(
   // legacy transition class compat
   const legacyClassEnabled =
     __COMPAT__ &&
-    compatUtils.isCompatEnabled(DeprecationTypes.TRANSITION_CLASSES)
+    compatUtils.isCompatEnabled(DeprecationTypes.TRANSITION_CLASSES, null)
   let legacyEnterFromClass: string
   let legacyAppearFromClass: string
   let legacyLeaveFromClass: string

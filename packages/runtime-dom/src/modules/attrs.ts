@@ -54,6 +54,7 @@ export function compatCoerceAttr(
       v2CocercedValue &&
       compatUtils.softAssertCompatEnabled(
         DeprecationTypes.ATTR_ENUMERATED_COERSION,
+        null,
         key,
         value,
         v2CocercedValue
@@ -65,7 +66,11 @@ export function compatCoerceAttr(
   } else if (
     value === false &&
     !isSpecialBooleanAttr(key) &&
-    compatUtils.softAssertCompatEnabled(DeprecationTypes.ATTR_FALSE_VALUE, key)
+    compatUtils.softAssertCompatEnabled(
+      DeprecationTypes.ATTR_FALSE_VALUE,
+      null,
+      key
+    )
   ) {
     el.removeAttribute(key)
     return true
