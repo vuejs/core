@@ -288,12 +288,17 @@ export { LegacyConfig } from './compat/globalConfig'
 
 import { warnDeprecation } from './compat/deprecations'
 import { createCompatVue } from './compat/global'
-import { isCompatEnabled, softAssertCompatEnabled } from './compat/compatConfig'
+import {
+  isCompatEnabled,
+  checkCompatEnabled,
+  softAssertCompatEnabled
+} from './compat/compatConfig'
 
 const _compatUtils = {
   warnDeprecation,
   createCompatVue,
   isCompatEnabled,
+  checkCompatEnabled,
   softAssertCompatEnabled
 }
 

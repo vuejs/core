@@ -39,6 +39,9 @@ export function isCompatEnabled(
   }
 }
 
+/**
+ * Use this for features that are completely removed in non-compat build.
+ */
 export function assertCompatEnabled(
   key: DeprecationTypes,
   instance: ComponentInternalInstance | null,
@@ -51,6 +54,10 @@ export function assertCompatEnabled(
   }
 }
 
+/**
+ * Use this for features where legacy usage is still possible, but will likely
+ * lead to runtime error if compat is disabled. (warn in all cases)
+ */
 export function softAssertCompatEnabled(
   key: DeprecationTypes,
   instance: ComponentInternalInstance | null,
@@ -62,12 +69,26 @@ export function softAssertCompatEnabled(
   return isCompatEnabled(key, instance)
 }
 
-// disable features that conflict with v3 behavior
+/**
+ * Use this for features with the same syntax but with mutually exclusive
+ * behavior in 2 vs 3. Only warn if compat is enabled.
+ * e.g. render function
+ */
+export function checkCompatEnabled(
+  key: DeprecationTypes,
+  instance: ComponentInternalInstance | null,
+  ...args: any[]
+) {
+  const enabled = isCompatEnabled(key, instance)
+  if (__DEV__ && enabled) {
+    warnDeprecation(key, instance, ...args)
+  }
+  return enabled
+}
+
+// run tests in v3 mode by default
 if (__TEST__) {
   configureCompat({
-    COMPONENT_ASYNC: false,
-    COMPONENT_FUNCTIONAL: false,
-    WATCH_ARRAY: false,
-    INSTANCE_ATTRS_CLASS_STYLE: false
+    MODE: 3
   })
 }

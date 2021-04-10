@@ -10,8 +10,8 @@ import {
 import { resolveInjections } from '../componentOptions'
 import { InternalSlots } from '../componentSlots'
 import { isVNode } from '../vnode'
-import { isCompatEnabled, softAssertCompatEnabled } from './compatConfig'
-import { DeprecationTypes, warnDeprecation } from './deprecations'
+import { checkCompatEnabled, softAssertCompatEnabled } from './compatConfig'
+import { DeprecationTypes } from './deprecations'
 import { getCompatListeners } from './instanceListeners'
 import { compatH } from './renderFn'
 
@@ -24,9 +24,8 @@ export function convertLegacyComponent(
   // use softAssert here.
   if (
     isFunction(comp) &&
-    isCompatEnabled(DeprecationTypes.COMPONENT_ASYNC, instance)
+    checkCompatEnabled(DeprecationTypes.COMPONENT_ASYNC, instance, comp)
   ) {
-    __DEV__ && warnDeprecation(DeprecationTypes.COMPONENT_ASYNC, instance, comp)
     return convertLegacyAsyncComponent(comp)
   }
 

@@ -54,8 +54,8 @@ import { CompilerOptions } from '@vue/compiler-core'
 import { markAttrsAccessed } from './componentRenderUtils'
 import { currentRenderingInstance } from './componentRenderContext'
 import { startMeasure, endMeasure } from './profiling'
-import { isCompatEnabled } from './compat/compatConfig'
-import { DeprecationTypes, warnDeprecation } from './compat/deprecations'
+import { checkCompatEnabled } from './compat/compatConfig'
+import { DeprecationTypes } from './compat/deprecations'
 import { compatH } from './compat/renderFn'
 
 export type Data = Record<string, unknown>
@@ -687,9 +687,8 @@ export function finishComponentSetup(
   if (
     __COMPAT__ &&
     Component.render &&
-    isCompatEnabled(DeprecationTypes.RENDER_FUNCTION, instance)
+    checkCompatEnabled(DeprecationTypes.RENDER_FUNCTION, instance)
   ) {
-    warnDeprecation(DeprecationTypes.RENDER_FUNCTION, instance)
     const originalRender = Component.render
     Component.render = function compatRender() {
       return originalRender.call(this, compatH)

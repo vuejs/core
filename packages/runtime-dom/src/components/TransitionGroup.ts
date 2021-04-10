@@ -106,7 +106,7 @@ const TransitionGroupImpl = {
       if (
         __COMPAT__ &&
         !rawProps.tag &&
-        compatUtils.softAssertCompatEnabled(
+        compatUtils.checkCompatEnabled(
           DeprecationTypes.TRANSITION_GROUP_ROOT,
           instance.parent
         )

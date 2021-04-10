@@ -1,7 +1,10 @@
 import Vue from '@vue/compat'
 
 describe('compat: global API', () => {
-  test('should work', async () => {
+  beforeEach(() => Vue.configureCompat({ MODE: 2 }))
+  afterEach(() => Vue.configureCompat({ MODE: 3 }))
+
+  test('should work', () => {
     const el = document.createElement('div')
     el.innerHTML = `{{ msg }}`
     new Vue({
