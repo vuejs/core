@@ -348,7 +348,7 @@ export function compileScript(
             break
           }
         }
-        for (let i = left.end!; i > 0; i++) {
+        for (let i = right.end!; i > 0; i++) {
           const char = source[i + startOffset]
           if (char === ')') {
             s.remove(i + startOffset, i + startOffset + 1)
