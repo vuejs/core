@@ -46,6 +46,10 @@ export const Transition: FunctionalComponent<TransitionProps> = (
 
 Transition.displayName = 'Transition'
 
+if (__COMPAT__) {
+  Transition.__isBuiltIn = true
+}
+
 const DOMTransitionPropsValidators = {
   name: String,
   type: String,

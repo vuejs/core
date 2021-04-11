@@ -19,6 +19,10 @@ export function convertLegacyComponent(
   comp: any,
   instance: ComponentInternalInstance | null
 ): Component {
+  if (comp.__isBuiltIn) {
+    return comp
+  }
+
   // 2.x async component
   // since after disabling this, plain functions are still valid usage, do not
   // use softAssert here.

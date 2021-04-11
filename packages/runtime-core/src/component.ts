@@ -54,9 +54,7 @@ import { CompilerOptions } from '@vue/compiler-core'
 import { markAttrsAccessed } from './componentRenderUtils'
 import { currentRenderingInstance } from './componentRenderContext'
 import { startMeasure, endMeasure } from './profiling'
-import { checkCompatEnabled } from './compat/compatConfig'
-import { DeprecationTypes } from './compat/deprecations'
-import { compatH } from './compat/renderFn'
+import { convertLegacyRenderFn } from './compat/renderFn'
 
 export type Data = Record<string, unknown>
 
@@ -96,6 +94,10 @@ export interface ComponentInternalOptions {
    * @internal
    */
   __hmrId?: string
+  /**
+   * Compat build only, for bailing out of certain compatibility behavior
+   */
+  __isBuiltIn?: boolean
   /**
    * This one should be exposed so that devtools can make use of it
    */
@@ -188,6 +190,10 @@ export type InternalRenderFunction = {
     $options: ComponentInternalInstance['ctx']
   ): VNodeChild
   _rc?: boolean // isRuntimeCompiled
+
+  // __COMPAT__ only
+  _compatChecked?: boolean // v3 and already checked for v2 compat
+  _compatWrapped?: boolean // is wrapped for v2 compat
 }
 
 /**
@@ -684,15 +690,8 @@ export function finishComponentSetup(
 ) {
   const Component = instance.type as ComponentOptions
 
-  if (
-    __COMPAT__ &&
-    Component.render &&
-    checkCompatEnabled(DeprecationTypes.RENDER_FUNCTION, instance)
-  ) {
-    const originalRender = Component.render
-    Component.render = function compatRender() {
-      return originalRender.call(this, compatH)
-    }
+  if (__COMPAT__) {
+    convertLegacyRenderFn(instance)
   }
 
   // template / render function normalization

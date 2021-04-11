@@ -49,7 +49,11 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
 
     // overrides existing accessor
     $slots: i => {
-      if (isCompatEnabled(DeprecationTypes.RENDER_FUNCTION, i)) {
+      if (
+        isCompatEnabled(DeprecationTypes.RENDER_FUNCTION, i) &&
+        i.render &&
+        i.render._compatWrapped
+      ) {
         return new Proxy(i.slots, legacySlotProxyHandlers)
       }
       return __DEV__ ? shallowReadonly(i.slots) : i.slots

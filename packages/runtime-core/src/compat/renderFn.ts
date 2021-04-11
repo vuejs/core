@@ -5,7 +5,13 @@ import {
   ShapeFlags,
   toHandlerKey
 } from '@vue/shared'
-import { Component, Data } from '../component'
+import {
+  Component,
+  ComponentInternalInstance,
+  ComponentOptions,
+  Data,
+  InternalRenderFunction
+} from '../component'
 import { DirectiveArguments, withDirectives } from '../directives'
 import {
   resolveDirective,
@@ -19,6 +25,35 @@ import {
   VNodeArrayChildren,
   VNodeProps
 } from '../vnode'
+import { checkCompatEnabled } from './compatConfig'
+import { DeprecationTypes } from './deprecations'
+
+export function convertLegacyRenderFn(instance: ComponentInternalInstance) {
+  const Component = instance.type as ComponentOptions
+  const render = Component.render as InternalRenderFunction | undefined
+
+  // v3 runtime compiled, or already checked / wrapped
+  if (!render || render._rc || render._compatChecked || render._compatWrapped) {
+    return
+  }
+
+  const string = render.toString()
+  if (string.startsWith('function render(_ctx') || string.startsWith('(_ctx')) {
+    // v3 pre-compiled function
+    render._compatChecked = true
+    return
+  }
+
+  // v2 render function, try to provide compat
+  if (checkCompatEnabled(DeprecationTypes.RENDER_FUNCTION, instance)) {
+    const wrapped = (Component.render = function compatRender() {
+      // @ts-ignore
+      return render.call(this, compatH)
+    })
+    // @ts-ignore
+    wrapped._compatWrapped = true
+  }
+}
 
 interface LegacyVNodeProps {
   key?: string | number

@@ -30,6 +30,11 @@ export function isCompatEnabled(
   key: DeprecationTypes,
   instance: ComponentInternalInstance | null
 ): boolean {
+  // skip compat for built-in components
+  if (instance && instance.type.__isBuiltIn) {
+    return false
+  }
+
   const mode = getCompatConfigForKey('MODE', instance) || 2
   const val = getCompatConfigForKey(key, instance)
   if (mode === 2) {

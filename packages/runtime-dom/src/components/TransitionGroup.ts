@@ -22,7 +22,8 @@ import {
   SetupContext,
   toRaw,
   compatUtils,
-  DeprecationTypes
+  DeprecationTypes,
+  ComponentOptions
 } from '@vue/runtime-core'
 import { extend } from '@vue/shared'
 
@@ -39,7 +40,7 @@ export type TransitionGroupProps = Omit<TransitionProps, 'mode'> & {
   moveClass?: string
 }
 
-const TransitionGroupImpl = {
+const TransitionGroupImpl: ComponentOptions = {
   name: 'TransitionGroup',
 
   props: /*#__PURE__*/ extend({}, TransitionPropsValidators, {
@@ -143,6 +144,10 @@ const TransitionGroupImpl = {
       return createVNode(tag, null, children)
     }
   }
+}
+
+if (__COMPAT__) {
+  TransitionGroupImpl.__isBuiltIn = true
 }
 
 /**
