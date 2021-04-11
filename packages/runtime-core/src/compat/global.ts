@@ -1,5 +1,19 @@
-import { reactive } from '@vue/reactivity'
-import { isFunction } from '@vue/shared'
+import {
+  isReactive,
+  reactive,
+  track,
+  TrackOpTypes,
+  trigger,
+  TriggerOpTypes
+} from '@vue/reactivity'
+import {
+  isFunction,
+  extend,
+  NOOP,
+  EMPTY_OBJ,
+  isArray,
+  isObject
+} from '@vue/shared'
 import { warn } from '../warning'
 import { cloneVNode, createVNode } from '../vnode'
 import { RootRenderFunction } from '../renderer'
@@ -20,7 +34,7 @@ import {
   isRuntimeOnly,
   setupComponent
 } from '../component'
-import { RenderFunction } from '../componentOptions'
+import { RenderFunction, mergeOptions } from '../componentOptions'
 import { ComponentPublicInstance } from '../componentPublicInstance'
 import { devtoolsInitApp } from '../devtools'
 import { Directive } from '../directives'
@@ -129,17 +143,14 @@ export function createCompatVue(
     isCopyingConfig = false
 
     // copy prototype augmentations as config.globalProperties
-    const isPrototypeEnabled = isCompatEnabled(
-      DeprecationTypes.GLOBAL_PROTOTYPE,
-      null
-    )
+    if (isCompatEnabled(DeprecationTypes.GLOBAL_PROTOTYPE, null)) {
+      app.config.globalProperties = Ctor.prototype
+    }
     let hasPrototypeAugmentations = false
     for (const key in Ctor.prototype) {
       if (key !== 'constructor') {
         hasPrototypeAugmentations = true
-      }
-      if (isPrototypeEnabled) {
-        app.config.globalProperties[key] = Ctor.prototype[key]
+        break
       }
     }
     if (__DEV__ && hasPrototypeAugmentations) {
@@ -227,6 +238,21 @@ export function createCompatVue(
     // TODO deprecation warning
     // TODO compiler warning for filters (maybe behavior compat?)
   }) as any
+
+  // internal utils - these are technically internal but some plugins use it.
+  const util = {
+    warn: __DEV__ ? warn : NOOP,
+    extend,
+    mergeOptions: (parent: any, child: any, vm?: ComponentPublicInstance) =>
+      mergeOptions(parent, child, vm && vm.$),
+    defineReactive
+  }
+  Object.defineProperty(Vue, 'util', {
+    get() {
+      assertCompatEnabled(DeprecationTypes.GLOBAL_UTIL, null)
+      return util
+    }
+  })
 
   Vue.configureCompat = configureCompat
 
@@ -357,4 +383,68 @@ export function installCompatMount(
 
     return instance.proxy!
   }
+}
+
+const methodsToPatch = [
+  'push',
+  'pop',
+  'shift',
+  'unshift',
+  'splice',
+  'sort',
+  'reverse'
+]
+
+const patched = new WeakSet<object>()
+
+function defineReactive(obj: any, key: string, val: any) {
+  // it's possible for the orignial object to be mutated after being defined
+  // and expecting reactivity... we are covering it here because this seems to
+  // be a bit more common.
+  if (isObject(val) && !isReactive(val) && !patched.has(val)) {
+    const reactiveVal = reactive(val)
+    if (isArray(val)) {
+      methodsToPatch.forEach(m => {
+        // @ts-ignore
+        val[m] = (...args: any[]) => {
+          // @ts-ignore
+          Array.prototype[m].call(reactiveVal, ...args)
+        }
+      })
+    } else {
+      Object.keys(val).forEach(key => {
+        defineReactiveSimple(val, key, val[key])
+      })
+    }
+  }
+
+  const i = obj.$
+  if (i && obj === i.proxy) {
+    // Vue instance, add it to data
+    if (i.data === EMPTY_OBJ) {
+      i.data = reactive({})
+    }
+    i.data[key] = val
+    i.accessCache = Object.create(null)
+  } else if (isReactive(obj)) {
+    obj[key] = val
+  } else {
+    defineReactiveSimple(obj, key, val)
+  }
+}
+
+function defineReactiveSimple(obj: any, key: string, val: any) {
+  val = isObject(val) ? reactive(val) : val
+  Object.defineProperty(obj, key, {
+    enumerable: true,
+    configurable: true,
+    get() {
+      track(obj, TrackOpTypes.GET, key)
+      return val
+    },
+    set(newVal) {
+      val = isObject(newVal) ? reactive(newVal) : newVal
+      trigger(obj, TriggerOpTypes.SET, key, newVal)
+    }
+  })
 }

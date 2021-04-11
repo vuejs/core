@@ -991,8 +991,12 @@ export function resolveMergedOptions(
   return (raw.__merged = options)
 }
 
-function mergeOptions(to: any, from: any, instance: ComponentInternalInstance) {
-  const strats = instance.appContext.config.optionMergeStrategies
+export function mergeOptions(
+  to: any,
+  from: any,
+  instance?: ComponentInternalInstance
+) {
+  const strats = instance && instance.appContext.config.optionMergeStrategies
   const { mixins, extends: extendsOptions } = from
 
   extendsOptions && mergeOptions(to, extendsOptions, instance)
@@ -1000,8 +1004,8 @@ function mergeOptions(to: any, from: any, instance: ComponentInternalInstance) {
     mixins.forEach((m: ComponentOptionsMixin) => mergeOptions(to, m, instance))
 
   for (const key in from) {
-    if (strats && hasOwn(strats, key)) {
-      to[key] = strats[key](to[key], from[key], instance.proxy, key)
+    if (strats && hasOwn(to, key) && hasOwn(strats, key)) {
+      to[key] = strats[key](to[key], from[key], instance && instance.proxy, key)
     } else {
       to[key] = from[key]
     }

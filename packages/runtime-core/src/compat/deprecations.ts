@@ -18,6 +18,7 @@ export const enum DeprecationTypes {
   GLOBAL_SET = 'GLOBAL_SET',
   GLOBAL_DELETE = 'GLOBAL_DELETE',
   GLOBAL_OBSERVABLE = 'GLOBAL_OBSERVABLE',
+  GLOBAL_UTIL = 'GLOBAL_UTIL',
 
   CONFIG_SILENT = 'CONFIG_SILENT',
   CONFIG_DEVTOOLS = 'CONFIG_DEVTOOLS',
@@ -111,6 +112,12 @@ const deprecationData: Record<DeprecationTypes, DeprecationData> = {
       `Vue.observable() has been removed. ` +
       `Use \`import { reactive } from "vue"\` from Composition API instead.`,
     link: `https://v3.vuejs.org/api/basic-reactivity.html`
+  },
+
+  [DeprecationTypes.GLOBAL_UTIL]: {
+    message:
+      `Vue.util has been removed. Please refactor to avoid its usage ` +
+      `since it was an internal API even in Vue 2.`
   },
 
   [DeprecationTypes.CONFIG_SILENT]: {

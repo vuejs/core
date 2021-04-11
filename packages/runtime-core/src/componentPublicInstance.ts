@@ -497,20 +497,6 @@ export function createRenderContext(instance: ComponentInternalInstance) {
     })
   })
 
-  // expose global properties
-  const { globalProperties } = instance.appContext.config
-  Object.keys(globalProperties).forEach(key => {
-    Object.defineProperty(target, key, {
-      configurable: true,
-      enumerable: false,
-      get: () => {
-        const val = globalProperties[key]
-        return __COMPAT__ && isFunction(val) ? val.bind(instance.proxy) : val
-      },
-      set: NOOP
-    })
-  })
-
   return target as ComponentRenderContext
 }
 

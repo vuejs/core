@@ -16,7 +16,7 @@ import { devtoolsInitApp, devtoolsUnmountApp } from './devtools'
 import { isFunction, NO, isObject } from '@vue/shared'
 import { version } from '.'
 import { installCompatMount } from './compat/global'
-import { installLegacyConfigTraps } from './compat/globalConfig'
+import { installLegacyConfigProperties } from './compat/globalConfig'
 
 export interface App<HostElement = any> {
   version: string
@@ -307,7 +307,7 @@ export function createAppAPI<HostElement>(
 
     if (__COMPAT__) {
       installCompatMount(app, context, render, hydrate)
-      if (__DEV__) installLegacyConfigTraps(app.config)
+      if (__DEV__) installLegacyConfigProperties(app.config)
     }
 
     return app

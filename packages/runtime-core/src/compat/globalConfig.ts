@@ -1,7 +1,8 @@
-import { isArray, isString } from '@vue/shared'
+import { extend, isArray, isString } from '@vue/shared'
 import { AppConfig } from '../apiCreateApp'
 import { isRuntimeOnly } from '../component'
 import { isCompatEnabled } from './compatConfig'
+import { deepMergeData } from './data'
 import { DeprecationTypes, warnDeprecation } from './deprecations'
 import { isCopyingConfig } from './global'
 
@@ -34,7 +35,7 @@ export type LegacyConfig = {
 }
 
 // dev only
-export function installLegacyConfigTraps(config: AppConfig) {
+export function installLegacyConfigProperties(config: AppConfig) {
   const legacyConfigOptions: Record<string, DeprecationTypes> = {
     silent: DeprecationTypes.CONFIG_SILENT,
     devtools: DeprecationTypes.CONFIG_DEVTOOLS,
@@ -72,4 +73,44 @@ export function installLegacyConfigTraps(config: AppConfig) {
       }
     })
   })
+
+  // Internal merge strats which are no longer needed in v3, but we need to
+  // expose them because some v2 plugins will reuse these internal strats to
+  // merge their custom options.
+  const strats = config.optionMergeStrategies as any
+  strats.data = deepMergeData
+  // lifecycle hooks
+  strats.beforeCreate = mergeHook
+  strats.created = mergeHook
+  strats.beforeMount = mergeHook
+  strats.mounted = mergeHook
+  strats.beforeUpdate = mergeHook
+  strats.updated = mergeHook
+  strats.beforeDestroy = mergeHook
+  strats.destroyed = mergeHook
+  strats.activated = mergeHook
+  strats.deactivated = mergeHook
+  strats.errorCaptured = mergeHook
+  strats.serverPrefetch = mergeHook
+  // assets
+  strats.components = mergeObjectOptions
+  strats.directives = mergeObjectOptions
+  strats.filters = mergeObjectOptions
+  // objects
+  strats.props = mergeObjectOptions
+  strats.methods = mergeObjectOptions
+  strats.inject = mergeObjectOptions
+  strats.computed = mergeObjectOptions
+  // watch has special merge behavior in v2, but isn't actually needed in v3.
+  // since we are only exposing these for compat and nobody should be relying
+  // on the watch-specific behavior, just expose the object merge strat.
+  strats.watch = mergeObjectOptions
+}
+
+function mergeHook(to: Function[] | undefined, from: Function | Function[]) {
+  return Array.from(new Set([...(to || []), from]))
+}
+
+function mergeObjectOptions(to: Object | undefined, from: Object | undefined) {
+  return to ? extend(extend(Object.create(null), to), from) : from
 }
