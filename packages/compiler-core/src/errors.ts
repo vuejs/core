@@ -1,7 +1,7 @@
 import { SourceLocation } from './ast'
 
 export interface CompilerError extends SyntaxError {
-  code: number
+  code: number | string
   loc?: SourceLocation
 }
 
@@ -11,6 +11,11 @@ export interface CoreCompilerError extends CompilerError {
 
 export function defaultOnError(error: CompilerError) {
   throw error
+}
+
+export function defaultOnWarn(msg: string | CompilerError) {
+  __DEV__ &&
+    console.warn(`[Vue warn]`, typeof msg === 'string' ? msg : msg.message)
 }
 
 export function createCompilerError<T extends number>(

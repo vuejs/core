@@ -28,7 +28,7 @@ import {
   capitalize,
   camelize
 } from '@vue/shared'
-import { defaultOnError } from './errors'
+import { defaultOnError, defaultOnWarn } from './errors'
 import {
   TO_DISPLAY_STRING,
   FRAGMENT,
@@ -40,6 +40,7 @@ import {
 } from './runtimeHelpers'
 import { isVSlot } from './utils'
 import { hoistStatic, isSingleElementRoot } from './transforms/hoistStatic'
+import { CompilerCompatOptions } from './compat/compatConfig'
 
 // There are two types of transforms:
 //
@@ -83,7 +84,10 @@ export interface ImportItem {
 }
 
 export interface TransformContext
-  extends Required<Omit<TransformOptions, 'filename'>> {
+  extends Required<
+      Omit<TransformOptions, 'filename' | keyof CompilerCompatOptions>
+    >,
+    CompilerCompatOptions {
   selfName: string | null
   root: RootNode
   helpers: Map<symbol, number>
@@ -136,7 +140,9 @@ export function createTransformContext(
     bindingMetadata = EMPTY_OBJ,
     inline = false,
     isTS = false,
-    onError = defaultOnError
+    onError = defaultOnError,
+    onWarn = defaultOnWarn,
+    compatConfig
   }: TransformOptions
 ): TransformContext {
   const nameMatch = filename.replace(/\?.*$/, '').match(/([^/\\]+)\.\w+$/)
@@ -160,6 +166,8 @@ export function createTransformContext(
     inline,
     isTS,
     onError,
+    onWarn,
+    compatConfig,
 
     // state
     root,

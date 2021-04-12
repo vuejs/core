@@ -1,6 +1,11 @@
-import { ParserOptions } from './options'
+import { ErrorHandlingOptions, ParserOptions } from './options'
 import { NO, isArray, makeMap, extend } from '@vue/shared'
-import { ErrorCodes, createCompilerError, defaultOnError } from './errors'
+import {
+  ErrorCodes,
+  createCompilerError,
+  defaultOnError,
+  defaultOnWarn
+} from './errors'
 import {
   assert,
   advancePositionWithMutation,
@@ -25,8 +30,12 @@ import {
   createRoot,
   ConstantTypes
 } from './ast'
+import { CompilerCompatOptions } from './compat/compatConfig'
 
-type OptionalOptions = 'isNativeTag' | 'isBuiltInComponent'
+type OptionalOptions =
+  | 'isNativeTag'
+  | 'isBuiltInComponent'
+  | keyof CompilerCompatOptions
 type MergedParserOptions = Omit<Required<ParserOptions>, OptionalOptions> &
   Pick<ParserOptions, OptionalOptions>
 type AttributeValue =
@@ -59,6 +68,7 @@ export const defaultParserOptions: MergedParserOptions = {
   decodeEntities: (rawText: string): string =>
     rawText.replace(decodeRE, (_, p1) => decodeMap[p1]),
   onError: defaultOnError,
+  onWarn: defaultOnWarn,
   comments: false
 }
 
@@ -80,6 +90,7 @@ export interface ParserContext {
   column: number
   inPre: boolean // HTML <pre> tag, preserve whitespaces
   inVPre: boolean // v-pre, do not process directives and interpolations
+  onWarn: NonNullable<ErrorHandlingOptions['onWarn']>
 }
 
 export function baseParse(
@@ -111,7 +122,8 @@ function createParserContext(
     originalSource: content,
     source: content,
     inPre: false,
-    inVPre: false
+    inVPre: false,
+    onWarn: options.onWarn
   }
 }
 

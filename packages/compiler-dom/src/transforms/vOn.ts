@@ -8,7 +8,9 @@ import {
   createCompoundExpression,
   ExpressionNode,
   SimpleExpressionNode,
-  isStaticExp
+  isStaticExp,
+  warnDeprecation,
+  CompilerDeprecationTypes
 } from '@vue/compiler-core'
 import { V_ON_WITH_MODIFIERS, V_ON_WITH_KEYS } from '../runtimeHelpers'
 import { makeMap, capitalize } from '@vue/shared'
@@ -93,7 +95,11 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
     if (!modifiers.length) return baseResult
 
     if (__COMPAT__ && __DEV__ && modifiers.includes('native')) {
-      console.warn('.native modifier for v-on has been removed')
+      warnDeprecation(
+        CompilerDeprecationTypes.V_ON_NATIVE_MODIFIER,
+        context,
+        dir.loc
+      )
     }
 
     let { key, value: handlerExp } = baseResult.props[0]
