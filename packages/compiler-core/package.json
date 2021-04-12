@@ -11,6 +11,7 @@
   ],
   "buildOptions": {
     "name": "VueCompilerCore",
+    "compat": true,
     "formats": [
       "esm-bundler",
       "cjs"

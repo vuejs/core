@@ -92,6 +92,10 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
     const { modifiers } = dir
     if (!modifiers.length) return baseResult
 
+    if (__COMPAT__ && __DEV__ && modifiers.includes('native')) {
+      console.warn('.native modifier for v-on has been removed')
+    }
+
     let { key, value: handlerExp } = baseResult.props[0]
     const {
       keyModifiers,
