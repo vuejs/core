@@ -2,6 +2,7 @@ import {
   h,
   Fragment,
   createVNode,
+  createCommentVNode,
   openBlock,
   createBlock,
   render,
@@ -646,5 +647,49 @@ describe('renderer: optimized mode', () => {
     expect(block!.dynamicChildren![0].dynamicChildren![0]).toEqual(
       dynamicVNode!
     )
+  })
+
+  // 3569
+  test('should force bailout when the user manually calls the slot function', async () => {
+    const index = ref(0)
+    const Foo = {
+      setup(props: any, { slots }: SetupContext) {
+        return () => {
+          return slots.default!()[index.value]
+        }
+      }
+    }
+
+    const app = createApp({
+      setup() {
+        return () => {
+          return (
+            openBlock(),
+            createBlock(Foo, null, {
+              default: withCtx(() => [
+                true
+                  ? (openBlock(), createBlock('p', { key: 0 }, '1'))
+                  : createCommentVNode('v-if', true),
+                true
+                  ? (openBlock(), createBlock('p', { key: 0 }, '2'))
+                  : createCommentVNode('v-if', true)
+              ]),
+              _: 1 /* STABLE */
+            })
+          )
+        }
+      }
+    })
+
+    app.mount(root)
+    expect(inner(root)).toBe('<p>1</p>')
+
+    index.value = 1
+    await nextTick()
+    expect(inner(root)).toBe('<p>2</p>')
+
+    index.value = 0
+    await nextTick()
+    expect(inner(root)).toBe('<p>1</p>')
   })
 })
