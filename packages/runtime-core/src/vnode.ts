@@ -35,7 +35,8 @@ import { warn } from './warning'
 import { TeleportImpl, isTeleport } from './components/Teleport'
 import {
   currentRenderingInstance,
-  currentScopeId
+  currentScopeId,
+  shouldForceBailout
 } from './componentRenderContext'
 import { RendererNode, RendererElement } from './renderer'
 import { NULL_DYNAMIC_COMPONENT } from './helpers/resolveAssets'
@@ -263,7 +264,9 @@ export function createBlock(
     true /* isBlock: prevent a block from tracking itself */
   )
   // save current block children on the block vnode
-  vnode.dynamicChildren = currentBlock || (EMPTY_ARR as any)
+  vnode.dynamicChildren = shouldForceBailout
+    ? null
+    : currentBlock || (EMPTY_ARR as any)
   // close block
   closeBlock()
   // a block is always going to be patched, so track it as a child of its
@@ -347,6 +350,11 @@ function _createVNode(
       warn(`Invalid vnode type when creating vnode: ${type}.`)
     }
     type = Comment
+  }
+
+  if (shouldForceBailout) {
+    patchFlag = 0
+    dynamicProps = null
   }
 
   if (isVNode(type)) {
