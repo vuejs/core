@@ -3,8 +3,11 @@ import { ComponentInternalInstance, ComponentOptions } from '../component'
 import { callWithErrorHandling, ErrorCodes } from '../errorHandling'
 import { VNode } from '../vnode'
 import { popWarningContext, pushWarningContext } from '../warning'
-import { isCompatEnabled } from './compatConfig'
-import { DeprecationTypes, warnDeprecation } from './deprecations'
+import {
+  DeprecationTypes,
+  warnDeprecation,
+  isCompatEnabled
+} from './compatConfig'
 
 const defaultModelMapping = {
   prop: 'value',

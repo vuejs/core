@@ -1,9 +1,12 @@
 import { extend, isArray, isString } from '@vue/shared'
 import { AppConfig } from '../apiCreateApp'
 import { isRuntimeOnly } from '../component'
-import { isCompatEnabled } from './compatConfig'
 import { deepMergeData } from './data'
-import { DeprecationTypes, warnDeprecation } from './deprecations'
+import {
+  DeprecationTypes,
+  warnDeprecation,
+  isCompatEnabled
+} from './compatConfig'
 import { isCopyingConfig } from './global'
 
 // legacy config warnings

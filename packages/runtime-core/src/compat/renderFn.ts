@@ -27,8 +27,7 @@ import {
   VNodeArrayChildren,
   VNodeProps
 } from '../vnode'
-import { checkCompatEnabled } from './compatConfig'
-import { DeprecationTypes } from './deprecations'
+import { checkCompatEnabled, DeprecationTypes } from './compatConfig'
 
 export function convertLegacyRenderFn(instance: ComponentInternalInstance) {
   const Component = instance.type as ComponentOptions

@@ -33,7 +33,7 @@ import {
 } from './errorHandling'
 import { queuePostRenderEffect } from './renderer'
 import { warn } from './warning'
-import { DeprecationTypes } from './compat/deprecations'
+import { DeprecationTypes } from './compat/compatConfig'
 import { checkCompatEnabled, isCompatEnabled } from './compat/compatConfig'
 
 export type WatchEffect = (onInvalidate: InvalidateCbRegistrator) => void

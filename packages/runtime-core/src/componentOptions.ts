@@ -66,7 +66,7 @@ import { VNodeChild } from './vnode'
 import { callWithAsyncErrorHandling } from './errorHandling'
 import { UnionToIntersection } from './helpers/typeUtils'
 import { deepMergeData } from './compat/data'
-import { DeprecationTypes } from './compat/deprecations'
+import { DeprecationTypes } from './compat/compatConfig'
 import {
   CompatConfig,
   isCompatEnabled,

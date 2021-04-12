@@ -2,8 +2,7 @@ import { ShapeFlags } from '@vue/shared/src'
 import { ComponentInternalInstance } from '../component'
 import { ComponentPublicInstance } from '../componentPublicInstance'
 import { VNode } from '../vnode'
-import { assertCompatEnabled } from './compatConfig'
-import { DeprecationTypes } from './deprecations'
+import { assertCompatEnabled, DeprecationTypes } from './compatConfig'
 
 export function getCompatChildren(
   instance: ComponentInternalInstance

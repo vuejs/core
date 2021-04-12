@@ -2,11 +2,11 @@ import { extend, NOOP } from '@vue/shared'
 import { PublicPropertiesMap } from '../componentPublicInstance'
 import { getCompatChildren } from './instanceChildren'
 import {
+  DeprecationTypes,
   assertCompatEnabled,
   checkCompatEnabled,
   isCompatEnabled
 } from './compatConfig'
-import { DeprecationTypes } from './deprecations'
 import { off, on, once } from './instanceEventEmitter'
 import { getCompatListeners } from './instanceListeners'
 import { shallowReadonly } from '@vue/reactivity'

@@ -1,8 +1,7 @@
 import { isArray } from '@vue/shared'
 import { ComponentInternalInstance } from '../component'
 import { callWithAsyncErrorHandling, ErrorCodes } from '../errorHandling'
-import { assertCompatEnabled } from './compatConfig'
-import { DeprecationTypes } from './deprecations'
+import { assertCompatEnabled, DeprecationTypes } from './compatConfig'
 
 interface EventRegistry {
   [event: string]: Function[] | undefined
@@ -32,7 +31,11 @@ export function on(
     event.forEach(e => on(instance, e, fn))
   } else {
     if (event.startsWith('hook:')) {
-      assertCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
+      assertCompatEnabled(
+        DeprecationTypes.INSTANCE_EVENT_HOOKS,
+        instance,
+        event
+      )
     } else {
       assertCompatEnabled(DeprecationTypes.INSTANCE_EVENT_EMITTER, instance)
     }

@@ -10,8 +10,11 @@ import {
 import { resolveInjections } from '../componentOptions'
 import { InternalSlots } from '../componentSlots'
 import { isVNode } from '../vnode'
-import { checkCompatEnabled, softAssertCompatEnabled } from './compatConfig'
-import { DeprecationTypes } from './deprecations'
+import {
+  checkCompatEnabled,
+  softAssertCompatEnabled,
+  DeprecationTypes
+} from './compatConfig'
 import { getCompatListeners } from './instanceListeners'
 import { compatH } from './renderFn'
 

@@ -86,7 +86,7 @@ import {
 import { initFeatureFlags } from './featureFlags'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import { isCompatEnabled } from './compat/compatConfig'
-import { DeprecationTypes } from './compat/deprecations'
+import { DeprecationTypes } from './compat/compatConfig'
 
 export interface Renderer<HostElement = RendererElement> {
   render: RootRenderFunction<HostElement>

@@ -39,11 +39,12 @@ import { ComponentPublicInstance } from '../componentPublicInstance'
 import { devtoolsInitApp } from '../devtools'
 import { Directive } from '../directives'
 import { nextTick } from '../scheduler'
-import { warnDeprecation, DeprecationTypes } from './deprecations'
 import { version } from '..'
 import { LegacyConfig } from './globalConfig'
 import { LegacyDirective } from './customDirective'
 import {
+  warnDeprecation,
+  DeprecationTypes,
   assertCompatEnabled,
   configureCompat,
   isCompatEnabled,

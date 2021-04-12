@@ -34,8 +34,8 @@ import { isEmitListener } from './componentEmits'
 import { InternalObjectKey } from './vnode'
 import { AppContext } from './apiCreateApp'
 import { createPropsDefaultThis } from './compat/props'
-import { isCompatEnabled } from './compat/compatConfig'
-import { DeprecationTypes } from './compat/deprecations'
+import { isCompatEnabled, softAssertCompatEnabled } from './compat/compatConfig'
+import { DeprecationTypes } from './compat/compatConfig'
 
 export type ComponentPropsOptions<P = Data> =
   | ComponentObjectPropsOptions<P>
@@ -296,6 +296,15 @@ function setFullProps(
       if (isReservedProp(key)) {
         continue
       }
+
+      if (__COMPAT__ && key.startsWith('onHook:')) {
+        softAssertCompatEnabled(
+          DeprecationTypes.INSTANCE_EVENT_HOOKS,
+          instance,
+          key.slice(2).toLowerCase()
+        )
+      }
+
       const value = rawProps[key]
       // prop option names are camelized during normalization, so to support
       // kebab -> camel conversion here we need to camelize the key.

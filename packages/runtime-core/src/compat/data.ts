@@ -1,6 +1,6 @@
 import { isPlainObject } from '@vue/shared'
 import { ComponentInternalInstance } from '../component'
-import { DeprecationTypes, warnDeprecation } from './deprecations'
+import { DeprecationTypes, warnDeprecation } from './compatConfig'
 
 export function deepMergeData(
   to: any,
