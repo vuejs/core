@@ -230,21 +230,28 @@ export function resolveComponentType(
   context: TransformContext,
   ssr = false
 ) {
-  const { tag } = node
+  let { tag } = node
 
   // 1. dynamic component
-  const isProp = isComponentTag(tag)
-    ? findProp(node, 'is')
-    : findDir(node, 'is')
+  const isExplicitDynamic = isComponentTag(tag)
+  const isProp =
+    findProp(node, 'is') || (!isExplicitDynamic && findDir(node, 'is'))
   if (isProp) {
-    const exp =
-      isProp.type === NodeTypes.ATTRIBUTE
-        ? isProp.value && createSimpleExpression(isProp.value.content, true)
-        : isProp.exp
-    if (exp) {
-      return createCallExpression(context.helper(RESOLVE_DYNAMIC_COMPONENT), [
-        exp
-      ])
+    if (!isExplicitDynamic && isProp.type === NodeTypes.ATTRIBUTE) {
+      // <button is="vue:xxx">
+      // if not <component>, only is value that starts with "vue:" will be
+      // treated as component by the parse phase and reach here.
+      tag = isProp.value!.content.slice(4)
+    } else {
+      const exp =
+        isProp.type === NodeTypes.ATTRIBUTE
+          ? isProp.value && createSimpleExpression(isProp.value.content, true)
+          : isProp.exp
+      if (exp) {
+        return createCallExpression(context.helper(RESOLVE_DYNAMIC_COMPONENT), [
+          exp
+        ])
+      }
     }
   }
 
@@ -416,8 +423,11 @@ export function buildProps(
           isStatic = false
         }
       }
-      // skip :is on <component>
-      if (name === 'is' && isComponentTag(tag)) {
+      // skip is on <component>, or is="vue:xxx"
+      if (
+        name === 'is' &&
+        (isComponentTag(tag) || (value && value.content.startsWith('vue:')))
+      ) {
         continue
       }
       properties.push(

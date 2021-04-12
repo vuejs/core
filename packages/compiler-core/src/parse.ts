@@ -488,7 +488,12 @@ function parseTag(
   const options = context.options
   if (!context.inVPre && !options.isCustomElement(tag)) {
     const hasVIs = props.some(
-      p => p.type === NodeTypes.DIRECTIVE && p.name === 'is'
+      p =>
+        p.name === 'is' &&
+        // v-is="xxx" (TODO: deprecate)
+        (p.type === NodeTypes.DIRECTIVE ||
+          // is="vue:xxx"
+          (p.value && p.value.content.startsWith('vue:')))
     )
     if (options.isNativeTag && !hasVIs) {
       if (!options.isNativeTag(tag)) tagType = ElementTypes.COMPONENT
