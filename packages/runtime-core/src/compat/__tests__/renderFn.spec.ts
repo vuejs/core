@@ -60,6 +60,35 @@ describe('compat: render function', () => {
     })
   })
 
+  test('staticClass + class', () => {
+    expect(
+      h('div', {
+        class: { foo: true },
+        staticClass: 'bar'
+      })
+    ).toMatchObject({
+      props: {
+        class: 'bar foo'
+      }
+    })
+  })
+
+  test('staticStyle + style', () => {
+    expect(
+      h('div', {
+        style: { color: 'red' },
+        staticStyle: { fontSize: '14px' }
+      })
+    ).toMatchObject({
+      props: {
+        style: {
+          color: 'red',
+          fontSize: '14px'
+        }
+      }
+    })
+  })
+
   test('on / nativeOn', () => {
     const fn = () => {}
     expect(

@@ -2,6 +2,8 @@ import {
   extend,
   isArray,
   isObject,
+  normalizeClass,
+  normalizeStyle,
   ShapeFlags,
   toHandlerKey
 } from '@vue/shared'
@@ -141,7 +143,13 @@ export function compatH(
   }
 }
 
-function convertLegacyProps(legacyProps?: LegacyVNodeProps): Data & VNodeProps {
+function convertLegacyProps(
+  legacyProps?: LegacyVNodeProps
+): Data & VNodeProps | null {
+  if (!legacyProps) {
+    return null
+  }
+
   const converted: Data & VNodeProps = {}
 
   for (const key in legacyProps) {
@@ -159,9 +167,20 @@ function convertLegacyProps(legacyProps?: LegacyVNodeProps): Data & VNodeProps {
             : incoming
         }
       }
-    } else {
+    } else if (
+      key !== 'refInFor' &&
+      key !== 'staticStyle' &&
+      key !== 'staticClass'
+    ) {
       converted[key] = legacyProps[key as keyof LegacyVNodeProps]
     }
+  }
+
+  if (legacyProps.staticClass) {
+    converted.class = normalizeClass([legacyProps.staticClass, converted.class])
+  }
+  if (legacyProps.staticStyle) {
+    converted.style = normalizeStyle([legacyProps.staticStyle, converted.style])
   }
 
   return converted
