@@ -25,18 +25,6 @@ import { DirectiveTransformResult } from 'packages/compiler-core/src/transform'
 export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
   const model = dir.exp!
 
-  function checkDuplicatedValue() {
-    const value = findProp(node, 'value')
-    if (value) {
-      context.onError(
-        createDOMCompilerError(
-          DOMErrorCodes.X_V_MODEL_UNNECESSARY_VALUE,
-          value.loc
-        )
-      )
-    }
-  }
-
   if (node.tagType === ElementTypes.ELEMENT) {
     const res: DirectiveTransformResult = { props: [] }
     const defaultProps = [
@@ -111,7 +99,6 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
               )
               break
             default:
-              checkDuplicatedValue()
               res.props = defaultProps
               break
           }
@@ -122,11 +109,9 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
         // the entire props expression
       } else {
         // text type
-        checkDuplicatedValue()
         res.props = defaultProps
       }
     } else if (node.tag === 'textarea') {
-      checkDuplicatedValue()
       node.children = [createInterpolation(model, model.loc)]
     } else if (node.tag === 'select') {
       // NOOP

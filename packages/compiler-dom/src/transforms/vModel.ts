@@ -31,18 +31,6 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
     )
   }
 
-  function checkDuplicatedValue() {
-    const value = findProp(node, 'value')
-    if (value) {
-      context.onError(
-        createDOMCompilerError(
-          DOMErrorCodes.X_V_MODEL_UNNECESSARY_VALUE,
-          value.loc
-        )
-      )
-    }
-  }
-
   const { tag } = node
   const isCustomElement = context.isCustomElement(tag)
   if (
@@ -76,25 +64,15 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
                 )
               )
               break
-            default:
-              // text type
-              __DEV__ && checkDuplicatedValue()
-              break
           }
         }
       } else if (hasDynamicKeyVBind(node)) {
         // element has bindings with dynamic keys, which can possibly contain
         // "type".
         directiveToUse = V_MODEL_DYNAMIC
-      } else {
-        // text type
-        __DEV__ && checkDuplicatedValue()
       }
     } else if (tag === 'select') {
       directiveToUse = V_MODEL_SELECT
-    } else {
-      // textarea
-      __DEV__ && checkDuplicatedValue()
     }
     // inject runtime directive
     // by returning the helper symbol via needRuntime
