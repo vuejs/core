@@ -43,11 +43,10 @@ function get(
     !isReadonly && track(rawTarget, TrackOpTypes.GET, key)
   }
   !isReadonly && track(rawTarget, TrackOpTypes.GET, rawKey)
-  const { has } = getProto(rawTarget)
   const wrap = isShallow ? toShallow : isReadonly ? toReadonly : toReactive
-  if (has.call(rawTarget, key)) {
+  if (target.has(key)) {
     return wrap(target.get(key))
-  } else if (has.call(rawTarget, rawKey)) {
+  } else if (target.has(rawKey)) {
     return wrap(target.get(rawKey))
   }
 }
