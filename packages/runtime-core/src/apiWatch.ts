@@ -181,9 +181,7 @@ function doWatch(
         } else if (isReactive(s)) {
           return traverse(s)
         } else if (isFunction(s)) {
-          return callWithErrorHandling(s, instance, ErrorCodes.WATCH_GETTER, [
-            arguments[3] && arguments[3].proxy
-          ])
+          return callWithErrorHandling(s, instance, ErrorCodes.WATCH_GETTER)
         } else {
           __DEV__ && warnInvalidSource(s)
         }

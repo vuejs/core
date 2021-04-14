@@ -880,13 +880,11 @@ describe('api: watch', () => {
 
   test('should not leak `this.proxy` to setup()', () => {
     const source = jest.fn()
-    const multipleSource = [jest.fn()]
 
     const Comp = defineComponent({
       render() {},
       setup() {
         watch(source, () => {})
-        watch(multipleSource, () => {})
       }
     })
 
@@ -894,7 +892,6 @@ describe('api: watch', () => {
     createApp(Comp).mount(root)
 
     expect(source).toBeCalledWith(undefined)
-    expect(multipleSource[0]).toBeCalledWith(undefined)
   })
 
   // #2728
