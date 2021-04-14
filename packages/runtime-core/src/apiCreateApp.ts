@@ -45,7 +45,8 @@ export type OptionMergeFunction = (
   to: unknown,
   from: unknown,
   instance: any,
-  key: string
+  key: string,
+  asMixin: boolean
 ) => any
 
 export interface AppConfig {

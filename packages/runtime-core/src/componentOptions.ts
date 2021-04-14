@@ -356,12 +356,11 @@ type ComponentWatchOptionItem = WatchOptionItem | WatchOptionItem[]
 
 type ComponentWatchOptions = Record<string, ComponentWatchOptionItem>
 
-type ComponentInjectOptions =
-  | string[]
-  | Record<
-      string | symbol,
-      string | symbol | { from?: string | symbol; default?: unknown }
-    >
+type ObjectInjectOptions = Record<
+  string | symbol,
+  string | symbol | { from?: string | symbol; default?: unknown }
+>
+type ComponentInjectOptions = string[] | ObjectInjectOptions
 
 interface LegacyOptions<
   Props,
@@ -484,16 +483,10 @@ export let shouldCacheAccess = true
 
 export function applyOptions(
   instance: ComponentInternalInstance,
-  options: ComponentOptions,
-  deferredData: DataFn[] = [],
-  deferredWatch: ComponentWatchOptions[] = [],
-  deferredProvide: (Data | Function)[] = [],
-  asMixin: boolean = false
+  options: ComponentOptions
 ) {
+  const publicThis = instance.proxy!
   const {
-    // composition
-    mixins,
-    extends: extendsOptions,
     // state
     data: dataOptions,
     computed: computedOptions,
@@ -505,6 +498,8 @@ export function applyOptions(
     components,
     directives,
     // lifecycle
+    beforeCreate,
+    created,
     beforeMount,
     mounted,
     beforeUpdate,
@@ -521,51 +516,18 @@ export function applyOptions(
     errorCaptured,
     // public API
     expose
-  } = options
+  } = publicThis.$options
 
-  const publicThis = instance.proxy!
   const ctx = instance.ctx
-  const globalMixins = instance.appContext.mixins
 
-  if (asMixin && render && instance.render === NOOP) {
+  if (render && instance.render === NOOP) {
     instance.render = render as InternalRenderFunction
   }
 
-  // applyOptions is called non-as-mixin once per instance
-  if (!asMixin) {
+  if (beforeCreate) {
     shouldCacheAccess = false
-    callSyncHook(
-      'beforeCreate',
-      LifecycleHooks.BEFORE_CREATE,
-      options,
-      instance,
-      globalMixins
-    )
+    callSyncHook(beforeCreate, instance, LifecycleHooks.BEFORE_CREATE)
     shouldCacheAccess = true
-    // global mixins are applied first
-    applyMixins(
-      instance,
-      globalMixins,
-      deferredData,
-      deferredWatch,
-      deferredProvide
-    )
-  }
-
-  // extending a base component...
-  if (extendsOptions) {
-    applyOptions(
-      instance,
-      extendsOptions,
-      deferredData,
-      deferredWatch,
-      deferredProvide,
-      true
-    )
-  }
-  // local mixins
-  if (mixins) {
-    applyMixins(instance, mixins, deferredData, deferredWatch, deferredProvide)
   }
 
   const checkDuplicateProperties = __DEV__ ? createDuplicateChecker() : null
@@ -583,9 +545,9 @@ export function applyOptions(
   // - props (already done outside of this function)
   // - inject
   // - methods
-  // - data (deferred since it relies on `this` access)
+  // - data
   // - computed
-  // - watch (deferred since it relies on `this` access)
+  // - watch
 
   if (injectOptions) {
     if (isArray(injectOptions)) {
@@ -643,31 +605,24 @@ export function applyOptions(
     }
   }
 
-  if (!asMixin) {
-    if (deferredData.length) {
-      deferredData.forEach(dataFn => resolveData(instance, dataFn, publicThis))
-    }
-    if (dataOptions) {
-      // @ts-ignore dataOptions is not fully type safe
-      resolveData(instance, dataOptions, publicThis)
-    }
-    if (__DEV__) {
-      const rawData = toRaw(instance.data)
-      for (const key in rawData) {
-        checkDuplicateProperties!(OptionTypes.DATA, key)
-        // expose data on ctx during dev
-        if (key[0] !== '$' && key[0] !== '_') {
-          Object.defineProperty(ctx, key, {
-            configurable: true,
-            enumerable: true,
-            get: () => rawData[key],
-            set: NOOP
-          })
-        }
+  if (dataOptions) {
+    // @ts-ignore dataOptions is not fully type safe
+    resolveData(instance, dataOptions, publicThis)
+  }
+  if (__DEV__) {
+    const rawData = toRaw(instance.data)
+    for (const key in rawData) {
+      checkDuplicateProperties!(OptionTypes.DATA, key)
+      // expose data on ctx during dev
+      if (key[0] !== '$' && key[0] !== '_') {
+        Object.defineProperty(ctx, key, {
+          configurable: true,
+          enumerable: true,
+          get: () => rawData[key],
+          set: NOOP
+        })
       }
     }
-  } else if (dataOptions) {
-    deferredData.push(dataOptions as DataFn)
   }
 
   if (computedOptions) {
@@ -707,173 +662,81 @@ export function applyOptions(
     }
   }
 
-  if (watchOptions) {
-    deferredWatch.push(watchOptions)
-  }
-  if (!asMixin && deferredWatch.length) {
-    deferredWatch.forEach(watchOptions => {
-      for (const key in watchOptions) {
-        createWatcher(watchOptions[key], ctx, publicThis, key)
-      }
-    })
+  for (const key in watchOptions) {
+    createWatcher(watchOptions[key], ctx, publicThis, key)
   }
 
   if (provideOptions) {
-    deferredProvide.push(provideOptions)
-  }
-  if (!asMixin && deferredProvide.length) {
-    deferredProvide.forEach(provideOptions => {
-      const provides = isFunction(provideOptions)
-        ? provideOptions.call(publicThis)
-        : provideOptions
-      Reflect.ownKeys(provides).forEach(key => {
-        provide(key, provides[key])
-      })
+    const provides = isFunction(provideOptions)
+      ? provideOptions.call(publicThis)
+      : provideOptions
+    Reflect.ownKeys(provides).forEach(key => {
+      provide(key, provides[key])
     })
   }
 
-  // asset options.
   // To reduce memory usage, only components with mixins or extends will have
   // resolved asset registry attached to instance.
-  if (asMixin) {
-    if (components) {
-      extend(
-        instance.components ||
-          (instance.components = extend(
-            {},
-            (instance.type as ComponentOptions).components
-          ) as Record<string, ConcreteComponent>),
-        components
-      )
-    }
-    if (directives) {
-      extend(
-        instance.directives ||
-          (instance.directives = extend(
-            {},
-            (instance.type as ComponentOptions).directives
-          )),
-        directives
-      )
-    }
+  if (components && (components as any).asMixin) {
+    instance.components = components as Record<string, ConcreteComponent> | null
+  }
+  if (directives && (directives as any).asMixin) {
+    instance.directives = directives as Record<string, Directive> | null
   }
 
   // lifecycle options
-  if (!asMixin) {
-    callSyncHook(
-      'created',
-      LifecycleHooks.CREATED,
-      options,
-      instance,
-      globalMixins
-    )
+  if (created) {
+    callSyncHook(created, instance, LifecycleHooks.CREATED)
   }
   if (beforeMount) {
-    onBeforeMount(beforeMount.bind(publicThis))
+    registerHooks(beforeMount, onBeforeMount, instance.proxy!)
   }
   if (mounted) {
-    onMounted(mounted.bind(publicThis))
+    registerHooks(mounted, onMounted, instance.proxy!)
   }
   if (beforeUpdate) {
-    onBeforeUpdate(beforeUpdate.bind(publicThis))
+    registerHooks(beforeUpdate, onBeforeUpdate, instance.proxy!)
   }
   if (updated) {
-    onUpdated(updated.bind(publicThis))
+    registerHooks(updated, onUpdated, instance.proxy!)
   }
   if (activated) {
-    onActivated(activated.bind(publicThis))
+    registerHooks(activated, onActivated, instance.proxy!)
   }
   if (deactivated) {
-    onDeactivated(deactivated.bind(publicThis))
+    registerHooks(deactivated, onDeactivated, instance.proxy!)
   }
   if (errorCaptured) {
-    onErrorCaptured(errorCaptured.bind(publicThis))
+    registerHooks(errorCaptured, onErrorCaptured, instance.proxy!)
   }
   if (renderTracked) {
-    onRenderTracked(renderTracked.bind(publicThis))
+    registerHooks(renderTracked, onRenderTracked, instance.proxy!)
   }
   if (renderTriggered) {
-    onRenderTriggered(renderTriggered.bind(publicThis))
+    registerHooks(renderTriggered, onRenderTriggered, instance.proxy!)
   }
   if (__DEV__ && beforeDestroy) {
     warn(`\`beforeDestroy\` has been renamed to \`beforeUnmount\`.`)
   }
   if (beforeUnmount) {
-    onBeforeUnmount(beforeUnmount.bind(publicThis))
+    registerHooks(beforeUnmount, onBeforeUnmount, instance.proxy!)
   }
   if (__DEV__ && destroyed) {
     warn(`\`destroyed\` has been renamed to \`unmounted\`.`)
   }
   if (unmounted) {
-    onUnmounted(unmounted.bind(publicThis))
+    registerHooks(unmounted, onUnmounted, instance.proxy!)
   }
 
   if (isArray(expose)) {
-    if (!asMixin) {
-      if (expose.length) {
-        const exposed = instance.exposed || (instance.exposed = proxyRefs({}))
-        expose.forEach(key => {
-          exposed[key] = toRef(publicThis, key as any)
-        })
-      } else if (!instance.exposed) {
-        instance.exposed = EMPTY_OBJ
-      }
-    } else if (__DEV__) {
-      warn(`The \`expose\` option is ignored when used in mixins.`)
+    if (expose.length) {
+      const exposed = instance.exposed || (instance.exposed = proxyRefs({}))
+      expose.forEach(key => {
+        exposed[key] = toRef(publicThis, key as any)
+      })
+    } else if (!instance.exposed) {
+      instance.exposed = EMPTY_OBJ
     }
-  }
-}
-
-function callSyncHook(
-  name: 'beforeCreate' | 'created',
-  type: LifecycleHooks,
-  options: ComponentOptions,
-  instance: ComponentInternalInstance,
-  globalMixins: ComponentOptions[]
-) {
-  for (let i = 0; i < globalMixins.length; i++) {
-    callHookWithMixinAndExtends(name, type, globalMixins[i], instance)
-  }
-  callHookWithMixinAndExtends(name, type, options, instance)
-}
-
-function callHookWithMixinAndExtends(
-  name: 'beforeCreate' | 'created',
-  type: LifecycleHooks,
-  options: ComponentOptions,
-  instance: ComponentInternalInstance
-) {
-  const { extends: base, mixins } = options
-  const selfHook = options[name]
-  if (base) {
-    callHookWithMixinAndExtends(name, type, base, instance)
-  }
-  if (mixins) {
-    for (let i = 0; i < mixins.length; i++) {
-      callHookWithMixinAndExtends(name, type, mixins[i], instance)
-    }
-  }
-  if (selfHook) {
-    callWithAsyncErrorHandling(selfHook.bind(instance.proxy!), instance, type)
-  }
-}
-
-function applyMixins(
-  instance: ComponentInternalInstance,
-  mixins: ComponentOptions[],
-  deferredData: DataFn[],
-  deferredWatch: ComponentWatchOptions[],
-  deferredProvide: (Data | Function)[]
-) {
-  for (let i = 0; i < mixins.length; i++) {
-    applyOptions(
-      instance,
-      mixins[i],
-      deferredData,
-      deferredWatch,
-      deferredProvide,
-      true
-    )
   }
 }
 
@@ -954,11 +817,16 @@ export function resolveMergedOptions(
   if (!globalMixins.length && !mixins && !extendsOptions) return raw
   const options = {}
   globalMixins.forEach(m => mergeOptions(options, m, instance))
-  mergeOptions(options, raw, instance)
+  mergeOptions(options, raw, instance, false)
   return (raw.__merged = options)
 }
 
-function mergeOptions(to: any, from: any, instance: ComponentInternalInstance) {
+function mergeOptions(
+  to: any,
+  from: any,
+  instance: ComponentInternalInstance,
+  asMixin = true
+) {
   const strats = instance.appContext.config.optionMergeStrategies
   const { mixins, extends: extendsOptions } = from
 
@@ -966,11 +834,181 @@ function mergeOptions(to: any, from: any, instance: ComponentInternalInstance) {
   mixins &&
     mixins.forEach((m: ComponentOptionsMixin) => mergeOptions(to, m, instance))
 
+  if (__DEV__ && asMixin && 'expose' in from) {
+    delete from.expose
+    warn(`The \`expose\` option is ignored when used in mixins.`)
+  }
+
   for (const key in from) {
     if (strats && hasOwn(strats, key)) {
-      to[key] = strats[key](to[key], from[key], instance.proxy, key)
+      to[key] = strats[key](to[key], from[key], instance.proxy, key, asMixin)
+    } else if (key in defaultMergeStrategies) {
+      to[key] = defaultMergeStrategies[key](
+        to[key],
+        from[key],
+        instance.proxy!,
+        key,
+        asMixin
+      )
     } else {
       to[key] = from[key]
     }
   }
+}
+
+const defaultMergeStrategies: Record<string, Function> = {
+  data(
+    toValue: DataFn | undefined,
+    fromValue: DataFn | undefined,
+    publicThis: ComponentPublicInstance
+  ) {
+    if (!fromValue) return toValue
+    if (!toValue) return fromValue
+
+    return function mergeDataFn() {
+      return extend(
+        {},
+        toValue.call(publicThis, publicThis),
+        fromValue.call(publicThis, publicThis)
+      )
+    }
+  },
+  watch(
+    toValue: ComponentWatchOptions | undefined,
+    fromValue: ComponentWatchOptions | undefined
+  ) {
+    if (!toValue) return fromValue
+    if (!fromValue) return toValue
+
+    const ret: ComponentWatchOptions = Object.create(null)
+    extend(ret, toValue)
+    for (const key in fromValue) {
+      let existing = ret[key]
+      const from = fromValue[key]
+      if (existing && !isArray(existing)) {
+        existing = [existing]
+      }
+      ret[key] = existing ? (existing as WatchOptionItem[]).concat(from) : from
+    }
+
+    return ret
+  },
+  inject(
+    toValue: ComponentInjectOptions | undefined,
+    fromValue: ComponentInjectOptions | undefined
+  ): ObjectInjectOptions | undefined {
+    toValue = normalizeInject(toValue)
+    fromValue = normalizeInject(fromValue)
+    if (!fromValue) return toValue
+    if (!toValue) return fromValue
+    return extend(Object.create(null), toValue, fromValue)
+  },
+  provide(
+    toValue: Data | Function | undefined,
+    fromValue: Data | Function | undefined,
+    publicThis: ComponentPublicInstance
+  ) {
+    return function mergeProvideFn() {
+      return extend(
+        Object.create(null),
+        isFunction(toValue) ? toValue.call(publicThis) : toValue,
+        isFunction(fromValue) ? fromValue.call(publicThis) : fromValue
+      )
+    }
+  },
+  render(
+    toValue: InternalRenderFunction | undefined,
+    fromValue: InternalRenderFunction | undefined
+  ) {
+    return fromValue || toValue
+  }
+}
+;([
+  'beforeCreate',
+  'created',
+  'beforeMount',
+  'mounted',
+  'beforeUpdate',
+  'updated',
+  'activated',
+  'deactivated',
+  'beforeDestroy',
+  'beforeUnmount',
+  'destroyed',
+  'unmounted',
+  'renderTracked',
+  'renderTriggered',
+  'errorCaptured'
+] as const).forEach(hookName => {
+  defaultMergeStrategies[hookName] = function mergeHook(
+    toValue?: Function | Function[],
+    fromValue?: Function
+  ) {
+    if (!fromValue) return toValue
+    toValue = toValue ? (isArray(toValue) ? toValue : [toValue]) : undefined
+
+    return toValue ? toValue.concat(fromValue) : fromValue
+  }
+})
+;(['components', 'directives'] as const).forEach(assetName => {
+  defaultMergeStrategies[assetName] = function mergeAssets(
+    toValue: Record<string, ConcreteComponent> | null,
+    fromValue: Record<string, ConcreteComponent> | null,
+    publicThis: ComponentPublicInstance,
+    key: string,
+    asMixin: boolean
+  ) {
+    if (!fromValue) return toValue
+    const ret = toValue ? extend(Object.create(toValue), fromValue) : fromValue
+
+    if (!toValue) {
+      Reflect.setPrototypeOf(ret, { asMixin })
+    }
+
+    return ret
+  }
+})
+;(['methods', 'computed'] as const).forEach(optionName => {
+  defaultMergeStrategies[optionName] = function(
+    toValue?: Record<string, Function>,
+    fromValue?: Record<string, Function>
+  ) {
+    if (!fromValue) return toValue
+    if (!toValue) return fromValue
+    return extend(Object.create(null), toValue, fromValue)
+  }
+})
+
+function normalizeInject(
+  injectOption?: ComponentInjectOptions
+): ObjectInjectOptions | undefined {
+  if (!injectOption) return
+  const normalized = Object.create(null)
+  if (isArray(injectOption)) {
+    for (let i = 0; i < injectOption.length; i++) {
+      normalized[injectOption[i]] = { from: injectOption[i] }
+    }
+    return normalized
+  }
+  return injectOption
+}
+
+function callSyncHook(
+  hooks: Function | Function[],
+  instance: ComponentInternalInstance,
+  type: LifecycleHooks
+) {
+  hooks = isArray(hooks) ? hooks : [hooks]
+  hooks.forEach(hook => {
+    callWithAsyncErrorHandling(hook.bind(instance.proxy!), instance, type)
+  })
+}
+
+function registerHooks(
+  hooks: Function | Function[],
+  hooker: Function,
+  publicThis: ComponentPublicInstance
+) {
+  hooks = isArray(hooks) ? hooks : [hooks]
+  hooks.forEach(hook => hooker(hook.bind(publicThis)))
 }
