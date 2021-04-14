@@ -47,8 +47,8 @@ export function defineAsyncComponent<
 
   const {
     loader,
-    loadingComponent: loadingComponent,
-    errorComponent: errorComponent,
+    loadingComponent,
+    errorComponent,
     delay = 200,
     timeout, // undefined = never times out
     suspensible = true,

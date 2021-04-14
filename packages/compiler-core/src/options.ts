@@ -94,8 +94,10 @@ export const enum BindingTypes {
   OPTIONS = 'options'
 }
 
-export interface BindingMetadata {
+export type BindingMetadata = {
   [key: string]: BindingTypes | undefined
+} & {
+  __isScriptSetup?: boolean
 }
 
 interface SharedTransformCodegenOptions {
@@ -199,6 +201,12 @@ export interface TransformOptions extends SharedTransformCodegenOptions {
    * SFC scoped styles ID
    */
   scopeId?: string | null
+  /**
+   * Indicates this SFC template has used :slotted in its styles
+   * Defaults to `true` for backwards compatibility - SFC tooling should set it
+   * to `false` if no `:slotted` usage is detected in `<style>`
+   */
+  slotted?: boolean
   /**
    * SFC `<style vars>` injection string
    * Should already be an object expression, e.g. `{ 'xxxx-color': color }`

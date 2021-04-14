@@ -164,6 +164,25 @@ return { x }
 }"
 `;
 
+exports[`SFC compile <script setup> imports should allow defineProps/Emit at the start of imports 1`] = `
+"import { ref } from 'vue'
+      
+export default {
+  expose: [],
+  props: ['foo'],
+  emits: ['bar'],
+  setup(__props) {
+
+      
+      
+      const r = ref(0)
+      
+return { r, ref }
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> imports should extract comment for import or type declarations 1`] = `
 "import a from 'a' // comment
         import b from 'b'
@@ -247,6 +266,25 @@ return (_ctx, _cache) => {
     _createVNode(ChildComp),
     _createVNode(SomeOtherComp)
   ], 64 /* STABLE_FRAGMENT */))
+}
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> inlineTemplate mode should not wrap render fn with withId when having scoped styles 1`] = `
+"import { toDisplayString as _toDisplayString, openBlock as _openBlock, createBlock as _createBlock, withScopeId as _withScopeId } from \\"vue\\"
+const _withId = /*#__PURE__*/_withScopeId(\\"data-v-xxxxxxxx\\")
+
+
+export default {
+  expose: [],
+  setup(__props) {
+
+        const msg = 1
+        
+return (_ctx, _cache) => {
+  return (_openBlock(), _createBlock(\\"h1\\", null, _toDisplayString(msg)))
 }
 }
 
@@ -607,6 +645,35 @@ return {  }
 }"
 `;
 
+exports[`SFC compile <script setup> ref: syntax sugar should not rewrite scope variable 1`] = `
+"import { ref as _ref } from 'vue'
+
+export default {
+  expose: [],
+  setup(__props) {
+
+        const a = _ref(1)
+        const b = _ref(1)
+        const d = _ref(1)
+        const e = 1
+        function test() {
+          const a = 2
+          console.log(a)
+          console.log(b.value)
+          let c = { c: 3 }
+          console.log(c)
+          let $d
+          console.log($d)
+          console.log(d.value)
+          console.log(e)
+        }
+      
+return { a, b, d, e, test }
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> ref: syntax sugar using ref binding in property shorthand 1`] = `
 "import { ref as _ref } from 'vue'
 
@@ -644,7 +711,7 @@ return { a, b, c, d, x }
 }"
 `;
 
-exports[`SFC compile <script setup> with TypeScript defineEmit w/ type (union) 1`] = `
+exports[`SFC compile <script setup> with TypeScript defineEmit w/ type (type literal w/ call signatures) 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
       
@@ -652,7 +719,7 @@ export default _defineComponent({
   expose: [],
   emits: [\\"foo\\", \\"bar\\", \\"baz\\"] as unknown as undefined,
   setup(__props, { emit }: {
-        emit: (((e: 'foo' | 'bar') => void) | ((e: 'baz', id: number) => void)),
+        emit: ({(e: 'foo' | 'bar'): void; (e: 'baz', id: number): void;}),
         slots: any,
         attrs: any
       }) {

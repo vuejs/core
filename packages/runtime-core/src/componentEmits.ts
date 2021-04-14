@@ -114,14 +114,15 @@ export function emit(
     }
   }
 
-  // convert handler name to camelCase. See issue #2249
-  let handlerName = toHandlerKey(camelize(event))
-  let handler = props[handlerName]
+  let handlerName
+  let handler =
+    props[(handlerName = toHandlerKey(event))] ||
+    // also try camelCase event handler (#2249)
+    props[(handlerName = toHandlerKey(camelize(event)))]
   // for v-model update:xxx events, also trigger kebab-case equivalent
   // for props passed via kebab-case
   if (!handler && isModelListener) {
-    handlerName = toHandlerKey(hyphenate(event))
-    handler = props[handlerName]
+    handler = props[(handlerName = toHandlerKey(hyphenate(event)))]
   }
 
   if (handler) {
@@ -165,8 +166,11 @@ export function normalizeEmitsOptions(
   let hasExtends = false
   if (__FEATURE_OPTIONS_API__ && !isFunction(comp)) {
     const extendEmits = (raw: ComponentOptions) => {
-      hasExtends = true
-      extend(normalized, normalizeEmitsOptions(raw, appContext, true))
+      const normalizedFromExtend = normalizeEmitsOptions(raw, appContext, true)
+      if (normalizedFromExtend) {
+        hasExtends = true
+        extend(normalized, normalizedFromExtend)
+      }
     }
     if (!asMixin && appContext.mixins.length) {
       appContext.mixins.forEach(extendEmits)

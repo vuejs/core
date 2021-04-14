@@ -20,8 +20,8 @@ import {
   Statement,
   Expression,
   LabeledStatement,
-  TSUnionType,
-  CallExpression
+  CallExpression,
+  RestElement
 } from '@babel/types'
 import { walk } from 'estree-walker'
 import { RawSourceMap } from 'source-map'
@@ -184,7 +184,7 @@ export function compileScript(
   let propsTypeDecl: TSTypeLiteral | undefined
   let propsIdentifier: string | undefined
   let emitRuntimeDecl: Node | undefined
-  let emitTypeDecl: TSFunctionType | TSUnionType | undefined
+  let emitTypeDecl: TSFunctionType | TSTypeLiteral | undefined
   let emitIdentifier: string | undefined
   let hasAwait = false
   let hasInlinedSsrRenderFn = false
@@ -300,13 +300,13 @@ export function compileScript(
         const typeArg = node.typeParameters.params[0]
         if (
           typeArg.type === 'TSFunctionType' ||
-          typeArg.type === 'TSUnionType'
+          typeArg.type === 'TSTypeLiteral'
         ) {
           emitTypeDecl = typeArg
         } else {
           error(
             `type argument passed to ${DEFINE_EMIT}() must be a function type ` +
-              `or a union of function types.`,
+              `or a literal type with call signatures.`,
             typeArg
           )
         }
@@ -597,19 +597,23 @@ export function compileScript(
 
       // dedupe imports
       let removed = 0
-      let prev: Node | undefined, next: Node | undefined
-      const removeSpecifier = (node: Node) => {
+      const removeSpecifier = (i: number) => {
+        const removeLeft = i > removed
         removed++
+        const current = node.specifiers[i]
+        const next = node.specifiers[i + 1]
         s.remove(
-          prev ? prev.end! + startOffset : node.start! + startOffset,
-          next && !prev ? next.start! + startOffset : node.end! + startOffset
+          removeLeft
+            ? node.specifiers[i - 1].end! + startOffset
+            : current.start! + startOffset,
+          next && !removeLeft
+            ? next.start! + startOffset
+            : current.end! + startOffset
         )
       }
 
       for (let i = 0; i < node.specifiers.length; i++) {
         const specifier = node.specifiers[i]
-        prev = node.specifiers[i - 1]
-        next = node.specifiers[i + 1]
         const local = specifier.local.name
         const imported =
           specifier.type === 'ImportSpecifier' &&
@@ -621,11 +625,11 @@ export function compileScript(
           source === 'vue' &&
           (imported === DEFINE_PROPS || imported === DEFINE_EMIT)
         ) {
-          removeSpecifier(specifier)
+          removeSpecifier(i)
         } else if (existing) {
           if (existing.source === source && existing.imported === imported) {
             // already imported in <script setup>, dedupe
-            removeSpecifier(specifier)
+            removeSpecifier(i)
           } else {
             error(`different imports aliased to same local name.`, specifier)
           }
@@ -1036,12 +1040,15 @@ function walkDeclaration(
       )
       if (id.type === 'Identifier') {
         let bindingType
-        if (
+        const userReactiveBinding = userImportAlias['reactive'] || 'reactive'
+        if (isCallOf(init, userReactiveBinding)) {
+          // treat reactive() calls as let since it's meant to be mutable
+          bindingType = BindingTypes.SETUP_LET
+        } else if (
           // if a declaration is a const literal, we can mark it so that
           // the generated render fn code doesn't need to unref() it
           isDefineCall ||
-          (isConst &&
-            canNeverBeRef(init!, userImportAlias['reactive'] || 'reactive'))
+          (isConst && canNeverBeRef(init!, userReactiveBinding))
         ) {
           bindingType = BindingTypes.SETUP_CONST
         } else if (isConst) {
@@ -1297,20 +1304,25 @@ function toRuntimeTypeString(types: string[]) {
 }
 
 function extractRuntimeEmits(
-  node: TSFunctionType | TSUnionType,
+  node: TSFunctionType | TSTypeLiteral,
   emits: Set<string>
 ) {
-  if (node.type === 'TSUnionType') {
-    for (let t of node.types) {
-      if (t.type === 'TSParenthesizedType') t = t.typeAnnotation
-      if (t.type === 'TSFunctionType') {
-        extractRuntimeEmits(t, emits)
+  if (node.type === 'TSTypeLiteral') {
+    for (let t of node.members) {
+      if (t.type === 'TSCallSignatureDeclaration') {
+        extractEventNames(t.parameters[0], emits)
       }
     }
     return
+  } else {
+    extractEventNames(node.parameters[0], emits)
   }
+}
 
-  const eventName = node.parameters[0]
+function extractEventNames(
+  eventName: Identifier | RestElement,
+  emits: Set<string>
+) {
   if (
     eventName.type === 'Identifier' &&
     eventName.typeAnnotation &&
@@ -1337,13 +1349,30 @@ function genRuntimeEmits(emits: Set<string>) {
     : ``
 }
 
+function markScopeIdentifier(
+  node: Node & { scopeIds?: Set<string> },
+  child: Identifier,
+  knownIds: Record<string, number>
+) {
+  const { name } = child
+  if (node.scopeIds && node.scopeIds.has(name)) {
+    return
+  }
+  if (name in knownIds) {
+    knownIds[name]++
+  } else {
+    knownIds[name] = 1
+  }
+  ;(node.scopeIds || (node.scopeIds = new Set())).add(name)
+}
+
 /**
  * Walk an AST and find identifiers that are variable references.
  * This is largely the same logic with `transformExpressions` in compiler-core
  * but with some subtle differences as this needs to handle a wider range of
  * possible syntax.
  */
-function walkIdentifiers(
+export function walkIdentifiers(
   root: Node,
   onIdentifier: (node: Identifier, parent: Node, parentStack: Node[]) => void
 ) {
@@ -1360,6 +1389,19 @@ function walkIdentifiers(
           onIdentifier(node, parent!, parentStack)
         }
       } else if (isFunction(node)) {
+        // #3445
+        // should not rewrite local variables sharing a name with a top-level ref
+        if (node.body.type === 'BlockStatement') {
+          node.body.body.forEach(p => {
+            if (p.type === 'VariableDeclaration') {
+              for (const decl of p.declarations) {
+                extractIdentifiers(decl.id).forEach(id => {
+                  markScopeIdentifier(node, id, knownIds)
+                })
+              }
+            }
+          })
+        }
         // walk function expressions and add its arguments to known identifiers
         // so that we don't prefix them
         node.params.forEach(p =>
@@ -1377,16 +1419,7 @@ function walkIdentifiers(
                   parent.right === child
                 )
               ) {
-                const { name } = child
-                if (node.scopeIds && node.scopeIds.has(name)) {
-                  return
-                }
-                if (name in knownIds) {
-                  knownIds[name]++
-                } else {
-                  knownIds[name] = 1
-                }
-                ;(node.scopeIds || (node.scopeIds = new Set())).add(name)
+                markScopeIdentifier(node, child, knownIds)
               }
             }
           })
@@ -1478,7 +1511,10 @@ function isFunction(node: Node): node is FunctionNode {
   return /Function(?:Expression|Declaration)$|Method$/.test(node.type)
 }
 
-function isCallOf(node: Node | null, name: string): node is CallExpression {
+function isCallOf(
+  node: Node | null | undefined,
+  name: string
+): node is CallExpression {
   return !!(
     node &&
     node.type === 'CallExpression' &&
@@ -1555,6 +1591,12 @@ function analyzeScriptBindings(ast: Statement[]): BindingMetadata {
 
 function analyzeBindingsFromOptions(node: ObjectExpression): BindingMetadata {
   const bindings: BindingMetadata = {}
+  // #3270, #3275
+  // mark non-script-setup so we don't resolve components/directives from these
+  Object.defineProperty(bindings, '__isScriptSetup', {
+    enumerable: false,
+    value: false
+  })
   for (const property of node.properties) {
     if (
       property.type === 'ObjectProperty' &&
@@ -1658,4 +1700,49 @@ function getObjectOrArrayExpressionKeys(value: Node): string[] {
     return getObjectExpressionKeys(value)
   }
   return []
+}
+
+function extractIdentifiers(
+  param: Node,
+  nodes: Identifier[] = []
+): Identifier[] {
+  switch (param.type) {
+    case 'Identifier':
+      nodes.push(param)
+      break
+
+    case 'MemberExpression':
+      let object: any = param
+      while (object.type === 'MemberExpression') {
+        object = object.object
+      }
+      nodes.push(object)
+      break
+
+    case 'ObjectPattern':
+      param.properties.forEach(prop => {
+        if (prop.type === 'RestElement') {
+          extractIdentifiers(prop.argument, nodes)
+        } else {
+          extractIdentifiers(prop.value, nodes)
+        }
+      })
+      break
+
+    case 'ArrayPattern':
+      param.elements.forEach(element => {
+        if (element) extractIdentifiers(element, nodes)
+      })
+      break
+
+    case 'RestElement':
+      extractIdentifiers(param.argument, nodes)
+      break
+
+    case 'AssignmentPattern':
+      extractIdentifiers(param.left, nodes)
+      break
+  }
+
+  return nodes
 }

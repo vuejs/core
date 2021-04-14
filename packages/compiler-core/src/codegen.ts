@@ -55,6 +55,7 @@ import {
 import { ImportItem } from './transform'
 
 const PURE_ANNOTATION = `/*#__PURE__*/`
+const WITH_ID = `_withId`
 
 type CodegenNode = TemplateChildNode | JSChildNode | SSRCodegenNode
 
@@ -200,6 +201,7 @@ export function generate(
     scopeId,
     ssr
   } = context
+
   const hasHelpers = ast.helpers.length > 0
   const useWithBlock = !prefixIdentifiers && mode !== 'module'
   const genScopeId = !__BROWSER__ && scopeId != null && mode === 'module'
@@ -229,12 +231,12 @@ export function generate(
       ? args.map(arg => `${arg}: any`).join(',')
       : args.join(', ')
 
-  if (genScopeId) {
-    if (isSetupInlined) {
-      push(`${PURE_ANNOTATION}_withId(`)
-    } else {
-      push(`const ${functionName} = ${PURE_ANNOTATION}_withId(`)
-    }
+  if (genScopeId && !isSetupInlined) {
+    // root-level _withId wrapping is no longer necessary after 3.0.8 and is
+    // a noop, it's only kept so that code compiled with 3.0.8+ can run with
+    // runtime < 3.0.8.
+    // TODO: consider removing in 3.1
+    push(`const ${functionName} = ${PURE_ANNOTATION}${WITH_ID}(`)
   }
   if (isSetupInlined || genScopeId) {
     push(`(${signature}) => {`)
@@ -301,7 +303,7 @@ export function generate(
   deindent()
   push(`}`)
 
-  if (genScopeId) {
+  if (genScopeId && !isSetupInlined) {
     push(`)`)
   }
 
@@ -380,11 +382,11 @@ function genModulePreamble(
 ) {
   const {
     push,
-    helper,
     newline,
-    scopeId,
     optimizeImports,
-    runtimeModuleName
+    runtimeModuleName,
+    scopeId,
+    helper
   } = context
 
   if (genScopeId) {
@@ -434,9 +436,14 @@ function genModulePreamble(
     newline()
   }
 
+  // we technically don't need this anymore since `withCtx` already sets the
+  // correct scopeId, but this is necessary for backwards compat
+  // TODO: consider removing in 3.1
   if (genScopeId) {
     push(
-      `const _withId = ${PURE_ANNOTATION}${helper(WITH_SCOPE_ID)}("${scopeId}")`
+      `const ${WITH_ID} = ${PURE_ANNOTATION}${helper(
+        WITH_SCOPE_ID
+      )}("${scopeId}")`
     )
     newline()
   }
@@ -458,9 +465,16 @@ function genAssets(
     type === 'component' ? RESOLVE_COMPONENT : RESOLVE_DIRECTIVE
   )
   for (let i = 0; i < assets.length; i++) {
-    const id = assets[i]
+    let id = assets[i]
+    // potential component implicit self-reference inferred from SFC filename
+    const maybeSelfReference = id.endsWith('__self')
+    if (maybeSelfReference) {
+      id = id.slice(0, -6)
+    }
     push(
-      `const ${toValidAssetId(id, type)} = ${resolver}(${JSON.stringify(id)})`
+      `const ${toValidAssetId(id, type)} = ${resolver}(${JSON.stringify(id)}${
+        maybeSelfReference ? `, true` : ``
+      })`
     )
     if (i < assets.length - 1) {
       newline()
@@ -823,10 +837,9 @@ function genFunctionExpression(
   const genScopeId =
     !__BROWSER__ && isSlot && scopeId != null && mode !== 'function'
 
-  if (genScopeId) {
-    push(`_withId(`)
-  } else if (isSlot) {
-    push(`_${helperNameMap[WITH_CTX]}(`)
+  if (isSlot) {
+    // wrap slot functions with owner context
+    push(genScopeId ? `${WITH_ID}(` : `_${helperNameMap[WITH_CTX]}(`)
   }
   push(`(`, node)
   if (isArray(params)) {
@@ -855,7 +868,7 @@ function genFunctionExpression(
     deindent()
     push(`}`)
   }
-  if (genScopeId || isSlot) {
+  if (isSlot) {
     push(`)`)
   }
 }

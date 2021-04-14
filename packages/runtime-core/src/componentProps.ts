@@ -56,11 +56,11 @@ interface PropOptions<T = any, D = T> {
 export type PropType<T> = PropConstructor<T> | PropConstructor<T>[]
 
 type PropConstructor<T = any> =
-  | { new (...args: any[]): T & object }
+  | { new (...args: any[]): T & {} }
   | { (): T }
   | PropMethod<T>
 
-type PropMethod<T, TConstructor = any> = T extends (...args: any) => any // if is function with args
+type PropMethod<T, TConstructor = any> = [T] extends [(...args: any) => any] // if is function with args
   ? { new (): TConstructor; (): T; readonly prototype: TConstructor } // Create Function like constructor
   : never
 
@@ -89,15 +89,19 @@ type DefaultKeys<T> = {
     : never
 }[keyof T]
 
-type InferPropType<T> = T extends null
+type InferPropType<T> = [T] extends [null]
   ? any // null & true would fail to infer
-  : T extends { type: null | true }
+  : [T] extends [{ type: null | true }]
     ? any // As TS issue https://github.com/Microsoft/TypeScript/issues/14829 // somehow `ObjectConstructor` when inferred from { (): T } becomes `any` // `BooleanConstructor` when inferred from PropConstructor(with PropMethod) becomes `Boolean`
-    : T extends ObjectConstructor | { type: ObjectConstructor }
+    : [T] extends [ObjectConstructor | { type: ObjectConstructor }]
       ? Record<string, any>
-      : T extends BooleanConstructor | { type: BooleanConstructor }
+      : [T] extends [BooleanConstructor | { type: BooleanConstructor }]
         ? boolean
-        : T extends Prop<infer V, infer D> ? (unknown extends V ? D : V) : T
+        : [T] extends [DateConstructor | { type: DateConstructor }]
+          ? Date
+          : [T] extends [Prop<infer V, infer D>]
+            ? (unknown extends V ? D : V)
+            : T
 
 export type ExtractPropTypes<O> = O extends object
   ? { [K in RequiredKeys<O>]: InferPropType<O[K]> } &
@@ -135,10 +139,21 @@ export function initProps(
   const props: Data = {}
   const attrs: Data = {}
   def(attrs, InternalObjectKey, 1)
+
+  instance.propsDefaults = Object.create(null)
+
   setFullProps(instance, rawProps, props, attrs)
+
+  // ensure all declared prop keys are present
+  for (const key in instance.propsOptions[0]) {
+    if (!(key in props)) {
+      props[key] = undefined
+    }
+  }
+
   // validation
   if (__DEV__) {
-    validateProps(props, instance)
+    validateProps(rawProps || {}, props, instance)
   }
 
   if (isStateful) {
@@ -260,8 +275,8 @@ export function updateProps(
   // trigger updates for $attrs in case it's used in component slots
   trigger(instance, TriggerOpTypes.SET, '$attrs')
 
-  if (__DEV__ && rawProps) {
-    validateProps(props, instance)
+  if (__DEV__) {
+    validateProps(rawProps || {}, props, instance)
   }
 }
 
@@ -274,11 +289,11 @@ function setFullProps(
   const [options, needCastKeys] = instance.propsOptions
   if (rawProps) {
     for (const key in rawProps) {
-      const value = rawProps[key]
       // key, ref are reserved and never passed down
       if (isReservedProp(key)) {
         continue
       }
+      const value = rawProps[key]
       // prop option names are camelized during normalization, so to support
       // kebab -> camel conversion here we need to camelize the key.
       let camelKey
@@ -322,9 +337,14 @@ function resolvePropValue(
     if (hasDefault && value === undefined) {
       const defaultValue = opt.default
       if (opt.type !== Function && isFunction(defaultValue)) {
-        setCurrentInstance(instance)
-        value = defaultValue(props)
-        setCurrentInstance(null)
+        const { propsDefaults } = instance
+        if (key in propsDefaults) {
+          value = propsDefaults[key]
+        } else {
+          setCurrentInstance(instance)
+          value = propsDefaults[key] = defaultValue(props)
+          setCurrentInstance(null)
+        }
       } else {
         value = defaultValue
       }
@@ -444,11 +464,7 @@ function getTypeIndex(
   expectedTypes: PropType<any> | void | null | true
 ): number {
   if (isArray(expectedTypes)) {
-    for (let i = 0, len = expectedTypes.length; i < len; i++) {
-      if (isSameType(expectedTypes[i], type)) {
-        return i
-      }
-    }
+    return expectedTypes.findIndex(t => isSameType(t, type))
   } else if (isFunction(expectedTypes)) {
     return isSameType(expectedTypes, type) ? 0 : -1
   }
@@ -458,13 +474,22 @@ function getTypeIndex(
 /**
  * dev only
  */
-function validateProps(props: Data, instance: ComponentInternalInstance) {
-  const rawValues = toRaw(props)
+function validateProps(
+  rawProps: Data,
+  props: Data,
+  instance: ComponentInternalInstance
+) {
+  const resolvedValues = toRaw(props)
   const options = instance.propsOptions[0]
   for (const key in options) {
     let opt = options[key]
     if (opt == null) continue
-    validateProp(key, rawValues[key], opt, !hasOwn(rawValues, key))
+    validateProp(
+      key,
+      resolvedValues[key],
+      opt,
+      !hasOwn(rawProps, key) && !hasOwn(rawProps, hyphenate(key))
+    )
   }
 }
 
@@ -510,7 +535,7 @@ function validateProp(
 }
 
 const isSimpleType = /*#__PURE__*/ makeMap(
-  'String,Number,Boolean,Function,Symbol'
+  'String,Number,Boolean,Function,Symbol,BigInt'
 )
 
 type AssertionResult = {

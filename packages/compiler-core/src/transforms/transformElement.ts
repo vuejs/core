@@ -62,18 +62,21 @@ const directiveImportMap = new WeakMap<DirectiveNode, symbol>()
 
 // generate a JavaScript AST for this element's codegen
 export const transformElement: NodeTransform = (node, context) => {
-  if (
-    !(
-      node.type === NodeTypes.ELEMENT &&
-      (node.tagType === ElementTypes.ELEMENT ||
-        node.tagType === ElementTypes.COMPONENT)
-    )
-  ) {
-    return
-  }
   // perform the work on exit, after all child expressions have been
   // processed and merged.
   return function postTransformElement() {
+    node = context.currentNode!
+
+    if (
+      !(
+        node.type === NodeTypes.ELEMENT &&
+        (node.tagType === ElementTypes.ELEMENT ||
+          node.tagType === ElementTypes.COMPONENT)
+      )
+    ) {
+      return
+    }
+
     const { tag, props } = node
     const isComponent = node.tagType === ElementTypes.COMPONENT
 
@@ -230,8 +233,9 @@ export function resolveComponentType(
   const { tag } = node
 
   // 1. dynamic component
-  const isProp =
-    node.tag === 'component' ? findProp(node, 'is') : findDir(node, 'is')
+  const isProp = isComponentTag(tag)
+    ? findProp(node, 'is')
+    : findDir(node, 'is')
   if (isProp) {
     const exp =
       isProp.type === NodeTypes.ATTRIBUTE
@@ -264,12 +268,17 @@ export function resolveComponentType(
   }
 
   // 4. Self referencing component (inferred from filename)
-  if (!__BROWSER__ && context.selfName) {
-    if (capitalize(camelize(tag)) === context.selfName) {
-      context.helper(RESOLVE_COMPONENT)
-      context.components.add(`_self`)
-      return toValidAssetId(`_self`, `component`)
-    }
+  if (
+    !__BROWSER__ &&
+    context.selfName &&
+    capitalize(camelize(tag)) === context.selfName
+  ) {
+    context.helper(RESOLVE_COMPONENT)
+    // codegen.ts has special check for __self postfix when generating
+    // component imports, which will pass additional `maybeSelfReference` flag
+    // to `resolveComponent`.
+    context.components.add(tag + `__self`)
+    return toValidAssetId(tag, `component`)
   }
 
   // 5. user component (resolve)
@@ -280,7 +289,7 @@ export function resolveComponentType(
 
 function resolveSetupReference(name: string, context: TransformContext) {
   const bindings = context.bindingMetadata
-  if (!bindings) {
+  if (!bindings || bindings.__isScriptSetup === false) {
     return
   }
 
@@ -408,7 +417,7 @@ export function buildProps(
         }
       }
       // skip :is on <component>
-      if (name === 'is' && tag === 'component') {
+      if (name === 'is' && isComponentTag(tag)) {
         continue
       }
       properties.push(
@@ -447,7 +456,7 @@ export function buildProps(
       // skip v-is and :is on <component>
       if (
         name === 'is' ||
-        (isBind && tag === 'component' && isBindKey(arg, 'is'))
+        (isBind && isComponentTag(tag) && isBindKey(arg, 'is'))
       ) {
         continue
       }
@@ -666,4 +675,8 @@ function stringifyDynamicPropNames(props: string[]): string {
     if (i < l - 1) propsNamesString += ', '
   }
   return propsNamesString + `]`
+}
+
+function isComponentTag(tag: string) {
+  return tag[0].toLowerCase() + tag.slice(1) === 'component'
 }

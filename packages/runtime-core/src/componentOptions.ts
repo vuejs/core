@@ -20,7 +20,12 @@ import {
   isPromise
 } from '@vue/shared'
 import { computed } from './apiComputed'
-import { watch, WatchOptions, WatchCallback } from './apiWatch'
+import {
+  watch,
+  WatchOptions,
+  WatchCallback,
+  createPathGetter
+} from './apiWatch'
 import { provide, inject } from './apiInject'
 import {
   onBeforeMount,
@@ -424,6 +429,16 @@ interface LegacyOptions<
 
   // runtime compile only
   delimiters?: [string, string]
+
+  /**
+   * #3468
+   *
+   * type-only, used to assist Mixin's type inference,
+   * typescript will try to simplify the inferred `Mixin` type,
+   * with the `__differenciator`, typescript won't be able to combine different mixins,
+   * because the `__differenciator` will be different
+   */
+  __differentiator?: keyof D | keyof C | keyof M
 }
 
 export type OptionTypesKeys = 'P' | 'B' | 'D' | 'C' | 'M' | 'Defaults'
@@ -465,7 +480,7 @@ function createDuplicateChecker() {
 
 type DataFn = (vm: ComponentPublicInstance) => any
 
-export let isInBeforeCreate = false
+export let shouldCacheAccess = true
 
 export function applyOptions(
   instance: ComponentInternalInstance,
@@ -518,7 +533,7 @@ export function applyOptions(
 
   // applyOptions is called non-as-mixin once per instance
   if (!asMixin) {
-    isInBeforeCreate = true
+    shouldCacheAccess = false
     callSyncHook(
       'beforeCreate',
       LifecycleHooks.BEFORE_CREATE,
@@ -526,7 +541,7 @@ export function applyOptions(
       instance,
       globalMixins
     )
-    isInBeforeCreate = false
+    shouldCacheAccess = true
     // global mixins are applied first
     applyMixins(
       instance,
@@ -604,7 +619,18 @@ export function applyOptions(
     for (const key in methods) {
       const methodHandler = (methods as MethodOptions)[key]
       if (isFunction(methodHandler)) {
-        ctx[key] = methodHandler.bind(publicThis)
+        // In dev mode, we use the `createRenderContext` function to define methods to the proxy target,
+        // and those are read-only but reconfigurable, so it needs to be redefined here
+        if (__DEV__) {
+          Object.defineProperty(ctx, key, {
+            value: methodHandler.bind(publicThis),
+            configurable: true,
+            enumerable: true,
+            writable: true
+          })
+        } else {
+          ctx[key] = methodHandler.bind(publicThis)
+        }
         if (__DEV__) {
           checkDuplicateProperties!(OptionTypes.METHODS, key)
         }
@@ -805,50 +831,30 @@ function callSyncHook(
   instance: ComponentInternalInstance,
   globalMixins: ComponentOptions[]
 ) {
-  callHookFromMixins(name, type, globalMixins, instance)
+  for (let i = 0; i < globalMixins.length; i++) {
+    callHookWithMixinAndExtends(name, type, globalMixins[i], instance)
+  }
+  callHookWithMixinAndExtends(name, type, options, instance)
+}
+
+function callHookWithMixinAndExtends(
+  name: 'beforeCreate' | 'created',
+  type: LifecycleHooks,
+  options: ComponentOptions,
+  instance: ComponentInternalInstance
+) {
   const { extends: base, mixins } = options
+  const selfHook = options[name]
   if (base) {
-    callHookFromExtends(name, type, base, instance)
+    callHookWithMixinAndExtends(name, type, base, instance)
   }
   if (mixins) {
-    callHookFromMixins(name, type, mixins, instance)
+    for (let i = 0; i < mixins.length; i++) {
+      callHookWithMixinAndExtends(name, type, mixins[i], instance)
+    }
   }
-  const selfHook = options[name]
   if (selfHook) {
     callWithAsyncErrorHandling(selfHook.bind(instance.proxy!), instance, type)
-  }
-}
-
-function callHookFromExtends(
-  name: 'beforeCreate' | 'created',
-  type: LifecycleHooks,
-  base: ComponentOptions,
-  instance: ComponentInternalInstance
-) {
-  if (base.extends) {
-    callHookFromExtends(name, type, base.extends, instance)
-  }
-  const baseHook = base[name]
-  if (baseHook) {
-    callWithAsyncErrorHandling(baseHook.bind(instance.proxy!), instance, type)
-  }
-}
-
-function callHookFromMixins(
-  name: 'beforeCreate' | 'created',
-  type: LifecycleHooks,
-  mixins: ComponentOptions[],
-  instance: ComponentInternalInstance
-) {
-  for (let i = 0; i < mixins.length; i++) {
-    const chainedMixins = mixins[i].mixins
-    if (chainedMixins) {
-      callHookFromMixins(name, type, chainedMixins, instance)
-    }
-    const fn = mixins[i][name]
-    if (fn) {
-      callWithAsyncErrorHandling(fn.bind(instance.proxy!), instance, type)
-    }
   }
 }
 
@@ -882,7 +888,9 @@ function resolveData(
         `Plain object usage is no longer supported.`
     )
   }
+  shouldCacheAccess = false
   const data = dataFn.call(publicThis, publicThis)
+  shouldCacheAccess = true
   if (__DEV__ && isPromise(data)) {
     warn(
       `data() returned a Promise - note data() cannot be async; If you ` +
@@ -933,17 +941,6 @@ function createWatcher(
     }
   } else if (__DEV__) {
     warn(`Invalid watch option: "${key}"`, raw)
-  }
-}
-
-function createPathGetter(ctx: any, path: string) {
-  const segments = path.split('.')
-  return () => {
-    let cur = ctx
-    for (let i = 0; i < segments.length && cur; i++) {
-      cur = cur[segments[i]]
-    }
-    return cur
   }
 }
 
