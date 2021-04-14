@@ -1394,4 +1394,35 @@ describe('api: options', () => {
       ).toHaveBeenWarned()
     })
   })
+
+  describe('$options', () => {
+    // #2791
+    test('modify $options in the beforeCreate hook', async () => {
+      const count = ref(0)
+      const mixin = {
+        data() {
+          return { foo: 1 }
+        },
+        beforeCreate(this: any) {
+          if (!this.$options.computed) {
+            this.$options.computed = {}
+          }
+          this.$options.computed.value = () => count.value
+        }
+      }
+      const root = nodeOps.createElement('div')
+      createApp({
+        mixins: [mixin],
+        render(this: any) {
+          return this.value
+        }
+      }).mount(root)
+
+      expect(serializeInner(root)).toBe('0')
+
+      count.value++
+      await nextTick()
+      expect(serializeInner(root)).toBe('1')
+    })
+  })
 })

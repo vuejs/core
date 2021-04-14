@@ -486,6 +486,18 @@ export function applyOptions(
   options: ComponentOptions
 ) {
   const publicThis = instance.proxy!
+  const ctx = instance.ctx
+
+  // we need to call the beforeCreate hook first,
+  // because users may potentially modify the options in these hooks
+  const { beforeCreate } = getOptions(publicThis)
+  if (beforeCreate) {
+    shouldCacheAccess = false
+    callSyncHook(beforeCreate, instance, LifecycleHooks.BEFORE_CREATE)
+    shouldCacheAccess = true
+  }
+
+  // get the options after the beforeCreate hooks is called
   const {
     // state
     data: dataOptions,
@@ -498,7 +510,6 @@ export function applyOptions(
     components,
     directives,
     // lifecycle
-    beforeCreate,
     created,
     beforeMount,
     mounted,
@@ -516,18 +527,10 @@ export function applyOptions(
     errorCaptured,
     // public API
     expose
-  } = publicThis.$options
-
-  const ctx = instance.ctx
+  } = getOptions(publicThis)
 
   if (render && instance.render === NOOP) {
     instance.render = render as InternalRenderFunction
-  }
-
-  if (beforeCreate) {
-    shouldCacheAccess = false
-    callSyncHook(beforeCreate, instance, LifecycleHooks.BEFORE_CREATE)
-    shouldCacheAccess = true
   }
 
   const checkDuplicateProperties = __DEV__ ? createDuplicateChecker() : null
@@ -1011,4 +1014,8 @@ function registerHooks(
 ) {
   hooks = isArray(hooks) ? hooks : [hooks]
   hooks.forEach(hook => hooker(hook.bind(publicThis)))
+}
+
+function getOptions(instance: ComponentPublicInstance) {
+  return instance.$options
 }
