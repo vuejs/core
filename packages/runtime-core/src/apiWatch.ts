@@ -182,7 +182,7 @@ function doWatch(
           return traverse(s)
         } else if (isFunction(s)) {
           return callWithErrorHandling(s, instance, ErrorCodes.WATCH_GETTER, [
-            instance && (instance.proxy as any)
+            arguments[3] && arguments[3].proxy
           ])
         } else {
           __DEV__ && warnInvalidSource(s)
@@ -193,7 +193,7 @@ function doWatch(
       // getter with cb
       getter = () =>
         callWithErrorHandling(source, instance, ErrorCodes.WATCH_GETTER, [
-          instance && (instance.proxy as any)
+          arguments[3] && arguments[3].proxy
         ])
     } else {
       // no cb -> simple effect

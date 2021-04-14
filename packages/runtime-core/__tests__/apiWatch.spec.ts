@@ -859,7 +859,7 @@ describe('api: watch', () => {
     expect(instance!.effects![0].active).toBe(false)
   })
 
-  test('this.$watch should pass `this.proxy` to watch source as the first argument ', () => {
+  test('this.$watch should pass `this.proxy` to watch source as the first argument', () => {
     let instance: any
     const source = jest.fn()
 
@@ -876,6 +876,25 @@ describe('api: watch', () => {
 
     expect(instance).toBeDefined()
     expect(source).toHaveBeenCalledWith(instance)
+  })
+
+  test('should not leak `this.proxy` to setup()', () => {
+    const source = jest.fn()
+    const multipleSource = [jest.fn()]
+
+    const Comp = defineComponent({
+      render() {},
+      setup() {
+        watch(source, () => {})
+        watch(multipleSource, () => {})
+      }
+    })
+
+    const root = nodeOps.createElement('div')
+    createApp(Comp).mount(root)
+
+    expect(source).toBeCalledWith(undefined)
+    expect(multipleSource[0]).toBeCalledWith(undefined)
   })
 
   // #2728
