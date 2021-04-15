@@ -109,9 +109,18 @@ export interface ComponentOptionsBase<
   Extends extends ComponentOptionsMixin,
   E extends EmitsOptions,
   EE extends string = string,
-  Defaults = {}
+  Defaults = {},
+  allowArrayAsLifecycleHook = false
 >
-  extends LegacyOptions<Props, D, C, M, Mixin, Extends>,
+  extends LegacyOptions<
+      Props,
+      D,
+      C,
+      M,
+      Mixin,
+      Extends,
+      allowArrayAsLifecycleHook
+    >,
     ComponentInternalOptions,
     ComponentCustomOptions {
   setup?: (
@@ -361,14 +370,18 @@ type ObjectInjectOptions = Record<
   string | symbol | { from?: string | symbol; default?: unknown }
 >
 type ComponentInjectOptions = string[] | ObjectInjectOptions
-
+type GetLifecycleHookType<
+  allowArray = false,
+  hook = (() => void)
+> = allowArray extends true ? hook | hook[] : hook
 interface LegacyOptions<
   Props,
   D,
   C extends ComputedOptions,
   M extends MethodOptions,
   Mixin extends ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin
+  Extends extends ComponentOptionsMixin,
+  allowArrayAsLifecycleHook = false
 > {
   // allow any custom options
   [key: string]: any
@@ -408,23 +421,29 @@ interface LegacyOptions<
   extends?: Extends
 
   // lifecycle
-  beforeCreate?(): void
-  created?(): void
-  beforeMount?(): void
-  mounted?(): void
-  beforeUpdate?(): void
-  updated?(): void
-  activated?(): void
-  deactivated?(): void
+  beforeCreate?: GetLifecycleHookType<allowArrayAsLifecycleHook>
+  created?: GetLifecycleHookType<allowArrayAsLifecycleHook>
+  beforeMount?: GetLifecycleHookType<allowArrayAsLifecycleHook>
+  mounted?: GetLifecycleHookType<allowArrayAsLifecycleHook>
+  beforeUpdate?: GetLifecycleHookType<allowArrayAsLifecycleHook>
+  updated?: GetLifecycleHookType<allowArrayAsLifecycleHook>
+  activated?: GetLifecycleHookType<allowArrayAsLifecycleHook>
+  deactivated?: GetLifecycleHookType<allowArrayAsLifecycleHook>
   /** @deprecated use `beforeUnmount` instead */
-  beforeDestroy?(): void
-  beforeUnmount?(): void
+  beforeDestroy?: GetLifecycleHookType<allowArrayAsLifecycleHook>
+  beforeUnmount?: GetLifecycleHookType<allowArrayAsLifecycleHook>
   /** @deprecated use `unmounted` instead */
-  destroyed?(): void
-  unmounted?(): void
-  renderTracked?: DebuggerHook
-  renderTriggered?: DebuggerHook
-  errorCaptured?: ErrorCapturedHook
+  destroyed?: GetLifecycleHookType<allowArrayAsLifecycleHook>
+  unmounted?: GetLifecycleHookType<allowArrayAsLifecycleHook>
+  renderTracked?: GetLifecycleHookType<allowArrayAsLifecycleHook, DebuggerHook>
+  renderTriggered?: GetLifecycleHookType<
+    allowArrayAsLifecycleHook,
+    DebuggerHook
+  >
+  errorCaptured?: GetLifecycleHookType<
+    allowArrayAsLifecycleHook,
+    ErrorCapturedHook
+  >
 
   // runtime compile only
   delimiters?: [string, string]
@@ -489,8 +508,8 @@ export function applyOptions(
   const ctx = instance.ctx
 
   // we need to call the beforeCreate hook first,
-  // because users may potentially modify the options in these hooks
-  const { beforeCreate } = getOptions(publicThis)
+  // because users may potentially modify the $options in the beforeCreate hook
+  const { beforeCreate } = publicThis.$options
   if (beforeCreate) {
     shouldCacheAccess = false
     callSyncHook(beforeCreate, instance, LifecycleHooks.BEFORE_CREATE)
@@ -527,7 +546,7 @@ export function applyOptions(
     errorCaptured,
     // public API
     expose
-  } = getOptions(publicThis)
+  } = publicThis.$options
 
   if (render && instance.render === NOOP) {
     instance.render = render as InternalRenderFunction
@@ -870,7 +889,7 @@ const defaultMergeStrategies: Record<string, Function> = {
 
     return function mergeDataFn() {
       return extend(
-        {},
+        Object.create(null),
         toValue.call(publicThis, publicThis),
         fromValue.call(publicThis, publicThis)
       )
@@ -880,8 +899,8 @@ const defaultMergeStrategies: Record<string, Function> = {
     toValue: ComponentWatchOptions | undefined,
     fromValue: ComponentWatchOptions | undefined
   ) {
-    if (!toValue) return fromValue
     if (!fromValue) return toValue
+    if (!toValue) return fromValue
 
     const ret: ComponentWatchOptions = Object.create(null)
     extend(ret, toValue)
@@ -949,7 +968,6 @@ const defaultMergeStrategies: Record<string, Function> = {
   ) {
     if (!fromValue) return toValue
     toValue = toValue ? (isArray(toValue) ? toValue : [toValue]) : undefined
-
     return toValue ? toValue.concat(fromValue) : fromValue
   }
 })
@@ -1014,8 +1032,4 @@ function registerHooks(
 ) {
   hooks = isArray(hooks) ? hooks : [hooks]
   hooks.forEach(hook => hooker(hook.bind(publicThis)))
-}
-
-function getOptions(instance: ComponentPublicInstance) {
-  return instance.$options
 }

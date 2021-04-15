@@ -172,7 +172,19 @@ export type ComponentPublicInstance<
   PublicProps = P,
   Defaults = {},
   MakeDefaultsOptional extends boolean = false,
-  Options = ComponentOptionsBase<any, any, any, any, any, any, any, any, any>
+  Options = ComponentOptionsBase<
+    any,
+    any,
+    any,
+    any,
+    any,
+    any,
+    any,
+    any,
+    any,
+    {},
+    true
+  >
 > = {
   $: ComponentInternalInstance
   $data: D

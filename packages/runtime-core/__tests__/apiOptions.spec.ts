@@ -1395,7 +1395,176 @@ describe('api: options', () => {
     })
   })
 
-  describe('$options', () => {
+  describe('options merge strategies', () => {
+    test('this.$options.data', () => {
+      const mixin = {
+        data() {
+          return { foo: 1, bar: 2 }
+        }
+      }
+      createApp({
+        mixins: [mixin],
+        data() {
+          return {
+            foo: 3,
+            baz: 4
+          }
+        },
+        created() {
+          expect(this.$options.data).toBeInstanceOf(Function)
+          expect(this.$options.data()).toEqual({
+            foo: 3,
+            bar: 2,
+            baz: 4
+          })
+        },
+        render: () => null
+      }).mount(nodeOps.createElement('div'))
+    })
+
+    test('this.$options.watch', () => {
+      const mixin = {
+        watch: {
+          a() {},
+          b() {}
+        }
+      }
+      createApp({
+        mixins: [mixin],
+        data() {
+          return {
+            a: 1,
+            b: 2
+          }
+        },
+        watch: {
+          a() {}
+        },
+        created() {
+          expect(this.$options.watch.a).toBeInstanceOf(Array)
+          expect(this.$options.watch.a.length).toBe(2)
+          expect(this.$options.watch.b).toBeInstanceOf(Function)
+        },
+        render: () => null
+      }).mount(nodeOps.createElement('div'))
+    })
+
+    test('this.$options.inject', () => {
+      const mixin = {
+        inject: ['a']
+      }
+      createApp({
+        mixins: [mixin],
+        inject: ['b'],
+        created() {
+          expect(this.$options.inject.a).toEqual({ from: 'a' })
+          expect(this.$options.inject.b).toEqual({ from: 'b' })
+        },
+        render: () => null
+      }).mount(nodeOps.createElement('div'))
+    })
+
+    test('this.$options.provide', () => {
+      const mixin = {
+        provide: {
+          a: 1
+        }
+      }
+      createApp({
+        mixins: [mixin],
+        provide() {
+          return {
+            b: 2
+          }
+        },
+        created() {
+          expect(this.$options.provide).toBeInstanceOf(Function)
+          expect(this.$options.provide()).toEqual({ a: 1, b: 2 })
+        },
+        render: () => null
+      }).mount(nodeOps.createElement('div'))
+    })
+
+    test('this.$options[lifecycle-name]', () => {
+      const mixin = {
+        mounted() {}
+      }
+      createApp({
+        mixins: [mixin],
+        mounted() {},
+        created() {
+          expect(this.$options.mounted).toBeInstanceOf(Array)
+          expect(this.$options.mounted.length).toBe(2)
+        },
+        render: () => null
+      }).mount(nodeOps.createElement('div'))
+    })
+
+    test('this.$options[asset-name]', () => {
+      const mixin = {
+        components: {
+          a: {}
+        },
+        directives: {
+          d1: {}
+        }
+      }
+      createApp({
+        mixins: [mixin],
+        components: {
+          b: {}
+        },
+        directives: {
+          d2: {}
+        },
+        created() {
+          expect('a' in this.$options.components).toBe(true)
+          expect('b' in this.$options.components).toBe(true)
+          expect('d1' in this.$options.directives).toBe(true)
+          expect('d2' in this.$options.directives).toBe(true)
+        },
+        render: () => null
+      }).mount(nodeOps.createElement('div'))
+    })
+
+    test('this.$options.methods', () => {
+      const mixin = {
+        methods: {
+          fn1() {}
+        }
+      }
+      createApp({
+        mixins: [mixin],
+        methods: {
+          fn2() {}
+        },
+        created() {
+          expect(this.$options.methods.fn1).toBeInstanceOf(Function)
+          expect(this.$options.methods.fn2).toBeInstanceOf(Function)
+        },
+        render: () => null
+      }).mount(nodeOps.createElement('div'))
+    })
+
+    test('this.$options.computed', () => {
+      const mixin = {
+        computed: {
+          c1() {}
+        }
+      }
+      createApp({
+        mixins: [mixin],
+        computed: {
+          c2() {}
+        },
+        created() {
+          expect(this.$options.computed.c1).toBeInstanceOf(Function)
+          expect(this.$options.computed.c2).toBeInstanceOf(Function)
+        },
+        render: () => null
+      }).mount(nodeOps.createElement('div'))
+    })
+
     // #2791
     test('modify $options in the beforeCreate hook', async () => {
       const count = ref(0)
