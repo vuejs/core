@@ -43,11 +43,16 @@ function get(
     !isReadonly && track(rawTarget, TrackOpTypes.GET, key)
   }
   !isReadonly && track(rawTarget, TrackOpTypes.GET, rawKey)
+  const { has } = getProto(rawTarget)
   const wrap = isShallow ? toShallow : isReadonly ? toReadonly : toReactive
-  if (target.has(key)) {
+  if (has.call(rawTarget, key)) {
     return wrap(target.get(key))
-  } else if (target.has(rawKey)) {
+  } else if (has.call(rawTarget, rawKey)) {
     return wrap(target.get(rawKey))
+  } else if (target !== rawTarget) {
+    // #3602 readonly(reactive(Map))
+    // ensure that the nested reactive `Map` can do tracking for itself
+    target.get(key)
   }
 }
 
