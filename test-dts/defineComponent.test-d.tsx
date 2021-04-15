@@ -893,6 +893,10 @@ describe('emits', () => {
       expectError(this.$emit('input'))
       //  @ts-expect-error
       expectError(this.$emit('input', 1))
+    },
+    mounted() {
+      // #3599
+      this.$nextTick()
     }
   })
 
