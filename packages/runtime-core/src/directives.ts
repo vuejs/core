@@ -19,18 +19,28 @@ import { currentRenderingInstance } from './componentRenderContext'
 import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
 import { ComponentPublicInstance } from './componentPublicInstance'
 
-export interface DirectiveBinding<V = any> {
+export interface DirectiveBinding<
+  V = any,
+  Arg extends string = string,
+  Modifiers extends string = string
+> {
   instance: ComponentPublicInstance | null
   value: V
   oldValue: V | null
-  arg?: string
-  modifiers: DirectiveModifiers
+  arg?: Arg
+  modifiers: DirectiveModifiers<Modifiers>
   dir: ObjectDirective<any, V>
 }
 
-export type DirectiveHook<T = any, Prev = VNode<any, T> | null, V = any> = (
+export type DirectiveHook<
+  T = any,
+  Prev = VNode<any, T> | null,
+  V = any,
+  Arg extends string = string,
+  Modifiers extends string = string
+> = (
   el: T,
-  binding: DirectiveBinding<V>,
+  binding: DirectiveBinding<V, Arg, Modifiers>,
   vnode: VNode<any, T>,
   prevVNode: Prev
 ) => void
@@ -40,14 +50,19 @@ export type SSRDirectiveHook = (
   vnode: VNode
 ) => Data | undefined
 
-export interface ObjectDirective<T = any, V = any> {
-  created?: DirectiveHook<T, null, V>
-  beforeMount?: DirectiveHook<T, null, V>
-  mounted?: DirectiveHook<T, null, V>
-  beforeUpdate?: DirectiveHook<T, VNode<any, T>, V>
-  updated?: DirectiveHook<T, VNode<any, T>, V>
-  beforeUnmount?: DirectiveHook<T, null, V>
-  unmounted?: DirectiveHook<T, null, V>
+export interface ObjectDirective<
+  T = any,
+  V = any,
+  Arg extends string = string,
+  Modifiers extends string = string
+> {
+  created?: DirectiveHook<T, null, V, Arg, Modifiers>
+  beforeMount?: DirectiveHook<T, null, V, Arg, Modifiers>
+  mounted?: DirectiveHook<T, null, V, Arg, Modifiers>
+  beforeUpdate?: DirectiveHook<T, VNode<any, T>, V, Arg, Modifiers>
+  updated?: DirectiveHook<T, VNode<any, T>, V, Arg, Modifiers>
+  beforeUnmount?: DirectiveHook<T, null, V, Arg, Modifiers>
+  unmounted?: DirectiveHook<T, null, V, Arg, Modifiers>
   getSSRProps?: SSRDirectiveHook
 }
 
@@ -57,7 +72,7 @@ export type Directive<T = any, V = any> =
   | ObjectDirective<T, V>
   | FunctionDirective<T, V>
 
-export type DirectiveModifiers = Record<string, boolean>
+export type DirectiveModifiers<K extends string = string> = Record<K, boolean>
 
 const isBuiltInDirective = /*#__PURE__*/ makeMap(
   'bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,slot,text'
