@@ -428,3 +428,25 @@ describe('class', () => {
 
   expectType<number>(props.foo)
 })
+
+describe('$options', () => {
+  defineComponent({
+    created() {
+      expectType<Function | undefined>(this.$options.data)
+      // the `provide` option is merged into a factory function
+      expectType<Function | undefined>(this.$options.provide)
+      // the `inject` option is merged into object format
+      expectType<
+        | Record<
+            string | symbol,
+            string | symbol | { from?: string | symbol; default?: unknown }
+          >
+        | undefined
+      >(this.$options.inject)
+      // lifecycle hooks are merged into function or an array of functions
+      expectType<(() => void) | (() => void)[] | undefined>(
+        this.$options.beforeMount
+      )
+    }
+  })
+})

@@ -157,7 +157,7 @@ export type CreateComponentPublicInstance<
   PublicProps,
   PublicDefaults,
   MakeDefaultsOptional,
-  ComponentOptionsBase<P, B, D, C, M, Mixin, Extends, E, string, Defaults>
+  ComponentOptionsBase<P, B, D, C, M, Mixin, Extends, E, string, Defaults, true>
 >
 
 // public properties exposed on the proxy, which is used as the render context
