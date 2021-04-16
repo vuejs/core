@@ -9,6 +9,8 @@ describe('runtime-dom: class patching', () => {
     expect(el.className).toBe('foo')
     patchProp(el, 'class', null, null)
     expect(el.className).toBe('')
+    patchProp(el, 'class', undefined, undefined)
+    expect(el.className).toBe('')
   })
 
   test('transition class', () => {

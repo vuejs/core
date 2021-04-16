@@ -34,4 +34,13 @@ describe('runtime-dom: attrs patching', () => {
     patchProp(el, 'onwards', 'a', null)
     expect(el.getAttribute('onwards')).toBe(null)
   })
+
+  // #3173
+  test('treat class as non-attr', () => {
+    const el = document.createElement('div')
+    patchProp(el, 'class', null, null)
+    expect(el.getAttribute('class')).toBe('')
+    patchProp(el, 'class', undefined, undefined)
+    expect(el.getAttribute('class')).toBe('')
+  })
 })
