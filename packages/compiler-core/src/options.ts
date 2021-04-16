@@ -10,7 +10,7 @@ import { CompilerCompatOptions } from './compat/compatConfig'
 import { ParserPlugin } from '@babel/parser'
 
 export interface ErrorHandlingOptions {
-  onWarn?: (msg: string | CompilerError) => void
+  onWarn?: (warning: CompilerError) => void
   onError?: (error: CompilerError) => void
 }
 

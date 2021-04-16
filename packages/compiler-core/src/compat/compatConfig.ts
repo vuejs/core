@@ -124,13 +124,8 @@ export function warnDeprecation(
     typeof message === 'function' ? message(...args) : message
   }${link ? `\n  Details: ${link}` : ``}`
 
-  if (loc) {
-    const err = new SyntaxError(msg) as CompilerError
-    err.code = key
-    err.loc = loc
-    context.onWarn(err)
-    return
-  }
-
-  context.onWarn(msg)
+  const err = new SyntaxError(msg) as CompilerError
+  err.code = key
+  if (loc) err.loc = loc
+  context.onWarn(err)
 }
