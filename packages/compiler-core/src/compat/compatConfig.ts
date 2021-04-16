@@ -102,7 +102,9 @@ export function checkCompatEnabled(
   loc: SourceLocation | null,
   ...args: any[]
 ): boolean {
-  const enabled = getCompatValue(key, context) !== false
+  const value = getCompatValue(key, context)
+  // during tests, only enable when value is explicitly true
+  const enabled = __TEST__ ? value === true : value !== false
   if (__DEV__ && enabled) {
     warnDeprecation(key, context, loc, ...args)
   }

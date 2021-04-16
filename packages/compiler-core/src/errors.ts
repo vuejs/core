@@ -13,9 +13,9 @@ export function defaultOnError(error: CompilerError) {
   throw error
 }
 
-export function defaultOnWarn(msg: string | CompilerError) {
-  __DEV__ &&
-    console.warn(`[Vue warn]`, typeof msg === 'string' ? msg : msg.message)
+export function defaultOnWarn(msg: CompilerError) {
+  throw new Error('foo')
+  __DEV__ && console.warn(`[Vue warn]`, msg.message)
 }
 
 export function createCompilerError<T extends number>(
