@@ -456,10 +456,46 @@ export type CompatConfig = Partial<
   MODE?: 2 | 3
 }
 
-const globalCompatConfig: CompatConfig = {}
+export const globalCompatConfig: CompatConfig = {}
 
 export function configureCompat(config: CompatConfig) {
+  if (__DEV__) {
+    validateCompatConfig(config)
+  }
   extend(globalCompatConfig, config)
+}
+
+const seenConfigObjects = /*#__PURE__*/ new WeakSet<CompatConfig>()
+const warnedInvalidKeys: Record<string, boolean> = {}
+
+// dev only
+export function validateCompatConfig(config: CompatConfig) {
+  if (seenConfigObjects.has(config)) {
+    return
+  }
+  seenConfigObjects.add(config)
+
+  for (const key of Object.keys(config)) {
+    if (
+      key !== 'MODE' &&
+      !(key in deprecationData) &&
+      !(key in warnedInvalidKeys)
+    ) {
+      if (key.startsWith('COMPILER_')) {
+        if (isRuntimeOnly()) {
+          warn(
+            `Depreaction config "${key}" is compiler-specific and you are ` +
+              `running a runtime-only build of Vue. This deprecation should be ` +
+              `configured via compiler options in your build setup instead.`
+            // TODO link to migration build docs on build setup
+          )
+        }
+      } else {
+        warn(`Invalid deprecation config "${key}".`)
+      }
+      warnedInvalidKeys[key] = true
+    }
+  }
 }
 
 export function getCompatConfigForKey(

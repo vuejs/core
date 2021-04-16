@@ -517,7 +517,7 @@ function parseTag(
       if (
         __COMPAT__ &&
         checkCompatEnabled(
-          CompilerDeprecationTypes.IS_ON_ELEMENT,
+          CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT,
           context,
           p.loc
         )

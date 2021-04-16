@@ -47,7 +47,8 @@ import {
   NO,
   makeMap,
   isPromise,
-  ShapeFlags
+  ShapeFlags,
+  extend
 } from '@vue/shared'
 import { SuspenseBoundary } from './components/Suspense'
 import { CompilerOptions } from '@vue/compiler-core'
@@ -55,6 +56,7 @@ import { markAttrsAccessed } from './componentRenderUtils'
 import { currentRenderingInstance } from './componentRenderContext'
 import { startMeasure, endMeasure } from './profiling'
 import { convertLegacyRenderFn } from './compat/renderFn'
+import { globalCompatConfig, validateCompatConfig } from './compat/compatConfig'
 
 export type Data = Record<string, unknown>
 
@@ -692,6 +694,10 @@ export function finishComponentSetup(
 
   if (__COMPAT__) {
     convertLegacyRenderFn(instance)
+
+    if (__DEV__ && Component.compatConfig) {
+      validateCompatConfig(Component.compatConfig)
+    }
   }
 
   // template / render function normalization
@@ -710,10 +716,18 @@ export function finishComponentSetup(
       if (__DEV__) {
         startMeasure(instance, `compile`)
       }
-      Component.render = compile(Component.template, {
+      const compilerOptions: CompilerOptions = {
         isCustomElement: instance.appContext.config.isCustomElement,
         delimiters: Component.delimiters
-      })
+      }
+      if (__COMPAT__) {
+        // pass runtime compat config into the compiler
+        compilerOptions.compatConfig = Object.create(globalCompatConfig)
+        if (Component.compatConfig) {
+          extend(compilerOptions.compatConfig, Component.compatConfig)
+        }
+      }
+      Component.render = compile(Component.template, compilerOptions)
       if (__DEV__) {
         endMeasure(instance, `compile`)
       }

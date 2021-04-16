@@ -96,7 +96,7 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
 
     if (__COMPAT__ && __DEV__ && modifiers.includes('native')) {
       warnDeprecation(
-        CompilerDeprecationTypes.V_ON_NATIVE_MODIFIER,
+        CompilerDeprecationTypes.COMPILER_V_ON_NATIVE_MODIFIER,
         context,
         dir.loc
       )

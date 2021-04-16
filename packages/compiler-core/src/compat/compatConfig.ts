@@ -14,14 +14,14 @@ export interface CompilerCompatOptions {
 }
 
 export const enum CompilerDeprecationTypes {
-  IS_ON_ELEMENT = 'IS_ON_ELEMENT',
-  V_BIND_SYNC = 'V_BIND_SYNC',
-  V_BIND_OBJECT_ORDER = 'V_BIND_OBJECT_ORDER',
-  V_ON_NATIVE_MODIFIER = 'V_ON_NATIVE_MODIFIER',
-  KEY_V_IF = 'KEY_V_IF',
-  KEY_V_FOR_TEMPLATE = 'KEY_V_FOR_TEMPLATE',
-  V_IF_V_FOR_PRECEDENCE = 'V_IF_V_FOR_PRECEDENCE',
-  NATIVE_TEMPLATE = 'NATIVE_TEMPLATE'
+  COMPILER_IS_ON_ELEMENT = 'COMPILER_IS_ON_ELEMENT',
+  COMPILER_V_BIND_SYNC = 'COMPILER_V_BIND_SYNC',
+  COMPILER_V_BIND_OBJECT_ORDER = 'COMPILER_V_BIND_OBJECT_ORDER',
+  COMPILER_V_ON_NATIVE_MODIFIER = 'COMPILER_V_ON_NATIVE_MODIFIER',
+  COMPILER_KEY_V_IF = 'COMPILER_KEY_V_IF',
+  COMPILER_KEY_V_FOR_TEMPLATE = 'COMPILER_KEY_V_FOR_TEMPLATE',
+  COMPILER_V_IF_V_FOR_PRECEDENCE = 'COMPILER_V_IF_V_FOR_PRECEDENCE',
+  COMPILER_NATIVE_TEMPLATE = 'COMPILER_NATIVE_TEMPLATE'
 }
 
 type DeprecationData = {
@@ -30,7 +30,7 @@ type DeprecationData = {
 }
 
 const deprecationData: Record<CompilerDeprecationTypes, DeprecationData> = {
-  [CompilerDeprecationTypes.IS_ON_ELEMENT]: {
+  [CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT]: {
     message:
       `Platform-native elements with "is" prop will no longer be ` +
       `treated as components in Vue 3 unless the "is" value is explicitly ` +
@@ -38,7 +38,7 @@ const deprecationData: Record<CompilerDeprecationTypes, DeprecationData> = {
     link: `https://v3.vuejs.org/guide/migration/custom-elements-interop.html`
   },
 
-  [CompilerDeprecationTypes.V_BIND_SYNC]: {
+  [CompilerDeprecationTypes.COMPILER_V_BIND_SYNC]: {
     message: key =>
       `.sync modifier for v-bind has been removed. Use v-model with ` +
       `argument instead. \`v-bind:${key}.sync\` should be changed to ` +
@@ -46,7 +46,7 @@ const deprecationData: Record<CompilerDeprecationTypes, DeprecationData> = {
     link: `https://v3.vuejs.org/guide/migration/v-model.html`
   },
 
-  [CompilerDeprecationTypes.V_BIND_OBJECT_ORDER]: {
+  [CompilerDeprecationTypes.COMPILER_V_BIND_OBJECT_ORDER]: {
     message:
       `v-bind="obj" usage is now order sensitive and behaves like JavaScript ` +
       `object spread: it will now overwrite an existing attribute that appears ` +
@@ -56,22 +56,22 @@ const deprecationData: Record<CompilerDeprecationTypes, DeprecationData> = {
     link: `https://v3.vuejs.org/guide/migration/v-bind.html`
   },
 
-  [CompilerDeprecationTypes.V_ON_NATIVE_MODIFIER]: {
+  [CompilerDeprecationTypes.COMPILER_V_ON_NATIVE_MODIFIER]: {
     message: `.native modifier for v-on has been removed as is no longer necessary.`,
     link: `https://v3.vuejs.org/guide/migration/v-on-native-modifier-removed.html`
   },
 
-  [CompilerDeprecationTypes.KEY_V_IF]: {
+  [CompilerDeprecationTypes.COMPILER_KEY_V_IF]: {
     message: ``,
     link: `https://v3.vuejs.org/guide/migration/key-attribute.html#on-conditional-branches`
   },
 
-  [CompilerDeprecationTypes.KEY_V_FOR_TEMPLATE]: {
+  [CompilerDeprecationTypes.COMPILER_KEY_V_FOR_TEMPLATE]: {
     message: ``,
     link: `https://v3.vuejs.org/guide/migration/key-attribute.html#with-template-v-for`
   },
 
-  [CompilerDeprecationTypes.V_IF_V_FOR_PRECEDENCE]: {
+  [CompilerDeprecationTypes.COMPILER_V_IF_V_FOR_PRECEDENCE]: {
     message:
       `v-if / v-for precedence when used on the same element has changed ` +
       `in Vue 3. It is best to avoid the ambiguity with either <template> tags ` +
@@ -79,7 +79,7 @@ const deprecationData: Record<CompilerDeprecationTypes, DeprecationData> = {
     link: `https://v3.vuejs.org/guide/migration/v-if-v-for.html`
   },
 
-  [CompilerDeprecationTypes.NATIVE_TEMPLATE]: {
+  [CompilerDeprecationTypes.COMPILER_NATIVE_TEMPLATE]: {
     message:
       `<template> with no special directives will render as a native template` +
       `element instead of its inner content in Vue 3.`
