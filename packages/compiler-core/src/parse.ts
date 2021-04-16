@@ -650,10 +650,9 @@ function parseAttribute(
       name
     )!
 
-    const dirName =
+    let dirName =
       match[1] ||
       (startsWith(name, ':') ? 'bind' : startsWith(name, '@') ? 'on' : 'slot')
-
     let arg: ExpressionNode | undefined
 
     if (match[2]) {
@@ -708,6 +707,25 @@ function parseAttribute(
       valueLoc.source = valueLoc.source.slice(1, -1)
     }
 
+    const modifiers = match[3] ? match[3].substr(1).split('.') : []
+
+    // 2.x compat v-bind:foo.sync -> v-model:foo
+    if (
+      __COMPAT__ &&
+      dirName === 'bind' &&
+      arg &&
+      modifiers.includes('sync') &&
+      checkCompatEnabled(
+        CompilerDeprecationTypes.COMPILER_V_BIND_SYNC,
+        context,
+        loc,
+        arg.loc.source
+      )
+    ) {
+      dirName = 'model'
+      modifiers.splice(modifiers.indexOf('sync'), 1)
+    }
+
     return {
       type: NodeTypes.DIRECTIVE,
       name: dirName,
@@ -721,7 +739,7 @@ function parseAttribute(
         loc: value.loc
       },
       arg,
-      modifiers: match[3] ? match[3].substr(1).split('.') : [],
+      modifiers,
       loc
     }
   }

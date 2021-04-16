@@ -16,8 +16,9 @@ export interface CompilerCompatOptions {
 export const enum CompilerDeprecationTypes {
   COMPILER_IS_ON_ELEMENT = 'COMPILER_IS_ON_ELEMENT',
   COMPILER_V_BIND_SYNC = 'COMPILER_V_BIND_SYNC',
+  COMPILER_V_BIND_PROP = 'COMPILER_V_BIND_PROP',
   COMPILER_V_BIND_OBJECT_ORDER = 'COMPILER_V_BIND_OBJECT_ORDER',
-  COMPILER_V_ON_NATIVE_MODIFIER = 'COMPILER_V_ON_NATIVE_MODIFIER',
+  COMPILER_V_ON_NATIVE = 'COMPILER_V_ON_NATIVE',
   COMPILER_KEY_V_IF = 'COMPILER_KEY_V_IF',
   COMPILER_KEY_V_FOR_TEMPLATE = 'COMPILER_KEY_V_FOR_TEMPLATE',
   COMPILER_V_IF_V_FOR_PRECEDENCE = 'COMPILER_V_IF_V_FOR_PRECEDENCE',
@@ -46,6 +47,12 @@ const deprecationData: Record<CompilerDeprecationTypes, DeprecationData> = {
     link: `https://v3.vuejs.org/guide/migration/v-model.html`
   },
 
+  [CompilerDeprecationTypes.COMPILER_V_BIND_PROP]: {
+    message:
+      `.prop modifier for v-bind has been removed and no longer necessary. ` +
+      `Vue 3 will automatically set a binding as DOM property when appropriate.`
+  },
+
   [CompilerDeprecationTypes.COMPILER_V_BIND_OBJECT_ORDER]: {
     message:
       `v-bind="obj" usage is now order sensitive and behaves like JavaScript ` +
@@ -56,7 +63,7 @@ const deprecationData: Record<CompilerDeprecationTypes, DeprecationData> = {
     link: `https://v3.vuejs.org/guide/migration/v-bind.html`
   },
 
-  [CompilerDeprecationTypes.COMPILER_V_ON_NATIVE_MODIFIER]: {
+  [CompilerDeprecationTypes.COMPILER_V_ON_NATIVE]: {
     message: `.native modifier for v-on has been removed as is no longer necessary.`,
     link: `https://v3.vuejs.org/guide/migration/v-on-native-modifier-removed.html`
   },
