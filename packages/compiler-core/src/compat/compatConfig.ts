@@ -31,7 +31,10 @@ type DeprecationData = {
 
 const deprecationData: Record<CompilerDeprecationTypes, DeprecationData> = {
   [CompilerDeprecationTypes.IS_ON_ELEMENT]: {
-    message: ``,
+    message:
+      `Platform-native elements with "is" prop will no longer be ` +
+      `treated as components in Vue 3 unless the "is" value is explicitly ` +
+      `prefixed with "vue:".`,
     link: `https://v3.vuejs.org/guide/migration/custom-elements-interop.html`
   },
 

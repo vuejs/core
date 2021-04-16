@@ -240,8 +240,11 @@ export function resolveComponentType(
     if (!isExplicitDynamic && isProp.type === NodeTypes.ATTRIBUTE) {
       // <button is="vue:xxx">
       // if not <component>, only is value that starts with "vue:" will be
-      // treated as component by the parse phase and reach here.
-      tag = isProp.value!.content.slice(4)
+      // treated as component by the parse phase and reach here, unless it's
+      // compat mode where all is values are considered components
+      tag = __COMPAT__
+        ? isProp.value!.content.replace(/^vue:/, '')
+        : isProp.value!.content.slice(4)
     } else {
       const exp =
         isProp.type === NodeTypes.ATTRIBUTE

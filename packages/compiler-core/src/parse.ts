@@ -30,7 +30,11 @@ import {
   createRoot,
   ConstantTypes
 } from './ast'
-import { CompilerCompatOptions } from './compat/compatConfig'
+import {
+  checkCompatEnabled,
+  CompilerCompatOptions,
+  CompilerDeprecationTypes
+} from './compat/compatConfig'
 
 type OptionalOptions =
   | 'isNativeTag'
@@ -499,14 +503,28 @@ function parseTag(
   let tagType = ElementTypes.ELEMENT
   const options = context.options
   if (!context.inVPre && !options.isCustomElement(tag)) {
-    const hasVIs = props.some(
-      p =>
-        p.name === 'is' &&
-        // v-is="xxx" (TODO: deprecate)
-        (p.type === NodeTypes.DIRECTIVE ||
-          // is="vue:xxx"
-          (p.value && p.value.content.startsWith('vue:')))
-    )
+    const hasVIs = props.some(p => {
+      if (p.name !== 'is') return
+      // v-is="xxx" (TODO: deprecate)
+      if (p.type === NodeTypes.DIRECTIVE) {
+        return true
+      }
+      // is="vue:xxx"
+      if (p.value && p.value.content.startsWith('vue:')) {
+        return true
+      }
+      // in compat mode, any is usage is considered a component
+      if (
+        __COMPAT__ &&
+        checkCompatEnabled(
+          CompilerDeprecationTypes.IS_ON_ELEMENT,
+          context,
+          p.loc
+        )
+      ) {
+        return true
+      }
+    })
     if (options.isNativeTag && !hasVIs) {
       if (!options.isNativeTag(tag)) tagType = ElementTypes.COMPONENT
     } else if (
