@@ -110,17 +110,9 @@ export interface ComponentOptionsBase<
   E extends EmitsOptions,
   EE extends string = string,
   Defaults = {},
-  allowArrayAsLifecycleHook = false
+  isMergedOptions = false
 >
-  extends LegacyOptions<
-      Props,
-      D,
-      C,
-      M,
-      Mixin,
-      Extends,
-      allowArrayAsLifecycleHook
-    >,
+  extends LegacyOptions<Props, D, C, M, Mixin, Extends, isMergedOptions>,
     ComponentInternalOptions,
     ComponentCustomOptions {
   setup?: (
@@ -381,7 +373,7 @@ interface LegacyOptions<
   M extends MethodOptions,
   Mixin extends ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin,
-  allowArrayAsLifecycleHook = false
+  isMergedOptions = false
 > {
   // allow any custom options
   [key: string]: any
@@ -413,37 +405,33 @@ interface LegacyOptions<
   computed?: C
   methods?: M
   watch?: ComponentWatchOptions
-  provide?: Data | Function
-  inject?: ComponentInjectOptions
+  provide?: isMergedOptions extends true ? Function : Data | Function
+  inject?: isMergedOptions extends true
+    ? ObjectInjectOptions
+    : ComponentInjectOptions
 
   // composition
   mixins?: Mixin[]
   extends?: Extends
 
   // lifecycle
-  beforeCreate?: GetLifecycleHookType<allowArrayAsLifecycleHook>
-  created?: GetLifecycleHookType<allowArrayAsLifecycleHook>
-  beforeMount?: GetLifecycleHookType<allowArrayAsLifecycleHook>
-  mounted?: GetLifecycleHookType<allowArrayAsLifecycleHook>
-  beforeUpdate?: GetLifecycleHookType<allowArrayAsLifecycleHook>
-  updated?: GetLifecycleHookType<allowArrayAsLifecycleHook>
-  activated?: GetLifecycleHookType<allowArrayAsLifecycleHook>
-  deactivated?: GetLifecycleHookType<allowArrayAsLifecycleHook>
+  beforeCreate?: GetLifecycleHookType<isMergedOptions>
+  created?: GetLifecycleHookType<isMergedOptions>
+  beforeMount?: GetLifecycleHookType<isMergedOptions>
+  mounted?: GetLifecycleHookType<isMergedOptions>
+  beforeUpdate?: GetLifecycleHookType<isMergedOptions>
+  updated?: GetLifecycleHookType<isMergedOptions>
+  activated?: GetLifecycleHookType<isMergedOptions>
+  deactivated?: GetLifecycleHookType<isMergedOptions>
   /** @deprecated use `beforeUnmount` instead */
-  beforeDestroy?: GetLifecycleHookType<allowArrayAsLifecycleHook>
-  beforeUnmount?: GetLifecycleHookType<allowArrayAsLifecycleHook>
+  beforeDestroy?: GetLifecycleHookType<isMergedOptions>
+  beforeUnmount?: GetLifecycleHookType<isMergedOptions>
   /** @deprecated use `unmounted` instead */
-  destroyed?: GetLifecycleHookType<allowArrayAsLifecycleHook>
-  unmounted?: GetLifecycleHookType<allowArrayAsLifecycleHook>
-  renderTracked?: GetLifecycleHookType<allowArrayAsLifecycleHook, DebuggerHook>
-  renderTriggered?: GetLifecycleHookType<
-    allowArrayAsLifecycleHook,
-    DebuggerHook
-  >
-  errorCaptured?: GetLifecycleHookType<
-    allowArrayAsLifecycleHook,
-    ErrorCapturedHook
-  >
+  destroyed?: GetLifecycleHookType<isMergedOptions>
+  unmounted?: GetLifecycleHookType<isMergedOptions>
+  renderTracked?: GetLifecycleHookType<isMergedOptions, DebuggerHook>
+  renderTriggered?: GetLifecycleHookType<isMergedOptions, DebuggerHook>
+  errorCaptured?: GetLifecycleHookType<isMergedOptions, ErrorCapturedHook>
 
   // runtime compile only
   delimiters?: [string, string]
@@ -915,6 +903,7 @@ const defaultMergeStrategies: Record<string, Function> = {
 
     return ret
   },
+  // the `inject` option is merged into object format
   inject(
     toValue: ComponentInjectOptions | undefined,
     fromValue: ComponentInjectOptions | undefined
@@ -925,6 +914,7 @@ const defaultMergeStrategies: Record<string, Function> = {
     if (!toValue) return fromValue
     return extend(Object.create(null), toValue, fromValue)
   },
+  // the `provide` option is merged into a factory function
   provide(
     toValue: Data | Function | undefined,
     fromValue: Data | Function | undefined,
@@ -945,6 +935,8 @@ const defaultMergeStrategies: Record<string, Function> = {
     return fromValue || toValue
   }
 }
+
+// lifecycle hooks are merged into function or an array of functions
 ;([
   'beforeCreate',
   'created',
@@ -1027,9 +1019,9 @@ function callSyncHook(
 
 function registerHooks(
   hooks: Function | Function[],
-  hooker: Function,
+  hookRegister: Function,
   publicThis: ComponentPublicInstance
 ) {
   hooks = isArray(hooks) ? hooks : [hooks]
-  hooks.forEach(hook => hooker(hook.bind(publicThis)))
+  hooks.forEach(hook => hookRegister(hook.bind(publicThis)))
 }
