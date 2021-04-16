@@ -39,6 +39,9 @@ describe('with object props', () => {
     kkk?: any
     validated?: string
     date?: Date
+    customTypedValidated: 1
+    customTypedValidated2?: string | 1
+    customTypedValidated3?: number
   }
 
   type GT = string & { __brand: unknown }
@@ -119,6 +122,18 @@ describe('with object props', () => {
         // validator requires explicit annotation
         validator: (val: unknown) => val !== ''
       },
+      customTypedValidated: {
+        required: true,
+        validator: (val: unknown): val is 1 => val === 1
+      },
+      customTypedValidated2: {
+        type: String,
+        validator: (val: unknown): val is 1 => val === 1
+      },
+      customTypedValidated3: {
+        type: Number,
+        validator: (val: unknown): val is 1 => val === 1
+      },
       date: Date
     },
     setup(props) {
@@ -149,6 +164,15 @@ describe('with object props', () => {
       expectType<ExpectedProps['kkk']>(props.kkk)
       expectType<ExpectedProps['validated']>(props.validated)
       expectType<ExpectedProps['date']>(props.date)
+      expectType<ExpectedProps['customTypedValidated']>(
+        props.customTypedValidated
+      )
+      expectType<ExpectedProps['customTypedValidated2']>(
+        props.customTypedValidated2
+      )
+      expectType<ExpectedProps['customTypedValidated3']>(
+        props.customTypedValidated3
+      )
 
       // @ts-expect-error props should be readonly
       expectError((props.a = 1))
@@ -258,6 +282,7 @@ describe('with object props', () => {
       key={'foo'}
       // should allow ref
       ref={'foo'}
+      customTypedValidated={1}
     />
   )
 
@@ -270,6 +295,7 @@ describe('with object props', () => {
       fff={(a, b) => ({ a: a > +b })}
       hhh={false}
       jjj={() => ''}
+      customTypedValidated={1}
     />
   )
 
