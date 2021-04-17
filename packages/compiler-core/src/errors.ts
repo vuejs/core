@@ -14,7 +14,6 @@ export function defaultOnError(error: CompilerError) {
 }
 
 export function defaultOnWarn(msg: CompilerError) {
-  throw new Error('foo')
   __DEV__ && console.warn(`[Vue warn]`, msg.message)
 }
 
@@ -92,13 +91,16 @@ export const enum ErrorCodes {
   X_CACHE_HANDLER_NOT_SUPPORTED,
   X_SCOPE_ID_NOT_SUPPORTED,
 
+  // warnings
+  X_V_IF_KEY,
+
   // Special value for higher-order compilers to pick up the last code
   // to avoid collision of error codes. This should always be kept as the last
   // item.
   __EXTEND_POINT__
 }
 
-export const errorMessages: { [code: number]: string } = {
+export const errorMessages: Record<ErrorCodes, string> = {
   // parse errors
   [ErrorCodes.ABRUPT_CLOSING_OF_EMPTY_COMMENT]: 'Illegal comment.',
   [ErrorCodes.CDATA_IN_HTML_CONTENT]:
@@ -129,6 +131,7 @@ export const errorMessages: { [code: number]: string } = {
     "Attribute name cannot start with '='.",
   [ErrorCodes.UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME]:
     "'<?' is allowed only in XML context.",
+  [ErrorCodes.UNEXPECTED_NULL_CHARACTER]: `Unexpected null cahracter.`,
   [ErrorCodes.UNEXPECTED_SOLIDUS_IN_TAG]: "Illegal '/' in tags.",
 
   // Vue-specific parse errors
@@ -169,5 +172,13 @@ export const errorMessages: { [code: number]: string } = {
   [ErrorCodes.X_PREFIX_ID_NOT_SUPPORTED]: `"prefixIdentifiers" option is not supported in this build of compiler.`,
   [ErrorCodes.X_MODULE_MODE_NOT_SUPPORTED]: `ES module mode is not supported in this build of compiler.`,
   [ErrorCodes.X_CACHE_HANDLER_NOT_SUPPORTED]: `"cacheHandlers" option is only supported when the "prefixIdentifiers" option is enabled.`,
-  [ErrorCodes.X_SCOPE_ID_NOT_SUPPORTED]: `"scopeId" option is only supported in module mode.`
+  [ErrorCodes.X_SCOPE_ID_NOT_SUPPORTED]: `"scopeId" option is only supported in module mode.`,
+
+  // warnings
+  [ErrorCodes.X_V_IF_KEY]:
+    `unnecessary key usage on v-if/else branches. ` +
+    `Vue will automatically generate unique keys for each branch.`,
+
+  // just to fullfill types
+  [ErrorCodes.__EXTEND_POINT__]: ``
 }
