@@ -96,13 +96,18 @@ const deprecationData: Record<CompilerDeprecationTypes, DeprecationData> = {
 }
 
 function getCompatValue(
-  key: CompilerDeprecationTypes,
+  key: CompilerDeprecationTypes | 'MODE',
   context: ParserContext | TransformContext
 ) {
   const config = (context as ParserContext).options
     ? (context as ParserContext).options.compatConfig
     : (context as TransformContext).compatConfig
-  return config && config[key]
+  const value = config && config[key]
+  if (key === 'MODE') {
+    return value || 3 // compiler defaults to v3 behavior
+  } else {
+    return value
+  }
 }
 
 export function checkCompatEnabled(
@@ -111,9 +116,11 @@ export function checkCompatEnabled(
   loc: SourceLocation | null,
   ...args: any[]
 ): boolean {
+  const mode = getCompatValue('MODE', context)
   const value = getCompatValue(key, context)
-  // during tests, only enable when value is explicitly true
-  const enabled = __TEST__ ? value === true : value !== false
+  // in v3 mode, only enable if explicitly set to true
+  // otherwise enable for any non-false value
+  const enabled = mode === 3 ? value === true : value !== false
   if (__DEV__ && enabled) {
     warnDeprecation(key, context, loc, ...args)
   }
