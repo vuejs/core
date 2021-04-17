@@ -81,8 +81,10 @@ const deprecationData: Record<CompilerDeprecationTypes, DeprecationData> = {
   [CompilerDeprecationTypes.COMPILER_V_IF_V_FOR_PRECEDENCE]: {
     message:
       `v-if / v-for precedence when used on the same element has changed ` +
-      `in Vue 3. It is best to avoid the ambiguity with either <template> tags ` +
-      `or a computed property that filters v-for data source.`,
+      `in Vue 3: v-if now takes higher precedence and will no longer have ` +
+      `access to v-for scope variables. It is best to avoid the ambiguity ` +
+      `with <template> tags or use a computed property that filters v-for ` +
+      `data source.`,
     link: `https://v3.vuejs.org/guide/migration/v-if-v-for.html`
   },
 

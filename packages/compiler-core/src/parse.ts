@@ -33,7 +33,8 @@ import {
 import {
   checkCompatEnabled,
   CompilerCompatOptions,
-  CompilerDeprecationTypes
+  CompilerDeprecationTypes,
+  warnDeprecation
 } from './compat/compatConfig'
 
 type OptionalOptions =
@@ -486,6 +487,29 @@ function parseTag(
     context.source = currentSource
     // re-parse attrs and filter out v-pre itself
     props = parseAttributes(context, type).filter(p => p.name !== 'v-pre')
+  }
+
+  // warn v-if/v-for usage on the same element
+  if (__COMPAT__ && __DEV__ && !__TEST__) {
+    let hasIf = false
+    let hasFor = false
+    for (let i = 0; i < props.length; i++) {
+      const p = props[i]
+      if (p.type === NodeTypes.DIRECTIVE) {
+        if (p.name === 'if') {
+          hasIf = true
+        } else if (p.name === 'for') {
+          hasFor = true
+        }
+      }
+      if (hasIf && hasFor) {
+        warnDeprecation(
+          CompilerDeprecationTypes.COMPILER_V_IF_V_FOR_PRECEDENCE,
+          context,
+          getSelection(context, start)
+        )
+      }
+    }
   }
 
   // Tag close.
