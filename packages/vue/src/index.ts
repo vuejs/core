@@ -49,22 +49,17 @@ function compileToFunction(
     extend(
       {
         hoistStatic: true,
-        onError(err) {
-          if (__DEV__) {
-            onError(err)
-          } else {
-            /* istanbul ignore next */
-            throw err
-          }
-        },
-        onWarn: __DEV__ ? onError : NOOP
+        onError: __DEV__ ? onError : undefined,
+        onWarn: __DEV__ ? e => onError(e, true) : NOOP
       } as CompilerOptions,
       options
     )
   )
 
-  function onError(err: CompilerError) {
-    const message = `Template compilation error: ${err.message}`
+  function onError(err: CompilerError, asWarning = false) {
+    const message = asWarning
+      ? err.message
+      : `Template compilation error: ${err.message}`
     const codeFrame =
       err.loc &&
       generateCodeFrame(

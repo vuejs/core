@@ -456,7 +456,9 @@ export type CompatConfig = Partial<
   MODE?: 2 | 3
 }
 
-export const globalCompatConfig: CompatConfig = {}
+export const globalCompatConfig: CompatConfig = {
+  MODE: 2
+}
 
 export function configureCompat(config: CompatConfig) {
   if (__DEV__) {
