@@ -693,7 +693,7 @@ export function applyOptions(
       Object.defineProperty(ctx, key, {
         enumerable: true,
         configurable: true,
-        get: () => c.value,
+        get: () => reactive(c.value),
         set: v => (c.value = v)
       })
       if (__DEV__) {
