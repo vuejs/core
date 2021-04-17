@@ -1117,6 +1117,40 @@ describe('api: options', () => {
       expect('Computed property "foo" has no getter.').toHaveBeenWarned()
     })
 
+    //#3618
+    test('computed should be reactive', async () => {
+      const Comp = defineComponent({
+        data() {
+          return {
+            activeItem: {}
+          }
+        },
+        computed: {
+          items() {
+            return [{ x: 1 }, { x: 2 }, { x: 3 }]
+          }
+        },
+        render() {
+          return h(
+            'div',
+            {
+              onClick: () => {
+                this.activeItem = this.items[0]
+              }
+            },
+            this.activeItem === this.items[0]
+          )
+        }
+      })
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+      expect(serializeInner(root)).toBe(`<div>false</div>`)
+
+      triggerEvent(root.children[0] as TestElement, 'click')
+      await nextTick()
+      expect(serializeInner(root)).toBe(`<div>true</div>`)
+    })
+
     test('assigning to computed with no setter', () => {
       let instance: any
       const Comp = {
