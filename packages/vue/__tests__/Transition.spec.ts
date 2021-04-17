@@ -1644,7 +1644,7 @@ describe('e2e: Transition', () => {
   )
 
   test(
-    'should ignore comment chilren before warn when used on multiple elements',
+    'should ignore comment children before warn when used on multiple elements',
     async () => {
       createApp({
         template: `
