@@ -138,3 +138,21 @@ describe('compiler warnings', () => {
     })
   })
 })
+
+test('the v-if/else-if/else branchs in Transition should ignore comments', () => {
+  expect(
+    compile(`
+    <transition>
+      <div v-if="a">hey</div>
+      <!-- this should be ignored -->
+      <div v-else-if="b">hey</div>
+      <!-- this should be ignored -->
+      <div v-else>
+        <p v-if="c"/>
+        <!-- this should not be ignored -->
+        <p v-else/>
+      </div>
+    </transition>
+    `).code
+  ).toMatchSnapshot()
+})

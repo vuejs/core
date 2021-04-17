@@ -146,7 +146,14 @@ export function processIf(
         // move the node to the if node's branches
         context.removeNode()
         const branch = createIfBranch(node, dir)
-        if (__DEV__ && comments.length) {
+        if (
+          (__DEV__ && comments.length && !context.scopes.transition) ||
+          !(
+            context.parent &&
+            context.parent.type === NodeTypes.ELEMENT &&
+            context.parent.tag === 'transition'
+          )
+        ) {
           branch.children = [...comments, ...branch.children]
         }
 
