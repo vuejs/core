@@ -148,7 +148,8 @@ const BaseTransitionImpl = {
       }
 
       // warn multiple elements
-      if (__DEV__ && children.length > 1) {
+      const filteredChildren = children.filter(d => d.type !== Comment)
+      if (__DEV__ && filteredChildren.length > 1) {
         warn(
           '<transition> can only be used on a single element or component. Use ' +
             '<transition-group> for lists.'
