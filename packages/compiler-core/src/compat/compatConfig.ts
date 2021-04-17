@@ -19,8 +19,6 @@ export const enum CompilerDeprecationTypes {
   COMPILER_V_BIND_PROP = 'COMPILER_V_BIND_PROP',
   COMPILER_V_BIND_OBJECT_ORDER = 'COMPILER_V_BIND_OBJECT_ORDER',
   COMPILER_V_ON_NATIVE = 'COMPILER_V_ON_NATIVE',
-  COMPILER_KEY_V_IF = 'COMPILER_KEY_V_IF',
-  COMPILER_KEY_V_FOR_TEMPLATE = 'COMPILER_KEY_V_FOR_TEMPLATE',
   COMPILER_V_IF_V_FOR_PRECEDENCE = 'COMPILER_V_IF_V_FOR_PRECEDENCE',
   COMPILER_NATIVE_TEMPLATE = 'COMPILER_NATIVE_TEMPLATE'
 }
@@ -66,16 +64,6 @@ const deprecationData: Record<CompilerDeprecationTypes, DeprecationData> = {
   [CompilerDeprecationTypes.COMPILER_V_ON_NATIVE]: {
     message: `.native modifier for v-on has been removed as is no longer necessary.`,
     link: `https://v3.vuejs.org/guide/migration/v-on-native-modifier-removed.html`
-  },
-
-  [CompilerDeprecationTypes.COMPILER_KEY_V_IF]: {
-    message: ``,
-    link: `https://v3.vuejs.org/guide/migration/key-attribute.html#on-conditional-branches`
-  },
-
-  [CompilerDeprecationTypes.COMPILER_KEY_V_FOR_TEMPLATE]: {
-    message: ``,
-    link: `https://v3.vuejs.org/guide/migration/key-attribute.html#with-template-v-for`
   },
 
   [CompilerDeprecationTypes.COMPILER_V_IF_V_FOR_PRECEDENCE]: {
