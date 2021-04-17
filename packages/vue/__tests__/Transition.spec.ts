@@ -40,11 +40,11 @@ describe('e2e: Transition', () => {
           const { createApp, ref } = (window as any).Vue
           createApp({
             template: `
-            ion>
+            <div id="container">
+              <transition>
                 <div v-if="toggle" class="test">content</div>
               </transition>
-            </<div id="container">
-              <transitdiv>
+            </div>
             <button id="toggleBtn" @click="click">button</button>
           `,
             setup: () => {
