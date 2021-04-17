@@ -40,11 +40,11 @@ describe('e2e: Transition', () => {
           const { createApp, ref } = (window as any).Vue
           createApp({
             template: `
-            <div id="container">
-              <transition>
+            ion>
                 <div v-if="toggle" class="test">content</div>
               </transition>
-            </div>
+            </<div id="container">
+              <transitdiv>
             <button id="toggleBtn" @click="click">button</button>
           `,
             setup: () => {
@@ -1639,6 +1639,24 @@ describe('e2e: Transition', () => {
       expect(
         '<transition> can only be used on a single element or component'
       ).toHaveBeenWarned()
+    },
+    E2E_TIMEOUT
+  )
+
+  test(
+    'should ignore comment chilren before warn when used on multiple elements',
+    async () => {
+      createApp({
+        template: `
+        <transition>
+          <!--Comment-->
+          <div>1</div>
+          <!--Comment-->
+        </transition>`
+      }).mount(document.createElement('div'))
+      expect(
+        '<transition> can only be used on a single element or component'
+      ).not.toHaveBeenWarned()
     },
     E2E_TIMEOUT
   )
