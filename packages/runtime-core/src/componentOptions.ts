@@ -686,14 +686,16 @@ export function applyOptions(
                 )
               }
             : NOOP
-      const c = computed({
-        get,
-        set
-      })
+      const c = reactive(
+        computed({
+          get,
+          set
+        })
+      )
       Object.defineProperty(ctx, key, {
         enumerable: true,
         configurable: true,
-        get: () => reactive(c.value),
+        get: () => c.value,
         set: v => (c.value = v)
       })
       if (__DEV__) {
