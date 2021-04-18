@@ -92,6 +92,7 @@ export const transformElement: NodeTransform = (node, context) => {
       ? resolveComponentType(node as ComponentNode, context)
       : `"${tag}"`
 
+    // 2.x <template> with no directives compat
     if (
       __COMPAT__ &&
       tag === 'template' &&
@@ -261,9 +262,7 @@ export function resolveComponentType(
       // if not <component>, only is value that starts with "vue:" will be
       // treated as component by the parse phase and reach here, unless it's
       // compat mode where all is values are considered components
-      tag = __COMPAT__
-        ? isProp.value!.content.replace(/^vue:/, '')
-        : isProp.value!.content.slice(4)
+      tag = isProp.value!.content.replace(/^vue:/, '')
     } else {
       const exp =
         isProp.type === NodeTypes.ATTRIBUTE
@@ -509,6 +508,7 @@ export function buildProps(
           }
           if (isVBind) {
             if (__COMPAT__) {
+              // 2.x v-bind object order compat
               if (__DEV__) {
                 const hasOverridableKeys = mergeArgs.some(arg => {
                   if (arg.type === NodeTypes.JS_OBJECT_EXPRESSION) {

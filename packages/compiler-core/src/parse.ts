@@ -748,20 +748,27 @@ function parseAttribute(
     const modifiers = match[3] ? match[3].substr(1).split('.') : []
 
     // 2.x compat v-bind:foo.sync -> v-model:foo
-    if (
-      __COMPAT__ &&
-      dirName === 'bind' &&
-      arg &&
-      modifiers.includes('sync') &&
-      checkCompatEnabled(
-        CompilerDeprecationTypes.COMPILER_V_BIND_SYNC,
-        context,
-        loc,
-        arg.loc.source
-      )
-    ) {
-      dirName = 'model'
-      modifiers.splice(modifiers.indexOf('sync'), 1)
+    if (__COMPAT__ && dirName === 'bind' && arg) {
+      if (
+        modifiers.includes('sync') &&
+        checkCompatEnabled(
+          CompilerDeprecationTypes.COMPILER_V_BIND_SYNC,
+          context,
+          loc,
+          arg.loc.source
+        )
+      ) {
+        dirName = 'model'
+        modifiers.splice(modifiers.indexOf('sync'), 1)
+      }
+
+      if (__DEV__ && modifiers.includes('prop')) {
+        checkCompatEnabled(
+          CompilerDeprecationTypes.COMPILER_V_BIND_PROP,
+          context,
+          loc
+        )
+      }
     }
 
     return {

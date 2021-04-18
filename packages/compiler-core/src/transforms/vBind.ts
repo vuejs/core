@@ -3,10 +3,6 @@ import { createObjectProperty, createSimpleExpression, NodeTypes } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { camelize } from '@vue/shared'
 import { CAMELIZE } from '../runtimeHelpers'
-import {
-  checkCompatEnabled,
-  CompilerDeprecationTypes
-} from '../compat/compatConfig'
 
 // v-bind without arg is handled directly in ./transformElements.ts due to it affecting
 // codegen for the entire props object. This transform here is only for v-bind
@@ -35,18 +31,6 @@ export const transformBind: DirectiveTransform = (dir, _node, context) => {
       arg.children.unshift(`${context.helperString(CAMELIZE)}(`)
       arg.children.push(`)`)
     }
-  }
-
-  if (__COMPAT__) {
-    if (modifiers.includes('prop')) {
-      checkCompatEnabled(
-        CompilerDeprecationTypes.COMPILER_V_BIND_PROP,
-        context,
-        loc
-      )
-    }
-    // .sync handling is performed directly in the parse phase to transform
-    // it into v-model:arg equivalent.
   }
 
   if (
