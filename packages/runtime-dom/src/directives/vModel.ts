@@ -43,7 +43,6 @@ function trigger(el: HTMLElement, type: string) {
 type ModelDirective<T, Modifiers extends string = string> = ObjectDirective<
   T & { _assign: AssignerFn },
   any,
-  string,
   Modifiers
 >
 
