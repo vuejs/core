@@ -300,11 +300,14 @@ const myEmit = defineEmit(['foo', 'bar'])
         const count = ref(0)
         const maybe = foo()
         let lett = 1
+        let v = ref(1)
         </script>
         <template>
           <div @click="count = 1"/>
           <div @click="maybe = count"/>
           <div @click="lett = count"/>
+          <div @click="v += 1"/>
+          <div @click="v -= 1"/>
         </template>
         `,
         { inlineTemplate: true }
@@ -317,6 +320,8 @@ const myEmit = defineEmit(['foo', 'bar'])
       expect(content).toMatch(
         `_isRef(lett) ? lett.value = count.value : lett = count.value`
       )
+      expect(content).toMatch(`_isRef(v) ? v.value += 1 : v += 1`)
+      expect(content).toMatch(`_isRef(v) ? v.value -= 1 : v -= 1`)
       assertCode(content)
     })
 
