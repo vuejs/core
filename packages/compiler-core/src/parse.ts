@@ -446,9 +446,19 @@ const isSpecialTemplateDirective = /*#__PURE__*/ makeMap(
  */
 function parseTag(
   context: ParserContext,
+  type: TagType.Start,
+  parent: ElementNode | undefined
+): ElementNode
+function parseTag(
+  context: ParserContext,
+  type: TagType.End,
+  parent: ElementNode | undefined
+): void
+function parseTag(
+  context: ParserContext,
   type: TagType,
   parent: ElementNode | undefined
-): ElementNode {
+): ElementNode | undefined {
   __TEST__ && assert(/^<\/?[a-z]/i.test(context.source))
   __TEST__ &&
     assert(
@@ -478,6 +488,7 @@ function parseTag(
 
   // check v-pre
   if (
+    type === TagType.Start &&
     !context.inVPre &&
     props.some(p => p.type === NodeTypes.DIRECTIVE && p.name === 'pre')
   ) {
@@ -487,6 +498,22 @@ function parseTag(
     context.source = currentSource
     // re-parse attrs and filter out v-pre itself
     props = parseAttributes(context, type).filter(p => p.name !== 'v-pre')
+  }
+
+  // Tag close.
+  let isSelfClosing = false
+  if (context.source.length === 0) {
+    emitError(context, ErrorCodes.EOF_IN_TAG)
+  } else {
+    isSelfClosing = startsWith(context.source, '/>')
+    if (type === TagType.End && isSelfClosing) {
+      emitError(context, ErrorCodes.END_TAG_WITH_TRAILING_SOLIDUS)
+    }
+    advanceBy(context, isSelfClosing ? 2 : 1)
+  }
+
+  if (type === TagType.End) {
+    return
   }
 
   // warn v-if/v-for usage on the same element
@@ -510,18 +537,6 @@ function parseTag(
         )
       }
     }
-  }
-
-  // Tag close.
-  let isSelfClosing = false
-  if (context.source.length === 0) {
-    emitError(context, ErrorCodes.EOF_IN_TAG)
-  } else {
-    isSelfClosing = startsWith(context.source, '/>')
-    if (type === TagType.End && isSelfClosing) {
-      emitError(context, ErrorCodes.END_TAG_WITH_TRAILING_SOLIDUS)
-    }
-    advanceBy(context, isSelfClosing ? 2 : 1)
   }
 
   let tagType = ElementTypes.ELEMENT
@@ -565,11 +580,10 @@ function parseTag(
       tagType = ElementTypes.SLOT
     } else if (
       tag === 'template' &&
-      props.some(p => {
-        return (
+      props.some(
+        p =>
           p.type === NodeTypes.DIRECTIVE && isSpecialTemplateDirective(p.name)
-        )
-      })
+      )
     ) {
       tagType = ElementTypes.TEMPLATE
     }
