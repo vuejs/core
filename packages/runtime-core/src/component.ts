@@ -712,24 +712,31 @@ export function finishComponentSetup(
       NOOP) as InternalRenderFunction
   } else if (!instance.render) {
     // could be set from setup()
-    if (compile && Component.template && !Component.render) {
-      if (__DEV__) {
-        startMeasure(instance, `compile`)
-      }
-      const compilerOptions: CompilerOptions = {
-        isCustomElement: instance.appContext.config.isCustomElement,
-        delimiters: Component.delimiters
-      }
-      if (__COMPAT__) {
-        // pass runtime compat config into the compiler
-        compilerOptions.compatConfig = Object.create(globalCompatConfig)
-        if (Component.compatConfig) {
-          extend(compilerOptions.compatConfig, Component.compatConfig)
+    if (compile && !Component.render) {
+      const template =
+        (__COMPAT__ &&
+          instance.vnode.props &&
+          instance.vnode.props['inline-template']) ||
+        Component.template
+      if (template) {
+        if (__DEV__) {
+          startMeasure(instance, `compile`)
         }
-      }
-      Component.render = compile(Component.template, compilerOptions)
-      if (__DEV__) {
-        endMeasure(instance, `compile`)
+        const compilerOptions: CompilerOptions = {
+          isCustomElement: instance.appContext.config.isCustomElement,
+          delimiters: Component.delimiters
+        }
+        if (__COMPAT__) {
+          // pass runtime compat config into the compiler
+          compilerOptions.compatConfig = Object.create(globalCompatConfig)
+          if (Component.compatConfig) {
+            extend(compilerOptions.compatConfig, Component.compatConfig)
+          }
+        }
+        Component.render = compile(template, compilerOptions)
+        if (__DEV__) {
+          endMeasure(instance, `compile`)
+        }
       }
     }
 

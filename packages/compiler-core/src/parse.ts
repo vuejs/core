@@ -406,6 +406,27 @@ function parseElement(
   const children = parseChildren(context, mode, ancestors)
   ancestors.pop()
 
+  // 2.x inline-template compat
+  if (__COMPAT__) {
+    const inlineTemplateProp = element.props.find(
+      p => p.type === NodeTypes.ATTRIBUTE && p.name === 'inline-template'
+    ) as AttributeNode
+    if (
+      inlineTemplateProp &&
+      checkCompatEnabled(
+        CompilerDeprecationTypes.COMPILER_INLINE_TEMPLATE,
+        context,
+        inlineTemplateProp.loc
+      )
+    ) {
+      inlineTemplateProp.value!.content = getSelection(
+        context,
+        element.loc.end
+      ).source
+      console.log(inlineTemplateProp)
+    }
+  }
+
   element.children = children
 
   // End tag.
@@ -516,7 +537,7 @@ function parseTag(
     return
   }
 
-  // warn v-if/v-for usage on the same element
+  // 2.x deprecation checks
   if (__COMPAT__ && __DEV__ && !__TEST__) {
     let hasIf = false
     let hasFor = false

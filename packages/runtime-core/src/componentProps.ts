@@ -297,12 +297,17 @@ function setFullProps(
         continue
       }
 
-      if (__COMPAT__ && key.startsWith('onHook:')) {
-        softAssertCompatEnabled(
-          DeprecationTypes.INSTANCE_EVENT_HOOKS,
-          instance,
-          key.slice(2).toLowerCase()
-        )
+      if (__COMPAT__) {
+        if (key.startsWith('onHook:')) {
+          softAssertCompatEnabled(
+            DeprecationTypes.INSTANCE_EVENT_HOOKS,
+            instance,
+            key.slice(2).toLowerCase()
+          )
+        }
+        if (key === 'inline-template') {
+          continue
+        }
       }
 
       const value = rawProps[key]

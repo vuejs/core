@@ -20,7 +20,9 @@ export const enum CompilerDeprecationTypes {
   COMPILER_V_BIND_OBJECT_ORDER = 'COMPILER_V_BIND_OBJECT_ORDER',
   COMPILER_V_ON_NATIVE = 'COMPILER_V_ON_NATIVE',
   COMPILER_V_IF_V_FOR_PRECEDENCE = 'COMPILER_V_IF_V_FOR_PRECEDENCE',
-  COMPILER_NATIVE_TEMPLATE = 'COMPILER_NATIVE_TEMPLATE'
+  COMPILER_NATIVE_TEMPLATE = 'COMPILER_NATIVE_TEMPLATE',
+  COMPILER_INLINE_TEMPLATE = 'COMPILER_INLINE_TEMPLATE',
+  COMPILER_FILTER = 'COMPILER_FILTER'
 }
 
 type DeprecationData = {
@@ -80,6 +82,16 @@ const deprecationData: Record<CompilerDeprecationTypes, DeprecationData> = {
     message:
       `<template> with no special directives will render as a native template ` +
       `element instead of its inner content in Vue 3.`
+  },
+
+  [CompilerDeprecationTypes.COMPILER_INLINE_TEMPLATE]: {
+    message: `"inline-template" has been removed in Vue 3.`,
+    link: `https://v3.vuejs.org/guide/migration/inline-template-attribute.html`
+  },
+
+  [CompilerDeprecationTypes.COMPILER_FILTER]: {
+    message: `filters have been removed in Vue 3.`,
+    link: `https://v3.vuejs.org/guide/migration/filters.html`
   }
 }
 
