@@ -41,7 +41,8 @@ import {
   TELEPORT,
   KEEP_ALIVE,
   SUSPENSE,
-  UNREF
+  UNREF,
+  FRAGMENT
 } from '../runtimeHelpers'
 import {
   getInnerRange,
@@ -87,9 +88,22 @@ export const transformElement: NodeTransform = (node, context) => {
 
     // The goal of the transform is to create a codegenNode implementing the
     // VNodeCall interface.
-    const vnodeTag = isComponent
+    let vnodeTag = isComponent
       ? resolveComponentType(node as ComponentNode, context)
       : `"${tag}"`
+
+    if (
+      __COMPAT__ &&
+      tag === 'template' &&
+      checkCompatEnabled(
+        CompilerDeprecationTypes.COMPILER_NATIVE_TEMPLATE,
+        context,
+        node.loc
+      )
+    ) {
+      vnodeTag = context.helper(FRAGMENT)
+    }
+
     const isDynamicComponent =
       isObject(vnodeTag) && vnodeTag.callee === RESOLVE_DYNAMIC_COMPONENT
 

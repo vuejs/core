@@ -63,7 +63,11 @@ export const transformText: NodeTransform = (node, context) => {
         (children.length === 1 &&
           (node.type === NodeTypes.ROOT ||
             (node.type === NodeTypes.ELEMENT &&
-              node.tagType === ElementTypes.ELEMENT)))
+              node.tagType === ElementTypes.ELEMENT &&
+              // in compat mode, <template> tags with no special directives
+              // will be rendered as a fragment so its children must be
+              // converted into vnodes.
+              !(__COMPAT__ && node.tag === 'template'))))
       ) {
         return
       }

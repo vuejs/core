@@ -78,7 +78,7 @@ const deprecationData: Record<CompilerDeprecationTypes, DeprecationData> = {
 
   [CompilerDeprecationTypes.COMPILER_NATIVE_TEMPLATE]: {
     message:
-      `<template> with no special directives will render as a native template` +
+      `<template> with no special directives will render as a native template ` +
       `element instead of its inner content in Vue 3.`
   }
 }
