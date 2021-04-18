@@ -431,7 +431,6 @@ export default {
         const count = ref(0)
         const maybe = foo()
         let lett = 1
-        let v = ref(1)
         
 return (_ctx, _cache) => {
   return (_openBlock(), _createBlock(_Fragment, null, [
