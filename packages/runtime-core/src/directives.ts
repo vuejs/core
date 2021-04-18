@@ -40,7 +40,7 @@ export type DirectiveHook<
   Arg extends string = string
 > = (
   el: HostElement,
-  binding: DirectiveBinding<Value, Arg, Modifiers>,
+  binding: DirectiveBinding<Value, Modifiers, Arg>,
   vnode: VNode<any, HostElement>,
   prevVNode: Prev
 ) => void
@@ -56,25 +56,25 @@ export interface ObjectDirective<
   Modifiers extends string = string,
   Arg extends string = string
 > {
-  created?: DirectiveHook<HostElement, null, Value, Arg, Modifiers>
-  beforeMount?: DirectiveHook<HostElement, null, Value, Arg, Modifiers>
-  mounted?: DirectiveHook<HostElement, null, Value, Arg, Modifiers>
+  created?: DirectiveHook<HostElement, null, Value, Modifiers, Arg>
+  beforeMount?: DirectiveHook<HostElement, null, Value, Modifiers, Arg>
+  mounted?: DirectiveHook<HostElement, null, Value, Modifiers, Arg>
   beforeUpdate?: DirectiveHook<
     HostElement,
     VNode<any, HostElement>,
     Value,
-    Arg,
-    Modifiers
+    Modifiers,
+    Arg
   >
   updated?: DirectiveHook<
     HostElement,
     VNode<any, HostElement>,
     Value,
-    Arg,
-    Modifiers
+    Modifiers,
+    Arg
   >
-  beforeUnmount?: DirectiveHook<HostElement, null, Value, Arg, Modifiers>
-  unmounted?: DirectiveHook<HostElement, null, Value, Arg, Modifiers>
+  beforeUnmount?: DirectiveHook<HostElement, null, Value, Modifiers, Arg>
+  unmounted?: DirectiveHook<HostElement, null, Value, Modifiers, Arg>
   getSSRProps?: SSRDirectiveHook
 }
 
@@ -83,7 +83,7 @@ export type FunctionDirective<
   V = any,
   Modifiers extends string = string,
   Arg extends string = string
-> = DirectiveHook<HostElement, any, V, Arg, Modifiers>
+> = DirectiveHook<HostElement, any, V, Modifiers, Arg>
 
 export type Directive<
   HostElement = any,
@@ -91,8 +91,8 @@ export type Directive<
   Modifiers extends string = string,
   Arg extends string = string
 > =
-  | ObjectDirective<HostElement, Value, Arg, Modifiers>
-  | FunctionDirective<HostElement, Value, Arg, Modifiers>
+  | ObjectDirective<HostElement, Value, Modifiers, Arg>
+  | FunctionDirective<HostElement, Value, Modifiers, Arg>
 
 export type DirectiveModifiers<K extends string = string> = Record<K, boolean>
 

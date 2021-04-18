@@ -1,4 +1,5 @@
-import { Directive, expectError, expectType } from './index'
+import { ObjectDirective } from '@vue/runtime-core'
+import { Directive, expectError, expectType, vModelText } from './index'
 
 type ExtractBinding<T> = T extends (
   el: any,
@@ -13,35 +14,45 @@ declare function testDirective<
   Value,
   Modifiers extends string = string,
   Arg extends string = string
->(): ExtractBinding<Directive<any, Value, Arg, Modifiers>>
+>(): ExtractBinding<Directive<any, Value, Modifiers, Arg>>
 
-expectType<{
-  value: number
-  oldValue: number | null
-  arg?: 'Arg'
-  modifiers: Record<'a' | 'b', boolean>
-}>(testDirective<number, 'a' | 'b', 'Arg'>())
-
-expectError<{
-  value: number
-  oldValue: number | null
-  arg?: 'Arg'
-  modifiers: Record<'a' | 'b', boolean>
+describe('vmodel', () => {
+  expectType<ObjectDirective<any, any, 'trim' | 'number' | 'lazy', string>>(
+    vModelText
+  )
   // @ts-expect-error
-}>(testDirective<number, 'a', 'Arg'>())
+  expectType<ObjectDirective<any, any, 'trim' | 'number', string>>(vModelText)
+})
 
-expectType<{
-  value: number
-  oldValue: number | null
-  arg?: 'Arg'
-  modifiers: Record<'a' | 'b', boolean>
-  // @ts-expect-error
-}>(testDirective<number, 'a' | 'b', 'Argx'>())
+describe('custom', () => {
+  expectType<{
+    value: number
+    oldValue: number | null
+    arg?: 'Arg'
+    modifiers: Record<'a' | 'b', boolean>
+  }>(testDirective<number, 'a' | 'b', 'Arg'>())
 
-expectType<{
-  value: number
-  oldValue: number | null
-  arg?: 'Arg'
-  modifiers: Record<'a' | 'b', boolean>
-  // @ts-expect-error
-}>(testDirective<string, 'a' | 'b', 'Arg'>())
+  expectError<{
+    value: number
+    oldValue: number | null
+    arg?: 'Arg'
+    modifiers: Record<'a' | 'b', boolean>
+    // @ts-expect-error
+  }>(testDirective<number, 'a', 'Arg'>())
+
+  expectType<{
+    value: number
+    oldValue: number | null
+    arg?: 'Arg'
+    modifiers: Record<'a' | 'b', boolean>
+    // @ts-expect-error
+  }>(testDirective<number, 'a' | 'b', 'Argx'>())
+
+  expectType<{
+    value: number
+    oldValue: number | null
+    arg?: 'Arg'
+    modifiers: Record<'a' | 'b', boolean>
+    // @ts-expect-error
+  }>(testDirective<string, 'a' | 'b', 'Arg'>())
+})
