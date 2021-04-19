@@ -9,7 +9,7 @@ import {
   traverseStaticChildren
 } from '../renderer'
 import { VNode, VNodeArrayChildren, VNodeProps } from '../vnode'
-import { isString, ShapeFlags, isArray } from '@vue/shared'
+import { isString, ShapeFlags } from '@vue/shared'
 import { warn } from '../warning'
 import { isHmrUpdating } from '../hmr'
 
