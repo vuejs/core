@@ -4675,6 +4675,13 @@ ltgt@^2.1.2:
   resolved "https://registry.yarnpkg.com/ltgt/-/ltgt-2.2.1.tgz#f35ca91c493f7b73da0e07495304f17b31f87ee5"
   integrity sha1-81ypHEk/e3PaDgdJUwTxezH4fuU=
 
+lzutf8@^0.6.0:
+  version "0.6.0"
+  resolved "https://registry.npm.taobao.org/lzutf8/download/lzutf8-0.6.0.tgz#ddfced3aa9959be68cc46d12c609e64d41e710f8"
+  integrity sha1-3fztOqmVm+aMxG0SxgnmTUHnEPg=
+  dependencies:
+    readable-stream "^3.6.0"
+
 magic-string@^0.22.5:
   version "0.22.5"
   resolved "https://registry.yarnpkg.com/magic-string/-/magic-string-0.22.5.tgz#8e9cf5afddf44385c1da5bc2a6a0dbd10b03657e"
