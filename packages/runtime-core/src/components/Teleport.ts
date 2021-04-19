@@ -9,7 +9,7 @@ import {
   traverseStaticChildren
 } from '../renderer'
 import { VNode, VNodeArrayChildren, VNodeProps } from '../vnode'
-import { isString, ShapeFlags } from '@vue/shared'
+import { isString, ShapeFlags, isArray } from '@vue/shared'
 import { warn } from '../warning'
 import { isHmrUpdating } from '../hmr'
 
@@ -243,12 +243,13 @@ export const TeleportImpl = {
       hostRemove(anchor!)
       if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
         for (let i = 0; i < (children as VNode[]).length; i++) {
+          const child = (children as VNode[])[i]
           unmount(
-            (children as VNode[])[i],
+            child,
             parentComponent,
             parentSuspense,
             true,
-            false
+            !!child.dynamicChildren
           )
         }
       }
