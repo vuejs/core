@@ -237,6 +237,7 @@ export const TeleportImpl = {
     if (target) {
       hostRemove(targetAnchor!)
     }
+    debugger
 
     // an unmounted teleport should always remove its children if not disabled
     if (doRemove || !isTeleportDisabled(props)) {
@@ -248,7 +249,7 @@ export const TeleportImpl = {
             parentComponent,
             parentSuspense,
             true,
-            optimized
+            false
           )
         }
       }
