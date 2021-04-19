@@ -472,4 +472,30 @@ describe('renderer: teleport', () => {
     expect(dir.mounted).toHaveBeenCalledTimes(1)
     expect(dir.unmounted).toHaveBeenCalledTimes(1)
   })
+
+  //#3623
+  test('nested teleport should be removed when unmounted', () => {
+    const target = nodeOps.createElement('div')
+    const root = nodeOps.createElement('div')
+
+    render(
+      h(() => [
+        h(
+          Teleport,
+          { to: target },
+          h('div', ['teleport1', h(Teleport, { to: target }, 'teleport2')])
+        )
+      ]),
+      root
+    )
+    expect(serializeInner(target)).toMatchInlineSnapshot(
+      `"<div>teleport1<!--teleport start--><!--teleport end--></div>teleport2"`
+    )
+    expect(serializeInner(root)).toMatchInlineSnapshot(
+      `"<!--teleport start--><!--teleport end-->"`
+    )
+
+    render(null, root)
+    expect(serializeInner(target)).toBe('')
+  })
 })
