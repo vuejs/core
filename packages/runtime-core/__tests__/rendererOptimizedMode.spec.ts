@@ -1,6 +1,7 @@
 import {
   h,
   Fragment,
+  Teleport,
   createVNode,
   openBlock,
   createBlock,
@@ -575,5 +576,46 @@ describe('renderer: optimized mode', () => {
     state.value = 1
     await nextTick()
     expect(inner(root)).toBe('<div>World</div>')
+  })
+
+  //#3623
+  test('nested teleport unmount need exit the optimization mode', () => {
+    const target = nodeOps.createElement('div')
+    const root = nodeOps.createElement('div')
+
+    render(
+      (openBlock(),
+      createBlock('div', null, [
+        (openBlock(),
+        createBlock(
+          Teleport as any,
+          {
+            to: target
+          },
+          [
+            createVNode('div', null, [
+              (openBlock(),
+              createBlock(
+                Teleport as any,
+                {
+                  to: target
+                },
+                [createVNode('div', null, 'foo')]
+              ))
+            ])
+          ]
+        ))
+      ])),
+      root
+    )
+    expect(inner(target)).toMatchInlineSnapshot(
+      `"<div><!--teleport start--><!--teleport end--></div><div>foo</div>"`
+    )
+    expect(inner(root)).toMatchInlineSnapshot(
+      `"<div><!--teleport start--><!--teleport end--></div>"`
+    )
+
+    render(null, root)
+    expect(inner(target)).toBe('')
   })
 })
