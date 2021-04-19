@@ -22,7 +22,7 @@ export const enum CompilerDeprecationTypes {
   COMPILER_V_IF_V_FOR_PRECEDENCE = 'COMPILER_V_IF_V_FOR_PRECEDENCE',
   COMPILER_NATIVE_TEMPLATE = 'COMPILER_NATIVE_TEMPLATE',
   COMPILER_INLINE_TEMPLATE = 'COMPILER_INLINE_TEMPLATE',
-  COMPILER_FILTER = 'COMPILER_FILTER'
+  COMPILER_FILTERS = 'COMPILER_FILTER'
 }
 
 type DeprecationData = {
@@ -89,8 +89,11 @@ const deprecationData: Record<CompilerDeprecationTypes, DeprecationData> = {
     link: `https://v3.vuejs.org/guide/migration/inline-template-attribute.html`
   },
 
-  [CompilerDeprecationTypes.COMPILER_FILTER]: {
-    message: `filters have been removed in Vue 3.`,
+  [CompilerDeprecationTypes.COMPILER_FILTERS]: {
+    message:
+      `filters have been removed in Vue 3. ` +
+      `The "|" symbol will be treated as native JavaScript bitwise OR operator. ` +
+      `Use method calls or computed properties instead.`,
     link: `https://v3.vuejs.org/guide/migration/filters.html`
   }
 }

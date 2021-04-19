@@ -72,6 +72,12 @@ import {
   isCompatEnabled,
   softAssertCompatEnabled
 } from './compat/compatConfig'
+import {
+  AssetTypes,
+  COMPONENTS,
+  DIRECTIVES,
+  FILTERS
+} from './helpers/resolveAssets'
 
 /**
  * Interface for declaring custom options.
@@ -413,6 +419,9 @@ interface LegacyOptions<
   provide?: Data | Function
   inject?: ComponentInjectOptions
 
+  // assets
+  filters?: Record<string, Function>
+
   // composition
   mixins?: Mixin[]
   extends?: Extends
@@ -510,9 +519,6 @@ export function applyOptions(
     watch: watchOptions,
     provide: provideOptions,
     inject: injectOptions,
-    // assets
-    components,
-    directives,
     // lifecycle
     beforeMount,
     mounted,
@@ -721,25 +727,10 @@ export function applyOptions(
   // To reduce memory usage, only components with mixins or extends will have
   // resolved asset registry attached to instance.
   if (asMixin) {
-    if (components) {
-      extend(
-        instance.components ||
-          (instance.components = extend(
-            {},
-            (instance.type as ComponentOptions).components
-          ) as Record<string, ConcreteComponent>),
-        components
-      )
-    }
-    if (directives) {
-      extend(
-        instance.directives ||
-          (instance.directives = extend(
-            {},
-            (instance.type as ComponentOptions).directives
-          )),
-        directives
-      )
+    resolveInstanceAssets(instance, options, COMPONENTS)
+    resolveInstanceAssets(instance, options, DIRECTIVES)
+    if (__COMPAT__ && isCompatEnabled(DeprecationTypes.FILTERS, instance)) {
+      resolveInstanceAssets(instance, options, FILTERS)
     }
   }
 
@@ -815,6 +806,23 @@ export function applyOptions(
     } else if (__DEV__) {
       warn(`The \`expose\` option is ignored when used in mixins.`)
     }
+  }
+}
+
+function resolveInstanceAssets(
+  instance: ComponentInternalInstance,
+  mixin: ComponentOptions,
+  type: AssetTypes
+) {
+  if (mixin[type]) {
+    extend(
+      instance[type] ||
+        (instance[type] = extend(
+          {},
+          (instance.type as ComponentOptions)[type]
+        ) as any),
+      mixin[type]
+    )
   }
 }
 

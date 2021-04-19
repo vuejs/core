@@ -293,6 +293,12 @@ import {
   checkCompatEnabled,
   softAssertCompatEnabled
 } from './compat/compatConfig'
+import { resolveFilter as _resolveFilter } from './helpers/resolveAssets'
+
+/**
+ * @internal only exposed in compat builds
+ */
+export const resolveFilter = __COMPAT__ ? _resolveFilter : null
 
 const _compatUtils = {
   warnDeprecation,

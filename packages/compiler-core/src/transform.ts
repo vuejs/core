@@ -118,6 +118,9 @@ export interface TransformContext
   hoist(exp: JSChildNode): SimpleExpressionNode
   cache<T extends JSChildNode>(exp: T, isVNode?: boolean): CacheExpression | T
   constantCache: Map<TemplateChildNode, ConstantTypes>
+
+  // 2.x Compat only
+  filters?: Set<string>
 }
 
 export function createTransformContext(
@@ -289,6 +292,10 @@ export function createTransformContext(
     }
   }
 
+  if (__COMPAT__) {
+    context.filters = new Set()
+  }
+
   function addId(id: string) {
     const { identifiers } = context
     if (identifiers[id] === undefined) {
@@ -321,6 +328,10 @@ export function transform(root: RootNode, options: TransformOptions) {
   root.hoists = context.hoists
   root.temps = context.temps
   root.cached = context.cached
+
+  if (__COMPAT__) {
+    root.filters = [...context.filters!]
+  }
 }
 
 function createRootCodegen(root: RootNode, context: TransformContext) {

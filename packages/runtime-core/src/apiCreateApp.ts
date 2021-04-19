@@ -17,6 +17,7 @@ import { isFunction, NO, isObject } from '@vue/shared'
 import { version } from '.'
 import { installCompatMount } from './compat/global'
 import { installLegacyConfigProperties } from './compat/globalConfig'
+import { installGlobalFilterMethod } from './compat/filter'
 
 export interface App<HostElement = any> {
   version: string
@@ -43,7 +44,13 @@ export interface App<HostElement = any> {
   _context: AppContext
 
   /**
-   * @internal 2.x compat only
+   * v2 compat only
+   */
+  filter?(name: string): Function | undefined
+  filter?(name: string, filter: Function): this
+
+  /**
+   * @internal v3 compat only
    */
   _createRoot?(options: ComponentOptions): ComponentPublicInstance
 }
@@ -92,6 +99,11 @@ export interface AppContext {
    * @internal
    */
   reload?: () => void
+  /**
+   * v2 compat only
+   * @internal
+   */
+  filters?: Record<string, Function>
 }
 
 type PluginInstallFunction = (app: App, ...options: any[]) => any
@@ -307,6 +319,7 @@ export function createAppAPI<HostElement>(
 
     if (__COMPAT__) {
       installCompatMount(app, context, render, hydrate)
+      installGlobalFilterMethod(app, context)
       if (__DEV__) installLegacyConfigProperties(app.config)
     }
 

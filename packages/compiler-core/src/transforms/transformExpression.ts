@@ -254,6 +254,11 @@ export function processExpression(
       parent && parentStack.push(parent)
       if (node.type === 'Identifier') {
         if (!isDuplicate(node)) {
+          // v2 wrapped filter call
+          if (__COMPAT__ && node.name.startsWith('_filter_')) {
+            return
+          }
+
           const needPrefix = shouldPrefix(node, parent!, parentStack)
           if (!knownIds[node.name] && needPrefix) {
             if (isStaticProperty(parent!) && parent.shorthand) {

@@ -56,7 +56,9 @@ export const enum DeprecationTypes {
   COMPONENT_FUNCTIONAL = 'COMPONENT_FUNCTIONAL',
   COMPONENT_V_MODEL = 'COMPONENT_V_MODEL',
 
-  RENDER_FUNCTION = 'RENDER_FUNCTION'
+  RENDER_FUNCTION = 'RENDER_FUNCTION',
+
+  FILTERS = 'FILTERS'
 }
 
 type DeprecationData = {
@@ -392,6 +394,14 @@ const deprecationData: Record<DeprecationTypes, DeprecationData> = {
       }: false })\n` +
       `\n  (This can also be done per-component via the "compatConfig" option.)`,
     link: `https://v3.vuejs.org/guide/migration/render-function-api.html`
+  },
+
+  [DeprecationTypes.FILTERS]: {
+    message:
+      `filters have been removed in Vue 3. ` +
+      `The "|" symbol will be treated as native JavaScript bitwise OR operator. ` +
+      `Use method calls or computed properties instead.`,
+    link: `https://v3.vuejs.org/guide/migration/filters.html`
   }
 }
 

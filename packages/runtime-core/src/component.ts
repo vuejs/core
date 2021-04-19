@@ -269,6 +269,11 @@ export interface ComponentInternalInstance {
    */
   directives: Record<string, Directive> | null
   /**
+   * Resolved filters registry, v2 compat only
+   * @internal
+   */
+  filters?: Record<string, Function>
+  /**
    * resolved props options
    * @internal
    */
