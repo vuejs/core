@@ -203,9 +203,10 @@ const deprecationData: Record<DeprecationTypes, DeprecationData> = {
 
   [DeprecationTypes.INSTANCE_LISTENERS]: {
     message:
-      `vm.$listeners has been removed. Parent v-on listeners are now ` +
+      `vm.$listeners has been removed. In Vue 3, parent v-on listeners are ` +
       `included in vm.$attrs and it is no longer necessary to separately use ` +
-      `v-on="$listeners" if you are already using v-bind="$attrs".`,
+      `v-on="$listeners" if you are already using v-bind="$attrs". ` +
+      `(Note: the Vue 3 behavior only applies if this compat config is disabled)`,
     link: `https://v3.vuejs.org/guide/migration/listeners-removed.html`
   },
 

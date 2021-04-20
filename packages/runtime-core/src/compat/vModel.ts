@@ -9,11 +9,6 @@ import {
   isCompatEnabled
 } from './compatConfig'
 
-const defaultModelMapping = {
-  prop: 'value',
-  event: 'input'
-}
-
 export const compatModelEventPrefix = `onModelCompat:`
 
 const warnedTypes = new WeakSet()
@@ -40,7 +35,7 @@ export function convertLegacyVModelProps(vnode: VNode) {
       warnedTypes.add(type as ComponentOptions)
     }
 
-    const { prop, event } = (type as any).model || defaultModelMapping
+    const { prop = 'value', event = 'input' } = (type as any).model || {}
     props[prop] = props.modelValue
     delete props.modelValue
     // important: update dynamic props

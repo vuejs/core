@@ -20,7 +20,8 @@ import {
   isReservedProp,
   EMPTY_ARR,
   def,
-  extend
+  extend,
+  isOn
 } from '@vue/shared'
 import { warn } from './warning'
 import {
@@ -224,6 +225,13 @@ export function updateProps(
             )
           }
         } else {
+          if (
+            __COMPAT__ &&
+            isOn(key) &&
+            isCompatEnabled(DeprecationTypes.INSTANCE_LISTENERS, instance)
+          ) {
+            continue
+          }
           attrs[key] = value
         }
       }
@@ -320,6 +328,13 @@ function setFullProps(
         // Any non-declared (either as a prop or an emitted event) props are put
         // into a separate `attrs` object for spreading. Make sure to preserve
         // original key casing
+        if (
+          __COMPAT__ &&
+          isOn(key) &&
+          isCompatEnabled(DeprecationTypes.INSTANCE_LISTENERS, instance)
+        ) {
+          continue
+        }
         attrs[key] = value
       }
     }

@@ -29,6 +29,8 @@ import {
 } from '../vnode'
 import { checkCompatEnabled, DeprecationTypes } from './compatConfig'
 
+const v3CompiledRenderFnRE = /^(?:function \w+)?\(_ctx, _cache/
+
 export function convertLegacyRenderFn(instance: ComponentInternalInstance) {
   const Component = instance.type as ComponentOptions
   const render = Component.render as InternalRenderFunction | undefined
@@ -38,8 +40,7 @@ export function convertLegacyRenderFn(instance: ComponentInternalInstance) {
     return
   }
 
-  const string = render.toString()
-  if (string.startsWith('function render(_ctx') || string.startsWith('(_ctx')) {
+  if (v3CompiledRenderFnRE.test(render.toString())) {
     // v3 pre-compiled function
     render._compatChecked = true
     return
@@ -128,9 +129,7 @@ export function compatH(
       return convertLegacySlots(createVNode(type, null, propsOrChildren))
     }
   } else {
-    if (l > 3) {
-      children = Array.prototype.slice.call(arguments, 2)
-    } else if (l === 3 && isVNode(children)) {
+    if (isVNode(children)) {
       children = [children]
     }
     return convertLegacySlots(
@@ -157,13 +156,20 @@ function convertLegacyProps(
     } else if (key === 'on' || key === 'nativeOn') {
       const listeners = legacyProps[key]
       for (const event in listeners) {
-        const handlerKey = toHandlerKey(event)
+        const handlerKey = convertLegacyEventKey(event)
         const existing = converted[handlerKey]
         const incoming = listeners[event]
         if (existing !== incoming) {
-          converted[handlerKey] = existing
-            ? [].concat(existing as any, incoming as any)
-            : incoming
+          if (existing) {
+            // for the rare case where the same handler is attached
+            // twice with/without .native modifier...
+            if (key === 'nativeOn' && String(existing) === String(incoming)) {
+              continue
+            }
+            converted[handlerKey] = [].concat(existing as any, incoming as any)
+          } else {
+            converted[handlerKey] = incoming
+          }
         }
       }
     } else if (
@@ -183,6 +189,20 @@ function convertLegacyProps(
   }
 
   return converted
+}
+
+function convertLegacyEventKey(event: string): string {
+  // normalize v2 event prefixes
+  if (event[0] === '&') {
+    event = event.slice(1) + 'Passive'
+  }
+  if (event[0] === '~') {
+    event = event.slice(1) + 'Once'
+  }
+  if (event[0] === '!') {
+    event = event.slice(1) + 'Capture'
+  }
+  return toHandlerKey(event)
 }
 
 function convertLegacyDirectives(

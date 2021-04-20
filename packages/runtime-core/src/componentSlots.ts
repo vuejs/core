@@ -80,7 +80,7 @@ const normalizeObjectSlots = (rawSlots: RawSlots, slots: InternalSlots) => {
     if (isFunction(value)) {
       slots[key] = normalizeSlot(key, value, ctx)
     } else if (value != null) {
-      if (__DEV__) {
+      if (__DEV__ && !__COMPAT__) {
         warn(
           `Non-function value encountered for slot "${key}". ` +
             `Prefer function slots for better performance.`

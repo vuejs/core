@@ -116,7 +116,16 @@ function createConfig(format, output, plugins = []) {
   // during a single build.
   hasTSChecked = true
 
-  const entryFile = /runtime$/.test(format) ? `src/runtime.ts` : `src/index.ts`
+  let entryFile = /runtime$/.test(format) ? `src/runtime.ts` : `src/index.ts`
+
+  // the compat build needs both default AND named exports. This will cause
+  // Rollup to complain for non-ESM targets, so we use separate entries for
+  // esm vs. non-esm builds.
+  if (isCompatBuild && (isBrowserESMBuild || isBundlerESMBuild)) {
+    entryFile = /runtime$/.test(format)
+      ? `src/esm-runtime.ts`
+      : `src/esm-index.ts`
+  }
 
   let external = []
 

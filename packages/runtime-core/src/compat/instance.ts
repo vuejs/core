@@ -1,4 +1,4 @@
-import { extend, NOOP } from '@vue/shared'
+import { extend, NOOP, toDisplayString, toNumber } from '@vue/shared'
 import { PublicPropertiesMap } from '../componentPublicInstance'
 import { getCompatChildren } from './instanceChildren'
 import {
@@ -11,6 +11,14 @@ import { off, on, once } from './instanceEventEmitter'
 import { getCompatListeners } from './instanceListeners'
 import { shallowReadonly } from '@vue/reactivity'
 import { legacySlotProxyHandlers } from './component'
+import { compatH } from './renderFn'
+import {
+  legacyBindObjectProps,
+  legacyRenderSlot,
+  legacyRenderStatic
+} from './renderHelpers'
+import { createCommentVNode, createTextVNode } from '../vnode'
+import { renderList } from '../helpers/renderList'
 
 export function installCompatInstanceProperties(map: PublicPropertiesMap) {
   const set = (target: any, key: any, val: any) => {
@@ -77,6 +85,19 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
     $off: i => off.bind(null, i),
 
     $children: getCompatChildren,
-    $listeners: getCompatListeners
+    $listeners: getCompatListeners,
+
+    // v2 render helpers
+    $createElement: () => compatH,
+    _self: i => i.proxy,
+    _c: () => compatH,
+    _n: () => toNumber,
+    _s: () => toDisplayString,
+    _l: () => renderList,
+    _t: i => legacyRenderSlot.bind(null, i),
+    _b: () => legacyBindObjectProps,
+    _e: () => createCommentVNode,
+    _v: () => createTextVNode,
+    _m: i => legacyRenderStatic.bind(null, i)
   } as PublicPropertiesMap)
 }
