@@ -340,7 +340,11 @@ export function instanceWatch(
 }
 
 function traverse(value: unknown, seen: Set<unknown> = new Set()) {
-  if (!isObject(value) || seen.has(value)) {
+  if (
+    !isObject(value) ||
+    seen.has(value) ||
+    (typeof Node !== 'undefined' && value instanceof Node)
+  ) {
     return value
   }
   seen.add(value)
