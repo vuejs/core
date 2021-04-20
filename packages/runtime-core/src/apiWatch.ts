@@ -18,7 +18,8 @@ import {
   NOOP,
   remove,
   isMap,
-  isSet
+  isSet,
+  isPlainObject
 } from '@vue/shared'
 import {
   currentInstance,
@@ -391,9 +392,9 @@ function traverse(value: unknown, seen: Set<unknown> = new Set()) {
     value.forEach((v: any) => {
       traverse(v, seen)
     })
-  } else {
+  } else if (isPlainObject(value)) {
     for (const key in value) {
-      traverse(value[key], seen)
+      traverse((value as any)[key], seen)
     }
   }
   return value
