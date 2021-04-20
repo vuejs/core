@@ -144,26 +144,6 @@ function injectCompilerOptionsCheck(app: App) {
         )
       }
     })
-
-    const compilerOptions = app.config.compilerOptions
-    const msg =
-      `The \`compilerOptions\` config option is only respected when using ` +
-      `a build of Vue.js that includes the runtime compiler (aka "full build"). ` +
-      `Since you are using the runtime-only build, \`compilerOptions\` ` +
-      `must be passed to \`@vue/compiler-dom\` in the build setup instead.\n` +
-      `- For vue-loader: pass it via vue-loader's \`compilerOptions\` loader option.\n` +
-      `- For vue-cli: see https://cli.vuejs.org/guide/webpack.html#modifying-options-of-a-loader\n` +
-      `- For vite: pass it via @vitejs/plugin-vue options. See https://github.com/vitejs/vite/tree/main/packages/plugin-vue#example-for-passing-options-to-vuecompiler-dom`
-
-    Object.defineProperty(app.config, 'compilerOptions', {
-      get() {
-        warn(msg)
-        return compilerOptions
-      },
-      set() {
-        warn(msg)
-      }
-    })
   }
 }
 

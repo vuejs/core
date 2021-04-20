@@ -32,12 +32,20 @@ export const NULL_DYNAMIC_COMPONENT = Symbol()
  * @private
  */
 export function resolveDynamicComponent(component: unknown): VNodeTypes {
-  if (isString(component)) {
-    return resolveAsset(COMPONENTS, component, false) || component
-  } else {
-    // invalid types will fallthrough to createVNode and raise warning
-    return (component || NULL_DYNAMIC_COMPONENT) as any
+  const instance = currentRenderingInstance || currentInstance
+  if (instance) {
+    const isCustomElement = instance.appContext.config.isCustomElement
+    if (isString(component)) {
+      if (isCustomElement(component)) return component
+      return resolveAsset(COMPONENTS, component, false) || component
+    } else {
+      // invalid types will fallthrough to createVNode and raise warning
+      return (component || NULL_DYNAMIC_COMPONENT) as any
+    }
+  } else if (__DEV__) {
+    warn(`resolveDynamicComponent can only be used in render() or setup().`)
   }
+  return component as any
 }
 
 /**

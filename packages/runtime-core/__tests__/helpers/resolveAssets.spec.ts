@@ -181,6 +181,28 @@ describe('resolveAssets', () => {
       app.mount(root)
       expect(serializeInner(root)).toBe('<div>hello</div>')
     })
+
+    test('resolve dynamic component should respect the `app.config.isCustomElement`', () => {
+      const Root = {
+        components: {
+          FooBar: { render: () => h('h1', 'component') }
+        },
+        setup() {
+          return () => {
+            return [
+              createVNode(resolveDynamicComponent('foo-bar') as string),
+              createVNode(resolveDynamicComponent('FooBar') as string)
+            ]
+          }
+        }
+      }
+
+      const app = createApp(Root)
+      app.config.isCustomElement = tag => tag === 'foo-bar'
+      const root = nodeOps.createElement('div')
+      app.mount(root)
+      expect(serializeInner(root)).toBe('<foo-bar></foo-bar><h1>component</h1>')
+    })
   })
 
   test('resolving from mixins & extends', () => {
