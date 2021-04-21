@@ -108,6 +108,7 @@ const buildClientSlotFn: SlotFnBuilder = (props, children, loc) =>
   createFunctionExpression(
     props,
     children,
+    undefined,
     false /* newline */,
     true /* isSlot */,
     children.length ? children[0].loc : loc
@@ -271,6 +272,7 @@ export function buildSlots(
             createFunctionExpression(
               createForLoopParams(parseResult),
               buildDynamicSlot(slotName, slotFunction),
+              undefined,
               true /* force newline */
             )
           ])

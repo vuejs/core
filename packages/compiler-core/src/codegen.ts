@@ -33,7 +33,7 @@ import {
   isSimpleIdentifier,
   toValidAssetId
 } from './utils'
-import { isString, isArray, isSymbol } from '@vue/shared'
+import { isString, isArray, isSymbol, NOOP } from '@vue/shared'
 import {
   helperNameMap,
   TO_DISPLAY_STRING,
@@ -97,7 +97,8 @@ function createCodegenContext(
     optimizeImports = false,
     runtimeGlobalName = `Vue`,
     runtimeModuleName = `vue`,
-    ssr = false
+    ssr = false,
+    customGen = NOOP
   }: CodegenOptions
 ): CodegenContext {
   const context: CodegenContext = {
@@ -118,6 +119,7 @@ function createCodegenContext(
     indentLevel: 0,
     pure: false,
     map: undefined,
+    customGen,
     helper(key) {
       return `_${helperNameMap[key]}`
     },
@@ -576,7 +578,10 @@ function genNodeList(
   }
 }
 
-function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
+export function genNode(
+  node: CodegenNode | symbol | string,
+  context: CodegenContext
+) {
   if (isString(node)) {
     context.push(node)
     return
@@ -663,7 +668,9 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
       // noop
       break
     default:
-      if (__DEV__) {
+      if (context.customGen !== NOOP) {
+        context.customGen(node, context)
+      } else if (__DEV__) {
         assert(false, `unhandled codegen node type: ${(node as any).type}`)
         // make sure we exhaust all possible types
         const exhaustiveCheck: never = node
@@ -852,6 +859,9 @@ function genFunctionExpression(
     push(`{`)
     indent()
   }
+  if (body) {
+    genNode(body, context)
+  }
   if (returns) {
     if (newline) {
       push(`return `)
@@ -861,8 +871,6 @@ function genFunctionExpression(
     } else {
       genNode(returns, context)
     }
-  } else if (body) {
-    genNode(body, context)
   }
   if (newline || body) {
     deindent()
