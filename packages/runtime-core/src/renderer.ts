@@ -1599,6 +1599,11 @@ function baseCreateRenderer(
         }
       }
     }, __DEV__ ? createDevEffectOptions(instance) : prodEffectOptions)
+
+    if (__DEV__) {
+      // @ts-ignore
+      instance.update.ownerInstance = instance
+    }
   }
 
   const updateComponentPreRender = (
