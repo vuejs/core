@@ -219,6 +219,11 @@ export function isEmitListener(
   if (!options || !isOn(key)) {
     return false
   }
+
+  if (__COMPAT__ && key.startsWith(compatModelEventPrefix)) {
+    return true
+  }
+
   key = key.slice(2).replace(/Once$/, '')
   return (
     hasOwn(options, key[0].toLowerCase() + key.slice(1)) ||
