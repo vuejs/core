@@ -82,7 +82,7 @@ function createReactiveEffect<T = any>(
   fn: () => T,
   options: ReactiveEffectOptions
 ): ReactiveEffect<T> {
-  const effect = function reactiveEffect(): unknown {
+  const effect: ReactiveEffect = function reactiveEffect(): unknown {
     if (!effect.active) {
       return options.scheduler ? undefined : fn()
     }
@@ -99,7 +99,7 @@ function createReactiveEffect<T = any>(
         activeEffect = effectStack[effectStack.length - 1]
       }
     }
-  } as ReactiveEffect
+  }
   effect.id = uid++
   effect.allowRecurse = !!options.allowRecurse
   effect._isEffect = true
