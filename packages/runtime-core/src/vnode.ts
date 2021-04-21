@@ -43,6 +43,7 @@ import { hmrDirtyComponents } from './hmr'
 import { setCompiledSlotRendering } from './helpers/renderSlot'
 import { convertLegacyComponent } from './compat/component'
 import { convertLegacyVModelProps } from './compat/vModel'
+import { defineLegacyVNodeProperties } from './compat/renderFn'
 
 export const Fragment = (Symbol(__DEV__ ? 'Fragment' : undefined) as any) as {
   __isFragment: true
@@ -472,6 +473,7 @@ function _createVNode(
 
   if (__COMPAT__) {
     convertLegacyVModelProps(vnode)
+    defineLegacyVNodeProperties(vnode)
   }
 
   return vnode
@@ -486,7 +488,7 @@ export function cloneVNode<T, U>(
   // key enumeration cost.
   const { props, ref, patchFlag, children } = vnode
   const mergedProps = extraProps ? mergeProps(props || {}, extraProps) : props
-  return {
+  const cloned: VNode = {
     __v_isVNode: true,
     [ReactiveFlags.SKIP]: true,
     type: vnode.type,
@@ -540,6 +542,10 @@ export function cloneVNode<T, U>(
     el: vnode.el,
     anchor: vnode.anchor
   }
+  if (__COMPAT__) {
+    defineLegacyVNodeProperties(cloned)
+  }
+  return cloned as any
 }
 
 /**

@@ -19,6 +19,7 @@ import { warn } from './warning'
 import { isKeepAlive } from './components/KeepAlive'
 import { withCtx } from './componentRenderContext'
 import { isHmrUpdating } from './hmr'
+import { DeprecationTypes, isCompatEnabled } from './compat/compatConfig'
 
 export type Slot = (...args: any[]) => VNode[]
 
@@ -72,7 +73,11 @@ const normalizeSlot = (
     return normalizeSlotValue(rawSlot(props))
   }, ctx) as Slot
 
-const normalizeObjectSlots = (rawSlots: RawSlots, slots: InternalSlots) => {
+const normalizeObjectSlots = (
+  rawSlots: RawSlots,
+  slots: InternalSlots,
+  instance: ComponentInternalInstance
+) => {
   const ctx = rawSlots._ctx
   for (const key in rawSlots) {
     if (isInternalKey(key)) continue
@@ -80,7 +85,13 @@ const normalizeObjectSlots = (rawSlots: RawSlots, slots: InternalSlots) => {
     if (isFunction(value)) {
       slots[key] = normalizeSlot(key, value, ctx)
     } else if (value != null) {
-      if (__DEV__ && !__COMPAT__) {
+      if (
+        __DEV__ &&
+        !(
+          __COMPAT__ &&
+          isCompatEnabled(DeprecationTypes.RENDER_FUNCTION, instance)
+        )
+      ) {
         warn(
           `Non-function value encountered for slot "${key}". ` +
             `Prefer function slots for better performance.`
@@ -117,7 +128,11 @@ export const initSlots = (
       // make compiler marker non-enumerable
       def(children as InternalSlots, '_', type)
     } else {
-      normalizeObjectSlots(children as RawSlots, (instance.slots = {}))
+      normalizeObjectSlots(
+        children as RawSlots,
+        (instance.slots = {}),
+        instance
+      )
     }
   } else {
     instance.slots = {}
@@ -162,7 +177,7 @@ export const updateSlots = (
       }
     } else {
       needDeletionCheck = !(children as RawSlots).$stable
-      normalizeObjectSlots(children as RawSlots, slots)
+      normalizeObjectSlots(children as RawSlots, slots, instance)
     }
     deletionComparisonTarget = children as RawSlots
   } else if (children) {

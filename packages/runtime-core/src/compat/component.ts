@@ -132,7 +132,7 @@ function convertLegacyFunctionalComponent(comp: ComponentOptions) {
       data: instance.vnode.props || {},
       scopedSlots: ctx.slots,
       parent: instance.parent && instance.parent.proxy,
-      get slots() {
+      slots() {
         return new Proxy(ctx.slots, legacySlotProxyHandlers)
       },
       get listeners() {

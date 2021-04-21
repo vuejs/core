@@ -12,13 +12,16 @@ import { getCompatListeners } from './instanceListeners'
 import { shallowReadonly } from '@vue/reactivity'
 import { legacySlotProxyHandlers } from './component'
 import { compatH } from './renderFn'
-import {
-  legacyBindObjectProps,
-  legacyRenderSlot,
-  legacyRenderStatic
-} from './renderHelpers'
 import { createCommentVNode, createTextVNode } from '../vnode'
 import { renderList } from '../helpers/renderList'
+import {
+  legacyBindObjectListeners,
+  legacyBindObjectProps,
+  legacyCheckKeyCodes,
+  legacyRenderSlot,
+  legacyRenderStatic,
+  legacyresolveScopedSlots
+} from './renderHelpers'
 
 export function installCompatInstanceProperties(map: PublicPropertiesMap) {
   const set = (target: any, key: any, val: any) => {
@@ -98,6 +101,9 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
     _b: () => legacyBindObjectProps,
     _e: () => createCommentVNode,
     _v: () => createTextVNode,
-    _m: i => legacyRenderStatic.bind(null, i)
+    _m: i => legacyRenderStatic.bind(null, i),
+    _g: () => legacyBindObjectListeners,
+    _u: () => legacyresolveScopedSlots,
+    _k: i => legacyCheckKeyCodes.bind(null, i)
   } as PublicPropertiesMap)
 }

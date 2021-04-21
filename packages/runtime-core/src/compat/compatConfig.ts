@@ -262,7 +262,8 @@ const deprecationData: Record<DeprecationTypes, DeprecationData> = {
 
   [DeprecationTypes.PROPS_DEFAULT_THIS]: {
     message: (key: string) =>
-      `props default value function no longer has access to "this". ` +
+      `props default value function no longer has access to "this". The compat ` +
+      `build only offers access to this.$options.` +
       `(found in prop "${key}")`,
     link: `https://v3.vuejs.org/guide/migration/props-default-this.html`
   },

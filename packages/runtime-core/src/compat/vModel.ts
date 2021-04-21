@@ -35,6 +35,9 @@ export function convertLegacyVModelProps(vnode: VNode) {
       warnedTypes.add(type as ComponentOptions)
     }
 
+    // v3 compiled model code -> v2 compat props
+    // modelValue -> value
+    // onUpdate:modelValue -> onModelCompat:input
     const { prop = 'value', event = 'input' } = (type as any).model || {}
     props[prop] = props.modelValue
     delete props.modelValue
@@ -42,7 +45,6 @@ export function convertLegacyVModelProps(vnode: VNode) {
     if (dynamicProps) {
       dynamicProps[dynamicProps.indexOf('modelValue')] = prop
     }
-
     props[compatModelEventPrefix + event] = props['onUpdate:modelValue']
     delete props['onUpdate:modelValue']
   }

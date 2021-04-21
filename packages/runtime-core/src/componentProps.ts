@@ -376,9 +376,8 @@ function resolvePropValue(
           setCurrentInstance(instance)
           value = propsDefaults[key] = defaultValue.call(
             __COMPAT__ &&
-            __DEV__ &&
             isCompatEnabled(DeprecationTypes.PROPS_DEFAULT_THIS, instance)
-              ? createPropsDefaultThis(key)
+              ? createPropsDefaultThis(instance, props, key)
               : null,
             props
           )

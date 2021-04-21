@@ -8,8 +8,21 @@ import {
   normalizeClass
 } from '@vue/shared'
 import { ComponentInternalInstance } from '../component'
+import { Slot } from '../componentSlots'
+import { createSlots } from '../helpers/createSlots'
 import { renderSlot } from '../helpers/renderSlot'
+import { toHandlers } from '../helpers/toHandlers'
 import { mergeProps, VNode } from '../vnode'
+
+function toObject(arr: Array<any>): Object {
+  const res = {}
+  for (let i = 0; i < arr.length; i++) {
+    if (arr[i]) {
+      extend(res, arr[i])
+    }
+  }
+  return res
+}
 
 export function legacyBindObjectProps(
   data: any,
@@ -49,6 +62,10 @@ export function legacyBindObjectProps(
   return data
 }
 
+export function legacyBindObjectListeners(props: any, listeners: any) {
+  return mergeProps(props, toHandlers(listeners))
+}
+
 export function legacyRenderSlot(
   instance: ComponentInternalInstance,
   name: string,
@@ -60,6 +77,41 @@ export function legacyRenderSlot(
     props = mergeProps(props, bindObject)
   }
   return renderSlot(instance.slots, name, props, fallback && (() => fallback))
+}
+
+type LegacyScopedSlotsData = Array<
+  | {
+      key: string
+      fn: Function
+    }
+  | LegacyScopedSlotsData
+>
+
+export function legacyresolveScopedSlots(
+  fns: LegacyScopedSlotsData,
+  raw?: Record<string, Slot>,
+  // the following are added in 2.6
+  hasDynamicKeys?: boolean
+) {
+  // v2 default slot doesn't have name
+  return createSlots(
+    raw || ({ $stable: !hasDynamicKeys } as any),
+    mapKeyToName(fns)
+  )
+}
+
+function mapKeyToName(slots: LegacyScopedSlotsData) {
+  for (let i = 0; i < slots.length; i++) {
+    const fn = slots[i]
+    if (fn) {
+      if (isArray(fn)) {
+        mapKeyToName(fn)
+      } else {
+        ;(fn as any).name = fn.key || 'default'
+      }
+    }
+  }
+  return slots as any
 }
 
 const staticCacheMap = /*#__PURE__*/ new WeakMap<
@@ -83,12 +135,30 @@ export function legacyRenderStatic(
   return (cache[index] = fn.call(ctx, null, ctx))
 }
 
-function toObject(arr: Array<any>): Object {
-  const res = {}
-  for (let i = 0; i < arr.length; i++) {
-    if (arr[i]) {
-      extend(res, arr[i])
-    }
+export function legacyCheckKeyCodes(
+  instance: ComponentInternalInstance,
+  eventKeyCode: number,
+  key: string,
+  builtInKeyCode?: number | number[],
+  eventKeyName?: string,
+  builtInKeyName?: string | string[]
+) {
+  const config = instance.appContext.config as any
+  const configKeyCodes = config.keyCodes || {}
+  const mappedKeyCode = configKeyCodes[key] || builtInKeyCode
+  if (builtInKeyName && eventKeyName && !configKeyCodes[key]) {
+    return isKeyNotMatch(builtInKeyName, eventKeyName)
+  } else if (mappedKeyCode) {
+    return isKeyNotMatch(mappedKeyCode, eventKeyCode)
+  } else if (eventKeyName) {
+    return hyphenate(eventKeyName) !== key
   }
-  return res
+}
+
+function isKeyNotMatch<T>(expect: T | T[], actual: T): boolean {
+  if (isArray(expect)) {
+    return expect.indexOf(actual) === -1
+  } else {
+    return expect !== actual
+  }
 }
