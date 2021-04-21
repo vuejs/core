@@ -188,6 +188,7 @@ export function updateProps(
   } = instance
   const rawCurrentProps = toRaw(props)
   const [options] = instance.propsOptions
+  let hasAttrsChanged = false
 
   if (
     // always force full diff in dev
@@ -213,7 +214,10 @@ export function updateProps(
           // attr / props separation was done on init and will be consistent
           // in this code path, so just check if attrs have it.
           if (hasOwn(attrs, key)) {
-            attrs[key] = value
+            if (value !== attrs[key]) {
+              attrs[key] = value
+              hasAttrsChanged = true
+            }
           } else {
             const camelizedKey = camelize(key)
             props[camelizedKey] = resolvePropValue(
@@ -232,13 +236,18 @@ export function updateProps(
           ) {
             continue
           }
-          attrs[key] = value
+          if (value !== attrs[key]) {
+            attrs[key] = value
+            hasAttrsChanged = true
+          }
         }
       }
     }
   } else {
     // full props update.
-    setFullProps(instance, rawProps, props, attrs)
+    if (setFullProps(instance, rawProps, props, attrs)) {
+      hasAttrsChanged = true
+    }
     // in case of dynamic props, check if we need to delete keys from
     // the props object
     let kebabKey: string
@@ -278,13 +287,16 @@ export function updateProps(
       for (const key in attrs) {
         if (!rawProps || !hasOwn(rawProps, key)) {
           delete attrs[key]
+          hasAttrsChanged = true
         }
       }
     }
   }
 
   // trigger updates for $attrs in case it's used in component slots
-  trigger(instance, TriggerOpTypes.SET, '$attrs')
+  if (hasAttrsChanged) {
+    trigger(instance, TriggerOpTypes.SET, '$attrs')
+  }
 
   if (__DEV__) {
     validateProps(rawProps || {}, props, instance)
@@ -298,6 +310,7 @@ function setFullProps(
   attrs: Data
 ) {
   const [options, needCastKeys] = instance.propsOptions
+  let hasAttrsChanged = false
   if (rawProps) {
     for (const key in rawProps) {
       // key, ref are reserved and never passed down
@@ -335,7 +348,10 @@ function setFullProps(
         ) {
           continue
         }
-        attrs[key] = value
+        if (value !== attrs[key]) {
+          attrs[key] = value
+          hasAttrsChanged = true
+        }
       }
     }
   }
@@ -353,6 +369,8 @@ function setFullProps(
       )
     }
   }
+
+  return hasAttrsChanged
 }
 
 function resolvePropValue(
