@@ -162,3 +162,21 @@ function isKeyNotMatch<T>(expect: T | T[], actual: T): boolean {
     return expect !== actual
   }
 }
+
+export function legacyMarkOnce(tree: VNode) {
+  return tree
+}
+
+export function legacyBindDynamicKeys(props: any, values: any[]) {
+  for (let i = 0; i < values.length; i += 2) {
+    const key = values[i]
+    if (typeof key === 'string' && key) {
+      props[values[i]] = values[i + 1]
+    }
+  }
+  return props
+}
+
+export function legacyPrependModifier(value: any, symbol: string) {
+  return typeof value === 'string' ? symbol + value : value
+}

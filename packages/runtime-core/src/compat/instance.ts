@@ -1,4 +1,11 @@
-import { extend, NOOP, toDisplayString, toNumber } from '@vue/shared'
+import {
+  extend,
+  looseEqual,
+  looseIndexOf,
+  NOOP,
+  toDisplayString,
+  toNumber
+} from '@vue/shared'
 import { PublicPropertiesMap } from '../componentPublicInstance'
 import { getCompatChildren } from './instanceChildren'
 import {
@@ -14,13 +21,17 @@ import { compatH } from './renderFn'
 import { createCommentVNode, createTextVNode } from '../vnode'
 import { renderList } from '../helpers/renderList'
 import {
+  legacyBindDynamicKeys,
   legacyBindObjectListeners,
   legacyBindObjectProps,
   legacyCheckKeyCodes,
+  legacyMarkOnce,
+  legacyPrependModifier,
   legacyRenderSlot,
   legacyRenderStatic,
   legacyresolveScopedSlots
 } from './renderHelpers'
+import { resolveFilter } from '../helpers/resolveAssets'
 
 export function installCompatInstanceProperties(map: PublicPropertiesMap) {
   const set = (target: any, key: any, val: any) => {
@@ -85,16 +96,22 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
     $createElement: () => compatH,
     _self: i => i.proxy,
     _c: () => compatH,
+    _o: () => legacyMarkOnce,
     _n: () => toNumber,
     _s: () => toDisplayString,
     _l: () => renderList,
     _t: i => legacyRenderSlot.bind(null, i),
-    _b: () => legacyBindObjectProps,
-    _e: () => createCommentVNode,
-    _v: () => createTextVNode,
+    _q: () => looseEqual,
+    _i: () => looseIndexOf,
     _m: i => legacyRenderStatic.bind(null, i),
-    _g: () => legacyBindObjectListeners,
+    _f: () => resolveFilter,
+    _k: i => legacyCheckKeyCodes.bind(null, i),
+    _b: () => legacyBindObjectProps,
+    _v: () => createTextVNode,
+    _e: () => createCommentVNode,
     _u: () => legacyresolveScopedSlots,
-    _k: i => legacyCheckKeyCodes.bind(null, i)
+    _g: () => legacyBindObjectListeners,
+    _d: () => legacyBindDynamicKeys,
+    _p: () => legacyPrependModifier
   } as PublicPropertiesMap)
 }

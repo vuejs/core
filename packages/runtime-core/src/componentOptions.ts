@@ -360,10 +360,11 @@ export type ExtractComputedReturns<T extends any> = {
     : T[key] extends (...args: any[]) => infer TReturn ? TReturn : never
 }
 
-type WatchOptionItem =
-  | string
-  | WatchCallback
-  | { handler: WatchCallback | string } & WatchOptions
+export type ObjectWatchOptionItem = {
+  handler: WatchCallback | string
+} & WatchOptions
+
+type WatchOptionItem = string | WatchCallback | ObjectWatchOptionItem
 
 type ComponentWatchOptionItem = WatchOptionItem | WatchOptionItem[]
 
@@ -949,7 +950,7 @@ function resolveData(
   }
 }
 
-function createWatcher(
+export function createWatcher(
   raw: ComponentWatchOptionItem,
   ctx: Data,
   publicThis: ComponentPublicInstance,

@@ -109,6 +109,8 @@ export function createCompatVue(
   } as any
 
   const singletonApp = createApp({})
+  // @ts-ignore
+  singletonApp.prototype = singletonApp.config.globalProperties
 
   function createCompatApp(options: ComponentOptions = {}, Ctor: any) {
     assertCompatEnabled(DeprecationTypes.GLOBAL_MOUNT, null)
@@ -145,7 +147,10 @@ export function createCompatVue(
 
     // copy prototype augmentations as config.globalProperties
     if (isCompatEnabled(DeprecationTypes.GLOBAL_PROTOTYPE, null)) {
-      app.config.globalProperties = Ctor.prototype
+      app.config.globalProperties = extend(
+        Object.create(Ctor.prototype),
+        singletonApp.config.globalProperties
+      )
     }
     let hasPrototypeAugmentations = false
     for (const key in Ctor.prototype) {

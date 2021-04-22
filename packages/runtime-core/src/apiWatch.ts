@@ -36,6 +36,7 @@ import { queuePostRenderEffect } from './renderer'
 import { warn } from './warning'
 import { DeprecationTypes } from './compat/compatConfig'
 import { checkCompatEnabled, isCompatEnabled } from './compat/compatConfig'
+import { ObjectWatchOptionItem } from './componentOptions'
 
 export type WatchEffect = (onInvalidate: InvalidateCbRegistrator) => void
 
@@ -354,7 +355,7 @@ function doWatch(
 export function instanceWatch(
   this: ComponentInternalInstance,
   source: string | Function,
-  cb: WatchCallback,
+  value: WatchCallback | ObjectWatchOptionItem,
   options?: WatchOptions
 ): WatchStopHandle {
   const publicThis = this.proxy as any
@@ -363,6 +364,13 @@ export function instanceWatch(
       ? createPathGetter(publicThis, source)
       : () => publicThis[source]
     : source.bind(publicThis)
+  let cb
+  if (isFunction(value)) {
+    cb = value
+  } else {
+    cb = value.handler as Function
+    options = value
+  }
   return doWatch(getter, cb.bind(publicThis), options, this)
 }
 
