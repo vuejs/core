@@ -153,10 +153,7 @@ export function createCompatVue(
 
     // copy prototype augmentations as config.globalProperties
     if (isCompatEnabled(DeprecationTypes.GLOBAL_PROTOTYPE, null)) {
-      app.config.globalProperties = extend(
-        Object.create(Ctor.prototype),
-        singletonApp.config.globalProperties
-      )
+      app.config.globalProperties = Ctor.prototype
     }
     let hasPrototypeAugmentations = false
     for (const key in Ctor.prototype) {
@@ -449,7 +446,9 @@ function defineReactive(obj: any, key: string, val: any) {
       })
     } else {
       Object.keys(val).forEach(key => {
-        defineReactiveSimple(val, key, val[key])
+        try {
+          defineReactiveSimple(val, key, val[key])
+        } catch (e) {}
       })
     }
   }

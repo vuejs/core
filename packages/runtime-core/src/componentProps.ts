@@ -229,7 +229,7 @@ export function updateProps(
             )
           }
         } else {
-          if (__COMPAT__ && shouldSkipAttr(key, instance)) {
+          if (__COMPAT__ && shouldSkipAttr(key, attrs[key], instance)) {
             continue
           }
           if (value !== attrs[key]) {
@@ -337,7 +337,7 @@ function setFullProps(
         // Any non-declared (either as a prop or an emitted event) props are put
         // into a separate `attrs` object for spreading. Make sure to preserve
         // original key casing
-        if (__COMPAT__ && shouldSkipAttr(key, instance)) {
+        if (__COMPAT__ && shouldSkipAttr(key, attrs[key], instance)) {
           continue
         }
         if (value !== attrs[key]) {

@@ -4,6 +4,7 @@ import { DeprecationTypes, isCompatEnabled } from './compatConfig'
 
 export function shouldSkipAttr(
   key: string,
+  value: any,
   instance: ComponentInternalInstance
 ): boolean {
   if (
@@ -16,6 +17,10 @@ export function shouldSkipAttr(
     isOn(key) &&
     isCompatEnabled(DeprecationTypes.INSTANCE_LISTENERS, instance)
   ) {
+    return true
+  }
+  // vue-router
+  if (key.startsWith('routerView') || key === 'registerRouteInstance') {
     return true
   }
   return false

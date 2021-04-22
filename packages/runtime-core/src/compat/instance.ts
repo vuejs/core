@@ -93,11 +93,14 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
     $children: getCompatChildren,
     $listeners: getCompatListeners,
 
-    // inject parent into $options for compat
+    $vnode: i => i.vnode,
+
+    // inject addtional properties into $options for compat
     $options: i => {
       let res = resolveMergedOptions(i)
       if (res === i.type) res = i.type.__merged = extend({}, res)
       res.parent = i.proxy!.$parent
+      res.propsData = i.vnode.props
       return res
     },
 

@@ -24,6 +24,7 @@ import {
   resolveDynamicComponent
 } from '../helpers/resolveAssets'
 import {
+  Comment,
   createVNode,
   isVNode,
   normalizeChildren,
@@ -121,6 +122,10 @@ export function compatH(
   propsOrChildren?: any,
   children?: any
 ): VNode {
+  if (!type) {
+    type = Comment
+  }
+
   // to support v2 string component name look!up
   if (typeof type === 'string') {
     const t = hyphenate(type)
@@ -201,6 +206,8 @@ function convertLegacyProps(
           }
         }
       }
+    } else if (key === 'hook') {
+      // TODO
     } else if (!skipLegacyRootLevelProps(key)) {
       converted[key] = legacyProps[key as keyof LegacyVNodeProps]
     }

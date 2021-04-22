@@ -345,8 +345,13 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       hasOwn(globalProperties, key))
     ) {
       if (__COMPAT__) {
-        const val = globalProperties[key]
-        return isFunction(val) ? val.bind(instance.proxy) : val
+        const desc = Object.getOwnPropertyDescriptor(globalProperties, key)!
+        if (desc.get) {
+          return desc.get.call(instance.proxy)
+        } else {
+          const val = globalProperties[key]
+          return isFunction(val) ? val.bind(instance.proxy) : val
+        }
       } else {
         return globalProperties[key]
       }
