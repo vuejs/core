@@ -216,15 +216,15 @@ const deprecationData: Record<DeprecationTypes, DeprecationData> = {
   },
 
   [DeprecationTypes.INSTANCE_ATTRS_CLASS_STYLE]: {
-    message:
-      `vm.$attrs now includes class and style bindings passed from parent. ` +
-      `Components with inheritAttrs: false will no longer auto-inherit ` +
-      `class/style on its root element. If your code relies on this behavior, ` +
-      `you may see broken styling and need to adjust your CSS. Otherwise, ` +
-      `you can disable the compat behavior and suppress this warning with:` +
-      `\n\n  configureCompat({ ${
-        DeprecationTypes.INSTANCE_ATTRS_CLASS_STYLE
-      }: false )\n`,
+    message: componentName =>
+      `Component <${componentName}> has \`inheritAttrs: false\` but is ` +
+      `relying on class/style fallthrough from parent. In Vue 3, class/style ` +
+      `are now included in $attrs and will no longer fallthrough when ` +
+      `inheritAttrs is false. If you are already using v-bind="$attrs" on ` +
+      `component root it should render the same end result. ` +
+      `If you are binding $attrs to a non-root element and expecting ` +
+      `class/style to fallthrough on root, you will need to now manually bind ` +
+      `them on root via :class="$attrs.class".`,
     link: `https://v3.vuejs.org/guide/migration/attrs-includes-class-style.html`
   },
 

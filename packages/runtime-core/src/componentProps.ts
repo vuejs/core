@@ -20,8 +20,7 @@ import {
   isReservedProp,
   EMPTY_ARR,
   def,
-  extend,
-  isOn
+  extend
 } from '@vue/shared'
 import { warn } from './warning'
 import {
@@ -37,6 +36,7 @@ import { AppContext } from './apiCreateApp'
 import { createPropsDefaultThis } from './compat/props'
 import { isCompatEnabled, softAssertCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
+import { shouldSkipAttr } from './compat/attrsFallthrough'
 
 export type ComponentPropsOptions<P = Data> =
   | ComponentObjectPropsOptions<P>
@@ -229,11 +229,7 @@ export function updateProps(
             )
           }
         } else {
-          if (
-            __COMPAT__ &&
-            isOn(key) &&
-            isCompatEnabled(DeprecationTypes.INSTANCE_LISTENERS, instance)
-          ) {
+          if (__COMPAT__ && shouldSkipAttr(key, instance)) {
             continue
           }
           if (value !== attrs[key]) {
@@ -341,11 +337,7 @@ function setFullProps(
         // Any non-declared (either as a prop or an emitted event) props are put
         // into a separate `attrs` object for spreading. Make sure to preserve
         // original key casing
-        if (
-          __COMPAT__ &&
-          isOn(key) &&
-          isCompatEnabled(DeprecationTypes.INSTANCE_LISTENERS, instance)
-        ) {
+        if (__COMPAT__ && shouldSkipAttr(key, instance)) {
           continue
         }
         if (value !== attrs[key]) {

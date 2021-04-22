@@ -4,7 +4,6 @@ import { getCompatChildren } from './instanceChildren'
 import {
   DeprecationTypes,
   assertCompatEnabled,
-  checkCompatEnabled,
   isCompatEnabled
 } from './compatConfig'
 import { off, on, once } from './instanceEventEmitter'
@@ -73,14 +72,6 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
     $scopedSlots: i => {
       assertCompatEnabled(DeprecationTypes.INSTANCE_SCOPED_SLOTS, i)
       return __DEV__ ? shallowReadonly(i.slots) : i.slots
-    },
-
-    // overrides existing accessor
-    $attrs: i => {
-      if (__DEV__ && i.type.inheritAttrs === false) {
-        checkCompatEnabled(DeprecationTypes.INSTANCE_ATTRS_CLASS_STYLE, i)
-      }
-      return __DEV__ ? shallowReadonly(i.attrs) : i.attrs
     },
 
     $on: i => on.bind(null, i),
