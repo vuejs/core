@@ -91,40 +91,44 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
     $off: i => off.bind(null, i),
 
     $children: getCompatChildren,
-    $listeners: getCompatListeners,
-
-    $vnode: i => i.vnode,
-
-    // inject addtional properties into $options for compat
-    $options: i => {
-      let res = resolveMergedOptions(i)
-      if (res === i.type) res = i.type.__merged = extend({}, res)
-      res.parent = i.proxy!.$parent
-      res.propsData = i.vnode.props
-      return res
-    },
-
-    // v2 render helpers
-    $createElement: () => compatH,
-    _self: i => i.proxy,
-    _uid: i => i.uid,
-    _c: () => compatH,
-    _o: () => legacyMarkOnce,
-    _n: () => toNumber,
-    _s: () => toDisplayString,
-    _l: () => renderList,
-    _t: i => legacyRenderSlot.bind(null, i),
-    _q: () => looseEqual,
-    _i: () => looseIndexOf,
-    _m: i => legacyRenderStatic.bind(null, i),
-    _f: () => resolveFilter,
-    _k: i => legacyCheckKeyCodes.bind(null, i),
-    _b: () => legacyBindObjectProps,
-    _v: () => createTextVNode,
-    _e: () => createCommentVNode,
-    _u: () => legacyresolveScopedSlots,
-    _g: () => legacyBindObjectListeners,
-    _d: () => legacyBindDynamicKeys,
-    _p: () => legacyPrependModifier
+    $listeners: getCompatListeners
   } as PublicPropertiesMap)
+
+  if (isCompatEnabled(DeprecationTypes.PRIVATE_APIS, null)) {
+    extend(map, {
+      $vnode: i => i.vnode,
+
+      // inject addtional properties into $options for compat
+      $options: i => {
+        let res = resolveMergedOptions(i)
+        if (res === i.type) res = i.type.__merged = extend({}, res)
+        res.parent = i.proxy!.$parent
+        res.propsData = i.vnode.props
+        return res
+      },
+
+      // v2 render helpers
+      $createElement: () => compatH,
+      _self: i => i.proxy,
+      _uid: i => i.uid,
+      _c: () => compatH,
+      _o: () => legacyMarkOnce,
+      _n: () => toNumber,
+      _s: () => toDisplayString,
+      _l: () => renderList,
+      _t: i => legacyRenderSlot.bind(null, i),
+      _q: () => looseEqual,
+      _i: () => looseIndexOf,
+      _m: i => legacyRenderStatic.bind(null, i),
+      _f: () => resolveFilter,
+      _k: i => legacyCheckKeyCodes.bind(null, i),
+      _b: () => legacyBindObjectProps,
+      _v: () => createTextVNode,
+      _e: () => createCommentVNode,
+      _u: () => legacyresolveScopedSlots,
+      _g: () => legacyBindObjectListeners,
+      _d: () => legacyBindDynamicKeys,
+      _p: () => legacyPrependModifier
+    } as PublicPropertiesMap)
+  }
 }

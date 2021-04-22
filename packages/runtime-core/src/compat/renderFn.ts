@@ -310,7 +310,11 @@ function convertLegacySlots(vnode: VNode): VNode {
 
 export function defineLegacyVNodeProperties(vnode: VNode) {
   if (
-    isCompatEnabled(DeprecationTypes.RENDER_FUNCTION, currentRenderingInstance)
+    isCompatEnabled(
+      DeprecationTypes.RENDER_FUNCTION,
+      currentRenderingInstance
+    ) &&
+    isCompatEnabled(DeprecationTypes.PRIVATE_APIS, currentRenderingInstance)
   ) {
     const context = currentRenderingInstance
     const getInstance = () => vnode.component && vnode.component.proxy

@@ -58,7 +58,9 @@ export const enum DeprecationTypes {
 
   RENDER_FUNCTION = 'RENDER_FUNCTION',
 
-  FILTERS = 'FILTERS'
+  FILTERS = 'FILTERS',
+
+  PRIVATE_APIS = 'PRIVATE_APIS'
 }
 
 type DeprecationData = {
@@ -404,6 +406,13 @@ const deprecationData: Record<DeprecationTypes, DeprecationData> = {
       `The "|" symbol will be treated as native JavaScript bitwise OR operator. ` +
       `Use method calls or computed properties instead.`,
     link: `https://v3.vuejs.org/guide/migration/filters.html`
+  },
+
+  [DeprecationTypes.PRIVATE_APIS]: {
+    message: name =>
+      `"${name}" is a Vue 2 private API that no longer exists in Vue 3. ` +
+      `If you are seeing this warning only due to a dependency, you can ` +
+      `suppress this warning via { PRIVATE_APIS: 'supress-warning' }.`
   }
 }
 
