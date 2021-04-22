@@ -26,13 +26,18 @@ export function convertLegacyComponent(
     return comp
   }
 
+  // 2.x constructor
+  if (isFunction(comp) && comp.cid) {
+    comp = comp.options
+  }
+
   // 2.x async component
-  // since after disabling this, plain functions are still valid usage, do not
-  // use softAssert here.
   if (
     isFunction(comp) &&
     checkCompatEnabled(DeprecationTypes.COMPONENT_ASYNC, instance, comp)
   ) {
+    // since after disabling this, plain functions are still valid usage, do not
+    // use softAssert here.
     return convertLegacyAsyncComponent(comp)
   }
 

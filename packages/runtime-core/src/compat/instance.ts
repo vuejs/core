@@ -32,6 +32,7 @@ import {
   legacyresolveScopedSlots
 } from './renderHelpers'
 import { resolveFilter } from '../helpers/resolveAssets'
+import { resolveMergedOptions } from '../componentOptions'
 
 export function installCompatInstanceProperties(map: PublicPropertiesMap) {
   const set = (target: any, key: any, val: any) => {
@@ -92,9 +93,18 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
     $children: getCompatChildren,
     $listeners: getCompatListeners,
 
+    // inject parent into $options for compat
+    $options: i => {
+      let res = resolveMergedOptions(i)
+      if (res === i.type) res = i.type.__merged = extend({}, res)
+      res.parent = i.proxy!.$parent
+      return res
+    },
+
     // v2 render helpers
     $createElement: () => compatH,
     _self: i => i.proxy,
+    _uid: i => i.uid,
     _c: () => compatH,
     _o: () => legacyMarkOnce,
     _n: () => toNumber,

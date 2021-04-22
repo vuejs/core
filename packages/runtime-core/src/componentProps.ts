@@ -429,6 +429,9 @@ export function normalizePropsOptions(
   let hasExtends = false
   if (__FEATURE_OPTIONS_API__ && !isFunction(comp)) {
     const extendProps = (raw: ComponentOptions) => {
+      if (__COMPAT__ && isFunction(raw)) {
+        raw = raw.options
+      }
       hasExtends = true
       const [props, keys] = normalizePropsOptions(raw, appContext, true)
       extend(normalized, props)

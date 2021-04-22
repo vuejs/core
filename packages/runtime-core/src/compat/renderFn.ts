@@ -3,6 +3,7 @@ import {
   hyphenate,
   isArray,
   isObject,
+  isString,
   makeMap,
   normalizeClass,
   normalizeStyle,
@@ -304,12 +305,17 @@ export function defineLegacyVNodeProperties(vnode: VNode) {
   if (
     isCompatEnabled(DeprecationTypes.RENDER_FUNCTION, currentRenderingInstance)
   ) {
+    const context = currentRenderingInstance
     const getInstance = () => vnode.component && vnode.component.proxy
     let componentOptions: any
     Object.defineProperties(vnode, {
+      tag: { get: () => vnode.type },
+      data: { get: () => vnode.props, set: p => (vnode.props = p) },
       elm: { get: () => vnode.el },
       componentInstance: { get: getInstance },
       child: { get: getInstance },
+      text: { get: () => (isString(vnode.children) ? vnode.children : null) },
+      context: { get: () => context && context.proxy },
       componentOptions: {
         get: () => {
           if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {

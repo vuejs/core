@@ -110,8 +110,11 @@ export function installLegacyConfigProperties(config: AppConfig) {
   strats.watch = mergeObjectOptions
 }
 
-function mergeHook(to: Function[] | undefined, from: Function | Function[]) {
-  return Array.from(new Set([...(to || []), from]))
+function mergeHook(
+  to: Function[] | Function | undefined,
+  from: Function | Function[]
+) {
+  return Array.from(new Set([...(isArray(to) ? to : to ? [to] : []), from]))
 }
 
 function mergeObjectOptions(to: Object | undefined, from: Object | undefined) {

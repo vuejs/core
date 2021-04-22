@@ -107,7 +107,11 @@ const normalizeVNodeSlots = (
   instance: ComponentInternalInstance,
   children: VNodeNormalizedChildren
 ) => {
-  if (__DEV__ && !isKeepAlive(instance.vnode)) {
+  if (
+    __DEV__ &&
+    !isKeepAlive(instance.vnode) &&
+    !(__COMPAT__ && isCompatEnabled(DeprecationTypes.RENDER_FUNCTION, instance))
+  ) {
     warn(
       `Non-function value encountered for default slot. ` +
         `Prefer function slots for better performance.`

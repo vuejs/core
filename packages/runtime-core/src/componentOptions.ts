@@ -509,6 +509,10 @@ export function applyOptions(
   deferredProvide: (Data | Function)[] = [],
   asMixin: boolean = false
 ) {
+  if (__COMPAT__ && isFunction(options)) {
+    options = options.options
+  }
+
   const {
     // composition
     mixins,
@@ -1005,6 +1009,10 @@ export function mergeOptions(
   from: any,
   instance?: ComponentInternalInstance
 ) {
+  if (__COMPAT__ && isFunction(from)) {
+    from = from.options
+  }
+
   const strats = instance && instance.appContext.config.optionMergeStrategies
   const { mixins, extends: extendsOptions } = from
 
@@ -1019,4 +1027,5 @@ export function mergeOptions(
       to[key] = from[key]
     }
   }
+  return to
 }

@@ -94,6 +94,14 @@ export type CompatVue = Pick<App, 'version' | 'component' | 'directive'> & {
    * @deprecated filters have been removed from Vue 3.
    */
   filter(name: string, arg: any): null
+  /**
+   * @internal
+   */
+  cid: number
+  /**
+   * @internal
+   */
+  options: ComponentOptions
 
   configureCompat: typeof configureCompat
 }
@@ -109,8 +117,6 @@ export function createCompatVue(
   } as any
 
   const singletonApp = createApp({})
-  // @ts-ignore
-  singletonApp.prototype = singletonApp.config.globalProperties
 
   function createCompatApp(options: ComponentOptions = {}, Ctor: any) {
     assertCompatEnabled(DeprecationTypes.GLOBAL_MOUNT, null)
@@ -174,18 +180,26 @@ export function createCompatVue(
   Vue.version = __VERSION__
   Vue.config = singletonApp.config
   Vue.nextTick = nextTick
+  Vue.options = { _base: Vue }
 
-  Vue.extend = ((options: ComponentOptions = {}) => {
+  let cid = 1
+  Vue.cid = cid
+
+  function extendCtor(this: any, extendOptions: ComponentOptions = {}) {
     assertCompatEnabled(DeprecationTypes.GLOBAL_EXTEND, null)
+    if (isFunction(extendOptions)) {
+      extendOptions = extendOptions.options
+    }
 
+    const Super = this
     function SubVue(inlineOptions?: ComponentOptions) {
       if (!inlineOptions) {
-        return createCompatApp(options, SubVue)
+        return createCompatApp(extendOptions, SubVue)
       } else {
         return createCompatApp(
           {
             el: inlineOptions.el,
-            extends: options,
+            extends: extendOptions,
             mixins: [inlineOptions]
           },
           SubVue
@@ -194,8 +208,20 @@ export function createCompatVue(
     }
     SubVue.prototype = Object.create(Vue.prototype)
     SubVue.prototype.constructor = SubVue
+    SubVue.options = mergeOptions(
+      extend({}, Super.options) as ComponentOptions,
+      extendOptions
+    )
+
+    SubVue.options._base = SubVue
+    SubVue.extend = extendCtor.bind(SubVue)
+    SubVue.mixin = Super.mixin
+    SubVue.use = Super.use
+    SubVue.cid = ++cid
     return SubVue
-  }) as any
+  }
+
+  Vue.extend = extendCtor.bind(Vue) as any
 
   Vue.set = (target, key, value) => {
     assertCompatEnabled(DeprecationTypes.GLOBAL_SET, null)
@@ -213,7 +239,11 @@ export function createCompatVue(
   }
 
   Vue.use = (p, ...options) => {
-    singletonApp.use(p, ...options)
+    if (p && isFunction(p.install)) {
+      p.install(Vue as any, ...options)
+    } else if (isFunction(p)) {
+      p(Vue as any, ...options)
+    }
     return Vue
   }
 
