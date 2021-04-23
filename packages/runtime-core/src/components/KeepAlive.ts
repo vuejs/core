@@ -34,6 +34,7 @@ import {
 } from '../renderer'
 import { setTransitionHooks } from './BaseTransition'
 import { ComponentRenderContext } from '../componentPublicInstance'
+import { devtoolsComponentAdded } from '../devtools'
 
 type MatchPattern = string | RegExp | string[] | RegExp[]
 
@@ -95,6 +96,10 @@ const KeepAliveImpl = {
     const keys: Keys = new Set()
     let current: VNode | null = null
 
+    if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+      ;(instance as any).__v_cache = cache
+    }
+
     const parentSuspense = instance.suspense
 
     const {
@@ -132,6 +137,11 @@ const KeepAliveImpl = {
           invokeVNodeHook(vnodeHook, instance.parent, vnode)
         }
       }, parentSuspense)
+
+      if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+        // Update components tree
+        devtoolsComponentAdded(instance)
+      }
     }
 
     sharedContext.deactivate = (vnode: VNode) => {
@@ -147,6 +157,11 @@ const KeepAliveImpl = {
         }
         instance.isDeactivated = true
       }, parentSuspense)
+
+      if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+        // Update components tree
+        devtoolsComponentAdded(instance)
+      }
     }
 
     function unmount(vnode: VNode) {
