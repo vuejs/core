@@ -18,6 +18,7 @@ import { isFunction, isString, isHTMLTag, isSVGTag, extend } from '@vue/shared'
 import { TransitionProps } from './components/Transition'
 import { TransitionGroupProps } from './components/TransitionGroup'
 import { vShow } from './directives/vShow'
+import { VOnDirective } from './directives/vOn'
 
 declare module '@vue/reactivity' {
   export interface RefUnwrapBailTypes {
@@ -35,6 +36,7 @@ declare module '@vue/runtime-core' {
 
   interface GlobalDirectives {
     vShow: typeof vShow
+    vOn: VOnDirective
   }
 }
 
