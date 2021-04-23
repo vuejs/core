@@ -52,12 +52,15 @@ export function shallowRef(value?: unknown) {
 }
 
 class RefImpl<T> {
+  private _rawValue: T
+
   private _value: T
 
   public readonly __v_isRef = true
 
-  constructor(private _rawValue: T, public readonly _shallow = false) {
-    this._value = _shallow ? _rawValue : convert(_rawValue)
+  constructor(value: T, public readonly _shallow = false) {
+    this._rawValue = _shallow ? value : toRaw(value)
+    this._value = _shallow ? value : convert(value)
   }
 
   get value() {
@@ -66,7 +69,8 @@ class RefImpl<T> {
   }
 
   set value(newVal) {
-    if (hasChanged(toRaw(newVal), this._rawValue)) {
+    newVal = this._shallow ? newVal : toRaw(newVal)
+    if (hasChanged(newVal, this._rawValue)) {
       this._rawValue = newVal
       this._value = this._shallow ? newVal : convert(newVal)
       trigger(toRaw(this), TriggerOpTypes.SET, 'value', newVal)
