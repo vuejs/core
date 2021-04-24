@@ -262,8 +262,15 @@ describe('e2e: TransitionGroup', () => {
               <button id="toggleBtn" @click="click">button</button>
             `,
           setup: () => {
-            const items = ref(['a', 'b', 'c'])
-            const click = () => (items.value = ['d', 'b', 'a'])
+            /*
+              a: moves
+              b: stays
+              c: leaves
+              d: moves because 'c' leaves
+              e: enters
+            */
+            const items = ref(['a', 'b', 'c', 'd'])
+            const click = () => (items.value = ['e', 'b', 'd', 'a'])
             return { click, items }
           }
         }).mount('#app')
@@ -271,26 +278,30 @@ describe('e2e: TransitionGroup', () => {
       expect(await html('#container')).toBe(
         `<div class="test">a</div>` +
           `<div class="test">b</div>` +
-          `<div class="test">c</div>`
+          `<div class="test">c</div>` +
+          `<div class="test">d</div>`
       )
 
       expect(await htmlWhenTransitionStart()).toBe(
-        `<div class="test group-enter-from group-enter-active">d</div>` +
+        `<div class="test group-enter-from group-enter-active">e</div>` +
           `<div class="test">b</div>` +
-          `<div class="test group-move" style="">a</div>` +
-          `<div class="test group-leave-from group-leave-active group-move" style="">c</div>`
+          `<div class="test group-leave-from group-leave-active group-move" style="">c</div>` +
+          `<div class="test group-move" style="">d</div>` +
+          `<div class="test group-move" style="">a</div>`
       )
       await nextFrame()
       expect(await html('#container')).toBe(
-        `<div class="test group-enter-active group-enter-to">d</div>` +
+        `<div class="test group-enter-active group-enter-to">e</div>` +
           `<div class="test">b</div>` +
-          `<div class="test group-move" style="">a</div>` +
-          `<div class="test group-leave-active group-move group-leave-to" style="">c</div>`
+          `<div class="test group-leave-active group-move group-leave-to" style="">c</div>` +
+          `<div class="test group-move" style="">d</div>` +
+          `<div class="test group-move" style="">a</div>`
       )
       await transitionFinish(duration * 2)
       expect(await html('#container')).toBe(
-        `<div class="test">d</div>` +
+        `<div class="test">e</div>` +
           `<div class="test">b</div>` +
+          `<div class="test" style="">d</div>` +
           `<div class="test" style="">a</div>`
       )
     },

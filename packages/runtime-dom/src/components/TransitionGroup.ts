@@ -77,6 +77,9 @@ const TransitionGroupImpl = {
       // force reflow to put everything in position
       forceReflow()
 
+      // remove `display: none` which was set to leaving children
+      prevChildren.forEach(resetDisplay)
+
       movedChildren.forEach(c => {
         const el = c.el as ElementWithTransition
         const style = el.style
@@ -154,10 +157,20 @@ function callPendingCbs(c: VNode) {
   if (el._enterCb) {
     el._enterCb()
   }
+  if (el._leaveCb) {
+    el.style.display = 'none'
+  }
 }
 
 function recordPosition(c: VNode) {
   newPositionMap.set(c, (c.el as Element).getBoundingClientRect())
+}
+
+function resetDisplay(c: VNode) {
+  const el = c.el as any
+  if (el._leaveCb) {
+    el.style.display = ''
+  }
 }
 
 function applyTranslation(c: VNode): VNode | undefined {
