@@ -1096,7 +1096,7 @@ describe('api: options', () => {
       }
 
       const root = nodeOps.createElement('div')
-      // @ts-ignore
+      // @ts-expect-error
       render(h(Comp), root)
 
       expect('Invalid watch option: "foo"').toHaveBeenWarned()
