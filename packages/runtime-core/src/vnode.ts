@@ -584,11 +584,15 @@ export function normalizeVNode(child: VNodeChild): VNode {
     return createVNode(Comment)
   } else if (isArray(child)) {
     // fragment
-    return createVNode(Fragment, null, child)
+    return createVNode(
+      Fragment,
+      null,
+      child.map(c => (isVNode(c) ? cloneIfMounted(c) : c))
+    )
   } else if (typeof child === 'object') {
     // already vnode, this should be the most common since compiled templates
     // always produce all-vnode children arrays
-    return child.el === null ? child : cloneVNode(child)
+    return cloneIfMounted(child)
   } else {
     // strings and numbers
     return createVNode(Text, null, String(child))
@@ -597,7 +601,9 @@ export function normalizeVNode(child: VNodeChild): VNode {
 
 // optimized normalization for template-compiled render fns
 export function cloneIfMounted(child: VNode): VNode {
-  return child.el === null ? child : cloneVNode(child)
+  return child.el === null && child.component === null
+    ? child
+    : cloneVNode(child)
 }
 
 export function normalizeChildren(vnode: VNode, children: unknown) {
