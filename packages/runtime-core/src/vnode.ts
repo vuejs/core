@@ -587,7 +587,8 @@ export function normalizeVNode(child: VNodeChild): VNode {
     return createVNode(
       Fragment,
       null,
-      child.map(c => (isVNode(c) ? cloneIfMounted(c) : c))
+      // #3666, avoid reference pollution when reusing vnode
+      child.map(c => c)
     )
   } else if (typeof child === 'object') {
     // already vnode, this should be the most common since compiled templates
