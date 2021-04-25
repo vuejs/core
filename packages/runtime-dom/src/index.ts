@@ -9,7 +9,10 @@ import {
   App,
   RootHydrateFunction,
   isRuntimeOnly,
-  DefineComponent
+  DefineComponent,
+  Directive,
+  Directive,
+  Directive
 } from '@vue/runtime-core'
 import { nodeOps } from './nodeOps'
 import { patchProp, forcePatchProp } from './patchProp'
@@ -19,6 +22,7 @@ import { TransitionProps } from './components/Transition'
 import { TransitionGroupProps } from './components/TransitionGroup'
 import { vShow } from './directives/vShow'
 import { VOnDirective } from './directives/vOn'
+import { VModelDirective } from './directives/vModel'
 
 declare module '@vue/reactivity' {
   export interface RefUnwrapBailTypes {
@@ -35,8 +39,13 @@ declare module '@vue/runtime-core' {
   }
 
   interface GlobalDirectives {
+    // Note: if updating this, also update `types/globalDirectives.d.ts`.
     vShow: typeof vShow
     vOn: VOnDirective
+    vBind: VModelDirective
+    vIf: Directive<any, boolean>
+    VOnce: Directive
+    VSlot: Directive
   }
 }
 
