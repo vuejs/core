@@ -38,6 +38,7 @@ import {
 } from './compat/compatConfig'
 
 type OptionalOptions =
+  | 'whitespace'
   | 'isNativeTag'
   | 'isBuiltInComponent'
   | keyof CompilerCompatOptions
@@ -65,7 +66,6 @@ const decodeMap: Record<string, string> = {
 
 export const defaultParserOptions: MergedParserOptions = {
   delimiters: [`{{`, `}}`],
-  whitespace: 'condense',
   getNamespace: () => Namespaces.HTML,
   getTextMode: () => TextModes.DATA,
   isVoidTag: NO,
@@ -222,35 +222,37 @@ function parseChildren(
 
   // Whitespace handling strategy like v2
   let removedWhitespace = false
-  if (context.options.whitespace === 'condense' && mode !== TextModes.RAWTEXT && mode !== TextModes.RCDATA) {
+  if (mode !== TextModes.RAWTEXT && mode !== TextModes.RCDATA) {
+    const preserve = context.options.whitespace === 'preserve'
     for (let i = 0; i < nodes.length; i++) {
       const node = nodes[i]
       if (!context.inPre && node.type === NodeTypes.TEXT) {
         if (!/[^\t\r\n\f ]/.test(node.content)) {
           const prev = nodes[i - 1]
           const next = nodes[i + 1]
-          // If:
+          // Remove if:
           // - the whitespace is the first or last node, or:
-          // - the whitespace is adjacent to a comment, or:
-          // - the whitespace is between two elements AND contains newline
-          // Then the whitespace is ignored.
+          // - (condense mode) the whitespace is adjacent to a comment, or:
+          // - (condense mode) the whitespace is between two elements AND contains newline
           if (
             !prev ||
             !next ||
-            prev.type === NodeTypes.COMMENT ||
-            next.type === NodeTypes.COMMENT ||
-            (prev.type === NodeTypes.ELEMENT &&
-              next.type === NodeTypes.ELEMENT &&
-              /[\r\n]/.test(node.content))
+            (!preserve &&
+              (prev.type === NodeTypes.COMMENT ||
+                next.type === NodeTypes.COMMENT ||
+                (prev.type === NodeTypes.ELEMENT &&
+                  next.type === NodeTypes.ELEMENT &&
+                  /[\r\n]/.test(node.content))))
           ) {
             removedWhitespace = true
             nodes[i] = null as any
           } else {
-            // Otherwise, condensed consecutive whitespace inside the text
-            // down to a single space
+            // Otherwise, the whitespace is condensed into a single space
             node.content = ' '
           }
-        } else {
+        } else if (!preserve) {
+          // in condense mode, consecutive whitespaces in text are condensed
+          // down to a single space.
           node.content = node.content.replace(/[\t\r\n\f ]+/g, ' ')
         }
       }

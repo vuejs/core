@@ -1837,9 +1837,9 @@ foo
         ...options
       })
 
-    it('should preserve whitespaces at start/end inside an element', () => {
+    it('should still remove whitespaces at start/end inside an element', () => {
       const ast = parse(`<div>   <span/>    </div>`)
-      expect((ast.children[0] as ElementNode).children.length).toBe(3)
+      expect((ast.children[0] as ElementNode).children.length).toBe(1)
     })
 
     it('should preserve whitespaces w/ newline between elements', () => {
@@ -1884,7 +1884,7 @@ foo
       expect(ast.children[0].type).toBe(NodeTypes.INTERPOLATION)
       expect(ast.children[1]).toMatchObject({
         type: NodeTypes.TEXT,
-        content: ' \n '
+        content: ' '
       })
       expect(ast.children[2].type).toBe(NodeTypes.INTERPOLATION)
     })
