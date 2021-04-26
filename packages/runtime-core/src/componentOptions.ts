@@ -50,6 +50,7 @@ import {
   proxyRefs,
   toRef
 } from '@vue/reactivity'
+
 import {
   ComponentObjectPropsOptions,
   ExtractPropTypes,
@@ -65,7 +66,7 @@ import { warn } from './warning'
 import { VNodeChild } from './vnode'
 import { callWithAsyncErrorHandling } from './errorHandling'
 import { UnionToIntersection } from './helpers/typeUtils'
-
+export { ComputedGetter } from '@vue/reactivity'
 /**
  * Interface for declaring custom options.
  *

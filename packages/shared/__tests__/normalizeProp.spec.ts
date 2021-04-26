@@ -6,7 +6,9 @@ describe('normalizeClass', () => {
   })
 
   test('handles array correctly', () => {
-    expect(normalizeClass(['foo', undefined, true, false, 'bar'])).toEqual('foo bar')
+    expect(normalizeClass(['foo', undefined, true, false, 'bar'])).toEqual(
+      'foo bar'
+    )
   })
 
   test('handles object correctly', () => {
