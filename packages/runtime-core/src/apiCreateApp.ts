@@ -69,7 +69,6 @@ export interface AppConfig {
   performance: boolean
   optionMergeStrategies: Record<string, OptionMergeFunction>
   globalProperties: Record<string, any>
-  isCustomElement: (tag: string) => boolean
   errorHandler?: (
     err: unknown,
     instance: ComponentPublicInstance | null,
@@ -80,6 +79,22 @@ export interface AppConfig {
     instance: ComponentPublicInstance | null,
     trace: string
   ) => void
+
+  /**
+   * @deprecated use config.compilerOptions.isCustomElement
+   */
+  isCustomElement?: (tag: string) => boolean
+
+  /**
+   * Options to pass to @vue/compiler-dom.
+   * *Only supported in runtime compiler build.*
+   */
+  compilerOptions: {
+    isCustomElement: (tag: string) => boolean
+    whitespace?: 'preserve' | 'condense'
+    comments?: boolean
+    delimiters?: [string, string]
+  }
 }
 
 export interface AppContext {
@@ -122,9 +137,11 @@ export function createAppContext(): AppContext {
       performance: false,
       globalProperties: {},
       optionMergeStrategies: {},
-      isCustomElement: NO,
       errorHandler: undefined,
-      warnHandler: undefined
+      warnHandler: undefined,
+      compilerOptions: {
+        isCustomElement: NO
+      }
     },
     mixins: [],
     components: {},

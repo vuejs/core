@@ -14,6 +14,7 @@ export const compilerOptions: CompilerOptions = reactive({
   inline: false,
   ssrCssVars: `{ color }`,
   compatConfig: { MODE: 3 },
+  whitespace: 'condense',
   bindingMetadata: {
     TestComponent: BindingTypes.SETUP_CONST,
     setupRef: BindingTypes.SETUP_REF,
@@ -81,6 +82,32 @@ const App = {
                 }
               }),
               h('label', { for: 'mode-function' }, 'function')
+            ]),
+
+            // whitespace handling
+            h('li', { id: 'whitespace' }, [
+              h('span', { class: 'label' }, 'whitespace: '),
+              h('input', {
+                type: 'radio',
+                id: 'whitespace-condense',
+                name: 'whitespace',
+                checked: compilerOptions.whitespace === 'condense',
+                onChange() {
+                  compilerOptions.whitespace = 'condense'
+                }
+              }),
+              h('label', { for: 'whitespace-condense' }, 'condense'),
+              ' ',
+              h('input', {
+                type: 'radio',
+                id: 'whitespace-preserve',
+                name: 'whitespace',
+                checked: compilerOptions.whitespace === 'preserve',
+                onChange() {
+                  compilerOptions.whitespace = 'preserve'
+                }
+              }),
+              h('label', { for: 'whitespace-preserve' }, 'preserve')
             ]),
 
             // SSR

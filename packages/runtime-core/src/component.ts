@@ -727,18 +727,22 @@ export function finishComponentSetup(
         if (__DEV__) {
           startMeasure(instance, `compile`)
         }
-        const compilerOptions: CompilerOptions = {
-          isCustomElement: instance.appContext.config.isCustomElement,
-          delimiters: Component.delimiters
-        }
+        const { isCustomElement, compilerOptions } = instance.appContext.config
+        const finalCompilerOptions: CompilerOptions = extend(
+          {
+            isCustomElement: isCustomElement || NO,
+            delimiters: Component.delimiters
+          },
+          compilerOptions
+        )
         if (__COMPAT__) {
           // pass runtime compat config into the compiler
-          compilerOptions.compatConfig = Object.create(globalCompatConfig)
+          finalCompilerOptions.compatConfig = Object.create(globalCompatConfig)
           if (Component.compatConfig) {
-            extend(compilerOptions.compatConfig, Component.compatConfig)
+            extend(finalCompilerOptions.compatConfig, Component.compatConfig)
           }
         }
-        Component.render = compile(template, compilerOptions)
+        Component.render = compile(template, finalCompilerOptions)
         if (__DEV__) {
           endMeasure(instance, `compile`)
         }
