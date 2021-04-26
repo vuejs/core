@@ -71,10 +71,9 @@ describe('ssr: element', () => {
       `)
     })
 
-    test('multiple _ssrInterpolate at parent and child import dependency once', () => {
-      expect(
-        compile(`<div>{{ hello }}<textarea v-bind="a"></textarea></div>`).code
-      ).toMatchInlineSnapshot(`
+    test("multiple _ssrInterpolate at parent and child import dependency once", () => {
+      expect( compile(`<div>{{ hello }}<textarea v-bind="a"></textarea></div>`).code)
+      .toMatchInlineSnapshot(`
         "const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require(\\"@vue/server-renderer\\")
 
         return function ssrRender(_ctx, _push, _parent, _attrs) {
@@ -90,8 +89,8 @@ describe('ssr: element', () => {
             _ssrInterpolate((\\"value\\" in _temp0) ? _temp0.value : \\"\\")
           }</textarea></div>\`)
         }"
-      `)
-    })
+      `);
+    });
 
     test('should pass tag to custom elements w/ dynamic v-bind', () => {
       expect(

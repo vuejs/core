@@ -179,7 +179,6 @@ export {
   ComponentOptionsBase,
   RenderFunction,
   MethodOptions,
-  ComputedGetter,
   ComputedOptions
 } from './componentOptions'
 export { EmitsOptions, ObjectEmitsOptions } from './componentEmits'
