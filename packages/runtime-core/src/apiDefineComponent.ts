@@ -7,7 +7,7 @@ import {
   ComponentOptionsMixin,
   RenderFunction,
   ComponentOptionsBase,
-  ComponentOptionClass
+  ComponentPropsOverride
 } from './componentOptions'
 import {
   SetupContext,
@@ -17,7 +17,8 @@ import {
 import {
   ExtractPropTypes,
   ComponentPropsOptions,
-  ExtractDefaultPropTypes
+  ExtractDefaultPropTypes,
+  PropType
 } from './componentProps'
 import { EmitsOptions } from './componentEmits'
 import { isFunction } from '@vue/shared'
@@ -46,7 +47,7 @@ export type DefineComponent<
   Defaults = ExtractDefaultPropTypes<PropsOrPropOptions>
 > =
   // If props is a class we should ifnore all the process
-  (PropsOrPropOptions extends { prototype: ComponentOptionClass }
+  (PropsOrPropOptions extends { prototype: ComponentPropsOverride }
     ? PropsOrPropOptions
     : ComponentPublicInstanceConstructor<
         CreateComponentPublicInstance<
@@ -82,40 +83,6 @@ export type DefineComponent<
 // when declaring components. Type inference is provided in the component
 // options (provided as the argument). The returned value has artificial types
 // for TSX / manual render function / IDE support.
-
-// export function defineComponent<O extends ComponentOptionClass>(
-//   // Props = {},
-//   // RawBindings = {},
-//   // D = {},
-//   // C extends ComputedOptions = {},
-//   // M extends MethodOptions = {},
-//   // Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
-//   // Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-//   // E extends EmitsOptions = EmitsOptions,
-//   // EE extends string = string
-//   options: O
-// ): DefineComponent<Props>
-
-// WORKING
-// export function defineComponent<
-//   C extends { prototype: B },
-//   B extends { prototype: C } = any
-// >(o: C): C
-
-// // kind working
-// export function defineComponent<O extends { prototype: ComponentOptionClass }>(
-//   o: O
-// ): DefineComponent<O>
-
-// export function defineComponent<O extends ComponentOptionClass>(
-//   o: any
-// ): DefineComponent<O>
-
-// export function defineComponent<TClass extends ComponentOptionClass>(
-
-// ) {
-
-// }
 
 // overload 1: direct setup function
 // (uses user defined props interface)
@@ -218,20 +185,44 @@ export function defineComponent<
   >
 ): DefineComponent<PropsOptions, RawBindings, D, C, M, Mixin, Extends, E, EE>
 
-// overload 4: ComponentOptionClass format to allow more powerful generics
-export function defineComponent<O extends { prototype: ComponentOptionClass }>(
+export function defineComponent<
+  O extends { prototype: ComponentPropsOverride }
+>(
   o: O
 ): DefineComponent<
   O,
   O extends { setup: (...a: any[]) => infer Setup } ? Setup : false
 >
 
+// overload 5: Allow overriding Props object
+export function defineComponent<
+  O extends { prototype: ComponentPropsOverride },
+  RawBindings = {},
+  D = {},
+  C extends ComputedOptions = ComputedOptions,
+  M extends MethodOptions = MethodOptions,
+  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
+  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
+  E extends EmitsOptions = Record<string, any>,
+  EE extends string = string,
+  PP = PublicProps
+>(
+  options: ComponentOptionsWithObjectProps<
+    O extends new () => { $props: infer P }
+      ? { [K in keyof P]: PropType<P[K]> }
+      : {},
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    EE
+  >
+): DefineComponent<O, RawBindings, D, C, M, Mixin, Extends, E, EE, PP>
+
 // implementation, close to no-op
 export function defineComponent(options: unknown) {
-  return isFunction(options)
-    ? !options.prototype
-      ? { setup: options, name: options.name }
-      : // @ts-expect-error
-        new options()
-    : options
+  return isFunction(options) ? { setup: options, name: options.name } : options
 }

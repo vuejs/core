@@ -1,4 +1,4 @@
-import { ComponentOptionClass } from '@vue/runtime-core'
+import { ComponentPropsOverride } from '@vue/runtime-core'
 import {
   describe,
   h,
@@ -247,17 +247,17 @@ describe('Class component generic props', () => {
     onChange?: OnChange<ValueType, Clearable>
   }
 
-  const Comp = defineComponent(
-    class<
-      Clearable extends boolean,
-      ValueType extends string | number | null | undefined
-    > extends ComponentOptionClass<GenericProp<Clearable, ValueType>> {
-      props = {}
-      setup() {
-        return {}
-      }
+  class CompProps<
+    Clearable extends boolean,
+    ValueType extends string | number | null | undefined
+  > extends ComponentPropsOverride<GenericProp<Clearable, ValueType>> {}
+
+  const Comp = defineComponent<typeof CompProps>({
+    props: {},
+    setup() {
+      return {}
     }
-  )
+  })
 
   h(Comp, {
     clearable: true,

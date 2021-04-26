@@ -53,10 +53,9 @@ import {
 import {
   ComponentObjectPropsOptions,
   ExtractPropTypes,
-  ExtractDefaultPropTypes,
-  PropType
+  ExtractDefaultPropTypes
 } from './componentProps'
-import { EmitFn, EmitsOptions } from './componentEmits'
+import { EmitsOptions } from './componentEmits'
 import { Directive } from './directives'
 import {
   CreateComponentPublicInstance,
@@ -191,29 +190,8 @@ export interface ComponentOptionsBase<
   __defaults?: Defaults
 }
 
-export abstract class ComponentOptionClass<
-  Props = {},
-  E extends EmitsOptions = EmitsOptions
-> {
-  readonly __vccOpts = {}
+export abstract class ComponentPropsOverride<Props = {}> {
   readonly $props: Props = {} as Props
-  readonly $emit: EmitFn<E> = {} as EmitFn<E>
-
-  props?: { [K in keyof Props]: PropType<Props[K]> }
-  emits?: E
-
-  constructor() {
-    this.setup.bind(this)
-  }
-
-  setup(
-    props: Props,
-    ctx: SetupContext<E>
-  ):
-    | Promise<Record<string, any>>
-    | Record<string, any>
-    | RenderFunction
-    | void {}
 }
 
 export type ComponentOptionsWithoutProps<

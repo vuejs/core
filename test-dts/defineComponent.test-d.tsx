@@ -12,7 +12,7 @@ import {
   ComponentOptions,
   SetupContext,
   IsUnion,
-  ComponentOptionClass,
+  ComponentPropsOverride,
   h
 } from './index'
 
@@ -1051,17 +1051,17 @@ describe('Generic props', () => {
     onChange?: OnChange<ValueType, Clearable>
   }
 
-  const Comp = defineComponent(
-    class<
-      Clearable extends boolean,
-      ValueType extends string | number | null | undefined
-    > extends ComponentOptionClass<GenericProp<Clearable, ValueType>> {
-      props = {}
-      setup() {
-        return {}
-      }
+  class CompProps<
+    Clearable extends boolean,
+    ValueType extends string | number | null | undefined
+  > extends ComponentPropsOverride<GenericProp<Clearable, ValueType>> {}
+
+  const Comp = defineComponent<typeof CompProps>({
+    props: {
+      value: Object,
+      clearable: Boolean
     }
-  )
+  })
   ;<Comp
     value={'sss'}
     clearable
