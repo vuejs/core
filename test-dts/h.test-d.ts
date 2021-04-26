@@ -1,4 +1,3 @@
-import { ComponentPropsOverride } from '@vue/runtime-core'
 import {
   describe,
   h,
@@ -10,7 +9,8 @@ import {
   Component,
   expectError,
   expectAssignable,
-  resolveComponent
+  resolveComponent,
+  ComponentPropsOverride
 } from './index'
 
 describe('h inference w/ element', () => {
