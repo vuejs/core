@@ -93,9 +93,7 @@ describe('component: proxy', () => {
     expect(instanceProxy.$root).toBe(instance!.root.proxy)
     expect(instanceProxy.$emit).toBe(instance!.emit)
     expect(instanceProxy.$el).toBe(instance!.vnode.el)
-    expect(instanceProxy.$options).toBe(
-      (instance!.type as ComponentOptions).__merged
-    )
+    expect(instanceProxy.$options).toBe(instance!.type as ComponentOptions)
     expect(() => (instanceProxy.$data = {})).toThrow(TypeError)
     expect(`Attempting to mutate public property "$data"`).toHaveBeenWarned()
 
