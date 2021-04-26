@@ -1,7 +1,6 @@
 import {
   describe,
   Component,
-  ConcreteComponent,
   defineComponent,
   PropType,
   ref,
