@@ -1,3 +1,4 @@
+import { ComponentOptionClass } from '@vue/runtime-core'
 import {
   describe,
   h,
@@ -231,5 +232,36 @@ describe('resolveComponent should work', () => {
   h(resolveComponent('test'))
   h(resolveComponent('test'), {
     message: '1'
+  })
+})
+
+// #3102
+describe('Class component generic props', () => {
+  type OnChange<ValueType, Clearable> = Clearable extends true
+    ? (value: ValueType | null) => void
+    : (value: ValueType) => void
+
+  interface GenericProp<Clearable, ValueType> {
+    clearable?: Clearable
+    value?: ValueType
+    onChange?: OnChange<ValueType, Clearable>
+  }
+
+  const Comp = defineComponent(
+    class<
+      Clearable extends boolean,
+      ValueType extends string | number | null | undefined
+    > extends ComponentOptionClass<GenericProp<Clearable, ValueType>> {
+      props = {}
+      setup() {
+        return {}
+      }
+    }
+  )
+
+  h(Comp, {
+    clearable: true,
+    value: 'test',
+    onChange(e) {}
   })
 })

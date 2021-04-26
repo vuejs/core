@@ -1,6 +1,7 @@
 import {
   describe,
   Component,
+  ConcreteComponent,
   defineComponent,
   PropType,
   ref,
@@ -12,6 +13,7 @@ import {
   ComponentOptions,
   SetupContext,
   IsUnion,
+  ComponentOptionClass,
   h
 } from './index'
 
@@ -1036,6 +1038,38 @@ describe('async setup', () => {
 
   // setup context properties should be mutable
   vm.a = 2
+})
+
+// #3102
+describe('Generic props', () => {
+  type OnChange<ValueType, Clearable> = Clearable extends true
+    ? (value: ValueType | null) => void
+    : (value: ValueType) => void
+
+  interface GenericProp<Clearable, ValueType> {
+    clearable?: Clearable
+    value?: ValueType
+    onChange?: OnChange<ValueType, Clearable>
+  }
+
+  const Comp = defineComponent(
+    class<
+      Clearable extends boolean,
+      ValueType extends string | number | null | undefined
+    > extends ComponentOptionClass<GenericProp<Clearable, ValueType>> {
+      props = {}
+      setup() {
+        return {}
+      }
+    }
+  )
+  ;<Comp
+    value={'sss'}
+    clearable
+    onChange={a => {
+      expectType<'sss' | null>(a)
+    }}
+  />
 })
 
 // check if defineComponent can be exported
