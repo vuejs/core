@@ -185,15 +185,6 @@ export function defineComponent<
   >
 ): DefineComponent<PropsOptions, RawBindings, D, C, M, Mixin, Extends, E, EE>
 
-export function defineComponent<
-  O extends { prototype: ComponentPropsOverride }
->(
-  o: O
-): DefineComponent<
-  O,
-  O extends { setup: (...a: any[]) => infer Setup } ? Setup : false
->
-
 // overload 5: Allow overriding Props object
 export function defineComponent<
   O extends { prototype: ComponentPropsOverride },
