@@ -24,6 +24,7 @@ export const enum DeprecationTypes {
   CONFIG_KEY_CODES = 'CONFIG_KEY_CODES',
   CONFIG_PRODUCTION_TIP = 'CONFIG_PRODUCTION_TIP',
   CONFIG_IGNORED_ELEMENTS = 'CONFIG_IGNORED_ELEMENTS',
+  CONFIG_WHITESPACE = 'CONFIG_WHITESPACE',
 
   INSTANCE_SET = 'INSTANCE_SET',
   INSTANCE_DELETE = 'INSTANCE_DELETE',
@@ -160,6 +161,15 @@ const deprecationData: Record<DeprecationTypes, DeprecationData> = {
       return msg
     },
     link: `https://v3.vuejs.org/guide/migration/global-api.html#config-ignoredelements-is-now-config-iscustomelement`
+  },
+
+  [DeprecationTypes.CONFIG_WHITESPACE]: {
+    // this warning is only relevant in the full build when using runtime
+    // compilation, so it's put in the runtime compatConfig list.
+    message:
+      `Vue 3 compiler's whitespace option will default to "condense" instead of ` +
+      `"preserve". To suppress this warning, provide an explicit value for ` +
+      `\`config.compilerOptions.whitespace\`.`
   },
 
   [DeprecationTypes.INSTANCE_SET]: {

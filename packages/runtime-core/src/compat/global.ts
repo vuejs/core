@@ -141,13 +141,15 @@ export function createCompatVue(
     // copy over global config mutations
     isCopyingConfig = true
     for (const key in singletonApp.config) {
+      if (key === 'isNativeTag') continue
       if (
-        key !== 'isNativeTag' &&
-        !(key === 'isCustomElement' && isRuntimeOnly())
+        isRuntimeOnly() &&
+        (key === 'isCustomElement' || key === 'compilerOptions')
       ) {
-        // @ts-ignore
-        app.config[key] = singletonApp.config[key]
+        continue
       }
+      // @ts-ignore
+      app.config[key] = singletonApp.config[key]
     }
     isCopyingConfig = false
 

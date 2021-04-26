@@ -1,16 +1,15 @@
 // This entry is the "full-build" that includes both the runtime
 // and the compiler, and supports on-the-fly compilation of the template option.
-import { initDev } from './dev'
+import { createCompatVue } from './createCompatVue'
 import { compile, CompilerError, CompilerOptions } from '@vue/compiler-dom'
 import { registerRuntimeCompiler, RenderFunction, warn } from '@vue/runtime-dom'
 import { isString, NOOP, generateCodeFrame, extend } from '@vue/shared'
 import { InternalRenderFunction } from 'packages/runtime-core/src/component'
 import * as runtimeDom from '@vue/runtime-dom'
-import Vue from './runtime'
-
-if (__DEV__) {
-  initDev()
-}
+import {
+  DeprecationTypes,
+  warnDeprecation
+} from '../../runtime-core/src/compat/compatConfig'
 
 const compileCache: Record<string, RenderFunction> = Object.create(null)
 
@@ -45,11 +44,16 @@ function compileToFunction(
     template = el ? el.innerHTML : ``
   }
 
+  if (__DEV__ && !__TEST__ && (!options || !options.whitespace)) {
+    warnDeprecation(DeprecationTypes.CONFIG_WHITESPACE, null)
+  }
+
   const { code } = compile(
     template,
     extend(
       {
         hoistStatic: true,
+        whitespace: 'preserve',
         onError: __DEV__ ? onError : undefined,
         onWarn: __DEV__ ? e => onError(e, true) : NOOP
       } as CompilerOptions,
@@ -87,6 +91,7 @@ function compileToFunction(
 
 registerRuntimeCompiler(compileToFunction)
 
+const Vue = createCompatVue()
 Vue.compile = compileToFunction
 
 export default Vue
