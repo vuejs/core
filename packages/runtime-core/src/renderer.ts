@@ -76,7 +76,6 @@ import {
 import { createHydrationFunctions, RootHydrateFunction } from './hydration'
 import { invokeDirectiveHook } from './directives'
 import { startMeasure, endMeasure } from './profiling'
-import { ComponentPublicInstance } from './componentPublicInstance'
 import {
   devtoolsComponentAdded,
   devtoolsComponentRemoved,
@@ -87,6 +86,7 @@ import { initFeatureFlags } from './featureFlags'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import { isCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
+import { registerLegacyRef } from './compat/ref'
 
 export interface Renderer<HostElement = RendererElement> {
   render: RootRenderFunction<HostElement>
@@ -309,7 +309,8 @@ export const setRef = (
   rawRef: VNodeNormalizedRef,
   oldRawRef: VNodeNormalizedRef | null,
   parentSuspense: SuspenseBoundary | null,
-  vnode: VNode | null
+  vnode: VNode,
+  isUnmount = false
 ) => {
   if (isArray(rawRef)) {
     rawRef.forEach((r, i) =>
@@ -317,25 +318,24 @@ export const setRef = (
         r,
         oldRawRef && (isArray(oldRawRef) ? oldRawRef[i] : oldRawRef),
         parentSuspense,
-        vnode
+        vnode,
+        isUnmount
       )
     )
     return
   }
 
-  let value: ComponentPublicInstance | RendererNode | Record<string, any> | null
-  if (!vnode) {
-    // means unmount
-    value = null
-  } else if (isAsyncWrapper(vnode)) {
+  if (isAsyncWrapper(vnode) && !isUnmount) {
     // when mounting async components, nothing needs to be done,
     // because the template ref is forwarded to inner component
     return
-  } else if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
-    value = vnode.component!.exposed || vnode.component!.proxy
-  } else {
-    value = vnode.el
   }
+
+  const refValue =
+    vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT
+      ? vnode.component!.exposed || vnode.component!.proxy
+      : vnode.el
+  const value = isUnmount ? null : refValue
 
   const { i: owner, r: ref } = rawRef
   if (__DEV__ && !owner) {
@@ -349,7 +349,7 @@ export const setRef = (
   const refs = owner.refs === EMPTY_OBJ ? (owner.refs = {}) : owner.refs
   const setupState = owner.setupState
 
-  // unset old ref
+  // dynamic ref changed. unset old ref
   if (oldRef != null && oldRef !== ref) {
     if (isString(oldRef)) {
       refs[oldRef] = null
@@ -363,7 +363,11 @@ export const setRef = (
 
   if (isString(ref)) {
     const doSet = () => {
-      refs[ref] = value
+      if (__COMPAT__ && isCompatEnabled(DeprecationTypes.V_FOR_REF, owner)) {
+        registerLegacyRef(refs, ref, refValue, owner, rawRef.f, isUnmount)
+      } else {
+        refs[ref] = value
+      }
       if (hasOwn(setupState, ref)) {
         setupState[ref] = value
       }
@@ -584,7 +588,7 @@ function baseCreateRenderer(
 
     // set ref
     if (ref != null && parentComponent) {
-      setRef(ref, n1 && n1.ref, parentSuspense, n2)
+      setRef(ref, n1 && n1.ref, parentSuspense, n2 || n1, !n2)
     }
   }
 
@@ -2113,7 +2117,7 @@ function baseCreateRenderer(
     } = vnode
     // unset ref
     if (ref != null) {
-      setRef(ref, null, parentSuspense, null)
+      setRef(ref, null, parentSuspense, vnode, true)
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {

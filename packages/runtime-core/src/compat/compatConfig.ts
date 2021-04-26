@@ -44,6 +44,7 @@ export const enum DeprecationTypes {
   WATCH_ARRAY = 'WATCH_ARRAY',
   PROPS_DEFAULT_THIS = 'PROPS_DEFAULT_THIS',
 
+  V_FOR_REF = 'V_FOR_REF',
   V_ON_KEYCODE_MODIFIER = 'V_ON_KEYCODE_MODIFIER',
   CUSTOM_DIR = 'CUSTOM_DIR',
 
@@ -287,6 +288,13 @@ const deprecationData: Record<DeprecationTypes, DeprecationData> = {
     link: `https://v3.vuejs.org/guide/migration/custom-directives.html`
   },
 
+  [DeprecationTypes.V_FOR_REF]: {
+    message:
+      `Ref usage on v-for no longer creates array ref values in Vue 3. ` +
+      `Consider using function refs or refactor to avoid ref usage altogether.`,
+    link: `https://v3.vuejs.org/guide/migration/array-refs.html`
+  },
+
   [DeprecationTypes.V_ON_KEYCODE_MODIFIER]: {
     message:
       `Using keyCode as v-on modifier is no longer supported. ` +
@@ -447,16 +455,18 @@ export function warnDeprecation(
   }
 
   const dupKey = key + args.join('')
-  const compName = instance && formatComponentName(instance, instance.type)
+  let compId: string | number | null =
+    instance && formatComponentName(instance, instance.type)
+  if (compId === 'Anonymous' && instance) {
+    compId = instance.uid
+  }
 
   // skip if the same warning is emitted for the same component type
-  if (compName !== `Anonymous`) {
-    const componentDupKey = dupKey + compName
-    if (componentDupKey in instanceWarned) {
-      return
-    }
-    instanceWarned[componentDupKey] = true
+  const componentDupKey = dupKey + compId
+  if (componentDupKey in instanceWarned) {
+    return
   }
+  instanceWarned[componentDupKey] = true
 
   // same warning, but different component. skip the long message and just
   // log the key and count.

@@ -171,7 +171,7 @@ export function compatH(
 }
 
 const skipLegacyRootLevelProps = /*#__PURE__*/ makeMap(
-  'refInFor,staticStyle,staticClass,directives,model'
+  'staticStyle,staticClass,directives,model,hook'
 )
 
 function convertLegacyProps(
@@ -206,8 +206,6 @@ function convertLegacyProps(
           }
         }
       }
-    } else if (key === 'hook') {
-      // TODO
     } else if (!skipLegacyRootLevelProps(key)) {
       converted[key] = legacyProps[key as keyof LegacyVNodeProps]
     }

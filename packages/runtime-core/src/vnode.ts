@@ -44,6 +44,7 @@ import { setCompiledSlotRendering } from './helpers/renderSlot'
 import { convertLegacyComponent } from './compat/component'
 import { convertLegacyVModelProps } from './compat/vModel'
 import { defineLegacyVNodeProperties } from './compat/renderFn'
+import { convertLegacyRefInFor } from './compat/ref'
 
 export const Fragment = (Symbol(__DEV__ ? 'Fragment' : undefined) as any) as {
   __isFragment: true
@@ -74,6 +75,7 @@ export type VNodeRef =
 export type VNodeNormalizedRefAtom = {
   i: ComponentInternalInstance
   r: VNodeRef
+  f?: boolean // v2 compat only, refInFor marker
 }
 
 export type VNodeNormalizedRef =
@@ -130,10 +132,12 @@ export interface VNode<
    * @internal
    */
   __v_isVNode: true
+
   /**
    * @internal
    */
   [ReactiveFlags.SKIP]: true
+
   type: VNodeTypes
   props: (VNodeProps & ExtraProps) | null
   key: string | number | null
@@ -413,7 +417,7 @@ function _createVNode(
 
   const vnode: VNode = {
     __v_isVNode: true,
-    [ReactiveFlags.SKIP]: true,
+    __v_skip: true,
     type,
     props,
     key: props && normalizeKey(props),
@@ -473,6 +477,7 @@ function _createVNode(
 
   if (__COMPAT__) {
     convertLegacyVModelProps(vnode)
+    convertLegacyRefInFor(vnode)
     defineLegacyVNodeProperties(vnode)
   }
 
@@ -490,7 +495,7 @@ export function cloneVNode<T, U>(
   const mergedProps = extraProps ? mergeProps(props || {}, extraProps) : props
   const cloned: VNode = {
     __v_isVNode: true,
-    [ReactiveFlags.SKIP]: true,
+    __v_skip: true,
     type: vnode.type,
     props: mergedProps,
     key: mergedProps && normalizeKey(mergedProps),

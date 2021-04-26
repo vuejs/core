@@ -590,6 +590,25 @@ export function buildProps(
         runtimeDirectives.push(prop)
       }
     }
+
+    if (
+      __COMPAT__ &&
+      prop.type === NodeTypes.ATTRIBUTE &&
+      prop.name === 'ref' &&
+      context.scopes.vFor > 0 &&
+      checkCompatEnabled(
+        CompilerDeprecationTypes.COMPILER_V_FOR_REF,
+        context,
+        prop.loc
+      )
+    ) {
+      properties.push(
+        createObjectProperty(
+          createSimpleExpression('refInFor', true),
+          createSimpleExpression('true', false)
+        )
+      )
+    }
   }
 
   let propsExpression: PropsExpression | undefined = undefined
