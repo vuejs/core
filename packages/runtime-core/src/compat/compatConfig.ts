@@ -17,7 +17,7 @@ export const enum DeprecationTypes {
   GLOBAL_SET = 'GLOBAL_SET',
   GLOBAL_DELETE = 'GLOBAL_DELETE',
   GLOBAL_OBSERVABLE = 'GLOBAL_OBSERVABLE',
-  GLOBAL_UTIL = 'GLOBAL_UTIL',
+  GLOBAL_PRIVATE_UTIL = 'GLOBAL_PRIVATE_UTIL',
 
   CONFIG_SILENT = 'CONFIG_SILENT',
   CONFIG_DEVTOOLS = 'CONFIG_DEVTOOLS',
@@ -70,7 +70,7 @@ type DeprecationData = {
   link?: string
 }
 
-const deprecationData: Record<DeprecationTypes, DeprecationData> = {
+export const deprecationData: Record<DeprecationTypes, DeprecationData> = {
   [DeprecationTypes.GLOBAL_MOUNT]: {
     message:
       `The global app bootstrapping API has changed: vm.$mount() and the "el" ` +
@@ -119,7 +119,7 @@ const deprecationData: Record<DeprecationTypes, DeprecationData> = {
     link: `https://v3.vuejs.org/api/basic-reactivity.html`
   },
 
-  [DeprecationTypes.GLOBAL_UTIL]: {
+  [DeprecationTypes.GLOBAL_PRIVATE_UTIL]: {
     message:
       `Vue.util has been removed. Please refactor to avoid its usage ` +
       `since it was an internal API even in Vue 2.`
@@ -437,12 +437,22 @@ const deprecationData: Record<DeprecationTypes, DeprecationData> = {
 const instanceWarned: Record<string, true> = Object.create(null)
 const warnCount: Record<string, number> = Object.create(null)
 
+// test only
+let warningEnabled = true
+
+export function toggleDeprecationWarning(flag: boolean) {
+  warningEnabled = flag
+}
+
 export function warnDeprecation(
   key: DeprecationTypes,
   instance: ComponentInternalInstance | null,
   ...args: any[]
 ) {
   if (!__DEV__) {
+    return
+  }
+  if (__TEST__ && !warningEnabled) {
     return
   }
 
@@ -463,14 +473,14 @@ export function warnDeprecation(
 
   // skip if the same warning is emitted for the same component type
   const componentDupKey = dupKey + compId
-  if (componentDupKey in instanceWarned) {
+  if (!__TEST__ && componentDupKey in instanceWarned) {
     return
   }
   instanceWarned[componentDupKey] = true
 
   // same warning, but different component. skip the long message and just
   // log the key and count.
-  if (dupKey in warnCount) {
+  if (!__TEST__ && dupKey in warnCount) {
     warn(`(deprecation ${key}) (${++warnCount[dupKey] + 1})`)
     return
   }

@@ -893,7 +893,13 @@ function callHookWithMixinAndExtends(
     }
   }
   if (selfHook) {
-    callWithAsyncErrorHandling(selfHook.bind(instance.proxy!), instance, type)
+    callWithAsyncErrorHandling(
+      __COMPAT__ && isArray(selfHook)
+        ? selfHook.map(h => h.bind(instance.proxy!))
+        : selfHook.bind(instance.proxy!),
+      instance,
+      type
+    )
   }
 }
 
@@ -1007,21 +1013,23 @@ export function resolveMergedOptions(
 export function mergeOptions(
   to: any,
   from: any,
-  instance?: ComponentInternalInstance
+  instance?: ComponentInternalInstance | null,
+  strats = instance && instance.appContext.config.optionMergeStrategies
 ) {
   if (__COMPAT__ && isFunction(from)) {
     from = from.options
   }
 
-  const strats = instance && instance.appContext.config.optionMergeStrategies
   const { mixins, extends: extendsOptions } = from
 
-  extendsOptions && mergeOptions(to, extendsOptions, instance)
+  extendsOptions && mergeOptions(to, extendsOptions, instance, strats)
   mixins &&
-    mixins.forEach((m: ComponentOptionsMixin) => mergeOptions(to, m, instance))
+    mixins.forEach((m: ComponentOptionsMixin) =>
+      mergeOptions(to, m, instance, strats)
+    )
 
   for (const key in from) {
-    if (strats && hasOwn(to, key) && hasOwn(strats, key)) {
+    if (strats && hasOwn(strats, key)) {
       to[key] = strats[key](to[key], from[key], instance && instance.proxy, key)
     } else {
       to[key] = from[key]

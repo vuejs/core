@@ -1,7 +1,7 @@
 import { extend, isArray, isString } from '@vue/shared'
 import { AppConfig } from '../apiCreateApp'
 import { isRuntimeOnly } from '../component'
-import { deepMergeData } from './data'
+import { mergeDataOption } from './data'
 import {
   DeprecationTypes,
   warnDeprecation,
@@ -80,34 +80,36 @@ export function installLegacyConfigProperties(config: AppConfig) {
   // Internal merge strats which are no longer needed in v3, but we need to
   // expose them because some v2 plugins will reuse these internal strats to
   // merge their custom options.
-  const strats = config.optionMergeStrategies as any
-  strats.data = deepMergeData
-  // lifecycle hooks
-  strats.beforeCreate = mergeHook
-  strats.created = mergeHook
-  strats.beforeMount = mergeHook
-  strats.mounted = mergeHook
-  strats.beforeUpdate = mergeHook
-  strats.updated = mergeHook
-  strats.beforeDestroy = mergeHook
-  strats.destroyed = mergeHook
-  strats.activated = mergeHook
-  strats.deactivated = mergeHook
-  strats.errorCaptured = mergeHook
-  strats.serverPrefetch = mergeHook
+  extend(config.optionMergeStrategies, legacyOptionMergeStrats)
+}
+
+export const legacyOptionMergeStrats = {
+  data: mergeDataOption,
+  beforeCreate: mergeHook,
+  created: mergeHook,
+  beforeMount: mergeHook,
+  mounted: mergeHook,
+  beforeUpdate: mergeHook,
+  updated: mergeHook,
+  beforeDestroy: mergeHook,
+  destroyed: mergeHook,
+  activated: mergeHook,
+  deactivated: mergeHook,
+  errorCaptured: mergeHook,
+  serverPrefetch: mergeHook,
   // assets
-  strats.components = mergeObjectOptions
-  strats.directives = mergeObjectOptions
-  strats.filters = mergeObjectOptions
+  components: mergeObjectOptions,
+  directives: mergeObjectOptions,
+  filters: mergeObjectOptions,
   // objects
-  strats.props = mergeObjectOptions
-  strats.methods = mergeObjectOptions
-  strats.inject = mergeObjectOptions
-  strats.computed = mergeObjectOptions
+  props: mergeObjectOptions,
+  methods: mergeObjectOptions,
+  inject: mergeObjectOptions,
+  computed: mergeObjectOptions,
   // watch has special merge behavior in v2, but isn't actually needed in v3.
   // since we are only exposing these for compat and nobody should be relying
   // on the watch-specific behavior, just expose the object merge strat.
-  strats.watch = mergeObjectOptions
+  watch: mergeObjectOptions
 }
 
 function mergeHook(

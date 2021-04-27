@@ -6,7 +6,10 @@ import {
   toDisplayString,
   toNumber
 } from '@vue/shared'
-import { PublicPropertiesMap } from '../componentPublicInstance'
+import {
+  ComponentPublicInstance,
+  PublicPropertiesMap
+} from '../componentPublicInstance'
 import { getCompatChildren } from './instanceChildren'
 import {
   DeprecationTypes,
@@ -33,6 +36,23 @@ import {
 } from './renderHelpers'
 import { resolveFilter } from '../helpers/resolveAssets'
 import { resolveMergedOptions } from '../componentOptions'
+import { Slots } from '../componentSlots'
+
+export type LegacyPublicInstance = ComponentPublicInstance &
+  LegacyPublicProperties
+
+export interface LegacyPublicProperties {
+  $set(target: object, key: string, value: any): void
+  $delete(target: object, key: string): void
+  $mount(el?: string | Element): this
+  $destroy(): void
+  $scopedSlots: Slots
+  $on(event: string | string[], fn: Function): this
+  $once(event: string, fn: Function): this
+  $off(event?: string, fn?: Function): this
+  $children: LegacyPublicProperties[]
+  $listeners: Record<string, Function | Function[]>
+}
 
 export function installCompatInstanceProperties(map: PublicPropertiesMap) {
   const set = (target: any, key: any, val: any) => {

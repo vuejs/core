@@ -25,7 +25,6 @@ import {
   CreateAppFunction,
   Plugin
 } from '../apiCreateApp'
-import { defineComponent } from '../apiDefineComponent'
 import {
   Component,
   ComponentOptions,
@@ -40,7 +39,7 @@ import { devtoolsInitApp } from '../devtools'
 import { Directive } from '../directives'
 import { nextTick } from '../scheduler'
 import { version } from '..'
-import { LegacyConfig } from './globalConfig'
+import { LegacyConfig, legacyOptionMergeStrats } from './globalConfig'
 import { LegacyDirective } from './customDirective'
 import {
   warnDeprecation,
@@ -50,6 +49,7 @@ import {
   isCompatEnabled,
   softAssertCompatEnabled
 } from './compatConfig'
+import { LegacyPublicInstance } from './instance'
 
 /**
  * @deprecated the default `Vue` export has been removed in Vue 3. The type for
@@ -57,15 +57,17 @@ import {
  * named imports instead - e.g. `import { createApp } from 'vue'`.
  */
 export type CompatVue = Pick<App, 'version' | 'component' | 'directive'> & {
+  configureCompat: typeof configureCompat
+
   // no inference here since these types are not meant for actual use - they
   // are merely here to provide type checks for internal implementation and
   // information for migration.
-  new (options?: ComponentOptions): ComponentPublicInstance
+  new (options?: ComponentOptions): LegacyPublicInstance
 
   version: string
   config: AppConfig & LegacyConfig
 
-  extend: typeof defineComponent
+  extend: (options?: ComponentOptions) => CompatVue
   nextTick: typeof nextTick
 
   use(plugin: Plugin, ...options: any[]): CompatVue
@@ -102,8 +104,10 @@ export type CompatVue = Pick<App, 'version' | 'component' | 'directive'> & {
    * @internal
    */
   options: ComponentOptions
-
-  configureCompat: typeof configureCompat
+  /**
+   * @internal
+   */
+  super: CompatVue
 }
 
 export let isCopyingConfig = false
@@ -184,32 +188,55 @@ export function createCompatVue(
   let cid = 1
   Vue.cid = cid
 
+  const extendCache = new WeakMap()
+
   function extendCtor(this: any, extendOptions: ComponentOptions = {}) {
     assertCompatEnabled(DeprecationTypes.GLOBAL_EXTEND, null)
     if (isFunction(extendOptions)) {
       extendOptions = extendOptions.options
     }
 
+    if (extendCache.has(extendOptions)) {
+      return extendCache.get(extendOptions)
+    }
+
     const Super = this
     function SubVue(inlineOptions?: ComponentOptions) {
       if (!inlineOptions) {
-        return createCompatApp(extendOptions, SubVue)
+        return createCompatApp(SubVue.options, SubVue)
       } else {
         return createCompatApp(
-          {
-            el: inlineOptions.el,
-            extends: extendOptions,
-            mixins: [inlineOptions]
-          },
+          mergeOptions(
+            extend({}, SubVue.options),
+            inlineOptions,
+            null,
+            legacyOptionMergeStrats as any
+          ),
           SubVue
         )
       }
     }
+    SubVue.super = Super
     SubVue.prototype = Object.create(Vue.prototype)
     SubVue.prototype.constructor = SubVue
+
+    // clone non-primitive base option values for edge case of mutating
+    // extended options
+    const mergeBase: any = {}
+    for (const key in Super.options) {
+      const superValue = Super.options[key]
+      mergeBase[key] = isArray(superValue)
+        ? superValue.slice()
+        : isObject(superValue)
+          ? extend(Object.create(null), superValue)
+          : superValue
+    }
+
     SubVue.options = mergeOptions(
-      extend({}, Super.options) as ComponentOptions,
-      extendOptions
+      mergeBase,
+      extendOptions,
+      null,
+      legacyOptionMergeStrats as any
     )
 
     SubVue.options._base = SubVue
@@ -217,6 +244,8 @@ export function createCompatVue(
     SubVue.mixin = Super.mixin
     SubVue.use = Super.use
     SubVue.cid = ++cid
+
+    extendCache.set(extendOptions, SubVue)
     return SubVue
   }
 
@@ -279,12 +308,17 @@ export function createCompatVue(
     warn: __DEV__ ? warn : NOOP,
     extend,
     mergeOptions: (parent: any, child: any, vm?: ComponentPublicInstance) =>
-      mergeOptions(parent, child, vm && vm.$),
+      mergeOptions(
+        parent,
+        child,
+        vm && vm.$,
+        vm ? undefined : (legacyOptionMergeStrats as any)
+      ),
     defineReactive
   }
   Object.defineProperty(Vue, 'util', {
     get() {
-      assertCompatEnabled(DeprecationTypes.GLOBAL_UTIL, null)
+      assertCompatEnabled(DeprecationTypes.GLOBAL_PRIVATE_UTIL, null)
       return util
     }
   })
@@ -332,7 +366,7 @@ export function installCompatMount(
     // Note: the following assumes DOM environment since the compat build
     // only targets web. It essentially includes logic for app.mount from
     // both runtime-core AND runtime-dom.
-    instance.ctx._compat_mount = (selectorOrEl: string | Element) => {
+    instance.ctx._compat_mount = (selectorOrEl?: string | Element) => {
       if (isMounted) {
         __DEV__ && warn(`Root instance is already mounted.`)
         return
@@ -351,14 +385,8 @@ export function installCompatMount(
         }
         container = result
       } else {
-        if (!selectorOrEl) {
-          __DEV__ &&
-            warn(
-              `Failed to mount root instance: invalid mount target ${selectorOrEl}.`
-            )
-          return
-        }
-        container = selectorOrEl
+        // eslint-disable-next-line
+        container = selectorOrEl || document.createElement('div')
       }
 
       const isSVG = container instanceof SVGElement
