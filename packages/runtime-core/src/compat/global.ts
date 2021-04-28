@@ -12,7 +12,8 @@ import {
   NOOP,
   EMPTY_OBJ,
   isArray,
-  isObject
+  isObject,
+  isString
 } from '@vue/shared'
 import { warn } from '../warning'
 import { cloneVNode, createVNode } from '../vnode'
@@ -152,8 +153,21 @@ export function createCompatVue(
       ) {
         continue
       }
+      const val = singletonApp.config[key as keyof AppConfig]
       // @ts-ignore
-      app.config[key] = singletonApp.config[key]
+      app.config[key] = val
+
+      // compat for runtime ignoredElements -> isCustomElement
+      if (
+        key === 'ignoredElements' &&
+        isCompatEnabled(DeprecationTypes.CONFIG_IGNORED_ELEMENTS, null) &&
+        !isRuntimeOnly() &&
+        isArray(val)
+      ) {
+        app.config.compilerOptions.isCustomElement = tag => {
+          return val.some(v => (isString(v) ? v === tag : v.test(tag)))
+        }
+      }
     }
     isCopyingConfig = false
 

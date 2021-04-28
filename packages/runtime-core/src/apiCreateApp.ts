@@ -4,7 +4,7 @@ import {
   validateComponentName,
   Component
 } from './component'
-import { ComponentOptions } from './componentOptions'
+import { ComponentOptions, RuntimeCompilerOptions } from './componentOptions'
 import { ComponentPublicInstance } from './componentPublicInstance'
 import { Directive, validateDirectiveName } from './directives'
 import { RootRenderFunction } from './renderer'
@@ -87,14 +87,9 @@ export interface AppConfig {
 
   /**
    * Options to pass to @vue/compiler-dom.
-   * *Only supported in runtime compiler build.*
+   * Only supported in runtime compiler build.
    */
-  compilerOptions: {
-    isCustomElement: (tag: string) => boolean
-    whitespace?: 'preserve' | 'condense'
-    comments?: boolean
-    delimiters?: [string, string]
-  }
+  compilerOptions: RuntimeCompilerOptions
 }
 
 export interface AppContext {

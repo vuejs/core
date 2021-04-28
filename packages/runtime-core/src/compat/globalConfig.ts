@@ -1,12 +1,7 @@
-import { extend, isArray, isString } from '@vue/shared'
+import { extend, isArray } from '@vue/shared'
 import { AppConfig } from '../apiCreateApp'
-import { isRuntimeOnly } from '../component'
 import { mergeDataOption } from './data'
-import {
-  DeprecationTypes,
-  warnDeprecation,
-  isCompatEnabled
-} from './compatConfig'
+import { DeprecationTypes, warnDeprecation } from './compatConfig'
 import { isCopyingConfig } from './global'
 
 // legacy config warnings
@@ -59,20 +54,6 @@ export function installLegacyConfigProperties(config: AppConfig) {
           warnDeprecation(legacyConfigOptions[key], null)
         }
         val = newVal
-
-        // compat for runtime ignoredElements -> isCustomElement
-        if (
-          key === 'ignoredElements' &&
-          isCompatEnabled(DeprecationTypes.CONFIG_IGNORED_ELEMENTS, null) &&
-          !isRuntimeOnly() &&
-          isArray(newVal)
-        ) {
-          config.isCustomElement = tag => {
-            return newVal.some(
-              val => (isString(val) ? val === tag : val.test(tag))
-            )
-          }
-        }
       }
     })
   })

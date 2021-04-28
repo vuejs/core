@@ -7,6 +7,7 @@ import {
 } from '../compatConfig'
 
 beforeEach(() => {
+  toggleDeprecationWarning(false)
   Vue.configureCompat({ MODE: 2 })
 })
 
