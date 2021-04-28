@@ -12,6 +12,7 @@ import {
   ComponentOptions,
   SetupContext,
   IsUnion,
+  ComponentPropsOverride,
   h
 } from './index'
 
@@ -1036,6 +1037,38 @@ describe('async setup', () => {
 
   // setup context properties should be mutable
   vm.a = 2
+})
+
+// #3102
+describe('Generic props', () => {
+  type OnChange<ValueType, Clearable> = Clearable extends true
+    ? (value: ValueType | null) => void
+    : (value: ValueType) => void
+
+  interface GenericProp<Clearable, ValueType> {
+    clearable?: Clearable
+    value?: ValueType
+    onChange?: OnChange<ValueType, Clearable>
+  }
+
+  class CompProps<
+    Clearable extends boolean,
+    ValueType extends string | number | null | undefined
+  > extends ComponentPropsOverride<GenericProp<Clearable, ValueType>> {}
+
+  const Comp = defineComponent<typeof CompProps>({
+    props: {
+      value: Object,
+      clearable: Boolean
+    }
+  })
+  ;<Comp
+    value={'sss'}
+    clearable
+    onChange={a => {
+      expectType<'sss' | null>(a)
+    }}
+  />
 })
 
 // check if defineComponent can be exported

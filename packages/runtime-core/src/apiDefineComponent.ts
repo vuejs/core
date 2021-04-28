@@ -6,7 +6,8 @@ import {
   ComponentOptionsWithObjectProps,
   ComponentOptionsMixin,
   RenderFunction,
-  ComponentOptionsBase
+  ComponentOptionsBase,
+  ComponentPropsOverride
 } from './componentOptions'
 import {
   SetupContext,
@@ -16,7 +17,8 @@ import {
 import {
   ExtractPropTypes,
   ComponentPropsOptions,
-  ExtractDefaultPropTypes
+  ExtractDefaultPropTypes,
+  PropType
 } from './componentProps'
 import { EmitsOptions } from './componentEmits'
 import { isFunction } from '@vue/shared'
@@ -43,35 +45,39 @@ export type DefineComponent<
   PP = PublicProps,
   Props = Readonly<ExtractPropTypes<PropsOrPropOptions>>,
   Defaults = ExtractDefaultPropTypes<PropsOrPropOptions>
-> = ComponentPublicInstanceConstructor<
-  CreateComponentPublicInstance<
-    Props,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    PP & Props,
-    Defaults,
-    true
-  > &
-    Props
-> &
-  ComponentOptionsBase<
-    Props,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    EE,
-    Defaults
-  > &
-  PP
+> =
+  // If props is a class we should ifnore all the process
+  (PropsOrPropOptions extends { prototype: ComponentPropsOverride }
+    ? PropsOrPropOptions
+    : ComponentPublicInstanceConstructor<
+        CreateComponentPublicInstance<
+          Props,
+          RawBindings,
+          D,
+          C,
+          M,
+          Mixin,
+          Extends,
+          E,
+          PP & Props,
+          Defaults,
+          true
+        > &
+          Props
+      >) &
+    ComponentOptionsBase<
+      Props,
+      RawBindings,
+      D,
+      C,
+      M,
+      Mixin,
+      Extends,
+      E,
+      EE,
+      Defaults
+    > &
+    PP
 
 // defineComponent is a utility that is primarily used for type inference
 // when declaring components. Type inference is provided in the component
@@ -178,6 +184,34 @@ export function defineComponent<
     EE
   >
 ): DefineComponent<PropsOptions, RawBindings, D, C, M, Mixin, Extends, E, EE>
+
+// overload 5: Allow overriding Props object
+export function defineComponent<
+  O extends { prototype: ComponentPropsOverride },
+  RawBindings = {},
+  D = {},
+  C extends ComputedOptions = ComputedOptions,
+  M extends MethodOptions = MethodOptions,
+  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
+  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
+  E extends EmitsOptions = Record<string, any>,
+  EE extends string = string,
+  PP = PublicProps
+>(
+  options: ComponentOptionsWithObjectProps<
+    O extends new () => { $props: infer P }
+      ? { [K in keyof P]: PropType<P[K]> }
+      : {},
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    EE
+  >
+): DefineComponent<O, RawBindings, D, C, M, Mixin, Extends, E, EE, PP>
 
 // implementation, close to no-op
 export function defineComponent(options: unknown) {

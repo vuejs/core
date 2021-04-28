@@ -9,7 +9,8 @@ import {
   Component,
   expectError,
   expectAssignable,
-  resolveComponent
+  resolveComponent,
+  ComponentPropsOverride
 } from './index'
 
 describe('h inference w/ element', () => {
@@ -231,5 +232,36 @@ describe('resolveComponent should work', () => {
   h(resolveComponent('test'))
   h(resolveComponent('test'), {
     message: '1'
+  })
+})
+
+// #3102
+describe('Class component generic props', () => {
+  type OnChange<ValueType, Clearable> = Clearable extends true
+    ? (value: ValueType | null) => void
+    : (value: ValueType) => void
+
+  interface GenericProp<Clearable, ValueType> {
+    clearable?: Clearable
+    value?: ValueType
+    onChange?: OnChange<ValueType, Clearable>
+  }
+
+  class CompProps<
+    Clearable extends boolean,
+    ValueType extends string | number | null | undefined
+  > extends ComponentPropsOverride<GenericProp<Clearable, ValueType>> {}
+
+  const Comp = defineComponent<typeof CompProps>({
+    props: {},
+    setup() {
+      return {}
+    }
+  })
+
+  h(Comp, {
+    clearable: true,
+    value: 'test',
+    onChange(e) {}
   })
 })

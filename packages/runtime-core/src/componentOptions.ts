@@ -190,6 +190,10 @@ export interface ComponentOptionsBase<
   __defaults?: Defaults
 }
 
+export abstract class ComponentPropsOverride<Props = {}> {
+  readonly $props: Props = {} as Props
+}
+
 export type ComponentOptionsWithoutProps<
   Props = {},
   RawBindings = {},
