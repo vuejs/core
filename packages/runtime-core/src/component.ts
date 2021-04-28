@@ -578,6 +578,13 @@ function setupStatefulComponent(
         validateDirectiveName(names[i])
       }
     }
+    if (Component.compilerOptions && isRuntimeOnly()) {
+      warn(
+        `"compilerOptions" is only supported when using a build of Vue that ` +
+          `includes the runtime compiler. Since you are using a runtime-only ` +
+          `build, the options should be passed via your build tool config instead.`
+      )
+    }
   }
   // 0. create render proxy property access cache
   instance.accessCache = Object.create(null)
@@ -728,12 +735,19 @@ export function finishComponentSetup(
           startMeasure(instance, `compile`)
         }
         const { isCustomElement, compilerOptions } = instance.appContext.config
+        const {
+          delimiters,
+          compilerOptions: componentCompilerOptions
+        } = Component
         const finalCompilerOptions: CompilerOptions = extend(
-          {
-            isCustomElement: isCustomElement || NO,
-            delimiters: Component.delimiters
-          },
-          compilerOptions
+          extend(
+            {
+              isCustomElement,
+              delimiters
+            },
+            compilerOptions
+          ),
+          componentCompilerOptions
         )
         if (__COMPAT__) {
           // pass runtime compat config into the compiler

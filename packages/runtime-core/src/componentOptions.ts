@@ -150,6 +150,9 @@ export interface ComponentOptionsBase<
   expose?: string[]
   serverPrefetch?(): Promise<any>
 
+  // Runtime compiler only -----------------------------------------------------
+  compilerOptions?: RuntimeCompilerOptions
+
   // Internal ------------------------------------------------------------------
 
   /**
@@ -201,6 +204,16 @@ export interface ComponentOptionsBase<
   __isSuspense?: never
 
   __defaults?: Defaults
+}
+
+/**
+ * Subset of compiler options that makes sense for the runtime.
+ */
+export interface RuntimeCompilerOptions {
+  isCustomElement?: (tag: string) => boolean
+  whitespace?: 'preserve' | 'condense'
+  comments?: boolean
+  delimiters?: [string, string]
 }
 
 export type ComponentOptionsWithoutProps<
@@ -446,7 +459,10 @@ interface LegacyOptions<
   renderTriggered?: DebuggerHook
   errorCaptured?: ErrorCapturedHook
 
-  // runtime compile only
+  /**
+   * runtime compile only
+   * @deprecated use `compilerOptions.delimiters` instead.
+   */
   delimiters?: [string, string]
 
   /**
