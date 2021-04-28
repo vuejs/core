@@ -109,6 +109,9 @@ export interface RootNode extends Node {
   temps: number
   ssrHelpers?: symbol[]
   codegenNode?: TemplateChildNode | JSChildNode | BlockStatement
+
+  // v2 compat only
+  filters?: string[]
 }
 
 export type ElementNode =

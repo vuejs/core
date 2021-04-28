@@ -5,7 +5,8 @@ import {
   ComponentInternalInstance,
   LifecycleHooks,
   currentInstance,
-  getComponentName
+  getComponentName,
+  ComponentOptions
 } from '../component'
 import { VNode, cloneVNode, isVNode, VNodeProps } from '../vnode'
 import { warn } from '../warning'
@@ -63,7 +64,7 @@ export interface KeepAliveContext extends ComponentRenderContext {
 export const isKeepAlive = (vnode: VNode): boolean =>
   (vnode.type as any).__isKeepAlive
 
-const KeepAliveImpl = {
+const KeepAliveImpl: ComponentOptions = {
   name: `KeepAlive`,
 
   // Marker for special handling inside the renderer. We are not using a ===
@@ -311,6 +312,10 @@ const KeepAliveImpl = {
       return rawVNode
     }
   }
+}
+
+if (__COMPAT__) {
+  KeepAliveImpl.__isBuildIn = true
 }
 
 // export the public type for h/tsx inference

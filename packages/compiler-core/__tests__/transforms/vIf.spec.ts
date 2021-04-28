@@ -306,6 +306,7 @@ describe('compiler: v-if', () => {
           code: ErrorCodes.X_V_IF_SAME_KEY
         }
       ])
+      expect('unnecessary key usage on v-if').toHaveBeenWarned()
     })
   })
 

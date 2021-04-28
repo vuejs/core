@@ -8,7 +8,9 @@ import {
   createCompoundExpression,
   ExpressionNode,
   SimpleExpressionNode,
-  isStaticExp
+  isStaticExp,
+  warnDeprecation,
+  CompilerDeprecationTypes
 } from '@vue/compiler-core'
 import { V_ON_WITH_MODIFIERS, V_ON_WITH_KEYS } from '../runtimeHelpers'
 import { makeMap, capitalize } from '@vue/shared'
@@ -91,6 +93,14 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
   return baseTransform(dir, node, context, baseResult => {
     const { modifiers } = dir
     if (!modifiers.length) return baseResult
+
+    if (__COMPAT__ && __DEV__ && modifiers.includes('native')) {
+      warnDeprecation(
+        CompilerDeprecationTypes.COMPILER_V_ON_NATIVE,
+        context,
+        dir.loc
+      )
+    }
 
     let { key, value: handlerExp } = baseResult.props[0]
     const {

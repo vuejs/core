@@ -1,3 +1,4 @@
+// @ts-check
 import path from 'path'
 import ts from 'rollup-plugin-typescript2'
 import replace from '@rollup/plugin-replace'
@@ -10,10 +11,10 @@ if (!process.env.TARGET) {
 const masterVersion = require('./package.json').version
 const packagesDir = path.resolve(__dirname, 'packages')
 const packageDir = path.resolve(packagesDir, process.env.TARGET)
-const name = path.basename(packageDir)
 const resolve = p => path.resolve(packageDir, p)
 const pkg = require(resolve(`package.json`))
 const packageOptions = pkg.buildOptions || {}
+const name = packageOptions.filename || path.basename(packageDir)
 
 // ensure TS checks only once for each build
 let hasTSChecked = false
@@ -89,6 +90,7 @@ function createConfig(format, output, plugins = []) {
   const isBrowserESMBuild = /esm-browser/.test(format)
   const isNodeBuild = format === 'cjs'
   const isGlobalBuild = /global/.test(format)
+  const isCompatBuild = !!packageOptions.compat
 
   if (isGlobalBuild) {
     output.name = packageOptions.name
@@ -114,21 +116,34 @@ function createConfig(format, output, plugins = []) {
   // during a single build.
   hasTSChecked = true
 
-  const entryFile = /runtime$/.test(format) ? `src/runtime.ts` : `src/index.ts`
+  let entryFile = /runtime$/.test(format) ? `src/runtime.ts` : `src/index.ts`
 
-  const external =
-    isGlobalBuild || isBrowserESMBuild
-      ? packageOptions.enableNonBrowserBranches
-        ? []
-        : // normal browser builds - non-browser only imports are tree-shaken,
-          // they are only listed here to suppress warnings.
-          ['source-map', '@babel/parser', 'estree-walker']
-      : // Node / esm-bundler builds. Externalize everything.
-        [
-          ...Object.keys(pkg.dependencies || {}),
-          ...Object.keys(pkg.peerDependencies || {}),
-          ...['path', 'url', 'stream'] // for @vue/compiler-sfc / server-renderer
-        ]
+  // the compat build needs both default AND named exports. This will cause
+  // Rollup to complain for non-ESM targets, so we use separate entries for
+  // esm vs. non-esm builds.
+  if (isCompatBuild && (isBrowserESMBuild || isBundlerESMBuild)) {
+    entryFile = /runtime$/.test(format)
+      ? `src/esm-runtime.ts`
+      : `src/esm-index.ts`
+  }
+
+  let external = []
+
+  if (isGlobalBuild || isBrowserESMBuild || isCompatBuild) {
+    if (!packageOptions.enableNonBrowserBranches) {
+      // normal browser builds - non-browser only imports are tree-shaken,
+      // they are only listed here to suppress warnings.
+      external = ['source-map', '@babel/parser', 'estree-walker']
+    }
+  } else {
+    // Node / esm-bundler builds.
+    // externalize all deps unless it's the compat build.
+    external = [
+      ...Object.keys(pkg.dependencies || {}),
+      ...Object.keys(pkg.peerDependencies || {}),
+      ...['path', 'url', 'stream'] // for @vue/compiler-sfc / server-renderer
+    ]
+  }
 
   // the browser builds of @vue/compiler-sfc requires postcss to be available
   // as a global (e.g. http://wzrd.in/standalone/postcss)
@@ -139,9 +154,11 @@ function createConfig(format, output, plugins = []) {
   const nodePlugins =
     packageOptions.enableNonBrowserBranches && format !== 'cjs'
       ? [
+          // @ts-ignore
           require('@rollup/plugin-commonjs')({
             sourceMap: false
           }),
+          // @ts-ignore
           require('rollup-plugin-polyfill-node')(),
           require('@rollup/plugin-node-resolve').nodeResolve()
         ]
@@ -165,7 +182,8 @@ function createConfig(format, output, plugins = []) {
         (isGlobalBuild || isBrowserESMBuild || isBundlerESMBuild) &&
           !packageOptions.enableNonBrowserBranches,
         isGlobalBuild,
-        isNodeBuild
+        isNodeBuild,
+        isCompatBuild
       ),
       ...nodePlugins,
       ...plugins
@@ -188,7 +206,8 @@ function createReplacePlugin(
   isBrowserESMBuild,
   isBrowserBuild,
   isGlobalBuild,
-  isNodeBuild
+  isNodeBuild,
+  isCompatBuild
 ) {
   const replacements = {
     __COMMIT__: `"${process.env.COMMIT}"`,
@@ -207,6 +226,9 @@ function createReplacePlugin(
     __ESM_BROWSER__: isBrowserESMBuild,
     // is targeting Node (SSR)?
     __NODE_JS__: isNodeBuild,
+
+    // 2.x compat build
+    __COMPAT__: isCompatBuild,
 
     // feature flags
     __FEATURE_SUSPENSE__: true,
@@ -231,6 +253,7 @@ function createReplacePlugin(
     }
   })
   return replace({
+    // @ts-ignore
     values: replacements,
     preventAssignment: true
   })

@@ -15,6 +15,7 @@ import { trackSlotScopes, trackVForSlotScopes } from './transforms/vSlot'
 import { transformText } from './transforms/transformText'
 import { transformOnce } from './transforms/vOnce'
 import { transformModel } from './transforms/vModel'
+import { transformFilter } from './compat/transformFilter'
 import { defaultOnError, createCompilerError, ErrorCodes } from './errors'
 
 export type TransformPreset = [
@@ -30,6 +31,7 @@ export function getBaseTransformPreset(
       transformOnce,
       transformIf,
       transformFor,
+      ...(__COMPAT__ ? [transformFilter] : []),
       ...(!__BROWSER__ && prefixIdentifiers
         ? [
             // order is important

@@ -12,12 +12,12 @@ export interface DOMCompilerError extends CompilerError {
 export function createDOMCompilerError(
   code: DOMErrorCodes,
   loc?: SourceLocation
-): DOMCompilerError {
+) {
   return createCompilerError(
     code,
     loc,
     __DEV__ || !__BROWSER__ ? DOMErrorMessages : undefined
-  )
+  ) as DOMCompilerError
 }
 
 export const enum DOMErrorCodes {

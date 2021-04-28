@@ -76,7 +76,6 @@ import {
 import { createHydrationFunctions, RootHydrateFunction } from './hydration'
 import { invokeDirectiveHook } from './directives'
 import { startMeasure, endMeasure } from './profiling'
-import { ComponentPublicInstance } from './componentPublicInstance'
 import {
   devtoolsComponentAdded,
   devtoolsComponentRemoved,
@@ -85,6 +84,9 @@ import {
 } from './devtools'
 import { initFeatureFlags } from './featureFlags'
 import { isAsyncWrapper } from './apiAsyncComponent'
+import { isCompatEnabled } from './compat/compatConfig'
+import { DeprecationTypes } from './compat/compatConfig'
+import { registerLegacyRef } from './compat/ref'
 
 export interface Renderer<HostElement = RendererElement> {
   render: RootRenderFunction<HostElement>
@@ -307,7 +309,8 @@ export const setRef = (
   rawRef: VNodeNormalizedRef,
   oldRawRef: VNodeNormalizedRef | null,
   parentSuspense: SuspenseBoundary | null,
-  vnode: VNode | null
+  vnode: VNode,
+  isUnmount = false
 ) => {
   if (isArray(rawRef)) {
     rawRef.forEach((r, i) =>
@@ -315,25 +318,24 @@ export const setRef = (
         r,
         oldRawRef && (isArray(oldRawRef) ? oldRawRef[i] : oldRawRef),
         parentSuspense,
-        vnode
+        vnode,
+        isUnmount
       )
     )
     return
   }
 
-  let value: ComponentPublicInstance | RendererNode | Record<string, any> | null
-  if (!vnode) {
-    // means unmount
-    value = null
-  } else if (isAsyncWrapper(vnode)) {
+  if (isAsyncWrapper(vnode) && !isUnmount) {
     // when mounting async components, nothing needs to be done,
     // because the template ref is forwarded to inner component
     return
-  } else if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
-    value = vnode.component!.exposed || vnode.component!.proxy
-  } else {
-    value = vnode.el
   }
+
+  const refValue =
+    vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT
+      ? vnode.component!.exposed || vnode.component!.proxy
+      : vnode.el
+  const value = isUnmount ? null : refValue
 
   const { i: owner, r: ref } = rawRef
   if (__DEV__ && !owner) {
@@ -347,7 +349,7 @@ export const setRef = (
   const refs = owner.refs === EMPTY_OBJ ? (owner.refs = {}) : owner.refs
   const setupState = owner.setupState
 
-  // unset old ref
+  // dynamic ref changed. unset old ref
   if (oldRef != null && oldRef !== ref) {
     if (isString(oldRef)) {
       refs[oldRef] = null
@@ -361,7 +363,11 @@ export const setRef = (
 
   if (isString(ref)) {
     const doSet = () => {
-      refs[ref] = value
+      if (__COMPAT__ && isCompatEnabled(DeprecationTypes.V_FOR_REF, owner)) {
+        registerLegacyRef(refs, ref, refValue, owner, rawRef.f, isUnmount)
+      } else {
+        refs[ref] = value
+      }
       if (hasOwn(setupState, ref)) {
         setupState[ref] = value
       }
@@ -440,6 +446,9 @@ function baseCreateRenderer(
   options: RendererOptions,
   createHydrationFns?: typeof createHydrationFunctions
 ): any {
+  const isHookEventCompatEnabled =
+    __COMPAT__ && isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, null)
+
   // compile-time feature flags check
   if (__ESM_BUNDLER__ && !__TEST__) {
     initFeatureFlags()
@@ -579,7 +588,7 @@ function baseCreateRenderer(
 
     // set ref
     if (ref != null && parentComponent) {
-      setRef(ref, n1 && n1.ref, parentSuspense, n2)
+      setRef(ref, n1 && n1.ref, parentSuspense, n2 || n1, !n2)
     }
   }
 
@@ -1292,11 +1301,16 @@ function baseCreateRenderer(
     isSVG,
     optimized
   ) => {
-    const instance: ComponentInternalInstance = (initialVNode.component = createComponentInstance(
-      initialVNode,
-      parentComponent,
-      parentSuspense
-    ))
+    // 2.x compat may pre-creaate the component instance before actually
+    // mounting
+    const compatMountInstance = __COMPAT__ && initialVNode.component
+    const instance: ComponentInternalInstance =
+      compatMountInstance ||
+      (initialVNode.component = createComponentInstance(
+        initialVNode,
+        parentComponent,
+        parentSuspense
+      ))
 
     if (__DEV__ && instance.type.__hmrId) {
       registerHMR(instance)
@@ -1313,12 +1327,14 @@ function baseCreateRenderer(
     }
 
     // resolve props and slots for setup context
-    if (__DEV__) {
-      startMeasure(instance, `init`)
-    }
-    setupComponent(instance)
-    if (__DEV__) {
-      endMeasure(instance, `init`)
+    if (!(__COMPAT__ && compatMountInstance)) {
+      if (__DEV__) {
+        startMeasure(instance, `init`)
+      }
+      setupComponent(instance)
+      if (__DEV__) {
+        endMeasure(instance, `init`)
+      }
     }
 
     // setup() is async. This component relies on async logic to be resolved
@@ -1410,6 +1426,9 @@ function baseCreateRenderer(
         if ((vnodeHook = props && props.onVnodeBeforeMount)) {
           invokeVNodeHook(vnodeHook, parent, initialVNode)
         }
+        if (__COMPAT__ && isHookEventCompatEnabled) {
+          instance.emit('hook:beforeMount')
+        }
 
         // render
         if (__DEV__) {
@@ -1460,19 +1479,29 @@ function baseCreateRenderer(
         // onVnodeMounted
         if ((vnodeHook = props && props.onVnodeMounted)) {
           const scopedInitialVNode = initialVNode
-          queuePostRenderEffect(() => {
-            invokeVNodeHook(vnodeHook!, parent, scopedInitialVNode)
-          }, parentSuspense)
+          queuePostRenderEffect(
+            () => invokeVNodeHook(vnodeHook!, parent, scopedInitialVNode),
+            parentSuspense
+          )
         }
+        if (__COMPAT__ && isHookEventCompatEnabled) {
+          queuePostRenderEffect(
+            () => instance.emit('hook:mounted'),
+            parentSuspense
+          )
+        }
+
         // activated hook for keep-alive roots.
         // #1742 activated hook must be accessed after first render
         // since the hook may be injected by a child keep-alive
-        const { a } = instance
-        if (
-          a &&
-          initialVNode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-        ) {
-          queuePostRenderEffect(a, parentSuspense)
+        if (initialVNode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
+          instance.a && queuePostRenderEffect(instance.a, parentSuspense)
+          if (__COMPAT__ && isHookEventCompatEnabled) {
+            queuePostRenderEffect(
+              () => instance.emit('hook:activated'),
+              parentSuspense
+            )
+          }
         }
         instance.isMounted = true
 
@@ -1507,6 +1536,9 @@ function baseCreateRenderer(
         // onVnodeBeforeUpdate
         if ((vnodeHook = next.props && next.props.onVnodeBeforeUpdate)) {
           invokeVNodeHook(vnodeHook, parent, next, vnode)
+        }
+        if (__COMPAT__ && isHookEventCompatEnabled) {
+          instance.emit('hook:beforeUpdate')
         }
 
         // render
@@ -1550,9 +1582,16 @@ function baseCreateRenderer(
         }
         // onVnodeUpdated
         if ((vnodeHook = next.props && next.props.onVnodeUpdated)) {
-          queuePostRenderEffect(() => {
-            invokeVNodeHook(vnodeHook!, parent, next!, vnode)
-          }, parentSuspense)
+          queuePostRenderEffect(
+            () => invokeVNodeHook(vnodeHook!, parent, next!, vnode),
+            parentSuspense
+          )
+        }
+        if (__COMPAT__ && isHookEventCompatEnabled) {
+          queuePostRenderEffect(
+            () => instance.emit('hook:updated'),
+            parentSuspense
+          )
         }
 
         if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
@@ -1564,6 +1603,11 @@ function baseCreateRenderer(
         }
       }
     }, __DEV__ ? createDevEffectOptions(instance) : prodEffectOptions)
+
+    if (__DEV__) {
+      // @ts-ignore
+      instance.update.ownerInstance = instance
+    }
   }
 
   const updateComponentPreRender = (
@@ -2073,7 +2117,7 @@ function baseCreateRenderer(
     } = vnode
     // unset ref
     if (ref != null) {
-      setRef(ref, null, parentSuspense, null)
+      setRef(ref, null, parentSuspense, vnode, true)
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
@@ -2204,10 +2248,15 @@ function baseCreateRenderer(
     }
 
     const { bum, effects, update, subTree, um } = instance
+
     // beforeUnmount hook
     if (bum) {
       invokeArrayFns(bum)
     }
+    if (__COMPAT__ && isHookEventCompatEnabled) {
+      instance.emit('hook:beforeDestroy')
+    }
+
     if (effects) {
       for (let i = 0; i < effects.length; i++) {
         stop(effects[i])
@@ -2222,6 +2271,12 @@ function baseCreateRenderer(
     // unmounted hook
     if (um) {
       queuePostRenderEffect(um, parentSuspense)
+    }
+    if (__COMPAT__ && isHookEventCompatEnabled) {
+      queuePostRenderEffect(
+        () => instance.emit('hook:destroyed'),
+        parentSuspense
+      )
     }
     queuePostRenderEffect(() => {
       instance.isUnmounted = true

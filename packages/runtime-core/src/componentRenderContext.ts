@@ -25,6 +25,10 @@ export function setCurrentRenderingInstance(
   const prev = currentRenderingInstance
   currentRenderingInstance = instance
   currentScopeId = (instance && instance.type.__scopeId) || null
+  // v2 pre-compiled components uses _scopeId instead of __scopeId
+  if (__COMPAT__ && !currentScopeId) {
+    currentScopeId = (instance && (instance.type as any)._scopeId) || null
+  }
   return prev
 }
 

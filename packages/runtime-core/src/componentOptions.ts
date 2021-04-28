@@ -65,6 +65,19 @@ import { warn } from './warning'
 import { VNodeChild } from './vnode'
 import { callWithAsyncErrorHandling } from './errorHandling'
 import { UnionToIntersection } from './helpers/typeUtils'
+import { deepMergeData } from './compat/data'
+import { DeprecationTypes } from './compat/compatConfig'
+import {
+  CompatConfig,
+  isCompatEnabled,
+  softAssertCompatEnabled
+} from './compat/compatConfig'
+import {
+  AssetTypes,
+  COMPONENTS,
+  DIRECTIVES,
+  FILTERS
+} from './helpers/resolveAssets'
 
 /**
  * Interface for declaring custom options.
@@ -137,6 +150,9 @@ export interface ComponentOptionsBase<
   expose?: string[]
   serverPrefetch?(): Promise<any>
 
+  // Runtime compiler only -----------------------------------------------------
+  compilerOptions?: RuntimeCompilerOptions
+
   // Internal ------------------------------------------------------------------
 
   /**
@@ -188,6 +204,16 @@ export interface ComponentOptionsBase<
   __isSuspense?: never
 
   __defaults?: Defaults
+}
+
+/**
+ * Subset of compiler options that makes sense for the runtime.
+ */
+export interface RuntimeCompilerOptions {
+  isCustomElement?: (tag: string) => boolean
+  whitespace?: 'preserve' | 'condense'
+  comments?: boolean
+  delimiters?: [string, string]
 }
 
 export type ComponentOptionsWithoutProps<
@@ -347,10 +373,11 @@ export type ExtractComputedReturns<T extends any> = {
     : T[key] extends (...args: any[]) => infer TReturn ? TReturn : never
 }
 
-type WatchOptionItem =
-  | string
-  | WatchCallback
-  | { handler: WatchCallback | string } & WatchOptions
+export type ObjectWatchOptionItem = {
+  handler: WatchCallback | string
+} & WatchOptions
+
+type WatchOptionItem = string | WatchCallback | ObjectWatchOptionItem
 
 type ComponentWatchOptionItem = WatchOptionItem | WatchOptionItem[]
 
@@ -371,6 +398,8 @@ interface LegacyOptions<
   Mixin extends ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin
 > {
+  compatConfig?: CompatConfig
+
   // allow any custom options
   [key: string]: any
 
@@ -404,6 +433,9 @@ interface LegacyOptions<
   provide?: Data | Function
   inject?: ComponentInjectOptions
 
+  // assets
+  filters?: Record<string, Function>
+
   // composition
   mixins?: Mixin[]
   extends?: Extends
@@ -427,7 +459,10 @@ interface LegacyOptions<
   renderTriggered?: DebuggerHook
   errorCaptured?: ErrorCapturedHook
 
-  // runtime compile only
+  /**
+   * runtime compile only
+   * @deprecated use `compilerOptions.delimiters` instead.
+   */
   delimiters?: [string, string]
 
   /**
@@ -490,6 +525,10 @@ export function applyOptions(
   deferredProvide: (Data | Function)[] = [],
   asMixin: boolean = false
 ) {
+  if (__COMPAT__ && isFunction(options)) {
+    options = options.options
+  }
+
   const {
     // composition
     mixins,
@@ -501,9 +540,6 @@ export function applyOptions(
     watch: watchOptions,
     provide: provideOptions,
     inject: injectOptions,
-    // assets
-    components,
-    directives,
     // lifecycle
     beforeMount,
     mounted,
@@ -588,31 +624,7 @@ export function applyOptions(
   // - watch (deferred since it relies on `this` access)
 
   if (injectOptions) {
-    if (isArray(injectOptions)) {
-      for (let i = 0; i < injectOptions.length; i++) {
-        const key = injectOptions[i]
-        ctx[key] = inject(key)
-        if (__DEV__) {
-          checkDuplicateProperties!(OptionTypes.INJECT, key)
-        }
-      }
-    } else {
-      for (const key in injectOptions) {
-        const opt = injectOptions[key]
-        if (isObject(opt)) {
-          ctx[key] = inject(
-            opt.from || key,
-            opt.default,
-            true /* treat default function as factory */
-          )
-        } else {
-          ctx[key] = inject(opt)
-        }
-        if (__DEV__) {
-          checkDuplicateProperties!(OptionTypes.INJECT, key)
-        }
-      }
-    }
+    resolveInjections(injectOptions, ctx, checkDuplicateProperties)
   }
 
   if (methods) {
@@ -736,25 +748,10 @@ export function applyOptions(
   // To reduce memory usage, only components with mixins or extends will have
   // resolved asset registry attached to instance.
   if (asMixin) {
-    if (components) {
-      extend(
-        instance.components ||
-          (instance.components = extend(
-            {},
-            (instance.type as ComponentOptions).components
-          ) as Record<string, ConcreteComponent>),
-        components
-      )
-    }
-    if (directives) {
-      extend(
-        instance.directives ||
-          (instance.directives = extend(
-            {},
-            (instance.type as ComponentOptions).directives
-          )),
-        directives
-      )
+    resolveInstanceAssets(instance, options, COMPONENTS)
+    resolveInstanceAssets(instance, options, DIRECTIVES)
+    if (__COMPAT__ && isCompatEnabled(DeprecationTypes.FILTERS, instance)) {
+      resolveInstanceAssets(instance, options, FILTERS)
     }
   }
 
@@ -795,17 +792,26 @@ export function applyOptions(
   if (renderTriggered) {
     onRenderTriggered(renderTriggered.bind(publicThis))
   }
-  if (__DEV__ && beforeDestroy) {
-    warn(`\`beforeDestroy\` has been renamed to \`beforeUnmount\`.`)
-  }
   if (beforeUnmount) {
     onBeforeUnmount(beforeUnmount.bind(publicThis))
   }
-  if (__DEV__ && destroyed) {
-    warn(`\`destroyed\` has been renamed to \`unmounted\`.`)
-  }
   if (unmounted) {
     onUnmounted(unmounted.bind(publicThis))
+  }
+
+  if (__COMPAT__) {
+    if (
+      beforeDestroy &&
+      softAssertCompatEnabled(DeprecationTypes.OPTIONS_BEFORE_DESTROY, instance)
+    ) {
+      onBeforeUnmount(beforeDestroy.bind(publicThis))
+    }
+    if (
+      destroyed &&
+      softAssertCompatEnabled(DeprecationTypes.OPTIONS_DESTROYED, instance)
+    ) {
+      onUnmounted(destroyed.bind(publicThis))
+    }
   }
 
   if (isArray(expose)) {
@@ -820,6 +826,55 @@ export function applyOptions(
       }
     } else if (__DEV__) {
       warn(`The \`expose\` option is ignored when used in mixins.`)
+    }
+  }
+}
+
+function resolveInstanceAssets(
+  instance: ComponentInternalInstance,
+  mixin: ComponentOptions,
+  type: AssetTypes
+) {
+  if (mixin[type]) {
+    extend(
+      instance[type] ||
+        (instance[type] = extend(
+          {},
+          (instance.type as ComponentOptions)[type]
+        ) as any),
+      mixin[type]
+    )
+  }
+}
+
+export function resolveInjections(
+  injectOptions: ComponentInjectOptions,
+  ctx: any,
+  checkDuplicateProperties = NOOP as any
+) {
+  if (isArray(injectOptions)) {
+    for (let i = 0; i < injectOptions.length; i++) {
+      const key = injectOptions[i]
+      ctx[key] = inject(key)
+      if (__DEV__) {
+        checkDuplicateProperties!(OptionTypes.INJECT, key)
+      }
+    }
+  } else {
+    for (const key in injectOptions) {
+      const opt = injectOptions[key]
+      if (isObject(opt)) {
+        ctx[key] = inject(
+          opt.from || key,
+          opt.default,
+          true /* treat default function as factory */
+        )
+      } else {
+        ctx[key] = inject(opt)
+      }
+      if (__DEV__) {
+        checkDuplicateProperties!(OptionTypes.INJECT, key)
+      }
     }
   }
 }
@@ -854,7 +909,13 @@ function callHookWithMixinAndExtends(
     }
   }
   if (selfHook) {
-    callWithAsyncErrorHandling(selfHook.bind(instance.proxy!), instance, type)
+    callWithAsyncErrorHandling(
+      __COMPAT__ && isArray(selfHook)
+        ? selfHook.map(h => h.bind(instance.proxy!))
+        : selfHook.bind(instance.proxy!),
+      instance,
+      type
+    )
   }
 }
 
@@ -904,11 +965,18 @@ function resolveData(
     instance.data = reactive(data)
   } else {
     // existing data: this is a mixin or extends.
-    extend(instance.data, data)
+    if (
+      __COMPAT__ &&
+      isCompatEnabled(DeprecationTypes.OPTIONS_DATA_MERGE, instance)
+    ) {
+      deepMergeData(instance.data, data, instance)
+    } else {
+      extend(instance.data, data)
+    }
   }
 }
 
-function createWatcher(
+export function createWatcher(
   raw: ComponentWatchOptionItem,
   ctx: Data,
   publicThis: ComponentPublicInstance,
@@ -958,19 +1026,30 @@ export function resolveMergedOptions(
   return (raw.__merged = options)
 }
 
-function mergeOptions(to: any, from: any, instance: ComponentInternalInstance) {
-  const strats = instance.appContext.config.optionMergeStrategies
+export function mergeOptions(
+  to: any,
+  from: any,
+  instance?: ComponentInternalInstance | null,
+  strats = instance && instance.appContext.config.optionMergeStrategies
+) {
+  if (__COMPAT__ && isFunction(from)) {
+    from = from.options
+  }
+
   const { mixins, extends: extendsOptions } = from
 
-  extendsOptions && mergeOptions(to, extendsOptions, instance)
+  extendsOptions && mergeOptions(to, extendsOptions, instance, strats)
   mixins &&
-    mixins.forEach((m: ComponentOptionsMixin) => mergeOptions(to, m, instance))
+    mixins.forEach((m: ComponentOptionsMixin) =>
+      mergeOptions(to, m, instance, strats)
+    )
 
   for (const key in from) {
     if (strats && hasOwn(strats, key)) {
-      to[key] = strats[key](to[key], from[key], instance.proxy, key)
+      to[key] = strats[key](to[key], from[key], instance && instance.proxy, key)
     } else {
       to[key] = from[key]
     }
   }
+  return to
 }

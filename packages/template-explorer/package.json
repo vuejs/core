@@ -6,6 +6,7 @@
     "formats": [
       "global"
     ],
+    "compat": true,
     "env": "development",
     "enableNonBrowserBranches": true
   },

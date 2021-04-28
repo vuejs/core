@@ -10,8 +10,11 @@ import { camelize, capitalize, isString } from '@vue/shared'
 import { warn } from '../warning'
 import { VNodeTypes } from '../vnode'
 
-const COMPONENTS = 'components'
-const DIRECTIVES = 'directives'
+export const COMPONENTS = 'components'
+export const DIRECTIVES = 'directives'
+export const FILTERS = 'filters'
+
+export type AssetTypes = typeof COMPONENTS | typeof DIRECTIVES | typeof FILTERS
 
 /**
  * @private
@@ -45,6 +48,14 @@ export function resolveDirective(name: string): Directive | undefined {
 }
 
 /**
+ * v2 compat only
+ * @internal
+ */
+export function resolveFilter(name: string): Function | undefined {
+  return resolveAsset(FILTERS, name)
+}
+
+/**
  * @private
  * overload 1: components
  */
@@ -60,8 +71,11 @@ function resolveAsset(
   name: string
 ): Directive | undefined
 // implementation
+// overload 3: filters (compat only)
+function resolveAsset(type: typeof FILTERS, name: string): Function | undefined
+// implementation
 function resolveAsset(
-  type: typeof COMPONENTS | typeof DIRECTIVES,
+  type: AssetTypes,
   name: string,
   warnMissing = true,
   maybeSelfReference = false
