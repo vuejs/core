@@ -28,7 +28,7 @@ This is the repository for Vue 3.0.
 
 Please consult the [Migration Guide](https://v3.vuejs.org/guide/migration/introduction.html).
 
-- Note: IE11 support is still pending.
+Also note: Vue 3 does not support IE11 ([RFC](https://github.com/vuejs/rfcs/blob/master/active-rfcs/0038-vue3-ie11-support.md) | [Discussion](https://github.com/vuejs/rfcs/discussions/296)).
 
 ## Supporting Libraries
 
