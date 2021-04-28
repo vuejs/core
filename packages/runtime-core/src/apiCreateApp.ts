@@ -134,9 +134,7 @@ export function createAppContext(): AppContext {
       optionMergeStrategies: {},
       errorHandler: undefined,
       warnHandler: undefined,
-      compilerOptions: {
-        isCustomElement: NO
-      }
+      compilerOptions: {}
     },
     mixins: [],
     components: {},
