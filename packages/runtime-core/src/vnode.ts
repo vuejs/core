@@ -588,7 +588,7 @@ export function normalizeVNode(child: VNodeChild): VNode {
       Fragment,
       null,
       // #3666, avoid reference pollution when reusing vnode
-      child.map(c => c)
+      child.slice()
     )
   } else if (typeof child === 'object') {
     // already vnode, this should be the most common since compiled templates
