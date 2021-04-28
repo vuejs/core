@@ -446,9 +446,6 @@ function baseCreateRenderer(
   options: RendererOptions,
   createHydrationFns?: typeof createHydrationFunctions
 ): any {
-  const isHookEventCompatEnabled =
-    __COMPAT__ && isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, null)
-
   // compile-time feature flags check
   if (__ESM_BUNDLER__ && !__TEST__) {
     initFeatureFlags()
@@ -1426,7 +1423,10 @@ function baseCreateRenderer(
         if ((vnodeHook = props && props.onVnodeBeforeMount)) {
           invokeVNodeHook(vnodeHook, parent, initialVNode)
         }
-        if (__COMPAT__ && isHookEventCompatEnabled) {
+        if (
+          __COMPAT__ &&
+          isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
+        ) {
           instance.emit('hook:beforeMount')
         }
 
@@ -1484,7 +1484,10 @@ function baseCreateRenderer(
             parentSuspense
           )
         }
-        if (__COMPAT__ && isHookEventCompatEnabled) {
+        if (
+          __COMPAT__ &&
+          isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
+        ) {
           queuePostRenderEffect(
             () => instance.emit('hook:mounted'),
             parentSuspense
@@ -1496,7 +1499,10 @@ function baseCreateRenderer(
         // since the hook may be injected by a child keep-alive
         if (initialVNode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
           instance.a && queuePostRenderEffect(instance.a, parentSuspense)
-          if (__COMPAT__ && isHookEventCompatEnabled) {
+          if (
+            __COMPAT__ &&
+            isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
+          ) {
             queuePostRenderEffect(
               () => instance.emit('hook:activated'),
               parentSuspense
@@ -1537,7 +1543,10 @@ function baseCreateRenderer(
         if ((vnodeHook = next.props && next.props.onVnodeBeforeUpdate)) {
           invokeVNodeHook(vnodeHook, parent, next, vnode)
         }
-        if (__COMPAT__ && isHookEventCompatEnabled) {
+        if (
+          __COMPAT__ &&
+          isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
+        ) {
           instance.emit('hook:beforeUpdate')
         }
 
@@ -1587,7 +1596,10 @@ function baseCreateRenderer(
             parentSuspense
           )
         }
-        if (__COMPAT__ && isHookEventCompatEnabled) {
+        if (
+          __COMPAT__ &&
+          isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
+        ) {
           queuePostRenderEffect(
             () => instance.emit('hook:updated'),
             parentSuspense
@@ -2253,7 +2265,10 @@ function baseCreateRenderer(
     if (bum) {
       invokeArrayFns(bum)
     }
-    if (__COMPAT__ && isHookEventCompatEnabled) {
+    if (
+      __COMPAT__ &&
+      isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
+    ) {
       instance.emit('hook:beforeDestroy')
     }
 
@@ -2272,7 +2287,10 @@ function baseCreateRenderer(
     if (um) {
       queuePostRenderEffect(um, parentSuspense)
     }
-    if (__COMPAT__ && isHookEventCompatEnabled) {
+    if (
+      __COMPAT__ &&
+      isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
+    ) {
       queuePostRenderEffect(
         () => instance.emit('hook:destroyed'),
         parentSuspense

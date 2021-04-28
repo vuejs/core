@@ -230,7 +230,8 @@ export const deprecationData: Record<DeprecationTypes, DeprecationData> = {
 
   [DeprecationTypes.INSTANCE_ATTRS_CLASS_STYLE]: {
     message: componentName =>
-      `Component <${componentName}> has \`inheritAttrs: false\` but is ` +
+      `Component <${componentName ||
+        'Anonymous'}> has \`inheritAttrs: false\` but is ` +
       `relying on class/style fallthrough from parent. In Vue 3, class/style ` +
       `are now included in $attrs and will no longer fallthrough when ` +
       `inheritAttrs is false. If you are already using v-bind="$attrs" on ` +

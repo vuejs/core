@@ -36,7 +36,7 @@ import {
 } from '../component'
 import { RenderFunction, mergeOptions } from '../componentOptions'
 import { ComponentPublicInstance } from '../componentPublicInstance'
-import { devtoolsInitApp } from '../devtools'
+import { devtoolsInitApp, devtoolsUnmountApp } from '../devtools'
 import { Directive } from '../directives'
 import { nextTick } from '../scheduler'
 import { version } from '..'
@@ -456,7 +456,17 @@ export function installCompatMount(
       return instance.proxy!
     }
 
-    instance.ctx._compat_destroy = app.unmount
+    instance.ctx._compat_destroy = () => {
+      if (isMounted) {
+        render(null, app._container)
+        if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+          devtoolsUnmountApp(app)
+        }
+        delete app._container.__vue_app__
+      } else if (__DEV__) {
+        warn(`Cannot unmount an app that is not mounted.`)
+      }
+    }
 
     return instance.proxy!
   }

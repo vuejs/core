@@ -61,13 +61,13 @@ export function once(
 
 export function off(
   instance: ComponentInternalInstance,
-  event?: string,
+  event?: string | string[],
   fn?: Function
 ) {
   assertCompatEnabled(DeprecationTypes.INSTANCE_EVENT_EMITTER, instance)
   const vm = instance.proxy
   // all
-  if (!arguments.length) {
+  if (!event) {
     eventRegistryMap.set(instance, Object.create(null))
     return vm
   }
@@ -93,12 +93,12 @@ export function off(
 export function emit(
   instance: ComponentInternalInstance,
   event: string,
-  ...args: any[]
+  args: any[]
 ) {
   const cbs = getRegistry(instance)[event]
   if (cbs) {
     callWithAsyncErrorHandling(
-      cbs,
+      cbs.map(cb => cb.bind(instance.proxy)),
       instance,
       ErrorCodes.COMPONENT_EVENT_HANDLER,
       args

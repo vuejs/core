@@ -49,7 +49,7 @@ export interface LegacyPublicProperties {
   $scopedSlots: Slots
   $on(event: string | string[], fn: Function): this
   $once(event: string, fn: Function): this
-  $off(event?: string, fn?: Function): this
+  $off(event?: string | string[], fn?: Function): this
   $children: LegacyPublicProperties[]
   $listeners: Record<string, Function | Function[]>
 }
