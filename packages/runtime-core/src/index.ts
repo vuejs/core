@@ -22,7 +22,8 @@ export {
   shallowReactive,
   shallowReadonly,
   markRaw,
-  toRaw
+  toRaw,
+  ComputedGetter
 } from '@vue/reactivity'
 export { computed } from './apiComputed'
 export { watch, watchEffect } from './apiWatch'
