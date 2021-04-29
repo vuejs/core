@@ -19,7 +19,7 @@ import {
 import { off, on, once } from './instanceEventEmitter'
 import { getCompatListeners } from './instanceListeners'
 import { shallowReadonly } from '@vue/reactivity'
-import { legacySlotProxyHandlers } from './component'
+import { legacySlotProxyHandlers } from './componentFunctional'
 import { compatH } from './renderFn'
 import { createCommentVNode, createTextVNode } from '../vnode'
 import { renderList } from '../helpers/renderList'
