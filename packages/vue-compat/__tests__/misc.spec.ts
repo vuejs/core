@@ -1,10 +1,10 @@
 import Vue from '@vue/compat'
-import { nextTick } from '../../scheduler'
+import { nextTick } from '../../runtime-core/src/scheduler'
 import {
   DeprecationTypes,
   deprecationData,
   toggleDeprecationWarning
-} from '../compatConfig'
+} from '../../runtime-core/src/compat/compatConfig'
 import { triggerEvent } from './utils'
 
 beforeEach(() => {

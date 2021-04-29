@@ -1,5 +1,5 @@
 import Vue from '@vue/compat'
-import { toggleDeprecationWarning } from '../compatConfig'
+import { toggleDeprecationWarning } from '../../runtime-core/src/compat/compatConfig'
 import { triggerEvent } from './utils'
 
 beforeEach(() => {

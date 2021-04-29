@@ -1,12 +1,12 @@
 import Vue from '@vue/compat'
-import { Slots } from '../../componentSlots'
-import { Text } from '../../vnode'
+import { Slots } from '../../runtime-core/src/componentSlots'
+import { Text } from '../../runtime-core/src/vnode'
 import {
   DeprecationTypes,
   deprecationData,
   toggleDeprecationWarning
-} from '../compatConfig'
-import { LegacyPublicInstance } from '../instance'
+} from '../../runtime-core/src/compat/compatConfig'
+import { LegacyPublicInstance } from '../../runtime-core/src/compat/instance'
 
 beforeEach(() => {
   toggleDeprecationWarning(true)

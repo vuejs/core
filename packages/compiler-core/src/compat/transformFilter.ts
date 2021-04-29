@@ -158,14 +158,13 @@ function parseFilter(node: SimpleExpressionNode, context: TransformContext) {
     lastFilterIndex = i + 1
   }
 
-  if (
-    filters.length &&
-    warnDeprecation(
-      CompilerDeprecationTypes.COMPILER_FILTERS,
-      context,
-      node.loc
-    )
-  ) {
+  if (filters.length) {
+    __DEV__ &&
+      warnDeprecation(
+        CompilerDeprecationTypes.COMPILER_FILTERS,
+        context,
+        node.loc
+      )
     for (i = 0; i < filters.length; i++) {
       expression = wrapFilter(expression, filters[i], context)
     }

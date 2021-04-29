@@ -3,7 +3,7 @@ import {
   DeprecationTypes,
   deprecationData,
   toggleDeprecationWarning
-} from '../compatConfig'
+} from '../../runtime-core/src/compat/compatConfig'
 
 beforeEach(() => {
   toggleDeprecationWarning(true)

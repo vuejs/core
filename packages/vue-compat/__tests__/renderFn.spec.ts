@@ -1,9 +1,28 @@
-import { ShapeFlags } from '@vue/shared/src'
-import { createComponentInstance } from '../../component'
-import { setCurrentRenderingInstance } from '../../componentRenderContext'
-import { DirectiveBinding } from '../../directives'
-import { createVNode } from '../../vnode'
-import { compatH as h } from '../renderFn'
+import { ShapeFlags } from '@vue/shared'
+import Vue from '@vue/compat'
+import { createComponentInstance } from '../../runtime-core/src/component'
+import { setCurrentRenderingInstance } from '../../runtime-core/src/componentRenderContext'
+import { DirectiveBinding } from '../../runtime-core/src/directives'
+import { createVNode } from '../../runtime-core/src/vnode'
+import {
+  deprecationData,
+  DeprecationTypes,
+  toggleDeprecationWarning
+} from '../../runtime-core/src/compat/compatConfig'
+import { compatH as h } from '../../runtime-core/src/compat/renderFn'
+
+beforeEach(() => {
+  toggleDeprecationWarning(false)
+  Vue.configureCompat({
+    MODE: 2,
+    GLOBAL_MOUNT: 'suppress-warning'
+  })
+})
+
+afterEach(() => {
+  toggleDeprecationWarning(false)
+  Vue.configureCompat({ MODE: 3 })
+})
 
 describe('compat: render function', () => {
   const mockDir = {}
@@ -174,5 +193,27 @@ describe('compat: render function', () => {
       { children: 'three' }
     ])
     expect(slots.bar()).toMatchObject([{ children: 'two' }])
+  })
+
+  test('in component usage', () => {
+    toggleDeprecationWarning(true)
+
+    const vm = new Vue({
+      render(h: any) {
+        return h(
+          'div',
+          {
+            class: 'foo',
+            attrs: { id: 'bar' }
+          },
+          'hello'
+        )
+      }
+    }).$mount()
+
+    expect(vm.$el.outerHTML).toBe(`<div class="foo" id="bar">hello</div>`)
+    expect(
+      deprecationData[DeprecationTypes.RENDER_FUNCTION].message
+    ).toHaveBeenWarned()
   })
 })
