@@ -32,13 +32,13 @@ export function mapCompatDirectiveHook(
   if (mappedName) {
     if (isArray(mappedName)) {
       const hook: DirectiveHook[] = []
-      mappedName.forEach(name => {
-        const mappedHook = dir[name]
+      mappedName.forEach(mapped => {
+        const mappedHook = dir[mapped]
         if (mappedHook) {
           softAssertCompatEnabled(
             DeprecationTypes.CUSTOM_DIR,
             instance,
-            mappedName,
+            mapped,
             name
           )
           hook.push(mappedHook)

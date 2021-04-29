@@ -1,4 +1,9 @@
-import { isSpecialBooleanAttr } from '@vue/shared'
+import { isSpecialBooleanAttr, makeMap, NOOP } from '@vue/shared'
+import {
+  compatUtils,
+  ComponentInternalInstance,
+  DeprecationTypes
+} from '@vue/runtime-core'
 
 export const xlinkNS = 'http://www.w3.org/1999/xlink'
 
@@ -6,7 +11,8 @@ export function patchAttr(
   el: Element,
   key: string,
   value: any,
-  isSVG: boolean
+  isSVG: boolean,
+  instance?: ComponentInternalInstance | null
 ) {
   if (isSVG && key.startsWith('xlink:')) {
     if (value == null) {
@@ -15,7 +21,7 @@ export function patchAttr(
       el.setAttributeNS(xlinkNS, key, value)
     }
   } else {
-    if (__COMPAT__ && compatCoerceAttr(el, key, value)) {
+    if (__COMPAT__ && compatCoerceAttr(el, key, value, instance)) {
       return
     }
 
@@ -31,9 +37,6 @@ export function patchAttr(
 }
 
 // 2.x compat
-import { makeMap, NOOP } from '@vue/shared'
-import { compatUtils, DeprecationTypes } from '@vue/runtime-core'
-
 const isEnumeratedAttr = __COMPAT__
   ? /*#__PURE__*/ makeMap('contenteditable,draggable,spellcheck')
   : NOOP
@@ -41,7 +44,8 @@ const isEnumeratedAttr = __COMPAT__
 export function compatCoerceAttr(
   el: Element,
   key: string,
-  value: unknown
+  value: unknown,
+  instance: ComponentInternalInstance | null = null
 ): boolean {
   if (isEnumeratedAttr(key)) {
     const v2CocercedValue =
@@ -54,7 +58,7 @@ export function compatCoerceAttr(
       v2CocercedValue &&
       compatUtils.softAssertCompatEnabled(
         DeprecationTypes.ATTR_ENUMERATED_COERSION,
-        null,
+        instance,
         key,
         value,
         v2CocercedValue
@@ -68,7 +72,7 @@ export function compatCoerceAttr(
     !isSpecialBooleanAttr(key) &&
     compatUtils.softAssertCompatEnabled(
       DeprecationTypes.ATTR_FALSE_VALUE,
-      null,
+      instance,
       key
     )
   ) {
