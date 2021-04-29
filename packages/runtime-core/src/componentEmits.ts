@@ -22,7 +22,10 @@ import { UnionToIntersection } from './helpers/typeUtils'
 import { devtoolsComponentEmit } from './devtools'
 import { AppContext } from './apiCreateApp'
 import { emit as compatInstanceEmit } from './compat/instanceEventEmitter'
-import { compatModelEventPrefix, compatModelEmit } from './compat/vModel'
+import {
+  compatModelEventPrefix,
+  compatModelEmit
+} from './compat/componentVModel'
 
 export type ObjectEmitsOptions = Record<
   string,

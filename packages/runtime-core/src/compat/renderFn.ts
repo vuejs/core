@@ -37,7 +37,7 @@ import {
   DeprecationTypes,
   isCompatEnabled
 } from './compatConfig'
-import { compatModelEventPrefix } from './vModel'
+import { compatModelEventPrefix } from './componentVModel'
 
 const v3CompiledRenderFnRE = /^(?:function \w+)?\(_ctx, _cache/
 

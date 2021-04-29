@@ -1,5 +1,6 @@
 import Vue from '@vue/compat'
 import { toggleDeprecationWarning } from '../compatConfig'
+import { triggerEvent } from './utils'
 
 beforeEach(() => {
   toggleDeprecationWarning(false)
@@ -10,18 +11,6 @@ afterEach(() => {
   Vue.configureCompat({ MODE: 3 })
   toggleDeprecationWarning(false)
 })
-
-function triggerEvent(
-  target: Element,
-  event: string,
-  process?: (e: any) => any
-) {
-  const e = document.createEvent('HTMLEvents')
-  e.initEvent(event, true, true)
-  if (process) process(e)
-  target.dispatchEvent(e)
-  return e
-}
 
 // only testing config options that affect runtime behavior.
 

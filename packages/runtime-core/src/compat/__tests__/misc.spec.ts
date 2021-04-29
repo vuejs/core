@@ -5,6 +5,7 @@ import {
   deprecationData,
   toggleDeprecationWarning
 } from '../compatConfig'
+import { triggerEvent } from './utils'
 
 beforeEach(() => {
   toggleDeprecationWarning(true)
@@ -18,18 +19,6 @@ afterEach(() => {
   toggleDeprecationWarning(false)
   Vue.configureCompat({ MODE: 3 })
 })
-
-function triggerEvent(
-  target: Element,
-  event: string,
-  process?: (e: any) => any
-) {
-  const e = document.createEvent('HTMLEvents')
-  e.initEvent(event, true, true)
-  if (process) process(e)
-  target.dispatchEvent(e)
-  return e
-}
 
 test('WATCH_ARRAY', async () => {
   const spy = jest.fn()
