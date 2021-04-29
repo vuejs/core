@@ -22,7 +22,7 @@ export {
   shallowReactive,
   shallowReadonly,
   markRaw,
-  toRaw,
+  toRaw
 } from '@vue/reactivity'
 export { computed } from './apiComputed'
 export { watch, watchEffect } from './apiWatch'
@@ -37,7 +37,7 @@ export {
   onDeactivated,
   onRenderTracked,
   onRenderTriggered,
-  onErrorCaptured,
+  onErrorCaptured
 } from './apiLifecycle'
 export { provide, inject } from './apiInject'
 export { nextTick } from './scheduler'
@@ -63,7 +63,7 @@ export { Suspense, SuspenseProps } from './components/Suspense'
 export { KeepAlive, KeepAliveProps } from './components/KeepAlive'
 export {
   BaseTransition,
-  BaseTransitionProps,
+  BaseTransitionProps
 } from './components/BaseTransition'
 // For using custom directives
 export { withDirectives } from './directives'
@@ -79,12 +79,12 @@ export {
   handleError,
   callWithErrorHandling,
   callWithAsyncErrorHandling,
-  ErrorCodes,
+  ErrorCodes
 } from './errorHandling'
 export {
   resolveComponent,
   resolveDirective,
-  resolveDynamicComponent,
+  resolveDynamicComponent
 } from './helpers/resolveAssets'
 // For integration with runtime compiler
 export { registerRuntimeCompiler, isRuntimeOnly } from './component'
@@ -92,7 +92,7 @@ export {
   useTransitionState,
   resolveTransitionHooks,
   setTransitionHooks,
-  getTransitionRawChildren,
+  getTransitionRawChildren
 } from './components/BaseTransition'
 export { initCustomFormatter } from './customFormatter'
 
@@ -132,7 +132,7 @@ export {
   WritableComputedOptions,
   ToRefs,
   DeepReadonly,
-  ComputedGetter,
+  ComputedGetter
 } from '@vue/reactivity'
 export {
   // types
@@ -141,7 +141,7 @@ export {
   WatchOptionsBase,
   WatchCallback,
   WatchSource,
-  WatchStopHandle,
+  WatchStopHandle
 } from './apiWatch'
 export { InjectionKey } from './apiInject'
 export {
@@ -150,7 +150,7 @@ export {
   AppContext,
   Plugin,
   CreateAppFunction,
-  OptionMergeFunction,
+  OptionMergeFunction
 } from './apiCreateApp'
 export {
   VNode,
@@ -158,7 +158,7 @@ export {
   VNodeTypes,
   VNodeProps,
   VNodeArrayChildren,
-  VNodeNormalizedChildren,
+  VNodeNormalizedChildren
 } from './vnode'
 export {
   Component,
@@ -167,7 +167,7 @@ export {
   ComponentInternalInstance,
   SetupContext,
   ComponentCustomProps,
-  AllowedComponentProps,
+  AllowedComponentProps
 } from './component'
 export { DefineComponent } from './apiDefineComponent'
 export {
@@ -181,12 +181,12 @@ export {
   RenderFunction,
   MethodOptions,
   ComputedOptions,
-  RuntimeCompilerOptions,
+  RuntimeCompilerOptions
 } from './componentOptions'
 export { EmitsOptions, ObjectEmitsOptions } from './componentEmits'
 export {
   ComponentPublicInstance,
-  ComponentCustomProperties,
+  ComponentCustomProperties
 } from './componentPublicInstance'
 export {
   Renderer,
@@ -194,7 +194,7 @@ export {
   RendererElement,
   HydrationRenderer,
   RendererOptions,
-  RootRenderFunction,
+  RootRenderFunction
 } from './renderer'
 export { RootHydrateFunction } from './hydration'
 export { Slot, Slots } from './componentSlots'
@@ -204,7 +204,7 @@ export {
   ComponentPropsOptions,
   ComponentObjectPropsOptions,
   ExtractPropTypes,
-  ExtractDefaultPropTypes,
+  ExtractDefaultPropTypes
 } from './componentProps'
 export {
   Directive,
@@ -212,13 +212,13 @@ export {
   DirectiveHook,
   ObjectDirective,
   FunctionDirective,
-  DirectiveArguments,
+  DirectiveArguments
 } from './directives'
 export { SuspenseBoundary } from './components/Suspense'
 export { TransitionState, TransitionHooks } from './components/BaseTransition'
 export {
   AsyncComponentOptions,
-  AsyncComponentLoader,
+  AsyncComponentLoader
 } from './apiAsyncComponent'
 export { HMRRuntime } from './hmr'
 
@@ -233,7 +233,7 @@ export {
   withCtx,
   pushScopeId,
   popScopeId,
-  withScopeId,
+  withScopeId
 } from './componentRenderContext'
 export { renderList } from './helpers/renderList'
 export { toHandlers } from './helpers/toHandlers'
@@ -245,13 +245,13 @@ export {
   setBlockTracking,
   createTextVNode,
   createCommentVNode,
-  createStaticVNode,
+  createStaticVNode
 } from './vnode'
 export {
   toDisplayString,
   camelize,
   capitalize,
-  toHandlerKey,
+  toHandlerKey
 } from '@vue/shared'
 
 // For test-utils
@@ -273,7 +273,7 @@ const _ssrUtils = {
   renderComponentRoot,
   setCurrentRenderingInstance,
   isVNode,
-  normalizeVNode,
+  normalizeVNode
 }
 
 /**
@@ -293,7 +293,7 @@ import { createCompatVue } from './compat/global'
 import {
   isCompatEnabled,
   checkCompatEnabled,
-  softAssertCompatEnabled,
+  softAssertCompatEnabled
 } from './compat/compatConfig'
 import { resolveFilter as _resolveFilter } from './helpers/resolveAssets'
 
@@ -307,7 +307,7 @@ const _compatUtils = {
   createCompatVue,
   isCompatEnabled,
   checkCompatEnabled,
-  softAssertCompatEnabled,
+  softAssertCompatEnabled
 }
 
 /**
