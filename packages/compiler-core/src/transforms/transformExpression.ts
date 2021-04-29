@@ -112,7 +112,10 @@ export function processExpression(
 
   const { inline, bindingMetadata } = context
   const rewriteIdentifier = (raw: string, parent?: Node, id?: Identifier) => {
-    const type = hasOwn(bindingMetadata, raw) && bindingMetadata[raw]
+    const type =
+      bindingMetadata.__isScriptSetup !== false &&
+      hasOwn(bindingMetadata, raw) &&
+      bindingMetadata[raw]
     if (inline) {
       // x = y
       const isAssignmentLVal =
