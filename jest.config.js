@@ -30,7 +30,9 @@ module.exports = {
     // only called in browsers
     '!packages/vue/src/devCheck.ts',
     // only used as a build entry
-    '!packages/vue/src/runtime.ts'
+    '!packages/vue/src/runtime.ts',
+    // mostly just entries
+    '!packages/vue-compat/**'
   ],
   watchPathIgnorePatterns: ['/node_modules/', '/dist/', '/.git/'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'json'],
