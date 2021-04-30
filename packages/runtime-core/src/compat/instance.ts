@@ -114,6 +114,7 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
     $listeners: getCompatListeners
   } as PublicPropertiesMap)
 
+  /* istanbul ignore if */
   if (isCompatEnabled(DeprecationTypes.PRIVATE_APIS, null)) {
     extend(map, {
       $vnode: i => i.vnode,

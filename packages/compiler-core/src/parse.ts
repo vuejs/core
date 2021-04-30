@@ -34,6 +34,7 @@ import {
   checkCompatEnabled,
   CompilerCompatOptions,
   CompilerDeprecationTypes,
+  isCompatEnabled,
   warnDeprecation
 } from './compat/compatConfig'
 
@@ -195,6 +196,30 @@ function parseChildren(
           }
         } else if (/[a-z]/i.test(s[1])) {
           node = parseElement(context, ancestors)
+
+          // 2.x <template> with no directive compat
+          if (
+            __COMPAT__ &&
+            isCompatEnabled(
+              CompilerDeprecationTypes.COMPILER_NATIVE_TEMPLATE,
+              context
+            ) &&
+            node &&
+            node.tag === 'template' &&
+            !node.props.some(
+              p =>
+                p.type === NodeTypes.DIRECTIVE &&
+                (p.name === 'if' || p.name === 'for' || p.name === 'slot')
+            )
+          ) {
+            __DEV__ &&
+              warnDeprecation(
+                CompilerDeprecationTypes.COMPILER_NATIVE_TEMPLATE,
+                context,
+                node.loc
+              )
+            node = node.children
+          }
         } else if (s[1] === '?') {
           emitError(
             context,
@@ -421,11 +446,12 @@ function parseElement(
         inlineTemplateProp.loc
       )
     ) {
-      inlineTemplateProp.value!.content = getSelection(
-        context,
-        element.loc.end
-      ).source
-      console.log(inlineTemplateProp)
+      const loc = getSelection(context, element.loc.end)
+      inlineTemplateProp.value = {
+        type: NodeTypes.TEXT,
+        content: loc.source,
+        loc
+      }
     }
   }
 
@@ -540,7 +566,14 @@ function parseTag(
   }
 
   // 2.x deprecation checks
-  if (__COMPAT__ && __DEV__ && !__TEST__) {
+  if (
+    __COMPAT__ &&
+    __DEV__ &&
+    isCompatEnabled(
+      CompilerDeprecationTypes.COMPILER_V_IF_V_FOR_PRECEDENCE,
+      context
+    )
+  ) {
     let hasIf = false
     let hasFor = false
     for (let i = 0; i < props.length; i++) {

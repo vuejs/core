@@ -4,9 +4,11 @@ import { DeprecationTypes, isCompatEnabled } from './compatConfig'
 
 export function shouldSkipAttr(
   key: string,
-  value: any,
   instance: ComponentInternalInstance
 ): boolean {
+  if (key === 'is') {
+    return true
+  }
   if (
     (key === 'class' || key === 'style') &&
     isCompatEnabled(DeprecationTypes.INSTANCE_ATTRS_CLASS_STYLE, instance)

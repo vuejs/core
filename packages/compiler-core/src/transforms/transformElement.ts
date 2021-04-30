@@ -41,8 +41,7 @@ import {
   TELEPORT,
   KEEP_ALIVE,
   SUSPENSE,
-  UNREF,
-  FRAGMENT
+  UNREF
 } from '../runtimeHelpers'
 import {
   getInnerRange,
@@ -91,19 +90,6 @@ export const transformElement: NodeTransform = (node, context) => {
     let vnodeTag = isComponent
       ? resolveComponentType(node as ComponentNode, context)
       : `"${tag}"`
-
-    // 2.x <template> with no directives compat
-    if (
-      __COMPAT__ &&
-      tag === 'template' &&
-      checkCompatEnabled(
-        CompilerDeprecationTypes.COMPILER_NATIVE_TEMPLATE,
-        context,
-        node.loc
-      )
-    ) {
-      vnodeTag = context.helper(FRAGMENT)
-    }
 
     const isDynamicComponent =
       isObject(vnodeTag) && vnodeTag.callee === RESOLVE_DYNAMIC_COMPONENT

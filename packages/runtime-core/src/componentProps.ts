@@ -20,7 +20,8 @@ import {
   isReservedProp,
   EMPTY_ARR,
   def,
-  extend
+  extend,
+  isOn
 } from '@vue/shared'
 import { warn } from './warning'
 import {
@@ -207,7 +208,7 @@ export function updateProps(
       // the props.
       const propsToUpdate = instance.vnode.dynamicProps!
       for (let i = 0; i < propsToUpdate.length; i++) {
-        const key = propsToUpdate[i]
+        let key = propsToUpdate[i]
         // PROPS flag guarantees rawProps to be non-null
         const value = rawProps![key]
         if (options) {
@@ -229,8 +230,12 @@ export function updateProps(
             )
           }
         } else {
-          if (__COMPAT__ && shouldSkipAttr(key, attrs[key], instance)) {
-            continue
+          if (__COMPAT__) {
+            if (isOn(key) && key.endsWith('Native')) {
+              key = key.slice(0, -6) // remove Native postfix
+            } else if (shouldSkipAttr(key, instance)) {
+              continue
+            }
           }
           if (value !== attrs[key]) {
             attrs[key] = value
@@ -308,7 +313,7 @@ function setFullProps(
   const [options, needCastKeys] = instance.propsOptions
   let hasAttrsChanged = false
   if (rawProps) {
-    for (const key in rawProps) {
+    for (let key in rawProps) {
       // key, ref are reserved and never passed down
       if (isReservedProp(key)) {
         continue
@@ -337,8 +342,12 @@ function setFullProps(
         // Any non-declared (either as a prop or an emitted event) props are put
         // into a separate `attrs` object for spreading. Make sure to preserve
         // original key casing
-        if (__COMPAT__ && shouldSkipAttr(key, attrs[key], instance)) {
-          continue
+        if (__COMPAT__) {
+          if (isOn(key) && key.endsWith('Native')) {
+            key = key.slice(0, -6) // remove Native postfix
+          } else if (shouldSkipAttr(key, instance)) {
+            continue
+          }
         }
         if (value !== attrs[key]) {
           attrs[key] = value
