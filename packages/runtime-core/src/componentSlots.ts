@@ -160,7 +160,7 @@ export const updateSlots = (
           delete slots._
         }
       }
-    } else {
+    } else if (!(children as any)[InternalObjectKey]) {
       needDeletionCheck = !(children as RawSlots).$stable
       normalizeObjectSlots(children as RawSlots, slots)
     }
