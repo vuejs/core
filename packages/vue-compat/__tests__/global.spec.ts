@@ -1,5 +1,6 @@
 import Vue from '@vue/compat'
 import { effect, isReactive } from '@vue/reactivity'
+import { nextTick } from '@vue/runtime-core'
 import {
   DeprecationTypes,
   deprecationData,
@@ -332,5 +333,51 @@ describe('GLOBAL_PRIVATE_UTIL', () => {
     expect(
       deprecationData[DeprecationTypes.GLOBAL_PRIVATE_UTIL].message
     ).toHaveBeenWarned()
+  })
+
+  test('defineReactive on instance', async () => {
+    const vm = new Vue({
+      beforeCreate() {
+        // @ts-ignore
+        Vue.util.defineReactive(this, 'foo', 1)
+      },
+      template: `<div>{{ foo }}</div>`
+    }).$mount() as any
+    expect(vm.$el.textContent).toBe('1')
+    vm.foo = 2
+    await nextTick()
+    expect(vm.$el.textContent).toBe('2')
+  })
+
+  test('defineReactive with object value', () => {
+    const obj: any = {}
+    const val = { a: 1 }
+    // @ts-ignore
+    Vue.util.defineReactive(obj, 'foo', val)
+
+    let n
+    effect(() => {
+      n = obj.foo.a
+    })
+    expect(n).toBe(1)
+    // mutating original
+    val.a++
+    expect(n).toBe(2)
+  })
+
+  test('defineReactive with array value', () => {
+    const obj: any = {}
+    const val = [1]
+    // @ts-ignore
+    Vue.util.defineReactive(obj, 'foo', val)
+
+    let n
+    effect(() => {
+      n = obj.foo.length
+    })
+    expect(n).toBe(1)
+    // mutating original
+    val.push(2)
+    expect(n).toBe(2)
   })
 })

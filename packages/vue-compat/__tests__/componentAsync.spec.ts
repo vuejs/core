@@ -59,4 +59,24 @@ describe('COMPONENT_ASYNC', () => {
       )
     ).toHaveBeenWarned()
   })
+
+  test('object syntax', async () => {
+    const comp = () => ({
+      component: Promise.resolve({ template: 'foo' })
+    })
+
+    const vm = new Vue({
+      template: `<div><comp/></div>`,
+      components: { comp }
+    }).$mount()
+    expect(vm.$el.innerHTML).toBe(`<!---->`)
+    await timeout(0)
+    expect(vm.$el.innerHTML).toBe(`foo`)
+
+    expect(
+      (deprecationData[DeprecationTypes.COMPONENT_ASYNC].message as Function)(
+        comp
+      )
+    ).toHaveBeenWarned()
+  })
 })

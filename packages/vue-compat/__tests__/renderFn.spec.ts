@@ -123,9 +123,29 @@ describe('compat: render function', () => {
       })
     ).toMatchObject({
       props: {
-        onClick: fn, // should dedupe
+        onClick: fn,
+        onClickNative: fn,
         onFooBar: fn,
-        'onBar-baz': fn
+        'onBar-bazNative': fn
+      }
+    })
+  })
+
+  test('v2 legacy event prefixes', () => {
+    const fn = () => {}
+    expect(
+      h('div', {
+        on: {
+          '&click': fn,
+          '~keyup': fn,
+          '!touchend': fn
+        }
+      })
+    ).toMatchObject({
+      props: {
+        onClickPassive: fn,
+        onKeyupOnce: fn,
+        onTouchendCapture: fn
       }
     })
   })
