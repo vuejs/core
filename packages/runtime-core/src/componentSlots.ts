@@ -130,7 +130,7 @@ export const initSlots = (
   if (instance.vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
     const type = (children as RawSlots)._
     if (type) {
-      // users can get the shallow readonly object through this.$slots,
+      // users can get the shallow readonly version of the slots object through `this.$slots`,
       // we should avoid the proxy object polluting the slots of the internal instance
       instance.slots = toRaw(children as InternalSlots)
       // make compiler marker non-enumerable
