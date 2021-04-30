@@ -1,10 +1,14 @@
 import Vue from '@vue/compat'
 import { CompilerDeprecationTypes } from '../../compiler-core/src'
-import { toggleDeprecationWarning } from '../../runtime-core/src/compat/compatConfig'
+import {
+  deprecationData,
+  DeprecationTypes,
+  toggleDeprecationWarning
+} from '../../runtime-core/src/compat/compatConfig'
 
 beforeEach(() => {
   toggleDeprecationWarning(false)
-  Vue.configureCompat({ MODE: 2 })
+  Vue.configureCompat({ MODE: 2, GLOBAL_MOUNT: 'suppress-warning' })
 })
 
 afterEach(() => {
@@ -31,6 +35,22 @@ describe('FILTERS', () => {
   function double(v: number) {
     return v * 2
   }
+
+  it('global registration', () => {
+    toggleDeprecationWarning(true)
+    Vue.filter('globalUpper', upper)
+    expect(Vue.filter('globalUpper')).toBe(upper)
+    const vm = new Vue({
+      template: '<div>{{ msg | globalUpper }}</div>',
+      data: () => ({
+        msg: 'hi'
+      })
+    }).$mount()
+    expect(vm.$el.textContent).toBe('HI')
+    expect(deprecationData[DeprecationTypes.FILTERS].message).toHaveBeenWarned()
+    expect(CompilerDeprecationTypes.COMPILER_FILTERS).toHaveBeenWarned()
+    Vue.filter('globalUpper', undefined)
+  })
 
   it('basic usage', () => {
     const vm = new Vue({

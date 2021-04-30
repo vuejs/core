@@ -96,7 +96,7 @@ export type CompatVue = Pick<App, 'version' | 'component' | 'directive'> & {
   /**
    * @deprecated filters have been removed from Vue 3.
    */
-  filter(name: string, arg: any): null
+  filter(name: string, arg?: any): null
   /**
    * @internal
    */
@@ -138,7 +138,7 @@ export function createCompatVue(
     const app = createApp(options)
 
     // copy over asset registries and deopt flag
-    ;['mixins', 'components', 'directives', 'deopt'].forEach(key => {
+    ;['mixins', 'components', 'directives', 'filters', 'deopt'].forEach(key => {
       // @ts-ignore
       app._context[key] = singletonApp._context[key]
     })
@@ -312,9 +312,13 @@ export function createCompatVue(
     }
   }) as any
 
-  Vue.filter = ((name: string, filter: any) => {
-    // TODO deprecation warning
-    // TODO compiler warning for filters (maybe behavior compat?)
+  Vue.filter = ((name: string, filter?: any) => {
+    if (filter) {
+      singletonApp.filter!(name, filter)
+      return Vue
+    } else {
+      return singletonApp.filter!(name)
+    }
   }) as any
 
   // internal utils - these are technically internal but some plugins use it.
