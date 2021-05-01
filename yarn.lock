@@ -6930,9 +6930,9 @@ to-regex@^3.0.1, to-regex@^3.0.2:
     safe-regex "^1.1.0"
 
 todomvc-app-css@^2.3.0:
-  version "2.3.0"
-  resolved "https://registry.yarnpkg.com/todomvc-app-css/-/todomvc-app-css-2.3.0.tgz#cc27f1686ab4c418eef4e790289cc124baca2546"
-  integrity sha512-RG8hxqoVn8Be3wxyuyHfOSAXiY1Z0N+PYQOe/jxzy3wpU1Obfwd1RF1i/fz/fR+MrYL+Q+BdrUt8SsXdtR7Oow==
+  version "2.4.0"
+  resolved "https://registry.yarnpkg.com/todomvc-app-css/-/todomvc-app-css-2.4.0.tgz#9aa17f0e566163864e146e29bb593feaec67d9fb"
+  integrity sha512-0xIt5DAZhQ+qzeu9DBEWk5J7mnDVGJaFofNLK67E31HbqqIGPWsZNBZ0+uFzvQLDqKCteETAQ8oIFzz+jZHiAg==
 
 token-stream@1.0.0:
   version "1.0.0"
