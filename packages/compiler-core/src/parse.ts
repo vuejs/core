@@ -209,7 +209,7 @@ function parseChildren(
             !node.props.some(
               p =>
                 p.type === NodeTypes.DIRECTIVE &&
-                (p.name === 'if' || p.name === 'for' || p.name === 'slot')
+                isSpecialTemplateDirective(p.name)
             )
           ) {
             __DEV__ &&
