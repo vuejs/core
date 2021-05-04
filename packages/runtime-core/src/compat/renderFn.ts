@@ -307,16 +307,21 @@ export function defineLegacyVNodeProperties(vnode: VNode) {
   if (
     isCompatEnabled(
       DeprecationTypes.RENDER_FUNCTION,
-      currentRenderingInstance
+      currentRenderingInstance,
+      true /* enable for built-ins */
     ) &&
-    isCompatEnabled(DeprecationTypes.PRIVATE_APIS, currentRenderingInstance)
+    isCompatEnabled(
+      DeprecationTypes.PRIVATE_APIS,
+      currentRenderingInstance,
+      true /* enable for built-ins */
+    )
   ) {
     const context = currentRenderingInstance
     const getInstance = () => vnode.component && vnode.component.proxy
     let componentOptions: any
     Object.defineProperties(vnode, {
       tag: { get: () => vnode.type },
-      data: { get: () => vnode.props, set: p => (vnode.props = p) },
+      data: { get: () => vnode.props || {}, set: p => (vnode.props = p) },
       elm: { get: () => vnode.el },
       componentInstance: { get: getInstance },
       child: { get: getInstance },

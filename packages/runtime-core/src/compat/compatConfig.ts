@@ -566,10 +566,11 @@ export function getCompatConfigForKey(
 
 export function isCompatEnabled(
   key: DeprecationTypes,
-  instance: ComponentInternalInstance | null
+  instance: ComponentInternalInstance | null,
+  enableForBuiltIn = false
 ): boolean {
   // skip compat for built-in components
-  if (instance && instance.type.__isBuiltIn) {
+  if (!enableForBuiltIn && instance && instance.type.__isBuiltIn) {
     return false
   }
 
