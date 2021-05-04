@@ -117,9 +117,11 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
   /* istanbul ignore if */
   if (isCompatEnabled(DeprecationTypes.PRIVATE_APIS, null)) {
     extend(map, {
+      // needed by many libs / render fns
       $vnode: i => i.vnode,
 
       // inject addtional properties into $options for compat
+      // e.g. vuex needs this.$options.parent
       $options: i => {
         let res = resolveMergedOptions(i)
         if (res === i.type) res = i.type.__merged = extend({}, res)
@@ -127,6 +129,9 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
         res.propsData = i.vnode.props
         return res
       },
+
+      // internal data access... (vuex uses this)
+      _data: i => i.data,
 
       // v2 render helpers
       $createElement: () => compatH,
