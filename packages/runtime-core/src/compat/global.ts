@@ -1,6 +1,7 @@
 import {
   isReactive,
   reactive,
+  stop,
   track,
   TrackOpTypes,
   trigger,
@@ -13,7 +14,8 @@ import {
   EMPTY_OBJ,
   isArray,
   isObject,
-  isString
+  isString,
+  invokeArrayFns
 } from '@vue/shared'
 import { warn } from '../warning'
 import { cloneVNode, createVNode } from '../vnode'
@@ -467,8 +469,28 @@ export function installCompatMount(
           devtoolsUnmountApp(app)
         }
         delete app._container.__vue_app__
-      } else if (__DEV__) {
-        warn(`Cannot unmount an app that is not mounted.`)
+      } else {
+        const { bum, effects, um } = instance
+        // beforeDestroy hooks
+        if (bum) {
+          invokeArrayFns(bum)
+        }
+        if (isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)) {
+          instance.emit('hook:beforeDestroy')
+        }
+        // stop effects
+        if (effects) {
+          for (let i = 0; i < effects.length; i++) {
+            stop(effects[i])
+          }
+        }
+        // unmounted hook
+        if (um) {
+          invokeArrayFns(um)
+        }
+        if (isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)) {
+          instance.emit('hook:destroyed')
+        }
       }
     }
 
