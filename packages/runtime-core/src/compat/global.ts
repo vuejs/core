@@ -115,15 +115,22 @@ export type CompatVue = Pick<App, 'version' | 'component' | 'directive'> & {
 
 export let isCopyingConfig = false
 
+// exported only for test
+export let singletonApp: App
+let singletonCtor: Function
+
 // Legacy global Vue constructor
 export function createCompatVue(
-  createApp: CreateAppFunction<Element>
+  createApp: CreateAppFunction<Element>,
+  createSingletonApp: CreateAppFunction<Element>
 ): CompatVue {
-  const Vue: CompatVue = function Vue(options: ComponentOptions = {}) {
-    return createCompatApp(options, Vue)
-  } as any
+  singletonApp = createSingletonApp({})
 
-  const singletonApp = createApp({})
+  const Vue: CompatVue = (singletonCtor = function Vue(
+    options: ComponentOptions = {}
+  ) {
+    return createCompatApp(options, Vue)
+  } as any)
 
   function createCompatApp(options: ComponentOptions = {}, Ctor: any) {
     assertCompatEnabled(DeprecationTypes.GLOBAL_MOUNT, null)
@@ -139,53 +146,8 @@ export function createCompatVue(
 
     const app = createApp(options)
 
-    // copy over asset registries and deopt flag
-    ;['mixins', 'components', 'directives', 'filters', 'deopt'].forEach(key => {
-      // @ts-ignore
-      app._context[key] = singletonApp._context[key]
-    })
-
-    // copy over global config mutations
-    isCopyingConfig = true
-    for (const key in singletonApp.config) {
-      if (key === 'isNativeTag') continue
-      if (
-        isRuntimeOnly() &&
-        (key === 'isCustomElement' || key === 'compilerOptions')
-      ) {
-        continue
-      }
-      const val = singletonApp.config[key as keyof AppConfig]
-      // @ts-ignore
-      app.config[key] = val
-
-      // compat for runtime ignoredElements -> isCustomElement
-      if (
-        key === 'ignoredElements' &&
-        isCompatEnabled(DeprecationTypes.CONFIG_IGNORED_ELEMENTS, null) &&
-        !isRuntimeOnly() &&
-        isArray(val)
-      ) {
-        app.config.compilerOptions.isCustomElement = tag => {
-          return val.some(v => (isString(v) ? v === tag : v.test(tag)))
-        }
-      }
-    }
-    isCopyingConfig = false
-
-    // copy prototype augmentations as config.globalProperties
-    if (isCompatEnabled(DeprecationTypes.GLOBAL_PROTOTYPE, null)) {
-      app.config.globalProperties = Ctor.prototype
-    }
-    let hasPrototypeAugmentations = false
-    for (const key in Ctor.prototype) {
-      if (key !== 'constructor') {
-        hasPrototypeAugmentations = true
-        break
-      }
-    }
-    if (__DEV__ && hasPrototypeAugmentations) {
-      warnDeprecation(DeprecationTypes.GLOBAL_PROTOTYPE, null)
+    if (Ctor !== Vue) {
+      applySingletonPrototype(app, Ctor)
     }
 
     const vm = app._createRoot!(options)
@@ -346,6 +308,66 @@ export function createCompatVue(
   Vue.configureCompat = configureCompat
 
   return Vue
+}
+
+export function applySingletonAppMutations(app: App, Ctor?: Function) {
+  if (!singletonApp) {
+    // this is the call of creating the singleton itself
+    return
+  }
+
+  // copy over asset registries and deopt flag
+  ;['mixins', 'components', 'directives', 'filters', 'deopt'].forEach(key => {
+    // @ts-ignore
+    app._context[key] = singletonApp._context[key]
+  })
+
+  // copy over global config mutations
+  isCopyingConfig = true
+  for (const key in singletonApp.config) {
+    if (key === 'isNativeTag') continue
+    if (
+      isRuntimeOnly() &&
+      (key === 'isCustomElement' || key === 'compilerOptions')
+    ) {
+      continue
+    }
+    const val = singletonApp.config[key as keyof AppConfig]
+    // @ts-ignore
+    app.config[key] = val
+
+    // compat for runtime ignoredElements -> isCustomElement
+    if (
+      key === 'ignoredElements' &&
+      isCompatEnabled(DeprecationTypes.CONFIG_IGNORED_ELEMENTS, null) &&
+      !isRuntimeOnly() &&
+      isArray(val)
+    ) {
+      app.config.compilerOptions.isCustomElement = tag => {
+        return val.some(v => (isString(v) ? v === tag : v.test(tag)))
+      }
+    }
+  }
+  isCopyingConfig = false
+
+  applySingletonPrototype(app, singletonCtor)
+}
+
+function applySingletonPrototype(app: App, Ctor: Function) {
+  // copy prototype augmentations as config.globalProperties
+  if (isCompatEnabled(DeprecationTypes.GLOBAL_PROTOTYPE, null)) {
+    app.config.globalProperties = Ctor.prototype
+  }
+  let hasPrototypeAugmentations = false
+  for (const key in Ctor.prototype) {
+    if (key !== 'constructor') {
+      hasPrototypeAugmentations = true
+      break
+    }
+  }
+  if (__DEV__ && hasPrototypeAugmentations) {
+    warnDeprecation(DeprecationTypes.GLOBAL_PROTOTYPE, null)
+  }
 }
 
 export function installCompatMount(

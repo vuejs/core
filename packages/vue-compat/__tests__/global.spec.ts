@@ -6,6 +6,8 @@ import {
   deprecationData,
   toggleDeprecationWarning
 } from '../../runtime-core/src/compat/compatConfig'
+import { singletonApp } from '../../runtime-core/src/compat/global'
+import { createApp } from '../src/esm-index'
 
 beforeEach(() => {
   toggleDeprecationWarning(false)
@@ -280,6 +282,15 @@ describe('GLOBAL_PROTOTYPE', () => {
     const plain = new Vue() as any
     expect(plain.$test).toBeUndefined()
   })
+
+  test('should affect apps created via createApp()', () => {
+    Vue.prototype.$test = 1
+    const vm = createApp({
+      template: 'foo'
+    }).mount(document.createElement('div')) as any
+    expect(vm.$test).toBe(1)
+    delete Vue.prototype.$test
+  })
 })
 
 describe('GLOBAL_SET/DELETE', () => {
@@ -380,4 +391,13 @@ describe('GLOBAL_PRIVATE_UTIL', () => {
     val.push(2)
     expect(n).toBe(2)
   })
+})
+
+test('global asset registration should affect apps created via createApp', () => {
+  Vue.component('foo', { template: 'foo' })
+  const vm = createApp({
+    template: '<foo/>'
+  }).mount(document.createElement('div')) as any
+  expect(vm.$el.textContent).toBe('foo')
+  delete singletonApp._context.components.foo
 })

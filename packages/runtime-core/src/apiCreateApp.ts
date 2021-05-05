@@ -15,7 +15,7 @@ import { RootHydrateFunction } from './hydration'
 import { devtoolsInitApp, devtoolsUnmountApp } from './devtools'
 import { isFunction, NO, isObject } from '@vue/shared'
 import { version } from '.'
-import { installCompatMount } from './compat/global'
+import { applySingletonAppMutations, installCompatMount } from './compat/global'
 import { installLegacyConfigProperties } from './compat/globalConfig'
 import { installGlobalFilterMethod } from './compat/filter'
 
@@ -331,6 +331,7 @@ export function createAppAPI<HostElement>(
       installCompatMount(app, context, render, hydrate)
       installGlobalFilterMethod(app, context)
       if (__DEV__) installLegacyConfigProperties(app.config)
+      applySingletonAppMutations(app)
     }
 
     return app

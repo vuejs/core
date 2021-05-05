@@ -38,9 +38,7 @@ function wrappedCreateApp(...args: any[]) {
 }
 
 export function createCompatVue() {
-  const Vue = compatUtils.createCompatVue(wrappedCreateApp)
+  const Vue = compatUtils.createCompatVue(createApp, wrappedCreateApp)
   extend(Vue, runtimeDom)
-  // @ts-ignore
-  Vue.createApp = wrappedCreateApp
   return Vue
 }
