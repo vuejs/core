@@ -38,23 +38,28 @@ export function defineProps() {
   return null as any
 }
 
-export function defineEmit<
+export function defineEmits<
   TypeEmit = undefined,
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
   InferredEmit = EmitFn<E>
 >(emitOptions?: E | EE[]): TypeEmit extends undefined ? InferredEmit : TypeEmit
 // implementation
-export function defineEmit() {
+export function defineEmits() {
   if (__DEV__) {
     warn(
-      `defineEmit() is a compiler-hint helper that is only usable inside ` +
+      `defineEmits() is a compiler-hint helper that is only usable inside ` +
         `<script setup> of a single file component. Its arguments should be ` +
         `compiled away and passing it at runtime has no effect.`
     )
   }
   return null as any
 }
+
+/**
+ * @deprecated use `defineEmits` instead.
+ */
+export const defineEmit = defineEmits
 
 export function useContext(): SetupContext {
   const i = getCurrentInstance()!

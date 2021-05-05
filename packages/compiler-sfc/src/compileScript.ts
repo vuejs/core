@@ -36,6 +36,7 @@ import { rewriteDefault } from './rewriteDefault'
 
 const DEFINE_PROPS = 'defineProps'
 const DEFINE_EMIT = 'defineEmit'
+const DEFINE_EMITS = 'defineEmits'
 
 export interface SFCScriptCompileOptions {
   /**
@@ -282,10 +283,10 @@ export function compileScript(
     return false
   }
 
-  function processDefineEmit(node: Node): boolean {
-    if (isCallOf(node, DEFINE_EMIT)) {
+  function processDefineEmits(node: Node): boolean {
+    if (isCallOf(node, DEFINE_EMIT) || isCallOf(node, DEFINE_EMITS)) {
       if (hasDefineEmitCall) {
-        error(`duplicate ${DEFINE_EMIT}() call`, node)
+        error(`duplicate ${DEFINE_EMITS}() call`, node)
       }
       hasDefineEmitCall = true
       emitRuntimeDecl = node.arguments[0]
@@ -305,7 +306,7 @@ export function compileScript(
           emitTypeDecl = typeArg
         } else {
           error(
-            `type argument passed to ${DEFINE_EMIT}() must be a function type ` +
+            `type argument passed to ${DEFINE_EMITS}() must be a function type ` +
               `or a literal type with call signatures.`,
             typeArg
           )
@@ -623,7 +624,9 @@ export function compileScript(
         const existing = userImports[local]
         if (
           source === 'vue' &&
-          (imported === DEFINE_PROPS || imported === DEFINE_EMIT)
+          (imported === DEFINE_PROPS ||
+            imported === DEFINE_EMIT ||
+            imported === DEFINE_EMITS)
         ) {
           removeSpecifier(i)
         } else if (existing) {
@@ -647,11 +650,11 @@ export function compileScript(
       }
     }
 
-    // process `defineProps` and `defineEmit` calls
+    // process `defineProps` and `defineEmit(s)` calls
     if (
       node.type === 'ExpressionStatement' &&
       (processDefineProps(node.expression) ||
-        processDefineEmit(node.expression))
+        processDefineEmits(node.expression))
     ) {
       s.remove(node.start! + startOffset, node.end! + startOffset)
     }
@@ -665,14 +668,14 @@ export function compileScript(
               decl.id.end!
             )
           }
-          const isDefineEmit = processDefineEmit(decl.init)
-          if (isDefineEmit) {
+          const isDefineEmits = processDefineEmits(decl.init)
+          if (isDefineEmits) {
             emitIdentifier = scriptSetup.content.slice(
               decl.id.start!,
               decl.id.end!
             )
           }
-          if (isDefineProps || isDefineEmit)
+          if (isDefineProps || isDefineEmits)
             if (node.declarations.length === 1) {
               s.remove(node.start! + startOffset, node.end! + startOffset)
             } else {
@@ -1036,7 +1039,9 @@ function walkDeclaration(
     for (const { id, init } of node.declarations) {
       const isDefineCall = !!(
         isConst &&
-        (isCallOf(init, DEFINE_PROPS) || isCallOf(init, DEFINE_EMIT))
+        (isCallOf(init, DEFINE_PROPS) ||
+          isCallOf(init, DEFINE_EMIT) ||
+          isCallOf(init, DEFINE_EMITS))
       )
       if (id.type === 'Identifier') {
         let bindingType
