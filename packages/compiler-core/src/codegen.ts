@@ -878,6 +878,9 @@ function genFunctionExpression(
     push(`}`)
   }
   if (isSlot) {
+    if (__COMPAT__ && node.isNonScopedSlot) {
+      push(`, undefined, true`)
+    }
     push(`)`)
   }
 }

@@ -281,6 +281,7 @@ function convertLegacySlots(vnode: VNode): VNode {
       for (const key in slots) {
         const slotChildren = slots[key]
         slots[key] = () => slotChildren
+        slots[key]._nonScoped = true
       }
     }
   }

@@ -36,7 +36,7 @@ import {
 } from './renderHelpers'
 import { resolveFilter } from '../helpers/resolveAssets'
 import { resolveMergedOptions } from '../componentOptions'
-import { Slots } from '../componentSlots'
+import { InternalSlots, Slots } from '../componentSlots'
 
 export type LegacyPublicInstance = ComponentPublicInstance &
   LegacyPublicProperties
@@ -103,7 +103,14 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
 
     $scopedSlots: i => {
       assertCompatEnabled(DeprecationTypes.INSTANCE_SCOPED_SLOTS, i)
-      return __DEV__ ? shallowReadonly(i.slots) : i.slots
+      const res: InternalSlots = {}
+      for (const key in i.slots) {
+        const fn = i.slots[key]!
+        if (!(fn as any)._nonScoped) {
+          res[key] = fn
+        }
+      }
+      return res
     },
 
     $on: i => on.bind(null, i),

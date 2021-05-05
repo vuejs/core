@@ -61,7 +61,8 @@ export const withScopeId = (_id: string) => withCtx
  */
 export function withCtx(
   fn: Function,
-  ctx: ComponentInternalInstance | null = currentRenderingInstance
+  ctx: ComponentInternalInstance | null = currentRenderingInstance,
+  isNonScopedSlot?: boolean // __COMPAT__ only
 ) {
   if (!ctx) return fn
   const renderFnWithContext = (...args: any[]) => {
@@ -83,5 +84,8 @@ export function withCtx(
   // this is used in vnode.ts -> normalizeChildren() to set the slot
   // rendering flag.
   renderFnWithContext._c = true
+  if (__COMPAT__ && isNonScopedSlot) {
+    renderFnWithContext._nonScoped = true
+  }
   return renderFnWithContext
 }
