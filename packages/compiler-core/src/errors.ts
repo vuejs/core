@@ -91,9 +91,6 @@ export const enum ErrorCodes {
   X_CACHE_HANDLER_NOT_SUPPORTED,
   X_SCOPE_ID_NOT_SUPPORTED,
 
-  // warnings
-  X_V_IF_KEY,
-
   // Special value for higher-order compilers to pick up the last code
   // to avoid collision of error codes. This should always be kept as the last
   // item.
@@ -173,11 +170,6 @@ export const errorMessages: Record<ErrorCodes, string> = {
   [ErrorCodes.X_MODULE_MODE_NOT_SUPPORTED]: `ES module mode is not supported in this build of compiler.`,
   [ErrorCodes.X_CACHE_HANDLER_NOT_SUPPORTED]: `"cacheHandlers" option is only supported when the "prefixIdentifiers" option is enabled.`,
   [ErrorCodes.X_SCOPE_ID_NOT_SUPPORTED]: `"scopeId" option is only supported in module mode.`,
-
-  // warnings
-  [ErrorCodes.X_V_IF_KEY]:
-    `unnecessary key usage on v-if/else branches. ` +
-    `Vue will automatically generate unique keys for each branch.`,
 
   // just to fullfill types
   [ErrorCodes.__EXTEND_POINT__]: ``

@@ -110,7 +110,7 @@ export function processIf(
   }
 
   if (dir.name === 'if') {
-    const branch = createIfBranch(node, dir, context)
+    const branch = createIfBranch(node, dir)
     const ifNode: IfNode = {
       type: NodeTypes.IF,
       loc: node.loc,
@@ -145,7 +145,7 @@ export function processIf(
       if (sibling && sibling.type === NodeTypes.IF) {
         // move the node to the if node's branches
         context.removeNode()
-        const branch = createIfBranch(node, dir, context)
+        const branch = createIfBranch(node, dir)
         if (__DEV__ && comments.length) {
           branch.children = [...comments, ...branch.children]
         }
@@ -187,16 +187,7 @@ export function processIf(
   }
 }
 
-function createIfBranch(
-  node: ElementNode,
-  dir: DirectiveNode,
-  context: TransformContext
-): IfBranchNode {
-  const userKey = findProp(node, `key`)
-  if (__DEV__ && userKey) {
-    context.onWarn(createCompilerError(ErrorCodes.X_V_IF_KEY, userKey.loc))
-  }
-
+function createIfBranch(node: ElementNode, dir: DirectiveNode): IfBranchNode {
   return {
     type: NodeTypes.IF_BRANCH,
     loc: node.loc,
@@ -205,7 +196,7 @@ function createIfBranch(
       node.tagType === ElementTypes.TEMPLATE && !findDir(node, 'for')
         ? node.children
         : [node],
-    userKey
+    userKey: findProp(node, `key`)
   }
 }
 
