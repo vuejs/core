@@ -130,13 +130,15 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
         return res
       },
 
-      // internal data access... (vuex uses this)
+      // some private properties that are likely accessed...
+      _self: i => i.proxy,
+      _uid: i => i.uid,
       _data: i => i.data,
+      _isMounted: i => i.isMounted,
+      _isDestroyed: i => i.isUnmounted,
 
       // v2 render helpers
       $createElement: () => compatH,
-      _self: i => i.proxy,
-      _uid: i => i.uid,
       _c: () => compatH,
       _o: () => legacyMarkOnce,
       _n: () => toNumber,
