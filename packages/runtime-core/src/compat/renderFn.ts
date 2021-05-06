@@ -39,7 +39,7 @@ import {
 } from './compatConfig'
 import { compatModelEventPrefix } from './componentVModel'
 
-const v3CompiledRenderFnRE = /^(?:function \w+)?\(_ctx, _cache/
+const v3CompiledRenderFnRE = /^(?:function \w*)?\(_ctx, _cache/
 
 export function convertLegacyRenderFn(instance: ComponentInternalInstance) {
   const Component = instance.type as ComponentOptions
