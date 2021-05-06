@@ -6,6 +6,7 @@ import {
   toggleDeprecationWarning
 } from '../../runtime-core/src/compat/compatConfig'
 import { triggerEvent } from './utils'
+import { h } from '@vue/runtime-core'
 
 beforeEach(() => {
   toggleDeprecationWarning(true)
@@ -18,6 +19,31 @@ beforeEach(() => {
 afterEach(() => {
   toggleDeprecationWarning(false)
   Vue.configureCompat({ MODE: 3 })
+})
+
+test('mode as function', () => {
+  const Foo = {
+    name: 'Foo',
+    render: (h: any) => h('div', 'foo')
+  }
+
+  const Bar = {
+    name: 'Bar',
+    data: () => ({ msg: 'bar' }),
+    render: (ctx: any) => h('div', ctx.msg)
+  }
+
+  toggleDeprecationWarning(false)
+  Vue.configureCompat({
+    MODE: comp => (comp && comp.name === 'Bar' ? 3 : 2)
+  })
+
+  const vm = new Vue({
+    components: { Foo, Bar },
+    template: `<div><foo/><bar/></div>`
+  }).$mount()
+
+  expect(vm.$el.innerHTML).toBe(`<div>foo</div><div>bar</div>`)
 })
 
 test('WATCH_ARRAY', async () => {

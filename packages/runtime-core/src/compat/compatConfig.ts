@@ -1,5 +1,6 @@
-import { extend, hasOwn, isArray } from '@vue/shared'
+import { extend, hasOwn, isArray, isFunction } from '@vue/shared'
 import {
+  Component,
   ComponentInternalInstance,
   ComponentOptions,
   formatComponentName,
@@ -505,7 +506,7 @@ export function warnDeprecation(
 export type CompatConfig = Partial<
   Record<DeprecationTypes, boolean | 'suppress-warning'>
 > & {
-  MODE?: 2 | 3
+  MODE?: 2 | 3 | ((comp: Component | null) => 2 | 3)
 }
 
 export const globalCompatConfig: CompatConfig = {
@@ -574,8 +575,13 @@ export function isCompatEnabled(
     return false
   }
 
-  const mode = getCompatConfigForKey('MODE', instance) || 2
+  const rawMode = getCompatConfigForKey('MODE', instance) || 2
   const val = getCompatConfigForKey(key, instance)
+
+  const mode = isFunction(rawMode)
+    ? rawMode(instance && instance.type)
+    : rawMode
+
   if (mode === 2) {
     return val !== false
   } else {
