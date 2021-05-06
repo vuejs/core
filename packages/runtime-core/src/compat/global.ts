@@ -19,7 +19,6 @@ import {
 import { warn } from '../warning'
 import { cloneVNode, createVNode } from '../vnode'
 import { RootRenderFunction } from '../renderer'
-import { RootHydrateFunction } from '../hydration'
 import {
   App,
   AppConfig,
@@ -41,7 +40,11 @@ import { devtoolsInitApp, devtoolsUnmountApp } from '../devtools'
 import { Directive } from '../directives'
 import { nextTick } from '../scheduler'
 import { version } from '..'
-import { LegacyConfig, legacyOptionMergeStrats } from './globalConfig'
+import {
+  installLegacyConfigProperties,
+  LegacyConfig,
+  legacyOptionMergeStrats
+} from './globalConfig'
 import { LegacyDirective } from './customDirective'
 import {
   warnDeprecation,
@@ -69,7 +72,6 @@ export type CompatVue = Pick<App, 'version' | 'component' | 'directive'> & {
   version: string
   config: AppConfig & LegacyConfig
 
-  extend: (options?: ComponentOptions) => CompatVue
   nextTick: typeof nextTick
 
   use(plugin: Plugin, ...options: any[]): CompatVue
@@ -82,6 +84,10 @@ export type CompatVue = Pick<App, 'version' | 'component' | 'directive'> & {
 
   compile(template: string): RenderFunction
 
+  /**
+   * @deprecated
+   */
+  extend: (options?: ComponentOptions) => CompatVue
   /**
    * @deprecated Vue 3 no longer needs set() for adding new properties.
    */
@@ -109,6 +115,10 @@ export type CompatVue = Pick<App, 'version' | 'component' | 'directive'> & {
   /**
    * @internal
    */
+  util: any
+  /**
+   * @internal
+   */
   super: CompatVue
 }
 
@@ -116,7 +126,7 @@ export let isCopyingConfig = false
 
 // exported only for test
 export let singletonApp: App
-let singletonCtor: Function
+let singletonCtor: CompatVue
 
 // Legacy global Vue constructor
 export function createCompatVue(
@@ -159,11 +169,45 @@ export function createCompatVue(
 
   Vue.version = __VERSION__
   Vue.config = singletonApp.config
-  Vue.nextTick = nextTick
+
+  Vue.use = (p, ...options) => {
+    if (p && isFunction(p.install)) {
+      p.install(Vue as any, ...options)
+    } else if (isFunction(p)) {
+      p(Vue as any, ...options)
+    }
+    return Vue
+  }
+
+  Vue.mixin = m => {
+    singletonApp.mixin(m)
+    return Vue
+  }
+
+  Vue.component = ((name: string, comp: Component) => {
+    if (comp) {
+      singletonApp.component(name, comp)
+      return Vue
+    } else {
+      return singletonApp.component(name)
+    }
+  }) as any
+
+  Vue.directive = ((name: string, dir: Directive | LegacyDirective) => {
+    if (dir) {
+      singletonApp.directive(name, dir as Directive)
+      return Vue
+    } else {
+      return singletonApp.directive(name)
+    }
+  }) as any
+
   Vue.options = { _base: Vue }
 
   let cid = 1
   Vue.cid = cid
+
+  Vue.nextTick = nextTick
 
   const extendCache = new WeakMap()
 
@@ -243,38 +287,6 @@ export function createCompatVue(
     return reactive(target)
   }
 
-  Vue.use = (p, ...options) => {
-    if (p && isFunction(p.install)) {
-      p.install(Vue as any, ...options)
-    } else if (isFunction(p)) {
-      p(Vue as any, ...options)
-    }
-    return Vue
-  }
-
-  Vue.mixin = m => {
-    singletonApp.mixin(m)
-    return Vue
-  }
-
-  Vue.component = ((name: string, comp: Component) => {
-    if (comp) {
-      singletonApp.component(name, comp)
-      return Vue
-    } else {
-      return singletonApp.component(name)
-    }
-  }) as any
-
-  Vue.directive = ((name: string, dir: Directive | LegacyDirective) => {
-    if (dir) {
-      singletonApp.directive(name, dir as Directive)
-      return Vue
-    } else {
-      return singletonApp.directive(name)
-    }
-  }) as any
-
   Vue.filter = ((name: string, filter?: any) => {
     if (filter) {
       singletonApp.filter!(name, filter)
@@ -309,12 +321,64 @@ export function createCompatVue(
   return Vue
 }
 
-export function applySingletonAppMutations(app: App, Ctor?: Function) {
+export function installAppCompatProperties(
+  app: App,
+  context: AppContext,
+  render: RootRenderFunction
+) {
+  installFilterMethod(app, context)
+
   if (!singletonApp) {
-    // this is the call of creating the singleton itself
+    // this is the call of creating the singleton itself so the rest is
+    // unnecessary
     return
   }
 
+  installCompatMount(app, context, render)
+  installLegacyAPIs(app)
+  applySingletonAppMutations(app)
+  if (__DEV__) installLegacyConfigProperties(app.config)
+}
+
+function installFilterMethod(app: App, context: AppContext) {
+  context.filters = {}
+  app.filter = (name: string, filter?: Function): any => {
+    assertCompatEnabled(DeprecationTypes.FILTERS, null)
+    if (!filter) {
+      return context.filters![name]
+    }
+    if (__DEV__ && context.filters![name]) {
+      warn(`Filter "${name}" has already been registered.`)
+    }
+    context.filters![name] = filter
+    return app
+  }
+}
+
+function installLegacyAPIs(app: App) {
+  // expose global API on app instance for legacy plugins
+  Object.defineProperties(app, {
+    // so that app.use() can work with legacy plugins that extend prototypes
+    prototype: {
+      get() {
+        __DEV__ && warnDeprecation(DeprecationTypes.GLOBAL_PROTOTYPE, null)
+        return app.config.globalProperties
+      }
+    },
+    nextTick: { value: nextTick },
+    extend: { value: singletonCtor.extend },
+    set: { value: singletonCtor.set },
+    delete: { value: singletonCtor.delete },
+    observable: { value: singletonCtor.observable },
+    util: {
+      get() {
+        return singletonCtor.util
+      }
+    }
+  })
+}
+
+function applySingletonAppMutations(app: App) {
   // copy over asset registries and deopt flag
   ;['mixins', 'components', 'directives', 'filters', 'deopt'].forEach(key => {
     // @ts-ignore
@@ -348,20 +412,27 @@ export function applySingletonAppMutations(app: App, Ctor?: Function) {
     }
   }
   isCopyingConfig = false
-
   applySingletonPrototype(app, singletonCtor)
 }
 
 function applySingletonPrototype(app: App, Ctor: Function) {
   // copy prototype augmentations as config.globalProperties
-  if (isCompatEnabled(DeprecationTypes.GLOBAL_PROTOTYPE, null)) {
-    app.config.globalProperties = Ctor.prototype
+  const enabled = isCompatEnabled(DeprecationTypes.GLOBAL_PROTOTYPE, null)
+  if (enabled) {
+    app.config.globalProperties = Object.create(Ctor.prototype)
   }
   let hasPrototypeAugmentations = false
-  for (const key in Ctor.prototype) {
+  const descriptors = Object.getOwnPropertyDescriptors(Ctor.prototype)
+  for (const key in descriptors) {
     if (key !== 'constructor') {
       hasPrototypeAugmentations = true
-      break
+      if (enabled) {
+        Object.defineProperty(
+          app.config.globalProperties,
+          key,
+          descriptors[key]
+        )
+      }
     }
   }
   if (__DEV__ && hasPrototypeAugmentations) {
@@ -369,11 +440,10 @@ function applySingletonPrototype(app: App, Ctor: Function) {
   }
 }
 
-export function installCompatMount(
+function installCompatMount(
   app: App,
   context: AppContext,
-  render: RootRenderFunction,
-  hydrate?: RootHydrateFunction
+  render: RootRenderFunction
 ) {
   let isMounted = false
 

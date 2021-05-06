@@ -97,7 +97,7 @@ export const deprecationData: Record<DeprecationTypes, DeprecationData> = {
   [DeprecationTypes.GLOBAL_PROTOTYPE]: {
     message:
       `Vue.prototype is no longer available in Vue 3. ` +
-      `Use config.globalProperties instead.`,
+      `Use app.config.globalProperties instead.`,
     link: `https://v3.vuejs.org/guide/migration/global-api.html#vue-prototype-replaced-by-config-globalproperties`
   },
 
