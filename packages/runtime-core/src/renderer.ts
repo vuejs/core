@@ -1753,17 +1753,15 @@ function baseCreateRenderer(
       if (!vnode) continue
 
       const key = vnode.key
-      if (key !== undefined && key !== null) {
-        if (seenKeys.has(key)) {
-          warn(
-            `Duplicate keys detected: '${JSON.stringify(
-              key
-            )}'. This may cause an update error.`,
-            `Make sure keys are unique.`
-          )
-        } else {
-          seenKeys.add(key)
-        }
+      if (key != null && seenKeys.has(key)) {
+        warn(
+          `Duplicate keys detected: '${JSON.stringify(
+            key
+          )}'. This may cause an update error.`,
+          `Make sure keys are unique.`
+        )
+      } else {
+        seenKeys.add(key)
       }
     }
   }
