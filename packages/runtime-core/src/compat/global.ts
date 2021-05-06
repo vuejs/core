@@ -11,7 +11,6 @@ import {
   isFunction,
   extend,
   NOOP,
-  EMPTY_OBJ,
   isArray,
   isObject,
   isString,
@@ -557,11 +556,8 @@ function defineReactive(obj: any, key: string, val: any) {
 
   const i = obj.$
   if (i && obj === i.proxy) {
-    // Vue instance, add it to data
-    if (i.data === EMPTY_OBJ) {
-      i.data = reactive({})
-    }
-    i.data[key] = val
+    // target is a Vue instance - define on instance.ctx
+    defineReactiveSimple(i.ctx, key, val)
     i.accessCache = Object.create(null)
   } else if (isReactive(obj)) {
     obj[key] = val

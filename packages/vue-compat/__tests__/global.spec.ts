@@ -360,6 +360,20 @@ describe('GLOBAL_PRIVATE_UTIL', () => {
     expect(vm.$el.textContent).toBe('2')
   })
 
+  test('defineReactive on instance with key that starts with $', async () => {
+    const vm = new Vue({
+      beforeCreate() {
+        // @ts-ignore
+        Vue.util.defineReactive(this, '$foo', 1)
+      },
+      template: `<div>{{ $foo }}</div>`
+    }).$mount() as any
+    expect(vm.$el.textContent).toBe('1')
+    vm.$foo = 2
+    await nextTick()
+    expect(vm.$el.textContent).toBe('2')
+  })
+
   test('defineReactive with object value', () => {
     const obj: any = {}
     const val = { a: 1 }
