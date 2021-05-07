@@ -14,8 +14,8 @@ describe('e2e: Transition', () => {
   } = setupPuppeteer()
   const baseUrl = `file://${path.resolve(__dirname, './transition.html')}`
 
-  const duration = process.env.CI ? 100 : 50
-  const buffer = 5
+  const duration = process.env.CI ? 200 : 50
+  const buffer = process.env.CI ? 20 : 5
 
   const transitionFinish = (time = duration) => timeout(time + buffer)
 
@@ -861,7 +861,7 @@ describe('e2e: Transition', () => {
           'test-anim-long-leave-to'
         ])
         await new Promise(r => {
-          setTimeout(r, duration + 5)
+          setTimeout(r, duration - buffer)
         })
         expect(await classList('#container div')).toStrictEqual([
           'test-anim-long-leave-active',
@@ -881,7 +881,7 @@ describe('e2e: Transition', () => {
           'test-anim-long-enter-to'
         ])
         await new Promise(r => {
-          setTimeout(r, duration + 5)
+          setTimeout(r, duration - buffer)
         })
         expect(await classList('#container div')).toStrictEqual([
           'test-anim-long-enter-active',
