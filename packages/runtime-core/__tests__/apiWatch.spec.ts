@@ -31,30 +31,6 @@ import {
 // reference: https://vue-composition-api-rfc.netlify.com/api.html#watch
 
 describe('api: watch', () => {
-  it('watching sources: ref<any[]>', async () => {
-    const foo = ref([1])
-    const spy = jest.fn()
-    watch(foo, () => {
-      spy()
-    })
-    foo.value = foo.value.slice()
-    await nextTick()
-    expect(spy).toBeCalledTimes(1)
-  })
-
-  it('watching multiple sources: computed', async () => {
-    let count = 0
-    const value = ref('1')
-    const plus = computed(() => !!value.value)
-    watch([plus], () => {
-      count++
-    })
-    value.value = '2'
-    await nextTick()
-    expect(plus.value).toBe(true)
-    expect(count).toBe(0)
-  })
-
   it('effect', async () => {
     const state = reactive({ count: 0 })
     let dummy
@@ -967,5 +943,29 @@ describe('api: watch', () => {
 
     await nextTick()
     expect(spy).toHaveBeenCalledTimes(2)
+  })
+  
+  it('watching sources: ref<any[]>', async () => {
+    const foo = ref([1])
+    const spy = jest.fn()
+    watch(foo, () => {
+      spy()
+    })
+    foo.value = foo.value.slice()
+    await nextTick()
+    expect(spy).toBeCalledTimes(1)
+  })
+
+  it('watching multiple sources: computed', async () => {
+    let count = 0
+    const value = ref('1')
+    const plus = computed(() => !!value.value)
+    watch([plus], () => {
+      count++
+    })
+    value.value = '2'
+    await nextTick()
+    expect(plus.value).toBe(true)
+    expect(count).toBe(0)
   })
 })
