@@ -49,6 +49,30 @@ const bar = 1
 },`)
   })
 
+  test('defineProps() should work with multiple declarations', () => {
+    const { content } = compile(`
+<script setup>
+import { defineProps } from 'vue'
+const props = defineProps({
+  foo: String
+}),
+bar = 1
+</script>
+  `)
+    // should generate working code
+    assertCode(content)
+    // should generate correct setup signature
+    expect(content).toMatch(`setup(__props) {`)
+    // should assign user identifier to it
+    expect(content).toMatch(`const props = __props`)
+    // should include context options in default export
+    expect(content).toMatch(`export default {
+  expose: [],
+  props: {
+  foo: String
+},`)
+  })
+
   test('defineEmit()', () => {
     const { content, bindings } = compile(`
 <script setup>

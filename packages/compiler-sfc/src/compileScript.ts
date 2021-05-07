@@ -676,7 +676,10 @@ export function compileScript(
             if (node.declarations.length === 1) {
               s.remove(node.start! + startOffset, node.end! + startOffset)
             } else {
-              s.remove(decl.start! + startOffset, decl.end! + startOffset)
+              const currentDeclIndex = node.declarations.indexOf(decl)
+              const nextDecl = node.declarations[currentDeclIndex + 1]
+              const end = nextDecl ? nextDecl.start! : decl.end!
+              s.remove(decl.start! + startOffset, end + startOffset)
             }
         }
       }

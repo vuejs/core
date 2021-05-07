@@ -86,6 +86,23 @@ return { props, bar }
 }"
 `;
 
+exports[`SFC compile <script setup> defineProps() should work with multiple declarations 1`] = `
+"export default {
+  expose: [],
+  props: {
+  foo: String
+},
+  setup(__props) {
+
+const props = __props
+const bar = 1
+
+return { props, bar }
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> errors should allow defineProps/Emit() referencing imported binding 1`] = `
 "import { bar } from './bar'
         
