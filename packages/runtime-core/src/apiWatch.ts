@@ -18,7 +18,8 @@ import {
   NOOP,
   remove,
   isMap,
-  isSet
+  isSet,
+  isPlainObject
 } from '@vue/shared'
 import {
   currentInstance,
@@ -33,6 +34,9 @@ import {
 } from './errorHandling'
 import { queuePostRenderEffect } from './renderer'
 import { warn } from './warning'
+import { DeprecationTypes } from './compat/compatConfig'
+import { checkCompatEnabled, isCompatEnabled } from './compat/compatConfig'
+import { ObjectWatchOptionItem } from './componentOptions'
 
 export type WatchEffect = (onInvalidate: InvalidateCbRegistrator) => void
 
@@ -80,7 +84,7 @@ const INITIAL_WATCHER_VALUE = {}
 
 type MultiWatchSources = (WatchSource<unknown> | object)[]
 
-// overload #1: array of multiple sources + cb
+// overload: array of multiple sources + cb
 export function watch<
   T extends MultiWatchSources,
   Immediate extends Readonly<boolean> = false
@@ -90,7 +94,7 @@ export function watch<
   options?: WatchOptions<Immediate>
 ): WatchStopHandle
 
-// overload #2 for multiple sources w/ `as const`
+// overload: multiple sources w/ `as const`
 // watch([foo, bar] as const, () => {})
 // somehow [...T] breaks when the type is readonly
 export function watch<
@@ -102,14 +106,14 @@ export function watch<
   options?: WatchOptions<Immediate>
 ): WatchStopHandle
 
-// overload #2: single source + cb
+// overload: single source + cb
 export function watch<T, Immediate extends Readonly<boolean> = false>(
   source: WatchSource<T>,
   cb: WatchCallback<T, Immediate extends true ? (T | undefined) : T>,
   options?: WatchOptions<Immediate>
 ): WatchStopHandle
 
-// overload #3: watching reactive object w/ cb
+// overload: watching reactive object w/ cb
 export function watch<
   T extends object,
   Immediate extends Readonly<boolean> = false
@@ -167,7 +171,8 @@ function doWatch(
 
   let getter: () => any
   let forceTrigger = false
-  let isSourceArray: boolean = false
+  let isMultiSource = false
+
   if (isRef(source)) {
     getter = () => (source as Ref).value
     forceTrigger = !!(source as Ref)._shallow
@@ -175,16 +180,18 @@ function doWatch(
     getter = () => source
     deep = true
   } else if (isArray(source)) {
-    isSourceArray = true
+    isMultiSource = true
+    forceTrigger = source.some(isReactive)
     getter = () =>
       source.map(s => {
         if (isRef(s)) {
           return s.value
         } else if (isReactive(s)) {
-          deep = true
           return traverse(s)
         } else if (isFunction(s)) {
-          return callWithErrorHandling(s, instance, ErrorCodes.WATCH_GETTER)
+          return callWithErrorHandling(s, instance, ErrorCodes.WATCH_GETTER, [
+            instance && (instance.proxy as any)
+          ])
         } else {
           __DEV__ && warnInvalidSource(s)
         }
@@ -193,7 +200,9 @@ function doWatch(
     if (cb) {
       // getter with cb
       getter = () =>
-        callWithErrorHandling(source, instance, ErrorCodes.WATCH_GETTER)
+        callWithErrorHandling(source, instance, ErrorCodes.WATCH_GETTER, [
+          instance && (instance.proxy as any)
+        ])
     } else {
       // no cb -> simple effect
       getter = () => {
@@ -203,7 +212,7 @@ function doWatch(
         if (cleanup) {
           cleanup()
         }
-        return callWithErrorHandling(
+        return callWithAsyncErrorHandling(
           source,
           instance,
           ErrorCodes.WATCH_CALLBACK,
@@ -216,13 +225,28 @@ function doWatch(
     __DEV__ && warnInvalidSource(source)
   }
 
+  // 2.x array mutation watch compat
+  if (__COMPAT__ && cb && !deep) {
+    const baseGetter = getter
+    getter = () => {
+      const val = baseGetter()
+      if (
+        isArray(val) &&
+        checkCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance)
+      ) {
+        traverse(val)
+      }
+      return val
+    }
+  }
+
   if (cb && deep) {
     const baseGetter = getter
     getter = () => traverse(baseGetter())
   }
 
   let cleanup: () => void
-  const onInvalidate: InvalidateCbRegistrator = (fn: () => void) => {
+  let onInvalidate: InvalidateCbRegistrator = (fn: () => void) => {
     cleanup = runner.options.onStop = () => {
       callWithErrorHandling(fn, instance, ErrorCodes.WATCH_CLEANUP)
     }
@@ -231,6 +255,8 @@ function doWatch(
   // in SSR there is no need to setup an actual effect, and it should be noop
   // unless it's eager
   if (__NODE_JS__ && isInSSRComponentSetup) {
+    // we will also not call the invalidate callback (+ runner is not set up)
+    onInvalidate = NOOP
     if (!cb) {
       getter()
     } else if (immediate) {
@@ -243,7 +269,7 @@ function doWatch(
     return NOOP
   }
 
-  let oldValue = isArray(source) ? [] : INITIAL_WATCHER_VALUE
+  let oldValue = isMultiSource ? [] : INITIAL_WATCHER_VALUE
   const job: SchedulerJob = () => {
     if (!runner.active) {
       return
@@ -251,19 +277,18 @@ function doWatch(
     if (cb) {
       // watch(source, cb)
       const newValue = runner()
-      let change: boolean = false
-
-      if (isSourceArray && isArray(newValue) && isArray(oldValue)) {
-        for (let i = 0; i < newValue.length && i < oldValue.length; i++) {
-          if (hasChanged(newValue[i], oldValue[i])) {
-            change = true
-            break
-          }
-        }
-      } else {
-        change = hasChanged(newValue, oldValue)
-      }
-      if (deep || forceTrigger || change) {
+      if (
+        deep ||
+        forceTrigger ||
+        (isMultiSource
+          ? (newValue as any[]).some((v, i) =>
+              hasChanged(v, (oldValue as any[])[i])
+            )
+          : hasChanged(newValue, oldValue)) ||
+        (__COMPAT__ &&
+          isArray(newValue) &&
+          isCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance))
+      ) {
         // cleanup before running cb again
         if (cleanup) {
           cleanup()
@@ -338,14 +363,34 @@ function doWatch(
 export function instanceWatch(
   this: ComponentInternalInstance,
   source: string | Function,
-  cb: WatchCallback,
+  value: WatchCallback | ObjectWatchOptionItem,
   options?: WatchOptions
 ): WatchStopHandle {
   const publicThis = this.proxy as any
   const getter = isString(source)
-    ? () => publicThis[source]
+    ? source.includes('.')
+      ? createPathGetter(publicThis, source)
+      : () => publicThis[source]
     : source.bind(publicThis)
+  let cb
+  if (isFunction(value)) {
+    cb = value
+  } else {
+    cb = value.handler as Function
+    options = value
+  }
   return doWatch(getter, cb.bind(publicThis), options, this)
+}
+
+export function createPathGetter(ctx: any, path: string) {
+  const segments = path.split('.')
+  return () => {
+    let cur = ctx
+    for (let i = 0; i < segments.length && cur; i++) {
+      cur = cur[segments[i]]
+    }
+    return cur
+  }
 }
 
 function traverse(value: unknown, seen: Set<unknown> = new Set()) {
@@ -363,9 +408,9 @@ function traverse(value: unknown, seen: Set<unknown> = new Set()) {
     value.forEach((v: any) => {
       traverse(v, seen)
     })
-  } else {
+  } else if (isPlainObject(value)) {
     for (const key in value) {
-      traverse(value[key], seen)
+      traverse((value as any)[key], seen)
     }
   }
   return value

@@ -1,7 +1,8 @@
 import {
   getCurrentInstance,
   SetupContext,
-  ComponentInternalInstance
+  ComponentInternalInstance,
+  ComponentOptions
 } from '../component'
 import {
   cloneVNode,
@@ -110,7 +111,7 @@ export function useTransitionState(): TransitionState {
 
 const TransitionHookValidator = [Function, Array]
 
-const BaseTransitionImpl = {
+const BaseTransitionImpl: ComponentOptions = {
   name: `BaseTransition`,
 
   props: {
@@ -223,7 +224,7 @@ const BaseTransitionImpl = {
             instance.update()
           }
           return emptyPlaceholder(child)
-        } else if (mode === 'in-out') {
+        } else if (mode === 'in-out' && innerChild.type !== Comment) {
           leavingHooks.delayLeave = (
             el: TransitionElement,
             earlyRemove,
@@ -248,6 +249,10 @@ const BaseTransitionImpl = {
       return child
     }
   }
+}
+
+if (__COMPAT__) {
+  BaseTransitionImpl.__isBuiltIn = true
 }
 
 // export the public type for h/tsx inference

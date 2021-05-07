@@ -80,12 +80,3 @@ export const render = /*#__PURE__*/_withId((_ctx, _cache) => {
   }))
 })"
 `;
-
-exports[`scopeId compiler support should wrap render function 1`] = `
-"import { createVNode as _createVNode, openBlock as _openBlock, createBlock as _createBlock, withScopeId as _withScopeId } from \\"vue\\"
-const _withId = /*#__PURE__*/_withScopeId(\\"test\\")
-
-export const render = /*#__PURE__*/_withId((_ctx, _cache) => {
-  return (_openBlock(), _createBlock(\\"div\\"))
-})"
-`;

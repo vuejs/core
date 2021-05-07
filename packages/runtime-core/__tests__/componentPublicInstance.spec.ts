@@ -6,7 +6,7 @@ import {
   createApp,
   shallowReadonly
 } from '@vue/runtime-test'
-import { ComponentInternalInstance } from '../src/component'
+import { ComponentInternalInstance, ComponentOptions } from '../src/component'
 
 describe('component: proxy', () => {
   test('data', () => {
@@ -93,7 +93,7 @@ describe('component: proxy', () => {
     expect(instanceProxy.$root).toBe(instance!.root.proxy)
     expect(instanceProxy.$emit).toBe(instance!.emit)
     expect(instanceProxy.$el).toBe(instance!.vnode.el)
-    expect(instanceProxy.$options).toBe(instance!.type)
+    expect(instanceProxy.$options).toBe(instance!.type as ComponentOptions)
     expect(() => (instanceProxy.$data = {})).toThrow(TypeError)
     expect(`Attempting to mutate public property "$data"`).toHaveBeenWarned()
 

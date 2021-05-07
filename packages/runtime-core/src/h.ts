@@ -4,6 +4,8 @@ import {
   createVNode,
   VNodeArrayChildren,
   Fragment,
+  Text,
+  Comment,
   isVNode
 } from './vnode'
 import { Teleport, TeleportProps } from './components/Teleport'
@@ -84,6 +86,16 @@ export function h(
   children?: RawChildren | RawSlots
 ): VNode
 
+// text/comment
+export function h(
+  type: typeof Text | typeof Comment,
+  children?: string | number | boolean
+): VNode
+export function h(
+  type: typeof Text | typeof Comment,
+  props?: null,
+  children?: string | number | boolean
+): VNode
 // fragment
 export function h(type: typeof Fragment, children?: VNodeArrayChildren): VNode
 export function h(

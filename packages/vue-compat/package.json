@@ -1,0 +1,44 @@
+{
+  "name": "@vue/compat",
+  "version": "3.0.11",
+  "description": "Vue 3 compatibility build for Vue 2",
+  "main": "index.js",
+  "module": "dist/vue.runtime.esm-bundler.js",
+  "types": "dist/vue.d.ts",
+  "unpkg": "dist/vue.global.js",
+  "jsdelivr": "dist/vue.global.js",
+  "files": [
+    "index.js",
+    "dist"
+  ],
+  "buildOptions": {
+    "name": "Vue",
+    "filename": "vue",
+    "compat": true,
+    "formats": [
+      "esm-bundler",
+      "esm-bundler-runtime",
+      "cjs",
+      "global",
+      "global-runtime",
+      "esm-browser",
+      "esm-browser-runtime"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vuejs/vue.git"
+  },
+  "keywords": [
+    "vue"
+  ],
+  "author": "Evan You",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/vuejs/vue/issues"
+  },
+  "homepage": "https://github.com/vuejs/vue/tree/dev/packages/vue-compat#readme",
+  "peerDependencies": {
+    "vue": "3.0.11"
+  }
+}
