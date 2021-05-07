@@ -1051,18 +1051,19 @@ function testRender(type: string, render: typeof renderToString) {
         setup() {
           onErrorCaptured(e => {
             capturedError = e
+            return false
           })
         },
         render() {
           return h('div', h(Child))
         }
       })
+
       try {
         await render(app)
       } catch (e) {
         renderError = e
       }
-      expect(`Unhandled error`).toHaveBeenWarned()
       expect(renderError).toBe(null)
       expect(((capturedError as unknown) as Error).message).toBe('An error')
     })
