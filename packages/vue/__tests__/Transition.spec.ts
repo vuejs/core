@@ -14,7 +14,7 @@ describe('e2e: Transition', () => {
   } = setupPuppeteer()
   const baseUrl = `file://${path.resolve(__dirname, './transition.html')}`
 
-  const duration = 50
+  const duration = process.env.CI ? 100 : 50
   const buffer = 5
 
   const transitionFinish = (time = duration) => timeout(time + buffer)
