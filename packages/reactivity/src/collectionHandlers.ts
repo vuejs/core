@@ -49,6 +49,10 @@ function get(
     return wrap(target.get(key))
   } else if (has.call(rawTarget, rawKey)) {
     return wrap(target.get(rawKey))
+  } else if (target !== rawTarget) {
+    // #3602 readonly(reactive(Map))
+    // ensure that the nested reactive `Map` can do tracking for itself
+    target.get(key)
   }
 }
 
