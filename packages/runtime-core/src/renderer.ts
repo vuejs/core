@@ -16,6 +16,7 @@ import {
 } from './vnode'
 import {
   ComponentInternalInstance,
+  ComponentOptions,
   createComponentInstance,
   Data,
   setupComponent
@@ -1430,31 +1431,50 @@ function baseCreateRenderer(
           instance.emit('hook:beforeMount')
         }
 
-        // render
-        if (__DEV__) {
-          startMeasure(instance, `render`)
-        }
-        const subTree = (instance.subTree = renderComponentRoot(instance))
-        if (__DEV__) {
-          endMeasure(instance, `render`)
-        }
-
         if (el && hydrateNode) {
-          if (__DEV__) {
-            startMeasure(instance, `hydrate`)
-          }
           // vnode has adopted host node - perform hydration instead of mount.
-          hydrateNode(
-            initialVNode.el as Node,
-            subTree,
-            instance,
-            parentSuspense,
-            null
-          )
-          if (__DEV__) {
-            endMeasure(instance, `hydrate`)
+          const hydrateSubTree = () => {
+            if (__DEV__) {
+              startMeasure(instance, `render`)
+            }
+            instance.subTree = renderComponentRoot(instance)
+            if (__DEV__) {
+              endMeasure(instance, `render`)
+            }
+            if (__DEV__) {
+              startMeasure(instance, `hydrate`)
+            }
+            hydrateNode!(
+              el as Node,
+              instance.subTree,
+              instance,
+              parentSuspense,
+              null
+            )
+            if (__DEV__) {
+              endMeasure(instance, `hydrate`)
+            }
+          }
+
+          if (isAsyncWrapper(initialVNode)) {
+            (initialVNode.type as ComponentOptions).__asyncLoader!().then(
+              // note: we are moving the render call into an async callback,
+              // which means it won't track dependencies - but it's ok because
+              // a server-rendered async wrapper is already in resolved state
+              // and it will never need to change.
+              hydrateSubTree
+            )
+          } else {
+            hydrateSubTree()
           }
         } else {
+          if (__DEV__) {
+            startMeasure(instance, `render`)
+          }
+          const subTree = (instance.subTree = renderComponentRoot(instance))
+          if (__DEV__) {
+            endMeasure(instance, `render`)
+          }
           if (__DEV__) {
             startMeasure(instance, `patch`)
           }

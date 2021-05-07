@@ -626,6 +626,67 @@ describe('SSR hydration', () => {
     expect(spy).toHaveBeenCalled()
   })
 
+  test('execute the updateComponent(AsyncComponentWrapper) before the async component is resolved', async () => {
+    const Comp = {
+      render() {
+        return h('h1', 'Async component')
+      }
+    }
+    let serverResolve: any
+    let AsyncComp = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          serverResolve = r
+        })
+    )
+
+    const bol = ref(true)
+    const App = {
+      setup() {
+        onMounted(() => {
+          // change state, this makes updateComponent(AsyncComp) execute before
+          // the async component is resolved
+          bol.value = false
+        })
+
+        return () => {
+          return [bol.value ? 'hello' : 'world', h(AsyncComp)]
+        }
+      }
+    }
+
+    // server render
+    const htmlPromise = renderToString(h(App))
+    serverResolve(Comp)
+    const html = await htmlPromise
+    expect(html).toMatchInlineSnapshot(
+      `"<!--[-->hello<h1>Async component</h1><!--]-->"`
+    )
+
+    // hydration
+    let clientResolve: any
+    AsyncComp = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          clientResolve = r
+        })
+    )
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    createSSRApp(App).mount(container)
+
+    // resolve
+    clientResolve(Comp)
+    await new Promise(r => setTimeout(r))
+
+    // should be hydrated now
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<!--[-->world<h1>Async component</h1><!--]-->"`
+    )
+  })
+
   test('elements with camel-case in svg ', () => {
     const { vnode, container } = mountWithHydration(
       '<animateTransform></animateTransform>',
