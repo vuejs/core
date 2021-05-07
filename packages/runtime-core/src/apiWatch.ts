@@ -171,6 +171,8 @@ function doWatch(
 
   let getter: () => any
   let forceTrigger = false
+  let isMultiSource = false
+
   if (isRef(source)) {
     getter = () => (source as Ref).value
     forceTrigger = !!(source as Ref)._shallow
@@ -178,6 +180,8 @@ function doWatch(
     getter = () => source
     deep = true
   } else if (isArray(source)) {
+    isMultiSource = true
+    forceTrigger = source.some(isReactive)
     getter = () =>
       source.map(s => {
         if (isRef(s)) {
@@ -265,7 +269,7 @@ function doWatch(
     return NOOP
   }
 
-  let oldValue = isArray(source) ? [] : INITIAL_WATCHER_VALUE
+  let oldValue = isMultiSource ? [] : INITIAL_WATCHER_VALUE
   const job: SchedulerJob = () => {
     if (!runner.active) {
       return
@@ -276,7 +280,11 @@ function doWatch(
       if (
         deep ||
         forceTrigger ||
-        hasChanged(newValue, oldValue) ||
+        (isMultiSource
+          ? (newValue as any[]).some((v, i) =>
+              hasChanged(v, (oldValue as any[])[i])
+            )
+          : hasChanged(newValue, oldValue)) ||
         (__COMPAT__ &&
           isArray(newValue) &&
           isCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance))
