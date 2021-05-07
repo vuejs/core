@@ -1415,8 +1415,6 @@ function baseCreateRenderer(
         let vnodeHook: VNodeHook | null | undefined
         const { el, props } = initialVNode
         const { bm, m, parent } = instance
-        const asyncWrapper = isAsyncWrapper(initialVNode)
-        const isHydration = el && hydrateNode
 
         // beforeMount hook
         if (bm) {
@@ -1433,25 +1431,19 @@ function baseCreateRenderer(
           instance.emit('hook:beforeMount')
         }
 
-        // render
-        if (__DEV__) {
-          startMeasure(instance, `render`)
-        }
-        if (!isHydration || !asyncWrapper) {
-          instance.subTree = renderComponentRoot(instance)
-        }
-        if (__DEV__) {
-          endMeasure(instance, `render`)
-        }
-
-        if (isHydration) {
-          if (__DEV__) {
-            startMeasure(instance, `hydrate`)
-          }
-
+        if (el && hydrateNode) {
           // vnode has adopted host node - perform hydration instead of mount.
           const hydrateSubTree = () => {
+            if (__DEV__) {
+              startMeasure(instance, `render`)
+            }
             instance.subTree = renderComponentRoot(instance)
+            if (__DEV__) {
+              endMeasure(instance, `render`)
+            }
+            if (__DEV__) {
+              startMeasure(instance, `hydrate`)
+            }
             hydrateNode!(
               el as Node,
               instance.subTree,
@@ -1459,25 +1451,36 @@ function baseCreateRenderer(
               parentSuspense,
               null
             )
+            if (__DEV__) {
+              endMeasure(instance, `hydrate`)
+            }
           }
 
-          if (asyncWrapper) {
+          if (isAsyncWrapper(initialVNode)) {
             (initialVNode.type as ComponentOptions).__asyncLoader!().then(
+              // note: we are moving the render call into an async callback,
+              // which means it won't track dependencies - but it's ok because
+              // a server-rendered async wrapper is already in resolved state
+              // and it will never need to change.
               hydrateSubTree
             )
           } else {
             hydrateSubTree()
           }
-          if (__DEV__) {
-            endMeasure(instance, `hydrate`)
-          }
         } else {
+          if (__DEV__) {
+            startMeasure(instance, `render`)
+          }
+          const subTree = (instance.subTree = renderComponentRoot(instance))
+          if (__DEV__) {
+            endMeasure(instance, `render`)
+          }
           if (__DEV__) {
             startMeasure(instance, `patch`)
           }
           patch(
             null,
-            instance.subTree,
+            subTree,
             container,
             anchor,
             instance,
@@ -1487,7 +1490,7 @@ function baseCreateRenderer(
           if (__DEV__) {
             endMeasure(instance, `patch`)
           }
-          initialVNode.el = instance.subTree.el
+          initialVNode.el = subTree.el
         }
         // mounted hook
         if (m) {
