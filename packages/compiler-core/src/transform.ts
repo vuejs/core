@@ -126,7 +126,7 @@ export interface TransformContext
   constantCache: Map<TemplateChildNode, ConstantTypes>
 
   // 2.x Compat only
-  filters?: Set<string>
+  filters?: Map<string, AssetData>
 }
 
 export function createTransformContext(
@@ -299,7 +299,7 @@ export function createTransformContext(
   }
 
   if (__COMPAT__) {
-    context.filters = new Set()
+    context.filters = new Map()
   }
 
   function addId(id: string) {
@@ -336,7 +336,7 @@ export function transform(root: RootNode, options: TransformOptions) {
   root.cached = context.cached
 
   if (__COMPAT__) {
-    root.filters = [...context.filters!]
+    root.filters = [...context.filters!.values()]
   }
 }
 

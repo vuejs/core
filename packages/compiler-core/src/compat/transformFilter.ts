@@ -180,12 +180,18 @@ function wrapFilter(
   context.helper(RESOLVE_FILTER)
   const i = filter.indexOf('(')
   if (i < 0) {
-    context.filters!.add(filter)
+    context.filters!.set(filter, {
+      name: filter,
+      warnMissing: true
+    })
     return `${toValidAssetId(filter, 'filter')}(${exp})`
   } else {
     const name = filter.slice(0, i)
     const args = filter.slice(i + 1)
-    context.filters!.add(name)
+    context.filters!.set(name, {
+      name,
+      warnMissing: true
+    })
     return `${toValidAssetId(name, 'filter')}(${exp}${
       args !== ')' ? ',' + args : args
     }`

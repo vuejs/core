@@ -111,7 +111,7 @@ export interface RootNode extends Node {
   codegenNode?: TemplateChildNode | JSChildNode | BlockStatement
 
   // v2 compat only
-  filters?: string[]
+  filters?: AssetData[]
 }
 
 export type ElementNode =
