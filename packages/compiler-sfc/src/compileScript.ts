@@ -21,7 +21,8 @@ import {
   Expression,
   LabeledStatement,
   CallExpression,
-  RestElement
+  RestElement,
+  VariableDeclarator
 } from '@babel/types'
 import { walk } from 'estree-walker'
 import { RawSourceMap } from 'source-map'
@@ -656,10 +657,13 @@ export function compileScript(
       s.remove(node.start! + startOffset, node.end! + startOffset)
     }
     if (node.type === 'VariableDeclaration' && !node.declare) {
+      let definePropsDecl: VariableDeclarator,
+        defineEmitDecl: VariableDeclarator
       for (const decl of node.declarations) {
         if (decl.init) {
           const isDefineProps = processDefineProps(decl.init)
           if (isDefineProps) {
+            definePropsDecl = decl
             propsIdentifier = scriptSetup.content.slice(
               decl.id.start!,
               decl.id.end!
@@ -667,13 +671,17 @@ export function compileScript(
           }
           const isDefineEmit = processDefineEmit(decl.init)
           if (isDefineEmit) {
+            defineEmitDecl = decl
             emitIdentifier = scriptSetup.content.slice(
               decl.id.start!,
               decl.id.end!
             )
           }
+          const filteredDeclarations = node.declarations.filter(
+            decl => decl !== definePropsDecl && decl !== defineEmitDecl
+          )
           if (isDefineProps || isDefineEmit)
-            if (node.declarations.length === 1) {
+            if (!filteredDeclarations.length) {
               s.remove(node.start! + startOffset, node.end! + startOffset)
             } else {
               const currentDeclIndex = node.declarations.indexOf(decl)

@@ -86,7 +86,25 @@ return { props, bar }
 }"
 `;
 
-exports[`SFC compile <script setup> defineProps() should work with multiple declarations 1`] = `
+exports[`SFC compile <script setup> defineProps() and defineEmit() are in the same declaration 1`] = `
+"export default {
+  expose: [],
+  props: {
+        foo: String
+      },
+  emits: ['bar'],
+  setup(__props, { emit: myEmit }) {
+
+const props = __props
+
+
+return { props, myEmit }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> defineProps() should work with multiple declarators 1`] = `
 "export default {
   expose: [],
   props: {

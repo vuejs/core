@@ -49,7 +49,7 @@ const bar = 1
 },`)
   })
 
-  test('defineProps() should work with multiple declarations', () => {
+  test('defineProps() should work with multiple declarators', () => {
     const { content } = compile(`
 <script setup>
 import { defineProps } from 'vue'
@@ -71,6 +71,20 @@ bar = 1
   props: {
   foo: String
 },`)
+  })
+
+  test('defineProps() and defineEmit() are in the same declaration', () => {
+    const { content } = compile(`
+<script setup>
+import { defineProps, defineEmit } from 'vue'
+const props = defineProps({
+        foo: String
+      }),
+      myEmit = defineEmit(['bar'])
+</script>
+  `)
+    // should generate working code
+    assertCode(content)
   })
 
   test('defineEmit()', () => {
