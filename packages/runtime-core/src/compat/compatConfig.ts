@@ -158,7 +158,7 @@ export const deprecationData: Record<DeprecationTypes, DeprecationData> = {
       if (isRuntimeOnly()) {
         msg += ` Pass the "isCustomElement" option to @vue/compiler-dom instead.`
       } else {
-        msg += ` Use config.isCustomElement instead.`
+        msg += ` Use config.compilerOptions.isCustomElement instead.`
       }
       return msg
     },

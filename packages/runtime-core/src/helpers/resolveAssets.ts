@@ -34,9 +34,10 @@ export const NULL_DYNAMIC_COMPONENT = Symbol()
 export function resolveDynamicComponent(component: unknown): VNodeTypes {
   const instance = currentRenderingInstance || currentInstance
   if (instance) {
-    const isCustomElement = instance.appContext.config.isCustomElement
+    const isCustomElement =
+      instance.appContext.config.compilerOptions.isCustomElement
     if (isString(component)) {
-      if (isCustomElement(component)) return component
+      if (isCustomElement && isCustomElement(component)) return component
       return resolveAsset(COMPONENTS, component, false) || component
     } else {
       // invalid types will fallthrough to createVNode and raise warning

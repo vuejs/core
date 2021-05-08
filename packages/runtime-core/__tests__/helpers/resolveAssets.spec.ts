@@ -182,7 +182,7 @@ describe('resolveAssets', () => {
       expect(serializeInner(root)).toBe('<div>hello</div>')
     })
 
-    test('resolve dynamic component should respect the `app.config.isCustomElement`', () => {
+    test('resolve dynamic component should respect the `app.config.compilerOptions.isCustomElement`', () => {
       const Root = {
         components: {
           FooBar: { render: () => h('h1', 'component') }
@@ -198,7 +198,7 @@ describe('resolveAssets', () => {
       }
 
       const app = createApp(Root)
-      app.config.isCustomElement = tag => tag === 'foo-bar'
+      app.config.compilerOptions.isCustomElement = tag => tag === 'foo-bar'
       const root = nodeOps.createElement('div')
       app.mount(root)
       expect(serializeInner(root)).toBe('<foo-bar></foo-bar><h1>component</h1>')

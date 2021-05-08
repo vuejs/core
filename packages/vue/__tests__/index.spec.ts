@@ -136,7 +136,7 @@ describe('compiler + runtime integration', () => {
       template: '<custom></custom>'
     })
     const container = document.createElement('div')
-    app.config.isCustomElement = tag => tag === 'custom'
+    app.config.compilerOptions.isCustomElement = tag => tag === 'custom'
     app.mount(container)
     expect(container.innerHTML).toBe('<custom></custom>')
   })
