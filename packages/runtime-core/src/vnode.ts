@@ -41,7 +41,6 @@ import {
 import { RendererNode, RendererElement } from './renderer'
 import { NULL_DYNAMIC_COMPONENT } from './helpers/resolveAssets'
 import { hmrDirtyComponents } from './hmr'
-import { setCompiledSlotRendering } from './helpers/renderSlot'
 import { convertLegacyComponent } from './compat/component'
 import { convertLegacyVModelProps } from './compat/componentVModel'
 import { defineLegacyVNodeProperties } from './compat/renderFn'
@@ -643,9 +642,9 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
       const slot = (children as any).default
       if (slot) {
         // _c marker is added by withCtx() indicating this is a compiled slot
-        slot._c && setCompiledSlotRendering(1)
+        slot._c && (slot._d = false)
         normalizeChildren(vnode, slot())
-        slot._c && setCompiledSlotRendering(-1)
+        slot._c && (slot._d = false)
       }
       return
     } else {
