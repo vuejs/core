@@ -4,11 +4,11 @@
 
 `@vue/compat` (aka "the migration build") is a build of Vue 3 that provides configurable Vue 2 compatible behavior.
 
-The migration build runs in Vue 2 mode by default - most public APIs behave exactly like Vue 2, with only [a few exceptions](TODO). Usage of features that have changed or been deprecated in Vue 3 will emit runtime warnings. A feature's compatibility can be enabled/disabled on a per-component basis.
+The migration build runs in Vue 2 mode by default - most public APIs behave exactly like Vue 2, with only [a few exceptions](#incompatible). Usage of features that have changed or been deprecated in Vue 3 will emit runtime warnings. A feature's compatibility can be enabled/disabled on a per-component basis.
 
 ### Intended Use Cases
 
-- Upgrading a Vue 2 application to Vue 3 (with limitations)
+- Upgrading a Vue 2 application to Vue 3 (with limitations - see below).
 - Migrate a library to support Vue 3
 - For experienced Vue 2 developers who have not tried Vue 3 yet, the migration build can be used in place of Vue 3 to help learn the difference between versions.
 
@@ -195,6 +195,30 @@ The following workflow walks through the steps of migrating an actual Vue 2 app 
 
     [Example commit](https://github.com/vuejs/vue-hackernews-2.0/commit/9beb45490bc5f938c9e87b4ac1357cfb799565bd)
 
+
+## Alternative Workflow
+
+The above workflow is "inside-out": it tries to get the app running in Vue 2 mode first, and then gradually move parts over to Vue 3. However, it's possible that your app simply won't run at all due to potential complexity.
+
+In such cases, an alternative "outside-in" strategy would be to start a fresh app running the migration build in [Vue 3 mode](#vue-3-mode), then gradually move parts from the old app into the new app. Existing components can be moved into the new app under Vue 2 mode (see [per component config](#per-component-config)) and then migrated to Vue 3 mode individually. This strategy is closer to a partial rewrite, but you should still be able to reuse most of the code.
+
+## TypeScript Support
+
+The `@vue/compat` package does not ship types, since we will be importing from the aliased `vue` package. TypeScript will be using the Vue 3 types from the `vue` package.
+
+Vue 3 no longer provides a default export - so if you want to get type support for `import Vue from 'vue'` you will need to shim the default export with:
+
+```ts
+// shim.d.ts
+declare module 'vue' {
+  import { CompatVue } from '@vue/runtime-dom'
+  const Vue: CompatVue
+  export default Vue
+}
+```
+
+Note the `CompatVue` type does not provide options API `this` type inference for `new Vue()` and `Vue.extend` - to get `this` type inference inside compoent options, update to use [`defineComponent`](https://v3.vuejs.org/api/global-api.html#definecomponent) instead.
+
 ## Compat Configuration
 
 ### Global Config
@@ -210,6 +234,8 @@ configureCompat({
   FEATURE_ID_B: false
 })
 ```
+
+### Vue 3 Mode
 
 Alternatively, the entire application can default to Vue 3 behavior, with only certain compat features enabled:
 
