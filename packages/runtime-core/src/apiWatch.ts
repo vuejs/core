@@ -18,7 +18,8 @@ import {
   NOOP,
   remove,
   isMap,
-  isSet
+  isSet,
+  isPlainObject
 } from '@vue/shared'
 import {
   currentInstance,
@@ -33,6 +34,9 @@ import {
 } from './errorHandling'
 import { queuePostRenderEffect } from './renderer'
 import { warn } from './warning'
+import { DeprecationTypes } from './compat/compatConfig'
+import { checkCompatEnabled, isCompatEnabled } from './compat/compatConfig'
+import { ObjectWatchOptionItem } from './componentOptions'
 
 export type WatchEffect = (onInvalidate: InvalidateCbRegistrator) => void
 
@@ -167,6 +171,8 @@ function doWatch(
 
   let getter: () => any
   let forceTrigger = false
+  let isMultiSource = false
+
   if (isRef(source)) {
     getter = () => (source as Ref).value
     forceTrigger = !!(source as Ref)._shallow
@@ -174,6 +180,8 @@ function doWatch(
     getter = () => source
     deep = true
   } else if (isArray(source)) {
+    isMultiSource = true
+    forceTrigger = source.some(isReactive)
     getter = () =>
       source.map(s => {
         if (isRef(s)) {
@@ -204,7 +212,7 @@ function doWatch(
         if (cleanup) {
           cleanup()
         }
-        return callWithErrorHandling(
+        return callWithAsyncErrorHandling(
           source,
           instance,
           ErrorCodes.WATCH_CALLBACK,
@@ -217,13 +225,28 @@ function doWatch(
     __DEV__ && warnInvalidSource(source)
   }
 
+  // 2.x array mutation watch compat
+  if (__COMPAT__ && cb && !deep) {
+    const baseGetter = getter
+    getter = () => {
+      const val = baseGetter()
+      if (
+        isArray(val) &&
+        checkCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance)
+      ) {
+        traverse(val)
+      }
+      return val
+    }
+  }
+
   if (cb && deep) {
     const baseGetter = getter
     getter = () => traverse(baseGetter())
   }
 
   let cleanup: () => void
-  const onInvalidate: InvalidateCbRegistrator = (fn: () => void) => {
+  let onInvalidate: InvalidateCbRegistrator = (fn: () => void) => {
     cleanup = runner.options.onStop = () => {
       callWithErrorHandling(fn, instance, ErrorCodes.WATCH_CLEANUP)
     }
@@ -232,6 +255,8 @@ function doWatch(
   // in SSR there is no need to setup an actual effect, and it should be noop
   // unless it's eager
   if (__NODE_JS__ && isInSSRComponentSetup) {
+    // we will also not call the invalidate callback (+ runner is not set up)
+    onInvalidate = NOOP
     if (!cb) {
       getter()
     } else if (immediate) {
@@ -244,7 +269,7 @@ function doWatch(
     return NOOP
   }
 
-  let oldValue = isArray(source) ? [] : INITIAL_WATCHER_VALUE
+  let oldValue = isMultiSource ? [] : INITIAL_WATCHER_VALUE
   const job: SchedulerJob = () => {
     if (!runner.active) {
       return
@@ -252,7 +277,18 @@ function doWatch(
     if (cb) {
       // watch(source, cb)
       const newValue = runner()
-      if (deep || forceTrigger || hasChanged(newValue, oldValue)) {
+      if (
+        deep ||
+        forceTrigger ||
+        (isMultiSource
+          ? (newValue as any[]).some((v, i) =>
+              hasChanged(v, (oldValue as any[])[i])
+            )
+          : hasChanged(newValue, oldValue)) ||
+        (__COMPAT__ &&
+          isArray(newValue) &&
+          isCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance))
+      ) {
         // cleanup before running cb again
         if (cleanup) {
           cleanup()
@@ -327,14 +363,34 @@ function doWatch(
 export function instanceWatch(
   this: ComponentInternalInstance,
   source: string | Function,
-  cb: WatchCallback,
+  value: WatchCallback | ObjectWatchOptionItem,
   options?: WatchOptions
 ): WatchStopHandle {
   const publicThis = this.proxy as any
   const getter = isString(source)
-    ? () => publicThis[source]
+    ? source.includes('.')
+      ? createPathGetter(publicThis, source)
+      : () => publicThis[source]
     : source.bind(publicThis)
+  let cb
+  if (isFunction(value)) {
+    cb = value
+  } else {
+    cb = value.handler as Function
+    options = value
+  }
   return doWatch(getter, cb.bind(publicThis), options, this)
+}
+
+export function createPathGetter(ctx: any, path: string) {
+  const segments = path.split('.')
+  return () => {
+    let cur = ctx
+    for (let i = 0; i < segments.length && cur; i++) {
+      cur = cur[segments[i]]
+    }
+    return cur
+  }
 }
 
 function traverse(value: unknown, seen: Set<unknown> = new Set()) {
@@ -352,9 +408,9 @@ function traverse(value: unknown, seen: Set<unknown> = new Set()) {
     value.forEach((v: any) => {
       traverse(v, seen)
     })
-  } else {
+  } else if (isPlainObject(value)) {
     for (const key in value) {
-      traverse(value[key], seen)
+      traverse((value as any)[key], seen)
     }
   }
   return value

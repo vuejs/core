@@ -23,7 +23,7 @@ import {
 } from './componentProps'
 import { Slots, initSlots, InternalSlots } from './componentSlots'
 import { warn } from './warning'
-import { ErrorCodes, callWithErrorHandling } from './errorHandling'
+import { ErrorCodes, callWithErrorHandling, handleError } from './errorHandling'
 import { AppContext, createAppContext, AppConfig } from './apiCreateApp'
 import { Directive, validateDirectiveName } from './directives'
 import {
@@ -47,15 +47,16 @@ import {
   NO,
   makeMap,
   isPromise,
-  ShapeFlags
+  ShapeFlags,
+  extend
 } from '@vue/shared'
 import { SuspenseBoundary } from './components/Suspense'
 import { CompilerOptions } from '@vue/compiler-core'
-import {
-  currentRenderingInstance,
-  markAttrsAccessed
-} from './componentRenderUtils'
+import { markAttrsAccessed } from './componentRenderUtils'
+import { currentRenderingInstance } from './componentRenderContext'
 import { startMeasure, endMeasure } from './profiling'
+import { convertLegacyRenderFn } from './compat/renderFn'
+import { globalCompatConfig, validateCompatConfig } from './compat/compatConfig'
 
 export type Data = Record<string, unknown>
 
@@ -95,6 +96,10 @@ export interface ComponentInternalOptions {
    * @internal
    */
   __hmrId?: string
+  /**
+   * Compat build only, for bailing out of certain compatibility behavior
+   */
+  __isBuiltIn?: boolean
   /**
    * This one should be exposed so that devtools can make use of it
    */
@@ -148,7 +153,7 @@ export type Component<
 
 export { ComponentOptions }
 
-type LifecycleHook = Function[] | null
+type LifecycleHook<TFn = Function> = TFn[] | null
 
 export const enum LifecycleHooks {
   BEFORE_CREATE = 'bc',
@@ -163,7 +168,8 @@ export const enum LifecycleHooks {
   ACTIVATED = 'a',
   RENDER_TRIGGERED = 'rtg',
   RENDER_TRACKED = 'rtc',
-  ERROR_CAPTURED = 'ec'
+  ERROR_CAPTURED = 'ec',
+  SERVER_PREFETCH = 'sp'
 }
 
 export interface SetupContext<E = EmitsOptions> {
@@ -187,6 +193,10 @@ export type InternalRenderFunction = {
     $options: ComponentInternalInstance['ctx']
   ): VNodeChild
   _rc?: boolean // isRuntimeCompiled
+
+  // __COMPAT__ only
+  _compatChecked?: boolean // v3 and already checked for v2 compat
+  _compatWrapped?: boolean // is wrapped for v2 compat
 }
 
 /**
@@ -260,6 +270,11 @@ export interface ComponentInternalInstance {
    */
   directives: Record<string, Directive> | null
   /**
+   * Resolved filters registry, v2 compat only
+   * @internal
+   */
+  filters?: Record<string, Function>
+  /**
    * resolved props options
    * @internal
    */
@@ -304,7 +319,12 @@ export interface ComponentInternalInstance {
    * @internal
    */
   emitted: Record<string, boolean> | null
-
+  /**
+   * used for caching the value returned from props default factory functions to
+   * avoid unnecessary watcher trigger
+   * @internal
+   */
+  propsDefaults: Data
   /**
    * setup related
    * @internal
@@ -395,6 +415,10 @@ export interface ComponentInternalInstance {
    * @internal
    */
   [LifecycleHooks.ERROR_CAPTURED]: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.SERVER_PREFETCH]: LifecycleHook<() => Promise<unknown>>
 }
 
 const emptyAppContext = createAppContext()
@@ -442,6 +466,9 @@ export function createComponentInstance(
     emit: null as any, // to be set immediately
     emitted: null,
 
+    // props default value
+    propsDefaults: EMPTY_OBJ,
+
     // state
     ctx: EMPTY_OBJ,
     data: EMPTY_OBJ,
@@ -475,7 +502,8 @@ export function createComponentInstance(
     a: null,
     rtg: null,
     rtc: null,
-    ec: null
+    ec: null,
+    sp: null
   }
   if (__DEV__) {
     instance.ctx = createRenderContext(instance)
@@ -556,6 +584,13 @@ function setupStatefulComponent(
         validateDirectiveName(names[i])
       }
     }
+    if (Component.compilerOptions && isRuntimeOnly()) {
+      warn(
+        `"compilerOptions" is only supported when using a build of Vue that ` +
+          `includes the runtime compiler. Since you are using a runtime-only ` +
+          `build, the options should be passed via your build tool config instead.`
+      )
+    }
   }
   // 0. create render proxy property access cache
   instance.accessCache = Object.create(null)
@@ -585,9 +620,13 @@ function setupStatefulComponent(
     if (isPromise(setupResult)) {
       if (isSSR) {
         // return the promise so server-renderer can wait on it
-        return setupResult.then((resolvedResult: unknown) => {
-          handleSetupResult(instance, resolvedResult, isSSR)
-        })
+        return setupResult
+          .then((resolvedResult: unknown) => {
+            handleSetupResult(instance, resolvedResult, isSSR)
+          })
+          .catch(e => {
+            handleError(e, instance, ErrorCodes.SETUP_FUNCTION)
+          })
       } else if (__FEATURE_SUSPENSE__) {
         // async setup returned Promise.
         // bail here and wait for re-entry.
@@ -653,6 +692,9 @@ type CompileFunction = (
 
 let compile: CompileFunction | undefined
 
+// dev only
+export const isRuntimeOnly = () => !compile
+
 /**
  * For runtime-dom to register the compiler.
  * Note the exported method uses any to avoid d.ts relying on the compiler types.
@@ -661,29 +703,69 @@ export function registerRuntimeCompiler(_compile: any) {
   compile = _compile
 }
 
-function finishComponentSetup(
+export function finishComponentSetup(
   instance: ComponentInternalInstance,
-  isSSR: boolean
+  isSSR: boolean,
+  skipOptions?: boolean
 ) {
   const Component = instance.type as ComponentOptions
 
+  if (__COMPAT__) {
+    convertLegacyRenderFn(instance)
+
+    if (__DEV__ && Component.compatConfig) {
+      validateCompatConfig(Component.compatConfig)
+    }
+  }
+
   // template / render function normalization
   if (__NODE_JS__ && isSSR) {
-    if (Component.render) {
-      instance.render = Component.render as InternalRenderFunction
-    }
+    // 1. the render function may already exist, returned by `setup`
+    // 2. otherwise try to use the `Component.render`
+    // 3. if the component doesn't have a render function,
+    //    set `instance.render` to NOOP so that it can inherit the render
+    //    function from mixins/extend
+    instance.render = (instance.render ||
+      Component.render ||
+      NOOP) as InternalRenderFunction
   } else if (!instance.render) {
     // could be set from setup()
-    if (compile && Component.template && !Component.render) {
-      if (__DEV__) {
-        startMeasure(instance, `compile`)
-      }
-      Component.render = compile(Component.template, {
-        isCustomElement: instance.appContext.config.isCustomElement,
-        delimiters: Component.delimiters
-      })
-      if (__DEV__) {
-        endMeasure(instance, `compile`)
+    if (compile && !Component.render) {
+      const template =
+        (__COMPAT__ &&
+          instance.vnode.props &&
+          instance.vnode.props['inline-template']) ||
+        Component.template
+      if (template) {
+        if (__DEV__) {
+          startMeasure(instance, `compile`)
+        }
+        const { isCustomElement, compilerOptions } = instance.appContext.config
+        const {
+          delimiters,
+          compilerOptions: componentCompilerOptions
+        } = Component
+        const finalCompilerOptions: CompilerOptions = extend(
+          extend(
+            {
+              isCustomElement,
+              delimiters
+            },
+            compilerOptions
+          ),
+          componentCompilerOptions
+        )
+        if (__COMPAT__) {
+          // pass runtime compat config into the compiler
+          finalCompilerOptions.compatConfig = Object.create(globalCompatConfig)
+          if (Component.compatConfig) {
+            extend(finalCompilerOptions.compatConfig, Component.compatConfig)
+          }
+        }
+        Component.render = compile(template, finalCompilerOptions)
+        if (__DEV__) {
+          endMeasure(instance, `compile`)
+        }
       }
     }
 
@@ -701,7 +783,7 @@ function finishComponentSetup(
   }
 
   // support for 2.x options
-  if (__FEATURE_OPTIONS_API__) {
+  if (__FEATURE_OPTIONS_API__ && !(__COMPAT__ && skipOptions)) {
     currentInstance = instance
     pauseTracking()
     applyOptions(instance, Component)
@@ -710,7 +792,8 @@ function finishComponentSetup(
   }
 
   // warn missing template/render
-  if (__DEV__ && !Component.render && instance.render === NOOP) {
+  // the runtime compilation of template in SSR is done by server-render
+  if (__DEV__ && !Component.render && instance.render === NOOP && !isSSR) {
     /* istanbul ignore if */
     if (!compile && Component.template) {
       warn(
@@ -761,9 +844,6 @@ export function createSetupContext(
     // We use getters in dev in case libs like test-utils overwrite instance
     // properties (overwrites should not be done in prod)
     return Object.freeze({
-      get props() {
-        return instance.props
-      },
       get attrs() {
         return new Proxy(instance.attrs, attrHandlers)
       },

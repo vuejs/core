@@ -41,7 +41,7 @@ module.exports = {
     },
     // Packages targeting DOM
     {
-      files: ['packages/{vue,runtime-dom}/**'],
+      files: ['packages/{vue,vue-compat,runtime-dom}/**'],
       rules: {
         'no-restricted-globals': ['error', ...NodeGlobals]
       }
@@ -56,7 +56,7 @@ module.exports = {
     },
     // Private package, browser only + no syntax restrictions
     {
-      files: ['packages/template-explorer/**'],
+      files: ['packages/template-explorer/**', 'packages/sfc-playground/**'],
       rules: {
         'no-restricted-globals': ['error', ...NodeGlobals],
         'no-restricted-syntax': 'off'

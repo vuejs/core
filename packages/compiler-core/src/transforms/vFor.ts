@@ -23,7 +23,8 @@ import {
   VNodeCall,
   ForRenderListExpression,
   BlockCodegenNode,
-  ForIteratorExpression
+  ForIteratorExpression,
+  ConstantTypes
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
@@ -47,7 +48,7 @@ import { PatchFlags, PatchFlagNames } from '@vue/shared'
 export const transformFor = createStructuralDirectiveTransform(
   'for',
   (node, dir, context) => {
-    const { helper } = context
+    const { helper, removeHelper } = context
     return processFor(node, dir, context, forNode => {
       // create the loop render function expression now, and add the
       // iterator on exit after all children have been traversed
@@ -78,7 +79,7 @@ export const transformFor = createStructuralDirectiveTransform(
 
       const isStableFragment =
         forNode.source.type === NodeTypes.SIMPLE_EXPRESSION &&
-        forNode.source.constType > 0
+        forNode.source.constType > ConstantTypes.NOT_CONSTANT
       const fragmentFlag = isStableFragment
         ? PatchFlags.STABLE_FRAGMENT
         : keyProp
@@ -164,6 +165,16 @@ export const transformFor = createStructuralDirectiveTransform(
             .codegenNode as VNodeCall
           if (isTemplate && keyProperty) {
             injectProp(childBlock, keyProperty, context)
+          }
+          if (childBlock.isBlock !== !isStableFragment) {
+            if (childBlock.isBlock) {
+              // switch from block to vnode
+              removeHelper(OPEN_BLOCK)
+              removeHelper(CREATE_BLOCK)
+            } else {
+              // switch from vnode to block
+              removeHelper(CREATE_VNODE)
+            }
           }
           childBlock.isBlock = !isStableFragment
           if (childBlock.isBlock) {

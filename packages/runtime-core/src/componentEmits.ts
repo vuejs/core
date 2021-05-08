@@ -21,6 +21,11 @@ import { warn } from './warning'
 import { UnionToIntersection } from './helpers/typeUtils'
 import { devtoolsComponentEmit } from './devtools'
 import { AppContext } from './apiCreateApp'
+import { emit as compatInstanceEmit } from './compat/instanceEventEmitter'
+import {
+  compatModelEventPrefix,
+  compatModelEmit
+} from './compat/componentVModel'
 
 export type ObjectEmitsOptions = Record<
   string,
@@ -56,7 +61,14 @@ export function emit(
       propsOptions: [propsOptions]
     } = instance
     if (emitsOptions) {
-      if (!(event in emitsOptions)) {
+      if (
+        !(event in emitsOptions) &&
+        !(
+          __COMPAT__ &&
+          (event.startsWith('hook:') ||
+            event.startsWith(compatModelEventPrefix))
+        )
+      ) {
         if (!propsOptions || !(toHandlerKey(event) in propsOptions)) {
           warn(
             `Component emitted event "${event}" but it is neither declared in ` +
@@ -114,14 +126,15 @@ export function emit(
     }
   }
 
-  // convert handler name to camelCase. See issue #2249
-  let handlerName = toHandlerKey(camelize(event))
-  let handler = props[handlerName]
+  let handlerName
+  let handler =
+    props[(handlerName = toHandlerKey(event))] ||
+    // also try camelCase event handler (#2249)
+    props[(handlerName = toHandlerKey(camelize(event)))]
   // for v-model update:xxx events, also trigger kebab-case equivalent
   // for props passed via kebab-case
   if (!handler && isModelListener) {
-    handlerName = toHandlerKey(hyphenate(event))
-    handler = props[handlerName]
+    handler = props[(handlerName = toHandlerKey(hyphenate(event)))]
   }
 
   if (handler) {
@@ -147,6 +160,11 @@ export function emit(
       args
     )
   }
+
+  if (__COMPAT__) {
+    compatModelEmit(instance, event, args)
+    return compatInstanceEmit(instance, event, args)
+  }
 }
 
 export function normalizeEmitsOptions(
@@ -165,8 +183,11 @@ export function normalizeEmitsOptions(
   let hasExtends = false
   if (__FEATURE_OPTIONS_API__ && !isFunction(comp)) {
     const extendEmits = (raw: ComponentOptions) => {
-      hasExtends = true
-      extend(normalized, normalizeEmitsOptions(raw, appContext, true))
+      const normalizedFromExtend = normalizeEmitsOptions(raw, appContext, true)
+      if (normalizedFromExtend) {
+        hasExtends = true
+        extend(normalized, normalizedFromExtend)
+      }
     }
     if (!asMixin && appContext.mixins.length) {
       appContext.mixins.forEach(extendEmits)
@@ -201,6 +222,11 @@ export function isEmitListener(
   if (!options || !isOn(key)) {
     return false
   }
+
+  if (__COMPAT__ && key.startsWith(compatModelEventPrefix)) {
+    return true
+  }
+
   key = key.slice(2).replace(/Once$/, '')
   return (
     hasOwn(options, key[0].toLowerCase() + key.slice(1)) ||

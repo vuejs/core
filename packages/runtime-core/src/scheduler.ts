@@ -1,6 +1,8 @@
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import { isArray } from '@vue/shared'
 import { ComponentPublicInstance } from './componentPublicInstance'
+import { ComponentInternalInstance, getComponentName } from './component'
+import { warn } from './warning'
 
 export interface SchedulerJob {
   (): void
@@ -22,6 +24,7 @@ export interface SchedulerJob {
    * stabilizes (#1727).
    */
   allowRecurse?: boolean
+  ownerInstance?: ComponentInternalInstance
 }
 
 export type SchedulerCb = Function & { id?: number }
@@ -57,6 +60,25 @@ export function nextTick(
   return fn ? p.then(this ? fn.bind(this) : fn) : p
 }
 
+// #2768
+// Use binary-search to find a suitable position in the queue,
+// so that the queue maintains the increasing order of job's id,
+// which can prevent the job from being skipped and also can avoid repeated patching.
+function findInsertionIndex(job: SchedulerJob) {
+  // the start index should be `flushIndex + 1`
+  let start = flushIndex + 1
+  let end = queue.length
+  const jobId = getId(job)
+
+  while (start < end) {
+    const middle = (start + end) >>> 1
+    const middleJobId = getId(queue[middle])
+    middleJobId < jobId ? (start = middle + 1) : (end = middle)
+  }
+
+  return start
+}
+
 export function queueJob(job: SchedulerJob) {
   // the dedupe search uses the startIndex argument of Array.includes()
   // by default the search index includes the current job that is being run
@@ -72,7 +94,12 @@ export function queueJob(job: SchedulerJob) {
       )) &&
     job !== currentPreFlushParentJob
   ) {
-    queue.push(job)
+    const pos = findInsertionIndex(job)
+    if (pos > -1) {
+      queue.splice(pos, 0, job)
+    } else {
+      queue.push(job)
+    }
     queueFlush()
   }
 }
@@ -86,7 +113,7 @@ function queueFlush() {
 
 export function invalidateJob(job: SchedulerJob) {
   const i = queue.indexOf(job)
-  if (i > -1) {
+  if (i > flushIndex) {
     queue.splice(i, 1)
   }
 }
@@ -140,8 +167,11 @@ export function flushPreFlushCbs(
       preFlushIndex < activePreFlushCbs.length;
       preFlushIndex++
     ) {
-      if (__DEV__) {
+      if (
+        __DEV__ &&
         checkRecursiveUpdates(seen!, activePreFlushCbs[preFlushIndex])
+      ) {
+        continue
       }
       activePreFlushCbs[preFlushIndex]()
     }
@@ -176,8 +206,11 @@ export function flushPostFlushCbs(seen?: CountMap) {
       postFlushIndex < activePostFlushCbs.length;
       postFlushIndex++
     ) {
-      if (__DEV__) {
+      if (
+        __DEV__ &&
         checkRecursiveUpdates(seen!, activePostFlushCbs[postFlushIndex])
+      ) {
+        continue
       }
       activePostFlushCbs[postFlushIndex]()
     }
@@ -211,8 +244,8 @@ function flushJobs(seen?: CountMap) {
     for (flushIndex = 0; flushIndex < queue.length; flushIndex++) {
       const job = queue[flushIndex]
       if (job) {
-        if (__DEV__) {
-          checkRecursiveUpdates(seen!, job)
+        if (__DEV__ && checkRecursiveUpdates(seen!, job)) {
+          continue
         }
         callWithErrorHandling(job, null, ErrorCodes.SCHEDULER)
       }
@@ -239,13 +272,18 @@ function checkRecursiveUpdates(seen: CountMap, fn: SchedulerJob | SchedulerCb) {
   } else {
     const count = seen.get(fn)!
     if (count > RECURSION_LIMIT) {
-      throw new Error(
-        `Maximum recursive updates exceeded. ` +
+      const instance = (fn as SchedulerJob).ownerInstance
+      const componentName = instance && getComponentName(instance.type)
+      warn(
+        `Maximum recursive updates exceeded${
+          componentName ? ` in component <${componentName}>` : ``
+        }. ` +
           `This means you have a reactive effect that is mutating its own ` +
           `dependencies and thus recursively triggering itself. Possible sources ` +
           `include component template, render function, updated hook or ` +
           `watcher source function.`
       )
+      return true
     } else {
       seen.set(fn, count + 1)
     }

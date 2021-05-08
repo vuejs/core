@@ -129,11 +129,6 @@ export function buildSlots(
   const slotsProperties: Property[] = []
   const dynamicSlots: (ConditionalExpression | CallExpression)[] = []
 
-  const buildDefaultSlotProperty = (
-    props: ExpressionNode | undefined,
-    children: TemplateChildNode[]
-  ) => createObjectProperty(`default`, buildSlotFn(props, children, loc))
-
   // If the slot is inside a v-for or another v-slot, force it to be dynamic
   // since it likely uses a scope variable.
   let hasDynamicSlots = context.scopes.vSlot > 0 || context.scopes.vFor > 0
@@ -302,6 +297,17 @@ export function buildSlots(
   }
 
   if (!onComponentSlot) {
+    const buildDefaultSlotProperty = (
+      props: ExpressionNode | undefined,
+      children: TemplateChildNode[]
+    ) => {
+      const fn = buildSlotFn(props, children, loc)
+      if (__COMPAT__ && context.compatConfig) {
+        fn.isNonScopedSlot = true
+      }
+      return createObjectProperty(`default`, fn)
+    }
+
     if (!hasTemplateSlots) {
       // implicit default slot (on component)
       slotsProperties.push(buildDefaultSlotProperty(undefined, children))
@@ -368,14 +374,25 @@ function buildDynamicSlot(
 function hasForwardedSlots(children: TemplateChildNode[]): boolean {
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
-    if (child.type === NodeTypes.ELEMENT) {
-      if (
-        child.tagType === ElementTypes.SLOT ||
-        (child.tagType === ElementTypes.ELEMENT &&
-          hasForwardedSlots(child.children))
-      ) {
-        return true
-      }
+    switch (child.type) {
+      case NodeTypes.ELEMENT:
+        if (
+          child.tagType === ElementTypes.SLOT ||
+          (child.tagType === ElementTypes.ELEMENT &&
+            hasForwardedSlots(child.children))
+        ) {
+          return true
+        }
+        break
+      case NodeTypes.IF:
+        if (hasForwardedSlots(child.branches)) return true
+        break
+      case NodeTypes.IF_BRANCH:
+      case NodeTypes.FOR:
+        if (hasForwardedSlots(child.children)) return true
+        break
+      default:
+        break
     }
   }
   return false

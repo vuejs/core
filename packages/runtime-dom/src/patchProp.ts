@@ -3,13 +3,7 @@ import { patchStyle } from './modules/style'
 import { patchAttr } from './modules/attrs'
 import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
-import {
-  isOn,
-  isString,
-  isFunction,
-  isModelListener,
-  isFormTag
-} from '@vue/shared'
+import { isOn, isString, isFunction, isModelListener } from '@vue/shared'
 import { RendererOptions } from '@vue/runtime-core'
 
 const nativeOnRE = /^on[a-z]/
@@ -64,7 +58,7 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
         } else if (key === 'false-value') {
           ;(el as any)._falseValue = nextValue
         }
-        patchAttr(el, key, nextValue, isSVG)
+        patchAttr(el, key, nextValue, isSVG, parentComponent)
       }
       break
   }
@@ -99,14 +93,19 @@ function shouldSetAsProp(
     return false
   }
 
-  // #1787, #2840 the form property is readonly and can only be set as an
-  // attribute using a string value
-  if (key === 'form' && isFormTag(el.tagName)) {
+  // #1787, #2840 form property on form elements is readonly and must be set as
+  // attribute.
+  if (key === 'form') {
     return false
   }
 
   // #1526 <input list> must be set as attribute
   if (key === 'list' && el.tagName === 'INPUT') {
+    return false
+  }
+
+  // #2766 <textarea type> must be set as attribute
+  if (key === 'type' && el.tagName === 'TEXTAREA') {
     return false
   }
 

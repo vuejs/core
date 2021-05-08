@@ -15,9 +15,10 @@ import { VNode } from './vnode'
 import { isFunction, EMPTY_OBJ, makeMap } from '@vue/shared'
 import { warn } from './warning'
 import { ComponentInternalInstance, Data } from './component'
-import { currentRenderingInstance } from './componentRenderUtils'
+import { currentRenderingInstance } from './componentRenderContext'
 import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
 import { ComponentPublicInstance } from './componentPublicInstance'
+import { mapCompatDirectiveHook } from './compat/customDirective'
 
 export interface DirectiveBinding<V = any> {
   instance: ComponentPublicInstance | null
@@ -124,7 +125,10 @@ export function invokeDirectiveHook(
     if (oldBindings) {
       binding.oldValue = oldBindings[i].value
     }
-    const hook = binding.dir[name] as DirectiveHook | undefined
+    let hook = binding.dir[name] as DirectiveHook | DirectiveHook[] | undefined
+    if (__COMPAT__ && !hook) {
+      hook = mapCompatDirectiveHook(name, binding.dir, instance)
+    }
     if (hook) {
       callWithAsyncErrorHandling(hook, instance, ErrorCodes.DIRECTIVE_HOOK, [
         vnode.el,

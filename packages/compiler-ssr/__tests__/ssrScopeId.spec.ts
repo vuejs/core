@@ -111,7 +111,7 @@ describe('ssr: scopeId', () => {
                   }
                 }),
                 _: 1 /* STABLE */
-              }, _parent))
+              }, _parent, _scopeId))
             } else {
               return [
                 _createVNode(\\"span\\", null, \\"hello\\"),
