@@ -1,7 +1,8 @@
 import {
   ComponentInternalInstance,
   FunctionalComponent,
-  Data
+  Data,
+  getComponentName
 } from './component'
 import {
   VNode,
@@ -20,6 +21,11 @@ import { isHmrUpdating } from './hmr'
 import { NormalizedProps } from './componentProps'
 import { isEmitListener } from './componentEmits'
 import { setCurrentRenderingInstance } from './componentRenderContext'
+import {
+  DeprecationTypes,
+  isCompatEnabled,
+  warnDeprecation
+} from './compat/compatConfig'
 
 /**
  * dev only flag to track whether $attrs was used during render.
@@ -117,7 +123,7 @@ export function renderComponentRoot(
       ;[root, setRoot] = getChildRoot(result)
     }
 
-    if (Component.inheritAttrs !== false && fallthroughAttrs) {
+    if (fallthroughAttrs && Component.inheritAttrs !== false) {
       const keys = Object.keys(fallthroughAttrs)
       const { shapeFlag } = root
       if (keys.length) {
@@ -172,6 +178,29 @@ export function renderComponentRoot(
             )
           }
         }
+      }
+    }
+
+    if (
+      __COMPAT__ &&
+      isCompatEnabled(DeprecationTypes.INSTANCE_ATTRS_CLASS_STYLE, instance) &&
+      vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT &&
+      (root.shapeFlag & ShapeFlags.ELEMENT ||
+        root.shapeFlag & ShapeFlags.COMPONENT)
+    ) {
+      const { class: cls, style } = vnode.props || {}
+      if (cls || style) {
+        if (__DEV__ && Component.inheritAttrs === false) {
+          warnDeprecation(
+            DeprecationTypes.INSTANCE_ATTRS_CLASS_STYLE,
+            instance,
+            getComponentName(instance.type)
+          )
+        }
+        root = cloneVNode(root, {
+          class: cls,
+          style: style
+        })
       }
     }
 

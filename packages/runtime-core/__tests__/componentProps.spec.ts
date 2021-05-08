@@ -11,7 +11,8 @@ import {
   createApp,
   provide,
   inject,
-  watch
+  watch,
+  toRefs
 } from '@vue/runtime-test'
 import { render as domRender, nextTick } from 'vue'
 
@@ -478,5 +479,33 @@ describe('component props', () => {
     await nextTick()
     expect(serializeInner(root)).toMatch(`<h1>11</h1>`)
     expect(count).toBe(0)
+  })
+
+  // #3288
+  test('declared prop key should be present even if not passed', async () => {
+    let initialKeys: string[] = []
+    const changeSpy = jest.fn()
+    const passFoo = ref(false)
+
+    const Comp = {
+      render() {},
+      props: {
+        foo: String
+      },
+      setup(props: any) {
+        initialKeys = Object.keys(props)
+        const { foo } = toRefs(props)
+        watch(foo, changeSpy)
+      }
+    }
+
+    const Parent = () => (passFoo.value ? h(Comp, { foo: 'ok' }) : h(Comp))
+    const root = nodeOps.createElement('div')
+    createApp(Parent).mount(root)
+
+    expect(initialKeys).toMatchObject(['foo'])
+    passFoo.value = true
+    await nextTick()
+    expect(changeSpy).toHaveBeenCalledTimes(1)
   })
 })

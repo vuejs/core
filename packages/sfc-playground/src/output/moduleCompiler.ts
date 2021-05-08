@@ -1,5 +1,5 @@
 import { store, File } from '../store'
-import { MAIN_FILE, SANDBOX_VUE_URL } from '../sfcCompiler'
+import { MAIN_FILE } from '../sfcCompiler'
 import {
   babelParse,
   MagicString,
@@ -92,15 +92,6 @@ function processFile(file: File, seen = new Set<File>()) {
           }
         }
         s.remove(node.start!, node.end!)
-      } else {
-        if (source === 'vue') {
-          // rewrite Vue imports
-          s.overwrite(
-            node.source.start!,
-            node.source.end!,
-            `"${SANDBOX_VUE_URL}"`
-          )
-        }
       }
     }
   }

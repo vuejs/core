@@ -1,5 +1,6 @@
 import { ComponentInternalInstance, Slots } from 'vue'
 import { Props, PushFn, renderVNodeChildren, SSRBufferItem } from '../render'
+import { isArray } from '@vue/shared'
 
 export type SSRSlots = Record<string, SSRSlot>
 export type SSRSlot = (
@@ -32,7 +33,7 @@ export function ssrRenderSlot(
       parentComponent,
       slotScopeId ? ' ' + slotScopeId : ''
     )
-    if (Array.isArray(ret)) {
+    if (isArray(ret)) {
       // normal slot
       renderVNodeChildren(push, ret, parentComponent, slotScopeId)
     } else {
