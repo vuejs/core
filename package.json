@@ -44,7 +44,7 @@
   },
   "devDependencies": {
     "@babel/types": "^7.12.0",
-    "@microsoft/api-extractor": "^7.12.1",
+    "@microsoft/api-extractor": "^7.15.1",
     "@rollup/plugin-commonjs": "^18.0.0",
     "@rollup/plugin-json": "^4.0.0",
     "@rollup/plugin-node-resolve": "^11.2.1",
