@@ -26,6 +26,7 @@ export const enum DeprecationTypes {
   CONFIG_PRODUCTION_TIP = 'CONFIG_PRODUCTION_TIP',
   CONFIG_IGNORED_ELEMENTS = 'CONFIG_IGNORED_ELEMENTS',
   CONFIG_WHITESPACE = 'CONFIG_WHITESPACE',
+  CONFIG_OPTION_MERGE_STRATS = 'CONFIG_OPTION_MERGE_STRATS',
 
   INSTANCE_SET = 'INSTANCE_SET',
   INSTANCE_DELETE = 'INSTANCE_DELETE',
@@ -172,6 +173,12 @@ export const deprecationData: Record<DeprecationTypes, DeprecationData> = {
       `Vue 3 compiler's whitespace option will default to "condense" instead of ` +
       `"preserve". To suppress this warning, provide an explicit value for ` +
       `\`config.compilerOptions.whitespace\`.`
+  },
+
+  [DeprecationTypes.CONFIG_OPTION_MERGE_STRATS]: {
+    message:
+      `config.optionMergeStrategies no longer exposes internal strategies. ` +
+      `Use custom merge functions instead.`
   },
 
   [DeprecationTypes.INSTANCE_SET]: {

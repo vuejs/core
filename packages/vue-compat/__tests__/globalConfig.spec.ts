@@ -1,5 +1,8 @@
 import Vue from '@vue/compat'
-import { toggleDeprecationWarning } from '../../runtime-core/src/compat/compatConfig'
+import {
+  DeprecationTypes,
+  toggleDeprecationWarning
+} from '../../runtime-core/src/compat/compatConfig'
 import { createApp } from '../src/esm-index'
 import { triggerEvent } from './utils'
 
@@ -73,4 +76,10 @@ test('singleton config should affect apps created with createApp()', () => {
     template: `<v-foo/><foo/>`
   }).mount(el)
   expect(el.innerHTML).toBe(`<v-foo></v-foo><foo></foo>`)
+})
+
+test('config.optionMergeStrategies', () => {
+  toggleDeprecationWarning(true)
+  expect(typeof Vue.config.optionMergeStrategies.created).toBe('function')
+  expect(DeprecationTypes.CONFIG_OPTION_MERGE_STRATS).toHaveBeenWarned()
 })

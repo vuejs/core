@@ -41,7 +41,8 @@ import { Directive } from '../directives'
 import { nextTick } from '../scheduler'
 import { version } from '..'
 import {
-  installLegacyConfigProperties,
+  installLegacyConfigWarnings,
+  installLegacyOptionMergeStrats,
   LegacyConfig,
   legacyOptionMergeStrats
 } from './globalConfig'
@@ -327,6 +328,7 @@ export function installAppCompatProperties(
   render: RootRenderFunction
 ) {
   installFilterMethod(app, context)
+  installLegacyOptionMergeStrats(app.config)
 
   if (!singletonApp) {
     // this is the call of creating the singleton itself so the rest is
@@ -337,7 +339,7 @@ export function installAppCompatProperties(
   installCompatMount(app, context, render)
   installLegacyAPIs(app)
   applySingletonAppMutations(app)
-  if (__DEV__) installLegacyConfigProperties(app.config)
+  if (__DEV__) installLegacyConfigWarnings(app.config)
 }
 
 function installFilterMethod(app: App, context: AppContext) {

@@ -1,7 +1,11 @@
 import { extend, isArray } from '@vue/shared'
 import { AppConfig } from '../apiCreateApp'
 import { mergeDataOption } from './data'
-import { DeprecationTypes, warnDeprecation } from './compatConfig'
+import {
+  DeprecationTypes,
+  softAssertCompatEnabled,
+  warnDeprecation
+} from './compatConfig'
 import { isCopyingConfig } from './global'
 
 // legacy config warnings
@@ -33,7 +37,7 @@ export type LegacyConfig = {
 }
 
 // dev only
-export function installLegacyConfigProperties(config: AppConfig) {
+export function installLegacyConfigWarnings(config: AppConfig) {
   const legacyConfigOptions: Record<string, DeprecationTypes> = {
     silent: DeprecationTypes.CONFIG_SILENT,
     devtools: DeprecationTypes.CONFIG_DEVTOOLS,
@@ -57,11 +61,27 @@ export function installLegacyConfigProperties(config: AppConfig) {
       }
     })
   })
+}
 
-  // Internal merge strats which are no longer needed in v3, but we need to
-  // expose them because some v2 plugins will reuse these internal strats to
-  // merge their custom options.
-  extend(config.optionMergeStrategies, legacyOptionMergeStrats)
+export function installLegacyOptionMergeStrats(config: AppConfig) {
+  config.optionMergeStrategies = new Proxy({} as any, {
+    get(target, key) {
+      if (key in target) {
+        return target[key]
+      }
+      if (
+        key in legacyOptionMergeStrats &&
+        softAssertCompatEnabled(
+          DeprecationTypes.CONFIG_OPTION_MERGE_STRATS,
+          null
+        )
+      ) {
+        return legacyOptionMergeStrats[
+          key as keyof typeof legacyOptionMergeStrats
+        ]
+      }
+    }
+  })
 }
 
 export const legacyOptionMergeStrats = {
