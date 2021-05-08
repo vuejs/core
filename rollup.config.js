@@ -81,6 +81,7 @@ function createConfig(format, output, plugins = []) {
     process.exit(1)
   }
 
+  output.exports = 'auto'
   output.sourcemap = !!process.env.SOURCE_MAP
   output.externalLiveBindings = false
 
@@ -97,7 +98,8 @@ function createConfig(format, output, plugins = []) {
     output.name = packageOptions.name
   }
 
-  const shouldEmitDeclarations = process.env.TYPES != null && !hasTSChecked
+  const shouldEmitDeclarations =
+    pkg.types && process.env.TYPES != null && !hasTSChecked
 
   const tsPlugin = ts({
     check: process.env.NODE_ENV === 'production' && !hasTSChecked,
