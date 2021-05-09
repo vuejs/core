@@ -131,8 +131,8 @@ let singletonCtor: CompatVue
 
 // Legacy global Vue constructor
 export function createCompatVue(
-  createApp: CreateAppFunction<Element>,
-  createSingletonApp: CreateAppFunction<Element>
+  createApp: CreateAppFunction<Element | ShadowRoot>,
+  createSingletonApp: CreateAppFunction<Element | ShadowRoot>
 ): CompatVue {
   singletonApp = createSingletonApp({})
 
