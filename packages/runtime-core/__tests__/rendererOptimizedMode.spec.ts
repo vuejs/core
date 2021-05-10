@@ -20,13 +20,7 @@ import {
   onBeforeUnmount,
   createTextVNode,
   SetupContext,
-  createApp,
-  createElementVNode,
-  reactive,
-  guardReactiveProps,
-  normalizeProps,
-  normalizeClass,
-  normalizeStyle
+  createApp
 } from '@vue/runtime-test'
 import { PatchFlags, SlotFlags } from '@vue/shared'
 import { SuspenseImpl } from '../src/components/Suspense'

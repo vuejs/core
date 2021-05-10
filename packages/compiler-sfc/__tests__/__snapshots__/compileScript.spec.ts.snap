@@ -273,7 +273,7 @@ return (_ctx, _cache) => {
 `;
 
 exports[`SFC compile <script setup> inlineTemplate mode should not wrap render fn with withId when having scoped styles 1`] = `
-"import { toDisplayString as _toDisplayString, openBlock as _openBlock, createBlock as _createBlock, withScopeId as _withScopeId } from \\"vue\\"
+"import { toDisplayString as _toDisplayString, openBlock as _openBlock, createElementBlock as _createElementBlock, withScopeId as _withScopeId } from \\"vue\\"
 const _withId = /*#__PURE__*/_withScopeId(\\"data-v-xxxxxxxx\\")
 
 
@@ -284,7 +284,7 @@ export default {
         const msg = 1
         
 return (_ctx, _cache) => {
-  return (_openBlock(), _createBlock(\\"h1\\", null, _toDisplayString(msg)))
+  return (_openBlock(), _createElementBlock(\\"h1\\", null, _toDisplayString(msg), null, null, 9 /* ELEMENT, TEXT_CHILDREN */))
 }
 }
 
