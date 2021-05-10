@@ -749,12 +749,13 @@ export function applyOptions(
   // To reduce memory usage, only components with mixins or extends will have
   // resolved asset registry attached to instance.
   if (asMixin) {
-    if (inheritAttrs !== undefined) instance.type.inheritAttrs = inheritAttrs
     resolveInstanceAssets(instance, options, COMPONENTS)
     resolveInstanceAssets(instance, options, DIRECTIVES)
     if (__COMPAT__ && isCompatEnabled(DeprecationTypes.FILTERS, instance)) {
       resolveInstanceAssets(instance, options, FILTERS)
     }
+
+    if (inheritAttrs !== undefined) instance.type.inheritAttrs = inheritAttrs
   }
 
   // lifecycle options
