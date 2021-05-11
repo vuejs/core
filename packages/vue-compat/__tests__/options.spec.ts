@@ -10,7 +10,8 @@ beforeEach(() => {
   toggleDeprecationWarning(true)
   Vue.configureCompat({
     MODE: 2,
-    GLOBAL_MOUNT: 'suppress-warning'
+    GLOBAL_MOUNT: 'suppress-warning',
+    GLOBAL_EXTEND: 'suppress-warning'
   })
 })
 
@@ -68,6 +69,38 @@ test('beforeDestroy/destroyed', async () => {
     beforeDestroy,
     destroyed
   }
+
+  const vm = new Vue({
+    template: `<child v-if="ok"/>`,
+    data() {
+      return { ok: true }
+    },
+    components: { child }
+  }).$mount() as any
+
+  vm.ok = false
+  await nextTick()
+  expect(beforeDestroy).toHaveBeenCalled()
+  expect(destroyed).toHaveBeenCalled()
+
+  expect(
+    deprecationData[DeprecationTypes.OPTIONS_BEFORE_DESTROY].message
+  ).toHaveBeenWarned()
+
+  expect(
+    deprecationData[DeprecationTypes.OPTIONS_DESTROYED].message
+  ).toHaveBeenWarned()
+})
+
+test('beforeDestroy/destroyed in Vue.extend components', async () => {
+  const beforeDestroy = jest.fn()
+  const destroyed = jest.fn()
+
+  const child = Vue.extend({
+    template: `foo`,
+    beforeDestroy,
+    destroyed
+  })
 
   const vm = new Vue({
     template: `<child v-if="ok"/>`,

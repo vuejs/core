@@ -180,3 +180,7 @@ export const getGlobalThis = (): any => {
               : {})
   )
 }
+
+export const toArray = (target: any) => {
+  return isArray(target) ? target : target ? [target] : []
+}

@@ -768,40 +768,40 @@ export function applyOptions(
     )
   }
   if (beforeMount) {
-    onBeforeMount(beforeMount.bind(publicThis))
+    runLifecycleHook(onBeforeMount, beforeMount, publicThis)
   }
   if (mounted) {
-    onMounted(mounted.bind(publicThis))
+    runLifecycleHook(onMounted, mounted, publicThis)
   }
   if (beforeUpdate) {
-    onBeforeUpdate(beforeUpdate.bind(publicThis))
+    runLifecycleHook(onBeforeUpdate, beforeUpdate, publicThis)
   }
   if (updated) {
-    onUpdated(updated.bind(publicThis))
+    runLifecycleHook(onUpdated, updated, publicThis)
   }
   if (activated) {
-    onActivated(activated.bind(publicThis))
+    runLifecycleHook(onActivated, activated, publicThis)
   }
   if (deactivated) {
-    onDeactivated(deactivated.bind(publicThis))
+    runLifecycleHook(onDeactivated, deactivated, publicThis)
   }
   if (errorCaptured) {
-    onErrorCaptured(errorCaptured.bind(publicThis))
+    runLifecycleHook(onErrorCaptured, errorCaptured, publicThis)
   }
   if (renderTracked) {
-    onRenderTracked(renderTracked.bind(publicThis))
+    runLifecycleHook(onRenderTracked, renderTracked, publicThis)
   }
   if (renderTriggered) {
-    onRenderTriggered(renderTriggered.bind(publicThis))
+    runLifecycleHook(onRenderTriggered, renderTriggered, publicThis)
   }
   if (beforeUnmount) {
-    onBeforeUnmount(beforeUnmount.bind(publicThis))
+    runLifecycleHook(onBeforeUnmount, beforeUnmount, publicThis)
   }
   if (unmounted) {
-    onUnmounted(unmounted.bind(publicThis))
+    runLifecycleHook(onUnmounted, unmounted, publicThis)
   }
   if (serverPrefetch) {
-    onServerPrefetch(serverPrefetch.bind(publicThis))
+    runLifecycleHook(onServerPrefetch, serverPrefetch, publicThis)
   }
 
   if (__COMPAT__) {
@@ -809,13 +809,13 @@ export function applyOptions(
       beforeDestroy &&
       softAssertCompatEnabled(DeprecationTypes.OPTIONS_BEFORE_DESTROY, instance)
     ) {
-      onBeforeUnmount(beforeDestroy.bind(publicThis))
+      runLifecycleHook(onBeforeUnmount, beforeDestroy, publicThis)
     }
     if (
       destroyed &&
       softAssertCompatEnabled(DeprecationTypes.OPTIONS_DESTROYED, instance)
     ) {
-      onUnmounted(destroyed.bind(publicThis))
+      runLifecycleHook(onUnmounted, destroyed, publicThis)
     }
   }
 
@@ -833,6 +833,12 @@ export function applyOptions(
       warn(`The \`expose\` option is ignored when used in mixins.`)
     }
   }
+}
+
+function runLifecycleHook(handler: Function, hook: Function | Function[], context: ComponentPublicInstance) {
+  // Array lifecycle hooks are only present in the compat build
+  if (__COMPAT__ && isArray(hook)) hook.forEach(_hook => handler(_hook.bind(context)))
+  else handler((hook as Function).bind(context))
 }
 
 function resolveInstanceAssets(

@@ -1,4 +1,4 @@
-import { extend, isArray } from '@vue/shared'
+import { extend, toArray } from '@vue/shared'
 import { AppConfig } from '../apiCreateApp'
 import { mergeDataOption } from './data'
 import {
@@ -117,7 +117,7 @@ function mergeHook(
   to: Function[] | Function | undefined,
   from: Function | Function[]
 ) {
-  return Array.from(new Set([...(isArray(to) ? to : to ? [to] : []), from]))
+  return Array.from(new Set([...toArray(to), ...toArray(from)]))
 }
 
 function mergeObjectOptions(to: Object | undefined, from: Object | undefined) {
