@@ -93,6 +93,7 @@ The following workflow walks through the steps of migrating an actual Vue 2 app 
                 }
               }
             })
+          }
       }
       ```
     </details>
@@ -163,7 +164,7 @@ The following workflow walks through the steps of migrating an actual Vue 2 app 
 
     - You can filter for specific warnings in the browser console. It's a good idea to use the filter and focus on fixing one item at a time. You can also use negated filters like `-GLOBAL_MOUNT`.
 
-    - You can suppress specific deperecations via [compat configuration](#compat-configuration).
+    - You can suppress specific deprecations via [compat configuration](#compat-configuration).
 
     - Some warnings maybe caused by a dependency that you use (e.g. `vue-router`). You can check this from the warning's component trace or stack trace (expanded on click). Focus on fixing the warnings that originates from your own source code first.
 
@@ -217,7 +218,7 @@ declare module 'vue' {
 }
 ```
 
-Note the `CompatVue` type does not provide options API `this` type inference for `new Vue()` and `Vue.extend` - to get `this` type inference inside compoent options, update to use [`defineComponent`](https://v3.vuejs.org/api/global-api.html#definecomponent) instead.
+Note the `CompatVue` type does not provide options API `this` type inference for `new Vue()` and `Vue.extend` - to get `this` type inference inside component options, update to use [`defineComponent`](https://v3.vuejs.org/api/global-api.html#definecomponent) instead.
 
 ## Compat Configuration
 
@@ -308,7 +309,7 @@ Features that start with `COMPILER_` are compiler-specific: if you are using the
 
 | ID                       | Type | Description                                                                                                                                                          | Docs                                                   |
 |--------------------------|------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------|
-| TRANSITION_CLASSES | ⭘    | Transtion enter/leave classes changed | [link](https://v3.vuejs.org/guide/migration/transition.html) |
+| TRANSITION_CLASSES | ⭘    | Transition enter/leave classes changed | [link](https://v3.vuejs.org/guide/migration/transition.html) |
 ### Fully Compatible
 
 | ID                           | Type | Description                                                           | Docs                                                                                                           |
@@ -319,7 +320,7 @@ Features that start with `COMPILER_` are compiler-specific: if you are using the
 | GLOBAL_SET                   | ●    | `Vue.set` removed (no longer needed)                                  |                                                                                                                |
 | GLOBAL_DELETE                | ●    | `Vue.delete` removed (no longer needed)                               |                                                                                                                |
 | GLOBAL_OBSERVABLE            | ●    | `Vue.observable` removed (use `reactive`)                             | [link](https://v3.vuejs.org/api/basic-reactivity.html)                                                         |
-| CONFIG_KEY_CODES             | ●    | config.keyCodes rmeoved                                               | [link](https://v3.vuejs.org/guide/migration/keycode-modifiers.html)                                            |
+| CONFIG_KEY_CODES             | ●    | config.keyCodes removed                                               | [link](https://v3.vuejs.org/guide/migration/keycode-modifiers.html)                                            |
 | CONFIG_WHITESPACE            | ●    | In Vue 3 whitespace defaults to `"condense"`                          |                                                                                                                |
 | CONFIG_OPTION_MERGE_STRATS   | ●    | Vue 3 no longer exposes internal option merge strats                  |                                                                                                                |
 | INSTANCE_SET                 | ●    | `vm.$set` removed (no longer needed)                                  |                                                                                                                |
