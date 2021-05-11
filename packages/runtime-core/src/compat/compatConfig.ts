@@ -546,7 +546,7 @@ export function validateCompatConfig(config: CompatConfig) {
       if (key.startsWith('COMPILER_')) {
         if (isRuntimeOnly()) {
           warn(
-            `Depreaction config "${key}" is compiler-specific and you are ` +
+            `Deprecation config "${key}" is compiler-specific and you are ` +
               `running a runtime-only build of Vue. This deprecation should be ` +
               `configured via compiler options in your build setup instead.`
             // TODO link to migration build docs on build setup
