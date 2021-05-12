@@ -1,4 +1,4 @@
-import { extend, toArray } from '@vue/shared'
+import { extend, isArray } from '@vue/shared'
 import { AppConfig } from '../apiCreateApp'
 import { mergeDataOption } from './data'
 import {
@@ -111,6 +111,10 @@ export const legacyOptionMergeStrats = {
   // since we are only exposing these for compat and nobody should be relying
   // on the watch-specific behavior, just expose the object merge strat.
   watch: mergeObjectOptions
+}
+
+function toArray(target: any) {
+  return isArray(target) ? target : target ? [target] : []
 }
 
 function mergeHook(
