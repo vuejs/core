@@ -113,11 +113,15 @@ export const legacyOptionMergeStrats = {
   watch: mergeObjectOptions
 }
 
+function toArray(target: any) {
+  return isArray(target) ? target : target ? [target] : []
+}
+
 function mergeHook(
   to: Function[] | Function | undefined,
   from: Function | Function[]
 ) {
-  return Array.from(new Set([...(isArray(to) ? to : to ? [to] : []), from]))
+  return Array.from(new Set([...toArray(to), ...toArray(from)]))
 }
 
 function mergeObjectOptions(to: Object | undefined, from: Object | undefined) {
