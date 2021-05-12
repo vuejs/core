@@ -1315,12 +1315,12 @@ describe('e2e: Transition', () => {
         expect(await html('#container')).toBe(
           '<div class="test v-leave-active v-leave-to">one</div>'
         )
-        // await transitionFinish()
-        // await nextFrame()
+        await transitionFinish()
+        await nextFrame()
         // expect(await html('#container')).toBe(
         //   '<div class="test v-enter-active v-enter-to">two</div>'
         // )
-        await transitionFinish(duration * 2)
+        await transitionFinish()
         expect(await html('#container')).toBe('<div class="test">two</div>')
       },
       E2E_TIMEOUT
