@@ -1,3 +1,13 @@
+# [3.1.0-beta.3](https://github.com/vuejs/vue-next/compare/v3.1.0-beta.2...v3.1.0-beta.3) (2021-05-12)
+
+
+### Bug Fixes
+
+* **compat:** correctly merge lifecycle hooks when using Vue.extend ([#3762](https://github.com/vuejs/vue-next/issues/3762)) ([2bfb8b5](https://github.com/vuejs/vue-next/commit/2bfb8b574d39a20a0e4da2ff4f2c007680ee2038)), closes [#3761](https://github.com/vuejs/vue-next/issues/3761)
+* **compiler-core:** bail out to array children when the element has custom directives + only one text child node ([#3757](https://github.com/vuejs/vue-next/issues/3757)) ([a56ab14](https://github.com/vuejs/vue-next/commit/a56ab148fd1f2702e699d31cdc854800c8283fde))
+
+
+
 # [3.1.0-beta.2](https://github.com/vuejs/vue-next/compare/v3.1.0-beta.1...v3.1.0-beta.2) (2021-05-08)
 
 
