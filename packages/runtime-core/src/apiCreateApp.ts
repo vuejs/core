@@ -17,7 +17,7 @@ import { isFunction, NO, isObject } from '@vue/shared'
 import { version } from '.'
 import { installAppCompatProperties } from './compat/global'
 
-export interface App<HostElement = any> {
+export interface App<HostElement = any, RootHostElement = HostElement> {
   version: string
   config: AppConfig
   use(plugin: Plugin, ...options: any[]): this
@@ -27,7 +27,7 @@ export interface App<HostElement = any> {
   directive(name: string): Directive | undefined
   directive(name: string, directive: Directive): this
   mount(
-    rootContainer: HostElement | string,
+    rootContainer: RootHostElement | string,
     isHydrate?: boolean,
     isSVG?: boolean
   ): ComponentPublicInstance
@@ -141,17 +141,17 @@ export function createAppContext(): AppContext {
   }
 }
 
-export type CreateAppFunction<HostElement> = (
+export type CreateAppFunction<HostElement, RootHostElement = HostElement> = (
   rootComponent: Component,
   rootProps?: Data | null
-) => App<HostElement>
+) => App<HostElement, RootHostElement>
 
 let uid = 0
 
-export function createAppAPI<HostElement>(
+export function createAppAPI<HostElement, RootHostElement>(
   render: RootRenderFunction,
   hydrate?: RootHydrateFunction
-): CreateAppFunction<HostElement> {
+): CreateAppFunction<HostElement, RootHostElement> {
   return function createApp(rootComponent, rootProps = null) {
     if (rootProps != null && !isObject(rootProps)) {
       __DEV__ && warn(`root props passed to app.mount() must be an object.`)
@@ -253,7 +253,7 @@ export function createAppAPI<HostElement>(
       },
 
       mount(
-        rootContainer: HostElement,
+        rootContainer: RootHostElement,
         isHydrate?: boolean,
         isSVG?: boolean
       ): any {
