@@ -767,55 +767,44 @@ export function applyOptions(
       globalMixins
     )
   }
-  if (beforeMount) {
-    runLifecycleHook(onBeforeMount, beforeMount, publicThis)
+
+  function registerLifecycleHook(
+    register: Function,
+    hook?: Function | Function[]
+  ) {
+    // Array lifecycle hooks are only present in the compat build
+    if (__COMPAT__ && isArray(hook)) {
+      hook.forEach(_hook => register(_hook.bind(publicThis)))
+    } else if (hook) {
+      register((hook as Function).bind(publicThis))
+    }
   }
-  if (mounted) {
-    runLifecycleHook(onMounted, mounted, publicThis)
-  }
-  if (beforeUpdate) {
-    runLifecycleHook(onBeforeUpdate, beforeUpdate, publicThis)
-  }
-  if (updated) {
-    runLifecycleHook(onUpdated, updated, publicThis)
-  }
-  if (activated) {
-    runLifecycleHook(onActivated, activated, publicThis)
-  }
-  if (deactivated) {
-    runLifecycleHook(onDeactivated, deactivated, publicThis)
-  }
-  if (errorCaptured) {
-    runLifecycleHook(onErrorCaptured, errorCaptured, publicThis)
-  }
-  if (renderTracked) {
-    runLifecycleHook(onRenderTracked, renderTracked, publicThis)
-  }
-  if (renderTriggered) {
-    runLifecycleHook(onRenderTriggered, renderTriggered, publicThis)
-  }
-  if (beforeUnmount) {
-    runLifecycleHook(onBeforeUnmount, beforeUnmount, publicThis)
-  }
-  if (unmounted) {
-    runLifecycleHook(onUnmounted, unmounted, publicThis)
-  }
-  if (serverPrefetch) {
-    runLifecycleHook(onServerPrefetch, serverPrefetch, publicThis)
-  }
+
+  registerLifecycleHook(onBeforeMount, beforeMount)
+  registerLifecycleHook(onMounted, mounted)
+  registerLifecycleHook(onBeforeUpdate, beforeUpdate)
+  registerLifecycleHook(onUpdated, updated)
+  registerLifecycleHook(onActivated, activated)
+  registerLifecycleHook(onDeactivated, deactivated)
+  registerLifecycleHook(onErrorCaptured, errorCaptured)
+  registerLifecycleHook(onRenderTracked, renderTracked)
+  registerLifecycleHook(onRenderTriggered, renderTriggered)
+  registerLifecycleHook(onBeforeUnmount, beforeUnmount)
+  registerLifecycleHook(onUnmounted, unmounted)
+  registerLifecycleHook(onServerPrefetch, serverPrefetch)
 
   if (__COMPAT__) {
     if (
       beforeDestroy &&
       softAssertCompatEnabled(DeprecationTypes.OPTIONS_BEFORE_DESTROY, instance)
     ) {
-      runLifecycleHook(onBeforeUnmount, beforeDestroy, publicThis)
+      registerLifecycleHook(onBeforeUnmount, beforeDestroy)
     }
     if (
       destroyed &&
       softAssertCompatEnabled(DeprecationTypes.OPTIONS_DESTROYED, instance)
     ) {
-      runLifecycleHook(onUnmounted, destroyed, publicThis)
+      registerLifecycleHook(onUnmounted, destroyed)
     }
   }
 
@@ -833,12 +822,6 @@ export function applyOptions(
       warn(`The \`expose\` option is ignored when used in mixins.`)
     }
   }
-}
-
-function runLifecycleHook(handler: Function, hook: Function | Function[], context: ComponentPublicInstance) {
-  // Array lifecycle hooks are only present in the compat build
-  if (__COMPAT__ && isArray(hook)) hook.forEach(_hook => handler(_hook.bind(context)))
-  else handler((hook as Function).bind(context))
 }
 
 function resolveInstanceAssets(
