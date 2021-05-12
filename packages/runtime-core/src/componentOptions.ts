@@ -65,7 +65,7 @@ import {
 import { warn } from './warning'
 import { VNodeChild } from './vnode'
 import { callWithAsyncErrorHandling } from './errorHandling'
-import { UnionToIntersection } from './helpers/typeUtils'
+import { LooseRequired, UnionToIntersection } from './helpers/typeUtils'
 import { deepMergeData } from './compat/data'
 import { DeprecationTypes } from './compat/compatConfig'
 import {
@@ -130,9 +130,13 @@ export interface ComponentOptionsBase<
     ComponentCustomOptions {
   setup?: (
     this: void,
-    props: Props &
-      UnionToIntersection<ExtractOptionProp<Mixin>> &
-      UnionToIntersection<ExtractOptionProp<Extends>>,
+    props: Readonly<
+      LooseRequired<
+        Props &
+          UnionToIntersection<ExtractOptionProp<Mixin>> &
+          UnionToIntersection<ExtractOptionProp<Extends>>
+      >
+    >,
     ctx: SetupContext<E>
   ) => Promise<RawBindings> | RawBindings | RenderFunction | void
   name?: string
