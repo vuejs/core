@@ -865,7 +865,7 @@ describe('compiler: transform component slots', () => {
     })
   })
 
-  describe('the content of slots with preserved whitespace', () => {
+  describe(`with whitespace: 'preserve'`, () => {
     test('named default slot + implicit whitespace content', () => {
       const source = `
       <Comp>
@@ -883,7 +883,7 @@ describe('compiler: transform component slots', () => {
       expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
     })
 
-    test('no named default slot', () => {
+    test('implicit default slot', () => {
       const source = `
       <Comp>
         <template #header> Header </template>
