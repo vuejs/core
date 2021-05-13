@@ -132,12 +132,12 @@ export function h(type: Component, children?: RawChildren): VNode
 // concrete component
 export function h<P>(
   type: ConcreteComponent | string,
-  children?: RawChildren
+  children?: RawChildren | RawSlots
 ): VNode
 export function h<P>(
   type: ConcreteComponent<P> | string,
   props?: (RawProps & P) | ({} extends P ? null : never),
-  children?: RawChildren
+  children?: RawChildren | RawSlots
 ): VNode
 
 // component without props
