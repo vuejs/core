@@ -284,6 +284,12 @@ export interface ComponentInternalInstance {
    */
   emitsOptions: ObjectEmitsOptions | null
 
+  /**
+   * resolved inheritAttrs options
+   * @internal
+   */
+  inheritAttrs?: boolean
+
   // the rest are only for stateful components ---------------------------------
 
   // main proxy that serves as the public instance (`this`)
@@ -463,6 +469,9 @@ export function createComponentInstance(
 
     // props default value
     propsDefaults: EMPTY_OBJ,
+
+    // inheritAttrs
+    inheritAttrs: type.inheritAttrs,
 
     // state
     ctx: EMPTY_OBJ,

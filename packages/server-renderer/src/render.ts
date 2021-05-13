@@ -128,8 +128,7 @@ function renderComponentSubTree(
     if (ssrRender) {
       // optimized
       // resolve fallthrough attrs
-      let attrs =
-        instance.type.inheritAttrs !== false ? instance.attrs : undefined
+      let attrs = instance.inheritAttrs !== false ? instance.attrs : undefined
       let hasCloned = false
 
       let cur = instance

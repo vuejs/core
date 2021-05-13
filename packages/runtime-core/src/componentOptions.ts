@@ -755,7 +755,7 @@ export function applyOptions(
       resolveInstanceAssets(instance, options, FILTERS)
     }
 
-    if (inheritAttrs !== undefined) instance.type.inheritAttrs = inheritAttrs
+    if (inheritAttrs !== undefined) instance.inheritAttrs = inheritAttrs
   }
 
   // lifecycle options
