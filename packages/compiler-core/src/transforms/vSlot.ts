@@ -314,12 +314,21 @@ export function buildSlots(
     } else if (implicitDefaultChildren.length) {
       // implicit default slot (mixed with named slots)
       if (hasNamedDefaultSlot) {
-        context.onError(
-          createCompilerError(
-            ErrorCodes.X_V_SLOT_EXTRANEOUS_DEFAULT_SLOT_CHILDREN,
-            implicitDefaultChildren[0].loc
+        // in the mode of preserve whitespace,
+        // the whitespace will be used as the content of the default slot,
+        // if the user specifies a named default slot,
+        // then the whitespace outside the default slot content will be ignored,
+        // and only need to warn if there is non-whitespace content
+        if (
+          implicitDefaultChildren.find(node => isNonWhitespaceContent(node))
+        ) {
+          context.onError(
+            createCompilerError(
+              ErrorCodes.X_V_SLOT_EXTRANEOUS_DEFAULT_SLOT_CHILDREN,
+              implicitDefaultChildren[0].loc
+            )
           )
-        )
+        }
       } else {
         slotsProperties.push(
           buildDefaultSlotProperty(undefined, implicitDefaultChildren)
@@ -396,4 +405,11 @@ function hasForwardedSlots(children: TemplateChildNode[]): boolean {
     }
   }
   return false
+}
+function isNonWhitespaceContent(node: TemplateChildNode): boolean {
+  if (node.type !== NodeTypes.TEXT && node.type !== NodeTypes.TEXT_CALL)
+    return true
+  return node.type === NodeTypes.TEXT
+    ? !!node.content.trim()
+    : isNonWhitespaceContent(node.content)
 }
