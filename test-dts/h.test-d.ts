@@ -16,19 +16,14 @@ describe('h inference w/ element', () => {
   // key
   h('div', { key: 1 })
   h('div', { key: 'foo' })
-  //  @ts-expect-error
   expectError(h('div', { key: [] }))
-  //  @ts-expect-error
   expectError(h('div', { key: {} }))
   // ref
   h('div', { ref: 'foo' })
   h('div', { ref: ref(null) })
   h('div', { ref: _el => {} })
-  //  @ts-expect-error
   expectError(h('div', { ref: [] }))
-  //  @ts-expect-error
   expectError(h('div', { ref: {} }))
-  //  @ts-expect-error
   expectError(h('div', { ref: 123 }))
   // slots
   const slots = { default: () => {} } // RawSlots
@@ -229,7 +224,7 @@ describe('Boolean prop implicit false', () => {
 // #2357
 describe('resolveComponent should work', () => {
   h(resolveComponent('test'), {})
-  h(resolveComponent('test'), null, {})
+  h(resolveComponent('test'), null, { default: () => {} })
   h(resolveComponent('test'), {
     message: '1'
   })
