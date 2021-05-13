@@ -311,24 +311,21 @@ export function buildSlots(
     if (!hasTemplateSlots) {
       // implicit default slot (on component)
       slotsProperties.push(buildDefaultSlotProperty(undefined, children))
-    } else if (implicitDefaultChildren.length) {
+    } else if (
+      implicitDefaultChildren.length &&
+      // #3766
+      // with whitespace: 'preserve', whitespaces between slots will end up in
+      // implicitDefaultChildren. Ignore if all implicit children are whitespaces.
+      implicitDefaultChildren.some(node => isNonWhitespaceContent(node))
+    ) {
       // implicit default slot (mixed with named slots)
       if (hasNamedDefaultSlot) {
-        // #3766
-        // with whitespace: 'preserve' + explicitly named default slot,
-        // whitespaces between slots will end up in implicitDefaultChildren.
-        // we only need to warn against extraneous default slot if the content
-        // is not all whitespace.
-        if (
-          implicitDefaultChildren.some(node => isNonWhitespaceContent(node))
-        ) {
-          context.onError(
-            createCompilerError(
-              ErrorCodes.X_V_SLOT_EXTRANEOUS_DEFAULT_SLOT_CHILDREN,
-              implicitDefaultChildren[0].loc
-            )
+        context.onError(
+          createCompilerError(
+            ErrorCodes.X_V_SLOT_EXTRANEOUS_DEFAULT_SLOT_CHILDREN,
+            implicitDefaultChildren[0].loc
           )
-        }
+        )
       } else {
         slotsProperties.push(
           buildDefaultSlotProperty(undefined, implicitDefaultChildren)

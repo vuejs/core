@@ -9,7 +9,9 @@ import {
   ForNode,
   ComponentNode,
   VNodeCall,
-  SlotsExpression
+  SlotsExpression,
+  ObjectExpression,
+  SimpleExpressionNode
 } from '../../src'
 import { transformElement } from '../../src/transforms/transformElement'
 import { transformOn } from '../../src/transforms/vOn'
@@ -897,6 +899,30 @@ describe('compiler: transform component slots', () => {
       expect(
         `Extraneous children found when component already has explicitly named default slot.`
       ).not.toHaveBeenWarned()
+      expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
+    })
+
+    test('should not generate whitespace only default slot', () => {
+      const source = `
+      <Comp>
+        <template #header> Header </template>
+        <template #footer> Footer </template>
+      </Comp>
+      `
+      const { root } = parseWithSlots(source, {
+        whitespace: 'preserve'
+      })
+
+      // slots is vnodeCall's children as an ObjectExpression
+      const slots = (root as any).children[0].codegenNode.children
+        .properties as ObjectExpression['properties']
+
+      // should be: header, footer, _ (no default)
+      expect(slots.length).toBe(3)
+      expect(
+        slots.some(p => (p.key as SimpleExpressionNode).content === 'default')
+      ).toBe(false)
+
       expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
     })
   })

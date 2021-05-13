@@ -240,3 +240,17 @@ return function render(_ctx, _cache) {
   }))
 }"
 `;
+
+exports[`compiler: transform component slots with whitespace: 'preserve' should not generate whitespace only default slot 1`] = `
+"const { resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
+
+return function render(_ctx, _cache) {
+  const _component_Comp = _resolveComponent(\\"Comp\\")
+
+  return (_openBlock(), _createBlock(_component_Comp, null, {
+    header: _withCtx(() => [\\" Header \\"]),
+    footer: _withCtx(() => [\\" Footer \\"]),
+    _: 1 /* STABLE */
+  }))
+}"
+`;
