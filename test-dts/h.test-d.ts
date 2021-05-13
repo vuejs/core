@@ -223,7 +223,9 @@ describe('Boolean prop implicit false', () => {
 
 // #2357
 describe('resolveComponent should work', () => {
-  h(resolveComponent('test'), {})
+  h(resolveComponent('test'))
+  h(resolveComponent('test'))
+  h(resolveComponent('test'), null, {})
   h(resolveComponent('test'), null, { default: () => {} })
   h(resolveComponent('test'), {
     message: '1'
