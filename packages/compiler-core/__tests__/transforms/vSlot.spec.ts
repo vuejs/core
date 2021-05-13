@@ -27,7 +27,9 @@ import { transformFor } from '../../src/transforms/vFor'
 import { transformIf } from '../../src/transforms/vIf'
 
 function parseWithSlots(template: string, options: CompilerOptions = {}) {
-  const ast = parse(template)
+  const ast = parse(template, {
+    whitespace: options.whitespace
+  })
   transform(ast, {
     nodeTransforms: [
       transformIf,
@@ -860,6 +862,42 @@ describe('compiler: transform component slots', () => {
           }
         }
       })
+    })
+  })
+
+  describe('the content of slots with preserved whitespace', () => {
+    test('named default slot + implicit whitespace content', () => {
+      const source = `
+      <Comp>
+        <template #header> Header </template>
+        <template #default> Default </template>
+      </Comp>
+      `
+      const { root } = parseWithSlots(source, {
+        whitespace: 'preserve'
+      })
+
+      expect(
+        `Extraneous children found when component already has explicitly named default slot.`
+      ).not.toHaveBeenWarned()
+      expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
+    })
+
+    test('no named default slot', () => {
+      const source = `
+      <Comp>
+        <template #header> Header </template>
+        <p/>
+      </Comp>
+      `
+      const { root } = parseWithSlots(source, {
+        whitespace: 'preserve'
+      })
+
+      expect(
+        `Extraneous children found when component already has explicitly named default slot.`
+      ).not.toHaveBeenWarned()
+      expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
     })
   })
 })

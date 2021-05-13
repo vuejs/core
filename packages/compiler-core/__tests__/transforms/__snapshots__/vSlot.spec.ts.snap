@@ -209,3 +209,34 @@ return function render(_ctx, _cache) {
   }))
 }"
 `;
+
+exports[`compiler: transform component slots the content of slots with preserved whitespace named default slot + implicit whitespace content 1`] = `
+"const { resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
+
+return function render(_ctx, _cache) {
+  const _component_Comp = _resolveComponent(\\"Comp\\")
+
+  return (_openBlock(), _createBlock(_component_Comp, null, {
+    header: _withCtx(() => [\\" Header \\"]),
+    default: _withCtx(() => [\\" Default \\"]),
+    _: 1 /* STABLE */
+  }))
+}"
+`;
+
+exports[`compiler: transform component slots the content of slots with preserved whitespace no named default slot 1`] = `
+"const { createVNode: _createVNode, resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
+
+return function render(_ctx, _cache) {
+  const _component_Comp = _resolveComponent(\\"Comp\\")
+
+  return (_openBlock(), _createBlock(_component_Comp, null, {
+    header: _withCtx(() => [\\" Header \\"]),
+    default: _withCtx(() => [
+      \\" \\",
+      _createVNode(\\"p\\")
+    ]),
+    _: 1 /* STABLE */
+  }))
+}"
+`;
