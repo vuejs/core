@@ -423,6 +423,7 @@ describe('reactivity/readonly', () => {
       bar: markRaw({ b: 2 })
     })
     expect(isReadonly(obj.foo)).toBe(true)
+    expect(isReactive(obj.bar)).toBe(false)
     expect(isReadonly(obj.bar)).toBe(false)
   })
 
