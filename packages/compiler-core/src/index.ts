@@ -57,3 +57,10 @@ export {
 } from './transforms/transformElement'
 export { processSlotOutlet } from './transforms/transformSlotOutlet'
 export { generateCodeFrame } from '@vue/shared'
+
+// v2 compat only
+export {
+  checkCompatEnabled,
+  warnDeprecation,
+  CompilerDeprecationTypes
+} from './compat/compatConfig'

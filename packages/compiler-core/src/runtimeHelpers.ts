@@ -14,6 +14,7 @@ export const RESOLVE_DYNAMIC_COMPONENT = Symbol(
   __DEV__ ? `resolveDynamicComponent` : ``
 )
 export const RESOLVE_DIRECTIVE = Symbol(__DEV__ ? `resolveDirective` : ``)
+export const RESOLVE_FILTER = Symbol(__DEV__ ? `resolveFilter` : ``)
 export const WITH_DIRECTIVES = Symbol(__DEV__ ? `withDirectives` : ``)
 export const RENDER_LIST = Symbol(__DEV__ ? `renderList` : ``)
 export const RENDER_SLOT = Symbol(__DEV__ ? `renderSlot` : ``)
@@ -50,6 +51,7 @@ export const helperNameMap: any = {
   [RESOLVE_COMPONENT]: `resolveComponent`,
   [RESOLVE_DYNAMIC_COMPONENT]: `resolveDynamicComponent`,
   [RESOLVE_DIRECTIVE]: `resolveDirective`,
+  [RESOLVE_FILTER]: `resolveFilter`,
   [WITH_DIRECTIVES]: `withDirectives`,
   [RENDER_LIST]: `renderList`,
   [RENDER_SLOT]: `renderSlot`,

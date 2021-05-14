@@ -50,7 +50,8 @@ import {
   CREATE_BLOCK,
   OPEN_BLOCK,
   CREATE_STATIC,
-  WITH_CTX
+  WITH_CTX,
+  RESOLVE_FILTER
 } from './runtimeHelpers'
 import { ImportItem } from './transform'
 
@@ -274,6 +275,12 @@ export function generate(
       newline()
     }
   }
+  if (__COMPAT__ && ast.filters && ast.filters.length) {
+    newline()
+    genAssets(ast.filters, 'filter', context)
+    newline()
+  }
+
   if (ast.temps > 0) {
     push(`let `)
     for (let i = 0; i < ast.temps; i++) {
@@ -458,11 +465,15 @@ function genModulePreamble(
 
 function genAssets(
   assets: string[],
-  type: 'component' | 'directive',
+  type: 'component' | 'directive' | 'filter',
   { helper, push, newline }: CodegenContext
 ) {
   const resolver = helper(
-    type === 'component' ? RESOLVE_COMPONENT : RESOLVE_DIRECTIVE
+    __COMPAT__ && type === 'filter'
+      ? RESOLVE_FILTER
+      : type === 'component'
+        ? RESOLVE_COMPONENT
+        : RESOLVE_DIRECTIVE
   )
   for (let i = 0; i < assets.length; i++) {
     let id = assets[i]
@@ -727,13 +738,11 @@ function genExpressionAsPropertyKey(
 }
 
 function genComment(node: CommentNode, context: CodegenContext) {
-  if (__DEV__) {
-    const { push, helper, pure } = context
-    if (pure) {
-      push(PURE_ANNOTATION)
-    }
-    push(`${helper(CREATE_COMMENT)}(${JSON.stringify(node.content)})`, node)
+  const { push, helper, pure } = context
+  if (pure) {
+    push(PURE_ANNOTATION)
   }
+  push(`${helper(CREATE_COMMENT)}(${JSON.stringify(node.content)})`, node)
 }
 
 function genVNodeCall(node: VNodeCall, context: CodegenContext) {
@@ -869,6 +878,9 @@ function genFunctionExpression(
     push(`}`)
   }
   if (isSlot) {
+    if (__COMPAT__ && node.isNonScopedSlot) {
+      push(`, undefined, true`)
+    }
     push(`)`)
   }
 }
