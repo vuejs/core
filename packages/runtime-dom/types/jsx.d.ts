@@ -480,6 +480,7 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   formnovalidate?: boolean
   formtarget?: string
   height?: number | string
+  indeterminate?: boolean // https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/checkbox#indeterminate
   list?: string
   max?: number | string
   maxlength?: number
