@@ -734,4 +734,54 @@ describe('renderer: optimized mode', () => {
     await nextTick()
     expect(inner(root)).toBe('<p>1</p>')
   })
+
+  // #3779
+  test('treat slots manually written by the user as dynamic', async () => {
+    const Middle = {
+      setup(props: any, { slots }: any) {
+        return slots.default!
+      }
+    }
+
+    const Comp = {
+      setup(props: any, { slots }: any) {
+        return () => {
+          return (
+            openBlock(),
+            createBlock('div', null, [
+              createVNode(Middle, null, {
+                default: withCtx(
+                  () => [
+                    createVNode('div', null, [renderSlot(slots, 'default')])
+                  ],
+                  undefined
+                ),
+                _: 3 /* FORWARDED */
+              })
+            ])
+          )
+        }
+      }
+    }
+
+    const loading = ref(false)
+    const app = createApp({
+      setup() {
+        return () => {
+          // important: write the slot content here
+          const content = h('span', loading.value ? 'loading' : 'loaded')
+          return h(Comp, null, {
+            default: () => content
+          })
+        }
+      }
+    })
+
+    app.mount(root)
+    expect(inner(root)).toBe('<div><div><span>loaded</span></div></div>')
+
+    loading.value = true
+    await nextTick()
+    expect(inner(root)).toBe('<div><div><span>loading</span></div></div>')
+  })
 })
