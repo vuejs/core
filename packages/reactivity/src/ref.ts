@@ -5,6 +5,7 @@ import { reactive, isProxy, toRaw, isReactive } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
 
 declare const RefSymbol: unique symbol
+export declare const RAW_SYMBOL: unique symbol
 
 export interface Ref<T = any> {
   value: T
@@ -212,16 +213,18 @@ export type UnwrapRef<T> = T extends Ref<infer V>
   ? UnwrapRefSimple<V>
   : UnwrapRefSimple<T>
 
-type UnwrapRefSimple<T> = T extends
-  | Function
-  | CollectionTypes
-  | BaseTypes
-  | Ref
-  | RefUnwrapBailTypes[keyof RefUnwrapBailTypes]
+type UnwrapRefSimple<T> = T extends { [RAW_SYMBOL]?: true }
   ? T
-  : T extends Array<any>
-    ? { [K in keyof T]: UnwrapRefSimple<T[K]> }
-    : T extends object ? UnwrappedObject<T> : T
+  : T extends
+      | Function
+      | CollectionTypes
+      | BaseTypes
+      | Ref
+      | RefUnwrapBailTypes[keyof RefUnwrapBailTypes]
+    ? T
+    : T extends Array<any>
+      ? { [K in keyof T]: UnwrapRefSimple<T[K]> }
+      : T extends object ? UnwrappedObject<T> : T
 
 // Extract all known symbols from an object
 // when unwrapping Object the symbols are not `in keyof`, this should cover all the
