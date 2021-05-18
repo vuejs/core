@@ -1,5 +1,13 @@
-import { reactive, Ref, ref } from '@vue/reactivity'
-import { readonly, describe, expectError, markRaw, expectType } from './index'
+import {
+  readonly,
+  describe,
+  expectError,
+  markRaw,
+  expectType,
+  reactive,
+  Ref,
+  ref
+} from './index'
 
 describe('should support DeepReadonly', () => {
   const r = readonly({ obj: { k: 'v' } })
@@ -11,7 +19,7 @@ describe('should support DeepReadonly', () => {
 
 describe('should support markRaw', () => {
   class Test<T> {
-    item = {} as T
+    item = {} as Ref<T>
   }
   const test = new Test<number>()
   const plain = {
@@ -30,7 +38,7 @@ describe('should support markRaw', () => {
   })
 
   expectType<Test<number>>(r.class.raw)
-  // TODO make this fail
+  // @ts-expect-error it should unwrap
   expectType<Test<number>>(r.class.reactive)
 
   expectType<Ref<number>>(r.plain.raw.ref)
