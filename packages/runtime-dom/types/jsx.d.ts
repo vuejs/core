@@ -469,7 +469,7 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   alt?: string
   autocomplete?: string
   autofocus?: boolean
-  capture?: boolean // https://www.w3.org/tr/html-media-capture/#the-capture-attribute
+  capture?: boolean | string // https://www.w3.org/tr/html-media-capture/#the-capture-attribute
   checked?: boolean
   crossorigin?: string
   disabled?: boolean
