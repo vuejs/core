@@ -1,4 +1,5 @@
 import { ComponentInternalInstance } from './component'
+import { devtoolsComponentUpdated } from './devtools'
 import { isRenderingCompiledSlot } from './helpers/renderSlot'
 import { closeBlock, openBlock } from './vnode'
 
@@ -78,6 +79,11 @@ export function withCtx(
     if (!isRenderingCompiledSlot) {
       closeBlock()
     }
+
+    if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+      devtoolsComponentUpdated(ctx)
+    }
+
     return res
   }
   // mark this as a compiled slot function.
