@@ -1,4 +1,5 @@
 import { ComponentInternalInstance } from './component'
+import { devtoolsComponentUpdated } from './devtools'
 import { isRenderingCompiledSlot } from './helpers/renderSlot'
 import { closeBlock, openBlock } from './vnode'
 
@@ -25,6 +26,10 @@ export function setCurrentRenderingInstance(
   const prev = currentRenderingInstance
   currentRenderingInstance = instance
   currentScopeId = (instance && instance.type.__scopeId) || null
+  // v2 pre-compiled components uses _scopeId instead of __scopeId
+  if (__COMPAT__ && !currentScopeId) {
+    currentScopeId = (instance && (instance.type as any)._scopeId) || null
+  }
   return prev
 }
 
@@ -57,7 +62,8 @@ export const withScopeId = (_id: string) => withCtx
  */
 export function withCtx(
   fn: Function,
-  ctx: ComponentInternalInstance | null = currentRenderingInstance
+  ctx: ComponentInternalInstance | null = currentRenderingInstance,
+  isNonScopedSlot?: boolean // __COMPAT__ only
 ) {
   if (!ctx) return fn
   const renderFnWithContext = (...args: any[]) => {
@@ -73,11 +79,19 @@ export function withCtx(
     if (!isRenderingCompiledSlot) {
       closeBlock()
     }
+
+    if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+      devtoolsComponentUpdated(ctx)
+    }
+
     return res
   }
   // mark this as a compiled slot function.
   // this is used in vnode.ts -> normalizeChildren() to set the slot
   // rendering flag.
   renderFnWithContext._c = true
+  if (__COMPAT__ && isNonScopedSlot) {
+    renderFnWithContext._nonScoped = true
+  }
   return renderFnWithContext
 }

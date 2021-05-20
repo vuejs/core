@@ -4,17 +4,18 @@ import {
   validateComponentName,
   Component
 } from './component'
-import { ComponentOptions } from './componentOptions'
+import { ComponentOptions, RuntimeCompilerOptions } from './componentOptions'
 import { ComponentPublicInstance } from './componentPublicInstance'
 import { Directive, validateDirectiveName } from './directives'
 import { RootRenderFunction } from './renderer'
 import { InjectionKey } from './apiInject'
-import { isFunction, NO, isObject } from '@vue/shared'
 import { warn } from './warning'
 import { createVNode, cloneVNode, VNode } from './vnode'
 import { RootHydrateFunction } from './hydration'
 import { devtoolsInitApp, devtoolsUnmountApp } from './devtools'
+import { isFunction, NO, isObject } from '@vue/shared'
 import { version } from '.'
+import { installAppCompatProperties } from './compat/global'
 
 export interface App<HostElement = any> {
   version: string
@@ -39,6 +40,17 @@ export interface App<HostElement = any> {
   _props: Data | null
   _container: HostElement | null
   _context: AppContext
+
+  /**
+   * v2 compat only
+   */
+  filter?(name: string): Function | undefined
+  filter?(name: string, filter: Function): this
+
+  /**
+   * @internal v3 compat only
+   */
+  _createRoot?(options: ComponentOptions): ComponentPublicInstance
 }
 
 export type OptionMergeFunction = (
@@ -55,7 +67,6 @@ export interface AppConfig {
   performance: boolean
   optionMergeStrategies: Record<string, OptionMergeFunction>
   globalProperties: Record<string, any>
-  isCustomElement: (tag: string) => boolean
   errorHandler?: (
     err: unknown,
     instance: ComponentPublicInstance | null,
@@ -66,6 +77,17 @@ export interface AppConfig {
     instance: ComponentPublicInstance | null,
     trace: string
   ) => void
+
+  /**
+   * @deprecated use config.compilerOptions.isCustomElement
+   */
+  isCustomElement?: (tag: string) => boolean
+
+  /**
+   * Options to pass to @vue/compiler-dom.
+   * Only supported in runtime compiler build.
+   */
+  compilerOptions: RuntimeCompilerOptions
 }
 
 export interface AppContext {
@@ -85,6 +107,11 @@ export interface AppContext {
    * @internal
    */
   reload?: () => void
+  /**
+   * v2 compat only
+   * @internal
+   */
+  filters?: Record<string, Function>
 }
 
 type PluginInstallFunction = (app: App, ...options: any[]) => any
@@ -103,9 +130,9 @@ export function createAppContext(): AppContext {
       performance: false,
       globalProperties: {},
       optionMergeStrategies: {},
-      isCustomElement: NO,
       errorHandler: undefined,
-      warnHandler: undefined
+      warnHandler: undefined,
+      compilerOptions: {}
     },
     mixins: [],
     components: {},
@@ -297,6 +324,10 @@ export function createAppAPI<HostElement>(
         return app
       }
     })
+
+    if (__COMPAT__) {
+      installAppCompatProperties(app, context, render)
+    }
 
     return app
   }

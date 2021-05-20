@@ -11,7 +11,8 @@ import {
   isGloballyWhitelisted,
   NOOP,
   extend,
-  isString
+  isString,
+  isFunction
 } from '@vue/shared'
 import {
   ReactiveEffect,
@@ -40,6 +41,7 @@ import { markAttrsAccessed } from './componentRenderUtils'
 import { currentRenderingInstance } from './componentRenderContext'
 import { warn } from './warning'
 import { UnionToIntersection } from './helpers/typeUtils'
+import { installCompatInstanceProperties } from './compat/instance'
 
 /**
  * Custom properties added to component instances in any way and can be accessed through `this`
@@ -201,7 +203,10 @@ export type ComponentPublicInstance<
   M &
   ComponentCustomProperties
 
-type PublicPropertiesMap = Record<string, (i: ComponentInternalInstance) => any>
+export type PublicPropertiesMap = Record<
+  string,
+  (i: ComponentInternalInstance) => any
+>
 
 /**
  * #2437 In Vue 3, functional components do not have a public instance proxy but
@@ -232,6 +237,10 @@ const publicPropertiesMap: PublicPropertiesMap = extend(Object.create(null), {
   $nextTick: i => nextTick.bind(i.proxy!),
   $watch: i => (__FEATURE_OPTIONS_API__ ? instanceWatch.bind(i) : NOOP)
 } as PublicPropertiesMap)
+
+if (__COMPAT__) {
+  installCompatInstanceProperties(publicPropertiesMap)
+}
 
 const enum AccessTypes {
   SETUP,
@@ -335,7 +344,17 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       ((globalProperties = appContext.config.globalProperties),
       hasOwn(globalProperties, key))
     ) {
-      return globalProperties[key]
+      if (__COMPAT__) {
+        const desc = Object.getOwnPropertyDescriptor(globalProperties, key)!
+        if (desc.get) {
+          return desc.get.call(instance.proxy)
+        } else {
+          const val = globalProperties[key]
+          return isFunction(val) ? val.bind(instance.proxy) : val
+        }
+      } else {
+        return globalProperties[key]
+      }
     } else if (
       __DEV__ &&
       currentRenderingInstance &&
@@ -479,17 +498,6 @@ export function createRenderContext(instance: ComponentInternalInstance) {
       get: () => publicPropertiesMap[key](instance),
       // intercepted by the proxy so no need for implementation,
       // but needed to prevent set errors
-      set: NOOP
-    })
-  })
-
-  // expose global properties
-  const { globalProperties } = instance.appContext.config
-  Object.keys(globalProperties).forEach(key => {
-    Object.defineProperty(target, key, {
-      configurable: true,
-      enumerable: false,
-      get: () => globalProperties[key],
       set: NOOP
     })
   })

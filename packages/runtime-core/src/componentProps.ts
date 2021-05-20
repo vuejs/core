@@ -20,7 +20,8 @@ import {
   isReservedProp,
   EMPTY_ARR,
   def,
-  extend
+  extend,
+  isOn
 } from '@vue/shared'
 import { warn } from './warning'
 import {
@@ -33,6 +34,10 @@ import {
 import { isEmitListener } from './componentEmits'
 import { InternalObjectKey } from './vnode'
 import { AppContext } from './apiCreateApp'
+import { createPropsDefaultThis } from './compat/props'
+import { isCompatEnabled, softAssertCompatEnabled } from './compat/compatConfig'
+import { DeprecationTypes } from './compat/compatConfig'
+import { shouldSkipAttr } from './compat/attrsFallthrough'
 
 export type ComponentPropsOptions<P = Data> =
   | ComponentObjectPropsOptions<P>
@@ -71,7 +76,7 @@ type RequiredKeys<T> = {
     // don't mark Boolean props as undefined
     | BooleanConstructor
     | { type: BooleanConstructor }
-    ? K
+    ? T[K] extends { default: undefined | (() => undefined) } ? never : K
     : never
 }[keyof T]
 
@@ -184,6 +189,7 @@ export function updateProps(
   } = instance
   const rawCurrentProps = toRaw(props)
   const [options] = instance.propsOptions
+  let hasAttrsChanged = false
 
   if (
     // always force full diff in dev
@@ -202,14 +208,17 @@ export function updateProps(
       // the props.
       const propsToUpdate = instance.vnode.dynamicProps!
       for (let i = 0; i < propsToUpdate.length; i++) {
-        const key = propsToUpdate[i]
+        let key = propsToUpdate[i]
         // PROPS flag guarantees rawProps to be non-null
         const value = rawProps![key]
         if (options) {
           // attr / props separation was done on init and will be consistent
           // in this code path, so just check if attrs have it.
           if (hasOwn(attrs, key)) {
-            attrs[key] = value
+            if (value !== attrs[key]) {
+              attrs[key] = value
+              hasAttrsChanged = true
+            }
           } else {
             const camelizedKey = camelize(key)
             props[camelizedKey] = resolvePropValue(
@@ -221,13 +230,25 @@ export function updateProps(
             )
           }
         } else {
-          attrs[key] = value
+          if (__COMPAT__) {
+            if (isOn(key) && key.endsWith('Native')) {
+              key = key.slice(0, -6) // remove Native postfix
+            } else if (shouldSkipAttr(key, instance)) {
+              continue
+            }
+          }
+          if (value !== attrs[key]) {
+            attrs[key] = value
+            hasAttrsChanged = true
+          }
         }
       }
     }
   } else {
     // full props update.
-    setFullProps(instance, rawProps, props, attrs)
+    if (setFullProps(instance, rawProps, props, attrs)) {
+      hasAttrsChanged = true
+    }
     // in case of dynamic props, check if we need to delete keys from
     // the props object
     let kebabKey: string
@@ -267,13 +288,16 @@ export function updateProps(
       for (const key in attrs) {
         if (!rawProps || !hasOwn(rawProps, key)) {
           delete attrs[key]
+          hasAttrsChanged = true
         }
       }
     }
   }
 
   // trigger updates for $attrs in case it's used in component slots
-  trigger(instance, TriggerOpTypes.SET, '$attrs')
+  if (hasAttrsChanged) {
+    trigger(instance, TriggerOpTypes.SET, '$attrs')
+  }
 
   if (__DEV__) {
     validateProps(rawProps || {}, props, instance)
@@ -287,12 +311,27 @@ function setFullProps(
   attrs: Data
 ) {
   const [options, needCastKeys] = instance.propsOptions
+  let hasAttrsChanged = false
   if (rawProps) {
-    for (const key in rawProps) {
+    for (let key in rawProps) {
       // key, ref are reserved and never passed down
       if (isReservedProp(key)) {
         continue
       }
+
+      if (__COMPAT__) {
+        if (key.startsWith('onHook:')) {
+          softAssertCompatEnabled(
+            DeprecationTypes.INSTANCE_EVENT_HOOKS,
+            instance,
+            key.slice(2).toLowerCase()
+          )
+        }
+        if (key === 'inline-template') {
+          continue
+        }
+      }
+
       const value = rawProps[key]
       // prop option names are camelized during normalization, so to support
       // kebab -> camel conversion here we need to camelize the key.
@@ -303,7 +342,17 @@ function setFullProps(
         // Any non-declared (either as a prop or an emitted event) props are put
         // into a separate `attrs` object for spreading. Make sure to preserve
         // original key casing
-        attrs[key] = value
+        if (__COMPAT__) {
+          if (isOn(key) && key.endsWith('Native')) {
+            key = key.slice(0, -6) // remove Native postfix
+          } else if (shouldSkipAttr(key, instance)) {
+            continue
+          }
+        }
+        if (value !== attrs[key]) {
+          attrs[key] = value
+          hasAttrsChanged = true
+        }
       }
     }
   }
@@ -321,6 +370,8 @@ function setFullProps(
       )
     }
   }
+
+  return hasAttrsChanged
 }
 
 function resolvePropValue(
@@ -342,7 +393,13 @@ function resolvePropValue(
           value = propsDefaults[key]
         } else {
           setCurrentInstance(instance)
-          value = propsDefaults[key] = defaultValue(props)
+          value = propsDefaults[key] = defaultValue.call(
+            __COMPAT__ &&
+            isCompatEnabled(DeprecationTypes.PROPS_DEFAULT_THIS, instance)
+              ? createPropsDefaultThis(instance, props, key)
+              : null,
+            props
+          )
           setCurrentInstance(null)
         }
       } else {
@@ -381,6 +438,9 @@ export function normalizePropsOptions(
   let hasExtends = false
   if (__FEATURE_OPTIONS_API__ && !isFunction(comp)) {
     const extendProps = (raw: ComponentOptions) => {
+      if (__COMPAT__ && isFunction(raw)) {
+        raw = raw.options
+      }
       hasExtends = true
       const [props, keys] = normalizePropsOptions(raw, appContext, true)
       extend(normalized, props)

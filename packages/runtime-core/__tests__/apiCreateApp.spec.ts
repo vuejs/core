@@ -481,4 +481,7 @@ describe('api: createApp', () => {
     app.mount(root)
     expect(serializeInner(root)).toBe('hello')
   })
+
+  // config.compilerOptions is tested in packages/vue since it is only
+  // supported in the full build.
 })

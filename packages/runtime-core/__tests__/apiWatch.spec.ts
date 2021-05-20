@@ -944,4 +944,28 @@ describe('api: watch', () => {
     await nextTick()
     expect(spy).toHaveBeenCalledTimes(2)
   })
+  
+  it('watching sources: ref<any[]>', async () => {
+    const foo = ref([1])
+    const spy = jest.fn()
+    watch(foo, () => {
+      spy()
+    })
+    foo.value = foo.value.slice()
+    await nextTick()
+    expect(spy).toBeCalledTimes(1)
+  })
+
+  it('watching multiple sources: computed', async () => {
+    let count = 0
+    const value = ref('1')
+    const plus = computed(() => !!value.value)
+    watch([plus], () => {
+      count++
+    })
+    value.value = '2'
+    await nextTick()
+    expect(plus.value).toBe(true)
+    expect(count).toBe(0)
+  })
 })

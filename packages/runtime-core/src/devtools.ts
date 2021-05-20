@@ -15,7 +15,9 @@ const enum DevtoolsHooks {
   COMPONENT_UPDATED = 'component:updated',
   COMPONENT_ADDED = 'component:added',
   COMPONENT_REMOVED = 'component:removed',
-  COMPONENT_EMIT = 'component:emit'
+  COMPONENT_EMIT = 'component:emit',
+  PERFORMANCE_START = 'perf:start',
+  PERFORMANCE_END = 'perf:end'
 }
 
 interface DevtoolsHook {
@@ -69,6 +71,28 @@ function createDevtoolsComponentHook(hook: DevtoolsHooks) {
       component.uid,
       component.parent ? component.parent.uid : undefined,
       component
+    )
+  }
+}
+
+export const devtoolsPerfStart = /*#__PURE__*/ createDevtoolsPerformanceHook(
+  DevtoolsHooks.PERFORMANCE_START
+)
+
+export const devtoolsPerfEnd = /*#__PURE__*/ createDevtoolsPerformanceHook(
+  DevtoolsHooks.PERFORMANCE_END
+)
+
+function createDevtoolsPerformanceHook(hook: DevtoolsHooks) {
+  return (component: ComponentInternalInstance, type: string, time: number) => {
+    if (!devtools) return
+    devtools.emit(
+      hook,
+      component.appContext.app,
+      component.uid,
+      component,
+      type,
+      time
     )
   }
 }
