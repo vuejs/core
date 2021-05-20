@@ -68,9 +68,9 @@ function findInsertionIndex(job: SchedulerJob) {
   // the start index should be `flushIndex + 1`
   let start = flushIndex + 1
   let end = queue.length
-  const jobId = getId(job)
-
+  
   while (start < end) {
+    const jobId = getId(job)
     const middle = (start + end) >>> 1
     const middleJobId = getId(queue[middle])
     middleJobId < jobId ? (start = middle + 1) : (end = middle)
@@ -94,12 +94,7 @@ export function queueJob(job: SchedulerJob) {
       )) &&
     job !== currentPreFlushParentJob
   ) {
-    const pos = findInsertionIndex(job)
-    if (pos > -1) {
-      queue.splice(pos, 0, job)
-    } else {
-      queue.push(job)
-    }
+    queue.splice(findInsertionIndex(job), 0, job)
     queueFlush()
   }
 }
