@@ -111,6 +111,36 @@ describe('reactivity/reactive/Array', () => {
     expect(fn).toHaveBeenCalledTimes(1)
   })
 
+  // # 3812
+  test('add non-valid integer prop on Array should not trigger length dependency', () => {
+    const array = new Array(3)
+    const observed = reactive(array)
+    const fn = jest.fn()
+    effect(() => {
+      fn(observed.length)
+    })
+    expect(fn).toHaveBeenCalledTimes(1)
+    observed[Math.pow(2, 32)] = 1
+    expect(fn).toHaveBeenCalledTimes(1)
+  })
+
+  // #3812
+  test('using equal value to set non-valid integer prop on Array should trigger effect 1 times', () => {
+    // integer key between 0 to 4294967295 will be treated as array index.
+    // If a integer key is over valid array length, it will be treated as a object key not a array index.
+    const arr = reactive<number[]>([])
+    const MAX_VALID_ARRAY_LENGTH = Math.pow(2, 32) - 1
+    const nonValidProp = MAX_VALID_ARRAY_LENGTH + 1
+    arr[nonValidProp] = 0
+    const fn = jest.fn()
+    effect(() => {
+      fn(arr[nonValidProp])
+    })
+    expect(fn).toHaveBeenCalledTimes(1)
+    arr[nonValidProp] = 0
+    expect(fn).toHaveBeenCalledTimes(1)
+  })
+
   test('add non-integer prop on Array should not trigger length dependency', () => {
     const array = new Array(3)
     const observed = reactive(array)

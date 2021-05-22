@@ -1,5 +1,11 @@
 import { TrackOpTypes, TriggerOpTypes } from './operations'
-import { EMPTY_OBJ, isArray, isIntegerKey, isMap } from '@vue/shared'
+import {
+  EMPTY_OBJ,
+  isArray,
+  isIntegerKey,
+  isMap,
+  MAX_VALID_ARRAY_LENGTH
+} from '@vue/shared'
 
 // The main WeakMap that stores {target -> key -> dep} connections.
 // Conceptually, it's easier to think of a dependency as a Dep class
@@ -213,7 +219,7 @@ export function trigger(
           if (isMap(target)) {
             add(depsMap.get(MAP_KEY_ITERATE_KEY))
           }
-        } else if (isIntegerKey(key)) {
+        } else if (isIntegerKey(key) && Number(key) <= MAX_VALID_ARRAY_LENGTH) {
           // new index added to array -> length changes
           add(depsMap.get('length'))
         }
