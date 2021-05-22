@@ -70,6 +70,37 @@ describe('vModel', () => {
     expect(input.value).toEqual('')
   })
 
+  it('should work with number input', async () => {
+    const component = defineComponent({
+      data() {
+        return { value: null }
+      },
+      render() {
+        return [
+          withVModel(
+            h('input', {
+              type: 'number',
+              'onUpdate:modelValue': setValue.bind(this)
+            }),
+            this.value
+          )
+        ]
+      }
+    })
+    render(h(component), root)
+
+    const input = root.querySelector('input')!
+    const data = root._vnode.component.data
+    expect(input.value).toEqual('')
+    expect(input.type).toEqual('number')
+
+    input.value = 1
+    triggerEvent('input', input)
+    await nextTick()
+    expect(typeof data.value).toEqual('number')
+    expect(data.value).toEqual(1)
+  })
+
   it('should work with multiple listeners', async () => {
     const spy = jest.fn()
     const component = defineComponent({

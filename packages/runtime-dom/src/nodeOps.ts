@@ -24,8 +24,12 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
       ? doc.createElementNS(svgNS, tag)
       : doc.createElement(tag, is ? { is } : undefined)
 
-    if (tag === 'select' && props && props.multiple != null) {
-      ;(el as HTMLSelectElement).setAttribute('multiple', props.multiple)
+    if (props) {
+      if (tag === 'select' && props.multiple != null) {
+        ;(el as HTMLSelectElement).setAttribute('multiple', props.multiple)
+      } else if (tag === 'input' && props.type != null) {
+        ;(el as HTMLSelectElement).setAttribute('type', props.type)
+      }
     }
 
     return el
