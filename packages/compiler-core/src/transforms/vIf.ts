@@ -34,7 +34,7 @@ import {
   OPEN_BLOCK,
   CREATE_VNODE
 } from '../runtimeHelpers'
-import { injectProp, findDir, findProp } from '../utils'
+import { injectProp, findDir, findProp, isBuiltInType } from '../utils'
 import { PatchFlags, PatchFlagNames } from '@vue/shared'
 
 export const transformIf = createStructuralDirectiveTransform(
@@ -147,11 +147,13 @@ export function processIf(
         context.removeNode()
         const branch = createIfBranch(node, dir)
         if (
-          (__DEV__ && comments.length && !context.scopes.transition) ||
+          __DEV__ &&
+          comments.length &&
+          // #3619 ignore comments if the v-if is direct child of <transition>
           !(
             context.parent &&
             context.parent.type === NodeTypes.ELEMENT &&
-            context.parent.tag === 'transition'
+            isBuiltInType(context.parent.tag, 'transition')
           )
         ) {
           branch.children = [...comments, ...branch.children]

@@ -99,7 +99,6 @@ export interface TransformContext
     vSlot: number
     vPre: number
     vOnce: number
-    transition: number
   }
   parent: ParentNode | null
   childIndex: number
@@ -177,8 +176,7 @@ export function createTransformContext(
       vFor: 0,
       vSlot: 0,
       vPre: 0,
-      vOnce: 0,
-      transition: 0
+      vOnce: 0
     },
     parent: null,
     currentNode: root,

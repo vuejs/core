@@ -15,9 +15,7 @@ export const warnTransitionChildren: NodeTransform = (node, context) => {
   ) {
     const component = context.isBuiltInComponent(node.tag)
     if (component === TRANSITION) {
-      context.scopes.transition++
       return () => {
-        context.scopes.transition--
         if (node.children.length && hasMultipleChildren(node)) {
           context.onError(
             createDOMCompilerError(
