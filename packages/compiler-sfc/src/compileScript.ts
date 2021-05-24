@@ -101,7 +101,8 @@ export function compileScript(
     sfc.template && sfc.template.attrs['inherit-attrs'] === 'false'
   const scriptLang = script && script.lang
   const scriptSetupLang = scriptSetup && scriptSetup.lang
-  const isTS = scriptLang === 'ts' || scriptSetupLang === 'ts'
+  const isTS =
+    scriptLang === 'ts' || scriptLang === 'tsx' || scriptSetupLang === 'ts'
   const plugins: ParserPlugin[] = [...babelParserDefaultPlugins, 'jsx']
   if (options.babelParserPlugins) plugins.push(...options.babelParserPlugins)
   if (isTS) plugins.push('typescript', 'decorators-legacy')
@@ -110,7 +111,7 @@ export function compileScript(
     if (!script) {
       throw new Error(`[@vue/compiler-sfc] SFC contains no <script> tags.`)
     }
-    if (scriptLang && scriptLang !== 'ts') {
+    if (scriptLang && scriptLang !== 'ts' && scriptLang !== 'tsx') {
       // do not process non js/ts script blocks
       return script
     }
