@@ -226,7 +226,8 @@ export function updateProps(
               rawCurrentProps,
               camelizedKey,
               value,
-              instance
+              instance,
+              false /* isAbsent */
             )
           }
         } else {
@@ -271,10 +272,11 @@ export function updateProps(
           ) {
             props[key] = resolvePropValue(
               options,
-              rawProps || EMPTY_OBJ,
+              rawCurrentProps,
               key,
               undefined,
-              instance
+              instance,
+              true /* isAbsent */
             )
           }
         } else {
@@ -363,14 +365,17 @@ function setFullProps(
   }
 
   if (needCastKeys) {
+    const rawCurrentProps = toRaw(props)
+    const castValues = rawCastValues || EMPTY_OBJ
     for (let i = 0; i < needCastKeys.length; i++) {
       const key = needCastKeys[i]
       props[key] = resolvePropValue(
         options!,
-        rawCastValues || EMPTY_OBJ,
+        rawCurrentProps,
         key,
-        rawCastValues && rawCastValues[key],
-        instance
+        castValues[key],
+        instance,
+        !hasOwn(castValues, key)
       )
     }
   }
@@ -383,7 +388,8 @@ function resolvePropValue(
   props: Data,
   key: string,
   value: unknown,
-  instance: ComponentInternalInstance
+  instance: ComponentInternalInstance,
+  isAbsent: boolean
 ) {
   const opt = options[key]
   if (opt != null) {
@@ -412,13 +418,13 @@ function resolvePropValue(
     }
     // boolean casting
     if (opt[BooleanFlags.shouldCast]) {
-      if (
+      if (isAbsent && !hasDefault) {
+        value = false
+      } else if (
         opt[BooleanFlags.shouldCastTrue] &&
         (value === '' || value === hyphenate(key))
       ) {
         value = true
-      } else if (!hasOwn(props, key) && !hasDefault) {
-        value = false
       }
     }
   }
