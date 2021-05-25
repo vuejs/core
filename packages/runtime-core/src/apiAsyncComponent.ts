@@ -194,7 +194,7 @@ export function defineAsyncComponent<
         })
 
       return () => {
-        if (loaded.value && resolvedComp) {
+        if (loaded.value && resolvedComp && !error.value) {
           return createInnerComp(resolvedComp, instance)
         } else if (error.value && errorComponent) {
           return createVNode(errorComponent as ConcreteComponent, {
