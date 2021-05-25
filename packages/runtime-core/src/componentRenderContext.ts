@@ -1,4 +1,5 @@
 import { ComponentInternalInstance } from './component'
+import { devtoolsComponentUpdated } from './devtools'
 import { isRenderingCompiledSlot } from './helpers/renderSlot'
 import { closeBlock, openBlock } from './vnode'
 
@@ -78,12 +79,18 @@ export function withCtx(
     if (!isRenderingCompiledSlot) {
       closeBlock()
     }
+
+    if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+      devtoolsComponentUpdated(ctx)
+    }
+
     return res
   }
   // mark this as a compiled slot function.
   // this is used in vnode.ts -> normalizeChildren() to set the slot
   // rendering flag.
-  renderFnWithContext._c = true
+  // also used to cache the normalized results to avoid repeated normalization
+  renderFnWithContext._c = renderFnWithContext
   if (__COMPAT__ && isNonScopedSlot) {
     renderFnWithContext._nonScoped = true
   }

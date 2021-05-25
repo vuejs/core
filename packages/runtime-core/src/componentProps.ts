@@ -226,7 +226,8 @@ export function updateProps(
               rawCurrentProps,
               camelizedKey,
               value,
-              instance
+              instance,
+              false /* isAbsent */
             )
           }
         } else {
@@ -271,10 +272,11 @@ export function updateProps(
           ) {
             props[key] = resolvePropValue(
               options,
-              rawProps || EMPTY_OBJ,
+              rawCurrentProps,
               key,
               undefined,
-              instance
+              instance,
+              true /* isAbsent */
             )
           }
         } else {
@@ -312,6 +314,7 @@ function setFullProps(
 ) {
   const [options, needCastKeys] = instance.propsOptions
   let hasAttrsChanged = false
+  let rawCastValues: Data | undefined
   if (rawProps) {
     for (let key in rawProps) {
       // key, ref are reserved and never passed down
@@ -337,7 +340,11 @@ function setFullProps(
       // kebab -> camel conversion here we need to camelize the key.
       let camelKey
       if (options && hasOwn(options, (camelKey = camelize(key)))) {
-        props[camelKey] = value
+        if (!needCastKeys || !needCastKeys.includes(camelKey)) {
+          props[camelKey] = value
+        } else {
+          ;(rawCastValues || (rawCastValues = {}))[camelKey] = value
+        }
       } else if (!isEmitListener(instance.emitsOptions, key)) {
         // Any non-declared (either as a prop or an emitted event) props are put
         // into a separate `attrs` object for spreading. Make sure to preserve
@@ -359,14 +366,16 @@ function setFullProps(
 
   if (needCastKeys) {
     const rawCurrentProps = toRaw(props)
+    const castValues = rawCastValues || EMPTY_OBJ
     for (let i = 0; i < needCastKeys.length; i++) {
       const key = needCastKeys[i]
       props[key] = resolvePropValue(
         options!,
         rawCurrentProps,
         key,
-        rawCurrentProps[key],
-        instance
+        castValues[key],
+        instance,
+        !hasOwn(castValues, key)
       )
     }
   }
@@ -379,7 +388,8 @@ function resolvePropValue(
   props: Data,
   key: string,
   value: unknown,
-  instance: ComponentInternalInstance
+  instance: ComponentInternalInstance,
+  isAbsent: boolean
 ) {
   const opt = options[key]
   if (opt != null) {
@@ -408,7 +418,7 @@ function resolvePropValue(
     }
     // boolean casting
     if (opt[BooleanFlags.shouldCast]) {
-      if (!hasOwn(props, key) && !hasDefault) {
+      if (isAbsent && !hasDefault) {
         value = false
       } else if (
         opt[BooleanFlags.shouldCastTrue] &&

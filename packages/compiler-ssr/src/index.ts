@@ -51,6 +51,7 @@ export function compile(
 
   transform(ast, {
     ...options,
+    hoistStatic: false,
     nodeTransforms: [
       ssrTransformIf,
       ssrTransformFor,

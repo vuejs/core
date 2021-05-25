@@ -4,7 +4,7 @@ import { isArray, isObject, hasChanged } from '@vue/shared'
 import { reactive, isProxy, toRaw, isReactive } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
 
-declare const RefSymbol: unique symbol
+export declare const RefSymbol: unique symbol
 export declare const RAW_SYMBOL: unique symbol
 
 export interface Ref<T = any> {
