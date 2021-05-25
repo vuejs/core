@@ -111,11 +111,14 @@ export function defineAsyncComponent<
   }
 
   return defineComponent({
+    name: 'AsyncComponentWrapper',
+
     __asyncLoader: load,
-    get __resolvedComp() {
+
+    get __asyncResolved() {
       return resolvedComp
     },
-    name: 'AsyncComponentWrapper',
+
     setup() {
       const instance = currentInstance!
 

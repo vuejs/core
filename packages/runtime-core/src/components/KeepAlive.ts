@@ -260,7 +260,7 @@ const KeepAliveImpl: ComponentOptions = {
       const comp = vnode.type as ConcreteComponent
       const name = getComponentName(
         isAsyncWrapper(vnode)
-          ? (vnode.type as ComponentOptions).__resolvedComp || {}
+          ? (vnode.type as ComponentOptions).__asyncResolved || {}
           : comp
       )
 
