@@ -17,7 +17,7 @@ import {
 } from '@vue/shared'
 import { warn } from './warning'
 import { isKeepAlive } from './components/KeepAlive'
-import { withCtx } from './componentRenderContext'
+import { ContextualRenderFn, withCtx } from './componentRenderContext'
 import { isHmrUpdating } from './hmr'
 import { DeprecationTypes, isCompatEnabled } from './compat/compatConfig'
 import { toRaw } from '@vue/reactivity'
@@ -62,9 +62,8 @@ const normalizeSlot = (
   key: string,
   rawSlot: Function,
   ctx: ComponentInternalInstance | null | undefined
-): Slot =>
-  (rawSlot as any)._c ||
-  (withCtx((props: any) => {
+): Slot => {
+  const normalized = withCtx((props: any) => {
     if (__DEV__ && currentInstance) {
       warn(
         `Slot "${key}" invoked outside of the render function: ` +
@@ -73,7 +72,11 @@ const normalizeSlot = (
       )
     }
     return normalizeSlotValue(rawSlot(props))
-  }, ctx) as Slot)
+  }, ctx) as Slot
+  // NOT a compiled slot
+  ;(normalized as ContextualRenderFn)._c = false
+  return normalized
+}
 
 const normalizeObjectSlots = (
   rawSlots: RawSlots,

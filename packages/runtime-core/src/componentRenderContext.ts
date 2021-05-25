@@ -1,6 +1,6 @@
 import { ComponentInternalInstance } from './component'
 import { devtoolsComponentUpdated } from './devtools'
-import { closeBlock, openBlock } from './vnode'
+import { setBlockTracking } from './vnode'
 
 /**
  * mark the current rendering instance for asset resolution (e.g.
@@ -57,21 +57,10 @@ export const withScopeId = (_id: string) => withCtx
 
 export type ContextualRenderFn = {
   (...args: any[]): any
+  _n: boolean /* already normalized */
   _c: boolean /* compiled */
   _d: boolean /* disableTracking */
-  _nonScoped: boolean
-}
-
-/**
- * used to force bailout when creating a VNode,
- * when the user manually calls the slot function,
- * it will potentially break the optimization mode
- */
-export let shouldForceBailout = false
-function setShouldForceBailout(bailout: boolean) {
-  const prev = shouldForceBailout
-  shouldForceBailout = bailout
-  return prev
+  _ns: boolean /* nonScoped */
 }
 
 /**
@@ -84,22 +73,26 @@ export function withCtx(
   isNonScopedSlot?: boolean // __COMPAT__ only
 ) {
   if (!ctx) return fn
+
+  // already normalized
+  if ((fn as ContextualRenderFn)._n) {
+    return fn
+  }
+
   const renderFnWithContext: ContextualRenderFn = (...args: any[]) => {
-    // in the case of recursively calling, save the prev value
-    const prev = setShouldForceBailout(false)
     // If a user calls a compiled slot inside a template expression (#1745), it
-    // can mess up block tracking, so by default we need to push a null block to
-    // avoid that. This isn't necessary if rendering a compiled `<slot>`.
+    // can mess up block tracking, so by default we disable block tracking and
+    // force bail out when invoking a compiled slot (indicated by the ._d flag).
+    // This isn't necessary if rendering a compiled `<slot>`, so we flip the
+    // ._d flag off when invoking the wrapped fn inside `renderSlot`.
     if (renderFnWithContext._d) {
-      openBlock(true /* null block that disables tracking */)
-      setShouldForceBailout(true)
+      setBlockTracking(-1)
     }
     const prevInstance = setCurrentRenderingInstance(ctx)
     const res = fn(...args)
     setCurrentRenderingInstance(prevInstance)
     if (renderFnWithContext._d) {
-      closeBlock()
-      setShouldForceBailout(prev)
+      setBlockTracking(1)
     }
 
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
@@ -108,14 +101,18 @@ export function withCtx(
 
     return res
   }
-  // mark this as a compiled slot function.
+
+  // mark normalized to avoid duplicated wrapping
+  renderFnWithContext._n = true
+  // mark this as compiled by default
   // this is used in vnode.ts -> normalizeChildren() to set the slot
   // rendering flag.
-  // also used to cache the normalized results to avoid repeated normalization
   renderFnWithContext._c = true
+  // disable block tracking by default
   renderFnWithContext._d = true
+  // compat build only flag to distinguish scoped slots from non-scoped ones
   if (__COMPAT__ && isNonScopedSlot) {
-    renderFnWithContext._nonScoped = true
+    renderFnWithContext._ns = true
   }
   return renderFnWithContext
 }
