@@ -11,7 +11,7 @@ import {
   shallowCollectionHandlers,
   shallowReadonlyCollectionHandlers
 } from './collectionHandlers'
-import { UnwrapRef, Ref, RAW_SYMBOL } from './ref'
+import { UnwrapRef, Ref, RawSymbol } from './ref'
 
 export const enum ReactiveFlags {
   SKIP = '__v_skip',
@@ -232,7 +232,7 @@ export function toRaw<T>(observed: T): T {
 
 export function markRaw<T extends object>(
   value: T
-): T & { [RAW_SYMBOL]?: true } {
+): T & { [RawSymbol]?: true } {
   def(value, ReactiveFlags.SKIP, true)
   return value
 }

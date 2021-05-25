@@ -5,7 +5,7 @@ import { reactive, isProxy, toRaw, isReactive } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
 
 export declare const RefSymbol: unique symbol
-export declare const RAW_SYMBOL: unique symbol
+export declare const RawSymbol: unique symbol
 
 export interface Ref<T = any> {
   value: T
@@ -213,7 +213,7 @@ export type UnwrapRef<T> = T extends Ref<infer V>
   ? UnwrapRefSimple<V>
   : UnwrapRefSimple<T>
 
-type UnwrapRefSimple<T> = T extends { [RAW_SYMBOL]?: true }
+type UnwrapRefSimple<T> = T extends { [RawSymbol]?: true }
   ? T
   : T extends
       | Function
