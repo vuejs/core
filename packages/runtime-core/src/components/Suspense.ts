@@ -294,7 +294,7 @@ function patchSuspense(
         suspense,
         isSVG,
         slotScopeIds,
-        optimized
+        !!newBranch.dynamicChildren
       )
       setActiveBranch(suspense, newBranch)
     } else {
