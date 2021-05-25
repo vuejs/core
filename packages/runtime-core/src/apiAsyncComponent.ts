@@ -183,7 +183,8 @@ export function defineAsyncComponent<
         .then(() => {
           loaded.value = true
           if (instance.parent && isKeepAlive(instance.parent.vnode)) {
-            // force update
+            // parent is keep-alive, force update so the loaded component's
+            // name is taken into account
             queueJob(instance.parent.update)
           }
         })
