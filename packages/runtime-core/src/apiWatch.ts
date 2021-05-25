@@ -189,9 +189,7 @@ function doWatch(
         } else if (isReactive(s)) {
           return traverse(s)
         } else if (isFunction(s)) {
-          return callWithErrorHandling(s, instance, ErrorCodes.WATCH_GETTER, [
-            instance && (instance.proxy as any)
-          ])
+          return callWithErrorHandling(s, instance, ErrorCodes.WATCH_GETTER)
         } else {
           __DEV__ && warnInvalidSource(s)
         }
@@ -200,9 +198,7 @@ function doWatch(
     if (cb) {
       // getter with cb
       getter = () =>
-        callWithErrorHandling(source, instance, ErrorCodes.WATCH_GETTER, [
-          instance && (instance.proxy as any)
-        ])
+        callWithErrorHandling(source, instance, ErrorCodes.WATCH_GETTER)
     } else {
       // no cb -> simple effect
       getter = () => {
@@ -371,7 +367,7 @@ export function instanceWatch(
     ? source.includes('.')
       ? createPathGetter(publicThis, source)
       : () => publicThis[source]
-    : source.bind(publicThis)
+    : source.bind(publicThis, publicThis)
   let cb
   if (isFunction(value)) {
     cb = value
