@@ -1,3 +1,18 @@
+# [3.1.0-beta.5](https://github.com/vuejs/vue-next/compare/v3.1.0-beta.4...v3.1.0-beta.5) (2021-05-26)
+
+
+### Bug Fixes
+
+* **keep-alive:** include/exclude should work with async component ([#3531](https://github.com/vuejs/vue-next/issues/3531)) ([9e3708c](https://github.com/vuejs/vue-next/commit/9e3708ca754c0ecd66dbb45984f8d103772bd55c)), closes [#3529](https://github.com/vuejs/vue-next/issues/3529)
+* **runtime-core:** properly check forwarded slots type ([#3781](https://github.com/vuejs/vue-next/issues/3781)) ([e8ddf86](https://github.com/vuejs/vue-next/commit/e8ddf8608021785c7b1b6f4211c633b40f26ddfc)), closes [#3779](https://github.com/vuejs/vue-next/issues/3779)
+* **runtime-core:** should not track dynamic children when the user calls a compiled slot inside template expression ([#3554](https://github.com/vuejs/vue-next/issues/3554)) ([2010607](https://github.com/vuejs/vue-next/commit/201060717d4498b4b7933bf8a8513866ab9347e4)), closes [#3548](https://github.com/vuejs/vue-next/issues/3548) [#3569](https://github.com/vuejs/vue-next/issues/3569)
+* **runtime-core/teleport:** ensure the nested teleport can be unmounted correctly ([#3629](https://github.com/vuejs/vue-next/issues/3629)) ([4e3f82f](https://github.com/vuejs/vue-next/commit/4e3f82f6835472650741896e19fbdc116d86d1eb)), closes [#3623](https://github.com/vuejs/vue-next/issues/3623)
+* **scheduler:** handle preFlush cb queued inside postFlush cb ([b57e995](https://github.com/vuejs/vue-next/commit/b57e995edd29eff685aeaf40712e0e029073d1cb)), closes [#3806](https://github.com/vuejs/vue-next/issues/3806)
+* **ssr:** handle hydrated async component unmounted before resolve ([b46a4dc](https://github.com/vuejs/vue-next/commit/b46a4dccf656280f9905e1bdc47022cb01c062c3)), closes [#3787](https://github.com/vuejs/vue-next/issues/3787)
+* **watch:** should not leak this context to setup watch getters ([1526f94](https://github.com/vuejs/vue-next/commit/1526f94edf023899490d7c58afcf36b051e25b6c)), closes [#3603](https://github.com/vuejs/vue-next/issues/3603)
+
+
+
 # [3.1.0-beta.4](https://github.com/vuejs/vue-next/compare/v3.1.0-beta.3...v3.1.0-beta.4) (2021-05-24)
 
 
