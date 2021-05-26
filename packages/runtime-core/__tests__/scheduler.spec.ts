@@ -230,6 +230,16 @@ describe('scheduler', () => {
       await nextTick()
       expect(calls).toEqual(['cb1', 'cb2', 'job1'])
     })
+
+    // #3806
+    it('queue preFlushCb inside postFlushCb', async () => {
+      const cb = jest.fn()
+      queuePostFlushCb(() => {
+        queuePreFlushCb(cb)
+      })
+      await nextTick()
+      expect(cb).toHaveBeenCalled()
+    })
   })
 
   describe('queuePostFlushCb', () => {
