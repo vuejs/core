@@ -8,8 +8,6 @@
 </div>
 
 <script>
-const delay = window.location.hash === '#test' ? 50 : 300
-
 Vue.createApp({
   data: () => ({
     input: '# hello'
@@ -22,7 +20,7 @@ Vue.createApp({
   methods: {
     update: _.debounce(function (e) {
       this.input = e.target.value
-    }, delay)
+    }, 50)
   }
 }).mount('#editor')
 </script>

@@ -17,8 +17,10 @@ import {
 } from '@vue/shared'
 import { warn } from './warning'
 import { isKeepAlive } from './components/KeepAlive'
-import { withCtx } from './componentRenderContext'
+import { ContextualRenderFn, withCtx } from './componentRenderContext'
 import { isHmrUpdating } from './hmr'
+import { DeprecationTypes, isCompatEnabled } from './compat/compatConfig'
+import { toRaw } from '@vue/reactivity'
 
 export type Slot = (...args: any[]) => VNode[]
 
@@ -60,8 +62,8 @@ const normalizeSlot = (
   key: string,
   rawSlot: Function,
   ctx: ComponentInternalInstance | null | undefined
-): Slot =>
-  withCtx((props: any) => {
+): Slot => {
+  const normalized = withCtx((props: any) => {
     if (__DEV__ && currentInstance) {
       warn(
         `Slot "${key}" invoked outside of the render function: ` +
@@ -71,8 +73,16 @@ const normalizeSlot = (
     }
     return normalizeSlotValue(rawSlot(props))
   }, ctx) as Slot
+  // NOT a compiled slot
+  ;(normalized as ContextualRenderFn)._c = false
+  return normalized
+}
 
-const normalizeObjectSlots = (rawSlots: RawSlots, slots: InternalSlots) => {
+const normalizeObjectSlots = (
+  rawSlots: RawSlots,
+  slots: InternalSlots,
+  instance: ComponentInternalInstance
+) => {
   const ctx = rawSlots._ctx
   for (const key in rawSlots) {
     if (isInternalKey(key)) continue
@@ -80,7 +90,13 @@ const normalizeObjectSlots = (rawSlots: RawSlots, slots: InternalSlots) => {
     if (isFunction(value)) {
       slots[key] = normalizeSlot(key, value, ctx)
     } else if (value != null) {
-      if (__DEV__) {
+      if (
+        __DEV__ &&
+        !(
+          __COMPAT__ &&
+          isCompatEnabled(DeprecationTypes.RENDER_FUNCTION, instance)
+        )
+      ) {
         warn(
           `Non-function value encountered for slot "${key}". ` +
             `Prefer function slots for better performance.`
@@ -96,7 +112,11 @@ const normalizeVNodeSlots = (
   instance: ComponentInternalInstance,
   children: VNodeNormalizedChildren
 ) => {
-  if (__DEV__ && !isKeepAlive(instance.vnode)) {
+  if (
+    __DEV__ &&
+    !isKeepAlive(instance.vnode) &&
+    !(__COMPAT__ && isCompatEnabled(DeprecationTypes.RENDER_FUNCTION, instance))
+  ) {
     warn(
       `Non-function value encountered for default slot. ` +
         `Prefer function slots for better performance.`
@@ -113,11 +133,17 @@ export const initSlots = (
   if (instance.vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
     const type = (children as RawSlots)._
     if (type) {
-      instance.slots = children as InternalSlots
+      // users can get the shallow readonly version of the slots object through `this.$slots`,
+      // we should avoid the proxy object polluting the slots of the internal instance
+      instance.slots = toRaw(children as InternalSlots)
       // make compiler marker non-enumerable
       def(children as InternalSlots, '_', type)
     } else {
-      normalizeObjectSlots(children as RawSlots, (instance.slots = {}))
+      normalizeObjectSlots(
+        children as RawSlots,
+        (instance.slots = {}),
+        instance
+      )
     }
   } else {
     instance.slots = {}
@@ -162,7 +188,7 @@ export const updateSlots = (
       }
     } else {
       needDeletionCheck = !(children as RawSlots).$stable
-      normalizeObjectSlots(children as RawSlots, slots)
+      normalizeObjectSlots(children as RawSlots, slots, instance)
     }
     deletionComparisonTarget = children as RawSlots
   } else if (children) {

@@ -28,7 +28,7 @@ import {
   capitalize,
   camelize
 } from '@vue/shared'
-import { defaultOnError } from './errors'
+import { defaultOnError, defaultOnWarn } from './errors'
 import {
   TO_DISPLAY_STRING,
   FRAGMENT,
@@ -40,6 +40,7 @@ import {
 } from './runtimeHelpers'
 import { isVSlot } from './utils'
 import { hoistStatic, isSingleElementRoot } from './transforms/hoistStatic'
+import { CompilerCompatOptions } from './compat/compatConfig'
 
 // There are two types of transforms:
 //
@@ -83,7 +84,10 @@ export interface ImportItem {
 }
 
 export interface TransformContext
-  extends Required<Omit<TransformOptions, 'filename'>> {
+  extends Required<
+      Omit<TransformOptions, 'filename' | keyof CompilerCompatOptions>
+    >,
+    CompilerCompatOptions {
   selfName: string | null
   root: RootNode
   helpers: Map<symbol, number>
@@ -114,6 +118,9 @@ export interface TransformContext
   hoist(exp: JSChildNode): SimpleExpressionNode
   cache<T extends JSChildNode>(exp: T, isVNode?: boolean): CacheExpression | T
   constantCache: Map<TemplateChildNode, ConstantTypes>
+
+  // 2.x Compat only
+  filters?: Set<string>
 }
 
 export function createTransformContext(
@@ -136,7 +143,9 @@ export function createTransformContext(
     bindingMetadata = EMPTY_OBJ,
     inline = false,
     isTS = false,
-    onError = defaultOnError
+    onError = defaultOnError,
+    onWarn = defaultOnWarn,
+    compatConfig
   }: TransformOptions
 ): TransformContext {
   const nameMatch = filename.replace(/\?.*$/, '').match(/([^/\\]+)\.\w+$/)
@@ -160,6 +169,8 @@ export function createTransformContext(
     inline,
     isTS,
     onError,
+    onWarn,
+    compatConfig,
 
     // state
     root,
@@ -281,6 +292,10 @@ export function createTransformContext(
     }
   }
 
+  if (__COMPAT__) {
+    context.filters = new Set()
+  }
+
   function addId(id: string) {
     const { identifiers } = context
     if (identifiers[id] === undefined) {
@@ -313,6 +328,10 @@ export function transform(root: RootNode, options: TransformOptions) {
   root.hoists = context.hoists
   root.temps = context.temps
   root.cached = context.cached
+
+  if (__COMPAT__) {
+    root.filters = [...context.filters!]
+  }
 }
 
 function createRootCodegen(root: RootNode, context: TransformContext) {

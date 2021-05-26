@@ -103,11 +103,7 @@ function createGetter(isReadonly = false, shallow = false) {
 
     const res = Reflect.get(target, key, receiver)
 
-    if (
-      isSymbol(key)
-        ? builtInSymbols.has(key as symbol)
-        : isNonTrackableKeys(key)
-    ) {
+    if (isSymbol(key) ? builtInSymbols.has(key) : isNonTrackableKeys(key)) {
       return res
     }
 

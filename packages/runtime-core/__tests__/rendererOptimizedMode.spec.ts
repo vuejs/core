@@ -3,6 +3,7 @@ import {
   Fragment,
   Teleport,
   createVNode,
+  createCommentVNode,
   openBlock,
   createBlock,
   render,
@@ -617,5 +618,120 @@ describe('renderer: optimized mode', () => {
 
     render(null, root)
     expect(inner(target)).toBe('')
+  })
+
+  // #3548
+  test('should not track dynamic children when the user calls a compiled slot inside template expression', () => {
+    const Comp = {
+      setup(props: any, { slots }: SetupContext) {
+        return () => {
+          return (
+            openBlock(),
+            (block = createBlock('section', null, [
+              renderSlot(slots, 'default')
+            ]))
+          )
+        }
+      }
+    }
+
+    let dynamicVNode: VNode
+    const Wrapper = {
+      setup(props: any, { slots }: SetupContext) {
+        return () => {
+          return (
+            openBlock(),
+            createBlock(Comp, null, {
+              default: withCtx(() => {
+                return [
+                  (dynamicVNode = createVNode(
+                    'div',
+                    {
+                      class: {
+                        foo: !!slots.default!()
+                      }
+                    },
+                    null,
+                    PatchFlags.CLASS
+                  ))
+                ]
+              }),
+              _: 1
+            })
+          )
+        }
+      }
+    }
+    const app = createApp({
+      render() {
+        return (
+          openBlock(),
+          createBlock(Wrapper, null, {
+            default: withCtx(() => {
+              return [createVNode({}) /* component */]
+            }),
+            _: 1
+          })
+        )
+      }
+    })
+
+    app.mount(root)
+    expect(inner(root)).toBe('<section><div class="foo"></div></section>')
+    /**
+     * Block Tree:
+     *  - block(div)
+     *   - block(Fragment): renderSlots()
+     *    - dynamicVNode
+     */
+    expect(block!.dynamicChildren!.length).toBe(1)
+    expect(block!.dynamicChildren![0].dynamicChildren!.length).toBe(1)
+    expect(block!.dynamicChildren![0].dynamicChildren![0]).toEqual(
+      dynamicVNode!
+    )
+  })
+
+  // 3569
+  test('should force bailout when the user manually calls the slot function', async () => {
+    const index = ref(0)
+    const Foo = {
+      setup(props: any, { slots }: SetupContext) {
+        return () => {
+          return slots.default!()[index.value]
+        }
+      }
+    }
+
+    const app = createApp({
+      setup() {
+        return () => {
+          return (
+            openBlock(),
+            createBlock(Foo, null, {
+              default: withCtx(() => [
+                true
+                  ? (openBlock(), createBlock('p', { key: 0 }, '1'))
+                  : createCommentVNode('v-if', true),
+                true
+                  ? (openBlock(), createBlock('p', { key: 0 }, '2'))
+                  : createCommentVNode('v-if', true)
+              ]),
+              _: 1 /* STABLE */
+            })
+          )
+        }
+      }
+    })
+
+    app.mount(root)
+    expect(inner(root)).toBe('<p>1</p>')
+
+    index.value = 1
+    await nextTick()
+    expect(inner(root)).toBe('<p>2</p>')
+
+    index.value = 0
+    await nextTick()
+    expect(inner(root)).toBe('<p>1</p>')
   })
 })

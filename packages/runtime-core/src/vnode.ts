@@ -40,7 +40,10 @@ import {
 import { RendererNode, RendererElement } from './renderer'
 import { NULL_DYNAMIC_COMPONENT } from './helpers/resolveAssets'
 import { hmrDirtyComponents } from './hmr'
-import { setCompiledSlotRendering } from './helpers/renderSlot'
+import { convertLegacyComponent } from './compat/component'
+import { convertLegacyVModelProps } from './compat/componentVModel'
+import { defineLegacyVNodeProperties } from './compat/renderFn'
+import { convertLegacyRefInFor } from './compat/ref'
 
 export const Fragment = (Symbol(__DEV__ ? 'Fragment' : undefined) as any) as {
   __isFragment: true
@@ -71,6 +74,7 @@ export type VNodeRef =
 export type VNodeNormalizedRefAtom = {
   i: ComponentInternalInstance
   r: VNodeRef
+  f?: boolean // v2 compat only, refInFor marker
 }
 
 export type VNodeNormalizedRef =
@@ -127,10 +131,12 @@ export interface VNode<
    * @internal
    */
   __v_isVNode: true
+
   /**
    * @internal
    */
   [ReactiveFlags.SKIP]: true
+
   type: VNodeTypes
   props: (VNodeProps & ExtraProps) | null
   key: string | number | null
@@ -211,7 +217,7 @@ export function closeBlock() {
 // Only tracks when this value is > 0
 // We are not using a simple boolean because this value may need to be
 // incremented/decremented by nested usage of v-once (see below)
-let shouldTrack = 1
+let isBlockTreeEnabled = 1
 
 /**
  * Block tracking sometimes needs to be disabled, for example during the
@@ -230,7 +236,7 @@ let shouldTrack = 1
  * @private
  */
 export function setBlockTracking(value: number) {
-  shouldTrack += value
+  isBlockTreeEnabled += value
 }
 
 /**
@@ -256,12 +262,13 @@ export function createBlock(
     true /* isBlock: prevent a block from tracking itself */
   )
   // save current block children on the block vnode
-  vnode.dynamicChildren = currentBlock || (EMPTY_ARR as any)
+  vnode.dynamicChildren =
+    isBlockTreeEnabled > 0 ? currentBlock || (EMPTY_ARR as any) : null
   // close block
   closeBlock()
   // a block is always going to be patched, so track it as a child of its
   // parent block
-  if (shouldTrack > 0 && currentBlock) {
+  if (isBlockTreeEnabled > 0 && currentBlock) {
     currentBlock.push(vnode)
   }
   return vnode
@@ -358,6 +365,11 @@ function _createVNode(
     type = type.__vccOpts
   }
 
+  // 2.x async/functional component compat
+  if (__COMPAT__) {
+    type = convertLegacyComponent(type, currentRenderingInstance)
+  }
+
   // class & style normalization.
   if (props) {
     // for reactive or proxy objects, we need to clone it to enable mutation.
@@ -405,7 +417,7 @@ function _createVNode(
 
   const vnode: VNode = {
     __v_isVNode: true,
-    [ReactiveFlags.SKIP]: true,
+    __v_skip: true,
     type,
     props,
     key: props && normalizeKey(props),
@@ -446,7 +458,7 @@ function _createVNode(
   }
 
   if (
-    shouldTrack > 0 &&
+    isBlockTreeEnabled > 0 &&
     // avoid a block node from tracking itself
     !isBlockNode &&
     // has current parent block
@@ -463,6 +475,12 @@ function _createVNode(
     currentBlock.push(vnode)
   }
 
+  if (__COMPAT__) {
+    convertLegacyVModelProps(vnode)
+    convertLegacyRefInFor(vnode)
+    defineLegacyVNodeProperties(vnode)
+  }
+
   return vnode
 }
 
@@ -475,9 +493,9 @@ export function cloneVNode<T, U>(
   // key enumeration cost.
   const { props, ref, patchFlag, children } = vnode
   const mergedProps = extraProps ? mergeProps(props || {}, extraProps) : props
-  return {
+  const cloned: VNode = {
     __v_isVNode: true,
-    [ReactiveFlags.SKIP]: true,
+    __v_skip: true,
     type: vnode.type,
     props: mergedProps,
     key: mergedProps && normalizeKey(mergedProps),
@@ -529,6 +547,10 @@ export function cloneVNode<T, U>(
     el: vnode.el,
     anchor: vnode.anchor
   }
+  if (__COMPAT__) {
+    defineLegacyVNodeProperties(cloned)
+  }
+  return cloned as any
 }
 
 /**
@@ -613,9 +635,9 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
       const slot = (children as any).default
       if (slot) {
         // _c marker is added by withCtx() indicating this is a compiled slot
-        slot._c && setCompiledSlotRendering(1)
+        slot._c && (slot._d = false)
         normalizeChildren(vnode, slot())
-        slot._c && setCompiledSlotRendering(-1)
+        slot._c && (slot._d = true)
       }
       return
     } else {
@@ -671,7 +693,7 @@ export function mergeProps(...args: (Data & VNodeProps)[]) {
         const incoming = toMerge[key]
         if (existing !== incoming) {
           ret[key] = existing
-            ? [].concat(existing as any, toMerge[key] as any)
+            ? [].concat(existing as any, incoming as any)
             : incoming
         }
       } else if (key !== '') {

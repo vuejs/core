@@ -9,7 +9,8 @@ import {
   expectType,
   ShallowUnwrapRef,
   FunctionalComponent,
-  ComponentPublicInstance
+  ComponentPublicInstance,
+  toRefs
 } from './index'
 
 declare function extractComponentOptions<Props, RawBindings>(
@@ -40,6 +41,27 @@ describe('object props', () => {
     ffff: (a: number, b: string) => { a: boolean }
     validated?: string
     object?: object
+  }
+
+  interface ExpectedRefs {
+    a: Ref<number | undefined>
+    b: Ref<string>
+    e: Ref<Function | undefined>
+    bb: Ref<string>
+    bbb: Ref<string>
+    cc: Ref<string[] | undefined>
+    dd: Ref<{ n: 1 }>
+    ee: Ref<(() => string) | undefined>
+    ff: Ref<((a: number, b: string) => { a: boolean }) | undefined>
+    ccc: Ref<string[] | undefined>
+    ddd: Ref<string[]>
+    eee: Ref<() => { a: string }>
+    fff: Ref<(a: number, b: string) => { a: boolean }>
+    hhh: Ref<boolean>
+    ggg: Ref<'foo' | 'bar'>
+    ffff: Ref<(a: number, b: string) => { a: boolean }>
+    validated: Ref<string | undefined>
+    object: Ref<object | undefined>
   }
 
   describe('defineComponent', () => {
@@ -111,6 +133,26 @@ describe('object props', () => {
         object: Object as PropType<object>
       },
       setup(props) {
+        const refs = toRefs(props)
+        expectType<ExpectedRefs['a']>(refs.a)
+        expectType<ExpectedRefs['b']>(refs.b)
+        expectType<ExpectedRefs['e']>(refs.e)
+        expectType<ExpectedRefs['bb']>(refs.bb)
+        expectType<ExpectedRefs['bbb']>(refs.bbb)
+        expectType<ExpectedRefs['cc']>(refs.cc)
+        expectType<ExpectedRefs['dd']>(refs.dd)
+        expectType<ExpectedRefs['ee']>(refs.ee)
+        expectType<ExpectedRefs['ff']>(refs.ff)
+        expectType<ExpectedRefs['ccc']>(refs.ccc)
+        expectType<ExpectedRefs['ddd']>(refs.ddd)
+        expectType<ExpectedRefs['eee']>(refs.eee)
+        expectType<ExpectedRefs['fff']>(refs.fff)
+        expectType<ExpectedRefs['hhh']>(refs.hhh)
+        expectType<ExpectedRefs['ggg']>(refs.ggg)
+        expectType<ExpectedRefs['ffff']>(refs.ffff)
+        expectType<ExpectedRefs['validated']>(refs.validated)
+        expectType<ExpectedRefs['object']>(refs.object)
+
         return {
           setupA: 1,
           setupB: ref(1),

@@ -8,14 +8,13 @@
 </div>
 
 <script>
-const delay = window.location.hash === '#test' ? 16 : 300
 const { ref, computed } = Vue
 
 Vue.createApp({
   setup() {
     const input = ref('# hello')
     const output = computed(() => marked(input.value, { sanitize: true }))
-    const update = _.debounce(e => { input.value = e.target.value }, delay)
+    const update = _.debounce(e => { input.value = e.target.value }, 50)
 
     return {
       input,
