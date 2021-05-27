@@ -182,7 +182,7 @@ function patchSuspense(
         suspense,
         isSVG,
         slotScopeIds,
-        optimized
+        !!newBranch.dynamicChildren
       )
       if (suspense.deps <= 0) {
         suspense.resolve()
@@ -196,7 +196,7 @@ function patchSuspense(
           null, // fallback tree will not have suspense context
           isSVG,
           slotScopeIds,
-          optimized
+          !!newBranch.dynamicChildren
         )
         setActiveBranch(suspense, newFallback)
       }
@@ -245,7 +245,7 @@ function patchSuspense(
             null, // fallback tree will not have suspense context
             isSVG,
             slotScopeIds,
-            optimized
+            !!newBranch.dynamicChildren
           )
           setActiveBranch(suspense, newFallback)
         }
@@ -260,7 +260,7 @@ function patchSuspense(
           suspense,
           isSVG,
           slotScopeIds,
-          optimized
+          !!newBranch.dynamicChildren
         )
         // force resolve
         suspense.resolve(true)

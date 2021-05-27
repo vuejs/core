@@ -1,6 +1,7 @@
 import {
   h,
   Fragment,
+  Suspense,
   Teleport,
   createVNode,
   createCommentVNode,
@@ -783,5 +784,44 @@ describe('renderer: optimized mode', () => {
     loading.value = true
     await nextTick()
     expect(inner(root)).toBe('<div><div><span>loading</span></div></div>')
+  })
+
+  // #3828
+  test('patch suspense exit optimized mode', async () => {
+    const show = ref(false)
+
+    const app = createApp({
+      setup() {
+        return () => {
+          return (
+            openBlock(),
+            createBlock(
+              Fragment,
+              null,
+              [
+                (openBlock(),
+                createBlock(Suspense as any, null, {
+                  default: withCtx(() => [
+                    createVNode('div', null, [
+                      createTextVNode(show.value as any, PatchFlags.TEXT)
+                    ])
+                  ]),
+                  _: SlotFlags.STABLE
+                })),
+                createVNode('div', null, show.value, PatchFlags.TEXT)
+              ],
+              PatchFlags.STABLE_FRAGMENT
+            )
+          )
+        }
+      }
+    })
+
+    app.mount(root)
+    expect(inner(root)).toBe('<div>false</div><div>false</div>')
+
+    show.value = true
+    await nextTick()
+    expect(inner(root)).toBe('<div>true</div><div>true</div>')
   })
 })
