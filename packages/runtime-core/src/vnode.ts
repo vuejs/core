@@ -26,8 +26,7 @@ import { AppContext } from './apiCreateApp'
 import {
   SuspenseImpl,
   isSuspense,
-  SuspenseBoundary,
-  normalizeSuspenseChildren
+  SuspenseBoundary
 } from './components/Suspense'
 import { DirectiveBinding } from './directives'
 import { TransitionHooks } from './components/BaseTransition'
@@ -186,7 +185,7 @@ export interface VNode<
 // structure would be stable. This allows us to skip most children diffing
 // and only worry about the dynamic nodes (indicated by patch flags).
 export const blockStack: (VNode[] | null)[] = []
-let currentBlock: VNode[] | null = null
+export let currentBlock: VNode[] | null = null
 
 /**
  * Open a block.
@@ -452,9 +451,7 @@ function _createVNode(
 
   // normalize suspense children
   if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
-    const { content, fallback } = normalizeSuspenseChildren(vnode)
-    vnode.ssContent = content
-    vnode.ssFallback = fallback
+    ;(type as typeof SuspenseImpl).normalize(vnode)
   }
 
   if (

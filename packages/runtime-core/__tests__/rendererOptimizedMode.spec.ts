@@ -23,6 +23,7 @@ import {
   createApp
 } from '@vue/runtime-test'
 import { PatchFlags, SlotFlags } from '@vue/shared'
+import { SuspenseImpl } from '../src/components/Suspense'
 
 describe('renderer: optimized mode', () => {
   let root: TestElement
@@ -783,5 +784,41 @@ describe('renderer: optimized mode', () => {
     loading.value = true
     await nextTick()
     expect(inner(root)).toBe('<div><div><span>loading</span></div></div>')
+  })
+
+  // #3828
+  test('patch Suspense in optimized mode w/ nested dynamic nodes', async () => {
+    const show = ref(false)
+
+    const app = createApp({
+      render() {
+        return (
+          openBlock(),
+          createBlock(
+            Fragment,
+            null,
+            [
+              (openBlock(),
+              createBlock(SuspenseImpl, null, {
+                default: withCtx(() => [
+                  createVNode('div', null, [
+                    createVNode('div', null, show.value, PatchFlags.TEXT)
+                  ])
+                ]),
+                _: SlotFlags.STABLE
+              }))
+            ],
+            PatchFlags.STABLE_FRAGMENT
+          )
+        )
+      }
+    })
+
+    app.mount(root)
+    expect(inner(root)).toBe('<div><div>false</div></div>')
+
+    show.value = true
+    await nextTick()
+    expect(inner(root)).toBe('<div><div>true</div></div>')
   })
 })
