@@ -29,10 +29,13 @@ export function mergeDataOption(to: any, from: any) {
     return from
   }
   return function mergedDataFn(this: ComponentPublicInstance) {
-    return deepMergeData(
-      isFunction(to) ? to.call(this, this) : to,
-      isFunction(from) ? from.call(this, this) : from,
-      this.$
-    )
+    if (isFunction(to)) {
+      to = to.call(this, this)
+    }
+    if (isFunction(from)) {
+      from = from.call(this, this)
+    }
+    deepMergeData(to, from, this.$)
+    return to
   }
 }
