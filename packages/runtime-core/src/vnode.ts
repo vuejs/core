@@ -136,6 +136,11 @@ export interface VNode<
    */
   [ReactiveFlags.SKIP]: true
 
+  /**
+   * @internal __COMPAT__ only
+   */
+  isCompatRoot?: true
+
   type: VNodeTypes
   props: (VNodeProps & ExtraProps) | null
   key: string | number | null

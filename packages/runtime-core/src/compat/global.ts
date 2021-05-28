@@ -472,6 +472,7 @@ function installCompatMount(
     }
     setupComponent(instance)
     vnode.component = instance
+    vnode.isCompatRoot = true
 
     // $mount & $destroy
     // these are defined on ctx and picked up by the $mount/$destroy

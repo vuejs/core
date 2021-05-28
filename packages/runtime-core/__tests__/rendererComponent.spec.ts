@@ -298,12 +298,10 @@ describe('renderer: component', () => {
   })
 
   test('the component VNode should be cloned when reusing it', () => {
-    const Child = {
-      setup(props: any, { slots }: SetupContext) {
-        return () => {
-          const c = slots.default!()
-          return [c, c, c]
-        }
+    const App = {
+      render() {
+        const c = [h(Comp)]
+        return [c, c, c]
       }
     }
 
@@ -312,14 +310,6 @@ describe('renderer: component', () => {
       render: () => h('h1'),
       beforeUnmount() {
         ids.push((this as any).$.uid)
-      }
-    }
-
-    const App = {
-      setup() {
-        return () => {
-          return h(Child, () => [h(Comp)])
-        }
       }
     }
 

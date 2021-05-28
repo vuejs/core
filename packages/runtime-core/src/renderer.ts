@@ -1301,7 +1301,8 @@ function baseCreateRenderer(
   ) => {
     // 2.x compat may pre-creaate the component instance before actually
     // mounting
-    const compatMountInstance = __COMPAT__ && initialVNode.component
+    const compatMountInstance =
+      __COMPAT__ && initialVNode.isCompatRoot && initialVNode.component
     const instance: ComponentInternalInstance =
       compatMountInstance ||
       (initialVNode.component = createComponentInstance(
