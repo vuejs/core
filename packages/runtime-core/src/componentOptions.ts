@@ -564,10 +564,6 @@ export function applyOptions(
   const ctx = instance.ctx
   const globalMixins = instance.appContext.mixins
 
-  if (asMixin && render && instance.render === NOOP) {
-    instance.render = render as InternalRenderFunction
-  }
-
   // applyOptions is called non-as-mixin once per instance
   if (!asMixin) {
     shouldCacheAccess = false
@@ -745,19 +741,6 @@ export function applyOptions(
     })
   }
 
-  // asset options.
-  // To reduce memory usage, only components with mixins or extends will have
-  // resolved asset registry attached to instance.
-  if (asMixin) {
-    resolveInstanceAssets(instance, options, COMPONENTS)
-    resolveInstanceAssets(instance, options, DIRECTIVES)
-    if (__COMPAT__ && isCompatEnabled(DeprecationTypes.FILTERS, instance)) {
-      resolveInstanceAssets(instance, options, FILTERS)
-    }
-
-    if (inheritAttrs !== undefined) instance.inheritAttrs = inheritAttrs
-  }
-
   // lifecycle options
   if (!asMixin) {
     callSyncHook(
@@ -829,6 +812,27 @@ export function applyOptions(
       }
     } else if (__DEV__) {
       warn(`The \`expose\` option is ignored when used in mixins.`)
+    }
+  }
+
+  // options that are handled when creating the instance but also need to be
+  // applied from mixins
+  if (asMixin) {
+    if (render && instance.render === NOOP) {
+      instance.render = render as InternalRenderFunction
+    }
+
+    if (inheritAttrs != null && instance.type.inheritAttrs == null) {
+      instance.inheritAttrs = inheritAttrs
+    }
+
+    // asset options.
+    // To reduce memory usage, only components with mixins or extends will have
+    // resolved asset registry attached to instance.
+    resolveInstanceAssets(instance, options, COMPONENTS)
+    resolveInstanceAssets(instance, options, DIRECTIVES)
+    if (__COMPAT__ && isCompatEnabled(DeprecationTypes.FILTERS, instance)) {
+      resolveInstanceAssets(instance, options, FILTERS)
     }
   }
 }
