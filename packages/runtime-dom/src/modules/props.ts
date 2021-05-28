@@ -34,7 +34,7 @@ export function patchDOMProp(
       el.value = newValue
     }
     if (value == null) {
-      el.removeAttribute('value')
+      el.removeAttribute(key)
     }
     return
   }
