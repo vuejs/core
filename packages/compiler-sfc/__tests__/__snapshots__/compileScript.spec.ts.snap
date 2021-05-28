@@ -622,9 +622,11 @@ const c = _ref(__c);
 const d = _ref(__d);
 const f = _ref(__f);
 const g = _ref(__g);
-      console.log(n.value, a.value, c.value, d.value, f.value, g.value)
+      const { foo: __foo } = useSomthing(() => 1);
+const foo = _ref(__foo);
+      console.log(n.value, a.value, c.value, d.value, f.value, g.value, foo.value)
       
-return { n, a, c, d, f, g }
+return { n, a, c, d, f, g, foo }
 }
 
 }"
