@@ -7,7 +7,7 @@ import {
   compatUtils,
   DeprecationTypes
 } from '@vue/runtime-core'
-import { isObject, toNumber, extend } from '@vue/shared'
+import { isObject, toNumber, extend, isArray } from '@vue/shared'
 
 const TRANSITION = 'transition'
 const ANIMATION = 'animation'
@@ -74,6 +74,35 @@ export const TransitionPropsValidators = (Transition.props = /*#__PURE__*/ exten
   (BaseTransition as any).props,
   DOMTransitionPropsValidators
 ))
+
+/**
+ * #3227 Incoming hooks may be merged into arrays when wrapping Transition
+ * with custom HOCs.
+ */
+const callHook = (
+  hook: Function | Function[] | undefined,
+  args: any[] = []
+) => {
+  if (isArray(hook)) {
+    hook.forEach(h => h(...args))
+  } else if (hook) {
+    hook(...args)
+  }
+}
+
+/**
+ * Check if a hook expects a callback (2nd arg), which means the user
+ * intends to explicitly control the end of the transition.
+ */
+const hasExplicitCallback = (
+  hook: Function | Function[] | undefined
+): boolean => {
+  return hook
+    ? isArray(hook)
+      ? hook.some(h => h.length > 1)
+      : hook.length > 1
+    : false
+}
 
 export function resolveTransitionProps(
   rawProps: TransitionProps
@@ -154,7 +183,7 @@ export function resolveTransitionProps(
     return (el: Element, done: () => void) => {
       const hook = isAppear ? onAppear : onEnter
       const resolve = () => finishEnter(el, isAppear, done)
-      hook && hook(el, resolve)
+      callHook(hook, [el, resolve])
       nextFrame(() => {
         removeTransitionClass(el, isAppear ? appearFromClass : enterFromClass)
         if (__COMPAT__ && legacyClassEnabled) {
@@ -164,7 +193,7 @@ export function resolveTransitionProps(
           )
         }
         addTransitionClass(el, isAppear ? appearToClass : enterToClass)
-        if (!(hook && hook.length > 1)) {
+        if (!hasExplicitCallback(hook)) {
           whenTransitionEnds(el, type, enterDuration, resolve)
         }
       })
@@ -173,7 +202,7 @@ export function resolveTransitionProps(
 
   return extend(baseProps, {
     onBeforeEnter(el) {
-      onBeforeEnter && onBeforeEnter(el)
+      callHook(onBeforeEnter, [el])
       addTransitionClass(el, enterFromClass)
       if (__COMPAT__ && legacyClassEnabled) {
         addTransitionClass(el, legacyEnterFromClass)
@@ -181,7 +210,7 @@ export function resolveTransitionProps(
       addTransitionClass(el, enterActiveClass)
     },
     onBeforeAppear(el) {
-      onBeforeAppear && onBeforeAppear(el)
+      callHook(onBeforeAppear, [el])
       addTransitionClass(el, appearFromClass)
       if (__COMPAT__ && legacyClassEnabled) {
         addTransitionClass(el, legacyAppearFromClass)
@@ -205,23 +234,23 @@ export function resolveTransitionProps(
           removeTransitionClass(el, legacyLeaveFromClass)
         }
         addTransitionClass(el, leaveToClass)
-        if (!(onLeave && onLeave.length > 1)) {
+        if (!hasExplicitCallback(onLeave)) {
           whenTransitionEnds(el, type, leaveDuration, resolve)
         }
       })
-      onLeave && onLeave(el, resolve)
+      callHook(onLeave, [el, resolve])
     },
     onEnterCancelled(el) {
       finishEnter(el, false)
-      onEnterCancelled && onEnterCancelled(el)
+      callHook(onEnterCancelled, [el])
     },
     onAppearCancelled(el) {
       finishEnter(el, true)
-      onAppearCancelled && onAppearCancelled(el)
+      callHook(onAppearCancelled, [el])
     },
     onLeaveCancelled(el) {
       finishLeave(el)
-      onLeaveCancelled && onLeaveCancelled(el)
+      callHook(onLeaveCancelled, [el])
     }
   } as BaseTransitionProps<Element>)
 }
