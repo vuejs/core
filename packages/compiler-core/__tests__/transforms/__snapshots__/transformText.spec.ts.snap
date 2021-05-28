@@ -67,13 +67,13 @@ exports[`compiler: transform text element with custom directives and only one te
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { toDisplayString: _toDisplayString, createTextVNode: _createTextVNode, resolveDirective: _resolveDirective, withDirectives: _withDirectives, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+    const { toDisplayString: _toDisplayString, createTextVNode: _createTextVNode, resolveDirective: _resolveDirective, withDirectives: _withDirectives, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     const _directive_foo = _resolveDirective(\\"foo\\")
 
-    return _withDirectives((_openBlock(), _createBlock(\\"p\\", null, [
+    return _withDirectives((_openBlock(), _createElementBlock(\\"p\\", null, [
       _createTextVNode(_toDisplayString(foo), 1 /* TEXT */)
-    ], 512 /* NEED_PATCH */)), [
+    ], 512 /* NEED_PATCH */, null, 17 /* ELEMENT, ARRAY_CHILDREN */)), [
       [_directive_foo]
     ])
   }

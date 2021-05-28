@@ -211,16 +211,16 @@ return function render(_ctx, _cache) {
 `;
 
 exports[`compiler: transform component slots with whitespace: 'preserve' implicit default slot 1`] = `
-"const { createVNode: _createVNode, resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
+"const { createElementVNode: _createElementVNode, resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createComponentBlock: _createComponentBlock } = Vue
 
 return function render(_ctx, _cache) {
   const _component_Comp = _resolveComponent(\\"Comp\\")
 
-  return (_openBlock(), _createBlock(_component_Comp, null, {
+  return (_openBlock(), _createComponentBlock(_component_Comp, null, {
     header: _withCtx(() => [\\" Header \\"]),
     default: _withCtx(() => [
       \\" \\",
-      _createVNode(\\"p\\")
+      _createElementVNode(\\"p\\")
     ]),
     _: 1 /* STABLE */
   }))
@@ -228,12 +228,12 @@ return function render(_ctx, _cache) {
 `;
 
 exports[`compiler: transform component slots with whitespace: 'preserve' named default slot + implicit whitespace content 1`] = `
-"const { resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
+"const { resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createComponentBlock: _createComponentBlock } = Vue
 
 return function render(_ctx, _cache) {
   const _component_Comp = _resolveComponent(\\"Comp\\")
 
-  return (_openBlock(), _createBlock(_component_Comp, null, {
+  return (_openBlock(), _createComponentBlock(_component_Comp, null, {
     header: _withCtx(() => [\\" Header \\"]),
     default: _withCtx(() => [\\" Default \\"]),
     _: 1 /* STABLE */
@@ -242,12 +242,12 @@ return function render(_ctx, _cache) {
 `;
 
 exports[`compiler: transform component slots with whitespace: 'preserve' should not generate whitespace only default slot 1`] = `
-"const { resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
+"const { resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createComponentBlock: _createComponentBlock } = Vue
 
 return function render(_ctx, _cache) {
   const _component_Comp = _resolveComponent(\\"Comp\\")
 
-  return (_openBlock(), _createBlock(_component_Comp, null, {
+  return (_openBlock(), _createComponentBlock(_component_Comp, null, {
     header: _withCtx(() => [\\" Header \\"]),
     footer: _withCtx(() => [\\" Footer \\"]),
     _: 1 /* STABLE */
