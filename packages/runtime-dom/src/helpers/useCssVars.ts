@@ -4,6 +4,7 @@ import {
   warn,
   VNode,
   Fragment,
+  Static,
   onUpdated,
   watchEffect
 } from '@vue/runtime-core'
@@ -53,5 +54,25 @@ function setVarsOnVNode(vnode: VNode, vars: Record<string, string>) {
     }
   } else if (vnode.type === Fragment) {
     ;(vnode.children as VNode[]).forEach(c => setVarsOnVNode(c, vars))
+  } else if (vnode.type === Static) {
+    const { el, anchor } = vnode
+    let current: HTMLElement | null = el as HTMLElement
+    while (current) {
+      setVarsOnElement(current, vars)
+      if (current === anchor) break
+      current = current.nextSibling as HTMLElement
+    }
+  }
+
+  function setVarsOnElement(el: HTMLElement, vars: Record<string, string>) {
+    const style = el.style
+    for (const key in vars) {
+      style.setProperty(`--${key}`, vars[key])
+    }
+
+    for (var i = 0; i < el.children.length; i++) {
+      const n = el.children[i]
+      setVarsOnElement(n as HTMLElement, vars)
+    }
   }
 }
