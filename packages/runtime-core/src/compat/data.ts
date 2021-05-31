@@ -19,6 +19,7 @@ export function deepMergeData(
       to[key] = fromVal
     }
   }
+  return to
 }
 
 export function mergeDataOption(to: any, from: any) {
