@@ -47,10 +47,6 @@ function unrollBufferSync(buffer: SSRBuffer, stream: Readable) {
   }
 }
 
-class PushSafeReadable extends Readable {
-  _read() {}
-}
-
 export function renderToStream(
   input: App | VNode,
   context: SSRContext = {}
@@ -66,7 +62,7 @@ export function renderToStream(
   // provide the ssr context to the tree
   input.provide(ssrContextKey, context)
 
-  const stream = new PushSafeReadable()
+  const stream = new Readable({ read() {} })
 
   Promise.resolve(renderComponentVNode(vnode))
     .then(buffer => unrollBuffer(buffer, stream))
