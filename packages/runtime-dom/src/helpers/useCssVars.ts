@@ -48,13 +48,12 @@ function setVarsOnVNode(vnode: VNode, vars: Record<string, string>) {
   }
 
   if (vnode.shapeFlag & ShapeFlags.ELEMENT && vnode.el) {
-    const style = vnode.el.style
-    for (const key in vars) {
-      style.setProperty(`--${key}`, vars[key])
-    }
+    setStyle(vnode.el as HTMLElement, vars)
   } else if (vnode.type === Fragment) {
     ;(vnode.children as VNode[]).forEach(c => setVarsOnVNode(c, vars))
-  } else if (vnode.type === Static) {
+  }
+  // #3841
+  else if (vnode.type === Static) {
     const { el, anchor } = vnode
     let current: HTMLElement | null = el as HTMLElement
     while (current) {
@@ -63,16 +62,19 @@ function setVarsOnVNode(vnode: VNode, vars: Record<string, string>) {
       current = current.nextSibling as HTMLElement
     }
   }
+}
 
-  function setVarsOnElement(el: HTMLElement, vars: Record<string, string>) {
-    const style = el.style
-    for (const key in vars) {
-      style.setProperty(`--${key}`, vars[key])
-    }
+function setStyle(el: HTMLElement, vars: Record<string, string>) {
+  const style = el.style
+  for (const key in vars) {
+    style.setProperty(`--${key}`, vars[key])
+  }
+}
 
-    for (var i = 0; i < el.children.length; i++) {
-      const n = el.children[i]
-      setVarsOnElement(n as HTMLElement, vars)
-    }
+function setVarsOnElement(el: HTMLElement, vars: Record<string, string>) {
+  setStyle(el, vars)
+  for (var i = 0; i < el.children.length; i++) {
+    const n = el.children[i]
+    setVarsOnElement(n as HTMLElement, vars)
   }
 }
