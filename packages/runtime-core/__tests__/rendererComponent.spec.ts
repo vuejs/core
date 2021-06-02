@@ -68,7 +68,7 @@ describe('renderer: component', () => {
     expect(serializeInner(root)).toBe(`<div id="foo" class="bar">test</div>`)
   })
 
-  it('should update an Component tag which is already mounted', () => {
+  it('should mount again an Component tag which is already mounted', () => {
     const Comp1 = {
       render: () => {
         return h('div', 'foo')
