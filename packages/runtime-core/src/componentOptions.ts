@@ -894,7 +894,7 @@ export function resolveMergedOptions(
   const { mixins, extends: extendsOptions } = base
   const {
     mixins: globalMixins,
-    cache,
+    optionsCache: cache,
     config: { optionMergeStrategies }
   } = instance.appContext
   const cached = cache.get(base)

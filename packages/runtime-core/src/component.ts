@@ -79,14 +79,6 @@ export interface ComponentInternalOptions {
   /**
    * @internal
    */
-  __props?: NormalizedPropsOptions
-  /**
-   * @internal
-   */
-  __emits?: ObjectEmitsOptions | null
-  /**
-   * @internal
-   */
   __scopeId?: string
   /**
    * @internal

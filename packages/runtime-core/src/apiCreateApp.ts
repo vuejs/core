@@ -20,6 +20,8 @@ import { devtoolsInitApp, devtoolsUnmountApp } from './devtools'
 import { isFunction, NO, isObject } from '@vue/shared'
 import { version } from '.'
 import { installAppCompatProperties } from './compat/global'
+import { NormalizedPropsOptions } from './componentProps'
+import { ObjectEmitsOptions } from './componentEmits'
 
 export interface App<HostElement = any> {
   version: string
@@ -101,13 +103,19 @@ export interface AppContext {
    * Cache for merged/normalized component options
    * Each app instance has its own cache because app-level global mixins and
    * optionMergeStrategies can affect merge behavior.
-   */
-  cache: WeakMap<ComponentOptions, MergedComponentOptions>
-  /**
-   * Flag for de-optimizing props normalization
    * @internal
    */
-  deopt?: boolean
+  optionsCache: WeakMap<ComponentOptions, MergedComponentOptions>
+  /**
+   * Cache for normalized props options
+   * @internal
+   */
+  propsCache: WeakMap<ConcreteComponent, NormalizedPropsOptions>
+  /**
+   * Cache for normalized emits options
+   * @internal
+   */
+  emitsCache: WeakMap<ConcreteComponent, ObjectEmitsOptions | null>
   /**
    * HMR only
    * @internal
@@ -144,7 +152,9 @@ export function createAppContext(): AppContext {
     components: {},
     directives: {},
     provides: Object.create(null),
-    cache: new WeakMap()
+    optionsCache: new WeakMap(),
+    propsCache: new WeakMap(),
+    emitsCache: new WeakMap()
   }
 }
 
@@ -213,11 +223,6 @@ export function createAppAPI<HostElement>(
         if (__FEATURE_OPTIONS_API__) {
           if (!context.mixins.includes(mixin)) {
             context.mixins.push(mixin)
-            // global mixin with props/emits de-optimizes props/emits
-            // normalization caching.
-            if (mixin.props || mixin.emits) {
-              context.deopt = true
-            }
           } else if (__DEV__) {
             warn(
               'Mixin has already been applied to target app' +
