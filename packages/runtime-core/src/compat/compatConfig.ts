@@ -531,7 +531,10 @@ const seenConfigObjects = /*#__PURE__*/ new WeakSet<CompatConfig>()
 const warnedInvalidKeys: Record<string, boolean> = {}
 
 // dev only
-export function validateCompatConfig(config: CompatConfig) {
+export function validateCompatConfig(
+  config: CompatConfig,
+  instance?: ComponentInternalInstance
+) {
   if (seenConfigObjects.has(config)) {
     return
   }
@@ -557,6 +560,14 @@ export function validateCompatConfig(config: CompatConfig) {
       }
       warnedInvalidKeys[key] = true
     }
+  }
+
+  if (instance && config[DeprecationTypes.OPTIONS_DATA_MERGE] != null) {
+    warn(
+      `Deprecation config "${
+        DeprecationTypes.OPTIONS_DATA_MERGE
+      }" can only be configured globally.`
+    )
   }
 }
 

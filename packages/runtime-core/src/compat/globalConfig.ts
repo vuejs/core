@@ -1,12 +1,11 @@
-import { extend, isArray } from '@vue/shared'
 import { AppConfig } from '../apiCreateApp'
-import { mergeDataOption } from './data'
 import {
   DeprecationTypes,
   softAssertCompatEnabled,
   warnDeprecation
 } from './compatConfig'
 import { isCopyingConfig } from './global'
+import { internalOptionMergeStrats } from '../componentOptions'
 
 // legacy config warnings
 export type LegacyConfig = {
@@ -70,60 +69,16 @@ export function installLegacyOptionMergeStrats(config: AppConfig) {
         return target[key]
       }
       if (
-        key in legacyOptionMergeStrats &&
+        key in internalOptionMergeStrats &&
         softAssertCompatEnabled(
           DeprecationTypes.CONFIG_OPTION_MERGE_STRATS,
           null
         )
       ) {
-        return legacyOptionMergeStrats[
-          key as keyof typeof legacyOptionMergeStrats
+        return internalOptionMergeStrats[
+          key as keyof typeof internalOptionMergeStrats
         ]
       }
     }
   })
-}
-
-export const legacyOptionMergeStrats = {
-  data: mergeDataOption,
-  beforeCreate: mergeHook,
-  created: mergeHook,
-  beforeMount: mergeHook,
-  mounted: mergeHook,
-  beforeUpdate: mergeHook,
-  updated: mergeHook,
-  beforeDestroy: mergeHook,
-  destroyed: mergeHook,
-  activated: mergeHook,
-  deactivated: mergeHook,
-  errorCaptured: mergeHook,
-  serverPrefetch: mergeHook,
-  // assets
-  components: mergeObjectOptions,
-  directives: mergeObjectOptions,
-  filters: mergeObjectOptions,
-  // objects
-  props: mergeObjectOptions,
-  methods: mergeObjectOptions,
-  inject: mergeObjectOptions,
-  computed: mergeObjectOptions,
-  // watch has special merge behavior in v2, but isn't actually needed in v3.
-  // since we are only exposing these for compat and nobody should be relying
-  // on the watch-specific behavior, just expose the object merge strat.
-  watch: mergeObjectOptions
-}
-
-function toArray(target: any) {
-  return isArray(target) ? target : target ? [target] : []
-}
-
-function mergeHook(
-  to: Function[] | Function | undefined,
-  from: Function | Function[]
-) {
-  return Array.from(new Set([...toArray(to), ...toArray(from)]))
-}
-
-function mergeObjectOptions(to: Object | undefined, from: Object | undefined) {
-  return to ? extend(extend(Object.create(null), to), from) : from
 }

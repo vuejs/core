@@ -4,7 +4,11 @@ import {
   validateComponentName,
   Component
 } from './component'
-import { ComponentOptions, RuntimeCompilerOptions } from './componentOptions'
+import {
+  ComponentOptions,
+  MergedComponentOptions,
+  RuntimeCompilerOptions
+} from './componentOptions'
 import { ComponentPublicInstance } from './componentPublicInstance'
 import { Directive, validateDirectiveName } from './directives'
 import { RootRenderFunction } from './renderer'
@@ -98,7 +102,7 @@ export interface AppContext {
    * Each app instance has its own cache because app-level global mixins and
    * optionMergeStrategies can affect merge behavior.
    */
-  cache: WeakMap<ComponentOptions, ComponentOptions>
+  cache: WeakMap<ComponentOptions, MergedComponentOptions>
   /**
    * Flag for de-optimizing props normalization
    * @internal
