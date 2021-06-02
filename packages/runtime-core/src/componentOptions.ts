@@ -79,6 +79,7 @@ import {
   DIRECTIVES,
   FILTERS
 } from './helpers/resolveAssets'
+import { OptionMergeFunction } from './apiCreateApp'
 
 /**
  * Interface for declaring custom options.
@@ -194,11 +195,6 @@ export interface ComponentOptionsBase<
    * @internal
    */
   __asyncResolved?: ConcreteComponent
-  /**
-   * cache for merged $options
-   * @internal
-   */
-  __merged?: ComponentOptions
 
   // Type differentiators ------------------------------------------------------
 
@@ -484,6 +480,28 @@ interface LegacyOptions<
    * because the `__differenciator` will be different
    */
   __differentiator?: keyof D | keyof C | keyof M
+}
+
+type MergedHook<T = (() => void)> = T | T[]
+
+export type MergedComponentOptionsOverride = {
+  beforeCreate?: MergedHook
+  created?: MergedHook
+  beforeMount?: MergedHook
+  mounted?: MergedHook
+  beforeUpdate?: MergedHook
+  updated?: MergedHook
+  activated?: MergedHook
+  deactivated?: MergedHook
+  /** @deprecated use `beforeUnmount` instead */
+  beforeDestroy?: MergedHook
+  beforeUnmount?: MergedHook
+  /** @deprecated use `unmounted` instead */
+  destroyed?: MergedHook
+  unmounted?: MergedHook
+  renderTracked?: MergedHook<DebuggerHook>
+  renderTriggered?: MergedHook<DebuggerHook>
+  errorCaptured?: MergedHook<ErrorCapturedHook>
 }
 
 export type OptionTypesKeys = 'P' | 'B' | 'D' | 'C' | 'M' | 'Defaults'
@@ -1022,25 +1040,56 @@ export function createWatcher(
   }
 }
 
+/**
+ * Resolve merged options and cache it on the component.
+ * This is done only once per-component since the merging does not involve
+ * instances.
+ */
 export function resolveMergedOptions(
   instance: ComponentInternalInstance
-): ComponentOptions {
-  const raw = instance.type as ComponentOptions
-  const { __merged, mixins, extends: extendsOptions } = raw
-  if (__merged) return __merged
-  const globalMixins = instance.appContext.mixins
-  if (!globalMixins.length && !mixins && !extendsOptions) return raw
-  const options = {}
-  globalMixins.forEach(m => mergeOptions(options, m, instance))
-  mergeOptions(options, raw, instance)
-  return (raw.__merged = options)
+): ComponentOptions & MergedComponentOptionsOverride {
+  const base = instance.type as ComponentOptions
+  const { mixins, extends: extendsOptions } = base
+  const {
+    mixins: globalMixins,
+    cache,
+    config: { optionMergeStrategies }
+  } = instance.appContext
+  const cached = cache.get(base)
+
+  let resolved: ComponentOptions
+
+  if (cached) {
+    resolved = cached
+  } else if (!globalMixins.length && !mixins && !extendsOptions) {
+    if (
+      __COMPAT__ &&
+      isCompatEnabled(DeprecationTypes.PRIVATE_APIS, instance)
+    ) {
+      resolved = extend({}, base)
+      resolved.parent = instance.parent && instance.parent.proxy
+      resolved.propsData = instance.vnode.props
+    } else {
+      resolved = base
+    }
+  } else {
+    resolved = {}
+    if (globalMixins.length) {
+      globalMixins.forEach(m =>
+        mergeOptions(resolved, m, optionMergeStrategies)
+      )
+    }
+    mergeOptions(resolved, base, optionMergeStrategies)
+  }
+
+  cache.set(base, resolved)
+  return resolved
 }
 
 export function mergeOptions(
   to: any,
   from: any,
-  instance?: ComponentInternalInstance | null,
-  strats = instance && instance.appContext.config.optionMergeStrategies
+  strats: Record<string, OptionMergeFunction>
 ) {
   if (__COMPAT__ && isFunction(from)) {
     from = from.options
@@ -1048,15 +1097,16 @@ export function mergeOptions(
 
   const { mixins, extends: extendsOptions } = from
 
-  extendsOptions && mergeOptions(to, extendsOptions, instance, strats)
-  mixins &&
-    mixins.forEach((m: ComponentOptionsMixin) =>
-      mergeOptions(to, m, instance, strats)
-    )
+  if (extendsOptions) {
+    mergeOptions(to, extendsOptions, strats)
+  }
+  if (mixins) {
+    mixins.forEach((m: ComponentOptionsMixin) => mergeOptions(to, m, strats))
+  }
 
   for (const key in from) {
     if (strats && hasOwn(strats, key)) {
-      to[key] = strats[key](to[key], from[key], instance && instance.proxy, key)
+      to[key] = strats[key](to[key], from[key])
     } else {
       to[key] = from[key]
     }

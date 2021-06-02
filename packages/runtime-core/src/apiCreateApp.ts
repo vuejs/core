@@ -53,12 +53,7 @@ export interface App<HostElement = any> {
   _createRoot?(options: ComponentOptions): ComponentPublicInstance
 }
 
-export type OptionMergeFunction = (
-  to: unknown,
-  from: unknown,
-  instance: any,
-  key: string
-) => any
+export type OptionMergeFunction = (to: unknown, from: unknown) => any
 
 export interface AppConfig {
   // @private
@@ -97,6 +92,13 @@ export interface AppContext {
   components: Record<string, Component>
   directives: Record<string, Directive>
   provides: Record<string | symbol, any>
+
+  /**
+   * Cache for merged/normalized component options
+   * Each app instance has its own cache because app-level global mixins and
+   * optionMergeStrategies can affect merge behavior.
+   */
+  cache: WeakMap<ComponentOptions, ComponentOptions>
   /**
    * Flag for de-optimizing props normalization
    * @internal
@@ -137,7 +139,8 @@ export function createAppContext(): AppContext {
     mixins: [],
     components: {},
     directives: {},
-    provides: Object.create(null)
+    provides: Object.create(null),
+    cache: new WeakMap()
   }
 }
 
