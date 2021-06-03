@@ -76,7 +76,7 @@ export function renderComponentRoot(
           proxyToUse,
           proxyToUse!,
           renderCache,
-          shallowReadonly(props),
+          __DEV__ ? shallowReadonly(props) : props,
           setupState,
           data,
           ctx
