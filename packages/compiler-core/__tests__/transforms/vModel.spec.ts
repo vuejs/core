@@ -530,7 +530,7 @@ describe('compiler: transform v-model', () => {
       )
     })
 
-    test('bingding to props', () => {
+    test('binding to props', () => {
       const onError = jest.fn()
       parseWithVModel('<input v-model="props" />', {
         onError,
