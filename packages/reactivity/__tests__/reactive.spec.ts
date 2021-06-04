@@ -19,7 +19,7 @@ describe('reactivity/reactive', () => {
   })
 
   test('should not reactive __proto__', () => {
-    const obj = Object.create(null)
+    const obj = Object.create({})
     const reactiveObj = reactive(obj)
     expect(isReactive(reactiveObj)).toBe(true)
     const prototype = reactiveObj['__proto__']
