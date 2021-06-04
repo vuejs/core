@@ -1170,7 +1170,7 @@ function baseCreateRenderer(
     const fragmentEndAnchor = (n2.anchor = n1 ? n1.anchor : hostCreateText(''))!
 
     let { patchFlag, dynamicChildren, slotScopeIds: fragmentSlotScopeIds } = n2
-    if (patchFlag > 0) {
+    if (dynamicChildren) {
       optimized = true
     }
 
