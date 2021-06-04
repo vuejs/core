@@ -79,14 +79,6 @@ export interface ComponentInternalOptions {
   /**
    * @internal
    */
-  __props?: NormalizedPropsOptions
-  /**
-   * @internal
-   */
-  __emits?: ObjectEmitsOptions | null
-  /**
-   * @internal
-   */
   __scopeId?: string
   /**
    * @internal
@@ -795,7 +787,7 @@ export function finishComponentSetup(
   if (__FEATURE_OPTIONS_API__ && !(__COMPAT__ && skipOptions)) {
     currentInstance = instance
     pauseTracking()
-    applyOptions(instance, Component)
+    applyOptions(instance)
     resetTracking()
     currentInstance = null
   }

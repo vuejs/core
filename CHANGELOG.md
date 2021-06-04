@@ -1,3 +1,37 @@
+# [3.1.0-beta.7](https://github.com/vuejs/vue-next/compare/v3.1.0-beta.6...v3.1.0-beta.7) (2021-06-02)
+
+
+### Bug Fixes
+
+* **compat:** fix deep data merge with extended constructor ([c7efb96](https://github.com/vuejs/vue-next/commit/c7efb967ca5ab42ea2713331b8e53ae5c2746a78)), closes [#3852](https://github.com/vuejs/vue-next/issues/3852)
+* **compiler-sfc:** fix style injection when using normal script + setup ([8b94464](https://github.com/vuejs/vue-next/commit/8b94464a3b9759a7a98c23efeafc7a9359c9807d)), closes [#3688](https://github.com/vuejs/vue-next/issues/3688)
+* **compiler-sfc:** fix template expression assignment codegen for script setup let refs ([#3626](https://github.com/vuejs/vue-next/issues/3626)) ([2c7bd42](https://github.com/vuejs/vue-next/commit/2c7bd428011e027efa8f66487d2269c8dd79a2b0)), closes [#3625](https://github.com/vuejs/vue-next/issues/3625)
+* **runtime-core:** align option merge behavior with Vue 2 ([e2ca67b](https://github.com/vuejs/vue-next/commit/e2ca67b59a4de57a9bce8d3394263ba493a35a39)), closes [#3566](https://github.com/vuejs/vue-next/issues/3566) [#2791](https://github.com/vuejs/vue-next/issues/2791)
+* **runtime-dom/v-model:** only set selectedIndex when the value changes ([#3845](https://github.com/vuejs/vue-next/issues/3845)) ([ecd97ee](https://github.com/vuejs/vue-next/commit/ecd97ee6e465ec5c841d58d96833fece4e899785))
+* **suspense:** fix suspense regression for errored template component ([44996d1](https://github.com/vuejs/vue-next/commit/44996d1a0a2de1bc6b3abfac6b2b8b3c969d4e01)), closes [#3857](https://github.com/vuejs/vue-next/issues/3857)
+* **watch:** avoid traversing objects that are marked non-reactive ([9acc9a1](https://github.com/vuejs/vue-next/commit/9acc9a1fa838bdcdf673d2f7cc3f996b2b69ffbc))
+
+
+### Code Refactoring
+
+* adjust component options merge cache strategy ([1e35a86](https://github.com/vuejs/vue-next/commit/1e35a860b995c1158d5c4e1706d2fc9bcd3b8412))
+
+
+### Performance Improvements
+
+* avoid deopt for props/emits normalization when global mixins are used ([51d2be2](https://github.com/vuejs/vue-next/commit/51d2be20386d4dc59006d31a1cc96676871027ce))
+
+
+### BREAKING CHANGES
+
+* optionMergeStrategies functions no longer receive
+the component instance as the 3rd argument. The argument was technically
+internal in Vue 2 and only used for generating warnings, and should not
+be needed in userland code. This removal enables much more efficient
+caching of option merging.
+
+
+
 # [3.1.0-beta.6](https://github.com/vuejs/vue-next/compare/v3.1.0-beta.5...v3.1.0-beta.6) (2021-05-28)
 
 

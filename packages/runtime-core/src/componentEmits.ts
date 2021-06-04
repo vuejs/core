@@ -172,8 +172,10 @@ export function normalizeEmitsOptions(
   appContext: AppContext,
   asMixin = false
 ): ObjectEmitsOptions | null {
-  if (!appContext.deopt && comp.__emits !== undefined) {
-    return comp.__emits
+  const cache = appContext.emitsCache
+  const cached = cache.get(comp)
+  if (cached !== undefined) {
+    return cached
   }
 
   const raw = comp.emits
@@ -201,7 +203,8 @@ export function normalizeEmitsOptions(
   }
 
   if (!raw && !hasExtends) {
-    return (comp.__emits = null)
+    cache.set(comp, null)
+    return null
   }
 
   if (isArray(raw)) {
@@ -209,7 +212,9 @@ export function normalizeEmitsOptions(
   } else {
     extend(normalized, raw)
   }
-  return (comp.__emits = normalized)
+
+  cache.set(comp, normalized)
+  return normalized
 }
 
 // Check if an incoming prop key is a declared emit event listener.
