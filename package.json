@@ -6,7 +6,7 @@
   ],
   "scripts": {
     "dev": "node scripts/dev.js",
-    "build": "node scripts/build.js",
+    "build": "node scripts/build.js --e=playground",
     "size": "node scripts/build.js vue runtime-dom size-check -p -f global",
     "lint": "eslint --ext .ts packages/*/src/**",
     "format": "prettier --write --parser typescript \"packages/**/*.ts?(x)\"",

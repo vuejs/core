@@ -20,7 +20,11 @@ const chalk = require('chalk')
 const execa = require('execa')
 const { gzipSync } = require('zlib')
 const { compress } = require('brotli')
-const { targets: allTargets, fuzzyMatchTarget } = require('./utils')
+const {
+  targets: allTargets,
+  fuzzyMatchTarget,
+  fuzzyExcludeTarget
+} = require('./utils')
 
 const args = require('minimist')(process.argv.slice(2))
 const targets = args._
@@ -31,6 +35,7 @@ const sourceMap = args.sourcemap || args.s
 const isRelease = args.release
 const buildTypes = args.t || args.types || isRelease
 const buildAllMatching = args.all || args.a
+const buildExcludeTargets = args.exclude || args.e
 const commit = execa.sync('git', ['rev-parse', 'HEAD']).stdout.slice(0, 7)
 
 run()
@@ -41,8 +46,13 @@ async function run() {
     await fs.remove(path.resolve(__dirname, '../node_modules/.rts2_cache'))
   }
   if (!targets.length) {
-    await buildAll(allTargets)
-    checkAllSizes(allTargets)
+    if (buildExcludeTargets) {
+      await buildAll(fuzzyExcludeTarget(buildExcludeTargets))
+      checkAllSizes(fuzzyExcludeTarget(buildExcludeTargets))
+    } else {
+      await buildAll(allTargets)
+      checkAllSizes(allTargets)
+    }
   } else {
     await buildAll(fuzzyMatchTarget(targets, buildAllMatching))
     checkAllSizes(fuzzyMatchTarget(targets, buildAllMatching))

@@ -12,6 +12,22 @@ const targets = (exports.targets = fs.readdirSync('packages').filter(f => {
   return true
 }))
 
+exports.fuzzyExcludeTarget = buildExcludeTargets => {
+  buildExcludeTargets = Array.isArray(buildExcludeTargets)
+    ? buildExcludeTargets
+    : [buildExcludeTargets]
+  const filtered = []
+  buildExcludeTargets.forEach(partialTarget => {
+    for (const target of targets) {
+      if (!target.match(partialTarget)) {
+        filtered.push(target)
+      }
+    }
+  })
+
+  return filtered
+}
+
 exports.fuzzyMatchTarget = (partialTargets, includeAllMatching) => {
   const matched = []
   partialTargets.forEach(partialTarget => {
