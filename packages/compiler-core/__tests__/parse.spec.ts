@@ -1736,20 +1736,26 @@ foo
     })
   })
 
-  describe('whitespace management', () => {
+  describe('whitespace management when adopting strategy condense', () => {
+    const parse = (content: string, options?: ParserOptions) =>
+      baseParse(content, {
+        whitespace: 'condense',
+        ...options
+      })
+
     it('should remove whitespaces at start/end inside an element', () => {
-      const ast = baseParse(`<div>   <span/>    </div>`)
+      const ast = parse(`<div>   <span/>    </div>`)
       expect((ast.children[0] as ElementNode).children.length).toBe(1)
     })
 
     it('should remove whitespaces w/ newline between elements', () => {
-      const ast = baseParse(`<div/> \n <div/> \n <div/>`)
+      const ast = parse(`<div/> \n <div/> \n <div/>`)
       expect(ast.children.length).toBe(3)
       expect(ast.children.every(c => c.type === NodeTypes.ELEMENT)).toBe(true)
     })
 
     it('should remove whitespaces adjacent to comments', () => {
-      const ast = baseParse(`<div/> \n <!--foo--> <div/>`)
+      const ast = parse(`<div/> \n <!--foo--> <div/>`)
       expect(ast.children.length).toBe(3)
       expect(ast.children[0].type).toBe(NodeTypes.ELEMENT)
       expect(ast.children[1].type).toBe(NodeTypes.COMMENT)
@@ -1757,7 +1763,7 @@ foo
     })
 
     it('should remove whitespaces w/ newline between comments and elements', () => {
-      const ast = baseParse(`<div/> \n <!--foo--> \n <div/>`)
+      const ast = parse(`<div/> \n <!--foo--> \n <div/>`)
       expect(ast.children.length).toBe(3)
       expect(ast.children[0].type).toBe(NodeTypes.ELEMENT)
       expect(ast.children[1].type).toBe(NodeTypes.COMMENT)
@@ -1765,7 +1771,7 @@ foo
     })
 
     it('should NOT remove whitespaces w/ newline between interpolations', () => {
-      const ast = baseParse(`{{ foo }} \n {{ bar }}`)
+      const ast = parse(`{{ foo }} \n {{ bar }}`)
       expect(ast.children.length).toBe(3)
       expect(ast.children[0].type).toBe(NodeTypes.INTERPOLATION)
       expect(ast.children[1]).toMatchObject({
@@ -1776,7 +1782,7 @@ foo
     })
 
     it('should NOT remove whitespaces w/o newline between elements', () => {
-      const ast = baseParse(`<div/> <div/> <div/>`)
+      const ast = parse(`<div/> <div/> <div/>`)
       expect(ast.children.length).toBe(5)
       expect(ast.children.map(c => c.type)).toMatchObject([
         NodeTypes.ELEMENT,
@@ -1788,7 +1794,7 @@ foo
     })
 
     it('should condense consecutive whitespaces in text', () => {
-      const ast = baseParse(`   foo  \n    bar     baz     `)
+      const ast = parse(`   foo  \n    bar     baz     `)
       expect((ast.children[0] as TextNode).content).toBe(` foo bar baz `)
     })
 
@@ -1811,6 +1817,94 @@ foo
       expect((preElement.children[1] as TextNode).content).toBe(
         `\n  foo  bar  `
       )
+    })
+
+    it('should NOT condense whitespaces in RCDATA text mode', () => {
+      const ast = baseParse(`<textarea>Text:\n   foo</textarea>`, {
+        getTextMode: ({ tag }) =>
+          tag === 'textarea' ? TextModes.RCDATA : TextModes.DATA
+      })
+      const preElement = ast.children[0] as ElementNode
+      expect(preElement.children).toHaveLength(1)
+      expect((preElement.children[0] as TextNode).content).toBe(`Text:\n   foo`)
+    })
+  })
+
+  describe('whitespace management when adopting strategy preserve', () => {
+    const parse = (content: string, options?: ParserOptions) =>
+      baseParse(content, {
+        whitespace: 'preserve',
+        ...options
+      })
+
+    it('should still remove whitespaces at start/end inside an element', () => {
+      const ast = parse(`<div>   <span/>    </div>`)
+      expect((ast.children[0] as ElementNode).children.length).toBe(1)
+    })
+
+    it('should preserve whitespaces w/ newline between elements', () => {
+      const ast = parse(`<div/> \n <div/> \n <div/>`)
+      expect(ast.children.length).toBe(5)
+      expect(ast.children.map(c => c.type)).toMatchObject([
+        NodeTypes.ELEMENT,
+        NodeTypes.TEXT,
+        NodeTypes.ELEMENT,
+        NodeTypes.TEXT,
+        NodeTypes.ELEMENT
+      ])
+    })
+
+    it('should preserve whitespaces adjacent to comments', () => {
+      const ast = parse(`<div/> \n <!--foo--> <div/>`)
+      expect(ast.children.length).toBe(5)
+      expect(ast.children.map(c => c.type)).toMatchObject([
+        NodeTypes.ELEMENT,
+        NodeTypes.TEXT,
+        NodeTypes.COMMENT,
+        NodeTypes.TEXT,
+        NodeTypes.ELEMENT
+      ])
+    })
+
+    it('should preserve whitespaces w/ newline between comments and elements', () => {
+      const ast = parse(`<div/> \n <!--foo--> \n <div/>`)
+      expect(ast.children.length).toBe(5)
+      expect(ast.children.map(c => c.type)).toMatchObject([
+        NodeTypes.ELEMENT,
+        NodeTypes.TEXT,
+        NodeTypes.COMMENT,
+        NodeTypes.TEXT,
+        NodeTypes.ELEMENT
+      ])
+    })
+
+    it('should preserve whitespaces w/ newline between interpolations', () => {
+      const ast = parse(`{{ foo }} \n {{ bar }}`)
+      expect(ast.children.length).toBe(3)
+      expect(ast.children[0].type).toBe(NodeTypes.INTERPOLATION)
+      expect(ast.children[1]).toMatchObject({
+        type: NodeTypes.TEXT,
+        content: ' '
+      })
+      expect(ast.children[2].type).toBe(NodeTypes.INTERPOLATION)
+    })
+
+    it('should preserve whitespaces w/o newline between elements', () => {
+      const ast = parse(`<div/> <div/> <div/>`)
+      expect(ast.children.length).toBe(5)
+      expect(ast.children.map(c => c.type)).toMatchObject([
+        NodeTypes.ELEMENT,
+        NodeTypes.TEXT,
+        NodeTypes.ELEMENT,
+        NodeTypes.TEXT,
+        NodeTypes.ELEMENT
+      ])
+    })
+
+    it('should preserve consecutive whitespaces in text', () => {
+      const content = `   foo  \n    bar     baz     `
+      const ast = parse(content)
+      expect((ast.children[0] as TextNode).content).toBe(content)
     })
   })
 

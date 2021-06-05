@@ -20,7 +20,10 @@ import {
   createVNode,
   onUpdated,
   SetupContext,
-  toRaw
+  toRaw,
+  compatUtils,
+  DeprecationTypes,
+  ComponentOptions
 } from '@vue/runtime-core'
 import { extend } from '@vue/shared'
 
@@ -37,7 +40,7 @@ export type TransitionGroupProps = Omit<TransitionProps, 'mode'> & {
   moveClass?: string
 }
 
-const TransitionGroupImpl = {
+const TransitionGroupImpl: ComponentOptions = {
   name: 'TransitionGroup',
 
   props: /*#__PURE__*/ extend({}, TransitionPropsValidators, {
@@ -99,7 +102,19 @@ const TransitionGroupImpl = {
     return () => {
       const rawProps = toRaw(props)
       const cssTransitionProps = resolveTransitionProps(rawProps)
-      const tag = rawProps.tag || Fragment
+      let tag = rawProps.tag || Fragment
+
+      if (
+        __COMPAT__ &&
+        !rawProps.tag &&
+        compatUtils.checkCompatEnabled(
+          DeprecationTypes.TRANSITION_GROUP_ROOT,
+          instance.parent
+        )
+      ) {
+        tag = 'span'
+      }
+
       prevChildren = children
       children = slots.default ? getTransitionRawChildren(slots.default()) : []
 
@@ -129,6 +144,10 @@ const TransitionGroupImpl = {
       return createVNode(tag, null, children)
     }
   }
+}
+
+if (__COMPAT__) {
+  TransitionGroupImpl.__isBuiltIn = true
 }
 
 /**

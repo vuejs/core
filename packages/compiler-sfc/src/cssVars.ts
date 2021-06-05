@@ -8,7 +8,7 @@ import {
   BindingMetadata
 } from '@vue/compiler-dom'
 import { SFCDescriptor } from './parse'
-import postcss, { Root } from 'postcss'
+import { PluginCreator } from 'postcss'
 import hash from 'hash-sum'
 
 export const CSS_VARS_HELPER = `useCssVars`
@@ -49,20 +49,21 @@ export interface CssVarsPluginOptions {
   isProd: boolean
 }
 
-export const cssVarsPlugin = postcss.plugin<CssVarsPluginOptions>(
-  'vue-scoped',
-  opts => (root: Root) => {
-    const { id, isProd } = opts!
-    root.walkDecls(decl => {
+export const cssVarsPlugin: PluginCreator<CssVarsPluginOptions> = opts => {
+  const { id, isProd } = opts!
+  return {
+    postcssPlugin: 'vue-sfc-vars',
+    Declaration(decl) {
       // rewrite CSS variables
       if (cssVarRE.test(decl.value)) {
         decl.value = decl.value.replace(cssVarRE, (_, $1, $2, $3) => {
           return `var(--${genVarName(id, $1 || $2 || $3, isProd)})`
         })
       }
-    })
+    }
   }
-)
+}
+cssVarsPlugin.postcss = true
 
 export function genCssVarsCode(
   vars: string[],
@@ -75,7 +76,7 @@ export function genCssVarsCode(
   const context = createTransformContext(createRoot([]), {
     prefixIdentifiers: true,
     inline: true,
-    bindingMetadata: bindings
+    bindingMetadata: bindings.__isScriptSetup === false ? undefined : bindings
   })
   const transformed = processExpression(exp, context)
   const transformedString =

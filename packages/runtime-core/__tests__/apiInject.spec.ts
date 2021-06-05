@@ -139,7 +139,7 @@ describe('api: provide/inject', () => {
 
     const Consumer = {
       setup() {
-        const count = inject('count') as Ref<number>
+        const count = inject<Ref<number>>('count')!
         return () => count.value
       }
     }
@@ -169,7 +169,7 @@ describe('api: provide/inject', () => {
 
     const Consumer = {
       setup() {
-        const count = inject('count') as Ref<number>
+        const count = inject<Ref<number>>('count')!
         // should not work
         count.value++
         return () => count.value
@@ -206,7 +206,7 @@ describe('api: provide/inject', () => {
 
     const Consumer = {
       setup() {
-        const state = inject('state') as typeof rootState
+        const state = inject<typeof rootState>('state')!
         return () => state.count
       }
     }
@@ -236,7 +236,7 @@ describe('api: provide/inject', () => {
 
     const Consumer = {
       setup() {
-        const state = inject('state') as typeof rootState
+        const state = inject<typeof rootState>('state')!
         // should not work
         state.count++
         return () => state.count

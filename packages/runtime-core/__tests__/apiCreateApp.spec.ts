@@ -60,12 +60,12 @@ describe('api: createApp', () => {
     const app = createApp(Comp)
 
     // warning
-    app.unmount(root)
+    app.unmount()
     expect(`that is not mounted`).toHaveBeenWarned()
 
     app.mount(root)
 
-    app.unmount(root)
+    app.unmount()
     expect(serializeInner(root)).toBe(``)
   })
 
@@ -481,4 +481,7 @@ describe('api: createApp', () => {
     app.mount(root)
     expect(serializeInner(root)).toBe('hello')
   })
+
+  // config.compilerOptions is tested in packages/vue since it is only
+  // supported in the full build.
 })

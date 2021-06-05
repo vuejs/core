@@ -8,7 +8,8 @@ import {
 import {
   mutableCollectionHandlers,
   readonlyCollectionHandlers,
-  shallowCollectionHandlers
+  shallowCollectionHandlers,
+  shallowReadonlyCollectionHandlers
 } from './collectionHandlers'
 import { UnwrapRef, Ref } from './ref'
 
@@ -29,7 +30,9 @@ export interface Target {
 
 // 对已经代理的 Target 做缓存， 这里使用 WeakMap ，以便释放内存
 export const reactiveMap = new WeakMap<Target, any>()
+export const shallowReactiveMap = new WeakMap<Target, any>()
 export const readonlyMap = new WeakMap<Target, any>()
+export const shallowReadonlyMap = new WeakMap<Target, any>()
 
 // 要代理对象的类型
 const enum TargetType {
@@ -60,7 +63,7 @@ function getTargetType(value: Target) {
 }
 
 // only unwrap nested ref
-type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRef<T>
+export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRef<T>
 
 /**
  * Creates a reactive copy of the original object.
@@ -94,7 +97,8 @@ export function reactive(target: object) {
     target,
     false,
     mutableHandlers,
-    mutableCollectionHandlers
+    mutableCollectionHandlers,
+    reactiveMap
   )
 }
 
@@ -108,7 +112,8 @@ export function shallowReactive<T extends object>(target: T): T {
     target,
     false,
     shallowReactiveHandlers,
-    shallowCollectionHandlers
+    shallowCollectionHandlers,
+    shallowReactiveMap
   )
 }
 
@@ -145,7 +150,8 @@ export function readonly<T extends object>(
     target,
     true,
     readonlyHandlers,
-    readonlyCollectionHandlers
+    readonlyCollectionHandlers,
+    readonlyMap
   )
 }
 
@@ -162,7 +168,8 @@ export function shallowReadonly<T extends object>(
     target,
     true,
     shallowReadonlyHandlers,
-    readonlyCollectionHandlers
+    shallowReadonlyCollectionHandlers,
+    shallowReadonlyMap
   )
 }
 
@@ -170,7 +177,8 @@ function createReactiveObject(
   target: Target,
   isReadonly: boolean,
   baseHandlers: ProxyHandler<any>,
-  collectionHandlers: ProxyHandler<any>
+  collectionHandlers: ProxyHandler<any>,
+  proxyMap: WeakMap<Target, any>
 ) {
   if (!isObject(target)) {
     if (__DEV__) {
@@ -193,7 +201,6 @@ function createReactiveObject(
   // 走到这里，说明是一个 readonly 或者 代理的是一个普通的对象
 
   // target already has corresponding Proxy
-  const proxyMap = isReadonly ? readonlyMap : reactiveMap
   const existingProxy = proxyMap.get(target)
   if (existingProxy) {
     return existingProxy

@@ -4,7 +4,7 @@ import { isArray, isObject, hasChanged } from '@vue/shared'
 import { reactive, isProxy, toRaw, isReactive } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
 
-declare const RefSymbol: unique symbol
+export declare const RefSymbol: unique symbol
 
 export interface Ref<T = any> {
   value: T
@@ -20,7 +20,7 @@ export interface Ref<T = any> {
   _shallow?: boolean
 }
 
-export type ToRef<T> = T extends Ref ? T : Ref<UnwrapRef<T>>
+export type ToRef<T> = [T] extends [Ref] ? T : Ref<UnwrapRef<T>>
 export type ToRefs<T = any> = {
   // #2687: somehow using ToRef<T[K]> here turns the resulting type into
   // a union of multiple Ref<*> types instead of a single Ref<* | *> type.

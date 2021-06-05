@@ -143,14 +143,14 @@ export function processExpression(
           // let is a local non-ref value, and we need to replicate the
           // right hand side value.
           // x = y --> isRef(x) ? x.value = y : x = y
-          const rVal = (parent as AssignmentExpression).right
+          const { right: rVal, operator } = parent as AssignmentExpression
           const rExp = rawExp.slice(rVal.start! - 1, rVal.end! - 1)
           const rExpString = stringifyExpression(
             processExpression(createSimpleExpression(rExp, false), context)
           )
           return `${context.helperString(IS_REF)}(${raw})${
             context.isTS ? ` //@ts-ignore\n` : ``
-          } ? ${raw}.value = ${rExpString} : ${raw}`
+          } ? ${raw}.value ${operator} ${rExpString} : ${raw}`
         } else if (isUpdateArg) {
           // make id replace parent in the code range so the raw update operator
           // is removed
@@ -254,6 +254,11 @@ export function processExpression(
       parent && parentStack.push(parent)
       if (node.type === 'Identifier') {
         if (!isDuplicate(node)) {
+          // v2 wrapped filter call
+          if (__COMPAT__ && node.name.startsWith('_filter_')) {
+            return
+          }
+
           const needPrefix = shouldPrefix(node, parent!, parentStack)
           if (!knownIds[node.name] && needPrefix) {
             if (isStaticProperty(parent!) && parent.shorthand) {

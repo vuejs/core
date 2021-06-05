@@ -1,3 +1,4 @@
+import { effect, stop } from '@vue/reactivity'
 import {
   queueJob,
   nextTick,
@@ -42,6 +43,38 @@ describe('scheduler', () => {
       expect(calls).toEqual([])
       await nextTick()
       expect(calls).toEqual(['job1', 'job2'])
+    })
+
+    it("should insert jobs in ascending order of job's id when flushing", async () => {
+      const calls: string[] = []
+      const job1 = () => {
+        calls.push('job1')
+
+        queueJob(job2)
+        queueJob(job3)
+        queueJob(job4)
+      }
+
+      const job2 = () => {
+        calls.push('job2')
+      }
+      job2.id = 10
+
+      const job3 = () => {
+        calls.push('job3')
+      }
+      job3.id = 1
+
+      // job4 gets the Infinity as it's id
+      const job4 = () => {
+        calls.push('job4')
+      }
+
+      queueJob(job1)
+
+      expect(calls).toEqual([])
+      await nextTick()
+      expect(calls).toEqual(['job1', 'job3', 'job2', 'job4'])
     })
 
     it('should dedupe queued jobs', async () => {
@@ -197,6 +230,16 @@ describe('scheduler', () => {
       queueJob(job1)
       await nextTick()
       expect(calls).toEqual(['cb1', 'cb2', 'job1'])
+    })
+
+    // #3806
+    it('queue preFlushCb inside postFlushCb', async () => {
+      const cb = jest.fn()
+      queuePostFlushCb(() => {
+        queuePreFlushCb(cb)
+      })
+      await nextTick()
+      expect(cb).toHaveBeenCalled()
     })
   })
 
@@ -525,5 +568,28 @@ describe('scheduler', () => {
 
     await nextTick()
     expect(count).toBe(1)
+  })
+
+  // #910
+  test('should not run stopped reactive effects', async () => {
+    const spy = jest.fn()
+
+    // simulate parent component that toggles child
+    const job1 = () => {
+      stop(job2)
+    }
+    job1.id = 0 // need the id to ensure job1 is sorted before job2
+
+    // simulate child that's triggered by the same reactive change that
+    // triggers its toggle
+    const job2 = effect(() => spy())
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    queueJob(job1)
+    queueJob(job2)
+    await nextTick()
+
+    // should not be called again
+    expect(spy).toHaveBeenCalledTimes(1)
   })
 })

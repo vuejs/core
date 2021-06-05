@@ -17,6 +17,30 @@ describe('CSS vars injection', () => {
     assertCode(content)
   })
 
+  test('w/ normal <script> binding analysis', () => {
+    const { content } = compileSFCScript(
+      `<script>
+      export default {
+        setup() {
+          return {
+            size: ref('100px')
+          }
+        }
+      }
+      </script>\n` +
+        `<style>
+          div {
+            font-size: v-bind(size);
+          }
+        </style>`
+    )
+    expect(content).toMatch(`_useCssVars(_ctx => ({
+  "${mockId}-size": (_ctx.size)
+})`)
+    expect(content).toMatch(`import { useCssVars as _useCssVars } from 'vue'`)
+    assertCode(content)
+  })
+
   test('w/ <script setup> binding analysis', () => {
     const { content } = compileSFCScript(
       `<script setup>

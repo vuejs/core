@@ -72,7 +72,7 @@ function createRecord(
     warn(
       `HMR API usage is out of date.\n` +
         `Please upgrade vue-loader/vite/rollup-plugin-vue or other relevant ` +
-        `depdendency that handles Vue SFC compilation.`
+        `dependency that handles Vue SFC compilation.`
     )
     component = {}
   }
@@ -116,7 +116,7 @@ function reload(id: string, newComp: ComponentOptions | ClassComponent) {
     newComp = isClassComponent(newComp) ? newComp.__vccOpts : newComp
     extend(component, newComp)
     for (const key in component) {
-      if (!(key in newComp)) {
+      if (key !== '__file' && !(key in newComp)) {
         delete (component as any)[key]
       }
     }

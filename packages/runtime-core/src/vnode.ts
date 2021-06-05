@@ -26,19 +26,23 @@ import { AppContext } from './apiCreateApp'
 import {
   SuspenseImpl,
   isSuspense,
-  SuspenseBoundary,
-  normalizeSuspenseChildren
+  SuspenseBoundary
 } from './components/Suspense'
 import { DirectiveBinding } from './directives'
 import { TransitionHooks } from './components/BaseTransition'
 import { warn } from './warning'
-import { currentScopeId } from './helpers/scopeId'
 import { TeleportImpl, isTeleport } from './components/Teleport'
-import { currentRenderingInstance } from './componentRenderUtils'
+import {
+  currentRenderingInstance,
+  currentScopeId
+} from './componentRenderContext'
 import { RendererNode, RendererElement } from './renderer'
 import { NULL_DYNAMIC_COMPONENT } from './helpers/resolveAssets'
 import { hmrDirtyComponents } from './hmr'
-import { setCompiledSlotRendering } from './helpers/renderSlot'
+import { convertLegacyComponent } from './compat/component'
+import { convertLegacyVModelProps } from './compat/componentVModel'
+import { defineLegacyVNodeProperties } from './compat/renderFn'
+import { convertLegacyRefInFor } from './compat/ref'
 
 export const Fragment = (Symbol(__DEV__ ? 'Fragment' : undefined) as any) as {
   __isFragment: true
@@ -69,6 +73,7 @@ export type VNodeRef =
 export type VNodeNormalizedRefAtom = {
   i: ComponentInternalInstance
   r: VNodeRef
+  f?: boolean // v2 compat only, refInFor marker
 }
 
 export type VNodeNormalizedRef =
@@ -125,10 +130,17 @@ export interface VNode<
    * @internal
    */
   __v_isVNode: true
+
   /**
    * @internal
    */
   [ReactiveFlags.SKIP]: true
+
+  /**
+   * @internal __COMPAT__ only
+   */
+  isCompatRoot?: true
+
   type: VNodeTypes
   /** @CT: vnode.props
    * vue-compiler 会将 template 解析成 render，
@@ -139,7 +151,18 @@ export interface VNode<
   props: (VNodeProps & ExtraProps) | null
   key: string | number | null
   ref: VNodeNormalizedRef | null
-  scopeId: string | null // SFC only
+  /**
+   * SFC only. This is assigned on vnode creation using currentScopeId
+   * which is set alongside currentRenderingInstance.
+   */
+  scopeId: string | null
+  /**
+   * SFC only. This is assigned to:
+   * - Slot fragment vnodes with :slotted SFC styles.
+   * - Component vnodes (during patch/hydration) so that its root node can
+   *   inherit the component's slotScopeIds
+   */
+  slotScopeIds: string[] | null
   children: VNodeNormalizedChildren
   /** @CT：有值说明这是个组件 */
   component: ComponentInternalInstance | null
@@ -176,7 +199,7 @@ export interface VNode<
 // structure would be stable. This allows us to skip most children diffing
 // and only worry about the dynamic nodes (indicated by patch flags).
 export const blockStack: (VNode[] | null)[] = []
-let currentBlock: VNode[] | null = null
+export let currentBlock: VNode[] | null = null
 
 /**
  * Open a block.
@@ -207,7 +230,7 @@ export function closeBlock() {
 // Only tracks when this value is > 0
 // We are not using a simple boolean because this value may need to be
 // incremented/decremented by nested usage of v-once (see below)
-let shouldTrack = 1
+let isBlockTreeEnabled = 1
 
 /**
  * Block tracking sometimes needs to be disabled, for example during the
@@ -226,7 +249,7 @@ let shouldTrack = 1
  * @private
  */
 export function setBlockTracking(value: number) {
-  shouldTrack += value
+  isBlockTreeEnabled += value
 }
 
 /**
@@ -252,13 +275,13 @@ export function createBlock(
     true /* isBlock: prevent a block from tracking itself */
   )
   // save current block children on the block vnode
-  // @CT: 当是 fo
-  vnode.dynamicChildren = currentBlock || (EMPTY_ARR as any)
+  vnode.dynamicChildren =
+    isBlockTreeEnabled > 0 ? currentBlock || (EMPTY_ARR as any) : null
   // close block
   closeBlock()
   // a block is always going to be patched, so track it as a child of its
   // parent block
-  if (shouldTrack > 0 && currentBlock) {
+  if (isBlockTreeEnabled > 0 && currentBlock) {
     currentBlock.push(vnode)
   }
   return vnode
@@ -355,6 +378,11 @@ function _createVNode(
     type = type.__vccOpts
   }
 
+  // 2.x async/functional component compat
+  if (__COMPAT__) {
+    type = convertLegacyComponent(type, currentRenderingInstance)
+  }
+
   // class & style normalization.
   if (props) {
     // for reactive or proxy objects, we need to clone it to enable mutation.
@@ -403,12 +431,13 @@ function _createVNode(
 
   const vnode: VNode = {
     __v_isVNode: true,
-    [ReactiveFlags.SKIP]: true,
+    __v_skip: true,
     type,
     props,
     key: props && normalizeKey(props),
     ref: props && normalizeRef(props),
     scopeId: currentScopeId,
+    slotScopeIds: null,
     children: null,
     component: null,
     suspense: null,
@@ -437,13 +466,11 @@ function _createVNode(
 
   // normalize suspense children
   if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
-    const { content, fallback } = normalizeSuspenseChildren(vnode)
-    vnode.ssContent = content
-    vnode.ssFallback = fallback
+    ;(type as typeof SuspenseImpl).normalize(vnode)
   }
 
   if (
-    shouldTrack > 0 &&
+    isBlockTreeEnabled > 0 &&
     // avoid a block node from tracking itself
     !isBlockNode &&
     // has current parent block
@@ -460,6 +487,12 @@ function _createVNode(
     currentBlock.push(vnode)
   }
 
+  if (__COMPAT__) {
+    convertLegacyVModelProps(vnode)
+    convertLegacyRefInFor(vnode)
+    defineLegacyVNodeProperties(vnode)
+  }
+
   return vnode
 }
 
@@ -470,11 +503,11 @@ export function cloneVNode<T, U>(
 ): VNode<T, U> {
   // This is intentionally NOT using spread or extend to avoid the runtime
   // key enumeration cost.
-  const { props, ref, patchFlag } = vnode
+  const { props, ref, patchFlag, children } = vnode
   const mergedProps = extraProps ? mergeProps(props || {}, extraProps) : props
-  return {
+  const cloned: VNode = {
     __v_isVNode: true,
-    [ReactiveFlags.SKIP]: true,
+    __v_skip: true,
     type: vnode.type,
     props: mergedProps,
     key: mergedProps && normalizeKey(mergedProps),
@@ -490,7 +523,11 @@ export function cloneVNode<T, U>(
           : normalizeRef(extraProps)
         : ref,
     scopeId: vnode.scopeId,
-    children: vnode.children,
+    slotScopeIds: vnode.slotScopeIds,
+    children:
+      __DEV__ && patchFlag === PatchFlags.HOISTED && isArray(children)
+        ? (children as VNode[]).map(deepCloneVNode)
+        : children,
     target: vnode.target,
     targetAnchor: vnode.targetAnchor,
     staticCount: vnode.staticCount,
@@ -522,6 +559,22 @@ export function cloneVNode<T, U>(
     el: vnode.el,
     anchor: vnode.anchor
   }
+  if (__COMPAT__) {
+    defineLegacyVNodeProperties(cloned)
+  }
+  return cloned as any
+}
+
+/**
+ * Dev only, for HMR of hoisted vnodes reused in v-for
+ * https://github.com/vitejs/vite/issues/2022
+ */
+function deepCloneVNode(vnode: VNode): VNode {
+  const cloned = cloneVNode(vnode)
+  if (isArray(vnode.children)) {
+    cloned.children = (vnode.children as VNode[]).map(deepCloneVNode)
+  }
+  return cloned
 }
 
 /**
@@ -566,11 +619,16 @@ export function normalizeVNode(child: VNodeChild): VNode {
     return createVNode(Comment)
   } else if (isArray(child)) {
     // fragment
-    return createVNode(Fragment, null, child)
+    return createVNode(
+      Fragment,
+      null,
+      // #3666, avoid reference pollution when reusing vnode
+      child.slice()
+    )
   } else if (typeof child === 'object') {
     // already vnode, this should be the most common since compiled templates
     // always produce all-vnode children arrays
-    return child.el === null ? child : cloneVNode(child)
+    return cloneIfMounted(child)
   } else {
     // strings and numbers
     return createVNode(Text, null, String(child))
@@ -596,9 +654,9 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
       const slot = (children as any).default
       if (slot) {
         // _c marker is added by withCtx() indicating this is a compiled slot
-        slot._c && setCompiledSlotRendering(1)
+        slot._c && (slot._d = false)
         normalizeChildren(vnode, slot())
-        slot._c && setCompiledSlotRendering(-1)
+        slot._c && (slot._d = true)
       }
       return
       // type 为组件
@@ -613,12 +671,12 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
         // a child component receives forwarded slots from the parent.
         // its slot type is determined by its parent's slot type.
         if (
-          currentRenderingInstance.vnode.patchFlag & PatchFlags.DYNAMIC_SLOTS
+          (currentRenderingInstance.slots as RawSlots)._ === SlotFlags.STABLE
         ) {
+          ;(children as RawSlots)._ = SlotFlags.STABLE
+        } else {
           ;(children as RawSlots)._ = SlotFlags.DYNAMIC
           vnode.patchFlag |= PatchFlags.DYNAMIC_SLOTS
-        } else {
-          ;(children as RawSlots)._ = SlotFlags.STABLE
         }
       }
     }
@@ -655,7 +713,7 @@ export function mergeProps(...args: (Data & VNodeProps)[]) {
         const incoming = toMerge[key]
         if (existing !== incoming) {
           ret[key] = existing
-            ? [].concat(existing as any, toMerge[key] as any)
+            ? [].concat(existing as any, incoming as any)
             : incoming
         }
       } else if (key !== '') {

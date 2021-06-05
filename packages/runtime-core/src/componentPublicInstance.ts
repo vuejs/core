@@ -1,4 +1,8 @@
-import { ComponentInternalInstance, Data } from './component'
+import {
+  ComponentInternalInstance,
+  Data,
+  isStatefulComponent
+} from './component'
 import { nextTick, queueJob } from './scheduler'
 import { instanceWatch, WatchOptions, WatchStopHandle } from './apiWatch'
 import {
@@ -7,7 +11,8 @@ import {
   isGloballyWhitelisted,
   NOOP,
   extend,
-  isString
+  isString,
+  isFunction
 } from '@vue/shared'
 import {
   ReactiveEffect,
@@ -16,7 +21,8 @@ import {
   ReactiveFlags,
   track,
   TrackOpTypes,
-  ShallowUnwrapRef
+  ShallowUnwrapRef,
+  UnwrapNestedRefs
 } from '@vue/reactivity'
 import {
   ExtractComputedReturns,
@@ -27,16 +33,16 @@ import {
   OptionTypesType,
   OptionTypesKeys,
   resolveMergedOptions,
-  isInBeforeCreate
+  shouldCacheAccess,
+  MergedComponentOptionsOverride
 } from './componentOptions'
 import { EmitsOptions, EmitFn } from './componentEmits'
 import { Slots } from './componentSlots'
-import {
-  currentRenderingInstance,
-  markAttrsAccessed
-} from './componentRenderUtils'
+import { markAttrsAccessed } from './componentRenderUtils'
+import { currentRenderingInstance } from './componentRenderContext'
 import { warn } from './warning'
 import { UnionToIntersection } from './helpers/typeUtils'
+import { installCompatInstanceProperties } from './compat/instance'
 
 /**
  * Custom properties added to component instances in any way and can be accessed through `this`
@@ -183,7 +189,7 @@ export type ComponentPublicInstance<
   $parent: ComponentPublicInstance | null
   $emit: EmitFn<E>
   $el: any
-  $options: Options
+  $options: Options & MergedComponentOptionsOverride
   $forceUpdate: ReactiveEffect
   $nextTick: typeof nextTick
   $watch(
@@ -193,12 +199,15 @@ export type ComponentPublicInstance<
   ): WatchStopHandle
 } & P &
   ShallowUnwrapRef<B> &
-  D &
+  UnwrapNestedRefs<D> &
   ExtractComputedReturns<C> &
   M &
   ComponentCustomProperties
 
-type PublicPropertiesMap = Record<string, (i: ComponentInternalInstance) => any>
+export type PublicPropertiesMap = Record<
+  string,
+  (i: ComponentInternalInstance) => any
+>
 
 /**
  * #2437 In Vue 3, functional components do not have a public instance proxy but
@@ -207,8 +216,11 @@ type PublicPropertiesMap = Record<string, (i: ComponentInternalInstance) => any>
  */
 const getPublicInstance = (
   i: ComponentInternalInstance | null
-): ComponentPublicInstance | null =>
-  i && (i.proxy ? i.proxy : getPublicInstance(i.parent))
+): ComponentPublicInstance | ComponentInternalInstance['exposed'] | null => {
+  if (!i) return null
+  if (isStatefulComponent(i)) return i.exposed ? i.exposed : i.proxy
+  return getPublicInstance(i.parent)
+}
 
 const publicPropertiesMap: PublicPropertiesMap = extend(Object.create(null), {
   $: i => i,
@@ -219,13 +231,17 @@ const publicPropertiesMap: PublicPropertiesMap = extend(Object.create(null), {
   $slots: i => (__DEV__ ? shallowReadonly(i.slots) : i.slots),
   $refs: i => (__DEV__ ? shallowReadonly(i.refs) : i.refs),
   $parent: i => getPublicInstance(i.parent),
-  $root: i => i.root && i.root.proxy,
+  $root: i => getPublicInstance(i.root),
   $emit: i => i.emit,
   $options: i => (__FEATURE_OPTIONS_API__ ? resolveMergedOptions(i) : i.type),
   $forceUpdate: i => () => queueJob(i.update),
   $nextTick: i => nextTick.bind(i.proxy!),
   $watch: i => (__FEATURE_OPTIONS_API__ ? instanceWatch.bind(i) : NOOP)
 } as PublicPropertiesMap)
+
+if (__COMPAT__) {
+  installCompatInstanceProperties(publicPropertiesMap)
+}
 
 const enum AccessTypes {
   SETUP,
@@ -300,7 +316,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       } else if (ctx !== EMPTY_OBJ && hasOwn(ctx, key)) {
         accessCache![key] = AccessTypes.CONTEXT
         return ctx[key]
-      } else if (!__FEATURE_OPTIONS_API__ || !isInBeforeCreate) {
+      } else if (!__FEATURE_OPTIONS_API__ || shouldCacheAccess) {
         accessCache![key] = AccessTypes.OTHER
       }
     }
@@ -329,7 +345,17 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       ((globalProperties = appContext.config.globalProperties),
       hasOwn(globalProperties, key))
     ) {
-      return globalProperties[key]
+      if (__COMPAT__) {
+        const desc = Object.getOwnPropertyDescriptor(globalProperties, key)!
+        if (desc.get) {
+          return desc.get.call(instance.proxy)
+        } else {
+          const val = globalProperties[key]
+          return isFunction(val) ? val.bind(instance.proxy) : val
+        }
+      } else {
+        return globalProperties[key]
+      }
     } else if (
       __DEV__ &&
       currentRenderingInstance &&
@@ -349,7 +375,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
           )} must be accessed via $data because it starts with a reserved ` +
             `character ("$" or "_") and is not proxied on the render context.`
         )
-      } else {
+      } else if (instance === currentRenderingInstance) {
         warn(
           `Property ${JSON.stringify(key)} was accessed during render ` +
             `but is not defined on instance.`
@@ -368,7 +394,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       setupState[key] = value
     } else if (data !== EMPTY_OBJ && hasOwn(data, key)) {
       data[key] = value
-    } else if (key in instance.props) {
+    } else if (hasOwn(instance.props, key)) {
       __DEV__ &&
         warn(
           `Attempting to mutate prop "${key}". Props are readonly.`,
@@ -473,17 +499,6 @@ export function createRenderContext(instance: ComponentInternalInstance) {
       get: () => publicPropertiesMap[key](instance),
       // intercepted by the proxy so no need for implementation,
       // but needed to prevent set errors
-      set: NOOP
-    })
-  })
-
-  // expose global properties
-  const { globalProperties } = instance.appContext.config
-  Object.keys(globalProperties).forEach(key => {
-    Object.defineProperty(target, key, {
-      configurable: true,
-      enumerable: false,
-      get: () => globalProperties[key],
       set: NOOP
     })
   })
