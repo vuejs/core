@@ -99,7 +99,7 @@ function resolveAsset(
 
     const res =
       // local registration
-      // check instance[type] first for components with mixin or extends.
+      // check instance[type] first which is resolved for options API
       resolve(instance[type] || (Component as ComponentOptions)[type], name) ||
       // global registration
       resolve(instance.appContext[type], name)

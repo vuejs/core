@@ -34,16 +34,20 @@ import {
   isRuntimeOnly,
   setupComponent
 } from '../component'
-import { RenderFunction, mergeOptions } from '../componentOptions'
+import {
+  RenderFunction,
+  mergeOptions,
+  internalOptionMergeStrats
+} from '../componentOptions'
 import { ComponentPublicInstance } from '../componentPublicInstance'
 import { devtoolsInitApp, devtoolsUnmountApp } from '../devtools'
 import { Directive } from '../directives'
 import { nextTick } from '../scheduler'
 import { version } from '..'
 import {
-  installLegacyConfigProperties,
-  LegacyConfig,
-  legacyOptionMergeStrats
+  installLegacyConfigWarnings,
+  installLegacyOptionMergeStrats,
+  LegacyConfig
 } from './globalConfig'
 import { LegacyDirective } from './customDirective'
 import {
@@ -230,8 +234,7 @@ export function createCompatVue(
           mergeOptions(
             extend({}, SubVue.options),
             inlineOptions,
-            null,
-            legacyOptionMergeStrats as any
+            internalOptionMergeStrats as any
           ),
           SubVue
         )
@@ -256,8 +259,7 @@ export function createCompatVue(
     SubVue.options = mergeOptions(
       mergeBase,
       extendOptions,
-      null,
-      legacyOptionMergeStrats as any
+      internalOptionMergeStrats as any
     )
 
     SubVue.options._base = SubVue
@@ -304,8 +306,7 @@ export function createCompatVue(
       mergeOptions(
         parent,
         child,
-        vm && vm.$,
-        vm ? undefined : (legacyOptionMergeStrats as any)
+        vm ? undefined : (internalOptionMergeStrats as any)
       ),
     defineReactive
   }
@@ -327,6 +328,7 @@ export function installAppCompatProperties(
   render: RootRenderFunction
 ) {
   installFilterMethod(app, context)
+  installLegacyOptionMergeStrats(app.config)
 
   if (!singletonApp) {
     // this is the call of creating the singleton itself so the rest is
@@ -337,7 +339,7 @@ export function installAppCompatProperties(
   installCompatMount(app, context, render)
   installLegacyAPIs(app)
   applySingletonAppMutations(app)
-  if (__DEV__) installLegacyConfigProperties(app.config)
+  if (__DEV__) installLegacyConfigWarnings(app.config)
 }
 
 function installFilterMethod(app: App, context: AppContext) {
@@ -470,6 +472,7 @@ function installCompatMount(
     }
     setupComponent(instance)
     vnode.component = instance
+    vnode.isCompatRoot = true
 
     // $mount & $destroy
     // these are defined on ctx and picked up by the $mount/$destroy

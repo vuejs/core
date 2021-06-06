@@ -10,7 +10,8 @@ beforeEach(() => {
   toggleDeprecationWarning(true)
   Vue.configureCompat({
     MODE: 2,
-    GLOBAL_MOUNT: 'suppress-warning'
+    GLOBAL_MOUNT: 'suppress-warning',
+    GLOBAL_EXTEND: 'suppress-warning'
   })
 })
 
@@ -46,17 +47,40 @@ test('data deep merge', () => {
     data: () => ({
       foo: {
         bar: 1
-      }
+      },
+      selfData: 3
     }),
-    template: `{{ foo }}`
+    template: `{{ { selfData, foo } }}`
   }).$mount()
 
-  expect(vm.$el.textContent).toBe(JSON.stringify({ baz: 2, bar: 1 }, null, 2))
+  expect(vm.$el.textContent).toBe(
+    JSON.stringify({ selfData: 3, foo: { baz: 2, bar: 1 } }, null, 2)
+  )
   expect(
     (deprecationData[DeprecationTypes.OPTIONS_DATA_MERGE].message as Function)(
       'foo'
     )
   ).toHaveBeenWarned()
+})
+
+// #3852
+test('data deep merge w/ extended constructor', () => {
+  const App = Vue.extend({
+    template: `<pre>{{ { mixinData, selfData } }}</pre>`,
+    mixins: [{ data: () => ({ mixinData: 'mixinData' }) }],
+    data: () => ({ selfData: 'selfData' })
+  })
+  const vm = new App().$mount()
+  expect(vm.$el.textContent).toBe(
+    JSON.stringify(
+      {
+        mixinData: 'mixinData',
+        selfData: 'selfData'
+      },
+      null,
+      2
+    )
+  )
 })
 
 test('beforeDestroy/destroyed', async () => {
@@ -68,6 +92,38 @@ test('beforeDestroy/destroyed', async () => {
     beforeDestroy,
     destroyed
   }
+
+  const vm = new Vue({
+    template: `<child v-if="ok"/>`,
+    data() {
+      return { ok: true }
+    },
+    components: { child }
+  }).$mount() as any
+
+  vm.ok = false
+  await nextTick()
+  expect(beforeDestroy).toHaveBeenCalled()
+  expect(destroyed).toHaveBeenCalled()
+
+  expect(
+    deprecationData[DeprecationTypes.OPTIONS_BEFORE_DESTROY].message
+  ).toHaveBeenWarned()
+
+  expect(
+    deprecationData[DeprecationTypes.OPTIONS_DESTROYED].message
+  ).toHaveBeenWarned()
+})
+
+test('beforeDestroy/destroyed in Vue.extend components', async () => {
+  const beforeDestroy = jest.fn()
+  const destroyed = jest.fn()
+
+  const child = Vue.extend({
+    template: `foo`,
+    beforeDestroy,
+    destroyed
+  })
 
   const vm = new Vue({
     template: `<child v-if="ok"/>`,

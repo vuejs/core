@@ -311,7 +311,13 @@ export function buildSlots(
     if (!hasTemplateSlots) {
       // implicit default slot (on component)
       slotsProperties.push(buildDefaultSlotProperty(undefined, children))
-    } else if (implicitDefaultChildren.length) {
+    } else if (
+      implicitDefaultChildren.length &&
+      // #3766
+      // with whitespace: 'preserve', whitespaces between slots will end up in
+      // implicitDefaultChildren. Ignore if all implicit children are whitespaces.
+      implicitDefaultChildren.some(node => isNonWhitespaceContent(node))
+    ) {
       // implicit default slot (mixed with named slots)
       if (hasNamedDefaultSlot) {
         context.onError(
@@ -396,4 +402,12 @@ function hasForwardedSlots(children: TemplateChildNode[]): boolean {
     }
   }
   return false
+}
+
+function isNonWhitespaceContent(node: TemplateChildNode): boolean {
+  if (node.type !== NodeTypes.TEXT && node.type !== NodeTypes.TEXT_CALL)
+    return true
+  return node.type === NodeTypes.TEXT
+    ? !!node.content.trim()
+    : isNonWhitespaceContent(node.content)
 }

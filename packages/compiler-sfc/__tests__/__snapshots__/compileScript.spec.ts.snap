@@ -361,6 +361,7 @@ export default {
         const count = ref(0)
         const maybe = foo()
         let lett = 1
+        let v = ref(1)
         
 return (_ctx, _cache) => {
   return (_openBlock(), _createBlock(_Fragment, null, [
@@ -372,6 +373,12 @@ return (_ctx, _cache) => {
     }),
     _createVNode(\\"div\\", {
       onClick: _cache[3] || (_cache[3] = $event => (_isRef(lett) ? lett.value = count.value : lett = count.value))
+    }),
+    _createVNode(\\"div\\", {
+      onClick: _cache[4] || (_cache[4] = $event => (_isRef(v) ? v.value += 1 : v += 1))
+    }),
+    _createVNode(\\"div\\", {
+      onClick: _cache[5] || (_cache[5] = $event => (_isRef(v) ? v.value -= 1 : v -= 1))
     })
   ], 64 /* STABLE_FRAGMENT */))
 }
@@ -622,9 +629,11 @@ const c = _ref(__c);
 const d = _ref(__d);
 const f = _ref(__f);
 const g = _ref(__g);
-      console.log(n.value, a.value, c.value, d.value, f.value, g.value)
+      const { foo: __foo } = useSomthing(() => 1);
+const foo = _ref(__foo);
+      console.log(n.value, a.value, c.value, d.value, f.value, g.value, foo.value)
       
-return { n, a, c, d, f, g }
+return { n, a, c, d, f, g, foo }
 }
 
 }"

@@ -243,12 +243,13 @@ export const TeleportImpl = {
       hostRemove(anchor!)
       if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
         for (let i = 0; i < (children as VNode[]).length; i++) {
+          const child = (children as VNode[])[i]
           unmount(
-            (children as VNode[])[i],
+            child,
             parentComponent,
             parentSuspense,
             true,
-            optimized
+            !!child.dynamicChildren
           )
         }
       }

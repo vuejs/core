@@ -76,7 +76,7 @@ export function genCssVarsCode(
   const context = createTransformContext(createRoot([]), {
     prefixIdentifiers: true,
     inline: true,
-    bindingMetadata: bindings
+    bindingMetadata: bindings.__isScriptSetup === false ? undefined : bindings
   })
   const transformed = processExpression(exp, context)
   const transformedString =

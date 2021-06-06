@@ -1,6 +1,6 @@
 {
   "name": "@vue/compiler-core",
-  "version": "3.0.11",
+  "version": "3.1.0-beta.7",
   "description": "@vue/compiler-core",
   "main": "index.js",
   "module": "dist/compiler-core.esm-bundler.js",
@@ -32,7 +32,7 @@
   },
   "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/compiler-core#readme",
   "dependencies": {
-    "@vue/shared": "3.0.11",
+    "@vue/shared": "3.1.0-beta.7",
     "@babel/parser": "^7.12.0",
     "@babel/types": "^7.12.0",
     "estree-walker": "^2.0.1",

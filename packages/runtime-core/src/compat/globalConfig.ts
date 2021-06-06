@@ -1,8 +1,11 @@
-import { extend, isArray } from '@vue/shared'
 import { AppConfig } from '../apiCreateApp'
-import { mergeDataOption } from './data'
-import { DeprecationTypes, warnDeprecation } from './compatConfig'
+import {
+  DeprecationTypes,
+  softAssertCompatEnabled,
+  warnDeprecation
+} from './compatConfig'
 import { isCopyingConfig } from './global'
+import { internalOptionMergeStrats } from '../componentOptions'
 
 // legacy config warnings
 export type LegacyConfig = {
@@ -33,7 +36,7 @@ export type LegacyConfig = {
 }
 
 // dev only
-export function installLegacyConfigProperties(config: AppConfig) {
+export function installLegacyConfigWarnings(config: AppConfig) {
   const legacyConfigOptions: Record<string, DeprecationTypes> = {
     silent: DeprecationTypes.CONFIG_SILENT,
     devtools: DeprecationTypes.CONFIG_DEVTOOLS,
@@ -57,49 +60,25 @@ export function installLegacyConfigProperties(config: AppConfig) {
       }
     })
   })
-
-  // Internal merge strats which are no longer needed in v3, but we need to
-  // expose them because some v2 plugins will reuse these internal strats to
-  // merge their custom options.
-  extend(config.optionMergeStrategies, legacyOptionMergeStrats)
 }
 
-export const legacyOptionMergeStrats = {
-  data: mergeDataOption,
-  beforeCreate: mergeHook,
-  created: mergeHook,
-  beforeMount: mergeHook,
-  mounted: mergeHook,
-  beforeUpdate: mergeHook,
-  updated: mergeHook,
-  beforeDestroy: mergeHook,
-  destroyed: mergeHook,
-  activated: mergeHook,
-  deactivated: mergeHook,
-  errorCaptured: mergeHook,
-  serverPrefetch: mergeHook,
-  // assets
-  components: mergeObjectOptions,
-  directives: mergeObjectOptions,
-  filters: mergeObjectOptions,
-  // objects
-  props: mergeObjectOptions,
-  methods: mergeObjectOptions,
-  inject: mergeObjectOptions,
-  computed: mergeObjectOptions,
-  // watch has special merge behavior in v2, but isn't actually needed in v3.
-  // since we are only exposing these for compat and nobody should be relying
-  // on the watch-specific behavior, just expose the object merge strat.
-  watch: mergeObjectOptions
-}
-
-function mergeHook(
-  to: Function[] | Function | undefined,
-  from: Function | Function[]
-) {
-  return Array.from(new Set([...(isArray(to) ? to : to ? [to] : []), from]))
-}
-
-function mergeObjectOptions(to: Object | undefined, from: Object | undefined) {
-  return to ? extend(extend(Object.create(null), to), from) : from
+export function installLegacyOptionMergeStrats(config: AppConfig) {
+  config.optionMergeStrategies = new Proxy({} as any, {
+    get(target, key) {
+      if (key in target) {
+        return target[key]
+      }
+      if (
+        key in internalOptionMergeStrats &&
+        softAssertCompatEnabled(
+          DeprecationTypes.CONFIG_OPTION_MERGE_STRATS,
+          null
+        )
+      ) {
+        return internalOptionMergeStrats[
+          key as keyof typeof internalOptionMergeStrats
+        ]
+      }
+    }
+  })
 }

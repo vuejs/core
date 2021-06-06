@@ -39,8 +39,10 @@ export function convertLegacyVModelProps(vnode: VNode) {
     // modelValue -> value
     // onUpdate:modelValue -> onModelCompat:input
     const { prop = 'value', event = 'input' } = (type as any).model || {}
-    props[prop] = props.modelValue
-    delete props.modelValue
+    if (prop !== 'modelValue') {
+      props[prop] = props.modelValue
+      delete props.modelValue
+    }
     // important: update dynamic props
     if (dynamicProps) {
       dynamicProps[dynamicProps.indexOf('modelValue')] = prop

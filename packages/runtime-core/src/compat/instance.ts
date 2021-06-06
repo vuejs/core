@@ -35,8 +35,8 @@ import {
   legacyresolveScopedSlots
 } from './renderHelpers'
 import { resolveFilter } from '../helpers/resolveAssets'
-import { resolveMergedOptions } from '../componentOptions'
 import { InternalSlots, Slots } from '../componentSlots'
+import { ContextualRenderFn } from '../componentRenderContext'
 
 export type LegacyPublicInstance = ComponentPublicInstance &
   LegacyPublicProperties
@@ -106,7 +106,7 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
       const res: InternalSlots = {}
       for (const key in i.slots) {
         const fn = i.slots[key]!
-        if (!(fn as any)._nonScoped) {
+        if (!(fn as ContextualRenderFn)._ns /* non-scoped slot */) {
           res[key] = fn
         }
       }
@@ -126,16 +126,6 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
     extend(map, {
       // needed by many libs / render fns
       $vnode: i => i.vnode,
-
-      // inject addtional properties into $options for compat
-      // e.g. vuex needs this.$options.parent
-      $options: i => {
-        let res = resolveMergedOptions(i)
-        if (res === i.type) res = i.type.__merged = extend({}, res)
-        res.parent = i.proxy!.$parent
-        res.propsData = i.vnode.props
-        return res
-      },
 
       // some private properties that are likely accessed...
       _self: i => i.proxy,

@@ -145,22 +145,31 @@ describe('GLOBAL_EXTEND', () => {
   })
 
   it('should not merge nested mixins created with Vue.extend', () => {
+    const a = jest.fn();
+    const b = jest.fn();
+    const c = jest.fn();
+    const d = jest.fn();
     const A = Vue.extend({
-      created: () => {}
+      created: a
     })
     const B = Vue.extend({
       mixins: [A],
-      created: () => {}
+      created: b
     })
     const C = Vue.extend({
       extends: B,
-      created: () => {}
+      created: c
     })
     const D = Vue.extend({
       mixins: [C],
-      created: () => {}
+      created: d,
+      render() { return null },
     })
-    expect(D.options.created!.length).toBe(4)
+    new D().$mount()
+    expect(a.mock.calls.length).toStrictEqual(1)
+    expect(b.mock.calls.length).toStrictEqual(1)
+    expect(c.mock.calls.length).toStrictEqual(1)
+    expect(d.mock.calls.length).toStrictEqual(1)
   })
 
   it('should merge methods', () => {

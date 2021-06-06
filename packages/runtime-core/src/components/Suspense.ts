@@ -1,9 +1,12 @@
 import {
   VNode,
   normalizeVNode,
-  VNodeChild,
   VNodeProps,
-  isSameVNodeType
+  isSameVNodeType,
+  openBlock,
+  closeBlock,
+  currentBlock,
+  createVNode
 } from '../vnode'
 import { isFunction, isArray, ShapeFlags, toNumber } from '@vue/shared'
 import { ComponentInternalInstance, handleSetupResult } from '../component'
@@ -79,7 +82,8 @@ export const SuspenseImpl = {
     }
   },
   hydrate: hydrateSuspense,
-  create: createSuspenseBoundary
+  create: createSuspenseBoundary,
+  normalize: normalizeSuspenseChildren
 }
 
 // Force-casted public typing for h and TSX props inference
@@ -709,31 +713,34 @@ function hydrateSuspense(
   /* eslint-enable no-restricted-globals */
 }
 
-export function normalizeSuspenseChildren(
-  vnode: VNode
-): {
-  content: VNode
-  fallback: VNode
-} {
+function normalizeSuspenseChildren(vnode: VNode) {
   const { shapeFlag, children } = vnode
-  let content: VNode
-  let fallback: VNode
-  if (shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
-    content = normalizeSuspenseSlot((children as Slots).default)
-    fallback = normalizeSuspenseSlot((children as Slots).fallback)
-  } else {
-    content = normalizeSuspenseSlot(children as VNodeChild)
-    fallback = normalizeVNode(null)
-  }
-  return {
-    content,
-    fallback
-  }
+  const isSlotChildren = shapeFlag & ShapeFlags.SLOTS_CHILDREN
+  vnode.ssContent = normalizeSuspenseSlot(
+    isSlotChildren ? (children as Slots).default : children
+  )
+  vnode.ssFallback = isSlotChildren
+    ? normalizeSuspenseSlot((children as Slots).fallback)
+    : createVNode(Comment)
 }
 
 function normalizeSuspenseSlot(s: any) {
+  let block: VNode[] | null | undefined
   if (isFunction(s)) {
+    const isCompiledSlot = s._c
+    if (isCompiledSlot) {
+      // disableTracking: false
+      // allow block tracking for compiled slots
+      // (see ./componentRenderContext.ts)
+      s._d = false
+      openBlock()
+    }
     s = s()
+    if (isCompiledSlot) {
+      s._d = true
+      block = currentBlock
+      closeBlock()
+    }
   }
   if (isArray(s)) {
     const singleChild = filterSingleRoot(s)
@@ -742,7 +749,11 @@ function normalizeSuspenseSlot(s: any) {
     }
     s = singleChild
   }
-  return normalizeVNode(s)
+  s = normalizeVNode(s)
+  if (block) {
+    s.dynamicChildren = block.filter(c => c !== s)
+  }
+  return s
 }
 
 export function queueEffectWithSuspense(

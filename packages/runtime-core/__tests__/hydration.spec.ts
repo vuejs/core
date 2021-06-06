@@ -626,7 +626,7 @@ describe('SSR hydration', () => {
     expect(spy).toHaveBeenCalled()
   })
 
-  test('execute the updateComponent(AsyncComponentWrapper) before the async component is resolved', async () => {
+  test('update async wrapper before resolve', async () => {
     const Comp = {
       render() {
         return h('h1', 'Async component')
@@ -685,6 +685,57 @@ describe('SSR hydration', () => {
     expect(container.innerHTML).toMatchInlineSnapshot(
       `"<!--[-->world<h1>Async component</h1><!--]-->"`
     )
+  })
+
+  // #3787
+  test('unmount async wrapper before load', async () => {
+    let resolve: any
+    const AsyncComp = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r
+        })
+    )
+
+    const show = ref(true)
+    const root = document.createElement('div')
+    root.innerHTML = '<div><div>async</div></div>'
+
+    createSSRApp({
+      render() {
+        return h('div', [show.value ? h(AsyncComp) : h('div', 'hi')])
+      }
+    }).mount(root)
+
+    show.value = false
+    await nextTick()
+    expect(root.innerHTML).toBe('<div><div>hi</div></div>')
+    resolve({})
+  })
+
+  test('unmount async wrapper before load (fragment)', async () => {
+    let resolve: any
+    const AsyncComp = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r
+        })
+    )
+
+    const show = ref(true)
+    const root = document.createElement('div')
+    root.innerHTML = '<div><!--[-->async<!--]--></div>'
+
+    createSSRApp({
+      render() {
+        return h('div', [show.value ? h(AsyncComp) : h('div', 'hi')])
+      }
+    }).mount(root)
+
+    show.value = false
+    await nextTick()
+    expect(root.innerHTML).toBe('<div><div>hi</div></div>')
+    resolve({})
   })
 
   test('elements with camel-case in svg ', () => {
