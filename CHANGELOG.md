@@ -1,3 +1,12 @@
+## [3.1.1](https://github.com/vuejs/vue-next/compare/v3.1.0...v3.1.1) (2021-06-07)
+
+
+### Bug Fixes
+
+* **compat:** update cjs dist file names ([#3893](https://github.com/vuejs/vue-next/issues/3893)) ([434ea30](https://github.com/vuejs/vue-next/commit/434ea30505466bceb433f113d84f4b4ef8866047))
+
+
+
 # [3.1.0](https://github.com/vuejs/vue-next/compare/v3.1.0-beta.7...v3.1.0) (2021-06-07)
 
 
