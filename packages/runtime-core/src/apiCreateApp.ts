@@ -2,7 +2,8 @@ import {
   ConcreteComponent,
   Data,
   validateComponentName,
-  Component
+  Component,
+  ComponentInternalInstance
 } from './component'
 import {
   ComponentOptions,
@@ -46,6 +47,7 @@ export interface App<HostElement = any> {
   _props: Data | null
   _container: HostElement | null
   _context: AppContext
+  _instance: ComponentInternalInstance | null
 
   /**
    * v2 compat only
@@ -186,6 +188,7 @@ export function createAppAPI<HostElement>(
       _props: rootProps,
       _container: null,
       _context: context,
+      _instance: null,
 
       version,
 
@@ -296,6 +299,7 @@ export function createAppAPI<HostElement>(
           ;(rootContainer as any).__vue_app__ = app
 
           if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+            app._instance = vnode.component
             devtoolsInitApp(app, version)
           }
 
@@ -314,6 +318,7 @@ export function createAppAPI<HostElement>(
         if (isMounted) {
           render(null, app._container)
           if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+            app._instance = null
             devtoolsUnmountApp(app)
           }
           delete app._container.__vue_app__
