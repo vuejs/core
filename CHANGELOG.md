@@ -1,3 +1,13 @@
+# [3.1.0](https://github.com/vuejs/vue-next/compare/v3.1.0-beta.7...v3.1.0) (2021-06-07)
+
+
+### Bug Fixes
+
+* **compat:** revert private properties on $options in comapt mode ([ad844cf](https://github.com/vuejs/vue-next/commit/ad844cf1e767137a713f715779969ffb94207c7a)), closes [#3883](https://github.com/vuejs/vue-next/issues/3883)
+* **runtime-core:** fix fragment update inside de-opt slots ([5bce2ae](https://github.com/vuejs/vue-next/commit/5bce2ae723d43f23ccfac961f29b80fc870fba1f)), closes [#3881](https://github.com/vuejs/vue-next/issues/3881)
+
+
+
 # [3.1.0-beta.7](https://github.com/vuejs/vue-next/compare/v3.1.0-beta.6...v3.1.0-beta.7) (2021-06-02)
 
 
