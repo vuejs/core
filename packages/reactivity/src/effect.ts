@@ -103,10 +103,10 @@ function createReactiveEffect<T = any>(
     }
     if (!effectStack.includes(effect)) {
       cleanup(effect)
+      enableTracking()
+      effectStack.push(effect)
+      activeEffect = effect
       try {
-        enableTracking()
-        effectStack.push(effect)
-        activeEffect = effect
         return fn()
       } finally {
         effectStack.pop()
