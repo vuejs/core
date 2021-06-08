@@ -10,6 +10,15 @@ import {
 } from '../src/index'
 import { computed } from '@vue/runtime-dom'
 import { shallowRef, unref, customRef, triggerRef } from '../src/ref'
+import {
+  render,
+  h,
+  nodeOps,
+  serializeInner,
+  nextTick,
+  triggerEvent,
+  TestElement
+} from '@vue/runtime-test'
 
 describe('reactivity/ref', () => {
   it('should hold a value', () => {
@@ -356,17 +365,71 @@ describe('reactivity/ref', () => {
     const done = testFunc()
 
     myRef.value++
-    await Promise.resolve()
+    await nextTick()
     myRef.value++
-    await Promise.resolve()
+    await nextTick()
     myRef.value++
-    await Promise.resolve()
+    await nextTick()
     myRef.value++
-    await Promise.resolve()
+    await nextTick()
     myRef.value++
-    await Promise.resolve()
+    await nextTick()
 
     await done
     expect(results).toEqual([0, 1, 2, 3, 'done'])
+  })
+
+  test('async iterables created from refs should cleanup if the containing component unmounts', async () => {
+    const results: any[] = []
+    const toggle = ref(true)
+    const root = nodeOps.createElement('div')
+
+    let finalize: any
+
+    const finalized = new Promise(resolve => {
+      finalize = resolve
+    })
+
+    const Comp = {
+      setup() {
+        return () => (toggle.value ? h(Child) : null)
+      }
+    }
+
+    const Child = {
+      setup() {
+        const counter = ref(0)
+        ;(async () => {
+          try {
+            for await (const value of counter) {
+              results.push(value)
+            }
+          } finally {
+            results.push('done')
+            finalize()
+          }
+        })()
+
+        return () => h('div', { onClick: () => counter.value++ })
+      }
+    }
+
+    render(h(Comp), root)
+
+    triggerEvent(root.children[0] as TestElement, 'click')
+
+    await nextTick()
+
+    triggerEvent(root.children[0] as TestElement, 'click')
+
+    await nextTick()
+
+    toggle.value = false
+
+    await nextTick()
+
+    await finalized
+
+    expect(results).toEqual([0, 1, 'done'])
   })
 })

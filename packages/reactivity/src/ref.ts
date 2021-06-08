@@ -3,7 +3,7 @@ import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { isArray, isObject, hasChanged } from '@vue/shared'
 import { reactive, isProxy, toRaw, isReactive } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
-import { watch, WatchStopHandle } from '@vue/runtime-core'
+import { watch, WatchStopHandle, onUnmounted } from '@vue/runtime-core'
 
 export declare const RefSymbol: unique symbol
 
@@ -85,6 +85,8 @@ class RefImpl<T> {
  */
 class RefAsyncIterator<T> implements AsyncIterator<T> {
   private _stop: WatchStopHandle
+  private _unmountCleanup: ReturnType<typeof onUnmounted>
+  private _stopped = false
   private _deferreds: ((result: IteratorResult<T, any>) => void)[] = []
   private _values: T[] = [] // HA! semicolon!
 
@@ -106,13 +108,22 @@ class RefAsyncIterator<T> implements AsyncIterator<T> {
         _values.push(value)
       }
     })
+
+    // Ensure that when when a containing component is unmounted,
+    // we clean up any hanging deferreds.
+    this._unmountCleanup = onUnmounted(() => {
+      this.return()
+    })
   }
 
   [Symbol.asyncIterator]() {
     return this
   }
 
-  next(): Promise<IteratorResult<T, any>> {
+  async next(): Promise<IteratorResult<T, any>> {
+    if (this._stopped) {
+      return { value: undefined, done: true }
+    }
     return new Promise(resolve => {
       const { _values, _deferreds } = this
       if (_values.length) {
@@ -123,26 +134,32 @@ class RefAsyncIterator<T> implements AsyncIterator<T> {
     })
   }
 
-  return(): Promise<IteratorResult<T, any>> {
-    // "return" should always be called for clean up of an
-    // async iterator. It's possible that some APIs may forget this important
-    // bit, so if your noticing leaked watchers, that would be why.
-    // But, for example, if an error is thrown, or there's a `break` inside
-    // of a `for await` loop that is looping this iterator, this `return`
-    // method _will_ be called, so we clean up here.
-    this._stop()
+  async return(): Promise<IteratorResult<T, any>> {
+    if (!this._stopped) {
+      this._stopped = true
 
-    // Generally, this should *always* be empty at this point. But just
-    // in case someone is doing something avante garde here, like nexting
-    // promises off of the iterable and awaiting them concurrently,
-    // we will guard against this here.
-    const { _deferreds } = this
-    while (_deferreds.length) {
-      _deferreds.shift()!({ value: undefined, done: true })
+      this._unmountCleanup && this._unmountCleanup()
+
+      // "return" should always be called for clean up of an
+      // async iterator. It's possible that some APIs may forget this important
+      // bit, so if your noticing leaked watchers, that would be why.
+      // But, for example, if an error is thrown, or there's a `break` inside
+      // of a `for await` loop that is looping this iterator, this `return`
+      // method _will_ be called, so we clean up here.
+      this._stop()
+
+      // Generally, this should *always* be empty at this point. But just
+      // in case someone is doing something avante garde here, like nexting
+      // promises off of the iterable and awaiting them concurrently,
+      // we will guard against this here.
+      const { _deferreds } = this
+      while (_deferreds.length) {
+        _deferreds.shift()!({ value: undefined, done: true })
+      }
+
+      this._values.length = 0
     }
-
-    this._values.length = 0
-    return Promise.resolve({ value: undefined, done: true })
+    return { value: undefined, done: true }
   }
 }
 
