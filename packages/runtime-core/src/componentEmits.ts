@@ -153,6 +153,9 @@ export function emit(
     } else if (instance.emitted[handlerName]) {
       return
     }
+    if (!instance.emitted[handlerName]) {
+      instance.emitted[handlerName] = true
+    }
     callWithAsyncErrorHandling(
       onceHandler,
       instance,
