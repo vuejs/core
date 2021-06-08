@@ -336,4 +336,37 @@ describe('reactivity/ref', () => {
     _trigger!()
     expect(dummy).toBe(2)
   })
+
+  test('ref as an async iterable', async () => {
+    let myRef = ref(0)
+
+    const results: any[] = []
+
+    const testFunc = async () => {
+      for await (const value of myRef) {
+        console.log
+        results.push(value)
+        if (value === 3) {
+          break
+        }
+      }
+      results.push('done')
+    }
+
+    const done = testFunc()
+
+    myRef.value++
+    await Promise.resolve()
+    myRef.value++
+    await Promise.resolve()
+    myRef.value++
+    await Promise.resolve()
+    myRef.value++
+    await Promise.resolve()
+    myRef.value++
+    await Promise.resolve()
+
+    await done
+    expect(results).toEqual([0, 1, 2, 3, 'done'])
+  })
 })

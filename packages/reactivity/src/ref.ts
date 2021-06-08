@@ -3,10 +3,11 @@ import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { isArray, isObject, hasChanged } from '@vue/shared'
 import { reactive, isProxy, toRaw, isReactive } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
+import { watch, WatchStopHandle } from '@vue/runtime-core'
 
 export declare const RefSymbol: unique symbol
 
-export interface Ref<T = any> {
+export interface Ref<T = any> extends AsyncIterable<T> {
   value: T
   /**
    * Type differentiator only.
@@ -71,6 +72,77 @@ class RefImpl<T> {
       this._value = this._shallow ? newVal : convert(newVal)
       trigger(toRaw(this), TriggerOpTypes.SET, 'value', newVal)
     }
+  }
+
+  [Symbol.asyncIterator](): AsyncIterator<T> {
+    return new RefAsyncIterator(this)
+  }
+}
+
+/**
+ * Converts a RefImpl instance into an AyncIterator that can
+ * be used in a `for await` loop, or with other libraries like RxJS.
+ */
+class RefAsyncIterator<T> implements AsyncIterator<T> {
+  private _stop: WatchStopHandle
+  private _deferreds: ((result: IteratorResult<T, any>) => void)[] = []
+  private _values: T[] = [] // HA! semicolon!
+
+  constructor(private _ref: RefImpl<T>) {
+    // Be sure that we prime this with the initial value
+    // so it is not missed by the consumer.
+    this._values.push(_ref.value)
+
+    // Start watching the ref for changes.
+    this._stop = watch(this._ref, () => {
+      const { _deferreds, _values } = this
+      const value = this._ref.value
+
+      if (_deferreds.length) {
+        // If we have a promise waiting, resolve it.
+        _deferreds.shift()!({ value, done: false })
+      } else {
+        // Otherwise buffer it for incoming `next()` requests
+        _values.push(value)
+      }
+    })
+  }
+
+  [Symbol.asyncIterator]() {
+    return this
+  }
+
+  next(): Promise<IteratorResult<T, any>> {
+    return new Promise(resolve => {
+      const { _values, _deferreds } = this
+      if (_values.length) {
+        resolve({ value: _values.shift()!, done: false })
+      } else {
+        _deferreds.push(resolve)
+      }
+    })
+  }
+
+  return(): Promise<IteratorResult<T, any>> {
+    // "return" should always be called for clean up of an
+    // async iterator. It's possible that some APIs may forget this important
+    // bit, so if your noticing leaked watchers, that would be why.
+    // But, for example, if an error is thrown, or there's a `break` inside
+    // of a `for await` loop that is looping this iterator, this `return`
+    // method _will_ be called, so we clean up here.
+    this._stop()
+
+    // Generally, this should *always* be empty at this point. But just
+    // in case someone is doing something avante garde here, like nexting
+    // promises off of the iterable and awaiting them concurrently,
+    // we will guard against this here.
+    const { _deferreds } = this
+    while (_deferreds.length) {
+      _deferreds.shift()!({ value: undefined, done: true })
+    }
+
+    this._values.length = 0
+    return Promise.resolve({ value: undefined, done: true })
   }
 }
 
