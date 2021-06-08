@@ -305,10 +305,10 @@ function createBlock(
   node.props.forEach(p => {
     if (p.type === NodeTypes.ATTRIBUTE) {
       attrs[p.name] = p.value ? p.value.content || true : true
-      if (p.name === 'lang') {
-        block.lang = p.value && p.value.content
-      } else if (p.name === 'src') {
-        block.src = p.value && p.value.content
+      if (p.name === 'lang' && p.value) {
+        block.lang = p.value.content
+      } else if (p.name === 'src' && p.value) {
+        block.src = p.value.content
       } else if (type === 'style') {
         if (p.name === 'scoped') {
           ;(block as SFCStyleBlock).scoped = true
