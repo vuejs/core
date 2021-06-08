@@ -149,10 +149,11 @@ export function emit(
   const onceHandler = props[handlerName + `Once`]
   if (onceHandler) {
     if (!instance.emitted) {
-      ;(instance.emitted = {} as Record<string, boolean>)[handlerName] = true
+      instance.emitted = {} as Record<any, boolean>
     } else if (instance.emitted[handlerName]) {
       return
     }
+    instance.emitted[handlerName] = true
     callWithAsyncErrorHandling(
       onceHandler,
       instance,
