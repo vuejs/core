@@ -56,14 +56,27 @@ const nonIdentifierRE = /^\d|[^\$\w]/
 export const isSimpleIdentifier = (name: string): boolean =>
   !nonIdentifierRE.test(name)
 
-const memberExpRE = /^[A-Za-z_$\xA0-\uFFFF][\w$\xA0-\uFFFF]*(?:\s*\.\s*[A-Za-z_$\xA0-\uFFFF][\w$\xA0-\uFFFF]*|\[(.+)\])*$/
-export const isMemberExpression = (path: string): boolean => {
+const createMemberExpRE = (re: string) =>
+  new RegExp(
+    '^[A-Za-z_$\\xA0-\\uFFFF][\\w$\\xA0-\\uFFFF]*(?:\\s*\\.\\s*[A-Za-z_$\\xA0-\\uFFFF][\\w$\\xA0-\\uFFFF]*|\\[' +
+      re +
+      '\\])*$'
+  )
+
+const matchMemberExpression = (path: string, re: RegExp): boolean => {
   if (!path) return false
-  const matched = memberExpRE.exec(path.trim())
+  const matched = re.exec(path.trim())
   if (!matched) return false
   if (!matched[1]) return true
   if (!/[\[\]]/.test(matched[1])) return true
-  return isMemberExpression(matched[1].trim())
+  return matchMemberExpression(matched[1].trim(), re)
+}
+
+export const isMemberExpression = (path: string): boolean => {
+  return (
+    matchMemberExpression(path, createMemberExpRE('([^\\]]+)')) ||
+    matchMemberExpression(path, createMemberExpRE('(.+)'))
+  )
 }
 
 export function getInnerRange(

@@ -81,6 +81,8 @@ test('isMemberExpression', () => {
   expect(isMemberExpression('obj[arr[ret[bar]]]')).toBe(true)
   expect(isMemberExpression('obj[arr[ret[bar]]].baz')).toBe(true)
   expect(isMemberExpression('obj[1 + 1]')).toBe(true)
+  expect(isMemberExpression('obj[1][2]')).toBe(true)
+  expect(isMemberExpression('obj[1][2].foo[3].bar.baz')).toBe(true)
   // should warning
   expect(isMemberExpression('obj[foo')).toBe(false)
   expect(isMemberExpression('objfoo]')).toBe(false)
