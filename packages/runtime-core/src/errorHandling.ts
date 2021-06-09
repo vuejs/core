@@ -62,15 +62,13 @@ export function callWithErrorHandling(
   fn: Function,
   instance: ComponentInternalInstance | null,
   type: ErrorTypes,
-  args?: unknown[]
+  args: unknown[] = []
 ) {
-  let res
   try {
-    res = args ? fn(...args) : fn()
+    return fn(...args)
   } catch (err) {
     handleError(err, instance, type)
   }
-  return res
 }
 
 export function callWithAsyncErrorHandling(
