@@ -141,4 +141,32 @@ describe('api: expose', () => {
     expect(childRef.value).toBeTruthy()
     expect(childRef.value.foo).toBe(1)
   })
+
+  test('with $parent/$root', () => {
+    const Child = defineComponent({
+      render() {
+        expect((this.$parent! as any).foo).toBe(1)
+        expect((this.$parent! as any).bar).toBe(undefined)
+        expect((this.$root! as any).foo).toBe(1)
+        expect((this.$root! as any).bar).toBe(undefined)
+      }
+    })
+
+    const Parent = defineComponent({
+      expose: [],
+      setup(_, { expose }) {
+        expose({
+          foo: 1
+        })
+        return {
+          bar: 2
+        }
+      },
+      render() {
+        return h(Child)
+      }
+    })
+    const root = nodeOps.createElement('div')
+    render(h(Parent), root)
+  })
 })

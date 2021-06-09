@@ -12,8 +12,8 @@ export interface SSRCompilerError extends CompilerError {
 export function createSSRCompilerError(
   code: SSRErrorCodes,
   loc?: SourceLocation
-): SSRCompilerError {
-  return createCompilerError(code, loc, SSRErrorMessages)
+) {
+  return createCompilerError(code, loc, SSRErrorMessages) as SSRCompilerError
 }
 
 export const enum SSRErrorCodes {

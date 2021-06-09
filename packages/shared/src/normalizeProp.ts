@@ -5,7 +5,7 @@ export type NormalizedStyle = Record<string, string | number>
 
 export function normalizeStyle(value: unknown): NormalizedStyle | undefined {
   if (isArray(value)) {
-    const res: Record<string, string | number> = {}
+    const res: NormalizedStyle = {}
     for (let i = 0; i < value.length; i++) {
       const item = value[i]
       const normalized = normalizeStyle(
@@ -62,7 +62,10 @@ export function normalizeClass(value: unknown): string {
     res = value
   } else if (isArray(value)) {
     for (let i = 0; i < value.length; i++) {
-      res += normalizeClass(value[i]) + ' '
+      const normalized = normalizeClass(value[i])
+      if (normalized) {
+        res += normalized + ' '
+      }
     }
   } else if (isObject(value)) {
     for (const name in value) {

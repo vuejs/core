@@ -1,7 +1,8 @@
 import {
   ComponentInternalInstance,
   FunctionalComponent,
-  Data
+  Data,
+  getComponentName
 } from './component'
 import {
   VNode,
@@ -10,7 +11,8 @@ import {
   Comment,
   cloneVNode,
   VNodeArrayChildren,
-  isVNode
+  isVNode,
+  blockStack
 } from './vnode'
 import { handleError, ErrorCodes } from './errorHandling'
 import { PatchFlags, ShapeFlags, isOn, isModelListener } from '@vue/shared'
@@ -18,18 +20,12 @@ import { warn } from './warning'
 import { isHmrUpdating } from './hmr'
 import { NormalizedProps } from './componentProps'
 import { isEmitListener } from './componentEmits'
-
-/**
- * mark the current rendering instance for asset resolution (e.g.
- * resolveComponent, resolveDirective) during render
- */
-export let currentRenderingInstance: ComponentInternalInstance | null = null
-
-export function setCurrentRenderingInstance(
-  instance: ComponentInternalInstance | null
-) {
-  currentRenderingInstance = instance
-}
+import { setCurrentRenderingInstance } from './componentRenderContext'
+import {
+  DeprecationTypes,
+  isCompatEnabled,
+  warnDeprecation
+} from './compat/compatConfig'
 
 /**
  * dev only flag to track whether $attrs was used during render.
@@ -59,11 +55,12 @@ export function renderComponentRoot(
     renderCache,
     data,
     setupState,
-    ctx
+    ctx,
+    inheritAttrs
   } = instance
 
   let result
-  currentRenderingInstance = instance
+  const prev = setCurrentRenderingInstance(instance)
   if (__DEV__) {
     accessedAttrs = false
   }
@@ -119,11 +116,15 @@ export function renderComponentRoot(
     // to have comments along side the root element which makes it a fragment
     let root = result
     let setRoot: ((root: VNode) => void) | undefined = undefined
-    if (__DEV__ && result.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT) {
+    if (
+      __DEV__ &&
+      result.patchFlag > 0 &&
+      result.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
+    ) {
       ;[root, setRoot] = getChildRoot(result)
     }
 
-    if (Component.inheritAttrs !== false && fallthroughAttrs) {
+    if (fallthroughAttrs && inheritAttrs !== false) {
       const keys = Object.keys(fallthroughAttrs)
       const { shapeFlag } = root
       if (keys.length) {
@@ -181,6 +182,29 @@ export function renderComponentRoot(
       }
     }
 
+    if (
+      __COMPAT__ &&
+      isCompatEnabled(DeprecationTypes.INSTANCE_ATTRS_CLASS_STYLE, instance) &&
+      vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT &&
+      (root.shapeFlag & ShapeFlags.ELEMENT ||
+        root.shapeFlag & ShapeFlags.COMPONENT)
+    ) {
+      const { class: cls, style } = vnode.props || {}
+      if (cls || style) {
+        if (__DEV__ && inheritAttrs === false) {
+          warnDeprecation(
+            DeprecationTypes.INSTANCE_ATTRS_CLASS_STYLE,
+            instance,
+            getComponentName(instance.type)
+          )
+        }
+        root = cloneVNode(root, {
+          class: cls,
+          style: style
+        })
+      }
+    }
+
     // inherit directives
     if (vnode.dirs) {
       if (__DEV__ && !isElementRoot(root)) {
@@ -208,11 +232,12 @@ export function renderComponentRoot(
       result = root
     }
   } catch (err) {
+    blockStack.length = 0
     handleError(err, instance, ErrorCodes.RENDER_FUNCTION)
     result = createVNode(Comment)
   }
-  currentRenderingInstance = null
 
+  setCurrentRenderingInstance(prev)
   return result
 }
 

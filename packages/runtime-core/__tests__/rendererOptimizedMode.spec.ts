@@ -1,7 +1,9 @@
 import {
   h,
   Fragment,
+  Teleport,
   createVNode,
+  createCommentVNode,
   openBlock,
   createBlock,
   render,
@@ -15,9 +17,15 @@ import {
   defineComponent,
   withCtx,
   renderSlot,
-  onBeforeUnmount
+  onBeforeUnmount,
+  createTextVNode,
+  SetupContext,
+  createApp,
+  FunctionalComponent,
+  renderList
 } from '@vue/runtime-test'
 import { PatchFlags, SlotFlags } from '@vue/shared'
+import { SuspenseImpl } from '../src/components/Suspense'
 
 describe('renderer: optimized mode', () => {
   let root: TestElement
@@ -516,5 +524,361 @@ describe('renderer: optimized mode', () => {
     render(null, root)
     expect(spyA).toHaveBeenCalledTimes(1)
     expect(spyB).toHaveBeenCalledTimes(1)
+  })
+
+  // #2893
+  test('manually rendering the optimized slots should allow subsequent updates to exit the optimized mode correctly', async () => {
+    const state = ref(0)
+
+    const CompA = {
+      setup(props: any, { slots }: SetupContext) {
+        return () => {
+          return (
+            openBlock(),
+            createBlock('div', null, [renderSlot(slots, 'default')])
+          )
+        }
+      }
+    }
+
+    const Wrapper = {
+      setup(props: any, { slots }: SetupContext) {
+        // use the manually written render function to rendering the optimized slots,
+        // which should make subsequent updates exit the optimized mode correctly
+        return () => {
+          return slots.default!()[state.value]
+        }
+      }
+    }
+
+    const app = createApp({
+      setup() {
+        return () => {
+          return (
+            openBlock(),
+            createBlock(Wrapper, null, {
+              default: withCtx(() => [
+                createVNode(CompA, null, {
+                  default: withCtx(() => [createTextVNode('Hello')]),
+                  _: 1 /* STABLE */
+                }),
+                createVNode(CompA, null, {
+                  default: withCtx(() => [createTextVNode('World')]),
+                  _: 1 /* STABLE */
+                })
+              ]),
+              _: 1 /* STABLE */
+            })
+          )
+        }
+      }
+    })
+
+    app.mount(root)
+    expect(inner(root)).toBe('<div>Hello</div>')
+
+    state.value = 1
+    await nextTick()
+    expect(inner(root)).toBe('<div>World</div>')
+  })
+
+  //#3623
+  test('nested teleport unmount need exit the optimization mode', () => {
+    const target = nodeOps.createElement('div')
+    const root = nodeOps.createElement('div')
+
+    render(
+      (openBlock(),
+      createBlock('div', null, [
+        (openBlock(),
+        createBlock(
+          Teleport as any,
+          {
+            to: target
+          },
+          [
+            createVNode('div', null, [
+              (openBlock(),
+              createBlock(
+                Teleport as any,
+                {
+                  to: target
+                },
+                [createVNode('div', null, 'foo')]
+              ))
+            ])
+          ]
+        ))
+      ])),
+      root
+    )
+    expect(inner(target)).toMatchInlineSnapshot(
+      `"<div><!--teleport start--><!--teleport end--></div><div>foo</div>"`
+    )
+    expect(inner(root)).toMatchInlineSnapshot(
+      `"<div><!--teleport start--><!--teleport end--></div>"`
+    )
+
+    render(null, root)
+    expect(inner(target)).toBe('')
+  })
+
+  // #3548
+  test('should not track dynamic children when the user calls a compiled slot inside template expression', () => {
+    const Comp = {
+      setup(props: any, { slots }: SetupContext) {
+        return () => {
+          return (
+            openBlock(),
+            (block = createBlock('section', null, [
+              renderSlot(slots, 'default')
+            ]))
+          )
+        }
+      }
+    }
+
+    let dynamicVNode: VNode
+    const Wrapper = {
+      setup(props: any, { slots }: SetupContext) {
+        return () => {
+          return (
+            openBlock(),
+            createBlock(Comp, null, {
+              default: withCtx(() => {
+                return [
+                  (dynamicVNode = createVNode(
+                    'div',
+                    {
+                      class: {
+                        foo: !!slots.default!()
+                      }
+                    },
+                    null,
+                    PatchFlags.CLASS
+                  ))
+                ]
+              }),
+              _: 1
+            })
+          )
+        }
+      }
+    }
+    const app = createApp({
+      render() {
+        return (
+          openBlock(),
+          createBlock(Wrapper, null, {
+            default: withCtx(() => {
+              return [createVNode({}) /* component */]
+            }),
+            _: 1
+          })
+        )
+      }
+    })
+
+    app.mount(root)
+    expect(inner(root)).toBe('<section><div class="foo"></div></section>')
+    /**
+     * Block Tree:
+     *  - block(div)
+     *   - block(Fragment): renderSlots()
+     *    - dynamicVNode
+     */
+    expect(block!.dynamicChildren!.length).toBe(1)
+    expect(block!.dynamicChildren![0].dynamicChildren!.length).toBe(1)
+    expect(block!.dynamicChildren![0].dynamicChildren![0]).toEqual(
+      dynamicVNode!
+    )
+  })
+
+  // 3569
+  test('should force bailout when the user manually calls the slot function', async () => {
+    const index = ref(0)
+    const Foo = {
+      setup(props: any, { slots }: SetupContext) {
+        return () => {
+          return slots.default!()[index.value]
+        }
+      }
+    }
+
+    const app = createApp({
+      setup() {
+        return () => {
+          return (
+            openBlock(),
+            createBlock(Foo, null, {
+              default: withCtx(() => [
+                true
+                  ? (openBlock(), createBlock('p', { key: 0 }, '1'))
+                  : createCommentVNode('v-if', true),
+                true
+                  ? (openBlock(), createBlock('p', { key: 0 }, '2'))
+                  : createCommentVNode('v-if', true)
+              ]),
+              _: 1 /* STABLE */
+            })
+          )
+        }
+      }
+    })
+
+    app.mount(root)
+    expect(inner(root)).toBe('<p>1</p>')
+
+    index.value = 1
+    await nextTick()
+    expect(inner(root)).toBe('<p>2</p>')
+
+    index.value = 0
+    await nextTick()
+    expect(inner(root)).toBe('<p>1</p>')
+  })
+
+  // #3779
+  test('treat slots manually written by the user as dynamic', async () => {
+    const Middle = {
+      setup(props: any, { slots }: any) {
+        return slots.default!
+      }
+    }
+
+    const Comp = {
+      setup(props: any, { slots }: any) {
+        return () => {
+          return (
+            openBlock(),
+            createBlock('div', null, [
+              createVNode(Middle, null, {
+                default: withCtx(
+                  () => [
+                    createVNode('div', null, [renderSlot(slots, 'default')])
+                  ],
+                  undefined
+                ),
+                _: 3 /* FORWARDED */
+              })
+            ])
+          )
+        }
+      }
+    }
+
+    const loading = ref(false)
+    const app = createApp({
+      setup() {
+        return () => {
+          // important: write the slot content here
+          const content = h('span', loading.value ? 'loading' : 'loaded')
+          return h(Comp, null, {
+            default: () => content
+          })
+        }
+      }
+    })
+
+    app.mount(root)
+    expect(inner(root)).toBe('<div><div><span>loaded</span></div></div>')
+
+    loading.value = true
+    await nextTick()
+    expect(inner(root)).toBe('<div><div><span>loading</span></div></div>')
+  })
+
+  // #3828
+  test('patch Suspense in optimized mode w/ nested dynamic nodes', async () => {
+    const show = ref(false)
+
+    const app = createApp({
+      render() {
+        return (
+          openBlock(),
+          createBlock(
+            Fragment,
+            null,
+            [
+              (openBlock(),
+              createBlock(SuspenseImpl, null, {
+                default: withCtx(() => [
+                  createVNode('div', null, [
+                    createVNode('div', null, show.value, PatchFlags.TEXT)
+                  ])
+                ]),
+                _: SlotFlags.STABLE
+              }))
+            ],
+            PatchFlags.STABLE_FRAGMENT
+          )
+        )
+      }
+    })
+
+    app.mount(root)
+    expect(inner(root)).toBe('<div><div>false</div></div>')
+
+    show.value = true
+    await nextTick()
+    expect(inner(root)).toBe('<div><div>true</div></div>')
+  })
+
+  // #3881
+  // root cause: fragment inside a compiled slot passed to component which
+  // programmatically invokes the slot. The entire slot should de-opt but
+  // the fragment was incorretly put in optimized mode which causes it to skip
+  // updates for its inner components.
+  test('fragments inside programmatically invoked compiled slot should de-opt properly', async () => {
+    const Parent: FunctionalComponent = (_, { slots }) => slots.default!()
+    const Dummy = () => 'dummy'
+
+    const toggle = ref(true)
+    const force = ref(0)
+
+    const app = createApp({
+      render() {
+        if (!toggle.value) {
+          return null
+        }
+        return h(
+          Parent,
+          { n: force.value },
+          {
+            default: withCtx(
+              () => [
+                createVNode('ul', null, [
+                  (openBlock(),
+                  createBlock(
+                    Fragment,
+                    null,
+                    renderList(1, item => {
+                      return createVNode('li', null, [createVNode(Dummy)])
+                    }),
+                    64 /* STABLE_FRAGMENT */
+                  ))
+                ])
+              ],
+              undefined,
+              true
+            ),
+            _: 1 /* STABLE */
+          }
+        )
+      }
+    })
+
+    app.mount(root)
+
+    // force a patch
+    force.value++
+    await nextTick()
+    expect(inner(root)).toBe(`<ul><li>dummy</li></ul>`)
+
+    // unmount
+    toggle.value = false
+    await nextTick()
+    // should successfully unmount without error
+    expect(inner(root)).toBe(`<!---->`)
   })
 })

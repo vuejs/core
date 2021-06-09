@@ -141,6 +141,18 @@ const myEmit = defineEmit(['foo', 'bar'])
       )
     })
 
+    // #2740
+    test('should allow defineProps/Emit at the start of imports', () => {
+      assertCode(
+        compile(`<script setup>
+      import { defineProps, defineEmit, ref } from 'vue'
+      defineProps(['foo'])
+      defineEmit(['bar'])
+      const r = ref(0)
+      </script>`).content
+      )
+    })
+
     test('dedupe between user & helper', () => {
       const { content } = compile(`
       <script setup>
@@ -288,11 +300,14 @@ const myEmit = defineEmit(['foo', 'bar'])
         const count = ref(0)
         const maybe = foo()
         let lett = 1
+        let v = ref(1)
         </script>
         <template>
           <div @click="count = 1"/>
           <div @click="maybe = count"/>
           <div @click="lett = count"/>
+          <div @click="v += 1"/>
+          <div @click="v -= 1"/>
         </template>
         `,
         { inlineTemplate: true }
@@ -305,6 +320,8 @@ const myEmit = defineEmit(['foo', 'bar'])
       expect(content).toMatch(
         `_isRef(lett) ? lett.value = count.value : lett = count.value`
       )
+      expect(content).toMatch(`_isRef(v) ? v.value += 1 : v += 1`)
+      expect(content).toMatch(`_isRef(v) ? v.value -= 1 : v -= 1`)
       assertCode(content)
     })
 
@@ -390,6 +407,32 @@ const myEmit = defineEmit(['foo', 'bar'])
       expect(content).toMatch(`\n  __ssrInlineRender: true,\n`)
       expect(content).toMatch(`return (_ctx, _push`)
       expect(content).toMatch(`ssrInterpolate`)
+      assertCode(content)
+    })
+
+    // _withId is only generated for backwards compat and is a noop when called
+    // in module scope.
+    // when inside setup(), currentInstance will be non-null and _withId will
+    // no longer be noop and cause scopeId errors.
+    // TODO: this test should no longer be necessary if we remove _withId
+    // codegen in 3.1
+    test('should not wrap render fn with withId when having scoped styles', async () => {
+      const { content } = compile(
+        `
+        <script setup>
+        const msg = 1
+        </script>
+        <template><h1>{{ msg }}</h1></template>
+        <style scoped>
+        h1 { color: red; }
+        </style>
+        `,
+        {
+          inlineTemplate: true
+        }
+      )
+      expect(content).toMatch(`return (_ctx, _cache`)
+      expect(content).not.toMatch(`_withId(`)
       assertCode(content)
     })
   })
@@ -520,6 +563,18 @@ const emit = defineEmit(['a', 'b'])
 
     test('defineEmit w/ type (union)', () => {
       const type = `((e: 'foo' | 'bar') => void) | ((e: 'baz', id: number) => void)`
+      expect(() =>
+        compile(`
+      <script setup lang="ts">
+      import { defineEmit } from 'vue'
+      const emit = defineEmit<${type}>()
+      </script>
+      `)
+      ).toThrow()
+    })
+
+    test('defineEmit w/ type (type literal w/ call signatures)', () => {
+      const type = `{(e: 'foo' | 'bar'): void; (e: 'baz', id: number): void;}`
       const { content } = compile(`
       <script setup lang="ts">
       import { defineEmit } from 'vue'
@@ -696,14 +751,44 @@ const emit = defineEmit(['a', 'b'])
       assertCode(content)
     })
 
+    test('should not rewrite scope variable', () => {
+      const { content } = compile(`
+      <script setup>
+        ref: a = 1
+        ref: b = 1
+        ref: d = 1
+        const e = 1
+        function test() {
+          const a = 2
+          console.log(a)
+          console.log(b)
+          let c = { c: 3 }
+          console.log(c)
+          let $d
+          console.log($d)
+          console.log(d)
+          console.log(e)
+        }
+      </script>`)
+      expect(content).toMatch('console.log(a)')
+      expect(content).toMatch('console.log(b.value)')
+      expect(content).toMatch('console.log(c)')
+      expect(content).toMatch('console.log($d)')
+      expect(content).toMatch('console.log(d.value)')
+      expect(content).toMatch('console.log(e)')
+      assertCode(content)
+    })
+
     test('object destructure', () => {
       const { content, bindings } = compile(`<script setup>
       ref: n = 1, ({ a, b: c, d = 1, e: f = 2, ...g } = useFoo())
-      console.log(n, a, c, d, f, g)
+      ref: ({ foo } = useSomthing(() => 1));
+      console.log(n, a, c, d, f, g, foo)
       </script>`)
       expect(content).toMatch(
         `const n = _ref(1), { a: __a, b: __c, d: __d = 1, e: __f = 2, ...__g } = useFoo()`
       )
+      expect(content).toMatch(`const { foo: __foo } = useSomthing(() => 1)`)
       expect(content).toMatch(`\nconst a = _ref(__a);`)
       expect(content).not.toMatch(`\nconst b = _ref(__b);`)
       expect(content).toMatch(`\nconst c = _ref(__c);`)
@@ -711,17 +796,19 @@ const emit = defineEmit(['a', 'b'])
       expect(content).not.toMatch(`\nconst e = _ref(__e);`)
       expect(content).toMatch(`\nconst f = _ref(__f);`)
       expect(content).toMatch(`\nconst g = _ref(__g);`)
+      expect(content).toMatch(`\nconst foo = _ref(__foo);`)
       expect(content).toMatch(
-        `console.log(n.value, a.value, c.value, d.value, f.value, g.value)`
+        `console.log(n.value, a.value, c.value, d.value, f.value, g.value, foo.value)`
       )
-      expect(content).toMatch(`return { n, a, c, d, f, g }`)
+      expect(content).toMatch(`return { n, a, c, d, f, g, foo }`)
       expect(bindings).toStrictEqual({
         n: BindingTypes.SETUP_REF,
         a: BindingTypes.SETUP_REF,
         c: BindingTypes.SETUP_REF,
         d: BindingTypes.SETUP_REF,
         f: BindingTypes.SETUP_REF,
-        g: BindingTypes.SETUP_REF
+        g: BindingTypes.SETUP_REF,
+        foo: BindingTypes.SETUP_REF
       })
       assertCode(content)
     })
@@ -922,6 +1009,7 @@ describe('SFC analyze <script> bindings', () => {
 
     expect(scriptAst).toBeDefined()
   })
+
   it('recognizes props array declaration', () => {
     const { bindings } = compile(`
       <script>
@@ -934,6 +1022,7 @@ describe('SFC analyze <script> bindings', () => {
       foo: BindingTypes.PROPS,
       bar: BindingTypes.PROPS
     })
+    expect(bindings!.__isScriptSetup).toBe(false)
   })
 
   it('recognizes props object declaration', () => {
@@ -957,6 +1046,7 @@ describe('SFC analyze <script> bindings', () => {
       baz: BindingTypes.PROPS,
       qux: BindingTypes.PROPS
     })
+    expect(bindings!.__isScriptSetup).toBe(false)
   })
 
   it('recognizes setup return', () => {
@@ -977,6 +1067,7 @@ describe('SFC analyze <script> bindings', () => {
       foo: BindingTypes.SETUP_MAYBE_REF,
       bar: BindingTypes.SETUP_MAYBE_REF
     })
+    expect(bindings!.__isScriptSetup).toBe(false)
   })
 
   it('recognizes async setup return', () => {
@@ -997,6 +1088,7 @@ describe('SFC analyze <script> bindings', () => {
       foo: BindingTypes.SETUP_MAYBE_REF,
       bar: BindingTypes.SETUP_MAYBE_REF
     })
+    expect(bindings!.__isScriptSetup).toBe(false)
   })
 
   it('recognizes data return', () => {

@@ -56,10 +56,14 @@ const nonIdentifierRE = /^\d|[^\$\w]/
 export const isSimpleIdentifier = (name: string): boolean =>
   !nonIdentifierRE.test(name)
 
-const memberExpRE = /^[A-Za-z_$][\w$]*(?:\s*\.\s*[A-Za-z_$][\w$]*|\[[^\]]+\])*$/
+const memberExpRE = /^[A-Za-z_$\xA0-\uFFFF][\w$\xA0-\uFFFF]*(?:\s*\.\s*[A-Za-z_$\xA0-\uFFFF][\w$\xA0-\uFFFF]*|\[(.+)\])*$/
 export const isMemberExpression = (path: string): boolean => {
   if (!path) return false
-  return memberExpRE.test(path.trim())
+  const matched = memberExpRE.exec(path.trim())
+  if (!matched) return false
+  if (!matched[1]) return true
+  if (!/[\[\]]/.test(matched[1])) return true
+  return isMemberExpression(matched[1].trim())
 }
 
 export function getInnerRange(
@@ -271,7 +275,7 @@ export function injectProp(
 
 export function toValidAssetId(
   name: string,
-  type: 'component' | 'directive'
+  type: 'component' | 'directive' | 'filter'
 ): string {
   return `_${type}_${name.replace(/[^\w]/g, '_')}`
 }

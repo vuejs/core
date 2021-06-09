@@ -1,7 +1,7 @@
 import { SourceLocation } from './ast'
 
 export interface CompilerError extends SyntaxError {
-  code: number
+  code: number | string
   loc?: SourceLocation
 }
 
@@ -11,6 +11,10 @@ export interface CoreCompilerError extends CompilerError {
 
 export function defaultOnError(error: CompilerError) {
   throw error
+}
+
+export function defaultOnWarn(msg: CompilerError) {
+  __DEV__ && console.warn(`[Vue warn] ${msg.message}`)
 }
 
 export function createCompilerError<T extends number>(
@@ -93,7 +97,7 @@ export const enum ErrorCodes {
   __EXTEND_POINT__
 }
 
-export const errorMessages: { [code: number]: string } = {
+export const errorMessages: Record<ErrorCodes, string> = {
   // parse errors
   [ErrorCodes.ABRUPT_CLOSING_OF_EMPTY_COMMENT]: 'Illegal comment.',
   [ErrorCodes.CDATA_IN_HTML_CONTENT]:
@@ -124,6 +128,7 @@ export const errorMessages: { [code: number]: string } = {
     "Attribute name cannot start with '='.",
   [ErrorCodes.UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME]:
     "'<?' is allowed only in XML context.",
+  [ErrorCodes.UNEXPECTED_NULL_CHARACTER]: `Unexpected null cahracter.`,
   [ErrorCodes.UNEXPECTED_SOLIDUS_IN_TAG]: "Illegal '/' in tags.",
 
   // Vue-specific parse errors
@@ -164,5 +169,8 @@ export const errorMessages: { [code: number]: string } = {
   [ErrorCodes.X_PREFIX_ID_NOT_SUPPORTED]: `"prefixIdentifiers" option is not supported in this build of compiler.`,
   [ErrorCodes.X_MODULE_MODE_NOT_SUPPORTED]: `ES module mode is not supported in this build of compiler.`,
   [ErrorCodes.X_CACHE_HANDLER_NOT_SUPPORTED]: `"cacheHandlers" option is only supported when the "prefixIdentifiers" option is enabled.`,
-  [ErrorCodes.X_SCOPE_ID_NOT_SUPPORTED]: `"scopeId" option is only supported in module mode.`
+  [ErrorCodes.X_SCOPE_ID_NOT_SUPPORTED]: `"scopeId" option is only supported in module mode.`,
+
+  // just to fullfill types
+  [ErrorCodes.__EXTEND_POINT__]: ``
 }

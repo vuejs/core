@@ -15,7 +15,8 @@ import {
   nodeOps,
   serializeInner,
   TestElement,
-  h
+  h,
+  createApp
 } from '@vue/runtime-test'
 import {
   ITERATE_KEY,
@@ -856,5 +857,131 @@ describe('api: watch', () => {
     await nextTick()
 
     expect(instance!.effects![0].active).toBe(false)
+  })
+
+  test('this.$watch should pass `this.proxy` to watch source as the first argument ', () => {
+    let instance: any
+    const source = jest.fn()
+
+    const Comp = defineComponent({
+      render() {},
+      created(this: any) {
+        instance = this
+        this.$watch(source, function() {})
+      }
+    })
+
+    const root = nodeOps.createElement('div')
+    createApp(Comp).mount(root)
+
+    expect(instance).toBeDefined()
+    expect(source).toHaveBeenCalledWith(instance)
+  })
+
+  test('should not leak `this.proxy` to setup()', () => {
+    const source = jest.fn()
+
+    const Comp = defineComponent({
+      render() {},
+      setup() {
+        watch(source, () => {})
+      }
+    })
+
+    const root = nodeOps.createElement('div')
+    createApp(Comp).mount(root)
+    // should not have any arguments
+    expect(source.mock.calls[0]).toMatchObject([])
+  })
+
+  // #2728
+  test('pre watcher callbacks should not track dependencies', async () => {
+    const a = ref(0)
+    const b = ref(0)
+    const updated = jest.fn()
+
+    const Child = defineComponent({
+      props: ['a'],
+      updated,
+      watch: {
+        a() {
+          b.value
+        }
+      },
+      render() {
+        return h('div', this.a)
+      }
+    })
+
+    const Parent = defineComponent({
+      render() {
+        return h(Child, { a: a.value })
+      }
+    })
+
+    const root = nodeOps.createElement('div')
+    createApp(Parent).mount(root)
+
+    a.value++
+    await nextTick()
+    expect(updated).toHaveBeenCalledTimes(1)
+
+    b.value++
+    await nextTick()
+    // should not track b as dependency of Child
+    expect(updated).toHaveBeenCalledTimes(1)
+  })
+
+  test('watching keypath', async () => {
+    const spy = jest.fn()
+    const Comp = defineComponent({
+      render() {},
+      data() {
+        return {
+          a: {
+            b: 1
+          }
+        }
+      },
+      watch: {
+        'a.b': spy
+      },
+      created(this: any) {
+        this.$watch('a.b', spy)
+      },
+      mounted(this: any) {
+        this.a.b++
+      }
+    })
+
+    const root = nodeOps.createElement('div')
+    createApp(Comp).mount(root)
+
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(2)
+  })
+
+  it('watching sources: ref<any[]>', async () => {
+    const foo = ref([1])
+    const spy = jest.fn()
+    watch(foo, () => {
+      spy()
+    })
+    foo.value = foo.value.slice()
+    await nextTick()
+    expect(spy).toBeCalledTimes(1)
+  })
+
+  it('watching multiple sources: computed', async () => {
+    let count = 0
+    const value = ref('1')
+    const plus = computed(() => !!value.value)
+    watch([plus], () => {
+      count++
+    })
+    value.value = '2'
+    await nextTick()
+    expect(plus.value).toBe(true)
+    expect(count).toBe(0)
   })
 })

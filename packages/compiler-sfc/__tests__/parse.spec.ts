@@ -139,6 +139,15 @@ h1 { color: red }
     expect(descriptor.template!.content).toBe(content)
   })
 
+  test('treat empty lang attribute as the html', () => {
+    const content = `<div><template v-if="ok">ok</template></div>`
+    const { descriptor, errors } = parse(
+      `<template lang="">${content}</template>`
+    )
+    expect(descriptor.template!.content).toBe(content)
+    expect(errors.length).toBe(0)
+  })
+
   // #1120
   test('alternative template lang should be treated as plain text', () => {
     const content = `p(v-if="1 < 2") test`
@@ -159,6 +168,24 @@ h1 { color: red }
     </template>
     `)
     expect(errors.length).toBe(0)
+  })
+
+  test('slotted detection', async () => {
+    expect(parse(`<template>hi</template>`).descriptor.slotted).toBe(false)
+    expect(
+      parse(`<template>hi</template><style>h1{color:red;}</style>`).descriptor
+        .slotted
+    ).toBe(false)
+    expect(
+      parse(
+        `<template>hi</template><style scoped>:slotted(h1){color:red;}</style>`
+      ).descriptor.slotted
+    ).toBe(true)
+    expect(
+      parse(
+        `<template>hi</template><style scoped>::v-slotted(h1){color:red;}</style>`
+      ).descriptor.slotted
+    ).toBe(true)
   })
 
   test('error tolerance', () => {

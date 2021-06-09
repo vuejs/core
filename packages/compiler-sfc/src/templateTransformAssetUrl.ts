@@ -153,19 +153,18 @@ function getImportsExpressionExp(
   context: TransformContext
 ): ExpressionNode {
   if (path) {
-    const importsArray = Array.from(context.imports)
-    const existing = importsArray.find(i => i.path === path)
+    const existing = context.imports.find(i => i.path === path)
     if (existing) {
       return existing.exp as ExpressionNode
     }
-    const name = `_imports_${importsArray.length}`
+    const name = `_imports_${context.imports.length}`
     const exp = createSimpleExpression(
       name,
       false,
       loc,
       ConstantTypes.CAN_HOIST
     )
-    context.imports.add({ exp, path })
+    context.imports.push({ exp, path })
     if (hash && path) {
       return context.hoist(
         createSimpleExpression(
