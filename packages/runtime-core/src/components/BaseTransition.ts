@@ -69,8 +69,8 @@ export interface TransitionHooks<
   delayedLeave?(): void
 }
 
-type TransitionHookCaller = (
-  hook: ((el: any) => void) | undefined,
+export type TransitionHookCaller = (
+  hook: ((el: any) => void) | Array<(el: any) => void> | undefined,
   args?: any[]
 ) => void
 

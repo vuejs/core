@@ -47,17 +47,40 @@ test('data deep merge', () => {
     data: () => ({
       foo: {
         bar: 1
-      }
+      },
+      selfData: 3
     }),
-    template: `{{ foo }}`
+    template: `{{ { selfData, foo } }}`
   }).$mount()
 
-  expect(vm.$el.textContent).toBe(JSON.stringify({ baz: 2, bar: 1 }, null, 2))
+  expect(vm.$el.textContent).toBe(
+    JSON.stringify({ selfData: 3, foo: { baz: 2, bar: 1 } }, null, 2)
+  )
   expect(
     (deprecationData[DeprecationTypes.OPTIONS_DATA_MERGE].message as Function)(
       'foo'
     )
   ).toHaveBeenWarned()
+})
+
+// #3852
+test('data deep merge w/ extended constructor', () => {
+  const App = Vue.extend({
+    template: `<pre>{{ { mixinData, selfData } }}</pre>`,
+    mixins: [{ data: () => ({ mixinData: 'mixinData' }) }],
+    data: () => ({ selfData: 'selfData' })
+  })
+  const vm = new App().$mount()
+  expect(vm.$el.textContent).toBe(
+    JSON.stringify(
+      {
+        mixinData: 'mixinData',
+        selfData: 'selfData'
+      },
+      null,
+      2
+    )
+  )
 })
 
 test('beforeDestroy/destroyed', async () => {

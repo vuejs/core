@@ -101,7 +101,11 @@ export function compileScript(
     sfc.template && sfc.template.attrs['inherit-attrs'] === 'false'
   const scriptLang = script && script.lang
   const scriptSetupLang = scriptSetup && scriptSetup.lang
-  const isTS = scriptLang === 'ts' || scriptSetupLang === 'ts'
+  const isTS =
+    scriptLang === 'ts' ||
+    scriptLang === 'tsx' ||
+    scriptSetupLang === 'ts' ||
+    scriptSetupLang === 'tsx'
   const plugins: ParserPlugin[] = [...babelParserDefaultPlugins, 'jsx']
   if (options.babelParserPlugins) plugins.push(...options.babelParserPlugins)
   if (isTS) plugins.push('typescript', 'decorators-legacy')
@@ -110,7 +114,7 @@ export function compileScript(
     if (!script) {
       throw new Error(`[@vue/compiler-sfc] SFC contains no <script> tags.`)
     }
-    if (scriptLang && scriptLang !== 'ts') {
+    if (scriptLang && !isTS && scriptLang !== 'jsx') {
       // do not process non js/ts script blocks
       return script
     }
@@ -156,7 +160,7 @@ export function compileScript(
     )
   }
 
-  if (scriptSetupLang && scriptSetupLang !== 'ts') {
+  if (scriptSetupLang && !isTS && scriptSetupLang !== 'jsx') {
     // do not process non js/ts script blocks
     return scriptSetup
   }
@@ -348,7 +352,7 @@ export function compileScript(
             break
           }
         }
-        for (let i = left.end!; i > 0; i++) {
+        for (let i = right.end!; i > 0; i++) {
           const char = source[i + startOffset]
           if (char === ')') {
             s.remove(i + startOffset, i + startOffset + 1)

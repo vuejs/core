@@ -33,7 +33,8 @@ import {
   OptionTypesType,
   OptionTypesKeys,
   resolveMergedOptions,
-  shouldCacheAccess
+  shouldCacheAccess,
+  MergedComponentOptionsOverride
 } from './componentOptions'
 import { EmitsOptions, EmitFn } from './componentEmits'
 import { Slots } from './componentSlots'
@@ -188,7 +189,7 @@ export type ComponentPublicInstance<
   $parent: ComponentPublicInstance | null
   $emit: EmitFn<E>
   $el: any
-  $options: Options
+  $options: Options & MergedComponentOptionsOverride
   $forceUpdate: ReactiveEffect
   $nextTick: typeof nextTick
   $watch(
