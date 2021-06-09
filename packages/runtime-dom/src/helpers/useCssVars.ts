@@ -47,6 +47,12 @@ function setVarsOnVNode(vnode: VNode, vars: Record<string, string>) {
     vnode = vnode.component.subTree
   }
 
+  if (vnode.transition) {
+    vnode.transition.effects.push((el: HTMLElement) => {
+      setVarsOnNode(el as Node, vars)
+    })
+  }
+
   if (vnode.shapeFlag & ShapeFlags.ELEMENT && vnode.el) {
     setVarsOnNode(vnode.el as Node, vars)
   } else if (vnode.type === Fragment) {

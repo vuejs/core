@@ -7,7 +7,8 @@ import {
   reactive,
   nextTick,
   ComponentOptions,
-  Suspense
+  Suspense,
+  Transition
 } from '@vue/runtime-dom'
 
 describe('useCssVars', () => {
@@ -142,24 +143,46 @@ describe('useCssVars', () => {
     }
   })
 
+<<<<<<< HEAD
   test('with createStaticVNode', async () => {
     const state = reactive({ color: 'red' })
+=======
+  test('with transition + v-if', async () => {
+    const state = reactive({ color: 'red' })
+    const value = ref(true)
+>>>>>>> 01b8c54b... fix(useCssVars): work with Transition
     const root = document.createElement('div')
 
     const App = {
       setup() {
         useCssVars(() => state)
+<<<<<<< HEAD
         return () => [
           h('div'),
           createStaticVNode('<div>1</div><div><span>2</span></div>', 2),
           h('div')
         ]
+=======
+        return () =>
+          h(Transition, null, {
+            default: () => (value.value ? [h('div')] : [h('span')])
+          })
+>>>>>>> 01b8c54b... fix(useCssVars): work with Transition
       }
     }
 
     render(h(App), root)
     await nextTick()
     for (const c of [].slice.call(root.children as any)) {
+<<<<<<< HEAD
+=======
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe(`red`)
+    }
+
+    value.value = false
+    await nextTick()
+    for (const c of [].slice.call(root.children as any)) {
+>>>>>>> 01b8c54b... fix(useCssVars): work with Transition
       expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
     }
   })
