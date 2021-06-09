@@ -43,15 +43,6 @@ const reset = () => {
 }
 const getNow = () => cachedNow || (p.then(reset), (cachedNow = _getNow()))
 
-export function addEventListener(
-  el: Element,
-  event: string,
-  handler: EventListener,
-  options?: EventListenerOptions
-) {
-  el.addEventListener(event, handler, options)
-}
-
 export function removeEventListener(
   el: Element,
   event: string,
@@ -79,7 +70,7 @@ export function patchEvent(
     if (nextValue) {
       // add
       const invoker = (invokers[rawName] = createInvoker(nextValue, instance))
-      addEventListener(el, name, invoker, options)
+      el.addEventListener(name, invoker, options)
     } else if (existingInvoker) {
       // remove
       removeEventListener(el, name, existingInvoker, options)
