@@ -52,15 +52,6 @@ export function addEventListener(
   el.addEventListener(event, handler, options)
 }
 
-export function removeEventListener(
-  el: Element,
-  event: string,
-  handler: EventListener,
-  options?: EventListenerOptions
-) {
-  el.removeEventListener(event, handler, options)
-}
-
 export function patchEvent(
   el: Element & { _vei?: Record<string, Invoker | undefined> },
   rawName: string,
@@ -82,7 +73,7 @@ export function patchEvent(
       addEventListener(el, name, invoker, options)
     } else if (existingInvoker) {
       // remove
-      removeEventListener(el, name, existingInvoker, options)
+      el.removeEventListener(name, existingInvoker, options)
       invokers[rawName] = undefined
     }
   }
