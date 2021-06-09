@@ -5,7 +5,6 @@ import {
   DirectiveBinding,
   warn
 } from '@vue/runtime-core'
-import { addEventListener } from '../modules/events'
 import {
   isArray,
   looseEqual,
@@ -50,7 +49,7 @@ export const vModelText: ModelDirective<
   created(el, { modifiers: { lazy, trim, number } }, vnode) {
     el._assign = getModelAssigner(vnode)
     const castToNumber = number || el.type === 'number'
-    addEventListener(el, lazy ? 'change' : 'input', e => {
+    el.addEventListener(lazy ? 'change' : 'input', e => {
       if ((e.target as any).composing) return
       let domValue: string | number = el.value
       if (trim) {
@@ -61,18 +60,18 @@ export const vModelText: ModelDirective<
       el._assign(domValue)
     })
     if (trim) {
-      addEventListener(el, 'change', () => {
+      el.addEventListener('change', () => {
         el.value = el.value.trim()
       })
     }
     if (!lazy) {
-      addEventListener(el, 'compositionstart', onCompositionStart)
-      addEventListener(el, 'compositionend', onCompositionEnd)
+      el.addEventListener('compositionstart', onCompositionStart)
+      el.addEventListener('compositionend', onCompositionEnd)
       // Safari < 10.2 & UIWebView doesn't fire compositionend when
       // switching focus before confirming composition choice
       // this also fixes the issue where some browsers e.g. iOS Chrome
       // fires "change" instead of "input" on autocomplete.
-      addEventListener(el, 'change', onCompositionEnd)
+      el.addEventListener('change', onCompositionEnd)
     }
   },
   // set value on mounted so it's after min/max for type="range"
@@ -101,7 +100,7 @@ export const vModelText: ModelDirective<
 export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
   created(el, _, vnode) {
     el._assign = getModelAssigner(vnode)
-    addEventListener(el, 'change', () => {
+    el.addEventListener('change', () => {
       const modelValue = (el as any)._modelValue
       const elementValue = getValue(el)
       const checked = el.checked
@@ -158,7 +157,7 @@ export const vModelRadio: ModelDirective<HTMLInputElement> = {
   created(el, { value }, vnode) {
     el.checked = looseEqual(value, vnode.props!.value)
     el._assign = getModelAssigner(vnode)
-    addEventListener(el, 'change', () => {
+    el.addEventListener('change', () => {
       el._assign(getValue(el))
     })
   },
@@ -173,7 +172,7 @@ export const vModelRadio: ModelDirective<HTMLInputElement> = {
 export const vModelSelect: ModelDirective<HTMLSelectElement> = {
   created(el, { value, modifiers: { number } }, vnode) {
     const isSetModel = isSet(value)
-    addEventListener(el, 'change', () => {
+    el.addEventListener('change', () => {
       const selectedVal = Array.prototype.filter
         .call(el.options, (o: HTMLOptionElement) => o.selected)
         .map(
