@@ -81,9 +81,25 @@ test('isMemberExpression', () => {
   expect(isMemberExpression('obj[arr[ret[bar]]]')).toBe(true)
   expect(isMemberExpression('obj[arr[ret[bar]]].baz')).toBe(true)
   expect(isMemberExpression('obj[1 + 1]')).toBe(true)
-  // should warning
+  expect(isMemberExpression(`obj[x[0]]`)).toBe(true)
+  expect(isMemberExpression('obj[1][2]')).toBe(true)
+  expect(isMemberExpression('obj[1][2].foo[3].bar.baz')).toBe(true)
+  expect(isMemberExpression(`a[b[c.d]][0]`)).toBe(true)
+
+  // strings
+  expect(isMemberExpression(`a['foo' + bar[baz]["qux"]]`)).toBe(true)
+
+  // multiline whitespaces
+  expect(isMemberExpression('obj \n .foo \n [bar \n + baz]')).toBe(true)
+  expect(isMemberExpression(`\n model\n.\nfoo \n`)).toBe(true)
+
+  // should fail
+  expect(isMemberExpression('a \n b')).toBe(false)
   expect(isMemberExpression('obj[foo')).toBe(false)
   expect(isMemberExpression('objfoo]')).toBe(false)
   expect(isMemberExpression('obj[arr[0]')).toBe(false)
   expect(isMemberExpression('obj[arr0]]')).toBe(false)
+  expect(isMemberExpression('123[a]')).toBe(false)
+  expect(isMemberExpression('a + b')).toBe(false)
+  expect(isMemberExpression('foo()')).toBe(false)
 })
