@@ -224,12 +224,12 @@ function setSelected(el: HTMLSelectElement, value: any) {
       }
     } else {
       if (looseEqual(getValue(option), value)) {
-        el.selectedIndex = i
+        if (el.selectedIndex !== i) el.selectedIndex = i
         return
       }
     }
   }
-  if (!isMultiple) {
+  if (!isMultiple && el.selectedIndex !== -1) {
     el.selectedIndex = -1
   }
 }

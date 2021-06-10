@@ -79,14 +79,6 @@ export interface ComponentInternalOptions {
   /**
    * @internal
    */
-  __props?: NormalizedPropsOptions
-  /**
-   * @internal
-   */
-  __emits?: ObjectEmitsOptions | null
-  /**
-   * @internal
-   */
   __scopeId?: string
   /**
    * @internal
@@ -285,6 +277,12 @@ export interface ComponentInternalInstance {
    */
   emitsOptions: ObjectEmitsOptions | null
 
+  /**
+   * resolved inheritAttrs options
+   * @internal
+   */
+  inheritAttrs?: boolean
+
   // the rest are only for stateful components ---------------------------------
 
   // main proxy that serves as the public instance (`this`)
@@ -468,6 +466,9 @@ export function createComponentInstance(
 
     // props default value
     propsDefaults: EMPTY_OBJ,
+
+    // inheritAttrs
+    inheritAttrs: type.inheritAttrs,
 
     // state
     ctx: EMPTY_OBJ,
@@ -786,7 +787,7 @@ export function finishComponentSetup(
   if (__FEATURE_OPTIONS_API__ && !(__COMPAT__ && skipOptions)) {
     currentInstance = instance
     pauseTracking()
-    applyOptions(instance, Component)
+    applyOptions(instance)
     resetTracking()
     currentInstance = null
   }

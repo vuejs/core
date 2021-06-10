@@ -632,6 +632,49 @@ describe('Suspense', () => {
     expect(serializeInner(root)).toBe(`<div>oops</div>`)
   })
 
+  // #3857
+  test('error handling w/ template optimization', async () => {
+    const Async = {
+      async setup() {
+        throw new Error('oops')
+      }
+    }
+
+    const Comp = {
+      template: `
+      <div v-if="errorMessage">{{ errorMessage }}</div>
+      <Suspense v-else>
+        <div>
+          <Async />     
+        </div>
+        <template #fallback>
+          <div>fallback</div>
+        </template>
+      </Suspense>
+      `,
+      components: { Async },
+      setup() {
+        const errorMessage = ref<string | null>(null)
+        onErrorCaptured(err => {
+          errorMessage.value =
+            err instanceof Error
+              ? err.message
+              : `A non-Error value thrown: ${err}`
+          return false
+        })
+        return { errorMessage }
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>oops</div>`)
+  })
+
   it('combined usage (nested async + nested suspense + multiple deps)', async () => {
     const msg = ref('nested msg')
     const calls: number[] = []

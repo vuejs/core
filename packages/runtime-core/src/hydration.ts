@@ -5,7 +5,9 @@ import {
   Comment,
   Static,
   Fragment,
-  VNodeHook
+  VNodeHook,
+  createVNode,
+  createTextVNode
 } from './vnode'
 import { flushPostFlushCbs } from './scheduler'
 import { ComponentInternalInstance } from './component'
@@ -19,6 +21,7 @@ import {
   queueEffectWithSuspense
 } from './components/Suspense'
 import { TeleportImpl, TeleportVNode } from './components/Teleport'
+import { isAsyncWrapper } from './apiAsyncComponent'
 
 export type RootHydrateFunction = (
   vnode: VNode<Node, Element>,
@@ -187,12 +190,32 @@ export function createHydrationFunctions(
             isSVGContainer(container),
             optimized
           )
+
           // component may be async, so in the case of fragments we cannot rely
           // on component's rendered output to determine the end of the fragment
           // instead, we do a lookahead to find the end anchor node.
           nextNode = isFragmentStart
             ? locateClosingAsyncAnchor(node)
             : nextSibling(node)
+
+          // #3787
+          // if component is async, it may get moved / unmounted before its
+          // inner component is loaded, so we need to give it a placeholder
+          // vnode that matches its adopted DOM.
+          if (isAsyncWrapper(vnode)) {
+            let subTree
+            if (isFragmentStart) {
+              subTree = createVNode(Fragment)
+              subTree.anchor = nextNode
+                ? nextNode.previousSibling
+                : container.lastChild
+            } else {
+              subTree =
+                node.nodeType === 3 ? createTextVNode('') : createVNode('div')
+            }
+            subTree.el = node
+            vnode.component!.subTree = subTree
+          }
         } else if (shapeFlag & ShapeFlags.TELEPORT) {
           if (domType !== DOMNodeTypes.COMMENT) {
             nextNode = onMismatch()

@@ -296,4 +296,29 @@ describe('renderer: component', () => {
       expect(serializeInner(root)).toBe(`<h1>1</h1>`)
     })
   })
+
+  test('the component VNode should be cloned when reusing it', () => {
+    const App = {
+      render() {
+        const c = [h(Comp)]
+        return [c, c, c]
+      }
+    }
+
+    const ids: number[] = []
+    const Comp = {
+      render: () => h('h1'),
+      beforeUnmount() {
+        ids.push((this as any).$.uid)
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<h1></h1><h1></h1><h1></h1>`)
+
+    render(null, root)
+    expect(serializeInner(root)).toBe(``)
+    expect(ids).toEqual([ids[0], ids[0] + 1, ids[0] + 2])
+  })
 })

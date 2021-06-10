@@ -878,6 +878,22 @@ describe('api: watch', () => {
     expect(source).toHaveBeenCalledWith(instance)
   })
 
+  test('should not leak `this.proxy` to setup()', () => {
+    const source = jest.fn()
+
+    const Comp = defineComponent({
+      render() {},
+      setup() {
+        watch(source, () => {})
+      }
+    })
+
+    const root = nodeOps.createElement('div')
+    createApp(Comp).mount(root)
+    // should not have any arguments
+    expect(source.mock.calls[0]).toMatchObject([])
+  })
+
   // #2728
   test('pre watcher callbacks should not track dependencies', async () => {
     const a = ref(0)
@@ -944,7 +960,7 @@ describe('api: watch', () => {
     await nextTick()
     expect(spy).toHaveBeenCalledTimes(2)
   })
-  
+
   it('watching sources: ref<any[]>', async () => {
     const foo = ref([1])
     const spy = jest.fn()

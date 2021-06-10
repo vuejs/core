@@ -301,6 +301,34 @@ describe('attribute fallthrough', () => {
     expect(root.innerHTML).toMatch(`<div>1</div>`)
   })
 
+  // #3741
+  it('should not fallthrough with inheritAttrs: false from mixins', () => {
+    const Parent = {
+      render() {
+        return h(Child, { foo: 1, class: 'parent' })
+      }
+    }
+
+    const mixin = {
+      inheritAttrs: false
+    }
+
+    const Child = defineComponent({
+      mixins: [mixin],
+      props: ['foo'],
+      render() {
+        return h('div', this.foo)
+      }
+    })
+
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    render(h(Parent), root)
+
+    // should not contain class
+    expect(root.innerHTML).toMatch(`<div>1</div>`)
+  })
+
   it('explicit spreading with inheritAttrs: false', () => {
     const Parent = {
       render() {

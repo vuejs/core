@@ -35,6 +35,36 @@ describe('compiler sfc: rewriteDefault', () => {
     `)
   })
 
+  test('export named default multiline', () => {
+    expect(
+      rewriteDefault(`let App = {}\n export {\nApp as default\n}`, '_sfc_main')
+    ).toMatchInlineSnapshot(`
+      "let App = {}
+       export {
+      
+      }
+      const _sfc_main = App"
+    `)
+  })
+
+  test('export named default multiline /w comments', () => {
+    expect(
+      rewriteDefault(
+        `const a = 1 \n export {\n a as b,\n a as default,\n a as c}\n` +
+          `// export { myFunction as default }`,
+        'script'
+      )
+    ).toMatchInlineSnapshot(`
+      "const a = 1 
+       export {
+       a as b,
+       
+       a as c}
+      // export { myFunction as default }
+      const script = a"
+    `)
+  })
+
   test('export default class', async () => {
     expect(rewriteDefault(`export default class Foo {}`, 'script'))
       .toMatchInlineSnapshot(`
