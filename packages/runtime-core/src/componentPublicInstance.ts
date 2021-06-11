@@ -18,7 +18,6 @@ import {
   ReactiveEffect,
   toRaw,
   shallowReadonly,
-  ReactiveFlags,
   track,
   TrackOpTypes,
   ShallowUnwrapRef,
@@ -267,11 +266,6 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       type,
       appContext
     } = instance
-
-    // let @vue/reactivity know it should never observe Vue public instances.
-    if (key === ReactiveFlags.SKIP) {
-      return true
-    }
 
     // for internal formatters to know that this is a Vue instance
     if (__DEV__ && key === '__isVue') {
