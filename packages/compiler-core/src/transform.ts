@@ -15,26 +15,32 @@ import {
   CacheExpression,
   createCacheExpression,
   TemplateLiteral,
-  createVNodeCall
+  createVNodeCall,
+  ConstantTypes
 } from './ast'
 import {
   isString,
   isArray,
   NOOP,
   PatchFlags,
-  PatchFlagNames
+  PatchFlagNames,
+  EMPTY_OBJ,
+  capitalize,
+  camelize
 } from '@vue/shared'
-import { defaultOnError } from './errors'
+import { defaultOnError, defaultOnWarn } from './errors'
 import {
   TO_DISPLAY_STRING,
   FRAGMENT,
   helperNameMap,
   CREATE_BLOCK,
   CREATE_COMMENT,
-  OPEN_BLOCK
+  OPEN_BLOCK,
+  CREATE_VNODE
 } from './runtimeHelpers'
 import { isVSlot } from './utils'
 import { hoistStatic, isSingleElementRoot } from './transforms/hoistStatic'
+import { CompilerCompatOptions } from './compat/compatConfig'
 
 // There are two types of transforms:
 //
@@ -77,13 +83,18 @@ export interface ImportItem {
   path: string
 }
 
-export interface TransformContext extends Required<TransformOptions> {
+export interface TransformContext
+  extends Required<
+      Omit<TransformOptions, 'filename' | keyof CompilerCompatOptions>
+    >,
+    CompilerCompatOptions {
+  selfName: string | null
   root: RootNode
-  helpers: Set<symbol>
+  helpers: Map<symbol, number>
   components: Set<string>
   directives: Set<string>
-  hoists: JSChildNode[]
-  imports: Set<ImportItem>
+  hoists: (JSChildNode | null)[]
+  imports: ImportItem[]
   temps: number
   cached: number
   identifiers: { [name: string]: number | undefined }
@@ -97,6 +108,7 @@ export interface TransformContext extends Required<TransformOptions> {
   childIndex: number
   currentNode: RootNode | TemplateChildNode | null
   helper<T extends symbol>(name: T): T
+  removeHelper<T extends symbol>(name: T): void
   helperString(name: symbol): string
   replaceNode(node: TemplateChildNode): void
   removeNode(node?: TemplateChildNode): void
@@ -105,11 +117,16 @@ export interface TransformContext extends Required<TransformOptions> {
   removeIdentifiers(exp: ExpressionNode | string): void
   hoist(exp: JSChildNode): SimpleExpressionNode
   cache<T extends JSChildNode>(exp: T, isVNode?: boolean): CacheExpression | T
+  constantCache: Map<TemplateChildNode, ConstantTypes>
+
+  // 2.x Compat only
+  filters?: Set<string>
 }
 
 export function createTransformContext(
   root: RootNode,
   {
+    filename = '',
     prefixIdentifiers = false,
     hoistStatic = false,
     cacheHandlers = false,
@@ -117,14 +134,24 @@ export function createTransformContext(
     directiveTransforms = {},
     transformHoist = null,
     isBuiltInComponent = NOOP,
+    isCustomElement = NOOP,
     expressionPlugins = [],
     scopeId = null,
+    slotted = true,
     ssr = false,
-    onError = defaultOnError
+    ssrCssVars = ``,
+    bindingMetadata = EMPTY_OBJ,
+    inline = false,
+    isTS = false,
+    onError = defaultOnError,
+    onWarn = defaultOnWarn,
+    compatConfig
   }: TransformOptions
 ): TransformContext {
+  const nameMatch = filename.replace(/\?.*$/, '').match(/([^/\\]+)\.\w+$/)
   const context: TransformContext = {
     // options
+    selfName: nameMatch && capitalize(camelize(nameMatch[1])),
     prefixIdentifiers,
     hoistStatic,
     cacheHandlers,
@@ -132,21 +159,30 @@ export function createTransformContext(
     directiveTransforms,
     transformHoist,
     isBuiltInComponent,
+    isCustomElement,
     expressionPlugins,
     scopeId,
+    slotted,
     ssr,
+    ssrCssVars,
+    bindingMetadata,
+    inline,
+    isTS,
     onError,
+    onWarn,
+    compatConfig,
 
     // state
     root,
-    helpers: new Set(),
+    helpers: new Map(),
     components: new Set(),
     directives: new Set(),
     hoists: [],
-    imports: new Set(),
+    imports: [],
+    constantCache: new Map(),
     temps: 0,
     cached: 0,
-    identifiers: {},
+    identifiers: Object.create(null),
     scopes: {
       vFor: 0,
       vSlot: 0,
@@ -159,8 +195,20 @@ export function createTransformContext(
 
     // methods
     helper(name) {
-      context.helpers.add(name)
+      const count = context.helpers.get(name) || 0
+      context.helpers.set(name, count + 1)
       return name
+    },
+    removeHelper(name) {
+      const count = context.helpers.get(name)
+      if (count) {
+        const currentCount = count - 1
+        if (!currentCount) {
+          context.helpers.delete(name)
+        } else {
+          context.helpers.set(name, currentCount)
+        }
+      }
     },
     helperString(name) {
       return `_${helperNameMap[context.helper(name)]}`
@@ -230,16 +278,22 @@ export function createTransformContext(
     },
     hoist(exp) {
       context.hoists.push(exp)
-      return createSimpleExpression(
+      const identifier = createSimpleExpression(
         `_hoisted_${context.hoists.length}`,
         false,
         exp.loc,
-        true
+        ConstantTypes.CAN_HOIST
       )
+      identifier.hoisted = exp
+      return identifier
     },
     cache(exp, isVNode = false) {
       return createCacheExpression(++context.cached, exp, isVNode)
     }
+  }
+
+  if (__COMPAT__) {
+    context.filters = new Set()
   }
 
   function addId(id: string) {
@@ -267,29 +321,36 @@ export function transform(root: RootNode, options: TransformOptions) {
     createRootCodegen(root, context)
   }
   // finalize meta information
-  root.helpers = [...context.helpers]
+  root.helpers = [...context.helpers.keys()]
   root.components = [...context.components]
   root.directives = [...context.directives]
-  root.imports = [...context.imports]
+  root.imports = context.imports
   root.hoists = context.hoists
   root.temps = context.temps
   root.cached = context.cached
+
+  if (__COMPAT__) {
+    root.filters = [...context.filters!]
+  }
 }
 
 function createRootCodegen(root: RootNode, context: TransformContext) {
-  const { helper } = context
+  const { helper, removeHelper } = context
   const { children } = root
-  const child = children[0]
   if (children.length === 1) {
+    const child = children[0]
     // if the single child is an element, turn it into a block.
     if (isSingleElementRoot(root, child) && child.codegenNode) {
       // single element root is never hoisted so codegenNode will never be
       // SimpleExpressionNode
       const codegenNode = child.codegenNode
       if (codegenNode.type === NodeTypes.VNODE_CALL) {
-        codegenNode.isBlock = true
-        helper(OPEN_BLOCK)
-        helper(CREATE_BLOCK)
+        if (!codegenNode.isBlock) {
+          removeHelper(CREATE_VNODE)
+          codegenNode.isBlock = true
+          helper(OPEN_BLOCK)
+          helper(CREATE_BLOCK)
+        }
       }
       root.codegenNode = codegenNode
     } else {
@@ -300,14 +361,23 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
     }
   } else if (children.length > 1) {
     // root has multiple nodes - return a fragment block.
+    let patchFlag = PatchFlags.STABLE_FRAGMENT
+    let patchFlagText = PatchFlagNames[PatchFlags.STABLE_FRAGMENT]
+    // check if the fragment actually contains a single valid child with
+    // the rest being comments
+    if (
+      __DEV__ &&
+      children.filter(c => c.type !== NodeTypes.COMMENT).length === 1
+    ) {
+      patchFlag |= PatchFlags.DEV_ROOT_FRAGMENT
+      patchFlagText += `, ${PatchFlagNames[PatchFlags.DEV_ROOT_FRAGMENT]}`
+    }
     root.codegenNode = createVNodeCall(
       context,
       helper(FRAGMENT),
       undefined,
       root.children,
-      `${PatchFlags.STABLE_FRAGMENT} /* ${
-        PatchFlagNames[PatchFlags.STABLE_FRAGMENT]
-      } */`,
+      patchFlag + (__DEV__ ? ` /* ${patchFlagText} */` : ``),
       undefined,
       undefined,
       true
@@ -391,6 +461,7 @@ export function traverseNode(
   }
 
   // exit transforms
+  context.currentNode = node
   let i = exitFns.length
   while (i--) {
     exitFns[i]()

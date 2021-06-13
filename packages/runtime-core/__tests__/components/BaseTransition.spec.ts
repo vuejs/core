@@ -53,6 +53,12 @@ function mockProps(extra: BaseTransitionProps = {}, withKeepAlive = false) {
     }),
     onAfterLeave: jest.fn(),
     onLeaveCancelled: jest.fn(),
+    onBeforeAppear: jest.fn(),
+    onAppear: jest.fn((el, done) => {
+      cbs.doneEnter[serialize(el as TestElement)] = done
+    }),
+    onAfterAppear: jest.fn(),
+    onAppearCancelled: jest.fn(),
     ...extra
   }
   return {
@@ -132,8 +138,33 @@ function runTestWithKeepAlive(tester: TestFn) {
 }
 
 describe('BaseTransition', () => {
-  test('appear: true', () => {
-    const { props, cbs } = mockProps({ appear: true })
+  test('appear: true w/ appear hooks', () => {
+    const { props, cbs } = mockProps({
+      appear: true
+    })
+    mount(props, () => h('div'))
+    expect(props.onBeforeAppear).toHaveBeenCalledTimes(1)
+    expect(props.onAppear).toHaveBeenCalledTimes(1)
+    expect(props.onAfterAppear).not.toHaveBeenCalled()
+
+    // enter should not be called
+    expect(props.onBeforeEnter).not.toHaveBeenCalled()
+    expect(props.onEnter).not.toHaveBeenCalled()
+    expect(props.onAfterEnter).not.toHaveBeenCalled()
+
+    cbs.doneEnter[`<div></div>`]()
+    expect(props.onAfterAppear).toHaveBeenCalledTimes(1)
+    expect(props.onAfterEnter).not.toHaveBeenCalled()
+  })
+
+  test('appear: true w/ fallback to enter hooks', () => {
+    const { props, cbs } = mockProps({
+      appear: true,
+      onBeforeAppear: undefined,
+      onAppear: undefined,
+      onAfterAppear: undefined,
+      onAppearCancelled: undefined
+    })
     mount(props, () => h('div'))
     expect(props.onBeforeEnter).toHaveBeenCalledTimes(1)
     expect(props.onEnter).toHaveBeenCalledTimes(1)
@@ -207,23 +238,26 @@ describe('BaseTransition', () => {
       const { hooks } = mockPersistedHooks()
       mount(props, () => h('div', hooks))
 
-      expect(props.onBeforeEnter).toHaveBeenCalledTimes(1)
-      expect(props.onEnter).toHaveBeenCalledTimes(1)
-      expect(props.onAfterEnter).not.toHaveBeenCalled()
+      expect(props.onBeforeAppear).toHaveBeenCalledTimes(1)
+      expect(props.onAppear).toHaveBeenCalledTimes(1)
+      expect(props.onAfterAppear).not.toHaveBeenCalled()
       cbs.doneEnter[`<div></div>`]()
-      expect(props.onAfterEnter).toHaveBeenCalledTimes(1)
+      expect(props.onAfterAppear).toHaveBeenCalledTimes(1)
     })
   })
 
   describe('toggle on-off', () => {
-    async function testToggleOnOff({
-      trueBranch,
-      trueSerialized,
-      falseBranch,
-      falseSerialized
-    }: ToggleOptions) {
+    async function testToggleOnOff(
+      {
+        trueBranch,
+        trueSerialized,
+        falseBranch,
+        falseSerialized
+      }: ToggleOptions,
+      mode?: BaseTransitionProps['mode']
+    ) {
       const toggle = ref(true)
-      const { props, cbs } = mockProps()
+      const { props, cbs } = mockProps({ mode })
       const root = mount(
         props,
         () => (toggle.value ? trueBranch() : falseBranch())
@@ -290,6 +324,18 @@ describe('BaseTransition', () => {
         falseBranch: () => null,
         falseSerialized: `<!---->`
       })
+    })
+
+    test('w/ mode: "in-out', async () => {
+      await testToggleOnOff(
+        {
+          trueBranch: () => h('div'),
+          trueSerialized: `<div></div>`,
+          falseBranch: () => null,
+          falseSerialized: `<!---->`
+        },
+        'in-out'
+      )
     })
   })
 
@@ -664,7 +710,7 @@ describe('BaseTransition', () => {
       expect(props.onAfterEnter).toHaveBeenCalledTimes(1)
       assertCalledWithEl(props.onAfterEnter, falseSerialized)
 
-      // toggele again
+      // toggle again
       toggle.value = true
       await nextTick()
       expect(serializeInner(root)).toBe(`${falseSerialized}<!---->`)
@@ -740,7 +786,7 @@ describe('BaseTransition', () => {
       await nextTick()
       // expected behavior: the previous true branch is preserved,
       // and a placeholder is injected for the replacement.
-      // the leaving node is repalced with the replace node (of the same branch)
+      // the leaving node is replaced with the replace node (of the same branch)
       // when it finishes leaving
       expect(serializeInner(root)).toBe(`${trueSerialized}<!---->`)
       // enter hooks should never be called (for neither branch)

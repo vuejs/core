@@ -1,9 +1,10 @@
 import { VNodeChild } from '../vnode'
 import { isArray, isString, isObject } from '@vue/shared'
+import { warn } from '../warning'
 
 /**
  * v-for string
- * @internal
+ * @private
  */
 export function renderList(
   source: string,
@@ -12,7 +13,6 @@ export function renderList(
 
 /**
  * v-for number
- * @internal
  */
 export function renderList(
   source: number,
@@ -21,7 +21,6 @@ export function renderList(
 
 /**
  * v-for array
- * @internal
  */
 export function renderList<T>(
   source: T[],
@@ -30,7 +29,6 @@ export function renderList<T>(
 
 /**
  * v-for iterable
- * @internal
  */
 export function renderList<T>(
   source: Iterable<T>,
@@ -39,7 +37,6 @@ export function renderList<T>(
 
 /**
  * v-for object
- * @internal
  */
 export function renderList<T>(
   source: T,
@@ -50,7 +47,9 @@ export function renderList<T>(
   ) => VNodeChild
 ): VNodeChild[]
 
-// actual implementation
+/**
+ * Actual implementation
+ */
 export function renderList(
   source: any,
   renderItem: (...args: any[]) => VNodeChild
@@ -62,6 +61,10 @@ export function renderList(
       ret[i] = renderItem(source[i], i)
     }
   } else if (typeof source === 'number') {
+    if (__DEV__ && !Number.isInteger(source)) {
+      warn(`The v-for range expect an integer value but got ${source}.`)
+      return []
+    }
     ret = new Array(source)
     for (let i = 0; i < source; i++) {
       ret[i] = renderItem(i + 1, i)

@@ -20,7 +20,8 @@ import {
   IfConditionalExpression,
   createVNodeCall,
   VNodeCall,
-  DirectiveArguments
+  DirectiveArguments,
+  ConstantTypes
 } from '../src'
 import {
   CREATE_VNODE,
@@ -32,7 +33,7 @@ import {
   FRAGMENT,
   RENDER_LIST
 } from '../src/runtimeHelpers'
-import { createElementWithCodegen } from './testUtils'
+import { createElementWithCodegen, genFlagText } from './testUtils'
 import { PatchFlags } from '@vue/shared'
 
 function createRoot(options: Partial<RootNode> = {}): RootNode {
@@ -68,11 +69,11 @@ describe('compiler: codegen', () => {
     expect(code).toMatchSnapshot()
   })
 
-  test('module mode preamble w/ optimizeBindings: true', () => {
+  test('module mode preamble w/ optimizeImports: true', () => {
     const root = createRoot({
       helpers: [CREATE_VNODE, RESOLVE_DIRECTIVE]
     })
-    const { code } = generate(root, { mode: 'module', optimizeBindings: true })
+    const { code } = generate(root, { mode: 'module', optimizeImports: true })
     expect(code).toMatch(
       `import { ${helperNameMap[CREATE_VNODE]}, ${
         helperNameMap[RESOLVE_DIRECTIVE]
@@ -125,7 +126,7 @@ describe('compiler: codegen', () => {
 
   test('assets + temps', () => {
     const root = createRoot({
-      components: [`Foo`, `bar-baz`, `barbaz`],
+      components: [`Foo`, `bar-baz`, `barbaz`, `Qux__self`],
       directives: [`my_dir_0`, `my_dir_1`],
       temps: 3
     })
@@ -142,6 +143,12 @@ describe('compiler: codegen', () => {
       `const _component_barbaz = _${
         helperNameMap[RESOLVE_COMPONENT]
       }("barbaz")\n`
+    )
+    // implicit self reference from SFC filename
+    expect(code).toMatch(
+      `const _component_Qux = _${
+        helperNameMap[RESOLVE_COMPONENT]
+      }("Qux", true)\n`
     )
     expect(code).toMatch(
       `const _directive_my_dir_0 = _${
@@ -283,7 +290,7 @@ describe('compiler: codegen', () => {
             type: NodeTypes.VNODE_CALL,
             tag: FRAGMENT,
             isBlock: true,
-            isForBlock: true,
+            disableTracking: true,
             props: undefined,
             children: createCallExpression(RENDER_LIST),
             patchFlag: '1',
@@ -295,6 +302,42 @@ describe('compiler: codegen', () => {
       })
     )
     expect(code).toMatch(`openBlock(true)`)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('forNode with constant expression', () => {
+    const { code } = generate(
+      createRoot({
+        codegenNode: {
+          type: NodeTypes.FOR,
+          loc: locStub,
+          source: createSimpleExpression(
+            '1 + 2',
+            false,
+            locStub,
+            ConstantTypes.CAN_STRINGIFY
+          ),
+          valueAlias: undefined,
+          keyAlias: undefined,
+          objectIndexAlias: undefined,
+          children: [],
+          parseResult: {} as any,
+          codegenNode: {
+            type: NodeTypes.VNODE_CALL,
+            tag: FRAGMENT,
+            isBlock: true,
+            disableTracking: false,
+            props: undefined,
+            children: createCallExpression(RENDER_LIST),
+            patchFlag: genFlagText(PatchFlags.STABLE_FRAGMENT),
+            dynamicProps: undefined,
+            directives: undefined,
+            loc: locStub
+          } as ForCodegenNode
+        }
+      })
+    )
+    expect(code).toMatch(`openBlock()`)
     expect(code).toMatchSnapshot()
   })
 
@@ -463,7 +506,7 @@ describe('compiler: codegen', () => {
     )
     expect(code).toMatchInlineSnapshot(`
       "
-      export function ssrRender(_ctx, _push, _parent) {
+      export function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`foo\${_renderAttr(id, foo)}bar\`)
       }"
     `)
@@ -484,7 +527,7 @@ describe('compiler: codegen', () => {
       )
       expect(code).toMatchInlineSnapshot(`
         "
-        export function ssrRender(_ctx, _push, _parent) {
+        export function ssrRender(_ctx, _push, _parent, _attrs) {
           if (foo) {
             ok()
           }
@@ -507,7 +550,7 @@ describe('compiler: codegen', () => {
       )
       expect(code).toMatchInlineSnapshot(`
         "
-        export function ssrRender(_ctx, _push, _parent) {
+        export function ssrRender(_ctx, _push, _parent, _attrs) {
           if (foo) {
             foo()
           } else {
@@ -535,7 +578,7 @@ describe('compiler: codegen', () => {
       )
       expect(code).toMatchInlineSnapshot(`
         "
-        export function ssrRender(_ctx, _push, _parent) {
+        export function ssrRender(_ctx, _push, _parent, _attrs) {
           if (foo) {
             foo()
           } else if (bar) {
@@ -564,7 +607,7 @@ describe('compiler: codegen', () => {
       )
       expect(code).toMatchInlineSnapshot(`
         "
-        export function ssrRender(_ctx, _push, _parent) {
+        export function ssrRender(_ctx, _push, _parent, _attrs) {
           if (foo) {
             foo()
           } else if (bar) {

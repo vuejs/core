@@ -39,7 +39,7 @@ function parseWithVModel(template: string, options: CompilerOptions = {}) {
 }
 
 describe('compiler: transform v-model', () => {
-  test('simple exprssion', () => {
+  test('simple expression', () => {
     const root = parseWithVModel('<input v-model="model" />')
     const node = root.children[0] as ElementNode
     const props = ((node.codegenNode as VNodeCall).props as ObjectExpression)
@@ -76,7 +76,7 @@ describe('compiler: transform v-model', () => {
     expect(generate(root).code).toMatchSnapshot()
   })
 
-  test('simple exprssion (with prefixIdentifiers)', () => {
+  test('simple expression (with prefixIdentifiers)', () => {
     const root = parseWithVModel('<input v-model="model" />', {
       prefixIdentifiers: true
     })
@@ -113,6 +113,44 @@ describe('compiler: transform v-model', () => {
     })
 
     expect(generate(root, { mode: 'module' }).code).toMatchSnapshot()
+  })
+
+  // #2426
+  test('simple expression (with multilines)', () => {
+    const root = parseWithVModel('<input v-model="\n model\n.\nfoo \n" />')
+    const node = root.children[0] as ElementNode
+    const props = ((node.codegenNode as VNodeCall).props as ObjectExpression)
+      .properties
+
+    expect(props[0]).toMatchObject({
+      key: {
+        content: 'modelValue',
+        isStatic: true
+      },
+      value: {
+        content: '\n model\n.\nfoo \n',
+        isStatic: false
+      }
+    })
+
+    expect(props[1]).toMatchObject({
+      key: {
+        content: 'onUpdate:modelValue',
+        isStatic: true
+      },
+      value: {
+        children: [
+          '$event => (',
+          {
+            content: '\n model\n.\nfoo \n',
+            isStatic: false
+          },
+          ' = $event)'
+        ]
+      }
+    })
+
+    expect(generate(root).code).toMatchSnapshot()
   })
 
   test('compound expression', () => {
@@ -377,7 +415,7 @@ describe('compiler: transform v-model', () => {
     expect(codegen.dynamicProps).toBe(`["modelValue", "onUpdate:modelValue"]`)
   })
 
-  test('should generate modelModifers for component v-model', () => {
+  test('should generate modelModifiers for component v-model', () => {
     const root = parseWithVModel('<Comp v-model.trim.bar-baz="foo" />', {
       prefixIdentifiers: true
     })
@@ -399,7 +437,7 @@ describe('compiler: transform v-model', () => {
     expect(vnodeCall.dynamicProps).toBe(`["modelValue", "onUpdate:modelValue"]`)
   })
 
-  test('should generate modelModifers for component v-model with arguments', () => {
+  test('should generate modelModifiers for component v-model with arguments', () => {
     const root = parseWithVModel(
       '<Comp v-model:foo.trim="foo" v-model:bar.number="bar" />',
       {
@@ -467,6 +505,13 @@ describe('compiler: transform v-model', () => {
           code: ErrorCodes.X_V_MODEL_MALFORMED_EXPRESSION
         })
       )
+    })
+
+    test('allow unicode', () => {
+      const onError = jest.fn()
+      parseWithVModel('<span v-model="变.量" />', { onError })
+
+      expect(onError).toHaveBeenCalledTimes(0)
     })
 
     test('used on scope variable', () => {

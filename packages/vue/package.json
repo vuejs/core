@@ -1,13 +1,12 @@
 {
   "name": "vue",
-  "version": "3.0.0-beta.5",
-  "description": "vue",
+  "version": "3.1.1",
+  "description": "The progressive JavaScript framework for buiding modern web UI.",
   "main": "index.js",
   "module": "dist/vue.runtime.esm-bundler.js",
   "types": "dist/vue.d.ts",
   "unpkg": "dist/vue.global.js",
   "jsdelivr": "dist/vue.global.js",
-  "sideEffects": false,
   "files": [
     "index.js",
     "dist"
@@ -38,9 +37,9 @@
   },
   "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/vue#readme",
   "dependencies": {
-    "@vue/shared": "3.0.0-beta.5",
-    "@vue/compiler-dom": "3.0.0-beta.5",
-    "@vue/runtime-dom": "3.0.0-beta.5"
+    "@vue/shared": "3.1.1",
+    "@vue/compiler-dom": "3.1.1",
+    "@vue/runtime-dom": "3.1.1"
   },
   "devDependencies": {
     "lodash": "^4.17.15",

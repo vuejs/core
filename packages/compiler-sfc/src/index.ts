@@ -2,6 +2,16 @@
 export { parse } from './parse'
 export { compileTemplate } from './compileTemplate'
 export { compileStyle, compileStyleAsync } from './compileStyle'
+export { compileScript } from './compileScript'
+export { rewriteDefault } from './rewriteDefault'
+export { generateCodeFrame } from '@vue/compiler-core'
+
+// Utilities
+export { parse as babelParse } from '@babel/parser'
+export { walkIdentifiers } from './compileScript'
+import MagicString from 'magic-string'
+export { MagicString }
+export { walk } from 'estree-walker'
 
 // Types
 export {
@@ -22,8 +32,9 @@ export {
   SFCAsyncStyleCompileOptions,
   SFCStyleCompileResults
 } from './compileStyle'
+export { SFCScriptCompileOptions } from './compileScript'
 export {
   CompilerOptions,
   CompilerError,
-  generateCodeFrame
+  BindingMetadata
 } from '@vue/compiler-core'

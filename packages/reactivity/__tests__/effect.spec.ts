@@ -7,7 +7,8 @@ import {
   TriggerOpTypes,
   DebuggerEvent,
   markRaw,
-  ref
+  shallowReactive,
+  readonly
 } from '../src/index'
 import { ITERATE_KEY } from '../src/effect'
 
@@ -67,6 +68,7 @@ describe('reactivity/effect', () => {
     effect(() => (dummy = obj.prop))
 
     expect(dummy).toBe('value')
+    // @ts-ignore
     delete obj.prop
     expect(dummy).toBe(undefined)
   })
@@ -77,6 +79,7 @@ describe('reactivity/effect', () => {
     effect(() => (dummy = 'prop' in obj))
 
     expect(dummy).toBe(true)
+    // @ts-ignore
     delete obj.prop
     expect(dummy).toBe(false)
     obj.prop = 12
@@ -91,6 +94,7 @@ describe('reactivity/effect', () => {
     effect(() => (dummy = counter.num))
 
     expect(dummy).toBe(0)
+    // @ts-ignore
     delete counter.num
     expect(dummy).toBe(2)
     parentCounter.num = 4
@@ -107,8 +111,10 @@ describe('reactivity/effect', () => {
     effect(() => (dummy = 'num' in counter))
 
     expect(dummy).toBe(true)
+    // @ts-ignore
     delete counter.num
     expect(dummy).toBe(true)
+    // @ts-ignore
     delete parentCounter.num
     expect(dummy).toBe(false)
     counter.num = 3
@@ -220,6 +226,7 @@ describe('reactivity/effect', () => {
     expect(hasDummy).toBe(true)
     obj[key] = 'newValue'
     expect(dummy).toBe('newValue')
+    // @ts-ignore
     delete obj[key]
     expect(dummy).toBe(undefined)
     expect(hasDummy).toBe(false)
@@ -351,6 +358,29 @@ describe('reactivity/effect', () => {
     counter.num = 4
     expect(counter.num).toBe(5)
     expect(counterSpy).toHaveBeenCalledTimes(2)
+  })
+
+  it('should avoid infinite recursive loops when use Array.prototype.push/unshift/pop/shift', () => {
+    ;(['push', 'unshift'] as const).forEach(key => {
+      const arr = reactive<number[]>([])
+      const counterSpy1 = jest.fn(() => (arr[key] as any)(1))
+      const counterSpy2 = jest.fn(() => (arr[key] as any)(2))
+      effect(counterSpy1)
+      effect(counterSpy2)
+      expect(arr.length).toBe(2)
+      expect(counterSpy1).toHaveBeenCalledTimes(1)
+      expect(counterSpy2).toHaveBeenCalledTimes(1)
+    })
+    ;(['pop', 'shift'] as const).forEach(key => {
+      const arr = reactive<number[]>([1, 2, 3, 4])
+      const counterSpy1 = jest.fn(() => (arr[key] as any)())
+      const counterSpy2 = jest.fn(() => (arr[key] as any)())
+      effect(counterSpy1)
+      effect(counterSpy2)
+      expect(arr.length).toBe(2)
+      expect(counterSpy1).toHaveBeenCalledTimes(1)
+      expect(counterSpy2).toHaveBeenCalledTimes(1)
+    })
   })
 
   it('should allow explicitly recursive raw function loops', () => {
@@ -649,6 +679,7 @@ describe('reactivity/effect', () => {
       newValue: 2
     })
 
+    // @ts-ignore
     delete obj.foo
     expect(dummy).toBeUndefined()
     expect(onTrigger).toHaveBeenCalledTimes(2)
@@ -676,28 +707,6 @@ describe('reactivity/effect', () => {
     // stopped effect should still be manually callable
     runner()
     expect(dummy).toBe(3)
-  })
-
-  it('stop with scheduler', () => {
-    let dummy
-    const obj = reactive({ prop: 1 })
-    const queue: (() => void)[] = []
-    const runner = effect(
-      () => {
-        dummy = obj.prop
-      },
-      {
-        scheduler: e => queue.push(e)
-      }
-    )
-    obj.prop = 2
-    expect(dummy).toBe(1)
-    expect(queue.length).toBe(1)
-    stop(runner)
-
-    // a scheduled effect should not execute anymore after stopped
-    queue.forEach(e => e())
-    expect(dummy).toBe(1)
   })
 
   it('events: onStop', () => {
@@ -759,7 +768,7 @@ describe('reactivity/effect', () => {
     expect(fnSpy).toHaveBeenCalledTimes(1)
   })
 
-  it('should trigger all effects when array lenght is set 0', () => {
+  it('should trigger all effects when array length is set to 0', () => {
     const observed: any = reactive([1])
     let dummy, record
     effect(() => {
@@ -783,13 +792,51 @@ describe('reactivity/effect', () => {
     expect(record).toBeUndefined()
   })
 
-  it('should handle self dependency mutations', () => {
-    const count = ref(0)
-    effect(() => {
-      count.value++
+  it('should trigger once effect when set the equal proxy', () => {
+    const obj = reactive({ foo: 1 })
+    const observed: any = reactive({ obj })
+    const fnSpy = jest.fn(() => observed.obj)
+
+    effect(fnSpy)
+
+    observed.obj = obj
+    expect(fnSpy).toHaveBeenCalledTimes(1)
+
+    const obj2 = reactive({ foo: 1 })
+    const observed2: any = shallowReactive({ obj2 })
+    const fnSpy2 = jest.fn(() => observed2.obj2)
+
+    effect(fnSpy2)
+
+    observed2.obj2 = obj2
+    expect(fnSpy2).toHaveBeenCalledTimes(1)
+  })
+
+  describe('readonly + reactive for Map', () => {
+    test('should work with readonly(reactive(Map))', () => {
+      const m = reactive(new Map())
+      const roM = readonly(m)
+      const fnSpy = jest.fn(() => roM.get(1))
+
+      effect(fnSpy)
+      expect(fnSpy).toHaveBeenCalledTimes(1)
+      m.set(1, 1)
+      expect(fnSpy).toHaveBeenCalledTimes(2)
     })
-    expect(count.value).toBe(1)
-    count.value = 10
-    expect(count.value).toBe(11)
+
+    test('should work with observed value as key', () => {
+      const key = reactive({})
+      const m = reactive(new Map())
+      m.set(key, 1)
+      const roM = readonly(m)
+      const fnSpy = jest.fn(() => roM.get(key))
+
+      effect(fnSpy)
+      expect(fnSpy).toHaveBeenCalledTimes(1)
+      m.set(key, 1)
+      expect(fnSpy).toHaveBeenCalledTimes(1)
+      m.set(key, 2)
+      expect(fnSpy).toHaveBeenCalledTimes(2)
+    })
   })
 })

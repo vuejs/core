@@ -11,7 +11,6 @@ import {
   buildSlots,
   FunctionExpression,
   TemplateChildNode,
-  TELEPORT,
   createIfStatement,
   createSimpleExpression,
   getBaseTransformPreset,
@@ -31,9 +30,12 @@ import {
   ExpressionNode,
   TemplateNode,
   SUSPENSE,
-  TRANSITION_GROUP
+  TELEPORT,
+  TRANSITION_GROUP,
+  CREATE_VNODE,
+  CallExpression
 } from '@vue/compiler-dom'
-import { SSR_RENDER_COMPONENT } from '../runtimeHelpers'
+import { SSR_RENDER_COMPONENT, SSR_RENDER_VNODE } from '../runtimeHelpers'
 import {
   SSRTransformContext,
   processChildren,
@@ -44,6 +46,7 @@ import {
   ssrProcessSuspense,
   ssrTransformSuspense
 } from './ssrTransformSuspense'
+import { ssrProcessTransitionGroup } from './ssrTransformTransitionGroup'
 import { isSymbol, isObject, isArray } from '@vue/shared'
 
 // We need to construct the slot functions in the 1st pass to ensure proper
@@ -58,7 +61,10 @@ interface WIPSlotEntry {
   vnodeBranch: ReturnStatement
 }
 
-const componentTypeMap = new WeakMap<ComponentNode, symbol>()
+const componentTypeMap = new WeakMap<
+  ComponentNode,
+  string | symbol | CallExpression
+>()
 
 // ssr component transform is done in two phases:
 // In phase 1. we use `buildSlot` to analyze the children of the component into
@@ -75,8 +81,9 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
   }
 
   const component = resolveComponentType(node, context, true /* ssr */)
+  componentTypeMap.set(node, component)
+
   if (isSymbol(component)) {
-    componentTypeMap.set(node, component)
     if (component === SUSPENSE) {
       return ssrTransformSuspense(node, context)
     }
@@ -134,10 +141,28 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
       ? buildSlots(node, context, buildSSRSlotFn).slots
       : `null`
 
-    node.ssrCodegenNode = createCallExpression(
-      context.helper(SSR_RENDER_COMPONENT),
-      [component, props, slots, `_parent`]
-    )
+    if (typeof component !== 'string') {
+      // dynamic component that resolved to a `resolveDynamicComponent` call
+      // expression - since the resolved result may be a plain element (string)
+      // or a VNode, handle it with `renderVNode`.
+      node.ssrCodegenNode = createCallExpression(
+        context.helper(SSR_RENDER_VNODE),
+        [
+          `_push`,
+          createCallExpression(context.helper(CREATE_VNODE), [
+            component,
+            props,
+            slots
+          ]),
+          `_parent`
+        ]
+      )
+    } else {
+      node.ssrCodegenNode = createCallExpression(
+        context.helper(SSR_RENDER_COMPONENT),
+        [component, props, slots, `_parent`]
+      )
+    }
   }
 }
 
@@ -145,16 +170,18 @@ export function ssrProcessComponent(
   node: ComponentNode,
   context: SSRTransformContext
 ) {
+  const component = componentTypeMap.get(node)!
   if (!node.ssrCodegenNode) {
     // this is a built-in component that fell-through.
-    const component = componentTypeMap.get(node)!
     if (component === TELEPORT) {
       return ssrProcessTeleport(node, context)
     } else if (component === SUSPENSE) {
       return ssrProcessSuspense(node, context)
+    } else if (component === TRANSITION_GROUP) {
+      return ssrProcessTransitionGroup(node, context)
     } else {
       // real fall-through (e.g. KeepAlive): just render its children.
-      processChildren(node.children, context, component === TRANSITION_GROUP)
+      processChildren(node.children, context)
     }
   } else {
     // finish up slot function expressions from the 1st pass.
@@ -176,7 +203,22 @@ export function ssrProcessComponent(
         vnodeBranch
       )
     }
-    context.pushStatement(createCallExpression(`_push`, [node.ssrCodegenNode]))
+
+    // component is inside a slot, inherit slot scope Id
+    if (context.withSlotScopeId) {
+      node.ssrCodegenNode!.arguments.push(`_scopeId`)
+    }
+
+    if (typeof component === 'string') {
+      // static component
+      context.pushStatement(
+        createCallExpression(`_push`, [node.ssrCodegenNode])
+      )
+    } else {
+      // dynamic component (`resolveDynamicComponent` call)
+      // the codegen node is a `renderVNode` call
+      context.pushStatement(node.ssrCodegenNode)
+    }
   }
 }
 
@@ -251,16 +293,28 @@ function subTransform(
   // inherit parent scope analysis state
   childContext.scopes = { ...parentContext.scopes }
   childContext.identifiers = { ...parentContext.identifiers }
+  childContext.imports = parentContext.imports
   // traverse
   traverseNode(childRoot, childContext)
-  // merge helpers/components/directives/imports into parent context
-  ;(['helpers', 'components', 'directives', 'imports'] as const).forEach(
-    key => {
-      childContext[key].forEach((value: any) => {
+  // merge helpers/components/directives into parent context
+  ;(['helpers', 'components', 'directives'] as const).forEach(key => {
+    childContext[key].forEach((value: any, helperKey: any) => {
+      if (key === 'helpers') {
+        const parentCount = parentContext.helpers.get(helperKey)
+        if (parentCount === undefined) {
+          parentContext.helpers.set(helperKey, value)
+        } else {
+          parentContext.helpers.set(helperKey, value + parentCount)
+        }
+      } else {
         ;(parentContext[key] as any).add(value)
-      })
-    }
-  )
+      }
+    })
+  })
+  // imports/hoists are not merged because:
+  // - imports are only used for asset urls and should be consistent between
+  //   node/client branches
+  // - hoists are not enabled for the client branch here
 }
 
 function clone(v: any): any {

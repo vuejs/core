@@ -71,7 +71,7 @@ describe('compiler: transform v-bind', () => {
     const props = (node.codegenNode as VNodeCall).props as ObjectExpression
     expect(props.properties[0]).toMatchObject({
       key: {
-        content: `id`,
+        content: `id || ""`,
         isStatic: false
       },
       value: {
@@ -83,7 +83,8 @@ describe('compiler: transform v-bind', () => {
 
   test('should error if no expression', () => {
     const onError = jest.fn()
-    parseWithVBind(`<div v-bind:arg />`, { onError })
+    const node = parseWithVBind(`<div v-bind:arg />`, { onError })
+    const props = (node.codegenNode as VNodeCall).props as ObjectExpression
     expect(onError.mock.calls[0][0]).toMatchObject({
       code: ErrorCodes.X_V_BIND_NO_EXPRESSION,
       loc: {
@@ -95,6 +96,16 @@ describe('compiler: transform v-bind', () => {
           line: 1,
           column: 16
         }
+      }
+    })
+    expect(props.properties[0]).toMatchObject({
+      key: {
+        content: `arg`,
+        isStatic: true
+      },
+      value: {
+        content: ``,
+        isStatic: true
       }
     })
   })
@@ -119,7 +130,7 @@ describe('compiler: transform v-bind', () => {
     const props = (node.codegenNode as VNodeCall).props as ObjectExpression
     expect(props.properties[0]).toMatchObject({
       key: {
-        content: `_${helperNameMap[CAMELIZE]}(foo)`,
+        content: `_${helperNameMap[CAMELIZE]}(foo || "")`,
         isStatic: false
       },
       value: {
@@ -138,10 +149,12 @@ describe('compiler: transform v-bind', () => {
       key: {
         children: [
           `_${helperNameMap[CAMELIZE]}(`,
+          `(`,
           { content: `_ctx.foo` },
           `(`,
           { content: `_ctx.bar` },
           `)`,
+          `) || ""`,
           `)`
         ]
       },

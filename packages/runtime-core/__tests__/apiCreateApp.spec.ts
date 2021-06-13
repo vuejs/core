@@ -13,11 +13,8 @@ import {
   getCurrentInstance,
   defineComponent
 } from '@vue/runtime-test'
-import { mockWarn } from '@vue/shared'
 
 describe('api: createApp', () => {
-  mockWarn()
-
   test('mount', () => {
     const Comp = defineComponent({
       props: {
@@ -61,9 +58,14 @@ describe('api: createApp', () => {
 
     const root = nodeOps.createElement('div')
     const app = createApp(Comp)
+
+    // warning
+    app.unmount()
+    expect(`that is not mounted`).toHaveBeenWarned()
+
     app.mount(root)
 
-    app.unmount(root)
+    app.unmount()
     expect(serializeInner(root)).toBe(``)
   })
 
@@ -95,6 +97,11 @@ describe('api: createApp', () => {
     app.mount(root)
     expect(serializeInner(root)).toBe(`3,2`)
     expect('[Vue warn]: injection "__proto__" not found.').toHaveBeenWarned()
+
+    const app2 = createApp(Root)
+    app2.provide('bar', 1)
+    app2.provide('bar', 2)
+    expect(`App already provides property with key "bar".`).toHaveBeenWarned()
   })
 
   test('component', () => {
@@ -474,4 +481,7 @@ describe('api: createApp', () => {
     app.mount(root)
     expect(serializeInner(root)).toBe('hello')
   })
+
+  // config.compilerOptions is tested in packages/vue since it is only
+  // supported in the full build.
 })

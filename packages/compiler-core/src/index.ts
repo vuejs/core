@@ -6,7 +6,9 @@ export {
   ParserOptions,
   TransformOptions,
   CodegenOptions,
-  HoistTransform
+  HoistTransform,
+  BindingMetadata,
+  BindingTypes
 } from './options'
 export { baseParse, TextModes } from './parse'
 export {
@@ -55,3 +57,10 @@ export {
 } from './transforms/transformElement'
 export { processSlotOutlet } from './transforms/transformSlotOutlet'
 export { generateCodeFrame } from '@vue/shared'
+
+// v2 compat only
+export {
+  checkCompatEnabled,
+  warnDeprecation,
+  CompilerDeprecationTypes
+} from './compat/compatConfig'

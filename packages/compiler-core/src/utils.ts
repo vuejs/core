@@ -20,7 +20,8 @@ import {
   IfBranchNode,
   TextNode,
   InterpolationNode,
-  VNodeCall
+  VNodeCall,
+  SimpleExpressionNode
 } from './ast'
 import { TransformContext } from './transform'
 import {
@@ -28,12 +29,13 @@ import {
   TELEPORT,
   SUSPENSE,
   KEEP_ALIVE,
-  BASE_TRANSITION
+  BASE_TRANSITION,
+  TO_HANDLERS
 } from './runtimeHelpers'
-import { isString, isObject, hyphenate } from '@vue/shared'
-import { parse } from '@babel/parser'
-import { walk } from 'estree-walker'
-import { Node } from '@babel/types'
+import { isString, isObject, hyphenate, extend } from '@vue/shared'
+
+export const isStaticExp = (p: JSChildNode): p is SimpleExpressionNode =>
+  p.type === NodeTypes.SIMPLE_EXPRESSION && p.isStatic
 
 export const isBuiltInType = (tag: string, expected: string): boolean =>
   tag === expected || tag === hyphenate(expected)
@@ -50,42 +52,72 @@ export function isCoreComponent(tag: string): symbol | void {
   }
 }
 
-export const parseJS: typeof parse = (code, options) => {
-  if (__BROWSER__) {
-    assert(
-      !__BROWSER__,
-      `Expression AST analysis can only be performed in non-browser builds.`
-    )
-    return null as any
-  } else {
-    return parse(code, options)
-  }
-}
-
-interface Walker {
-  enter?(node: Node, parent: Node): void
-  leave?(node: Node): void
-}
-
-export const walkJS = (ast: Node, walker: Walker) => {
-  if (__BROWSER__) {
-    assert(
-      !__BROWSER__,
-      `Expression AST analysis can only be performed in non-browser builds.`
-    )
-    return null as any
-  } else {
-    return (walk as any)(ast, walker)
-  }
-}
-
 const nonIdentifierRE = /^\d|[^\$\w]/
 export const isSimpleIdentifier = (name: string): boolean =>
   !nonIdentifierRE.test(name)
 
-const memberExpRE = /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\[[^\]]+\])*$/
-export const isMemberExpression = (path: string): boolean =>
-  memberExpRE.test(path)
+const enum MemberExpLexState {
+  inMemberExp,
+  inBrackets,
+  inString
+}
+
+const validFirstIdentCharRE = /[A-Za-z_$\xA0-\uFFFF]/
+const validIdentCharRE = /[\.\w$\xA0-\uFFFF]/
+const whitespaceRE = /\s+[.[]\s*|\s*[.[]\s+/g
+
+/**
+ * Simple lexer to check if an expression is a member expression. This is
+ * lax and only checks validity at the root level (i.e. does not validate exps
+ * inside square brackets), but it's ok since these are only used on template
+ * expressions and false positives are invalid expressions in the first place.
+ */
+export const isMemberExpression = (path: string): boolean => {
+  // remove whitespaces around . or [ first
+  path = path.trim().replace(whitespaceRE, s => s.trim())
+
+  let state = MemberExpLexState.inMemberExp
+  let prevState = MemberExpLexState.inMemberExp
+  let currentOpenBracketCount = 0
+  let currentStringType: "'" | '"' | '`' | null = null
+
+  for (let i = 0; i < path.length; i++) {
+    const char = path.charAt(i)
+    switch (state) {
+      case MemberExpLexState.inMemberExp:
+        if (char === '[') {
+          prevState = state
+          state = MemberExpLexState.inBrackets
+          currentOpenBracketCount++
+        } else if (
+          !(i === 0 ? validFirstIdentCharRE : validIdentCharRE).test(char)
+        ) {
+          return false
+        }
+        break
+      case MemberExpLexState.inBrackets:
+        if (char === `'` || char === `"` || char === '`') {
+          prevState = state
+          state = MemberExpLexState.inString
+          currentStringType = char
+        } else if (char === `[`) {
+          currentOpenBracketCount++
+        } else if (char === `]`) {
+          if (!--currentOpenBracketCount) {
+            state = prevState
+          }
+        }
+        break
+      case MemberExpLexState.inString:
+        if (char === currentStringType) {
+          state = prevState
+          currentStringType = null
+        }
+        break
+    }
+  }
+  return !currentOpenBracketCount
+}
 
 export function getInnerRange(
   loc: SourceLocation,
@@ -117,7 +149,11 @@ export function advancePositionWithClone(
   source: string,
   numberOfCharacters: number = source.length
 ): Position {
-  return advancePositionWithMutation({ ...pos }, source, numberOfCharacters)
+  return advancePositionWithMutation(
+    extend({}, pos),
+    source,
+    numberOfCharacters
+  )
 }
 
 // advance by mutation without cloning (for performance reasons), since this
@@ -183,19 +219,18 @@ export function findProp(
       if (p.name === name && (p.value || allowEmpty)) {
         return p
       }
-    } else if (p.name === 'bind' && p.exp && isBindKey(p.arg, name)) {
+    } else if (
+      p.name === 'bind' &&
+      (p.exp || allowEmpty) &&
+      isBindKey(p.arg, name)
+    ) {
       return p
     }
   }
 }
 
 export function isBindKey(arg: DirectiveNode['arg'], name: string): boolean {
-  return !!(
-    arg &&
-    arg.type === NodeTypes.SIMPLE_EXPRESSION &&
-    arg.isStatic &&
-    arg.content === name
-  )
+  return !!(arg && isStaticExp(arg) && arg.content === name)
 }
 
 export function hasDynamicKeyVBind(node: ElementNode): boolean {
@@ -238,7 +273,7 @@ export function injectProp(
   prop: Property,
   context: TransformContext
 ) {
-  let propsWithInjection: ObjectExpression | CallExpression
+  let propsWithInjection: ObjectExpression | CallExpression | undefined
   const props =
     node.type === NodeTypes.VNODE_CALL ? node.props : node.arguments[2]
   if (props == null || isString(props)) {
@@ -251,9 +286,17 @@ export function injectProp(
     if (!isString(first) && first.type === NodeTypes.JS_OBJECT_EXPRESSION) {
       first.properties.unshift(prop)
     } else {
-      props.arguments.unshift(createObjectExpression([prop]))
+      if (props.callee === TO_HANDLERS) {
+        // #2366
+        propsWithInjection = createCallExpression(context.helper(MERGE_PROPS), [
+          createObjectExpression([prop]),
+          props
+        ])
+      } else {
+        props.arguments.unshift(createObjectExpression([prop]))
+      }
     }
-    propsWithInjection = props
+    !propsWithInjection && (propsWithInjection = props)
   } else if (props.type === NodeTypes.JS_OBJECT_EXPRESSION) {
     let alreadyExists = false
     // check existing key to avoid overriding user provided keys
@@ -285,7 +328,7 @@ export function injectProp(
 
 export function toValidAssetId(
   name: string,
-  type: 'component' | 'directive'
+  type: 'component' | 'directive' | 'filter'
 ): string {
   return `_${type}_${name.replace(/[^\w]/g, '_')}`
 }

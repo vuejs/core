@@ -8,8 +8,6 @@
 </div>
 
 <script>
-const delay = window.location.hash === '#test' ? 16 : 300
-
 Vue.createApp({
   data: () => ({
     input: '# hello'
@@ -22,7 +20,7 @@ Vue.createApp({
   methods: {
     update: _.debounce(function (e) {
       this.input = e.target.value
-    }, delay)
+    }, 50)
   }
 }).mount('#editor')
 </script>
@@ -37,7 +35,8 @@ html, body, #editor {
 
 textarea, #editor div {
   display: inline-block;
-  width: 49%;
+  overflow: auto;
+  width: 50%;
   height: 100%;
   vertical-align: top;
   -webkit-box-sizing: border-box;

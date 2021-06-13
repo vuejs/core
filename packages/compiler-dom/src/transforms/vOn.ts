@@ -3,14 +3,19 @@ import {
   DirectiveTransform,
   createObjectProperty,
   createCallExpression,
-  createObjectExpression,
   createSimpleExpression,
   NodeTypes,
   createCompoundExpression,
-  ExpressionNode
+  ExpressionNode,
+  SimpleExpressionNode,
+  isStaticExp,
+  CompilerDeprecationTypes,
+  TransformContext,
+  SourceLocation,
+  checkCompatEnabled
 } from '@vue/compiler-core'
 import { V_ON_WITH_MODIFIERS, V_ON_WITH_KEYS } from '../runtimeHelpers'
-import { makeMap } from '@vue/shared'
+import { makeMap, capitalize } from '@vue/shared'
 
 const isEventOptionModifier = /*#__PURE__*/ makeMap(`passive,once,capture`)
 const isNonKeyModifier = /*#__PURE__*/ makeMap(
@@ -19,14 +24,21 @@ const isNonKeyModifier = /*#__PURE__*/ makeMap(
     // system modifiers + exact
     `ctrl,shift,alt,meta,exact,` +
     // mouse
-    `left,middle,right`
+    `middle`
 )
+// left & right could be mouse or key modifiers based on event type
+const maybeKeyModifier = /*#__PURE__*/ makeMap('left,right')
 const isKeyboardEvent = /*#__PURE__*/ makeMap(
   `onkeyup,onkeydown,onkeypress`,
   true
 )
 
-const generateModifiers = (modifiers: string[]) => {
+const resolveModifiers = (
+  key: ExpressionNode,
+  modifiers: string[],
+  context: TransformContext,
+  loc: SourceLocation
+) => {
   const keyModifiers = []
   const nonKeyModifiers = []
   const eventOptionModifiers = []
@@ -34,15 +46,39 @@ const generateModifiers = (modifiers: string[]) => {
   for (let i = 0; i < modifiers.length; i++) {
     const modifier = modifiers[i]
 
-    if (isEventOptionModifier(modifier)) {
-      // eventOptionModifiers: modifiers for addEventListener() options, e.g. .passive & .capture
+    if (
+      __COMPAT__ &&
+      modifier === 'native' &&
+      checkCompatEnabled(
+        CompilerDeprecationTypes.COMPILER_V_ON_NATIVE,
+        context,
+        loc
+      )
+    ) {
+      eventOptionModifiers.push(modifier)
+    } else if (isEventOptionModifier(modifier)) {
+      // eventOptionModifiers: modifiers for addEventListener() options,
+      // e.g. .passive & .capture
       eventOptionModifiers.push(modifier)
     } else {
       // runtimeModifiers: modifiers that needs runtime guards
-      if (isNonKeyModifier(modifier)) {
-        nonKeyModifiers.push(modifier)
+      if (maybeKeyModifier(modifier)) {
+        if (isStaticExp(key)) {
+          if (isKeyboardEvent((key as SimpleExpressionNode).content)) {
+            keyModifiers.push(modifier)
+          } else {
+            nonKeyModifiers.push(modifier)
+          }
+        } else {
+          keyModifiers.push(modifier)
+          nonKeyModifiers.push(modifier)
+        }
       } else {
-        keyModifiers.push(modifier)
+        if (isNonKeyModifier(modifier)) {
+          nonKeyModifiers.push(modifier)
+        } else {
+          keyModifiers.push(modifier)
+        }
       }
     }
   }
@@ -56,16 +92,14 @@ const generateModifiers = (modifiers: string[]) => {
 
 const transformClick = (key: ExpressionNode, event: string) => {
   const isStaticClick =
-    key.type === NodeTypes.SIMPLE_EXPRESSION &&
-    key.isStatic &&
-    key.content.toLowerCase() === 'onclick'
+    isStaticExp(key) && key.content.toLowerCase() === 'onclick'
   return isStaticClick
     ? createSimpleExpression(event, true)
     : key.type !== NodeTypes.SIMPLE_EXPRESSION
       ? createCompoundExpression([
           `(`,
           key,
-          `).toLowerCase() === "onclick" ? "${event}" : (`,
+          `) === "onClick" ? "${event}" : (`,
           key,
           `)`
         ])
@@ -82,7 +116,7 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
       keyModifiers,
       nonKeyModifiers,
       eventOptionModifiers
-    } = generateModifiers(modifiers)
+    } = resolveModifiers(key, modifiers, context, dir.loc)
 
     // normalize click.right and click.middle since they don't actually fire
     if (nonKeyModifiers.includes('right')) {
@@ -102,9 +136,7 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
     if (
       keyModifiers.length &&
       // if event name is dynamic, always wrap with keys guard
-      (key.type === NodeTypes.COMPOUND_EXPRESSION ||
-        !key.isStatic ||
-        isKeyboardEvent(key.content))
+      (!isStaticExp(key) || isKeyboardEvent(key.content))
     ) {
       handlerExp = createCallExpression(context.helper(V_ON_WITH_KEYS), [
         handlerExp,
@@ -113,20 +145,10 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
     }
 
     if (eventOptionModifiers.length) {
-      handlerExp = createObjectExpression([
-        createObjectProperty('handler', handlerExp),
-        createObjectProperty(
-          'options',
-          createObjectExpression(
-            eventOptionModifiers.map(modifier =>
-              createObjectProperty(
-                modifier,
-                createSimpleExpression('true', false)
-              )
-            )
-          )
-        )
-      ])
+      const modifierPostfix = eventOptionModifiers.map(capitalize).join('')
+      key = isStaticExp(key)
+        ? createSimpleExpression(`${key.content}${modifierPostfix}`, true)
+        : createCompoundExpression([`(`, key, `) + "${modifierPostfix}"`])
     }
 
     return {

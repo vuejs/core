@@ -31,6 +31,21 @@
     - **`vue.runtime.esm-bundler.js` (default)** is runtime only, and requires all templates to be pre-compiled. This is the default entry for bundlers (via `module` field in `package.json`) because when using a bundler templates are typically pre-compiled (e.g. in `*.vue` files).
     - **`vue.esm-bundler.js`**: includes the runtime compiler. Use this if you are using a bundler but still want runtime template compilation (e.g. in-DOM templates or templates via inline JavaScript strings). You will need to configure your bundler to alias `vue` to this file.
 
+#### Bundler Build Feature Flags
+
+Starting with 3.0.0-rc.3, `esm-bundler` builds now exposes global feature flags that can be overwritten at compile time:
+
+- `__VUE_OPTIONS_API__` (enable/disable Options API support, default: `true`)
+- `__VUE_PROD_DEVTOOLS__` (enable/disable devtools support in production, default: `false`)
+
+The build will work without configuring these flags, however it is **strongly recommended** to properly configure them in order to get proper tree-shaking in the final bundle. To configure these flags:
+
+- webpack: use [DefinePlugin](https://webpack.js.org/plugins/define-plugin/)
+- Rollup: use [@rollup/plugin-replace](https://github.com/rollup/plugins/tree/master/packages/replace)
+- Vite: configured by default, but can be overwritten using the [`define` option](https://github.com/vitejs/vite/blob/a4133c073e640b17276b2de6e91a6857bdf382e1/src/node/config.ts#L72-L76)
+
+Note: the replacement value **must be boolean literals** and cannot be strings, otherwise the bundler/minifier will not be able to properly evaluate the conditions.
+
 ### For Server-Side Rendering
 
 - **`vue.cjs(.prod).js`**:

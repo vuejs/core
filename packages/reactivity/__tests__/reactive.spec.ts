@@ -1,17 +1,9 @@
 import { ref, isRef } from '../src/ref'
-import {
-  reactive,
-  isReactive,
-  toRaw,
-  markRaw,
-  shallowReactive
-} from '../src/reactive'
-import { mockWarn } from '@vue/shared'
+import { reactive, isReactive, toRaw, markRaw } from '../src/reactive'
 import { computed } from '../src/computed'
+import { effect } from '../src/effect'
 
 describe('reactivity/reactive', () => {
-  mockWarn()
-
   test('Object', () => {
     const original = { foo: 1 }
     const observed = reactive(original)
@@ -24,6 +16,20 @@ describe('reactivity/reactive', () => {
     expect('foo' in observed).toBe(true)
     // ownKeys
     expect(Object.keys(observed)).toEqual(['foo'])
+  })
+
+  test('proto', () => {
+    const obj = {}
+    const reactiveObj = reactive(obj)
+    expect(isReactive(reactiveObj)).toBe(true)
+    // read prop of reactiveObject will cause reactiveObj[prop] to be reactive
+    // @ts-ignore
+    const prototype = reactiveObj['__proto__']
+    const otherObj = { data: ['a'] }
+    expect(isReactive(otherObj)).toBe(false)
+    const reactiveOther = reactive(otherObj)
+    expect(isReactive(reactiveOther)).toBe(true)
+    expect(reactiveOther.data[0]).toBe('a')
   })
 
   test('nested reactives', () => {
@@ -39,6 +45,61 @@ describe('reactivity/reactive', () => {
     expect(isReactive(observed.array[0])).toBe(true)
   })
 
+  test('observing subtypes of IterableCollections(Map, Set)', () => {
+    // subtypes of Map
+    class CustomMap extends Map {}
+    const cmap = reactive(new CustomMap())
+
+    expect(cmap instanceof Map).toBe(true)
+    expect(isReactive(cmap)).toBe(true)
+
+    cmap.set('key', {})
+    expect(isReactive(cmap.get('key'))).toBe(true)
+
+    // subtypes of Set
+    class CustomSet extends Set {}
+    const cset = reactive(new CustomSet())
+
+    expect(cset instanceof Set).toBe(true)
+    expect(isReactive(cset)).toBe(true)
+
+    let dummy
+    effect(() => (dummy = cset.has('value')))
+    expect(dummy).toBe(false)
+    cset.add('value')
+    expect(dummy).toBe(true)
+    cset.delete('value')
+    expect(dummy).toBe(false)
+  })
+
+  test('observing subtypes of WeakCollections(WeakMap, WeakSet)', () => {
+    // subtypes of WeakMap
+    class CustomMap extends WeakMap {}
+    const cmap = reactive(new CustomMap())
+
+    expect(cmap instanceof WeakMap).toBe(true)
+    expect(isReactive(cmap)).toBe(true)
+
+    const key = {}
+    cmap.set(key, {})
+    expect(isReactive(cmap.get(key))).toBe(true)
+
+    // subtypes of WeakSet
+    class CustomSet extends WeakSet {}
+    const cset = reactive(new CustomSet())
+
+    expect(cset instanceof WeakSet).toBe(true)
+    expect(isReactive(cset)).toBe(true)
+
+    let dummy
+    effect(() => (dummy = cset.has(key)))
+    expect(dummy).toBe(false)
+    cset.add(key)
+    expect(dummy).toBe(true)
+    cset.delete(key)
+    expect(dummy).toBe(false)
+  })
+
   test('observed value should proxy mutations to original (Object)', () => {
     const original: any = { foo: 1 }
     const observed = reactive(original)
@@ -50,6 +111,19 @@ describe('reactivity/reactive', () => {
     delete observed.foo
     expect('foo' in observed).toBe(false)
     expect('foo' in original).toBe(false)
+  })
+
+  test('original value change should reflect in observed value (Object)', () => {
+    const original: any = { foo: 1 }
+    const observed = reactive(original)
+    // set
+    original.bar = 1
+    expect(original.bar).toBe(1)
+    expect(observed.bar).toBe(1)
+    // delete
+    delete original.foo
+    expect('foo' in original).toBe(false)
+    expect('foo' in observed).toBe(false)
   })
 
   test('setting a property with an unobserved value should wrap with reactive', () => {
@@ -84,11 +158,19 @@ describe('reactivity/reactive', () => {
     expect(original.bar).toBe(original2)
   })
 
-  test('unwrap', () => {
+  test('toRaw', () => {
     const original = { foo: 1 }
     const observed = reactive(original)
     expect(toRaw(observed)).toBe(original)
     expect(toRaw(original)).toBe(original)
+  })
+
+  test('toRaw on object using reactive as prototype', () => {
+    const original = reactive({})
+    const obj = Object.create(original)
+    const raw = toRaw(obj)
+    expect(raw).toBe(obj)
+    expect(raw).not.toBe(toRaw(original))
   })
 
   test('should not unwrap Ref<T>', () => {
@@ -113,6 +195,21 @@ describe('reactivity/reactive', () => {
     obj.b + 1
     expect(typeof obj.a).toBe(`number`)
     expect(typeof obj.b).toBe(`number`)
+  })
+
+  test('should allow setting property from a ref to another ref', () => {
+    const foo = ref(0)
+    const bar = ref(1)
+    const observed = reactive({ a: foo })
+    const dummy = computed(() => observed.a)
+    expect(dummy.value).toBe(0)
+
+    // @ts-ignore
+    observed.a = bar
+    expect(dummy.value).toBe(1)
+
+    bar.value++
+    expect(dummy.value).toBe(2)
   })
 
   test('non-observable values', () => {
@@ -155,23 +252,24 @@ describe('reactivity/reactive', () => {
     expect(isReactive(obj.bar)).toBe(false)
   })
 
-  test('should not observe frozen objects', () => {
+  test('should not observe non-extensible objects', () => {
     const obj = reactive({
-      foo: Object.freeze({ a: 1 })
+      foo: Object.preventExtensions({ a: 1 }),
+      // sealed or frozen objects are considered non-extensible as well
+      bar: Object.freeze({ a: 1 }),
+      baz: Object.seal({ a: 1 })
     })
     expect(isReactive(obj.foo)).toBe(false)
+    expect(isReactive(obj.bar)).toBe(false)
+    expect(isReactive(obj.baz)).toBe(false)
   })
 
-  describe('shallowReactive', () => {
-    test('should not make non-reactive properties reactive', () => {
-      const props = shallowReactive({ n: { foo: 1 } })
-      expect(isReactive(props.n)).toBe(false)
-    })
-
-    test('should keep reactive properties reactive', () => {
-      const props: any = shallowReactive({ n: reactive({ foo: 1 }) })
-      props.n = reactive({ foo: 2 })
-      expect(isReactive(props.n)).toBe(true)
-    })
+  test('should not observe objects with __v_skip', () => {
+    const original = {
+      foo: 1,
+      __v_skip: true
+    }
+    const observed = reactive(original)
+    expect(isReactive(observed)).toBe(false)
   })
 })

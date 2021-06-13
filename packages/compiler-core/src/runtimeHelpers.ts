@@ -14,6 +14,7 @@ export const RESOLVE_DYNAMIC_COMPONENT = Symbol(
   __DEV__ ? `resolveDynamicComponent` : ``
 )
 export const RESOLVE_DIRECTIVE = Symbol(__DEV__ ? `resolveDirective` : ``)
+export const RESOLVE_FILTER = Symbol(__DEV__ ? `resolveFilter` : ``)
 export const WITH_DIRECTIVES = Symbol(__DEV__ ? `withDirectives` : ``)
 export const RENDER_LIST = Symbol(__DEV__ ? `renderList` : ``)
 export const RENDER_SLOT = Symbol(__DEV__ ? `renderSlot` : ``)
@@ -22,11 +23,15 @@ export const TO_DISPLAY_STRING = Symbol(__DEV__ ? `toDisplayString` : ``)
 export const MERGE_PROPS = Symbol(__DEV__ ? `mergeProps` : ``)
 export const TO_HANDLERS = Symbol(__DEV__ ? `toHandlers` : ``)
 export const CAMELIZE = Symbol(__DEV__ ? `camelize` : ``)
+export const CAPITALIZE = Symbol(__DEV__ ? `capitalize` : ``)
+export const TO_HANDLER_KEY = Symbol(__DEV__ ? `toHandlerKey` : ``)
 export const SET_BLOCK_TRACKING = Symbol(__DEV__ ? `setBlockTracking` : ``)
 export const PUSH_SCOPE_ID = Symbol(__DEV__ ? `pushScopeId` : ``)
 export const POP_SCOPE_ID = Symbol(__DEV__ ? `popScopeId` : ``)
 export const WITH_SCOPE_ID = Symbol(__DEV__ ? `withScopeId` : ``)
 export const WITH_CTX = Symbol(__DEV__ ? `withCtx` : ``)
+export const UNREF = Symbol(__DEV__ ? `unref` : ``)
+export const IS_REF = Symbol(__DEV__ ? `isRef` : ``)
 
 // Name mapping for runtime helpers that need to be imported from 'vue' in
 // generated code. Make sure these are correctly exported in the runtime!
@@ -46,6 +51,7 @@ export const helperNameMap: any = {
   [RESOLVE_COMPONENT]: `resolveComponent`,
   [RESOLVE_DYNAMIC_COMPONENT]: `resolveDynamicComponent`,
   [RESOLVE_DIRECTIVE]: `resolveDirective`,
+  [RESOLVE_FILTER]: `resolveFilter`,
   [WITH_DIRECTIVES]: `withDirectives`,
   [RENDER_LIST]: `renderList`,
   [RENDER_SLOT]: `renderSlot`,
@@ -54,11 +60,15 @@ export const helperNameMap: any = {
   [MERGE_PROPS]: `mergeProps`,
   [TO_HANDLERS]: `toHandlers`,
   [CAMELIZE]: `camelize`,
+  [CAPITALIZE]: `capitalize`,
+  [TO_HANDLER_KEY]: `toHandlerKey`,
   [SET_BLOCK_TRACKING]: `setBlockTracking`,
   [PUSH_SCOPE_ID]: `pushScopeId`,
   [POP_SCOPE_ID]: `popScopeId`,
   [WITH_SCOPE_ID]: `withScopeId`,
-  [WITH_CTX]: `withCtx`
+  [WITH_CTX]: `withCtx`,
+  [UNREF]: `unref`,
+  [IS_REF]: `isRef`
 }
 
 export function registerRuntimeHelpers(helpers: any) {

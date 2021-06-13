@@ -18,14 +18,15 @@
     "types": ["jest", "puppeteer", "node"],
     "rootDir": ".",
     "paths": {
+      "@vue/compat": ["packages/vue-compat/src"],
       "@vue/*": ["packages/*/src"],
       "vue": ["packages/vue/src"]
     }
   },
   "include": [
     "packages/global.d.ts",
-    "packages/runtime-dom/jsx.d.ts",
     "packages/*/src",
+    "packages/runtime-dom/types/jsx.d.ts",
     "packages/*/__tests__",
     "test-dts"
   ]

@@ -2,8 +2,9 @@ import * as m from 'monaco-editor'
 import { compile, CompilerError, CompilerOptions } from '@vue/compiler-dom'
 import { compile as ssrCompile } from '@vue/compiler-ssr'
 import { compilerOptions, initOptions, ssrMode } from './options'
-import { watchEffect } from '@vue/runtime-dom'
+import { toRaw, watchEffect } from '@vue/runtime-dom'
 import { SourceMapConsumer } from 'source-map'
+import theme from './theme'
 
 declare global {
   interface Window {
@@ -19,8 +20,21 @@ interface PersistedState {
   options: CompilerOptions
 }
 
+const sharedEditorOptions: m.editor.IStandaloneEditorConstructionOptions = {
+  fontSize: 14,
+  scrollBeyondLastLine: false,
+  renderWhitespace: 'selection',
+  minimap: {
+    enabled: false
+  }
+}
+
 window.init = () => {
   const monaco = window.monaco
+
+  monaco.editor.defineTheme('my-theme', theme)
+  monaco.editor.setTheme('my-theme')
+
   const persistedState: PersistedState = JSON.parse(
     decodeURIComponent(window.location.hash.slice(1)) ||
       localStorage.getItem('state') ||
@@ -39,7 +53,7 @@ window.init = () => {
       const compileFn = ssrMode.value ? ssrCompile : compile
       const start = performance.now()
       const { code, ast, map } = compileFn(source, {
-        filename: 'template.vue',
+        filename: 'ExampleTemplate.vue',
         ...compilerOptions,
         sourceMap: true,
         onError: err => {
@@ -53,6 +67,7 @@ window.init = () => {
         errors.filter(e => e.loc).map(formatError)
       )
       console.log(`AST: `, ast)
+      console.log(`Options: `, toRaw(compilerOptions))
       lastSuccessfulCode = code + `\n\n// Check the console for the AST`
       lastSuccessfulMap = new SourceMapConsumer(map!)
       lastSuccessfulMap!.computeColumnSpans()
@@ -94,22 +109,11 @@ window.init = () => {
     }
   }
 
-  const sharedEditorOptions: m.editor.IStandaloneEditorConstructionOptions = {
-    theme: 'vs-dark',
-    fontSize: 14,
-    wordWrap: 'on',
-    scrollBeyondLastLine: false,
-    renderWhitespace: 'selection',
-    contextmenu: false,
-    minimap: {
-      enabled: false
-    }
-  }
-
   const editor = monaco.editor.create(document.getElementById('source')!, {
     value: persistedState.src || `<div>Hello World!</div>`,
     language: 'html',
-    ...sharedEditorOptions
+    ...sharedEditorOptions,
+    wordWrap: 'bounded'
   })
 
   editor.getModel()!.updateOptions({
@@ -146,7 +150,7 @@ window.init = () => {
       clearEditorDecos()
       if (lastSuccessfulMap) {
         const pos = lastSuccessfulMap.generatedPositionFor({
-          source: 'template.vue',
+          source: 'ExampleTemplate.vue',
           line: e.position.lineNumber,
           column: e.position.column - 1
         })

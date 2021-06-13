@@ -10,13 +10,20 @@ import { SourceMapConsumer, SourceMapGenerator, RawSourceMap } from 'source-map'
 import {
   transformAssetUrl,
   AssetURLOptions,
-  createAssetUrlTransformWithOptions
+  createAssetUrlTransformWithOptions,
+  AssetURLTagConfig,
+  normalizeOptions
 } from './templateTransformAssetUrl'
-import { transformSrcset } from './templateTransformSrcset'
-import { isObject } from '@vue/shared'
+import {
+  transformSrcset,
+  createSrcsetTransformWithOptions
+} from './templateTransformSrcset'
+import { generateCodeFrame, isObject } from '@vue/shared'
 import * as CompilerDOM from '@vue/compiler-dom'
 import * as CompilerSSR from '@vue/compiler-ssr'
 import consolidate from 'consolidate'
+import { warnOnce } from './warn'
+import { genCssVarsFromList } from './cssVars'
 
 export interface TemplateCompiler {
   compile(template: string, options: CompilerOptions): CodegenResult
@@ -25,6 +32,8 @@ export interface TemplateCompiler {
 
 export interface SFCTemplateCompileResults {
   code: string
+  ast?: RootNode
+  preamble?: string
   source: string
   tips: string[]
   errors: (string | CompilerError)[]
@@ -34,29 +43,53 @@ export interface SFCTemplateCompileResults {
 export interface SFCTemplateCompileOptions {
   source: string
   filename: string
+  id: string
+  scoped?: boolean
+  slotted?: boolean
+  isProd?: boolean
   ssr?: boolean
+  ssrCssVars?: string[]
   inMap?: RawSourceMap
   compiler?: TemplateCompiler
   compilerOptions?: CompilerOptions
   preprocessLang?: string
   preprocessOptions?: any
+  /**
+   * In some cases, compiler-sfc may not be inside the project root (e.g. when
+   * linked or globally installed). In such cases a custom `require` can be
+   * passed to correctly resolve the preprocessors.
+   */
   preprocessCustomRequire?: (id: string) => any
-  transformAssetUrls?: AssetURLOptions | boolean
+  /**
+   * Configure what tags/attributes to transform into asset url imports,
+   * or disable the transform altogether with `false`.
+   */
+  transformAssetUrls?: AssetURLOptions | AssetURLTagConfig | boolean
+}
+
+interface PreProcessor {
+  render(
+    source: string,
+    options: any,
+    cb: (err: Error | null, res: string) => void
+  ): void
 }
 
 function preprocess(
   { source, filename, preprocessOptions }: SFCTemplateCompileOptions,
-  preprocessor: any
+  preprocessor: PreProcessor
 ): string {
   // Consolidate exposes a callback based API, but the callback is in fact
   // called synchronously for most templating engines. In our case, we have to
   // expose a synchronous API so that it is usable in Jest transforms (which
   // have to be sync because they are applied via Node.js require hooks)
-  let res: any, err
+  let res: string = ''
+  let err: Error | null = null
+
   preprocessor.render(
     source,
     { filename, ...preprocessOptions },
-    (_err: Error | null, _res: string) => {
+    (_err, _res) => {
       if (_err) err = _err
       res = _res
     }
@@ -124,35 +157,63 @@ export function compileTemplate(
 
 function doCompileTemplate({
   filename,
+  id,
+  scoped,
+  slotted,
   inMap,
   source,
   ssr = false,
+  ssrCssVars,
+  isProd = false,
   compiler = ssr ? (CompilerSSR as TemplateCompiler) : CompilerDOM,
   compilerOptions = {},
   transformAssetUrls
 }: SFCTemplateCompileOptions): SFCTemplateCompileResults {
   const errors: CompilerError[] = []
+  const warnings: CompilerError[] = []
 
   let nodeTransforms: NodeTransform[] = []
   if (isObject(transformAssetUrls)) {
+    const assetOptions = normalizeOptions(transformAssetUrls)
     nodeTransforms = [
-      createAssetUrlTransformWithOptions(transformAssetUrls),
-      transformSrcset
+      createAssetUrlTransformWithOptions(assetOptions),
+      createSrcsetTransformWithOptions(assetOptions)
     ]
   } else if (transformAssetUrls !== false) {
     nodeTransforms = [transformAssetUrl, transformSrcset]
   }
 
-  let { code, map } = compiler.compile(source, {
+  if (ssr && !ssrCssVars) {
+    warnOnce(
+      `compileTemplate is called with \`ssr: true\` but no ` +
+        `corresponding \`cssVars\` option.\`.`
+    )
+  }
+  if (!id) {
+    warnOnce(`compileTemplate now requires the \`id\` option.\`.`)
+    id = ''
+  }
+
+  const shortId = id.replace(/^data-v-/, '')
+  const longId = `data-v-${shortId}`
+
+  let { code, ast, preamble, map } = compiler.compile(source, {
     mode: 'module',
     prefixIdentifiers: true,
     hoistStatic: true,
     cacheHandlers: true,
+    ssrCssVars:
+      ssr && ssrCssVars && ssrCssVars.length
+        ? genCssVarsFromList(ssrCssVars, shortId, isProd)
+        : '',
+    scopeId: scoped ? longId : undefined,
+    slotted,
     ...compilerOptions,
     nodeTransforms: nodeTransforms.concat(compilerOptions.nodeTransforms || []),
     filename,
     sourceMap: true,
-    onError: e => errors.push(e)
+    onError: e => errors.push(e),
+    onWarn: w => warnings.push(w)
   })
 
   // inMap should be the map produced by ./parse.ts which is a simple line-only
@@ -167,7 +228,19 @@ function doCompileTemplate({
     }
   }
 
-  return { code, source, errors, tips: [], map }
+  const tips = warnings.map(w => {
+    let msg = w.message
+    if (w.loc) {
+      msg += `\n${generateCodeFrame(
+        source,
+        w.loc.start.offset,
+        w.loc.end.offset
+      )}`
+    }
+    return msg
+  })
+
+  return { code, ast, preamble, source, errors, tips, map }
 }
 
 function mapLines(oldMap: RawSourceMap, newMap: RawSourceMap): RawSourceMap {

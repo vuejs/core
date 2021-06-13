@@ -15,22 +15,24 @@ import { VNode } from './vnode'
 import { isFunction, EMPTY_OBJ, makeMap } from '@vue/shared'
 import { warn } from './warning'
 import { ComponentInternalInstance, Data } from './component'
-import { currentRenderingInstance } from './componentRenderUtils'
+import { currentRenderingInstance } from './componentRenderContext'
 import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
-import { ComponentPublicInstance } from './componentProxy'
+import { ComponentPublicInstance } from './componentPublicInstance'
+import { mapCompatDirectiveHook } from './compat/customDirective'
+import { pauseTracking, resetTracking } from '@vue/reactivity'
 
-export interface DirectiveBinding {
+export interface DirectiveBinding<V = any> {
   instance: ComponentPublicInstance | null
-  value: any
-  oldValue: any
+  value: V
+  oldValue: V | null
   arg?: string
   modifiers: DirectiveModifiers
-  dir: ObjectDirective
+  dir: ObjectDirective<any, V>
 }
 
-export type DirectiveHook<T = any, Prev = VNode<any, T> | null> = (
+export type DirectiveHook<T = any, Prev = VNode<any, T> | null, V = any> = (
   el: T,
-  binding: DirectiveBinding,
+  binding: DirectiveBinding<V>,
   vnode: VNode<any, T>,
   prevVNode: Prev
 ) => void
@@ -40,27 +42,24 @@ export type SSRDirectiveHook = (
   vnode: VNode
 ) => Data | undefined
 
-export interface ObjectDirective<T = any> {
-  beforeMount?: DirectiveHook<T, null>
-  mounted?: DirectiveHook<T, null>
-  beforeUpdate?: DirectiveHook<T, VNode<any, T>>
-  updated?: DirectiveHook<T, VNode<any, T>>
-  beforeUnmount?: DirectiveHook<T, null>
-  unmounted?: DirectiveHook<T, null>
+export interface ObjectDirective<T = any, V = any> {
+  created?: DirectiveHook<T, null, V>
+  beforeMount?: DirectiveHook<T, null, V>
+  mounted?: DirectiveHook<T, null, V>
+  beforeUpdate?: DirectiveHook<T, VNode<any, T>, V>
+  updated?: DirectiveHook<T, VNode<any, T>, V>
+  beforeUnmount?: DirectiveHook<T, null, V>
+  unmounted?: DirectiveHook<T, null, V>
   getSSRProps?: SSRDirectiveHook
 }
 
-export type FunctionDirective<T = any> = DirectiveHook<T>
+export type FunctionDirective<T = any, V = any> = DirectiveHook<T, any, V>
 
-export type Directive<T = any> = ObjectDirective<T> | FunctionDirective<T>
+export type Directive<T = any, V = any> =
+  | ObjectDirective<T, V>
+  | FunctionDirective<T, V>
 
 export type DirectiveModifiers = Record<string, boolean>
-
-export type VNodeDirectiveData = [
-  unknown,
-  string | undefined,
-  DirectiveModifiers
-]
 
 const isBuiltInDirective = /*#__PURE__*/ makeMap(
   'bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,slot,text'
@@ -82,7 +81,6 @@ export type DirectiveArguments = Array<
 
 /**
  * Adds directives to a VNode.
- * @internal
  */
 export function withDirectives<T extends VNode>(
   vnode: T,
@@ -128,14 +126,21 @@ export function invokeDirectiveHook(
     if (oldBindings) {
       binding.oldValue = oldBindings[i].value
     }
-    const hook = binding.dir[name] as DirectiveHook | undefined
+    let hook = binding.dir[name] as DirectiveHook | DirectiveHook[] | undefined
+    if (__COMPAT__ && !hook) {
+      hook = mapCompatDirectiveHook(name, binding.dir, instance)
+    }
     if (hook) {
+      // disable tracking inside all lifecycle hooks
+      // since they can potentially be called inside effects.
+      pauseTracking()
       callWithAsyncErrorHandling(hook, instance, ErrorCodes.DIRECTIVE_HOOK, [
         vnode.el,
         binding,
         vnode,
         prevVNode
       ])
+      resetTracking()
     }
   }
 }

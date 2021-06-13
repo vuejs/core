@@ -43,3 +43,10 @@ export function escapeHtml(string: unknown) {
 
   return lastIndex !== index ? html + str.substring(lastIndex, index) : html
 }
+
+// https://www.w3.org/TR/html52/syntax.html#comments
+const commentStripRE = /^-?>|<!--|-->|--!>|<!-$/g
+
+export function escapeHtmlComment(src: string): string {
+  return src.replace(commentStripRE, '')
+}

@@ -4,11 +4,13 @@ import {
   CompoundExpressionNode,
   createCallExpression,
   CallExpression,
-  ElementTypes
+  ElementTypes,
+  ConstantTypes
 } from '../ast'
 import { isText } from '../utils'
 import { CREATE_TEXT } from '../runtimeHelpers'
 import { PatchFlags, PatchFlagNames } from '@vue/shared'
+import { getConstantType } from './hoistStatic'
 
 // Merge adjacent text nodes and expressions into a single expression
 // e.g. <div>abc {{ d }} {{ e }}</div> should have a single expression node as child.
@@ -61,7 +63,21 @@ export const transformText: NodeTransform = (node, context) => {
         (children.length === 1 &&
           (node.type === NodeTypes.ROOT ||
             (node.type === NodeTypes.ELEMENT &&
-              node.tagType === ElementTypes.ELEMENT)))
+              node.tagType === ElementTypes.ELEMENT &&
+              // #3756
+              // custom directives can potentially add DOM elements arbitrarily,
+              // we need to avoid setting textContent of the element at runtime
+              // to avoid accidentally overwriting the DOM elements added
+              // by the user through custom directives.
+              !node.props.find(
+                p =>
+                  p.type === NodeTypes.DIRECTIVE &&
+                  !context.directiveTransforms[p.name]
+              ) &&
+              // in compat mode, <template> tags with no special directives
+              // will be rendered as a fragment so its children must be
+              // converted into vnodes.
+              !(__COMPAT__ && node.tag === 'template'))))
       ) {
         return
       }
@@ -78,9 +94,13 @@ export const transformText: NodeTransform = (node, context) => {
             callArgs.push(child)
           }
           // mark dynamic text with flag so it gets patched inside a block
-          if (!context.ssr && child.type !== NodeTypes.TEXT) {
+          if (
+            !context.ssr &&
+            getConstantType(child, context) === ConstantTypes.NOT_CONSTANT
+          ) {
             callArgs.push(
-              `${PatchFlags.TEXT} /* ${PatchFlagNames[PatchFlags.TEXT]} */`
+              PatchFlags.TEXT +
+                (__DEV__ ? ` /* ${PatchFlagNames[PatchFlags.TEXT]} */` : ``)
             )
           }
           children[i] = {

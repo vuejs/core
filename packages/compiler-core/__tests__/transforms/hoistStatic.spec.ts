@@ -7,7 +7,8 @@ import {
   VNodeCall,
   IfNode,
   ElementNode,
-  ForNode
+  ForNode,
+  ConstantTypes
 } from '../../src'
 import { FRAGMENT, RENDER_LIST, CREATE_TEXT } from '../../src/runtimeHelpers'
 import { transformElement } from '../../src/transforms/transformElement'
@@ -469,7 +470,7 @@ describe('compiler: hoistStatic transform', () => {
             content: {
               content: `1`,
               isStatic: false,
-              isConstant: true
+              constType: ConstantTypes.CAN_STRINGIFY
             }
           }
         }
@@ -505,13 +506,13 @@ describe('compiler: hoistStatic transform', () => {
             {
               key: {
                 content: `class`,
-                isConstant: true,
-                isStatic: true
+                isStatic: true,
+                constType: ConstantTypes.CAN_STRINGIFY
               },
               value: {
                 content: `{ foo: true }`,
-                isConstant: true,
-                isStatic: false
+                isStatic: false,
+                constType: ConstantTypes.CAN_STRINGIFY
               }
             }
           ]
@@ -534,8 +535,8 @@ describe('compiler: hoistStatic transform', () => {
                 type: NodeTypes.INTERPOLATION,
                 content: {
                   content: `_ctx.bar`,
-                  isConstant: false,
-                  isStatic: false
+                  isStatic: false,
+                  constType: ConstantTypes.NOT_CONSTANT
                 }
               },
               patchFlag: `1 /* TEXT */`
@@ -599,6 +600,14 @@ describe('compiler: hoistStatic transform', () => {
           prefixIdentifiers: true
         }).code
       ).toMatchSnapshot()
+    })
+
+    test('should NOT hoist keyed template v-for with plain element child', () => {
+      const root = transformWithHoist(
+        `<div><template v-for="item in items" :key="item"><span/></template></div>`
+      )
+      expect(root.hoists.length).toBe(0)
+      expect(generate(root).code).toMatchSnapshot()
     })
   })
 })

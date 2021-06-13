@@ -2,7 +2,9 @@ import {
   CompilerOptions,
   baseParse as parse,
   transform,
-  ErrorCodes
+  ErrorCodes,
+  BindingTypes,
+  NodeTransform
 } from '../../src'
 import {
   RESOLVE_COMPONENT,
@@ -68,6 +70,36 @@ describe('compiler: element transform', () => {
     const { root } = parseWithElementTransform(`<Foo/>`)
     expect(root.helpers).toContain(RESOLVE_COMPONENT)
     expect(root.components).toContain(`Foo`)
+  })
+
+  test('resolve implcitly self-referencing component', () => {
+    const { root } = parseWithElementTransform(`<Example/>`, {
+      filename: `/foo/bar/Example.vue?vue&type=template`
+    })
+    expect(root.helpers).toContain(RESOLVE_COMPONENT)
+    expect(root.components).toContain(`Example__self`)
+  })
+
+  test('resolve component from setup bindings', () => {
+    const { root, node } = parseWithElementTransform(`<Example/>`, {
+      bindingMetadata: {
+        Example: BindingTypes.SETUP_MAYBE_REF
+      }
+    })
+    expect(root.helpers).not.toContain(RESOLVE_COMPONENT)
+    expect(node.tag).toBe(`$setup["Example"]`)
+  })
+
+  test('do not resolve component from non-script-setup bindings', () => {
+    const bindingMetadata = {
+      Example: BindingTypes.SETUP_MAYBE_REF
+    }
+    Object.defineProperty(bindingMetadata, '__isScriptSetup', { value: false })
+    const { root } = parseWithElementTransform(`<Example/>`, {
+      bindingMetadata
+    })
+    expect(root.helpers).toContain(RESOLVE_COMPONENT)
+    expect(root.components).toContain(`Example`)
   })
 
   test('static props', () => {
@@ -321,13 +353,13 @@ describe('compiler: element transform', () => {
               fallback: {
                 type: NodeTypes.JS_FUNCTION_EXPRESSION
               },
-              _: `[1]`
+              _: `[1 /* STABLE */]`
             })
           : createObjectMatcher({
               default: {
                 type: NodeTypes.JS_FUNCTION_EXPRESSION
               },
-              _: `[1]`
+              _: `[1 /* STABLE */]`
             })
       })
     }
@@ -381,7 +413,7 @@ describe('compiler: element transform', () => {
           default: {
             type: NodeTypes.JS_FUNCTION_EXPRESSION
           },
-          _: `[1]`
+          _: `[1 /* STABLE */]`
         })
       })
     }
@@ -780,6 +812,11 @@ describe('compiler: element transform', () => {
       expect(node.patchFlag).toBe(genFlagText(PatchFlags.NEED_PATCH))
     })
 
+    test('NEED_PATCH (vnode hooks)', () => {
+      const { node } = parseWithBind(`<div @vnodeUpdated="foo" />`)
+      expect(node.patchFlag).toBe(genFlagText(PatchFlags.NEED_PATCH))
+    })
+
     test('HYDRATE_EVENTS', () => {
       // ignore click events (has dedicated fast path)
       const { node } = parseWithElementTransform(`<div @click="foo" />`, {
@@ -807,6 +844,24 @@ describe('compiler: element transform', () => {
   describe('dynamic component', () => {
     test('static binding', () => {
       const { node, root } = parseWithBind(`<component is="foo" />`)
+      expect(root.helpers).toContain(RESOLVE_DYNAMIC_COMPONENT)
+      expect(node).toMatchObject({
+        isBlock: true,
+        tag: {
+          callee: RESOLVE_DYNAMIC_COMPONENT,
+          arguments: [
+            {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'foo',
+              isStatic: true
+            }
+          ]
+        }
+      })
+    })
+
+    test('capitalized version w/ static binding', () => {
+      const { node, root } = parseWithBind(`<Component is="foo" />`)
       expect(root.helpers).toContain(RESOLVE_DYNAMIC_COMPONENT)
       expect(node).toMatchObject({
         isBlock: true,
@@ -883,6 +938,37 @@ describe('compiler: element transform', () => {
       type: NodeTypes.VNODE_CALL,
       tag: `"div"`,
       isBlock: true
+    })
+  })
+
+  test('should process node when node has been replaced', () => {
+    // a NodeTransform that swaps out <div id="foo" /> with <span id="foo" />
+    const customNodeTransform: NodeTransform = (node, context) => {
+      if (
+        node.type === NodeTypes.ELEMENT &&
+        node.tag === 'div' &&
+        node.props.some(
+          prop =>
+            prop.type === NodeTypes.ATTRIBUTE &&
+            prop.name === 'id' &&
+            prop.value &&
+            prop.value.content === 'foo'
+        )
+      ) {
+        context.replaceNode({
+          ...node,
+          tag: 'span'
+        })
+      }
+    }
+    const ast = parse(`<div><div id="foo" /></div>`)
+    transform(ast, {
+      nodeTransforms: [transformElement, transformText, customNodeTransform]
+    })
+    expect((ast as any).children[0].children[0].codegenNode).toMatchObject({
+      type: NodeTypes.VNODE_CALL,
+      tag: '"span"',
+      isBlock: false
     })
   })
 })

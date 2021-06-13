@@ -6,7 +6,14 @@ import {
   warn
 } from '@vue/runtime-core'
 import { addEventListener } from '../modules/events'
-import { isArray, looseEqual, looseIndexOf, invokeArrayFns } from '@vue/shared'
+import {
+  isArray,
+  looseEqual,
+  looseIndexOf,
+  invokeArrayFns,
+  toNumber,
+  isSet
+} from '@vue/shared'
 
 type AssignerFn = (value: any) => void
 
@@ -33,27 +40,18 @@ function trigger(el: HTMLElement, type: string) {
   el.dispatchEvent(e)
 }
 
-function toNumber(val: string): number | string {
-  const n = parseFloat(val)
-  return isNaN(n) ? val : n
-}
-
 type ModelDirective<T> = ObjectDirective<T & { _assign: AssignerFn }>
 
 // We are exporting the v-model runtime directly as vnode hooks so that it can
-// be tree-shaken in case v-model is never used. These are used by compilers
-// only and userland code should avoid relying on them.
-/**
- * @internal
- */
+// be tree-shaken in case v-model is never used.
 export const vModelText: ModelDirective<
   HTMLInputElement | HTMLTextAreaElement
 > = {
-  beforeMount(el, { value, modifiers: { lazy, trim, number } }, vnode) {
-    el.value = value
+  created(el, { modifiers: { lazy, trim, number } }, vnode) {
     el._assign = getModelAssigner(vnode)
     const castToNumber = number || el.type === 'number'
-    addEventListener(el, lazy ? 'change' : 'input', () => {
+    addEventListener(el, lazy ? 'change' : 'input', e => {
+      if ((e.target as any).composing) return
       let domValue: string | number = el.value
       if (trim) {
         domValue = domValue.trim()
@@ -77,11 +75,14 @@ export const vModelText: ModelDirective<
       addEventListener(el, 'change', onCompositionEnd)
     }
   },
-  beforeUpdate(el, { value, oldValue, modifiers: { trim, number } }, vnode) {
+  // set value on mounted so it's after min/max for type="range"
+  mounted(el, { value }) {
+    el.value = value == null ? '' : value
+  },
+  beforeUpdate(el, { value, modifiers: { trim, number } }, vnode) {
     el._assign = getModelAssigner(vnode)
-    if (value === oldValue) {
-      return
-    }
+    // avoid clearing unresolved text. #2302
+    if ((el as any).composing) return
     if (document.activeElement === el) {
       if (trim && el.value.trim() === value) {
         return
@@ -90,16 +91,15 @@ export const vModelText: ModelDirective<
         return
       }
     }
-    el.value = value
+    const newValue = value == null ? '' : value
+    if (el.value !== newValue) {
+      el.value = newValue
+    }
   }
 }
 
-/**
- * @internal
- */
 export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
-  beforeMount(el, binding, vnode) {
-    setChecked(el, binding, vnode)
+  created(el, _, vnode) {
     el._assign = getModelAssigner(vnode)
     addEventListener(el, 'change', () => {
       const modelValue = (el as any)._modelValue
@@ -116,11 +116,21 @@ export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
           filtered.splice(index, 1)
           assign(filtered)
         }
+      } else if (isSet(modelValue)) {
+        const cloned = new Set(modelValue)
+        if (checked) {
+          cloned.add(elementValue)
+        } else {
+          cloned.delete(elementValue)
+        }
+        assign(cloned)
       } else {
         assign(getCheckboxValue(el, checked))
       }
     })
   },
+  // set initial checked on mount to wait for true-value/false-value
+  mounted: setChecked,
   beforeUpdate(el, binding, vnode) {
     el._assign = getModelAssigner(vnode)
     setChecked(el, binding, vnode)
@@ -137,16 +147,15 @@ function setChecked(
   ;(el as any)._modelValue = value
   if (isArray(value)) {
     el.checked = looseIndexOf(value, vnode.props!.value) > -1
+  } else if (isSet(value)) {
+    el.checked = value.has(vnode.props!.value)
   } else if (value !== oldValue) {
     el.checked = looseEqual(value, getCheckboxValue(el, true))
   }
 }
 
-/**
- * @internal
- */
 export const vModelRadio: ModelDirective<HTMLInputElement> = {
-  beforeMount(el, { value }, vnode) {
+  created(el, { value }, vnode) {
     el.checked = looseEqual(value, vnode.props!.value)
     el._assign = getModelAssigner(vnode)
     addEventListener(el, 'change', () => {
@@ -161,20 +170,30 @@ export const vModelRadio: ModelDirective<HTMLInputElement> = {
   }
 }
 
-/**
- * @internal
- */
 export const vModelSelect: ModelDirective<HTMLSelectElement> = {
-  // use mounted & updated because <select> relies on its children <option>s.
-  mounted(el, { value }, vnode) {
-    setSelected(el, value)
-    el._assign = getModelAssigner(vnode)
+  created(el, { value, modifiers: { number } }, vnode) {
+    const isSetModel = isSet(value)
     addEventListener(el, 'change', () => {
       const selectedVal = Array.prototype.filter
         .call(el.options, (o: HTMLOptionElement) => o.selected)
-        .map(getValue)
-      el._assign(el.multiple ? selectedVal : selectedVal[0])
+        .map(
+          (o: HTMLOptionElement) =>
+            number ? toNumber(getValue(o)) : getValue(o)
+        )
+      el._assign(
+        el.multiple
+          ? isSetModel
+            ? new Set(selectedVal)
+            : selectedVal
+          : selectedVal[0]
+      )
     })
+    el._assign = getModelAssigner(vnode)
+  },
+  // set value in mounted & updated because <select> relies on its children
+  // <option>s.
+  mounted(el, { value }) {
+    setSelected(el, value)
   },
   beforeUpdate(el, _binding, vnode) {
     el._assign = getModelAssigner(vnode)
@@ -186,10 +205,10 @@ export const vModelSelect: ModelDirective<HTMLSelectElement> = {
 
 function setSelected(el: HTMLSelectElement, value: any) {
   const isMultiple = el.multiple
-  if (isMultiple && !isArray(value)) {
+  if (isMultiple && !isArray(value) && !isSet(value)) {
     __DEV__ &&
       warn(
-        `<select multiple v-model> expects an Array value for its binding, ` +
+        `<select multiple v-model> expects an Array or Set value for its binding, ` +
           `but got ${Object.prototype.toString.call(value).slice(8, -1)}.`
       )
     return
@@ -198,15 +217,19 @@ function setSelected(el: HTMLSelectElement, value: any) {
     const option = el.options[i]
     const optionValue = getValue(option)
     if (isMultiple) {
-      option.selected = looseIndexOf(value, optionValue) > -1
+      if (isArray(value)) {
+        option.selected = looseIndexOf(value, optionValue) > -1
+      } else {
+        option.selected = value.has(optionValue)
+      }
     } else {
       if (looseEqual(getValue(option), value)) {
-        el.selectedIndex = i
+        if (el.selectedIndex !== i) el.selectedIndex = i
         return
       }
     }
   }
-  if (!isMultiple) {
+  if (!isMultiple && el.selectedIndex !== -1) {
     el.selectedIndex = -1
   }
 }
@@ -225,14 +248,11 @@ function getCheckboxValue(
   return key in el ? el[key] : checked
 }
 
-/**
- * @internal
- */
 export const vModelDynamic: ObjectDirective<
   HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
 > = {
-  beforeMount(el, binding, vnode) {
-    callModelHook(el, binding, vnode, null, 'beforeMount')
+  created(el, binding, vnode) {
+    callModelHook(el, binding, vnode, null, 'created')
   },
   mounted(el, binding, vnode) {
     callModelHook(el, binding, vnode, null, 'mounted')
@@ -250,7 +270,7 @@ function callModelHook(
   binding: DirectiveBinding,
   vnode: VNode,
   prevVNode: VNode | null,
-  hook: 'beforeMount' | 'mounted' | 'beforeUpdate' | 'updated'
+  hook: keyof ObjectDirective
 ) {
   let modelToUse: ObjectDirective
   switch (el.tagName) {
@@ -261,7 +281,7 @@ function callModelHook(
       modelToUse = vModelText
       break
     default:
-      switch (el.type) {
+      switch (vnode.props && vnode.props.type) {
         case 'checkbox':
           modelToUse = vModelCheckbox
           break
@@ -289,6 +309,10 @@ if (__NODE_JS__) {
   vModelCheckbox.getSSRProps = ({ value }, vnode) => {
     if (isArray(value)) {
       if (vnode.props && looseIndexOf(value, vnode.props.value) > -1) {
+        return { checked: true }
+      }
+    } else if (isSet(value)) {
+      if (vnode.props && value.has(vnode.props.value)) {
         return { checked: true }
       }
     } else if (value) {

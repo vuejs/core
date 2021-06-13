@@ -8,16 +8,20 @@ import {
   normalizeClass,
   normalizeStyle,
   PatchFlags,
-  ShapeFlags
+  ShapeFlags,
+  SlotFlags,
+  isOn
 } from '@vue/shared'
 import {
   ComponentInternalInstance,
   Data,
+  ConcreteComponent,
+  ClassComponent,
   Component,
-  ClassComponent
+  isClassComponent
 } from './component'
 import { RawSlots } from './componentSlots'
-import { isProxy, Ref, toRaw } from '@vue/reactivity'
+import { isProxy, Ref, toRaw, ReactiveFlags, isRef } from '@vue/reactivity'
 import { AppContext } from './apiCreateApp'
 import {
   SuspenseImpl,
@@ -27,11 +31,18 @@ import {
 import { DirectiveBinding } from './directives'
 import { TransitionHooks } from './components/BaseTransition'
 import { warn } from './warning'
-import { currentScopeId } from './helpers/scopeId'
 import { TeleportImpl, isTeleport } from './components/Teleport'
-import { currentRenderingInstance } from './componentRenderUtils'
+import {
+  currentRenderingInstance,
+  currentScopeId
+} from './componentRenderContext'
 import { RendererNode, RendererElement } from './renderer'
 import { NULL_DYNAMIC_COMPONENT } from './helpers/resolveAssets'
+import { hmrDirtyComponents } from './hmr'
+import { convertLegacyComponent } from './compat/component'
+import { convertLegacyVModelProps } from './compat/componentVModel'
+import { defineLegacyVNodeProperties } from './compat/renderFn'
+import { convertLegacyRefInFor } from './compat/ref'
 
 export const Fragment = (Symbol(__DEV__ ? 'Fragment' : undefined) as any) as {
   __isFragment: true
@@ -45,6 +56,7 @@ export const Static = Symbol(__DEV__ ? 'Static' : undefined)
 
 export type VNodeTypes =
   | string
+  | VNode
   | Component
   | typeof Text
   | typeof Static
@@ -58,7 +70,15 @@ export type VNodeRef =
   | Ref
   | ((ref: object | null, refs: Record<string, any>) => void)
 
-export type VNodeNormalizedRef = [ComponentInternalInstance, VNodeRef]
+export type VNodeNormalizedRefAtom = {
+  i: ComponentInternalInstance
+  r: VNodeRef
+  f?: boolean // v2 compat only, refInFor marker
+}
+
+export type VNodeNormalizedRef =
+  | VNodeNormalizedRefAtom
+  | (VNodeNormalizedRefAtom)[]
 
 type VNodeMountHook = (vnode: VNode) => void
 type VNodeUpdateHook = (vnode: VNode, oldVNode: VNode) => void
@@ -68,8 +88,8 @@ export type VNodeHook =
   | VNodeMountHook[]
   | VNodeUpdateHook[]
 
-export interface VNodeProps {
-  [key: string]: any
+// https://github.com/microsoft/TypeScript/issues/33099
+export type VNodeProps = {
   key?: string | number
   ref?: VNodeRef
 
@@ -82,12 +102,16 @@ export interface VNodeProps {
   onVnodeUnmounted?: VNodeMountHook | VNodeMountHook[]
 }
 
-type VNodeChildAtom = VNode | string | number | boolean | null | void
+type VNodeChildAtom =
+  | VNode
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | void
 
-export interface VNodeArrayChildren<
-  HostNode = RendererNode,
-  HostElement = RendererElement
-> extends Array<VNodeArrayChildren | VNodeChildAtom> {}
+export type VNodeArrayChildren = Array<VNodeArrayChildren | VNodeChildAtom>
 
 export type VNodeChild = VNodeChildAtom | VNodeArrayChildren
 
@@ -97,24 +121,58 @@ export type VNodeNormalizedChildren =
   | RawSlots
   | null
 
-export interface VNode<HostNode = RendererNode, HostElement = RendererElement> {
-  _isVNode: true
+export interface VNode<
+  HostNode = RendererNode,
+  HostElement = RendererElement,
+  ExtraProps = { [key: string]: any }
+> {
+  /**
+   * @internal
+   */
+  __v_isVNode: true
+
+  /**
+   * @internal
+   */
+  [ReactiveFlags.SKIP]: true
+
+  /**
+   * @internal __COMPAT__ only
+   */
+  isCompatRoot?: true
+
   type: VNodeTypes
-  props: VNodeProps | null
+  props: (VNodeProps & ExtraProps) | null
   key: string | number | null
   ref: VNodeNormalizedRef | null
-  scopeId: string | null // SFC only
+  /**
+   * SFC only. This is assigned on vnode creation using currentScopeId
+   * which is set alongside currentRenderingInstance.
+   */
+  scopeId: string | null
+  /**
+   * SFC only. This is assigned to:
+   * - Slot fragment vnodes with :slotted SFC styles.
+   * - Component vnodes (during patch/hydration) so that its root node can
+   *   inherit the component's slotScopeIds
+   */
+  slotScopeIds: string[] | null
   children: VNodeNormalizedChildren
   component: ComponentInternalInstance | null
-  suspense: SuspenseBoundary | null
   dirs: DirectiveBinding[] | null
-  transition: TransitionHooks | null
+  transition: TransitionHooks<HostElement> | null
 
   // DOM
   el: HostNode | null
   anchor: HostNode | null // fragment anchor
   target: HostElement | null // teleport target
   targetAnchor: HostNode | null // teleport target anchor
+  staticCount: number // number of elements contained in a static vnode
+
+  // suspense
+  suspense: SuspenseBoundary | null
+  ssContent: VNode | null
+  ssFallback: VNode | null
 
   // optimization only
   shapeFlag: number
@@ -131,29 +189,39 @@ export interface VNode<HostNode = RendererNode, HostElement = RendererElement> {
 // can divide a template into nested blocks, and within each block the node
 // structure would be stable. This allows us to skip most children diffing
 // and only worry about the dynamic nodes (indicated by patch flags).
-const blockStack: (VNode[] | null)[] = []
-let currentBlock: VNode[] | null = null
+export const blockStack: (VNode[] | null)[] = []
+export let currentBlock: VNode[] | null = null
 
-// Open a block.
-// This must be called before `createBlock`. It cannot be part of `createBlock`
-// because the children of the block are evaluated before `createBlock` itself
-// is called. The generated code typically looks like this:
-//
-//   function render() {
-//     return (openBlock(),createBlock('div', null, [...]))
-//   }
-//
-// disableTracking is true when creating a fragment block, since a fragment
-// always diffs its children.
+/**
+ * Open a block.
+ * This must be called before `createBlock`. It cannot be part of `createBlock`
+ * because the children of the block are evaluated before `createBlock` itself
+ * is called. The generated code typically looks like this:
+ *
+ * ```js
+ * function render() {
+ *   return (openBlock(),createBlock('div', null, [...]))
+ * }
+ * ```
+ * disableTracking is true when creating a v-for fragment block, since a v-for
+ * fragment always diffs its children.
+ *
+ * @private
+ */
 export function openBlock(disableTracking = false) {
   blockStack.push((currentBlock = disableTracking ? null : []))
+}
+
+export function closeBlock() {
+  blockStack.pop()
+  currentBlock = blockStack[blockStack.length - 1] || null
 }
 
 // Whether we should be tracking dynamic child nodes inside a block.
 // Only tracks when this value is > 0
 // We are not using a simple boolean because this value may need to be
 // incremented/decremented by nested usage of v-once (see below)
-let shouldTrack = 1
+let isBlockTreeEnabled = 1
 
 /**
  * Block tracking sometimes needs to be disabled, for example during the
@@ -168,18 +236,23 @@ let shouldTrack = 1
  *   _cache[1]
  * )
  * ```
- * @internal
+ *
+ * @private
  */
 export function setBlockTracking(value: number) {
-  shouldTrack += value
+  isBlockTreeEnabled += value
 }
 
-// Create a block root vnode. Takes the same exact arguments as `createVNode`.
-// A block root keeps track of dynamic nodes within the block in the
-// `dynamicChildren` array.
+/**
+ * Create a block root vnode. Takes the same exact arguments as `createVNode`.
+ * A block root keeps track of dynamic nodes within the block in the
+ * `dynamicChildren` array.
+ *
+ * @private
+ */
 export function createBlock(
   type: VNodeTypes | ClassComponent,
-  props?: { [key: string]: any } | null,
+  props?: Record<string, any> | null,
   children?: any,
   patchFlag?: number,
   dynamicProps?: string[]
@@ -193,27 +266,27 @@ export function createBlock(
     true /* isBlock: prevent a block from tracking itself */
   )
   // save current block children on the block vnode
-  vnode.dynamicChildren = currentBlock || EMPTY_ARR
+  vnode.dynamicChildren =
+    isBlockTreeEnabled > 0 ? currentBlock || (EMPTY_ARR as any) : null
   // close block
-  blockStack.pop()
-  currentBlock = blockStack[blockStack.length - 1] || null
+  closeBlock()
   // a block is always going to be patched, so track it as a child of its
   // parent block
-  if (currentBlock) {
+  if (isBlockTreeEnabled > 0 && currentBlock) {
     currentBlock.push(vnode)
   }
   return vnode
 }
 
 export function isVNode(value: any): value is VNode {
-  return value ? value._isVNode === true : false
+  return value ? value.__v_isVNode === true : false
 }
 
 export function isSameVNodeType(n1: VNode, n2: VNode): boolean {
   if (
     __DEV__ &&
     n2.shapeFlag & ShapeFlags.COMPONENT &&
-    (n2.type as Component).__hmrUpdated
+    hmrDirtyComponents.has(n2.type as ConcreteComponent)
   ) {
     // HMR only: if the component has been hot-updated, force a reload.
     return false
@@ -231,7 +304,8 @@ let vnodeArgsTransformer:
 /**
  * Internal API for registering an arguments transform for createVNode
  * used for creating stubs in the test-utils
- * @internal
+ * It is *internal* but needs to be exposed for test-utils to pick up proper
+ * typings
  */
 export function transformVNodeArgs(transformer?: typeof vnodeArgsTransformer) {
   vnodeArgsTransformer = transformer
@@ -252,12 +326,13 @@ export const InternalObjectKey = `__vInternal`
 const normalizeKey = ({ key }: VNodeProps): VNode['key'] =>
   key != null ? key : null
 
-const normalizeRef = ({ ref }: VNodeProps): VNode['ref'] =>
-  (ref != null
-    ? isArray(ref)
-      ? ref
-      : [currentRenderingInstance!, ref]
+const normalizeRef = ({ ref }: VNodeProps): VNodeNormalizedRefAtom | null => {
+  return (ref != null
+    ? isString(ref) || isRef(ref) || isFunction(ref)
+      ? { i: currentRenderingInstance, r: ref }
+      : ref
     : null) as any
+}
 
 export const createVNode = (__DEV__
   ? createVNodeWithArgsTransform
@@ -278,9 +353,25 @@ function _createVNode(
     type = Comment
   }
 
+  if (isVNode(type)) {
+    // createVNode receiving an existing vnode. This happens in cases like
+    // <component :is="vnode"/>
+    // #2078 make sure to merge refs during the clone instead of overwriting it
+    const cloned = cloneVNode(type, props, true /* mergeRef: true */)
+    if (children) {
+      normalizeChildren(cloned, children)
+    }
+    return cloned
+  }
+
   // class component normalization.
-  if (isFunction(type) && '__vccOpts' in type) {
+  if (isClassComponent(type)) {
     type = type.__vccOpts
+  }
+
+  // 2.x async/functional component compat
+  if (__COMPAT__) {
+    type = convertLegacyComponent(type, currentRenderingInstance)
   }
 
   // class & style normalization.
@@ -329,21 +420,26 @@ function _createVNode(
   }
 
   const vnode: VNode = {
-    _isVNode: true,
+    __v_isVNode: true,
+    __v_skip: true,
     type,
     props,
     key: props && normalizeKey(props),
     ref: props && normalizeRef(props),
     scopeId: currentScopeId,
+    slotScopeIds: null,
     children: null,
     component: null,
     suspense: null,
+    ssContent: null,
+    ssFallback: null,
     dirs: null,
     transition: null,
     el: null,
     anchor: null,
     target: null,
     targetAnchor: null,
+    staticCount: 0,
     shapeFlag,
     patchFlag,
     dynamicProps,
@@ -351,25 +447,40 @@ function _createVNode(
     appContext: null
   }
 
+  // validate key
+  if (__DEV__ && vnode.key !== vnode.key) {
+    warn(`VNode created with invalid key (NaN). VNode type:`, vnode.type)
+  }
+
   normalizeChildren(vnode, children)
 
-  // presence of a patch flag indicates this node needs patching on updates.
-  // component nodes also should always be patched, because even if the
-  // component doesn't need to update, it needs to persist the instance on to
-  // the next vnode so that it can be properly unmounted later.
+  // normalize suspense children
+  if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
+    ;(type as typeof SuspenseImpl).normalize(vnode)
+  }
+
   if (
-    shouldTrack > 0 &&
+    isBlockTreeEnabled > 0 &&
+    // avoid a block node from tracking itself
     !isBlockNode &&
+    // has current parent block
     currentBlock &&
+    // presence of a patch flag indicates this node needs patching on updates.
+    // component nodes also should always be patched, because even if the
+    // component doesn't need to update, it needs to persist the instance on to
+    // the next vnode so that it can be properly unmounted later.
+    (patchFlag > 0 || shapeFlag & ShapeFlags.COMPONENT) &&
     // the EVENTS flag is only for hydration and if it is the only flag, the
     // vnode should not be considered dynamic due to handler caching.
-    patchFlag !== PatchFlags.HYDRATE_EVENTS &&
-    (patchFlag > 0 ||
-      shapeFlag & ShapeFlags.SUSPENSE ||
-      shapeFlag & ShapeFlags.STATEFUL_COMPONENT ||
-      shapeFlag & ShapeFlags.FUNCTIONAL_COMPONENT)
+    patchFlag !== PatchFlags.HYDRATE_EVENTS
   ) {
     currentBlock.push(vnode)
+  }
+
+  if (__COMPAT__) {
+    convertLegacyVModelProps(vnode)
+    convertLegacyRefInFor(vnode)
+    defineLegacyVNodeProperties(vnode)
   }
 
   return vnode
@@ -377,27 +488,50 @@ function _createVNode(
 
 export function cloneVNode<T, U>(
   vnode: VNode<T, U>,
-  extraProps?: Data & VNodeProps
+  extraProps?: Data & VNodeProps | null,
+  mergeRef = false
 ): VNode<T, U> {
-  const props = (extraProps
-    ? vnode.props
-      ? mergeProps(vnode.props, extraProps)
-      : extend({}, extraProps)
-    : vnode.props) as any
   // This is intentionally NOT using spread or extend to avoid the runtime
   // key enumeration cost.
-  return {
-    _isVNode: true,
+  const { props, ref, patchFlag, children } = vnode
+  const mergedProps = extraProps ? mergeProps(props || {}, extraProps) : props
+  const cloned: VNode = {
+    __v_isVNode: true,
+    __v_skip: true,
     type: vnode.type,
-    props,
-    key: props && normalizeKey(props),
-    ref: props && normalizeRef(props),
+    props: mergedProps,
+    key: mergedProps && normalizeKey(mergedProps),
+    ref:
+      extraProps && extraProps.ref
+        ? // #2078 in the case of <component :is="vnode" ref="extra"/>
+          // if the vnode itself already has a ref, cloneVNode will need to merge
+          // the refs so the single vnode can be set on multiple refs
+          mergeRef && ref
+          ? isArray(ref)
+            ? ref.concat(normalizeRef(extraProps)!)
+            : [ref, normalizeRef(extraProps)!]
+          : normalizeRef(extraProps)
+        : ref,
     scopeId: vnode.scopeId,
-    children: vnode.children,
+    slotScopeIds: vnode.slotScopeIds,
+    children:
+      __DEV__ && patchFlag === PatchFlags.HOISTED && isArray(children)
+        ? (children as VNode[]).map(deepCloneVNode)
+        : children,
     target: vnode.target,
     targetAnchor: vnode.targetAnchor,
+    staticCount: vnode.staticCount,
     shapeFlag: vnode.shapeFlag,
-    patchFlag: vnode.patchFlag,
+    // if the vnode is cloned with extra props, we can no longer assume its
+    // existing patch flag to be reliable and need to add the FULL_PROPS flag.
+    // note: perserve flag for fragments since they use the flag for children
+    // fast paths only.
+    patchFlag:
+      extraProps && vnode.type !== Fragment
+        ? patchFlag === -1 // hoisted node
+          ? PatchFlags.FULL_PROPS
+          : patchFlag | PatchFlags.FULL_PROPS
+        : patchFlag,
     dynamicProps: vnode.dynamicProps,
     dynamicChildren: vnode.dynamicChildren,
     appContext: vnode.appContext,
@@ -410,27 +544,52 @@ export function cloneVNode<T, U>(
     // they will simply be overwritten.
     component: vnode.component,
     suspense: vnode.suspense,
+    ssContent: vnode.ssContent && cloneVNode(vnode.ssContent),
+    ssFallback: vnode.ssFallback && cloneVNode(vnode.ssFallback),
     el: vnode.el,
     anchor: vnode.anchor
   }
+  if (__COMPAT__) {
+    defineLegacyVNodeProperties(cloned)
+  }
+  return cloned as any
 }
 
 /**
- * @internal
+ * Dev only, for HMR of hoisted vnodes reused in v-for
+ * https://github.com/vitejs/vite/issues/2022
+ */
+function deepCloneVNode(vnode: VNode): VNode {
+  const cloned = cloneVNode(vnode)
+  if (isArray(vnode.children)) {
+    cloned.children = (vnode.children as VNode[]).map(deepCloneVNode)
+  }
+  return cloned
+}
+
+/**
+ * @private
  */
 export function createTextVNode(text: string = ' ', flag: number = 0): VNode {
   return createVNode(Text, null, text, flag)
 }
 
 /**
- * @internal
+ * @private
  */
-export function createStaticVNode(content: string): VNode {
-  return createVNode(Static, null, content)
+export function createStaticVNode(
+  content: string,
+  numberOfNodes: number
+): VNode {
+  // A static vnode can contain multiple stringified elements, and the number
+  // of elements is necessary for hydration.
+  const vnode = createVNode(Static, null, content)
+  vnode.staticCount = numberOfNodes
+  return vnode
 }
 
 /**
- * @internal
+ * @private
  */
 export function createCommentVNode(
   text: string = '',
@@ -449,11 +608,16 @@ export function normalizeVNode(child: VNodeChild): VNode {
     return createVNode(Comment)
   } else if (isArray(child)) {
     // fragment
-    return createVNode(Fragment, null, child)
+    return createVNode(
+      Fragment,
+      null,
+      // #3666, avoid reference pollution when reusing vnode
+      child.slice()
+    )
   } else if (typeof child === 'object') {
     // already vnode, this should be the most common since compiled templates
     // always produce all-vnode children arrays
-    return child.el === null ? child : cloneVNode(child)
+    return cloneIfMounted(child)
   } else {
     // strings and numbers
     return createVNode(Text, null, String(child))
@@ -473,19 +637,34 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
   } else if (isArray(children)) {
     type = ShapeFlags.ARRAY_CHILDREN
   } else if (typeof children === 'object') {
-    // Normalize slot to plain children
-    if (
-      (shapeFlag & ShapeFlags.ELEMENT || shapeFlag & ShapeFlags.TELEPORT) &&
-      (children as any).default
-    ) {
-      normalizeChildren(vnode, (children as any).default())
+    if (shapeFlag & ShapeFlags.ELEMENT || shapeFlag & ShapeFlags.TELEPORT) {
+      // Normalize slot to plain children for plain element and Teleport
+      const slot = (children as any).default
+      if (slot) {
+        // _c marker is added by withCtx() indicating this is a compiled slot
+        slot._c && (slot._d = false)
+        normalizeChildren(vnode, slot())
+        slot._c && (slot._d = true)
+      }
       return
     } else {
       type = ShapeFlags.SLOTS_CHILDREN
-      if (!(children as RawSlots)._ && !(InternalObjectKey in children!)) {
+      const slotFlag = (children as RawSlots)._
+      if (!slotFlag && !(InternalObjectKey in children!)) {
         // if slots are not normalized, attach context instance
         // (compiled / normalized slots already have context)
         ;(children as RawSlots)._ctx = currentRenderingInstance
+      } else if (slotFlag === SlotFlags.FORWARDED && currentRenderingInstance) {
+        // a child component receives forwarded slots from the parent.
+        // its slot type is determined by its parent's slot type.
+        if (
+          (currentRenderingInstance.slots as RawSlots)._ === SlotFlags.STABLE
+        ) {
+          ;(children as RawSlots)._ = SlotFlags.STABLE
+        } else {
+          ;(children as RawSlots)._ = SlotFlags.DYNAMIC
+          vnode.patchFlag |= PatchFlags.DYNAMIC_SLOTS
+        }
       }
     }
   } else if (isFunction(children)) {
@@ -505,11 +684,8 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
   vnode.shapeFlag |= type
 }
 
-const handlersRE = /^on|^vnode/
-
 export function mergeProps(...args: (Data & VNodeProps)[]) {
-  const ret: Data = {}
-  extend(ret, args[0])
+  const ret = extend({}, args[0])
   for (let i = 1; i < args.length; i++) {
     const toMerge = args[i]
     for (const key in toMerge) {
@@ -519,16 +695,15 @@ export function mergeProps(...args: (Data & VNodeProps)[]) {
         }
       } else if (key === 'style') {
         ret.style = normalizeStyle([ret.style, toMerge.style])
-      } else if (handlersRE.test(key)) {
-        // on*, vnode*
+      } else if (isOn(key)) {
         const existing = ret[key]
         const incoming = toMerge[key]
         if (existing !== incoming) {
           ret[key] = existing
-            ? [].concat(existing as any, toMerge[key] as any)
+            ? [].concat(existing as any, incoming as any)
             : incoming
         }
-      } else {
+      } else if (key !== '') {
         ret[key] = toMerge[key]
       }
     }

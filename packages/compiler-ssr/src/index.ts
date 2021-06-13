@@ -23,6 +23,8 @@ import { ssrTransformIf } from './transforms/ssrVIf'
 import { ssrTransformFor } from './transforms/ssrVFor'
 import { ssrTransformModel } from './transforms/ssrVModel'
 import { ssrTransformShow } from './transforms/ssrVShow'
+import { ssrInjectFallthroughAttrs } from './transforms/ssrInjectFallthroughAttrs'
+import { ssrInjectCssVars } from './transforms/ssrInjectCssVars'
 
 export function compile(
   template: string,
@@ -49,12 +51,15 @@ export function compile(
 
   transform(ast, {
     ...options,
+    hoistStatic: false,
     nodeTransforms: [
       ssrTransformIf,
       ssrTransformFor,
       trackVForSlotScopes,
       transformExpression,
       ssrTransformSlotOutlet,
+      ssrInjectFallthroughAttrs,
+      ssrInjectCssVars,
       ssrTransformElement,
       ssrTransformComponent,
       trackSlotScopes,
