@@ -13,9 +13,12 @@ import {
   createTextVNode,
   createBlock,
   openBlock,
-  createCommentVNode
+  createCommentVNode,
+  ref,
+  nextTick,
+  renderSlot
 } from '@vue/runtime-test'
-import { PatchFlags } from '@vue/shared'
+import { PatchFlags, SlotFlags } from '@vue/shared'
 import { renderList } from '../src/helpers/renderList'
 
 describe('renderer: fragment', () => {
@@ -313,6 +316,59 @@ describe('renderer: fragment', () => {
     render(renderFn(['two', 'one']), root)
     expect(serializeInner(root)).toBe(
       `<!--comment--><span></span><div>two</div><!--comment--><span></span><div>one</div>`
+    )
+  })
+
+  //#3943
+  test('should deep traverseStaticChildren if has dynamicChildren', async () => {
+    const root = nodeOps.createElement('div')
+
+    const Child = {
+      render(this: any) {
+        return (
+          openBlock(),
+          createBlock('div', null, [renderSlot(this.$slots, 'default')])
+        )
+      }
+    }
+
+    const foo = ref(true)
+    const change = ref(false)
+
+    const renderFn = () => {
+      return (
+        openBlock(),
+        createBlock(Child, null, {
+          default: () => [
+            createVNode('div', null, [
+              createVNode('div', null, foo.value, PatchFlags.TEXT),
+              change.value
+                ? (openBlock(), createBlock('div', null, change.value))
+                : createCommentVNode('v-if', true)
+            ])
+          ],
+          _: SlotFlags.STABLE
+        })
+      )
+    }
+
+    render(renderFn(), root)
+    expect(serializeInner(root)).toBe(
+      `<div><div><div>true</div><!--v-if--></div></div>`
+    )
+
+    foo.value = false
+    await nextTick()
+
+    expect(serializeInner(root)).toBe(
+      `<div><div><div>false</div><!--v-if--></div></div>`
+    )
+
+    change.value = true
+    await nextTick()
+
+    expect(serializeInner(root)).toBe(
+      `<div><div><div>false</div><div>true</div></div></div>`
     )
   })
 })
