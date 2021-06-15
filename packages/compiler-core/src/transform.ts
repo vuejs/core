@@ -128,7 +128,7 @@ export function createTransformContext(
   {
     filename = '',
     prefixIdentifiers = false,
-    hoistStatic = false,
+    hoistStatic = true,
     cacheHandlers = false,
     nodeTransforms = [],
     directiveTransforms = {},
