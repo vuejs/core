@@ -1530,7 +1530,7 @@ describe('Suspense', () => {
   describe('warnings', () => {
     // base function to check if a combination of solts warns or not
     function baseCheckWarn(
-      sohuldWarn: boolean,
+      shouldWarn: boolean,
       children: RawSlots,
       props: SuspenseProps | null = null
     ) {
@@ -1543,7 +1543,7 @@ describe('Suspense', () => {
       const root = nodeOps.createElement('div')
       render(h(Comp), root)
 
-      if (sohuldWarn) {
+      if (shouldWarn) {
         expect(`<Suspense> slots expect a single root node.`).toHaveBeenWarned()
       } else {
         expect(
