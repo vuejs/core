@@ -2,7 +2,7 @@
 // Reason: potentially setting innerHTML.
 // This can come from explicit usage of v-html or innerHTML as a prop in render
 
-import { warn } from '@vue/runtime-core'
+import { warn, DeprecationTypes, compatUtils } from '@vue/runtime-core'
 
 // functions. The user is responsible for using them with only trusted content.
 export function patchDOMProp(
@@ -24,6 +24,7 @@ export function patchDOMProp(
     el[key] = value == null ? '' : value
     return
   }
+
   if (key === 'value' && el.tagName !== 'PROGRESS') {
     // store value as _value as well since
     // non-string values will be stringified.
@@ -32,27 +33,63 @@ export function patchDOMProp(
     if (el.value !== newValue) {
       el.value = newValue
     }
+    if (value == null) {
+      el.removeAttribute(key)
+    }
     return
   }
-  if (value === '' && typeof el[key] === 'boolean') {
-    // e.g. <select multiple> compiles to { multiple: '' }
-    el[key] = true
-  } else if (value == null && typeof el[key] === 'string') {
-    // e.g. <div :id="null">
-    el[key] = ''
-    el.removeAttribute(key)
-  } else {
-    // some properties perform value validation and throw
-    try {
-      el[key] = value
-    } catch (e) {
-      if (__DEV__) {
-        warn(
-          `Failed setting prop "${key}" on <${el.tagName.toLowerCase()}>: ` +
-            `value ${value} is invalid.`,
-          e
+
+  if (value === '' || value == null) {
+    const type = typeof el[key]
+    if (value === '' && type === 'boolean') {
+      // e.g. <select multiple> compiles to { multiple: '' }
+      el[key] = true
+      return
+    } else if (value == null && type === 'string') {
+      // e.g. <div :id="null">
+      el[key] = ''
+      el.removeAttribute(key)
+      return
+    } else if (type === 'number') {
+      // e.g. <img :width="null">
+      el[key] = 0
+      el.removeAttribute(key)
+      return
+    }
+  }
+
+  if (
+    __COMPAT__ &&
+    value === false &&
+    compatUtils.isCompatEnabled(
+      DeprecationTypes.ATTR_FALSE_VALUE,
+      parentComponent
+    )
+  ) {
+    const type = typeof el[key]
+    if (type === 'string' || type === 'number') {
+      __DEV__ &&
+        compatUtils.warnDeprecation(
+          DeprecationTypes.ATTR_FALSE_VALUE,
+          parentComponent,
+          key
         )
-      }
+      el[key] = type === 'number' ? 0 : ''
+      el.removeAttribute(key)
+      return
+    }
+  }
+
+  // some properties perform value validation and throw
+  try {
+    el[key] = value
+  } catch (e) {
+    if (__DEV__) {
+      warn(
+        `Failed setting prop "${key}" on <${el.tagName.toLowerCase()}>: ` +
+          `value ${value} is invalid.`,
+        e
+      )
     }
   }
 }

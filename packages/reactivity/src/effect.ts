@@ -17,6 +17,7 @@ export interface ReactiveEffect<T = any> {
   raw: () => T
   deps: Array<Dep>
   options: ReactiveEffectOptions
+  allowRecurse: boolean
 }
 
 export interface ReactiveEffectOptions {
@@ -25,6 +26,21 @@ export interface ReactiveEffectOptions {
   onTrack?: (event: DebuggerEvent) => void
   onTrigger?: (event: DebuggerEvent) => void
   onStop?: () => void
+  /**
+   * Indicates whether the job is allowed to recursively trigger itself when
+   * managed by the scheduler.
+   *
+   * By default, a job cannot trigger itself because some built-in method calls,
+   * e.g. Array.prototype.push actually performs reads as well (#1740) which
+   * can lead to confusing infinite loops.
+   * The allowed cases are component update functions and watch callbacks.
+   * Component update functions may update child component props, which in turn
+   * trigger flush: "pre" watch callbacks that mutates state that the parent
+   * relies on (#1801). Watch callbacks doesn't track its dependencies so if it
+   * triggers itself again, it's likely intentional and it is the user's
+   * responsibility to perform recursive state mutation that eventually
+   * stabilizes (#1727).
+   */
   allowRecurse?: boolean
 }
 
@@ -83,7 +99,7 @@ function createReactiveEffect<T = any>(
 ): ReactiveEffect<T> {
   const effect = function reactiveEffect(): unknown {
     if (!effect.active) {
-      return options.scheduler ? undefined : fn()
+      return fn()
     }
     if (!effectStack.includes(effect)) {
       cleanup(effect)
@@ -100,6 +116,7 @@ function createReactiveEffect<T = any>(
     }
   } as ReactiveEffect
   effect.id = uid++
+  effect.allowRecurse = !!options.allowRecurse
   effect._isEffect = true
   effect.active = true
   effect.raw = fn
@@ -180,7 +197,7 @@ export function trigger(
   const add = (effectsToAdd: Set<ReactiveEffect> | undefined) => {
     if (effectsToAdd) {
       effectsToAdd.forEach(effect => {
-        if (effect !== activeEffect || effect.options.allowRecurse) {
+        if (effect !== activeEffect || effect.allowRecurse) {
           effects.add(effect)
         }
       })

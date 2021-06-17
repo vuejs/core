@@ -193,4 +193,10 @@ describe('reactivity/computed', () => {
     expect(isReadonly(z)).toBe(false)
     expect(isReadonly(z.value.a)).toBe(false)
   })
+
+  it('should expose value when stopped', () => {
+    const x = computed(() => 1)
+    stop(x.effect)
+    expect(x.value).toBe(1)
+  })
 })

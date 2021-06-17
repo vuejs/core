@@ -4,25 +4,25 @@ import { transformIf } from '../../src/transforms/vIf'
 import { transformElement } from '../../src/transforms/transformElement'
 import { transformSlotOutlet } from '../../src/transforms/transformSlotOutlet'
 import {
+  CommentNode,
+  ConditionalExpression,
+  ElementNode,
+  ElementTypes,
+  IfBranchNode,
+  IfConditionalExpression,
   IfNode,
   NodeTypes,
-  ElementNode,
-  TextNode,
-  CommentNode,
   SimpleExpressionNode,
-  ConditionalExpression,
-  IfConditionalExpression,
-  VNodeCall,
-  ElementTypes,
-  IfBranchNode
+  TextNode,
+  VNodeCall
 } from '../../src/ast'
 import { ErrorCodes } from '../../src/errors'
-import { CompilerOptions, generate } from '../../src'
+import { CompilerOptions, generate, TO_HANDLERS } from '../../src'
 import {
+  CREATE_COMMENT,
   FRAGMENT,
   MERGE_PROPS,
-  RENDER_SLOT,
-  CREATE_COMMENT
+  RENDER_SLOT
 } from '../../src/runtimeHelpers'
 import { createObjectMatcher } from '../testUtils'
 
@@ -606,6 +606,27 @@ describe('compiler: v-if', () => {
       expect(branch1.props).toMatchObject(createObjectMatcher({ key: `[0]` }))
     })
 
+    test('with spaces between branches', () => {
+      const {
+        node: { codegenNode }
+      } = parseWithIfTransform(
+        `<div v-if="ok"/> <div v-else-if="no"/> <div v-else/>`
+      )
+      expect(codegenNode.consequent).toMatchObject({
+        tag: `"div"`,
+        props: createObjectMatcher({ key: `[0]` })
+      })
+      const branch = codegenNode.alternate as ConditionalExpression
+      expect(branch.consequent).toMatchObject({
+        tag: `"div"`,
+        props: createObjectMatcher({ key: `[1]` })
+      })
+      expect(branch.alternate).toMatchObject({
+        tag: `"div"`,
+        props: createObjectMatcher({ key: `[2]` })
+      })
+    })
+
     test('with comments', () => {
       const { node } = parseWithIfTransform(`
           <template v-if="ok">
@@ -651,5 +672,25 @@ describe('compiler: v-if', () => {
       expect(b1.children[3].type).toBe(NodeTypes.ELEMENT)
       expect((b1.children[3] as ElementNode).tag).toBe(`p`)
     })
+  })
+
+  test('v-on with v-if', () => {
+    const {
+      node: { codegenNode }
+    } = parseWithIfTransform(
+      `<button v-on="{ click: clickEvent }" v-if="true">w/ v-if</button>`
+    )
+
+    expect((codegenNode.consequent as any).props.type).toBe(
+      NodeTypes.JS_CALL_EXPRESSION
+    )
+    expect((codegenNode.consequent as any).props.callee).toBe(MERGE_PROPS)
+    expect(
+      (codegenNode.consequent as any).props.arguments[0].properties[0].value
+        .content
+    ).toBe('0')
+    expect((codegenNode.consequent as any).props.arguments[1].callee).toBe(
+      TO_HANDLERS
+    )
   })
 })

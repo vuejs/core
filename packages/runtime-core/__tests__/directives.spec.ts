@@ -340,4 +340,59 @@ describe('directives', () => {
     expect(beforeUnmount).toHaveBeenCalledTimes(1)
     expect(unmounted).toHaveBeenCalledTimes(1)
   })
+
+  // #2298
+  it('directive merging on component root', () => {
+    const d1 = {
+      mounted: jest.fn()
+    }
+    const d2 = {
+      mounted: jest.fn()
+    }
+    const Comp = {
+      render() {
+        return withDirectives(h('div'), [[d2]])
+      }
+    }
+
+    const App = {
+      name: 'App',
+      render() {
+        return h('div', [withDirectives(h(Comp), [[d1]])])
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(d1.mounted).toHaveBeenCalled()
+    expect(d2.mounted).toHaveBeenCalled()
+  })
+
+  test('should disable tracking inside directive lifecycle hooks', async () => {
+    const count = ref(0)
+    const text = ref('')
+    const beforeUpdate = jest.fn(() => count.value++)
+
+    const App = {
+      render() {
+        return withDirectives(h('p', text.value), [
+          [
+            {
+              beforeUpdate
+            }
+          ]
+        ])
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(beforeUpdate).toHaveBeenCalledTimes(0)
+    expect(count.value).toBe(0)
+
+    text.value = 'foo'
+    await nextTick()
+    expect(beforeUpdate).toHaveBeenCalledTimes(1)
+    expect(count.value).toBe(1)
+  })
 })

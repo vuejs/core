@@ -49,7 +49,7 @@ describe('ssr: v-model', () => {
     `)
   })
 
-  test('<input type="checkbox"', () => {
+  test('<input type="checkbox">', () => {
     expect(compileWithWrapper(`<input type="checkbox" v-model="bar">`).code)
       .toMatchInlineSnapshot(`
       "const { ssrLooseContain: _ssrLooseContain, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"@vue/server-renderer\\")
@@ -78,6 +78,38 @@ describe('ssr: v-model', () => {
           ((Array.isArray(_ctx.bar))
             ? _ssrLooseContain(_ctx.bar, \\"foo\\")
             : _ctx.bar) ? \\" checked\\" : \\"\\"
+        }></div>\`)
+      }"
+    `)
+
+    expect(
+      compileWithWrapper(
+        `<input type="checkbox" :true-value="foo" :false-value="bar" v-model="baz">`
+      ).code
+    ).toMatchInlineSnapshot(`
+      "const { ssrLooseEqual: _ssrLooseEqual, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"@vue/server-renderer\\")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<div\${
+          _ssrRenderAttrs(_attrs)
+        }><input type=\\"checkbox\\"\${
+          (_ssrLooseEqual(_ctx.baz, _ctx.foo)) ? \\" checked\\" : \\"\\"
+        }></div>\`)
+      }"
+    `)
+
+    expect(
+      compileWithWrapper(
+        `<input type="checkbox" true-value="foo" false-value="bar" v-model="baz">`
+      ).code
+    ).toMatchInlineSnapshot(`
+      "const { ssrLooseEqual: _ssrLooseEqual, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"@vue/server-renderer\\")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<div\${
+          _ssrRenderAttrs(_attrs)
+        }><input type=\\"checkbox\\"\${
+          (_ssrLooseEqual(_ctx.baz, \\"foo\\")) ? \\" checked\\" : \\"\\"
         }></div>\`)
       }"
     `)

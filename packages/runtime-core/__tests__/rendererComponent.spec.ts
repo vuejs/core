@@ -8,7 +8,9 @@ import {
   VNode,
   provide,
   inject,
-  Ref
+  Ref,
+  watch,
+  SetupContext
 } from '@vue/runtime-test'
 
 describe('renderer: component', () => {
@@ -136,5 +138,187 @@ describe('renderer: component', () => {
     expect(serializeInner(root)).toBe(`<div>0</div><div>1</div>`)
     await nextTick()
     expect(serializeInner(root)).toBe(`<div>1</div><div>1</div>`)
+  })
+
+  // #2170
+  test('instance.$el should be exposed to watch options', async () => {
+    function returnThis(this: any, _arg: any) {
+      return this
+    }
+    const propWatchSpy = jest.fn(returnThis)
+    const dataWatchSpy = jest.fn(returnThis)
+    let instance: any
+    const Comp = {
+      props: {
+        testProp: String
+      },
+
+      data() {
+        return {
+          testData: undefined
+        }
+      },
+
+      watch: {
+        testProp() {
+          // @ts-ignore
+          propWatchSpy(this.$el)
+        },
+        testData() {
+          // @ts-ignore
+          dataWatchSpy(this.$el)
+        }
+      },
+
+      created() {
+        instance = this
+      },
+
+      render() {
+        return h('div')
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    await nextTick()
+    expect(propWatchSpy).not.toHaveBeenCalled()
+    expect(dataWatchSpy).not.toHaveBeenCalled()
+
+    render(h(Comp, { testProp: 'prop ' }), root)
+    await nextTick()
+    expect(propWatchSpy).toHaveBeenCalledWith(instance.$el)
+
+    instance.testData = 1
+    await nextTick()
+    expect(dataWatchSpy).toHaveBeenCalledWith(instance.$el)
+  })
+
+  // #2200
+  test('component child updating parent state in pre-flush should trigger parent re-render', async () => {
+    const outer = ref(0)
+    const App = {
+      setup() {
+        const inner = ref(0)
+
+        return () => {
+          return [
+            h('div', inner.value),
+            h(Child, {
+              value: outer.value,
+              onUpdate: (val: number) => (inner.value = val)
+            })
+          ]
+        }
+      }
+    }
+
+    const Child = {
+      props: ['value'],
+      setup(props: any, { emit }: SetupContext) {
+        watch(() => props.value, (val: number) => emit('update', val))
+
+        return () => {
+          return h('div', props.value)
+        }
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<div>0</div><div>0</div>`)
+
+    outer.value++
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>1</div><div>1</div>`)
+  })
+
+  // #2521
+  test('should pause tracking deps when initializing legacy options', async () => {
+    let childInstance = null as any
+    const Child = {
+      props: ['foo'],
+      data() {
+        return {
+          count: 0
+        }
+      },
+      watch: {
+        foo: {
+          immediate: true,
+          handler() {
+            ;(this as any).count
+          }
+        }
+      },
+      created() {
+        childInstance = this as any
+        childInstance.count
+      },
+      render() {
+        return h('h1', (this as any).count)
+      }
+    }
+
+    const App = {
+      setup() {
+        return () => h(Child)
+      },
+      updated: jest.fn()
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(App.updated).toHaveBeenCalledTimes(0)
+
+    childInstance.count++
+    await nextTick()
+    expect(App.updated).toHaveBeenCalledTimes(0)
+  })
+
+  describe('render with access caches', () => {
+    // #3297
+    test('should not set the access cache in the data() function (production mode)', () => {
+      const Comp = {
+        data() {
+          ;(this as any).foo
+          return { foo: 1 }
+        },
+        render() {
+          return h('h1', (this as any).foo)
+        }
+      }
+      const root = nodeOps.createElement('div')
+
+      __DEV__ = false
+      render(h(Comp), root)
+      __DEV__ = true
+      expect(serializeInner(root)).toBe(`<h1>1</h1>`)
+    })
+  })
+
+  test('the component VNode should be cloned when reusing it', () => {
+    const App = {
+      render() {
+        const c = [h(Comp)]
+        return [c, c, c]
+      }
+    }
+
+    const ids: number[] = []
+    const Comp = {
+      render: () => h('h1'),
+      beforeUnmount() {
+        ids.push((this as any).$.uid)
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<h1></h1><h1></h1><h1></h1>`)
+
+    render(null, root)
+    expect(serializeInner(root)).toBe(``)
+    expect(ids).toEqual([ids[0], ids[0] + 1, ids[0] + 2])
   })
 })

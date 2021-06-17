@@ -1,7 +1,8 @@
 import {
   getCurrentInstance,
   SetupContext,
-  ComponentInternalInstance
+  ComponentInternalInstance,
+  ComponentOptions
 } from '../component'
 import {
   cloneVNode,
@@ -68,8 +69,8 @@ export interface TransitionHooks<
   delayedLeave?(): void
 }
 
-type TransitionHookCaller = (
-  hook: ((el: any) => void) | undefined,
+export type TransitionHookCaller = (
+  hook: ((el: any) => void) | Array<(el: any) => void> | undefined,
   args?: any[]
 ) => void
 
@@ -110,7 +111,7 @@ export function useTransitionState(): TransitionState {
 
 const TransitionHookValidator = [Function, Array]
 
-const BaseTransitionImpl = {
+const BaseTransitionImpl: ComponentOptions = {
   name: `BaseTransition`,
 
   props: {
@@ -223,7 +224,7 @@ const BaseTransitionImpl = {
             instance.update()
           }
           return emptyPlaceholder(child)
-        } else if (mode === 'in-out') {
+        } else if (mode === 'in-out' && innerChild.type !== Comment) {
           leavingHooks.delayLeave = (
             el: TransitionElement,
             earlyRemove,
@@ -248,6 +249,10 @@ const BaseTransitionImpl = {
       return child
     }
   }
+}
+
+if (__COMPAT__) {
+  BaseTransitionImpl.__isBuiltIn = true
 }
 
 // export the public type for h/tsx inference
@@ -471,7 +476,7 @@ export function getTransitionRawChildren(
   }
   // #1126 if a transition children list contains multiple sub fragments, these
   // fragments will be merged into a flat children array. Since each v-for
-  // fragment may contain different static bindings inside, we need to de-top
+  // fragment may contain different static bindings inside, we need to de-op
   // these children to force full diffs to ensure correct behavior.
   if (keyedFragmentCount > 1) {
     for (let i = 0; i < ret.length; i++) {

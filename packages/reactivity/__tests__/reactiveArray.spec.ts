@@ -128,6 +128,21 @@ describe('reactivity/reactive/Array', () => {
     expect(fn).toHaveBeenCalledTimes(1)
   })
 
+  // #2427
+  test('track length on for ... in iteration', () => {
+    const array = reactive([1])
+    let length = ''
+    effect(() => {
+      length = ''
+      for (const key in array) {
+        length += key
+      }
+    })
+    expect(length).toBe('0')
+    array.push(1)
+    expect(length).toBe('01')
+  })
+
   describe('Array methods w/ refs', () => {
     let original: any[]
     beforeEach(() => {

@@ -46,6 +46,7 @@ import {
   ssrProcessSuspense,
   ssrTransformSuspense
 } from './ssrTransformSuspense'
+import { ssrProcessTransitionGroup } from './ssrTransformTransitionGroup'
 import { isSymbol, isObject, isArray } from '@vue/shared'
 
 // We need to construct the slot functions in the 1st pass to ensure proper
@@ -176,9 +177,11 @@ export function ssrProcessComponent(
       return ssrProcessTeleport(node, context)
     } else if (component === SUSPENSE) {
       return ssrProcessSuspense(node, context)
+    } else if (component === TRANSITION_GROUP) {
+      return ssrProcessTransitionGroup(node, context)
     } else {
       // real fall-through (e.g. KeepAlive): just render its children.
-      processChildren(node.children, context, component === TRANSITION_GROUP)
+      processChildren(node.children, context)
     }
   } else {
     // finish up slot function expressions from the 1st pass.
@@ -200,6 +203,12 @@ export function ssrProcessComponent(
         vnodeBranch
       )
     }
+
+    // component is inside a slot, inherit slot scope Id
+    if (context.withSlotScopeId) {
+      node.ssrCodegenNode!.arguments.push(`_scopeId`)
+    }
+
     if (typeof component === 'string') {
       // static component
       context.pushStatement(
@@ -284,16 +293,28 @@ function subTransform(
   // inherit parent scope analysis state
   childContext.scopes = { ...parentContext.scopes }
   childContext.identifiers = { ...parentContext.identifiers }
+  childContext.imports = parentContext.imports
   // traverse
   traverseNode(childRoot, childContext)
-  // merge helpers/components/directives/imports into parent context
-  ;(['helpers', 'components', 'directives', 'imports'] as const).forEach(
-    key => {
-      childContext[key].forEach((value: any) => {
+  // merge helpers/components/directives into parent context
+  ;(['helpers', 'components', 'directives'] as const).forEach(key => {
+    childContext[key].forEach((value: any, helperKey: any) => {
+      if (key === 'helpers') {
+        const parentCount = parentContext.helpers.get(helperKey)
+        if (parentCount === undefined) {
+          parentContext.helpers.set(helperKey, value)
+        } else {
+          parentContext.helpers.set(helperKey, value + parentCount)
+        }
+      } else {
         ;(parentContext[key] as any).add(value)
-      })
-    }
-  )
+      }
+    })
+  })
+  // imports/hoists are not merged because:
+  // - imports are only used for asset urls and should be consistent between
+  //   node/client branches
+  // - hoists are not enabled for the client branch here
 }
 
 function clone(v: any): any {

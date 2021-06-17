@@ -21,7 +21,7 @@ const toReactive = <T extends unknown>(value: T): T =>
   isObject(value) ? reactive(value) : value
 
 const toReadonly = <T extends unknown>(value: T): T =>
-  isObject(value) ? readonly(value) : value
+  isObject(value) ? readonly(value as Record<any, any>) : value
 
 const toShallow = <T extends unknown>(value: T): T => value
 
@@ -44,11 +44,15 @@ function get(
   }
   !isReadonly && track(rawTarget, TrackOpTypes.GET, rawKey)
   const { has } = getProto(rawTarget)
-  const wrap = isReadonly ? toReadonly : isShallow ? toShallow : toReactive
+  const wrap = isShallow ? toShallow : isReadonly ? toReadonly : toReactive
   if (has.call(rawTarget, key)) {
     return wrap(target.get(key))
   } else if (has.call(rawTarget, rawKey)) {
     return wrap(target.get(rawKey))
+  } else if (target !== rawTarget) {
+    // #3602 readonly(reactive(Map))
+    // ensure that the nested reactive `Map` can do tracking for itself
+    target.get(key)
   }
 }
 
@@ -76,11 +80,11 @@ function add(this: SetTypes, value: unknown) {
   const target = toRaw(this)
   const proto = getProto(target)
   const hadKey = proto.has.call(target, value)
-  const result = target.add(value)
   if (!hadKey) {
+    target.add(value)
     trigger(target, TriggerOpTypes.ADD, value, value)
   }
-  return result
+  return this
 }
 
 function set(this: MapTypes, key: unknown, value: unknown) {
@@ -97,13 +101,13 @@ function set(this: MapTypes, key: unknown, value: unknown) {
   }
 
   const oldValue = get.call(target, key)
-  const result = target.set(key, value)
+  target.set(key, value)
   if (!hadKey) {
     trigger(target, TriggerOpTypes.ADD, key, value)
   } else if (hasChanged(value, oldValue)) {
     trigger(target, TriggerOpTypes.SET, key, value, oldValue)
   }
-  return result
+  return this
 }
 
 function deleteEntry(this: CollectionTypes, key: unknown) {
@@ -151,7 +155,7 @@ function createForEach(isReadonly: boolean, isShallow: boolean) {
     const observed = this as any
     const target = observed[ReactiveFlags.RAW]
     const rawTarget = toRaw(target)
-    const wrap = isReadonly ? toReadonly : isShallow ? toShallow : toReactive
+    const wrap = isShallow ? toShallow : isReadonly ? toReadonly : toReactive
     !isReadonly && track(rawTarget, TrackOpTypes.ITERATE, ITERATE_KEY)
     return target.forEach((value: unknown, key: unknown) => {
       // important: make sure the callback is
@@ -191,7 +195,7 @@ function createIterableMethod(
       method === 'entries' || (method === Symbol.iterator && targetIsMap)
     const isKeyOnly = method === 'keys' && targetIsMap
     const innerIterator = target[method](...args)
-    const wrap = isReadonly ? toReadonly : isShallow ? toShallow : toReactive
+    const wrap = isShallow ? toShallow : isReadonly ? toReadonly : toReactive
     !isReadonly &&
       track(
         rawTarget,
@@ -279,6 +283,23 @@ const readonlyInstrumentations: Record<string, Function> = {
   forEach: createForEach(true, false)
 }
 
+const shallowReadonlyInstrumentations: Record<string, Function> = {
+  get(this: MapTypes, key: unknown) {
+    return get(this, key, true, true)
+  },
+  get size() {
+    return size((this as unknown) as IterableCollections, true)
+  },
+  has(this: MapTypes, key: unknown) {
+    return has.call(this, key, true)
+  },
+  add: createReadonlyMethod(TriggerOpTypes.ADD),
+  set: createReadonlyMethod(TriggerOpTypes.SET),
+  delete: createReadonlyMethod(TriggerOpTypes.DELETE),
+  clear: createReadonlyMethod(TriggerOpTypes.CLEAR),
+  forEach: createForEach(true, true)
+}
+
 const iteratorMethods = ['keys', 'values', 'entries', Symbol.iterator]
 iteratorMethods.forEach(method => {
   mutableInstrumentations[method as string] = createIterableMethod(
@@ -296,11 +317,18 @@ iteratorMethods.forEach(method => {
     false,
     true
   )
+  shallowReadonlyInstrumentations[method as string] = createIterableMethod(
+    method,
+    true,
+    true
+  )
 })
 
 function createInstrumentationGetter(isReadonly: boolean, shallow: boolean) {
   const instrumentations = shallow
-    ? shallowInstrumentations
+    ? isReadonly
+      ? shallowReadonlyInstrumentations
+      : shallowInstrumentations
     : isReadonly
       ? readonlyInstrumentations
       : mutableInstrumentations
@@ -340,6 +368,12 @@ export const readonlyCollectionHandlers: ProxyHandler<CollectionTypes> = {
   get: createInstrumentationGetter(true, false)
 }
 
+export const shallowReadonlyCollectionHandlers: ProxyHandler<
+  CollectionTypes
+> = {
+  get: createInstrumentationGetter(true, true)
+}
+
 function checkIdentityKeys(
   target: CollectionTypes,
   has: (key: unknown) => boolean,
@@ -350,7 +384,7 @@ function checkIdentityKeys(
     const type = toRawType(target)
     console.warn(
       `Reactive ${type} contains both the raw and reactive ` +
-        `versions of the same object${type === `Map` ? `as keys` : ``}, ` +
+        `versions of the same object${type === `Map` ? ` as keys` : ``}, ` +
         `which can lead to inconsistencies. ` +
         `Avoid differentiating between the raw and reactive versions ` +
         `of an object and only use the reactive version if possible.`

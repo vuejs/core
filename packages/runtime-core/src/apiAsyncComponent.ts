@@ -3,15 +3,18 @@ import {
   ConcreteComponent,
   currentInstance,
   ComponentInternalInstance,
-  isInSSRComponentSetup
+  isInSSRComponentSetup,
+  ComponentOptions
 } from './component'
 import { isFunction, isObject } from '@vue/shared'
 import { ComponentPublicInstance } from './componentPublicInstance'
-import { createVNode } from './vnode'
+import { createVNode, VNode } from './vnode'
 import { defineComponent } from './apiDefineComponent'
 import { warn } from './warning'
 import { ref } from '@vue/reactivity'
 import { handleError, ErrorCodes } from './errorHandling'
+import { isKeepAlive } from './components/KeepAlive'
+import { queueJob } from './scheduler'
 
 export type AsyncComponentResolveResult<T = Component> = T | { default: T } // es modules
 
@@ -34,6 +37,9 @@ export interface AsyncComponentOptions<T = any> {
   ) => any
 }
 
+export const isAsyncWrapper = (i: ComponentInternalInstance | VNode): boolean =>
+  !!(i.type as ComponentOptions).__asyncLoader
+
 export function defineAsyncComponent<
   T extends Component = { new (): ComponentPublicInstance }
 >(source: AsyncComponentLoader<T> | AsyncComponentOptions<T>): T {
@@ -43,8 +49,8 @@ export function defineAsyncComponent<
 
   const {
     loader,
-    loadingComponent: loadingComponent,
-    errorComponent: errorComponent,
+    loadingComponent,
+    errorComponent,
     delay = 200,
     timeout, // undefined = never times out
     suspensible = true,
@@ -105,8 +111,14 @@ export function defineAsyncComponent<
   }
 
   return defineComponent({
-    __asyncLoader: load,
     name: 'AsyncComponentWrapper',
+
+    __asyncLoader: load,
+
+    get __asyncResolved() {
+      return resolvedComp
+    },
+
     setup() {
       const instance = currentInstance!
 
@@ -170,6 +182,11 @@ export function defineAsyncComponent<
       load()
         .then(() => {
           loaded.value = true
+          if (instance.parent && isKeepAlive(instance.parent.vnode)) {
+            // parent is keep-alive, force update so the loaded component's
+            // name is taken into account
+            queueJob(instance.parent.update)
+          }
         })
         .catch(err => {
           onError(err)
@@ -193,7 +210,10 @@ export function defineAsyncComponent<
 
 function createInnerComp(
   comp: ConcreteComponent,
-  { vnode: { props, children } }: ComponentInternalInstance
+  { vnode: { ref, props, children } }: ComponentInternalInstance
 ) {
-  return createVNode(comp, props, children)
+  const vnode = createVNode(comp, props, children)
+  // ensure inner component inherits the async wrapper's ref owner
+  vnode.ref = ref
+  return vnode
 }

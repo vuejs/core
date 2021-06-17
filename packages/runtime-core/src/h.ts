@@ -4,13 +4,20 @@ import {
   createVNode,
   VNodeArrayChildren,
   Fragment,
+  Text,
+  Comment,
   isVNode
 } from './vnode'
 import { Teleport, TeleportProps } from './components/Teleport'
 import { Suspense, SuspenseProps } from './components/Suspense'
 import { isObject, isArray } from '@vue/shared'
 import { RawSlots } from './componentSlots'
-import { FunctionalComponent, Component, ComponentOptions } from './component'
+import {
+  FunctionalComponent,
+  Component,
+  ComponentOptions,
+  ConcreteComponent
+} from './component'
 import { EmitsOptions } from './componentEmits'
 import { DefineComponent } from './apiDefineComponent'
 
@@ -79,6 +86,16 @@ export function h(
   children?: RawChildren | RawSlots
 ): VNode
 
+// text/comment
+export function h(
+  type: typeof Text | typeof Comment,
+  children?: string | number | boolean
+): VNode
+export function h(
+  type: typeof Text | typeof Comment,
+  props?: null,
+  children?: string | number | boolean
+): VNode
 // fragment
 export function h(type: typeof Fragment, children?: VNodeArrayChildren): VNode
 export function h(
@@ -111,6 +128,17 @@ export function h<P, E extends EmitsOptions = {}>(
 
 // catch-all for generic component types
 export function h(type: Component, children?: RawChildren): VNode
+
+// concrete component
+export function h<P>(
+  type: ConcreteComponent | string,
+  children?: RawChildren
+): VNode
+export function h<P>(
+  type: ConcreteComponent<P> | string,
+  props?: (RawProps & P) | ({} extends P ? null : never),
+  children?: RawChildren
+): VNode
 
 // component without props
 export function h(

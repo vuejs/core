@@ -7,7 +7,10 @@ import {
   Renderer,
   HydrationRenderer,
   App,
-  RootHydrateFunction
+  RootHydrateFunction,
+  isRuntimeOnly,
+  DeprecationTypes,
+  compatUtils
 } from '@vue/runtime-core'
 import { nodeOps } from './nodeOps'
 import { patchProp, forcePatchProp } from './patchProp'
@@ -55,21 +58,43 @@ export const createApp = ((...args) => {
 
   if (__DEV__) {
     injectNativeTagCheck(app)
+    injectCompilerOptionsCheck(app)
   }
 
   const { mount } = app
-  app.mount = (containerOrSelector: Element | string): any => {
+  app.mount = (containerOrSelector: Element | ShadowRoot | string): any => {
     const container = normalizeContainer(containerOrSelector)
     if (!container) return
+
     const component = app._component
     if (!isFunction(component) && !component.render && !component.template) {
+      // __UNSAFE__
+      // Reason: potential execution of JS expressions in in-DOM template.
+      // The user must make sure the in-DOM template is trusted. If it's
+      // rendered by the server, the template should not contain any user data.
       component.template = container.innerHTML
+      // 2.x compat check
+      if (__COMPAT__ && __DEV__) {
+        for (let i = 0; i < container.attributes.length; i++) {
+          const attr = container.attributes[i]
+          if (attr.name !== 'v-cloak' && /^(v-|:|@)/.test(attr.name)) {
+            compatUtils.warnDeprecation(
+              DeprecationTypes.GLOBAL_MOUNT_CONTAINER,
+              null
+            )
+            break
+          }
+        }
+      }
     }
+
     // clear content before mounting
     container.innerHTML = ''
-    const proxy = mount(container)
-    container.removeAttribute('v-cloak')
-    container.setAttribute('data-v-app', '')
+    const proxy = mount(container, false, container instanceof SVGElement)
+    if (container instanceof Element) {
+      container.removeAttribute('v-cloak')
+      container.setAttribute('data-v-app', '')
+    }
     return proxy
   }
 
@@ -81,13 +106,14 @@ export const createSSRApp = ((...args) => {
 
   if (__DEV__) {
     injectNativeTagCheck(app)
+    injectCompilerOptionsCheck(app)
   }
 
   const { mount } = app
-  app.mount = (containerOrSelector: Element | string): any => {
+  app.mount = (containerOrSelector: Element | ShadowRoot | string): any => {
     const container = normalizeContainer(containerOrSelector)
     if (container) {
-      return mount(container, true)
+      return mount(container, true, container instanceof SVGElement)
     }
   }
 
@@ -103,15 +129,66 @@ function injectNativeTagCheck(app: App) {
   })
 }
 
-function normalizeContainer(container: Element | string): Element | null {
+// dev only
+function injectCompilerOptionsCheck(app: App) {
+  if (isRuntimeOnly()) {
+    const isCustomElement = app.config.isCustomElement
+    Object.defineProperty(app.config, 'isCustomElement', {
+      get() {
+        return isCustomElement
+      },
+      set() {
+        warn(
+          `The \`isCustomElement\` config option is deprecated. Use ` +
+            `\`compilerOptions.isCustomElement\` instead.`
+        )
+      }
+    })
+
+    const compilerOptions = app.config.compilerOptions
+    const msg =
+      `The \`compilerOptions\` config option is only respected when using ` +
+      `a build of Vue.js that includes the runtime compiler (aka "full build"). ` +
+      `Since you are using the runtime-only build, \`compilerOptions\` ` +
+      `must be passed to \`@vue/compiler-dom\` in the build setup instead.\n` +
+      `- For vue-loader: pass it via vue-loader's \`compilerOptions\` loader option.\n` +
+      `- For vue-cli: see https://cli.vuejs.org/guide/webpack.html#modifying-options-of-a-loader\n` +
+      `- For vite: pass it via @vitejs/plugin-vue options. See https://github.com/vitejs/vite/tree/main/packages/plugin-vue#example-for-passing-options-to-vuecompiler-dom`
+
+    Object.defineProperty(app.config, 'compilerOptions', {
+      get() {
+        warn(msg)
+        return compilerOptions
+      },
+      set() {
+        warn(msg)
+      }
+    })
+  }
+}
+
+function normalizeContainer(
+  container: Element | ShadowRoot | string
+): Element | null {
   if (isString(container)) {
     const res = document.querySelector(container)
     if (__DEV__ && !res) {
-      warn(`Failed to mount app: mount target selector returned null.`)
+      warn(
+        `Failed to mount app: mount target selector "${container}" returned null.`
+      )
     }
     return res
   }
-  return container
+  if (
+    __DEV__ &&
+    container instanceof window.ShadowRoot &&
+    container.mode === 'closed'
+  ) {
+    warn(
+      `mounting on a ShadowRoot with \`{mode: "closed"}\` may lead to unpredictable bugs`
+    )
+  }
+  return container as any
 }
 
 // SFC CSS utilities

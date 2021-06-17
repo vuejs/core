@@ -1,5 +1,6 @@
 import path from 'path'
 import {
+  ConstantTypes,
   createSimpleExpression,
   ExpressionNode,
   NodeTransform,
@@ -112,21 +113,20 @@ export const transformAssetUrl: NodeTransform = (
       }
 
       const url = parseUrl(attr.value.content)
-      if (options.base) {
-        // explicit base - directly rewrite the url into absolute url
-        // does not apply to absolute urls or urls that start with `@`
-        // since they are aliases
-        if (
-          attr.value.content[0] !== '@' &&
-          isRelativeUrl(attr.value.content)
-        ) {
-          // when packaged in the browser, path will be using the posix-
-          // only version provided by rollup-plugin-node-builtins.
-          attr.value.content = (path.posix || path).join(
-            options.base,
-            url.path + (url.hash || '')
-          )
-        }
+      if (options.base && attr.value.content[0] === '.') {
+        // explicit base - directly rewrite relative urls into absolute url
+        // to avoid generating extra imports
+        // Allow for full hostnames provided in options.base
+        const base = parseUrl(options.base)
+        const protocol = base.protocol || ''
+        const host = base.host ? protocol + '//' + base.host : ''
+        const basePath = base.path || '/'
+
+        // when packaged in the browser, path will be using the posix-
+        // only version provided by rollup-plugin-node-builtins.
+        attr.value.content =
+          host +
+          (path.posix || path).join(basePath, url.path + (url.hash || ''))
         return
       }
 
@@ -153,25 +153,31 @@ function getImportsExpressionExp(
   context: TransformContext
 ): ExpressionNode {
   if (path) {
-    const importsArray = Array.from(context.imports)
-    const existing = importsArray.find(i => i.path === path)
+    const existing = context.imports.find(i => i.path === path)
     if (existing) {
       return existing.exp as ExpressionNode
     }
-    const name = `_imports_${importsArray.length}`
-    const exp = createSimpleExpression(name, false, loc, true)
-    exp.isRuntimeConstant = true
-    context.imports.add({ exp, path })
+    const name = `_imports_${context.imports.length}`
+    const exp = createSimpleExpression(
+      name,
+      false,
+      loc,
+      ConstantTypes.CAN_HOIST
+    )
+    context.imports.push({ exp, path })
     if (hash && path) {
-      const ret = context.hoist(
-        createSimpleExpression(`${name} + '${hash}'`, false, loc, true)
+      return context.hoist(
+        createSimpleExpression(
+          `${name} + '${hash}'`,
+          false,
+          loc,
+          ConstantTypes.CAN_HOIST
+        )
       )
-      ret.isRuntimeConstant = true
-      return ret
     } else {
       return exp
     }
   } else {
-    return createSimpleExpression(`''`, false, loc, true)
+    return createSimpleExpression(`''`, false, loc, ConstantTypes.CAN_HOIST)
   }
 }

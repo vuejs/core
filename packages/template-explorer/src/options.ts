@@ -1,20 +1,28 @@
 import { h, reactive, createApp, ref } from 'vue'
 import { CompilerOptions } from '@vue/compiler-dom'
+import { BindingTypes } from '@vue/compiler-core'
 
 export const ssrMode = ref(false)
 
 export const compilerOptions: CompilerOptions = reactive({
   mode: 'module',
+  filename: 'Foo.vue',
   prefixIdentifiers: false,
-  optimizeImports: false,
   hoistStatic: false,
   cacheHandlers: false,
   scopeId: null,
+  inline: false,
   ssrCssVars: `{ color }`,
+  compatConfig: { MODE: 3 },
+  whitespace: 'condense',
   bindingMetadata: {
-    TestComponent: 'setup',
-    foo: 'setup',
-    bar: 'props'
+    TestComponent: BindingTypes.SETUP_CONST,
+    setupRef: BindingTypes.SETUP_REF,
+    setupConst: BindingTypes.SETUP_CONST,
+    setupLet: BindingTypes.SETUP_LET,
+    setupMaybeRef: BindingTypes.SETUP_MAYBE_REF,
+    setupProp: BindingTypes.PROPS,
+    vMySetupDir: BindingTypes.SETUP_CONST
   }
 })
 
@@ -74,6 +82,32 @@ const App = {
                 }
               }),
               h('label', { for: 'mode-function' }, 'function')
+            ]),
+
+            // whitespace handling
+            h('li', { id: 'whitespace' }, [
+              h('span', { class: 'label' }, 'whitespace: '),
+              h('input', {
+                type: 'radio',
+                id: 'whitespace-condense',
+                name: 'whitespace',
+                checked: compilerOptions.whitespace === 'condense',
+                onChange() {
+                  compilerOptions.whitespace = 'condense'
+                }
+              }),
+              h('label', { for: 'whitespace-condense' }, 'condense'),
+              ' ',
+              h('input', {
+                type: 'radio',
+                id: 'whitespace-preserve',
+                name: 'whitespace',
+                checked: compilerOptions.whitespace === 'preserve',
+                onChange() {
+                  compilerOptions.whitespace = 'preserve'
+                }
+              }),
+              h('label', { for: 'whitespace-preserve' }, 'preserve')
             ]),
 
             // SSR
@@ -150,18 +184,33 @@ const App = {
               h('label', { for: 'scope-id' }, 'scopeId')
             ]),
 
-            // toggle optimizeImports
+            // inline mode
             h('li', [
               h('input', {
                 type: 'checkbox',
-                id: 'optimize-imports',
-                disabled: !isModule || isSSR,
-                checked: isModule && !isSSR && compilerOptions.optimizeImports,
+                id: 'inline',
+                checked: compilerOptions.inline,
                 onChange(e: Event) {
-                  compilerOptions.optimizeImports = (e.target as HTMLInputElement).checked
+                  compilerOptions.inline = (e.target as HTMLInputElement).checked
                 }
               }),
-              h('label', { for: 'optimize-imports' }, 'optimizeImports')
+              h('label', { for: 'inline' }, 'inline')
+            ]),
+
+            // compat mode
+            h('li', [
+              h('input', {
+                type: 'checkbox',
+                id: 'compat',
+                checked: compilerOptions.compatConfig!.MODE === 2,
+                onChange(e: Event) {
+                  compilerOptions.compatConfig!.MODE = (e.target as HTMLInputElement)
+                    .checked
+                    ? 2
+                    : 3
+                }
+              }),
+              h('label', { for: 'compat' }, 'v2 compat mode')
             ])
           ])
         ])

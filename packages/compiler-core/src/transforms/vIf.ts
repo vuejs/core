@@ -20,7 +20,9 @@ import {
   IfNode,
   createVNodeCall,
   AttributeNode,
-  locStub
+  locStub,
+  CacheExpression,
+  ConstantTypes
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
@@ -29,9 +31,10 @@ import {
   CREATE_BLOCK,
   FRAGMENT,
   CREATE_COMMENT,
-  OPEN_BLOCK
+  OPEN_BLOCK,
+  CREATE_VNODE
 } from '../runtimeHelpers'
-import { injectProp, findDir, findProp } from '../utils'
+import { injectProp, findDir, findProp, isBuiltInType } from '../utils'
 import { PatchFlags, PatchFlagNames } from '@vue/shared'
 
 export const transformIf = createStructuralDirectiveTransform(
@@ -62,13 +65,7 @@ export const transformIf = createStructuralDirectiveTransform(
           ) as IfConditionalExpression
         } else {
           // attach this branch's codegen node to the v-if root.
-          let parentCondition = ifNode.codegenNode!
-          while (
-            parentCondition.alternate.type ===
-            NodeTypes.JS_CONDITIONAL_EXPRESSION
-          ) {
-            parentCondition = parentCondition.alternate
-          }
+          const parentCondition = getParentCondition(ifNode.codegenNode!)
           parentCondition.alternate = createCodegenNodeForBranch(
             branch,
             key + ifNode.branches.length - 1,
@@ -135,11 +132,30 @@ export function processIf(
         comments.unshift(sibling)
         continue
       }
+
+      if (
+        sibling &&
+        sibling.type === NodeTypes.TEXT &&
+        !sibling.content.trim().length
+      ) {
+        context.removeNode(sibling)
+        continue
+      }
+
       if (sibling && sibling.type === NodeTypes.IF) {
         // move the node to the if node's branches
         context.removeNode()
         const branch = createIfBranch(node, dir)
-        if (__DEV__ && comments.length) {
+        if (
+          __DEV__ &&
+          comments.length &&
+          // #3619 ignore comments if the v-if is direct child of <transition>
+          !(
+            context.parent &&
+            context.parent.type === NodeTypes.ELEMENT &&
+            isBuiltInType(context.parent.tag, 'transition')
+          )
+        ) {
           branch.children = [...comments, ...branch.children]
         }
 
@@ -219,10 +235,15 @@ function createChildrenCodegenNode(
   keyIndex: number,
   context: TransformContext
 ): BlockCodegenNode {
-  const { helper } = context
+  const { helper, removeHelper } = context
   const keyProperty = createObjectProperty(
     `key`,
-    createSimpleExpression(`${keyIndex}`, false, locStub, true)
+    createSimpleExpression(
+      `${keyIndex}`,
+      false,
+      locStub,
+      ConstantTypes.CAN_HOIST
+    )
   )
   const { children } = branch
   const firstChild = children[0]
@@ -235,14 +256,24 @@ function createChildrenCodegenNode(
       injectProp(vnodeCall, keyProperty, context)
       return vnodeCall
     } else {
+      let patchFlag = PatchFlags.STABLE_FRAGMENT
+      let patchFlagText = PatchFlagNames[PatchFlags.STABLE_FRAGMENT]
+      // check if the fragment actually contains a single valid child with
+      // the rest being comments
+      if (
+        __DEV__ &&
+        children.filter(c => c.type !== NodeTypes.COMMENT).length === 1
+      ) {
+        patchFlag |= PatchFlags.DEV_ROOT_FRAGMENT
+        patchFlagText += `, ${PatchFlagNames[PatchFlags.DEV_ROOT_FRAGMENT]}`
+      }
+
       return createVNodeCall(
         context,
         helper(FRAGMENT),
         createObjectExpression([keyProperty]),
         children,
-        `${PatchFlags.STABLE_FRAGMENT} /* ${
-          PatchFlagNames[PatchFlags.STABLE_FRAGMENT]
-        } */`,
+        patchFlag + (__DEV__ ? ` /* ${patchFlagText} */` : ``),
         undefined,
         undefined,
         true,
@@ -254,7 +285,8 @@ function createChildrenCodegenNode(
     const vnodeCall = (firstChild as ElementNode)
       .codegenNode as BlockCodegenNode
     // Change createVNode to createBlock.
-    if (vnodeCall.type === NodeTypes.VNODE_CALL) {
+    if (vnodeCall.type === NodeTypes.VNODE_CALL && !vnodeCall.isBlock) {
+      removeHelper(CREATE_VNODE)
       vnodeCall.isBlock = true
       helper(OPEN_BLOCK)
       helper(CREATE_BLOCK)
@@ -292,4 +324,20 @@ function isSameKey(
     }
   }
   return true
+}
+
+function getParentCondition(
+  node: IfConditionalExpression | CacheExpression
+): IfConditionalExpression {
+  while (true) {
+    if (node.type === NodeTypes.JS_CONDITIONAL_EXPRESSION) {
+      if (node.alternate.type === NodeTypes.JS_CONDITIONAL_EXPRESSION) {
+        node = node.alternate
+      } else {
+        return node
+      }
+    } else if (node.type === NodeTypes.JS_CACHE_EXPRESSION) {
+      node = node.value as IfConditionalExpression
+    }
+  }
 }

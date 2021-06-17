@@ -14,7 +14,7 @@ import { Data } from '../src/component'
 import { ShapeFlags, PatchFlags } from '@vue/shared'
 import { h, reactive, isReactive, setBlockTracking } from '../src'
 import { createApp, nodeOps, serializeInner } from '@vue/runtime-test'
-import { setCurrentRenderingInstance } from '../src/componentRenderUtils'
+import { setCurrentRenderingInstance } from '../src/componentRenderContext'
 
 describe('vnode', () => {
   test('create with just tag', () => {
@@ -40,6 +40,12 @@ describe('vnode', () => {
     const vnode = createVNode('p', null)
     expect(vnode.type).toBe('p')
     expect(vnode.props).toBe(null)
+  })
+
+  test('show warn when create with invalid type', () => {
+    const vnode = createVNode('')
+    expect('Invalid vnode type when creating vnode').toHaveBeenWarned()
+    expect(vnode.type).toBe(Comment)
   })
 
   test('create from an existing vnode', () => {
@@ -225,8 +231,8 @@ describe('vnode', () => {
 
   // ref normalizes to [currentRenderingInstance, ref]
   test('cloneVNode ref normalization', () => {
-    const mockInstance1 = {} as any
-    const mockInstance2 = {} as any
+    const mockInstance1 = { type: {} } as any
+    const mockInstance2 = { type: {} } as any
 
     setCurrentRenderingInstance(mockInstance1)
     const original = createVNode('div', { ref: 'foo' })
@@ -266,8 +272,8 @@ describe('vnode', () => {
   })
 
   test('cloneVNode ref merging', () => {
-    const mockInstance1 = {} as any
-    const mockInstance2 = {} as any
+    const mockInstance1 = { type: {} } as any
+    const mockInstance2 = { type: {} } as any
 
     setCurrentRenderingInstance(mockInstance1)
     const original = createVNode('div', { ref: 'foo' })
@@ -509,7 +515,7 @@ describe('vnode', () => {
     //   slot content (called during the block node creation) to be missed
     test('element block should track normalized slot children', () => {
       const hoist = createVNode('div')
-      let vnode1
+      let vnode1: any
       const vnode = (openBlock(),
       createBlock('div', null, {
         default: () => {

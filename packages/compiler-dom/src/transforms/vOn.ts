@@ -8,7 +8,11 @@ import {
   createCompoundExpression,
   ExpressionNode,
   SimpleExpressionNode,
-  isStaticExp
+  isStaticExp,
+  CompilerDeprecationTypes,
+  TransformContext,
+  SourceLocation,
+  checkCompatEnabled
 } from '@vue/compiler-core'
 import { V_ON_WITH_MODIFIERS, V_ON_WITH_KEYS } from '../runtimeHelpers'
 import { makeMap, capitalize } from '@vue/shared'
@@ -29,7 +33,12 @@ const isKeyboardEvent = /*#__PURE__*/ makeMap(
   true
 )
 
-const resolveModifiers = (key: ExpressionNode, modifiers: string[]) => {
+const resolveModifiers = (
+  key: ExpressionNode,
+  modifiers: string[],
+  context: TransformContext,
+  loc: SourceLocation
+) => {
   const keyModifiers = []
   const nonKeyModifiers = []
   const eventOptionModifiers = []
@@ -37,7 +46,17 @@ const resolveModifiers = (key: ExpressionNode, modifiers: string[]) => {
   for (let i = 0; i < modifiers.length; i++) {
     const modifier = modifiers[i]
 
-    if (isEventOptionModifier(modifier)) {
+    if (
+      __COMPAT__ &&
+      modifier === 'native' &&
+      checkCompatEnabled(
+        CompilerDeprecationTypes.COMPILER_V_ON_NATIVE,
+        context,
+        loc
+      )
+    ) {
+      eventOptionModifiers.push(modifier)
+    } else if (isEventOptionModifier(modifier)) {
       // eventOptionModifiers: modifiers for addEventListener() options,
       // e.g. .passive & .capture
       eventOptionModifiers.push(modifier)
@@ -97,7 +116,7 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
       keyModifiers,
       nonKeyModifiers,
       eventOptionModifiers
-    } = resolveModifiers(key, modifiers)
+    } = resolveModifiers(key, modifiers, context, dir.loc)
 
     // normalize click.right and click.middle since they don't actually fire
     if (nonKeyModifiers.includes('right')) {

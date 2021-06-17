@@ -29,7 +29,8 @@ import {
   TELEPORT,
   SUSPENSE,
   KEEP_ALIVE,
-  BASE_TRANSITION
+  BASE_TRANSITION,
+  TO_HANDLERS
 } from './runtimeHelpers'
 import { isString, isObject, hyphenate, extend } from '@vue/shared'
 
@@ -55,10 +56,67 @@ const nonIdentifierRE = /^\d|[^\$\w]/
 export const isSimpleIdentifier = (name: string): boolean =>
   !nonIdentifierRE.test(name)
 
-const memberExpRE = /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\[[^\]]+\])*$/
+const enum MemberExpLexState {
+  inMemberExp,
+  inBrackets,
+  inString
+}
+
+const validFirstIdentCharRE = /[A-Za-z_$\xA0-\uFFFF]/
+const validIdentCharRE = /[\.\w$\xA0-\uFFFF]/
+const whitespaceRE = /\s+[.[]\s*|\s*[.[]\s+/g
+
+/**
+ * Simple lexer to check if an expression is a member expression. This is
+ * lax and only checks validity at the root level (i.e. does not validate exps
+ * inside square brackets), but it's ok since these are only used on template
+ * expressions and false positives are invalid expressions in the first place.
+ */
 export const isMemberExpression = (path: string): boolean => {
-  if (!path) return false
-  return memberExpRE.test(path.trim())
+  // remove whitespaces around . or [ first
+  path = path.trim().replace(whitespaceRE, s => s.trim())
+
+  let state = MemberExpLexState.inMemberExp
+  let prevState = MemberExpLexState.inMemberExp
+  let currentOpenBracketCount = 0
+  let currentStringType: "'" | '"' | '`' | null = null
+
+  for (let i = 0; i < path.length; i++) {
+    const char = path.charAt(i)
+    switch (state) {
+      case MemberExpLexState.inMemberExp:
+        if (char === '[') {
+          prevState = state
+          state = MemberExpLexState.inBrackets
+          currentOpenBracketCount++
+        } else if (
+          !(i === 0 ? validFirstIdentCharRE : validIdentCharRE).test(char)
+        ) {
+          return false
+        }
+        break
+      case MemberExpLexState.inBrackets:
+        if (char === `'` || char === `"` || char === '`') {
+          prevState = state
+          state = MemberExpLexState.inString
+          currentStringType = char
+        } else if (char === `[`) {
+          currentOpenBracketCount++
+        } else if (char === `]`) {
+          if (!--currentOpenBracketCount) {
+            state = prevState
+          }
+        }
+        break
+      case MemberExpLexState.inString:
+        if (char === currentStringType) {
+          state = prevState
+          currentStringType = null
+        }
+        break
+    }
+  }
+  return !currentOpenBracketCount
 }
 
 export function getInnerRange(
@@ -215,7 +273,7 @@ export function injectProp(
   prop: Property,
   context: TransformContext
 ) {
-  let propsWithInjection: ObjectExpression | CallExpression
+  let propsWithInjection: ObjectExpression | CallExpression | undefined
   const props =
     node.type === NodeTypes.VNODE_CALL ? node.props : node.arguments[2]
   if (props == null || isString(props)) {
@@ -228,9 +286,17 @@ export function injectProp(
     if (!isString(first) && first.type === NodeTypes.JS_OBJECT_EXPRESSION) {
       first.properties.unshift(prop)
     } else {
-      props.arguments.unshift(createObjectExpression([prop]))
+      if (props.callee === TO_HANDLERS) {
+        // #2366
+        propsWithInjection = createCallExpression(context.helper(MERGE_PROPS), [
+          createObjectExpression([prop]),
+          props
+        ])
+      } else {
+        props.arguments.unshift(createObjectExpression([prop]))
+      }
     }
-    propsWithInjection = props
+    !propsWithInjection && (propsWithInjection = props)
   } else if (props.type === NodeTypes.JS_OBJECT_EXPRESSION) {
     let alreadyExists = false
     // check existing key to avoid overriding user provided keys
@@ -262,7 +328,7 @@ export function injectProp(
 
 export function toValidAssetId(
   name: string,
-  type: 'component' | 'directive'
+  type: 'component' | 'directive' | 'filter'
 ): string {
   return `_${type}_${name.replace(/[^\w]/g, '_')}`
 }

@@ -1,25 +1,29 @@
-import { currentRenderingInstance } from '../componentRenderUtils'
 import {
   currentInstance,
   ConcreteComponent,
-  FunctionalComponent,
-  ComponentOptions
+  ComponentOptions,
+  getComponentName
 } from '../component'
+import { currentRenderingInstance } from '../componentRenderContext'
 import { Directive } from '../directives'
 import { camelize, capitalize, isString } from '@vue/shared'
 import { warn } from '../warning'
 import { VNodeTypes } from '../vnode'
 
-const COMPONENTS = 'components'
-const DIRECTIVES = 'directives'
+export const COMPONENTS = 'components'
+export const DIRECTIVES = 'directives'
+export const FILTERS = 'filters'
+
+export type AssetTypes = typeof COMPONENTS | typeof DIRECTIVES | typeof FILTERS
 
 /**
  * @private
  */
 export function resolveComponent(
-  name: string
-): ConcreteComponent | string | undefined {
-  return resolveAsset(COMPONENTS, name) || name
+  name: string,
+  maybeSelfReference?: boolean
+): ConcreteComponent | string {
+  return resolveAsset(COMPONENTS, name, true, maybeSelfReference) || name
 }
 
 export const NULL_DYNAMIC_COMPONENT = Symbol()
@@ -44,13 +48,22 @@ export function resolveDirective(name: string): Directive | undefined {
 }
 
 /**
+ * v2 compat only
+ * @internal
+ */
+export function resolveFilter(name: string): Function | undefined {
+  return resolveAsset(FILTERS, name)
+}
+
+/**
  * @private
  * overload 1: components
  */
 function resolveAsset(
   type: typeof COMPONENTS,
   name: string,
-  warnMissing?: boolean
+  warnMissing?: boolean,
+  maybeSelfReference?: boolean
 ): ConcreteComponent | undefined
 // overload 2: directives
 function resolveAsset(
@@ -58,19 +71,22 @@ function resolveAsset(
   name: string
 ): Directive | undefined
 // implementation
+// overload 3: filters (compat only)
+function resolveAsset(type: typeof FILTERS, name: string): Function | undefined
+// implementation
 function resolveAsset(
-  type: typeof COMPONENTS | typeof DIRECTIVES,
+  type: AssetTypes,
   name: string,
-  warnMissing = true
+  warnMissing = true,
+  maybeSelfReference = false
 ) {
   const instance = currentRenderingInstance || currentInstance
   if (instance) {
     const Component = instance.type
 
-    // self name has highest priority
+    // explicit self name has highest priority
     if (type === COMPONENTS) {
-      const selfName =
-        (Component as FunctionalComponent).displayName || Component.name
+      const selfName = getComponentName(Component)
       if (
         selfName &&
         (selfName === name ||
@@ -83,13 +99,20 @@ function resolveAsset(
 
     const res =
       // local registration
-      // check instance[type] first for components with mixin or extends.
+      // check instance[type] first which is resolved for options API
       resolve(instance[type] || (Component as ComponentOptions)[type], name) ||
       // global registration
       resolve(instance.appContext[type], name)
+
+    if (!res && maybeSelfReference) {
+      // fallback to implicit self-reference
+      return Component
+    }
+
     if (__DEV__ && warnMissing && !res) {
       warn(`Failed to resolve ${type.slice(0, -1)}: ${name}`)
     }
+
     return res
   } else if (__DEV__) {
     warn(

@@ -18,10 +18,12 @@ import {
   transformSrcset,
   createSrcsetTransformWithOptions
 } from './templateTransformSrcset'
-import { isObject } from '@vue/shared'
+import { generateCodeFrame, isObject } from '@vue/shared'
 import * as CompilerDOM from '@vue/compiler-dom'
 import * as CompilerSSR from '@vue/compiler-ssr'
 import consolidate from 'consolidate'
+import { warnOnce } from './warn'
+import { genCssVarsFromList } from './cssVars'
 
 export interface TemplateCompiler {
   compile(template: string, options: CompilerOptions): CodegenResult
@@ -30,6 +32,8 @@ export interface TemplateCompiler {
 
 export interface SFCTemplateCompileResults {
   code: string
+  ast?: RootNode
+  preamble?: string
   source: string
   tips: string[]
   errors: (string | CompilerError)[]
@@ -39,7 +43,12 @@ export interface SFCTemplateCompileResults {
 export interface SFCTemplateCompileOptions {
   source: string
   filename: string
+  id: string
+  scoped?: boolean
+  slotted?: boolean
+  isProd?: boolean
   ssr?: boolean
+  ssrCssVars?: string[]
   inMap?: RawSourceMap
   compiler?: TemplateCompiler
   compilerOptions?: CompilerOptions
@@ -148,14 +157,20 @@ export function compileTemplate(
 
 function doCompileTemplate({
   filename,
+  id,
+  scoped,
+  slotted,
   inMap,
   source,
   ssr = false,
+  ssrCssVars,
+  isProd = false,
   compiler = ssr ? (CompilerSSR as TemplateCompiler) : CompilerDOM,
   compilerOptions = {},
   transformAssetUrls
 }: SFCTemplateCompileOptions): SFCTemplateCompileResults {
   const errors: CompilerError[] = []
+  const warnings: CompilerError[] = []
 
   let nodeTransforms: NodeTransform[] = []
   if (isObject(transformAssetUrls)) {
@@ -168,16 +183,37 @@ function doCompileTemplate({
     nodeTransforms = [transformAssetUrl, transformSrcset]
   }
 
-  let { code, map } = compiler.compile(source, {
+  if (ssr && !ssrCssVars) {
+    warnOnce(
+      `compileTemplate is called with \`ssr: true\` but no ` +
+        `corresponding \`cssVars\` option.\`.`
+    )
+  }
+  if (!id) {
+    warnOnce(`compileTemplate now requires the \`id\` option.\`.`)
+    id = ''
+  }
+
+  const shortId = id.replace(/^data-v-/, '')
+  const longId = `data-v-${shortId}`
+
+  let { code, ast, preamble, map } = compiler.compile(source, {
     mode: 'module',
     prefixIdentifiers: true,
     hoistStatic: true,
     cacheHandlers: true,
+    ssrCssVars:
+      ssr && ssrCssVars && ssrCssVars.length
+        ? genCssVarsFromList(ssrCssVars, shortId, isProd)
+        : '',
+    scopeId: scoped ? longId : undefined,
+    slotted,
     ...compilerOptions,
     nodeTransforms: nodeTransforms.concat(compilerOptions.nodeTransforms || []),
     filename,
     sourceMap: true,
-    onError: e => errors.push(e)
+    onError: e => errors.push(e),
+    onWarn: w => warnings.push(w)
   })
 
   // inMap should be the map produced by ./parse.ts which is a simple line-only
@@ -192,7 +228,19 @@ function doCompileTemplate({
     }
   }
 
-  return { code, source, errors, tips: [], map }
+  const tips = warnings.map(w => {
+    let msg = w.message
+    if (w.loc) {
+      msg += `\n${generateCodeFrame(
+        source,
+        w.loc.start.offset,
+        w.loc.end.offset
+      )}`
+    }
+    return msg
+  })
+
+  return { code, ast, preamble, source, errors, tips, map }
 }
 
 function mapLines(oldMap: RawSourceMap, newMap: RawSourceMap): RawSourceMap {

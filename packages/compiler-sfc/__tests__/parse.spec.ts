@@ -111,8 +111,13 @@ h1 { color: red }
     )
   })
 
-  test('should ignore nodes with no content', () => {
-    expect(parse(`<template/>`).descriptor.template).toBe(null)
+  test('should keep template nodes with no content', () => {
+    const { descriptor } = parse(`<template/>`)
+    expect(descriptor.template).toBeTruthy()
+    expect(descriptor.template!.content).toBeFalsy()
+  })
+
+  test('should ignore other nodes with no content', () => {
     expect(parse(`<script/>`).descriptor.script).toBe(null)
     expect(parse(`<style/>`).descriptor.styles.length).toBe(0)
     expect(parse(`<custom/>`).descriptor.customBlocks.length).toBe(0)
@@ -134,6 +139,15 @@ h1 { color: red }
     expect(descriptor.template!.content).toBe(content)
   })
 
+  test('treat empty lang attribute as the html', () => {
+    const content = `<div><template v-if="ok">ok</template></div>`
+    const { descriptor, errors } = parse(
+      `<template lang="">${content}</template>`
+    )
+    expect(descriptor.template!.content).toBe(content)
+    expect(errors.length).toBe(0)
+  })
+
   // #1120
   test('alternative template lang should be treated as plain text', () => {
     const content = `p(v-if="1 < 2") test`
@@ -142,6 +156,36 @@ h1 { color: red }
     )
     expect(errors.length).toBe(0)
     expect(descriptor.template!.content).toBe(content)
+  })
+
+  //#2566
+  test('div lang should not be treated as plain text', () => {
+    const { errors } = parse(`
+    <template lang="pug">
+      <div lang="">
+        <div></div>
+      </div>
+    </template>
+    `)
+    expect(errors.length).toBe(0)
+  })
+
+  test('slotted detection', async () => {
+    expect(parse(`<template>hi</template>`).descriptor.slotted).toBe(false)
+    expect(
+      parse(`<template>hi</template><style>h1{color:red;}</style>`).descriptor
+        .slotted
+    ).toBe(false)
+    expect(
+      parse(
+        `<template>hi</template><style scoped>:slotted(h1){color:red;}</style>`
+      ).descriptor.slotted
+    ).toBe(true)
+    expect(
+      parse(
+        `<template>hi</template><style scoped>::v-slotted(h1){color:red;}</style>`
+      ).descriptor.slotted
+    ).toBe(true)
   })
 
   test('error tolerance', () => {

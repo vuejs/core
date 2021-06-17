@@ -13,6 +13,7 @@ import {
   createCommentVNode,
   Fragment
 } from '@vue/runtime-dom'
+import { PatchFlags } from '@vue/shared/src'
 
 describe('attribute fallthrough', () => {
   it('should allow attrs to fallthrough', async () => {
@@ -300,6 +301,34 @@ describe('attribute fallthrough', () => {
     expect(root.innerHTML).toMatch(`<div>1</div>`)
   })
 
+  // #3741
+  it('should not fallthrough with inheritAttrs: false from mixins', () => {
+    const Parent = {
+      render() {
+        return h(Child, { foo: 1, class: 'parent' })
+      }
+    }
+
+    const mixin = {
+      inheritAttrs: false
+    }
+
+    const Child = defineComponent({
+      mixins: [mixin],
+      props: ['foo'],
+      render() {
+        return h('div', this.foo)
+      }
+    })
+
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    render(h(Parent), root)
+
+    // should not contain class
+    expect(root.innerHTML).toMatch(`<div>1</div>`)
+  })
+
   it('explicit spreading with inheritAttrs: false', () => {
     const Parent = {
       render() {
@@ -574,11 +603,16 @@ describe('attribute fallthrough', () => {
       setup() {
         return () => (
           openBlock(),
-          createBlock(Fragment, null, [
-            createCommentVNode('hello'),
-            h('button'),
-            createCommentVNode('world')
-          ])
+          createBlock(
+            Fragment,
+            null,
+            [
+              createCommentVNode('hello'),
+              h('button'),
+              createCommentVNode('world')
+            ],
+            PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT
+          )
         )
       }
     }

@@ -9,6 +9,7 @@ describe('runtime-dom: props patching', () => {
     // prop with string value should be set to empty string on null values
     patchProp(el, 'id', null, null)
     expect(el.id).toBe('')
+    expect(el.getAttribute('id')).toBe(null)
   })
 
   test('value', () => {
@@ -17,10 +18,23 @@ describe('runtime-dom: props patching', () => {
     expect(el.value).toBe('foo')
     patchProp(el, 'value', null, null)
     expect(el.value).toBe('')
+    expect(el.getAttribute('value')).toBe(null)
     const obj = {}
     patchProp(el, 'value', null, obj)
     expect(el.value).toBe(obj.toString())
     expect((el as any)._value).toBe(obj)
+  })
+
+  // For <input type="text">, setting el.value won't create a `value` attribute
+  // so we need to add tests for other elements
+  test('value for non-text input', () => {
+    const el = document.createElement('option')
+    patchProp(el, 'value', null, 'foo')
+    expect(el.value).toBe('foo')
+    patchProp(el, 'value', null, null)
+    expect(el.value).toBe('')
+    // #3475
+    expect(el.getAttribute('value')).toBe(null)
   })
 
   test('boolean prop', () => {
@@ -120,6 +134,23 @@ describe('runtime-dom: props patching', () => {
 
     patchProp(el, 'id', null, '')
     expect(el.hasAttribute('id')).toBe(true)
+
+    // #2677
+    const img = document.createElement('img')
+    patchProp(img, 'width', null, '')
+    expect(el.hasAttribute('width')).toBe(false)
+    patchProp(img, 'width', null, 0)
+    expect(img.hasAttribute('width')).toBe(true)
+
+    patchProp(img, 'width', null, null)
+    expect(img.hasAttribute('width')).toBe(false)
+    patchProp(img, 'width', null, 0)
+    expect(img.hasAttribute('width')).toBe(true)
+
+    patchProp(img, 'width', null, undefined)
+    expect(img.hasAttribute('width')).toBe(false)
+    patchProp(img, 'width', null, 0)
+    expect(img.hasAttribute('width')).toBe(true)
   })
 
   test('form attribute', () => {
@@ -128,5 +159,15 @@ describe('runtime-dom: props patching', () => {
     // non existant element
     expect(el.form).toBe(null)
     expect(el.getAttribute('form')).toBe('foo')
+    // remove attribute
+    patchProp(el, 'form', 'foo', null)
+    expect(el.getAttribute('form')).toBe(null)
+  })
+
+  test('readonly type prop on textarea', () => {
+    const el = document.createElement('textarea')
+    // just to verify that it doesn't throw when i.e. switching a dynamic :is from an 'input' to a 'textarea'
+    // see https://github.com/vuejs/vue-next/issues/2766
+    patchProp(el, 'type', 'text', null)
   })
 })

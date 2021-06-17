@@ -115,8 +115,9 @@ describe('compiler: transform v-model', () => {
     expect(generate(root, { mode: 'module' }).code).toMatchSnapshot()
   })
 
+  // #2426
   test('simple expression (with multilines)', () => {
-    const root = parseWithVModel('<input v-model="\n model \n" />')
+    const root = parseWithVModel('<input v-model="\n model\n.\nfoo \n" />')
     const node = root.children[0] as ElementNode
     const props = ((node.codegenNode as VNodeCall).props as ObjectExpression)
       .properties
@@ -127,7 +128,7 @@ describe('compiler: transform v-model', () => {
         isStatic: true
       },
       value: {
-        content: '\n model \n',
+        content: '\n model\n.\nfoo \n',
         isStatic: false
       }
     })
@@ -141,7 +142,7 @@ describe('compiler: transform v-model', () => {
         children: [
           '$event => (',
           {
-            content: '\n model \n',
+            content: '\n model\n.\nfoo \n',
             isStatic: false
           },
           ' = $event)'
@@ -504,6 +505,13 @@ describe('compiler: transform v-model', () => {
           code: ErrorCodes.X_V_MODEL_MALFORMED_EXPRESSION
         })
       )
+    })
+
+    test('allow unicode', () => {
+      const onError = jest.fn()
+      parseWithVModel('<span v-model="变.量" />', { onError })
+
+      expect(onError).toHaveBeenCalledTimes(0)
     })
 
     test('used on scope variable', () => {

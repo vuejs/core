@@ -1,30 +1,18 @@
 import { baseCompile } from '../src/compile'
-import {
-  WITH_SCOPE_ID,
-  PUSH_SCOPE_ID,
-  POP_SCOPE_ID
-} from '../src/runtimeHelpers'
+import { PUSH_SCOPE_ID, POP_SCOPE_ID } from '../src/runtimeHelpers'
 import { PatchFlags } from '@vue/shared'
 import { genFlagText } from './testUtils'
 
+/**
+ * Ensure all slot functions are wrapped with _withCtx
+ * which sets the currentRenderingInstance and currentScopeId when rendering
+ * the slot.
+ */
 describe('scopeId compiler support', () => {
   test('should only work in module mode', () => {
     expect(() => {
       baseCompile(``, { scopeId: 'test' })
     }).toThrow(`"scopeId" option is only supported in module mode`)
-  })
-
-  test('should wrap render function', () => {
-    const { ast, code } = baseCompile(`<div/>`, {
-      mode: 'module',
-      scopeId: 'test'
-    })
-    expect(ast.helpers).toContain(WITH_SCOPE_ID)
-    expect(code).toMatch(`const _withId = /*#__PURE__*/_withScopeId("test")`)
-    expect(code).toMatch(
-      `export const render = /*#__PURE__*/_withId(function render(`
-    )
-    expect(code).toMatchSnapshot()
   })
 
   test('should wrap default slot', () => {

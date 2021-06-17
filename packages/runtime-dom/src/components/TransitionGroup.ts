@@ -5,7 +5,8 @@ import {
   ElementWithTransition,
   getTransitionInfo,
   resolveTransitionProps,
-  TransitionPropsValidators
+  TransitionPropsValidators,
+  forceReflow
 } from './Transition'
 import {
   Fragment,
@@ -18,9 +19,12 @@ import {
   setTransitionHooks,
   createVNode,
   onUpdated,
-  SetupContext
+  SetupContext,
+  toRaw,
+  compatUtils,
+  DeprecationTypes,
+  ComponentOptions
 } from '@vue/runtime-core'
-import { toRaw } from '@vue/reactivity'
 import { extend } from '@vue/shared'
 
 interface Position {
@@ -36,7 +40,7 @@ export type TransitionGroupProps = Omit<TransitionProps, 'mode'> & {
   moveClass?: string
 }
 
-const TransitionGroupImpl = {
+const TransitionGroupImpl: ComponentOptions = {
   name: 'TransitionGroup',
 
   props: /*#__PURE__*/ extend({}, TransitionPropsValidators, {
@@ -98,7 +102,19 @@ const TransitionGroupImpl = {
     return () => {
       const rawProps = toRaw(props)
       const cssTransitionProps = resolveTransitionProps(rawProps)
-      const tag = rawProps.tag || Fragment
+      let tag = rawProps.tag || Fragment
+
+      if (
+        __COMPAT__ &&
+        !rawProps.tag &&
+        compatUtils.checkCompatEnabled(
+          DeprecationTypes.TRANSITION_GROUP_ROOT,
+          instance.parent
+        )
+      ) {
+        tag = 'span'
+      }
+
       prevChildren = children
       children = slots.default ? getTransitionRawChildren(slots.default()) : []
 
@@ -128,6 +144,10 @@ const TransitionGroupImpl = {
       return createVNode(tag, null, children)
     }
   }
+}
+
+if (__COMPAT__) {
+  TransitionGroupImpl.__isBuiltIn = true
 }
 
 /**
@@ -170,11 +190,6 @@ function applyTranslation(c: VNode): VNode | undefined {
     s.transitionDuration = '0s'
     return c
   }
-}
-
-// this is put in a dedicated function to avoid the line from being treeshaken
-function forceReflow() {
-  return document.body.offsetHeight
 }
 
 function hasCSSTransform(
