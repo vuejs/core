@@ -21,7 +21,7 @@ describe('e2e: TransitionGroup', () => {
 
   beforeEach(async () => {
     await page().goto(baseUrl)
-    await page().waitFor('#app')
+    await page().waitForSelector('#app')
   })
 
   test(
