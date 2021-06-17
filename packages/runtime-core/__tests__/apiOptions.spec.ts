@@ -9,7 +9,8 @@ import {
   renderToString,
   ref,
   defineComponent,
-  createApp
+  createApp,
+  TestText
 } from '@vue/runtime-test'
 
 describe('api: options', () => {
@@ -631,6 +632,57 @@ describe('api: options', () => {
       'mixinC mounted',
       'comp mounted'
     ])
+  })
+
+  test('trigger watch in mixins', async () => {
+    let ctx: any
+    const mixinA = defineComponent({
+      data() {
+        return {
+          fromMixinA: ''
+        }
+      },
+      watch: {
+        obj(to) {
+          this.fromMixinA = to
+        }
+      }
+    })
+    const mixinB = defineComponent({
+      data() {
+        return {
+          fromMixinB: ''
+        }
+      },
+      watch: {
+        obj(to) {
+          this.fromMixinB = to
+        }
+      }
+    })
+    const Comp = defineComponent({
+      mixins: [mixinA, mixinB],
+      data() {
+        return {
+          obj: '',
+          fromComp: ''
+        }
+      },
+      watch: {
+        obj(to) {
+          this.fromComp = to
+        }
+      },
+      render() {
+        ctx = this
+        return `${this.fromComp}${this.fromMixinA}${this.fromMixinB}`
+      }
+    })
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    ctx.obj = '1'
+    await nextTick()
+    expect((root.children[0] as TestText).text).toBe('111')
   })
 
   test('render from mixin', () => {

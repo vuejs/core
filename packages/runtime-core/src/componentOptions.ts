@@ -16,7 +16,8 @@ import {
   isArray,
   EMPTY_OBJ,
   NOOP,
-  isPromise
+  isPromise,
+  hasOwn
 } from '@vue/shared'
 import { computed } from './apiComputed'
 import {
@@ -987,10 +988,8 @@ export const internalOptionMergeStrats: Record<string, Function> = {
   // assets
   components: mergeObjectOptions,
   directives: mergeObjectOptions,
-  // watch has special merge behavior in v2, but isn't actually needed in v3.
-  // since we are only exposing these for compat and nobody should be relying
-  // on the watch-specific behavior, just expose the object merge strat.
-  watch: mergeObjectOptions,
+  // we need trigger all watch in component and mixins.
+  watch: mergeWatchOptions,
   // provide / inject
   provide: mergeDataFn,
   inject: mergeInject
@@ -1047,4 +1046,29 @@ function mergeHook(
 
 function mergeObjectOptions(to: Object | undefined, from: Object | undefined) {
   return to ? extend(extend(Object.create(null), to), from) : from
+}
+
+function mergeWatchOptions(
+  to: ComponentWatchOptions | undefined,
+  from: ComponentWatchOptions | undefined
+) {
+  if (to && from) {
+    const copiedTo = extend(Object.create(null), to)
+    for (const key in from) {
+      if (hasOwn(copiedTo, key)) {
+        if (isArray(copiedTo[key])) {
+          copiedTo[key].push(from[key])
+        } else {
+          copiedTo[key] = [copiedTo[key], from[key]]
+        }
+      } else {
+        copiedTo[key] = from[key]
+      }
+    }
+    return copiedTo
+  } else if (to && !from) {
+    return extend(Object.create(null), to)
+  } else {
+    return from
+  }
 }
