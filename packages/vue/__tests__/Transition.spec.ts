@@ -1326,15 +1326,10 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
+    // #3963
     test(
       'Suspense fallback should work with transition',
       async () => {
-        const onLeaveSpy = jest.fn()
-        const onEnterSpy = jest.fn()
-
-        await page().exposeFunction('onLeaveSpy', onLeaveSpy)
-        await page().exposeFunction('onEnterSpy', onEnterSpy)
-
         await page().evaluate(() => {
           const { createApp, shallowRef, h } = (window as any).Vue
           const One = {
@@ -1377,7 +1372,6 @@ describe('e2e: Transition', () => {
           }).mount('#app')
         })
 
-        await nextTick()
         expect(await html('#container')).toBe('<!---->')
 
         await click('#toggleBtn')
