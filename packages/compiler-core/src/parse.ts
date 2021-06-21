@@ -152,7 +152,11 @@ function parseChildren(
       if (!context.inVPre && startsWith(s, context.options.delimiters[0])) {
         // '{{'
         node = parseInterpolation(context, mode)
-      } else if (mode === TextModes.DATA && s[0] === '<') {
+      } else if (
+        mode === TextModes.DATA &&
+        s[0] === '<' &&
+        !/[<>]/i.test(s[1]) // ignore <<... and <>...
+      ) {
         // https://html.spec.whatwg.org/multipage/parsing.html#tag-open-state
         if (s.length === 1) {
           emitError(context, ErrorCodes.EOF_BEFORE_TAG_NAME, 1)
@@ -429,6 +433,10 @@ function parseElement(
 
   // Children.
   ancestors.push(element)
+  if (element.type !== NodeTypes.ELEMENT) {
+    ancestors.pop()
+    return element
+  }
   const mode = context.options.getTextMode(element, parent)
   const children = parseChildren(context, mode, ancestors)
   ancestors.pop()
@@ -507,7 +515,7 @@ function parseTag(
   context: ParserContext,
   type: TagType,
   parent: ElementNode | undefined
-): ElementNode | undefined {
+): ElementNode | TextNode | undefined {
   __TEST__ && assert(/^<\/?[a-z]/i.test(context.source))
   __TEST__ &&
     assert(
@@ -516,7 +524,7 @@ function parseTag(
 
   // Tag open.
   const start = getCursor(context)
-  const match = /^<\/?([a-z][^\t\r\n\f />]*)/i.exec(context.source)!
+  const match = /^<\/?([a-z][^\t\r\n\f /><]*)/i.exec(context.source)!
   const tag = match[1]
   const ns = context.options.getNamespace(tag, parent)
 
@@ -553,6 +561,12 @@ function parseTag(
   let isSelfClosing = false
   if (context.source.length === 0) {
     emitError(context, ErrorCodes.EOF_IN_TAG)
+  } else if (startsWith(context.source, '<')) {
+    return {
+      type: NodeTypes.TEXT,
+      content: '',
+      loc: getSelection(context, start)
+    }
   } else {
     isSelfClosing = startsWith(context.source, '/>')
     if (type === TagType.End && isSelfClosing) {
@@ -667,7 +681,9 @@ function parseAttributes(
   while (
     context.source.length > 0 &&
     !startsWith(context.source, '>') &&
-    !startsWith(context.source, '/>')
+    !startsWith(context.source, '/>') &&
+    !startsWith(context.source, '<') &&
+    !startsWith(context.source, '</')
   ) {
     if (startsWith(context.source, '/')) {
       emitError(context, ErrorCodes.UNEXPECTED_SOLIDUS_IN_TAG)
