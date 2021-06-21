@@ -1332,20 +1332,20 @@ describe('e2e: Transition', () => {
       async () => {
         await page().evaluate(() => {
           const { createApp, shallowRef, h } = (window as any).Vue
+
           const One = {
             template: `<div>{{ msg }}</div>`,
             setup() {
-              return new Promise((resolve, reject) => {
-                setTimeout(
-                  () =>
-                    resolve({
-                      msg: 'success'
-                    }),
-                  1000
-                )
+              return new Promise(_resolve => {
+                // @ts-ignore
+                window.resolve = () =>
+                  _resolve({
+                    msg: 'success'
+                  })
               })
             }
           }
+
           createApp({
             template: `
               <div id="container">
@@ -1375,9 +1375,15 @@ describe('e2e: Transition', () => {
         expect(await html('#container')).toBe('<!---->')
 
         await click('#toggleBtn')
-        await timeout(500)
+        await nextFrame()
         expect(await html('#container')).toBe('<div class="">Loading...</div>')
-        await transitionFinish(1500)
+
+        await page().evaluate(() => {
+          // @ts-ignore
+          window.resolve()
+        })
+
+        await transitionFinish(duration * 2)
         expect(await html('#container')).toBe('<div class="">success</div>')
       },
       E2E_TIMEOUT
