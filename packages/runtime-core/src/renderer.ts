@@ -141,7 +141,8 @@ export interface RendererOptions<
     content: string,
     parent: HostElement,
     anchor: HostNode | null,
-    isSVG: boolean
+    isSVG: boolean,
+    cached?: [HostNode, HostNode | null] | null
   ): HostElement[]
 }
 
@@ -635,7 +636,11 @@ function baseCreateRenderer(
       n2.children as string,
       container,
       anchor,
-      isSVG
+      isSVG,
+      // pass cached nodes if the static node is being mounted multiple times
+      // so that runtime-dom can simply cloneNode() instead of inserting new
+      // HTML
+      n2.el && [n2.el, n2.anchor]
     )
   }
 
