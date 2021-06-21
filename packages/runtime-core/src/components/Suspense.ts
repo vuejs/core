@@ -551,6 +551,8 @@ function createSuspenseBoundary(
       if (delayEnter) {
         activeBranch!.transition!.afterLeave = mountFallback
       }
+      suspense.isInFallback = true
+
       // unmount current active branch
       unmount(
         activeBranch!,
@@ -559,7 +561,6 @@ function createSuspenseBoundary(
         true // shouldRemove
       )
 
-      suspense.isInFallback = true
       if (!delayEnter) {
         mountFallback()
       }
