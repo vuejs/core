@@ -18,7 +18,6 @@
     "dev-compiler": "npm-run-all --parallel \"dev template-explorer\" serve",
     "serve": "serve",
     "open": "open http://localhost:5000/packages/template-explorer/local.html",
-    "preinstall": "node ./scripts/checkYarn.js",
     "prebuild-sfc-playground": "node scripts/build.js compiler shared -af cjs && node scripts/build.js runtime reactivity shared -af esm-bundler && node scripts/build.js vue -f esm-bundler-runtime && node scripts/build.js vue -f esm-browser-runtime && node scripts/build.js compiler-sfc -f esm-browser",
     "build-sfc-playground": "cd packages/sfc-playground && vite build"
   },
@@ -40,7 +39,9 @@
     ]
   },
   "engines": {
-    "node": ">=10.0.0"
+    "node": ">=10.0.0",
+    "yarn": ">= 1.0.0",
+    "npm": "This repository requires Yarn 1.x for scripts to work properly.\n"
   },
   "devDependencies": {
     "@babel/types": "^7.12.0",
