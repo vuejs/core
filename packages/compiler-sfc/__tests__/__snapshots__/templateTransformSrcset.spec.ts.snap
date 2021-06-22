@@ -64,7 +64,7 @@ export function render(_ctx, _cache) {
       src: \\"data:image/png;base64,i\\",
       srcset: \\"data:image/png;base64,i 1x, data:image/png;base64,i 2x\\"
     })
-  ], 64 /* STABLE_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */))
+  ], 64 /* STABLE_FRAGMENT */))
 }"
 `;
 
@@ -121,7 +121,7 @@ export function render(_ctx, _cache) {
       src: \\"data:image/png;base64,i\\",
       srcset: \\"data:image/png;base64,i 1x, data:image/png;base64,i 2x\\"
     })
-  ], 64 /* STABLE_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */))
+  ], 64 /* STABLE_FRAGMENT */))
 }"
 `;
 
@@ -191,6 +191,6 @@ export function render(_ctx, _cache) {
       src: \\"data:image/png;base64,i\\",
       srcset: \\"data:image/png;base64,i 1x, data:image/png;base64,i 2x\\"
     })
-  ], 64 /* STABLE_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */))
+  ], 64 /* STABLE_FRAGMENT */))
 }"
 `;

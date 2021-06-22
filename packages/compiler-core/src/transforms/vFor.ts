@@ -39,12 +39,7 @@ import {
 import { RENDER_LIST, OPEN_BLOCK, FRAGMENT } from '../runtimeHelpers'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
-import {
-  PatchFlags,
-  PatchFlagNames,
-  ShapeFlags,
-  ShapeFlagNames
-} from '@vue/shared'
+import { PatchFlags, PatchFlagNames } from '@vue/shared'
 
 export const transformFor = createStructuralDirectiveTransform(
   'for',
@@ -99,10 +94,6 @@ export const transformFor = createStructuralDirectiveTransform(
         true /* isBlock */,
         !isStableFragment /* disableTracking */,
         false /* isComponent */,
-        ShapeFlags.ARRAY_CHILDREN +
-          (__DEV__
-            ? ` /* ${ShapeFlagNames[ShapeFlags.ARRAY_CHILDREN]} */`
-            : ``),
         node.loc
       ) as ForCodegenNode
 
@@ -165,11 +156,7 @@ export const transformFor = createStructuralDirectiveTransform(
             undefined,
             true,
             undefined,
-            false /* isComponent */,
-            ShapeFlags.ARRAY_CHILDREN +
-              (__DEV__
-                ? ` /* ${ShapeFlagNames[ShapeFlags.ARRAY_CHILDREN]} */`
-                : ``)
+            false /* isComponent */
           )
         } else {
           // Normal element v-for. Directly use the child's codegenNode

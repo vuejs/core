@@ -371,7 +371,7 @@ function createBaseVNode(
   dynamicProps: string[] | null = null,
   shapeFlag = ShapeFlags.ELEMENT,
   isBlockNode = false,
-  needChildrenNormalization = false
+  needFullChildrenNormalization = false
 ) {
   const vnode = {
     __v_isVNode: true,
@@ -401,12 +401,18 @@ function createBaseVNode(
     appContext: null
   } as VNode
 
-  if (needChildrenNormalization) {
+  if (needFullChildrenNormalization) {
     normalizeChildren(vnode, children)
     // normalize suspense children
     if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
       ;(type as typeof SuspenseImpl).normalize(vnode)
     }
+  } else if (children) {
+    // compiled element vnode - if children is passed, only possible types are
+    // string or Array.
+    vnode.shapeFlag |= isString(children)
+      ? ShapeFlags.TEXT_CHILDREN
+      : ShapeFlags.ARRAY_CHILDREN
   }
 
   // validate key

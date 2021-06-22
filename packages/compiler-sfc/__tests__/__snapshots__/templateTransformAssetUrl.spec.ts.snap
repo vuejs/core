@@ -66,7 +66,7 @@ export function render(_ctx, _cache) {
     _createElementVNode(\\"img\\", { src: \\"http://example.com/fixtures/logo.png\\" }),
     _createElementVNode(\\"img\\", { src: \\"/fixtures/logo.png\\" }),
     _createElementVNode(\\"img\\", { src: \\"data:image/png;base64,i\\" })
-  ], 64 /* STABLE_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */))
+  ], 64 /* STABLE_FRAGMENT */))
 }"
 `;
 
@@ -82,7 +82,7 @@ export function render(_ctx, _cache) {
     _createElementVNode(\\"img\\", { src: \\"bar.png\\" }),
     _createElementVNode(\\"img\\", { src: _imports_0 }),
     _createElementVNode(\\"img\\", { src: _imports_1 })
-  ], 64 /* STABLE_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */))
+  ], 64 /* STABLE_FRAGMENT */))
 }"
 `;
 
@@ -97,6 +97,6 @@ export function render(_ctx, _cache) {
     _createElementVNode(\\"img\\", { src: _imports_0 }),
     _createElementVNode(\\"img\\", { src: _imports_1 }),
     _createElementVNode(\\"img\\", { src: \\"https://foo.bar/baz.png\\" })
-  ], 64 /* STABLE_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */))
+  ], 64 /* STABLE_FRAGMENT */))
 }"
 `;

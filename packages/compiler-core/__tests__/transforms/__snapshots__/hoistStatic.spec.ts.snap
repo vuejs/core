@@ -12,7 +12,7 @@ return function render(_ctx, _cache) {
 
     return (_openBlock(), _createElementBlock(\\"div\\", null, [
       _hoisted_1
-    ], null, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
+    ]))
   }
 }"
 `;
@@ -24,7 +24,7 @@ const { createElementVNode: _createElementVNode } = _Vue
 const _hoisted_1 = /*#__PURE__*/_createElementVNode(\\"p\\", null, [
   /*#__PURE__*/_createElementVNode(\\"span\\"),
   /*#__PURE__*/_createElementVNode(\\"span\\")
-], -1 /* HOISTED */, null, 17 /* ELEMENT, ARRAY_CHILDREN */)
+], -1 /* HOISTED */)
 
 return function render(_ctx, _cache) {
   with (_ctx) {
@@ -32,7 +32,7 @@ return function render(_ctx, _cache) {
 
     return (_openBlock(), _createElementBlock(\\"div\\", null, [
       _hoisted_1
-    ], null, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
+    ]))
   }
 }"
 `;
@@ -43,7 +43,7 @@ const { createElementVNode: _createElementVNode, createCommentVNode: _createComm
 
 const _hoisted_1 = /*#__PURE__*/_createElementVNode(\\"div\\", null, [
   /*#__PURE__*/_createCommentVNode(\\"comment\\")
-], -1 /* HOISTED */, null, 17 /* ELEMENT, ARRAY_CHILDREN */)
+], -1 /* HOISTED */)
 
 return function render(_ctx, _cache) {
   with (_ctx) {
@@ -51,7 +51,7 @@ return function render(_ctx, _cache) {
 
     return (_openBlock(), _createElementBlock(\\"div\\", null, [
       _hoisted_1
-    ], null, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
+    ]))
   }
 }"
 `;
@@ -70,7 +70,7 @@ return function render(_ctx, _cache) {
     return (_openBlock(), _createElementBlock(\\"div\\", null, [
       _hoisted_1,
       _hoisted_2
-    ], null, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
+    ]))
   }
 }"
 `;
@@ -79,7 +79,7 @@ exports[`compiler: hoistStatic transform hoist simple element 1`] = `
 "const _Vue = Vue
 const { createElementVNode: _createElementVNode } = _Vue
 
-const _hoisted_1 = /*#__PURE__*/_createElementVNode(\\"span\\", { class: \\"inline\\" }, \\"hello\\", -1 /* HOISTED */, null, 9 /* ELEMENT, TEXT_CHILDREN */)
+const _hoisted_1 = /*#__PURE__*/_createElementVNode(\\"span\\", { class: \\"inline\\" }, \\"hello\\", -1 /* HOISTED */)
 
 return function render(_ctx, _cache) {
   with (_ctx) {
@@ -87,7 +87,7 @@ return function render(_ctx, _cache) {
 
     return (_openBlock(), _createElementBlock(\\"div\\", null, [
       _hoisted_1
-    ], null, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
+    ]))
   }
 }"
 `;
@@ -108,7 +108,7 @@ return function render(_ctx, _cache) {
       _withDirectives(_createElementVNode(\\"div\\", _hoisted_1, null, 512 /* NEED_PATCH */), [
         [_directive_foo]
       ])
-    ], null, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
+    ]))
   }
 }"
 `;
@@ -124,8 +124,8 @@ return function render(_ctx, _cache) {
     const { toDisplayString: _toDisplayString, createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return (_openBlock(), _createElementBlock(\\"div\\", null, [
-      _createElementVNode(\\"div\\", _hoisted_1, _toDisplayString(hello), 1 /* TEXT */, null, 9 /* ELEMENT, TEXT_CHILDREN */)
-    ], null, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
+      _createElementVNode(\\"div\\", _hoisted_1, _toDisplayString(hello), 1 /* TEXT */)
+    ]))
   }
 }"
 `;
@@ -145,8 +145,8 @@ return function render(_ctx, _cache) {
     return (_openBlock(), _createElementBlock(\\"div\\", null, [
       _createElementVNode(\\"div\\", _hoisted_1, [
         _createVNode(_component_Comp)
-      ], null, null, 17 /* ELEMENT, ARRAY_CHILDREN */)
-    ], null, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
+      ])
+    ]))
   }
 }"
 `;
@@ -164,8 +164,8 @@ return function render(_ctx, _cache) {
     const { toDisplayString: _toDisplayString, normalizeClass: _normalizeClass, createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return (_openBlock(), _createElementBlock(\\"div\\", null, [
-      _createElementVNode(\\"span\\", _hoisted_1, _toDisplayString(_ctx.bar), 1 /* TEXT */, null, 9 /* ELEMENT, TEXT_CHILDREN */)
-    ], null, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
+      _createElementVNode(\\"span\\", _hoisted_1, _toDisplayString(_ctx.bar), 1 /* TEXT */)
+    ]))
   }
 }"
 `;
@@ -174,7 +174,7 @@ exports[`compiler: hoistStatic transform prefixIdentifiers hoist nested static t
 "const _Vue = Vue
 const { createElementVNode: _createElementVNode } = _Vue
 
-const _hoisted_1 = /*#__PURE__*/_createElementVNode(\\"span\\", null, \\"foo \\" + /*#__PURE__*/_toDisplayString(1) + \\" \\" + /*#__PURE__*/_toDisplayString(true), -1 /* HOISTED */, null, 9 /* ELEMENT, TEXT_CHILDREN */)
+const _hoisted_1 = /*#__PURE__*/_createElementVNode(\\"span\\", null, \\"foo \\" + /*#__PURE__*/_toDisplayString(1) + \\" \\" + /*#__PURE__*/_toDisplayString(true), -1 /* HOISTED */)
 
 return function render(_ctx, _cache) {
   with (_ctx) {
@@ -182,7 +182,7 @@ return function render(_ctx, _cache) {
 
     return (_openBlock(), _createElementBlock(\\"div\\", null, [
       _hoisted_1
-    ], null, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
+    ]))
   }
 }"
 `;
@@ -191,7 +191,7 @@ exports[`compiler: hoistStatic transform prefixIdentifiers hoist nested static t
 "const _Vue = Vue
 const { createElementVNode: _createElementVNode } = _Vue
 
-const _hoisted_1 = /*#__PURE__*/_createElementVNode(\\"span\\", { foo: 0 }, /*#__PURE__*/_toDisplayString(1), -1 /* HOISTED */, null, 9 /* ELEMENT, TEXT_CHILDREN */)
+const _hoisted_1 = /*#__PURE__*/_createElementVNode(\\"span\\", { foo: 0 }, /*#__PURE__*/_toDisplayString(1), -1 /* HOISTED */)
 
 return function render(_ctx, _cache) {
   with (_ctx) {
@@ -199,7 +199,7 @@ return function render(_ctx, _cache) {
 
     return (_openBlock(), _createElementBlock(\\"div\\", null, [
       _hoisted_1
-    ], null, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
+    ]))
   }
 }"
 `;
@@ -213,8 +213,8 @@ export function render(_ctx, _cache) {
       _createElementVNode(\\"div\\", {
         onClick: _cache[1] || (_cache[1] = (...args) => (_ctx.foo && _ctx.foo(...args)))
       })
-    ], null, null, 17 /* ELEMENT, ARRAY_CHILDREN */)
-  ], null, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
+    ])
+  ]))
 }"
 `;
 
@@ -228,10 +228,10 @@ return function render(_ctx, _cache) {
     return (_openBlock(), _createElementBlock(\\"div\\", null, [
       (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.list, (o) => {
         return (_openBlock(), _createElementBlock(\\"p\\", null, [
-          _createElementVNode(\\"span\\", null, _toDisplayString(o + 'foo'), 1 /* TEXT */, null, 9 /* ELEMENT, TEXT_CHILDREN */)
-        ], null, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
-      }), 256 /* UNKEYED_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */))
-    ], null, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
+          _createElementVNode(\\"span\\", null, _toDisplayString(o + 'foo'), 1 /* TEXT */)
+        ]))
+      }), 256 /* UNKEYED_FRAGMENT */))
+    ]))
   }
 }"
 `;
@@ -265,10 +265,10 @@ return function render(_ctx, _cache) {
     return (_openBlock(), _createElementBlock(\\"div\\", null, [
       (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.list, (o) => {
         return (_openBlock(), _createElementBlock(\\"p\\", null, [
-          _createElementVNode(\\"span\\", null, _toDisplayString(o), 1 /* TEXT */, null, 9 /* ELEMENT, TEXT_CHILDREN */)
-        ], null, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
-      }), 256 /* UNKEYED_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */))
-    ], null, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
+          _createElementVNode(\\"span\\", null, _toDisplayString(o), 1 /* TEXT */)
+        ]))
+      }), 256 /* UNKEYED_FRAGMENT */))
+    ]))
   }
 }"
 `;
@@ -283,8 +283,8 @@ return function render(_ctx, _cache) {
     return (_openBlock(), _createElementBlock(\\"div\\", null, [
       (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(items, (item) => {
         return (_openBlock(), _createElementBlock(\\"span\\", { key: item }))
-      }), 128 /* KEYED_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */))
-    ], null, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
+      }), 128 /* KEYED_FRAGMENT */))
+    ]))
   }
 }"
 `;
@@ -300,7 +300,7 @@ return function render(_ctx, _cache) {
 
     return (_openBlock(), _createElementBlock(\\"div\\", null, [
       _createVNode(_component_Comp)
-    ], null, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
+    ]))
   }
 }"
 `;
@@ -314,7 +314,7 @@ return function render(_ctx, _cache) {
 
     return (_openBlock(), _createElementBlock(\\"div\\", null, [
       (_openBlock(), _createElementBlock(\\"div\\", { key: foo }))
-    ], null, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
+    ]))
   }
 }"
 `;
@@ -328,7 +328,7 @@ return function render(_ctx, _cache) {
 
     return (_openBlock(), _createElementBlock(\\"div\\", null, [
       _createElementVNode(\\"div\\", { id: foo }, null, 8 /* PROPS */, [\\"id\\"])
-    ], null, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
+    ]))
   }
 }"
 `;
@@ -342,7 +342,7 @@ return function render(_ctx, _cache) {
 
     return (_openBlock(), _createElementBlock(\\"div\\", null, [
       _createElementVNode(\\"div\\", { ref: foo }, null, 512 /* NEED_PATCH */)
-    ], null, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
+    ]))
   }
 }"
 `;
@@ -374,9 +374,9 @@ return function render(_ctx, _cache) {
       (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(list, (i) => {
         return (_openBlock(), _createElementBlock(\\"div\\", _hoisted_1, [
           _hoisted_2
-        ], null, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
-      }), 256 /* UNKEYED_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */))
-    ], null, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
+        ]))
+      }), 256 /* UNKEYED_FRAGMENT */))
+    ]))
   }
 }"
 `;
@@ -399,9 +399,9 @@ return function render(_ctx, _cache) {
       ok
         ? (_openBlock(), _createElementBlock(\\"div\\", _hoisted_1, [
             _hoisted_2
-          ], null, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
+          ]))
         : _createCommentVNode(\\"v-if\\", true)
-    ], null, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
+    ]))
   }
 }"
 `;

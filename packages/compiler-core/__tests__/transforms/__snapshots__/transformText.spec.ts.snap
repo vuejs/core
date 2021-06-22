@@ -10,8 +10,8 @@ return function render(_ctx, _cache) {
     return (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(list, (i) => {
       return (_openBlock(), _createElementBlock(_Fragment, null, [
         _createTextVNode(\\"foo\\")
-      ], 64 /* STABLE_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */))
-    }), 256 /* UNKEYED_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */))
+      ], 64 /* STABLE_FRAGMENT */))
+    }), 256 /* UNKEYED_FRAGMENT */))
   }
 }"
 `;
@@ -39,7 +39,7 @@ return function render(_ctx, _cache) {
       _createElementVNode(\\"div\\"),
       _createTextVNode(_toDisplayString(foo) + \\" bar \\" + _toDisplayString(baz), 1 /* TEXT */),
       _createElementVNode(\\"div\\")
-    ], 64 /* STABLE_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */))
+    ], 64 /* STABLE_FRAGMENT */))
   }
 }"
 `;
@@ -57,7 +57,7 @@ return function render(_ctx, _cache) {
       _createElementVNode(\\"div\\"),
       _createTextVNode(\\"hello\\"),
       _createElementVNode(\\"div\\")
-    ], 64 /* STABLE_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */))
+    ], 64 /* STABLE_FRAGMENT */))
   }
 }"
 `;
@@ -73,7 +73,7 @@ return function render(_ctx, _cache) {
 
     return _withDirectives((_openBlock(), _createElementBlock(\\"p\\", null, [
       _createTextVNode(_toDisplayString(foo), 1 /* TEXT */)
-    ], 512 /* NEED_PATCH */, null, 17 /* ELEMENT, ARRAY_CHILDREN */)), [
+    ], 512 /* NEED_PATCH */)), [
       [_directive_foo]
     ])
   }
@@ -103,7 +103,7 @@ return function render(_ctx, _cache) {
       _createElementVNode(\\"div\\"),
       _createTextVNode(\\"hello\\"),
       _createElementVNode(\\"div\\")
-    ], 64 /* STABLE_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */))
+    ], 64 /* STABLE_FRAGMENT */))
   }
 }"
 `;

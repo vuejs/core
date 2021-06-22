@@ -26,9 +26,7 @@ import {
   PatchFlagNames,
   EMPTY_OBJ,
   capitalize,
-  camelize,
-  ShapeFlags,
-  ShapeFlagNames
+  camelize
 } from '@vue/shared'
 import { defaultOnError, defaultOnWarn } from './errors'
 import {
@@ -384,9 +382,7 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
       undefined,
       true,
       undefined,
-      false /* isComponent */,
-      ShapeFlags.ARRAY_CHILDREN +
-        (__DEV__ ? ` /* ${ShapeFlagNames[ShapeFlags.ARRAY_CHILDREN]} */` : ``)
+      false /* isComponent */
     )
   } else {
     // no children = noop. codegen will return null.

@@ -29,9 +29,7 @@ import {
   isObject,
   isReservedProp,
   capitalize,
-  camelize,
-  ShapeFlags,
-  ShapeFlagNames
+  camelize
 } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
@@ -107,14 +105,6 @@ export const transformElement: NodeTransform = (node, context) => {
     let vnodeDynamicProps: VNodeCall['dynamicProps']
     let dynamicPropNames: string[] | undefined
     let vnodeDirectives: VNodeCall['directives']
-    let vnodeShapeFlag: VNodeCall['shapeFlag']
-    let shapeFlag: number = !isComponent
-      ? ShapeFlags.ELEMENT
-      : vnodeTag === TELEPORT
-        ? ShapeFlags.TELEPORT
-        : vnodeTag === SUSPENSE
-          ? ShapeFlags.SUSPENSE
-          : 0
 
     let shouldUseBlock =
       // dynamic component may resolve to plain elements
@@ -199,15 +189,11 @@ export const transformElement: NodeTransform = (node, context) => {
         // (plain / interpolation / expression)
         if (hasDynamicTextChild || type === NodeTypes.TEXT) {
           vnodeChildren = child as TemplateTextChildNode
-          shapeFlag |= ShapeFlags.TEXT_CHILDREN
         } else {
           vnodeChildren = node.children
-          // KeepAlive is a component, but no slot is built for it at compile time
-          vnodeTag !== KEEP_ALIVE && (shapeFlag |= ShapeFlags.ARRAY_CHILDREN)
         }
       } else {
         vnodeChildren = node.children
-        vnodeTag !== KEEP_ALIVE && (shapeFlag |= ShapeFlags.ARRAY_CHILDREN)
       }
     }
 
@@ -234,19 +220,6 @@ export const transformElement: NodeTransform = (node, context) => {
       }
     }
 
-    if (shapeFlag > 1) {
-      if (__DEV__) {
-        // bitwise flags
-        const flagNames = Object.keys(ShapeFlagNames)
-          .map(Number)
-          .filter(n => shapeFlag & n)
-          .map(n => ShapeFlagNames[n])
-          .join(`, `)
-        vnodeShapeFlag = shapeFlag + ` /* ${flagNames} */`
-      } else {
-        vnodeShapeFlag = String(shapeFlag)
-      }
-    }
     node.codegenNode = createVNodeCall(
       context,
       vnodeTag,
@@ -258,7 +231,6 @@ export const transformElement: NodeTransform = (node, context) => {
       !!shouldUseBlock,
       false /* disableTracking */,
       isComponent,
-      vnodeShapeFlag,
       node.loc
     )
   }

@@ -30,7 +30,7 @@ return function render(_ctx, _cache) {
         : orNot
           ? (_openBlock(), _createElementBlock(\\"p\\", { key: 3 }))
           : (_openBlock(), _createElementBlock(\\"p\\", { key: 4 }))
-    ], 64 /* STABLE_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */))
+    ], 64 /* STABLE_FRAGMENT */))
   }
 }"
 `;
@@ -49,7 +49,7 @@ return function render(_ctx, _cache) {
       orNot
         ? (_openBlock(), _createElementBlock(\\"p\\", { key: 1 }))
         : _createCommentVNode(\\"v-if\\", true)
-    ], 64 /* STABLE_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */))
+    ], 64 /* STABLE_FRAGMENT */))
   }
 }"
 `;
@@ -66,7 +66,7 @@ return function render(_ctx, _cache) {
           _createElementVNode(\\"div\\"),
           \\"hello\\",
           _createElementVNode(\\"p\\")
-        ], 64 /* STABLE_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */))
+        ], 64 /* STABLE_FRAGMENT */))
       : _createCommentVNode(\\"v-if\\", true)
   }
 }"
@@ -111,7 +111,7 @@ return function render(_ctx, _cache) {
       ? (_openBlock(), _createElementBlock(\\"div\\", { key: 0 }))
       : orNot
         ? (_openBlock(), _createElementBlock(\\"p\\", { key: 1 }))
-        : (_openBlock(), _createElementBlock(_Fragment, { key: 2 }, [\\"fine\\"], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */))
+        : (_openBlock(), _createElementBlock(_Fragment, { key: 2 }, [\\"fine\\"], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */))
   }
 }"
 `;

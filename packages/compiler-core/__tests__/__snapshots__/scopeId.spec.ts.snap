@@ -5,8 +5,8 @@ exports[`scopeId compiler support should push scopeId for hoisted nodes 1`] = `
 const _withId = /*#__PURE__*/_withScopeId(\\"test\\")
 
 _pushScopeId(\\"test\\")
-const _hoisted_1 = /*#__PURE__*/_createElementVNode(\\"div\\", null, \\"hello\\", -1 /* HOISTED */, null, 9 /* ELEMENT, TEXT_CHILDREN */)
-const _hoisted_2 = /*#__PURE__*/_createElementVNode(\\"div\\", null, \\"world\\", -1 /* HOISTED */, null, 9 /* ELEMENT, TEXT_CHILDREN */)
+const _hoisted_1 = /*#__PURE__*/_createElementVNode(\\"div\\", null, \\"hello\\", -1 /* HOISTED */)
+const _hoisted_2 = /*#__PURE__*/_createElementVNode(\\"div\\", null, \\"world\\", -1 /* HOISTED */)
 _popScopeId()
 
 export const render = /*#__PURE__*/_withId((_ctx, _cache) => {
@@ -14,7 +14,7 @@ export const render = /*#__PURE__*/_withId((_ctx, _cache) => {
     _hoisted_1,
     _createTextVNode(_toDisplayString(_ctx.foo), 1 /* TEXT */),
     _hoisted_2
-  ], null, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
+  ]))
 })"
 `;
 

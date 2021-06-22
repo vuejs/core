@@ -10,17 +10,17 @@ return function render(_ctx, _cache) {
     return (_openBlock(), _createBlock(_Transition, null, {
       default: _withCtx(() => [
         a
-          ? (_openBlock(), _createElementBlock(\\"div\\", { key: 0 }, \\"hey\\", null, null, 9 /* ELEMENT, TEXT_CHILDREN */))
+          ? (_openBlock(), _createElementBlock(\\"div\\", { key: 0 }, \\"hey\\"))
           : b
-            ? (_openBlock(), _createElementBlock(\\"div\\", { key: 1 }, \\"hey\\", null, null, 9 /* ELEMENT, TEXT_CHILDREN */))
+            ? (_openBlock(), _createElementBlock(\\"div\\", { key: 1 }, \\"hey\\"))
             : (_openBlock(), _createElementBlock(\\"div\\", { key: 2 }, [
                 c
                   ? (_openBlock(), _createElementBlock(\\"p\\", { key: 0 }))
                   : (_openBlock(), _createElementBlock(_Fragment, { key: 1 }, [
                       _createCommentVNode(\\" this should not be ignored \\"),
                       _createElementVNode(\\"p\\")
-                    ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */))
-              ], null, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
+                    ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */))
+              ]))
       ]),
       _: 1 /* STABLE */
     }))

@@ -12,12 +12,12 @@ return function render(_ctx, _cache) {
         textContent: _toDisplayString(text)
       }, null, 8 /* PROPS */, [\\"textContent\\"]),
       _createElementVNode(\\"div\\", { innerHTML: html }, null, 8 /* PROPS */, [\\"innerHTML\\"]),
-      _createElementVNode(\\"div\\", null, \\"test\\", null, null, 9 /* ELEMENT, TEXT_CHILDREN */),
-      _createElementVNode(\\"div\\", { style: {\\"color\\":\\"red\\"} }, \\"red\\", null, null, 9 /* ELEMENT, TEXT_CHILDREN */),
+      _createElementVNode(\\"div\\", null, \\"test\\"),
+      _createElementVNode(\\"div\\", { style: {\\"color\\":\\"red\\"} }, \\"red\\"),
       _createElementVNode(\\"div\\", {
         style: _normalizeStyle({color: 'green'})
       }, null, 4 /* STYLE */)
-    ], 64 /* STABLE_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */))
+    ], 64 /* STABLE_FRAGMENT */))
   }
 }"
 `;

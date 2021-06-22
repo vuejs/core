@@ -53,8 +53,8 @@ return function render(_ctx, _cache) {
       [prop]: bar,
       [foo + bar]: bar
     }, [
-      _createElementVNode(\\"p\\", { \\"some-key\\": \\"foo\\" }, null, null, null, 1)
-    ], 16, null, 1)
+      _createElementVNode(\\"p\\", { \\"some-key\\": \\"foo\\" })
+    ], 16)
   }
 }"
 `;

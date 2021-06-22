@@ -27,11 +27,7 @@ import {
 import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
-import {
-  FRAGMENT,
-  CREATE_COMMENT,
-  OPEN_BLOCK
-} from '../runtimeHelpers'
+import { FRAGMENT, CREATE_COMMENT, OPEN_BLOCK } from '../runtimeHelpers'
 import {
   injectProp,
   findDir,
@@ -40,12 +36,7 @@ import {
   getVNodeHelper,
   getVNodeBlockHelper
 } from '../utils'
-import {
-  PatchFlags,
-  PatchFlagNames,
-  ShapeFlags,
-  ShapeFlagNames
-} from '@vue/shared'
+import { PatchFlags, PatchFlagNames } from '@vue/shared'
 
 export const transformIf = createStructuralDirectiveTransform(
   /^(if|else|else-if)$/,
@@ -289,10 +280,6 @@ function createChildrenCodegenNode(
         true,
         false,
         false /* isComponent */,
-        ShapeFlags.ARRAY_CHILDREN +
-          (__DEV__
-            ? ` /* ${ShapeFlagNames[ShapeFlags.ARRAY_CHILDREN]} */`
-            : ``),
         branch.loc
       )
     }

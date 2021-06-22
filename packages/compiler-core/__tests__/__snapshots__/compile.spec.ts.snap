@@ -13,16 +13,16 @@ return function render(_ctx, _cache) {
     }, [
       _createTextVNode(_toDisplayString(world.burn()) + \\" \\", 1 /* TEXT */),
       ok
-        ? (_openBlock(), _createElementBlock(\\"div\\", { key: 0 }, \\"yes\\", null, null, 9 /* ELEMENT, TEXT_CHILDREN */))
+        ? (_openBlock(), _createElementBlock(\\"div\\", { key: 0 }, \\"yes\\"))
         : (_openBlock(), _createElementBlock(_Fragment, { key: 1 }, [
             _createTextVNode(\\"no\\")
-          ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */)),
+          ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */)),
       (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(list, (value, index) => {
         return (_openBlock(), _createElementBlock(\\"div\\", null, [
-          _createElementVNode(\\"span\\", null, _toDisplayString(value + index), 1 /* TEXT */, null, 9 /* ELEMENT, TEXT_CHILDREN */)
-        ], null, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
-      }), 256 /* UNKEYED_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */))
-    ], 2 /* CLASS */, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
+          _createElementVNode(\\"span\\", null, _toDisplayString(value + index), 1 /* TEXT */)
+        ]))
+      }), 256 /* UNKEYED_FRAGMENT */))
+    ], 2 /* CLASS */))
   }
 }"
 `;
@@ -37,16 +37,16 @@ return function render(_ctx, _cache) {
   }, [
     _createTextVNode(_toDisplayString(_ctx.world.burn()) + \\" \\", 1 /* TEXT */),
     (_ctx.ok)
-      ? (_openBlock(), _createElementBlock(\\"div\\", { key: 0 }, \\"yes\\", null, null, 9 /* ELEMENT, TEXT_CHILDREN */))
+      ? (_openBlock(), _createElementBlock(\\"div\\", { key: 0 }, \\"yes\\"))
       : (_openBlock(), _createElementBlock(_Fragment, { key: 1 }, [
           _createTextVNode(\\"no\\")
-        ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */)),
+        ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */)),
     (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.list, (value, index) => {
       return (_openBlock(), _createElementBlock(\\"div\\", null, [
-        _createElementVNode(\\"span\\", null, _toDisplayString(value + index), 1 /* TEXT */, null, 9 /* ELEMENT, TEXT_CHILDREN */)
-      ], null, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
-    }), 256 /* UNKEYED_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */))
-  ], 2 /* CLASS */, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
+        _createElementVNode(\\"span\\", null, _toDisplayString(value + index), 1 /* TEXT */)
+      ]))
+    }), 256 /* UNKEYED_FRAGMENT */))
+  ], 2 /* CLASS */))
 }"
 `;
 
@@ -60,15 +60,15 @@ export function render(_ctx, _cache) {
   }, [
     _createTextVNode(_toDisplayString(_ctx.world.burn()) + \\" \\", 1 /* TEXT */),
     (_ctx.ok)
-      ? (_openBlock(), _createElementBlock(\\"div\\", { key: 0 }, \\"yes\\", null, null, 9 /* ELEMENT, TEXT_CHILDREN */))
+      ? (_openBlock(), _createElementBlock(\\"div\\", { key: 0 }, \\"yes\\"))
       : (_openBlock(), _createElementBlock(_Fragment, { key: 1 }, [
           _createTextVNode(\\"no\\")
-        ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */)),
+        ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */)),
     (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.list, (value, index) => {
       return (_openBlock(), _createElementBlock(\\"div\\", null, [
-        _createElementVNode(\\"span\\", null, _toDisplayString(value + index), 1 /* TEXT */, null, 9 /* ELEMENT, TEXT_CHILDREN */)
-      ], null, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
-    }), 256 /* UNKEYED_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */))
-  ], 2 /* CLASS */, null, 17 /* ELEMENT, ARRAY_CHILDREN */))
+        _createElementVNode(\\"span\\", null, _toDisplayString(value + index), 1 /* TEXT */)
+      ]))
+    }), 256 /* UNKEYED_FRAGMENT */))
+  ], 2 /* CLASS */))
 }"
 `;

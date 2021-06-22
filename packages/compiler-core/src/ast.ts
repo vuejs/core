@@ -293,7 +293,6 @@ export interface VNodeCall extends Node {
   isBlock: boolean
   disableTracking: boolean
   isComponent: boolean
-  shapeFlag: string | undefined
 }
 
 // JS Node Types ---------------------------------------------------------------
@@ -562,7 +561,6 @@ export function createVNodeCall(
   isBlock: VNodeCall['isBlock'] = false,
   disableTracking: VNodeCall['disableTracking'] = false,
   isComponent: VNodeCall['isComponent'] = false,
-  shapeFlag: VNodeCall['shapeFlag'] = undefined,
   loc = locStub
 ): VNodeCall {
   if (context) {
@@ -588,7 +586,6 @@ export function createVNodeCall(
     isBlock,
     disableTracking,
     isComponent,
-    shapeFlag,
     loc
   }
 }

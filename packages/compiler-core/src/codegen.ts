@@ -756,7 +756,6 @@ function genVNodeCall(node: VNodeCall, context: CodegenContext) {
     props,
     children,
     patchFlag,
-    shapeFlag,
     dynamicProps,
     directives,
     isBlock,
@@ -777,14 +776,7 @@ function genVNodeCall(node: VNodeCall, context: CodegenContext) {
     : getVNodeHelper(context.inSSR, isComponent)
   push(helper(callHelper) + `(`, node)
   genNodeList(
-    genNullableArgs([
-      tag,
-      props,
-      children,
-      patchFlag,
-      dynamicProps,
-      context.inSSR ? null : shapeFlag
-    ]),
+    genNullableArgs([tag, props, children, patchFlag, dynamicProps]),
     context
   )
   push(`)`)
