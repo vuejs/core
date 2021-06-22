@@ -972,25 +972,23 @@ export const internalOptionMergeStrats: Record<string, Function> = {
   methods: mergeObjectOptions,
   computed: mergeObjectOptions,
   // lifecycle
-  beforeCreate: mergeHook,
-  created: mergeHook,
-  beforeMount: mergeHook,
-  mounted: mergeHook,
-  beforeUpdate: mergeHook,
-  updated: mergeHook,
-  beforeDestroy: mergeHook,
-  destroyed: mergeHook,
-  activated: mergeHook,
-  deactivated: mergeHook,
-  errorCaptured: mergeHook,
-  serverPrefetch: mergeHook,
+  beforeCreate: mergeAsArray,
+  created: mergeAsArray,
+  beforeMount: mergeAsArray,
+  mounted: mergeAsArray,
+  beforeUpdate: mergeAsArray,
+  updated: mergeAsArray,
+  beforeDestroy: mergeAsArray,
+  destroyed: mergeAsArray,
+  activated: mergeAsArray,
+  deactivated: mergeAsArray,
+  errorCaptured: mergeAsArray,
+  serverPrefetch: mergeAsArray,
   // assets
   components: mergeObjectOptions,
   directives: mergeObjectOptions,
-  // watch has special merge behavior in v2, but isn't actually needed in v3.
-  // since we are only exposing these for compat and nobody should be relying
-  // on the watch-specific behavior, just expose the object merge strat.
-  watch: mergeObjectOptions,
+  // watch
+  watch: mergeWatchOptions,
   // provide / inject
   provide: mergeDataFn,
   inject: mergeInject
@@ -1038,13 +1036,23 @@ function normalizeInject(
   return raw
 }
 
-function mergeHook(
-  to: Function[] | Function | undefined,
-  from: Function | Function[]
-) {
+function mergeAsArray<T = Function>(to: T[] | T | undefined, from: T | T[]) {
   return to ? [...new Set([].concat(to as any, from as any))] : from
 }
 
 function mergeObjectOptions(to: Object | undefined, from: Object | undefined) {
   return to ? extend(extend(Object.create(null), to), from) : from
+}
+
+function mergeWatchOptions(
+  to: ComponentWatchOptions | undefined,
+  from: ComponentWatchOptions | undefined
+) {
+  if (!to) return from
+  if (!from) return to
+  const merged = extend(Object.create(null), to)
+  for (const key in from) {
+    merged[key] = mergeAsArray(to[key], from[key])
+  }
+  return merged
 }
