@@ -5,15 +5,15 @@ import {
   render,
   SetupContext
 } from '@vue/runtime-test'
-import { defineEmit, defineProps, useContext } from '../src/apiSetupHelpers'
+import { defineEmits, defineProps, useContext } from '../src/apiSetupHelpers'
 
 describe('SFC <script setup> helpers', () => {
   test('should warn runtime usage', () => {
     defineProps()
     expect(`defineProps() is a compiler-hint`).toHaveBeenWarned()
 
-    defineEmit()
-    expect(`defineEmit() is a compiler-hint`).toHaveBeenWarned()
+    defineEmits()
+    expect(`defineEmits() is a compiler-hint`).toHaveBeenWarned()
   })
 
   test('useContext (no args)', () => {

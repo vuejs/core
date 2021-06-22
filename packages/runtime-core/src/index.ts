@@ -44,7 +44,12 @@ export { provide, inject } from './apiInject'
 export { nextTick } from './scheduler'
 export { defineComponent } from './apiDefineComponent'
 export { defineAsyncComponent } from './apiAsyncComponent'
-export { defineProps, defineEmit, useContext } from './apiSetupHelpers'
+export {
+  defineProps,
+  defineEmits,
+  defineEmit,
+  useContext
+} from './apiSetupHelpers'
 
 // Advanced API ----------------------------------------------------------------
 

@@ -54,7 +54,7 @@ return { a }
 }"
 `;
 
-exports[`SFC compile <script setup> defineEmit() 1`] = `
+exports[`SFC compile <script setup> defineEmits() 1`] = `
 "export default {
   expose: [],
   emits: ['foo', 'bar'],
@@ -720,7 +720,7 @@ return { a, b, c, d, x }
 }"
 `;
 
-exports[`SFC compile <script setup> with TypeScript defineEmit w/ type (type literal w/ call signatures) 1`] = `
+exports[`SFC compile <script setup> with TypeScript defineEmits w/ type (type literal w/ call signatures) 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
       
@@ -741,7 +741,7 @@ return { emit }
 })"
 `;
 
-exports[`SFC compile <script setup> with TypeScript defineEmit w/ type 1`] = `
+exports[`SFC compile <script setup> with TypeScript defineEmits w/ type 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
       
