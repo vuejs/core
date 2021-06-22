@@ -22,7 +22,7 @@ import {
   Fragment
 } from '@vue/runtime-test'
 import { createApp, defineComponent } from 'vue'
-import { RawSlots } from 'packages/runtime-core/src/componentSlots'
+import { type RawSlots } from 'packages/runtime-core/src/componentSlots'
 
 describe('Suspense', () => {
   const deps: Promise<any>[] = []
@@ -1528,7 +1528,7 @@ describe('Suspense', () => {
   })
 
   describe('warnings', () => {
-    // base function to check if a combination of solts warns or not
+    // base function to check if a combination of slots warns or not
     function baseCheckWarn(
       shouldWarn: boolean,
       children: RawSlots,
@@ -1572,8 +1572,8 @@ describe('Suspense', () => {
 
     test('does not warn on <component :is="null" />', async () => {
       checkNoWarn({
-        default: () => [resolveDynamicComponent(null)]
-        // fallback: () => null
+        default: () => [resolveDynamicComponent(null)],
+        fallback: () => null
       })
     })
 
