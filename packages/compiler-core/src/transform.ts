@@ -33,12 +33,10 @@ import {
   TO_DISPLAY_STRING,
   FRAGMENT,
   helperNameMap,
-  CREATE_BLOCK,
   CREATE_COMMENT,
-  OPEN_BLOCK,
-  CREATE_VNODE
+  OPEN_BLOCK
 } from './runtimeHelpers'
-import { isVSlot } from './utils'
+import { getVNodeBlockHelper, getVNodeHelper, isVSlot } from './utils'
 import { hoistStatic, isSingleElementRoot } from './transforms/hoistStatic'
 import { CompilerCompatOptions } from './compat/compatConfig'
 
@@ -139,6 +137,7 @@ export function createTransformContext(
     scopeId = null,
     slotted = true,
     ssr = false,
+    inSSR = false,
     ssrCssVars = ``,
     bindingMetadata = EMPTY_OBJ,
     inline = false,
@@ -164,6 +163,7 @@ export function createTransformContext(
     scopeId,
     slotted,
     ssr,
+    inSSR,
     ssrCssVars,
     bindingMetadata,
     inline,
@@ -346,10 +346,10 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
       const codegenNode = child.codegenNode
       if (codegenNode.type === NodeTypes.VNODE_CALL) {
         if (!codegenNode.isBlock) {
-          removeHelper(CREATE_VNODE)
           codegenNode.isBlock = true
+          removeHelper(getVNodeHelper(context.inSSR, codegenNode.isComponent))
           helper(OPEN_BLOCK)
-          helper(CREATE_BLOCK)
+          helper(getVNodeBlockHelper(context.inSSR, codegenNode.isComponent))
         }
       }
       root.codegenNode = codegenNode
@@ -380,7 +380,9 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
       patchFlag + (__DEV__ ? ` /* ${patchFlagText} */` : ``),
       undefined,
       undefined,
-      true
+      true,
+      undefined,
+      false /* isComponent */
     )
   } else {
     // no children = noop. codegen will return null.

@@ -10,7 +10,12 @@ import {
   ForNode,
   ConstantTypes
 } from '../../src'
-import { FRAGMENT, RENDER_LIST, CREATE_TEXT } from '../../src/runtimeHelpers'
+import {
+  FRAGMENT,
+  RENDER_LIST,
+  CREATE_TEXT,
+  NORMALIZE_CLASS
+} from '../../src/runtimeHelpers'
 import { transformElement } from '../../src/transforms/transformElement'
 import { transformExpression } from '../../src/transforms/transformExpression'
 import { transformIf } from '../../src/transforms/vIf'
@@ -510,9 +515,15 @@ describe('compiler: hoistStatic transform', () => {
                 constType: ConstantTypes.CAN_STRINGIFY
               },
               value: {
-                content: `{ foo: true }`,
-                isStatic: false,
-                constType: ConstantTypes.CAN_STRINGIFY
+                type: NodeTypes.JS_CALL_EXPRESSION,
+                callee: NORMALIZE_CLASS,
+                arguments: [
+                  {
+                    content: `{ foo: true }`,
+                    isStatic: false,
+                    constType: ConstantTypes.CAN_STRINGIFY
+                  }
+                ]
               }
             }
           ]
