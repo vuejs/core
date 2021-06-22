@@ -5,10 +5,10 @@ exports[`compiler: v-if codegen basic v-if 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { openBlock: _openBlock, createBlock: _createBlock, createCommentVNode: _createCommentVNode } = _Vue
+    const { openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode } = _Vue
 
     return ok
-      ? (_openBlock(), _createBlock(\\"div\\", { key: 0 }))
+      ? (_openBlock(), _createElementBlock(\\"div\\", { key: 0 }))
       : _createCommentVNode(\\"v-if\\", true)
   }
 }"
@@ -19,17 +19,17 @@ exports[`compiler: v-if codegen increasing key: v-if + v-else-if + v-else 1`] = 
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { openBlock: _openBlock, createBlock: _createBlock, createCommentVNode: _createCommentVNode, Fragment: _Fragment } = _Vue
+    const { openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode, Fragment: _Fragment } = _Vue
 
-    return (_openBlock(), _createBlock(_Fragment, null, [
+    return (_openBlock(), _createElementBlock(_Fragment, null, [
       ok
-        ? (_openBlock(), _createBlock(\\"div\\", { key: 0 }))
-        : (_openBlock(), _createBlock(\\"p\\", { key: 1 })),
+        ? (_openBlock(), _createElementBlock(\\"div\\", { key: 0 }))
+        : (_openBlock(), _createElementBlock(\\"p\\", { key: 1 })),
       another
-        ? (_openBlock(), _createBlock(\\"div\\", { key: 2 }))
+        ? (_openBlock(), _createElementBlock(\\"div\\", { key: 2 }))
         : orNot
-          ? (_openBlock(), _createBlock(\\"p\\", { key: 3 }))
-          : (_openBlock(), _createBlock(\\"p\\", { key: 4 }))
+          ? (_openBlock(), _createElementBlock(\\"p\\", { key: 3 }))
+          : (_openBlock(), _createElementBlock(\\"p\\", { key: 4 }))
     ], 64 /* STABLE_FRAGMENT */))
   }
 }"
@@ -40,14 +40,14 @@ exports[`compiler: v-if codegen multiple v-if that are sibling nodes should have
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { openBlock: _openBlock, createBlock: _createBlock, createCommentVNode: _createCommentVNode, Fragment: _Fragment } = _Vue
+    const { openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode, Fragment: _Fragment } = _Vue
 
-    return (_openBlock(), _createBlock(_Fragment, null, [
+    return (_openBlock(), _createElementBlock(_Fragment, null, [
       ok
-        ? (_openBlock(), _createBlock(\\"div\\", { key: 0 }))
+        ? (_openBlock(), _createElementBlock(\\"div\\", { key: 0 }))
         : _createCommentVNode(\\"v-if\\", true),
       orNot
-        ? (_openBlock(), _createBlock(\\"p\\", { key: 1 }))
+        ? (_openBlock(), _createElementBlock(\\"p\\", { key: 1 }))
         : _createCommentVNode(\\"v-if\\", true)
     ], 64 /* STABLE_FRAGMENT */))
   }
@@ -59,13 +59,13 @@ exports[`compiler: v-if codegen template v-if 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { createVNode: _createVNode, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, createCommentVNode: _createCommentVNode } = _Vue
+    const { createElementVNode: _createElementVNode, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode } = _Vue
 
     return ok
-      ? (_openBlock(), _createBlock(_Fragment, { key: 0 }, [
-          _createVNode(\\"div\\"),
+      ? (_openBlock(), _createElementBlock(_Fragment, { key: 0 }, [
+          _createElementVNode(\\"div\\"),
           \\"hello\\",
-          _createVNode(\\"p\\")
+          _createElementVNode(\\"p\\")
         ], 64 /* STABLE_FRAGMENT */))
       : _createCommentVNode(\\"v-if\\", true)
   }
@@ -91,11 +91,11 @@ exports[`compiler: v-if codegen v-if + v-else 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { openBlock: _openBlock, createBlock: _createBlock, createCommentVNode: _createCommentVNode } = _Vue
+    const { openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode } = _Vue
 
     return ok
-      ? (_openBlock(), _createBlock(\\"div\\", { key: 0 }))
-      : (_openBlock(), _createBlock(\\"p\\", { key: 1 }))
+      ? (_openBlock(), _createElementBlock(\\"div\\", { key: 0 }))
+      : (_openBlock(), _createElementBlock(\\"p\\", { key: 1 }))
   }
 }"
 `;
@@ -105,13 +105,13 @@ exports[`compiler: v-if codegen v-if + v-else-if + v-else 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { openBlock: _openBlock, createBlock: _createBlock, createCommentVNode: _createCommentVNode, Fragment: _Fragment } = _Vue
+    const { openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode, Fragment: _Fragment } = _Vue
 
     return ok
-      ? (_openBlock(), _createBlock(\\"div\\", { key: 0 }))
+      ? (_openBlock(), _createElementBlock(\\"div\\", { key: 0 }))
       : orNot
-        ? (_openBlock(), _createBlock(\\"p\\", { key: 1 }))
-        : (_openBlock(), _createBlock(_Fragment, { key: 2 }, [\\"fine\\"], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */))
+        ? (_openBlock(), _createElementBlock(\\"p\\", { key: 1 }))
+        : (_openBlock(), _createElementBlock(_Fragment, { key: 2 }, [\\"fine\\"], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */))
   }
 }"
 `;
@@ -121,12 +121,12 @@ exports[`compiler: v-if codegen v-if + v-else-if 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { openBlock: _openBlock, createBlock: _createBlock, createCommentVNode: _createCommentVNode } = _Vue
+    const { openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode } = _Vue
 
     return ok
-      ? (_openBlock(), _createBlock(\\"div\\", { key: 0 }))
+      ? (_openBlock(), _createElementBlock(\\"div\\", { key: 0 }))
       : orNot
-        ? (_openBlock(), _createBlock(\\"p\\", { key: 1 }))
+        ? (_openBlock(), _createElementBlock(\\"p\\", { key: 1 }))
         : _createCommentVNode(\\"v-if\\", true)
   }
 }"

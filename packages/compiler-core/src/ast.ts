@@ -5,13 +5,12 @@ import {
   CREATE_SLOTS,
   RENDER_LIST,
   OPEN_BLOCK,
-  CREATE_BLOCK,
   FRAGMENT,
-  CREATE_VNODE,
   WITH_DIRECTIVES
 } from './runtimeHelpers'
 import { PropsExpression } from './transforms/transformElement'
 import { ImportItem, TransformContext } from './transform'
+import { getVNodeBlockHelper, getVNodeHelper } from './utils'
 
 // Vue template is a platform-agnostic superset of HTML (syntax only).
 // More namespaces like SVG and MathML are declared by platform specific
@@ -293,6 +292,7 @@ export interface VNodeCall extends Node {
   directives: DirectiveArguments | undefined
   isBlock: boolean
   disableTracking: boolean
+  isComponent: boolean
 }
 
 // JS Node Types ---------------------------------------------------------------
@@ -560,14 +560,15 @@ export function createVNodeCall(
   directives?: VNodeCall['directives'],
   isBlock: VNodeCall['isBlock'] = false,
   disableTracking: VNodeCall['disableTracking'] = false,
+  isComponent: VNodeCall['isComponent'] = false,
   loc = locStub
 ): VNodeCall {
   if (context) {
     if (isBlock) {
       context.helper(OPEN_BLOCK)
-      context.helper(CREATE_BLOCK)
+      context.helper(getVNodeBlockHelper(context.inSSR, isComponent))
     } else {
-      context.helper(CREATE_VNODE)
+      context.helper(getVNodeHelper(context.inSSR, isComponent))
     }
     if (directives) {
       context.helper(WITH_DIRECTIVES)
@@ -584,6 +585,7 @@ export function createVNodeCall(
     directives,
     isBlock,
     disableTracking,
+    isComponent,
     loc
   }
 }

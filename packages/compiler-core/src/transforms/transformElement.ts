@@ -37,11 +37,15 @@ import {
   RESOLVE_COMPONENT,
   RESOLVE_DYNAMIC_COMPONENT,
   MERGE_PROPS,
+  NORMALIZE_CLASS,
+  NORMALIZE_STYLE,
+  NORMALIZE_PROPS,
   TO_HANDLERS,
   TELEPORT,
   KEEP_ALIVE,
   SUSPENSE,
-  UNREF
+  UNREF,
+  GUARD_REACTIVE_PROPS
 } from '../runtimeHelpers'
 import {
   getInnerRange,
@@ -226,6 +230,7 @@ export const transformElement: NodeTransform = (node, context) => {
       vnodeDirectives,
       !!shouldUseBlock,
       false /* disableTracking */,
+      isComponent,
       node.loc
     )
   }
@@ -401,13 +406,23 @@ export function buildProps(
         // skip if the prop is a cached handler or has constant value
         return
       }
+
       if (name === 'ref') {
         hasRef = true
-      } else if (name === 'class' && !isComponent) {
+      } else if (name === 'class') {
         hasClassBinding = true
-      } else if (name === 'style' && !isComponent) {
+      } else if (name === 'style') {
         hasStyleBinding = true
       } else if (name !== 'key' && !dynamicPropNames.includes(name)) {
+        dynamicPropNames.push(name)
+      }
+
+      // treat the dynamic class and style binding of the component as dynamic props
+      if (
+        isComponent &&
+        (name === 'class' || name === 'style') &&
+        !dynamicPropNames.includes(name)
+      ) {
         dynamicPropNames.push(name)
       }
     } else {
@@ -627,10 +642,10 @@ export function buildProps(
   if (hasDynamicKeys) {
     patchFlag |= PatchFlags.FULL_PROPS
   } else {
-    if (hasClassBinding) {
+    if (hasClassBinding && !isComponent) {
       patchFlag |= PatchFlags.CLASS
     }
-    if (hasStyleBinding) {
+    if (hasStyleBinding && !isComponent) {
       patchFlag |= PatchFlags.STYLE
     }
     if (dynamicPropNames.length) {
@@ -645,6 +660,72 @@ export function buildProps(
     (hasRef || hasVnodeHook || runtimeDirectives.length > 0)
   ) {
     patchFlag |= PatchFlags.NEED_PATCH
+  }
+
+  // pre-normalize props, SSR is skipped for now
+  if (!context.inSSR && propsExpression) {
+    switch (propsExpression.type) {
+      case NodeTypes.JS_OBJECT_EXPRESSION:
+        // means that there is no v-bind,
+        // but still need to deal with dynamic key binding
+        let classKeyIndex = -1
+        let styleKeyIndex = -1
+        let dynamicKeyIndex = -1
+
+        for (let i = 0; i < propsExpression.properties.length; i++) {
+          const p = propsExpression.properties[i]
+          if (p.key.type !== NodeTypes.SIMPLE_EXPRESSION) continue
+          if (!isStaticExp(p.key)) dynamicKeyIndex = i
+          if (isStaticExp(p.key) && p.key.content === 'class') classKeyIndex = i
+          if (isStaticExp(p.key) && p.key.content === 'style') styleKeyIndex = i
+        }
+
+        const classProp = propsExpression.properties[classKeyIndex]
+        const styleProp = propsExpression.properties[styleKeyIndex]
+
+        // no dynamic key
+        if (dynamicKeyIndex === -1) {
+          if (classProp && !isStaticExp(classProp.value)) {
+            classProp.value = createCallExpression(
+              context.helper(NORMALIZE_CLASS),
+              [classProp.value]
+            )
+          }
+          if (
+            styleProp &&
+            !isStaticExp(styleProp.value) &&
+            // the static style is compiled into an object,
+            // so use `hasStyleBinding` to ensure that it is a dynamic style binding
+            hasStyleBinding
+          ) {
+            styleProp.value = createCallExpression(
+              context.helper(NORMALIZE_STYLE),
+              [styleProp.value]
+            )
+          }
+        } else {
+          // dynamic key binding, wrap with `normalizeProps`
+          propsExpression = createCallExpression(
+            context.helper(NORMALIZE_PROPS),
+            [propsExpression]
+          )
+        }
+        break
+      case NodeTypes.JS_CALL_EXPRESSION:
+        // mergeProps call, do nothing
+        break
+      default:
+        // single v-bind
+        propsExpression = createCallExpression(
+          context.helper(NORMALIZE_PROPS),
+          [
+            createCallExpression(context.helper(GUARD_REACTIVE_PROPS), [
+              propsExpression
+            ])
+          ]
+        )
+        break
+    }
   }
 
   return {

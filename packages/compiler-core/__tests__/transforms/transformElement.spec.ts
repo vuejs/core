@@ -17,7 +17,11 @@ import {
   RESOLVE_DYNAMIC_COMPONENT,
   SUSPENSE,
   KEEP_ALIVE,
-  BASE_TRANSITION
+  BASE_TRANSITION,
+  NORMALIZE_CLASS,
+  NORMALIZE_STYLE,
+  NORMALIZE_PROPS,
+  GUARD_REACTIVE_PROPS
 } from '../../src/runtimeHelpers'
 import {
   NodeTypes,
@@ -158,11 +162,25 @@ describe('compiler: element transform', () => {
     const { root, node } = parseWithElementTransform(`<div v-bind="obj" />`)
     // single v-bind doesn't need mergeProps
     expect(root.helpers).not.toContain(MERGE_PROPS)
+    expect(root.helpers).toContain(NORMALIZE_PROPS)
+    expect(root.helpers).toContain(GUARD_REACTIVE_PROPS)
 
     // should directly use `obj` in props position
     expect(node.props).toMatchObject({
-      type: NodeTypes.SIMPLE_EXPRESSION,
-      content: `obj`
+      type: NodeTypes.JS_CALL_EXPRESSION,
+      callee: NORMALIZE_PROPS,
+      arguments: [
+        {
+          type: NodeTypes.JS_CALL_EXPRESSION,
+          callee: GUARD_REACTIVE_PROPS,
+          arguments: [
+            {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: `obj`
+            }
+          ]
+        }
+      ]
     })
   })
 
@@ -654,7 +672,7 @@ describe('compiler: element transform', () => {
   })
 
   test(`props merging: style`, () => {
-    const { node } = parseWithElementTransform(
+    const { node, root } = parseWithElementTransform(
       `<div style="color: green" :style="{ color: 'red' }" />`,
       {
         nodeTransforms: [transformStyle, transformElement],
@@ -663,6 +681,7 @@ describe('compiler: element transform', () => {
         }
       }
     )
+    expect(root.helpers).toContain(NORMALIZE_STYLE)
     expect(node.props).toMatchObject({
       type: NodeTypes.JS_OBJECT_EXPRESSION,
       properties: [
@@ -674,17 +693,23 @@ describe('compiler: element transform', () => {
             isStatic: true
           },
           value: {
-            type: NodeTypes.JS_ARRAY_EXPRESSION,
-            elements: [
+            type: NodeTypes.JS_CALL_EXPRESSION,
+            callee: NORMALIZE_STYLE,
+            arguments: [
               {
-                type: NodeTypes.SIMPLE_EXPRESSION,
-                content: `{"color":"green"}`,
-                isStatic: false
-              },
-              {
-                type: NodeTypes.SIMPLE_EXPRESSION,
-                content: `{ color: 'red' }`,
-                isStatic: false
+                type: NodeTypes.JS_ARRAY_EXPRESSION,
+                elements: [
+                  {
+                    type: NodeTypes.SIMPLE_EXPRESSION,
+                    content: `{"color":"green"}`,
+                    isStatic: false
+                  },
+                  {
+                    type: NodeTypes.SIMPLE_EXPRESSION,
+                    content: `{ color: 'red' }`,
+                    isStatic: false
+                  }
+                ]
               }
             ]
           }
@@ -694,7 +719,7 @@ describe('compiler: element transform', () => {
   })
 
   test(`props merging: class`, () => {
-    const { node } = parseWithElementTransform(
+    const { node, root } = parseWithElementTransform(
       `<div class="foo" :class="{ bar: isBar }" />`,
       {
         directiveTransforms: {
@@ -702,6 +727,7 @@ describe('compiler: element transform', () => {
         }
       }
     )
+    expect(root.helpers).toContain(NORMALIZE_CLASS)
     expect(node.props).toMatchObject({
       type: NodeTypes.JS_OBJECT_EXPRESSION,
       properties: [
@@ -713,17 +739,23 @@ describe('compiler: element transform', () => {
             isStatic: true
           },
           value: {
-            type: NodeTypes.JS_ARRAY_EXPRESSION,
-            elements: [
+            type: NodeTypes.JS_CALL_EXPRESSION,
+            callee: NORMALIZE_CLASS,
+            arguments: [
               {
-                type: NodeTypes.SIMPLE_EXPRESSION,
-                content: `foo`,
-                isStatic: true
-              },
-              {
-                type: NodeTypes.SIMPLE_EXPRESSION,
-                content: `{ bar: isBar }`,
-                isStatic: false
+                type: NodeTypes.JS_ARRAY_EXPRESSION,
+                elements: [
+                  {
+                    type: NodeTypes.SIMPLE_EXPRESSION,
+                    content: `foo`,
+                    isStatic: true
+                  },
+                  {
+                    type: NodeTypes.SIMPLE_EXPRESSION,
+                    content: `{ bar: isBar }`,
+                    isStatic: false
+                  }
+                ]
               }
             ]
           }
