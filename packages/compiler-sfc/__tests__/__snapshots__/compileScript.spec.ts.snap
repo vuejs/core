@@ -214,7 +214,7 @@ return { ref }
 `;
 
 exports[`SFC compile <script setup> inlineTemplate mode avoid unref() when necessary 1`] = `
-"import { unref as _unref, toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, withCtx as _withCtx, createComponentVNode as _createComponentVNode, createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
+"import { unref as _unref, toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, withCtx as _withCtx, createVNode as _createVNode, createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 
 import { ref } from 'vue'
         import Foo, { bar } from './Foo.vue'
@@ -232,7 +232,7 @@ export default {
         
 return (_ctx, _cache) => {
   return (_openBlock(), _createElementBlock(_Fragment, null, [
-    _createComponentVNode(Foo, null, {
+    _createVNode(Foo, null, {
       default: _withCtx(() => [
         _createTextVNode(_toDisplayString(_unref(bar)), 1 /* TEXT */)
       ]),
@@ -247,7 +247,7 @@ return (_ctx, _cache) => {
 `;
 
 exports[`SFC compile <script setup> inlineTemplate mode referencing scope components and directives 1`] = `
-"import { unref as _unref, createElementVNode as _createElementVNode, withDirectives as _withDirectives, createComponentVNode as _createComponentVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
+"import { unref as _unref, createElementVNode as _createElementVNode, withDirectives as _withDirectives, createVNode as _createVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 
 import ChildComp from './Child.vue'
         import SomeOtherComp from './Other.vue'
@@ -263,8 +263,8 @@ return (_ctx, _cache) => {
     _withDirectives(_createElementVNode(\\"div\\", null, null, 512 /* NEED_PATCH */), [
       [_unref(myDir)]
     ]),
-    _createComponentVNode(ChildComp),
-    _createComponentVNode(SomeOtherComp)
+    _createVNode(ChildComp),
+    _createVNode(SomeOtherComp)
   ], 64 /* STABLE_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */))
 }
 }

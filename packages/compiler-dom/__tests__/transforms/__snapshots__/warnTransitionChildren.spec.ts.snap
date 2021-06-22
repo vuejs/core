@@ -5,9 +5,9 @@ exports[`the v-if/else-if/else branchs in Transition should ignore comments 1`] 
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode, createElementVNode: _createElementVNode, Fragment: _Fragment, Transition: _Transition, withCtx: _withCtx, createComponentBlock: _createComponentBlock } = _Vue
+    const { openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode, createElementVNode: _createElementVNode, Fragment: _Fragment, Transition: _Transition, withCtx: _withCtx, createBlock: _createBlock } = _Vue
 
-    return (_openBlock(), _createComponentBlock(_Transition, null, {
+    return (_openBlock(), _createBlock(_Transition, null, {
       default: _withCtx(() => [
         a
           ? (_openBlock(), _createElementBlock(\\"div\\", { key: 0 }, \\"hey\\", null, null, 9 /* ELEMENT, TEXT_CHILDREN */))

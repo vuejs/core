@@ -247,9 +247,7 @@ export {
   createCommentVNode,
   createStaticVNode,
   createElementVNode,
-  createComponentVNode,
   createElementBlock,
-  createComponentBlock,
   guardReactiveProps
 } from './vnode'
 export {

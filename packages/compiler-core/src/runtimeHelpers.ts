@@ -6,14 +6,8 @@ export const BASE_TRANSITION = Symbol(__DEV__ ? `BaseTransition` : ``)
 export const OPEN_BLOCK = Symbol(__DEV__ ? `openBlock` : ``)
 export const CREATE_BLOCK = Symbol(__DEV__ ? `createBlock` : ``)
 export const CREATE_ELEMENT_BLOCK = Symbol(__DEV__ ? `createElementBlock` : ``)
-export const CREATE_COMPONENT_BLOCK = Symbol(
-  __DEV__ ? `createComponentBlock` : ``
-)
 export const CREATE_VNODE = Symbol(__DEV__ ? `createVNode` : ``)
 export const CREATE_ELEMENT_VNODE = Symbol(__DEV__ ? `createElementVNode` : ``)
-export const CREATE_COMPONENT_VNODE = Symbol(
-  __DEV__ ? `createComponentVNode` : ``
-)
 export const CREATE_COMMENT = Symbol(__DEV__ ? `createCommentVNode` : ``)
 export const CREATE_TEXT = Symbol(__DEV__ ? `createTextVNode` : ``)
 export const CREATE_STATIC = Symbol(__DEV__ ? `createStaticVNode` : ``)
@@ -57,10 +51,8 @@ export const helperNameMap: any = {
   [OPEN_BLOCK]: `openBlock`,
   [CREATE_BLOCK]: `createBlock`,
   [CREATE_ELEMENT_BLOCK]: `createElementBlock`,
-  [CREATE_COMPONENT_BLOCK]: `createComponentBlock`,
   [CREATE_VNODE]: `createVNode`,
   [CREATE_ELEMENT_VNODE]: `createElementVNode`,
-  [CREATE_COMPONENT_VNODE]: `createComponentVNode`,
   [CREATE_COMMENT]: `createCommentVNode`,
   [CREATE_TEXT]: `createTextVNode`,
   [CREATE_STATIC]: `createStaticVNode`,

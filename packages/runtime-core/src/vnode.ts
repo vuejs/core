@@ -242,9 +242,7 @@ let isBlockTreeEnabled = 1
 export function setBlockTracking(value: number) {
   isBlockTreeEnabled += value
 }
-/**
- * @private
- */
+
 function setupBlock(vnode: VNode) {
   // save current block children on the block vnode
   vnode.dynamicChildren =
@@ -256,40 +254,9 @@ function setupBlock(vnode: VNode) {
   if (isBlockTreeEnabled > 0 && currentBlock) {
     currentBlock.push(vnode)
   }
+  return vnode
 }
-/**
- * @private
- */
-function trackVNode(
-  vnode: VNode,
-  isBlockNode: boolean,
-  patchFlag: number,
-  shapeFlag: number
-) {
-  if (
-    isBlockTreeEnabled > 0 &&
-    // avoid a block node from tracking itself
-    !isBlockNode &&
-    // has current parent block
-    currentBlock &&
-    // presence of a patch flag indicates this node needs patching on updates.
-    // component nodes also should always be patched, because even if the
-    // component doesn't need to update, it needs to persist the instance on to
-    // the next vnode so that it can be properly unmounted later.
-    (patchFlag > 0 || shapeFlag & ShapeFlags.COMPONENT) &&
-    // the EVENTS flag is only for hydration and if it is the only flag, the
-    // vnode should not be considered dynamic due to handler caching.
-    patchFlag !== PatchFlags.HYDRATE_EVENTS
-  ) {
-    currentBlock.push(vnode)
-  }
 
-  if (__COMPAT__) {
-    convertLegacyVModelProps(vnode)
-    convertLegacyRefInFor(vnode)
-    defineLegacyVNodeProperties(vnode)
-  }
-}
 /**
  * @private
  */
@@ -301,46 +268,17 @@ export function createElementBlock(
   dynamicProps?: string[],
   shapeFlag?: number
 ) {
-  const vnode = createElementVNode(
-    type,
-    props,
-    children,
-    patchFlag,
-    dynamicProps,
-    shapeFlag,
-    true /* isBlock */
+  return setupBlock(
+    createBaseVNode(
+      type,
+      props,
+      children,
+      patchFlag,
+      dynamicProps,
+      shapeFlag,
+      true /* isBlock */
+    )
   )
-  setupBlock(vnode)
-  return vnode
-}
-
-/**
- * @private
- */
-export function createComponentBlock(
-  type:
-    | Component
-    | VNode
-    | typeof NULL_DYNAMIC_COMPONENT
-    | typeof TeleportImpl
-    | typeof SuspenseImpl,
-  props?: Record<string, any> | null,
-  children?: any,
-  patchFlag?: number,
-  dynamicProps?: string[],
-  shapeFlag?: number
-) {
-  const vnode = createComponentVNode(
-    type,
-    props,
-    children,
-    patchFlag,
-    dynamicProps,
-    shapeFlag,
-    true /* isBlock */
-  )
-  setupBlock(vnode)
-  return vnode
 }
 
 /**
@@ -357,16 +295,16 @@ export function createBlock(
   patchFlag?: number,
   dynamicProps?: string[]
 ): VNode {
-  const vnode = createVNode(
-    type,
-    props,
-    children,
-    patchFlag,
-    dynamicProps,
-    true /* isBlock: prevent a block from tracking itself */
+  return setupBlock(
+    createVNode(
+      type,
+      props,
+      children,
+      patchFlag,
+      dynamicProps,
+      true /* isBlock: prevent a block from tracking itself */
+    )
   )
-  setupBlock(vnode)
-  return vnode
 }
 
 export function isVNode(value: any): value is VNode {
@@ -425,14 +363,17 @@ const normalizeRef = ({ ref }: VNodeProps): VNodeNormalizedRefAtom | null => {
     : null) as any
 }
 
-function createPlainVNode(
+function createBaseVNode(
   type: VNodeTypes | ClassComponent | typeof NULL_DYNAMIC_COMPONENT,
   props: (Data & VNodeProps) | null = null,
   children: unknown = null,
-  patchFlag: number = 0,
-  dynamicProps: string[] | null = null
+  patchFlag = 0,
+  dynamicProps: string[] | null = null,
+  shapeFlag = ShapeFlags.ELEMENT,
+  isBlockNode = false,
+  needChildrenNormalization = false
 ) {
-  return {
+  const vnode = {
     __v_isVNode: true,
     __v_skip: true,
     type,
@@ -453,13 +394,55 @@ function createPlainVNode(
     target: null,
     targetAnchor: null,
     staticCount: 0,
-    shapeFlag: 0,
+    shapeFlag,
     patchFlag,
     dynamicProps,
     dynamicChildren: null,
     appContext: null
   } as VNode
+
+  if (needChildrenNormalization) {
+    normalizeChildren(vnode, children)
+    // normalize suspense children
+    if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
+      ;(type as typeof SuspenseImpl).normalize(vnode)
+    }
+  }
+
+  // validate key
+  if (__DEV__ && vnode.key !== vnode.key) {
+    warn(`VNode created with invalid key (NaN). VNode type:`, vnode.type)
+  }
+
+  // track vnode for block tree
+  if (
+    isBlockTreeEnabled > 0 &&
+    // avoid a block node from tracking itself
+    !isBlockNode &&
+    // has current parent block
+    currentBlock &&
+    // presence of a patch flag indicates this node needs patching on updates.
+    // component nodes also should always be patched, because even if the
+    // component doesn't need to update, it needs to persist the instance on to
+    // the next vnode so that it can be properly unmounted later.
+    (vnode.patchFlag > 0 || shapeFlag & ShapeFlags.COMPONENT) &&
+    // the EVENTS flag is only for hydration and if it is the only flag, the
+    // vnode should not be considered dynamic due to handler caching.
+    vnode.patchFlag !== PatchFlags.HYDRATE_EVENTS
+  ) {
+    currentBlock.push(vnode)
+  }
+
+  if (__COMPAT__) {
+    convertLegacyVModelProps(vnode)
+    convertLegacyRefInFor(vnode)
+    defineLegacyVNodeProperties(vnode)
+  }
+
+  return vnode
 }
+
+export { createBaseVNode as createElementVNode }
 
 export const createVNode = (__DEV__
   ? createVNodeWithArgsTransform
@@ -494,6 +477,11 @@ function _createVNode(
   // class component normalization.
   if (isClassComponent(type)) {
     type = type.__vccOpts
+  }
+
+  // 2.x async/functional component compat
+  if (__COMPAT__) {
+    type = convertLegacyComponent(type, currentRenderingInstance)
   }
 
   // class & style normalization.
@@ -539,131 +527,16 @@ function _createVNode(
     )
   }
 
-  const vnode = createPlainVNode(type, props, children, patchFlag, dynamicProps)
-  vnode.shapeFlag = shapeFlag
-
-  // validate key
-  if (__DEV__ && vnode.key !== vnode.key) {
-    warn(`VNode created with invalid key (NaN). VNode type:`, vnode.type)
-  }
-
-  normalizeChildren(vnode, children)
-
-  // normalize suspense children
-  if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
-    ;(type as typeof SuspenseImpl).normalize(vnode)
-  }
-
-  trackVNode(vnode, isBlockNode, patchFlag, shapeFlag)
-
-  return vnode
-}
-
-export function createElementVNode(
-  type: string,
-  props: (Data & VNodeProps) | null = null,
-  children: Exclude<VNodeNormalizedChildren, RawSlots> = null,
-  patchFlag: number = 0,
-  dynamicProps: string[] | null = null,
-  shapeFlag = ShapeFlags.ELEMENT,
-  isBlockNode = false
-) {
-  const vnode = createPlainVNode(type, props, children, patchFlag, dynamicProps)
-  vnode.shapeFlag = shapeFlag
-  trackVNode(vnode, isBlockNode, patchFlag, shapeFlag)
-  return vnode
-}
-
-export function createComponentVNode(
-  type: VNodeTypes | ClassComponent | typeof NULL_DYNAMIC_COMPONENT,
-  props: (Data & VNodeProps) | null = null,
-  children: Exclude<VNodeNormalizedChildren, RawSlots> = null,
-  patchFlag: number = 0,
-  dynamicProps: string[] | null = null,
-  shapeFlag: ShapeFlags = 0,
-  isBlockNode = false
-) {
-  if (!type || type === NULL_DYNAMIC_COMPONENT) {
-    if (__DEV__ && !type) {
-      warn(`Invalid vnode type when creating vnode: ${type}.`)
-    }
-    type = Comment
-  }
-
-  if (isVNode(type)) {
-    const cloned = cloneVNode(type, props, true /* mergeRef: true */)
-    if (children) {
-      normalizeChildren(cloned, children)
-    }
-    return cloned
-  }
-
-  // class component normalization.
-  if (isClassComponent(type)) {
-    type = type.__vccOpts
-  }
-
-  // 2.x async/functional component compat
-  if (__COMPAT__) {
-    type = convertLegacyComponent(type, currentRenderingInstance)
-  }
-
-  // class & style normalization.
-  if (props) {
-    // for reactive or proxy objects, we need to clone it to enable mutation.
-    props = guardReactiveProps(props)!
-    let { class: klass, style } = props
-    if (klass && !isString(klass)) {
-      props.class = normalizeClass(klass)
-    }
-    if (isObject(style)) {
-      // reactive state objects need to be cloned since they are likely to be
-      // mutated
-      if (isProxy(style) && !isArray(style)) {
-        style = extend({}, style)
-      }
-      props.style = normalizeStyle(style)
-    }
-  }
-
-  // Suspense and Teleport analysis at compile time
-  if (!shapeFlag) {
-    shapeFlag = isObject(type)
-      ? ShapeFlags.STATEFUL_COMPONENT
-      : isFunction(type)
-        ? ShapeFlags.FUNCTIONAL_COMPONENT
-        : 0
-  }
-
-  if (__DEV__ && shapeFlag & ShapeFlags.STATEFUL_COMPONENT && isProxy(type)) {
-    type = toRaw(type)
-    warn(
-      `Vue received a Component which was made a reactive object. This can ` +
-        `lead to unnecessary performance overhead, and should be avoided by ` +
-        `marking the component with \`markRaw\` or using \`shallowRef\` ` +
-        `instead of \`ref\`.`,
-      `\nComponent that was made reactive: `,
-      type
-    )
-  }
-
-  const vnode = createPlainVNode(type, props, children, patchFlag, dynamicProps)
-  vnode.shapeFlag = shapeFlag
-
-  // validate key
-  if (__DEV__ && vnode.key !== vnode.key) {
-    warn(`VNode created with invalid key (NaN). VNode type:`, vnode.type)
-  }
-
-  normalizeChildren(vnode, children)
-
-  // normalize suspense children
-  if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
-    ;(type as typeof SuspenseImpl).normalize(vnode)
-  }
-
-  trackVNode(vnode, isBlockNode, patchFlag, shapeFlag)
-  return vnode
+  return createBaseVNode(
+    type,
+    props,
+    children,
+    patchFlag,
+    dynamicProps,
+    shapeFlag,
+    isBlockNode,
+    true
+  )
 }
 
 export function guardReactiveProps(props: (Data & VNodeProps) | null) {

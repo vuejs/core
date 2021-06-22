@@ -22,14 +22,14 @@ exports[`compiler: v-once transform on component 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { setBlockTracking: _setBlockTracking, resolveComponent: _resolveComponent, createComponentVNode: _createComponentVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
+    const { setBlockTracking: _setBlockTracking, resolveComponent: _resolveComponent, createVNode: _createVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     const _component_Comp = _resolveComponent(\\"Comp\\")
 
     return (_openBlock(), _createElementBlock(\\"div\\", null, [
       _cache[1] || (
         _setBlockTracking(-1),
-        _cache[1] = _createComponentVNode(_component_Comp, { id: foo }, null, 8 /* PROPS */, [\\"id\\"]),
+        _cache[1] = _createVNode(_component_Comp, { id: foo }, null, 8 /* PROPS */, [\\"id\\"]),
         _setBlockTracking(1),
         _cache[1]
       )

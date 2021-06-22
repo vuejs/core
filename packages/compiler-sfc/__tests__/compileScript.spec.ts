@@ -218,9 +218,9 @@ const myEmit = defineEmit(['foo', 'bar'])
         { inlineTemplate: true }
       )
       expect(content).toMatch('[_unref(myDir)]')
-      expect(content).toMatch('_createComponentVNode(ChildComp)')
+      expect(content).toMatch('_createVNode(ChildComp)')
       // kebab-case component support
-      expect(content).toMatch('_createComponentVNode(SomeOtherComp)')
+      expect(content).toMatch('_createVNode(SomeOtherComp)')
       assertCode(content)
     })
 
@@ -245,7 +245,7 @@ const myEmit = defineEmit(['foo', 'bar'])
         { inlineTemplate: true }
       )
       // no need to unref vue component import
-      expect(content).toMatch(`createComponentVNode(Foo,`)
+      expect(content).toMatch(`createVNode(Foo,`)
       // #2699 should unref named imports from .vue
       expect(content).toMatch(`unref(bar)`)
       // should unref other imports

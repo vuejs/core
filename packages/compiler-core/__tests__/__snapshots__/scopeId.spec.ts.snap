@@ -19,13 +19,13 @@ export const render = /*#__PURE__*/_withId((_ctx, _cache) => {
 `;
 
 exports[`scopeId compiler support should wrap default slot 1`] = `
-"import { createElementVNode as _createElementVNode, resolveComponent as _resolveComponent, withCtx as _withCtx, openBlock as _openBlock, createComponentBlock as _createComponentBlock, withScopeId as _withScopeId } from \\"vue\\"
+"import { createElementVNode as _createElementVNode, resolveComponent as _resolveComponent, withCtx as _withCtx, openBlock as _openBlock, createBlock as _createBlock, withScopeId as _withScopeId } from \\"vue\\"
 const _withId = /*#__PURE__*/_withScopeId(\\"test\\")
 
 export const render = /*#__PURE__*/_withId((_ctx, _cache) => {
   const _component_Child = _resolveComponent(\\"Child\\")
 
-  return (_openBlock(), _createComponentBlock(_component_Child, null, {
+  return (_openBlock(), _createBlock(_component_Child, null, {
     default: _withId(() => [
       _createElementVNode(\\"div\\")
     ]),
@@ -35,13 +35,13 @@ export const render = /*#__PURE__*/_withId((_ctx, _cache) => {
 `;
 
 exports[`scopeId compiler support should wrap dynamic slots 1`] = `
-"import { createElementVNode as _createElementVNode, resolveComponent as _resolveComponent, withCtx as _withCtx, renderList as _renderList, createSlots as _createSlots, openBlock as _openBlock, createComponentBlock as _createComponentBlock, withScopeId as _withScopeId } from \\"vue\\"
+"import { createElementVNode as _createElementVNode, resolveComponent as _resolveComponent, withCtx as _withCtx, renderList as _renderList, createSlots as _createSlots, openBlock as _openBlock, createBlock as _createBlock, withScopeId as _withScopeId } from \\"vue\\"
 const _withId = /*#__PURE__*/_withScopeId(\\"test\\")
 
 export const render = /*#__PURE__*/_withId((_ctx, _cache) => {
   const _component_Child = _resolveComponent(\\"Child\\")
 
-  return (_openBlock(), _createComponentBlock(_component_Child, null, _createSlots({ _: 2 /* DYNAMIC */ }, [
+  return (_openBlock(), _createBlock(_component_Child, null, _createSlots({ _: 2 /* DYNAMIC */ }, [
     (_ctx.ok)
       ? {
           name: \\"foo\\",
@@ -63,13 +63,13 @@ export const render = /*#__PURE__*/_withId((_ctx, _cache) => {
 `;
 
 exports[`scopeId compiler support should wrap named slots 1`] = `
-"import { toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, createElementVNode as _createElementVNode, resolveComponent as _resolveComponent, withCtx as _withCtx, openBlock as _openBlock, createComponentBlock as _createComponentBlock, withScopeId as _withScopeId } from \\"vue\\"
+"import { toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, createElementVNode as _createElementVNode, resolveComponent as _resolveComponent, withCtx as _withCtx, openBlock as _openBlock, createBlock as _createBlock, withScopeId as _withScopeId } from \\"vue\\"
 const _withId = /*#__PURE__*/_withScopeId(\\"test\\")
 
 export const render = /*#__PURE__*/_withId((_ctx, _cache) => {
   const _component_Child = _resolveComponent(\\"Child\\")
 
-  return (_openBlock(), _createComponentBlock(_component_Child, null, {
+  return (_openBlock(), _createBlock(_component_Child, null, {
     foo: _withId(({ msg }) => [
       _createTextVNode(_toDisplayString(msg), 1 /* TEXT */)
     ]),

@@ -34,10 +34,8 @@ import {
   NORMALIZE_PROPS,
   GUARD_REACTIVE_PROPS,
   CREATE_BLOCK,
-  CREATE_COMPONENT_BLOCK,
   CREATE_ELEMENT_BLOCK,
   CREATE_VNODE,
-  CREATE_COMPONENT_VNODE,
   CREATE_ELEMENT_VNODE
 } from './runtimeHelpers'
 import { isString, isObject, hyphenate, extend } from '@vue/shared'
@@ -225,19 +223,11 @@ export function isSlotOutlet(
 }
 
 export function getVNodeHelper(ssr: boolean, isComponent: boolean) {
-  return ssr
-    ? CREATE_VNODE
-    : isComponent
-      ? CREATE_COMPONENT_VNODE
-      : CREATE_ELEMENT_VNODE
+  return ssr || isComponent ? CREATE_VNODE : CREATE_ELEMENT_VNODE
 }
 
 export function getVNodeBlockHelper(ssr: boolean, isComponent: boolean) {
-  return ssr
-    ? CREATE_BLOCK
-    : isComponent
-      ? CREATE_COMPONENT_BLOCK
-      : CREATE_ELEMENT_BLOCK
+  return ssr || isComponent ? CREATE_BLOCK : CREATE_ELEMENT_BLOCK
 }
 
 const propsHelperSet = new Set([NORMALIZE_PROPS, GUARD_REACTIVE_PROPS])
