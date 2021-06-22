@@ -54,6 +54,20 @@ return { a }
 }"
 `;
 
+exports[`SFC compile <script setup> defineEmit() (deprecated) 1`] = `
+"export default {
+  expose: [],
+  emits: ['foo', 'bar'],
+  setup(__props, { emit: myEmit }) {
+
+
+
+return { myEmit }
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> defineEmits() 1`] = `
 "export default {
   expose: [],
