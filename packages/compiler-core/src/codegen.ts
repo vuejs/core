@@ -30,6 +30,8 @@ import { SourceMapGenerator, RawSourceMap } from 'source-map'
 import {
   advancePositionWithMutation,
   assert,
+  getVNodeBlockHelper,
+  getVNodeHelper,
   isSimpleIdentifier,
   toValidAssetId
 } from './utils'
@@ -47,7 +49,7 @@ import {
   POP_SCOPE_ID,
   WITH_SCOPE_ID,
   WITH_DIRECTIVES,
-  CREATE_BLOCK,
+  CREATE_ELEMENT_VNODE,
   OPEN_BLOCK,
   CREATE_STATIC,
   WITH_CTX,
@@ -96,7 +98,8 @@ function createCodegenContext(
     runtimeGlobalName = `Vue`,
     runtimeModuleName = `vue`,
     ssr = false,
-    isTS = false
+    isTS = false,
+    inSSR = false
   }: CodegenOptions
 ): CodegenContext {
   const context: CodegenContext = {
@@ -110,6 +113,7 @@ function createCodegenContext(
     runtimeModuleName,
     ssr,
     isTS,
+    inSSR,
     source: ast.loc.source,
     code: ``,
     column: 1,
@@ -218,7 +222,6 @@ export function generate(
   } else {
     genFunctionPreamble(ast, preambleContext)
   }
-
   // enter render function
   const functionName = ssr ? `ssrRender` : `render`
   const args = ssr ? ['_ctx', '_push', '_parent', '_attrs'] : ['_ctx', '_cache']
@@ -355,6 +358,7 @@ function genFunctionPreamble(ast: RootNode, context: CodegenContext) {
       if (ast.hoists.length) {
         const staticHelpers = [
           CREATE_VNODE,
+          CREATE_ELEMENT_VNODE,
           CREATE_COMMENT,
           CREATE_TEXT,
           CREATE_STATIC
@@ -754,7 +758,8 @@ function genVNodeCall(node: VNodeCall, context: CodegenContext) {
     dynamicProps,
     directives,
     isBlock,
-    disableTracking
+    disableTracking,
+    isComponent
   } = node
   if (directives) {
     push(helper(WITH_DIRECTIVES) + `(`)
@@ -765,7 +770,10 @@ function genVNodeCall(node: VNodeCall, context: CodegenContext) {
   if (pure) {
     push(PURE_ANNOTATION)
   }
-  push(helper(isBlock ? CREATE_BLOCK : CREATE_VNODE) + `(`, node)
+  const callHelper: symbol = isBlock
+    ? getVNodeBlockHelper(context.inSSR, isComponent)
+    : getVNodeHelper(context.inSSR, isComponent)
+  push(helper(callHelper) + `(`, node)
   genNodeList(
     genNullableArgs([tag, props, children, patchFlag, dynamicProps]),
     context

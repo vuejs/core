@@ -73,10 +73,10 @@ describe('scopeId compiler support', () => {
     expect(code).toMatch(
       [
         `_pushScopeId("test")`,
-        `const _hoisted_1 = /*#__PURE__*/_createVNode("div", null, "hello", ${genFlagText(
+        `const _hoisted_1 = /*#__PURE__*/_createElementVNode("div", null, "hello", ${genFlagText(
           PatchFlags.HOISTED
         )})`,
-        `const _hoisted_2 = /*#__PURE__*/_createVNode("div", null, "world", ${genFlagText(
+        `const _hoisted_2 = /*#__PURE__*/_createElementVNode("div", null, "world", ${genFlagText(
           PatchFlags.HOISTED
         )})`,
         `_popScopeId()`

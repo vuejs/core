@@ -27,14 +27,15 @@ import {
 import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
+import { FRAGMENT, CREATE_COMMENT, OPEN_BLOCK } from '../runtimeHelpers'
 import {
-  CREATE_BLOCK,
-  FRAGMENT,
-  CREATE_COMMENT,
-  OPEN_BLOCK,
-  CREATE_VNODE
-} from '../runtimeHelpers'
-import { injectProp, findDir, findProp, isBuiltInType } from '../utils'
+  injectProp,
+  findDir,
+  findProp,
+  isBuiltInType,
+  getVNodeHelper,
+  getVNodeBlockHelper
+} from '../utils'
 import { PatchFlags, PatchFlagNames } from '@vue/shared'
 
 export const transformIf = createStructuralDirectiveTransform(
@@ -278,6 +279,7 @@ function createChildrenCodegenNode(
         undefined,
         true,
         false,
+        false /* isComponent */,
         branch.loc
       )
     }
@@ -286,10 +288,10 @@ function createChildrenCodegenNode(
       .codegenNode as BlockCodegenNode
     // Change createVNode to createBlock.
     if (vnodeCall.type === NodeTypes.VNODE_CALL && !vnodeCall.isBlock) {
-      removeHelper(CREATE_VNODE)
+      removeHelper(getVNodeHelper(context.inSSR, vnodeCall.isComponent))
       vnodeCall.isBlock = true
       helper(OPEN_BLOCK)
-      helper(CREATE_BLOCK)
+      helper(getVNodeBlockHelper(context.inSSR, vnodeCall.isComponent))
     }
     // inject branch key
     injectProp(vnodeCall, keyProperty, context)

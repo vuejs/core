@@ -268,7 +268,7 @@ return { ref }
 `;
 
 exports[`SFC compile <script setup> inlineTemplate mode avoid unref() when necessary 1`] = `
-"import { unref as _unref, toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, withCtx as _withCtx, createVNode as _createVNode, Fragment as _Fragment, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
+"import { unref as _unref, toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, withCtx as _withCtx, createVNode as _createVNode, createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 
 import { ref } from 'vue'
         import Foo, { bar } from './Foo.vue'
@@ -284,14 +284,14 @@ export default {
         function fn() {}
         
 return (_ctx, _cache) => {
-  return (_openBlock(), _createBlock(_Fragment, null, [
+  return (_openBlock(), _createElementBlock(_Fragment, null, [
     _createVNode(Foo, null, {
       default: _withCtx(() => [
         _createTextVNode(_toDisplayString(_unref(bar)), 1 /* TEXT */)
       ]),
       _: 1 /* STABLE */
     }),
-    _createVNode(\\"div\\", { onClick: fn }, _toDisplayString(count.value) + \\" \\" + _toDisplayString(constant) + \\" \\" + _toDisplayString(_unref(maybe)) + \\" \\" + _toDisplayString(_unref(lett)) + \\" \\" + _toDisplayString(_unref(other)), 1 /* TEXT */)
+    _createElementVNode(\\"div\\", { onClick: fn }, _toDisplayString(count.value) + \\" \\" + _toDisplayString(constant) + \\" \\" + _toDisplayString(_unref(maybe)) + \\" \\" + _toDisplayString(_unref(lett)) + \\" \\" + _toDisplayString(_unref(other)), 1 /* TEXT */)
   ], 64 /* STABLE_FRAGMENT */))
 }
 }
@@ -300,7 +300,7 @@ return (_ctx, _cache) => {
 `;
 
 exports[`SFC compile <script setup> inlineTemplate mode referencing scope components and directives 1`] = `
-"import { unref as _unref, createVNode as _createVNode, withDirectives as _withDirectives, Fragment as _Fragment, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
+"import { unref as _unref, createElementVNode as _createElementVNode, withDirectives as _withDirectives, createVNode as _createVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 
 import ChildComp from './Child.vue'
         import SomeOtherComp from './Other.vue'
@@ -311,8 +311,8 @@ export default {
 
         
 return (_ctx, _cache) => {
-  return (_openBlock(), _createBlock(_Fragment, null, [
-    _withDirectives(_createVNode(\\"div\\", null, null, 512 /* NEED_PATCH */), [
+  return (_openBlock(), _createElementBlock(_Fragment, null, [
+    _withDirectives(_createElementVNode(\\"div\\", null, null, 512 /* NEED_PATCH */), [
       [_unref(vMyDir)]
     ]),
     _createVNode(ChildComp),
@@ -325,7 +325,7 @@ return (_ctx, _cache) => {
 `;
 
 exports[`SFC compile <script setup> inlineTemplate mode should not wrap render fn with withId when having scoped styles 1`] = `
-"import { toDisplayString as _toDisplayString, openBlock as _openBlock, createBlock as _createBlock, withScopeId as _withScopeId } from \\"vue\\"
+"import { toDisplayString as _toDisplayString, openBlock as _openBlock, createElementBlock as _createElementBlock, withScopeId as _withScopeId } from \\"vue\\"
 const _withId = /*#__PURE__*/_withScopeId(\\"data-v-xxxxxxxx\\")
 
 
@@ -335,7 +335,7 @@ export default {
         const msg = 1
         
 return (_ctx, _cache) => {
-  return (_openBlock(), _createBlock(\\"h1\\", null, _toDisplayString(msg)))
+  return (_openBlock(), _createElementBlock(\\"h1\\", null, _toDisplayString(msg)))
 }
 }
 
@@ -343,9 +343,9 @@ return (_ctx, _cache) => {
 `;
 
 exports[`SFC compile <script setup> inlineTemplate mode should work 1`] = `
-"import { toDisplayString as _toDisplayString, createVNode as _createVNode, Fragment as _Fragment, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
+"import { toDisplayString as _toDisplayString, createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 
-const _hoisted_1 = /*#__PURE__*/_createVNode(\\"div\\", null, \\"static\\", -1 /* HOISTED */)
+const _hoisted_1 = /*#__PURE__*/_createElementVNode(\\"div\\", null, \\"static\\", -1 /* HOISTED */)
 
 import { ref } from 'vue'
         
@@ -355,8 +355,8 @@ export default {
         const count = ref(0)
         
 return (_ctx, _cache) => {
-  return (_openBlock(), _createBlock(_Fragment, null, [
-    _createVNode(\\"div\\", null, _toDisplayString(count.value), 1 /* TEXT */),
+  return (_openBlock(), _createElementBlock(_Fragment, null, [
+    _createElementVNode(\\"div\\", null, _toDisplayString(count.value), 1 /* TEXT */),
     _hoisted_1
   ], 64 /* STABLE_FRAGMENT */))
 }
@@ -399,7 +399,7 @@ return (_ctx, _push, _parent, _attrs) => {
 `;
 
 exports[`SFC compile <script setup> inlineTemplate mode template assignment expression codegen 1`] = `
-"import { createVNode as _createVNode, isRef as _isRef, Fragment as _Fragment, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
+"import { createElementVNode as _createElementVNode, isRef as _isRef, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 
 import { ref } from 'vue'
         
@@ -412,20 +412,20 @@ export default {
         let v = ref(1)
         
 return (_ctx, _cache) => {
-  return (_openBlock(), _createBlock(_Fragment, null, [
-    _createVNode(\\"div\\", {
+  return (_openBlock(), _createElementBlock(_Fragment, null, [
+    _createElementVNode(\\"div\\", {
       onClick: _cache[1] || (_cache[1] = $event => (count.value = 1))
     }),
-    _createVNode(\\"div\\", {
+    _createElementVNode(\\"div\\", {
       onClick: _cache[2] || (_cache[2] = $event => (maybe.value = count.value))
     }),
-    _createVNode(\\"div\\", {
+    _createElementVNode(\\"div\\", {
       onClick: _cache[3] || (_cache[3] = $event => (_isRef(lett) ? lett.value = count.value : lett = count.value))
     }),
-    _createVNode(\\"div\\", {
+    _createElementVNode(\\"div\\", {
       onClick: _cache[4] || (_cache[4] = $event => (_isRef(v) ? v.value += 1 : v += 1))
     }),
-    _createVNode(\\"div\\", {
+    _createElementVNode(\\"div\\", {
       onClick: _cache[5] || (_cache[5] = $event => (_isRef(v) ? v.value -= 1 : v -= 1))
     })
   ], 64 /* STABLE_FRAGMENT */))
@@ -436,7 +436,7 @@ return (_ctx, _cache) => {
 `;
 
 exports[`SFC compile <script setup> inlineTemplate mode template destructure assignment codegen 1`] = `
-"import { createVNode as _createVNode, Fragment as _Fragment, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
+"import { createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 
 import { ref } from 'vue'
         
@@ -449,14 +449,14 @@ export default {
         let lett = 1
         
 return (_ctx, _cache) => {
-  return (_openBlock(), _createBlock(_Fragment, null, [
-    _createVNode(\\"div\\", {
+  return (_openBlock(), _createElementBlock(_Fragment, null, [
+    _createElementVNode(\\"div\\", {
       onClick: _cache[1] || (_cache[1] = $event => (({ count: count.value } = val)))
     }),
-    _createVNode(\\"div\\", {
+    _createElementVNode(\\"div\\", {
       onClick: _cache[2] || (_cache[2] = $event => ([maybe.value] = val))
     }),
-    _createVNode(\\"div\\", {
+    _createElementVNode(\\"div\\", {
       onClick: _cache[3] || (_cache[3] = $event => (({ lett: lett } = val)))
     })
   ], 64 /* STABLE_FRAGMENT */))
@@ -467,7 +467,7 @@ return (_ctx, _cache) => {
 `;
 
 exports[`SFC compile <script setup> inlineTemplate mode template update expression codegen 1`] = `
-"import { createVNode as _createVNode, isRef as _isRef, Fragment as _Fragment, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
+"import { createElementVNode as _createElementVNode, isRef as _isRef, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 
 import { ref } from 'vue'
         
@@ -479,23 +479,23 @@ export default {
         let lett = 1
         
 return (_ctx, _cache) => {
-  return (_openBlock(), _createBlock(_Fragment, null, [
-    _createVNode(\\"div\\", {
+  return (_openBlock(), _createElementBlock(_Fragment, null, [
+    _createElementVNode(\\"div\\", {
       onClick: _cache[1] || (_cache[1] = $event => (count.value++))
     }),
-    _createVNode(\\"div\\", {
+    _createElementVNode(\\"div\\", {
       onClick: _cache[2] || (_cache[2] = $event => (--count.value))
     }),
-    _createVNode(\\"div\\", {
+    _createElementVNode(\\"div\\", {
       onClick: _cache[3] || (_cache[3] = $event => (maybe.value++))
     }),
-    _createVNode(\\"div\\", {
+    _createElementVNode(\\"div\\", {
       onClick: _cache[4] || (_cache[4] = $event => (--maybe.value))
     }),
-    _createVNode(\\"div\\", {
+    _createElementVNode(\\"div\\", {
       onClick: _cache[5] || (_cache[5] = $event => (_isRef(lett) ? lett.value++ : lett++))
     }),
-    _createVNode(\\"div\\", {
+    _createElementVNode(\\"div\\", {
       onClick: _cache[6] || (_cache[6] = $event => (_isRef(lett) ? --lett.value : --lett))
     })
   ], 64 /* STABLE_FRAGMENT */))
@@ -506,7 +506,7 @@ return (_ctx, _cache) => {
 `;
 
 exports[`SFC compile <script setup> inlineTemplate mode v-model codegen 1`] = `
-"import { vModelText as _vModelText, createVNode as _createVNode, withDirectives as _withDirectives, unref as _unref, isRef as _isRef, Fragment as _Fragment, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
+"import { vModelText as _vModelText, createElementVNode as _createElementVNode, withDirectives as _withDirectives, unref as _unref, isRef as _isRef, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 
 import { ref } from 'vue'
         
@@ -518,18 +518,18 @@ export default {
         let lett = 1
         
 return (_ctx, _cache) => {
-  return (_openBlock(), _createBlock(_Fragment, null, [
-    _withDirectives(_createVNode(\\"input\\", {
+  return (_openBlock(), _createElementBlock(_Fragment, null, [
+    _withDirectives(_createElementVNode(\\"input\\", {
       \\"onUpdate:modelValue\\": _cache[1] || (_cache[1] = $event => (count.value = $event))
     }, null, 512 /* NEED_PATCH */), [
       [_vModelText, count.value]
     ]),
-    _withDirectives(_createVNode(\\"input\\", {
+    _withDirectives(_createElementVNode(\\"input\\", {
       \\"onUpdate:modelValue\\": _cache[2] || (_cache[2] = $event => (_isRef(maybe) ? maybe.value = $event : null))
     }, null, 512 /* NEED_PATCH */), [
       [_vModelText, _unref(maybe)]
     ]),
-    _withDirectives(_createVNode(\\"input\\", {
+    _withDirectives(_createElementVNode(\\"input\\", {
       \\"onUpdate:modelValue\\": _cache[3] || (_cache[3] = $event => (_isRef(lett) ? lett.value = $event : lett = $event))
     }, null, 512 /* NEED_PATCH */), [
       [_vModelText, _unref(lett)]

@@ -32,15 +32,11 @@ import {
   findProp,
   isTemplateNode,
   isSlotOutlet,
-  injectProp
+  injectProp,
+  getVNodeBlockHelper,
+  getVNodeHelper
 } from '../utils'
-import {
-  RENDER_LIST,
-  OPEN_BLOCK,
-  CREATE_BLOCK,
-  FRAGMENT,
-  CREATE_VNODE
-} from '../runtimeHelpers'
+import { RENDER_LIST, OPEN_BLOCK, FRAGMENT } from '../runtimeHelpers'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
 import { PatchFlags, PatchFlagNames } from '@vue/shared'
@@ -85,6 +81,7 @@ export const transformFor = createStructuralDirectiveTransform(
         : keyProp
           ? PatchFlags.KEYED_FRAGMENT
           : PatchFlags.UNKEYED_FRAGMENT
+
       forNode.codegenNode = createVNodeCall(
         context,
         helper(FRAGMENT),
@@ -96,6 +93,7 @@ export const transformFor = createStructuralDirectiveTransform(
         undefined,
         true /* isBlock */,
         !isStableFragment /* disableTracking */,
+        false /* isComponent */,
         node.loc
       ) as ForCodegenNode
 
@@ -156,7 +154,9 @@ export const transformFor = createStructuralDirectiveTransform(
                 : ``),
             undefined,
             undefined,
-            true
+            true,
+            undefined,
+            false /* isComponent */
           )
         } else {
           // Normal element v-for. Directly use the child's codegenNode
@@ -170,18 +170,22 @@ export const transformFor = createStructuralDirectiveTransform(
             if (childBlock.isBlock) {
               // switch from block to vnode
               removeHelper(OPEN_BLOCK)
-              removeHelper(CREATE_BLOCK)
+              removeHelper(
+                getVNodeBlockHelper(context.inSSR, childBlock.isComponent)
+              )
             } else {
               // switch from vnode to block
-              removeHelper(CREATE_VNODE)
+              removeHelper(
+                getVNodeHelper(context.inSSR, childBlock.isComponent)
+              )
             }
           }
           childBlock.isBlock = !isStableFragment
           if (childBlock.isBlock) {
             helper(OPEN_BLOCK)
-            helper(CREATE_BLOCK)
+            helper(getVNodeBlockHelper(context.inSSR, childBlock.isComponent))
           } else {
-            helper(CREATE_VNODE)
+            helper(getVNodeHelper(context.inSSR, childBlock.isComponent))
           }
         }
 
