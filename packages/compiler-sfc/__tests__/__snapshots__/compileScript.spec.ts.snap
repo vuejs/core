@@ -374,10 +374,10 @@ return (_ctx, _cache) => {
     _createElementVNode(\\"div\\", {
       onClick: _cache[3] || (_cache[3] = $event => (_isRef(lett) ? lett.value = count.value : lett = count.value))
     }),
-    _createVNode(\\"div\\", {
+    _createElementVNode(\\"div\\", {
       onClick: _cache[4] || (_cache[4] = $event => (_isRef(v) ? v.value += 1 : v += 1))
     }),
-    _createVNode(\\"div\\", {
+    _createElementVNode(\\"div\\", {
       onClick: _cache[5] || (_cache[5] = $event => (_isRef(v) ? v.value -= 1 : v -= 1))
     })
   ], 64 /* STABLE_FRAGMENT */, null, 16 /* ARRAY_CHILDREN */))

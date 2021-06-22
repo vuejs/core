@@ -247,7 +247,8 @@ export function setBlockTracking(value: number) {
  */
 function setupBlock(vnode: VNode) {
   // save current block children on the block vnode
-  vnode.dynamicChildren = isBlockTreeEnabled > 0 ? currentBlock || (EMPTY_ARR as any) : null
+  vnode.dynamicChildren =
+    isBlockTreeEnabled > 0 ? currentBlock || (EMPTY_ARR as any) : null
   // close block
   closeBlock()
   // a block is always going to be patched, so track it as a child of its
