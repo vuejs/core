@@ -5,7 +5,8 @@ import {
   Ref,
   ComputedRef,
   ReactiveEffectOptions,
-  isReactive
+  isReactive,
+  ReactiveFlags
 } from '@vue/reactivity'
 import { SchedulerJob, queuePreFlushCb } from './scheduler'
 import {
@@ -390,7 +391,11 @@ export function createPathGetter(ctx: any, path: string) {
 }
 
 function traverse(value: unknown, seen: Set<unknown> = new Set()) {
-  if (!isObject(value) || seen.has(value)) {
+  if (
+    !isObject(value) ||
+    seen.has(value) ||
+    (value as any)[ReactiveFlags.SKIP]
+  ) {
     return value
   }
   seen.add(value)

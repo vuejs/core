@@ -35,9 +35,9 @@ import {
   legacyresolveScopedSlots
 } from './renderHelpers'
 import { resolveFilter } from '../helpers/resolveAssets'
-import { resolveMergedOptions } from '../componentOptions'
 import { InternalSlots, Slots } from '../componentSlots'
 import { ContextualRenderFn } from '../componentRenderContext'
+import { resolveMergedOptions } from '../componentOptions'
 
 export type LegacyPublicInstance = ComponentPublicInstance &
   LegacyPublicProperties
@@ -131,8 +131,7 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
       // inject addtional properties into $options for compat
       // e.g. vuex needs this.$options.parent
       $options: i => {
-        let res = resolveMergedOptions(i)
-        if (res === i.type) res = i.type.__merged = extend({}, res)
+        const res = extend({}, resolveMergedOptions(i))
         res.parent = i.proxy!.$parent
         res.propsData = i.vnode.props
         return res
