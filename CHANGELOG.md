@@ -1,3 +1,26 @@
+## [3.1.2](https://github.com/vuejs/vue-next/compare/v3.1.1...v3.1.2) (2021-06-22)
+
+
+### Bug Fixes
+
+* **compiler-core:** improve member expression check ([bc100c5](https://github.com/vuejs/vue-next/commit/bc100c5c48b98b6e2eabfa1d50e0d3099ea2a90d)), closes [#3910](https://github.com/vuejs/vue-next/issues/3910)
+* **compiler-core/compat:** fix is prop usage on components ([08e9322](https://github.com/vuejs/vue-next/commit/08e93220f146118aad8ab07e18066bbb2d4b0040)), closes [#3934](https://github.com/vuejs/vue-next/issues/3934)
+* **compiler-sfc:** rewriteDefault support multiline ([#3917](https://github.com/vuejs/vue-next/issues/3917)) ([b228abb](https://github.com/vuejs/vue-next/commit/b228abb72fcdb4fc9dced907f3614abcaaacdce5))
+* **compiler-ssr:** fix attr fallthrough for transition/keep-alive as template root ([9f6f8b3](https://github.com/vuejs/vue-next/commit/9f6f8b35c1fdfa5b76b834673e2f991c5fa7c9c5)), closes [#3981](https://github.com/vuejs/vue-next/issues/3981)
+* **devtools:** expose root instance ([2b52d5d](https://github.com/vuejs/vue-next/commit/2b52d5d7c53f7843f4a1e85fd7f1720dc2847ebc))
+* **runtime-core:** bind default function of inject to instance ([#3925](https://github.com/vuejs/vue-next/issues/3925)) ([db1dc1c](https://github.com/vuejs/vue-next/commit/db1dc1c63097ed62a3f683a7a11c7e819d90bb73)), closes [#3923](https://github.com/vuejs/vue-next/issues/3923)
+* **runtime-core:** fix multiple .once event handlers on same component ([#3904](https://github.com/vuejs/vue-next/issues/3904)) ([011dee8](https://github.com/vuejs/vue-next/commit/011dee8644bb52f5bdc6365c6e8404936d57e2cd)), closes [#3902](https://github.com/vuejs/vue-next/issues/3902)
+* **Suspense:** emit initial fallback and pending events ([#3965](https://github.com/vuejs/vue-next/issues/3965)) ([ab6e927](https://github.com/vuejs/vue-next/commit/ab6e927041e4082acac9a5effe332557e70e4f2a)), closes [#3964](https://github.com/vuejs/vue-next/issues/3964)
+* **Suspense:** fallback should work with transition ([#3968](https://github.com/vuejs/vue-next/issues/3968)) ([43e2a72](https://github.com/vuejs/vue-next/commit/43e2a72900b96870fe6f16248ecec50ff58278df)), closes [#3963](https://github.com/vuejs/vue-next/issues/3963)
+* **watch:** fix watch option merging from mixins ([9b607fe](https://github.com/vuejs/vue-next/commit/9b607fe409d70e991ba458e7c994e008a4b621e8)), closes [#3966](https://github.com/vuejs/vue-next/issues/3966)
+
+
+### Performance Improvements
+
+* improve static content insertion perf ([4de5d24](https://github.com/vuejs/vue-next/commit/4de5d24aa72f6bc68da967ead330147032983e30)), closes [#3090](https://github.com/vuejs/vue-next/issues/3090)
+
+
+
 ## [3.1.1](https://github.com/vuejs/vue-next/compare/v3.1.0...v3.1.1) (2021-06-07)
 
 
