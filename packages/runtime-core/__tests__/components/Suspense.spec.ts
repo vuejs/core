@@ -69,6 +69,32 @@ describe('Suspense', () => {
     expect(serializeInner(root)).toBe(`<div>async</div>`)
   })
 
+  test('fallback content', async () => {
+    const Async = defineAsyncComponent({
+      render() {
+        return h('div', 'async')
+      }
+    })
+
+    const Comp = {
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            default: h(Async),
+            fallback: h('div', 'fallback')
+          })
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>async</div>`)
+  })
+
   test('emits events', async () => {
     const Async = defineAsyncComponent({
       render() {
@@ -709,7 +735,7 @@ describe('Suspense', () => {
       <div v-if="errorMessage">{{ errorMessage }}</div>
       <Suspense v-else>
         <div>
-          <Async />     
+          <Async />
         </div>
         <template #fallback>
           <div>fallback</div>
@@ -981,6 +1007,66 @@ describe('Suspense', () => {
       `bar unmounted`
     ])
     expect(serializeInner(root)).toBe(`<div>foo<div>foo nested</div></div>`)
+  })
+
+  test('display previous branch when timeout + no fallback slot is provided', async () => {
+    const toggle = ref(false)
+    let resolve = () => {}
+    let promise: Promise<void>
+    function createPromise() {
+      promise = new Promise<void>(r => {
+        resolve = r
+      })
+
+      return promise
+    }
+
+    const Foo = {
+      async setup() {
+        await createPromise()
+        return () => h('div', ['foo'])
+      }
+    }
+
+    const onPending = jest.fn()
+    const onFallback = jest.fn()
+    const onResolve = jest.fn()
+
+    const Comp = {
+      setup() {
+        return () =>
+          h(
+            Suspense,
+            { timeout: 0, onPending, onFallback, onResolve },
+            {
+              default: toggle.value ? h(Foo) : 'other'
+            }
+          )
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`other`)
+    expect(onPending).toHaveBeenCalledTimes(0)
+    expect(onFallback).toHaveBeenCalledTimes(0)
+    expect(onResolve).toHaveBeenCalledTimes(1)
+
+    toggle.value = true
+    await nextTick()
+    expect(serializeInner(root)).toBe(`other`)
+    expect(onPending).toHaveBeenCalledTimes(1)
+    expect(onFallback).toHaveBeenCalledTimes(0)
+    expect(onResolve).toHaveBeenCalledTimes(1)
+
+    resolve()
+    await promise!
+    await nextTick()
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>foo</div>`)
+    expect(onPending).toHaveBeenCalledTimes(1)
+    expect(onFallback).toHaveBeenCalledTimes(0)
+    expect(onResolve).toHaveBeenCalledTimes(2)
   })
 
   test('branch switch to 3rd branch before resolve', async () => {

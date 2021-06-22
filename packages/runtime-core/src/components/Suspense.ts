@@ -4,6 +4,7 @@ import {
   VNodeProps,
   isSameVNodeType,
   openBlock,
+  Comment,
   closeBlock,
   currentBlock,
   createVNode
@@ -516,7 +517,8 @@ function createSuspenseBoundary(
     },
 
     fallback(fallbackVNode) {
-      if (!suspense.pendingBranch) {
+      // avoid displaying the fallback/emitting node if there isn't any
+      if (!suspense.pendingBranch || fallbackVNode.type === Comment) {
         return
       }
 
