@@ -5,11 +5,20 @@ export function generateCodeFrame(
   start = 0,
   end = source.length
 ): string {
-  const lines = source.split(/\r?\n/)
+  //Split the content into individual lines but capture the newline sequence
+  // that separated each line. This is important because the actual sequence is
+  // needed to properly take into account the full line length for offset
+  // comparison
+  let lines = source.split(/(\r?\n)/)
+
+  //Separate the lines and newline sequences into separate arrays for easier referencing
+  const newlineSequences = lines.filter((_, idx) => idx % 2 === 1)
+  lines = lines.filter((_, idx) => idx % 2 === 0)
+
   let count = 0
   const res: string[] = []
   for (let i = 0; i < lines.length; i++) {
-    count += lines[i].length + 1
+    count += lines[i].length + newlineSequences[i].length
     if (count >= start) {
       for (let j = i - range; j <= i + range || end > count; j++) {
         if (j < 0 || j >= lines.length) continue
@@ -33,7 +42,7 @@ export function generateCodeFrame(
             const length = Math.max(Math.min(end - count, lineLength), 1)
             res.push(`   |  ` + '^'.repeat(length))
           }
-          count += lineLength + 1
+          count += lineLength + newlineSequences[j].length
         }
       }
       break
