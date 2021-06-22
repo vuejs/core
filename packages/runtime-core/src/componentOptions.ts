@@ -51,7 +51,7 @@ import {
   ExtractPropTypes,
   ExtractDefaultPropTypes
 } from './componentProps'
-import { EmitsOptions } from './componentEmits'
+import { EmitsOptions, EmitsToProps } from './componentEmits'
 import { Directive } from './directives'
 import {
   CreateComponentPublicInstance,
@@ -91,16 +91,18 @@ export interface ComponentCustomOptions {}
 export type RenderFunction = () => VNodeChild
 
 type ExtractOptionProp<T> = T extends ComponentOptionsBase<
-  infer P,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any
+  infer P, // Props
+  any, // RawBindings
+  any, // D
+  any, // C
+  any, // M
+  any, // Mixin
+  any, // Extends
+  any // EmitsOptions
 >
-  ? unknown extends P ? {} : P
+  ? unknown extends P
+    ? {}
+    : P
   : {}
 
 export interface ComponentOptionsBase<
@@ -114,8 +116,7 @@ export interface ComponentOptionsBase<
   E extends EmitsOptions,
   EE extends string = string,
   Defaults = {}
->
-  extends LegacyOptions<Props, D, C, M, Mixin, Extends>,
+> extends LegacyOptions<Props, D, C, M, Mixin, Extends>,
     ComponentInternalOptions,
     ComponentCustomOptions {
   setup?: (
@@ -220,9 +221,10 @@ export type ComponentOptionsWithoutProps<
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
-  EE extends string = string
+  EE extends string = string,
+  PE = Props & EmitsToProps<E>
 > = ComponentOptionsBase<
-  Props,
+  PE,
   RawBindings,
   D,
   C,
@@ -235,7 +237,7 @@ export type ComponentOptionsWithoutProps<
 > & {
   props?: undefined
 } & ThisType<
-    CreateComponentPublicInstance<{}, RawBindings, D, C, M, Mixin, Extends, E>
+    CreateComponentPublicInstance<PE, RawBindings, D, C, M, Mixin, Extends, E>
   >
 
 export type ComponentOptionsWithArrayProps<
@@ -248,7 +250,7 @@ export type ComponentOptionsWithArrayProps<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
-  Props = Readonly<{ [key in PropNames]?: any }>
+  Props = Readonly<{ [key in PropNames]?: any }> & EmitsToProps<E>
 > = ComponentOptionsBase<
   Props,
   RawBindings,
@@ -285,7 +287,7 @@ export type ComponentOptionsWithObjectProps<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
-  Props = Readonly<ExtractPropTypes<PropsOptions>>,
+  Props = Readonly<ExtractPropTypes<PropsOptions>> & EmitsToProps<E>,
   Defaults = ExtractDefaultPropTypes<PropsOptions>
 > = ComponentOptionsBase<
   Props,
@@ -365,7 +367,9 @@ export interface MethodOptions {
 export type ExtractComputedReturns<T extends any> = {
   [key in keyof T]: T[key] extends { get: (...args: any[]) => infer TReturn }
     ? TReturn
-    : T[key] extends (...args: any[]) => infer TReturn ? TReturn : never
+    : T[key] extends (...args: any[]) => infer TReturn
+    ? TReturn
+    : never
 }
 
 export type ObjectWatchOptionItem = {
@@ -471,7 +475,7 @@ interface LegacyOptions<
   __differentiator?: keyof D | keyof C | keyof M
 }
 
-type MergedHook<T = (() => void)> = T | T[]
+type MergedHook<T = () => void> = T | T[]
 
 export type MergedComponentOptions = ComponentOptions &
   MergedComponentOptionsOverride
@@ -679,8 +683,8 @@ export function applyOptions(instance: ComponentInternalInstance) {
       const get = isFunction(opt)
         ? opt.bind(publicThis, publicThis)
         : isFunction(opt.get)
-          ? opt.get.bind(publicThis, publicThis)
-          : NOOP
+        ? opt.get.bind(publicThis, publicThis)
+        : NOOP
       if (__DEV__ && get === NOOP) {
         warn(`Computed property "${key}" has no getter.`)
       }
@@ -688,12 +692,12 @@ export function applyOptions(instance: ComponentInternalInstance) {
         !isFunction(opt) && isFunction(opt.set)
           ? opt.set.bind(publicThis)
           : __DEV__
-            ? () => {
-                warn(
-                  `Write operation failed: computed property "${key}" is readonly.`
-                )
-              }
-            : NOOP
+          ? () => {
+              warn(
+                `Write operation failed: computed property "${key}" is readonly.`
+              )
+            }
+          : NOOP
       const c = computed({
         get,
         set
@@ -1006,10 +1010,11 @@ function mergeDataFn(to: any, from: any) {
     return from
   }
   return function mergedDataFn(this: ComponentPublicInstance) {
-    return (__COMPAT__ &&
-    isCompatEnabled(DeprecationTypes.OPTIONS_DATA_MERGE, null)
-      ? deepMergeData
-      : extend)(
+    return (
+      __COMPAT__ && isCompatEnabled(DeprecationTypes.OPTIONS_DATA_MERGE, null)
+        ? deepMergeData
+        : extend
+    )(
       isFunction(to) ? to.call(this, this) : to,
       isFunction(from) ? from.call(this, this) : from
     )
