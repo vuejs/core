@@ -91,28 +91,6 @@ const myEmit = defineEmits(['foo', 'bar'])
   emits: ['foo', 'bar'],`)
   })
 
-  test('<template inherit-attrs="false">', () => {
-    const { content } = compile(`
-      <script>
-      export default {}
-      </script>
-      <template inherit-attrs="false">
-      {{ a }}
-      </template>
-      `)
-    assertCode(content)
-
-    const { content: content2 } = compile(`
-      <script setup>
-      const a = 1
-      </script>
-      <template inherit-attrs="false">
-      {{ a }}
-      </template>
-      `)
-    assertCode(content2)
-  })
-
   describe('<script> and <script setup> co-usage', () => {
     test('script first', () => {
       const { content } = compile(`

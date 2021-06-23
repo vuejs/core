@@ -96,10 +96,17 @@ export function compileScript(
     )
   }
 
+  // TODO remove on 3.2
+  if (sfc.template && sfc.template.attrs['inherit-attrs'] === 'false') {
+    warnOnce(
+      `experimetnal support for <template inherit-attrs="false"> support has ` +
+        `been removed. Use a <script> block with \`export default\` to ` +
+        `declare options.`
+    )
+  }
+
   const scopeId = options.id ? options.id.replace(/^data-v-/, '') : ''
   const cssVars = sfc.cssVars
-  const hasInheritAttrsFlag =
-    sfc.template && sfc.template.attrs['inherit-attrs'] === 'false'
   const scriptLang = script && script.lang
   const scriptSetupLang = scriptSetup && scriptSetup.lang
   const isTS =
@@ -125,9 +132,8 @@ export function compileScript(
         sourceType: 'module'
       }).program.body
       const bindings = analyzeScriptBindings(scriptAst)
-      const needRewrite = cssVars.length || hasInheritAttrsFlag
       let content = script.content
-      if (needRewrite) {
+      if (cssVars.length) {
         content = rewriteDefault(content, `__default__`, plugins)
         if (cssVars.length) {
           content += genNormalScriptCssVarsCode(
@@ -136,9 +142,6 @@ export function compileScript(
             scopeId,
             !!options.isProd
           )
-        }
-        if (hasInheritAttrsFlag) {
-          content += `__default__.inheritAttrs = false`
         }
         content += `\nexport default __default__`
       }
@@ -950,9 +953,6 @@ export function compileScript(
   // 11. finalize default export
   // expose: [] makes <script setup> components "closed" by default.
   let runtimeOptions = `\n  expose: [],`
-  if (hasInheritAttrsFlag) {
-    runtimeOptions += `\n  inheritAttrs: false,`
-  }
   if (hasInlinedSsrRenderFn) {
     runtimeOptions += `\n  __ssrInlineRender: true,`
   }
