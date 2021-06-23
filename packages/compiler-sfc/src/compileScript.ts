@@ -947,6 +947,8 @@ export function compileScript(
       }
     }
     returned = `{ ${Object.keys(allBindings).join(', ')}${
+      // the `__isScriptSetup: true` flag is used by componentPublicInstance
+      // proxy to allow properties that start with $ or _
       __TEST__ ? `` : `, __isScriptSetup: true`
     } }`
   }
