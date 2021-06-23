@@ -517,7 +517,7 @@ function createSuspenseBoundary(
     },
 
     fallback(fallbackVNode) {
-      // avoid displaying the fallback/emitting node if there isn't any
+      // avoid emitting fallback and displaying the fallback node if there isn't any
       if (!suspense.pendingBranch || fallbackVNode.type === Comment) {
         return
       }
