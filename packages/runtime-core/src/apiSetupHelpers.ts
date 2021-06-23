@@ -61,10 +61,27 @@ export function defineEmits() {
  */
 export const defineEmit = defineEmits
 
+/**
+ * @deprecated use `useSlots` and `useAttrs` instead.
+ */
 export function useContext(): SetupContext {
+  if (__DEV__) {
+    warn(
+      `\`useContext()\` has been deprecated and will be removed in the ` +
+        `next minor release. Use \`useSlots()\` and \`useAttrs()\` instead.`
+    )
+  }
   const i = getCurrentInstance()!
   if (__DEV__ && !i) {
     warn(`useContext() called without active instance.`)
   }
   return i.setupContext || (i.setupContext = createSetupContext(i))
+}
+
+export function useSlots(): SetupContext['slots'] {
+  return useContext().slots
+}
+
+export function useAttrs(): SetupContext['attrs'] {
+  return useContext().attrs
 }

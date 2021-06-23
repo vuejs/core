@@ -815,11 +815,9 @@ export function finishComponentSetup(
   }
 }
 
-const attrHandlers: ProxyHandler<Data> = {
+const attrDevProxyHandlers: ProxyHandler<Data> = {
   get: (target, key: string) => {
-    if (__DEV__) {
-      markAttrsAccessed()
-    }
+    markAttrsAccessed()
     return target[key]
   },
   set: () => {
@@ -847,7 +845,7 @@ export function createSetupContext(
     // properties (overwrites should not be done in prod)
     return Object.freeze({
       get attrs() {
-        return new Proxy(instance.attrs, attrHandlers)
+        return new Proxy(instance.attrs, attrDevProxyHandlers)
       },
       get slots() {
         return shallowReadonly(instance.slots)
