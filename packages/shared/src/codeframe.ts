@@ -18,7 +18,9 @@ export function generateCodeFrame(
   let count = 0
   const res: string[] = []
   for (let i = 0; i < lines.length; i++) {
-    count += lines[i].length + newlineSequences[i].length
+    count +=
+      lines[i].length +
+      ((newlineSequences[i] && newlineSequences[i].length) || 0)
     if (count >= start) {
       for (let j = i - range; j <= i + range || end > count; j++) {
         if (j < 0 || j >= lines.length) continue
@@ -29,9 +31,12 @@ export function generateCodeFrame(
           }`
         )
         const lineLength = lines[j].length
+        const newLineSeqLength =
+          (newlineSequences[j] && newlineSequences[j].length) || 0
+
         if (j === i) {
           // push underline
-          const pad = start - (count - lineLength) + 1
+          const pad = start - (count - (lineLength + newLineSeqLength))
           const length = Math.max(
             1,
             end > count ? lineLength - pad : end - start
@@ -42,7 +47,8 @@ export function generateCodeFrame(
             const length = Math.max(Math.min(end - count, lineLength), 1)
             res.push(`   |  ` + '^'.repeat(length))
           }
-          count += lineLength + newlineSequences[j].length
+
+          count += lineLength + newLineSeqLength
         }
       }
       break
