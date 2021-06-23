@@ -69,32 +69,6 @@ describe('Suspense', () => {
     expect(serializeInner(root)).toBe(`<div>async</div>`)
   })
 
-  test('fallback content', async () => {
-    const Async = defineAsyncComponent({
-      render() {
-        return h('div', 'async')
-      }
-    })
-
-    const Comp = {
-      setup() {
-        return () =>
-          h(Suspense, null, {
-            default: h(Async),
-            fallback: h('div', 'fallback')
-          })
-      }
-    }
-
-    const root = nodeOps.createElement('div')
-    render(h(Comp), root)
-    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
-
-    await Promise.all(deps)
-    await nextTick()
-    expect(serializeInner(root)).toBe(`<div>async</div>`)
-  })
-
   test('emits events', async () => {
     const Async = defineAsyncComponent({
       render() {
