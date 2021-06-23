@@ -64,8 +64,6 @@ class ComputedRefImpl<T> {
   }
 }
 
-interface ComputedRefImpl<T> extends Ref<T> {}
-
 export function computed<T>(getter: ComputedGetter<T>): ComputedRef<T>
 export function computed<T>(
   options: WritableComputedOptions<T>

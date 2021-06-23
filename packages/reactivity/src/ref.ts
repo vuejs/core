@@ -30,7 +30,12 @@ export interface Ref<T = any> {
   dep?: Set<ReactiveEffect>
 }
 
-export function trackRefValue(ref: Ref) {
+type RefBase<T> = {
+  dep?: Set<ReactiveEffect>
+  value: T
+}
+
+export function trackRefValue(ref: RefBase<any>) {
   if (isTracking()) {
     ref = toRaw(ref)
     const eventInfo = __DEV__
@@ -43,7 +48,7 @@ export function trackRefValue(ref: Ref) {
   }
 }
 
-export function triggerRefValue(ref: Ref, newVal?: any) {
+export function triggerRefValue(ref: RefBase<any>, newVal?: any) {
   ref = toRaw(ref)
   if (ref.dep) {
     const eventInfo = __DEV__
@@ -114,8 +119,6 @@ class RefImpl<T> {
   }
 }
 
-interface RefImpl<T> extends Ref<T> {}
-
 function createRef(rawValue: unknown, shallow = false) {
   if (isRef(rawValue)) {
     return rawValue
@@ -185,8 +188,6 @@ class CustomRefImpl<T> {
     this._set(newVal)
   }
 }
-
-interface CustomRefImpl<T> extends Ref<T> {}
 
 export function customRef<T>(factory: CustomRefFactory<T>): Ref<T> {
   return new CustomRefImpl(factory) as any
