@@ -1,6 +1,5 @@
-import { effect, ReactiveEffect, trigger, track } from './effect'
-import { TriggerOpTypes, TrackOpTypes } from './operations'
-import { Ref } from './ref'
+import { effect, ReactiveEffect } from './effect'
+import { Ref, trackRefValue, triggerRefValue } from './ref'
 import { isFunction, NOOP } from '@vue/shared'
 import { ReactiveFlags, toRaw } from './reactive'
 
@@ -21,6 +20,8 @@ export interface WritableComputedOptions<T> {
 }
 
 class ComputedRefImpl<T> {
+  public dep?: Set<ReactiveEffect> = undefined
+
   private _value!: T
   private _dirty = true
 
@@ -39,7 +40,7 @@ class ComputedRefImpl<T> {
       scheduler: () => {
         if (!this._dirty) {
           this._dirty = true
-          trigger(toRaw(this), TriggerOpTypes.SET, 'value')
+          triggerRefValue(this)
         }
       }
     })
@@ -54,7 +55,7 @@ class ComputedRefImpl<T> {
       self._value = this.effect()
       self._dirty = false
     }
-    track(self, TrackOpTypes.GET, 'value')
+    trackRefValue(this)
     return self._value
   }
 
@@ -62,6 +63,8 @@ class ComputedRefImpl<T> {
     this._setter(newValue)
   }
 }
+
+interface ComputedRefImpl<T> extends Ref<T> {}
 
 export function computed<T>(getter: ComputedGetter<T>): ComputedRef<T>
 export function computed<T>(
