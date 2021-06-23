@@ -5,7 +5,12 @@ import {
   render,
   SetupContext
 } from '@vue/runtime-test'
-import { defineEmits, defineProps, useContext } from '../src/apiSetupHelpers'
+import {
+  defineEmits,
+  defineProps,
+  useAttrs,
+  useSlots
+} from '../src/apiSetupHelpers'
 
 describe('SFC <script setup> helpers', () => {
   test('should warn runtime usage', () => {
@@ -16,34 +21,41 @@ describe('SFC <script setup> helpers', () => {
     expect(`defineEmits() is a compiler-hint`).toHaveBeenWarned()
   })
 
-  test('useContext (no args)', () => {
-    let ctx: SetupContext | undefined
+  test('useSlots / useAttrs (no args)', () => {
+    let slots: SetupContext['slots'] | undefined
+    let attrs: SetupContext['attrs'] | undefined
     const Comp = {
       setup() {
-        ctx = useContext()
+        slots = useSlots()
+        attrs = useAttrs()
         return () => {}
       }
     }
-    render(h(Comp), nodeOps.createElement('div'))
-    expect(ctx).toMatchObject({
-      attrs: {},
-      slots: {}
-    })
-    expect(typeof ctx!.emit).toBe('function')
+    const passedAttrs = { id: 'foo' }
+    const passedSlots = {
+      default: () => {},
+      x: () => {}
+    }
+    render(h(Comp, passedAttrs, passedSlots), nodeOps.createElement('div'))
+    expect(typeof slots!.default).toBe('function')
+    expect(typeof slots!.x).toBe('function')
+    expect(attrs).toMatchObject(passedAttrs)
   })
 
-  test('useContext (with args)', () => {
+  test('useSlots / useAttrs (with args)', () => {
+    let slots: SetupContext['slots'] | undefined
+    let attrs: SetupContext['attrs'] | undefined
     let ctx: SetupContext | undefined
-    let ctxArg: SetupContext | undefined
     const Comp = defineComponent({
-      setup(_, _ctxArg) {
-        ctx = useContext()
-        ctxArg = _ctxArg
+      setup(_, _ctx) {
+        slots = useSlots()
+        attrs = useAttrs()
+        ctx = _ctx
         return () => {}
       }
     })
     render(h(Comp), nodeOps.createElement('div'))
-    expect(ctx).toBeDefined()
-    expect(ctx).toBe(ctxArg)
+    expect(slots).toBe(ctx!.slots)
+    expect(attrs).toBe(ctx!.attrs)
   })
 })

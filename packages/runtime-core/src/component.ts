@@ -841,11 +841,14 @@ export function createSetupContext(
   }
 
   if (__DEV__) {
+    let attrs: Data
     // We use getters in dev in case libs like test-utils overwrite instance
     // properties (overwrites should not be done in prod)
     return Object.freeze({
       get attrs() {
-        return new Proxy(instance.attrs, attrDevProxyHandlers)
+        return (
+          attrs || (attrs = new Proxy(instance.attrs, attrDevProxyHandlers))
+        )
       },
       get slots() {
         return shallowReadonly(instance.slots)

@@ -71,6 +71,10 @@ export function useContext(): SetupContext {
         `next minor release. Use \`useSlots()\` and \`useAttrs()\` instead.`
     )
   }
+  return getContext()
+}
+
+function getContext(): SetupContext {
   const i = getCurrentInstance()!
   if (__DEV__ && !i) {
     warn(`useContext() called without active instance.`)
@@ -79,9 +83,9 @@ export function useContext(): SetupContext {
 }
 
 export function useSlots(): SetupContext['slots'] {
-  return useContext().slots
+  return getContext().slots
 }
 
 export function useAttrs(): SetupContext['attrs'] {
-  return useContext().attrs
+  return getContext().attrs
 }
