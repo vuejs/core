@@ -1,4 +1,9 @@
-import { track, trigger } from './effect'
+import {
+  isTracking,
+  ReactiveEffect,
+  trackEffects,
+  triggerEffects
+} from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { isArray, isObject, hasChanged } from '@vue/shared'
 import { reactive, isProxy, toRaw, isReactive } from './reactive'
@@ -18,6 +23,44 @@ export interface Ref<T = any> {
    * @internal
    */
   _shallow?: boolean
+
+  /**
+   * Deps are maintained locally rather than in depsMap for performance reasons.
+   */
+  dep?: Set<ReactiveEffect>
+}
+
+type RefBase<T> = {
+  dep?: Set<ReactiveEffect>
+  value: T
+}
+
+export function trackRefValue(ref: RefBase<any>) {
+  if (isTracking()) {
+    ref = toRaw(ref)
+    const eventInfo = __DEV__
+      ? { target: ref, type: TrackOpTypes.GET, key: 'value' }
+      : undefined
+    if (!ref.dep) {
+      ref.dep = new Set<ReactiveEffect>()
+    }
+    trackEffects(ref.dep, eventInfo)
+  }
+}
+
+export function triggerRefValue(ref: RefBase<any>, newVal?: any) {
+  ref = toRaw(ref)
+  if (ref.dep) {
+    const eventInfo = __DEV__
+      ? {
+          target: ref,
+          type: TriggerOpTypes.SET,
+          key: 'value',
+          newValue: newVal
+        }
+      : undefined
+    triggerEffects(ref.dep, eventInfo)
+  }
 }
 
 export type ToRef<T> = [T] extends [Ref] ? T : Ref<UnwrapRef<T>>
@@ -52,10 +95,10 @@ export function shallowRef(value?: unknown) {
 }
 
 class RefImpl<T> {
+  private _value: T
   private _rawValue: T
 
-  private _value: T
-
+  public dep?: Set<ReactiveEffect> = undefined
   public readonly __v_isRef = true
 
   constructor(value: T, public readonly _shallow = false) {
@@ -64,7 +107,7 @@ class RefImpl<T> {
   }
 
   get value() {
-    track(toRaw(this), TrackOpTypes.GET, 'value')
+    trackRefValue(this)
     return this._value
   }
 
@@ -73,7 +116,7 @@ class RefImpl<T> {
     if (hasChanged(newVal, this._rawValue)) {
       this._rawValue = newVal
       this._value = this._shallow ? newVal : convert(newVal)
-      trigger(toRaw(this), TriggerOpTypes.SET, 'value', newVal)
+      triggerRefValue(this, newVal)
     }
   }
 }
@@ -86,7 +129,7 @@ function createRef(rawValue: unknown, shallow = false) {
 }
 
 export function triggerRef(ref: Ref) {
-  trigger(toRaw(ref), TriggerOpTypes.SET, 'value', __DEV__ ? ref.value : void 0)
+  triggerRefValue(ref, __DEV__ ? ref.value : void 0)
 }
 
 export function unref<T>(ref: T | Ref<T>): T {
@@ -123,6 +166,8 @@ export type CustomRefFactory<T> = (
 }
 
 class CustomRefImpl<T> {
+  public dep?: Set<ReactiveEffect> = undefined
+
   private readonly _get: ReturnType<CustomRefFactory<T>>['get']
   private readonly _set: ReturnType<CustomRefFactory<T>>['set']
 
@@ -130,8 +175,8 @@ class CustomRefImpl<T> {
 
   constructor(factory: CustomRefFactory<T>) {
     const { get, set } = factory(
-      () => track(this, TrackOpTypes.GET, 'value'),
-      () => trigger(this, TriggerOpTypes.SET, 'value')
+      () => trackRefValue(this),
+      () => triggerRefValue(this)
     )
     this._get = get
     this._set = set

@@ -46,12 +46,12 @@ export interface ReactiveEffectOptions {
 
 export type DebuggerEvent = {
   effect: ReactiveEffect
+} & DebuggerEventExtraInfo
+
+export type DebuggerEventExtraInfo = {
   target: object
   type: TrackOpTypes | TriggerOpTypes
   key: any
-} & DebuggerEventExtraInfo
-
-export interface DebuggerEventExtraInfo {
   newValue?: any
   oldValue?: any
   oldTarget?: Map<any, any> | Set<any>
@@ -111,7 +111,8 @@ function createReactiveEffect<T = any>(
       } finally {
         effectStack.pop()
         resetTracking()
-        activeEffect = effectStack[effectStack.length - 1]
+        const n = effectStack.length
+        activeEffect = n > 0 ? effectStack[n - 1] : undefined
       }
     }
   } as ReactiveEffect
@@ -154,7 +155,7 @@ export function resetTracking() {
 }
 
 export function track(target: object, type: TrackOpTypes, key: unknown) {
-  if (!shouldTrack || activeEffect === undefined) {
+  if (!isTracking()) {
     return
   }
   let depsMap = targetMap.get(target)
@@ -165,16 +166,34 @@ export function track(target: object, type: TrackOpTypes, key: unknown) {
   if (!dep) {
     depsMap.set(key, (dep = new Set()))
   }
-  if (!dep.has(activeEffect)) {
-    dep.add(activeEffect)
-    activeEffect.deps.push(dep)
-    if (__DEV__ && activeEffect.options.onTrack) {
-      activeEffect.options.onTrack({
-        effect: activeEffect,
-        target,
-        type,
-        key
-      })
+
+  const eventInfo = __DEV__
+    ? { effect: activeEffect, target, type, key }
+    : undefined
+
+  trackEffects(dep, eventInfo)
+}
+
+export function isTracking() {
+  return shouldTrack && activeEffect !== undefined
+}
+
+export function trackEffects(
+  dep: Set<ReactiveEffect>,
+  debuggerEventExtraInfo?: DebuggerEventExtraInfo
+) {
+  if (!dep.has(activeEffect!)) {
+    dep.add(activeEffect!)
+    activeEffect!.deps.push(dep)
+    if (__DEV__ && activeEffect!.options.onTrack) {
+      activeEffect!.options.onTrack(
+        Object.assign(
+          {
+            effect: activeEffect!
+          },
+          debuggerEventExtraInfo
+        )
+      )
     }
   }
 }
@@ -193,73 +212,88 @@ export function trigger(
     return
   }
 
-  const effects = new Set<ReactiveEffect>()
-  const add = (effectsToAdd: Set<ReactiveEffect> | undefined) => {
-    if (effectsToAdd) {
-      effectsToAdd.forEach(effect => {
-        if (effect !== activeEffect || effect.allowRecurse) {
-          effects.add(effect)
-        }
-      })
-    }
-  }
-
+  let sets: DepSets = []
   if (type === TriggerOpTypes.CLEAR) {
     // collection being cleared
     // trigger all effects for target
-    depsMap.forEach(add)
+    sets = [...depsMap.values()]
   } else if (key === 'length' && isArray(target)) {
     depsMap.forEach((dep, key) => {
       if (key === 'length' || key >= (newValue as number)) {
-        add(dep)
+        sets.push(dep)
       }
     })
   } else {
     // schedule runs for SET | ADD | DELETE
     if (key !== void 0) {
-      add(depsMap.get(key))
+      sets.push(depsMap.get(key))
     }
 
     // also run for iteration key on ADD | DELETE | Map.SET
     switch (type) {
       case TriggerOpTypes.ADD:
         if (!isArray(target)) {
-          add(depsMap.get(ITERATE_KEY))
+          sets.push(depsMap.get(ITERATE_KEY))
           if (isMap(target)) {
-            add(depsMap.get(MAP_KEY_ITERATE_KEY))
+            sets.push(depsMap.get(MAP_KEY_ITERATE_KEY))
           }
         } else if (isIntegerKey(key)) {
           // new index added to array -> length changes
-          add(depsMap.get('length'))
+          sets.push(depsMap.get('length'))
         }
         break
       case TriggerOpTypes.DELETE:
         if (!isArray(target)) {
-          add(depsMap.get(ITERATE_KEY))
+          sets.push(depsMap.get(ITERATE_KEY))
           if (isMap(target)) {
-            add(depsMap.get(MAP_KEY_ITERATE_KEY))
+            sets.push(depsMap.get(MAP_KEY_ITERATE_KEY))
           }
         }
         break
       case TriggerOpTypes.SET:
         if (isMap(target)) {
-          add(depsMap.get(ITERATE_KEY))
+          sets.push(depsMap.get(ITERATE_KEY))
         }
         break
     }
   }
 
+  const eventInfo = __DEV__
+    ? { target, type, key, newValue, oldValue, oldTarget }
+    : undefined
+  triggerMultiEffects(sets, eventInfo)
+}
+
+type DepSets = (Dep | undefined)[]
+
+export function triggerMultiEffects(
+  depSets: DepSets,
+  debuggerEventExtraInfo?: DebuggerEventExtraInfo
+) {
+  if (depSets.length === 1) {
+    if (depSets[0]) {
+      triggerEffects(depSets[0], debuggerEventExtraInfo)
+    }
+  } else {
+    const sets = depSets.filter(s => !!s) as Dep[]
+    triggerEffects(concatSets(sets), debuggerEventExtraInfo)
+  }
+}
+
+function concatSets<T>(sets: Set<T>[]): Set<T> {
+  const all = ([] as T[]).concat(...sets.map(s => [...s!]))
+  return new Set(all)
+}
+
+export function triggerEffects(
+  dep: Dep,
+  debuggerEventExtraInfo?: DebuggerEventExtraInfo
+) {
   const run = (effect: ReactiveEffect) => {
     if (__DEV__ && effect.options.onTrigger) {
-      effect.options.onTrigger({
-        effect,
-        target,
-        key,
-        type,
-        newValue,
-        oldValue,
-        oldTarget
-      })
+      effect.options.onTrigger(
+        Object.assign({ effect }, debuggerEventExtraInfo)
+      )
     }
     if (effect.options.scheduler) {
       effect.options.scheduler(effect)
@@ -268,5 +302,10 @@ export function trigger(
     }
   }
 
-  effects.forEach(run)
+  const immutableDeps = [...dep]
+  immutableDeps.forEach(effect => {
+    if (effect !== activeEffect || effect.allowRecurse) {
+      run(effect)
+    }
+  })
 }
