@@ -946,7 +946,9 @@ export function compileScript(
         allBindings[key] = true
       }
     }
-    returned = `{ ${Object.keys(allBindings).join(', ')} }`
+    returned = `{ ${Object.keys(allBindings).join(', ')}${
+      __TEST__ ? `` : `, __isScriptSetup: true`
+    } }`
   }
   s.appendRight(endOffset, `\nreturn ${returned}\n}\n\n`)
 

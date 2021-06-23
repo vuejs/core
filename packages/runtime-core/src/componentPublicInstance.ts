@@ -272,6 +272,19 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       return true
     }
 
+    // prioritize <script setup> bindings during dev.
+    // this allows even properties that start with _ or $ to be used - so that
+    // it aligns with the production behavior where the render fn is inlined and
+    // indeed has access to all declared variables.
+    if (
+      __DEV__ &&
+      setupState !== EMPTY_OBJ &&
+      setupState.__isScriptSetup &&
+      hasOwn(setupState, key)
+    ) {
+      return setupState[key]
+    }
+
     // data / props / ctx
     // This getter gets called for every property access on the render context
     // during render and is a major hotspot. The most expensive part of this
@@ -526,7 +539,7 @@ export function exposeSetupStateOnRenderContext(
 ) {
   const { ctx, setupState } = instance
   Object.keys(toRaw(setupState)).forEach(key => {
-    if (key[0] === '$' || key[0] === '_') {
+    if (!setupState.__isScriptSetup && (key[0] === '$' || key[0] === '_')) {
       warn(
         `setup() return property ${JSON.stringify(
           key

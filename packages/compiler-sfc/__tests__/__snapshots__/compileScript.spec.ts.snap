@@ -33,27 +33,6 @@ return { x }
       export const n = 1"
 `;
 
-exports[`SFC compile <script setup> <template inherit-attrs="false"> 1`] = `
-"
-      const __default__ = {}
-      __default__.inheritAttrs = false
-export default __default__"
-`;
-
-exports[`SFC compile <script setup> <template inherit-attrs="false"> 2`] = `
-"export default {
-  expose: [],
-  inheritAttrs: false,
-  setup(__props) {
-
-      const a = 1
-      
-return { a }
-}
-
-}"
-`;
-
 exports[`SFC compile <script setup> defineEmit() (deprecated) 1`] = `
 "export default {
   expose: [],
