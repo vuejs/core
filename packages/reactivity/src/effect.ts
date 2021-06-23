@@ -1,5 +1,5 @@
 import { TrackOpTypes, TriggerOpTypes } from './operations'
-import { EMPTY_OBJ, isArray, isIntegerKey, isMap } from '@vue/shared'
+import { EMPTY_OBJ, extend, isArray, isIntegerKey, isMap } from '@vue/shared'
 
 // The main WeakMap that stores {target -> key -> dep} connections.
 // Conceptually, it's easier to think of a dependency as a Dep class
@@ -212,47 +212,47 @@ export function trigger(
     return
   }
 
-  let sets: DepSets = []
+  let deps: (Dep | undefined)[] = []
   if (type === TriggerOpTypes.CLEAR) {
     // collection being cleared
     // trigger all effects for target
-    sets = [...depsMap.values()]
+    deps = [...depsMap.values()]
   } else if (key === 'length' && isArray(target)) {
     depsMap.forEach((dep, key) => {
       if (key === 'length' || key >= (newValue as number)) {
-        sets.push(dep)
+        deps.push(dep)
       }
     })
   } else {
     // schedule runs for SET | ADD | DELETE
     if (key !== void 0) {
-      sets.push(depsMap.get(key))
+      deps.push(depsMap.get(key))
     }
 
     // also run for iteration key on ADD | DELETE | Map.SET
     switch (type) {
       case TriggerOpTypes.ADD:
         if (!isArray(target)) {
-          sets.push(depsMap.get(ITERATE_KEY))
+          deps.push(depsMap.get(ITERATE_KEY))
           if (isMap(target)) {
-            sets.push(depsMap.get(MAP_KEY_ITERATE_KEY))
+            deps.push(depsMap.get(MAP_KEY_ITERATE_KEY))
           }
         } else if (isIntegerKey(key)) {
           // new index added to array -> length changes
-          sets.push(depsMap.get('length'))
+          deps.push(depsMap.get('length'))
         }
         break
       case TriggerOpTypes.DELETE:
         if (!isArray(target)) {
-          sets.push(depsMap.get(ITERATE_KEY))
+          deps.push(depsMap.get(ITERATE_KEY))
           if (isMap(target)) {
-            sets.push(depsMap.get(MAP_KEY_ITERATE_KEY))
+            deps.push(depsMap.get(MAP_KEY_ITERATE_KEY))
           }
         }
         break
       case TriggerOpTypes.SET:
         if (isMap(target)) {
-          sets.push(depsMap.get(ITERATE_KEY))
+          deps.push(depsMap.get(ITERATE_KEY))
         }
         break
     }
@@ -261,51 +261,37 @@ export function trigger(
   const eventInfo = __DEV__
     ? { target, type, key, newValue, oldValue, oldTarget }
     : undefined
-  triggerMultiEffects(sets, eventInfo)
-}
 
-type DepSets = (Dep | undefined)[]
-
-export function triggerMultiEffects(
-  depSets: DepSets,
-  debuggerEventExtraInfo?: DebuggerEventExtraInfo
-) {
-  if (depSets.length === 1) {
-    if (depSets[0]) {
-      triggerEffects(depSets[0], debuggerEventExtraInfo)
+  if (deps.length === 1) {
+    if (deps[0]) {
+      triggerEffects(deps[0], eventInfo)
     }
   } else {
-    const sets = depSets.filter(s => !!s) as Dep[]
-    triggerEffects(concatSets(sets), debuggerEventExtraInfo)
+    const effects: ReactiveEffect[] = []
+    for (const dep of deps) {
+      if (dep) {
+        effects.push(...dep)
+      }
+    }
+    triggerEffects(new Set(effects), eventInfo)
   }
-}
-
-function concatSets<T>(sets: Set<T>[]): Set<T> {
-  const all = ([] as T[]).concat(...sets.map(s => [...s!]))
-  return new Set(all)
 }
 
 export function triggerEffects(
   dep: Dep,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
-  const run = (effect: ReactiveEffect) => {
-    if (__DEV__ && effect.options.onTrigger) {
-      effect.options.onTrigger(
-        Object.assign({ effect }, debuggerEventExtraInfo)
-      )
-    }
-    if (effect.options.scheduler) {
-      effect.options.scheduler(effect)
-    } else {
-      effect()
+  // spread into array for stabilization
+  for (const effect of [...dep]) {
+    if (effect !== activeEffect || effect.allowRecurse) {
+      if (__DEV__ && effect.options.onTrigger) {
+        effect.options.onTrigger(extend({ effect }, debuggerEventExtraInfo))
+      }
+      if (effect.options.scheduler) {
+        effect.options.scheduler(effect)
+      } else {
+        effect()
+      }
     }
   }
-
-  const immutableDeps = [...dep]
-  immutableDeps.forEach(effect => {
-    if (effect !== activeEffect || effect.allowRecurse) {
-      run(effect)
-    }
-  })
 }
