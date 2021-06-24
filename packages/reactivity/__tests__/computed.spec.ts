@@ -2,7 +2,6 @@ import {
   computed,
   reactive,
   effect,
-  stop,
   ref,
   WritableComputedRef,
   isReadonly
@@ -125,7 +124,7 @@ describe('reactivity/computed', () => {
     expect(dummy).toBe(undefined)
     value.foo = 1
     expect(dummy).toBe(1)
-    stop(cValue.effect)
+    cValue.effect.stop()
     value.foo = 2
     expect(dummy).toBe(1)
   })
@@ -196,7 +195,7 @@ describe('reactivity/computed', () => {
 
   it('should expose value when stopped', () => {
     const x = computed(() => 1)
-    stop(x.effect)
+    x.effect.stop()
     expect(x.value).toBe(1)
   })
 })

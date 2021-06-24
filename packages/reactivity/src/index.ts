@@ -46,7 +46,9 @@ export {
   resetTracking,
   ITERATE_KEY,
   ReactiveEffect,
+  ReactiveEffectRunner,
   ReactiveEffectOptions,
+  EffectScheduler,
   DebuggerEvent
 } from './effect'
 export { TrackOpTypes, TriggerOpTypes } from './operations'

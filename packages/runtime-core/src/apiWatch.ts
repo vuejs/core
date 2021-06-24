@@ -1,12 +1,12 @@
 import {
-  effect,
-  stop,
   isRef,
   Ref,
   ComputedRef,
+  ReactiveEffect,
   ReactiveEffectOptions,
   isReactive,
-  ReactiveFlags
+  ReactiveFlags,
+  EffectScheduler
 } from '@vue/reactivity'
 import { SchedulerJob, queuePreFlushCb } from './scheduler'
 import {
@@ -244,7 +244,7 @@ function doWatch(
 
   let cleanup: () => void
   let onInvalidate: InvalidateCbRegistrator = (fn: () => void) => {
-    cleanup = runner.options.onStop = () => {
+    cleanup = effect.onStop = () => {
       callWithErrorHandling(fn, instance, ErrorCodes.WATCH_CLEANUP)
     }
   }
@@ -268,12 +268,12 @@ function doWatch(
 
   let oldValue = isMultiSource ? [] : INITIAL_WATCHER_VALUE
   const job: SchedulerJob = () => {
-    if (!runner.active) {
+    if (!effect.active) {
       return
     }
     if (cb) {
       // watch(source, cb)
-      const newValue = runner()
+      const newValue = effect.run()
       if (
         deep ||
         forceTrigger ||
@@ -300,7 +300,7 @@ function doWatch(
       }
     } else {
       // watchEffect
-      runner()
+      effect.run()
     }
   }
 
@@ -308,7 +308,7 @@ function doWatch(
   // it is allowed to self-trigger (#1727)
   job.allowRecurse = !!cb
 
-  let scheduler: ReactiveEffectOptions['scheduler']
+  let scheduler: EffectScheduler
   if (flush === 'sync') {
     scheduler = job as any // the scheduler function gets called directly
   } else if (flush === 'post') {
@@ -326,32 +326,35 @@ function doWatch(
     }
   }
 
-  const runner = effect(getter, {
-    lazy: true,
-    onTrack,
-    onTrigger,
-    scheduler
-  })
+  const effect = new ReactiveEffect(getter, scheduler)
 
-  recordInstanceBoundEffect(runner, instance)
+  if (__DEV__) {
+    effect.onTrack = onTrack
+    effect.onTrigger = onTrigger
+  }
+
+  recordInstanceBoundEffect(effect, instance)
 
   // initial run
   if (cb) {
     if (immediate) {
       job()
     } else {
-      oldValue = runner()
+      oldValue = effect.run()
     }
   } else if (flush === 'post') {
-    queuePostRenderEffect(runner, instance && instance.suspense)
+    queuePostRenderEffect(
+      effect.run.bind(effect),
+      instance && instance.suspense
+    )
   } else {
-    runner()
+    effect.run()
   }
 
   return () => {
-    stop(runner)
+    effect.stop()
     if (instance) {
-      remove(instance.effects!, runner)
+      remove(instance.effects!, effect)
     }
   }
 }

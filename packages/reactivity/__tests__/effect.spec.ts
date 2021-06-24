@@ -494,7 +494,7 @@ describe('reactivity/effect', () => {
     const runner = effect(() => {})
     const otherRunner = effect(runner)
     expect(runner).not.toBe(otherRunner)
-    expect(runner.raw).toBe(otherRunner.raw)
+    expect(runner.effect.fn).toBe(otherRunner.effect.fn)
   })
 
   it('should not run multiple times for a single mutation', () => {
@@ -590,12 +590,13 @@ describe('reactivity/effect', () => {
   })
 
   it('scheduler', () => {
-    let runner: any, dummy
-    const scheduler = jest.fn(_runner => {
-      runner = _runner
+    let dummy
+    let run: any
+    const scheduler = jest.fn(() => {
+      run = runner
     })
     const obj = reactive({ foo: 1 })
-    effect(
+    const runner = effect(
       () => {
         dummy = obj.foo
       },
@@ -609,7 +610,7 @@ describe('reactivity/effect', () => {
     // should not run yet
     expect(dummy).toBe(1)
     // manually run
-    runner()
+    run()
     // should have run
     expect(dummy).toBe(2)
   })
@@ -633,19 +634,19 @@ describe('reactivity/effect', () => {
     expect(onTrack).toHaveBeenCalledTimes(3)
     expect(events).toEqual([
       {
-        effect: runner,
+        effect: runner.effect,
         target: toRaw(obj),
         type: TrackOpTypes.GET,
         key: 'foo'
       },
       {
-        effect: runner,
+        effect: runner.effect,
         target: toRaw(obj),
         type: TrackOpTypes.HAS,
         key: 'bar'
       },
       {
-        effect: runner,
+        effect: runner.effect,
         target: toRaw(obj),
         type: TrackOpTypes.ITERATE,
         key: ITERATE_KEY
@@ -671,7 +672,7 @@ describe('reactivity/effect', () => {
     expect(dummy).toBe(2)
     expect(onTrigger).toHaveBeenCalledTimes(1)
     expect(events[0]).toEqual({
-      effect: runner,
+      effect: runner.effect,
       target: toRaw(obj),
       type: TriggerOpTypes.SET,
       key: 'foo',
@@ -684,7 +685,7 @@ describe('reactivity/effect', () => {
     expect(dummy).toBeUndefined()
     expect(onTrigger).toHaveBeenCalledTimes(2)
     expect(events[1]).toEqual({
-      effect: runner,
+      effect: runner.effect,
       target: toRaw(obj),
       type: TriggerOpTypes.DELETE,
       key: 'foo',
