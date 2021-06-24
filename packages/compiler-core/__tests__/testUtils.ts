@@ -70,7 +70,6 @@ export function createElementWithCodegen(
       isBlock: false,
       disableTracking: false,
       isComponent: false,
-      shapeFlag: ShapeFlags.ELEMENT + ``,
       loc: locStub
     }
   }
