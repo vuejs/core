@@ -1,12 +1,12 @@
 import {
-  effect,
-  stop,
   isRef,
   Ref,
   ComputedRef,
+  ReactiveEffect,
   ReactiveEffectOptions,
   isReactive,
-  ReactiveFlags
+  ReactiveFlags,
+  EffectScheduler
 } from '@vue/reactivity'
 import { SchedulerJob, queuePreFlushCb } from './scheduler'
 import {
@@ -244,7 +244,7 @@ function doWatch(
 
   let cleanup: () => void
   let onInvalidate: InvalidateCbRegistrator = (fn: () => void) => {
-    cleanup = runner.options.onStop = () => {
+    cleanup = runner.onStop = () => {
       callWithErrorHandling(fn, instance, ErrorCodes.WATCH_CLEANUP)
     }
   }
@@ -273,7 +273,7 @@ function doWatch(
     }
     if (cb) {
       // watch(source, cb)
-      const newValue = runner()
+      const newValue = runner.run()
       if (
         deep ||
         forceTrigger ||
@@ -300,7 +300,7 @@ function doWatch(
       }
     } else {
       // watchEffect
-      runner()
+      runner.run()
     }
   }
 
@@ -308,7 +308,7 @@ function doWatch(
   // it is allowed to self-trigger (#1727)
   job.allowRecurse = !!cb
 
-  let scheduler: ReactiveEffectOptions['scheduler']
+  let scheduler: EffectScheduler
   if (flush === 'sync') {
     scheduler = job as any // the scheduler function gets called directly
   } else if (flush === 'post') {
@@ -326,12 +326,12 @@ function doWatch(
     }
   }
 
-  const runner = effect(getter, {
-    lazy: true,
-    onTrack,
-    onTrigger,
-    scheduler
-  })
+  const runner = new ReactiveEffect(getter, scheduler)
+
+  if (__DEV__) {
+    runner.onTrack = onTrack
+    runner.onTrigger = onTrigger
+  }
 
   recordInstanceBoundEffect(runner, instance)
 
@@ -340,16 +340,16 @@ function doWatch(
     if (immediate) {
       job()
     } else {
-      oldValue = runner()
+      oldValue = runner.run()
     }
   } else if (flush === 'post') {
-    queuePostRenderEffect(runner, instance && instance.suspense)
+    queuePostRenderEffect(runner.boundRun, instance && instance.suspense)
   } else {
-    runner()
+    runner.run()
   }
 
   return () => {
-    stop(runner)
+    runner.stop()
     if (instance) {
       remove(instance.effects!, runner)
     }

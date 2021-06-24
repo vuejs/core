@@ -4,7 +4,8 @@ import {
   pauseTracking,
   resetTracking,
   shallowReadonly,
-  proxyRefs
+  proxyRefs,
+  ReactiveEffectRunner
 } from '@vue/reactivity'
 import {
   ComponentPublicInstance,
@@ -215,9 +216,9 @@ export interface ComponentInternalInstance {
    */
   subTree: VNode
   /**
-   * The reactive effect for rendering and patching the component. Callable.
+   * Bound effect runner
    */
-  update: ReactiveEffect
+  update: ReactiveEffectRunner
   /**
    * The render function that returns vdom tree.
    * @internal

@@ -1,7 +1,6 @@
 import {
   isReactive,
   reactive,
-  stop,
   track,
   TrackOpTypes,
   trigger,
@@ -575,7 +574,7 @@ function installCompatMount(
         // stop effects
         if (effects) {
           for (let i = 0; i < effects.length; i++) {
-            stop(effects[i])
+            effects[i].stop()
           }
         }
         // unmounted hook

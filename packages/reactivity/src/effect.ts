@@ -1,5 +1,5 @@
 import { TrackOpTypes, TriggerOpTypes } from './operations'
-import { EMPTY_OBJ, extend, isArray, isIntegerKey, isMap } from '@vue/shared'
+import { extend, isArray, isIntegerKey, isMap } from '@vue/shared'
 
 // The main WeakMap that stores {target -> key -> dep} connections.
 // Conceptually, it's easier to think of a dependency as a Dep class
@@ -9,40 +9,7 @@ type Dep = Set<ReactiveEffect>
 type KeyToDepMap = Map<any, Dep>
 const targetMap = new WeakMap<any, KeyToDepMap>()
 
-export interface ReactiveEffect<T = any> {
-  (): T
-  _isEffect: true
-  id: number
-  active: boolean
-  raw: () => T
-  deps: Array<Dep>
-  options: ReactiveEffectOptions
-  allowRecurse: boolean
-}
-
-export interface ReactiveEffectOptions {
-  lazy?: boolean
-  scheduler?: (job: ReactiveEffect) => void
-  onTrack?: (event: DebuggerEvent) => void
-  onTrigger?: (event: DebuggerEvent) => void
-  onStop?: () => void
-  /**
-   * Indicates whether the job is allowed to recursively trigger itself when
-   * managed by the scheduler.
-   *
-   * By default, a job cannot trigger itself because some built-in method calls,
-   * e.g. Array.prototype.push actually performs reads as well (#1740) which
-   * can lead to confusing infinite loops.
-   * The allowed cases are component update functions and watch callbacks.
-   * Component update functions may update child component props, which in turn
-   * trigger flush: "pre" watch callbacks that mutates state that the parent
-   * relies on (#1801). Watch callbacks doesn't track its dependencies so if it
-   * triggers itself again, it's likely intentional and it is the user's
-   * responsibility to perform recursive state mutation that eventually
-   * stabilizes (#1727).
-   */
-  allowRecurse?: boolean
-}
+export type EffectScheduler = (job: () => void) => void
 
 export type DebuggerEvent = {
   effect: ReactiveEffect
@@ -63,51 +30,58 @@ let activeEffect: ReactiveEffect | undefined
 export const ITERATE_KEY = Symbol(__DEV__ ? 'iterate' : '')
 export const MAP_KEY_ITERATE_KEY = Symbol(__DEV__ ? 'Map key iterate' : '')
 
-export function isEffect(fn: any): fn is ReactiveEffect {
-  return fn && fn._isEffect === true
-}
-
-export function effect<T = any>(
-  fn: () => T,
-  options: ReactiveEffectOptions = EMPTY_OBJ
-): ReactiveEffect<T> {
-  if (isEffect(fn)) {
-    fn = fn.raw
-  }
-  const effect = createReactiveEffect(fn, options)
-  if (!options.lazy) {
-    effect()
-  }
-  return effect
-}
-
-export function stop(effect: ReactiveEffect) {
-  if (effect.active) {
-    cleanup(effect)
-    if (effect.options.onStop) {
-      effect.options.onStop()
-    }
-    effect.active = false
-  }
-}
-
 let uid = 0
 
-function createReactiveEffect<T = any>(
-  fn: () => T,
-  options: ReactiveEffectOptions
-): ReactiveEffect<T> {
-  const effect = function reactiveEffect(): unknown {
-    if (!effect.active) {
-      return fn()
+export interface ReactiveEffectRunner {
+  (): any
+  id: number
+  active: boolean
+  allowRecurse: boolean
+  effect: ReactiveEffect
+}
+
+export class ReactiveEffect<T = any> {
+  active = true
+  deps: Dep[] = []
+
+  // can be attached after creation
+  onStop?: () => void
+  // dev only
+  onTrack?: (event: DebuggerEvent) => void
+  // dev only
+  onTrigger?: (event: DebuggerEvent) => void
+
+  constructor(
+    public fn: () => T,
+    public scheduler: EffectScheduler | null = null,
+    /**
+     * Indicates whether the effect is allowed to recursively trigger itself
+     * when managed by the scheduler.
+     *
+     * By default, a job cannot trigger itself because some built-in method calls,
+     * e.g. Array.prototype.push actually performs reads as well (#1740) which
+     * can lead to confusing infinite loops.
+     * The allowed cases are component update functions and watch callbacks.
+     * Component update functions may update child component props, which in turn
+     * trigger flush: "pre" watch callbacks that mutates state that the parent
+     * relies on (#1801). Watch callbacks doesn't track its dependencies so if it
+     * triggers itself again, it's likely intentional and it is the user's
+     * responsibility to perform recursive state mutation that eventually
+     * stabilizes (#1727).
+     */
+    public allowRecurse = false
+  ) {}
+
+  run() {
+    if (!this.active) {
+      return this.fn()
     }
-    if (!effectStack.includes(effect)) {
-      cleanup(effect)
+    if (!effectStack.includes(this)) {
+      this.cleanup()
       try {
         enableTracking()
-        effectStack.push(effect)
-        activeEffect = effect
-        return fn()
+        effectStack.push((activeEffect = this))
+        return this.fn()
       } finally {
         effectStack.pop()
         resetTracking()
@@ -115,25 +89,78 @@ function createReactiveEffect<T = any>(
         activeEffect = n > 0 ? effectStack[n - 1] : undefined
       }
     }
-  } as ReactiveEffect
-  effect.id = uid++
-  effect.allowRecurse = !!options.allowRecurse
-  effect._isEffect = true
-  effect.active = true
-  effect.raw = fn
-  effect.deps = []
-  effect.options = options
-  return effect
+  }
+
+  /**
+   * Lazy initialized bound runner function that can be passed to a scheduler.
+   * Also attaches a few properties that are needed by @vue/runtime-core's
+   * scheduler.
+   *
+   * This is only needed when a scheduler is used so making it lazy provides
+   * decent memory savings.
+   */
+  _boundRun?: ReactiveEffectRunner
+  get boundRun(): ReactiveEffectRunner {
+    if (this._boundRun) {
+      return this._boundRun
+    }
+    const run = (this._boundRun = this.run.bind(this) as ReactiveEffectRunner)
+    run.id = uid++
+    run.active = this.active
+    run.allowRecurse = this.allowRecurse
+    run.effect = this
+    return run
+  }
+
+  cleanup() {
+    const { deps } = this
+    if (deps.length) {
+      for (let i = 0; i < deps.length; i++) {
+        deps[i].delete(this)
+      }
+      deps.length = 0
+    }
+  }
+
+  stop() {
+    if (this.active) {
+      this.cleanup()
+      if (this.onStop) {
+        this.onStop()
+      }
+      this.active = false
+      if (this._boundRun) {
+        this._boundRun.active = false
+      }
+    }
+  }
 }
 
-function cleanup(effect: ReactiveEffect) {
-  const { deps } = effect
-  if (deps.length) {
-    for (let i = 0; i < deps.length; i++) {
-      deps[i].delete(effect)
-    }
-    deps.length = 0
+export interface ReactiveEffectOptions {
+  lazy?: boolean
+  scheduler?: EffectScheduler
+  allowRecurse?: boolean
+  onStop?: () => void
+  onTrack?: (event: DebuggerEvent) => void
+  onTrigger?: (event: DebuggerEvent) => void
+}
+
+export function effect<T = any>(
+  fn: () => T,
+  options?: ReactiveEffectOptions
+): ReactiveEffectRunner {
+  const _effect = new ReactiveEffect(fn)
+  if (options) {
+    extend(_effect, options)
   }
+  if (!options || !options.lazy) {
+    _effect.run()
+  }
+  return _effect.boundRun
+}
+
+export function stop(runner: ReactiveEffectRunner) {
+  runner.effect.stop()
 }
 
 let shouldTrack = true
@@ -185,8 +212,8 @@ export function trackEffects(
   if (!dep.has(activeEffect!)) {
     dep.add(activeEffect!)
     activeEffect!.deps.push(dep)
-    if (__DEV__ && activeEffect!.options.onTrack) {
-      activeEffect!.options.onTrack(
+    if (__DEV__ && activeEffect!.onTrack) {
+      activeEffect!.onTrack(
         Object.assign(
           {
             effect: activeEffect!
@@ -284,13 +311,17 @@ export function triggerEffects(
   // spread into array for stabilization
   for (const effect of [...dep]) {
     if (effect !== activeEffect || effect.allowRecurse) {
-      if (__DEV__ && effect.options.onTrigger) {
-        effect.options.onTrigger(extend({ effect }, debuggerEventExtraInfo))
+      if (__DEV__ && effect.onTrigger) {
+        effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
       }
-      if (effect.options.scheduler) {
-        effect.options.scheduler(effect)
+      const { scheduler } = effect
+      if (scheduler) {
+        // optimization: avoid creating bound runner fn when scheduler expects
+        // no arguments.
+        // @ts-ignore
+        scheduler(scheduler.length ? effect.boundRun : null)
       } else {
-        effect()
+        effect.run()
       }
     }
   }
