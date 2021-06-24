@@ -946,11 +946,13 @@ export function compileScript(
         allBindings[key] = true
       }
     }
-    returned = `{ ${Object.keys(allBindings).join(', ')}${
+    const keys = Object.keys(allBindings)
+    if (!__TEST__) {
       // the `__isScriptSetup: true` flag is used by componentPublicInstance
       // proxy to allow properties that start with $ or _
-      __TEST__ ? `` : `, __isScriptSetup: true`
-    } }`
+      keys.push(`__isScriptSetup: true`)
+    }
+    returned = `{ ${keys.join(', ')} }`
   }
   s.appendRight(endOffset, `\nreturn ${returned}\n}\n\n`)
 
