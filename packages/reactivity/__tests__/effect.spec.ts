@@ -490,12 +490,12 @@ describe('reactivity/effect', () => {
     expect(conditionalSpy).toHaveBeenCalledTimes(2)
   })
 
-  // it('should not double wrap if the passed function is a effect', () => {
-  //   const runner = effect(() => {})
-  //   const otherRunner = effect(runner)
-  //   expect(runner).not.toBe(otherRunner)
-  //   expect(runner.raw).toBe(otherRunner.raw)
-  // })
+  it('should not double wrap if the passed function is a effect', () => {
+    const runner = effect(() => {})
+    const otherRunner = effect(runner)
+    expect(runner).not.toBe(otherRunner)
+    expect(runner.effect.fn).toBe(otherRunner.effect.fn)
+  })
 
   it('should not run multiple times for a single mutation', () => {
     let dummy
