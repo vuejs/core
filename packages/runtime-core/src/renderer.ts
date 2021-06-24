@@ -1621,15 +1621,17 @@ function baseCreateRenderer(
     }
 
     // create reactive effect for rendering
-    const effect = new ReactiveEffect(
+    const effect = (instance.effect = new ReactiveEffect(
       componentUpdateFn,
-      queueJob,
-      // allowRecurse
-      // #1801, #2043 component render effects should allow recursive updates
-      true
-    )
+      () => queueJob(instance.update),
+      true /* allowRecurse */
+    ))
 
-    instance.update = effect.boundRun
+    const update = (instance.update = effect.run.bind(effect) as SchedulerJob)
+    update.id = instance.uid
+    // allowRecurse
+    // #1801, #2043 component render effects should allow recursive updates
+    update.allowRecurse = true
 
     if (__DEV__) {
       effect.onTrack = instance.rtc
@@ -1639,10 +1641,10 @@ function baseCreateRenderer(
         ? e => invokeArrayFns(instance.rtg!, e)
         : void 0
       // @ts-ignore (for scheduler)
-      instance.update.ownerInstance = instance
+      update.ownerInstance = instance
     }
 
-    instance.update()
+    update()
   }
 
   const updateComponentPreRender = (
@@ -2282,7 +2284,7 @@ function baseCreateRenderer(
       unregisterHMR(instance)
     }
 
-    const { bum, effects, update, subTree, um } = instance
+    const { bum, effect, effects, update, subTree, um } = instance
 
     // beforeUnmount hook
     if (bum) {
@@ -2302,8 +2304,10 @@ function baseCreateRenderer(
     }
     // update may be null if a component is unmounted before its async
     // setup has resolved.
-    if (update) {
-      update.effect.stop()
+    if (effect) {
+      effect.stop()
+      // so that scheduler will no longer invoke it
+      update.active = false
       unmount(subTree, instance, parentSuspense, doRemove)
     }
     // unmounted hook

@@ -244,7 +244,7 @@ function doWatch(
 
   let cleanup: () => void
   let onInvalidate: InvalidateCbRegistrator = (fn: () => void) => {
-    cleanup = runner.onStop = () => {
+    cleanup = effect.onStop = () => {
       callWithErrorHandling(fn, instance, ErrorCodes.WATCH_CLEANUP)
     }
   }
@@ -268,12 +268,12 @@ function doWatch(
 
   let oldValue = isMultiSource ? [] : INITIAL_WATCHER_VALUE
   const job: SchedulerJob = () => {
-    if (!runner.active) {
+    if (!effect.active) {
       return
     }
     if (cb) {
       // watch(source, cb)
-      const newValue = runner.run()
+      const newValue = effect.run()
       if (
         deep ||
         forceTrigger ||
@@ -300,7 +300,7 @@ function doWatch(
       }
     } else {
       // watchEffect
-      runner.run()
+      effect.run()
     }
   }
 
@@ -326,32 +326,35 @@ function doWatch(
     }
   }
 
-  const runner = new ReactiveEffect(getter, scheduler)
+  const effect = new ReactiveEffect(getter, scheduler)
 
   if (__DEV__) {
-    runner.onTrack = onTrack
-    runner.onTrigger = onTrigger
+    effect.onTrack = onTrack
+    effect.onTrigger = onTrigger
   }
 
-  recordInstanceBoundEffect(runner, instance)
+  recordInstanceBoundEffect(effect, instance)
 
   // initial run
   if (cb) {
     if (immediate) {
       job()
     } else {
-      oldValue = runner.run()
+      oldValue = effect.run()
     }
   } else if (flush === 'post') {
-    queuePostRenderEffect(runner.boundRun, instance && instance.suspense)
+    queuePostRenderEffect(
+      effect.run.bind(effect),
+      instance && instance.suspense
+    )
   } else {
-    runner.run()
+    effect.run()
   }
 
   return () => {
-    runner.stop()
+    effect.stop()
     if (instance) {
-      remove(instance.effects!, runner)
+      remove(instance.effects!, effect)
     }
   }
 }

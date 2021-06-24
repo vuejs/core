@@ -4,8 +4,7 @@ import {
   pauseTracking,
   resetTracking,
   shallowReadonly,
-  proxyRefs,
-  ReactiveEffectRunner
+  proxyRefs
 } from '@vue/reactivity'
 import {
   ComponentPublicInstance,
@@ -58,6 +57,7 @@ import { currentRenderingInstance } from './componentRenderContext'
 import { startMeasure, endMeasure } from './profiling'
 import { convertLegacyRenderFn } from './compat/renderFn'
 import { globalCompatConfig, validateCompatConfig } from './compat/compatConfig'
+import { SchedulerJob } from './scheduler'
 
 export type Data = Record<string, unknown>
 
@@ -216,9 +216,14 @@ export interface ComponentInternalInstance {
    */
   subTree: VNode
   /**
-   * Bound effect runner
+   * Main update effect
+   * @internal
    */
-  update: ReactiveEffectRunner
+  effect: ReactiveEffect
+  /**
+   * Bound effect runner to be passed to schedulers
+   */
+  update: SchedulerJob
   /**
    * The render function that returns vdom tree.
    * @internal
@@ -443,6 +448,7 @@ export function createComponentInstance(
     root: null!, // to be immediately set
     next: null,
     subTree: null!, // will be set synchronously right after creation
+    effect: null!, // will be set synchronously right after creation
     update: null!, // will be set synchronously right after creation
     render: null,
     proxy: null,

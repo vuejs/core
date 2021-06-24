@@ -9,7 +9,7 @@ type Dep = Set<ReactiveEffect>
 type KeyToDepMap = Map<any, Dep>
 const targetMap = new WeakMap<any, KeyToDepMap>()
 
-export type EffectScheduler = (job: () => void) => void
+export type EffectScheduler = () => void
 
 export type DebuggerEvent = {
   effect: ReactiveEffect
@@ -29,17 +29,6 @@ let activeEffect: ReactiveEffect | undefined
 
 export const ITERATE_KEY = Symbol(__DEV__ ? 'iterate' : '')
 export const MAP_KEY_ITERATE_KEY = Symbol(__DEV__ ? 'Map key iterate' : '')
-
-let uid = 0
-
-export interface ReactiveEffectRunner {
-  (): any
-  id: number
-  active: boolean
-  allowRecurse: boolean
-  effect: ReactiveEffect
-}
-
 export class ReactiveEffect<T = any> {
   active = true
   deps: Dep[] = []
@@ -91,27 +80,6 @@ export class ReactiveEffect<T = any> {
     }
   }
 
-  /**
-   * Lazy initialized bound runner function that can be passed to a scheduler.
-   * Also attaches a few properties that are needed by @vue/runtime-core's
-   * scheduler.
-   *
-   * This is only needed when a scheduler is used so making it lazy provides
-   * decent memory savings.
-   */
-  _boundRun?: ReactiveEffectRunner
-  get boundRun(): ReactiveEffectRunner {
-    if (this._boundRun) {
-      return this._boundRun
-    }
-    const run = (this._boundRun = this.run.bind(this) as ReactiveEffectRunner)
-    run.id = uid++
-    run.active = this.active
-    run.allowRecurse = this.allowRecurse
-    run.effect = this
-    return run
-  }
-
   cleanup() {
     const { deps } = this
     if (deps.length) {
@@ -129,9 +97,6 @@ export class ReactiveEffect<T = any> {
         this.onStop()
       }
       this.active = false
-      if (this._boundRun) {
-        this._boundRun.active = false
-      }
     }
   }
 }
@@ -145,6 +110,11 @@ export interface ReactiveEffectOptions {
   onTrigger?: (event: DebuggerEvent) => void
 }
 
+export interface ReactiveEffectRunner<T = any> {
+  (): T
+  effect: ReactiveEffect
+}
+
 export function effect<T = any>(
   fn: () => T,
   options?: ReactiveEffectOptions
@@ -156,7 +126,9 @@ export function effect<T = any>(
   if (!options || !options.lazy) {
     _effect.run()
   }
-  return _effect.boundRun
+  const runner = _effect.run.bind(_effect) as ReactiveEffectRunner
+  runner.effect = _effect
+  return runner
 }
 
 export function stop(runner: ReactiveEffectRunner) {
@@ -314,12 +286,8 @@ export function triggerEffects(
       if (__DEV__ && effect.onTrigger) {
         effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
       }
-      const { scheduler } = effect
-      if (scheduler) {
-        // optimization: avoid creating bound runner fn when scheduler expects
-        // no arguments.
-        // @ts-ignore
-        scheduler(scheduler.length ? effect.boundRun : null)
+      if (effect.scheduler) {
+        effect.scheduler()
       } else {
         effect.run()
       }

@@ -3,10 +3,10 @@ import { isArray } from '@vue/shared'
 import { ComponentPublicInstance } from './componentPublicInstance'
 import { ComponentInternalInstance, getComponentName } from './component'
 import { warn } from './warning'
-import { ReactiveEffectRunner } from '@vue/reactivity'
 
-export interface SchedulerJob extends Function, Partial<ReactiveEffectRunner> {
+export interface SchedulerJob extends Function {
   id?: number
+  active?: boolean
   allowRecurse?: boolean
   /**
    * Attached by renderer.ts when setting up a component's render effect

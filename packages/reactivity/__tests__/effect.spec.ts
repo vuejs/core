@@ -590,12 +590,13 @@ describe('reactivity/effect', () => {
   })
 
   it('scheduler', () => {
-    let runner: any, dummy
-    const scheduler = jest.fn(_runner => {
-      runner = _runner
+    let dummy
+    let run: any
+    const scheduler = jest.fn(() => {
+      run = runner
     })
     const obj = reactive({ foo: 1 })
-    effect(
+    const runner = effect(
       () => {
         dummy = obj.foo
       },
@@ -609,7 +610,7 @@ describe('reactivity/effect', () => {
     // should not run yet
     expect(dummy).toBe(1)
     // manually run
-    runner()
+    run()
     // should have run
     expect(dummy).toBe(2)
   })
