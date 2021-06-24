@@ -144,6 +144,27 @@ export type Component<
   | ConcreteComponent<Props, RawBindings, D, C, M>
   | ComponentPublicInstanceConstructor<Props>
 
+/**
+ * The type is used to determine component refs type.
+ * @example
+ * ```ts
+ * import { ref, ComponentRef, defineComponent, h } from 'vue'
+ * const ChildComponent = defineComponent(...);
+ * export default {
+ *   setup() {
+ *     const child = ref<ComponentRef<typeof ChildComponent> | null>(null);
+ *     return {
+ *       child,
+ *     };
+ *   },
+ *   render() {
+ *     return h(ChildComponent, { ref: 'child' });
+ *   },
+ * }
+ * ```
+ */
+export type ComponentRef<C> = C extends Component<infer Props, infer RawBindings, infer D, infer Computed, infer Method> ? Props & RawBindings & D & Computed & Method : never
+
 export { ComponentOptions }
 
 type LifecycleHook<TFn = Function> = TFn[] | null
