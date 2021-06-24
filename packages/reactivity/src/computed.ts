@@ -1,4 +1,4 @@
-import { effect, ReactiveEffect } from './effect'
+import { ReactiveEffect } from './effect'
 import { Ref, trackRefValue, triggerRefValue } from './ref'
 import { isFunction, NOOP } from '@vue/shared'
 import { ReactiveFlags, toRaw } from './reactive'
@@ -35,16 +35,12 @@ class ComputedRefImpl<T> {
     private readonly _setter: ComputedSetter<T>,
     isReadonly: boolean
   ) {
-    this.effect = effect(getter, {
-      lazy: true,
-      scheduler: () => {
-        if (!this._dirty) {
-          this._dirty = true
-          triggerRefValue(this)
-        }
+    this.effect = new ReactiveEffect(getter, () => {
+      if (!this._dirty) {
+        this._dirty = true
+        triggerRefValue(this)
       }
     })
-
     this[ReactiveFlags.IS_READONLY] = isReadonly
   }
 
@@ -52,10 +48,10 @@ class ComputedRefImpl<T> {
     // the computed ref may get wrapped by other proxies e.g. readonly() #3376
     const self = toRaw(this)
     if (self._dirty) {
-      self._value = this.effect()
+      self._value = self.effect.run()!
       self._dirty = false
     }
-    trackRefValue(this)
+    trackRefValue(self)
     return self._value
   }
 

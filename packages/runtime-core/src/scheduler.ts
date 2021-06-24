@@ -2,9 +2,26 @@ import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import { isArray } from '@vue/shared'
 import { ComponentInternalInstance, getComponentName } from './component'
 import { warn } from './warning'
-import { ReactiveEffect } from '@vue/reactivity'
 
-export interface SchedulerJob extends Function, Partial<ReactiveEffect> {
+export interface SchedulerJob extends Function {
+  id?: number
+  active?: boolean
+  /**
+   * Indicates whether the effect is allowed to recursively trigger itself
+   * when managed by the scheduler.
+   *
+   * By default, a job cannot trigger itself because some built-in method calls,
+   * e.g. Array.prototype.push actually performs reads as well (#1740) which
+   * can lead to confusing infinite loops.
+   * The allowed cases are component update functions and watch callbacks.
+   * Component update functions may update child component props, which in turn
+   * trigger flush: "pre" watch callbacks that mutates state that the parent
+   * relies on (#1801). Watch callbacks doesn't track its dependencies so if it
+   * triggers itself again, it's likely intentional and it is the user's
+   * responsibility to perform recursive state mutation that eventually
+   * stabilizes (#1727).
+   */
+  allowRecurse?: boolean
   /**
    * Attached by renderer.ts when setting up a component's render effect
    * Used to obtain component information when reporting max recursive updates.
@@ -13,8 +30,7 @@ export interface SchedulerJob extends Function, Partial<ReactiveEffect> {
   ownerInstance?: ComponentInternalInstance
 }
 
-export type SchedulerCb = Function & { id?: number }
-export type SchedulerCbs = SchedulerCb | SchedulerCb[]
+export type SchedulerJobs = SchedulerJob | SchedulerJob[]
 
 let isFlushing = false
 let isFlushPending = false
@@ -22,12 +38,12 @@ let isFlushPending = false
 const queue: SchedulerJob[] = []
 let flushIndex = 0
 
-const pendingPreFlushCbs: SchedulerCb[] = []
-let activePreFlushCbs: SchedulerCb[] | null = null
+const pendingPreFlushCbs: SchedulerJob[] = []
+let activePreFlushCbs: SchedulerJob[] | null = null
 let preFlushIndex = 0
 
-const pendingPostFlushCbs: SchedulerCb[] = []
-let activePostFlushCbs: SchedulerCb[] | null = null
+const pendingPostFlushCbs: SchedulerJob[] = []
+let activePostFlushCbs: SchedulerJob[] | null = null
 let postFlushIndex = 0
 
 const resolvedPromise: Promise<any> = Promise.resolve()
@@ -36,7 +52,7 @@ let currentFlushPromise: Promise<void> | null = null
 let currentPreFlushParentJob: SchedulerJob | null = null
 
 const RECURSION_LIMIT = 100
-type CountMap = Map<SchedulerJob | SchedulerCb, number>
+type CountMap = Map<SchedulerJob, number>
 
 export function nextTick<T = void>(
   this: T,
@@ -105,9 +121,9 @@ export function invalidateJob(job: SchedulerJob) {
 }
 
 function queueCb(
-  cb: SchedulerCbs,
-  activeQueue: SchedulerCb[] | null,
-  pendingQueue: SchedulerCb[],
+  cb: SchedulerJobs,
+  activeQueue: SchedulerJob[] | null,
+  pendingQueue: SchedulerJob[],
   index: number
 ) {
   if (!isArray(cb)) {
@@ -129,11 +145,11 @@ function queueCb(
   queueFlush()
 }
 
-export function queuePreFlushCb(cb: SchedulerCb) {
+export function queuePreFlushCb(cb: SchedulerJob) {
   queueCb(cb, activePreFlushCbs, pendingPreFlushCbs, preFlushIndex)
 }
 
-export function queuePostFlushCb(cb: SchedulerCbs) {
+export function queuePostFlushCb(cb: SchedulerJobs) {
   queueCb(cb, activePostFlushCbs, pendingPostFlushCbs, postFlushIndex)
 }
 
@@ -205,8 +221,8 @@ export function flushPostFlushCbs(seen?: CountMap) {
   }
 }
 
-const getId = (job: SchedulerJob | SchedulerCb) =>
-  job.id == null ? Infinity : job.id
+const getId = (job: SchedulerJob): number =>
+  job.id == null ? Infinity : job.id!
 
 function flushJobs(seen?: CountMap) {
   isFlushPending = false
@@ -256,13 +272,13 @@ function flushJobs(seen?: CountMap) {
   }
 }
 
-function checkRecursiveUpdates(seen: CountMap, fn: SchedulerJob | SchedulerCb) {
+function checkRecursiveUpdates(seen: CountMap, fn: SchedulerJob) {
   if (!seen.has(fn)) {
     seen.set(fn, 1)
   } else {
     const count = seen.get(fn)!
     if (count > RECURSION_LIMIT) {
-      const instance = (fn as SchedulerJob).ownerInstance
+      const instance = fn.ownerInstance
       const componentName = instance && getComponentName(instance.type)
       warn(
         `Maximum recursive updates exceeded${
