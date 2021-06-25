@@ -38,12 +38,11 @@ const bar = 1
     // should remove defineOptions import and call
     expect(content).not.toMatch('defineProps')
     // should generate correct setup signature
-    expect(content).toMatch(`setup(__props) {`)
+    expect(content).toMatch(`setup(__props, { expose }) {`)
     // should assign user identifier to it
     expect(content).toMatch(`const props = __props`)
     // should include context options in default export
     expect(content).toMatch(`export default {
-  expose: [],
   props: {
   foo: String
 },`)
@@ -63,10 +62,9 @@ const myEmit = defineEmit(['foo', 'bar'])
     // should remove defineOptions import and call
     expect(content).not.toMatch(/defineEmits?/)
     // should generate correct setup signature
-    expect(content).toMatch(`setup(__props, { emit: myEmit }) {`)
+    expect(content).toMatch(`setup(__props, { expose, emit: myEmit }) {`)
     // should include context options in default export
     expect(content).toMatch(`export default {
-  expose: [],
   emits: ['foo', 'bar'],`)
   })
 
@@ -84,11 +82,26 @@ const myEmit = defineEmits(['foo', 'bar'])
     // should remove defineOptions import and call
     expect(content).not.toMatch('defineEmits')
     // should generate correct setup signature
-    expect(content).toMatch(`setup(__props, { emit: myEmit }) {`)
+    expect(content).toMatch(`setup(__props, { expose, emit: myEmit }) {`)
     // should include context options in default export
     expect(content).toMatch(`export default {
-  expose: [],
   emits: ['foo', 'bar'],`)
+  })
+
+  test('defineExpose()', () => {
+    const { content } = compile(`
+<script setup>
+import { defineExpose } from 'vue'
+defineExpose({ foo: 123 })
+</script>
+  `)
+    assertCode(content)
+    // should remove defineOptions import and call
+    expect(content).not.toMatch('defineExpose')
+    // should generate correct setup signature
+    expect(content).toMatch(`setup(__props, { expose }) {`)
+    // should replace callee
+    expect(content).toMatch(/\bexpose\(\{ foo: 123 \}\)/)
   })
 
   describe('<script> and <script setup> co-usage', () => {
@@ -198,6 +211,25 @@ const myEmit = defineEmits(['foo', 'bar'])
       // check snapshot and make sure helper imports and
       // hoists are placed correctly.
       assertCode(content)
+      // in inline mode, no need to call expose() since nothing is exposed
+      // anyway!
+      expect(content).not.toMatch(`expose()`)
+    })
+
+    test('with defineExpose()', () => {
+      const { content } = compile(
+        `
+        <script setup>
+        import { defineExpose } from 'vue'
+        const count = ref(0)
+        defineExpose({ count })
+        </script>
+        `,
+        { inlineTemplate: true }
+      )
+      assertCode(content)
+      expect(content).toMatch(`setup(__props, { expose })`)
+      expect(content).toMatch(`expose({ count })`)
     })
 
     test('referencing scope components and directives', () => {
@@ -456,10 +488,9 @@ const emit = defineEmits(['a', 'b'])
       `)
       assertCode(content)
       expect(content).toMatch(`export default _defineComponent({
-  expose: [],
   props: { foo: String },
   emits: ['a', 'b'],
-  setup(__props, { emit }) {`)
+  setup(__props, { expose, emit }) {`)
     })
 
     test('defineProps w/ type', () => {

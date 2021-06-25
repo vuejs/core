@@ -37,6 +37,7 @@ import { rewriteDefault } from './rewriteDefault'
 const DEFINE_PROPS = 'defineProps'
 const DEFINE_EMIT = 'defineEmit'
 const DEFINE_EMITS = 'defineEmits'
+const DEFINE_EXPOSE = 'defineExpose'
 
 export interface SFCScriptCompileOptions {
   /**
@@ -188,6 +189,7 @@ export function compileScript(
   let defaultExport: Node | undefined
   let hasDefinePropsCall = false
   let hasDefineEmitCall = false
+  let hasDefineExposeCall = false
   let propsRuntimeDecl: Node | undefined
   let propsTypeDecl: TSTypeLiteral | undefined
   let propsIdentifier: string | undefined
@@ -319,6 +321,17 @@ export function compileScript(
           )
         }
       }
+      return true
+    }
+    return false
+  }
+
+  function processDefineExpose(node: Node): boolean {
+    if (isCallOf(node, DEFINE_EXPOSE)) {
+      if (hasDefineExposeCall) {
+        error(`duplicate ${DEFINE_EXPOSE}() call`, node)
+      }
+      hasDefineExposeCall = true
       return true
     }
     return false
@@ -633,7 +646,8 @@ export function compileScript(
           source === 'vue' &&
           (imported === DEFINE_PROPS ||
             imported === DEFINE_EMIT ||
-            imported === DEFINE_EMITS)
+            imported === DEFINE_EMITS ||
+            imported === DEFINE_EXPOSE)
         ) {
           removeSpecifier(i)
         } else if (existing) {
@@ -657,14 +671,24 @@ export function compileScript(
       }
     }
 
-    // process `defineProps` and `defineEmit(s)` calls
-    if (
-      node.type === 'ExpressionStatement' &&
-      (processDefineProps(node.expression) ||
-        processDefineEmits(node.expression))
-    ) {
-      s.remove(node.start! + startOffset, node.end! + startOffset)
+    if (node.type === 'ExpressionStatement') {
+      // process `defineProps` and `defineEmit(s)` calls
+      if (
+        processDefineProps(node.expression) ||
+        processDefineEmits(node.expression)
+      ) {
+        s.remove(node.start! + startOffset, node.end! + startOffset)
+      } else if (processDefineExpose(node.expression)) {
+        // defineExpose({}) -> expose({})
+        const callee = (node.expression as CallExpression).callee
+        s.overwrite(
+          callee.start! + startOffset,
+          callee.end! + startOffset,
+          'expose'
+        )
+      }
     }
+
     if (node.type === 'VariableDeclaration' && !node.declare) {
       for (const decl of node.declarations) {
         if (decl.init) {
@@ -863,18 +887,21 @@ export function compileScript(
   if (propsIdentifier) {
     s.prependRight(startOffset, `\nconst ${propsIdentifier} = __props`)
   }
+
+  const destructureElements =
+    hasDefineExposeCall || !options.inlineTemplate ? [`expose`] : []
   if (emitIdentifier) {
-    args +=
-      emitIdentifier === `emit` ? `, { emit }` : `, { emit: ${emitIdentifier} }`
+    destructureElements.push(
+      emitIdentifier === `emit` ? `emit` : `emit: ${emitIdentifier}`
+    )
+  }
+  if (destructureElements.length) {
+    args += `, { ${destructureElements.join(', ')} }`
     if (emitTypeDecl) {
-      args += `: {
-        emit: (${scriptSetup.content.slice(
-          emitTypeDecl.start!,
-          emitTypeDecl.end!
-        )}),
-        slots: any,
-        attrs: any
-      }`
+      args += `: { emit: (${scriptSetup.content.slice(
+        emitTypeDecl.start!,
+        emitTypeDecl.end!
+      )}), expose: any, slots: any, attrs: any }`
     }
   }
 
@@ -957,8 +984,7 @@ export function compileScript(
   s.appendRight(endOffset, `\nreturn ${returned}\n}\n\n`)
 
   // 11. finalize default export
-  // expose: [] makes <script setup> components "closed" by default.
-  let runtimeOptions = `\n  expose: [],`
+  let runtimeOptions = ``
   if (hasInlinedSsrRenderFn) {
     runtimeOptions += `\n  __ssrInlineRender: true,`
   }
@@ -976,6 +1002,11 @@ export function compileScript(
   } else if (emitTypeDecl) {
     runtimeOptions += genRuntimeEmits(typeDeclaredEmits)
   }
+
+  // <script setup> components are closed by default. If the user did not
+  // explicitly call `defineExpose`, call expose() with no args.
+  const exposeCall =
+    hasDefineExposeCall || options.inlineTemplate ? `` : `  expose()\n`
   if (isTS) {
     // for TS, make sure the exported type is still valid type with
     // correct props information
@@ -991,7 +1022,7 @@ export function compileScript(
         `defineComponent`
       )}({${def}${runtimeOptions}\n  ${
         hasAwait ? `async ` : ``
-      }setup(${args}) {\n`
+      }setup(${args}) {\n${exposeCall}`
     )
     s.appendRight(endOffset, `})`)
   } else {
@@ -1008,7 +1039,7 @@ export function compileScript(
       s.prependLeft(
         startOffset,
         `\nexport default {${runtimeOptions}\n  ` +
-          `${hasAwait ? `async ` : ``}setup(${args}) {\n`
+          `${hasAwait ? `async ` : ``}setup(${args}) {\n${exposeCall}`
       )
       s.appendRight(endOffset, `}`)
     }
