@@ -61,6 +61,16 @@ export function defineEmits() {
  */
 export const defineEmit = defineEmits
 
+export function defineExpose(exposed?: Record<string, any>) {
+  if (__DEV__) {
+    warn(
+      `defineExpose() is a compiler-hint helper that is only usable inside ` +
+        `<script setup> of a single file component. Its usage should be ` +
+        `compiled away and calling it at runtime has no effect.`
+    )
+  }
+}
+
 /**
  * @deprecated use `useSlots` and `useAttrs` instead.
  */
