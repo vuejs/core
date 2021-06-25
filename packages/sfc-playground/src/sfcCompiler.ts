@@ -59,14 +59,21 @@ export async function compileFile({ filename, code, compiled }: File) {
   }
 
   if (
-    (descriptor.script && descriptor.script.lang) ||
-    (descriptor.scriptSetup && descriptor.scriptSetup.lang) ||
     descriptor.styles.some(s => s.lang) ||
     (descriptor.template && descriptor.template.lang)
   ) {
     store.errors = [
-      'lang="x" pre-processors are not supported in the in-browser playground.'
+      `lang="x" pre-processors for <template> or <style> are currently not ` +
+        `supported.`
     ]
+    return
+  }
+
+  const scriptLang =
+    (descriptor.script && descriptor.script.lang) ||
+    (descriptor.scriptSetup && descriptor.scriptSetup.lang)
+  if (scriptLang && scriptLang !== 'ts') {
+    store.errors = [`Only lang="ts" is supported for <script> blocks.`]
     return
   }
 
@@ -79,7 +86,7 @@ export async function compileFile({ filename, code, compiled }: File) {
     ssrCode += code
   }
 
-  const clientScriptResult = doCompileScript(descriptor, id, false)
+  const clientScriptResult = await doCompileScript(descriptor, id, false)
   if (!clientScriptResult) {
     return
   }
@@ -89,7 +96,7 @@ export async function compileFile({ filename, code, compiled }: File) {
   // script ssr only needs to be performed if using <script setup> where
   // the render fn is inlined.
   if (descriptor.scriptSetup) {
-    const ssrScriptResult = doCompileScript(descriptor, id, true)
+    const ssrScriptResult = await doCompileScript(descriptor, id, true)
     if (!ssrScriptResult) {
       return
     }
@@ -171,11 +178,11 @@ export async function compileFile({ filename, code, compiled }: File) {
   store.errors = []
 }
 
-function doCompileScript(
+async function doCompileScript(
   descriptor: SFCDescriptor,
   id: string,
   ssr: boolean
-): [string, BindingMetadata | undefined] | undefined {
+): Promise<[string, BindingMetadata | undefined] | undefined> {
   if (descriptor.script || descriptor.scriptSetup) {
     try {
       const compiledScript = SFCCompiler.compileScript(descriptor, {
@@ -198,6 +205,13 @@ function doCompileScript(
       code +=
         `\n` +
         SFCCompiler.rewriteDefault(compiledScript.content, COMP_IDENTIFIER)
+
+      if ((descriptor.script || descriptor.scriptSetup)!.lang === 'ts') {
+        code = (await import('sucrase')).transform(code, {
+          transforms: ['typescript']
+        }).code
+      }
+
       return [code, compiledScript.bindings]
     } catch (e) {
       store.errors = [e]
