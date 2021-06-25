@@ -1492,7 +1492,15 @@ export function walkIdentifiers(
   })
 }
 
-function isRefIdentifier(id: Identifier, parent: Node, parentStack: Node[]) {
+function isRefIdentifier(
+  id: Identifier,
+  parent: Node | null,
+  parentStack: Node[]
+) {
+  if (!parent) {
+    return true
+  }
+
   // declaration id
   if (
     (parent.type === 'VariableDeclarator' ||

@@ -48,6 +48,19 @@ const bar = 1
 },`)
   })
 
+  test('defineProps w/ external definition', () => {
+    const { content } = compile(`
+    <script setup>
+    import { defineProps } from 'vue'
+    import { propsModel } from './props'
+    const props = defineProps(propsModel)
+    </script>
+      `)
+    assertCode(content)
+    expect(content).toMatch(`export default {
+  props: propsModel,`)
+  })
+
   test('defineEmit() (deprecated)', () => {
     const { content, bindings } = compile(`
 <script setup>

@@ -73,6 +73,23 @@ return {  }
 }"
 `;
 
+exports[`SFC compile <script setup> defineProps w/ external definition 1`] = `
+"import { propsModel } from './props'
+    
+export default {
+  props: propsModel,
+  setup(__props, { expose }) {
+  expose()
+
+const props = __props
+    
+    
+return { props, propsModel }
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> defineProps() 1`] = `
 "export default {
   props: {
