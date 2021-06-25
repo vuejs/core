@@ -14,7 +14,6 @@ import {
   isString,
   isObject,
   isArray,
-  EMPTY_OBJ,
   NOOP,
   isPromise
 } from '@vue/shared'
@@ -45,9 +44,7 @@ import {
 import {
   reactive,
   ComputedGetter,
-  WritableComputedOptions,
-  proxyRefs,
-  toRef
+  WritableComputedOptions
 } from '@vue/reactivity'
 import {
   ComponentObjectPropsOptions,
@@ -540,7 +537,7 @@ export let shouldCacheAccess = true
 
 export function applyOptions(instance: ComponentInternalInstance) {
   const options = resolveMergedOptions(instance)
-  const publicThis = instance.proxy!
+  const publicThis = instance.proxy! as any
   const ctx = instance.ctx
 
   // do not cache property access on public proxy during state initialization
@@ -773,12 +770,15 @@ export function applyOptions(instance: ComponentInternalInstance) {
 
   if (isArray(expose)) {
     if (expose.length) {
-      const exposed = instance.exposed || (instance.exposed = proxyRefs({}))
+      const exposed = instance.exposed || (instance.exposed = {})
       expose.forEach(key => {
-        exposed[key] = toRef(publicThis, key as any)
+        Object.defineProperty(exposed, key, {
+          get: () => publicThis[key],
+          set: val => (publicThis[key] = val)
+        })
       })
     } else if (!instance.exposed) {
-      instance.exposed = EMPTY_OBJ
+      instance.exposed = {}
     }
   }
 

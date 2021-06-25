@@ -14,7 +14,8 @@ import {
   createRenderContext,
   exposePropsOnRenderContext,
   exposeSetupStateOnRenderContext,
-  ComponentPublicInstanceConstructor
+  ComponentPublicInstanceConstructor,
+  publicPropertiesMap
 } from './componentPublicInstance'
 import {
   ComponentPropsOptions,
@@ -169,7 +170,7 @@ export interface SetupContext<E = EmitsOptions> {
   attrs: Data
   slots: Slots
   emit: EmitFn<E>
-  expose: (exposed: Record<string, any>) => void
+  expose: (exposed?: Record<string, any>) => void
 }
 
 /**
@@ -291,6 +292,7 @@ export interface ComponentInternalInstance {
 
   // exposed properties via expose()
   exposed: Record<string, any> | null
+  exposeProxy: Record<string, any> | null
 
   /**
    * alternative proxy used only for runtime-compiled render functions using
@@ -447,6 +449,7 @@ export function createComponentInstance(
     render: null,
     proxy: null,
     exposed: null,
+    exposeProxy: null,
     withProxy: null,
     effects: null,
     provides: parent ? parent.provides : Object.create(appContext.provides),
@@ -837,7 +840,7 @@ export function createSetupContext(
     if (__DEV__ && instance.exposed) {
       warn(`expose() should be called only once per setup().`)
     }
-    instance.exposed = proxyRefs(exposed)
+    instance.exposed = exposed || {}
   }
 
   if (__DEV__) {
@@ -865,6 +868,23 @@ export function createSetupContext(
       emit: instance.emit,
       expose
     }
+  }
+}
+
+export function getExposeProxy(instance: ComponentInternalInstance) {
+  if (instance.exposed) {
+    return (
+      instance.exposeProxy ||
+      (instance.exposeProxy = new Proxy(proxyRefs(markRaw(instance.exposed)), {
+        get(target, key: string) {
+          if (key in target) {
+            return target[key]
+          } else if (key in publicPropertiesMap) {
+            return publicPropertiesMap[key](instance)
+          }
+        }
+      }))
+    )
   }
 }
 

@@ -19,6 +19,7 @@ import {
   ComponentOptions,
   createComponentInstance,
   Data,
+  getExposeProxy,
   setupComponent
 } from './component'
 import {
@@ -335,7 +336,7 @@ export const setRef = (
 
   const refValue =
     vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT
-      ? vnode.component!.exposed || vnode.component!.proxy
+      ? getExposeProxy(vnode.component!) || vnode.component!.proxy
       : vnode.el
   const value = isUnmount ? null : refValue
 

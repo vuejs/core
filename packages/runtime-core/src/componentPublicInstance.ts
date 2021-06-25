@@ -221,22 +221,25 @@ const getPublicInstance = (
   return getPublicInstance(i.parent)
 }
 
-const publicPropertiesMap: PublicPropertiesMap = extend(Object.create(null), {
-  $: i => i,
-  $el: i => i.vnode.el,
-  $data: i => i.data,
-  $props: i => (__DEV__ ? shallowReadonly(i.props) : i.props),
-  $attrs: i => (__DEV__ ? shallowReadonly(i.attrs) : i.attrs),
-  $slots: i => (__DEV__ ? shallowReadonly(i.slots) : i.slots),
-  $refs: i => (__DEV__ ? shallowReadonly(i.refs) : i.refs),
-  $parent: i => getPublicInstance(i.parent),
-  $root: i => getPublicInstance(i.root),
-  $emit: i => i.emit,
-  $options: i => (__FEATURE_OPTIONS_API__ ? resolveMergedOptions(i) : i.type),
-  $forceUpdate: i => () => queueJob(i.update),
-  $nextTick: i => nextTick.bind(i.proxy!),
-  $watch: i => (__FEATURE_OPTIONS_API__ ? instanceWatch.bind(i) : NOOP)
-} as PublicPropertiesMap)
+export const publicPropertiesMap: PublicPropertiesMap = extend(
+  Object.create(null),
+  {
+    $: i => i,
+    $el: i => i.vnode.el,
+    $data: i => i.data,
+    $props: i => (__DEV__ ? shallowReadonly(i.props) : i.props),
+    $attrs: i => (__DEV__ ? shallowReadonly(i.attrs) : i.attrs),
+    $slots: i => (__DEV__ ? shallowReadonly(i.slots) : i.slots),
+    $refs: i => (__DEV__ ? shallowReadonly(i.refs) : i.refs),
+    $parent: i => getPublicInstance(i.parent),
+    $root: i => getPublicInstance(i.root),
+    $emit: i => i.emit,
+    $options: i => (__FEATURE_OPTIONS_API__ ? resolveMergedOptions(i) : i.type),
+    $forceUpdate: i => () => queueJob(i.update),
+    $nextTick: i => nextTick.bind(i.proxy!),
+    $watch: i => (__FEATURE_OPTIONS_API__ ? instanceWatch.bind(i) : NOOP)
+  } as PublicPropertiesMap
+)
 
 if (__COMPAT__) {
   installCompatInstanceProperties(publicPropertiesMap)
