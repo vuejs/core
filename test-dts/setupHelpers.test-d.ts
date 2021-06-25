@@ -19,6 +19,32 @@ describe('defineProps w/ type declaration', () => {
   props.bar
 })
 
+describe('defineProps w/ type declaration + defaults', () => {
+  defineProps<{
+    number?: number
+    arr?: string[]
+    arr2?: string[]
+    obj?: { x: number }
+    obj2?: { x: number }
+    obj3?: { x: number }
+  }>(
+    {},
+    {
+      number: 1,
+
+      arr: () => [''],
+      // @ts-expect-error not using factory
+      arr2: [''],
+
+      obj: () => ({ x: 123 }),
+      // @ts-expect-error not using factory
+      obj2: { x: 123 },
+      // @ts-expect-error factory return type does not match
+      obj3: () => ({ x: 'foo' })
+    }
+  )
+})
+
 describe('defineProps w/ runtime declaration', () => {
   // runtime declaration
   const props = defineProps({

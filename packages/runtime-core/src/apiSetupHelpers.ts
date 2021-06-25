@@ -7,6 +7,12 @@ import { EmitFn, EmitsOptions } from './componentEmits'
 import { ComponentObjectPropsOptions, ExtractPropTypes } from './componentProps'
 import { warn } from './warning'
 
+type InferDefaults<T> = {
+  [K in keyof T]?: NonNullable<T[K]> extends object
+    ? () => NonNullable<T[K]>
+    : NonNullable<T[K]>
+}
+
 /**
  * Compile-time-only helper used for declaring props inside `<script setup>`.
  * This is stripped away in the compiled code and should never be actually
@@ -25,7 +31,10 @@ export function defineProps<
   TypeProps = undefined,
   PP extends ComponentObjectPropsOptions = ComponentObjectPropsOptions,
   InferredProps = ExtractPropTypes<PP>
->(props?: PP): Readonly<TypeProps extends undefined ? InferredProps : TypeProps>
+>(
+  props?: PP,
+  defaults?: InferDefaults<TypeProps>
+): Readonly<TypeProps extends undefined ? InferredProps : TypeProps>
 // implementation
 export function defineProps() {
   if (__DEV__) {
