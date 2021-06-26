@@ -345,6 +345,11 @@ export function createHydrationFunctions(
         }
       }
     }
+
+    // #4006
+    if (el.tagName === 'OPTION' && props) {
+      patchProp(el, 'value', null, props['value'])
+    }
     return el.nextSibling
   }
 
