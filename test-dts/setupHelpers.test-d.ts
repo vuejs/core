@@ -1,10 +1,10 @@
-import { withDefaults } from '../packages/runtime-core/src/apiSetupHelpers'
 import {
   expectType,
   defineProps,
   defineEmit,
   defineEmits,
   useContext,
+  withDefaults,
   Slots,
   describe
 } from './index'
