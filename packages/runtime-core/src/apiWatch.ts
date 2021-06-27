@@ -175,8 +175,8 @@ function doWatch(
   let isMultiSource = false
 
   if (isRef(source)) {
-    getter = () => (source as Ref).value
-    forceTrigger = !!(source as Ref)._shallow
+    getter = () => source.value
+    forceTrigger = !!source._shallow
   } else if (isReactive(source)) {
     getter = () => source
     deep = true
