@@ -214,7 +214,12 @@ async function doCompileScript(
 
       return [code, compiledScript.bindings]
     } catch (e) {
-      store.errors = [e]
+      store.errors = [
+        e.stack
+          .split('\n')
+          .slice(0, 12)
+          .join('\n')
+      ]
       return
     }
   } else {

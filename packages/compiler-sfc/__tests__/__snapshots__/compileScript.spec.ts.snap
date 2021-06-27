@@ -881,3 +881,50 @@ return {  }
 
 })"
 `;
+
+exports[`SFC compile <script setup> with TypeScript withDefaults (dynamic) 1`] = `
+"import { mergeDefaults as _mergeDefaults, defineComponent as _defineComponent } from 'vue'
+import { defaults } from './foo'
+      
+export default _defineComponent({
+  props: _mergeDefaults({
+    foo: { type: String, required: false },
+    bar: { type: Number, required: false }
+  }, { ...defaults }) as unknown as undefined,
+  setup(__props: {
+        foo?: string
+        bar?: number
+      }, { expose }) {
+  expose()
+
+const props = __props
+      
+      
+return { props, defaults }
+}
+
+})"
+`;
+
+exports[`SFC compile <script setup> with TypeScript withDefaults (static) 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default _defineComponent({
+  props: {
+    foo: { type: String, required: false, default: 'hi' },
+    bar: { type: Number, required: false }
+  } as unknown as undefined,
+  setup(__props: {
+        foo?: string
+        bar?: number
+      }, { expose }) {
+  expose()
+
+const props = __props
+      
+      
+return { props }
+}
+
+})"
+`;

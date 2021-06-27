@@ -592,6 +592,51 @@ const emit = defineEmits(['a', 'b'])
       })
     })
 
+    test('withDefaults (static)', () => {
+      const { content, bindings } = compile(`
+      <script setup lang="ts">
+      const props = withDefaults(defineProps<{
+        foo?: string
+        bar?: number
+      }>(), {
+        foo: 'hi'
+      })
+      </script>
+      `)
+      assertCode(content)
+      expect(content).toMatch(
+        `foo: { type: String, required: false, default: 'hi' }`
+      )
+      expect(content).toMatch(`bar: { type: Number, required: false }`)
+      expect(content).toMatch(`const props = __props`)
+      expect(bindings).toStrictEqual({
+        foo: BindingTypes.PROPS,
+        bar: BindingTypes.PROPS,
+        props: BindingTypes.SETUP_CONST
+      })
+    })
+
+    test('withDefaults (dynamic)', () => {
+      const { content } = compile(`
+      <script setup lang="ts">
+      import { defaults } from './foo'
+      const props = withDefaults(defineProps<{
+        foo?: string
+        bar?: number
+      }>(), { ...defaults })
+      </script>
+      `)
+      assertCode(content)
+      expect(content).toMatch(`import { mergeDefaults as _mergeDefaults`)
+      expect(content).toMatch(
+        `
+  _mergeDefaults({
+    foo: { type: String, required: false },
+    bar: { type: Number, required: false }
+  }, { ...defaults })`.trim()
+      )
+    })
+
     test('defineEmits w/ type', () => {
       const { content } = compile(`
       <script setup lang="ts">
@@ -942,7 +987,6 @@ const emit = defineEmits(['a', 'b'])
     test('defineProps/Emit() w/ both type and non-type args', () => {
       expect(() => {
         compile(`<script setup lang="ts">
-        import { defineProps } from 'vue'
         defineProps<{}>({})
         </script>`)
       }).toThrow(`cannot accept both type and non-type arguments`)

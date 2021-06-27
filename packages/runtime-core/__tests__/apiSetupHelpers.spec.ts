@@ -8,8 +8,11 @@ import {
 import {
   defineEmits,
   defineProps,
+  defineExpose,
+  withDefaults,
   useAttrs,
-  useSlots
+  useSlots,
+  mergeDefaults
 } from '../src/apiSetupHelpers'
 
 describe('SFC <script setup> helpers', () => {
@@ -19,6 +22,12 @@ describe('SFC <script setup> helpers', () => {
 
     defineEmits()
     expect(`defineEmits() is a compiler-hint`).toHaveBeenWarned()
+
+    defineExpose()
+    expect(`defineExpose() is a compiler-hint`).toHaveBeenWarned()
+
+    withDefaults({}, {})
+    expect(`withDefaults() is a compiler-hint`).toHaveBeenWarned()
   })
 
   test('useSlots / useAttrs (no args)', () => {
@@ -57,5 +66,27 @@ describe('SFC <script setup> helpers', () => {
     render(h(Comp), nodeOps.createElement('div'))
     expect(slots).toBe(ctx!.slots)
     expect(attrs).toBe(ctx!.attrs)
+  })
+
+  test('mergeDefaults', () => {
+    const merged = mergeDefaults(
+      {
+        foo: null,
+        bar: { type: String, required: false }
+      },
+      {
+        foo: 1,
+        bar: 'baz'
+      }
+    )
+    expect(merged).toMatchObject({
+      foo: { default: 1 },
+      bar: { type: String, required: false, default: 'baz' }
+    })
+
+    mergeDefaults({}, { foo: 1 })
+    expect(
+      `props default key "foo" has no corresponding declaration`
+    ).toHaveBeenWarned()
   })
 })

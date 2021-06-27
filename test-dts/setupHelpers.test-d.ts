@@ -1,3 +1,4 @@
+import { withDefaults } from '../packages/runtime-core/src/apiSetupHelpers'
 import {
   expectType,
   defineProps,
@@ -19,30 +20,29 @@ describe('defineProps w/ type declaration', () => {
   props.bar
 })
 
-describe('defineProps w/ type declaration + defaults', () => {
-  defineProps<{
-    number?: number
-    arr?: string[]
-    arr2?: string[]
-    obj?: { x: number }
-    obj2?: { x: number }
-    obj3?: { x: number }
-  }>(
-    {},
+describe('defineProps w/ type declaration + withDefaults', () => {
+  const res = withDefaults(
+    defineProps<{
+      number?: number
+      arr?: string[]
+      obj?: { x: number }
+      fn?: (e: string) => void
+      x?: string
+    }>(),
     {
-      number: 1,
-
-      arr: () => [''],
-      // @ts-expect-error not using factory
-      arr2: [''],
-
+      number: 123,
+      arr: () => [],
       obj: () => ({ x: 123 }),
-      // @ts-expect-error not using factory
-      obj2: { x: 123 },
-      // @ts-expect-error factory return type does not match
-      obj3: () => ({ x: 'foo' })
+      fn: () => {}
     }
   )
+
+  res.number + 1
+  res.arr.push('hi')
+  res.obj.x
+  res.fn('hi')
+  // @ts-expect-error
+  res.x.slice()
 })
 
 describe('defineProps w/ runtime declaration', () => {
