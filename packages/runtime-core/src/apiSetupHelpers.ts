@@ -11,6 +11,25 @@ import {
 } from './componentProps'
 import { warn } from './warning'
 
+/**
+ * The following helpers are compiler macros that are only usable inside
+ * `<script setup>`. They are essentially part of the `<script setup>` API and
+ * will be frequently used. Although they can be explicitly imported, they can
+ * actually be used directly inside `<script setup>` blocks. Their types are
+ * therefore also made globally available to ensure proper type inference.
+ */
+type _defineProps = typeof defineProps
+type _defineEmits = typeof defineEmits
+type _defineExpose = typeof defineExpose
+type _withDefaults = typeof withDefaults
+
+declare global {
+  const defineProps: _defineProps
+  const defineEmits: _defineEmits
+  const defineExpose: _defineExpose
+  const withDefaults: _withDefaults
+}
+
 // dev only
 const warnRuntimeUsage = (method: string) =>
   warn(
