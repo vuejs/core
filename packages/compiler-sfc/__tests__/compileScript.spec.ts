@@ -271,7 +271,7 @@ defineExpose({ foo: 123 })
         <script setup>
         import ChildComp from './Child.vue'
         import SomeOtherComp from './Other.vue'
-        import myDir from './my-dir'
+        import vMyDir from './my-dir'
         </script>
         <template>
           <div v-my-dir></div>
@@ -281,7 +281,7 @@ defineExpose({ foo: 123 })
         `,
         { inlineTemplate: true }
       )
-      expect(content).toMatch('[_unref(myDir)]')
+      expect(content).toMatch('[_unref(vMyDir)]')
       expect(content).toMatch('_createVNode(ChildComp)')
       // kebab-case component support
       expect(content).toMatch('_createVNode(SomeOtherComp)')

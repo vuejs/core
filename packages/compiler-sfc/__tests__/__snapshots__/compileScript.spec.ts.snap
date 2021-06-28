@@ -304,7 +304,7 @@ exports[`SFC compile <script setup> inlineTemplate mode referencing scope compon
 
 import ChildComp from './Child.vue'
         import SomeOtherComp from './Other.vue'
-        import myDir from './my-dir'
+        import vMyDir from './my-dir'
         
 export default {
   setup(__props) {
@@ -313,7 +313,7 @@ export default {
 return (_ctx, _cache) => {
   return (_openBlock(), _createBlock(_Fragment, null, [
     _withDirectives(_createVNode(\\"div\\", null, null, 512 /* NEED_PATCH */), [
-      [_unref(myDir)]
+      [_unref(vMyDir)]
     ]),
     _createVNode(ChildComp),
     _createVNode(SomeOtherComp)
