@@ -1121,15 +1121,22 @@ export function compileScript(
         allBindings[key] = true
       }
     }
-    const keys = Object.keys(allBindings)
-    if (!__TEST__) {
-      // the `__isScriptSetup: true` flag is used by componentPublicInstance
-      // proxy to allow properties that start with $ or _
-      keys.push(`__isScriptSetup: true`)
-    }
-    returned = `{ ${keys.join(', ')} }`
+    returned = `{ ${Object.keys(allBindings).join(', ')} }`
   }
-  s.appendRight(endOffset, `\nreturn ${returned}\n}\n\n`)
+
+  if (!options.inlineTemplate && !__TEST__) {
+    // in non-inline mode, the `__isScriptSetup: true` flag is used by
+    // componentPublicInstance proxy to allow properties that start with $ or _
+    s.appendRight(
+      endOffset,
+      `\nconst __returned__ = ${returned}\n` +
+        `Object.defineProperty(__returned__, '__isScriptSetup', { enumerable: false, value: true })\n` +
+        `return __returned__` +
+        `\n}\n\n`
+    )
+  } else {
+    s.appendRight(endOffset, `\nreturn ${returned}\n}\n\n`)
+  }
 
   // 11. finalize default export
   let runtimeOptions = ``
