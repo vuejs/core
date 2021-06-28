@@ -532,6 +532,7 @@ const emit = defineEmits(['a', 'b'])
         recordRef: Record<string, null>
         interface: Test
         alias: Alias
+        method(): void
 
         union: string | number
         literalUnion: 'foo' | 'bar'
@@ -557,6 +558,7 @@ const emit = defineEmits(['a', 'b'])
       expect(content).toMatch(`recordRef: { type: Object, required: true }`)
       expect(content).toMatch(`interface: { type: Object, required: true }`)
       expect(content).toMatch(`alias: { type: Array, required: true }`)
+      expect(content).toMatch(`method: { type: Function, required: true }`)
       expect(content).toMatch(
         `union: { type: [String, Number], required: true }`
       )
@@ -585,6 +587,7 @@ const emit = defineEmits(['a', 'b'])
         recordRef: BindingTypes.PROPS,
         interface: BindingTypes.PROPS,
         alias: BindingTypes.PROPS,
+        method: BindingTypes.PROPS,
         union: BindingTypes.PROPS,
         literalUnion: BindingTypes.PROPS,
         literalUnionMixed: BindingTypes.PROPS,

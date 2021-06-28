@@ -1355,14 +1355,25 @@ function extractRuntimeProps(
 ) {
   const members = node.type === 'TSTypeLiteral' ? node.members : node.body
   for (const m of members) {
-    if (m.type === 'TSPropertySignature' && m.key.type === 'Identifier') {
+    if (
+      (m.type === 'TSPropertySignature' || m.type === 'TSMethodSignature') &&
+      m.key.type === 'Identifier'
+    ) {
+      let type
+      if (__DEV__) {
+        if (m.type === 'TSMethodSignature') {
+          type = ['Function']
+        } else if (m.typeAnnotation) {
+          type = inferRuntimeType(
+            m.typeAnnotation.typeAnnotation,
+            declaredTypes
+          )
+        }
+      }
       props[m.key.name] = {
         key: m.key.name,
         required: !m.optional,
-        type:
-          __DEV__ && m.typeAnnotation
-            ? inferRuntimeType(m.typeAnnotation.typeAnnotation, declaredTypes)
-            : [`null`]
+        type: type || [`null`]
       }
     }
   }

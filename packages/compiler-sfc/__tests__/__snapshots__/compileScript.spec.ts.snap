@@ -864,6 +864,7 @@ export default _defineComponent({
     recordRef: { type: Object, required: true },
     interface: { type: Object, required: true },
     alias: { type: Array, required: true },
+    method: { type: Function, required: true },
     union: { type: [String, Number], required: true },
     literalUnion: { type: [String, String], required: true },
     literalUnionMixed: { type: [String, Number, Boolean], required: true },
@@ -887,6 +888,7 @@ export default _defineComponent({
         recordRef: Record<string, null>
         interface: Test
         alias: Alias
+        method(): void
 
         union: string | number
         literalUnion: 'foo' | 'bar'
