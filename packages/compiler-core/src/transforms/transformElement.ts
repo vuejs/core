@@ -739,7 +739,8 @@ function buildDirectiveArgs(
   } else {
     // user directive.
     // see if we have directives exposed via <script setup>
-    const fromSetup = !__BROWSER__ && resolveSetupReference(dir.name, context)
+    const fromSetup =
+      !__BROWSER__ && resolveSetupReference('v-' + dir.name, context)
     if (fromSetup) {
       dirArgs.push(fromSetup)
     } else {
