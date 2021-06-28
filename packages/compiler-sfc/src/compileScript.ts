@@ -820,7 +820,10 @@ export function compileScript(
     }
 
     if (node.type === 'VariableDeclaration' && !node.declare) {
-      for (const decl of node.declarations) {
+      const total = node.declarations.length
+      let left = total
+      for (let i = 0; i < total; i++) {
+        const decl = node.declarations[i]
         if (decl.init) {
           const isDefineProps =
             processDefineProps(decl.init) || processWithDefaults(decl.init)
@@ -838,10 +841,20 @@ export function compileScript(
             )
           }
           if (isDefineProps || isDefineEmits)
-            if (node.declarations.length === 1) {
+            if (left === 1) {
               s.remove(node.start! + startOffset, node.end! + startOffset)
             } else {
-              s.remove(decl.start! + startOffset, decl.end! + startOffset)
+              let start = decl.start! + startOffset
+              let end = decl.end! + startOffset
+              if (i < total - 1) {
+                // not the last one, locate the start of the next
+                end = node.declarations[i + 1].start! + startOffset
+              } else {
+                // last one, locate the end of the prev
+                start = node.declarations[i - 1].end! + startOffset
+              }
+              s.remove(start, end)
+              left--
             }
         }
       }

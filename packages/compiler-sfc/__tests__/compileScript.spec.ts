@@ -97,6 +97,32 @@ const myEmit = defineEmits(['foo', 'bar'])
   emits: ['foo', 'bar'],`)
   })
 
+  test('defineProps/defineEmits in multi-variable decalration', () => {
+    const { content } = compile(`
+    <script setup>
+    const props = defineProps(['item']),
+      a = 1,
+      emit = defineEmits(['a']);
+    </script>
+  `)
+    assertCode(content)
+    expect(content).toMatch(`const a = 1;`) // test correct removal
+    expect(content).toMatch(`props: ['item'],`)
+    expect(content).toMatch(`emits: ['a'],`)
+  })
+
+  test('defineProps/defineEmits in multi-variable decalration (full removal)', () => {
+    const { content } = compile(`
+    <script setup>
+    const props = defineProps(['item']),
+          emit = defineEmits(['a']);
+    </script>
+  `)
+    assertCode(content)
+    expect(content).toMatch(`props: ['item'],`)
+    expect(content).toMatch(`emits: ['a'],`)
+  })
+
   test('defineExpose()', () => {
     const { content } = compile(`
 <script setup>

@@ -108,6 +108,38 @@ return { props, bar }
 }"
 `;
 
+exports[`SFC compile <script setup> defineProps/defineEmits in multi-variable decalration (full removal) 1`] = `
+"export default {
+  props: ['item'],
+  emits: ['a'],
+  setup(__props, { expose, emit }) {
+  expose()
+
+const props = __props
+    
+    
+return { props, emit }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> defineProps/defineEmits in multi-variable decalration 1`] = `
+"export default {
+  props: ['item'],
+  emits: ['a'],
+  setup(__props, { expose, emit }) {
+  expose()
+
+const props = __props
+    const a = 1;
+    
+return { props, a, emit }
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> errors should allow defineProps/Emit() referencing imported binding 1`] = `
 "import { bar } from './bar'
         
