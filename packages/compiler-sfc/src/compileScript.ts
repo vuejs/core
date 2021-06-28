@@ -199,7 +199,7 @@ export function compileScript(
   let propsTypeDecl: TSTypeLiteral | TSInterfaceBody | undefined
   let propsIdentifier: string | undefined
   let emitRuntimeDecl: Node | undefined
-  let emitTypeDecl: TSFunctionType | TSTypeLiteral | undefined
+  let emitTypeDecl: TSFunctionType | TSTypeLiteral | TSInterfaceBody | undefined
   let emitIdentifier: string | undefined
   let hasAwait = false
   let hasInlinedSsrRenderFn = false
@@ -288,47 +288,16 @@ export function compileScript(
         )
       }
 
-      let typeArg: Node = node.typeParameters.params[0]
-      if (typeArg.type === 'TSTypeLiteral') {
-        propsTypeDecl = typeArg
-      } else if (
-        typeArg.type === 'TSTypeReference' &&
-        typeArg.typeName.type === 'Identifier'
-      ) {
-        const refName = typeArg.typeName.name
-        const isValidType = (node: Node): boolean => {
-          if (
-            node.type === 'TSInterfaceDeclaration' &&
-            node.id.name === refName
-          ) {
-            propsTypeDecl = node.body
-            return true
-          } else if (
-            node.type === 'TSTypeAliasDeclaration' &&
-            node.id.name === refName &&
-            node.typeAnnotation.type === 'TSTypeLiteral'
-          ) {
-            propsTypeDecl = node.typeAnnotation
-            return true
-          } else if (
-            node.type === 'ExportNamedDeclaration' &&
-            node.declaration
-          ) {
-            return isValidType(node.declaration)
-          }
-          return false
-        }
-
-        for (const node of scriptSetupAst) {
-          if (isValidType(node)) break
-        }
-      }
+      propsTypeDecl = resolveQualifiedType(
+        node.typeParameters.params[0],
+        node => node.type === 'TSTypeLiteral'
+      ) as TSTypeLiteral | TSInterfaceBody | undefined
 
       if (!propsTypeDecl) {
         error(
           `type argument passed to ${DEFINE_PROPS}() must be a literal type, ` +
-            `or a reference to a interface or literal type.`,
-          typeArg
+            `or a reference to an interface or literal type.`,
+          node.typeParameters.params[0]
         )
       }
     }
@@ -375,21 +344,59 @@ export function compileScript(
           node
         )
       }
-      const typeArg = node.typeParameters.params[0]
-      if (
-        typeArg.type === 'TSFunctionType' ||
-        typeArg.type === 'TSTypeLiteral'
-      ) {
-        emitTypeDecl = typeArg
-      } else {
+
+      emitTypeDecl = resolveQualifiedType(
+        node.typeParameters.params[0],
+        node => node.type === 'TSFunctionType' || node.type === 'TSTypeLiteral'
+      ) as TSFunctionType | TSTypeLiteral | TSInterfaceBody | undefined
+
+      if (!emitTypeDecl) {
         error(
-          `type argument passed to ${DEFINE_EMITS}() must be a function type ` +
-            `or a literal type with call signatures.`,
-          typeArg
+          `type argument passed to ${DEFINE_EMITS}() must be a function type, ` +
+            `a literal type with call signatures, or a reference to the above types.`,
+          node.typeParameters.params[0]
         )
       }
     }
     return true
+  }
+
+  function resolveQualifiedType(
+    node: Node,
+    qualifier: (node: Node) => boolean
+  ) {
+    if (qualifier(node)) {
+      return node
+    }
+    if (
+      node.type === 'TSTypeReference' &&
+      node.typeName.type === 'Identifier'
+    ) {
+      const refName = node.typeName.name
+      const isQualifiedType = (node: Node): Node | undefined => {
+        if (
+          node.type === 'TSInterfaceDeclaration' &&
+          node.id.name === refName
+        ) {
+          return node.body
+        } else if (
+          node.type === 'TSTypeAliasDeclaration' &&
+          node.id.name === refName &&
+          qualifier(node.typeAnnotation)
+        ) {
+          return node.typeAnnotation
+        } else if (node.type === 'ExportNamedDeclaration' && node.declaration) {
+          return isQualifiedType(node.declaration)
+        }
+      }
+
+      for (const node of scriptSetupAst) {
+        const qualified = isQualifiedType(node)
+        if (qualified) {
+          return qualified
+        }
+      }
+    }
   }
 
   function processDefineExpose(node: Node): boolean {
@@ -1469,11 +1476,12 @@ function toRuntimeTypeString(types: string[]) {
 }
 
 function extractRuntimeEmits(
-  node: TSFunctionType | TSTypeLiteral,
+  node: TSFunctionType | TSTypeLiteral | TSInterfaceBody,
   emits: Set<string>
 ) {
-  if (node.type === 'TSTypeLiteral') {
-    for (let t of node.members) {
+  if (node.type === 'TSTypeLiteral' || node.type === 'TSInterfaceBody') {
+    const members = node.type === 'TSTypeLiteral' ? node.members : node.body
+    for (let t of members) {
       if (t.type === 'TSCallSignatureDeclaration') {
         extractEventNames(t.parameters[0], emits)
       }
