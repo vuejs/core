@@ -21,7 +21,8 @@ import {
   Expression,
   LabeledStatement,
   CallExpression,
-  RestElement
+  RestElement,
+  TSInterfaceBody
 } from '@babel/types'
 import { walk } from 'estree-walker'
 import { RawSourceMap } from 'source-map'
@@ -195,7 +196,7 @@ export function compileScript(
   let hasDefineExposeCall = false
   let propsRuntimeDecl: Node | undefined
   let propsRuntimeDefaults: Node | undefined
-  let propsTypeDecl: TSTypeLiteral | undefined
+  let propsTypeDecl: TSTypeLiteral | TSInterfaceBody | undefined
   let propsIdentifier: string | undefined
   let emitRuntimeDecl: Node | undefined
   let emitTypeDecl: TSFunctionType | TSTypeLiteral | undefined
@@ -287,12 +288,46 @@ export function compileScript(
         )
       }
 
-      const typeArg = node.typeParameters.params[0]
+      let typeArg: Node = node.typeParameters.params[0]
       if (typeArg.type === 'TSTypeLiteral') {
         propsTypeDecl = typeArg
-      } else {
+      } else if (
+        typeArg.type === 'TSTypeReference' &&
+        typeArg.typeName.type === 'Identifier'
+      ) {
+        const refName = typeArg.typeName.name
+        const isValidType = (node: Node): boolean => {
+          if (
+            node.type === 'TSInterfaceDeclaration' &&
+            node.id.name === refName
+          ) {
+            propsTypeDecl = node.body
+            return true
+          } else if (
+            node.type === 'TSTypeAliasDeclaration' &&
+            node.id.name === refName &&
+            node.typeAnnotation.type === 'TSTypeLiteral'
+          ) {
+            propsTypeDecl = node.typeAnnotation
+            return true
+          } else if (
+            node.type === 'ExportNamedDeclaration' &&
+            node.declaration
+          ) {
+            return isValidType(node.declaration)
+          }
+          return false
+        }
+
+        for (const node of scriptSetupAst) {
+          if (isValidType(node)) break
+        }
+      }
+
+      if (!propsTypeDecl) {
         error(
-          `type argument passed to ${DEFINE_PROPS}() must be a literal type.`,
+          `type argument passed to ${DEFINE_PROPS}() must be a literal type, ` +
+            `or a reference to a interface or literal type.`,
           typeArg
         )
       }
@@ -661,7 +696,6 @@ export function compileScript(
   for (const node of scriptSetupAst) {
     const start = node.start! + startOffset
     let end = node.end! + startOffset
-    // import or type declarations: move to top
     // locate comment
     if (node.trailingComments && node.trailingComments.length > 0) {
       const lastCommentNode =
@@ -1315,11 +1349,12 @@ function recordType(node: Node, declaredTypes: Record<string, string[]>) {
 }
 
 function extractRuntimeProps(
-  node: TSTypeLiteral,
+  node: TSTypeLiteral | TSInterfaceBody,
   props: Record<string, PropTypeData>,
   declaredTypes: Record<string, string[]>
 ) {
-  for (const m of node.members) {
+  const members = node.type === 'TSTypeLiteral' ? node.members : node.body
+  for (const m of members) {
     if (m.type === 'TSPropertySignature' && m.key.type === 'Identifier') {
       props[m.key.name] = {
         key: m.key.name,

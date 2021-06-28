@@ -592,6 +592,62 @@ const emit = defineEmits(['a', 'b'])
       })
     })
 
+    test('defineProps w/ interface', () => {
+      const { content, bindings } = compile(`
+      <script setup lang="ts">
+      interface Props { x?: number }
+      defineProps<Props>()
+      </script>
+      `)
+      assertCode(content)
+      expect(content).toMatch(`x: { type: Number, required: false }`)
+      expect(bindings).toStrictEqual({
+        x: BindingTypes.PROPS
+      })
+    })
+
+    test('defineProps w/ exported interface', () => {
+      const { content, bindings } = compile(`
+      <script setup lang="ts">
+      export interface Props { x?: number }
+      defineProps<Props>()
+      </script>
+      `)
+      assertCode(content)
+      expect(content).toMatch(`x: { type: Number, required: false }`)
+      expect(bindings).toStrictEqual({
+        x: BindingTypes.PROPS
+      })
+    })
+
+    test('defineProps w/ type alias', () => {
+      const { content, bindings } = compile(`
+      <script setup lang="ts">
+      type Props = { x?: number }
+      defineProps<Props>()
+      </script>
+      `)
+      assertCode(content)
+      expect(content).toMatch(`x: { type: Number, required: false }`)
+      expect(bindings).toStrictEqual({
+        x: BindingTypes.PROPS
+      })
+    })
+
+    test('defineProps w/ exported type alias', () => {
+      const { content, bindings } = compile(`
+      <script setup lang="ts">
+      export type Props = { x?: number }
+      defineProps<Props>()
+      </script>
+      `)
+      assertCode(content)
+      expect(content).toMatch(`x: { type: Number, required: false }`)
+      expect(bindings).toStrictEqual({
+        x: BindingTypes.PROPS
+      })
+    })
+
     test('withDefaults (static)', () => {
       const { content, bindings } = compile(`
       <script setup lang="ts">

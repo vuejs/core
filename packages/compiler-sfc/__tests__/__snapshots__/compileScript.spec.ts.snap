@@ -780,6 +780,63 @@ return { emit }
 })"
 `;
 
+exports[`SFC compile <script setup> with TypeScript defineProps w/ exported interface 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+export interface Props { x?: number }
+      
+export default _defineComponent({
+  props: {
+    x: { type: Number, required: false }
+  } as unknown as undefined,
+  setup(__props: { x?: number }, { expose }) {
+  expose()
+
+      
+      
+return {  }
+}
+
+})"
+`;
+
+exports[`SFC compile <script setup> with TypeScript defineProps w/ exported type alias 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+export type Props = { x?: number }
+      
+export default _defineComponent({
+  props: {
+    x: { type: Number, required: false }
+  } as unknown as undefined,
+  setup(__props: { x?: number }, { expose }) {
+  expose()
+
+      
+      
+return {  }
+}
+
+})"
+`;
+
+exports[`SFC compile <script setup> with TypeScript defineProps w/ interface 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+interface Props { x?: number }
+      
+export default _defineComponent({
+  props: {
+    x: { type: Number, required: false }
+  } as unknown as undefined,
+  setup(__props: { x?: number }, { expose }) {
+  expose()
+
+      
+      
+return {  }
+}
+
+})"
+`;
+
 exports[`SFC compile <script setup> with TypeScript defineProps w/ type 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
@@ -836,6 +893,25 @@ export default _defineComponent({
         literalUnionMixed: 'foo' | 1 | boolean
         intersection: Test & {}
       }, { expose }) {
+  expose()
+
+      
+      
+return {  }
+}
+
+})"
+`;
+
+exports[`SFC compile <script setup> with TypeScript defineProps w/ type alias 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+type Props = { x?: number }
+      
+export default _defineComponent({
+  props: {
+    x: { type: Number, required: false }
+  } as unknown as undefined,
+  setup(__props: { x?: number }, { expose }) {
   expose()
 
       
