@@ -778,6 +778,9 @@ export function compileScript(
             imported === DEFINE_EMITS ||
             imported === DEFINE_EXPOSE)
         ) {
+          warnOnce(
+            `\`${imported}\` is a compiler macro and no longer needs to be imported.`
+          )
           removeSpecifier(i)
         } else if (existing) {
           if (existing.source === source && existing.imported === imported) {
