@@ -2,7 +2,9 @@ import {
   expectType,
   defineProps,
   defineEmit,
+  defineEmits,
   useContext,
+  withDefaults,
   Slots,
   describe
 } from './index'
@@ -16,6 +18,31 @@ describe('defineProps w/ type declaration', () => {
   expectType<string>(props.foo)
   // @ts-expect-error
   props.bar
+})
+
+describe('defineProps w/ type declaration + withDefaults', () => {
+  const res = withDefaults(
+    defineProps<{
+      number?: number
+      arr?: string[]
+      obj?: { x: number }
+      fn?: (e: string) => void
+      x?: string
+    }>(),
+    {
+      number: 123,
+      arr: () => [],
+      obj: () => ({ x: 123 }),
+      fn: () => {}
+    }
+  )
+
+  res.number + 1
+  res.arr.push('hi')
+  res.obj.x
+  res.fn('hi')
+  // @ts-expect-error
+  res.x.slice()
 })
 
 describe('defineProps w/ runtime declaration', () => {
@@ -49,8 +76,8 @@ describe('defineProps w/ runtime declaration', () => {
   props2.baz
 })
 
-describe('defineEmit w/ type declaration', () => {
-  const emit = defineEmit<(e: 'change') => void>()
+describe('defineEmits w/ type declaration', () => {
+  const emit = defineEmits<(e: 'change') => void>()
   emit('change')
   // @ts-expect-error
   emit()
@@ -58,7 +85,7 @@ describe('defineEmit w/ type declaration', () => {
   emit('bar')
 
   type Emits = { (e: 'foo' | 'bar'): void; (e: 'baz', id: number): void }
-  const emit2 = defineEmit<Emits>()
+  const emit2 = defineEmits<Emits>()
 
   emit2('foo')
   emit2('bar')
@@ -67,8 +94,8 @@ describe('defineEmit w/ type declaration', () => {
   emit2('baz')
 })
 
-describe('defineEmit w/ runtime declaration', () => {
-  const emit = defineEmit({
+describe('defineEmits w/ runtime declaration', () => {
+  const emit = defineEmits({
     foo: () => {},
     bar: null
   })
@@ -77,11 +104,22 @@ describe('defineEmit w/ runtime declaration', () => {
   // @ts-expect-error
   emit('baz')
 
-  const emit2 = defineEmit(['foo', 'bar'])
+  const emit2 = defineEmits(['foo', 'bar'])
   emit2('foo')
   emit2('bar', 123)
   // @ts-expect-error
   emit2('baz')
+})
+
+describe('deprecated defineEmit', () => {
+  const emit = defineEmit({
+    foo: () => {},
+    bar: null
+  })
+  emit('foo')
+  emit('bar', 123)
+  // @ts-expect-error
+  emit('baz')
 })
 
 describe('useContext', () => {

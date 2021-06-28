@@ -279,6 +279,67 @@ describe('api: options', () => {
     assertCall(spyC, 0, [{ qux: 4 }, { qux: 4 }])
   })
 
+  // #3966
+  test('watch merging from mixins', async () => {
+    const mixinA = {
+      data() {
+        return {
+          fromMixinA: ''
+        }
+      },
+      watch: {
+        obj: {
+          handler(this: any, to: any) {
+            this.fromMixinA = to
+          }
+        }
+      }
+    }
+
+    const mixinB = {
+      data() {
+        return {
+          fromMixinB: ''
+        }
+      },
+      watch: {
+        obj: 'setMixinB'
+      },
+      methods: {
+        setMixinB(this: any, to: any) {
+          this.fromMixinB = to
+        }
+      }
+    }
+
+    let vm: any
+    const Comp = {
+      render() {},
+      mixins: [mixinA, mixinB],
+      data: () => ({
+        obj: 'foo',
+        fromComp: ''
+      }),
+      watch: {
+        obj(this: any, to: any) {
+          this.fromComp = to
+        }
+      },
+      mounted() {
+        vm = this
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+
+    vm.obj = 'bar'
+    await nextTick()
+    expect(vm.fromComp).toBe('bar')
+    expect(vm.fromMixinA).toBe('bar')
+    expect(vm.fromMixinB).toBe('bar')
+  })
+
   test('provide/inject', () => {
     const symbolKey = Symbol()
     const Root = defineComponent({

@@ -240,16 +240,16 @@ export function resolveComponentType(
 
   // 1. dynamic component
   const isExplicitDynamic = isComponentTag(tag)
-  const isProp =
-    findProp(node, 'is') || (!isExplicitDynamic && findDir(node, 'is'))
+  const isProp = findProp(node, 'is')
   if (isProp) {
-    if (!isExplicitDynamic && isProp.type === NodeTypes.ATTRIBUTE) {
-      // <button is="vue:xxx">
-      // if not <component>, only is value that starts with "vue:" will be
-      // treated as component by the parse phase and reach here, unless it's
-      // compat mode where all is values are considered components
-      tag = isProp.value!.content.replace(/^vue:/, '')
-    } else {
+    if (
+      isExplicitDynamic ||
+      (__COMPAT__ &&
+        isCompatEnabled(
+          CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT,
+          context
+        ))
+    ) {
       const exp =
         isProp.type === NodeTypes.ATTRIBUTE
           ? isProp.value && createSimpleExpression(isProp.value.content, true)
@@ -259,7 +259,24 @@ export function resolveComponentType(
           exp
         ])
       }
+    } else if (
+      isProp.type === NodeTypes.ATTRIBUTE &&
+      isProp.value!.content.startsWith('vue:')
+    ) {
+      // <button is="vue:xxx">
+      // if not <component>, only is value that starts with "vue:" will be
+      // treated as component by the parse phase and reach here, unless it's
+      // compat mode where all is values are considered components
+      tag = isProp.value!.content.slice(4)
     }
+  }
+
+  // 1.5 v-is (TODO: Deprecate)
+  const isDir = !isExplicitDynamic && findDir(node, 'is')
+  if (isDir && isDir.exp) {
+    return createCallExpression(context.helper(RESOLVE_DYNAMIC_COMPONENT), [
+      isDir.exp
+    ])
   }
 
   // 2. built-in components (Teleport, Transition, KeepAlive, Suspense...)
@@ -433,7 +450,13 @@ export function buildProps(
       // skip is on <component>, or is="vue:xxx"
       if (
         name === 'is' &&
-        (isComponentTag(tag) || (value && value.content.startsWith('vue:')))
+        (isComponentTag(tag) ||
+          (value && value.content.startsWith('vue:')) ||
+          (__COMPAT__ &&
+            isCompatEnabled(
+              CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT,
+              context
+            )))
       ) {
         continue
       }
@@ -473,7 +496,14 @@ export function buildProps(
       // skip v-is and :is on <component>
       if (
         name === 'is' ||
-        (isVBind && isComponentTag(tag) && isBindKey(arg, 'is'))
+        (isVBind &&
+          isBindKey(arg, 'is') &&
+          (isComponentTag(tag) ||
+            (__COMPAT__ &&
+              isCompatEnabled(
+                CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT,
+                context
+              ))))
       ) {
         continue
       }

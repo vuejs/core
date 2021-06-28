@@ -57,8 +57,9 @@ function parseWithElementTransform(
   }
 }
 
-function parseWithBind(template: string) {
+function parseWithBind(template: string, options?: CompilerOptions) {
   return parseWithElementTransform(template, {
+    ...options,
     directiveTransforms: {
       bind: transformBind
     }
@@ -912,6 +913,18 @@ describe('compiler: element transform', () => {
         },
         // should skip v-is runtime check
         directives: undefined
+      })
+    })
+
+    // #3934
+    test('normal component with is prop', () => {
+      const { node, root } = parseWithBind(`<custom-input is="foo" />`, {
+        isNativeTag: () => false
+      })
+      expect(root.helpers).toContain(RESOLVE_COMPONENT)
+      expect(root.helpers).not.toContain(RESOLVE_DYNAMIC_COMPONENT)
+      expect(node).toMatchObject({
+        tag: '_component_custom_input'
       })
     })
   })

@@ -51,7 +51,7 @@ export type Prop<T, D = T> = PropOptions<T, D> | PropType<T>
 
 type DefaultFactory<T> = (props: Data) => T | null | undefined
 
-interface PropOptions<T = any, D = T> {
+export interface PropOptions<T = any, D = T> {
   type?: PropType<T> | true | null
   required?: boolean
   default?: D | DefaultFactory<D> | null | undefined | object

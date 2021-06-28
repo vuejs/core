@@ -94,6 +94,16 @@ export const Suspense = ((__FEATURE_SUSPENSE__
   new (): { $props: VNodeProps & SuspenseProps }
 }
 
+function triggerEvent(
+  vnode: VNode,
+  name: 'onResolve' | 'onPending' | 'onFallback'
+) {
+  const eventListener = vnode.props && vnode.props[name]
+  if (isFunction(eventListener)) {
+    eventListener()
+  }
+}
+
 function mountSuspense(
   vnode: VNode,
   container: RendererElement,
@@ -137,6 +147,10 @@ function mountSuspense(
   // now check if we have encountered any async deps
   if (suspense.deps > 0) {
     // has async
+    // invoke @fallback event
+    triggerEvent(vnode, 'onPending')
+    triggerEvent(vnode, 'onFallback')
+
     // mount the fallback tree
     patch(
       null,
@@ -304,10 +318,7 @@ function patchSuspense(
     } else {
       // root node toggled
       // invoke @pending event
-      const onPending = n2.props && n2.props.onPending
-      if (isFunction(onPending)) {
-        onPending()
-      }
+      triggerEvent(n2, 'onPending')
       // mount pending branch in off-dom container
       suspense.pendingBranch = newBranch
       suspense.pendingId++
@@ -501,10 +512,7 @@ function createSuspenseBoundary(
       suspense.effects = []
 
       // invoke @resolve event
-      const onResolve = vnode.props && vnode.props.onResolve
-      if (isFunction(onResolve)) {
-        onResolve()
-      }
+      triggerEvent(vnode, 'onResolve')
     },
 
     fallback(fallbackVNode) {
@@ -521,10 +529,7 @@ function createSuspenseBoundary(
       } = suspense
 
       // invoke @fallback event
-      const onFallback = vnode.props && vnode.props.onFallback
-      if (isFunction(onFallback)) {
-        onFallback()
-      }
+      triggerEvent(vnode, 'onFallback')
 
       const anchor = next(activeBranch!)
       const mountFallback = () => {
@@ -551,6 +556,8 @@ function createSuspenseBoundary(
       if (delayEnter) {
         activeBranch!.transition!.afterLeave = mountFallback
       }
+      suspense.isInFallback = true
+
       // unmount current active branch
       unmount(
         activeBranch!,
@@ -559,7 +566,6 @@ function createSuspenseBoundary(
         true // shouldRemove
       )
 
-      suspense.isInFallback = true
       if (!delayEnter) {
         mountFallback()
       }

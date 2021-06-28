@@ -36,6 +36,11 @@ import { rewriteDefault } from './rewriteDefault'
 
 const DEFINE_PROPS = 'defineProps'
 const DEFINE_EMIT = 'defineEmit'
+const DEFINE_EXPOSE = 'defineExpose'
+const WITH_DEFAULTS = 'withDefaults'
+
+// deprecated
+const DEFINE_EMITS = 'defineEmits'
 
 export interface SFCScriptCompileOptions {
   /**
@@ -95,10 +100,17 @@ export function compileScript(
     )
   }
 
+  // TODO remove on 3.2
+  if (sfc.template && sfc.template.attrs['inherit-attrs'] === 'false') {
+    warnOnce(
+      `experimetnal support for <template inherit-attrs="false"> support has ` +
+        `been removed. Use a <script> block with \`export default\` to ` +
+        `declare options.`
+    )
+  }
+
   const scopeId = options.id ? options.id.replace(/^data-v-/, '') : ''
   const cssVars = sfc.cssVars
-  const hasInheritAttrsFlag =
-    sfc.template && sfc.template.attrs['inherit-attrs'] === 'false'
   const scriptLang = script && script.lang
   const scriptSetupLang = scriptSetup && scriptSetup.lang
   const isTS =
@@ -124,9 +136,8 @@ export function compileScript(
         sourceType: 'module'
       }).program.body
       const bindings = analyzeScriptBindings(scriptAst)
-      const needRewrite = cssVars.length || hasInheritAttrsFlag
       let content = script.content
-      if (needRewrite) {
+      if (cssVars.length) {
         content = rewriteDefault(content, `__default__`, plugins)
         if (cssVars.length) {
           content += genNormalScriptCssVarsCode(
@@ -135,9 +146,6 @@ export function compileScript(
             scopeId,
             !!options.isProd
           )
-        }
-        if (hasInheritAttrsFlag) {
-          content += `__default__.inheritAttrs = false`
         }
         content += `\nexport default __default__`
       }
@@ -184,7 +192,9 @@ export function compileScript(
   let defaultExport: Node | undefined
   let hasDefinePropsCall = false
   let hasDefineEmitCall = false
+  let hasDefineExposeCall = false
   let propsRuntimeDecl: Node | undefined
+  let propsRuntimeDefaults: Node | undefined
   let propsTypeDecl: TSTypeLiteral | undefined
   let propsIdentifier: string | undefined
   let emitRuntimeDecl: Node | undefined
@@ -256,65 +266,103 @@ export function compileScript(
   }
 
   function processDefineProps(node: Node): boolean {
-    if (isCallOf(node, DEFINE_PROPS)) {
-      if (hasDefinePropsCall) {
-        error(`duplicate ${DEFINE_PROPS}() call`, node)
-      }
-      hasDefinePropsCall = true
-      propsRuntimeDecl = node.arguments[0]
-      // context call has type parameters - infer runtime types from it
-      if (node.typeParameters) {
-        if (propsRuntimeDecl) {
-          error(
-            `${DEFINE_PROPS}() cannot accept both type and non-type arguments ` +
-              `at the same time. Use one or the other.`,
-            node
-          )
-        }
-        const typeArg = node.typeParameters.params[0]
-        if (typeArg.type === 'TSTypeLiteral') {
-          propsTypeDecl = typeArg
-        } else {
-          error(
-            `type argument passed to ${DEFINE_PROPS}() must be a literal type.`,
-            typeArg
-          )
-        }
-      }
-      return true
+    if (!isCallOf(node, DEFINE_PROPS)) {
+      return false
     }
-    return false
+
+    if (hasDefinePropsCall) {
+      error(`duplicate ${DEFINE_PROPS}() call`, node)
+    }
+    hasDefinePropsCall = true
+
+    propsRuntimeDecl = node.arguments[0]
+
+    // call has type parameters - infer runtime types from it
+    if (node.typeParameters) {
+      if (propsRuntimeDecl) {
+        error(
+          `${DEFINE_PROPS}() cannot accept both type and non-type arguments ` +
+            `at the same time. Use one or the other.`,
+          node
+        )
+      }
+
+      const typeArg = node.typeParameters.params[0]
+      if (typeArg.type === 'TSTypeLiteral') {
+        propsTypeDecl = typeArg
+      } else {
+        error(
+          `type argument passed to ${DEFINE_PROPS}() must be a literal type.`,
+          typeArg
+        )
+      }
+    }
+
+    return true
   }
 
-  function processDefineEmit(node: Node): boolean {
-    if (isCallOf(node, DEFINE_EMIT)) {
-      if (hasDefineEmitCall) {
-        error(`duplicate ${DEFINE_EMIT}() call`, node)
+  function processWithDefaults(node: Node): boolean {
+    if (!isCallOf(node, WITH_DEFAULTS)) {
+      return false
+    }
+    if (processDefineProps(node.arguments[0])) {
+      if (propsRuntimeDecl) {
+        error(
+          `${WITH_DEFAULTS} can only be used with type-based ` +
+            `${DEFINE_PROPS} declaration.`,
+          node
+        )
       }
-      hasDefineEmitCall = true
-      emitRuntimeDecl = node.arguments[0]
-      if (node.typeParameters) {
-        if (emitRuntimeDecl) {
-          error(
-            `${DEFINE_EMIT}() cannot accept both type and non-type arguments ` +
-              `at the same time. Use one or the other.`,
-            node
-          )
-        }
-        const typeArg = node.typeParameters.params[0]
-        if (
-          typeArg.type === 'TSFunctionType' ||
-          typeArg.type === 'TSTypeLiteral'
-        ) {
-          emitTypeDecl = typeArg
-        } else {
-          error(
-            `type argument passed to ${DEFINE_EMIT}() must be a function type ` +
-              `or a literal type with call signatures.`,
-            typeArg
-          )
-        }
+      propsRuntimeDefaults = node.arguments[1]
+    } else {
+      error(
+        `${WITH_DEFAULTS}' first argument must be a ${DEFINE_PROPS} call.`,
+        node.arguments[0] || node
+      )
+    }
+    return true
+  }
+
+  function processDefineEmits(node: Node): boolean {
+    if (!isCallOf(node, c => c === DEFINE_EMIT || c === DEFINE_EMITS)) {
+      return false
+    }
+    if (hasDefineEmitCall) {
+      error(`duplicate ${DEFINE_EMITS}() call`, node)
+    }
+    hasDefineEmitCall = true
+    emitRuntimeDecl = node.arguments[0]
+    if (node.typeParameters) {
+      if (emitRuntimeDecl) {
+        error(
+          `${DEFINE_EMIT}() cannot accept both type and non-type arguments ` +
+            `at the same time. Use one or the other.`,
+          node
+        )
       }
+      const typeArg = node.typeParameters.params[0]
+      if (
+        typeArg.type === 'TSFunctionType' ||
+        typeArg.type === 'TSTypeLiteral'
+      ) {
+        emitTypeDecl = typeArg
+      } else {
+        error(
+          `type argument passed to ${DEFINE_EMITS}() must be a function type ` +
+            `or a literal type with call signatures.`,
+          typeArg
+        )
+      }
+    }
+    return true
+  }
+
+  function processDefineExpose(node: Node): boolean {
+    if (isCallOf(node, DEFINE_EXPOSE)) {
+      if (hasDefineExposeCall) {
+        error(`duplicate ${DEFINE_EXPOSE}() call`, node)
+      }
+      hasDefineExposeCall = true
       return true
     }
     return false
@@ -461,6 +509,63 @@ export function compileScript(
         )
       }
     }
+  }
+
+  function genRuntimeProps(props: Record<string, PropTypeData>) {
+    const keys = Object.keys(props)
+    if (!keys.length) {
+      return ``
+    }
+
+    // check defaults. If the default object is an object literal with only
+    // static properties, we can directly generate more optimzied default
+    // decalrations. Otherwise we will have to fallback to runtime merging.
+    const hasStaticDefaults =
+      propsRuntimeDefaults &&
+      propsRuntimeDefaults.type === 'ObjectExpression' &&
+      propsRuntimeDefaults.properties.every(
+        node => node.type === 'ObjectProperty' && !node.computed
+      )
+
+    let propsDecls = `{
+    ${keys
+      .map(key => {
+        let defaultString: string | undefined
+        if (hasStaticDefaults) {
+          const prop = (propsRuntimeDefaults as ObjectExpression).properties.find(
+            (node: any) => node.key.name === key
+          ) as ObjectProperty
+          if (prop) {
+            // prop has corresponding static default value
+            defaultString = `default: ${source.slice(
+              prop.value.start! + startOffset,
+              prop.value.end! + startOffset
+            )}`
+          }
+        }
+
+        if (__DEV__) {
+          const { type, required } = props[key]
+          return `${key}: { type: ${toRuntimeTypeString(
+            type
+          )}, required: ${required}${
+            defaultString ? `, ${defaultString}` : ``
+          } }`
+        } else {
+          // production: checks are useless
+          return `${key}: ${defaultString ? `{ ${defaultString} }` : 'null'}`
+        }
+      })
+      .join(',\n    ')}\n  }`
+
+    if (propsRuntimeDefaults && !hasStaticDefaults) {
+      propsDecls = `${helper('mergeDefaults')}(${propsDecls}, ${source.slice(
+        propsRuntimeDefaults.start! + startOffset,
+        propsRuntimeDefaults.end! + startOffset
+      )})`
+    }
+
+    return `\n  props: ${propsDecls} as unknown as undefined,`
   }
 
   // 1. process normal <script> first if it exists
@@ -627,7 +732,10 @@ export function compileScript(
         const existing = userImports[local]
         if (
           source === 'vue' &&
-          (imported === DEFINE_PROPS || imported === DEFINE_EMIT)
+          (imported === DEFINE_PROPS ||
+            imported === DEFINE_EMIT ||
+            imported === DEFINE_EMITS ||
+            imported === DEFINE_EXPOSE)
         ) {
           removeSpecifier(i)
         } else if (existing) {
@@ -651,32 +759,44 @@ export function compileScript(
       }
     }
 
-    // process `defineProps` and `defineEmit` calls
-    if (
-      node.type === 'ExpressionStatement' &&
-      (processDefineProps(node.expression) ||
-        processDefineEmit(node.expression))
-    ) {
-      s.remove(node.start! + startOffset, node.end! + startOffset)
+    if (node.type === 'ExpressionStatement') {
+      // process `defineProps` and `defineEmit(s)` calls
+      if (
+        processDefineProps(node.expression) ||
+        processDefineEmits(node.expression) ||
+        processWithDefaults(node.expression)
+      ) {
+        s.remove(node.start! + startOffset, node.end! + startOffset)
+      } else if (processDefineExpose(node.expression)) {
+        // defineExpose({}) -> expose({})
+        const callee = (node.expression as CallExpression).callee
+        s.overwrite(
+          callee.start! + startOffset,
+          callee.end! + startOffset,
+          'expose'
+        )
+      }
     }
+
     if (node.type === 'VariableDeclaration' && !node.declare) {
       for (const decl of node.declarations) {
         if (decl.init) {
-          const isDefineProps = processDefineProps(decl.init)
+          const isDefineProps =
+            processDefineProps(decl.init) || processWithDefaults(decl.init)
           if (isDefineProps) {
             propsIdentifier = scriptSetup.content.slice(
               decl.id.start!,
               decl.id.end!
             )
           }
-          const isDefineEmit = processDefineEmit(decl.init)
-          if (isDefineEmit) {
+          const isDefineEmits = processDefineEmits(decl.init)
+          if (isDefineEmits) {
             emitIdentifier = scriptSetup.content.slice(
               decl.id.start!,
               decl.id.end!
             )
           }
-          if (isDefineProps || isDefineEmit)
+          if (isDefineProps || isDefineEmits)
             if (node.declarations.length === 1) {
               s.remove(node.start! + startOffset, node.end! + startOffset)
             } else {
@@ -782,6 +902,7 @@ export function compileScript(
   // 5. check useOptions args to make sure it doesn't reference setup scope
   // variables
   checkInvalidScopeReference(propsRuntimeDecl, DEFINE_PROPS)
+  checkInvalidScopeReference(propsRuntimeDefaults, DEFINE_PROPS)
   checkInvalidScopeReference(emitRuntimeDecl, DEFINE_PROPS)
 
   // 6. remove non-script content
@@ -857,18 +978,21 @@ export function compileScript(
   if (propsIdentifier) {
     s.prependRight(startOffset, `\nconst ${propsIdentifier} = __props`)
   }
+
+  const destructureElements =
+    hasDefineExposeCall || !options.inlineTemplate ? [`expose`] : []
   if (emitIdentifier) {
-    args +=
-      emitIdentifier === `emit` ? `, { emit }` : `, { emit: ${emitIdentifier} }`
+    destructureElements.push(
+      emitIdentifier === `emit` ? `emit` : `emit: ${emitIdentifier}`
+    )
+  }
+  if (destructureElements.length) {
+    args += `, { ${destructureElements.join(', ')} }`
     if (emitTypeDecl) {
-      args += `: {
-        emit: (${scriptSetup.content.slice(
-          emitTypeDecl.start!,
-          emitTypeDecl.end!
-        )}),
-        slots: any,
-        attrs: any
-      }`
+      args += `: { emit: (${scriptSetup.content.slice(
+        emitTypeDecl.start!,
+        emitTypeDecl.end!
+      )}), expose: any, slots: any, attrs: any }`
     }
   }
 
@@ -940,16 +1064,18 @@ export function compileScript(
         allBindings[key] = true
       }
     }
-    returned = `{ ${Object.keys(allBindings).join(', ')} }`
+    const keys = Object.keys(allBindings)
+    if (!__TEST__) {
+      // the `__isScriptSetup: true` flag is used by componentPublicInstance
+      // proxy to allow properties that start with $ or _
+      keys.push(`__isScriptSetup: true`)
+    }
+    returned = `{ ${keys.join(', ')} }`
   }
   s.appendRight(endOffset, `\nreturn ${returned}\n}\n\n`)
 
   // 11. finalize default export
-  // expose: [] makes <script setup> components "closed" by default.
-  let runtimeOptions = `\n  expose: [],`
-  if (hasInheritAttrsFlag) {
-    runtimeOptions += `\n  inheritAttrs: false,`
-  }
+  let runtimeOptions = ``
   if (hasInlinedSsrRenderFn) {
     runtimeOptions += `\n  __ssrInlineRender: true,`
   }
@@ -967,6 +1093,11 @@ export function compileScript(
   } else if (emitTypeDecl) {
     runtimeOptions += genRuntimeEmits(typeDeclaredEmits)
   }
+
+  // <script setup> components are closed by default. If the user did not
+  // explicitly call `defineExpose`, call expose() with no args.
+  const exposeCall =
+    hasDefineExposeCall || options.inlineTemplate ? `` : `  expose()\n`
   if (isTS) {
     // for TS, make sure the exported type is still valid type with
     // correct props information
@@ -982,7 +1113,7 @@ export function compileScript(
         `defineComponent`
       )}({${def}${runtimeOptions}\n  ${
         hasAwait ? `async ` : ``
-      }setup(${args}) {\n`
+      }setup(${args}) {\n${exposeCall}`
     )
     s.appendRight(endOffset, `})`)
   } else {
@@ -999,7 +1130,7 @@ export function compileScript(
       s.prependLeft(
         startOffset,
         `\nexport default {${runtimeOptions}\n  ` +
-          `${hasAwait ? `async ` : ``}setup(${args}) {\n`
+          `${hasAwait ? `async ` : ``}setup(${args}) {\n${exposeCall}`
       )
       s.appendRight(endOffset, `}`)
     }
@@ -1040,7 +1171,14 @@ function walkDeclaration(
     for (const { id, init } of node.declarations) {
       const isDefineCall = !!(
         isConst &&
-        (isCallOf(init, DEFINE_PROPS) || isCallOf(init, DEFINE_EMIT))
+        isCallOf(
+          init,
+          c =>
+            c === DEFINE_PROPS ||
+            c === DEFINE_EMIT ||
+            c === DEFINE_EMITS ||
+            c === WITH_DEFAULTS
+        )
       )
       if (id.type === 'Identifier') {
         let bindingType
@@ -1276,29 +1414,6 @@ function inferRuntimeType(
   }
 }
 
-function genRuntimeProps(props: Record<string, PropTypeData>) {
-  const keys = Object.keys(props)
-  if (!keys.length) {
-    return ``
-  }
-
-  if (!__DEV__) {
-    // production: generate array version only
-    return `\n  props: [\n    ${keys
-      .map(k => JSON.stringify(k))
-      .join(',\n    ')}\n  ] as unknown as undefined,`
-  }
-
-  return `\n  props: {\n    ${keys
-    .map(key => {
-      const { type, required } = props[key]
-      return `${key}: { type: ${toRuntimeTypeString(
-        type
-      )}, required: ${required} }`
-    })
-    .join(',\n    ')}\n  } as unknown as undefined,`
-}
-
 function toRuntimeTypeString(types: string[]) {
   return types.some(t => t === 'null')
     ? `null`
@@ -1450,7 +1565,15 @@ export function walkIdentifiers(
   })
 }
 
-function isRefIdentifier(id: Identifier, parent: Node, parentStack: Node[]) {
+function isRefIdentifier(
+  id: Identifier,
+  parent: Node | null,
+  parentStack: Node[]
+) {
+  if (!parent) {
+    return true
+  }
+
   // declaration id
   if (
     (parent.type === 'VariableDeclarator' ||
@@ -1517,13 +1640,15 @@ function isFunction(node: Node): node is FunctionNode {
 
 function isCallOf(
   node: Node | null | undefined,
-  name: string
+  test: string | ((id: string) => boolean)
 ): node is CallExpression {
   return !!(
     node &&
     node.type === 'CallExpression' &&
     node.callee.type === 'Identifier' &&
-    node.callee.name === name
+    (typeof test === 'string'
+      ? node.callee.name === test
+      : test(node.callee.name))
   )
 }
 

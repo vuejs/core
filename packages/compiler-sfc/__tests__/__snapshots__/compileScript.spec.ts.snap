@@ -6,8 +6,8 @@ exports[`SFC compile <script setup> <script> and <script setup> co-usage script 
       export const n = 1
       
 export default {
-  expose: [],
-  setup(__props) {
+  setup(__props, { expose }) {
+  expose()
 
       x()
       
@@ -21,8 +21,8 @@ exports[`SFC compile <script setup> <script> and <script setup> co-usage script 
 "import { x } from './x'
       
 export default {
-  expose: [],
-  setup(__props) {
+  setup(__props, { expose }) {
+  expose()
 
       x()
       
@@ -33,32 +33,11 @@ return { x }
       export const n = 1"
 `;
 
-exports[`SFC compile <script setup> <template inherit-attrs="false"> 1`] = `
-"
-      const __default__ = {}
-      __default__.inheritAttrs = false
-export default __default__"
-`;
-
-exports[`SFC compile <script setup> <template inherit-attrs="false"> 2`] = `
+exports[`SFC compile <script setup> defineEmit() (deprecated) 1`] = `
 "export default {
-  expose: [],
-  inheritAttrs: false,
-  setup(__props) {
-
-      const a = 1
-      
-return { a }
-}
-
-}"
-`;
-
-exports[`SFC compile <script setup> defineEmit() 1`] = `
-"export default {
-  expose: [],
   emits: ['foo', 'bar'],
-  setup(__props, { emit: myEmit }) {
+  setup(__props, { expose, emit: myEmit }) {
+  expose()
 
 
 
@@ -68,13 +47,56 @@ return { myEmit }
 }"
 `;
 
+exports[`SFC compile <script setup> defineEmits() 1`] = `
+"export default {
+  emits: ['foo', 'bar'],
+  setup(__props, { expose, emit: myEmit }) {
+  expose()
+
+
+
+return { myEmit }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> defineExpose() 1`] = `
+"export default {
+  setup(__props, { expose }) {
+
+expose({ foo: 123 })
+
+return {  }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> defineProps w/ external definition 1`] = `
+"import { propsModel } from './props'
+    
+export default {
+  props: propsModel,
+  setup(__props, { expose }) {
+  expose()
+
+const props = __props
+    
+    
+return { props, propsModel }
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> defineProps() 1`] = `
 "export default {
-  expose: [],
   props: {
   foo: String
 },
-  setup(__props) {
+  setup(__props, { expose }) {
+  expose()
 
 const props = __props
 
@@ -90,7 +112,6 @@ exports[`SFC compile <script setup> errors should allow defineProps/Emit() refer
 "import { bar } from './bar'
         
 export default {
-  expose: [],
   props: {
           foo: {
             default: () => bar
@@ -99,7 +120,8 @@ export default {
   emits: {
           foo: () => bar > 1
         },
-  setup(__props) {
+  setup(__props, { expose }) {
+  expose()
 
         
         
@@ -112,7 +134,6 @@ return { bar }
 
 exports[`SFC compile <script setup> errors should allow defineProps/Emit() referencing scope var 1`] = `
 "export default {
-  expose: [],
   props: {
             foo: {
               default: bar => bar + 1
@@ -121,7 +142,8 @@ exports[`SFC compile <script setup> errors should allow defineProps/Emit() refer
   emits: {
             foo: bar => bar > 1
           },
-  setup(__props) {
+  setup(__props, { expose }) {
+  expose()
 
           const bar = 1
           
@@ -138,8 +160,8 @@ exports[`SFC compile <script setup> imports dedupe between user & helper 1`] = `
 import { ref } from 'vue'
       
 export default {
-  expose: [],
-  setup(__props) {
+  setup(__props, { expose }) {
+  expose()
 
       const foo = _ref(1)
       
@@ -153,8 +175,8 @@ exports[`SFC compile <script setup> imports import dedupe between <script> and <
 "import { x } from './x'
         
 export default {
-  expose: [],
-  setup(__props) {
+  setup(__props, { expose }) {
+  expose()
 
         x()
         
@@ -168,10 +190,10 @@ exports[`SFC compile <script setup> imports should allow defineProps/Emit at the
 "import { ref } from 'vue'
       
 export default {
-  expose: [],
   props: ['foo'],
   emits: ['bar'],
-  setup(__props) {
+  setup(__props, { expose }) {
+  expose()
 
       
       
@@ -188,8 +210,8 @@ exports[`SFC compile <script setup> imports should extract comment for import or
         import b from 'b'
         
 export default {
-  expose: [],
-  setup(__props) {
+  setup(__props, { expose }) {
+  expose()
 
         
 return { a, b }
@@ -203,8 +225,8 @@ exports[`SFC compile <script setup> imports should hoist and expose imports 1`] 
           import 'foo/css'
         
 export default {
-  expose: [],
-  setup(__props) {
+  setup(__props, { expose }) {
+  expose()
 
           
 return { ref }
@@ -221,7 +243,6 @@ import { ref } from 'vue'
         import other from './util'
         
 export default {
-  expose: [],
   setup(__props) {
 
         const count = ref(0)
@@ -254,7 +275,6 @@ import ChildComp from './Child.vue'
         import myDir from './my-dir'
         
 export default {
-  expose: [],
   setup(__props) {
 
         
@@ -278,7 +298,6 @@ const _withId = /*#__PURE__*/_withScopeId(\\"data-v-xxxxxxxx\\")
 
 
 export default {
-  expose: [],
   setup(__props) {
 
         const msg = 1
@@ -299,7 +318,6 @@ const _hoisted_1 = /*#__PURE__*/_createVNode(\\"div\\", null, \\"static\\", -1 /
 import { ref } from 'vue'
         
 export default {
-  expose: [],
   setup(__props) {
 
         const count = ref(0)
@@ -322,7 +340,6 @@ import { ssrRenderAttrs as _ssrRenderAttrs, ssrInterpolate as _ssrInterpolate } 
 import { ref } from 'vue'
         
 export default {
-  expose: [],
   __ssrInlineRender: true,
   setup(__props) {
 
@@ -355,7 +372,6 @@ exports[`SFC compile <script setup> inlineTemplate mode template assignment expr
 import { ref } from 'vue'
         
 export default {
-  expose: [],
   setup(__props) {
 
         const count = ref(0)
@@ -393,7 +409,6 @@ exports[`SFC compile <script setup> inlineTemplate mode template destructure ass
 import { ref } from 'vue'
         
 export default {
-  expose: [],
   setup(__props) {
 
         const val = {}
@@ -425,7 +440,6 @@ exports[`SFC compile <script setup> inlineTemplate mode template update expressi
 import { ref } from 'vue'
         
 export default {
-  expose: [],
   setup(__props) {
 
         const count = ref(0)
@@ -465,7 +479,6 @@ exports[`SFC compile <script setup> inlineTemplate mode v-model codegen 1`] = `
 import { ref } from 'vue'
         
 export default {
-  expose: [],
   setup(__props) {
 
         const count = ref(0)
@@ -496,12 +509,25 @@ return (_ctx, _cache) => {
 }"
 `;
 
+exports[`SFC compile <script setup> inlineTemplate mode with defineExpose() 1`] = `
+"export default {
+  setup(__props, { expose }) {
+
+        const count = ref(0)
+        expose({ count })
+        
+return () => {}
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> ref: syntax sugar accessing ref binding 1`] = `
 "import { ref as _ref } from 'vue'
 
 export default {
-  expose: [],
-  setup(__props) {
+  setup(__props, { expose }) {
+  expose()
 
       const a = _ref(1)
       console.log(a.value)
@@ -519,8 +545,8 @@ exports[`SFC compile <script setup> ref: syntax sugar array destructure 1`] = `
 "import { ref as _ref } from 'vue'
 
 export default {
-  expose: [],
-  setup(__props) {
+  setup(__props, { expose }) {
+  expose()
 
       const n = _ref(1), [__a, __b = 1, ...__c] = useFoo()
 const a = _ref(__a);
@@ -538,8 +564,8 @@ exports[`SFC compile <script setup> ref: syntax sugar convert ref declarations 1
 "import { ref as _ref } from 'vue'
 
 export default {
-  expose: [],
-  setup(__props) {
+  setup(__props, { expose }) {
+  expose()
 
       const foo = _ref()
       const a = _ref(1)
@@ -559,8 +585,8 @@ exports[`SFC compile <script setup> ref: syntax sugar multi ref declarations 1`]
 "import { ref as _ref } from 'vue'
 
 export default {
-  expose: [],
-  setup(__props) {
+  setup(__props, { expose }) {
+  expose()
 
       const a = _ref(1), b = _ref(2), c = _ref({
         count: 0
@@ -576,8 +602,8 @@ exports[`SFC compile <script setup> ref: syntax sugar mutating ref binding 1`] =
 "import { ref as _ref } from 'vue'
 
 export default {
-  expose: [],
-  setup(__props) {
+  setup(__props, { expose }) {
+  expose()
 
       const a = _ref(1)
       const b = _ref({ count: 0 })
@@ -600,8 +626,8 @@ exports[`SFC compile <script setup> ref: syntax sugar nested destructure 1`] = `
 "import { ref as _ref } from 'vue'
 
 export default {
-  expose: [],
-  setup(__props) {
+  setup(__props, { expose }) {
+  expose()
 
       const [{ a: { b: __b }}] = useFoo()
 const b = _ref(__b);
@@ -620,8 +646,8 @@ exports[`SFC compile <script setup> ref: syntax sugar object destructure 1`] = `
 "import { ref as _ref } from 'vue'
 
 export default {
-  expose: [],
-  setup(__props) {
+  setup(__props, { expose }) {
+  expose()
 
       const n = _ref(1), { a: __a, b: __c, d: __d = 1, e: __f = 2, ...__g } = useFoo()
 const a = _ref(__a);
@@ -641,8 +667,8 @@ return { n, a, c, d, f, g, foo }
 
 exports[`SFC compile <script setup> ref: syntax sugar should not convert non ref labels 1`] = `
 "export default {
-  expose: [],
-  setup(__props) {
+  setup(__props, { expose }) {
+  expose()
 
       foo: a = 1, b = 2, c = {
         count: 0
@@ -658,8 +684,8 @@ exports[`SFC compile <script setup> ref: syntax sugar should not rewrite scope v
 "import { ref as _ref } from 'vue'
 
 export default {
-  expose: [],
-  setup(__props) {
+  setup(__props, { expose }) {
+  expose()
 
         const a = _ref(1)
         const b = _ref(1)
@@ -687,8 +713,8 @@ exports[`SFC compile <script setup> ref: syntax sugar using ref binding in prope
 "import { ref as _ref } from 'vue'
 
 export default {
-  expose: [],
-  setup(__props) {
+  setup(__props, { expose }) {
+  expose()
 
       const a = _ref(1)
       const b = { a: a.value }
@@ -706,8 +732,8 @@ exports[`SFC compile <script setup> should expose top level declarations 1`] = `
 "import { x } from './x'
       
 export default {
-  expose: [],
-  setup(__props) {
+  setup(__props, { expose }) {
+  expose()
 
       let a = 1
       const b = 2
@@ -720,18 +746,14 @@ return { a, b, c, d, x }
 }"
 `;
 
-exports[`SFC compile <script setup> with TypeScript defineEmit w/ type (type literal w/ call signatures) 1`] = `
+exports[`SFC compile <script setup> with TypeScript defineEmits w/ type (type literal w/ call signatures) 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
       
 export default _defineComponent({
-  expose: [],
   emits: [\\"foo\\", \\"bar\\", \\"baz\\"] as unknown as undefined,
-  setup(__props, { emit }: {
-        emit: ({(e: 'foo' | 'bar'): void; (e: 'baz', id: number): void;}),
-        slots: any,
-        attrs: any
-      }) {
+  setup(__props, { expose, emit }: { emit: ({(e: 'foo' | 'bar'): void; (e: 'baz', id: number): void;}), expose: any, slots: any, attrs: any }) {
+  expose()
 
       
       
@@ -741,18 +763,14 @@ return { emit }
 })"
 `;
 
-exports[`SFC compile <script setup> with TypeScript defineEmit w/ type 1`] = `
+exports[`SFC compile <script setup> with TypeScript defineEmits w/ type 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
       
 export default _defineComponent({
-  expose: [],
   emits: [\\"foo\\", \\"bar\\"] as unknown as undefined,
-  setup(__props, { emit }: {
-        emit: ((e: 'foo' | 'bar') => void),
-        slots: any,
-        attrs: any
-      }) {
+  setup(__props, { expose, emit }: { emit: ((e: 'foo' | 'bar') => void), expose: any, slots: any, attrs: any }) {
+  expose()
 
       
       
@@ -771,7 +789,6 @@ exports[`SFC compile <script setup> with TypeScript defineProps w/ type 1`] = `
 
       
 export default _defineComponent({
-  expose: [],
   props: {
     string: { type: String, required: true },
     number: { type: Number, required: true },
@@ -818,7 +835,8 @@ export default _defineComponent({
         literalUnion: 'foo' | 'bar'
         literalUnionMixed: 'foo' | 1 | boolean
         intersection: Test & {}
-      }) {
+      }, { expose }) {
+  expose()
 
       
       
@@ -833,10 +851,10 @@ exports[`SFC compile <script setup> with TypeScript defineProps/Emit w/ runtime 
 
 
 export default _defineComponent({
-  expose: [],
   props: { foo: String },
   emits: ['a', 'b'],
-  setup(__props, { emit }) {
+  setup(__props, { expose, emit }) {
+  expose()
 
 const props = __props
 
@@ -854,11 +872,58 @@ export interface Foo {}
         type Bar = {}
       
 export default _defineComponent({
-  expose: [],
-  setup(__props) {
+  setup(__props, { expose }) {
+  expose()
 
         
 return {  }
+}
+
+})"
+`;
+
+exports[`SFC compile <script setup> with TypeScript withDefaults (dynamic) 1`] = `
+"import { mergeDefaults as _mergeDefaults, defineComponent as _defineComponent } from 'vue'
+import { defaults } from './foo'
+      
+export default _defineComponent({
+  props: _mergeDefaults({
+    foo: { type: String, required: false },
+    bar: { type: Number, required: false }
+  }, { ...defaults }) as unknown as undefined,
+  setup(__props: {
+        foo?: string
+        bar?: number
+      }, { expose }) {
+  expose()
+
+const props = __props
+      
+      
+return { props, defaults }
+}
+
+})"
+`;
+
+exports[`SFC compile <script setup> with TypeScript withDefaults (static) 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default _defineComponent({
+  props: {
+    foo: { type: String, required: false, default: 'hi' },
+    bar: { type: Number, required: false }
+  } as unknown as undefined,
+  setup(__props: {
+        foo?: string
+        bar?: number
+      }, { expose }) {
+  expose()
+
+const props = __props
+      
+      
+return { props }
 }
 
 })"
