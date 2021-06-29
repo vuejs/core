@@ -1,13 +1,9 @@
-import {
-  isTracking,
-  ReactiveEffect,
-  trackEffects,
-  triggerEffects
-} from './effect'
+import { isTracking, trackEffects, triggerEffects } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { isArray, isObject, hasChanged } from '@vue/shared'
 import { reactive, isProxy, toRaw, isReactive } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
+import { createDep, Dep } from './Dep'
 
 export declare const RefSymbol: unique symbol
 
@@ -27,11 +23,11 @@ export interface Ref<T = any> {
   /**
    * Deps are maintained locally rather than in depsMap for performance reasons.
    */
-  dep?: Set<ReactiveEffect>
+  dep?: Dep
 }
 
 type RefBase<T> = {
-  dep?: Set<ReactiveEffect>
+  dep?: Dep
   value: T
 }
 
@@ -39,7 +35,7 @@ export function trackRefValue(ref: RefBase<any>) {
   if (isTracking()) {
     ref = toRaw(ref)
     if (!ref.dep) {
-      ref.dep = new Set<ReactiveEffect>()
+      ref.dep = createDep()
     }
     if (__DEV__) {
       trackEffects(ref.dep, {
@@ -101,7 +97,7 @@ export function shallowRef(value?: unknown) {
 }
 
 class RefImpl<T> {
-  public dep?: Set<ReactiveEffect> = undefined
+  public dep?: Dep = undefined
 
   private _value: T
 
@@ -170,7 +166,7 @@ export type CustomRefFactory<T> = (
 }
 
 class CustomRefImpl<T> {
-  public dep?: Set<ReactiveEffect> = undefined
+  public dep?: Dep = undefined
 
   private readonly _get: ReturnType<CustomRefFactory<T>>['get']
   private readonly _set: ReturnType<CustomRefFactory<T>>['set']

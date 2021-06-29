@@ -2,6 +2,7 @@ import { ReactiveEffect } from './effect'
 import { Ref, trackRefValue, triggerRefValue } from './ref'
 import { isFunction, NOOP } from '@vue/shared'
 import { ReactiveFlags, toRaw } from './reactive'
+import { Dep } from './Dep'
 
 export interface ComputedRef<T = any> extends WritableComputedRef<T> {
   readonly value: T
@@ -31,7 +32,7 @@ export const setComputedScheduler = (s: ComputedScheduler | undefined) => {
 }
 
 class ComputedRefImpl<T> {
-  public dep?: Set<ReactiveEffect> = undefined
+  public dep?: Dep = undefined
 
   private _value!: T
   private _dirty = true
