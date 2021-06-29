@@ -189,7 +189,7 @@ export function compileScript(
   const setupBindings: Record<string, BindingTypes> = Object.create(null)
   const refBindings: Record<string, BindingTypes> = Object.create(null)
   const refIdentifiers: Set<Identifier> = new Set()
-  const enableRefSugar = options.refSugar !== false
+  const enableRefSugar = !!options.refSugar
   let defaultExport: Node | undefined
   let hasDefinePropsCall = false
   let hasDefineEmitCall = false
@@ -732,10 +732,11 @@ export function compileScript(
         )
         processRefExpression(node.body.expression, node)
       } else {
-        // TODO if we end up shipping ref: sugar as an opt-in feature,
-        // need to proxy the option in vite, vue-loader and rollup-plugin-vue.
         error(
-          `ref: sugar needs to be explicitly enabled via vite or vue-loader options.`,
+          `ref: sugar now needs to be explicitly enabled via @vitejs/plugin-vue ` +
+            `or vue-loader options:\n` +
+            `- @vitejs/plugin-vue: via \`script.refSugar\`\n` +
+            `- vue-loader: via \`refSugar\` (requires 16.3.0+)`,
           node
         )
       }
