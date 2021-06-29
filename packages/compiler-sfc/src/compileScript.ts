@@ -900,6 +900,11 @@ export function compileScript(
           }
           if (node.type === 'AwaitExpression') {
             hasAwait = true
+            s.prependRight(
+              node.argument.start! + startOffset,
+              helper(`withAsyncContext`) + `(`
+            )
+            s.appendLeft(node.argument.end! + startOffset, `)`)
           }
         }
       })

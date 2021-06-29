@@ -48,12 +48,14 @@ export { defineAsyncComponent } from './apiAsyncComponent'
 // <script setup> API ----------------------------------------------------------
 
 export {
+  // macros runtime, for warnings only
   defineProps,
   defineEmits,
   defineExpose,
   withDefaults,
   // internal
   mergeDefaults,
+  withAsyncContext,
   // deprecated
   defineEmit,
   useContext

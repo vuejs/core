@@ -824,37 +824,70 @@ const emit = defineEmits(['a', 'b'])
   })
 
   describe('async/await detection', () => {
-    function assertAwaitDetection(code: string, shouldAsync = true) {
+    function assertAwaitDetection(
+      code: string,
+      expected: string | ((content: string) => boolean),
+      shouldAsync = true
+    ) {
       const { content } = compile(`<script setup>${code}</script>`)
       expect(content).toMatch(`${shouldAsync ? `async ` : ``}setup(`)
+      if (typeof expected === 'string') {
+        expect(content).toMatch(expected)
+      } else {
+        expect(expected(content)).toBe(true)
+      }
     }
 
     test('expression statement', () => {
-      assertAwaitDetection(`await foo`)
+      assertAwaitDetection(`await foo`, `await _withAsyncContext(foo)`)
     })
 
     test('variable', () => {
-      assertAwaitDetection(`const a = 1 + (await foo)`)
+      assertAwaitDetection(
+        `const a = 1 + (await foo)`,
+        `1 + (await _withAsyncContext(foo))`
+      )
     })
 
     test('ref', () => {
-      assertAwaitDetection(`ref: a = 1 + (await foo)`)
+      assertAwaitDetection(
+        `ref: a = 1 + (await foo)`,
+        `1 + (await _withAsyncContext(foo))`
+      )
     })
 
     test('nested statements', () => {
-      assertAwaitDetection(`if (ok) { await foo } else { await bar }`)
+      assertAwaitDetection(`if (ok) { await foo } else { await bar }`, code => {
+        return (
+          code.includes(`await _withAsyncContext(foo)`) &&
+          code.includes(`await _withAsyncContext(bar)`)
+        )
+      })
     })
 
     test('should ignore await inside functions', () => {
       // function declaration
-      assertAwaitDetection(`async function foo() { await bar }`, false)
+      assertAwaitDetection(
+        `async function foo() { await bar }`,
+        `await bar`,
+        false
+      )
       // function expression
-      assertAwaitDetection(`const foo = async () => { await bar }`, false)
+      assertAwaitDetection(
+        `const foo = async () => { await bar }`,
+        `await bar`,
+        false
+      )
       // object method
-      assertAwaitDetection(`const obj = { async method() { await bar }}`, false)
+      assertAwaitDetection(
+        `const obj = { async method() { await bar }}`,
+        `await bar`,
+        false
+      )
       // class method
       assertAwaitDetection(
         `const cls = class Foo { async method() { await bar }}`,
+        `await bar`,
         false
       )
     })

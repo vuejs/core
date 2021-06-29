@@ -1,9 +1,13 @@
 import {
+  ComponentInternalInstance,
   defineComponent,
+  getCurrentInstance,
   h,
   nodeOps,
+  onMounted,
   render,
-  SetupContext
+  SetupContext,
+  Suspense
 } from '@vue/runtime-test'
 import {
   defineEmits,
@@ -12,7 +16,8 @@ import {
   withDefaults,
   useAttrs,
   useSlots,
-  mergeDefaults
+  mergeDefaults,
+  withAsyncContext
 } from '../src/apiSetupHelpers'
 
 describe('SFC <script setup> helpers', () => {
@@ -88,5 +93,40 @@ describe('SFC <script setup> helpers', () => {
     expect(
       `props default key "foo" has no corresponding declaration`
     ).toHaveBeenWarned()
+  })
+
+  test('withAsyncContext', async () => {
+    const spy = jest.fn()
+
+    let beforeInstance: ComponentInternalInstance | null = null
+    let afterInstance: ComponentInternalInstance | null = null
+    let resolve: (msg: string) => void
+
+    const Comp = defineComponent({
+      async setup() {
+        beforeInstance = getCurrentInstance()
+        const msg = await withAsyncContext(
+          new Promise(r => {
+            resolve = r
+          })
+        )
+        // register the lifecycle after an await statement
+        onMounted(spy)
+        afterInstance = getCurrentInstance()
+        return () => msg
+      }
+    })
+
+    const root = nodeOps.createElement('div')
+    render(h(() => h(Suspense, () => h(Comp))), root)
+
+    expect(spy).not.toHaveBeenCalled()
+    resolve!('hello')
+    // wait a macro task tick for all micro ticks to resolve
+    await new Promise(r => setTimeout(r))
+    // mount hook should have been called
+    expect(spy).toHaveBeenCalled()
+    // should retain same instance before/after the await call
+    expect(beforeInstance).toBe(afterInstance)
   })
 })

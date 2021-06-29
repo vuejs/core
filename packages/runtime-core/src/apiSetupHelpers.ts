@@ -1,7 +1,8 @@
 import {
   getCurrentInstance,
   SetupContext,
-  createSetupContext
+  createSetupContext,
+  setCurrentInstance
 } from './component'
 import { EmitFn, EmitsOptions } from './componentEmits'
 import {
@@ -225,4 +226,18 @@ export function mergeDefaults(
     }
   }
   return props
+}
+
+/**
+ * Runtime helper for storing and resuming current instance context in
+ * async setup().
+ * @internal
+ */
+export async function withAsyncContext<T>(
+  awaitable: T | Promise<T>
+): Promise<T> {
+  const ctx = getCurrentInstance()
+  const res = await awaitable
+  setCurrentInstance(ctx)
+  return res
 }
