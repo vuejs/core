@@ -231,13 +231,20 @@ export function mergeDefaults(
 /**
  * Runtime helper for storing and resuming current instance context in
  * async setup().
- * @internal
  */
 export async function withAsyncContext<T>(
   awaitable: T | Promise<T>
 ): Promise<T> {
   const ctx = getCurrentInstance()
-  const res = await awaitable
-  setCurrentInstance(ctx)
+  setCurrentInstance(null) // unset after storing instance
+  if (__DEV__ && !ctx) {
+    warn(`withAsyncContext() called when there is no active context instance.`)
+  }
+  let res: T
+  try {
+    res = await awaitable
+  } finally {
+    setCurrentInstance(ctx)
+  }
   return res
 }

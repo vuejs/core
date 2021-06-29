@@ -1,11 +1,13 @@
 import {
   ComponentInternalInstance,
+  createApp,
   defineComponent,
   getCurrentInstance,
   h,
   nodeOps,
   onMounted,
   render,
+  serializeInner,
   SetupContext,
   Suspense
 } from '@vue/runtime-test'
@@ -95,38 +97,161 @@ describe('SFC <script setup> helpers', () => {
     ).toHaveBeenWarned()
   })
 
-  test('withAsyncContext', async () => {
-    const spy = jest.fn()
-
-    let beforeInstance: ComponentInternalInstance | null = null
-    let afterInstance: ComponentInternalInstance | null = null
-    let resolve: (msg: string) => void
-
-    const Comp = defineComponent({
-      async setup() {
-        beforeInstance = getCurrentInstance()
-        const msg = await withAsyncContext(
-          new Promise(r => {
-            resolve = r
-          })
-        )
-        // register the lifecycle after an await statement
-        onMounted(spy)
-        afterInstance = getCurrentInstance()
-        return () => msg
-      }
+  describe('withAsyncContext', () => {
+    // disable options API because applyOptions() also resets currentInstance
+    // and we want to ensure the logic works even with Options API disabled.
+    beforeEach(() => {
+      __FEATURE_OPTIONS_API__ = false
     })
 
-    const root = nodeOps.createElement('div')
-    render(h(() => h(Suspense, () => h(Comp))), root)
+    afterEach(() => {
+      __FEATURE_OPTIONS_API__ = true
+    })
 
-    expect(spy).not.toHaveBeenCalled()
-    resolve!('hello')
-    // wait a macro task tick for all micro ticks to resolve
-    await new Promise(r => setTimeout(r))
-    // mount hook should have been called
-    expect(spy).toHaveBeenCalled()
-    // should retain same instance before/after the await call
-    expect(beforeInstance).toBe(afterInstance)
+    test('basic', async () => {
+      const spy = jest.fn()
+
+      let beforeInstance: ComponentInternalInstance | null = null
+      let afterInstance: ComponentInternalInstance | null = null
+      let resolve: (msg: string) => void
+
+      const Comp = defineComponent({
+        async setup() {
+          beforeInstance = getCurrentInstance()
+          const msg = await withAsyncContext(
+            new Promise(r => {
+              resolve = r
+            })
+          )
+          // register the lifecycle after an await statement
+          onMounted(spy)
+          afterInstance = getCurrentInstance()
+          return () => msg
+        }
+      })
+
+      const root = nodeOps.createElement('div')
+      render(h(() => h(Suspense, () => h(Comp))), root)
+
+      expect(spy).not.toHaveBeenCalled()
+      resolve!('hello')
+      // wait a macro task tick for all micro ticks to resolve
+      await new Promise(r => setTimeout(r))
+      // mount hook should have been called
+      expect(spy).toHaveBeenCalled()
+      // should retain same instance before/after the await call
+      expect(beforeInstance).toBe(afterInstance)
+      expect(serializeInner(root)).toBe('hello')
+    })
+
+    test('error handling', async () => {
+      const spy = jest.fn()
+
+      let beforeInstance: ComponentInternalInstance | null = null
+      let afterInstance: ComponentInternalInstance | null = null
+      let reject: () => void
+
+      const Comp = defineComponent({
+        async setup() {
+          beforeInstance = getCurrentInstance()
+          try {
+            await withAsyncContext(
+              new Promise((r, rj) => {
+                reject = rj
+              })
+            )
+          } catch (e) {
+            // ignore
+          }
+          // register the lifecycle after an await statement
+          onMounted(spy)
+          afterInstance = getCurrentInstance()
+          return () => ''
+        }
+      })
+
+      const root = nodeOps.createElement('div')
+      render(h(() => h(Suspense, () => h(Comp))), root)
+
+      expect(spy).not.toHaveBeenCalled()
+      reject!()
+      // wait a macro task tick for all micro ticks to resolve
+      await new Promise(r => setTimeout(r))
+      // mount hook should have been called
+      expect(spy).toHaveBeenCalled()
+      // should retain same instance before/after the await call
+      expect(beforeInstance).toBe(afterInstance)
+    })
+
+    test('should not leak instance on multiple awaits', async () => {
+      let resolve: (val?: any) => void
+      let beforeInstance: ComponentInternalInstance | null = null
+      let afterInstance: ComponentInternalInstance | null = null
+      let inBandInstance: ComponentInternalInstance | null = null
+      let outOfBandInstance: ComponentInternalInstance | null = null
+
+      const ready = new Promise(r => {
+        resolve = r
+      })
+
+      async function doAsyncWork() {
+        // should still have instance
+        inBandInstance = getCurrentInstance()
+        await Promise.resolve()
+        // should not leak instance
+        outOfBandInstance = getCurrentInstance()
+      }
+
+      const Comp = defineComponent({
+        async setup() {
+          beforeInstance = getCurrentInstance()
+          // first await
+          await withAsyncContext(Promise.resolve())
+          // setup exit, instance set to null, then resumed
+          await withAsyncContext(doAsyncWork())
+          afterInstance = getCurrentInstance()
+          return () => {
+            resolve()
+            return ''
+          }
+        }
+      })
+
+      const root = nodeOps.createElement('div')
+      render(h(() => h(Suspense, () => h(Comp))), root)
+
+      await ready
+      expect(inBandInstance).toBe(beforeInstance)
+      expect(outOfBandInstance).toBeNull()
+      expect(afterInstance).toBe(beforeInstance)
+      expect(getCurrentInstance()).toBeNull()
+    })
+
+    test('should not leak on multiple awaits + error', async () => {
+      let resolve: (val?: any) => void
+      const ready = new Promise(r => {
+        resolve = r
+      })
+
+      const Comp = defineComponent({
+        async setup() {
+          await withAsyncContext(Promise.resolve())
+          await withAsyncContext(Promise.reject())
+        },
+        render() {}
+      })
+
+      const app = createApp(() => h(Suspense, () => h(Comp)))
+      app.config.errorHandler = () => {
+        resolve()
+        return false
+      }
+
+      const root = nodeOps.createElement('div')
+      app.mount(root)
+
+      await ready
+      expect(getCurrentInstance()).toBeNull()
+    })
   })
 })

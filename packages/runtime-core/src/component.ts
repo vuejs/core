@@ -623,6 +623,11 @@ function setupStatefulComponent(
     currentInstance = null
 
     if (isPromise(setupResult)) {
+      const unsetInstance = () => {
+        currentInstance = null
+      }
+      setupResult.then(unsetInstance, unsetInstance)
+
       if (isSSR) {
         // return the promise so server-renderer can wait on it
         return setupResult
