@@ -937,20 +937,6 @@ export function compileScript(
       walkDeclaration(node, setupBindings, userImportAlias)
     }
 
-    // Type declarations
-    if (node.type === 'VariableDeclaration' && node.declare) {
-      s.remove(start, end)
-    }
-
-    // move all type declarations to outer scope
-    if (
-      node.type.startsWith('TS') ||
-      (node.type === 'ExportNamedDeclaration' && node.exportKind === 'type')
-    ) {
-      recordType(node, declaredTypes)
-      s.move(start, end, 0)
-    }
-
     // walk statements & named exports / variable declarations for top level
     // await
     if (
@@ -985,6 +971,24 @@ export function compileScript(
           `consult the updated RFC at https://github.com/vuejs/rfcs/pull/227.`,
         node
       )
+    }
+
+    if (isTS) {
+      // runtime enum
+      if (node.type === 'TSEnumDeclaration' && !node.const) {
+        registerBinding(setupBindings, node.id, BindingTypes.SETUP_CONST)
+      }
+
+      // move all Type declarations to outer scope
+      if (
+        node.type.startsWith('TS') ||
+        (node.type === 'ExportNamedDeclaration' &&
+          node.exportKind === 'type') ||
+        (node.type === 'VariableDeclaration' && node.declare)
+      ) {
+        recordType(node, declaredTypes)
+        s.move(start, end, 0)
+      }
     }
   }
 
