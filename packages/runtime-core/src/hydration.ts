@@ -57,12 +57,14 @@ export function createHydrationFunctions(
   } = rendererInternals
 
   const hydrate: RootHydrateFunction = (vnode, container) => {
-    if (__DEV__ && !container.hasChildNodes()) {
-      warn(
-        `Attempting to hydrate existing markup but container is empty. ` +
-          `Performing full mount instead.`
-      )
+    if (!container.hasChildNodes()) {
+      __DEV__ &&
+        warn(
+          `Attempting to hydrate existing markup but container is empty. ` +
+            `Performing full mount instead.`
+        )
       patch(null, vnode, container)
+      flushPostFlushCbs()
       return
     }
     hasMismatch = false
