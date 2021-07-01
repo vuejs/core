@@ -73,17 +73,15 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
   // As long as the user only uses trusted templates, this is safe.
   insertStaticContent(content, parent, anchor, isSVG, cached) {
     if (cached) {
-      let [cachedFirst, cachedLast] = cached
-      let first, last
-      while (true) {
-        let node = cachedFirst.cloneNode(true)
-        if (!first) first = node
+      let first
+      let last
+      let i = 0
+      let l = cached.length
+      for (; i < l; i++) {
+        const node = cached[i].cloneNode(true)
+        if (i === 0) first = node
+        if (i === l - 1) last = node
         parent.insertBefore(node, anchor)
-        if (cachedFirst === cachedLast) {
-          last = node
-          break
-        }
-        cachedFirst = cachedFirst.nextSibling!
       }
       return [first, last] as any
     }
@@ -111,11 +109,14 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
     } else {
       parent.insertAdjacentHTML('beforeend', content)
     }
-    return [
-      // first
-      before ? before.nextSibling : parent.firstChild,
-      // last
-      anchor ? anchor.previousSibling : parent.lastChild
-    ]
+    let first = before ? before.nextSibling : parent.firstChild
+    const last = anchor ? anchor.previousSibling : parent.lastChild
+    const ret = []
+    while (first) {
+      ret.push(first)
+      if (first === last) break
+      first = first.nextSibling
+    }
+    return ret
   }
 }

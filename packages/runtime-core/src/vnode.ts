@@ -167,7 +167,8 @@ export interface VNode<
   anchor: HostNode | null // fragment anchor
   target: HostElement | null // teleport target
   targetAnchor: HostNode | null // teleport target anchor
-  staticCount: number // number of elements contained in a static vnode
+  staticCount?: number // number of elements contained in a static vnode
+  staticCache?: HostNode[] // cache of parsed static nodes for faster repeated insertions
 
   // suspense
   suspense: SuspenseBoundary | null
@@ -439,7 +440,6 @@ function _createVNode(
     anchor: null,
     target: null,
     targetAnchor: null,
-    staticCount: 0,
     shapeFlag,
     patchFlag,
     dynamicProps,
@@ -521,6 +521,7 @@ export function cloneVNode<T, U>(
     target: vnode.target,
     targetAnchor: vnode.targetAnchor,
     staticCount: vnode.staticCount,
+    staticCache: vnode.staticCache,
     shapeFlag: vnode.shapeFlag,
     // if the vnode is cloned with extra props, we can no longer assume its
     // existing patch flag to be reliable and need to add the FULL_PROPS flag.

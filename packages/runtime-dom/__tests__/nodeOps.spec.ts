@@ -30,15 +30,11 @@ describe('runtime-dom: node-ops', () => {
     test('fresh insertion', () => {
       const content = `<div>one</div><div>two</div>three`
       const parent = document.createElement('div')
-      const [first, last] = nodeOps.insertStaticContent!(
-        content,
-        parent,
-        null,
-        false
-      )
+      const nodes = nodeOps.insertStaticContent!(content, parent, null, false)
       expect(parent.innerHTML).toBe(content)
-      expect(first).toBe(parent.firstChild)
-      expect(last).toBe(parent.lastChild)
+      expect(nodes.length).toBe(3)
+      expect(nodes[0]).toBe(parent.firstChild)
+      expect(nodes[nodes.length - 1]).toBe(parent.lastChild)
     })
 
     test('fresh insertion with anchor', () => {
@@ -47,15 +43,13 @@ describe('runtime-dom: node-ops', () => {
       const parent = document.createElement('div')
       parent.innerHTML = existing
       const anchor = parent.firstChild
-      const [first, last] = nodeOps.insertStaticContent!(
-        content,
-        parent,
-        anchor,
-        false
-      )
+      const nodes = nodeOps.insertStaticContent!(content, parent, anchor, false)
       expect(parent.innerHTML).toBe(content + existing)
-      expect(first).toBe(parent.firstChild)
-      expect(last).toBe(parent.childNodes[parent.childNodes.length - 2])
+      expect(nodes.length).toBe(3)
+      expect(nodes[0]).toBe(parent.firstChild)
+      expect(nodes[nodes.length - 1]).toBe(
+        parent.childNodes[parent.childNodes.length - 2]
+      )
     })
 
     test('fresh insertion as svg', () => {
@@ -97,7 +91,7 @@ describe('runtime-dom: node-ops', () => {
       const content = `<div>one</div><div>two</div>three`
 
       const cacheParent = document.createElement('div')
-      const [cachedFirst, cachedLast] = nodeOps.insertStaticContent!(
+      const nodes = nodeOps.insertStaticContent!(
         content,
         cacheParent,
         null,
@@ -106,20 +100,18 @@ describe('runtime-dom: node-ops', () => {
 
       const parent = document.createElement('div')
 
-      const [first, last] = nodeOps.insertStaticContent!(
+      const clonedNodes = nodeOps.insertStaticContent!(
         ``,
         parent,
         null,
         false,
-        [cachedFirst, cachedLast]
+        nodes
       )
 
       expect(parent.innerHTML).toBe(content)
-      expect(first).toBe(parent.firstChild)
-      expect(last).toBe(parent.lastChild)
-
-      expect(first).not.toBe(cachedFirst)
-      expect(last).not.toBe(cachedLast)
+      expect(clonedNodes[0]).toBe(parent.firstChild)
+      expect(clonedNodes[clonedNodes.length - 1]).toBe(parent.lastChild)
+      expect(clonedNodes[0]).not.toBe(nodes[0])
     })
   })
 })

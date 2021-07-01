@@ -134,10 +134,10 @@ export function createHydrationFunctions(
           // if the static vnode has its content stripped during build,
           // adopt it from the server-rendered HTML.
           const needToAdoptContent = !(vnode.children as string).length
-          for (let i = 0; i < vnode.staticCount; i++) {
+          for (let i = 0; i < vnode.staticCount!; i++) {
             if (needToAdoptContent)
               vnode.children += (nextNode as Element).outerHTML
-            if (i === vnode.staticCount - 1) {
+            if (i === vnode.staticCount! - 1) {
               vnode.anchor = nextNode
             }
             nextNode = nextSibling(nextNode)!

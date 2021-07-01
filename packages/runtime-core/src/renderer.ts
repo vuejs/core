@@ -143,7 +143,7 @@ export interface RendererOptions<
     parent: HostElement,
     anchor: HostNode | null,
     isSVG: boolean,
-    cached?: [HostNode, HostNode | null] | null
+    cached?: HostNode[] | null
   ): HostElement[]
 }
 
@@ -633,7 +633,7 @@ function baseCreateRenderer(
   ) => {
     // static nodes are only present when used with compiler-dom/runtime-dom
     // which guarantees presence of hostInsertStaticContent.
-    ;[n2.el, n2.anchor] = hostInsertStaticContent!(
+    const nodes = hostInsertStaticContent!(
       n2.children as string,
       container,
       anchor,
@@ -641,8 +641,14 @@ function baseCreateRenderer(
       // pass cached nodes if the static node is being mounted multiple times
       // so that runtime-dom can simply cloneNode() instead of inserting new
       // HTML
-      n2.el && [n2.el, n2.anchor]
+      n2.staticCache
     )
+    // first mount - this is the orignal hoisted vnode. cache nodes.
+    if (!n2.el) {
+      n2.staticCache = nodes
+    }
+    n2.el = nodes[0]
+    n2.anchor = nodes[nodes.length - 1]
   }
 
   /**
@@ -686,16 +692,14 @@ function baseCreateRenderer(
     hostInsert(anchor!, container, nextSibling)
   }
 
-  const removeStaticNode = (vnode: VNode) => {
+  const removeStaticNode = ({ el, anchor }: VNode) => {
     let next
-    let { el, anchor } = vnode
     while (el && el !== anchor) {
       next = hostNextSibling(el)
       hostRemove(el)
       el = next
     }
     hostRemove(anchor!)
-    vnode.el = vnode.anchor = null
   }
 
   const processElement = (
