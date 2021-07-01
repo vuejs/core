@@ -203,3 +203,10 @@ switch (data.state.value) {
     data.state.value = 'state1'
     break
 }
+
+// #3954
+function testUnrefGenerics<T>(p: T | Ref<T>) {
+  expectType<T>(unref(p))
+}
+
+testUnrefGenerics(1)
