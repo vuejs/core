@@ -2478,10 +2478,10 @@ es-to-primitive@^1.2.1:
     is-date-object "^1.0.1"
     is-symbol "^1.0.2"
 
-esbuild@^0.12.5:
-  version "0.12.7"
-  resolved "https://registry.yarnpkg.com/esbuild/-/esbuild-0.12.7.tgz#0243ff94b241d9c815720083633731bc5b601b24"
-  integrity sha512-vxENKWBo928ErLiT/uUv8Sl2EoC5cF3cZzCTc8hDEh9ZAZ75xblJCr72NeJo74lxWaGopIePZPIWq1qDpLUHQQ==
+esbuild@^0.12.8:
+  version "0.12.13"
+  resolved "https://registry.yarnpkg.com/esbuild/-/esbuild-0.12.13.tgz#666e1e6c50dbde40c02824cc60296574ebd588c5"
+  integrity sha512-fnKinmXcW1DMYnf1Ol3ZO0yU7dBDCuPcE4XDwceIy2zqTvB4G0NfonqgdvPMJi/IXRoVi/w9r9O5xxg/SqiAxA==
 
 escalade@^3.1.1:
   version "3.1.1"
@@ -2997,7 +2997,7 @@ fs.realpath@^1.0.0:
   resolved "https://registry.yarnpkg.com/fs.realpath/-/fs.realpath-1.0.0.tgz#1504ad2523158caa40db4a2787cb01411994ea4f"
   integrity sha1-FQStJSMVjKpA20onh8sBQRmU6k8=
 
-fsevents@^2.1.2, fsevents@~2.3.1:
+fsevents@^2.1.2, fsevents@~2.3.1, fsevents@~2.3.2:
   version "2.3.2"
   resolved "https://registry.yarnpkg.com/fsevents/-/fsevents-2.3.2.tgz#8a526f78b8fdf4623b709e0b975c52c24c02fd1a"
   integrity sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==
@@ -5556,10 +5556,10 @@ postcss-value-parser@^4.1.0:
   resolved "https://registry.yarnpkg.com/postcss-value-parser/-/postcss-value-parser-4.1.0.tgz#443f6a20ced6481a2bda4fa8532a6e55d789a2cb"
   integrity sha512-97DXOFbQJhk71ne5/Mt6cOu6yxsSfM0QGQyl0L25Gca4yGWEGJaig7l7gbCX623VqTBNGLRLaVUCnNkcedlRSQ==
 
-postcss@^8.1.10, postcss@^8.3.0:
-  version "8.3.0"
-  resolved "https://registry.yarnpkg.com/postcss/-/postcss-8.3.0.tgz#b1a713f6172ca427e3f05ef1303de8b65683325f"
-  integrity sha512-+ogXpdAjWGa+fdYY5BQ96V/6tAo+TdSSIMP5huJBIygdWwKtVoB5JWZ7yUd4xZ8r+8Kvvx4nyg/PQ071H4UtcQ==
+postcss@^8.1.10, postcss@^8.3.4:
+  version "8.3.5"
+  resolved "https://registry.yarnpkg.com/postcss/-/postcss-8.3.5.tgz#982216b113412bc20a86289e91eb994952a5b709"
+  integrity sha512-NxTuJocUhYGsMiMFHDUkmjSKT3EdH4/WbGF6GCi1NDGk+vbcUTun4fpbOqaPtD8IIsztA2ilZm2DhYCuyN58gA==
   dependencies:
     colorette "^1.2.2"
     nanoid "^3.1.23"
@@ -6110,7 +6110,7 @@ resolve@1.17.0, resolve@~1.17.0:
   dependencies:
     path-parse "^1.0.6"
 
-resolve@^1.1.6, resolve@^1.10.0, resolve@^1.15.1, resolve@^1.17.0, resolve@^1.18.1, resolve@^1.19.0:
+resolve@^1.1.6, resolve@^1.10.0, resolve@^1.15.1, resolve@^1.17.0, resolve@^1.18.1, resolve@^1.19.0, resolve@^1.20.0:
   version "1.20.0"
   resolved "https://registry.yarnpkg.com/resolve/-/resolve-1.20.0.tgz#629a013fb3f70755d6f0b7935cc1c2c5378b1975"
   integrity sha512-wENBPt4ySzg4ybFQW2TT1zMQucPK95HSh/nq2CFTZVOGut2+pQvSsgtda4d26YrYcr067wjbmzOG8byDPBX63A==
@@ -7284,16 +7284,16 @@ verror@1.10.0:
     extsprintf "^1.2.0"
 
 vite@^2.1.5:
-  version "2.3.7"
-  resolved "https://registry.yarnpkg.com/vite/-/vite-2.3.7.tgz#3023892419367465e1af1739578f8663d04243b2"
-  integrity sha512-Y0xRz11MPYu/EAvzN94+FsOZHbSvO6FUvHv127CyG7mV6oDoay2bw+g5y9wW3Blf8OY3chaz3nc/DcRe1IQ3Nw==
+  version "2.3.8"
+  resolved "https://registry.yarnpkg.com/vite/-/vite-2.3.8.tgz#42e3e03953859fd410e4e6ab3d1cca0aab2adc3c"
+  integrity sha512-QiEx+iqNnJntSgSF2fWRQvRey9pORIrtNJzNyBJXwc+BdzWs83FQolX84cTBo393cfhObrtWa6180dAa4NLDiQ==
   dependencies:
-    esbuild "^0.12.5"
-    postcss "^8.3.0"
-    resolve "^1.19.0"
+    esbuild "^0.12.8"
+    postcss "^8.3.4"
+    resolve "^1.20.0"
     rollup "^2.38.5"
   optionalDependencies:
-    fsevents "~2.3.1"
+    fsevents "~2.3.2"
 
 vlq@^0.2.2:
   version "0.2.3"
