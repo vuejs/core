@@ -686,14 +686,16 @@ function baseCreateRenderer(
     hostInsert(anchor!, container, nextSibling)
   }
 
-  const removeStaticNode = ({ el, anchor }: VNode) => {
+  const removeStaticNode = (vnode: VNode) => {
     let next
+    let { el, anchor } = vnode
     while (el && el !== anchor) {
       next = hostNextSibling(el)
       hostRemove(el)
       el = next
     }
     hostRemove(anchor!)
+    vnode.el = vnode.anchor = null
   }
 
   const processElement = (
