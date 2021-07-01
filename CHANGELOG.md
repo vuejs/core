@@ -1,3 +1,47 @@
+## [3.1.3](https://github.com/vuejs/vue-next/compare/v3.1.2...v3.1.3) (2021-07-01)
+
+
+### Bug Fixes
+
+* **compiler-core:** properly exit self-closing pre tag ([d2df28d](https://github.com/vuejs/vue-next/commit/d2df28dca42f6679766033f8986b5637dfe64e1e)), closes [#4030](https://github.com/vuejs/vue-next/issues/4030)
+* **compiler-sfc:** avoid script setup marker showing up in devtools ([211793d](https://github.com/vuejs/vue-next/commit/211793d3767b12dd457de62160b672af24b921e7))
+* **compiler-sfc:** fix defineProps() call on imported identifier ([691d354](https://github.com/vuejs/vue-next/commit/691d354af9e3a66c781494656b367950fcd8faec))
+* **compiler-sfc:** fix defineProps/defineEmits usage in multi-variable declarations ([62c1b2f](https://github.com/vuejs/vue-next/commit/62c1b2f7dc4d2dd22a1b1ab1897f0ce765008d59)), closes [#3739](https://github.com/vuejs/vue-next/issues/3739)
+* **compiler-sfc:** fix script setup hidden flag codegen ([a5a66c5](https://github.com/vuejs/vue-next/commit/a5a66c5196f5e00e8cbf7f6008d350d6eabcee71))
+* **compiler-sfc:** support method signature in defineProps ([afdd2f2](https://github.com/vuejs/vue-next/commit/afdd2f28354ce8cea647279ed25d61e7b9946cf5)), closes [#2983](https://github.com/vuejs/vue-next/issues/2983)
+* **compiler-sfc:** support TS runtime enum in `<script setup>` ([1ffd48a](https://github.com/vuejs/vue-next/commit/1ffd48a2f5fd3eead3ea29dae668b7ed1c6f6130))
+* **runtime-core:** add missing serverPrefetch hook error string ([#4014](https://github.com/vuejs/vue-next/issues/4014)) ([d069796](https://github.com/vuejs/vue-next/commit/d069796b8f0cf8df9aa77d781c4b5429b9411204))
+* **runtime-core:** fix mouting of detached static vnode ([fded1e8](https://github.com/vuejs/vue-next/commit/fded1e8dfa22ca7fecd300c4cbffd6a37b887be8)), closes [#4023](https://github.com/vuejs/vue-next/issues/4023)
+* **runtime-dom:** fix static node content caching edge cases ([ba89ca9](https://github.com/vuejs/vue-next/commit/ba89ca9ecafe86292e3adf751671ed5e9ca6e928)), closes [#4023](https://github.com/vuejs/vue-next/issues/4023) [#4031](https://github.com/vuejs/vue-next/issues/4031) [#4037](https://github.com/vuejs/vue-next/issues/4037)
+* **sfc:** allow variables that start with _ or $ in `<script setup>` ([0b8b576](https://github.com/vuejs/vue-next/commit/0b8b5764287b4814a37034ad4bc6f2b8ac8f8700))
+* **ssr:** ensure behavior consistency between prod/dev when mounting SSR app to empty containers ([33708e8](https://github.com/vuejs/vue-next/commit/33708e8bf44a037070af5c8eabdfe1ccad22bbc2)), closes [#4034](https://github.com/vuejs/vue-next/issues/4034)
+* **ssr:** properly hydrate non-string value bindings ([34d4991](https://github.com/vuejs/vue-next/commit/34d4991dd5876325eb8747afa9a835929bde3974)), closes [#4006](https://github.com/vuejs/vue-next/issues/4006)
+* **types:** improve type of unref() ([127ed1b](https://github.com/vuejs/vue-next/commit/127ed1b969cb2d237d0f588aab726e04f4732641)), closes [#3954](https://github.com/vuejs/vue-next/issues/3954)
+* defineExpose type definition and runtime warning ([1675b6d](https://github.com/vuejs/vue-next/commit/1675b6d723829d1f61e697735e3da7b16aa1362d))
+* prevent withAsyncContext currentInstance leak in edge cases ([9ee41e1](https://github.com/vuejs/vue-next/commit/9ee41e14d2d173866300e75758468c6788180277))
+
+
+### Features
+
+* **compiler-sfc:** compileScript parseOnly mode ([601a290](https://github.com/vuejs/vue-next/commit/601a290caaf7fa29c58c88ac79fc2f1d2c57e337))
+* **expose:** always expose $ instance properties on child refs ([b0203a3](https://github.com/vuejs/vue-next/commit/b0203a30929e4e7f59e035574e43d72ed3b9d7fd))
+* **sfc:** add `defineEmits` and deprecate `defineEmit` ([#3725](https://github.com/vuejs/vue-next/issues/3725)) ([a137da8](https://github.com/vuejs/vue-next/commit/a137da8a9f728edacd50d288bce281e32597197b))
+* **sfc:** auto restore current instance after await statements in async setup() ([0240e82](https://github.com/vuejs/vue-next/commit/0240e82a38e2e0c5f0b63c228fd02b059a19073d))
+* **sfc:** change `<script setup>` directive resolution to require v prefix ([d35e0b1](https://github.com/vuejs/vue-next/commit/d35e0b1468ce3c22b713020ed29f81aba40dd039)), closes [#3543](https://github.com/vuejs/vue-next/issues/3543)
+* **sfc:** defineExpose ([be2b1d3](https://github.com/vuejs/vue-next/commit/be2b1d3c2f16de8dc6e2a22f65fefaa2d25ec3ee))
+* **sfc:** make ref sugar disabled by default ([96cc335](https://github.com/vuejs/vue-next/commit/96cc335aa7050b6bf2ae53cc209d0032a8d59d0e))
+* **sfc:** remove `<template inherit-attrs>` support ([6f6f0cf](https://github.com/vuejs/vue-next/commit/6f6f0cf5dcc02f4a648fab86439eb29a4b5596d2))
+* **sfc:** support referenced types for defineEmits ([2973b6c](https://github.com/vuejs/vue-next/commit/2973b6c30ae5b3ff65aeb71a26a6de1c7789537d))
+* **sfc:** support using declared interface or type alias with defineProps() ([2f91db3](https://github.com/vuejs/vue-next/commit/2f91db30cda5c315ed3e4d20800b55721b0cb17c))
+* **sfc:** useAttrs + useSlots ([63e9e2e](https://github.com/vuejs/vue-next/commit/63e9e2e9aae07c701548f3350ea83535bea22066))
+* **sfc:** withDefaults helper ([4c5844a](https://github.com/vuejs/vue-next/commit/4c5844a9ca0acc4ea45565a0dc9a21c2502d64a4))
+* **sfc-playground:** support lang=ts ([be0f614](https://github.com/vuejs/vue-next/commit/be0f614ac096bdfe44cfddb04c859c9747dcd6dd))
+* **sfc/types:** make `<script setup>` helper types available globally ([004bd18](https://github.com/vuejs/vue-next/commit/004bd18cf75526bd79f68ccea8102aa94a8a28e2))
+* **types:** support IDE renaming for props ([#3656](https://github.com/vuejs/vue-next/issues/3656)) ([81e69b2](https://github.com/vuejs/vue-next/commit/81e69b29ecf992d215d8ddc56bf7e40661144595))
+* **types/ide:** support find definition for jsx tags, events ([#3570](https://github.com/vuejs/vue-next/issues/3570)) ([8ed3ed6](https://github.com/vuejs/vue-next/commit/8ed3ed6c27b0fb9a1b6994eddc967e42d4b3d4e1))
+
+
+
 ## [3.1.2](https://github.com/vuejs/vue-next/compare/v3.1.1...v3.1.2) (2021-06-22)
 
 
