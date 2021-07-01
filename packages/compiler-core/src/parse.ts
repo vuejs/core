@@ -425,6 +425,10 @@ function parseElement(
   const isVPreBoundary = context.inVPre && !wasInVPre
 
   if (element.isSelfClosing || context.options.isVoidTag(element.tag)) {
+    // #4030 self-closing <pre> tag
+    if (context.options.isPreTag(element.tag)) {
+      context.inPre = false
+    }
     return element
   }
 
@@ -528,13 +532,14 @@ function parseTag(
   const cursor = getCursor(context)
   const currentSource = context.source
 
-  // Attributes.
-  let props = parseAttributes(context, type)
-
   // check <pre> tag
-  if (context.options.isPreTag(tag)) {
+  const isPreTag = context.options.isPreTag(tag)
+  if (isPreTag) {
     context.inPre = true
   }
+
+  // Attributes.
+  let props = parseAttributes(context, type)
 
   // check v-pre
   if (
