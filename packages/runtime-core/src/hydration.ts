@@ -264,21 +264,28 @@ export function createHydrationFunctions(
     optimized: boolean
   ) => {
     optimized = optimized || !!vnode.dynamicChildren
-    const { props, patchFlag, shapeFlag, dirs } = vnode
+    const { type, props, patchFlag, shapeFlag, dirs } = vnode
+    // #4006 for form elements with non-string v-model value bindings
+    // e.g. <option :value="obj">, <input type="checkbox" :true-value="1">
+    const forcePatchValue = (type === 'input' && dirs) || type === 'option'
     // skip props & children if this is hoisted static nodes
-    if (patchFlag !== PatchFlags.HOISTED) {
+    if (forcePatchValue || patchFlag !== PatchFlags.HOISTED) {
       if (dirs) {
         invokeDirectiveHook(vnode, null, parentComponent, 'created')
       }
       // props
       if (props) {
         if (
+          forcePatchValue ||
           !optimized ||
           (patchFlag & PatchFlags.FULL_PROPS ||
             patchFlag & PatchFlags.HYDRATE_EVENTS)
         ) {
           for (const key in props) {
-            if (!isReservedProp(key) && isOn(key)) {
+            if (
+              (forcePatchValue && key.endsWith('value')) ||
+              (isOn(key) && !isReservedProp(key))
+            ) {
               patchProp(el, key, null, props[key])
             }
           }
