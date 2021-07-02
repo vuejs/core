@@ -58,7 +58,9 @@ export {
   withAsyncContext,
   // deprecated
   defineEmit,
-  useContext
+  useContext,
+  useAttrs,
+  useSlots
 } from './apiSetupHelpers'
 
 // Advanced API ----------------------------------------------------------------
