@@ -4,6 +4,8 @@ import {
   defineEmit,
   defineEmits,
   useContext,
+  useAttrs,
+  useSlots,
   withDefaults,
   Slots,
   describe
@@ -133,4 +135,14 @@ describe('useContext', () => {
   // should be able to emit anything
   emit('foo')
   emit('bar')
+})
+
+describe('useAttrs', () => {
+  const attrs = useAttrs()
+  expectType<Record<string, unknown>>(attrs)
+})
+
+describe('useSlots', () => {
+  const slots = useSlots()
+  expectType<Slots>(slots)
 })
