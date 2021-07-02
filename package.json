@@ -8,7 +8,7 @@
     "dev": "node scripts/dev.js",
     "build": "node scripts/build.js",
     "size": "node scripts/build.js vue runtime-dom size-check -p -f global",
-    "lint": "eslint --ext .ts packages/*/src/**",
+    "lint": "eslint --ext .ts packages/*/src/**.ts",
     "format": "prettier --write --parser typescript \"packages/**/*.ts?(x)\"",
     "test": "node scripts/build.js vue -f global -d && jest --runInBand",
     "test-dts": "node scripts/build.js shared reactivity runtime-core runtime-dom -dt -f esm-bundler && yarn test-dts-only",
