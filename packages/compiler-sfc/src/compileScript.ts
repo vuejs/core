@@ -1,5 +1,10 @@
 import MagicString from 'magic-string'
-import { BindingMetadata, BindingTypes, UNREF } from '@vue/compiler-core'
+import {
+  BindingMetadata,
+  BindingTypes,
+  locStub,
+  UNREF
+} from '@vue/compiler-core'
 import {
   ScriptSetupTextRanges,
   SFCDescriptor,
@@ -126,7 +131,7 @@ export function compileScript(
       type: 'script',
       content: '',
       attrs: {},
-      loc: null as any
+      loc: locStub
     }
   }
 

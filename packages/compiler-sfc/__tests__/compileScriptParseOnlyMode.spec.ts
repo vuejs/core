@@ -74,4 +74,14 @@ describe('compileScript parseOnly mode', () => {
     const { ranges } = compile(`<script setup lang="ts">${src}</script>`)
     expect(getRange(src, ranges!.emitsTypeArg!)).toBe(`{ (e: 'x'): void }`)
   })
+
+  test('no script setup block', () => {
+    const src = `import { x } from './x'`
+    const { ranges } = compile(`<script>${src}</script>`)
+    expect(getRange(src, ranges!.scriptBindings[0])).toBe(`x`)
+  })
+
+  test('no script block', () => {
+    expect(() => compile(`<style>hello</style>`)).not.toThrow()
+  })
 })
