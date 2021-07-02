@@ -171,13 +171,20 @@ describe('api: expose', () => {
   })
 
   test('expose should allow access to built-in instance properties', () => {
+    const GrandChild = defineComponent({
+      render() {
+        return h('div')
+      }
+    })
+
+    const grandChildRef = ref()
     const Child = defineComponent({
       render() {
         return h('div')
       },
       setup(_, { expose }) {
         expose()
-        return {}
+        return () => h(GrandChild, { ref: grandChildRef })
       }
     })
 
@@ -190,5 +197,7 @@ describe('api: expose', () => {
     const root = nodeOps.createElement('div')
     render(h(Parent), root)
     expect(childRef.value.$el.tag).toBe('div')
+    expect(grandChildRef.value.$parent).toBe(childRef.value)
+    expect(grandChildRef.value.$parent.$parent).toBe(grandChildRef.value.$root)
   })
 })
