@@ -68,10 +68,7 @@ export interface CodegenResult {
 }
 
 export interface CodegenContext
-  extends Omit<
-      Required<CodegenOptions>,
-      'bindingMetadata' | 'inline' | 'isTS'
-    > {
+  extends Omit<Required<CodegenOptions>, 'bindingMetadata' | 'inline'> {
   source: string
   code: string
   line: number
@@ -98,7 +95,8 @@ function createCodegenContext(
     optimizeImports = false,
     runtimeGlobalName = `Vue`,
     runtimeModuleName = `vue`,
-    ssr = false
+    ssr = false,
+    isTS = false
   }: CodegenOptions
 ): CodegenContext {
   const context: CodegenContext = {
@@ -111,6 +109,7 @@ function createCodegenContext(
     runtimeGlobalName,
     runtimeModuleName,
     ssr,
+    isTS,
     source: ast.loc.source,
     code: ``,
     column: 1,
@@ -466,7 +465,7 @@ function genModulePreamble(
 function genAssets(
   assets: string[],
   type: 'component' | 'directive' | 'filter',
-  { helper, push, newline }: CodegenContext
+  { helper, push, newline, isTS }: CodegenContext
 ) {
   const resolver = helper(
     __COMPAT__ && type === 'filter'
@@ -485,7 +484,7 @@ function genAssets(
     push(
       `const ${toValidAssetId(id, type)} = ${resolver}(${JSON.stringify(id)}${
         maybeSelfReference ? `, true` : ``
-      })`
+      })${isTS ? `!` : ``}`
     )
     if (i < assets.length - 1) {
       newline()
