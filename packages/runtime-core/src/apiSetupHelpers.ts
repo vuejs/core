@@ -1,3 +1,4 @@
+import { isPromise } from '../../shared/src'
 import {
   getCurrentInstance,
   SetupContext,
@@ -232,19 +233,22 @@ export function mergeDefaults(
  * Runtime helper for storing and resuming current instance context in
  * async setup().
  */
-export async function withAsyncContext<T>(
-  awaitable: T | Promise<T>
-): Promise<T> {
+export function withAsyncContext<T>(awaitable: T | Promise<T>): Promise<T> {
   const ctx = getCurrentInstance()
   setCurrentInstance(null) // unset after storing instance
   if (__DEV__ && !ctx) {
     warn(`withAsyncContext() called when there is no active context instance.`)
   }
-  let res: T
-  try {
-    res = await awaitable
-  } finally {
-    setCurrentInstance(ctx)
-  }
-  return res
+  return isPromise<T>(awaitable)
+    ? awaitable.then(
+        res => {
+          setCurrentInstance(ctx)
+          return res
+        },
+        err => {
+          setCurrentInstance(ctx)
+          throw err
+        }
+      )
+    : (awaitable as any)
 }
