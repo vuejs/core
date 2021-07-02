@@ -1,4 +1,4 @@
-import { nodeOps, render } from '@vue/runtime-test'
+import { nodeOps, render, createApp } from '@vue/runtime-test'
 import { defineComponent, h, ref } from '../src'
 
 describe('api: expose', () => {
@@ -199,5 +199,32 @@ describe('api: expose', () => {
     expect(childRef.value.$el.tag).toBe('div')
     expect(grandChildRef.value.$parent).toBe(childRef.value)
     expect(grandChildRef.value.$parent.$parent).toBe(grandChildRef.value.$root)
+  })
+
+  test('expose should allow access to global properties', () => {
+    const Child = defineComponent({
+      render() {
+        return h('div')
+      },
+      setup(_, { expose }) {
+        expose()
+        return {}
+      }
+    })
+
+    const childRef = ref()
+    const Parent = {
+      setup() {
+        return () => h(Child, { ref: childRef })
+      }
+    }
+
+    const app = createApp(Parent)
+    app.config.globalProperties.testProp = 2
+
+    const root = nodeOps.createElement('div')
+    app.mount(root)
+
+    expect(childRef.value.testProp).toBe(2)
   })
 })

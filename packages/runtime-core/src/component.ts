@@ -50,7 +50,8 @@ import {
   makeMap,
   isPromise,
   ShapeFlags,
-  extend
+  extend,
+  hasOwn
 } from '@vue/shared'
 import { SuspenseBoundary } from './components/Suspense'
 import { CompilerOptions } from '@vue/compiler-core'
@@ -882,10 +883,29 @@ export function getExposeProxy(instance: ComponentInternalInstance) {
       instance.exposeProxy ||
       (instance.exposeProxy = new Proxy(proxyRefs(markRaw(instance.exposed)), {
         get(target, key: string) {
+          let globalProperties
           if (key in target) {
             return target[key]
           } else if (key in publicPropertiesMap) {
             return publicPropertiesMap[key](instance)
+          } else if (
+            ((globalProperties = instance.appContext.config.globalProperties),
+            hasOwn(globalProperties, key))
+          ) {
+            if (__COMPAT__) {
+              const desc = Object.getOwnPropertyDescriptor(
+                globalProperties,
+                key
+              )!
+              if (desc.get) {
+                return desc.get.call(instance.proxy)
+              } else {
+                const val = globalProperties[key]
+                return isFunction(val) ? val.bind(instance.proxy) : val
+              }
+            } else {
+              return globalProperties[key]
+            }
           }
         }
       }))
