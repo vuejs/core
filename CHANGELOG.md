@@ -1,3 +1,17 @@
+## [3.1.4](https://github.com/vuejs/vue-next/compare/v3.1.3...v3.1.4) (2021-07-02)
+
+
+### Bug Fixes
+
+* **build:** avoid using async/await syntax ([438754a](https://github.com/vuejs/vue-next/commit/438754a0d1428d10e27d1a290beb4b81da5fdaeb))
+* **build:** fix generated code containing unprocessed class field syntax ([2788154](https://github.com/vuejs/vue-next/commit/2788154f7707928f1dd3e4d9bd144f758a8c0478)), closes [#4052](https://github.com/vuejs/vue-next/issues/4052) [vuejs/vue-cli#6562](https://github.com/vuejs/vue-cli/issues/6562)
+* **codegen:** ensure valid types in genreated code when using global directives ([a44d528](https://github.com/vuejs/vue-next/commit/a44d528af1227c05dedf610b6ec45504d8e58276)), closes [#4054](https://github.com/vuejs/vue-next/issues/4054)
+* **compiler-sfc:** fix parse-only mode when there is no script setup block ([253ca27](https://github.com/vuejs/vue-next/commit/253ca2729d808fc051215876aa4af986e4caa43c))
+* **runtime-core:** add useAttrs and useSlots export ([#4053](https://github.com/vuejs/vue-next/issues/4053)) ([735ada1](https://github.com/vuejs/vue-next/commit/735ada1507623b8d36e80b30a4f67a8af4a45c99))
+* **runtime-core:** fix instance accessed via $parent chain when using expose() ([#4048](https://github.com/vuejs/vue-next/issues/4048)) ([12cf9f4](https://github.com/vuejs/vue-next/commit/12cf9f4ea148a59fd9002ecf9ea9d365829ce37c))
+
+
+
 ## [3.1.3](https://github.com/vuejs/vue-next/compare/v3.1.2...v3.1.3) (2021-07-01)
 
 
