@@ -398,9 +398,10 @@ export const deprecationData: Record<DeprecationTypes, DeprecationData> = {
           DeprecationTypes.COMPONENT_V_MODEL
         }: false }\`.`
       if (
-        comp.props && isArray(comp.props)
+        comp.props &&
+        (isArray(comp.props)
           ? comp.props.includes('modelValue')
-          : hasOwn(comp.props, 'modelValue')
+          : hasOwn(comp.props, 'modelValue'))
       ) {
         return (
           `Component delcares "modelValue" prop, which is Vue 3 usage, but ` +
