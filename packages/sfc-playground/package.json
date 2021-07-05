@@ -18,7 +18,7 @@
     "@types/codemirror": "^0.0.108",
     "@vitejs/plugin-vue": "^1.2.0",
     "codemirror": "^5.60.0",
-    "vite": "^2.1.5"
+    "vite": "^2.4.0"
   },
   "dependencies": {
     "file-saver": "^2.0.5",

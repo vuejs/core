@@ -236,6 +236,22 @@ describe('<script setup> ref sugar', () => {
     assertCode(content)
   })
 
+  //#4062
+  test('should not rewrite type identifiers', () => {
+    const { content } = compile(
+      `
+      <script setup lang="ts">
+        const props = defineProps<{msg: string; ids?: string[]}>()
+        ref: ids = []
+      </script>`,
+      {
+        refSugar: true
+      }
+    )
+    assertCode(content)
+    expect(content).not.toMatch('.value')
+  })
+
   describe('errors', () => {
     test('ref: non-assignment expressions', () => {
       expect(() =>

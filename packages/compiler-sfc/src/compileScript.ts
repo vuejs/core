@@ -1708,6 +1708,9 @@ export function walkIdentifiers(
   ;(walk as any)(root, {
     enter(node: Node & { scopeIds?: Set<string> }, parent: Node | undefined) {
       parent && parentStack.push(parent)
+      if (node.type.startsWith('TS')) {
+        return this.skip()
+      }
       if (node.type === 'Identifier') {
         if (
           !knownIds[node.name] &&
