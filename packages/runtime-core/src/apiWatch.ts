@@ -325,7 +325,8 @@ function doWatch(
     }
   }
 
-  const effect = new ReactiveEffect(getter, scheduler, instance && instance.effectScope)
+  const scope = instance && instance.effectScope
+  const effect = new ReactiveEffect(getter, scheduler, scope)
 
   if (__DEV__) {
     effect.onTrack = onTrack
@@ -350,8 +351,8 @@ function doWatch(
 
   return () => {
     effect.stop()
-    if (instance) {
-      remove(instance.effectScope.effects!, effect)
+    if (scope) {
+      remove(scope.effects!, effect)
     }
   }
 }

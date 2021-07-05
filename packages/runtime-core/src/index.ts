@@ -26,10 +26,9 @@ export {
   toRaw,
   // effect
   effect,
-  effectScope,
-  extendScope,
+  ReactiveEffect,
+  EffectScope,
   getCurrentScope,
-  onScopeStopped,
   stop
 } from '@vue/reactivity'
 export { watch, watchEffect } from './apiWatch'
@@ -144,7 +143,6 @@ declare module '@vue/reactivity' {
 }
 
 export {
-  ReactiveEffect,
   ReactiveEffectOptions,
   DebuggerEvent,
   TrackOpTypes,
@@ -157,11 +155,7 @@ export {
   WritableComputedOptions,
   ToRefs,
   DeepReadonly,
-  EffectScope,
-  EffectScopeOptions,
-  EffectScopeReturns,
-  EffectScopeOnStopHook,
-  EffectScopeReturnsWrapper
+  EffectScopeOnStopHook
 } from '@vue/reactivity'
 export {
   WatchEffect,

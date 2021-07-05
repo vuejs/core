@@ -3,111 +3,54 @@ import { warn } from './warning'
 
 export type EffectScopeOnStopHook = (fn: (() => void)) => void
 
-export interface EffectScope {
-  _isEffectScope: true
-  extend<T extends object | undefined | void>(
-    fn?: (onStop: EffectScopeOnStopHook) => T
-  ): EffectScopeReturns<T>
-  id: number
-  active: boolean
-  effects: (ReactiveEffect | EffectScope)[]
-  onStopHooks: ((scope: EffectScope) => void)[]
-}
-
-export interface EffectScopeReturnsWrapper {
-  /**
-   * @internal the scope instance
-   */
-  _scope: EffectScope
-}
-
-export type EffectScopeReturns<
-  T extends object | undefined | void = undefined
-> = T extends {} ? T & EffectScopeReturnsWrapper : EffectScopeReturnsWrapper
-
-export interface EffectScopeOptions {
-  detached?: boolean
-}
-
-let uid = 0
-let activeEffectScope: EffectScope | null = null
+let activeEffectScope: EffectScope | undefined
 const effectScopeStack: EffectScope[] = []
 
-export function recordEffectScope(
-  effect: ReactiveEffect | EffectScope,
-  scope: EffectScope | null = activeEffectScope
-) {
-  if (scope && scope.active) {
-    scope.effects.push(effect)
-  }
-}
+export class EffectScope {
+  active = true
+  effects: (ReactiveEffect | EffectScope)[] = []
+  cleanups: (() => void)[] = []
 
-export function effectScope<T extends object | undefined | void = undefined>(
-  fn?: (onCleanup: EffectScopeOnStopHook) => T,
-  options: EffectScopeOptions = {}
-): EffectScopeReturns<T> {
-  let scope: EffectScope = {
-    _isEffectScope: true,
-    id: uid++,
-    active: true,
-    effects: [],
-    onStopHooks: [],
-    extend(fn): any {
-      const wrapper: EffectScopeReturnsWrapper = { _scope: scope }
-      if (!fn) {
-        return wrapper
-      }
-      if (!scope.active) {
-        if (__DEV__) {
-          warn('can not extend on an inactive scope.')
-        }
-        return wrapper
-      }
+  constructor(fn?: (onStop: EffectScopeOnStopHook) => any, detached?: boolean) {
+    if (!detached) {
+      recordEffectScope(this)
+    }
+    if (fn) {
+      this.extend(fn)
+    }
+  }
+
+  extend(fn: (onStop: EffectScopeOnStopHook) => any) {
+    if (this.active) {
       try {
-        if (!options.detached) {
-          recordEffectScope(scope)
-        }
-        effectScopeStack.push(scope)
-        activeEffectScope = scope
-        const returns = fn((fn: () => void) => {
-          scope.onStopHooks.push(fn)
-        })
-        if (returns) {
-          return Object.assign(returns, wrapper)
-        } else {
-          return wrapper
-        }
+        effectScopeStack.push(this)
+        activeEffectScope = this
+        fn(cleanup => this.cleanups.push(cleanup))
       } finally {
         effectScopeStack.pop()
         activeEffectScope = effectScopeStack[effectScopeStack.length - 1]
       }
+    } else if (__DEV__) {
+      warn(`cannot extend an inactive effect scope.`)
     }
   }
 
-  return scope.extend(fn)
-}
-
-export function isEffectScope(obj: any): obj is EffectScope {
-  return obj && obj._isEffectScope === true
-}
-
-export function isEffectScopeReturns(obj: any): obj is EffectScopeReturns {
-  return obj && obj._scope && obj._scope._isEffectScope === true
-}
-
-export function extendScope<T extends object | undefined | void = undefined>(
-  scope: EffectScopeReturns | EffectScope,
-  fn?: (onCleanup: EffectScopeOnStopHook) => T
-): EffectScopeReturns<T> {
-  if (isEffectScope(scope)) {
-    return scope.extend<T>(fn)
-  } else if (isEffectScopeReturns(scope)) {
-    return scope._scope.extend<T>(fn)
-  } else {
-    if (__DEV__) {
-      warn('extendScope() called with a non scope target')
+  stop() {
+    if (this.active) {
+      this.effects.forEach(e => e.stop())
+      this.cleanups.forEach(cleanup => cleanup())
+      this.active = false
     }
-    return undefined as any
+  }
+}
+
+export function recordEffectScope(
+  effect: ReactiveEffect | EffectScope,
+  scope?: EffectScope | null
+) {
+  scope = scope || activeEffectScope
+  if (scope && scope.active) {
+    scope.effects.push(effect)
   }
 }
 
@@ -115,13 +58,13 @@ export function getCurrentScope() {
   return activeEffectScope
 }
 
-export function onScopeStopped(fn: (scope: EffectScope) => void) {
-  const scope = activeEffectScope
-  if (scope) {
-    scope.onStopHooks.push(fn)
+export function onDispose(fn: () => void) {
+  if (activeEffectScope) {
+    activeEffectScope.cleanups.push(fn)
   } else if (__DEV__) {
     warn(
-      'onScopeStopped() is called when there is no active scope instance to be associated with.'
+      `onDispose() is called when there is no active effect scope ` +
+        ` to be associated with.`
     )
   }
 }

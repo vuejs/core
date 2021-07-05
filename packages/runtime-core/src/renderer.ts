@@ -52,7 +52,6 @@ import {
 } from './scheduler'
 import {
   isRef,
-  stop,
   pauseTracking,
   resetTracking,
   ReactiveEffect
@@ -2313,7 +2312,7 @@ function baseCreateRenderer(
     }
 
     if (effectScope) {
-      stop(effectScope)
+      effectScope.stop()
     }
 
     // update may be null if a component is unmounted before its async

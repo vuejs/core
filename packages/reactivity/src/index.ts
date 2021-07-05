@@ -52,15 +52,9 @@ export {
   DebuggerEvent
 } from './effect'
 export {
-  isEffectScope,
-  effectScope,
-  extendScope,
-  getCurrentScope,
-  onScopeStopped,
   EffectScope,
-  EffectScopeOptions,
-  EffectScopeReturns,
-  EffectScopeOnStopHook,
-  EffectScopeReturnsWrapper
+  getCurrentScope,
+  onDispose,
+  EffectScopeOnStopHook
 } from './effectScope'
 export { TrackOpTypes, TriggerOpTypes } from './operations'

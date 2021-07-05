@@ -1,29 +1,19 @@
-import {
-  reactive,
-  effect,
-  effectScope,
-  stop,
-  isEffectScope,
-  extendScope,
-  computed,
-  ref,
-  onScopeStopped
-} from '../src'
+import { reactive, effect, EffectScope, onDispose } from '../src'
 
 describe('reactivity/effect/scope', () => {
   it('should run the passed function once (wrapped by a effect)', () => {
     const fnSpy = jest.fn(() => {})
-    effectScope(fnSpy)
+    new EffectScope(fnSpy)
     expect(fnSpy).toHaveBeenCalledTimes(1)
   })
 
   it('should accept zero argument', () => {
-    const scope = effectScope()
-    expect(scope._scope.effects.length).toBe(0)
+    const scope = new EffectScope()
+    expect(scope.effects.length).toBe(0)
   })
 
   it('should collect the effects', () => {
-    const scope = effectScope(() => {
+    const scope = new EffectScope(() => {
       let dummy
       const counter = reactive({ num: 0 })
       effect(() => (dummy = counter.num))
@@ -33,26 +23,26 @@ describe('reactivity/effect/scope', () => {
       expect(dummy).toBe(7)
     })
 
-    expect(scope._scope.effects.length).toBe(1)
+    expect(scope.effects.length).toBe(1)
   })
 
   it('stop', () => {
     let dummy, doubled
     const counter = reactive({ num: 0 })
 
-    const scope = effectScope(() => {
+    const scope = new EffectScope(() => {
       effect(() => (dummy = counter.num))
       effect(() => (doubled = counter.num * 2))
     })
 
-    expect(scope._scope.effects.length).toBe(2)
+    expect(scope.effects.length).toBe(2)
 
     expect(dummy).toBe(0)
     counter.num = 7
     expect(dummy).toBe(7)
     expect(doubled).toBe(14)
 
-    stop(scope)
+    scope.stop()
 
     counter.num = 6
     expect(dummy).toBe(7)
@@ -63,16 +53,16 @@ describe('reactivity/effect/scope', () => {
     let dummy, doubled
     const counter = reactive({ num: 0 })
 
-    const scope = effectScope(() => {
+    const scope = new EffectScope(() => {
       effect(() => (dummy = counter.num))
       // nested scope
-      effectScope(() => {
+      new EffectScope(() => {
         effect(() => (doubled = counter.num * 2))
       })
     })
 
-    expect(scope._scope.effects.length).toBe(2)
-    expect(isEffectScope(scope._scope.effects[1])).toBe(true)
+    expect(scope.effects.length).toBe(2)
+    expect(scope.effects[1]).toBeInstanceOf(EffectScope)
 
     expect(dummy).toBe(0)
     counter.num = 7
@@ -80,7 +70,7 @@ describe('reactivity/effect/scope', () => {
     expect(doubled).toBe(14)
 
     // stop the nested scope as well
-    stop(scope)
+    scope.stop()
 
     counter.num = 6
     expect(dummy).toBe(7)
@@ -91,25 +81,22 @@ describe('reactivity/effect/scope', () => {
     let dummy, doubled
     const counter = reactive({ num: 0 })
 
-    const scope = effectScope(() => {
+    const scope = new EffectScope(() => {
       effect(() => (dummy = counter.num))
       // nested scope
-      effectScope(
-        () => {
-          effect(() => (doubled = counter.num * 2))
-        },
-        { detached: true }
-      )
+      new EffectScope(() => {
+        effect(() => (doubled = counter.num * 2))
+      }, true)
     })
 
-    expect(scope._scope.effects.length).toBe(1)
+    expect(scope.effects.length).toBe(1)
 
     expect(dummy).toBe(0)
     counter.num = 7
     expect(dummy).toBe(7)
     expect(doubled).toBe(14)
 
-    stop(scope)
+    scope.stop()
 
     counter.num = 6
     expect(dummy).toBe(7)
@@ -122,44 +109,46 @@ describe('reactivity/effect/scope', () => {
     let dummy, doubled
     const counter = reactive({ num: 0 })
 
-    const scope = effectScope(() => {
+    const scope = new EffectScope(() => {
       effect(() => (dummy = counter.num))
     })
 
-    expect(scope._scope.effects.length).toBe(1)
+    expect(scope.effects.length).toBe(1)
 
-    extendScope(scope, () => {
+    scope.extend(() => {
       effect(() => (doubled = counter.num * 2))
     })
 
-    expect(scope._scope.effects.length).toBe(2)
+    expect(scope.effects.length).toBe(2)
 
     counter.num = 7
     expect(dummy).toBe(7)
     expect(doubled).toBe(14)
 
-    stop(scope)
+    scope.stop()
   })
 
   it('can not extend an inactive scope', () => {
     let dummy, doubled
     const counter = reactive({ num: 0 })
 
-    const scope = effectScope(() => {
+    const scope = new EffectScope(() => {
       effect(() => (dummy = counter.num))
     })
 
-    expect(scope._scope.effects.length).toBe(1)
+    expect(scope.effects.length).toBe(1)
 
-    stop(scope)
+    scope.stop()
 
-    extendScope(scope, () => {
+    scope.extend(() => {
       effect(() => (doubled = counter.num * 2))
     })
 
-    expect('[Vue warn] can not extend on an inactive scope.').toHaveBeenWarned()
+    expect(
+      '[Vue warn] cannot extend an inactive effect scope.'
+    ).toHaveBeenWarned()
 
-    expect(scope._scope.effects.length).toBe(1)
+    expect(scope.effects.length).toBe(1)
 
     counter.num = 7
     expect(dummy).toBe(0)
@@ -169,80 +158,36 @@ describe('reactivity/effect/scope', () => {
   it('should fire onStop hook', () => {
     let dummy = 0
 
-    const scope = effectScope(onStop => {
+    const scope = new EffectScope(onStop => {
       onStop(() => (dummy += 1))
       onStop(() => (dummy += 2))
     })
 
-    extendScope(scope, onStop => {
+    scope.extend(onStop => {
       onStop(() => (dummy += 4))
     })
 
     expect(dummy).toBe(0)
 
-    stop(scope)
+    scope.stop()
     expect(dummy).toBe(7)
   })
 
   it('should fire onScopeStopped hook', () => {
     let dummy = 0
 
-    const scope = effectScope(() => {
-      onScopeStopped(() => (dummy += 1))
-      onScopeStopped(() => (dummy += 2))
+    const scope = new EffectScope(() => {
+      onDispose(() => (dummy += 1))
+      onDispose(() => (dummy += 2))
     })
 
-    extendScope(scope, () => {
-      onScopeStopped(() => (dummy += 4))
+    scope.extend(() => {
+      onDispose(() => (dummy += 4))
     })
 
     expect(dummy).toBe(0)
 
-    stop(scope)
+    scope.stop()
     expect(dummy).toBe(7)
-  })
-
-  it('should forward returns', () => {
-    let foo = ref(1)
-
-    const scope = effectScope(() => {
-      return {
-        doubled: computed(() => foo.value * 2)
-      }
-    })
-
-    const { doubled } = scope
-
-    expect(doubled.value).toBe(2)
-
-    foo.value += 1
-    expect(doubled.value).toBe(4)
-
-    stop(scope)
-
-    foo.value += 1
-    expect(doubled.value).toBe(4)
-  })
-
-  it('should forward returns on extending', () => {
-    let foo = ref(1)
-
-    const scope = effectScope()
-
-    const { tripled } = extendScope(scope, () => {
-      return {
-        tripled: computed(() => foo.value * 3)
-      }
-    })
-
-    expect(tripled.value).toBe(3)
-
-    foo.value += 1
-    expect(tripled.value).toBe(6)
-
-    stop(scope)
-
-    foo.value += 1
-    expect(tripled.value).toBe(6)
   })
 })

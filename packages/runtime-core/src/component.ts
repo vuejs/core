@@ -6,7 +6,6 @@ import {
   shallowReadonly,
   proxyRefs,
   EffectScope,
-  effectScope,
   markRaw
 } from '@vue/reactivity'
 import {
@@ -460,7 +459,7 @@ export function createComponentInstance(
     exposed: null,
     exposeProxy: null,
     withProxy: null,
-    effectScope: effectScope()._scope,
+    effectScope: new EffectScope(),
     provides: parent ? parent.provides : Object.create(appContext.provides),
     accessCache: null!,
     renderCache: [],
