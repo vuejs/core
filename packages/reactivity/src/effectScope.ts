@@ -1,7 +1,7 @@
 import { ReactiveEffect } from './effect'
 import { warn } from './warning'
 
-type EffectScopeOnStopHook = (fn: (() => void)) => void
+export type EffectScopeOnStopHook = (fn: (() => void)) => void
 
 export interface EffectScope {
   _isEffectScope: true
@@ -14,7 +14,7 @@ export interface EffectScope {
   onStopHooks: ((scope: EffectScope) => void)[]
 }
 
-interface EffectScopeReturnsWrapper {
+export interface EffectScopeReturnsWrapper {
   /**
    * @internal the scope instance
    */

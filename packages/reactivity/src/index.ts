@@ -59,6 +59,8 @@ export {
   onScopeStopped,
   EffectScope,
   EffectScopeOptions,
-  EffectScopeReturns
+  EffectScopeReturns,
+  EffectScopeOnStopHook,
+  EffectScopeReturnsWrapper
 } from './effectScope'
 export { TrackOpTypes, TriggerOpTypes } from './operations'

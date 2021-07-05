@@ -159,7 +159,9 @@ export {
   DeepReadonly,
   EffectScope,
   EffectScopeOptions,
-  EffectScopeReturns
+  EffectScopeReturns,
+  EffectScopeOnStopHook,
+  EffectScopeReturnsWrapper
 } from '@vue/reactivity'
 export {
   WatchEffect,
