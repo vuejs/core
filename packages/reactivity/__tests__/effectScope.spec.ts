@@ -1,4 +1,13 @@
-import { reactive, effect, EffectScope, onDispose } from '../src'
+import { nextTick, watch, watchEffect } from '@vue/runtime-core'
+import {
+  reactive,
+  effect,
+  EffectScope,
+  onDispose,
+  computed,
+  ref,
+  ComputedRef
+} from '../src'
 
 describe('reactivity/effect/scope', () => {
   it('should run the passed function once (wrapped by a effect)', () => {
@@ -173,7 +182,7 @@ describe('reactivity/effect/scope', () => {
     expect(dummy).toBe(7)
   })
 
-  it('should fire onScopeStopped hook', () => {
+  it('should fire onDispose hook', () => {
     let dummy = 0
 
     const scope = new EffectScope(() => {
@@ -189,5 +198,49 @@ describe('reactivity/effect/scope', () => {
 
     scope.stop()
     expect(dummy).toBe(7)
+  })
+
+  it('test with higher level APIs', async () => {
+    const r = ref(1)
+
+    const computedSpy = jest.fn()
+    const watchSpy = jest.fn()
+    const watchEffectSpy = jest.fn()
+
+    let c: ComputedRef
+    const scope = new EffectScope(() => {
+      c = computed(() => {
+        computedSpy()
+        return r.value + 1
+      })
+
+      watch(r, watchSpy)
+      watchEffect(() => {
+        watchEffectSpy()
+        r.value
+      })
+    })
+
+    c!.value // computed is lazy so trigger collection
+    expect(computedSpy).toHaveBeenCalledTimes(1)
+    expect(watchSpy).toHaveBeenCalledTimes(0)
+    expect(watchEffectSpy).toHaveBeenCalledTimes(1)
+
+    r.value++
+    c!.value
+    await nextTick()
+    expect(computedSpy).toHaveBeenCalledTimes(2)
+    expect(watchSpy).toHaveBeenCalledTimes(1)
+    expect(watchEffectSpy).toHaveBeenCalledTimes(2)
+
+    scope.stop()
+
+    r.value++
+    c!.value
+    await nextTick()
+    // should not trigger anymore
+    expect(computedSpy).toHaveBeenCalledTimes(2)
+    expect(watchSpy).toHaveBeenCalledTimes(1)
+    expect(watchEffectSpy).toHaveBeenCalledTimes(2)
   })
 })
