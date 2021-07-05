@@ -5,6 +5,8 @@ import {
   resetTracking,
   shallowReadonly,
   proxyRefs,
+  EffectScope,
+  effectScope,
   markRaw
 } from '@vue/reactivity'
 import {
@@ -246,7 +248,7 @@ export interface ComponentInternalInstance {
    * so that they can be automatically stopped on component unmount
    * @internal
    */
-  effects: ReactiveEffect[] | null
+  effectScope: EffectScope
   /**
    * cache for proxy access type to avoid hasOwnProperty calls
    * @internal
@@ -458,7 +460,7 @@ export function createComponentInstance(
     exposed: null,
     exposeProxy: null,
     withProxy: null,
-    effects: null,
+    effectScope: effectScope()._scope,
     provides: parent ? parent.provides : Object.create(appContext.provides),
     accessCache: null!,
     renderCache: [],
@@ -615,17 +617,23 @@ function setupStatefulComponent(
   // 2. call setup()
   const { setup } = Component
   if (setup) {
+    let setupResult: any
     const setupContext = (instance.setupContext =
       setup.length > 1 ? createSetupContext(instance) : null)
 
     currentInstance = instance
     pauseTracking()
-    const setupResult = callWithErrorHandling(
-      setup,
-      instance,
-      ErrorCodes.SETUP_FUNCTION,
-      [__DEV__ ? shallowReadonly(instance.props) : instance.props, setupContext]
-    )
+    instance.effectScope.extend(() => {
+      setupResult = callWithErrorHandling(
+        setup,
+        instance,
+        ErrorCodes.SETUP_FUNCTION,
+        [
+          __DEV__ ? shallowReadonly(instance.props) : instance.props,
+          setupContext
+        ]
+      )
+    })
     resetTracking()
     currentInstance = null
 
@@ -803,7 +811,9 @@ export function finishComponentSetup(
   if (__FEATURE_OPTIONS_API__ && !(__COMPAT__ && skipOptions)) {
     currentInstance = instance
     pauseTracking()
-    applyOptions(instance)
+    instance.effectScope.extend(() => {
+      applyOptions(instance)
+    })
     resetTracking()
     currentInstance = null
   }
@@ -897,17 +907,6 @@ export function getExposeProxy(instance: ComponentInternalInstance) {
         }
       }))
     )
-  }
-}
-
-// record effects created during a component's setup() so that they can be
-// stopped when the component unmounts
-export function recordInstanceBoundEffect(
-  effect: ReactiveEffect,
-  instance = currentInstance
-) {
-  if (instance) {
-    ;(instance.effects || (instance.effects = [])).push(effect)
   }
 }
 

@@ -1,5 +1,12 @@
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { extend, isArray, isIntegerKey, isMap } from '@vue/shared'
+import {
+  EffectScope,
+  EffectScopeReturns,
+  isEffectScope,
+  isEffectScopeReturns,
+  recordEffectScope
+} from './effectScope'
 
 // The main WeakMap that stores {target -> key -> dep} connections.
 // Conceptually, it's easier to think of a dependency as a Dep class
@@ -43,9 +50,12 @@ export class ReactiveEffect<T = any> {
   constructor(
     public fn: () => T,
     public scheduler: EffectScheduler | null = null,
+    public scope?: EffectScope | null,
     // allow recursive self-invocation
     public allowRecurse = false
-  ) {}
+  ) {
+    recordEffectScope(this, scope)
+  }
 
   run() {
     if (!this.active) {
@@ -90,6 +100,7 @@ export class ReactiveEffect<T = any> {
 export interface ReactiveEffectOptions {
   lazy?: boolean
   scheduler?: EffectScheduler
+  scope?: EffectScope
   allowRecurse?: boolean
   onStop?: () => void
   onTrack?: (event: DebuggerEvent) => void
@@ -112,6 +123,7 @@ export function effect<T = any>(
   const _effect = new ReactiveEffect(fn)
   if (options) {
     extend(_effect, options)
+    if (options.scope) recordEffectScope(_effect, options.scope)
   }
   if (!options || !options.lazy) {
     _effect.run()
@@ -121,8 +133,25 @@ export function effect<T = any>(
   return runner
 }
 
-export function stop(runner: ReactiveEffectRunner) {
-  runner.effect.stop()
+export function stop(
+  runner:
+    | ReactiveEffect
+    | ReactiveEffectRunner
+    | EffectScope
+    | EffectScopeReturns
+) {
+  if (isEffectScopeReturns(runner)) {
+    runner = runner._scope
+  }
+  if (isEffectScope(runner)) {
+    runner.effects.forEach(stop)
+    runner.onStopHooks.forEach(e => e(runner as EffectScope))
+    runner.active = false
+  } else if ('effect' in runner) {
+    runner.effect.stop()
+  } else {
+    runner.stop()
+  }
 }
 
 let shouldTrack = true

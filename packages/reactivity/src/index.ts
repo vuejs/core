@@ -51,4 +51,14 @@ export {
   EffectScheduler,
   DebuggerEvent
 } from './effect'
+export {
+  isEffectScope,
+  effectScope,
+  extendScope,
+  getCurrentScope,
+  onScopeStopped,
+  EffectScope,
+  EffectScopeOptions,
+  EffectScopeReturns
+} from './effectScope'
 export { TrackOpTypes, TriggerOpTypes } from './operations'

@@ -3,6 +3,7 @@
 export const version = __VERSION__
 export {
   // core
+  computed,
   reactive,
   ref,
   readonly,
@@ -22,9 +23,15 @@ export {
   shallowReactive,
   shallowReadonly,
   markRaw,
-  toRaw
+  toRaw,
+  // effect
+  effect,
+  effectScope,
+  extendScope,
+  getCurrentScope,
+  onScopeStopped,
+  stop
 } from '@vue/reactivity'
-export { computed } from './apiComputed'
 export { watch, watchEffect } from './apiWatch'
 export {
   onBeforeMount,
@@ -149,7 +156,10 @@ export {
   ShallowUnwrapRef,
   WritableComputedOptions,
   ToRefs,
-  DeepReadonly
+  DeepReadonly,
+  EffectScope,
+  EffectScopeOptions,
+  EffectScopeReturns
 } from '@vue/reactivity'
 export {
   WatchEffect,

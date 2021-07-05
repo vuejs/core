@@ -848,15 +848,16 @@ describe('api: watch', () => {
     render(h(Comp), nodeOps.createElement('div'))
 
     expect(instance!).toBeDefined()
-    expect(instance!.effects).toBeInstanceOf(Array)
-    expect(instance!.effects!.length).toBe(1)
+    expect(instance!.effectScope.effects).toBeInstanceOf(Array)
+    // includes the component's own render effect AND the watcher effect
+    expect(instance!.effectScope.effects!.length).toBe(2)
 
     _show!.value = false
 
     await nextTick()
     await nextTick()
 
-    expect(instance!.effects![0].active).toBe(false)
+    expect(instance!.effectScope.effects![0].active).toBe(false)
   })
 
   test('this.$watch should pass `this.proxy` to watch source as the first argument ', () => {

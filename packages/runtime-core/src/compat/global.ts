@@ -1,4 +1,5 @@
 import {
+  stop,
   isReactive,
   reactive,
   track,
@@ -563,7 +564,7 @@ function installCompatMount(
         }
         delete app._container.__vue_app__
       } else {
-        const { bum, effects, um } = instance
+        const { bum, effectScope, um } = instance
         // beforeDestroy hooks
         if (bum) {
           invokeArrayFns(bum)
@@ -572,10 +573,8 @@ function installCompatMount(
           instance.emit('hook:beforeDestroy')
         }
         // stop effects
-        if (effects) {
-          for (let i = 0; i < effects.length; i++) {
-            effects[i].stop()
-          }
+        if (effectScope) {
+          stop(effectScope)
         }
         // unmounted hook
         if (um) {
