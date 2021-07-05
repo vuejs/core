@@ -514,6 +514,21 @@ defineExpose({ foo: 123 })
       assertCode(content)
     })
 
+    //#4062
+    test('defineProps /w refSugar, prop and variable with the same name', () => {
+      const { content } = compile(
+        `
+        <script setup lang="ts">
+          const props = defineProps<{msg: string; ids?: string[]}>()
+          ref: ids = []
+        </script>`,
+        {
+          refSugar: true
+        }
+      )
+      assertCode(content)
+    })
+
     test('defineProps/Emit w/ runtime options', () => {
       const { content } = compile(`
 <script setup lang="ts">

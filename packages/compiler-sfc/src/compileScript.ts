@@ -1032,7 +1032,11 @@ export function compileScript(
     for (const node of scriptSetupAst) {
       if (node.type !== 'ImportDeclaration') {
         walkIdentifiers(node, (id, parent, parentStack) => {
-          if (refBindings[id.name] && !refIdentifiers.has(id)) {
+          if (
+            refBindings[id.name] &&
+            !refIdentifiers.has(id) &&
+            parent.type !== 'TSPropertySignature'
+          ) {
             if (isStaticProperty(parent) && parent.shorthand) {
               // let binding used in a property shorthand
               // { foo } -> { foo: foo.value }
