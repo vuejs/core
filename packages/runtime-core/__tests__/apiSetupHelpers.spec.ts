@@ -9,7 +9,9 @@ import {
   render,
   serializeInner,
   SetupContext,
-  Suspense
+  Suspense,
+  computed,
+  ComputedRef
 } from '@vue/runtime-test'
 import {
   defineEmits,
@@ -252,6 +254,36 @@ describe('SFC <script setup> helpers', () => {
 
       await ready
       expect(getCurrentInstance()).toBeNull()
+    })
+
+    test('should teardown in-scope effects', async () => {
+      let resolve: (val?: any) => void
+      const ready = new Promise(r => {
+        resolve = r
+      })
+
+      let c: ComputedRef
+
+      const Comp = defineComponent({
+        async setup() {
+          await withAsyncContext(Promise.resolve())
+
+          c = computed(() => {})
+          // register the lifecycle after an await statement
+          onMounted(resolve)
+          return () => ''
+        }
+      })
+
+      const app = createApp(() => h(Suspense, () => h(Comp)))
+      const root = nodeOps.createElement('div')
+      app.mount(root)
+
+      await ready
+      expect(c!.effect.active).toBe(true)
+
+      app.unmount()
+      expect(c!.effect.active).toBe(false)
     })
   })
 })
