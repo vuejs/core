@@ -15,7 +15,7 @@ export class EffectScope {
     }
   }
 
-  run(fn: () => any) {
+  run<T>(fn: () => T): T | undefined {
     if (this.active) {
       try {
         effectScopeStack.push(this)
