@@ -18,15 +18,27 @@ export class EffectScope {
   run<T>(fn: () => T): T | undefined {
     if (this.active) {
       try {
-        effectScopeStack.push(this)
-        activeEffectScope = this
+        this.on()
         return fn()
       } finally {
-        effectScopeStack.pop()
-        activeEffectScope = effectScopeStack[effectScopeStack.length - 1]
+        this.off()
       }
     } else if (__DEV__) {
       warn(`cannot run an inactive effect scope.`)
+    }
+  }
+
+  on() {
+    if (this.active) {
+      effectScopeStack.push(this)
+      activeEffectScope = this
+    }
+  }
+
+  off() {
+    if (this.active) {
+      effectScopeStack.pop()
+      activeEffectScope = effectScopeStack[effectScopeStack.length - 1]
     }
   }
 

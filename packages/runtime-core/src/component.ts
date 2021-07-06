@@ -527,10 +527,14 @@ export let currentInstance: ComponentInternalInstance | null = null
 export const getCurrentInstance: () => ComponentInternalInstance | null = () =>
   currentInstance || currentRenderingInstance
 
-export const setCurrentInstance = (
-  instance: ComponentInternalInstance | null
-) => {
+export const setCurrentInstance = (instance: ComponentInternalInstance) => {
   currentInstance = instance
+  instance.scope.on()
+}
+
+export const unsetCurrentInstance = () => {
+  currentInstance && currentInstance.scope.off()
+  currentInstance = null
 }
 
 const isBuiltInTag = /*#__PURE__*/ makeMap('slot,component')
@@ -612,22 +616,19 @@ function setupStatefulComponent(
     const setupContext = (instance.setupContext =
       setup.length > 1 ? createSetupContext(instance) : null)
 
-    currentInstance = instance
+    setCurrentInstance(instance)
     pauseTracking()
-    const setupResult = instance.scope.run(() =>
-      callWithErrorHandling(setup, instance, ErrorCodes.SETUP_FUNCTION, [
-        __DEV__ ? shallowReadonly(instance.props) : instance.props,
-        setupContext
-      ])
+    const setupResult = callWithErrorHandling(
+      setup,
+      instance,
+      ErrorCodes.SETUP_FUNCTION,
+      [__DEV__ ? shallowReadonly(instance.props) : instance.props, setupContext]
     )
     resetTracking()
-    currentInstance = null
+    unsetCurrentInstance()
 
     if (isPromise(setupResult)) {
-      const unsetInstance = () => {
-        currentInstance = null
-      }
-      setupResult.then(unsetInstance, unsetInstance)
+      setupResult.then(unsetCurrentInstance, unsetCurrentInstance)
 
       if (isSSR) {
         // return the promise so server-renderer can wait on it
@@ -795,11 +796,11 @@ export function finishComponentSetup(
 
   // support for 2.x options
   if (__FEATURE_OPTIONS_API__ && !(__COMPAT__ && skipOptions)) {
-    currentInstance = instance
+    setCurrentInstance(instance)
     pauseTracking()
-    instance.scope.run(() => applyOptions(instance))
+    applyOptions(instance)
     resetTracking()
-    currentInstance = null
+    unsetCurrentInstance()
   }
 
   // warn missing template/render

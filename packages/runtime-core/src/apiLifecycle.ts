@@ -3,7 +3,8 @@ import {
   currentInstance,
   isInSSRComponentSetup,
   LifecycleHooks,
-  setCurrentInstance
+  setCurrentInstance,
+  unsetCurrentInstance
 } from './component'
 import { ComponentPublicInstance } from './componentPublicInstance'
 import { callWithAsyncErrorHandling, ErrorTypeStrings } from './errorHandling'
@@ -37,12 +38,8 @@ export function injectHook(
         // This assumes the hook does not synchronously trigger other hooks, which
         // can only be false when the user does something really funky.
         setCurrentInstance(target)
-        const res = target.scope.active
-          ? target.scope.run(() =>
-              callWithAsyncErrorHandling(hook, target, type, args)
-            )
-          : callWithAsyncErrorHandling(hook, target, type, args)
-        setCurrentInstance(null)
+        const res = callWithAsyncErrorHandling(hook, target, type, args)
+        unsetCurrentInstance()
         resetTracking()
         return res
       })
