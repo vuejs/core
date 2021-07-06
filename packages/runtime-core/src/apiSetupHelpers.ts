@@ -1,9 +1,9 @@
 import { isPromise } from '../../shared/src'
 import {
   getCurrentInstance,
+  setCurrentInstance,
   SetupContext,
-  createSetupContext,
-  setCurrentInstance
+  createSetupContext
 } from './component'
 import { EmitFn, EmitsOptions } from './componentEmits'
 import {
@@ -230,25 +230,32 @@ export function mergeDefaults(
 }
 
 /**
- * Runtime helper for storing and resuming current instance context in
- * async setup().
+ * `<script setup>` helper for persisting the current instance context over
+ * async/await flows.
+ *
+ * `@vue/compiler-sfc` converts the following:
+ *
+ * ```ts
+ * const x = await foo()
+ * ```
+ *
+ * into:
+ *
+ * ```ts
+ * let __temp, __restore
+ * const x = (([__temp, __restore] = withAsyncContext(() => foo())),__temp=await __temp,__restore(),__temp)
+ * ```
+ * @internal
  */
-export function withAsyncContext<T>(awaitable: T | Promise<T>): Promise<T> {
+export function withAsyncContext(getAwaitable: () => any) {
   const ctx = getCurrentInstance()
-  setCurrentInstance(null) // unset after storing instance
-  if (__DEV__ && !ctx) {
-    warn(`withAsyncContext() called when there is no active context instance.`)
+  let awaitable = getAwaitable()
+  setCurrentInstance(null)
+  if (isPromise(awaitable)) {
+    awaitable = awaitable.catch(e => {
+      setCurrentInstance(ctx)
+      throw e
+    })
   }
-  return isPromise<T>(awaitable)
-    ? awaitable.then(
-        res => {
-          setCurrentInstance(ctx)
-          return res
-        },
-        err => {
-          setCurrentInstance(ctx)
-          throw err
-        }
-      )
-    : (awaitable as any)
+  return [awaitable, () => setCurrentInstance(ctx)]
 }

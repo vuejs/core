@@ -32,7 +32,8 @@ import {
   LabeledStatement,
   CallExpression,
   RestElement,
-  TSInterfaceBody
+  TSInterfaceBody,
+  AwaitExpression
 } from '@babel/types'
 import { walk } from 'estree-walker'
 import { RawSourceMap } from 'source-map'
@@ -485,6 +486,25 @@ export function compileScript(
         )
       }
     })
+  }
+
+  /**
+   * await foo()
+   * -->
+   * (([__temp, __restore] = withAsyncContext(() => foo())),__temp=await __temp,__restore(),__temp)
+   */
+  function processAwait(node: AwaitExpression, isStatement: boolean) {
+    s.overwrite(
+      node.start! + startOffset,
+      node.argument.start! + startOffset,
+      `${isStatement ? `;` : ``}(([__temp,__restore]=${helper(
+        `withAsyncContext`
+      )}(()=>(`
+    )
+    s.appendLeft(
+      node.end! + startOffset,
+      `))),__temp=await __temp,__restore()${isStatement ? `` : `,__temp`})`
+    )
   }
 
   function processRefExpression(exp: Expression, statement: LabeledStatement) {
@@ -949,17 +969,13 @@ export function compileScript(
       node.type.endsWith('Statement')
     ) {
       ;(walk as any)(node, {
-        enter(node: Node) {
-          if (isFunction(node)) {
+        enter(child: Node, parent: Node) {
+          if (isFunction(child)) {
             this.skip()
           }
-          if (node.type === 'AwaitExpression') {
+          if (child.type === 'AwaitExpression') {
             hasAwait = true
-            s.prependRight(
-              node.argument.start! + startOffset,
-              helper(`withAsyncContext`) + `(`
-            )
-            s.appendLeft(node.argument.end! + startOffset, `)`)
+            processAwait(child, parent.type === 'ExpressionStatement')
           }
         }
       })
@@ -1150,6 +1166,11 @@ export function compileScript(
   // can use it directly
   if (propsIdentifier) {
     s.prependRight(startOffset, `\nconst ${propsIdentifier} = __props`)
+  }
+  // inject temp variables for async context preservation
+  if (hasAwait) {
+    const any = isTS ? `:any` : ``
+    s.prependRight(startOffset, `\nlet __temp${any}, __restore${any}\n`)
   }
 
   const destructureElements =

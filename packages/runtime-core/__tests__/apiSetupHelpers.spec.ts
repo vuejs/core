@@ -119,12 +119,20 @@ describe('SFC <script setup> helpers', () => {
 
       const Comp = defineComponent({
         async setup() {
+          let __temp: any, __restore: any
+
           beforeInstance = getCurrentInstance()
-          const msg = await withAsyncContext(
-            new Promise(r => {
-              resolve = r
-            })
-          )
+
+          const msg = (([__temp, __restore] = withAsyncContext(
+            () =>
+              new Promise(r => {
+                resolve = r
+              })
+          )),
+          (__temp = await __temp),
+          __restore(),
+          __temp)
+
           // register the lifecycle after an await statement
           onMounted(spy)
           afterInstance = getCurrentInstance()
@@ -155,13 +163,18 @@ describe('SFC <script setup> helpers', () => {
 
       const Comp = defineComponent({
         async setup() {
+          let __temp: any, __restore: any
+
           beforeInstance = getCurrentInstance()
           try {
-            await withAsyncContext(
-              new Promise((r, rj) => {
-                reject = rj
-              })
+            ;[__temp, __restore] = withAsyncContext(
+              () =>
+                new Promise((_, rj) => {
+                  reject = rj
+                })
             )
+            __temp = await __temp
+            __restore()
           } catch (e) {
             // ignore
           }
@@ -206,11 +219,20 @@ describe('SFC <script setup> helpers', () => {
 
       const Comp = defineComponent({
         async setup() {
+          let __temp: any, __restore: any
+
           beforeInstance = getCurrentInstance()
+
           // first await
-          await withAsyncContext(Promise.resolve())
+          ;[__temp, __restore] = withAsyncContext(() => Promise.resolve())
+          __temp = await __temp
+          __restore()
+
           // setup exit, instance set to null, then resumed
-          await withAsyncContext(doAsyncWork())
+          ;[__temp, __restore] = withAsyncContext(() => doAsyncWork())
+          __temp = await __temp
+          __restore()
+
           afterInstance = getCurrentInstance()
           return () => {
             resolve()
@@ -237,8 +259,13 @@ describe('SFC <script setup> helpers', () => {
 
       const Comp = defineComponent({
         async setup() {
-          await withAsyncContext(Promise.resolve())
-          await withAsyncContext(Promise.reject())
+          let __temp: any, __restore: any
+          ;[__temp, __restore] = withAsyncContext(() => Promise.resolve())
+          __temp = await __temp
+          __restore()
+          ;[__temp, __restore] = withAsyncContext(() => Promise.reject())
+          __temp = await __temp
+          __restore()
         },
         render() {}
       })
@@ -256,6 +283,42 @@ describe('SFC <script setup> helpers', () => {
       expect(getCurrentInstance()).toBeNull()
     })
 
+    // #4050
+    test('race conditions', async () => {
+      const uids = {
+        one: { before: NaN, after: NaN },
+        two: { before: NaN, after: NaN }
+      }
+
+      const Comp = defineComponent({
+        props: ['name'],
+        async setup(props: { name: 'one' | 'two' }) {
+          let __temp: any, __restore: any
+
+          uids[props.name].before = getCurrentInstance()!.uid
+          ;[__temp, __restore] = withAsyncContext(() => Promise.resolve())
+          __temp = await __temp
+          __restore()
+
+          uids[props.name].after = getCurrentInstance()!.uid
+          return () => ''
+        }
+      })
+
+      const app = createApp(() =>
+        h(Suspense, () =>
+          h('div', [h(Comp, { name: 'one' }), h(Comp, { name: 'two' })])
+        )
+      )
+      const root = nodeOps.createElement('div')
+      app.mount(root)
+
+      await new Promise(r => setTimeout(r))
+      expect(uids.one.before).not.toBe(uids.two.before)
+      expect(uids.one.before).toBe(uids.one.after)
+      expect(uids.two.before).toBe(uids.two.after)
+    })
+
     test('should teardown in-scope effects', async () => {
       let resolve: (val?: any) => void
       const ready = new Promise(r => {
@@ -266,7 +329,10 @@ describe('SFC <script setup> helpers', () => {
 
       const Comp = defineComponent({
         async setup() {
-          await withAsyncContext(Promise.resolve())
+          let __temp: any, __restore: any
+          ;[__temp, __restore] = withAsyncContext(() => Promise.resolve())
+          __temp = await __temp
+          __restore()
 
           c = computed(() => {})
           // register the lifecycle after an await statement
