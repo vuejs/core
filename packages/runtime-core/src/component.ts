@@ -1,6 +1,5 @@
 import { VNode, VNodeChild, isVNode } from './vnode'
 import {
-  ReactiveEffect,
   pauseTracking,
   resetTracking,
   shallowReadonly,
@@ -219,11 +218,6 @@ export interface ComponentInternalInstance {
    */
   subTree: VNode
   /**
-   * Main update effect
-   * @internal
-   */
-  effect: ReactiveEffect
-  /**
    * Bound effect runner to be passed to schedulers
    */
   update: SchedulerJob
@@ -247,7 +241,7 @@ export interface ComponentInternalInstance {
    * so that they can be automatically stopped on component unmount
    * @internal
    */
-  effectScope: EffectScope
+  scope: EffectScope
   /**
    * cache for proxy access type to avoid hasOwnProperty calls
    * @internal
@@ -452,14 +446,13 @@ export function createComponentInstance(
     root: null!, // to be immediately set
     next: null,
     subTree: null!, // will be set synchronously right after creation
-    effect: null!, // will be set synchronously right after creation
     update: null!, // will be set synchronously right after creation
+    scope: new EffectScope(),
     render: null,
     proxy: null,
     exposed: null,
     exposeProxy: null,
     withProxy: null,
-    effectScope: new EffectScope(),
     provides: parent ? parent.provides : Object.create(appContext.provides),
     accessCache: null!,
     renderCache: [],
@@ -616,23 +609,17 @@ function setupStatefulComponent(
   // 2. call setup()
   const { setup } = Component
   if (setup) {
-    let setupResult: any
     const setupContext = (instance.setupContext =
       setup.length > 1 ? createSetupContext(instance) : null)
 
     currentInstance = instance
     pauseTracking()
-    instance.effectScope.extend(() => {
-      setupResult = callWithErrorHandling(
-        setup,
-        instance,
-        ErrorCodes.SETUP_FUNCTION,
-        [
-          __DEV__ ? shallowReadonly(instance.props) : instance.props,
-          setupContext
-        ]
-      )
-    })
+    const setupResult = instance.scope.run(() =>
+      callWithErrorHandling(setup, instance, ErrorCodes.SETUP_FUNCTION, [
+        __DEV__ ? shallowReadonly(instance.props) : instance.props,
+        setupContext
+      ])
+    )
     resetTracking()
     currentInstance = null
 
@@ -810,9 +797,7 @@ export function finishComponentSetup(
   if (__FEATURE_OPTIONS_API__ && !(__COMPAT__ && skipOptions)) {
     currentInstance = instance
     pauseTracking()
-    instance.effectScope.extend(() => {
-      applyOptions(instance)
-    })
+    instance.scope.run(() => applyOptions(instance))
     resetTracking()
     currentInstance = null
   }

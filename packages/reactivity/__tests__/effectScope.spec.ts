@@ -3,16 +3,16 @@ import {
   reactive,
   effect,
   EffectScope,
-  onDispose,
+  onScopeDispose,
   computed,
   ref,
   ComputedRef
 } from '../src'
 
 describe('reactivity/effect/scope', () => {
-  it('should run the passed function once (wrapped by a effect)', () => {
+  it('should run', () => {
     const fnSpy = jest.fn(() => {})
-    new EffectScope(fnSpy)
+    new EffectScope().run(fnSpy)
     expect(fnSpy).toHaveBeenCalledTimes(1)
   })
 
@@ -21,8 +21,13 @@ describe('reactivity/effect/scope', () => {
     expect(scope.effects.length).toBe(0)
   })
 
+  it('should return run value', () => {
+    expect(new EffectScope().run(() => 1)).toBe(1)
+  })
+
   it('should collect the effects', () => {
-    const scope = new EffectScope(() => {
+    const scope = new EffectScope()
+    scope.run(() => {
       let dummy
       const counter = reactive({ num: 0 })
       effect(() => (dummy = counter.num))
@@ -39,7 +44,8 @@ describe('reactivity/effect/scope', () => {
     let dummy, doubled
     const counter = reactive({ num: 0 })
 
-    const scope = new EffectScope(() => {
+    const scope = new EffectScope()
+    scope.run(() => {
       effect(() => (dummy = counter.num))
       effect(() => (doubled = counter.num * 2))
     })
@@ -62,10 +68,11 @@ describe('reactivity/effect/scope', () => {
     let dummy, doubled
     const counter = reactive({ num: 0 })
 
-    const scope = new EffectScope(() => {
+    const scope = new EffectScope()
+    scope.run(() => {
       effect(() => (dummy = counter.num))
       // nested scope
-      new EffectScope(() => {
+      new EffectScope().run(() => {
         effect(() => (doubled = counter.num * 2))
       })
     })
@@ -90,12 +97,13 @@ describe('reactivity/effect/scope', () => {
     let dummy, doubled
     const counter = reactive({ num: 0 })
 
-    const scope = new EffectScope(() => {
+    const scope = new EffectScope()
+    scope.run(() => {
       effect(() => (dummy = counter.num))
       // nested scope
-      new EffectScope(() => {
+      new EffectScope(true).run(() => {
         effect(() => (doubled = counter.num * 2))
-      }, true)
+      })
     })
 
     expect(scope.effects.length).toBe(1)
@@ -114,17 +122,18 @@ describe('reactivity/effect/scope', () => {
     expect(doubled).toBe(12)
   })
 
-  it('able to extend the scope', () => {
+  it('able to run the scope', () => {
     let dummy, doubled
     const counter = reactive({ num: 0 })
 
-    const scope = new EffectScope(() => {
+    const scope = new EffectScope()
+    scope.run(() => {
       effect(() => (dummy = counter.num))
     })
 
     expect(scope.effects.length).toBe(1)
 
-    scope.extend(() => {
+    scope.run(() => {
       effect(() => (doubled = counter.num * 2))
     })
 
@@ -137,11 +146,12 @@ describe('reactivity/effect/scope', () => {
     scope.stop()
   })
 
-  it('can not extend an inactive scope', () => {
+  it('can not run an inactive scope', () => {
     let dummy, doubled
     const counter = reactive({ num: 0 })
 
-    const scope = new EffectScope(() => {
+    const scope = new EffectScope()
+    scope.run(() => {
       effect(() => (dummy = counter.num))
     })
 
@@ -149,13 +159,11 @@ describe('reactivity/effect/scope', () => {
 
     scope.stop()
 
-    scope.extend(() => {
+    scope.run(() => {
       effect(() => (doubled = counter.num * 2))
     })
 
-    expect(
-      '[Vue warn] cannot extend an inactive effect scope.'
-    ).toHaveBeenWarned()
+    expect('[Vue warn] cannot run an inactive effect scope.').toHaveBeenWarned()
 
     expect(scope.effects.length).toBe(1)
 
@@ -164,34 +172,17 @@ describe('reactivity/effect/scope', () => {
     expect(doubled).toBe(undefined)
   })
 
-  it('should fire onStop hook', () => {
-    let dummy = 0
-
-    const scope = new EffectScope(onStop => {
-      onStop(() => (dummy += 1))
-      onStop(() => (dummy += 2))
-    })
-
-    scope.extend(onStop => {
-      onStop(() => (dummy += 4))
-    })
-
-    expect(dummy).toBe(0)
-
-    scope.stop()
-    expect(dummy).toBe(7)
-  })
-
   it('should fire onDispose hook', () => {
     let dummy = 0
 
-    const scope = new EffectScope(() => {
-      onDispose(() => (dummy += 1))
-      onDispose(() => (dummy += 2))
+    const scope = new EffectScope()
+    scope.run(() => {
+      onScopeDispose(() => (dummy += 1))
+      onScopeDispose(() => (dummy += 2))
     })
 
-    scope.extend(() => {
-      onDispose(() => (dummy += 4))
+    scope.run(() => {
+      onScopeDispose(() => (dummy += 4))
     })
 
     expect(dummy).toBe(0)
@@ -208,7 +199,8 @@ describe('reactivity/effect/scope', () => {
     const watchEffectSpy = jest.fn()
 
     let c: ComputedRef
-    const scope = new EffectScope(() => {
+    const scope = new EffectScope()
+    scope.run(() => {
       c = computed(() => {
         computedSpy()
         return r.value + 1

@@ -325,7 +325,7 @@ function doWatch(
     }
   }
 
-  const scope = instance && instance.effectScope
+  const scope = instance && instance.scope
   const effect = new ReactiveEffect(getter, scheduler, scope)
 
   if (__DEV__) {

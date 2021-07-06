@@ -1633,12 +1633,12 @@ function baseCreateRenderer(
     }
 
     // create reactive effect for rendering
-    const effect = (instance.effect = new ReactiveEffect(
+    const effect = new ReactiveEffect(
       componentUpdateFn,
       () => queueJob(instance.update),
-      instance.effectScope,
+      instance.scope, // track it in component's effect scope
       true /* allowRecurse */
-    ))
+    )
 
     const update = (instance.update = effect.run.bind(effect) as SchedulerJob)
     update.id = instance.uid
@@ -2297,7 +2297,7 @@ function baseCreateRenderer(
       unregisterHMR(instance)
     }
 
-    const { bum, effectScope, update, subTree, um } = instance
+    const { bum, scope, update, subTree, um } = instance
 
     // beforeUnmount hook
     if (bum) {
@@ -2311,8 +2311,8 @@ function baseCreateRenderer(
       instance.emit('hook:beforeDestroy')
     }
 
-    if (effectScope) {
-      effectScope.stop()
+    if (scope) {
+      scope.stop()
     }
 
     // update may be null if a component is unmounted before its async

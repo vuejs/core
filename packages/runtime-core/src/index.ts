@@ -26,10 +26,12 @@ export {
   toRaw,
   // effect
   effect,
+  stop,
   ReactiveEffect,
+  // effect scope
   EffectScope,
   getCurrentScope,
-  stop
+  onScopeDispose
 } from '@vue/reactivity'
 export { watch, watchEffect } from './apiWatch'
 export {
@@ -154,8 +156,7 @@ export {
   ShallowUnwrapRef,
   WritableComputedOptions,
   ToRefs,
-  DeepReadonly,
-  EffectScopeOnStopHook
+  DeepReadonly
 } from '@vue/reactivity'
 export {
   WatchEffect,
