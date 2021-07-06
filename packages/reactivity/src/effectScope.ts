@@ -9,7 +9,7 @@ export class EffectScope {
   effects: (ReactiveEffect | EffectScope)[] = []
   cleanups: (() => void)[] = []
 
-  constructor(detached?: boolean) {
+  constructor(detached = false) {
     if (!detached) {
       recordEffectScope(this)
     }
@@ -37,6 +37,10 @@ export class EffectScope {
       this.active = false
     }
   }
+}
+
+export function effectScope(detached?: boolean) {
+  return new EffectScope(detached)
 }
 
 export function recordEffectScope(
