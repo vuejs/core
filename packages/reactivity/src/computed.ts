@@ -5,6 +5,7 @@ import { ReactiveFlags, toRaw } from './reactive'
 
 export interface ComputedRef<T = any> extends WritableComputedRef<T> {
   readonly value: T
+  defer?: (fn: () => void) => void
 }
 
 export interface WritableComputedRef<T> extends Ref<T> {
@@ -17,6 +18,16 @@ export type ComputedSetter<T> = (v: T) => void
 export interface WritableComputedOptions<T> {
   get: ComputedGetter<T>
   set: ComputedSetter<T>
+}
+
+type ComputedScheduler = (fn: () => void) => void
+let scheduler: ComputedScheduler | undefined
+
+/**
+ * Set a scheduler for deferring computed computations
+ */
+export const setComputedScheduler = (s: ComputedScheduler | undefined) => {
+  scheduler = s
 }
 
 class ComputedRefImpl<T> {
@@ -35,10 +46,34 @@ class ComputedRefImpl<T> {
     private readonly _setter: ComputedSetter<T>,
     isReadonly: boolean
   ) {
+    let deferFn: () => void
+    let scheduled = false
     this.effect = new ReactiveEffect(getter, () => {
       if (!this._dirty) {
         this._dirty = true
-        triggerRefValue(this)
+        if (scheduler) {
+          if (!scheduled) {
+            scheduled = true
+            scheduler(
+              deferFn ||
+                (deferFn = () => {
+                  scheduled = false
+                  if (this._dirty) {
+                    this._dirty = false
+                    const newValue = this.effect.run()!
+                    if (this._value !== newValue) {
+                      this._value = newValue
+                      triggerRefValue(this)
+                    }
+                  } else {
+                    triggerRefValue(this)
+                  }
+                })
+            )
+          }
+        } else {
+          triggerRefValue(this)
+        }
       }
     })
     this[ReactiveFlags.IS_READONLY] = isReadonly
