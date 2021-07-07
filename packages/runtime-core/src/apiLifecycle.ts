@@ -3,7 +3,8 @@ import {
   currentInstance,
   isInSSRComponentSetup,
   LifecycleHooks,
-  setCurrentInstance
+  setCurrentInstance,
+  unsetCurrentInstance
 } from './component'
 import { ComponentPublicInstance } from './componentPublicInstance'
 import { callWithAsyncErrorHandling, ErrorTypeStrings } from './errorHandling'
@@ -38,7 +39,7 @@ export function injectHook(
         // can only be false when the user does something really funky.
         setCurrentInstance(target)
         const res = callWithAsyncErrorHandling(hook, target, type, args)
-        setCurrentInstance(null)
+        unsetCurrentInstance()
         resetTracking()
         return res
       })

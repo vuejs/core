@@ -17,7 +17,7 @@ import {
   NOOP,
   isPromise
 } from '@vue/shared'
-import { computed } from './apiComputed'
+import { computed } from '@vue/reactivity'
 import {
   watch,
   WatchOptions,

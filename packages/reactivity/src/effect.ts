@@ -1,5 +1,6 @@
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { extend, isArray, isIntegerKey, isMap } from '@vue/shared'
+import { EffectScope, recordEffectScope } from './effectScope'
 
 // The main WeakMap that stores {target -> key -> dep} connections.
 // Conceptually, it's easier to think of a dependency as a Dep class
@@ -43,9 +44,12 @@ export class ReactiveEffect<T = any> {
   constructor(
     public fn: () => T,
     public scheduler: EffectScheduler | null = null,
+    scope?: EffectScope | null,
     // allow recursive self-invocation
     public allowRecurse = false
-  ) {}
+  ) {
+    recordEffectScope(this, scope)
+  }
 
   run() {
     if (!this.active) {
@@ -60,8 +64,7 @@ export class ReactiveEffect<T = any> {
       } finally {
         effectStack.pop()
         resetTracking()
-        const n = effectStack.length
-        activeEffect = n > 0 ? effectStack[n - 1] : undefined
+        activeEffect = effectStack[effectStack.length - 1]
       }
     }
   }
@@ -90,6 +93,7 @@ export class ReactiveEffect<T = any> {
 export interface ReactiveEffectOptions {
   lazy?: boolean
   scheduler?: EffectScheduler
+  scope?: EffectScope
   allowRecurse?: boolean
   onStop?: () => void
   onTrack?: (event: DebuggerEvent) => void
@@ -112,6 +116,7 @@ export function effect<T = any>(
   const _effect = new ReactiveEffect(fn)
   if (options) {
     extend(_effect, options)
+    if (options.scope) recordEffectScope(_effect, options.scope)
   }
   if (!options || !options.lazy) {
     _effect.run()
