@@ -8,7 +8,8 @@ import {
   DebuggerEvent,
   markRaw,
   shallowReactive,
-  readonly
+  readonly,
+  ReactiveEffectRunner
 } from '../src/index'
 import { ITERATE_KEY } from '../src/effect'
 
@@ -488,6 +489,96 @@ describe('reactivity/effect', () => {
     obj.prop = 'value2'
     expect(dummy).toBe('other')
     expect(conditionalSpy).toHaveBeenCalledTimes(2)
+  })
+
+  it('should handle deep effect recursion using cleanup fallback', () => {
+    const results = reactive([0])
+    const effects: { fx: ReactiveEffectRunner; index: number }[] = []
+    for (let i = 1; i < 40; i++) {
+      ;(index => {
+        const fx = effect(() => {
+          results[index] = results[index - 1] * 2
+        })
+        effects.push({ fx, index })
+      })(i)
+    }
+
+    expect(results[39]).toBe(0)
+    results[0] = 1
+    expect(results[39]).toBe(Math.pow(2, 39))
+  })
+
+  it('should register deps independently during effect recursion', () => {
+    const input = reactive({ a: 1, b: 2, c: 0 })
+    const output = reactive({ fx1: 0, fx2: 0 })
+
+    const fx1Spy = jest.fn(() => {
+      let result = 0
+      if (input.c < 2) result += input.a
+      if (input.c > 1) result += input.b
+      output.fx1 = result
+    })
+
+    const fx1 = effect(fx1Spy)
+
+    const fx2Spy = jest.fn(() => {
+      let result = 0
+      if (input.c > 1) result += input.a
+      if (input.c < 3) result += input.b
+      output.fx2 = result + output.fx1
+    })
+
+    const fx2 = effect(fx2Spy)
+
+    expect(fx1).not.toBeNull()
+    expect(fx2).not.toBeNull()
+
+    expect(output.fx1).toBe(1)
+    expect(output.fx2).toBe(2 + 1)
+    expect(fx1Spy).toHaveBeenCalledTimes(1)
+    expect(fx2Spy).toHaveBeenCalledTimes(1)
+
+    fx1Spy.mockClear()
+    fx2Spy.mockClear()
+    input.b = 3
+    expect(output.fx1).toBe(1)
+    expect(output.fx2).toBe(3 + 1)
+    expect(fx1Spy).toHaveBeenCalledTimes(0)
+    expect(fx2Spy).toHaveBeenCalledTimes(1)
+
+    fx1Spy.mockClear()
+    fx2Spy.mockClear()
+    input.c = 1
+    expect(output.fx1).toBe(1)
+    expect(output.fx2).toBe(3 + 1)
+    expect(fx1Spy).toHaveBeenCalledTimes(1)
+    expect(fx2Spy).toHaveBeenCalledTimes(1)
+
+    fx1Spy.mockClear()
+    fx2Spy.mockClear()
+    input.c = 2
+    expect(output.fx1).toBe(3)
+    expect(output.fx2).toBe(1 + 3 + 3)
+    expect(fx1Spy).toHaveBeenCalledTimes(1)
+
+    // Invoked twice due to change of fx1.
+    expect(fx2Spy).toHaveBeenCalledTimes(2)
+
+    fx1Spy.mockClear()
+    fx2Spy.mockClear()
+    input.c = 3
+    expect(output.fx1).toBe(3)
+    expect(output.fx2).toBe(1 + 3)
+    expect(fx1Spy).toHaveBeenCalledTimes(1)
+    expect(fx2Spy).toHaveBeenCalledTimes(1)
+
+    fx1Spy.mockClear()
+    fx2Spy.mockClear()
+    input.a = 10
+    expect(output.fx1).toBe(3)
+    expect(output.fx2).toBe(10 + 3)
+    expect(fx1Spy).toHaveBeenCalledTimes(0)
+    expect(fx2Spy).toHaveBeenCalledTimes(1)
   })
 
   it('should not double wrap if the passed function is a effect', () => {
