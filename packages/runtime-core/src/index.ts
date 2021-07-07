@@ -3,6 +3,7 @@
 export const version = __VERSION__
 export {
   // core
+  computed,
   reactive,
   ref,
   readonly,
@@ -22,9 +23,17 @@ export {
   shallowReactive,
   shallowReadonly,
   markRaw,
-  toRaw
+  toRaw,
+  // effect
+  effect,
+  stop,
+  ReactiveEffect,
+  // effect scope
+  effectScope,
+  EffectScope,
+  getCurrentScope,
+  onScopeDispose
 } from '@vue/reactivity'
-export { computed } from './apiComputed'
 export { watch, watchEffect } from './apiWatch'
 export {
   onBeforeMount,
@@ -137,7 +146,6 @@ declare module '@vue/reactivity' {
 }
 
 export {
-  ReactiveEffect,
   ReactiveEffectOptions,
   DebuggerEvent,
   TrackOpTypes,

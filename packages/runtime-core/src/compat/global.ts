@@ -563,7 +563,7 @@ function installCompatMount(
         }
         delete app._container.__vue_app__
       } else {
-        const { bum, effects, um } = instance
+        const { bum, scope, um } = instance
         // beforeDestroy hooks
         if (bum) {
           invokeArrayFns(bum)
@@ -572,10 +572,8 @@ function installCompatMount(
           instance.emit('hook:beforeDestroy')
         }
         // stop effects
-        if (effects) {
-          for (let i = 0; i < effects.length; i++) {
-            effects[i].stop()
-          }
+        if (scope) {
+          scope.stop()
         }
         // unmounted hook
         if (um) {

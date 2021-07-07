@@ -25,8 +25,7 @@ import {
 import {
   currentInstance,
   ComponentInternalInstance,
-  isInSSRComponentSetup,
-  recordInstanceBoundEffect
+  isInSSRComponentSetup
 } from './component'
 import {
   ErrorCodes,
@@ -326,14 +325,13 @@ function doWatch(
     }
   }
 
-  const effect = new ReactiveEffect(getter, scheduler)
+  const scope = instance && instance.scope
+  const effect = new ReactiveEffect(getter, scheduler, scope)
 
   if (__DEV__) {
     effect.onTrack = onTrack
     effect.onTrigger = onTrigger
   }
-
-  recordInstanceBoundEffect(effect, instance)
 
   // initial run
   if (cb) {
@@ -353,8 +351,8 @@ function doWatch(
 
   return () => {
     effect.stop()
-    if (instance) {
-      remove(instance.effects!, effect)
+    if (scope) {
+      remove(scope.effects!, effect)
     }
   }
 }
