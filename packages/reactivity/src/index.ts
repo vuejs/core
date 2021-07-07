@@ -30,6 +30,7 @@ export {
 } from './reactive'
 export {
   computed,
+  setComputedScheduler,
   ComputedRef,
   WritableComputedRef,
   WritableComputedOptions,
