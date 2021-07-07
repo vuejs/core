@@ -1395,33 +1395,28 @@ function baseCreateRenderer(
     isSVG,
     optimized
   ) => {
-    const componentUpdateFn = function(this: ReactiveEffect) {
+    const componentUpdateFn = () => {
       if (!instance.isMounted) {
         let vnodeHook: VNodeHook | null | undefined
         const { el, props } = initialVNode
         const { bm, m, parent } = instance
 
-        try {
-          // Disallow component effect recursion during pre-lifecycle hooks.
-          this.allowRecurse = false
-
-          // beforeMount hook
-          if (bm) {
-            invokeArrayFns(bm)
-          }
-          // onVnodeBeforeMount
-          if ((vnodeHook = props && props.onVnodeBeforeMount)) {
-            invokeVNodeHook(vnodeHook, parent, initialVNode)
-          }
-          if (
-            __COMPAT__ &&
-            isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
-          ) {
-            instance.emit('hook:beforeMount')
-          }
-        } finally {
-          this.allowRecurse = true
+        effect.allowRecurse = false
+        // beforeMount hook
+        if (bm) {
+          invokeArrayFns(bm)
         }
+        // onVnodeBeforeMount
+        if ((vnodeHook = props && props.onVnodeBeforeMount)) {
+          invokeVNodeHook(vnodeHook, parent, initialVNode)
+        }
+        if (
+          __COMPAT__ &&
+          isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
+        ) {
+          instance.emit('hook:beforeMount')
+        }
+        effect.allowRecurse = true
 
         if (el && hydrateNode) {
           // vnode has adopted host node - perform hydration instead of mount.
@@ -1547,27 +1542,23 @@ function baseCreateRenderer(
           next = vnode
         }
 
-        try {
-          // Disallow component effect recursion during pre-lifecycle hooks.
-          this.allowRecurse = false
-
-          // beforeUpdate hook
-          if (bu) {
-            invokeArrayFns(bu)
-          }
-          // onVnodeBeforeUpdate
-          if ((vnodeHook = next.props && next.props.onVnodeBeforeUpdate)) {
-            invokeVNodeHook(vnodeHook, parent, next, vnode)
-          }
-          if (
-            __COMPAT__ &&
-            isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
-          ) {
-            instance.emit('hook:beforeUpdate')
-          }
-        } finally {
-          this.allowRecurse = true
+        // Disallow component effect recursion during pre-lifecycle hooks.
+        effect.allowRecurse = false
+        // beforeUpdate hook
+        if (bu) {
+          invokeArrayFns(bu)
         }
+        // onVnodeBeforeUpdate
+        if ((vnodeHook = next.props && next.props.onVnodeBeforeUpdate)) {
+          invokeVNodeHook(vnodeHook, parent, next, vnode)
+        }
+        if (
+          __COMPAT__ &&
+          isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
+        ) {
+          instance.emit('hook:beforeUpdate')
+        }
+        effect.allowRecurse = true
 
         // render
         if (__DEV__) {
