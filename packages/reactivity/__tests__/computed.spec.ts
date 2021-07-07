@@ -4,7 +4,8 @@ import {
   effect,
   ref,
   WritableComputedRef,
-  isReadonly
+  isReadonly,
+  setComputedScheduler
 } from '../src'
 
 describe('reactivity/computed', () => {
@@ -197,5 +198,59 @@ describe('reactivity/computed', () => {
     const x = computed(() => 1)
     x.effect.stop()
     expect(x.value).toBe(1)
+  })
+
+  describe('with scheduler', () => {
+    const p = Promise.resolve()
+    const defer = (fn?: any) => (fn ? p.then(fn) : p)
+    beforeEach(() => {
+      setComputedScheduler(defer)
+    })
+
+    afterEach(() => {
+      setComputedScheduler(undefined)
+    })
+
+    test('should only trigger once on multiple mutations', async () => {
+      const src = ref(0)
+      const c = computed(() => src.value)
+      const spy = jest.fn()
+      effect(() => {
+        spy(c.value)
+      })
+      expect(spy).toHaveBeenCalledTimes(1)
+      src.value = 1
+      src.value = 2
+      src.value = 3
+      // not called yet
+      expect(spy).toHaveBeenCalledTimes(1)
+      await defer()
+      // should only trigger once
+      expect(spy).toHaveBeenCalledTimes(2)
+      expect(spy).toHaveBeenCalledWith(c.value)
+    })
+
+    test('should not trigger if value did not change', async () => {
+      const src = ref(0)
+      const c = computed(() => src.value % 2)
+      const spy = jest.fn()
+      effect(() => {
+        spy(c.value)
+      })
+      expect(spy).toHaveBeenCalledTimes(1)
+      src.value = 1
+      src.value = 2
+
+      await defer()
+      // should not trigger
+      expect(spy).toHaveBeenCalledTimes(1)
+
+      src.value = 3
+      src.value = 4
+      src.value = 5
+      await defer()
+      // should trigger because latest value changes
+      expect(spy).toHaveBeenCalledTimes(2)
+    })
   })
 })
