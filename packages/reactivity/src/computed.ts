@@ -5,7 +5,6 @@ import { ReactiveFlags, toRaw } from './reactive'
 
 export interface ComputedRef<T = any> extends WritableComputedRef<T> {
   readonly value: T
-  defer?: (fn: () => void) => void
 }
 
 export interface WritableComputedRef<T> extends Ref<T> {
