@@ -4,10 +4,9 @@ import { EffectScope, recordEffectScope } from './effectScope'
 import {
   createDep,
   Dep,
+  finalizeDepMarkers,
+  initDepMarkers,
   newTracked,
-  resetTracked,
-  setNewTracked,
-  setWasTracked,
   wasTracked
 } from './Dep'
 
@@ -17,6 +16,18 @@ import {
 // raw Sets to reduce memory overhead.
 type KeyToDepMap = Map<any, Dep>
 const targetMap = new WeakMap<any, KeyToDepMap>()
+
+// The number of effects currently being tracked recursively.
+let effectTrackDepth = 0
+
+export let trackOpBit = 1
+
+/**
+ * The bitwise track markers support at most 30 levels op recursion.
+ * This value is chosen to enable modern JS engines to use a SMI on all platforms.
+ * When recursion depth is greater, fall back to using a full cleanup.
+ */
+const maxMarkerBits = 30
 
 export type EffectScheduler = () => void
 
@@ -38,6 +49,7 @@ let activeEffect: ReactiveEffect | undefined
 
 export const ITERATE_KEY = Symbol(__DEV__ ? 'iterate' : '')
 export const MAP_KEY_ITERATE_KEY = Symbol(__DEV__ ? 'Map key iterate' : '')
+
 export class ReactiveEffect<T = any> {
   active = true
   deps: Dep[] = []
@@ -68,19 +80,21 @@ export class ReactiveEffect<T = any> {
         effectStack.push((activeEffect = this))
         enableTracking()
 
-        effectTrackDepth++
+        trackOpBit = 1 << ++effectTrackDepth
 
         if (effectTrackDepth <= maxMarkerBits) {
-          this.initDepMarkers()
+          initDepMarkers(this)
         } else {
-          this.cleanup()
+          cleanupEffect(this)
         }
         return this.fn()
       } finally {
         if (effectTrackDepth <= maxMarkerBits) {
-          this.finalizeDepMarkers()
+          finalizeDepMarkers(this)
         }
-        effectTrackDepth--
+
+        trackOpBit = 1 << --effectTrackDepth
+
         resetTracking()
         effectStack.pop()
         const n = effectStack.length
@@ -89,45 +103,9 @@ export class ReactiveEffect<T = any> {
     }
   }
 
-  initDepMarkers() {
-    const { deps } = this
-    if (deps.length) {
-      for (let i = 0; i < deps.length; i++) {
-        setWasTracked(deps[i])
-      }
-    }
-  }
-
-  finalizeDepMarkers() {
-    const { deps } = this
-    if (deps.length) {
-      let ptr = 0
-      for (let i = 0; i < deps.length; i++) {
-        const dep = deps[i]
-        if (wasTracked(dep) && !newTracked(dep)) {
-          dep.delete(this)
-        } else {
-          deps[ptr++] = dep
-        }
-        resetTracked(dep)
-      }
-      deps.length = ptr
-    }
-  }
-
-  cleanup() {
-    const { deps } = this
-    if (deps.length) {
-      for (let i = 0; i < deps.length; i++) {
-        deps[i].delete(this)
-      }
-      deps.length = 0
-    }
-  }
-
   stop() {
     if (this.active) {
-      this.cleanup()
+      cleanupEffect(this)
       if (this.onStop) {
         this.onStop()
       }
@@ -136,18 +114,14 @@ export class ReactiveEffect<T = any> {
   }
 }
 
-// The number of effects currently being tracked recursively.
-let effectTrackDepth = 0
-
-/**
- * The bitwise track markers support at most 30 levels op recursion.
- * This value is chosen to enable modern JS engines to use a SMI on all platforms.
- * When recursion depth is greater, fall back to using a full cleanup.
- */
-const maxMarkerBits = 30
-
-export function getTrackOpBit(): number {
-  return 1 << effectTrackDepth
+function cleanupEffect(effect: ReactiveEffect) {
+  const { deps } = effect
+  if (deps.length) {
+    for (let i = 0; i < deps.length; i++) {
+      deps[i].delete(effect)
+    }
+    deps.length = 0
+  }
 }
 
 export interface ReactiveEffectOptions {
@@ -218,8 +192,7 @@ export function track(target: object, type: TrackOpTypes, key: unknown) {
   }
   let dep = depsMap.get(key)
   if (!dep) {
-    dep = createDep()
-    depsMap.set(key, dep)
+    depsMap.set(key, (dep = createDep()))
   }
 
   const eventInfo = __DEV__
@@ -240,7 +213,7 @@ export function trackEffects(
   let shouldTrack = false
   if (effectTrackDepth <= maxMarkerBits) {
     if (!newTracked(dep)) {
-      setNewTracked(dep)
+      dep.n |= trackOpBit // set newly tracked
       shouldTrack = !wasTracked(dep)
     }
   } else {
