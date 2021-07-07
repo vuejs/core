@@ -186,9 +186,9 @@ describe('compiler: hoistStatic transform', () => {
     expect(generate(root).code).toMatchSnapshot()
   })
 
-  test('should NOT hoist element with dynamic props', () => {
+  test('should NOT hoist element with dynamic props (but hoist the props list)', () => {
     const root = transformWithHoist(`<div><div :id="foo"/></div>`)
-    expect(root.hoists.length).toBe(0)
+    expect(root.hoists.length).toBe(1)
     expect((root.codegenNode as VNodeCall).children).toMatchObject([
       {
         type: NodeTypes.ELEMENT,
@@ -200,7 +200,11 @@ describe('compiler: hoistStatic transform', () => {
           }),
           children: undefined,
           patchFlag: genFlagText(PatchFlags.PROPS),
-          dynamicProps: `["id"]`
+          dynamicProps: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: `_hoisted_1`,
+            isStatic: false
+          }
         }
       }
     ])

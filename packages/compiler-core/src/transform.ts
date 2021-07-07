@@ -113,7 +113,7 @@ export interface TransformContext
   onNodeRemoved(): void
   addIdentifiers(exp: ExpressionNode | string): void
   removeIdentifiers(exp: ExpressionNode | string): void
-  hoist(exp: JSChildNode): SimpleExpressionNode
+  hoist(exp: string | JSChildNode): SimpleExpressionNode
   cache<T extends JSChildNode>(exp: T, isVNode?: boolean): CacheExpression | T
   constantCache: Map<TemplateChildNode, ConstantTypes>
 
@@ -277,6 +277,7 @@ export function createTransformContext(
       }
     },
     hoist(exp) {
+      if (isString(exp)) exp = createSimpleExpression(exp, false)
       context.hoists.push(exp)
       const identifier = createSimpleExpression(
         `_hoisted_${context.hoists.length}`,

@@ -319,15 +319,18 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: hoistStatic transform should NOT hoist element with dynamic props 1`] = `
+exports[`compiler: hoistStatic transform should NOT hoist element with dynamic props (but hoist the props list) 1`] = `
 "const _Vue = Vue
+const { createElementVNode: _createElementVNode } = _Vue
+
+const _hoisted_1 = [\\"id\\"]
 
 return function render(_ctx, _cache) {
   with (_ctx) {
     const { createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return (_openBlock(), _createElementBlock(\\"div\\", null, [
-      _createElementVNode(\\"div\\", { id: foo }, null, 8 /* PROPS */, [\\"id\\"])
+      _createElementVNode(\\"div\\", { id: foo }, null, 8 /* PROPS */, _hoisted_1)
     ]))
   }
 }"
