@@ -160,9 +160,8 @@ function createSetter(shallow = false) {
     }
 
     const hadKey =
-      isArray(target) && isIntegerKey(key)
-        ? Number(key) < target.length
-        : hasOwn(target, key)
+      (isArray(target) && isIntegerKey(key) && Number(key) < target.length) ||
+      hasOwn(target, key)
     const result = Reflect.set(target, key, value, receiver)
     // don't trigger if target is something up in the prototype chain of original
     if (target === toRaw(receiver)) {

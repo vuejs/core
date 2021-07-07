@@ -32,6 +32,8 @@ export const EMPTY_ARR = __DEV__ ? Object.freeze([]) : []
 
 export const NOOP = () => {}
 
+export const MAX_VALID_ARRAY_LENGTH = 4294967295 // Math.pow(2, 32) - 1
+
 /**
  * Always return false.
  */
