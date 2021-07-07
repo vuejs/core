@@ -288,7 +288,7 @@ export interface VNodeCall extends Node {
     | ForRenderListExpression // v-for fragment call
     | undefined
   patchFlag: string | undefined
-  dynamicProps: string | undefined
+  dynamicProps: string | SimpleExpressionNode | undefined
   directives: DirectiveArguments | undefined
   isBlock: boolean
   disableTracking: boolean

@@ -102,6 +102,9 @@ function walk(
               codegenNode.props = context.hoist(props)
             }
           }
+          if (codegenNode.dynamicProps) {
+            codegenNode.dynamicProps = context.hoist(codegenNode.dynamicProps)
+          }
         }
       }
     } else if (child.type === NodeTypes.TEXT_CALL) {
