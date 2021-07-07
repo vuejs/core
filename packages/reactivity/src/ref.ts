@@ -3,7 +3,7 @@ import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { isArray, isObject, hasChanged } from '@vue/shared'
 import { reactive, isProxy, toRaw, isReactive } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
-import { createDep, Dep } from './Dep'
+import { createDep, Dep } from './dep'
 
 export declare const RefSymbol: unique symbol
 

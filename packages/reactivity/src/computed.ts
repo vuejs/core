@@ -2,7 +2,7 @@ import { ReactiveEffect } from './effect'
 import { Ref, trackRefValue, triggerRefValue } from './ref'
 import { isFunction, NOOP } from '@vue/shared'
 import { ReactiveFlags, toRaw } from './reactive'
-import { Dep } from './Dep'
+import { Dep } from './dep'
 
 export interface ComputedRef<T = any> extends WritableComputedRef<T> {
   readonly value: T

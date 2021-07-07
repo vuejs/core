@@ -8,7 +8,7 @@ import {
   initDepMarkers,
   newTracked,
   wasTracked
-} from './Dep'
+} from './dep'
 
 // The main WeakMap that stores {target -> key -> dep} connections.
 // Conceptually, it's easier to think of a dependency as a Dep class
