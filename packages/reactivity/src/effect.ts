@@ -55,6 +55,8 @@ export class ReactiveEffect<T = any> {
   deps: Dep[] = []
 
   // can be attached after creation
+  computed?: boolean
+  allowRecurse?: boolean
   onStop?: () => void
   // dev only
   onTrack?: (event: DebuggerEvent) => void
@@ -64,9 +66,7 @@ export class ReactiveEffect<T = any> {
   constructor(
     public fn: () => T,
     public scheduler: EffectScheduler | null = null,
-    scope?: EffectScope | null,
-    // allow recursive self-invocation
-    public allowRecurse = false
+    scope?: EffectScope | null
   ) {
     recordEffectScope(this, scope)
   }
@@ -303,7 +303,11 @@ export function trigger(
 
   if (deps.length === 1) {
     if (deps[0]) {
-      triggerEffects(deps[0], eventInfo)
+      if (__DEV__) {
+        triggerEffects(deps[0], eventInfo)
+      } else {
+        triggerEffects(deps[0])
+      }
     }
   } else {
     const effects: ReactiveEffect[] = []
@@ -312,16 +316,20 @@ export function trigger(
         effects.push(...dep)
       }
     }
-    triggerEffects(createDep(effects), eventInfo)
+    if (__DEV__) {
+      triggerEffects(createDep(effects), eventInfo)
+    } else {
+      triggerEffects(createDep(effects))
+    }
   }
 }
 
 export function triggerEffects(
-  dep: Dep,
+  dep: Dep | ReactiveEffect[],
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
   // spread into array for stabilization
-  for (const effect of [...dep]) {
+  for (const effect of isArray(dep) ? dep : [...dep]) {
     if (effect !== activeEffect || effect.allowRecurse) {
       if (__DEV__ && effect.onTrigger) {
         effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))

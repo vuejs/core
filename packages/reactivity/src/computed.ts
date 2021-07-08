@@ -1,8 +1,9 @@
-import { ReactiveEffect } from './effect'
+import { ReactiveEffect, triggerEffects } from './effect'
 import { Ref, trackRefValue, triggerRefValue } from './ref'
 import { isFunction, NOOP } from '@vue/shared'
 import { ReactiveFlags, toRaw } from './reactive'
 import { Dep } from './dep'
+import { TriggerOpTypes } from '@vue/runtime-core'
 
 export interface ComputedRef<T = any> extends WritableComputedRef<T> {
   readonly value: T
@@ -35,6 +36,7 @@ class ComputedRefImpl<T> {
 
   private _value!: T
   private _dirty = true
+  private _changed = false
 
   public readonly effect: ReactiveEffect<T>
 
@@ -46,46 +48,58 @@ class ComputedRefImpl<T> {
     private readonly _setter: ComputedSetter<T>,
     isReadonly: boolean
   ) {
-    let deferFn: () => void
-    let scheduled = false
     this.effect = new ReactiveEffect(getter, () => {
       if (!this._dirty) {
         this._dirty = true
         if (scheduler) {
-          if (!scheduled) {
-            scheduled = true
-            scheduler(
-              deferFn ||
-                (deferFn = () => {
-                  scheduled = false
-                  if (this._dirty) {
-                    this._dirty = false
-                    const newValue = this.effect.run()!
-                    if (this._value !== newValue) {
-                      this._value = newValue
-                      triggerRefValue(this)
-                    }
-                  } else {
-                    triggerRefValue(this)
-                  }
-                })
-            )
+          if (this.dep) {
+            const effects: ReactiveEffect[] = []
+            scheduler(() => {
+              if ((this._get(), this._changed)) {
+                if (__DEV__) {
+                  triggerEffects(effects, {
+                    target: this,
+                    type: TriggerOpTypes.SET,
+                    key: 'value',
+                    newValue: this._value
+                  })
+                } else {
+                  triggerEffects(effects)
+                }
+              }
+            })
+            // chained upstream computeds are notified synchronously to ensure
+            // value invalidation in case of sync access; normal effects are
+            // deferred to be triggered in scheduler.
+            for (const e of this.dep) {
+              if (e.computed) {
+                e.scheduler!()
+              } else {
+                effects.push(e)
+              }
+            }
           }
         } else {
           triggerRefValue(this)
         }
       }
     })
+    this.effect.computed = true
     this[ReactiveFlags.IS_READONLY] = isReadonly
+  }
+
+  private _get() {
+    if (this._dirty) {
+      const oldValue = this._value
+      this._changed = oldValue !== (this._value = this.effect.run()!)
+      this._dirty = false
+    }
   }
 
   get value() {
     // the computed ref may get wrapped by other proxies e.g. readonly() #3376
     const self = toRaw(this)
-    if (self._dirty) {
-      self._value = self.effect.run()!
-      self._dirty = false
-    }
+    self._get()
     trackRefValue(self)
     return self._value
   }
