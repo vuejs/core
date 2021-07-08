@@ -1630,15 +1630,14 @@ function baseCreateRenderer(
     const effect = new ReactiveEffect(
       componentUpdateFn,
       () => queueJob(instance.update),
-      instance.scope, // track it in component's effect scope
-      true /* allowRecurse */
+      instance.scope // track it in component's effect scope
     )
 
     const update = (instance.update = effect.run.bind(effect) as SchedulerJob)
     update.id = instance.uid
     // allowRecurse
     // #1801, #2043 component render effects should allow recursive updates
-    update.allowRecurse = true
+    effect.allowRecurse = update.allowRecurse = true
 
     if (__DEV__) {
       effect.onTrack = instance.rtc
