@@ -840,7 +840,7 @@ function genObjectExpression(node: ObjectExpression, context: CodegenContext) {
 }
 
 function genArrayExpression(node: ArrayExpression, context: CodegenContext) {
-  genNodeListAsArray(node.elements, context)
+  genNodeListAsArray(node.elements as CodegenNode[], context)
 }
 
 function genFunctionExpression(

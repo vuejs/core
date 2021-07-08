@@ -11,10 +11,11 @@ import {
   VNodeCall,
   ParentNode,
   JSChildNode,
-  CallExpression
+  CallExpression,
+  createArrayExpression
 } from '../ast'
 import { TransformContext } from '../transform'
-import { PatchFlags, isString, isSymbol } from '@vue/shared'
+import { PatchFlags, isString, isSymbol, isArray } from '@vue/shared'
 import { getVNodeBlockHelper, getVNodeHelper, isSlotOutlet } from '../utils'
 import {
   OPEN_BLOCK,
@@ -51,7 +52,6 @@ function walk(
   context: TransformContext,
   doNotHoistNode: boolean = false
 ) {
-  let hasHoistedNode = false
   // Some transforms, e.g. transformAssetUrls from @vue/compiler-sfc, replaces
   // static bindings with expressions. These expressions are guaranteed to be
   // constant so they are still eligible for hoisting, but they are only
@@ -63,6 +63,9 @@ function walk(
   let canStringify = true
 
   const { children } = node
+  const originalCount = children.length
+  let hoistedCount = 0
+
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
     // only plain elements & text calls are eligible for hoisting.
@@ -81,7 +84,7 @@ function walk(
           ;(child.codegenNode as VNodeCall).patchFlag =
             PatchFlags.HOISTED + (__DEV__ ? ` /* HOISTED */` : ``)
           child.codegenNode = context.hoist(child.codegenNode!)
-          hasHoistedNode = true
+          hoistedCount++
           continue
         }
       } else {
@@ -115,7 +118,7 @@ function walk(
         }
         if (contentType >= ConstantTypes.CAN_HOIST) {
           child.codegenNode = context.hoist(child.codegenNode)
-          hasHoistedNode = true
+          hoistedCount++
         }
       }
     }
@@ -145,8 +148,23 @@ function walk(
     }
   }
 
-  if (canStringify && hasHoistedNode && context.transformHoist) {
+  if (canStringify && hoistedCount && context.transformHoist) {
     context.transformHoist(children, context, node)
+  }
+
+  // all children were hoisted - the entire children array is hoistable.
+  if (
+    hoistedCount &&
+    hoistedCount === originalCount &&
+    node.type === NodeTypes.ELEMENT &&
+    node.tagType === ElementTypes.ELEMENT &&
+    node.codegenNode &&
+    node.codegenNode.type === NodeTypes.VNODE_CALL &&
+    isArray(node.codegenNode.children)
+  ) {
+    node.codegenNode.children = context.hoist(
+      createArrayExpression(node.codegenNode.children)
+    )
   }
 }
 

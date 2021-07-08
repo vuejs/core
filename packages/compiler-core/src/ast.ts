@@ -286,6 +286,7 @@ export interface VNodeCall extends Node {
     | TemplateTextChildNode // single text child
     | SlotsExpression // component slots
     | ForRenderListExpression // v-for fragment call
+    | SimpleExpressionNode // hoisted
     | undefined
   patchFlag: string | undefined
   dynamicProps: string | SimpleExpressionNode | undefined
@@ -338,7 +339,7 @@ export interface Property extends Node {
 
 export interface ArrayExpression extends Node {
   type: NodeTypes.JS_ARRAY_EXPRESSION
-  elements: Array<string | JSChildNode>
+  elements: Array<string | Node>
 }
 
 export interface FunctionExpression extends Node {

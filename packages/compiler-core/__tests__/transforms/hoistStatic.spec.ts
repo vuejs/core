@@ -26,6 +26,17 @@ import { createObjectMatcher, genFlagText } from '../testUtils'
 import { transformText } from '../../src/transforms/transformText'
 import { PatchFlags } from '@vue/shared'
 
+const hoistedChildrenArrayMatcher = (startIndex = 1, length = 1) => ({
+  type: NodeTypes.JS_ARRAY_EXPRESSION,
+  elements: new Array(length).fill(0).map((_, i) => ({
+    type: NodeTypes.ELEMENT,
+    codegenNode: {
+      type: NodeTypes.SIMPLE_EXPRESSION,
+      content: `_hoisted_${startIndex + i}`
+    }
+  }))
+})
+
 function transformWithHoist(template: string, options: CompilerOptions = {}) {
   const ast = parse(template)
   transform(ast, {
@@ -75,20 +86,13 @@ describe('compiler: hoistStatic transform', () => {
           type: NodeTypes.TEXT,
           content: `hello`
         }
-      }
+      },
+      hoistedChildrenArrayMatcher()
     ])
     expect(root.codegenNode).toMatchObject({
       tag: `"div"`,
       props: undefined,
-      children: [
-        {
-          type: NodeTypes.ELEMENT,
-          codegenNode: {
-            type: NodeTypes.SIMPLE_EXPRESSION,
-            content: `_hoisted_1`
-          }
-        }
-      ]
+      children: { content: `_hoisted_2` }
     })
     expect(generate(root).code).toMatchSnapshot()
   })
@@ -104,17 +108,12 @@ describe('compiler: hoistStatic transform', () => {
           { type: NodeTypes.ELEMENT, tag: `span` },
           { type: NodeTypes.ELEMENT, tag: `span` }
         ]
-      }
+      },
+      hoistedChildrenArrayMatcher()
     ])
-    expect((root.codegenNode as VNodeCall).children).toMatchObject([
-      {
-        type: NodeTypes.ELEMENT,
-        codegenNode: {
-          type: NodeTypes.SIMPLE_EXPRESSION,
-          content: `_hoisted_1`
-        }
-      }
-    ])
+    expect((root.codegenNode as VNodeCall).children).toMatchObject({
+      content: '_hoisted_2'
+    })
     expect(generate(root).code).toMatchSnapshot()
   })
 
@@ -126,17 +125,12 @@ describe('compiler: hoistStatic transform', () => {
         tag: `"div"`,
         props: undefined,
         children: [{ type: NodeTypes.COMMENT, content: `comment` }]
-      }
+      },
+      hoistedChildrenArrayMatcher()
     ])
-    expect((root.codegenNode as VNodeCall).children).toMatchObject([
-      {
-        type: NodeTypes.ELEMENT,
-        codegenNode: {
-          type: NodeTypes.SIMPLE_EXPRESSION,
-          content: `_hoisted_1`
-        }
-      }
-    ])
+    expect((root.codegenNode as VNodeCall).children).toMatchObject({
+      content: `_hoisted_2`
+    })
     expect(generate(root).code).toMatchSnapshot()
   })
 
@@ -150,24 +144,12 @@ describe('compiler: hoistStatic transform', () => {
       {
         type: NodeTypes.VNODE_CALL,
         tag: `"div"`
-      }
-    ])
-    expect((root.codegenNode as VNodeCall).children).toMatchObject([
-      {
-        type: NodeTypes.ELEMENT,
-        codegenNode: {
-          type: NodeTypes.SIMPLE_EXPRESSION,
-          content: `_hoisted_1`
-        }
       },
-      {
-        type: NodeTypes.ELEMENT,
-        codegenNode: {
-          type: NodeTypes.SIMPLE_EXPRESSION,
-          content: `_hoisted_2`
-        }
-      }
+      hoistedChildrenArrayMatcher(1, 2)
     ])
+    expect((root.codegenNode as VNodeCall).children).toMatchObject({
+      content: '_hoisted_3'
+    })
     expect(generate(root).code).toMatchSnapshot()
   })
 
@@ -213,26 +195,19 @@ describe('compiler: hoistStatic transform', () => {
 
   test('hoist element with static key', () => {
     const root = transformWithHoist(`<div><div key="foo"/></div>`)
-    expect(root.hoists.length).toBe(1)
+    expect(root.hoists.length).toBe(2)
     expect(root.hoists).toMatchObject([
       {
         type: NodeTypes.VNODE_CALL,
         tag: `"div"`,
         props: createObjectMatcher({ key: 'foo' })
-      }
+      },
+      hoistedChildrenArrayMatcher()
     ])
     expect(root.codegenNode).toMatchObject({
       tag: `"div"`,
       props: undefined,
-      children: [
-        {
-          type: NodeTypes.ELEMENT,
-          codegenNode: {
-            type: NodeTypes.SIMPLE_EXPRESSION,
-            content: `_hoisted_1`
-          }
-        }
-      ]
+      children: { content: `_hoisted_2` }
     })
     expect(generate(root).code).toMatchSnapshot()
   })
@@ -348,7 +323,8 @@ describe('compiler: hoistStatic transform', () => {
       {
         type: NodeTypes.VNODE_CALL,
         tag: `"span"`
-      }
+      },
+      hoistedChildrenArrayMatcher(2)
     ])
     expect(
       ((root.children[0] as ElementNode).children[0] as IfNode).codegenNode
@@ -359,11 +335,7 @@ describe('compiler: hoistStatic transform', () => {
         type: NodeTypes.VNODE_CALL,
         tag: `"div"`,
         props: { content: `_hoisted_1` },
-        children: [
-          {
-            codegenNode: { content: `_hoisted_2` }
-          }
-        ]
+        children: { content: `_hoisted_3` }
       }
     })
     expect(generate(root).code).toMatchSnapshot()
@@ -380,7 +352,8 @@ describe('compiler: hoistStatic transform', () => {
       {
         type: NodeTypes.VNODE_CALL,
         tag: `"span"`
-      }
+      },
+      hoistedChildrenArrayMatcher(2)
     ])
     const forBlockCodegen = ((root.children[0] as ElementNode)
       .children[0] as ForNode).codegenNode
@@ -399,11 +372,7 @@ describe('compiler: hoistStatic transform', () => {
       type: NodeTypes.VNODE_CALL,
       tag: `"div"`,
       props: { content: `_hoisted_1` },
-      children: [
-        {
-          codegenNode: { content: `_hoisted_2` }
-        }
-      ]
+      children: { content: `_hoisted_3` }
     })
     expect(generate(root).code).toMatchSnapshot()
   })
@@ -423,6 +392,17 @@ describe('compiler: hoistStatic transform', () => {
       {
         type: NodeTypes.VNODE_CALL,
         tag: `"div"`
+      },
+      {
+        type: NodeTypes.JS_ARRAY_EXPRESSION,
+        elements: [
+          {
+            type: NodeTypes.TEXT_CALL
+          },
+          {
+            type: NodeTypes.ELEMENT
+          }
+        ]
       }
     ])
   })
@@ -443,20 +423,16 @@ describe('compiler: hoistStatic transform', () => {
           children: {
             type: NodeTypes.COMPOUND_EXPRESSION
           }
-        }
+        },
+        hoistedChildrenArrayMatcher()
       ])
       expect(root.codegenNode).toMatchObject({
         tag: `"div"`,
         props: undefined,
-        children: [
-          {
-            type: NodeTypes.ELEMENT,
-            codegenNode: {
-              type: NodeTypes.SIMPLE_EXPRESSION,
-              content: `_hoisted_1`
-            }
-          }
-        ]
+        children: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: `_hoisted_2`
+        }
       })
       expect(generate(root).code).toMatchSnapshot()
     })
@@ -482,20 +458,16 @@ describe('compiler: hoistStatic transform', () => {
               constType: ConstantTypes.CAN_STRINGIFY
             }
           }
-        }
+        },
+        hoistedChildrenArrayMatcher()
       ])
       expect(root.codegenNode).toMatchObject({
         tag: `"div"`,
         props: undefined,
-        children: [
-          {
-            type: NodeTypes.ELEMENT,
-            codegenNode: {
-              type: NodeTypes.SIMPLE_EXPRESSION,
-              content: `_hoisted_1`
-            }
-          }
-        ]
+        children: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: `_hoisted_2`
+        }
       })
       expect(generate(root).code).toMatchSnapshot()
     })

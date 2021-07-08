@@ -16,7 +16,8 @@ import {
   createCacheExpression,
   TemplateLiteral,
   createVNodeCall,
-  ConstantTypes
+  ConstantTypes,
+  ArrayExpression
 } from './ast'
 import {
   isString,
@@ -113,7 +114,7 @@ export interface TransformContext
   onNodeRemoved(): void
   addIdentifiers(exp: ExpressionNode | string): void
   removeIdentifiers(exp: ExpressionNode | string): void
-  hoist(exp: string | JSChildNode): SimpleExpressionNode
+  hoist(exp: string | JSChildNode | ArrayExpression): SimpleExpressionNode
   cache<T extends JSChildNode>(exp: T, isVNode?: boolean): CacheExpression | T
   constantCache: Map<TemplateChildNode, ConstantTypes>
 

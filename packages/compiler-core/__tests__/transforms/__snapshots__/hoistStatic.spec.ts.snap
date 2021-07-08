@@ -5,14 +5,15 @@ exports[`compiler: hoistStatic transform hoist element with static key 1`] = `
 const { createElementVNode: _createElementVNode } = _Vue
 
 const _hoisted_1 = /*#__PURE__*/_createElementVNode(\\"div\\", { key: \\"foo\\" }, null, -1 /* HOISTED */)
+const _hoisted_2 = [
+  _hoisted_1
+]
 
 return function render(_ctx, _cache) {
   with (_ctx) {
     const { createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
-    return (_openBlock(), _createElementBlock(\\"div\\", null, [
-      _hoisted_1
-    ]))
+    return (_openBlock(), _createElementBlock(\\"div\\", null, _hoisted_2))
   }
 }"
 `;
@@ -25,14 +26,15 @@ const _hoisted_1 = /*#__PURE__*/_createElementVNode(\\"p\\", null, [
   /*#__PURE__*/_createElementVNode(\\"span\\"),
   /*#__PURE__*/_createElementVNode(\\"span\\")
 ], -1 /* HOISTED */)
+const _hoisted_2 = [
+  _hoisted_1
+]
 
 return function render(_ctx, _cache) {
   with (_ctx) {
     const { createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
-    return (_openBlock(), _createElementBlock(\\"div\\", null, [
-      _hoisted_1
-    ]))
+    return (_openBlock(), _createElementBlock(\\"div\\", null, _hoisted_2))
   }
 }"
 `;
@@ -44,14 +46,15 @@ const { createElementVNode: _createElementVNode, createCommentVNode: _createComm
 const _hoisted_1 = /*#__PURE__*/_createElementVNode(\\"div\\", null, [
   /*#__PURE__*/_createCommentVNode(\\"comment\\")
 ], -1 /* HOISTED */)
+const _hoisted_2 = [
+  _hoisted_1
+]
 
 return function render(_ctx, _cache) {
   with (_ctx) {
     const { createCommentVNode: _createCommentVNode, createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
-    return (_openBlock(), _createElementBlock(\\"div\\", null, [
-      _hoisted_1
-    ]))
+    return (_openBlock(), _createElementBlock(\\"div\\", null, _hoisted_2))
   }
 }"
 `;
@@ -62,15 +65,16 @@ const { createElementVNode: _createElementVNode } = _Vue
 
 const _hoisted_1 = /*#__PURE__*/_createElementVNode(\\"span\\", null, null, -1 /* HOISTED */)
 const _hoisted_2 = /*#__PURE__*/_createElementVNode(\\"div\\", null, null, -1 /* HOISTED */)
+const _hoisted_3 = [
+  _hoisted_1,
+  _hoisted_2
+]
 
 return function render(_ctx, _cache) {
   with (_ctx) {
     const { createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
-    return (_openBlock(), _createElementBlock(\\"div\\", null, [
-      _hoisted_1,
-      _hoisted_2
-    ]))
+    return (_openBlock(), _createElementBlock(\\"div\\", null, _hoisted_3))
   }
 }"
 `;
@@ -80,14 +84,15 @@ exports[`compiler: hoistStatic transform hoist simple element 1`] = `
 const { createElementVNode: _createElementVNode } = _Vue
 
 const _hoisted_1 = /*#__PURE__*/_createElementVNode(\\"span\\", { class: \\"inline\\" }, \\"hello\\", -1 /* HOISTED */)
+const _hoisted_2 = [
+  _hoisted_1
+]
 
 return function render(_ctx, _cache) {
   with (_ctx) {
     const { createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
-    return (_openBlock(), _createElementBlock(\\"div\\", null, [
-      _hoisted_1
-    ]))
+    return (_openBlock(), _createElementBlock(\\"div\\", null, _hoisted_2))
   }
 }"
 `;
@@ -175,14 +180,15 @@ exports[`compiler: hoistStatic transform prefixIdentifiers hoist nested static t
 const { createElementVNode: _createElementVNode } = _Vue
 
 const _hoisted_1 = /*#__PURE__*/_createElementVNode(\\"span\\", null, \\"foo \\" + /*#__PURE__*/_toDisplayString(1) + \\" \\" + /*#__PURE__*/_toDisplayString(true), -1 /* HOISTED */)
+const _hoisted_2 = [
+  _hoisted_1
+]
 
 return function render(_ctx, _cache) {
   with (_ctx) {
     const { toDisplayString: _toDisplayString, createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
-    return (_openBlock(), _createElementBlock(\\"div\\", null, [
-      _hoisted_1
-    ]))
+    return (_openBlock(), _createElementBlock(\\"div\\", null, _hoisted_2))
   }
 }"
 `;
@@ -192,14 +198,15 @@ exports[`compiler: hoistStatic transform prefixIdentifiers hoist nested static t
 const { createElementVNode: _createElementVNode } = _Vue
 
 const _hoisted_1 = /*#__PURE__*/_createElementVNode(\\"span\\", { foo: 0 }, /*#__PURE__*/_toDisplayString(1), -1 /* HOISTED */)
+const _hoisted_2 = [
+  _hoisted_1
+]
 
 return function render(_ctx, _cache) {
   with (_ctx) {
     const { toDisplayString: _toDisplayString, createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
-    return (_openBlock(), _createElementBlock(\\"div\\", null, [
-      _hoisted_1
-    ]))
+    return (_openBlock(), _createElementBlock(\\"div\\", null, _hoisted_2))
   }
 }"
 `;
@@ -368,6 +375,9 @@ const { createElementVNode: _createElementVNode } = _Vue
 
 const _hoisted_1 = { id: \\"foo\\" }
 const _hoisted_2 = /*#__PURE__*/_createElementVNode(\\"span\\", null, null, -1 /* HOISTED */)
+const _hoisted_3 = [
+  _hoisted_2
+]
 
 return function render(_ctx, _cache) {
   with (_ctx) {
@@ -375,9 +385,7 @@ return function render(_ctx, _cache) {
 
     return (_openBlock(), _createElementBlock(\\"div\\", null, [
       (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(list, (i) => {
-        return (_openBlock(), _createElementBlock(\\"div\\", _hoisted_1, [
-          _hoisted_2
-        ]))
+        return (_openBlock(), _createElementBlock(\\"div\\", _hoisted_1, _hoisted_3))
       }), 256 /* UNKEYED_FRAGMENT */))
     ]))
   }
@@ -393,6 +401,9 @@ const _hoisted_1 = {
   id: \\"foo\\"
 }
 const _hoisted_2 = /*#__PURE__*/_createElementVNode(\\"span\\", null, null, -1 /* HOISTED */)
+const _hoisted_3 = [
+  _hoisted_2
+]
 
 return function render(_ctx, _cache) {
   with (_ctx) {
@@ -400,9 +411,7 @@ return function render(_ctx, _cache) {
 
     return (_openBlock(), _createElementBlock(\\"div\\", null, [
       ok
-        ? (_openBlock(), _createElementBlock(\\"div\\", _hoisted_1, [
-            _hoisted_2
-          ]))
+        ? (_openBlock(), _createElementBlock(\\"div\\", _hoisted_1, _hoisted_3))
         : _createCommentVNode(\\"v-if\\", true)
     ]))
   }
