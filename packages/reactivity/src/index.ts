@@ -50,6 +50,7 @@ export {
   ReactiveEffectRunner,
   ReactiveEffectOptions,
   EffectScheduler,
+  DebuggerOptions,
   DebuggerEvent
 } from './effect'
 export {

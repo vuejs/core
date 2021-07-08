@@ -1,4 +1,4 @@
-import { ReactiveEffect } from './effect'
+import { DebuggerOptions, ReactiveEffect } from './effect'
 import { Ref, trackRefValue, triggerRefValue } from './ref'
 import { isFunction, NOOP } from '@vue/shared'
 import { ReactiveFlags, toRaw } from './reactive'
@@ -101,12 +101,17 @@ class ComputedRefImpl<T> {
   }
 }
 
-export function computed<T>(getter: ComputedGetter<T>): ComputedRef<T>
 export function computed<T>(
-  options: WritableComputedOptions<T>
+  getter: ComputedGetter<T>,
+  debugOptions?: DebuggerOptions
+): ComputedRef<T>
+export function computed<T>(
+  options: WritableComputedOptions<T>,
+  debugOptions?: DebuggerOptions
 ): WritableComputedRef<T>
 export function computed<T>(
-  getterOrOptions: ComputedGetter<T> | WritableComputedOptions<T>
+  getterOrOptions: ComputedGetter<T> | WritableComputedOptions<T>,
+  debugOptions?: DebuggerOptions
 ) {
   let getter: ComputedGetter<T>
   let setter: ComputedSetter<T>
@@ -123,9 +128,16 @@ export function computed<T>(
     setter = getterOrOptions.set
   }
 
-  return new ComputedRefImpl(
+  const cRef = new ComputedRefImpl(
     getter,
     setter,
     isFunction(getterOrOptions) || !getterOrOptions.set
-  ) as any
+  )
+
+  if (__DEV__ && debugOptions) {
+    cRef.effect.onTrack = debugOptions.onTrack
+    cRef.effect.onTrigger = debugOptions.onTrigger
+  }
+
+  return cRef as any
 }

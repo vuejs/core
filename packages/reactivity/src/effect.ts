@@ -124,14 +124,17 @@ function cleanupEffect(effect: ReactiveEffect) {
   }
 }
 
-export interface ReactiveEffectOptions {
+export interface DebuggerOptions {
+  onTrack?: (event: DebuggerEvent) => void
+  onTrigger?: (event: DebuggerEvent) => void
+}
+
+export interface ReactiveEffectOptions extends DebuggerOptions {
   lazy?: boolean
   scheduler?: EffectScheduler
   scope?: EffectScope
   allowRecurse?: boolean
   onStop?: () => void
-  onTrack?: (event: DebuggerEvent) => void
-  onTrigger?: (event: DebuggerEvent) => void
 }
 
 export interface ReactiveEffectRunner<T = any> {
