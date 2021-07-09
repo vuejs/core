@@ -182,11 +182,12 @@ function renderComponentSubTree(
         slotScopeId
       )
     } else {
-      warn(
-        `Component ${
-          comp.name ? `${comp.name} ` : ``
-        } is missing template or render function.`
-      )
+      __DEV__ &&
+        warn(
+          `Component ${
+            comp.name ? `${comp.name} ` : ``
+          } is missing template or render function.`
+        )
       push(`<!---->`)
     }
   }
@@ -236,11 +237,12 @@ export function renderVNode(
       } else if (shapeFlag & ShapeFlags.SUSPENSE) {
         renderVNode(push, vnode.ssContent!, parentComponent, slotScopeId)
       } else {
-        warn(
-          '[@vue/server-renderer] Invalid VNode type:',
-          type,
-          `(${typeof type})`
-        )
+        __DEV__ &&
+          warn(
+            '[@vue/server-renderer] Invalid VNode type:',
+            type,
+            `(${typeof type})`
+          )
       }
   }
 }
@@ -350,13 +352,14 @@ function renderTeleportVNode(
   const target = vnode.props && vnode.props.to
   const disabled = vnode.props && vnode.props.disabled
   if (!target) {
-    warn(`[@vue/server-renderer] Teleport is missing target prop.`)
+    __DEV__ && warn(`[@vue/server-renderer] Teleport is missing target prop.`)
     return []
   }
   if (!isString(target)) {
-    warn(
-      `[@vue/server-renderer] Teleport target must be a query selector string.`
-    )
+    __DEV__ &&
+      warn(
+        `[@vue/server-renderer] Teleport target must be a query selector string.`
+      )
     return []
   }
   ssrRenderTeleport(
