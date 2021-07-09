@@ -151,7 +151,7 @@ export function compileScript(
   // TODO remove on 3.2
   if (sfc.template && sfc.template.attrs['inherit-attrs'] === 'false') {
     warnOnce(
-      `experimetnal support for <template inherit-attrs="false"> support has ` +
+      `Experimental support for <template inherit-attrs="false"> support has ` +
         `been removed. Use a <script> block with \`export default\` to ` +
         `declare options.`
     )
