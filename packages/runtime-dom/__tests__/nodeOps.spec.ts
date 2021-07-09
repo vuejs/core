@@ -32,9 +32,8 @@ describe('runtime-dom: node-ops', () => {
       const parent = document.createElement('div')
       const nodes = nodeOps.insertStaticContent!(content, parent, null, false)
       expect(parent.innerHTML).toBe(content)
-      expect(nodes.length).toBe(3)
       expect(nodes[0]).toBe(parent.firstChild)
-      expect(nodes[nodes.length - 1]).toBe(parent.lastChild)
+      expect(nodes[1]).toBe(parent.lastChild)
     })
 
     test('fresh insertion with anchor', () => {
@@ -45,11 +44,8 @@ describe('runtime-dom: node-ops', () => {
       const anchor = parent.firstChild
       const nodes = nodeOps.insertStaticContent!(content, parent, anchor, false)
       expect(parent.innerHTML).toBe(content + existing)
-      expect(nodes.length).toBe(3)
       expect(nodes[0]).toBe(parent.firstChild)
-      expect(nodes[nodes.length - 1]).toBe(
-        parent.childNodes[parent.childNodes.length - 2]
-      )
+      expect(nodes[1]).toBe(parent.childNodes[parent.childNodes.length - 2])
     })
 
     test('fresh insertion as svg', () => {
@@ -85,33 +81,6 @@ describe('runtime-dom: node-ops', () => {
       expect(last).toBe(parent.childNodes[parent.childNodes.length - 2])
       expect(first.namespaceURI).toMatch('svg')
       expect(last.namespaceURI).toMatch('svg')
-    })
-
-    test('cached', () => {
-      const content = `<div>one</div><div>two</div>three`
-
-      const cacheParent = document.createElement('div')
-      const nodes = nodeOps.insertStaticContent!(
-        content,
-        cacheParent,
-        null,
-        false
-      )
-
-      const parent = document.createElement('div')
-
-      const clonedNodes = nodeOps.insertStaticContent!(
-        ``,
-        parent,
-        null,
-        false,
-        nodes
-      )
-
-      expect(parent.innerHTML).toBe(content)
-      expect(clonedNodes[0]).toBe(parent.firstChild)
-      expect(clonedNodes[clonedNodes.length - 1]).toBe(parent.lastChild)
-      expect(clonedNodes[0]).not.toBe(nodes[0])
     })
   })
 })

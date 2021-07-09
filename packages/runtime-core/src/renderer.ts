@@ -142,9 +142,8 @@ export interface RendererOptions<
     content: string,
     parent: HostElement,
     anchor: HostNode | null,
-    isSVG: boolean,
-    cached?: HostNode[] | null
-  ): HostElement[]
+    isSVG: boolean
+  ): [HostNode, HostNode]
 }
 
 // Renderer Node can technically be any object in the context of core renderer
@@ -633,22 +632,12 @@ function baseCreateRenderer(
   ) => {
     // static nodes are only present when used with compiler-dom/runtime-dom
     // which guarantees presence of hostInsertStaticContent.
-    const nodes = hostInsertStaticContent!(
+    ;[n2.el, n2.anchor] = hostInsertStaticContent!(
       n2.children as string,
       container,
       anchor,
-      isSVG,
-      // pass cached nodes if the static node is being mounted multiple times
-      // so that runtime-dom can simply cloneNode() instead of inserting new
-      // HTML
-      n2.staticCache
+      isSVG
     )
-    // first mount - this is the orignal hoisted vnode. cache nodes.
-    if (!n2.el) {
-      n2.staticCache = nodes
-    }
-    n2.el = nodes[0]
-    n2.anchor = nodes[nodes.length - 1]
   }
 
   /**
