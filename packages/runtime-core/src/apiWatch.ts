@@ -3,10 +3,10 @@ import {
   Ref,
   ComputedRef,
   ReactiveEffect,
-  ReactiveEffectOptions,
   isReactive,
   ReactiveFlags,
-  EffectScheduler
+  EffectScheduler,
+  DebuggerOptions
 } from '@vue/reactivity'
 import { SchedulerJob, queuePreFlushCb } from './scheduler'
 import {
@@ -58,10 +58,8 @@ type MapSources<T, Immediate> = {
 
 type InvalidateCbRegistrator = (cb: () => void) => void
 
-export interface WatchOptionsBase {
+export interface WatchOptionsBase extends DebuggerOptions {
   flush?: 'pre' | 'post' | 'sync'
-  onTrack?: ReactiveEffectOptions['onTrack']
-  onTrigger?: ReactiveEffectOptions['onTrigger']
 }
 
 export interface WatchOptions<Immediate = boolean> extends WatchOptionsBase {
@@ -77,6 +75,15 @@ export function watchEffect(
   options?: WatchOptionsBase
 ): WatchStopHandle {
   return doWatch(effect, null, options)
+}
+
+export function watchPostEffect(
+  effect: WatchEffect,
+  options?: DebuggerOptions
+) {
+  return doWatch(effect, null, (__DEV__
+    ? Object.assign(options || {}, { flush: 'post' })
+    : { flush: 'post' }) as WatchOptionsBase)
 }
 
 // initial value for watchers to trigger on undefined initial values
