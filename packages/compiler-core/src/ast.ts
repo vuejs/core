@@ -6,7 +6,8 @@ import {
   RENDER_LIST,
   OPEN_BLOCK,
   FRAGMENT,
-  WITH_DIRECTIVES
+  WITH_DIRECTIVES,
+  WITH_MEMO
 } from './runtimeHelpers'
 import { PropsExpression } from './transforms/transformElement'
 import { ImportItem, TransformContext } from './transform'
@@ -135,6 +136,7 @@ export interface PlainElementNode extends BaseElementNode {
     | VNodeCall
     | SimpleExpressionNode // when hoisted
     | CacheExpression // when cached by v-once
+    | MemoExpression // when cached by v-memo
     | undefined
   ssrCodegenNode?: TemplateLiteral
 }
@@ -144,6 +146,7 @@ export interface ComponentNode extends BaseElementNode {
   codegenNode:
     | VNodeCall
     | CacheExpression // when cached by v-once
+    | MemoExpression // when cached by v-memo
     | undefined
   ssrCodegenNode?: CallExpression
 }
@@ -375,6 +378,15 @@ export interface CacheExpression extends Node {
   isVNode: boolean
 }
 
+export interface MemoExpression extends CallExpression {
+  callee: typeof WITH_MEMO
+  arguments: [ExpressionNode, MemoFactory, string, string]
+}
+
+interface MemoFactory extends FunctionExpression {
+  returns: BlockCodegenNode
+}
+
 // SSR-specific Node Types -----------------------------------------------------
 
 export type SSRCodegenNode =
@@ -499,8 +511,8 @@ export interface DynamicSlotFnProperty extends Property {
 export type BlockCodegenNode = VNodeCall | RenderSlotCall
 
 export interface IfConditionalExpression extends ConditionalExpression {
-  consequent: BlockCodegenNode
-  alternate: BlockCodegenNode | IfConditionalExpression
+  consequent: BlockCodegenNode | MemoExpression
+  alternate: BlockCodegenNode | IfConditionalExpression | MemoExpression
 }
 
 export interface ForCodegenNode extends VNodeCall {
@@ -627,7 +639,7 @@ export function createObjectProperty(
 
 export function createSimpleExpression(
   content: SimpleExpressionNode['content'],
-  isStatic: SimpleExpressionNode['isStatic'],
+  isStatic: SimpleExpressionNode['isStatic'] = false,
   loc: SourceLocation = locStub,
   constType: ConstantTypes = ConstantTypes.NOT_CONSTANT
 ): SimpleExpressionNode {

@@ -504,8 +504,8 @@ export function buildProps(
         }
         continue
       }
-      // skip v-once - it is handled by its dedicated transform.
-      if (name === 'once') {
+      // skip v-once/v-memo - they are handled by dedicated transforms.
+      if (name === 'once' || name === 'memo') {
         continue
       }
       // skip v-is and :is on <component>

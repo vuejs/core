@@ -34,10 +34,9 @@ import {
   TO_DISPLAY_STRING,
   FRAGMENT,
   helperNameMap,
-  CREATE_COMMENT,
-  OPEN_BLOCK
+  CREATE_COMMENT
 } from './runtimeHelpers'
-import { getVNodeBlockHelper, getVNodeHelper, isVSlot } from './utils'
+import { isVSlot, makeBlock } from './utils'
 import { hoistStatic, isSingleElementRoot } from './transforms/hoistStatic'
 import { CompilerCompatOptions } from './compat/compatConfig'
 
@@ -278,7 +277,7 @@ export function createTransformContext(
       }
     },
     hoist(exp) {
-      if (isString(exp)) exp = createSimpleExpression(exp, false)
+      if (isString(exp)) exp = createSimpleExpression(exp)
       context.hoists.push(exp)
       const identifier = createSimpleExpression(
         `_hoisted_${context.hoists.length}`,
@@ -290,7 +289,7 @@ export function createTransformContext(
       return identifier
     },
     cache(exp, isVNode = false) {
-      return createCacheExpression(++context.cached, exp, isVNode)
+      return createCacheExpression(context.cached++, exp, isVNode)
     }
   }
 
@@ -337,7 +336,7 @@ export function transform(root: RootNode, options: TransformOptions) {
 }
 
 function createRootCodegen(root: RootNode, context: TransformContext) {
-  const { helper, removeHelper } = context
+  const { helper } = context
   const { children } = root
   if (children.length === 1) {
     const child = children[0]
@@ -347,12 +346,7 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
       // SimpleExpressionNode
       const codegenNode = child.codegenNode
       if (codegenNode.type === NodeTypes.VNODE_CALL) {
-        if (!codegenNode.isBlock) {
-          codegenNode.isBlock = true
-          removeHelper(getVNodeHelper(context.inSSR, codegenNode.isComponent))
-          helper(OPEN_BLOCK)
-          helper(getVNodeBlockHelper(context.inSSR, codegenNode.isComponent))
-        }
+        makeBlock(codegenNode, context)
       }
       root.codegenNode = codegenNode
     } else {

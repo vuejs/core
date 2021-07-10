@@ -452,7 +452,7 @@ describe('compiler: transform v-on', () => {
         (vnodeCall.props as ObjectExpression).properties[0].value
       ).toMatchObject({
         type: NodeTypes.JS_CACHE_EXPRESSION,
-        index: 1,
+        index: 0,
         value: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: `() => {}`
@@ -473,7 +473,7 @@ describe('compiler: transform v-on', () => {
         (vnodeCall.props as ObjectExpression).properties[0].value
       ).toMatchObject({
         type: NodeTypes.JS_CACHE_EXPRESSION,
-        index: 1,
+        index: 0,
         value: {
           type: NodeTypes.COMPOUND_EXPRESSION,
           children: [
@@ -498,7 +498,7 @@ describe('compiler: transform v-on', () => {
         (vnodeCall.props as ObjectExpression).properties[0].value
       ).toMatchObject({
         type: NodeTypes.JS_CACHE_EXPRESSION,
-        index: 1,
+        index: 0,
         value: {
           type: NodeTypes.COMPOUND_EXPRESSION,
           children: [
@@ -543,7 +543,7 @@ describe('compiler: transform v-on', () => {
         (vnodeCall.props as ObjectExpression).properties[0].value
       ).toMatchObject({
         type: NodeTypes.JS_CACHE_EXPRESSION,
-        index: 1,
+        index: 0,
         value: {
           type: NodeTypes.COMPOUND_EXPRESSION,
           children: [`() => `, { content: `_ctx.foo` }, `()`]
@@ -565,7 +565,7 @@ describe('compiler: transform v-on', () => {
         (vnodeCall.props as ObjectExpression).properties[0].value
       ).toMatchObject({
         type: NodeTypes.JS_CACHE_EXPRESSION,
-        index: 1,
+        index: 0,
         value: {
           type: NodeTypes.COMPOUND_EXPRESSION,
           children: [

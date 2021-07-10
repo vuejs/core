@@ -24,7 +24,9 @@ import {
   ForRenderListExpression,
   BlockCodegenNode,
   ForIteratorExpression,
-  ConstantTypes
+  ConstantTypes,
+  createBlockStatement,
+  createCompoundExpression
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
@@ -34,9 +36,15 @@ import {
   isSlotOutlet,
   injectProp,
   getVNodeBlockHelper,
-  getVNodeHelper
+  getVNodeHelper,
+  findDir
 } from '../utils'
-import { RENDER_LIST, OPEN_BLOCK, FRAGMENT } from '../runtimeHelpers'
+import {
+  RENDER_LIST,
+  OPEN_BLOCK,
+  FRAGMENT,
+  IS_MEMO_SAME
+} from '../runtimeHelpers'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
 import { PatchFlags, PatchFlagNames } from '@vue/shared'
@@ -51,15 +59,14 @@ export const transformFor = createStructuralDirectiveTransform(
       const renderExp = createCallExpression(helper(RENDER_LIST), [
         forNode.source
       ]) as ForRenderListExpression
+      const memo = findDir(node, 'memo')
       const keyProp = findProp(node, `key`)
-      const keyProperty = keyProp
-        ? createObjectProperty(
-            `key`,
-            keyProp.type === NodeTypes.ATTRIBUTE
-              ? createSimpleExpression(keyProp.value!.content, true)
-              : keyProp.exp!
-          )
-        : null
+      const keyExp =
+        keyProp &&
+        (keyProp.type === NodeTypes.ATTRIBUTE
+          ? createSimpleExpression(keyProp.value!.content, true)
+          : keyProp.exp!)
+      const keyProperty = keyProp ? createObjectProperty(`key`, keyExp!) : null
 
       if (!__BROWSER__ && context.prefixIdentifiers && keyProperty) {
         // #2085 process :key expression needs to be processed in order for it
@@ -189,11 +196,37 @@ export const transformFor = createStructuralDirectiveTransform(
           }
         }
 
-        renderExp.arguments.push(createFunctionExpression(
-          createForLoopParams(forNode.parseResult),
-          childBlock,
-          true /* force newline */
-        ) as ForIteratorExpression)
+        if (memo) {
+          const loop = createFunctionExpression(
+            createForLoopParams(forNode.parseResult, [
+              createSimpleExpression(`_cached`)
+            ])
+          )
+          loop.body = createBlockStatement([
+            createCompoundExpression([`const _memo = (`, memo.exp!, `)`]),
+            createCompoundExpression([
+              `if (_cached`,
+              ...(keyExp ? [` && _cached.key === `, keyExp] : []),
+              ` && ${context.helperString(
+                IS_MEMO_SAME
+              )}(_cached.memo, _memo)) return _cached`
+            ]),
+            createCompoundExpression([`const _item = `, childBlock as any]),
+            createSimpleExpression(`_item.memo = _memo`),
+            createSimpleExpression(`return _item`)
+          ])
+          renderExp.arguments.push(
+            loop as ForIteratorExpression,
+            createSimpleExpression(`_cache`),
+            createSimpleExpression(String(context.cached++))
+          )
+        } else {
+          renderExp.arguments.push(createFunctionExpression(
+            createForLoopParams(forNode.parseResult),
+            childBlock,
+            true /* force newline */
+          ) as ForIteratorExpression)
+        }
       }
     })
   }
@@ -393,29 +426,21 @@ function createAliasExpression(
   )
 }
 
-export function createForLoopParams({
-  value,
-  key,
-  index
-}: ForParseResult): ExpressionNode[] {
-  const params: ExpressionNode[] = []
-  if (value) {
-    params.push(value)
+export function createForLoopParams(
+  { value, key, index }: ForParseResult,
+  memoArgs: ExpressionNode[] = []
+): ExpressionNode[] {
+  return createParamsList([value, key, index, ...memoArgs])
+}
+
+function createParamsList(
+  args: (ExpressionNode | undefined)[]
+): ExpressionNode[] {
+  let i = args.length
+  while (i--) {
+    if (args[i]) break
   }
-  if (key) {
-    if (!value) {
-      params.push(createSimpleExpression(`_`, false))
-    }
-    params.push(key)
-  }
-  if (index) {
-    if (!key) {
-      if (!value) {
-        params.push(createSimpleExpression(`_`, false))
-      }
-      params.push(createSimpleExpression(`__`, false))
-    }
-    params.push(index)
-  }
-  return params
+  return args
+    .slice(0, i + 1)
+    .map((arg, i) => arg || createSimpleExpression(`_`.repeat(i + 1), false))
 }

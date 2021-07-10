@@ -7,11 +7,11 @@ return function render(_ctx, _cache) {
   with (_ctx) {
     const { setBlockTracking: _setBlockTracking, createElementVNode: _createElementVNode } = _Vue
 
-    return _cache[1] || (
+    return _cache[0] || (
       _setBlockTracking(-1),
-      _cache[1] = _createElementVNode(\\"div\\", { id: foo }, null, 8 /* PROPS */, [\\"id\\"]),
+      _cache[0] = _createElementVNode(\\"div\\", { id: foo }, null, 8 /* PROPS */, [\\"id\\"]),
       _setBlockTracking(1),
-      _cache[1]
+      _cache[0]
     )
   }
 }"
@@ -27,11 +27,11 @@ return function render(_ctx, _cache) {
     const _component_Comp = _resolveComponent(\\"Comp\\")
 
     return (_openBlock(), _createElementBlock(\\"div\\", null, [
-      _cache[1] || (
+      _cache[0] || (
         _setBlockTracking(-1),
-        _cache[1] = _createVNode(_component_Comp, { id: foo }, null, 8 /* PROPS */, [\\"id\\"]),
+        _cache[0] = _createVNode(_component_Comp, { id: foo }, null, 8 /* PROPS */, [\\"id\\"]),
         _setBlockTracking(1),
-        _cache[1]
+        _cache[0]
       )
     ]))
   }
@@ -46,11 +46,11 @@ return function render(_ctx, _cache) {
     const { setBlockTracking: _setBlockTracking, createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return (_openBlock(), _createElementBlock(\\"div\\", null, [
-      _cache[1] || (
+      _cache[0] || (
         _setBlockTracking(-1),
-        _cache[1] = _createElementVNode(\\"div\\", { id: foo }, null, 8 /* PROPS */, [\\"id\\"]),
+        _cache[0] = _createElementVNode(\\"div\\", { id: foo }, null, 8 /* PROPS */, [\\"id\\"]),
         _setBlockTracking(1),
-        _cache[1]
+        _cache[0]
       )
     ]))
   }
@@ -65,11 +65,11 @@ return function render(_ctx, _cache) {
     const { setBlockTracking: _setBlockTracking, renderSlot: _renderSlot, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return (_openBlock(), _createElementBlock(\\"div\\", null, [
-      _cache[1] || (
+      _cache[0] || (
         _setBlockTracking(-1),
-        _cache[1] = _renderSlot($slots, \\"default\\"),
+        _cache[0] = _renderSlot($slots, \\"default\\"),
         _setBlockTracking(1),
-        _cache[1]
+        _cache[0]
       )
     ]))
   }
@@ -84,11 +84,11 @@ return function render(_ctx, _cache) {
     const { setBlockTracking: _setBlockTracking, createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return (_openBlock(), _createElementBlock(\\"div\\", null, [
-      _cache[1] || (
+      _cache[0] || (
         _setBlockTracking(-1),
-        _cache[1] = _createElementVNode(\\"div\\"),
+        _cache[0] = _createElementVNode(\\"div\\"),
         _setBlockTracking(1),
-        _cache[1]
+        _cache[0]
       )
     ]))
   }

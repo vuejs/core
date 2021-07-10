@@ -414,19 +414,19 @@ export default {
 return (_ctx, _cache) => {
   return (_openBlock(), _createElementBlock(_Fragment, null, [
     _createElementVNode(\\"div\\", {
-      onClick: _cache[1] || (_cache[1] = $event => (count.value = 1))
+      onClick: _cache[0] || (_cache[0] = $event => (count.value = 1))
     }),
     _createElementVNode(\\"div\\", {
-      onClick: _cache[2] || (_cache[2] = $event => (maybe.value = count.value))
+      onClick: _cache[1] || (_cache[1] = $event => (maybe.value = count.value))
     }),
     _createElementVNode(\\"div\\", {
-      onClick: _cache[3] || (_cache[3] = $event => (_isRef(lett) ? lett.value = count.value : lett = count.value))
+      onClick: _cache[2] || (_cache[2] = $event => (_isRef(lett) ? lett.value = count.value : lett = count.value))
     }),
     _createElementVNode(\\"div\\", {
-      onClick: _cache[4] || (_cache[4] = $event => (_isRef(v) ? v.value += 1 : v += 1))
+      onClick: _cache[3] || (_cache[3] = $event => (_isRef(v) ? v.value += 1 : v += 1))
     }),
     _createElementVNode(\\"div\\", {
-      onClick: _cache[5] || (_cache[5] = $event => (_isRef(v) ? v.value -= 1 : v -= 1))
+      onClick: _cache[4] || (_cache[4] = $event => (_isRef(v) ? v.value -= 1 : v -= 1))
     })
   ], 64 /* STABLE_FRAGMENT */))
 }
@@ -451,13 +451,13 @@ export default {
 return (_ctx, _cache) => {
   return (_openBlock(), _createElementBlock(_Fragment, null, [
     _createElementVNode(\\"div\\", {
-      onClick: _cache[1] || (_cache[1] = $event => (({ count: count.value } = val)))
+      onClick: _cache[0] || (_cache[0] = $event => (({ count: count.value } = val)))
     }),
     _createElementVNode(\\"div\\", {
-      onClick: _cache[2] || (_cache[2] = $event => ([maybe.value] = val))
+      onClick: _cache[1] || (_cache[1] = $event => ([maybe.value] = val))
     }),
     _createElementVNode(\\"div\\", {
-      onClick: _cache[3] || (_cache[3] = $event => (({ lett: lett } = val)))
+      onClick: _cache[2] || (_cache[2] = $event => (({ lett: lett } = val)))
     })
   ], 64 /* STABLE_FRAGMENT */))
 }
@@ -481,22 +481,22 @@ export default {
 return (_ctx, _cache) => {
   return (_openBlock(), _createElementBlock(_Fragment, null, [
     _createElementVNode(\\"div\\", {
-      onClick: _cache[1] || (_cache[1] = $event => (count.value++))
+      onClick: _cache[0] || (_cache[0] = $event => (count.value++))
     }),
     _createElementVNode(\\"div\\", {
-      onClick: _cache[2] || (_cache[2] = $event => (--count.value))
+      onClick: _cache[1] || (_cache[1] = $event => (--count.value))
     }),
     _createElementVNode(\\"div\\", {
-      onClick: _cache[3] || (_cache[3] = $event => (maybe.value++))
+      onClick: _cache[2] || (_cache[2] = $event => (maybe.value++))
     }),
     _createElementVNode(\\"div\\", {
-      onClick: _cache[4] || (_cache[4] = $event => (--maybe.value))
+      onClick: _cache[3] || (_cache[3] = $event => (--maybe.value))
     }),
     _createElementVNode(\\"div\\", {
-      onClick: _cache[5] || (_cache[5] = $event => (_isRef(lett) ? lett.value++ : lett++))
+      onClick: _cache[4] || (_cache[4] = $event => (_isRef(lett) ? lett.value++ : lett++))
     }),
     _createElementVNode(\\"div\\", {
-      onClick: _cache[6] || (_cache[6] = $event => (_isRef(lett) ? --lett.value : --lett))
+      onClick: _cache[5] || (_cache[5] = $event => (_isRef(lett) ? --lett.value : --lett))
     })
   ], 64 /* STABLE_FRAGMENT */))
 }
@@ -520,17 +520,17 @@ export default {
 return (_ctx, _cache) => {
   return (_openBlock(), _createElementBlock(_Fragment, null, [
     _withDirectives(_createElementVNode(\\"input\\", {
-      \\"onUpdate:modelValue\\": _cache[1] || (_cache[1] = $event => (count.value = $event))
+      \\"onUpdate:modelValue\\": _cache[0] || (_cache[0] = $event => (count.value = $event))
     }, null, 512 /* NEED_PATCH */), [
       [_vModelText, count.value]
     ]),
     _withDirectives(_createElementVNode(\\"input\\", {
-      \\"onUpdate:modelValue\\": _cache[2] || (_cache[2] = $event => (_isRef(maybe) ? maybe.value = $event : null))
+      \\"onUpdate:modelValue\\": _cache[1] || (_cache[1] = $event => (_isRef(maybe) ? maybe.value = $event : null))
     }, null, 512 /* NEED_PATCH */), [
       [_vModelText, _unref(maybe)]
     ]),
     _withDirectives(_createElementVNode(\\"input\\", {
-      \\"onUpdate:modelValue\\": _cache[3] || (_cache[3] = $event => (_isRef(lett) ? lett.value = $event : lett = $event))
+      \\"onUpdate:modelValue\\": _cache[2] || (_cache[2] = $event => (_isRef(lett) ? lett.value = $event : lett = $event))
     }, null, 512 /* NEED_PATCH */), [
       [_vModelText, _unref(lett)]
     ])

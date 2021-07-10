@@ -21,7 +21,9 @@ import {
   TextNode,
   InterpolationNode,
   VNodeCall,
-  SimpleExpressionNode
+  SimpleExpressionNode,
+  BlockCodegenNode,
+  MemoExpression
 } from './ast'
 import { TransformContext } from './transform'
 import {
@@ -36,7 +38,9 @@ import {
   CREATE_BLOCK,
   CREATE_ELEMENT_BLOCK,
   CREATE_VNODE,
-  CREATE_ELEMENT_VNODE
+  CREATE_ELEMENT_VNODE,
+  WITH_MEMO,
+  OPEN_BLOCK
 } from './runtimeHelpers'
 import { isString, isObject, hyphenate, extend } from '@vue/shared'
 import { PropsExpression } from './transforms/transformElement'
@@ -481,5 +485,25 @@ export function hasScopeRef(
         exhaustiveCheck
       }
       return false
+  }
+}
+
+export function getMemoedVNodeCall(node: BlockCodegenNode | MemoExpression) {
+  if (node.type === NodeTypes.JS_CALL_EXPRESSION && node.callee === WITH_MEMO) {
+    return node.arguments[1].returns as VNodeCall
+  } else {
+    return node
+  }
+}
+
+export function makeBlock(
+  node: VNodeCall,
+  { helper, removeHelper, inSSR }: TransformContext
+) {
+  if (!node.isBlock) {
+    node.isBlock = true
+    removeHelper(getVNodeHelper(inSSR, node.isComponent))
+    helper(OPEN_BLOCK)
+    helper(getVNodeBlockHelper(inSSR, node.isComponent))
   }
 }
