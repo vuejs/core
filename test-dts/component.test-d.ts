@@ -159,6 +159,7 @@ describe('object props', () => {
           setupC: {
             a: ref(2)
           },
+          setupD: undefined as Ref<number> | undefined,
           setupProps: props
         }
       }
@@ -190,7 +191,7 @@ describe('object props', () => {
     expectType<Number>(rawBindings.setupA)
     expectType<Ref<Number>>(rawBindings.setupB)
     expectType<Ref<Number>>(rawBindings.setupC.a)
-    expectType<Number>(rawBindings.setupA)
+    expectType<Ref<Number> | undefined>(rawBindings.setupD)
 
     // raw bindings props
     expectType<ExpectedProps['a']>(rawBindings.setupProps.a)
@@ -215,7 +216,7 @@ describe('object props', () => {
     expectType<Number>(setup.setupA)
     expectType<Number>(setup.setupB)
     expectType<Ref<Number>>(setup.setupC.a)
-    expectType<Number>(setup.setupA)
+    expectType<number | undefined>(setup.setupD)
 
     // raw bindings props
     expectType<ExpectedProps['a']>(setup.setupProps.a)
@@ -239,6 +240,7 @@ describe('object props', () => {
     // instance
     const instance = new MyComponent()
     expectType<number>(instance.setupA)
+    expectType<number | undefined>(instance.setupD)
     // @ts-expect-error
     instance.notExist
   })
