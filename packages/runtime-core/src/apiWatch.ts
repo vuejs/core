@@ -259,7 +259,7 @@ function doWatch(
     } else if (immediate) {
       callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
         getter(),
-        undefined,
+        isMultiSource ? [] : undefined,
         onInvalidate
       ])
     }
