@@ -61,7 +61,8 @@ export interface ParserOptions
    */
   decodeEntities?: (rawText: string, asAttr: boolean) => string
   /**
-   * Keep comments in the templates AST, even in production
+   * Whether to keep comments in the templates AST.
+   * This defaults to `true` in development and `false` in production builds.
    */
   comments?: boolean
 }

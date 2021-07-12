@@ -77,7 +77,7 @@ export const defaultParserOptions: MergedParserOptions = {
     rawText.replace(decodeRE, (_, p1) => decodeMap[p1]),
   onError: defaultOnError,
   onWarn: defaultOnWarn,
-  comments: false
+  comments: __DEV__
 }
 
 export const enum TextModes {
@@ -118,9 +118,14 @@ function createParserContext(
   rawOptions: ParserOptions
 ): ParserContext {
   const options = extend({}, defaultParserOptions)
-  for (const key in rawOptions) {
+
+  let key: keyof ParserOptions
+  for (key in rawOptions) {
     // @ts-ignore
-    options[key] = rawOptions[key] || defaultParserOptions[key]
+    options[key] =
+      rawOptions[key] === undefined
+        ? defaultParserOptions[key]
+        : rawOptions[key]
   }
   return {
     options,
@@ -282,12 +287,8 @@ function parseChildren(
           node.content = node.content.replace(/[\t\r\n\f ]+/g, ' ')
         }
       }
-      // also remove comment nodes in prod by default
-      if (
-        !__DEV__ &&
-        node.type === NodeTypes.COMMENT &&
-        !context.options.comments
-      ) {
+      // Remove comment nodes if desired by configuration.
+      else if (node.type === NodeTypes.COMMENT && !context.options.comments) {
         removedWhitespace = true
         nodes[i] = null as any
       }
