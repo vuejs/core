@@ -136,11 +136,6 @@ export interface VNode<
    */
   [ReactiveFlags.SKIP]: true
 
-  /**
-   * @internal __COMPAT__ only
-   */
-  isCompatRoot?: true
-
   type: VNodeTypes
   props: (VNodeProps & ExtraProps) | null
   key: string | number | null
@@ -155,6 +150,7 @@ export interface VNode<
    * - Slot fragment vnodes with :slotted SFC styles.
    * - Component vnodes (during patch/hydration) so that its root node can
    *   inherit the component's slotScopeIds
+   * @internal
    */
   slotScopeIds: string[] | null
   children: VNodeNormalizedChildren
@@ -167,24 +163,50 @@ export interface VNode<
   anchor: HostNode | null // fragment anchor
   target: HostElement | null // teleport target
   targetAnchor: HostNode | null // teleport target anchor
-  staticCount?: number // number of elements contained in a static vnode
+  /**
+   * number of elements contained in a static vnode
+   * @internal
+   */
+  staticCount: number
 
   // suspense
   suspense: SuspenseBoundary | null
+  /**
+   * @internal
+   */
   ssContent: VNode | null
+  /**
+   * @internal
+   */
   ssFallback: VNode | null
 
   // optimization only
   shapeFlag: number
   patchFlag: number
+  /**
+   * @internal
+   */
   dynamicProps: string[] | null
+  /**
+   * @internal
+   */
   dynamicChildren: VNode[] | null
 
   // application root node only
   appContext: AppContext | null
 
-  // v-for memo
+  /**
+   * @internal attached by v-memo
+   */
   memo?: any[]
+  /**
+   * @internal __COMPAT__ only
+   */
+  isCompatRoot?: true
+  /**
+   * @internal custom element interception hook
+   */
+  ce?: (instance: ComponentInternalInstance) => void
 }
 
 // Since v-if and v-for are the two possible ways node structure can dynamically
