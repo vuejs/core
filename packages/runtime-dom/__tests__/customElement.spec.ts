@@ -99,13 +99,66 @@ describe('defineCustomElement', () => {
       container.appendChild(e)
       expect(e.shadowRoot!.innerHTML).toBe('<div>one</div><div>two</div>')
 
+      // reflect
+      // should reflect primitive value
+      expect(e.getAttribute('foo')).toBe('one')
+      // should not reflect rich data
+      expect(e.hasAttribute('bar')).toBe(false)
+
       e.foo = 'three'
       await nextTick()
       expect(e.shadowRoot!.innerHTML).toBe('<div>three</div><div>two</div>')
+      expect(e.getAttribute('foo')).toBe('three')
+
+      e.foo = null
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe('<div></div><div>two</div>')
+      expect(e.hasAttribute('foo')).toBe(false)
 
       e.bazQux = 'four'
       await nextTick()
-      expect(e.shadowRoot!.innerHTML).toBe('<div>three</div><div>four</div>')
+      expect(e.shadowRoot!.innerHTML).toBe('<div></div><div>four</div>')
+      expect(e.getAttribute('baz-qux')).toBe('four')
+    })
+
+    test('attribute -> prop type casting', async () => {
+      const E = defineCustomElement({
+        props: {
+          foo: Number,
+          bar: Boolean
+        },
+        render() {
+          return [this.foo, typeof this.foo, this.bar, typeof this.bar].join(
+            ' '
+          )
+        }
+      })
+      customElements.define('my-el-props-cast', E)
+      container.innerHTML = `<my-el-props-cast foo="1"></my-el-props-cast>`
+      const e = container.childNodes[0] as VueElement
+      expect(e.shadowRoot!.innerHTML).toBe(`1 number false boolean`)
+
+      e.setAttribute('bar', '')
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe(`1 number true boolean`)
+
+      e.setAttribute('foo', '2e1')
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe(`20 number true boolean`)
+    })
+
+    test('handling properties set before upgrading', () => {
+      const E = defineCustomElement({
+        props: ['foo'],
+        render() {
+          return `foo: ${this.foo}`
+        }
+      })
+      const el = document.createElement('my-el-upgrade') as any
+      el.foo = 'hello'
+      container.appendChild(el)
+      customElements.define('my-el-upgrade', E)
+      expect(el.shadowRoot.innerHTML).toBe(`foo: hello`)
     })
   })
 

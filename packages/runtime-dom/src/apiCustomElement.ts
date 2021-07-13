@@ -20,7 +20,7 @@ import {
   nextTick,
   warn
 } from '@vue/runtime-core'
-import { camelize, hyphenate, isArray } from '@vue/shared'
+import { camelize, extend, hyphenate, isArray, toNumber } from '@vue/shared'
 import { hydrate, render } from '.'
 
 type VueElementConstructor<P = {}> = {
@@ -134,7 +134,7 @@ export function defineCustomElement(
       return attrKeys
     }
     constructor() {
-      super(Comp, attrKeys, hydate)
+      super(Comp, attrKeys, propKeys, hydate)
     }
   }
 
@@ -173,12 +173,13 @@ export class VueElement extends HTMLElement {
 
   constructor(
     private _def: Component,
-    private _attrs: string[],
+    private _attrKeys: string[],
+    private _propKeys: string[],
     hydrate?: RootHydrateFunction
   ) {
     super()
     if (this.shadowRoot && hydrate) {
-      hydrate(this._initVNode(), this.shadowRoot)
+      hydrate(this._createVNode(), this.shadowRoot)
     } else {
       if (__DEV__ && this.shadowRoot) {
         warn(
@@ -191,15 +192,23 @@ export class VueElement extends HTMLElement {
   }
 
   attributeChangedCallback(name: string, _oldValue: string, newValue: string) {
-    if (this._attrs.includes(name)) {
-      this._setProp(camelize(name), newValue)
+    if (this._attrKeys.includes(name)) {
+      this._setProp(camelize(name), toNumber(newValue), false)
     }
   }
 
   connectedCallback() {
     this._connected = true
     if (!this._instance) {
-      render(this._initVNode(), this.shadowRoot!)
+      // check if there are props set pre-upgrade
+      for (const key of this._propKeys) {
+        if (this.hasOwnProperty(key)) {
+          const value = (this as any)[key]
+          delete (this as any)[key]
+          this._setProp(key, value)
+        }
+      }
+      render(this._createVNode(), this.shadowRoot!)
     }
   }
 
@@ -213,41 +222,61 @@ export class VueElement extends HTMLElement {
     })
   }
 
+  /**
+   * @internal
+   */
   protected _getProp(key: string) {
     return this._props[key]
   }
 
-  protected _setProp(key: string, val: any) {
-    const oldValue = this._props[key]
-    this._props[key] = val
-    if (this._instance && val !== oldValue) {
-      this._instance.props[key] = val
+  /**
+   * @internal
+   */
+  protected _setProp(key: string, val: any, shouldReflect = true) {
+    if (val !== this._props[key]) {
+      this._props[key] = val
+      if (this._instance) {
+        render(this._createVNode(), this.shadowRoot!)
+      }
+      // reflect
+      if (shouldReflect) {
+        if (val === true) {
+          this.setAttribute(hyphenate(key), '')
+        } else if (typeof val === 'string' || typeof val === 'number') {
+          this.setAttribute(hyphenate(key), val + '')
+        } else if (!val) {
+          this.removeAttribute(hyphenate(key))
+        }
+      }
     }
   }
 
-  protected _initVNode(): VNode<any, any> {
-    const vnode = createVNode(this._def, this._props)
-    vnode.ce = instance => {
-      this._instance = instance
-      instance.isCE = true
+  private _createVNode(): VNode<any, any> {
+    const vnode = createVNode(this._def, extend({}, this._props))
+    if (!this._instance) {
+      vnode.ce = instance => {
+        this._instance = instance
+        instance.isCE = true
 
-      // intercept emit
-      instance.emit = (event: string, ...args: any[]) => {
-        this.dispatchEvent(
-          new CustomEvent(event, {
-            detail: args
-          })
-        )
-      }
+        // intercept emit
+        instance.emit = (event: string, ...args: any[]) => {
+          this.dispatchEvent(
+            new CustomEvent(event, {
+              detail: args
+            })
+          )
+        }
 
-      // locate nearest Vue custom element parent for provide/inject
-      let parent: Node | null = this
-      while (
-        (parent = parent && (parent.parentNode || (parent as ShadowRoot).host))
-      ) {
-        if (parent instanceof VueElement) {
-          instance.parent = parent._instance
-          break
+        // locate nearest Vue custom element parent for provide/inject
+        let parent: Node | null = this
+        while (
+          (parent =
+            parent && (parent.parentNode || (parent as ShadowRoot).host))
+        ) {
+          if (parent instanceof VueElement) {
+            instance.parent = parent._instance
+            break
+          }
         }
       }
     }
