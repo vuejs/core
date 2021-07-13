@@ -403,6 +403,18 @@ describe('compiler: transform v-model', () => {
     ).not.toBe(NodeTypes.JS_CACHE_EXPRESSION)
   })
 
+  test('should not cache update handler if it inside v-once', () => {
+    const root = parseWithVModel(
+      '<div v-once><input v-model="foo" /></div>',
+      {
+        prefixIdentifiers: true,
+        cacheHandlers: true
+      }
+    )
+    expect(root.cached).not.toBe(2)
+    expect(root.cached).toBe(1)
+  })
+
   test('should mark update handler dynamic if it refers slot scope variables', () => {
     const root = parseWithVModel(
       '<Comp v-slot="{ foo }"><input v-model="foo.bar"/></Comp>',
