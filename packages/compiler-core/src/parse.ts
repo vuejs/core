@@ -772,14 +772,19 @@ function parseAttribute(
   }
   const loc = getSelection(context, start)
 
-  if (!context.inVPre && /^(v-|:|@|#)/.test(name)) {
-    const match = /(?:^v-([a-z0-9-]+))?(?:(?::|^@|^#)(\[[^\]]+\]|[^\.]+))?(.+)?$/i.exec(
+  if (!context.inVPre && /^(v-|:|\.|@|#)/.test(name)) {
+    const match = /(?:^v-([a-z0-9-]+))?(?:(?::|^\.|^@|^#)(\[[^\]]+\]|[^\.]+))?(.+)?$/i.exec(
       name
     )!
 
+    let isPropShorthand = startsWith(name, '.')
     let dirName =
       match[1] ||
-      (startsWith(name, ':') ? 'bind' : startsWith(name, '@') ? 'on' : 'slot')
+      (isPropShorthand || startsWith(name, ':')
+        ? 'bind'
+        : startsWith(name, '@')
+          ? 'on'
+          : 'slot')
     let arg: ExpressionNode | undefined
 
     if (match[2]) {
@@ -835,6 +840,7 @@ function parseAttribute(
     }
 
     const modifiers = match[3] ? match[3].substr(1).split('.') : []
+    if (isPropShorthand) modifiers.push('prop')
 
     // 2.x compat v-bind:foo.sync -> v-model:foo
     if (__COMPAT__ && dirName === 'bind' && arg) {

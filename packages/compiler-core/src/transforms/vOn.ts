@@ -163,5 +163,7 @@ export const transformOn: DirectiveTransform = (
     ret.props[0].value = context.cache(ret.props[0].value)
   }
 
+  // mark the key as handler for props normalization check
+  ret.props.forEach(p => (p.key.isHandlerKey = true))
   return ret
 }

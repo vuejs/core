@@ -172,22 +172,140 @@ describe('compiler: transform v-bind', () => {
     const node = parseWithVBind(`<div v-bind:[foo(bar)].camel="id"/>`, {
       prefixIdentifiers: true
     })
+    const props = (node.codegenNode as VNodeCall).props as CallExpression
+    expect(props).toMatchObject({
+      type: NodeTypes.JS_CALL_EXPRESSION,
+      callee: NORMALIZE_PROPS,
+      arguments: [
+        {
+          type: NodeTypes.JS_OBJECT_EXPRESSION,
+          properties: [
+            {
+              key: {
+                children: [
+                  `_${helperNameMap[CAMELIZE]}(`,
+                  `(`,
+                  { content: `_ctx.foo` },
+                  `(`,
+                  { content: `_ctx.bar` },
+                  `)`,
+                  `) || ""`,
+                  `)`
+                ]
+              },
+              value: {
+                content: `_ctx.id`,
+                isStatic: false
+              }
+            }
+          ]
+        }
+      ]
+    })
+  })
+
+  test('.prop modifier', () => {
+    const node = parseWithVBind(`<div v-bind:fooBar.prop="id"/>`)
     const props = (node.codegenNode as VNodeCall).props as ObjectExpression
     expect(props.properties[0]).toMatchObject({
       key: {
-        children: [
-          `_${helperNameMap[CAMELIZE]}(`,
-          `(`,
-          { content: `_ctx.foo` },
-          `(`,
-          { content: `_ctx.bar` },
-          `)`,
-          `) || ""`,
-          `)`
-        ]
+        content: `.fooBar`,
+        isStatic: true
       },
       value: {
-        content: `_ctx.id`,
+        content: `id`,
+        isStatic: false
+      }
+    })
+  })
+
+  test('.prop modifier w/ dynamic arg', () => {
+    const node = parseWithVBind(`<div v-bind:[fooBar].prop="id"/>`)
+    const props = (node.codegenNode as VNodeCall).props as CallExpression
+    expect(props).toMatchObject({
+      type: NodeTypes.JS_CALL_EXPRESSION,
+      callee: NORMALIZE_PROPS,
+      arguments: [
+        {
+          type: NodeTypes.JS_OBJECT_EXPRESSION,
+          properties: [
+            {
+              key: {
+                content: '`.${fooBar || ""}`',
+                isStatic: false
+              },
+              value: {
+                content: `id`,
+                isStatic: false
+              }
+            }
+          ]
+        }
+      ]
+    })
+  })
+
+  test('.prop modifier w/ dynamic arg + prefixIdentifiers', () => {
+    const node = parseWithVBind(`<div v-bind:[foo(bar)].prop="id"/>`, {
+      prefixIdentifiers: true
+    })
+    const props = (node.codegenNode as VNodeCall).props as CallExpression
+    expect(props).toMatchObject({
+      type: NodeTypes.JS_CALL_EXPRESSION,
+      callee: NORMALIZE_PROPS,
+      arguments: [
+        {
+          type: NodeTypes.JS_OBJECT_EXPRESSION,
+          properties: [
+            {
+              key: {
+                children: [
+                  `'.' + (`,
+                  `(`,
+                  { content: `_ctx.foo` },
+                  `(`,
+                  { content: `_ctx.bar` },
+                  `)`,
+                  `) || ""`,
+                  `)`
+                ]
+              },
+              value: {
+                content: `_ctx.id`,
+                isStatic: false
+              }
+            }
+          ]
+        }
+      ]
+    })
+  })
+
+  test('.prop modifier (shorthand)', () => {
+    const node = parseWithVBind(`<div .fooBar="id"/>`)
+    const props = (node.codegenNode as VNodeCall).props as ObjectExpression
+    expect(props.properties[0]).toMatchObject({
+      key: {
+        content: `.fooBar`,
+        isStatic: true
+      },
+      value: {
+        content: `id`,
+        isStatic: false
+      }
+    })
+  })
+
+  test('.attr modifier', () => {
+    const node = parseWithVBind(`<div v-bind:foo-bar.attr="id"/>`)
+    const props = (node.codegenNode as VNodeCall).props as ObjectExpression
+    expect(props.properties[0]).toMatchObject({
+      key: {
+        content: `^foo-bar`,
+        isStatic: true
+      },
+      value: {
+        content: `id`,
         isStatic: false
       }
     })

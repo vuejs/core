@@ -221,6 +221,7 @@ export interface SimpleExpressionNode extends Node {
    * the identifiers declared inside the function body.
    */
   identifiers?: string[]
+  isHandlerKey?: boolean
 }
 
 export interface InterpolationNode extends Node {
@@ -243,6 +244,7 @@ export interface CompoundExpressionNode extends Node {
    * the identifiers declared inside the function body.
    */
   identifiers?: string[]
+  isHandlerKey?: boolean
 }
 
 export interface IfNode extends Node {

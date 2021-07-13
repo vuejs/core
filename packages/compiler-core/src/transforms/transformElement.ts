@@ -700,21 +700,26 @@ export function buildProps(
         // but still need to deal with dynamic key binding
         let classKeyIndex = -1
         let styleKeyIndex = -1
-        let dynamicKeyIndex = -1
+        let hasDynamicKey = false
 
         for (let i = 0; i < propsExpression.properties.length; i++) {
-          const p = propsExpression.properties[i]
-          if (p.key.type !== NodeTypes.SIMPLE_EXPRESSION) continue
-          if (!isStaticExp(p.key)) dynamicKeyIndex = i
-          if (isStaticExp(p.key) && p.key.content === 'class') classKeyIndex = i
-          if (isStaticExp(p.key) && p.key.content === 'style') styleKeyIndex = i
+          const key = propsExpression.properties[i].key
+          if (isStaticExp(key)) {
+            if (key.content === 'class') {
+              classKeyIndex = i
+            } else if (key.content === 'style') {
+              styleKeyIndex = i
+            }
+          } else if (!key.isHandlerKey) {
+            hasDynamicKey = true
+          }
         }
 
         const classProp = propsExpression.properties[classKeyIndex]
         const styleProp = propsExpression.properties[styleKeyIndex]
 
         // no dynamic key
-        if (dynamicKeyIndex === -1) {
+        if (!hasDynamicKey) {
           if (classProp && !isStaticExp(classProp.value)) {
             classProp.value = createCallExpression(
               context.helper(NORMALIZE_CLASS),
