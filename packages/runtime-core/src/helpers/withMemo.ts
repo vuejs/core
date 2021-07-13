@@ -2,7 +2,7 @@ import { currentBlock, isBlockTreeEnabled, VNode } from '../vnode'
 
 export function withMemo(
   memo: any[],
-  render: () => VNode,
+  render: () => VNode<any, any>,
   cache: any[],
   index: number
 ) {
