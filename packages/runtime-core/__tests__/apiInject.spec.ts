@@ -310,6 +310,30 @@ describe('api: provide/inject', () => {
     expect(`injection "foo" not found.`).toHaveBeenWarned()
   })
 
+  it('should warn unfound w/ injectionKey is undefined', () => {
+    const Provider = {
+      setup() {
+        return () => h(Middle)
+      }
+    }
+
+    const Middle = { render: () => h(Consumer) }
+
+    const Consumer = {
+      setup() {
+        // The emulation does not use TypeScript
+        const foo = inject((undefined as unknown) as string)
+        expect(foo).toBeUndefined()
+        return () => foo
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Provider), root)
+    expect(serialize(root)).toBe(`<div><!----></div>`)
+    expect(`injection "undefined" not found.`).toHaveBeenWarned()
+  })
+
   it('should not warn when default value is undefined', () => {
     const Provider = {
       setup() {
