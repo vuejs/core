@@ -37,12 +37,13 @@ export const transformBind: DirectiveTransform = (dir, _node, context) => {
     }
   }
 
-  if (modifiers.includes('prop')) {
-    injectPrefix(arg, '.')
-  }
-
-  if (modifiers.includes('attr')) {
-    injectPrefix(arg, '^')
+  if (!context.inSSR) {
+    if (modifiers.includes('prop')) {
+      injectPrefix(arg, '.')
+    }
+    if (modifiers.includes('attr')) {
+      injectPrefix(arg, '^')
+    }
   }
 
   if (
