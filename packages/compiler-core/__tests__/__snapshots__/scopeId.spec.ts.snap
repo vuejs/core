@@ -24,7 +24,7 @@ export function render(_ctx, _cache) {
   const _component_Child = _resolveComponent(\\"Child\\")
 
   return (_openBlock(), _createBlock(_component_Child, null, {
-    default: _withId(() => [
+    default: _withCtx(() => [
       _createElementVNode(\\"div\\")
     ]),
     _: 1 /* STABLE */
@@ -42,7 +42,7 @@ export function render(_ctx, _cache) {
     (_ctx.ok)
       ? {
           name: \\"foo\\",
-          fn: _withId(() => [
+          fn: _withCtx(() => [
             _createElementVNode(\\"div\\")
           ])
         }
@@ -50,7 +50,7 @@ export function render(_ctx, _cache) {
     _renderList(_ctx.list, (i) => {
       return {
         name: i,
-        fn: _withId(() => [
+        fn: _withCtx(() => [
           _createElementVNode(\\"div\\")
         ])
       }
@@ -66,10 +66,10 @@ export function render(_ctx, _cache) {
   const _component_Child = _resolveComponent(\\"Child\\")
 
   return (_openBlock(), _createBlock(_component_Child, null, {
-    foo: _withId(({ msg }) => [
+    foo: _withCtx(({ msg }) => [
       _createTextVNode(_toDisplayString(msg), 1 /* TEXT */)
     ]),
-    bar: _withId(() => [
+    bar: _withCtx(() => [
       _createElementVNode(\\"div\\")
     ]),
     _: 1 /* STABLE */

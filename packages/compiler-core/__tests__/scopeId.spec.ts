@@ -20,7 +20,7 @@ describe('scopeId compiler support', () => {
       mode: 'module',
       scopeId: 'test'
     })
-    expect(code).toMatch(`default: _withId(() => [`)
+    expect(code).toMatch(`default: _withCtx(() => [`)
     expect(code).toMatchSnapshot()
   })
 
@@ -36,8 +36,8 @@ describe('scopeId compiler support', () => {
         scopeId: 'test'
       }
     )
-    expect(code).toMatch(`foo: _withId(({ msg }) => [`)
-    expect(code).toMatch(`bar: _withId(() => [`)
+    expect(code).toMatch(`foo: _withCtx(({ msg }) => [`)
+    expect(code).toMatch(`bar: _withCtx(() => [`)
     expect(code).toMatchSnapshot()
   })
 
@@ -53,8 +53,8 @@ describe('scopeId compiler support', () => {
         scopeId: 'test'
       }
     )
-    expect(code).toMatch(/name: "foo",\s+fn: _withId\(/)
-    expect(code).toMatch(/name: i,\s+fn: _withId\(/)
+    expect(code).toMatch(/name: "foo",\s+fn: _withCtx\(/)
+    expect(code).toMatch(/name: i,\s+fn: _withCtx\(/)
     expect(code).toMatchSnapshot()
   })
 

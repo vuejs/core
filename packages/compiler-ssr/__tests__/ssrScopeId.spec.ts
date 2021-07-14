@@ -34,7 +34,7 @@ describe('ssr: scopeId', () => {
         const _component_foo = _resolveComponent(\\"foo\\")
 
         _push(_ssrRenderComponent(_component_foo, _attrs, {
-          default: _withId((_, _push, _parent, _scopeId) => {
+          default: _withCtx((_, _push, _parent, _scopeId) => {
             if (_push) {
               _push(\`foo\`)
             } else {
@@ -63,7 +63,7 @@ describe('ssr: scopeId', () => {
         const _component_foo = _resolveComponent(\\"foo\\")
 
         _push(_ssrRenderComponent(_component_foo, _attrs, {
-          default: _withId((_, _push, _parent, _scopeId) => {
+          default: _withCtx((_, _push, _parent, _scopeId) => {
             if (_push) {
               _push(\`<span data-v-xxxxxxx\${_scopeId}>hello</span>\`)
             } else {
@@ -93,11 +93,11 @@ describe('ssr: scopeId', () => {
         const _component_bar = _resolveComponent(\\"bar\\")
 
         _push(_ssrRenderComponent(_component_foo, _attrs, {
-          default: _withId((_, _push, _parent, _scopeId) => {
+          default: _withCtx((_, _push, _parent, _scopeId) => {
             if (_push) {
               _push(\`<span data-v-xxxxxxx\${_scopeId}>hello</span>\`)
               _push(_ssrRenderComponent(_component_bar, null, {
-                default: _withId((_, _push, _parent, _scopeId) => {
+                default: _withCtx((_, _push, _parent, _scopeId) => {
                   if (_push) {
                     _push(\`<span data-v-xxxxxxx\${_scopeId}></span>\`)
                   } else {
@@ -112,7 +112,7 @@ describe('ssr: scopeId', () => {
               return [
                 _createVNode(\\"span\\", null, \\"hello\\"),
                 _createVNode(_component_bar, null, {
-                  default: _withId(() => [
+                  default: _withCtx(() => [
                     _createVNode(\\"span\\")
                   ]),
                   _: 1 /* STABLE */

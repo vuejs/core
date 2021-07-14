@@ -58,7 +58,6 @@ import {
 import { ImportItem } from './transform'
 
 const PURE_ANNOTATION = `/*#__PURE__*/`
-const WITH_ID = `_withId`
 
 type CodegenNode = TemplateChildNode | JSChildNode | SSRCodegenNode
 
@@ -821,15 +820,11 @@ function genFunctionExpression(
   node: FunctionExpression,
   context: CodegenContext
 ) {
-  const { push, indent, deindent, scopeId, mode } = context
+  const { push, indent, deindent } = context
   const { params, returns, body, newline, isSlot } = node
-  // slot functions also need to push scopeId before rendering its content
-  const genScopeId =
-    !__BROWSER__ && isSlot && scopeId != null && mode !== 'function'
-
   if (isSlot) {
     // wrap slot functions with owner context
-    push(genScopeId ? `${WITH_ID}(` : `_${helperNameMap[WITH_CTX]}(`)
+    push(`_${helperNameMap[WITH_CTX]}(`)
   }
   push(`(`, node)
   if (isArray(params)) {
