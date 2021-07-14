@@ -394,7 +394,7 @@ function createBaseVNode(
   children: unknown = null,
   patchFlag = 0,
   dynamicProps: string[] | null = null,
-  shapeFlag = ShapeFlags.ELEMENT,
+  shapeFlag = type === Fragment ? 0 : ShapeFlags.ELEMENT,
   isBlockNode = false,
   needFullChildrenNormalization = false
 ) {
