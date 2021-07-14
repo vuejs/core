@@ -123,9 +123,7 @@ export function compileScript(
   const enableRefSugar = !!options.refSugar
   const parseOnly = !!options.parseOnly
 
-  if (scriptSetup) {
-    !parseOnly && warnExperimental(`<script setup>`, 227)
-  } else if (parseOnly) {
+  if (parseOnly && !scriptSetup) {
     // in parse-only mode, construct a fake script setup so we still perform
     // the full parse logic.
     scriptSetup = {
