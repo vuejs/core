@@ -552,8 +552,8 @@ export function validateCompatConfig(
           warn(
             `Deprecation config "${key}" is compiler-specific and you are ` +
               `running a runtime-only build of Vue. This deprecation should be ` +
-              `configured via compiler options in your build setup instead.`
-            // TODO link to migration build docs on build setup
+              `configured via compiler options in your build setup instead.\n` +
+              `Details: https://v3.vuejs.org/guide/migration/migration-build.html`
           )
         }
       } else {

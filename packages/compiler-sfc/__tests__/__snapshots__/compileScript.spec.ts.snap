@@ -326,7 +326,6 @@ return (_ctx, _cache) => {
 
 exports[`SFC compile <script setup> inlineTemplate mode should not wrap render fn with withId when having scoped styles 1`] = `
 "import { toDisplayString as _toDisplayString, openBlock as _openBlock, createElementBlock as _createElementBlock, withScopeId as _withScopeId } from \\"vue\\"
-const _withId = /*#__PURE__*/_withScopeId(\\"data-v-xxxxxxxx\\")
 
 
 export default {

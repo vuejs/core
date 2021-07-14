@@ -476,32 +476,6 @@ defineExpose({ foo: 123 })
       expect(content).toMatch(`ssrInterpolate`)
       assertCode(content)
     })
-
-    // _withId is only generated for backwards compat and is a noop when called
-    // in module scope.
-    // when inside setup(), currentInstance will be non-null and _withId will
-    // no longer be noop and cause scopeId errors.
-    // TODO: this test should no longer be necessary if we remove _withId
-    // codegen in 3.1
-    test('should not wrap render fn with withId when having scoped styles', async () => {
-      const { content } = compile(
-        `
-        <script setup>
-        const msg = 1
-        </script>
-        <template><h1>{{ msg }}</h1></template>
-        <style scoped>
-        h1 { color: red; }
-        </style>
-        `,
-        {
-          inlineTemplate: true
-        }
-      )
-      expect(content).toMatch(`return (_ctx, _cache`)
-      expect(content).not.toMatch(`_withId(`)
-      assertCode(content)
-    })
   })
 
   describe('with TypeScript', () => {
