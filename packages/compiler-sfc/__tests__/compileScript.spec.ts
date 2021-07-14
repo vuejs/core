@@ -59,25 +59,6 @@ const bar = 1
   props: propsModel,`)
   })
 
-  test('defineEmit() (deprecated)', () => {
-    const { content, bindings } = compile(`
-<script setup>
-const myEmit = defineEmit(['foo', 'bar'])
-</script>
-  `)
-    assertCode(content)
-    expect(bindings).toStrictEqual({
-      myEmit: BindingTypes.SETUP_CONST
-    })
-    // should remove defineOptions import and call
-    expect(content).not.toMatch(/defineEmits?/)
-    // should generate correct setup signature
-    expect(content).toMatch(`setup(__props, { expose, emit: myEmit }) {`)
-    // should include context options in default export
-    expect(content).toMatch(`export default {
-  emits: ['foo', 'bar'],`)
-  })
-
   test('defineEmits()', () => {
     const { content, bindings } = compile(`
 <script setup>
@@ -204,7 +185,7 @@ defineExpose({ foo: 123 })
         `
       <script setup>
       import { ref } from 'vue'
-      ref: foo = 1
+      let foo = $ref(1)
       </script>
       `,
         { refSugar: true }
@@ -848,7 +829,7 @@ const emit = defineEmits(['a', 'b'])
 
     test('ref', () => {
       assertAwaitDetection(
-        `ref: a = 1 + (await foo)`,
+        `let a = $ref(1 + (await foo))`,
         `1 + ((([__temp,__restore]=_withAsyncContext(()=>(foo))),__temp=await __temp,__restore(),__temp))`
       )
     })

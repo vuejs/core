@@ -48,7 +48,7 @@ import { rewriteDefault } from './rewriteDefault'
 
 // Special compiler macros
 const DEFINE_PROPS = 'defineProps'
-const DEFINE_EMIT = 'defineEmit'
+const DEFINE_EMITS = 'defineEmits'
 const DEFINE_EXPOSE = 'defineExpose'
 const WITH_DEFAULTS = 'withDefaults'
 
@@ -56,9 +56,6 @@ const $REF = `$ref`
 const $COMPUTED = `$computed`
 const $FROM_REFS = `$fromRefs`
 const $RAW = `$raw`
-
-// deprecated
-const DEFINE_EMITS = 'defineEmits'
 
 export interface SFCScriptCompileOptions {
   /**
@@ -387,7 +384,7 @@ export function compileScript(
   }
 
   function processDefineEmits(node: Node): boolean {
-    if (!isCallOf(node, c => c === DEFINE_EMIT || c === DEFINE_EMITS)) {
+    if (!isCallOf(node, DEFINE_EMITS)) {
       return false
     }
     if (hasDefineEmitCall) {
@@ -398,7 +395,7 @@ export function compileScript(
     if (node.typeParameters) {
       if (emitsRuntimeDecl) {
         error(
-          `${DEFINE_EMIT}() cannot accept both type and non-type arguments ` +
+          `${DEFINE_EMITS}() cannot accept both type and non-type arguments ` +
             `at the same time. Use one or the other.`,
           node
         )
@@ -873,7 +870,6 @@ export function compileScript(
         if (
           source === 'vue' &&
           (imported === DEFINE_PROPS ||
-            imported === DEFINE_EMIT ||
             imported === DEFINE_EMITS ||
             imported === DEFINE_EXPOSE)
         ) {
@@ -1414,11 +1410,7 @@ function walkDeclaration(
         isConst &&
         isCallOf(
           init,
-          c =>
-            c === DEFINE_PROPS ||
-            c === DEFINE_EMIT ||
-            c === DEFINE_EMITS ||
-            c === WITH_DEFAULTS
+          c => c === DEFINE_PROPS || c === DEFINE_EMITS || c === WITH_DEFAULTS
         )
       )
       if (id.type === 'Identifier') {

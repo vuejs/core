@@ -33,20 +33,6 @@ return { x }
       export const n = 1"
 `;
 
-exports[`SFC compile <script setup> defineEmit() (deprecated) 1`] = `
-"export default {
-  emits: ['foo', 'bar'],
-  setup(__props, { expose, emit: myEmit }) {
-  expose()
-
-
-
-return { myEmit }
-}
-
-}"
-`;
-
 exports[`SFC compile <script setup> defineEmits() 1`] = `
 "export default {
   emits: ['foo', 'bar'],
@@ -195,7 +181,7 @@ export default {
   setup(__props, { expose }) {
   expose()
 
-      const foo = _ref(1)
+      let foo = _ref(1)
       
 return { foo, ref }
 }
@@ -318,23 +304,6 @@ return (_ctx, _cache) => {
     _createVNode(ChildComp),
     _createVNode(SomeOtherComp)
   ], 64 /* STABLE_FRAGMENT */))
-}
-}
-
-}"
-`;
-
-exports[`SFC compile <script setup> inlineTemplate mode should not wrap render fn with withId when having scoped styles 1`] = `
-"import { toDisplayString as _toDisplayString, openBlock as _openBlock, createElementBlock as _createElementBlock, withScopeId as _withScopeId } from \\"vue\\"
-
-
-export default {
-  setup(__props) {
-
-        const msg = 1
-        
-return (_ctx, _cache) => {
-  return (_openBlock(), _createElementBlock(\\"h1\\", null, _toDisplayString(msg)))
 }
 }
 
