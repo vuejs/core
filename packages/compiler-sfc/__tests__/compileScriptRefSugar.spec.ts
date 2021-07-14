@@ -6,24 +6,24 @@ describe('<script setup> ref sugar', () => {
     return compile(src, { refSugar: true })
   }
 
-  test('convert ref declarations', () => {
+  test('$ref declarations', () => {
     const { content, bindings } = compileWithRefSugar(`<script setup>
-    ref: foo
-    ref: a = 1
-    ref: b = {
+    let foo = $ref()
+    let a = $ref(1)
+    let b = $ref({
       count: 0
-    }
+    })
     let c = () => {}
     let d
     </script>`)
     expect(content).toMatch(`import { ref as _ref } from 'vue'`)
-    expect(content).not.toMatch(`ref: foo`)
-    expect(content).not.toMatch(`ref: a`)
-    expect(content).not.toMatch(`ref: b`)
-    expect(content).toMatch(`const foo = _ref()`)
-    expect(content).toMatch(`const a = _ref(1)`)
+    expect(content).not.toMatch(`$ref()`)
+    expect(content).not.toMatch(`$ref(1)`)
+    expect(content).not.toMatch(`$ref({`)
+    expect(content).toMatch(`let foo = _ref()`)
+    expect(content).toMatch(`let a = _ref(1)`)
     expect(content).toMatch(`
-    const b = _ref({
+    let b = _ref({
       count: 0
     })
     `)
@@ -40,14 +40,14 @@ describe('<script setup> ref sugar', () => {
     })
   })
 
-  test('multi ref declarations', () => {
+  test('multi $ref declarations', () => {
     const { content, bindings } = compileWithRefSugar(`<script setup>
-    ref: a = 1, b = 2, c = {
+    let a = $ref(1), b = $ref(2), c = $ref({
       count: 0
-    }
+    })
     </script>`)
     expect(content).toMatch(`
-    const a = _ref(1), b = _ref(2), c = _ref({
+    let a = _ref(1), b = _ref(2), c = _ref({
       count: 0
     })
     `)
@@ -60,19 +60,38 @@ describe('<script setup> ref sugar', () => {
     })
   })
 
-  test('should not convert non ref labels', () => {
-    const { content } = compileWithRefSugar(`<script setup>
-    foo: a = 1, b = 2, c = {
-      count: 0
-    }
+  test('$computed declaration', () => {
+    const { content, bindings } = compileWithRefSugar(`<script setup>
+    const a = $computed(() => 1)
     </script>`)
-    expect(content).toMatch(`foo: a = 1, b = 2`)
+    expect(content).toMatch(`
+    const a = _computed(() => 1)
+    `)
+    expect(content).toMatch(`return { a }`)
     assertCode(content)
+    expect(bindings).toStrictEqual({
+      a: BindingTypes.SETUP_REF
+    })
+  })
+
+  test('mixing $ref & $computed declarations', () => {
+    const { content, bindings } = compileWithRefSugar(`<script setup>
+    let a = $ref(1), b = $computed(() => a + 1)
+    </script>`)
+    expect(content).toMatch(`
+    let a = _ref(1), b = _computed(() => a.value + 1)
+    `)
+    expect(content).toMatch(`return { a, b }`)
+    assertCode(content)
+    expect(bindings).toStrictEqual({
+      a: BindingTypes.SETUP_REF,
+      b: BindingTypes.SETUP_REF
+    })
   })
 
   test('accessing ref binding', () => {
     const { content } = compileWithRefSugar(`<script setup>
-    ref: a = 1
+    let a = $ref(1)
     console.log(a)
     function get() {
       return a + 1
@@ -85,7 +104,7 @@ describe('<script setup> ref sugar', () => {
 
   test('cases that should not append .value', () => {
     const { content } = compileWithRefSugar(`<script setup>
-    ref: a = 1
+    let a = $ref(1)
     console.log(b.a)
     function get(a) {
       return a + 1
@@ -96,8 +115,8 @@ describe('<script setup> ref sugar', () => {
 
   test('mutating ref binding', () => {
     const { content } = compileWithRefSugar(`<script setup>
-    ref: a = 1
-    ref: b = { count: 0 }
+    let a = $ref(1)
+    let b = $ref({ count: 0 })
     function inc() {
       a++
       a = a + 1
@@ -118,7 +137,7 @@ describe('<script setup> ref sugar', () => {
 
   test('using ref binding in property shorthand', () => {
     const { content } = compileWithRefSugar(`<script setup>
-    ref: a = 1
+    let a = $ref(1)
     const b = { a }
     function test() {
       const { a } = b
@@ -133,9 +152,9 @@ describe('<script setup> ref sugar', () => {
   test('should not rewrite scope variable', () => {
     const { content } = compileWithRefSugar(`
     <script setup>
-      ref: a = 1
-      ref: b = 1
-      ref: d = 1
+      let a = $ref(1)
+      let b = $ref(1)
+      let d = $ref(1)
       const e = 1
       function test() {
         const a = 2
@@ -143,8 +162,6 @@ describe('<script setup> ref sugar', () => {
         console.log(b)
         let c = { c: 3 }
         console.log(c)
-        let $d
-        console.log($d)
         console.log(d)
         console.log(e)
       }
@@ -152,7 +169,6 @@ describe('<script setup> ref sugar', () => {
     expect(content).toMatch('console.log(a)')
     expect(content).toMatch('console.log(b.value)')
     expect(content).toMatch('console.log(c)')
-    expect(content).toMatch('console.log($d)')
     expect(content).toMatch('console.log(d.value)')
     expect(content).toMatch('console.log(e)')
     assertCode(content)
@@ -160,14 +176,14 @@ describe('<script setup> ref sugar', () => {
 
   test('object destructure', () => {
     const { content, bindings } = compileWithRefSugar(`<script setup>
-    ref: n = 1, ({ a, b: c, d = 1, e: f = 2, ...g } = useFoo())
-    ref: ({ foo } = useSomthing(() => 1));
+    let n = $ref(1), { a, b: c, d = 1, e: f = 2, ...g } = $fromRefs(useFoo())
+    let { foo } = $fromRefs(useSomthing(() => 1));
     console.log(n, a, c, d, f, g, foo)
     </script>`)
     expect(content).toMatch(
-      `const n = _ref(1), { a: __a, b: __c, d: __d = 1, e: __f = 2, ...__g } = useFoo()`
+      `let n = _ref(1), { a: __a, b: __c, d: __d = 1, e: __f = 2, ...__g } = (useFoo())`
     )
-    expect(content).toMatch(`const { foo: __foo } = useSomthing(() => 1)`)
+    expect(content).toMatch(`let { foo: __foo } = (useSomthing(() => 1))`)
     expect(content).toMatch(`\nconst a = _ref(__a);`)
     expect(content).not.toMatch(`\nconst b = _ref(__b);`)
     expect(content).toMatch(`\nconst c = _ref(__c);`)
@@ -194,11 +210,11 @@ describe('<script setup> ref sugar', () => {
 
   test('array destructure', () => {
     const { content, bindings } = compileWithRefSugar(`<script setup>
-    ref: n = 1, [a, b = 1, ...c] = useFoo()
+    let n = $ref(1), [a, b = 1, ...c] = $fromRefs(useFoo())
     console.log(n, a, b, c)
     </script>`)
     expect(content).toMatch(
-      `const n = _ref(1), [__a, __b = 1, ...__c] = useFoo()`
+      `let n = _ref(1), [__a, __b = 1, ...__c] = (useFoo())`
     )
     expect(content).toMatch(`\nconst a = _ref(__a);`)
     expect(content).toMatch(`\nconst b = _ref(__b);`)
@@ -216,12 +232,12 @@ describe('<script setup> ref sugar', () => {
 
   test('nested destructure', () => {
     const { content, bindings } = compileWithRefSugar(`<script setup>
-    ref: [{ a: { b }}] = useFoo()
-    ref: ({ c: [d, e] } = useBar())
+    let [{ a: { b }}] = $fromRefs(useFoo())
+    let { c: [d, e] } = $fromRefs(useBar())
     console.log(b, d, e)
     </script>`)
-    expect(content).toMatch(`const [{ a: { b: __b }}] = useFoo()`)
-    expect(content).toMatch(`const { c: [__d, __e] } = useBar()`)
+    expect(content).toMatch(`let [{ a: { b: __b }}] = (useFoo())`)
+    expect(content).toMatch(`let { c: [__d, __e] } = (useBar())`)
     expect(content).not.toMatch(`\nconst a = _ref(__a);`)
     expect(content).not.toMatch(`\nconst c = _ref(__c);`)
     expect(content).toMatch(`\nconst b = _ref(__b);`)
@@ -236,13 +252,26 @@ describe('<script setup> ref sugar', () => {
     assertCode(content)
   })
 
+  test('$raw', () => {
+    const { content } = compileWithRefSugar(`<script setup>
+    let a = $ref(1)
+    const b = $raw(a)
+    const c = $raw({ a })
+    callExternal($raw(a))
+    </script>`)
+    expect(content).toMatch(`const b = (a)`)
+    expect(content).toMatch(`const c = ({ a })`)
+    expect(content).toMatch(`callExternal((a))`)
+    assertCode(content)
+  })
+
   //#4062
   test('should not rewrite type identifiers', () => {
     const { content } = compile(
       `
       <script setup lang="ts">
         const props = defineProps<{msg: string; ids?: string[]}>()
-        ref: ids = []
+        let ids = $ref([])
       </script>`,
       {
         refSugar: true
@@ -253,22 +282,44 @@ describe('<script setup> ref sugar', () => {
   })
 
   describe('errors', () => {
-    test('ref: non-assignment expressions', () => {
+    test('non-let $ref declaration', () => {
       expect(() =>
         compile(
           `<script setup>
-        ref: a = 1, foo()
+        const a = $ref(1)
         </script>`,
           { refSugar: true }
         )
-      ).toThrow(`ref: statements can only contain assignment expressions`)
+      ).toThrow(`$ref() bindings can only be declared with let`)
+    })
+
+    test('$ref w/ destructure', () => {
+      expect(() =>
+        compile(
+          `<script setup>
+        let { a } = $ref(1)
+        </script>`,
+          { refSugar: true }
+        )
+      ).toThrow(`$ref() bindings cannot be used with destructuring`)
+    })
+
+    test('$computed w/ destructure', () => {
+      expect(() =>
+        compile(
+          `<script setup>
+        const { a } = $computed(() => 1)
+        </script>`,
+          { refSugar: true }
+        )
+      ).toThrow(`$computed() bindings cannot be used with destructuring`)
     })
 
     test('defineProps/Emit() referencing ref declarations', () => {
       expect(() =>
         compile(
           `<script setup>
-        ref: bar = 1
+        let bar = $ref(1)
         defineProps({
           bar
         })
@@ -280,7 +331,7 @@ describe('<script setup> ref sugar', () => {
       expect(() =>
         compile(
           `<script setup>
-        ref: bar = 1
+        let bar = $ref(1)
         defineEmits({
           bar
         })

@@ -1,5 +1,59 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`<script setup> ref sugar $computed declaration 1`] = `
+"import { computed as _computed } from 'vue'
+
+export default {
+  setup(__props, { expose }) {
+  expose()
+
+    const a = _computed(() => 1)
+    
+return { a }
+}
+
+}"
+`;
+
+exports[`<script setup> ref sugar $raw 1`] = `
+"import { ref as _ref } from 'vue'
+
+export default {
+  setup(__props, { expose }) {
+  expose()
+
+    let a = _ref(1)
+    const b = (a)
+    const c = ({ a })
+    callExternal((a))
+    
+return { a, b, c }
+}
+
+}"
+`;
+
+exports[`<script setup> ref sugar $ref declarations 1`] = `
+"import { ref as _ref } from 'vue'
+
+export default {
+  setup(__props, { expose }) {
+  expose()
+
+    let foo = _ref()
+    let a = _ref(1)
+    let b = _ref({
+      count: 0
+    })
+    let c = () => {}
+    let d
+    
+return { foo, a, b, c, d }
+}
+
+}"
+`;
+
 exports[`<script setup> ref sugar accessing ref binding 1`] = `
 "import { ref as _ref } from 'vue'
 
@@ -7,7 +61,7 @@ export default {
   setup(__props, { expose }) {
   expose()
 
-    const a = _ref(1)
+    let a = _ref(1)
     console.log(a.value)
     function get() {
       return a.value + 1
@@ -26,7 +80,7 @@ export default {
   setup(__props, { expose }) {
   expose()
 
-    const n = _ref(1), [__a, __b = 1, ...__c] = useFoo()
+    let n = _ref(1), [__a, __b = 1, ...__c] = (useFoo())
 const a = _ref(__a);
 const b = _ref(__b);
 const c = _ref(__c);
@@ -38,35 +92,29 @@ return { n, a, b, c }
 }"
 `;
 
-exports[`<script setup> ref sugar convert ref declarations 1`] = `
-"import { ref as _ref } from 'vue'
+exports[`<script setup> ref sugar mixing $ref & $computed declarations 1`] = `
+"import { ref as _ref, computed as _computed } from 'vue'
 
 export default {
   setup(__props, { expose }) {
   expose()
 
-    const foo = _ref()
-    const a = _ref(1)
-    const b = _ref({
-      count: 0
-    })
-    let c = () => {}
-    let d
+    let a = _ref(1), b = _computed(() => a.value + 1)
     
-return { foo, a, b, c, d }
+return { a, b }
 }
 
 }"
 `;
 
-exports[`<script setup> ref sugar multi ref declarations 1`] = `
+exports[`<script setup> ref sugar multi $ref declarations 1`] = `
 "import { ref as _ref } from 'vue'
 
 export default {
   setup(__props, { expose }) {
   expose()
 
-    const a = _ref(1), b = _ref(2), c = _ref({
+    let a = _ref(1), b = _ref(2), c = _ref({
       count: 0
     })
     
@@ -83,8 +131,8 @@ export default {
   setup(__props, { expose }) {
   expose()
 
-    const a = _ref(1)
-    const b = _ref({ count: 0 })
+    let a = _ref(1)
+    let b = _ref({ count: 0 })
     function inc() {
       a.value++
       a.value = a.value + 1
@@ -107,9 +155,9 @@ export default {
   setup(__props, { expose }) {
   expose()
 
-    const [{ a: { b: __b }}] = useFoo()
+    let [{ a: { b: __b }}] = (useFoo())
 const b = _ref(__b);
-    const { c: [__d, __e] } = useBar()
+    let { c: [__d, __e] } = (useBar())
 const d = _ref(__d);
 const e = _ref(__e);
     console.log(b.value, d.value, e.value)
@@ -127,32 +175,17 @@ export default {
   setup(__props, { expose }) {
   expose()
 
-    const n = _ref(1), { a: __a, b: __c, d: __d = 1, e: __f = 2, ...__g } = useFoo()
+    let n = _ref(1), { a: __a, b: __c, d: __d = 1, e: __f = 2, ...__g } = (useFoo())
 const a = _ref(__a);
 const c = _ref(__c);
 const d = _ref(__d);
 const f = _ref(__f);
 const g = _ref(__g);
-    const { foo: __foo } = useSomthing(() => 1);
+    let { foo: __foo } = (useSomthing(() => 1));
 const foo = _ref(__foo);
     console.log(n.value, a.value, c.value, d.value, f.value, g.value, foo.value)
     
 return { n, a, c, d, f, g, foo }
-}
-
-}"
-`;
-
-exports[`<script setup> ref sugar should not convert non ref labels 1`] = `
-"export default {
-  setup(__props, { expose }) {
-  expose()
-
-    foo: a = 1, b = 2, c = {
-      count: 0
-    }
-    
-return {  }
 }
 
 }"
@@ -165,9 +198,9 @@ export default {
   setup(__props, { expose }) {
   expose()
 
-      const a = _ref(1)
-      const b = _ref(1)
-      const d = _ref(1)
+      let a = _ref(1)
+      let b = _ref(1)
+      let d = _ref(1)
       const e = 1
       function test() {
         const a = 2
@@ -175,8 +208,6 @@ export default {
         console.log(b.value)
         let c = { c: 3 }
         console.log(c)
-        let $d
-        console.log($d)
         console.log(d.value)
         console.log(e)
       }
@@ -200,7 +231,7 @@ export default _defineComponent({
 
 const props = __props
         
-        const ids = _ref([])
+        let ids = _ref([])
       
 return { props, ids }
 }
@@ -215,7 +246,7 @@ export default {
   setup(__props, { expose }) {
   expose()
 
-    const a = _ref(1)
+    let a = _ref(1)
     const b = { a: a.value }
     function test() {
       const { a } = b

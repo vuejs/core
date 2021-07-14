@@ -28,12 +28,12 @@ import {
   ObjectProperty,
   ArrayExpression,
   Statement,
-  Expression,
-  LabeledStatement,
   CallExpression,
   RestElement,
   TSInterfaceBody,
-  AwaitExpression
+  AwaitExpression,
+  VariableDeclarator,
+  VariableDeclaration
 } from '@babel/types'
 import { walk } from 'estree-walker'
 import { RawSourceMap } from 'source-map'
@@ -46,10 +46,16 @@ import { compileTemplate, SFCTemplateCompileOptions } from './compileTemplate'
 import { warnExperimental, warnOnce } from './warn'
 import { rewriteDefault } from './rewriteDefault'
 
+// Special compiler macros
 const DEFINE_PROPS = 'defineProps'
 const DEFINE_EMIT = 'defineEmit'
 const DEFINE_EXPOSE = 'defineExpose'
 const WITH_DEFAULTS = 'withDefaults'
+
+const $REF = `$ref`
+const $COMPUTED = `$computed`
+const $FROM_REFS = `$fromRefs`
+const $RAW = `$raw`
 
 // deprecated
 const DEFINE_EMITS = 'defineEmits'
@@ -288,7 +294,7 @@ export function compileScript(
     msg: string,
     node: Node,
     end: number = node.end! + startOffset
-  ) {
+  ): never {
     throw new Error(
       `[@vue/compiler-sfc] ${msg}\n\n${sfc.filename}\n${generateCodeFrame(
         source,
@@ -499,42 +505,67 @@ export function compileScript(
     )
   }
 
-  function processRefExpression(exp: Expression, statement: LabeledStatement) {
-    if (exp.type === 'AssignmentExpression') {
-      const { left, right } = exp
-      if (left.type === 'Identifier') {
-        registerRefBinding(left)
-        s.prependRight(right.start! + startOffset, `${helper('ref')}(`)
-        s.appendLeft(right.end! + startOffset, ')')
-      } else if (left.type === 'ObjectPattern') {
-        // remove wrapping parens
-        for (let i = left.start!; i > 0; i--) {
-          const char = source[i + startOffset]
-          if (char === '(') {
-            s.remove(i + startOffset, i + startOffset + 1)
-            break
-          }
-        }
-        for (let i = right.end!; i > 0; i++) {
-          const char = source[i + startOffset]
-          if (char === ')') {
-            s.remove(i + startOffset, i + startOffset + 1)
-            break
-          }
-        }
-        processRefObjectPattern(left, statement)
-      } else if (left.type === 'ArrayPattern') {
-        processRefArrayPattern(left, statement)
-      }
-    } else if (exp.type === 'SequenceExpression') {
-      // possible multiple declarations
-      // ref: x = 1, y = 2
-      exp.expressions.forEach(e => processRefExpression(e, statement))
-    } else if (exp.type === 'Identifier') {
-      registerRefBinding(exp)
-      s.appendLeft(exp.end! + startOffset, ` = ${helper('ref')}()`)
+  function isRefSugarCall(callee: string) {
+    return callee === $REF || callee === $COMPUTED || callee === $FROM_REFS
+  }
+
+  function processRefSugar(
+    decl: VariableDeclarator,
+    statement: VariableDeclaration
+  ) {
+    if (!isCallOf(decl.init, isRefSugarCall)) {
+      return
+    }
+
+    if (!enableRefSugar) {
+      error(
+        `ref sugar is an experimental proposal and must be explicitly ` +
+          `enabled via @vue/compiler-sfc options.`,
+        // TODO link to RFC details
+        decl.init
+      )
     } else {
-      error(`ref: statements can only contain assignment expressions.`, exp)
+      warnExperimental(`ref sugar`, 0 /* TODO */)
+    }
+
+    const callee = (decl.init.callee as Identifier).name
+    const start = decl.init.start! + startOffset
+    if (callee === $REF) {
+      if (statement.kind !== 'let') {
+        error(`${$REF}() bindings can only be declared with let.`, decl)
+      }
+      if (decl.id.type !== 'Identifier') {
+        error(
+          `${$REF}() bindings cannot be used with destructuring. ` +
+            `If you are trying to destructure from an object of refs, ` +
+            `use \`let { x } = $fromRefs(obj)\`.`,
+          decl.id
+        )
+      }
+      registerRefBinding(decl.id)
+      s.overwrite(start, start + $REF.length, helper('ref'))
+    } else if (callee === $COMPUTED) {
+      if (decl.id.type !== 'Identifier') {
+        error(
+          `${$COMPUTED}() bindings cannot be used with destructuring.`,
+          decl.id
+        )
+      }
+      registerRefBinding(decl.id)
+      s.overwrite(start, start + $COMPUTED.length, helper('computed'))
+    } else if (callee === $FROM_REFS) {
+      if (!decl.id.type.endsWith('Pattern')) {
+        error(
+          `${$FROM_REFS}() declaration must be used with destructure patterns.`,
+          decl
+        )
+      }
+      if (decl.id.type === 'ObjectPattern') {
+        processRefObjectPattern(decl.id, statement)
+      } else if (decl.id.type === 'ArrayPattern') {
+        processRefArrayPattern(decl.id, statement)
+      }
+      s.remove(start, start + callee.length)
     }
   }
 
@@ -551,7 +582,7 @@ export function compileScript(
 
   function processRefObjectPattern(
     pattern: ObjectPattern,
-    statement: LabeledStatement
+    statement: VariableDeclaration
   ) {
     for (const p of pattern.properties) {
       let nameId: Identifier | undefined
@@ -597,7 +628,7 @@ export function compileScript(
 
   function processRefArrayPattern(
     pattern: ArrayPattern,
-    statement: LabeledStatement
+    statement: VariableDeclaration
   ) {
     for (const e of pattern.elements) {
       if (!e) continue
@@ -795,29 +826,18 @@ export function compileScript(
       end++
     }
 
-    // process `ref: x` bindings (convert to refs)
+    // (Dropped) `ref: x` bindings
     if (
       node.type === 'LabeledStatement' &&
       node.label.name === 'ref' &&
       node.body.type === 'ExpressionStatement'
     ) {
-      if (enableRefSugar) {
-        !parseOnly && warnExperimental(`ref: sugar`, 228)
-        s.overwrite(
-          node.label.start! + startOffset,
-          node.body.start! + startOffset,
-          'const '
-        )
-        processRefExpression(node.body.expression, node)
-      } else {
-        error(
-          `ref: sugar now needs to be explicitly enabled via @vitejs/plugin-vue ` +
-            `or vue-loader options:\n` +
-            `- @vitejs/plugin-vue: via \`script.refSugar\`\n` +
-            `- vue-loader: via \`refSugar\` (requires 16.3.0+)`,
-          node
-        )
-      }
+      error(
+        `ref sugar using the label syntax was an experimental proposal and ` +
+          `has been dropped based on community feedback.`,
+        // TODO + ` Please check out the adjusted proposal at ...`,
+        node
+      )
     }
 
     if (node.type === 'ImportDeclaration') {
@@ -909,6 +929,7 @@ export function compileScript(
       for (let i = 0; i < total; i++) {
         const decl = node.declarations[i]
         if (decl.init) {
+          // defineProps / defineEmits
           const isDefineProps =
             processDefineProps(decl.init) || processWithDefaults(decl.init)
           if (isDefineProps) {
@@ -924,7 +945,7 @@ export function compileScript(
               decl.id.end!
             )
           }
-          if (isDefineProps || isDefineEmits)
+          if (isDefineProps || isDefineEmits) {
             if (left === 1) {
               s.remove(node.start! + startOffset, node.end! + startOffset)
             } else {
@@ -940,6 +961,9 @@ export function compileScript(
               s.remove(start, end)
               left--
             }
+          } else {
+            processRefSugar(decl, node)
+          }
         }
       }
     }
@@ -1046,28 +1070,37 @@ export function compileScript(
   // 3. Do a full walk to rewrite identifiers referencing let exports with ref
   // value access
   if (enableRefSugar && Object.keys(refBindings).length) {
+    const onIdent = (id: Identifier, parent: Node, parentStack: Node[]) => {
+      if (refBindings[id.name] && !refIdentifiers.has(id)) {
+        if (isStaticProperty(parent) && parent.shorthand) {
+          // let binding used in a property shorthand
+          // { foo } -> { foo: foo.value }
+          // skip for destructure patterns
+          if (
+            !(parent as any).inPattern ||
+            isInDestructureAssignment(parent, parentStack)
+          ) {
+            s.appendLeft(id.end! + startOffset, `: ${id.name}.value`)
+          }
+        } else {
+          s.appendLeft(id.end! + startOffset, '.value')
+        }
+      }
+    }
+
+    const onNode = (node: Node) => {
+      if (isCallOf(node, $RAW)) {
+        s.remove(
+          node.callee.start! + startOffset,
+          node.callee.end! + startOffset
+        )
+        return false // skip walk
+      }
+    }
+
     for (const node of scriptSetupAst) {
       if (node.type !== 'ImportDeclaration') {
-        walkIdentifiers(node, (id, parent, parentStack) => {
-          if (refBindings[id.name] && !refIdentifiers.has(id)) {
-            if (isStaticProperty(parent) && parent.shorthand) {
-              // let binding used in a property shorthand
-              // { foo } -> { foo: foo.value }
-              // skip for destructure patterns
-              if (
-                !(parent as any).inPattern ||
-                isInDestructureAssignment(parent, parentStack)
-              ) {
-                s.appendLeft(id.end! + startOffset, `: ${id.name}.value`)
-              }
-            } else {
-              s.appendLeft(id.end! + startOffset, '.value')
-            }
-          } else if (id.name[0] === '$' && refBindings[id.name.slice(1)]) {
-            // $xxx raw ref access variables, remove the $ prefix
-            s.remove(id.start! + startOffset, id.start! + startOffset + 1)
-          }
-        })
+        walkIdentifiers(node, onIdent, onNode)
       }
     }
   }
@@ -1128,6 +1161,10 @@ export function compileScript(
   }
   for (const key in setupBindings) {
     bindingMetadata[key] = setupBindings[key].type
+  }
+  // known ref bindings
+  for (const key in refBindings) {
+    bindingMetadata[key] = BindingTypes.SETUP_REF
   }
 
   // 8. inject `useCssVars` calls
@@ -1714,7 +1751,8 @@ function markScopeIdentifier(
  */
 export function walkIdentifiers(
   root: Node,
-  onIdentifier: (node: Identifier, parent: Node, parentStack: Node[]) => void
+  onIdentifier: (node: Identifier, parent: Node, parentStack: Node[]) => void,
+  onNode?: (node: Node, parent: Node, parentStack: Node[]) => void | boolean
 ) {
   const parentStack: Node[] = []
   const knownIds: Record<string, number> = Object.create(null)
@@ -1722,6 +1760,9 @@ export function walkIdentifiers(
     enter(node: Node & { scopeIds?: Set<string> }, parent: Node | undefined) {
       parent && parentStack.push(parent)
       if (node.type.startsWith('TS')) {
+        return this.skip()
+      }
+      if (onNode && onNode(node, parent!, parentStack) === false) {
         return this.skip()
       }
       if (node.type === 'Identifier') {
