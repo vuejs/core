@@ -269,9 +269,10 @@ describe('ssr: components', () => {
     test('built-in fallthroughs', () => {
       expect(compile(`<transition><div/></transition>`).code)
         .toMatchInlineSnapshot(`
-        "
+        "const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"@vue/server-renderer\\")
+
         return function ssrRender(_ctx, _push, _parent, _attrs) {
-          _push(\`<div></div>\`)
+          _push(\`<div\${_ssrRenderAttrs(_attrs)}></div>\`)
         }"
       `)
 
@@ -283,7 +284,7 @@ describe('ssr: components', () => {
         return function ssrRender(_ctx, _push, _parent, _attrs) {
           const _component_foo = _resolveComponent(\\"foo\\")
 
-          _push(_ssrRenderComponent(_component_foo, null, null, _parent))
+          _push(_ssrRenderComponent(_component_foo, _attrs, null, _parent))
         }"
       `)
     })

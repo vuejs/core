@@ -60,7 +60,7 @@ export function inject(
       return provides[key as string]
     } else if (arguments.length > 1) {
       return treatDefaultAsFactory && isFunction(defaultValue)
-        ? defaultValue()
+        ? defaultValue.call(instance.proxy)
         : defaultValue
     } else if (__DEV__) {
       warn(`injection "${String(key)}" not found.`)

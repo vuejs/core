@@ -9,7 +9,9 @@ import {
   ForNode,
   ComponentNode,
   VNodeCall,
-  SlotsExpression
+  SlotsExpression,
+  ObjectExpression,
+  SimpleExpressionNode
 } from '../../src'
 import { transformElement } from '../../src/transforms/transformElement'
 import { transformOn } from '../../src/transforms/vOn'
@@ -27,7 +29,9 @@ import { transformFor } from '../../src/transforms/vFor'
 import { transformIf } from '../../src/transforms/vIf'
 
 function parseWithSlots(template: string, options: CompilerOptions = {}) {
-  const ast = parse(template)
+  const ast = parse(template, {
+    whitespace: options.whitespace
+  })
   transform(ast, {
     nodeTransforms: [
       transformIf,
@@ -767,6 +771,13 @@ describe('compiler: transform component slots', () => {
       const { slots } = parseWithSlots(`<Comp><slot v-for="a in b"/></Comp>`)
       expect(slots).toMatchObject(toMatch)
     })
+
+    test('<slot> tag w/ template', () => {
+      const { slots } = parseWithSlots(
+        `<Comp><template #default><slot/></template></Comp>`
+      )
+      expect(slots).toMatchObject(toMatch)
+    })
   })
 
   describe('errors', () => {
@@ -860,6 +871,66 @@ describe('compiler: transform component slots', () => {
           }
         }
       })
+    })
+  })
+
+  describe(`with whitespace: 'preserve'`, () => {
+    test('named default slot + implicit whitespace content', () => {
+      const source = `
+      <Comp>
+        <template #header> Header </template>
+        <template #default> Default </template>
+      </Comp>
+      `
+      const { root } = parseWithSlots(source, {
+        whitespace: 'preserve'
+      })
+
+      expect(
+        `Extraneous children found when component already has explicitly named default slot.`
+      ).not.toHaveBeenWarned()
+      expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
+    })
+
+    test('implicit default slot', () => {
+      const source = `
+      <Comp>
+        <template #header> Header </template>
+        <p/>
+      </Comp>
+      `
+      const { root } = parseWithSlots(source, {
+        whitespace: 'preserve'
+      })
+
+      expect(
+        `Extraneous children found when component already has explicitly named default slot.`
+      ).not.toHaveBeenWarned()
+      expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
+    })
+
+    test('should not generate whitespace only default slot', () => {
+      const source = `
+      <Comp>
+        <template #header> Header </template>
+        <template #footer> Footer </template>
+      </Comp>
+      `
+      const { root } = parseWithSlots(source, {
+        whitespace: 'preserve'
+      })
+
+      // slots is vnodeCall's children as an ObjectExpression
+      const slots = (root as any).children[0].codegenNode.children
+        .properties as ObjectExpression['properties']
+
+      // should be: header, footer, _ (no default)
+      expect(slots.length).toBe(3)
+      expect(
+        slots.some(p => (p.key as SimpleExpressionNode).content === 'default')
+      ).toBe(false)
+
+      expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
     })
   })
 })

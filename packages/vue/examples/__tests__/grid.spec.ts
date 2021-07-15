@@ -28,7 +28,7 @@ describe('e2e: grid', () => {
     )}`
 
     await page().goto(baseUrl)
-    await page().waitFor('table')
+    await page().waitForSelector('table')
     expect(await count('th')).toBe(2)
     expect(await count('th.active')).toBe(0)
     expect(await text('th:nth-child(1)')).toContain('Name')

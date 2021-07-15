@@ -3,7 +3,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, defineProps, defineEmit, watchEffect } from 'vue'
+import { ref, onMounted, defineProps, defineEmits, watchEffect } from 'vue'
 import { debounce } from '../utils'
 import CodeMirror from './codemirror'
 
@@ -24,7 +24,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmit<(e: 'change', value: string) => void>()
+const emit = defineEmits<(e: 'change', value: string) => void>()
 
 onMounted(() => {
   const addonOptions = {

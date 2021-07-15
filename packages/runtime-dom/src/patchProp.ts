@@ -58,7 +58,7 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
         } else if (key === 'false-value') {
           ;(el as any)._falseValue = nextValue
         }
-        patchAttr(el, key, nextValue, isSVG)
+        patchAttr(el, key, nextValue, isSVG, parentComponent)
       }
       break
   }
