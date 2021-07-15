@@ -2,7 +2,7 @@
 // Reason: potentially setting innerHTML.
 // This can come from explicit usage of v-html or innerHTML as a prop in render
 
-import { warn } from '@vue/runtime-core'
+import { warn, DeprecationTypes, compatUtils } from '@vue/runtime-core'
 
 // functions. The user is responsible for using them with only trusted content.
 export function patchDOMProp(
@@ -33,6 +33,9 @@ export function patchDOMProp(
     if (el.value !== newValue) {
       el.value = newValue
     }
+    if (value == null) {
+      el.removeAttribute(key)
+    }
     return
   }
 
@@ -49,7 +52,32 @@ export function patchDOMProp(
       return
     } else if (type === 'number') {
       // e.g. <img :width="null">
-      el[key] = 0
+      // the value of some IDL attr must be greater than 0, e.g. input.size = 0 -> error
+      try {
+        el[key] = 0
+      } catch {}
+      el.removeAttribute(key)
+      return
+    }
+  }
+
+  if (
+    __COMPAT__ &&
+    value === false &&
+    compatUtils.isCompatEnabled(
+      DeprecationTypes.ATTR_FALSE_VALUE,
+      parentComponent
+    )
+  ) {
+    const type = typeof el[key]
+    if (type === 'string' || type === 'number') {
+      __DEV__ &&
+        compatUtils.warnDeprecation(
+          DeprecationTypes.ATTR_FALSE_VALUE,
+          parentComponent,
+          key
+        )
+      el[key] = type === 'number' ? 0 : ''
       el.removeAttribute(key)
       return
     }

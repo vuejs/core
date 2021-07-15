@@ -4,7 +4,7 @@ import { isArray, isObject, hasChanged } from '@vue/shared'
 import { reactive, isProxy, toRaw, isReactive } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
 
-declare const RefSymbol: unique symbol
+export declare const RefSymbol: unique symbol
 
 export interface Ref<T = any> {
   value: T
@@ -52,12 +52,15 @@ export function shallowRef(value?: unknown) {
 }
 
 class RefImpl<T> {
+  private _rawValue: T
+
   private _value: T
 
   public readonly __v_isRef = true
 
-  constructor(private _rawValue: T, public readonly _shallow = false) {
-    this._value = _shallow ? _rawValue : convert(_rawValue)
+  constructor(value: T, public readonly _shallow = false) {
+    this._rawValue = _shallow ? value : toRaw(value)
+    this._value = _shallow ? value : convert(value)
   }
 
   get value() {
@@ -66,7 +69,8 @@ class RefImpl<T> {
   }
 
   set value(newVal) {
-    if (hasChanged(toRaw(newVal), this._rawValue)) {
+    newVal = this._shallow ? newVal : toRaw(newVal)
+    if (hasChanged(newVal, this._rawValue)) {
       this._rawValue = newVal
       this._value = this._shallow ? newVal : convert(newVal)
       trigger(toRaw(this), TriggerOpTypes.SET, 'value', newVal)
@@ -85,7 +89,7 @@ export function triggerRef(ref: Ref) {
   trigger(toRaw(ref), TriggerOpTypes.SET, 'value', __DEV__ ? ref.value : void 0)
 }
 
-export function unref<T>(ref: T): T extends Ref<infer V> ? V : T {
+export function unref<T>(ref: T | Ref<T>): T {
   return isRef(ref) ? (ref.value as any) : ref
 }
 
@@ -205,7 +209,11 @@ type BaseTypes = string | number | boolean
 export interface RefUnwrapBailTypes {}
 
 export type ShallowUnwrapRef<T> = {
-  [K in keyof T]: T[K] extends Ref<infer V> ? V : T[K]
+  [K in keyof T]: T[K] extends Ref<infer V>
+    ? V
+    : T[K] extends Ref<infer V> | undefined // if `V` is `unknown` that means it does not extend `Ref` and is undefined
+      ? unknown extends V ? undefined : V | undefined
+      : T[K]
 }
 
 export type UnwrapRef<T> = T extends Ref<infer V>

@@ -6,7 +6,7 @@ const puppeteerOptions = process.env.CI
   ? { args: ['--no-sandbox', '--disable-setuid-sandbox'] }
   : {}
 
-const maxTries = 20
+const maxTries = 30
 export const timeout = (n: number) => new Promise(r => setTimeout(r, n))
 
 export async function expectByPolling(
@@ -108,7 +108,7 @@ export function setupPuppeteer() {
     await page.$eval(
       selector,
       (node, value) => {
-        ;(node as HTMLInputElement).value = value
+        ;(node as HTMLInputElement).value = value as string
         node.dispatchEvent(new Event('input'))
       },
       value

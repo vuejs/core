@@ -17,6 +17,30 @@ describe('CSS vars injection', () => {
     assertCode(content)
   })
 
+  test('w/ normal <script> binding analysis', () => {
+    const { content } = compileSFCScript(
+      `<script>
+      export default {
+        setup() {
+          return {
+            size: ref('100px')
+          }
+        }
+      }
+      </script>\n` +
+        `<style>
+          div {
+            font-size: v-bind(size);
+          }
+        </style>`
+    )
+    expect(content).toMatch(`_useCssVars(_ctx => ({
+  "${mockId}-size": (_ctx.size)
+})`)
+    expect(content).toMatch(`import { useCssVars as _useCssVars } from 'vue'`)
+    assertCode(content)
+  })
+
   test('w/ <script setup> binding analysis', () => {
     const { content } = compileSFCScript(
       `<script setup>
@@ -135,6 +159,27 @@ describe('CSS vars injection', () => {
             `<style>div{ color: v-bind(color); }</style>`
         ).content
       )
+    })
+
+    test('w/ <script setup> using the same var multiple times', () => {
+      const { content } = compileSFCScript(
+        `<script setup>
+        const color = 'red'
+        </script>\n` +
+          `<style>
+          div {
+            color: v-bind(color);
+          }
+          p {
+            color: v-bind(color);
+          }
+        </style>`
+      )
+      // color should only be injected once, even if it is twice in style
+      expect(content).toMatch(`_useCssVars(_ctx => ({
+  "${mockId}-color": (color)
+})`)
+      assertCode(content)
     })
   })
 })

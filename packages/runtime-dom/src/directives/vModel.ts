@@ -99,6 +99,8 @@ export const vModelText: ModelDirective<
 }
 
 export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
+  // #4096 array checkboxes need to be deep traversed
+  deep: true,
   created(el, _, vnode) {
     el._assign = getModelAssigner(vnode)
     addEventListener(el, 'change', () => {
@@ -171,6 +173,8 @@ export const vModelRadio: ModelDirective<HTMLInputElement> = {
 }
 
 export const vModelSelect: ModelDirective<HTMLSelectElement> = {
+  // <select multiple> value need to be deep traversed
+  deep: true,
   created(el, { value, modifiers: { number } }, vnode) {
     const isSetModel = isSet(value)
     addEventListener(el, 'change', () => {
@@ -224,12 +228,12 @@ function setSelected(el: HTMLSelectElement, value: any) {
       }
     } else {
       if (looseEqual(getValue(option), value)) {
-        el.selectedIndex = i
+        if (el.selectedIndex !== i) el.selectedIndex = i
         return
       }
     }
   }
-  if (!isMultiple) {
+  if (!isMultiple && el.selectedIndex !== -1) {
     el.selectedIndex = -1
   }
 }

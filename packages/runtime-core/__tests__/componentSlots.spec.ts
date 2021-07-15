@@ -82,7 +82,7 @@ describe('component: slots', () => {
     expect(slots.default()).toMatchObject([normalizeVNode(h('span'))])
   })
 
-  test('updateSlots: instance.slots should be update correctly (when slotType is number)', async () => {
+  test('updateSlots: instance.slots should be updated correctly (when slotType is number)', async () => {
     const flag1 = ref(true)
 
     let instance: any
@@ -124,7 +124,7 @@ describe('component: slots', () => {
     expect(instance.slots).toHaveProperty('two')
   })
 
-  test('updateSlots: instance.slots should be update correctly (when slotType is null)', async () => {
+  test('updateSlots: instance.slots should be updated correctly (when slotType is null)', async () => {
     const flag1 = ref(true)
 
     let instance: any

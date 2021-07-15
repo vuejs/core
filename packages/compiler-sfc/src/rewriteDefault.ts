@@ -2,7 +2,7 @@ import { parse, ParserPlugin } from '@babel/parser'
 import MagicString from 'magic-string'
 
 const defaultExportRE = /((?:^|\n|;)\s*)export(\s*)default/
-const namedDefaultExportRE = /((?:^|\n|;)\s*)export(.+)as(\s*)default/
+const namedDefaultExportRE = /((?:^|\n|;)\s*)export(.+)as(\s*)default/s
 const exportDefaultClassRE = /((?:^|\n|;)\s*)export\s+default\s+class\s+([\w$]+)/
 
 /**

@@ -23,6 +23,8 @@ describe('with object props', () => {
     h: boolean
     bb: string
     bbb: string
+    bbbb: string | undefined
+    bbbbb: string | undefined
     cc?: string[] | undefined
     dd: { n: 1 }
     ee?: () => string
@@ -61,6 +63,14 @@ describe('with object props', () => {
         // Note: default function value requires arrow syntax + explicit
         // annotation
         default: (props: any) => (props.bb as string) || 'foo'
+      },
+      bbbb: {
+        type: String,
+        default: undefined
+      },
+      bbbbb: {
+        type: String,
+        default: () => undefined
       },
       // explicit type casting
       cc: Array as PropType<string[]>,
@@ -129,6 +139,8 @@ describe('with object props', () => {
       expectType<ExpectedProps['h']>(props.h)
       expectType<ExpectedProps['bb']>(props.bb)
       expectType<ExpectedProps['bbb']>(props.bbb)
+      expectType<ExpectedProps['bbbb']>(props.bbbb)
+      expectType<ExpectedProps['bbbbb']>(props.bbbbb)
       expectType<ExpectedProps['cc']>(props.cc)
       expectType<ExpectedProps['dd']>(props.dd)
       expectType<ExpectedProps['ee']>(props.ee)
@@ -893,6 +905,25 @@ describe('emits', () => {
       expectError(this.$emit('input'))
       //  @ts-expect-error
       expectError(this.$emit('input', 1))
+    },
+    mounted() {
+      // #3599
+      this.$nextTick(function() {
+        // this should be bound to this instance
+
+        this.$emit('click', 1)
+        this.$emit('input', 'foo')
+        //  @ts-expect-error
+        expectError(this.$emit('nope'))
+        //  @ts-expect-error
+        expectError(this.$emit('click'))
+        //  @ts-expect-error
+        expectError(this.$emit('click', 'foo'))
+        //  @ts-expect-error
+        expectError(this.$emit('input'))
+        //  @ts-expect-error
+        expectError(this.$emit('input', 1))
+      })
     }
   })
 

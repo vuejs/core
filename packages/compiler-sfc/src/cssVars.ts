@@ -37,7 +37,10 @@ export function parseCssVars(sfc: SFCDescriptor): string[] {
   sfc.styles.forEach(style => {
     let match
     while ((match = cssVarRE.exec(style.content))) {
-      vars.push(match[1] || match[2] || match[3])
+      const variable = match[1] || match[2] || match[3]
+      if (!vars.includes(variable)) {
+        vars.push(variable)
+      }
     }
   })
   return vars
@@ -76,7 +79,7 @@ export function genCssVarsCode(
   const context = createTransformContext(createRoot([]), {
     prefixIdentifiers: true,
     inline: true,
-    bindingMetadata: bindings
+    bindingMetadata: bindings.__isScriptSetup === false ? undefined : bindings
   })
   const transformed = processExpression(exp, context)
   const transformedString =
