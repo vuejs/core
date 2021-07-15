@@ -1,6 +1,5 @@
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import { isArray } from '@vue/shared'
-import { ComponentPublicInstance } from './componentPublicInstance'
 import { ComponentInternalInstance, getComponentName } from './component'
 import { warn } from './warning'
 import { ReactiveEffect } from '@vue/reactivity'
@@ -39,9 +38,9 @@ let currentPreFlushParentJob: SchedulerJob | null = null
 const RECURSION_LIMIT = 100
 type CountMap = Map<SchedulerJob | SchedulerCb, number>
 
-export function nextTick(
-  this: ComponentPublicInstance | void,
-  fn?: () => void
+export function nextTick<T = void>(
+  this: T,
+  fn?: (this: T) => void
 ): Promise<void> {
   const p = currentFlushPromise || resolvedPromise
   return fn ? p.then(this ? fn.bind(this) : fn) : p
