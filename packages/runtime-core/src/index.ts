@@ -37,13 +37,31 @@ export {
   onDeactivated,
   onRenderTracked,
   onRenderTriggered,
-  onErrorCaptured
+  onErrorCaptured,
+  onServerPrefetch
 } from './apiLifecycle'
 export { provide, inject } from './apiInject'
 export { nextTick } from './scheduler'
 export { defineComponent } from './apiDefineComponent'
 export { defineAsyncComponent } from './apiAsyncComponent'
-export { defineProps, defineEmit, useContext } from './apiSetupHelpers'
+
+// <script setup> API ----------------------------------------------------------
+
+export {
+  // macros runtime, for warnings only
+  defineProps,
+  defineEmits,
+  defineExpose,
+  withDefaults,
+  // internal
+  mergeDefaults,
+  withAsyncContext,
+  // deprecated
+  defineEmit,
+  useContext,
+  useAttrs,
+  useSlots
+} from './apiSetupHelpers'
 
 // Advanced API ----------------------------------------------------------------
 
@@ -134,7 +152,6 @@ export {
   DeepReadonly
 } from '@vue/reactivity'
 export {
-  // types
   WatchEffect,
   WatchOptions,
   WatchOptionsBase,
@@ -179,12 +196,14 @@ export {
   ComponentOptionsBase,
   RenderFunction,
   MethodOptions,
-  ComputedOptions
+  ComputedOptions,
+  RuntimeCompilerOptions
 } from './componentOptions'
 export { EmitsOptions, ObjectEmitsOptions } from './componentEmits'
 export {
   ComponentPublicInstance,
-  ComponentCustomProperties
+  ComponentCustomProperties,
+  CreateComponentPublicInstance
 } from './componentPublicInstance'
 export {
   Renderer,
@@ -279,3 +298,38 @@ const _ssrUtils = {
  * @internal
  */
 export const ssrUtils = (__NODE_JS__ ? _ssrUtils : null) as typeof _ssrUtils
+
+// 2.x COMPAT ------------------------------------------------------------------
+
+export { DeprecationTypes } from './compat/compatConfig'
+export { CompatVue } from './compat/global'
+export { LegacyConfig } from './compat/globalConfig'
+
+import { warnDeprecation } from './compat/compatConfig'
+import { createCompatVue } from './compat/global'
+import {
+  isCompatEnabled,
+  checkCompatEnabled,
+  softAssertCompatEnabled
+} from './compat/compatConfig'
+import { resolveFilter as _resolveFilter } from './helpers/resolveAssets'
+
+/**
+ * @internal only exposed in compat builds
+ */
+export const resolveFilter = __COMPAT__ ? _resolveFilter : null
+
+const _compatUtils = {
+  warnDeprecation,
+  createCompatVue,
+  isCompatEnabled,
+  checkCompatEnabled,
+  softAssertCompatEnabled
+}
+
+/**
+ * @internal only exposed in compat builds.
+ */
+export const compatUtils = (__COMPAT__
+  ? _compatUtils
+  : null) as typeof _compatUtils

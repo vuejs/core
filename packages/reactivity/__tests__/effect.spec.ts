@@ -7,7 +7,8 @@ import {
   TriggerOpTypes,
   DebuggerEvent,
   markRaw,
-  shallowReactive
+  shallowReactive,
+  readonly
 } from '../src/index'
 import { ITERATE_KEY } from '../src/effect'
 
@@ -708,28 +709,6 @@ describe('reactivity/effect', () => {
     expect(dummy).toBe(3)
   })
 
-  it('stop with scheduler', () => {
-    let dummy
-    const obj = reactive({ prop: 1 })
-    const queue: (() => void)[] = []
-    const runner = effect(
-      () => {
-        dummy = obj.prop
-      },
-      {
-        scheduler: e => queue.push(e)
-      }
-    )
-    obj.prop = 2
-    expect(dummy).toBe(1)
-    expect(queue.length).toBe(1)
-    stop(runner)
-
-    // a scheduled effect should not execute anymore after stopped
-    queue.forEach(e => e())
-    expect(dummy).toBe(1)
-  })
-
   it('events: onStop', () => {
     const onStop = jest.fn()
     const runner = effect(() => {}, {
@@ -831,5 +810,33 @@ describe('reactivity/effect', () => {
 
     observed2.obj2 = obj2
     expect(fnSpy2).toHaveBeenCalledTimes(1)
+  })
+
+  describe('readonly + reactive for Map', () => {
+    test('should work with readonly(reactive(Map))', () => {
+      const m = reactive(new Map())
+      const roM = readonly(m)
+      const fnSpy = jest.fn(() => roM.get(1))
+
+      effect(fnSpy)
+      expect(fnSpy).toHaveBeenCalledTimes(1)
+      m.set(1, 1)
+      expect(fnSpy).toHaveBeenCalledTimes(2)
+    })
+
+    test('should work with observed value as key', () => {
+      const key = reactive({})
+      const m = reactive(new Map())
+      m.set(key, 1)
+      const roM = readonly(m)
+      const fnSpy = jest.fn(() => roM.get(key))
+
+      effect(fnSpy)
+      expect(fnSpy).toHaveBeenCalledTimes(1)
+      m.set(key, 1)
+      expect(fnSpy).toHaveBeenCalledTimes(1)
+      m.set(key, 2)
+      expect(fnSpy).toHaveBeenCalledTimes(2)
+    })
   })
 })

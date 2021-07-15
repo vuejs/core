@@ -116,7 +116,7 @@ function reload(id: string, newComp: ComponentOptions | ClassComponent) {
     newComp = isClassComponent(newComp) ? newComp.__vccOpts : newComp
     extend(component, newComp)
     for (const key in component) {
-      if (!(key in newComp)) {
+      if (key !== '__file' && !(key in newComp)) {
         delete (component as any)[key]
       }
     }

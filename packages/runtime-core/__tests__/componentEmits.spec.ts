@@ -144,7 +144,7 @@ describe('component: emit', () => {
     expect(fn1).toHaveBeenCalledTimes(1)
     expect(fn1).toHaveBeenCalledWith(1)
     expect(fn2).toHaveBeenCalledTimes(1)
-    expect(fn1).toHaveBeenCalledWith(1)
+    expect(fn2).toHaveBeenCalledWith(1)
   })
 
   test('warning for undeclared event (array)', () => {
@@ -245,21 +245,27 @@ describe('component: emit', () => {
     const Foo = defineComponent({
       render() {},
       emits: {
-        foo: null
+        foo: null,
+        bar: null
       },
       created() {
         this.$emit('foo')
         this.$emit('foo')
+        this.$emit('bar')
+        this.$emit('bar')
       }
     })
     const fn = jest.fn()
+    const barFn = jest.fn()
     render(
       h(Foo, {
-        onFooOnce: fn
+        onFooOnce: fn,
+        onBarOnce: barFn
       }),
       nodeOps.createElement('div')
     )
     expect(fn).toHaveBeenCalledTimes(1)
+    expect(barFn).toHaveBeenCalledTimes(1)
   })
 
   test('.once with normal listener of the same name', () => {

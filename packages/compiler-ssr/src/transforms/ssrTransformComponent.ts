@@ -180,7 +180,8 @@ export function ssrProcessComponent(
     } else if (component === TRANSITION_GROUP) {
       return ssrProcessTransitionGroup(node, context)
     } else {
-      // real fall-through (e.g. KeepAlive): just render its children.
+      // real fall-through: Transition / KeepAlive
+      // just render its children.
       processChildren(node.children, context)
     }
   } else {

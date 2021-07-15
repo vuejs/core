@@ -62,6 +62,24 @@ return function render(_ctx, _cache) {
 }"
 `;
 
+exports[`compiler: transform text element with custom directives and only one text child node 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { toDisplayString: _toDisplayString, createTextVNode: _createTextVNode, resolveDirective: _resolveDirective, withDirectives: _withDirectives, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
+    const _directive_foo = _resolveDirective(\\"foo\\")
+
+    return _withDirectives((_openBlock(), _createBlock(\\"p\\", null, [
+      _createTextVNode(_toDisplayString(foo), 1 /* TEXT */)
+    ], 512 /* NEED_PATCH */)), [
+      [_directive_foo]
+    ])
+  }
+}"
+`;
+
 exports[`compiler: transform text no consecutive text 1`] = `
 "const _Vue = Vue
 

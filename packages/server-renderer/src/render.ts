@@ -2,7 +2,6 @@ import {
   Comment,
   Component,
   ComponentInternalInstance,
-  ComponentOptions,
   DirectiveBinding,
   Fragment,
   mergeProps,
@@ -87,13 +86,18 @@ export function renderComponentVNode(
   const instance = createComponentInstance(vnode, parentComponent, null)
   const res = setupComponent(instance, true /* isSSR */)
   const hasAsyncSetup = isPromise(res)
-  const prefetch = (vnode.type as ComponentOptions).serverPrefetch
-  if (hasAsyncSetup || prefetch) {
-    let p = hasAsyncSetup ? (res as Promise<void>) : Promise.resolve()
-    if (prefetch) {
-      p = p.then(() => prefetch.call(instance.proxy)).catch(err => {
-        warn(`[@vue/server-renderer]: Uncaught error in serverPrefetch:\n`, err)
-      })
+  const prefetches = instance.sp
+  if (hasAsyncSetup || prefetches) {
+    let p: Promise<unknown> = hasAsyncSetup
+      ? (res as Promise<void>)
+      : Promise.resolve()
+    if (prefetches) {
+      p = p
+        .then(() =>
+          Promise.all(prefetches.map(prefetch => prefetch.call(instance.proxy)))
+        )
+        // Note: error display is already done by the wrapped lifecycle hook function.
+        .catch(() => {})
     }
     return p.then(() => renderComponentSubTree(instance, slotScopeId))
   } else {
@@ -128,8 +132,7 @@ function renderComponentSubTree(
     if (ssrRender) {
       // optimized
       // resolve fallthrough attrs
-      let attrs =
-        instance.type.inheritAttrs !== false ? instance.attrs : undefined
+      let attrs = instance.inheritAttrs !== false ? instance.attrs : undefined
       let hasCloned = false
 
       let cur = instance

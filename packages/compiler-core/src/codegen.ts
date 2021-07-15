@@ -50,7 +50,8 @@ import {
   CREATE_BLOCK,
   OPEN_BLOCK,
   CREATE_STATIC,
-  WITH_CTX
+  WITH_CTX,
+  RESOLVE_FILTER
 } from './runtimeHelpers'
 import { ImportItem } from './transform'
 
@@ -67,10 +68,7 @@ export interface CodegenResult {
 }
 
 export interface CodegenContext
-  extends Omit<
-      Required<CodegenOptions>,
-      'bindingMetadata' | 'inline' | 'isTS'
-    > {
+  extends Omit<Required<CodegenOptions>, 'bindingMetadata' | 'inline'> {
   source: string
   code: string
   line: number
@@ -97,7 +95,8 @@ function createCodegenContext(
     optimizeImports = false,
     runtimeGlobalName = `Vue`,
     runtimeModuleName = `vue`,
-    ssr = false
+    ssr = false,
+    isTS = false
   }: CodegenOptions
 ): CodegenContext {
   const context: CodegenContext = {
@@ -110,6 +109,7 @@ function createCodegenContext(
     runtimeGlobalName,
     runtimeModuleName,
     ssr,
+    isTS,
     source: ast.loc.source,
     code: ``,
     column: 1,
@@ -274,6 +274,12 @@ export function generate(
       newline()
     }
   }
+  if (__COMPAT__ && ast.filters && ast.filters.length) {
+    newline()
+    genAssets(ast.filters, 'filter', context)
+    newline()
+  }
+
   if (ast.temps > 0) {
     push(`let `)
     for (let i = 0; i < ast.temps; i++) {
@@ -458,11 +464,15 @@ function genModulePreamble(
 
 function genAssets(
   assets: string[],
-  type: 'component' | 'directive',
-  { helper, push, newline }: CodegenContext
+  type: 'component' | 'directive' | 'filter',
+  { helper, push, newline, isTS }: CodegenContext
 ) {
   const resolver = helper(
-    type === 'component' ? RESOLVE_COMPONENT : RESOLVE_DIRECTIVE
+    __COMPAT__ && type === 'filter'
+      ? RESOLVE_FILTER
+      : type === 'component'
+        ? RESOLVE_COMPONENT
+        : RESOLVE_DIRECTIVE
   )
   for (let i = 0; i < assets.length; i++) {
     let id = assets[i]
@@ -474,7 +484,7 @@ function genAssets(
     push(
       `const ${toValidAssetId(id, type)} = ${resolver}(${JSON.stringify(id)}${
         maybeSelfReference ? `, true` : ``
-      })`
+      })${isTS ? `!` : ``}`
     )
     if (i < assets.length - 1) {
       newline()
@@ -727,13 +737,11 @@ function genExpressionAsPropertyKey(
 }
 
 function genComment(node: CommentNode, context: CodegenContext) {
-  if (__DEV__) {
-    const { push, helper, pure } = context
-    if (pure) {
-      push(PURE_ANNOTATION)
-    }
-    push(`${helper(CREATE_COMMENT)}(${JSON.stringify(node.content)})`, node)
+  const { push, helper, pure } = context
+  if (pure) {
+    push(PURE_ANNOTATION)
   }
+  push(`${helper(CREATE_COMMENT)}(${JSON.stringify(node.content)})`, node)
 }
 
 function genVNodeCall(node: VNodeCall, context: CodegenContext) {
@@ -869,6 +877,9 @@ function genFunctionExpression(
     push(`}`)
   }
   if (isSlot) {
+    if (__COMPAT__ && node.isNonScopedSlot) {
+      push(`, undefined, true`)
+    }
     push(`)`)
   }
 }

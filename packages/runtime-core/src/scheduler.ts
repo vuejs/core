@@ -1,27 +1,17 @@
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import { isArray } from '@vue/shared'
 import { ComponentPublicInstance } from './componentPublicInstance'
+import { ComponentInternalInstance, getComponentName } from './component'
+import { warn } from './warning'
+import { ReactiveEffect } from '@vue/reactivity'
 
-export interface SchedulerJob {
-  (): void
+export interface SchedulerJob extends Function, Partial<ReactiveEffect> {
   /**
-   * unique job id, only present on raw effects, e.g. component render effect
+   * Attached by renderer.ts when setting up a component's render effect
+   * Used to obtain component information when reporting max recursive updates.
+   * dev only.
    */
-  id?: number
-  /**
-   * Indicates whether the job is allowed to recursively trigger itself.
-   * By default, a job cannot trigger itself because some built-in method calls,
-   * e.g. Array.prototype.push actually performs reads as well (#1740) which
-   * can lead to confusing infinite loops.
-   * The allowed cases are component update functions and watch callbacks.
-   * Component update functions may update child component props, which in turn
-   * trigger flush: "pre" watch callbacks that mutates state that the parent
-   * relies on (#1801). Watch callbacks doesn't track its dependencies so if it
-   * triggers itself again, it's likely intentional and it is the user's
-   * responsibility to perform recursive state mutation that eventually
-   * stabilizes (#1727).
-   */
-  allowRecurse?: boolean
+  ownerInstance?: ComponentInternalInstance
 }
 
 export type SchedulerCb = Function & { id?: number }
@@ -164,8 +154,11 @@ export function flushPreFlushCbs(
       preFlushIndex < activePreFlushCbs.length;
       preFlushIndex++
     ) {
-      if (__DEV__) {
+      if (
+        __DEV__ &&
         checkRecursiveUpdates(seen!, activePreFlushCbs[preFlushIndex])
+      ) {
+        continue
       }
       activePreFlushCbs[preFlushIndex]()
     }
@@ -200,8 +193,11 @@ export function flushPostFlushCbs(seen?: CountMap) {
       postFlushIndex < activePostFlushCbs.length;
       postFlushIndex++
     ) {
-      if (__DEV__) {
+      if (
+        __DEV__ &&
         checkRecursiveUpdates(seen!, activePostFlushCbs[postFlushIndex])
+      ) {
+        continue
       }
       activePostFlushCbs[postFlushIndex]()
     }
@@ -234,9 +230,9 @@ function flushJobs(seen?: CountMap) {
   try {
     for (flushIndex = 0; flushIndex < queue.length; flushIndex++) {
       const job = queue[flushIndex]
-      if (job) {
-        if (__DEV__) {
-          checkRecursiveUpdates(seen!, job)
+      if (job && job.active !== false) {
+        if (__DEV__ && checkRecursiveUpdates(seen!, job)) {
+          continue
         }
         callWithErrorHandling(job, null, ErrorCodes.SCHEDULER)
       }
@@ -251,7 +247,11 @@ function flushJobs(seen?: CountMap) {
     currentFlushPromise = null
     // some postFlushCb queued jobs!
     // keep flushing until it drains.
-    if (queue.length || pendingPostFlushCbs.length) {
+    if (
+      queue.length ||
+      pendingPreFlushCbs.length ||
+      pendingPostFlushCbs.length
+    ) {
       flushJobs(seen)
     }
   }
@@ -263,13 +263,18 @@ function checkRecursiveUpdates(seen: CountMap, fn: SchedulerJob | SchedulerCb) {
   } else {
     const count = seen.get(fn)!
     if (count > RECURSION_LIMIT) {
-      throw new Error(
-        `Maximum recursive updates exceeded. ` +
+      const instance = (fn as SchedulerJob).ownerInstance
+      const componentName = instance && getComponentName(instance.type)
+      warn(
+        `Maximum recursive updates exceeded${
+          componentName ? ` in component <${componentName}>` : ``
+        }. ` +
           `This means you have a reactive effect that is mutating its own ` +
           `dependencies and thus recursively triggering itself. Possible sources ` +
           `include component template, render function, updated hook or ` +
           `watcher source function.`
       )
+      return true
     } else {
       seen.set(fn, count + 1)
     }

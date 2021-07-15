@@ -4,7 +4,7 @@ import { isArray, isObject, hasChanged } from '@vue/shared'
 import { reactive, isProxy, toRaw, isReactive } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
 
-declare const RefSymbol: unique symbol
+export declare const RefSymbol: unique symbol
 
 export interface Ref<T = any> {
   value: T
@@ -89,7 +89,7 @@ export function triggerRef(ref: Ref) {
   trigger(toRaw(ref), TriggerOpTypes.SET, 'value', __DEV__ ? ref.value : void 0)
 }
 
-export function unref<T>(ref: T): T extends Ref<infer V> ? V : T {
+export function unref<T>(ref: T | Ref<T>): T {
   return isRef(ref) ? (ref.value as any) : ref
 }
 
@@ -209,7 +209,11 @@ type BaseTypes = string | number | boolean
 export interface RefUnwrapBailTypes {}
 
 export type ShallowUnwrapRef<T> = {
-  [K in keyof T]: T[K] extends Ref<infer V> ? V : T[K]
+  [K in keyof T]: T[K] extends Ref<infer V>
+    ? V
+    : T[K] extends Ref<infer V> | undefined // if `V` is `unknown` that means it does not extend `Ref` and is undefined
+      ? unknown extends V ? undefined : V | undefined
+      : T[K]
 }
 
 export type UnwrapRef<T> = T extends Ref<infer V>
