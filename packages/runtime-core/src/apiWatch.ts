@@ -390,12 +390,12 @@ export function createPathGetter(ctx: any, path: string) {
   }
 }
 
-function traverse(value: unknown, seen: Set<unknown> = new Set()) {
-  if (
-    !isObject(value) ||
-    seen.has(value) ||
-    (value as any)[ReactiveFlags.SKIP]
-  ) {
+export function traverse(value: unknown, seen: Set<unknown> = new Set()) {
+  if (!isObject(value) || (value as any)[ReactiveFlags.SKIP]) {
+    return value
+  }
+  seen = seen || new Set()
+  if (seen.has(value)) {
     return value
   }
   seen.add(value)
