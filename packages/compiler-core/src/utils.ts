@@ -59,6 +59,7 @@ export const isSimpleIdentifier = (name: string): boolean =>
 const enum MemberExpLexState {
   inMemberExp,
   inBrackets,
+  inParens,
   inString
 }
 
@@ -79,6 +80,7 @@ export const isMemberExpression = (path: string): boolean => {
   let state = MemberExpLexState.inMemberExp
   let stateStack: MemberExpLexState[] = []
   let currentOpenBracketCount = 0
+  let currentOpenParensCount = 0
   let currentStringType: "'" | '"' | '`' | null = null
 
   for (let i = 0; i < path.length; i++) {
@@ -89,6 +91,10 @@ export const isMemberExpression = (path: string): boolean => {
           stateStack.push(state)
           state = MemberExpLexState.inBrackets
           currentOpenBracketCount++
+        } else if (char === '(') {
+          stateStack.push(state)
+          state = MemberExpLexState.inParens
+          currentOpenParensCount++
         } else if (
           !(i === 0 ? validFirstIdentCharRE : validIdentCharRE).test(char)
         ) {
@@ -108,6 +114,23 @@ export const isMemberExpression = (path: string): boolean => {
           }
         }
         break
+      case MemberExpLexState.inParens:
+        if (char === `'` || char === `"` || char === '`') {
+          stateStack.push(state)
+          state = MemberExpLexState.inString
+          currentStringType = char
+        } else if (char === `(`) {
+          currentOpenParensCount++
+        } else if (char === `)`) {
+          // if the exp ends as a call then it should not be considered valid
+          if (i === path.length - 1) {
+            return false
+          }
+          if (!--currentOpenParensCount) {
+            state = stateStack.pop()!
+          }
+        }
+        break
       case MemberExpLexState.inString:
         if (char === currentStringType) {
           state = stateStack.pop()!
@@ -116,7 +139,7 @@ export const isMemberExpression = (path: string): boolean => {
         break
     }
   }
-  return !currentOpenBracketCount
+  return !currentOpenBracketCount && !currentOpenParensCount
 }
 
 export function getInnerRange(
