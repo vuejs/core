@@ -80,6 +80,13 @@ describe('compiler: v-once transform', () => {
     expect(generate(root).code).toMatchSnapshot()
   })
 
+  // v-once inside v-once should not be cached
+  test('inside v-once', () => {
+    const root = transformWithOnce(`<div v-once><div v-once/></div>`)
+    expect(root.cached).not.toBe(2)
+    expect(root.cached).toBe(1)
+  })
+
   // cached nodes should be ignored by hoistStatic transform
   test('with hoistStatic: true', () => {
     const root = transformWithOnce(`<div><div v-once /></div>`, {

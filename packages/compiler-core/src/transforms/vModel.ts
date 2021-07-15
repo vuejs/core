@@ -107,6 +107,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
   if (
     !__BROWSER__ &&
     context.prefixIdentifiers &&
+    !context.inVOnce &&
     context.cacheHandlers &&
     !hasScopeRef(exp, context.identifiers)
   ) {

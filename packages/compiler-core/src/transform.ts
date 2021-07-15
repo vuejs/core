@@ -105,6 +105,7 @@ export interface TransformContext
   parent: ParentNode | null
   childIndex: number
   currentNode: RootNode | TemplateChildNode | null
+  inVOnce: boolean
   helper<T extends symbol>(name: T): T
   removeHelper<T extends symbol>(name: T): void
   helperString(name: symbol): string
@@ -192,6 +193,7 @@ export function createTransformContext(
     parent: null,
     currentNode: root,
     childIndex: 0,
+    inVOnce: false,
 
     // methods
     helper(name) {
