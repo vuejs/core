@@ -70,8 +70,8 @@ exports[`CSS vars injection codegen w/ <script setup> using the same var multipl
 "import { useCssVars as _useCssVars, unref as _unref } from 'vue'
 
 export default {
-  expose: [],
-  setup(__props) {
+  setup(__props, { expose }) {
+  expose()
 
 _useCssVars(_ctx => ({
   \\"xxxxxxxx-color\\": (color)
