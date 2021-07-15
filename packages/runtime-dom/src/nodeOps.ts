@@ -111,6 +111,10 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
     }
     let first = before ? before.nextSibling : parent.firstChild
     const last = anchor ? anchor.previousSibling : parent.lastChild
+
+    // if only has one child
+    if (first === last) return [first, last]
+
     const ret = []
     while (first) {
       ret.push(first)
