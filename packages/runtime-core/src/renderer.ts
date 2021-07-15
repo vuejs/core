@@ -487,7 +487,7 @@ function baseCreateRenderer(
     parentSuspense = null,
     isSVG = false,
     slotScopeIds = null,
-    optimized = false
+    optimized = __DEV__ && isHmrUpdating ? false : !!n2.dynamicChildren
   ) => {
     // patching & not same type, unmount old tree
     if (n1 && !isSameVNodeType(n1, n2)) {
@@ -772,7 +772,7 @@ function baseCreateRenderer(
           parentSuspense,
           isSVG && type !== 'foreignObject',
           slotScopeIds,
-          optimized || !!vnode.dynamicChildren
+          optimized
         )
       }
 
