@@ -166,7 +166,10 @@ export function compileScript(
     scriptLang === 'tsx' ||
     scriptSetupLang === 'ts' ||
     scriptSetupLang === 'tsx'
-  const plugins: ParserPlugin[] = [...babelParserDefaultPlugins, 'jsx']
+  const plugins: ParserPlugin[] = [...babelParserDefaultPlugins]
+  if (!isTS || scriptLang === 'tsx' || scriptSetupLang === 'tsx') {
+    plugins.push('jsx')
+  }
   if (options.babelParserPlugins) plugins.push(...options.babelParserPlugins)
   if (isTS) plugins.push('typescript', 'decorators-legacy')
 
