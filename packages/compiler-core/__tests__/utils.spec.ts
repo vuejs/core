@@ -104,4 +104,5 @@ test('isMemberExpression', () => {
   expect(isMemberExpression('a + b')).toBe(false)
   expect(isMemberExpression('foo()')).toBe(false)
   expect(isMemberExpression('a?b:c')).toBe(false)
+  expect(isMemberExpression(`state['text'] = $event`)).toBe(false)
 })

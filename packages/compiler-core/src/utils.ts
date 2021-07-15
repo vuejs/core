@@ -77,7 +77,7 @@ export const isMemberExpression = (path: string): boolean => {
   path = path.trim().replace(whitespaceRE, s => s.trim())
 
   let state = MemberExpLexState.inMemberExp
-  let prevState = MemberExpLexState.inMemberExp
+  let stateStack: MemberExpLexState[] = []
   let currentOpenBracketCount = 0
   let currentStringType: "'" | '"' | '`' | null = null
 
@@ -86,7 +86,7 @@ export const isMemberExpression = (path: string): boolean => {
     switch (state) {
       case MemberExpLexState.inMemberExp:
         if (char === '[') {
-          prevState = state
+          stateStack.push(state)
           state = MemberExpLexState.inBrackets
           currentOpenBracketCount++
         } else if (
@@ -97,20 +97,20 @@ export const isMemberExpression = (path: string): boolean => {
         break
       case MemberExpLexState.inBrackets:
         if (char === `'` || char === `"` || char === '`') {
-          prevState = state
+          stateStack.push(state)
           state = MemberExpLexState.inString
           currentStringType = char
         } else if (char === `[`) {
           currentOpenBracketCount++
         } else if (char === `]`) {
           if (!--currentOpenBracketCount) {
-            state = prevState
+            state = stateStack.pop()!
           }
         }
         break
       case MemberExpLexState.inString:
         if (char === currentStringType) {
-          state = prevState
+          state = stateStack.pop()!
           currentStringType = null
         }
         break
