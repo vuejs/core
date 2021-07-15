@@ -301,6 +301,13 @@ export function resolveComponentType(
     if (fromSetup) {
       return fromSetup
     }
+    const dotIndex = tag.indexOf('.')
+    if (dotIndex > 0) {
+      const ns = resolveSetupReference(tag.slice(0, dotIndex), context)
+      if (ns) {
+        return ns + tag.slice(dotIndex)
+      }
+    }
   }
 
   // 4. Self referencing component (inferred from filename)

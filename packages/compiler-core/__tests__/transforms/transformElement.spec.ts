@@ -95,6 +95,60 @@ describe('compiler: element transform', () => {
     expect(node.tag).toBe(`$setup["Example"]`)
   })
 
+  test('resolve component from setup bindings (inline)', () => {
+    const { root, node } = parseWithElementTransform(`<Example/>`, {
+      inline: true,
+      bindingMetadata: {
+        Example: BindingTypes.SETUP_MAYBE_REF
+      }
+    })
+    expect(root.helpers).not.toContain(RESOLVE_COMPONENT)
+    expect(node.tag).toBe(`_unref(Example)`)
+  })
+
+  test('resolve component from setup bindings (inline const)', () => {
+    const { root, node } = parseWithElementTransform(`<Example/>`, {
+      inline: true,
+      bindingMetadata: {
+        Example: BindingTypes.SETUP_CONST
+      }
+    })
+    expect(root.helpers).not.toContain(RESOLVE_COMPONENT)
+    expect(node.tag).toBe(`Example`)
+  })
+
+  test('resolve namespaced component from setup bindings', () => {
+    const { root, node } = parseWithElementTransform(`<Foo.Example/>`, {
+      bindingMetadata: {
+        Foo: BindingTypes.SETUP_MAYBE_REF
+      }
+    })
+    expect(root.helpers).not.toContain(RESOLVE_COMPONENT)
+    expect(node.tag).toBe(`$setup["Foo"].Example`)
+  })
+
+  test('resolve namespaced component from setup bindings (inline)', () => {
+    const { root, node } = parseWithElementTransform(`<Foo.Example/>`, {
+      inline: true,
+      bindingMetadata: {
+        Foo: BindingTypes.SETUP_MAYBE_REF
+      }
+    })
+    expect(root.helpers).not.toContain(RESOLVE_COMPONENT)
+    expect(node.tag).toBe(`_unref(Foo).Example`)
+  })
+
+  test('resolve namespaced component from setup bindings (inline const)', () => {
+    const { root, node } = parseWithElementTransform(`<Foo.Example/>`, {
+      inline: true,
+      bindingMetadata: {
+        Foo: BindingTypes.SETUP_CONST
+      }
+    })
+    expect(root.helpers).not.toContain(RESOLVE_COMPONENT)
+    expect(node.tag).toBe(`Foo.Example`)
+  })
+
   test('do not resolve component from non-script-setup bindings', () => {
     const bindingMetadata = {
       Example: BindingTypes.SETUP_MAYBE_REF
