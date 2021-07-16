@@ -7,7 +7,8 @@ import {
   reactive,
   nextTick,
   ComponentOptions,
-  Suspense
+  Suspense,
+  FunctionalComponent
 } from '@vue/runtime-dom'
 
 describe('useCssVars', () => {
@@ -125,6 +126,40 @@ describe('useCssVars', () => {
       setup() {
         useCssVars(() => state)
         return () => (value.value ? [h('div')] : [h('div'), h('div')])
+      }
+    }
+
+    render(h(App), root)
+    await nextTick()
+    // css vars use with fallback tree
+    for (const c of [].slice.call(root.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe(`red`)
+    }
+
+    value.value = false
+    await nextTick()
+    for (const c of [].slice.call(root.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+    }
+  })
+
+  // #3894
+  test('with subTree change inside HOC', async () => {
+    const state = reactive({ color: 'red' })
+    const value = ref(true)
+    const root = document.createElement('div')
+
+    const Child: FunctionalComponent = (_, { slots }) => slots.default!()
+
+    const App = {
+      setup() {
+        useCssVars(() => state)
+        return () =>
+          h(
+            Child,
+            null,
+            () => (value.value ? [h('div')] : [h('div'), h('div')])
+          )
       }
     }
 

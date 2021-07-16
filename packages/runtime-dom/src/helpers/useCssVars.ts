@@ -1,12 +1,12 @@
 import {
   getCurrentInstance,
-  onMounted,
   warn,
   VNode,
   Fragment,
   Static,
-  onUpdated,
-  watchEffect
+  watchPostEffect,
+  onMounted,
+  onUnmounted
 } from '@vue/runtime-core'
 import { ShapeFlags } from '@vue/shared'
 
@@ -27,8 +27,12 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>) {
 
   const setVars = () =>
     setVarsOnVNode(instance.subTree, getter(instance.proxy!))
-  onMounted(() => watchEffect(setVars, { flush: 'post' }))
-  onUpdated(setVars)
+  watchPostEffect(setVars)
+  onMounted(() => {
+    const ob = new MutationObserver(setVars)
+    ob.observe(instance.subTree.el!.parentNode, { childList: true })
+    onUnmounted(() => ob.disconnect())
+  })
 }
 
 function setVarsOnVNode(vnode: VNode, vars: Record<string, string>) {
