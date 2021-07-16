@@ -194,7 +194,7 @@ export function h<P, E extends EmitsOptions = {}, PP = {}, Props = {},Defaults =
   type: DefineComponent<P, any, any, any, any, any, any, E, any, PP, Props, Defaults>,
   props?: RenderProps<Partial<Defaults> & Omit<Props & PP, keyof Defaults>, E>,
   children?: RawChildren | RawSlots
-): P
+): VNode
 export function h(type: DefineComponent): VNode
 export function h(type: DefineComponent, children?: RawChildren): VNode
 
@@ -203,7 +203,7 @@ export function h<P, E extends EmitsOptions = {}>(
   type: Constructor<P>,
   props?: RenderProps<P,E>,
   children?: RawChildren | RawSlots
-): ExtractEmitEvents<E>
+): VNode
 export function h(type: Constructor, children?: RawChildren): VNode
 
 
