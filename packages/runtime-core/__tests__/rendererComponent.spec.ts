@@ -275,4 +275,50 @@ describe('renderer: component', () => {
     await nextTick()
     expect(App.updated).toHaveBeenCalledTimes(0)
   })
+
+  describe('render with access caches', () => {
+    // #3297
+    test('should not set the access cache in the data() function (production mode)', () => {
+      const Comp = {
+        data() {
+          ;(this as any).foo
+          return { foo: 1 }
+        },
+        render() {
+          return h('h1', (this as any).foo)
+        }
+      }
+      const root = nodeOps.createElement('div')
+
+      __DEV__ = false
+      render(h(Comp), root)
+      __DEV__ = true
+      expect(serializeInner(root)).toBe(`<h1>1</h1>`)
+    })
+  })
+
+  test('the component VNode should be cloned when reusing it', () => {
+    const App = {
+      render() {
+        const c = [h(Comp)]
+        return [c, c, c]
+      }
+    }
+
+    const ids: number[] = []
+    const Comp = {
+      render: () => h('h1'),
+      beforeUnmount() {
+        ids.push((this as any).$.uid)
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<h1></h1><h1></h1><h1></h1>`)
+
+    render(null, root)
+    expect(serializeInner(root)).toBe(``)
+    expect(ids).toEqual([ids[0], ids[0] + 1, ids[0] + 2])
+  })
 })

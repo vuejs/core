@@ -9,7 +9,8 @@ import {
   proxyRefs,
   toRef,
   toRefs,
-  ToRefs
+  ToRefs,
+  watch
 } from './index'
 
 function plainType(arg: number | Ref<number>) {
@@ -165,6 +166,14 @@ const obj = {
 expectType<Ref<number>>(toRef(obj, 'a'))
 expectType<Ref<number>>(toRef(obj, 'b'))
 
+const objWithUnionProp: { a: string | number } = {
+  a: 1
+}
+
+watch(toRef(objWithUnionProp, 'a'), value => {
+  expectType<string | number>(value)
+})
+
 // toRefs
 const objRefs = toRefs(obj)
 expectType<{
@@ -194,3 +203,10 @@ switch (data.state.value) {
     data.state.value = 'state1'
     break
 }
+
+// #3954
+function testUnrefGenerics<T>(p: T | Ref<T>) {
+  expectType<T>(unref(p))
+}
+
+testUnrefGenerics(1)

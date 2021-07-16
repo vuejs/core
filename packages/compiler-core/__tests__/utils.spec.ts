@@ -1,5 +1,9 @@
 import { Position } from '../src/ast'
-import { getInnerRange, advancePositionWithClone } from '../src/utils'
+import {
+  getInnerRange,
+  advancePositionWithClone,
+  isMemberExpression
+} from '../src/utils'
 
 function p(line: number, column: number, offset: number): Position {
   return { column, line, offset }
@@ -66,4 +70,40 @@ describe('getInnerRange', () => {
     expect(loc2.end.line).toBe(2)
     expect(loc2.end.offset).toBe(7)
   })
+})
+
+test('isMemberExpression', () => {
+  // should work
+  expect(isMemberExpression('obj.foo')).toBe(true)
+  expect(isMemberExpression('obj[foo]')).toBe(true)
+  expect(isMemberExpression('obj[arr[0]]')).toBe(true)
+  expect(isMemberExpression('obj[arr[ret.bar]]')).toBe(true)
+  expect(isMemberExpression('obj[arr[ret[bar]]]')).toBe(true)
+  expect(isMemberExpression('obj[arr[ret[bar]]].baz')).toBe(true)
+  expect(isMemberExpression('obj[1 + 1]')).toBe(true)
+  expect(isMemberExpression(`obj[x[0]]`)).toBe(true)
+  expect(isMemberExpression('obj[1][2]')).toBe(true)
+  expect(isMemberExpression('obj[1][2].foo[3].bar.baz')).toBe(true)
+  expect(isMemberExpression(`a[b[c.d]][0]`)).toBe(true)
+  expect(isMemberExpression('obj?.foo')).toBe(true)
+  expect(isMemberExpression('foo().test')).toBe(true)
+
+  // strings
+  expect(isMemberExpression(`a['foo' + bar[baz]["qux"]]`)).toBe(true)
+
+  // multiline whitespaces
+  expect(isMemberExpression('obj \n .foo \n [bar \n + baz]')).toBe(true)
+  expect(isMemberExpression(`\n model\n.\nfoo \n`)).toBe(true)
+
+  // should fail
+  expect(isMemberExpression('a \n b')).toBe(false)
+  expect(isMemberExpression('obj[foo')).toBe(false)
+  expect(isMemberExpression('objfoo]')).toBe(false)
+  expect(isMemberExpression('obj[arr[0]')).toBe(false)
+  expect(isMemberExpression('obj[arr0]]')).toBe(false)
+  expect(isMemberExpression('123[a]')).toBe(false)
+  expect(isMemberExpression('a + b')).toBe(false)
+  expect(isMemberExpression('foo()')).toBe(false)
+  expect(isMemberExpression('a?b:c')).toBe(false)
+  expect(isMemberExpression(`state['text'] = $event`)).toBe(false)
 })

@@ -6,9 +6,17 @@ import {
   DirectiveTransform,
   TransformContext
 } from './transform'
+import { CompilerCompatOptions } from './compat/compatConfig'
 import { ParserPlugin } from '@babel/parser'
 
-export interface ParserOptions {
+export interface ErrorHandlingOptions {
+  onWarn?: (warning: CompilerError) => void
+  onError?: (error: CompilerError) => void
+}
+
+export interface ParserOptions
+  extends ErrorHandlingOptions,
+    CompilerCompatOptions {
   /**
    * e.g. platform native elements, e.g. `<div>` for browsers
    */
@@ -45,10 +53,13 @@ export interface ParserOptions {
    */
   delimiters?: [string, string]
   /**
+   * Whitespace handling strategy
+   */
+  whitespace?: 'preserve' | 'condense'
+  /**
    * Only needed for DOM compilers
    */
   decodeEntities?: (rawText: string, asAttr: boolean) => string
-  onError?: (error: CompilerError) => void
   /**
    * Keep comments in the templates AST, even in production
    */
@@ -94,8 +105,10 @@ export const enum BindingTypes {
   OPTIONS = 'options'
 }
 
-export interface BindingMetadata {
+export type BindingMetadata = {
   [key: string]: BindingTypes | undefined
+} & {
+  __isScriptSetup?: boolean
 }
 
 interface SharedTransformCodegenOptions {
@@ -136,7 +149,10 @@ interface SharedTransformCodegenOptions {
   filename?: string
 }
 
-export interface TransformOptions extends SharedTransformCodegenOptions {
+export interface TransformOptions
+  extends SharedTransformCodegenOptions,
+    ErrorHandlingOptions,
+    CompilerCompatOptions {
   /**
    * An array of node transforms to be applied to every AST node.
    */
@@ -200,12 +216,17 @@ export interface TransformOptions extends SharedTransformCodegenOptions {
    */
   scopeId?: string | null
   /**
+   * Indicates this SFC template has used :slotted in its styles
+   * Defaults to `true` for backwards compatibility - SFC tooling should set it
+   * to `false` if no `:slotted` usage is detected in `<style>`
+   */
+  slotted?: boolean
+  /**
    * SFC `<style vars>` injection string
    * Should already be an object expression, e.g. `{ 'xxxx-color': color }`
    * needed to render inline CSS variables on component root
    */
   ssrCssVars?: string
-  onError?: (error: CompilerError) => void
 }
 
 export interface CodegenOptions extends SharedTransformCodegenOptions {

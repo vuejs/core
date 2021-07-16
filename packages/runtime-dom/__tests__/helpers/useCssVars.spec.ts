@@ -2,6 +2,7 @@ import {
   ref,
   render,
   useCssVars,
+  createStaticVNode,
   h,
   reactive,
   nextTick,
@@ -135,6 +136,28 @@ describe('useCssVars', () => {
     }
 
     value.value = false
+    await nextTick()
+    for (const c of [].slice.call(root.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+    }
+  })
+
+  test('with createStaticVNode', async () => {
+    const state = reactive({ color: 'red' })
+    const root = document.createElement('div')
+
+    const App = {
+      setup() {
+        useCssVars(() => state)
+        return () => [
+          h('div'),
+          createStaticVNode('<div>1</div><div><span>2</span></div>', 2),
+          h('div')
+        ]
+      }
+    }
+
+    render(h(App), root)
     await nextTick()
     for (const c of [].slice.call(root.children as any)) {
       expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')

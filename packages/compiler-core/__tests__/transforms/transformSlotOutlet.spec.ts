@@ -339,6 +339,15 @@ describe('compiler: transform <slot> outlets', () => {
     })
   })
 
+  test('slot with slotted: false', async () => {
+    const ast = parseWithSlots(`<slot/>`, { slotted: false, scopeId: 'foo' })
+    expect((ast.children[0] as ElementNode).codegenNode).toMatchObject({
+      type: NodeTypes.JS_CALL_EXPRESSION,
+      callee: RENDER_SLOT,
+      arguments: [`$slots`, `"default"`, `{}`, `undefined`, `true`]
+    })
+  })
+
   test(`error on unexpected custom directive on <slot>`, () => {
     const onError = jest.fn()
     const source = `<slot v-foo />`

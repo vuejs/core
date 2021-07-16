@@ -42,6 +42,25 @@ export interface SFCScriptBlock extends SFCBlock {
   bindings?: BindingMetadata
   scriptAst?: Statement[]
   scriptSetupAst?: Statement[]
+  ranges?: ScriptSetupTextRanges
+}
+
+/**
+ * Text range data for IDE support
+ */
+export interface ScriptSetupTextRanges {
+  scriptBindings: TextRange[]
+  scriptSetupBindings: TextRange[]
+  propsTypeArg?: TextRange
+  propsRuntimeArg?: TextRange
+  emitsTypeArg?: TextRange
+  emitsRuntimeArg?: TextRange
+  withDefaultsArg?: TextRange
+}
+
+export interface TextRange {
+  start: number
+  end: number
 }
 
 export interface SFCStyleBlock extends SFCBlock {
@@ -59,6 +78,9 @@ export interface SFCDescriptor {
   styles: SFCStyleBlock[]
   customBlocks: SFCBlock[]
   cssVars: string[]
+  // whether the SFC uses :slotted() modifier.
+  // this is used as a compiler optimization hint.
+  slotted: boolean
 }
 
 export interface SFCParseResult {
@@ -100,7 +122,8 @@ export function parse(
     scriptSetup: null,
     styles: [],
     customBlocks: [],
-    cssVars: []
+    cssVars: [],
+    slotted: false
   }
 
   const errors: (CompilerError | SyntaxError)[] = []
@@ -121,6 +144,7 @@ export function parse(
               p.type === NodeTypes.ATTRIBUTE &&
               p.name === 'lang' &&
               p.value &&
+              p.value.content &&
               p.value.content !== 'html'
           ))
       ) {
@@ -150,6 +174,18 @@ export function parse(
             false
           ) as SFCTemplateBlock)
           templateBlock.ast = node
+
+          // warn against 2.x <template functional>
+          if (templateBlock.attrs.functional) {
+            const err = new SyntaxError(
+              `<template functional> is no longer supported in Vue 3, since ` +
+                `functional components no longer have significant performance ` +
+                `difference from stateful ones. Just use a normal <template> ` +
+                `instead.`
+            ) as CompilerError
+            err.loc = node.props.find(p => p.name === 'functional')!.loc
+            errors.push(err)
+          }
         } else {
           errors.push(createDuplicateBlockError(node))
         }
@@ -229,6 +265,12 @@ export function parse(
   if (descriptor.cssVars.length) {
     warnExperimental(`v-bind() CSS variable injection`, 231)
   }
+
+  // check if the SFC uses :slotted
+  const slottedRE = /(?:::v-|:)slotted\(/
+  descriptor.slotted = descriptor.styles.some(
+    s => s.scoped && slottedRE.test(s.content)
+  )
 
   const result = {
     descriptor,

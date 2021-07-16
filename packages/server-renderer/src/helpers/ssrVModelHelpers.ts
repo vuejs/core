@@ -1,4 +1,4 @@
-import { looseEqual, looseIndexOf } from '@vue/shared'
+import { looseEqual, looseIndexOf, isArray } from '@vue/shared'
 import { ssrRenderAttr } from './ssrRenderAttrs'
 
 export const ssrLooseEqual = looseEqual as (a: unknown, b: unknown) => boolean
@@ -17,7 +17,7 @@ export function ssrRenderDynamicModel(
     case 'radio':
       return looseEqual(model, value) ? ' checked' : ''
     case 'checkbox':
-      return (Array.isArray(model)
+      return (isArray(model)
       ? ssrLooseContain(model, value)
       : model)
         ? ' checked'
@@ -38,7 +38,7 @@ export function ssrGetDynamicModelProps(
     case 'radio':
       return looseEqual(model, value) ? { checked: true } : null
     case 'checkbox':
-      return (Array.isArray(model)
+      return (isArray(model)
       ? ssrLooseContain(model, value)
       : model)
         ? { checked: true }

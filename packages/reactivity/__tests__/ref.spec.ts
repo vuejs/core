@@ -336,4 +336,24 @@ describe('reactivity/ref', () => {
     _trigger!()
     expect(dummy).toBe(2)
   })
+
+  test('should not trigger when setting value to same proxy', () => {
+    const obj = reactive({ count: 0 })
+
+    const a = ref(obj)
+    const spy1 = jest.fn(() => a.value)
+
+    effect(spy1)
+
+    a.value = obj
+    expect(spy1).toBeCalledTimes(1)
+
+    const b = shallowRef(obj)
+    const spy2 = jest.fn(() => b.value)
+
+    effect(spy2)
+
+    b.value = obj
+    expect(spy2).toBeCalledTimes(1)
+  })
 })

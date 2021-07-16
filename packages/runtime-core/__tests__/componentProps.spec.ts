@@ -10,7 +10,10 @@ import {
   serializeInner,
   createApp,
   provide,
-  inject
+  inject,
+  watch,
+  toRefs,
+  SetupContext
 } from '@vue/runtime-test'
 import { render as domRender, nextTick } from 'vue'
 
@@ -295,6 +298,46 @@ describe('component props', () => {
       ;(instance!.proxy as any).foo = 2
     }).toThrow(TypeError)
     expect(`Attempting to mutate prop "foo"`).toHaveBeenWarned()
+    // should not throw when overriding properties other than props
+    expect(() => {
+      ;(instance!.proxy as any).hasOwnProperty = () => {}
+    }).not.toThrow(TypeError)
+  })
+
+  test('warn absent required props', () => {
+    const Comp = {
+      props: {
+        bool: { type: Boolean, required: true },
+        str: { type: String, required: true },
+        num: { type: Number, required: true }
+      },
+      setup() {
+        return () => null
+      }
+    }
+    render(h(Comp), nodeOps.createElement('div'))
+    expect(`Missing required prop: "bool"`).toHaveBeenWarned()
+    expect(`Missing required prop: "str"`).toHaveBeenWarned()
+    expect(`Missing required prop: "num"`).toHaveBeenWarned()
+  })
+
+  // #3495
+  test('should not warn required props using kebab-case', async () => {
+    const Comp = {
+      props: {
+        fooBar: { type: String, required: true }
+      },
+      setup() {
+        return () => null
+      }
+    }
+    render(
+      h(Comp, {
+        'foo-bar': 'hello'
+      }),
+      nodeOps.createElement('div')
+    )
+    expect(`Missing required prop: "fooBar"`).not.toHaveBeenWarned()
   })
 
   test('merging props from mixins and extends', () => {
@@ -377,5 +420,140 @@ describe('component props', () => {
     )
     expect(setupProps).toMatchObject(props)
     expect(renderProxy.$props).toMatchObject(props)
+  })
+
+  test('props type support BigInt', () => {
+    const Comp = {
+      props: {
+        foo: BigInt
+      },
+      render(this: any) {
+        return h('div', [this.foo])
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(
+      h(Comp, {
+        foo: BigInt(BigInt(100000111)) + BigInt(2000000000) * BigInt(30000000)
+      }),
+      root
+    )
+
+    expect(serializeInner(root)).toMatch('<div>60000000100000111</div>')
+  })
+
+  // #3474
+  test('should cache the value returned from the default factory to avoid unnecessary watcher trigger', async () => {
+    let count = 0
+    const Comp = {
+      props: {
+        foo: {
+          type: Object,
+          default: () => ({ val: 1 })
+        },
+        bar: Number
+      },
+      setup(props: any) {
+        watch(
+          () => props.foo,
+          () => {
+            count++
+          }
+        )
+        return () => h('h1', [props.foo.val, props.bar])
+      }
+    }
+
+    const foo = ref()
+    const bar = ref(0)
+    const app = createApp({
+      render: () => h(Comp, { foo: foo.value, bar: bar.value })
+    })
+
+    const root = nodeOps.createElement('div')
+    app.mount(root)
+    expect(serializeInner(root)).toMatch(`<h1>10</h1>`)
+    expect(count).toBe(0)
+
+    bar.value++
+    await nextTick()
+    expect(serializeInner(root)).toMatch(`<h1>11</h1>`)
+    expect(count).toBe(0)
+  })
+
+  // #3288
+  test('declared prop key should be present even if not passed', async () => {
+    let initialKeys: string[] = []
+    const changeSpy = jest.fn()
+    const passFoo = ref(false)
+
+    const Comp = {
+      render() {},
+      props: {
+        foo: String
+      },
+      setup(props: any) {
+        initialKeys = Object.keys(props)
+        const { foo } = toRefs(props)
+        watch(foo, changeSpy)
+      }
+    }
+
+    const Parent = () => (passFoo.value ? h(Comp, { foo: 'ok' }) : h(Comp))
+    const root = nodeOps.createElement('div')
+    createApp(Parent).mount(root)
+
+    expect(initialKeys).toMatchObject(['foo'])
+    passFoo.value = true
+    await nextTick()
+    expect(changeSpy).toHaveBeenCalledTimes(1)
+  })
+
+  // #3371
+  test(`avoid double-setting props when casting`, async () => {
+    const Parent = {
+      setup(props: any, { slots }: SetupContext) {
+        const childProps = ref()
+        const registerChildProps = (props: any) => {
+          childProps.value = props
+        }
+        provide('register', registerChildProps)
+
+        return () => {
+          // access the child component's props
+          childProps.value && childProps.value.foo
+          return slots.default!()
+        }
+      }
+    }
+
+    const Child = {
+      props: {
+        foo: {
+          type: Boolean,
+          required: false
+        }
+      },
+      setup(props: { foo: boolean }) {
+        const register = inject('register') as any
+        // 1. change the reactivity data of the parent component
+        // 2. register its own props to the parent component
+        register(props)
+
+        return () => 'foo'
+      }
+    }
+
+    const App = {
+      setup() {
+        return () => h(Parent, () => h(Child as any, { foo: '' }, () => null))
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`foo`)
   })
 })

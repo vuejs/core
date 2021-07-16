@@ -1,7 +1,7 @@
 {
   "name": "vue",
-  "version": "3.0.5",
-  "description": "vue",
+  "version": "3.1.4",
+  "description": "The progressive JavaScript framework for buiding modern web UI.",
   "main": "index.js",
   "module": "dist/vue.runtime.esm-bundler.js",
   "types": "dist/vue.d.ts",
@@ -37,9 +37,9 @@
   },
   "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/vue#readme",
   "dependencies": {
-    "@vue/shared": "3.0.5",
-    "@vue/compiler-dom": "3.0.5",
-    "@vue/runtime-dom": "3.0.5"
+    "@vue/shared": "3.1.4",
+    "@vue/compiler-dom": "3.1.4",
+    "@vue/runtime-dom": "3.1.4"
   },
   "devDependencies": {
     "lodash": "^4.17.15",

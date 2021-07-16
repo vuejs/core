@@ -55,6 +55,11 @@ import {
 import { buildSlots } from './vSlot'
 import { getConstantType } from './hoistStatic'
 import { BindingTypes } from '../options'
+import {
+  checkCompatEnabled,
+  CompilerDeprecationTypes,
+  isCompatEnabled
+} from '../compat/compatConfig'
 
 // some directive transforms (e.g. v-model) may return a symbol for runtime
 // import, which should be used instead of a resolveDirective call.
@@ -62,26 +67,30 @@ const directiveImportMap = new WeakMap<DirectiveNode, symbol>()
 
 // generate a JavaScript AST for this element's codegen
 export const transformElement: NodeTransform = (node, context) => {
-  if (
-    !(
-      node.type === NodeTypes.ELEMENT &&
-      (node.tagType === ElementTypes.ELEMENT ||
-        node.tagType === ElementTypes.COMPONENT)
-    )
-  ) {
-    return
-  }
   // perform the work on exit, after all child expressions have been
   // processed and merged.
   return function postTransformElement() {
+    node = context.currentNode!
+
+    if (
+      !(
+        node.type === NodeTypes.ELEMENT &&
+        (node.tagType === ElementTypes.ELEMENT ||
+          node.tagType === ElementTypes.COMPONENT)
+      )
+    ) {
+      return
+    }
+
     const { tag, props } = node
     const isComponent = node.tagType === ElementTypes.COMPONENT
 
     // The goal of the transform is to create a codegenNode implementing the
     // VNodeCall interface.
-    const vnodeTag = isComponent
+    let vnodeTag = isComponent
       ? resolveComponentType(node as ComponentNode, context)
       : `"${tag}"`
+
     const isDynamicComponent =
       isObject(vnodeTag) && vnodeTag.callee === RESOLVE_DYNAMIC_COMPONENT
 
@@ -227,21 +236,47 @@ export function resolveComponentType(
   context: TransformContext,
   ssr = false
 ) {
-  const { tag } = node
+  let { tag } = node
 
   // 1. dynamic component
-  const isProp =
-    node.tag === 'component' ? findProp(node, 'is') : findDir(node, 'is')
+  const isExplicitDynamic = isComponentTag(tag)
+  const isProp = findProp(node, 'is')
   if (isProp) {
-    const exp =
-      isProp.type === NodeTypes.ATTRIBUTE
-        ? isProp.value && createSimpleExpression(isProp.value.content, true)
-        : isProp.exp
-    if (exp) {
-      return createCallExpression(context.helper(RESOLVE_DYNAMIC_COMPONENT), [
-        exp
-      ])
+    if (
+      isExplicitDynamic ||
+      (__COMPAT__ &&
+        isCompatEnabled(
+          CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT,
+          context
+        ))
+    ) {
+      const exp =
+        isProp.type === NodeTypes.ATTRIBUTE
+          ? isProp.value && createSimpleExpression(isProp.value.content, true)
+          : isProp.exp
+      if (exp) {
+        return createCallExpression(context.helper(RESOLVE_DYNAMIC_COMPONENT), [
+          exp
+        ])
+      }
+    } else if (
+      isProp.type === NodeTypes.ATTRIBUTE &&
+      isProp.value!.content.startsWith('vue:')
+    ) {
+      // <button is="vue:xxx">
+      // if not <component>, only is value that starts with "vue:" will be
+      // treated as component by the parse phase and reach here, unless it's
+      // compat mode where all is values are considered components
+      tag = isProp.value!.content.slice(4)
     }
+  }
+
+  // 1.5 v-is (TODO: Deprecate)
+  const isDir = !isExplicitDynamic && findDir(node, 'is')
+  if (isDir && isDir.exp) {
+    return createCallExpression(context.helper(RESOLVE_DYNAMIC_COMPONENT), [
+      isDir.exp
+    ])
   }
 
   // 2. built-in components (Teleport, Transition, KeepAlive, Suspense...)
@@ -264,12 +299,17 @@ export function resolveComponentType(
   }
 
   // 4. Self referencing component (inferred from filename)
-  if (!__BROWSER__ && context.selfName) {
-    if (capitalize(camelize(tag)) === context.selfName) {
-      context.helper(RESOLVE_COMPONENT)
-      context.components.add(`_self`)
-      return toValidAssetId(`_self`, `component`)
-    }
+  if (
+    !__BROWSER__ &&
+    context.selfName &&
+    capitalize(camelize(tag)) === context.selfName
+  ) {
+    context.helper(RESOLVE_COMPONENT)
+    // codegen.ts has special check for __self postfix when generating
+    // component imports, which will pass additional `maybeSelfReference` flag
+    // to `resolveComponent`.
+    context.components.add(tag + `__self`)
+    return toValidAssetId(tag, `component`)
   }
 
   // 5. user component (resolve)
@@ -280,7 +320,7 @@ export function resolveComponentType(
 
 function resolveSetupReference(name: string, context: TransformContext) {
   const bindings = context.bindingMetadata
-  if (!bindings) {
+  if (!bindings || bindings.__isScriptSetup === false) {
     return
   }
 
@@ -407,8 +447,17 @@ export function buildProps(
           isStatic = false
         }
       }
-      // skip :is on <component>
-      if (name === 'is' && tag === 'component') {
+      // skip is on <component>, or is="vue:xxx"
+      if (
+        name === 'is' &&
+        (isComponentTag(tag) ||
+          (value && value.content.startsWith('vue:')) ||
+          (__COMPAT__ &&
+            isCompatEnabled(
+              CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT,
+              context
+            )))
+      ) {
         continue
       }
       properties.push(
@@ -428,8 +477,8 @@ export function buildProps(
     } else {
       // directives
       const { name, arg, exp, loc } = prop
-      const isBind = name === 'bind'
-      const isOn = name === 'on'
+      const isVBind = name === 'bind'
+      const isVOn = name === 'on'
 
       // skip v-slot - it is handled by its dedicated transform.
       if (name === 'slot') {
@@ -447,17 +496,24 @@ export function buildProps(
       // skip v-is and :is on <component>
       if (
         name === 'is' ||
-        (isBind && tag === 'component' && isBindKey(arg, 'is'))
+        (isVBind &&
+          isBindKey(arg, 'is') &&
+          (isComponentTag(tag) ||
+            (__COMPAT__ &&
+              isCompatEnabled(
+                CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT,
+                context
+              ))))
       ) {
         continue
       }
       // skip v-on in SSR compilation
-      if (isOn && ssr) {
+      if (isVOn && ssr) {
         continue
       }
 
       // special case for v-bind and v-on with no argument
-      if (!arg && (isBind || isOn)) {
+      if (!arg && (isVBind || isVOn)) {
         hasDynamicKeys = true
         if (exp) {
           if (properties.length) {
@@ -466,7 +522,50 @@ export function buildProps(
             )
             properties = []
           }
-          if (isBind) {
+          if (isVBind) {
+            if (__COMPAT__) {
+              // 2.x v-bind object order compat
+              if (__DEV__) {
+                const hasOverridableKeys = mergeArgs.some(arg => {
+                  if (arg.type === NodeTypes.JS_OBJECT_EXPRESSION) {
+                    return arg.properties.some(({ key }) => {
+                      if (
+                        key.type !== NodeTypes.SIMPLE_EXPRESSION ||
+                        !key.isStatic
+                      ) {
+                        return true
+                      }
+                      return (
+                        key.content !== 'class' &&
+                        key.content !== 'style' &&
+                        !isOn(key.content)
+                      )
+                    })
+                  } else {
+                    // dynamic expression
+                    return true
+                  }
+                })
+                if (hasOverridableKeys) {
+                  checkCompatEnabled(
+                    CompilerDeprecationTypes.COMPILER_V_BIND_OBJECT_ORDER,
+                    context,
+                    loc
+                  )
+                }
+              }
+
+              if (
+                isCompatEnabled(
+                  CompilerDeprecationTypes.COMPILER_V_BIND_OBJECT_ORDER,
+                  context
+                )
+              ) {
+                mergeArgs.unshift(exp)
+                continue
+              }
+            }
+
             mergeArgs.push(exp)
           } else {
             // v-on="obj" -> toHandlers(obj)
@@ -480,7 +579,7 @@ export function buildProps(
         } else {
           context.onError(
             createCompilerError(
-              isBind
+              isVBind
                 ? ErrorCodes.X_V_BIND_NO_EXPRESSION
                 : ErrorCodes.X_V_ON_NO_EXPRESSION,
               loc
@@ -506,6 +605,25 @@ export function buildProps(
         // no built-in transform, this is a user custom directive.
         runtimeDirectives.push(prop)
       }
+    }
+
+    if (
+      __COMPAT__ &&
+      prop.type === NodeTypes.ATTRIBUTE &&
+      prop.name === 'ref' &&
+      context.scopes.vFor > 0 &&
+      checkCompatEnabled(
+        CompilerDeprecationTypes.COMPILER_V_FOR_REF,
+        context,
+        prop.loc
+      )
+    ) {
+      properties.push(
+        createObjectProperty(
+          createSimpleExpression('refInFor', true),
+          createSimpleExpression('true', false)
+        )
+      )
     }
   }
 
@@ -621,7 +739,8 @@ function buildDirectiveArgs(
   } else {
     // user directive.
     // see if we have directives exposed via <script setup>
-    const fromSetup = !__BROWSER__ && resolveSetupReference(dir.name, context)
+    const fromSetup =
+      !__BROWSER__ && resolveSetupReference('v-' + dir.name, context)
     if (fromSetup) {
       dirArgs.push(fromSetup)
     } else {
@@ -666,4 +785,8 @@ function stringifyDynamicPropNames(props: string[]): string {
     if (i < l - 1) propsNamesString += ', '
   }
   return propsNamesString + `]`
+}
+
+function isComponentTag(tag: string) {
+  return tag[0].toLowerCase() + tag.slice(1) === 'component'
 }
