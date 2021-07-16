@@ -157,7 +157,11 @@ export const defineSSRCustomElement = ((options: any) => {
   return defineCustomElement(options, hydrate)
 }) as typeof defineCustomElement
 
-export class VueElement extends HTMLElement {
+const BaseClass = (typeof HTMLElement !== 'undefined'
+  ? HTMLElement
+  : class {}) as typeof HTMLElement
+
+export class VueElement extends BaseClass {
   /**
    * @internal
    */
