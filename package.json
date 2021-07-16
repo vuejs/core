@@ -16,7 +16,7 @@
     "release": "node scripts/release.js",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s",
     "dev-compiler": "npm-run-all --parallel \"dev template-explorer\" serve",
-    "dev-sfc": "npm-run-all --parallel \"dev compiler-sfc -f esm-browser\" \"dev runtime-core -f esm-bundler\" serve-sfc-playground",
+    "dev-sfc": "npm-run-all --parallel \"dev compiler-sfc -f esm-browser\" \"dev runtime-core -f esm-bundler\" \"dev runtime-dom -f esm-bundler\" serve-sfc-playground",
     "serve-sfc-playground": "vite packages/sfc-playground",
     "serve": "serve",
     "open": "open http://localhost:5000/packages/template-explorer/local.html",
