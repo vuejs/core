@@ -1,3 +1,30 @@
+## [3.1.5](https://github.com/vuejs/vue-next/compare/v3.1.4...v3.1.5) (2021-07-16)
+
+
+### Bug Fixes
+
+* **compat:** fix props check for v-model compat warning ([#4056](https://github.com/vuejs/vue-next/issues/4056)) ([f3e15f6](https://github.com/vuejs/vue-next/commit/f3e15f633edfa2d4f116bf52fd5dee02655567e3))
+* **compat:** fix v3 compiled fn detection in production ([8dbad83](https://github.com/vuejs/vue-next/commit/8dbad83e7fa39be3e61ca694a6090c1646117953))
+* **compiler:** Addressed infinite loop in compiler ([#3992](https://github.com/vuejs/vue-next/issues/3992)) ([e00aa56](https://github.com/vuejs/vue-next/commit/e00aa56658ec207d45aae6eb23f0267b9e1c55e2)), closes [#3987](https://github.com/vuejs/vue-next/issues/3987)
+* **compiler-core:** fix forwarded slots detection on template slots ([#4124](https://github.com/vuejs/vue-next/issues/4124)) ([c23153d](https://github.com/vuejs/vue-next/commit/c23153d82eb2aa57d254dd362a78383defec3968)), closes [#4123](https://github.com/vuejs/vue-next/issues/4123)
+* **compiler-sfc:** duplicated injected css var with repeated vars in style ([#2802](https://github.com/vuejs/vue-next/issues/2802)) ([2901050](https://github.com/vuejs/vue-next/commit/29010501cc9611eb9cacb99a24827053ced3e018))
+* **compiler-sfc:** should not rewrite ref sugar identifiers in types ([6fad209](https://github.com/vuejs/vue-next/commit/6fad2093a46898636af34ddc148616473a234617)), closes [#4062](https://github.com/vuejs/vue-next/issues/4062)
+* **reactivity:** call array subclass methods ([#3624](https://github.com/vuejs/vue-next/issues/3624)) ([1cfe290](https://github.com/vuejs/vue-next/commit/1cfe290352456f0faf8319d7e193a4b3a31ef352)), closes [#2314](https://github.com/vuejs/vue-next/issues/2314) [#2315](https://github.com/vuejs/vue-next/issues/2315)
+* **ref:** should not trigger when setting value to same proxy ([#3658](https://github.com/vuejs/vue-next/issues/3658)) ([08f504c](https://github.com/vuejs/vue-next/commit/08f504c1b7798d95c1c0a9d0894b846ff955ce3c))
+* **runtime-core:** enter optimized mode for component as root ([68365b9](https://github.com/vuejs/vue-next/commit/68365b9b2bc2ccef93e88475c4f15e7cfb4f2497)), closes [#3943](https://github.com/vuejs/vue-next/issues/3943)
+* **runtime-dom:** capture errors when setting value for IDL ([#3578](https://github.com/vuejs/vue-next/issues/3578)) ([3756270](https://github.com/vuejs/vue-next/commit/37562702725fc328286b63499422856ac47890d7)), closes [#3576](https://github.com/vuejs/vue-next/issues/3576)
+* **runtime-dom:** remove class attribute on nullish values ([7013e8f](https://github.com/vuejs/vue-next/commit/7013e8f5781e838256bf07e7d5de58a974e761a8)), closes [#3173](https://github.com/vuejs/vue-next/issues/3173)
+* **sfc:** fix `<script setup>` async context preservation logic ([03e2684](https://github.com/vuejs/vue-next/commit/03e26845e2c220b1350a35179acf3435e2711282)), closes [#4050](https://github.com/vuejs/vue-next/issues/4050)
+* **sfc:** fix style variables injection on static vnode ([#3847](https://github.com/vuejs/vue-next/issues/3847)) ([6a0c7cd](https://github.com/vuejs/vue-next/commit/6a0c7cd9051e1b3eb1a3ce1eaadfd9c828b53daa)), closes [#3841](https://github.com/vuejs/vue-next/issues/3841)
+* **sfc:** only enable jsx parser plugin when explicitly using tsx ([5df7dfc](https://github.com/vuejs/vue-next/commit/5df7dfcd71172f97a045297cdeea226e0b354a93)), closes [#4106](https://github.com/vuejs/vue-next/issues/4106)
+* **type:** infer parent as `this` on `nextTick` function ([#3608](https://github.com/vuejs/vue-next/issues/3608)) ([18911ab](https://github.com/vuejs/vue-next/commit/18911abb917788106221027032bc771f0e37886d)), closes [#3599](https://github.com/vuejs/vue-next/issues/3599)
+* **v-model:** handle mutations of v-model bound array/sets ([2937530](https://github.com/vuejs/vue-next/commit/2937530beff5c6bb57286c2556307859e37aa809)), closes [#4096](https://github.com/vuejs/vue-next/issues/4096)
+* **v-model:** support calling methods in v-model expression ([5af718b](https://github.com/vuejs/vue-next/commit/5af718ba41f53d032fd33861494f96b70c107acd)), closes [#3993](https://github.com/vuejs/vue-next/issues/3993)
+* **v-on:** proper member exp detection for bracket assignment ([395572b](https://github.com/vuejs/vue-next/commit/395572b593c300be4db698777503bebe2bba2950)), closes [#4097](https://github.com/vuejs/vue-next/issues/4097)
+* **v-on:** properly detect member expressions with optional chaining ([963085d](https://github.com/vuejs/vue-next/commit/963085d18c472b13c2d3894d5bd4aac1420767f8)), closes [#4107](https://github.com/vuejs/vue-next/issues/4107)
+
+
+
 ## [3.1.4](https://github.com/vuejs/vue-next/compare/v3.1.3...v3.1.4) (2021-07-02)
 
 
