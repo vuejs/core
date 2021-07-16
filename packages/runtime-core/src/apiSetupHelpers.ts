@@ -110,11 +110,6 @@ export function defineEmits() {
 }
 
 /**
- * @deprecated use `defineEmits` instead.
- */
-export const defineEmit = defineEmits
-
-/**
  * Vue `<script setup>` compiler macro for declaring a component's exposed
  * instance properties when it is accessed by a parent component via template
  * refs.
@@ -176,19 +171,6 @@ export function withDefaults<Props, Defaults extends InferDefaults<Props>>(
     warnRuntimeUsage(`withDefaults`)
   }
   return null as any
-}
-
-/**
- * @deprecated use `useSlots` and `useAttrs` instead.
- */
-export function useContext(): SetupContext {
-  if (__DEV__) {
-    warn(
-      `\`useContext()\` has been deprecated and will be removed in the ` +
-        `next minor release. Use \`useSlots()\` and \`useAttrs()\` instead.`
-    )
-  }
-  return getContext()
 }
 
 export function useSlots(): SetupContext['slots'] {

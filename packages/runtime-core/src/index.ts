@@ -65,9 +65,6 @@ export {
   // internal
   mergeDefaults,
   withAsyncContext,
-  // deprecated
-  defineEmit,
-  useContext,
   useAttrs,
   useSlots
 } from './apiSetupHelpers'

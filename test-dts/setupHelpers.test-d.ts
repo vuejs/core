@@ -1,9 +1,7 @@
 import {
   expectType,
   defineProps,
-  defineEmit,
   defineEmits,
-  useContext,
   useAttrs,
   useSlots,
   withDefaults,
@@ -111,30 +109,6 @@ describe('defineEmits w/ runtime declaration', () => {
   emit2('bar', 123)
   // @ts-expect-error
   emit2('baz')
-})
-
-describe('deprecated defineEmit', () => {
-  const emit = defineEmit({
-    foo: () => {},
-    bar: null
-  })
-  emit('foo')
-  emit('bar', 123)
-  // @ts-expect-error
-  emit('baz')
-})
-
-describe('useContext', () => {
-  const { attrs, emit, slots } = useContext()
-  expectType<Record<string, unknown>>(attrs)
-  expectType<(...args: any[]) => void>(emit)
-  expectType<Slots>(slots)
-
-  // @ts-expect-error
-  props.foo
-  // should be able to emit anything
-  emit('foo')
-  emit('bar')
 })
 
 describe('useAttrs', () => {
