@@ -48,8 +48,8 @@ function setVarsOnVNode(vnode: VNode, vars: Record<string, string>) {
   }
 
   if (vnode.transition) {
-    vnode.transition.effects.push((el: HTMLElement) => {
-      setVarsOnNode(el as Node, vars)
+    vnode.transition.effects.push((el: Node) => {
+      setVarsOnNode(el, vars)
     })
   }
 
