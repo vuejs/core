@@ -12,7 +12,7 @@ const HTML_TAGS =
   'canvas,script,noscript,del,ins,caption,col,colgroup,table,thead,tbody,td,' +
   'th,tr,button,datalist,fieldset,form,input,label,legend,meter,optgroup,' +
   'option,output,progress,select,textarea,details,dialog,menu,' +
-  'summary,template,blockquote,iframe,tfoot'
+  'summary,template,blockquote,iframe,tfoot,portal'
 
 // https://developer.mozilla.org/en-US/docs/Web/SVG/Element
 const SVG_TAGS =
