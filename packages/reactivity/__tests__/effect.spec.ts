@@ -792,13 +792,14 @@ describe('reactivity/effect', () => {
     expect(record).toBeUndefined()
   })
 
-  it('should trigger once effect when set the equal proxy', () => {
+  it('should not be trigger when set the equal proxy', () => {
     const obj = reactive({ foo: 1 })
     const observed: any = reactive({ obj })
     const fnSpy = jest.fn(() => observed.obj)
 
     effect(fnSpy)
 
+    expect(fnSpy).toHaveBeenCalledTimes(1)
     observed.obj = obj
     expect(fnSpy).toHaveBeenCalledTimes(1)
 
@@ -808,6 +809,7 @@ describe('reactivity/effect', () => {
 
     effect(fnSpy2)
 
+    expect(fnSpy2).toHaveBeenCalledTimes(1)
     observed2.obj2 = obj2
     expect(fnSpy2).toHaveBeenCalledTimes(1)
   })
