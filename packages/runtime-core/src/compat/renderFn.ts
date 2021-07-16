@@ -39,8 +39,6 @@ import {
 } from './compatConfig'
 import { compatModelEventPrefix } from './componentVModel'
 
-const v3CompiledRenderFnRE = /^(?:function \w*)?\(_ctx, _cache/
-
 export function convertLegacyRenderFn(instance: ComponentInternalInstance) {
   const Component = instance.type as ComponentOptions
   const render = Component.render as InternalRenderFunction | undefined
@@ -50,8 +48,10 @@ export function convertLegacyRenderFn(instance: ComponentInternalInstance) {
     return
   }
 
-  if (v3CompiledRenderFnRE.test(render.toString())) {
-    // v3 pre-compiled function
+  if (render.length >= 2) {
+    // v3 pre-compiled function, since v2 render functions never need more than
+    // 2 arguments, and v2 functional render functions would have already been
+    // normalized into v3 functional components
     render._compatChecked = true
     return
   }
