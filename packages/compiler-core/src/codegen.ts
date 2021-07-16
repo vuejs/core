@@ -304,10 +304,6 @@ export function generate(
   deindent()
   push(`}`)
 
-  if (genScopeId && !isSetupInlined) {
-    push(`)`)
-  }
-
   return {
     ast,
     code: context.code,

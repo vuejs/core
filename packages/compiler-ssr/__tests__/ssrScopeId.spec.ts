@@ -15,7 +15,7 @@ describe('ssr: scopeId', () => {
 
       export function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<div\${_ssrRenderAttrs(_attrs)} data-v-xxxxxxx><span data-v-xxxxxxx>hello</span></div>\`)
-      })"
+      }"
     `)
   })
 
@@ -45,7 +45,7 @@ describe('ssr: scopeId', () => {
           }),
           _: 1 /* STABLE */
         }, _parent))
-      })"
+      }"
     `)
   })
 
@@ -74,7 +74,7 @@ describe('ssr: scopeId', () => {
           }),
           _: 1 /* STABLE */
         }, _parent))
-      })"
+      }"
     `)
   })
 
@@ -122,7 +122,7 @@ describe('ssr: scopeId', () => {
           }),
           _: 1 /* STABLE */
         }, _parent))
-      })"
+      }"
     `)
   })
 })
