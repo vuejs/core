@@ -53,20 +53,19 @@ export { provide, inject } from './apiInject'
 export { nextTick } from './scheduler'
 export { defineComponent } from './apiDefineComponent'
 export { defineAsyncComponent } from './apiAsyncComponent'
+export { useAttrs, useSlots } from './apiSetupHelpers'
 
 // <script setup> API ----------------------------------------------------------
 
 export {
-  // macros runtime, for warnings only
+  // macros runtime, for typing and warnings only
   defineProps,
   defineEmits,
   defineExpose,
   withDefaults,
   // internal
   mergeDefaults,
-  withAsyncContext,
-  useAttrs,
-  useSlots
+  withAsyncContext
 } from './apiSetupHelpers'
 
 // Advanced API ----------------------------------------------------------------
@@ -345,3 +344,7 @@ const _compatUtils = {
 export const compatUtils = (__COMPAT__
   ? _compatUtils
   : null) as typeof _compatUtils
+
+// Ref macros ------------------------------------------------------------------
+// for dts generation only
+export { $ref, $computed, $raw, $fromRefs } from './helpers/refMacros'
