@@ -692,7 +692,7 @@ export function createCallExpression<T extends CallExpression['callee']>(
     loc,
     callee,
     arguments: args
-  } as any
+  } as InferCodegenNodeType<T>
 }
 
 export function createFunctionExpression(
