@@ -311,10 +311,9 @@ function createBlock(
         block.src = p.value && p.value.content
       } else if (type === 'style') {
         if (p.name === 'scoped') {
-          if (p.value && p.value.content === 'deep') {
-            ;(block as SFCStyleBlock).scoped = p.value.content
-          } else if (p.value && p.value.content === 'slotted') {
-            ;(block as SFCStyleBlock).scoped = p.value.content
+          const scoped = p.value && p.value.content
+          if (scoped === 'deep' || scoped === 'slotted') {
+            ;(block as SFCStyleBlock).scoped = scoped
           } else {
             ;(block as SFCStyleBlock).scoped = true
           }
