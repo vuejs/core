@@ -740,10 +740,17 @@ export function buildProps(
             // so use `hasStyleBinding` to ensure that it is a dynamic style binding
             hasStyleBinding
           ) {
-            styleProp.value = createCallExpression(
-              context.helper(NORMALIZE_STYLE),
-              [styleProp.value]
-            )
+            const content = (styleProp.value as any).content
+            // only transform object style, skip text style
+            if (
+              content &&
+              (content.startsWith('{') || content.startsWith('['))
+            ) {
+              styleProp.value = createCallExpression(
+                context.helper(NORMALIZE_STYLE),
+                [styleProp.value]
+              )
+            }
           }
         } else {
           // dynamic key binding, wrap with `normalizeProps`
