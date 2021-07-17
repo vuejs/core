@@ -741,7 +741,7 @@ export function buildProps(
             hasStyleBinding
           ) {
             const content = (styleProp.value as any).content
-            // only transform object style, skip text style
+            // #4138 only transform object style
             if (
               content &&
               (content.startsWith('{') || content.startsWith('['))
