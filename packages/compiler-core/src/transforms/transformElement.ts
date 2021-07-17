@@ -740,11 +740,11 @@ export function buildProps(
             // so use `hasStyleBinding` to ensure that it is a dynamic style binding
             hasStyleBinding
           ) {
-            const content = (styleProp.value as any).content
-            // #4138 only transform object style
+            // #4138 only transform object and array
+            const { content, type } = styleProp.value as any
             if (
-              content &&
-              (content.startsWith('{') || content.startsWith('['))
+              type === NodeTypes.JS_ARRAY_EXPRESSION ||
+              (content && (content.startsWith('{') || content.startsWith('[')))
             ) {
               styleProp.value = createCallExpression(
                 context.helper(NORMALIZE_STYLE),
