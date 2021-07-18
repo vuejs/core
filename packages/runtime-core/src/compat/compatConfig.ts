@@ -398,9 +398,10 @@ export const deprecationData: Record<DeprecationTypes, DeprecationData> = {
           DeprecationTypes.COMPONENT_V_MODEL
         }: false }\`.`
       if (
-        comp.props && isArray(comp.props)
+        comp.props &&
+        (isArray(comp.props)
           ? comp.props.includes('modelValue')
-          : hasOwn(comp.props, 'modelValue')
+          : hasOwn(comp.props, 'modelValue'))
       ) {
         return (
           `Component delcares "modelValue" prop, which is Vue 3 usage, but ` +
@@ -551,8 +552,8 @@ export function validateCompatConfig(
           warn(
             `Deprecation config "${key}" is compiler-specific and you are ` +
               `running a runtime-only build of Vue. This deprecation should be ` +
-              `configured via compiler options in your build setup instead.`
-            // TODO link to migration build docs on build setup
+              `configured via compiler options in your build setup instead.\n` +
+              `Details: https://v3.vuejs.org/guide/migration/migration-build.html`
           )
         }
       } else {

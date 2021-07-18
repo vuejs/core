@@ -384,7 +384,8 @@ function hasForwardedSlots(children: TemplateChildNode[]): boolean {
       case NodeTypes.ELEMENT:
         if (
           child.tagType === ElementTypes.SLOT ||
-          (child.tagType === ElementTypes.ELEMENT &&
+          ((child.tagType === ElementTypes.ELEMENT ||
+            child.tagType === ElementTypes.TEMPLATE) &&
             hasForwardedSlots(child.children))
         ) {
           return true

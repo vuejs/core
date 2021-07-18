@@ -29,7 +29,8 @@ import {
   ComponentInternalInstance,
   ComponentOptions,
   ConcreteComponent,
-  setCurrentInstance
+  setCurrentInstance,
+  unsetCurrentInstance
 } from './component'
 import { isEmitListener } from './componentEmits'
 import { InternalObjectKey } from './vnode'
@@ -109,7 +110,8 @@ type InferPropType<T> = [T] extends [null]
             : T
 
 export type ExtractPropTypes<O> = O extends object
-  ? { [K in RequiredKeys<O>]: InferPropType<O[K]> } &
+  ? { [K in keyof O]?: unknown } & // This is needed to keep the relation between the option prop and the props, allowing to use ctrl+click to navigate to the prop options. see: #3656
+      { [K in RequiredKeys<O>]: InferPropType<O[K]> } &
       { [K in OptionalKeys<O>]?: InferPropType<O[K]> }
   : { [K in string]: any }
 
@@ -410,7 +412,7 @@ function resolvePropValue(
               : null,
             props
           )
-          setCurrentInstance(null)
+          unsetCurrentInstance()
         }
       } else {
         value = defaultValue

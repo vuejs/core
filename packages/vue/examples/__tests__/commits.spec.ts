@@ -28,7 +28,7 @@ describe('e2e: commits', () => {
     })
 
     await page().goto(baseUrl)
-    await page().waitFor('li')
+    await page().waitForSelector('li')
     expect(await count('input')).toBe(2)
     expect(await count('label')).toBe(2)
     expect(await text('label[for="master"]')).toBe('master')

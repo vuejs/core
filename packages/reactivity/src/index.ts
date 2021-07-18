@@ -30,6 +30,7 @@ export {
 } from './reactive'
 export {
   computed,
+  setComputedScheduler,
   ComputedRef,
   WritableComputedRef,
   WritableComputedOptions,
@@ -46,7 +47,16 @@ export {
   resetTracking,
   ITERATE_KEY,
   ReactiveEffect,
+  ReactiveEffectRunner,
   ReactiveEffectOptions,
+  EffectScheduler,
+  DebuggerOptions,
   DebuggerEvent
 } from './effect'
+export {
+  effectScope,
+  EffectScope,
+  getCurrentScope,
+  onScopeDispose
+} from './effectScope'
 export { TrackOpTypes, TriggerOpTypes } from './operations'

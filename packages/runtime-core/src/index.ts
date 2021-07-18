@@ -3,6 +3,7 @@
 export const version = __VERSION__
 export {
   // core
+  computed,
   reactive,
   ref,
   readonly,
@@ -22,10 +23,18 @@ export {
   shallowReactive,
   shallowReadonly,
   markRaw,
-  toRaw
+  toRaw,
+  // effect
+  effect,
+  stop,
+  ReactiveEffect,
+  // effect scope
+  effectScope,
+  EffectScope,
+  getCurrentScope,
+  onScopeDispose
 } from '@vue/reactivity'
-export { computed } from './apiComputed'
-export { watch, watchEffect } from './apiWatch'
+export { watch, watchEffect, watchPostEffect } from './apiWatch'
 export {
   onBeforeMount,
   onMounted,
@@ -44,19 +53,19 @@ export { provide, inject } from './apiInject'
 export { nextTick } from './scheduler'
 export { defineComponent } from './apiDefineComponent'
 export { defineAsyncComponent } from './apiAsyncComponent'
+export { useAttrs, useSlots } from './apiSetupHelpers'
 
 // <script setup> API ----------------------------------------------------------
 
 export {
+  // macros runtime, for typing and warnings only
   defineProps,
   defineEmits,
   defineExpose,
   withDefaults,
   // internal
   mergeDefaults,
-  // deprecated
-  defineEmit,
-  useContext
+  withAsyncContext
 } from './apiSetupHelpers'
 
 // Advanced API ----------------------------------------------------------------
@@ -133,7 +142,6 @@ declare module '@vue/reactivity' {
 }
 
 export {
-  ReactiveEffect,
   ReactiveEffectOptions,
   DebuggerEvent,
   TrackOpTypes,
@@ -198,7 +206,8 @@ export {
 export { EmitsOptions, ObjectEmitsOptions } from './componentEmits'
 export {
   ComponentPublicInstance,
-  ComponentCustomProperties
+  ComponentCustomProperties,
+  CreateComponentPublicInstance
 } from './componentPublicInstance'
 export {
   Renderer,
@@ -251,19 +260,26 @@ export { renderList } from './helpers/renderList'
 export { toHandlers } from './helpers/toHandlers'
 export { renderSlot } from './helpers/renderSlot'
 export { createSlots } from './helpers/createSlots'
+export { withMemo, isMemoSame } from './helpers/withMemo'
 export {
   openBlock,
   createBlock,
   setBlockTracking,
   createTextVNode,
   createCommentVNode,
-  createStaticVNode
+  createStaticVNode,
+  createElementVNode,
+  createElementBlock,
+  guardReactiveProps
 } from './vnode'
 export {
   toDisplayString,
   camelize,
   capitalize,
-  toHandlerKey
+  toHandlerKey,
+  normalizeProps,
+  normalizeClass,
+  normalizeStyle
 } from '@vue/shared'
 
 // For test-utils
@@ -328,3 +344,7 @@ const _compatUtils = {
 export const compatUtils = (__COMPAT__
   ? _compatUtils
   : null) as typeof _compatUtils
+
+// Ref macros ------------------------------------------------------------------
+// for dts generation only
+export { $ref, $computed, $raw, $fromRefs } from './helpers/refMacros'

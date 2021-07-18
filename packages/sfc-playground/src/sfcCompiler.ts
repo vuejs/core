@@ -97,10 +97,11 @@ export async function compileFile({ filename, code, compiled }: File) {
   // the render fn is inlined.
   if (descriptor.scriptSetup) {
     const ssrScriptResult = await doCompileScript(descriptor, id, true)
-    if (!ssrScriptResult) {
-      return
+    if (ssrScriptResult) {
+      ssrCode += ssrScriptResult[0]
+    } else {
+      ssrCode = `/* SSR compile error: ${store.errors[0]} */`
     }
-    ssrCode += ssrScriptResult[0]
   } else {
     // when no <script setup> is used, the script result will be identical.
     ssrCode += clientScript
@@ -121,10 +122,12 @@ export async function compileFile({ filename, code, compiled }: File) {
     clientCode += clientTemplateResult
 
     const ssrTemplateResult = doCompileTemplate(descriptor, id, bindings, true)
-    if (!ssrTemplateResult) {
-      return
+    if (ssrTemplateResult) {
+      // ssr compile failure is fine
+      ssrCode += ssrTemplateResult
+    } else {
+      ssrCode = `/* SSR compile error: ${store.errors[0]} */`
     }
-    ssrCode += ssrTemplateResult
   }
 
   if (hasScoped) {

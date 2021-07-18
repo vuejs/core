@@ -1276,6 +1276,54 @@ describe('compiler: parse', () => {
       })
     })
 
+    test('v-bind .prop shorthand', () => {
+      const ast = baseParse('<div .a=b />')
+      const directive = (ast.children[0] as ElementNode).props[0]
+
+      expect(directive).toStrictEqual({
+        type: NodeTypes.DIRECTIVE,
+        name: 'bind',
+        arg: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: 'a',
+          isStatic: true,
+          constType: ConstantTypes.CAN_STRINGIFY,
+
+          loc: {
+            source: 'a',
+            start: {
+              column: 7,
+              line: 1,
+              offset: 6
+            },
+            end: {
+              column: 8,
+              line: 1,
+              offset: 7
+            }
+          }
+        },
+        modifiers: ['prop'],
+        exp: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: 'b',
+          isStatic: false,
+          constType: ConstantTypes.NOT_CONSTANT,
+
+          loc: {
+            start: { offset: 8, line: 1, column: 9 },
+            end: { offset: 9, line: 1, column: 10 },
+            source: 'b'
+          }
+        },
+        loc: {
+          start: { offset: 5, line: 1, column: 6 },
+          end: { offset: 9, line: 1, column: 10 },
+          source: '.a=b'
+        }
+      })
+    })
+
     test('v-bind shorthand with modifier', () => {
       const ast = baseParse('<div :a.sync=b />')
       const directive = (ast.children[0] as ElementNode).props[0]

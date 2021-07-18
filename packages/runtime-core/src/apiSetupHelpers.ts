@@ -1,7 +1,10 @@
+import { isPromise } from '../../shared/src'
 import {
   getCurrentInstance,
+  setCurrentInstance,
   SetupContext,
-  createSetupContext
+  createSetupContext,
+  unsetCurrentInstance
 } from './component'
 import { EmitFn, EmitsOptions } from './componentEmits'
 import {
@@ -107,11 +110,6 @@ export function defineEmits() {
 }
 
 /**
- * @deprecated use `defineEmits` instead.
- */
-export const defineEmit = defineEmits
-
-/**
  * Vue `<script setup>` compiler macro for declaring a component's exposed
  * instance properties when it is accessed by a parent component via template
  * refs.
@@ -175,19 +173,6 @@ export function withDefaults<Props, Defaults extends InferDefaults<Props>>(
   return null as any
 }
 
-/**
- * @deprecated use `useSlots` and `useAttrs` instead.
- */
-export function useContext(): SetupContext {
-  if (__DEV__) {
-    warn(
-      `\`useContext()\` has been deprecated and will be removed in the ` +
-        `next minor release. Use \`useSlots()\` and \`useAttrs()\` instead.`
-    )
-  }
-  return getContext()
-}
-
 export function useSlots(): SetupContext['slots'] {
   return getContext().slots
 }
@@ -225,4 +210,41 @@ export function mergeDefaults(
     }
   }
   return props
+}
+
+/**
+ * `<script setup>` helper for persisting the current instance context over
+ * async/await flows.
+ *
+ * `@vue/compiler-sfc` converts the following:
+ *
+ * ```ts
+ * const x = await foo()
+ * ```
+ *
+ * into:
+ *
+ * ```ts
+ * let __temp, __restore
+ * const x = (([__temp, __restore] = withAsyncContext(() => foo())),__temp=await __temp,__restore(),__temp)
+ * ```
+ * @internal
+ */
+export function withAsyncContext(getAwaitable: () => any) {
+  const ctx = getCurrentInstance()!
+  if (__DEV__ && !ctx) {
+    warn(
+      `withAsyncContext called without active current instance. ` +
+        `This is likely a bug.`
+    )
+  }
+  let awaitable = getAwaitable()
+  unsetCurrentInstance()
+  if (isPromise(awaitable)) {
+    awaitable = awaitable.catch(e => {
+      setCurrentInstance(ctx)
+      throw e
+    })
+  }
+  return [awaitable, () => setCurrentInstance(ctx)]
 }

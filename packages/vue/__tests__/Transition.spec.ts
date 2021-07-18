@@ -29,7 +29,7 @@ describe('e2e: Transition', () => {
 
   beforeEach(async () => {
     await page().goto(baseUrl)
-    await page().waitFor('#app')
+    await page().waitForSelector('#app')
   })
 
   describe('transition with v-if', () => {

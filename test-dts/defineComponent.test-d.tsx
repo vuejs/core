@@ -905,6 +905,25 @@ describe('emits', () => {
       expectError(this.$emit('input'))
       //  @ts-expect-error
       expectError(this.$emit('input', 1))
+    },
+    mounted() {
+      // #3599
+      this.$nextTick(function() {
+        // this should be bound to this instance
+
+        this.$emit('click', 1)
+        this.$emit('input', 'foo')
+        //  @ts-expect-error
+        expectError(this.$emit('nope'))
+        //  @ts-expect-error
+        expectError(this.$emit('click'))
+        //  @ts-expect-error
+        expectError(this.$emit('click', 'foo'))
+        //  @ts-expect-error
+        expectError(this.$emit('input'))
+        //  @ts-expect-error
+        expectError(this.$emit('input', 1))
+      })
     }
   })
 

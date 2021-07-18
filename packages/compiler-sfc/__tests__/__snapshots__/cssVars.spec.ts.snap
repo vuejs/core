@@ -66,6 +66,25 @@ return { color }
 }"
 `;
 
+exports[`CSS vars injection codegen w/ <script setup> using the same var multiple times 1`] = `
+"import { useCssVars as _useCssVars, unref as _unref } from 'vue'
+
+export default {
+  setup(__props, { expose }) {
+  expose()
+
+_useCssVars(_ctx => ({
+  \\"xxxxxxxx-color\\": (color)
+}))
+
+        const color = 'red'
+        
+return { color }
+}
+
+}"
+`;
+
 exports[`CSS vars injection generating correct code for nested paths 1`] = `
 "const a = 1
 const __default__ = {}

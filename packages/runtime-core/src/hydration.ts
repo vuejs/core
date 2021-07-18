@@ -25,7 +25,7 @@ import { isAsyncWrapper } from './apiAsyncComponent'
 
 export type RootHydrateFunction = (
   vnode: VNode<Node, Element>,
-  container: Element
+  container: Element | ShadowRoot
 ) => void
 
 const enum DOMNodeTypes {
@@ -57,12 +57,14 @@ export function createHydrationFunctions(
   } = rendererInternals
 
   const hydrate: RootHydrateFunction = (vnode, container) => {
-    if (__DEV__ && !container.hasChildNodes()) {
-      warn(
-        `Attempting to hydrate existing markup but container is empty. ` +
-          `Performing full mount instead.`
-      )
+    if (!container.hasChildNodes()) {
+      __DEV__ &&
+        warn(
+          `Attempting to hydrate existing markup but container is empty. ` +
+            `Performing full mount instead.`
+        )
       patch(null, vnode, container)
+      flushPostFlushCbs()
       return
     }
     hasMismatch = false
@@ -132,10 +134,10 @@ export function createHydrationFunctions(
           // if the static vnode has its content stripped during build,
           // adopt it from the server-rendered HTML.
           const needToAdoptContent = !(vnode.children as string).length
-          for (let i = 0; i < vnode.staticCount; i++) {
+          for (let i = 0; i < vnode.staticCount!; i++) {
             if (needToAdoptContent)
               vnode.children += (nextNode as Element).outerHTML
-            if (i === vnode.staticCount - 1) {
+            if (i === vnode.staticCount! - 1) {
               vnode.anchor = nextNode
             }
             nextNode = nextSibling(nextNode)!
@@ -264,21 +266,28 @@ export function createHydrationFunctions(
     optimized: boolean
   ) => {
     optimized = optimized || !!vnode.dynamicChildren
-    const { props, patchFlag, shapeFlag, dirs } = vnode
+    const { type, props, patchFlag, shapeFlag, dirs } = vnode
+    // #4006 for form elements with non-string v-model value bindings
+    // e.g. <option :value="obj">, <input type="checkbox" :true-value="1">
+    const forcePatchValue = (type === 'input' && dirs) || type === 'option'
     // skip props & children if this is hoisted static nodes
-    if (patchFlag !== PatchFlags.HOISTED) {
+    if (forcePatchValue || patchFlag !== PatchFlags.HOISTED) {
       if (dirs) {
         invokeDirectiveHook(vnode, null, parentComponent, 'created')
       }
       // props
       if (props) {
         if (
+          forcePatchValue ||
           !optimized ||
           (patchFlag & PatchFlags.FULL_PROPS ||
             patchFlag & PatchFlags.HYDRATE_EVENTS)
         ) {
           for (const key in props) {
-            if (!isReservedProp(key) && isOn(key)) {
+            if (
+              (forcePatchValue && key.endsWith('value')) ||
+              (isOn(key) && !isReservedProp(key))
+            ) {
               patchProp(el, key, null, props[key])
             }
           }

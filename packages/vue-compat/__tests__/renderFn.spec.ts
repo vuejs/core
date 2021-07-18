@@ -236,4 +236,19 @@ describe('compat: render function', () => {
       deprecationData[DeprecationTypes.RENDER_FUNCTION].message
     ).toHaveBeenWarned()
   })
+
+  test('should detect v3 compiled render fn', () => {
+    const vm = new Vue({
+      data() {
+        return {
+          a: 'hello'
+        }
+      },
+      // check is arg length based
+      render(c: any, _c: any) {
+        return createVNode('div', null, c.a)
+      }
+    }).$mount()
+    expect(vm.$el.outerHTML).toBe(`<div>hello</div>`)
+  })
 })

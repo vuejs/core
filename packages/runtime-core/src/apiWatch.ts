@@ -1,12 +1,12 @@
 import {
-  effect,
-  stop,
   isRef,
   Ref,
   ComputedRef,
-  ReactiveEffectOptions,
+  ReactiveEffect,
   isReactive,
-  ReactiveFlags
+  ReactiveFlags,
+  EffectScheduler,
+  DebuggerOptions
 } from '@vue/reactivity'
 import { SchedulerJob, queuePreFlushCb } from './scheduler'
 import {
@@ -25,8 +25,7 @@ import {
 import {
   currentInstance,
   ComponentInternalInstance,
-  isInSSRComponentSetup,
-  recordInstanceBoundEffect
+  isInSSRComponentSetup
 } from './component'
 import {
   ErrorCodes,
@@ -59,10 +58,8 @@ type MapSources<T, Immediate> = {
 
 type InvalidateCbRegistrator = (cb: () => void) => void
 
-export interface WatchOptionsBase {
+export interface WatchOptionsBase extends DebuggerOptions {
   flush?: 'pre' | 'post' | 'sync'
-  onTrack?: ReactiveEffectOptions['onTrack']
-  onTrigger?: ReactiveEffectOptions['onTrigger']
 }
 
 export interface WatchOptions<Immediate = boolean> extends WatchOptionsBase {
@@ -78,6 +75,15 @@ export function watchEffect(
   options?: WatchOptionsBase
 ): WatchStopHandle {
   return doWatch(effect, null, options)
+}
+
+export function watchPostEffect(
+  effect: WatchEffect,
+  options?: DebuggerOptions
+) {
+  return doWatch(effect, null, (__DEV__
+    ? Object.assign(options || {}, { flush: 'post' })
+    : { flush: 'post' }) as WatchOptionsBase)
 }
 
 // initial value for watchers to trigger on undefined initial values
@@ -244,7 +250,7 @@ function doWatch(
 
   let cleanup: () => void
   let onInvalidate: InvalidateCbRegistrator = (fn: () => void) => {
-    cleanup = runner.options.onStop = () => {
+    cleanup = effect.onStop = () => {
       callWithErrorHandling(fn, instance, ErrorCodes.WATCH_CLEANUP)
     }
   }
@@ -268,12 +274,12 @@ function doWatch(
 
   let oldValue = isMultiSource ? [] : INITIAL_WATCHER_VALUE
   const job: SchedulerJob = () => {
-    if (!runner.active) {
+    if (!effect.active) {
       return
     }
     if (cb) {
       // watch(source, cb)
-      const newValue = runner()
+      const newValue = effect.run()
       if (
         deep ||
         forceTrigger ||
@@ -300,7 +306,7 @@ function doWatch(
       }
     } else {
       // watchEffect
-      runner()
+      effect.run()
     }
   }
 
@@ -308,7 +314,7 @@ function doWatch(
   // it is allowed to self-trigger (#1727)
   job.allowRecurse = !!cb
 
-  let scheduler: ReactiveEffectOptions['scheduler']
+  let scheduler: EffectScheduler
   if (flush === 'sync') {
     scheduler = job as any // the scheduler function gets called directly
   } else if (flush === 'post') {
@@ -326,32 +332,34 @@ function doWatch(
     }
   }
 
-  const runner = effect(getter, {
-    lazy: true,
-    onTrack,
-    onTrigger,
-    scheduler
-  })
+  const scope = instance && instance.scope
+  const effect = new ReactiveEffect(getter, scheduler, scope)
 
-  recordInstanceBoundEffect(runner, instance)
+  if (__DEV__) {
+    effect.onTrack = onTrack
+    effect.onTrigger = onTrigger
+  }
 
   // initial run
   if (cb) {
     if (immediate) {
       job()
     } else {
-      oldValue = runner()
+      oldValue = effect.run()
     }
   } else if (flush === 'post') {
-    queuePostRenderEffect(runner, instance && instance.suspense)
+    queuePostRenderEffect(
+      effect.run.bind(effect),
+      instance && instance.suspense
+    )
   } else {
-    runner()
+    effect.run()
   }
 
   return () => {
-    stop(runner)
-    if (instance) {
-      remove(instance.effects!, runner)
+    effect.stop()
+    if (scope) {
+      remove(scope.effects!, effect)
     }
   }
 }
@@ -390,12 +398,12 @@ export function createPathGetter(ctx: any, path: string) {
   }
 }
 
-function traverse(value: unknown, seen: Set<unknown> = new Set()) {
-  if (
-    !isObject(value) ||
-    seen.has(value) ||
-    (value as any)[ReactiveFlags.SKIP]
-  ) {
+export function traverse(value: unknown, seen: Set<unknown> = new Set()) {
+  if (!isObject(value) || (value as any)[ReactiveFlags.SKIP]) {
+    return value
+  }
+  seen = seen || new Set()
+  if (seen.has(value)) {
     return value
   }
   seen.add(value)

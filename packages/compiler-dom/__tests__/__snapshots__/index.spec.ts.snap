@@ -5,16 +5,18 @@ exports[`compile should contain standard transforms 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { toDisplayString: _toDisplayString, createVNode: _createVNode, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+    const { toDisplayString: _toDisplayString, createElementVNode: _createElementVNode, normalizeStyle: _normalizeStyle, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
-    return (_openBlock(), _createBlock(_Fragment, null, [
-      _createVNode(\\"div\\", {
+    return (_openBlock(), _createElementBlock(_Fragment, null, [
+      _createElementVNode(\\"div\\", {
         textContent: _toDisplayString(text)
       }, null, 8 /* PROPS */, [\\"textContent\\"]),
-      _createVNode(\\"div\\", { innerHTML: html }, null, 8 /* PROPS */, [\\"innerHTML\\"]),
-      _createVNode(\\"div\\", null, \\"test\\"),
-      _createVNode(\\"div\\", { style: {\\"color\\":\\"red\\"} }, \\"red\\"),
-      _createVNode(\\"div\\", { style: {color: 'green'} }, null, 4 /* STYLE */)
+      _createElementVNode(\\"div\\", { innerHTML: html }, null, 8 /* PROPS */, [\\"innerHTML\\"]),
+      _createElementVNode(\\"div\\", null, \\"test\\"),
+      _createElementVNode(\\"div\\", { style: {\\"color\\":\\"red\\"} }, \\"red\\"),
+      _createElementVNode(\\"div\\", {
+        style: _normalizeStyle({color: 'green'})
+      }, null, 4 /* STYLE */)
     ], 64 /* STABLE_FRAGMENT */))
   }
 }"

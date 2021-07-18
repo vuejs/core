@@ -5,13 +5,13 @@ import {
   CREATE_SLOTS,
   RENDER_LIST,
   OPEN_BLOCK,
-  CREATE_BLOCK,
   FRAGMENT,
-  CREATE_VNODE,
-  WITH_DIRECTIVES
+  WITH_DIRECTIVES,
+  WITH_MEMO
 } from './runtimeHelpers'
 import { PropsExpression } from './transforms/transformElement'
 import { ImportItem, TransformContext } from './transform'
+import { getVNodeBlockHelper, getVNodeHelper } from './utils'
 
 // Vue template is a platform-agnostic superset of HTML (syntax only).
 // More namespaces like SVG and MathML are declared by platform specific
@@ -136,6 +136,7 @@ export interface PlainElementNode extends BaseElementNode {
     | VNodeCall
     | SimpleExpressionNode // when hoisted
     | CacheExpression // when cached by v-once
+    | MemoExpression // when cached by v-memo
     | undefined
   ssrCodegenNode?: TemplateLiteral
 }
@@ -145,6 +146,7 @@ export interface ComponentNode extends BaseElementNode {
   codegenNode:
     | VNodeCall
     | CacheExpression // when cached by v-once
+    | MemoExpression // when cached by v-memo
     | undefined
   ssrCodegenNode?: CallExpression
 }
@@ -219,6 +221,7 @@ export interface SimpleExpressionNode extends Node {
    * the identifiers declared inside the function body.
    */
   identifiers?: string[]
+  isHandlerKey?: boolean
 }
 
 export interface InterpolationNode extends Node {
@@ -241,6 +244,7 @@ export interface CompoundExpressionNode extends Node {
    * the identifiers declared inside the function body.
    */
   identifiers?: string[]
+  isHandlerKey?: boolean
 }
 
 export interface IfNode extends Node {
@@ -287,12 +291,14 @@ export interface VNodeCall extends Node {
     | TemplateTextChildNode // single text child
     | SlotsExpression // component slots
     | ForRenderListExpression // v-for fragment call
+    | SimpleExpressionNode // hoisted
     | undefined
   patchFlag: string | undefined
-  dynamicProps: string | undefined
+  dynamicProps: string | SimpleExpressionNode | undefined
   directives: DirectiveArguments | undefined
   isBlock: boolean
   disableTracking: boolean
+  isComponent: boolean
 }
 
 // JS Node Types ---------------------------------------------------------------
@@ -338,7 +344,7 @@ export interface Property extends Node {
 
 export interface ArrayExpression extends Node {
   type: NodeTypes.JS_ARRAY_EXPRESSION
-  elements: Array<string | JSChildNode>
+  elements: Array<string | Node>
 }
 
 export interface FunctionExpression extends Node {
@@ -372,6 +378,15 @@ export interface CacheExpression extends Node {
   index: number
   value: JSChildNode
   isVNode: boolean
+}
+
+export interface MemoExpression extends CallExpression {
+  callee: typeof WITH_MEMO
+  arguments: [ExpressionNode, MemoFactory, string, string]
+}
+
+interface MemoFactory extends FunctionExpression {
+  returns: BlockCodegenNode
 }
 
 // SSR-specific Node Types -----------------------------------------------------
@@ -498,8 +513,8 @@ export interface DynamicSlotFnProperty extends Property {
 export type BlockCodegenNode = VNodeCall | RenderSlotCall
 
 export interface IfConditionalExpression extends ConditionalExpression {
-  consequent: BlockCodegenNode
-  alternate: BlockCodegenNode | IfConditionalExpression
+  consequent: BlockCodegenNode | MemoExpression
+  alternate: BlockCodegenNode | IfConditionalExpression | MemoExpression
 }
 
 export interface ForCodegenNode extends VNodeCall {
@@ -560,14 +575,15 @@ export function createVNodeCall(
   directives?: VNodeCall['directives'],
   isBlock: VNodeCall['isBlock'] = false,
   disableTracking: VNodeCall['disableTracking'] = false,
+  isComponent: VNodeCall['isComponent'] = false,
   loc = locStub
 ): VNodeCall {
   if (context) {
     if (isBlock) {
       context.helper(OPEN_BLOCK)
-      context.helper(CREATE_BLOCK)
+      context.helper(getVNodeBlockHelper(context.inSSR, isComponent))
     } else {
-      context.helper(CREATE_VNODE)
+      context.helper(getVNodeHelper(context.inSSR, isComponent))
     }
     if (directives) {
       context.helper(WITH_DIRECTIVES)
@@ -584,6 +600,7 @@ export function createVNodeCall(
     directives,
     isBlock,
     disableTracking,
+    isComponent,
     loc
   }
 }
@@ -624,7 +641,7 @@ export function createObjectProperty(
 
 export function createSimpleExpression(
   content: SimpleExpressionNode['content'],
-  isStatic: SimpleExpressionNode['isStatic'],
+  isStatic: SimpleExpressionNode['isStatic'] = false,
   loc: SourceLocation = locStub,
   constType: ConstantTypes = ConstantTypes.NOT_CONSTANT
 ): SimpleExpressionNode {

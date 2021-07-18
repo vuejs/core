@@ -1,5 +1,10 @@
 import { DirectiveTransform } from '../transform'
-import { createObjectProperty, createSimpleExpression, NodeTypes } from '../ast'
+import {
+  createObjectProperty,
+  createSimpleExpression,
+  ExpressionNode,
+  NodeTypes
+} from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { camelize } from '@vue/shared'
 import { CAMELIZE } from '../runtimeHelpers'
@@ -18,7 +23,6 @@ export const transformBind: DirectiveTransform = (dir, _node, context) => {
     arg.content = `${arg.content} || ""`
   }
 
-  // .prop is no longer necessary due to new patch behavior
   // .sync is replaced by v-model:arg
   if (modifiers.includes('camel')) {
     if (arg.type === NodeTypes.SIMPLE_EXPRESSION) {
@@ -30,6 +34,15 @@ export const transformBind: DirectiveTransform = (dir, _node, context) => {
     } else {
       arg.children.unshift(`${context.helperString(CAMELIZE)}(`)
       arg.children.push(`)`)
+    }
+  }
+
+  if (!context.inSSR) {
+    if (modifiers.includes('prop')) {
+      injectPrefix(arg, '.')
+    }
+    if (modifiers.includes('attr')) {
+      injectPrefix(arg, '^')
     }
   }
 
@@ -45,5 +58,18 @@ export const transformBind: DirectiveTransform = (dir, _node, context) => {
 
   return {
     props: [createObjectProperty(arg!, exp)]
+  }
+}
+
+const injectPrefix = (arg: ExpressionNode, prefix: string) => {
+  if (arg.type === NodeTypes.SIMPLE_EXPRESSION) {
+    if (arg.isStatic) {
+      arg.content = prefix + arg.content
+    } else {
+      arg.content = `\`${prefix}\${${arg.content}}\``
+    }
+  } else {
+    arg.children.unshift(`'${prefix}' + (`)
+    arg.children.push(`)`)
   }
 }

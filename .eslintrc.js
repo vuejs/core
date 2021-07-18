@@ -20,7 +20,8 @@ module.exports = {
     'no-restricted-syntax': [
       'error',
       'ObjectExpression > SpreadElement',
-      'ObjectPattern > RestElement'
+      'ObjectPattern > RestElement',
+      'AwaitExpression'
     ]
   },
   overrides: [
