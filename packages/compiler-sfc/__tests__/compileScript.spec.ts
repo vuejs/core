@@ -514,6 +514,7 @@ const emit = defineEmits(['a', 'b'])
         literalUnion: 'foo' | 'bar'
         literalUnionMixed: 'foo' | 1 | boolean
         intersection: Test & {}
+        foo: ((item: any) => boolean) | null
       }>()
       </script>`)
       assertCode(content)
@@ -545,6 +546,7 @@ const emit = defineEmits(['a', 'b'])
         `literalUnionMixed: { type: [String, Number, Boolean], required: true }`
       )
       expect(content).toMatch(`intersection: { type: Object, required: true }`)
+      expect(content).toMatch(`foo: { type: [Function, null], required: true }`)
       expect(bindings).toStrictEqual({
         string: BindingTypes.PROPS,
         number: BindingTypes.PROPS,
@@ -567,7 +569,8 @@ const emit = defineEmits(['a', 'b'])
         union: BindingTypes.PROPS,
         literalUnion: BindingTypes.PROPS,
         literalUnionMixed: BindingTypes.PROPS,
-        intersection: BindingTypes.PROPS
+        intersection: BindingTypes.PROPS,
+        foo: BindingTypes.PROPS
       })
     })
 
