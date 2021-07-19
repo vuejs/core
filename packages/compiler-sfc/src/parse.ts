@@ -305,6 +305,16 @@ function createBlock(
     start = node.children[0].loc.start
     end = node.children[node.children.length - 1].loc.end
     content = source.slice(start.offset, end.offset)
+  } else {
+    const offset = node.loc.source.indexOf(`</`)
+    if (offset > -1) {
+      start = {
+        line: start.line,
+        column: start.column + offset,
+        offset: start.offset + offset
+      }
+    }
+    end = { ...start }
   }
   const loc = {
     source: content,

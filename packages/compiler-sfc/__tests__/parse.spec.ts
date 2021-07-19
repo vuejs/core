@@ -111,10 +111,26 @@ h1 { color: red }
     )
   })
 
-  test('should keep template nodes with no content', () => {
+  test('should parse correct range for blocks with no content (self closing)', () => {
     const { descriptor } = parse(`<template/>`)
     expect(descriptor.template).toBeTruthy()
     expect(descriptor.template!.content).toBeFalsy()
+    expect(descriptor.template!.loc).toMatchObject({
+      start: { line: 1, column: 1, offset: 0 },
+      end: { line: 1, column: 1, offset: 0 },
+      source: ''
+    })
+  })
+
+  test('should parse correct range for blocks with no content (explicit)', () => {
+    const { descriptor } = parse(`<template></template>`)
+    expect(descriptor.template).toBeTruthy()
+    expect(descriptor.template!.content).toBeFalsy()
+    expect(descriptor.template!.loc).toMatchObject({
+      start: { line: 1, column: 11, offset: 10 },
+      end: { line: 1, column: 11, offset: 10 },
+      source: ''
+    })
   })
 
   test('should ignore other nodes with no content', () => {
