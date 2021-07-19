@@ -1,9 +1,10 @@
 export function debounce(fn: Function, n = 100) {
-  let handle: any
+  let handle: number | null = null
   return (...args: any[]) => {
-    if (handle) clearTimeout(handle)
-    handle = setTimeout(() => {
+    if (handle) window.clearTimeout(handle)
+    handle = window.setTimeout(() => {
       fn(...args)
+      handle = null
     }, n)
   }
 }
