@@ -17,20 +17,24 @@ export function defaultOnWarn(msg: CompilerError) {
   __DEV__ && console.warn(`[Vue warn] ${msg.message}`)
 }
 
+type InferCompilerError<T> = T extends ErrorCodes
+  ? CoreCompilerError
+  : CompilerError
+
 export function createCompilerError<T extends number>(
   code: T,
   loc?: SourceLocation,
   messages?: { [code: number]: string },
   additionalMessage?: string
-): T extends ErrorCodes ? CoreCompilerError : CompilerError {
+): InferCompilerError<T> {
   const msg =
     __DEV__ || !__BROWSER__
       ? (messages || errorMessages)[code] + (additionalMessage || ``)
       : code
-  const error = new SyntaxError(String(msg)) as CompilerError
+  const error = new SyntaxError(String(msg)) as InferCompilerError<T>
   error.code = code
   error.loc = loc
-  return error as any
+  return error
 }
 
 export const enum ErrorCodes {
