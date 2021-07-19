@@ -111,6 +111,22 @@ h1 { color: red }
     )
   })
 
+  test('should parse correct range for root level self closing tag', () => {
+    const content = `\n  <div/>\n`
+    const { descriptor } = parse(`<template>${content}</template>`)
+    expect(descriptor.template).toBeTruthy()
+    expect(descriptor.template!.content).toBe(content)
+    expect(descriptor.template!.loc).toMatchObject({
+      start: { line: 1, column: 11, offset: 10 },
+      end: {
+        line: 3,
+        column: 1,
+        offset: 10 + content.length
+      },
+      source: content
+    })
+  })
+
   test('should parse correct range for blocks with no content (self closing)', () => {
     const { descriptor } = parse(`<template/>`)
     expect(descriptor.template).toBeTruthy()

@@ -96,8 +96,8 @@ export interface ParserContext {
   offset: number
   line: number
   column: number
-  inPre: boolean // HTML <pre> tag, preserve whitespaces
-  inVPre: boolean // v-pre, do not process directives and interpolations
+  inPre: number // HTML <pre> tag, preserve whitespaces
+  inVPre: number // v-pre, do not process directives and interpolations
   onWarn: NonNullable<ErrorHandlingOptions['onWarn']>
 }
 
@@ -134,8 +134,8 @@ function createParserContext(
     offset: 0,
     originalSource: content,
     source: content,
-    inPre: false,
-    inVPre: false,
+    inPre: 0,
+    inVPre: 0,
     onWarn: options.onWarn
   }
 }
@@ -254,7 +254,7 @@ function parseChildren(
   // Whitespace handling strategy like v2
   let removedWhitespace = false
   if (mode !== TextModes.RAWTEXT && mode !== TextModes.RCDATA) {
-    const preserve = context.options.whitespace === 'preserve'
+    const shouldCondense = context.options.whitespace !== 'preserve'
     for (let i = 0; i < nodes.length; i++) {
       const node = nodes[i]
       if (!context.inPre && node.type === NodeTypes.TEXT) {
@@ -268,7 +268,7 @@ function parseChildren(
           if (
             !prev ||
             !next ||
-            (!preserve &&
+            (shouldCondense &&
               (prev.type === NodeTypes.COMMENT ||
                 next.type === NodeTypes.COMMENT ||
                 (prev.type === NodeTypes.ELEMENT &&
@@ -281,7 +281,7 @@ function parseChildren(
             // Otherwise, the whitespace is condensed into a single space
             node.content = ' '
           }
-        } else if (!preserve) {
+        } else if (shouldCondense) {
           // in condense mode, consecutive whitespaces in text are condensed
           // down to a single space.
           node.content = node.content.replace(/[\t\r\n\f ]+/g, ' ')
@@ -428,7 +428,7 @@ function parseElement(
   if (element.isSelfClosing || context.options.isVoidTag(element.tag)) {
     // #4030 self-closing <pre> tag
     if (context.options.isPreTag(element.tag)) {
-      context.inPre = false
+      context.inPre--
     }
     return element
   }
@@ -479,10 +479,10 @@ function parseElement(
   element.loc = getSelection(context, element.loc.start)
 
   if (isPreBoundary) {
-    context.inPre = false
+    context.inPre--
   }
   if (isVPreBoundary) {
-    context.inVPre = false
+    context.inVPre--
   }
   return element
 }
@@ -534,9 +534,8 @@ function parseTag(
   const currentSource = context.source
 
   // check <pre> tag
-  const isPreTag = context.options.isPreTag(tag)
-  if (isPreTag) {
-    context.inPre = true
+  if (context.options.isPreTag(tag)) {
+    context.inPre++
   }
 
   // Attributes.
@@ -548,7 +547,7 @@ function parseTag(
     !context.inVPre &&
     props.some(p => p.type === NodeTypes.DIRECTIVE && p.name === 'pre')
   ) {
-    context.inVPre = true
+    context.inVPre++
     // reset context
     extend(context, cursor)
     context.source = currentSource
