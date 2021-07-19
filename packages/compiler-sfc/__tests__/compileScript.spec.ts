@@ -794,6 +794,18 @@ const emit = defineEmits(['a', 'b'])
         Foo: BindingTypes.SETUP_CONST
       })
     })
+
+    test('const Enum', () => {
+      const { content, bindings } = compile(
+        `<script setup lang="ts">
+        const enum Foo { A = 123 }
+        </script>`
+      )
+      assertCode(content)
+      expect(bindings).toStrictEqual({
+        Foo: BindingTypes.SETUP_CONST
+      })
+    })
   })
 
   describe('async/await detection', () => {

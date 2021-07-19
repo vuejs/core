@@ -1008,7 +1008,7 @@ export function compileScript(
 
     if (isTS) {
       // runtime enum
-      if (node.type === 'TSEnumDeclaration' && !node.const) {
+      if (node.type === 'TSEnumDeclaration') {
         registerBinding(setupBindings, node.id, BindingTypes.SETUP_CONST)
       }
 

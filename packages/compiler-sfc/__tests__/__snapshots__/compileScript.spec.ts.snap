@@ -540,6 +540,21 @@ return { a, b, c, d, x }
 }"
 `;
 
+exports[`SFC compile <script setup> with TypeScript const Enum 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+const enum Foo { A = 123 }
+        
+export default _defineComponent({
+  setup(__props, { expose }) {
+  expose()
+
+        
+return { Foo }
+}
+
+})"
+`;
+
 exports[`SFC compile <script setup> with TypeScript defineEmits w/ type (exported interface) 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 export interface Emits { (e: 'foo' | 'bar'): void }
