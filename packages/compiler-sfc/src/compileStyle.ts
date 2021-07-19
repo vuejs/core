@@ -185,7 +185,7 @@ export function doCompileStyle(
       return result
         .then(result => ({
           code: result.css || '',
-          map: result.map && (result.map.toJSON() as any),
+          map: result.map && result.map.toJSON(),
           errors,
           modules: cssModules,
           rawResult: result,
@@ -210,7 +210,7 @@ export function doCompileStyle(
 
   return {
     code: code || ``,
-    map: outMap && (outMap.toJSON() as any),
+    map: outMap && outMap.toJSON(),
     errors,
     rawResult: result,
     dependencies
