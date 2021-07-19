@@ -529,7 +529,7 @@ function validatePropName(key: string) {
 // so that it works across vms / iframes.
 function getType(ctor: Prop<any>): string {
   const match = ctor && ctor.toString().match(/^\s*function (\w+)/)
-  return match ? match[1] : ''
+  return match ? match[1] : ctor === null ? 'null' : ''
 }
 
 function isSameType(a: Prop<any>, b: Prop<any>): boolean {
@@ -637,6 +637,8 @@ function assertType(value: unknown, type: PropConstructor): AssertionResult {
     valid = isObject(value)
   } else if (expectedType === 'Array') {
     valid = isArray(value)
+  } else if (expectedType === 'null') {
+    valid = value === null
   } else {
     valid = value instanceof type
   }
@@ -656,7 +658,7 @@ function getInvalidTypeMessage(
 ): string {
   let message =
     `Invalid prop: type check failed for prop "${name}".` +
-    ` Expected ${expectedTypes.map(capitalize).join(', ')}`
+    ` Expected ${expectedTypes.map(capitalize).join(' | ')}`
   const expectedType = expectedTypes[0]
   const receivedType = toRawType(value)
   const expectedValue = styleValue(value, expectedType)

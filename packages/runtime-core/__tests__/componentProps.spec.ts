@@ -556,4 +556,21 @@ describe('component props', () => {
     await nextTick()
     expect(serializeInner(root)).toBe(`foo`)
   })
+
+  test('support null in required + multiple-type declarations', () => {
+    const Comp = {
+      props: {
+        foo: { type: [Function, null], required: true }
+      },
+      render() {}
+    }
+    const root = nodeOps.createElement('div')
+    expect(() => {
+      render(h(Comp, { foo: () => {} }), root)
+    }).not.toThrow()
+
+    expect(() => {
+      render(h(Comp, { foo: null }), root)
+    }).not.toThrow()
+  })
 })
