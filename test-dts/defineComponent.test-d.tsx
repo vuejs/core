@@ -469,6 +469,7 @@ describe('type inference w/ options API', () => {
 
 describe('with mixins', () => {
   const MixinA = defineComponent({
+    emits: ['bar'],
     props: {
       aP1: {
         type: String,
@@ -523,6 +524,7 @@ describe('with mixins', () => {
   })
   const MyComponent = defineComponent({
     mixins: [MixinA, MixinB, MixinC, MixinD],
+    emits: ['click'],
     props: {
       // required should make property non-void
       z: {
@@ -552,6 +554,9 @@ describe('with mixins', () => {
     setup(props) {
       expectType<string>(props.z)
       // props
+      expectType<((...args: any[]) => any) | undefined>(props.onClick)
+      // from Base
+      expectType<((...args: any[]) => any) | undefined>(props.onBar)
       expectType<string>(props.aP1)
       expectType<boolean | undefined>(props.aP2)
       expectType<any>(props.bP1)
@@ -561,6 +566,9 @@ describe('with mixins', () => {
     render() {
       const props = this.$props
       // props
+      expectType<((...args: any[]) => any) | undefined>(props.onClick)
+      // from Base
+      expectType<((...args: any[]) => any) | undefined>(props.onBar)
       expectType<string>(props.aP1)
       expectType<boolean | undefined>(props.aP2)
       expectType<any>(props.bP1)
@@ -688,6 +696,7 @@ describe('with extends', () => {
 
 describe('extends with mixins', () => {
   const Mixin = defineComponent({
+    emits: ['bar'],
     props: {
       mP1: {
         type: String,
@@ -706,6 +715,7 @@ describe('extends with mixins', () => {
     }
   })
   const Base = defineComponent({
+    emits: ['foo'],
     props: {
       p1: Boolean,
       p2: {
@@ -731,6 +741,7 @@ describe('extends with mixins', () => {
   const MyComponent = defineComponent({
     extends: Base,
     mixins: [Mixin],
+    emits: ['click'],
     props: {
       // required should make property non-void
       z: {
@@ -741,6 +752,11 @@ describe('extends with mixins', () => {
     render() {
       const props = this.$props
       // props
+      expectType<((...args: any[]) => any) | undefined>(props.onClick)
+      // from Mixin
+      expectType<((...args: any[]) => any) | undefined>(props.onBar)
+      // from Base
+      expectType<((...args: any[]) => any) | undefined>(props.onFoo)
       expectType<boolean | undefined>(props.p1)
       expectType<number>(props.p2)
       expectType<string>(props.z)
@@ -879,6 +895,8 @@ describe('emits', () => {
       input: (b: string) => b.length > 1
     },
     setup(props, { emit }) {
+      expectType<((n: number) => boolean) | undefined>(props.onClick)
+      expectType<((b: string) => boolean) | undefined>(props.onInput)
       emit('click', 1)
       emit('input', 'foo')
       //  @ts-expect-error
@@ -931,6 +949,8 @@ describe('emits', () => {
   defineComponent({
     emits: ['foo', 'bar'],
     setup(props, { emit }) {
+      expectType<((...args: any[]) => any) | undefined>(props.onFoo)
+      expectType<((...args: any[]) => any) | undefined>(props.onBar)
       emit('foo')
       emit('foo', 123)
       emit('bar')
@@ -972,10 +992,9 @@ describe('emits', () => {
 })
 
 describe('componentOptions setup should be `SetupContext`', () => {
-  expect<ComponentOptions['setup']>({} as (
-    props: Record<string, any>,
-    ctx: SetupContext
-  ) => any)
+  expect<ComponentOptions['setup']>(
+    {} as (props: Record<string, any>, ctx: SetupContext) => any
+  )
 })
 
 describe('extract instance type', () => {
