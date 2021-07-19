@@ -377,25 +377,42 @@ describe('compiler: parse', () => {
     })
 
     test('comments option', () => {
-      __DEV__ = false
-      const astDefaultComment = baseParse('<!--abc-->')
-      const astNoComment = baseParse('<!--abc-->', { comments: false })
-      const astWithComments = baseParse('<!--abc-->', { comments: true })
-      __DEV__ = true
+      const astOptionNoComment = baseParse('<!--abc-->', { comments: false })
+      const astOptionWithComments = baseParse('<!--abc-->', { comments: true })
 
-      expect(astDefaultComment.children).toHaveLength(0)
-      expect(astNoComment.children).toHaveLength(0)
-      expect(astWithComments.children).toHaveLength(1)
+      expect(astOptionNoComment.children).toHaveLength(0)
+      expect(astOptionWithComments.children).toHaveLength(1)
     })
 
     // #2217
-    test('comments in the <pre> tag should be removed in production mode', () => {
-      __DEV__ = false
+    test('comments in the <pre> tag should be removed when comments option requires it', () => {
       const rawText = `<p/><!-- foo --><p/>`
-      const ast = baseParse(`<pre>${rawText}</pre>`)
-      __DEV__ = true
 
-      expect((ast.children[0] as ElementNode).children).toMatchObject([
+      const astWithComments = baseParse(`<pre>${rawText}</pre>`, {
+        comments: true
+      })
+      expect(
+        (astWithComments.children[0] as ElementNode).children
+      ).toMatchObject([
+        {
+          type: NodeTypes.ELEMENT,
+          tag: 'p'
+        },
+        {
+          type: NodeTypes.COMMENT
+        },
+        {
+          type: NodeTypes.ELEMENT,
+          tag: 'p'
+        }
+      ])
+
+      const astWithoutComments = baseParse(`<pre>${rawText}</pre>`, {
+        comments: false
+      })
+      expect(
+        (astWithoutComments.children[0] as ElementNode).children
+      ).toMatchObject([
         {
           type: NodeTypes.ELEMENT,
           tag: 'p'
