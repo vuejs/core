@@ -96,8 +96,8 @@ export interface ParserContext {
   offset: number
   line: number
   column: number
-  inPre: number // HTML <pre> tag, preserve whitespaces
-  inVPre: number // v-pre, do not process directives and interpolations
+  inPre: boolean // HTML <pre> tag, preserve whitespaces
+  inVPre: boolean // v-pre, do not process directives and interpolations
   onWarn: NonNullable<ErrorHandlingOptions['onWarn']>
 }
 
@@ -134,8 +134,8 @@ function createParserContext(
     offset: 0,
     originalSource: content,
     source: content,
-    inPre: 0,
-    inVPre: 0,
+    inPre: false,
+    inVPre: false,
     onWarn: options.onWarn
   }
 }
@@ -427,8 +427,8 @@ function parseElement(
 
   if (element.isSelfClosing || context.options.isVoidTag(element.tag)) {
     // #4030 self-closing <pre> tag
-    if (context.options.isPreTag(element.tag)) {
-      context.inPre--
+    if (isPreBoundary) {
+      context.inPre = false
     }
     return element
   }
@@ -479,10 +479,10 @@ function parseElement(
   element.loc = getSelection(context, element.loc.start)
 
   if (isPreBoundary) {
-    context.inPre--
+    context.inPre = false
   }
   if (isVPreBoundary) {
-    context.inVPre--
+    context.inVPre = false
   }
   return element
 }
@@ -535,7 +535,7 @@ function parseTag(
 
   // check <pre> tag
   if (context.options.isPreTag(tag)) {
-    context.inPre++
+    context.inPre = true
   }
 
   // Attributes.
@@ -547,7 +547,7 @@ function parseTag(
     !context.inVPre &&
     props.some(p => p.type === NodeTypes.DIRECTIVE && p.name === 'pre')
   ) {
-    context.inVPre++
+    context.inVPre = true
     // reset context
     extend(context, cursor)
     context.source = currentSource
