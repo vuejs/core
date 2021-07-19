@@ -10,6 +10,7 @@ setComputedScheduler(queueJob)
 export interface SchedulerJob extends Function {
   id?: number
   active?: boolean
+  computed?: boolean
   /**
    * Indicates whether the effect is allowed to recursively trigger itself
    * when managed by the scheduler.
@@ -70,16 +71,15 @@ export function nextTick<T = void>(
 // Use binary-search to find a suitable position in the queue,
 // so that the queue maintains the increasing order of job's id,
 // which can prevent the job from being skipped and also can avoid repeated patching.
-function findInsertionIndex(job: SchedulerJob) {
+function findInsertionIndex(id: number) {
   // the start index should be `flushIndex + 1`
   let start = flushIndex + 1
   let end = queue.length
-  const jobId = getId(job)
 
   while (start < end) {
     const middle = (start + end) >>> 1
     const middleJobId = getId(queue[middle])
-    middleJobId < jobId ? (start = middle + 1) : (end = middle)
+    middleJobId < id ? (start = middle + 1) : (end = middle)
   }
 
   return start
@@ -100,11 +100,10 @@ export function queueJob(job: SchedulerJob) {
       )) &&
     job !== currentPreFlushParentJob
   ) {
-    const pos = findInsertionIndex(job)
-    if (pos > -1) {
-      queue.splice(pos, 0, job)
-    } else {
+    if (job.id == null) {
       queue.push(job)
+    } else {
+      queue.splice(findInsertionIndex(job.id), 0, job)
     }
     queueFlush()
   }
@@ -253,6 +252,7 @@ function flushJobs(seen?: CountMap) {
         if (__DEV__ && checkRecursiveUpdates(seen!, job)) {
           continue
         }
+        // console.log(`running:`, job.id)
         callWithErrorHandling(job, null, ErrorCodes.SCHEDULER)
       }
     }
