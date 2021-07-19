@@ -49,7 +49,8 @@ export const vModelText: ModelDirective<
 > = {
   created(el, { modifiers: { lazy, trim, number } }, vnode) {
     el._assign = getModelAssigner(vnode)
-    const castToNumber = number || el.type === 'number'
+    const castToNumber =
+      number || (vnode.props && vnode.props.type === 'number')
     addEventListener(el, lazy ? 'change' : 'input', e => {
       if ((e.target as any).composing) return
       let domValue: string | number = el.value
