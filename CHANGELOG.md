@@ -1,3 +1,34 @@
+# [3.2.0-beta.2](https://github.com/vuejs/vue-next/compare/v3.2.0-beta.1...v3.2.0-beta.2) (2021-07-19)
+
+
+### Bug Fixes
+
+* **compiler-core:** fix self-closing tags with v-pre ([a21ca3d](https://github.com/vuejs/vue-next/commit/a21ca3dccc6a0c3822d15b6b2b1d22a2d1a4dd67))
+* **compiler-sfc:** defineProps infer TSParenthesizedType ([#4147](https://github.com/vuejs/vue-next/issues/4147)) ([f7607d3](https://github.com/vuejs/vue-next/commit/f7607d3a15683745b21585baa18cf2871447580e))
+* **compiler-sfc:** expose correct range for empty blocks ([b274b08](https://github.com/vuejs/vue-next/commit/b274b08f5ff56d153d3dd46fa740dd6b156bf26f))
+* **compiler-sfc:** fix whitespace preservation when block contains single self-closing tag ([ec6abe8](https://github.com/vuejs/vue-next/commit/ec6abe8d5e0c85e9c884e9c2525d5181213a8e64))
+* **compiler-sfc:** support const enum ([93a950d](https://github.com/vuejs/vue-next/commit/93a950d60d347321df4196d22f64c4810840a3bb))
+* **reactivity:** computed should not trigger scheduler if stopped ([6eb47f0](https://github.com/vuejs/vue-next/commit/6eb47f000a1b54b2419c031979502d2793c5189d)), closes [#4149](https://github.com/vuejs/vue-next/issues/4149)
+* **runtime-core:** fix null type in required + multi-type prop declarations ([bbf6ca9](https://github.com/vuejs/vue-next/commit/bbf6ca9bca942df639ff0357d713413c9a1c4c05)), closes [#4146](https://github.com/vuejs/vue-next/issues/4146) [#4147](https://github.com/vuejs/vue-next/issues/4147)
+* **scheduler:** fix insertion for id-less job ([d810a1a](https://github.com/vuejs/vue-next/commit/d810a1a56943aeba5160b42bc917187e99cdfb8e)), closes [#4148](https://github.com/vuejs/vue-next/issues/4148)
+* **shared:** normalizeStyle should handle strings ([a8c3a8a](https://github.com/vuejs/vue-next/commit/a8c3a8ad61b16a31f6754066838440a59ee9db8b)), closes [#4138](https://github.com/vuejs/vue-next/issues/4138)
+* **ssr:** update initial old value to watch callback in ssr usage ([#4103](https://github.com/vuejs/vue-next/issues/4103)) ([20b6619](https://github.com/vuejs/vue-next/commit/20b6619793702d265fcc3a7c099f5764fa9d8685))
+* **v-model:** properly detect input type=number ([3056e9b](https://github.com/vuejs/vue-next/commit/3056e9b3dcb1ab0bd18227c6fa7bf283f98f6ef6)), closes [#3813](https://github.com/vuejs/vue-next/issues/3813)
+
+
+### Features
+
+* **compiler:** allow 'comments' option to affect comment inclusion in dev ([#4115](https://github.com/vuejs/vue-next/issues/4115)) ([dd0f9d1](https://github.com/vuejs/vue-next/commit/dd0f9d1ce6b0de59c84d334c7190fa9d2cc17a04)), closes [#3392](https://github.com/vuejs/vue-next/issues/3392) [#3395](https://github.com/vuejs/vue-next/issues/3395)
+* **compiler-sfc:** add ignoreEmpty option for sfc parse method ([8dbecfc](https://github.com/vuejs/vue-next/commit/8dbecfcbb3d597a644d0f263dfd6d7fcfd23a9fb))
+* **types:** map declared emits to onXXX props in inferred prop types ([#3926](https://github.com/vuejs/vue-next/issues/3926)) ([69344ff](https://github.com/vuejs/vue-next/commit/69344ff1ae724beb648c34ede8050b3b70ddf4b7))
+
+
+### Performance Improvements
+
+* **compiler-sfc:** ignore empty blocks ([#3520](https://github.com/vuejs/vue-next/issues/3520)) ([b771fdb](https://github.com/vuejs/vue-next/commit/b771fdbef9a8dadd4c9cc939cc104f7764e40373))
+
+
+
 # [3.2.0-beta.1](https://github.com/vuejs/vue-next/compare/v3.1.5...v3.2.0-beta.1) (2021-07-16)
 
 
