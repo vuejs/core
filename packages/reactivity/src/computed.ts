@@ -58,7 +58,7 @@ class ComputedRefImpl<T> {
           scheduled = true
           hasCompareTarget = false
           scheduler(() => {
-            if (this._get() !== valueToCompare) {
+            if (this.effect.active && this._get() !== valueToCompare) {
               triggerRefValue(this)
             }
             scheduled = false

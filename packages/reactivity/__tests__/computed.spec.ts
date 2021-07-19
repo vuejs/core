@@ -466,5 +466,25 @@ describe('reactivity/computed', () => {
       await tick
       expect(effectSpy).toHaveBeenCalledTimes(2)
     })
+
+    test('should not compute if deactivated before scheduler is called', async () => {
+      const c1Spy = jest.fn()
+      const src = ref(0)
+      const c1 = computed(() => {
+        c1Spy()
+        return src.value % 2
+      })
+      effect(() => c1.value)
+      expect(c1Spy).toHaveBeenCalledTimes(1)
+
+      // schedule stop
+      schedule(() => {
+        c1.effect.stop()
+      })
+      // trigger
+      src.value++
+      await tick
+      expect(c1Spy).toHaveBeenCalledTimes(1)
+    })
   })
 })
