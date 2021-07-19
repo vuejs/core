@@ -135,8 +135,13 @@ h1 { color: red }
 
   test('should ignore other nodes with no content', () => {
     expect(parse(`<script/>`).descriptor.script).toBe(null)
+    expect(parse(`<script> \n\t  </script>`).descriptor.script).toBe(null)
     expect(parse(`<style/>`).descriptor.styles.length).toBe(0)
+    expect(parse(`<style> \n\t </style>`).descriptor.styles.length).toBe(0)
     expect(parse(`<custom/>`).descriptor.customBlocks.length).toBe(0)
+    expect(
+      parse(`<custom> \n\t </custom>`).descriptor.customBlocks.length
+    ).toBe(0)
   })
 
   test('handle empty nodes with src attribute', () => {

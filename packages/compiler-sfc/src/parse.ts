@@ -162,7 +162,8 @@ export function parse(
     if (node.type !== NodeTypes.ELEMENT) {
       return
     }
-    if (!node.children.length && !hasSrc(node) && node.tag !== 'template') {
+    // we only want to keep the nodes that are not empty (when the tag is not a template)
+    if (node.tag !== 'template' && isEmpty(node) && !hasSrc(node)) {
       return
     }
     switch (node.tag) {
@@ -414,4 +415,16 @@ function hasSrc(node: ElementNode) {
     }
     return p.name === 'src'
   })
+}
+
+/**
+ * Returns true if the node has no children
+ * once the empty text nodes (trimmed content) have been filtered out.
+ */
+function isEmpty(node: ElementNode) {
+  return (
+    node.children.filter(
+      child => child.type !== NodeTypes.TEXT || child.content.trim() !== ''
+    ).length === 0
+  )
 }
