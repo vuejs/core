@@ -1646,6 +1646,8 @@ function inferRuntimeType(
       }
       return [`null`]
 
+    case 'TSParenthesizedType':
+      return inferRuntimeType(node.typeAnnotation, declaredTypes)
     case 'TSUnionType':
       return [
         ...new Set(
@@ -1654,7 +1656,6 @@ function inferRuntimeType(
           ) as any)
         )
       ]
-
     case 'TSIntersectionType':
       return ['Object']
 

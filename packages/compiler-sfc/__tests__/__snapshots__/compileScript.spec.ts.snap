@@ -761,7 +761,8 @@ export default _defineComponent({
     union: { type: [String, Number], required: true },
     literalUnion: { type: [String, String], required: true },
     literalUnionMixed: { type: [String, Number, Boolean], required: true },
-    intersection: { type: Object, required: true }
+    intersection: { type: Object, required: true },
+    foo: { type: [Function, null], required: true }
   } as unknown as undefined,
   setup(__props: {
         string: string
@@ -787,6 +788,7 @@ export default _defineComponent({
         literalUnion: 'foo' | 'bar'
         literalUnionMixed: 'foo' | 1 | boolean
         intersection: Test & {}
+        foo: ((item: any) => boolean) | null
       }, { expose }) {
   expose()
 
