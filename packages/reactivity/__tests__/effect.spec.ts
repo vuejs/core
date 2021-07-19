@@ -758,7 +758,7 @@ describe('reactivity/effect', () => {
     expect(dummy).toBe(1)
   })
 
-  it('should not be trigger when the value and the old value both are NaN', () => {
+  it('should not be triggered when the value and the old value both are NaN', () => {
     const obj = reactive({
       foo: NaN
     })
@@ -792,7 +792,7 @@ describe('reactivity/effect', () => {
     expect(record).toBeUndefined()
   })
 
-  it('should not be trigger when set the equal proxy', () => {
+  it('should not be triggered when set with the same proxy', () => {
     const obj = reactive({ foo: 1 })
     const observed: any = reactive({ obj })
     const fnSpy = jest.fn(() => observed.obj)
