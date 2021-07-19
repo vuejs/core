@@ -177,7 +177,7 @@ const skipLegacyRootLevelProps = /*#__PURE__*/ makeMap(
 function convertLegacyProps(
   legacyProps: LegacyVNodeProps | undefined,
   type: any
-): Data & VNodeProps | null {
+): (Data & VNodeProps) | null {
   if (!legacyProps) {
     return null
   }

@@ -87,9 +87,7 @@ export const SuspenseImpl = {
 }
 
 // Force-casted public typing for h and TSX props inference
-export const Suspense = ((__FEATURE_SUSPENSE__
-  ? SuspenseImpl
-  : null) as any) as {
+export const Suspense = (__FEATURE_SUSPENSE__ ? SuspenseImpl : null) as any as {
   __isSuspense: true
   new (): { $props: VNodeProps & SuspenseProps }
 }
@@ -520,13 +518,8 @@ function createSuspenseBoundary(
         return
       }
 
-      const {
-        vnode,
-        activeBranch,
-        parentComponent,
-        container,
-        isSVG
-      } = suspense
+      const { vnode, activeBranch, parentComponent, container, isSVG } =
+        suspense
 
       // invoke @fallback event
       triggerEvent(vnode, 'onFallback')

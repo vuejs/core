@@ -181,9 +181,8 @@ export const vModelSelect: ModelDirective<HTMLSelectElement> = {
     addEventListener(el, 'change', () => {
       const selectedVal = Array.prototype.filter
         .call(el.options, (o: HTMLOptionElement) => o.selected)
-        .map(
-          (o: HTMLOptionElement) =>
-            number ? toNumber(getValue(o)) : getValue(o)
+        .map((o: HTMLOptionElement) =>
+          number ? toNumber(getValue(o)) : getValue(o)
         )
       el._assign(
         el.multiple

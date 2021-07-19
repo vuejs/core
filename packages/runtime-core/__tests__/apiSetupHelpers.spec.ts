@@ -123,15 +123,16 @@ describe('SFC <script setup> helpers', () => {
 
           beforeInstance = getCurrentInstance()
 
-          const msg = (([__temp, __restore] = withAsyncContext(
-            () =>
-              new Promise(r => {
-                resolve = r
-              })
-          )),
-          (__temp = await __temp),
-          __restore(),
-          __temp)
+          const msg =
+            (([__temp, __restore] = withAsyncContext(
+              () =>
+                new Promise(r => {
+                  resolve = r
+                })
+            )),
+            (__temp = await __temp),
+            __restore(),
+            __temp)
 
           // register the lifecycle after an await statement
           onMounted(spy)
@@ -141,7 +142,10 @@ describe('SFC <script setup> helpers', () => {
       })
 
       const root = nodeOps.createElement('div')
-      render(h(() => h(Suspense, () => h(Comp))), root)
+      render(
+        h(() => h(Suspense, () => h(Comp))),
+        root
+      )
 
       expect(spy).not.toHaveBeenCalled()
       resolve!('hello')
@@ -186,7 +190,10 @@ describe('SFC <script setup> helpers', () => {
       })
 
       const root = nodeOps.createElement('div')
-      render(h(() => h(Suspense, () => h(Comp))), root)
+      render(
+        h(() => h(Suspense, () => h(Comp))),
+        root
+      )
 
       expect(spy).not.toHaveBeenCalled()
       reject!()
@@ -242,7 +249,10 @@ describe('SFC <script setup> helpers', () => {
       })
 
       const root = nodeOps.createElement('div')
-      render(h(() => h(Suspense, () => h(Comp))), root)
+      render(
+        h(() => h(Suspense, () => h(Comp))),
+        root
+      )
 
       await ready
       expect(inBandInstance).toBe(beforeInstance)

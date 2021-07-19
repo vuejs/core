@@ -37,8 +37,8 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
     key[0] === '.'
       ? ((key = key.slice(1)), true)
       : key[0] === '^'
-        ? ((key = key.slice(1)), false)
-        : shouldSetAsProp(el, key, nextValue, isSVG)
+      ? ((key = key.slice(1)), false)
+      : shouldSetAsProp(el, key, nextValue, isSVG)
   ) {
     patchDOMProp(
       el,

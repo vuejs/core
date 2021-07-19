@@ -26,9 +26,7 @@ export function ssrCompile(
     isNativeTag: instance.appContext.config.isNativeTag || NO,
     onError(err: CompilerError) {
       if (__DEV__) {
-        const message = `[@vue/server-renderer] Template compilation error: ${
-          err.message
-        }`
+        const message = `[@vue/server-renderer] Template compilation error: ${err.message}`
         const codeFrame =
           err.loc &&
           generateCodeFrame(

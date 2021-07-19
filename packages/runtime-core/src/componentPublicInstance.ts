@@ -72,7 +72,9 @@ import { installCompatInstanceProperties } from './compat/instance'
 export interface ComponentCustomProperties {}
 
 type IsDefaultMixinComponent<T> = T extends ComponentOptionsMixin
-  ? ComponentOptionsMixin extends T ? true : false
+  ? ComponentOptionsMixin extends T
+    ? true
+    : false
   : false
 
 type MixinToOptionTypes<T> = T extends ComponentOptionsBase<
@@ -261,15 +263,8 @@ export interface ComponentRenderContext {
 
 export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
   get({ _: instance }: ComponentRenderContext, key: string) {
-    const {
-      ctx,
-      setupState,
-      data,
-      props,
-      accessCache,
-      type,
-      appContext
-    } = instance
+    const { ctx, setupState, data, props, accessCache, type, appContext } =
+      instance
 
     // for internal formatters to know that this is a Vue instance
     if (__DEV__ && key === '__isVue') {

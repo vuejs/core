@@ -31,10 +31,10 @@ if (__DEV__) {
     typeof global !== 'undefined'
       ? global
       : typeof self !== 'undefined'
-        ? self
-        : typeof window !== 'undefined'
-          ? window
-          : {}
+      ? self
+      : typeof window !== 'undefined'
+      ? window
+      : {}
 
   globalObject.__VUE_HMR_RUNTIME__ = {
     createRecord: tryWrap(createRecord),

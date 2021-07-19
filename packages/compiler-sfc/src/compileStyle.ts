@@ -79,9 +79,10 @@ export function compileStyle(
 export function compileStyleAsync(
   options: SFCAsyncStyleCompileOptions
 ): Promise<SFCStyleCompileResults> {
-  return doCompileStyle({ ...options, isAsync: true }) as Promise<
-    SFCStyleCompileResults
-  >
+  return doCompileStyle({
+    ...options,
+    isAsync: true
+  }) as Promise<SFCStyleCompileResults>
 }
 
 export function doCompileStyle(

@@ -319,8 +319,8 @@ function isSameKey(
     }
     if (
       exp.type !== NodeTypes.SIMPLE_EXPRESSION ||
-      (exp.isStatic !== (branchExp as SimpleExpressionNode).isStatic ||
-        exp.content !== (branchExp as SimpleExpressionNode).content)
+      exp.isStatic !== (branchExp as SimpleExpressionNode).isStatic ||
+      exp.content !== (branchExp as SimpleExpressionNode).content
     ) {
       return false
     }

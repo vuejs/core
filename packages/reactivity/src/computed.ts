@@ -37,7 +37,7 @@ class ComputedRefImpl<T> {
   private _dirty = true
   public readonly effect: ReactiveEffect<T>
 
-  public readonly __v_isRef = true;
+  public readonly __v_isRef = true
   public readonly [ReactiveFlags.IS_READONLY]: boolean
 
   constructor(

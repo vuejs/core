@@ -355,8 +355,9 @@ describe('compiler: hoistStatic transform', () => {
       },
       hoistedChildrenArrayMatcher(2)
     ])
-    const forBlockCodegen = ((root.children[0] as ElementNode)
-      .children[0] as ForNode).codegenNode
+    const forBlockCodegen = (
+      (root.children[0] as ElementNode).children[0] as ForNode
+    ).codegenNode
     expect(forBlockCodegen).toMatchObject({
       type: NodeTypes.VNODE_CALL,
       tag: FRAGMENT,

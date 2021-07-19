@@ -168,7 +168,10 @@ describe('api: watch', () => {
     state.count++
     count.value++
     await nextTick()
-    expect(dummy).toMatchObject([[2, 2, 3], [1, 1, 2]])
+    expect(dummy).toMatchObject([
+      [2, 2, 3],
+      [1, 1, 2]
+    ])
   })
 
   it('watching multiple sources: readonly array', async () => {
@@ -188,7 +191,10 @@ describe('api: watch', () => {
     state.count++
     status.value = true
     await nextTick()
-    expect(dummy).toMatchObject([[2, true], [1, false]])
+    expect(dummy).toMatchObject([
+      [2, true],
+      [1, false]
+    ])
   })
 
   it('watching multiple sources: reactive object (with automatic deep: true)', async () => {
@@ -568,7 +574,10 @@ describe('api: watch', () => {
         count: ref(0)
       },
       array: [1, 2, 3],
-      map: new Map([['a', 1], ['b', 2]]),
+      map: new Map([
+        ['a', 1],
+        ['b', 2]
+      ]),
       set: new Set([1, 2, 3])
     })
 
@@ -868,7 +877,10 @@ describe('api: watch', () => {
       mounted() {
         // this call runs while Comp is currentInstance, but
         // the effect for this `$watch` should nontheless be registered with Child
-        this.comp!.$watch(() => this.show, () => void 0)
+        this.comp!.$watch(
+          () => this.show,
+          () => void 0
+        )
       }
     })
 
@@ -895,7 +907,7 @@ describe('api: watch', () => {
       render() {},
       created(this: any) {
         instance = this
-        this.$watch(source, function() {})
+        this.$watch(source, function () {})
       }
     })
 

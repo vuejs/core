@@ -55,7 +55,8 @@ test('COMPONENT_FUNCTIONAL', async () => {
   )
 
   expect(
-    (deprecationData[DeprecationTypes.COMPONENT_FUNCTIONAL]
-      .message as Function)(func)
+    (
+      deprecationData[DeprecationTypes.COMPONENT_FUNCTIONAL].message as Function
+    )(func)
   ).toHaveBeenWarned()
 })

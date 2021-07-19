@@ -24,9 +24,7 @@ declare namespace jest {
   }
 }
 
-declare module '*.vue' {
-
-}
+declare module '*.vue' {}
 declare module '*?raw' {
   const content: string
   export default content

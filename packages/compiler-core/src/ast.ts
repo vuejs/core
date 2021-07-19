@@ -237,7 +237,8 @@ export interface CompoundExpressionNode extends Node {
     | InterpolationNode
     | TextNode
     | string
-    | symbol)[]
+    | symbol
+  )[]
 
   /**
    * an expression parsed as the params of a function will track
@@ -328,7 +329,8 @@ export interface CallExpression extends Node {
     | JSChildNode
     | SSRCodegenNode
     | TemplateChildNode
-    | TemplateChildNode[])[]
+    | TemplateChildNode[]
+  )[]
 }
 
 export interface ObjectExpression extends Node {
@@ -439,8 +441,8 @@ export interface DirectiveArguments extends ArrayExpression {
 }
 
 export interface DirectiveArgumentNode extends ArrayExpression {
-  elements:  // dir, exp, arg, modifiers
-    | [string]
+  elements: // dir, exp, arg, modifiers
+  | [string]
     | [string, ExpressionNode]
     | [string, ExpressionNode, ExpressionNode]
     | [string, ExpressionNode, ExpressionNode, ObjectExpression]
@@ -449,8 +451,8 @@ export interface DirectiveArgumentNode extends ArrayExpression {
 // renderSlot(...)
 export interface RenderSlotCall extends CallExpression {
   callee: typeof RENDER_SLOT
-  arguments:  // $slots, name, props, fallback
-    | [string, string | ExpressionNode]
+  arguments: // $slots, name, props, fallback
+  | [string, string | ExpressionNode]
     | [string, string | ExpressionNode, PropsExpression]
     | [
         string,

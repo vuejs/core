@@ -184,7 +184,7 @@ function createIterableMethod(
   isReadonly: boolean,
   isShallow: boolean
 ) {
-  return function(
+  return function (
     this: IterableCollections,
     ...args: unknown[]
   ): Iterable & Iterator {
@@ -224,7 +224,7 @@ function createIterableMethod(
 }
 
 function createReadonlyMethod(type: TriggerOpTypes): Function {
-  return function(this: CollectionTypes, ...args: unknown[]) {
+  return function (this: CollectionTypes, ...args: unknown[]) {
     if (__DEV__) {
       const key = args[0] ? `on key "${args[0]}" ` : ``
       console.warn(
@@ -242,7 +242,7 @@ function createInstrumentations() {
       return get(this, key)
     },
     get size() {
-      return size((this as unknown) as IterableCollections)
+      return size(this as unknown as IterableCollections)
     },
     has,
     add,
@@ -257,7 +257,7 @@ function createInstrumentations() {
       return get(this, key, false, true)
     },
     get size() {
-      return size((this as unknown) as IterableCollections)
+      return size(this as unknown as IterableCollections)
     },
     has,
     add,
@@ -272,7 +272,7 @@ function createInstrumentations() {
       return get(this, key, true)
     },
     get size() {
-      return size((this as unknown) as IterableCollections, true)
+      return size(this as unknown as IterableCollections, true)
     },
     has(this: MapTypes, key: unknown) {
       return has.call(this, key, true)
@@ -289,7 +289,7 @@ function createInstrumentations() {
       return get(this, key, true, true)
     },
     get size() {
-      return size((this as unknown) as IterableCollections, true)
+      return size(this as unknown as IterableCollections, true)
     },
     has(this: MapTypes, key: unknown) {
       return has.call(this, key, true)
@@ -346,8 +346,8 @@ function createInstrumentationGetter(isReadonly: boolean, shallow: boolean) {
       ? shallowReadonlyInstrumentations
       : shallowInstrumentations
     : isReadonly
-      ? readonlyInstrumentations
-      : mutableInstrumentations
+    ? readonlyInstrumentations
+    : mutableInstrumentations
 
   return (
     target: CollectionTypes,
@@ -384,11 +384,10 @@ export const readonlyCollectionHandlers: ProxyHandler<CollectionTypes> = {
   get: /*#__PURE__*/ createInstrumentationGetter(true, false)
 }
 
-export const shallowReadonlyCollectionHandlers: ProxyHandler<
-  CollectionTypes
-> = {
-  get: /*#__PURE__*/ createInstrumentationGetter(true, true)
-}
+export const shallowReadonlyCollectionHandlers: ProxyHandler<CollectionTypes> =
+  {
+    get: /*#__PURE__*/ createInstrumentationGetter(true, true)
+  }
 
 function checkIdentityKeys(
   target: CollectionTypes,

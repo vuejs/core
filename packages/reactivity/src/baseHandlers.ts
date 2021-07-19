@@ -49,7 +49,7 @@ function createArrayInstrumentations() {
   // instrument identity-sensitive Array methods to account for possible reactive
   // values
   ;(['includes', 'indexOf', 'lastIndexOf'] as const).forEach(key => {
-    instrumentations[key] = function(this: unknown[], ...args: unknown[]) {
+    instrumentations[key] = function (this: unknown[], ...args: unknown[]) {
       const arr = toRaw(this) as any
       for (let i = 0, l = this.length; i < l; i++) {
         track(arr, TrackOpTypes.GET, i + '')
@@ -67,7 +67,7 @@ function createArrayInstrumentations() {
   // instrument length-altering mutation methods to avoid length being tracked
   // which leads to infinite loops in some cases (#2137)
   ;(['push', 'pop', 'shift', 'unshift', 'splice'] as const).forEach(key => {
-    instrumentations[key] = function(this: unknown[], ...args: unknown[]) {
+    instrumentations[key] = function (this: unknown[], ...args: unknown[]) {
       pauseTracking()
       const res = (toRaw(this) as any)[key].apply(this, args)
       resetTracking()
@@ -91,8 +91,8 @@ function createGetter(isReadonly = false, shallow = false) {
             ? shallowReadonlyMap
             : readonlyMap
           : shallow
-            ? shallowReactiveMap
-            : reactiveMap
+          ? shallowReactiveMap
+          : reactiveMap
         ).get(target)
     ) {
       return target

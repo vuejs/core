@@ -774,9 +774,10 @@ function parseAttribute(
   const loc = getSelection(context, start)
 
   if (!context.inVPre && /^(v-|:|\.|@|#)/.test(name)) {
-    const match = /(?:^v-([a-z0-9-]+))?(?:(?::|^\.|^@|^#)(\[[^\]]+\]|[^\.]+))?(.+)?$/i.exec(
-      name
-    )!
+    const match =
+      /(?:^v-([a-z0-9-]+))?(?:(?::|^\.|^@|^#)(\[[^\]]+\]|[^\.]+))?(.+)?$/i.exec(
+        name
+      )!
 
     let isPropShorthand = startsWith(name, '.')
     let dirName =
@@ -784,8 +785,8 @@ function parseAttribute(
       (isPropShorthand || startsWith(name, ':')
         ? 'bind'
         : startsWith(name, '@')
-          ? 'on'
-          : 'slot')
+        ? 'on'
+        : 'slot')
     let arg: ExpressionNode | undefined
 
     if (match[2]) {

@@ -341,9 +341,9 @@ const _compatUtils = {
 /**
  * @internal only exposed in compat builds.
  */
-export const compatUtils = (__COMPAT__
-  ? _compatUtils
-  : null) as typeof _compatUtils
+export const compatUtils = (
+  __COMPAT__ ? _compatUtils : null
+) as typeof _compatUtils
 
 // Ref macros ------------------------------------------------------------------
 // for dts generation only

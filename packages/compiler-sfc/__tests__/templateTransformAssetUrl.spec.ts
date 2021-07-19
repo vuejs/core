@@ -59,8 +59,8 @@ describe('compiler sfc: transform asset url', () => {
   test('with explicit base', () => {
     const { code } = compileWithAssetUrls(
       `<img src="./bar.png"></img>` + // -> /foo/bar.png
-      `<img src="bar.png"></img>` + // -> bar.png (untouched)
-      `<img src="~bar.png"></img>` + // -> still converts to import
+        `<img src="bar.png"></img>` + // -> bar.png (untouched)
+        `<img src="~bar.png"></img>` + // -> still converts to import
         `<img src="@theme/bar.png"></img>`, // -> still converts to import
       {
         base: '/foo'

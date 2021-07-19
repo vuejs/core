@@ -337,8 +337,8 @@ export function buildSlots(
   const slotFlag = hasDynamicSlots
     ? SlotFlags.DYNAMIC
     : hasForwardedSlots(node.children)
-      ? SlotFlags.FORWARDED
-      : SlotFlags.STABLE
+    ? SlotFlags.FORWARDED
+    : SlotFlags.STABLE
 
   let slots = createObjectExpression(
     slotsProperties.concat(

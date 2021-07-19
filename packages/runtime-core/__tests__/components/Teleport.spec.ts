@@ -106,7 +106,10 @@ describe('renderer: teleport', () => {
     const root = nodeOps.createElement('div')
     const children = ref([h('div', 'teleported')])
 
-    render(h(() => h(Teleport, { to: target }, children.value)), root)
+    render(
+      h(() => h(Teleport, { to: target }, children.value)),
+      root
+    )
     expect(serializeInner(target)).toMatchInlineSnapshot(
       `"<div>teleported</div>"`
     )

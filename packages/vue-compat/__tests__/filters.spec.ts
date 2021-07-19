@@ -26,10 +26,7 @@ describe('FILTERS', () => {
   }
 
   function reverse(v: string) {
-    return v
-      .split('')
-      .reverse()
-      .join('')
+    return v.split('').reverse().join('')
   }
 
   function double(v: number) {

@@ -411,9 +411,9 @@ describe('vnode', () => {
     })
 
     test('handlers', () => {
-      let clickHandler1 = function() {}
-      let clickHandler2 = function() {}
-      let focusHandler2 = function() {}
+      let clickHandler1 = function () {}
+      let clickHandler2 = function () {}
+      let focusHandler2 = function () {}
 
       let props1: Data = { onClick: clickHandler1 }
       let props2: Data = { onClick: clickHandler2, onFocus: focusHandler2 }
@@ -439,37 +439,41 @@ describe('vnode', () => {
     test('with patchFlags', () => {
       const hoist = createVNode('div')
       let vnode1
-      const vnode = (openBlock(),
-      createBlock('div', null, [
-        hoist,
-        (vnode1 = createVNode('div', null, 'text', PatchFlags.TEXT))
-      ]))
+      const vnode =
+        (openBlock(),
+        createBlock('div', null, [
+          hoist,
+          (vnode1 = createVNode('div', null, 'text', PatchFlags.TEXT))
+        ]))
       expect(vnode.dynamicChildren).toStrictEqual([vnode1])
     })
 
     test('should not track vnodes with only HYDRATE_EVENTS flag', () => {
       const hoist = createVNode('div')
-      const vnode = (openBlock(),
-      createBlock('div', null, [
-        hoist,
-        createVNode('div', null, 'text', PatchFlags.HYDRATE_EVENTS)
-      ]))
+      const vnode =
+        (openBlock(),
+        createBlock('div', null, [
+          hoist,
+          createVNode('div', null, 'text', PatchFlags.HYDRATE_EVENTS)
+        ]))
       expect(vnode.dynamicChildren).toStrictEqual([])
     })
 
     test('many times call openBlock', () => {
       const hoist = createVNode('div')
       let vnode1, vnode2, vnode3
-      const vnode = (openBlock(),
-      createBlock('div', null, [
-        hoist,
-        (vnode1 = createVNode('div', null, 'text', PatchFlags.TEXT)),
-        (vnode2 = (openBlock(),
+      const vnode =
+        (openBlock(),
         createBlock('div', null, [
           hoist,
-          (vnode3 = createVNode('div', null, 'text', PatchFlags.TEXT))
-        ])))
-      ]))
+          (vnode1 = createVNode('div', null, 'text', PatchFlags.TEXT)),
+          (vnode2 =
+            (openBlock(),
+            createBlock('div', null, [
+              hoist,
+              (vnode3 = createVNode('div', null, 'text', PatchFlags.TEXT))
+            ])))
+        ]))
       expect(vnode.dynamicChildren).toStrictEqual([vnode1, vnode2])
       expect(vnode2.dynamicChildren).toStrictEqual([vnode3])
     })
@@ -477,33 +481,36 @@ describe('vnode', () => {
     test('with stateful component', () => {
       const hoist = createVNode('div')
       let vnode1
-      const vnode = (openBlock(),
-      createBlock('div', null, [
-        hoist,
-        (vnode1 = createVNode({}, null, 'text'))
-      ]))
+      const vnode =
+        (openBlock(),
+        createBlock('div', null, [
+          hoist,
+          (vnode1 = createVNode({}, null, 'text'))
+        ]))
       expect(vnode.dynamicChildren).toStrictEqual([vnode1])
     })
 
     test('with functional component', () => {
       const hoist = createVNode('div')
       let vnode1
-      const vnode = (openBlock(),
-      createBlock('div', null, [
-        hoist,
-        (vnode1 = createVNode(() => {}, null, 'text'))
-      ]))
+      const vnode =
+        (openBlock(),
+        createBlock('div', null, [
+          hoist,
+          (vnode1 = createVNode(() => {}, null, 'text'))
+        ]))
       expect(vnode.dynamicChildren).toStrictEqual([vnode1])
     })
 
     test('with suspense', () => {
       const hoist = createVNode('div')
       let vnode1
-      const vnode = (openBlock(),
-      createBlock('div', null, [
-        hoist,
-        (vnode1 = createVNode(() => {}, null, 'text'))
-      ]))
+      const vnode =
+        (openBlock(),
+        createBlock('div', null, [
+          hoist,
+          (vnode1 = createVNode(() => {}, null, 'text'))
+        ]))
       expect(vnode.dynamicChildren).toStrictEqual([vnode1])
     })
 
@@ -516,32 +523,35 @@ describe('vnode', () => {
     test('element block should track normalized slot children', () => {
       const hoist = createVNode('div')
       let vnode1: any
-      const vnode = (openBlock(),
-      createBlock('div', null, {
-        default: () => {
-          return [
-            hoist,
-            (vnode1 = createVNode('div', null, 'text', PatchFlags.TEXT))
-          ]
-        }
-      }))
+      const vnode =
+        (openBlock(),
+        createBlock('div', null, {
+          default: () => {
+            return [
+              hoist,
+              (vnode1 = createVNode('div', null, 'text', PatchFlags.TEXT))
+            ]
+          }
+        }))
       expect(vnode.dynamicChildren).toStrictEqual([vnode1])
     })
 
     test('openBlock w/ disableTracking: true', () => {
       const hoist = createVNode('div')
       let vnode1
-      const vnode = (openBlock(),
-      createBlock('div', null, [
-        // a v-for fragment block generated by the compiler
-        // disables tracking because it always diffs its
-        // children.
-        (vnode1 = (openBlock(true),
-        createBlock(Fragment, null, [
-          hoist,
-          /*vnode2*/ createVNode(() => {}, null, 'text')
-        ])))
-      ]))
+      const vnode =
+        (openBlock(),
+        createBlock('div', null, [
+          // a v-for fragment block generated by the compiler
+          // disables tracking because it always diffs its
+          // children.
+          (vnode1 =
+            (openBlock(true),
+            createBlock(Fragment, null, [
+              hoist,
+              /*vnode2*/ createVNode(() => {}, null, 'text')
+            ])))
+        ]))
       expect(vnode.dynamicChildren).toStrictEqual([vnode1])
       expect(vnode1.dynamicChildren).toStrictEqual([])
     })
@@ -549,27 +559,30 @@ describe('vnode', () => {
     test('openBlock without disableTracking: true', () => {
       const hoist = createVNode('div')
       let vnode1, vnode2
-      const vnode = (openBlock(),
-      createBlock('div', null, [
-        (vnode1 = (openBlock(),
-        createBlock(Fragment, null, [
-          hoist,
-          (vnode2 = createVNode(() => {}, null, 'text'))
-        ])))
-      ]))
+      const vnode =
+        (openBlock(),
+        createBlock('div', null, [
+          (vnode1 =
+            (openBlock(),
+            createBlock(Fragment, null, [
+              hoist,
+              (vnode2 = createVNode(() => {}, null, 'text'))
+            ])))
+        ]))
       expect(vnode.dynamicChildren).toStrictEqual([vnode1])
       expect(vnode1.dynamicChildren).toStrictEqual([vnode2])
     })
 
     test('should not track openBlock() when tracking is disabled', () => {
       let vnode1
-      const vnode = (openBlock(),
-      createBlock('div', null, [
-        setBlockTracking(-1),
-        (vnode1 = (openBlock(), createBlock('div'))),
-        setBlockTracking(1),
-        vnode1
-      ]))
+      const vnode =
+        (openBlock(),
+        createBlock('div', null, [
+          setBlockTracking(-1),
+          (vnode1 = (openBlock(), createBlock('div'))),
+          setBlockTracking(1),
+          vnode1
+        ]))
       expect(vnode.dynamicChildren).toStrictEqual([])
     })
   })

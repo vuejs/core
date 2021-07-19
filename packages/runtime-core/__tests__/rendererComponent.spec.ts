@@ -217,7 +217,10 @@ describe('renderer: component', () => {
     const Child = {
       props: ['value'],
       setup(props: any, { emit }: SetupContext) {
-        watch(() => props.value, (val: number) => emit('update', val))
+        watch(
+          () => props.value,
+          (val: number) => emit('update', val)
+        )
 
         return () => {
           return h('div', props.value)

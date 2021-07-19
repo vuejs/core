@@ -841,10 +841,8 @@ describe('KeepAlive', () => {
     const instanceRef = ref<any>(null)
     const App = {
       render: () => {
-        return h(
-          KeepAlive,
-          { include: 'Foo' },
-          () => (toggle.value ? h(AsyncComp, { ref: instanceRef }) : null)
+        return h(KeepAlive, { include: 'Foo' }, () =>
+          toggle.value ? h(AsyncComp, { ref: instanceRef }) : null
         )
       }
     }

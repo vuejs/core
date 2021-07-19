@@ -11,7 +11,7 @@ describe('e2e: TransitionGroup', () => {
 
   const htmlWhenTransitionStart = () =>
     page().evaluate(() => {
-      (document.querySelector('#toggleBtn') as any)!.click()
+      ;(document.querySelector('#toggleBtn') as any)!.click()
       return Promise.resolve().then(() => {
         return document.querySelector('#container')!.innerHTML
       })

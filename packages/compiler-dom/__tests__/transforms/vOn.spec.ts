@@ -27,8 +27,10 @@ function parseWithVOn(template: string, options: CompilerOptions = {}) {
   })
   return {
     root: ast,
-    props: (((ast.children[0] as ElementNode).codegenNode as VNodeCall)
-      .props as ObjectExpression).properties
+    props: (
+      ((ast.children[0] as ElementNode).codegenNode as VNodeCall)
+        .props as ObjectExpression
+    ).properties
   }
 }
 

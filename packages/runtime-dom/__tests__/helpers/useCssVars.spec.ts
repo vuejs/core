@@ -155,10 +155,8 @@ describe('useCssVars', () => {
       setup() {
         useCssVars(() => state)
         return () =>
-          h(
-            Child,
-            null,
-            () => (value.value ? [h('div')] : [h('div'), h('div')])
+          h(Child, null, () =>
+            value.value ? [h('div')] : [h('div'), h('div')]
           )
       }
     }

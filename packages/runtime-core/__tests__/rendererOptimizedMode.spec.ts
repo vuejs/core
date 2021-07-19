@@ -417,11 +417,12 @@ describe('renderer: optimized mode', () => {
     const Comp = defineComponent({
       setup(_props, { slots }) {
         return () => {
-          const vnode = (openBlock(),
-          (block = createBlock('div', null, {
-            default: withCtx(() => [renderSlot(slots, 'default')]),
-            _: SlotFlags.FORWARDED
-          })))
+          const vnode =
+            (openBlock(),
+            (block = createBlock('div', null, {
+              default: withCtx(() => [renderSlot(slots, 'default')]),
+              _: SlotFlags.FORWARDED
+            })))
 
           return vnode
         }
@@ -449,8 +450,9 @@ describe('renderer: optimized mode', () => {
     expect(block!.dynamicChildren![0].type).toBe(Fragment)
     expect(block!.dynamicChildren![0].dynamicChildren!.length).toBe(1)
     expect(
-      serialize(block!.dynamicChildren![0].dynamicChildren![0]
-        .el as TestElement)
+      serialize(
+        block!.dynamicChildren![0].dynamicChildren![0].el as TestElement
+      )
     ).toBe('<p>0</p>')
 
     foo.value++

@@ -72,9 +72,7 @@ window.init = () => {
       lastSuccessfulMap = new SourceMapConsumer(map!)
       lastSuccessfulMap!.computeColumnSpans()
     } catch (e) {
-      lastSuccessfulCode = `/* ERROR: ${
-        e.message
-      } (see console for more info) */`
+      lastSuccessfulCode = `/* ERROR: ${e.message} (see console for more info) */`
       console.error(e)
     }
     return lastSuccessfulCode
@@ -195,8 +193,10 @@ window.init = () => {
         if (
           pos.line != null &&
           pos.column != null &&
-          !// ignore mock location
-          (pos.line === 1 && pos.column === 0)
+          !(
+            // ignore mock location
+            (pos.line === 1 && pos.column === 0)
+          )
         ) {
           const translatedPos = {
             column: pos.column + 1,

@@ -50,10 +50,14 @@ export type WatchCallback<V = any, OV = any> = (
 
 type MapSources<T, Immediate> = {
   [K in keyof T]: T[K] extends WatchSource<infer V>
-    ? Immediate extends true ? (V | undefined) : V
+    ? Immediate extends true
+      ? V | undefined
+      : V
     : T[K] extends object
-      ? Immediate extends true ? (T[K] | undefined) : T[K]
-      : never
+    ? Immediate extends true
+      ? T[K] | undefined
+      : T[K]
+    : never
 }
 
 type InvalidateCbRegistrator = (cb: () => void) => void
@@ -81,9 +85,13 @@ export function watchPostEffect(
   effect: WatchEffect,
   options?: DebuggerOptions
 ) {
-  return doWatch(effect, null, (__DEV__
-    ? Object.assign(options || {}, { flush: 'post' })
-    : { flush: 'post' }) as WatchOptionsBase)
+  return doWatch(
+    effect,
+    null,
+    (__DEV__
+      ? Object.assign(options || {}, { flush: 'post' })
+      : { flush: 'post' }) as WatchOptionsBase
+  )
 }
 
 // initial value for watchers to trigger on undefined initial values
@@ -116,7 +124,7 @@ export function watch<
 // overload: single source + cb
 export function watch<T, Immediate extends Readonly<boolean> = false>(
   source: WatchSource<T>,
-  cb: WatchCallback<T, Immediate extends true ? (T | undefined) : T>,
+  cb: WatchCallback<T, Immediate extends true ? T | undefined : T>,
   options?: WatchOptions<Immediate>
 ): WatchStopHandle
 
@@ -126,7 +134,7 @@ export function watch<
   Immediate extends Readonly<boolean> = false
 >(
   source: T,
-  cb: WatchCallback<T, Immediate extends true ? (T | undefined) : T>,
+  cb: WatchCallback<T, Immediate extends true ? T | undefined : T>,
   options?: WatchOptions<Immediate>
 ): WatchStopHandle
 

@@ -259,8 +259,10 @@ export type ShallowUnwrapRef<T> = {
   [K in keyof T]: T[K] extends Ref<infer V>
     ? V
     : T[K] extends Ref<infer V> | undefined // if `V` is `unknown` that means it does not extend `Ref` and is undefined
-      ? unknown extends V ? undefined : V | undefined
-      : T[K]
+    ? unknown extends V
+      ? undefined
+      : V | undefined
+    : T[K]
 }
 
 export type UnwrapRef<T> = T extends Ref<infer V>
@@ -275,8 +277,10 @@ type UnwrapRefSimple<T> = T extends
   | RefUnwrapBailTypes[keyof RefUnwrapBailTypes]
   ? T
   : T extends Array<any>
-    ? { [K in keyof T]: UnwrapRefSimple<T[K]> }
-    : T extends object ? UnwrappedObject<T> : T
+  ? { [K in keyof T]: UnwrapRefSimple<T[K]> }
+  : T extends object
+  ? UnwrappedObject<T>
+  : T
 
 // Extract all known symbols from an object
 // when unwrapping Object the symbols are not `in keyof`, this should cover all the

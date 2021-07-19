@@ -8,8 +8,8 @@ export const toDisplayString = (val: unknown): string => {
   return val == null
     ? ''
     : isObject(val)
-      ? JSON.stringify(val, replacer, 2)
-      : String(val)
+    ? JSON.stringify(val, replacer, 2)
+    : String(val)
 }
 
 const replacer = (_key: string, val: any) => {

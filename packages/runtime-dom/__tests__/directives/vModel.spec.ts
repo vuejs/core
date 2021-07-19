@@ -17,7 +17,7 @@ const triggerEvent = (type: string, el: Element) => {
 const withVModel = (node: VNode, arg: any, mods?: any) =>
   withDirectives(node, [[vModelDynamic, arg, '', mods]])
 
-const setValue = function(this: any, value: any) {
+const setValue = function (this: any, value: any) {
   this.value = value
 }
 

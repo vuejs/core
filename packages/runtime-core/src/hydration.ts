@@ -280,8 +280,8 @@ export function createHydrationFunctions(
         if (
           forcePatchValue ||
           !optimized ||
-          (patchFlag & PatchFlags.FULL_PROPS ||
-            patchFlag & PatchFlags.HYDRATE_EVENTS)
+          patchFlag & PatchFlags.FULL_PROPS ||
+          patchFlag & PatchFlags.HYDRATE_EVENTS
         ) {
           for (const key in props) {
             if (
@@ -346,7 +346,9 @@ export function createHydrationFunctions(
           hasMismatch = true
           __DEV__ &&
             warn(
-              `Hydration text content mismatch in <${vnode.type as string}>:\n` +
+              `Hydration text content mismatch in <${
+                vnode.type as string
+              }>:\n` +
                 `- Client: ${el.textContent}\n` +
                 `- Server: ${vnode.children as string}`
             )
@@ -465,8 +467,8 @@ export function createHydrationFunctions(
         node.nodeType === DOMNodeTypes.TEXT
           ? `(text)`
           : isComment(node) && node.data === '['
-            ? `(start of fragment)`
-            : ``
+          ? `(start of fragment)`
+          : ``
       )
     vnode.el = null
 

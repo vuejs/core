@@ -531,10 +531,13 @@ describe('compiler: transform v-on', () => {
     })
 
     test('should not be cached inside v-once', () => {
-      const { root } = parseWithVOn(`<div v-once><div v-on:click="foo"/></div>`, {
-        prefixIdentifiers: true,
-        cacheHandlers: true
-      })
+      const { root } = parseWithVOn(
+        `<div v-once><div v-on:click="foo"/></div>`,
+        {
+          prefixIdentifiers: true,
+          cacheHandlers: true
+        }
+      )
       expect(root.cached).not.toBe(2)
       expect(root.cached).toBe(1)
     })

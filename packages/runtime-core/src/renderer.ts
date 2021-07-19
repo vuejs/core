@@ -1444,7 +1444,7 @@ function baseCreateRenderer(
           }
 
           if (isAsyncWrapper(initialVNode)) {
-            (initialVNode.type as ComponentOptions).__asyncLoader!().then(
+            ;(initialVNode.type as ComponentOptions).__asyncLoader!().then(
               // note: we are moving the render call into an async callback,
               // which means it won't track dependencies - but it's ok because
               // a server-rendered async wrapper is already in resolved state
@@ -2406,10 +2406,9 @@ function baseCreateRenderer(
   let hydrate: ReturnType<typeof createHydrationFunctions>[0] | undefined
   let hydrateNode: ReturnType<typeof createHydrationFunctions>[1] | undefined
   if (createHydrationFns) {
-    ;[hydrate, hydrateNode] = createHydrationFns(internals as RendererInternals<
-      Node,
-      Element
-    >)
+    ;[hydrate, hydrateNode] = createHydrationFns(
+      internals as RendererInternals<Node, Element>
+    )
   }
 
   return {

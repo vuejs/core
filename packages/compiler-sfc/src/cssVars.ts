@@ -12,7 +12,8 @@ import { PluginCreator } from 'postcss'
 import hash from 'hash-sum'
 
 export const CSS_VARS_HELPER = `useCssVars`
-export const cssVarRE = /\bv-bind\(\s*(?:'([^']+)'|"([^"]+)"|([^'"][^)]*))\s*\)/g
+export const cssVarRE =
+  /\bv-bind\(\s*(?:'([^']+)'|"([^"]+)"|([^'"][^)]*))\s*\)/g
 
 export function genCssVarsFromList(
   vars: string[],

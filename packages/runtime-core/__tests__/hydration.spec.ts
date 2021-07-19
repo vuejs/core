@@ -759,9 +759,11 @@ describe('SSR hydration', () => {
     })
 
     expect(
-      (app.mount(svgContainer).$.subTree as VNode<Node, Element> & {
-        el: Element
-      }).el instanceof SVGElement
+      (
+        app.mount(svgContainer).$.subTree as VNode<Node, Element> & {
+          el: Element
+        }
+      ).el instanceof SVGElement
     )
   })
 
