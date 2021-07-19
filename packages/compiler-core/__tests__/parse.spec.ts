@@ -1644,6 +1644,54 @@ describe('compiler: parse', () => {
       })
     })
 
+    test('self-closing v-pre', () => {
+      const ast = baseParse(
+        `<div v-pre/>\n<div :id="foo"><Comp/>{{ bar }}</div>`
+      )
+      // should not affect siblings after it
+      const divWithoutPre = ast.children[1] as ElementNode
+      expect(divWithoutPre.props).toMatchObject([
+        {
+          type: NodeTypes.DIRECTIVE,
+          name: `bind`,
+          arg: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            isStatic: true,
+            content: `id`
+          },
+          exp: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            isStatic: false,
+            content: `foo`
+          },
+          loc: {
+            source: `:id="foo"`,
+            start: {
+              line: 2,
+              column: 6
+            },
+            end: {
+              line: 2,
+              column: 15
+            }
+          }
+        }
+      ])
+      expect(divWithoutPre.children[0]).toMatchObject({
+        type: NodeTypes.ELEMENT,
+        tagType: ElementTypes.COMPONENT,
+        tag: `Comp`
+      })
+      expect(divWithoutPre.children[1]).toMatchObject({
+        type: NodeTypes.INTERPOLATION,
+        content: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: `bar`,
+          isStatic: false
+        }
+      })
+    })
+
     test('end tags are case-insensitive.', () => {
       const ast = baseParse('<div>hello</DIV>after')
       const element = ast.children[0] as ElementNode
@@ -1882,6 +1930,15 @@ foo
       expect((preElement.children[1] as TextNode).content).toBe(
         `\n  foo  bar  `
       )
+    })
+
+    it('self-closing pre tag', () => {
+      const ast = baseParse(`<pre/><span>\n  foo   bar</span>`, {
+        isPreTag: tag => tag === 'pre'
+      })
+      const elementAfterPre = ast.children[1] as ElementNode
+      // should not affect the <span> and condense its whitepsace inside
+      expect((elementAfterPre.children[0] as TextNode).content).toBe(` foo bar`)
     })
 
     it('should NOT condense whitespaces in RCDATA text mode', () => {

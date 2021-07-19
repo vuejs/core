@@ -430,6 +430,9 @@ function parseElement(
     if (isPreBoundary) {
       context.inPre = false
     }
+    if (isVPreBoundary) {
+      context.inVPre = false
+    }
     return element
   }
 
