@@ -18,6 +18,8 @@ export function normalizeStyle(value: unknown): NormalizedStyle | undefined {
       }
     }
     return res
+  } else if (isString(value)) {
+    return parseStringStyle(value)
   } else if (isObject(value)) {
     return value
   }
