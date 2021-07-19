@@ -30,9 +30,6 @@
     "url": "https://github.com/vuejs/vue-next/issues"
   },
   "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/compiler-sfc#readme",
-  "peerDependencies": {
-    "vue": "3.2.0-beta.1"
-  },
   "dependencies": {
     "@babel/parser": "^7.13.9",
     "@babel/types": "^7.13.0",
