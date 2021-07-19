@@ -18,6 +18,7 @@ export interface SFCParseOptions {
   sourceMap?: boolean
   sourceRoot?: string
   pad?: boolean | 'line' | 'space'
+  ignoreEmpty?: boolean
   compiler?: TemplateCompiler
 }
 
@@ -104,6 +105,7 @@ export function parse(
     filename = 'anonymous.vue',
     sourceRoot = '',
     pad = false,
+    ignoreEmpty = true,
     compiler = CompilerDOM
   }: SFCParseOptions = {}
 ): SFCParseResult {
@@ -163,7 +165,12 @@ export function parse(
       return
     }
     // we only want to keep the nodes that are not empty (when the tag is not a template)
-    if (node.tag !== 'template' && isEmpty(node) && !hasSrc(node)) {
+    if (
+      ignoreEmpty &&
+      node.tag !== 'template' &&
+      isEmpty(node) &&
+      !hasSrc(node)
+    ) {
       return
     }
     switch (node.tag) {

@@ -167,6 +167,28 @@ h1 { color: red }
     expect(descriptor.script!.attrs['src']).toBe('com')
   })
 
+  test('ignoreEmpty: false', () => {
+    const { descriptor } = parse(
+      `<script></script>\n<script setup>\n</script>`,
+      {
+        ignoreEmpty: false
+      }
+    )
+    expect(descriptor.script).toBeTruthy()
+    expect(descriptor.script!.loc).toMatchObject({
+      source: '',
+      start: { line: 1, column: 9, offset: 8 },
+      end: { line: 1, column: 9, offset: 8 }
+    })
+
+    expect(descriptor.scriptSetup).toBeTruthy()
+    expect(descriptor.scriptSetup!.loc).toMatchObject({
+      source: '\n',
+      start: { line: 2, column: 15, offset: 32 },
+      end: { line: 3, column: 1, offset: 33 }
+    })
+  })
+
   test('nested templates', () => {
     const content = `
     <template v-if="ok">ok</template>
