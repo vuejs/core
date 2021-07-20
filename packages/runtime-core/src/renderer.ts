@@ -2304,9 +2304,8 @@ function baseCreateRenderer(
       instance.emit('hook:beforeDestroy')
     }
 
-    if (scope) {
-      scope.stop()
-    }
+    // stop effects in component scope
+    scope.stop()
 
     // update may be null if a component is unmounted before its async
     // setup has resolved.

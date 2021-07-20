@@ -25,7 +25,8 @@ import {
   TriggerOpTypes,
   triggerRef,
   shallowRef,
-  Ref
+  Ref,
+  effectScope
 } from '@vue/reactivity'
 import { watchPostEffect } from '../src/apiWatch'
 
@@ -848,7 +849,7 @@ describe('api: watch', () => {
   })
 
   // https://github.com/vuejs/vue-next/issues/2381
-  test('$watch should always register its effects with itw own instance', async () => {
+  test('$watch should always register its effects with its own instance', async () => {
     let instance: ComponentInternalInstance | null
     let _show: Ref<boolean>
 
@@ -889,14 +890,14 @@ describe('api: watch', () => {
     expect(instance!).toBeDefined()
     expect(instance!.scope.effects).toBeInstanceOf(Array)
     // includes the component's own render effect AND the watcher effect
-    expect(instance!.scope.effects!.length).toBe(2)
+    expect(instance!.scope.effects.length).toBe(2)
 
     _show!.value = false
 
     await nextTick()
     await nextTick()
 
-    expect(instance!.scope.effects![0].active).toBe(false)
+    expect(instance!.scope.effects[0].active).toBe(false)
   })
 
   test('this.$watch should pass `this.proxy` to watch source as the first argument ', () => {
@@ -1023,5 +1024,27 @@ describe('api: watch', () => {
     await nextTick()
     expect(plus.value).toBe(true)
     expect(count).toBe(0)
+  })
+
+  // #4158
+  test('watch should not register in owner component if created inside detached scope', () => {
+    let instance: ComponentInternalInstance
+    const Comp = {
+      setup() {
+        instance = getCurrentInstance()!
+        effectScope(true).run(() => {
+          watch(
+            () => 1,
+            () => {}
+          )
+        })
+        return () => ''
+      }
+    }
+    const root = nodeOps.createElement('div')
+    createApp(Comp).mount(root)
+    // should not record watcher in detached scope and only the instance's
+    // own update effect
+    expect(instance!.scope.effects.length).toBe(1)
   })
 })
