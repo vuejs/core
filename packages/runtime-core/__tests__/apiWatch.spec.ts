@@ -16,7 +16,9 @@ import {
   serializeInner,
   TestElement,
   h,
-  createApp
+  createApp,
+  watchPostEffect,
+  watchSyncEffect
 } from '@vue/runtime-test'
 import {
   ITERATE_KEY,
@@ -28,7 +30,6 @@ import {
   Ref,
   effectScope
 } from '@vue/reactivity'
-import { watchPostEffect } from '../src/apiWatch'
 
 // reference: https://vue-composition-api-rfc.netlify.com/api.html#watch
 
@@ -427,6 +428,48 @@ describe('api: watch', () => {
             flush: 'sync'
           }
         )
+        return () => count.value
+      }
+    }
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(assertion).toHaveBeenCalledTimes(1)
+    expect(result1).toBe(true)
+    expect(result2).toBe(true)
+
+    count.value++
+    count2.value++
+    await nextTick()
+    expect(assertion).toHaveBeenCalledTimes(3)
+    expect(result1).toBe(true)
+    expect(result2).toBe(true)
+  })
+
+  it('watchSyncEffect', async () => {
+    const count = ref(0)
+    const count2 = ref(0)
+
+    let callCount = 0
+    let result1
+    let result2
+    const assertion = jest.fn(count => {
+      callCount++
+      // on mount, the watcher callback should be called before DOM render
+      // on update, should be called before the count is updated
+      const expectedDOM = callCount === 1 ? `` : `${count - 1}`
+      result1 = serializeInner(root) === expectedDOM
+
+      // in a sync callback, state mutation on the next line should not have
+      // executed yet on the 2nd call, but will be on the 3rd call.
+      const expectedState = callCount < 3 ? 0 : 1
+      result2 = count2.value === expectedState
+    })
+
+    const Comp = {
+      setup() {
+        watchSyncEffect(() => {
+          assertion(count.value)
+        })
         return () => count.value
       }
     }

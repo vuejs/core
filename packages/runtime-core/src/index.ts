@@ -34,7 +34,12 @@ export {
   getCurrentScope,
   onScopeDispose
 } from '@vue/reactivity'
-export { watch, watchEffect, watchPostEffect } from './apiWatch'
+export {
+  watch,
+  watchEffect,
+  watchPostEffect,
+  watchSyncEffect
+} from './apiWatch'
 export {
   onBeforeMount,
   onMounted,

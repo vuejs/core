@@ -96,6 +96,19 @@ export function watchPostEffect(
   )
 }
 
+export function watchSyncEffect(
+  effect: WatchEffect,
+  options?: DebuggerOptions
+) {
+  return doWatch(
+    effect,
+    null,
+    (__DEV__
+      ? Object.assign(options || {}, { flush: 'sync' })
+      : { flush: 'sync' }) as WatchOptionsBase
+  )
+}
+
 // initial value for watchers to trigger on undefined initial values
 const INITIAL_WATCHER_VALUE = {}
 
