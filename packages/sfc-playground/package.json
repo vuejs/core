@@ -7,13 +7,6 @@
     "build": "vite build",
     "serve": "vite preview"
   },
-  "buildOptions": {
-    "formats": [
-      "global"
-    ],
-    "env": "development",
-    "enableNonBrowserBranches": true
-  },
   "devDependencies": {
     "@types/codemirror": "^0.0.108",
     "@vitejs/plugin-vue": "^1.2.0",
