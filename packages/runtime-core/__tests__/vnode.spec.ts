@@ -349,6 +349,12 @@ describe('vnode', () => {
       expect(mergeProps(props1, props2, props3, props4)).toMatchObject({
         class: 'c cc ccc cccc'
       })
+
+      expect(
+        mergeProps({ class: { ccc: true } }, { disabled: true })
+      ).toMatchObject({
+        class: 'ccc'
+      })
     })
 
     test('style', () => {
