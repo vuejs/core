@@ -2,10 +2,6 @@ import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import { isArray } from '@vue/shared'
 import { ComponentInternalInstance, getComponentName } from './component'
 import { warn } from './warning'
-import { setComputedScheduler } from '@vue/reactivity'
-
-// set scheduler for computed
-setComputedScheduler(queueJob)
 
 export interface SchedulerJob extends Function {
   id?: number

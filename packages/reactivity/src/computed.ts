@@ -20,16 +20,6 @@ export interface WritableComputedOptions<T> {
   set: ComputedSetter<T>
 }
 
-type ComputedScheduler = (fn: () => void) => void
-let scheduler: ComputedScheduler | undefined
-
-/**
- * Set a scheduler for deferring computed computations
- */
-export const setComputedScheduler = (s: ComputedScheduler | undefined) => {
-  scheduler = s
-}
-
 class ComputedRefImpl<T> {
   public dep?: Dep = undefined
 
@@ -45,55 +35,24 @@ class ComputedRefImpl<T> {
     private readonly _setter: ComputedSetter<T>,
     isReadonly: boolean
   ) {
-    let compareTarget: any
-    let hasCompareTarget = false
-    let scheduled = false
-    this.effect = new ReactiveEffect(getter, (computedTrigger?: boolean) => {
-      if (scheduler && this.dep) {
-        if (computedTrigger) {
-          compareTarget = this._value
-          hasCompareTarget = true
-        } else if (!scheduled) {
-          const valueToCompare = hasCompareTarget ? compareTarget : this._value
-          scheduled = true
-          hasCompareTarget = false
-          scheduler(() => {
-            if (this.effect.active && this._get() !== valueToCompare) {
-              triggerRefValue(this)
-            }
-            scheduled = false
-          })
-        }
-        // chained upstream computeds are notified synchronously to ensure
-        // value invalidation in case of sync access; normal effects are
-        // deferred to be triggered in scheduler.
-        for (const e of this.dep) {
-          if (e.computed) {
-            e.scheduler!(true /* computedTrigger */)
-          }
-        }
-      }
+    this.effect = new ReactiveEffect(getter, () => {
       if (!this._dirty) {
         this._dirty = true
-        if (!scheduler) triggerRefValue(this)
+        triggerRefValue(this)
       }
     })
-    this.effect.computed = true
     this[ReactiveFlags.IS_READONLY] = isReadonly
   }
 
-  private _get() {
-    if (this._dirty) {
-      this._dirty = false
-      return (this._value = this.effect.run()!)
-    }
-    return this._value
-  }
-
   get value() {
-    trackRefValue(this)
     // the computed ref may get wrapped by other proxies e.g. readonly() #3376
-    return toRaw(this)._get()
+    const self = toRaw(this)
+    trackRefValue(self)
+    if (self._dirty) {
+      self._dirty = false
+      self._value = self.effect.run()!
+    }
+    return self._value
   }
 
   set value(newValue: T) {
