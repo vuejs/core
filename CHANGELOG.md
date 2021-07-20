@@ -1,3 +1,21 @@
+# [3.2.0-beta.3](https://github.com/vuejs/vue-next/compare/v3.2.0-beta.2...v3.2.0-beta.3) (2021-07-20)
+
+
+### Bug Fixes
+
+* **reactivity:** revert computed scheduler change ([33c2fbf](https://github.com/vuejs/vue-next/commit/33c2fbfdc80c6f17c7e8435b7a152a4d9ed5c6ed)), closes [#4157](https://github.com/vuejs/vue-next/issues/4157)
+* **runtime-core:** fix v-bind class/style merging regression ([2bdee50](https://github.com/vuejs/vue-next/commit/2bdee50a598456392541a8a4b451501e5df2d363)), closes [#4155](https://github.com/vuejs/vue-next/issues/4155)
+* **sfc-playground:** Transform named default exports without altering scope ([#4154](https://github.com/vuejs/vue-next/issues/4154)) ([acb2a4d](https://github.com/vuejs/vue-next/commit/acb2a4d285bfdee6437970b3dc9435abfe1c4ddf))
+* **watch:** ensure watchers respect detached scope ([bc7f976](https://github.com/vuejs/vue-next/commit/bc7f9767f502b808d1c74e2cafaafbf8aa568045)), closes [#4158](https://github.com/vuejs/vue-next/issues/4158)
+
+
+### Features
+
+* **reactivity:** deferredComputed ([14ca881](https://github.com/vuejs/vue-next/commit/14ca881a1ba6ad887d5ffc6ce3b7f8461252afee))
+* **runtime-core:** watchSyncEffect ([d87d059](https://github.com/vuejs/vue-next/commit/d87d059ac120ed0496f85474344ef76e40fa9bc7))
+
+
+
 # [3.2.0-beta.2](https://github.com/vuejs/vue-next/compare/v3.2.0-beta.1...v3.2.0-beta.2) (2021-07-19)
 
 
