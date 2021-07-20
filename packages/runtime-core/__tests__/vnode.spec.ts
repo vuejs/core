@@ -342,7 +342,7 @@ describe('vnode', () => {
 
   describe('mergeProps', () => {
     test('class', () => {
-      let props1: Data = { class: 'c' }
+      let props1: Data = { class: { c: true } }
       let props2: Data = { class: ['cc'] }
       let props3: Data = { class: [{ ccc: true }] }
       let props4: Data = { class: { cccc: true } }
@@ -353,10 +353,12 @@ describe('vnode', () => {
 
     test('style', () => {
       let props1: Data = {
-        style: {
-          color: 'red',
-          fontSize: 10
-        }
+        style: [
+          {
+            color: 'red',
+            fontSize: 10
+          }
+        ]
       }
       let props2: Data = {
         style: [
