@@ -16,6 +16,8 @@ import { baseCompile } from '@vue/compiler-core'
 declare var __VUE_HMR_RUNTIME__: HMRRuntime
 const { createRecord, rerender, reload } = __VUE_HMR_RUNTIME__
 
+runtimeTest.registerRuntimeCompiler(compileToFunction)
+
 function compileToFunction(template: string) {
   const { code } = baseCompile(template)
   const render = new Function('Vue', code)(
