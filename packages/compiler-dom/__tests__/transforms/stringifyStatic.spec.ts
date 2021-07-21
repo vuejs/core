@@ -98,8 +98,7 @@ describe('stringify static html', () => {
         StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
       )}</div>`
     )
-    // should have 6 hoisted nodes (including the entire array),
-    // but 2~5 should be null because they are merged into 1
+    // should have 1 hoisted nodes, because they are reused
     expect(ast.hoists).toMatchObject([
       {
         type: NodeTypes.JS_CALL_EXPRESSION,
@@ -114,10 +113,6 @@ describe('stringify static html', () => {
           '5'
         ]
       },
-      null,
-      null,
-      null,
-      null,
       {
         type: NodeTypes.JS_ARRAY_EXPRESSION
       }
