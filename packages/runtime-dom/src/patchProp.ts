@@ -10,9 +10,6 @@ const nativeOnRE = /^on[a-z]/
 
 type DOMRendererOptions = RendererOptions<Node, Element>
 
-export const forcePatchProp: DOMRendererOptions['forcePatchProp'] = (_, key) =>
-  key === 'value'
-
 export const patchProp: DOMRendererOptions['patchProp'] = (
   el,
   key,
