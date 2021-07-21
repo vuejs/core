@@ -5,7 +5,9 @@ import {
   shallowReadonly,
   proxyRefs,
   EffectScope,
-  markRaw
+  markRaw,
+  track,
+  TrackOpTypes
 } from '@vue/reactivity'
 import {
   ComponentPublicInstance,
@@ -834,19 +836,32 @@ export function finishComponentSetup(
   }
 }
 
-const attrDevProxyHandlers: ProxyHandler<Data> = {
-  get: (target, key: string) => {
-    markAttrsAccessed()
-    return target[key]
-  },
-  set: () => {
-    warn(`setupContext.attrs is readonly.`)
-    return false
-  },
-  deleteProperty: () => {
-    warn(`setupContext.attrs is readonly.`)
-    return false
-  }
+function createAttrsProxy(instance: ComponentInternalInstance): Data {
+  return new Proxy(
+    instance.attrs,
+    __DEV__
+      ? {
+          get(target, key: string) {
+            markAttrsAccessed()
+            track(instance, TrackOpTypes.GET, '$attrs')
+            return target[key]
+          },
+          set() {
+            warn(`setupContext.attrs is readonly.`)
+            return false
+          },
+          deleteProperty() {
+            warn(`setupContext.attrs is readonly.`)
+            return false
+          }
+        }
+      : {
+          get(target, key: string) {
+            track(instance, TrackOpTypes.GET, '$attrs')
+            return target[key]
+          }
+        }
+  )
 }
 
 export function createSetupContext(
@@ -859,15 +874,13 @@ export function createSetupContext(
     instance.exposed = exposed || {}
   }
 
+  let attrs: Data
   if (__DEV__) {
-    let attrs: Data
     // We use getters in dev in case libs like test-utils overwrite instance
     // properties (overwrites should not be done in prod)
     return Object.freeze({
       get attrs() {
-        return (
-          attrs || (attrs = new Proxy(instance.attrs, attrDevProxyHandlers))
-        )
+        return attrs || (attrs = createAttrsProxy(instance))
       },
       get slots() {
         return shallowReadonly(instance.slots)
@@ -879,7 +892,9 @@ export function createSetupContext(
     })
   } else {
     return {
-      attrs: instance.attrs,
+      get attrs() {
+        return attrs || (attrs = createAttrsProxy(instance))
+      },
       slots: instance.slots,
       emit: instance.emit,
       expose
