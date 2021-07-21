@@ -1,3 +1,18 @@
+# [3.2.0-beta.4](https://github.com/vuejs/vue-next/compare/v3.2.0-beta.3...v3.2.0-beta.4) (2021-07-21)
+
+
+### Bug Fixes
+
+* **runtime-core:** ensure setupContext.attrs reactivity when used in child slots ([8560005](https://github.com/vuejs/vue-next/commit/85600056015fcf5c922dc0b5b07aa03a5ba53245)), closes [#4161](https://github.com/vuejs/vue-next/issues/4161)
+* **runtime-dom:** defer setting value ([ff0c810](https://github.com/vuejs/vue-next/commit/ff0c810300f7182f717f130fe5e382d9c0c99838)), closes [#2325](https://github.com/vuejs/vue-next/issues/2325) [#4024](https://github.com/vuejs/vue-next/issues/4024)
+
+
+### Performance Improvements
+
+* skip patch on same vnode ([d13774b](https://github.com/vuejs/vue-next/commit/d13774b881b297f2cd1a8d3193183d241dee625b))
+
+
+
 # [3.2.0-beta.3](https://github.com/vuejs/vue-next/compare/v3.2.0-beta.2...v3.2.0-beta.3) (2021-07-20)
 
 
