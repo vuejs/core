@@ -470,6 +470,10 @@ function baseCreateRenderer(
     slotScopeIds = null,
     optimized = __DEV__ && isHmrUpdating ? false : !!n2.dynamicChildren
   ) => {
+    if (n1 === n2) {
+      return
+    }
+
     // patching & not same type, unmount old tree
     if (n1 && !isSameVNodeType(n1, n2)) {
       anchor = getNextHostNode(n1)
@@ -1152,8 +1156,12 @@ function baseCreateRenderer(
     const fragmentEndAnchor = (n2.anchor = n1 ? n1.anchor : hostCreateText(''))!
 
     let { patchFlag, dynamicChildren, slotScopeIds: fragmentSlotScopeIds } = n2
-    if (dynamicChildren) {
-      optimized = true
+
+    if (__DEV__ && isHmrUpdating) {
+      // HMR updated, force full diff
+      patchFlag = 0
+      optimized = false
+      dynamicChildren = null
     }
 
     // check if this is a slot fragment with :slotted scope ids
@@ -1161,13 +1169,6 @@ function baseCreateRenderer(
       slotScopeIds = slotScopeIds
         ? slotScopeIds.concat(fragmentSlotScopeIds)
         : fragmentSlotScopeIds
-    }
-
-    if (__DEV__ && isHmrUpdating) {
-      // HMR updated, force full diff
-      patchFlag = 0
-      optimized = false
-      dynamicChildren = null
     }
 
     if (n1 == null) {
