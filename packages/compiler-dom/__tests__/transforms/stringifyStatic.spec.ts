@@ -98,7 +98,7 @@ describe('stringify static html', () => {
         StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
       )}</div>`
     )
-    // should have 1 hoisted nodes, because they are reused
+    // should have 1 hoisted nodes, because it's reused
     expect(ast.hoists).toMatchObject([
       {
         type: NodeTypes.JS_CALL_EXPRESSION,
