@@ -204,6 +204,22 @@ return { x }
 }"
 `;
 
+exports[`SFC compile <script setup> imports imports not used in <template> should not be exposed 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+import { FooBar, FooBaz, FooQux, vMyDir, x, y } from './x'
+        
+export default _defineComponent({
+  setup(__props, { expose }) {
+  expose()
+
+        const fooBar: FooBar = 1
+        
+return { fooBar, FooBaz, FooQux, vMyDir, x }
+}
+
+})"
+`;
+
 exports[`SFC compile <script setup> imports should allow defineProps/Emit at the start of imports 1`] = `
 "import { ref } from 'vue'
       

@@ -12,7 +12,11 @@ import {
   TextRange
 } from './parse'
 import { parse as _parse, ParserOptions, ParserPlugin } from '@babel/parser'
-import { babelParserDefaultPlugins, generateCodeFrame } from '@vue/shared'
+import {
+  babelParserDefaultPlugins,
+  generateCodeFrame,
+  hyphenate
+} from '@vue/shared'
 import {
   Node,
   Declaration,
@@ -105,6 +109,7 @@ interface ImportBinding {
   source: string
   rangeNode: Node
   isFromSetup: boolean
+  isUsedInTemplate: boolean
 }
 
 interface VariableBinding {
@@ -312,12 +317,21 @@ export function compileScript(
     if (source === 'vue' && imported) {
       userImportAlias[imported] = local
     }
+
+    let isUsedInTemplate = true
+    if (sfc.template && !sfc.template.src) {
+      isUsedInTemplate = new RegExp(
+        `\\b(?:${local}|${hyphenate(local)})\\b`
+      ).test(sfc.template.content)
+    }
+
     userImports[local] = {
       isType,
       imported: imported || 'default',
       source,
       rangeNode,
-      isFromSetup
+      isFromSetup,
+      isUsedInTemplate
     }
   }
 
@@ -1279,7 +1293,7 @@ export function compileScript(
     // return bindings from setup
     const allBindings: Record<string, any> = { ...setupBindings }
     for (const key in userImports) {
-      if (!userImports[key].isType) {
+      if (!userImports[key].isType && userImports[key].isUsedInTemplate) {
         allBindings[key] = true
       }
     }

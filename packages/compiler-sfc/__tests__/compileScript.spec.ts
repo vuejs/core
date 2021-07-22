@@ -209,6 +209,25 @@ defineExpose({ foo: 123 })
         content.lastIndexOf(`import { x }`)
       )
     })
+
+    test('imports not used in <template> should not be exposed', () => {
+      const { content } = compile(`
+        <script setup lang="ts">
+        import { FooBar, FooBaz, FooQux, vMyDir, x, y } from './x'
+        const fooBar: FooBar = 1
+        </script>
+        <template>
+          <FooBaz v-my-dir>{{ x }} {{ yy }}</FooBaz>
+          <foo-qux/>
+        </template>
+        `)
+      assertCode(content)
+      // FooBaz: used as PascalCase component
+      // FooQux: used as kebab-case component
+      // vMyDir: used as directive v-my-dir
+      // x: used in interpolation
+      expect(content).toMatch(`return { fooBar, FooBaz, FooQux, vMyDir, x }`)
+    })
   })
 
   describe('inlineTemplate mode', () => {
