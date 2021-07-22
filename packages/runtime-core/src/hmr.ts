@@ -130,6 +130,9 @@ function reload(id: string, newComp: ComponentOptions | ClassComponent) {
   }
 
   Array.from(instances).forEach(instance => {
+    // invalidate options resolution cache
+    instance.appContext.optionsCache.delete(instance.type as any)
+
     if (instance.parent) {
       // 4. Force the parent instance to re-render. This will cause all updated
       // components to be unmounted and re-mounted. Queue the update so that we
