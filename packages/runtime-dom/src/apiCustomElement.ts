@@ -167,10 +167,9 @@ export class VueElement extends BaseClass {
    * @internal
    */
   _instance: ComponentInternalInstance | null = null
-  /**
-   * @internal
-   */
-  _connected = false
+
+  private _connected = false
+  private _styles?: HTMLStyleElement[]
 
   constructor(
     private _def: ComponentOptions & { styles?: string[] },
@@ -262,12 +261,16 @@ export class VueElement extends BaseClass {
         instance.isCE = true
         // HMR
         if (__DEV__) {
-          instance.appContext.reload = () => {
-            render(this._createVNode(), this.shadowRoot!)
-            this.shadowRoot!.querySelectorAll('style').forEach(s => {
-              this.shadowRoot!.removeChild(s)
-            })
+          instance.ceReload = () => {
+            this._instance = null
+            // reset styles
+            if (this._styles) {
+              this._styles.forEach(s => this.shadowRoot!.removeChild(s))
+              this._styles.length = 0
+            }
             this._applyStyles()
+            // reload
+            render(this._createVNode(), this.shadowRoot!)
           }
         }
 
@@ -302,6 +305,10 @@ export class VueElement extends BaseClass {
         const s = document.createElement('style')
         s.textContent = css
         this.shadowRoot!.appendChild(s)
+        // record for HMR
+        if (__DEV__) {
+          ;(this._styles || (this._styles = [])).push(s)
+        }
       })
     }
   }

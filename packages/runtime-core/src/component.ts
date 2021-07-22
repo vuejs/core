@@ -290,6 +290,10 @@ export interface ComponentInternalInstance {
    * is custom element?
    */
   isCE?: boolean
+  /**
+   * custom element specific HMR method
+   */
+  ceReload?: () => void
 
   // the rest are only for stateful components ---------------------------------
 
