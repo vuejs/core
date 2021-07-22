@@ -2,9 +2,14 @@ import MagicString from 'magic-string'
 import {
   BindingMetadata,
   BindingTypes,
+  createRoot,
   locStub,
-  UNREF
-} from '@vue/compiler-core'
+  NodeTypes,
+  transform,
+  parserOptions,
+  UNREF,
+  SimpleExpressionNode
+} from '@vue/compiler-dom'
 import {
   ScriptSetupTextRanges,
   SFCDescriptor,
@@ -14,8 +19,10 @@ import {
 import { parse as _parse, ParserOptions, ParserPlugin } from '@babel/parser'
 import {
   babelParserDefaultPlugins,
+  camelize,
+  capitalize,
   generateCodeFrame,
-  hyphenate
+  makeMap
 } from '@vue/shared'
 import {
   Node,
@@ -49,6 +56,7 @@ import {
 import { compileTemplate, SFCTemplateCompileOptions } from './compileTemplate'
 import { warnExperimental, warnOnce } from './warn'
 import { rewriteDefault } from './rewriteDefault'
+import { createCache } from './cache'
 
 // Special compiler macros
 const DEFINE_PROPS = 'defineProps'
@@ -60,6 +68,10 @@ const $REF = `$ref`
 const $COMPUTED = `$computed`
 const $FROM_REFS = `$fromRefs`
 const $RAW = `$raw`
+
+const isBuiltInDir = makeMap(
+  `once,memo,if,else,else-if,slot,text,html,on,bind,model,show,cloak,is`
+)
 
 export interface SFCScriptCompileOptions {
   /**
@@ -319,10 +331,10 @@ export function compileScript(
     }
 
     let isUsedInTemplate = true
-    if (sfc.template && !sfc.template.src) {
-      isUsedInTemplate = new RegExp(
-        `\\b(?:${local}|${hyphenate(local)})\\b`
-      ).test(sfc.template.content)
+    if (isTS && sfc.template && !sfc.template.src) {
+      isUsedInTemplate = new RegExp(`\\b${local}\\b`).test(
+        resolveTemplateUsageCheckString(sfc)
+      )
     }
 
     userImports[local] = {
@@ -2153,4 +2165,54 @@ function toTextRange(node: Node): TextRange {
     start: node.start!,
     end: node.end!
   }
+}
+
+const templateUsageCheckCache = createCache<string>()
+
+function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
+  const { content, ast } = sfc.template!
+  const cached = templateUsageCheckCache.get(content)
+  if (cached) {
+    return cached
+  }
+
+  let code = ''
+  transform(createRoot([ast]), {
+    nodeTransforms: [
+      node => {
+        if (node.type === NodeTypes.ELEMENT) {
+          if (
+            !parserOptions.isNativeTag!(node.tag) &&
+            !parserOptions.isBuiltInComponent!(node.tag)
+          ) {
+            code += `,${capitalize(camelize(node.tag))}`
+          }
+          for (let i = 0; i < node.props.length; i++) {
+            const prop = node.props[i]
+            if (prop.type === NodeTypes.DIRECTIVE) {
+              if (!isBuiltInDir(prop.name)) {
+                code += `,v${capitalize(camelize(prop.name))}`
+              }
+              if (prop.exp) {
+                code += `,${stripStrings(
+                  (prop.exp as SimpleExpressionNode).content
+                )}`
+              }
+            }
+          }
+        } else if (node.type === NodeTypes.INTERPOLATION) {
+          code += `,${stripStrings(
+            (node.content as SimpleExpressionNode).content
+          )}`
+        }
+      }
+    ]
+  })
+
+  templateUsageCheckCache.set(content, code)
+  return code
+}
+
+function stripStrings(exp: string) {
+  return exp.replace(/'[^']+'|"[^"]+"|`[^`]+`/g, '')
 }

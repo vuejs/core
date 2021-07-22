@@ -12,6 +12,7 @@ import { TemplateCompiler } from './compileTemplate'
 import { Statement } from '@babel/types'
 import { parseCssVars } from './cssVars'
 import { warnExperimental } from './warn'
+import { createCache } from './cache'
 
 export interface SFCParseOptions {
   filename?: string
@@ -89,14 +90,7 @@ export interface SFCParseResult {
   errors: (CompilerError | SyntaxError)[]
 }
 
-const SFC_CACHE_MAX_SIZE = 500
-const sourceToSFC =
-  __GLOBAL__ || __ESM_BROWSER__
-    ? new Map<string, SFCParseResult>()
-    : (new (require('lru-cache'))(SFC_CACHE_MAX_SIZE) as Map<
-        string,
-        SFCParseResult
-      >)
+const sourceToSFC = createCache<SFCParseResult>()
 
 export function parse(
   source: string,
