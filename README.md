@@ -9,14 +9,12 @@ This is the repository for Vue 3.0.
 - Scaffold via [Vite](https://github.com/vitejs/vite):
 
   ```bash
-# npm 6.x
-npm init vite@latest my-vue-app --template vue
-
-# npm 7+, extra double-dash is needed:
-npm init vite@latest my-vue-app -- --template vue
-
-# yarn
-yarn create vite my-vue-app --template vue
+  # npm 6.x
+  npm init vite@latest my-vue-app --template vue
+  # npm 7+, extra double-dash is needed:
+  npm init vite@latest my-vue-app -- --template vue
+  # yarn
+  yarn create vite my-vue-app --template vue
   ```
 
 - Scaffold via [vue-cli](https://cli.vuejs.org/):
