@@ -1,5 +1,4 @@
 import {
-  Component,
   ComponentOptionsMixin,
   ComponentOptionsWithArrayProps,
   ComponentOptionsWithObjectProps,
@@ -18,7 +17,8 @@ import {
   createVNode,
   defineComponent,
   nextTick,
-  warn
+  warn,
+  ComponentOptions
 } from '@vue/runtime-core'
 import { camelize, extend, hyphenate, isArray, toNumber } from '@vue/shared'
 import { hydrate, render } from '.'
@@ -60,7 +60,7 @@ export function defineCustomElement<
     Extends,
     E,
     EE
-  >
+  > & { styles?: string[] }
 ): VueElementConstructor<Props>
 
 // overload 3: object format with array props declaration
@@ -85,7 +85,7 @@ export function defineCustomElement<
     Extends,
     E,
     EE
-  >
+  > & { styles?: string[] }
 ): VueElementConstructor<{ [K in PropNames]: any }>
 
 // overload 4: object format with object props declaration
@@ -110,7 +110,7 @@ export function defineCustomElement<
     Extends,
     E,
     EE
-  >
+  > & { styles?: string[] }
 ): VueElementConstructor<ExtractPropTypes<PropsOptions>>
 
 // overload 5: defining a custom element from the returned value of
@@ -176,7 +176,7 @@ export class VueElement extends BaseClass {
   _connected = false
 
   constructor(
-    private _def: Component,
+    private _def: ComponentOptions & { styles?: string[] },
     private _attrKeys: string[],
     private _propKeys: string[],
     hydrate?: RootHydrateFunction
@@ -192,6 +192,13 @@ export class VueElement extends BaseClass {
         )
       }
       this.attachShadow({ mode: 'open' })
+      if (_def.styles) {
+        _def.styles.forEach(css => {
+          const s = document.createElement('style')
+          s.textContent = css
+          this.shadowRoot!.appendChild(s)
+        })
+      }
     }
   }
 

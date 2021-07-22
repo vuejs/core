@@ -274,4 +274,20 @@ describe('defineCustomElement', () => {
       expect(consumer.shadowRoot!.innerHTML).toBe(`<div>changed!</div>`)
     })
   })
+
+  describe('styles', () => {
+    test('should attach styles to shadow dom', () => {
+      const Foo = defineCustomElement({
+        styles: [`div { color: red; }`],
+        render() {
+          return h('div', 'hello')
+        }
+      })
+      customElements.define('my-el-with-styles', Foo)
+      container.innerHTML = `<my-el-with-styles></my-el-with-styles>`
+      const el = container.childNodes[0] as VueElement
+      const style = el.shadowRoot?.querySelector('style')!
+      expect(style.textContent).toBe(`div { color: red; }`)
+    })
+  })
 })
