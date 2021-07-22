@@ -198,7 +198,8 @@ function normalizeContainer(
 export {
   defineCustomElement,
   defineSSRCustomElement,
-  VueElement
+  VueElement,
+  VueElementConstructor
 } from './apiCustomElement'
 
 // SFC CSS utilities

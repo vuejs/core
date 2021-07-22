@@ -23,8 +23,8 @@ import {
 import { camelize, extend, hyphenate, isArray, toNumber } from '@vue/shared'
 import { hydrate, render } from '.'
 
-type VueElementConstructor<P = {}> = {
-  new (): VueElement & P
+export type VueElementConstructor<P = {}> = {
+  new (initialProps?: Record<string, any>): VueElement & P
 }
 
 // defineCustomElement provides the same type inference as defineComponent
@@ -134,8 +134,8 @@ export function defineCustomElement(
     static get observedAttributes() {
       return attrKeys
     }
-    constructor() {
-      super(Comp, attrKeys, propKeys, hydate)
+    constructor(initialProps?: Record<string, any>) {
+      super(Comp, initialProps, attrKeys, propKeys, hydate)
     }
   }
 
@@ -166,10 +166,6 @@ export class VueElement extends BaseClass {
   /**
    * @internal
    */
-  _props: Record<string, any> = {}
-  /**
-   * @internal
-   */
   _instance: ComponentInternalInstance | null = null
   /**
    * @internal
@@ -178,6 +174,7 @@ export class VueElement extends BaseClass {
 
   constructor(
     private _def: ComponentOptions & { styles?: string[] },
+    private _props: Record<string, any> = {},
     private _attrKeys: string[],
     private _propKeys: string[],
     hydrate?: RootHydrateFunction

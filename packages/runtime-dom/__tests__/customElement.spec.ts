@@ -17,7 +17,15 @@ describe('defineCustomElement', () => {
 
   describe('mounting/unmount', () => {
     const E = defineCustomElement({
-      render: () => h('div', 'hello')
+      props: {
+        msg: {
+          type: String,
+          default: 'hello'
+        }
+      },
+      render() {
+        return h('div', this.msg)
+      }
     })
     customElements.define('my-element', E)
 
@@ -30,13 +38,13 @@ describe('defineCustomElement', () => {
     })
 
     test('should work w/ manual instantiation', () => {
-      const e = new E()
+      const e = new E({ msg: 'inline' })
       // should lazy init
       expect(e._instance).toBe(null)
       // should initialize on connect
       container.appendChild(e)
       expect(e._instance).toBeTruthy()
-      expect(e.shadowRoot!.innerHTML).toBe(`<div>hello</div>`)
+      expect(e.shadowRoot!.innerHTML).toBe(`<div>inline</div>`)
     })
 
     test('should unmount on remove', async () => {
