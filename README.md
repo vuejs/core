@@ -10,9 +10,9 @@ This is the repository for Vue 3.0.
 
   ```bash
   # npm
-  npm init @vitejs/app
+  npm init vite
   # yarn
-  yarn create @vitejs/app
+  yarn create vite
   # select vue template
   ```
 
