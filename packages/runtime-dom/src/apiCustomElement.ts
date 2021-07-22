@@ -130,6 +130,7 @@ export function defineCustomElement(
   const propKeys = rawKeys.map(camelize)
 
   class VueCustomElement extends VueElement {
+    static def = Comp
     static get observedAttributes() {
       return attrKeys
     }
@@ -192,13 +193,7 @@ export class VueElement extends BaseClass {
         )
       }
       this.attachShadow({ mode: 'open' })
-      if (_def.styles) {
-        _def.styles.forEach(css => {
-          const s = document.createElement('style')
-          s.textContent = css
-          this.shadowRoot!.appendChild(s)
-        })
-      }
+      this._applyStyles()
     }
   }
 
@@ -268,6 +263,16 @@ export class VueElement extends BaseClass {
       vnode.ce = instance => {
         this._instance = instance
         instance.isCE = true
+        // HMR
+        if (__DEV__) {
+          instance.appContext.reload = () => {
+            render(this._createVNode(), this.shadowRoot!)
+            this.shadowRoot!.querySelectorAll('style').forEach(s => {
+              this.shadowRoot!.removeChild(s)
+            })
+            this._applyStyles()
+          }
+        }
 
         // intercept emit
         instance.emit = (event: string, ...args: any[]) => {
@@ -292,5 +297,15 @@ export class VueElement extends BaseClass {
       }
     }
     return vnode
+  }
+
+  private _applyStyles() {
+    if (this._def.styles) {
+      this._def.styles.forEach(css => {
+        const s = document.createElement('style')
+        s.textContent = css
+        this.shadowRoot!.appendChild(s)
+      })
+    }
   }
 }
