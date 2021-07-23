@@ -1,3 +1,23 @@
+# [3.2.0-beta.5](https://github.com/vuejs/vue-next/compare/v3.2.0-beta.4...v3.2.0-beta.5) (2021-07-23)
+
+
+### Bug Fixes
+
+* **hmr:** fix custom elements hmr edge cases ([bff4ea7](https://github.com/vuejs/vue-next/commit/bff4ea74c545ccc7e39f45d4db4e7c471f248b13))
+* **hmr:** fix hmr when global mixins are used ([db3f57a](https://github.com/vuejs/vue-next/commit/db3f57a39206eb33946a42bc230eb972bde61368)), closes [#4174](https://github.com/vuejs/vue-next/issues/4174)
+* **types:** fix types for readonly ref ([2581cfb](https://github.com/vuejs/vue-next/commit/2581cfb707f90bdf4128e5d481b99e7c39e198d3)), closes [#4180](https://github.com/vuejs/vue-next/issues/4180)
+* **v-model:** avoid resetting value of in-focus & lazy input ([ac74e1d](https://github.com/vuejs/vue-next/commit/ac74e1dd33a45874a96fc13efdaade613c44dd70)), closes [#4182](https://github.com/vuejs/vue-next/issues/4182)
+
+
+### Features
+
+* **compiler-sfc:** avoid exposing imports not used in template ([5a3ccfd](https://github.com/vuejs/vue-next/commit/5a3ccfd9143700c7ca82d2911fe592d0658c5393)), closes [#3183](https://github.com/vuejs/vue-next/issues/3183)
+* **runtime-dom:** hmr for custom elements ([7a7e1d8](https://github.com/vuejs/vue-next/commit/7a7e1d8e9fed27bc2dbf24076642e83d0c80d9af))
+* **runtime-dom:** support passing initial props to custom element constructor ([5b76843](https://github.com/vuejs/vue-next/commit/5b76843b693d6477ae44b4bd238c2c892d8f4c77))
+* **runtime-dom:** support specifying shadow dom styles in defineCustomElement ([a7fa4ac](https://github.com/vuejs/vue-next/commit/a7fa4ac28afb73be00503be87f35e8724fe25443))
+
+
+
 # [3.2.0-beta.4](https://github.com/vuejs/vue-next/compare/v3.2.0-beta.3...v3.2.0-beta.4) (2021-07-21)
 
 
