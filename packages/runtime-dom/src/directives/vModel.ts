@@ -80,11 +80,14 @@ export const vModelText: ModelDirective<
   mounted(el, { value }) {
     el.value = value == null ? '' : value
   },
-  beforeUpdate(el, { value, modifiers: { trim, number } }, vnode) {
+  beforeUpdate(el, { value, modifiers: { lazy, trim, number } }, vnode) {
     el._assign = getModelAssigner(vnode)
     // avoid clearing unresolved text. #2302
     if ((el as any).composing) return
     if (document.activeElement === el) {
+      if (lazy) {
+        return
+      }
       if (trim && el.value.trim() === value) {
         return
       }
