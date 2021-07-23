@@ -19,11 +19,6 @@ export interface Ref<T = any> {
    * @internal
    */
   _shallow?: boolean
-
-  /**
-   * Deps are maintained locally rather than in depsMap for performance reasons.
-   */
-  dep?: Dep
 }
 
 type RefBase<T> = {
