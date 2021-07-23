@@ -7,7 +7,7 @@ import {
   ClassComponent,
   isClassComponent
 } from './component'
-import { nextTick, queueJob } from './scheduler'
+import { queueJob, queuePostFlushCb } from './scheduler'
 import { extend } from '@vue/shared'
 import { warn } from './warning'
 
@@ -124,7 +124,7 @@ function reload(id: string, newComp: ComponentOptions | ClassComponent) {
     // on patch.
     hmrDirtyComponents.add(component)
     // 3. Make sure to unmark the component after the reload.
-    nextTick(() => {
+    queuePostFlushCb(() => {
       hmrDirtyComponents.delete(component)
     })
   }
@@ -135,7 +135,9 @@ function reload(id: string, newComp: ComponentOptions | ClassComponent) {
 
     if (instance.ceReload) {
       // custom element
+      hmrDirtyComponents.add(component)
       instance.ceReload()
+      hmrDirtyComponents.delete(component)
     } else if (instance.parent) {
       // 4. Force the parent instance to re-render. This will cause all updated
       // components to be unmounted and re-mounted. Queue the update so that we
