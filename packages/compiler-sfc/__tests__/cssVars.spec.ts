@@ -161,6 +161,19 @@ describe('CSS vars injection', () => {
       )
     })
 
+    //#4185
+    test('should ignore comments', () => {
+      const { content } = compileSFCScript(
+        `<script setup>const color = 'red'</script>\n` +
+          `<style>
+            div{ /* color: v-bind(color); */ width:20; }
+          </style>`
+      )
+
+      expect(content).not.toMatch(`_useCssVars`)
+      assertCode(content)
+    })
+
     test('w/ <script setup> using the same var multiple times', () => {
       const { content } = compileSFCScript(
         `<script setup>
