@@ -750,8 +750,7 @@ function normalizeSuspenseSlot(s: any) {
   }
   s = normalizeVNode(s)
   if (block) {
-    block = block.filter(c => c !== s)
-    s.dynamicChildren = block.length ? block : null
+    s.dynamicChildren = block.filter(c => c !== s)
   }
   return s
 }
