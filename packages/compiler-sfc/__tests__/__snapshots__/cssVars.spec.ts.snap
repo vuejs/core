@@ -49,6 +49,17 @@ __default__.setup = __setup__
 export default __default__"
 `;
 
+exports[`CSS vars injection codegen should ignore comments 1`] = `
+"export default {
+  setup(__props, { expose }) {
+  expose()
+const color = 'red'
+return { color }
+}
+
+}"
+`;
+
 exports[`CSS vars injection codegen w/ <script setup> 1`] = `
 "import { useCssVars as _useCssVars, unref as _unref } from 'vue'
 
