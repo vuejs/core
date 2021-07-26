@@ -106,9 +106,7 @@ export class ReactiveEffect<T = any> {
   stop() {
     if (this.active) {
       cleanupEffect(this)
-      if (this.onStop) {
-        this.onStop()
-      }
+      this.onStop?.()
       this.active = false
     }
   }
