@@ -1,3 +1,19 @@
+# [3.2.0-beta.6](https://github.com/vuejs/vue-next/compare/v3.2.0-beta.5...v3.2.0-beta.6) (2021-07-27)
+
+
+### Bug Fixes
+
+* **inject:** should auto unwrap injected refs ([561e210](https://github.com/vuejs/vue-next/commit/561e210157874b216efc1c17be701a6a81c4383b)), closes [#4196](https://github.com/vuejs/vue-next/issues/4196)
+* **runtime-core:** expose ssrUtils in esm-bundler build ([ee4cbae](https://github.com/vuejs/vue-next/commit/ee4cbaeec917362c571ce95352adccd6ec2d1f47)), closes [#4199](https://github.com/vuejs/vue-next/issues/4199)
+* **sfc/style-vars:** should ignore style variable bindings in comments ([#4188](https://github.com/vuejs/vue-next/issues/4188)) ([3a75d5d](https://github.com/vuejs/vue-next/commit/3a75d5d6942a1743789192dca9161f7c30a71e58)), closes [#4185](https://github.com/vuejs/vue-next/issues/4185)
+
+
+### Features
+
+* unwrap refs in toDisplayString ([f994b97](https://github.com/vuejs/vue-next/commit/f994b974c0a1ac95d313c8ccfc258c6ba3910b6e))
+
+
+
 # [3.2.0-beta.5](https://github.com/vuejs/vue-next/compare/v3.2.0-beta.4...v3.2.0-beta.5) (2021-07-23)
 
 
