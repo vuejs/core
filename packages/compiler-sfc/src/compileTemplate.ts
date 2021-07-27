@@ -140,14 +140,10 @@ export function compileTemplate(
       code: `export default function render() {}`,
       source: options.source,
       tips: [
-        `Component ${
-          options.filename
-        } uses lang ${preprocessLang} for template. Please install the language preprocessor.`
+        `Component ${options.filename} uses lang ${preprocessLang} for template. Please install the language preprocessor.`
       ],
       errors: [
-        `Component ${
-          options.filename
-        } uses lang ${preprocessLang} for template, however it is not installed.`
+        `Component ${options.filename} uses lang ${preprocessLang} for template, however it is not installed.`
       ]
     }
   } else {

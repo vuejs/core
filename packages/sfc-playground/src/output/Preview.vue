@@ -123,6 +123,9 @@ function createSandbox() {
       runtimeError.value = 'Uncaught (in promise): ' + error.message
     },
     on_console: (log: any) => {
+      if (log.duplicate) {
+        return
+      }
       if (log.level === 'error') {
         if (log.args[0] instanceof Error) {
           runtimeError.value = log.args[0].message
@@ -156,7 +159,10 @@ function createSandbox() {
 }
 
 async function updatePreview() {
-  console.clear()
+  // @ts-ignore
+  if (import.meta.env.PROD) {
+    console.clear()
+  }
   runtimeError.value = null
   runtimeWarning.value = null
   try {

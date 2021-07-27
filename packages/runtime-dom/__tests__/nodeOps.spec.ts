@@ -30,15 +30,10 @@ describe('runtime-dom: node-ops', () => {
     test('fresh insertion', () => {
       const content = `<div>one</div><div>two</div>three`
       const parent = document.createElement('div')
-      const [first, last] = nodeOps.insertStaticContent!(
-        content,
-        parent,
-        null,
-        false
-      )
+      const nodes = nodeOps.insertStaticContent!(content, parent, null, false)
       expect(parent.innerHTML).toBe(content)
-      expect(first).toBe(parent.firstChild)
-      expect(last).toBe(parent.lastChild)
+      expect(nodes[0]).toBe(parent.firstChild)
+      expect(nodes[1]).toBe(parent.lastChild)
     })
 
     test('fresh insertion with anchor', () => {
@@ -47,15 +42,10 @@ describe('runtime-dom: node-ops', () => {
       const parent = document.createElement('div')
       parent.innerHTML = existing
       const anchor = parent.firstChild
-      const [first, last] = nodeOps.insertStaticContent!(
-        content,
-        parent,
-        anchor,
-        false
-      )
+      const nodes = nodeOps.insertStaticContent!(content, parent, anchor, false)
       expect(parent.innerHTML).toBe(content + existing)
-      expect(first).toBe(parent.firstChild)
-      expect(last).toBe(parent.childNodes[parent.childNodes.length - 2])
+      expect(nodes[0]).toBe(parent.firstChild)
+      expect(nodes[1]).toBe(parent.childNodes[parent.childNodes.length - 2])
     })
 
     test('fresh insertion as svg', () => {
@@ -91,35 +81,6 @@ describe('runtime-dom: node-ops', () => {
       expect(last).toBe(parent.childNodes[parent.childNodes.length - 2])
       expect(first.namespaceURI).toMatch('svg')
       expect(last.namespaceURI).toMatch('svg')
-    })
-
-    test('cached', () => {
-      const content = `<div>one</div><div>two</div>three`
-
-      const cacheParent = document.createElement('div')
-      const [cachedFirst, cachedLast] = nodeOps.insertStaticContent!(
-        content,
-        cacheParent,
-        null,
-        false
-      )
-
-      const parent = document.createElement('div')
-
-      const [first, last] = nodeOps.insertStaticContent!(
-        ``,
-        parent,
-        null,
-        false,
-        [cachedFirst, cachedLast]
-      )
-
-      expect(parent.innerHTML).toBe(content)
-      expect(first).toBe(parent.firstChild)
-      expect(last).toBe(parent.lastChild)
-
-      expect(first).not.toBe(cachedFirst)
-      expect(last).not.toBe(cachedLast)
     })
   })
 })

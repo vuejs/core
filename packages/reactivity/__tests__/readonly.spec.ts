@@ -178,7 +178,10 @@ describe('reactivity/readonly', () => {
       test('should make nested values readonly', () => {
         const key1 = {}
         const key2 = {}
-        const original = new Collection([[key1, {}], [key2, {}]])
+        const original = new Collection([
+          [key1, {}],
+          [key2, {}]
+        ])
         const wrapped = readonly(original)
         expect(wrapped).not.toBe(original)
         expect(isProxy(wrapped)).toBe(true)
@@ -228,7 +231,10 @@ describe('reactivity/readonly', () => {
         test('should retrieve readonly values on iteration', () => {
           const key1 = {}
           const key2 = {}
-          const original = new Map([[key1, {}], [key2, {}]])
+          const original = new Map([
+            [key1, {}],
+            [key2, {}]
+          ])
           const wrapped: any = readonly(original)
           expect(wrapped.size).toBe(2)
           for (const [key, value] of wrapped) {
@@ -246,7 +252,12 @@ describe('reactivity/readonly', () => {
         test('should retrieve reactive + readonly values on iteration', () => {
           const key1 = {}
           const key2 = {}
-          const original = reactive(new Map([[key1, {}], [key2, {}]]))
+          const original = reactive(
+            new Map([
+              [key1, {}],
+              [key2, {}]
+            ])
+          )
           const wrapped: any = readonly(original)
           expect(wrapped.size).toBe(2)
           for (const [key, value] of wrapped) {
@@ -382,7 +393,7 @@ describe('reactivity/readonly', () => {
     const eff = effect(() => {
       roArr.includes(2)
     })
-    expect(eff.deps.length).toBe(0)
+    expect(eff.effect.deps.length).toBe(0)
   })
 
   test('readonly should track and trigger if wrapping reactive original (collection)', () => {

@@ -337,8 +337,8 @@ export function buildSlots(
   const slotFlag = hasDynamicSlots
     ? SlotFlags.DYNAMIC
     : hasForwardedSlots(node.children)
-      ? SlotFlags.FORWARDED
-      : SlotFlags.STABLE
+    ? SlotFlags.FORWARDED
+    : SlotFlags.STABLE
 
   let slots = createObjectExpression(
     slotsProperties.concat(
@@ -384,7 +384,8 @@ function hasForwardedSlots(children: TemplateChildNode[]): boolean {
       case NodeTypes.ELEMENT:
         if (
           child.tagType === ElementTypes.SLOT ||
-          (child.tagType === ElementTypes.ELEMENT &&
+          ((child.tagType === ElementTypes.ELEMENT ||
+            child.tagType === ElementTypes.TEMPLATE) &&
             hasForwardedSlots(child.children))
         ) {
           return true

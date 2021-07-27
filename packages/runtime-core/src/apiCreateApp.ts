@@ -133,7 +133,7 @@ export interface AppContext {
 type PluginInstallFunction = (app: App, ...options: any[]) => any
 
 export type Plugin =
-  | PluginInstallFunction & { install?: PluginInstallFunction }
+  | (PluginInstallFunction & { install?: PluginInstallFunction })
   | {
       install: PluginInstallFunction
     }

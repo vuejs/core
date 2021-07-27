@@ -213,15 +213,21 @@ test('ATTR_ENUMERATED_COERCION', () => {
   expect(vm.$el.getAttribute('spellcheck')).toBe('true')
   expect(vm.$el.getAttribute('contenteditable')).toBe('true')
   expect(
-    (deprecationData[DeprecationTypes.ATTR_ENUMERATED_COERCION]
-      .message as Function)('draggable', null, 'false')
+    (
+      deprecationData[DeprecationTypes.ATTR_ENUMERATED_COERCION]
+        .message as Function
+    )('draggable', null, 'false')
   ).toHaveBeenWarned()
   expect(
-    (deprecationData[DeprecationTypes.ATTR_ENUMERATED_COERCION]
-      .message as Function)('spellcheck', 0, 'true')
+    (
+      deprecationData[DeprecationTypes.ATTR_ENUMERATED_COERCION]
+        .message as Function
+    )('spellcheck', 0, 'true')
   ).toHaveBeenWarned()
   expect(
-    (deprecationData[DeprecationTypes.ATTR_ENUMERATED_COERCION]
-      .message as Function)('contenteditable', 'foo', 'true')
+    (
+      deprecationData[DeprecationTypes.ATTR_ENUMERATED_COERCION]
+        .message as Function
+    )('contenteditable', 'foo', 'true')
   ).toHaveBeenWarned()
 })

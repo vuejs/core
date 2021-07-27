@@ -22,20 +22,22 @@ import {
   AttributeNode,
   locStub,
   CacheExpression,
-  ConstantTypes
+  ConstantTypes,
+  MemoExpression
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
+import { FRAGMENT, CREATE_COMMENT } from '../runtimeHelpers'
 import {
-  CREATE_BLOCK,
-  FRAGMENT,
-  CREATE_COMMENT,
-  OPEN_BLOCK,
-  CREATE_VNODE
-} from '../runtimeHelpers'
-import { injectProp, findDir, findProp, isBuiltInType } from '../utils'
+  injectProp,
+  findDir,
+  findProp,
+  isBuiltInType,
+  makeBlock
+} from '../utils'
 import { PatchFlags, PatchFlagNames } from '@vue/shared'
+import { getMemoedVNodeCall } from '..'
 
 export const transformIf = createStructuralDirectiveTransform(
   /^(if|else|else-if)$/,
@@ -213,7 +215,7 @@ function createCodegenNodeForBranch(
   branch: IfBranchNode,
   keyIndex: number,
   context: TransformContext
-): IfConditionalExpression | BlockCodegenNode {
+): IfConditionalExpression | BlockCodegenNode | MemoExpression {
   if (branch.condition) {
     return createConditionalExpression(
       branch.condition,
@@ -234,8 +236,8 @@ function createChildrenCodegenNode(
   branch: IfBranchNode,
   keyIndex: number,
   context: TransformContext
-): BlockCodegenNode {
-  const { helper, removeHelper } = context
+): BlockCodegenNode | MemoExpression {
+  const { helper } = context
   const keyProperty = createObjectProperty(
     `key`,
     createSimpleExpression(
@@ -278,22 +280,22 @@ function createChildrenCodegenNode(
         undefined,
         true,
         false,
+        false /* isComponent */,
         branch.loc
       )
     }
   } else {
-    const vnodeCall = (firstChild as ElementNode)
-      .codegenNode as BlockCodegenNode
+    const ret = (firstChild as ElementNode).codegenNode as
+      | BlockCodegenNode
+      | MemoExpression
+    const vnodeCall = getMemoedVNodeCall(ret)
     // Change createVNode to createBlock.
-    if (vnodeCall.type === NodeTypes.VNODE_CALL && !vnodeCall.isBlock) {
-      removeHelper(CREATE_VNODE)
-      vnodeCall.isBlock = true
-      helper(OPEN_BLOCK)
-      helper(CREATE_BLOCK)
+    if (vnodeCall.type === NodeTypes.VNODE_CALL) {
+      makeBlock(vnodeCall, context)
     }
     // inject branch key
     injectProp(vnodeCall, keyProperty, context)
-    return vnodeCall
+    return ret
   }
 }
 
@@ -317,8 +319,8 @@ function isSameKey(
     }
     if (
       exp.type !== NodeTypes.SIMPLE_EXPRESSION ||
-      (exp.isStatic !== (branchExp as SimpleExpressionNode).isStatic ||
-        exp.content !== (branchExp as SimpleExpressionNode).content)
+      exp.isStatic !== (branchExp as SimpleExpressionNode).isStatic ||
+      exp.content !== (branchExp as SimpleExpressionNode).content
     ) {
       return false
     }

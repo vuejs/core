@@ -1,3 +1,7 @@
+/**
+ * @jest-environment node
+ */
+
 import {
   createApp,
   h,
@@ -717,7 +721,7 @@ function testRender(type: string, render: typeof renderToString) {
       test('with client-compiled vnode slots', async () => {
         const Child = {
           __scopeId: 'data-v-child',
-          render: function(this: any) {
+          render: function (this: any) {
             return h('div', null, [renderSlot(this.$slots, 'default')])
           }
         }
@@ -1065,7 +1069,7 @@ function testRender(type: string, render: typeof renderToString) {
         renderError = e
       }
       expect(renderError).toBe(null)
-      expect(((capturedError as unknown) as Error).message).toBe('An error')
+      expect((capturedError as unknown as Error).message).toBe('An error')
     })
   })
 }

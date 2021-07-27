@@ -3,7 +3,8 @@ import MagicString from 'magic-string'
 
 const defaultExportRE = /((?:^|\n|;)\s*)export(\s*)default/
 const namedDefaultExportRE = /((?:^|\n|;)\s*)export(.+)as(\s*)default/s
-const exportDefaultClassRE = /((?:^|\n|;)\s*)export\s+default\s+class\s+([\w$]+)/
+const exportDefaultClassRE =
+  /((?:^|\n|;)\s*)export\s+default\s+class\s+([\w$]+)/
 
 /**
  * Utility for rewriting `export default` in a script block into a variable

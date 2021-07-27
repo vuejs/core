@@ -1,4 +1,3 @@
-import { effect, stop } from '@vue/reactivity'
 import {
   queueJob,
   nextTick,
@@ -52,11 +51,12 @@ describe('scheduler', () => {
 
         queueJob(job2)
         queueJob(job3)
-        queueJob(job4)
       }
 
       const job2 = () => {
         calls.push('job2')
+        queueJob(job4)
+        queueJob(job5)
       }
       job2.id = 10
 
@@ -65,16 +65,19 @@ describe('scheduler', () => {
       }
       job3.id = 1
 
-      // job4 gets the Infinity as it's id
       const job4 = () => {
         calls.push('job4')
+      }
+
+      const job5 = () => {
+        calls.push('job5')
       }
 
       queueJob(job1)
 
       expect(calls).toEqual([])
       await nextTick()
-      expect(calls).toEqual(['job1', 'job3', 'job2', 'job4'])
+      expect(calls).toEqual(['job1', 'job3', 'job2', 'job4', 'job5'])
     })
 
     it('should dedupe queued jobs', async () => {
@@ -576,20 +579,19 @@ describe('scheduler', () => {
 
     // simulate parent component that toggles child
     const job1 = () => {
-      stop(job2)
+      // @ts-ignore
+      job2.active = false
     }
-    job1.id = 0 // need the id to ensure job1 is sorted before job2
-
     // simulate child that's triggered by the same reactive change that
     // triggers its toggle
-    const job2 = effect(() => spy())
-    expect(spy).toHaveBeenCalledTimes(1)
+    const job2 = () => spy()
+    expect(spy).toHaveBeenCalledTimes(0)
 
     queueJob(job1)
     queueJob(job2)
     await nextTick()
 
-    // should not be called again
-    expect(spy).toHaveBeenCalledTimes(1)
+    // should not be called
+    expect(spy).toHaveBeenCalledTimes(0)
   })
 })

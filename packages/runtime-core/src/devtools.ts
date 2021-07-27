@@ -54,13 +54,11 @@ export const devtoolsComponentAdded = /*#__PURE__*/ createDevtoolsComponentHook(
   DevtoolsHooks.COMPONENT_ADDED
 )
 
-export const devtoolsComponentUpdated = /*#__PURE__*/ createDevtoolsComponentHook(
-  DevtoolsHooks.COMPONENT_UPDATED
-)
+export const devtoolsComponentUpdated =
+  /*#__PURE__*/ createDevtoolsComponentHook(DevtoolsHooks.COMPONENT_UPDATED)
 
-export const devtoolsComponentRemoved = /*#__PURE__*/ createDevtoolsComponentHook(
-  DevtoolsHooks.COMPONENT_REMOVED
-)
+export const devtoolsComponentRemoved =
+  /*#__PURE__*/ createDevtoolsComponentHook(DevtoolsHooks.COMPONENT_REMOVED)
 
 function createDevtoolsComponentHook(hook: DevtoolsHooks) {
   return (component: ComponentInternalInstance) => {

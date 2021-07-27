@@ -85,6 +85,8 @@ test('isMemberExpression', () => {
   expect(isMemberExpression('obj[1][2]')).toBe(true)
   expect(isMemberExpression('obj[1][2].foo[3].bar.baz')).toBe(true)
   expect(isMemberExpression(`a[b[c.d]][0]`)).toBe(true)
+  expect(isMemberExpression('obj?.foo')).toBe(true)
+  expect(isMemberExpression('foo().test')).toBe(true)
 
   // strings
   expect(isMemberExpression(`a['foo' + bar[baz]["qux"]]`)).toBe(true)
@@ -102,4 +104,6 @@ test('isMemberExpression', () => {
   expect(isMemberExpression('123[a]')).toBe(false)
   expect(isMemberExpression('a + b')).toBe(false)
   expect(isMemberExpression('foo()')).toBe(false)
+  expect(isMemberExpression('a?b:c')).toBe(false)
+  expect(isMemberExpression(`state['text'] = $event`)).toBe(false)
 })

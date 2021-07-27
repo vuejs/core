@@ -18,7 +18,7 @@ import {
   ComponentPropsOptions,
   ExtractDefaultPropTypes
 } from './componentProps'
-import { EmitsOptions } from './componentEmits'
+import { EmitsOptions, EmitsToProps } from './componentEmits'
 import { isFunction } from '@vue/shared'
 import { VNodeProps } from './vnode'
 import {
@@ -41,7 +41,7 @@ export type DefineComponent<
   E extends EmitsOptions = Record<string, any>,
   EE extends string = string,
   PP = PublicProps,
-  Props = Readonly<ExtractPropTypes<PropsOrPropOptions>>,
+  Props = Readonly<ExtractPropTypes<PropsOrPropOptions>> & EmitsToProps<E>,
   Defaults = ExtractDefaultPropTypes<PropsOrPropOptions>
 > = ComponentPublicInstanceConstructor<
   CreateComponentPublicInstance<
@@ -102,7 +102,7 @@ export function defineComponent<
   EE extends string = string
 >(
   options: ComponentOptionsWithoutProps<
-    Props,
+    Props & EmitsToProps<E>,
     RawBindings,
     D,
     C,

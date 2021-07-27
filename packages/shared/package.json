@@ -1,6 +1,6 @@
 {
   "name": "@vue/shared",
-  "version": "3.1.2",
+  "version": "3.2.0-beta.5",
   "description": "internal utils shared across @vue packages",
   "main": "index.js",
   "module": "dist/shared.esm-bundler.js",

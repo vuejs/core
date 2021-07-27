@@ -452,7 +452,7 @@ describe('compiler: transform v-on', () => {
         (vnodeCall.props as ObjectExpression).properties[0].value
       ).toMatchObject({
         type: NodeTypes.JS_CACHE_EXPRESSION,
-        index: 1,
+        index: 0,
         value: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: `() => {}`
@@ -473,7 +473,7 @@ describe('compiler: transform v-on', () => {
         (vnodeCall.props as ObjectExpression).properties[0].value
       ).toMatchObject({
         type: NodeTypes.JS_CACHE_EXPRESSION,
-        index: 1,
+        index: 0,
         value: {
           type: NodeTypes.COMPOUND_EXPRESSION,
           children: [
@@ -498,7 +498,7 @@ describe('compiler: transform v-on', () => {
         (vnodeCall.props as ObjectExpression).properties[0].value
       ).toMatchObject({
         type: NodeTypes.JS_CACHE_EXPRESSION,
-        index: 1,
+        index: 0,
         value: {
           type: NodeTypes.COMPOUND_EXPRESSION,
           children: [
@@ -530,6 +530,18 @@ describe('compiler: transform v-on', () => {
       expect(root.cached).toBe(0)
     })
 
+    test('should not be cached inside v-once', () => {
+      const { root } = parseWithVOn(
+        `<div v-once><div v-on:click="foo"/></div>`,
+        {
+          prefixIdentifiers: true,
+          cacheHandlers: true
+        }
+      )
+      expect(root.cached).not.toBe(2)
+      expect(root.cached).toBe(1)
+    })
+
     test('inline function expression handler', () => {
       const { root, node } = parseWithVOn(`<div v-on:click="() => foo()" />`, {
         prefixIdentifiers: true,
@@ -543,7 +555,7 @@ describe('compiler: transform v-on', () => {
         (vnodeCall.props as ObjectExpression).properties[0].value
       ).toMatchObject({
         type: NodeTypes.JS_CACHE_EXPRESSION,
-        index: 1,
+        index: 0,
         value: {
           type: NodeTypes.COMPOUND_EXPRESSION,
           children: [`() => `, { content: `_ctx.foo` }, `()`]
@@ -565,7 +577,7 @@ describe('compiler: transform v-on', () => {
         (vnodeCall.props as ObjectExpression).properties[0].value
       ).toMatchObject({
         type: NodeTypes.JS_CACHE_EXPRESSION,
-        index: 1,
+        index: 0,
         value: {
           type: NodeTypes.COMPOUND_EXPRESSION,
           children: [

@@ -4,6 +4,8 @@ export const svgNS = 'http://www.w3.org/2000/svg'
 
 const doc = (typeof document !== 'undefined' ? document : null) as Document
 
+const staticTemplateCache = new Map<string, DocumentFragment>()
+
 export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
   insert: (child, parent, anchor) => {
     parent.insertBefore(child, anchor || null)
@@ -68,54 +70,33 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
   },
 
   // __UNSAFE__
-  // Reason: insertAdjacentHTML.
+  // Reason: innerHTML.
   // Static content here can only come from compiled templates.
   // As long as the user only uses trusted templates, this is safe.
-  insertStaticContent(content, parent, anchor, isSVG, cached) {
-    if (cached) {
-      let [cachedFirst, cachedLast] = cached
-      let first, last
-      while (true) {
-        let node = cachedFirst.cloneNode(true)
-        if (!first) first = node
-        parent.insertBefore(node, anchor)
-        if (cachedFirst === cachedLast) {
-          last = node
-          break
-        }
-        cachedFirst = cachedFirst.nextSibling!
-      }
-      return [first, last] as any
-    }
-
+  insertStaticContent(content, parent, anchor, isSVG) {
     // <parent> before | first ... last | anchor </parent>
     const before = anchor ? anchor.previousSibling : parent.lastChild
-    if (anchor) {
-      let insertionPoint
-      let usingTempInsertionPoint = false
-      if (anchor instanceof Element) {
-        insertionPoint = anchor
-      } else {
-        // insertAdjacentHTML only works for elements but the anchor is not an
-        // element...
-        usingTempInsertionPoint = true
-        insertionPoint = isSVG
-          ? doc.createElementNS(svgNS, 'g')
-          : doc.createElement('div')
-        parent.insertBefore(insertionPoint, anchor)
+    let template = staticTemplateCache.get(content)
+    if (!template) {
+      const t = doc.createElement('template')
+      t.innerHTML = isSVG ? `<svg>${content}</svg>` : content
+      template = t.content
+      if (isSVG) {
+        // remove outer svg wrapper
+        const wrapper = template.firstChild!
+        while (wrapper.firstChild) {
+          template.appendChild(wrapper.firstChild)
+        }
+        template.removeChild(wrapper)
       }
-      insertionPoint.insertAdjacentHTML('beforebegin', content)
-      if (usingTempInsertionPoint) {
-        parent.removeChild(insertionPoint)
-      }
-    } else {
-      parent.insertAdjacentHTML('beforeend', content)
+      staticTemplateCache.set(content, template)
     }
+    parent.insertBefore(template.cloneNode(true), anchor)
     return [
       // first
-      before ? before.nextSibling : parent.firstChild,
+      before ? before.nextSibling! : parent.firstChild!,
       // last
-      anchor ? anchor.previousSibling : parent.lastChild
+      anchor ? anchor.previousSibling! : parent.lastChild!
     ]
   }
 }

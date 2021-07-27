@@ -16,7 +16,8 @@ import {
   createCacheExpression,
   TemplateLiteral,
   createVNodeCall,
-  ConstantTypes
+  ConstantTypes,
+  ArrayExpression
 } from './ast'
 import {
   isString,
@@ -33,12 +34,9 @@ import {
   TO_DISPLAY_STRING,
   FRAGMENT,
   helperNameMap,
-  CREATE_BLOCK,
-  CREATE_COMMENT,
-  OPEN_BLOCK,
-  CREATE_VNODE
+  CREATE_COMMENT
 } from './runtimeHelpers'
-import { isVSlot } from './utils'
+import { isVSlot, makeBlock } from './utils'
 import { hoistStatic, isSingleElementRoot } from './transforms/hoistStatic'
 import { CompilerCompatOptions } from './compat/compatConfig'
 
@@ -107,6 +105,7 @@ export interface TransformContext
   parent: ParentNode | null
   childIndex: number
   currentNode: RootNode | TemplateChildNode | null
+  inVOnce: boolean
   helper<T extends symbol>(name: T): T
   removeHelper<T extends symbol>(name: T): void
   helperString(name: symbol): string
@@ -115,7 +114,7 @@ export interface TransformContext
   onNodeRemoved(): void
   addIdentifiers(exp: ExpressionNode | string): void
   removeIdentifiers(exp: ExpressionNode | string): void
-  hoist(exp: JSChildNode): SimpleExpressionNode
+  hoist(exp: string | JSChildNode | ArrayExpression): SimpleExpressionNode
   cache<T extends JSChildNode>(exp: T, isVNode?: boolean): CacheExpression | T
   constantCache: Map<TemplateChildNode, ConstantTypes>
 
@@ -139,6 +138,7 @@ export function createTransformContext(
     scopeId = null,
     slotted = true,
     ssr = false,
+    inSSR = false,
     ssrCssVars = ``,
     bindingMetadata = EMPTY_OBJ,
     inline = false,
@@ -164,6 +164,7 @@ export function createTransformContext(
     scopeId,
     slotted,
     ssr,
+    inSSR,
     ssrCssVars,
     bindingMetadata,
     inline,
@@ -192,6 +193,7 @@ export function createTransformContext(
     parent: null,
     currentNode: root,
     childIndex: 0,
+    inVOnce: false,
 
     // methods
     helper(name) {
@@ -233,8 +235,8 @@ export function createTransformContext(
       const removalIndex = node
         ? list.indexOf(node)
         : context.currentNode
-          ? context.childIndex
-          : -1
+        ? context.childIndex
+        : -1
       /* istanbul ignore if */
       if (__DEV__ && removalIndex < 0) {
         throw new Error(`node being removed is not a child of current parent`)
@@ -277,6 +279,7 @@ export function createTransformContext(
       }
     },
     hoist(exp) {
+      if (isString(exp)) exp = createSimpleExpression(exp)
       context.hoists.push(exp)
       const identifier = createSimpleExpression(
         `_hoisted_${context.hoists.length}`,
@@ -288,7 +291,7 @@ export function createTransformContext(
       return identifier
     },
     cache(exp, isVNode = false) {
-      return createCacheExpression(++context.cached, exp, isVNode)
+      return createCacheExpression(context.cached++, exp, isVNode)
     }
   }
 
@@ -335,7 +338,7 @@ export function transform(root: RootNode, options: TransformOptions) {
 }
 
 function createRootCodegen(root: RootNode, context: TransformContext) {
-  const { helper, removeHelper } = context
+  const { helper } = context
   const { children } = root
   if (children.length === 1) {
     const child = children[0]
@@ -345,12 +348,7 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
       // SimpleExpressionNode
       const codegenNode = child.codegenNode
       if (codegenNode.type === NodeTypes.VNODE_CALL) {
-        if (!codegenNode.isBlock) {
-          removeHelper(CREATE_VNODE)
-          codegenNode.isBlock = true
-          helper(OPEN_BLOCK)
-          helper(CREATE_BLOCK)
-        }
+        makeBlock(codegenNode, context)
       }
       root.codegenNode = codegenNode
     } else {
@@ -380,7 +378,9 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
       patchFlag + (__DEV__ ? ` /* ${patchFlagText} */` : ``),
       undefined,
       undefined,
-      true
+      true,
+      undefined,
+      false /* isComponent */
     )
   } else {
     // no children = noop. codegen will return null.

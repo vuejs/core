@@ -51,7 +51,7 @@ export function legacyBindObjectProps(
 
           if (isSync) {
             const on = data.on || (data.on = {})
-            on[`update:${key}`] = function($event: any) {
+            on[`update:${key}`] = function ($event: any) {
               value[key] = $event
             }
           }
