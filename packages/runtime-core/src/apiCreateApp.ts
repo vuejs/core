@@ -82,15 +82,21 @@ export interface AppConfig {
   ) => void
 
   /**
+   * Options to pass to @vue/compiler-dom.
+   * Only supported in runtime compiler build.
+   */
+  compilerOptions: RuntimeCompilerOptions
+
+  /**
    * @deprecated use config.compilerOptions.isCustomElement
    */
   isCustomElement?: (tag: string) => boolean
 
   /**
-   * Options to pass to @vue/compiler-dom.
-   * Only supported in runtime compiler build.
+   * Temporary config for opt-in to unwrap injected refs.
+   * TODO deprecate in 3.3
    */
-  compilerOptions: RuntimeCompilerOptions
+  unwrapInjectedRef?: boolean
 }
 
 export interface AppContext {

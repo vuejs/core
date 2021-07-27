@@ -1,7 +1,9 @@
 import {
   defineCustomElement,
   h,
+  inject,
   nextTick,
+  Ref,
   ref,
   renderSlot,
   VueElement
@@ -231,9 +233,9 @@ describe('defineCustomElement', () => {
 
   describe('provide/inject', () => {
     const Consumer = defineCustomElement({
-      inject: ['foo'],
-      render(this: any) {
-        return h('div', this.foo.value)
+      setup() {
+        const foo = inject<Ref>('foo')!
+        return () => h('div', foo.value)
       }
     })
     customElements.define('my-consumer', Consumer)

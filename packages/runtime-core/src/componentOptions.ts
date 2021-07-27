@@ -17,7 +17,7 @@ import {
   NOOP,
   isPromise
 } from '@vue/shared'
-import { computed } from '@vue/reactivity'
+import { computed, isRef, Ref } from '@vue/reactivity'
 import {
   watch,
   WatchOptions,
@@ -607,15 +607,21 @@ export function applyOptions(instance: ComponentInternalInstance) {
   // - watch (deferred since it relies on `this` access)
 
   if (injectOptions) {
-    resolveInjections(injectOptions, ctx, checkDuplicateProperties)
+    resolveInjections(
+      injectOptions,
+      ctx,
+      checkDuplicateProperties,
+      instance.appContext.config.unwrapInjectedRef
+    )
   }
 
   if (methods) {
     for (const key in methods) {
       const methodHandler = (methods as MethodOptions)[key]
       if (isFunction(methodHandler)) {
-        // In dev mode, we use the `createRenderContext` function to define methods to the proxy target,
-        // and those are read-only but reconfigurable, so it needs to be redefined here
+        // In dev mode, we use the `createRenderContext` function to define
+        // methods to the proxy target, and those are read-only but
+        // reconfigurable, so it needs to be redefined here
         if (__DEV__) {
           Object.defineProperty(ctx, key, {
             value: methodHandler.bind(publicThis),
@@ -810,25 +816,51 @@ export function applyOptions(instance: ComponentInternalInstance) {
 export function resolveInjections(
   injectOptions: ComponentInjectOptions,
   ctx: any,
-  checkDuplicateProperties = NOOP as any
+  checkDuplicateProperties = NOOP as any,
+  unwrapRef = false
 ) {
   if (isArray(injectOptions)) {
     injectOptions = normalizeInject(injectOptions)!
   }
   for (const key in injectOptions) {
     const opt = (injectOptions as ObjectInjectOptions)[key]
+    let injected: unknown
     if (isObject(opt)) {
       if ('default' in opt) {
-        ctx[key] = inject(
+        injected = inject(
           opt.from || key,
           opt.default,
           true /* treat default function as factory */
         )
       } else {
-        ctx[key] = inject(opt.from || key)
+        injected = inject(opt.from || key)
       }
     } else {
-      ctx[key] = inject(opt)
+      injected = inject(opt)
+    }
+    if (isRef(injected)) {
+      // TODO remove the check in 3.3
+      if (unwrapRef) {
+        Object.defineProperty(ctx, key, {
+          enumerable: true,
+          configurable: true,
+          get: () => (injected as Ref).value,
+          set: v => ((injected as Ref).value = v)
+        })
+      } else {
+        if (__DEV__) {
+          warn(
+            `injected property "${key}" is a ref and will be auto-unwrapped ` +
+              `and no longer needs \`.value\` in the next minor release. ` +
+              `To opt-in to the new behavior now, ` +
+              `set \`app.config.unwrapInjectedRef = true\` (this config is ` +
+              `temporary and will not be needed in the future.)`
+          )
+        }
+        ctx[key] = injected
+      }
+    } else {
+      ctx[key] = injected
     }
     if (__DEV__) {
       checkDuplicateProperties!(OptionTypes.INJECT, key)
