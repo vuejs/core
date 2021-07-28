@@ -22,7 +22,8 @@ import {
   SetupContext,
   createApp,
   FunctionalComponent,
-  renderList
+  renderList,
+  onUnmounted
 } from '@vue/runtime-test'
 import { PatchFlags, SlotFlags } from '@vue/shared'
 import { SuspenseImpl } from '../src/components/Suspense'
@@ -824,6 +825,55 @@ describe('renderer: optimized mode', () => {
     show.value = true
     await nextTick()
     expect(inner(root)).toBe('<div><div>true</div></div>')
+  })
+
+  // #4183
+  test('should not take unmount children fast path /w Suspense', async () => {
+    const show = ref(true)
+    const spyUnmounted = jest.fn()
+
+    const Parent = {
+      setup(props: any, { slots }: SetupContext) {
+        return () => (
+          openBlock(),
+          createBlock(SuspenseImpl, null, {
+            default: withCtx(() => [renderSlot(slots, 'default')]),
+            _: SlotFlags.FORWARDED
+          })
+        )
+      }
+    }
+
+    const Child = {
+      setup() {
+        onUnmounted(spyUnmounted)
+        return () => createVNode('div', null, show.value, PatchFlags.TEXT)
+      }
+    }
+
+    const app = createApp({
+      render() {
+        return show.value
+          ? (openBlock(),
+            createBlock(
+              Parent,
+              { key: 0 },
+              {
+                default: withCtx(() => [createVNode(Child)]),
+                _: SlotFlags.STABLE
+              }
+            ))
+          : createCommentVNode('v-if', true)
+      }
+    })
+
+    app.mount(root)
+    expect(inner(root)).toBe('<div>true</div>')
+
+    show.value = false
+    await nextTick()
+    expect(inner(root)).toBe('<!--v-if-->')
+    expect(spyUnmounted).toHaveBeenCalledTimes(1)
   })
 
   // #3881
