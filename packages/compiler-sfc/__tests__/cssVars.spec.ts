@@ -164,13 +164,17 @@ describe('CSS vars injection', () => {
     //#4185
     test('should ignore comments', () => {
       const { content } = compileSFCScript(
-        `<script setup>const color = 'red'</script>\n` +
+        `<script setup>const color = 'red';const width = 100</script>\n` +
           `<style>
+            /* comment **/
             div{ /* color: v-bind(color); */ width:20; }
+            div{ width: v-bind(width); }
+            /* comment */
           </style>`
       )
 
-      expect(content).not.toMatch(`_useCssVars`)
+      expect(content).not.toMatch(`"${mockId}-color": (color)`)
+      expect(content).toMatch(`"${mockId}-width": (width)`)
       assertCode(content)
     })
 
