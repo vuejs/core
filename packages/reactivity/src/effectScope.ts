@@ -1,3 +1,4 @@
+import { remove } from '@vue/shared'
 import { ReactiveEffect } from './effect'
 import { warn } from './warning'
 
@@ -8,10 +9,12 @@ export class EffectScope {
   active = true
   effects: (ReactiveEffect | EffectScope)[] = []
   cleanups: (() => void)[] = []
+  parent: EffectScope | undefined
 
   constructor(detached = false) {
     if (!detached) {
       recordEffectScope(this)
+      this.parent = activeEffectScope
     }
   }
 
@@ -42,11 +45,14 @@ export class EffectScope {
     }
   }
 
-  stop() {
+  stop(fromParent = false) {
     if (this.active) {
-      this.effects.forEach(e => e.stop())
+      this.effects.forEach(e => e.stop(true))
       this.cleanups.forEach(cleanup => cleanup())
       this.active = false
+      if (!fromParent && this.parent) {
+        remove(this.parent.effects, this)
+      }
     }
   }
 }
