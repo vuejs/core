@@ -10,8 +10,11 @@ import {
   inject,
   Ref,
   watch,
-  SetupContext
+  SetupContext,
+  openBlock,
+  createBlock
 } from '@vue/runtime-test'
+import { PatchFlags } from '@vue/shared'
 
 describe('renderer: component', () => {
   test('should update parent(hoc) component host el when child component self update', async () => {
@@ -113,26 +116,40 @@ describe('renderer: component', () => {
   // #4204
   it('should not update Component if only changed props are model listeners', () => {
     let foo = 1
-    const Comp1 = {
+    const Comp = {
       updated: jest.fn(),
       render: () => null
     }
     const root = nodeOps.createElement('div')
     render(
-      h(Comp1, {
-        modelValue: foo,
-        'onUpdate:modelValue': ($event: any) => (foo = $event)
-      }),
+      (openBlock(),
+      createBlock(
+        Comp,
+        {
+          modelValue: foo,
+          'onUpdate:modelValue': ($event: any) => (foo = $event)
+        },
+        null,
+        PatchFlags.PROPS,
+        ['modelValue', 'onUpdate:modelValue']
+      )),
       root
     )
     render(
-      h(Comp1, {
-        modelValue: foo,
-        'onUpdate:modelValue': ($event: any) => (foo = $event)
-      }),
+      (openBlock(),
+      createBlock(
+        Comp,
+        {
+          modelValue: foo,
+          'onUpdate:modelValue': ($event: any) => (foo = $event)
+        },
+        null,
+        PatchFlags.PROPS,
+        ['modelValue', 'onUpdate:modelValue']
+      )),
       root
     )
-    expect(Comp1.updated).not.toHaveBeenCalled()
+    expect(Comp.updated).not.toHaveBeenCalled()
   })
 
   // #2043
