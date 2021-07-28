@@ -264,7 +264,7 @@ export type UnwrapRef<T> = T extends Ref<infer V>
   ? UnwrapRefSimple<V>
   : UnwrapRefSimple<T>
 
-type UnwrapRefSimple<T> = T extends
+export type UnwrapRefSimple<T> = T extends
   | Function
   | CollectionTypes
   | BaseTypes

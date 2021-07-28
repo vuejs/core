@@ -11,7 +11,7 @@ import {
   shallowCollectionHandlers,
   shallowReadonlyCollectionHandlers
 } from './collectionHandlers'
-import { UnwrapRef, Ref } from './ref'
+import { UnwrapRefSimple, Ref } from './ref'
 
 export const enum ReactiveFlags {
   SKIP = '__v_skip',
@@ -60,7 +60,7 @@ function getTargetType(value: Target) {
 }
 
 // only unwrap nested ref
-export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRef<T>
+export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRefSimple<T>
 
 /**
  * Creates a reactive copy of the original object.
