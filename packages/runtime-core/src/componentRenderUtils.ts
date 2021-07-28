@@ -361,7 +361,8 @@ export function shouldUpdateComponent(
         const key = dynamicProps[i]
         if (
           nextProps![key] !== prevProps![key] &&
-          !isEmitListener(emits, key)
+          !isEmitListener(emits, key) &&
+          !isModelListener(key)
         ) {
           return true
         }
