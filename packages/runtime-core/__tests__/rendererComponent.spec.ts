@@ -110,6 +110,31 @@ describe('renderer: component', () => {
     expect(Comp1.updated).not.toHaveBeenCalled()
   })
 
+  // #4204
+  it('should not update Component if only changed props are model listeners', () => {
+    let foo = 1
+    const Comp1 = {
+      updated: jest.fn(),
+      render: () => null
+    }
+    const root = nodeOps.createElement('div')
+    render(
+      h(Comp1, {
+        modelValue: foo,
+        'onUpdate:modelValue': ($event: any) => (foo = $event)
+      }),
+      root
+    )
+    render(
+      h(Comp1, {
+        modelValue: foo,
+        'onUpdate:modelValue': ($event: any) => (foo = $event)
+      }),
+      root
+    )
+    expect(Comp1.updated).not.toHaveBeenCalled()
+  })
+
   // #2043
   test('component child synchronously updating parent state should trigger parent re-render', async () => {
     const App = {
