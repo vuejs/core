@@ -11,7 +11,6 @@ import { RawSourceMap, SourceMapGenerator } from 'source-map'
 import { TemplateCompiler } from './compileTemplate'
 import { Statement } from '@babel/types'
 import { parseCssVars } from './cssVars'
-import { warnExperimental } from './warn'
 import { createCache } from './cache'
 
 export interface SFCParseOptions {
@@ -264,9 +263,6 @@ export function parse(
 
   // parse CSS vars
   descriptor.cssVars = parseCssVars(descriptor)
-  if (descriptor.cssVars.length) {
-    warnExperimental(`v-bind() CSS variable injection`, 231)
-  }
 
   // check if the SFC uses :slotted
   const slottedRE = /(?:::v-|:)slotted\(/
