@@ -20,7 +20,14 @@ export interface WritableComputedOptions<T> {
   set: ComputedSetter<T>
 }
 
-export class ComputedRefImpl<T> {
+export function isComputed<T>(
+  value: ComputedRef<T> | unknown
+): value is ComputedRef<T>
+export function isComputed(value: any): value is ComputedRef {
+  return Boolean(value && value.effect)
+}
+
+class ComputedRefImpl<T> {
   public dep?: Dep = undefined
 
   private _value!: T

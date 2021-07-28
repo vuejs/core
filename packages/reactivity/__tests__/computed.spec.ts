@@ -9,7 +9,8 @@ import {
   toRaw,
   TrackOpTypes,
   ITERATE_KEY,
-  TriggerOpTypes
+  TriggerOpTypes,
+  isComputed
 } from '../src'
 
 describe('reactivity/computed', () => {
@@ -271,5 +272,17 @@ describe('reactivity/computed', () => {
       key: 'foo',
       oldValue: 2
     })
+  })
+
+  it('isComputed', () => {
+    expect(isComputed(undefined)).toBe(false)
+    expect(isComputed(null)).toBe(false)
+    expect(isComputed(3)).toBe(false)
+    expect(isComputed({})).toBe(false)
+    expect(isComputed(computed(() => 1))).toBe(true)
+    expect(isComputed(ref(1))).toBe(false)
+    expect(isComputed(reactive({}))).toBe(false)
+    expect(isComputed(reactive({ c: computed(() => 1) }).c)).toBe(false)
+    expect(isComputed(toRaw(reactive({ c: computed(() => 1) })).c)).toBe(true)
   })
 })

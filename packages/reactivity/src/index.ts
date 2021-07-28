@@ -30,13 +30,14 @@ export {
 } from './reactive'
 export {
   computed,
+  isComputed,
   ComputedRef,
   WritableComputedRef,
   WritableComputedOptions,
   ComputedGetter,
   ComputedSetter
 } from './computed'
-export { deferredComputed, isComputed } from './deferredComputed'
+export { deferredComputed } from './deferredComputed'
 export {
   effect,
   stop,
