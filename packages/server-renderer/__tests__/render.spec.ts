@@ -24,7 +24,7 @@ import {
 } from 'vue'
 import { escapeHtml } from '@vue/shared'
 import { renderToString } from '../src/renderToString'
-import { renderToStream as _renderToStream } from '../src/renderToStream'
+import { renderToNodeStream } from '../src/renderToStream'
 import { ssrRenderSlot, SSRSlot } from '../src/helpers/ssrRenderSlot'
 import { ssrRenderComponent } from '../src/helpers/ssrRenderComponent'
 import { Readable } from 'stream'
@@ -46,7 +46,7 @@ const promisifyStream = (stream: Readable) => {
 }
 
 const renderToStream = (app: any, context?: any) =>
-  promisifyStream(_renderToStream(app, context))
+  promisifyStream(renderToNodeStream(app, context))
 
 // we run the same tests twice, once for renderToString, once for renderToStream
 testRender(`renderToString`, renderToString)
