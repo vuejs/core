@@ -8,19 +8,23 @@ export class EffectScope {
   active = true
   effects: ReactiveEffect[] = []
   cleanups: (() => void)[] = []
+
   parent: EffectScope | undefined
-  private children: EffectScope[] | undefined
-  private parentIndex: number | undefined
+  scopes: EffectScope[] | undefined
+  /**
+   * track a child scope's index in its parent's scopes array for optimized
+   * removal
+   */
+  private index: number | undefined
 
   constructor(detached = false) {
-    if (!detached) {
-      this.recordEffectScope()
+    if (!detached && activeEffectScope) {
+      this.parent = activeEffectScope
+      this.index =
+        (activeEffectScope.scopes || (activeEffectScope.scopes = [])).push(
+          this
+        ) - 1
     }
-  }
-
-  get scopes(): EffectScope[] {
-    if (!this.children) this.children = []
-    return this.children
   }
 
   run<T>(fn: () => T): T | undefined {
@@ -50,31 +54,23 @@ export class EffectScope {
     }
   }
 
-  stop() {
+  stop(fromParent?: boolean) {
     if (this.active) {
       this.effects.forEach(e => e.stop())
-      this.children?.forEach(e => e.stop())
       this.cleanups.forEach(cleanup => cleanup())
-      this.parent?.derefChildScope(this)
+      if (this.scopes) {
+        this.scopes.forEach(e => e.stop(true))
+      }
+      // nested scope, dereference from parent to avoid memory leaks
+      if (this.parent && !fromParent) {
+        // optimized O(1) removal
+        const last = this.parent.scopes!.pop()
+        if (last && last !== this) {
+          this.parent.scopes![this.index!] = last
+          last.index = this.index!
+        }
+      }
       this.active = false
-    }
-  }
-
-  private recordEffectScope() {
-    const parent = activeEffectScope
-    if (parent && parent.active) {
-      this.parent = parent
-      this.parentIndex = parent.scopes.push(this) - 1
-    }
-  }
-
-  private derefChildScope(scope: EffectScope) {
-    // reuse the freed index by moving the last array entry
-    const last = this.scopes.pop()
-    if (last && last !== scope) {
-      const childIndex = scope.parentIndex!
-      this.scopes[childIndex] = last
-      last.parentIndex = childIndex
     }
   }
 }

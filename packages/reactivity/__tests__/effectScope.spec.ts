@@ -78,8 +78,8 @@ describe('reactivity/effect/scope', () => {
     })
 
     expect(scope.effects.length).toBe(1)
-    expect(scope.scopes.length).toBe(1)
-    expect(scope.scopes[0]).toBeInstanceOf(EffectScope)
+    expect(scope.scopes!.length).toBe(1)
+    expect(scope.scopes![0]).toBeInstanceOf(EffectScope)
 
     expect(dummy).toBe(0)
     counter.num = 7
@@ -195,9 +195,9 @@ describe('reactivity/effect/scope', () => {
   it('should derefence child scope from parent scope after stopping child scope (no memleaks)', async () => {
     const parent = new EffectScope()
     const child = parent.run(() => new EffectScope())!
-    expect(parent.scopes.includes(child)).toBe(true)
+    expect(parent.scopes!.includes(child)).toBe(true)
     child.stop()
-    expect(parent.scopes.includes(child)).toBe(false)
+    expect(parent.scopes!.includes(child)).toBe(false)
   })
 
   it('test with higher level APIs', async () => {
