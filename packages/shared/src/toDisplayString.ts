@@ -1,4 +1,11 @@
-import { isArray, isMap, isObject, isPlainObject, isSet } from './index'
+import {
+  isArray,
+  isMap,
+  isObject,
+  isPlainObject,
+  isSet,
+  objectToString
+} from './index'
 
 /**
  * For converting {{ interpolation }} values to displayed strings.
@@ -7,7 +14,7 @@ import { isArray, isMap, isObject, isPlainObject, isSet } from './index'
 export const toDisplayString = (val: unknown): string => {
   return val == null
     ? ''
-    : isObject(val)
+    : isArray(val) || (isObject(val) && val.toString === objectToString)
     ? JSON.stringify(val, replacer, 2)
     : String(val)
 }

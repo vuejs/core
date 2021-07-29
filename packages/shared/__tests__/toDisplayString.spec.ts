@@ -31,10 +31,22 @@ describe('toDisplayString', () => {
       })
     ).toBe(JSON.stringify({ n: 1, np: 2 }, null, 2))
   })
+  
+  test('objects with custom toString', () => {
+    class TestClass {
+      toString() {
+        return 'foo'
+      }
+    }
+    const instance = new TestClass()
+    expect(toDisplayString(instance)).toBe('foo')
+    const obj = { toString: () => 'bar' }
+    expect(toDisplayString(obj)).toBe('bar')
+  })
 
   test('native objects', () => {
     const div = document.createElement('div')
-    expect(toDisplayString(div)).toBe(`"[object HTMLDivElement]"`)
+    expect(toDisplayString(div)).toBe('[object HTMLDivElement]')
     expect(toDisplayString({ div })).toMatchInlineSnapshot(`
       "{
         \\"div\\": \\"[object HTMLDivElement]\\"
