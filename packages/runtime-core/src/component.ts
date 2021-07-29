@@ -456,7 +456,7 @@ export function createComponentInstance(
     next: null,
     subTree: null!, // will be set synchronously right after creation
     update: null!, // will be set synchronously right after creation
-    scope: new EffectScope(),
+    scope: new EffectScope(true /* detached */),
     render: null,
     proxy: null,
     exposed: null,
