@@ -11,10 +11,13 @@ import {
   nextTick
 } from '@vue/runtime-test'
 import * as runtimeTest from '@vue/runtime-test'
+import { registerRuntimeCompiler, createApp } from '@vue/runtime-test'
 import { baseCompile } from '@vue/compiler-core'
 
 declare var __VUE_HMR_RUNTIME__: HMRRuntime
 const { createRecord, rerender, reload } = __VUE_HMR_RUNTIME__
+
+registerRuntimeCompiler(compileToFunction)
 
 function compileToFunction(template: string) {
   const { code } = baseCompile(template)
@@ -331,5 +334,105 @@ describe('hot module replacement', () => {
 
     rerender(last.__hmrId!, compileToFunction(`<Parent class="test"/>`))
     expect(serializeInner(root)).toBe(`<div class="test">child</div>`)
+  })
+
+  // #3302
+  test('rerender with Teleport', () => {
+    const root = nodeOps.createElement('div')
+    const target = nodeOps.createElement('div')
+    const parentId = 'parent-teleport'
+
+    const Child: ComponentOptions = {
+      data() {
+        return {
+          // style is used to ensure that the div tag will be tracked by Teleport
+          style: {},
+          target
+        }
+      },
+      render: compileToFunction(`
+        <teleport :to="target">
+          <div :style="style">
+            <slot/>
+          </div>
+        </teleport>
+      `)
+    }
+
+    const Parent: ComponentOptions = {
+      __hmrId: parentId,
+      components: { Child },
+      render: compileToFunction(`
+        <Child>
+          <template #default>
+            <div>1</div>
+          </template>
+        </Child>
+      `)
+    }
+    createRecord(parentId, Parent)
+
+    render(h(Parent), root)
+    expect(serializeInner(root)).toBe(
+      `<!--teleport start--><!--teleport end-->`
+    )
+    expect(serializeInner(target)).toBe(`<div style={}><div>1</div></div>`)
+
+    rerender(
+      parentId,
+      compileToFunction(`
+      <Child>
+        <template #default>
+          <div>1</div>
+          <div>2</div>
+        </template>
+      </Child>
+    `)
+    )
+    expect(serializeInner(root)).toBe(
+      `<!--teleport start--><!--teleport end-->`
+    )
+    expect(serializeInner(target)).toBe(
+      `<div style={}><div>1</div><div>2</div></div>`
+    )
+  })
+
+  // #4174
+  test('with global mixins', async () => {
+    const childId = 'hmr-global-mixin'
+    const createSpy1 = jest.fn()
+    const createSpy2 = jest.fn()
+
+    const Child: ComponentOptions = {
+      __hmrId: childId,
+      created: createSpy1,
+      render() {
+        return h('div')
+      }
+    }
+    createRecord(childId, Child)
+
+    const Parent: ComponentOptions = {
+      render: () => h(Child)
+    }
+
+    const app = createApp(Parent)
+    app.mixin({})
+
+    const root = nodeOps.createElement('div')
+    app.mount(root)
+    expect(createSpy1).toHaveBeenCalledTimes(1)
+    expect(createSpy2).toHaveBeenCalledTimes(0)
+
+    reload(childId, {
+      __hmrId: childId,
+      created: createSpy2,
+      render() {
+        return h('div')
+      }
+    })
+    await nextTick()
+    expect(createSpy1).toHaveBeenCalledTimes(1)
+    expect(createSpy2).toHaveBeenCalledTimes(1)
   })
 })

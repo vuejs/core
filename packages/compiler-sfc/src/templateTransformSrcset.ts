@@ -57,20 +57,26 @@ export const transformSrcset: NodeTransform = (
             return { url, descriptor }
           })
 
-          // for data url need recheck url
+          // data urls contains comma after the ecoding so we need to re-merge
+          // them
           for (let i = 0; i < imageCandidates.length; i++) {
-            if (imageCandidates[i].url.trim().startsWith('data:')) {
+            const { url } = imageCandidates[i]
+            if (isDataUrl(url)) {
               imageCandidates[i + 1].url =
-                imageCandidates[i].url + ',' + imageCandidates[i + 1].url
+                url + ',' + imageCandidates[i + 1].url
               imageCandidates.splice(i, 1)
             }
           }
 
-          // When srcset does not contain any relative URLs, skip transforming
-          if (
-            !options.includeAbsolute &&
-            !imageCandidates.some(({ url }) => isRelativeUrl(url))
-          ) {
+          const hasQualifiedUrl = imageCandidates.some(({ url }) => {
+            return (
+              !isExternalUrl(url) &&
+              !isDataUrl(url) &&
+              (options.includeAbsolute || isRelativeUrl(url))
+            )
+          })
+          // When srcset does not contain any qualified URLs, skip transforming
+          if (!hasQualifiedUrl) {
             return
           }
 
@@ -131,9 +137,9 @@ export const transformSrcset: NodeTransform = (
             }
             const isNotLast = imageCandidates.length - 1 > index
             if (descriptor && isNotLast) {
-              compoundExpression.children.push(` + '${descriptor}, ' + `)
+              compoundExpression.children.push(` + ' ${descriptor}, ' + `)
             } else if (descriptor) {
-              compoundExpression.children.push(` + '${descriptor}'`)
+              compoundExpression.children.push(` + ' ${descriptor}'`)
             } else if (isNotLast) {
               compoundExpression.children.push(` + ', ' + `)
             }

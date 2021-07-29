@@ -1,0 +1,43 @@
+{
+  "name": "@vue/compat",
+  "version": "3.2.0-beta.6",
+  "description": "Vue 3 compatibility build for Vue 2",
+  "main": "index.js",
+  "module": "dist/vue.runtime.esm-bundler.js",
+  "unpkg": "dist/vue.global.js",
+  "jsdelivr": "dist/vue.global.js",
+  "files": [
+    "index.js",
+    "dist"
+  ],
+  "buildOptions": {
+    "name": "Vue",
+    "filename": "vue",
+    "compat": true,
+    "formats": [
+      "esm-bundler",
+      "esm-bundler-runtime",
+      "cjs",
+      "global",
+      "global-runtime",
+      "esm-browser",
+      "esm-browser-runtime"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vuejs/vue-next.git"
+  },
+  "keywords": [
+    "vue"
+  ],
+  "author": "Evan You",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/vuejs/vue-next/issues"
+  },
+  "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/vue-compat#readme",
+  "peerDependencies": {
+    "vue": "3.2.0-beta.6"
+  }
+}

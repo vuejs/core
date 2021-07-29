@@ -101,16 +101,42 @@ bailType(el)
 function withSymbol() {
   const customSymbol = Symbol()
   const obj = {
-    [Symbol.asyncIterator]: { a: 1 },
-    [Symbol.unscopables]: { b: '1' },
-    [customSymbol]: { c: [1, 2, 3] }
+    [Symbol.asyncIterator]: ref(1),
+    [Symbol.hasInstance]: { a: ref('a') },
+    [Symbol.isConcatSpreadable]: { b: ref(true) },
+    [Symbol.iterator]: [ref(1)],
+    [Symbol.match]: new Set<Ref<number>>(),
+    [Symbol.matchAll]: new Map<number, Ref<string>>(),
+    [Symbol.replace]: { arr: [ref('a')] },
+    [Symbol.search]: { set: new Set<Ref<number>>() },
+    [Symbol.species]: { map: new Map<number, Ref<string>>() },
+    [Symbol.split]: new WeakSet<Ref<boolean>>(),
+    [Symbol.toPrimitive]: new WeakMap<Ref<boolean>, string>(),
+    [Symbol.toStringTag]: { weakSet: new WeakSet<Ref<boolean>>() },
+    [Symbol.unscopables]: { weakMap: new WeakMap<Ref<boolean>, string>() },
+    [customSymbol]: { arr: [ref(1)] }
   }
 
   const objRef = ref(obj)
 
-  expectType<{ a: number }>(objRef.value[Symbol.asyncIterator])
-  expectType<{ b: string }>(objRef.value[Symbol.unscopables])
-  expectType<{ c: Array<number> }>(objRef.value[customSymbol])
+  expectType<Ref<number>>(objRef.value[Symbol.asyncIterator])
+  expectType<{ a: Ref<string> }>(objRef.value[Symbol.hasInstance])
+  expectType<{ b: Ref<boolean> }>(objRef.value[Symbol.isConcatSpreadable])
+  expectType<Ref<number>[]>(objRef.value[Symbol.iterator])
+  expectType<Set<Ref<number>>>(objRef.value[Symbol.match])
+  expectType<Map<number, Ref<string>>>(objRef.value[Symbol.matchAll])
+  expectType<{ arr: Ref<string>[] }>(objRef.value[Symbol.replace])
+  expectType<{ set: Set<Ref<number>> }>(objRef.value[Symbol.search])
+  expectType<{ map: Map<number, Ref<string>> }>(objRef.value[Symbol.species])
+  expectType<WeakSet<Ref<boolean>>>(objRef.value[Symbol.split])
+  expectType<WeakMap<Ref<boolean>, string>>(objRef.value[Symbol.toPrimitive])
+  expectType<{ weakSet: WeakSet<Ref<boolean>> }>(
+    objRef.value[Symbol.toStringTag]
+  )
+  expectType<{ weakMap: WeakMap<Ref<boolean>, string> }>(
+    objRef.value[Symbol.unscopables]
+  )
+  expectType<{ arr: Ref<number>[] }>(objRef.value[customSymbol])
 }
 
 withSymbol()
@@ -203,3 +229,10 @@ switch (data.state.value) {
     data.state.value = 'state1'
     break
 }
+
+// #3954
+function testUnrefGenerics<T>(p: T | Ref<T>) {
+  expectType<T>(unref(p))
+}
+
+testUnrefGenerics(1)

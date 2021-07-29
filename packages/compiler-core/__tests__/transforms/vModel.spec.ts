@@ -9,7 +9,8 @@ import {
   PlainElementNode,
   ComponentNode,
   NodeTypes,
-  VNodeCall
+  VNodeCall,
+  NORMALIZE_PROPS
 } from '../../src'
 import { ErrorCodes } from '../../src/errors'
 import { transformModel } from '../../src/transforms/vModel'
@@ -17,6 +18,7 @@ import { transformElement } from '../../src/transforms/transformElement'
 import { transformExpression } from '../../src/transforms/transformExpression'
 import { transformFor } from '../../src/transforms/vFor'
 import { trackSlotScopes } from '../../src/transforms/vSlot'
+import { CallExpression } from '@babel/types'
 
 function parseWithVModel(template: string, options: CompilerOptions = {}) {
   const ast = parse(template)
@@ -288,40 +290,50 @@ describe('compiler: transform v-model', () => {
   test('with dynamic argument', () => {
     const root = parseWithVModel('<input v-model:[value]="model" />')
     const node = root.children[0] as ElementNode
-    const props = ((node.codegenNode as VNodeCall).props as ObjectExpression)
-      .properties
+    const props = (node.codegenNode as VNodeCall)
+      .props as unknown as CallExpression
 
-    expect(props[0]).toMatchObject({
-      key: {
-        content: 'value',
-        isStatic: false
-      },
-      value: {
-        content: 'model',
-        isStatic: false
-      }
-    })
-
-    expect(props[1]).toMatchObject({
-      key: {
-        children: [
-          '"onUpdate:" + ',
-          {
-            content: 'value',
-            isStatic: false
-          }
-        ]
-      },
-      value: {
-        children: [
-          '$event => (',
-          {
-            content: 'model',
-            isStatic: false
-          },
-          ' = $event)'
-        ]
-      }
+    expect(props).toMatchObject({
+      type: NodeTypes.JS_CALL_EXPRESSION,
+      callee: NORMALIZE_PROPS,
+      arguments: [
+        {
+          type: NodeTypes.JS_OBJECT_EXPRESSION,
+          properties: [
+            {
+              key: {
+                content: 'value',
+                isStatic: false
+              },
+              value: {
+                content: 'model',
+                isStatic: false
+              }
+            },
+            {
+              key: {
+                children: [
+                  '"onUpdate:" + ',
+                  {
+                    content: 'value',
+                    isStatic: false
+                  }
+                ]
+              },
+              value: {
+                children: [
+                  '$event => (',
+                  {
+                    content: 'model',
+                    isStatic: false
+                  },
+                  ' = $event)'
+                ]
+              }
+            }
+          ]
+        }
+      ]
     })
 
     expect(generate(root).code).toMatchSnapshot()
@@ -332,40 +344,50 @@ describe('compiler: transform v-model', () => {
       prefixIdentifiers: true
     })
     const node = root.children[0] as ElementNode
-    const props = ((node.codegenNode as VNodeCall).props as ObjectExpression)
-      .properties
+    const props = (node.codegenNode as VNodeCall)
+      .props as unknown as CallExpression
 
-    expect(props[0]).toMatchObject({
-      key: {
-        content: '_ctx.value',
-        isStatic: false
-      },
-      value: {
-        content: '_ctx.model',
-        isStatic: false
-      }
-    })
-
-    expect(props[1]).toMatchObject({
-      key: {
-        children: [
-          '"onUpdate:" + ',
-          {
-            content: '_ctx.value',
-            isStatic: false
-          }
-        ]
-      },
-      value: {
-        children: [
-          '$event => (',
-          {
-            content: '_ctx.model',
-            isStatic: false
-          },
-          ' = $event)'
-        ]
-      }
+    expect(props).toMatchObject({
+      type: NodeTypes.JS_CALL_EXPRESSION,
+      callee: NORMALIZE_PROPS,
+      arguments: [
+        {
+          type: NodeTypes.JS_OBJECT_EXPRESSION,
+          properties: [
+            {
+              key: {
+                content: '_ctx.value',
+                isStatic: false
+              },
+              value: {
+                content: '_ctx.model',
+                isStatic: false
+              }
+            },
+            {
+              key: {
+                children: [
+                  '"onUpdate:" + ',
+                  {
+                    content: '_ctx.value',
+                    isStatic: false
+                  }
+                ]
+              },
+              value: {
+                children: [
+                  '$event => (',
+                  {
+                    content: '_ctx.model',
+                    isStatic: false
+                  },
+                  ' = $event)'
+                ]
+              }
+            }
+          ]
+        }
+      ]
     })
 
     expect(generate(root, { mode: 'module' }).code).toMatchSnapshot()
@@ -395,12 +417,22 @@ describe('compiler: transform v-model', () => {
       }
     )
     expect(root.cached).toBe(0)
-    const codegen = ((root.children[0] as ForNode)
-      .children[0] as PlainElementNode).codegenNode as VNodeCall
+    const codegen = (
+      (root.children[0] as ForNode).children[0] as PlainElementNode
+    ).codegenNode as VNodeCall
     expect(codegen.dynamicProps).toBe(`["modelValue", "onUpdate:modelValue"]`)
     expect(
       (codegen.props as ObjectExpression).properties[1].value.type
     ).not.toBe(NodeTypes.JS_CACHE_EXPRESSION)
+  })
+
+  test('should not cache update handler if it inside v-once', () => {
+    const root = parseWithVModel('<div v-once><input v-model="foo" /></div>', {
+      prefixIdentifiers: true,
+      cacheHandlers: true
+    })
+    expect(root.cached).not.toBe(2)
+    expect(root.cached).toBe(1)
   })
 
   test('should mark update handler dynamic if it refers slot scope variables', () => {
@@ -410,8 +442,9 @@ describe('compiler: transform v-model', () => {
         prefixIdentifiers: true
       }
     )
-    const codegen = ((root.children[0] as ComponentNode)
-      .children[0] as PlainElementNode).codegenNode as VNodeCall
+    const codegen = (
+      (root.children[0] as ComponentNode).children[0] as PlainElementNode
+    ).codegenNode as VNodeCall
     expect(codegen.dynamicProps).toBe(`["modelValue", "onUpdate:modelValue"]`)
   })
 
@@ -505,6 +538,13 @@ describe('compiler: transform v-model', () => {
           code: ErrorCodes.X_V_MODEL_MALFORMED_EXPRESSION
         })
       )
+    })
+
+    test('allow unicode', () => {
+      const onError = jest.fn()
+      parseWithVModel('<span v-model="变.量" />', { onError })
+
+      expect(onError).toHaveBeenCalledTimes(0)
     })
 
     test('used on scope variable', () => {

@@ -31,10 +31,10 @@ if (__DEV__) {
     typeof global !== 'undefined'
       ? global
       : typeof self !== 'undefined'
-        ? self
-        : typeof window !== 'undefined'
-          ? window
-          : {}
+      ? self
+      : typeof window !== 'undefined'
+      ? window
+      : {}
 
   globalObject.__VUE_HMR_RUNTIME__ = {
     createRecord: tryWrap(createRecord),
@@ -116,7 +116,7 @@ function reload(id: string, newComp: ComponentOptions | ClassComponent) {
     newComp = isClassComponent(newComp) ? newComp.__vccOpts : newComp
     extend(component, newComp)
     for (const key in component) {
-      if (!(key in newComp)) {
+      if (key !== '__file' && !(key in newComp)) {
         delete (component as any)[key]
       }
     }
@@ -130,7 +130,15 @@ function reload(id: string, newComp: ComponentOptions | ClassComponent) {
   }
 
   Array.from(instances).forEach(instance => {
-    if (instance.parent) {
+    // invalidate options resolution cache
+    instance.appContext.optionsCache.delete(instance.type as any)
+
+    if (instance.ceReload) {
+      // custom element
+      hmrDirtyComponents.add(component)
+      instance.ceReload()
+      hmrDirtyComponents.delete(component)
+    } else if (instance.parent) {
       // 4. Force the parent instance to re-render. This will cause all updated
       // components to be unmounted and re-mounted. Queue the update so that we
       // don't end up forcing the same parent to re-render multiple times.

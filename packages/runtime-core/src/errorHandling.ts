@@ -24,6 +24,7 @@ export const enum ErrorCodes {
 }
 
 export const ErrorTypeStrings: Record<number | string, string> = {
+  [LifecycleHooks.SERVER_PREFETCH]: 'serverPrefetch hook',
   [LifecycleHooks.BEFORE_CREATE]: 'beforeCreate hook',
   [LifecycleHooks.CREATED]: 'created hook',
   [LifecycleHooks.BEFORE_MOUNT]: 'beforeMount hook',

@@ -5,9 +5,11 @@ import {
   Fragment,
   Teleport,
   expectError,
-  expectType
+  expectType,
+  VNode
 } from './index'
 
+expectType<VNode>(<div />)
 expectType<JSX.Element>(<div />)
 expectType<JSX.Element>(<div id="foo" />)
 expectType<JSX.Element>(<input value="foo" />)

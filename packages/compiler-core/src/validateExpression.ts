@@ -18,7 +18,8 @@ const prohibitedKeywordRE = new RegExp(
 )
 
 // strip strings in expressions
-const stripStringRE = /'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|`(?:[^`\\]|\\.)*\$\{|\}(?:[^`\\]|\\.)*`|`(?:[^`\\]|\\.)*`/g
+const stripStringRE =
+  /'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|`(?:[^`\\]|\\.)*\$\{|\}(?:[^`\\]|\\.)*`|`(?:[^`\\]|\\.)*`/g
 
 /**
  * Validate a non-prefixed expression.
@@ -51,9 +52,7 @@ export function validateBrowserExpression(
       .replace(stripStringRE, '')
       .match(prohibitedKeywordRE)
     if (keywordMatch) {
-      message = `avoid using JavaScript keyword as property name: "${
-        keywordMatch[0]
-      }"`
+      message = `avoid using JavaScript keyword as property name: "${keywordMatch[0]}"`
     }
     context.onError(
       createCompilerError(

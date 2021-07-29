@@ -1,3 +1,626 @@
+# [3.2.0-beta.6](https://github.com/vuejs/vue-next/compare/v3.2.0-beta.5...v3.2.0-beta.6) (2021-07-27)
+
+
+### Bug Fixes
+
+* **inject:** should auto unwrap injected refs ([561e210](https://github.com/vuejs/vue-next/commit/561e210157874b216efc1c17be701a6a81c4383b)), closes [#4196](https://github.com/vuejs/vue-next/issues/4196)
+* **runtime-core:** expose ssrUtils in esm-bundler build ([ee4cbae](https://github.com/vuejs/vue-next/commit/ee4cbaeec917362c571ce95352adccd6ec2d1f47)), closes [#4199](https://github.com/vuejs/vue-next/issues/4199)
+* **sfc/style-vars:** should ignore style variable bindings in comments ([#4188](https://github.com/vuejs/vue-next/issues/4188)) ([3a75d5d](https://github.com/vuejs/vue-next/commit/3a75d5d6942a1743789192dca9161f7c30a71e58)), closes [#4185](https://github.com/vuejs/vue-next/issues/4185)
+
+
+### Features
+
+* unwrap refs in toDisplayString ([f994b97](https://github.com/vuejs/vue-next/commit/f994b974c0a1ac95d313c8ccfc258c6ba3910b6e))
+
+
+
+# [3.2.0-beta.5](https://github.com/vuejs/vue-next/compare/v3.2.0-beta.4...v3.2.0-beta.5) (2021-07-23)
+
+
+### Bug Fixes
+
+* **hmr:** fix custom elements hmr edge cases ([bff4ea7](https://github.com/vuejs/vue-next/commit/bff4ea74c545ccc7e39f45d4db4e7c471f248b13))
+* **hmr:** fix hmr when global mixins are used ([db3f57a](https://github.com/vuejs/vue-next/commit/db3f57a39206eb33946a42bc230eb972bde61368)), closes [#4174](https://github.com/vuejs/vue-next/issues/4174)
+* **types:** fix types for readonly ref ([2581cfb](https://github.com/vuejs/vue-next/commit/2581cfb707f90bdf4128e5d481b99e7c39e198d3)), closes [#4180](https://github.com/vuejs/vue-next/issues/4180)
+* **v-model:** avoid resetting value of in-focus & lazy input ([ac74e1d](https://github.com/vuejs/vue-next/commit/ac74e1dd33a45874a96fc13efdaade613c44dd70)), closes [#4182](https://github.com/vuejs/vue-next/issues/4182)
+
+
+### Features
+
+* **compiler-sfc:** avoid exposing imports not used in template ([5a3ccfd](https://github.com/vuejs/vue-next/commit/5a3ccfd9143700c7ca82d2911fe592d0658c5393)), closes [#3183](https://github.com/vuejs/vue-next/issues/3183)
+* **runtime-dom:** hmr for custom elements ([7a7e1d8](https://github.com/vuejs/vue-next/commit/7a7e1d8e9fed27bc2dbf24076642e83d0c80d9af))
+* **runtime-dom:** support passing initial props to custom element constructor ([5b76843](https://github.com/vuejs/vue-next/commit/5b76843b693d6477ae44b4bd238c2c892d8f4c77))
+* **runtime-dom:** support specifying shadow dom styles in defineCustomElement ([a7fa4ac](https://github.com/vuejs/vue-next/commit/a7fa4ac28afb73be00503be87f35e8724fe25443))
+
+
+
+# [3.2.0-beta.4](https://github.com/vuejs/vue-next/compare/v3.2.0-beta.3...v3.2.0-beta.4) (2021-07-21)
+
+
+### Bug Fixes
+
+* **runtime-core:** ensure setupContext.attrs reactivity when used in child slots ([8560005](https://github.com/vuejs/vue-next/commit/85600056015fcf5c922dc0b5b07aa03a5ba53245)), closes [#4161](https://github.com/vuejs/vue-next/issues/4161)
+* **runtime-dom:** defer setting value ([ff0c810](https://github.com/vuejs/vue-next/commit/ff0c810300f7182f717f130fe5e382d9c0c99838)), closes [#2325](https://github.com/vuejs/vue-next/issues/2325) [#4024](https://github.com/vuejs/vue-next/issues/4024)
+
+
+### Performance Improvements
+
+* skip patch on same vnode ([d13774b](https://github.com/vuejs/vue-next/commit/d13774b881b297f2cd1a8d3193183d241dee625b))
+
+
+
+# [3.2.0-beta.3](https://github.com/vuejs/vue-next/compare/v3.2.0-beta.2...v3.2.0-beta.3) (2021-07-20)
+
+
+### Bug Fixes
+
+* **reactivity:** revert computed scheduler change ([33c2fbf](https://github.com/vuejs/vue-next/commit/33c2fbfdc80c6f17c7e8435b7a152a4d9ed5c6ed)), closes [#4157](https://github.com/vuejs/vue-next/issues/4157)
+* **runtime-core:** fix v-bind class/style merging regression ([2bdee50](https://github.com/vuejs/vue-next/commit/2bdee50a598456392541a8a4b451501e5df2d363)), closes [#4155](https://github.com/vuejs/vue-next/issues/4155)
+* **sfc-playground:** Transform named default exports without altering scope ([#4154](https://github.com/vuejs/vue-next/issues/4154)) ([acb2a4d](https://github.com/vuejs/vue-next/commit/acb2a4d285bfdee6437970b3dc9435abfe1c4ddf))
+* **watch:** ensure watchers respect detached scope ([bc7f976](https://github.com/vuejs/vue-next/commit/bc7f9767f502b808d1c74e2cafaafbf8aa568045)), closes [#4158](https://github.com/vuejs/vue-next/issues/4158)
+
+
+### Features
+
+* **reactivity:** deferredComputed ([14ca881](https://github.com/vuejs/vue-next/commit/14ca881a1ba6ad887d5ffc6ce3b7f8461252afee))
+* **runtime-core:** watchSyncEffect ([d87d059](https://github.com/vuejs/vue-next/commit/d87d059ac120ed0496f85474344ef76e40fa9bc7))
+
+
+
+# [3.2.0-beta.2](https://github.com/vuejs/vue-next/compare/v3.2.0-beta.1...v3.2.0-beta.2) (2021-07-19)
+
+
+### Bug Fixes
+
+* **compiler-core:** fix self-closing tags with v-pre ([a21ca3d](https://github.com/vuejs/vue-next/commit/a21ca3dccc6a0c3822d15b6b2b1d22a2d1a4dd67))
+* **compiler-sfc:** defineProps infer TSParenthesizedType ([#4147](https://github.com/vuejs/vue-next/issues/4147)) ([f7607d3](https://github.com/vuejs/vue-next/commit/f7607d3a15683745b21585baa18cf2871447580e))
+* **compiler-sfc:** expose correct range for empty blocks ([b274b08](https://github.com/vuejs/vue-next/commit/b274b08f5ff56d153d3dd46fa740dd6b156bf26f))
+* **compiler-sfc:** fix whitespace preservation when block contains single self-closing tag ([ec6abe8](https://github.com/vuejs/vue-next/commit/ec6abe8d5e0c85e9c884e9c2525d5181213a8e64))
+* **compiler-sfc:** support const enum ([93a950d](https://github.com/vuejs/vue-next/commit/93a950d60d347321df4196d22f64c4810840a3bb))
+* **reactivity:** computed should not trigger scheduler if stopped ([6eb47f0](https://github.com/vuejs/vue-next/commit/6eb47f000a1b54b2419c031979502d2793c5189d)), closes [#4149](https://github.com/vuejs/vue-next/issues/4149)
+* **runtime-core:** fix null type in required + multi-type prop declarations ([bbf6ca9](https://github.com/vuejs/vue-next/commit/bbf6ca9bca942df639ff0357d713413c9a1c4c05)), closes [#4146](https://github.com/vuejs/vue-next/issues/4146) [#4147](https://github.com/vuejs/vue-next/issues/4147)
+* **scheduler:** fix insertion for id-less job ([d810a1a](https://github.com/vuejs/vue-next/commit/d810a1a56943aeba5160b42bc917187e99cdfb8e)), closes [#4148](https://github.com/vuejs/vue-next/issues/4148)
+* **shared:** normalizeStyle should handle strings ([a8c3a8a](https://github.com/vuejs/vue-next/commit/a8c3a8ad61b16a31f6754066838440a59ee9db8b)), closes [#4138](https://github.com/vuejs/vue-next/issues/4138)
+* **ssr:** update initial old value to watch callback in ssr usage ([#4103](https://github.com/vuejs/vue-next/issues/4103)) ([20b6619](https://github.com/vuejs/vue-next/commit/20b6619793702d265fcc3a7c099f5764fa9d8685))
+* **v-model:** properly detect input type=number ([3056e9b](https://github.com/vuejs/vue-next/commit/3056e9b3dcb1ab0bd18227c6fa7bf283f98f6ef6)), closes [#3813](https://github.com/vuejs/vue-next/issues/3813)
+
+
+### Features
+
+* **compiler:** allow 'comments' option to affect comment inclusion in dev ([#4115](https://github.com/vuejs/vue-next/issues/4115)) ([dd0f9d1](https://github.com/vuejs/vue-next/commit/dd0f9d1ce6b0de59c84d334c7190fa9d2cc17a04)), closes [#3392](https://github.com/vuejs/vue-next/issues/3392) [#3395](https://github.com/vuejs/vue-next/issues/3395)
+* **compiler-sfc:** add ignoreEmpty option for sfc parse method ([8dbecfc](https://github.com/vuejs/vue-next/commit/8dbecfcbb3d597a644d0f263dfd6d7fcfd23a9fb))
+* **types:** map declared emits to onXXX props in inferred prop types ([#3926](https://github.com/vuejs/vue-next/issues/3926)) ([69344ff](https://github.com/vuejs/vue-next/commit/69344ff1ae724beb648c34ede8050b3b70ddf4b7))
+
+
+### Performance Improvements
+
+* **compiler-sfc:** ignore empty blocks ([#3520](https://github.com/vuejs/vue-next/issues/3520)) ([b771fdb](https://github.com/vuejs/vue-next/commit/b771fdbef9a8dadd4c9cc939cc104f7764e40373))
+
+
+
+# [3.2.0-beta.1](https://github.com/vuejs/vue-next/compare/v3.1.5...v3.2.0-beta.1) (2021-07-16)
+
+
+### Bug Fixes
+
+* **sfc/style-vars:** properly re-apply style vars on component root elements change ([49dc2dd](https://github.com/vuejs/vue-next/commit/49dc2dd1e4a56d0d2ad28003240c99e99ef469e4)), closes [#3894](https://github.com/vuejs/vue-next/issues/3894)
+* ensure customElements API ssr compatibility ([de32cfa](https://github.com/vuejs/vue-next/commit/de32cfa43e94276c60f93ac4c560cb7b84534cfe)), closes [#4129](https://github.com/vuejs/vue-next/issues/4129)
+* **runtime-core:** fix default shapeFlag for fragments ([2a310df](https://github.com/vuejs/vue-next/commit/2a310df7531a693be706a96d4191a5bfbf24692d))
+* ignore .prop/.attr modifiers in ssr ([29732c2](https://github.com/vuejs/vue-next/commit/29732c2c8681cc3e58251c19149ba3a0ce31cdaf))
+
+
+### Code Refactoring
+
+* remove deprecated scopeId codegen ([f596e00](https://github.com/vuejs/vue-next/commit/f596e008efd97fe8f9b28f536fbb0fd48b9b6333))
+
+
+### Features
+
+* **sfc:** (experimental) new ref sugar ([562bddb](https://github.com/vuejs/vue-next/commit/562bddb3ce76a0e98e499e199e96fa4271e5d1b4))
+* **sfc:** support namespaced component tags when using `<script setup>` ([e5a4412](https://github.com/vuejs/vue-next/commit/e5a4412764f6db255afe01b8a7e6e40ebf707412))
+* custom element reflection, casting and edge cases ([00f0b3c](https://github.com/vuejs/vue-next/commit/00f0b3c46552626cd7c5ec73ffd0a918c3e1a5fb))
+* remove experimental status of `<script setup>` ([27104ea](https://github.com/vuejs/vue-next/commit/27104eaaf0f929a4c08b53877b495c5813157232))
+* support v-bind .prop & .attr modifiers ([1c7d737](https://github.com/vuejs/vue-next/commit/1c7d737cc8ed0384b334d0b3e2dc8ede44906dc4))
+* **runtime-dom:** defineCustomElement ([8610e1c](https://github.com/vuejs/vue-next/commit/8610e1c9e23a4316f76fb35eebbab4ad48566fbf))
+* v-memo ([3b64508](https://github.com/vuejs/vue-next/commit/3b64508e3b2d648e346cbf34e1641f4022be61b6))
+* watchPostEffect ([42ace95](https://github.com/vuejs/vue-next/commit/42ace9577da49477ff189950a83d6eead73d0efe))
+* **reactivity:** new effectScope API ([#2195](https://github.com/vuejs/vue-next/issues/2195)) ([f5617fc](https://github.com/vuejs/vue-next/commit/f5617fc3bb8fd33927b2567622ac4f8b43f9b5d5))
+* **reactivity:** support onTrack/onTrigger debug options for computed ([5cea9a1](https://github.com/vuejs/vue-next/commit/5cea9a1d4e846f60515ef76ebab4800228645601))
+
+
+### Performance Improvements
+
+* also hoist all-static children array ([b7ea7c1](https://github.com/vuejs/vue-next/commit/b7ea7c148552874e8bce399eec9fbe565efa2f4d))
+* hoist dynamic props lists ([02339b6](https://github.com/vuejs/vue-next/commit/02339b67d8c6fab6ee701a7c4f2773139ed007f5))
+* **reactivity:** avoid triggering re-render if computed value did not change ([ebaac9a](https://github.com/vuejs/vue-next/commit/ebaac9a56d82d266e333d077b6457543d7cab9ae))
+* **reactivity:** improve reactive effect memory usage ([#4001](https://github.com/vuejs/vue-next/issues/4001)) ([87f69fd](https://github.com/vuejs/vue-next/commit/87f69fd0bb67508337fb95cb98135fd5d6ebca7d)), closes [#2345](https://github.com/vuejs/vue-next/issues/2345)
+* **reactivity:** ref-specific track/trigger and miscellaneous optimizations ([#3995](https://github.com/vuejs/vue-next/issues/3995)) ([6431040](https://github.com/vuejs/vue-next/commit/64310405acaccabc24985ade95fb1b5c9c06ef76))
+* **reactivity:** use bitwise dep markers to optimize re-tracking ([#4017](https://github.com/vuejs/vue-next/issues/4017)) ([6cf2377](https://github.com/vuejs/vue-next/commit/6cf2377cd49d24814bdff136bf78c77d50d5b41a))
+* improve VNode creation performance with compiler hints ([#3334](https://github.com/vuejs/vue-next/issues/3334)) ([ceff899](https://github.com/vuejs/vue-next/commit/ceff89905b05381d3d73c480e08c7aff9271b074))
+
+
+### BREAKING CHANGES
+
+* Output of SFC using `<style scoped>` generated by 3.2+
+will be incompatible w/ runtime <3.2.
+
+
+
+## [3.1.5](https://github.com/vuejs/vue-next/compare/v3.1.4...v3.1.5) (2021-07-16)
+
+
+### Bug Fixes
+
+* **compat:** fix props check for v-model compat warning ([#4056](https://github.com/vuejs/vue-next/issues/4056)) ([f3e15f6](https://github.com/vuejs/vue-next/commit/f3e15f633edfa2d4f116bf52fd5dee02655567e3))
+* **compat:** fix v3 compiled fn detection in production ([8dbad83](https://github.com/vuejs/vue-next/commit/8dbad83e7fa39be3e61ca694a6090c1646117953))
+* **compiler:** Addressed infinite loop in compiler ([#3992](https://github.com/vuejs/vue-next/issues/3992)) ([e00aa56](https://github.com/vuejs/vue-next/commit/e00aa56658ec207d45aae6eb23f0267b9e1c55e2)), closes [#3987](https://github.com/vuejs/vue-next/issues/3987)
+* **compiler-core:** fix forwarded slots detection on template slots ([#4124](https://github.com/vuejs/vue-next/issues/4124)) ([c23153d](https://github.com/vuejs/vue-next/commit/c23153d82eb2aa57d254dd362a78383defec3968)), closes [#4123](https://github.com/vuejs/vue-next/issues/4123)
+* **compiler-sfc:** duplicated injected css var with repeated vars in style ([#2802](https://github.com/vuejs/vue-next/issues/2802)) ([2901050](https://github.com/vuejs/vue-next/commit/29010501cc9611eb9cacb99a24827053ced3e018))
+* **compiler-sfc:** should not rewrite ref sugar identifiers in types ([6fad209](https://github.com/vuejs/vue-next/commit/6fad2093a46898636af34ddc148616473a234617)), closes [#4062](https://github.com/vuejs/vue-next/issues/4062)
+* **reactivity:** call array subclass methods ([#3624](https://github.com/vuejs/vue-next/issues/3624)) ([1cfe290](https://github.com/vuejs/vue-next/commit/1cfe290352456f0faf8319d7e193a4b3a31ef352)), closes [#2314](https://github.com/vuejs/vue-next/issues/2314) [#2315](https://github.com/vuejs/vue-next/issues/2315)
+* **ref:** should not trigger when setting value to same proxy ([#3658](https://github.com/vuejs/vue-next/issues/3658)) ([08f504c](https://github.com/vuejs/vue-next/commit/08f504c1b7798d95c1c0a9d0894b846ff955ce3c))
+* **runtime-core:** enter optimized mode for component as root ([68365b9](https://github.com/vuejs/vue-next/commit/68365b9b2bc2ccef93e88475c4f15e7cfb4f2497)), closes [#3943](https://github.com/vuejs/vue-next/issues/3943)
+* **runtime-dom:** capture errors when setting value for IDL ([#3578](https://github.com/vuejs/vue-next/issues/3578)) ([3756270](https://github.com/vuejs/vue-next/commit/37562702725fc328286b63499422856ac47890d7)), closes [#3576](https://github.com/vuejs/vue-next/issues/3576)
+* **runtime-dom:** remove class attribute on nullish values ([7013e8f](https://github.com/vuejs/vue-next/commit/7013e8f5781e838256bf07e7d5de58a974e761a8)), closes [#3173](https://github.com/vuejs/vue-next/issues/3173)
+* **sfc:** fix `<script setup>` async context preservation logic ([03e2684](https://github.com/vuejs/vue-next/commit/03e26845e2c220b1350a35179acf3435e2711282)), closes [#4050](https://github.com/vuejs/vue-next/issues/4050)
+* **sfc:** fix style variables injection on static vnode ([#3847](https://github.com/vuejs/vue-next/issues/3847)) ([6a0c7cd](https://github.com/vuejs/vue-next/commit/6a0c7cd9051e1b3eb1a3ce1eaadfd9c828b53daa)), closes [#3841](https://github.com/vuejs/vue-next/issues/3841)
+* **sfc:** only enable jsx parser plugin when explicitly using tsx ([5df7dfc](https://github.com/vuejs/vue-next/commit/5df7dfcd71172f97a045297cdeea226e0b354a93)), closes [#4106](https://github.com/vuejs/vue-next/issues/4106)
+* **type:** infer parent as `this` on `nextTick` function ([#3608](https://github.com/vuejs/vue-next/issues/3608)) ([18911ab](https://github.com/vuejs/vue-next/commit/18911abb917788106221027032bc771f0e37886d)), closes [#3599](https://github.com/vuejs/vue-next/issues/3599)
+* **v-model:** handle mutations of v-model bound array/sets ([2937530](https://github.com/vuejs/vue-next/commit/2937530beff5c6bb57286c2556307859e37aa809)), closes [#4096](https://github.com/vuejs/vue-next/issues/4096)
+* **v-model:** support calling methods in v-model expression ([5af718b](https://github.com/vuejs/vue-next/commit/5af718ba41f53d032fd33861494f96b70c107acd)), closes [#3993](https://github.com/vuejs/vue-next/issues/3993)
+* **v-on:** proper member exp detection for bracket assignment ([395572b](https://github.com/vuejs/vue-next/commit/395572b593c300be4db698777503bebe2bba2950)), closes [#4097](https://github.com/vuejs/vue-next/issues/4097)
+* **v-on:** properly detect member expressions with optional chaining ([963085d](https://github.com/vuejs/vue-next/commit/963085d18c472b13c2d3894d5bd4aac1420767f8)), closes [#4107](https://github.com/vuejs/vue-next/issues/4107)
+
+
+
+## [3.1.4](https://github.com/vuejs/vue-next/compare/v3.1.3...v3.1.4) (2021-07-02)
+
+
+### Bug Fixes
+
+* **build:** avoid using async/await syntax ([438754a](https://github.com/vuejs/vue-next/commit/438754a0d1428d10e27d1a290beb4b81da5fdaeb))
+* **build:** fix generated code containing unprocessed class field syntax ([2788154](https://github.com/vuejs/vue-next/commit/2788154f7707928f1dd3e4d9bd144f758a8c0478)), closes [#4052](https://github.com/vuejs/vue-next/issues/4052) [vuejs/vue-cli#6562](https://github.com/vuejs/vue-cli/issues/6562)
+* **codegen:** ensure valid types in genreated code when using global directives ([a44d528](https://github.com/vuejs/vue-next/commit/a44d528af1227c05dedf610b6ec45504d8e58276)), closes [#4054](https://github.com/vuejs/vue-next/issues/4054)
+* **compiler-sfc:** fix parse-only mode when there is no script setup block ([253ca27](https://github.com/vuejs/vue-next/commit/253ca2729d808fc051215876aa4af986e4caa43c))
+* **runtime-core:** add useAttrs and useSlots export ([#4053](https://github.com/vuejs/vue-next/issues/4053)) ([735ada1](https://github.com/vuejs/vue-next/commit/735ada1507623b8d36e80b30a4f67a8af4a45c99))
+* **runtime-core:** fix instance accessed via $parent chain when using expose() ([#4048](https://github.com/vuejs/vue-next/issues/4048)) ([12cf9f4](https://github.com/vuejs/vue-next/commit/12cf9f4ea148a59fd9002ecf9ea9d365829ce37c))
+
+
+
+## [3.1.3](https://github.com/vuejs/vue-next/compare/v3.1.2...v3.1.3) (2021-07-01)
+
+
+### Bug Fixes
+
+* **compiler-core:** properly exit self-closing pre tag ([d2df28d](https://github.com/vuejs/vue-next/commit/d2df28dca42f6679766033f8986b5637dfe64e1e)), closes [#4030](https://github.com/vuejs/vue-next/issues/4030)
+* **compiler-sfc:** avoid script setup marker showing up in devtools ([211793d](https://github.com/vuejs/vue-next/commit/211793d3767b12dd457de62160b672af24b921e7))
+* **compiler-sfc:** fix defineProps() call on imported identifier ([691d354](https://github.com/vuejs/vue-next/commit/691d354af9e3a66c781494656b367950fcd8faec))
+* **compiler-sfc:** fix defineProps/defineEmits usage in multi-variable declarations ([62c1b2f](https://github.com/vuejs/vue-next/commit/62c1b2f7dc4d2dd22a1b1ab1897f0ce765008d59)), closes [#3739](https://github.com/vuejs/vue-next/issues/3739)
+* **compiler-sfc:** fix script setup hidden flag codegen ([a5a66c5](https://github.com/vuejs/vue-next/commit/a5a66c5196f5e00e8cbf7f6008d350d6eabcee71))
+* **compiler-sfc:** support method signature in defineProps ([afdd2f2](https://github.com/vuejs/vue-next/commit/afdd2f28354ce8cea647279ed25d61e7b9946cf5)), closes [#2983](https://github.com/vuejs/vue-next/issues/2983)
+* **compiler-sfc:** support TS runtime enum in `<script setup>` ([1ffd48a](https://github.com/vuejs/vue-next/commit/1ffd48a2f5fd3eead3ea29dae668b7ed1c6f6130))
+* **runtime-core:** add missing serverPrefetch hook error string ([#4014](https://github.com/vuejs/vue-next/issues/4014)) ([d069796](https://github.com/vuejs/vue-next/commit/d069796b8f0cf8df9aa77d781c4b5429b9411204))
+* **runtime-core:** fix mouting of detached static vnode ([fded1e8](https://github.com/vuejs/vue-next/commit/fded1e8dfa22ca7fecd300c4cbffd6a37b887be8)), closes [#4023](https://github.com/vuejs/vue-next/issues/4023)
+* **runtime-dom:** fix static node content caching edge cases ([ba89ca9](https://github.com/vuejs/vue-next/commit/ba89ca9ecafe86292e3adf751671ed5e9ca6e928)), closes [#4023](https://github.com/vuejs/vue-next/issues/4023) [#4031](https://github.com/vuejs/vue-next/issues/4031) [#4037](https://github.com/vuejs/vue-next/issues/4037)
+* **sfc:** allow variables that start with _ or $ in `<script setup>` ([0b8b576](https://github.com/vuejs/vue-next/commit/0b8b5764287b4814a37034ad4bc6f2b8ac8f8700))
+* **ssr:** ensure behavior consistency between prod/dev when mounting SSR app to empty containers ([33708e8](https://github.com/vuejs/vue-next/commit/33708e8bf44a037070af5c8eabdfe1ccad22bbc2)), closes [#4034](https://github.com/vuejs/vue-next/issues/4034)
+* **ssr:** properly hydrate non-string value bindings ([34d4991](https://github.com/vuejs/vue-next/commit/34d4991dd5876325eb8747afa9a835929bde3974)), closes [#4006](https://github.com/vuejs/vue-next/issues/4006)
+* **types:** improve type of unref() ([127ed1b](https://github.com/vuejs/vue-next/commit/127ed1b969cb2d237d0f588aab726e04f4732641)), closes [#3954](https://github.com/vuejs/vue-next/issues/3954)
+* defineExpose type definition and runtime warning ([1675b6d](https://github.com/vuejs/vue-next/commit/1675b6d723829d1f61e697735e3da7b16aa1362d))
+* prevent withAsyncContext currentInstance leak in edge cases ([9ee41e1](https://github.com/vuejs/vue-next/commit/9ee41e14d2d173866300e75758468c6788180277))
+
+
+### Features
+
+* **compiler-sfc:** compileScript parseOnly mode ([601a290](https://github.com/vuejs/vue-next/commit/601a290caaf7fa29c58c88ac79fc2f1d2c57e337))
+* **expose:** always expose $ instance properties on child refs ([b0203a3](https://github.com/vuejs/vue-next/commit/b0203a30929e4e7f59e035574e43d72ed3b9d7fd))
+* **sfc:** add `defineEmits` and deprecate `defineEmit` ([#3725](https://github.com/vuejs/vue-next/issues/3725)) ([a137da8](https://github.com/vuejs/vue-next/commit/a137da8a9f728edacd50d288bce281e32597197b))
+* **sfc:** auto restore current instance after await statements in async setup() ([0240e82](https://github.com/vuejs/vue-next/commit/0240e82a38e2e0c5f0b63c228fd02b059a19073d))
+* **sfc:** change `<script setup>` directive resolution to require v prefix ([d35e0b1](https://github.com/vuejs/vue-next/commit/d35e0b1468ce3c22b713020ed29f81aba40dd039)), closes [#3543](https://github.com/vuejs/vue-next/issues/3543)
+* **sfc:** defineExpose ([be2b1d3](https://github.com/vuejs/vue-next/commit/be2b1d3c2f16de8dc6e2a22f65fefaa2d25ec3ee))
+* **sfc:** make ref sugar disabled by default ([96cc335](https://github.com/vuejs/vue-next/commit/96cc335aa7050b6bf2ae53cc209d0032a8d59d0e))
+* **sfc:** remove `<template inherit-attrs>` support ([6f6f0cf](https://github.com/vuejs/vue-next/commit/6f6f0cf5dcc02f4a648fab86439eb29a4b5596d2))
+* **sfc:** support referenced types for defineEmits ([2973b6c](https://github.com/vuejs/vue-next/commit/2973b6c30ae5b3ff65aeb71a26a6de1c7789537d))
+* **sfc:** support using declared interface or type alias with defineProps() ([2f91db3](https://github.com/vuejs/vue-next/commit/2f91db30cda5c315ed3e4d20800b55721b0cb17c))
+* **sfc:** useAttrs + useSlots ([63e9e2e](https://github.com/vuejs/vue-next/commit/63e9e2e9aae07c701548f3350ea83535bea22066))
+* **sfc:** withDefaults helper ([4c5844a](https://github.com/vuejs/vue-next/commit/4c5844a9ca0acc4ea45565a0dc9a21c2502d64a4))
+* **sfc-playground:** support lang=ts ([be0f614](https://github.com/vuejs/vue-next/commit/be0f614ac096bdfe44cfddb04c859c9747dcd6dd))
+* **sfc/types:** make `<script setup>` helper types available globally ([004bd18](https://github.com/vuejs/vue-next/commit/004bd18cf75526bd79f68ccea8102aa94a8a28e2))
+* **types:** support IDE renaming for props ([#3656](https://github.com/vuejs/vue-next/issues/3656)) ([81e69b2](https://github.com/vuejs/vue-next/commit/81e69b29ecf992d215d8ddc56bf7e40661144595))
+* **types/ide:** support find definition for jsx tags, events ([#3570](https://github.com/vuejs/vue-next/issues/3570)) ([8ed3ed6](https://github.com/vuejs/vue-next/commit/8ed3ed6c27b0fb9a1b6994eddc967e42d4b3d4e1))
+
+
+
+## [3.1.2](https://github.com/vuejs/vue-next/compare/v3.1.1...v3.1.2) (2021-06-22)
+
+
+### Bug Fixes
+
+* **compiler-core:** improve member expression check ([bc100c5](https://github.com/vuejs/vue-next/commit/bc100c5c48b98b6e2eabfa1d50e0d3099ea2a90d)), closes [#3910](https://github.com/vuejs/vue-next/issues/3910)
+* **compiler-core/compat:** fix is prop usage on components ([08e9322](https://github.com/vuejs/vue-next/commit/08e93220f146118aad8ab07e18066bbb2d4b0040)), closes [#3934](https://github.com/vuejs/vue-next/issues/3934)
+* **compiler-sfc:** rewriteDefault support multiline ([#3917](https://github.com/vuejs/vue-next/issues/3917)) ([b228abb](https://github.com/vuejs/vue-next/commit/b228abb72fcdb4fc9dced907f3614abcaaacdce5))
+* **compiler-ssr:** fix attr fallthrough for transition/keep-alive as template root ([9f6f8b3](https://github.com/vuejs/vue-next/commit/9f6f8b35c1fdfa5b76b834673e2f991c5fa7c9c5)), closes [#3981](https://github.com/vuejs/vue-next/issues/3981)
+* **devtools:** expose root instance ([2b52d5d](https://github.com/vuejs/vue-next/commit/2b52d5d7c53f7843f4a1e85fd7f1720dc2847ebc))
+* **runtime-core:** bind default function of inject to instance ([#3925](https://github.com/vuejs/vue-next/issues/3925)) ([db1dc1c](https://github.com/vuejs/vue-next/commit/db1dc1c63097ed62a3f683a7a11c7e819d90bb73)), closes [#3923](https://github.com/vuejs/vue-next/issues/3923)
+* **runtime-core:** fix multiple .once event handlers on same component ([#3904](https://github.com/vuejs/vue-next/issues/3904)) ([011dee8](https://github.com/vuejs/vue-next/commit/011dee8644bb52f5bdc6365c6e8404936d57e2cd)), closes [#3902](https://github.com/vuejs/vue-next/issues/3902)
+* **Suspense:** emit initial fallback and pending events ([#3965](https://github.com/vuejs/vue-next/issues/3965)) ([ab6e927](https://github.com/vuejs/vue-next/commit/ab6e927041e4082acac9a5effe332557e70e4f2a)), closes [#3964](https://github.com/vuejs/vue-next/issues/3964)
+* **Suspense:** fallback should work with transition ([#3968](https://github.com/vuejs/vue-next/issues/3968)) ([43e2a72](https://github.com/vuejs/vue-next/commit/43e2a72900b96870fe6f16248ecec50ff58278df)), closes [#3963](https://github.com/vuejs/vue-next/issues/3963)
+* **watch:** fix watch option merging from mixins ([9b607fe](https://github.com/vuejs/vue-next/commit/9b607fe409d70e991ba458e7c994e008a4b621e8)), closes [#3966](https://github.com/vuejs/vue-next/issues/3966)
+
+
+### Performance Improvements
+
+* improve static content insertion perf ([4de5d24](https://github.com/vuejs/vue-next/commit/4de5d24aa72f6bc68da967ead330147032983e30)), closes [#3090](https://github.com/vuejs/vue-next/issues/3090)
+
+
+
+## [3.1.1](https://github.com/vuejs/vue-next/compare/v3.1.0...v3.1.1) (2021-06-07)
+
+
+### Bug Fixes
+
+* **compat:** update cjs dist file names ([#3893](https://github.com/vuejs/vue-next/issues/3893)) ([434ea30](https://github.com/vuejs/vue-next/commit/434ea30505466bceb433f113d84f4b4ef8866047))
+
+
+
+# [3.1.0](https://github.com/vuejs/vue-next/compare/v3.1.0-beta.7...v3.1.0) (2021-06-07)
+
+
+### Features
+
+- [Migration Build](https://v3.vuejs.org/guide/migration/migration-build.html)
+- **compiler-core:** whitespace handling strategy ([dee3d6a](https://github.com/vuejs/vue-next/commit/dee3d6ab8b4da6653d15eb148c51d9878007f6b6))
+- support component-level `compilerOptions` when using runtime compiler ([ce0bbe0](https://github.com/vuejs/vue-next/commit/ce0bbe053abaf8ba18de8baf535e175048596ee5))
+- **config:** support configuring runtime compiler via `app.config.compilerOptions` ([091e6d6](https://github.com/vuejs/vue-next/commit/091e6d67bfcc215227d78be578c68ead542481ad))
+- support casting plain element to component via is="vue:xxx" ([af9e699](https://github.com/vuejs/vue-next/commit/af9e6999e1779f56b5cf827b97310d8e4e1fe5ec))
+- **devtools:** improved KeepAlive support ([03ae300](https://github.com/vuejs/vue-next/commit/03ae3006e1e678ade4377cd10d206e8f7b4ad0cb))
+- **devtools:** performance events ([f7c54ca](https://github.com/vuejs/vue-next/commit/f7c54caeb1dac69a26b79c98409e9633a7fe4bd3))
+- onServerPrefetch ([#3070](https://github.com/vuejs/vue-next/issues/3070)) ([349eb0f](https://github.com/vuejs/vue-next/commit/349eb0f0ad78f9cb491278eb4c7f9fe0c2e78b79))
+
+### Performance Improvements
+
+- only trigger `$attrs` update when it has actually changed ([5566d39](https://github.com/vuejs/vue-next/commit/5566d39d467ebdd4e4234bc97d62600ff01ea28e))
+- **compiler:** skip unncessary checks when parsing end tag ([048ac29](https://github.com/vuejs/vue-next/commit/048ac299f35709b25ae1bc1efa67d2abc53dbc3b))
+- avoid deopt for props/emits normalization when global mixins are used ([51d2be2](https://github.com/vuejs/vue-next/commit/51d2be20386d4dc59006d31a1cc96676871027ce))
+
+### Deprecations
+
+- `app.config.isCustomElement` has been deprecated and should be now nested under `app.config.compilerOptions`. [[Docs](https://v3.vuejs.org/api/application-config.html#compileroptions)]
+- `delimiters` component option has been deprecated and should now be nested under the `compilerOptions` component option. [[Docs](https://v3.vuejs.org/api/options-misc.html#compileroptions)]
+- `v-is` has been deprecated in favor of `is="vue:xxx"` [[Docs](https://v3.vuejs.org/api/special-attributes.html#is)]
+
+### Minor Breaking Changes
+
+- `this.$props` and the `props` object passed to `setup()` now always contain all the keys for declared props, even for props that are absent ([4fe4de0](https://github.com/vuejs/vue-next/commit/4fe4de0a49ffc2461b0394e74674af38ff5e2a20)). This has always been the behavior in Vue 2 and is therefore considered a fix (see reasoning in [#3288](https://github.com/vuejs/vue-next/issues/3288)). However, this could break Vue 3 code that relied on the keys for prop absence checks. The workaround is to use a Symbol default value for props that need absence checks:
+
+  ```js
+  const isAbsent = Symbol()
+
+  export default {
+    props: {
+      foo: { default: isAbsent }
+    },
+    setup(props) {
+      if (props.foo === isAbsent) {
+        // foo is absent
+      }
+    }
+  }
+  ```
+
+- `optionMergeStrategies` functions no longer receive
+  the component instance as the 3rd argument. The argument was technically
+  internal in Vue 2 and only used for generating warnings, and should not
+  be needed in userland code. This removal enables much more efficient
+  caching of option merging.
+
+### Bug Fixes
+
+* **compat:** revert private properties on $options in comapt mode ([ad844cf](https://github.com/vuejs/vue-next/commit/ad844cf1e767137a713f715779969ffb94207c7a)), closes [#3883](https://github.com/vuejs/vue-next/issues/3883)
+* **runtime-core:** fix fragment update inside de-opt slots ([5bce2ae](https://github.com/vuejs/vue-next/commit/5bce2ae723d43f23ccfac961f29b80fc870fba1f)), closes [#3881](https://github.com/vuejs/vue-next/issues/3881)
+- **compat:** fix deep data merge with extended constructor ([c7efb96](https://github.com/vuejs/vue-next/commit/c7efb967ca5ab42ea2713331b8e53ae5c2746a78)), closes [#3852](https://github.com/vuejs/vue-next/issues/3852)
+- **compiler-sfc:** fix style injection when using normal script + setup ([8b94464](https://github.com/vuejs/vue-next/commit/8b94464a3b9759a7a98c23efeafc7a9359c9807d)), closes [#3688](https://github.com/vuejs/vue-next/issues/3688)
+- **compiler-sfc:** fix template expression assignment codegen for script setup let refs ([#3626](https://github.com/vuejs/vue-next/issues/3626)) ([2c7bd42](https://github.com/vuejs/vue-next/commit/2c7bd428011e027efa8f66487d2269c8dd79a2b0)), closes [#3625](https://github.com/vuejs/vue-next/issues/3625)
+- **runtime-core:** align option merge behavior with Vue 2 ([e2ca67b](https://github.com/vuejs/vue-next/commit/e2ca67b59a4de57a9bce8d3394263ba493a35a39)), closes [#3566](https://github.com/vuejs/vue-next/issues/3566) [#2791](https://github.com/vuejs/vue-next/issues/2791)
+- **runtime-dom/v-model:** only set selectedIndex when the value changes ([#3845](https://github.com/vuejs/vue-next/issues/3845)) ([ecd97ee](https://github.com/vuejs/vue-next/commit/ecd97ee6e465ec5c841d58d96833fece4e899785))
+- **suspense:** fix suspense regression for errored template component ([44996d1](https://github.com/vuejs/vue-next/commit/44996d1a0a2de1bc6b3abfac6b2b8b3c969d4e01)), closes [#3857](https://github.com/vuejs/vue-next/issues/3857)
+- **watch:** avoid traversing objects that are marked non-reactive ([9acc9a1](https://github.com/vuejs/vue-next/commit/9acc9a1fa838bdcdf673d2f7cc3f996b2b69ffbc))
+- **compiler-core:** improve the isMemberExpression function ([#3675](https://github.com/vuejs/vue-next/issues/3675)) ([9b2e894](https://github.com/vuejs/vue-next/commit/9b2e8940176b3b75fa052b3c3e9eeaabc46a95e6))
+- **compiler-dom:** fix in-browser attribute value decoding w/ html tags ([6690372](https://github.com/vuejs/vue-next/commit/669037277b03bb8e67f517faf2811a8668ea86d6)), closes [#3001](https://github.com/vuejs/vue-next/issues/3001)
+- **compiler-sfc:** correctly remove parens used for wrapping ([#3582](https://github.com/vuejs/vue-next/issues/3582)) ([6bfb50a](https://github.com/vuejs/vue-next/commit/6bfb50aff98038a1f854ce24733f545eec2ee796)), closes [#3581](https://github.com/vuejs/vue-next/issues/3581)
+- **reactivity:** ensure computed always expose value ([03a7a73](https://github.com/vuejs/vue-next/commit/03a7a73148a9e210a7889c7a2ecf925338735c70)), closes [#3099](https://github.com/vuejs/vue-next/issues/3099) [#910](https://github.com/vuejs/vue-next/issues/910)
+- **runtime-core:** fix cases of reused children arrays in render functions ([#3670](https://github.com/vuejs/vue-next/issues/3670)) ([a641eb2](https://github.com/vuejs/vue-next/commit/a641eb201fe51620d50884b988f6fefc3e21a20b)), closes [#3666](https://github.com/vuejs/vue-next/issues/3666)
+- **runtime-core:** fix resolving inheritAttrs from mixins ([#3742](https://github.com/vuejs/vue-next/issues/3742)) ([d6607c9](https://github.com/vuejs/vue-next/commit/d6607c9864376fbe17899f3d35fc7b097670a1b1)), closes [#3741](https://github.com/vuejs/vue-next/issues/3741)
+- **runtime-core:** should disable tracking inside directive lifecycle hooks ([#3699](https://github.com/vuejs/vue-next/issues/3699)) ([ff50e8d](https://github.com/vuejs/vue-next/commit/ff50e8d78c033252c4ce7ffddb8069b3ddae5936))
+- **runtime-core:** stricter compat root mount check ([32e2133](https://github.com/vuejs/vue-next/commit/32e21333dd1197a978cf42802729b2133bda5a0b))
+- **runtime-dom:** should remove attribute when binding `null` to `value` ([#3564](https://github.com/vuejs/vue-next/issues/3564)) ([e3f5dcb](https://github.com/vuejs/vue-next/commit/e3f5dcb99bf42fed48d995438e459203dc3f6ed0))
+- **suspense:** fix suspense patching in optimized mode ([9f24195](https://github.com/vuejs/vue-next/commit/9f24195d2ce24184ccdc5020793dd9423f0d3148)), closes [#3828](https://github.com/vuejs/vue-next/issues/3828)
+- **transition:** fix higher order transition components with merged listeners ([071986a](https://github.com/vuejs/vue-next/commit/071986a2c6459fd99b91a48793a9ab6d6618b52d)), closes [#3227](https://github.com/vuejs/vue-next/issues/3227)
+- **keep-alive:** include/exclude should work with async component ([#3531](https://github.com/vuejs/vue-next/issues/3531)) ([9e3708c](https://github.com/vuejs/vue-next/commit/9e3708ca754c0ecd66dbb45984f8d103772bd55c)), closes [#3529](https://github.com/vuejs/vue-next/issues/3529)
+- **runtime-core:** properly check forwarded slots type ([#3781](https://github.com/vuejs/vue-next/issues/3781)) ([e8ddf86](https://github.com/vuejs/vue-next/commit/e8ddf8608021785c7b1b6f4211c633b40f26ddfc)), closes [#3779](https://github.com/vuejs/vue-next/issues/3779)
+- **runtime-core:** should not track dynamic children when the user calls a compiled slot inside template expression ([#3554](https://github.com/vuejs/vue-next/issues/3554)) ([2010607](https://github.com/vuejs/vue-next/commit/201060717d4498b4b7933bf8a8513866ab9347e4)), closes [#3548](https://github.com/vuejs/vue-next/issues/3548) [#3569](https://github.com/vuejs/vue-next/issues/3569)
+- **runtime-core/teleport:** ensure the nested teleport can be unmounted correctly ([#3629](https://github.com/vuejs/vue-next/issues/3629)) ([4e3f82f](https://github.com/vuejs/vue-next/commit/4e3f82f6835472650741896e19fbdc116d86d1eb)), closes [#3623](https://github.com/vuejs/vue-next/issues/3623)
+- **scheduler:** handle preFlush cb queued inside postFlush cb ([b57e995](https://github.com/vuejs/vue-next/commit/b57e995edd29eff685aeaf40712e0e029073d1cb)), closes [#3806](https://github.com/vuejs/vue-next/issues/3806)
+- **ssr:** handle hydrated async component unmounted before resolve ([b46a4dc](https://github.com/vuejs/vue-next/commit/b46a4dccf656280f9905e1bdc47022cb01c062c3)), closes [#3787](https://github.com/vuejs/vue-next/issues/3787)
+- **watch:** should not leak this context to setup watch getters ([1526f94](https://github.com/vuejs/vue-next/commit/1526f94edf023899490d7c58afcf36b051e25b6c)), closes [#3603](https://github.com/vuejs/vue-next/issues/3603)
+- **compat:** avoid accidentally delete the modelValue prop ([#3772](https://github.com/vuejs/vue-next/issues/3772)) ([4f17be7](https://github.com/vuejs/vue-next/commit/4f17be7b1ce4872ded085a36b95c1897d8c1f299))
+- **compat:** enum coercion warning ([#3755](https://github.com/vuejs/vue-next/issues/3755)) ([f01aadf](https://github.com/vuejs/vue-next/commit/f01aadf2a16a7bef422eb039d7b157bef9ad32fc))
+- **compiler-core:** fix whitespace management for slots with whitespace: 'preserve' ([#3767](https://github.com/vuejs/vue-next/issues/3767)) ([47da921](https://github.com/vuejs/vue-next/commit/47da92146c9fb3fa6b1e250e064ca49b74d815e4)), closes [#3766](https://github.com/vuejs/vue-next/issues/3766)
+- **compiler-dom:** comments in the v-if branchs should be ignored when used in Transition ([#3622](https://github.com/vuejs/vue-next/issues/3622)) ([7c74feb](https://github.com/vuejs/vue-next/commit/7c74feb3dc6beae7ff3ad22193be3b5a0f4d8aac)), closes [#3619](https://github.com/vuejs/vue-next/issues/3619)
+- **compiler-sfc:** support tsx in setup script ([#3825](https://github.com/vuejs/vue-next/issues/3825)) ([01e8ba8](https://github.com/vuejs/vue-next/commit/01e8ba8f873afe3857a23fb68b44fdc057e31781)), closes [#3808](https://github.com/vuejs/vue-next/issues/3808)
+- **compiler-ssr:** disable hoisting in compiler-ssr ([3ef1fcc](https://github.com/vuejs/vue-next/commit/3ef1fcc8590da186664197a0a82e7856011c1693)), closes [#3536](https://github.com/vuejs/vue-next/issues/3536)
+- **devtools:** send update to component owning the slot ([1355ee2](https://github.com/vuejs/vue-next/commit/1355ee27a65d466bfe8f3a7ba99aa2213e25bc50))
+- **runtime-core:** avoid double-setting props when casting ([0255be2](https://github.com/vuejs/vue-next/commit/0255be2f4b3581bfdf4af9368dcd6c1a27a5ee03)), closes [#3371](https://github.com/vuejs/vue-next/issues/3371) [#3384](https://github.com/vuejs/vue-next/issues/3384)
+- **runtime-core:** avoid the proxy object polluting the slots of the internal instance ([#3698](https://github.com/vuejs/vue-next/issues/3698)) ([4ce0df6](https://github.com/vuejs/vue-next/commit/4ce0df6ef1a31ee45402e61e01777e3836b2c223)), closes [#3695](https://github.com/vuejs/vue-next/issues/3695)
+- **types:** declared prop keys should always exist in `props` argument ([#3726](https://github.com/vuejs/vue-next/issues/3726)) ([9b160b9](https://github.com/vuejs/vue-next/commit/9b160b940555abb6b6ce722fddbd9649ee196f7b))
+- **types/reactivity:** error TS4058 caused by `RefSymbol` ([#2548](https://github.com/vuejs/vue-next/issues/2548)) ([90aa835](https://github.com/vuejs/vue-next/commit/90aa8358129f25826bfc4c234325c1442aef8d55))
+- **compat:** correctly merge lifecycle hooks when using Vue.extend ([#3762](https://github.com/vuejs/vue-next/issues/3762)) ([2bfb8b5](https://github.com/vuejs/vue-next/commit/2bfb8b574d39a20a0e4da2ff4f2c007680ee2038)), closes [#3761](https://github.com/vuejs/vue-next/issues/3761)
+- **compiler-core:** bail out to array children when the element has custom directives + only one text child node ([#3757](https://github.com/vuejs/vue-next/issues/3757)) ([a56ab14](https://github.com/vuejs/vue-next/commit/a56ab148fd1f2702e699d31cdc854800c8283fde))
+- **compat:** handle and warn config.optionMergeStrategies ([94e69fd](https://github.com/vuejs/vue-next/commit/94e69fd3896214da6ff8b9fb09ad942c598053c7))
+- **compiler-core:** preserve comment content in production when comments option is enabled ([e486254](https://github.com/vuejs/vue-next/commit/e4862544310a4187dfc8b3a49944700888bb60e3))
+- **hmr:** don't remove \_\_file key from component type ([9db3cbb](https://github.com/vuejs/vue-next/commit/9db3cbbfc1a072675a8d0e53edf3869af115dc60))
+- **hydration:** fix update before async component is hydrated ([#3563](https://github.com/vuejs/vue-next/issues/3563)) ([c8d9683](https://github.com/vuejs/vue-next/commit/c8d96837b871d7ad34cd73b4669338be5fdd59fd)), closes [#3560](https://github.com/vuejs/vue-next/issues/3560)
+- **reactivity:** fix tracking for readonly + reactive Map ([#3604](https://github.com/vuejs/vue-next/issues/3604)) ([5036c51](https://github.com/vuejs/vue-next/commit/5036c51cb78435c145ffea5e82cd620d0d056ff7)), closes [#3602](https://github.com/vuejs/vue-next/issues/3602)
+- **runtime-core:** ensure declare prop keys are always present ([4fe4de0](https://github.com/vuejs/vue-next/commit/4fe4de0a49ffc2461b0394e74674af38ff5e2a20)), closes [#3288](https://github.com/vuejs/vue-next/issues/3288)
+- **runtime-core:** watching multiple sources: computed ([#3066](https://github.com/vuejs/vue-next/issues/3066)) ([e7300eb](https://github.com/vuejs/vue-next/commit/e7300eb47960a153311d568d7976ac5256eb6297)), closes [#3068](https://github.com/vuejs/vue-next/issues/3068)
+- **Teleport:** avoid changing the reference of vnode.dynamicChildren ([#3642](https://github.com/vuejs/vue-next/issues/3642)) ([43f7815](https://github.com/vuejs/vue-next/commit/43f78151bfdff2103a9be25e66e3f3be68d03a08)), closes [#3641](https://github.com/vuejs/vue-next/issues/3641)
+- **watch:** avoid traversing non-plain objects ([62b8f4a](https://github.com/vuejs/vue-next/commit/62b8f4a39ca56b48a8c8fdf7e200cb80735e16ae))
+- **watch:** this.$watch should support watching keypath ([870f2a7](https://github.com/vuejs/vue-next/commit/870f2a7ba35245fd8c008d2ff666ea130a7e4704))
+
+
+
+
+# [3.1.0-beta.7](https://github.com/vuejs/vue-next/compare/v3.1.0-beta.6...v3.1.0-beta.7) (2021-06-02)
+
+
+### Bug Fixes
+
+* **compat:** fix deep data merge with extended constructor ([c7efb96](https://github.com/vuejs/vue-next/commit/c7efb967ca5ab42ea2713331b8e53ae5c2746a78)), closes [#3852](https://github.com/vuejs/vue-next/issues/3852)
+* **compiler-sfc:** fix style injection when using normal script + setup ([8b94464](https://github.com/vuejs/vue-next/commit/8b94464a3b9759a7a98c23efeafc7a9359c9807d)), closes [#3688](https://github.com/vuejs/vue-next/issues/3688)
+* **compiler-sfc:** fix template expression assignment codegen for script setup let refs ([#3626](https://github.com/vuejs/vue-next/issues/3626)) ([2c7bd42](https://github.com/vuejs/vue-next/commit/2c7bd428011e027efa8f66487d2269c8dd79a2b0)), closes [#3625](https://github.com/vuejs/vue-next/issues/3625)
+* **runtime-core:** align option merge behavior with Vue 2 ([e2ca67b](https://github.com/vuejs/vue-next/commit/e2ca67b59a4de57a9bce8d3394263ba493a35a39)), closes [#3566](https://github.com/vuejs/vue-next/issues/3566) [#2791](https://github.com/vuejs/vue-next/issues/2791)
+* **runtime-dom/v-model:** only set selectedIndex when the value changes ([#3845](https://github.com/vuejs/vue-next/issues/3845)) ([ecd97ee](https://github.com/vuejs/vue-next/commit/ecd97ee6e465ec5c841d58d96833fece4e899785))
+* **suspense:** fix suspense regression for errored template component ([44996d1](https://github.com/vuejs/vue-next/commit/44996d1a0a2de1bc6b3abfac6b2b8b3c969d4e01)), closes [#3857](https://github.com/vuejs/vue-next/issues/3857)
+* **watch:** avoid traversing objects that are marked non-reactive ([9acc9a1](https://github.com/vuejs/vue-next/commit/9acc9a1fa838bdcdf673d2f7cc3f996b2b69ffbc))
+
+
+### Code Refactoring
+
+* adjust component options merge cache strategy ([1e35a86](https://github.com/vuejs/vue-next/commit/1e35a860b995c1158d5c4e1706d2fc9bcd3b8412))
+
+
+### Performance Improvements
+
+* avoid deopt for props/emits normalization when global mixins are used ([51d2be2](https://github.com/vuejs/vue-next/commit/51d2be20386d4dc59006d31a1cc96676871027ce))
+
+
+### BREAKING CHANGES
+
+* optionMergeStrategies functions no longer receive
+the component instance as the 3rd argument. The argument was technically
+internal in Vue 2 and only used for generating warnings, and should not
+be needed in userland code. This removal enables much more efficient
+caching of option merging.
+
+
+
+# [3.1.0-beta.6](https://github.com/vuejs/vue-next/compare/v3.1.0-beta.5...v3.1.0-beta.6) (2021-05-28)
+
+
+### Bug Fixes
+
+* **compiler-core:** improve the isMemberExpression function ([#3675](https://github.com/vuejs/vue-next/issues/3675)) ([9b2e894](https://github.com/vuejs/vue-next/commit/9b2e8940176b3b75fa052b3c3e9eeaabc46a95e6))
+* **compiler-dom:** fix in-browser attribute value decoding w/ html tags ([6690372](https://github.com/vuejs/vue-next/commit/669037277b03bb8e67f517faf2811a8668ea86d6)), closes [#3001](https://github.com/vuejs/vue-next/issues/3001)
+* **compiler-sfc:** correctly remove parens used for wrapping ([#3582](https://github.com/vuejs/vue-next/issues/3582)) ([6bfb50a](https://github.com/vuejs/vue-next/commit/6bfb50aff98038a1f854ce24733f545eec2ee796)), closes [#3581](https://github.com/vuejs/vue-next/issues/3581)
+* **reactivity:** ensure computed always expose value ([03a7a73](https://github.com/vuejs/vue-next/commit/03a7a73148a9e210a7889c7a2ecf925338735c70)), closes [#3099](https://github.com/vuejs/vue-next/issues/3099) [#910](https://github.com/vuejs/vue-next/issues/910)
+* **runtime-core:** fix cases of reused children arrays in render functions ([#3670](https://github.com/vuejs/vue-next/issues/3670)) ([a641eb2](https://github.com/vuejs/vue-next/commit/a641eb201fe51620d50884b988f6fefc3e21a20b)), closes [#3666](https://github.com/vuejs/vue-next/issues/3666)
+* **runtime-core:** fix resolving inheritAttrs from mixins ([#3742](https://github.com/vuejs/vue-next/issues/3742)) ([d6607c9](https://github.com/vuejs/vue-next/commit/d6607c9864376fbe17899f3d35fc7b097670a1b1)), closes [#3741](https://github.com/vuejs/vue-next/issues/3741)
+* **runtime-core:** should disable tracking inside directive lifecycle hooks ([#3699](https://github.com/vuejs/vue-next/issues/3699)) ([ff50e8d](https://github.com/vuejs/vue-next/commit/ff50e8d78c033252c4ce7ffddb8069b3ddae5936))
+* **runtime-core:** stricter compat root mount check ([32e2133](https://github.com/vuejs/vue-next/commit/32e21333dd1197a978cf42802729b2133bda5a0b))
+* **runtime-dom:** should remove attribute when binding `null` to `value` ([#3564](https://github.com/vuejs/vue-next/issues/3564)) ([e3f5dcb](https://github.com/vuejs/vue-next/commit/e3f5dcb99bf42fed48d995438e459203dc3f6ed0))
+* **suspense:** fix suspense patching in optimized mode ([9f24195](https://github.com/vuejs/vue-next/commit/9f24195d2ce24184ccdc5020793dd9423f0d3148)), closes [#3828](https://github.com/vuejs/vue-next/issues/3828)
+* **transition:** fix higher order transition components with merged listeners ([071986a](https://github.com/vuejs/vue-next/commit/071986a2c6459fd99b91a48793a9ab6d6618b52d)), closes [#3227](https://github.com/vuejs/vue-next/issues/3227)
+
+
+
+# [3.1.0-beta.5](https://github.com/vuejs/vue-next/compare/v3.1.0-beta.4...v3.1.0-beta.5) (2021-05-26)
+
+
+### Bug Fixes
+
+* **keep-alive:** include/exclude should work with async component ([#3531](https://github.com/vuejs/vue-next/issues/3531)) ([9e3708c](https://github.com/vuejs/vue-next/commit/9e3708ca754c0ecd66dbb45984f8d103772bd55c)), closes [#3529](https://github.com/vuejs/vue-next/issues/3529)
+* **runtime-core:** properly check forwarded slots type ([#3781](https://github.com/vuejs/vue-next/issues/3781)) ([e8ddf86](https://github.com/vuejs/vue-next/commit/e8ddf8608021785c7b1b6f4211c633b40f26ddfc)), closes [#3779](https://github.com/vuejs/vue-next/issues/3779)
+* **runtime-core:** should not track dynamic children when the user calls a compiled slot inside template expression ([#3554](https://github.com/vuejs/vue-next/issues/3554)) ([2010607](https://github.com/vuejs/vue-next/commit/201060717d4498b4b7933bf8a8513866ab9347e4)), closes [#3548](https://github.com/vuejs/vue-next/issues/3548) [#3569](https://github.com/vuejs/vue-next/issues/3569)
+* **runtime-core/teleport:** ensure the nested teleport can be unmounted correctly ([#3629](https://github.com/vuejs/vue-next/issues/3629)) ([4e3f82f](https://github.com/vuejs/vue-next/commit/4e3f82f6835472650741896e19fbdc116d86d1eb)), closes [#3623](https://github.com/vuejs/vue-next/issues/3623)
+* **scheduler:** handle preFlush cb queued inside postFlush cb ([b57e995](https://github.com/vuejs/vue-next/commit/b57e995edd29eff685aeaf40712e0e029073d1cb)), closes [#3806](https://github.com/vuejs/vue-next/issues/3806)
+* **ssr:** handle hydrated async component unmounted before resolve ([b46a4dc](https://github.com/vuejs/vue-next/commit/b46a4dccf656280f9905e1bdc47022cb01c062c3)), closes [#3787](https://github.com/vuejs/vue-next/issues/3787)
+* **watch:** should not leak this context to setup watch getters ([1526f94](https://github.com/vuejs/vue-next/commit/1526f94edf023899490d7c58afcf36b051e25b6c)), closes [#3603](https://github.com/vuejs/vue-next/issues/3603)
+
+
+
+# [3.1.0-beta.4](https://github.com/vuejs/vue-next/compare/v3.1.0-beta.3...v3.1.0-beta.4) (2021-05-24)
+
+
+### Bug Fixes
+
+* **compat:** avoid accidentally delete the modelValue prop ([#3772](https://github.com/vuejs/vue-next/issues/3772)) ([4f17be7](https://github.com/vuejs/vue-next/commit/4f17be7b1ce4872ded085a36b95c1897d8c1f299))
+* **compat:** enum coercion warning ([#3755](https://github.com/vuejs/vue-next/issues/3755)) ([f01aadf](https://github.com/vuejs/vue-next/commit/f01aadf2a16a7bef422eb039d7b157bef9ad32fc))
+* **compiler-core:** fix whitespace management for slots with whitespace: 'preserve' ([#3767](https://github.com/vuejs/vue-next/issues/3767)) ([47da921](https://github.com/vuejs/vue-next/commit/47da92146c9fb3fa6b1e250e064ca49b74d815e4)), closes [#3766](https://github.com/vuejs/vue-next/issues/3766)
+* **compiler-dom:** comments in the v-if branchs should be ignored when used in Transition ([#3622](https://github.com/vuejs/vue-next/issues/3622)) ([7c74feb](https://github.com/vuejs/vue-next/commit/7c74feb3dc6beae7ff3ad22193be3b5a0f4d8aac)), closes [#3619](https://github.com/vuejs/vue-next/issues/3619)
+* **compiler-sfc:** support tsx in setup script ([#3825](https://github.com/vuejs/vue-next/issues/3825)) ([01e8ba8](https://github.com/vuejs/vue-next/commit/01e8ba8f873afe3857a23fb68b44fdc057e31781)), closes [#3808](https://github.com/vuejs/vue-next/issues/3808)
+* **compiler-ssr:** disable hoisting in compiler-ssr ([3ef1fcc](https://github.com/vuejs/vue-next/commit/3ef1fcc8590da186664197a0a82e7856011c1693)), closes [#3536](https://github.com/vuejs/vue-next/issues/3536)
+* **devtools:** send update to component owning the slot ([1355ee2](https://github.com/vuejs/vue-next/commit/1355ee27a65d466bfe8f3a7ba99aa2213e25bc50))
+* **runtime-core:** avoid double-setting props when casting ([0255be2](https://github.com/vuejs/vue-next/commit/0255be2f4b3581bfdf4af9368dcd6c1a27a5ee03)), closes [#3371](https://github.com/vuejs/vue-next/issues/3371) [#3384](https://github.com/vuejs/vue-next/issues/3384)
+* **runtime-core:** avoid the proxy object polluting the slots of the internal instance ([#3698](https://github.com/vuejs/vue-next/issues/3698)) ([4ce0df6](https://github.com/vuejs/vue-next/commit/4ce0df6ef1a31ee45402e61e01777e3836b2c223)), closes [#3695](https://github.com/vuejs/vue-next/issues/3695)
+* **types:** declared prop keys should always exist in `props` argument ([#3726](https://github.com/vuejs/vue-next/issues/3726)) ([9b160b9](https://github.com/vuejs/vue-next/commit/9b160b940555abb6b6ce722fddbd9649ee196f7b))
+* **types/reactivity:** error TS4058 caused by `RefSymbol` ([#2548](https://github.com/vuejs/vue-next/issues/2548)) ([90aa835](https://github.com/vuejs/vue-next/commit/90aa8358129f25826bfc4c234325c1442aef8d55))
+
+
+### Features
+
+* **devtools:** performance events ([f7c54ca](https://github.com/vuejs/vue-next/commit/f7c54caeb1dac69a26b79c98409e9633a7fe4bd3))
+
+
+
+# [3.1.0-beta.3](https://github.com/vuejs/vue-next/compare/v3.1.0-beta.2...v3.1.0-beta.3) (2021-05-12)
+
+
+### Bug Fixes
+
+* **compat:** correctly merge lifecycle hooks when using Vue.extend ([#3762](https://github.com/vuejs/vue-next/issues/3762)) ([2bfb8b5](https://github.com/vuejs/vue-next/commit/2bfb8b574d39a20a0e4da2ff4f2c007680ee2038)), closes [#3761](https://github.com/vuejs/vue-next/issues/3761)
+* **compiler-core:** bail out to array children when the element has custom directives + only one text child node ([#3757](https://github.com/vuejs/vue-next/issues/3757)) ([a56ab14](https://github.com/vuejs/vue-next/commit/a56ab148fd1f2702e699d31cdc854800c8283fde))
+
+
+
+# [3.1.0-beta.2](https://github.com/vuejs/vue-next/compare/v3.1.0-beta.1...v3.1.0-beta.2) (2021-05-08)
+
+
+### Bug Fixes
+
+* **compat:** handle and warn config.optionMergeStrategies ([94e69fd](https://github.com/vuejs/vue-next/commit/94e69fd3896214da6ff8b9fb09ad942c598053c7))
+
+
+
+# [3.1.0-beta.1](https://github.com/vuejs/vue-next/compare/v3.0.11...v3.1.0-beta.1) (2021-05-08)
+
+
+### Bug Fixes
+
+* **compiler-core:** preserve comment content in production when comments option is enabled ([e486254](https://github.com/vuejs/vue-next/commit/e4862544310a4187dfc8b3a49944700888bb60e3))
+* **hmr:** don't remove __file key from component type ([9db3cbb](https://github.com/vuejs/vue-next/commit/9db3cbbfc1a072675a8d0e53edf3869af115dc60))
+* **hydration:** fix update before async component is hydrated ([#3563](https://github.com/vuejs/vue-next/issues/3563)) ([c8d9683](https://github.com/vuejs/vue-next/commit/c8d96837b871d7ad34cd73b4669338be5fdd59fd)), closes [#3560](https://github.com/vuejs/vue-next/issues/3560)
+* **reactivity:** fix tracking for readonly + reactive Map ([#3604](https://github.com/vuejs/vue-next/issues/3604)) ([5036c51](https://github.com/vuejs/vue-next/commit/5036c51cb78435c145ffea5e82cd620d0d056ff7)), closes [#3602](https://github.com/vuejs/vue-next/issues/3602)
+* **runtime-core:** ensure declare prop keys are always present ([4fe4de0](https://github.com/vuejs/vue-next/commit/4fe4de0a49ffc2461b0394e74674af38ff5e2a20)), closes [#3288](https://github.com/vuejs/vue-next/issues/3288)
+* **runtime-core:** watching multiple sources: computed ([#3066](https://github.com/vuejs/vue-next/issues/3066)) ([e7300eb](https://github.com/vuejs/vue-next/commit/e7300eb47960a153311d568d7976ac5256eb6297)), closes [#3068](https://github.com/vuejs/vue-next/issues/3068)
+* **Teleport:** avoid changing the reference of vnode.dynamicChildren ([#3642](https://github.com/vuejs/vue-next/issues/3642)) ([43f7815](https://github.com/vuejs/vue-next/commit/43f78151bfdff2103a9be25e66e3f3be68d03a08)), closes [#3641](https://github.com/vuejs/vue-next/issues/3641)
+* **watch:** avoid traversing non-plain objects ([62b8f4a](https://github.com/vuejs/vue-next/commit/62b8f4a39ca56b48a8c8fdf7e200cb80735e16ae))
+* **watch:** this.$watch should support watching keypath ([870f2a7](https://github.com/vuejs/vue-next/commit/870f2a7ba35245fd8c008d2ff666ea130a7e4704))
+
+
+### Features
+
+* onServerPrefetch ([#3070](https://github.com/vuejs/vue-next/issues/3070)) ([349eb0f](https://github.com/vuejs/vue-next/commit/349eb0f0ad78f9cb491278eb4c7f9fe0c2e78b79))
+* support component-level `compilerOptions` when using runtime compiler ([ce0bbe0](https://github.com/vuejs/vue-next/commit/ce0bbe053abaf8ba18de8baf535e175048596ee5))
+* **compiler-core:** whitespace handling strategy ([dee3d6a](https://github.com/vuejs/vue-next/commit/dee3d6ab8b4da6653d15eb148c51d9878007f6b6))
+* **config:** support configuring runtime compiler via `app.config.compilerOptions` ([091e6d6](https://github.com/vuejs/vue-next/commit/091e6d67bfcc215227d78be578c68ead542481ad))
+* **devtools:** improved KeepAlive support ([03ae300](https://github.com/vuejs/vue-next/commit/03ae3006e1e678ade4377cd10d206e8f7b4ad0cb))
+* support casting plain element to component via is="vue:xxx" ([af9e699](https://github.com/vuejs/vue-next/commit/af9e6999e1779f56b5cf827b97310d8e4e1fe5ec))
+
+
+### Performance Improvements
+
+* only trigger $attrs update when it has actually changed ([5566d39](https://github.com/vuejs/vue-next/commit/5566d39d467ebdd4e4234bc97d62600ff01ea28e))
+* **compiler:** skip unncessary checks when parsing end tag ([048ac29](https://github.com/vuejs/vue-next/commit/048ac299f35709b25ae1bc1efa67d2abc53dbc3b))
+
+
+
+## [3.0.11](https://github.com/vuejs/vue-next/compare/v3.0.10...v3.0.11) (2021-04-01)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** fix wrong scopeId for nested `<script setup>` components ([7f7dcc9](https://github.com/vuejs/vue-next/commit/7f7dcc9f7d9a036df366453e2bf228f29c0bef82))
+* **runtime-core:** fix render function + optimized slot edge case ([#3523](https://github.com/vuejs/vue-next/issues/3523)) ([995d76b](https://github.com/vuejs/vue-next/commit/995d76bd128c3f4d264f10212f2a8e8946f58a62)), closes [#2893](https://github.com/vuejs/vue-next/issues/2893)
+* **runtime-core:** fix v-on object kebab-case event emit matching ([c1cd42e](https://github.com/vuejs/vue-next/commit/c1cd42e627bdeb561d54e64ea5fea87ccbbae637)), closes [#3527](https://github.com/vuejs/vue-next/issues/3527)
+
+
+
+## [3.0.10](https://github.com/vuejs/vue-next/compare/v3.0.9...v3.0.10) (2021-03-31)
+
+
+### Bug Fixes
+
+* **compiler-core:** allow PascalCase dynamic component tag usage ([#3508](https://github.com/vuejs/vue-next/issues/3508)) ([555b016](https://github.com/vuejs/vue-next/commit/555b016dcb3b347a1d8b3d14df74c175115adb0b)), closes [#3507](https://github.com/vuejs/vue-next/issues/3507)
+* **compiler-core:** properly transform replaced nodes ([#2927](https://github.com/vuejs/vue-next/issues/2927)) ([0fe567a](https://github.com/vuejs/vue-next/commit/0fe567abfcb7c685954231995033d04c86b6ef8a))
+* **compiler-sfc:** do not resolve assets from setup bindings ([f5827fd](https://github.com/vuejs/vue-next/commit/f5827fdf781c97234e9f82095e5e0cdadd404338)), closes [#3270](https://github.com/vuejs/vue-next/issues/3270) [#3275](https://github.com/vuejs/vue-next/issues/3275)
+* **compiler-sfc:** fix function scope variable declaration marking ([69b4727](https://github.com/vuejs/vue-next/commit/69b4727204256795d37a29930be33ab4f864af38))
+* **compiler-sfc:** fix missing whitespace issue in srcsets ([#3132](https://github.com/vuejs/vue-next/issues/3132)) ([42b68c7](https://github.com/vuejs/vue-next/commit/42b68c773d1e1a04af223eb241329df50bac1d15)), closes [#3069](https://github.com/vuejs/vue-next/issues/3069)
+* **compiler-sfc:** support proper type arguments for defineEmit helper ([bb8cdca](https://github.com/vuejs/vue-next/commit/bb8cdcad9f91f099c12ad78afacfc909e6269a7c)), closes [#2874](https://github.com/vuejs/vue-next/issues/2874)
+* **reactivity:** should not trigger when setting value to same proxy ([#2904](https://github.com/vuejs/vue-next/issues/2904)) ([c61e767](https://github.com/vuejs/vue-next/commit/c61e7674221cd51df87aafc92367273c8815af6c))
+* **runtime-core:** avoid unmount teleport's children multiple times ([#3499](https://github.com/vuejs/vue-next/issues/3499)) ([3736496](https://github.com/vuejs/vue-next/commit/3736496006485e61614bef285ea89ea2a33134c4)), closes [#3497](https://github.com/vuejs/vue-next/issues/3497)
+* **runtime-core:** fix dev fragment root flag check ([9cf7525](https://github.com/vuejs/vue-next/commit/9cf75258c866bbdb2023c066cc3579fb86f15f40))
+* **runtime-dom:** fix event listeners call in firefox <= 53 ([#3501](https://github.com/vuejs/vue-next/issues/3501)) ([33ba0e3](https://github.com/vuejs/vue-next/commit/33ba0e3229de02b7f4dda9465e4df16e177ea8cc)), closes [#3485](https://github.com/vuejs/vue-next/issues/3485)
+* **ssr:** fix scopeId inheritance across mixed parent chain ([5e54081](https://github.com/vuejs/vue-next/commit/5e54081d5bfd0412fe4946c80b5c538f2afd7fb8)), closes [#3513](https://github.com/vuejs/vue-next/issues/3513)
+* **types:** add a type-only differentiator to assist Mixin's type infer ([#3481](https://github.com/vuejs/vue-next/issues/3481)) ([5db2b14](https://github.com/vuejs/vue-next/commit/5db2b141dcf20af5c762f7e40580904c43298764)), closes [#3468](https://github.com/vuejs/vue-next/issues/3468)
+* **types/tsx:** make JSX.Element extend VNode ([#3171](https://github.com/vuejs/vue-next/issues/3171)) ([4f26835](https://github.com/vuejs/vue-next/commit/4f26835dac5c345e6ccb2e2c2844f3560daa1de3))
+
+
+### Performance Improvements
+
+* **compiler-sfc:** skip srcset transform if all candidates are external ([b39208c](https://github.com/vuejs/vue-next/commit/b39208cf06a56b115016be18d5ee368a8f9dff74))
+* **runtime-core:** optimize the performance of getTypeIndex ([#3206](https://github.com/vuejs/vue-next/issues/3206)) ([2e50acf](https://github.com/vuejs/vue-next/commit/2e50acfbb89c29a071765d7f3967d2ccaf14f375))
+
+
+
+## [3.0.9](https://github.com/vuejs/vue-next/compare/v3.0.8...v3.0.9) (2021-03-27)
+
+
+### Bug Fixes
+
+* **compiler-core:** fix slot source location ([#3494](https://github.com/vuejs/vue-next/issues/3494)) ([e752bdd](https://github.com/vuejs/vue-next/commit/e752bddb33b8d150e9f071f15b91a39d326522a3))
+* **runtime-core:** fix kebab-case prop required warning ([2121c32](https://github.com/vuejs/vue-next/commit/2121c32e228376c01de4335e2fcc645b7581cd4b)), closes [#3495](https://github.com/vuejs/vue-next/issues/3495) [#3363](https://github.com/vuejs/vue-next/issues/3363)
+* **runtime-core:** remove dev-only props property from setup context for consistency ([#3492](https://github.com/vuejs/vue-next/issues/3492)) ([4549e65](https://github.com/vuejs/vue-next/commit/4549e65baea54bfd10116241a6a5eba91ec3f632))
+* ensure backwards compat for pre-compiled sfc components ([37c1709](https://github.com/vuejs/vue-next/commit/37c17091fddb26d54e080d2867102d017f09171f)), closes [#3493](https://github.com/vuejs/vue-next/issues/3493)
+
+
+
+## [3.0.8](https://github.com/vuejs/vue-next/compare/v3.0.7...v3.0.8) (2021-03-26)
+
+
+### Bug Fixes
+
+* **compiler:** properly bail stringfication for nested slot elements ([f74b16c](https://github.com/vuejs/vue-next/commit/f74b16ccfe42abddf6abfa6105900ad9b8124a96))
+* **compiler-core:** allow unicode to appear in identifiers ([#3443](https://github.com/vuejs/vue-next/issues/3443)) ([ebedccc](https://github.com/vuejs/vue-next/commit/ebedcccdc04d8cda40f7a3b69354acfdda265c74)), closes [#3440](https://github.com/vuejs/vue-next/issues/3440)
+* **compiler-core:** avoid generating useless createVNode helper ([#2938](https://github.com/vuejs/vue-next/issues/2938)) ([7715c49](https://github.com/vuejs/vue-next/commit/7715c49af92f5db0e4eef52d983850c08439d87c)), closes [#2739](https://github.com/vuejs/vue-next/issues/2739)
+* **compiler-core:** detect v-if branch root with comment as dev fragment ([#2785](https://github.com/vuejs/vue-next/issues/2785)) ([4bf7ba1](https://github.com/vuejs/vue-next/commit/4bf7ba19bf6b1a6c242090d512c91e1bf8c7c8cc)), closes [#2780](https://github.com/vuejs/vue-next/issues/2780)
+* **compiler-core:** fix the detection of forwarded slots with v-if or v-for ([#3353](https://github.com/vuejs/vue-next/issues/3353)) ([602b58e](https://github.com/vuejs/vue-next/commit/602b58ebd1923dd48669755d5f5b67c5478cc625)), closes [#3347](https://github.com/vuejs/vue-next/issues/3347)
+* **compiler-core:** should not condense whitespace in RCDATA text mode ([#3482](https://github.com/vuejs/vue-next/issues/3482)) ([b4b8215](https://github.com/vuejs/vue-next/commit/b4b82159e2175d27f7d1f2641d262269f981fc86)), closes [#3479](https://github.com/vuejs/vue-next/issues/3479)
+* **compiler-dom:** stringifyStatic should remove attribute bindings with `null` value ([#3477](https://github.com/vuejs/vue-next/issues/3477)) ([ca6aa01](https://github.com/vuejs/vue-next/commit/ca6aa01181dd15e2ab76d89538cf898221f927cd)), closes [#3475](https://github.com/vuejs/vue-next/issues/3475)
+* **compiler-sfc:** scope Id should not be attached to [@keyframe](https://github.com/keyframe) breakpoint rules ([#3308](https://github.com/vuejs/vue-next/issues/3308)) ([6cb9475](https://github.com/vuejs/vue-next/commit/6cb94752b0354117669de94f81c5195ec8c7f40c)), closes [#3304](https://github.com/vuejs/vue-next/issues/3304)
+* **compiler-sfc:** should not rewrite scope variable ([#3449](https://github.com/vuejs/vue-next/issues/3449)) ([bbc5fe6](https://github.com/vuejs/vue-next/commit/bbc5fe6a9716efe87fdb4c4ac51fcdc3bd541904)), closes [#3445](https://github.com/vuejs/vue-next/issues/3445)
+* **compiler-ssr:** keep the order of imports expression for the fallback branch of SSR ([#3448](https://github.com/vuejs/vue-next/issues/3448)) ([49f4072](https://github.com/vuejs/vue-next/commit/49f4072c83c06a66e2b7a334d8dedabd1b433ca9)), closes [#3447](https://github.com/vuejs/vue-next/issues/3447)
+* **component:** prioritize registered component over implicit self-reference via filename ([abd129d](https://github.com/vuejs/vue-next/commit/abd129d845951737c335a80a8af6cf7b0df2f74d)), closes [#2827](https://github.com/vuejs/vue-next/issues/2827)
+* **hydration:** handle camel-case tag name when performing match assertion ([#3247](https://github.com/vuejs/vue-next/issues/3247)) ([9036f88](https://github.com/vuejs/vue-next/commit/9036f88d8304a3455265f1ecd86ec8f4a5ea4715)), closes [#3243](https://github.com/vuejs/vue-next/issues/3243)
+* **KeepAlive:** adapt keepalive for ssr ([#3259](https://github.com/vuejs/vue-next/issues/3259)) ([e8e9b00](https://github.com/vuejs/vue-next/commit/e8e9b00f81ed42434afd92f84101e7a14d70a23c)), closes [#3255](https://github.com/vuejs/vue-next/issues/3255)
+* **reactivity:** ensure computed can be wrapped by readonly ([41e02f0](https://github.com/vuejs/vue-next/commit/41e02f0fac069c93c94438741517e713f3c94215)), closes [#3376](https://github.com/vuejs/vue-next/issues/3376)
+* **reactivity:** ensure that shallow and normal proxies are tracked seperately (close [#2843](https://github.com/vuejs/vue-next/issues/2843)) ([#2851](https://github.com/vuejs/vue-next/issues/2851)) ([22cc4a7](https://github.com/vuejs/vue-next/commit/22cc4a76592cfe336e75e2fa0c05232ae1f0f149))
+* **reactivity:** fix shallow readonly behavior for collections ([#3003](https://github.com/vuejs/vue-next/issues/3003)) ([68de9f4](https://github.com/vuejs/vue-next/commit/68de9f408a2e61a5726a4a0d03b026cba451c5bd)), closes [#3007](https://github.com/vuejs/vue-next/issues/3007)
+* **rumtime-core:** custom dom props should be cloned when cloning a hoisted DOM ([#3080](https://github.com/vuejs/vue-next/issues/3080)) ([5dbe834](https://github.com/vuejs/vue-next/commit/5dbe8348581dacd7a3594a9b0055ce350ce8e5bf)), closes [#3072](https://github.com/vuejs/vue-next/issues/3072)
+* **runtime-core:** cache props default values to avoid unnecessary watcher trigger ([#3474](https://github.com/vuejs/vue-next/issues/3474)) ([44166b4](https://github.com/vuejs/vue-next/commit/44166b43d9be1062f79612880f71284049bcab0b)), closes [#3471](https://github.com/vuejs/vue-next/issues/3471)
+* **runtime-core:** ensure only skip unflushed job ([#3406](https://github.com/vuejs/vue-next/issues/3406)) ([bf34e33](https://github.com/vuejs/vue-next/commit/bf34e33c909da89681b9c5004cdf04ab198ec5a7))
+* **runtime-core:** fix async component ref handling ([#3191](https://github.com/vuejs/vue-next/issues/3191)) ([7562e72](https://github.com/vuejs/vue-next/commit/7562e72c2b58a5646bd4fbd9adea11eb884fe140)), closes [#3188](https://github.com/vuejs/vue-next/issues/3188)
+* **runtime-core:** fix erraneous emits warnings w/ mixins ([60d777d](https://github.com/vuejs/vue-next/commit/60d777d228414515cc32526ad72a53ef070501be)), closes [#2651](https://github.com/vuejs/vue-next/issues/2651)
+* **runtime-core:** fix warning for absent props ([#3363](https://github.com/vuejs/vue-next/issues/3363)) ([86ceef4](https://github.com/vuejs/vue-next/commit/86ceef43523bfbbb0a24731d3802ca6849cbefd6)), closes [#3362](https://github.com/vuejs/vue-next/issues/3362)
+* **runtime-core:** handle error in async setup ([#2881](https://github.com/vuejs/vue-next/issues/2881)) ([d668d48](https://github.com/vuejs/vue-next/commit/d668d48e9e5211a49ee53361ea5b4d67ba16e0a3))
+* **runtime-core:** handle error in async watchEffect ([#3129](https://github.com/vuejs/vue-next/issues/3129)) ([eb1fae6](https://github.com/vuejs/vue-next/commit/eb1fae63f926435fb0eef890663d24e09d4c79e1))
+* **runtime-core:** should call chained mixins and extends ([#3040](https://github.com/vuejs/vue-next/issues/3040)) ([b58bb16](https://github.com/vuejs/vue-next/commit/b58bb169590297daf9df0433b413fab118f18486)), closes [#3038](https://github.com/vuejs/vue-next/issues/3038)
+* **runtime-core:** should not cache property access during data() invocation ([#3299](https://github.com/vuejs/vue-next/issues/3299)) ([6e88156](https://github.com/vuejs/vue-next/commit/6e88156934a88c891fa1014c46c04a3fa1a5eaeb)), closes [#3297](https://github.com/vuejs/vue-next/issues/3297)
+* **runtime-core:** should not track deps in pre flush watcher callbacks ([d5824b9](https://github.com/vuejs/vue-next/commit/d5824b97c570eb9e3d689b840f098e401e458d05)), closes [#2728](https://github.com/vuejs/vue-next/issues/2728)
+* **runtime-core:** the select tag's multiple prop should be set before the children mounting ([#3202](https://github.com/vuejs/vue-next/issues/3202)) ([2451dd8](https://github.com/vuejs/vue-next/commit/2451dd8ae63cc0667a234f9896b1a4f241d4cb44)), closes [#3199](https://github.com/vuejs/vue-next/issues/3199)
+* **runtime-dom:** support mounting app to svg container ([#2929](https://github.com/vuejs/vue-next/issues/2929)) ([8ffcde2](https://github.com/vuejs/vue-next/commit/8ffcde2836baa41d279d9cc079f139a2e31cf6be)), closes [#2926](https://github.com/vuejs/vue-next/issues/2926)
+* **ssr:** ensure async setup error handling work with suspense during ssr ([2e71f07](https://github.com/vuejs/vue-next/commit/2e71f07bc1bab09ca6970b8992d05aeea9b5e9e4))
+* **ssr:** fix memory leak when vnode component render throws error ([da944cb](https://github.com/vuejs/vue-next/commit/da944cb37987212d1b1a860b79f43a7c85814225)), closes [#3100](https://github.com/vuejs/vue-next/issues/3100)
+* **ssr:** properly update currentRenderingInstance state during ssr ([8c3c14a](https://github.com/vuejs/vue-next/commit/8c3c14a0ff02bffbc37e1b069d4ff3c7e086a1d5)), closes [#2863](https://github.com/vuejs/vue-next/issues/2863)
+* **ssr:** respect render function from extends/mixins in ssr ([#3006](https://github.com/vuejs/vue-next/issues/3006)) ([0a583d5](https://github.com/vuejs/vue-next/commit/0a583d5ca224d2cba878dc6b0fb8d468e658f1ef)), closes [#3004](https://github.com/vuejs/vue-next/issues/3004)
+* **ssr:** watchEffect onInvalidate runner initialization ([#3323](https://github.com/vuejs/vue-next/issues/3323)) ([e4b5fcc](https://github.com/vuejs/vue-next/commit/e4b5fccd0c54a1109737ae75b3ca2bc603cb05b3)), closes [#3322](https://github.com/vuejs/vue-next/issues/3322)
+* **ssr/hydration:** handle ending empty text node ([#3246](https://github.com/vuejs/vue-next/issues/3246)) ([420c8f4](https://github.com/vuejs/vue-next/commit/420c8f4580dddea9a724cfadc4cc2c272181c24d)), closes [#3245](https://github.com/vuejs/vue-next/issues/3245)
+* **teleport:** targetAnchor should also be removed when unmounted ([#2870](https://github.com/vuejs/vue-next/issues/2870)) ([21d1288](https://github.com/vuejs/vue-next/commit/21d128813353fd5d5a5304f8fb885265f5163cd8))
+* **Teleport:** component with multi roots should be removed when unmounted ([#3157](https://github.com/vuejs/vue-next/issues/3157)) ([7769513](https://github.com/vuejs/vue-next/commit/776951315d38fb93b75892bd60a69177b4480f67)), closes [#3156](https://github.com/vuejs/vue-next/issues/3156)
+* **Teleport:** fallback to non-optimized mode when HRM performing updates ([#3311](https://github.com/vuejs/vue-next/issues/3311)) ([9cb21d0](https://github.com/vuejs/vue-next/commit/9cb21d088edd097b75a038f2c11d1c921406686f)), closes [#3302](https://github.com/vuejs/vue-next/issues/3302)
+* **transition:** toggling branches with in-out mode should be transitioned correctly ([#3109](https://github.com/vuejs/vue-next/issues/3109)) ([67a0290](https://github.com/vuejs/vue-next/commit/67a0290c0aa5626dbc71b66b00e7ca7755e339cb)), closes [#3104](https://github.com/vuejs/vue-next/issues/3104)
+* **types:** allow style to be an array in JSX ([#2947](https://github.com/vuejs/vue-next/issues/2947)) ([13c9d2c](https://github.com/vuejs/vue-next/commit/13c9d2ca82d60652ef19fe055ecbe0d05134007b))
+* **types:** union function prop ([#3119](https://github.com/vuejs/vue-next/issues/3119)) ([3755e60](https://github.com/vuejs/vue-next/commit/3755e60c52adcd83e569f32c3d31d8854b4fdd8d)), closes [#3357](https://github.com/vuejs/vue-next/issues/3357)
+* **types:** unwrap refs on public instance data ([#3319](https://github.com/vuejs/vue-next/issues/3319)) ([2b588cf](https://github.com/vuejs/vue-next/commit/2b588cf1bc03329576b8759c9072e3e551b739f1)), closes [#3315](https://github.com/vuejs/vue-next/issues/3315)
+* **types/jsx:** llow tabindex to be a string ([#3476](https://github.com/vuejs/vue-next/issues/3476)) ([e4a5712](https://github.com/vuejs/vue-next/commit/e4a5712a33d10d3087f1c3cff0ecdf5569a84d94))
+* add display name for suspense component ([#3312](https://github.com/vuejs/vue-next/issues/3312)) ([3b3a9a1](https://github.com/vuejs/vue-next/commit/3b3a9a1f5225fb734d16ffe2d596f457e9c47cec))
+
+
+### Performance Improvements
+
+* support only attaching slot scope ids when necessary ([02cbbb7](https://github.com/vuejs/vue-next/commit/02cbbb718ca226b087c42e6f132120931307c2a6))
+
+
+
 ## [3.0.7](https://github.com/vuejs/vue-next/compare/v3.0.6...v3.0.7) (2021-03-01)
 
 

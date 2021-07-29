@@ -49,12 +49,14 @@ async function main() {
     })
 
     if (release === 'custom') {
-      targetVersion = (await prompt({
-        type: 'input',
-        name: 'version',
-        message: 'Input custom version',
-        initial: currentVersion
-      })).version
+      targetVersion = (
+        await prompt({
+          type: 'input',
+          name: 'version',
+          message: 'Input custom version',
+          initial: currentVersion
+        })
+      ).version
     } else {
       targetVersion = release.match(/\((.*)\)/)[1]
     }
@@ -181,9 +183,21 @@ async function publishPackage(pkgName, version, runIfNotDry) {
     return
   }
 
-  // for now (alpha/beta phase), every package except "vue" can be published as
+  // For now, all 3.x packages except "vue" can be published as
   // `latest`, whereas "vue" will be published under the "next" tag.
-  const releaseTag = args.tag || (pkgName === 'vue' ? 'next' : null)
+  let releaseTag = null
+  if (args.tag) {
+    releaseTag = args.tag
+  } else if (version.includes('alpha')) {
+    releaseTag = 'alpha'
+  } else if (version.includes('beta')) {
+    releaseTag = 'beta'
+  } else if (version.includes('rc')) {
+    releaseTag = 'rc'
+  } else if (pkgName === 'vue') {
+    // TODO remove when 3.x becomes default
+    releaseTag = 'next'
+  }
 
   // TODO use inferred release channel after official 3.0 release
   // const releaseTag = semver.prerelease(version)[0] || null
