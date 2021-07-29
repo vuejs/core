@@ -1,4 +1,3 @@
-import { remove } from '@vue/shared'
 import { ReactiveEffect } from './effect'
 import { warn } from './warning'
 
@@ -7,15 +6,21 @@ const effectScopeStack: EffectScope[] = []
 
 export class EffectScope {
   active = true
-  effects: (ReactiveEffect | EffectScope)[] = []
+  effects: ReactiveEffect[] = []
   cleanups: (() => void)[] = []
   parent: EffectScope | undefined
+  private children: EffectScope[] | undefined
+  private parentIndex: number | undefined
 
   constructor(detached = false) {
     if (!detached) {
-      recordEffectScope(this)
-      this.parent = activeEffectScope
+      this.recordEffectScope()
     }
+  }
+
+  get scopes(): EffectScope[] {
+    if (!this.children) this.children = []
+    return this.children
   }
 
   run<T>(fn: () => T): T | undefined {
@@ -45,14 +50,31 @@ export class EffectScope {
     }
   }
 
-  stop(fromParent = false) {
+  stop() {
     if (this.active) {
-      this.effects.forEach(e => e.stop(true))
+      this.effects.forEach(e => e.stop())
+      this.children?.forEach(e => e.stop())
       this.cleanups.forEach(cleanup => cleanup())
+      this.parent?.derefChildScope(this)
       this.active = false
-      if (!fromParent && this.parent) {
-        remove(this.parent.effects, this)
-      }
+    }
+  }
+
+  private recordEffectScope() {
+    const parent = activeEffectScope
+    if (parent && parent.active) {
+      this.parent = parent
+      this.parentIndex = parent.scopes.push(this) - 1
+    }
+  }
+
+  private derefChildScope(scope: EffectScope) {
+    // reuse the freed index by moving the last array entry
+    const last = this.scopes.pop()
+    if (last && last !== scope) {
+      const childIndex = scope.parentIndex!
+      this.scopes[childIndex] = last
+      last.parentIndex = childIndex
     }
   }
 }
@@ -62,7 +84,7 @@ export function effectScope(detached?: boolean) {
 }
 
 export function recordEffectScope(
-  effect: ReactiveEffect | EffectScope,
+  effect: ReactiveEffect,
   scope?: EffectScope | null
 ) {
   scope = scope || activeEffectScope
