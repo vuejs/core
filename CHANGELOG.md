@@ -1,3 +1,21 @@
+# [3.2.0-beta.7](https://github.com/vuejs/vue-next/compare/v3.2.0-beta.6...v3.2.0-beta.7) (2021-07-29)
+
+
+### Bug Fixes
+
+* **reactivity:** dereference nested effect scopes on manual stop ([1867591](https://github.com/vuejs/vue-next/commit/1867591e7c54406e92575753dd77fffba17606a2))
+* **sfc/style-vars:** improve ignore style variable bindings in comments ([#4202](https://github.com/vuejs/vue-next/issues/4202)) ([771635b](https://github.com/vuejs/vue-next/commit/771635b72af598c4dd5c3a034b31613fe208e4b3))
+* **shared:** support custom .toString() in text interpolation again ([#4210](https://github.com/vuejs/vue-next/issues/4210)) ([9d5fd33](https://github.com/vuejs/vue-next/commit/9d5fd33d6dadf3186f7979d811dedf092f3ddcb7)), closes [#3944](https://github.com/vuejs/vue-next/issues/3944)
+* **suspense:** fix dynamicChildren tracking when suspense root is a block itself ([51ee84f](https://github.com/vuejs/vue-next/commit/51ee84fc6a5a1ab83cd02f17154803c47e65ae16)), closes [#4183](https://github.com/vuejs/vue-next/issues/4183) [#4198](https://github.com/vuejs/vue-next/issues/4198)
+
+
+### Features
+
+* **server-renderer:** decouple esm build from Node + improve stream API ([0867222](https://github.com/vuejs/vue-next/commit/08672222c611a61f6359543aa202f0841d199bcb)), closes [#3467](https://github.com/vuejs/vue-next/issues/3467) [#3111](https://github.com/vuejs/vue-next/issues/3111) [#3460](https://github.com/vuejs/vue-next/issues/3460)
+* **sfc:** remove experimental status for sfc style v-bind ([3b38c9a](https://github.com/vuejs/vue-next/commit/3b38c9ae9b08c41ee3a70c8ef94fd078f05a8925))
+
+
+
 # [3.2.0-beta.6](https://github.com/vuejs/vue-next/compare/v3.2.0-beta.5...v3.2.0-beta.6) (2021-07-27)
 
 
