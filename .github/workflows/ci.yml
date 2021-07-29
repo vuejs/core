@@ -11,6 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
+      - name: Set node version to 16
+        uses: actions/setup-node@v2
+        with:
+          node-version: 16
       - uses: bahmutov/npm-install@v1
       - name: Run unit tests
         run: yarn test --ci
@@ -19,6 +23,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
+      - name: Set node version to 16
+        uses: actions/setup-node@v2
+        with:
+          node-version: 16
       - uses: bahmutov/npm-install@v1
       - name: Run type declaration tests
         run: yarn test-dts
@@ -29,6 +37,10 @@ jobs:
       CI_JOB_NUMBER: 1
     steps:
       - uses: actions/checkout@v1
+      - name: Set node version to 16
+        uses: actions/setup-node@v2
+        with:
+          node-version: 16
       - uses: bahmutov/npm-install@v1
 
       - name: Check build size
