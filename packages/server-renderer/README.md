@@ -50,7 +50,10 @@ Renders input as a [Node.js Readable stream](https://nodejs.org/api/stream.html#
 **Signature**
 
 ```ts
-function renderToNodeStream(input: App | VNode, context?: SSRContext): Readable
+function renderToNodeStream(
+  input: App | VNode,
+  context?: SSRContext
+): Readable
 ```
 
 **Usage**
