@@ -21,7 +21,7 @@ export const toDisplayString = (val: unknown): string => {
 
 const replacer = (_key: string, val: any): any => {
   // can't use isRef here since @vue/shared has no deps
-  if (val && val.__v_isRef) {
+  if (val && val.__v_isRef && !val.__v_skip) {
     return replacer(_key, val.value)
   } else if (isMap(val)) {
     return {
