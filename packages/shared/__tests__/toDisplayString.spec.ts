@@ -1,4 +1,4 @@
-import { computed, ref } from '@vue/reactivity'
+import { computed, ref, markRaw } from '@vue/reactivity'
 import { toDisplayString } from '../src'
 
 describe('toDisplayString', () => {
@@ -21,6 +21,22 @@ describe('toDisplayString', () => {
     expect(toDisplayString(arr)).toBe(JSON.stringify(arr, null, 2))
   })
 
+  test('markRaw ref', () => {
+    let rawValue = 5
+
+    let refRaw = markRaw(ref(rawValue))
+
+    // spy on value getter
+    let spyRefRawValue = jest.spyOn(refRaw, 'value', 'get')
+
+    let refRawDisplayString = toDisplayString(refRaw)
+    expect(refRawDisplayString).toBe(JSON.stringify(refRaw, null, 2))
+    expect(refRawDisplayString).not.toBe('5')
+
+    // .value should not be accessed as to not trigger reactivity
+    expect(spyRefRawValue).not.toHaveBeenCalled()
+  })
+
   test('refs', () => {
     const n = ref(1)
     const np = computed(() => n.value + 1)
@@ -31,7 +47,7 @@ describe('toDisplayString', () => {
       })
     ).toBe(JSON.stringify({ n: 1, np: 2 }, null, 2))
   })
-  
+
   test('objects with custom toString', () => {
     class TestClass {
       toString() {
