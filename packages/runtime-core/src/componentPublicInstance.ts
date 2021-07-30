@@ -397,8 +397,10 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     const { data, setupState, ctx } = instance
     if (setupState !== EMPTY_OBJ && hasOwn(setupState, key)) {
       setupState[key] = value
+      return true
     } else if (data !== EMPTY_OBJ && hasOwn(data, key)) {
       data[key] = value
+      return true
     } else if (hasOwn(instance.props, key)) {
       __DEV__ &&
         warn(
@@ -445,6 +447,19 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       hasOwn(publicPropertiesMap, key) ||
       hasOwn(appContext.config.globalProperties, key)
     )
+  },
+
+  defineProperty(
+    target: ComponentRenderContext,
+    key: string,
+    descriptor: PropertyDescriptor
+  ) {
+    if (descriptor.get != null) {
+      this.set!(target, key, descriptor.get(), null)
+    } else if (descriptor.value != null) {
+      this.set!(target, key, descriptor.value, null)
+    }
+    return Reflect.defineProperty(target, key, descriptor)
   }
 }
 
