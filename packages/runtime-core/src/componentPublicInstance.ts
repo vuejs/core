@@ -387,6 +387,8 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
             `but is not defined on instance.`
         )
       }
+    } else if (key === 'hasOwnProperty') {
+      return ctx.hasOwnProperty
     }
   },
 

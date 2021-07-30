@@ -209,6 +209,22 @@ describe('component: proxy', () => {
     ])
   })
 
+  test('allow calling hasOwnProperty', () => {
+    let instanceProxy: any
+    const Comp = {
+      render() {},
+      mounted() {
+        instanceProxy = this
+      }
+    }
+
+    const app = createApp(Comp)
+
+    app.mount(nodeOps.createElement('div'))
+
+    expect(instanceProxy.hasOwnProperty).not.toBeNull()
+  })
+
   // #864
   test('should not warn declared but absent props', () => {
     const Comp = {
