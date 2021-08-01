@@ -155,6 +155,7 @@ export {
   ComputedRef,
   WritableComputedRef,
   UnwrapRef,
+  UnwrapNestedRefs,
   ShallowUnwrapRef,
   WritableComputedOptions,
   ToRefs,
