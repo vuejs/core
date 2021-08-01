@@ -396,12 +396,12 @@ describe('type inference w/ options API', () => {
       }
     },
     computed: {
-      d(): number {
+      d() {
         expectType<number>(this.b)
         return this.b + 1
       },
       e: {
-        get(): number {
+        get() {
           expectType<number>(this.b)
           expectType<number>(this.d)
 
@@ -514,10 +514,10 @@ describe('with mixins', () => {
       expectType<string>(props.aP1)
     },
     computed: {
-      dC1(): number {
+      dC1() {
         return this.d + this.a
       },
-      dC2(): string {
+      dC2() {
         return this.aP1 + 'dC2'
       }
     }
@@ -926,7 +926,7 @@ describe('emits', () => {
     },
     mounted() {
       // #3599
-      this.$nextTick(function() {
+      this.$nextTick(function () {
         // this should be bound to this instance
 
         this.$emit('click', 1)
