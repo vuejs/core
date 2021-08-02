@@ -184,6 +184,7 @@ function normalizeContainer(
   }
   if (
     __DEV__ &&
+    window.ShadowRoot &&
     container instanceof window.ShadowRoot &&
     container.mode === 'closed'
   ) {
