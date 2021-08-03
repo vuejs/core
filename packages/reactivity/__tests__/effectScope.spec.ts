@@ -204,7 +204,7 @@ describe('reactivity/effect/scope', () => {
     onScopeDispose(spy)
 
     expect(
-      '[Vue warn] onDispose() is called when there is no active effect scope  to be associated with.'
+      '[Vue warn] onDispose() is called when there is no active effect scope to be associated with.'
     ).toHaveBeenWarned()
 
     scope.stop()
