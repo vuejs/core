@@ -192,6 +192,26 @@ describe('reactivity/effect/scope', () => {
     expect(dummy).toBe(7)
   })
 
+  it('should warn onDispose() is called when there is no active effect scope', () => {
+    let dummy = 0
+    const scope = new EffectScope()
+    scope.run(() => {
+      onScopeDispose(() => (dummy += 1))
+      onScopeDispose(() => (dummy += 2))
+    })
+
+    expect(dummy).toBe(0)
+
+    onScopeDispose(() => (dummy += 3))
+
+    expect(
+      '[Vue warn] onDispose() is called when there is no active effect scope  to be associated with.'
+    ).toHaveBeenWarned()
+
+    scope.stop()
+    expect(dummy).toBe(3)
+  })
+
   it('should derefence child scope from parent scope after stopping child scope (no memleaks)', async () => {
     const parent = new EffectScope()
     const child = parent.run(() => new EffectScope())!
