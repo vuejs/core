@@ -98,8 +98,7 @@ export function onScopeDispose(fn: () => void) {
     activeEffectScope.cleanups.push(fn)
   } else if (__DEV__) {
     warn(
-      `onDispose() is called when there is no active effect scope ` +
-        ` to be associated with.`
+      `onDispose() is called when there is no active effect scope to be associated with.`
     )
   }
 }
