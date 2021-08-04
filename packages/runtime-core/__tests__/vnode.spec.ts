@@ -383,6 +383,45 @@ describe('vnode', () => {
       })
     })
 
+    test('object w/ array', () => {
+      let props1: Data = {
+        class: 'a b',
+        style: {
+          color: 'green',
+          fontSize: 10
+        }
+      }
+
+      let props2: Data[] = [
+        {
+          style: [
+            {
+              color: 'blue',
+              width: '300px'
+            }
+          ]
+        },
+        {
+          style: [
+            {
+              color: 'red',
+              height: '300px'
+            }
+          ]
+        }
+      ]
+
+      expect(mergeProps(props1, props2)).toMatchObject({
+        style: {
+          color: 'red',
+          width: '300px',
+          height: '300px',
+          fontSize: 10
+        },
+        class: 'a b'
+      })
+    })
+
     test('style w/ strings', () => {
       let props1: Data = {
         style: 'width:100px;right:10;top:10'

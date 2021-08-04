@@ -777,10 +777,9 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
   vnode.shapeFlag |= type
 }
 
-export function mergeProps(...args: (Data & VNodeProps)[]) {
+export function mergeProps(...args: (Data & VNodeProps | Data[])[]) {
   const ret: Data = {}
-  for (let i = 0; i < args.length; i++) {
-    const toMerge = args[i]
+  const merge = (toMerge: Data & VNodeProps) => {
     for (const key in toMerge) {
       if (key === 'class') {
         if (ret.class !== toMerge.class) {
@@ -799,6 +798,15 @@ export function mergeProps(...args: (Data & VNodeProps)[]) {
       } else if (key !== '') {
         ret[key] = toMerge[key]
       }
+    }
+  }
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i]
+    if (isArray(arg)) {
+      // support v-bind="[propsA, propsB]"
+      arg.forEach(prop => merge(prop))
+    } else {
+      merge(arg)
     }
   }
   return ret

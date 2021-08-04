@@ -19,9 +19,7 @@ import {
   KEEP_ALIVE,
   BASE_TRANSITION,
   NORMALIZE_CLASS,
-  NORMALIZE_STYLE,
-  NORMALIZE_PROPS,
-  GUARD_REACTIVE_PROPS
+  NORMALIZE_STYLE
 } from '../../src/runtimeHelpers'
 import {
   NodeTypes,
@@ -215,25 +213,17 @@ describe('compiler: element transform', () => {
 
   test('v-bind="obj"', () => {
     const { root, node } = parseWithElementTransform(`<div v-bind="obj" />`)
-    // single v-bind doesn't need mergeProps
-    expect(root.helpers).not.toContain(MERGE_PROPS)
-    expect(root.helpers).toContain(NORMALIZE_PROPS)
-    expect(root.helpers).toContain(GUARD_REACTIVE_PROPS)
+    // obj may be an array here, use mergeProps to spread array
+    expect(root.helpers).toContain(MERGE_PROPS)
 
     // should directly use `obj` in props position
     expect(node.props).toMatchObject({
       type: NodeTypes.JS_CALL_EXPRESSION,
-      callee: NORMALIZE_PROPS,
+      callee: MERGE_PROPS,
       arguments: [
         {
-          type: NodeTypes.JS_CALL_EXPRESSION,
-          callee: GUARD_REACTIVE_PROPS,
-          arguments: [
-            {
-              type: NodeTypes.SIMPLE_EXPRESSION,
-              content: `obj`
-            }
-          ]
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: `obj`
         }
       ]
     })

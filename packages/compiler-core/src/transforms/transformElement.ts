@@ -44,8 +44,7 @@ import {
   TELEPORT,
   KEEP_ALIVE,
   SUSPENSE,
-  UNREF,
-  GUARD_REACTIVE_PROPS
+  UNREF
 } from '../runtimeHelpers'
 import {
   getInnerRange,
@@ -759,12 +758,8 @@ export function buildProps(
       default:
         // single v-bind
         propsExpression = createCallExpression(
-          context.helper(NORMALIZE_PROPS),
-          [
-            createCallExpression(context.helper(GUARD_REACTIVE_PROPS), [
-              propsExpression
-            ])
-          ]
+          context.helper(MERGE_PROPS),
+          [propsExpression]
         )
         break
     }
