@@ -548,7 +548,10 @@ export function compileScript(
         decl.init
       )
     } else {
-      warnExperimental(`ref sugar`, 0 /* TODO */)
+      warnExperimental(
+        `ref sugar`,
+        `https://github.com/vuejs/rfcs/discussions/369`
+      )
     }
 
     const callee = (decl.init.callee as Identifier).name
