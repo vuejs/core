@@ -352,6 +352,6 @@ export const compatUtils = (
   __COMPAT__ ? _compatUtils : null
 ) as typeof _compatUtils
 
-// Ref macros ------------------------------------------------------------------
+// Ref sugar macros ------------------------------------------------------------
 // for dts generation only
-export { $ref, $computed, $raw, $fromRefs } from './helpers/refMacros'
+export { $ref, $computed, $raw, $fromRefs } from './helpers/refSugar'

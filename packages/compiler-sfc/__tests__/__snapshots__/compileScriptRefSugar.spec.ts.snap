@@ -74,16 +74,16 @@ return { a, get }
 `;
 
 exports[`<script setup> ref sugar array destructure 1`] = `
-"import { ref as _ref } from 'vue'
+"import { ref as _ref, shallowRef as _shallowRef } from 'vue'
 
 export default {
   setup(__props, { expose }) {
   expose()
 
     let n = _ref(1), [__a, __b = 1, ...__c] = (useFoo())
-const a = _ref(__a);
-const b = _ref(__b);
-const c = _ref(__c);
+const a = _shallowRef(__a);
+const b = _shallowRef(__b);
+const c = _shallowRef(__c);
     console.log(n.value, a.value, b.value, c.value)
     
 return { n, a, b, c }
@@ -149,17 +149,17 @@ return { a, b, inc }
 `;
 
 exports[`<script setup> ref sugar nested destructure 1`] = `
-"import { ref as _ref } from 'vue'
+"import { shallowRef as _shallowRef } from 'vue'
 
 export default {
   setup(__props, { expose }) {
   expose()
 
     let [{ a: { b: __b }}] = (useFoo())
-const b = _ref(__b);
+const b = _shallowRef(__b);
     let { c: [__d, __e] } = (useBar())
-const d = _ref(__d);
-const e = _ref(__e);
+const d = _shallowRef(__d);
+const e = _shallowRef(__e);
     console.log(b.value, d.value, e.value)
     
 return { b, d, e }
@@ -169,20 +169,20 @@ return { b, d, e }
 `;
 
 exports[`<script setup> ref sugar object destructure 1`] = `
-"import { ref as _ref } from 'vue'
+"import { ref as _ref, shallowRef as _shallowRef } from 'vue'
 
 export default {
   setup(__props, { expose }) {
   expose()
 
     let n = _ref(1), { a: __a, b: __c, d: __d = 1, e: __f = 2, ...__g } = (useFoo())
-const a = _ref(__a);
-const c = _ref(__c);
-const d = _ref(__d);
-const f = _ref(__f);
-const g = _ref(__g);
+const a = _shallowRef(__a);
+const c = _shallowRef(__c);
+const d = _shallowRef(__d);
+const f = _shallowRef(__f);
+const g = _shallowRef(__g);
     let { foo: __foo } = (useSomthing(() => 1));
-const foo = _ref(__foo);
+const foo = _shallowRef(__foo);
     console.log(n.value, a.value, c.value, d.value, f.value, g.value, foo.value)
     
 return { n, a, c, d, f, g, foo }

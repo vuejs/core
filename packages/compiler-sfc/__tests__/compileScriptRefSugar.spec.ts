@@ -184,14 +184,14 @@ describe('<script setup> ref sugar', () => {
       `let n = _ref(1), { a: __a, b: __c, d: __d = 1, e: __f = 2, ...__g } = (useFoo())`
     )
     expect(content).toMatch(`let { foo: __foo } = (useSomthing(() => 1))`)
-    expect(content).toMatch(`\nconst a = _ref(__a);`)
-    expect(content).not.toMatch(`\nconst b = _ref(__b);`)
-    expect(content).toMatch(`\nconst c = _ref(__c);`)
-    expect(content).toMatch(`\nconst d = _ref(__d);`)
-    expect(content).not.toMatch(`\nconst e = _ref(__e);`)
-    expect(content).toMatch(`\nconst f = _ref(__f);`)
-    expect(content).toMatch(`\nconst g = _ref(__g);`)
-    expect(content).toMatch(`\nconst foo = _ref(__foo);`)
+    expect(content).toMatch(`\nconst a = _shallowRef(__a);`)
+    expect(content).not.toMatch(`\nconst b = _shallowRef(__b);`)
+    expect(content).toMatch(`\nconst c = _shallowRef(__c);`)
+    expect(content).toMatch(`\nconst d = _shallowRef(__d);`)
+    expect(content).not.toMatch(`\nconst e = _shallowRef(__e);`)
+    expect(content).toMatch(`\nconst f = _shallowRef(__f);`)
+    expect(content).toMatch(`\nconst g = _shallowRef(__g);`)
+    expect(content).toMatch(`\nconst foo = _shallowRef(__foo);`)
     expect(content).toMatch(
       `console.log(n.value, a.value, c.value, d.value, f.value, g.value, foo.value)`
     )
@@ -216,9 +216,9 @@ describe('<script setup> ref sugar', () => {
     expect(content).toMatch(
       `let n = _ref(1), [__a, __b = 1, ...__c] = (useFoo())`
     )
-    expect(content).toMatch(`\nconst a = _ref(__a);`)
-    expect(content).toMatch(`\nconst b = _ref(__b);`)
-    expect(content).toMatch(`\nconst c = _ref(__c);`)
+    expect(content).toMatch(`\nconst a = _shallowRef(__a);`)
+    expect(content).toMatch(`\nconst b = _shallowRef(__b);`)
+    expect(content).toMatch(`\nconst c = _shallowRef(__c);`)
     expect(content).toMatch(`console.log(n.value, a.value, b.value, c.value)`)
     expect(content).toMatch(`return { n, a, b, c }`)
     expect(bindings).toStrictEqual({
@@ -238,11 +238,11 @@ describe('<script setup> ref sugar', () => {
     </script>`)
     expect(content).toMatch(`let [{ a: { b: __b }}] = (useFoo())`)
     expect(content).toMatch(`let { c: [__d, __e] } = (useBar())`)
-    expect(content).not.toMatch(`\nconst a = _ref(__a);`)
-    expect(content).not.toMatch(`\nconst c = _ref(__c);`)
-    expect(content).toMatch(`\nconst b = _ref(__b);`)
-    expect(content).toMatch(`\nconst d = _ref(__d);`)
-    expect(content).toMatch(`\nconst e = _ref(__e);`)
+    expect(content).not.toMatch(`\nconst a = _shallowRef(__a);`)
+    expect(content).not.toMatch(`\nconst c = _shallowRef(__c);`)
+    expect(content).toMatch(`\nconst b = _shallowRef(__b);`)
+    expect(content).toMatch(`\nconst d = _shallowRef(__d);`)
+    expect(content).toMatch(`\nconst e = _shallowRef(__e);`)
     expect(content).toMatch(`return { b, d, e }`)
     expect(bindings).toStrictEqual({
       b: BindingTypes.SETUP_REF,
