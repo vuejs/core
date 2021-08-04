@@ -15,11 +15,16 @@ export function withMemo(
     return cached
   }
   const ret = render()
-  ret.memo = memo
+
+  // shallow clone
+  ret.memo = memo.slice(0, memo.length)
   return (cache[index] = ret)
 }
 
 export function isMemoSame(prev: any[], next: any[]) {
+  if (prev.length != next.length) {
+    return false
+  }
   for (let i = 0; i < prev.length; i++) {
     if (prev[i] !== next[i]) {
       return false
