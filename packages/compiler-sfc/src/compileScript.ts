@@ -1084,19 +1084,20 @@ export function compileScript(
       }
     }
 
+    const remove = (start: number, end: number) => {
+      s.remove(start + startOffset, end + startOffset)
+    }
+
     const onNode = (node: Node) => {
       if (isCallOf(node, $RAW)) {
-        s.remove(
-          node.callee.start! + startOffset,
-          node.callee.end! + startOffset
-        )
+        remove(node.callee.start!, node.callee.end!)
         return false // skip walk
       }
     }
 
     for (const node of scriptSetupAst) {
       if (node.type !== 'ImportDeclaration') {
-        walkIdentifiers(node, onIdent, onNode)
+        walkIdentifiers(node, onIdent, onNode, remove)
       }
     }
   }
@@ -1744,7 +1745,8 @@ function markScopeIdentifier(
 export function walkIdentifiers(
   root: Node,
   onIdentifier: (node: Identifier, parent: Node, parentStack: Node[]) => void,
-  onNode?: (node: Node, parent: Node, parentStack: Node[]) => void | boolean
+  onNode?: (node: Node, parent: Node, parentStack: Node[]) => void | boolean,
+  remove?: (start: number, end: number) => void
 ) {
   const parentStack: Node[] = []
   const knownIds: Record<string, number> = Object.create(null)
@@ -1752,7 +1754,12 @@ export function walkIdentifiers(
     enter(node: Node & { scopeIds?: Set<string> }, parent: Node | undefined) {
       parent && parentStack.push(parent)
       if (node.type.startsWith('TS')) {
-        return this.skip()
+        if (node.type === 'TSNonNullExpression') {
+          // foo! -> foo
+          remove && remove(node.end! - 1, node.end!)
+        } else {
+          return this.skip()
+        }
       }
       if (onNode && onNode(node, parent!, parentStack) === false) {
         return this.skip()

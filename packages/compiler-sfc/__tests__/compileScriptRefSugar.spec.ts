@@ -102,6 +102,17 @@ describe('<script setup> ref sugar', () => {
     assertCode(content)
   })
 
+  test('accessing ref binding /w TypeScript', () => {
+    const { content } = compileWithRefSugar(`<script setup lang="ts">
+    let a = $ref(1)
+    console.log(a!) 
+    console.log(a! - 1) 
+    </script>`)
+    expect(content).toMatch(`console.log(a.value)`)
+    expect(content).toMatch(`console.log(a.value - 1)`)
+    assertCode(content)
+  })
+
   test('cases that should not append .value', () => {
     const { content } = compileWithRefSugar(`<script setup>
     let a = $ref(1)
