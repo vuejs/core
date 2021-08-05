@@ -1754,9 +1754,18 @@ export function walkIdentifiers(
     enter(node: Node & { scopeIds?: Set<string> }, parent: Node | undefined) {
       parent && parentStack.push(parent)
       if (node.type.startsWith('TS')) {
-        if (node.type === 'TSNonNullExpression') {
+        if (
+          node.type === 'TSNonNullExpression' ||
+          node.type === 'TSAsExpression' ||
+          node.type === 'TSTypeAssertion'
+        ) {
           // foo! -> foo
-          remove && remove(node.end! - 1, node.end!)
+          // foo as any -> foo
+          // <any>foo -> foo
+          if (remove) {
+            remove(node.start!, node.expression.start!)
+            remove(node.expression.end!, node.end!)
+          }
         } else {
           return this.skip()
         }

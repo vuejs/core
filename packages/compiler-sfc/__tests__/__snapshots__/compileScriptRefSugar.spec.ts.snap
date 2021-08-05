@@ -63,7 +63,14 @@ export default _defineComponent({
 
     let a = _ref(1)
     console.log(a.value) 
-    console.log(a.value - 1) 
+    console.log(a.value + 1) 
+    console.log(a.value) 
+    console.log((a.value) + 1) 
+    console.log(a.value) 
+    console.log(a.value + 1) 
+    console.log(a.value + (a.value)) 
+    console.log(a.value + a.value) 
+    console.log((a.value) + a.value) 
     
 return { a }
 }
