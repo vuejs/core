@@ -281,6 +281,24 @@ describe('<script setup> ref sugar', () => {
     expect(content).not.toMatch('.value')
   })
 
+  // #4254
+  test('handle TS casting syntax', () => {
+    const { content } = compile(
+      `
+      <script setup lang="ts">
+        let n = $ref<number | undefined>()
+        console.log(n!)
+        console.log(n as number)
+      </script>`,
+      {
+        refSugar: true
+      }
+    )
+    assertCode(content)
+    expect(content).toMatch('console.log(n.value!)')
+    expect(content).toMatch('console.log(n.value as number)')
+  })
+
   describe('errors', () => {
     test('non-let $ref declaration', () => {
       expect(() =>
