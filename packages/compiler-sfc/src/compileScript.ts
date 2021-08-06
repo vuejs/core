@@ -88,8 +88,8 @@ export interface SFCScriptCompileOptions {
    */
   babelParserPlugins?: ParserPlugin[]
   /**
-   * Enable ref: label sugar
-   * https://github.com/vuejs/rfcs/pull/228
+   * Introduce a compiler-based syntax sugar for using refs without `.value`
+   * https://github.com/vuejs/rfcs/discussions/369
    * @default true
    */
   refSugar?: boolean
