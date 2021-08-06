@@ -2,11 +2,14 @@
 export { SSRContext } from './render'
 export { renderToString } from './renderToString'
 export {
-  renderToStream,
   renderToSimpleStream,
   renderToNodeStream,
+  pipeToNodeWritable,
   renderToWebStream,
-  SimpleReadable
+  pipeToWebWritable,
+  SimpleReadable,
+  // deprecated
+  renderToStream
 } from './renderToStream'
 
 // internal runtime helpers

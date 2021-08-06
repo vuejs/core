@@ -36,5 +36,6 @@ declare module 'file-saver' {
 
 declare module 'stream/web' {
   const r: typeof ReadableStream
-  export { r as ReadableStream }
+  const t: typeof TransformStream
+  export { r as ReadableStream, t as TransformStream }
 }

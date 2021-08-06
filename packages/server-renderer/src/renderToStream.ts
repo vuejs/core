@@ -8,7 +8,7 @@ import {
 } from 'vue'
 import { isString, isPromise } from '@vue/shared'
 import { renderComponentVNode, SSRBuffer, SSRContext } from './render'
-import { Readable } from 'stream'
+import { Readable, Writable } from 'stream'
 
 const { isVNode } = ssrUtils
 
@@ -99,51 +99,64 @@ export function renderToStream(
 
 export function renderToNodeStream(
   input: App | VNode,
-  context: SSRContext = {},
-  UserReadable?: typeof Readable
+  context: SSRContext = {}
 ): Readable {
-  const stream: Readable = UserReadable
-    ? new UserReadable()
-    : __NODE_JS__
+  const stream: Readable = __NODE_JS__
     ? new (require('stream').Readable)()
     : null
 
   if (!stream) {
     throw new Error(
-      `ESM build of renderToStream() requires explicitly passing in the Node.js ` +
-        `Readable constructor the 3rd argument. Example:\n\n` +
-        `  import { Readable } from 'stream'\n` +
-        `  const stream = renderToStream(app, {}, Readable)`
+      `ESM build of renderToStream() does not support renderToNodeStream(). ` +
+        `Use pipeToNodeWritable() with an existing Node.js Writable stream ` +
+        `instance instead.`
     )
   }
 
   return renderToSimpleStream(input, context, stream)
 }
 
-const hasGlobalWebStream = typeof ReadableStream === 'function'
+export function pipeToNodeWritable(
+  input: App | VNode,
+  context: SSRContext = {},
+  writable: Writable
+) {
+  renderToSimpleStream(input, context, {
+    push(content) {
+      if (content != null) {
+        writable.write(content)
+      } else {
+        writable.end()
+      }
+    },
+    destroy(err) {
+      writable.destroy(err)
+    }
+  })
+}
 
 export function renderToWebStream(
   input: App | VNode,
-  context: SSRContext = {},
-  Ctor?: { new (): ReadableStream }
+  context: SSRContext = {}
 ): ReadableStream {
-  if (!Ctor && !hasGlobalWebStream) {
+  if (typeof ReadableStream !== 'function') {
     throw new Error(
-      `ReadableStream constructor is not available in the global scope and ` +
-        `must be explicitly passed in as the 3rd argument:\n\n` +
-        `  import { ReadableStream } from 'stream/web'\n` +
-        `  const stream = renderToWebStream(app, {}, ReadableStream)`
+      `ReadableStream constructor is not available in the global scope. ` +
+        `If the target environment does support web streams, consider using ` +
+        `pipeToWebWritable() with an existing WritableStream instance instead.`
     )
   }
 
+  const encoder = new TextEncoder()
   let cancelled = false
-  return new (Ctor || ReadableStream)({
+
+  return new ReadableStream({
     start(controller) {
       renderToSimpleStream(input, context, {
         push(content) {
           if (cancelled) return
           if (content != null) {
-            controller.enqueue(content)
+            controller.enqueue(encoder.encode(content))
           } else {
             controller.close()
           }
@@ -156,5 +169,31 @@ export function renderToWebStream(
     cancel() {
       cancelled = true
     }
+  })
+}
+
+export function pipeToWebWritable(
+  input: App | VNode,
+  context: SSRContext = {},
+  writable: WritableStream
+): void {
+  const writer = writable.getWriter()
+  const encoder = new TextEncoder()
+
+  writer.ready.then(() => {
+    renderToSimpleStream(input, context, {
+      push(content) {
+        if (content != null) {
+          writer.write(encoder.encode(content))
+        } else {
+          writer.close()
+        }
+      },
+      destroy(err) {
+        // TODO better error handling?
+        console.log(err)
+        writer.close()
+      }
+    })
   })
 }
