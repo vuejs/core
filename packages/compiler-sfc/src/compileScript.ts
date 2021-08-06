@@ -1785,7 +1785,8 @@ export function walkIdentifiers(
         parent &&
         parent.type.startsWith('TS') &&
         parent.type !== 'TSAsExpression' &&
-        parent.type !== 'TSNonNullExpression'
+        parent.type !== 'TSNonNullExpression' &&
+        parent.type !== 'TSTypeAssertion'
       ) {
         return this.skip()
       }

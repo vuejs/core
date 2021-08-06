@@ -99,11 +99,18 @@ export default _defineComponent({
   setup(__props, { expose }) {
   expose()
 
-        let n = _ref<number | undefined>()
-        console.log(n.value!)
-        console.log(n.value as number)
+      let a = _ref(1)
+      console.log(a.value!) 
+      console.log(a.value! + 1) 
+      console.log(a.value as number) 
+      console.log((a.value as number) + 1) 
+      console.log(<number>a.value) 
+      console.log(<number>a.value + 1) 
+      console.log(a.value! + (a.value as number)) 
+      console.log(a.value! + <number>a.value) 
+      console.log((a.value as number) + <number>a.value)
       
-return { n }
+return { a }
 }
 
 })"
