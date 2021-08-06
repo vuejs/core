@@ -209,7 +209,7 @@ export const transformFor = createStructuralDirectiveTransform(
               ...(keyExp ? [` && _cached.key === `, keyExp] : []),
               ` && ${context.helperString(
                 IS_MEMO_SAME
-              )}(_cached.memo, _memo)) return _cached`
+              )}(_cached, _memo)) return _cached`
             ]),
             createCompoundExpression([`const _item = `, childBlock as any]),
             createSimpleExpression(`_item.memo = _memo`),
