@@ -88,7 +88,7 @@ function renderToWebStream(
 **Usage**
 
 ```js
-// e.g. inside a Cloudflare Worker
+// e.g. inside an environment with ReadableStream support
 return new Response(renderToWebStream(app))
 ```
 

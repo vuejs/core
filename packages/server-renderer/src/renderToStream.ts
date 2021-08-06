@@ -129,7 +129,7 @@ export function renderToWebStream(
 ): ReadableStream {
   if (!Ctor && !hasGlobalWebStream) {
     throw new Error(
-      `ReadableStream constructor is not avaialbe in the global scope and ` +
+      `ReadableStream constructor is not available in the global scope and ` +
         `must be explicitly passed in as the 3rd argument:\n\n` +
         `  import { ReadableStream } from 'stream/web'\n` +
         `  const stream = renderToWebStream(app, {}, ReadableStream)`
