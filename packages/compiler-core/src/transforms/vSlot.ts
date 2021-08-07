@@ -382,11 +382,13 @@ function hasForwardedSlots(children: TemplateChildNode[]): boolean {
     const child = children[i]
     switch (child.type) {
       case NodeTypes.ELEMENT:
-        if ( child.tagType === ElementTypes.SLOT ) {
+        if (
+          child.tagType === ElementTypes.SLOT ||
+          hasForwardedSlots(child.children)
+        ) {
           return true
-        } else {
-          return hasForwardedSlots(child.children)
         }
+        break
       case NodeTypes.IF:
         if (hasForwardedSlots(child.branches)) return true
         break
