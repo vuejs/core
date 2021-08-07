@@ -15,9 +15,7 @@ export function withMemo(
   return (cache[index] = ret)
 }
 
-export function isMemoSame(cached: VNode | undefined, memo: any[]) {
-  if (!cached) return false
-
+export function isMemoSame(cached: VNode, memo: any[]) {
   const prev: any[] = cached.memo!
   for (let i = 0; i < prev.length; i++) {
     if (prev[i] !== memo[i]) {
