@@ -103,7 +103,8 @@ export function withDirectives<T extends VNode>(
         updated: dir
       } as ObjectDirective
     }
-    if (dir && dir.deep) {
+    if (!dir) continue;
+    if (dir.deep) {
       traverse(value)
     }
     bindings.push({
@@ -131,7 +132,7 @@ export function invokeDirectiveHook(
     if (oldBindings) {
       binding.oldValue = oldBindings[i].value
     }
-    let hook = binding && binding.dir && binding.dir[name] as DirectiveHook | DirectiveHook[] | undefined
+    let hook = binding.dir[name] as DirectiveHook | DirectiveHook[] | undefined
     if (__COMPAT__ && !hook) {
       hook = mapCompatDirectiveHook(name, binding.dir, instance)
     }
