@@ -183,7 +183,6 @@ function analyzeNode(node: StringifiableNode): [number, number] | false {
   let ec = node.props.length > 0 ? 1 : 0 // element w/ binding count
   let bailed = false
   const bail = (): false => {
-    debugger
     bailed = true
     return false
   }
