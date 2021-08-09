@@ -360,4 +360,28 @@ describe('stringify static html', () => {
       ]
     })
   })
+
+  test('should stringify svg', () => {
+    const svg = `<svg width="50" height="50" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">`
+    const repeated = `<rect width="50" height="50" fill="#C4C4C4"></rect>`
+    const { ast } = compileWithStringify(
+      `<div>${svg}${repeat(
+        repeated,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+      )}</svg></div>`
+    )
+    expect(ast.hoists[0]).toMatchObject({
+      type: NodeTypes.JS_CALL_EXPRESSION,
+      callee: CREATE_STATIC,
+      arguments: [
+        JSON.stringify(
+          `${svg}${repeat(
+            repeated,
+            StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+          )}</svg>`
+        ),
+        '1'
+      ]
+    })
+  })
 })
