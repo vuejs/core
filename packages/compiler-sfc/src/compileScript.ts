@@ -332,7 +332,9 @@ export function compileScript(
 
     let isUsedInTemplate = true
     if (isTS && sfc.template && !sfc.template.src) {
-      isUsedInTemplate = new RegExp(`\\b${local}\\b`).test(
+      // escape ( local$ => local\\$ )
+      let localEscaped = local.replace(/[$]/g,'\\$&')
+      isUsedInTemplate = new RegExp(`\\b${localEscaped}\\b`).test(
         resolveTemplateUsageCheckString(sfc)
       )
     }
