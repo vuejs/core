@@ -50,10 +50,7 @@ Renders input as a [Node.js Readable stream](https://nodejs.org/api/stream.html#
 **Signature**
 
 ```ts
-function renderToNodeStream(
-  input: App | VNode,
-  context?: SSRContext
-): Readable
+function renderToNodeStream(input: App | VNode, context?: SSRContext): Readable
 ```
 
 **Usage**
@@ -63,12 +60,27 @@ function renderToNodeStream(
 renderToNodeStream(app).pipe(res)
 ```
 
-In the ESM build of `@vue/server-renderer`, which is decoupled from Node.js environments, the `Readable` constructor must be explicitly passed in as the 3rd argument:
+**Note:** This method is not supported in the ESM build of `@vue/server-renderer`, which is decoupled from Node.js environments. Use `pipeToNodeWritable` instead.
+
+### `pipeToNodeWritable`
+
+Render and pipe to an existing [Node.js Writable stream](https://nodejs.org/api/stream.html#stream_writable_streams) instance.
+
+**Signature**
+
+```ts
+function pipeToNodeWritable(
+  input: App | VNode,
+  context: SSRContext = {},
+  writable: Writable
+): void
+```
+
+**Usage**
 
 ```js
-import { Readable } from 'stream'
-
-renderToNodeStream(app, {}, Readable).pipe(res)
+// inside a Node.js http handler
+pipeToNodeWritable(app, {}, res)
 ```
 
 ### `renderToWebStream`
@@ -88,19 +100,40 @@ function renderToWebStream(
 **Usage**
 
 ```js
-// e.g. inside a Cloudflare Worker
+// inside an environment with ReadableStream support
 return new Response(renderToWebStream(app))
 ```
 
-Note in environments that do not expose `ReadableStream` constructor in the global scope, the constructor must be explicitly passed in as the 3rd argument. For example in Node.js 16.5.0+ where web streams are also supported:
+**Note:** in environments that do not expose `ReadableStream` constructor in the global scope, `pipeToWebWritable` should be used instead.
 
-```js
-import { ReadableStream } from 'stream/web'
+### `pipeToWebWritable`
 
-const stream = renderToWebStream(app, {}, ReadableStream)
+Render and pipe to an existing [Web WritableStream](https://developer.mozilla.org/en-US/docs/Web/API/WritableStream) instance.
+
+**Signature**
+
+```ts
+function pipeToWebWritable(
+  input: App | VNode,
+  context: SSRContext = {},
+  writable: WritableStream
+): void
 ```
 
-## `renderToSimpleStream`
+**Usage**
+
+This is typically used in combination with [`TransformStream`](https://developer.mozilla.org/en-US/docs/Web/API/TransformStream):
+
+```js
+// TransformStream is available in environments such as CloudFlare workers.
+// in Node.js, TransformStream needs to be explicitly imported from 'stream/web'
+const { readable, writable } = new TransformStream()
+pipeToWebWritable(app, {}, writable)
+
+return new Response(readable)
+```
+
+### `renderToSimpleStream`
 
 Renders input in streaming mode using a simple readable interface.
 

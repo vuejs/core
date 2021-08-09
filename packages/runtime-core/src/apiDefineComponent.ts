@@ -102,7 +102,7 @@ export function defineComponent<
   EE extends string = string
 >(
   options: ComponentOptionsWithoutProps<
-    Props & EmitsToProps<E>,
+    Props,
     RawBindings,
     D,
     C,

@@ -188,4 +188,26 @@ describe('v-memo', () => {
       `<div>5 yes z</div><div>2 no z</div><div>3 no z</div>`
     )
   })
+
+  test('on v-for /w constant expression ', async () => {
+    const [el, vm] = mount({
+      template: `<div v-for="item in 3"  v-memo="[count < 2 ? true : count]">
+          {{count}}
+        </div>`,
+      data: () => ({
+        count: 0
+      })
+    })
+    expect(el.innerHTML).toBe(`<div>0</div><div>0</div><div>0</div>`)
+
+    vm.count = 1
+    await nextTick()
+    // should not update
+    expect(el.innerHTML).toBe(`<div>0</div><div>0</div><div>0</div>`)
+
+    vm.count = 2
+    await nextTick()
+    // should update
+    expect(el.innerHTML).toBe(`<div>2</div><div>2</div><div>2</div>`)
+  })
 })

@@ -88,8 +88,8 @@ export interface SFCScriptCompileOptions {
    */
   babelParserPlugins?: ParserPlugin[]
   /**
-   * Enable ref: label sugar
-   * https://github.com/vuejs/rfcs/pull/228
+   * Introduce a compiler-based syntax sugar for using refs without `.value`
+   * https://github.com/vuejs/rfcs/discussions/369
    * @default true
    */
   refSugar?: boolean
@@ -332,9 +332,11 @@ export function compileScript(
 
     let isUsedInTemplate = true
     if (isTS && sfc.template && !sfc.template.src) {
-      isUsedInTemplate = new RegExp(`\\b${local}\\b`).test(
-        resolveTemplateUsageCheckString(sfc)
-      )
+      isUsedInTemplate = new RegExp(
+        // #4274 escape $ since it's a special char in regex
+        // (and is the only regex special char that is valid in identifiers)
+        `[^\\w$_]${local.replace(/\$/g, '\\$')}[^\\w$_]`
+      ).test(resolveTemplateUsageCheckString(sfc))
     }
 
     userImports[local] = {
@@ -1781,7 +1783,13 @@ export function walkIdentifiers(
   ;(walk as any)(root, {
     enter(node: Node & { scopeIds?: Set<string> }, parent: Node | undefined) {
       parent && parentStack.push(parent)
-      if (node.type.startsWith('TS')) {
+      if (
+        parent &&
+        parent.type.startsWith('TS') &&
+        parent.type !== 'TSAsExpression' &&
+        parent.type !== 'TSNonNullExpression' &&
+        parent.type !== 'TSTypeAssertion'
+      ) {
         return this.skip()
       }
       if (onNode && onNode(node, parent!, parentStack) === false) {

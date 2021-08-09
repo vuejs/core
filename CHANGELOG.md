@@ -1,3 +1,24 @@
+# [3.2.0-beta.8](https://github.com/vuejs/vue-next/compare/v3.2.0-beta.7...v3.2.0-beta.8) (2021-08-07)
+
+
+### Bug Fixes
+
+* **compiler-core:** detected forwarded slots in nested components ([#4268](https://github.com/vuejs/vue-next/issues/4268)) ([abb3a81](https://github.com/vuejs/vue-next/commit/abb3a81e871e271db8dd882f9323551e753cc00f)), closes [#4244](https://github.com/vuejs/vue-next/issues/4244)
+* **compiler-sfc:** fix ref sugar rewrite for identifiers in ts casting expressions ([865b84b](https://github.com/vuejs/vue-next/commit/865b84bfe81622626152e9c571cd26f30ba37bd5)), closes [#4254](https://github.com/vuejs/vue-next/issues/4254)
+* **core:** typing of key in VNodeProps ([#4242](https://github.com/vuejs/vue-next/issues/4242)) ([d045055](https://github.com/vuejs/vue-next/commit/d045055b475f76624830ed594dd138ac71eccd4e)), closes [#4240](https://github.com/vuejs/vue-next/issues/4240)
+* **runtime-core:** component effect scopes should be detached ([6aa871e](https://github.com/vuejs/vue-next/commit/6aa871e5658f79369ae4022b2c73319444bd1cca))
+* **runtime-dom:** fix shadowRoot instanceof check in unsupported browsers ([#4238](https://github.com/vuejs/vue-next/issues/4238)) ([bc7dd93](https://github.com/vuejs/vue-next/commit/bc7dd93f9223e8c5809ad7b95fcf8b2414181b91))
+* **types:** remove explicit return type annotation requirement for `this` inference in computed options ([#4221](https://github.com/vuejs/vue-next/issues/4221)) ([d3d5ad2](https://github.com/vuejs/vue-next/commit/d3d5ad204d17e18f6a038c7f6c3cc2a5c2271a08))
+* **v-memo:** ensure track block when returning cached vnode ([#4270](https://github.com/vuejs/vue-next/issues/4270)) ([a211e27](https://github.com/vuejs/vue-next/commit/a211e271ee8c328e68afc0fe5ab86fabd7e4a320)), closes [#4253](https://github.com/vuejs/vue-next/issues/4253)
+* **v-memo:** should work on v-for with constant expression ([#4272](https://github.com/vuejs/vue-next/issues/4272)) ([3b60358](https://github.com/vuejs/vue-next/commit/3b60358d0e0289298df7937983b3e06123f8eb3d)), closes [#4246](https://github.com/vuejs/vue-next/issues/4246)
+
+
+### Features
+
+* **runtime-dom:** support async component in defineCustomElement ([c421fb9](https://github.com/vuejs/vue-next/commit/c421fb91b2bec047e665f8269e231bf89f9bfc93)), closes [#4261](https://github.com/vuejs/vue-next/issues/4261)
+
+
+
 # [3.2.0-beta.7](https://github.com/vuejs/vue-next/compare/v3.2.0-beta.6...v3.2.0-beta.7) (2021-07-29)
 
 

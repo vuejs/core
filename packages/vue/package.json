@@ -1,6 +1,6 @@
 {
   "name": "vue",
-  "version": "3.2.0-beta.7",
+  "version": "3.2.0-beta.8",
   "description": "The progressive JavaScript framework for buiding modern web UI.",
   "main": "index.js",
   "module": "dist/vue.runtime.esm-bundler.js",
@@ -37,9 +37,9 @@
   },
   "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/vue#readme",
   "dependencies": {
-    "@vue/shared": "3.2.0-beta.7",
-    "@vue/compiler-dom": "3.2.0-beta.7",
-    "@vue/runtime-dom": "3.2.0-beta.7"
+    "@vue/shared": "3.2.0-beta.8",
+    "@vue/compiler-dom": "3.2.0-beta.8",
+    "@vue/runtime-dom": "3.2.0-beta.8"
   },
   "devDependencies": {
     "lodash": "^4.17.15",

@@ -24,10 +24,10 @@ import {
 } from 'vue'
 import { escapeHtml } from '@vue/shared'
 import { renderToString } from '../src/renderToString'
-import { renderToNodeStream } from '../src/renderToStream'
+import { renderToNodeStream, pipeToNodeWritable } from '../src/renderToStream'
 import { ssrRenderSlot, SSRSlot } from '../src/helpers/ssrRenderSlot'
 import { ssrRenderComponent } from '../src/helpers/ssrRenderComponent'
-import { Readable } from 'stream'
+import { Readable, Transform } from 'stream'
 import { ssrRenderVNode } from '../src'
 
 const promisifyStream = (stream: Readable) => {
@@ -45,12 +45,25 @@ const promisifyStream = (stream: Readable) => {
   })
 }
 
-const renderToStream = (app: any, context?: any) =>
-  promisifyStream(renderToNodeStream(app, context))
+const renderToStream = (app: any, context?: any) => {
+  return promisifyStream(renderToNodeStream(app, context))
+}
+
+const pipeToWritable = (app: any, context?: any) => {
+  const stream = new Transform({
+    transform(data, _encoding, cb) {
+      this.push(data)
+      cb()
+    }
+  })
+  pipeToNodeWritable(app, context, stream)
+  return promisifyStream(stream)
+}
 
 // we run the same tests twice, once for renderToString, once for renderToStream
 testRender(`renderToString`, renderToString)
-testRender(`renderToStream`, renderToStream)
+testRender(`renderToNodeStream`, renderToStream)
+testRender(`pipeToNodeWritable`, pipeToWritable)
 
 function testRender(type: string, render: typeof renderToString) {
   describe(`ssr: ${type}`, () => {
@@ -760,7 +773,7 @@ function testRender(type: string, render: typeof renderToString) {
       test('handle compiler errors', async () => {
         await render(
           // render different content since compilation is cached
-          createApp({ template: `<${type === 'renderToString' ? 'div' : 'p'}` })
+          createApp({ template: `<div>${type}</` })
         )
 
         expect(
