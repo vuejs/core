@@ -332,9 +332,11 @@ export function compileScript(
 
     let isUsedInTemplate = true
     if (isTS && sfc.template && !sfc.template.src) {
-      isUsedInTemplate = new RegExp(`\\b${local}\\b`).test(
-        resolveTemplateUsageCheckString(sfc)
-      )
+      isUsedInTemplate = new RegExp(
+        // #4274 escape $ since it's a special char in regex
+        // (and is the only regex special char that is valid in identifiers)
+        `[^\\w$_]${local.replace(/\$/g, '\\$')}[^\\w$_]`
+      ).test(resolveTemplateUsageCheckString(sfc))
     }
 
     userImports[local] = {
