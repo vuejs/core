@@ -1,3 +1,18 @@
+# [3.2.0](https://github.com/vuejs/vue-next/compare/v3.2.0-beta.8...v3.2.0) (2021-08-09)
+
+
+### Bug Fixes
+
+* **compiler-dom:** stringify eligible svg content ([2641422](https://github.com/vuejs/vue-next/commit/2641422aa7b438513dd6eab357e39028c5876e52)), closes [#4282](https://github.com/vuejs/vue-next/issues/4282)
+* **compiler-sfc:** fix import usage detection for names containing $ ([88a4504](https://github.com/vuejs/vue-next/commit/88a4504e8215392e277f07db41ab9f46fc68b4d3)), closes [#4274](https://github.com/vuejs/vue-next/issues/4274)
+
+
+### Features
+
+* **runtime-core:** support dynamic / external array in v-memo ([#4255](https://github.com/vuejs/vue-next/issues/4255)) ([6779bff](https://github.com/vuejs/vue-next/commit/6779bff537d3506e3bb3b30eadfbe66def7bd3cb))
+
+
+
 # [3.2.0-beta.8](https://github.com/vuejs/vue-next/compare/v3.2.0-beta.7...v3.2.0-beta.8) (2021-08-07)
 
 
