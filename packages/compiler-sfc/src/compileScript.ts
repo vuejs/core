@@ -2220,6 +2220,7 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
     ]
   })
 
+  code += ';'
   templateUsageCheckCache.set(content, code)
   return code
 }

@@ -213,13 +213,14 @@ defineExpose({ foo: 123 })
     test('imports not used in <template> should not be exposed', () => {
       const { content } = compile(`
         <script setup lang="ts">
-        import { FooBar, FooBaz, FooQux, vMyDir, x, y, z, x$y } from './x'
+        import { FooBar, FooBaz, FooQux, vMyDir, x, y, z, x$y, Last } from './x'
         const fooBar: FooBar = 1
         </script>
         <template>
           <FooBaz v-my-dir>{{ x }} {{ yy }} {{ x$y }}</FooBaz>
           <foo-qux/>
           <div :id="z + 'y'">FooBar</div>
+          <Last/>
         </template>
         `)
       assertCode(content)
@@ -231,7 +232,7 @@ defineExpose({ foo: 123 })
       // y: should not be matched by {{ yy }} or 'y' in binding exps
       // x$y: #4274 should escape special chars when creating Regex
       expect(content).toMatch(
-        `return { fooBar, FooBaz, FooQux, vMyDir, x, z, x$y }`
+        `return { fooBar, FooBaz, FooQux, vMyDir, x, z, x$y, Last }`
       )
     })
   })
