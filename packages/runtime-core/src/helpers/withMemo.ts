@@ -19,7 +19,7 @@ export function withMemo(
 
 export function isMemoSame(cached: VNode, memo: any[]) {
   const prev: any[] = cached.memo!
-  if (prev.length != next.length) {
+  if (prev.length != memo.length) {
     return false
   }
   for (let i = 0; i < prev.length; i++) {
