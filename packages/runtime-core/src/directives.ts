@@ -97,13 +97,13 @@ export function withDirectives<T extends VNode>(
   const bindings: DirectiveBinding[] = vnode.dirs || (vnode.dirs = [])
   for (let i = 0; i < directives.length; i++) {
     let [dir, value, arg, modifiers = EMPTY_OBJ] = directives[i]
+    if (!dir) continue
     if (isFunction(dir)) {
       dir = {
         mounted: dir,
         updated: dir
       } as ObjectDirective
     }
-    if (!dir) continue;
     if (dir.deep) {
       traverse(value)
     }
