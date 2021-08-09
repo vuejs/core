@@ -11,12 +11,17 @@ export function withMemo(
     return cached
   }
   const ret = render()
-  ret.memo = memo
+
+  // shallow clone
+  ret.memo = memo.slice()
   return (cache[index] = ret)
 }
 
 export function isMemoSame(cached: VNode, memo: any[]) {
   const prev: any[] = cached.memo!
+  if (prev.length != memo.length) {
+    return false
+  }
   for (let i = 0; i < prev.length; i++) {
     if (prev[i] !== memo[i]) {
       return false
