@@ -1,3 +1,12 @@
+## [3.2.1](https://github.com/vuejs/vue-next/compare/v3.2.0...v3.2.1) (2021-08-09)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** fix import usage check for last expression ([1e1682f](https://github.com/vuejs/vue-next/commit/1e1682f060883ee11e802834adb273159d8e84cc))
+
+
+
 # [3.2.0](https://github.com/vuejs/vue-next/compare/v3.2.0-beta.8...v3.2.0) (2021-08-09)
 
 ### Compatibility Notes
