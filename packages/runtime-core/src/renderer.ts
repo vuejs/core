@@ -2330,7 +2330,8 @@ function baseCreateRenderer(
   return {
     render,
     hydrate,
-    createApp: createAppAPI(render, hydrate)
+    createApp: (rootComponent: any, rootProps = null) =>
+      createAppAPI(rootComponent, rootProps, render, hydrate)
   }
 }
 
