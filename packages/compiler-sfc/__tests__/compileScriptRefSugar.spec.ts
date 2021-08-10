@@ -366,5 +366,26 @@ describe('<script setup> ref sugar', () => {
         )
       ).toThrow(`cannot reference locally declared variables`)
     })
+
+    test('warn usage in non-init positions', () => {
+      expect(() =>
+        compile(
+          `<script setup>
+      let bar = $ref(1)
+      bar = $ref(2)
+    </script>`,
+          { refSugar: true }
+        )
+      ).toThrow(`$ref can only be used directly as a variable initializer`)
+
+      expect(() =>
+        compile(
+          `<script setup>
+      let bar = { foo: $computed(1) }
+    </script>`,
+          { refSugar: true }
+        )
+      ).toThrow(`$computed can only be used directly as a variable initializer`)
+    })
   })
 })

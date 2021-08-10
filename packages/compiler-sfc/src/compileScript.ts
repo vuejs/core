@@ -1096,7 +1096,7 @@ export function compileScript(
 
   // 3. Do a full walk to rewrite identifiers referencing let exports with ref
   // value access
-  if (enableRefSugar && Object.keys(refBindings).length) {
+  if (enableRefSugar) {
     const onIdent = (id: Identifier, parent: Node, parentStack: Node[]) => {
       if (refBindings[id.name] && !refIdentifiers.has(id)) {
         if (isStaticProperty(parent) && parent.shorthand) {
@@ -1115,13 +1115,26 @@ export function compileScript(
       }
     }
 
-    const onNode = (node: Node) => {
+    const onNode = (node: Node, parent: Node) => {
       if (isCallOf(node, $RAW)) {
         s.remove(
           node.callee.start! + startOffset,
           node.callee.end! + startOffset
         )
         return false // skip walk
+      } else if (
+        parent &&
+        isCallOf(
+          node,
+          id => id === $REF || id === $FROM_REFS || id === $COMPUTED
+        ) &&
+        (parent.type !== 'VariableDeclarator' || node !== parent.init)
+      ) {
+        error(
+          // @ts-ignore
+          `${node.callee.name} can only be used directly as a variable initializer.`,
+          node
+        )
       }
     }
 
