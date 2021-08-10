@@ -92,8 +92,7 @@ Renders input as a [Web ReadableStream](https://developer.mozilla.org/en-US/docs
 ```ts
 function renderToWebStream(
   input: App | VNode,
-  context?: SSRContext,
-  Ctor?: { new (): ReadableStream }
+  context?: SSRContext
 ): ReadableStream
 ```
 

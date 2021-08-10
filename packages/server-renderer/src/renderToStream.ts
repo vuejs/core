@@ -74,9 +74,7 @@ export function renderToSimpleStream<T extends SimpleReadable>(
 
   Promise.resolve(renderComponentVNode(vnode))
     .then(buffer => unrollBuffer(buffer, stream))
-    .then(() => {
-      stream.push(null)
-    })
+    .then(() => stream.push(null))
     .catch(error => {
       stream.destroy(error)
     })
@@ -180,20 +178,27 @@ export function pipeToWebWritable(
   const writer = writable.getWriter()
   const encoder = new TextEncoder()
 
-  writer.ready.then(() => {
-    renderToSimpleStream(input, context, {
-      push(content) {
-        if (content != null) {
-          writer.write(encoder.encode(content))
-        } else {
-          writer.close()
-        }
-      },
-      destroy(err) {
-        // TODO better error handling?
-        console.log(err)
-        writer.close()
+  // #4287 CloudFlare workers do not implement `ready` property
+  let hasReady = false
+  try {
+    hasReady = isPromise(writer.ready)
+  } catch (e) {}
+
+  renderToSimpleStream(input, context, {
+    async push(content) {
+      if (hasReady) {
+        await writer.ready
       }
-    })
+      if (content != null) {
+        return writer.write(encoder.encode(content))
+      } else {
+        return writer.close()
+      }
+    },
+    destroy(err) {
+      // TODO better error handling?
+      console.log(err)
+      writer.close()
+    }
   })
 }
