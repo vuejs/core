@@ -966,6 +966,33 @@ describe('emits', () => {
     }
   })
 
+  // with tsx
+  const Component = defineComponent({
+    emits: {
+      click: (n: number) => typeof n === 'number'
+    },
+    setup(props, { emit }) {
+      expectType<((n: number) => any) | undefined>(props.onClick)
+      emit('click', 1)
+      //  @ts-expect-error
+      expectError(emit('click'))
+      //  @ts-expect-error
+      expectError(emit('click', 'foo'))
+    }
+  })
+
+  defineComponent({
+    render() {
+      return (
+        <Component
+          onClick={(n: number) => {
+            return n + 1
+          }}
+        />
+      )
+    }
+  })
+
   // without emits
   defineComponent({
     setup(props, { emit }) {
