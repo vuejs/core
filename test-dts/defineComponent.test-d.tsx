@@ -982,9 +982,6 @@ describe('emits', () => {
   })
 
   defineComponent({
-    components: {
-      Component
-    },
     render() {
       return (
         <Component
