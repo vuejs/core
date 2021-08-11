@@ -192,7 +192,7 @@ export type ComponentPublicInstance<
   $emit: EmitFn<E>
   $el: any
   $options: Options & MergedComponentOptionsOverride
-  $forceUpdate: ReactiveEffect
+  $forceUpdate: (i: ComponentInternalInstance) => () => void
   $nextTick: typeof nextTick
   $watch(
     source: string | Function,
