@@ -1,3 +1,21 @@
+## [3.2.2](https://github.com/vuejs/vue-next/compare/v3.2.1...v3.2.2) (2021-08-11)
+
+
+### Bug Fixes
+
+* **runtime-dom:** patch `textContent` on svg properly ([#4301](https://github.com/vuejs/vue-next/issues/4301)) ([e7b0a9d](https://github.com/vuejs/vue-next/commit/e7b0a9d3cffc938d3add7dcde02d0991f60c6ec9)), closes [#4296](https://github.com/vuejs/vue-next/issues/4296)
+* **server-renderer:** pipeToWebWritable CF worker compat ([2224610](https://github.com/vuejs/vue-next/commit/2224610b0b390d82d7b5436df1f78b0569a199a9)), closes [#4287](https://github.com/vuejs/vue-next/issues/4287)
+* **types:** allow symbol in JSX ReservedProps.key ([#4306](https://github.com/vuejs/vue-next/issues/4306)) ([6e5801f](https://github.com/vuejs/vue-next/commit/6e5801f8a8cc23d05817ee94fd98cb1889cc8413))
+* **types:** fix forceUpdate type ([#4302](https://github.com/vuejs/vue-next/issues/4302)) ([380608b](https://github.com/vuejs/vue-next/commit/380608bd44eb385ec085eec4355e6fdc01ca09cd))
+* **types:** fix tsx emit-mapped handler return type ([#4290](https://github.com/vuejs/vue-next/issues/4290)) ([1ce34e2](https://github.com/vuejs/vue-next/commit/1ce34e25d56e73591acc5bbe6e52ec8ef026cc6c)), closes [#4288](https://github.com/vuejs/vue-next/issues/4288)
+
+
+### Features
+
+* **sfc:** support $shallowRef ref sugar ([00b76d3](https://github.com/vuejs/vue-next/commit/00b76d3dc192138514ae6464ded34be5b0c730bb))
+
+
+
 ## [3.2.1](https://github.com/vuejs/vue-next/compare/v3.2.0...v3.2.1) (2021-08-09)
 
 
