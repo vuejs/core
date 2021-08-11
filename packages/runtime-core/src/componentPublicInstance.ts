@@ -16,7 +16,6 @@ import {
   isFunction
 } from '@vue/shared'
 import {
-  ReactiveEffect,
   toRaw,
   shallowReadonly,
   track,
@@ -192,7 +191,7 @@ export type ComponentPublicInstance<
   $emit: EmitFn<E>
   $el: any
   $options: Options & MergedComponentOptionsOverride
-  $forceUpdate: ReactiveEffect
+  $forceUpdate: () => void
   $nextTick: typeof nextTick
   $watch(
     source: string | Function,
