@@ -779,8 +779,8 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
 
 export function mergeProps(...args: (Data & VNodeProps)[]) {
   const ret: Data = {}
-  for (let i = 0; i < args.length; i++) {
-    const toMerge = args[i]
+  for (const arg of args) {
+    const toMerge = arg
     for (const key in toMerge) {
       if (key === 'class') {
         if (ret.class !== toMerge.class) {
