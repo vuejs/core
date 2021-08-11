@@ -354,4 +354,10 @@ export const compatUtils = (
 
 // Ref sugar macros ------------------------------------------------------------
 // for dts generation only
-export { $ref, $computed, $raw, $fromRefs } from './helpers/refSugar'
+export {
+  $ref,
+  $shallowRef,
+  $computed,
+  $raw,
+  $fromRefs
+} from './helpers/refSugar'

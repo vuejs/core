@@ -1,6 +1,7 @@
 import {
   expectType,
   $ref,
+  $shallowRef,
   $computed,
   $fromRefs,
   $raw,
@@ -13,6 +14,10 @@ import {
 expectType<number>($ref(1))
 expectType<number>($ref(ref(1)))
 expectType<{ foo: number }>($ref({ foo: ref(1) }))
+
+// $shallowRef
+expectType<number>($shallowRef(1))
+expectType<{ foo: Ref<number> }>($shallowRef({ foo: ref(1) }))
 
 // $computed
 expectType<number>($computed(() => 1))

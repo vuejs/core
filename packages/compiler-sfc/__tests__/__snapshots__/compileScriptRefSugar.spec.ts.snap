@@ -33,8 +33,8 @@ return { a, b, c }
 }"
 `;
 
-exports[`<script setup> ref sugar $ref declarations 1`] = `
-"import { ref as _ref } from 'vue'
+exports[`<script setup> ref sugar $ref & $shallowRef declarations 1`] = `
+"import { ref as _ref, shallowRef as _shallowRef } from 'vue'
 
 export default {
   setup(__props, { expose }) {
@@ -42,7 +42,7 @@ export default {
 
     let foo = _ref()
     let a = _ref(1)
-    let b = _ref({
+    let b = _shallowRef({
       count: 0
     })
     let c = () => {}

@@ -6,24 +6,26 @@ describe('<script setup> ref sugar', () => {
     return compile(src, { refSugar: true })
   }
 
-  test('$ref declarations', () => {
+  test('$ref & $shallowRef declarations', () => {
     const { content, bindings } = compileWithRefSugar(`<script setup>
     let foo = $ref()
     let a = $ref(1)
-    let b = $ref({
+    let b = $shallowRef({
       count: 0
     })
     let c = () => {}
     let d
     </script>`)
-    expect(content).toMatch(`import { ref as _ref } from 'vue'`)
+    expect(content).toMatch(
+      `import { ref as _ref, shallowRef as _shallowRef } from 'vue'`
+    )
     expect(content).not.toMatch(`$ref()`)
     expect(content).not.toMatch(`$ref(1)`)
-    expect(content).not.toMatch(`$ref({`)
+    expect(content).not.toMatch(`$shallowRef({`)
     expect(content).toMatch(`let foo = _ref()`)
     expect(content).toMatch(`let a = _ref(1)`)
     expect(content).toMatch(`
-    let b = _ref({
+    let b = _shallowRef({
       count: 0
     })
     `)

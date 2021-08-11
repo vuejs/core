@@ -3,6 +3,10 @@ import { Ref, UnwrapRef, ShallowUnwrapRef, ComputedRef } from '@vue/reactivity'
 export function $ref<T>(arg: T | Ref<T>): UnwrapRef<T>
 export function $ref() {}
 
+export function $shallowRef<T>(arg: T): T {
+  return arg
+}
+
 declare const ComputedRefMarker: unique symbol
 type ComputedRefValue<T> = T & { [ComputedRefMarker]?: any }
 

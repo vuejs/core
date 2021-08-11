@@ -6,6 +6,7 @@ type _defineExpose = typeof defineExpose
 type _withDefaults = typeof withDefaults
 
 type _ref = typeof $ref
+type _shallowRef = typeof $shallowRef
 type _computed = typeof $computed
 type _fromRefs = typeof $fromRefs
 type _raw = typeof $raw
@@ -17,6 +18,7 @@ declare global {
   const withDefaults: _withDefaults
 
   const $ref: _ref
+  const $shallowRef: _shallowRef
   const $computed: _computed
   const $fromRefs: _fromRefs
   const $raw: _raw
