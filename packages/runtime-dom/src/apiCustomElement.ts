@@ -18,6 +18,7 @@ import {
   defineComponent,
   nextTick,
   warn,
+  Component,
   ConcreteComponent,
   ComponentOptions
 } from '@vue/runtime-core'
@@ -221,7 +222,7 @@ export class VueElement extends BaseClass {
           this._setProp(key, this[key as keyof this])
         }
       }
-      const { props, styles } = def
+      const { props } = def
       // defining getter/setters on prototype
       const rawKeys = props ? (isArray(props) ? props : Object.keys(props)) : []
       for (const key of rawKeys.map(camelize)) {
@@ -234,7 +235,7 @@ export class VueElement extends BaseClass {
           }
         })
       }
-      this._applyStyles(styles)
+      this._applyStyles(this._getStylesRecursively(def))
     }
 
     const asyncDef = (this._def as ComponentOptions).__asyncLoader
@@ -340,5 +341,29 @@ export class VueElement extends BaseClass {
         }
       })
     }
+  }
+
+  private _getStylesRecursively(
+    component: Component & {
+      components?: Record<string, Component>
+      styles?: string[]
+    }
+  ): string[] {
+    const customElementStyles: string[] = []
+
+    if (component.styles) {
+      customElementStyles.push(...component.styles)
+    }
+
+    const childComponents = component.components
+    if (childComponents) {
+      Object.keys(childComponents).forEach(name => {
+        const childComponent = childComponents[name]
+        const styles = this._getStylesRecursively(childComponent)
+        customElementStyles.push(...styles)
+      })
+    }
+
+    return customElementStyles
   }
 }
