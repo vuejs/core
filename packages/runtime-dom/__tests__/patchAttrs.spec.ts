@@ -10,6 +10,13 @@ describe('runtime-dom: attrs patching', () => {
     expect(el.getAttributeNS(xlinkNS, 'href')).toBe(null)
   })
 
+  test('textContent attributes /w svg', () => {
+    const el = document.createElementNS('http://www.w3.org/2000/svg', 'use')
+    patchProp(el, 'textContent', null, 'foo', true)
+    expect(el.attributes.length).toBe(0)
+    expect(el.innerHTML).toBe('foo')
+  })
+
   test('boolean attributes', () => {
     const el = document.createElement('input')
     patchProp(el, 'readonly', null, true)

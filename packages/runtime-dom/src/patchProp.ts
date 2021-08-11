@@ -68,8 +68,8 @@ function shouldSetAsProp(
 ) {
   if (isSVG) {
     // most keys must be set as attribute on svg elements to work
-    // ...except innerHTML
-    if (key === 'innerHTML') {
+    // ...except innerHTML & textContent
+    if (key === 'innerHTML' || key === 'textContent') {
       return true
     }
     // or native onclick with function values
