@@ -778,7 +778,7 @@ describe('compiler: element transform', () => {
     const { node, root } = parseWithElementTransform(
       `<div style="color: green" :style="{ color: 'red' }" />`,
       {
-        nodeTransforms: [transformExpression ,transformStyle, transformElement],
+        nodeTransforms: [transformExpression, transformStyle, transformElement],
         directiveTransforms: {
           bind: transformBind
         },
@@ -798,7 +798,7 @@ describe('compiler: element transform', () => {
           },
           value: {
             type: NodeTypes.JS_CALL_EXPRESSION,
-            callee: NORMALIZE_STYLE,
+            callee: NORMALIZE_STYLE
           }
         }
       ]
