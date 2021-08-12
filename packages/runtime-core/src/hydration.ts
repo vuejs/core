@@ -280,8 +280,7 @@ export function createHydrationFunctions(
         if (
           forcePatchValue ||
           !optimized ||
-          patchFlag & PatchFlags.FULL_PROPS ||
-          patchFlag & PatchFlags.HYDRATE_EVENTS
+          patchFlag & (PatchFlags.FULL_PROPS | PatchFlags.HYDRATE_EVENTS)
         ) {
           for (const key in props) {
             if (

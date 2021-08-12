@@ -128,10 +128,7 @@ export function renderComponentRoot(
       const keys = Object.keys(fallthroughAttrs)
       const { shapeFlag } = root
       if (keys.length) {
-        if (
-          shapeFlag & ShapeFlags.ELEMENT ||
-          shapeFlag & ShapeFlags.COMPONENT
-        ) {
+        if (shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.COMPONENT)) {
           if (propsOptions && keys.some(isModelListener)) {
             // If a v-model listener (onUpdate:xxx) has a corresponding declared
             // prop, it indicates this component expects to handle v-model and
@@ -186,8 +183,7 @@ export function renderComponentRoot(
       __COMPAT__ &&
       isCompatEnabled(DeprecationTypes.INSTANCE_ATTRS_CLASS_STYLE, instance) &&
       vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT &&
-      (root.shapeFlag & ShapeFlags.ELEMENT ||
-        root.shapeFlag & ShapeFlags.COMPONENT)
+      root.shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.COMPONENT)
     ) {
       const { class: cls, style } = vnode.props || {}
       if (cls || style) {
@@ -316,8 +312,7 @@ const filterModelListeners = (attrs: Data, props: NormalizedProps): Data => {
 
 const isElementRoot = (vnode: VNode) => {
   return (
-    vnode.shapeFlag & ShapeFlags.COMPONENT ||
-    vnode.shapeFlag & ShapeFlags.ELEMENT ||
+    vnode.shapeFlag & (ShapeFlags.COMPONENT | ShapeFlags.ELEMENT) ||
     vnode.type === Comment // potential v-if branch switch
   )
 }

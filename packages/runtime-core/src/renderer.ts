@@ -984,8 +984,7 @@ function baseCreateRenderer(
           // which also requires the correct parent container
           !isSameVNodeType(oldVNode, newVNode) ||
           // - In the case of a component, it could contain anything.
-          oldVNode.shapeFlag & ShapeFlags.COMPONENT ||
-          oldVNode.shapeFlag & ShapeFlags.TELEPORT)
+          oldVNode.shapeFlag & (ShapeFlags.COMPONENT | ShapeFlags.TELEPORT))
           ? hostParentNode(oldVNode.el)!
           : // In other cases, the parent container is not actually used so we
             // just pass the block element here to avoid a DOM parentNode call.
@@ -2129,8 +2128,8 @@ function baseCreateRenderer(
         )
       } else if (
         (type === Fragment &&
-          (patchFlag & PatchFlags.KEYED_FRAGMENT ||
-            patchFlag & PatchFlags.UNKEYED_FRAGMENT)) ||
+          patchFlag &
+            (PatchFlags.KEYED_FRAGMENT | PatchFlags.UNKEYED_FRAGMENT)) ||
         (!optimized && shapeFlag & ShapeFlags.ARRAY_CHILDREN)
       ) {
         unmountChildren(children as VNode[], parentComponent, parentSuspense)
