@@ -738,7 +738,10 @@ export function buildProps(
             !isStaticExp(styleProp.value) &&
             // the static style is compiled into an object,
             // so use `hasStyleBinding` to ensure that it is a dynamic style binding
-            hasStyleBinding
+            (hasStyleBinding ||
+              // v-bind:style and style both exist,
+              // v-bind:style with static literal object
+              styleProp.value.type === NodeTypes.JS_ARRAY_EXPRESSION)
           ) {
             styleProp.value = createCallExpression(
               context.helper(NORMALIZE_STYLE),
