@@ -148,7 +148,7 @@ describe('compiler: v-once transform', () => {
     const onError = jest.fn()
     transformWithOnce(
       `<div v-for="i in list"><div v-once>{{ i }}</div></div>`,
-      { onError }
+      { onError, prefixIdentifiers: true }
     )
 
     expect(onError).toHaveBeenCalledTimes(1)
@@ -163,7 +163,7 @@ describe('compiler: v-once transform', () => {
     const onError = jest.fn()
     transformWithOnce(
       `<div v-for="i in list"><div v-once>{{ k }}</div></div>`,
-      { onError }
+      { onError, prefixIdentifiers: true }
     )
 
     expect(onError).toHaveBeenCalledTimes(0)

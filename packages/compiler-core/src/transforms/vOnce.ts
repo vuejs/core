@@ -13,6 +13,7 @@ export const transformOnce: NodeTransform = (node, context) => {
     }
 
     if (
+      context.prefixIdentifiers &&
       context.scopes.vFor > 0 &&
       context.parent!.type !== NodeTypes.FOR &&
       hasScopeRef(node, context.identifiers)
