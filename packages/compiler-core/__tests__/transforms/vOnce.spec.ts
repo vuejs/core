@@ -4,7 +4,8 @@ import {
   NodeTypes,
   generate,
   CompilerOptions,
-  getBaseTransformPreset
+  getBaseTransformPreset,
+  ErrorCodes
 } from '../../src'
 import { RENDER_SLOT, SET_BLOCK_TRACKING } from '../../src/runtimeHelpers'
 
@@ -141,5 +142,30 @@ describe('compiler: v-once transform', () => {
         type: NodeTypes.JS_CACHE_EXPRESSION
       }
     })
+  })
+
+  test('inside v-for w/ scope variables', () => {
+    const onError = jest.fn()
+    transformWithOnce(
+      `<div v-for="i in list"><div v-once>{{ i }}</div></div>`,
+      { onError }
+    )
+
+    expect(onError).toHaveBeenCalledTimes(1)
+    expect(onError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        code: ErrorCodes.X_V_ONCE_INSIDE_FOR
+      })
+    )
+  })
+
+  test('inside v-for w/o scope variables', () => {
+    const onError = jest.fn()
+    transformWithOnce(
+      `<div v-for="i in list"><div v-once>{{ k }}</div></div>`,
+      { onError }
+    )
+
+    expect(onError).toHaveBeenCalledTimes(0)
   })
 })
