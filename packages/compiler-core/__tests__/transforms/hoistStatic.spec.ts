@@ -573,7 +573,7 @@ describe('compiler: hoistStatic transform', () => {
 
     test('should NOT hoist elements with cached handlers', () => {
       const root = transformWithHoist(
-        `<div><div><div @click="foo"/></div></div>`,
+        `<div><div><div :class="{}" @click="foo"/></div></div>`,
         {
           prefixIdentifiers: true,
           cacheHandlers: true
