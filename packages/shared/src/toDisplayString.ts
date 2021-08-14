@@ -14,7 +14,9 @@ import {
 export const toDisplayString = (val: unknown): string => {
   return val == null
     ? ''
-    : isArray(val) || (isObject(val) && val.toString === objectToString)
+    : isArray(val) ||
+      (isObject(val) &&
+        (val.toString === objectToString || val.toString == null))
     ? JSON.stringify(val, replacer, 2)
     : String(val)
 }
