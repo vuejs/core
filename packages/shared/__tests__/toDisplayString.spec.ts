@@ -19,6 +19,46 @@ describe('toDisplayString', () => {
     expect(toDisplayString(obj)).toBe(JSON.stringify(obj, null, 2))
     const arr = [obj]
     expect(toDisplayString(arr)).toBe(JSON.stringify(arr, null, 2))
+
+    const obj_with_toString_override = {
+      foo: 555,
+      toString() {
+        return 'override'
+      }
+    }
+    expect(toDisplayString(obj_with_toString_override)).toBe('override')
+
+    const obj_with_non_invokeable_toString_override = {
+      foo: 555,
+      toString: null
+    }
+    expect(toDisplayString(obj_with_non_invokeable_toString_override)).toBe(
+      `{
+  "foo": 555,
+  "toString": null
+}`
+    )
+
+    // object created from null does not have .toString in its prototype
+    const nullObjectWithoutToString = Object.create(null)
+    nullObjectWithoutToString.bar = 1
+    expect(toDisplayString(nullObjectWithoutToString)).toBe(
+      `{
+  "bar": 1
+}`
+    )
+
+    // array toString override is ignored
+    const arrWithToStringOverride = [1, 2, 3]
+    arrWithToStringOverride.toString = () =>
+      'override for array is not supported'
+    expect(toDisplayString(arrWithToStringOverride)).toBe(
+      `[
+  1,
+  2,
+  3
+]`
+    )
   })
 
   test('refs', () => {
@@ -31,7 +71,7 @@ describe('toDisplayString', () => {
       })
     ).toBe(JSON.stringify({ n: 1, np: 2 }, null, 2))
   })
-  
+
   test('objects with custom toString', () => {
     class TestClass {
       toString() {

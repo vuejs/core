@@ -4,6 +4,7 @@ import {
   isObject,
   isPlainObject,
   isSet,
+  isFunction,
   objectToString
 } from './index'
 
@@ -12,11 +13,22 @@ import {
  * @private
  */
 export const toDisplayString = (val: unknown): string => {
-  return val == null
-    ? ''
-    : isArray(val) || (isObject(val) && val.toString === objectToString)
-    ? JSON.stringify(val, replacer, 2)
-    : String(val)
+  if (val == null) return ''
+
+  let hasToString = false
+  if (!isObject(val)) {
+    hasToString = true
+  } else if (isArray(val)) {
+    // skip toString override check for Array
+    hasToString = false
+  } else {
+    // Object - check if toString is an invokable override
+    hasToString =
+      val.toString &&
+      val.toString !== objectToString &&
+      isFunction(val.toString)
+  }
+  return hasToString ? String(val) : JSON.stringify(val, replacer, 2)
 }
 
 const replacer = (_key: string, val: any): any => {
