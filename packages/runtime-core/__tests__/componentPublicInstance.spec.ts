@@ -97,7 +97,7 @@ describe('component: proxy', () => {
     expect(() => (instanceProxy.$data = {})).toThrow(TypeError)
     expect(`Attempting to mutate public property "$data"`).toHaveBeenWarned()
 
-    const nextTickThis = await instanceProxy.$nextTick(function(this: any) {
+    const nextTickThis = await instanceProxy.$nextTick(function (this: any) {
       return this
     })
     expect(nextTickThis).toBe(instanceProxy)

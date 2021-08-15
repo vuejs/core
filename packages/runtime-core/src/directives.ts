@@ -19,6 +19,8 @@ import { currentRenderingInstance } from './componentRenderContext'
 import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
 import { ComponentPublicInstance } from './componentPublicInstance'
 import { mapCompatDirectiveHook } from './compat/customDirective'
+import { pauseTracking, resetTracking } from '@vue/reactivity'
+import { traverse } from './apiWatch'
 
 export interface DirectiveBinding<V = any> {
   instance: ComponentPublicInstance | null
@@ -50,6 +52,7 @@ export interface ObjectDirective<T = any, V = any> {
   beforeUnmount?: DirectiveHook<T, null, V>
   unmounted?: DirectiveHook<T, null, V>
   getSSRProps?: SSRDirectiveHook
+  deep?: boolean
 }
 
 export type FunctionDirective<T = any, V = any> = DirectiveHook<T, any, V>
@@ -100,6 +103,9 @@ export function withDirectives<T extends VNode>(
         updated: dir
       } as ObjectDirective
     }
+    if (dir.deep) {
+      traverse(value)
+    }
     bindings.push({
       dir,
       instance,
@@ -130,12 +136,16 @@ export function invokeDirectiveHook(
       hook = mapCompatDirectiveHook(name, binding.dir, instance)
     }
     if (hook) {
+      // disable tracking inside all lifecycle hooks
+      // since they can potentially be called inside effects.
+      pauseTracking()
       callWithAsyncErrorHandling(hook, instance, ErrorCodes.DIRECTIVE_HOOK, [
         vnode.el,
         binding,
         vnode,
         prevVNode
       ])
+      resetTracking()
     }
   }
 }

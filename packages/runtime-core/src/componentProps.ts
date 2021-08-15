@@ -29,7 +29,8 @@ import {
   ComponentInternalInstance,
   ComponentOptions,
   ConcreteComponent,
-  setCurrentInstance
+  setCurrentInstance,
+  unsetCurrentInstance
 } from './component'
 import { isEmitListener } from './componentEmits'
 import { InternalObjectKey } from './vnode'
@@ -51,7 +52,7 @@ export type Prop<T, D = T> = PropOptions<T, D> | PropType<T>
 
 type DefaultFactory<T> = (props: Data) => T | null | undefined
 
-interface PropOptions<T = any, D = T> {
+export interface PropOptions<T = any, D = T> {
   type?: PropType<T> | true | null
   required?: boolean
   default?: D | DefaultFactory<D> | null | undefined | object
@@ -76,7 +77,9 @@ type RequiredKeys<T> = {
     // don't mark Boolean props as undefined
     | BooleanConstructor
     | { type: BooleanConstructor }
-    ? T[K] extends { default: undefined | (() => undefined) } ? never : K
+    ? T[K] extends { default: undefined | (() => undefined) }
+      ? never
+      : K
     : never
 }[keyof T]
 
@@ -97,19 +100,22 @@ type DefaultKeys<T> = {
 type InferPropType<T> = [T] extends [null]
   ? any // null & true would fail to infer
   : [T] extends [{ type: null | true }]
-    ? any // As TS issue https://github.com/Microsoft/TypeScript/issues/14829 // somehow `ObjectConstructor` when inferred from { (): T } becomes `any` // `BooleanConstructor` when inferred from PropConstructor(with PropMethod) becomes `Boolean`
-    : [T] extends [ObjectConstructor | { type: ObjectConstructor }]
-      ? Record<string, any>
-      : [T] extends [BooleanConstructor | { type: BooleanConstructor }]
-        ? boolean
-        : [T] extends [DateConstructor | { type: DateConstructor }]
-          ? Date
-          : [T] extends [Prop<infer V, infer D>]
-            ? (unknown extends V ? D : V)
-            : T
+  ? any // As TS issue https://github.com/Microsoft/TypeScript/issues/14829 // somehow `ObjectConstructor` when inferred from { (): T } becomes `any` // `BooleanConstructor` when inferred from PropConstructor(with PropMethod) becomes `Boolean`
+  : [T] extends [ObjectConstructor | { type: ObjectConstructor }]
+  ? Record<string, any>
+  : [T] extends [BooleanConstructor | { type: BooleanConstructor }]
+  ? boolean
+  : [T] extends [DateConstructor | { type: DateConstructor }]
+  ? Date
+  : [T] extends [Prop<infer V, infer D>]
+  ? unknown extends V
+    ? D
+    : V
+  : T
 
 export type ExtractPropTypes<O> = O extends object
-  ? { [K in RequiredKeys<O>]: InferPropType<O[K]> } &
+  ? { [K in keyof O]?: unknown } & // This is needed to keep the relation between the option prop and the props, allowing to use ctrl+click to navigate to the prop options. see: #3656
+      { [K in RequiredKeys<O>]: InferPropType<O[K]> } &
       { [K in OptionalKeys<O>]?: InferPropType<O[K]> }
   : { [K in string]: any }
 
@@ -405,12 +411,12 @@ function resolvePropValue(
           setCurrentInstance(instance)
           value = propsDefaults[key] = defaultValue.call(
             __COMPAT__ &&
-            isCompatEnabled(DeprecationTypes.PROPS_DEFAULT_THIS, instance)
+              isCompatEnabled(DeprecationTypes.PROPS_DEFAULT_THIS, instance)
               ? createPropsDefaultThis(instance, props, key)
               : null,
             props
           )
-          setCurrentInstance(null)
+          unsetCurrentInstance()
         }
       } else {
         value = defaultValue
@@ -436,8 +442,10 @@ export function normalizePropsOptions(
   appContext: AppContext,
   asMixin = false
 ): NormalizedPropsOptions {
-  if (!appContext.deopt && comp.__props) {
-    return comp.__props
+  const cache = appContext.propsCache
+  const cached = cache.get(comp)
+  if (cached) {
+    return cached
   }
 
   const raw = comp.props
@@ -468,7 +476,8 @@ export function normalizePropsOptions(
   }
 
   if (!raw && !hasExtends) {
-    return (comp.__props = EMPTY_ARR as any)
+    cache.set(comp, EMPTY_ARR as any)
+    return EMPTY_ARR as any
   }
 
   if (isArray(raw)) {
@@ -506,7 +515,9 @@ export function normalizePropsOptions(
     }
   }
 
-  return (comp.__props = [normalized, needCastKeys])
+  const res: NormalizedPropsOptions = [normalized, needCastKeys]
+  cache.set(comp, res)
+  return res
 }
 
 function validatePropName(key: string) {
@@ -522,7 +533,7 @@ function validatePropName(key: string) {
 // so that it works across vms / iframes.
 function getType(ctor: Prop<any>): string {
   const match = ctor && ctor.toString().match(/^\s*function (\w+)/)
-  return match ? match[1] : ''
+  return match ? match[1] : ctor === null ? 'null' : ''
 }
 
 function isSameType(a: Prop<any>, b: Prop<any>): boolean {
@@ -630,6 +641,8 @@ function assertType(value: unknown, type: PropConstructor): AssertionResult {
     valid = isObject(value)
   } else if (expectedType === 'Array') {
     valid = isArray(value)
+  } else if (expectedType === 'null') {
+    valid = value === null
   } else {
     valid = value instanceof type
   }
@@ -649,7 +662,7 @@ function getInvalidTypeMessage(
 ): string {
   let message =
     `Invalid prop: type check failed for prop "${name}".` +
-    ` Expected ${expectedTypes.map(capitalize).join(', ')}`
+    ` Expected ${expectedTypes.map(capitalize).join(' | ')}`
   const expectedType = expectedTypes[0]
   const receivedType = toRawType(value)
   const expectedValue = styleValue(value, expectedType)

@@ -33,6 +33,9 @@ export function patchDOMProp(
     if (el.value !== newValue) {
       el.value = newValue
     }
+    if (value == null) {
+      el.removeAttribute(key)
+    }
     return
   }
 
@@ -49,7 +52,10 @@ export function patchDOMProp(
       return
     } else if (type === 'number') {
       // e.g. <img :width="null">
-      el[key] = 0
+      // the value of some IDL attr must be greater than 0, e.g. input.size = 0 -> error
+      try {
+        el[key] = 0
+      } catch {}
       el.removeAttribute(key)
       return
     }

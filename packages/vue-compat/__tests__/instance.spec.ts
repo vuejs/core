@@ -57,7 +57,7 @@ describe('INSTANCE_EVENT_EMITTER', () => {
   })
 
   it('$on', () => {
-    vm.$on('test', function(this: any) {
+    vm.$on('test', function (this: any) {
       // expect correct context
       expect(this).toBe(vm)
       spy.apply(this, arguments)
@@ -71,7 +71,7 @@ describe('INSTANCE_EVENT_EMITTER', () => {
   })
 
   it('$on multi event', () => {
-    vm.$on(['test1', 'test2'], function(this: any) {
+    vm.$on(['test1', 'test2'], function (this: any) {
       expect(this).toBe(vm)
       spy.apply(this, arguments)
     })
@@ -179,8 +179,10 @@ describe('INSTANCE_EVENT_HOOKS', () => {
     vm.$mount()
     expect(spy).toHaveBeenCalled()
     expect(
-      (deprecationData[DeprecationTypes.INSTANCE_EVENT_HOOKS]
-        .message as Function)('hook:mounted')
+      (
+        deprecationData[DeprecationTypes.INSTANCE_EVENT_HOOKS]
+          .message as Function
+      )('hook:mounted')
     ).toHaveBeenWarned()
   })
 
@@ -197,8 +199,10 @@ describe('INSTANCE_EVENT_HOOKS', () => {
     }).$mount()
     expect(spy).toHaveBeenCalled()
     expect(
-      (deprecationData[DeprecationTypes.INSTANCE_EVENT_HOOKS]
-        .message as Function)('hook:mounted')
+      (
+        deprecationData[DeprecationTypes.INSTANCE_EVENT_HOOKS]
+          .message as Function
+      )('hook:mounted')
     ).toHaveBeenWarned()
   })
 })
@@ -319,7 +323,9 @@ test('INSTANCE_ATTR_CLASS_STYLE', () => {
   )
 
   expect(
-    (deprecationData[DeprecationTypes.INSTANCE_ATTRS_CLASS_STYLE]
-      .message as Function)('Anonymous')
+    (
+      deprecationData[DeprecationTypes.INSTANCE_ATTRS_CLASS_STYLE]
+        .message as Function
+    )('Anonymous')
   ).toHaveBeenWarned()
 })

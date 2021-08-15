@@ -36,6 +36,7 @@ import {
 import { setTransitionHooks } from './BaseTransition'
 import { ComponentRenderContext } from '../componentPublicInstance'
 import { devtoolsComponentAdded } from '../devtools'
+import { isAsyncWrapper } from '../apiAsyncComponent'
 
 type MatchPattern = string | RegExp | string[] | RegExp[]
 
@@ -45,7 +46,7 @@ export interface KeepAliveProps {
   max?: number | string
 }
 
-type CacheKey = string | number | ConcreteComponent
+type CacheKey = string | number | symbol | ConcreteComponent
 type Cache = Map<CacheKey, VNode>
 type Keys = Set<CacheKey>
 
@@ -257,7 +258,15 @@ const KeepAliveImpl: ComponentOptions = {
 
       let vnode = getInnerChild(rawVNode)
       const comp = vnode.type as ConcreteComponent
-      const name = getComponentName(comp)
+
+      // for async components, name check should be based in its loaded
+      // inner component if available
+      const name = getComponentName(
+        isAsyncWrapper(vnode)
+          ? (vnode.type as ComponentOptions).__asyncResolved || {}
+          : comp
+      )
+
       const { include, exclude, max } = props
 
       if (
@@ -320,7 +329,7 @@ if (__COMPAT__) {
 
 // export the public type for h/tsx inference
 // also to avoid inline import() in generated d.ts files
-export const KeepAlive = (KeepAliveImpl as any) as {
+export const KeepAlive = KeepAliveImpl as any as {
   __isKeepAlive: true
   new (): {
     $props: VNodeProps & KeepAliveProps

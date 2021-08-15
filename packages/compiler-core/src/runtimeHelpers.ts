@@ -5,7 +5,9 @@ export const KEEP_ALIVE = Symbol(__DEV__ ? `KeepAlive` : ``)
 export const BASE_TRANSITION = Symbol(__DEV__ ? `BaseTransition` : ``)
 export const OPEN_BLOCK = Symbol(__DEV__ ? `openBlock` : ``)
 export const CREATE_BLOCK = Symbol(__DEV__ ? `createBlock` : ``)
+export const CREATE_ELEMENT_BLOCK = Symbol(__DEV__ ? `createElementBlock` : ``)
 export const CREATE_VNODE = Symbol(__DEV__ ? `createVNode` : ``)
+export const CREATE_ELEMENT_VNODE = Symbol(__DEV__ ? `createElementVNode` : ``)
 export const CREATE_COMMENT = Symbol(__DEV__ ? `createCommentVNode` : ``)
 export const CREATE_TEXT = Symbol(__DEV__ ? `createTextVNode` : ``)
 export const CREATE_STATIC = Symbol(__DEV__ ? `createStaticVNode` : ``)
@@ -21,6 +23,10 @@ export const RENDER_SLOT = Symbol(__DEV__ ? `renderSlot` : ``)
 export const CREATE_SLOTS = Symbol(__DEV__ ? `createSlots` : ``)
 export const TO_DISPLAY_STRING = Symbol(__DEV__ ? `toDisplayString` : ``)
 export const MERGE_PROPS = Symbol(__DEV__ ? `mergeProps` : ``)
+export const NORMALIZE_CLASS = Symbol(__DEV__ ? `normalizeClass` : ``)
+export const NORMALIZE_STYLE = Symbol(__DEV__ ? `normalizeStyle` : ``)
+export const NORMALIZE_PROPS = Symbol(__DEV__ ? `normalizeProps` : ``)
+export const GUARD_REACTIVE_PROPS = Symbol(__DEV__ ? `guardReactiveProps` : ``)
 export const TO_HANDLERS = Symbol(__DEV__ ? `toHandlers` : ``)
 export const CAMELIZE = Symbol(__DEV__ ? `camelize` : ``)
 export const CAPITALIZE = Symbol(__DEV__ ? `capitalize` : ``)
@@ -32,6 +38,8 @@ export const WITH_SCOPE_ID = Symbol(__DEV__ ? `withScopeId` : ``)
 export const WITH_CTX = Symbol(__DEV__ ? `withCtx` : ``)
 export const UNREF = Symbol(__DEV__ ? `unref` : ``)
 export const IS_REF = Symbol(__DEV__ ? `isRef` : ``)
+export const WITH_MEMO = Symbol(__DEV__ ? `withMemo` : ``)
+export const IS_MEMO_SAME = Symbol(__DEV__ ? `isMemoSame` : ``)
 
 // Name mapping for runtime helpers that need to be imported from 'vue' in
 // generated code. Make sure these are correctly exported in the runtime!
@@ -44,7 +52,9 @@ export const helperNameMap: any = {
   [BASE_TRANSITION]: `BaseTransition`,
   [OPEN_BLOCK]: `openBlock`,
   [CREATE_BLOCK]: `createBlock`,
+  [CREATE_ELEMENT_BLOCK]: `createElementBlock`,
   [CREATE_VNODE]: `createVNode`,
+  [CREATE_ELEMENT_VNODE]: `createElementVNode`,
   [CREATE_COMMENT]: `createCommentVNode`,
   [CREATE_TEXT]: `createTextVNode`,
   [CREATE_STATIC]: `createStaticVNode`,
@@ -58,6 +68,10 @@ export const helperNameMap: any = {
   [CREATE_SLOTS]: `createSlots`,
   [TO_DISPLAY_STRING]: `toDisplayString`,
   [MERGE_PROPS]: `mergeProps`,
+  [NORMALIZE_CLASS]: `normalizeClass`,
+  [NORMALIZE_STYLE]: `normalizeStyle`,
+  [NORMALIZE_PROPS]: `normalizeProps`,
+  [GUARD_REACTIVE_PROPS]: `guardReactiveProps`,
   [TO_HANDLERS]: `toHandlers`,
   [CAMELIZE]: `camelize`,
   [CAPITALIZE]: `capitalize`,
@@ -68,7 +82,9 @@ export const helperNameMap: any = {
   [WITH_SCOPE_ID]: `withScopeId`,
   [WITH_CTX]: `withCtx`,
   [UNREF]: `unref`,
-  [IS_REF]: `isRef`
+  [IS_REF]: `isRef`,
+  [WITH_MEMO]: `withMemo`,
+  [IS_MEMO_SAME]: `isMemoSame`
 }
 
 export function registerRuntimeHelpers(helpers: any) {

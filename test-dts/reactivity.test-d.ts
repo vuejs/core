@@ -1,12 +1,12 @@
 import {
+  ref,
   readonly,
   describe,
   expectError,
-  markRaw,
   expectType,
-  reactive,
   Ref,
-  ref
+  reactive,
+  markRaw
 } from './index'
 
 describe('should support DeepReadonly', () => {
@@ -15,6 +15,12 @@ describe('should support DeepReadonly', () => {
   expectError((r.obj = {}))
   // @ts-expect-error
   expectError((r.obj.k = 'x'))
+})
+
+// #4180
+describe('readonly ref', () => {
+  const r = readonly(ref({ count: 1 }))
+  expectType<Ref>(r)
 })
 
 describe('should support markRaw', () => {

@@ -1,7 +1,6 @@
 import {
   isReactive,
   reactive,
-  stop,
   track,
   TrackOpTypes,
   trigger,
@@ -34,7 +33,11 @@ import {
   isRuntimeOnly,
   setupComponent
 } from '../component'
-import { RenderFunction, mergeOptions } from '../componentOptions'
+import {
+  RenderFunction,
+  mergeOptions,
+  internalOptionMergeStrats
+} from '../componentOptions'
 import { ComponentPublicInstance } from '../componentPublicInstance'
 import { devtoolsInitApp, devtoolsUnmountApp } from '../devtools'
 import { Directive } from '../directives'
@@ -43,8 +46,7 @@ import { version } from '..'
 import {
   installLegacyConfigWarnings,
   installLegacyOptionMergeStrats,
-  LegacyConfig,
-  legacyOptionMergeStrats
+  LegacyConfig
 } from './globalConfig'
 import { LegacyDirective } from './customDirective'
 import {
@@ -231,8 +233,7 @@ export function createCompatVue(
           mergeOptions(
             extend({}, SubVue.options),
             inlineOptions,
-            null,
-            legacyOptionMergeStrats as any
+            internalOptionMergeStrats as any
           ),
           SubVue
         )
@@ -250,15 +251,14 @@ export function createCompatVue(
       mergeBase[key] = isArray(superValue)
         ? superValue.slice()
         : isObject(superValue)
-          ? extend(Object.create(null), superValue)
-          : superValue
+        ? extend(Object.create(null), superValue)
+        : superValue
     }
 
     SubVue.options = mergeOptions(
       mergeBase,
       extendOptions,
-      null,
-      legacyOptionMergeStrats as any
+      internalOptionMergeStrats as any
     )
 
     SubVue.options._base = SubVue
@@ -305,8 +305,7 @@ export function createCompatVue(
       mergeOptions(
         parent,
         child,
-        vm && vm.$,
-        vm ? undefined : (legacyOptionMergeStrats as any)
+        vm ? undefined : (internalOptionMergeStrats as any)
       ),
     defineReactive
   }
@@ -472,6 +471,7 @@ function installCompatMount(
     }
     setupComponent(instance)
     vnode.component = instance
+    vnode.isCompatRoot = true
 
     // $mount & $destroy
     // these are defined on ctx and picked up by the $mount/$destroy
@@ -563,7 +563,7 @@ function installCompatMount(
         }
         delete app._container.__vue_app__
       } else {
-        const { bum, effects, um } = instance
+        const { bum, scope, um } = instance
         // beforeDestroy hooks
         if (bum) {
           invokeArrayFns(bum)
@@ -572,10 +572,8 @@ function installCompatMount(
           instance.emit('hook:beforeDestroy')
         }
         // stop effects
-        if (effects) {
-          for (let i = 0; i < effects.length; i++) {
-            stop(effects[i])
-          }
+        if (scope) {
+          scope.stop()
         }
         // unmounted hook
         if (um) {

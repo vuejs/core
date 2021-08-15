@@ -35,6 +35,22 @@ test('COMPILER_IS_ON_ELEMENT', () => {
   expect(CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT).toHaveBeenWarned()
 })
 
+test('COMPILER_IS_ON_ELEMENT (dynamic)', () => {
+  const MyButton = {
+    template: `<div><slot/></div>`
+  }
+
+  const vm = new Vue({
+    template: `<button :is="'MyButton'">text</button>`,
+    components: {
+      MyButton
+    }
+  }).$mount()
+
+  expect(vm.$el.outerHTML).toBe(`<div>text</div>`)
+  expect(CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT).toHaveBeenWarned()
+})
+
 test('COMPILER_V_BIND_SYNC', async () => {
   const MyButton = {
     props: ['foo'],

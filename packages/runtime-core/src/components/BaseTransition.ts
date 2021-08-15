@@ -69,8 +69,8 @@ export interface TransitionHooks<
   delayedLeave?(): void
 }
 
-type TransitionHookCaller = (
-  hook: ((el: any) => void) | undefined,
+export type TransitionHookCaller = (
+  hook: ((el: any) => void) | Array<(el: any) => void> | undefined,
   args?: any[]
 ) => void
 
@@ -257,7 +257,7 @@ if (__COMPAT__) {
 
 // export the public type for h/tsx inference
 // also to avoid inline import() in generated d.ts files
-export const BaseTransition = (BaseTransitionImpl as any) as {
+export const BaseTransition = BaseTransitionImpl as any as {
   new (): {
     $props: BaseTransitionProps<any>
   }

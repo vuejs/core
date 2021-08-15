@@ -180,7 +180,8 @@ export function ssrProcessComponent(
     } else if (component === TRANSITION_GROUP) {
       return ssrProcessTransitionGroup(node, context)
     } else {
-      // real fall-through (e.g. KeepAlive): just render its children.
+      // real fall-through: Transition / KeepAlive
+      // just render its children.
       processChildren(node.children, context)
     }
   } else {
@@ -206,7 +207,7 @@ export function ssrProcessComponent(
 
     // component is inside a slot, inherit slot scope Id
     if (context.withSlotScopeId) {
-      node.ssrCodegenNode!.arguments.push(`_scopeId`)
+      node.ssrCodegenNode.arguments.push(`_scopeId`)
     }
 
     if (typeof component === 'string') {
@@ -224,9 +225,8 @@ export function ssrProcessComponent(
 
 export const rawOptionsMap = new WeakMap<RootNode, CompilerOptions>()
 
-const [baseNodeTransforms, baseDirectiveTransforms] = getBaseTransformPreset(
-  true
-)
+const [baseNodeTransforms, baseDirectiveTransforms] =
+  getBaseTransformPreset(true)
 const vnodeNodeTransforms = [...baseNodeTransforms, ...DOMNodeTransforms]
 const vnodeDirectiveTransforms = {
   ...baseDirectiveTransforms,
@@ -240,6 +240,7 @@ function createVNodeSlotBranch(
 ): ReturnStatement {
   // apply a sub-transform using vnode-based transforms.
   const rawOptions = rawOptionsMap.get(parentContext.root)!
+
   const subOptions = {
     ...rawOptions,
     // overwrite with vnode-based transforms

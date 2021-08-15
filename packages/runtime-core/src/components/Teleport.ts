@@ -243,12 +243,13 @@ export const TeleportImpl = {
       hostRemove(anchor!)
       if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
         for (let i = 0; i < (children as VNode[]).length; i++) {
+          const child = (children as VNode[])[i]
           unmount(
-            (children as VNode[])[i],
+            child,
             parentComponent,
             parentSuspense,
             true,
-            optimized
+            !!child.dynamicChildren
           )
         }
       }
@@ -370,7 +371,7 @@ function hydrateTeleport(
 }
 
 // Force-casted public typing for h and TSX props inference
-export const Teleport = (TeleportImpl as any) as {
+export const Teleport = TeleportImpl as any as {
   __isTeleport: true
   new (): { $props: VNodeProps & TeleportProps }
 }

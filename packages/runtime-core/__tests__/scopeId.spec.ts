@@ -226,7 +226,7 @@ describe('backwards compat with <=3.0.7', () => {
   test('should work on slots', () => {
     const Child = {
       __scopeId: 'child',
-      render: withChildId(function(this: any) {
+      render: withChildId(function (this: any) {
         return h('div', renderSlot(this.$slots, 'default'))
       })
     }

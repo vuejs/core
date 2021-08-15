@@ -48,8 +48,7 @@ const App = {
         h(
           'a',
           {
-            href:
-              'https://app.netlify.com/sites/vue-next-template-explorer/deploys',
+            href: 'https://app.netlify.com/sites/vue-next-template-explorer/deploys',
             target: `_blank`
           },
           'History'
@@ -147,7 +146,9 @@ const App = {
                 checked: compilerOptions.hoistStatic && !isSSR,
                 disabled: isSSR,
                 onChange(e: Event) {
-                  compilerOptions.hoistStatic = (e.target as HTMLInputElement).checked
+                  compilerOptions.hoistStatic = (
+                    e.target as HTMLInputElement
+                  ).checked
                 }
               }),
               h('label', { for: 'hoist' }, 'hoistStatic')
@@ -161,7 +162,9 @@ const App = {
                 checked: usePrefix && compilerOptions.cacheHandlers && !isSSR,
                 disabled: !usePrefix || isSSR,
                 onChange(e: Event) {
-                  compilerOptions.cacheHandlers = (e.target as HTMLInputElement).checked
+                  compilerOptions.cacheHandlers = (
+                    e.target as HTMLInputElement
+                  ).checked
                 }
               }),
               h('label', { for: 'cache' }, 'cacheHandlers')
@@ -191,7 +194,9 @@ const App = {
                 id: 'inline',
                 checked: compilerOptions.inline,
                 onChange(e: Event) {
-                  compilerOptions.inline = (e.target as HTMLInputElement).checked
+                  compilerOptions.inline = (
+                    e.target as HTMLInputElement
+                  ).checked
                 }
               }),
               h('label', { for: 'inline' }, 'inline')
@@ -204,8 +209,9 @@ const App = {
                 id: 'compat',
                 checked: compilerOptions.compatConfig!.MODE === 2,
                 onChange(e: Event) {
-                  compilerOptions.compatConfig!.MODE = (e.target as HTMLInputElement)
-                    .checked
+                  compilerOptions.compatConfig!.MODE = (
+                    e.target as HTMLInputElement
+                  ).checked
                     ? 2
                     : 3
                 }

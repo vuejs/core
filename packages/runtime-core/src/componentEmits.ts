@@ -31,7 +31,27 @@ export type ObjectEmitsOptions = Record<
   string,
   ((...args: any[]) => any) | null
 >
+
 export type EmitsOptions = ObjectEmitsOptions | string[]
+
+export type EmitsToProps<T extends EmitsOptions> = T extends string[]
+  ? {
+      [K in string & `on${Capitalize<T[number]>}`]?: (...args: any[]) => any
+    }
+  : T extends ObjectEmitsOptions
+  ? {
+      [K in string &
+        `on${Capitalize<string & keyof T>}`]?: K extends `on${infer C}`
+        ? T[Uncapitalize<C>] extends null
+          ? (...args: any[]) => any
+          : (
+              ...args: T[Uncapitalize<C>] extends (...args: infer P) => any
+                ? P
+                : never
+            ) => any
+        : never
+    }
+  : {}
 
 export type EmitFn<
   Options = ObjectEmitsOptions,
@@ -39,14 +59,14 @@ export type EmitFn<
 > = Options extends Array<infer V>
   ? (event: V, ...args: any[]) => void
   : {} extends Options // if the emit is empty object (usually the default value for emit) should be converted to function
-    ? (event: string, ...args: any[]) => void
-    : UnionToIntersection<
-        {
-          [key in Event]: Options[key] extends ((...args: infer Args) => any)
-            ? (event: key, ...args: Args) => void
-            : (event: key, ...args: any[]) => void
-        }[Event]
-      >
+  ? (event: string, ...args: any[]) => void
+  : UnionToIntersection<
+      {
+        [key in Event]: Options[key] extends (...args: infer Args) => any
+          ? (event: key, ...args: Args) => void
+          : (event: key, ...args: any[]) => void
+      }[Event]
+    >
 
 export function emit(
   instance: ComponentInternalInstance,
@@ -149,10 +169,11 @@ export function emit(
   const onceHandler = props[handlerName + `Once`]
   if (onceHandler) {
     if (!instance.emitted) {
-      ;(instance.emitted = {} as Record<string, boolean>)[handlerName] = true
+      instance.emitted = {} as Record<any, boolean>
     } else if (instance.emitted[handlerName]) {
       return
     }
+    instance.emitted[handlerName] = true
     callWithAsyncErrorHandling(
       onceHandler,
       instance,
@@ -172,8 +193,10 @@ export function normalizeEmitsOptions(
   appContext: AppContext,
   asMixin = false
 ): ObjectEmitsOptions | null {
-  if (!appContext.deopt && comp.__emits !== undefined) {
-    return comp.__emits
+  const cache = appContext.emitsCache
+  const cached = cache.get(comp)
+  if (cached !== undefined) {
+    return cached
   }
 
   const raw = comp.emits
@@ -201,7 +224,8 @@ export function normalizeEmitsOptions(
   }
 
   if (!raw && !hasExtends) {
-    return (comp.__emits = null)
+    cache.set(comp, null)
+    return null
   }
 
   if (isArray(raw)) {
@@ -209,7 +233,9 @@ export function normalizeEmitsOptions(
   } else {
     extend(normalized, raw)
   }
-  return (comp.__emits = normalized)
+
+  cache.set(comp, normalized)
+  return normalized
 }
 
 // Check if an incoming prop key is a declared emit event listener.

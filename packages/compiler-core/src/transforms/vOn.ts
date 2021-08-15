@@ -70,7 +70,7 @@ export const transformOn: DirectiveTransform = (
   if (exp && !exp.content.trim()) {
     exp = undefined
   }
-  let shouldCache: boolean = context.cacheHandlers && !exp
+  let shouldCache: boolean = context.cacheHandlers && !exp && !context.inVOnce
   if (exp) {
     const isMemberExp = isMemberExpression(exp.content)
     const isInlineStatement = !(isMemberExp || fnExpRE.test(exp.content))
@@ -90,6 +90,8 @@ export const transformOn: DirectiveTransform = (
       // to scope variables.
       shouldCache =
         context.cacheHandlers &&
+        // unnecessary to cache inside v-once
+        !context.inVOnce &&
         // runtime constants don't need to be cached
         // (this is analyzed by compileScript in SFC <script setup>)
         !(exp.type === NodeTypes.SIMPLE_EXPRESSION && exp.constType > 0) &&
@@ -163,5 +165,7 @@ export const transformOn: DirectiveTransform = (
     ret.props[0].value = context.cache(ret.props[0].value)
   }
 
+  // mark the key as handler for props normalization check
+  ret.props.forEach(p => (p.key.isHandlerKey = true))
   return ret
 }

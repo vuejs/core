@@ -19,6 +19,7 @@ import {
   ComponentOptions,
   createComponentInstance,
   Data,
+  getExposeProxy,
   setupComponent
 } from './component'
 import {
@@ -47,15 +48,13 @@ import {
   flushPostFlushCbs,
   invalidateJob,
   flushPreFlushCbs,
-  SchedulerCb
+  SchedulerJob
 } from './scheduler'
 import {
-  effect,
-  stop,
-  ReactiveEffectOptions,
   isRef,
   pauseTracking,
-  resetTracking
+  resetTracking,
+  ReactiveEffect
 } from '@vue/reactivity'
 import { updateProps } from './componentProps'
 import { updateSlots } from './componentSlots'
@@ -94,7 +93,7 @@ export interface Renderer<HostElement = RendererElement> {
   createApp: CreateAppFunction<HostElement>
 }
 
-export interface HydrationRenderer extends Renderer<Element> {
+export interface HydrationRenderer extends Renderer<Element | ShadowRoot> {
   hydrate: RootHydrateFunction
 }
 
@@ -119,7 +118,6 @@ export interface RendererOptions<
     parentSuspense?: SuspenseBoundary | null,
     unmountChildren?: UnmountChildrenFn
   ): void
-  forcePatchProp?(el: HostElement, key: string): boolean
   insert(el: HostNode, parent: HostElement, anchor?: HostNode | null): void
   remove(el: HostNode): void
   createElement(
@@ -142,7 +140,7 @@ export interface RendererOptions<
     parent: HostElement,
     anchor: HostNode | null,
     isSVG: boolean
-  ): HostElement[]
+  ): [HostNode, HostNode]
 }
 
 // Renderer Node can technically be any object in the context of core renderer
@@ -285,119 +283,9 @@ export const enum MoveType {
   REORDER
 }
 
-const prodEffectOptions = {
-  scheduler: queueJob,
-  // #1801, #2043 component render effects should allow recursive updates
-  allowRecurse: true
-}
-
-function createDevEffectOptions(
-  instance: ComponentInternalInstance
-): ReactiveEffectOptions {
-  return {
-    scheduler: queueJob,
-    allowRecurse: true,
-    onTrack: instance.rtc ? e => invokeArrayFns(instance.rtc!, e) : void 0,
-    onTrigger: instance.rtg ? e => invokeArrayFns(instance.rtg!, e) : void 0
-  }
-}
-
 export const queuePostRenderEffect = __FEATURE_SUSPENSE__
   ? queueEffectWithSuspense
   : queuePostFlushCb
-
-export const setRef = (
-  rawRef: VNodeNormalizedRef,
-  oldRawRef: VNodeNormalizedRef | null,
-  parentSuspense: SuspenseBoundary | null,
-  vnode: VNode,
-  isUnmount = false
-) => {
-  if (isArray(rawRef)) {
-    rawRef.forEach((r, i) =>
-      setRef(
-        r,
-        oldRawRef && (isArray(oldRawRef) ? oldRawRef[i] : oldRawRef),
-        parentSuspense,
-        vnode,
-        isUnmount
-      )
-    )
-    return
-  }
-
-  if (isAsyncWrapper(vnode) && !isUnmount) {
-    // when mounting async components, nothing needs to be done,
-    // because the template ref is forwarded to inner component
-    return
-  }
-
-  const refValue =
-    vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT
-      ? vnode.component!.exposed || vnode.component!.proxy
-      : vnode.el
-  const value = isUnmount ? null : refValue
-
-  const { i: owner, r: ref } = rawRef
-  if (__DEV__ && !owner) {
-    warn(
-      `Missing ref owner context. ref cannot be used on hoisted vnodes. ` +
-        `A vnode with ref must be created inside the render function.`
-    )
-    return
-  }
-  const oldRef = oldRawRef && (oldRawRef as VNodeNormalizedRefAtom).r
-  const refs = owner.refs === EMPTY_OBJ ? (owner.refs = {}) : owner.refs
-  const setupState = owner.setupState
-
-  // dynamic ref changed. unset old ref
-  if (oldRef != null && oldRef !== ref) {
-    if (isString(oldRef)) {
-      refs[oldRef] = null
-      if (hasOwn(setupState, oldRef)) {
-        setupState[oldRef] = null
-      }
-    } else if (isRef(oldRef)) {
-      oldRef.value = null
-    }
-  }
-
-  if (isString(ref)) {
-    const doSet = () => {
-      if (__COMPAT__ && isCompatEnabled(DeprecationTypes.V_FOR_REF, owner)) {
-        registerLegacyRef(refs, ref, refValue, owner, rawRef.f, isUnmount)
-      } else {
-        refs[ref] = value
-      }
-      if (hasOwn(setupState, ref)) {
-        setupState[ref] = value
-      }
-    }
-    // #1789: for non-null values, set them after render
-    // null values means this is unmount and it should not overwrite another
-    // ref with the same key
-    if (value) {
-      ;(doSet as SchedulerCb).id = -1
-      queuePostRenderEffect(doSet, parentSuspense)
-    } else {
-      doSet()
-    }
-  } else if (isRef(ref)) {
-    const doSet = () => {
-      ref.value = value
-    }
-    if (value) {
-      ;(doSet as SchedulerCb).id = -1
-      queuePostRenderEffect(doSet, parentSuspense)
-    } else {
-      doSet()
-    }
-  } else if (isFunction(ref)) {
-    callWithErrorHandling(ref, owner, ErrorCodes.FUNCTION_REF, [value, refs])
-  } else if (__DEV__) {
-    warn('Invalid template ref type:', value, `(${typeof value})`)
-  }
-}
 
 /**
  * The createRenderer function accepts two generic arguments:
@@ -462,7 +350,6 @@ function baseCreateRenderer(
     insert: hostInsert,
     remove: hostRemove,
     patchProp: hostPatchProp,
-    forcePatchProp: hostForcePatchProp,
     createElement: hostCreateElement,
     createText: hostCreateText,
     createComment: hostCreateComment,
@@ -486,8 +373,12 @@ function baseCreateRenderer(
     parentSuspense = null,
     isSVG = false,
     slotScopeIds = null,
-    optimized = false
+    optimized = __DEV__ && isHmrUpdating ? false : !!n2.dynamicChildren
   ) => {
+    if (n1 === n2) {
+      return
+    }
+
     // patching & not same type, unmount old tree
     if (n1 && !isSameVNodeType(n1, n2)) {
       anchor = getNextHostNode(n1)
@@ -771,7 +662,7 @@ function baseCreateRenderer(
           parentSuspense,
           isSVG && type !== 'foreignObject',
           slotScopeIds,
-          optimized || !!vnode.dynamicChildren
+          optimized
         )
       }
 
@@ -781,7 +672,7 @@ function baseCreateRenderer(
       // props
       if (props) {
         for (const key in props) {
-          if (!isReservedProp(key)) {
+          if (key !== 'value' && !isReservedProp(key)) {
             hostPatchProp(
               el,
               key,
@@ -794,6 +685,18 @@ function baseCreateRenderer(
               unmountChildren
             )
           }
+        }
+        /**
+         * Special case for setting value on DOM elements:
+         * - it can be order-sensitive (e.g. should be set *after* min/max, #2325, #4024)
+         * - it needs to be forced (#1471)
+         * #2353 proposes adding another renderer option to configure this, but
+         * the properties affects are so finite it is worth special casing it
+         * here to reduce the complexity. (Special casing it also should not
+         * affect non-DOM renderers)
+         */
+        if ('value' in props) {
+          hostPatchProp(el, 'value', null, props.value)
         }
         if ((vnodeHook = props.onVnodeBeforeMount)) {
           invokeVNodeHook(vnodeHook, parentComponent, vnode)
@@ -981,10 +884,8 @@ function baseCreateRenderer(
             const key = propsToUpdate[i]
             const prev = oldProps[key]
             const next = newProps[key]
-            if (
-              next !== prev ||
-              (hostForcePatchProp && hostForcePatchProp(el, key))
-            ) {
+            // #1471 force patch value
+            if (next !== prev || key === 'value') {
               hostPatchProp(
                 el,
                 key,
@@ -1073,16 +974,19 @@ function baseCreateRenderer(
       const newVNode = newChildren[i]
       // Determine the container (parent element) for the patch.
       const container =
+        // oldVNode may be an errored async setup() component inside Suspense
+        // which will not have a mounted element
+        oldVNode.el &&
         // - In the case of a Fragment, we need to provide the actual parent
         // of the Fragment itself so it can move its children.
-        oldVNode.type === Fragment ||
-        // - In the case of different nodes, there is going to be a replacement
-        // which also requires the correct parent container
-        !isSameVNodeType(oldVNode, newVNode) ||
-        // - In the case of a component, it could contain anything.
-        oldVNode.shapeFlag & ShapeFlags.COMPONENT ||
-        oldVNode.shapeFlag & ShapeFlags.TELEPORT
-          ? hostParentNode(oldVNode.el!)!
+        (oldVNode.type === Fragment ||
+          // - In the case of different nodes, there is going to be a replacement
+          // which also requires the correct parent container
+          !isSameVNodeType(oldVNode, newVNode) ||
+          // - In the case of a component, it could contain anything.
+          oldVNode.shapeFlag & ShapeFlags.COMPONENT ||
+          oldVNode.shapeFlag & ShapeFlags.TELEPORT)
+          ? hostParentNode(oldVNode.el)!
           : // In other cases, the parent container is not actually used so we
             // just pass the block element here to avoid a DOM parentNode call.
             fallbackContainer
@@ -1115,10 +1019,8 @@ function baseCreateRenderer(
         if (isReservedProp(key)) continue
         const next = newProps[key]
         const prev = oldProps[key]
-        if (
-          next !== prev ||
-          (hostForcePatchProp && hostForcePatchProp(el, key))
-        ) {
+        // defer patching value
+        if (next !== prev && key !== 'value') {
           hostPatchProp(
             el,
             key,
@@ -1149,6 +1051,9 @@ function baseCreateRenderer(
           }
         }
       }
+      if ('value' in newProps) {
+        hostPatchProp(el, 'value', oldProps.value, newProps.value)
+      }
     }
   }
 
@@ -1167,8 +1072,12 @@ function baseCreateRenderer(
     const fragmentEndAnchor = (n2.anchor = n1 ? n1.anchor : hostCreateText(''))!
 
     let { patchFlag, dynamicChildren, slotScopeIds: fragmentSlotScopeIds } = n2
-    if (patchFlag > 0) {
-      optimized = true
+
+    if (__DEV__ && isHmrUpdating) {
+      // HMR updated, force full diff
+      patchFlag = 0
+      optimized = false
+      dynamicChildren = null
     }
 
     // check if this is a slot fragment with :slotted scope ids
@@ -1176,13 +1085,6 @@ function baseCreateRenderer(
       slotScopeIds = slotScopeIds
         ? slotScopeIds.concat(fragmentSlotScopeIds)
         : fragmentSlotScopeIds
-    }
-
-    if (__DEV__ && isHmrUpdating) {
-      // HMR updated, force full diff
-      patchFlag = 0
-      optimized = false
-      dynamicChildren = null
     }
 
     if (n1 == null) {
@@ -1301,7 +1203,8 @@ function baseCreateRenderer(
   ) => {
     // 2.x compat may pre-creaate the component instance before actually
     // mounting
-    const compatMountInstance = __COMPAT__ && initialVNode.component
+    const compatMountInstance =
+      __COMPAT__ && initialVNode.isCompatRoot && initialVNode.component
     const instance: ComponentInternalInstance =
       compatMountInstance ||
       (initialVNode.component = createComponentInstance(
@@ -1389,7 +1292,7 @@ function baseCreateRenderer(
         // in case the child component is also queued, remove it to avoid
         // double updating the same child component in the same flush.
         invalidateJob(instance.update)
-        // instance.update is the reactive effect runner.
+        // instance.update is the reactive effect.
         instance.update()
       }
     } else {
@@ -1409,13 +1312,13 @@ function baseCreateRenderer(
     isSVG,
     optimized
   ) => {
-    // create reactive effect for rendering
-    instance.update = effect(function componentEffect() {
+    const componentUpdateFn = () => {
       if (!instance.isMounted) {
         let vnodeHook: VNodeHook | null | undefined
         const { el, props } = initialVNode
         const { bm, m, parent } = instance
 
+        effect.allowRecurse = false
         // beforeMount hook
         if (bm) {
           invokeArrayFns(bm)
@@ -1430,6 +1333,7 @@ function baseCreateRenderer(
         ) {
           instance.emit('hook:beforeMount')
         }
+        effect.allowRecurse = true
 
         if (el && hydrateNode) {
           // vnode has adopted host node - perform hydration instead of mount.
@@ -1457,12 +1361,12 @@ function baseCreateRenderer(
           }
 
           if (isAsyncWrapper(initialVNode)) {
-            (initialVNode.type as ComponentOptions).__asyncLoader!().then(
+            ;(initialVNode.type as ComponentOptions).__asyncLoader!().then(
               // note: we are moving the render call into an async callback,
               // which means it won't track dependencies - but it's ok because
               // a server-rendered async wrapper is already in resolved state
               // and it will never need to change.
-              hydrateSubTree
+              () => !instance.isUnmounted && hydrateSubTree()
             )
           } else {
             hydrateSubTree()
@@ -1555,6 +1459,8 @@ function baseCreateRenderer(
           next = vnode
         }
 
+        // Disallow component effect recursion during pre-lifecycle hooks.
+        effect.allowRecurse = false
         // beforeUpdate hook
         if (bu) {
           invokeArrayFns(bu)
@@ -1569,6 +1475,7 @@ function baseCreateRenderer(
         ) {
           instance.emit('hook:beforeUpdate')
         }
+        effect.allowRecurse = true
 
         // render
         if (__DEV__) {
@@ -1634,12 +1541,33 @@ function baseCreateRenderer(
           popWarningContext()
         }
       }
-    }, __DEV__ ? createDevEffectOptions(instance) : prodEffectOptions)
+    }
+
+    // create reactive effect for rendering
+    const effect = new ReactiveEffect(
+      componentUpdateFn,
+      () => queueJob(instance.update),
+      instance.scope // track it in component's effect scope
+    )
+
+    const update = (instance.update = effect.run.bind(effect) as SchedulerJob)
+    update.id = instance.uid
+    // allowRecurse
+    // #1801, #2043 component render effects should allow recursive updates
+    effect.allowRecurse = update.allowRecurse = true
 
     if (__DEV__) {
-      // @ts-ignore
-      instance.update.ownerInstance = instance
+      effect.onTrack = instance.rtc
+        ? e => invokeArrayFns(instance.rtc!, e)
+        : void 0
+      effect.onTrigger = instance.rtg
+        ? e => invokeArrayFns(instance.rtg!, e)
+        : void 0
+      // @ts-ignore (for scheduler)
+      update.ownerInstance = instance
     }
+
+    update()
   }
 
   const updateComponentPreRender = (
@@ -1945,7 +1873,7 @@ function baseCreateRenderer(
       const s2 = i // next starting index
 
       // 5.1 build key:index map for newChildren
-      const keyToNewIndexMap: Map<string | number, number> = new Map()
+      const keyToNewIndexMap: Map<string | number | symbol, number> = new Map()
       for (i = s2; i <= e2; i++) {
         const nextChild = (c2[i] = optimized
           ? cloneIfMounted(c2[i] as VNode)
@@ -2279,12 +2207,13 @@ function baseCreateRenderer(
       unregisterHMR(instance)
     }
 
-    const { bum, effects, update, subTree, um } = instance
+    const { bum, scope, update, subTree, um } = instance
 
     // beforeUnmount hook
     if (bum) {
       invokeArrayFns(bum)
     }
+
     if (
       __COMPAT__ &&
       isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
@@ -2292,15 +2221,14 @@ function baseCreateRenderer(
       instance.emit('hook:beforeDestroy')
     }
 
-    if (effects) {
-      for (let i = 0; i < effects.length; i++) {
-        stop(effects[i])
-      }
-    }
+    // stop effects in component scope
+    scope.stop()
+
     // update may be null if a component is unmounted before its async
     // setup has resolved.
     if (update) {
-      stop(update)
+      // so that scheduler will no longer invoke it
+      update.active = false
       unmount(subTree, instance, parentSuspense, doRemove)
     }
     // unmounted hook
@@ -2394,16 +2322,108 @@ function baseCreateRenderer(
   let hydrate: ReturnType<typeof createHydrationFunctions>[0] | undefined
   let hydrateNode: ReturnType<typeof createHydrationFunctions>[1] | undefined
   if (createHydrationFns) {
-    ;[hydrate, hydrateNode] = createHydrationFns(internals as RendererInternals<
-      Node,
-      Element
-    >)
+    ;[hydrate, hydrateNode] = createHydrationFns(
+      internals as RendererInternals<Node, Element>
+    )
   }
 
   return {
     render,
     hydrate,
     createApp: createAppAPI(render, hydrate)
+  }
+}
+
+export function setRef(
+  rawRef: VNodeNormalizedRef,
+  oldRawRef: VNodeNormalizedRef | null,
+  parentSuspense: SuspenseBoundary | null,
+  vnode: VNode,
+  isUnmount = false
+) {
+  if (isArray(rawRef)) {
+    rawRef.forEach((r, i) =>
+      setRef(
+        r,
+        oldRawRef && (isArray(oldRawRef) ? oldRawRef[i] : oldRawRef),
+        parentSuspense,
+        vnode,
+        isUnmount
+      )
+    )
+    return
+  }
+
+  if (isAsyncWrapper(vnode) && !isUnmount) {
+    // when mounting async components, nothing needs to be done,
+    // because the template ref is forwarded to inner component
+    return
+  }
+
+  const refValue =
+    vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT
+      ? getExposeProxy(vnode.component!) || vnode.component!.proxy
+      : vnode.el
+  const value = isUnmount ? null : refValue
+
+  const { i: owner, r: ref } = rawRef
+  if (__DEV__ && !owner) {
+    warn(
+      `Missing ref owner context. ref cannot be used on hoisted vnodes. ` +
+        `A vnode with ref must be created inside the render function.`
+    )
+    return
+  }
+  const oldRef = oldRawRef && (oldRawRef as VNodeNormalizedRefAtom).r
+  const refs = owner.refs === EMPTY_OBJ ? (owner.refs = {}) : owner.refs
+  const setupState = owner.setupState
+
+  // dynamic ref changed. unset old ref
+  if (oldRef != null && oldRef !== ref) {
+    if (isString(oldRef)) {
+      refs[oldRef] = null
+      if (hasOwn(setupState, oldRef)) {
+        setupState[oldRef] = null
+      }
+    } else if (isRef(oldRef)) {
+      oldRef.value = null
+    }
+  }
+
+  if (isString(ref)) {
+    const doSet = () => {
+      if (__COMPAT__ && isCompatEnabled(DeprecationTypes.V_FOR_REF, owner)) {
+        registerLegacyRef(refs, ref, refValue, owner, rawRef.f, isUnmount)
+      } else {
+        refs[ref] = value
+      }
+      if (hasOwn(setupState, ref)) {
+        setupState[ref] = value
+      }
+    }
+    // #1789: for non-null values, set them after render
+    // null values means this is unmount and it should not overwrite another
+    // ref with the same key
+    if (value) {
+      ;(doSet as SchedulerJob).id = -1
+      queuePostRenderEffect(doSet, parentSuspense)
+    } else {
+      doSet()
+    }
+  } else if (isRef(ref)) {
+    const doSet = () => {
+      ref.value = value
+    }
+    if (value) {
+      ;(doSet as SchedulerJob).id = -1
+      queuePostRenderEffect(doSet, parentSuspense)
+    } else {
+      doSet()
+    }
+  } else if (isFunction(ref)) {
+    callWithErrorHandling(ref, owner, ErrorCodes.FUNCTION_REF, [value, refs])
+  } else if (__DEV__) {
+    warn('Invalid template ref type:', value, `(${typeof value})`)
   }
 }
 
@@ -2473,7 +2493,7 @@ function getSequence(arr: number[]): number[] {
       u = 0
       v = result.length - 1
       while (u < v) {
-        c = ((u + v) / 2) | 0
+        c = (u + v) >> 1
         if (arr[result[c]] < arrI) {
           u = c + 1
         } else {

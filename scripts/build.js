@@ -75,8 +75,8 @@ async function build(target) {
   const pkgDir = path.resolve(`packages/${target}`)
   const pkg = require(`${pkgDir}/package.json`)
 
-  // only build published packages for release
-  if (isRelease && pkg.private) {
+  // if this is a full build (no specific targets), ignore private packages
+  if ((isRelease || !targets.length) && pkg.private) {
     return
   }
 
@@ -118,9 +118,8 @@ async function build(target) {
     const { Extractor, ExtractorConfig } = require('@microsoft/api-extractor')
 
     const extractorConfigPath = path.resolve(pkgDir, `api-extractor.json`)
-    const extractorConfig = ExtractorConfig.loadFileAndPrepare(
-      extractorConfigPath
-    )
+    const extractorConfig =
+      ExtractorConfig.loadFileAndPrepare(extractorConfigPath)
     const extractorResult = Extractor.invoke(extractorConfig, {
       localBuild: true,
       showVerboseMessages: true

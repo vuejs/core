@@ -55,7 +55,8 @@ export function renderComponentRoot(
     renderCache,
     data,
     setupState,
-    ctx
+    ctx,
+    inheritAttrs
   } = instance
 
   let result
@@ -123,7 +124,7 @@ export function renderComponentRoot(
       ;[root, setRoot] = getChildRoot(result)
     }
 
-    if (fallthroughAttrs && Component.inheritAttrs !== false) {
+    if (fallthroughAttrs && inheritAttrs !== false) {
       const keys = Object.keys(fallthroughAttrs)
       const { shapeFlag } = root
       if (keys.length) {
@@ -190,7 +191,7 @@ export function renderComponentRoot(
     ) {
       const { class: cls, style } = vnode.props || {}
       if (cls || style) {
-        if (__DEV__ && Component.inheritAttrs === false) {
+        if (__DEV__ && inheritAttrs === false) {
           warnDeprecation(
             DeprecationTypes.INSTANCE_ATTRS_CLASS_STYLE,
             instance,

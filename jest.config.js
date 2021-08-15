@@ -13,7 +13,12 @@ module.exports = {
     __FEATURE_OPTIONS_API__: true,
     __FEATURE_SUSPENSE__: true,
     __FEATURE_PROD_DEVTOOLS__: false,
-    __COMPAT__: true
+    __COMPAT__: true,
+    'ts-jest': {
+      tsconfig: {
+        target: 'esnext'
+      }
+    }
   },
   coverageDirectory: 'coverage',
   coverageReporters: ['html', 'lcov', 'text'],
