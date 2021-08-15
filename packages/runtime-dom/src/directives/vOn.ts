@@ -1,5 +1,12 @@
-import { hyphenate } from '@vue/shared'
-import { Directive } from 'test-dts'
+import {
+  getCurrentInstance,
+  DeprecationTypes,
+  LegacyConfig,
+  compatUtils,
+  ComponentInternalInstance,
+  Directive
+} from '@vue/runtime-core'
+import { hyphenate, isArray } from '@vue/shared'
 
 type KeyedEvent = KeyboardEvent | MouseEvent | TouchEvent
 
@@ -59,19 +66,66 @@ const keyNames = {
  * @private
  */
 export const withKeys = (fn: Function, modifiers: string[]) => {
+  let globalKeyCodes: LegacyConfig['keyCodes']
+  let instance: ComponentInternalInstance | null = null
+  if (__COMPAT__) {
+    instance = getCurrentInstance()
+    if (
+      compatUtils.isCompatEnabled(DeprecationTypes.CONFIG_KEY_CODES, instance)
+    ) {
+      if (instance) {
+        globalKeyCodes = (instance.appContext.config as any as LegacyConfig)
+          .keyCodes
+      }
+    }
+    if (__DEV__ && modifiers.some(m => /^\d+$/.test(m))) {
+      compatUtils.warnDeprecation(
+        DeprecationTypes.V_ON_KEYCODE_MODIFIER,
+        instance
+      )
+    }
+  }
+
   return (event: KeyboardEvent) => {
-    if (!('key' in event)) return
+    if (!('key' in event)) {
+      return
+    }
+
     const eventKey = hyphenate(event.key)
     if (
-      // None of the provided key modifiers match the current event key
-      !modifiers.some(
+      modifiers.some(
         k => k === eventKey || keyNames[k as CompatModifiers] === eventKey
       )
     ) {
-      return
+      return fn(event)
     }
-    return fn(event)
+
+    if (__COMPAT__) {
+      const keyCode = String(event.keyCode)
+      if (
+        compatUtils.isCompatEnabled(
+          DeprecationTypes.V_ON_KEYCODE_MODIFIER,
+          instance
+        ) &&
+        modifiers.some(mod => mod == keyCode)
+      ) {
+        return fn(event)
+      }
+      if (globalKeyCodes) {
+        for (const mod of modifiers) {
+          const codes = globalKeyCodes[mod]
+          if (codes) {
+            const matches = isArray(codes)
+              ? codes.some(code => String(code) === keyCode)
+              : String(codes) === keyCode
+            if (matches) {
+              return fn(event)
+            }
+          }
+        }
+      }
+    }
   }
 }
 
-export type VOnDirective = Directive<any, any, Modifiers>
+export type VOnDirective = Directive<any, any, VOnModifiers>

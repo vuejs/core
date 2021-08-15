@@ -1,4 +1,4 @@
-# vue-next [![beta](https://img.shields.io/npm/v/vue/next.svg)](https://www.npmjs.com/package/vue/v/next) [![CircleCI](https://circleci.com/gh/vuejs/vue-next.svg?style=svg&circle-token=fb883a2d0a73df46e80b2e79fd430959d8f2b488)](https://circleci.com/gh/vuejs/vue-next)
+# vue-next [![npm](https://img.shields.io/npm/v/vue/next.svg)](https://www.npmjs.com/package/vue/v/next) [![build status](https://github.com/vuejs/vue-next/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/vuejs/vue-next/actions/workflows/ci.yml)
 
 This is the repository for Vue 3.0.
 
@@ -9,11 +9,12 @@ This is the repository for Vue 3.0.
 - Scaffold via [Vite](https://github.com/vitejs/vite):
 
   ```bash
-  # npm
-  npm init @vitejs/app
+  # npm 6.x
+  npm init vite@latest my-vue-app --template vue
+  # npm 7+, extra double-dash is needed:
+  npm init vite@latest my-vue-app -- --template vue
   # yarn
-  yarn create @vitejs/app
-  # select vue template
+  yarn create vite my-vue-app --template vue
   ```
 
 - Scaffold via [vue-cli](https://cli.vuejs.org/):
@@ -28,7 +29,7 @@ This is the repository for Vue 3.0.
 
 Please consult the [Migration Guide](https://v3.vuejs.org/guide/migration/introduction.html).
 
-- Note: IE11 support is still pending.
+Also note: Vue 3 does not support IE11 ([RFC](https://github.com/vuejs/rfcs/blob/master/active-rfcs/0038-vue3-ie11-support.md) | [Discussion](https://github.com/vuejs/rfcs/discussions/296)).
 
 ## Supporting Libraries
 

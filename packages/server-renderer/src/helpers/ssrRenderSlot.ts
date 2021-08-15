@@ -1,5 +1,6 @@
 import { ComponentInternalInstance, Slots } from 'vue'
 import { Props, PushFn, renderVNodeChildren, SSRBufferItem } from '../render'
+import { isArray } from '@vue/shared'
 
 export type SSRSlots = Record<string, SSRSlot>
 export type SSRSlot = (
@@ -16,7 +17,7 @@ export function ssrRenderSlot(
   fallbackRenderFn: (() => void) | null,
   push: PushFn,
   parentComponent: ComponentInternalInstance,
-  slotScopeId?: string | null
+  slotScopeId?: string
 ) {
   // template-compiled slots are always rendered as fragments
   push(`<!--[-->`)
@@ -32,9 +33,9 @@ export function ssrRenderSlot(
       parentComponent,
       slotScopeId ? ' ' + slotScopeId : ''
     )
-    if (Array.isArray(ret)) {
+    if (isArray(ret)) {
       // normal slot
-      renderVNodeChildren(push, ret, parentComponent)
+      renderVNodeChildren(push, ret, parentComponent, slotScopeId)
     } else {
       // ssr slot.
       // check if the slot renders all comments, in which case use the fallback

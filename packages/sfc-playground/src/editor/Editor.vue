@@ -20,7 +20,7 @@ const onChange = debounce((code: string) => {
 
 const activeCode = ref(store.activeFile.code)
 const activeMode = computed(
-  () => (store.activeFilename.endsWith('.js') ? 'javascript' : 'htmlmixed')
+  () => (store.activeFilename.endsWith('.vue') ? 'htmlmixed' : 'javascript')
 )
 
 watch(

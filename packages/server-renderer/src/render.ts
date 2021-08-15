@@ -2,7 +2,6 @@ import {
   Comment,
   Component,
   ComponentInternalInstance,
-  ComponentOptions,
   DirectiveBinding,
   Fragment,
   mergeProps,
@@ -87,13 +86,18 @@ export function renderComponentVNode(
   const instance = createComponentInstance(vnode, parentComponent, null)
   const res = setupComponent(instance, true /* isSSR */)
   const hasAsyncSetup = isPromise(res)
-  const prefetch = (vnode.type as ComponentOptions).serverPrefetch
-  if (hasAsyncSetup || prefetch) {
-    let p = hasAsyncSetup ? (res as Promise<void>) : Promise.resolve()
-    if (prefetch) {
-      p = p.then(() => prefetch.call(instance.proxy)).catch(err => {
-        warn(`[@vue/server-renderer]: Uncaught error in serverPrefetch:\n`, err)
-      })
+  const prefetches = instance.sp
+  if (hasAsyncSetup || prefetches) {
+    let p: Promise<unknown> = hasAsyncSetup
+      ? (res as Promise<void>)
+      : Promise.resolve()
+    if (prefetches) {
+      p = p
+        .then(() =>
+          Promise.all(prefetches.map(prefetch => prefetch.call(instance.proxy)))
+        )
+        // Note: error display is already done by the wrapped lifecycle hook function.
+        .catch(() => {})
     }
     return p.then(() => renderComponentSubTree(instance, slotScopeId))
   } else {
@@ -111,7 +115,8 @@ function renderComponentSubTree(
     renderVNode(
       push,
       (instance.subTree = renderComponentRoot(instance)),
-      instance
+      instance,
+      slotScopeId
     )
   } else {
     if (
@@ -127,15 +132,32 @@ function renderComponentSubTree(
     if (ssrRender) {
       // optimized
       // resolve fallthrough attrs
-      let attrs =
-        instance.type.inheritAttrs !== false ? instance.attrs : undefined
+      let attrs = instance.inheritAttrs !== false ? instance.attrs : undefined
+      let hasCloned = false
 
-      // inherited scopeId
-      const scopeId = instance.vnode.scopeId
-      if (scopeId || slotScopeId) {
-        attrs = { ...attrs }
-        if (scopeId) attrs[scopeId] = ''
-        if (slotScopeId) attrs[slotScopeId.trim()] = ''
+      let cur = instance
+      while (true) {
+        const scopeId = cur.vnode.scopeId
+        if (scopeId) {
+          if (!hasCloned) {
+            attrs = { ...attrs }
+            hasCloned = true
+          }
+          attrs![scopeId] = ''
+        }
+        const parent = cur.parent
+        if (parent && parent.subTree && parent.subTree === cur.vnode) {
+          // parent is a non-SSR compiled component and is rendering this
+          // component as root. inherit its scopeId if present.
+          cur = parent
+        } else {
+          break
+        }
+      }
+
+      if (slotScopeId) {
+        if (!hasCloned) attrs = { ...attrs }
+        attrs![slotScopeId.trim()] = ''
       }
 
       // set current rendering instance for asset resolution
@@ -156,7 +178,8 @@ function renderComponentSubTree(
       renderVNode(
         push,
         (instance.subTree = renderComponentRoot(instance)),
-        instance
+        instance,
+        slotScopeId
       )
     } else {
       warn(
@@ -173,7 +196,8 @@ function renderComponentSubTree(
 export function renderVNode(
   push: PushFn,
   vnode: VNode,
-  parentComponent: ComponentInternalInstance
+  parentComponent: ComponentInternalInstance,
+  slotScopeId?: string
 ) {
   const { type, shapeFlag, children } = vnode
   switch (type) {
@@ -189,19 +213,28 @@ export function renderVNode(
       push(children as string)
       break
     case Fragment:
+      if (vnode.slotScopeIds) {
+        slotScopeId =
+          (slotScopeId ? slotScopeId + ' ' : '') + vnode.slotScopeIds.join(' ')
+      }
       push(`<!--[-->`) // open
-      renderVNodeChildren(push, children as VNodeArrayChildren, parentComponent)
+      renderVNodeChildren(
+        push,
+        children as VNodeArrayChildren,
+        parentComponent,
+        slotScopeId
+      )
       push(`<!--]-->`) // close
       break
     default:
       if (shapeFlag & ShapeFlags.ELEMENT) {
-        renderElementVNode(push, vnode, parentComponent)
+        renderElementVNode(push, vnode, parentComponent, slotScopeId)
       } else if (shapeFlag & ShapeFlags.COMPONENT) {
-        push(renderComponentVNode(vnode, parentComponent))
+        push(renderComponentVNode(vnode, parentComponent, slotScopeId))
       } else if (shapeFlag & ShapeFlags.TELEPORT) {
-        renderTeleportVNode(push, vnode, parentComponent)
+        renderTeleportVNode(push, vnode, parentComponent, slotScopeId)
       } else if (shapeFlag & ShapeFlags.SUSPENSE) {
-        renderVNode(push, vnode.ssContent!, parentComponent)
+        renderVNode(push, vnode.ssContent!, parentComponent, slotScopeId)
       } else {
         warn(
           '[@vue/server-renderer] Invalid VNode type:',
@@ -215,17 +248,19 @@ export function renderVNode(
 export function renderVNodeChildren(
   push: PushFn,
   children: VNodeArrayChildren,
-  parentComponent: ComponentInternalInstance
+  parentComponent: ComponentInternalInstance,
+  slotScopeId: string | undefined
 ) {
   for (let i = 0; i < children.length; i++) {
-    renderVNode(push, normalizeVNode(children[i]), parentComponent)
+    renderVNode(push, normalizeVNode(children[i]), parentComponent, slotScopeId)
   }
 }
 
 function renderElementVNode(
   push: PushFn,
   vnode: VNode,
-  parentComponent: ComponentInternalInstance
+  parentComponent: ComponentInternalInstance,
+  slotScopeId: string | undefined
 ) {
   const tag = vnode.type as string
   let { props, children, shapeFlag, scopeId, dirs } = vnode
@@ -239,7 +274,22 @@ function renderElementVNode(
     openTag += ssrRenderAttrs(props, tag)
   }
 
-  openTag += resolveScopeId(scopeId, vnode, parentComponent)
+  if (scopeId) {
+    openTag += ` ${scopeId}`
+  }
+  // inherit parent chain scope id if this is the root node
+  let curParent: ComponentInternalInstance | null = parentComponent
+  let curVnode = vnode
+  while (curParent && curVnode === curParent.subTree) {
+    curVnode = curParent.vnode
+    if (curVnode.scopeId) {
+      openTag += ` ${curVnode.scopeId}`
+    }
+    curParent = curParent.parent
+  }
+  if (slotScopeId) {
+    openTag += ` ${slotScopeId}`
+  }
 
   push(openTag + `>`)
   if (!isVoidTag(tag)) {
@@ -263,39 +313,13 @@ function renderElementVNode(
         renderVNodeChildren(
           push,
           children as VNodeArrayChildren,
-          parentComponent
+          parentComponent,
+          slotScopeId
         )
       }
     }
     push(`</${tag}>`)
   }
-}
-
-function resolveScopeId(
-  scopeId: string | null,
-  vnode: VNode,
-  parentComponent: ComponentInternalInstance | null
-) {
-  let res = ``
-  if (scopeId) {
-    res = ` ${scopeId}`
-  }
-  if (parentComponent) {
-    const treeOwnerId = parentComponent.type.__scopeId
-    // vnode's own scopeId and the current rendering component's scopeId is
-    // different - this is a slot content node.
-    if (treeOwnerId && treeOwnerId !== scopeId) {
-      res += ` ${treeOwnerId}-s`
-    }
-    if (vnode === parentComponent.subTree) {
-      res += resolveScopeId(
-        parentComponent.vnode.scopeId,
-        parentComponent.vnode,
-        parentComponent.parent
-      )
-    }
-  }
-  return res
 }
 
 function applySSRDirectives(
@@ -320,7 +344,8 @@ function applySSRDirectives(
 function renderTeleportVNode(
   push: PushFn,
   vnode: VNode,
-  parentComponent: ComponentInternalInstance
+  parentComponent: ComponentInternalInstance,
+  slotScopeId: string | undefined
 ) {
   const target = vnode.props && vnode.props.to
   const disabled = vnode.props && vnode.props.disabled
@@ -340,7 +365,8 @@ function renderTeleportVNode(
       renderVNodeChildren(
         push,
         vnode.children as VNodeArrayChildren,
-        parentComponent
+        parentComponent,
+        slotScopeId
       )
     },
     target,

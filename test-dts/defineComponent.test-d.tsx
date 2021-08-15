@@ -27,6 +27,8 @@ describe('with object props', () => {
     h: boolean
     bb: string
     bbb: string
+    bbbb: string | undefined
+    bbbbb: string | undefined
     cc?: string[] | undefined
     dd: { n: 1 }
     ee?: () => string
@@ -65,6 +67,14 @@ describe('with object props', () => {
         // Note: default function value requires arrow syntax + explicit
         // annotation
         default: (props: any) => (props.bb as string) || 'foo'
+      },
+      bbbb: {
+        type: String,
+        default: undefined
+      },
+      bbbbb: {
+        type: String,
+        default: () => undefined
       },
       // explicit type casting
       cc: Array as PropType<string[]>,
@@ -133,6 +143,8 @@ describe('with object props', () => {
       expectType<ExpectedProps['h']>(props.h)
       expectType<ExpectedProps['bb']>(props.bb)
       expectType<ExpectedProps['bbb']>(props.bbb)
+      expectType<ExpectedProps['bbbb']>(props.bbbb)
+      expectType<ExpectedProps['bbbbb']>(props.bbbbb)
       expectType<ExpectedProps['cc']>(props.cc)
       expectType<ExpectedProps['dd']>(props.dd)
       expectType<ExpectedProps['ee']>(props.ee)
@@ -388,12 +400,12 @@ describe('type inference w/ options API', () => {
       }
     },
     computed: {
-      d(): number {
+      d() {
         expectType<number>(this.b)
         return this.b + 1
       },
       e: {
-        get(): number {
+        get() {
           expectType<number>(this.b)
           expectType<number>(this.d)
 
@@ -461,6 +473,7 @@ describe('type inference w/ options API', () => {
 
 describe('with mixins', () => {
   const MixinA = defineComponent({
+    emits: ['bar'],
     props: {
       aP1: {
         type: String,
@@ -505,16 +518,17 @@ describe('with mixins', () => {
       expectType<string>(props.aP1)
     },
     computed: {
-      dC1(): number {
+      dC1() {
         return this.d + this.a
       },
-      dC2(): string {
+      dC2() {
         return this.aP1 + 'dC2'
       }
     }
   })
   const MyComponent = defineComponent({
     mixins: [MixinA, MixinB, MixinC, MixinD],
+    emits: ['click'],
     props: {
       // required should make property non-void
       z: {
@@ -544,6 +558,9 @@ describe('with mixins', () => {
     setup(props) {
       expectType<string>(props.z)
       // props
+      expectType<((...args: any[]) => any) | undefined>(props.onClick)
+      // from Base
+      expectType<((...args: any[]) => any) | undefined>(props.onBar)
       expectType<string>(props.aP1)
       expectType<boolean | undefined>(props.aP2)
       expectType<any>(props.bP1)
@@ -553,6 +570,9 @@ describe('with mixins', () => {
     render() {
       const props = this.$props
       // props
+      expectType<((...args: any[]) => any) | undefined>(props.onClick)
+      // from Base
+      expectType<((...args: any[]) => any) | undefined>(props.onBar)
       expectType<string>(props.aP1)
       expectType<boolean | undefined>(props.aP2)
       expectType<any>(props.bP1)
@@ -680,6 +700,7 @@ describe('with extends', () => {
 
 describe('extends with mixins', () => {
   const Mixin = defineComponent({
+    emits: ['bar'],
     props: {
       mP1: {
         type: String,
@@ -698,6 +719,7 @@ describe('extends with mixins', () => {
     }
   })
   const Base = defineComponent({
+    emits: ['foo'],
     props: {
       p1: Boolean,
       p2: {
@@ -723,6 +745,7 @@ describe('extends with mixins', () => {
   const MyComponent = defineComponent({
     extends: Base,
     mixins: [Mixin],
+    emits: ['click'],
     props: {
       // required should make property non-void
       z: {
@@ -733,6 +756,11 @@ describe('extends with mixins', () => {
     render() {
       const props = this.$props
       // props
+      expectType<((...args: any[]) => any) | undefined>(props.onClick)
+      // from Mixin
+      expectType<((...args: any[]) => any) | undefined>(props.onBar)
+      // from Base
+      expectType<((...args: any[]) => any) | undefined>(props.onFoo)
       expectType<boolean | undefined>(props.p1)
       expectType<number>(props.p2)
       expectType<string>(props.z)
@@ -871,6 +899,8 @@ describe('emits', () => {
       input: (b: string) => b.length > 1
     },
     setup(props, { emit }) {
+      expectType<((n: number) => boolean) | undefined>(props.onClick)
+      expectType<((b: string) => boolean) | undefined>(props.onInput)
       emit('click', 1)
       emit('input', 'foo')
       //  @ts-expect-error
@@ -897,6 +927,25 @@ describe('emits', () => {
       expectError(this.$emit('input'))
       //  @ts-expect-error
       expectError(this.$emit('input', 1))
+    },
+    mounted() {
+      // #3599
+      this.$nextTick(function () {
+        // this should be bound to this instance
+
+        this.$emit('click', 1)
+        this.$emit('input', 'foo')
+        //  @ts-expect-error
+        expectError(this.$emit('nope'))
+        //  @ts-expect-error
+        expectError(this.$emit('click'))
+        //  @ts-expect-error
+        expectError(this.$emit('click', 'foo'))
+        //  @ts-expect-error
+        expectError(this.$emit('input'))
+        //  @ts-expect-error
+        expectError(this.$emit('input', 1))
+      })
     }
   })
 
@@ -904,6 +953,8 @@ describe('emits', () => {
   defineComponent({
     emits: ['foo', 'bar'],
     setup(props, { emit }) {
+      expectType<((...args: any[]) => any) | undefined>(props.onFoo)
+      expectType<((...args: any[]) => any) | undefined>(props.onBar)
       emit('foo')
       emit('foo', 123)
       emit('bar')
@@ -916,6 +967,33 @@ describe('emits', () => {
       this.$emit('bar')
       //  @ts-expect-error
       expectError(this.$emit('nope'))
+    }
+  })
+
+  // with tsx
+  const Component = defineComponent({
+    emits: {
+      click: (n: number) => typeof n === 'number'
+    },
+    setup(props, { emit }) {
+      expectType<((n: number) => any) | undefined>(props.onClick)
+      emit('click', 1)
+      //  @ts-expect-error
+      expectError(emit('click'))
+      //  @ts-expect-error
+      expectError(emit('click', 'foo'))
+    }
+  })
+
+  defineComponent({
+    render() {
+      return (
+        <Component
+          onClick={(n: number) => {
+            return n + 1
+          }}
+        />
+      )
     }
   })
 
@@ -945,10 +1023,9 @@ describe('emits', () => {
 })
 
 describe('componentOptions setup should be `SetupContext`', () => {
-  expect<ComponentOptions['setup']>({} as (
-    props: Record<string, any>,
-    ctx: SetupContext
-  ) => any)
+  expect<ComponentOptions['setup']>(
+    {} as (props: Record<string, any>, ctx: SetupContext) => any
+  )
 })
 
 describe('extract instance type', () => {

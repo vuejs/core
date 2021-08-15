@@ -11,7 +11,9 @@ import {
   createApp,
   provide,
   inject,
-  watch
+  watch,
+  toRefs,
+  SetupContext
 } from '@vue/runtime-test'
 import { render as domRender, nextTick } from 'vue'
 
@@ -478,5 +480,97 @@ describe('component props', () => {
     await nextTick()
     expect(serializeInner(root)).toMatch(`<h1>11</h1>`)
     expect(count).toBe(0)
+  })
+
+  // #3288
+  test('declared prop key should be present even if not passed', async () => {
+    let initialKeys: string[] = []
+    const changeSpy = jest.fn()
+    const passFoo = ref(false)
+
+    const Comp = {
+      render() {},
+      props: {
+        foo: String
+      },
+      setup(props: any) {
+        initialKeys = Object.keys(props)
+        const { foo } = toRefs(props)
+        watch(foo, changeSpy)
+      }
+    }
+
+    const Parent = () => (passFoo.value ? h(Comp, { foo: 'ok' }) : h(Comp))
+    const root = nodeOps.createElement('div')
+    createApp(Parent).mount(root)
+
+    expect(initialKeys).toMatchObject(['foo'])
+    passFoo.value = true
+    await nextTick()
+    expect(changeSpy).toHaveBeenCalledTimes(1)
+  })
+
+  // #3371
+  test(`avoid double-setting props when casting`, async () => {
+    const Parent = {
+      setup(props: any, { slots }: SetupContext) {
+        const childProps = ref()
+        const registerChildProps = (props: any) => {
+          childProps.value = props
+        }
+        provide('register', registerChildProps)
+
+        return () => {
+          // access the child component's props
+          childProps.value && childProps.value.foo
+          return slots.default!()
+        }
+      }
+    }
+
+    const Child = {
+      props: {
+        foo: {
+          type: Boolean,
+          required: false
+        }
+      },
+      setup(props: { foo: boolean }) {
+        const register = inject('register') as any
+        // 1. change the reactivity data of the parent component
+        // 2. register its own props to the parent component
+        register(props)
+
+        return () => 'foo'
+      }
+    }
+
+    const App = {
+      setup() {
+        return () => h(Parent, () => h(Child as any, { foo: '' }, () => null))
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`foo`)
+  })
+
+  test('support null in required + multiple-type declarations', () => {
+    const Comp = {
+      props: {
+        foo: { type: [Function, null], required: true }
+      },
+      render() {}
+    }
+    const root = nodeOps.createElement('div')
+    expect(() => {
+      render(h(Comp, { foo: () => {} }), root)
+    }).not.toThrow()
+
+    expect(() => {
+      render(h(Comp, { foo: null }), root)
+    }).not.toThrow()
   })
 })

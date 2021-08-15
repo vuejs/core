@@ -35,6 +35,7 @@ export function compile(
     // apply DOM-specific parsing options
     ...parserOptions,
     ssr: true,
+    inSSR: true,
     scopeId: options.mode === 'function' ? null : options.scopeId,
     // always prefix since compiler-ssr doesn't have size concern
     prefixIdentifiers: true,
@@ -51,6 +52,7 @@ export function compile(
 
   transform(ast, {
     ...options,
+    hoistStatic: false,
     nodeTransforms: [
       ssrTransformIf,
       ssrTransformFor,

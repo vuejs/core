@@ -10,9 +10,13 @@ import {
   onMounted,
   defineAsyncComponent,
   defineComponent,
-  createTextVNode
+  createTextVNode,
+  createVNode,
+  withDirectives,
+  vModelCheckbox
 } from '@vue/runtime-dom'
 import { renderToString, SSRContext } from '@vue/server-renderer'
+import { PatchFlags } from '../../shared/src'
 
 function mountWithHydration(html: string, render: () => any) {
   const container = document.createElement('div')
@@ -626,6 +630,118 @@ describe('SSR hydration', () => {
     expect(spy).toHaveBeenCalled()
   })
 
+  test('update async wrapper before resolve', async () => {
+    const Comp = {
+      render() {
+        return h('h1', 'Async component')
+      }
+    }
+    let serverResolve: any
+    let AsyncComp = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          serverResolve = r
+        })
+    )
+
+    const bol = ref(true)
+    const App = {
+      setup() {
+        onMounted(() => {
+          // change state, this makes updateComponent(AsyncComp) execute before
+          // the async component is resolved
+          bol.value = false
+        })
+
+        return () => {
+          return [bol.value ? 'hello' : 'world', h(AsyncComp)]
+        }
+      }
+    }
+
+    // server render
+    const htmlPromise = renderToString(h(App))
+    serverResolve(Comp)
+    const html = await htmlPromise
+    expect(html).toMatchInlineSnapshot(
+      `"<!--[-->hello<h1>Async component</h1><!--]-->"`
+    )
+
+    // hydration
+    let clientResolve: any
+    AsyncComp = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          clientResolve = r
+        })
+    )
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    createSSRApp(App).mount(container)
+
+    // resolve
+    clientResolve(Comp)
+    await new Promise(r => setTimeout(r))
+
+    // should be hydrated now
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<!--[-->world<h1>Async component</h1><!--]-->"`
+    )
+  })
+
+  // #3787
+  test('unmount async wrapper before load', async () => {
+    let resolve: any
+    const AsyncComp = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r
+        })
+    )
+
+    const show = ref(true)
+    const root = document.createElement('div')
+    root.innerHTML = '<div><div>async</div></div>'
+
+    createSSRApp({
+      render() {
+        return h('div', [show.value ? h(AsyncComp) : h('div', 'hi')])
+      }
+    }).mount(root)
+
+    show.value = false
+    await nextTick()
+    expect(root.innerHTML).toBe('<div><div>hi</div></div>')
+    resolve({})
+  })
+
+  test('unmount async wrapper before load (fragment)', async () => {
+    let resolve: any
+    const AsyncComp = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r
+        })
+    )
+
+    const show = ref(true)
+    const root = document.createElement('div')
+    root.innerHTML = '<div><!--[-->async<!--]--></div>'
+
+    createSSRApp({
+      render() {
+        return h('div', [show.value ? h(AsyncComp) : h('div', 'hi')])
+      }
+    }).mount(root)
+
+    show.value = false
+    await nextTick()
+    expect(root.innerHTML).toBe('<div><div>hi</div></div>')
+    resolve({})
+  })
+
   test('elements with camel-case in svg ', () => {
     const { vnode, container } = mountWithHydration(
       '<animateTransform></animateTransform>',
@@ -643,10 +759,42 @@ describe('SSR hydration', () => {
     })
 
     expect(
-      (app.mount(svgContainer).$.subTree as VNode<Node, Element> & {
-        el: Element
-      }).el instanceof SVGElement
+      (
+        app.mount(svgContainer).$.subTree as VNode<Node, Element> & {
+          el: Element
+        }
+      ).el instanceof SVGElement
     )
+  })
+
+  test('force hydrate input v-model with non-string value bindings', () => {
+    const { container } = mountWithHydration(
+      '<input type="checkbox" value="true">',
+      () =>
+        withDirectives(
+          createVNode(
+            'input',
+            { type: 'checkbox', 'true-value': true },
+            null,
+            PatchFlags.PROPS,
+            ['true-value']
+          ),
+          [[vModelCheckbox, true]]
+        )
+    )
+    expect((container.firstChild as any)._trueValue).toBe(true)
+  })
+
+  test('force hydrate select option with non-string value bindings', () => {
+    const { container } = mountWithHydration(
+      '<select><option :value="true">ok</option></select>',
+      () =>
+        h('select', [
+          // hoisted because bound value is a constant...
+          createVNode('option', { value: true }, null, -1 /* HOISTED */)
+        ])
+    )
+    expect((container.firstChild!.firstChild as any)._value).toBe(true)
   })
 
   describe('mismatch handling', () => {

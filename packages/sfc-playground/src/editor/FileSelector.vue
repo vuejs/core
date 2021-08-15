@@ -45,8 +45,12 @@ function focus({ el }: VNode) {
 function doneAddFile() {
   const filename = pendingFilename.value
 
-  if (!filename.endsWith('.vue') && !filename.endsWith('.js')) {
-    store.errors = [`Playground only supports .vue or .js files.`]
+  if (
+    !filename.endsWith('.vue') &&
+    !filename.endsWith('.js') &&
+    filename !== 'import-map.json'
+  ) {
+    store.errors = [`Playground only supports *.vue, *.js files or import-map.json.`]
     return
   }
 

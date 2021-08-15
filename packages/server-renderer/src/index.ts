@@ -1,7 +1,16 @@
 // public
 export { SSRContext } from './render'
 export { renderToString } from './renderToString'
-export { renderToStream } from './renderToStream'
+export {
+  renderToSimpleStream,
+  renderToNodeStream,
+  pipeToNodeWritable,
+  renderToWebStream,
+  pipeToWebWritable,
+  SimpleReadable,
+  // deprecated
+  renderToStream
+} from './renderToStream'
 
 // internal runtime helpers
 export { renderVNode as ssrRenderVNode } from './render'

@@ -41,9 +41,9 @@ describe('runtime-dom: v-on directive', () => {
   })
 
   test('it should support key modifiers and system modifiers', () => {
-    const keyNames = ["ctrl","shift","meta","alt"]
+    const keyNames = ['ctrl', 'shift', 'meta', 'alt'] as const
 
-    keyNames.forEach(keyName=>{
+    keyNames.forEach(keyName => {
       const el = document.createElement('div')
       const fn = jest.fn()
       // <div @keyup[keyName].esc="test"/>
@@ -52,28 +52,28 @@ describe('runtime-dom: v-on directive', () => {
         'arrow-left'
       ])
       patchEvent(el, 'onKeyup', null, nextValue, null)
-  
+
       triggerEvent(el, 'keyup', e => (e.key = 'a'))
       expect(fn).not.toBeCalled()
-  
+
       triggerEvent(el, 'keyup', e => {
         e[`${keyName}Key`] = false
         e.key = 'esc'
       })
       expect(fn).not.toBeCalled()
-  
+
       triggerEvent(el, 'keyup', e => {
         e[`${keyName}Key`] = true
         e.key = 'Escape'
       })
       expect(fn).toBeCalledTimes(1)
-  
+
       triggerEvent(el, 'keyup', e => {
         e[`${keyName}Key`] = true
         e.key = 'ArrowLeft'
       })
       expect(fn).toBeCalledTimes(2)
-    });
+    })
   })
 
   test('it should support "exact" modifier', () => {
@@ -114,9 +114,11 @@ describe('runtime-dom: v-on directive', () => {
       const fn = jest.fn()
       const handler = withModifiers(fn, [button])
       patchEvent(el, 'onMousedown', null, handler, null)
-      buttons.filter(b => b !== button).forEach(button => {
-        triggerEvent(el, 'mousedown', e => (e.button = buttonCodes[button]))
-      })
+      buttons
+        .filter(b => b !== button)
+        .forEach(button => {
+          triggerEvent(el, 'mousedown', e => (e.button = buttonCodes[button]))
+        })
       expect(fn).not.toBeCalled()
       triggerEvent(el, 'mousedown', e => (e.button = buttonCodes[button]))
       expect(fn).toBeCalled()

@@ -1,4 +1,5 @@
-import { store, MAIN_FILE, SANDBOX_VUE_URL, File } from '../store'
+import { store, File } from '../store'
+import { MAIN_FILE } from '../sfcCompiler'
 import {
   babelParse,
   MagicString,
@@ -91,15 +92,6 @@ function processFile(file: File, seen = new Set<File>()) {
           }
         }
         s.remove(node.start!, node.end!)
-      } else {
-        if (source === 'vue') {
-          // rewrite Vue imports
-          s.overwrite(
-            node.source.start!,
-            node.source.end!,
-            `"${SANDBOX_VUE_URL}"`
-          )
-        }
       }
     }
   }
@@ -148,7 +140,17 @@ function processFile(file: File, seen = new Set<File>()) {
 
     // default export
     if (node.type === 'ExportDefaultDeclaration') {
-      s.overwrite(node.start!, node.start! + 14, `${moduleKey}.default =`)
+      if ('id' in node.declaration && node.declaration.id) {
+        // named hoistable/class exports
+        // export default function foo() {}
+        // export default class A {}
+        const { name } = node.declaration.id
+        s.remove(node.start!, node.start! + 15)
+        s.append(`\n${exportKey}(${moduleKey}, "default", () => ${name})`)
+      } else {
+        // anonymous default exports
+        s.overwrite(node.start!, node.start! + 14, `${moduleKey}.default =`)
+      }
     }
 
     // export * from './foo'

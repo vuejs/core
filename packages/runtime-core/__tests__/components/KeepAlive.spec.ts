@@ -14,9 +14,13 @@ import {
   ComponentPublicInstance,
   Ref,
   cloneVNode,
-  provide
+  provide,
+  defineAsyncComponent,
+  Component
 } from '@vue/runtime-test'
 import { KeepAliveProps } from '../../src/components/KeepAlive'
+
+const timeout = (n: number = 0) => new Promise(r => setTimeout(r, n))
 
 describe('KeepAlive', () => {
   let one: ComponentOptions
@@ -822,5 +826,52 @@ describe('KeepAlive', () => {
     viewRef.value = 'one'
     await nextTick()
     expect(serializeInner(root)).toBe(`<div foo>changed</div>`)
+  })
+
+  test('should work with async component', async () => {
+    let resolve: (comp: Component) => void
+    const AsyncComp = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r as any
+        })
+    )
+
+    const toggle = ref(true)
+    const instanceRef = ref<any>(null)
+    const App = {
+      render: () => {
+        return h(KeepAlive, { include: 'Foo' }, () =>
+          toggle.value ? h(AsyncComp, { ref: instanceRef }) : null
+        )
+      }
+    }
+
+    render(h(App), root)
+    // async component has not been resolved
+    expect(serializeInner(root)).toBe('<!---->')
+
+    resolve!({
+      name: 'Foo',
+      data: () => ({ count: 0 }),
+      render() {
+        return h('p', this.count)
+      }
+    })
+
+    await timeout()
+    // resolved
+    expect(serializeInner(root)).toBe('<p>0</p>')
+
+    // change state + toggle out
+    instanceRef.value.count++
+    toggle.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe('<!---->')
+
+    // toggle in, state should be maintained
+    toggle.value = true
+    await nextTick()
+    expect(serializeInner(root)).toBe('<p>1</p>')
   })
 })

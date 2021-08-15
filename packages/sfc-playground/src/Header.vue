@@ -1,13 +1,80 @@
+
+<script setup lang="ts">
+import { downloadProject } from './download/download'
+import { setVersion, resetVersion } from './sfcCompiler'
+import { ref, onMounted } from 'vue'
+
+const currentCommit = __COMMIT__
+const activeVersion = ref(`@${currentCommit}`)
+const publishedVersions = ref<string[]>()
+const expanded = ref(false)
+
+async function toggle() {
+  expanded.value = !expanded.value
+  if (!publishedVersions.value) {
+    publishedVersions.value = await fetchVersions()
+  }
+}
+
+async function setVueVersion(v: string) {
+  activeVersion.value = `loading...`
+  await setVersion(v)
+  activeVersion.value = `v${v}`
+  expanded.value = false
+}
+
+function resetVueVersion() {
+  resetVersion()
+  activeVersion.value = `@${currentCommit}`
+  expanded.value = false
+}
+
+async function copyLink() {
+  await navigator.clipboard.writeText(location.href)
+  alert('Sharable URL has been copied to clipboard.')
+}
+
+onMounted(async () => {
+  window.addEventListener('click', () => {
+    expanded.value = false
+  })
+})
+
+async function fetchVersions(): Promise<string[]> {
+  const res = await fetch(
+    `https://api.github.com/repos/vuejs/vue-next/releases?per_page=100`
+  )
+  const releases: any[] = await res.json()
+  const versions = releases.map(
+    r => (/^v/.test(r.tag_name) ? r.tag_name.substr(1) : r.tag_name)
+  )
+  const minVersion = versions.findIndex(v => v === '3.0.10')
+  return versions.slice(0, minVersion + 1)
+}
+</script>
+
 <template>
   <nav>
     <h1>
-      <img alt="logo" src="/icon.png">
+      <img alt="logo" src="/logo.svg">
       <span>Vue SFC Playground</span>
     </h1>
     <div class="links">
-      <a class="commit-link" href="https://app.netlify.com/sites/vue-sfc-playground/deploys" target="_blank">
-        @{{ commit }}
-      </a>
+      <div class="version" @click.stop>
+        <span class="active-version" @click="toggle">
+          Version: {{ activeVersion }}
+        </span>
+        <ul class="versions" :class="{ expanded }">
+          <li v-if="!publishedVersions"><a>loading versions...</a></li>
+          <li v-for="version of publishedVersions">
+            <a @click="setVueVersion(version)">v{{ version }}</a>
+          </li>
+          <li><a @click="resetVueVersion">This Commit ({{ currentCommit }})</a></li>
+          <li>
+            <a href="https://app.netlify.com/sites/vue-sfc-playground/deploys" target="_blank">Commits History</a>
+          </li>
+        </ul>
+      </div>
       <button class="share" @click="copyLink">
         <svg width="1.4em" height="1.4em" viewBox="0 0 24 24">
           <g fill="none" stroke="#626262" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -33,17 +100,6 @@
     </div>
   </nav>
 </template>
-
-<script setup lang="ts">
-import { downloadProject } from './download/download'
-
-const commit = __COMMIT__
-
-async function copyLink() {
-  await navigator.clipboard.writeText(location.href)
-  alert('Sharable URL has been copied to clipboard.')
-}
-</script>
 
 <style>
 nav {
@@ -74,33 +130,81 @@ h1 img {
   top: -2px;
 }
 
-@media (max-width:400px) {
+@media (max-width: 480px) {
   h1 span {
     display: none;
   }
 }
 
-.commit-link {
-  color: var(--color-branding);
-  text-decoration: none;
-  margin-left: 6px;
+.links {
+  display: flex;
+}
+
+.version {
+  display: inline-block;
+  margin-right: 12px;
+  position: relative;
+}
+
+.active-version {
+  cursor: pointer;
+  position: relative;
+  display: inline-block;
   vertical-align: middle;
   line-height: var(--nav-height);
+  padding-right: 15px;
 }
 
-.share {
-  position: relative;
-  top: 6px;
-  margin: 0 2px;
+.active-version:after {
+  content: '';
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 6px solid #aaa;
+  position: absolute;
+  right: 0;
+  top: 22px;
 }
 
+.version:hover .active-version:after {
+  border-top-color: var(--base);
+}
+
+.versions {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 40px;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  list-style-type: none;
+  padding: 8px;
+  margin: 0;
+  width: 200px;
+  max-height: calc(100vh - 70px);
+  overflow: scroll;
+}
+
+.versions a {
+  display: block;
+  padding: 6px 12px;
+  text-decoration: none;
+  cursor: pointer;
+  color: var(--base);
+}
+
+.versions a:hover {
+  color: var(--color-branding);
+}
+
+.versions.expanded {
+  display: block;
+}
+
+.share,
 .download {
-  position: relative;
-  top: 8px;
   margin: 0 2px;
-}
-
-.commit-link {
-  margin: 0 5px;
 }
 </style>

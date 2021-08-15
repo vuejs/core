@@ -1,3 +1,7 @@
+/**
+ * @jest-environment node
+ */
+
 import {
   createApp,
   h,
@@ -13,14 +17,17 @@ import {
   Transition,
   watchEffect,
   createVNode,
-  resolveDynamicComponent
+  resolveDynamicComponent,
+  renderSlot,
+  onErrorCaptured,
+  onServerPrefetch
 } from 'vue'
 import { escapeHtml } from '@vue/shared'
 import { renderToString } from '../src/renderToString'
-import { renderToStream as _renderToStream } from '../src/renderToStream'
+import { renderToNodeStream, pipeToNodeWritable } from '../src/renderToStream'
 import { ssrRenderSlot, SSRSlot } from '../src/helpers/ssrRenderSlot'
 import { ssrRenderComponent } from '../src/helpers/ssrRenderComponent'
-import { Readable } from 'stream'
+import { Readable, Transform } from 'stream'
 import { ssrRenderVNode } from '../src'
 
 const promisifyStream = (stream: Readable) => {
@@ -38,12 +45,25 @@ const promisifyStream = (stream: Readable) => {
   })
 }
 
-const renderToStream = (app: any, context?: any) =>
-  promisifyStream(_renderToStream(app, context))
+const renderToStream = (app: any, context?: any) => {
+  return promisifyStream(renderToNodeStream(app, context))
+}
+
+const pipeToWritable = (app: any, context?: any) => {
+  const stream = new Transform({
+    transform(data, _encoding, cb) {
+      this.push(data)
+      cb()
+    }
+  })
+  pipeToNodeWritable(app, context, stream)
+  return promisifyStream(stream)
+}
 
 // we run the same tests twice, once for renderToString, once for renderToStream
 testRender(`renderToString`, renderToString)
-testRender(`renderToStream`, renderToStream)
+testRender(`renderToNodeStream`, renderToStream)
+testRender(`pipeToNodeWritable`, pipeToWritable)
 
 function testRender(type: string, render: typeof renderToString) {
   describe(`ssr: ${type}`, () => {
@@ -711,11 +731,11 @@ function testRender(type: string, render: typeof renderToString) {
         expect(await render(h(Foo))).toBe(`<div data-v-test></div>`)
       })
 
-      test('with slots', async () => {
+      test('with client-compiled vnode slots', async () => {
         const Child = {
           __scopeId: 'data-v-child',
-          render: function(this: any) {
-            return h('div', this.$slots.default())
+          render: function (this: any) {
+            return h('div', null, [renderSlot(this.$slots, 'default')])
           }
         }
 
@@ -723,13 +743,15 @@ function testRender(type: string, render: typeof renderToString) {
           __scopeId: 'data-v-test',
           render: () => {
             return h(Child, null, {
-              default: withCtx(() => h('span', 'slot'))
+              default: withCtx(() => [h('span', 'slot')])
             })
           }
         }
 
         expect(await render(h(Parent))).toBe(
-          `<div data-v-child data-v-test><span data-v-test data-v-child-s>slot</span></div>`
+          `<div data-v-child data-v-test>` +
+            `<!--[--><span data-v-test data-v-child-s>slot</span><!--]-->` +
+            `</div>`
         )
       })
     })
@@ -751,7 +773,7 @@ function testRender(type: string, render: typeof renderToString) {
       test('handle compiler errors', async () => {
         await render(
           // render different content since compilation is cached
-          createApp({ template: `<${type === 'renderToString' ? 'div' : 'p'}` })
+          createApp({ template: `<div>${type}</` })
         )
 
         expect(
@@ -855,6 +877,212 @@ function testRender(type: string, render: typeof renderToString) {
           })
         )
       ).toBe(`<div>A</div><div>B</div>`)
+    })
+
+    test('onServerPrefetch', async () => {
+      const msg = Promise.resolve('hello')
+      const app = createApp({
+        setup() {
+          const message = ref('')
+          onServerPrefetch(async () => {
+            message.value = await msg
+          })
+          return {
+            message
+          }
+        },
+        render() {
+          return h('div', this.message)
+        }
+      })
+      const html = await render(app)
+      expect(html).toBe(`<div>hello</div>`)
+    })
+
+    test('multiple onServerPrefetch', async () => {
+      const msg = Promise.resolve('hello')
+      const msg2 = Promise.resolve('hi')
+      const msg3 = Promise.resolve('bonjour')
+      const app = createApp({
+        setup() {
+          const message = ref('')
+          const message2 = ref('')
+          const message3 = ref('')
+          onServerPrefetch(async () => {
+            message.value = await msg
+          })
+          onServerPrefetch(async () => {
+            message2.value = await msg2
+          })
+          onServerPrefetch(async () => {
+            message3.value = await msg3
+          })
+          return {
+            message,
+            message2,
+            message3
+          }
+        },
+        render() {
+          return h('div', `${this.message} ${this.message2} ${this.message3}`)
+        }
+      })
+      const html = await render(app)
+      expect(html).toBe(`<div>hello hi bonjour</div>`)
+    })
+
+    test('onServerPrefetch are run in parallel', async () => {
+      const first = jest.fn(() => Promise.resolve())
+      const second = jest.fn(() => Promise.resolve())
+      let checkOther = [false, false]
+      let done = [false, false]
+      const app = createApp({
+        setup() {
+          onServerPrefetch(async () => {
+            checkOther[0] = done[1]
+            await first()
+            done[0] = true
+          })
+          onServerPrefetch(async () => {
+            checkOther[1] = done[0]
+            await second()
+            done[1] = true
+          })
+        },
+        render() {
+          return h('div', '')
+        }
+      })
+      await render(app)
+      expect(first).toHaveBeenCalled()
+      expect(second).toHaveBeenCalled()
+      expect(checkOther).toEqual([false, false])
+      expect(done).toEqual([true, true])
+    })
+
+    test('onServerPrefetch with serverPrefetch option', async () => {
+      const msg = Promise.resolve('hello')
+      const msg2 = Promise.resolve('hi')
+      const app = createApp({
+        data() {
+          return {
+            message: ''
+          }
+        },
+
+        async serverPrefetch() {
+          this.message = await msg
+        },
+
+        setup() {
+          const message2 = ref('')
+          onServerPrefetch(async () => {
+            message2.value = await msg2
+          })
+          return {
+            message2
+          }
+        },
+        render() {
+          return h('div', `${this.message} ${this.message2}`)
+        }
+      })
+      const html = await render(app)
+      expect(html).toBe(`<div>hello hi</div>`)
+    })
+
+    test('mixed in serverPrefetch', async () => {
+      const msg = Promise.resolve('hello')
+      const app = createApp({
+        data() {
+          return {
+            msg: ''
+          }
+        },
+        mixins: [
+          {
+            async serverPrefetch() {
+              this.msg = await msg
+            }
+          }
+        ],
+        render() {
+          return h('div', this.msg)
+        }
+      })
+      const html = await render(app)
+      expect(html).toBe(`<div>hello</div>`)
+    })
+
+    test('many serverPrefetch', async () => {
+      const foo = Promise.resolve('foo')
+      const bar = Promise.resolve('bar')
+      const baz = Promise.resolve('baz')
+      const app = createApp({
+        data() {
+          return {
+            foo: '',
+            bar: '',
+            baz: ''
+          }
+        },
+        mixins: [
+          {
+            async serverPrefetch() {
+              this.foo = await foo
+            }
+          },
+          {
+            async serverPrefetch() {
+              this.bar = await bar
+            }
+          }
+        ],
+        async serverPrefetch() {
+          this.baz = await baz
+        },
+        render() {
+          return h('div', `${this.foo}${this.bar}${this.baz}`)
+        }
+      })
+      const html = await render(app)
+      expect(html).toBe(`<div>foobarbaz</div>`)
+    })
+
+    test('onServerPrefetch throwing error', async () => {
+      let renderError: Error | null = null
+      let capturedError: Error | null = null
+
+      const Child = {
+        setup() {
+          onServerPrefetch(async () => {
+            throw new Error('An error')
+          })
+        },
+        render() {
+          return h('span')
+        }
+      }
+
+      const app = createApp({
+        setup() {
+          onErrorCaptured(e => {
+            capturedError = e
+            return false
+          })
+        },
+        render() {
+          return h('div', h(Child))
+        }
+      })
+
+      try {
+        await render(app)
+      } catch (e) {
+        renderError = e
+      }
+      expect(renderError).toBe(null)
+      expect((capturedError as unknown as Error).message).toBe('An error')
     })
   })
 }
