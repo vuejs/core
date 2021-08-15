@@ -415,7 +415,13 @@ describe('functional', () => {
     const MyComponent: FunctionalComponent<
       { foo: number },
       { ev: (a: string) => void }
-    > = (_, _2) => {}
+    > = (_, { emit }) => {
+      emit('ev', 'a')
+      // @ts-expect-error invalid argument
+      emit('ev', 12)
+      // @ts-expect-error invalid event
+      emit('o', '1')
+    }
 
     defineComponent(MyComponent)
   })
