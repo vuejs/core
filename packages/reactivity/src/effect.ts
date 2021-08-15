@@ -1,5 +1,5 @@
 import { TrackOpTypes, TriggerOpTypes } from './operations'
-import { extend, isArray, isIntegerKey, isMap } from '@vue/shared'
+import { extend, isArray, isIntegerKey, isMap, EMPTY_OBJ } from '@vue/shared'
 import { EffectScope, recordEffectScope } from './effectScope'
 import {
   createDep,
@@ -144,7 +144,7 @@ export interface ReactiveEffectRunner<T = any> {
 
 export function effect<T = any>(
   fn: () => T,
-  options?: ReactiveEffectOptions
+  options: ReactiveEffectOptions = EMPTY_OBJ
 ): ReactiveEffectRunner {
   if ((fn as ReactiveEffectRunner).effect) {
     fn = (fn as ReactiveEffectRunner).effect.fn
@@ -155,7 +155,7 @@ export function effect<T = any>(
     extend(_effect, options)
     if (options.scope) recordEffectScope(_effect, options.scope)
   }
-  if (!options || !options.lazy) {
+  if (!options.lazy) {
     _effect.run()
   }
   const runner = _effect.run.bind(_effect) as ReactiveEffectRunner
