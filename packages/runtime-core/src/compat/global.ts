@@ -57,7 +57,7 @@ import {
   isCompatEnabled,
   softAssertCompatEnabled
 } from './compatConfig'
-import { LegacyPublicInstance } from './instance'
+import { LegacyPublicInstance, LegacyPublicProperties } from './instance'
 
 /**
  * @deprecated the default `Vue` export has been removed in Vue 3. The type for
@@ -78,7 +78,7 @@ export type CompatVue = Pick<App, 'version' | 'component' | 'directive'> & {
   nextTick: typeof nextTick
 
   use(plugin: Plugin, ...options: any[]): CompatVue
-  mixin(mixin: ComponentOptions): CompatVue
+  mixin(mixin: LegacyComponentOptions): CompatVue
 
   component(name: string): Component | undefined
   component(name: string, component: Component): CompatVue
@@ -90,7 +90,7 @@ export type CompatVue = Pick<App, 'version' | 'component' | 'directive'> & {
   /**
    * @deprecated
    */
-  extend: (options?: ComponentOptions) => CompatVue
+  extend: (options?: LegacyComponentOptions) => CompatVue
   /**
    * @deprecated Vue 3 no longer needs set() for adding new properties.
    */
@@ -124,6 +124,9 @@ export type CompatVue = Pick<App, 'version' | 'component' | 'directive'> & {
    */
   super: CompatVue
 }
+
+type LegacyComponentOptions = ComponentOptions &
+  ThisType<LegacyPublicProperties>
 
 export let isCopyingConfig = false
 
