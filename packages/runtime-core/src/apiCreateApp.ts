@@ -166,6 +166,12 @@ export function createAppContext(): AppContext {
   }
 }
 
+/**
+ * It's possible to pass listeners for emited events to `rootProps`.
+ * Event name must be transformed to `on` + PascalCaseEventName no dashes.
+ * 
+ * > Event `header-click` must be transformed to `onHeaderClick`
+ */
 export type CreateAppFunction<HostElement> = (
   rootComponent: Component,
   rootProps?: Data | null
