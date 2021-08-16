@@ -332,7 +332,7 @@ export function compileScript(
     }
 
     let isUsedInTemplate = true
-    if (isTS && sfc.template && !sfc.template.src) {
+    if (isTS && sfc.template && !sfc.template.src && !sfc.template.lang) {
       isUsedInTemplate = new RegExp(
         // #4274 escape $ since it's a special char in regex
         // (and is the only regex special char that is valid in identifiers)
