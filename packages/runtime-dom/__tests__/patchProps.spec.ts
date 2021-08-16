@@ -43,6 +43,18 @@ describe('runtime-dom: props patching', () => {
     expect(el.multiple).toBe(true)
     patchProp(el, 'multiple', null, null)
     expect(el.multiple).toBe(false)
+    patchProp(el, 'multiple', null, true)
+    expect(el.multiple).toBe(true)
+    patchProp(el, 'multiple', null, 0)
+    expect(el.multiple).toBe(false)
+    patchProp(el, 'multiple', null, '0')
+    expect(el.multiple).toBe(true)
+    patchProp(el, 'multiple', null, false)
+    expect(el.multiple).toBe(false)
+    patchProp(el, 'multiple', null, 1)
+    expect(el.multiple).toBe(true)
+    patchProp(el, 'multiple', null, undefined)
+    expect(el.multiple).toBe(false)
   })
 
   test('innerHTML unmount prev children', () => {

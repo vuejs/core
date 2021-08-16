@@ -24,6 +24,14 @@ export const isBooleanAttr = /*#__PURE__*/ makeMap(
     `checked,muted,multiple,selected`
 )
 
+/**
+ * Boolean attributes should be included if the value is truthy or ''.
+ * e.g. <select multiple> compiles to { multiple: '' }
+ */
+export function includeBooleanAttr(value: unknown): boolean {
+  return !!value || value === ''
+}
+
 const unsafeAttrCharRE = /[>/="'\u0009\u000a\u000c\u0020]/
 const attrValidationCache: Record<string, boolean> = {}
 
