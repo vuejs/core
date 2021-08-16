@@ -2242,5 +2242,15 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
 }
 
 function stripStrings(exp: string) {
-  return exp.replace(/'[^']+'|"[^"]+"|`[^`]+`/g, '')
+  return exp
+    .replace(/'[^']+'|"[^"]+"/g, '')
+    .replace(/`[^`]+`/g, stripTemplateString)
+}
+
+function stripTemplateString(str: string): string {
+  const interpMatch = str.match(/\${[^}]+}/g)
+  if (interpMatch) {
+    return interpMatch.map(m => m.slice(2, -1)).join(',')
+  }
+  return ''
 }

@@ -213,17 +213,17 @@ defineExpose({ foo: 123 })
     test('imports not used in <template> should not be exposed', () => {
       const { content } = compile(`
         <script setup lang="ts">
-        import { FooBar, FooBaz, FooQux, vMyDir, x, y, z, x$y, Last } from './x'
+        import { FooBar, FooBaz, FooQux, vMyDir, x, y, z, x$y, VAR, VAR2, VAR3, Last } from './x'
         const fooBar: FooBar = 1
         </script>
         <template>
           <FooBaz v-my-dir>{{ x }} {{ yy }} {{ x$y }}</FooBaz>
           <foo-qux/>
           <div :id="z + 'y'">FooBar</div>
+          {{ \`\${VAR}VAR2\${VAR3}\` }}
           <Last/>
         </template>
         `)
-      assertCode(content)
       // FooBar: should not be matched by plain text
       // FooBaz: used as PascalCase component
       // FooQux: used as kebab-case component
@@ -231,9 +231,11 @@ defineExpose({ foo: 123 })
       // x: used in interpolation
       // y: should not be matched by {{ yy }} or 'y' in binding exps
       // x$y: #4274 should escape special chars when creating Regex
+      // VAR & VAR3: #4340 interpolations in tempalte strings
       expect(content).toMatch(
-        `return { fooBar, FooBaz, FooQux, vMyDir, x, z, x$y, Last }`
+        `return { fooBar, FooBaz, FooQux, vMyDir, x, z, x$y, VAR, VAR3, Last }`
       )
+      assertCode(content)
     })
   })
 
