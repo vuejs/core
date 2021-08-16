@@ -730,7 +730,7 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
   } else if (isArray(children)) {
     type = ShapeFlags.ARRAY_CHILDREN
   } else if (typeof children === 'object') {
-    if (shapeFlag & ShapeFlags.ELEMENT || shapeFlag & ShapeFlags.TELEPORT) {
+    if (shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.TELEPORT)) {
       // Normalize slot to plain children for plain element and Teleport
       const slot = (children as any).default
       if (slot) {

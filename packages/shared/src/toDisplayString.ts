@@ -2,6 +2,7 @@ import {
   isArray,
   isMap,
   isObject,
+  isFunction,
   isPlainObject,
   isSet,
   isFunction,
@@ -13,21 +14,13 @@ import {
  * @private
  */
 export const toDisplayString = (val: unknown): string => {
-  if (val == null) return ''
-
-  let useToString = true
-
-  if (isArray(val)) {
-    useToString = false
-  } else if (isObject(val)) {
-    // object with invokeable toString override
-    useToString =
-      val.toString &&
-      val.toString !== objectToString &&
-      isFunction(val.toString)
-  }
-
-  return useToString ? String(val) : JSON.stringify(val, replacer, 2)
+  return val == null
+    ? ''
+    : isArray(val) ||
+      (isObject(val) &&
+        (val.toString === objectToString || !isFunction(val.toString)))
+    ? JSON.stringify(val, replacer, 2)
+    : String(val)
 }
 
 const replacer = (_key: string, val: any): any => {

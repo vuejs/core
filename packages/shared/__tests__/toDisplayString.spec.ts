@@ -20,19 +20,19 @@ describe('toDisplayString', () => {
     const arr = [obj]
     expect(toDisplayString(arr)).toBe(JSON.stringify(arr, null, 2))
 
-    const obj_with_toString_override = {
+    const objWithToStringOverride = {
       foo: 555,
       toString() {
         return 'override'
       }
     }
-    expect(toDisplayString(obj_with_toString_override)).toBe('override')
+    expect(toDisplayString(objWithToStringOverride)).toBe('override')
 
-    const obj_with_non_invokeable_toString_override = {
+    const objWithNonInvokeableToString = {
       foo: 555,
       toString: null
     }
-    expect(toDisplayString(obj_with_non_invokeable_toString_override)).toBe(
+    expect(toDisplayString(objWithNonInvokeableToString)).toBe(
       `{
   "foo": 555,
   "toString": null
