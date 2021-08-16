@@ -5,7 +5,6 @@ import {
   isFunction,
   isPlainObject,
   isSet,
-  isFunction,
   objectToString
 } from './index'
 
