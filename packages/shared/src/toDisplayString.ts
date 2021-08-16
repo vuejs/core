@@ -2,6 +2,7 @@ import {
   isArray,
   isMap,
   isObject,
+  isFunction,
   isPlainObject,
   isSet,
   objectToString
@@ -14,7 +15,9 @@ import {
 export const toDisplayString = (val: unknown): string => {
   return val == null
     ? ''
-    : isArray(val) || (isObject(val) && val.toString === objectToString)
+    : isArray(val) ||
+      (isObject(val) &&
+        (val.toString === objectToString || !isFunction(val.toString)))
     ? JSON.stringify(val, replacer, 2)
     : String(val)
 }

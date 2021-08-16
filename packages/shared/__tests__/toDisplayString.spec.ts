@@ -19,6 +19,9 @@ describe('toDisplayString', () => {
     expect(toDisplayString(obj)).toBe(JSON.stringify(obj, null, 2))
     const arr = [obj]
     expect(toDisplayString(arr)).toBe(JSON.stringify(arr, null, 2))
+    const foo = Object.create(null)
+    foo.bar = 1
+    expect(toDisplayString(foo)).toBe(JSON.stringify(foo, null, 2))
   })
 
   test('refs', () => {
@@ -31,7 +34,7 @@ describe('toDisplayString', () => {
       })
     ).toBe(JSON.stringify({ n: 1, np: 2 }, null, 2))
   })
-  
+
   test('objects with custom toString', () => {
     class TestClass {
       toString() {
