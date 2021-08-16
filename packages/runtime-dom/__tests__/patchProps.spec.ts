@@ -192,4 +192,26 @@ describe('runtime-dom: props patching', () => {
     patchProp(el, 'size', 100, null)
     expect(el.getAttribute('size')).toBe(null)
   })
+
+  test('patch value for select', () => {
+    const root = document.createElement('div')
+    render(
+      h('select', { value: 'foo' }, [
+        h('option', { value: 'foo' }, 'foo'),
+        h('option', { value: 'bar' }, 'bar')
+      ]),
+      root
+    )
+    const el = root.children[0] as HTMLSelectElement
+    expect(el.value).toBe('foo')
+
+    render(
+      h('select', { value: 'baz' }, [
+        h('option', { value: 'foo' }, 'foo'),
+        h('option', { value: 'baz' }, 'baz')
+      ]),
+      root
+    )
+    expect(el.value).toBe('baz')
+  })
 })
