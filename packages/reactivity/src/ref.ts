@@ -26,6 +26,7 @@ type RefBase<T> = {
   value: T
 }
 
+// 用于搜集依赖
 export function trackRefValue(ref: RefBase<any>) {
   if (isTracking()) {
     ref = toRaw(ref)
@@ -90,7 +91,7 @@ export function shallowRef<T = any>(): Ref<T | undefined>
 export function shallowRef(value?: unknown) {
   return createRef(value, true)
 }
-
+// 构建ref
 class RefImpl<T> {
   private _value: T
   private _rawValue: T
@@ -104,6 +105,7 @@ class RefImpl<T> {
   }
 
   get value() {
+    // 搜集依赖
     trackRefValue(this)
     return this._value
   }
@@ -113,6 +115,7 @@ class RefImpl<T> {
     if (hasChanged(newVal, this._rawValue)) {
       this._rawValue = newVal
       this._value = this._shallow ? newVal : convert(newVal)
+      // 响应依赖
       triggerRefValue(this, newVal)
     }
   }
