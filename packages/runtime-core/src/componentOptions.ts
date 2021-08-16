@@ -651,7 +651,7 @@ export function applyOptions(instance: ComponentInternalInstance) {
           `Plain object usage is no longer supported.`
       )
     }
-    const data = (dataOptions as any).call(publicThis, publicThis)
+    const data = dataOptions.call(publicThis, publicThis)
     if (__DEV__ && isPromise(data)) {
       warn(
         `data() returned a Promise - note data() cannot be async; If you ` +
