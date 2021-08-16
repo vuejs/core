@@ -538,6 +538,7 @@ const emit = defineEmits(['a', 'b'])
 
         union: string | number
         literalUnion: 'foo' | 'bar'
+        literalUnionNumber: 1 | 2 | 3 | 4 | 5
         literalUnionMixed: 'foo' | 1 | boolean
         intersection: Test & {}
         foo: ((item: any) => boolean) | null
@@ -565,8 +566,9 @@ const emit = defineEmits(['a', 'b'])
       expect(content).toMatch(
         `union: { type: [String, Number], required: true }`
       )
+      expect(content).toMatch(`literalUnion: { type: String, required: true }`)
       expect(content).toMatch(
-        `literalUnion: { type: [String, String], required: true }`
+        `literalUnionNumber: { type: Number, required: true }`
       )
       expect(content).toMatch(
         `literalUnionMixed: { type: [String, Number, Boolean], required: true }`
@@ -594,6 +596,7 @@ const emit = defineEmits(['a', 'b'])
         method: BindingTypes.PROPS,
         union: BindingTypes.PROPS,
         literalUnion: BindingTypes.PROPS,
+        literalUnionNumber: BindingTypes.PROPS,
         literalUnionMixed: BindingTypes.PROPS,
         intersection: BindingTypes.PROPS,
         foo: BindingTypes.PROPS
