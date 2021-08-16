@@ -1,3 +1,21 @@
+## [3.2.3](https://github.com/vuejs/vue-next/compare/v3.2.2...v3.2.3) (2021-08-16)
+
+
+### Bug Fixes
+
+* **compiler-core:** fix hoisting logic for elements with cached handlers + other bindings ([a6c1db2](https://github.com/vuejs/vue-next/commit/a6c1db2728cd3c72b897cb7b245d532e63485b07)), closes [#4327](https://github.com/vuejs/vue-next/issues/4327)
+* **compiler-core:** fix style binding edge case ([#4319](https://github.com/vuejs/vue-next/issues/4319)) ([092bdcd](https://github.com/vuejs/vue-next/commit/092bdcdf58643d77da8d564fbc3c5c6647f6bfc5)), closes [#4317](https://github.com/vuejs/vue-next/issues/4317)
+* **compiler-sfc:** bail on import usage check when template has custom lang ([aae3725](https://github.com/vuejs/vue-next/commit/aae3725e574e0182a1b41aa3dc38b11e596570ad)), closes [#4312](https://github.com/vuejs/vue-next/issues/4312)
+* **compiler-sfc:** fix import usage check in template strings in expressions ([f855ccb](https://github.com/vuejs/vue-next/commit/f855ccb2c1a8ea05ae71cfab92f5a18be31a1f14)), closes [#4340](https://github.com/vuejs/vue-next/issues/4340)
+* **defineProps:** defineProps generates unnecessary array of same types ([#4353](https://github.com/vuejs/vue-next/issues/4353)) ([ad66295](https://github.com/vuejs/vue-next/commit/ad66295cb363f6409b8321f258aaf29b3758c53c)), closes [#4352](https://github.com/vuejs/vue-next/issues/4352)
+* **runtime-core:** patchChildren first in patchElement ([#4313](https://github.com/vuejs/vue-next/issues/4313)) ([5b3f1e8](https://github.com/vuejs/vue-next/commit/5b3f1e8424d40d2b7b1e07f53ec11570dd546d66))
+* **runtime-core:** vnode hooks should not be called on async wrapper ([#4349](https://github.com/vuejs/vue-next/issues/4349)) ([cd2d984](https://github.com/vuejs/vue-next/commit/cd2d98499ed646c85f81faa1f9241b0585654b86)), closes [#4346](https://github.com/vuejs/vue-next/issues/4346)
+* **runtime-dom:** consistently remove boolean attributes for falsy values ([#4348](https://github.com/vuejs/vue-next/issues/4348)) ([620a69b](https://github.com/vuejs/vue-next/commit/620a69b871a017dfe0ba81d380fd933d997c8a00))
+* **shared:** fix toDisplayString on object with null prototype ([#4335](https://github.com/vuejs/vue-next/issues/4335)) ([42a334e](https://github.com/vuejs/vue-next/commit/42a334e12ee1462ccefc73fd7f24dc6b4ae48403)), closes [#4334](https://github.com/vuejs/vue-next/issues/4334)
+* **types:** fix tsx ref component instance type ([#2486](https://github.com/vuejs/vue-next/issues/2486)) ([84d4357](https://github.com/vuejs/vue-next/commit/84d4357f6f2b2eb03ca56abfb3cac17fa7dfa85e))
+
+
+
 ## [3.2.2](https://github.com/vuejs/vue-next/compare/v3.2.1...v3.2.2) (2021-08-11)
 
 
