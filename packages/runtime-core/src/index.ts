@@ -4,6 +4,7 @@ export const version = __VERSION__
 export {
   // core
   computed,
+  deferredComputed,
   reactive,
   ref,
   readonly,
