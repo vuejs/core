@@ -1703,7 +1703,7 @@ function inferRuntimeType(
       return [
         ...new Set(
           [].concat(
-            node.types.map(t => inferRuntimeType(t, declaredTypes)) as any
+            ...(node.types.map(t => inferRuntimeType(t, declaredTypes)) as any)
           )
         )
       ]
@@ -1716,11 +1716,7 @@ function inferRuntimeType(
 }
 
 function toRuntimeTypeString(types: string[]) {
-  return types.some(t => t === 'null')
-    ? `null`
-    : types.length > 1
-    ? `[${types.join(', ')}]`
-    : types[0]
+  return types.length > 1 ? `[${types.join(', ')}]` : types[0]
 }
 
 function extractRuntimeEmits(

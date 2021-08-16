@@ -790,7 +790,8 @@ export default _defineComponent({
     alias: { type: Array, required: true },
     method: { type: Function, required: true },
     union: { type: [String, Number], required: true },
-    literalUnion: { type: [String, String], required: true },
+    literalUnion: { type: String, required: true },
+    literalUnionNumber: { type: Number, required: true },
     literalUnionMixed: { type: [String, Number, Boolean], required: true },
     intersection: { type: Object, required: true },
     foo: { type: [Function, null], required: true }
@@ -817,6 +818,7 @@ export default _defineComponent({
 
         union: string | number
         literalUnion: 'foo' | 'bar'
+        literalUnionNumber: 1 | 2 | 3 | 4 | 5
         literalUnionMixed: 'foo' | 1 | boolean
         intersection: Test & {}
         foo: ((item: any) => boolean) | null
