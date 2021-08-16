@@ -177,7 +177,7 @@ describe('ssr: element', () => {
       expect(getCompiledString(`<input type="checkbox" :checked="checked">`))
         .toMatchInlineSnapshot(`
         "\`<input type=\\"checkbox\\"\${
-            (_ctx.checked) ? \\" checked\\" : \\"\\"
+            (_ssrIncludeBooleanAttr(_ctx.checked)) ? \\" checked\\" : \\"\\"
           }>\`"
       `)
     })

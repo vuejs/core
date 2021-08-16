@@ -27,6 +27,7 @@ export {
 export { ssrInterpolate } from './helpers/ssrInterpolate'
 export { ssrRenderList } from './helpers/ssrRenderList'
 export { ssrRenderSuspense } from './helpers/ssrRenderSuspense'
+export { includeBooleanAttr as ssrIncludeBooleanAttr } from '@vue/shared'
 
 // v-model helpers
 export {
