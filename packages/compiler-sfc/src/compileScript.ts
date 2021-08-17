@@ -201,14 +201,12 @@ export function compileScript(
       let content = script.content
       if (cssVars.length) {
         content = rewriteDefault(content, `__default__`, plugins)
-        if (cssVars.length) {
-          content += genNormalScriptCssVarsCode(
-            cssVars,
-            bindings,
-            scopeId,
-            !!options.isProd
-          )
-        }
+        content += genNormalScriptCssVarsCode(
+          cssVars,
+          bindings,
+          scopeId,
+          !!options.isProd
+        )
         content += `\nexport default __default__`
       }
       return {
