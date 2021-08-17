@@ -3,7 +3,7 @@ import { compileSFCScript as compile, assertCode } from './utils'
 
 describe('SFC compile <script setup>', () => {
   test('should expose top level declarations', () => {
-    const { content } = compile(`
+    const { content, bindings } = compile(`
       <script setup>
       import { x } from './x'
       let a = 1
@@ -11,9 +11,29 @@ describe('SFC compile <script setup>', () => {
       function c() {}
       class d {}
       </script>
+
+      <script>
+      import { xx } from './x'
+      let aa = 1
+      const bb = 2
+      function cc() {}
+      class dd {}
+      </script>
       `)
+    expect(content).toMatch('return { aa, bb, cc, dd, a, b, c, d, xx, x }')
+    expect(bindings).toStrictEqual({
+      x: BindingTypes.SETUP_MAYBE_REF,
+      a: BindingTypes.SETUP_LET,
+      b: BindingTypes.SETUP_CONST,
+      c: BindingTypes.SETUP_CONST,
+      d: BindingTypes.SETUP_CONST,
+      xx: BindingTypes.SETUP_MAYBE_REF,
+      aa: BindingTypes.SETUP_LET,
+      bb: BindingTypes.SETUP_CONST,
+      cc: BindingTypes.SETUP_CONST,
+      dd: BindingTypes.SETUP_CONST
+    })
     assertCode(content)
-    expect(content).toMatch('return { a, b, c, d, x }')
   })
 
   test('defineProps()', () => {

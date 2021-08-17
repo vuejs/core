@@ -827,6 +827,13 @@ export function compileScript(
             )
           }
         }
+      } else if (
+        (node.type === 'VariableDeclaration' ||
+          node.type === 'FunctionDeclaration' ||
+          node.type === 'ClassDeclaration') &&
+        !node.declare
+      ) {
+        walkDeclaration(node, setupBindings, userImportAlias)
       }
     }
   }

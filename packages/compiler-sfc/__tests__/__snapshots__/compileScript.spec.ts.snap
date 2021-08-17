@@ -610,10 +610,15 @@ export default {
       function c() {}
       class d {}
       
-return { a, b, c, d, x }
+return { aa, bb, cc, dd, a, b, c, d, xx, x }
 }
 
-}"
+}
+      import { xx } from './x'
+      let aa = 1
+      const bb = 2
+      function cc() {}
+      class dd {}"
 `;
 
 exports[`SFC compile <script setup> with TypeScript const Enum 1`] = `
