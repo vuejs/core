@@ -1,6 +1,24 @@
+<script setup lang="ts">
+import Preview from './Preview.vue'
+import CodeMirror from '../codemirror/CodeMirror.vue'
+import { store } from '../store'
+import { ref } from 'vue'
+
+const modes = ['preview', 'js', 'css', 'ssr'] as const
+
+type Modes = typeof modes[number]
+const mode = ref<Modes>('preview')
+</script>
+
 <template>
   <div class="tab-buttons">
-    <button v-for="m of modes" :class="{ active: mode === m }" @click="mode = m">{{ m }}</button>
+    <button
+      v-for="m of modes"
+      :class="{ active: mode === m }"
+      @click="mode = m"
+    >
+      {{ m }}
+    </button>
   </div>
 
   <div class="output-container">
@@ -13,18 +31,6 @@
     />
   </div>
 </template>
-
-<script setup lang="ts">
-import Preview from './Preview.vue'
-import CodeMirror from '../codemirror/CodeMirror.vue'
-import { store } from '../store'
-import { ref } from 'vue'
-
-const modes = ['preview', 'js', 'css', 'ssr'] as const
-
-type Modes = typeof modes[number]
-const mode = ref<Modes>('preview')
-</script>
 
 <style scoped>
 .output-container {

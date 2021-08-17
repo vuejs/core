@@ -1,31 +1,6 @@
-<template>
-  <div class="file-selector">
-    <div
-      v-for="(file, i) in Object.keys(store.files)"
-      class="file"
-      :class="{ active: store.activeFilename === file }"
-      @click="setActive(file)">
-      <span class="label">{{ file }}</span>
-      <span v-if="i > 0" class="remove" @click.stop="deleteFile(file)">
-        <svg width="12" height="12" viewBox="0 0 24 24" class="svelte-cghqrp"><line stroke="#999" x1="18" y1="6" x2="6" y2="18"></line><line stroke="#999" x1="6" y1="6" x2="18" y2="18"></line></svg>
-      </span>
-    </div>
-    <div v-if="pending" class="file" >
-      <input
-        v-model="pendingFilename"
-        spellcheck="false"
-        @keyup.enter="doneAddFile"
-        @keyup.esc="cancelAddFile"
-        @vnodeMounted="focus">
-    </div>
-    <button class="add" @click="startAddFile">+</button>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { store, addFile, deleteFile, setActive } from '../store'
-import { ref } from 'vue'
-import type { VNode } from 'vue'
+import { ref, VNode } from 'vue'
 
 const pending = ref(false)
 const pendingFilename = ref('Comp.vue')
@@ -39,7 +14,7 @@ function cancelAddFile() {
 }
 
 function focus({ el }: VNode) {
-  (el as HTMLInputElement).focus()
+  ;(el as HTMLInputElement).focus()
 }
 
 function doneAddFile() {
@@ -50,7 +25,9 @@ function doneAddFile() {
     !filename.endsWith('.js') &&
     filename !== 'import-map.json'
   ) {
-    store.errors = [`Playground only supports *.vue, *.js files or import-map.json.`]
+    store.errors = [
+      `Playground only supports *.vue, *.js files or import-map.json.`
+    ]
     return
   }
 
@@ -65,6 +42,35 @@ function doneAddFile() {
   pendingFilename.value = 'Comp.vue'
 }
 </script>
+
+<template>
+  <div class="file-selector">
+    <div
+      v-for="(file, i) in Object.keys(store.files)"
+      class="file"
+      :class="{ active: store.activeFilename === file }"
+      @click="setActive(file)"
+    >
+      <span class="label">{{ file }}</span>
+      <span v-if="i > 0" class="remove" @click.stop="deleteFile(file)">
+        <svg width="12" height="12" viewBox="0 0 24 24" class="svelte-cghqrp">
+          <line stroke="#999" x1="18" y1="6" x2="6" y2="18"></line>
+          <line stroke="#999" x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </span>
+    </div>
+    <div v-if="pending" class="file">
+      <input
+        v-model="pendingFilename"
+        spellcheck="false"
+        @keyup.enter="doneAddFile"
+        @keyup.esc="cancelAddFile"
+        @vnodeMounted="focus"
+      />
+    </div>
+    <button class="add" @click="startAddFile">+</button>
+  </div>
+</template>
 
 <style scoped>
 .file-selector {

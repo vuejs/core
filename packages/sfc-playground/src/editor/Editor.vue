@@ -1,11 +1,3 @@
-<template>
-  <FileSelector/>
-  <div class="editor-container">
-    <CodeMirror @change="onChange" :value="activeCode" :mode="activeMode" />
-    <Message :err="store.errors[0]" />
-  </div>
-</template>
-
 <script setup lang="ts">
 import FileSelector from './FileSelector.vue'
 import CodeMirror from '../codemirror/CodeMirror.vue'
@@ -19,8 +11,8 @@ const onChange = debounce((code: string) => {
 }, 250)
 
 const activeCode = ref(store.activeFile.code)
-const activeMode = computed(
-  () => (store.activeFilename.endsWith('.vue') ? 'htmlmixed' : 'javascript')
+const activeMode = computed(() =>
+  store.activeFilename.endsWith('.vue') ? 'htmlmixed' : 'javascript'
 )
 
 watch(
@@ -30,6 +22,14 @@ watch(
   }
 )
 </script>
+
+<template>
+  <FileSelector />
+  <div class="editor-container">
+    <CodeMirror @change="onChange" :value="activeCode" :mode="activeMode" />
+    <Message :err="store.errors[0]" />
+  </div>
+</template>
 
 <style scoped>
 .editor-container {

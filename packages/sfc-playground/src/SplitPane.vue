@@ -1,22 +1,3 @@
-<template>
-  <div
-    ref="container"
-    class="split-pane"
-    :class="{ dragging: state.dragging }"
-    @mousemove="dragMove"
-    @mouseup="dragEnd"
-    @mouseleave="dragEnd"
-  >
-    <div class="left" :style="{ width: boundSplit() + '%' }">
-      <slot name="left" />
-      <div class="dragger" @mousedown.prevent="dragStart" />
-    </div>
-    <div class="right" :style="{ width: (100 - boundSplit()) + '%' }">
-      <slot name="right" />
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 
@@ -29,11 +10,7 @@ const state = reactive({
 
 function boundSplit() {
   const { split } = state
-  return split < 20
-    ? 20
-    : split > 80
-      ? 80
-      : split
+  return split < 20 ? 20 : split > 80 ? 80 : split
 }
 
 let startPosition = 0
@@ -50,7 +27,7 @@ function dragMove(e: MouseEvent) {
     const position = e.pageX
     const totalSize = container.value.offsetWidth
     const dp = position - startPosition
-    state.split = startSplit + ~~(dp / totalSize * 100)
+    state.split = startSplit + ~~((dp / totalSize) * 100)
   }
 }
 
@@ -58,6 +35,25 @@ function dragEnd() {
   state.dragging = false
 }
 </script>
+
+<template>
+  <div
+    ref="container"
+    class="split-pane"
+    :class="{ dragging: state.dragging }"
+    @mousemove="dragMove"
+    @mouseup="dragEnd"
+    @mouseleave="dragEnd"
+  >
+    <div class="left" :style="{ width: boundSplit() + '%' }">
+      <slot name="left" />
+      <div class="dragger" @mousedown.prevent="dragStart" />
+    </div>
+    <div class="right" :style="{ width: 100 - boundSplit() + '%' }">
+      <slot name="right" />
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .split-pane {

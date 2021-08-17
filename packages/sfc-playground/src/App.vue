@@ -1,3 +1,10 @@
+<script setup lang="ts">
+import Header from './Header.vue'
+import SplitPane from './SplitPane.vue'
+import Editor from './editor/Editor.vue'
+import Output from './output/Output.vue'
+</script>
+
 <template>
   <Header />
   <div class="wrapper">
@@ -11,13 +18,6 @@
     </SplitPane>
   </div>
 </template>
-
-<script setup lang="ts">
-import Header from './Header.vue'
-import SplitPane from './SplitPane.vue'
-import Editor from './editor/Editor.vue'
-import Output from './output/Output.vue'
-</script>
 
 <style>
 body {

@@ -1,4 +1,3 @@
-
 <script setup lang="ts">
 import { downloadProject } from './download/download'
 import { setVersion, resetVersion } from './sfcCompiler'
