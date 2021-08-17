@@ -206,7 +206,7 @@ return { x }
 
 exports[`SFC compile <script setup> imports imports not used in <template> should not be exposed 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
-import { FooBar, FooBaz, FooQux, vMyDir, x, y, z, x$y, VAR, VAR2, VAR3, Last } from './x'
+import { FooBar, FooBaz, fooQux, vMyDir, x, y, z, x$y, VAR, VAR2, VAR3, Last } from './x'
         
 export default _defineComponent({
   setup(__props, { expose }) {
@@ -214,7 +214,7 @@ export default _defineComponent({
 
         const fooBar: FooBar = 1
         
-return { fooBar, FooBaz, FooQux, vMyDir, x, z, x$y, VAR, VAR3, Last }
+return { fooBar, FooBaz, fooQux, vMyDir, x, z, x$y, VAR, VAR3, Last }
 }
 
 })"

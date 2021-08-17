@@ -213,7 +213,7 @@ defineExpose({ foo: 123 })
     test('imports not used in <template> should not be exposed', () => {
       const { content } = compile(`
         <script setup lang="ts">
-        import { FooBar, FooBaz, FooQux, vMyDir, x, y, z, x$y, VAR, VAR2, VAR3, Last } from './x'
+        import { FooBar, FooBaz, fooQux, vMyDir, x, y, z, x$y, VAR, VAR2, VAR3, Last } from './x'
         const fooBar: FooBar = 1
         </script>
         <template>
@@ -233,7 +233,7 @@ defineExpose({ foo: 123 })
       // x$y: #4274 should escape special chars when creating Regex
       // VAR & VAR3: #4340 interpolations in tempalte strings
       expect(content).toMatch(
-        `return { fooBar, FooBaz, FooQux, vMyDir, x, z, x$y, VAR, VAR3, Last }`
+        `return { fooBar, FooBaz, fooQux, vMyDir, x, z, x$y, VAR, VAR3, Last }`
       )
       assertCode(content)
     })
