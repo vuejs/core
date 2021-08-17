@@ -209,32 +209,90 @@ defineExpose({ foo: 123 })
         content.lastIndexOf(`import { x }`)
       )
     })
+  })
 
-    test('imports not used in <template> should not be exposed', () => {
+  // in dev mode, declared bindings are returned as an object from setup()
+  // when using TS, users may import types which should not be returned as
+  // values, so we need to check import usage in the template to determine
+  // what to be returned.
+  describe('dev mode import usage check', () => {
+    test('components', () => {
       const { content } = compile(`
         <script setup lang="ts">
-        import { FooBar, FooBaz, FooQux, vMyDir, x, y, z, x$y, VAR, VAR2, VAR3, Last } from './x'
+        import { FooBar, FooBaz, FooQux, foo } from './x'
         const fooBar: FooBar = 1
         </script>
         <template>
-          <FooBaz v-my-dir>{{ x }} {{ yy }} {{ x$y }}</FooBaz>
+          <FooBaz></FooBaz>
           <foo-qux/>
-          <div :id="z + 'y'">FooBar</div>
-          {{ \`\${VAR}VAR2\${VAR3}\` }}
-          <Last/>
+          <foo/>
+          FooBar
         </template>
         `)
-      // FooBar: should not be matched by plain text
+      // FooBar: should not be matched by plain text or incorrect case
       // FooBaz: used as PascalCase component
       // FooQux: used as kebab-case component
-      // vMyDir: used as directive v-my-dir
+      // foo: lowercase component
+      expect(content).toMatch(`return { fooBar, FooBaz, FooQux, foo }`)
+      assertCode(content)
+    })
+
+    test('directive', () => {
+      const { content } = compile(`
+        <script setup lang="ts">
+        import { vMyDir } from './x'
+        </script>
+        <template>
+          <div v-my-dir></div>
+        </template>
+        `)
+      expect(content).toMatch(`return { vMyDir }`)
+      assertCode(content)
+    })
+
+    test('vue interpolations', () => {
+      const { content } = compile(`
+      <script setup lang="ts">
+      import { x, y, z, x$y } from './x'
+      </script>
+      <template>
+        <div :id="z + 'y'">{{ x }} {{ yy }} {{ x$y }}</div>
+      </template>
+      `)
       // x: used in interpolation
       // y: should not be matched by {{ yy }} or 'y' in binding exps
       // x$y: #4274 should escape special chars when creating Regex
-      // VAR & VAR3: #4340 interpolations in tempalte strings
-      expect(content).toMatch(
-        `return { fooBar, FooBaz, FooQux, vMyDir, x, z, x$y, VAR, VAR3, Last }`
-      )
+      expect(content).toMatch(`return { x, z, x$y }`)
+      assertCode(content)
+    })
+
+    // #4340 interpolations in tempalte strings
+    test('js template string interpolations', () => {
+      const { content } = compile(`
+        <script setup lang="ts">
+        import { VAR, VAR2, VAR3 } from './x'
+        </script>
+        <template>
+          {{ \`\${VAR}VAR2\${VAR3}\` }}
+        </template>
+        `)
+      // VAR2 should not be matched
+      expect(content).toMatch(`return { VAR, VAR3 }`)
+      assertCode(content)
+    })
+
+    // edge case: last tag in template
+    test('last tag', () => {
+      const { content } = compile(`
+        <script setup lang="ts">
+        import { FooBaz, Last } from './x'
+        </script>
+        <template>
+          <FooBaz></FooBaz>
+          <Last/>
+        </template>
+        `)
+      expect(content).toMatch(`return { FooBaz, Last }`)
       assertCode(content)
     })
   })

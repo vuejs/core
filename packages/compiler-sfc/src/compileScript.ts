@@ -2212,7 +2212,7 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
             !parserOptions.isNativeTag!(node.tag) &&
             !parserOptions.isBuiltInComponent!(node.tag)
           ) {
-            code += `,${capitalize(camelize(node.tag))}`
+            code += `,${camelize(node.tag)},${capitalize(camelize(node.tag))}`
           }
           for (let i = 0; i < node.props.length; i++) {
             const prop = node.props[i]

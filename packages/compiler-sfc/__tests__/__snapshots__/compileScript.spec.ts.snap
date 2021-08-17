@@ -126,6 +126,82 @@ return { props, a, emit }
 }"
 `;
 
+exports[`SFC compile <script setup> dev mode import usage check components 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+import { FooBar, FooBaz, FooQux, foo } from './x'
+        
+export default _defineComponent({
+  setup(__props, { expose }) {
+  expose()
+
+        const fooBar: FooBar = 1
+        
+return { fooBar, FooBaz, FooQux, foo }
+}
+
+})"
+`;
+
+exports[`SFC compile <script setup> dev mode import usage check directive 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+import { vMyDir } from './x'
+        
+export default _defineComponent({
+  setup(__props, { expose }) {
+  expose()
+
+        
+return { vMyDir }
+}
+
+})"
+`;
+
+exports[`SFC compile <script setup> dev mode import usage check js template string interpolations 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+import { VAR, VAR2, VAR3 } from './x'
+        
+export default _defineComponent({
+  setup(__props, { expose }) {
+  expose()
+
+        
+return { VAR, VAR3 }
+}
+
+})"
+`;
+
+exports[`SFC compile <script setup> dev mode import usage check last tag 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+import { FooBaz, Last } from './x'
+        
+export default _defineComponent({
+  setup(__props, { expose }) {
+  expose()
+
+        
+return { FooBaz, Last }
+}
+
+})"
+`;
+
+exports[`SFC compile <script setup> dev mode import usage check vue interpolations 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+import { x, y, z, x$y } from './x'
+      
+export default _defineComponent({
+  setup(__props, { expose }) {
+  expose()
+
+      
+return { x, z, x$y }
+}
+
+})"
+`;
+
 exports[`SFC compile <script setup> errors should allow defineProps/Emit() referencing imported binding 1`] = `
 "import { bar } from './bar'
         
@@ -202,22 +278,6 @@ return { x }
 }
 
 }"
-`;
-
-exports[`SFC compile <script setup> imports imports not used in <template> should not be exposed 1`] = `
-"import { defineComponent as _defineComponent } from 'vue'
-import { FooBar, FooBaz, FooQux, vMyDir, x, y, z, x$y, VAR, VAR2, VAR3, Last } from './x'
-        
-export default _defineComponent({
-  setup(__props, { expose }) {
-  expose()
-
-        const fooBar: FooBar = 1
-        
-return { fooBar, FooBaz, FooQux, vMyDir, x, z, x$y, VAR, VAR3, Last }
-}
-
-})"
 `;
 
 exports[`SFC compile <script setup> imports should allow defineProps/Emit at the start of imports 1`] = `
