@@ -146,10 +146,9 @@ describe('compiler: v-once transform', () => {
 
   test('inside v-for is illegal', () => {
     const onError = jest.fn()
-    transformWithOnce(
-      `<div v-for="i in list"><div v-once /></div>`,
-      { onError }
-    )
+    transformWithOnce(`<div v-for="i in list"><div v-once /></div>`, {
+      onError
+    })
 
     expect(onError).toHaveBeenCalledTimes(1)
     expect(onError).toHaveBeenCalledWith(

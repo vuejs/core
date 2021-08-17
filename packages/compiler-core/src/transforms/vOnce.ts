@@ -12,12 +12,7 @@ export const transformOnce: NodeTransform = (node, context) => {
       return
     }
 
-    if (
-      context.prefixIdentifiers &&
-      context.scopes.vFor > 0 &&
-      // element with both v-for and v-once is legal
-      context.parent!.type !== NodeTypes.FOR
-    ) {
+    if (context.scopes.vFor > 0) {
       context.onError(
         createCompilerError(ErrorCodes.X_V_ONCE_INSIDE_FOR, node.loc)
       )
