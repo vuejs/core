@@ -144,11 +144,11 @@ describe('compiler: v-once transform', () => {
     })
   })
 
-  test('inside v-for w/ scope variables', () => {
+  test('inside v-for is illegal', () => {
     const onError = jest.fn()
     transformWithOnce(
-      `<div v-for="i in list"><div v-once>{{ i }}</div></div>`,
-      { onError, prefixIdentifiers: true }
+      `<div v-for="i in list"><div v-once /></div>`,
+      { onError }
     )
 
     expect(onError).toHaveBeenCalledTimes(1)
@@ -157,15 +157,5 @@ describe('compiler: v-once transform', () => {
         code: ErrorCodes.X_V_ONCE_INSIDE_FOR
       })
     )
-  })
-
-  test('inside v-for w/o scope variables', () => {
-    const onError = jest.fn()
-    transformWithOnce(
-      `<div v-for="i in list"><div v-once>{{ k }}</div></div>`,
-      { onError, prefixIdentifiers: true }
-    )
-
-    expect(onError).toHaveBeenCalledTimes(0)
   })
 })

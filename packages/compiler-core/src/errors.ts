@@ -149,7 +149,7 @@ export const errorMessages: Record<ErrorCodes, string> = {
   [ErrorCodes.X_V_IF_NO_EXPRESSION]: `v-if/v-else-if is missing expression.`,
   [ErrorCodes.X_V_IF_SAME_KEY]: `v-if/else branches must use unique keys.`,
   [ErrorCodes.X_V_ELSE_NO_ADJACENT_IF]: `v-else/v-else-if has no adjacent v-if.`,
-  [ErrorCodes.X_V_ONCE_INSIDE_FOR]: `v-for scope variables cannot be used inside nested template with v-once.`,
+  [ErrorCodes.X_V_ONCE_INSIDE_FOR]: `Element with v-once cannot be used inside v-for.`,
   [ErrorCodes.X_V_FOR_NO_EXPRESSION]: `v-for is missing expression.`,
   [ErrorCodes.X_V_FOR_MALFORMED_EXPRESSION]: `v-for has invalid expression.`,
   [ErrorCodes.X_V_FOR_TEMPLATE_KEY_PLACEMENT]: `<template v-for> key should be placed on the <template> tag.`,
