@@ -494,7 +494,7 @@ export function normalizePropsOptions(
     if (__DEV__ && !isObject(raw)) {
       warn(`invalid props options`, raw)
     }
-    for (const key in raw) {
+    for (const key of Object.keys(raw)) {
       const normalizedKey = camelize(key)
       if (validatePropName(normalizedKey)) {
         const opt = raw[key]
