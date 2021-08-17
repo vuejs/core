@@ -1,3 +1,19 @@
+## [3.2.4](https://github.com/vuejs/vue-next/compare/v3.2.3...v3.2.4) (2021-08-17)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** fix import usage check for lowercase imported components ([57f1081](https://github.com/vuejs/vue-next/commit/57f10812cc7f1e9f6c92736c36aba577943996fd)), closes [#4358](https://github.com/vuejs/vue-next/issues/4358)
+* **runtime-core:** ensure consistent arguments for tempalte and render funtion slot usage ([644971e](https://github.com/vuejs/vue-next/commit/644971ec06642817cf7e720ad4980182d2140f53)), closes [#4367](https://github.com/vuejs/vue-next/issues/4367)
+* **runtime-core:** fix child component double update on props change ([c1f564e](https://github.com/vuejs/vue-next/commit/c1f564e1dc40eda9af657c30cd787a8d770dde0f)), closes [#4365](https://github.com/vuejs/vue-next/issues/4365)
+
+
+### Reverts
+
+* Revert "chore: add missing space in warning message (#4359) [ci skip]" ([951fbb1](https://github.com/vuejs/vue-next/commit/951fbb197b63c2bd1528e78601c28424211ba6b8)), closes [#4359](https://github.com/vuejs/vue-next/issues/4359)
+
+
+
 ## [3.2.3](https://github.com/vuejs/vue-next/compare/v3.2.2...v3.2.3) (2021-08-16)
 
 
