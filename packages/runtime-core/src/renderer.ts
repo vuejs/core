@@ -1458,6 +1458,9 @@ function baseCreateRenderer(
           pushWarningContext(next || instance.vnode)
         }
 
+        // Disallow component effect recursion during pre-lifecycle hooks.
+        effect.allowRecurse = false
+
         if (next) {
           next.el = vnode.el
           updateComponentPreRender(instance, next, optimized)
@@ -1465,8 +1468,6 @@ function baseCreateRenderer(
           next = vnode
         }
 
-        // Disallow component effect recursion during pre-lifecycle hooks.
-        effect.allowRecurse = false
         // beforeUpdate hook
         if (bu) {
           invokeArrayFns(bu)
@@ -1481,6 +1482,7 @@ function baseCreateRenderer(
         ) {
           instance.emit('hook:beforeUpdate')
         }
+
         effect.allowRecurse = true
 
         // render
