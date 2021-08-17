@@ -228,7 +228,7 @@ function createReadonlyMethod(type: TriggerOpTypes): Function {
     if (__DEV__) {
       const key = args[0] ? `on key "${args[0]}" ` : ``
       console.warn(
-        `${capitalize(type)} operation ${key} failed: target is readonly.`,
+        `${capitalize(type)} operation ${key}failed: target is readonly.`,
         toRaw(this)
       )
     }
