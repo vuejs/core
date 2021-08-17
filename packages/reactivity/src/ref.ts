@@ -221,9 +221,8 @@ export function toRef<T extends object, K extends keyof T>(
   object: T,
   key: K
 ): ToRef<T[K]> {
-  return isRef(object[key])
-    ? object[key]
-    : (new ObjectRefImpl(object, key) as any)
+  const val = object[key]
+  return isRef(val) ? val : (new ObjectRefImpl(object, key) as any)
 }
 
 // corner case when use narrows type
