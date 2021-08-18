@@ -2,7 +2,7 @@ import { NodeTransform } from '../transform'
 import { findDir } from '../utils'
 import { ElementNode, ForNode, IfNode, NodeTypes } from '../ast'
 import { SET_BLOCK_TRACKING } from '../runtimeHelpers'
-import { createCompilerError, ErrorCodes } from '@vue/compiler-core'
+import { createCompilerError, ErrorCodes } from '../errors'
 
 const seen = new WeakSet()
 

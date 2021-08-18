@@ -9,6 +9,7 @@ import {
   PlainElementNode
 } from '../ast'
 import { WITH_MEMO } from '../runtimeHelpers'
+import { createCompilerError, ErrorCodes } from '../errors'
 
 const seen = new WeakSet()
 
@@ -18,6 +19,13 @@ export const transformMemo: NodeTransform = (node, context) => {
     if (!dir || seen.has(node)) {
       return
     }
+
+    if (context.scopes.vFor > 0) {
+      context.onError(
+        createCompilerError(ErrorCodes.X_V_MEMO_INSIDE_FOR, node.loc)
+      )
+    }
+
     seen.add(node)
     return () => {
       const codegenNode =
