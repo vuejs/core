@@ -211,6 +211,8 @@ describe('scheduler', () => {
 
     it('preFlushCb inside queueJob', async () => {
       const calls: string[] = []
+
+      // job1.allowRecurse is undefined, so it equal to false
       const job1 = () => {
         // the only case where a pre-flush cb can be queued inside a job is
         // when updating the props of a child component. This is handled
@@ -218,12 +220,12 @@ describe('scheduler', () => {
         // cb triggers (#1763)
         queuePreFlushCb(cb1)
         queuePreFlushCb(cb2)
-        flushPreFlushCbs(undefined, job1)
+        flushPreFlushCbs()
         calls.push('job1')
       }
       const cb1 = () => {
         calls.push('cb1')
-        // a cb triggers its parent job, which should be skipped
+        // with job1.allowRecurse false,it won't be added into queue again
         queueJob(job1)
       }
       const cb2 = () => {

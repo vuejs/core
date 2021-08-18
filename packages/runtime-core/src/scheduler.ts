@@ -50,8 +50,6 @@ let postFlushIndex = 0
 const resolvedPromise: Promise<any> = Promise.resolve()
 let currentFlushPromise: Promise<void> | null = null
 
-let currentPreFlushParentJob: SchedulerJob | null = null
-
 const RECURSION_LIMIT = 100
 type CountMap = Map<SchedulerJob, number>
 
@@ -89,12 +87,11 @@ export function queueJob(job: SchedulerJob) {
   // allow it recursively trigger itself - it is the user's responsibility to
   // ensure it doesn't end up in an infinite loop.
   if (
-    (!queue.length ||
-      !queue.includes(
-        job,
-        isFlushing && job.allowRecurse ? flushIndex + 1 : flushIndex
-      )) &&
-    job !== currentPreFlushParentJob
+    !queue.length ||
+    !queue.includes(
+      job,
+      isFlushing && job.allowRecurse ? flushIndex + 1 : flushIndex
+    )
   ) {
     if (job.id == null) {
       queue.push(job)
@@ -128,10 +125,7 @@ function queueCb(
   if (!isArray(cb)) {
     if (
       !activeQueue ||
-      !activeQueue.includes(
-        cb,
-        cb.allowRecurse ? index + 1 : index
-      )
+      !activeQueue.includes(cb, cb.allowRecurse ? index + 1 : index)
     ) {
       pendingQueue.push(cb)
     }
@@ -152,12 +146,8 @@ export function queuePostFlushCb(cb: SchedulerJobs) {
   queueCb(cb, activePostFlushCbs, pendingPostFlushCbs, postFlushIndex)
 }
 
-export function flushPreFlushCbs(
-  seen?: CountMap,
-  parentJob: SchedulerJob | null = null
-) {
+export function flushPreFlushCbs(seen?: CountMap) {
   if (pendingPreFlushCbs.length) {
-    currentPreFlushParentJob = parentJob
     activePreFlushCbs = [...new Set(pendingPreFlushCbs)]
     pendingPreFlushCbs.length = 0
     if (__DEV__) {
@@ -178,9 +168,8 @@ export function flushPreFlushCbs(
     }
     activePreFlushCbs = null
     preFlushIndex = 0
-    currentPreFlushParentJob = null
     // recursively flush until it drains
-    flushPreFlushCbs(seen, parentJob)
+    flushPreFlushCbs(seen)
   }
 }
 
