@@ -789,8 +789,8 @@ export function compileScript(
         // export default
         defaultExport = node
         const start = node.start! + scriptStartOffset!
-        const end = start + node.declaration.start! - node.start! - 1
-        s.overwrite(start, end, `const ${defaultTempVar} =`)
+        const end = start + node.declaration.start! - node.start!
+        s.overwrite(start, end, `const ${defaultTempVar} = `)
       } else if (node.type === 'ExportNamedDeclaration' && node.specifiers) {
         const defaultSpecifier = node.specifiers.find(
           s => s.exported.type === 'Identifier' && s.exported.name === 'default'
