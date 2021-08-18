@@ -159,7 +159,7 @@ export const def = (obj: object, key: string | symbol, value: any) => {
 
 export const toNumber = (val: any): any => {
   const n = parseFloat(val)
-  return isNaN(n) ? val : n
+  return isNaN(n) || isNaN(Number(val)) ? val : n
 }
 
 let _globalThis: any
