@@ -140,6 +140,23 @@ defineExpose({ foo: 123 })
   })
 
   describe('<script> and <script setup> co-usage', () => {
+    test('with default export and some extra spaces in ExportDefaultDeclaration node', () => {
+      // #4371
+      const { content } = compile(`
+      <script>
+      export const n = 1
+      export     default     {   
+        some:'option'
+      }
+      </script>
+      <script setup>
+      import { x } from './x'
+      x()
+      </script>
+      `)
+      assertCode(content)
+    })
+
     test('script first', () => {
       const { content } = compile(`
       <script>
