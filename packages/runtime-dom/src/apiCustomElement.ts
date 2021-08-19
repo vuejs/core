@@ -21,7 +21,7 @@ import {
   ConcreteComponent,
   ComponentOptions
 } from '@vue/runtime-core'
-import { camelize, extend, hyphenate, isArray, toNumber } from '@vue/shared'
+import { camelize, extend, hyphenate, isArray } from '@vue/shared'
 import { hydrate, render } from '.'
 
 export type VueElementConstructor<P = {}> = {
@@ -341,4 +341,11 @@ export class VueElement extends BaseClass {
       })
     }
   }
+}
+
+export function toNumber(value: string | null): number | string {
+  // for Number('') and Number(null) as they both become 0
+  if (!value) return ''
+  const casted = Number(value)
+  return value === 'NaN' || !Number.isNaN(casted) ? casted : value
 }
