@@ -319,6 +319,7 @@ export function trigger(
         effects.push(...dep)
       }
     }
+    if (effects.length === 0) return
     if (__DEV__) {
       triggerEffects(createDep(effects), eventInfo)
     } else {
