@@ -28,6 +28,14 @@ export type VueElementConstructor<P = {}> = {
   new (initialProps?: Record<string, any>): VueElement & P
 }
 
+export interface DefineCustomElementConfig {
+  /**
+   * Render inside a shadow root DOM element
+   * @default true
+   */
+  shadowRoot?: boolean
+}
+
 // defineCustomElement provides the same type inference as defineComponent
 // so most of the following overloads should be kept in sync w/ defineComponent.
 
@@ -36,7 +44,8 @@ export function defineCustomElement<Props, RawBindings = object>(
   setup: (
     props: Readonly<Props>,
     ctx: SetupContext
-  ) => RawBindings | RenderFunction
+  ) => RawBindings | RenderFunction,
+  config?: DefineCustomElementConfig
 ): VueElementConstructor<Props>
 
 // overload 2: object format with no props
@@ -61,7 +70,8 @@ export function defineCustomElement<
     Extends,
     E,
     EE
-  > & { styles?: string[] }
+  > & { styles?: string[] },
+  config?: DefineCustomElementConfig
 ): VueElementConstructor<Props>
 
 // overload 3: object format with array props declaration
@@ -86,7 +96,8 @@ export function defineCustomElement<
     Extends,
     E,
     EE
-  > & { styles?: string[] }
+  > & { styles?: string[] },
+  config?: DefineCustomElementConfig
 ): VueElementConstructor<{ [K in PropNames]: any }>
 
 // overload 4: object format with object props declaration
@@ -111,7 +122,8 @@ export function defineCustomElement<
     Extends,
     E,
     EE
-  > & { styles?: string[] }
+  > & { styles?: string[] },
+  config?: DefineCustomElementConfig
 ): VueElementConstructor<ExtractPropTypes<PropsOptions>>
 
 // overload 5: defining a custom element from the returned value of
@@ -122,22 +134,26 @@ export function defineCustomElement(options: {
 
 export function defineCustomElement(
   options: any,
-  hydate?: RootHydrateFunction
+  config?: DefineCustomElementConfig,
+  hydrate?: RootHydrateFunction
 ): VueElementConstructor {
   const Comp = defineComponent(options as any)
   class VueCustomElement extends VueElement {
     static def = Comp
     constructor(initialProps?: Record<string, any>) {
-      super(Comp, initialProps, hydate)
+      super(Comp, initialProps, config, hydrate)
     }
   }
 
   return VueCustomElement
 }
 
-export const defineSSRCustomElement = ((options: any) => {
-  // @ts-ignore
-  return defineCustomElement(options, hydrate)
+export const defineSSRCustomElement = ((
+  options: any,
+  config?: DefineCustomElementConfig
+) => {
+  // @ts-expect-error
+  return defineCustomElement(options, config, hydrate)
 }) as typeof defineCustomElement
 
 const BaseClass = (
@@ -160,20 +176,38 @@ export class VueElement extends BaseClass {
   constructor(
     private _def: InnerComponentDef,
     private _props: Record<string, any> = {},
+    private _config: DefineCustomElementConfig = {},
     hydrate?: RootHydrateFunction
   ) {
     super()
-    if (this.shadowRoot && hydrate) {
-      hydrate(this._createVNode(), this.shadowRoot)
-    } else {
-      if (__DEV__ && this.shadowRoot) {
-        warn(
-          `Custom element has pre-rendered declarative shadow root but is not ` +
-            `defined as hydratable. Use \`defineSSRCustomElement\`.`
-        )
+    this._config = extend(
+      {
+        shadowRoot: true
+      },
+      this._config
+    )
+
+    if (this._config.shadowRoot) {
+      if (this.shadowRoot && hydrate) {
+        hydrate(this._createVNode(), this._root!)
+      } else {
+        if (__DEV__ && this.shadowRoot) {
+          warn(
+            `Custom element has pre-rendered declarative shadow root but is not ` +
+              `defined as hydratable. Use \`defineSSRCustomElement\`.`
+          )
+        }
+        this.attachShadow({ mode: 'open' })
       }
-      this.attachShadow({ mode: 'open' })
+    } else {
+      if (hydrate) {
+        hydrate(this._createVNode(), this._root!)
+      }
     }
+  }
+
+  get _root(): Element | ShadowRoot | null {
+    return this._config.shadowRoot ? this.shadowRoot : this
   }
 
   connectedCallback() {
@@ -187,7 +221,7 @@ export class VueElement extends BaseClass {
     this._connected = false
     nextTick(() => {
       if (!this._connected) {
-        render(null, this.shadowRoot!)
+        render(null, this._root!)
         this._instance = null
       }
     })
@@ -309,7 +343,7 @@ export class VueElement extends BaseClass {
   }
 
   private _update() {
-    render(this._createVNode(), this.shadowRoot!)
+    render(this._createVNode(), this._root!)
   }
 
   private _createVNode(): VNode<any, any> {
@@ -323,7 +357,7 @@ export class VueElement extends BaseClass {
           instance.ceReload = newStyles => {
             // always reset styles
             if (this._styles) {
-              this._styles.forEach(s => this.shadowRoot!.removeChild(s))
+              this._styles.forEach(s => this._root!.removeChild(s))
               this._styles.length = 0
             }
             this._applyStyles(newStyles)
@@ -367,7 +401,7 @@ export class VueElement extends BaseClass {
       styles.forEach(css => {
         const s = document.createElement('style')
         s.textContent = css
-        this.shadowRoot!.appendChild(s)
+        this._root!.appendChild(s)
         // record for HMR
         if (__DEV__) {
           ;(this._styles || (this._styles = [])).push(s)
