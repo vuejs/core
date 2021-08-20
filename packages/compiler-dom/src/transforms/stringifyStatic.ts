@@ -20,14 +20,16 @@ import {
   isVoidTag,
   isString,
   isSymbol,
-  isKnownAttr,
+  isKnownHtmlAttr,
   escapeHtml,
   toDisplayString,
   normalizeClass,
   normalizeStyle,
   stringifyStyle,
-  makeMap
+  makeMap,
+  isKnownSvgAttr
 } from '@vue/shared'
+import { DOMNamespaces } from '../parserOptions'
 
 export const enum StringifyThresholds {
   ELEMENT_WITH_BINDING_COUNT = 5,
@@ -138,8 +140,14 @@ const getHoistedNode = (node: TemplateChildNode) =>
   node.codegenNode.hoisted
 
 const dataAriaRE = /^(data|aria)-/
-const isStringifiableAttr = (name: string) => {
-  return isKnownAttr(name) || dataAriaRE.test(name)
+const isStringifiableAttr = (name: string, ns: DOMNamespaces) => {
+  return (
+    (ns === DOMNamespaces.HTML
+      ? isKnownHtmlAttr(name)
+      : ns === DOMNamespaces.SVG
+      ? isKnownSvgAttr(name)
+      : false) || dataAriaRE.test(name)
+  )
 }
 
 const replaceHoist = (
@@ -187,7 +195,10 @@ function analyzeNode(node: StringifiableNode): [number, number] | false {
     for (let i = 0; i < node.props.length; i++) {
       const p = node.props[i]
       // bail on non-attr bindings
-      if (p.type === NodeTypes.ATTRIBUTE && !isStringifiableAttr(p.name)) {
+      if (
+        p.type === NodeTypes.ATTRIBUTE &&
+        !isStringifiableAttr(p.name, node.ns)
+      ) {
         return bail()
       }
       if (p.type === NodeTypes.DIRECTIVE && p.name === 'bind') {
@@ -195,7 +206,7 @@ function analyzeNode(node: StringifiableNode): [number, number] | false {
         if (
           p.arg &&
           (p.arg.type === NodeTypes.COMPOUND_EXPRESSION ||
-            (p.arg.isStatic && !isStringifiableAttr(p.arg.content)))
+            (p.arg.isStatic && !isStringifiableAttr(p.arg.content, node.ns)))
         ) {
           return bail()
         }
@@ -264,15 +275,17 @@ function stringifyElement(
     } else if (p.type === NodeTypes.DIRECTIVE && p.name === 'bind') {
       // constant v-bind, e.g. :foo="1"
       let evaluated = evaluateConstant(p.exp as SimpleExpressionNode)
-      const arg = p.arg && (p.arg as SimpleExpressionNode).content
-      if (arg === 'class') {
-        evaluated = normalizeClass(evaluated)
-      } else if (arg === 'style') {
-        evaluated = stringifyStyle(normalizeStyle(evaluated))
+      if (evaluated != null) {
+        const arg = p.arg && (p.arg as SimpleExpressionNode).content
+        if (arg === 'class') {
+          evaluated = normalizeClass(evaluated)
+        } else if (arg === 'style') {
+          evaluated = stringifyStyle(normalizeStyle(evaluated))
+        }
+        res += ` ${(p.arg as SimpleExpressionNode).content}="${escapeHtml(
+          evaluated
+        )}"`
       }
-      res += ` ${(p.arg as SimpleExpressionNode).content}="${escapeHtml(
-        evaluated
-      )}"`
     }
   }
   if (context.scopeId) {

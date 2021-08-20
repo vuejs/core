@@ -24,7 +24,9 @@ import {
   ForRenderListExpression,
   BlockCodegenNode,
   ForIteratorExpression,
-  ConstantTypes
+  ConstantTypes,
+  createBlockStatement,
+  createCompoundExpression
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
@@ -32,14 +34,16 @@ import {
   findProp,
   isTemplateNode,
   isSlotOutlet,
-  injectProp
+  injectProp,
+  getVNodeBlockHelper,
+  getVNodeHelper,
+  findDir
 } from '../utils'
 import {
   RENDER_LIST,
   OPEN_BLOCK,
-  CREATE_BLOCK,
   FRAGMENT,
-  CREATE_VNODE
+  IS_MEMO_SAME
 } from '../runtimeHelpers'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
@@ -48,22 +52,21 @@ import { PatchFlags, PatchFlagNames } from '@vue/shared'
 export const transformFor = createStructuralDirectiveTransform(
   'for',
   (node, dir, context) => {
-    const { helper } = context
+    const { helper, removeHelper } = context
     return processFor(node, dir, context, forNode => {
       // create the loop render function expression now, and add the
       // iterator on exit after all children have been traversed
       const renderExp = createCallExpression(helper(RENDER_LIST), [
         forNode.source
       ]) as ForRenderListExpression
+      const memo = findDir(node, 'memo')
       const keyProp = findProp(node, `key`)
-      const keyProperty = keyProp
-        ? createObjectProperty(
-            `key`,
-            keyProp.type === NodeTypes.ATTRIBUTE
-              ? createSimpleExpression(keyProp.value!.content, true)
-              : keyProp.exp!
-          )
-        : null
+      const keyExp =
+        keyProp &&
+        (keyProp.type === NodeTypes.ATTRIBUTE
+          ? createSimpleExpression(keyProp.value!.content, true)
+          : keyProp.exp!)
+      const keyProperty = keyProp ? createObjectProperty(`key`, keyExp!) : null
 
       if (!__BROWSER__ && context.prefixIdentifiers && keyProperty) {
         // #2085 process :key expression needs to be processed in order for it
@@ -83,8 +86,9 @@ export const transformFor = createStructuralDirectiveTransform(
       const fragmentFlag = isStableFragment
         ? PatchFlags.STABLE_FRAGMENT
         : keyProp
-          ? PatchFlags.KEYED_FRAGMENT
-          : PatchFlags.UNKEYED_FRAGMENT
+        ? PatchFlags.KEYED_FRAGMENT
+        : PatchFlags.UNKEYED_FRAGMENT
+
       forNode.codegenNode = createVNodeCall(
         context,
         helper(FRAGMENT),
@@ -96,6 +100,7 @@ export const transformFor = createStructuralDirectiveTransform(
         undefined,
         true /* isBlock */,
         !isStableFragment /* disableTracking */,
+        false /* isComponent */,
         node.loc
       ) as ForCodegenNode
 
@@ -130,8 +135,8 @@ export const transformFor = createStructuralDirectiveTransform(
           : isTemplate &&
             node.children.length === 1 &&
             isSlotOutlet(node.children[0])
-            ? (node.children[0] as SlotOutletNode) // api-extractor somehow fails to infer this
-            : null
+          ? (node.children[0] as SlotOutletNode) // api-extractor somehow fails to infer this
+          : null
 
         if (slotOutlet) {
           // <slot v-for="..."> or <template v-for="..."><slot/></template>
@@ -156,7 +161,9 @@ export const transformFor = createStructuralDirectiveTransform(
                 : ``),
             undefined,
             undefined,
-            true
+            true,
+            undefined,
+            false /* isComponent */
           )
         } else {
           // Normal element v-for. Directly use the child's codegenNode
@@ -166,20 +173,62 @@ export const transformFor = createStructuralDirectiveTransform(
           if (isTemplate && keyProperty) {
             injectProp(childBlock, keyProperty, context)
           }
+          if (childBlock.isBlock !== !isStableFragment) {
+            if (childBlock.isBlock) {
+              // switch from block to vnode
+              removeHelper(OPEN_BLOCK)
+              removeHelper(
+                getVNodeBlockHelper(context.inSSR, childBlock.isComponent)
+              )
+            } else {
+              // switch from vnode to block
+              removeHelper(
+                getVNodeHelper(context.inSSR, childBlock.isComponent)
+              )
+            }
+          }
           childBlock.isBlock = !isStableFragment
           if (childBlock.isBlock) {
             helper(OPEN_BLOCK)
-            helper(CREATE_BLOCK)
+            helper(getVNodeBlockHelper(context.inSSR, childBlock.isComponent))
           } else {
-            helper(CREATE_VNODE)
+            helper(getVNodeHelper(context.inSSR, childBlock.isComponent))
           }
         }
 
-        renderExp.arguments.push(createFunctionExpression(
-          createForLoopParams(forNode.parseResult),
-          childBlock,
-          true /* force newline */
-        ) as ForIteratorExpression)
+        if (memo) {
+          const loop = createFunctionExpression(
+            createForLoopParams(forNode.parseResult, [
+              createSimpleExpression(`_cached`)
+            ])
+          )
+          loop.body = createBlockStatement([
+            createCompoundExpression([`const _memo = (`, memo.exp!, `)`]),
+            createCompoundExpression([
+              `if (_cached`,
+              ...(keyExp ? [` && _cached.key === `, keyExp] : []),
+              ` && ${context.helperString(
+                IS_MEMO_SAME
+              )}(_cached, _memo)) return _cached`
+            ]),
+            createCompoundExpression([`const _item = `, childBlock as any]),
+            createSimpleExpression(`_item.memo = _memo`),
+            createSimpleExpression(`return _item`)
+          ])
+          renderExp.arguments.push(
+            loop as ForIteratorExpression,
+            createSimpleExpression(`_cache`),
+            createSimpleExpression(String(context.cached++))
+          )
+        } else {
+          renderExp.arguments.push(
+            createFunctionExpression(
+              createForLoopParams(forNode.parseResult),
+              childBlock,
+              true /* force newline */
+            ) as ForIteratorExpression
+          )
+        }
       }
     })
   }
@@ -296,9 +345,7 @@ export function parseForExpression(
     validateBrowserExpression(result.source as SimpleExpressionNode, context)
   }
 
-  let valueContent = LHS.trim()
-    .replace(stripParensRE, '')
-    .trim()
+  let valueContent = LHS.trim().replace(stripParensRE, '').trim()
   const trimmedOffset = LHS.indexOf(valueContent)
 
   const iteratorMatch = valueContent.match(forIteratorRE)
@@ -379,29 +426,21 @@ function createAliasExpression(
   )
 }
 
-export function createForLoopParams({
-  value,
-  key,
-  index
-}: ForParseResult): ExpressionNode[] {
-  const params: ExpressionNode[] = []
-  if (value) {
-    params.push(value)
+export function createForLoopParams(
+  { value, key, index }: ForParseResult,
+  memoArgs: ExpressionNode[] = []
+): ExpressionNode[] {
+  return createParamsList([value, key, index, ...memoArgs])
+}
+
+function createParamsList(
+  args: (ExpressionNode | undefined)[]
+): ExpressionNode[] {
+  let i = args.length
+  while (i--) {
+    if (args[i]) break
   }
-  if (key) {
-    if (!value) {
-      params.push(createSimpleExpression(`_`, false))
-    }
-    params.push(key)
-  }
-  if (index) {
-    if (!key) {
-      if (!value) {
-        params.push(createSimpleExpression(`_`, false))
-      }
-      params.push(createSimpleExpression(`__`, false))
-    }
-    params.push(index)
-  }
-  return params
+  return args
+    .slice(0, i + 1)
+    .map((arg, i) => arg || createSimpleExpression(`_`.repeat(i + 1), false))
 }

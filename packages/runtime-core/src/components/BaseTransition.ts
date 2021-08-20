@@ -1,7 +1,8 @@
 import {
   getCurrentInstance,
   SetupContext,
-  ComponentInternalInstance
+  ComponentInternalInstance,
+  ComponentOptions
 } from '../component'
 import {
   cloneVNode,
@@ -68,8 +69,8 @@ export interface TransitionHooks<
   delayedLeave?(): void
 }
 
-type TransitionHookCaller = (
-  hook: ((el: any) => void) | undefined,
+export type TransitionHookCaller = (
+  hook: ((el: any) => void) | Array<(el: any) => void> | undefined,
   args?: any[]
 ) => void
 
@@ -110,7 +111,7 @@ export function useTransitionState(): TransitionState {
 
 const TransitionHookValidator = [Function, Array]
 
-const BaseTransitionImpl = {
+const BaseTransitionImpl: ComponentOptions = {
   name: `BaseTransition`,
 
   props: {
@@ -223,7 +224,7 @@ const BaseTransitionImpl = {
             instance.update()
           }
           return emptyPlaceholder(child)
-        } else if (mode === 'in-out') {
+        } else if (mode === 'in-out' && innerChild.type !== Comment) {
           leavingHooks.delayLeave = (
             el: TransitionElement,
             earlyRemove,
@@ -250,9 +251,13 @@ const BaseTransitionImpl = {
   }
 }
 
+if (__COMPAT__) {
+  BaseTransitionImpl.__isBuiltIn = true
+}
+
 // export the public type for h/tsx inference
 // also to avoid inline import() in generated d.ts files
-export const BaseTransition = (BaseTransitionImpl as any) as {
+export const BaseTransition = BaseTransitionImpl as any as {
   new (): {
     $props: BaseTransitionProps<any>
   }

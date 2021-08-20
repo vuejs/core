@@ -1,0 +1,82 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`compiler: v-memo transform on component 1`] = `
+"import { resolveComponent as _resolveComponent, createVNode as _createVNode, withMemo as _withMemo, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
+
+export function render(_ctx, _cache) {
+  const _component_Comp = _resolveComponent(\\"Comp\\")
+
+  return (_openBlock(), _createElementBlock(\\"div\\", null, [
+    _withMemo([_ctx.x], () => _createVNode(_component_Comp), _cache, 0)
+  ]))
+}"
+`;
+
+exports[`compiler: v-memo transform on normal element 1`] = `
+"import { openBlock as _openBlock, createElementBlock as _createElementBlock, withMemo as _withMemo } from \\"vue\\"
+
+export function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock(\\"div\\", null, [
+    _withMemo([_ctx.x], () => (_openBlock(), _createElementBlock(\\"div\\")), _cache, 0)
+  ]))
+}"
+`;
+
+exports[`compiler: v-memo transform on root element 1`] = `
+"import { openBlock as _openBlock, createElementBlock as _createElementBlock, withMemo as _withMemo } from \\"vue\\"
+
+export function render(_ctx, _cache) {
+  return _withMemo([_ctx.x], () => (_openBlock(), _createElementBlock(\\"div\\")), _cache, 0)
+}"
+`;
+
+exports[`compiler: v-memo transform on template v-for 1`] = `
+"import { renderList as _renderList, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock, isMemoSame as _isMemoSame, withMemo as _withMemo } from \\"vue\\"
+
+export function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock(\\"div\\", null, [
+    (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.list, ({ x, y }, __, ___, _cached) => {
+      const _memo = ([x, y === z])
+      if (_cached && _cached.key === x && _isMemoSame(_cached, _memo)) return _cached
+      const _item = (_openBlock(), _createElementBlock(\\"span\\", { key: x }, \\"foobar\\"))
+      _item.memo = _memo
+      return _item
+    }, _cache, 0), 128 /* KEYED_FRAGMENT */))
+  ]))
+}"
+`;
+
+exports[`compiler: v-memo transform on v-for 1`] = `
+"import { renderList as _renderList, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock, createElementVNode as _createElementVNode, isMemoSame as _isMemoSame, withMemo as _withMemo } from \\"vue\\"
+
+export function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock(\\"div\\", null, [
+    (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.list, ({ x, y }, __, ___, _cached) => {
+      const _memo = ([x, y === _ctx.z])
+      if (_cached && _cached.key === x && _isMemoSame(_cached, _memo)) return _cached
+      const _item = (_openBlock(), _createElementBlock(\\"div\\", { key: x }, [
+        _createElementVNode(\\"span\\", null, \\"foobar\\")
+      ]))
+      _item.memo = _memo
+      return _item
+    }, _cache, 0), 128 /* KEYED_FRAGMENT */))
+  ]))
+}"
+`;
+
+exports[`compiler: v-memo transform on v-if 1`] = `
+"import { createElementVNode as _createElementVNode, createTextVNode as _createTextVNode, openBlock as _openBlock, createElementBlock as _createElementBlock, withMemo as _withMemo, createCommentVNode as _createCommentVNode, resolveComponent as _resolveComponent, createBlock as _createBlock } from \\"vue\\"
+
+export function render(_ctx, _cache) {
+  const _component_Comp = _resolveComponent(\\"Comp\\")
+
+  return (_openBlock(), _createElementBlock(\\"div\\", null, [
+    (_ctx.ok)
+      ? _withMemo([_ctx.x], () => (_openBlock(), _createElementBlock(\\"div\\", { key: 0 }, [
+          _createElementVNode(\\"span\\", null, \\"foo\\"),
+          _createTextVNode(\\"bar\\")
+        ])), _cache, 0)
+      : _withMemo([_ctx.x], () => (_openBlock(), _createBlock(_component_Comp, { key: 1 })), _cache, 1)
+  ]))
+}"
+`;

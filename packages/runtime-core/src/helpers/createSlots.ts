@@ -15,7 +15,8 @@ export function createSlots(
   dynamicSlots: (
     | CompiledSlotDescriptor
     | CompiledSlotDescriptor[]
-    | undefined)[]
+    | undefined
+  )[]
 ): Record<string, Slot> {
   for (let i = 0; i < dynamicSlots.length; i++) {
     const slot = dynamicSlots[i]

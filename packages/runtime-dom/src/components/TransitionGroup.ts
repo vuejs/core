@@ -20,7 +20,10 @@ import {
   createVNode,
   onUpdated,
   SetupContext,
-  toRaw
+  toRaw,
+  compatUtils,
+  DeprecationTypes,
+  ComponentOptions
 } from '@vue/runtime-core'
 import { extend } from '@vue/shared'
 
@@ -37,7 +40,7 @@ export type TransitionGroupProps = Omit<TransitionProps, 'mode'> & {
   moveClass?: string
 }
 
-const TransitionGroupImpl = {
+const TransitionGroupImpl: ComponentOptions = {
   name: 'TransitionGroup',
 
   props: /*#__PURE__*/ extend({}, TransitionPropsValidators, {
@@ -99,7 +102,19 @@ const TransitionGroupImpl = {
     return () => {
       const rawProps = toRaw(props)
       const cssTransitionProps = resolveTransitionProps(rawProps)
-      const tag = rawProps.tag || Fragment
+      let tag = rawProps.tag || Fragment
+
+      if (
+        __COMPAT__ &&
+        !rawProps.tag &&
+        compatUtils.checkCompatEnabled(
+          DeprecationTypes.TRANSITION_GROUP_ROOT,
+          instance.parent
+        )
+      ) {
+        tag = 'span'
+      }
+
       prevChildren = children
       children = slots.default ? getTransitionRawChildren(slots.default()) : []
 
@@ -131,6 +146,10 @@ const TransitionGroupImpl = {
   }
 }
 
+if (__COMPAT__) {
+  TransitionGroupImpl.__isBuiltIn = true
+}
+
 /**
  * TransitionGroup does not support "mode" so we need to remove it from the
  * props declarations, but direct delete operation is considered a side effect
@@ -140,7 +159,7 @@ const TransitionGroupImpl = {
 const removeMode = (props: any) => delete props.mode
 /*#__PURE__*/ removeMode(TransitionGroupImpl.props)
 
-export const TransitionGroup = (TransitionGroupImpl as unknown) as {
+export const TransitionGroup = TransitionGroupImpl as unknown as {
   new (): {
     $props: TransitionGroupProps
   }
@@ -191,9 +210,9 @@ function hasCSSTransform(
   }
   moveClass.split(/\s+/).forEach(c => c && clone.classList.add(c))
   clone.style.display = 'none'
-  const container = (root.nodeType === 1
-    ? root
-    : root.parentNode) as HTMLElement
+  const container = (
+    root.nodeType === 1 ? root : root.parentNode
+  ) as HTMLElement
   container.appendChild(clone)
   const { hasTransform } = getTransitionInfo(clone)
   container.removeChild(clone)

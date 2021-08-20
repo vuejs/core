@@ -25,7 +25,8 @@ export {
   markRaw,
   toRaw,
   ReactiveFlags,
-  DeepReadonly
+  DeepReadonly,
+  UnwrapNestedRefs
 } from './reactive'
 export {
   computed,
@@ -35,6 +36,7 @@ export {
   ComputedGetter,
   ComputedSetter
 } from './computed'
+export { deferredComputed } from './deferredComputed'
 export {
   effect,
   stop,
@@ -45,7 +47,16 @@ export {
   resetTracking,
   ITERATE_KEY,
   ReactiveEffect,
+  ReactiveEffectRunner,
   ReactiveEffectOptions,
+  EffectScheduler,
+  DebuggerOptions,
   DebuggerEvent
 } from './effect'
+export {
+  effectScope,
+  EffectScope,
+  getCurrentScope,
+  onScopeDispose
+} from './effectScope'
 export { TrackOpTypes, TriggerOpTypes } from './operations'

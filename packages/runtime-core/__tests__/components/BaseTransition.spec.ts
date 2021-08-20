@@ -247,17 +247,19 @@ describe('BaseTransition', () => {
   })
 
   describe('toggle on-off', () => {
-    async function testToggleOnOff({
-      trueBranch,
-      trueSerialized,
-      falseBranch,
-      falseSerialized
-    }: ToggleOptions) {
+    async function testToggleOnOff(
+      {
+        trueBranch,
+        trueSerialized,
+        falseBranch,
+        falseSerialized
+      }: ToggleOptions,
+      mode?: BaseTransitionProps['mode']
+    ) {
       const toggle = ref(true)
-      const { props, cbs } = mockProps()
-      const root = mount(
-        props,
-        () => (toggle.value ? trueBranch() : falseBranch())
+      const { props, cbs } = mockProps({ mode })
+      const root = mount(props, () =>
+        toggle.value ? trueBranch() : falseBranch()
       )
 
       // without appear: true, enter hooks should not be called on mount
@@ -322,6 +324,18 @@ describe('BaseTransition', () => {
         falseSerialized: `<!---->`
       })
     })
+
+    test('w/ mode: "in-out', async () => {
+      await testToggleOnOff(
+        {
+          trueBranch: () => h('div'),
+          trueSerialized: `<div></div>`,
+          falseBranch: () => null,
+          falseSerialized: `<!---->`
+        },
+        'in-out'
+      )
+    })
   })
 
   describe('toggle on-off before finish', () => {
@@ -333,9 +347,8 @@ describe('BaseTransition', () => {
     }: ToggleOptions) {
       const toggle = ref(false)
       const { props, cbs } = mockProps()
-      const root = mount(
-        props,
-        () => (toggle.value ? trueBranch() : falseBranch())
+      const root = mount(props, () =>
+        toggle.value ? trueBranch() : falseBranch()
       )
 
       // start enter

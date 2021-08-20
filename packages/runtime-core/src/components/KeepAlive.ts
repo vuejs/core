@@ -5,7 +5,8 @@ import {
   ComponentInternalInstance,
   LifecycleHooks,
   currentInstance,
-  getComponentName
+  getComponentName,
+  ComponentOptions
 } from '../component'
 import { VNode, cloneVNode, isVNode, VNodeProps } from '../vnode'
 import { warn } from '../warning'
@@ -34,6 +35,8 @@ import {
 } from '../renderer'
 import { setTransitionHooks } from './BaseTransition'
 import { ComponentRenderContext } from '../componentPublicInstance'
+import { devtoolsComponentAdded } from '../devtools'
+import { isAsyncWrapper } from '../apiAsyncComponent'
 
 type MatchPattern = string | RegExp | string[] | RegExp[]
 
@@ -43,7 +46,7 @@ export interface KeepAliveProps {
   max?: number | string
 }
 
-type CacheKey = string | number | ConcreteComponent
+type CacheKey = string | number | symbol | ConcreteComponent
 type Cache = Map<CacheKey, VNode>
 type Keys = Set<CacheKey>
 
@@ -62,7 +65,7 @@ export interface KeepAliveContext extends ComponentRenderContext {
 export const isKeepAlive = (vnode: VNode): boolean =>
   (vnode.type as any).__isKeepAlive
 
-const KeepAliveImpl = {
+const KeepAliveImpl: ComponentOptions = {
   name: `KeepAlive`,
 
   // Marker for special handling inside the renderer. We are not using a ===
@@ -77,19 +80,30 @@ const KeepAliveImpl = {
   },
 
   setup(props: KeepAliveProps, { slots }: SetupContext) {
-    const cache: Cache = new Map()
-    const keys: Keys = new Set()
-    let current: VNode | null = null
-
     const instance = getCurrentInstance()!
-    const parentSuspense = instance.suspense
-
     // KeepAlive communicates with the instantiated renderer via the
     // ctx where the renderer passes in its internals,
     // and the KeepAlive instance exposes activate/deactivate implementations.
     // The whole point of this is to avoid importing KeepAlive directly in the
     // renderer to facilitate tree-shaking.
     const sharedContext = instance.ctx as KeepAliveContext
+
+    // if the internal renderer is not registered, it indicates that this is server-side rendering,
+    // for KeepAlive, we just need to render its children
+    if (!sharedContext.renderer) {
+      return slots.default
+    }
+
+    const cache: Cache = new Map()
+    const keys: Keys = new Set()
+    let current: VNode | null = null
+
+    if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+      ;(instance as any).__v_cache = cache
+    }
+
+    const parentSuspense = instance.suspense
+
     const {
       renderer: {
         p: patch,
@@ -125,6 +139,11 @@ const KeepAliveImpl = {
           invokeVNodeHook(vnodeHook, instance.parent, vnode)
         }
       }, parentSuspense)
+
+      if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+        // Update components tree
+        devtoolsComponentAdded(instance)
+      }
     }
 
     sharedContext.deactivate = (vnode: VNode) => {
@@ -140,6 +159,11 @@ const KeepAliveImpl = {
         }
         instance.isDeactivated = true
       }, parentSuspense)
+
+      if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+        // Update components tree
+        devtoolsComponentAdded(instance)
+      }
     }
 
     function unmount(vnode: VNode) {
@@ -234,7 +258,15 @@ const KeepAliveImpl = {
 
       let vnode = getInnerChild(rawVNode)
       const comp = vnode.type as ConcreteComponent
-      const name = getComponentName(comp)
+
+      // for async components, name check should be based in its loaded
+      // inner component if available
+      const name = getComponentName(
+        isAsyncWrapper(vnode)
+          ? (vnode.type as ComponentOptions).__asyncResolved || {}
+          : comp
+      )
+
       const { include, exclude, max } = props
 
       if (
@@ -291,9 +323,13 @@ const KeepAliveImpl = {
   }
 }
 
+if (__COMPAT__) {
+  KeepAliveImpl.__isBuildIn = true
+}
+
 // export the public type for h/tsx inference
 // also to avoid inline import() in generated d.ts files
-export const KeepAlive = (KeepAliveImpl as any) as {
+export const KeepAlive = KeepAliveImpl as any as {
   __isKeepAlive: true
   new (): {
     $props: VNodeProps & KeepAliveProps

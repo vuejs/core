@@ -1,6 +1,6 @@
 {
   "name": "@vue/compiler-sfc",
-  "version": "3.0.7",
+  "version": "3.2.4",
   "description": "@vue/compiler-sfc",
   "main": "dist/compiler-sfc.cjs.js",
   "types": "dist/compiler-sfc.d.ts",
@@ -11,7 +11,7 @@
     "name": "VueCompilerSFC",
     "formats": [
       "cjs",
-      "global"
+      "esm-browser"
     ],
     "prod": false,
     "enableNonBrowserBranches": true
@@ -30,16 +30,14 @@
     "url": "https://github.com/vuejs/vue-next/issues"
   },
   "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/compiler-sfc#readme",
-  "peerDependencies": {
-    "vue": "3.0.7"
-  },
   "dependencies": {
     "@babel/parser": "^7.13.9",
     "@babel/types": "^7.13.0",
-    "@vue/compiler-core": "3.0.7",
-    "@vue/compiler-dom": "3.0.7",
-    "@vue/compiler-ssr": "3.0.7",
-    "@vue/shared": "3.0.7",
+    "@types/estree": "^0.0.48",
+    "@vue/compiler-core": "3.2.4",
+    "@vue/compiler-dom": "3.2.4",
+    "@vue/compiler-ssr": "3.2.4",
+    "@vue/shared": "3.2.4",
     "consolidate": "^0.16.0",
     "estree-walker": "^2.0.1",
     "hash-sum": "^2.0.0",

@@ -16,6 +16,14 @@ export function ssrCompile(
   template: string,
   instance: ComponentInternalInstance
 ): SSRRenderFunction {
+  if (!__NODE_JS__) {
+    throw new Error(
+      `On-the-fly template compilation is not supported in the ESM build of ` +
+        `@vue/server-renderer. All templates must be pre-compiled into ` +
+        `render functions.`
+    )
+  }
+
   const cached = compileCache[template]
   if (cached) {
     return cached
@@ -26,9 +34,7 @@ export function ssrCompile(
     isNativeTag: instance.appContext.config.isNativeTag || NO,
     onError(err: CompilerError) {
       if (__DEV__) {
-        const message = `[@vue/server-renderer] Template compilation error: ${
-          err.message
-        }`
+        const message = `[@vue/server-renderer] Template compilation error: ${err.message}`
         const codeFrame =
           err.loc &&
           generateCodeFrame(

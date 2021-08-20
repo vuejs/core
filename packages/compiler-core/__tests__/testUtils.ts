@@ -6,7 +6,13 @@ import {
   ElementTypes,
   VNodeCall
 } from '../src'
-import { isString, PatchFlags, PatchFlagNames, isArray } from '@vue/shared'
+import {
+  isString,
+  PatchFlags,
+  PatchFlagNames,
+  isArray,
+  ShapeFlags
+} from '@vue/shared'
 
 const leadingBracketRE = /^\[/
 const bracketsRE = /^\[|\]$/g
@@ -63,19 +69,24 @@ export function createElementWithCodegen(
       directives: undefined,
       isBlock: false,
       disableTracking: false,
+      isComponent: false,
       loc: locStub
     }
   }
 }
 
-export function genFlagText(flag: PatchFlags | PatchFlags[]) {
+type Flags = PatchFlags | ShapeFlags
+export function genFlagText(
+  flag: Flags | Flags[],
+  names: { [k: number]: string } = PatchFlagNames
+) {
   if (isArray(flag)) {
     let f = 0
     flag.forEach(ff => {
       f |= ff
     })
-    return `${f} /* ${flag.map(f => PatchFlagNames[f]).join(', ')} */`
+    return `${f} /* ${flag.map(f => names[f]).join(', ')} */`
   } else {
-    return `${flag} /* ${PatchFlagNames[flag]} */`
+    return `${flag} /* ${names[flag]} */`
   }
 }

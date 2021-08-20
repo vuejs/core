@@ -11,6 +11,7 @@ import {
 import { VNode, VNodeArrayChildren, VNodeProps } from '../vnode'
 import { isString, ShapeFlags } from '@vue/shared'
 import { warn } from '../warning'
+import { isHmrUpdating } from '../hmr'
 
 export type TeleportVNode = VNode<RendererNode, RendererElement, TeleportProps>
 
@@ -21,7 +22,7 @@ export interface TeleportProps {
 
 export const isTeleport = (type: any): boolean => type.__isTeleport
 
-export const isTeleportDisabled = (props: VNode['props']): boolean =>
+const isTeleportDisabled = (props: VNode['props']): boolean =>
   props && (props.disabled || props.disabled === '')
 
 const isTargetSVG = (target: RendererElement): boolean =>
@@ -83,7 +84,14 @@ export const TeleportImpl = {
     } = internals
 
     const disabled = isTeleportDisabled(n2.props)
-    const { shapeFlag, children } = n2
+    let { shapeFlag, children, dynamicChildren } = n2
+
+    // #3302
+    // HMR updated, force full diff
+    if (__DEV__ && isHmrUpdating) {
+      optimized = false
+      dynamicChildren = null
+    }
 
     if (n1 == null) {
       // insert anchors in the main view
@@ -138,11 +146,11 @@ export const TeleportImpl = {
       const currentAnchor = wasDisabled ? mainAnchor : targetAnchor
       isSVG = isSVG || isTargetSVG(target)
 
-      if (n2.dynamicChildren) {
+      if (dynamicChildren) {
         // fast path when the teleport happens to be a block root
         patchBlockChildren(
           n1.dynamicChildren!,
-          n2.dynamicChildren,
+          dynamicChildren,
           currentContainer,
           parentComponent,
           parentSuspense,
@@ -218,13 +226,32 @@ export const TeleportImpl = {
 
   remove(
     vnode: VNode,
-    { r: remove, o: { remove: hostRemove } }: RendererInternals
+    parentComponent: ComponentInternalInstance | null,
+    parentSuspense: SuspenseBoundary | null,
+    optimized: boolean,
+    { um: unmount, o: { remove: hostRemove } }: RendererInternals,
+    doRemove: Boolean
   ) {
-    const { shapeFlag, children, anchor } = vnode
-    hostRemove(anchor!)
-    if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-      for (let i = 0; i < (children as VNode[]).length; i++) {
-        remove((children as VNode[])[i])
+    const { shapeFlag, children, anchor, targetAnchor, target, props } = vnode
+
+    if (target) {
+      hostRemove(targetAnchor!)
+    }
+
+    // an unmounted teleport should always remove its children if not disabled
+    if (doRemove || !isTeleportDisabled(props)) {
+      hostRemove(anchor!)
+      if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        for (let i = 0; i < (children as VNode[]).length; i++) {
+          const child = (children as VNode[])[i]
+          unmount(
+            child,
+            parentComponent,
+            parentSuspense,
+            true,
+            !!child.dynamicChildren
+          )
+        }
       }
     }
   },
@@ -344,7 +371,7 @@ function hydrateTeleport(
 }
 
 // Force-casted public typing for h and TSX props inference
-export const Teleport = (TeleportImpl as any) as {
+export const Teleport = TeleportImpl as any as {
   __isTeleport: true
   new (): { $props: VNodeProps & TeleportProps }
 }

@@ -3,7 +3,8 @@
     "baseUrl": ".",
     "outDir": "dist",
     "sourceMap": false,
-    "target": "esnext",
+    "target": "es2016",
+    "useDefineForClassFields": false,
     "module": "esnext",
     "moduleResolution": "node",
     "allowJs": false,
@@ -18,6 +19,7 @@
     "types": ["jest", "puppeteer", "node"],
     "rootDir": ".",
     "paths": {
+      "@vue/compat": ["packages/vue-compat/src"],
       "@vue/*": ["packages/*/src"],
       "vue": ["packages/vue/src"]
     }

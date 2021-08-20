@@ -10,6 +10,7 @@ export const SSR_RENDER_ATTRS = Symbol(`ssrRenderAttrs`)
 export const SSR_RENDER_ATTR = Symbol(`ssrRenderAttr`)
 export const SSR_RENDER_DYNAMIC_ATTR = Symbol(`ssrRenderDynamicAttr`)
 export const SSR_RENDER_LIST = Symbol(`ssrRenderList`)
+export const SSR_INCLUDE_BOOLEAN_ATTR = Symbol(`ssrIncludeBooleanAttr`)
 export const SSR_LOOSE_EQUAL = Symbol(`ssrLooseEqual`)
 export const SSR_LOOSE_CONTAIN = Symbol(`ssrLooseContain`)
 export const SSR_RENDER_DYNAMIC_MODEL = Symbol(`ssrRenderDynamicModel`)
@@ -28,6 +29,7 @@ export const ssrHelpers = {
   [SSR_RENDER_ATTR]: `ssrRenderAttr`,
   [SSR_RENDER_DYNAMIC_ATTR]: `ssrRenderDynamicAttr`,
   [SSR_RENDER_LIST]: `ssrRenderList`,
+  [SSR_INCLUDE_BOOLEAN_ATTR]: `ssrIncludeBooleanAttr`,
   [SSR_LOOSE_EQUAL]: `ssrLooseEqual`,
   [SSR_LOOSE_CONTAIN]: `ssrLooseContain`,
   [SSR_RENDER_DYNAMIC_MODEL]: `ssrRenderDynamicModel`,

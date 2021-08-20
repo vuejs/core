@@ -1,11 +1,12 @@
 {
   "name": "@vue/template-explorer",
-  "version": "3.0.7",
+  "version": "3.2.4",
   "private": true,
   "buildOptions": {
     "formats": [
       "global"
     ],
+    "compat": true,
     "env": "development",
     "enableNonBrowserBranches": true
   },

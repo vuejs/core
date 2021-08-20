@@ -1,7 +1,8 @@
 import {
   ComponentInternalInstance,
   FunctionalComponent,
-  Data
+  Data,
+  getComponentName
 } from './component'
 import {
   VNode,
@@ -10,7 +11,8 @@ import {
   Comment,
   cloneVNode,
   VNodeArrayChildren,
-  isVNode
+  isVNode,
+  blockStack
 } from './vnode'
 import { handleError, ErrorCodes } from './errorHandling'
 import { PatchFlags, ShapeFlags, isOn, isModelListener } from '@vue/shared'
@@ -19,6 +21,11 @@ import { isHmrUpdating } from './hmr'
 import { NormalizedProps } from './componentProps'
 import { isEmitListener } from './componentEmits'
 import { setCurrentRenderingInstance } from './componentRenderContext'
+import {
+  DeprecationTypes,
+  isCompatEnabled,
+  warnDeprecation
+} from './compat/compatConfig'
 
 /**
  * dev only flag to track whether $attrs was used during render.
@@ -48,11 +55,12 @@ export function renderComponentRoot(
     renderCache,
     data,
     setupState,
-    ctx
+    ctx,
+    inheritAttrs
   } = instance
 
   let result
-  setCurrentRenderingInstance(instance)
+  const prev = setCurrentRenderingInstance(instance)
   if (__DEV__) {
     accessedAttrs = false
   }
@@ -116,14 +124,11 @@ export function renderComponentRoot(
       ;[root, setRoot] = getChildRoot(result)
     }
 
-    if (Component.inheritAttrs !== false && fallthroughAttrs) {
+    if (fallthroughAttrs && inheritAttrs !== false) {
       const keys = Object.keys(fallthroughAttrs)
       const { shapeFlag } = root
       if (keys.length) {
-        if (
-          shapeFlag & ShapeFlags.ELEMENT ||
-          shapeFlag & ShapeFlags.COMPONENT
-        ) {
+        if (shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.COMPONENT)) {
           if (propsOptions && keys.some(isModelListener)) {
             // If a v-model listener (onUpdate:xxx) has a corresponding declared
             // prop, it indicates this component expects to handle v-model and
@@ -174,6 +179,28 @@ export function renderComponentRoot(
       }
     }
 
+    if (
+      __COMPAT__ &&
+      isCompatEnabled(DeprecationTypes.INSTANCE_ATTRS_CLASS_STYLE, instance) &&
+      vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT &&
+      root.shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.COMPONENT)
+    ) {
+      const { class: cls, style } = vnode.props || {}
+      if (cls || style) {
+        if (__DEV__ && inheritAttrs === false) {
+          warnDeprecation(
+            DeprecationTypes.INSTANCE_ATTRS_CLASS_STYLE,
+            instance,
+            getComponentName(instance.type)
+          )
+        }
+        root = cloneVNode(root, {
+          class: cls,
+          style: style
+        })
+      }
+    }
+
     // inherit directives
     if (vnode.dirs) {
       if (__DEV__ && !isElementRoot(root)) {
@@ -201,11 +228,12 @@ export function renderComponentRoot(
       result = root
     }
   } catch (err) {
+    blockStack.length = 0
     handleError(err, instance, ErrorCodes.RENDER_FUNCTION)
     result = createVNode(Comment)
   }
 
-  setCurrentRenderingInstance(null)
+  setCurrentRenderingInstance(prev)
   return result
 }
 
@@ -284,8 +312,7 @@ const filterModelListeners = (attrs: Data, props: NormalizedProps): Data => {
 
 const isElementRoot = (vnode: VNode) => {
   return (
-    vnode.shapeFlag & ShapeFlags.COMPONENT ||
-    vnode.shapeFlag & ShapeFlags.ELEMENT ||
+    vnode.shapeFlag & (ShapeFlags.COMPONENT | ShapeFlags.ELEMENT) ||
     vnode.type === Comment // potential v-if branch switch
   )
 }
