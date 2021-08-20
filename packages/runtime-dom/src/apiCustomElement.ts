@@ -246,7 +246,7 @@ export class VueElement extends BaseClass {
   }
 
   protected _setAttr(key: string) {
-    this._setProp(camelize(key), toNumber(this.getAttribute(key)), false)
+    this._setProp(camelize(key), parseNumber(this.getAttribute(key)), false)
   }
 
   /**
@@ -343,7 +343,7 @@ export class VueElement extends BaseClass {
   }
 }
 
-export function toNumber(value: string | null): number | string {
+export function parseNumber(value: string | null): number | string {
   // for Number('') and Number(null) as they both become 0
   if (!value) return ''
   const casted = Number(value)
