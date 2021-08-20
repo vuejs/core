@@ -66,7 +66,9 @@ type PropConstructor<T = any> =
   | { (): T }
   | PropMethod<T>
 
-type PropMethod<T, TConstructor = any> = [T] extends [(...args: any) => any] // if is function with args
+type PropMethod<T, TConstructor = any> = [T] extends [
+  ((...args: any) => any) | undefined
+] // if is function with args, allowing non-required functions
   ? { new (): TConstructor; (): T; readonly prototype: TConstructor } // Create Function like constructor
   : never
 
