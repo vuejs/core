@@ -128,10 +128,7 @@ function queueCb(
   if (!isArray(cb)) {
     if (
       !activeQueue ||
-      !activeQueue.includes(
-        cb,
-        cb.allowRecurse ? index + 1 : index
-      )
+      !activeQueue.includes(cb, cb.allowRecurse ? index + 1 : index)
     ) {
       pendingQueue.push(cb)
     }

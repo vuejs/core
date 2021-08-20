@@ -13,7 +13,9 @@ const normalizedFunctionalComponentMap = new Map<
   FunctionalComponent
 >()
 
-export const legacySlotProxyHandlers: ProxyHandler<InternalSlots> = {
+export const legacySlotProxyHandlers: ProxyHandler<
+  InternalSlots<Record<string, null>>
+> = {
   get(target, key: string) {
     const slot = target[key]
     return slot && slot()
