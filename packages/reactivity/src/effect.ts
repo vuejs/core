@@ -35,7 +35,7 @@ export type DebuggerEvent = {
   effect: ReactiveEffect
 } & DebuggerEventExtraInfo
 
-export type DebuggerEventExtraInfo = {
+type DebuggerEventExtraInfo = {
   target: object
   type: TrackOpTypes | TriggerOpTypes
   key: any

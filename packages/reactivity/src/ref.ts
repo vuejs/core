@@ -5,7 +5,7 @@ import { reactive, isProxy, toRaw, isReactive } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
 import { createDep, Dep } from './dep'
 
-export declare const RefSymbol: unique symbol
+declare const RefSymbol: unique symbol
 
 export interface Ref<T = any> {
   value: T
@@ -60,7 +60,7 @@ export function triggerRefValue(ref: RefBase<any>, newVal?: any) {
   }
 }
 
-export type ToRef<T> = [T] extends [Ref] ? T : Ref<UnwrapRef<T>>
+type ToRef<T> = [T] extends [Ref] ? T : Ref<UnwrapRef<T>>
 export type ToRefs<T = any> = {
   // #2687: somehow using ToRef<T[K]> here turns the resulting type into
   // a union of multiple Ref<*> types instead of a single Ref<* | *> type.
@@ -154,7 +154,7 @@ export function proxyRefs<T extends object>(
     : new Proxy(objectWithRefs, shallowUnwrapHandlers)
 }
 
-export type CustomRefFactory<T> = (
+type CustomRefFactory<T> = (
   track: () => void,
   trigger: () => void
 ) => {
