@@ -286,12 +286,12 @@ function setupBlock(vnode: VNode) {
  * @private
  */
 export function createElementBlock(
-  type: string,
-  props?: Record<string, any> | null,
-  children?: any,
+  type: VNodeTypes | ClassComponent | typeof NULL_DYNAMIC_COMPONENT,
+  props?: (Data & VNodeProps) | null,
+  children?: unknown,
   patchFlag?: number,
-  dynamicProps?: string[],
-  shapeFlag?: number
+  dynamicProps?: string[] | null,
+  shapeFlag?: number | ShapeFlags
 ) {
   return setupBlock(
     createBaseVNode(
@@ -314,11 +314,11 @@ export function createElementBlock(
  * @private
  */
 export function createBlock(
-  type: VNodeTypes | ClassComponent,
-  props?: Record<string, any> | null,
-  children?: any,
+  type: VNodeTypes | ClassComponent | typeof NULL_DYNAMIC_COMPONENT,
+  props?: (Data & VNodeProps) | null,
+  children?: unknown,
   patchFlag?: number,
-  dynamicProps?: string[]
+  dynamicProps?: string[] | null
 ): VNode {
   return setupBlock(
     createVNode(
