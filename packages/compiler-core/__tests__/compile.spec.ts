@@ -1,5 +1,6 @@
 import { baseCompile as compile } from '../src'
 import { SourceMapConsumer, RawSourceMap } from 'source-map'
+import { isString } from '@vue/shared'
 
 describe('compiler: integration tests', () => {
   const source = `
@@ -39,7 +40,7 @@ describe('compiler: integration tests', () => {
           : generatedOffset - lastNewLinePos - 1
     }
     if (expectName) {
-      res.name = typeof expectName === 'string' ? expectName : token
+      res.name = isString(expectName) ? expectName : token
     }
     return res
   }

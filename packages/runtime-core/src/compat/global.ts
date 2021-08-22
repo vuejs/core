@@ -486,7 +486,7 @@ function installCompatMount(
       }
 
       let container: Element
-      if (typeof selectorOrEl === 'string') {
+      if (isString(selectorOrEl)) {
         // eslint-disable-next-line
         const result = document.querySelector(selectorOrEl)
         if (!result) {

@@ -1,4 +1,5 @@
 import { BindingTypes } from '@vue/compiler-core'
+import { isString } from '@vue/shared'
 import { compileSFCScript as compile, assertCode } from './utils'
 
 describe('SFC compile <script setup>', () => {
@@ -930,7 +931,7 @@ const emit = defineEmits(['a', 'b'])
         expect(content).toMatch(`let __temp, __restore`)
       }
       expect(content).toMatch(`${shouldAsync ? `async ` : ``}setup(`)
-      if (typeof expected === 'string') {
+      if (isString(expected)) {
         expect(content).toMatch(expected)
       } else {
         expect(expected(content)).toBe(true)

@@ -8,9 +8,11 @@ import {
   serialize,
   serializeInner
 } from '@vue/runtime-test'
+import { isString } from '@vue/shared'
+
 function toSpan(content: any) {
-  if (typeof content === 'string') {
-    return h('span', content.toString())
+  if (isString(content)) {
+    return h('span', content)
   } else {
     return h('span', { key: content }, content.toString())
   }

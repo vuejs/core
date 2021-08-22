@@ -22,6 +22,7 @@ import {
   camelize,
   capitalize,
   generateCodeFrame,
+  isString,
   makeMap
 } from '@vue/shared'
 import {
@@ -1301,7 +1302,7 @@ export function compileScript(
         tips.forEach(warnOnce)
       }
       const err = errors[0]
-      if (typeof err === 'string') {
+      if (isString(err)) {
         throw new Error(err)
       } else if (err) {
         if (err.loc) {
@@ -1962,9 +1963,7 @@ function isCallOf(
     node &&
     node.type === 'CallExpression' &&
     node.callee.type === 'Identifier' &&
-    (typeof test === 'string'
-      ? node.callee.name === test
-      : test(node.callee.name))
+    (isString(test) ? node.callee.name === test : test(node.callee.name))
   )
 }
 

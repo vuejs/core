@@ -21,7 +21,14 @@ import {
   ConcreteComponent,
   ComponentOptions
 } from '@vue/runtime-core'
-import { camelize, extend, hyphenate, isArray, toNumber } from '@vue/shared'
+import {
+  camelize,
+  extend,
+  hyphenate,
+  isArray,
+  isString,
+  toNumber
+} from '@vue/shared'
 import { hydrate, render } from '.'
 
 export type VueElementConstructor<P = {}> = {
@@ -269,7 +276,7 @@ export class VueElement extends BaseClass {
       if (shouldReflect) {
         if (val === true) {
           this.setAttribute(hyphenate(key), '')
-        } else if (typeof val === 'string' || typeof val === 'number') {
+        } else if (isString(val) || typeof val === 'number') {
           this.setAttribute(hyphenate(key), val + '')
         } else if (!val) {
           this.removeAttribute(hyphenate(key))

@@ -47,7 +47,7 @@ import {
   ssrTransformSuspense
 } from './ssrTransformSuspense'
 import { ssrProcessTransitionGroup } from './ssrTransformTransitionGroup'
-import { isSymbol, isObject, isArray } from '@vue/shared'
+import { isSymbol, isObject, isArray, isString } from '@vue/shared'
 
 // We need to construct the slot functions in the 1st pass to ensure proper
 // scope tracking, but the children of each slot cannot be processed until
@@ -210,7 +210,7 @@ export function ssrProcessComponent(
       node.ssrCodegenNode.arguments.push(`_scopeId`)
     }
 
-    if (typeof component === 'string') {
+    if (isString(component)) {
       // static component
       context.pushStatement(
         createCallExpression(`_push`, [node.ssrCodegenNode])
