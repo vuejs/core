@@ -17,18 +17,19 @@ import {
   createCompoundExpression,
   ConstantTypes
 } from '../ast'
+import {
+  isInDestructureAssignment,
+  isStaticProperty,
+  isStaticPropertyKey,
+  walkIdentifiers
+} from '../babelUtils'
 import { advancePositionWithClone, isSimpleIdentifier } from '../utils'
 import {
   isGloballyWhitelisted,
   makeMap,
   babelParserDefaultPlugins,
   hasOwn,
-  isString,
-  isReferencedIdentifier,
-  isInDestructureAssignment,
-  isStaticProperty,
-  isStaticPropertyKey,
-  isFunctionType
+  isString
 } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
@@ -39,7 +40,6 @@ import {
 } from '@babel/types'
 import { validateBrowserExpression } from '../validateExpression'
 import { parse } from '@babel/parser'
-import { walk } from 'estree-walker'
 import { IS_REF, UNREF } from '../runtimeHelpers'
 import { BindingTypes } from '../options'
 
@@ -245,89 +245,49 @@ export function processExpression(
     return node
   }
 
-  const ids: (Identifier & PrefixMeta)[] = []
-  const knownIds = Object.create(context.identifiers)
-  const isDuplicate = (node: Node & PrefixMeta): boolean =>
-    ids.some(id => id.start === node.start)
+  type QualifiedId = Identifier & PrefixMeta
+
+  const ids: QualifiedId[] = []
   const parentStack: Node[] = []
+  const knownIds: Record<string, number> = Object.create(context.identifiers)
 
-  // walk the AST and look for identifiers that need to be prefixed.
-  ;(walk as any)(ast, {
-    enter(node: Node & PrefixMeta, parent: Node | undefined) {
-      parent && parentStack.push(parent)
-      if (node.type === 'Identifier') {
-        if (!isDuplicate(node)) {
-          // v2 wrapped filter call
-          if (__COMPAT__ && node.name.startsWith('_filter_')) {
-            return
-          }
+  walkIdentifiers(
+    ast,
+    (node, parent, _, isReferenced, isLocal) => {
+      if (isStaticPropertyKey(node, parent!)) {
+        return
+      }
+      // v2 wrapped filter call
+      if (__COMPAT__ && node.name.startsWith('_filter_')) {
+        return
+      }
 
-          const needPrefix = shouldPrefix(node, parent!, parentStack)
-          if (!knownIds[node.name] && needPrefix) {
-            if (isStaticProperty(parent!) && parent.shorthand) {
-              // property shorthand like { foo }, we need to add the key since
-              // we rewrite the value
-              node.prefix = `${node.name}: `
-            }
-            node.name = rewriteIdentifier(node.name, parent, node)
-            ids.push(node)
-          } else if (!isStaticPropertyKey(node, parent!)) {
-            // The identifier is considered constant unless it's pointing to a
-            // scope variable (a v-for alias, or a v-slot prop)
-            if (!(needPrefix && knownIds[node.name]) && !bailConstant) {
-              node.isConstant = true
-            }
-            // also generate sub-expressions for other identifiers for better
-            // source map support. (except for property keys which are static)
-            ids.push(node)
-          }
+      const needPrefix = isReferenced && canPrefix(node)
+      if (needPrefix && !isLocal) {
+        if (isStaticProperty(parent!) && parent.shorthand) {
+          // property shorthand like { foo }, we need to add the key since
+          // we rewrite the value
+          ;(node as QualifiedId).prefix = `${node.name}: `
         }
-      } else if (isFunctionType(node)) {
-        // walk function expressions and add its arguments to known identifiers
-        // so that we don't prefix them
-        node.params.forEach(p =>
-          (walk as any)(p, {
-            enter(child: Node, parent: Node) {
-              if (
-                child.type === 'Identifier' &&
-                // do not record as scope variable if is a destructured key
-                !isStaticPropertyKey(child, parent) &&
-                // do not record if this is a default value
-                // assignment of a destructured variable
-                !(
-                  parent &&
-                  parent.type === 'AssignmentPattern' &&
-                  parent.right === child
-                )
-              ) {
-                const { name } = child
-                if (node.scopeIds && node.scopeIds.has(name)) {
-                  return
-                }
-                if (name in knownIds) {
-                  knownIds[name]++
-                } else {
-                  knownIds[name] = 1
-                }
-                ;(node.scopeIds || (node.scopeIds = new Set())).add(name)
-              }
-            }
-          })
-        )
+        node.name = rewriteIdentifier(node.name, parent, node)
+        ids.push(node as QualifiedId)
+      } else {
+        // The identifier is considered constant unless it's pointing to a
+        // local scope variable (a v-for alias, or a v-slot prop)
+        if (!(needPrefix && isLocal) && !bailConstant) {
+          ;(node as QualifiedId).isConstant = true
+        }
+        // also generate sub-expressions for other identifiers for better
+        // source map support. (except for property keys which are static)
+        ids.push(node as QualifiedId)
       }
     },
-    leave(node: Node & PrefixMeta, parent: Node | undefined) {
-      parent && parentStack.pop()
-      if (node !== ast.body[0].expression && node.scopeIds) {
-        node.scopeIds.forEach((id: string) => {
-          knownIds[id]--
-          if (knownIds[id] === 0) {
-            delete knownIds[id]
-          }
-        })
-      }
-    }
-  })
+    undefined,
+    parentStack,
+    knownIds,
+    // invoke on ALL identifiers
+    true
+  )
 
   // We break up the compound expression into an array of strings and sub
   // expressions (for identifiers that have been prefixed). In codegen, if
@@ -375,7 +335,7 @@ export function processExpression(
   return ret
 }
 
-function shouldPrefix(id: Identifier, parent: Node, parentStack: Node[]) {
+function canPrefix(id: Identifier) {
   // skip whitelisted globals
   if (isGloballyWhitelisted(id.name)) {
     return false
@@ -384,7 +344,7 @@ function shouldPrefix(id: Identifier, parent: Node, parentStack: Node[]) {
   if (id.name === 'require') {
     return false
   }
-  return isReferencedIdentifier(id, parent, parentStack)
+  return true
 }
 
 function stringifyExpression(exp: ExpressionNode | string): string {

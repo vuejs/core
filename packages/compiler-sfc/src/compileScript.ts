@@ -8,7 +8,10 @@ import {
   transform,
   parserOptions,
   UNREF,
-  SimpleExpressionNode
+  SimpleExpressionNode,
+  isFunctionType,
+  isStaticProperty,
+  walkIdentifiers
 } from '@vue/compiler-dom'
 import {
   ScriptSetupTextRanges,
@@ -22,10 +25,6 @@ import {
   camelize,
   capitalize,
   generateCodeFrame,
-  isFunctionType,
-  isReferencedIdentifier,
-  isStaticProperty,
-  isStaticPropertyKey,
   makeMap
 } from '@vue/shared'
 import {
@@ -1154,9 +1153,7 @@ export function compileScript(
     }
 
     for (const node of scriptSetupAst) {
-      if (node.type !== 'ImportDeclaration') {
-        walkIdentifiers(node, onIdent, onNode)
-      }
+      walkIdentifiers(node, onIdent, onNode)
     }
   }
 
@@ -1774,116 +1771,6 @@ function genRuntimeEmits(emits: Set<string>) {
     : ``
 }
 
-function markScopeIdentifier(
-  node: Node & { scopeIds?: Set<string> },
-  child: Identifier,
-  knownIds: Record<string, number>
-) {
-  const { name } = child
-  if (node.scopeIds && node.scopeIds.has(name)) {
-    return
-  }
-  if (name in knownIds) {
-    knownIds[name]++
-  } else {
-    knownIds[name] = 1
-  }
-  ;(node.scopeIds || (node.scopeIds = new Set())).add(name)
-}
-
-/**
- * Walk an AST and find identifiers that are variable references.
- * This is largely the same logic with `transformExpressions` in compiler-core
- * but with some subtle differences as this needs to handle a wider range of
- * possible syntax.
- */
-export function walkIdentifiers(
-  root: Node,
-  onIdentifier: (node: Identifier, parent: Node, parentStack: Node[]) => void,
-  onNode?: (node: Node, parent: Node, parentStack: Node[]) => void | boolean
-) {
-  const parentStack: Node[] = []
-  const knownIds: Record<string, number> = Object.create(null)
-  ;(walk as any)(root, {
-    enter(node: Node & { scopeIds?: Set<string> }, parent: Node | undefined) {
-      parent && parentStack.push(parent)
-      if (
-        parent &&
-        parent.type.startsWith('TS') &&
-        parent.type !== 'TSAsExpression' &&
-        parent.type !== 'TSNonNullExpression' &&
-        parent.type !== 'TSTypeAssertion'
-      ) {
-        return this.skip()
-      }
-      if (onNode && onNode(node, parent!, parentStack) === false) {
-        return this.skip()
-      }
-      if (node.type === 'Identifier') {
-        if (
-          !knownIds[node.name] &&
-          isReferencedIdentifier(node, parent!, parentStack)
-        ) {
-          onIdentifier(node, parent!, parentStack)
-        }
-      } else if (isFunctionType(node)) {
-        // #3445
-        // should not rewrite local variables sharing a name with a top-level ref
-        if (node.body.type === 'BlockStatement') {
-          node.body.body.forEach(p => {
-            if (p.type === 'VariableDeclaration') {
-              for (const decl of p.declarations) {
-                extractIdentifiers(decl.id).forEach(id => {
-                  markScopeIdentifier(node, id, knownIds)
-                })
-              }
-            }
-          })
-        }
-        // walk function expressions and add its arguments to known identifiers
-        // so that we don't prefix them
-        node.params.forEach(p =>
-          (walk as any)(p, {
-            enter(child: Node, parent: Node) {
-              if (
-                child.type === 'Identifier' &&
-                // do not record as scope variable if is a destructured key
-                !isStaticPropertyKey(child, parent) &&
-                // do not record if this is a default value
-                // assignment of a destructured variable
-                !(
-                  parent &&
-                  parent.type === 'AssignmentPattern' &&
-                  parent.right === child
-                )
-              ) {
-                markScopeIdentifier(node, child, knownIds)
-              }
-            }
-          })
-        )
-      } else if (
-        node.type === 'ObjectProperty' &&
-        parent!.type === 'ObjectPattern'
-      ) {
-        // mark property in destructure pattern
-        ;(node as any).inPattern = true
-      }
-    },
-    leave(node: Node & { scopeIds?: Set<string> }, parent: Node | undefined) {
-      parent && parentStack.pop()
-      if (node.scopeIds) {
-        node.scopeIds.forEach((id: string) => {
-          knownIds[id]--
-          if (knownIds[id] === 0) {
-            delete knownIds[id]
-          }
-        })
-      }
-    }
-  })
-}
-
 function isCallOf(
   node: Node | null | undefined,
   test: string | ((id: string) => boolean)
@@ -2075,51 +1962,6 @@ function getObjectOrArrayExpressionKeys(value: Node): string[] {
     return getObjectExpressionKeys(value)
   }
   return []
-}
-
-function extractIdentifiers(
-  param: Node,
-  nodes: Identifier[] = []
-): Identifier[] {
-  switch (param.type) {
-    case 'Identifier':
-      nodes.push(param)
-      break
-
-    case 'MemberExpression':
-      let object: any = param
-      while (object.type === 'MemberExpression') {
-        object = object.object
-      }
-      nodes.push(object)
-      break
-
-    case 'ObjectPattern':
-      param.properties.forEach(prop => {
-        if (prop.type === 'RestElement') {
-          extractIdentifiers(prop.argument, nodes)
-        } else {
-          extractIdentifiers(prop.value, nodes)
-        }
-      })
-      break
-
-    case 'ArrayPattern':
-      param.elements.forEach(element => {
-        if (element) extractIdentifiers(element, nodes)
-      })
-      break
-
-    case 'RestElement':
-      extractIdentifiers(param.argument, nodes)
-      break
-
-    case 'AssignmentPattern':
-      extractIdentifiers(param.left, nodes)
-      break
-  }
-
-  return nodes
 }
 
 function toTextRange(node: Node): TextRange {
