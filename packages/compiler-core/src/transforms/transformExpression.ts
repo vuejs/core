@@ -23,14 +23,17 @@ import {
   makeMap,
   babelParserDefaultPlugins,
   hasOwn,
-  isString
+  isString,
+  isReferencedIdentifier,
+  isInDestructureAssignment,
+  isStaticProperty,
+  isStaticPropertyKey,
+  isFunctionType
 } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
   Node,
-  Function,
   Identifier,
-  ObjectProperty,
   AssignmentExpression,
   UpdateExpression
 } from '@babel/types'
@@ -279,7 +282,7 @@ export function processExpression(
             ids.push(node)
           }
         }
-      } else if (isFunction(node)) {
+      } else if (isFunctionType(node)) {
         // walk function expressions and add its arguments to known identifiers
         // so that we don't prefix them
         node.params.forEach(p =>
@@ -372,97 +375,16 @@ export function processExpression(
   return ret
 }
 
-const isFunction = (node: Node): node is Function => {
-  return /Function(?:Expression|Declaration)$|Method$/.test(node.type)
-}
-
-const isStaticProperty = (node: Node): node is ObjectProperty =>
-  node &&
-  (node.type === 'ObjectProperty' || node.type === 'ObjectMethod') &&
-  !node.computed
-
-const isStaticPropertyKey = (node: Node, parent: Node) =>
-  isStaticProperty(parent) && parent.key === node
-
 function shouldPrefix(id: Identifier, parent: Node, parentStack: Node[]) {
-  // declaration id
-  if (
-    (parent.type === 'VariableDeclarator' ||
-      parent.type === 'ClassDeclaration') &&
-    parent.id === id
-  ) {
-    return false
-  }
-
-  if (isFunction(parent)) {
-    // function decalration/expression id
-    if ((parent as any).id === id) {
-      return false
-    }
-    // params list
-    if (parent.params.includes(id)) {
-      return false
-    }
-  }
-
-  // property key
-  // this also covers object destructure pattern
-  if (isStaticPropertyKey(id, parent)) {
-    return false
-  }
-
-  // non-assignment array destructure pattern
-  if (
-    parent.type === 'ArrayPattern' &&
-    !isInDestructureAssignment(parent, parentStack)
-  ) {
-    return false
-  }
-
-  // member expression property
-  if (
-    (parent.type === 'MemberExpression' ||
-      parent.type === 'OptionalMemberExpression') &&
-    parent.property === id &&
-    !parent.computed
-  ) {
-    return false
-  }
-
-  // is a special keyword but parsed as identifier
-  if (id.name === 'arguments') {
-    return false
-  }
-
   // skip whitelisted globals
   if (isGloballyWhitelisted(id.name)) {
     return false
   }
-
   // special case for webpack compilation
   if (id.name === 'require') {
     return false
   }
-
-  return true
-}
-
-function isInDestructureAssignment(parent: Node, parentStack: Node[]): boolean {
-  if (
-    parent &&
-    (parent.type === 'ObjectProperty' || parent.type === 'ArrayPattern')
-  ) {
-    let i = parentStack.length
-    while (i--) {
-      const p = parentStack[i]
-      if (p.type === 'AssignmentExpression') {
-        return true
-      } else if (p.type !== 'ObjectProperty' && !p.type.endsWith('Pattern')) {
-        break
-      }
-    }
-  }
-  return false
+  return isReferencedIdentifier(id, parent, parentStack)
 }
 
 function stringifyExpression(exp: ExpressionNode | string): string {

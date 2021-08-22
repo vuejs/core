@@ -22,6 +22,10 @@ import {
   camelize,
   capitalize,
   generateCodeFrame,
+  isFunctionType,
+  isReferencedIdentifier,
+  isStaticProperty,
+  isStaticPropertyKey,
   makeMap
 } from '@vue/shared'
 import {
@@ -32,7 +36,6 @@ import {
   ArrayPattern,
   Identifier,
   ExportSpecifier,
-  Function as FunctionNode,
   TSType,
   TSTypeLiteral,
   TSFunctionType,
@@ -1028,7 +1031,7 @@ export function compileScript(
     ) {
       ;(walk as any)(node, {
         enter(child: Node, parent: Node) {
-          if (isFunction(child)) {
+          if (isFunctionType(child)) {
             this.skip()
           }
           if (child.type === 'AwaitExpression') {
@@ -1819,11 +1822,11 @@ export function walkIdentifiers(
       if (node.type === 'Identifier') {
         if (
           !knownIds[node.name] &&
-          isRefIdentifier(node, parent!, parentStack)
+          isReferencedIdentifier(node, parent!, parentStack)
         ) {
           onIdentifier(node, parent!, parentStack)
         }
-      } else if (isFunction(node)) {
+      } else if (isFunctionType(node)) {
         // #3445
         // should not rewrite local variables sharing a name with a top-level ref
         if (node.body.type === 'BlockStatement') {
@@ -1879,79 +1882,6 @@ export function walkIdentifiers(
       }
     }
   })
-}
-
-function isRefIdentifier(
-  id: Identifier,
-  parent: Node | null,
-  parentStack: Node[]
-) {
-  if (!parent) {
-    return true
-  }
-
-  // declaration id
-  if (
-    (parent.type === 'VariableDeclarator' ||
-      parent.type === 'ClassDeclaration') &&
-    parent.id === id
-  ) {
-    return false
-  }
-
-  if (isFunction(parent)) {
-    // function decalration/expression id
-    if ((parent as any).id === id) {
-      return false
-    }
-    // params list
-    if (parent.params.includes(id)) {
-      return false
-    }
-  }
-
-  // property key
-  // this also covers object destructure pattern
-  if (isStaticPropertyKey(id, parent)) {
-    return false
-  }
-
-  // non-assignment array destructure pattern
-  if (
-    parent.type === 'ArrayPattern' &&
-    !isInDestructureAssignment(parent, parentStack)
-  ) {
-    return false
-  }
-
-  // member expression property
-  if (
-    (parent.type === 'MemberExpression' ||
-      parent.type === 'OptionalMemberExpression') &&
-    parent.property === id &&
-    !parent.computed
-  ) {
-    return false
-  }
-
-  // is a special keyword but parsed as identifier
-  if (id.name === 'arguments') {
-    return false
-  }
-
-  return true
-}
-
-const isStaticProperty = (node: Node): node is ObjectProperty =>
-  node &&
-  (node.type === 'ObjectProperty' || node.type === 'ObjectMethod') &&
-  !node.computed
-
-const isStaticPropertyKey = (node: Node, parent: Node) =>
-  isStaticProperty(parent) && parent.key === node
-
-function isFunction(node: Node): node is FunctionNode {
-  return /Function(?:Expression|Declaration)$|Method$/.test(node.type)
 }
 
 function isCallOf(
