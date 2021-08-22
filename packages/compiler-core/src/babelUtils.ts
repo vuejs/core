@@ -1,7 +1,7 @@
 import {
+  isReferenced,
   Identifier,
   Node,
-  isReferenced,
   Function,
   ObjectProperty
 } from '@babel/types'

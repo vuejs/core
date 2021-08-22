@@ -81,7 +81,7 @@ function createConfig(format, output, plugins = []) {
     process.exit(1)
   }
 
-  output.exports = 'auto'
+  output.exports = 'named'
   output.sourcemap = !!process.env.SOURCE_MAP
   output.externalLiveBindings = false
 

@@ -1752,10 +1752,15 @@ function extractEventNames(
   ) {
     const typeNode = eventName.typeAnnotation.typeAnnotation
     if (typeNode.type === 'TSLiteralType') {
-      emits.add(String(typeNode.literal.value))
+      if (typeNode.literal.type !== 'UnaryExpression') {
+        emits.add(String(typeNode.literal.value))
+      }
     } else if (typeNode.type === 'TSUnionType') {
       for (const t of typeNode.types) {
-        if (t.type === 'TSLiteralType') {
+        if (
+          t.type === 'TSLiteralType' &&
+          t.literal.type !== 'UnaryExpression'
+        ) {
           emits.add(String(t.literal.value))
         }
       }
