@@ -52,8 +52,8 @@ import { warnExperimental, warnOnce } from './warn'
 import { rewriteDefault } from './rewriteDefault'
 import { createCache } from './cache'
 import {
-  shouldTransform,
-  transformAST as transformWithRefSugar
+  shouldTransform as shouldTransformRef,
+  transformAST as transformRefAST
 } from '@vue/ref-transform'
 
 // Special compiler macros
@@ -81,9 +81,13 @@ export interface SFCScriptCompileOptions {
    */
   babelParserPlugins?: ParserPlugin[]
   /**
-   * Introduce a compiler-based syntax sugar for using refs without `.value`
+   * (Experimental) Enable syntax transform for using refs without `.value`
    * https://github.com/vuejs/rfcs/discussions/369
    * @default true
+   */
+  refTransform?: boolean
+  /**
+   * @deprecated use `refTransform` instead.
    */
   refSugar?: boolean
   /**
@@ -121,7 +125,7 @@ export function compileScript(
 ): SFCScriptBlock {
   let { script, scriptSetup, source, filename } = sfc
   // feature flags
-  const enableRefSugar = !!options.refSugar
+  const enableRefTransform = !!options.refSugar || !!options.refTransform
   let refBindings: string[] | undefined
 
   // for backwards compat
@@ -858,12 +862,12 @@ export function compileScript(
   }
 
   // 3. Apply ref sugar transform
-  if (enableRefSugar && shouldTransform(source)) {
+  if (enableRefTransform && shouldTransformRef(source)) {
     warnExperimental(
       `ref sugar`,
       `https://github.com/vuejs/rfcs/discussions/369`
     )
-    const { rootVars, importedHelpers } = transformWithRefSugar(
+    const { rootVars, importedHelpers } = transformRefAST(
       scriptSetupAst,
       s,
       startOffset

@@ -4,8 +4,9 @@ export { compileTemplate } from './compileTemplate'
 export { compileStyle, compileStyleAsync } from './compileStyle'
 export { compileScript } from './compileScript'
 export { rewriteDefault } from './rewriteDefault'
-export { generateCodeFrame, walkIdentifiers } from '@vue/compiler-core'
+export { generateCodeFrame } from '@vue/compiler-core'
 export {
+  shouldTransform as shouldTransformRef,
   transform as transformRef,
   transformAST as transformRefAST
 } from '@vue/ref-transform'
