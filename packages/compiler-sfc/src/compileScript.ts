@@ -3,7 +3,6 @@ import {
   BindingMetadata,
   BindingTypes,
   createRoot,
-  locStub,
   NodeTypes,
   transform,
   parserOptions,
@@ -12,12 +11,7 @@ import {
   isFunctionType,
   walkIdentifiers
 } from '@vue/compiler-dom'
-import {
-  ScriptSetupTextRanges,
-  SFCDescriptor,
-  SFCScriptBlock,
-  TextRange
-} from './parse'
+import { SFCDescriptor, SFCScriptBlock } from './parse'
 import { parse as _parse, ParserOptions, ParserPlugin } from '@babel/parser'
 import {
   babelParserDefaultPlugins,
@@ -103,26 +97,14 @@ export interface SFCScriptCompileOptions {
    * options passed to `compiler-dom`.
    */
   templateOptions?: Partial<SFCTemplateCompileOptions>
-  /**
-   * Skip codegen and only return AST / binding / text range information.
-   * Also makes the call error-tolerant.
-   * Used for IDE support.
-   */
-  parseOnly?: boolean
 }
 
 interface ImportBinding {
   isType: boolean
   imported: string
   source: string
-  rangeNode: Node
   isFromSetup: boolean
   isUsedInTemplate: boolean
-}
-
-interface VariableBinding {
-  type: BindingTypes
-  rangeNode: Node
 }
 
 /**
@@ -138,18 +120,6 @@ export function compileScript(
   // feature flags
   const enableRefSugar = !!options.refSugar
   let refBindings: string[] | undefined
-  const parseOnly = !!options.parseOnly
-
-  if (parseOnly && !scriptSetup) {
-    // in parse-only mode, construct a fake script setup so we still perform
-    // the full parse logic.
-    scriptSetup = {
-      type: 'script',
-      content: '',
-      attrs: {},
-      loc: locStub
-    }
-  }
 
   // for backwards compat
   if (!options) {
@@ -190,8 +160,7 @@ export function compileScript(
     try {
       const scriptAst = _parse(script.content, {
         plugins,
-        sourceType: 'module',
-        errorRecovery: parseOnly
+        sourceType: 'module'
       }).program.body
       const bindings = analyzeScriptBindings(scriptAst)
       let content = script.content
@@ -232,18 +201,11 @@ export function compileScript(
 
   // metadata that needs to be returned
   const bindingMetadata: BindingMetadata = {}
-  const ranges: ScriptSetupTextRanges | undefined = parseOnly
-    ? {
-        scriptBindings: [],
-        scriptSetupBindings: []
-      }
-    : undefined
-
   const defaultTempVar = `__default__`
   const helperImports: Set<string> = new Set()
   const userImports: Record<string, ImportBinding> = Object.create(null)
   const userImportAlias: Record<string, string> = Object.create(null)
-  const setupBindings: Record<string, VariableBinding> = Object.create(null)
+  const setupBindings: Record<string, BindingTypes> = Object.create(null)
 
   let defaultExport: Node | undefined
   let hasDefinePropsCall = false
@@ -288,7 +250,6 @@ export function compileScript(
     offset: number
   ): Program {
     try {
-      options.errorRecovery = parseOnly
       return _parse(input, options).program
     } catch (e) {
       e.message = `[@vue/compiler-sfc] ${e.message}\n\n${
@@ -317,8 +278,7 @@ export function compileScript(
     local: string,
     imported: string | false,
     isType: boolean,
-    isFromSetup: boolean,
-    rangeNode: Node
+    isFromSetup: boolean
   ) {
     if (source === 'vue' && imported) {
       userImportAlias[imported] = local
@@ -337,7 +297,6 @@ export function compileScript(
       isType,
       imported: imported || 'default',
       source,
-      rangeNode,
       isFromSetup,
       isUsedInTemplate
     }
@@ -609,8 +568,7 @@ export function compileScript(
             specifier.local.name,
             imported,
             node.importKind === 'type',
-            false,
-            specifier.local
+            false
           )
         }
       } else if (node.type === 'ExportDefaultDeclaration') {
@@ -705,8 +663,8 @@ export function compileScript(
     ) {
       error(
         `ref sugar using the label syntax was an experimental proposal and ` +
-          `has been dropped based on community feedback.`,
-        // TODO + ` Please check out the adjusted proposal at ...`,
+          `has been dropped based on community feedback. Please check out ` +
+          `the new proposal at https://github.com/vuejs/rfcs/discussions/369`,
         node
       )
     }
@@ -764,8 +722,7 @@ export function compileScript(
             local,
             imported,
             node.importKind === 'type',
-            true,
-            specifier.local
+            true
           )
         }
       }
@@ -897,44 +854,6 @@ export function compileScript(
     }
   }
 
-  // in parse only mode, we should have collected all the information we need,
-  // return early.
-  if (parseOnly) {
-    for (const key in userImports) {
-      const { rangeNode, isFromSetup } = userImports[key]
-      const bindings = isFromSetup
-        ? ranges!.scriptSetupBindings
-        : ranges!.scriptBindings
-      bindings.push(toTextRange(rangeNode))
-    }
-    for (const key in setupBindings) {
-      ranges!.scriptSetupBindings.push(
-        toTextRange(setupBindings[key].rangeNode)
-      )
-    }
-    if (propsRuntimeDecl) {
-      ranges!.propsRuntimeArg = toTextRange(propsRuntimeDecl)
-    }
-    if (propsTypeDeclRaw) {
-      ranges!.propsTypeArg = toTextRange(propsTypeDeclRaw)
-    }
-    if (emitsRuntimeDecl) {
-      ranges!.emitsRuntimeArg = toTextRange(emitsRuntimeDecl)
-    }
-    if (emitsTypeDeclRaw) {
-      ranges!.emitsTypeArg = toTextRange(emitsTypeDeclRaw)
-    }
-    if (propsRuntimeDefaults) {
-      ranges!.withDefaultsArg = toTextRange(propsRuntimeDefaults)
-    }
-    return {
-      ...scriptSetup,
-      ranges,
-      scriptAst: scriptAst?.body,
-      scriptSetupAst: scriptSetupAst?.body
-    }
-  }
-
   // 3. Apply ref sugar transform
   if (enableRefSugar) {
     warnExperimental(
@@ -1007,7 +926,7 @@ export function compileScript(
         : BindingTypes.SETUP_MAYBE_REF
   }
   for (const key in setupBindings) {
-    bindingMetadata[key] = setupBindings[key].type
+    bindingMetadata[key] = setupBindings[key]
   }
   // known ref bindings
   if (refBindings) {
@@ -1240,19 +1159,16 @@ export function compileScript(
 }
 
 function registerBinding(
-  bindings: Record<string, VariableBinding>,
+  bindings: Record<string, BindingTypes>,
   node: Identifier,
   type: BindingTypes
 ) {
-  bindings[node.name] = {
-    type,
-    rangeNode: node
-  }
+  bindings[node.name] = type
 }
 
 function walkDeclaration(
   node: Declaration,
-  bindings: Record<string, VariableBinding>,
+  bindings: Record<string, BindingTypes>,
   userImportAlias: Record<string, string>
 ) {
   if (node.type === 'VariableDeclaration') {
@@ -1301,16 +1217,13 @@ function walkDeclaration(
   ) {
     // export function foo() {} / export class Foo {}
     // export declarations must be named.
-    bindings[node.id!.name] = {
-      type: BindingTypes.SETUP_CONST,
-      rangeNode: node.id!
-    }
+    bindings[node.id!.name] = BindingTypes.SETUP_CONST
   }
 }
 
 function walkObjectPattern(
   node: ObjectPattern,
-  bindings: Record<string, VariableBinding>,
+  bindings: Record<string, BindingTypes>,
   isConst: boolean,
   isDefineCall = false
 ) {
@@ -1341,7 +1254,7 @@ function walkObjectPattern(
 
 function walkArrayPattern(
   node: ArrayPattern,
-  bindings: Record<string, VariableBinding>,
+  bindings: Record<string, BindingTypes>,
   isConst: boolean,
   isDefineCall = false
 ) {
@@ -1352,7 +1265,7 @@ function walkArrayPattern(
 
 function walkPattern(
   node: Node,
-  bindings: Record<string, VariableBinding>,
+  bindings: Record<string, BindingTypes>,
   isConst: boolean,
   isDefineCall = false
 ) {
@@ -1743,13 +1656,6 @@ function getObjectOrArrayExpressionKeys(value: Node): string[] {
     return getObjectExpressionKeys(value)
   }
   return []
-}
-
-function toTextRange(node: Node): TextRange {
-  return {
-    start: node.start!,
-    end: node.end!
-  }
 }
 
 const templateUsageCheckCache = createCache<string>()

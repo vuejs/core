@@ -43,27 +43,7 @@ export interface SFCScriptBlock extends SFCBlock {
   bindings?: BindingMetadata
   scriptAst?: Statement[]
   scriptSetupAst?: Statement[]
-  ranges?: ScriptSetupTextRanges
 }
-
-/**
- * Text range data for IDE support
- */
-export interface ScriptSetupTextRanges {
-  scriptBindings: TextRange[]
-  scriptSetupBindings: TextRange[]
-  propsTypeArg?: TextRange
-  propsRuntimeArg?: TextRange
-  emitsTypeArg?: TextRange
-  emitsRuntimeArg?: TextRange
-  withDefaultsArg?: TextRange
-}
-
-export interface TextRange {
-  start: number
-  end: number
-}
-
 export interface SFCStyleBlock extends SFCBlock {
   type: 'style'
   scoped?: boolean
