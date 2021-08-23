@@ -49,7 +49,9 @@ module.exports = {
     },
     // Packages targeting Node
     {
-      files: ['packages/{compiler-sfc,compiler-ssr,server-renderer}/**'],
+      files: [
+        'packages/{compiler-sfc,compiler-ssr,server-renderer,ref-transform}/**'
+      ],
       rules: {
         'no-restricted-globals': ['error', ...DOMGlobals],
         'no-restricted-syntax': 'off'

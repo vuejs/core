@@ -283,10 +283,10 @@ export function processExpression(
       }
     },
     undefined,
+    true, // invoke on ALL identifiers
+    true, // isLocal scope analysis
     parentStack,
-    knownIds,
-    // invoke on ALL identifiers
-    true
+    knownIds
   )
 
   // We break up the compound expression into an array of strings and sub

@@ -5,6 +5,10 @@ export { compileStyle, compileStyleAsync } from './compileStyle'
 export { compileScript } from './compileScript'
 export { rewriteDefault } from './rewriteDefault'
 export { generateCodeFrame, walkIdentifiers } from '@vue/compiler-core'
+export {
+  transform as transformRef,
+  transformAST as transformRefAST
+} from '@vue/ref-transform'
 
 // Utilities
 export { parse as babelParse } from '@babel/parser'

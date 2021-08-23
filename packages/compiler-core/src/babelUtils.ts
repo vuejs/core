@@ -3,7 +3,8 @@ import {
   Identifier,
   Node,
   Function,
-  ObjectProperty
+  ObjectProperty,
+  BlockStatement
 } from '@babel/types'
 import { walk } from 'estree-walker'
 
@@ -17,9 +18,10 @@ export function walkIdentifiers(
     isLocal: boolean
   ) => void,
   onNode?: (node: Node, parent: Node, parentStack: Node[]) => void | boolean,
+  includeAll = false,
+  analyzeScope = true,
   parentStack: Node[] = [],
-  knownIds: Record<string, number> = Object.create(null),
-  includeAll = false
+  knownIds: Record<string, number> = Object.create(null)
 ) {
   const rootExp =
     root.type === 'Program' &&
@@ -42,44 +44,10 @@ export function walkIdentifiers(
         return this.skip()
       }
       if (node.type === 'Identifier') {
-        const isLocal = !!knownIds[node.name]
+        const isLocal = analyzeScope && !!knownIds[node.name]
         const isRefed = isReferencedIdentifier(node, parent!, parentStack)
         if (includeAll || (isRefed && !isLocal)) {
           onIdentifier(node, parent!, parentStack, isRefed, isLocal)
-        }
-      } else if (isFunctionType(node)) {
-        // walk function expressions and add its arguments to known identifiers
-        // so that we don't prefix them
-        for (const p of node.params) {
-          ;(walk as any)(p, {
-            enter(child: Node, parent: Node) {
-              if (
-                child.type === 'Identifier' &&
-                // do not record as scope variable if is a destructured key
-                !isStaticPropertyKey(child, parent) &&
-                // do not record if this is a default value
-                // assignment of a destructured variable
-                !(
-                  parent &&
-                  parent.type === 'AssignmentPattern' &&
-                  parent.right === child
-                )
-              ) {
-                markScopeIdentifier(node, child, knownIds)
-              }
-            }
-          })
-        }
-      } else if (node.type === 'BlockStatement') {
-        // #3445 record block-level local variables
-        for (const stmt of node.body) {
-          if (stmt.type === 'VariableDeclaration') {
-            for (const decl of stmt.declarations) {
-              for (const id of extractIdentifiers(decl.id)) {
-                markScopeIdentifier(node, id, knownIds)
-              }
-            }
-          }
         }
       } else if (
         node.type === 'ObjectProperty' &&
@@ -87,17 +55,30 @@ export function walkIdentifiers(
       ) {
         // mark property in destructure pattern
         ;(node as any).inPattern = true
+      } else if (analyzeScope) {
+        if (isFunctionType(node)) {
+          // walk function expressions and add its arguments to known identifiers
+          // so that we don't prefix them
+          walkFunctionParams(node, id =>
+            markScopeIdentifier(node, id, knownIds)
+          )
+        } else if (node.type === 'BlockStatement') {
+          // #3445 record block-level local variables
+          walkBlockDeclarations(node, id =>
+            markScopeIdentifier(node, id, knownIds)
+          )
+        }
       }
     },
     leave(node: Node & { scopeIds?: Set<string> }, parent: Node | undefined) {
       parent && parentStack.pop()
-      if (node !== rootExp && node.scopeIds) {
-        node.scopeIds.forEach((id: string) => {
+      if (analyzeScope && node !== rootExp && node.scopeIds) {
+        for (const id of node.scopeIds) {
           knownIds[id]--
           if (knownIds[id] === 0) {
             delete knownIds[id]
           }
-        })
+        }
       }
     }
   })
@@ -154,6 +135,47 @@ export function isInDestructureAssignment(
     }
   }
   return false
+}
+
+export function walkFunctionParams(
+  node: Function,
+  onIdent: (id: Identifier) => void
+) {
+  for (const p of node.params) {
+    ;(walk as any)(p, {
+      enter(child: Node, parent: Node) {
+        if (
+          child.type === 'Identifier' &&
+          // do not record as scope variable if is a destructured key
+          !isStaticPropertyKey(child, parent) &&
+          // do not record if this is a default value
+          // assignment of a destructured variable
+          !(
+            parent &&
+            parent.type === 'AssignmentPattern' &&
+            parent.right === child
+          )
+        ) {
+          onIdent(child)
+        }
+      }
+    })
+  }
+}
+
+export function walkBlockDeclarations(
+  block: BlockStatement,
+  onIdent: (node: Identifier) => void
+) {
+  for (const stmt of block.body) {
+    if (stmt.type === 'VariableDeclaration') {
+      for (const decl of stmt.declarations) {
+        for (const id of extractIdentifiers(decl.id)) {
+          onIdent(id)
+        }
+      }
+    }
+  }
 }
 
 function extractIdentifiers(

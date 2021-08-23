@@ -1,0 +1,39 @@
+{
+  "name": "@vue/ref-transform",
+  "version": "3.2.4",
+  "description": "@vue/ref-transform",
+  "main": "dist/ref-transform.cjs.js",
+  "files": [
+    "dist"
+  ],
+  "buildOptions": {
+    "formats": [
+      "cjs"
+    ],
+    "prod": false
+  },
+  "types": "dist/ref-transform.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vuejs/vue-next.git",
+    "directory": "packages/ref-transform"
+  },
+  "keywords": [
+    "vue"
+  ],
+  "author": "Evan You",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/vuejs/vue-next/issues"
+  },
+  "homepage": "https://github.com/vuejs/vue-next/tree/dev/packages/ref-transform#readme",
+  "dependencies": {
+    "@vue/compiler-core": "3.2.4",
+    "@vue/shared": "3.2.4",
+    "@babel/parser": "^7.15.0",
+    "estree-walker": "^2.0.2"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.15.0"
+  }
+}

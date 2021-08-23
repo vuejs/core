@@ -10,7 +10,6 @@ import {
   UNREF,
   SimpleExpressionNode,
   isFunctionType,
-  isStaticProperty,
   walkIdentifiers
 } from '@vue/compiler-dom'
 import {
@@ -45,8 +44,7 @@ import {
   RestElement,
   TSInterfaceBody,
   AwaitExpression,
-  VariableDeclarator,
-  VariableDeclaration
+  Program
 } from '@babel/types'
 import { walk } from 'estree-walker'
 import { RawSourceMap } from 'source-map'
@@ -59,18 +57,13 @@ import { compileTemplate, SFCTemplateCompileOptions } from './compileTemplate'
 import { warnExperimental, warnOnce } from './warn'
 import { rewriteDefault } from './rewriteDefault'
 import { createCache } from './cache'
+import { transformAST as transformWithRefSugar } from '@vue/ref-transform'
 
 // Special compiler macros
 const DEFINE_PROPS = 'defineProps'
 const DEFINE_EMITS = 'defineEmits'
 const DEFINE_EXPOSE = 'defineExpose'
 const WITH_DEFAULTS = 'withDefaults'
-
-const $REF = `$ref`
-const $SHALLOW_REF = '$shallowRef'
-const $COMPUTED = `$computed`
-const $FROM_REFS = `$fromRefs`
-const $RAW = `$raw`
 
 const isBuiltInDir = makeMap(
   `once,memo,if,else,else-if,slot,text,html,on,bind,model,show,cloak,is`
@@ -144,6 +137,7 @@ export function compileScript(
   let { script, scriptSetup, source, filename } = sfc
   // feature flags
   const enableRefSugar = !!options.refSugar
+  let refBindings: string[] | undefined
   const parseOnly = !!options.parseOnly
 
   if (parseOnly && !scriptSetup) {
@@ -250,8 +244,7 @@ export function compileScript(
   const userImports: Record<string, ImportBinding> = Object.create(null)
   const userImportAlias: Record<string, string> = Object.create(null)
   const setupBindings: Record<string, VariableBinding> = Object.create(null)
-  const refBindings: Record<string, VariableBinding> = Object.create(null)
-  const refIdentifiers: Set<Identifier> = new Set()
+
   let defaultExport: Node | undefined
   let hasDefinePropsCall = false
   let hasDefineEmitCall = false
@@ -293,10 +286,10 @@ export function compileScript(
     input: string,
     options: ParserOptions,
     offset: number
-  ): Statement[] {
+  ): Program {
     try {
       options.errorRecovery = parseOnly
-      return _parse(input, options).program.body
+      return _parse(input, options).program
     } catch (e) {
       e.message = `[@vue/compiler-sfc] ${e.message}\n\n${
         sfc.filename
@@ -476,7 +469,7 @@ export function compileScript(
         }
       }
 
-      for (const node of scriptSetupAst) {
+      for (const node of scriptSetupAst.body) {
         const qualified = isQualifiedType(node)
         if (qualified) {
           return qualified
@@ -529,173 +522,6 @@ export function compileScript(
       node.end! + startOffset,
       `))),__temp=await __temp,__restore()${isStatement ? `` : `,__temp`})`
     )
-  }
-
-  function isRefSugarCall(callee: string) {
-    return (
-      callee === $REF ||
-      callee === $COMPUTED ||
-      callee === $FROM_REFS ||
-      callee === $SHALLOW_REF
-    )
-  }
-
-  function processRefSugar(
-    decl: VariableDeclarator,
-    statement: VariableDeclaration
-  ) {
-    if (!isCallOf(decl.init, isRefSugarCall)) {
-      return
-    }
-
-    if (!enableRefSugar) {
-      error(
-        `ref sugar is an experimental proposal and must be explicitly ` +
-          `enabled via @vue/compiler-sfc options.`,
-        // TODO link to RFC details
-        decl.init
-      )
-    } else {
-      warnExperimental(
-        `ref sugar`,
-        `https://github.com/vuejs/rfcs/discussions/369`
-      )
-    }
-
-    const callee = (decl.init.callee as Identifier).name
-    const start = decl.init.start! + startOffset
-    if (callee === $REF || callee === $SHALLOW_REF) {
-      if (statement.kind !== 'let') {
-        error(`${callee}() bindings can only be declared with let.`, decl)
-      }
-      if (decl.id.type !== 'Identifier') {
-        error(
-          `${callee}() bindings cannot be used with destructuring. ` +
-            `If you are trying to destructure from an object of refs, ` +
-            `use \`let { x } = $fromRefs(obj)\`.`,
-          decl.id
-        )
-      }
-      registerRefBinding(decl.id)
-      s.overwrite(
-        start,
-        start + callee.length,
-        helper(callee === $REF ? 'ref' : 'shallowRef')
-      )
-    } else if (callee === $COMPUTED) {
-      if (decl.id.type !== 'Identifier') {
-        error(
-          `${callee}() bindings cannot be used with destructuring.`,
-          decl.id
-        )
-      }
-      registerRefBinding(decl.id)
-      s.overwrite(start, start + $COMPUTED.length, helper('computed'))
-    } else if (callee === $FROM_REFS) {
-      if (!decl.id.type.endsWith('Pattern')) {
-        error(
-          `${callee}() declaration must be used with destructure patterns.`,
-          decl
-        )
-      }
-      if (decl.id.type === 'ObjectPattern') {
-        processRefObjectPattern(decl.id, statement)
-      } else if (decl.id.type === 'ArrayPattern') {
-        processRefArrayPattern(decl.id, statement)
-      }
-      s.remove(start, start + callee.length)
-    }
-  }
-
-  function registerRefBinding(id: Identifier) {
-    if (id.name[0] === '$') {
-      error(`ref variable identifiers cannot start with $.`, id)
-    }
-    refBindings[id.name] = setupBindings[id.name] = {
-      type: BindingTypes.SETUP_REF,
-      rangeNode: id
-    }
-    refIdentifiers.add(id)
-  }
-
-  function processRefObjectPattern(
-    pattern: ObjectPattern,
-    statement: VariableDeclaration
-  ) {
-    for (const p of pattern.properties) {
-      let nameId: Identifier | undefined
-      if (p.type === 'ObjectProperty') {
-        if (p.key.start! === p.value.start!) {
-          // shorthand { foo } --> { foo: __foo }
-          nameId = p.key as Identifier
-          s.appendLeft(nameId.end! + startOffset, `: __${nameId.name}`)
-          if (p.value.type === 'AssignmentPattern') {
-            // { foo = 1 }
-            refIdentifiers.add(p.value.left as Identifier)
-          }
-        } else {
-          if (p.value.type === 'Identifier') {
-            // { foo: bar } --> { foo: __bar }
-            nameId = p.value
-            s.prependRight(nameId.start! + startOffset, `__`)
-          } else if (p.value.type === 'ObjectPattern') {
-            processRefObjectPattern(p.value, statement)
-          } else if (p.value.type === 'ArrayPattern') {
-            processRefArrayPattern(p.value, statement)
-          } else if (p.value.type === 'AssignmentPattern') {
-            // { foo: bar = 1 } --> { foo: __bar = 1 }
-            nameId = p.value.left as Identifier
-            s.prependRight(nameId.start! + startOffset, `__`)
-          }
-        }
-      } else {
-        // rest element { ...foo } --> { ...__foo }
-        nameId = p.argument as Identifier
-        s.prependRight(nameId.start! + startOffset, `__`)
-      }
-      if (nameId) {
-        registerRefBinding(nameId)
-        // append binding declarations after the parent statement
-        s.appendLeft(
-          statement.end! + startOffset,
-          `\nconst ${nameId.name} = ${helper('shallowRef')}(__${nameId.name});`
-        )
-      }
-    }
-  }
-
-  function processRefArrayPattern(
-    pattern: ArrayPattern,
-    statement: VariableDeclaration
-  ) {
-    for (const e of pattern.elements) {
-      if (!e) continue
-      let nameId: Identifier | undefined
-      if (e.type === 'Identifier') {
-        // [a] --> [__a]
-        nameId = e
-      } else if (e.type === 'AssignmentPattern') {
-        // [a = 1] --> [__a = 1]
-        nameId = e.left as Identifier
-      } else if (e.type === 'RestElement') {
-        // [...a] --> [...__a]
-        nameId = e.argument as Identifier
-      } else if (e.type === 'ObjectPattern') {
-        processRefObjectPattern(e, statement)
-      } else if (e.type === 'ArrayPattern') {
-        processRefArrayPattern(e, statement)
-      }
-      if (nameId) {
-        registerRefBinding(nameId)
-        // prefix original
-        s.prependRight(nameId.start! + startOffset, `__`)
-        // append binding declarations after the parent statement
-        s.appendLeft(
-          statement.end! + startOffset,
-          `\nconst ${nameId.name} = ${helper('shallowRef')}(__${nameId.name});`
-        )
-      }
-    }
   }
 
   function genRuntimeProps(props: Record<string, PropTypeData>) {
@@ -770,7 +596,7 @@ export function compileScript(
       scriptStartOffset!
     )
 
-    for (const node of scriptAst) {
+    for (const node of scriptAst.body) {
       if (node.type === 'ImportDeclaration') {
         // record imports for dedupe
         for (const specifier of node.specifiers) {
@@ -854,7 +680,7 @@ export function compileScript(
     startOffset
   )
 
-  for (const node of scriptSetupAst) {
+  for (const node of scriptSetupAst.body) {
     const start = node.start! + startOffset
     let end = node.end! + startOffset
     // locate comment
@@ -1005,8 +831,6 @@ export function compileScript(
               s.remove(start, end)
               left--
             }
-          } else {
-            processRefSugar(decl, node)
           }
         }
       }
@@ -1106,54 +930,25 @@ export function compileScript(
     return {
       ...scriptSetup,
       ranges,
-      scriptAst,
-      scriptSetupAst
+      scriptAst: scriptAst?.body,
+      scriptSetupAst: scriptSetupAst?.body
     }
   }
 
-  // 3. Do a full walk to rewrite identifiers referencing let exports with ref
-  // value access
+  // 3. Apply ref sugar transform
   if (enableRefSugar) {
-    const onIdent = (id: Identifier, parent: Node, parentStack: Node[]) => {
-      if (refBindings[id.name] && !refIdentifiers.has(id)) {
-        if (isStaticProperty(parent) && parent.shorthand) {
-          // let binding used in a property shorthand
-          // { foo } -> { foo: foo.value }
-          // skip for destructure patterns
-          if (
-            !(parent as any).inPattern ||
-            isInDestructureAssignment(parent, parentStack)
-          ) {
-            s.appendLeft(id.end! + startOffset, `: ${id.name}.value`)
-          }
-        } else {
-          s.appendLeft(id.end! + startOffset, '.value')
-        }
-      }
-    }
-
-    const onNode = (node: Node, parent: Node) => {
-      if (isCallOf(node, $RAW)) {
-        s.remove(
-          node.callee.start! + startOffset,
-          node.callee.end! + startOffset
-        )
-        return false // skip walk
-      } else if (
-        parent &&
-        isCallOf(node, isRefSugarCall) &&
-        (parent.type !== 'VariableDeclarator' || node !== parent.init)
-      ) {
-        error(
-          // @ts-ignore
-          `${node.callee.name} can only be used directly as a variable initializer.`,
-          node
-        )
-      }
-    }
-
-    for (const node of scriptSetupAst) {
-      walkIdentifiers(node, onIdent, onNode)
+    warnExperimental(
+      `ref sugar`,
+      `https://github.com/vuejs/rfcs/discussions/369`
+    )
+    const { rootVars, importedHelpers } = transformWithRefSugar(
+      scriptSetupAst,
+      s,
+      startOffset
+    )
+    refBindings = rootVars
+    for (const h of importedHelpers) {
+      helperImports.add(h)
     }
   }
 
@@ -1192,7 +987,7 @@ export function compileScript(
 
   // 7. analyze binding metadata
   if (scriptAst) {
-    Object.assign(bindingMetadata, analyzeScriptBindings(scriptAst))
+    Object.assign(bindingMetadata, analyzeScriptBindings(scriptAst.body))
   }
   if (propsRuntimeDecl) {
     for (const key of getObjectOrArrayExpressionKeys(propsRuntimeDecl)) {
@@ -1215,8 +1010,10 @@ export function compileScript(
     bindingMetadata[key] = setupBindings[key].type
   }
   // known ref bindings
-  for (const key in refBindings) {
-    bindingMetadata[key] = BindingTypes.SETUP_REF
+  if (refBindings) {
+    for (const key of refBindings) {
+      bindingMetadata[key] = BindingTypes.SETUP_REF
+    }
   }
 
   // 8. inject `useCssVars` calls
@@ -1437,8 +1234,8 @@ export function compileScript(
       hires: true,
       includeContent: true
     }) as unknown as RawSourceMap,
-    scriptAst,
-    scriptSetupAst
+    scriptAst: scriptAst?.body,
+    scriptSetupAst: scriptSetupAst?.body
   }
 }
 
@@ -1816,27 +1613,6 @@ function canNeverBeRef(node: Node, userReactiveImport: string): boolean {
       }
       return false
   }
-}
-
-function isInDestructureAssignment(parent: Node, parentStack: Node[]): boolean {
-  if (
-    parent &&
-    (parent.type === 'ObjectProperty' || parent.type === 'ArrayPattern')
-  ) {
-    let i = parentStack.length
-    while (i--) {
-      const p = parentStack[i]
-      if (p.type === 'AssignmentExpression') {
-        const root = parentStack[0]
-        // if this is a ref: destructure, it should be treated like a
-        // variable decalration!
-        return !(root.type === 'LabeledStatement' && root.label.name === 'ref')
-      } else if (p.type !== 'ObjectProperty' && !p.type.endsWith('Pattern')) {
-        break
-      }
-    }
-  }
-  return false
 }
 
 /**

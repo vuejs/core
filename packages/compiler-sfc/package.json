@@ -37,6 +37,7 @@
     "@vue/compiler-core": "3.2.4",
     "@vue/compiler-dom": "3.2.4",
     "@vue/compiler-ssr": "3.2.4",
+    "@vue/ref-transform": "3.2.4",
     "@vue/shared": "3.2.4",
     "consolidate": "^0.16.0",
     "estree-walker": "^2.0.2",
