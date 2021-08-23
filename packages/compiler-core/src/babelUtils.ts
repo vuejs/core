@@ -142,24 +142,9 @@ export function walkFunctionParams(
   onIdent: (id: Identifier) => void
 ) {
   for (const p of node.params) {
-    ;(walk as any)(p, {
-      enter(child: Node, parent: Node) {
-        if (
-          child.type === 'Identifier' &&
-          // do not record as scope variable if is a destructured key
-          !isStaticPropertyKey(child, parent) &&
-          // do not record if this is a default value
-          // assignment of a destructured variable
-          !(
-            parent &&
-            parent.type === 'AssignmentPattern' &&
-            parent.right === child
-          )
-        ) {
-          onIdent(child)
-        }
-      }
-    })
+    for (const id of extractIdentifiers(p)) {
+      onIdent(id)
+    }
   }
 }
 

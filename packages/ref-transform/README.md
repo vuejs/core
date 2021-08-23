@@ -37,6 +37,17 @@ A few commonly used APIs have shorthands (which also removes the need to import 
 
 This package is the lower-level transform that can be used standalone. Higher-level tooling (e.g. `@vitejs/plugin-vue` and `vue-loader`) will provide integration via options.
 
+### `shouldTransform`
+
+Can be used to do a cheap check to determine whether full transform should be performed.
+
+```js
+import { shouldTransform } from '@vue/ref-transform'
+
+shouldTransform(`let a = ref(0)`) // false
+shouldTransform(`let a = $ref(0)`) // true
+```
+
 ### `transform`
 
 ```js
@@ -65,6 +76,8 @@ interface RefTransformOptions {
 ```
 
 ### `transformAST`
+
+Transform with an existing Babel AST + MagicString instance. This is used internally by `@vue/compiler-sfc` to avoid double parse/transform cost.
 
 ```js
 import { transformAST } from '@vue/ref-transform'

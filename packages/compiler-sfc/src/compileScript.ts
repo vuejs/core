@@ -51,7 +51,10 @@ import { compileTemplate, SFCTemplateCompileOptions } from './compileTemplate'
 import { warnExperimental, warnOnce } from './warn'
 import { rewriteDefault } from './rewriteDefault'
 import { createCache } from './cache'
-import { transformAST as transformWithRefSugar } from '@vue/ref-transform'
+import {
+  shouldTransform,
+  transformAST as transformWithRefSugar
+} from '@vue/ref-transform'
 
 // Special compiler macros
 const DEFINE_PROPS = 'defineProps'
@@ -855,7 +858,7 @@ export function compileScript(
   }
 
   // 3. Apply ref sugar transform
-  if (enableRefSugar) {
+  if (enableRefSugar && shouldTransform(source)) {
     warnExperimental(
       `ref sugar`,
       `https://github.com/vuejs/rfcs/discussions/369`
