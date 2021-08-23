@@ -60,7 +60,11 @@ const {
 } = transform(src, {
   filename: 'foo.ts',
   sourceMap: true,
-  parserPlugins: ['typescript']
+
+  // @babel/parser plugins to enable.
+  // 'typescript' and 'jsx' will be auto-inferred from filename if provided,
+  // so in most cases explicit parserPlugins are not necessary
+  parserPlugins: [/* ... */]
 })
 ```
 

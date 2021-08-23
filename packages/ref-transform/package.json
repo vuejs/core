@@ -28,10 +28,11 @@
   },
   "homepage": "https://github.com/vuejs/vue-next/tree/dev/packages/ref-transform#readme",
   "dependencies": {
+    "@babel/parser": "^7.15.0",
     "@vue/compiler-core": "3.2.4",
     "@vue/shared": "3.2.4",
-    "@babel/parser": "^7.15.0",
-    "estree-walker": "^2.0.2"
+    "estree-walker": "^2.0.2",
+    "magic-string": "^0.25.7"
   },
   "devDependencies": {
     "@babel/core": "^7.15.0"

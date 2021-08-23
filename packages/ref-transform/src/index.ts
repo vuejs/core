@@ -63,9 +63,19 @@ export function transform(
     importHelpersFrom = 'vue'
   }: RefTransformOptions = {}
 ): RefTransformResults {
+  const plugins: ParserPlugin[] = parserPlugins || []
+  if (filename) {
+    if (/\.tsx?$/.test(filename)) {
+      plugins.push('typescript')
+    }
+    if (filename.endsWith('x')) {
+      plugins.push('jsx')
+    }
+  }
+
   const ast = parse(src, {
     sourceType: 'module',
-    plugins: [...babelParserDefaultPlugins, ...(parserPlugins || [])]
+    plugins: [...new Set([...babelParserDefaultPlugins, ...plugins])]
   })
   const s = new MagicString(src)
   const res = transformAST(ast, s)
