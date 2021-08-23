@@ -1,5 +1,10 @@
 import { store, File } from './store'
-import { SFCDescriptor, BindingMetadata } from '@vue/compiler-sfc'
+import {
+  SFCDescriptor,
+  BindingMetadata,
+  shouldTransformRef,
+  transformRef
+} from '@vue/compiler-sfc'
 import * as defaultCompiler from '@vue/compiler-sfc'
 import { ref } from 'vue'
 
@@ -36,6 +41,12 @@ export function resetVersion() {
   vueRuntimeUrl.value = defaultVueUrl
 }
 
+async function transformTS(src: string) {
+  return (await import('sucrase')).transform(src, {
+    transforms: ['typescript']
+  }).code
+}
+
 export async function compileFile({ filename, code, compiled }: File) {
   if (!code.trim()) {
     store.errors = []
@@ -43,6 +54,14 @@ export async function compileFile({ filename, code, compiled }: File) {
   }
 
   if (!filename.endsWith('.vue')) {
+    if (shouldTransformRef(code)) {
+      code = transformRef(code, { filename }).code
+    }
+
+    if (filename.endsWith('.ts')) {
+      code = await transformTS(code)
+    }
+
     compiled.js = compiled.ssr = code
     store.errors = []
     return
@@ -190,7 +209,7 @@ async function doCompileScript(
     try {
       const compiledScript = SFCCompiler.compileScript(descriptor, {
         id,
-        refSugar: true,
+        refTransform: true,
         inlineTemplate: true,
         templateOptions: {
           ssr,
@@ -210,9 +229,7 @@ async function doCompileScript(
         SFCCompiler.rewriteDefault(compiledScript.content, COMP_IDENTIFIER)
 
       if ((descriptor.script || descriptor.scriptSetup)!.lang === 'ts') {
-        code = (await import('sucrase')).transform(code, {
-          transforms: ['typescript']
-        }).code
+        code = await transformTS(code)
       }
 
       return [code, compiledScript.bindings]

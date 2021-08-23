@@ -4,7 +4,8 @@ import {
   Node,
   Function,
   ObjectProperty,
-  BlockStatement
+  BlockStatement,
+  Program
 } from '@babel/types'
 import { walk } from 'estree-walker'
 
@@ -17,9 +18,7 @@ export function walkIdentifiers(
     isReference: boolean,
     isLocal: boolean
   ) => void,
-  onNode?: (node: Node, parent: Node, parentStack: Node[]) => void | boolean,
   includeAll = false,
-  analyzeScope = true,
   parentStack: Node[] = [],
   knownIds: Record<string, number> = Object.create(null)
 ) {
@@ -40,11 +39,8 @@ export function walkIdentifiers(
       ) {
         return this.skip()
       }
-      if (onNode && onNode(node, parent!, parentStack) === false) {
-        return this.skip()
-      }
       if (node.type === 'Identifier') {
-        const isLocal = analyzeScope && !!knownIds[node.name]
+        const isLocal = !!knownIds[node.name]
         const isRefed = isReferencedIdentifier(node, parent!, parentStack)
         if (includeAll || (isRefed && !isLocal)) {
           onIdentifier(node, parent!, parentStack, isRefed, isLocal)
@@ -55,24 +51,20 @@ export function walkIdentifiers(
       ) {
         // mark property in destructure pattern
         ;(node as any).inPattern = true
-      } else if (analyzeScope) {
-        if (isFunctionType(node)) {
-          // walk function expressions and add its arguments to known identifiers
-          // so that we don't prefix them
-          walkFunctionParams(node, id =>
-            markScopeIdentifier(node, id, knownIds)
-          )
-        } else if (node.type === 'BlockStatement') {
-          // #3445 record block-level local variables
-          walkBlockDeclarations(node, id =>
-            markScopeIdentifier(node, id, knownIds)
-          )
-        }
+      } else if (isFunctionType(node)) {
+        // walk function expressions and add its arguments to known identifiers
+        // so that we don't prefix them
+        walkFunctionParams(node, id => markScopeIdentifier(node, id, knownIds))
+      } else if (node.type === 'BlockStatement') {
+        // #3445 record block-level local variables
+        walkBlockDeclarations(node, id =>
+          markScopeIdentifier(node, id, knownIds)
+        )
       }
     },
     leave(node: Node & { scopeIds?: Set<string> }, parent: Node | undefined) {
       parent && parentStack.pop()
-      if (analyzeScope && node !== rootExp && node.scopeIds) {
+      if (node !== rootExp && node.scopeIds) {
         for (const id of node.scopeIds) {
           knownIds[id]--
           if (knownIds[id] === 0) {
@@ -142,43 +134,35 @@ export function walkFunctionParams(
   onIdent: (id: Identifier) => void
 ) {
   for (const p of node.params) {
-    ;(walk as any)(p, {
-      enter(child: Node, parent: Node) {
-        if (
-          child.type === 'Identifier' &&
-          // do not record as scope variable if is a destructured key
-          !isStaticPropertyKey(child, parent) &&
-          // do not record if this is a default value
-          // assignment of a destructured variable
-          !(
-            parent &&
-            parent.type === 'AssignmentPattern' &&
-            parent.right === child
-          )
-        ) {
-          onIdent(child)
-        }
-      }
-    })
+    for (const id of extractIdentifiers(p)) {
+      onIdent(id)
+    }
   }
 }
 
 export function walkBlockDeclarations(
-  block: BlockStatement,
+  block: BlockStatement | Program,
   onIdent: (node: Identifier) => void
 ) {
   for (const stmt of block.body) {
     if (stmt.type === 'VariableDeclaration') {
+      if (stmt.declare) continue
       for (const decl of stmt.declarations) {
         for (const id of extractIdentifiers(decl.id)) {
           onIdent(id)
         }
       }
+    } else if (
+      stmt.type === 'FunctionDeclaration' ||
+      stmt.type === 'ClassDeclaration'
+    ) {
+      if (stmt.declare || !stmt.id) continue
+      onIdent(stmt.id)
     }
   }
 }
 
-function extractIdentifiers(
+export function extractIdentifiers(
   param: Node,
   nodes: Identifier[] = []
 ): Identifier[] {
@@ -196,13 +180,13 @@ function extractIdentifiers(
       break
 
     case 'ObjectPattern':
-      param.properties.forEach(prop => {
+      for (const prop of param.properties) {
         if (prop.type === 'RestElement') {
           extractIdentifiers(prop.argument, nodes)
         } else {
           extractIdentifiers(prop.value, nodes)
         }
-      })
+      }
       break
 
     case 'ArrayPattern':

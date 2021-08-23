@@ -286,7 +286,7 @@ function setupBlock(vnode: VNode) {
  * @private
  */
 export function createElementBlock(
-  type: string,
+  type: string | typeof Fragment,
   props?: Record<string, any> | null,
   children?: any,
   patchFlag?: number,

@@ -3,13 +3,13 @@ import { compileSFCScript as compile, assertCode } from './utils'
 
 // this file only tests integration with SFC - main test case for the ref
 // transform can be found in <root>/packages/ref-transform/__tests__
-describe('<script setup> ref sugar', () => {
-  function compileWithRefSugar(src: string) {
+describe('sfc ref transform', () => {
+  function compileWithRefTransform(src: string) {
     return compile(src, { refSugar: true })
   }
 
   test('$ unwrapping', () => {
-    const { content, bindings } = compileWithRefSugar(`<script setup>
+    const { content, bindings } = compileWithRefTransform(`<script setup>
     import { ref, shallowRef } from 'vue'
     let foo = $(ref())
     let a = $(ref(1))
@@ -46,7 +46,7 @@ describe('<script setup> ref sugar', () => {
   })
 
   test('$ref & $shallowRef declarations', () => {
-    const { content, bindings } = compileWithRefSugar(`<script setup>
+    const { content, bindings } = compileWithRefTransform(`<script setup>
     let foo = $ref()
     let a = $ref(1)
     let b = $shallowRef({
@@ -78,6 +78,58 @@ describe('<script setup> ref sugar', () => {
       b: BindingTypes.SETUP_REF,
       c: BindingTypes.SETUP_LET,
       d: BindingTypes.SETUP_LET
+    })
+  })
+
+  test('usage in normal <script>', () => {
+    const { content } = compileWithRefTransform(`<script>
+    export default {
+      setup() {
+        let count = $ref(0)
+        const inc = () => count++
+        return $$({ count })
+      }
+    }
+    </script>`)
+    expect(content).not.toMatch(`$ref(0)`)
+    expect(content).toMatch(`import { ref as _ref } from 'vue'`)
+    expect(content).toMatch(`let count = _ref(0)`)
+    expect(content).toMatch(`count.value++`)
+    expect(content).toMatch(`return ({ count })`)
+    assertCode(content)
+  })
+
+  test('usage with normal <script> + <script setup>', () => {
+    const { content, bindings } = compileWithRefTransform(`<script>
+    let a = $ref(0)
+    let c = $ref(0)
+    </script>
+    <script setup>
+    let b = $ref(0)
+    let c = 0
+    function change() {
+      a++
+      b++
+      c++
+    }
+    </script>`)
+    // should dedupe helper imports
+    expect(content).toMatch(`import { ref as _ref } from 'vue'`)
+
+    expect(content).toMatch(`let a = _ref(0)`)
+    expect(content).toMatch(`let b = _ref(0)`)
+
+    // root level ref binding declared in <script> should be inherited in <script setup>
+    expect(content).toMatch(`a.value++`)
+    expect(content).toMatch(`b.value++`)
+    // c shadowed
+    expect(content).toMatch(`c++`)
+    assertCode(content)
+    expect(bindings).toStrictEqual({
+      a: BindingTypes.SETUP_REF,
+      b: BindingTypes.SETUP_REF,
+      c: BindingTypes.SETUP_REF,
+      change: BindingTypes.SETUP_CONST
     })
   })
 

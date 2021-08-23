@@ -33,14 +33,56 @@ return { x }
       export const n = 1"
 `;
 
+exports[`SFC compile <script setup> <script> and <script setup> co-usage spaces in ExportDefaultDeclaration node with many spaces and newline 1`] = `
+"import { x } from './x'
+        
+        export const n = 1
+        const __default__ = {   
+          some:'option'
+        }
+        
+function setup(__props, { expose }) {
+
+        x()
+        
+return { x }
+}
+
+
+export default /*#__PURE__*/ Object.assign(__default__, {
+  setup
+})"
+`;
+
+exports[`SFC compile <script setup> <script> and <script setup> co-usage spaces in ExportDefaultDeclaration node with minimal spaces 1`] = `
+"import { x } from './x'
+        
+        export const n = 1
+        const __default__ = {   
+          some:'option'
+        }
+        
+function setup(__props, { expose }) {
+
+        x()
+        
+return { x }
+}
+
+
+export default /*#__PURE__*/ Object.assign(__default__, {
+  setup
+})"
+`;
+
 exports[`SFC compile <script setup> <script> and <script setup> co-usage script setup first, lang="ts", script block content export default 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 import { x } from './x'
-      
+
 function setup(__props, { expose }) {
 
       x()
-      
+
 return { x }
 }
 
@@ -48,7 +90,7 @@ return { x }
       const __default__ = {
         name: \\"test\\"
       }
-      
+
 export default _defineComponent({
   ...__default__,
   setup})"

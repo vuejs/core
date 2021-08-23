@@ -10,7 +10,7 @@ import {
 } from 'vue'
 import srcdoc from './srcdoc.html?raw'
 import { PreviewProxy } from './PreviewProxy'
-import { MAIN_FILE, vueRuntimeUrl } from '../sfcCompiler'
+import { MAIN_FILE, vueRuntimeUrl } from '../transform'
 import { compileModulesForPreview } from './moduleCompiler'
 import { store } from '../store'
 

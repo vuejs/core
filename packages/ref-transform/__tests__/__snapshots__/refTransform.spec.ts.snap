@@ -136,6 +136,9 @@ exports[`nested scopes 1`] = `
     b.value++ // outer b
     c++ // outer c
 
+    let bar = _ref(0)
+    bar.value++ // outer bar
+
     function foo({ a }) {
       a++ // inner a
       b.value++ // inner b
@@ -143,10 +146,11 @@ exports[`nested scopes 1`] = `
       c.value++ // inner c
       let d = _ref(0)
 
-      const bar = (c) => {
+      function bar(c) {
         c++ // nested c
         d.value++ // nested d
       }
+      bar() // inner bar
 
       if (true) {
         let a = _ref(0)

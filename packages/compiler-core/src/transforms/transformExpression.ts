@@ -282,9 +282,7 @@ export function processExpression(
         ids.push(node as QualifiedId)
       }
     },
-    undefined,
     true, // invoke on ALL identifiers
-    true, // isLocal scope analysis
     parentStack,
     knownIds
   )

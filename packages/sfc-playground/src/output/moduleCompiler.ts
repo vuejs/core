@@ -1,13 +1,16 @@
 import { store, File } from '../store'
-import { MAIN_FILE } from '../sfcCompiler'
+import { MAIN_FILE } from '../transform'
 import {
   babelParse,
   MagicString,
   walk,
-  walkIdentifiers
+  walkIdentifiers,
+  extractIdentifiers,
+  isInDestructureAssignment,
+  isStaticProperty
 } from '@vue/compiler-sfc'
 import { babelParserDefaultPlugins } from '@vue/shared'
-import { ExportSpecifier, Identifier, Node, ObjectProperty } from '@babel/types'
+import { ExportSpecifier, Identifier, Node } from '@babel/types'
 
 export function compileModulesForPreview() {
   return processFile(store.files[MAIN_FILE]).reverse()
@@ -110,9 +113,8 @@ function processFile(file: File, seen = new Set<File>()) {
         } else if (node.declaration.type === 'VariableDeclaration') {
           // export const foo = 1, bar = 2
           for (const decl of node.declaration.declarations) {
-            const names = extractNames(decl.id as any)
-            for (const name of names) {
-              defineExport(name)
+            for (const id of extractIdentifiers(decl.id)) {
+              defineExport(id.name)
             }
           }
         }
@@ -230,74 +232,4 @@ function processFile(file: File, seen = new Set<File>()) {
 
   // return a list of files to further process
   return processed
-}
-
-const isStaticProperty = (node: Node): node is ObjectProperty =>
-  node.type === 'ObjectProperty' && !node.computed
-
-function extractNames(param: Node): string[] {
-  return extractIdentifiers(param).map(id => id.name)
-}
-
-function extractIdentifiers(
-  param: Node,
-  nodes: Identifier[] = []
-): Identifier[] {
-  switch (param.type) {
-    case 'Identifier':
-      nodes.push(param)
-      break
-
-    case 'MemberExpression':
-      let object: any = param
-      while (object.type === 'MemberExpression') {
-        object = object.object
-      }
-      nodes.push(object)
-      break
-
-    case 'ObjectPattern':
-      param.properties.forEach(prop => {
-        if (prop.type === 'RestElement') {
-          extractIdentifiers(prop.argument, nodes)
-        } else {
-          extractIdentifiers(prop.value, nodes)
-        }
-      })
-      break
-
-    case 'ArrayPattern':
-      param.elements.forEach(element => {
-        if (element) extractIdentifiers(element, nodes)
-      })
-      break
-
-    case 'RestElement':
-      extractIdentifiers(param.argument, nodes)
-      break
-
-    case 'AssignmentPattern':
-      extractIdentifiers(param.left, nodes)
-      break
-  }
-
-  return nodes
-}
-
-function isInDestructureAssignment(parent: Node, parentStack: Node[]): boolean {
-  if (
-    parent &&
-    (parent.type === 'ObjectProperty' || parent.type === 'ArrayPattern')
-  ) {
-    let i = parentStack.length
-    while (i--) {
-      const p = parentStack[i]
-      if (p.type === 'AssignmentExpression') {
-        return true
-      } else if (p.type !== 'ObjectProperty' && !p.type.endsWith('Pattern')) {
-        break
-      }
-    }
-  }
-  return false
 }
