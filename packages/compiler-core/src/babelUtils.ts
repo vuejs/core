@@ -4,7 +4,8 @@ import {
   Node,
   Function,
   ObjectProperty,
-  BlockStatement
+  BlockStatement,
+  Program
 } from '@babel/types'
 import { walk } from 'estree-walker'
 
@@ -149,16 +150,23 @@ export function walkFunctionParams(
 }
 
 export function walkBlockDeclarations(
-  block: BlockStatement,
+  block: BlockStatement | Program,
   onIdent: (node: Identifier) => void
 ) {
   for (const stmt of block.body) {
     if (stmt.type === 'VariableDeclaration') {
+      if (stmt.declare) continue
       for (const decl of stmt.declarations) {
         for (const id of extractIdentifiers(decl.id)) {
           onIdent(id)
         }
       }
+    } else if (
+      stmt.type === 'FunctionDeclaration' ||
+      stmt.type === 'ClassDeclaration'
+    ) {
+      if (stmt.declare || !stmt.id) continue
+      onIdent(stmt.id)
     }
   }
 }

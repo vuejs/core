@@ -165,12 +165,34 @@ export function compileScript(
       return script
     }
     try {
-      const scriptAst = _parse(script.content, {
+      let content = script.content
+      let map = script.map
+      const scriptAst = _parse(content, {
         plugins,
         sourceType: 'module'
-      }).program.body
-      const bindings = analyzeScriptBindings(scriptAst)
-      let content = script.content
+      }).program
+      const bindings = analyzeScriptBindings(scriptAst.body)
+      if (enableRefTransform && shouldTransformRef(content)) {
+        const s = new MagicString(source)
+        const startOffset = script.loc.start.offset
+        const endOffset = script.loc.end.offset
+        const { importedHelpers } = transformRefAST(scriptAst, s, startOffset)
+        if (importedHelpers.length) {
+          s.prepend(
+            `import { ${importedHelpers
+              .map(h => `${h} as _${h}`)
+              .join(', ')} } from 'vue'\n`
+          )
+        }
+        s.remove(0, startOffset)
+        s.remove(endOffset, source.length)
+        content = s.toString()
+        map = s.generateMap({
+          source: filename,
+          hires: true,
+          includeContent: true
+        }) as unknown as RawSourceMap
+      }
       if (cssVars.length) {
         content = rewriteDefault(content, `__default__`, plugins)
         content += genNormalScriptCssVarsCode(
@@ -184,8 +206,9 @@ export function compileScript(
       return {
         ...script,
         content,
+        map,
         bindings,
-        scriptAst
+        scriptAst: scriptAst.body
       }
     } catch (e) {
       // silently fallback if parse fails since user may be using custom
@@ -629,6 +652,23 @@ export function compileScript(
         walkDeclaration(node, setupBindings, userImportAlias)
       }
     }
+
+    // apply ref transform
+    if (enableRefTransform && shouldTransformRef(script.content)) {
+      warnExperimental(
+        `ref sugar`,
+        `https://github.com/vuejs/rfcs/discussions/369`
+      )
+      const { rootVars, importedHelpers } = transformRefAST(
+        scriptAst,
+        s,
+        scriptStartOffset!
+      )
+      refBindings = rootVars
+      for (const h of importedHelpers) {
+        helperImports.add(h)
+      }
+    }
   }
 
   // 2. parse <script setup> and  walk over top level statements
@@ -862,7 +902,7 @@ export function compileScript(
   }
 
   // 3. Apply ref sugar transform
-  if (enableRefTransform && shouldTransformRef(source)) {
+  if (enableRefTransform && shouldTransformRef(scriptSetup.content)) {
     warnExperimental(
       `ref sugar`,
       `https://github.com/vuejs/rfcs/discussions/369`
@@ -870,9 +910,10 @@ export function compileScript(
     const { rootVars, importedHelpers } = transformRefAST(
       scriptSetupAst,
       s,
-      startOffset
+      startOffset,
+      refBindings
     )
-    refBindings = rootVars
+    refBindings = refBindings ? [...refBindings, ...rootVars] : rootVars
     for (const h of importedHelpers) {
       helperImports.add(h)
     }

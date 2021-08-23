@@ -279,6 +279,9 @@ test('nested scopes', () => {
     b++ // outer b
     c++ // outer c
 
+    let bar = $ref(0)
+    bar++ // outer bar
+
     function foo({ a }) {
       a++ // inner a
       b++ // inner b
@@ -286,10 +289,11 @@ test('nested scopes', () => {
       c++ // inner c
       let d = $ref(0)
 
-      const bar = (c) => {
+      function bar(c) {
         c++ // nested c
         d++ // nested d
       }
+      bar() // inner bar
 
       if (true) {
         let a = $ref(0)
@@ -299,7 +303,7 @@ test('nested scopes', () => {
       return $$({ a, b, c, d })
     }
     `)
-  expect(rootVars).toStrictEqual(['a', 'b'])
+  expect(rootVars).toStrictEqual(['a', 'b', 'bar'])
 
   expect(code).toMatch('a.value++ // outer a')
   expect(code).toMatch('b.value++ // outer b')
@@ -313,6 +317,10 @@ test('nested scopes', () => {
   expect(code).toMatch(`d.value++ // nested d`)
 
   expect(code).toMatch(`a.value++ // if block a`) // if block
+
+  expect(code).toMatch(`bar.value++ // outer bar`)
+  // inner bar shadowed by function declaration
+  expect(code).toMatch(`bar() // inner bar`)
 
   expect(code).toMatch(`return ({ a, b, c, d })`)
   assertCode(code)

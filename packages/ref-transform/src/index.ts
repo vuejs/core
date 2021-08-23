@@ -1,7 +1,6 @@
 import {
   Node,
   Identifier,
-  VariableDeclarator,
   BlockStatement,
   CallExpression,
   ObjectPattern,
@@ -28,14 +27,6 @@ const transformCheckRE = /[^\w]\$(?:\$|ref|computed|shallowRef)?\(/
 
 export function shouldTransform(src: string): boolean {
   return transformCheckRE.test(src)
-}
-
-export interface ReactiveDeclarator {
-  node: VariableDeclarator
-  statement: VariableDeclaration
-  ids: Identifier[]
-  isPattern: boolean
-  isRoot: boolean
 }
 
 type Scope = Record<string, boolean>
@@ -105,17 +96,25 @@ export function transform(
 export function transformAST(
   ast: Node,
   s: MagicString,
-  offset = 0
+  offset = 0,
+  knownRootVars?: string[]
 ): {
   rootVars: string[]
   importedHelpers: string[]
 } {
   const importedHelpers = new Set<string>()
   const blockStack: BlockStatement[] = []
+  let currentBlock: BlockStatement | null = null
   const rootScope: Scope = {}
   const blockToScopeMap = new WeakMap<BlockStatement, Scope>()
   const excludedIds = new Set<Identifier>()
   const parentStack: Node[] = []
+
+  if (knownRootVars) {
+    for (const key of knownRootVars) {
+      rootScope[key] = true
+    }
+  }
 
   const error = (msg: string, node: Node) => {
     const e = new Error(msg)
@@ -130,7 +129,6 @@ export function transformAST(
 
   const registerBinding = (id: Identifier, isRef = false) => {
     excludedIds.add(id)
-    const currentBlock = blockStack[blockStack.length - 1]
     if (currentBlock) {
       const currentScope = blockToScopeMap.get(currentBlock)
       if (!currentScope) {
@@ -145,13 +143,16 @@ export function transformAST(
 
   const registerRefBinding = (id: Identifier) => registerBinding(id, true)
 
+  if (ast.type === 'Program') {
+    walkBlockDeclarations(ast, registerBinding)
+  }
+
   // 1st pass: detect macro callsites and register ref bindings
   ;(walk as any)(ast, {
     enter(node: Node, parent?: Node) {
       parent && parentStack.push(parent)
-
       if (node.type === 'BlockStatement') {
-        blockStack.push(node)
+        blockStack.push((currentBlock = node))
         walkBlockDeclarations(node, registerBinding)
         if (parent && isFunctionType(parent)) {
           walkFunctionParams(parent, registerBinding)
@@ -213,6 +214,7 @@ export function transformAST(
       parent && parentStack.pop()
       if (node.type === 'BlockStatement') {
         blockStack.pop()
+        currentBlock = blockStack[blockStack.length - 1] || null
       }
     }
   })
@@ -356,7 +358,7 @@ export function transformAST(
   }
 
   return {
-    rootVars: Object.keys(rootScope),
+    rootVars: Object.keys(rootScope).filter(key => rootScope[key]),
     importedHelpers: [...importedHelpers]
   }
 }
