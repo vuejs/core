@@ -1105,15 +1105,27 @@ export function compileScript(
     // wrap setup code with function.
     // export the content of <script setup> as a named export, `setup`.
     // this allows `import { setup } from '*.vue'` for testing purposes.
-    s.prependLeft(
-      startOffset,
-      `\nexport default ${helper(
-        `defineComponent`
-      )}({${def}${runtimeOptions}\n  ${
-        hasAwait ? `async ` : ``
-      }setup(${args}) {\n${exposeCall}`
-    )
-    s.appendRight(endOffset, `})`)
+    if (defaultExport) {
+      s.prependLeft(
+        startOffset,
+        `\n${hasAwait ? `async ` : ``}function setup(${args}) {\n`
+      )
+      s.append(
+        `\nexport default ${helper(
+          `defineComponent`
+        )}({${def}${runtimeOptions}\n  setup})`
+      )
+    } else {
+      s.prependLeft(
+        startOffset,
+        `\nexport default ${helper(
+          `defineComponent`
+        )}({${def}${runtimeOptions}\n  ${
+          hasAwait ? `async ` : ``
+        }setup(${args}) {\n${exposeCall}`
+      )
+      s.appendRight(endOffset, `})`)
+    }
   } else {
     if (defaultExport) {
       // can't rely on spread operator in non ts mode
