@@ -163,7 +163,7 @@ export function walkBlockDeclarations(
   }
 }
 
-function extractIdentifiers(
+export function extractIdentifiers(
   param: Node,
   nodes: Identifier[] = []
 ): Identifier[] {
