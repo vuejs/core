@@ -1,4 +1,4 @@
-import { isArray, isString, isObject, hyphenate } from './'
+import { EMPTY_OBJ, isArray, isString, isObject, hyphenate } from './'
 import { isNoUnitNumericStyleProp } from './domAttrConfig'
 
 export type NormalizedStyle = Record<string, string | number>
@@ -24,6 +24,8 @@ export function normalizeStyle(
     return value
   } else if (isObject(value)) {
     return value
+  } else if (value == null) {
+    return EMPTY_OBJ
   }
 }
 
