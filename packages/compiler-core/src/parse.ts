@@ -716,6 +716,18 @@ function parseAttributes(
     }
 
     const attr = parseAttribute(context, attributeNames)
+
+    // Trim whitespace between class or style
+    // https://github.com/vuejs/vue-next/issues/4251
+    if (
+      (attr.name === 'class' || attr.name === 'style') &&
+      (attr as AttributeNode).value?.content
+    ) {
+      ;(attr as AttributeNode).value!.content = (attr as AttributeNode)
+        .value!.content.replace(/\s+/g, ' ')
+        .trim()
+    }
+
     if (type === TagType.Start) {
       props.push(attr)
     }
