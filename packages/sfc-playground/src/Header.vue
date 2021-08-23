@@ -47,8 +47,24 @@ async function fetchVersions(): Promise<string[]> {
   const versions = releases.map(r =>
     /^v/.test(r.tag_name) ? r.tag_name.substr(1) : r.tag_name
   )
-  const minVersion = versions.findIndex(v => v === '3.0.10')
-  return versions.slice(0, minVersion + 1)
+  // if the latest version is a pre-release, list all current pre-releases
+  // otherwise filter out pre-releases
+  let isInPreRelease = versions[0].includes('-')
+  const filteredVersions: string[] = []
+  for (const v of versions) {
+    if (v.includes('-')) {
+      if (isInPreRelease) {
+        filteredVersions.push(v)
+      }
+    } else {
+      filteredVersions.push(v)
+      isInPreRelease = false
+    }
+    if (filteredVersions.length >= 30 || v === '3.0.10') {
+      break
+    }
+  }
+  return filteredVersions
 }
 </script>
 
