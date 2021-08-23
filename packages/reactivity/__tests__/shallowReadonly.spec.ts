@@ -28,7 +28,7 @@ describe('reactivity/shallowReadonly', () => {
   })
 
   // #2843
-  test('should differentiate from normal readonly calls', async () => {
+  test('should differentiate from normal readonly calls', () => {
     const original = { foo: {} }
     const shallowProxy = shallowReadonly(original)
     const reactiveProxy = readonly(original)
