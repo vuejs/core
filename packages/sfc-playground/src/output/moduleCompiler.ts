@@ -1,12 +1,14 @@
 import { store, File } from '../store'
 import { MAIN_FILE } from '../transform'
-import { babelParse, MagicString, walk } from '@vue/compiler-sfc'
 import {
+  babelParse,
+  MagicString,
+  walk,
   walkIdentifiers,
   extractIdentifiers,
   isInDestructureAssignment,
   isStaticProperty
-} from '@vue/compiler-core'
+} from '@vue/compiler-sfc'
 import { babelParserDefaultPlugins } from '@vue/shared'
 import { ExportSpecifier, Identifier, Node } from '@babel/types'
 
