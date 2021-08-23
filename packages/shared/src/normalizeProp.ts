@@ -15,7 +15,10 @@ export function normalizeStyle(
         : (normalizeStyle(item) as NormalizedStyle)
       if (normalized) {
         for (const key in normalized) {
-          res[key] = normalized[key]
+          res[key.replace(/\s+/g, ' ').trim()] =
+            typeof normalized[key] === 'string'
+              ? (normalized[key] as string).replace(/\s+/g, ' ').trim()
+              : normalized[key]
         }
       }
     }
@@ -80,7 +83,7 @@ export function normalizeClass(value: unknown): string {
       }
     }
   }
-  return res.trim()
+  return res.replace(/\s+/g, ' ').trim()
 }
 
 export function normalizeProps(props: Record<string, any> | null) {
