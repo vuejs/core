@@ -430,7 +430,10 @@ export function toValidAssetId(
   name: string,
   type: 'component' | 'directive' | 'filter'
 ): string {
-  return `_${type}_${name.replace(/[^\w]/g, '_')}`
+  // see issue#4422, we need adding identifier on validAssetId if variable `name` has specific character
+  return `_${type}_${name.replace(/[^\w]/g, (searchValue, replaceValue) => {
+    return searchValue === '-' ? '_' : name.charCodeAt(replaceValue).toString()
+  })}`
 }
 
 // Check if a node contains expressions that reference current context scope ids
