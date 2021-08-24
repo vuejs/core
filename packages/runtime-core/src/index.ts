@@ -149,6 +149,7 @@ declare module '@vue/reactivity' {
 export {
   ReactiveEffectOptions,
   DebuggerEvent,
+  DebuggerOptions,
   TrackOpTypes,
   TriggerOpTypes,
   Ref,
@@ -351,13 +352,3 @@ const _compatUtils = {
 export const compatUtils = (
   __COMPAT__ ? _compatUtils : null
 ) as typeof _compatUtils
-
-// Ref sugar macros ------------------------------------------------------------
-// for dts generation only
-export {
-  $ref,
-  $shallowRef,
-  $computed,
-  $raw,
-  $fromRefs
-} from './helpers/refSugar'

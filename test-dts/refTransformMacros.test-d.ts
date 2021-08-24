@@ -1,15 +1,17 @@
 import { WritableComputedRef } from '@vue/reactivity'
-import {
-  expectType,
-  $ref,
-  $shallowRef,
-  $computed,
-  $fromRefs,
-  $raw,
-  ref,
-  Ref,
-  ComputedRef
-} from './index'
+import { expectType, ref, Ref, ComputedRef } from './index'
+import 'vue/ref-macros'
+
+// wrapping refs
+// normal
+// computed
+// writable computed
+
+// destructure
+const { x, y, z } = $(useFoo())
+expectType<number>(x)
+expectType<string>(y)
+expectType<number>(z)
 
 // $ref
 expectType<number>($ref(1))
@@ -45,23 +47,19 @@ function useFoo() {
   }
 }
 
-// $fromRefs
-const { x, y, z } = $fromRefs(useFoo())
-expectType<number>(x)
-expectType<string>(y)
-expectType<number>(z)
-
-// $raw
-expectType<Ref<number>>($raw(x))
-expectType<Ref<string>>($raw(y))
+// $$
+expectType<Ref<number>>($$(x))
+expectType<Ref<string>>($$(y))
 
 const c = $computed(() => 1)
-const cRef = $raw(c)
+const cRef = $$(c)
 expectType<ComputedRef<number>>(cRef)
 
 const c2 = $computed({
   get: () => 1,
   set: () => {}
 })
-const c2Ref = $raw(c2)
+const c2Ref = $$(c2)
 expectType<WritableComputedRef<number>>(c2Ref)
+
+// $$ on object
