@@ -104,6 +104,9 @@ export function transformAST(
   rootVars: string[]
   importedHelpers: string[]
 } {
+  // TODO remove when out of experimental
+  warnExperimental()
+
   const importedHelpers = new Set<string>()
   const rootScope: Scope = {}
   const scopeStack: Scope[] = [rootScope]
@@ -148,7 +151,12 @@ export function transformAST(
         if (stmt.declare) continue
         for (const decl of stmt.declarations) {
           let toVarCall
-          if (decl.init && (toVarCall = isToVarCall(decl.init))) {
+          if (
+            decl.init &&
+            decl.init.type === 'CallExpression' &&
+            decl.init.callee.type === 'Identifier' &&
+            (toVarCall = isToVarCall(decl.init.callee.name))
+          ) {
             processRefDeclaration(
               toVarCall,
               decl.init as CallExpression,
@@ -369,18 +377,38 @@ export function transformAST(
         }
       }
 
-      const toVarCall = isToVarCall(node)
-      if (toVarCall && (!parent || parent.type !== 'VariableDeclarator')) {
-        return error(
-          `${toVarCall} can only be used as the initializer of ` +
-            `a variable declaration.`,
-          node
-        )
-      }
+      if (node.type === 'CallExpression' && node.callee.type === 'Identifier') {
+        const callee = node.callee.name
 
-      if (isToRefCall(node)) {
-        s.remove(node.callee.start! + offset, node.callee.end! + offset)
-        return this.skip()
+        const toVarCall = isToVarCall(callee)
+        if (toVarCall && (!parent || parent.type !== 'VariableDeclarator')) {
+          return error(
+            `${toVarCall} can only be used as the initializer of ` +
+              `a variable declaration.`,
+            node
+          )
+        }
+
+        if (callee === TO_REF_SYMBOL) {
+          s.remove(node.callee.start! + offset, node.callee.end! + offset)
+          return this.skip()
+        }
+
+        // TODO remove when out of experimental
+        if (callee === '$raw') {
+          error(
+            `$raw() has been replaced by $$(). ` +
+              `See ${RFC_LINK} for latest updates.`,
+            node
+          )
+        }
+        if (callee === '$fromRef') {
+          error(
+            `$fromRef() has been replaced by $(). ` +
+              `See ${RFC_LINK} for latest updates.`,
+            node
+          )
+        }
       }
     },
     leave(node: Node, parent?: Node) {
@@ -401,11 +429,7 @@ export function transformAST(
   }
 }
 
-function isToVarCall(node: Node): string | false {
-  if (node.type !== 'CallExpression' || node.callee.type !== 'Identifier') {
-    return false
-  }
-  const callee = node.callee.name
+function isToVarCall(callee: string): string | false {
   if (callee === TO_VAR_SYMBOL) {
     return TO_VAR_SYMBOL
   }
@@ -415,9 +439,33 @@ function isToVarCall(node: Node): string | false {
   return false
 }
 
-function isToRefCall(node: Node): node is CallExpression {
-  return (
-    node.type === 'CallExpression' &&
-    (node.callee as Identifier).name === TO_REF_SYMBOL
+const RFC_LINK = `https://github.com/vuejs/rfcs/discussions/369`
+const hasWarned: Record<string, boolean> = {}
+
+function warnExperimental() {
+  // eslint-disable-next-line
+  if (typeof window !== 'undefined') {
+    return
+  }
+  warnOnce(
+    `@vue/ref-transform is an experimental feature.\n` +
+      `Experimental features may change behavior between patch versions.\n` +
+      `It is recommended to pin your vue dependencies to exact versions to avoid breakage.\n` +
+      `You can follow the proposal's status at ${RFC_LINK}.`
+  )
+}
+
+function warnOnce(msg: string) {
+  const isNodeProd =
+    typeof process !== 'undefined' && process.env.NODE_ENV === 'production'
+  if (!isNodeProd && !__TEST__ && !hasWarned[msg]) {
+    hasWarned[msg] = true
+    warn(msg)
+  }
+}
+
+function warn(msg: string) {
+  console.warn(
+    `\x1b[1m\x1b[33m[@vue/compiler-sfc]\x1b[0m\x1b[33m ${msg}\x1b[0m\n`
   )
 }

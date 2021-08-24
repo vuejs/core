@@ -48,7 +48,7 @@ import {
   genNormalScriptCssVarsCode
 } from './cssVars'
 import { compileTemplate, SFCTemplateCompileOptions } from './compileTemplate'
-import { warnExperimental, warnOnce } from './warn'
+import { warnOnce } from './warn'
 import { rewriteDefault } from './rewriteDefault'
 import { createCache } from './cache'
 import {
@@ -652,10 +652,6 @@ export function compileScript(
 
     // apply ref transform
     if (enableRefTransform && shouldTransformRef(script.content)) {
-      warnExperimental(
-        `ref sugar`,
-        `https://github.com/vuejs/rfcs/discussions/369`
-      )
       const { rootVars, importedHelpers } = transformRefAST(
         scriptAst,
         s,
@@ -900,10 +896,6 @@ export function compileScript(
 
   // 3. Apply ref sugar transform
   if (enableRefTransform && shouldTransformRef(scriptSetup.content)) {
-    warnExperimental(
-      `ref sugar`,
-      `https://github.com/vuejs/rfcs/discussions/369`
-    )
     const { rootVars, importedHelpers } = transformRefAST(
       scriptSetupAst,
       s,
