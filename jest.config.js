@@ -16,7 +16,8 @@ module.exports = {
     __COMPAT__: true,
     'ts-jest': {
       tsconfig: {
-        target: 'esnext'
+        target: 'esnext',
+        sourceMap: true
       }
     }
   },

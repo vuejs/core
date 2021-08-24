@@ -31,6 +31,7 @@ export {
 
 export * from './ast'
 export * from './utils'
+export * from './babelUtils'
 export * from './runtimeHelpers'
 
 export { getBaseTransformPreset, TransformPreset } from './compile'

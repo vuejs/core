@@ -79,7 +79,7 @@ export function ref<T extends object>(value: T): ToRef<T>
 export function ref<T>(value: T): Ref<UnwrapRef<T>>
 export function ref<T = any>(): Ref<T | undefined>
 export function ref(value?: unknown) {
-  return createRef(value)
+  return createRef(value, false)
 }
 
 export function shallowRef<T extends object>(
@@ -98,7 +98,7 @@ class RefImpl<T> {
   public dep?: Dep = undefined
   public readonly __v_isRef = true
 
-  constructor(value: T, public readonly _shallow = false) {
+  constructor(value: T, public readonly _shallow: boolean) {
     this._rawValue = _shallow ? value : toRaw(value)
     this._value = _shallow ? value : convert(value)
   }
@@ -118,7 +118,7 @@ class RefImpl<T> {
   }
 }
 
-function createRef(rawValue: unknown, shallow = false) {
+function createRef(rawValue: unknown, shallow: boolean) {
   if (isRef(rawValue)) {
     return rawValue
   }

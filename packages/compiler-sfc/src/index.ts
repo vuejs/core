@@ -4,14 +4,24 @@ export { compileTemplate } from './compileTemplate'
 export { compileStyle, compileStyleAsync } from './compileStyle'
 export { compileScript } from './compileScript'
 export { rewriteDefault } from './rewriteDefault'
-export { generateCodeFrame } from '@vue/compiler-core'
+export {
+  shouldTransform as shouldTransformRef,
+  transform as transformRef,
+  transformAST as transformRefAST
+} from '@vue/ref-transform'
 
 // Utilities
 export { parse as babelParse } from '@babel/parser'
-export { walkIdentifiers } from './compileScript'
 import MagicString from 'magic-string'
 export { MagicString }
 export { walk } from 'estree-walker'
+export {
+  generateCodeFrame,
+  walkIdentifiers,
+  extractIdentifiers,
+  isInDestructureAssignment,
+  isStaticProperty
+} from '@vue/compiler-core'
 
 // Types
 export {

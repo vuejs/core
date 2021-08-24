@@ -3,19 +3,15 @@ import {
   BindingMetadata,
   BindingTypes,
   createRoot,
-  locStub,
   NodeTypes,
   transform,
   parserOptions,
   UNREF,
-  SimpleExpressionNode
+  SimpleExpressionNode,
+  isFunctionType,
+  walkIdentifiers
 } from '@vue/compiler-dom'
-import {
-  ScriptSetupTextRanges,
-  SFCDescriptor,
-  SFCScriptBlock,
-  TextRange
-} from './parse'
+import { SFCDescriptor, SFCScriptBlock } from './parse'
 import { parse as _parse, ParserOptions, ParserPlugin } from '@babel/parser'
 import {
   babelParserDefaultPlugins,
@@ -32,7 +28,6 @@ import {
   ArrayPattern,
   Identifier,
   ExportSpecifier,
-  Function as FunctionNode,
   TSType,
   TSTypeLiteral,
   TSFunctionType,
@@ -43,8 +38,7 @@ import {
   RestElement,
   TSInterfaceBody,
   AwaitExpression,
-  VariableDeclarator,
-  VariableDeclaration
+  Program
 } from '@babel/types'
 import { walk } from 'estree-walker'
 import { RawSourceMap } from 'source-map'
@@ -54,21 +48,19 @@ import {
   genNormalScriptCssVarsCode
 } from './cssVars'
 import { compileTemplate, SFCTemplateCompileOptions } from './compileTemplate'
-import { warnExperimental, warnOnce } from './warn'
+import { warnOnce } from './warn'
 import { rewriteDefault } from './rewriteDefault'
 import { createCache } from './cache'
+import {
+  shouldTransform as shouldTransformRef,
+  transformAST as transformRefAST
+} from '@vue/ref-transform'
 
 // Special compiler macros
 const DEFINE_PROPS = 'defineProps'
 const DEFINE_EMITS = 'defineEmits'
 const DEFINE_EXPOSE = 'defineExpose'
 const WITH_DEFAULTS = 'withDefaults'
-
-const $REF = `$ref`
-const $SHALLOW_REF = '$shallowRef'
-const $COMPUTED = `$computed`
-const $FROM_REFS = `$fromRefs`
-const $RAW = `$raw`
 
 const isBuiltInDir = makeMap(
   `once,memo,if,else,else-if,slot,text,html,on,bind,model,show,cloak,is`
@@ -89,9 +81,13 @@ export interface SFCScriptCompileOptions {
    */
   babelParserPlugins?: ParserPlugin[]
   /**
-   * Introduce a compiler-based syntax sugar for using refs without `.value`
+   * (Experimental) Enable syntax transform for using refs without `.value`
    * https://github.com/vuejs/rfcs/discussions/369
    * @default true
+   */
+  refTransform?: boolean
+  /**
+   * @deprecated use `refTransform` instead.
    */
   refSugar?: boolean
   /**
@@ -108,26 +104,14 @@ export interface SFCScriptCompileOptions {
    * options passed to `compiler-dom`.
    */
   templateOptions?: Partial<SFCTemplateCompileOptions>
-  /**
-   * Skip codegen and only return AST / binding / text range information.
-   * Also makes the call error-tolerant.
-   * Used for IDE support.
-   */
-  parseOnly?: boolean
 }
 
 interface ImportBinding {
   isType: boolean
   imported: string
   source: string
-  rangeNode: Node
   isFromSetup: boolean
   isUsedInTemplate: boolean
-}
-
-interface VariableBinding {
-  type: BindingTypes
-  rangeNode: Node
 }
 
 /**
@@ -141,19 +125,8 @@ export function compileScript(
 ): SFCScriptBlock {
   let { script, scriptSetup, source, filename } = sfc
   // feature flags
-  const enableRefSugar = !!options.refSugar
-  const parseOnly = !!options.parseOnly
-
-  if (parseOnly && !scriptSetup) {
-    // in parse-only mode, construct a fake script setup so we still perform
-    // the full parse logic.
-    scriptSetup = {
-      type: 'script',
-      content: '',
-      attrs: {},
-      loc: locStub
-    }
-  }
+  const enableRefTransform = !!options.refSugar || !!options.refTransform
+  let refBindings: string[] | undefined
 
   // for backwards compat
   if (!options) {
@@ -192,13 +165,34 @@ export function compileScript(
       return script
     }
     try {
-      const scriptAst = _parse(script.content, {
-        plugins,
-        sourceType: 'module',
-        errorRecovery: parseOnly
-      }).program.body
-      const bindings = analyzeScriptBindings(scriptAst)
       let content = script.content
+      let map = script.map
+      const scriptAst = _parse(content, {
+        plugins,
+        sourceType: 'module'
+      }).program
+      const bindings = analyzeScriptBindings(scriptAst.body)
+      if (enableRefTransform && shouldTransformRef(content)) {
+        const s = new MagicString(source)
+        const startOffset = script.loc.start.offset
+        const endOffset = script.loc.end.offset
+        const { importedHelpers } = transformRefAST(scriptAst, s, startOffset)
+        if (importedHelpers.length) {
+          s.prepend(
+            `import { ${importedHelpers
+              .map(h => `${h} as _${h}`)
+              .join(', ')} } from 'vue'\n`
+          )
+        }
+        s.remove(0, startOffset)
+        s.remove(endOffset, source.length)
+        content = s.toString()
+        map = s.generateMap({
+          source: filename,
+          hires: true,
+          includeContent: true
+        }) as unknown as RawSourceMap
+      }
       if (cssVars.length) {
         content = rewriteDefault(content, `__default__`, plugins)
         content += genNormalScriptCssVarsCode(
@@ -212,8 +206,9 @@ export function compileScript(
       return {
         ...script,
         content,
+        map,
         bindings,
-        scriptAst
+        scriptAst: scriptAst.body
       }
     } catch (e) {
       // silently fallback if parse fails since user may be using custom
@@ -236,20 +231,12 @@ export function compileScript(
 
   // metadata that needs to be returned
   const bindingMetadata: BindingMetadata = {}
-  const ranges: ScriptSetupTextRanges | undefined = parseOnly
-    ? {
-        scriptBindings: [],
-        scriptSetupBindings: []
-      }
-    : undefined
-
   const defaultTempVar = `__default__`
   const helperImports: Set<string> = new Set()
   const userImports: Record<string, ImportBinding> = Object.create(null)
   const userImportAlias: Record<string, string> = Object.create(null)
-  const setupBindings: Record<string, VariableBinding> = Object.create(null)
-  const refBindings: Record<string, VariableBinding> = Object.create(null)
-  const refIdentifiers: Set<Identifier> = new Set()
+  const setupBindings: Record<string, BindingTypes> = Object.create(null)
+
   let defaultExport: Node | undefined
   let hasDefinePropsCall = false
   let hasDefineEmitCall = false
@@ -291,10 +278,9 @@ export function compileScript(
     input: string,
     options: ParserOptions,
     offset: number
-  ): Statement[] {
+  ): Program {
     try {
-      options.errorRecovery = parseOnly
-      return _parse(input, options).program.body
+      return _parse(input, options).program
     } catch (e) {
       e.message = `[@vue/compiler-sfc] ${e.message}\n\n${
         sfc.filename
@@ -322,8 +308,7 @@ export function compileScript(
     local: string,
     imported: string | false,
     isType: boolean,
-    isFromSetup: boolean,
-    rangeNode: Node
+    isFromSetup: boolean
   ) {
     if (source === 'vue' && imported) {
       userImportAlias[imported] = local
@@ -342,7 +327,6 @@ export function compileScript(
       isType,
       imported: imported || 'default',
       source,
-      rangeNode,
       isFromSetup,
       isUsedInTemplate
     }
@@ -474,7 +458,7 @@ export function compileScript(
         }
       }
 
-      for (const node of scriptSetupAst) {
+      for (const node of scriptSetupAst.body) {
         const qualified = isQualifiedType(node)
         if (qualified) {
           return qualified
@@ -527,173 +511,6 @@ export function compileScript(
       node.end! + startOffset,
       `))),__temp=await __temp,__restore()${isStatement ? `` : `,__temp`})`
     )
-  }
-
-  function isRefSugarCall(callee: string) {
-    return (
-      callee === $REF ||
-      callee === $COMPUTED ||
-      callee === $FROM_REFS ||
-      callee === $SHALLOW_REF
-    )
-  }
-
-  function processRefSugar(
-    decl: VariableDeclarator,
-    statement: VariableDeclaration
-  ) {
-    if (!isCallOf(decl.init, isRefSugarCall)) {
-      return
-    }
-
-    if (!enableRefSugar) {
-      error(
-        `ref sugar is an experimental proposal and must be explicitly ` +
-          `enabled via @vue/compiler-sfc options.`,
-        // TODO link to RFC details
-        decl.init
-      )
-    } else {
-      warnExperimental(
-        `ref sugar`,
-        `https://github.com/vuejs/rfcs/discussions/369`
-      )
-    }
-
-    const callee = (decl.init.callee as Identifier).name
-    const start = decl.init.start! + startOffset
-    if (callee === $REF || callee === $SHALLOW_REF) {
-      if (statement.kind !== 'let') {
-        error(`${callee}() bindings can only be declared with let.`, decl)
-      }
-      if (decl.id.type !== 'Identifier') {
-        error(
-          `${callee}() bindings cannot be used with destructuring. ` +
-            `If you are trying to destructure from an object of refs, ` +
-            `use \`let { x } = $fromRefs(obj)\`.`,
-          decl.id
-        )
-      }
-      registerRefBinding(decl.id)
-      s.overwrite(
-        start,
-        start + callee.length,
-        helper(callee === $REF ? 'ref' : 'shallowRef')
-      )
-    } else if (callee === $COMPUTED) {
-      if (decl.id.type !== 'Identifier') {
-        error(
-          `${callee}() bindings cannot be used with destructuring.`,
-          decl.id
-        )
-      }
-      registerRefBinding(decl.id)
-      s.overwrite(start, start + $COMPUTED.length, helper('computed'))
-    } else if (callee === $FROM_REFS) {
-      if (!decl.id.type.endsWith('Pattern')) {
-        error(
-          `${callee}() declaration must be used with destructure patterns.`,
-          decl
-        )
-      }
-      if (decl.id.type === 'ObjectPattern') {
-        processRefObjectPattern(decl.id, statement)
-      } else if (decl.id.type === 'ArrayPattern') {
-        processRefArrayPattern(decl.id, statement)
-      }
-      s.remove(start, start + callee.length)
-    }
-  }
-
-  function registerRefBinding(id: Identifier) {
-    if (id.name[0] === '$') {
-      error(`ref variable identifiers cannot start with $.`, id)
-    }
-    refBindings[id.name] = setupBindings[id.name] = {
-      type: BindingTypes.SETUP_REF,
-      rangeNode: id
-    }
-    refIdentifiers.add(id)
-  }
-
-  function processRefObjectPattern(
-    pattern: ObjectPattern,
-    statement: VariableDeclaration
-  ) {
-    for (const p of pattern.properties) {
-      let nameId: Identifier | undefined
-      if (p.type === 'ObjectProperty') {
-        if (p.key.start! === p.value.start!) {
-          // shorthand { foo } --> { foo: __foo }
-          nameId = p.key as Identifier
-          s.appendLeft(nameId.end! + startOffset, `: __${nameId.name}`)
-          if (p.value.type === 'AssignmentPattern') {
-            // { foo = 1 }
-            refIdentifiers.add(p.value.left as Identifier)
-          }
-        } else {
-          if (p.value.type === 'Identifier') {
-            // { foo: bar } --> { foo: __bar }
-            nameId = p.value
-            s.prependRight(nameId.start! + startOffset, `__`)
-          } else if (p.value.type === 'ObjectPattern') {
-            processRefObjectPattern(p.value, statement)
-          } else if (p.value.type === 'ArrayPattern') {
-            processRefArrayPattern(p.value, statement)
-          } else if (p.value.type === 'AssignmentPattern') {
-            // { foo: bar = 1 } --> { foo: __bar = 1 }
-            nameId = p.value.left as Identifier
-            s.prependRight(nameId.start! + startOffset, `__`)
-          }
-        }
-      } else {
-        // rest element { ...foo } --> { ...__foo }
-        nameId = p.argument as Identifier
-        s.prependRight(nameId.start! + startOffset, `__`)
-      }
-      if (nameId) {
-        registerRefBinding(nameId)
-        // append binding declarations after the parent statement
-        s.appendLeft(
-          statement.end! + startOffset,
-          `\nconst ${nameId.name} = ${helper('shallowRef')}(__${nameId.name});`
-        )
-      }
-    }
-  }
-
-  function processRefArrayPattern(
-    pattern: ArrayPattern,
-    statement: VariableDeclaration
-  ) {
-    for (const e of pattern.elements) {
-      if (!e) continue
-      let nameId: Identifier | undefined
-      if (e.type === 'Identifier') {
-        // [a] --> [__a]
-        nameId = e
-      } else if (e.type === 'AssignmentPattern') {
-        // [a = 1] --> [__a = 1]
-        nameId = e.left as Identifier
-      } else if (e.type === 'RestElement') {
-        // [...a] --> [...__a]
-        nameId = e.argument as Identifier
-      } else if (e.type === 'ObjectPattern') {
-        processRefObjectPattern(e, statement)
-      } else if (e.type === 'ArrayPattern') {
-        processRefArrayPattern(e, statement)
-      }
-      if (nameId) {
-        registerRefBinding(nameId)
-        // prefix original
-        s.prependRight(nameId.start! + startOffset, `__`)
-        // append binding declarations after the parent statement
-        s.appendLeft(
-          statement.end! + startOffset,
-          `\nconst ${nameId.name} = ${helper('shallowRef')}(__${nameId.name});`
-        )
-      }
-    }
   }
 
   function genRuntimeProps(props: Record<string, PropTypeData>) {
@@ -768,7 +585,7 @@ export function compileScript(
       scriptStartOffset!
     )
 
-    for (const node of scriptAst) {
+    for (const node of scriptAst.body) {
       if (node.type === 'ImportDeclaration') {
         // record imports for dedupe
         for (const specifier of node.specifiers) {
@@ -781,19 +598,15 @@ export function compileScript(
             specifier.local.name,
             imported,
             node.importKind === 'type',
-            false,
-            specifier.local
+            false
           )
         }
       } else if (node.type === 'ExportDefaultDeclaration') {
         // export default
         defaultExport = node
         const start = node.start! + scriptStartOffset!
-        s.overwrite(
-          start,
-          start + `export default`.length,
-          `const ${defaultTempVar} =`
-        )
+        const end = node.declaration.start! + scriptStartOffset!
+        s.overwrite(start, end, `const ${defaultTempVar} = `)
       } else if (node.type === 'ExportNamedDeclaration' && node.specifiers) {
         const defaultSpecifier = node.specifiers.find(
           s => s.exported.type === 'Identifier' && s.exported.name === 'default'
@@ -836,6 +649,19 @@ export function compileScript(
         walkDeclaration(node, setupBindings, userImportAlias)
       }
     }
+
+    // apply ref transform
+    if (enableRefTransform && shouldTransformRef(script.content)) {
+      const { rootVars, importedHelpers } = transformRefAST(
+        scriptAst,
+        s,
+        scriptStartOffset!
+      )
+      refBindings = rootVars
+      for (const h of importedHelpers) {
+        helperImports.add(h)
+      }
+    }
   }
 
   // 2. parse <script setup> and  walk over top level statements
@@ -852,7 +678,7 @@ export function compileScript(
     startOffset
   )
 
-  for (const node of scriptSetupAst) {
+  for (const node of scriptSetupAst.body) {
     const start = node.start! + startOffset
     let end = node.end! + startOffset
     // locate comment
@@ -877,8 +703,8 @@ export function compileScript(
     ) {
       error(
         `ref sugar using the label syntax was an experimental proposal and ` +
-          `has been dropped based on community feedback.`,
-        // TODO + ` Please check out the adjusted proposal at ...`,
+          `has been dropped based on community feedback. Please check out ` +
+          `the new proposal at https://github.com/vuejs/rfcs/discussions/369`,
         node
       )
     }
@@ -936,8 +762,7 @@ export function compileScript(
             local,
             imported,
             node.importKind === 'type',
-            true,
-            specifier.local
+            true
           )
         }
       }
@@ -1003,8 +828,6 @@ export function compileScript(
               s.remove(start, end)
               left--
             }
-          } else {
-            processRefSugar(decl, node)
           }
         }
       }
@@ -1028,7 +851,7 @@ export function compileScript(
     ) {
       ;(walk as any)(node, {
         enter(child: Node, parent: Node) {
-          if (isFunction(child)) {
+          if (isFunctionType(child)) {
             this.skip()
           }
           if (child.type === 'AwaitExpression') {
@@ -1071,89 +894,17 @@ export function compileScript(
     }
   }
 
-  // in parse only mode, we should have collected all the information we need,
-  // return early.
-  if (parseOnly) {
-    for (const key in userImports) {
-      const { rangeNode, isFromSetup } = userImports[key]
-      const bindings = isFromSetup
-        ? ranges!.scriptSetupBindings
-        : ranges!.scriptBindings
-      bindings.push(toTextRange(rangeNode))
-    }
-    for (const key in setupBindings) {
-      ranges!.scriptSetupBindings.push(
-        toTextRange(setupBindings[key].rangeNode)
-      )
-    }
-    if (propsRuntimeDecl) {
-      ranges!.propsRuntimeArg = toTextRange(propsRuntimeDecl)
-    }
-    if (propsTypeDeclRaw) {
-      ranges!.propsTypeArg = toTextRange(propsTypeDeclRaw)
-    }
-    if (emitsRuntimeDecl) {
-      ranges!.emitsRuntimeArg = toTextRange(emitsRuntimeDecl)
-    }
-    if (emitsTypeDeclRaw) {
-      ranges!.emitsTypeArg = toTextRange(emitsTypeDeclRaw)
-    }
-    if (propsRuntimeDefaults) {
-      ranges!.withDefaultsArg = toTextRange(propsRuntimeDefaults)
-    }
-    return {
-      ...scriptSetup,
-      ranges,
-      scriptAst,
-      scriptSetupAst
-    }
-  }
-
-  // 3. Do a full walk to rewrite identifiers referencing let exports with ref
-  // value access
-  if (enableRefSugar) {
-    const onIdent = (id: Identifier, parent: Node, parentStack: Node[]) => {
-      if (refBindings[id.name] && !refIdentifiers.has(id)) {
-        if (isStaticProperty(parent) && parent.shorthand) {
-          // let binding used in a property shorthand
-          // { foo } -> { foo: foo.value }
-          // skip for destructure patterns
-          if (
-            !(parent as any).inPattern ||
-            isInDestructureAssignment(parent, parentStack)
-          ) {
-            s.appendLeft(id.end! + startOffset, `: ${id.name}.value`)
-          }
-        } else {
-          s.appendLeft(id.end! + startOffset, '.value')
-        }
-      }
-    }
-
-    const onNode = (node: Node, parent: Node) => {
-      if (isCallOf(node, $RAW)) {
-        s.remove(
-          node.callee.start! + startOffset,
-          node.callee.end! + startOffset
-        )
-        return false // skip walk
-      } else if (
-        parent &&
-        isCallOf(node, isRefSugarCall) &&
-        (parent.type !== 'VariableDeclarator' || node !== parent.init)
-      ) {
-        error(
-          // @ts-ignore
-          `${node.callee.name} can only be used directly as a variable initializer.`,
-          node
-        )
-      }
-    }
-
-    for (const node of scriptSetupAst) {
-      if (node.type !== 'ImportDeclaration') {
-        walkIdentifiers(node, onIdent, onNode)
-      }
+  // 3. Apply ref sugar transform
+  if (enableRefTransform && shouldTransformRef(scriptSetup.content)) {
+    const { rootVars, importedHelpers } = transformRefAST(
+      scriptSetupAst,
+      s,
+      startOffset,
+      refBindings
+    )
+    refBindings = refBindings ? [...refBindings, ...rootVars] : rootVars
+    for (const h of importedHelpers) {
+      helperImports.add(h)
     }
   }
 
@@ -1192,7 +943,7 @@ export function compileScript(
 
   // 7. analyze binding metadata
   if (scriptAst) {
-    Object.assign(bindingMetadata, analyzeScriptBindings(scriptAst))
+    Object.assign(bindingMetadata, analyzeScriptBindings(scriptAst.body))
   }
   if (propsRuntimeDecl) {
     for (const key of getObjectOrArrayExpressionKeys(propsRuntimeDecl)) {
@@ -1212,11 +963,13 @@ export function compileScript(
         : BindingTypes.SETUP_MAYBE_REF
   }
   for (const key in setupBindings) {
-    bindingMetadata[key] = setupBindings[key].type
+    bindingMetadata[key] = setupBindings[key]
   }
   // known ref bindings
-  for (const key in refBindings) {
-    bindingMetadata[key] = BindingTypes.SETUP_REF
+  if (refBindings) {
+    for (const key of refBindings) {
+      bindingMetadata[key] = BindingTypes.SETUP_REF
+    }
   }
 
   // 8. inject `useCssVars` calls
@@ -1389,15 +1142,27 @@ export function compileScript(
     // wrap setup code with function.
     // export the content of <script setup> as a named export, `setup`.
     // this allows `import { setup } from '*.vue'` for testing purposes.
-    s.prependLeft(
-      startOffset,
-      `\nexport default ${helper(
-        `defineComponent`
-      )}({${def}${runtimeOptions}\n  ${
-        hasAwait ? `async ` : ``
-      }setup(${args}) {\n${exposeCall}`
-    )
-    s.appendRight(endOffset, `})`)
+    if (defaultExport) {
+      s.prependLeft(
+        startOffset,
+        `\n${hasAwait ? `async ` : ``}function setup(${args}) {\n`
+      )
+      s.append(
+        `\nexport default ${helper(
+          `defineComponent`
+        )}({${def}${runtimeOptions}\n  setup})`
+      )
+    } else {
+      s.prependLeft(
+        startOffset,
+        `\nexport default ${helper(
+          `defineComponent`
+        )}({${def}${runtimeOptions}\n  ${
+          hasAwait ? `async ` : ``
+        }setup(${args}) {\n${exposeCall}`
+      )
+      s.appendRight(endOffset, `})`)
+    }
   } else {
     if (defaultExport) {
       // can't rely on spread operator in non ts mode
@@ -1437,25 +1202,22 @@ export function compileScript(
       hires: true,
       includeContent: true
     }) as unknown as RawSourceMap,
-    scriptAst,
-    scriptSetupAst
+    scriptAst: scriptAst?.body,
+    scriptSetupAst: scriptSetupAst?.body
   }
 }
 
 function registerBinding(
-  bindings: Record<string, VariableBinding>,
+  bindings: Record<string, BindingTypes>,
   node: Identifier,
   type: BindingTypes
 ) {
-  bindings[node.name] = {
-    type,
-    rangeNode: node
-  }
+  bindings[node.name] = type
 }
 
 function walkDeclaration(
   node: Declaration,
-  bindings: Record<string, VariableBinding>,
+  bindings: Record<string, BindingTypes>,
   userImportAlias: Record<string, string>
 ) {
   if (node.type === 'VariableDeclaration') {
@@ -1504,16 +1266,13 @@ function walkDeclaration(
   ) {
     // export function foo() {} / export class Foo {}
     // export declarations must be named.
-    bindings[node.id!.name] = {
-      type: BindingTypes.SETUP_CONST,
-      rangeNode: node.id!
-    }
+    bindings[node.id!.name] = BindingTypes.SETUP_CONST
   }
 }
 
 function walkObjectPattern(
   node: ObjectPattern,
-  bindings: Record<string, VariableBinding>,
+  bindings: Record<string, BindingTypes>,
   isConst: boolean,
   isDefineCall = false
 ) {
@@ -1544,7 +1303,7 @@ function walkObjectPattern(
 
 function walkArrayPattern(
   node: ArrayPattern,
-  bindings: Record<string, VariableBinding>,
+  bindings: Record<string, BindingTypes>,
   isConst: boolean,
   isDefineCall = false
 ) {
@@ -1555,7 +1314,7 @@ function walkArrayPattern(
 
 function walkPattern(
   node: Node,
-  bindings: Record<string, VariableBinding>,
+  bindings: Record<string, BindingTypes>,
   isConst: boolean,
   isDefineCall = false
 ) {
@@ -1752,10 +1511,15 @@ function extractEventNames(
   ) {
     const typeNode = eventName.typeAnnotation.typeAnnotation
     if (typeNode.type === 'TSLiteralType') {
-      emits.add(String(typeNode.literal.value))
+      if (typeNode.literal.type !== 'UnaryExpression') {
+        emits.add(String(typeNode.literal.value))
+      }
     } else if (typeNode.type === 'TSUnionType') {
       for (const t of typeNode.types) {
-        if (t.type === 'TSLiteralType') {
+        if (
+          t.type === 'TSLiteralType' &&
+          t.literal.type !== 'UnaryExpression'
+        ) {
           emits.add(String(t.literal.value))
         }
       }
@@ -1769,189 +1533,6 @@ function genRuntimeEmits(emits: Set<string>) {
         .map(p => JSON.stringify(p))
         .join(', ')}] as unknown as undefined,`
     : ``
-}
-
-function markScopeIdentifier(
-  node: Node & { scopeIds?: Set<string> },
-  child: Identifier,
-  knownIds: Record<string, number>
-) {
-  const { name } = child
-  if (node.scopeIds && node.scopeIds.has(name)) {
-    return
-  }
-  if (name in knownIds) {
-    knownIds[name]++
-  } else {
-    knownIds[name] = 1
-  }
-  ;(node.scopeIds || (node.scopeIds = new Set())).add(name)
-}
-
-/**
- * Walk an AST and find identifiers that are variable references.
- * This is largely the same logic with `transformExpressions` in compiler-core
- * but with some subtle differences as this needs to handle a wider range of
- * possible syntax.
- */
-export function walkIdentifiers(
-  root: Node,
-  onIdentifier: (node: Identifier, parent: Node, parentStack: Node[]) => void,
-  onNode?: (node: Node, parent: Node, parentStack: Node[]) => void | boolean
-) {
-  const parentStack: Node[] = []
-  const knownIds: Record<string, number> = Object.create(null)
-  ;(walk as any)(root, {
-    enter(node: Node & { scopeIds?: Set<string> }, parent: Node | undefined) {
-      parent && parentStack.push(parent)
-      if (
-        parent &&
-        parent.type.startsWith('TS') &&
-        parent.type !== 'TSAsExpression' &&
-        parent.type !== 'TSNonNullExpression' &&
-        parent.type !== 'TSTypeAssertion'
-      ) {
-        return this.skip()
-      }
-      if (onNode && onNode(node, parent!, parentStack) === false) {
-        return this.skip()
-      }
-      if (node.type === 'Identifier') {
-        if (
-          !knownIds[node.name] &&
-          isRefIdentifier(node, parent!, parentStack)
-        ) {
-          onIdentifier(node, parent!, parentStack)
-        }
-      } else if (isFunction(node)) {
-        // #3445
-        // should not rewrite local variables sharing a name with a top-level ref
-        if (node.body.type === 'BlockStatement') {
-          node.body.body.forEach(p => {
-            if (p.type === 'VariableDeclaration') {
-              for (const decl of p.declarations) {
-                extractIdentifiers(decl.id).forEach(id => {
-                  markScopeIdentifier(node, id, knownIds)
-                })
-              }
-            }
-          })
-        }
-        // walk function expressions and add its arguments to known identifiers
-        // so that we don't prefix them
-        node.params.forEach(p =>
-          (walk as any)(p, {
-            enter(child: Node, parent: Node) {
-              if (
-                child.type === 'Identifier' &&
-                // do not record as scope variable if is a destructured key
-                !isStaticPropertyKey(child, parent) &&
-                // do not record if this is a default value
-                // assignment of a destructured variable
-                !(
-                  parent &&
-                  parent.type === 'AssignmentPattern' &&
-                  parent.right === child
-                )
-              ) {
-                markScopeIdentifier(node, child, knownIds)
-              }
-            }
-          })
-        )
-      } else if (
-        node.type === 'ObjectProperty' &&
-        parent!.type === 'ObjectPattern'
-      ) {
-        // mark property in destructure pattern
-        ;(node as any).inPattern = true
-      }
-    },
-    leave(node: Node & { scopeIds?: Set<string> }, parent: Node | undefined) {
-      parent && parentStack.pop()
-      if (node.scopeIds) {
-        node.scopeIds.forEach((id: string) => {
-          knownIds[id]--
-          if (knownIds[id] === 0) {
-            delete knownIds[id]
-          }
-        })
-      }
-    }
-  })
-}
-
-function isRefIdentifier(
-  id: Identifier,
-  parent: Node | null,
-  parentStack: Node[]
-) {
-  if (!parent) {
-    return true
-  }
-
-  // declaration id
-  if (
-    (parent.type === 'VariableDeclarator' ||
-      parent.type === 'ClassDeclaration') &&
-    parent.id === id
-  ) {
-    return false
-  }
-
-  if (isFunction(parent)) {
-    // function decalration/expression id
-    if ((parent as any).id === id) {
-      return false
-    }
-    // params list
-    if (parent.params.includes(id)) {
-      return false
-    }
-  }
-
-  // property key
-  // this also covers object destructure pattern
-  if (isStaticPropertyKey(id, parent)) {
-    return false
-  }
-
-  // non-assignment array destructure pattern
-  if (
-    parent.type === 'ArrayPattern' &&
-    !isInDestructureAssignment(parent, parentStack)
-  ) {
-    return false
-  }
-
-  // member expression property
-  if (
-    (parent.type === 'MemberExpression' ||
-      parent.type === 'OptionalMemberExpression') &&
-    parent.property === id &&
-    !parent.computed
-  ) {
-    return false
-  }
-
-  // is a special keyword but parsed as identifier
-  if (id.name === 'arguments') {
-    return false
-  }
-
-  return true
-}
-
-const isStaticProperty = (node: Node): node is ObjectProperty =>
-  node &&
-  (node.type === 'ObjectProperty' || node.type === 'ObjectMethod') &&
-  !node.computed
-
-const isStaticPropertyKey = (node: Node, parent: Node) =>
-  isStaticProperty(parent) && parent.key === node
-
-function isFunction(node: Node): node is FunctionNode {
-  return /Function(?:Expression|Declaration)$|Method$/.test(node.type)
 }
 
 function isCallOf(
@@ -1994,27 +1575,6 @@ function canNeverBeRef(node: Node, userReactiveImport: string): boolean {
       }
       return false
   }
-}
-
-function isInDestructureAssignment(parent: Node, parentStack: Node[]): boolean {
-  if (
-    parent &&
-    (parent.type === 'ObjectProperty' || parent.type === 'ArrayPattern')
-  ) {
-    let i = parentStack.length
-    while (i--) {
-      const p = parentStack[i]
-      if (p.type === 'AssignmentExpression') {
-        const root = parentStack[0]
-        // if this is a ref: destructure, it should be treated like a
-        // variable decalration!
-        return !(root.type === 'LabeledStatement' && root.label.name === 'ref')
-      } else if (p.type !== 'ObjectProperty' && !p.type.endsWith('Pattern')) {
-        break
-      }
-    }
-  }
-  return false
 }
 
 /**
@@ -2145,58 +1705,6 @@ function getObjectOrArrayExpressionKeys(value: Node): string[] {
     return getObjectExpressionKeys(value)
   }
   return []
-}
-
-function extractIdentifiers(
-  param: Node,
-  nodes: Identifier[] = []
-): Identifier[] {
-  switch (param.type) {
-    case 'Identifier':
-      nodes.push(param)
-      break
-
-    case 'MemberExpression':
-      let object: any = param
-      while (object.type === 'MemberExpression') {
-        object = object.object
-      }
-      nodes.push(object)
-      break
-
-    case 'ObjectPattern':
-      param.properties.forEach(prop => {
-        if (prop.type === 'RestElement') {
-          extractIdentifiers(prop.argument, nodes)
-        } else {
-          extractIdentifiers(prop.value, nodes)
-        }
-      })
-      break
-
-    case 'ArrayPattern':
-      param.elements.forEach(element => {
-        if (element) extractIdentifiers(element, nodes)
-      })
-      break
-
-    case 'RestElement':
-      extractIdentifiers(param.argument, nodes)
-      break
-
-    case 'AssignmentPattern':
-      extractIdentifiers(param.left, nodes)
-      break
-  }
-
-  return nodes
-}
-
-function toTextRange(node: Node): TextRange {
-  return {
-    start: node.start!,
-    end: node.end!
-  }
 }
 
 const templateUsageCheckCache = createCache<string>()

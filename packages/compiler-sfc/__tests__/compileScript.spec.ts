@@ -140,6 +140,43 @@ defineExpose({ foo: 123 })
   })
 
   describe('<script> and <script setup> co-usage', () => {
+    describe('spaces in ExportDefaultDeclaration node', () => {
+      // #4371
+      test('with many spaces and newline', () => {
+        // #4371
+        const { content } = compile(`
+        <script>
+        export const n = 1
+        export        default     
+        {   
+          some:'option'
+        }
+        </script>
+        <script setup>
+        import { x } from './x'
+        x()
+        </script>
+        `)
+        assertCode(content)
+      })
+
+      test('with minimal spaces', () => {
+        const { content } = compile(`
+        <script>
+        export const n = 1
+        export default{   
+          some:'option'
+        }
+        </script>
+        <script setup>
+        import { x } from './x'
+        x()
+        </script>
+        `)
+        assertCode(content)
+      })
+    })
+
     test('script first', () => {
       const { content } = compile(`
       <script>
@@ -163,6 +200,24 @@ defineExpose({ foo: 123 })
       export const n = 1
       </script>
       `)
+      assertCode(content)
+    })
+
+    // #4395
+    test('script setup first, lang="ts", script block content export default', () => {
+      const { content } = compile(`
+      <script setup lang="ts">
+      import { x } from './x'
+      x()
+      </script>
+      <script lang="ts">
+      export default {
+        name: "test"
+      }
+      </script>
+      `)
+      // ensure __default__ is declared before used
+      expect(content).toMatch(/const __default__[\S\s]*\.\.\.__default__/m)
       assertCode(content)
     })
   })

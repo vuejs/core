@@ -1,3 +1,34 @@
+## [3.2.6](https://github.com/vuejs/vue-next/compare/v3.2.5...v3.2.6) (2021-08-24)
+
+
+### Bug Fixes
+
+* **build:** avoid imports to @babel/types in client build of compiler-core ([4c468eb](https://github.com/vuejs/vue-next/commit/4c468eb30a87f726d43c94476b75063640c3ff1c))
+
+
+
+## [3.2.5](https://github.com/vuejs/vue-next/compare/v3.2.4...v3.2.5) (2021-08-24)
+
+
+### Bug Fixes
+
+* **compiler-core:** fix duplicated component identifier for names with non-ascii chars ([#4429](https://github.com/vuejs/vue-next/issues/4429)) ([3282750](https://github.com/vuejs/vue-next/commit/32827506ff2b6174d63525e7713830838840c671)), closes [#4422](https://github.com/vuejs/vue-next/issues/4422)
+* **compiler-sfc:**   fix 'export default' rewrite with extra whitespaces ([#4375](https://github.com/vuejs/vue-next/issues/4375)) ([4792ebd](https://github.com/vuejs/vue-next/commit/4792ebd6879115f887e393c7ed0a8475a705b6b0))
+* **compiler-sfc:** fix `<script>` and `<script setup>` co-usage ordering edge case ([#4419](https://github.com/vuejs/vue-next/issues/4419)) ([9826382](https://github.com/vuejs/vue-next/commit/98263821f8c42abcff46fae2b0375219c84fb6a4)), closes [#4395](https://github.com/vuejs/vue-next/issues/4395) [#4376](https://github.com/vuejs/vue-next/issues/4376)
+* **compiler-sfc:** should also expose regular script block bindings when `<script setup>` is used ([872b3f7](https://github.com/vuejs/vue-next/commit/872b3f7ec5e1a41c60018bb1f64d841c309b8939)), closes [#4369](https://github.com/vuejs/vue-next/issues/4369)
+* **types:** improve the type of createElementBlock ([#4406](https://github.com/vuejs/vue-next/issues/4406)) ([ebd0bac](https://github.com/vuejs/vue-next/commit/ebd0baca98b618945fba223b94833c2b34cdf6a2)), closes [#4391](https://github.com/vuejs/vue-next/issues/4391)
+
+
+### Features
+
+* **experimental:** expose ref macro types using separate d.ts file ([b408451](https://github.com/vuejs/vue-next/commit/b40845153cd4dbdd76bfb74816f4e6b109c9f049))
+* **experimental:** shouldTransform for ref-transform ([e565831](https://github.com/vuejs/vue-next/commit/e565831c98ac5110bf3550f15575ee6d01961992))
+* **experimental:** standalone ref transform ([db8dc75](https://github.com/vuejs/vue-next/commit/db8dc753c0647edfb878d3b0f7b5b16bcfd2c23c))
+* **experimental:** support ref transform for sfc normal `<script>` ([06051c4](https://github.com/vuejs/vue-next/commit/06051c4bf207ff9ac09292b8a5a73b254608cf0e))
+* **ref-transform:** auto infer parser plugins ([6453359](https://github.com/vuejs/vue-next/commit/6453359852d4c93fe436bb94d73181eaa218b527))
+
+
+
 ## [3.2.4](https://github.com/vuejs/vue-next/compare/v3.2.3...v3.2.4) (2021-08-17)
 
 

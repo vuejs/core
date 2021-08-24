@@ -21,6 +21,7 @@ describe('with object props', () => {
     b: string
     e?: Function
     h: boolean
+    j: undefined | (() => string | undefined)
     bb: string
     bbb: string
     bbbb: string | undefined
@@ -55,6 +56,7 @@ describe('with object props', () => {
       },
       e: Function,
       h: Boolean,
+      j: Function as PropType<undefined | (() => string | undefined)>,
       // default value should infer type and make it non-void
       bb: {
         default: 'hello'
@@ -137,6 +139,7 @@ describe('with object props', () => {
       expectType<ExpectedProps['b']>(props.b)
       expectType<ExpectedProps['e']>(props.e)
       expectType<ExpectedProps['h']>(props.h)
+      expectType<ExpectedProps['j']>(props.j)
       expectType<ExpectedProps['bb']>(props.bb)
       expectType<ExpectedProps['bbb']>(props.bbb)
       expectType<ExpectedProps['bbbb']>(props.bbbb)

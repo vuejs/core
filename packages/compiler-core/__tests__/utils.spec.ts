@@ -2,7 +2,8 @@ import { Position } from '../src/ast'
 import {
   getInnerRange,
   advancePositionWithClone,
-  isMemberExpression
+  isMemberExpression,
+  toValidAssetId
 } from '../src/utils'
 
 function p(line: number, column: number, offset: number): Position {
@@ -106,4 +107,14 @@ test('isMemberExpression', () => {
   expect(isMemberExpression('foo()')).toBe(false)
   expect(isMemberExpression('a?b:c')).toBe(false)
   expect(isMemberExpression(`state['text'] = $event`)).toBe(false)
+})
+
+test('toValidAssetId', () => {
+  expect(toValidAssetId('foo', 'component')).toBe('_component_foo')
+  expect(toValidAssetId('p', 'directive')).toBe('_directive_p')
+  expect(toValidAssetId('div', 'filter')).toBe('_filter_div')
+  expect(toValidAssetId('foo-bar', 'component')).toBe('_component_foo_bar')
+  expect(toValidAssetId('test-测试-1', 'component')).toBe(
+    '_component_test_2797935797_1'
+  )
 })
