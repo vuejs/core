@@ -255,7 +255,7 @@ export function transformAST(
         // append binding declarations after the parent statement
         s.appendLeft(
           statement.end! + offset,
-          `\nconst ${nameId.name} = ${helper('ref')}(__${nameId.name});`
+          `\nconst ${nameId.name} = ${helper('shallowRef')}(__${nameId.name});`
         )
       }
     }
@@ -289,7 +289,7 @@ export function transformAST(
         // append binding declarations after the parent statement
         s.appendLeft(
           statement.end! + offset,
-          `\nconst ${nameId.name} = ${helper('ref')}(__${nameId.name});`
+          `\nconst ${nameId.name} = ${helper('shallowRef')}(__${nameId.name});`
         )
       }
     }
