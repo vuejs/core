@@ -147,17 +147,18 @@ declare module '@vue/reactivity' {
 }
 
 export {
+  Ref,
+  ToRef,
+  ToRefs,
   ReactiveEffectOptions,
   DebuggerEvent,
   TrackOpTypes,
   TriggerOpTypes,
-  Ref,
   ComputedRef,
   WritableComputedRef,
   UnwrapRef,
   ShallowUnwrapRef,
   WritableComputedOptions,
-  ToRefs,
   DeepReadonly
 } from '@vue/reactivity'
 export {
