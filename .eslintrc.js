@@ -22,7 +22,8 @@ module.exports = {
       'ObjectExpression > SpreadElement',
       'ObjectPattern > RestElement',
       'AwaitExpression'
-    ]
+    ],
+    'require-await': ['error']
   },
   overrides: [
     // tests, no restrictions (runs in Node / jest with jsdom)
