@@ -1,3 +1,12 @@
+## [3.2.6](https://github.com/vuejs/vue-next/compare/v3.2.5...v3.2.6) (2021-08-24)
+
+
+### Bug Fixes
+
+* **build:** avoid imports to @babel/types in client build of compiler-core ([4c468eb](https://github.com/vuejs/vue-next/commit/4c468eb30a87f726d43c94476b75063640c3ff1c))
+
+
+
 ## [3.2.5](https://github.com/vuejs/vue-next/compare/v3.2.4...v3.2.5) (2021-08-24)
 
 
