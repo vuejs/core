@@ -22,6 +22,10 @@ export function walkIdentifiers(
   parentStack: Node[] = [],
   knownIds: Record<string, number> = Object.create(null)
 ) {
+  if (__BROWSER__) {
+    return
+  }
+
   const rootExp =
     root.type === 'Program' &&
     root.body[0].type === 'ExpressionStatement' &&
@@ -81,6 +85,10 @@ export function isReferencedIdentifier(
   parent: Node | null,
   parentStack: Node[]
 ) {
+  if (__BROWSER__) {
+    return false
+  }
+
   if (!parent) {
     return true
   }
