@@ -715,17 +715,14 @@ function parseAttributes(
       emitError(context, ErrorCodes.END_TAG_WITH_ATTRIBUTES)
     }
 
-    const attr = parseAttribute(context, attributeNames)
+    let attr = parseAttribute(context, attributeNames)
 
-    // Trim whitespace between class or style
+    // Trim whitespace between class
     // https://github.com/vuejs/vue-next/issues/4251
-    if (
-      (attr.name === 'class' || attr.name === 'style') &&
-      (attr as AttributeNode).value?.content
-    ) {
-      ;(attr as AttributeNode).value!.content = (attr as AttributeNode)
-        .value!.content.replace(/\s+/g, ' ')
-        .trim()
+    if (attr.name === 'class') {
+      attr = attr as AttributeNode
+      if (attr.value?.content)
+        attr.value!.content = attr.value!.content.replace(/\s+/g, ' ').trim()
     }
 
     if (type === TagType.Start) {
