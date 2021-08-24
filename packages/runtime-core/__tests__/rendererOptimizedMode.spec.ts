@@ -108,7 +108,7 @@ describe('renderer: optimized mode', () => {
     )
   })
 
-  test('PatchFlags: PatchFlags.TEXT', async () => {
+  test('PatchFlags: PatchFlags.TEXT', () => {
     renderWithBlock(() => [createVNode('p', null, 'foo', PatchFlags.TEXT)])
 
     expect(inner(root)).toBe('<div><p>foo</p></div>')
@@ -126,7 +126,7 @@ describe('renderer: optimized mode', () => {
     )
   })
 
-  test('PatchFlags: PatchFlags.CLASS', async () => {
+  test('PatchFlags: PatchFlags.CLASS', () => {
     renderWithBlock(() => [
       createVNode('p', { class: 'foo' }, '', PatchFlags.CLASS)
     ])
@@ -148,7 +148,7 @@ describe('renderer: optimized mode', () => {
     )
   })
 
-  test('PatchFlags: PatchFlags.STYLE', async () => {
+  test('PatchFlags: PatchFlags.STYLE', () => {
     renderWithBlock(() => [
       createVNode('p', { style: 'color: red' }, '', PatchFlags.STYLE)
     ])
@@ -170,7 +170,7 @@ describe('renderer: optimized mode', () => {
     )
   })
 
-  test('PatchFlags: PatchFlags.PROPS', async () => {
+  test('PatchFlags: PatchFlags.PROPS', () => {
     renderWithBlock(() => [
       createVNode('p', { id: 'foo' }, '', PatchFlags.PROPS, ['id'])
     ])
@@ -192,7 +192,7 @@ describe('renderer: optimized mode', () => {
     )
   })
 
-  test('PatchFlags: PatchFlags.FULL_PROPS', async () => {
+  test('PatchFlags: PatchFlags.FULL_PROPS', () => {
     let propName = 'foo'
 
     renderWithBlock(() => [
@@ -218,7 +218,7 @@ describe('renderer: optimized mode', () => {
   })
 
   // the order and length of the list will not change
-  test('PatchFlags: PatchFlags.STABLE_FRAGMENT', async () => {
+  test('PatchFlags: PatchFlags.STABLE_FRAGMENT', () => {
     let list = ['foo', 'bar']
     render(
       (openBlock(),
@@ -268,7 +268,7 @@ describe('renderer: optimized mode', () => {
 
   // A Fragment with `UNKEYED_FRAGMENT` flag will always patch its children,
   // so there's no need for tracking dynamicChildren.
-  test('PatchFlags: PatchFlags.UNKEYED_FRAGMENT', async () => {
+  test('PatchFlags: PatchFlags.UNKEYED_FRAGMENT', () => {
     const list = [{ tag: 'p', text: 'foo' }]
     render(
       (openBlock(true),
@@ -306,7 +306,7 @@ describe('renderer: optimized mode', () => {
 
   // A Fragment with `KEYED_FRAGMENT` will always patch its children,
   // so there's no need for tracking dynamicChildren.
-  test('PatchFlags: PatchFlags.KEYED_FRAGMENT', async () => {
+  test('PatchFlags: PatchFlags.KEYED_FRAGMENT', () => {
     const list = [{ tag: 'p', text: 'foo' }]
     render(
       (openBlock(true),
@@ -387,7 +387,7 @@ describe('renderer: optimized mode', () => {
     expect(spyUpdated).toHaveBeenCalledTimes(1)
   })
 
-  test('PatchFlags: PatchFlags.BAIL', async () => {
+  test('PatchFlags: PatchFlags.BAIL', () => {
     render(
       (openBlock(),
       (block = createBlock('div', null, [createVNode('p', null, 'foo')]))),

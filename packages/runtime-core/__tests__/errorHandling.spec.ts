@@ -105,6 +105,7 @@ describe('error handling', () => {
 
     const Child = {
       setup() {
+        // eslint-disable-next-line
         onMounted(async () => {
           throw err
         })
@@ -433,7 +434,7 @@ describe('error handling', () => {
         })
         return () =>
           h(Child, {
-            async onFoo() {
+            onFoo() {
               throw err
             }
           })
@@ -557,7 +558,7 @@ describe('error handling', () => {
         )
         watch(
           count,
-          async () => {
+          () => {
             throw error2
           },
           { immediate: true }
@@ -565,7 +566,7 @@ describe('error handling', () => {
         watchEffect(() => {
           throw error3
         })
-        watchEffect(async () => {
+        watchEffect(() => {
           throw error4
         })
       },

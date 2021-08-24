@@ -103,7 +103,7 @@ describe('component: proxy', () => {
     expect(nextTickThis).toBe(instanceProxy)
   })
 
-  test('user attached properties', async () => {
+  test('user attached properties', () => {
     let instance: ComponentInternalInstance
     let instanceProxy: any
     const Comp = {

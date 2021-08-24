@@ -52,7 +52,7 @@ describe('SSR hydration', () => {
     expect(container.textContent).toBe('bar')
   })
 
-  test('empty text', async () => {
+  test('empty text', () => {
     const { container } = mountWithHydration('<div></div>', () =>
       h('div', createTextVNode(''))
     )
@@ -463,7 +463,7 @@ describe('SSR hydration', () => {
 
   test('Suspense', async () => {
     const AsyncChild = {
-      async setup() {
+      setup() {
         const count = ref(0)
         return () =>
           h(

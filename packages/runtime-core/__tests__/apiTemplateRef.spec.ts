@@ -179,7 +179,7 @@ describe('api: template refs', () => {
     expect(el.value).toBe(null)
   })
 
-  test('string ref inside slots', async () => {
+  test('string ref inside slots', () => {
     const root = nodeOps.createElement('div')
     const spy = jest.fn()
     const Child = {

@@ -322,7 +322,7 @@ describe('component props', () => {
   })
 
   // #3495
-  test('should not warn required props using kebab-case', async () => {
+  test('should not warn required props using kebab-case', () => {
     const Comp = {
       props: {
         fooBar: { type: String, required: true }

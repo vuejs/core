@@ -120,7 +120,7 @@ describe('component: emit', () => {
     expect(barSpy).toHaveBeenCalled()
   })
 
-  test('should trigger array of listeners', async () => {
+  test('should trigger array of listeners', () => {
     const Child = defineComponent({
       setup(_, { emit }) {
         emit('foo', 1)

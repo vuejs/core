@@ -285,7 +285,7 @@ describe('GLOBAL_PROTOTYPE', () => {
     delete Vue.prototype.$test
   })
 
-  test('extended prototype', async () => {
+  test('extended prototype', () => {
     const Foo = Vue.extend()
     Foo.prototype.$test = 1
     const vm = new Foo() as any

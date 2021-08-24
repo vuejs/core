@@ -27,7 +27,7 @@ describe('compiler sfc: rewriteDefault', () => {
     `)
   })
 
-  test('w/ comments', async () => {
+  test('w/ comments', () => {
     expect(rewriteDefault(`// export default\nexport default {}`, 'script'))
       .toMatchInlineSnapshot(`
       "// export default
@@ -65,7 +65,7 @@ describe('compiler sfc: rewriteDefault', () => {
     `)
   })
 
-  test('export default class', async () => {
+  test('export default class', () => {
     expect(rewriteDefault(`export default class Foo {}`, 'script'))
       .toMatchInlineSnapshot(`
       "class Foo {}
@@ -73,7 +73,7 @@ describe('compiler sfc: rewriteDefault', () => {
     `)
   })
 
-  test('export default class w/ comments', async () => {
+  test('export default class w/ comments', () => {
     expect(
       rewriteDefault(`// export default\nexport default class Foo {}`, 'script')
     ).toMatchInlineSnapshot(`
@@ -83,7 +83,7 @@ describe('compiler sfc: rewriteDefault', () => {
     `)
   })
 
-  test('export default class w/ comments 2', async () => {
+  test('export default class w/ comments 2', () => {
     expect(
       rewriteDefault(
         `export default {}\n` + `// export default class Foo {}`,
@@ -95,7 +95,7 @@ describe('compiler sfc: rewriteDefault', () => {
     `)
   })
 
-  test('export default class w/ comments 3', async () => {
+  test('export default class w/ comments 3', () => {
     expect(
       rewriteDefault(
         `/*\nexport default class Foo {}*/\n` + `export default class Bar {}`,

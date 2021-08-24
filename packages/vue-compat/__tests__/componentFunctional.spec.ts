@@ -18,7 +18,7 @@ afterEach(() => {
   Vue.configureCompat({ MODE: 3 })
 })
 
-test('COMPONENT_FUNCTIONAL', async () => {
+test('COMPONENT_FUNCTIONAL', () => {
   const func = {
     name: 'Func',
     functional: true,

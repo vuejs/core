@@ -431,7 +431,7 @@ describe('e2e: Transition', () => {
     test(
       'transition on appear',
       async () => {
-        const appearClass = await page().evaluate(async () => {
+        const appearClass = await page().evaluate(() => {
           const { createApp, ref } = (window as any).Vue
           createApp({
             template: `
@@ -527,7 +527,7 @@ describe('e2e: Transition', () => {
         await page().exposeFunction('afterEnterSpy', afterEnterSpy)
         await page().exposeFunction('afterAppearSpy', afterAppearSpy)
 
-        const appearClass = await page().evaluate(async () => {
+        const appearClass = await page().evaluate(() => {
           const {
             beforeAppearSpy,
             onAppearSpy,
@@ -1126,6 +1126,7 @@ describe('e2e: Transition', () => {
           `,
             components: {
               Comp: {
+                // eslint-disable-next-line
                 async setup() {
                   return () => h('div', { class: 'test' }, 'content')
                 }
@@ -1265,12 +1266,13 @@ describe('e2e: Transition', () => {
         await page().evaluate(() => {
           const { createApp, shallowRef, h } = (window as any).Vue
           const One = {
+            // eslint-disable-next-line
             async setup() {
               return () => h('div', { class: 'test' }, 'one')
             }
           }
           const Two = {
-            async setup() {
+            setup() {
               return () => h('div', { class: 'test' }, 'two')
             }
           }
@@ -1614,7 +1616,7 @@ describe('e2e: Transition', () => {
     test(
       'transition on appear with v-show',
       async () => {
-        const appearClass = await page().evaluate(async () => {
+        const appearClass = await page().evaluate(() => {
           const { createApp, ref } = (window as any).Vue
           createApp({
             template: `
@@ -1920,7 +1922,7 @@ describe('e2e: Transition', () => {
 
     test(
       'warn invalid durations',
-      async () => {
+      () => {
         createApp({
           template: `
             <div id="container">
@@ -1956,7 +1958,7 @@ describe('e2e: Transition', () => {
     )
   })
 
-  test('warn when used on multiple elements', async () => {
+  test('warn when used on multiple elements', () => {
     createApp({
       render() {
         return h(Transition, null, {
