@@ -46,93 +46,97 @@ describe('with object props', () => {
 
   type GT = string & { __brand: unknown }
 
-  const MyComponent = defineComponent({
-    props: {
-      a: Number,
-      // required should make property non-void
-      b: {
-        type: String,
-        required: true
-      },
-      e: Function,
-      h: Boolean,
-      j: Function as PropType<undefined | (() => string | undefined)>,
-      // default value should infer type and make it non-void
-      bb: {
-        default: 'hello'
-      },
-      bbb: {
-        // Note: default function value requires arrow syntax + explicit
-        // annotation
-        default: (props: any) => (props.bb as string) || 'foo'
-      },
-      bbbb: {
-        type: String,
-        default: undefined
-      },
-      bbbbb: {
-        type: String,
-        default: () => undefined
-      },
-      // explicit type casting
-      cc: Array as PropType<string[]>,
-      // required + type casting
-      dd: {
-        type: Object as PropType<{ n: 1 }>,
-        required: true
-      },
-      // return type
-      ee: Function as PropType<() => string>,
-      // arguments + object return
-      ff: Function as PropType<(a: number, b: string) => { a: boolean }>,
-      // explicit type casting with constructor
-      ccc: Array as () => string[],
-      // required + contructor type casting
-      ddd: {
-        type: Array as () => string[],
-        required: true
-      },
-      // required + object return
-      eee: {
-        type: Function as PropType<() => { a: string }>,
-        required: true
-      },
-      // required + arguments + object return
-      fff: {
-        type: Function as PropType<(a: number, b: string) => { a: boolean }>,
-        required: true
-      },
-      hhh: {
-        type: Boolean,
-        required: true
-      },
-      // default + type casting
-      ggg: {
-        type: String as PropType<'foo' | 'bar'>,
-        default: 'foo'
-      },
-      // default + function
-      ffff: {
-        type: Function as PropType<(a: number, b: string) => { a: boolean }>,
-        default: (a: number, b: string) => ({ a: a > +b })
-      },
-      // union + function with different return types
-      iii: Function as PropType<(() => string) | (() => number)>,
-      // union + function with different args & same return type
-      jjj: {
-        type: Function as PropType<
-          ((arg1: string) => string) | ((arg1: string, arg2: string) => string)
-        >,
-        required: true
-      },
-      kkk: null,
-      validated: {
-        type: String,
-        // validator requires explicit annotation
-        validator: (val: unknown) => val !== ''
-      },
-      date: Date
+  const props = {
+    a: Number,
+    // required should make property non-void
+    b: {
+      type: String,
+      required: true as true
     },
+    e: Function,
+    h: Boolean,
+    j: Function as PropType<undefined | (() => string | undefined)>,
+    // default value should infer type and make it non-void
+    bb: {
+      default: 'hello'
+    },
+    bbb: {
+      // Note: default function value requires arrow syntax + explicit
+      // annotation
+      default: (props: any) => (props.bb as string) || 'foo'
+    },
+    bbbb: {
+      type: String,
+      default: undefined
+    },
+    bbbbb: {
+      type: String,
+      default: () => undefined
+    },
+    // explicit type casting
+    cc: Array as PropType<string[]>,
+    // required + type casting
+    dd: {
+      type: Object as PropType<{ n: 1 }>,
+      required: true as true
+    },
+    // return type
+    ee: Function as PropType<() => string>,
+    // arguments + object return
+    ff: Function as PropType<(a: number, b: string) => { a: boolean }>,
+    // explicit type casting with constructor
+    ccc: Array as () => string[],
+    // required + contructor type casting
+    ddd: {
+      type: Array as () => string[],
+      required: true as true
+    },
+    // required + object return
+    eee: {
+      type: Function as PropType<() => { a: string }>,
+      required: true as true
+    },
+    // required + arguments + object return
+    fff: {
+      type: Function as PropType<(a: number, b: string) => { a: boolean }>,
+      required: true as true
+    },
+    hhh: {
+      type: Boolean,
+      required: true as true
+    },
+    // default + type casting
+    ggg: {
+      type: String as PropType<'foo' | 'bar'>,
+      default: 'foo'
+    },
+    // default + function
+    ffff: {
+      type: Function as PropType<(a: number, b: string) => { a: boolean }>,
+      default: (a: number, b: string) => ({ a: a > +b })
+    },
+    // union + function with different return types
+    iii: Function as PropType<(() => string) | (() => number)>,
+    // union + function with different args & same return type
+    jjj: {
+      type: Function as PropType<
+        ((arg1: string) => string) | ((arg1: string, arg2: string) => string)
+      >,
+      required: true as true
+    },
+    kkk: null,
+    validated: {
+      type: String,
+      // validator requires explicit annotation
+      validator: (val: unknown) => val !== ''
+    },
+    date: Date
+  }
+
+  type ExpectedPropsType = typeof props
+
+  const MyComponent = defineComponent({
+    props,
     setup(props) {
       // type assertion. See https://github.com/SamVerschueren/tsd
       expectType<ExpectedProps['a']>(props.a)
@@ -248,6 +252,8 @@ describe('with object props', () => {
   })
 
   expectType<Component>(MyComponent)
+
+  expectType<ExpectedPropsType>(MyComponent.props)
 
   // Test TSX
   expectType<JSX.Element>(
