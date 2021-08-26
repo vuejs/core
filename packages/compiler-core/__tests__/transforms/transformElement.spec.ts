@@ -936,6 +936,57 @@ describe('compiler: element transform', () => {
       expect(node.patchFlag).toBe(genFlagText(PatchFlags.NEED_PATCH))
     })
 
+    test('isStatic false from setup bindings (inline ref input)', () => {
+      const { node } = parseWithElementTransform(`<input ref="input"/>`, {
+        inline: true,
+        bindingMetadata: {
+          input: BindingTypes.SETUP_REF
+        }
+      })
+      expect(node.props).toMatchObject({
+        type: NodeTypes.JS_OBJECT_EXPRESSION,
+        properties: [
+          {
+            type: NodeTypes.JS_PROPERTY,
+            key: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'ref',
+              isStatic: true
+            },
+            value: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'input',
+              isStatic: false
+            }
+          }
+        ]
+      })
+    })
+
+    test('isStatic true without setup bindings (inline ref input)', () => {
+      const { node } = parseWithElementTransform(`<input ref="input"/>`, {
+        inline: true
+      })
+      expect(node.props).toMatchObject({
+        type: NodeTypes.JS_OBJECT_EXPRESSION,
+        properties: [
+          {
+            type: NodeTypes.JS_PROPERTY,
+            key: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'ref',
+              isStatic: true
+            },
+            value: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'input',
+              isStatic: true
+            }
+          }
+        ]
+      })
+    })
+
     test('HYDRATE_EVENTS', () => {
       // ignore click events (has dedicated fast path)
       const { node } = parseWithElementTransform(`<div @click="foo" />`, {
