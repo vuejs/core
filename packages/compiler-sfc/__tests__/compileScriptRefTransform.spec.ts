@@ -99,6 +99,17 @@ describe('sfc ref transform', () => {
     assertCode(content)
   })
 
+  test('usage /w typescript', () => {
+    const { content } = compileWithRefTransform(`
+      <script setup lang="ts">
+        let msg = $ref<string | number>('foo');
+      </script>
+    `)
+    expect(content).toMatch(`import { ref as _ref`)
+    expect(content).toMatch(`let msg = _ref<string | number>('foo')`)
+    assertCode(content)
+  })
+
   test('usage with normal <script> + <script setup>', () => {
     const { content, bindings } = compileWithRefTransform(`<script>
     let a = $ref(0)

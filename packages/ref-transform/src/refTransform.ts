@@ -25,7 +25,7 @@ import { babelParserDefaultPlugins } from '@vue/shared'
 const TO_VAR_SYMBOL = '$'
 const TO_REF_SYMBOL = '$$'
 const shorthands = ['ref', 'computed', 'shallowRef']
-const transformCheckRE = /[^\w]\$(?:\$|ref|computed|shallowRef)?\(/
+const transformCheckRE = /[^\w]\$(?:\$|ref|computed|shallowRef)?(\(|\<)/
 
 export function shouldTransform(src: string): boolean {
   return transformCheckRE.test(src)
