@@ -1265,14 +1265,18 @@ describe('api: options', () => {
 
     test('this.$options[lifecycle-name]', () => {
       const mixin = {
-        mounted() {}
+        mounted() {},
+        unmounted() {}
       }
       createApp({
         mixins: [mixin],
         mounted() {},
+        unmounted() {},
         created() {
           expect(this.$options.mounted).toBeInstanceOf(Array)
           expect(this.$options.mounted.length).toBe(2)
+          expect(this.$options.unmounted).toBeInstanceOf(Array)
+          expect(this.$options.unmounted.length).toBe(2)
         },
         render: () => null
       }).mount(nodeOps.createElement('div'))
