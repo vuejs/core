@@ -1101,22 +1101,22 @@ const emit = defineEmits(['a', 'b'])
       assertAwaitDetection(
         `await (await foo)`,
         `;(([__temp,__restore]=_withAsyncContext(` +
-          `()=>(((([__temp,__restore]=_withAsyncContext(` +
+          `async ()=>(((([__temp,__restore]=_withAsyncContext(` +
           `()=>(foo))),__temp=await __temp,__restore(),__temp))))` +
           `),__temp=await __temp,__restore())`
       )
       assertAwaitDetection(
         `await ((await foo))`,
         `;(([__temp,__restore]=_withAsyncContext(` +
-          `()=>((((([__temp,__restore]=_withAsyncContext(` +
+          `async ()=>((((([__temp,__restore]=_withAsyncContext(` +
           `()=>(foo))),__temp=await __temp,__restore(),__temp)))))` +
           `),__temp=await __temp,__restore())`
       )
       assertAwaitDetection(
         `await (await (await foo))`,
         `;(([__temp,__restore]=_withAsyncContext(` +
-          `()=>(((([__temp,__restore]=_withAsyncContext(` +
-          `()=>(((([__temp,__restore]=_withAsyncContext(` +
+          `async ()=>(((([__temp,__restore]=_withAsyncContext(` +
+          `async ()=>(((([__temp,__restore]=_withAsyncContext(` +
           `()=>(foo))),__temp=await __temp,__restore(),__temp))))` +
           `),__temp=await __temp,__restore(),__temp))))` +
           `),__temp=await __temp,__restore())`

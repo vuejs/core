@@ -520,7 +520,7 @@ export function compileScript(
       end + startOffset,
       `${isStatement ? `;` : ``}(([__temp,__restore]=${helper(
         `withAsyncContext`
-      )}(()=>(`
+      )}(${node.argument.type === 'AwaitExpression' ? `async ` : ``}()=>(`
     )
     s.appendLeft(
       node.end! + startOffset,
