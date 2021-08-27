@@ -250,7 +250,9 @@ export function resolveTransitionProps(
       callHook(onAppearCancelled, [el])
     },
     onLeaveCancelled(el) {
-      finishLeave(el)
+      nextFrame(() => {
+        finishLeave(el)
+      })
       callHook(onLeaveCancelled, [el])
     }
   } as BaseTransitionProps<Element>)
