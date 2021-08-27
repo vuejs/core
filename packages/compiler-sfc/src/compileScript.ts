@@ -512,9 +512,12 @@ export function compileScript(
    * (([__temp, __restore] = withAsyncContext(() => foo())),__temp=await __temp,__restore(),__temp)
    */
   function processAwait(node: AwaitExpression, isStatement: boolean) {
+    const end = node.argument.extra
+      ? (node.argument.extra.parenStart as number)
+      : node.argument.start!
     s.overwrite(
       node.start! + startOffset,
-      node.argument.start! + startOffset,
+      end + startOffset,
       `${isStatement ? `;` : ``}(([__temp,__restore]=${helper(
         `withAsyncContext`
       )}(()=>(`
