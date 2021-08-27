@@ -50,8 +50,9 @@ export default _defineComponent({
   expose()
 
         let msg = _ref<string | number>('foo');
+        let bar = _ref <string | number>('bar');
       
-return { msg }
+return { msg, bar }
 }
 
 })"

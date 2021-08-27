@@ -103,10 +103,12 @@ describe('sfc ref transform', () => {
     const { content } = compileWithRefTransform(`
       <script setup lang="ts">
         let msg = $ref<string | number>('foo');
+        let bar = $ref <string | number>('bar');
       </script>
     `)
     expect(content).toMatch(`import { ref as _ref`)
     expect(content).toMatch(`let msg = _ref<string | number>('foo')`)
+    expect(content).toMatch(`let bar = _ref <string | number>('bar')`)
     assertCode(content)
   })
 
