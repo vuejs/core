@@ -203,7 +203,7 @@ export type ComponentPublicInstance<
   $slots: Slots<S>
   $root: ComponentPublicInstance | null
   $parent: ComponentPublicInstance | null
-  $emit: EmitFn<E>
+  $emit: EmitFn<E, P>
   $el: any
   $options: Options & MergedComponentOptionsOverride
   $forceUpdate: () => void

@@ -53,10 +53,16 @@ export type EmitsToProps<T extends EmitsOptions> = T extends string[]
     }
   : {}
 
+export type EmitVModelUpdate<
+  T,
+  E extends keyof T & string = keyof T & string
+> = (event: `update:${E}`, value: T[E]) => void
+
 export type EmitFn<
   Options = ObjectEmitsOptions,
+  P = {},
   Event extends keyof Options = keyof Options
-> = Options extends Array<infer V>
+> = (Options extends Array<infer V>
   ? (event: V, ...args: any[]) => void
   : {} extends Options // if the emit is empty object (usually the default value for emit) should be converted to function
   ? (event: string, ...args: any[]) => void
@@ -66,7 +72,8 @@ export type EmitFn<
           ? (event: key, ...args: Args) => void
           : (event: key, ...args: any[]) => void
       }[Event]
-    >
+    >) &
+  EmitVModelUpdate<P>
 
 export function emit(
   instance: ComponentInternalInstance,

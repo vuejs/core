@@ -130,7 +130,7 @@ export interface ComponentOptionsBase<
           UnionToIntersection<ExtractOptionProp<Extends>>
       >
     >,
-    ctx: SetupContext<E, Slots<S>>
+    ctx: SetupContext<E, Props, Slots<S>>
   ) => Promise<RawBindings> | RawBindings | RenderFunction | void
   name?: string
   template?: string | object // can be a direct DOM node
@@ -348,8 +348,20 @@ export type ComponentOptions<
   M extends MethodOptions = any,
   Mixin extends ComponentOptionsMixin = any,
   Extends extends ComponentOptionsMixin = any,
-  E extends EmitsOptions = any
-> = ComponentOptionsBase<Props, RawBindings, D, C, M, Mixin, Extends, E> &
+  E extends EmitsOptions = {},
+  S = any
+> = ComponentOptionsBase<
+  Props,
+  RawBindings,
+  D,
+  C,
+  M,
+  Mixin,
+  Extends,
+  E,
+  any,
+  S
+> &
   ThisType<
     CreateComponentPublicInstance<
       {},
@@ -360,6 +372,7 @@ export type ComponentOptions<
       Mixin,
       Extends,
       E,
+      any,
       Readonly<Props>
     >
   >

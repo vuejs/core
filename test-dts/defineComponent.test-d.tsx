@@ -1136,6 +1136,7 @@ describe('typed slots', () => {
   })
 
   h(
+    // @ts-expect-error the provided slots are not valid
     Comp,
     {},
     {
@@ -1144,6 +1145,7 @@ describe('typed slots', () => {
       item(s) {
         expectType<number>(s.i)
         expectType<{ value: number }>(s.item)
+        return {} as any
       }
     }
   )
@@ -1170,6 +1172,7 @@ describe('typed slots just type', () => {
   })
 
   h(
+    // @ts-expect-error the provided slots are not valid
     Comp,
     {},
     {
@@ -1178,6 +1181,8 @@ describe('typed slots just type', () => {
       item(s) {
         expectType<number>(s.i)
         expectType<{ value: number }>(s.item)
+
+        return {} as any
       }
     }
   )
