@@ -459,6 +459,21 @@ describe('functional', () => {
 
     expectType<number>(props.foo)
   })
+
+  describe('emit', () => {
+    const MyComponent: FunctionalComponent<
+      { foo: number },
+      { ev: (a: string) => void }
+    > = (_, { emit }) => {
+      emit('ev', 'a')
+      // @ts-expect-error invalid argument
+      emit('ev', 12)
+      // @ts-expect-error invalid event
+      emit('o', '1')
+    }
+
+    defineComponent(MyComponent)
+  })
 })
 
 declare type VueClass<Props = {}> = {

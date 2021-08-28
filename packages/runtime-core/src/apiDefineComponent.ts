@@ -61,10 +61,9 @@ export type DefineComponent<
     true
   > &
     Props
->
-/**
+> & /**
  * just typescript
- */ & { __isDefineComponent?: true } & ComponentOptionsBase<
+ */ { __isDefineComponent?: true } & ComponentOptionsBase<
     Props,
     RawBindings,
     D,
@@ -86,10 +85,15 @@ export type DefineComponent<
 
 // overload 1: direct setup function
 // (uses user defined props interface)
-export function defineComponent<Props, RawBindings = object, S = {}>(
+export function defineComponent<
+  Props,
+  RawBindings = object,
+  E extends EmitsOptions = {},
+  S = {}
+>(
   setup: (
     props: Readonly<Props>,
-    ctx: SetupContext<EmitsOptions, Slots<S>>
+    ctx: SetupContext<E, Slots<S>>
   ) => RawBindings | RenderFunction
 ): DefineComponent<Props, RawBindings, {}, any, any, any, any, any, string, S>
 
