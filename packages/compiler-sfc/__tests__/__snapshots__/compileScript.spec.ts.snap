@@ -1037,11 +1037,13 @@ import { defaults } from './foo'
 export default /*#__PURE__*/_defineComponent({
   props: _mergeDefaults({
     foo: { type: String, required: false },
-    bar: { type: Number, required: false }
+    bar: { type: Number, required: false },
+    baz: { type: Boolean, required: true }
   }, { ...defaults }) as unknown as undefined,
   setup(__props: {
         foo?: string
         bar?: number
+        baz: boolean
       }, { expose }) {
   expose()
 
@@ -1060,11 +1062,13 @@ exports[`SFC compile <script setup> with TypeScript withDefaults (static) 1`] = 
 export default /*#__PURE__*/_defineComponent({
   props: {
     foo: { type: String, required: false, default: 'hi' },
-    bar: { type: Number, required: false }
+    bar: { type: Number, required: false },
+    baz: { type: Boolean, required: true }
   } as unknown as undefined,
   setup(__props: {
-        foo?: string
+        foo: string
         bar?: number
+        baz: boolean
       }, { expose }) {
   expose()
 

@@ -800,6 +800,7 @@ const emit = defineEmits(['a', 'b'])
       const props = withDefaults(defineProps<{
         foo?: string
         bar?: number
+        baz: boolean
       }>(), {
         foo: 'hi'
       })
@@ -810,10 +811,17 @@ const emit = defineEmits(['a', 'b'])
         `foo: { type: String, required: false, default: 'hi' }`
       )
       expect(content).toMatch(`bar: { type: Number, required: false }`)
+      expect(content).toMatch(`baz: { type: Boolean, required: true }`)
+      expect(content).toMatch(`{
+        foo: string
+        bar?: number
+        baz: boolean
+      }`)
       expect(content).toMatch(`const props = __props`)
       expect(bindings).toStrictEqual({
         foo: BindingTypes.PROPS,
         bar: BindingTypes.PROPS,
+        baz: BindingTypes.PROPS,
         props: BindingTypes.SETUP_CONST
       })
     })
@@ -825,6 +833,7 @@ const emit = defineEmits(['a', 'b'])
       const props = withDefaults(defineProps<{
         foo?: string
         bar?: number
+        baz: boolean
       }>(), { ...defaults })
       </script>
       `)
@@ -834,7 +843,8 @@ const emit = defineEmits(['a', 'b'])
         `
   _mergeDefaults({
     foo: { type: String, required: false },
-    bar: { type: Number, required: false }
+    bar: { type: Number, required: false },
+    baz: { type: Boolean, required: true }
   }, { ...defaults })`.trim()
       )
     })
