@@ -100,14 +100,11 @@ type ExtractOptionProp<T> = T extends ComponentOptionsBase<
   any, // M
   any, // Mixin
   any, // Extends
-  infer E, // EmitsOptions
-  any,
-  any,
-  any
+  infer E // EmitsOptions
 >
   ? unknown extends P
     ? {}
-    : P
+    : P & EmitsToProps<E>
   : {}
 
 export interface ComponentOptionsBase<
@@ -118,14 +115,14 @@ export interface ComponentOptionsBase<
   M extends MethodOptions,
   Mixin extends ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin,
-  E extends EmitsOptions,
+  E extends EmitsOptions = {},
   EE extends string = string,
   S = any,
   LC extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
   Defaults = {}
-> extends LegacyOptions<Props, D, C, M, Mixin, Extends>,
+> extends LegacyOptions<Props, D, C, M, Mixin, Extends, E>,
     ComponentInternalOptions,
     ComponentCustomOptions {
   setup?: (
@@ -134,7 +131,8 @@ export interface ComponentOptionsBase<
       LooseRequired<
         Props &
           UnionToIntersection<ExtractOptionProp<Mixin>> &
-          UnionToIntersection<ExtractOptionProp<Extends>>
+          UnionToIntersection<ExtractOptionProp<Extends>> &
+          EmitsToProps<E>
       >
     >,
     ctx: SetupContext<E, Props, Slots<S>>
@@ -150,7 +148,7 @@ export interface ComponentOptionsBase<
   components?: LC
   directives?: Directives
   inheritAttrs?: boolean
-  emits?: (E | EE[]) & ThisType<void>
+  emits?: (E & ThisType<void>) | EE[]
   expose?: Exposed[]
   serverPrefetch?(): Promise<any>
 
@@ -334,7 +332,7 @@ export type ComponentOptionsWithObjectProps<
   M extends MethodOptions = {},
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = EmitsOptions,
+  E extends EmitsOptions = {},
   EE extends string = string,
   S = any,
   LC extends Record<string, Component> = {},
@@ -360,7 +358,7 @@ export type ComponentOptionsWithObjectProps<
 > & {
   props: PropsOptions & ThisType<void>
 } & ThisType<
-    { supa: Props } & CreateComponentPublicInstance<
+    CreateComponentPublicInstance<
       Props,
       RawBindings,
       D,
@@ -438,6 +436,9 @@ export type ComponentOptionsMixin = ComponentOptionsBase<
   any,
   any,
   any,
+  any,
+  any,
+  any,
   any
 >
 
@@ -481,7 +482,8 @@ interface LegacyOptions<
   C extends ComputedOptions,
   M extends MethodOptions,
   Mixin extends ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin
+  Extends extends ComponentOptionsMixin,
+  E extends EmitsOptions
 > {
   compatConfig?: CompatConfig
 
@@ -500,7 +502,8 @@ interface LegacyOptions<
       {},
       MethodOptions,
       Mixin,
-      Extends
+      Extends,
+      E
     >,
     vm: CreateComponentPublicInstance<
       Props,
@@ -509,7 +512,8 @@ interface LegacyOptions<
       {},
       MethodOptions,
       Mixin,
-      Extends
+      Extends,
+      E
     >
   ) => D
   computed?: C

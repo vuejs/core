@@ -35,6 +35,10 @@ export type PublicProps = VNodeProps &
   AllowedComponentProps &
   ComponentCustomProps
 
+type FixS<T extends EmitsOptions> = T extends string[]
+  ? Record<T[number], null>
+  : T
+
 export type DefineComponent<
   PropsOrPropOptions = {},
   RawBindings = {},
@@ -43,14 +47,14 @@ export type DefineComponent<
   M extends MethodOptions = MethodOptions,
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = Record<string, any>,
+  E extends EmitsOptions = {},
   EE extends string = string,
   S = any,
   LC extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
   PP = PublicProps,
-  Props = Readonly<ExtractPropTypes<PropsOrPropOptions>> & EmitsToProps<E>,
+  Props = Readonly<ExtractPropTypes<PropsOrPropOptions>>,
   Defaults = ExtractDefaultPropTypes<PropsOrPropOptions>
 > = ComponentPublicInstanceConstructor<
   CreateComponentPublicInstance<
@@ -61,7 +65,7 @@ export type DefineComponent<
     M,
     Mixin,
     Extends,
-    E,
+    FixS<E>,
     S,
     PP & Props,
     Defaults,
@@ -70,7 +74,7 @@ export type DefineComponent<
     Directives & GlobalDirectives,
     Exposed
   > &
-    Props
+    Readonly<ExtractPropTypes<PropsOrPropOptions>>
 > & /**
  * just typescript
  */ { __isDefineComponent?: true } & ComponentOptionsBase<
@@ -170,7 +174,7 @@ export function defineComponent<
   M extends MethodOptions = {},
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = Record<string, any>,
+  E extends EmitsOptions = {},
   EE extends string = string,
   S = any,
   LC extends Record<string, Component> = {},
@@ -220,7 +224,7 @@ export function defineComponent<
   M extends MethodOptions = {},
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = Record<string, any>,
+  E extends EmitsOptions = {},
   EE extends string = string,
   S = any,
   LC extends Record<string, Component> = {},

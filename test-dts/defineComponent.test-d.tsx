@@ -701,6 +701,8 @@ describe('with extends', () => {
 describe('extends with mixins', () => {
   const Mixin = defineComponent({
     emits: ['bar'],
+    // emits: { bar: (a: string) => true },
+
     props: {
       mP1: {
         type: String,
@@ -739,14 +741,31 @@ describe('extends with mixins', () => {
     },
     computed: {
       c(): number {
+        this.$XXX
         return this.p2 + this.b
       }
     }
   })
+  const OtherMixin = defineComponent({
+    emits: {
+      test: (a: boolean) => true
+    },
+
+    render() {
+      this.$emit('test', true)
+
+      // @ts-expect-error
+      this.$emit('test', 0)
+
+      // @ts-expect-error
+      this.$emit('')
+    }
+  })
+
   const MyComponent = defineComponent({
     extends: Base,
-    mixins: [Mixin],
-    emits: ['click'],
+    mixins: [Mixin, OtherMixin],
+    emits: ['click', 'lock'],
     props: {
       // required should make property non-void
       z: {
@@ -757,13 +776,17 @@ describe('extends with mixins', () => {
     render() {
       const props = this.$props
 
-      this.$HHH
-      this.$ZZZ
-      this.supa
-
-      this.$emit('bar', 2)
-      this.$emit('foo', 2)
+      //@ts-expect-error
       this.$emit('')
+
+      this.$emit('bar')
+      this.$emit('foo')
+      this.$emit('click')
+
+      this.$emit('test', true)
+
+      //@ts-expect-error
+      this.$emit('test', 0)
 
       // props
       expectType<((...args: any[]) => any) | undefined>(props.onClick)
@@ -1068,7 +1091,8 @@ describe('extract instance type', () => {
         required: true
       },
       c: Number
-    }
+    },
+    setup(props) {}
   })
 
   const compA = {} as InstanceType<typeof CompA>

@@ -44,6 +44,7 @@ import { warn } from './warning'
 import { UnionToIntersection } from './helpers/typeUtils'
 import { Directive } from './directives'
 import { installCompatInstanceProperties } from './compat/instance'
+import { ObjectEmitsOptions } from 'test-dts'
 
 /**
  * Custom properties added to component instances in any way and can be accessed through `this`
@@ -139,6 +140,12 @@ export type ComponentPublicInstanceConstructor<
   new (...args: any[]): T
 }
 
+type FixS<T extends EmitsOptions> = T extends string[]
+  ? // the omit serves to remove the type 'bar[]' from `bar[] & { foo: Function}`
+    Record<T[number], null> &
+      (T extends object ? Omit<T, T[number] | keyof string[]> : never)
+  : T
+
 export type CreateComponentPublicInstance<
   P = {},
   B = {},
@@ -156,7 +163,7 @@ export type CreateComponentPublicInstance<
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
   PublicMixin = IntersectionMixin<Mixin> & IntersectionMixin<Extends>,
-  PublicP = UnwrapMixinsType<PublicMixin, 'P'> & EnsureNonVoid<P>,
+  PublicP = Readonly<UnwrapMixinsType<PublicMixin, 'P'>> & EnsureNonVoid<P>,
   PublicB = UnwrapMixinsType<PublicMixin, 'B'> & EnsureNonVoid<B>,
   PublicD = UnwrapMixinsType<PublicMixin, 'D'> & EnsureNonVoid<D>,
   PublicC extends ComputedOptions = UnwrapMixinsType<PublicMixin, 'C'> &
@@ -164,10 +171,11 @@ export type CreateComponentPublicInstance<
   PublicM extends MethodOptions = UnwrapMixinsType<PublicMixin, 'M'> &
     EnsureNonVoid<M>,
   // Emits behave a bit different and require union instead of intersection
-  PublicE extends EmitsOptions = UnwrapMixinsType<
-    IntersectionMixin<Mixin> & IntersectionMixin<Extends>,
-    'E'
-  >,
+  PublicE extends EmitsOptions = FixS<
+    UnwrapMixinsType<IntersectionMixin<Mixin>, 'E'>
+  > &
+    FixS<UnwrapMixinsType<IntersectionMixin<Extends>, 'E'>> &
+    FixS<EnsureNonVoid<E>>,
   PublicDefaults = UnwrapMixinsType<PublicMixin, 'Defaults'> &
     EnsureNonVoid<Defaults>
 > = ComponentPublicInstance<
@@ -176,7 +184,7 @@ export type CreateComponentPublicInstance<
   PublicD,
   PublicC,
   PublicM,
-  E,
+  PublicE,
   S,
   PublicProps,
   PublicDefaults,
@@ -232,9 +240,7 @@ export type ComponentPublicInstance<
   >,
   Exposed extends string = ''
 > = {
-  $HHH: E
-  $OOO: E extends (infer U)[] ? U[] : E
-  $ZZZ: EmitsToProps<E extends (infer U)[] ? UnionToIntersection<U>[] : E>
+  $XXX: E
   $: ComponentInternalInstance
   $data: D
   $props: (MakeDefaultsOptional extends true
