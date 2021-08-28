@@ -117,6 +117,9 @@ export interface ComponentOptionsBase<
   E extends EmitsOptions,
   EE extends string = string,
   S = any,
+  LC extends Record<string, Component> = {},
+  Directives extends Record<string, Directive> = {},
+  Exposed extends string = string,
   Defaults = {}
 > extends LegacyOptions<Props, D, C, M, Mixin, Extends>,
     ComponentInternalOptions,
@@ -140,12 +143,11 @@ export interface ComponentOptionsBase<
   // Luckily `render()` doesn't need any arguments nor does it care about return
   // type.
   render?: Function
-  components?: Record<string, Component>
-  directives?: Record<string, Directive>
+  components?: LC
+  directives?: Directives
   inheritAttrs?: boolean
   emits?: (E | EE[]) & ThisType<void>
-  // TODO infer public instance type based on exposed keys
-  expose?: string[]
+  expose?: Exposed[]
   serverPrefetch?(): Promise<any>
 
   // Runtime compiler only -----------------------------------------------------
@@ -227,6 +229,9 @@ export type ComponentOptionsWithoutProps<
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
   S = any,
+  LC extends Record<string, Component> = {},
+  Directives extends Record<string, Directive> = {},
+  Exposed extends string = string,
   PE = Props & EmitsToProps<E>
 > = ComponentOptionsBase<
   PE,
@@ -239,6 +244,9 @@ export type ComponentOptionsWithoutProps<
   E,
   EE,
   S,
+  LC,
+  Directives,
+  Exposed,
   {}
 > & {
   props?: undefined
@@ -252,7 +260,13 @@ export type ComponentOptionsWithoutProps<
       Mixin,
       Extends,
       E,
-      S
+      S,
+      Props,
+      {},
+      false,
+      LC,
+      Directives,
+      Exposed
     >
   >
 
@@ -267,6 +281,9 @@ export type ComponentOptionsWithArrayProps<
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
   S = any,
+  LC extends Record<string, Component> = {},
+  Directives extends Record<string, Directive> = {},
+  Exposed extends string = string,
   Props = Readonly<{ [key in PropNames]?: any }> & EmitsToProps<E>
 > = ComponentOptionsBase<
   Props,
@@ -279,6 +296,9 @@ export type ComponentOptionsWithArrayProps<
   E,
   EE,
   S,
+  LC,
+  Directives,
+  Exposed,
   {}
 > & {
   props: PropNames[]
@@ -292,7 +312,13 @@ export type ComponentOptionsWithArrayProps<
       Mixin,
       Extends,
       E,
-      S
+      S,
+      Props,
+      {},
+      false,
+      LC,
+      Directives,
+      Exposed
     >
   >
 
@@ -307,6 +333,9 @@ export type ComponentOptionsWithObjectProps<
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
   S = any,
+  LC extends Record<string, Component> = {},
+  Directives extends Record<string, Directive> = {},
+  Exposed extends string = string,
   Props = Readonly<ExtractPropTypes<PropsOptions>> & EmitsToProps<E>,
   Defaults = ExtractDefaultPropTypes<PropsOptions>
 > = ComponentOptionsBase<
@@ -320,6 +349,9 @@ export type ComponentOptionsWithObjectProps<
   E,
   EE,
   S,
+  LC,
+  Directives,
+  Exposed,
   Defaults
 > & {
   props: PropsOptions & ThisType<void>
@@ -336,7 +368,9 @@ export type ComponentOptionsWithObjectProps<
       S,
       Props,
       Defaults,
-      false
+      false,
+      LC,
+      Directives
     >
   >
 
@@ -349,7 +383,10 @@ export type ComponentOptions<
   Mixin extends ComponentOptionsMixin = any,
   Extends extends ComponentOptionsMixin = any,
   E extends EmitsOptions = {},
-  S = any
+  S = any,
+  LC extends Record<string, Component> = {},
+  Directives extends Record<string, Directive> = {},
+  Exposed extends string = string
 > = ComponentOptionsBase<
   Props,
   RawBindings,
@@ -359,8 +396,11 @@ export type ComponentOptions<
   Mixin,
   Extends,
   E,
-  any,
-  S
+  string,
+  S,
+  LC,
+  Directives,
+  Exposed
 > &
   ThisType<
     CreateComponentPublicInstance<
@@ -372,8 +412,12 @@ export type ComponentOptions<
       Mixin,
       Extends,
       E,
-      any,
-      Readonly<Props>
+      string,
+      S,
+      {},
+      false,
+      LC,
+      Directives
     >
   >
 

@@ -41,7 +41,7 @@ describe('runtime-dom: v-on directive', () => {
   })
 
   test('it should support key modifiers and system modifiers', () => {
-    const keyNames = ['ctrl', 'shift', 'meta', 'alt']
+    const keyNames = ['ctrl', 'shift', 'meta', 'alt'] as const
 
     keyNames.forEach(keyName => {
       const el = document.createElement('div')

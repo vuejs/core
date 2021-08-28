@@ -11,7 +11,10 @@ import {
 import {
   SetupContext,
   AllowedComponentProps,
-  ComponentCustomProps
+  ComponentCustomProps,
+  Component,
+  GlobalDirectives,
+  GlobalComponents
 } from './component'
 import {
   ExtractPropTypes,
@@ -26,6 +29,7 @@ import {
   ComponentPublicInstanceConstructor
 } from './componentPublicInstance'
 import { Slots } from './componentSlots'
+import { Directive } from './directives'
 
 export type PublicProps = VNodeProps &
   AllowedComponentProps &
@@ -42,6 +46,9 @@ export type DefineComponent<
   E extends EmitsOptions = Record<string, any>,
   EE extends string = string,
   S = any,
+  LC extends Record<string, Component> = {},
+  Directives extends Record<string, Directive> = {},
+  Exposed extends string = string,
   PP = PublicProps,
   Props = Readonly<ExtractPropTypes<PropsOrPropOptions>> & EmitsToProps<E>,
   Defaults = ExtractDefaultPropTypes<PropsOrPropOptions>
@@ -58,7 +65,10 @@ export type DefineComponent<
     S,
     PP & Props,
     Defaults,
-    true
+    true,
+    LC & GlobalComponents,
+    Directives & GlobalDirectives,
+    Exposed
   > &
     Props
 > & /**
@@ -74,6 +84,9 @@ export type DefineComponent<
     E,
     EE,
     S,
+    LC & GlobalComponents,
+    Directives & GlobalDirectives,
+    Exposed,
     Defaults
   > &
   PP
@@ -110,7 +123,10 @@ export function defineComponent<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
-  S = any
+  S = any,
+  LC extends Record<string, Component> = {},
+  Directives extends Record<string, Directive> = {},
+  Exposed extends string = string
 >(
   options: ComponentOptionsWithoutProps<
     Props,
@@ -122,9 +138,26 @@ export function defineComponent<
     Extends,
     E,
     EE,
-    S
+    S,
+    LC,
+    Directives,
+    Exposed
   >
-): DefineComponent<Props, RawBindings, D, C, M, Mixin, Extends, E, EE, S>
+): DefineComponent<
+  Props,
+  RawBindings,
+  D,
+  C,
+  M,
+  Mixin,
+  Extends,
+  E,
+  EE,
+  S,
+  LC,
+  Directives,
+  Exposed
+>
 
 // overload 3: object format with array props declaration
 // props inferred as { [key in PropNames]?: any }
@@ -139,7 +172,10 @@ export function defineComponent<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = Record<string, any>,
   EE extends string = string,
-  S = any
+  S = any,
+  LC extends Record<string, Component> = {},
+  Directives extends Record<string, Directive> = {},
+  Exposed extends string = string
 >(
   options: ComponentOptionsWithArrayProps<
     PropNames,
@@ -151,7 +187,10 @@ export function defineComponent<
     Extends,
     E,
     EE,
-    S
+    S,
+    LC,
+    Directives,
+    Exposed
   >
 ): DefineComponent<
   Readonly<{ [key in PropNames]?: any }>,
@@ -163,7 +202,10 @@ export function defineComponent<
   Extends,
   E,
   EE,
-  S
+  S,
+  LC,
+  Directives,
+  Exposed
 >
 
 // overload 4: object format with object props declaration
@@ -181,6 +223,9 @@ export function defineComponent<
   E extends EmitsOptions = Record<string, any>,
   EE extends string = string,
   S = any,
+  LC extends Record<string, Component> = {},
+  Directives extends Record<string, Directive> = {},
+  Exposed extends string = string,
   Props = Readonly<ExtractPropTypes<PropsOptions>> & EmitsToProps<E>,
   Defaults = ExtractDefaultPropTypes<PropsOptions>
 >(
@@ -195,11 +240,14 @@ export function defineComponent<
     E,
     EE,
     S,
+    LC,
+    Directives,
+    Exposed,
     Props,
     Defaults
   >
 ): DefineComponent<
-  ExtractPropTypes<PropsOptions>,
+  PropsOptions,
   RawBindings,
   D,
   C,
@@ -209,7 +257,9 @@ export function defineComponent<
   E,
   EE,
   S,
-  PublicProps,
+  LC,
+  Directives,
+  Exposed,
   Props,
   Defaults
 >

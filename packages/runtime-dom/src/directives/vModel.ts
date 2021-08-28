@@ -40,12 +40,17 @@ function trigger(el: HTMLElement, type: string) {
   el.dispatchEvent(e)
 }
 
-type ModelDirective<T> = ObjectDirective<T & { _assign: AssignerFn }>
+type ModelDirective<T, Modifiers extends string = string> = ObjectDirective<
+  T & { _assign: AssignerFn },
+  any,
+  Modifiers
+>
 
 // We are exporting the v-model runtime directly as vnode hooks so that it can
 // be tree-shaken in case v-model is never used.
 export const vModelText: ModelDirective<
-  HTMLInputElement | HTMLTextAreaElement
+  HTMLInputElement | HTMLTextAreaElement,
+  'trim' | 'number' | 'lazy'
 > = {
   created(el, { modifiers: { lazy, trim, number } }, vnode) {
     el._assign = getModelAssigner(vnode)
@@ -176,7 +181,7 @@ export const vModelRadio: ModelDirective<HTMLInputElement> = {
   }
 }
 
-export const vModelSelect: ModelDirective<HTMLSelectElement> = {
+export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
   // <select multiple> value need to be deep traversed
   deep: true,
   created(el, { value, modifiers: { number } }, vnode) {
@@ -327,3 +332,10 @@ if (__NODE_JS__) {
     }
   }
 }
+
+export type VModelDirective =
+  | typeof vModelText
+  | typeof vModelCheckbox
+  | typeof vModelSelect
+  | typeof vModelRadio
+  | typeof vModelDynamic

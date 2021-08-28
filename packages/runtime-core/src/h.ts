@@ -228,6 +228,9 @@ export function h<
     E,
     any,
     S,
+    {},
+    {},
+    string,
     PP,
     Props,
     Defaults
