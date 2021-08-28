@@ -70,6 +70,7 @@ import {
 } from './compat/compatConfig'
 import { OptionMergeFunction } from './apiCreateApp'
 import { Slots } from './componentSlots'
+import { PublicProps } from './apiDefineComponent'
 
 /**
  * Interface for declaring custom options.
@@ -99,7 +100,10 @@ type ExtractOptionProp<T> = T extends ComponentOptionsBase<
   any, // M
   any, // Mixin
   any, // Extends
-  any // EmitsOptions
+  infer E, // EmitsOptions
+  any,
+  any,
+  any
 >
   ? unknown extends P
     ? {}
@@ -252,7 +256,7 @@ export type ComponentOptionsWithoutProps<
   props?: undefined
 } & ThisType<
     CreateComponentPublicInstance<
-      PE,
+      Props,
       RawBindings,
       D,
       C,
@@ -284,7 +288,7 @@ export type ComponentOptionsWithArrayProps<
   LC extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
-  Props = Readonly<{ [key in PropNames]?: any }> & EmitsToProps<E>
+  Props = Readonly<{ [key in PropNames]?: any }>
 > = ComponentOptionsBase<
   Props,
   RawBindings,
@@ -336,7 +340,7 @@ export type ComponentOptionsWithObjectProps<
   LC extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
-  Props = Readonly<ExtractPropTypes<PropsOptions>> & EmitsToProps<E>,
+  Props = Readonly<ExtractPropTypes<PropsOptions>>,
   Defaults = ExtractDefaultPropTypes<PropsOptions>
 > = ComponentOptionsBase<
   Props,
@@ -356,7 +360,7 @@ export type ComponentOptionsWithObjectProps<
 > & {
   props: PropsOptions & ThisType<void>
 } & ThisType<
-    CreateComponentPublicInstance<
+    { supa: Props } & CreateComponentPublicInstance<
       Props,
       RawBindings,
       D,
@@ -367,10 +371,11 @@ export type ComponentOptionsWithObjectProps<
       E,
       S,
       Props,
-      Defaults,
+      {},
       false,
       LC,
-      Directives
+      Directives,
+      Exposed
     >
   >
 
@@ -404,7 +409,7 @@ export type ComponentOptions<
 > &
   ThisType<
     CreateComponentPublicInstance<
-      {},
+      Props,
       RawBindings,
       D,
       C,
@@ -412,16 +417,18 @@ export type ComponentOptions<
       Mixin,
       Extends,
       E,
-      string,
       S,
+      Props,
       {},
       false,
       LC,
-      Directives
+      Directives,
+      Exposed
     >
   >
 
 export type ComponentOptionsMixin = ComponentOptionsBase<
+  any,
   any,
   any,
   any,
@@ -579,7 +586,7 @@ export type MergedComponentOptionsOverride = {
   errorCaptured?: MergedHook<ErrorCapturedHook>
 }
 
-export type OptionTypesKeys = 'P' | 'B' | 'D' | 'C' | 'M' | 'Defaults'
+export type OptionTypesKeys = 'P' | 'B' | 'D' | 'C' | 'M' | 'E' | 'Defaults'
 
 export type OptionTypesType<
   P = {},
@@ -587,6 +594,7 @@ export type OptionTypesType<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
+  E extends EmitsOptions = {},
   Defaults = {}
 > = {
   P: P
@@ -594,6 +602,7 @@ export type OptionTypesType<
   D: D
   C: C
   M: M
+  E: E
   Defaults: Defaults
 }
 

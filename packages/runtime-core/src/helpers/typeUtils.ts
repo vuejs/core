@@ -5,4 +5,6 @@ export type UnionToIntersection<U> = (
   : never
 
 // make keys required but keep undefined values
-export type LooseRequired<T> = { [P in string & keyof T]: T[P] }
+// export type LooseRequired<T> = { [P in string & keyof T]: T[P] }
+// TODO validate this change, was what's above
+export type LooseRequired<T> = { [P in keyof T]: T[P] }

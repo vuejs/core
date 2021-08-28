@@ -113,11 +113,19 @@ export type InferPropType<T> = [T] extends [null]
     : V
   : T
 
-export type ExtractPropTypes<O> = O extends object
+export type ExtractPropTypesOld<O> = O extends object
   ? { [K in keyof O]?: unknown } & // This is needed to keep the relation between the option prop and the props, allowing to use ctrl+click to navigate to the prop options. see: #3656
       { [K in RequiredKeys<O>]: InferPropType<O[K]> } &
       { [K in OptionalKeys<O>]?: InferPropType<O[K]> }
   : { [K in string]: any }
+
+export type ExtractPropTypes<O, RK = RequiredKeys<O>> = O extends object
+  ? {
+      [K in keyof O]: K extends RK
+        ? InferPropType<O[K]>
+        : InferPropType<O[K]> | undefined
+    }
+  : {} // or { [K in string]: any } //TODO CR check
 
 const enum BooleanFlags {
   shouldCast,

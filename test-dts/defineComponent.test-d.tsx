@@ -555,7 +555,7 @@ describe('with mixins', () => {
       return {}
     },
 
-    setup(props) {
+    setup(props, _) {
       expectType<string>(props.z)
       // props
       expectType<((...args: any[]) => any) | undefined>(props.onClick)
@@ -713,6 +713,7 @@ describe('extends with mixins', () => {
       }
     },
     data() {
+      this.$props.onBar
       return {
         a: 1
       }
@@ -755,6 +756,15 @@ describe('extends with mixins', () => {
     },
     render() {
       const props = this.$props
+
+      this.$HHH
+      this.$ZZZ
+      this.supa
+
+      this.$emit('bar', 2)
+      this.$emit('foo', 2)
+      this.$emit('')
+
       // props
       expectType<((...args: any[]) => any) | undefined>(props.onClick)
       // from Mixin

@@ -36,7 +36,7 @@ import {
   shouldCacheAccess,
   MergedComponentOptionsOverride
 } from './componentOptions'
-import { EmitsOptions, EmitFn } from './componentEmits'
+import { EmitsOptions, EmitFn, EmitsToProps } from './componentEmits'
 import { Slots } from './componentSlots'
 import { markAttrsAccessed } from './componentRenderUtils'
 import { currentRenderingInstance } from './componentRenderContext'
@@ -86,6 +86,7 @@ type MixinToOptionTypes<T> = T extends ComponentOptionsBase<
   infer M,
   infer Mixin,
   infer Extends,
+  infer E,
   any,
   any,
   any,
@@ -93,7 +94,7 @@ type MixinToOptionTypes<T> = T extends ComponentOptionsBase<
   any,
   infer Defaults
 >
-  ? OptionTypesType<P & {}, B & {}, D & {}, C & {}, M & {}, Defaults & {}> &
+  ? OptionTypesType<P & {}, B & {}, D & {}, C & {}, M & {}, E, Defaults & {}> &
       IntersectionMixin<Mixin> &
       IntersectionMixin<Extends>
   : never
@@ -104,8 +105,12 @@ type ExtractMixin<T> = {
 }[T extends ComponentOptionsMixin ? 'Mixin' : never]
 
 type IntersectionMixin<T> = IsDefaultMixinComponent<T> extends true
-  ? OptionTypesType<{}, {}, {}, {}, {}>
+  ? OptionTypesType<{}, {}, {}, {}, {}, {}, {}>
   : UnionToIntersection<ExtractMixin<T>>
+
+type UnionMixin<T> = IsDefaultMixinComponent<T> extends true
+  ? OptionTypesType<{}, {}, {}, {}, {}, {}, {}>
+  : ExtractMixin<T>
 
 type UnwrapMixinsType<
   T,
@@ -158,6 +163,11 @@ export type CreateComponentPublicInstance<
     EnsureNonVoid<C>,
   PublicM extends MethodOptions = UnwrapMixinsType<PublicMixin, 'M'> &
     EnsureNonVoid<M>,
+  // Emits behave a bit different and require union instead of intersection
+  PublicE extends EmitsOptions = UnwrapMixinsType<
+    IntersectionMixin<Mixin> & IntersectionMixin<Extends>,
+    'E'
+  >,
   PublicDefaults = UnwrapMixinsType<PublicMixin, 'Defaults'> &
     EnsureNonVoid<Defaults>
 > = ComponentPublicInstance<
@@ -222,11 +232,15 @@ export type ComponentPublicInstance<
   >,
   Exposed extends string = ''
 > = {
+  $HHH: E
+  $OOO: E extends (infer U)[] ? U[] : E
+  $ZZZ: EmitsToProps<E extends (infer U)[] ? UnionToIntersection<U>[] : E>
   $: ComponentInternalInstance
   $data: D
-  $props: MakeDefaultsOptional extends true
+  $props: (MakeDefaultsOptional extends true
     ? Partial<Defaults> & Omit<P & PublicProps, keyof Defaults>
-    : P & PublicProps
+    : P & PublicProps) &
+    EmitsToProps<E>
   $attrs: Data
   $refs: Data
   $slots: Slots<S>

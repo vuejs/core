@@ -53,6 +53,24 @@ export type EmitsToProps<T extends EmitsOptions> = T extends string[]
     }
   : {}
 
+// declare function processEmits<T extends EmitsOptions>(a: T): EmitsToProps<T>
+
+// const x = processEmits({ click: (a: 1) => true })
+
+// declare const a: EmitsToProps<'click'[] & 'bar'[]>
+// a.onClick
+
+// type Unpacked<T> = T extends (infer U)[]
+//   ? U
+//   : T extends (...args: any[]) => infer U
+//   ? U
+//   : T extends Promise<infer U>
+//   ? U
+//   : T
+// type SSS<T> = T extends string[] ? T : false
+
+// declare const t: SSS<'click'[] & 'bar'[]>
+
 export type EmitVModelUpdate<
   T,
   E extends keyof T & string = keyof T & string

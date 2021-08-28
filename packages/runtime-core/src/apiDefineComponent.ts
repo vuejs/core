@@ -226,7 +226,7 @@ export function defineComponent<
   LC extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
-  Props = Readonly<ExtractPropTypes<PropsOptions>> & EmitsToProps<E>,
+  Props = Readonly<ExtractPropTypes<PropsOptions>>,
   Defaults = ExtractDefaultPropTypes<PropsOptions>
 >(
   options: ComponentOptionsWithObjectProps<
