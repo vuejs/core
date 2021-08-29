@@ -572,9 +572,9 @@ export function compileScript(
     return `\n  props: ${propsDecls} as unknown as undefined,`
   }
 
-  function genSetupPropsArgs(
+  function genSetupPropsType(
     props: Record<string, PropTypeData>,
-    propsArgs: string
+    propsType: string
   ) {
     const keys = Object.keys(props)
     if (!keys.length) {
@@ -594,12 +594,12 @@ export function compileScript(
         if (prop) {
           const { required } = props[key]
           if (!required) {
-            propsArgs = propsArgs.replace(`${key}?`, key)
+            propsType = propsType.replace(`${key}?`, key)
           }
         }
       }
     })
-    return `: ${propsArgs}`
+    return `: ${propsType}`
   }
 
   // 1. process normal <script> first if it exists
@@ -1020,11 +1020,11 @@ export function compileScript(
   // 9. finalize setup() argument signature
   let args = `__props`
   if (propsTypeDecl) {
-    const propsArgs = `${scriptSetup.content.slice(
+    const propsType = `${scriptSetup.content.slice(
       propsTypeDecl.start!,
       propsTypeDecl.end!
     )}`
-    args += genSetupPropsArgs(typeDeclaredProps, propsArgs)
+    args += genSetupPropsType(typeDeclaredProps, propsType)
   }
   // inject user assignment of props
   // we use a default __props so that template expressions referencing props
