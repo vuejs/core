@@ -66,3 +66,7 @@ expectType<JSX.Element>(
 )
 // @ts-expect-error
 expectError(<Suspense onResolve={123} />)
+
+const EmptyComponent = betterDefineComponent({ props: {} })
+
+;<EmptyComponent />

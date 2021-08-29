@@ -50,6 +50,7 @@ import { UnionToIntersection } from './helpers/typeUtils'
 import { Directive } from './directives'
 import { installCompatInstanceProperties } from './compat/instance'
 import { Slot } from './componentSlots'
+import { PublicProps } from './apiDefineComponent'
 
 /**
  * Custom properties added to component instances in any way and can be accessed through `this`
@@ -306,7 +307,15 @@ export type BetterCreateComponentPublicInstance<
   PublicE,
   Readonly<Slots<S>>,
   ExposedKeys<
-    ShallowUnwrapRef<PublicB> &
+    // Props
+    (MakeDefaultsOptional extends true
+      ? Partial<PublicDefaults> &
+          Omit<PublicP & PublicProps, keyof PublicDefaults>
+      : PublicP & PublicProps) &
+      EmitsToProps<PublicE> &
+      // /Props
+
+      ShallowUnwrapRef<PublicB> &
       UnwrapNestedRefs<PublicD> &
       ExtractComputedReturns<PublicC> &
       PublicM,
@@ -406,7 +415,7 @@ export type BetterComponentPublicInstance<
 > = {
   $: ComponentInternalInstance
   $data: D
-  $props: Props
+  $props: Props & PublicProps
 
   $attrs: Data
   $refs: Data

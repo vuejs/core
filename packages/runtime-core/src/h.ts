@@ -328,7 +328,8 @@ declare const MyComp: BetterComponent<
 const r = betterH(
   MyComp,
   {
-    test: 2
+    test: 2,
+    onHey(rrr) {}
   },
   {
     default() {
@@ -356,18 +357,26 @@ const x = betterH(
 )
 
 const Comp = betterDefineComponent({
-  props: {
-    test: Number
-  }
+  // props: ['test']
 })
 
 betterH(
   Comp,
   {
-    test: 1
+    test: 2
   },
   {}
 )
 
 declare function test(t: BetterComponent): boolean
 test(Comp)
+
+declare const MyComp2: Component<{ test: number }>
+
+h(
+  MyComp2,
+  {
+    test: 2
+  },
+  {}
+)
