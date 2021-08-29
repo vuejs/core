@@ -16,11 +16,14 @@ import {
   FunctionalComponent,
   Component,
   ConcreteComponent,
-  ComponentOptions
+  ComponentOptions,
+  BetterComponent
 } from './component'
 import { EmitsOptions } from './componentEmits'
-import { DefineComponent } from './apiDefineComponent'
-import { Slots } from 'test-dts'
+import { betterDefineComponent, DefineComponent } from './apiDefineComponent'
+import { Prop, Slots } from 'test-dts'
+import { BetterComponentOptions } from './componentOptions'
+import { RenderComponent } from './componentPublicInstance'
 
 // `h` is a more user-friendly version of `createVNode` that allows omitting the
 // props when possible. It is intended for manually written render functions.
@@ -92,6 +95,7 @@ type ExtractEmitEvents<T> = T extends Readonly<Array<infer V>>
         : (...args: any[]) => void
     }
 
+// TODO remove `on*` props aka Emit events
 type ExtractEmitPropUpdate<
   P = {},
   PK extends keyof P & string = keyof P & string
@@ -108,6 +112,11 @@ type ExtractEmitPropUpdate<
 type RenderProps<P, E extends EmitsOptions = {}> =
   | (Partial<ExtractEmitEvents<E>> & RawProps & P & ExtractEmitPropUpdate<P>)
   | ({} extends P ? Partial<ExtractEmitEvents<E>> | null : never)
+
+type RenderSlots<S> =
+  | Slots<S>
+  | ({} extends S ? RawSlots : Slots<S>)
+  | RawChildren
 
 // The following is a series of overloads for providing props validation of
 // manually written render functions.
@@ -273,3 +282,92 @@ export function h(type: any, propsOrChildren?: any, children?: any): VNode {
     return createVNode(type, propsOrChildren, children)
   }
 }
+
+// declare function betterH<
+//   P extends Record<string, unknown>,
+//   E extends EmitsOptions,
+//   S
+// >(
+//   type: BetterComponentOptions<P, E, S>,
+//   props?: RenderProps<P, E>,
+//   children?: (RawChildren & Slots<S>) | ({} extends S ? RawSlots : Slots<S>)
+// ): P
+export function betterH<
+  P extends Record<string, unknown>,
+  E extends EmitsOptions,
+  S
+>(
+  type: BetterComponent<P, E, S>,
+  props?: RenderProps<P, E>,
+  children?: RenderSlots<S>
+): P
+
+export function betterH<
+  P extends Record<string, unknown>,
+  E extends EmitsOptions,
+  S
+>(
+  type: RenderComponent<P, E, S>,
+  props?: RenderProps<P, E>,
+  children?: RenderSlots<S>
+): P
+export function betterH(
+  type: any,
+  propsOrChildren?: any,
+  children?: any
+): any {}
+
+declare const MyComp: BetterComponent<
+  { test: number },
+  ['hey'],
+  {
+    default: null
+    typedSlot: { a: number }
+  }
+>
+const r = betterH(
+  MyComp,
+  {
+    test: 2
+  },
+  {
+    default() {
+      return {} as unknown as VNode
+    },
+    typedSlot(e) {
+      return {} as unknown as VNode
+    }
+  }
+)
+
+const x = betterH(
+  {} as unknown as RenderComponent<
+    {
+      test: number
+    },
+    ['tst'],
+    {
+      default: null
+    }
+  >,
+  {
+    test: 2
+  }
+)
+
+const Comp = betterDefineComponent({
+  props: {
+    test: Number
+  }
+})
+
+betterH(
+  Comp,
+  {
+    test: 1
+  },
+  {}
+)
+
+declare function test(t: BetterComponent): boolean
+test(Comp)

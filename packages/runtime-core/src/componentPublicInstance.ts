@@ -34,17 +34,22 @@ import {
   OptionTypesKeys,
   resolveMergedOptions,
   shouldCacheAccess,
-  MergedComponentOptionsOverride
+  MergedComponentOptionsOverride,
+  BetterOptionTypesType,
+  BetterComponentOptionsBase,
+  BetterOptionTypesKeys,
+  BetterComponentOptionsMixin,
+  BetterComponentOptionsAny
 } from './componentOptions'
 import { EmitsOptions, EmitFn, EmitsToProps } from './componentEmits'
-import { Slots } from './componentSlots'
+import { RenderSlot, Slots } from './componentSlots'
 import { markAttrsAccessed } from './componentRenderUtils'
 import { currentRenderingInstance } from './componentRenderContext'
 import { warn } from './warning'
 import { UnionToIntersection } from './helpers/typeUtils'
 import { Directive } from './directives'
 import { installCompatInstanceProperties } from './compat/instance'
-import { ObjectEmitsOptions } from 'test-dts'
+import { Slot } from './componentSlots'
 
 /**
  * Custom properties added to component instances in any way and can be accessed through `this`
@@ -100,6 +105,37 @@ type MixinToOptionTypes<T> = T extends ComponentOptionsBase<
       IntersectionMixin<Extends>
   : never
 
+type BetterMixinToOptionTypes<T> = T extends BetterComponentOptionsBase<
+  infer Props,
+  infer Emits,
+  any,
+  infer LC,
+  infer LD,
+  infer B,
+  infer D,
+  infer C,
+  infer M,
+  any,
+  any,
+  infer Mixin,
+  infer Extends,
+  infer Defaults
+>
+  ? BetterOptionTypesType<
+      Props & {},
+      Emits /* & {}*/,
+      LC & {},
+      LD & {},
+      B & {},
+      D & {},
+      C & {},
+      M & {},
+      Defaults & {}
+    > &
+      BetterIntersectionMixin<Mixin> &
+      BetterIntersectionMixin<Extends>
+  : never
+
 // ExtractMixin(map type) is used to resolve circularly references
 type ExtractMixin<T> = {
   Mixin: MixinToOptionTypes<T>
@@ -109,9 +145,17 @@ type IntersectionMixin<T> = IsDefaultMixinComponent<T> extends true
   ? OptionTypesType<{}, {}, {}, {}, {}, {}, {}>
   : UnionToIntersection<ExtractMixin<T>>
 
-type UnionMixin<T> = IsDefaultMixinComponent<T> extends true
-  ? OptionTypesType<{}, {}, {}, {}, {}, {}, {}>
-  : ExtractMixin<T>
+type BetterExtractMixin<T> = {
+  Mixin: MixinToOptionTypes<T>
+}[T extends ComponentOptionsMixin ? 'Mixin' : never]
+type BetterIntersectionMixin<T> = IsDefaultMixinComponent<T> extends true
+  ? BetterOptionTypesType<{}, {}, {}, {}, {}, {}, {}>
+  : BetterExtractMixin<T>
+
+type BetterUnwrapMixinsType<
+  T,
+  Type extends BetterOptionTypesKeys
+> = T extends BetterOptionTypesType ? T[Type] : never
 
 type UnwrapMixinsType<
   T,
@@ -119,6 +163,67 @@ type UnwrapMixinsType<
 > = T extends OptionTypesType ? T[Type] : never
 
 type EnsureNonVoid<T> = T extends void ? {} : T
+
+/**
+  Props extends Record<string, unknown> = {},
+  Emits extends EmitsOptions = {},
+  S extends Slots<unknown> = {},
+  Bindings extends Record<string, unknown> = {},
+  LC extends Record<string, Component> = {},
+  LD extends Record<string, Directive> = {},
+  D = {}, // return from data()
+  Options extends BetterComponentOptionsAny = BetterComponentOptionsBase<
+    Props,
+    Emits,
+    S,
+    LC,
+    LD,
+    any,
+    D,
+    any,
+    any
+  >
+
+*/
+
+// Render component AKA ComponentPublicInstanceConstructor
+// NOTE maybe this can be a class? to allow more advanced typing
+export type RenderComponent<
+  Props extends Record<string, unknown> = {},
+  Emits extends EmitsOptions = {},
+  S = {},
+  // Allows to expose public API properties, this bypasses Data/Computed/Methods,
+  // easier to declare manually
+  Bindings extends Record<string, unknown> = {},
+  LC extends Record<string, Component> = {},
+  LD extends Record<string, Directive> = {},
+  D = {}, // return from data()
+  Options extends BetterComponentOptionsAny = BetterComponentOptionsBase<
+    Props,
+    Emits,
+    S,
+    LC,
+    LD,
+    any,
+    D,
+    any,
+    any
+  >
+> = {
+  __isFragment?: never
+  __isTeleport?: never
+  __isSuspense?: never
+  new (...args: any[]): BetterComponentPublicInstance<
+    Props,
+    Emits,
+    Readonly<Slots<S>>,
+    Bindings,
+    LC,
+    LD,
+    D,
+    Options
+  >
+}
 
 export type ComponentPublicInstanceConstructor<
   T extends ComponentPublicInstance<
@@ -145,6 +250,72 @@ type FixS<T extends EmitsOptions> = T extends string[]
     Record<T[number], null> &
       (T extends object ? Omit<T, T[number] | keyof string[]> : never)
   : T
+
+export type BetterCreateComponentPublicInstance<
+  P extends Record<string, unknown> = {},
+  E extends EmitsOptions = {},
+  S = any,
+  LC extends Record<string, Component> = {},
+  LD extends Record<string, Directive> = {},
+  B = {},
+  D = {},
+  C extends ComputedOptions = {},
+  M extends MethodOptions = {},
+  Exposed extends string = string,
+  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
+  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
+  PublicProps = P,
+  Defaults = {},
+  MakeDefaultsOptional extends boolean = false,
+  PublicMixin = BetterIntersectionMixin<Mixin> &
+    BetterIntersectionMixin<Extends>,
+  PublicP extends Record<string, unknown> = Readonly<
+    BetterUnwrapMixinsType<PublicMixin, 'P'>
+  > &
+    EnsureNonVoid<P>,
+  PublicLC extends Record<string, Component> = BetterUnwrapMixinsType<
+    PublicMixin,
+    'LC'
+  > &
+    EnsureNonVoid<LC>,
+  PublicLD extends Record<string, Directive> = BetterUnwrapMixinsType<
+    PublicMixin,
+    'LD'
+  > &
+    EnsureNonVoid<LD>,
+  PublicB = BetterUnwrapMixinsType<PublicMixin, 'B'> & EnsureNonVoid<B>,
+  PublicD = BetterUnwrapMixinsType<PublicMixin, 'D'> & EnsureNonVoid<D>,
+  PublicC extends ComputedOptions = BetterUnwrapMixinsType<PublicMixin, 'C'> &
+    EnsureNonVoid<C>,
+  PublicM extends MethodOptions = BetterUnwrapMixinsType<PublicMixin, 'M'> &
+    EnsureNonVoid<M>,
+  // Emits behave a bit different and require union instead of intersection
+  PublicE extends EmitsOptions = FixS<
+    BetterUnwrapMixinsType<BetterIntersectionMixin<Mixin>, 'E'>
+  > &
+    FixS<BetterUnwrapMixinsType<BetterIntersectionMixin<Extends>, 'E'>> &
+    FixS<EnsureNonVoid<E>>,
+  PublicDefaults = BetterUnwrapMixinsType<PublicMixin, 'Defaults'> &
+    EnsureNonVoid<Defaults>
+> = BetterComponentPublicInstance<
+  (MakeDefaultsOptional extends true
+    ? Partial<PublicDefaults> &
+        Omit<PublicP & PublicProps, keyof PublicDefaults>
+    : PublicP & PublicProps) &
+    EmitsToProps<PublicE>,
+  PublicE,
+  Readonly<Slots<S>>,
+  ExposedKeys<
+    ShallowUnwrapRef<PublicB> &
+      UnwrapNestedRefs<PublicD> &
+      ExtractComputedReturns<PublicC> &
+      PublicM,
+    Exposed
+  >,
+  PublicLC,
+  PublicLD,
+  PublicD
+>
 
 export type CreateComponentPublicInstance<
   P = {},
@@ -212,6 +383,49 @@ export type ExposedKeys<
   T,
   Exposed extends string & keyof T
 > = '' extends Exposed ? T : Pick<T, Exposed>
+
+export type BetterComponentPublicInstance<
+  Props extends Record<string, unknown> = {},
+  Emits extends EmitsOptions = {},
+  S extends Slots<unknown> = {},
+  Bindings extends Record<string, unknown> = {},
+  LC extends Record<string, Component> = {},
+  LD extends Record<string, Directive> = {},
+  D = {}, // return from data()
+  Options extends BetterComponentOptionsAny = BetterComponentOptionsBase<
+    Props,
+    Emits,
+    S,
+    LC,
+    LD,
+    any,
+    D,
+    any,
+    any
+  >
+> = {
+  $: ComponentInternalInstance
+  $data: D
+  $props: Props
+
+  $attrs: Data
+  $refs: Data
+  $slots: Readonly<S>
+  $root: BetterComponentPublicInstance | null
+  $parent: BetterComponentPublicInstance | null
+  $emit: EmitFn<Emits, Props>
+  $el: any
+  $options: Options & MergedComponentOptionsOverride
+  $forceUpdate: () => void
+  $nextTick: typeof nextTick
+  $watch(
+    source: string | Function,
+    cb: Function,
+    options?: WatchOptions
+  ): WatchStopHandle
+} & Bindings &
+  // TODO check if the custom properties are exposed with expose
+  ComponentCustomProperties
 
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)

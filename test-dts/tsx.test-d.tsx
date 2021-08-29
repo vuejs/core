@@ -1,4 +1,5 @@
 // TSX w/ defineComponent is tested in defineComponent.test-d.tsx
+import { betterDefineComponent } from 'packages/runtime-core/src/apiDefineComponent'
 import {
   KeepAlive,
   Suspense,

@@ -23,7 +23,8 @@ import {
   ComponentPropsOptions,
   NormalizedPropsOptions,
   initProps,
-  normalizePropsOptions
+  normalizePropsOptions,
+  Prop
 } from './componentProps'
 import { Slots, initSlots, InternalSlots } from './componentSlots'
 import { warn } from './warning'
@@ -32,6 +33,8 @@ import { AppContext, createAppContext, AppConfig } from './apiCreateApp'
 import { Directive, validateDirectiveName } from './directives'
 import {
   applyOptions,
+  BetterComponentOptions,
+  BetterComponentOptionsMixin,
   ComponentOptions,
   ComponentOptionsMixin,
   ComputedOptions,
@@ -188,6 +191,43 @@ export type Component<
 > =
   | ConcreteComponent<Props, RawBindings, D, C, M>
   | ComponentPublicInstanceConstructor<Props>
+
+// export type BetterConcreteComponent<
+//   Props extends Record<string, Prop<unknown>> = {},
+//   Emits extends EmitsOptions = {},
+//   Slots = {},
+//   // Allows to expose public API properties, this bypasses Data/Computed/Methods,
+//   // easier to declare manually
+//   Bindings extends Record<string, unknown> = {},
+//   Options extends ComponentOptions = {}
+
+// > =;
+
+export type BetterComponent<
+  Props extends Record<string, unknown> = {},
+  Emits extends EmitsOptions = {},
+  Slots = {},
+  // Allows to expose public API properties, this bypasses Data/Computed/Methods,
+  // easier to declare manually
+  Bindings extends Record<string, unknown> = {},
+  LocalComponents extends Record<string, Component> = {},
+  LocalDirectives extends Record<string, Directive> = {},
+  D = any,
+  RawBindings = any,
+  C extends ComputedOptions = ComputedOptions,
+  M extends MethodOptions = MethodOptions,
+  Exposed extends string = string,
+  Mixin extends BetterComponentOptionsMixin = any,
+  Extends extends BetterComponentOptionsMixin = any,
+  Options extends BetterComponentOptions = any
+> =
+  | ConcreteComponent<Props, Bindings>
+  | ComponentPublicInstanceConstructor<Props>
+  | { supa: Options }
+
+const ddd: BetterComponent = {
+  setup() {}
+}
 
 export { ComponentOptions }
 

@@ -22,9 +22,11 @@ import { isHmrUpdating } from './hmr'
 import { DeprecationTypes, isCompatEnabled } from './compat/compatConfig'
 import { toRaw } from '@vue/reactivity'
 
-export type Slot = (...args: any[]) => VNode[]
+export type Slot = (...args: any[]) => VNode[] | VNode
 
-export type SlotTyped<T> = T extends null ? () => VNode[] : (arg: T) => VNode[]
+export type SlotTyped<T> = T extends null
+  ? () => VNode[] | VNode
+  : (arg: T) => VNode[] | VNode
 
 export type InternalSlots<T = any> = {
   [K in keyof T]?: T[K] extends () => infer R ? SlotTyped<R> : SlotTyped<T[K]>
@@ -41,6 +43,14 @@ export type Slots<T = any> = RenderSlot &
     : T extends Array<infer V>
     ? Readonly<SlotArray<V>>
     : Readonly<SlotsObject<T>>)
+
+declare const rr: Slots<{ a: null }> extends Readonly<InternalSlots<any>>
+  ? true
+  : false
+
+if (rr) {
+  rr?.valueOf()
+}
 
 export type RenderSlot = {
   // manual render fn hint to skip forced children updates
