@@ -513,22 +513,27 @@ export function compileScript(
     )
   }
 
-  function genRuntimeProps(props: Record<string, PropTypeData>) {
-    const keys = Object.keys(props)
-    if (!keys.length) {
-      return ``
-    }
-
-    // check defaults. If the default object is an object literal with only
-    // static properties, we can directly generate more optimzied default
-    // decalrations. Otherwise we will have to fallback to runtime merging.
-    const hasStaticDefaults =
+  /**
+   * check defaults. If the default object is an object literal with only
+   * static properties, we can directly generate more optimzied default
+   * decalrations. Otherwise we will have to fallback to runtime merging.
+   */
+  function checkStaticDefaults() {
+    return (
       propsRuntimeDefaults &&
       propsRuntimeDefaults.type === 'ObjectExpression' &&
       propsRuntimeDefaults.properties.every(
         node => node.type === 'ObjectProperty' && !node.computed
       )
+    )
+  }
 
+  function genRuntimeProps(props: Record<string, PropTypeData>) {
+    const keys = Object.keys(props)
+    if (!keys.length) {
+      return ``
+    }
+    const hasStaticDefaults = checkStaticDefaults()
     let propsDecls = `{
     ${keys
       .map(key => {
@@ -580,12 +585,7 @@ export function compileScript(
     if (!keys.length) {
       return ``
     }
-    const hasStaticDefaults =
-      propsRuntimeDefaults &&
-      propsRuntimeDefaults.type === 'ObjectExpression' &&
-      propsRuntimeDefaults.properties.every(
-        node => node.type === 'ObjectProperty' && !node.computed
-      )
+    const hasStaticDefaults = checkStaticDefaults()
     keys.map(key => {
       if (hasStaticDefaults) {
         const prop = (propsRuntimeDefaults as ObjectExpression).properties.find(
