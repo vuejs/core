@@ -10,8 +10,7 @@ describe('ssr: scopeId', () => {
         mode: 'module'
       }).code
     ).toMatchInlineSnapshot(`
-      "import { withScopeId as _withScopeId } from \\"vue\\"
-      import { ssrRenderAttrs as _ssrRenderAttrs } from \\"@vue/server-renderer\\"
+      "import { ssrRenderAttrs as _ssrRenderAttrs } from \\"@vue/server-renderer\\"
 
       export function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<div\${_ssrRenderAttrs(_attrs)} data-v-xxxxxxx><span data-v-xxxxxxx>hello</span></div>\`)
@@ -27,7 +26,7 @@ describe('ssr: scopeId', () => {
         mode: 'module'
       }).code
     ).toMatchInlineSnapshot(`
-      "import { resolveComponent as _resolveComponent, withCtx as _withCtx, createTextVNode as _createTextVNode, withScopeId as _withScopeId } from \\"vue\\"
+      "import { resolveComponent as _resolveComponent, withCtx as _withCtx, createTextVNode as _createTextVNode } from \\"vue\\"
       import { ssrRenderComponent as _ssrRenderComponent } from \\"@vue/server-renderer\\"
 
       export function ssrRender(_ctx, _push, _parent, _attrs) {
@@ -56,7 +55,7 @@ describe('ssr: scopeId', () => {
         mode: 'module'
       }).code
     ).toMatchInlineSnapshot(`
-      "import { resolveComponent as _resolveComponent, withCtx as _withCtx, createVNode as _createVNode, withScopeId as _withScopeId } from \\"vue\\"
+      "import { resolveComponent as _resolveComponent, withCtx as _withCtx, createVNode as _createVNode } from \\"vue\\"
       import { ssrRenderComponent as _ssrRenderComponent } from \\"@vue/server-renderer\\"
 
       export function ssrRender(_ctx, _push, _parent, _attrs) {
@@ -85,7 +84,7 @@ describe('ssr: scopeId', () => {
         mode: 'module'
       }).code
     ).toMatchInlineSnapshot(`
-      "import { resolveComponent as _resolveComponent, withCtx as _withCtx, createVNode as _createVNode, withScopeId as _withScopeId } from \\"vue\\"
+      "import { resolveComponent as _resolveComponent, withCtx as _withCtx, createVNode as _createVNode } from \\"vue\\"
       import { ssrRenderComponent as _ssrRenderComponent } from \\"@vue/server-renderer\\"
 
       export function ssrRender(_ctx, _push, _parent, _attrs) {
