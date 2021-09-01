@@ -1,3 +1,17 @@
+## [3.2.7](https://github.com/vuejs/vue-next/compare/v3.2.6...v3.2.7) (2021-09-01)
+
+
+### Bug Fixes
+
+* **compiler-core:** remove no longer necessary withScopeId import in generated code ([935b4e2](https://github.com/vuejs/vue-next/commit/935b4e221041c8ae34c5821d90db90f07e622a9f))
+* **compiler-sfc:** ensure script setup lang=ts output is tree-shakable ([b89ff92](https://github.com/vuejs/vue-next/commit/b89ff9291e70c64f7098cc110161a75eb7c465a4))
+* **compiler:** only generate non-static ref for script setup if the binding exists ([3628991](https://github.com/vuejs/vue-next/commit/362899190666a2d1f9fe23c92e9b6007721ad69f)), closes [#4431](https://github.com/vuejs/vue-next/issues/4431)
+* **ref-transform:** should transform $ref when used with generic arguments ([#4446](https://github.com/vuejs/vue-next/issues/4446)) ([33cf6c8](https://github.com/vuejs/vue-next/commit/33cf6c88664137e8c9d6e75a3b4c5f5cce763c12)), closes [#4442](https://github.com/vuejs/vue-next/issues/4442)
+* **runtime-core:** properly merge unmounted and beforeUnmount options ([#4447](https://github.com/vuejs/vue-next/issues/4447)) ([741d3b3](https://github.com/vuejs/vue-next/commit/741d3b36f21582e682009114961b5cd3146e8dad))
+* **suspense:** misusing DOM Comment element constructor as a vnode type ([#4451](https://github.com/vuejs/vue-next/issues/4451)) ([ef5b731](https://github.com/vuejs/vue-next/commit/ef5b73159d7221c36c25e32f643669d789a33c2c))
+
+
+
 ## [3.2.6](https://github.com/vuejs/vue-next/compare/v3.2.5...v3.2.6) (2021-08-24)
 
 
