@@ -132,7 +132,7 @@ export const errorMessages: Record<ErrorCodes, string> = {
     "Attribute name cannot start with '='.",
   [ErrorCodes.UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME]:
     "'<?' is allowed only in XML context.",
-  [ErrorCodes.UNEXPECTED_NULL_CHARACTER]: `Unexpected null cahracter.`,
+  [ErrorCodes.UNEXPECTED_NULL_CHARACTER]: `Unexpected null character.`,
   [ErrorCodes.UNEXPECTED_SOLIDUS_IN_TAG]: "Illegal '/' in tags.",
 
   // Vue-specific parse errors
