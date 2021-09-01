@@ -16,7 +16,7 @@ describe('e2e: grid', () => {
       for (let j = 0; j < columns.length; j++) {
         expect(
           await text(`tr:nth-child(${i + 1}) td:nth-child(${j + 1})`)
-        ).toContain(data[i][columns[j]])
+        ).toContain(`${data[i][columns[j]]}`)
       }
     }
   }
