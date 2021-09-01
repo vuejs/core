@@ -6,6 +6,7 @@ import {
   openBlock,
   closeBlock,
   currentBlock,
+  Comment,
   createVNode
 } from '../vnode'
 import { isFunction, isArray, ShapeFlags, toNumber } from '@vue/shared'
