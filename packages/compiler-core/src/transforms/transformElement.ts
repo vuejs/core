@@ -465,7 +465,12 @@ export function buildProps(
         // in inline mode there is no setupState object, so we can't use string
         // keys to set the ref. Instead, we need to transform it to pass the
         // acrtual ref instead.
-        if (!__BROWSER__ && context.inline) {
+        if (
+          !__BROWSER__ &&
+          value &&
+          context.inline &&
+          context.bindingMetadata[value.content]
+        ) {
           isStatic = false
         }
       }
