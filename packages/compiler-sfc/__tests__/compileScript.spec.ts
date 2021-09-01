@@ -638,7 +638,7 @@ const emit = defineEmits(['a', 'b'])
 </script>
       `)
       assertCode(content)
-      expect(content).toMatch(`export default _defineComponent({
+      expect(content).toMatch(`export default /*#__PURE__*/_defineComponent({
   props: { foo: String },
   emits: ['a', 'b'],
   setup(__props, { expose, emit }) {`)

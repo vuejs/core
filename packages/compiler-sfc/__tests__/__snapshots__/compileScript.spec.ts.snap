@@ -49,7 +49,7 @@ return { x }
         name: \\"test\\"
       }
       
-export default _defineComponent({
+export default /*#__PURE__*/_defineComponent({
   ...__default__,
   setup})"
 `;
@@ -193,7 +193,7 @@ exports[`SFC compile <script setup> dev mode import usage check components 1`] =
 "import { defineComponent as _defineComponent } from 'vue'
 import { FooBar, FooBaz, FooQux, foo } from './x'
         
-export default _defineComponent({
+export default /*#__PURE__*/_defineComponent({
   setup(__props, { expose }) {
   expose()
 
@@ -209,7 +209,7 @@ exports[`SFC compile <script setup> dev mode import usage check directive 1`] = 
 "import { defineComponent as _defineComponent } from 'vue'
 import { vMyDir } from './x'
         
-export default _defineComponent({
+export default /*#__PURE__*/_defineComponent({
   setup(__props, { expose }) {
   expose()
 
@@ -224,7 +224,7 @@ exports[`SFC compile <script setup> dev mode import usage check js template stri
 "import { defineComponent as _defineComponent } from 'vue'
 import { VAR, VAR2, VAR3 } from './x'
         
-export default _defineComponent({
+export default /*#__PURE__*/_defineComponent({
   setup(__props, { expose }) {
   expose()
 
@@ -239,7 +239,7 @@ exports[`SFC compile <script setup> dev mode import usage check last tag 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 import { FooBaz, Last } from './x'
         
-export default _defineComponent({
+export default /*#__PURE__*/_defineComponent({
   setup(__props, { expose }) {
   expose()
 
@@ -254,7 +254,7 @@ exports[`SFC compile <script setup> dev mode import usage check vue interpolatio
 "import { defineComponent as _defineComponent } from 'vue'
 import { x, y, z, x$y } from './x'
       
-export default _defineComponent({
+export default /*#__PURE__*/_defineComponent({
   setup(__props, { expose }) {
   expose()
 
@@ -688,7 +688,7 @@ exports[`SFC compile <script setup> with TypeScript const Enum 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 const enum Foo { A = 123 }
         
-export default _defineComponent({
+export default /*#__PURE__*/_defineComponent({
   setup(__props, { expose }) {
   expose()
 
@@ -703,7 +703,7 @@ exports[`SFC compile <script setup> with TypeScript defineEmits w/ type (exporte
 "import { defineComponent as _defineComponent } from 'vue'
 export interface Emits { (e: 'foo' | 'bar'): void }
       
-export default _defineComponent({
+export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\"] as unknown as undefined,
   setup(__props, { expose, emit }: { emit: ({ (e: 'foo' | 'bar'): void }), expose: any, slots: any, attrs: any }) {
   expose()
@@ -720,7 +720,7 @@ exports[`SFC compile <script setup> with TypeScript defineEmits w/ type (exporte
 "import { defineComponent as _defineComponent } from 'vue'
 export type Emits = { (e: 'foo' | 'bar'): void }
       
-export default _defineComponent({
+export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\"] as unknown as undefined,
   setup(__props, { expose, emit }: { emit: ({ (e: 'foo' | 'bar'): void }), expose: any, slots: any, attrs: any }) {
   expose()
@@ -737,7 +737,7 @@ exports[`SFC compile <script setup> with TypeScript defineEmits w/ type (interfa
 "import { defineComponent as _defineComponent } from 'vue'
 interface Emits { (e: 'foo' | 'bar'): void }
       
-export default _defineComponent({
+export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\"] as unknown as undefined,
   setup(__props, { expose, emit }: { emit: ({ (e: 'foo' | 'bar'): void }), expose: any, slots: any, attrs: any }) {
   expose()
@@ -754,7 +754,7 @@ exports[`SFC compile <script setup> with TypeScript defineEmits w/ type (referen
 "import { defineComponent as _defineComponent } from 'vue'
 export type Emits = (e: 'foo' | 'bar') => void
       
-export default _defineComponent({
+export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\"] as unknown as undefined,
   setup(__props, { expose, emit }: { emit: ((e: 'foo' | 'bar') => void), expose: any, slots: any, attrs: any }) {
   expose()
@@ -771,7 +771,7 @@ exports[`SFC compile <script setup> with TypeScript defineEmits w/ type (referen
 "import { defineComponent as _defineComponent } from 'vue'
 type Emits = (e: 'foo' | 'bar') => void
       
-export default _defineComponent({
+export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\"] as unknown as undefined,
   setup(__props, { expose, emit }: { emit: ((e: 'foo' | 'bar') => void), expose: any, slots: any, attrs: any }) {
   expose()
@@ -788,7 +788,7 @@ exports[`SFC compile <script setup> with TypeScript defineEmits w/ type (type al
 "import { defineComponent as _defineComponent } from 'vue'
 type Emits = { (e: 'foo' | 'bar'): void }
       
-export default _defineComponent({
+export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\"] as unknown as undefined,
   setup(__props, { expose, emit }: { emit: ({ (e: 'foo' | 'bar'): void }), expose: any, slots: any, attrs: any }) {
   expose()
@@ -804,7 +804,7 @@ return { emit }
 exports[`SFC compile <script setup> with TypeScript defineEmits w/ type (type literal w/ call signatures) 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
-export default _defineComponent({
+export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\", \\"baz\\"] as unknown as undefined,
   setup(__props, { expose, emit }: { emit: ({(e: 'foo' | 'bar'): void; (e: 'baz', id: number): void;}), expose: any, slots: any, attrs: any }) {
   expose()
@@ -820,7 +820,7 @@ return { emit }
 exports[`SFC compile <script setup> with TypeScript defineEmits w/ type 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
-export default _defineComponent({
+export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\"] as unknown as undefined,
   setup(__props, { expose, emit }: { emit: ((e: 'foo' | 'bar') => void), expose: any, slots: any, attrs: any }) {
   expose()
@@ -837,7 +837,7 @@ exports[`SFC compile <script setup> with TypeScript defineProps w/ exported inte
 "import { defineComponent as _defineComponent } from 'vue'
 export interface Props { x?: number }
       
-export default _defineComponent({
+export default /*#__PURE__*/_defineComponent({
   props: {
     x: { type: Number, required: false }
   } as unknown as undefined,
@@ -856,7 +856,7 @@ exports[`SFC compile <script setup> with TypeScript defineProps w/ exported type
 "import { defineComponent as _defineComponent } from 'vue'
 export type Props = { x?: number }
       
-export default _defineComponent({
+export default /*#__PURE__*/_defineComponent({
   props: {
     x: { type: Number, required: false }
   } as unknown as undefined,
@@ -875,7 +875,7 @@ exports[`SFC compile <script setup> with TypeScript defineProps w/ interface 1`]
 "import { defineComponent as _defineComponent } from 'vue'
 interface Props { x?: number }
       
-export default _defineComponent({
+export default /*#__PURE__*/_defineComponent({
   props: {
     x: { type: Number, required: false }
   } as unknown as undefined,
@@ -897,7 +897,7 @@ interface Test {}
       type Alias = number[]
 
       
-export default _defineComponent({
+export default /*#__PURE__*/_defineComponent({
   props: {
     string: { type: String, required: true },
     number: { type: Number, required: true },
@@ -965,7 +965,7 @@ exports[`SFC compile <script setup> with TypeScript defineProps w/ type alias 1`
 "import { defineComponent as _defineComponent } from 'vue'
 type Props = { x?: number }
       
-export default _defineComponent({
+export default /*#__PURE__*/_defineComponent({
   props: {
     x: { type: Number, required: false }
   } as unknown as undefined,
@@ -983,7 +983,7 @@ return {  }
 exports[`SFC compile <script setup> with TypeScript defineProps/Emit w/ runtime options 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
-export default _defineComponent({
+export default /*#__PURE__*/_defineComponent({
   props: { foo: String },
   emits: ['a', 'b'],
   setup(__props, { expose, emit }) {
@@ -1004,7 +1004,7 @@ exports[`SFC compile <script setup> with TypeScript hoist type declarations 1`] 
 export interface Foo {}
         type Bar = {}
       
-export default _defineComponent({
+export default /*#__PURE__*/_defineComponent({
   setup(__props, { expose }) {
   expose()
 
@@ -1019,7 +1019,7 @@ exports[`SFC compile <script setup> with TypeScript runtime Enum 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 enum Foo { A = 123 }
         
-export default _defineComponent({
+export default /*#__PURE__*/_defineComponent({
   setup(__props, { expose }) {
   expose()
 
@@ -1034,7 +1034,7 @@ exports[`SFC compile <script setup> with TypeScript withDefaults (dynamic) 1`] =
 "import { mergeDefaults as _mergeDefaults, defineComponent as _defineComponent } from 'vue'
 import { defaults } from './foo'
       
-export default _defineComponent({
+export default /*#__PURE__*/_defineComponent({
   props: _mergeDefaults({
     foo: { type: String, required: false },
     bar: { type: Number, required: false }
@@ -1057,7 +1057,7 @@ return { props, defaults }
 exports[`SFC compile <script setup> with TypeScript withDefaults (static) 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
-export default _defineComponent({
+export default /*#__PURE__*/_defineComponent({
   props: {
     foo: { type: String, required: false, default: 'hi' },
     bar: { type: Number, required: false }

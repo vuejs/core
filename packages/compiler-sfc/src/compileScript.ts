@@ -1148,14 +1148,14 @@ export function compileScript(
         `\n${hasAwait ? `async ` : ``}function setup(${args}) {\n`
       )
       s.append(
-        `\nexport default ${helper(
+        `\nexport default /*#__PURE__*/${helper(
           `defineComponent`
         )}({${def}${runtimeOptions}\n  setup})`
       )
     } else {
       s.prependLeft(
         startOffset,
-        `\nexport default ${helper(
+        `\nexport default /*#__PURE__*/${helper(
           `defineComponent`
         )}({${def}${runtimeOptions}\n  ${
           hasAwait ? `async ` : ``
