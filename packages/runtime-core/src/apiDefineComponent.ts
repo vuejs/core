@@ -38,10 +38,11 @@ export type DefineComponent<
   M extends MethodOptions = MethodOptions,
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = Record<string, any>,
+  E extends EmitsOptions = {},
   EE extends string = string,
   PP = PublicProps,
-  Props = Readonly<ExtractPropTypes<PropsOrPropOptions>> & EmitsToProps<E>,
+  Props = Readonly<ExtractPropTypes<PropsOrPropOptions>> &
+    ({} extends E ? {} : EmitsToProps<E>),
   Defaults = ExtractDefaultPropTypes<PropsOrPropOptions>
 > = ComponentPublicInstanceConstructor<
   CreateComponentPublicInstance<

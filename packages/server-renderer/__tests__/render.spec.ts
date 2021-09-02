@@ -1078,7 +1078,7 @@ function testRender(type: string, render: typeof renderToString) {
 
       try {
         await render(app)
-      } catch (e) {
+      } catch (e: any) {
         renderError = e
       }
       expect(renderError).toBe(null)

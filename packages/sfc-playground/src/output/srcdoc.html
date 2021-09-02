@@ -61,7 +61,7 @@
 							}
 							window.__next__ = undefined
 							send_ok()
-						} catch (e) {
+						} catch (e: any) {
 							send_error(e.message, e.stack);
 						}
 					}
@@ -109,7 +109,7 @@
 					}
 					try {
 						parent.postMessage({ action: 'error', value: error }, '*');
-					} catch (e) {
+					} catch (e: any) {
 						parent.postMessage({ action: 'error', value: msg }, '*');
 					}
 				}
@@ -121,7 +121,7 @@
 					}
 					try {
 						parent.postMessage({ action: 'unhandledrejection', value: event.reason }, '*');
-					} catch (e) {
+					} catch (e: any) {
 						parent.postMessage({ action: 'unhandledrejection', value: event.reason.message }, '*');
 					}
 				});

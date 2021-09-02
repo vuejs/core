@@ -9,7 +9,7 @@ function assertCode(code: string) {
       sourceType: 'module',
       plugins: [...babelParserDefaultPlugins, 'typescript']
     })
-  } catch (e) {
+  } catch (e: any) {
     console.log(code)
     throw e
   }

@@ -87,7 +87,7 @@ export function patchDOMProp(
   // some properties perform value validation and throw
   try {
     el[key] = value
-  } catch (e) {
+  } catch (e: any) {
     if (__DEV__) {
       warn(
         `Failed setting prop "${key}" on <${el.tagName.toLowerCase()}>: ` +
