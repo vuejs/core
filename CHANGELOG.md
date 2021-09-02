@@ -1,3 +1,16 @@
+## [3.2.8](https://github.com/vuejs/vue-next/compare/v3.2.7...v3.2.8) (2021-09-02)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** ensure script setup generates type-valid ts output ([bacb201](https://github.com/vuejs/vue-next/commit/bacb2012acb4045a2db6988ba4545a7655d6ca14)), closes [#4455](https://github.com/vuejs/vue-next/issues/4455)
+* **compiler-sfc:** generate matching prop types when withDefaults is used ([#4466](https://github.com/vuejs/vue-next/issues/4466)) ([8580796](https://github.com/vuejs/vue-next/commit/85807967dc874e6ea6b20f341875beda938e3058)), closes [#4455](https://github.com/vuejs/vue-next/issues/4455)
+* **compiler:** generate function ref for script setup if inline is ture. ([#4492](https://github.com/vuejs/vue-next/issues/4492)) ([4cd282b](https://github.com/vuejs/vue-next/commit/4cd282b0a17589ef9ca2649e7beb0bdee4a73c57))
+* **compiler:** report invalid directive name error ([#4494](https://github.com/vuejs/vue-next/issues/4494)) ([#4495](https://github.com/vuejs/vue-next/issues/4495)) ([c00925e](https://github.com/vuejs/vue-next/commit/c00925ed5c409b57a1540b79c595b7f8117e2d4c))
+* **types:** include ref-macros.d.ts in npm dist files ([d7f1b77](https://github.com/vuejs/vue-next/commit/d7f1b771f80ab9014a4701913b50458fd251a117)), closes [#4433](https://github.com/vuejs/vue-next/issues/4433)
+
+
+
 ## [3.2.7](https://github.com/vuejs/vue-next/compare/v3.2.6...v3.2.7) (2021-09-01)
 
 
