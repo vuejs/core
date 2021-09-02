@@ -9,7 +9,8 @@
   "jsdelivr": "dist/vue.global.js",
   "files": [
     "index.js",
-    "dist"
+    "dist",
+    "ref-macros.d.ts"
   ],
   "buildOptions": {
     "name": "Vue",
