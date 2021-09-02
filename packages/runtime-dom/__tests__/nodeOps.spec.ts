@@ -60,8 +60,8 @@ describe('runtime-dom: node-ops', () => {
       expect(parent.innerHTML).toBe(content)
       expect(first).toBe(parent.firstChild)
       expect(last).toBe(parent.lastChild)
-      expect(first.namespaceURI).toMatch('svg')
-      expect(last.namespaceURI).toMatch('svg')
+      expect((first as Element).namespaceURI).toMatch('svg')
+      expect((last as Element).namespaceURI).toMatch('svg')
     })
 
     test('fresh insertion as svg, with anchor', () => {
@@ -79,8 +79,8 @@ describe('runtime-dom: node-ops', () => {
       expect(parent.innerHTML).toBe(content + existing)
       expect(first).toBe(parent.firstChild)
       expect(last).toBe(parent.childNodes[parent.childNodes.length - 2])
-      expect(first.namespaceURI).toMatch('svg')
-      expect(last.namespaceURI).toMatch('svg')
+      expect((first as Element).namespaceURI).toMatch('svg')
+      expect((last as Element).namespaceURI).toMatch('svg')
     })
   })
 })

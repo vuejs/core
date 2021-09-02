@@ -490,7 +490,7 @@ describe('error handling', () => {
 
     try {
       await Promise.all(res)
-    } catch (e) {
+    } catch (e: any) {
       expect(e).toBe(err)
     }
     expect(fn).toHaveBeenCalledWith(err, 'component event handler')

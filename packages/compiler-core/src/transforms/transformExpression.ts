@@ -233,7 +233,7 @@ export function processExpression(
     ast = parse(source, {
       plugins: [...context.expressionPlugins, ...babelParserDefaultPlugins]
     }).program
-  } catch (e) {
+  } catch (e: any) {
     context.onError(
       createCompilerError(
         ErrorCodes.X_INVALID_EXPRESSION,

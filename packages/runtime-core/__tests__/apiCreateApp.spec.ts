@@ -84,7 +84,7 @@ describe('api: createApp', () => {
         const bar = inject('bar')
         try {
           inject('__proto__')
-        } catch (e) {}
+        } catch (e: any) {}
         return () => `${foo},${bar}`
       }
     }
