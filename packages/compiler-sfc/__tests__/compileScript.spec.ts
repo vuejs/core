@@ -861,7 +861,7 @@ const emit = defineEmits(['a', 'b'])
       `)
       assertCode(content)
       expect(content).toMatch(`emit: ((e: 'foo' | 'bar') => void),`)
-      expect(content).toMatch(`emits: ["foo", "bar"] as unknown as undefined`)
+      expect(content).toMatch(`emits: ["foo", "bar"]`)
     })
 
     test('defineEmits w/ type (union)', () => {
@@ -884,9 +884,7 @@ const emit = defineEmits(['a', 'b'])
       `)
       assertCode(content)
       expect(content).toMatch(`emit: (${type}),`)
-      expect(content).toMatch(
-        `emits: ["foo", "bar", "baz"] as unknown as undefined`
-      )
+      expect(content).toMatch(`emits: ["foo", "bar", "baz"]`)
     })
 
     test('defineEmits w/ type (interface)', () => {
@@ -898,7 +896,7 @@ const emit = defineEmits(['a', 'b'])
       `)
       assertCode(content)
       expect(content).toMatch(`emit: ({ (e: 'foo' | 'bar'): void }),`)
-      expect(content).toMatch(`emits: ["foo", "bar"] as unknown as undefined`)
+      expect(content).toMatch(`emits: ["foo", "bar"]`)
     })
 
     test('defineEmits w/ type (exported interface)', () => {
@@ -910,7 +908,7 @@ const emit = defineEmits(['a', 'b'])
       `)
       assertCode(content)
       expect(content).toMatch(`emit: ({ (e: 'foo' | 'bar'): void }),`)
-      expect(content).toMatch(`emits: ["foo", "bar"] as unknown as undefined`)
+      expect(content).toMatch(`emits: ["foo", "bar"]`)
     })
 
     test('defineEmits w/ type (type alias)', () => {
@@ -922,7 +920,7 @@ const emit = defineEmits(['a', 'b'])
       `)
       assertCode(content)
       expect(content).toMatch(`emit: ({ (e: 'foo' | 'bar'): void }),`)
-      expect(content).toMatch(`emits: ["foo", "bar"] as unknown as undefined`)
+      expect(content).toMatch(`emits: ["foo", "bar"]`)
     })
 
     test('defineEmits w/ type (exported type alias)', () => {
@@ -934,7 +932,7 @@ const emit = defineEmits(['a', 'b'])
       `)
       assertCode(content)
       expect(content).toMatch(`emit: ({ (e: 'foo' | 'bar'): void }),`)
-      expect(content).toMatch(`emits: ["foo", "bar"] as unknown as undefined`)
+      expect(content).toMatch(`emits: ["foo", "bar"]`)
     })
 
     test('defineEmits w/ type (referenced function type)', () => {
@@ -946,7 +944,7 @@ const emit = defineEmits(['a', 'b'])
       `)
       assertCode(content)
       expect(content).toMatch(`emit: ((e: 'foo' | 'bar') => void),`)
-      expect(content).toMatch(`emits: ["foo", "bar"] as unknown as undefined`)
+      expect(content).toMatch(`emits: ["foo", "bar"]`)
     })
 
     test('defineEmits w/ type (referenced exported function type)', () => {
@@ -958,7 +956,7 @@ const emit = defineEmits(['a', 'b'])
       `)
       assertCode(content)
       expect(content).toMatch(`emit: ((e: 'foo' | 'bar') => void),`)
-      expect(content).toMatch(`emits: ["foo", "bar"] as unknown as undefined`)
+      expect(content).toMatch(`emits: ["foo", "bar"]`)
     })
 
     test('runtime Enum', () => {

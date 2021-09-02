@@ -592,7 +592,7 @@ export function compileScript(
       )})`
     }
 
-    return `\n  props: ${propsDecls} as unknown as undefined,`
+    return `\n  props: ${propsDecls},`
   }
 
   function genSetupPropsType(node: TSTypeLiteral | TSInterfaceBody) {
@@ -600,7 +600,7 @@ export function compileScript(
     if (checkStaticDefaults()) {
       // if withDefaults() is used, we need to remove the optional flags
       // on props that have default values
-      let res = `: { `
+      let res = `{ `
       const members = node.type === 'TSTypeLiteral' ? node.members : node.body
       for (const m of members) {
         if (
@@ -629,7 +629,7 @@ export function compileScript(
       }
       return (res.length ? res.slice(0, -2) : res) + ` }`
     } else {
-      return `: ${scriptSetupSource.slice(node.start!, node.end!)}`
+      return scriptSetupSource.slice(node.start!, node.end!)
     }
   }
 
@@ -1051,17 +1051,25 @@ export function compileScript(
   // 9. finalize setup() argument signature
   let args = `__props`
   if (propsTypeDecl) {
-    args += genSetupPropsType(propsTypeDecl)
+    // mark as any and only cast on assignment
+    // since the user defined complex types may be incompatible with the
+    // inferred type from generated runtime declarations
+    args += `: any`
   }
   // inject user assignment of props
   // we use a default __props so that template expressions referencing props
   // can use it directly
   if (propsIdentifier) {
-    s.prependRight(startOffset, `\nconst ${propsIdentifier} = __props`)
+    s.prependRight(
+      startOffset,
+      `\nconst ${propsIdentifier} = __props${
+        propsTypeDecl ? ` as ${genSetupPropsType(propsTypeDecl)}` : ``
+      }`
+    )
   }
   // inject temp variables for async context preservation
   if (hasAwait) {
-    const any = isTS ? `:any` : ``
+    const any = isTS ? `: any` : ``
     s.prependRight(startOffset, `\nlet __temp${any}, __restore${any}\n`)
   }
 
@@ -1589,7 +1597,7 @@ function genRuntimeEmits(emits: Set<string>) {
   return emits.size
     ? `\n  emits: [${Array.from(emits)
         .map(p => JSON.stringify(p))
-        .join(', ')}] as unknown as undefined,`
+        .join(', ')}],`
     : ``
 }
 

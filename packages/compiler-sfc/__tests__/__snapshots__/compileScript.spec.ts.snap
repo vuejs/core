@@ -704,7 +704,7 @@ exports[`SFC compile <script setup> with TypeScript defineEmits w/ type (exporte
 export interface Emits { (e: 'foo' | 'bar'): void }
       
 export default /*#__PURE__*/_defineComponent({
-  emits: [\\"foo\\", \\"bar\\"] as unknown as undefined,
+  emits: [\\"foo\\", \\"bar\\"],
   setup(__props, { expose, emit }: { emit: ({ (e: 'foo' | 'bar'): void }), expose: any, slots: any, attrs: any }) {
   expose()
 
@@ -721,7 +721,7 @@ exports[`SFC compile <script setup> with TypeScript defineEmits w/ type (exporte
 export type Emits = { (e: 'foo' | 'bar'): void }
       
 export default /*#__PURE__*/_defineComponent({
-  emits: [\\"foo\\", \\"bar\\"] as unknown as undefined,
+  emits: [\\"foo\\", \\"bar\\"],
   setup(__props, { expose, emit }: { emit: ({ (e: 'foo' | 'bar'): void }), expose: any, slots: any, attrs: any }) {
   expose()
 
@@ -738,7 +738,7 @@ exports[`SFC compile <script setup> with TypeScript defineEmits w/ type (interfa
 interface Emits { (e: 'foo' | 'bar'): void }
       
 export default /*#__PURE__*/_defineComponent({
-  emits: [\\"foo\\", \\"bar\\"] as unknown as undefined,
+  emits: [\\"foo\\", \\"bar\\"],
   setup(__props, { expose, emit }: { emit: ({ (e: 'foo' | 'bar'): void }), expose: any, slots: any, attrs: any }) {
   expose()
 
@@ -755,7 +755,7 @@ exports[`SFC compile <script setup> with TypeScript defineEmits w/ type (referen
 export type Emits = (e: 'foo' | 'bar') => void
       
 export default /*#__PURE__*/_defineComponent({
-  emits: [\\"foo\\", \\"bar\\"] as unknown as undefined,
+  emits: [\\"foo\\", \\"bar\\"],
   setup(__props, { expose, emit }: { emit: ((e: 'foo' | 'bar') => void), expose: any, slots: any, attrs: any }) {
   expose()
 
@@ -772,7 +772,7 @@ exports[`SFC compile <script setup> with TypeScript defineEmits w/ type (referen
 type Emits = (e: 'foo' | 'bar') => void
       
 export default /*#__PURE__*/_defineComponent({
-  emits: [\\"foo\\", \\"bar\\"] as unknown as undefined,
+  emits: [\\"foo\\", \\"bar\\"],
   setup(__props, { expose, emit }: { emit: ((e: 'foo' | 'bar') => void), expose: any, slots: any, attrs: any }) {
   expose()
 
@@ -789,7 +789,7 @@ exports[`SFC compile <script setup> with TypeScript defineEmits w/ type (type al
 type Emits = { (e: 'foo' | 'bar'): void }
       
 export default /*#__PURE__*/_defineComponent({
-  emits: [\\"foo\\", \\"bar\\"] as unknown as undefined,
+  emits: [\\"foo\\", \\"bar\\"],
   setup(__props, { expose, emit }: { emit: ({ (e: 'foo' | 'bar'): void }), expose: any, slots: any, attrs: any }) {
   expose()
 
@@ -805,7 +805,7 @@ exports[`SFC compile <script setup> with TypeScript defineEmits w/ type (type li
 "import { defineComponent as _defineComponent } from 'vue'
 
 export default /*#__PURE__*/_defineComponent({
-  emits: [\\"foo\\", \\"bar\\", \\"baz\\"] as unknown as undefined,
+  emits: [\\"foo\\", \\"bar\\", \\"baz\\"],
   setup(__props, { expose, emit }: { emit: ({(e: 'foo' | 'bar'): void; (e: 'baz', id: number): void;}), expose: any, slots: any, attrs: any }) {
   expose()
 
@@ -821,7 +821,7 @@ exports[`SFC compile <script setup> with TypeScript defineEmits w/ type 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
 export default /*#__PURE__*/_defineComponent({
-  emits: [\\"foo\\", \\"bar\\"] as unknown as undefined,
+  emits: [\\"foo\\", \\"bar\\"],
   setup(__props, { expose, emit }: { emit: ((e: 'foo' | 'bar') => void), expose: any, slots: any, attrs: any }) {
   expose()
 
@@ -840,8 +840,8 @@ export interface Props { x?: number }
 export default /*#__PURE__*/_defineComponent({
   props: {
     x: { type: Number, required: false }
-  } as unknown as undefined,
-  setup(__props: { x?: number }, { expose }) {
+  },
+  setup(__props: any, { expose }) {
   expose()
 
       
@@ -859,8 +859,8 @@ export type Props = { x?: number }
 export default /*#__PURE__*/_defineComponent({
   props: {
     x: { type: Number, required: false }
-  } as unknown as undefined,
-  setup(__props: { x?: number }, { expose }) {
+  },
+  setup(__props: any, { expose }) {
   expose()
 
       
@@ -878,8 +878,8 @@ interface Props { x?: number }
 export default /*#__PURE__*/_defineComponent({
   props: {
     x: { type: Number, required: false }
-  } as unknown as undefined,
-  setup(__props: { x?: number }, { expose }) {
+  },
+  setup(__props: any, { expose }) {
   expose()
 
       
@@ -923,34 +923,8 @@ export default /*#__PURE__*/_defineComponent({
     literalUnionMixed: { type: [String, Number, Boolean], required: true },
     intersection: { type: Object, required: true },
     foo: { type: [Function, null], required: true }
-  } as unknown as undefined,
-  setup(__props: {
-        string: string
-        number: number
-        boolean: boolean
-        object: object
-        objectLiteral: { a: number }
-        fn: (n: number) => void
-        functionRef: Function
-        objectRef: Object
-        array: string[]
-        arrayRef: Array<any>
-        tuple: [number, number]
-        set: Set<string>
-        literal: 'foo'
-        optional?: any
-        recordRef: Record<string, null>
-        interface: Test
-        alias: Alias
-        method(): void
-
-        union: string | number
-        literalUnion: 'foo' | 'bar'
-        literalUnionNumber: 1 | 2 | 3 | 4 | 5
-        literalUnionMixed: 'foo' | 1 | boolean
-        intersection: Test & {}
-        foo: ((item: any) => boolean) | null
-      }, { expose }) {
+  },
+  setup(__props: any, { expose }) {
   expose()
 
       
@@ -968,8 +942,8 @@ type Props = { x?: number }
 export default /*#__PURE__*/_defineComponent({
   props: {
     x: { type: Number, required: false }
-  } as unknown as undefined,
-  setup(__props: { x?: number }, { expose }) {
+  },
+  setup(__props: any, { expose }) {
   expose()
 
       
@@ -1039,15 +1013,15 @@ export default /*#__PURE__*/_defineComponent({
     foo: { type: String, required: false },
     bar: { type: Number, required: false },
     baz: { type: Boolean, required: true }
-  }, { ...defaults }) as unknown as undefined,
-  setup(__props: {
+  }, { ...defaults }),
+  setup(__props: any, { expose }) {
+  expose()
+
+const props = __props as {
         foo?: string
         bar?: number
         baz: boolean
-      }, { expose }) {
-  expose()
-
-const props = __props
+      }
       
       
 return { props, defaults }
@@ -1065,11 +1039,11 @@ export default /*#__PURE__*/_defineComponent({
     bar: { type: Number, required: false },
     baz: { type: Boolean, required: true },
     qux: { type: Function, required: false, default() { return 1 } }
-  } as unknown as undefined,
-  setup(__props: { foo: string, bar?: number, baz: boolean, qux(): number }, { expose }) {
+  },
+  setup(__props: any, { expose }) {
   expose()
 
-const props = __props
+const props = __props as { foo: string, bar?: number, baz: boolean, qux(): number }
       
       
 return { props }
