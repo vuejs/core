@@ -775,7 +775,7 @@ function parseAttribute(
   }
   const loc = getSelection(context, start)
 
-  if (!context.inVPre && /^(v-|:|\.|@|#)/.test(name)) {
+  if (!context.inVPre && /^(v-[A-Za-z0-9-]|:|\.|@|#)/.test(name)) {
     const match =
       /(?:^v-([a-z0-9-]+))?(?:(?::|^\.|^@|^#)(\[[^\]]+\]|[^\.]+))?(.+)?$/i.exec(
         name
@@ -886,6 +886,11 @@ function parseAttribute(
       modifiers,
       loc
     }
+  }
+
+  // missing directive name or illegal directive name
+  if (!context.inVPre && startsWith(name, 'v-')) {
+    emitError(context, ErrorCodes.X_MISSING_DIRECTIVE_NAME)
   }
 
   return {
