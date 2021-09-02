@@ -936,6 +936,74 @@ describe('compiler: element transform', () => {
       expect(node.patchFlag).toBe(genFlagText(PatchFlags.NEED_PATCH))
     })
 
+    test('the binding exists (inline ref input)', () => {
+      const { node } = parseWithElementTransform(`<input ref="input"/>`, {
+        inline: true,
+        bindingMetadata: {
+          input: BindingTypes.SETUP_REF
+        }
+      })
+      expect(node.props).toMatchObject({
+        type: NodeTypes.JS_OBJECT_EXPRESSION,
+        properties: [
+          {
+            type: NodeTypes.JS_PROPERTY,
+            key: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'ref',
+              isStatic: true
+            },
+            value: {
+              type: NodeTypes.JS_FUNCTION_EXPRESSION,
+              params: ['_value', '_refs'],
+              body: {
+                type: NodeTypes.JS_BLOCK_STATEMENT,
+                body: [
+                  {
+                    content: `_refs['input'] = _value`
+                  },
+                  {
+                    content: 'input.value = _value'
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      })
+    })
+
+    test('the binding not exists (inline ref input)', () => {
+      const { node } = parseWithElementTransform(`<input ref="input"/>`, {
+        inline: true
+      })
+      expect(node.props).toMatchObject({
+        type: NodeTypes.JS_OBJECT_EXPRESSION,
+        properties: [
+          {
+            type: NodeTypes.JS_PROPERTY,
+            key: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'ref',
+              isStatic: true
+            },
+            value: {
+              type: NodeTypes.JS_FUNCTION_EXPRESSION,
+              params: ['_value', '_refs'],
+              body: {
+                type: NodeTypes.JS_BLOCK_STATEMENT,
+                body: [
+                  {
+                    content: `_refs['input'] = _value`
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      })
+    })
+
     test('HYDRATE_EVENTS', () => {
       // ignore click events (has dedicated fast path)
       const { node } = parseWithElementTransform(`<div @click="foo" />`, {
