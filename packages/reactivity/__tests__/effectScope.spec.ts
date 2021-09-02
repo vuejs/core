@@ -211,7 +211,7 @@ describe('reactivity/effect/scope', () => {
     expect(spy).toHaveBeenCalledTimes(1)
   })
 
-  it('should derefence child scope from parent scope after stopping child scope (no memleaks)', async () => {
+  it('should derefence child scope from parent scope after stopping child scope (no memleaks)', () => {
     const parent = new EffectScope()
     const child = parent.run(() => new EffectScope())!
     expect(parent.scopes!.includes(child)).toBe(true)
