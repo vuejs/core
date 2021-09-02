@@ -38,7 +38,8 @@ import {
   RestElement,
   TSInterfaceBody,
   AwaitExpression,
-  Program
+  Program,
+  ObjectMethod
 } from '@babel/types'
 import { walk } from 'estree-walker'
 import { RawSourceMap } from 'source-map'
@@ -242,7 +243,7 @@ export function compileScript(
   let hasDefineEmitCall = false
   let hasDefineExposeCall = false
   let propsRuntimeDecl: Node | undefined
-  let propsRuntimeDefaults: Node | undefined
+  let propsRuntimeDefaults: ObjectExpression | undefined
   let propsTypeDecl: TSTypeLiteral | TSInterfaceBody | undefined
   let propsTypeDeclRaw: Node | undefined
   let propsIdentifier: string | undefined
@@ -384,7 +385,16 @@ export function compileScript(
           node
         )
       }
-      propsRuntimeDefaults = node.arguments[1]
+      propsRuntimeDefaults = node.arguments[1] as ObjectExpression
+      if (
+        !propsRuntimeDefaults ||
+        propsRuntimeDefaults.type !== 'ObjectExpression'
+      ) {
+        error(
+          `The 2nd argument of ${WITH_DEFAULTS} must be an object literal.`,
+          propsRuntimeDefaults || node
+        )
+      }
     } else {
       error(
         `${WITH_DEFAULTS}' first argument must be a ${DEFINE_PROPS} call.`,
@@ -523,7 +533,9 @@ export function compileScript(
       propsRuntimeDefaults &&
       propsRuntimeDefaults.type === 'ObjectExpression' &&
       propsRuntimeDefaults.properties.every(
-        node => node.type === 'ObjectProperty' && !node.computed
+        node =>
+          (node.type === 'ObjectProperty' && !node.computed) ||
+          node.type === 'ObjectMethod'
       )
     )
   }
@@ -534,22 +546,28 @@ export function compileScript(
       return ``
     }
     const hasStaticDefaults = checkStaticDefaults()
+    const scriptSetupSource = scriptSetup!.content
     let propsDecls = `{
     ${keys
       .map(key => {
         let defaultString: string | undefined
         if (hasStaticDefaults) {
-          const prop = (
-            propsRuntimeDefaults as ObjectExpression
-          ).properties.find(
+          const prop = propsRuntimeDefaults!.properties.find(
             (node: any) => node.key.name === key
-          ) as ObjectProperty
+          ) as ObjectProperty | ObjectMethod
           if (prop) {
-            // prop has corresponding static default value
-            defaultString = `default: ${source.slice(
-              prop.value.start! + startOffset,
-              prop.value.end! + startOffset
-            )}`
+            if (prop.type === 'ObjectProperty') {
+              // prop has corresponding static default value
+              defaultString = `default: ${scriptSetupSource.slice(
+                prop.value.start!,
+                prop.value.end!
+              )}`
+            } else {
+              defaultString = `default() ${scriptSetupSource.slice(
+                prop.body.start!,
+                prop.body.end!
+              )}`
+            }
           }
         }
 
@@ -577,29 +595,42 @@ export function compileScript(
     return `\n  props: ${propsDecls} as unknown as undefined,`
   }
 
-  function genSetupPropsType(
-    props: Record<string, PropTypeData>,
-    propsType: string
-  ) {
-    const keys = Object.keys(props)
-    if (!keys.length) {
-      return ``
-    }
-    const hasStaticDefaults = checkStaticDefaults()
-    keys.map(key => {
-      if (hasStaticDefaults) {
-        const prop = (propsRuntimeDefaults as ObjectExpression).properties.find(
-          (node: any) => node.key.name === key
-        ) as ObjectProperty
-        if (prop) {
-          const { required } = props[key]
-          if (!required) {
-            propsType = propsType.replace(`${key}?`, key)
+  function genSetupPropsType(node: TSTypeLiteral | TSInterfaceBody) {
+    const scriptSetupSource = scriptSetup!.content
+    if (checkStaticDefaults()) {
+      // if withDefaults() is used, we need to remove the optional flags
+      // on props that have default values
+      let res = `: { `
+      const members = node.type === 'TSTypeLiteral' ? node.members : node.body
+      for (const m of members) {
+        if (
+          (m.type === 'TSPropertySignature' ||
+            m.type === 'TSMethodSignature') &&
+          m.typeAnnotation &&
+          m.key.type === 'Identifier'
+        ) {
+          if (
+            propsRuntimeDefaults!.properties.some(
+              (p: any) => p.key.name === (m.key as Identifier).name
+            )
+          ) {
+            res +=
+              m.key.name +
+              (m.type === 'TSMethodSignature' ? '()' : '') +
+              scriptSetupSource.slice(
+                m.typeAnnotation.start!,
+                m.typeAnnotation.end!
+              ) +
+              ', '
+          } else {
+            res += scriptSetupSource.slice(m.start!, m.end!) + `, `
           }
         }
       }
-    })
-    return `: ${propsType}`
+      return (res.length ? res.slice(0, -2) : res) + ` }`
+    } else {
+      return `: ${scriptSetupSource.slice(node.start!, node.end!)}`
+    }
   }
 
   // 1. process normal <script> first if it exists
@@ -1020,11 +1051,7 @@ export function compileScript(
   // 9. finalize setup() argument signature
   let args = `__props`
   if (propsTypeDecl) {
-    const propsType = `${scriptSetup.content.slice(
-      propsTypeDecl.start!,
-      propsTypeDecl.end!
-    )}`
-    args += genSetupPropsType(typeDeclaredProps, propsType)
+    args += genSetupPropsType(propsTypeDecl)
   }
   // inject user assignment of props
   // we use a default __props so that template expressions referencing props

@@ -801,8 +801,10 @@ const emit = defineEmits(['a', 'b'])
         foo?: string
         bar?: number
         baz: boolean
+        qux?(): number
       }>(), {
-        foo: 'hi'
+        foo: 'hi',
+        qux() { return 1 }
       })
       </script>
       `)
@@ -812,16 +814,18 @@ const emit = defineEmits(['a', 'b'])
       )
       expect(content).toMatch(`bar: { type: Number, required: false }`)
       expect(content).toMatch(`baz: { type: Boolean, required: true }`)
-      expect(content).toMatch(`{
-        foo: string
-        bar?: number
-        baz: boolean
-      }`)
+      expect(content).toMatch(
+        `qux: { type: Function, required: false, default() { return 1 } }`
+      )
+      expect(content).toMatch(
+        `{ foo: string, bar?: number, baz: boolean, qux(): number }`
+      )
       expect(content).toMatch(`const props = __props`)
       expect(bindings).toStrictEqual({
         foo: BindingTypes.PROPS,
         bar: BindingTypes.PROPS,
         baz: BindingTypes.PROPS,
+        qux: BindingTypes.PROPS,
         props: BindingTypes.SETUP_CONST
       })
     })
