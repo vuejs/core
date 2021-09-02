@@ -619,7 +619,7 @@ function defineReactive(obj: any, key: string, val: any) {
       Object.keys(val).forEach(key => {
         try {
           defineReactiveSimple(val, key, val[key])
-        } catch (e) {}
+        } catch (e: any) {}
       })
     }
   }

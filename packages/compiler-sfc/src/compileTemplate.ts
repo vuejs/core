@@ -127,7 +127,7 @@ export function compileTemplate(
         ...options,
         source: preprocess(options, preprocessor)
       })
-    } catch (e) {
+    } catch (e: any) {
       return {
         code: `export default function render() {}`,
         source: options.source,

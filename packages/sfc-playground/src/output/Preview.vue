@@ -49,7 +49,7 @@ watch(
         ]
       }
       createSandbox()
-    } catch (e) {
+    } catch (e: any) {
       store.errors = [e as Error]
       return
     }
@@ -89,7 +89,7 @@ function createSandbox() {
   let importMap: Record<string, any>
   try {
     importMap = JSON.parse(store.importMap || `{}`)
-  } catch (e) {
+  } catch (e: any) {
     store.errors = [`Syntax error in import-map.json: ${(e as Error).message}`]
     return
   }
@@ -193,7 +193,7 @@ async function updatePreview() {
   app.config.errorHandler = e => console.error(e)
   app.mount('#app')`.trim()
     ])
-  } catch (e) {
+  } catch (e: any) {
     runtimeError.value = (e as Error).message
   }
 }

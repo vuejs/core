@@ -210,7 +210,7 @@ export function compileScript(
         bindings,
         scriptAst: scriptAst.body
       }
-    } catch (e) {
+    } catch (e: any) {
       // silently fallback if parse fails since user may be using custom
       // babel syntax
       return script
@@ -281,7 +281,7 @@ export function compileScript(
   ): Program {
     try {
       return _parse(input, options).program
-    } catch (e) {
+    } catch (e: any) {
       e.message = `[@vue/compiler-sfc] ${e.message}\n\n${
         sfc.filename
       }\n${generateCodeFrame(source, e.pos + offset, e.pos + offset + 1)}`

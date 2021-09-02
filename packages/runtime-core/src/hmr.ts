@@ -169,7 +169,7 @@ function tryWrap(fn: (id: string, arg: any) => any): Function {
   return (id: string, arg: any) => {
     try {
       return fn(id, arg)
-    } catch (e) {
+    } catch (e: any) {
       console.error(e)
       console.warn(
         `[HMR] Something went wrong during Vue component hot-reload. ` +

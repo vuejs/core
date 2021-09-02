@@ -489,7 +489,7 @@ describe('scheduler', () => {
     })
     try {
       await nextTick()
-    } catch (e) {
+    } catch (e: any) {
       expect(e).toBe(err)
     }
     expect(

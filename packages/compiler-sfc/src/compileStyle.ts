@@ -205,7 +205,7 @@ export function doCompileStyle(
     // force synchronous transform (we know we only have sync plugins)
     code = result.css
     outMap = result.map
-  } catch (e) {
+  } catch (e: any) {
     errors.push(e)
   }
 
