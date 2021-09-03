@@ -179,7 +179,7 @@ describe('SFC <script setup> helpers', () => {
             )
             __temp = await __temp
             __restore()
-          } catch (e) {
+          } catch (e: any) {
             // ignore
           }
           // register the lifecycle after an await statement

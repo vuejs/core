@@ -71,7 +71,7 @@ window.init = () => {
       lastSuccessfulCode = code + `\n\n// Check the console for the AST`
       lastSuccessfulMap = new SourceMapConsumer(map!)
       lastSuccessfulMap!.computeColumnSpans()
-    } catch (e) {
+    } catch (e: any) {
       lastSuccessfulCode = `/* ERROR: ${e.message} (see console for more info) */`
       console.error(e)
     }

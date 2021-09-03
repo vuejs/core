@@ -47,7 +47,6 @@ import {
   CREATE_TEXT,
   PUSH_SCOPE_ID,
   POP_SCOPE_ID,
-  WITH_SCOPE_ID,
   WITH_DIRECTIVES,
   CREATE_ELEMENT_VNODE,
   OPEN_BLOCK,
@@ -380,11 +379,8 @@ function genModulePreamble(
 ) {
   const { push, newline, optimizeImports, runtimeModuleName } = context
 
-  if (genScopeId) {
-    ast.helpers.push(WITH_SCOPE_ID)
-    if (ast.hoists.length) {
-      ast.helpers.push(PUSH_SCOPE_ID, POP_SCOPE_ID)
-    }
+  if (genScopeId && ast.hoists.length) {
+    ast.helpers.push(PUSH_SCOPE_ID, POP_SCOPE_ID)
   }
 
   // generate import statements for helpers

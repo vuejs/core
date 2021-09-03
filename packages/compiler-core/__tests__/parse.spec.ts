@@ -1309,6 +1309,27 @@ describe('compiler: parse', () => {
         }
       })
     })
+    test('directive with no name', () => {
+      let errorCode = -1
+      const ast = baseParse('<div v-/>', {
+        onError: err => {
+          errorCode = err.code as number
+        }
+      })
+      const directive = (ast.children[0] as ElementNode).props[0]
+
+      expect(errorCode).toBe(ErrorCodes.X_MISSING_DIRECTIVE_NAME)
+      expect(directive).toStrictEqual({
+        type: NodeTypes.ATTRIBUTE,
+        name: 'v-',
+        value: undefined,
+        loc: {
+          start: { offset: 5, line: 1, column: 6 },
+          end: { offset: 7, line: 1, column: 8 },
+          source: 'v-'
+        }
+      })
+    })
 
     test('v-bind shorthand', () => {
       const ast = baseParse('<div :a=b />')

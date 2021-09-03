@@ -42,6 +42,22 @@ return { foo, a, b, c, d }
 }"
 `;
 
+exports[`sfc ref transform usage /w typescript 1`] = `
+"import { ref as _ref, defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  setup(__props, { expose }) {
+  expose()
+
+        let msg = _ref<string | number>('foo');
+        let bar = _ref <string | number>('bar');
+      
+return { msg, bar }
+}
+
+})"
+`;
+
 exports[`sfc ref transform usage in normal <script> 1`] = `
 "import { ref as _ref } from 'vue'
 

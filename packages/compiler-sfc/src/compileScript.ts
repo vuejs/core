@@ -38,7 +38,8 @@ import {
   RestElement,
   TSInterfaceBody,
   AwaitExpression,
-  Program
+  Program,
+  ObjectMethod
 } from '@babel/types'
 import { walk } from 'estree-walker'
 import { RawSourceMap } from 'source-map'
@@ -210,7 +211,7 @@ export function compileScript(
         bindings,
         scriptAst: scriptAst.body
       }
-    } catch (e) {
+    } catch (e: any) {
       // silently fallback if parse fails since user may be using custom
       // babel syntax
       return script
@@ -242,7 +243,7 @@ export function compileScript(
   let hasDefineEmitCall = false
   let hasDefineExposeCall = false
   let propsRuntimeDecl: Node | undefined
-  let propsRuntimeDefaults: Node | undefined
+  let propsRuntimeDefaults: ObjectExpression | undefined
   let propsTypeDecl: TSTypeLiteral | TSInterfaceBody | undefined
   let propsTypeDeclRaw: Node | undefined
   let propsIdentifier: string | undefined
@@ -281,7 +282,7 @@ export function compileScript(
   ): Program {
     try {
       return _parse(input, options).program
-    } catch (e) {
+    } catch (e: any) {
       e.message = `[@vue/compiler-sfc] ${e.message}\n\n${
         sfc.filename
       }\n${generateCodeFrame(source, e.pos + offset, e.pos + offset + 1)}`
@@ -384,7 +385,16 @@ export function compileScript(
           node
         )
       }
-      propsRuntimeDefaults = node.arguments[1]
+      propsRuntimeDefaults = node.arguments[1] as ObjectExpression
+      if (
+        !propsRuntimeDefaults ||
+        propsRuntimeDefaults.type !== 'ObjectExpression'
+      ) {
+        error(
+          `The 2nd argument of ${WITH_DEFAULTS} must be an object literal.`,
+          propsRuntimeDefaults || node
+        )
+      }
     } else {
       error(
         `${WITH_DEFAULTS}' first argument must be a ${DEFINE_PROPS} call.`,
@@ -513,38 +523,51 @@ export function compileScript(
     )
   }
 
+  /**
+   * check defaults. If the default object is an object literal with only
+   * static properties, we can directly generate more optimzied default
+   * decalrations. Otherwise we will have to fallback to runtime merging.
+   */
+  function checkStaticDefaults() {
+    return (
+      propsRuntimeDefaults &&
+      propsRuntimeDefaults.type === 'ObjectExpression' &&
+      propsRuntimeDefaults.properties.every(
+        node =>
+          (node.type === 'ObjectProperty' && !node.computed) ||
+          node.type === 'ObjectMethod'
+      )
+    )
+  }
+
   function genRuntimeProps(props: Record<string, PropTypeData>) {
     const keys = Object.keys(props)
     if (!keys.length) {
       return ``
     }
-
-    // check defaults. If the default object is an object literal with only
-    // static properties, we can directly generate more optimzied default
-    // decalrations. Otherwise we will have to fallback to runtime merging.
-    const hasStaticDefaults =
-      propsRuntimeDefaults &&
-      propsRuntimeDefaults.type === 'ObjectExpression' &&
-      propsRuntimeDefaults.properties.every(
-        node => node.type === 'ObjectProperty' && !node.computed
-      )
-
+    const hasStaticDefaults = checkStaticDefaults()
+    const scriptSetupSource = scriptSetup!.content
     let propsDecls = `{
     ${keys
       .map(key => {
         let defaultString: string | undefined
         if (hasStaticDefaults) {
-          const prop = (
-            propsRuntimeDefaults as ObjectExpression
-          ).properties.find(
+          const prop = propsRuntimeDefaults!.properties.find(
             (node: any) => node.key.name === key
-          ) as ObjectProperty
+          ) as ObjectProperty | ObjectMethod
           if (prop) {
-            // prop has corresponding static default value
-            defaultString = `default: ${source.slice(
-              prop.value.start! + startOffset,
-              prop.value.end! + startOffset
-            )}`
+            if (prop.type === 'ObjectProperty') {
+              // prop has corresponding static default value
+              defaultString = `default: ${scriptSetupSource.slice(
+                prop.value.start!,
+                prop.value.end!
+              )}`
+            } else {
+              defaultString = `default() ${scriptSetupSource.slice(
+                prop.body.start!,
+                prop.body.end!
+              )}`
+            }
           }
         }
 
@@ -569,7 +592,45 @@ export function compileScript(
       )})`
     }
 
-    return `\n  props: ${propsDecls} as unknown as undefined,`
+    return `\n  props: ${propsDecls},`
+  }
+
+  function genSetupPropsType(node: TSTypeLiteral | TSInterfaceBody) {
+    const scriptSetupSource = scriptSetup!.content
+    if (checkStaticDefaults()) {
+      // if withDefaults() is used, we need to remove the optional flags
+      // on props that have default values
+      let res = `{ `
+      const members = node.type === 'TSTypeLiteral' ? node.members : node.body
+      for (const m of members) {
+        if (
+          (m.type === 'TSPropertySignature' ||
+            m.type === 'TSMethodSignature') &&
+          m.typeAnnotation &&
+          m.key.type === 'Identifier'
+        ) {
+          if (
+            propsRuntimeDefaults!.properties.some(
+              (p: any) => p.key.name === (m.key as Identifier).name
+            )
+          ) {
+            res +=
+              m.key.name +
+              (m.type === 'TSMethodSignature' ? '()' : '') +
+              scriptSetupSource.slice(
+                m.typeAnnotation.start!,
+                m.typeAnnotation.end!
+              ) +
+              ', '
+          } else {
+            res += scriptSetupSource.slice(m.start!, m.end!) + `, `
+          }
+        }
+      }
+      return (res.length ? res.slice(0, -2) : res) + ` }`
+    } else {
+      return scriptSetupSource.slice(node.start!, node.end!)
+    }
   }
 
   // 1. process normal <script> first if it exists
@@ -990,20 +1051,25 @@ export function compileScript(
   // 9. finalize setup() argument signature
   let args = `__props`
   if (propsTypeDecl) {
-    args += `: ${scriptSetup.content.slice(
-      propsTypeDecl.start!,
-      propsTypeDecl.end!
-    )}`
+    // mark as any and only cast on assignment
+    // since the user defined complex types may be incompatible with the
+    // inferred type from generated runtime declarations
+    args += `: any`
   }
   // inject user assignment of props
   // we use a default __props so that template expressions referencing props
   // can use it directly
   if (propsIdentifier) {
-    s.prependRight(startOffset, `\nconst ${propsIdentifier} = __props`)
+    s.prependRight(
+      startOffset,
+      `\nconst ${propsIdentifier} = __props${
+        propsTypeDecl ? ` as ${genSetupPropsType(propsTypeDecl)}` : ``
+      }`
+    )
   }
   // inject temp variables for async context preservation
   if (hasAwait) {
-    const any = isTS ? `:any` : ``
+    const any = isTS ? `: any` : ``
     s.prependRight(startOffset, `\nlet __temp${any}, __restore${any}\n`)
   }
 
@@ -1148,14 +1214,14 @@ export function compileScript(
         `\n${hasAwait ? `async ` : ``}function setup(${args}) {\n`
       )
       s.append(
-        `\nexport default ${helper(
+        `\nexport default /*#__PURE__*/${helper(
           `defineComponent`
         )}({${def}${runtimeOptions}\n  setup})`
       )
     } else {
       s.prependLeft(
         startOffset,
-        `\nexport default ${helper(
+        `\nexport default /*#__PURE__*/${helper(
           `defineComponent`
         )}({${def}${runtimeOptions}\n  ${
           hasAwait ? `async ` : ``
@@ -1531,7 +1597,7 @@ function genRuntimeEmits(emits: Set<string>) {
   return emits.size
     ? `\n  emits: [${Array.from(emits)
         .map(p => JSON.stringify(p))
-        .join(', ')}] as unknown as undefined,`
+        .join(', ')}],`
     : ``
 }
 

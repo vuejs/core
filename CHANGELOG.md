@@ -1,3 +1,30 @@
+## [3.2.8](https://github.com/vuejs/vue-next/compare/v3.2.7...v3.2.8) (2021-09-02)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** ensure script setup generates type-valid ts output ([bacb201](https://github.com/vuejs/vue-next/commit/bacb2012acb4045a2db6988ba4545a7655d6ca14)), closes [#4455](https://github.com/vuejs/vue-next/issues/4455)
+* **compiler-sfc:** generate matching prop types when withDefaults is used ([#4466](https://github.com/vuejs/vue-next/issues/4466)) ([8580796](https://github.com/vuejs/vue-next/commit/85807967dc874e6ea6b20f341875beda938e3058)), closes [#4455](https://github.com/vuejs/vue-next/issues/4455)
+* **compiler:** generate function ref for script setup if inline is ture. ([#4492](https://github.com/vuejs/vue-next/issues/4492)) ([4cd282b](https://github.com/vuejs/vue-next/commit/4cd282b0a17589ef9ca2649e7beb0bdee4a73c57))
+* **compiler:** report invalid directive name error ([#4494](https://github.com/vuejs/vue-next/issues/4494)) ([#4495](https://github.com/vuejs/vue-next/issues/4495)) ([c00925e](https://github.com/vuejs/vue-next/commit/c00925ed5c409b57a1540b79c595b7f8117e2d4c))
+* **types:** include ref-macros.d.ts in npm dist files ([d7f1b77](https://github.com/vuejs/vue-next/commit/d7f1b771f80ab9014a4701913b50458fd251a117)), closes [#4433](https://github.com/vuejs/vue-next/issues/4433)
+
+
+
+## [3.2.7](https://github.com/vuejs/vue-next/compare/v3.2.6...v3.2.7) (2021-09-01)
+
+
+### Bug Fixes
+
+* **compiler-core:** remove no longer necessary withScopeId import in generated code ([935b4e2](https://github.com/vuejs/vue-next/commit/935b4e221041c8ae34c5821d90db90f07e622a9f))
+* **compiler-sfc:** ensure script setup lang=ts output is tree-shakable ([b89ff92](https://github.com/vuejs/vue-next/commit/b89ff9291e70c64f7098cc110161a75eb7c465a4))
+* **compiler:** only generate non-static ref for script setup if the binding exists ([3628991](https://github.com/vuejs/vue-next/commit/362899190666a2d1f9fe23c92e9b6007721ad69f)), closes [#4431](https://github.com/vuejs/vue-next/issues/4431)
+* **ref-transform:** should transform $ref when used with generic arguments ([#4446](https://github.com/vuejs/vue-next/issues/4446)) ([33cf6c8](https://github.com/vuejs/vue-next/commit/33cf6c88664137e8c9d6e75a3b4c5f5cce763c12)), closes [#4442](https://github.com/vuejs/vue-next/issues/4442)
+* **runtime-core:** properly merge unmounted and beforeUnmount options ([#4447](https://github.com/vuejs/vue-next/issues/4447)) ([741d3b3](https://github.com/vuejs/vue-next/commit/741d3b36f21582e682009114961b5cd3146e8dad))
+* **suspense:** misusing DOM Comment element constructor as a vnode type ([#4451](https://github.com/vuejs/vue-next/issues/4451)) ([ef5b731](https://github.com/vuejs/vue-next/commit/ef5b73159d7221c36c25e32f643669d789a33c2c))
+
+
+
 ## [3.2.6](https://github.com/vuejs/vue-next/compare/v3.2.5...v3.2.6) (2021-08-24)
 
 

@@ -1,7 +1,7 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`scopeId compiler support should push scopeId for hoisted nodes 1`] = `
-"import { createElementVNode as _createElementVNode, toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, openBlock as _openBlock, createElementBlock as _createElementBlock, withScopeId as _withScopeId, pushScopeId as _pushScopeId, popScopeId as _popScopeId } from \\"vue\\"
+"import { createElementVNode as _createElementVNode, toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, openBlock as _openBlock, createElementBlock as _createElementBlock, pushScopeId as _pushScopeId, popScopeId as _popScopeId } from \\"vue\\"
 
 _pushScopeId(\\"test\\")
 const _hoisted_1 = /*#__PURE__*/_createElementVNode(\\"div\\", null, \\"hello\\", -1 /* HOISTED */)
@@ -18,7 +18,7 @@ export function render(_ctx, _cache) {
 `;
 
 exports[`scopeId compiler support should wrap default slot 1`] = `
-"import { createElementVNode as _createElementVNode, resolveComponent as _resolveComponent, withCtx as _withCtx, openBlock as _openBlock, createBlock as _createBlock, withScopeId as _withScopeId } from \\"vue\\"
+"import { createElementVNode as _createElementVNode, resolveComponent as _resolveComponent, withCtx as _withCtx, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
 
 export function render(_ctx, _cache) {
   const _component_Child = _resolveComponent(\\"Child\\")
@@ -33,7 +33,7 @@ export function render(_ctx, _cache) {
 `;
 
 exports[`scopeId compiler support should wrap dynamic slots 1`] = `
-"import { createElementVNode as _createElementVNode, resolveComponent as _resolveComponent, withCtx as _withCtx, renderList as _renderList, createSlots as _createSlots, openBlock as _openBlock, createBlock as _createBlock, withScopeId as _withScopeId } from \\"vue\\"
+"import { createElementVNode as _createElementVNode, resolveComponent as _resolveComponent, withCtx as _withCtx, renderList as _renderList, createSlots as _createSlots, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
 
 export function render(_ctx, _cache) {
   const _component_Child = _resolveComponent(\\"Child\\")
@@ -60,7 +60,7 @@ export function render(_ctx, _cache) {
 `;
 
 exports[`scopeId compiler support should wrap named slots 1`] = `
-"import { toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, createElementVNode as _createElementVNode, resolveComponent as _resolveComponent, withCtx as _withCtx, openBlock as _openBlock, createBlock as _createBlock, withScopeId as _withScopeId } from \\"vue\\"
+"import { toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, createElementVNode as _createElementVNode, resolveComponent as _resolveComponent, withCtx as _withCtx, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
 
 export function render(_ctx, _cache) {
   const _component_Child = _resolveComponent(\\"Child\\")

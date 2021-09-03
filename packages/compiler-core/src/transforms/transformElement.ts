@@ -19,7 +19,10 @@ import {
   TemplateTextChildNode,
   DirectiveArguments,
   createVNodeCall,
-  ConstantTypes
+  ConstantTypes,
+  JSChildNode,
+  createFunctionExpression,
+  createBlockStatement
 } from '../ast'
 import {
   PatchFlags,
@@ -58,7 +61,7 @@ import {
 } from '../utils'
 import { buildSlots } from './vSlot'
 import { getConstantType } from './hoistStatic'
-import { BindingTypes } from '../options'
+import { BindingMetadata, BindingTypes } from '../options'
 import {
   checkCompatEnabled,
   CompilerDeprecationTypes,
@@ -459,14 +462,21 @@ export function buildProps(
     const prop = props[i]
     if (prop.type === NodeTypes.ATTRIBUTE) {
       const { loc, name, value } = prop
-      let isStatic = true
+      let valueNode = createSimpleExpression(
+        value ? value.content : '',
+        true,
+        value ? value.loc : loc
+      ) as JSChildNode
       if (name === 'ref') {
         hasRef = true
         // in inline mode there is no setupState object, so we can't use string
         // keys to set the ref. Instead, we need to transform it to pass the
         // acrtual ref instead.
-        if (!__BROWSER__ && context.inline) {
-          isStatic = false
+        if (!__BROWSER__ && context.inline && value?.content) {
+          valueNode = createFunctionExpression(['_value', '_refs'])
+          valueNode.body = createBlockStatement(
+            processInlineRef(context.bindingMetadata, value.content)
+          )
         }
       }
       // skip is on <component>, or is="vue:xxx"
@@ -489,11 +499,7 @@ export function buildProps(
             true,
             getInnerRange(loc, 0, name.length)
           ),
-          createSimpleExpression(
-            value ? value.content : '',
-            isStatic,
-            value ? value.loc : loc
-          )
+          valueNode
         )
       )
     } else {
@@ -885,4 +891,18 @@ function stringifyDynamicPropNames(props: string[]): string {
 
 function isComponentTag(tag: string) {
   return tag[0].toLowerCase() + tag.slice(1) === 'component'
+}
+
+function processInlineRef(
+  bindings: BindingMetadata,
+  raw: string
+): JSChildNode[] {
+  const body = [createSimpleExpression(`_refs['${raw}'] = _value`)]
+  const type = bindings[raw]
+  if (type === BindingTypes.SETUP_REF) {
+    body.push(createSimpleExpression(`${raw}.value = _value`))
+  } else if (type === BindingTypes.SETUP_LET) {
+    body.push(createSimpleExpression(`${raw} = _value`))
+  }
+  return body
 }
