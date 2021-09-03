@@ -623,7 +623,11 @@ export function compileScript(
               ) +
               ', '
           } else {
-            res += scriptSetupSource.slice(m.start!, m.end!) + `, `
+            const propTypeSource = scriptSetupSource.slice(m.start!, m.end!)
+            res +=
+              (propTypeSource.includes(';')
+                ? propTypeSource.slice(0, -1)
+                : propTypeSource) + `, `
           }
         }
       }
