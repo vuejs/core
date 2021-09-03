@@ -773,6 +773,28 @@ const emit = defineEmits(['a', 'b'])
       })
     })
 
+    test('defineProps w/ interface extends', () => {
+      const { content, bindings } = compile(`
+      <script setup lang="ts">
+      interface Foo { x?: number }
+      interface Bar extends Foo { y?: number }
+      interface Props extends Bar {
+        z: number
+      }
+      defineProps<Props>()
+      </script>
+      `)
+      assertCode(content)
+      expect(content).toMatch(`x: { type: Number, required: false }`)
+      expect(content).toMatch(`y: { type: Number, required: false }`)
+      expect(content).toMatch(`z: { type: Number, required: true }`)
+      expect(bindings).toStrictEqual({
+        x: BindingTypes.PROPS,
+        y: BindingTypes.PROPS,
+        z: BindingTypes.PROPS
+      })
+    })
+
     test('defineProps w/ exported interface', () => {
       const { content, bindings } = compile(`
       <script setup lang="ts">
