@@ -146,7 +146,8 @@ export function transformAST(
   const registerRefBinding = (id: Identifier) => registerBinding(id, true)
 
   function walkScope(node: Program | BlockStatement) {
-    for (const stmt of node.body) {
+    for (let stmt of node.body) {
+      if (stmt.type === 'ExportNamedDeclaration' && stmt.declaration) stmt = stmt.declaration
       if (stmt.type === 'VariableDeclaration') {
         if (stmt.declare) continue
         for (const decl of stmt.declarations) {
