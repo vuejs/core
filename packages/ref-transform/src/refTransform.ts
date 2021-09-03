@@ -310,7 +310,7 @@ export function transformAST(
     parentStack: Node[]
   ): boolean {
     if (id.name in scope) {
-      if (scope[id.name]) {
+      if (scope[id.name] === true) {
         if (isStaticProperty(parent) && parent.shorthand) {
           // let binding used in a property shorthand
           // { foo } -> { foo: foo.value }
