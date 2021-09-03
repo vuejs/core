@@ -799,8 +799,8 @@ const emit = defineEmits(['a', 'b'])
       <script setup lang="ts">
       const props = withDefaults(defineProps<{
         foo?: string
-        bar?: number
-        baz: boolean
+        bar?: number;
+        baz: boolean;
         qux?(): number
       }>(), {
         foo: 'hi',
