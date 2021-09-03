@@ -395,4 +395,12 @@ describe('errors', () => {
       `$computed can only be used as the initializer`
     )
   })
+
+  test('not transform the prototype attributes', () => {
+    const { code } = transform(`
+    const hasOwnProperty = Object.prototype.hasOwnProperty
+    const hasOwn = (val, key) => hasOwnProperty.call(val, key)
+    `)
+    expect(code).not.toMatch('.value')
+  })
 })
