@@ -625,7 +625,7 @@ export function compileScript(
           } else {
             const propTypeSource = scriptSetupSource.slice(m.start!, m.end!)
             res +=
-              (propTypeSource.includes(';')
+              (propTypeSource[propTypeSource.length - 1] === ';'
                 ? propTypeSource.slice(0, -1)
                 : propTypeSource) + `, `
           }
