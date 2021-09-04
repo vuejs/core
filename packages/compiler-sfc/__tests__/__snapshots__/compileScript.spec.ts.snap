@@ -506,7 +506,7 @@ return (_ctx, _push, _parent, _attrs) => {
 `;
 
 exports[`SFC compile <script setup> inlineTemplate mode template assignment expression codegen 1`] = `
-"import { createElementVNode as _createElementVNode, isRef as _isRef, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
+"import { createElementVNode as _createElementVNode, isRef as _isRef, unref as _unref, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 
 import { ref } from 'vue'
         
@@ -534,6 +534,12 @@ return (_ctx, _cache) => {
     }),
     _createElementVNode(\\"div\\", {
       onClick: _cache[4] || (_cache[4] = $event => (_isRef(v) ? v.value -= 1 : v -= 1))
+    }),
+    _createElementVNode(\\"div\\", {
+      onClick: _cache[5] || (_cache[5] = () => {
+              let a = '' + _unref(lett)           
+              _isRef(v) ? v.value = a : v = a
+           })
     })
   ], 64 /* STABLE_FRAGMENT */))
 }

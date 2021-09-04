@@ -517,6 +517,10 @@ defineExpose({ foo: 123 })
           <div @click="lett = count"/>
           <div @click="v += 1"/>
           <div @click="v -= 1"/>
+          <div @click="() => {
+              let a = '' + lett           
+              v = a
+           }"/>
         </template>
         `,
         { inlineTemplate: true }
@@ -531,6 +535,7 @@ defineExpose({ foo: 123 })
       )
       expect(content).toMatch(`_isRef(v) ? v.value += 1 : v += 1`)
       expect(content).toMatch(`_isRef(v) ? v.value -= 1 : v -= 1`)
+      expect(content).toMatch(`_isRef(v) ? v.value = a : v = a`)
       assertCode(content)
     })
 
