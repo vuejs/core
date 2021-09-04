@@ -3,6 +3,10 @@ import { isNoUnitNumericStyleProp } from './domAttrConfig'
 
 export type NormalizedStyle = Record<string, string | number>
 
+export function normalizeWhitespace(value: string) {
+  return value.replace(/\s+/g, ' ').trim()
+}
+
 export function normalizeStyle(
   value: unknown
 ): NormalizedStyle | string | undefined {
@@ -15,9 +19,9 @@ export function normalizeStyle(
         : (normalizeStyle(item) as NormalizedStyle)
       if (normalized) {
         for (const key in normalized) {
-          res[key.replace(/\s+/g, ' ').trim()] =
+          res[normalizeWhitespace(key)] =
             typeof normalized[key] === 'string'
-              ? (normalized[key] as string).replace(/\s+/g, ' ').trim()
+              ? normalizeWhitespace(normalized[key] as string)
               : normalized[key]
         }
       }
@@ -83,7 +87,7 @@ export function normalizeClass(value: unknown): string {
       }
     }
   }
-  return res.replace(/\s+/g, ' ').trim()
+  return normalizeWhitespace(res)
 }
 
 export function normalizeProps(props: Record<string, any> | null) {
