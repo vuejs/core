@@ -1,14 +1,55 @@
 import { WritableComputedRef } from '@vue/reactivity'
-import { expectType, ref, Ref, ComputedRef } from './index'
+import { expectType, ref, computed, Ref, ComputedRef } from './index'
 import 'vue/ref-macros'
+import { RefType, RefTypes } from 'vue/ref-macros'
 
 // wrapping refs
+
 // normal
+let n = $(ref(1))
+n = 2
+// @ts-expect-error
+n = 'foo'
+
+// #4499 nullable
+let msg = $(ref<string | null>(null))
+msg = 'hello world'
+msg = null
+expectType<RefTypes.Ref | undefined>(msg![RefType])
+
 // computed
+let m = $(computed(() => n + 1))
+m * 1
+// @ts-expect-error
+m.slice()
+expectType<RefTypes.ComputedRef | undefined>(m[RefType])
+
 // writable computed
+let wc = $(
+  computed({
+    get: () => n + 1,
+    set: v => (n = v - 1)
+  })
+)
+wc = 2
+// @ts-expect-error
+wc = 'foo'
+expectType<RefTypes.WritableComputedRef | undefined>(wc[RefType])
 
 // destructure
-const { x, y, z } = $(useFoo())
+function useFoo() {
+  let x = $ref(1)
+  let y = $computed(() => 'hi')
+
+  return $$({
+    x,
+    y,
+    z: 123
+  })
+}
+
+const fooRes = useFoo()
+const { x, y, z } = $(fooRes)
 expectType<number>(x)
 expectType<string>(y)
 expectType<number>(z)
@@ -39,17 +80,12 @@ expectType<number>(
   })
 )
 
-function useFoo() {
-  return {
-    x: ref(1),
-    y: ref('hi'),
-    z: 123
-  }
-}
-
 // $$
-expectType<Ref<number>>($$(x))
-expectType<Ref<string>>($$(y))
+const xRef = $$(x)
+expectType<Ref<number>>(xRef)
+
+const yRef = $$(y)
+expectType<ComputedRef<string>>(yRef)
 
 const c = $computed(() => 1)
 const cRef = $$(c)
@@ -63,3 +99,12 @@ const c2Ref = $$(c2)
 expectType<WritableComputedRef<number>>(c2Ref)
 
 // $$ on object
+const obj = $$({
+  n,
+  m,
+  wc
+})
+
+expectType<Ref<number>>(obj.n)
+expectType<ComputedRef<number>>(obj.m)
+expectType<WritableComputedRef<number>>(obj.wc)
