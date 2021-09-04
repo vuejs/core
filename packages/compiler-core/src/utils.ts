@@ -5,6 +5,7 @@ import {
   NodeTypes,
   CallExpression,
   createCallExpression,
+  AttributeNode,
   DirectiveNode,
   ElementTypes,
   TemplateChildNode,
@@ -42,7 +43,13 @@ import {
   WITH_MEMO,
   OPEN_BLOCK
 } from './runtimeHelpers'
-import { isString, isObject, hyphenate, extend } from '@vue/shared'
+import {
+  isString,
+  isObject,
+  hyphenate,
+  extend,
+  normalizeWhitespace
+} from '@vue/shared'
 import { PropsExpression } from './transforms/transformElement'
 
 export const isStaticExp = (p: JSChildNode): p is SimpleExpressionNode =>
@@ -508,5 +515,19 @@ export function makeBlock(
     removeHelper(getVNodeHelper(inSSR, node.isComponent))
     helper(OPEN_BLOCK)
     helper(getVNodeBlockHelper(inSSR, node.isComponent))
+  }
+}
+
+// Trims all whitespace inside of specific attribute/s and replaces it with a single whitespace
+export function trimAttrValue(
+  node: AttributeNode | DirectiveNode,
+  name: string | string[]
+) {
+  if (
+    node.type === NodeTypes.ATTRIBUTE &&
+    name.includes(node.name) &&
+    node.value?.content
+  ) {
+    node.value.content = normalizeWhitespace(node.value.content)
   }
 }
