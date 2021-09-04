@@ -28,7 +28,7 @@ declare function _$<T extends object>(arg?: T): ShallowUnwrapRef<T>
 /**
  * Vue ref transform macro for accessing underlying refs of reactive varaibles.
  */
-declare function _$$<T>(value: T): ComputedRef<T>
+declare function _$$<T>(value: ComputedRefValue<T>): ComputedRef<T>
 declare function _$$<T>(
   value: WritableComputedRefValue<T>
 ): WritableComputedRef<T>
