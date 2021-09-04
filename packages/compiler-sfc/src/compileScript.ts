@@ -458,7 +458,7 @@ export function compileScript(
               extend.expression.name
             )
             if (qualified) {
-              cache.unshift(qualified)
+              cache.push(qualified)
               resolveExtendsType(node, qualifier, cache)
               return cache
             }
@@ -487,6 +487,28 @@ export function compileScript(
     }
   }
 
+  // filter all extends types to keep the override declaration
+  function filterExtendsType(extendsTypes: Node[], bodies: TSTypeElement[]) {
+    extendsTypes.forEach(extend => {
+      const body = (extend as TSInterfaceBody).body
+      body.forEach(newBody => {
+        if (
+          newBody.type === 'TSPropertySignature' &&
+          newBody.key.type === 'Identifier'
+        ) {
+          const name = newBody.key.name
+          const hasOverride = bodies.some(
+            seenBody =>
+              seenBody.type === 'TSPropertySignature' &&
+              seenBody.key.type === 'Identifier' &&
+              seenBody.key.name === name
+          )
+          if (!hasOverride) bodies.push(newBody)
+        }
+      })
+    })
+  }
+
   function resolveQualifiedType(
     node: Node,
     qualifier: (node: Node) => boolean
@@ -511,11 +533,8 @@ export function compileScript(
         if (qualified) {
           const extendsTypes = resolveExtendsType(node, qualifier)
           if (extendsTypes.length) {
-            const bodies: TSTypeElement[] = []
-            extendsTypes.forEach(extend => {
-              bodies.push(...(extend as TSInterfaceBody).body)
-            })
-            bodies.push(...qualified.body)
+            const bodies: TSTypeElement[] = [...qualified.body]
+            filterExtendsType(extendsTypes, bodies)
             qualified.body = bodies
           }
           return qualified

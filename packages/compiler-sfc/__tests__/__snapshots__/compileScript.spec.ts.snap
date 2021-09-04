@@ -911,12 +911,19 @@ return {  }
 })"
 `;
 
-exports[`SFC compile <script setup> with TypeScript defineProps w/ interface 1`] = `
+exports[`SFC compile <script setup> with TypeScript defineProps w/ extends interface 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
-interface Props { x?: number }
+interface Foo { x?: number }
+      interface Bar extends Foo { y?: number }
+      interface Props extends Bar {
+        z: number
+        y: string
+      }
       
 export default /*#__PURE__*/_defineComponent({
   props: {
+    z: { type: Number, required: true },
+    y: { type: String, required: true },
     x: { type: Number, required: false }
   },
   setup(__props: any, { expose }) {
@@ -930,19 +937,13 @@ return {  }
 })"
 `;
 
-exports[`SFC compile <script setup> with TypeScript defineProps w/ interface extends 1`] = `
+exports[`SFC compile <script setup> with TypeScript defineProps w/ interface 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
-interface Foo { x?: number }
-      interface Bar extends Foo { y?: number }
-      interface Props extends Bar {
-        z: number
-      }
+interface Props { x?: number }
       
 export default /*#__PURE__*/_defineComponent({
   props: {
-    x: { type: Number, required: false },
-    y: { type: Number, required: false },
-    z: { type: Number, required: true }
+    x: { type: Number, required: false }
   },
   setup(__props: any, { expose }) {
   expose()
