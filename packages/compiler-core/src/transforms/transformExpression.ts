@@ -89,8 +89,6 @@ interface PrefixMeta {
   scopeIds?: Set<string>
 }
 
-type QualifiedId = Identifier & PrefixMeta
-
 // Important: since this function uses Node.js only dependencies, it should
 // always be used with a leading !__BROWSER__ check so that it can be
 // tree-shaken from the browser build.
@@ -102,7 +100,7 @@ export function processExpression(
   asParams = false,
   // v-on handler values may contain multiple statements
   asRawStatements = false,
-  localVars: QualifiedId[] = []
+  localVars: Record<string, number> = Object.create(context.identifiers)
 ): ExpressionNode {
   if (__BROWSER__) {
     if (__DEV__) {
@@ -130,10 +128,7 @@ export function processExpression(
       const isDestructureAssignment =
         parent && isInDestructureAssignment(parent, parentStack)
 
-      if (
-        type === BindingTypes.SETUP_CONST ||
-        localVars.find(v => v.name === raw)
-      ) {
+      if (type === BindingTypes.SETUP_CONST || localVars[raw]) {
         return raw
       } else if (type === BindingTypes.SETUP_REF) {
         return `${raw}.value`
@@ -160,7 +155,7 @@ export function processExpression(
               context,
               false,
               false,
-              localIds
+              knownIds
             )
           )
           return `${context.helperString(IS_REF)}(${raw})${
@@ -258,16 +253,14 @@ export function processExpression(
     return node
   }
 
+  type QualifiedId = Identifier & PrefixMeta
   const ids: QualifiedId[] = []
-  const localIds: QualifiedId[] = []
   const parentStack: Node[] = []
   const knownIds: Record<string, number> = Object.create(context.identifiers)
 
   walkIdentifiers(
     ast,
     (node, parent, _, isReferenced, isLocal) => {
-      if (isLocal) localIds.push(node as QualifiedId)
-
       if (isStaticPropertyKey(node, parent!)) {
         return
       }
