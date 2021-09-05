@@ -40,7 +40,7 @@ const warnRuntimeUsage = (method: string) =>
  * })
  * ```
  *
- * Equivalent type-based decalration:
+ * Equivalent type-based declaration:
  * ```ts
  * // will be compiled into equivalent runtime declarations
  * const props = defineProps<{
@@ -79,7 +79,7 @@ export function defineProps() {
  * const emit = defineEmits(['change', 'update'])
  * ```
  *
- * Example type-based decalration:
+ * Example type-based declaration:
  * ```ts
  * const emit = defineEmits<{
  *   (event: 'change'): void
@@ -147,7 +147,7 @@ type PropsWithDefaults<Base, Defaults> = Base &
 
 /**
  * Vue `<script setup>` compiler macro for providing props default values when
- * using type-based `defineProps` decalration.
+ * using type-based `defineProps` declaration.
  *
  * Example usage:
  * ```ts

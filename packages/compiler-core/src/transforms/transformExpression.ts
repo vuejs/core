@@ -99,7 +99,8 @@ export function processExpression(
   // function params
   asParams = false,
   // v-on handler values may contain multiple statements
-  asRawStatements = false
+  asRawStatements = false,
+  localVars: Record<string, number> = Object.create(context.identifiers)
 ): ExpressionNode {
   if (__BROWSER__) {
     if (__DEV__) {
@@ -127,7 +128,7 @@ export function processExpression(
       const isDestructureAssignment =
         parent && isInDestructureAssignment(parent, parentStack)
 
-      if (type === BindingTypes.SETUP_CONST) {
+      if (type === BindingTypes.SETUP_CONST || localVars[raw]) {
         return raw
       } else if (type === BindingTypes.SETUP_REF) {
         return `${raw}.value`
@@ -149,7 +150,13 @@ export function processExpression(
           const { right: rVal, operator } = parent as AssignmentExpression
           const rExp = rawExp.slice(rVal.start! - 1, rVal.end! - 1)
           const rExpString = stringifyExpression(
-            processExpression(createSimpleExpression(rExp, false), context)
+            processExpression(
+              createSimpleExpression(rExp, false),
+              context,
+              false,
+              false,
+              knownIds
+            )
           )
           return `${context.helperString(IS_REF)}(${raw})${
             context.isTS ? ` //@ts-ignore\n` : ``
@@ -190,6 +197,7 @@ export function processExpression(
         return `$${type}.${raw}`
       }
     }
+
     // fallback to ctx
     return `_ctx.${raw}`
   }
@@ -246,7 +254,6 @@ export function processExpression(
   }
 
   type QualifiedId = Identifier & PrefixMeta
-
   const ids: QualifiedId[] = []
   const parentStack: Node[] = []
   const knownIds: Record<string, number> = Object.create(context.identifiers)

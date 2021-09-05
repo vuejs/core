@@ -526,7 +526,7 @@ export function compileScript(
   /**
    * check defaults. If the default object is an object literal with only
    * static properties, we can directly generate more optimzied default
-   * decalrations. Otherwise we will have to fallback to runtime merging.
+   * declarations. Otherwise we will have to fallback to runtime merging.
    */
   function checkStaticDefaults() {
     return (
@@ -895,7 +895,7 @@ export function compileScript(
       }
     }
 
-    // walk decalrations to record declared bindings
+    // walk declarations to record declared bindings
     if (
       (node.type === 'VariableDeclaration' ||
         node.type === 'FunctionDeclaration' ||

@@ -157,7 +157,7 @@ return { props, bar }
 }"
 `;
 
-exports[`SFC compile <script setup> defineProps/defineEmits in multi-variable decalration (full removal) 1`] = `
+exports[`SFC compile <script setup> defineProps/defineEmits in multi-variable declaration (full removal) 1`] = `
 "export default {
   props: ['item'],
   emits: ['a'],
@@ -173,7 +173,7 @@ return { props, emit }
 }"
 `;
 
-exports[`SFC compile <script setup> defineProps/defineEmits in multi-variable decalration 1`] = `
+exports[`SFC compile <script setup> defineProps/defineEmits in multi-variable declaration 1`] = `
 "export default {
   props: ['item'],
   emits: ['a'],
@@ -506,7 +506,7 @@ return (_ctx, _push, _parent, _attrs) => {
 `;
 
 exports[`SFC compile <script setup> inlineTemplate mode template assignment expression codegen 1`] = `
-"import { createElementVNode as _createElementVNode, isRef as _isRef, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
+"import { createElementVNode as _createElementVNode, isRef as _isRef, unref as _unref, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 
 import { ref } from 'vue'
         
@@ -534,6 +534,26 @@ return (_ctx, _cache) => {
     }),
     _createElementVNode(\\"div\\", {
       onClick: _cache[4] || (_cache[4] = $event => (_isRef(v) ? v.value -= 1 : v -= 1))
+    }),
+    _createElementVNode(\\"div\\", {
+      onClick: _cache[5] || (_cache[5] = () => {
+              let a = '' + _unref(lett)           
+              _isRef(v) ? v.value = a : v = a
+           })
+    }),
+    _createElementVNode(\\"div\\", {
+      onClick: _cache[6] || (_cache[6] = () => {
+              // nested scopes
+              (()=>{
+                let x = _ctx.a
+                (()=>{
+                  let z = x
+                  let z2 = z
+                })
+                let lz = _ctx.z
+              })        
+              _isRef(v) ? v.value = _ctx.a : v = _ctx.a
+           })
     })
   ], 64 /* STABLE_FRAGMENT */))
 }
