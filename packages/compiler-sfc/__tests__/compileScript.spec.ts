@@ -98,7 +98,7 @@ const myEmit = defineEmits(['foo', 'bar'])
   emits: ['foo', 'bar'],`)
   })
 
-  test('defineProps/defineEmits in multi-variable decalration', () => {
+  test('defineProps/defineEmits in multi-variable declaration', () => {
     const { content } = compile(`
     <script setup>
     const props = defineProps(['item']),
@@ -112,7 +112,7 @@ const myEmit = defineEmits(['foo', 'bar'])
     expect(content).toMatch(`emits: ['a'],`)
   })
 
-  test('defineProps/defineEmits in multi-variable decalration (full removal)', () => {
+  test('defineProps/defineEmits in multi-variable declaration (full removal)', () => {
     const { content } = compile(`
     <script setup>
     const props = defineProps(['item']),

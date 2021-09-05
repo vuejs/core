@@ -157,7 +157,7 @@ return { props, bar }
 }"
 `;
 
-exports[`SFC compile <script setup> defineProps/defineEmits in multi-variable decalration (full removal) 1`] = `
+exports[`SFC compile <script setup> defineProps/defineEmits in multi-variable declaration (full removal) 1`] = `
 "export default {
   props: ['item'],
   emits: ['a'],
@@ -173,7 +173,7 @@ return { props, emit }
 }"
 `;
 
-exports[`SFC compile <script setup> defineProps/defineEmits in multi-variable decalration 1`] = `
+exports[`SFC compile <script setup> defineProps/defineEmits in multi-variable declaration 1`] = `
 "export default {
   props: ['item'],
   emits: ['a'],
