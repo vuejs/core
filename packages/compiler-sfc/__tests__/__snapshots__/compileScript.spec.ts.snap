@@ -947,6 +947,7 @@ export default /*#__PURE__*/_defineComponent({
     fn: { type: Function, required: true },
     functionRef: { type: Function, required: true },
     objectRef: { type: Object, required: true },
+    dateTime: { type: Date, required: true },
     array: { type: Array, required: true },
     arrayRef: { type: Array, required: true },
     tuple: { type: Array, required: true },
