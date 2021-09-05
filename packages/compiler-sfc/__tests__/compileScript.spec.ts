@@ -521,6 +521,18 @@ defineExpose({ foo: 123 })
               let a = '' + lett           
               v = a
            }"/>
+           <div @click="() => {
+              // nested scopes
+              (()=>{
+                let x = a
+                (()=>{
+                  let z = x
+                  let z2 = z
+                })
+                let lz = z
+              })        
+              v = a
+           }"/>
         </template>
         `,
         { inlineTemplate: true }
@@ -536,6 +548,7 @@ defineExpose({ foo: 123 })
       expect(content).toMatch(`_isRef(v) ? v.value += 1 : v += 1`)
       expect(content).toMatch(`_isRef(v) ? v.value -= 1 : v -= 1`)
       expect(content).toMatch(`_isRef(v) ? v.value = a : v = a`)
+      expect(content).toMatch(`_isRef(v) ? v.value = _ctx.a : v = _ctx.a`)
       assertCode(content)
     })
 

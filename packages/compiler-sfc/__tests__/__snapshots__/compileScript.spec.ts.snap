@@ -540,6 +540,20 @@ return (_ctx, _cache) => {
               let a = '' + _unref(lett)           
               _isRef(v) ? v.value = a : v = a
            })
+    }),
+    _createElementVNode(\\"div\\", {
+      onClick: _cache[6] || (_cache[6] = () => {
+              // nested scopes
+              (()=>{
+                let x = _ctx.a
+                (()=>{
+                  let z = x
+                  let z2 = z
+                })
+                let lz = _ctx.z
+              })        
+              _isRef(v) ? v.value = _ctx.a : v = _ctx.a
+           })
     })
   ], 64 /* STABLE_FRAGMENT */))
 }
