@@ -623,7 +623,8 @@ export function compileScript(
               ) +
               ', '
           } else {
-            res += scriptSetupSource.slice(m.start!, m.end!) + `, `
+            res +=
+              scriptSetupSource.slice(m.start!, m.typeAnnotation.end!) + `, `
           }
         }
       }
