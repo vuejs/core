@@ -20,7 +20,7 @@ import {
   walkFunctionParams
 } from '@vue/compiler-core'
 import { parse, ParserPlugin } from '@babel/parser'
-import { babelParserDefaultPlugins } from '@vue/shared'
+import { babelParserDefaultPlugins, hasOwn } from '@vue/shared'
 
 const TO_VAR_SYMBOL = '$'
 const TO_REF_SYMBOL = '$$'
@@ -309,7 +309,7 @@ export function transformAST(
     parent: Node,
     parentStack: Node[]
   ): boolean {
-    if (id.name in scope) {
+    if (hasOwn(scope, id.name)) {
       if (scope[id.name]) {
         if (isStaticProperty(parent) && parent.shorthand) {
           // let binding used in a property shorthand
