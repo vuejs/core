@@ -230,6 +230,15 @@ function createReplacePlugin(
     // is targeting Node (SSR)?
     __NODE_JS__: isNodeBuild,
 
+    // for compiler-sfc browser build inlined deps
+    ...(isBrowserESMBuild
+      ? {
+          'process.env': '({})',
+          'process.platform': '""',
+          'process.stdout': 'null'
+        }
+      : {}),
+
     // 2.x compat build
     __COMPAT__: isCompatBuild,
 
