@@ -1,3 +1,18 @@
+## [3.2.9](https://github.com/vuejs/vue-next/compare/v3.2.8...v3.2.9) (2021-09-05)
+
+
+### Bug Fixes
+
+* **compile-sfc:** generate setup prop type format error ([#4506](https://github.com/vuejs/vue-next/issues/4506)) ([e6fe751](https://github.com/vuejs/vue-next/commit/e6fe751b20dd9c34068b27545cb7459de2d538e6)), closes [#4505](https://github.com/vuejs/vue-next/issues/4505)
+* **compile-sfc:** support  `Date` prop type with defineProps ([#4519](https://github.com/vuejs/vue-next/issues/4519)) ([fac9a29](https://github.com/vuejs/vue-next/commit/fac9a2926d5b825b7daacb7914fd3b34abc02cb7))
+* **compiler-sfc:** fix script setup ref assignment codegen edge case ([#4520](https://github.com/vuejs/vue-next/issues/4520)) ([5594643](https://github.com/vuejs/vue-next/commit/5594643d7b49b77e60f6d4682a3a71db0b1c6552)), closes [#4514](https://github.com/vuejs/vue-next/issues/4514)
+* **compiler-sfc:** support using declared interface in normal script with defineProps() ([#4522](https://github.com/vuejs/vue-next/issues/4522)) ([14d6518](https://github.com/vuejs/vue-next/commit/14d65181f1610079f0d9969c214720624056106b)), closes [#4423](https://github.com/vuejs/vue-next/issues/4423)
+* **ref-transform:** not transform the prototype attributes. ([#4503](https://github.com/vuejs/vue-next/issues/4503)) ([0178f4e](https://github.com/vuejs/vue-next/commit/0178f4ed3187dff439ed3097c8c89555b2a6749f)), closes [#4502](https://github.com/vuejs/vue-next/issues/4502)
+* **types/ref-transform:** fix $$() type ([5852cc8](https://github.com/vuejs/vue-next/commit/5852cc8d825b0746bbf5e4c324afa02280046005))
+* **types:** fix ref macro types ([815bfcf](https://github.com/vuejs/vue-next/commit/815bfcffae7a9f04ee996367a731e6e072af6bd2)), closes [#4499](https://github.com/vuejs/vue-next/issues/4499)
+
+
+
 ## [3.2.8](https://github.com/vuejs/vue-next/compare/v3.2.7...v3.2.8) (2021-09-02)
 
 
