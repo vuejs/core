@@ -636,7 +636,7 @@ export function compileScript(
   }
 
   // 1. process normal <script> first if it exists
-  let scriptAst = undefined as unknown as Program
+  let scriptAst: Program | undefined
   if (script) {
     // import dedupe between <script> and <script setup>
     scriptAst = parse(
