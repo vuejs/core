@@ -784,6 +784,22 @@ const emit = defineEmits(['a', 'b'])
       })
     })
 
+    test('defineProps w/ exported interface in normal script', () => {
+      const { content, bindings } = compile(`
+      <script lang="ts">
+        export interface Props { x?: number }
+      </script>
+      <script setup lang="ts">
+        defineProps<Props>()
+      </script>
+      `)
+      assertCode(content)
+      expect(content).toMatch(`x: { type: Number, required: false }`)
+      expect(bindings).toStrictEqual({
+        x: BindingTypes.PROPS
+      })
+    })
+
     test('defineProps w/ type alias', () => {
       const { content, bindings } = compile(`
       <script setup lang="ts">

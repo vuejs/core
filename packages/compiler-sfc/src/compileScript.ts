@@ -467,8 +467,10 @@ export function compileScript(
           return isQualifiedType(node.declaration)
         }
       }
-
-      for (const node of scriptSetupAst.body) {
+      const body = scriptAst
+        ? [...scriptSetupAst.body, ...scriptAst.body]
+        : scriptSetupAst.body
+      for (const node of body) {
         const qualified = isQualifiedType(node)
         if (qualified) {
           return qualified
@@ -635,7 +637,7 @@ export function compileScript(
   }
 
   // 1. process normal <script> first if it exists
-  let scriptAst
+  let scriptAst: Program | undefined
   if (script) {
     // import dedupe between <script> and <script setup>
     scriptAst = parse(
