@@ -44,6 +44,7 @@ describe('with object props', () => {
     date?: Date
     l?: Date
     ll?: Date | number
+    lll?: string | number
   }
 
   type GT = string & { __brand: unknown }
@@ -135,7 +136,8 @@ describe('with object props', () => {
       },
       date: Date,
       l: [Date],
-      ll: [Date, Number]
+      ll: [Date, Number],
+      lll: [String, Number]
     },
     setup(props) {
       // type assertion. See https://github.com/SamVerschueren/tsd
@@ -170,6 +172,7 @@ describe('with object props', () => {
       expectType<ExpectedProps['date']>(props.date)
       expectType<ExpectedProps['l']>(props.l)
       expectType<ExpectedProps['ll']>(props.ll)
+      expectType<ExpectedProps['lll']>(props.lll)
 
       // @ts-expect-error props should be readonly
       expectError((props.a = 1))
