@@ -79,7 +79,7 @@ export const enum BindingTypes {
    */
   DATA = 'data',
   /**
-   * decalred as a prop
+   * declared as a prop
    */
   PROPS = 'props',
   /**
