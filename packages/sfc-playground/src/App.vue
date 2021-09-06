@@ -1,22 +1,24 @@
 <script setup lang="ts">
 import Header from './Header.vue'
-import SplitPane from './SplitPane.vue'
-import Editor from './editor/Editor.vue'
-import Output from './output/Output.vue'
+import { Repl, ReplStore } from '@vue/repl'
+import { watchEffect } from 'vue'
+
+document.documentElement.style.setProperty('--vh', window.innerHeight + `px`)
+
+const store = new ReplStore({
+  serializedState: location.hash.slice(1),
+  defaultVueRuntimeURL: import.meta.env.PROD
+    ? `${location.origin}/vue.runtime.esm-browser.js`
+    : `${location.origin}/src/vue-dev-proxy`
+})
+
+// persist state
+watchEffect(() => history.replaceState({}, '', store.serialize()))
 </script>
 
 <template>
-  <Header />
-  <div class="wrapper">
-    <SplitPane>
-      <template #left>
-        <Editor />
-      </template>
-      <template #right>
-        <Output />
-      </template>
-    </SplitPane>
-  </div>
+  <Header :store="store" />
+  <Repl :store="store" :showCompileOutput="true" />
 </template>
 
 <style>
@@ -24,18 +26,13 @@ body {
   font-size: 13px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
     Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  color: var(--base);
   margin: 0;
-  background-color: #f8f8f8;
   --base: #444;
   --nav-height: 50px;
-  --font-code: 'Source Code Pro', monospace;
-  --color-branding: #3ca877;
-  --color-branding-dark: #416f9c;
 }
 
-.wrapper {
-  height: calc(100vh - var(--nav-height));
+.vue-repl {
+  height: calc(var(--vh) - var(--nav-height));
 }
 
 button {

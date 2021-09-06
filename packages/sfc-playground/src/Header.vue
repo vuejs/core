@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { downloadProject } from './download/download'
-import { setVersion, resetVersion } from './transform'
 import { ref, onMounted } from 'vue'
+
+// @ts-ignore
+const { store } = defineProps(['store'])
 
 const currentCommit = __COMMIT__
 const activeVersion = ref(`@${currentCommit}`)
@@ -17,13 +19,13 @@ async function toggle() {
 
 async function setVueVersion(v: string) {
   activeVersion.value = `loading...`
-  await setVersion(v)
+  await store.setVueVersion(v)
   activeVersion.value = `v${v}`
   expanded.value = false
 }
 
 function resetVueVersion() {
-  resetVersion()
+  store.resetVueVersion()
   activeVersion.value = `@${currentCommit}`
   expanded.value = false
 }
@@ -113,7 +115,7 @@ async function fetchVersions(): Promise<string[]> {
           </g>
         </svg>
       </button>
-      <button class="download" @click="downloadProject">
+      <button class="download" @click="downloadProject(store)">
         <svg width="1.7em" height="1.7em" viewBox="0 0 24 24">
           <g fill="#626262">
             <rect x="4" y="18" width="16" height="2" rx="1" ry="1" />
@@ -241,7 +243,7 @@ h1 img {
 }
 
 .versions a:hover {
-  color: var(--color-branding);
+  color: #3ca877;
 }
 
 .versions.expanded {

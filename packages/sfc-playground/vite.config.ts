@@ -11,13 +11,8 @@ export default defineConfig({
   define: {
     __COMMIT__: JSON.stringify(commit)
   },
-  resolve: {
-    alias: {
-      '@vue/compiler-sfc': '@vue/compiler-sfc/dist/compiler-sfc.esm-browser.js'
-    }
-  },
   optimizeDeps: {
-    exclude: ['consolidate']
+    exclude: ['@vue/repl']
   }
 })
 

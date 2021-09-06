@@ -1,4 +1,3 @@
-import { exportFiles } from '../store'
 import { saveAs } from 'file-saver'
 
 import index from './template/index.html?raw'
@@ -7,7 +6,7 @@ import pkg from './template/package.json?raw'
 import config from './template/vite.config.js?raw'
 import readme from './template/README.md?raw'
 
-export async function downloadProject() {
+export async function downloadProject(store: any) {
   const { default: JSZip } = await import('jszip')
   const zip = new JSZip()
 
@@ -21,7 +20,7 @@ export async function downloadProject() {
   const src = zip.folder('src')!
   src.file('main.js', main)
 
-  const files = exportFiles()
+  const files = store.getFiles()
   for (const file in files) {
     src.file(file, files[file])
   }

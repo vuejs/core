@@ -8,14 +8,12 @@
     "serve": "vite preview"
   },
   "devDependencies": {
-    "@types/codemirror": "^0.0.108",
     "@vitejs/plugin-vue": "^1.2.0",
-    "codemirror": "^5.60.0",
     "vite": "^2.4.0"
   },
   "dependencies": {
+    "@vue/repl": "^0.1.0",
     "file-saver": "^2.0.5",
-    "jszip": "^3.6.0",
-    "sucrase": "^3.19.0"
+    "jszip": "^3.6.0"
   }
 }
