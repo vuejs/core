@@ -109,10 +109,10 @@ type InferPropType<T> = [T] extends [null]
   ? boolean
   : [T] extends [DateConstructor | { type: DateConstructor }]
   ? Date
-  : [T] extends [
-      (DateConstructor | infer U)[] | { type: (DateConstructor | infer U)[] }
-    ]
-  ? Date | InferPropType<U>
+  : [T] extends [(infer U)[] | { type: (infer U)[] }]
+  ? U extends Date
+    ? Date | InferPropType<U>
+    : InferPropType<U>
   : [T] extends [Prop<infer V, infer D>]
   ? unknown extends V
     ? D
