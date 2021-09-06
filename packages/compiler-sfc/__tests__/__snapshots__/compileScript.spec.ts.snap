@@ -913,12 +913,13 @@ return {  }
 
 exports[`SFC compile <script setup> with TypeScript defineProps w/ extends interface 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
-interface Foo { x?: number }
-      interface Bar extends Foo { y?: number }
-      interface Props extends Bar {
-        z: number
-        y: string
-      }
+interface Bar extends Foo { y?: number }
+        interface Props extends Bar {
+          z: number
+          y: string
+        }
+        
+        interface Foo { x?: number }
       
 export default /*#__PURE__*/_defineComponent({
   props: {
@@ -929,7 +930,7 @@ export default /*#__PURE__*/_defineComponent({
   setup(__props: any, { expose }) {
   expose()
 
-      
+        
       
 return {  }
 }

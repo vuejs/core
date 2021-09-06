@@ -775,14 +775,16 @@ const emit = defineEmits(['a', 'b'])
 
     test('defineProps w/ extends interface', () => {
       const { content, bindings } = compile(`
+      <script lang="ts">
+        interface Foo { x?: number }
+      </script>
       <script setup lang="ts">
-      interface Foo { x?: number }
-      interface Bar extends Foo { y?: number }
-      interface Props extends Bar {
-        z: number
-        y: string
-      }
-      defineProps<Props>()
+        interface Bar extends Foo { y?: number }
+        interface Props extends Bar {
+          z: number
+          y: string
+        }
+        defineProps<Props>()
       </script>
       `)
       assertCode(content)

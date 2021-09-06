@@ -440,6 +440,12 @@ export function compileScript(
     return true
   }
 
+  function getAstBody(): Statement[] {
+    return scriptAst
+      ? [...scriptSetupAst.body, ...scriptAst.body]
+      : scriptSetupAst.body
+  }
+
   function resolveExtendsType(
     node: Node,
     qualifier: (node: Node) => boolean,
@@ -451,7 +457,8 @@ export function compileScript(
           extend.type === 'TSExpressionWithTypeArguments' &&
           extend.expression.type === 'Identifier'
         ) {
-          for (const node of scriptSetupAst.body) {
+          const body = getAstBody()
+          for (const node of body) {
             const qualified = isQualifiedType(
               node,
               qualifier,
@@ -521,9 +528,7 @@ export function compileScript(
       node.typeName.type === 'Identifier'
     ) {
       const refName = node.typeName.name
-      const body = scriptAst
-        ? [...scriptSetupAst.body, ...scriptAst.body]
-        : scriptSetupAst.body
+      const body = getAstBody()
       for (const node of body) {
         let qualified = isQualifiedType(
           node,
