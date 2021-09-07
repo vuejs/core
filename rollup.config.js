@@ -81,7 +81,8 @@ function createConfig(format, output, plugins = []) {
     process.exit(1)
   }
 
-  output.exports = 'named'
+  const isCompatBuild = !!packageOptions.compat
+  output.exports = isCompatBuild ? 'default' : 'named'
   output.sourcemap = !!process.env.SOURCE_MAP
   output.externalLiveBindings = false
 
@@ -91,7 +92,6 @@ function createConfig(format, output, plugins = []) {
   const isBrowserESMBuild = /esm-browser/.test(format)
   const isNodeBuild = format === 'cjs'
   const isGlobalBuild = /global/.test(format)
-  const isCompatBuild = !!packageOptions.compat
   const isCompatPackage = pkg.name === '@vue/compat'
 
   if (isGlobalBuild) {
