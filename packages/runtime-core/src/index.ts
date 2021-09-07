@@ -286,8 +286,7 @@ export {
   toHandlerKey,
   normalizeProps,
   normalizeClass,
-  normalizeStyle,
-  normalizeWhitespace
+  normalizeStyle
 } from '@vue/shared'
 
 // For test-utils

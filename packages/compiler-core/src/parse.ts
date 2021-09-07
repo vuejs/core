@@ -11,8 +11,7 @@ import {
   advancePositionWithMutation,
   advancePositionWithClone,
   isCoreComponent,
-  isBindKey,
-  trimAttrValue
+  isBindKey
 } from './utils'
 import {
   Namespaces,
@@ -716,11 +715,17 @@ function parseAttributes(
       emitError(context, ErrorCodes.END_TAG_WITH_ATTRIBUTES)
     }
 
-    let attr = parseAttribute(context, attributeNames)
+    const attr = parseAttribute(context, attributeNames)
 
     // Trim whitespace between class
     // https://github.com/vuejs/vue-next/issues/4251
-    trimAttrValue(attr, 'class')
+    if (
+      attr.type === NodeTypes.ATTRIBUTE &&
+      attr.value &&
+      attr.name === 'class'
+    ) {
+      attr.value.content = attr.value.content.replace(/\s+/g, ' ').trim()
+    }
 
     if (type === TagType.Start) {
       props.push(attr)
