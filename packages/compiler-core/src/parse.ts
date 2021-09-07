@@ -716,6 +716,17 @@ function parseAttributes(
     }
 
     const attr = parseAttribute(context, attributeNames)
+
+    // Trim whitespace between class
+    // https://github.com/vuejs/vue-next/issues/4251
+    if (
+      attr.type === NodeTypes.ATTRIBUTE &&
+      attr.value &&
+      attr.name === 'class'
+    ) {
+      attr.value.content = attr.value.content.replace(/\s+/g, ' ').trim()
+    }
+
     if (type === TagType.Start) {
       props.push(attr)
     }

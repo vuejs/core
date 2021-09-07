@@ -1015,6 +1015,71 @@ describe('compiler: parse', () => {
       })
     })
 
+    // https://github.com/vuejs/vue-next/issues/4251
+    test('class attribute should ignore whitespace when parsed', () => {
+      const ast = baseParse('<div class=" \n\t c \t\n "></div>')
+      const element = ast.children[0] as ElementNode
+
+      expect(element).toStrictEqual({
+        children: [],
+        codegenNode: undefined,
+        isSelfClosing: false,
+        loc: {
+          end: {
+            column: 10,
+            line: 3,
+            offset: 29
+          },
+          source: '<div class=" \n\t c \t\n "></div>',
+          start: {
+            column: 1,
+            line: 1,
+            offset: 0
+          }
+        },
+        ns: 0,
+        props: [
+          {
+            loc: {
+              end: {
+                column: 3,
+                line: 3,
+                offset: 22
+              },
+              source: 'class=" \n\t c \t\n "',
+              start: {
+                column: 6,
+                line: 1,
+                offset: 5
+              }
+            },
+            name: 'class',
+            type: 6,
+            value: {
+              content: 'c',
+              loc: {
+                end: {
+                  column: 3,
+                  line: 3,
+                  offset: 22
+                },
+                source: '" \n\t c \t\n "',
+                start: {
+                  column: 12,
+                  line: 1,
+                  offset: 11
+                }
+              },
+              type: 2
+            }
+          }
+        ],
+        tag: 'div',
+        tagType: 0,
+        type: 1
+      })
+    })
+
     test('directive with no value', () => {
       const ast = baseParse('<div v-if/>')
       const directive = (ast.children[0] as ElementNode).props[0]
