@@ -923,15 +923,15 @@
     "@typescript-eslint/types" "4.30.0"
     eslint-visitor-keys "^2.0.0"
 
-"@vitejs/plugin-vue@^1.2.0":
-  version "1.6.0"
-  resolved "https://registry.yarnpkg.com/@vitejs/plugin-vue/-/plugin-vue-1.6.0.tgz#e5558e20c20e9098cd5bd65b9901fdcd2c354983"
-  integrity sha512-n3i8htn8pTg9M+kM3cnEfsPZx/6ngInlTroth6fA1LQTJq5aTVQ8ggaE5pPoAy9vCgHPtcaXMzwpldhqRAkebQ==
+"@vitejs/plugin-vue@^1.6.0":
+  version "1.6.1"
+  resolved "https://registry.yarnpkg.com/@vitejs/plugin-vue/-/plugin-vue-1.6.1.tgz#a40a06661af61fdc1bebdfb811b28f50ad39dfb3"
+  integrity sha512-tX2Ju8fOyEtfstfmwjfSJcstTFXwzdFAUbYJ5bWWifvKIgbe6B0FbM8l3Wb7wOaaxKn4FYkii7WQnAPcsTqaIA==
 
-"@vue/repl@^0.1.0":
-  version "0.1.0"
-  resolved "https://registry.yarnpkg.com/@vue/repl/-/repl-0.1.0.tgz#9d37f0e8458b18737286785ea86456b8a60e3ee8"
-  integrity sha512-C1o7ZRJFDKjF7Hz94DVCg9XQL1gRG7+Iigu9HduNmS80LvBb6SJ6JiwOpPSV0UU/gDCt1r+Am9bUGEVj2D/fzw==
+"@vue/repl@^0.2.0":
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/@vue/repl/-/repl-0.2.0.tgz#497a2377c1dda1fb032052e15d3ccc8f1a85c1bf"
+  integrity sha512-L8Fju0AdmFlcIK2JTprmeXU+SEppPd8TZtS+Le/PYlU6b8i3+PZ7Dt/ce/PI0MLR1BPPtRA0voPpM0wccYqHdQ==
 
 "@zeit/schemas@2.6.0":
   version "2.6.0"
@@ -6342,7 +6342,7 @@ vary@~1.1.2:
   resolved "https://registry.yarnpkg.com/vary/-/vary-1.1.2.tgz#2299f02c6ded30d4a5961b0b9f74524a18f634fc"
   integrity sha1-IpnwLG3tMNSllhsLn3RSShj2NPw=
 
-vite@^2.4.0:
+vite@^2.5.0:
   version "2.5.3"
   resolved "https://registry.yarnpkg.com/vite/-/vite-2.5.3.tgz#88d40a9efb9bec66bd87a7676c5689f35ff63742"
   integrity sha512-1wMDnjflvtTTkMov8O/Xb5+w1/VW/Gw8oCf8f6dqgHn8lMOEqq0SaPtFEQeikFcOKCfSbiU0nEi0LDIx6DNsaQ==

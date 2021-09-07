@@ -8,11 +8,11 @@
     "serve": "vite preview"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^1.2.0",
-    "vite": "^2.4.0"
+    "@vitejs/plugin-vue": "^1.6.0",
+    "vite": "^2.5.0"
   },
   "dependencies": {
-    "@vue/repl": "^0.1.0",
+    "@vue/repl": "^0.2.0",
     "file-saver": "^2.0.5",
     "jszip": "^3.6.0"
   }

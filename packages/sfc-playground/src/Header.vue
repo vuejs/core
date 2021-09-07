@@ -102,7 +102,7 @@ async function fetchVersions(): Promise<string[]> {
         <svg width="1.4em" height="1.4em" viewBox="0 0 24 24">
           <g
             fill="none"
-            stroke="#626262"
+            stroke="#666"
             stroke-width="2"
             stroke-linecap="round"
             stroke-linejoin="round"
@@ -117,7 +117,7 @@ async function fetchVersions(): Promise<string[]> {
       </button>
       <button class="download" @click="downloadProject(store)">
         <svg width="1.7em" height="1.7em" viewBox="0 0 24 24">
-          <g fill="#626262">
+          <g fill="#666">
             <rect x="4" y="18" width="16" height="2" rx="1" ry="1" />
             <rect
               x="3"
@@ -150,15 +150,30 @@ async function fetchVersions(): Promise<string[]> {
 
 <style>
 nav {
+  --bg: #fff;
+  --bg-light: #fff;
+  --border: #ddd;
+
+  color: var(--base);
   height: var(--nav-height);
   box-sizing: border-box;
   padding: 0 1em;
-  background-color: #fff;
+  background-color: var(--bg);
   box-shadow: 0 0 4px rgba(0, 0, 0, 0.33);
   position: relative;
   z-index: 999;
   display: flex;
   justify-content: space-between;
+}
+
+.dark nav {
+  --base: #ddd;
+  --bg: #1a1a1a;
+  --bg-light: #242424;
+  --border: #383838;
+
+  box-shadow: none;
+  border-bottom: 1px solid var(--border);
 }
 
 h1 {
@@ -218,13 +233,17 @@ h1 img {
   border-top-color: var(--base);
 }
 
+.dark .version:hover .active-version:after {
+  border-top-color: #fff;
+}
+
 .versions {
   display: none;
   position: absolute;
   left: 0;
   top: 40px;
-  background-color: white;
-  border: 1px solid #ddd;
+  background-color: var(--bg-light);
+  border: 1px solid var(--border);
   border-radius: 4px;
   list-style-type: none;
   padding: 8px;
