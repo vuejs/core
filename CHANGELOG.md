@@ -1,3 +1,17 @@
+## [3.2.10](https://github.com/vuejs/vue-next/compare/v3.2.9...v3.2.10) (2021-09-07)
+
+
+### Bug Fixes
+
+* **build:** build vue-compat in default exports mode ([#4460](https://github.com/vuejs/vue-next/issues/4460)) ([7575733](https://github.com/vuejs/vue-next/commit/7575733b8c1345ebdfb010bd4c4e8cf4ed49f5cf))
+* **compiler-core:** avoid runtime dependency on @babel/types ([1045590](https://github.com/vuejs/vue-next/commit/1045590d4bbaf4a2b05311f11b22a0b3d22cf609)), closes [#4531](https://github.com/vuejs/vue-next/issues/4531)
+* **compiler-core:** pick last char when dynamic directive doesn't close ([#4507](https://github.com/vuejs/vue-next/issues/4507)) ([5d262e0](https://github.com/vuejs/vue-next/commit/5d262e08d5d5fb29f48ba5fa5b97a9a3e34b9d4b))
+* **compiler:** condense whitespaces in static class attributes ([#4432](https://github.com/vuejs/vue-next/issues/4432)) ([b8653d3](https://github.com/vuejs/vue-next/commit/b8653d390a555e1ee3f92a1c49cfd8800c67e46a)), closes [#4251](https://github.com/vuejs/vue-next/issues/4251)
+* **runtime-dom:** style patching shoud always preserve v-show display property ([d534515](https://github.com/vuejs/vue-next/commit/d53451583684c37bda7d30bff912216e1a58126f)), closes [#4424](https://github.com/vuejs/vue-next/issues/4424)
+* **type:** fix prop type infer ([#4530](https://github.com/vuejs/vue-next/issues/4530)) ([4178d5d](https://github.com/vuejs/vue-next/commit/4178d5d7d9549a0a1d19663bc2f92c8ac6a731b2)), closes [#4525](https://github.com/vuejs/vue-next/issues/4525)
+
+
+
 ## [3.2.9](https://github.com/vuejs/vue-next/compare/v3.2.8...v3.2.9) (2021-09-05)
 
 
