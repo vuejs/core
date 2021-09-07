@@ -81,11 +81,6 @@ function createConfig(format, output, plugins = []) {
     process.exit(1)
   }
 
-  const isCompatBuild = !!packageOptions.compat
-  output.exports = isCompatBuild ? 'default' : 'named'
-  output.sourcemap = !!process.env.SOURCE_MAP
-  output.externalLiveBindings = false
-
   const isProductionBuild =
     process.env.__DEV__ === 'false' || /\.prod\.js$/.test(output.file)
   const isBundlerESMBuild = /esm-bundler/.test(format)
@@ -93,6 +88,11 @@ function createConfig(format, output, plugins = []) {
   const isNodeBuild = format === 'cjs'
   const isGlobalBuild = /global/.test(format)
   const isCompatPackage = pkg.name === '@vue/compat'
+  const isCompatBuild = !!packageOptions.compat
+
+  output.exports = isCompatPackage ? 'auto' : 'named'
+  output.sourcemap = !!process.env.SOURCE_MAP
+  output.externalLiveBindings = false
 
   if (isGlobalBuild) {
     output.name = packageOptions.name
