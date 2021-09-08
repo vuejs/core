@@ -1,3 +1,12 @@
+## [3.2.11](https://github.com/vuejs/vue-next/compare/v3.2.10...v3.2.11) (2021-09-08)
+
+
+### Bug Fixes
+
+* **hmr:** handle possible duplicate component definitions with same id ([aa8908a](https://github.com/vuejs/vue-next/commit/aa8908a8543c5151a2cc06ed4d8fab3a1461692a))
+
+
+
 ## [3.2.10](https://github.com/vuejs/vue-next/compare/v3.2.9...v3.2.10) (2021-09-07)
 
 
