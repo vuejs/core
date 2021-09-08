@@ -9,7 +9,6 @@ import {
 } from './component'
 import { queueJob, queuePostFlushCb } from './scheduler'
 import { extend } from '@vue/shared'
-import { warn } from './warning'
 
 export let isHmrUpdating = false
 
@@ -43,58 +42,46 @@ if (__DEV__) {
   } as HMRRuntime
 }
 
-type HMRRecord = {
-  component: ComponentOptions
-  instances: Set<ComponentInternalInstance>
-}
-
-const map: Map<string, HMRRecord> = new Map()
+const map: Map<string, Set<ComponentInternalInstance>> = new Map()
 
 export function registerHMR(instance: ComponentInternalInstance) {
   const id = instance.type.__hmrId!
   let record = map.get(id)
   if (!record) {
-    createRecord(id, instance.type as ComponentOptions)
+    createRecord(id)
     record = map.get(id)!
   }
-  record.instances.add(instance)
+  record.add(instance)
 }
 
 export function unregisterHMR(instance: ComponentInternalInstance) {
-  map.get(instance.type.__hmrId!)!.instances.delete(instance)
+  map.get(instance.type.__hmrId!)!.delete(instance)
 }
 
-function createRecord(
-  id: string,
-  component: ComponentOptions | ClassComponent
-): boolean {
-  if (!component) {
-    warn(
-      `HMR API usage is out of date.\n` +
-        `Please upgrade vue-loader/vite/rollup-plugin-vue or other relevant ` +
-        `dependency that handles Vue SFC compilation.`
-    )
-    component = {}
-  }
+function createRecord(id: string): boolean {
   if (map.has(id)) {
     return false
   }
-  map.set(id, {
-    component: isClassComponent(component) ? component.__vccOpts : component,
-    instances: new Set()
-  })
+  map.set(id, new Set())
   return true
+}
+
+type HMRComponent = ComponentOptions | ClassComponent
+
+function normalizeClassComponent(component: HMRComponent): ComponentOptions {
+  return isClassComponent(component) ? component.__vccOpts : component
 }
 
 function rerender(id: string, newRender?: Function) {
   const record = map.get(id)
-  if (!record) return
-  if (newRender) record.component.render = newRender
-  // Array.from creates a snapshot which avoids the set being mutated during
-  // updates
-  Array.from(record.instances).forEach(instance => {
+  if (!record) {
+    return
+  }
+  // Create a snapshot which avoids the set being mutated during updates
+  ;[...record].forEach(instance => {
     if (newRender) {
       instance.render = newRender as InternalRenderFunction
+      normalizeClassComponent(instance.type as HMRComponent).render = newRender
     }
     instance.renderCache = []
     // this flag forces child components with slot content to update
@@ -104,40 +91,40 @@ function rerender(id: string, newRender?: Function) {
   })
 }
 
-function reload(id: string, newComp: ComponentOptions | ClassComponent) {
+function reload(id: string, newComp: HMRComponent) {
   const record = map.get(id)
   if (!record) return
-  // Array.from creates a snapshot which avoids the set being mutated during
-  // updates
-  const { component, instances } = record
 
-  if (!hmrDirtyComponents.has(component)) {
-    // 1. Update existing comp definition to match new one
-    newComp = isClassComponent(newComp) ? newComp.__vccOpts : newComp
-    extend(component, newComp)
-    for (const key in component) {
-      if (key !== '__file' && !(key in newComp)) {
-        delete (component as any)[key]
+  newComp = normalizeClassComponent(newComp)
+
+  // create a snapshot which avoids the set being mutated during updates
+  const instances = [...record]
+
+  for (const instance of instances) {
+    const oldComp = normalizeClassComponent(instance.type as HMRComponent)
+
+    if (!hmrDirtyComponents.has(oldComp)) {
+      // 1. Update existing comp definition to match new one
+      extend(oldComp, newComp)
+      for (const key in oldComp) {
+        if (key !== '__file' && !(key in newComp)) {
+          delete (oldComp as any)[key]
+        }
       }
+      // 2. mark definition dirty. This forces the renderer to replace the
+      // component on patch.
+      hmrDirtyComponents.add(oldComp)
     }
-    // 2. Mark component dirty. This forces the renderer to replace the component
-    // on patch.
-    hmrDirtyComponents.add(component)
-    // 3. Make sure to unmark the component after the reload.
-    queuePostFlushCb(() => {
-      hmrDirtyComponents.delete(component)
-    })
-  }
 
-  Array.from(instances).forEach(instance => {
-    // invalidate options resolution cache
+    // 3. invalidate options resolution cache
     instance.appContext.optionsCache.delete(instance.type as any)
 
+    // 4. actually update
     if (instance.ceReload) {
       // custom element
-      hmrDirtyComponents.add(component)
+      hmrDirtyComponents.add(oldComp)
       instance.ceReload((newComp as any).styles)
-      hmrDirtyComponents.delete(component)
+      hmrDirtyComponents.delete(oldComp)
     } else if (instance.parent) {
       // 4. Force the parent instance to re-render. This will cause all updated
       // components to be unmounted and re-mounted. Queue the update so that we
@@ -160,6 +147,15 @@ function reload(id: string, newComp: ComponentOptions | ClassComponent) {
     } else {
       console.warn(
         '[HMR] Root or manually mounted instance modified. Full reload required.'
+      )
+    }
+  }
+
+  // 5. make sure to cleanup dirty hmr components after update
+  queuePostFlushCb(() => {
+    for (const instance of instances) {
+      hmrDirtyComponents.delete(
+        normalizeClassComponent(instance.type as HMRComponent)
       )
     }
   })
