@@ -14,7 +14,7 @@ jobs:
       - name: Set node version to 16
         uses: actions/setup-node@v2
         with:
-          node-version: 16
+          node-version: 16.8
       - uses: bahmutov/npm-install@v1
       - name: Run unit tests
         run: yarn test --ci
