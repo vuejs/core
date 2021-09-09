@@ -15,7 +15,6 @@ const store = new ReplStore({
     ? `${location.origin}/vue.runtime.esm-browser.js`
     : `${location.origin}/src/vue-dev-proxy`
 })
-
 // persist state
 watchEffect(() => history.replaceState({}, '', store.serialize()))
 </script>
@@ -34,11 +33,9 @@ body {
   --base: #444;
   --nav-height: 50px;
 }
-
 .vue-repl {
   height: calc(var(--vh) - var(--nav-height));
 }
-
 button {
   border: none;
   outline: none;
