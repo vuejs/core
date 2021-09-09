@@ -1347,8 +1347,8 @@ function walkObjectPattern(
 ) {
   for (const p of node.properties) {
     if (p.type === 'ObjectProperty') {
-      // key can only be Identifier in ObjectPattern
-      if (p.key.type === 'Identifier') {
+      // key can be Identifier in ObjectPattern or StringLiteral
+      if (p.key.type === 'Identifier' || p.key.type === 'StringLiteral') {
         if (p.key === p.value) {
           // const { x } = ...
           const type = isDefineCall
