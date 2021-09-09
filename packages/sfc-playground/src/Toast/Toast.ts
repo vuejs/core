@@ -8,7 +8,7 @@ const Toast = {
     ins.mount(container)
     document.body.appendChild(container)
     setTimeout(() => {
-      ins.unmount(container)
+      ins.unmount()
       document.body.removeChild(container)
     }, delay)
   }
