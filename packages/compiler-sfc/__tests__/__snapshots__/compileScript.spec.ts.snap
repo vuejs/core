@@ -96,6 +96,19 @@ export default /*#__PURE__*/ Object.assign(__default__, {
 })"
 `;
 
+exports[`SFC compile <script setup> binding analysis for destructur 1`] = `
+"export default {
+  setup(__props, { expose }) {
+  expose()
+
+      const { foo, b: bar, ['x' + 'y']: baz, x: { y, zz: { z }}} = {}
+      
+return { foo, bar, baz, y, z }
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> defineEmits() 1`] = `
 "export default {
   emits: ['foo', 'bar'],

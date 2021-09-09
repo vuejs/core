@@ -1347,19 +1347,16 @@ function walkObjectPattern(
 ) {
   for (const p of node.properties) {
     if (p.type === 'ObjectProperty') {
-      // key can only be Identifier in ObjectPattern
-      if (p.key.type === 'Identifier') {
-        if (p.key === p.value) {
-          // const { x } = ...
-          const type = isDefineCall
-            ? BindingTypes.SETUP_CONST
-            : isConst
-            ? BindingTypes.SETUP_MAYBE_REF
-            : BindingTypes.SETUP_LET
-          registerBinding(bindings, p.key, type)
-        } else {
-          walkPattern(p.value, bindings, isConst, isDefineCall)
-        }
+      if (p.key.type === 'Identifier' && p.key === p.value) {
+        // shorthand: const { x } = ...
+        const type = isDefineCall
+          ? BindingTypes.SETUP_CONST
+          : isConst
+          ? BindingTypes.SETUP_MAYBE_REF
+          : BindingTypes.SETUP_LET
+        registerBinding(bindings, p.key, type)
+      } else {
+        walkPattern(p.value, bindings, isConst, isDefineCall)
       }
     } else {
       // ...rest

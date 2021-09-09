@@ -36,6 +36,23 @@ describe('SFC compile <script setup>', () => {
     assertCode(content)
   })
 
+  test('binding analysis for destructur', () => {
+    const { content, bindings } = compile(`
+      <script setup>
+      const { foo, b: bar, ['x' + 'y']: baz, x: { y, zz: { z }}} = {}
+      </script>
+      `)
+    expect(content).toMatch('return { foo, bar, baz, y, z }')
+    expect(bindings).toStrictEqual({
+      foo: BindingTypes.SETUP_MAYBE_REF,
+      bar: BindingTypes.SETUP_MAYBE_REF,
+      baz: BindingTypes.SETUP_MAYBE_REF,
+      y: BindingTypes.SETUP_MAYBE_REF,
+      z: BindingTypes.SETUP_MAYBE_REF
+    })
+    assertCode(content)
+  })
+
   test('defineProps()', () => {
     const { content, bindings } = compile(`
 <script setup>
