@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import Header from './Header.vue'
 import { Repl, ReplStore } from '@vue/repl'
-import { watchEffect, ref , onUnmounted} from 'vue'
+import { watchEffect, ref, onUnmounted } from 'vue'
 import Toast from './Toast/Toast'
 
 const setVH = () => {
