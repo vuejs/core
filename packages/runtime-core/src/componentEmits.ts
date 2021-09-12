@@ -223,7 +223,7 @@ export function normalizeEmitsOptions(
     }
   }
 
-  if (!raw && !hasExtends) {
+  if (!(raw || hasExtends)) {
     cache.set(comp, null)
     return null
   }

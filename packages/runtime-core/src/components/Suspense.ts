@@ -399,7 +399,7 @@ function createSuspenseBoundary(
   isHydrating = false
 ): SuspenseBoundary {
   /* istanbul ignore if */
-  if (__DEV__ && !__TEST__ && !hasWarned) {
+  if (__DEV__ && !(__TEST__ || hasWarned)) {
     hasWarned = true
     // @ts-ignore `console.info` cannot be null error
     console[console.info ? 'info' : 'log'](
@@ -436,7 +436,7 @@ function createSuspenseBoundary(
 
     resolve(resume = false) {
       if (__DEV__) {
-        if (!resume && !suspense.pendingBranch) {
+        if (!(resume || suspense.pendingBranch)) {
           throw new Error(
             `suspense.resolve() is called without a pending branch.`
           )

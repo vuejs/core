@@ -106,7 +106,7 @@ export function queueJob(job: SchedulerJob) {
 }
 
 function queueFlush() {
-  if (!isFlushing && !isFlushPending) {
+  if (!(isFlushing || isFlushPending)) {
     isFlushPending = true
     currentFlushPromise = resolvedPromise.then(flushJobs)
   }

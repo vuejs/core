@@ -78,7 +78,7 @@ async function main() {
 
   // run tests before release
   step('\nRunning tests...')
-  if (!skipTests && !isDryRun) {
+  if (!(skipTests || isDryRun)) {
     await run(bin('jest'), ['--clearCache'])
     await run('yarn', ['test', '--bail'])
   } else {
@@ -91,7 +91,7 @@ async function main() {
 
   // build all packages with types
   step('\nBuilding all packages...')
-  if (!skipBuild && !isDryRun) {
+  if (!(skipBuild || isDryRun)) {
     await run('yarn', ['build', '--release'])
     // test generated dts files
     step('\nVerifying type declarations...')

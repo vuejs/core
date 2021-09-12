@@ -55,7 +55,7 @@ const resolveTarget = <T = RendererElement>(
       return target as any
     }
   } else {
-    if (__DEV__ && !targetSelector && !isTeleportDisabled(props)) {
+    if (__DEV__ && !(targetSelector || isTeleportDisabled(props))) {
       warn(`Invalid Teleport target: ${targetSelector}`)
     }
     return targetSelector as any

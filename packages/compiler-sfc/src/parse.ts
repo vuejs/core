@@ -178,7 +178,7 @@ export function parse(
           descriptor.scriptSetup = scriptBlock
           break
         }
-        if (!isSetup && !descriptor.script) {
+        if (!(isSetup || descriptor.script)) {
           descriptor.script = scriptBlock
           break
         }

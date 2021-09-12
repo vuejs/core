@@ -70,7 +70,7 @@ export const transformOn: DirectiveTransform = (
   if (exp && !exp.content.trim()) {
     exp = undefined
   }
-  let shouldCache: boolean = context.cacheHandlers && !exp && !context.inVOnce
+  let shouldCache: boolean = context.cacheHandlers && !(exp || context.inVOnce)
   if (exp) {
     const isMemberExp = isMemberExpression(exp.content)
     const isInlineStatement = !(isMemberExp || fnExpRE.test(exp.content))

@@ -150,7 +150,7 @@ export const isMemberExpression = (path: string): boolean => {
         break
     }
   }
-  return !currentOpenBracketCount && !currentOpenParensCount
+  return !(currentOpenBracketCount || currentOpenParensCount)
 }
 
 export function getInnerRange(

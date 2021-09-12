@@ -481,7 +481,7 @@ export function normalizePropsOptions(
     }
   }
 
-  if (!raw && !hasExtends) {
+  if (!(raw || hasExtends)) {
     cache.set(comp, EMPTY_ARR as any)
     return EMPTY_ARR as any
   }

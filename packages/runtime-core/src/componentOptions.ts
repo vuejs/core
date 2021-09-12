@@ -939,7 +939,7 @@ export function resolveMergedOptions(
 
   if (cached) {
     resolved = cached
-  } else if (!globalMixins.length && !mixins && !extendsOptions) {
+  } else if (!globalMixins.length && !(mixins || extendsOptions)) {
     if (
       __COMPAT__ &&
       isCompatEnabled(DeprecationTypes.PRIVATE_APIS, instance)

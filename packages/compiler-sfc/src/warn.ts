@@ -3,7 +3,7 @@ const hasWarned: Record<string, boolean> = {}
 export function warnOnce(msg: string) {
   const isNodeProd =
     typeof process !== 'undefined' && process.env.NODE_ENV === 'production'
-  if (!isNodeProd && !__TEST__ && !hasWarned[msg]) {
+  if (!(isNodeProd || __TEST__ || hasWarned[msg])) {
     hasWarned[msg] = true
     warn(msg)
   }

@@ -15,7 +15,7 @@ import { ShapeFlags } from '@vue/shared'
  * @private
  */
 export function useCssVars(getter: (ctx: any) => Record<string, string>) {
-  if (!__BROWSER__ && !__TEST__) return
+  if (!(__BROWSER__ || __TEST__)) return
 
   const instance = getCurrentInstance()
   /* istanbul ignore next */

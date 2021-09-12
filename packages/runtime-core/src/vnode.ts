@@ -743,7 +743,7 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
     } else {
       type = ShapeFlags.SLOTS_CHILDREN
       const slotFlag = (children as RawSlots)._
-      if (!slotFlag && !(InternalObjectKey in children!)) {
+      if (!(slotFlag || (InternalObjectKey in children!))) {
         // if slots are not normalized, attach context instance
         // (compiled / normalized slots already have context)
         ;(children as RawSlots)._ctx = currentRenderingInstance

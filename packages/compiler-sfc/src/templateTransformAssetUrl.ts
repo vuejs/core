@@ -94,7 +94,7 @@ export const transformAssetUrl: NodeTransform = (
     const tags = options.tags || defaultAssetUrlOptions.tags
     const attrs = tags[node.tag]
     const wildCardAttrs = tags['*']
-    if (!attrs && !wildCardAttrs) {
+    if (!(attrs || wildCardAttrs)) {
       return
     }
 

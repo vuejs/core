@@ -211,7 +211,7 @@ export function processExpression(
     const isScopeVarReference = context.identifiers[rawExp]
     const isAllowedGlobal = isGloballyWhitelisted(rawExp)
     const isLiteral = isLiteralWhitelisted(rawExp)
-    if (!asParams && !isScopeVarReference && !isAllowedGlobal && !isLiteral) {
+    if (!(asParams || isScopeVarReference || isAllowedGlobal || isLiteral)) {
       // const bindings exposed from setup can be skipped for patching but
       // cannot be hoisted to module scope
       if (bindingMetadata[node.content] === BindingTypes.SETUP_CONST) {

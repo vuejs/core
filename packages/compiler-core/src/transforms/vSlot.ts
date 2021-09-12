@@ -134,7 +134,7 @@ export function buildSlots(
   let hasDynamicSlots = context.scopes.vSlot > 0 || context.scopes.vFor > 0
   // with `prefixIdentifiers: true`, this can be further optimized to make
   // it dynamic only when the slot actually uses the scope variables.
-  if (!__BROWSER__ && !context.ssr && context.prefixIdentifiers) {
+  if (!(__BROWSER__ || context.ssr) && context.prefixIdentifiers) {
     hasDynamicSlots = hasScopeRef(node, context.identifiers)
   }
 
