@@ -98,7 +98,7 @@ export function transform(
 export function transformAST(
   ast: Program,
   s: MagicString,
-  offset = 0,
+  offset: number = 0,
   knownRootVars?: string[]
 ): {
   rootVars: string[]
