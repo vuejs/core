@@ -563,6 +563,58 @@ describe('compiler: transform v-on', () => {
       })
     })
 
+    test('inline async arrow function expression handler', () => {
+      const { root, node } = parseWithVOn(
+        `<div v-on:click="async () => await foo()" />`,
+        {
+          prefixIdentifiers: true,
+          cacheHandlers: true
+        }
+      )
+      expect(root.cached).toBe(1)
+      const vnodeCall = node.codegenNode as VNodeCall
+      // should not treat cached handler as dynamicProp, so no flags
+      expect(vnodeCall.patchFlag).toBeUndefined()
+      expect(
+        (vnodeCall.props as ObjectExpression).properties[0].value
+      ).toMatchObject({
+        type: NodeTypes.JS_CACHE_EXPRESSION,
+        index: 0,
+        value: {
+          type: NodeTypes.COMPOUND_EXPRESSION,
+          children: [`async () => await `, { content: `_ctx.foo` }, `()`]
+        }
+      })
+    })
+
+    test('inline async function expression handler', () => {
+      const { root, node } = parseWithVOn(
+        `<div v-on:click="async function () { await foo() } " />`,
+        {
+          prefixIdentifiers: true,
+          cacheHandlers: true
+        }
+      )
+      expect(root.cached).toBe(1)
+      const vnodeCall = node.codegenNode as VNodeCall
+      // should not treat cached handler as dynamicProp, so no flags
+      expect(vnodeCall.patchFlag).toBeUndefined()
+      expect(
+        (vnodeCall.props as ObjectExpression).properties[0].value
+      ).toMatchObject({
+        type: NodeTypes.JS_CACHE_EXPRESSION,
+        index: 0,
+        value: {
+          type: NodeTypes.COMPOUND_EXPRESSION,
+          children: [
+            `async function () { await `,
+            { content: `_ctx.foo` },
+            `() } `
+          ]
+        }
+      })
+    })
+
     test('inline statement handler', () => {
       const { root, node } = parseWithVOn(`<div v-on:click="foo++" />`, {
         prefixIdentifiers: true,
