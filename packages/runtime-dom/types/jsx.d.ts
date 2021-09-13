@@ -584,7 +584,7 @@ export interface OptionHTMLAttributes extends HTMLAttributes {
   disabled?: Booleanish
   label?: string
   selected?: Booleanish
-  value?: string | string[] | number
+  value?: any  // we support :value to be bound to anything w/ v-model
 }
 
 export interface OutputHTMLAttributes extends HTMLAttributes {
@@ -624,7 +624,7 @@ export interface SelectHTMLAttributes extends HTMLAttributes {
   name?: string
   required?: Booleanish
   size?: Numberish
-  value?: string | string[] | number
+  value?: any  // we support :value to be bound to anything w/ v-model
 }
 
 export interface SourceHTMLAttributes extends HTMLAttributes {
