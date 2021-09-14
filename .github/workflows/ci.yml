@@ -3,6 +3,11 @@ on:
   push:
     branches:
       - '**'
+    paths-ignore:
+      - LICENSE
+      - '*.md'
+      - .vscode/**
+      - scripts/**
   pull_request:
     branches:
       - master
