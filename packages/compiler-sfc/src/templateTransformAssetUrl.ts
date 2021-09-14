@@ -2,6 +2,7 @@ import path from 'path'
 import {
   ConstantTypes,
   createSimpleExpression,
+  SimpleExpressionNode,
   ExpressionNode,
   NodeTransform,
   NodeTypes,
@@ -154,17 +155,17 @@ function getImportsExpressionExp(
 ): ExpressionNode {
   if (path) {
     const existing = context.imports.find(i => i.path === path)
+    let exp: SimpleExpressionNode
+    let name: string
     if (existing) {
-      return existing.exp as ExpressionNode
+      exp = existing.exp as SimpleExpressionNode
+      name = exp.content
+    } else {
+      name = `_imports_${context.imports.length}`
+      exp = createSimpleExpression(name, false, loc, ConstantTypes.CAN_HOIST)
+      context.imports.push({ exp, path })
     }
-    const name = `_imports_${context.imports.length}`
-    const exp = createSimpleExpression(
-      name,
-      false,
-      loc,
-      ConstantTypes.CAN_HOIST
-    )
-    context.imports.push({ exp, path })
+
     if (hash && path) {
       return context.hoist(
         createSimpleExpression(
