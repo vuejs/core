@@ -1118,6 +1118,14 @@ const emit = defineEmits(['a', 'b'])
         false
       )
     })
+
+    test('if statement with expression statement consequent type', () => {
+      assertAwaitDetection(`if (ok) await foo`, code => {
+        return code.includes(
+          `if (ok) (([__temp,__restore]=_withAsyncContext(()=>(foo))),__temp=await __temp,__restore(),__temp)`
+        )
+      })
+    })
   })
 
   describe('errors', () => {

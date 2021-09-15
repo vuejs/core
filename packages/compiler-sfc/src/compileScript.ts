@@ -913,6 +913,13 @@ export function compileScript(
       (node.type === 'VariableDeclaration' && !node.declare) ||
       node.type.endsWith('Statement')
     ) {
+      let isIfExpStmt = false
+      if (
+        node.type === 'IfStatement' &&
+        node.consequent.type === 'ExpressionStatement'
+      ) {
+        isIfExpStmt = true
+      }
       ;(walk as any)(node, {
         enter(child: Node, parent: Node) {
           if (isFunctionType(child)) {
@@ -920,7 +927,10 @@ export function compileScript(
           }
           if (child.type === 'AwaitExpression') {
             hasAwait = true
-            processAwait(child, parent.type === 'ExpressionStatement')
+            processAwait(
+              child,
+              parent.type === 'ExpressionStatement' && !isIfExpStmt
+            )
           }
         }
       })
