@@ -1541,6 +1541,9 @@ function inferRuntimeType(
     case 'TSIntersectionType':
       return ['Object']
 
+    case 'TSSymbolKeyword':
+      return ['Symbol']
+
     default:
       return [`null`] // no runtime check
   }
