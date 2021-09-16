@@ -1089,7 +1089,7 @@ const emit = defineEmits(['a', 'b'])
     })
 
     // should prepend semicolon
-    test('await in expression statement', () => {
+    test('nested leading await in expression statement', () => {
       const code = assertAwaitDetection(`foo()\nawait 1 + await 2`)
       expect(code).toMatch(`foo()\n;(`)
     })

@@ -96,36 +96,6 @@ export default /*#__PURE__*/ Object.assign(__default__, {
 })"
 `;
 
-exports[`SFC compile <script setup> async/await detection await in expression statement 1`] = `
-"import { withAsyncContext as _withAsyncContext } from 'vue'
-
-export default {
-  async setup(__props, { expose }) {
-  expose()
-
-let __temp, __restore
-foo()
-;(
-  ([__temp,__restore] = _withAsyncContext(() => {
-    return 1
-  })),
-  __temp = await __temp,
-  __restore(),
-  __temp
-) + (
-  ([__temp,__restore] = _withAsyncContext(() => {
-    return 2
-  })),
-  __temp = await __temp,
-  __restore(),
-  __temp
-)
-return {  }
-}
-
-}"
-`;
-
 exports[`SFC compile <script setup> async/await detection expression statement 1`] = `
 "import { withAsyncContext as _withAsyncContext } from 'vue'
 
@@ -135,12 +105,9 @@ export default {
 
 let __temp, __restore
 ;(
-  ([__temp,__restore] = _withAsyncContext(() => {
-    return foo
-  })),
-  __temp = await __temp,
-  __restore(),
-  __temp
+  ([__temp,__restore] = _withAsyncContext(() => foo)),
+  await __temp,
+  __restore()
 )
 return {  }
 }
@@ -157,19 +124,14 @@ export default {
 
 let __temp, __restore
 ;(
-  ([__temp,__restore] = _withAsyncContext(async () => {
-    return ((
-  ([__temp,__restore] = _withAsyncContext(() => {
-    return foo
-  })),
+  ([__temp,__restore] = _withAsyncContext(async () => ((
+  ([__temp,__restore] = _withAsyncContext(() => foo)),
   __temp = await __temp,
   __restore(),
   __temp
-))
-  })),
-  __temp = await __temp,
-  __restore(),
-  __temp
+)))),
+  await __temp,
+  __restore()
 )
 return {  }
 }
@@ -186,19 +148,14 @@ export default {
 
 let __temp, __restore
 ;(
-  ([__temp,__restore] = _withAsyncContext(async () => {
-    return (((
-  ([__temp,__restore] = _withAsyncContext(() => {
-    return foo
-  })),
+  ([__temp,__restore] = _withAsyncContext(async () => (((
+  ([__temp,__restore] = _withAsyncContext(() => foo)),
   __temp = await __temp,
   __restore(),
   __temp
-)))
-  })),
-  __temp = await __temp,
-  __restore(),
-  __temp
+))))),
+  await __temp,
+  __restore()
 )
 return {  }
 }
@@ -215,23 +172,42 @@ export default {
 
 let __temp, __restore
 ;(
-  ([__temp,__restore] = _withAsyncContext(async () => {
-    return ((
-  ([__temp,__restore] = _withAsyncContext(async () => {
-    return ((
-  ([__temp,__restore] = _withAsyncContext(() => {
-    return foo
-  })),
+  ([__temp,__restore] = _withAsyncContext(async () => ((
+  ([__temp,__restore] = _withAsyncContext(async () => ((
+  ([__temp,__restore] = _withAsyncContext(() => foo)),
   __temp = await __temp,
   __restore(),
   __temp
-))
-  })),
+)))),
   __temp = await __temp,
   __restore(),
   __temp
-))
-  })),
+)))),
+  await __temp,
+  __restore()
+)
+return {  }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> async/await detection nested leading await in expression statement 1`] = `
+"import { withAsyncContext as _withAsyncContext } from 'vue'
+
+export default {
+  async setup(__props, { expose }) {
+  expose()
+
+let __temp, __restore
+foo()
+;(
+  ([__temp,__restore] = _withAsyncContext(() => 1)),
+  __temp = await __temp,
+  __restore(),
+  __temp
+) + (
+  ([__temp,__restore] = _withAsyncContext(() => 2)),
   __temp = await __temp,
   __restore(),
   __temp
@@ -251,19 +227,13 @@ export default {
 
 let __temp, __restore
 if (ok) { (
-  ([__temp,__restore] = _withAsyncContext(() => {
-    return foo
-  })),
-  __temp = await __temp,
-  __restore(),
-  __temp
+  ([__temp,__restore] = _withAsyncContext(() => foo)),
+  await __temp,
+  __restore()
 ) } else { (
-  ([__temp,__restore] = _withAsyncContext(() => {
-    return bar
-  })),
-  __temp = await __temp,
-  __restore(),
-  __temp
+  ([__temp,__restore] = _withAsyncContext(() => bar)),
+  await __temp,
+  __restore()
 ) }
 return {  }
 }
@@ -280,9 +250,7 @@ export default {
 
 let __temp, __restore
 let a = _ref(1 + ((
-  ([__temp,__restore] = _withAsyncContext(() => {
-    return foo
-  })),
+  ([__temp,__restore] = _withAsyncContext(() => foo)),
   __temp = await __temp,
   __restore(),
   __temp
@@ -346,12 +314,9 @@ export default {
 
 let __temp, __restore
 if (false) (
-  ([__temp,__restore] = _withAsyncContext(() => {
-    return foo()
-  })),
-  __temp = await __temp,
-  __restore(),
-  __temp
+  ([__temp,__restore] = _withAsyncContext(() => foo())),
+  await __temp,
+  __restore()
 )
 return {  }
 }
@@ -368,9 +333,7 @@ export default {
 
 let __temp, __restore
 const a = 1 + ((
-  ([__temp,__restore] = _withAsyncContext(() => {
-    return foo
-  })),
+  ([__temp,__restore] = _withAsyncContext(() => foo)),
   __temp = await __temp,
   __restore(),
   __temp
