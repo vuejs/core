@@ -154,6 +154,7 @@ export class VueElement extends BaseClass {
 
   private _connected = false
   private _resolved = false
+  private _numberProps: Record<string, true> | null = null
   private _styles?: HTMLStyleElement[]
 
   constructor(
@@ -179,19 +180,18 @@ export class VueElement extends BaseClass {
       this._setAttr(this.attributes[i].name)
     }
     // watch future attr changes
-    const observer = new MutationObserver(mutations => {
+    new MutationObserver(mutations => {
       for (const m of mutations) {
         this._setAttr(m.attributeName!)
       }
-    })
-    observer.observe(this, { attributes: true })
+    }).observe(this, { attributes: true })
   }
 
   connectedCallback() {
     this._connected = true
     if (!this._instance) {
       this._resolveDef()
-      render(this._createVNode(), this.shadowRoot!)
+      this._update()
     }
   }
 
@@ -215,15 +215,33 @@ export class VueElement extends BaseClass {
 
     const resolve = (def: InnerComponentDef) => {
       this._resolved = true
+      const { props, styles } = def
+      const hasOptions = !isArray(props)
+      const rawKeys = props ? (hasOptions ? Object.keys(props) : props) : []
+
+      // cast Number-type props set before resolve
+      let numberProps
+      if (hasOptions) {
+        for (const key in this._props) {
+          const opt = props[key]
+          if (opt === Number || (opt && opt.type === Number)) {
+            this._props[key] = toNumber(this._props[key])
+            ;(numberProps || (numberProps = Object.create(null)))[key] = true
+          }
+        }
+      }
+      if (numberProps) {
+        this._numberProps = numberProps
+        this._update()
+      }
+
       // check if there are props set pre-upgrade or connect
       for (const key of Object.keys(this)) {
         if (key[0] !== '_') {
           this._setProp(key, this[key as keyof this])
         }
       }
-      const { props, styles } = def
       // defining getter/setters on prototype
-      const rawKeys = props ? (isArray(props) ? props : Object.keys(props)) : []
       for (const key of rawKeys.map(camelize)) {
         Object.defineProperty(this, key, {
           get() {
@@ -246,7 +264,11 @@ export class VueElement extends BaseClass {
   }
 
   protected _setAttr(key: string) {
-    this._setProp(camelize(key), toNumber(this.getAttribute(key)), false)
+    let value = this.getAttribute(key)
+    if (this._numberProps && this._numberProps[key]) {
+      value = toNumber(value)
+    }
+    this._setProp(camelize(key), value, false)
   }
 
   /**
@@ -263,7 +285,7 @@ export class VueElement extends BaseClass {
     if (val !== this._props[key]) {
       this._props[key] = val
       if (this._instance) {
-        render(this._createVNode(), this.shadowRoot!)
+        this._update()
       }
       // reflect
       if (shouldReflect) {
@@ -276,6 +298,10 @@ export class VueElement extends BaseClass {
         }
       }
     }
+  }
+
+  private _update() {
+    render(this._createVNode(), this.shadowRoot!)
   }
 
   private _createVNode(): VNode<any, any> {
@@ -298,7 +324,7 @@ export class VueElement extends BaseClass {
             if (!(this._def as ComponentOptions).__asyncLoader) {
               // reload
               this._instance = null
-              render(this._createVNode(), this.shadowRoot!)
+              this._update()
             }
           }
         }
