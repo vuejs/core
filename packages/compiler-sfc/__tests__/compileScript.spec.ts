@@ -706,6 +706,7 @@ const emit = defineEmits(['a', 'b'])
         interface: Test
         alias: Alias
         method(): void
+        symbol: symbol
 
         union: string | number
         literalUnion: 'foo' | 'bar'
@@ -735,6 +736,7 @@ const emit = defineEmits(['a', 'b'])
       expect(content).toMatch(`interface: { type: Object, required: true }`)
       expect(content).toMatch(`alias: { type: Array, required: true }`)
       expect(content).toMatch(`method: { type: Function, required: true }`)
+      expect(content).toMatch(`symbol: { type: Symbol, required: true }`)
       expect(content).toMatch(
         `union: { type: [String, Number], required: true }`
       )
@@ -767,6 +769,7 @@ const emit = defineEmits(['a', 'b'])
         interface: BindingTypes.PROPS,
         alias: BindingTypes.PROPS,
         method: BindingTypes.PROPS,
+        symbol: BindingTypes.PROPS,
         union: BindingTypes.PROPS,
         literalUnion: BindingTypes.PROPS,
         literalUnionNumber: BindingTypes.PROPS,
