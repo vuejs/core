@@ -928,10 +928,10 @@
   resolved "https://registry.yarnpkg.com/@vitejs/plugin-vue/-/plugin-vue-1.6.1.tgz#a40a06661af61fdc1bebdfb811b28f50ad39dfb3"
   integrity sha512-tX2Ju8fOyEtfstfmwjfSJcstTFXwzdFAUbYJ5bWWifvKIgbe6B0FbM8l3Wb7wOaaxKn4FYkii7WQnAPcsTqaIA==
 
-"@vue/repl@^0.2.0":
-  version "0.2.0"
-  resolved "https://registry.yarnpkg.com/@vue/repl/-/repl-0.2.0.tgz#497a2377c1dda1fb032052e15d3ccc8f1a85c1bf"
-  integrity sha512-L8Fju0AdmFlcIK2JTprmeXU+SEppPd8TZtS+Le/PYlU6b8i3+PZ7Dt/ce/PI0MLR1BPPtRA0voPpM0wccYqHdQ==
+"@vue/repl@^0.3.2":
+  version "0.3.2"
+  resolved "https://registry.yarnpkg.com/@vue/repl/-/repl-0.3.2.tgz#dda8e0675727cc4919cada1ec3b137067ae4fa87"
+  integrity sha512-PsCe/6b3TlXHsqHyMUrv2lP9trxZtZbmzOqeB9A2B7P9Ov1+4Mkxg3pm99Ng6PmonJzDQSaKz6g9unGOPs84YQ==
 
 "@zeit/schemas@2.6.0":
   version "2.6.0"
