@@ -145,6 +145,16 @@ export function processIf(
       }
 
       if (sibling && sibling.type === NodeTypes.IF) {
+        // Check if v-else was followed by v-else-if
+        if (
+          dir.name === 'else-if' &&
+          sibling.branches[sibling.branches.length - 1].condition === undefined
+        ) {
+          context.onError(
+            createCompilerError(ErrorCodes.X_V_ELSE_NO_ADJACENT_IF, node.loc)
+          )
+        }
+
         // move the node to the if node's branches
         context.removeNode()
         const branch = createIfBranch(node, dir)
