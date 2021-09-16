@@ -20,7 +20,7 @@ export function ssrProcessTransitionGroup(
         /**
          * TransitionGroup has the special runtime behavior of flattening and
          * concatenating all children into a single fragment (in order for them to
-         * be pathced using the same key map) so we need to account for that here
+         * be patched using the same key map) so we need to account for that here
          * by disabling nested fragment wrappers from being generated.
          */
         true
