@@ -429,7 +429,7 @@ export const deprecationData: Record<DeprecationTypes, DeprecationData> = {
     message: name =>
       `"${name}" is a Vue 2 private API that no longer exists in Vue 3. ` +
       `If you are seeing this warning only due to a dependency, you can ` +
-      `suppress this warning via { PRIVATE_APIS: 'supress-warning' }.`
+      `suppress this warning via { PRIVATE_APIS: 'suppress-warning' }.`
   }
 }
 
