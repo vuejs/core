@@ -509,19 +509,33 @@ export function compileScript(
   /**
    * await foo()
    * -->
-   * (([__temp, __restore] = withAsyncContext(() => foo())),__temp=await __temp,__restore(),__temp)
+   * (([__temp, __restore] = withAsyncContext(async () => foo())),__temp=await __temp,__restore(),__temp)
    */
   function processAwait(node: AwaitExpression, isStatement: boolean) {
+    const argumentStart =
+      node.argument.extra && node.argument.extra.parenthesized
+        ? (node.argument.extra.parenStart as number)
+        : node.argument.start!
+
+    const argumentStr = source.slice(
+      argumentStart + startOffset,
+      node.argument.end! + startOffset
+    )
+
+    const containsNestedAwait = /\bawait\b/.test(argumentStr)
+
     s.overwrite(
       node.start! + startOffset,
-      node.argument.start! + startOffset,
-      `${isStatement ? `;` : ``}(([__temp,__restore]=${helper(
+      argumentStart + startOffset,
+      `${isStatement ? `;` : ``}(\n  ([__temp,__restore] = ${helper(
         `withAsyncContext`
-      )}(()=>(`
+      )}(${containsNestedAwait ? `async ` : ``}() => {\n    return `
     )
     s.appendLeft(
       node.end! + startOffset,
-      `))),__temp=await __temp,__restore()${isStatement ? `` : `,__temp`})`
+      `\n  })),\n  __temp = await __temp,\n  __restore()${
+        isStatement ? `` : `,\n  __temp`
+      }\n)`
     )
   }
 

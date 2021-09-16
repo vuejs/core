@@ -96,6 +96,233 @@ export default /*#__PURE__*/ Object.assign(__default__, {
 })"
 `;
 
+exports[`SFC compile <script setup> async/await detection expression statement 1`] = `
+"import { withAsyncContext as _withAsyncContext } from 'vue'
+
+export default {
+  async setup(__props, { expose }) {
+  expose()
+
+let __temp, __restore
+;(
+  ([__temp,__restore] = _withAsyncContext(() => {
+    return foo
+  })),
+  __temp = await __temp,
+  __restore()
+)
+return {  }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> async/await detection nested await 1`] = `
+"import { withAsyncContext as _withAsyncContext } from 'vue'
+
+export default {
+  async setup(__props, { expose }) {
+  expose()
+
+let __temp, __restore
+;(
+  ([__temp,__restore] = _withAsyncContext(async () => {
+    return ((
+  ([__temp,__restore] = _withAsyncContext(() => {
+    return foo
+  })),
+  __temp = await __temp,
+  __restore(),
+  __temp
+))
+  })),
+  __temp = await __temp,
+  __restore()
+)
+return {  }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> async/await detection nested await 2`] = `
+"import { withAsyncContext as _withAsyncContext } from 'vue'
+
+export default {
+  async setup(__props, { expose }) {
+  expose()
+
+let __temp, __restore
+;(
+  ([__temp,__restore] = _withAsyncContext(async () => {
+    return (((
+  ([__temp,__restore] = _withAsyncContext(() => {
+    return foo
+  })),
+  __temp = await __temp,
+  __restore(),
+  __temp
+)))
+  })),
+  __temp = await __temp,
+  __restore()
+)
+return {  }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> async/await detection nested await 3`] = `
+"import { withAsyncContext as _withAsyncContext } from 'vue'
+
+export default {
+  async setup(__props, { expose }) {
+  expose()
+
+let __temp, __restore
+;(
+  ([__temp,__restore] = _withAsyncContext(async () => {
+    return ((
+  ([__temp,__restore] = _withAsyncContext(async () => {
+    return ((
+  ([__temp,__restore] = _withAsyncContext(() => {
+    return foo
+  })),
+  __temp = await __temp,
+  __restore(),
+  __temp
+))
+  })),
+  __temp = await __temp,
+  __restore(),
+  __temp
+))
+  })),
+  __temp = await __temp,
+  __restore()
+)
+return {  }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> async/await detection nested statements 1`] = `
+"import { withAsyncContext as _withAsyncContext } from 'vue'
+
+export default {
+  async setup(__props, { expose }) {
+  expose()
+
+let __temp, __restore
+if (ok) { ;(
+  ([__temp,__restore] = _withAsyncContext(() => {
+    return foo
+  })),
+  __temp = await __temp,
+  __restore()
+) } else { ;(
+  ([__temp,__restore] = _withAsyncContext(() => {
+    return bar
+  })),
+  __temp = await __temp,
+  __restore()
+) }
+return {  }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> async/await detection ref 1`] = `
+"import { withAsyncContext as _withAsyncContext, ref as _ref } from 'vue'
+
+export default {
+  async setup(__props, { expose }) {
+  expose()
+
+let __temp, __restore
+let a = _ref(1 + ((
+  ([__temp,__restore] = _withAsyncContext(() => {
+    return foo
+  })),
+  __temp = await __temp,
+  __restore(),
+  __temp
+)))
+return { a }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> async/await detection should ignore await inside functions 1`] = `
+"export default {
+  setup(__props, { expose }) {
+  expose()
+async function foo() { await bar }
+return { foo }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> async/await detection should ignore await inside functions 2`] = `
+"export default {
+  setup(__props, { expose }) {
+  expose()
+const foo = async () => { await bar }
+return { foo }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> async/await detection should ignore await inside functions 3`] = `
+"export default {
+  setup(__props, { expose }) {
+  expose()
+const obj = { async method() { await bar }}
+return { obj }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> async/await detection should ignore await inside functions 4`] = `
+"export default {
+  setup(__props, { expose }) {
+  expose()
+const cls = class Foo { async method() { await bar }}
+return { cls }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> async/await detection variable 1`] = `
+"import { withAsyncContext as _withAsyncContext } from 'vue'
+
+export default {
+  async setup(__props, { expose }) {
+  expose()
+
+let __temp, __restore
+const a = 1 + ((
+  ([__temp,__restore] = _withAsyncContext(() => {
+    return foo
+  })),
+  __temp = await __temp,
+  __restore(),
+  __temp
+))
+return { a }
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> binding analysis for destructur 1`] = `
 "export default {
   setup(__props, { expose }) {
