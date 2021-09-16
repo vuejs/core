@@ -7,6 +7,10 @@ import config from './template/vite.config.js?raw'
 import readme from './template/README.md?raw'
 
 export async function downloadProject(store: any) {
+  if (!confirm('Download project files?')) {
+    return
+  }
+
   const { default: JSZip } = await import('jszip')
   const zip = new JSZip()
 

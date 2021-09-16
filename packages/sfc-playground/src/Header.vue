@@ -111,12 +111,18 @@ async function fetchVersions(): Promise<string[]> {
           </li>
         </ul>
       </div>
-      <button class="toggle-dark" @click="toggleDark">
+      <button title="Toggle dark mode" class="toggle-dark" @click="toggleDark">
         <Sun class="light" />
         <Moon class="dark" />
       </button>
-      <button class="share" @click="copyLink"><Share /></button>
-      <button class="download" @click="downloadProject(store)">
+      <button title="Copy sharable URL" class="share" @click="copyLink">
+        <Share />
+      </button>
+      <button
+        title="Download project files"
+        class="download"
+        @click="downloadProject(store)"
+      >
         <Download />
       </button>
     </div>
