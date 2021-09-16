@@ -913,13 +913,9 @@ export function compileScript(
       (node.type === 'VariableDeclaration' && !node.declare) ||
       node.type.endsWith('Statement')
     ) {
-      let isIfExpStmt = false
-      if (
+      const isIfExpStmt =
         node.type === 'IfStatement' &&
         node.consequent.type === 'ExpressionStatement'
-      ) {
-        isIfExpStmt = true
-      }
       ;(walk as any)(node, {
         enter(child: Node, parent: Node) {
           if (isFunctionType(child)) {
