@@ -1823,7 +1823,7 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
 
 function stripStrings(exp: string) {
   return exp
-    .replace(/'[^']+'|"[^"]+"/g, '')
+    .replace(/'[^']*'|"[^"]*"/g, '')
     .replace(/`[^`]+`/g, stripTemplateString)
 }
 
