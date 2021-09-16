@@ -671,7 +671,7 @@ export function compileScript(
         const start = node.start! + scriptStartOffset!
         const end = node.declaration.start! + scriptStartOffset!
         s.overwrite(start, end, `const ${defaultTempVar} = `)
-      } else if (node.type === 'ExportNamedDeclaration' && node.specifiers) {
+      } else if (node.type === 'ExportNamedDeclaration') {
         const defaultSpecifier = node.specifiers.find(
           s => s.exported.type === 'Identifier' && s.exported.name === 'default'
         ) as ExportSpecifier
@@ -704,7 +704,9 @@ export function compileScript(
             )
           }
         }
-        walkDeclaration(node.declaration!, setupBindings, userImportAlias)
+        if (node.declaration) {
+          walkDeclaration(node.declaration, setupBindings, userImportAlias)
+        }
       } else if (
         (node.type === 'VariableDeclaration' ||
           node.type === 'FunctionDeclaration' ||
