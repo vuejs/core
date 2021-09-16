@@ -300,6 +300,54 @@ describe('defineCustomElement', () => {
       const style = el.shadowRoot?.querySelector('style')!
       expect(style.textContent).toBe(`div { color: red; }`)
     })
+
+    test('should attach styles recursively to shadow dom', () => {
+      const SecondDepthChild1 = {
+        styles: [`div { color: yellow; }`],
+        render() {
+          return h('div', '2nd')
+        }
+      }
+      const SecondDepthChild2 = {
+        styles: [`div { color: green; }`],
+        render() {
+          return h('div', '2nd')
+        }
+      }
+      const FirstDepthChild = {
+        styles: [`div { color: blue; }`],
+        components: { SecondDepthChild1, SecondDepthChild2 },
+        render() {
+          return h('div', [
+            '1st',
+            h('SecondDepthChild1'),
+            h('SecondDepthChild2')
+          ])
+        }
+      }
+      const RootComponent = {
+        styles: [`div { color: red; }`],
+        components: { FirstDepthChild },
+        render() {
+          return h('div', ['root', h('FirstDepthChild')])
+        }
+      }
+
+      const customElement = defineCustomElement(RootComponent)
+      customElements.define('my-el-with-recursive-styles', customElement)
+
+      container.innerHTML = `<my-el-with-recursive-styles></my-el-with-recursive-styles>`
+      const el = container.childNodes[0] as VueElement
+      const styles = el.shadowRoot?.querySelectorAll('style')!
+      const styleTexts = Array.from(styles).map(style => style.textContent)
+
+      expect(styleTexts).toEqual([
+        ...RootComponent.styles,
+        ...FirstDepthChild.styles,
+        ...SecondDepthChild1.styles,
+        ...SecondDepthChild2.styles
+      ])
+    })
   })
 
   describe('async', () => {
