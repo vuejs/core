@@ -342,6 +342,21 @@ defineExpose({ foo: 123 })
       assertCode(content)
     })
 
+    // https://github.com/vuejs/vue-next/issues/4599
+    test('attribute expressions', () => {
+      const { content } = compile(`
+        <script setup lang="ts">
+        import { bar, baz } from './x'
+        const cond = true
+        </script>
+        <template>
+          <div :class="[cond ? '' : bar(), 'default']" :style="baz"></div>
+        </template>
+        `)
+      expect(content).toMatch(`return { cond, bar, baz }`)
+      assertCode(content)
+    })
+
     test('vue interpolations', () => {
       const { content } = compile(`
       <script setup lang="ts">

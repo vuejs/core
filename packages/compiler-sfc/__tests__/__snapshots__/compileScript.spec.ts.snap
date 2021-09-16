@@ -202,6 +202,22 @@ return { props, a, emit }
 }"
 `;
 
+exports[`SFC compile <script setup> dev mode import usage check attribute expressions 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+import { bar, baz } from './x'
+        
+export default /*#__PURE__*/_defineComponent({
+  setup(__props, { expose }) {
+  expose()
+
+        const cond = true
+        
+return { cond, bar, baz }
+}
+
+})"
+`;
+
 exports[`SFC compile <script setup> dev mode import usage check components 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 import { FooBar, FooBaz, FooQux, foo } from './x'
