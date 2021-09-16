@@ -166,7 +166,7 @@ function insert(child: TestNode, parent: TestElement, ref?: TestNode | null) {
   }
 }
 
-function remove(child: TestNode, logOp: boolean = true) {
+function remove(child: TestNode, logOp = true) {
   const parent = child.parentNode
   if (parent) {
     if (logOp) {
