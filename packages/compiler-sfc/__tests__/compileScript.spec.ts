@@ -1066,6 +1066,7 @@ const emit = defineEmits(['a', 'b'])
       }
       expect(content).toMatch(`${shouldAsync ? `async ` : ``}setup(`)
       assertCode(content)
+      return content
     }
 
     test('expression statement', () => {
@@ -1080,10 +1081,23 @@ const emit = defineEmits(['a', 'b'])
       assertAwaitDetection(`let a = $ref(1 + (await foo))`)
     })
 
+    // #4448
     test('nested await', () => {
       assertAwaitDetection(`await (await foo)`)
       assertAwaitDetection(`await ((await foo))`)
       assertAwaitDetection(`await (await (await foo))`)
+    })
+
+    // should prepend semicolon
+    test('await in expression statement', () => {
+      const code = assertAwaitDetection(`foo()\nawait 1 + await 2`)
+      expect(code).toMatch(`foo()\n;(`)
+    })
+
+    // #4596 should NOT prepend semicolon
+    test('single line conditions', () => {
+      const code = assertAwaitDetection(`if (false) await foo()`)
+      expect(code).not.toMatch(`if (false) ;(`)
     })
 
     test('nested statements', () => {

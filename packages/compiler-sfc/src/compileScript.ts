@@ -507,11 +507,13 @@ export function compileScript(
   }
 
   /**
-   * await foo()
-   * -->
-   * (([__temp, __restore] = withAsyncContext(async () => foo())),__temp=await __temp,__restore(),__temp)
+   * await foo() -->
+   *
+   * (([__temp, __restore] = withAsyncContext(async () => {
+   *   return foo()
+   * })),__temp=await __temp,__restore(),__temp)
    */
-  function processAwait(node: AwaitExpression, isStatement: boolean) {
+  function processAwait(node: AwaitExpression, needSemi: boolean) {
     const argumentStart =
       node.argument.extra && node.argument.extra.parenthesized
         ? (node.argument.extra.parenStart as number)
@@ -527,15 +529,13 @@ export function compileScript(
     s.overwrite(
       node.start! + startOffset,
       argumentStart + startOffset,
-      `${isStatement ? `;` : ``}(\n  ([__temp,__restore] = ${helper(
+      `${needSemi ? `;` : ``}(\n  ([__temp,__restore] = ${helper(
         `withAsyncContext`
       )}(${containsNestedAwait ? `async ` : ``}() => {\n    return `
     )
     s.appendLeft(
       node.end! + startOffset,
-      `\n  })),\n  __temp = await __temp,\n  __restore()${
-        isStatement ? `` : `,\n  __temp`
-      }\n)`
+      `\n  })),\n  __temp = await __temp,\n  __restore(),\n  __temp\n)`
     )
   }
 
@@ -934,7 +934,10 @@ export function compileScript(
           }
           if (child.type === 'AwaitExpression') {
             hasAwait = true
-            processAwait(child, parent.type === 'ExpressionStatement')
+            const needsSemi = scriptSetupAst.body.some(n => {
+              return n.type === 'ExpressionStatement' && n.start === child.start
+            })
+            processAwait(child, needsSemi)
           }
         }
       })

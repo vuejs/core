@@ -96,6 +96,36 @@ export default /*#__PURE__*/ Object.assign(__default__, {
 })"
 `;
 
+exports[`SFC compile <script setup> async/await detection await in expression statement 1`] = `
+"import { withAsyncContext as _withAsyncContext } from 'vue'
+
+export default {
+  async setup(__props, { expose }) {
+  expose()
+
+let __temp, __restore
+foo()
+;(
+  ([__temp,__restore] = _withAsyncContext(() => {
+    return 1
+  })),
+  __temp = await __temp,
+  __restore(),
+  __temp
+) + (
+  ([__temp,__restore] = _withAsyncContext(() => {
+    return 2
+  })),
+  __temp = await __temp,
+  __restore(),
+  __temp
+)
+return {  }
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> async/await detection expression statement 1`] = `
 "import { withAsyncContext as _withAsyncContext } from 'vue'
 
@@ -109,7 +139,8 @@ let __temp, __restore
     return foo
   })),
   __temp = await __temp,
-  __restore()
+  __restore(),
+  __temp
 )
 return {  }
 }
@@ -137,7 +168,8 @@ let __temp, __restore
 ))
   })),
   __temp = await __temp,
-  __restore()
+  __restore(),
+  __temp
 )
 return {  }
 }
@@ -165,7 +197,8 @@ let __temp, __restore
 )))
   })),
   __temp = await __temp,
-  __restore()
+  __restore(),
+  __temp
 )
 return {  }
 }
@@ -200,7 +233,8 @@ let __temp, __restore
 ))
   })),
   __temp = await __temp,
-  __restore()
+  __restore(),
+  __temp
 )
 return {  }
 }
@@ -216,18 +250,20 @@ export default {
   expose()
 
 let __temp, __restore
-if (ok) { ;(
+if (ok) { (
   ([__temp,__restore] = _withAsyncContext(() => {
     return foo
   })),
   __temp = await __temp,
-  __restore()
-) } else { ;(
+  __restore(),
+  __temp
+) } else { (
   ([__temp,__restore] = _withAsyncContext(() => {
     return bar
   })),
   __temp = await __temp,
-  __restore()
+  __restore(),
+  __temp
 ) }
 return {  }
 }
@@ -296,6 +332,28 @@ exports[`SFC compile <script setup> async/await detection should ignore await in
   expose()
 const cls = class Foo { async method() { await bar }}
 return { cls }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> async/await detection single line conditions 1`] = `
+"import { withAsyncContext as _withAsyncContext } from 'vue'
+
+export default {
+  async setup(__props, { expose }) {
+  expose()
+
+let __temp, __restore
+if (false) (
+  ([__temp,__restore] = _withAsyncContext(() => {
+    return foo()
+  })),
+  __temp = await __temp,
+  __restore(),
+  __temp
+)
+return {  }
 }
 
 }"
