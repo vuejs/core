@@ -11,7 +11,7 @@ export default {
 
       x()
       
-return { x }
+return { n, x }
 }
 
 }"
@@ -26,7 +26,7 @@ export default {
 
       x()
       
-return { x }
+return { n, x }
 }
 
 }
@@ -66,7 +66,7 @@ function setup(__props, { expose }) {
 
         x()
         
-return { x }
+return { n, x }
 }
 
 
@@ -87,7 +87,7 @@ function setup(__props, { expose }) {
 
         x()
         
-return { x }
+return { n, x }
 }
 
 

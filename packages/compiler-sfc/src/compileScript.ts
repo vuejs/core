@@ -704,6 +704,7 @@ export function compileScript(
             )
           }
         }
+        walkDeclaration(node.declaration!, setupBindings, userImportAlias)
       } else if (
         (node.type === 'VariableDeclaration' ||
           node.type === 'FunctionDeclaration' ||
