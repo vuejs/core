@@ -1031,7 +1031,7 @@ describe('compiler: element transform', () => {
                     content: `_refs['input'] = _value`
                   },
                   {
-                    content: 'input.value = _value'
+                    content: '_isRef(input) && (input.value = _value)'
                   }
                 ]
               }

@@ -901,11 +901,14 @@ function processInlineRef(
   const body = [createSimpleExpression(`_refs['${raw}'] = _value`)]
   const { bindingMetadata, helperString } = context
   const type = bindingMetadata[raw]
-  if (
-    type === BindingTypes.SETUP_REF ||
-    type === BindingTypes.SETUP_MAYBE_REF
-  ) {
+  if (type === BindingTypes.SETUP_REF) {
     body.push(createSimpleExpression(`${raw}.value = _value`))
+  } else if (type === BindingTypes.SETUP_MAYBE_REF) {
+    body.push(
+      createSimpleExpression(
+        `${helperString(IS_REF)}(${raw}) && (${raw}.value = _value)`
+      )
+    )
   } else if (type === BindingTypes.SETUP_LET) {
     body.push(
       createSimpleExpression(
