@@ -350,7 +350,7 @@ defineExpose({ foo: 123 })
         const cond = true
         </script>
         <template>
-          <div :class="[cond ? '' ? bar() : 'default']" :style="baz"></div>
+          <div :class="[cond ? '' : bar(), 'default']" :style="baz"></div>
         </template>
         `)
       expect(content).toMatch(`return { cond, bar, baz }`)
