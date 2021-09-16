@@ -53,7 +53,7 @@ function setVarsOnVNode(vnode: VNode, vars: Record<string, string>) {
 
   if (vnode.shapeFlag & ShapeFlags.ELEMENT && vnode.el) {
     setVarsOnNode(vnode.el as Node, vars)
-  } else if (vnode.type === Fragment) {
+  } else if (vnode.type === Fragment || vnode.shapeFlag & ShapeFlags.TELEPORT) {
     ;(vnode.children as VNode[]).forEach(c => setVarsOnVNode(c, vars))
   } else if (vnode.type === Static) {
     let { el, anchor } = vnode
