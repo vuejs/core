@@ -793,6 +793,7 @@ export function finishComponentSetup(
           }
         }
         Component.render = compile(template, finalCompilerOptions)
+        Component.template = ''
         if (__DEV__) {
           endMeasure(instance, `compile`)
         }
