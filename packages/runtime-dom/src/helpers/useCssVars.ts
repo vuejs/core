@@ -67,9 +67,7 @@ function onSubTreeChange(
 ): MutationObserver {
   const ob = new MutationObserver((mutations: MutationRecord[]) => {
     mutations.forEach((mutation: MutationRecord) => {
-      mutation.addedNodes.forEach((node: Node) => {
-        cb(node)
-      })
+      mutation.addedNodes.forEach((node: Node) => cb(node))
     })
   })
   ob.observe(target, { childList: true })
