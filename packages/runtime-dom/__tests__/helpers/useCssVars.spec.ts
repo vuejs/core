@@ -216,4 +216,37 @@ describe('useCssVars', () => {
       expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
     }
   })
+
+  test('with teleport(change subTree)', async () => {
+    const state = reactive({ color: 'red' })
+    const root = document.createElement('div')
+    const target = document.body
+    const toggle = ref(false)
+
+    const App = {
+      setup() {
+        useCssVars(() => state)
+        return () => [
+          h(Teleport, { to: target }, [
+            h('div'),
+            toggle.value ? h('div') : null
+          ])
+        ]
+      }
+    }
+
+    render(h(App), root)
+    await nextTick()
+    expect(target.children.length).toBe(1)
+    for (const c of [].slice.call(target.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+    }
+
+    toggle.value = true
+    await nextTick()
+    expect(target.children.length).toBe(2)
+    for (const c of [].slice.call(target.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+    }
+  })
 })

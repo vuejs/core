@@ -28,7 +28,7 @@ const isTeleportDisabled = (props: VNode['props']): boolean =>
 const isTargetSVG = (target: RendererElement): boolean =>
   typeof SVGElement !== 'undefined' && target instanceof SVGElement
 
-const resolveTarget = <T = RendererElement>(
+export const resolveTarget = <T = RendererElement>(
   props: TeleportProps | null,
   select: RendererOptions['querySelector']
 ): T | null => {
