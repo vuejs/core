@@ -4,10 +4,10 @@ import {
   BlockStatement,
   CallExpression,
   ObjectPattern,
-  VariableDeclaration,
   ArrayPattern,
   Program,
-  VariableDeclarator
+  Function,
+  LVal
 } from '@babel/types'
 import MagicString, { SourceMap } from 'magic-string'
 import { walk } from 'estree-walker'
@@ -16,8 +16,7 @@ import {
   isFunctionType,
   isInDestructureAssignment,
   isReferencedIdentifier,
-  isStaticProperty,
-  walkFunctionParams
+  isStaticProperty
 } from '@vue/compiler-core'
 import { parse, ParserPlugin } from '@babel/parser'
 import { babelParserDefaultPlugins, hasOwn } from '@vue/shared'
@@ -155,13 +154,19 @@ export function transformAST(
             decl.init &&
             decl.init.type === 'CallExpression' &&
             decl.init.callee.type === 'Identifier' &&
-            (toVarCall = isToVarCall(decl.init.callee.name))
+            (toVarCall = isToVarCallString(decl.init.callee.name))
           ) {
+            if (stmt.kind !== 'let') {
+              error(
+                `${toVarCall}() bindings can only be declared with let`,
+                decl.init
+              )
+            }
             processRefDeclaration(
               toVarCall,
               decl.init as CallExpression,
               decl.id,
-              stmt
+              stmt.end! + offset
             )
           } else {
             for (const id of extractIdentifiers(decl.id)) {
@@ -179,16 +184,49 @@ export function transformAST(
     }
   }
 
+  function walkFunctionParams(node: Function) {
+    let hasConverted = false
+    for (const param of node.params) {
+      let varCall
+      if (
+        param.type === 'AssignmentPattern' &&
+        (varCall = isToVarCall(param.right))
+      ) {
+        // determine destructure statements append point
+        let appendPoint
+        if (node.body.type === 'BlockStatement') {
+          appendPoint = node.body.start! + offset + 1
+        } else {
+          appendPoint = node.body.start! + offset
+          // foo = () => 123 ---> foo = () => {return 123}
+          if (!hasConverted) {
+            hasConverted = true
+            s.prependLeft(appendPoint, '{')
+            s.prependRight(appendPoint, '\nreturn ')
+            s.appendLeft(node.body.end! + offset, '\n}')
+          }
+        }
+        processRefDeclaration(
+          varCall,
+          param.right as CallExpression,
+          param.left,
+          appendPoint
+        )
+      } else {
+        for (const id of extractIdentifiers(param)) {
+          registerBinding(id)
+        }
+      }
+    }
+  }
+
   function processRefDeclaration(
     method: string,
     call: CallExpression,
-    id: VariableDeclarator['id'],
-    statement: VariableDeclaration
+    id: LVal,
+    appendPoint: number
   ) {
     excludedIds.add(call.callee as Identifier)
-    if (statement.kind !== 'let') {
-      error(`${method}() bindings can only be declared with let`, call)
-    }
     if (method === TO_VAR_SYMBOL) {
       // $
       // remove macro
@@ -197,9 +235,9 @@ export function transformAST(
         // single variable
         registerRefBinding(id)
       } else if (id.type === 'ObjectPattern') {
-        processRefObjectPattern(id, statement)
+        processRefObjectPattern(id, appendPoint)
       } else if (id.type === 'ArrayPattern') {
-        processRefArrayPattern(id, statement)
+        processRefArrayPattern(id, appendPoint)
       }
     } else {
       // shorthands
@@ -219,7 +257,7 @@ export function transformAST(
 
   function processRefObjectPattern(
     pattern: ObjectPattern,
-    statement: VariableDeclaration
+    appendPoint: number
   ) {
     for (const p of pattern.properties) {
       let nameId: Identifier | undefined
@@ -244,9 +282,9 @@ export function transformAST(
             nameId = p.value
             s.prependRight(nameId.start! + offset, `__`)
           } else if (p.value.type === 'ObjectPattern') {
-            processRefObjectPattern(p.value, statement)
+            processRefObjectPattern(p.value, appendPoint)
           } else if (p.value.type === 'ArrayPattern') {
-            processRefArrayPattern(p.value, statement)
+            processRefArrayPattern(p.value, appendPoint)
           } else if (p.value.type === 'AssignmentPattern') {
             // { foo: bar = 1 } --> { foo: __bar = 1 }
             nameId = p.value.left as Identifier
@@ -262,17 +300,14 @@ export function transformAST(
         registerRefBinding(nameId)
         // append binding declarations after the parent statement
         s.appendLeft(
-          statement.end! + offset,
+          appendPoint,
           `\nconst ${nameId.name} = ${helper('shallowRef')}(__${nameId.name});`
         )
       }
     }
   }
 
-  function processRefArrayPattern(
-    pattern: ArrayPattern,
-    statement: VariableDeclaration
-  ) {
+  function processRefArrayPattern(pattern: ArrayPattern, appendPoint: number) {
     for (const e of pattern.elements) {
       if (!e) continue
       let nameId: Identifier | undefined
@@ -286,9 +321,9 @@ export function transformAST(
         // [...a] --> [...__a]
         nameId = e.argument as Identifier
       } else if (e.type === 'ObjectPattern') {
-        processRefObjectPattern(e, statement)
+        processRefObjectPattern(e, appendPoint)
       } else if (e.type === 'ArrayPattern') {
-        processRefArrayPattern(e, statement)
+        processRefArrayPattern(e, appendPoint)
       }
       if (nameId) {
         registerRefBinding(nameId)
@@ -296,7 +331,7 @@ export function transformAST(
         s.prependRight(nameId.start! + offset, `__`)
         // append binding declarations after the parent statement
         s.appendLeft(
-          statement.end! + offset,
+          appendPoint,
           `\nconst ${nameId.name} = ${helper('shallowRef')}(__${nameId.name});`
         )
       }
@@ -339,7 +374,7 @@ export function transformAST(
       // function scopes
       if (isFunctionType(node)) {
         scopeStack.push((currentScope = {}))
-        walkFunctionParams(node, registerBinding)
+        walkFunctionParams(node)
         if (node.body.type === 'BlockStatement') {
           walkScope(node.body)
         }
@@ -379,18 +414,30 @@ export function transformAST(
 
       if (node.type === 'CallExpression' && node.callee.type === 'Identifier') {
         const callee = node.callee.name
-
-        const toVarCall = isToVarCall(callee)
-        if (toVarCall && (!parent || parent.type !== 'VariableDeclarator')) {
+        const toVarCall = isToVarCallString(callee)
+        if (
+          toVarCall &&
+          (!parent ||
+            (parent.type !== 'VariableDeclarator' &&
+              !isParamDefaultInitializer(node, parent, parentStack)))
+        ) {
           return error(
             `${toVarCall} can only be used as the initializer of ` +
-              `a variable declaration.`,
+              `a variable declaration or a function parameter.`,
             node
           )
         }
 
         if (callee === TO_REF_SYMBOL) {
-          s.remove(node.callee.start! + offset, node.callee.end! + offset)
+          const call = s.slice(
+            node.callee.start! + offset,
+            node.callee.end! + offset
+          )
+          s.overwrite(
+            node.callee.start! + offset,
+            node.callee.end! + offset,
+            call.replace(/\$\$$/, '')
+          )
           return this.skip()
         }
 
@@ -429,7 +476,15 @@ export function transformAST(
   }
 }
 
-function isToVarCall(callee: string): string | false {
+function isToVarCall(node: Node) {
+  return (
+    node.type === 'CallExpression' &&
+    node.callee.type === 'Identifier' &&
+    isToVarCallString(node.callee.name)
+  )
+}
+
+function isToVarCallString(callee: string): string | false {
   if (callee === TO_VAR_SYMBOL) {
     return TO_VAR_SYMBOL
   }
@@ -437,6 +492,24 @@ function isToVarCall(callee: string): string | false {
     return callee
   }
   return false
+}
+
+function isParamDefaultInitializer(
+  node: Node,
+  parent: Node,
+  parentStack: Node[]
+): boolean {
+  if (parent.type !== 'AssignmentPattern') {
+    return false
+  }
+  if (node !== parent.right) {
+    return false
+  }
+  const grandParent = parentStack[parentStack.length - 2]
+  if (!isFunctionType(grandParent)) {
+    return false
+  }
+  return grandParent.params.includes(parent)
 }
 
 const RFC_LINK = `https://github.com/vuejs/rfcs/discussions/369`

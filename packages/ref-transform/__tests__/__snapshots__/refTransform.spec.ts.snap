@@ -65,6 +65,29 @@ const c = _shallowRef(__c);
     "
 `;
 
+exports[`as function param default value (arrow fn, no block) 1`] = `
+"import { shallowRef as _shallowRef, ref as _ref } from 'vue'
+
+  const foo = (m, n = (m), { x: __x, y: __y } = (useMouse()), z = _ref(0)) => {
+const x = _shallowRef(__x);
+const y = _shallowRef(__y);
+return ({ m, n, x, y, z })
+}
+  "
+`;
+
+exports[`as function param default value 1`] = `
+"import { shallowRef as _shallowRef, ref as _ref } from 'vue'
+
+  function foo(m, n = (m), { x: __x, y: __y } = (useMouse()), z = _ref(0)) {
+const x = _shallowRef(__x);
+const y = _shallowRef(__y);
+    console.log(m, n.value, x.value, y.value, z.value)
+    return ({ m, n, x, y, z })
+  }
+  "
+`;
+
 exports[`handle TS casting syntax 1`] = `
 "import { ref as _ref } from 'vue'
 

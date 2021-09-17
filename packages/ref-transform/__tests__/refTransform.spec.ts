@@ -256,6 +256,37 @@ test('nested destructure', () => {
   assertCode(code)
 })
 
+test('as function param default value', () => {
+  const { code } = transform(`
+  function foo(m, n = $(m), { x, y } = $(useMouse()), z = $ref(0)) {
+    console.log(m, n, x, y, z)
+    return $$({ m, n, x, y, z })
+  }
+  `)
+  expect(code).toMatch(
+    `function foo(m, n = (m), { x: __x, y: __y } = (useMouse()), z = _ref(0))`
+  )
+  expect(code).toMatch(`const x = _shallowRef(__x)`)
+  expect(code).toMatch(`const y = _shallowRef(__y)`)
+  expect(code).toMatch(`console.log(m, n.value, x.value, y.value, z.value)`)
+  expect(code).toMatch(`return ({ m, n, x, y, z })`)
+  assertCode(code)
+})
+
+test('as function param default value (arrow fn, no block)', () => {
+  const { code } = transform(`
+  const foo = (m, n = $(m), { x, y } = $(useMouse()), z = $ref(0)) => $$({ m, n, x, y, z })
+  `)
+  expect(code).toMatch(
+    `const foo = (m, n = (m), { x: __x, y: __y } = (useMouse()), z = _ref(0))`
+  )
+  expect(code).toMatch(`const x = _shallowRef(__x)`)
+  expect(code).toMatch(`const y = _shallowRef(__y)`)
+  // should convert it to a function with block body and return statement
+  expect(code).toMatch(`return ({ m, n, x, y, z })`)
+  assertCode(code)
+})
+
 test('$$', () => {
   const { code } = transform(`
     let a = $ref(1)
