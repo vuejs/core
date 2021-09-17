@@ -185,6 +185,7 @@ export function createAppAPI<HostElement>(
 
     const context = createAppContext()
     const installedPlugins = new Set()
+    const pluginCleanupFns: Array<() => any> = []
 
     let isMounted = false
 
@@ -211,19 +212,27 @@ export function createAppAPI<HostElement>(
       },
 
       use(plugin: Plugin, ...options: any[]) {
+        let cleanupFn: (() => any) | undefined = undefined
         if (installedPlugins.has(plugin)) {
           __DEV__ && warn(`Plugin has already been applied to target app.`)
         } else if (plugin && isFunction(plugin.install)) {
           installedPlugins.add(plugin)
-          plugin.install(app, ...options)
+          cleanupFn = plugin.install(app, ...options)
         } else if (isFunction(plugin)) {
           installedPlugins.add(plugin)
-          plugin(app, ...options)
+          cleanupFn = plugin(app, ...options)
         } else if (__DEV__) {
           warn(
             `A plugin must either be a function or an object with an "install" ` +
               `function.`
           )
+        }
+        if (
+          cleanupFn &&
+          typeof cleanupFn === 'function' &&
+          cleanupFn.length === 0
+        ) {
+          pluginCleanupFns.push(cleanupFn)
         }
         return app
       },
@@ -323,6 +332,7 @@ export function createAppAPI<HostElement>(
       unmount() {
         if (isMounted) {
           render(null, app._container)
+          pluginCleanupFns.map(fn => fn())
           if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
             app._instance = null
             devtoolsUnmountApp(app)
