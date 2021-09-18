@@ -206,10 +206,10 @@ function doCompileTemplate({
         : '',
     scopeId: scoped ? longId : undefined,
     slotted,
+    sourceMap: true,
     ...compilerOptions,
     nodeTransforms: nodeTransforms.concat(compilerOptions.nodeTransforms || []),
     filename,
-    sourceMap: true,
     onError: e => errors.push(e),
     onWarn: w => warnings.push(w)
   })

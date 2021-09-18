@@ -78,6 +78,10 @@ export interface SFCScriptCompileOptions {
    */
   isProd?: boolean
   /**
+   * Enable/disable source map. Defaults to true.
+   */
+  sourceMap?: boolean
+  /**
    * https://babeljs.io/docs/en/babel-parser#plugins
    */
   babelParserPlugins?: ParserPlugin[]
@@ -127,12 +131,9 @@ export function compileScript(
   let { script, scriptSetup, source, filename } = sfc
   // feature flags
   const enableRefTransform = !!options.refSugar || !!options.refTransform
+  const genSourceMap = options.sourceMap !== false
   let refBindings: string[] | undefined
 
-  // for backwards compat
-  if (!options) {
-    options = { id: '' }
-  }
   if (!options.id) {
     warnOnce(
       `compileScript now requires passing the \`id\` option.\n` +
@@ -188,11 +189,13 @@ export function compileScript(
         s.remove(0, startOffset)
         s.remove(endOffset, source.length)
         content = s.toString()
-        map = s.generateMap({
-          source: filename,
-          hires: true,
-          includeContent: true
-        }) as unknown as RawSourceMap
+        if (genSourceMap) {
+          map = s.generateMap({
+            source: filename,
+            hires: true,
+            includeContent: true
+          }) as unknown as RawSourceMap
+        }
       }
       if (cssVars.length) {
         content = rewriteDefault(content, `__default__`, plugins)
@@ -1307,11 +1310,13 @@ export function compileScript(
     ...scriptSetup,
     bindings: bindingMetadata,
     content: s.toString(),
-    map: s.generateMap({
-      source: filename,
-      hires: true,
-      includeContent: true
-    }) as unknown as RawSourceMap,
+    map: genSourceMap
+      ? (s.generateMap({
+          source: filename,
+          hires: true,
+          includeContent: true
+        }) as unknown as RawSourceMap)
+      : undefined,
     scriptAst: scriptAst?.body,
     scriptSetupAst: scriptSetupAst?.body
   }
