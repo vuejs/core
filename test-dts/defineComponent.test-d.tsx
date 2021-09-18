@@ -891,15 +891,6 @@ describe('defineComponent', () => {
 })
 
 describe('emits', () => {
-  // Note: for TSX inference, ideally we want to map emits to onXXX props,
-  // but that requires type-level string constant concatenation as suggested in
-  // https://github.com/Microsoft/TypeScript/issues/12754
-
-  // The workaround for TSX users is instead of using emits, declare onXXX props
-  // and call them instead. Since `v-on:click` compiles to an `onClick` prop,
-  // this would also support other users consuming the component in templates
-  // with `v-on` listeners.
-
   // with object emits
   defineComponent({
     emits: {
@@ -980,27 +971,22 @@ describe('emits', () => {
 
   // with tsx
   const Component = defineComponent({
-    emits: {
-      click: (n: number) => typeof n === 'number'
+    props: {
+      modelValue: {
+        type: String,
+        required: true,
+      },
     },
-    setup(props, { emit }) {
-      expectType<((n: number) => any) | undefined>(props.onClick)
-      emit('click', 1)
-      //  @ts-expect-error
-      expectError(emit('click'))
-      //  @ts-expect-error
-      expectError(emit('click', 'foo'))
+    emits: {
+      'update:modelValue': (n: string) => typeof n === 'string',
     }
   })
 
   defineComponent({
     render() {
+      const model = { value: '2' }
       return (
-        <Component
-          onClick={(n: number) => {
-            return n + 1
-          }}
-        />
+        <Component v-model={ model.value } />
       )
     }
   })
