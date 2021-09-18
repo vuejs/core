@@ -164,6 +164,46 @@ export type CreateComponentPublicInstance<
   ComponentOptionsBase<P, B, D, C, M, Mixin, Extends, E, string, Defaults>
 >
 
+type ModelProps<T> = Exclude<{
+  [Prop in keyof T]: T extends { [k in Prop as `onUpdate:${k & string}`]?: any }
+    ? Prop
+    : never
+}[keyof T], undefined>
+
+type RequiredModelProps<T> = Exclude<{
+  [Prop in keyof T]: T extends { [k in Prop]: any }
+    ? T extends { [k in Prop as `onUpdate:${k & string}`]?: any }
+      ? Prop
+      : never
+    : never
+}[keyof T], undefined>
+
+type ModelFor<T extends string | number | symbol, V> =
+  T extends 'modelValue'
+    ? | { [k in T]: V }
+      | { [k in `v-model:${T & string}`]: V }
+      | { 'v-model': V }
+    : | { [k in T]: V }
+      | { [k in `v-model:${T & string}`]: V }
+
+type NotNever<T> = [T] extends [never] ? {} : T
+
+type Unmap<T, U = UnionToIntersection<Exclude<T, undefined>>> =
+  NotNever<U extends { mapped: any } ? U['mapped'] : never>
+
+type MakeModelTypes<
+  T,
+  R extends keyof T = RequiredModelProps<T>,
+  O extends keyof T = Exclude<ModelProps<T>, R>
+> =
+  & Unmap<{
+    [K in R]: { mapped: ModelFor<K, T[K]> }
+  }[R]>
+  & Unmap<{
+    [K in O]: { mapped: Partial<ModelFor<K, T[K]>> }
+  }[O]>
+  & Omit<T, R | O>
+
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)
 export type ComponentPublicInstance<
@@ -181,7 +221,7 @@ export type ComponentPublicInstance<
   $: ComponentInternalInstance
   $data: D
   $props: MakeDefaultsOptional extends true
-    ? Partial<Defaults> & Omit<P & PublicProps, keyof Defaults>
+    ? Partial<Defaults> & MakeModelTypes<Omit<P & PublicProps, keyof Defaults>>
     : P & PublicProps
   $attrs: Data
   $refs: Data

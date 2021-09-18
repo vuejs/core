@@ -25,36 +25,10 @@ import {
   CreateComponentPublicInstance,
   ComponentPublicInstanceConstructor
 } from './componentPublicInstance'
-import { UnionToIntersection } from './helpers/typeUtils'
 
 export type PublicProps = VNodeProps &
   AllowedComponentProps &
   ComponentCustomProps
-
-
-type Flatten<T> = { [K in keyof T]: T[K] }
-
-type MakeModelTypes<Props extends {}> = Flatten<UnionToIntersection<
-{
-  [K in keyof Props]: { [k in K]: Props[k] } & (
-    K extends `onUpdate:${infer U}`         // has update event
-      ? Props extends { [k in U]: infer V } // and matching prop
-        ? U extends 'modelValue'            // and prop is the default v-model
-          ? { [k in `v-model:${U}`]: V } & { 'v-model': V }
-          : { [k in `v-model:${U}`]: V }
-        : Props extends { [k in U]?: infer V } // and matching prop (optional)
-          ? U extends 'modelValue'             // and prop is the default v-model
-            ? { [k in `v-model:${U}`]?: V } & { 'v-model'?: V }
-            : { [k in `v-model:${U}`]?: V }
-          : {}
-      : {}
-  )
-}[keyof Props] & {}>>
-
-type T = MakeModelTypes<{
-  modelValue: string,
-  'onUpdate:modelValue': (v: string) => any
-}>
 
 export type DefineComponent<
   PropsOrPropOptions = {},
@@ -80,7 +54,7 @@ export type DefineComponent<
     Mixin,
     Extends,
     E,
-    PP & MakeModelTypes<Props>,
+    PP & Props,
     Defaults,
     true
   > &

@@ -971,25 +971,118 @@ describe('emits', () => {
 
   // with tsx
   const Component = defineComponent({
-    props: {
-      modelValue: {
-        type: String,
-        required: true,
-      },
-    },
     emits: {
-      'update:modelValue': (n: string) => typeof n === 'string',
+      click: (n: number) => typeof n === 'number'
+    },
+    setup(props, { emit }) {
+      expectType<((n: number) => any) | undefined>(props.onClick)
+      emit('click', 1)
+      //  @ts-expect-error
+      expectError(emit('click'))
+      //  @ts-expect-error
+      expectError(emit('click', 'foo'))
     }
   })
 
   defineComponent({
     render() {
-      const model = { value: '2' }
       return (
-        <Component v-model={ model.value } />
+        <Component
+          onClick={(n: number) => {
+            return n + 1
+          }}
+        />
       )
     }
   })
+
+  // Optional model
+  {
+    const Component = defineComponent({
+      props: {
+        modelValue: String,
+        value: Number
+      },
+      emits: {
+        'update:modelValue': (n: string) => typeof n === 'string',
+      },
+      setup (props) {
+        // @ts-expect-error
+        props['v-model']
+      }
+    })
+    ;[
+      <Component />,
+      <Component value={ 3 } />,
+      <Component v-model="3" />,
+      <Component modelValue="3" />,
+      <Component v-model:modelValue="3" />,
+      <Component v-model="3" value={ 3 } />,
+      <Component modelValue="3" value={ 3 } />,
+      <Component v-model:modelValue="3" value={ 3 } />,
+    ]
+  }
+
+  // Required model
+  {
+    const Component = defineComponent({
+      props: {
+        modelValue: {
+          type: String,
+          required: true,
+        },
+        value: Number
+      },
+      emits: {
+        'update:modelValue': (n: string) => typeof n === 'string',
+      },
+      setup (props) {
+        // @ts-expect-error
+        props['v-model']
+      }
+    })
+    ;[
+      // @ts-expect-error
+      <Component />,
+      // @ts-expect-error
+      <Component value={ 3 } />,
+      <Component v-model="3" />,
+      <Component modelValue="3" />,
+      <Component v-model:modelValue="3" />,
+      <Component v-model="3" value={ 3 } />,
+      <Component modelValue="3" value={ 3 } />,
+      <Component v-model:modelValue="3" value={ 3 } />,
+    ]
+  }
+
+  // Multiple models
+  {
+    const Component = defineComponent({
+      props: {
+        modelValue: {
+          type: String,
+          required: true,
+        },
+        value: {
+          type: Number,
+          required: true,
+        }
+      },
+      emits: {
+        'update:modelValue': (n: string) => typeof n === 'string',
+        'update:value': (n: number) => typeof n === 'number',
+      }
+    })
+    ;[
+      // @ts-expect-error
+      <Component />,
+      // @ts-expect-error
+      <Component value={ 3 } />,
+      // @ts-expect-error
+      <Component modelValue="3" />,
+      <Component v-model="3" v-model:value={ 3 } />,
+    ]
+  }
 
   // without emits
   defineComponent({
