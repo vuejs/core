@@ -470,25 +470,33 @@ function genHoists(hoists: (JSChildNode | null)[], context: CodegenContext) {
   const genScopeId = !__BROWSER__ && scopeId != null && mode !== 'function'
   newline()
 
-  // push scope Id before initializing hoisted vnodes so that these vnodes
-  // get the proper scopeId as well.
+  // generate inlined withScopeId helper
   if (genScopeId) {
-    push(`${helper(PUSH_SCOPE_ID)}("${scopeId}")`)
+    push(
+      `const _withScopeId = n => (${helper(
+        PUSH_SCOPE_ID
+      )}("${scopeId}"),n=n(),${helper(POP_SCOPE_ID)}(),n)`
+    )
     newline()
   }
 
-  hoists.forEach((exp, i) => {
+  for (let i = 0; i < hoists.length; i++) {
+    const exp = hoists[i]
     if (exp) {
-      push(`const _hoisted_${i + 1} = `)
+      const needScopeIdWrapper = genScopeId && exp.type === NodeTypes.VNODE_CALL
+      push(
+        `const _hoisted_${i + 1} = ${
+          needScopeIdWrapper ? `${PURE_ANNOTATION} _withScopeId(() => ` : ``
+        }`
+      )
       genNode(exp, context)
+      if (needScopeIdWrapper) {
+        push(`)`)
+      }
       newline()
     }
-  })
-
-  if (genScopeId) {
-    push(`${helper(POP_SCOPE_ID)}()`)
-    newline()
   }
+
   context.pure = false
 }
 
