@@ -262,42 +262,46 @@ export function trigger(
   } else if (key === 'length' && isArray(target)) {
     depsMap.forEach((dep, key) => {
       if (key === 'length' || key >= (newValue as number)) {
-        deps.push(dep)
+        push(dep)
       }
     })
   } else {
     // schedule runs for SET | ADD | DELETE
     if (key !== void 0) {
-      deps.push(depsMap.get(key))
+      push(depsMap.get(key))
     }
 
     // also run for iteration key on ADD | DELETE | Map.SET
     switch (type) {
       case TriggerOpTypes.ADD:
         if (!isArray(target)) {
-          deps.push(depsMap.get(ITERATE_KEY))
+          push(depsMap.get(ITERATE_KEY))
           if (isMap(target)) {
-            deps.push(depsMap.get(MAP_KEY_ITERATE_KEY))
+            push(depsMap.get(MAP_KEY_ITERATE_KEY))
           }
         } else if (isIntegerKey(key)) {
           // new index added to array -> length changes
-          deps.push(depsMap.get('length'))
+          push(depsMap.get('length'))
         }
         break
       case TriggerOpTypes.DELETE:
         if (!isArray(target)) {
-          deps.push(depsMap.get(ITERATE_KEY))
+          push(depsMap.get(ITERATE_KEY))
           if (isMap(target)) {
-            deps.push(depsMap.get(MAP_KEY_ITERATE_KEY))
+            push(depsMap.get(MAP_KEY_ITERATE_KEY))
           }
         }
         break
       case TriggerOpTypes.SET:
         if (isMap(target)) {
-          deps.push(depsMap.get(ITERATE_KEY))
+          push(depsMap.get(ITERATE_KEY))
         }
         break
     }
+  }
+
+  function push(dep: Dep | undefined) {
+    dep && deps.push(dep)
   }
 
   const eventInfo = __DEV__
