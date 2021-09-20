@@ -38,7 +38,7 @@ jobs:
     env:
       CI_JOB_NUMBER: 1
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v1
       - name: Set node version to 16
         uses: actions/setup-node@v2
         with:
@@ -46,7 +46,7 @@ jobs:
           cache: 'yarn'
       - run: yarn install
       - name: Check build size
-        uses: posva/size-check-action@v2.1.2
+        uses: posva/size-check-action@v1.1.2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           build_script: size
