@@ -16,7 +16,7 @@ jobs:
         with:
           node-version: 16
           cache: 'yarn'
-      - run: yarn install
+      - run: yarn install --frozen-lockfile
       - name: Run unit tests
         run: yarn test --ci
 
@@ -29,7 +29,7 @@ jobs:
         with:
           node-version: 16
           cache: 'yarn'
-      - run: yarn install
+      - run: yarn install --frozen-lockfile
       - name: Run type declaration tests
         run: yarn test-dts
 
@@ -44,7 +44,7 @@ jobs:
         with:
           node-version: 16
           cache: 'yarn'
-      - run: yarn install
+      - run: yarn install --frozen-lockfile
       - name: Check build size
         uses: posva/size-check-action@v1.1.2
         with:
