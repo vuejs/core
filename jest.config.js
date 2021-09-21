@@ -44,10 +44,10 @@ module.exports = {
   watchPathIgnorePatterns: ['/node_modules/', '/dist/', '/.git/'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'json'],
   moduleNameMapper: {
+    '@vue/consolidate': '@vue/consolidate',
     '@vue/compat': '<rootDir>/packages/vue-compat/src',
     '^@vue/(.*?)$': '<rootDir>/packages/$1/src',
-    vue: '<rootDir>/packages/vue/src',
-    '@vue/consolidate': '@vue/consolidate'
+    vue: '<rootDir>/packages/vue/src'
   },
   rootDir: __dirname,
   testMatch: ['<rootDir>/packages/**/__tests__/**/*spec.[jt]s?(x)'],
