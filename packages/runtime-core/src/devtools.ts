@@ -31,15 +31,33 @@ interface DevtoolsHook {
 
 export let devtools: DevtoolsHook
 
-export function setDevtoolsHook(hook: DevtoolsHook) {
+let buffer: { event: string; args: any[] }[] = []
+
+function emit(event: string, ...args: any[]) {
+  if (devtools) {
+    devtools.emit(event, ...args)
+  } else {
+    buffer.push({ event, args })
+  }
+}
+
+export function setDevtoolsHook(hook: DevtoolsHook, target: any) {
   devtools = hook
-  if (devtools) devtools.enabled = true
+  if (devtools) {
+    devtools.enabled = true
+    buffer.forEach(({ event, args }) => devtools.emit(event, ...args))
+    buffer = []
+  } else {
+    const replay = (target.__VUE_DEVTOOLS_HOOK_REPLAY__ =
+      target.__VUE_DEVTOOLS_HOOK_REPLAY__ || [])
+    replay.push((newHook: DevtoolsHook) => {
+      setDevtoolsHook(newHook, target)
+    })
+  }
 }
 
 export function devtoolsInitApp(app: App, version: string) {
-  // TODO queue if devtools is undefined
-  if (!devtools) return
-  devtools.emit(DevtoolsHooks.APP_INIT, app, version, {
+  emit(DevtoolsHooks.APP_INIT, app, version, {
     Fragment,
     Text,
     Comment,
@@ -48,8 +66,7 @@ export function devtoolsInitApp(app: App, version: string) {
 }
 
 export function devtoolsUnmountApp(app: App) {
-  if (!devtools) return
-  devtools.emit(DevtoolsHooks.APP_UNMOUNT, app)
+  emit(DevtoolsHooks.APP_UNMOUNT, app)
 }
 
 export const devtoolsComponentAdded = /*#__PURE__*/ createDevtoolsComponentHook(
@@ -64,8 +81,7 @@ export const devtoolsComponentRemoved =
 
 function createDevtoolsComponentHook(hook: DevtoolsHooks) {
   return (component: ComponentInternalInstance) => {
-    if (!devtools) return
-    devtools.emit(
+    emit(
       hook,
       component.appContext.app,
       component.uid,
@@ -85,15 +101,7 @@ export const devtoolsPerfEnd = /*#__PURE__*/ createDevtoolsPerformanceHook(
 
 function createDevtoolsPerformanceHook(hook: DevtoolsHooks) {
   return (component: ComponentInternalInstance, type: string, time: number) => {
-    if (!devtools) return
-    devtools.emit(
-      hook,
-      component.appContext.app,
-      component.uid,
-      component,
-      type,
-      time
-    )
+    emit(hook, component.appContext.app, component.uid, component, type, time)
   }
 }
 
@@ -102,8 +110,7 @@ export function devtoolsComponentEmit(
   event: string,
   params: any[]
 ) {
-  if (!devtools) return
-  devtools.emit(
+  emit(
     DevtoolsHooks.COMPONENT_EMIT,
     component.appContext.app,
     component,
