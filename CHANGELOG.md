@@ -1,3 +1,27 @@
+## [3.2.13](https://github.com/vuejs/vue-next/compare/v3.2.12...v3.2.13) (2021-09-21)
+
+
+### Bug Fixes
+
+* **compiler-core:** add check when v-else-if is behind v-else ([#4603](https://github.com/vuejs/vue-next/issues/4603)) ([5addef8](https://github.com/vuejs/vue-next/commit/5addef8ecdee58e630e4e80befc28bfef43b6b2d))
+* **compiler-core:** dedupe renderSlot's default props ([#4557](https://github.com/vuejs/vue-next/issues/4557)) ([0448125](https://github.com/vuejs/vue-next/commit/044812525feef125c3a1a8de57bd7d67fb8f3cab))
+* **compiler-core:** ensure hoisted scopeId code can be treeshaken ([cb2d7c0](https://github.com/vuejs/vue-next/commit/cb2d7c0e3c2ccbfd92eb7d19e2cfddad30bcaf62))
+* **compiler-core:** more robust member expression check when running in node ([d23fde3](https://github.com/vuejs/vue-next/commit/d23fde3d3b17b2a8c058749cb28d5b1dd08c8963)), closes [#4640](https://github.com/vuejs/vue-next/issues/4640)
+* **compiler-core:** only merge true handlers ([#4577](https://github.com/vuejs/vue-next/issues/4577)) ([d8a36d0](https://github.com/vuejs/vue-next/commit/d8a36d0198a427d3b6447128a3882287c0003413))
+* **compiler-core:** support ts syntax in expressions when isTS is true ([0dc521b](https://github.com/vuejs/vue-next/commit/0dc521b9e15ce4aa3d5229e90d2173644529e92b))
+* **compiler-dom:** fix transition children check for whitespace nodes ([ed6470c](https://github.com/vuejs/vue-next/commit/ed6470c845efa57d902c50a7b97e4a40331e9621)), closes [#4637](https://github.com/vuejs/vue-next/issues/4637)
+* **hydration:** ensure hydrated event listeners have bound instance ([#4529](https://github.com/vuejs/vue-next/issues/4529)) ([58b1fa5](https://github.com/vuejs/vue-next/commit/58b1fa5ed15edc7264785cd722282a011ea3042c)), closes [#4479](https://github.com/vuejs/vue-next/issues/4479)
+* **runtime-core:** return the exposeProxy from mount ([#4606](https://github.com/vuejs/vue-next/issues/4606)) ([5aa4255](https://github.com/vuejs/vue-next/commit/5aa425580808d0588aef12ead81c91f7147e1042))
+* **types:** incorrect type inference of array ([#4578](https://github.com/vuejs/vue-next/issues/4578)) ([140f089](https://github.com/vuejs/vue-next/commit/140f08991727d7c15db907eea5a101979fe390b2))
+* **watch:** remove redundant parameter default value ([#4565](https://github.com/vuejs/vue-next/issues/4565)) ([11a2098](https://github.com/vuejs/vue-next/commit/11a2098a69f47e0919647de0deabd14022febda1))
+
+
+### Features
+
+* **compiler-sfc:** allow disabling sourcemap when not needed ([585615b](https://github.com/vuejs/vue-next/commit/585615beb1727e6eb32c41f1e0bba6975ff40b28))
+
+
+
 ## [3.2.12](https://github.com/vuejs/vue-next/compare/v3.2.11...v3.2.12) (2021-09-17)
 
 

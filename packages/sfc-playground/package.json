@@ -1,6 +1,6 @@
 {
   "name": "@vue/sfc-playground",
-  "version": "3.2.12",
+  "version": "3.2.13",
   "private": true,
   "scripts": {
     "dev": "vite",
