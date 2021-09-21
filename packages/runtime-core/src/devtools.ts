@@ -21,6 +21,7 @@ const enum DevtoolsHooks {
 }
 
 interface DevtoolsHook {
+  enabled?: boolean
   emit: (event: string, ...payload: any[]) => void
   on: (event: string, handler: Function) => void
   once: (event: string, handler: Function) => void
@@ -32,6 +33,7 @@ export let devtools: DevtoolsHook
 
 export function setDevtoolsHook(hook: DevtoolsHook) {
   devtools = hook
+  if (devtools) devtools.enabled = true
 }
 
 export function devtoolsInitApp(app: App, version: string) {
