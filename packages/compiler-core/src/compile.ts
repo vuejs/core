@@ -85,6 +85,14 @@ export function baseCompile(
   const ast = isString(template) ? baseParse(template, options) : template
   const [nodeTransforms, directiveTransforms] =
     getBaseTransformPreset(prefixIdentifiers)
+
+  if (!__BROWSER__ && options.isTS) {
+    const { expressionPlugins } = options
+    if (!expressionPlugins || !expressionPlugins.includes('typescript')) {
+      options.expressionPlugins = [...(expressionPlugins || []), 'typescript']
+    }
+  }
+
   transform(
     ast,
     extend({}, options, {

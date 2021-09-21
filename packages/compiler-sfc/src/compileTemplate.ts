@@ -21,7 +21,7 @@ import {
 import { generateCodeFrame, isObject } from '@vue/shared'
 import * as CompilerDOM from '@vue/compiler-dom'
 import * as CompilerSSR from '@vue/compiler-ssr'
-import consolidate from 'consolidate'
+import consolidate from '@vue/consolidate'
 import { warnOnce } from './warn'
 import { genCssVarsFromList } from './cssVars'
 
@@ -121,7 +121,7 @@ export function compileTemplate(
       ? preprocessCustomRequire(preprocessLang)
       : __ESM_BROWSER__
       ? undefined
-      : require('consolidate')[preprocessLang as keyof typeof consolidate]
+      : consolidate[preprocessLang as keyof typeof consolidate]
     : false
   if (preprocessor) {
     try {
@@ -206,10 +206,10 @@ function doCompileTemplate({
         : '',
     scopeId: scoped ? longId : undefined,
     slotted,
+    sourceMap: true,
     ...compilerOptions,
     nodeTransforms: nodeTransforms.concat(compilerOptions.nodeTransforms || []),
     filename,
-    sourceMap: true,
     onError: e => errors.push(e),
     onWarn: w => warnings.push(w)
   })

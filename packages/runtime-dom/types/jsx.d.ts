@@ -29,7 +29,7 @@
 import { VNode } from '@vue/runtime-core'
 import * as CSS from 'csstype'
 
-export interface CSSProperties extends CSS.Properties<string | number> {
+export interface CSSProperties extends CSS.Properties<string | number>, CSS.PropertiesHyphen<string | number> {
   /**
    * The index signature was removed to enable closed typing for style
    * using CSSType. You're able to use type assertion or module augmentation
@@ -584,7 +584,7 @@ export interface OptionHTMLAttributes extends HTMLAttributes {
   disabled?: Booleanish
   label?: string
   selected?: Booleanish
-  value?: any  // we support :value to be bound to anything w/ v-model
+  value?: any // we support :value to be bound to anything w/ v-model
 }
 
 export interface OutputHTMLAttributes extends HTMLAttributes {

@@ -41,7 +41,10 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
     bindingType &&
     bindingType !== BindingTypes.SETUP_CONST
 
-  if (!expString.trim() || (!isMemberExpression(expString) && !maybeRef)) {
+  if (
+    !expString.trim() ||
+    (!isMemberExpression(expString, context) && !maybeRef)
+  ) {
     context.onError(
       createCompilerError(ErrorCodes.X_V_MODEL_MALFORMED_EXPRESSION, exp.loc)
     )

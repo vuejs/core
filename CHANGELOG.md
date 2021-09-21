@@ -1,3 +1,24 @@
+## [3.2.12](https://github.com/vuejs/vue-next/compare/v3.2.11...v3.2.12) (2021-09-17)
+
+
+### Bug Fixes
+
+* **compile-sfc:**  add symbol judge in prop type checks. ([#4594](https://github.com/vuejs/vue-next/issues/4594)) ([fcd5422](https://github.com/vuejs/vue-next/commit/fcd5422b4adaf99627ea0d675d98b2d9530c05ab)), closes [#4592](https://github.com/vuejs/vue-next/issues/4592)
+* **compiler-core:** v-on inline async function expression handler ([#4569](https://github.com/vuejs/vue-next/issues/4569)) ([fc968d6](https://github.com/vuejs/vue-next/commit/fc968d607b181db9d50cd4b30a8d7e4cc5fe9d2b)), closes [#4568](https://github.com/vuejs/vue-next/issues/4568)
+* **compiler-sfc:** fix TLA codegen semicolon insertion ([39cebf5](https://github.com/vuejs/vue-next/commit/39cebf5f7a8f72338030844fca4a75ffc913c518)), closes [#4596](https://github.com/vuejs/vue-next/issues/4596)
+* **compiler-sfc:** handle empty strings during template usage analysis of setup bindings ([#4608](https://github.com/vuejs/vue-next/issues/4608)) ([bdb1a79](https://github.com/vuejs/vue-next/commit/bdb1a7958ba091bb3166f0938e91ebd52facbf03)), closes [#4599](https://github.com/vuejs/vue-next/issues/4599)
+* **compiler-sfc:** properly analyze destructured bindings with dynamic keys ([a6e5f82](https://github.com/vuejs/vue-next/commit/a6e5f82d8ea5fe55432d0277e88300045eca4237)), closes [#4540](https://github.com/vuejs/vue-next/issues/4540)
+* **compiler-sfc:** properly reuse hoisted asset imports ([06c5bf5](https://github.com/vuejs/vue-next/commit/06c5bf53abc8143acb92e25b21394a79e11170d8)), closes [#4581](https://github.com/vuejs/vue-next/issues/4581)
+* **compiler-sfc:** register exported bindings in normal script when using script setup ([#4601](https://github.com/vuejs/vue-next/issues/4601)) ([8055445](https://github.com/vuejs/vue-next/commit/8055445b68b18a73670a9f3e7534af5d31f65c38)), closes [#4600](https://github.com/vuejs/vue-next/issues/4600)
+* **compiler-sfc:** support nested await statements ([#4458](https://github.com/vuejs/vue-next/issues/4458)) ([ae942cd](https://github.com/vuejs/vue-next/commit/ae942cdcd9bd686e7b0394c8e91e63a31ff8fb5d)), closes [#4448](https://github.com/vuejs/vue-next/issues/4448)
+* **compiler-ssr:** handle v-memo in ssr compilation ([dd9a276](https://github.com/vuejs/vue-next/commit/dd9a2760a8f8da94ba634ac984f9f14ac053fe31))
+* **compiler:** fix template ref codegen for setup-maybe-ref binding types ([#4549](https://github.com/vuejs/vue-next/issues/4549)) ([f29d061](https://github.com/vuejs/vue-next/commit/f29d0611246bb619df2e46b30dfd5e43ad4ee6b1)), closes [#4546](https://github.com/vuejs/vue-next/issues/4546)
+* **custom-elements:** fix number prop casting ([0cfa211](https://github.com/vuejs/vue-next/commit/0cfa2112ce2210300cf2edf272c8c8d11b9355e4)), closes [#4370](https://github.com/vuejs/vue-next/issues/4370) [#4393](https://github.com/vuejs/vue-next/issues/4393)
+* **runtime-core:** avoid script setup bindings overwriting reserved ctx properties ([#4570](https://github.com/vuejs/vue-next/issues/4570)) ([14fcced](https://github.com/vuejs/vue-next/commit/14fcced281c5de2f07629a8028653cab1e787b89))
+* **suspense:** fix suspense slot inside deoptimized slot call ([141a5e1](https://github.com/vuejs/vue-next/commit/141a5e188cbf6fbc433173aab922940c7d2471be)), closes [#4556](https://github.com/vuejs/vue-next/issues/4556)
+
+
+
 ## [3.2.11](https://github.com/vuejs/vue-next/compare/v3.2.10...v3.2.11) (2021-09-08)
 
 

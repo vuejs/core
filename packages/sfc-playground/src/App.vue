@@ -3,7 +3,11 @@ import Header from './Header.vue'
 import { Repl, ReplStore } from '@vue/repl'
 import { watchEffect } from 'vue'
 
-document.documentElement.style.setProperty('--vh', window.innerHeight + `px`)
+const setVH = () => {
+  document.documentElement.style.setProperty('--vh', window.innerHeight + `px`)
+}
+window.addEventListener('resize', setVH)
+setVH()
 
 const store = new ReplStore({
   serializedState: location.hash.slice(1),
@@ -18,7 +22,7 @@ watchEffect(() => history.replaceState({}, '', store.serialize()))
 
 <template>
   <Header :store="store" />
-  <Repl :store="store" :showCompileOutput="true" />
+  <Repl :store="store" :showCompileOutput="true" :autoResize="true" />
 </template>
 
 <style>

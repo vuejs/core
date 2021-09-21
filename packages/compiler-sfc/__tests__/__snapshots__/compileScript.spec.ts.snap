@@ -11,7 +11,7 @@ export default {
 
       x()
       
-return { x }
+return { n, x }
 }
 
 }"
@@ -26,7 +26,7 @@ export default {
 
       x()
       
-return { x }
+return { n, x }
 }
 
 }
@@ -66,7 +66,7 @@ function setup(__props, { expose }) {
 
         x()
         
-return { x }
+return { n, x }
 }
 
 
@@ -87,13 +87,261 @@ function setup(__props, { expose }) {
 
         x()
         
-return { x }
+return { n, x }
 }
 
 
 export default /*#__PURE__*/ Object.assign(__default__, {
   setup
 })"
+`;
+
+exports[`SFC compile <script setup> async/await detection expression statement 1`] = `
+"import { withAsyncContext as _withAsyncContext } from 'vue'
+
+export default {
+  async setup(__props, { expose }) {
+  expose()
+
+let __temp, __restore
+;(
+  ([__temp,__restore] = _withAsyncContext(() => foo)),
+  await __temp,
+  __restore()
+)
+return {  }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> async/await detection nested await 1`] = `
+"import { withAsyncContext as _withAsyncContext } from 'vue'
+
+export default {
+  async setup(__props, { expose }) {
+  expose()
+
+let __temp, __restore
+;(
+  ([__temp,__restore] = _withAsyncContext(async () => ((
+  ([__temp,__restore] = _withAsyncContext(() => foo)),
+  __temp = await __temp,
+  __restore(),
+  __temp
+)))),
+  await __temp,
+  __restore()
+)
+return {  }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> async/await detection nested await 2`] = `
+"import { withAsyncContext as _withAsyncContext } from 'vue'
+
+export default {
+  async setup(__props, { expose }) {
+  expose()
+
+let __temp, __restore
+;(
+  ([__temp,__restore] = _withAsyncContext(async () => (((
+  ([__temp,__restore] = _withAsyncContext(() => foo)),
+  __temp = await __temp,
+  __restore(),
+  __temp
+))))),
+  await __temp,
+  __restore()
+)
+return {  }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> async/await detection nested await 3`] = `
+"import { withAsyncContext as _withAsyncContext } from 'vue'
+
+export default {
+  async setup(__props, { expose }) {
+  expose()
+
+let __temp, __restore
+;(
+  ([__temp,__restore] = _withAsyncContext(async () => ((
+  ([__temp,__restore] = _withAsyncContext(async () => ((
+  ([__temp,__restore] = _withAsyncContext(() => foo)),
+  __temp = await __temp,
+  __restore(),
+  __temp
+)))),
+  __temp = await __temp,
+  __restore(),
+  __temp
+)))),
+  await __temp,
+  __restore()
+)
+return {  }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> async/await detection nested leading await in expression statement 1`] = `
+"import { withAsyncContext as _withAsyncContext } from 'vue'
+
+export default {
+  async setup(__props, { expose }) {
+  expose()
+
+let __temp, __restore
+foo()
+;(
+  ([__temp,__restore] = _withAsyncContext(() => 1)),
+  __temp = await __temp,
+  __restore(),
+  __temp
+) + (
+  ([__temp,__restore] = _withAsyncContext(() => 2)),
+  __temp = await __temp,
+  __restore(),
+  __temp
+)
+return {  }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> async/await detection nested statements 1`] = `
+"import { withAsyncContext as _withAsyncContext } from 'vue'
+
+export default {
+  async setup(__props, { expose }) {
+  expose()
+
+let __temp, __restore
+if (ok) { (
+  ([__temp,__restore] = _withAsyncContext(() => foo)),
+  await __temp,
+  __restore()
+) } else { (
+  ([__temp,__restore] = _withAsyncContext(() => bar)),
+  await __temp,
+  __restore()
+) }
+return {  }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> async/await detection ref 1`] = `
+"import { withAsyncContext as _withAsyncContext, ref as _ref } from 'vue'
+
+export default {
+  async setup(__props, { expose }) {
+  expose()
+
+let __temp, __restore
+let a = _ref(1 + ((
+  ([__temp,__restore] = _withAsyncContext(() => foo)),
+  __temp = await __temp,
+  __restore(),
+  __temp
+)))
+return { a }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> async/await detection should ignore await inside functions 1`] = `
+"export default {
+  setup(__props, { expose }) {
+  expose()
+async function foo() { await bar }
+return { foo }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> async/await detection should ignore await inside functions 2`] = `
+"export default {
+  setup(__props, { expose }) {
+  expose()
+const foo = async () => { await bar }
+return { foo }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> async/await detection should ignore await inside functions 3`] = `
+"export default {
+  setup(__props, { expose }) {
+  expose()
+const obj = { async method() { await bar }}
+return { obj }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> async/await detection should ignore await inside functions 4`] = `
+"export default {
+  setup(__props, { expose }) {
+  expose()
+const cls = class Foo { async method() { await bar }}
+return { cls }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> async/await detection single line conditions 1`] = `
+"import { withAsyncContext as _withAsyncContext } from 'vue'
+
+export default {
+  async setup(__props, { expose }) {
+  expose()
+
+let __temp, __restore
+if (false) (
+  ([__temp,__restore] = _withAsyncContext(() => foo())),
+  await __temp,
+  __restore()
+)
+return {  }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> async/await detection variable 1`] = `
+"import { withAsyncContext as _withAsyncContext } from 'vue'
+
+export default {
+  async setup(__props, { expose }) {
+  expose()
+
+let __temp, __restore
+const a = 1 + ((
+  ([__temp,__restore] = _withAsyncContext(() => foo)),
+  __temp = await __temp,
+  __restore(),
+  __temp
+))
+return { a }
+}
+
+}"
 `;
 
 exports[`SFC compile <script setup> binding analysis for destructur 1`] = `
@@ -200,6 +448,22 @@ return { props, a, emit }
 }
 
 }"
+`;
+
+exports[`SFC compile <script setup> dev mode import usage check attribute expressions 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+import { bar, baz } from './x'
+        
+export default /*#__PURE__*/_defineComponent({
+  setup(__props, { expose }) {
+  expose()
+
+        const cond = true
+        
+return { cond, bar, baz }
+}
+
+})"
 `;
 
 exports[`SFC compile <script setup> dev mode import usage check components 1`] = `
@@ -971,6 +1235,7 @@ export default /*#__PURE__*/_defineComponent({
     interface: { type: Object, required: true },
     alias: { type: Array, required: true },
     method: { type: Function, required: true },
+    symbol: { type: Symbol, required: true },
     union: { type: [String, Number], required: true },
     literalUnion: { type: String, required: true },
     literalUnionNumber: { type: Number, required: true },

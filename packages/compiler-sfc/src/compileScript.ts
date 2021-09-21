@@ -78,6 +78,10 @@ export interface SFCScriptCompileOptions {
    */
   isProd?: boolean
   /**
+   * Enable/disable source map. Defaults to true.
+   */
+  sourceMap?: boolean
+  /**
    * https://babeljs.io/docs/en/babel-parser#plugins
    */
   babelParserPlugins?: ParserPlugin[]
@@ -94,7 +98,7 @@ export interface SFCScriptCompileOptions {
   /**
    * Compile the template and inline the resulting render function
    * directly inside setup().
-   * - Only affects <script setup>
+   * - Only affects `<script setup>`
    * - This should only be used in production because it prevents the template
    * from being hot-reloaded separately from component state.
    */
@@ -127,12 +131,9 @@ export function compileScript(
   let { script, scriptSetup, source, filename } = sfc
   // feature flags
   const enableRefTransform = !!options.refSugar || !!options.refTransform
+  const genSourceMap = options.sourceMap !== false
   let refBindings: string[] | undefined
 
-  // for backwards compat
-  if (!options) {
-    options = { id: '' }
-  }
   if (!options.id) {
     warnOnce(
       `compileScript now requires passing the \`id\` option.\n` +
@@ -188,11 +189,13 @@ export function compileScript(
         s.remove(0, startOffset)
         s.remove(endOffset, source.length)
         content = s.toString()
-        map = s.generateMap({
-          source: filename,
-          hires: true,
-          includeContent: true
-        }) as unknown as RawSourceMap
+        if (genSourceMap) {
+          map = s.generateMap({
+            source: filename,
+            hires: true,
+            includeContent: true
+          }) as unknown as RawSourceMap
+        }
       }
       if (cssVars.length) {
         content = rewriteDefault(content, `__default__`, plugins)
@@ -509,19 +512,50 @@ export function compileScript(
   /**
    * await foo()
    * -->
-   * (([__temp, __restore] = withAsyncContext(() => foo())),__temp=await __temp,__restore(),__temp)
+   * ;(
+   *   ([__temp,__restore] = withAsyncContext(() => foo())),
+   *   await __temp,
+   *   __restore()
+   * )
+   *
+   * const a = await foo()
+   * -->
+   * const a = (
+   *   ([__temp, __restore] = withAsyncContext(() => foo())),
+   *   __temp = await __temp,
+   *   __restore(),
+   *   __temp
+   * )
    */
-  function processAwait(node: AwaitExpression, isStatement: boolean) {
+  function processAwait(
+    node: AwaitExpression,
+    needSemi: boolean,
+    isStatement: boolean
+  ) {
+    const argumentStart =
+      node.argument.extra && node.argument.extra.parenthesized
+        ? (node.argument.extra.parenStart as number)
+        : node.argument.start!
+
+    const argumentStr = source.slice(
+      argumentStart + startOffset,
+      node.argument.end! + startOffset
+    )
+
+    const containsNestedAwait = /\bawait\b/.test(argumentStr)
+
     s.overwrite(
       node.start! + startOffset,
-      node.argument.start! + startOffset,
-      `${isStatement ? `;` : ``}(([__temp,__restore]=${helper(
+      argumentStart + startOffset,
+      `${needSemi ? `;` : ``}(\n  ([__temp,__restore] = ${helper(
         `withAsyncContext`
-      )}(()=>(`
+      )}(${containsNestedAwait ? `async ` : ``}() => `
     )
     s.appendLeft(
       node.end! + startOffset,
-      `))),__temp=await __temp,__restore()${isStatement ? `` : `,__temp`})`
+      `)),\n  ${isStatement ? `` : `__temp = `}await __temp,\n  __restore()${
+        isStatement ? `` : `,\n  __temp`
+      }\n)`
     )
   }
 
@@ -671,7 +705,7 @@ export function compileScript(
         const start = node.start! + scriptStartOffset!
         const end = node.declaration.start! + scriptStartOffset!
         s.overwrite(start, end, `const ${defaultTempVar} = `)
-      } else if (node.type === 'ExportNamedDeclaration' && node.specifiers) {
+      } else if (node.type === 'ExportNamedDeclaration') {
         const defaultSpecifier = node.specifiers.find(
           s => s.exported.type === 'Identifier' && s.exported.name === 'default'
         ) as ExportSpecifier
@@ -703,6 +737,9 @@ export function compileScript(
               `\nconst ${defaultTempVar} = ${defaultSpecifier.local.name}\n`
             )
           }
+        }
+        if (node.declaration) {
+          walkDeclaration(node.declaration, setupBindings, userImportAlias)
         }
       } else if (
         (node.type === 'VariableDeclaration' ||
@@ -920,7 +957,14 @@ export function compileScript(
           }
           if (child.type === 'AwaitExpression') {
             hasAwait = true
-            processAwait(child, parent.type === 'ExpressionStatement')
+            const needsSemi = scriptSetupAst.body.some(n => {
+              return n.type === 'ExpressionStatement' && n.start === child.start
+            })
+            processAwait(
+              child,
+              needsSemi,
+              parent.type === 'ExpressionStatement'
+            )
           }
         }
       })
@@ -1266,11 +1310,13 @@ export function compileScript(
     ...scriptSetup,
     bindings: bindingMetadata,
     content: s.toString(),
-    map: s.generateMap({
-      source: filename,
-      hires: true,
-      includeContent: true
-    }) as unknown as RawSourceMap,
+    map: genSourceMap
+      ? (s.generateMap({
+          source: filename,
+          hires: true,
+          includeContent: true
+        }) as unknown as RawSourceMap)
+      : undefined,
     scriptAst: scriptAst?.body,
     scriptSetupAst: scriptSetupAst?.body
   }
@@ -1540,6 +1586,9 @@ function inferRuntimeType(
       ]
     case 'TSIntersectionType':
       return ['Object']
+
+    case 'TSSymbolKeyword':
+      return ['Symbol']
 
     default:
       return [`null`] // no runtime check
@@ -1823,7 +1872,7 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
 
 function stripStrings(exp: string) {
   return exp
-    .replace(/'[^']+'|"[^"]+"/g, '')
+    .replace(/'[^']*'|"[^"]*"/g, '')
     .replace(/`[^`]+`/g, stripTemplateString)
 }
 

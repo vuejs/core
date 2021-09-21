@@ -136,26 +136,40 @@ describe('defineCustomElement', () => {
       const E = defineCustomElement({
         props: {
           foo: Number,
-          bar: Boolean
+          bar: Boolean,
+          baz: String
         },
         render() {
-          return [this.foo, typeof this.foo, this.bar, typeof this.bar].join(
-            ' '
-          )
+          return [
+            this.foo,
+            typeof this.foo,
+            this.bar,
+            typeof this.bar,
+            this.baz,
+            typeof this.baz
+          ].join(' ')
         }
       })
       customElements.define('my-el-props-cast', E)
-      container.innerHTML = `<my-el-props-cast foo="1"></my-el-props-cast>`
+      container.innerHTML = `<my-el-props-cast foo="1" baz="12345"></my-el-props-cast>`
       const e = container.childNodes[0] as VueElement
-      expect(e.shadowRoot!.innerHTML).toBe(`1 number false boolean`)
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `1 number false boolean 12345 string`
+      )
 
       e.setAttribute('bar', '')
       await nextTick()
-      expect(e.shadowRoot!.innerHTML).toBe(`1 number true boolean`)
+      expect(e.shadowRoot!.innerHTML).toBe(`1 number true boolean 12345 string`)
 
       e.setAttribute('foo', '2e1')
       await nextTick()
-      expect(e.shadowRoot!.innerHTML).toBe(`20 number true boolean`)
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `20 number true boolean 12345 string`
+      )
+
+      e.setAttribute('baz', '2e1')
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe(`20 number true boolean 2e1 string`)
     })
 
     test('handling properties set before upgrading', () => {
@@ -391,6 +405,26 @@ describe('defineCustomElement', () => {
 
       e2.msg = 'hello'
       expect(e2.shadowRoot!.innerHTML).toBe(`<div>hello</div>`)
+    })
+
+    test('Number prop casting before resolve', async () => {
+      const E = defineCustomElement(
+        defineAsyncComponent(() => {
+          return Promise.resolve({
+            props: { n: Number },
+            render(this: any) {
+              return h('div', this.n + ',' + typeof this.n)
+            }
+          })
+        })
+      )
+      customElements.define('my-el-async-3', E)
+      container.innerHTML = `<my-el-async-3 n="2e1"></my-el-async-3>`
+
+      await new Promise(r => setTimeout(r))
+
+      const e = container.childNodes[0] as VueElement
+      expect(e.shadowRoot!.innerHTML).toBe(`<div>20,number</div>`)
     })
   })
 })

@@ -10,24 +10,26 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
       - name: Set node version to 16
         uses: actions/setup-node@v2
         with:
-          node-version: 16.8
-      - uses: bahmutov/npm-install@v1
+          node-version: 16
+          cache: 'yarn'
+      - run: yarn install --frozen-lockfile
       - name: Run unit tests
         run: yarn test --ci
 
   test-dts:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
       - name: Set node version to 16
         uses: actions/setup-node@v2
         with:
           node-version: 16
-      - uses: bahmutov/npm-install@v1
+          cache: 'yarn'
+      - run: yarn install --frozen-lockfile
       - name: Run type declaration tests
         run: yarn test-dts
 
@@ -41,8 +43,8 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: 16
-      - uses: bahmutov/npm-install@v1
-
+          cache: 'yarn'
+      - run: yarn install --frozen-lockfile
       - name: Check build size
         uses: posva/size-check-action@v1.1.2
         with:

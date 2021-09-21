@@ -342,6 +342,21 @@ defineExpose({ foo: 123 })
       assertCode(content)
     })
 
+    // https://github.com/vuejs/vue-next/issues/4599
+    test('attribute expressions', () => {
+      const { content } = compile(`
+        <script setup lang="ts">
+        import { bar, baz } from './x'
+        const cond = true
+        </script>
+        <template>
+          <div :class="[cond ? '' : bar(), 'default']" :style="baz"></div>
+        </template>
+        `)
+      expect(content).toMatch(`return { cond, bar, baz }`)
+      assertCode(content)
+    })
+
     test('vue interpolations', () => {
       const { content } = compile(`
       <script setup lang="ts">
@@ -706,6 +721,7 @@ const emit = defineEmits(['a', 'b'])
         interface: Test
         alias: Alias
         method(): void
+        symbol: symbol
 
         union: string | number
         literalUnion: 'foo' | 'bar'
@@ -735,6 +751,7 @@ const emit = defineEmits(['a', 'b'])
       expect(content).toMatch(`interface: { type: Object, required: true }`)
       expect(content).toMatch(`alias: { type: Array, required: true }`)
       expect(content).toMatch(`method: { type: Function, required: true }`)
+      expect(content).toMatch(`symbol: { type: Symbol, required: true }`)
       expect(content).toMatch(
         `union: { type: [String, Number], required: true }`
       )
@@ -767,6 +784,7 @@ const emit = defineEmits(['a', 'b'])
         interface: BindingTypes.PROPS,
         alias: BindingTypes.PROPS,
         method: BindingTypes.PROPS,
+        symbol: BindingTypes.PROPS,
         union: BindingTypes.PROPS,
         literalUnion: BindingTypes.PROPS,
         literalUnionNumber: BindingTypes.PROPS,
@@ -1039,11 +1057,7 @@ const emit = defineEmits(['a', 'b'])
   })
 
   describe('async/await detection', () => {
-    function assertAwaitDetection(
-      code: string,
-      expected: string | ((content: string) => boolean),
-      shouldAsync = true
-    ) {
+    function assertAwaitDetection(code: string, shouldAsync = true) {
       const { content } = compile(`<script setup>${code}</script>`, {
         refSugar: true
       })
@@ -1051,70 +1065,55 @@ const emit = defineEmits(['a', 'b'])
         expect(content).toMatch(`let __temp, __restore`)
       }
       expect(content).toMatch(`${shouldAsync ? `async ` : ``}setup(`)
-      if (typeof expected === 'string') {
-        expect(content).toMatch(expected)
-      } else {
-        expect(expected(content)).toBe(true)
-      }
+      assertCode(content)
+      return content
     }
 
     test('expression statement', () => {
-      assertAwaitDetection(
-        `await foo`,
-        `;(([__temp,__restore]=_withAsyncContext(()=>(foo))),__temp=await __temp,__restore())`
-      )
+      assertAwaitDetection(`await foo`)
     })
 
     test('variable', () => {
-      assertAwaitDetection(
-        `const a = 1 + (await foo)`,
-        `1 + ((([__temp,__restore]=_withAsyncContext(()=>(foo))),__temp=await __temp,__restore(),__temp))`
-      )
+      assertAwaitDetection(`const a = 1 + (await foo)`)
     })
 
     test('ref', () => {
-      assertAwaitDetection(
-        `let a = $ref(1 + (await foo))`,
-        `1 + ((([__temp,__restore]=_withAsyncContext(()=>(foo))),__temp=await __temp,__restore(),__temp))`
-      )
+      assertAwaitDetection(`let a = $ref(1 + (await foo))`)
+    })
+
+    // #4448
+    test('nested await', () => {
+      assertAwaitDetection(`await (await foo)`)
+      assertAwaitDetection(`await ((await foo))`)
+      assertAwaitDetection(`await (await (await foo))`)
+    })
+
+    // should prepend semicolon
+    test('nested leading await in expression statement', () => {
+      const code = assertAwaitDetection(`foo()\nawait 1 + await 2`)
+      expect(code).toMatch(`foo()\n;(`)
+    })
+
+    // #4596 should NOT prepend semicolon
+    test('single line conditions', () => {
+      const code = assertAwaitDetection(`if (false) await foo()`)
+      expect(code).not.toMatch(`if (false) ;(`)
     })
 
     test('nested statements', () => {
-      assertAwaitDetection(`if (ok) { await foo } else { await bar }`, code => {
-        return (
-          code.includes(
-            `;(([__temp,__restore]=_withAsyncContext(()=>(foo))),__temp=await __temp,__restore())`
-          ) &&
-          code.includes(
-            `;(([__temp,__restore]=_withAsyncContext(()=>(bar))),__temp=await __temp,__restore())`
-          )
-        )
-      })
+      assertAwaitDetection(`if (ok) { await foo } else { await bar }`)
     })
 
     test('should ignore await inside functions', () => {
       // function declaration
-      assertAwaitDetection(
-        `async function foo() { await bar }`,
-        `await bar`,
-        false
-      )
+      assertAwaitDetection(`async function foo() { await bar }`, false)
       // function expression
-      assertAwaitDetection(
-        `const foo = async () => { await bar }`,
-        `await bar`,
-        false
-      )
+      assertAwaitDetection(`const foo = async () => { await bar }`, false)
       // object method
-      assertAwaitDetection(
-        `const obj = { async method() { await bar }}`,
-        `await bar`,
-        false
-      )
+      assertAwaitDetection(`const obj = { async method() { await bar }}`, false)
       // class method
       assertAwaitDetection(
         `const cls = class Foo { async method() { await bar }}`,
-        `await bar`,
         false
       )
     })
@@ -1294,6 +1293,20 @@ describe('SFC analyze <script> bindings', () => {
       bar: BindingTypes.SETUP_MAYBE_REF
     })
     expect(bindings!.__isScriptSetup).toBe(false)
+  })
+
+  it('recognizes exported vars', () => {
+    const { bindings } = compile(`
+      <script>
+        export const foo = 2
+      </script>
+      <script setup>
+        console.log(foo)
+      </script>
+    `)
+    expect(bindings).toStrictEqual({
+      foo: BindingTypes.SETUP_CONST
+    })
   })
 
   it('recognizes async setup return', () => {

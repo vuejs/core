@@ -1,6 +1,6 @@
 {
   "private": true,
-  "version": "3.2.11",
+  "version": "3.2.12",
   "workspaces": [
     "packages/*"
   ],
@@ -17,7 +17,7 @@
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s",
     "dev-compiler": "npm-run-all --parallel \"dev template-explorer\" serve",
     "dev-sfc": "npm-run-all --parallel \"dev compiler-sfc -f esm-browser\" \"dev runtime-core -f esm-bundler\" \"dev runtime-dom -f esm-bundler\" serve-sfc-playground",
-    "serve-sfc-playground": "vite packages/sfc-playground",
+    "serve-sfc-playground": "vite packages/sfc-playground --host",
     "serve": "serve",
     "open": "open http://localhost:5000/packages/template-explorer/local.html",
     "preinstall": "node ./scripts/checkYarn.js",
@@ -80,6 +80,9 @@
     "serve": "^12.0.0",
     "ts-jest": "^27.0.5",
     "typescript": "^4.2.2",
-    "yorkie": "^2.0.0"
+    "yorkie": "^2.0.0",
+    "lodash": "^4.17.15",
+    "marked": "^0.7.0",
+    "todomvc-app-css": "^2.3.0"
   }
 }

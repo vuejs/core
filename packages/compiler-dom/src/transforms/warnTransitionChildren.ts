@@ -36,7 +36,9 @@ export const warnTransitionChildren: NodeTransform = (node, context) => {
 function hasMultipleChildren(node: ComponentNode | IfBranchNode): boolean {
   // #1352 filter out potential comment nodes.
   const children = (node.children = node.children.filter(
-    c => c.type !== NodeTypes.COMMENT
+    c =>
+      c.type !== NodeTypes.COMMENT &&
+      !(c.type === NodeTypes.TEXT && !c.content.trim())
   ))
   const child = children[0]
   return (
