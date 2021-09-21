@@ -49,7 +49,7 @@
     "@types/lru-cache": "^5.1.0",
     "pug": "^3.0.1",
     "sass": "^1.26.9",
-    "@vue/consolidate": "^0.17.2",
+    "@vue/consolidate": "^0.17.3",
     "hash-sum": "^2.0.0",
     "lru-cache": "^5.1.1",
     "merge-source-map": "^1.1.0",
