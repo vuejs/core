@@ -807,7 +807,7 @@ function dedupeProperties(properties: Property[]): Property[] {
     const name = prop.key.content
     const existing = knownProps.get(name)
     if (existing) {
-      if (name === 'style' || name === 'class' || name.startsWith('on')) {
+      if (name === 'style' || name === 'class' || isOn(name)) {
         mergeAsArray(existing, prop)
       }
       // unexpected duplicate, should have emitted error during parse
