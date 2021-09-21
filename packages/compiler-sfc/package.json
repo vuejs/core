@@ -33,7 +33,6 @@
   "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/compiler-sfc#readme",
   "dependencies": {
     "@babel/parser": "^7.15.0",
-    "@babel/types": "^7.15.0",
     "@types/estree": "^0.0.48",
     "@vue/compiler-core": "3.2.12",
     "@vue/compiler-dom": "3.2.12",
@@ -52,6 +51,7 @@
     "source-map": "^0.6.1"
   },
   "devDependencies": {
+    "@babel/types": "^7.15.0",
     "@types/consolidate": "^0.14.0",
     "@types/lru-cache": "^5.1.0",
     "pug": "^3.0.1",

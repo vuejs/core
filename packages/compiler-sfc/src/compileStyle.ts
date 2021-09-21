@@ -30,7 +30,7 @@ export interface SFCStyleCompileOptions {
   postcssOptions?: any
   postcssPlugins?: any[]
   /**
-   * @deprecated
+   * @deprecated use `inMap` instead.
    */
   map?: RawSourceMap
 }
