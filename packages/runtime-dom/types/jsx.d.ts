@@ -624,7 +624,7 @@ export interface SelectHTMLAttributes extends HTMLAttributes {
   name?: string
   required?: Booleanish
   size?: Numberish
-  value?: string | string[] | number
+  value?: any // we support :value to be bound to anything w/ v-model
 }
 
 export interface SourceHTMLAttributes extends HTMLAttributes {
