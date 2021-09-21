@@ -17,7 +17,7 @@ type WeakCollections = WeakMap<any, any> | WeakSet<any>
 type MapTypes = Map<any, any> | WeakMap<any, any>
 type SetTypes = Set<any> | WeakSet<any>
 
-const toReactive = <T extends unknown>(value: T): T =>
+export const toReactive = <T extends unknown>(value: T): T =>
   isObject(value) ? reactive(value) : value
 
 const toReadonly = <T extends unknown>(value: T): T =>
