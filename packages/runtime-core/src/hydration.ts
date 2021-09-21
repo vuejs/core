@@ -287,13 +287,29 @@ export function createHydrationFunctions(
               (forcePatchValue && key.endsWith('value')) ||
               (isOn(key) && !isReservedProp(key))
             ) {
-              patchProp(el, key, null, props[key])
+              patchProp(
+                el,
+                key,
+                null,
+                props[key],
+                false,
+                undefined,
+                parentComponent
+              )
             }
           }
         } else if (props.onClick) {
           // Fast path for click listeners (which is most often) to avoid
           // iterating through props.
-          patchProp(el, 'onClick', null, props.onClick)
+          patchProp(
+            el,
+            'onClick',
+            null,
+            props.onClick,
+            false,
+            undefined,
+            parentComponent
+          )
         }
       }
       // vnode / directive hooks
