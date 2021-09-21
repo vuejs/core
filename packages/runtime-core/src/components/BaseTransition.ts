@@ -8,6 +8,7 @@ import {
   cloneVNode,
   Comment,
   isSameVNodeType,
+  Text,
   VNode,
   VNodeArrayChildren,
   Fragment
@@ -470,7 +471,8 @@ export function getTransitionRawChildren(
       )
     }
     // comment placeholders should be skipped, e.g. v-if
-    else if (keepComment || child.type !== Comment) {
+    // #4621, #4622, #4637 also skip text nodes
+    else if ((keepComment || child.type !== Comment) && child.type !== Text) {
       ret.push(child)
     }
   }
