@@ -1,8 +1,8 @@
 import { isTracking, trackEffects, triggerEffects } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
-import { isArray, isObject, hasChanged } from '@vue/shared'
-import { reactive, isProxy, toRaw, isReactive } from './reactive'
-import { CollectionTypes } from './collectionHandlers'
+import { isArray, hasChanged } from '@vue/shared'
+import { isProxy, toRaw, isReactive } from './reactive'
+import { CollectionTypes, toReactive } from './collectionHandlers'
 import { createDep, Dep } from './dep'
 
 declare const RefSymbol: unique symbol
@@ -60,9 +60,6 @@ export function triggerRefValue(ref: RefBase<any>, newVal?: any) {
   }
 }
 
-const convert = <T extends unknown>(val: T): T =>
-  isObject(val) ? reactive(val) : val
-
 export function isRef<T>(r: Ref<T> | unknown): r is Ref<T>
 export function isRef(r: any): r is Ref {
   return Boolean(r && r.__v_isRef === true)
@@ -93,7 +90,7 @@ class RefImpl<T> {
 
   constructor(value: T, public readonly _shallow: boolean) {
     this._rawValue = _shallow ? value : toRaw(value)
-    this._value = _shallow ? value : convert(value)
+    this._value = _shallow ? value : toReactive(value)
   }
 
   get value() {
@@ -105,7 +102,7 @@ class RefImpl<T> {
     newVal = this._shallow ? newVal : toRaw(newVal)
     if (hasChanged(newVal, this._rawValue)) {
       this._rawValue = newVal
-      this._value = this._shallow ? newVal : convert(newVal)
+      this._value = this._shallow ? newVal : toReactive(newVal)
       triggerRefValue(this, newVal)
     }
   }
