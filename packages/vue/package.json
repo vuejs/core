@@ -10,6 +10,8 @@
   "files": [
     "index.js",
     "dist",
+    "compiler-sfc",
+    "server-renderer",
     "ref-macros.d.ts"
   ],
   "buildOptions": {
@@ -40,11 +42,8 @@
   "dependencies": {
     "@vue/shared": "3.2.12",
     "@vue/compiler-dom": "3.2.12",
-    "@vue/runtime-dom": "3.2.12"
-  },
-  "devDependencies": {
-    "lodash": "^4.17.15",
-    "marked": "^0.7.0",
-    "todomvc-app-css": "^2.3.0"
+    "@vue/runtime-dom": "3.2.12",
+    "@vue/compiler-sfc": "3.2.12",
+    "@vue/server-renderer": "3.2.12"
   }
 }

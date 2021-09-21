@@ -15,6 +15,7 @@ import {
 } from './stylePreprocessors'
 import { RawSourceMap } from 'source-map'
 import { cssVarsPlugin } from './cssVars'
+import postcssModules from 'postcss-modules'
 
 export interface SFCStyleCompileOptions {
   source: string
@@ -47,7 +48,7 @@ export interface CSSModulesOptions {
   hashPrefix?: string
   localsConvention?: 'camelCase' | 'camelCaseOnly' | 'dashes' | 'dashesOnly'
   exportGlobals?: boolean
-  globalModulePaths?: string[]
+  globalModulePaths?: RegExp[]
 }
 
 export interface SFCAsyncStyleCompileOptions extends SFCStyleCompileOptions {
@@ -131,7 +132,7 @@ export function doCompileStyle(
       )
     }
     plugins.push(
-      require('postcss-modules')({
+      postcssModules({
         ...modulesOptions,
         getJSON: (_cssFileName: string, json: Record<string, string>) => {
           cssModules = json

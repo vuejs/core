@@ -36,7 +36,6 @@ const outputConfigs = {
     file: resolve(`dist/${name}.global.js`),
     format: `iife`
   },
-
   // runtime-only builds, for main "vue" package only
   'esm-bundler-runtime': {
     file: resolve(`dist/${name}.runtime.esm-bundler.js`),
@@ -140,7 +139,7 @@ function createConfig(format, output, plugins = []) {
     }
   } else {
     // Node / esm-bundler builds.
-    // externalize all deps unless it's the compat build.
+    // externalize all direct deps unless it's the compat build.
     external = [
       ...Object.keys(pkg.dependencies || {}),
       ...Object.keys(pkg.peerDependencies || {}),
@@ -148,21 +147,35 @@ function createConfig(format, output, plugins = []) {
     ]
   }
 
-  // the browser builds of @vue/compiler-sfc requires postcss to be available
-  // as a global (e.g. http://wzrd.in/standalone/postcss)
-  output.globals = {
-    postcss: 'postcss'
+  // we are bundling forked consolidate.js in compiler-sfc which dynamically
+  // requires a ton of template engines which should be ignored.
+  let cjsIgnores = []
+  if (pkg.name === '@vue/compiler-sfc') {
+    cjsIgnores = [
+      ...Object.keys(require('@vue/consolidate/package.json').devDependencies),
+      'vm',
+      'crypto',
+      'react-dom/server',
+      'teacup/lib/express',
+      'arc-templates/dist/es5',
+      'then-pug',
+      'then-jade'
+    ]
   }
 
   const nodePlugins =
-    packageOptions.enableNonBrowserBranches && format !== 'cjs'
+    (format === 'cjs' && Object.keys(pkg.devDependencies || {}).length) ||
+    packageOptions.enableNonBrowserBranches
       ? [
           // @ts-ignore
           require('@rollup/plugin-commonjs')({
-            sourceMap: false
+            sourceMap: false,
+            ignore: cjsIgnores
           }),
-          // @ts-ignore
-          require('rollup-plugin-polyfill-node')(),
+          ...(format === 'cjs'
+            ? []
+            : // @ts-ignore
+              [require('rollup-plugin-polyfill-node')()]),
           require('@rollup/plugin-node-resolve').nodeResolve()
         ]
       : []

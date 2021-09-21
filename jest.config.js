@@ -46,7 +46,8 @@ module.exports = {
   moduleNameMapper: {
     '@vue/compat': '<rootDir>/packages/vue-compat/src',
     '^@vue/(.*?)$': '<rootDir>/packages/$1/src',
-    vue: '<rootDir>/packages/vue/src'
+    vue: '<rootDir>/packages/vue/src',
+    '@vue/consolidate': '@vue/consolidate'
   },
   rootDir: __dirname,
   testMatch: ['<rootDir>/packages/**/__tests__/**/*spec.[jt]s?(x)'],

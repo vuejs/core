@@ -739,19 +739,6 @@
   dependencies:
     "@babel/types" "^7.3.0"
 
-"@types/bluebird@*":
-  version "3.5.36"
-  resolved "https://registry.yarnpkg.com/@types/bluebird/-/bluebird-3.5.36.tgz#00d9301d4dc35c2f6465a8aec634bb533674c652"
-  integrity sha512-HBNx4lhkxN7bx6P0++W8E289foSu8kO8GCk2unhuVggO+cE7rh9DhZUyPhUxNRG9m+5B5BTKxZQ5ZP92x/mx9Q==
-
-"@types/consolidate@^0.14.0":
-  version "0.14.1"
-  resolved "https://registry.yarnpkg.com/@types/consolidate/-/consolidate-0.14.1.tgz#78f01b1ed747d945dea9969581fcc1d0cb59bad8"
-  integrity sha512-p0QTiPgjYssVJEo8zJ1WPfvfCpSvIU9oLZ7WPKl4Nx5dvaRAGb7Mk0a14T6UOVhI5PXYL7CkM4+lS7VRrUePUQ==
-  dependencies:
-    "@types/bluebird" "*"
-    "@types/node" "*"
-
 "@types/estree@*":
   version "0.0.50"
   resolved "https://registry.yarnpkg.com/@types/estree/-/estree-0.0.50.tgz#1e0caa9364d3fccd2931c3ed96fdbeaa5d4cca83"
@@ -927,6 +914,11 @@
   version "1.8.1"
   resolved "https://registry.yarnpkg.com/@vitejs/plugin-vue/-/plugin-vue-1.8.1.tgz#6cc2a8dfd04201e3c868c239091aaa89aa75f880"
   integrity sha512-gktQGZ7qfaDdVJhT86fWSkyhP+bdoA81f5S2TQOL5Sbe5q7B36XfLGq8Q0BpHoqhPSflAMe6WwM1IecP1sChRw==
+
+"@vue/consolidate@^0.17.2":
+  version "0.17.2"
+  resolved "https://registry.yarnpkg.com/@vue/consolidate/-/consolidate-0.17.2.tgz#8a871a638ae94fd88660a235b7b0837538b92e35"
+  integrity sha512-OG4/GJDOJdERTBw7G/gXE1Xf0cbPEBGJ73sBe7pOeMR4A0x3JNjKuwcv7QjXSOsWiYtsqDDgaKFac9fj1Gv1fw==
 
 "@vue/repl@^0.3.7":
   version "0.3.7"
@@ -1265,11 +1257,6 @@ bl@~0.8.1:
   integrity sha1-yba8oI0bwuoA/Ir7Txpf0eHGbk4=
   dependencies:
     readable-stream "~1.0.26"
-
-bluebird@^3.7.2:
-  version "3.7.2"
-  resolved "https://registry.yarnpkg.com/bluebird/-/bluebird-3.7.2.tgz#9f229c15be272454ffa973ace0dbee79a1b0c36f"
-  integrity sha512-XpNj6GDQzdfW+r2Wnn7xiSAd7TM3jzkxGXBGTtWKuSXv1xUV+azxAm8jdWZN06QTQk+2N2XB9jRDkvbmQmcRtg==
 
 bn.js@^4.0.0, bn.js@^4.1.0, bn.js@^4.11.9:
   version "4.12.0"
@@ -1731,13 +1718,6 @@ concat-stream@^1.4.4:
     inherits "^2.0.3"
     readable-stream "^2.2.2"
     typedarray "^0.0.6"
-
-consolidate@^0.16.0:
-  version "0.16.0"
-  resolved "https://registry.yarnpkg.com/consolidate/-/consolidate-0.16.0.tgz#a11864768930f2f19431660a65906668f5fbdc16"
-  integrity sha512-Nhl1wzCslqXYTJVDyJCu3ODohy9OfBMB5uD2BiBTzd7w+QY0lBzafkR8y8755yMYHAaMD4NuzbAw03/xzfw+eQ==
-  dependencies:
-    bluebird "^3.7.2"
 
 constantinople@^4.0.1:
   version "4.0.1"
