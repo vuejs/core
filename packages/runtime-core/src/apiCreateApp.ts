@@ -3,7 +3,8 @@ import {
   Data,
   validateComponentName,
   Component,
-  ComponentInternalInstance
+  ComponentInternalInstance,
+  getExposeProxy
 } from './component'
 import {
   ComponentOptions,
@@ -309,7 +310,7 @@ export function createAppAPI<HostElement>(
             devtoolsInitApp(app, version)
           }
 
-          return vnode.component!.proxy
+          return getExposeProxy(vnode.component!) || vnode.component!.proxy
         } else if (__DEV__) {
           warn(
             `App has already been mounted.\n` +
