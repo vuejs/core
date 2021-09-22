@@ -47,7 +47,7 @@ describe('renderSlot', () => {
         return [createVNode('div', null, 'foo', PatchFlags.TEXT)]
       },
       // mock instance
-      { type: {} } as any
+      { type: {}, appContext: {} } as any
     ) as Slot
 
     // manual invocation should not track
