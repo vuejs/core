@@ -177,6 +177,6 @@ export const errorMessages: Record<ErrorCodes, string> = {
   [ErrorCodes.X_CACHE_HANDLER_NOT_SUPPORTED]: `"cacheHandlers" option is only supported when the "prefixIdentifiers" option is enabled.`,
   [ErrorCodes.X_SCOPE_ID_NOT_SUPPORTED]: `"scopeId" option is only supported in module mode.`,
 
-  // just to fullfill types
+  // just to fulfill types
   [ErrorCodes.__EXTEND_POINT__]: ``
 }
