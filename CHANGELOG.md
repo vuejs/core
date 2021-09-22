@@ -1,3 +1,15 @@
+## [3.2.14](https://github.com/vuejs/vue-next/compare/v3.2.13...v3.2.14) (2021-09-22)
+
+
+### Bug Fixes
+
+* **compiler-core:** generate TS-cast safe assignment code for v-model ([686d014](https://github.com/vuejs/vue-next/commit/686d0149b6a4215603fce00b8a54bc310fd5a781)), closes [#4655](https://github.com/vuejs/vue-next/issues/4655)
+* **compiler-core:** more robust member expression check in Node ([6257ade](https://github.com/vuejs/vue-next/commit/6257adeaac03d1401a67714953909e2e31febed6))
+* **compiler-sfc:** fix local var access check for bindings in normal script ([6d6cc90](https://github.com/vuejs/vue-next/commit/6d6cc9091280ba132d92850f30db31c9152af599)), closes [#4644](https://github.com/vuejs/vue-next/issues/4644)
+* **devtools:** fix prod devtools detection + handle late devtools hook injection ([#4653](https://github.com/vuejs/vue-next/issues/4653)) ([2476eaa](https://github.com/vuejs/vue-next/commit/2476eaad6e9d68f0b75772456775a0a8165631c0))
+
+
+
 ## [3.2.13](https://github.com/vuejs/vue-next/compare/v3.2.12...v3.2.13) (2021-09-21)
 
 
