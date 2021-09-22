@@ -198,7 +198,7 @@ function doWatch(
     )
   }
 
-  const instance = currentInstance
+  const instance = currentInstance // A
   let getter: () => any
   let forceTrigger = false
   let isMultiSource = false
@@ -274,7 +274,7 @@ function doWatch(
   let cleanup: () => void
   let onInvalidate: InvalidateCbRegistrator = (fn: () => void) => {
     cleanup = effect.onStop = () => {
-      callWithErrorHandling(fn, instance, ErrorCodes.WATCH_CLEANUP)
+      callWithErrorHandling(fn, currentInstance, ErrorCodes.WATCH_CLEANUP) // A处只是个赋值, 这里相当于就是换一下变量名, 没理由报错啊(吧?).
     }
   }
 
