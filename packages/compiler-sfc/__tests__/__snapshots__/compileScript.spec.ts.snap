@@ -924,17 +924,17 @@ export default {
 return (_ctx, _cache) => {
   return (_openBlock(), _createElementBlock(_Fragment, null, [
     _withDirectives(_createElementVNode(\\"input\\", {
-      \\"onUpdate:modelValue\\": _cache[0] || (_cache[0] = $event => (count.value = $event))
+      \\"onUpdate:modelValue\\": _cache[0] || (_cache[0] = $event => ((count).value = $event))
     }, null, 512 /* NEED_PATCH */), [
       [_vModelText, count.value]
     ]),
     _withDirectives(_createElementVNode(\\"input\\", {
-      \\"onUpdate:modelValue\\": _cache[1] || (_cache[1] = $event => (_isRef(maybe) ? maybe.value = $event : null))
+      \\"onUpdate:modelValue\\": _cache[1] || (_cache[1] = $event => (_isRef(maybe) ? (maybe).value = $event : null))
     }, null, 512 /* NEED_PATCH */), [
       [_vModelText, _unref(maybe)]
     ]),
     _withDirectives(_createElementVNode(\\"input\\", {
-      \\"onUpdate:modelValue\\": _cache[2] || (_cache[2] = $event => (_isRef(lett) ? lett.value = $event : lett = $event))
+      \\"onUpdate:modelValue\\": _cache[2] || (_cache[2] = $event => (_isRef(lett) ? (lett).value = $event : lett = $event))
     }, null, 512 /* NEED_PATCH */), [
       [_vModelText, _unref(lett)]
     ])
