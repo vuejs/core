@@ -472,7 +472,7 @@ export function buildProps(
         hasRef = true
         // in inline mode there is no setupState object, so we can't use string
         // keys to set the ref. Instead, we need to transform it to pass the
-        // acrtual ref instead.
+        // actual ref instead.
         if (!__BROWSER__ && context.inline && value?.content) {
           valueNode = createFunctionExpression(['_value', '_refs'])
           valueNode.body = createBlockStatement(
