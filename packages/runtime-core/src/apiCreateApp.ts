@@ -39,6 +39,7 @@ export interface App<HostElement = any> {
     isSVG?: boolean
   ): ComponentPublicInstance
   unmount(): void
+  onUnmount(cb: () => void): void
   provide<T>(key: InjectionKey<T> | string, value: T): this
 
   // internal, but we need to expose these for the server-renderer and devtools
@@ -212,27 +213,19 @@ export function createAppAPI<HostElement>(
       },
 
       use(plugin: Plugin, ...options: any[]) {
-        let cleanupFn: (() => any) | undefined = undefined
         if (installedPlugins.has(plugin)) {
           __DEV__ && warn(`Plugin has already been applied to target app.`)
         } else if (plugin && isFunction(plugin.install)) {
           installedPlugins.add(plugin)
-          cleanupFn = plugin.install(app, ...options)
+          plugin.install(app, ...options)
         } else if (isFunction(plugin)) {
           installedPlugins.add(plugin)
-          cleanupFn = plugin(app, ...options)
+          plugin(app, ...options)
         } else if (__DEV__) {
           warn(
             `A plugin must either be a function or an object with an "install" ` +
               `function.`
           )
-        }
-        if (
-          cleanupFn &&
-          typeof cleanupFn === 'function' &&
-          cleanupFn.length === 0
-        ) {
-          pluginCleanupFns.push(cleanupFn)
         }
         return app
       },
@@ -329,10 +322,22 @@ export function createAppAPI<HostElement>(
         }
       },
 
+      onUnmount(cleanupFn: () => void) {
+        if (typeof cleanupFn === 'function') pluginCleanupFns.push(cleanupFn)
+        else if (__DEV__) {
+          warn(
+            `Expected function as first argument to app.onUnmount(), but got ${typeof cleanupFn}`
+          )
+        }
+      },
       unmount() {
         if (isMounted) {
           render(null, app._container)
-          pluginCleanupFns.map(fn => fn())
+          pluginCleanupFns.map(fn => {
+            try {
+              fn()
+            } catch {}
+          })
           if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
             app._instance = null
             devtoolsUnmountApp(app)

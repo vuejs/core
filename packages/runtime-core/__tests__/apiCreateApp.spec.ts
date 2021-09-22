@@ -313,35 +313,34 @@ describe('api: createApp', () => {
     ).toHaveBeenWarnedTimes(1)
   })
 
-  test('use: call cleanup plugin on unmount', () => {
+  test.only('onUnmount', () => {
     const cleanup = jest.fn().mockName('plugin cleanup')
     const PluginA: Plugin = app => {
       app.provide('foo', 1)
-      return cleanup
+      app.onUnmount(cleanup)
     }
     const PluginB: Plugin = {
       install: (app, arg1, arg2) => {
         app.provide('bar', arg1 + arg2)
-        return cleanup
+        app.onUnmount(cleanup)
       }
     }
-
-    // should ignore non-function return values
-    const PluginC: Plugin = app => ({})
 
     const app = createApp({
       render: () => `Test`
     })
     app.use(PluginA)
     app.use(PluginB)
-    app.use(PluginC)
 
     const root = nodeOps.createElement('div')
     app.mount(root)
 
+    //also can be added after mount
+    app.onUnmount(cleanup)
+
     app.unmount()
 
-    expect(cleanup).toHaveBeenCalledTimes(2)
+    expect(cleanup).toHaveBeenCalledTimes(3)
   })
 
   test('config.errorHandler', () => {
