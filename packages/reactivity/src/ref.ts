@@ -1,8 +1,8 @@
 import { isTracking, trackEffects, triggerEffects } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { isArray, hasChanged } from '@vue/shared'
-import { isProxy, toRaw, isReactive } from './reactive'
-import { CollectionTypes, toReactive } from './collectionHandlers'
+import { isProxy, toRaw, isReactive, toReactive } from './reactive'
+import { CollectionTypes } from './collectionHandlers'
 import { createDep, Dep } from './dep'
 
 declare const RefSymbol: unique symbol
@@ -81,6 +81,13 @@ export function shallowRef(value?: unknown) {
   return createRef(value, true)
 }
 
+function createRef(rawValue: unknown, shallow: boolean) {
+  if (isRef(rawValue)) {
+    return rawValue
+  }
+  return new RefImpl(rawValue, shallow)
+}
+
 class RefImpl<T> {
   private _value: T
   private _rawValue: T
@@ -106,13 +113,6 @@ class RefImpl<T> {
       triggerRefValue(this, newVal)
     }
   }
-}
-
-function createRef(rawValue: unknown, shallow: boolean) {
-  if (isRef(rawValue)) {
-    return rawValue
-  }
-  return new RefImpl(rawValue, shallow)
 }
 
 export function triggerRef(ref: Ref) {
