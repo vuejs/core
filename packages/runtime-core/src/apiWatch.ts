@@ -23,7 +23,7 @@ import {
   isPlainObject
 } from '@vue/shared'
 import {
-  currentInstance,
+  currentInstance, // import
   ComponentInternalInstance,
   isInSSRComponentSetup,
   setCurrentInstance,
