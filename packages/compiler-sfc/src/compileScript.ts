@@ -239,6 +239,7 @@ export function compileScript(
   const helperImports: Set<string> = new Set()
   const userImports: Record<string, ImportBinding> = Object.create(null)
   const userImportAlias: Record<string, string> = Object.create(null)
+  const scriptBindings: Record<string, BindingTypes> = Object.create(null)
   const setupBindings: Record<string, BindingTypes> = Object.create(null)
 
   let defaultExport: Node | undefined
@@ -739,7 +740,7 @@ export function compileScript(
           }
         }
         if (node.declaration) {
-          walkDeclaration(node.declaration, setupBindings, userImportAlias)
+          walkDeclaration(node.declaration, scriptBindings, userImportAlias)
         }
       } else if (
         (node.type === 'VariableDeclaration' ||
@@ -747,7 +748,7 @@ export function compileScript(
           node.type === 'ClassDeclaration') &&
         !node.declare
       ) {
-        walkDeclaration(node, setupBindings, userImportAlias)
+        walkDeclaration(node, scriptBindings, userImportAlias)
       }
     }
 
@@ -1070,6 +1071,9 @@ export function compileScript(
         ? BindingTypes.SETUP_CONST
         : BindingTypes.SETUP_MAYBE_REF
   }
+  for (const key in scriptBindings) {
+    bindingMetadata[key] = scriptBindings[key]
+  }
   for (const key in setupBindings) {
     bindingMetadata[key] = setupBindings[key]
   }
@@ -1198,8 +1202,11 @@ export function compileScript(
       returned = `() => {}`
     }
   } else {
-    // return bindings from setup
-    const allBindings: Record<string, any> = { ...setupBindings }
+    // return bindings from script and script setup
+    const allBindings: Record<string, any> = {
+      ...scriptBindings,
+      ...setupBindings
+    }
     for (const key in userImports) {
       if (!userImports[key].isType && userImports[key].isUsedInTemplate) {
         allBindings[key] = true

@@ -1181,6 +1181,19 @@ const emit = defineEmits(['a', 'b'])
         defineEmits([bar])
         </script>`)
       ).toThrow(`cannot reference locally declared variables`)
+
+      // #4644
+      expect(() =>
+        compile(`
+        <script>const bar = 1</script>
+        <script setup>
+        defineProps({
+          foo: {
+            default: () => bar
+          }
+        })
+        </script>`)
+      ).not.toThrow(`cannot reference locally declared variables`)
     })
 
     test('should allow defineProps/Emit() referencing scope var', () => {
