@@ -105,7 +105,6 @@ describe('isMemberExpression', () => {
     expect(fn('objfoo]')).toBe(false)
     expect(fn('obj[arr[0]')).toBe(false)
     expect(fn('obj[arr0]]')).toBe(false)
-    expect(fn('123[a]')).toBe(false)
     expect(fn('a + b')).toBe(false)
     expect(fn('foo()')).toBe(false)
     expect(fn('a?b:c')).toBe(false)
@@ -114,6 +113,7 @@ describe('isMemberExpression', () => {
 
   test('browser', () => {
     commonAssertions(isMemberExpressionBrowser)
+    expect(isMemberExpressionBrowser('123[a]')).toBe(false)
   })
 
   test('node', () => {
@@ -126,6 +126,8 @@ describe('isMemberExpression', () => {
     expect(fn(`foo.bar as string`)).toBe(true)
     expect(fn(`foo['bar'] as string`)).toBe(true)
     expect(fn(`foo[bar as string]`)).toBe(true)
+    expect(fn(`(foo as string)`)).toBe(true)
+    expect(fn(`123[a]`)).toBe(true)
     expect(fn(`foo() as string`)).toBe(false)
     expect(fn(`a + b as string`)).toBe(false)
   })

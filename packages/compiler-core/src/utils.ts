@@ -165,10 +165,6 @@ export const isMemberExpressionNode = (
   path: string,
   context: TransformContext
 ): boolean => {
-  path = path.trim()
-  if (!validFirstIdentCharRE.test(path[0])) {
-    return false
-  }
   try {
     let ret: Expression = parseExpression(path, {
       plugins: [...context.expressionPlugins, ...babelParserDefaultPlugins]
