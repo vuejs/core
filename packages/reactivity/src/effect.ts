@@ -254,7 +254,7 @@ export function trigger(
     return
   }
 
-  let deps: (Dep | undefined)[] = []
+  let deps: Dep[] = []
   if (type === TriggerOpTypes.CLEAR) {
     // collection being cleared
     // trigger all effects for target
@@ -309,19 +309,15 @@ export function trigger(
     : undefined
 
   if (deps.length === 1) {
-    if (deps[0]) {
-      if (__DEV__) {
-        triggerEffects(deps[0], eventInfo)
-      } else {
-        triggerEffects(deps[0])
-      }
+    if (__DEV__) {
+      triggerEffects(deps[0], eventInfo)
+    } else {
+      triggerEffects(deps[0])
     }
   } else {
     const effects: ReactiveEffect[] = []
     for (const dep of deps) {
-      if (dep) {
-        effects.push(...dep)
-      }
+      effects.push(...dep)
     }
     if (__DEV__) {
       triggerEffects(createDep(effects), eventInfo)
