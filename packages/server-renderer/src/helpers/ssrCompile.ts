@@ -30,7 +30,7 @@ export function ssrCompile(
   }
 
   const { code } = compile(template, {
-    isCustomElement: instance.appContext.config.isCustomElement || NO,
+    isCustomElement: instance.appContext.config.compilerOptions.isCustomElement || NO,
     isNativeTag: instance.appContext.config.isNativeTag || NO,
     onError(err: CompilerError) {
       if (__DEV__) {
