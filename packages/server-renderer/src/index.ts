@@ -1,3 +1,6 @@
+import { initDirectivesForSSR } from 'vue'
+initDirectivesForSSR()
+
 // public
 export { SSRContext } from './render'
 export { renderToString } from './renderToString'

@@ -303,8 +303,9 @@ function callModelHook(
   fn && fn(el, binding, vnode, prevVNode)
 }
 
-// SSR vnode transforms
-if (__NODE_JS__) {
+// SSR vnode transforms, only used when user includes client-oriented render
+// function in SSR
+export function initVModelForSSR() {
   vModelText.getSSRProps = ({ value }) => ({ value })
 
   vModelRadio.getSSRProps = ({ value }, vnode) => {

@@ -242,6 +242,8 @@ function createReplacePlugin(
     __ESM_BROWSER__: isBrowserESMBuild,
     // is targeting Node (SSR)?
     __NODE_JS__: isNodeBuild,
+    // need SSR-specific branches?
+    __SSR__: isNodeBuild || isBundlerESMBuild,
 
     // for compiler-sfc browser build inlined deps
     ...(isBrowserESMBuild

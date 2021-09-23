@@ -678,7 +678,7 @@ export function handleSetupResult(
 ) {
   if (isFunction(setupResult)) {
     // setup returned an inline render function
-    if (__NODE_JS__ && (instance.type as ComponentOptions).__ssrInlineRender) {
+    if (__SSR__ && (instance.type as ComponentOptions).__ssrInlineRender) {
       // when the function's name is `ssrRender` (compiled by SFC inline mode),
       // set it as ssrRender instead.
       instance.ssrRender = setupResult
@@ -751,18 +751,11 @@ export function finishComponentSetup(
   }
 
   // template / render function normalization
-  if (__NODE_JS__ && isSSR) {
-    // 1. the render function may already exist, returned by `setup`
-    // 2. otherwise try to use the `Component.render`
-    // 3. if the component doesn't have a render function,
-    //    set `instance.render` to NOOP so that it can inherit the render
-    //    function from mixins/extend
-    instance.render = (instance.render ||
-      Component.render ||
-      NOOP) as InternalRenderFunction
-  } else if (!instance.render) {
-    // could be set from setup()
-    if (compile && !Component.render) {
+  // could be already set when returned from setup()
+  if (!instance.render) {
+    // only do on-the-fly compile if not in SSR - SSR on-the-fly compliation
+    // is done by server-renderer
+    if (!isSSR && compile && !Component.render) {
       const template =
         (__COMPAT__ &&
           instance.vnode.props &&
