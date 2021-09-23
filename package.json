@@ -9,7 +9,7 @@
     "build": "node scripts/build.js",
     "size": "run-s size-global size-baseline",
     "size-global": "node scripts/build.js vue runtime-dom -f global -p",
-    "size-baseline": "node scripts/build.js vue runtime-dom runtime-core reactivity shared -f esm-bundler && cd packages/size-check && vite build",
+    "size-baseline": "node scripts/build.js runtime-dom runtime-core reactivity shared -f esm-bundler && cd packages/size-check && vite build",
     "lint": "eslint --ext .ts packages/*/src/**.ts",
     "format": "prettier --write --parser typescript \"packages/**/*.ts?(x)\"",
     "test": "node scripts/build.js vue -f global -d && jest --runInBand",
