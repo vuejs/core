@@ -255,6 +255,11 @@ export function trigger(
   }
 
   let deps: Dep[] = []
+
+  function push(dep: Dep | undefined) {
+    dep && deps.push(dep)
+  }
+
   if (type === TriggerOpTypes.CLEAR) {
     // collection being cleared
     // trigger all effects for target
@@ -300,39 +305,27 @@ export function trigger(
     }
   }
 
-  function push(dep: Dep | undefined) {
-    dep && deps.push(dep)
-  }
-
   const eventInfo = __DEV__
     ? { target, type, key, newValue, oldValue, oldTarget }
     : undefined
 
   if (deps.length === 1) {
-    if (__DEV__) {
-      triggerEffects(deps[0], eventInfo)
-    } else {
-      triggerEffects(deps[0])
-    }
+    triggerEffects(deps[0], eventInfo)
   } else {
     const effects: ReactiveEffect[] = []
     for (const dep of deps) {
       effects.push(...dep)
     }
-    if (__DEV__) {
-      triggerEffects(createDep(effects), eventInfo)
-    } else {
-      triggerEffects(createDep(effects))
-    }
+    triggerEffects(createDep(effects), eventInfo)
   }
 }
 
 export function triggerEffects(
-  dep: Dep | ReactiveEffect[],
+  dep: Dep,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
   // spread into array for stabilization
-  for (const effect of isArray(dep) ? dep : [...dep]) {
+  for (const effect of [...dep]) {
     if (effect !== activeEffect || effect.allowRecurse) {
       if (__DEV__ && effect.onTrigger) {
         effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
