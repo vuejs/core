@@ -2,10 +2,10 @@
   "name": "@vue/size-check",
   "version": "3.2.16",
   "private": true,
-  "buildOptions": {
-    "name": "Vue",
-    "formats": [
-      "global"
-    ]
+  "scripts": {
+    "build": "vite build"
+  },
+  "devDependencies": {
+    "vite": "^2.5.10"
   }
 }
