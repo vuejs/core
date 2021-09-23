@@ -47,6 +47,8 @@ module.exports = {
     '@vue/consolidate': '@vue/consolidate',
     '@vue/compat': '<rootDir>/packages/vue-compat/src',
     '^@vue/(.*?)$': '<rootDir>/packages/$1/src',
+    'vue/compiler-sfc': '<rootDir>/packages/compiler-sfc/src',
+    'vue/server-renderer': '<rootDir>/packages/server-renderer/src',
     vue: '<rootDir>/packages/vue/src'
   },
   rootDir: __dirname,
