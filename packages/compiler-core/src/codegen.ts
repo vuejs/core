@@ -363,7 +363,7 @@ function genFunctionPreamble(ast: RootNode, context: CodegenContext) {
     push(
       `const { ${ast.ssrHelpers
         .map(aliasHelper)
-        .join(', ')} } = require("@vue/server-renderer")\n`
+        .join(', ')} } = require("vue/server-renderer")\n`
     )
   }
   genHoists(ast.hoists, context)
