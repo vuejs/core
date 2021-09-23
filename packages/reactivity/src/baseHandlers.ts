@@ -119,9 +119,9 @@ function createGetter(isReadonly = false, shallow = false) {
     }
 
     if (isRef(res)) {
-      // ref unwrapping - does not apply for Array + integer key.
-      const shouldUnwrap = !targetIsArray || !isIntegerKey(key)
-      return shouldUnwrap ? res.value : res
+      // ref unwrapping - does not apply for Array + integer key, keep it wraped.
+      const wrap = targetIsArray && isIntegerKey(key)
+      return wrap ? res : res.value
     }
 
     if (isObject(res)) {
