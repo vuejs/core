@@ -751,7 +751,7 @@ return (_ctx, _cache) => {
 
 exports[`SFC compile <script setup> inlineTemplate mode ssr codegen 1`] = `
 "import { useCssVars as _useCssVars, unref as _unref } from 'vue'
-import { ssrRenderAttrs as _ssrRenderAttrs, ssrInterpolate as _ssrInterpolate } from \\"@vue/server-renderer\\"
+import { ssrRenderAttrs as _ssrRenderAttrs, ssrInterpolate as _ssrInterpolate } from \\"vue/server-renderer\\"
 
 import { ref } from 'vue'
         

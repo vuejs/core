@@ -276,6 +276,11 @@ export interface CodegenOptions extends SharedTransformCodegenOptions {
    */
   runtimeModuleName?: string
   /**
+   * Customize where to import ssr runtime helpers from/**
+   * @default 'vue/server-renderer'
+   */
+  ssrRuntimeModuleName?: string
+  /**
    * Customize the global variable name of `Vue` to get helpers from
    * in function mode
    * @default 'Vue'
