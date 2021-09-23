@@ -1,3 +1,12 @@
+## [3.2.16](https://github.com/vuejs/vue-next/compare/v3.2.15...v3.2.16) (2021-09-23)
+
+
+### Bug Fixes
+
+* **ssr:** fix ssr runtime helper import in module mode ([8e05b7f](https://github.com/vuejs/vue-next/commit/8e05b7f9fcb0e4c4ece2afe9fb2efbd29a6d1482))
+
+
+
 ## [3.2.15](https://github.com/vuejs/vue-next/compare/v3.2.14...v3.2.15) (2021-09-23)
 
 
