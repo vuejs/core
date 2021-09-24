@@ -8,10 +8,9 @@ import {
   DebuggerEvent,
   markRaw,
   shallowReactive,
-  readonly,
-  ReactiveEffectRunner
+  readonly
 } from '../src/index'
-import { ITERATE_KEY } from '../src/effect'
+import { ITERATE_KEY, maxMarkerBits } from '../src/effect'
 
 describe('reactivity/effect', () => {
   it('should run the passed function once (wrapped by a effect)', () => {
@@ -491,21 +490,19 @@ describe('reactivity/effect', () => {
     expect(conditionalSpy).toHaveBeenCalledTimes(2)
   })
 
-  it('should handle deep effect recursion using cleanup fallback', () => {
+  it('should handle deep effect recursion(overtop maxMarkerBits) using cleanup fallback', () => {
     const results = reactive([0])
-    const effects: { fx: ReactiveEffectRunner; index: number }[] = []
-    for (let i = 1; i < 40; i++) {
-      ;(index => {
-        const fx = effect(() => {
-          results[index] = results[index - 1] * 2
-        })
-        effects.push({ fx, index })
-      })(i)
+    const times = maxMarkerBits + 1
+
+    for (let i = 1; i <= times; i++) {
+      effect(() => {
+        results[i] = results[i - 1] * 2
+      })
     }
 
-    expect(results[39]).toBe(0)
+    expect(results[times]).toBe(0)
     results[0] = 1
-    expect(results[39]).toBe(Math.pow(2, 39))
+    expect(results[times]).toBe(Math.pow(2, times))
   })
 
   it('should register deps independently during effect recursion', () => {

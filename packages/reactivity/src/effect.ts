@@ -27,7 +27,7 @@ export let trackOpBit = 1
  * This value is chosen to enable modern JS engines to use a SMI on all platforms.
  * When recursion depth is greater, fall back to using a full cleanup.
  */
-const maxMarkerBits = 30
+export const maxMarkerBits = 30
 
 export type EffectScheduler = (...args: any[]) => any
 
