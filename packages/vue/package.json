@@ -14,6 +14,25 @@
     "server-renderer",
     "ref-macros.d.ts"
   ],
+  "exports": {
+    ".": {
+      "import": {
+        "node": "./index.mjs",
+        "default": "./dist/vue.runtime.esm-bundler.js"
+      },
+      "require": "./index.js"
+    },
+    "./server-renderer": {
+      "import": "./server-renderer/index.mjs",
+      "require": "./server-renderer/index.js"
+    },
+    "./compiler-sfc": {
+      "import": "./compiler-sfc/index.mjs",
+      "require": "./compiler-sfc/index.js"
+    },
+    "./dist/*": "./dist/*",
+    "./package.json": "./package.json"
+  },
   "buildOptions": {
     "name": "Vue",
     "formats": [
