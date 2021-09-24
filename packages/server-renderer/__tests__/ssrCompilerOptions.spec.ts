@@ -50,9 +50,9 @@ describe('ssr: compiler options', () => {
 
   test('config.compilerOptions.delimiters', async () => {
     const app = createApp({
-      template: `<div>[[ 1 + 1 ]]</div>`
+      template: `<div>[( 1 + 1 )]</div>`
     })
-    app.config.compilerOptions.delimiters = ['[[', ']]']
+    app.config.compilerOptions.delimiters = ['[(', ')]']
     expect(await renderToString(app)).toBe(`<div>2</div>`)
   })
 
@@ -87,6 +87,62 @@ describe('ssr: compiler options', () => {
     app.config.compilerOptions.whitespace = 'preserve'
     expect(await renderToString(app)).toBe(
       `<div><span>Hello world</span><span>Hello   world</span></div>`
+    )
+  })
+
+  test('caching with compilerOptions', async () => {
+    const template = `<div>{{1 + 1}}   [[1 + 1]]</div>`
+
+    const app = createApp({
+      template: `<div><ChildOne/><ChildTwo/><ChildThree/></div>`,
+      components: {
+        ChildOne: {
+          template
+        },
+        ChildTwo: {
+          template,
+          compilerOptions: {
+            whitespace: 'preserve'
+          }
+        },
+        ChildThree: {
+          template,
+          compilerOptions: {
+            delimiters: ['[[', ']]']
+          }
+        }
+      }
+    })
+    expect(await renderToString(app)).toBe(
+      `<div><div>2 [[1 + 1]]</div><div>2   [[1 + 1]]</div><div>{{1 + 1}} 2</div></div>`
+    )
+  })
+
+  test('caching with isCustomElement', async () => {
+    const template = `<div><MyChild/></div>`
+
+    const app = createApp({
+      template,
+      // No compilerOptions on the root
+      components: {
+        MyChild: {
+          template,
+          compilerOptions: {
+            isCustomElement: tag => tag.startsWith('x-')
+          },
+          components: {
+            MyChild: {
+              template,
+              compilerOptions: {
+                isCustomElement: tag => tag.startsWith('My')
+              }
+            }
+          }
+        }
+      }
+    })
+    expect(await renderToString(app)).toBe(
+      `<div><div><div><MyChild></MyChild></div></div></div>`
     )
   })
 })

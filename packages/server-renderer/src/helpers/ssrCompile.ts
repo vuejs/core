@@ -1,6 +1,6 @@
 import { ComponentInternalInstance, ComponentOptions, warn } from 'vue'
 import { compile } from '@vue/compiler-ssr'
-import { extend, generateCodeFrame, NO } from '@vue/shared'
+import { extend, generateCodeFrame, isFunction, NO } from '@vue/shared'
 import { CompilerError, CompilerOptions } from '@vue/compiler-core'
 import { PushFn } from '../render'
 
@@ -24,12 +24,6 @@ export function ssrCompile(
     )
   }
 
-  // TODO: The cache does not take the compilerOptions into account
-  const cached = compileCache[template]
-  if (cached) {
-    return cached
-  }
-
   // TODO: This is copied from runtime-core/src/component.ts and should probably be refactored
   const Component = instance.type as ComponentOptions
   const { isCustomElement, compilerOptions } = instance.appContext.config
@@ -50,6 +44,21 @@ export function ssrCompile(
     finalCompilerOptions.isCustomElement || NO
   finalCompilerOptions.isNativeTag = finalCompilerOptions.isNativeTag || NO
 
+  const cacheKey = JSON.stringify(
+    {
+      template,
+      compilerOptions: finalCompilerOptions
+    },
+    (key, value) => {
+      return isFunction(value) ? value.toString() : value
+    }
+  )
+
+  const cached = compileCache[cacheKey]
+  if (cached) {
+    return cached
+  }
+
   finalCompilerOptions.onError = (err: CompilerError) => {
     if (__DEV__) {
       const message = `[@vue/server-renderer] Template compilation error: ${err.message}`
@@ -67,5 +76,5 @@ export function ssrCompile(
   }
 
   const { code } = compile(template, finalCompilerOptions)
-  return (compileCache[template] = Function('require', code)(require))
+  return (compileCache[cacheKey] = Function('require', code)(require))
 }
