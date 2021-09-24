@@ -163,7 +163,7 @@ export const isMemberExpressionBrowser = (path: string): boolean => {
 }
 
 export const isMemberExpressionNode = __BROWSER__
-  ? NOOP
+  ? (NOOP as any as (path: string, context: TransformContext) => boolean)
   : (path: string, context: TransformContext): boolean => {
       try {
         let ret: Expression = parseExpression(path, {
