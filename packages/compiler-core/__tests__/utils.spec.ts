@@ -76,7 +76,7 @@ describe('getInnerRange', () => {
 })
 
 describe('isMemberExpression', () => {
-  function commonAssertions(fn: (str: string) => boolean) {
+  function commonAssertions(fn: (str: string) => boolean | void) {
     // should work
     expect(fn('obj.foo')).toBe(true)
     expect(fn('obj[foo]')).toBe(true)
