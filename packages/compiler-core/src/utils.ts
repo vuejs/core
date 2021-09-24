@@ -47,7 +47,8 @@ import {
   isObject,
   hyphenate,
   extend,
-  babelParserDefaultPlugins
+  babelParserDefaultPlugins,
+  NOOP
 } from '@vue/shared'
 import { PropsExpression } from './transforms/transformElement'
 import { parseExpression } from '@babel/parser'
@@ -161,26 +162,25 @@ export const isMemberExpressionBrowser = (path: string): boolean => {
   return !currentOpenBracketCount && !currentOpenParensCount
 }
 
-export const isMemberExpressionNode = (
-  path: string,
-  context: TransformContext
-): boolean => {
-  try {
-    let ret: Expression = parseExpression(path, {
-      plugins: [...context.expressionPlugins, ...babelParserDefaultPlugins]
-    })
-    if (ret.type === 'TSAsExpression' || ret.type === 'TSTypeAssertion') {
-      ret = ret.expression
+export const isMemberExpressionNode = __BROWSER__
+  ? NOOP
+  : (path: string, context: TransformContext): boolean => {
+      try {
+        let ret: Expression = parseExpression(path, {
+          plugins: [...context.expressionPlugins, ...babelParserDefaultPlugins]
+        })
+        if (ret.type === 'TSAsExpression' || ret.type === 'TSTypeAssertion') {
+          ret = ret.expression
+        }
+        return (
+          ret.type === 'MemberExpression' ||
+          ret.type === 'OptionalMemberExpression' ||
+          ret.type === 'Identifier'
+        )
+      } catch (e) {
+        return false
+      }
     }
-    return (
-      ret.type === 'MemberExpression' ||
-      ret.type === 'OptionalMemberExpression' ||
-      ret.type === 'Identifier'
-    )
-  } catch (e) {
-    return false
-  }
-}
 
 export const isMemberExpression = __BROWSER__
   ? isMemberExpressionBrowser
