@@ -68,7 +68,12 @@ export const transformFor = createStructuralDirectiveTransform(
           : keyProp.exp!)
       const keyProperty = keyProp ? createObjectProperty(`key`, keyExp!) : null
 
-      if (!__BROWSER__ && context.prefixIdentifiers && keyProperty) {
+      if (
+        !__BROWSER__ &&
+        context.prefixIdentifiers &&
+        keyProperty &&
+        keyProp!.type !== NodeTypes.ATTRIBUTE
+      ) {
         // #2085 process :key expression needs to be processed in order for it
         // to behave consistently for <template v-for> and <div v-for>.
         // In the case of `<template v-for>`, the node is discarded and never
