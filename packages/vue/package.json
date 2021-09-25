@@ -9,6 +9,7 @@
   "jsdelivr": "dist/vue.global.js",
   "files": [
     "index.js",
+    "index.mjs",
     "dist",
     "compiler-sfc",
     "server-renderer",
