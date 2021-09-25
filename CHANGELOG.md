@@ -1,3 +1,13 @@
+## [3.2.19](https://github.com/vuejs/vue-next/compare/v3.2.18...v3.2.19) (2021-09-25)
+
+
+### Bug Fixes
+
+* **compiler-core:** should treat attribute key as expression ([#4658](https://github.com/vuejs/vue-next/issues/4658)) ([7aa0ea0](https://github.com/vuejs/vue-next/commit/7aa0ea06c822d84a1d43b40cf5643b983aae6d36))
+* **server-renderer:** respect compilerOptions during runtime template compilation ([#4631](https://github.com/vuejs/vue-next/issues/4631)) ([50d9d34](https://github.com/vuejs/vue-next/commit/50d9d3436079419f91231351f20f69062a01505c))
+
+
+
 ## [3.2.18](https://github.com/vuejs/vue-next/compare/v3.2.17...v3.2.18) (2021-09-24)
 
 
