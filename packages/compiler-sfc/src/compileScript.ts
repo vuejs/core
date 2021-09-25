@@ -39,7 +39,9 @@ import {
   TSInterfaceBody,
   AwaitExpression,
   Program,
-  ObjectMethod
+  ObjectMethod,
+  LVal,
+  Expression
 } from '@babel/types'
 import { walk } from 'estree-walker'
 import { RawSourceMap } from 'source-map'
@@ -248,6 +250,8 @@ export function compileScript(
   let hasDefineExposeCall = false
   let propsRuntimeDecl: Node | undefined
   let propsRuntimeDefaults: ObjectExpression | undefined
+  const propsDestructuredBindings: Record<string, Expression | true> =
+    Object.create(null)
   let propsTypeDecl: TSTypeLiteral | TSInterfaceBody | undefined
   let propsTypeDeclRaw: Node | undefined
   let propsIdentifier: string | undefined
@@ -337,7 +341,7 @@ export function compileScript(
     }
   }
 
-  function processDefineProps(node: Node): boolean {
+  function processDefineProps(node: Node, declId?: LVal): boolean {
     if (!isCallOf(node, DEFINE_PROPS)) {
       return false
     }
@@ -374,19 +378,60 @@ export function compileScript(
       }
     }
 
+    if (declId) {
+      if (declId.type === 'ObjectPattern') {
+        // props destructure - handle compilation sugar
+        for (const prop of declId.properties) {
+          if (prop.type === 'ObjectProperty') {
+            if (prop.value.type === 'AssignmentPattern') {
+              // default value { foo = 123 }
+              const { left, right } = prop.value
+              if (left.type !== 'Identifier') {
+                error(
+                  `${DEFINE_PROPS}() destructure does not support nested patterns.`,
+                  left
+                )
+              }
+              // store default value
+              propsDestructuredBindings[left.name] = right
+            } else if (prop.value.type === 'Identifier') {
+              // simple destucture
+              propsDestructuredBindings[prop.value.name] = true
+            } else {
+              error(
+                `${DEFINE_PROPS}() destructure does not support nested patterns.`,
+                prop.value
+              )
+            }
+          } else {
+            // TODO rest spread
+          }
+        }
+      } else {
+        propsIdentifier = scriptSetup!.content.slice(declId.start!, declId.end!)
+      }
+    }
+
     return true
   }
 
-  function processWithDefaults(node: Node): boolean {
+  function processWithDefaults(node: Node, declId?: LVal): boolean {
     if (!isCallOf(node, WITH_DEFAULTS)) {
       return false
     }
-    if (processDefineProps(node.arguments[0])) {
+    if (processDefineProps(node.arguments[0], declId)) {
       if (propsRuntimeDecl) {
         error(
           `${WITH_DEFAULTS} can only be used with type-based ` +
             `${DEFINE_PROPS} declaration.`,
           node
+        )
+      }
+      if (Object.keys(propsDestructuredBindings).length) {
+        error(
+          `${WITH_DEFAULTS}() is unnecessary when using destructure with ${DEFINE_PROPS}().\n` +
+            `Prefer using destructure default values, e.g. const { foo = 1 } = defineProps(...).`,
+          node.callee
         )
       }
       propsRuntimeDefaults = node.arguments[1] as ObjectExpression
@@ -408,7 +453,7 @@ export function compileScript(
     return true
   }
 
-  function processDefineEmits(node: Node): boolean {
+  function processDefineEmits(node: Node, declId?: LVal): boolean {
     if (!isCallOf(node, DEFINE_EMITS)) {
       return false
     }
@@ -440,6 +485,11 @@ export function compileScript(
         )
       }
     }
+
+    if (declId) {
+      emitIdentifier = scriptSetup!.content.slice(declId.start!, declId.end!)
+    }
+
     return true
   }
 
@@ -754,7 +804,7 @@ export function compileScript(
 
     // apply ref transform
     if (enableRefTransform && shouldTransformRef(script.content)) {
-      const { rootVars, importedHelpers } = transformRefAST(
+      const { rootRefs: rootVars, importedHelpers } = transformRefAST(
         scriptAst,
         s,
         scriptStartOffset!
@@ -900,20 +950,9 @@ export function compileScript(
         if (decl.init) {
           // defineProps / defineEmits
           const isDefineProps =
-            processDefineProps(decl.init) || processWithDefaults(decl.init)
-          if (isDefineProps) {
-            propsIdentifier = scriptSetup.content.slice(
-              decl.id.start!,
-              decl.id.end!
-            )
-          }
-          const isDefineEmits = processDefineEmits(decl.init)
-          if (isDefineEmits) {
-            emitIdentifier = scriptSetup.content.slice(
-              decl.id.start!,
-              decl.id.end!
-            )
-          }
+            processDefineProps(decl.init, decl.id) ||
+            processWithDefaults(decl.init, decl.id)
+          const isDefineEmits = processDefineEmits(decl.init, decl.id)
           if (isDefineProps || isDefineEmits) {
             if (left === 1) {
               s.remove(node.start! + startOffset, node.end! + startOffset)
@@ -1004,14 +1043,20 @@ export function compileScript(
   }
 
   // 3. Apply ref sugar transform
-  if (enableRefTransform && shouldTransformRef(scriptSetup.content)) {
-    const { rootVars, importedHelpers } = transformRefAST(
+  const propsDestructuredKeys = Object.keys(propsDestructuredBindings)
+  if (
+    (enableRefTransform && shouldTransformRef(scriptSetup.content)) ||
+    propsDestructuredKeys.length
+  ) {
+    const { rootRefs, importedHelpers } = transformRefAST(
       scriptSetupAst,
       s,
       startOffset,
-      refBindings
+      refBindings,
+      propsDestructuredKeys,
+      !enableRefTransform
     )
-    refBindings = refBindings ? [...refBindings, ...rootVars] : rootVars
+    refBindings = refBindings ? [...refBindings, ...rootRefs] : rootRefs
     for (const h of importedHelpers) {
       helperImports.add(h)
     }
@@ -1313,6 +1358,8 @@ export function compileScript(
   }
 
   s.trim()
+
+  debugger
   return {
     ...scriptSetup,
     bindings: bindingMetadata,
@@ -1376,10 +1423,16 @@ function walkDeclaration(
           bindingType = BindingTypes.SETUP_LET
         }
         registerBinding(bindings, id, bindingType)
-      } else if (id.type === 'ObjectPattern') {
-        walkObjectPattern(id, bindings, isConst, isDefineCall)
-      } else if (id.type === 'ArrayPattern') {
-        walkArrayPattern(id, bindings, isConst, isDefineCall)
+      } else {
+        if (isCallOf(init, DEFINE_PROPS)) {
+          // skip walking props destructure
+          return
+        }
+        if (id.type === 'ObjectPattern') {
+          walkObjectPattern(id, bindings, isConst, isDefineCall)
+        } else if (id.type === 'ArrayPattern') {
+          walkArrayPattern(id, bindings, isConst, isDefineCall)
+        }
       }
     }
   } else if (
