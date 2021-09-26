@@ -250,8 +250,7 @@ export function compileScript(
   let hasDefineExposeCall = false
   let propsRuntimeDecl: Node | undefined
   let propsRuntimeDefaults: ObjectExpression | undefined
-  const propsDestructuredBindings: Record<string, Expression | true> =
-    Object.create(null)
+  let propsDestructureDecl: Node | undefined
   let propsTypeDecl: TSTypeLiteral | TSInterfaceBody | undefined
   let propsTypeDeclRaw: Node | undefined
   let propsIdentifier: string | undefined
@@ -270,6 +269,14 @@ export function compileScript(
   const typeDeclaredEmits: Set<string> = new Set()
   // record declared types for runtime props type generation
   const declaredTypes: Record<string, string[]> = {}
+  // props destructure data
+  const propsDestructuredBindings: Record<
+    string, // public prop key
+    {
+      local: string // local identifier, may be different
+      default?: Expression
+    }
+  > = Object.create(null)
 
   // magic-string state
   const s = new MagicString(source)
@@ -380,9 +387,17 @@ export function compileScript(
 
     if (declId) {
       if (declId.type === 'ObjectPattern') {
+        propsDestructureDecl = declId
         // props destructure - handle compilation sugar
         for (const prop of declId.properties) {
           if (prop.type === 'ObjectProperty') {
+            if (prop.computed) {
+              error(
+                `${DEFINE_PROPS}() destructure cannot use computed key.`,
+                prop.key
+              )
+            }
+            const propKey = (prop.key as Identifier).name
             if (prop.value.type === 'AssignmentPattern') {
               // default value { foo = 123 }
               const { left, right } = prop.value
@@ -393,10 +408,15 @@ export function compileScript(
                 )
               }
               // store default value
-              propsDestructuredBindings[left.name] = right
+              propsDestructuredBindings[propKey] = {
+                local: left.name,
+                default: right
+              }
             } else if (prop.value.type === 'Identifier') {
               // simple destucture
-              propsDestructuredBindings[prop.value.name] = true
+              propsDestructuredBindings[propKey] = {
+                local: prop.value.name
+              }
             } else {
               error(
                 `${DEFINE_PROPS}() destructure does not support nested patterns.`,
@@ -427,7 +447,7 @@ export function compileScript(
           node
         )
       }
-      if (Object.keys(propsDestructuredBindings).length) {
+      if (propsDestructureDecl) {
         error(
           `${WITH_DEFAULTS}() is unnecessary when using destructure with ${DEFINE_PROPS}().\n` +
             `Prefer using destructure default values, e.g. const { foo = 1 } = defineProps(...).`,
@@ -615,7 +635,7 @@ export function compileScript(
    * static properties, we can directly generate more optimzied default
    * declarations. Otherwise we will have to fallback to runtime merging.
    */
-  function checkStaticDefaults() {
+  function hasStaticWithDefaults() {
     return (
       propsRuntimeDefaults &&
       propsRuntimeDefaults.type === 'ObjectExpression' &&
@@ -632,13 +652,16 @@ export function compileScript(
     if (!keys.length) {
       return ``
     }
-    const hasStaticDefaults = checkStaticDefaults()
+    const hasStaticDefaults = hasStaticWithDefaults()
     const scriptSetupSource = scriptSetup!.content
     let propsDecls = `{
     ${keys
       .map(key => {
         let defaultString: string | undefined
-        if (hasStaticDefaults) {
+        const destructured = genDestructuredDefaultValue(key)
+        if (destructured) {
+          defaultString = `default: ${destructured}`
+        } else if (hasStaticDefaults) {
           const prop = propsRuntimeDefaults!.properties.find(
             (node: any) => node.key.name === key
           ) as ObjectProperty | ObjectMethod
@@ -682,9 +705,21 @@ export function compileScript(
     return `\n  props: ${propsDecls},`
   }
 
+  function genDestructuredDefaultValue(key: string): string | undefined {
+    const destructured = propsDestructuredBindings[key]
+    if (destructured && destructured.default) {
+      const value = scriptSetup!.content.slice(
+        destructured.default.start!,
+        destructured.default.end!
+      )
+      const isLiteral = destructured.default.type.endsWith('Literal')
+      return isLiteral ? value : `() => ${value}`
+    }
+  }
+
   function genSetupPropsType(node: TSTypeLiteral | TSInterfaceBody) {
     const scriptSetupSource = scriptSetup!.content
-    if (checkStaticDefaults()) {
+    if (hasStaticWithDefaults()) {
       // if withDefaults() is used, we need to remove the optional flags
       // on props that have default values
       let res = `{ `
@@ -1043,17 +1078,16 @@ export function compileScript(
   }
 
   // 3. Apply ref sugar transform
-  const propsDestructuredKeys = Object.keys(propsDestructuredBindings)
   if (
     (enableRefTransform && shouldTransformRef(scriptSetup.content)) ||
-    propsDestructuredKeys.length
+    propsDestructureDecl
   ) {
     const { rootRefs, importedHelpers } = transformRefAST(
       scriptSetupAst,
       s,
       startOffset,
       refBindings,
-      propsDestructuredKeys,
+      propsDestructuredBindings,
       !enableRefTransform
     )
     refBindings = refBindings ? [...refBindings, ...rootRefs] : rootRefs
@@ -1074,6 +1108,7 @@ export function compileScript(
   // variables
   checkInvalidScopeReference(propsRuntimeDecl, DEFINE_PROPS)
   checkInvalidScopeReference(propsRuntimeDefaults, DEFINE_PROPS)
+  checkInvalidScopeReference(propsDestructureDecl, DEFINE_PROPS)
   checkInvalidScopeReference(emitsRuntimeDecl, DEFINE_PROPS)
 
   // 6. remove non-script content
@@ -1280,9 +1315,22 @@ export function compileScript(
     runtimeOptions += `\n  __ssrInlineRender: true,`
   }
   if (propsRuntimeDecl) {
-    runtimeOptions += `\n  props: ${scriptSetup.content
+    let declCode = scriptSetup.content
       .slice(propsRuntimeDecl.start!, propsRuntimeDecl.end!)
-      .trim()},`
+      .trim()
+    if (propsDestructureDecl) {
+      const defaults: string[] = []
+      for (const key in propsDestructuredBindings) {
+        const d = genDestructuredDefaultValue(key)
+        if (d) defaults.push(`${key}: ${d}`)
+      }
+      if (defaults.length) {
+        declCode = `${helper(
+          `mergeDefaults`
+        )}(${declCode}, {\n  ${defaults.join(',\n  ')}\n})`
+      }
+    }
+    runtimeOptions += `\n  props: ${declCode},`
   } else if (propsTypeDecl) {
     runtimeOptions += genRuntimeProps(typeDeclaredProps)
   }

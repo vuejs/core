@@ -100,7 +100,13 @@ export function transformAST(
   s: MagicString,
   offset = 0,
   knownRefs?: string[],
-  knownProps?: string[],
+  knownProps?: Record<
+    string, // public prop key
+    {
+      local: string // local identifier, may be different
+      default?: any
+    }
+  >,
   rewritePropsOnly = false
 ): {
   rootRefs: string[]
@@ -117,6 +123,7 @@ export function transformAST(
   let currentScope: Scope = rootScope
   const excludedIds = new WeakSet<Identifier>()
   const parentStack: Node[] = []
+  const propsLocalToPublicMap = Object.create(null)
 
   if (knownRefs) {
     for (const key of knownRefs) {
@@ -124,8 +131,10 @@ export function transformAST(
     }
   }
   if (knownProps) {
-    for (const key of knownProps) {
-      rootScope[key] = 'prop'
+    for (const key in knownProps) {
+      const { local } = knownProps[key]
+      rootScope[local] = 'prop'
+      propsLocalToPublicMap[local] = key
     }
   }
 
@@ -348,14 +357,22 @@ export function transformAST(
             !(parent as any).inPattern ||
             isInDestructureAssignment(parent, parentStack)
           ) {
-            s.appendLeft(
-              id.end! + offset,
-              isProp ? `: __props.${id.name}` : `: ${id.name}.value`
-            )
+            if (isProp) {
+              s.appendLeft(
+                id.end! + offset,
+                `: __props.${propsLocalToPublicMap[id.name]}`
+              )
+            } else {
+              s.appendLeft(id.end! + offset, `: ${id.name}.value`)
+            }
           }
         } else {
           if (isProp) {
-            s.prependRight(id.start! + offset, `__props.`)
+            s.overwrite(
+              id.start! + offset,
+              id.end! + offset,
+              `__props.${propsLocalToPublicMap[id.name]}`
+            )
           } else {
             s.appendLeft(id.end! + offset, '.value')
           }
