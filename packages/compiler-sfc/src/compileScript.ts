@@ -251,6 +251,7 @@ export function compileScript(
   let propsRuntimeDecl: Node | undefined
   let propsRuntimeDefaults: ObjectExpression | undefined
   let propsDestructureDecl: Node | undefined
+  let propsDestructureRestId: string | undefined
   let propsTypeDecl: TSTypeLiteral | TSInterfaceBody | undefined
   let propsTypeDeclRaw: Node | undefined
   let propsIdentifier: string | undefined
@@ -424,7 +425,8 @@ export function compileScript(
               )
             }
           } else {
-            // TODO rest spread
+            // rest spread
+            propsDestructureRestId = (prop.argument as Identifier).name
           }
         }
       } else {
@@ -1142,6 +1144,20 @@ export function compileScript(
   for (const key in typeDeclaredProps) {
     bindingMetadata[key] = BindingTypes.PROPS
   }
+  // props aliases
+  if (propsDestructureDecl) {
+    if (propsDestructureRestId) {
+      bindingMetadata[propsDestructureRestId] = BindingTypes.SETUP_CONST
+    }
+    for (const key in propsDestructuredBindings) {
+      const { local } = propsDestructuredBindings[key]
+      if (local !== key) {
+        bindingMetadata[local] = BindingTypes.PROPS_ALIASED
+        ;(bindingMetadata.__propsAliases ||
+          (bindingMetadata.__propsAliases = {}))[local] = key
+      }
+    }
+  }
   for (const [key, { isType, imported, source }] of Object.entries(
     userImports
   )) {
@@ -1196,6 +1212,14 @@ export function compileScript(
       `\nconst ${propsIdentifier} = __props${
         propsTypeDecl ? ` as ${genSetupPropsType(propsTypeDecl)}` : ``
       }`
+    )
+  }
+  if (propsDestructureRestId) {
+    s.prependRight(
+      startOffset,
+      `\nconst ${propsDestructureRestId} = ${helper(
+        `createPropsRestProxy`
+      )}(__props, ${JSON.stringify(Object.keys(propsDestructuredBindings))})`
     )
   }
   // inject temp variables for async context preservation
@@ -1407,7 +1431,6 @@ export function compileScript(
 
   s.trim()
 
-  debugger
   return {
     ...scriptSetup,
     bindings: bindingMetadata,

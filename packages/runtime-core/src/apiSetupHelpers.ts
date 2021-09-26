@@ -219,6 +219,24 @@ export function mergeDefaults(
 }
 
 /**
+ * Used to create a proxy for the rest element when destructuring props with
+ * defineProps().
+ * @internal
+ */
+export function createPropsRestProxy(props: any, excludedKeys: string[]) {
+  const ret = {}
+  for (const key in props) {
+    if (!excludedKeys.includes(key)) {
+      Object.defineProperty(ret, key, {
+        enumerable: true,
+        get: () => props[key]
+      })
+    }
+  }
+  return ret
+}
+
+/**
  * `<script setup>` helper for persisting the current instance context over
  * async/await flows.
  *
