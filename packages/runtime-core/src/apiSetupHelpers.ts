@@ -194,7 +194,7 @@ function getContext(): SetupContext {
 export function mergeDefaults(
   raw: ComponentPropsOptions,
   defaults: Record<string, any>
-) {
+): ComponentObjectPropsOptions {
   const props = isArray(raw)
     ? raw.reduce(
         (normalized, p) => ((normalized[p] = {}), normalized),
@@ -223,8 +223,11 @@ export function mergeDefaults(
  * defineProps().
  * @internal
  */
-export function createPropsRestProxy(props: any, excludedKeys: string[]) {
-  const ret = {}
+export function createPropsRestProxy(
+  props: any,
+  excludedKeys: string[]
+): Record<string, any> {
+  const ret: Record<string, any> = {}
   for (const key in props) {
     if (!excludedKeys.includes(key)) {
       Object.defineProperty(ret, key, {

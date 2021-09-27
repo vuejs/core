@@ -90,9 +90,15 @@ export interface SFCScriptCompileOptions {
   /**
    * (Experimental) Enable syntax transform for using refs without `.value`
    * https://github.com/vuejs/rfcs/discussions/369
-   * @default true
+   * @default false
    */
   refTransform?: boolean
+  /**
+   * (Experimental) Enable syntax transform for destructuring from defineProps()
+   * https://github.com/vuejs/rfcs/discussions/394
+   * @default false
+   */
+  propsDestructureTransform?: boolean
   /**
    * @deprecated use `refTransform` instead.
    */
@@ -133,6 +139,8 @@ export function compileScript(
   let { script, scriptSetup, source, filename } = sfc
   // feature flags
   const enableRefTransform = !!options.refSugar || !!options.refTransform
+  const enablePropsTransform = !!options.propsDestructureTransform
+  const isProd = !!options.isProd
   const genSourceMap = options.sourceMap !== false
   let refBindings: string[] | undefined
 
@@ -205,7 +213,7 @@ export function compileScript(
           cssVars,
           bindings,
           scopeId,
-          !!options.isProd
+          isProd
         )
         content += `\nexport default __default__`
       }
@@ -387,7 +395,7 @@ export function compileScript(
     }
 
     if (declId) {
-      if (declId.type === 'ObjectPattern') {
+      if (enablePropsTransform && declId.type === 'ObjectPattern') {
         propsDestructureDecl = declId
         // props destructure - handle compilation sugar
         for (const prop of declId.properties) {
@@ -683,7 +691,7 @@ export function compileScript(
           }
         }
 
-        if (__DEV__) {
+        if (!isProd) {
           const { type, required } = props[key]
           return `${key}: { type: ${toRuntimeTypeString(
             type
@@ -1100,7 +1108,7 @@ export function compileScript(
 
   // 4. extract runtime props/emits code from setup context type
   if (propsTypeDecl) {
-    extractRuntimeProps(propsTypeDecl, typeDeclaredProps, declaredTypes)
+    extractRuntimeProps(propsTypeDecl, typeDeclaredProps, declaredTypes, isProd)
   }
   if (emitsTypeDecl) {
     extractRuntimeEmits(emitsTypeDecl, typeDeclaredEmits)
@@ -1186,12 +1194,7 @@ export function compileScript(
     helperImports.add('unref')
     s.prependRight(
       startOffset,
-      `\n${genCssVarsCode(
-        cssVars,
-        bindingMetadata,
-        scopeId,
-        !!options.isProd
-      )}\n`
+      `\n${genCssVarsCode(cssVars, bindingMetadata, scopeId, isProd)}\n`
     )
   }
 
@@ -1612,7 +1615,8 @@ function recordType(node: Node, declaredTypes: Record<string, string[]>) {
 function extractRuntimeProps(
   node: TSTypeLiteral | TSInterfaceBody,
   props: Record<string, PropTypeData>,
-  declaredTypes: Record<string, string[]>
+  declaredTypes: Record<string, string[]>,
+  isProd: boolean
 ) {
   const members = node.type === 'TSTypeLiteral' ? node.members : node.body
   for (const m of members) {
@@ -1621,7 +1625,7 @@ function extractRuntimeProps(
       m.key.type === 'Identifier'
     ) {
       let type
-      if (__DEV__) {
+      if (!isProd) {
         if (m.type === 'TSMethodSignature') {
           type = ['Function']
         } else if (m.typeAnnotation) {

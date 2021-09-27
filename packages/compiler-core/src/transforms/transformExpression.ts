@@ -190,13 +190,14 @@ export function processExpression(
         return `__props.${raw}`
       } else if (type === BindingTypes.PROPS_ALIASED) {
         // prop with a different local alias (from defineProps() destructure)
-        const propKey = bindingMetadata.__propsAliases![raw]
-        return `__props.${propKey}`
+        return `__props.${bindingMetadata.__propsAliases![raw]}`
       }
     } else {
       if (type && type.startsWith('setup')) {
         // setup bindings in non-inline mode
         return `$setup.${raw}`
+      } else if (type === BindingTypes.PROPS_ALIASED) {
+        return `$props.${bindingMetadata.__propsAliases![raw]}`
       } else if (type) {
         return `$${type}.${raw}`
       }
