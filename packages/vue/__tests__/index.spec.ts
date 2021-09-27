@@ -131,7 +131,7 @@ describe('compiler + runtime integration', () => {
     ).toHaveBeenWarned()
   })
 
-  it('should support custom element by config.isCustomElement (deprecated)', () => {
+  it('should support custom element via config.isCustomElement (deprecated)', () => {
     const app = createApp({
       template: '<custom></custom>'
     })
@@ -141,7 +141,7 @@ describe('compiler + runtime integration', () => {
     expect(container.innerHTML).toBe('<custom></custom>')
   })
 
-  it('should support custom element by config.compilerOptions.isCustomElement', () => {
+  it('should support custom element via config.compilerOptions.isCustomElement', () => {
     const app = createApp({
       template: '<custom></custom>'
     })
