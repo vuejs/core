@@ -19,7 +19,8 @@ import {
   nextTick,
   warn,
   ConcreteComponent,
-  ComponentOptions
+  ComponentOptions,
+  Component
 } from '@vue/runtime-core'
 import { camelize, extend, hyphenate, isArray, toNumber } from '@vue/shared'
 import { hydrate, render } from '.'
@@ -215,7 +216,7 @@ export class VueElement extends BaseClass {
 
     const resolve = (def: InnerComponentDef) => {
       this._resolved = true
-      const { props, styles } = def
+      const { props } = def
       const hasOptions = !isArray(props)
       const rawKeys = props ? (hasOptions ? Object.keys(props) : props) : []
 
@@ -252,7 +253,7 @@ export class VueElement extends BaseClass {
           }
         })
       }
-      this._applyStyles(styles)
+      this._applyStyles(this._getChildrenComponentsStyles(def))
     }
 
     const asyncDef = (this._def as ComponentOptions).__asyncLoader
@@ -366,5 +367,43 @@ export class VueElement extends BaseClass {
         }
       })
     }
+  }
+
+  private _getChildrenComponentsStyles(
+    component: Component & {
+      components?: Record<string, Component>
+      styles?: string[]
+    }
+  ): string[] {
+    let componentStyles: string[] = []
+
+    if (component.components) {
+      componentStyles = Object.values(component.components).reduce(
+        (
+          aggregatedStyles: string[],
+          nestedComponent: Component & {
+            components?: Record<string, Component>
+            styles?: string[]
+          }
+        ) => {
+          if (nestedComponent?.components) {
+            aggregatedStyles = [
+              ...aggregatedStyles,
+              ...this._getChildrenComponentsStyles(nestedComponent)
+            ]
+          }
+          return nestedComponent.styles
+            ? [...aggregatedStyles, ...nestedComponent.styles]
+            : aggregatedStyles
+        },
+        [] as string[]
+      )
+    }
+
+    if (component.styles) {
+      componentStyles.push(...component.styles)
+    }
+
+    return componentStyles
   }
 }

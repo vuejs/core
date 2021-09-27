@@ -1,6 +1,7 @@
 import {
   defineAsyncComponent,
   defineCustomElement,
+  defineComponent,
   h,
   inject,
   nextTick,
@@ -313,6 +314,48 @@ describe('defineCustomElement', () => {
       const el = container.childNodes[0] as VueElement
       const style = el.shadowRoot?.querySelector('style')!
       expect(style.textContent).toBe(`div { color: red; }`)
+    })
+
+    test('should attach styles of children components to shadow dom', () => {
+      const Bar = defineComponent({
+        styles: [`.green-color { color: green; }`],
+        render() {
+          return h(
+            'h1',
+            {
+              attrs: { class: 'green-color' }
+            },
+            'hello'
+          )
+        }
+      })
+      const Foo = defineComponent({
+        components: { Bar },
+        styles: [`.blue-back { color: blue; }`],
+        render() {
+          return h(
+            'span',
+            {
+              attrs: { class: 'blue-back' }
+            },
+            '<bar></bar>'
+          )
+        }
+      })
+
+      const FooBar = defineCustomElement({
+        components: { Foo },
+        styles: [`div { color: red; }`],
+        render() {
+          return h('div', '<foo/>')
+        }
+      })
+      customElements.define('my-el-with-nested-styles', FooBar)
+      container.innerHTML = `<my-el-with-nested-styles></my-el-with-nested-styles>`
+      const el = container.childNodes[0] as VueElement
+      const style = el.shadowRoot?.querySelectorAll('style')!
+      expect(style[0].textContent).toBe(`.green-color { color: green; }`)
+      expect(style[1].textContent).toBe(`.blue-back { color: blue; }`)
     })
   })
 
