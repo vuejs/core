@@ -330,6 +330,7 @@ export function createAppAPI<HostElement>(
           )
         }
       },
+
       unmount() {
         if (isMounted) {
           render(null, app._container)
