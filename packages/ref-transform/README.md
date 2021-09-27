@@ -64,7 +64,9 @@ const {
   // @babel/parser plugins to enable.
   // 'typescript' and 'jsx' will be auto-inferred from filename if provided,
   // so in most cases explicit parserPlugins are not necessary
-  parserPlugins: [/* ... */]
+  parserPlugins: [
+    /* ... */
+  ]
 })
 ```
 
@@ -93,7 +95,7 @@ const ast = parse(src, { sourceType: 'module' })
 const s = new MagicString(src)
 
 const {
-  rootVars, // ['a']
+  rootRefs, // ['a']
   importedHelpers // ['ref']
 } = transformAST(ast, s)
 

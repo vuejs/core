@@ -920,10 +920,10 @@
   resolved "https://registry.yarnpkg.com/@vue/consolidate/-/consolidate-0.17.3.tgz#9614d25a2eb263fa5df18ce98b0a576142e0ec83"
   integrity sha512-nl0SWcTMzaaTnJ5G6V8VlMDA1CVVrNnaQKF1aBZU3kXtjgU9jtHMsEAsgjoRUx+T0EVJk9TgbmxGhK3pOk22zw==
 
-"@vue/repl@^0.4.1":
-  version "0.4.1"
-  resolved "https://registry.yarnpkg.com/@vue/repl/-/repl-0.4.1.tgz#b2062bea2baa077520eb01b87df51fff357961be"
-  integrity sha512-Rq9q0MHRA0YRGBE2VSFL5ZkllqLK5HnFK9/+6Iu75M39BZAacwf808fHPTN0bhYGkJ63ur2i0sEYnnNzWzluPg==
+"@vue/repl@^0.4.2":
+  version "0.4.2"
+  resolved "https://registry.yarnpkg.com/@vue/repl/-/repl-0.4.2.tgz#594d36061201195222bc91d187cd766d692f2046"
+  integrity sha512-Spg+M7dENa0jfjEhb2odLP5uqy28fBAMmURL+vFQUIkxcvtFaMkKY3viklhFqacfQqD6YTZfnLWSXyB+F6r/eQ==
 
 "@zeit/schemas@2.6.0":
   version "2.6.0"

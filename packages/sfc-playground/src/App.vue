@@ -16,13 +16,27 @@ const store = new ReplStore({
     : `${location.origin}/src/vue-dev-proxy`
 })
 
+// enable experimental features
+const sfcOptions = {
+  script: {
+    refTransform: true,
+    propsDestructureTransform: true
+  }
+}
+
 // persist state
 watchEffect(() => history.replaceState({}, '', store.serialize()))
 </script>
 
 <template>
   <Header :store="store" />
-  <Repl :store="store" :showCompileOutput="true" :autoResize="true" />
+  <Repl
+    :store="store"
+    :showCompileOutput="true"
+    :autoResize="true"
+    :sfcOptions="sfcOptions"
+    :clearConsole="false"
+  />
 </template>
 
 <style>

@@ -31,7 +31,7 @@ export function shouldTransform(src: string): boolean {
   return transformCheckRE.test(src)
 }
 
-type Scope = Record<string, boolean>
+type Scope = Record<string, boolean | 'prop'>
 
 export interface RefTransformOptions {
   filename?: string
@@ -43,7 +43,7 @@ export interface RefTransformOptions {
 export interface RefTransformResults {
   code: string
   map: SourceMap | null
-  rootVars: string[]
+  rootRefs: string[]
   importedHelpers: string[]
 }
 
@@ -99,13 +99,23 @@ export function transformAST(
   ast: Program,
   s: MagicString,
   offset = 0,
-  knownRootVars?: string[]
+  knownRefs?: string[],
+  knownProps?: Record<
+    string, // public prop key
+    {
+      local: string // local identifier, may be different
+      default?: any
+    }
+  >,
+  rewritePropsOnly = false
 ): {
-  rootVars: string[]
+  rootRefs: string[]
   importedHelpers: string[]
 } {
   // TODO remove when out of experimental
-  warnExperimental()
+  if (!rewritePropsOnly) {
+    warnExperimental()
+  }
 
   const importedHelpers = new Set<string>()
   const rootScope: Scope = {}
@@ -113,14 +123,23 @@ export function transformAST(
   let currentScope: Scope = rootScope
   const excludedIds = new WeakSet<Identifier>()
   const parentStack: Node[] = []
+  const propsLocalToPublicMap = Object.create(null)
 
-  if (knownRootVars) {
-    for (const key of knownRootVars) {
+  if (knownRefs) {
+    for (const key of knownRefs) {
       rootScope[key] = true
+    }
+  }
+  if (knownProps) {
+    for (const key in knownProps) {
+      const { local } = knownProps[key]
+      rootScope[local] = 'prop'
+      propsLocalToPublicMap[local] = key
     }
   }
 
   function error(msg: string, node: Node) {
+    if (rewritePropsOnly) return
     const e = new Error(msg)
     ;(e as any).node = node
     throw e
@@ -145,17 +164,19 @@ export function transformAST(
 
   const registerRefBinding = (id: Identifier) => registerBinding(id, true)
 
-  function walkScope(node: Program | BlockStatement) {
+  function walkScope(node: Program | BlockStatement, isRoot = false) {
     for (const stmt of node.body) {
       if (stmt.type === 'VariableDeclaration') {
         if (stmt.declare) continue
         for (const decl of stmt.declarations) {
           let toVarCall
-          if (
+          const isCall =
             decl.init &&
             decl.init.type === 'CallExpression' &&
-            decl.init.callee.type === 'Identifier' &&
-            (toVarCall = isToVarCall(decl.init.callee.name))
+            decl.init.callee.type === 'Identifier'
+          if (
+            isCall &&
+            (toVarCall = isToVarCall((decl as any).init.callee.name))
           ) {
             processRefDeclaration(
               toVarCall,
@@ -164,8 +185,18 @@ export function transformAST(
               stmt
             )
           } else {
+            const isProps =
+              isRoot &&
+              isCall &&
+              (decl as any).init.callee.name === 'defineProps'
             for (const id of extractIdentifiers(decl.id)) {
-              registerBinding(id)
+              if (isProps) {
+                // for defineProps destructure, only exclude them since they
+                // are already passed in as knownProps
+                excludedIds.add(id)
+              } else {
+                registerBinding(id)
+              }
             }
           }
         }
@@ -303,26 +334,48 @@ export function transformAST(
     }
   }
 
-  function checkRefId(
+  function rewriteId(
     scope: Scope,
     id: Identifier,
     parent: Node,
     parentStack: Node[]
   ): boolean {
     if (hasOwn(scope, id.name)) {
-      if (scope[id.name]) {
+      const bindingType = scope[id.name]
+      if (bindingType) {
+        const isProp = bindingType === 'prop'
+        if (rewritePropsOnly && !isProp) {
+          return true
+        }
+        // ref
         if (isStaticProperty(parent) && parent.shorthand) {
           // let binding used in a property shorthand
           // { foo } -> { foo: foo.value }
+          // { prop } -> { prop: __prop.prop }
           // skip for destructure patterns
           if (
             !(parent as any).inPattern ||
             isInDestructureAssignment(parent, parentStack)
           ) {
-            s.appendLeft(id.end! + offset, `: ${id.name}.value`)
+            if (isProp) {
+              s.appendLeft(
+                id.end! + offset,
+                `: __props.${propsLocalToPublicMap[id.name]}`
+              )
+            } else {
+              s.appendLeft(id.end! + offset, `: ${id.name}.value`)
+            }
           }
         } else {
-          s.appendLeft(id.end! + offset, '.value')
+          if (isProp) {
+            s.overwrite(
+              id.start! + offset,
+              id.end! + offset,
+              `__props.${propsLocalToPublicMap[id.name]}`
+            )
+          } else {
+            s.appendLeft(id.end! + offset, '.value')
+          }
         }
       }
       return true
@@ -331,7 +384,7 @@ export function transformAST(
   }
 
   // check root scope first
-  walkScope(ast)
+  walkScope(ast, true)
   ;(walk as any)(ast, {
     enter(node: Node, parent?: Node) {
       parent && parentStack.push(parent)
@@ -371,7 +424,7 @@ export function transformAST(
         // walk up the scope chain to check if id should be appended .value
         let i = scopeStack.length
         while (i--) {
-          if (checkRefId(scopeStack[i], node, parent!, parentStack)) {
+          if (rewriteId(scopeStack[i], node, parent!, parentStack)) {
             return
           }
         }
@@ -424,7 +477,7 @@ export function transformAST(
   })
 
   return {
-    rootVars: Object.keys(rootScope).filter(key => rootScope[key]),
+    rootRefs: Object.keys(rootScope).filter(key => rootScope[key] === true),
     importedHelpers: [...importedHelpers]
   }
 }
