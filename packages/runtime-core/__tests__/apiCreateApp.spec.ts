@@ -313,7 +313,7 @@ describe('api: createApp', () => {
     ).toHaveBeenWarnedTimes(1)
   })
 
-  test.only('onUnmount', () => {
+  test('onUnmount', () => {
     const cleanup = jest.fn().mockName('plugin cleanup')
     const PluginA: Plugin = app => {
       app.provide('foo', 1)
