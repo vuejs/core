@@ -392,6 +392,7 @@ export class VueElement extends BaseClass {
               ...this._getChildrenComponentsStyles(nestedComponent)
             ]
           }
+          // Should have a method that adds styles only if not existing
           return nestedComponent.styles
             ? [...aggregatedStyles, ...nestedComponent.styles]
             : aggregatedStyles
@@ -404,6 +405,6 @@ export class VueElement extends BaseClass {
       componentStyles.push(...component.styles)
     }
 
-    return componentStyles
+    return [...new Set(componentStyles)]
   }
 }

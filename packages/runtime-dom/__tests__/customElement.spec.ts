@@ -354,8 +354,11 @@ describe('defineCustomElement', () => {
       container.innerHTML = `<my-el-with-nested-styles></my-el-with-nested-styles>`
       const el = container.childNodes[0] as VueElement
       const style = el.shadowRoot?.querySelectorAll('style')!
+
+      expect(style.length).toBe(3)
       expect(style[0].textContent).toBe(`.green-color { color: green; }`)
       expect(style[1].textContent).toBe(`.blue-back { color: blue; }`)
+      expect(style[2].textContent).toBe(`div { color: red; }`)
     })
   })
 
