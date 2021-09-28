@@ -1323,7 +1323,7 @@ return { Foo }
 })"
 `;
 
-exports[`SFC compile <script setup> with TypeScript runtime Enum w/ normal script 1`] = `
+exports[`SFC compile <script setup> with TypeScript runtime Enum in normal script 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 enum Foo { A = 123 }
         
