@@ -457,6 +457,47 @@ describe('compiler: parse', () => {
       })
     })
 
+    test('simple div with interpolation ', () => {
+      const ast = baseParse('<div>{{ msg }}</div>')
+      const element = ast.children[0] as ElementNode
+
+      expect(element).toStrictEqual({
+        type: NodeTypes.ELEMENT,
+        ns: Namespaces.HTML,
+        tag: 'div',
+        tagType: ElementTypes.ELEMENT,
+        codegenNode: undefined,
+        props: [],
+        isSelfClosing: false,
+        children: [
+          {
+            type: NodeTypes.INTERPOLATION,
+            content: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: `msg`,
+              isStatic: false,
+              constType: ConstantTypes.NOT_CONSTANT,
+              loc: {
+                start: { offset: 8, line: 1, column: 9 },
+                end: { offset: 11, line: 1, column: 12 },
+                source: 'msg'
+              }
+            },
+            loc: {
+              start: { offset: 5, line: 1, column: 6 },
+              end: { offset: 14, line: 1, column: 15 },
+              source: '{{ msg }}'
+            }
+          }
+        ],
+        loc: {
+          start: { offset: 0, line: 1, column: 1 },
+          end: { offset: 20, line: 1, column: 21 },
+          source: '<div>{{ msg }}</div>'
+        }
+      })
+    })
+
     test('empty', () => {
       const ast = baseParse('<div></div>')
       const element = ast.children[0] as ElementNode
