@@ -1042,6 +1042,26 @@ const emit = defineEmits(['a', 'b'])
       })
     })
 
+    test('runtime Enum w/ normal script', () => {
+      const { content, bindings } = compile(
+        `<script lang="ts">
+          export enum D { D = "D" }
+          const enum C { C = "C" }
+          enum B { B = "B" }
+        </script>
+        <script setup lang="ts">
+        enum Foo { A = 123 }
+        </script>`
+      )
+      assertCode(content)
+      expect(bindings).toStrictEqual({
+        D: BindingTypes.SETUP_CONST,
+        C: BindingTypes.SETUP_CONST,
+        B: BindingTypes.SETUP_CONST,
+        Foo: BindingTypes.SETUP_CONST
+      })
+    })
+
     test('const Enum', () => {
       const { content, bindings } = compile(
         `<script setup lang="ts">

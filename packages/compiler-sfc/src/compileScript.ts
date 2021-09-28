@@ -840,7 +840,8 @@ export function compileScript(
       } else if (
         (node.type === 'VariableDeclaration' ||
           node.type === 'FunctionDeclaration' ||
-          node.type === 'ClassDeclaration') &&
+          node.type === 'ClassDeclaration' ||
+          node.type === 'TSEnumDeclaration') &&
         !node.declare
       ) {
         walkDeclaration(node, scriptBindings, userImportAlias)
@@ -1510,6 +1511,7 @@ function walkDeclaration(
       }
     }
   } else if (
+    node.type === 'TSEnumDeclaration' ||
     node.type === 'FunctionDeclaration' ||
     node.type === 'ClassDeclaration'
   ) {
