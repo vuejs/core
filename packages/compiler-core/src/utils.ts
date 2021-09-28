@@ -189,10 +189,10 @@ export const isMemberExpression = __BROWSER__
 export function getInnerRange(
   loc: SourceLocation,
   offset: number,
-  length?: number
+  length: number
 ): SourceLocation {
   __TEST__ && assert(offset <= loc.source.length)
-  const source = loc.source.substr(offset, length)
+  const source = loc.source.substring(offset, offset + length)
   const newLoc: SourceLocation = {
     source,
     start: advancePositionWithClone(loc.start, loc.source, offset),
