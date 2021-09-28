@@ -1042,7 +1042,7 @@ const emit = defineEmits(['a', 'b'])
       })
     })
 
-    test('runtime Enum w/ normal script', () => {
+    test('runtime Enum in normal script', () => {
       const { content, bindings } = compile(
         `<script lang="ts">
           export enum D { D = "D" }
