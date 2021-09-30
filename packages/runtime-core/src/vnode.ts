@@ -54,6 +54,8 @@ export const Text = Symbol(__DEV__ ? 'Text' : undefined)
 export const Comment = Symbol(__DEV__ ? 'Comment' : undefined)
 export const Static = Symbol(__DEV__ ? 'Static' : undefined)
 
+export type VNodeKey = string | number | symbol
+
 export type VNodeTypes =
   | string
   | VNode
@@ -91,7 +93,7 @@ export type VNodeHook =
 
 // https://github.com/microsoft/TypeScript/issues/33099
 export type VNodeProps = {
-  key?: string | number | symbol
+  key?: VNodeKey
   ref?: VNodeRef
   ref_for?: boolean
   ref_key?: string
@@ -141,7 +143,7 @@ export interface VNode<
 
   type: VNodeTypes
   props: (VNodeProps & ExtraProps) | null
-  key: string | number | symbol | null
+  key: VNodeKey | null
   ref: VNodeNormalizedRef | null
   /**
    * SFC only. This is assigned on vnode creation using currentScopeId

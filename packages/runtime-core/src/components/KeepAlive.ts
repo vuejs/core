@@ -12,6 +12,7 @@ import {
   VNode,
   cloneVNode,
   isVNode,
+  VNodeKey,
   VNodeProps,
   invokeVNodeHook
 } from '../vnode'
@@ -51,7 +52,7 @@ export interface KeepAliveProps {
   max?: number | string
 }
 
-type CacheKey = string | number | symbol | ConcreteComponent
+type CacheKey = VNodeKey | ConcreteComponent
 type Cache = Map<CacheKey, VNode>
 type Keys = Set<CacheKey>
 

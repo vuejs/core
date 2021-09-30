@@ -194,6 +194,7 @@ export {
 export {
   VNode,
   VNodeChild,
+  VNodeKey,
   VNodeTypes,
   VNodeProps,
   VNodeArrayChildren,

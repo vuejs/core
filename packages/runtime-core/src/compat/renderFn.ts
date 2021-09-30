@@ -30,6 +30,7 @@ import {
   normalizeChildren,
   VNode,
   VNodeArrayChildren,
+  VNodeKey,
   VNodeProps
 } from '../vnode'
 import {
@@ -68,7 +69,7 @@ export function convertLegacyRenderFn(instance: ComponentInternalInstance) {
 }
 
 interface LegacyVNodeProps {
-  key?: string | number
+  key?: VNodeKey
   ref?: string
   refInFor?: boolean
 

@@ -26,7 +26,7 @@
 //                 Kanitkorn Sujautra <https://github.com/lukyth>
 //                 Sebastian Silbermann <https://github.com/eps1lon>
 
-import { VNode } from '@vue/runtime-core'
+import { VNodeKey, VNode } from '@vue/runtime-core'
 import * as CSS from 'csstype'
 
 export interface CSSProperties
@@ -1307,7 +1307,7 @@ type EventHandlers<E> = {
 import * as RuntimeCore from '@vue/runtime-core'
 
 type ReservedProps = {
-  key?: string | number | symbol
+  key?: VNodeKey
   ref?:
     | string
     | RuntimeCore.Ref
