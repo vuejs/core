@@ -42,7 +42,7 @@ export const decodeHtml: ParserOptions['decodeEntities'] = (
           )
         }
         for (let length = maxCRNameLength; !value && length > 0; --length) {
-          name = rawText.substring(1, 1 + length)
+          name = rawText.slice(1, 1 + length)
           value = (namedCharacterReferences as Record<string, string>)[name]
         }
         if (value) {

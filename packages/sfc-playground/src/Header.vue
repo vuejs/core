@@ -60,7 +60,7 @@ async function fetchVersions(): Promise<string[]> {
   )
   const releases: any[] = await res.json()
   const versions = releases.map(r =>
-    /^v/.test(r.tag_name) ? r.tag_name.substring(1) : r.tag_name
+    /^v/.test(r.tag_name) ? r.tag_name.slice(1) : r.tag_name
   )
   // if the latest version is a pre-release, list all current pre-releases
   // otherwise filter out pre-releases
