@@ -65,7 +65,7 @@ const DEFINE_EMITS = 'defineEmits'
 const DEFINE_EXPOSE = 'defineExpose'
 const WITH_DEFAULTS = 'withDefaults'
 
-const isBuiltInDir = makeMap(
+const isBuiltInDir = /*#__PURE__*/ makeMap(
   `once,memo,if,else,else-if,slot,text,html,on,bind,model,show,cloak,is`
 )
 
