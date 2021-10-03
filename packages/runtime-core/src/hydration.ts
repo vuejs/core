@@ -28,19 +28,13 @@ export type RootHydrateFunction = (
   container: Element | ShadowRoot
 ) => void
 
-const enum DOMNodeTypes {
-  ELEMENT = 1,
-  TEXT = 3,
-  COMMENT = 8
-}
-
 let hasMismatch = false
 
 const isSVGContainer = (container: Element) =>
   /svg/.test(container.namespaceURI!) && container.tagName !== 'foreignObject'
 
 const isComment = (node: Node): node is Comment =>
-  node.nodeType === DOMNodeTypes.COMMENT
+  node.nodeType === Node.COMMENT_NODE
 
 // Note: hydration is DOM-specific
 // But we have to place it in core due to tight coupling with core - splitting
@@ -102,7 +96,7 @@ export function createHydrationFunctions(
     let nextNode: Node | null = null
     switch (type) {
       case Text:
-        if (domType !== DOMNodeTypes.TEXT) {
+        if (domType !== Node.TEXT_NODE) {
           nextNode = onMismatch()
         } else {
           if ((node as Text).data !== vnode.children) {
@@ -119,14 +113,14 @@ export function createHydrationFunctions(
         }
         break
       case Comment:
-        if (domType !== DOMNodeTypes.COMMENT || isFragmentStart) {
+        if (domType !== Node.COMMENT_NODE || isFragmentStart) {
           nextNode = onMismatch()
         } else {
           nextNode = nextSibling(node)
         }
         break
       case Static:
-        if (domType !== DOMNodeTypes.ELEMENT) {
+        if (domType !== Node.ELEMENT_NODE) {
           nextNode = onMismatch()
         } else {
           // determine anchor, adopt content
@@ -162,7 +156,7 @@ export function createHydrationFunctions(
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
           if (
-            domType !== DOMNodeTypes.ELEMENT ||
+            domType !== Node.ELEMENT_NODE ||
             (vnode.type as string).toLowerCase() !==
               (node as Element).tagName.toLowerCase()
           ) {
@@ -213,13 +207,13 @@ export function createHydrationFunctions(
                 : container.lastChild
             } else {
               subTree =
-                node.nodeType === 3 ? createTextVNode('') : createVNode('div')
+                node.nodeType === Node.TEXT_NODE ? createTextVNode('') : createVNode('div')
             }
             subTree.el = node
             vnode.component!.subTree = subTree
           }
         } else if (shapeFlag & ShapeFlags.TELEPORT) {
-          if (domType !== DOMNodeTypes.COMMENT) {
+          if (domType !== Node.COMMENT_NODE) {
             nextNode = onMismatch()
           } else {
             nextNode = (vnode.type as typeof TeleportImpl).hydrate(
@@ -479,7 +473,7 @@ export function createHydrationFunctions(
         vnode.type,
         `\n- Server rendered DOM:`,
         node,
-        node.nodeType === DOMNodeTypes.TEXT
+        node.nodeType === Node.TEXT_NODE
           ? `(text)`
           : isComment(node) && node.data === '['
           ? `(start of fragment)`

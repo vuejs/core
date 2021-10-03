@@ -66,7 +66,7 @@ function setVarsOnVNode(vnode: VNode, vars: Record<string, string>) {
 }
 
 function setVarsOnNode(el: Node, vars: Record<string, string>) {
-  if (el.nodeType === 1) {
+  if (el.nodeType === Node.ELEMENT_NODE) {
     const style = (el as HTMLElement).style
     for (const key in vars) {
       style.setProperty(`--${key}`, vars[key])

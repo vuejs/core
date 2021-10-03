@@ -211,7 +211,7 @@ function hasCSSTransform(
   moveClass.split(/\s+/).forEach(c => c && clone.classList.add(c))
   clone.style.display = 'none'
   const container = (
-    root.nodeType === 1 ? root : root.parentNode
+    root.nodeType === Node.ELEMENT_NODE ? root : root.parentNode
   ) as HTMLElement
   container.appendChild(clone)
   const { hasTransform } = getTransitionInfo(clone)
