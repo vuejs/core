@@ -65,7 +65,7 @@ export function isRef(r: any): r is Ref {
   return Boolean(r && r.__v_isRef === true)
 }
 
-export function ref<T extends object>(value: T): ToRef<T>
+export function ref<T extends object>(value: T): [T] extends [Ref] ? T : Ref<UnwrapRef<T>>
 export function ref<T>(value: T): Ref<UnwrapRef<T>>
 export function ref<T = any>(): Ref<T | undefined>
 export function ref(value?: unknown) {
@@ -212,7 +212,7 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
   }
 }
 
-export type ToRef<T> = [T] extends [Ref] ? T : Ref<UnwrapRef<T>>
+export type ToRef<T> = [T] extends [Ref] ? T : Ref<T>
 export function toRef<T extends object, K extends keyof T>(
   object: T,
   key: K

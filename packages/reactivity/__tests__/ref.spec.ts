@@ -268,6 +268,16 @@ describe('reactivity/ref', () => {
     // should keep ref
     const r = { x: ref(1) }
     expect(toRef(r, 'x')).toBe(r.x)
+
+    // #4732
+    const baz = {
+      foo: {
+        bar: ref(42)
+      }
+    }
+    const foo = toRef(baz, 'foo')
+    expect(isRef(foo.value.bar)).toBe(true)
+    expect(foo.value.bar.value).toBe(42)
   })
 
   test('toRefs', () => {
