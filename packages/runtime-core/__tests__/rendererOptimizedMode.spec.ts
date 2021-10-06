@@ -626,6 +626,46 @@ describe('renderer: optimized mode', () => {
     expect(inner(target)).toBe('')
   })
 
+  // #4737
+  test('teleport unmount should always remove its children', () => {
+    const target = nodeOps.createElement('div')
+    const root = nodeOps.createElement('div')
+
+    render(
+      (openBlock(),
+      createBlock('div', null, [
+        (openBlock(),
+        createBlock(
+          Teleport as any,
+          {
+            to: target,
+            disabled: true // teleport is disabled
+          },
+          [
+            createVNode('div', null, [
+              (openBlock(),
+              createBlock(
+                Teleport as any,
+                {
+                  to: target
+                },
+                [createVNode('div', null, 'foo')]
+              ))
+            ])
+          ]
+        ))
+      ])),
+      root
+    )
+    expect(inner(target)).toMatchInlineSnapshot(`"<div>foo</div>"`)
+    expect(inner(root)).toMatchInlineSnapshot(
+      `"<div><!--teleport start--><div><!--teleport start--><!--teleport end--></div><!--teleport end--></div>"`
+    )
+
+    render(null, root)
+    expect(inner(target)).toBe('')
+  })
+
   // #3548
   test('should not track dynamic children when the user calls a compiled slot inside template expression', () => {
     const Comp = {
