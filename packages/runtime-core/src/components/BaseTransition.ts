@@ -464,10 +464,10 @@ export function getTransitionRawChildren(
     const child = children[i]
     // handle fragment children case, e.g. v-for
     if (child.type === Fragment) {
-      if (child.patchFlag & PatchFlags.KEYED_FRAGMENT) keyedFragmentCount++
       if (child.patchFlag & PatchFlags.STABLE_FRAGMENT && child.key != null) {
         ret.push(child)
       } else {
+        if (child.patchFlag & PatchFlags.KEYED_FRAGMENT) keyedFragmentCount++
         ret = ret.concat(
           getTransitionRawChildren(child.children as VNode[], keepComment)
         )
