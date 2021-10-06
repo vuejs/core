@@ -508,4 +508,20 @@ describe('e2e: TransitionGroup', () => {
 
     expect(`<TransitionGroup> children must be keyed`).toHaveBeenWarned()
   })
+
+  test('should not warn v-for + template', () => {
+    createApp({
+      template: `
+        <transition-group name="test">
+          <template v-for="item in items" key="item">{{item}}</template>
+        </transition-group>
+            `,
+      setup: () => {
+        const items = ref(['a', 'b', 'c'])
+        return { items }
+      }
+    }).mount(document.createElement('div'))
+
+    expect(`<TransitionGroup> children must be keyed`).not.toHaveBeenWarned()
+  })
 })

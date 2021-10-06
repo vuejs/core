@@ -465,9 +465,13 @@ export function getTransitionRawChildren(
     // handle fragment children case, e.g. v-for
     if (child.type === Fragment) {
       if (child.patchFlag & PatchFlags.KEYED_FRAGMENT) keyedFragmentCount++
-      ret = ret.concat(
-        getTransitionRawChildren(child.children as VNode[], keepComment)
-      )
+      if (child.patchFlag & PatchFlags.STABLE_FRAGMENT && child.key != null) {
+        ret.push(child)
+      } else {
+        ret = ret.concat(
+          getTransitionRawChildren(child.children as VNode[], keepComment)
+        )
+      }
     }
     // comment placeholders should be skipped, e.g. v-if
     else if (keepComment || child.type !== Comment) {
