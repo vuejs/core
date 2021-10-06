@@ -2122,8 +2122,7 @@ function baseCreateRenderer(
           parentComponent,
           parentSuspense,
           optimized,
-          internals,
-          doRemove
+          internals
         )
       } else if (
         dynamicChildren &&
