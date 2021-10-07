@@ -13,18 +13,6 @@ export * from './escapeHtml'
 export * from './looseEqual'
 export * from './toDisplayString'
 
-/**
- * List of @babel/parser plugins that are used for template expression
- * transforms and SFC script transforms. By default we enable proposals slated
- * for ES2020. This will need to be updated as the spec moves forward.
- * Full list at https://babeljs.io/docs/en/next/babel-parser#plugins
- */
-export const babelParserDefaultPlugins = [
-  'bigInt',
-  'optionalChaining',
-  'nullishCoalescingOperator'
-] as const
-
 export const EMPTY_OBJ: { readonly [key: string]: any } = __DEV__
   ? Object.freeze({})
   : {}

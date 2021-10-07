@@ -20,7 +20,7 @@ import {
   walkFunctionParams
 } from '@vue/compiler-core'
 import { parse, ParserPlugin } from '@babel/parser'
-import { babelParserDefaultPlugins, hasOwn } from '@vue/shared'
+import { hasOwn } from '@vue/shared'
 
 const TO_VAR_SYMBOL = '$'
 const TO_REF_SYMBOL = '$$'
@@ -68,7 +68,7 @@ export function transform(
 
   const ast = parse(src, {
     sourceType: 'module',
-    plugins: [...new Set([...babelParserDefaultPlugins, ...plugins])]
+    plugins
   })
   const s = new MagicString(src)
   const res = transformAST(ast.program, s)

@@ -13,13 +13,7 @@ import {
 } from '@vue/compiler-dom'
 import { SFCDescriptor, SFCScriptBlock } from './parse'
 import { parse as _parse, ParserOptions, ParserPlugin } from '@babel/parser'
-import {
-  babelParserDefaultPlugins,
-  camelize,
-  capitalize,
-  generateCodeFrame,
-  makeMap
-} from '@vue/shared'
+import { camelize, capitalize, generateCodeFrame, makeMap } from '@vue/shared'
 import {
   Node,
   Declaration,
@@ -161,7 +155,7 @@ export function compileScript(
     scriptLang === 'tsx' ||
     scriptSetupLang === 'ts' ||
     scriptSetupLang === 'tsx'
-  const plugins: ParserPlugin[] = [...babelParserDefaultPlugins]
+  const plugins: ParserPlugin[] = []
   if (!isTS || scriptLang === 'tsx' || scriptSetupLang === 'tsx') {
     plugins.push('jsx')
   }

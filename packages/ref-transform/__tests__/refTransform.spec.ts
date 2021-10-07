@@ -1,5 +1,4 @@
 import { parse } from '@babel/parser'
-import { babelParserDefaultPlugins } from '@vue/shared'
 import { transform } from '../src'
 
 function assertCode(code: string) {
@@ -7,7 +6,7 @@ function assertCode(code: string) {
   try {
     parse(code, {
       sourceType: 'module',
-      plugins: [...babelParserDefaultPlugins, 'typescript']
+      plugins: ['typescript']
     })
   } catch (e: any) {
     console.log(code)
