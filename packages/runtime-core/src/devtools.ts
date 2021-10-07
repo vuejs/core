@@ -53,6 +53,11 @@ export function setDevtoolsHook(hook: DevtoolsHook, target: any) {
     replay.push((newHook: DevtoolsHook) => {
       setDevtoolsHook(newHook, target)
     })
+    // clear buffer after 3s - the user probably doesn't have devtools installed
+    // at all, and keeping the buffer will cause memory leaks (#4738)
+    setTimeout(() => {
+      buffer = []
+    }, 3000)
   }
 }
 
