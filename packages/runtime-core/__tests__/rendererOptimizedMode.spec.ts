@@ -627,7 +627,7 @@ describe('renderer: optimized mode', () => {
   })
 
   // #4737
-  test('teleport unmount should always remove its children', () => {
+  test('teleport unmount should remove its children if its descendant nodes have a teleport that not disabled', () => {
     const target = nodeOps.createElement('div')
     const root = nodeOps.createElement('div')
 
@@ -639,13 +639,13 @@ describe('renderer: optimized mode', () => {
           Teleport as any,
           {
             to: target,
-            disabled: true // teleport is disabled
+            disabled: true // disabled
           },
           [
             createVNode('div', null, [
               (openBlock(),
               createBlock(
-                Teleport as any,
+                Teleport as any, // not disabled
                 {
                   to: target
                 },

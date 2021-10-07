@@ -229,32 +229,53 @@ export const TeleportImpl = {
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
     optimized: boolean,
-    { um: unmount, o: { remove: hostRemove } }: RendererInternals
+    { um: unmount, o: { remove: hostRemove } }: RendererInternals,
+    doRemove: Boolean
   ) {
-    const { shapeFlag, children, anchor, targetAnchor, target } = vnode
+    const { shapeFlag, children, anchor, targetAnchor, target, props } = vnode
 
     if (target) {
       hostRemove(targetAnchor!)
     }
 
-    // an unmounted teleport should always remove its children
-    hostRemove(anchor!)
-    if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-      for (let i = 0; i < (children as VNode[]).length; i++) {
-        const child = (children as VNode[])[i]
-        unmount(
-          child,
-          parentComponent,
-          parentSuspense,
-          true,
-          !!child.dynamicChildren
-        )
+    // an unmounted teleport should always remove its children if not disabled
+    // or its descendant nodes have a teleport that not disabled
+    if (
+      doRemove ||
+      !isTeleportDisabled(props) ||
+      hasNotDisabledTeleport(children as VNode[])
+    ) {
+      hostRemove(anchor!)
+      if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        for (let i = 0; i < (children as VNode[]).length; i++) {
+          const child = (children as VNode[])[i]
+          unmount(
+            child,
+            parentComponent,
+            parentSuspense,
+            true,
+            !!child.dynamicChildren
+          )
+        }
       }
     }
   },
 
   move: moveTeleport,
   hydrate: hydrateTeleport
+}
+
+function hasNotDisabledTeleport(vnodes: VNode[]): Boolean {
+  for (let i = 0; i < vnodes.length; i++) {
+    const { shapeFlag, props, children } = vnodes[i]
+    if (shapeFlag & ShapeFlags.TELEPORT && !isTeleportDisabled(props)) {
+      return true
+    }
+    if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      return hasNotDisabledTeleport(children as VNode[])
+    }
+  }
+  return false
 }
 
 export const enum TeleportMoveTypes {
