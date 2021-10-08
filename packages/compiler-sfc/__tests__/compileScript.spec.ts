@@ -84,6 +84,18 @@ const bar = 1
 },`)
   })
 
+  test('import without new line at top of setup script + defineProps ', () => {
+    const { content } = compile(`
+<script setup>import { ref } from 'vue'
+const props = defineProps({
+  foo: String
+})
+</script>
+  `)
+    // should generate working code
+    assertCode(content)
+  })
+
   test('defineProps w/ external definition', () => {
     const { content } = compile(`
     <script setup>
