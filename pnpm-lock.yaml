@@ -249,7 +249,7 @@ importers:
 
   packages/size-check:
     specifiers:
-      vite: ^2.5.10
+      vite: ^2.6.0
     devDependencies:
       vite: 2.6.5
 
