@@ -58,7 +58,7 @@ exports[`SFC compile <script setup> <script> and <script setup> co-usage spaces 
 "import { x } from './x'
         
         export const n = 1
-        const __default__ = {   
+        const __default__ = {
           some:'option'
         }
         
@@ -79,7 +79,7 @@ exports[`SFC compile <script setup> <script> and <script setup> co-usage spaces 
 "import { x } from './x'
         
         export const n = 1
-        const __default__ = {   
+        const __default__ = {
           some:'option'
         }
         
@@ -392,9 +392,27 @@ export default {
   expose()
 
 const props = __props
+
     
     
 return { props, propsModel }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> defineProps w/ leading code 1`] = `
+"import { x } from './x'
+    
+export default {
+  props: {},
+  setup(__props, { expose }) {
+  expose()
+
+const props = __props
+
+    
+return { props, x }
 }
 
 }"
@@ -409,6 +427,7 @@ exports[`SFC compile <script setup> defineProps() 1`] = `
   expose()
 
 const props = __props
+
 
 const bar = 1
 
@@ -426,6 +445,7 @@ exports[`SFC compile <script setup> defineProps/defineEmits in multi-variable de
   expose()
 
 const props = __props
+
     
     
 return { props, emit }
@@ -442,6 +462,7 @@ exports[`SFC compile <script setup> defineProps/defineEmits in multi-variable de
   expose()
 
 const props = __props
+
     const a = 1;
     
 return { props, a, emit }
@@ -814,7 +835,7 @@ return (_ctx, _cache) => {
     }),
     _createElementVNode(\\"div\\", {
       onClick: _cache[5] || (_cache[5] = () => {
-              let a = '' + _unref(lett)           
+              let a = '' + _unref(lett)
               _isRef(v) ? v.value = a : v = a
            })
     }),
@@ -828,7 +849,7 @@ return (_ctx, _cache) => {
                   let z2 = z
                 })
                 let lz = _ctx.z
-              })        
+              })
               _isRef(v) ? v.value = _ctx.a : v = _ctx.a
            })
     })
@@ -1286,6 +1307,7 @@ const props = __props
 
 
 
+
 return { props, emit }
 }
 
@@ -1360,6 +1382,7 @@ const props = __props as {
         bar?: number
         baz: boolean
       }
+
       
       
 return { props, defaults }
@@ -1382,6 +1405,7 @@ export default /*#__PURE__*/_defineComponent({
   expose()
 
 const props = __props as { foo: string, bar?: number, baz: boolean, qux(): number }
+
       
       
 return { props }

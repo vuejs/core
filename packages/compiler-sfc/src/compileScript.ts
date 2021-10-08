@@ -1205,25 +1205,25 @@ export function compileScript(
   // we use a default __props so that template expressions referencing props
   // can use it directly
   if (propsIdentifier) {
-    s.prependRight(
+    s.prependLeft(
       startOffset,
       `\nconst ${propsIdentifier} = __props${
         propsTypeDecl ? ` as ${genSetupPropsType(propsTypeDecl)}` : ``
-      }`
+      }\n`
     )
   }
   if (propsDestructureRestId) {
-    s.prependRight(
+    s.prependLeft(
       startOffset,
       `\nconst ${propsDestructureRestId} = ${helper(
         `createPropsRestProxy`
-      )}(__props, ${JSON.stringify(Object.keys(propsDestructuredBindings))})`
+      )}(__props, ${JSON.stringify(Object.keys(propsDestructuredBindings))})\n`
     )
   }
   // inject temp variables for async context preservation
   if (hasAwait) {
     const any = isTS ? `: any` : ``
-    s.prependRight(startOffset, `\nlet __temp${any}, __restore${any}\n`)
+    s.prependLeft(startOffset, `\nlet __temp${any}, __restore${any}\n`)
   }
 
   const destructureElements =
