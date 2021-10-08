@@ -256,8 +256,10 @@ importers:
   packages/template-explorer:
     specifiers:
       monaco-editor: ^0.20.0
+      source-map: ^0.6.1
     dependencies:
       monaco-editor: 0.20.0
+      source-map: 0.6.1
 
   packages/vue:
     specifiers:
