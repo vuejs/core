@@ -392,6 +392,7 @@ export default {
   expose()
 
 const props = __props
+
     
     
 return { props, propsModel }
@@ -410,6 +411,7 @@ exports[`SFC compile <script setup> defineProps() 1`] = `
 
 const props = __props
 
+
 const bar = 1
 
 return { props, bar }
@@ -426,6 +428,7 @@ exports[`SFC compile <script setup> defineProps/defineEmits in multi-variable de
   expose()
 
 const props = __props
+
     
     
 return { props, emit }
@@ -442,6 +445,7 @@ exports[`SFC compile <script setup> defineProps/defineEmits in multi-variable de
   expose()
 
 const props = __props
+
     const a = 1;
     
 return { props, a, emit }
@@ -1286,6 +1290,7 @@ const props = __props
 
 
 
+
 return { props, emit }
 }
 
@@ -1341,6 +1346,7 @@ const props = __props as {
         bar?: number
         baz: boolean
       }
+
       
       
 return { props, defaults }
@@ -1363,6 +1369,7 @@ export default /*#__PURE__*/_defineComponent({
   expose()
 
 const props = __props as { foo: string, bar?: number, baz: boolean, qux(): number }
+
       
       
 return { props }
