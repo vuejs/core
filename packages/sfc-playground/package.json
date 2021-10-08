@@ -8,8 +8,7 @@
     "serve": "vite preview"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^1.8.1",
-    "vite": "^2.5.10"
+    "@vitejs/plugin-vue": "^1.9.3"
   },
   "dependencies": {
     "vue": "workspace:*",
