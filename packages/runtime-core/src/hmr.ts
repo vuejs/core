@@ -10,6 +10,8 @@ import {
 import { queueJob, queuePostFlushCb } from './scheduler'
 import { extend, getGlobalThis } from '@vue/shared'
 
+type HMRComponent = ComponentOptions | ClassComponent
+
 export let isHmrUpdating = false
 
 export const hmrDirtyComponents = new Set<ConcreteComponent>()
@@ -33,31 +35,41 @@ if (__DEV__) {
   } as HMRRuntime
 }
 
-const map: Map<string, Set<ComponentInternalInstance>> = new Map()
+const map: Map<
+  string,
+  {
+    // the initial component definition is recorded on import - this allows us
+    // to apply hot updates to the component even when there are no actively
+    // rendered instance.
+    initialDef: ComponentOptions
+    instances: Set<ComponentInternalInstance>
+  }
+> = new Map()
 
 export function registerHMR(instance: ComponentInternalInstance) {
   const id = instance.type.__hmrId!
   let record = map.get(id)
   if (!record) {
-    createRecord(id)
+    createRecord(id, instance.type as HMRComponent)
     record = map.get(id)!
   }
-  record.add(instance)
+  record.instances.add(instance)
 }
 
 export function unregisterHMR(instance: ComponentInternalInstance) {
-  map.get(instance.type.__hmrId!)!.delete(instance)
+  map.get(instance.type.__hmrId!)!.instances.delete(instance)
 }
 
-function createRecord(id: string): boolean {
+function createRecord(id: string, initialDef: HMRComponent): boolean {
   if (map.has(id)) {
     return false
   }
-  map.set(id, new Set())
+  map.set(id, {
+    initialDef: normalizeClassComponent(initialDef),
+    instances: new Set()
+  })
   return true
 }
-
-type HMRComponent = ComponentOptions | ClassComponent
 
 function normalizeClassComponent(component: HMRComponent): ComponentOptions {
   return isClassComponent(component) ? component.__vccOpts : component
@@ -68,8 +80,12 @@ function rerender(id: string, newRender?: Function) {
   if (!record) {
     return
   }
+
+  // update initial record (for not-yet-rendered component)
+  record.initialDef.render = newRender
+
   // Create a snapshot which avoids the set being mutated during updates
-  ;[...record].forEach(instance => {
+  ;[...record.instances].forEach(instance => {
     if (newRender) {
       instance.render = newRender as InternalRenderFunction
       normalizeClassComponent(instance.type as HMRComponent).render = newRender
@@ -87,20 +103,19 @@ function reload(id: string, newComp: HMRComponent) {
   if (!record) return
 
   newComp = normalizeClassComponent(newComp)
+  // update initial def (for not-yet-rendered components)
+  updateComponentDef(record.initialDef, newComp)
 
   // create a snapshot which avoids the set being mutated during updates
-  const instances = [...record]
+  const instances = [...record.instances]
 
   for (const instance of instances) {
     const oldComp = normalizeClassComponent(instance.type as HMRComponent)
 
     if (!hmrDirtyComponents.has(oldComp)) {
       // 1. Update existing comp definition to match new one
-      extend(oldComp, newComp)
-      for (const key in oldComp) {
-        if (key !== '__file' && !(key in newComp)) {
-          delete (oldComp as any)[key]
-        }
+      if (oldComp !== record.initialDef) {
+        updateComponentDef(oldComp, newComp)
       }
       // 2. mark definition dirty. This forces the renderer to replace the
       // component on patch.
@@ -150,6 +165,18 @@ function reload(id: string, newComp: HMRComponent) {
       )
     }
   })
+}
+
+function updateComponentDef(
+  oldComp: ComponentOptions,
+  newComp: ComponentOptions
+) {
+  extend(oldComp, newComp)
+  for (const key in oldComp) {
+    if (key !== '__file' && !(key in newComp)) {
+      delete (oldComp as any)[key]
+    }
+  }
 }
 
 function tryWrap(fn: (id: string, arg: any) => any): Function {
