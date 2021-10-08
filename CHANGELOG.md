@@ -1,3 +1,22 @@
+## [3.2.20](https://github.com/vuejs/vue-next/compare/v3.2.19...v3.2.20) (2021-10-08)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** fix props codegen w/ leading import ([d4c04e9](https://github.com/vuejs/vue-next/commit/d4c04e979934b81a30467aa4b1e717175b9b2d80)), closes [#4764](https://github.com/vuejs/vue-next/issues/4764)
+* **compiler-sfc:** support runtime Enum in normal script ([#4698](https://github.com/vuejs/vue-next/issues/4698)) ([f66d456](https://github.com/vuejs/vue-next/commit/f66d456b7a39db9dae7e70c28bb431ff293d8fef))
+* **devtools:** clear devtools buffer after timeout ([f4639e0](https://github.com/vuejs/vue-next/commit/f4639e0a36abe16828b202d7297e1486653b1217)), closes [#4738](https://github.com/vuejs/vue-next/issues/4738)
+* **hmr:** fix hmr for components with no active instance yet ([9e3d773](https://github.com/vuejs/vue-next/commit/9e3d7731c7839638f49157123c6b372fec9e4d46)), closes [#4757](https://github.com/vuejs/vue-next/issues/4757)
+* **types:** ensure that DeepReadonly handles Ref type properly ([#4714](https://github.com/vuejs/vue-next/issues/4714)) ([ed0071a](https://github.com/vuejs/vue-next/commit/ed0071ac1a6d18439f3212711c6901fbb7193288))
+* **types:** make `toRef` return correct type(fix [#4732](https://github.com/vuejs/vue-next/issues/4732)) ([#4734](https://github.com/vuejs/vue-next/issues/4734)) ([925bc34](https://github.com/vuejs/vue-next/commit/925bc346fe85091467fcd2e40d6c1ff07f3b51c4))
+
+
+### Features
+
+* **compiler-sfc:** `<script setup>` defineProps destructure transform ([#4690](https://github.com/vuejs/vue-next/issues/4690)) ([467e113](https://github.com/vuejs/vue-next/commit/467e113b95a3c9c97f8dc309b61c0b2e3caba66f))
+
+
+
 ## [3.2.19](https://github.com/vuejs/vue-next/compare/v3.2.18...v3.2.19) (2021-09-25)
 
 
