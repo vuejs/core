@@ -28,7 +28,7 @@ function copyVuePlugin(): Plugin {
       if (!fs.existsSync(filePath)) {
         throw new Error(
           `vue.runtime.esm-browser.js not built. ` +
-            `Run "yarn build vue -f esm-browser" first.`
+            `Run "nr build vue -f esm-browser" first.`
         )
       }
       this.emitFile({
