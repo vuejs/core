@@ -1323,6 +1323,25 @@ return { Foo }
 })"
 `;
 
+exports[`SFC compile <script setup> with TypeScript runtime Enum in normal script 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+enum Foo { A = 123 }
+        
+          export enum D { D = \\"D\\" }
+          const enum C { C = \\"C\\" }
+          enum B { B = \\"B\\" }
+        
+export default /*#__PURE__*/_defineComponent({
+  setup(__props, { expose }) {
+  expose()
+
+        
+return { D, C, B, Foo }
+}
+
+})"
+`;
+
 exports[`SFC compile <script setup> with TypeScript withDefaults (dynamic) 1`] = `
 "import { mergeDefaults as _mergeDefaults, defineComponent as _defineComponent } from 'vue'
 import { defaults } from './foo'
