@@ -10,6 +10,7 @@ import {
   toRef,
   toRefs,
   ToRefs,
+  shallowReactive,
   watch
 } from './index'
 
@@ -236,3 +237,15 @@ function testUnrefGenerics<T>(p: T | Ref<T>) {
 }
 
 testUnrefGenerics(1)
+
+// #4732
+const baz = shallowReactive({
+  foo: {
+    bar: ref(42)
+  }
+})
+
+const foo = toRef(baz, 'foo')
+
+expectType<Ref<number>>(foo.value.bar)
+expectType<number>(foo.value.bar.value)
