@@ -508,4 +508,61 @@ describe('e2e: TransitionGroup', () => {
 
     expect(`<TransitionGroup> children must be keyed`).toHaveBeenWarned()
   })
+
+  test('computed transform attribute',
+    async () => {
+      await page().evaluate(() => {
+        const { createApp, ref } = (window as any).Vue
+        createApp({
+          template: `
+              <div id="container">
+                <transition-group name="group">
+                  <div :style="{ transform: \`translate(\${translateX}px, \${translateY}px)\` }" v-for="item in items" :key="item" class="test">{{item}}</div>
+                </transition-group>
+              </div>
+              <button id="toggleBtn" @click="click">button</button>
+            `,
+          setup: () => {
+            const items = ref(['a', 'b', 'c'])
+            const translateX = ref(0), translateY = ref(0)
+            const click = () => { items.value = ['d', 'b', 'a']; translateX.value += 5; translateY.value += 10; }
+            return { click, items, translateX, translateY }
+          }
+        }).mount('#app')
+      })
+      expect(await html('#container')).toBe(
+        `<div class="test" style="transform: translate(0px, 0px);">a</div>` +
+          `<div class="test" style="transform: translate(0px, 0px);">b</div>` +
+          `<div class="test" style="transform: translate(0px, 0px);">c</div>`
+      )
+
+      const transitionStart = () => page().evaluate(() => {
+        ;(document.querySelector('#toggleBtn') as any)!.click()
+        return Promise.resolve().then(() => {
+          return document.querySelector('#container')!.innerHTML
+        })
+      })
+
+      expect(await transitionStart()).toBe(
+        `<div class="test group-enter-from group-enter-active" style="transform: translate(5px, 10px);">d</div>` +
+          `<div class="test group-move" style="transform: translate(5px, 10px);">b</div>` +
+          `<div class="test group-move" style="transform: translate(5px, 10px);">a</div>` +
+          `<div class="test group-leave-from group-leave-active group-move" style="transform: translate(0px, 0px);">c</div>`
+      )
+      await nextFrame()
+      expect(await html('#container')).toBe(
+        `<div class="test group-enter-active group-enter-to" style="transform: translate(5px, 10px);">d</div>` +
+          `<div class="test group-move" style="transform: translate(5px, 10px);">b</div>` +
+          `<div class="test group-move" style="transform: translate(5px, 10px);">a</div>` +
+          `<div class="test group-leave-active group-move group-leave-to" style="transform: translate(0px, 0px);">c</div>`
+      )
+      await transitionFinish(duration * 2)
+      expect(await html('#container')).toBe(
+        `<div class="test" style="transform: translate(5px, 10px);">d</div>` +
+          `<div class="test" style="transform: translate(5px, 10px);">b</div>` +
+          `<div class="test" style="transform: translate(5px, 10px);">a</div>`
+      )
+    },
+    E2E_TIMEOUT
+  )
 })
