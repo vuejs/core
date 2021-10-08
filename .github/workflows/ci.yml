@@ -11,27 +11,43 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2.0.1
+        with:
+          version: 6.15.1
+
       - name: Set node version to 16
         uses: actions/setup-node@v2
         with:
           node-version: 16
-          cache: 'yarn'
-      - run: yarn install --frozen-lockfile
+          cache: 'pnpm'
+
+      - run: pnpm install
+
       - name: Run unit tests
-        run: yarn test --ci
+        run: pnpm run test -- --ci
 
   test-dts:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2.0.1
+        with:
+          version: 6.15.1
+
       - name: Set node version to 16
         uses: actions/setup-node@v2
         with:
           node-version: 16
-          cache: 'yarn'
-      - run: yarn install --frozen-lockfile
+          cache: 'pnpm'
+
+      - run: pnpm install
+
       - name: Run type declaration tests
-        run: yarn test-dts
+        run: pnpm run test-dts
 
   size:
     runs-on: ubuntu-latest
@@ -39,12 +55,20 @@ jobs:
       CI_JOB_NUMBER: 1
     steps:
       - uses: actions/checkout@v1
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2.0.1
+        with:
+          version: 6.15.1
+
       - name: Set node version to 16
         uses: actions/setup-node@v2
         with:
           node-version: 16
-          cache: 'yarn'
-      - run: yarn install --frozen-lockfile
+          cache: 'pnpm'
+
+      - run: pnpm install
+
       - name: Check build size
         uses: posva/size-check-action@v1.1.2
         with:

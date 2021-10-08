@@ -1,9 +1,6 @@
 {
   "private": true,
   "version": "3.2.20",
-  "workspaces": [
-    "packages/*"
-  ],
   "scripts": {
     "dev": "node scripts/dev.js",
     "build": "node scripts/build.js",
@@ -13,16 +10,16 @@
     "lint": "eslint --ext .ts packages/*/src/**.ts",
     "format": "prettier --write --parser typescript \"packages/**/*.ts?(x)\"",
     "test": "node scripts/build.js vue -f global -d && jest --runInBand",
-    "test-dts": "node scripts/build.js shared reactivity runtime-core runtime-dom -dt -f esm-bundler && yarn test-dts-only",
+    "test-dts": "node scripts/build.js shared reactivity runtime-core runtime-dom -dt -f esm-bundler && npm run test-dts-only",
     "test-dts-only": "tsc -p ./test-dts/tsconfig.json && tsc -p ./test-dts/tsconfig.build.json",
     "release": "node scripts/release.js",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s",
     "dev-compiler": "run-p \"dev template-explorer\" serve",
-    "dev-sfc": "run-p \"dev compiler-sfc -f esm-browser\" \"dev runtime-core -f esm-bundler\" \"dev runtime-dom -f esm-bundler\" serve-sfc-playground",
+    "dev-sfc": "run-p \"dev compiler-sfc -- -f esm-browser\" \"dev runtime-core -- -f esm-bundler\" \"dev runtime-dom -- -f esm-bundler\" serve-sfc-playground",
     "serve-sfc-playground": "vite packages/sfc-playground --host",
     "serve": "serve",
     "open": "open http://localhost:5000/packages/template-explorer/local.html",
-    "preinstall": "node ./scripts/checkYarn.js",
+    "preinstall": "node ./scripts/preinstall.js",
     "prebuild-sfc-playground": "node scripts/build.js compiler ref-transform shared -af cjs && node scripts/build.js runtime reactivity shared -af esm-bundler && node scripts/build.js vue -f esm-bundler-runtime && node scripts/build.js vue -f esm-browser-runtime && node scripts/build.js compiler-sfc -f esm-browser",
     "build-sfc-playground": "cd packages/sfc-playground && vite build"
   },
@@ -47,6 +44,7 @@
     "node": ">=16.5.0"
   },
   "devDependencies": {
+    "vue": "workspace:*",
     "@babel/types": "^7.12.0",
     "@microsoft/api-extractor": "^7.15.1",
     "@rollup/plugin-commonjs": "^18.0.0",
