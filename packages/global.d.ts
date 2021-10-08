@@ -46,15 +46,8 @@ declare module '@vue/repl' {
   export { Repl, ReplStore }
 }
 
-// for String
 declare interface String {
   /**
-   * Returns the substring at the specified location within a String object.
    * @deprecated Please use String.prototype.slice instead of String.prototype.substring in the repository.
-   * @see https://github.com/vuejs/vue-next/pull/4699.
-   * @param start The zero-based index number indicating the beginning of the substring.
-   * @param end Zero-based index number indicating the end of the substring. The substring includes the characters up to, but not including, the character indicated by end.
-   * If end is omitted, the characters from start through the end of the original string are returned.
-   */
   substring(start: number, end?: number): string;
 }
