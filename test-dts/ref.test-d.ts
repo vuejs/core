@@ -239,13 +239,65 @@ function testUnrefGenerics<T>(p: T | Ref<T>) {
 testUnrefGenerics(1)
 
 // #4732
-const baz = shallowReactive({
-  foo: {
-    bar: ref(42)
-  }
+describe('ref in shallow reactive', () => {
+  const baz = shallowReactive({
+    foo: {
+      bar: ref(42)
+    }
+  })
+
+  const foo = toRef(baz, 'foo')
+
+  expectType<Ref<number>>(foo.value.bar)
+  expectType<number>(foo.value.bar.value)
 })
 
-const foo = toRef(baz, 'foo')
+// #4771
+describe('shallow reactive in reactive', () => {
+  const baz = reactive({
+    foo: shallowReactive({
+      a: {
+        b: ref(42)
+      }
+    })
+  })
 
-expectType<Ref<number>>(foo.value.bar)
-expectType<number>(foo.value.bar.value)
+  const foo = toRef(baz, 'foo')
+
+  expectType<Ref<number>>(foo.value.a.b)
+  expectType<number>(foo.value.a.b.value)
+})
+
+describe('shallow ref in reactive', () => {
+  const x = reactive({
+    foo: shallowRef({
+      bar: {
+        baz: ref(123),
+        qux: reactive({
+          z: ref(123)
+        })
+      }
+    })
+  })
+
+  expectType<Ref<number>>(x.foo.bar.baz)
+  expectType<number>(x.foo.bar.qux.z)
+})
+
+describe('ref in shallow ref', () => {
+  const x = shallowRef({
+    a: ref(123)
+  })
+
+  expectType<Ref<number>>(x.value.a)
+})
+
+describe('reactive in shallow ref', () => {
+  const x = shallowRef({
+    a: reactive({
+      b: ref(0)
+    })
+  })
+
+  expectType<number>(x.value.a.b)
+})

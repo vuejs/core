@@ -99,12 +99,18 @@ export function reactive(target: object) {
   )
 }
 
+export declare const ShallowReactiveMarker: unique symbol
+
+export type ShallowReactive<T> = T & { [ShallowReactiveMarker]?: true }
+
 /**
  * Return a shallowly-reactive copy of the original object, where only the root
  * level properties are reactive. It also does not auto-unwrap refs (even at the
  * root level).
  */
-export function shallowReactive<T extends object>(target: T): T {
+export function shallowReactive<T extends object>(
+  target: T
+): ShallowReactive<T> {
   return createReactiveObject(
     target,
     false,

@@ -27,6 +27,7 @@ export {
   toRaw,
   ReactiveFlags,
   DeepReadonly,
+  ShallowReactive,
   UnwrapNestedRefs
 } from './reactive'
 export {

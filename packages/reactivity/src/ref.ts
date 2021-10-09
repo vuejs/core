@@ -1,7 +1,13 @@
 import { isTracking, trackEffects, triggerEffects } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { isArray, hasChanged } from '@vue/shared'
-import { isProxy, toRaw, isReactive, toReactive } from './reactive'
+import {
+  isProxy,
+  toRaw,
+  isReactive,
+  toReactive,
+  ShallowReactiveMarker
+} from './reactive'
 import { CollectionTypes } from './collectionHandlers'
 import { createDep, Dep } from './dep'
 
@@ -74,11 +80,15 @@ export function ref(value?: unknown) {
   return createRef(value, false)
 }
 
+declare const ShallowRefMarker: unique symbol
+
+type ShallowRef<T = any> = Ref<T> & { [ShallowRefMarker]?: true }
+
 export function shallowRef<T extends object>(
   value: T
-): T extends Ref ? T : Ref<T>
-export function shallowRef<T>(value: T): Ref<T>
-export function shallowRef<T = any>(): Ref<T | undefined>
+): T extends Ref ? T : ShallowRef<T>
+export function shallowRef<T>(value: T): ShallowRef<T>
+export function shallowRef<T = any>(): ShallowRef<T | undefined>
 export function shallowRef(value?: unknown) {
   return createRef(value, true)
 }
@@ -215,6 +225,7 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
 }
 
 export type ToRef<T> = [T] extends [Ref] ? T : Ref<T>
+
 export function toRef<T extends object, K extends keyof T>(
   object: T,
   key: K
@@ -258,7 +269,9 @@ export type ShallowUnwrapRef<T> = {
     : T[K]
 }
 
-export type UnwrapRef<T> = T extends Ref<infer V>
+export type UnwrapRef<T> = T extends ShallowRef<infer V>
+  ? V
+  : T extends Ref<infer V>
   ? UnwrapRefSimple<V>
   : UnwrapRefSimple<T>
 
@@ -271,7 +284,7 @@ export type UnwrapRefSimple<T> = T extends
   ? T
   : T extends Array<any>
   ? { [K in keyof T]: UnwrapRefSimple<T[K]> }
-  : T extends object
+  : T extends object & { [ShallowReactiveMarker]?: never }
   ? {
       [P in keyof T]: P extends symbol ? T[P] : UnwrapRef<T[P]>
     }
