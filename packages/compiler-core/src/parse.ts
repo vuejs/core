@@ -600,6 +600,7 @@ function parseTag(
           context,
           getSelection(context, start)
         )
+        break
       }
     }
   }
