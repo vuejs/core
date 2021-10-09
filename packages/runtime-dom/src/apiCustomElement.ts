@@ -174,17 +174,6 @@ export class VueElement extends BaseClass {
       }
       this.attachShadow({ mode: 'open' })
     }
-
-    // set initial attrs
-    for (let i = 0; i < this.attributes.length; i++) {
-      this._setAttr(this.attributes[i].name)
-    }
-    // watch future attr changes
-    new MutationObserver(mutations => {
-      for (const m of mutations) {
-        this._setAttr(m.attributeName!)
-      }
-    }).observe(this, { attributes: true })
   }
 
   connectedCallback() {
@@ -212,9 +201,21 @@ export class VueElement extends BaseClass {
     if (this._resolved) {
       return
     }
+    this._resolved = true
+
+    // set initial attrs
+    for (let i = 0; i < this.attributes.length; i++) {
+      this._setAttr(this.attributes[i].name)
+    }
+
+    // watch future attr changes
+    new MutationObserver(mutations => {
+      for (const m of mutations) {
+        this._setAttr(m.attributeName!)
+      }
+    }).observe(this, { attributes: true })
 
     const resolve = (def: InnerComponentDef) => {
-      this._resolved = true
       const { props, styles } = def
       const hasOptions = !isArray(props)
       const rawKeys = props ? (hasOptions ? Object.keys(props) : props) : []

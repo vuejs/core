@@ -172,6 +172,23 @@ describe('defineCustomElement', () => {
       expect(e.shadowRoot!.innerHTML).toBe(`20 number true boolean 2e1 string`)
     })
 
+    // #4772
+    test('attr casting w/ programmatic creation', () => {
+      const E = defineCustomElement({
+        props: {
+          foo: Number
+        },
+        render() {
+          return `foo type: ${typeof this.foo}`
+        }
+      })
+      customElements.define('my-element-programmatic', E)
+      const el = document.createElement('my-element-programmatic') as any
+      el.setAttribute('foo', '123')
+      container.appendChild(el)
+      expect(el.shadowRoot.innerHTML).toBe(`foo type: number`)
+    })
+
     test('handling properties set before upgrading', () => {
       const E = defineCustomElement({
         props: ['foo'],
