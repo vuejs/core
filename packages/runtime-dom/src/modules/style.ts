@@ -1,5 +1,6 @@
 import { isString, hyphenate, capitalize, isArray } from '@vue/shared'
 import { camelize } from '@vue/runtime-core'
+import { VShowElement } from '../directives/vShow'
 
 type Style = string | Record<string, string | string[]> | null
 
@@ -27,8 +28,12 @@ export function patchStyle(el: Element, prev: Style, next: Style) {
   // indicates that the `display` of the element is controlled by `v-show`,
   // so we always keep the current `display` value regardless of the `style` value,
   // thus handing over control to `v-show`.
-  if ('_vod' in el) {
-    style.display = currentDisplay
+  if ('_vod' in el && currentDisplay !== style.display) {
+    (el as VShowElement)._vod = style.display;
+    if (!(el as VShowElement)._vds) {
+        // if vshow was set to hide
+        style.display = currentDisplay;
+    }
   }
 }
 

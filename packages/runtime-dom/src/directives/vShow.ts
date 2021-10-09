@@ -1,8 +1,10 @@
 import { ObjectDirective } from '@vue/runtime-core'
 
-interface VShowElement extends HTMLElement {
+export interface VShowElement extends HTMLElement {
   // _vod = vue original display
   _vod: string
+  // _vod = vue display status
+  _vds: boolean
 }
 
 export const vShow: ObjectDirective<VShowElement> = {
@@ -41,7 +43,7 @@ export const vShow: ObjectDirective<VShowElement> = {
 }
 
 function setDisplay(el: VShowElement, value: unknown): void {
-  el.style.display = value ? el._vod : 'none'
+  el.style.display = (el._vds = !!value) ? el._vod : 'none'
 }
 
 // SSR vnode transforms, only used when user includes client-oriented render
