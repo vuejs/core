@@ -3,7 +3,7 @@ import { ObjectDirective } from '@vue/runtime-core'
 export interface VShowElement extends HTMLElement {
   // _vod = vue original display
   _vod: string
-  // _vod = vue display status
+  // _vds = vue display status
   _vds: boolean
 }
 
