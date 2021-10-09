@@ -195,7 +195,7 @@ import { h } from '@vue/runtime-core'
 
 This is made possible via several configurations:
 
-- For TypeScript, `compilerOptions.path` in `tsconfig.json`
+- For TypeScript, `compilerOptions.paths` in `tsconfig.json`
 - For Jest, `moduleNameMapper` in `jest.config.js`
 - For plain Node.js, they are linked using [PNPM Workspaces](https://pnpm.io/workspaces).
 
