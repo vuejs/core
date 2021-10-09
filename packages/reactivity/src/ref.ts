@@ -1,13 +1,8 @@
 import { isTracking, trackEffects, triggerEffects } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { isArray, hasChanged } from '@vue/shared'
-import {
-  isProxy,
-  toRaw,
-  isReactive,
-  toReactive,
-  ShallowReactiveMarker
-} from './reactive'
+import { isProxy, toRaw, isReactive, toReactive } from './reactive'
+import type { ShallowReactiveMarker } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
 import { createDep, Dep } from './dep'
 
