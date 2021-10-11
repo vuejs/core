@@ -1,6 +1,7 @@
 import {
   watch,
   watchEffect,
+  watchImmediate,
   reactive,
   computed,
   nextTick,
@@ -699,6 +700,41 @@ describe('api: watch', () => {
     const state = ref()
     const spy = jest.fn()
     watch(() => state.value, spy, { immediate: true })
+    expect(spy).toHaveBeenCalled()
+    state.value = 3
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(2)
+    // testing if undefined can trigger the watcher
+    state.value = undefined
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(3)
+    // it shouldn't trigger if the same value is set
+    state.value = undefined
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(3)
+  })
+
+  it('watchImmediate', async () => {
+    const count = ref(0)
+    const cb = jest.fn()
+    watchImmediate(count, cb)
+    expect(cb).toHaveBeenCalledTimes(1)
+    count.value++
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(2)
+  })
+
+  it('watchImmediate: triggers when initial value is null', async () => {
+    const state = ref(null)
+    const spy = jest.fn()
+    watchImmediate(() => state.value, spy)
+    expect(spy).toHaveBeenCalled()
+  })
+
+  it('watchImmediate: triggers when initial value is undefined', async () => {
+    const state = ref()
+    const spy = jest.fn()
+    watchImmediate(() => state.value, spy)
     expect(spy).toHaveBeenCalled()
     state.value = 3
     await nextTick()

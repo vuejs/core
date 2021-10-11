@@ -169,6 +169,44 @@ export function watch<T = any, Immediate extends Readonly<boolean> = false>(
   return doWatch(source as any, cb, options)
 }
 
+export function watchImmediate<T extends MultiWatchSources>(
+  sources: [...T],
+  cb: WatchCallback<MapSources<T, false>, MapSources<T, true>>,
+  options?: DebuggerOptions
+): WatchStopHandle
+
+export function watchImmediate<T extends Readonly<MultiWatchSources>>(
+  source: T,
+  cb: WatchCallback<MapSources<T, false>, MapSources<T, true>>,
+  options?: DebuggerOptions
+): WatchStopHandle
+
+export function watchImmediate<T>(
+  source: WatchSource<T>,
+  cb: WatchCallback<T, T | undefined>,
+  options?: DebuggerOptions
+): WatchStopHandle
+
+export function watchImmediate<T extends object>(
+  source: T,
+  cb: WatchCallback<T, T | undefined>,
+  options?: DebuggerOptions
+): WatchStopHandle
+
+export function watchImmediate<T = any>(
+  source: T | WatchSource<T>,
+  cb: WatchCallback<T, T | undefined>,
+  options?: DebuggerOptions
+): WatchStopHandle {
+  return doWatch(
+    source as any,
+    cb,
+    (__DEV__
+      ? Object.assign(options || {}, { immediate: true })
+      : { immediate: true }) as WatchOptionsBase
+  )
+}
+
 function doWatch(
   source: WatchSource | WatchSource[] | WatchEffect | object,
   cb: WatchCallback | null,

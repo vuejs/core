@@ -36,6 +36,7 @@ export {
 } from '@vue/reactivity'
 export {
   watch,
+  watchImmediate,
   watchEffect,
   watchPostEffect,
   watchSyncEffect
