@@ -64,7 +64,7 @@ export type Directive<T = any, V = any> =
 export type DirectiveModifiers = Record<string, boolean>
 
 const isBuiltInDirective = /*#__PURE__*/ makeMap(
-  'bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,slot,text'
+  'bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,slot,text,memo'
 )
 
 export function validateDirectiveName(name: string) {
