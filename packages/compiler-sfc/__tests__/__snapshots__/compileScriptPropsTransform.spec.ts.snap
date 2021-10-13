@@ -80,9 +80,10 @@ exports[`sfc props transform default values w/ type declaration, prod mode 1`] =
 
 export default /*#__PURE__*/_defineComponent({
   props: {
-    foo: { default: 1 },
-    bar: { default: () => {} },
-    baz: null
+    foo: { type: Number, default: 1 },
+    bar: { type: Object, default: () => {} },
+    baz: { type: null },
+    bool: { type: Boolean }
   },
   setup(__props: any) {
 

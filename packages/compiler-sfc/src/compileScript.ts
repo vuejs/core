@@ -693,8 +693,13 @@ export function compileScript(
             defaultString ? `, ${defaultString}` : ``
           } }`
         } else {
+          const { type } = props[key]
           // production: checks are useless
-          return `${key}: ${defaultString ? `{ ${defaultString} }` : 'null'}`
+          return `${key}: { type: ${toRuntimeTypeString(
+            type
+          )}${
+            defaultString ? `, ${defaultString}` : ``
+          } }`
         }
       })
       .join(',\n    ')}\n  }`
@@ -1621,15 +1626,13 @@ function extractRuntimeProps(
       m.key.type === 'Identifier'
     ) {
       let type
-      if (!isProd) {
-        if (m.type === 'TSMethodSignature') {
-          type = ['Function']
-        } else if (m.typeAnnotation) {
-          type = inferRuntimeType(
-            m.typeAnnotation.typeAnnotation,
-            declaredTypes
-          )
-        }
+      if (m.type === 'TSMethodSignature') {
+        type = ['Function']
+      } else if (m.typeAnnotation) {
+        type = inferRuntimeType(
+          m.typeAnnotation.typeAnnotation,
+          declaredTypes
+        )
       }
       props[m.key.name] = {
         key: m.key.name,
