@@ -191,13 +191,21 @@ describe('defineCustomElement', () => {
 
     test('handling properties set before upgrading', () => {
       const E = defineCustomElement({
-        props: ['foo'],
+        props: {
+          foo: String,
+          dataAge: Number
+        },
+        setup(props) {
+          expect(props.foo).toBe('hello')
+          expect(props.dataAge).toBe(5)
+        },
         render() {
           return `foo: ${this.foo}`
         }
       })
       const el = document.createElement('my-el-upgrade') as any
       el.foo = 'hello'
+      el.dataset.age = 5
       container.appendChild(el)
       customElements.define('my-el-upgrade', E)
       expect(el.shadowRoot.innerHTML).toBe(`foo: hello`)

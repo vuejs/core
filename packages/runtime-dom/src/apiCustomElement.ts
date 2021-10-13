@@ -233,7 +233,7 @@ export class VueElement extends BaseClass {
       }
       if (numberProps) {
         this._numberProps = numberProps
-        this._update()
+        // this._update()
       }
 
       // check if there are props set pre-upgrade or connect
@@ -258,7 +258,9 @@ export class VueElement extends BaseClass {
 
     const asyncDef = (this._def as ComponentOptions).__asyncLoader
     if (asyncDef) {
-      asyncDef().then(resolve)
+      asyncDef()
+        .then(resolve)
+        .then(() => this._update())
     } else {
       resolve(this._def)
     }
