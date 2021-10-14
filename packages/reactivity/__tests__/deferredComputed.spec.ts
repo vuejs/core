@@ -107,7 +107,7 @@ describe('deferred computed', () => {
     expect(effectSpy).toHaveBeenCalledTimes(1)
   })
 
-  test('chained computed value invalidation', async () => {
+  test('chained computed value invalidation', () => {
     const effectSpy = jest.fn()
     const c1Spy = jest.fn()
     const c2Spy = jest.fn()
