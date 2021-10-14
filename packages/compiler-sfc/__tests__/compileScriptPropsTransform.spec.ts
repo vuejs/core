@@ -83,7 +83,7 @@ describe('sfc props transform', () => {
     const { content } = compile(
       `
       <script setup lang="ts">
-      const { foo = 1, bar = {} } = defineProps<{ foo?: number, bar?: object, baz?: any, bool?: boolean }>()
+      const { foo = 1, bar = {} } = defineProps<{ foo?: number, bar?: object, baz?: any, boola?: boolean, boolb?: boolean | number }>()
       </script>
     `,
       { isProd: true }
@@ -91,10 +91,11 @@ describe('sfc props transform', () => {
     // literals can be used as-is, non-literals are always returned from a
     // function
     expect(content).toMatch(`props: {
-    foo: { type: Number, default: 1 },
-    bar: { type: Object, default: () => {} },
-    baz: { type: null },
-    bool: { type: Boolean }
+    foo: { default: 1 },
+    bar: { default: () => {} },
+    baz: null,
+    boola: { type: Boolean },
+    boolb: { type: [Boolean, Number] }
   }`)
     assertCode(content)
   })

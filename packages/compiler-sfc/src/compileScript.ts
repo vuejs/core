@@ -685,21 +685,23 @@ export function compileScript(
           }
         }
 
+        const { type, required } = props[key]
         if (!isProd) {
-          const { type, required } = props[key]
           return `${key}: { type: ${toRuntimeTypeString(
             type
           )}, required: ${required}${
             defaultString ? `, ${defaultString}` : ``
           } }`
-        } else {
-          const { type } = props[key]
-          // production: checks are useless
+        } else if (type.indexOf('Boolean') > -1) {
+          // production: if boolean exists, should keep the type.
           return `${key}: { type: ${toRuntimeTypeString(
             type
           )}${
             defaultString ? `, ${defaultString}` : ``
           } }`
+        } else {
+          // production: checks are useless
+          return `${key}: ${defaultString ? `{ ${defaultString} }` : 'null'}`
         }
       })
       .join(',\n    ')}\n  }`
