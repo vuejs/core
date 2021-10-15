@@ -124,7 +124,7 @@ export const capitalize = cacheStringFunction(
  * @private
  */
 export const toHandlerKey = cacheStringFunction((str: string) =>
-  str ? `on${capitalize(str)}` : ``
+  str ? `on${capitalize(camelize(str))}` : ``
 )
 
 // compare whether a value has changed, accounting for NaN.
