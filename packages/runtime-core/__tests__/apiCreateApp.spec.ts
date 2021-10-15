@@ -93,6 +93,14 @@ describe('api: createApp', () => {
     app.provide('foo', 1)
     app.provide('bar', 2)
 
+    const foo = app.inject('foo')
+    const bar = app.inject('bar')
+    app.inject('non-existant')
+
+    expect('[Vue warn]: injection "non-existant" not found.').toHaveBeenWarned()
+    expect(foo).toBe(1)
+    expect(bar).toBe(2)
+
     const root = nodeOps.createElement('div')
     app.mount(root)
     expect(serializeInner(root)).toBe(`3,2`)

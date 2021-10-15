@@ -41,6 +41,7 @@ export interface App<HostElement = any> {
   ): ComponentPublicInstance
   unmount(): void
   provide<T>(key: InjectionKey<T> | string, value: T): this
+  inject<T>(key: InjectionKey<T> | string): T | undefined
 
   // internal, but we need to expose these for the server-renderer and devtools
   _uid: number
@@ -346,6 +347,14 @@ export function createAppAPI<HostElement>(
         context.provides[key as string] = value
 
         return app
+      },
+
+      inject<T>(key: InjectionKey<T> | string) {
+        const value = context.provides[key as string]
+        if (__DEV__ && !((key as string) in context.provides)) {
+          warn(`injection "${String(key)}" not found.`)
+        }
+        return value
       }
     })
 
