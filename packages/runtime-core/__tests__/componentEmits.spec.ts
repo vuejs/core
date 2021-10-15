@@ -195,6 +195,22 @@ describe('component: emit', () => {
     ).not.toHaveBeenWarned()
   })
 
+  test('should not warn if has equivalent onXXX prop with kebap-cased event', () => {
+    const Foo = defineComponent({
+      props: ['onFooBar'],
+      emits: [],
+      render() {},
+      created() {
+        // @ts-ignore
+        this.$emit('foo-bar')
+      }
+    })
+    render(h(Foo), nodeOps.createElement('div'))
+    expect(
+      `Component emitted event "foo" but it is neither declared`
+    ).not.toHaveBeenWarned()
+  })
+
   test('validator warning', () => {
     const Foo = defineComponent({
       emits: {
