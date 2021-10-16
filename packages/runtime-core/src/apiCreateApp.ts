@@ -350,11 +350,11 @@ export function createAppAPI<HostElement>(
       },
 
       inject<T>(key: InjectionKey<T> | string) {
-        const value = context.provides[key as string]
-        if (__DEV__ && !((key as string) in context.provides)) {
+        if ((key as string) in context.provides) {
+          return context.provides[key as string]
+        } else if (__DEV__) {
           warn(`injection "${String(key)}" not found.`)
         }
-        return value
       }
     })
 
