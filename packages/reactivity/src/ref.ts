@@ -278,7 +278,7 @@ export type UnwrapRefSimple<T> = T extends
   | RefUnwrapBailTypes[keyof RefUnwrapBailTypes]
   ? T
   : T extends Array<any>
-  ? { [K in keyof T]: UnwrapRefSimple<T[K]> }
+  ? Array<UnwrapRefSimple<T[number]>>
   : T extends object & { [ShallowReactiveMarker]?: never }
   ? {
       [P in keyof T]: P extends symbol ? T[P] : UnwrapRef<T[P]>
