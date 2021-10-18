@@ -2,7 +2,7 @@
   "name": "@vue/ref-transform",
   "version": "3.2.20",
   "description": "@vue/ref-transform",
-  "main": "dist/ref-transform.cjs.js",
+  "main": "dist/ref-transform.cjs",
   "files": [
     "dist"
   ],

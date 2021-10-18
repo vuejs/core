@@ -12,7 +12,7 @@ setVH()
 const store = new ReplStore({
   serializedState: location.hash.slice(1),
   defaultVueRuntimeURL: import.meta.env.PROD
-    ? `${location.origin}/vue.runtime.esm-browser.js`
+    ? `${location.origin}/vue.runtime.esm-browser.mjs`
     : `${location.origin}/src/vue-dev-proxy`
 })
 

@@ -2,12 +2,12 @@
   "name": "@vue/runtime-dom",
   "version": "3.2.20",
   "description": "@vue/runtime-dom",
-  "main": "index.js",
-  "module": "dist/runtime-dom.esm-bundler.js",
+  "main": "index.cjs",
+  "module": "dist/runtime-dom.esm-bundler.mjs",
   "types": "dist/runtime-dom.d.ts",
   "unpkg": "dist/runtime-dom.global.js",
   "files": [
-    "index.js",
+    "index.cjs",
     "dist"
   ],
   "sideEffects": false,

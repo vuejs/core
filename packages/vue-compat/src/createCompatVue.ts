@@ -1,5 +1,5 @@
 // This entry exports the runtime only, and is built as
-// `dist/vue.esm-bundler.js` which is used by default for bundlers.
+// `dist/vue.esm-bundler.mjs` which is used by default for bundlers.
 import { initDev } from './dev'
 import {
   compatUtils,

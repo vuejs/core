@@ -2,11 +2,11 @@
   "name": "@vue/server-renderer",
   "version": "3.2.20",
   "description": "@vue/server-renderer",
-  "main": "index.js",
-  "module": "dist/server-renderer.esm-bundler.js",
+  "main": "index.cjs",
+  "module": "dist/server-renderer.esm-bundler.mjs",
   "types": "dist/server-renderer.d.ts",
   "files": [
-    "index.js",
+    "index.cjs",
     "dist"
   ],
   "buildOptions": {

@@ -2,8 +2,8 @@
   "name": "@vue/compiler-sfc",
   "version": "3.2.20",
   "description": "@vue/compiler-sfc",
-  "main": "dist/compiler-sfc.cjs.js",
-  "module": "dist/compiler-sfc.esm-browser.js",
+  "main": "dist/compiler-sfc.cjs",
+  "module": "dist/compiler-sfc.esm-browser.mjs",
   "types": "dist/compiler-sfc.d.ts",
   "files": [
     "dist"

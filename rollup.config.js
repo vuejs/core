@@ -21,15 +21,15 @@ let hasTSChecked = false
 
 const outputConfigs = {
   'esm-bundler': {
-    file: resolve(`dist/${name}.esm-bundler.js`),
+    file: resolve(`dist/${name}.esm-bundler.mjs`),
     format: `es`
   },
   'esm-browser': {
-    file: resolve(`dist/${name}.esm-browser.js`),
+    file: resolve(`dist/${name}.esm-browser.mjs`),
     format: `es`
   },
   cjs: {
-    file: resolve(`dist/${name}.cjs.js`),
+    file: resolve(`dist/${name}.cjs`),
     format: `cjs`
   },
   global: {
@@ -38,11 +38,11 @@ const outputConfigs = {
   },
   // runtime-only builds, for main "vue" package only
   'esm-bundler-runtime': {
-    file: resolve(`dist/${name}.runtime.esm-bundler.js`),
+    file: resolve(`dist/${name}.runtime.esm-bundler.mjs`),
     format: `es`
   },
   'esm-browser-runtime': {
-    file: resolve(`dist/${name}.runtime.esm-browser.js`),
+    file: resolve(`dist/${name}.runtime.esm-browser.mjs`),
     format: 'es'
   },
   'global-runtime': {
@@ -81,7 +81,7 @@ function createConfig(format, output, plugins = []) {
   }
 
   const isProductionBuild =
-    process.env.__DEV__ === 'false' || /\.prod\.js$/.test(output.file)
+    process.env.__DEV__ === 'false' || /\.prod\.[cm]?js$/.test(output.file)
   const isBundlerESMBuild = /esm-bundler/.test(format)
   const isBrowserESMBuild = /esm-browser/.test(format)
   const isNodeBuild = format === 'cjs'
@@ -287,8 +287,14 @@ function createReplacePlugin(
 }
 
 function createProductionConfig(format) {
+  const extensions = {
+    cjs: 'cjs',
+    es: 'mjs'
+  }
+  const ext = extensions[format] || 'js'
+  const description = format === 'cjs' ? '' : `.${format}`
   return createConfig(format, {
-    file: resolve(`dist/${name}.${format}.prod.js`),
+    file: resolve(`dist/${name}${description}.prod.${ext}`),
     format: outputConfigs[format].format
   })
 }
@@ -298,7 +304,7 @@ function createMinifiedConfig(format) {
   return createConfig(
     format,
     {
-      file: outputConfigs[format].file.replace(/\.js$/, '.prod.js'),
+      file: outputConfigs[format].file.replace(/\.[cm]?js$/, r => `.prod${r}`),
       format: outputConfigs[format].format
     },
     [

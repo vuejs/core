@@ -29,7 +29,7 @@ files.forEach(shortName => {
       version,
       description: name,
       main: 'index.js',
-      module: `dist/${shortName}.esm-bundler.js`,
+      module: `dist/${shortName}.esm-bundler.mjs`,
       files: [`index.js`, `dist`],
       types: `dist/${shortName}.d.ts`,
       repository: {
@@ -89,9 +89,9 @@ files.forEach(shortName => {
 'use strict'
 
 if (process.env.NODE_ENV === 'production') {
-  module.exports = require('./dist/${shortName}.cjs.prod.js')
+  module.exports = require('./dist/${shortName}.prod.cjs')
 } else {
-  module.exports = require('./dist/${shortName}.cjs.js')
+  module.exports = require('./dist/${shortName}.cjs')
 }
     `.trim() + '\n'
     )

@@ -2,11 +2,11 @@
   "name": "@vue/shared",
   "version": "3.2.20",
   "description": "internal utils shared across @vue packages",
-  "main": "index.js",
-  "module": "dist/shared.esm-bundler.js",
+  "main": "index.cjs",
+  "module": "dist/shared.esm-bundler.mjs",
   "types": "dist/shared.d.ts",
   "files": [
-    "index.js",
+    "index.cjs",
     "dist"
   ],
   "buildOptions": {

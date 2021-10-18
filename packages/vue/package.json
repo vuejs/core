@@ -2,13 +2,13 @@
   "name": "vue",
   "version": "3.2.20",
   "description": "The progressive JavaScript framework for buiding modern web UI.",
-  "main": "index.js",
-  "module": "dist/vue.runtime.esm-bundler.js",
+  "main": "index.cjs",
+  "module": "dist/vue.runtime.esm-bundler.mjs",
   "types": "dist/vue.d.ts",
   "unpkg": "dist/vue.global.js",
   "jsdelivr": "dist/vue.global.js",
   "files": [
-    "index.js",
+    "index.cjs",
     "index.mjs",
     "dist",
     "compiler-sfc",
@@ -19,17 +19,17 @@
     ".": {
       "import": {
         "node": "./index.mjs",
-        "default": "./dist/vue.runtime.esm-bundler.js"
+        "default": "./dist/vue.runtime.esm-bundler.mjs"
       },
-      "require": "./index.js"
+      "require": "./index.cjs"
     },
     "./server-renderer": {
       "import": "./server-renderer/index.mjs",
-      "require": "./server-renderer/index.js"
+      "require": "./server-renderer/index.cjs"
     },
     "./compiler-sfc": {
       "import": "./compiler-sfc/index.mjs",
-      "require": "./compiler-sfc/index.js"
+      "require": "./compiler-sfc/index.cjs"
     },
     "./dist/*": "./dist/*",
     "./package.json": "./package.json"

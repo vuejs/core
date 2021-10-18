@@ -3,11 +3,11 @@
   "version": "3.2.20",
   "description": "@vue/runtime-test",
   "private": true,
-  "main": "index.js",
-  "module": "dist/runtime-test.esm-bundler.js",
+  "main": "index.cjs",
+  "module": "dist/runtime-test.esm-bundler.mjs",
   "types": "dist/runtime-test.d.ts",
   "files": [
-    "index.js",
+    "index.cjs",
     "dist"
   ],
   "repository": {

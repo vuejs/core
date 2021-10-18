@@ -2,11 +2,11 @@
   "name": "@vue/runtime-core",
   "version": "3.2.20",
   "description": "@vue/runtime-core",
-  "main": "index.js",
-  "module": "dist/runtime-core.esm-bundler.js",
+  "main": "index.cjs",
+  "module": "dist/runtime-core.esm-bundler.mjs",
   "types": "dist/runtime-core.d.ts",
   "files": [
-    "index.js",
+    "index.cjs",
     "dist"
   ],
   "buildOptions": {

@@ -23,17 +23,17 @@ function copyVuePlugin(): Plugin {
     generateBundle() {
       const filePath = path.resolve(
         __dirname,
-        '../vue/dist/vue.runtime.esm-browser.js'
+        '../vue/dist/vue.runtime.esm-browser.mjs'
       )
       if (!fs.existsSync(filePath)) {
         throw new Error(
-          `vue.runtime.esm-browser.js not built. ` +
+          `vue.runtime.esm-browser.mjs not built. ` +
             `Run "nr build vue -f esm-browser" first.`
         )
       }
       this.emitFile({
         type: 'asset',
-        fileName: 'vue.runtime.esm-browser.js',
+        fileName: 'vue.runtime.esm-browser.mjs',
         source: fs.readFileSync(filePath, 'utf-8')
       })
     }
