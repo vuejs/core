@@ -99,6 +99,10 @@ export function createHydrationFunctions(
     const domType = node.nodeType
     vnode.el = node
 
+    if (vnode.patchFlag === PatchFlags.BAIL) {
+      vnode.dynamicChildren = null
+    }
+
     let nextNode: Node | null = null
     switch (type) {
       case Text:
