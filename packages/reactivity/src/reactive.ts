@@ -191,12 +191,10 @@ function createReactiveObject(
     }
     return target
   }
+  
   // target is already a Proxy, return it.
   // exception: calling readonly() on a reactive object
-  if (
-    target[ReactiveFlags.RAW] &&
-    !(isReadonly && target[ReactiveFlags.IS_REACTIVE])
-  ) {
+  if (isReactive(target) && !isReadonly){
     return target
   }
   // target already has corresponding Proxy
