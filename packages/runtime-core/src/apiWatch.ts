@@ -25,7 +25,9 @@ import {
 import {
   currentInstance,
   ComponentInternalInstance,
-  isInSSRComponentSetup
+  isInSSRComponentSetup,
+  setCurrentInstance,
+  unsetCurrentInstance
 } from './component'
 import {
   ErrorCodes,
@@ -50,10 +52,14 @@ export type WatchCallback<V = any, OV = any> = (
 
 type MapSources<T, Immediate> = {
   [K in keyof T]: T[K] extends WatchSource<infer V>
-    ? Immediate extends true ? (V | undefined) : V
+    ? Immediate extends true
+      ? V | undefined
+      : V
     : T[K] extends object
-      ? Immediate extends true ? (T[K] | undefined) : T[K]
-      : never
+    ? Immediate extends true
+      ? T[K] | undefined
+      : T[K]
+    : never
 }
 
 type InvalidateCbRegistrator = (cb: () => void) => void
@@ -81,9 +87,26 @@ export function watchPostEffect(
   effect: WatchEffect,
   options?: DebuggerOptions
 ) {
-  return doWatch(effect, null, (__DEV__
-    ? Object.assign(options || {}, { flush: 'post' })
-    : { flush: 'post' }) as WatchOptionsBase)
+  return doWatch(
+    effect,
+    null,
+    (__DEV__
+      ? Object.assign(options || {}, { flush: 'post' })
+      : { flush: 'post' }) as WatchOptionsBase
+  )
+}
+
+export function watchSyncEffect(
+  effect: WatchEffect,
+  options?: DebuggerOptions
+) {
+  return doWatch(
+    effect,
+    null,
+    (__DEV__
+      ? Object.assign(options || {}, { flush: 'sync' })
+      : { flush: 'sync' }) as WatchOptionsBase
+  )
 }
 
 // initial value for watchers to trigger on undefined initial values
@@ -116,7 +139,7 @@ export function watch<
 // overload: single source + cb
 export function watch<T, Immediate extends Readonly<boolean> = false>(
   source: WatchSource<T>,
-  cb: WatchCallback<T, Immediate extends true ? (T | undefined) : T>,
+  cb: WatchCallback<T, Immediate extends true ? T | undefined : T>,
   options?: WatchOptions<Immediate>
 ): WatchStopHandle
 
@@ -126,7 +149,7 @@ export function watch<
   Immediate extends Readonly<boolean> = false
 >(
   source: T,
-  cb: WatchCallback<T, Immediate extends true ? (T | undefined) : T>,
+  cb: WatchCallback<T, Immediate extends true ? T | undefined : T>,
   options?: WatchOptions<Immediate>
 ): WatchStopHandle
 
@@ -149,8 +172,7 @@ export function watch<T = any, Immediate extends Readonly<boolean> = false>(
 function doWatch(
   source: WatchSource | WatchSource[] | WatchEffect | object,
   cb: WatchCallback | null,
-  { immediate, deep, flush, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ,
-  instance = currentInstance
+  { immediate, deep, flush, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ
 ): WatchStopHandle {
   if (__DEV__ && !cb) {
     if (immediate !== undefined) {
@@ -176,6 +198,7 @@ function doWatch(
     )
   }
 
+  const instance = currentInstance
   let getter: () => any
   let forceTrigger = false
   let isMultiSource = false
@@ -257,7 +280,7 @@ function doWatch(
 
   // in SSR there is no need to setup an actual effect, and it should be noop
   // unless it's eager
-  if (__NODE_JS__ && isInSSRComponentSetup) {
+  if (__SSR__ && isInSSRComponentSetup) {
     // we will also not call the invalidate callback (+ runner is not set up)
     onInvalidate = NOOP
     if (!cb) {
@@ -265,7 +288,7 @@ function doWatch(
     } else if (immediate) {
       callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
         getter(),
-        undefined,
+        isMultiSource ? [] : undefined,
         onInvalidate
       ])
     }
@@ -332,8 +355,7 @@ function doWatch(
     }
   }
 
-  const scope = instance && instance.scope
-  const effect = new ReactiveEffect(getter, scheduler, scope)
+  const effect = new ReactiveEffect(getter, scheduler)
 
   if (__DEV__) {
     effect.onTrack = onTrack
@@ -358,8 +380,8 @@ function doWatch(
 
   return () => {
     effect.stop()
-    if (scope) {
-      remove(scope.effects!, effect)
+    if (instance && instance.scope) {
+      remove(instance.scope.effects!, effect)
     }
   }
 }
@@ -384,7 +406,15 @@ export function instanceWatch(
     cb = value.handler as Function
     options = value
   }
-  return doWatch(getter, cb.bind(publicThis), options, this)
+  const cur = currentInstance
+  setCurrentInstance(this)
+  const res = doWatch(getter, cb.bind(publicThis), options)
+  if (cur) {
+    setCurrentInstance(cur)
+  } else {
+    unsetCurrentInstance()
+  }
+  return res
 }
 
 export function createPathGetter(ctx: any, path: string) {
@@ -398,7 +428,7 @@ export function createPathGetter(ctx: any, path: string) {
   }
 }
 
-export function traverse(value: unknown, seen: Set<unknown> = new Set()) {
+export function traverse(value: unknown, seen?: Set<unknown>) {
   if (!isObject(value) || (value as any)[ReactiveFlags.SKIP]) {
     return value
   }

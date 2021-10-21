@@ -33,14 +33,17 @@ export function render(_ctx, _cache) {
 `;
 
 exports[`compiler sfc: transform asset url support uri fragment 1`] = `
-"import { openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
+"import { createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 import _imports_0 from '@svg/file.svg'
 
 
 const _hoisted_1 = _imports_0 + '#fragment'
 
 export function render(_ctx, _cache) {
-  return (_openBlock(), _createElementBlock(\\"use\\", { href: _hoisted_1 }))
+  return (_openBlock(), _createElementBlock(_Fragment, null, [
+    _createElementVNode(\\"use\\", { href: _hoisted_1 }),
+    _createElementVNode(\\"use\\", { href: _hoisted_1 })
+  ], 64 /* STABLE_FRAGMENT */))
 }"
 `;
 

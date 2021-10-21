@@ -1,28 +1,19 @@
 {
   "name": "@vue/sfc-playground",
-  "version": "3.2.0-beta.1",
+  "version": "3.2.20",
   "private": true,
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "serve": "vite preview"
   },
-  "buildOptions": {
-    "formats": [
-      "global"
-    ],
-    "env": "development",
-    "enableNonBrowserBranches": true
-  },
   "devDependencies": {
-    "@types/codemirror": "^0.0.108",
-    "@vitejs/plugin-vue": "^1.2.0",
-    "codemirror": "^5.60.0",
-    "vite": "^2.4.0"
+    "@vitejs/plugin-vue": "^1.9.3"
   },
   "dependencies": {
+    "vue": "workspace:*",
+    "@vue/repl": "^0.4.3",
     "file-saver": "^2.0.5",
-    "jszip": "^3.6.0",
-    "sucrase": "^3.19.0"
+    "jszip": "^3.6.0"
   }
 }

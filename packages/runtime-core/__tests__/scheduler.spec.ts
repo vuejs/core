@@ -51,11 +51,12 @@ describe('scheduler', () => {
 
         queueJob(job2)
         queueJob(job3)
-        queueJob(job4)
       }
 
       const job2 = () => {
         calls.push('job2')
+        queueJob(job4)
+        queueJob(job5)
       }
       job2.id = 10
 
@@ -64,16 +65,19 @@ describe('scheduler', () => {
       }
       job3.id = 1
 
-      // job4 gets the Infinity as it's id
       const job4 = () => {
         calls.push('job4')
+      }
+
+      const job5 = () => {
+        calls.push('job5')
       }
 
       queueJob(job1)
 
       expect(calls).toEqual([])
       await nextTick()
-      expect(calls).toEqual(['job1', 'job3', 'job2', 'job4'])
+      expect(calls).toEqual(['job1', 'job3', 'job2', 'job4', 'job5'])
     })
 
     it('should dedupe queued jobs', async () => {
@@ -485,7 +489,7 @@ describe('scheduler', () => {
     })
     try {
       await nextTick()
-    } catch (e) {
+    } catch (e: any) {
       expect(e).toBe(err)
     }
     expect(

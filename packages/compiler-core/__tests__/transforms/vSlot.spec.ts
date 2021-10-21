@@ -778,6 +778,11 @@ describe('compiler: transform component slots', () => {
       )
       expect(slots).toMatchObject(toMatch)
     })
+
+    test('<slot w/ nested component>', () => {
+      const { slots } = parseWithSlots(`<Comp><Comp><slot/></Comp></Comp>`)
+      expect(slots).toMatchObject(toMatch)
+    })
   })
 
   describe('errors', () => {

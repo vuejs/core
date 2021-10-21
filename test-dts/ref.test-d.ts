@@ -10,6 +10,7 @@ import {
   toRef,
   toRefs,
   ToRefs,
+  shallowReactive,
   watch
 } from './index'
 
@@ -101,16 +102,42 @@ bailType(el)
 function withSymbol() {
   const customSymbol = Symbol()
   const obj = {
-    [Symbol.asyncIterator]: { a: 1 },
-    [Symbol.unscopables]: { b: '1' },
-    [customSymbol]: { c: [1, 2, 3] }
+    [Symbol.asyncIterator]: ref(1),
+    [Symbol.hasInstance]: { a: ref('a') },
+    [Symbol.isConcatSpreadable]: { b: ref(true) },
+    [Symbol.iterator]: [ref(1)],
+    [Symbol.match]: new Set<Ref<number>>(),
+    [Symbol.matchAll]: new Map<number, Ref<string>>(),
+    [Symbol.replace]: { arr: [ref('a')] },
+    [Symbol.search]: { set: new Set<Ref<number>>() },
+    [Symbol.species]: { map: new Map<number, Ref<string>>() },
+    [Symbol.split]: new WeakSet<Ref<boolean>>(),
+    [Symbol.toPrimitive]: new WeakMap<Ref<boolean>, string>(),
+    [Symbol.toStringTag]: { weakSet: new WeakSet<Ref<boolean>>() },
+    [Symbol.unscopables]: { weakMap: new WeakMap<Ref<boolean>, string>() },
+    [customSymbol]: { arr: [ref(1)] }
   }
 
   const objRef = ref(obj)
 
-  expectType<{ a: number }>(objRef.value[Symbol.asyncIterator])
-  expectType<{ b: string }>(objRef.value[Symbol.unscopables])
-  expectType<{ c: Array<number> }>(objRef.value[customSymbol])
+  expectType<Ref<number>>(objRef.value[Symbol.asyncIterator])
+  expectType<{ a: Ref<string> }>(objRef.value[Symbol.hasInstance])
+  expectType<{ b: Ref<boolean> }>(objRef.value[Symbol.isConcatSpreadable])
+  expectType<Ref<number>[]>(objRef.value[Symbol.iterator])
+  expectType<Set<Ref<number>>>(objRef.value[Symbol.match])
+  expectType<Map<number, Ref<string>>>(objRef.value[Symbol.matchAll])
+  expectType<{ arr: Ref<string>[] }>(objRef.value[Symbol.replace])
+  expectType<{ set: Set<Ref<number>> }>(objRef.value[Symbol.search])
+  expectType<{ map: Map<number, Ref<string>> }>(objRef.value[Symbol.species])
+  expectType<WeakSet<Ref<boolean>>>(objRef.value[Symbol.split])
+  expectType<WeakMap<Ref<boolean>, string>>(objRef.value[Symbol.toPrimitive])
+  expectType<{ weakSet: WeakSet<Ref<boolean>> }>(
+    objRef.value[Symbol.toStringTag]
+  )
+  expectType<{ weakMap: WeakMap<Ref<boolean>, string> }>(
+    objRef.value[Symbol.unscopables]
+  )
+  expectType<{ arr: Ref<number>[] }>(objRef.value[customSymbol])
 }
 
 withSymbol()
@@ -210,3 +237,67 @@ function testUnrefGenerics<T>(p: T | Ref<T>) {
 }
 
 testUnrefGenerics(1)
+
+// #4732
+describe('ref in shallow reactive', () => {
+  const baz = shallowReactive({
+    foo: {
+      bar: ref(42)
+    }
+  })
+
+  const foo = toRef(baz, 'foo')
+
+  expectType<Ref<number>>(foo.value.bar)
+  expectType<number>(foo.value.bar.value)
+})
+
+// #4771
+describe('shallow reactive in reactive', () => {
+  const baz = reactive({
+    foo: shallowReactive({
+      a: {
+        b: ref(42)
+      }
+    })
+  })
+
+  const foo = toRef(baz, 'foo')
+
+  expectType<Ref<number>>(foo.value.a.b)
+  expectType<number>(foo.value.a.b.value)
+})
+
+describe('shallow ref in reactive', () => {
+  const x = reactive({
+    foo: shallowRef({
+      bar: {
+        baz: ref(123),
+        qux: reactive({
+          z: ref(123)
+        })
+      }
+    })
+  })
+
+  expectType<Ref<number>>(x.foo.bar.baz)
+  expectType<number>(x.foo.bar.qux.z)
+})
+
+describe('ref in shallow ref', () => {
+  const x = shallowRef({
+    a: ref(123)
+  })
+
+  expectType<Ref<number>>(x.value.a)
+})
+
+describe('reactive in shallow ref', () => {
+  const x = shallowRef({
+    a: reactive({
+      b: ref(0)
+    })
+  })
+
+  expectType<number>(x.value.a.b)
+})

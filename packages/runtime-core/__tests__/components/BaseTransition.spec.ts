@@ -258,9 +258,8 @@ describe('BaseTransition', () => {
     ) {
       const toggle = ref(true)
       const { props, cbs } = mockProps({ mode })
-      const root = mount(
-        props,
-        () => (toggle.value ? trueBranch() : falseBranch())
+      const root = mount(props, () =>
+        toggle.value ? trueBranch() : falseBranch()
       )
 
       // without appear: true, enter hooks should not be called on mount
@@ -348,9 +347,8 @@ describe('BaseTransition', () => {
     }: ToggleOptions) {
       const toggle = ref(false)
       const { props, cbs } = mockProps()
-      const root = mount(
-        props,
-        () => (toggle.value ? trueBranch() : falseBranch())
+      const root = mount(props, () =>
+        toggle.value ? trueBranch() : falseBranch()
       )
 
       // start enter

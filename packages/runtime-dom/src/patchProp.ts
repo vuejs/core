@@ -10,9 +10,6 @@ const nativeOnRE = /^on[a-z]/
 
 type DOMRendererOptions = RendererOptions<Node, Element>
 
-export const forcePatchProp: DOMRendererOptions['forcePatchProp'] = (_, key) =>
-  key === 'value'
-
 export const patchProp: DOMRendererOptions['patchProp'] = (
   el,
   key,
@@ -37,8 +34,8 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
     key[0] === '.'
       ? ((key = key.slice(1)), true)
       : key[0] === '^'
-        ? ((key = key.slice(1)), false)
-        : shouldSetAsProp(el, key, nextValue, isSVG)
+      ? ((key = key.slice(1)), false)
+      : shouldSetAsProp(el, key, nextValue, isSVG)
   ) {
     patchDOMProp(
       el,
@@ -71,8 +68,8 @@ function shouldSetAsProp(
 ) {
   if (isSVG) {
     // most keys must be set as attribute on svg elements to work
-    // ...except innerHTML
-    if (key === 'innerHTML') {
+    // ...except innerHTML & textContent
+    if (key === 'innerHTML' || key === 'textContent') {
       return true
     }
     // or native onclick with function values

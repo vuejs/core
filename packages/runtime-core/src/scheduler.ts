@@ -1,15 +1,12 @@
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
-import { isArray } from '@vue/shared'
+import { isArray, NOOP } from '@vue/shared'
 import { ComponentInternalInstance, getComponentName } from './component'
 import { warn } from './warning'
-import { setComputedScheduler } from '@vue/reactivity'
-
-// set scheduler for computed
-setComputedScheduler(queueJob)
 
 export interface SchedulerJob extends Function {
   id?: number
   active?: boolean
+  computed?: boolean
   /**
    * Indicates whether the effect is allowed to recursively trigger itself
    * when managed by the scheduler.
@@ -70,16 +67,15 @@ export function nextTick<T = void>(
 // Use binary-search to find a suitable position in the queue,
 // so that the queue maintains the increasing order of job's id,
 // which can prevent the job from being skipped and also can avoid repeated patching.
-function findInsertionIndex(job: SchedulerJob) {
+function findInsertionIndex(id: number) {
   // the start index should be `flushIndex + 1`
   let start = flushIndex + 1
   let end = queue.length
-  const jobId = getId(job)
 
   while (start < end) {
     const middle = (start + end) >>> 1
     const middleJobId = getId(queue[middle])
-    middleJobId < jobId ? (start = middle + 1) : (end = middle)
+    middleJobId < id ? (start = middle + 1) : (end = middle)
   }
 
   return start
@@ -100,11 +96,10 @@ export function queueJob(job: SchedulerJob) {
       )) &&
     job !== currentPreFlushParentJob
   ) {
-    const pos = findInsertionIndex(job)
-    if (pos > -1) {
-      queue.splice(pos, 0, job)
-    } else {
+    if (job.id == null) {
       queue.push(job)
+    } else {
+      queue.splice(findInsertionIndex(job.id), 0, job)
     }
     queueFlush()
   }
@@ -133,10 +128,7 @@ function queueCb(
   if (!isArray(cb)) {
     if (
       !activeQueue ||
-      !activeQueue.includes(
-        cb,
-        (cb as SchedulerJob).allowRecurse ? index + 1 : index
-      )
+      !activeQueue.includes(cb, cb.allowRecurse ? index + 1 : index)
     ) {
       pendingQueue.push(cb)
     }
@@ -226,7 +218,7 @@ export function flushPostFlushCbs(seen?: CountMap) {
 }
 
 const getId = (job: SchedulerJob): number =>
-  job.id == null ? Infinity : job.id!
+  job.id == null ? Infinity : job.id
 
 function flushJobs(seen?: CountMap) {
   isFlushPending = false
@@ -246,13 +238,23 @@ function flushJobs(seen?: CountMap) {
   //    its update can be skipped.
   queue.sort((a, b) => getId(a) - getId(b))
 
+  // conditional usage of checkRecursiveUpdate must be determined out of
+  // try ... catch block since Rollup by default de-optimizes treeshaking
+  // inside try-catch. This can leave all warning code unshaked. Although
+  // they would get eventually shaken by a minifier like terser, some minifiers
+  // would fail to do that (e.g. https://github.com/evanw/esbuild/issues/1610)
+  const check = __DEV__
+    ? (job: SchedulerJob) => checkRecursiveUpdates(seen!, job)
+    : NOOP
+
   try {
     for (flushIndex = 0; flushIndex < queue.length; flushIndex++) {
       const job = queue[flushIndex]
       if (job && job.active !== false) {
-        if (__DEV__ && checkRecursiveUpdates(seen!, job)) {
+        if (__DEV__ && check(job)) {
           continue
         }
+        // console.log(`running:`, job.id)
         callWithErrorHandling(job, null, ErrorCodes.SCHEDULER)
       }
     }

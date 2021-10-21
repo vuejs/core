@@ -10,6 +10,47 @@ describe('v-memo', () => {
     return [el, vm]
   }
 
+  test('on with external array', async () => {
+    const [el, vm] = mount({
+      template: `<div v-memo="arr">{{ arr[0] }} {{ arr[1] }} {{arr[2] ?? '_' }} ({{c}})</div>{{c}}`,
+      data: () => ({ arr: [0, 0], c: 0 })
+    })
+    expect(el.innerHTML).toBe(`<div>0 0 _ (0)</div>0`)
+
+    let [x, y, z] = [0, 1, 2]
+
+    // change at index x - should update
+    vm.arr[x]++
+    vm.c++
+    await nextTick()
+    expect(el.innerHTML).toBe(`<div>1 0 _ (1)</div>1`)
+
+    // change at index y - should update
+    vm.arr[y]++
+    vm.c++
+    await nextTick()
+    expect(el.innerHTML).toBe(`<div>1 1 _ (2)</div>2`)
+
+    // noop change - should NOT update
+    vm.arr[x] = vm.arr[0]
+    vm.arr[y] = vm.arr[1]
+    vm.c++
+    await nextTick()
+    expect(el.innerHTML).toBe(`<div>1 1 _ (2)</div>3`)
+
+    // add item  3rd item - should update
+    vm.arr[z] = 0
+    vm.c++
+    await nextTick()
+    expect(el.innerHTML).toBe(`<div>1 1 0 (4)</div>4`)
+
+    // remove 3rd item - should update
+    vm.arr = vm.arr.slice(0, vm.arr.length - 1)
+    vm.c++
+    await nextTick()
+    expect(el.innerHTML).toBe(`<div>1 1 _ (5)</div>5`)
+  })
+
   test('on normal element', async () => {
     const [el, vm] = mount({
       template: `<div v-memo="[x]">{{ x }} {{ y }}</div>`,
@@ -146,5 +187,27 @@ describe('v-memo', () => {
     expect(el.innerHTML).toBe(
       `<div>5 yes z</div><div>2 no z</div><div>3 no z</div>`
     )
+  })
+
+  test('on v-for /w constant expression ', async () => {
+    const [el, vm] = mount({
+      template: `<div v-for="item in 3"  v-memo="[count < 2 ? true : count]">
+          {{count}}
+        </div>`,
+      data: () => ({
+        count: 0
+      })
+    })
+    expect(el.innerHTML).toBe(`<div>0</div><div>0</div><div>0</div>`)
+
+    vm.count = 1
+    await nextTick()
+    // should not update
+    expect(el.innerHTML).toBe(`<div>0</div><div>0</div><div>0</div>`)
+
+    vm.count = 2
+    await nextTick()
+    // should update
+    expect(el.innerHTML).toBe(`<div>2</div><div>2</div><div>2</div>`)
   })
 })

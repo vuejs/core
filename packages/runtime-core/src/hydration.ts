@@ -280,21 +280,36 @@ export function createHydrationFunctions(
         if (
           forcePatchValue ||
           !optimized ||
-          (patchFlag & PatchFlags.FULL_PROPS ||
-            patchFlag & PatchFlags.HYDRATE_EVENTS)
+          patchFlag & (PatchFlags.FULL_PROPS | PatchFlags.HYDRATE_EVENTS)
         ) {
           for (const key in props) {
             if (
               (forcePatchValue && key.endsWith('value')) ||
               (isOn(key) && !isReservedProp(key))
             ) {
-              patchProp(el, key, null, props[key])
+              patchProp(
+                el,
+                key,
+                null,
+                props[key],
+                false,
+                undefined,
+                parentComponent
+              )
             }
           }
         } else if (props.onClick) {
           // Fast path for click listeners (which is most often) to avoid
           // iterating through props.
-          patchProp(el, 'onClick', null, props.onClick)
+          patchProp(
+            el,
+            'onClick',
+            null,
+            props.onClick,
+            false,
+            undefined,
+            parentComponent
+          )
         }
       }
       // vnode / directive hooks
@@ -346,7 +361,9 @@ export function createHydrationFunctions(
           hasMismatch = true
           __DEV__ &&
             warn(
-              `Hydration text content mismatch in <${vnode.type as string}>:\n` +
+              `Hydration text content mismatch in <${
+                vnode.type as string
+              }>:\n` +
                 `- Client: ${el.textContent}\n` +
                 `- Server: ${vnode.children as string}`
             )
@@ -465,8 +482,8 @@ export function createHydrationFunctions(
         node.nodeType === DOMNodeTypes.TEXT
           ? `(text)`
           : isComment(node) && node.data === '['
-            ? `(start of fragment)`
-            : ``
+          ? `(start of fragment)`
+          : ``
       )
     vnode.el = null
 

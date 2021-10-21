@@ -42,8 +42,10 @@ import {
   WITH_MEMO,
   OPEN_BLOCK
 } from './runtimeHelpers'
-import { isString, isObject, hyphenate, extend } from '@vue/shared'
+import { isString, isObject, hyphenate, extend, NOOP } from '@vue/shared'
 import { PropsExpression } from './transforms/transformElement'
+import { parseExpression } from '@babel/parser'
+import { Expression } from '@babel/types'
 
 export const isStaticExp = (p: JSChildNode): p is SimpleExpressionNode =>
   p.type === NodeTypes.SIMPLE_EXPRESSION && p.isStatic
@@ -84,7 +86,7 @@ const whitespaceRE = /\s+[.[]\s*|\s*[.[]\s+/g
  * inside square brackets), but it's ok since these are only used on template
  * expressions and false positives are invalid expressions in the first place.
  */
-export const isMemberExpression = (path: string): boolean => {
+export const isMemberExpressionBrowser = (path: string): boolean => {
   // remove whitespaces around . or [ first
   path = path.trim().replace(whitespaceRE, s => s.trim())
 
@@ -153,13 +155,37 @@ export const isMemberExpression = (path: string): boolean => {
   return !currentOpenBracketCount && !currentOpenParensCount
 }
 
+export const isMemberExpressionNode = __BROWSER__
+  ? (NOOP as any as (path: string, context: TransformContext) => boolean)
+  : (path: string, context: TransformContext): boolean => {
+      try {
+        let ret: Expression = parseExpression(path, {
+          plugins: context.expressionPlugins
+        })
+        if (ret.type === 'TSAsExpression' || ret.type === 'TSTypeAssertion') {
+          ret = ret.expression
+        }
+        return (
+          ret.type === 'MemberExpression' ||
+          ret.type === 'OptionalMemberExpression' ||
+          ret.type === 'Identifier'
+        )
+      } catch (e) {
+        return false
+      }
+    }
+
+export const isMemberExpression = __BROWSER__
+  ? isMemberExpressionBrowser
+  : isMemberExpressionNode
+
 export function getInnerRange(
   loc: SourceLocation,
   offset: number,
-  length?: number
+  length: number
 ): SourceLocation {
   __TEST__ && assert(offset <= loc.source.length)
-  const source = loc.source.substr(offset, length)
+  const source = loc.source.slice(offset, offset + length)
   const newLoc: SourceLocation = {
     source,
     start: advancePositionWithClone(loc.start, loc.source, offset),
@@ -273,7 +299,7 @@ export function hasDynamicKeyVBind(node: ElementNode): boolean {
       p.type === NodeTypes.DIRECTIVE &&
       p.name === 'bind' &&
       (!p.arg || // v-bind="obj"
-      p.arg.type !== NodeTypes.SIMPLE_EXPRESSION || // v-bind:[_ctx.foo]
+        p.arg.type !== NodeTypes.SIMPLE_EXPRESSION || // v-bind:[_ctx.foo]
         !p.arg.isStatic) // v-bind:[foo]
   )
 }
@@ -430,7 +456,10 @@ export function toValidAssetId(
   name: string,
   type: 'component' | 'directive' | 'filter'
 ): string {
-  return `_${type}_${name.replace(/[^\w]/g, '_')}`
+  // see issue#4422, we need adding identifier on validAssetId if variable `name` has specific character
+  return `_${type}_${name.replace(/[^\w]/g, (searchValue, replaceValue) => {
+    return searchValue === '-' ? '_' : name.charCodeAt(replaceValue).toString()
+  })}`
 }
 
 // Check if a node contains expressions that reference current context scope ids

@@ -10,18 +10,44 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
-      - uses: bahmutov/npm-install@v1
+      - uses: actions/checkout@v2
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2.0.1
+        with:
+          version: 6.15.1
+
+      - name: Set node version to 16
+        uses: actions/setup-node@v2
+        with:
+          node-version: 16
+          cache: 'pnpm'
+
+      - run: pnpm install
+
       - name: Run unit tests
-        run: yarn test --ci
+        run: pnpm run test -- --ci
 
   test-dts:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
-      - uses: bahmutov/npm-install@v1
+      - uses: actions/checkout@v2
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2.0.1
+        with:
+          version: 6.15.1
+
+      - name: Set node version to 16
+        uses: actions/setup-node@v2
+        with:
+          node-version: 16
+          cache: 'pnpm'
+
+      - run: pnpm install
+
       - name: Run type declaration tests
-        run: yarn test-dts
+        run: pnpm run test-dts
 
   size:
     runs-on: ubuntu-latest
@@ -29,11 +55,24 @@ jobs:
       CI_JOB_NUMBER: 1
     steps:
       - uses: actions/checkout@v1
-      - uses: bahmutov/npm-install@v1
 
-      - name: Check build size
-        uses: posva/size-check-action@v1.1.2
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2.0.1
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          build_script: size
-          files: packages/vue/dist/vue.global.prod.js packages/runtime-dom/dist/runtime-dom.global.prod.js packages/size-check/dist/size-check.global.prod.js
+          version: 6.15.1
+
+      - name: Set node version to 16
+        uses: actions/setup-node@v2
+        with:
+          node-version: 16
+          cache: 'pnpm'
+
+      - run: pnpm install
+      - run: pnpm run size
+
+      # - name: Check build size
+      #   uses: posva/size-check-action@v1.1.2
+      #   with:
+      #     github_token: ${{ secrets.GITHUB_TOKEN }}
+      #     build_script: size
+      #     files: packages/vue/dist/vue.global.prod.js packages/runtime-dom/dist/runtime-dom.global.prod.js packages/size-check/dist/index.js

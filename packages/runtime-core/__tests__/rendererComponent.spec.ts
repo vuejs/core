@@ -10,8 +10,7 @@ import {
   inject,
   Ref,
   watch,
-  SetupContext,
-  computed
+  SetupContext
 } from '@vue/runtime-test'
 
 describe('renderer: component', () => {
@@ -217,7 +216,10 @@ describe('renderer: component', () => {
     const Child = {
       props: ['value'],
       setup(props: any, { emit }: SetupContext) {
-        watch(() => props.value, (val: number) => emit('update', val))
+        watch(
+          () => props.value,
+          (val: number) => emit('update', val)
+        )
 
         return () => {
           return h('div', props.value)
@@ -323,35 +325,33 @@ describe('renderer: component', () => {
     expect(ids).toEqual([ids[0], ids[0] + 1, ids[0] + 2])
   })
 
-  test('computed that did not change should not trigger re-render', async () => {
-    const src = ref(0)
-    const c = computed(() => src.value % 2)
+  test('child component props update should not lead to double update', async () => {
+    const text = ref(0)
     const spy = jest.fn()
+
     const App = {
       render() {
+        return h(Comp, { text: text.value })
+      }
+    }
+
+    const Comp = {
+      props: ['text'],
+      render(this: any) {
         spy()
-        return c.value
+        return h('h1', this.text)
       }
     }
 
     const root = nodeOps.createElement('div')
     render(h(App), root)
-    expect(serializeInner(root)).toBe(`0`)
+
+    expect(serializeInner(root)).toBe(`<h1>0</h1>`)
     expect(spy).toHaveBeenCalledTimes(1)
 
-    // verify it updates
-    src.value = 1
-    src.value = 2
-    src.value = 3
+    text.value++
     await nextTick()
-    expect(serializeInner(root)).toBe(`1`)
-    expect(spy).toHaveBeenCalledTimes(2) // should only update once
-
-    // verify it updates
-    src.value = 4
-    src.value = 5
-    await nextTick()
-    expect(serializeInner(root)).toBe(`1`)
-    expect(spy).toHaveBeenCalledTimes(2) // should not need to update
+    expect(serializeInner(root)).toBe(`<h1>1</h1>`)
+    expect(spy).toHaveBeenCalledTimes(2)
   })
 })

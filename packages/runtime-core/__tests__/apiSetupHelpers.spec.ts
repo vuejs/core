@@ -11,7 +11,8 @@ import {
   SetupContext,
   Suspense,
   computed,
-  ComputedRef
+  ComputedRef,
+  shallowReactive
 } from '@vue/runtime-test'
 import {
   defineEmits,
@@ -21,7 +22,8 @@ import {
   useAttrs,
   useSlots,
   mergeDefaults,
-  withAsyncContext
+  withAsyncContext,
+  createPropsRestProxy
 } from '../src/apiSetupHelpers'
 
 describe('SFC <script setup> helpers', () => {
@@ -77,26 +79,62 @@ describe('SFC <script setup> helpers', () => {
     expect(attrs).toBe(ctx!.attrs)
   })
 
-  test('mergeDefaults', () => {
-    const merged = mergeDefaults(
-      {
-        foo: null,
-        bar: { type: String, required: false }
-      },
-      {
-        foo: 1,
-        bar: 'baz'
-      }
-    )
-    expect(merged).toMatchObject({
-      foo: { default: 1 },
-      bar: { type: String, required: false, default: 'baz' }
+  describe('mergeDefaults', () => {
+    test('object syntax', () => {
+      const merged = mergeDefaults(
+        {
+          foo: null,
+          bar: { type: String, required: false },
+          baz: String
+        },
+        {
+          foo: 1,
+          bar: 'baz',
+          baz: 'qux'
+        }
+      )
+      expect(merged).toMatchObject({
+        foo: { default: 1 },
+        bar: { type: String, required: false, default: 'baz' },
+        baz: { type: String, default: 'qux' }
+      })
     })
 
-    mergeDefaults({}, { foo: 1 })
-    expect(
-      `props default key "foo" has no corresponding declaration`
-    ).toHaveBeenWarned()
+    test('array syntax', () => {
+      const merged = mergeDefaults(['foo', 'bar', 'baz'], {
+        foo: 1,
+        bar: 'baz',
+        baz: 'qux'
+      })
+      expect(merged).toMatchObject({
+        foo: { default: 1 },
+        bar: { default: 'baz' },
+        baz: { default: 'qux' }
+      })
+    })
+
+    test('should warn missing', () => {
+      mergeDefaults({}, { foo: 1 })
+      expect(
+        `props default key "foo" has no corresponding declaration`
+      ).toHaveBeenWarned()
+    })
+  })
+
+  describe('createPropsRestProxy', () => {
+    const original = shallowReactive({
+      foo: 1,
+      bar: 2,
+      baz: 3
+    })
+    const rest = createPropsRestProxy(original, ['foo', 'bar'])
+    expect('foo' in rest).toBe(false)
+    expect('bar' in rest).toBe(false)
+    expect(rest.baz).toBe(3)
+    expect(Object.keys(rest)).toEqual(['baz'])
+
+    original.baz = 4
+    expect(rest.baz).toBe(4)
   })
 
   describe('withAsyncContext', () => {
@@ -123,15 +161,16 @@ describe('SFC <script setup> helpers', () => {
 
           beforeInstance = getCurrentInstance()
 
-          const msg = (([__temp, __restore] = withAsyncContext(
-            () =>
-              new Promise(r => {
-                resolve = r
-              })
-          )),
-          (__temp = await __temp),
-          __restore(),
-          __temp)
+          const msg =
+            (([__temp, __restore] = withAsyncContext(
+              () =>
+                new Promise(r => {
+                  resolve = r
+                })
+            )),
+            (__temp = await __temp),
+            __restore(),
+            __temp)
 
           // register the lifecycle after an await statement
           onMounted(spy)
@@ -141,7 +180,10 @@ describe('SFC <script setup> helpers', () => {
       })
 
       const root = nodeOps.createElement('div')
-      render(h(() => h(Suspense, () => h(Comp))), root)
+      render(
+        h(() => h(Suspense, () => h(Comp))),
+        root
+      )
 
       expect(spy).not.toHaveBeenCalled()
       resolve!('hello')
@@ -175,7 +217,7 @@ describe('SFC <script setup> helpers', () => {
             )
             __temp = await __temp
             __restore()
-          } catch (e) {
+          } catch (e: any) {
             // ignore
           }
           // register the lifecycle after an await statement
@@ -186,7 +228,10 @@ describe('SFC <script setup> helpers', () => {
       })
 
       const root = nodeOps.createElement('div')
-      render(h(() => h(Suspense, () => h(Comp))), root)
+      render(
+        h(() => h(Suspense, () => h(Comp))),
+        root
+      )
 
       expect(spy).not.toHaveBeenCalled()
       reject!()
@@ -242,7 +287,10 @@ describe('SFC <script setup> helpers', () => {
       })
 
       const root = nodeOps.createElement('div')
-      render(h(() => h(Suspense, () => h(Comp))), root)
+      render(
+        h(() => h(Suspense, () => h(Comp))),
+        root
+      )
 
       await ready
       expect(inBandInstance).toBe(beforeInstance)

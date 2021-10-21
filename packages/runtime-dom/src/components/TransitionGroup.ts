@@ -159,7 +159,7 @@ if (__COMPAT__) {
 const removeMode = (props: any) => delete props.mode
 /*#__PURE__*/ removeMode(TransitionGroupImpl.props)
 
-export const TransitionGroup = (TransitionGroupImpl as unknown) as {
+export const TransitionGroup = TransitionGroupImpl as unknown as {
   new (): {
     $props: TransitionGroupProps
   }
@@ -210,9 +210,9 @@ function hasCSSTransform(
   }
   moveClass.split(/\s+/).forEach(c => c && clone.classList.add(c))
   clone.style.display = 'none'
-  const container = (root.nodeType === 1
-    ? root
-    : root.parentNode) as HTMLElement
+  const container = (
+    root.nodeType === 1 ? root : root.parentNode
+  ) as HTMLElement
   container.appendChild(clone)
   const { hasTransform } = getTransitionInfo(clone)
   container.removeChild(clone)

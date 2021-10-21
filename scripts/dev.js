@@ -6,13 +6,13 @@ formats to watch (defaults to "global"):
 
 ```
 # name supports fuzzy match. will watch all packages with name containing "dom"
-yarn dev dom
+nr dev dom
 
 # specify the format to output
-yarn dev core --formats cjs
+nr dev core --formats cjs
 
 # Can also drop all __DEV__ blocks with:
-__DEV__=false yarn dev
+__DEV__=false nr dev
 ```
 */
 

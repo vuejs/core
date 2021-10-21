@@ -44,7 +44,7 @@ import { convertLegacyVModelProps } from './compat/componentVModel'
 import { defineLegacyVNodeProperties } from './compat/renderFn'
 import { convertLegacyRefInFor } from './compat/ref'
 
-export const Fragment = (Symbol(__DEV__ ? 'Fragment' : undefined) as any) as {
+export const Fragment = Symbol(__DEV__ ? 'Fragment' : undefined) as any as {
   __isFragment: true
   new (): {
     $props: VNodeProps
@@ -78,7 +78,7 @@ export type VNodeNormalizedRefAtom = {
 
 export type VNodeNormalizedRef =
   | VNodeNormalizedRefAtom
-  | (VNodeNormalizedRefAtom)[]
+  | VNodeNormalizedRefAtom[]
 
 type VNodeMountHook = (vnode: VNode) => void
 type VNodeUpdateHook = (vnode: VNode, oldVNode: VNode) => void
@@ -90,7 +90,7 @@ export type VNodeHook =
 
 // https://github.com/microsoft/TypeScript/issues/33099
 export type VNodeProps = {
-  key?: string | number
+  key?: string | number | symbol
   ref?: VNodeRef
 
   // vnode hooks
@@ -138,7 +138,7 @@ export interface VNode<
 
   type: VNodeTypes
   props: (VNodeProps & ExtraProps) | null
-  key: string | number | null
+  key: string | number | symbol | null
   ref: VNodeNormalizedRef | null
   /**
    * SFC only. This is assigned on vnode creation using currentScopeId
@@ -286,7 +286,7 @@ function setupBlock(vnode: VNode) {
  * @private
  */
 export function createElementBlock(
-  type: string,
+  type: string | typeof Fragment,
   props?: Record<string, any> | null,
   children?: any,
   patchFlag?: number,
@@ -381,11 +381,13 @@ const normalizeKey = ({ key }: VNodeProps): VNode['key'] =>
   key != null ? key : null
 
 const normalizeRef = ({ ref }: VNodeProps): VNodeNormalizedRefAtom | null => {
-  return (ref != null
-    ? isString(ref) || isRef(ref) || isFunction(ref)
-      ? { i: currentRenderingInstance, r: ref }
-      : ref
-    : null) as any
+  return (
+    ref != null
+      ? isString(ref) || isRef(ref) || isFunction(ref)
+        ? { i: currentRenderingInstance, r: ref }
+        : ref
+      : null
+  ) as any
 }
 
 function createBaseVNode(
@@ -475,9 +477,9 @@ function createBaseVNode(
 
 export { createBaseVNode as createElementVNode }
 
-export const createVNode = (__DEV__
-  ? createVNodeWithArgsTransform
-  : _createVNode) as typeof _createVNode
+export const createVNode = (
+  __DEV__ ? createVNodeWithArgsTransform : _createVNode
+) as typeof _createVNode
 
 function _createVNode(
   type: VNodeTypes | ClassComponent | typeof NULL_DYNAMIC_COMPONENT,
@@ -537,14 +539,14 @@ function _createVNode(
   const shapeFlag = isString(type)
     ? ShapeFlags.ELEMENT
     : __FEATURE_SUSPENSE__ && isSuspense(type)
-      ? ShapeFlags.SUSPENSE
-      : isTeleport(type)
-        ? ShapeFlags.TELEPORT
-        : isObject(type)
-          ? ShapeFlags.STATEFUL_COMPONENT
-          : isFunction(type)
-            ? ShapeFlags.FUNCTIONAL_COMPONENT
-            : 0
+    ? ShapeFlags.SUSPENSE
+    : isTeleport(type)
+    ? ShapeFlags.TELEPORT
+    : isObject(type)
+    ? ShapeFlags.STATEFUL_COMPONENT
+    : isFunction(type)
+    ? ShapeFlags.FUNCTIONAL_COMPONENT
+    : 0
 
   if (__DEV__ && shapeFlag & ShapeFlags.STATEFUL_COMPONENT && isProxy(type)) {
     type = toRaw(type)
@@ -579,7 +581,7 @@ export function guardReactiveProps(props: (Data & VNodeProps) | null) {
 
 export function cloneVNode<T, U>(
   vnode: VNode<T, U>,
-  extraProps?: Data & VNodeProps | null,
+  extraProps?: (Data & VNodeProps) | null,
   mergeRef = false
 ): VNode<T, U> {
   // This is intentionally NOT using spread or extend to avoid the runtime
@@ -728,7 +730,7 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
   } else if (isArray(children)) {
     type = ShapeFlags.ARRAY_CHILDREN
   } else if (typeof children === 'object') {
-    if (shapeFlag & ShapeFlags.ELEMENT || shapeFlag & ShapeFlags.TELEPORT) {
+    if (shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.TELEPORT)) {
       // Normalize slot to plain children for plain element and Teleport
       const slot = (children as any).default
       if (slot) {
@@ -776,8 +778,8 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
 }
 
 export function mergeProps(...args: (Data & VNodeProps)[]) {
-  const ret = extend({}, args[0])
-  for (let i = 1; i < args.length; i++) {
+  const ret: Data = {}
+  for (let i = 0; i < args.length; i++) {
     const toMerge = args[i]
     for (const key in toMerge) {
       if (key === 'class') {

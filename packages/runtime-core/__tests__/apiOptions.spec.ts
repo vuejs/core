@@ -9,7 +9,8 @@ import {
   renderToString,
   ref,
   defineComponent,
-  createApp
+  createApp,
+  computed
 } from '@vue/runtime-test'
 
 describe('api: options', () => {
@@ -424,6 +425,69 @@ describe('api: options', () => {
       }
     })
     expect(renderToString(h(Root))).toBe(`1111234522`)
+  })
+
+  test('provide/inject refs', async () => {
+    const n = ref(0)
+    const np = computed(() => n.value + 1)
+    const Parent = defineComponent({
+      provide() {
+        return {
+          n,
+          np
+        }
+      },
+      render: () => h(Child)
+    })
+    const Child = defineComponent({
+      inject: ['n', 'np'],
+      render(this: any) {
+        return this.n + this.np
+      }
+    })
+    const app = createApp(Parent)
+    // TODO remove in 3.3
+    app.config.unwrapInjectedRef = true
+    const root = nodeOps.createElement('div')
+    app.mount(root)
+    expect(serializeInner(root)).toBe(`1`)
+
+    n.value++
+    await nextTick()
+    expect(serializeInner(root)).toBe(`3`)
+  })
+
+  // TODO remove in 3.3
+  test('provide/inject refs (compat)', async () => {
+    const n = ref(0)
+    const np = computed(() => n.value + 1)
+    const Parent = defineComponent({
+      provide() {
+        return {
+          n,
+          np
+        }
+      },
+      render: () => h(Child)
+    })
+    const Child = defineComponent({
+      inject: ['n', 'np'],
+      render(this: any) {
+        return this.n.value + this.np.value
+      }
+    })
+    const app = createApp(Parent)
+
+    const root = nodeOps.createElement('div')
+    app.mount(root)
+    expect(serializeInner(root)).toBe(`1`)
+
+    n.value++
+    await nextTick()
+    expect(serializeInner(root)).toBe(`3`)
+
+    expect(`injected property "n" is a ref`).toHaveBeenWarned()
+    expect(`injected property "np" is a ref`).toHaveBeenWarned()
   })
 
   test('provide accessing data in extends', () => {
@@ -1201,14 +1265,22 @@ describe('api: options', () => {
 
     test('this.$options[lifecycle-name]', () => {
       const mixin = {
-        mounted() {}
+        mounted() {},
+        beforeUnmount() {},
+        unmounted() {}
       }
       createApp({
         mixins: [mixin],
         mounted() {},
+        beforeUnmount() {},
+        unmounted() {},
         created() {
           expect(this.$options.mounted).toBeInstanceOf(Array)
           expect(this.$options.mounted.length).toBe(2)
+          expect(this.$options.beforeUnmount).toBeInstanceOf(Array)
+          expect(this.$options.beforeUnmount.length).toBe(2)
+          expect(this.$options.unmounted).toBeInstanceOf(Array)
+          expect(this.$options.unmounted.length).toBe(2)
         },
         render: () => null
       }).mount(nodeOps.createElement('div'))

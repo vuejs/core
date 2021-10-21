@@ -355,8 +355,9 @@ describe('compiler: hoistStatic transform', () => {
       },
       hoistedChildrenArrayMatcher(2)
     ])
-    const forBlockCodegen = ((root.children[0] as ElementNode)
-      .children[0] as ForNode).codegenNode
+    const forBlockCodegen = (
+      (root.children[0] as ElementNode).children[0] as ForNode
+    ).codegenNode
     expect(forBlockCodegen).toMatchObject({
       type: NodeTypes.VNODE_CALL,
       tag: FRAGMENT,
@@ -573,6 +574,25 @@ describe('compiler: hoistStatic transform', () => {
     test('should NOT hoist elements with cached handlers', () => {
       const root = transformWithHoist(
         `<div><div><div @click="foo"/></div></div>`,
+        {
+          prefixIdentifiers: true,
+          cacheHandlers: true
+        }
+      )
+
+      expect(root.cached).toBe(1)
+      expect(root.hoists.length).toBe(0)
+      expect(
+        generate(root, {
+          mode: 'module',
+          prefixIdentifiers: true
+        }).code
+      ).toMatchSnapshot()
+    })
+
+    test('should NOT hoist elements with cached handlers + other bindings', () => {
+      const root = transformWithHoist(
+        `<div><div><div :class="{}" @click="foo"/></div></div>`,
         {
           prefixIdentifiers: true,
           cacheHandlers: true

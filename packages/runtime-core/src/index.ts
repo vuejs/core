@@ -34,7 +34,12 @@ export {
   getCurrentScope,
   onScopeDispose
 } from '@vue/reactivity'
-export { watch, watchEffect, watchPostEffect } from './apiWatch'
+export {
+  watch,
+  watchEffect,
+  watchPostEffect,
+  watchSyncEffect
+} from './apiWatch'
 export {
   onBeforeMount,
   onMounted,
@@ -65,6 +70,7 @@ export {
   withDefaults,
   // internal
   mergeDefaults,
+  createPropsRestProxy,
   withAsyncContext
 } from './apiSetupHelpers'
 
@@ -142,18 +148,21 @@ declare module '@vue/reactivity' {
 }
 
 export {
+  Ref,
+  ToRef,
+  ToRefs,
   ReactiveEffectOptions,
   DebuggerEvent,
+  DebuggerOptions,
   TrackOpTypes,
   TriggerOpTypes,
-  Ref,
   ComputedRef,
   WritableComputedRef,
   UnwrapRef,
   ShallowUnwrapRef,
   WritableComputedOptions,
-  ToRefs,
-  DeepReadonly
+  DeepReadonly,
+  ShallowReactive
 } from '@vue/reactivity'
 export {
   WatchEffect,
@@ -308,7 +317,7 @@ const _ssrUtils = {
  * SSR utils for \@vue/server-renderer. Only exposed in cjs builds.
  * @internal
  */
-export const ssrUtils = (__NODE_JS__ ? _ssrUtils : null) as typeof _ssrUtils
+export const ssrUtils = (__SSR__ ? _ssrUtils : null) as typeof _ssrUtils
 
 // 2.x COMPAT ------------------------------------------------------------------
 
@@ -341,10 +350,6 @@ const _compatUtils = {
 /**
  * @internal only exposed in compat builds.
  */
-export const compatUtils = (__COMPAT__
-  ? _compatUtils
-  : null) as typeof _compatUtils
-
-// Ref macros ------------------------------------------------------------------
-// for dts generation only
-export { $ref, $computed, $raw, $fromRefs } from './helpers/refMacros'
+export const compatUtils = (
+  __COMPAT__ ? _compatUtils : null
+) as typeof _compatUtils

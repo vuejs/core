@@ -43,6 +43,18 @@ describe('runtime-dom: props patching', () => {
     expect(el.multiple).toBe(true)
     patchProp(el, 'multiple', null, null)
     expect(el.multiple).toBe(false)
+    patchProp(el, 'multiple', null, true)
+    expect(el.multiple).toBe(true)
+    patchProp(el, 'multiple', null, 0)
+    expect(el.multiple).toBe(false)
+    patchProp(el, 'multiple', null, '0')
+    expect(el.multiple).toBe(true)
+    patchProp(el, 'multiple', null, false)
+    expect(el.multiple).toBe(false)
+    patchProp(el, 'multiple', null, 1)
+    expect(el.multiple).toBe(true)
+    patchProp(el, 'multiple', null, undefined)
+    expect(el.multiple).toBe(false)
   })
 
   test('innerHTML unmount prev children', () => {
@@ -191,5 +203,27 @@ describe('runtime-dom: props patching', () => {
     expect(el.size).toBe(100)
     patchProp(el, 'size', 100, null)
     expect(el.getAttribute('size')).toBe(null)
+  })
+
+  test('patch value for select', () => {
+    const root = document.createElement('div')
+    render(
+      h('select', { value: 'foo' }, [
+        h('option', { value: 'foo' }, 'foo'),
+        h('option', { value: 'bar' }, 'bar')
+      ]),
+      root
+    )
+    const el = root.children[0] as HTMLSelectElement
+    expect(el.value).toBe('foo')
+
+    render(
+      h('select', { value: 'baz' }, [
+        h('option', { value: 'foo' }, 'foo'),
+        h('option', { value: 'baz' }, 'baz')
+      ]),
+      root
+    )
+    expect(el.value).toBe('baz')
   })
 })

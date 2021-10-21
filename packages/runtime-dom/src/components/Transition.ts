@@ -69,11 +69,12 @@ const DOMTransitionPropsValidators = {
   leaveToClass: String
 }
 
-export const TransitionPropsValidators = (Transition.props = /*#__PURE__*/ extend(
-  {},
-  (BaseTransition as any).props,
-  DOMTransitionPropsValidators
-))
+export const TransitionPropsValidators = (Transition.props =
+  /*#__PURE__*/ extend(
+    {},
+    (BaseTransition as any).props,
+    DOMTransitionPropsValidators
+  ))
 
 /**
  * #3227 Incoming hooks may be merged into arrays when wrapping Transition

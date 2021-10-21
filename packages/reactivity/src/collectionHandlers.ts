@@ -1,14 +1,7 @@
-import { toRaw, reactive, readonly, ReactiveFlags } from './reactive'
+import { toRaw, ReactiveFlags, toReactive, toReadonly } from './reactive'
 import { track, trigger, ITERATE_KEY, MAP_KEY_ITERATE_KEY } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
-import {
-  isObject,
-  capitalize,
-  hasOwn,
-  hasChanged,
-  toRawType,
-  isMap
-} from '@vue/shared'
+import { capitalize, hasOwn, hasChanged, toRawType, isMap } from '@vue/shared'
 
 export type CollectionTypes = IterableCollections | WeakCollections
 
@@ -16,12 +9,6 @@ type IterableCollections = Map<any, any> | Set<any>
 type WeakCollections = WeakMap<any, any> | WeakSet<any>
 type MapTypes = Map<any, any> | WeakMap<any, any>
 type SetTypes = Set<any> | WeakSet<any>
-
-const toReactive = <T extends unknown>(value: T): T =>
-  isObject(value) ? reactive(value) : value
-
-const toReadonly = <T extends unknown>(value: T): T =>
-  isObject(value) ? readonly(value as Record<any, any>) : value
 
 const toShallow = <T extends unknown>(value: T): T => value
 
@@ -184,7 +171,7 @@ function createIterableMethod(
   isReadonly: boolean,
   isShallow: boolean
 ) {
-  return function(
+  return function (
     this: IterableCollections,
     ...args: unknown[]
   ): Iterable & Iterator {
@@ -224,7 +211,7 @@ function createIterableMethod(
 }
 
 function createReadonlyMethod(type: TriggerOpTypes): Function {
-  return function(this: CollectionTypes, ...args: unknown[]) {
+  return function (this: CollectionTypes, ...args: unknown[]) {
     if (__DEV__) {
       const key = args[0] ? `on key "${args[0]}" ` : ``
       console.warn(
@@ -242,7 +229,7 @@ function createInstrumentations() {
       return get(this, key)
     },
     get size() {
-      return size((this as unknown) as IterableCollections)
+      return size(this as unknown as IterableCollections)
     },
     has,
     add,
@@ -257,7 +244,7 @@ function createInstrumentations() {
       return get(this, key, false, true)
     },
     get size() {
-      return size((this as unknown) as IterableCollections)
+      return size(this as unknown as IterableCollections)
     },
     has,
     add,
@@ -272,7 +259,7 @@ function createInstrumentations() {
       return get(this, key, true)
     },
     get size() {
-      return size((this as unknown) as IterableCollections, true)
+      return size(this as unknown as IterableCollections, true)
     },
     has(this: MapTypes, key: unknown) {
       return has.call(this, key, true)
@@ -289,7 +276,7 @@ function createInstrumentations() {
       return get(this, key, true, true)
     },
     get size() {
-      return size((this as unknown) as IterableCollections, true)
+      return size(this as unknown as IterableCollections, true)
     },
     has(this: MapTypes, key: unknown) {
       return has.call(this, key, true)
@@ -346,8 +333,8 @@ function createInstrumentationGetter(isReadonly: boolean, shallow: boolean) {
       ? shallowReadonlyInstrumentations
       : shallowInstrumentations
     : isReadonly
-      ? readonlyInstrumentations
-      : mutableInstrumentations
+    ? readonlyInstrumentations
+    : mutableInstrumentations
 
   return (
     target: CollectionTypes,
@@ -384,11 +371,10 @@ export const readonlyCollectionHandlers: ProxyHandler<CollectionTypes> = {
   get: /*#__PURE__*/ createInstrumentationGetter(true, false)
 }
 
-export const shallowReadonlyCollectionHandlers: ProxyHandler<
-  CollectionTypes
-> = {
-  get: /*#__PURE__*/ createInstrumentationGetter(true, true)
-}
+export const shallowReadonlyCollectionHandlers: ProxyHandler<CollectionTypes> =
+  {
+    get: /*#__PURE__*/ createInstrumentationGetter(true, true)
+  }
 
 function checkIdentityKeys(
   target: CollectionTypes,

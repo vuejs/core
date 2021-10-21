@@ -65,12 +65,12 @@ describe('compiler: transform v-model', () => {
       },
       value: {
         children: [
-          '$event => (',
+          '$event => ((',
           {
             content: 'model',
             isStatic: false
           },
-          ' = $event)'
+          ') = $event)'
         ]
       }
     })
@@ -104,12 +104,12 @@ describe('compiler: transform v-model', () => {
       },
       value: {
         children: [
-          '$event => (',
+          '$event => ((',
           {
             content: '_ctx.model',
             isStatic: false
           },
-          ' = $event)'
+          ') = $event)'
         ]
       }
     })
@@ -142,12 +142,12 @@ describe('compiler: transform v-model', () => {
       },
       value: {
         children: [
-          '$event => (',
+          '$event => ((',
           {
             content: '\n model\n.\nfoo \n',
             isStatic: false
           },
-          ' = $event)'
+          ') = $event)'
         ]
       }
     })
@@ -179,12 +179,12 @@ describe('compiler: transform v-model', () => {
       },
       value: {
         children: [
-          '$event => (',
+          '$event => ((',
           {
             content: 'model[index]',
             isStatic: false
           },
-          ' = $event)'
+          ') = $event)'
         ]
       }
     })
@@ -228,7 +228,7 @@ describe('compiler: transform v-model', () => {
       },
       value: {
         children: [
-          '$event => (',
+          '$event => ((',
           {
             children: [
               {
@@ -243,7 +243,7 @@ describe('compiler: transform v-model', () => {
               ']'
             ]
           },
-          ' = $event)'
+          ') = $event)'
         ]
       }
     })
@@ -274,12 +274,12 @@ describe('compiler: transform v-model', () => {
       },
       value: {
         children: [
-          '$event => (',
+          '$event => ((',
           {
             content: 'model',
             isStatic: false
           },
-          ' = $event)'
+          ') = $event)'
         ]
       }
     })
@@ -290,8 +290,8 @@ describe('compiler: transform v-model', () => {
   test('with dynamic argument', () => {
     const root = parseWithVModel('<input v-model:[value]="model" />')
     const node = root.children[0] as ElementNode
-    const props = ((node.codegenNode as VNodeCall)
-      .props as unknown) as CallExpression
+    const props = (node.codegenNode as VNodeCall)
+      .props as unknown as CallExpression
 
     expect(props).toMatchObject({
       type: NodeTypes.JS_CALL_EXPRESSION,
@@ -322,12 +322,12 @@ describe('compiler: transform v-model', () => {
               },
               value: {
                 children: [
-                  '$event => (',
+                  '$event => ((',
                   {
                     content: 'model',
                     isStatic: false
                   },
-                  ' = $event)'
+                  ') = $event)'
                 ]
               }
             }
@@ -344,8 +344,8 @@ describe('compiler: transform v-model', () => {
       prefixIdentifiers: true
     })
     const node = root.children[0] as ElementNode
-    const props = ((node.codegenNode as VNodeCall)
-      .props as unknown) as CallExpression
+    const props = (node.codegenNode as VNodeCall)
+      .props as unknown as CallExpression
 
     expect(props).toMatchObject({
       type: NodeTypes.JS_CALL_EXPRESSION,
@@ -376,12 +376,12 @@ describe('compiler: transform v-model', () => {
               },
               value: {
                 children: [
-                  '$event => (',
+                  '$event => ((',
                   {
                     content: '_ctx.model',
                     isStatic: false
                   },
-                  ' = $event)'
+                  ') = $event)'
                 ]
               }
             }
@@ -417,8 +417,9 @@ describe('compiler: transform v-model', () => {
       }
     )
     expect(root.cached).toBe(0)
-    const codegen = ((root.children[0] as ForNode)
-      .children[0] as PlainElementNode).codegenNode as VNodeCall
+    const codegen = (
+      (root.children[0] as ForNode).children[0] as PlainElementNode
+    ).codegenNode as VNodeCall
     expect(codegen.dynamicProps).toBe(`["modelValue", "onUpdate:modelValue"]`)
     expect(
       (codegen.props as ObjectExpression).properties[1].value.type
@@ -426,13 +427,10 @@ describe('compiler: transform v-model', () => {
   })
 
   test('should not cache update handler if it inside v-once', () => {
-    const root = parseWithVModel(
-      '<div v-once><input v-model="foo" /></div>',
-      {
-        prefixIdentifiers: true,
-        cacheHandlers: true
-      }
-    )
+    const root = parseWithVModel('<div v-once><input v-model="foo" /></div>', {
+      prefixIdentifiers: true,
+      cacheHandlers: true
+    })
     expect(root.cached).not.toBe(2)
     expect(root.cached).toBe(1)
   })
@@ -444,8 +442,9 @@ describe('compiler: transform v-model', () => {
         prefixIdentifiers: true
       }
     )
-    const codegen = ((root.children[0] as ComponentNode)
-      .children[0] as PlainElementNode).codegenNode as VNodeCall
+    const codegen = (
+      (root.children[0] as ComponentNode).children[0] as PlainElementNode
+    ).codegenNode as VNodeCall
     expect(codegen.dynamicProps).toBe(`["modelValue", "onUpdate:modelValue"]`)
   })
 

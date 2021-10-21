@@ -1,7 +1,10 @@
 import {
+  defineAsyncComponent,
   defineCustomElement,
   h,
+  inject,
   nextTick,
+  Ref,
   ref,
   renderSlot,
   VueElement
@@ -17,7 +20,15 @@ describe('defineCustomElement', () => {
 
   describe('mounting/unmount', () => {
     const E = defineCustomElement({
-      render: () => h('div', 'hello')
+      props: {
+        msg: {
+          type: String,
+          default: 'hello'
+        }
+      },
+      render() {
+        return h('div', this.msg)
+      }
     })
     customElements.define('my-element', E)
 
@@ -30,13 +41,13 @@ describe('defineCustomElement', () => {
     })
 
     test('should work w/ manual instantiation', () => {
-      const e = new E()
+      const e = new E({ msg: 'inline' })
       // should lazy init
       expect(e._instance).toBe(null)
       // should initialize on connect
       container.appendChild(e)
       expect(e._instance).toBeTruthy()
-      expect(e.shadowRoot!.innerHTML).toBe(`<div>hello</div>`)
+      expect(e.shadowRoot!.innerHTML).toBe(`<div>inline</div>`)
     })
 
     test('should unmount on remove', async () => {
@@ -125,26 +136,57 @@ describe('defineCustomElement', () => {
       const E = defineCustomElement({
         props: {
           foo: Number,
-          bar: Boolean
+          bar: Boolean,
+          baz: String
         },
         render() {
-          return [this.foo, typeof this.foo, this.bar, typeof this.bar].join(
-            ' '
-          )
+          return [
+            this.foo,
+            typeof this.foo,
+            this.bar,
+            typeof this.bar,
+            this.baz,
+            typeof this.baz
+          ].join(' ')
         }
       })
       customElements.define('my-el-props-cast', E)
-      container.innerHTML = `<my-el-props-cast foo="1"></my-el-props-cast>`
+      container.innerHTML = `<my-el-props-cast foo="1" baz="12345"></my-el-props-cast>`
       const e = container.childNodes[0] as VueElement
-      expect(e.shadowRoot!.innerHTML).toBe(`1 number false boolean`)
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `1 number false boolean 12345 string`
+      )
 
       e.setAttribute('bar', '')
       await nextTick()
-      expect(e.shadowRoot!.innerHTML).toBe(`1 number true boolean`)
+      expect(e.shadowRoot!.innerHTML).toBe(`1 number true boolean 12345 string`)
 
       e.setAttribute('foo', '2e1')
       await nextTick()
-      expect(e.shadowRoot!.innerHTML).toBe(`20 number true boolean`)
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `20 number true boolean 12345 string`
+      )
+
+      e.setAttribute('baz', '2e1')
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe(`20 number true boolean 2e1 string`)
+    })
+
+    // #4772
+    test('attr casting w/ programmatic creation', () => {
+      const E = defineCustomElement({
+        props: {
+          foo: Number
+        },
+        render() {
+          return `foo type: ${typeof this.foo}`
+        }
+      })
+      customElements.define('my-element-programmatic', E)
+      const el = document.createElement('my-element-programmatic') as any
+      el.setAttribute('foo', '123')
+      container.appendChild(el)
+      expect(el.shadowRoot.innerHTML).toBe(`foo type: number`)
     })
 
     test('handling properties set before upgrading', () => {
@@ -223,9 +265,9 @@ describe('defineCustomElement', () => {
 
   describe('provide/inject', () => {
     const Consumer = defineCustomElement({
-      inject: ['foo'],
-      render(this: any) {
-        return h('div', this.foo.value)
+      setup() {
+        const foo = inject<Ref>('foo')!
+        return () => h('div', foo.value)
       }
     })
     customElements.define('my-consumer', Consumer)
@@ -272,6 +314,134 @@ describe('defineCustomElement', () => {
       foo.value = 'changed!'
       await nextTick()
       expect(consumer.shadowRoot!.innerHTML).toBe(`<div>changed!</div>`)
+    })
+  })
+
+  describe('styles', () => {
+    test('should attach styles to shadow dom', () => {
+      const Foo = defineCustomElement({
+        styles: [`div { color: red; }`],
+        render() {
+          return h('div', 'hello')
+        }
+      })
+      customElements.define('my-el-with-styles', Foo)
+      container.innerHTML = `<my-el-with-styles></my-el-with-styles>`
+      const el = container.childNodes[0] as VueElement
+      const style = el.shadowRoot?.querySelector('style')!
+      expect(style.textContent).toBe(`div { color: red; }`)
+    })
+  })
+
+  describe('async', () => {
+    test('should work', async () => {
+      const loaderSpy = jest.fn()
+      const E = defineCustomElement(
+        defineAsyncComponent(() => {
+          loaderSpy()
+          return Promise.resolve({
+            props: ['msg'],
+            styles: [`div { color: red }`],
+            render(this: any) {
+              return h('div', null, this.msg)
+            }
+          })
+        })
+      )
+      customElements.define('my-el-async', E)
+      container.innerHTML =
+        `<my-el-async msg="hello"></my-el-async>` +
+        `<my-el-async msg="world"></my-el-async>`
+
+      await new Promise(r => setTimeout(r))
+
+      // loader should be called only once
+      expect(loaderSpy).toHaveBeenCalledTimes(1)
+
+      const e1 = container.childNodes[0] as VueElement
+      const e2 = container.childNodes[1] as VueElement
+
+      // should inject styles
+      expect(e1.shadowRoot!.innerHTML).toBe(
+        `<div>hello</div><style>div { color: red }</style>`
+      )
+      expect(e2.shadowRoot!.innerHTML).toBe(
+        `<div>world</div><style>div { color: red }</style>`
+      )
+
+      // attr
+      e1.setAttribute('msg', 'attr')
+      await nextTick()
+      expect((e1 as any).msg).toBe('attr')
+      expect(e1.shadowRoot!.innerHTML).toBe(
+        `<div>attr</div><style>div { color: red }</style>`
+      )
+
+      // props
+      expect(`msg` in e1).toBe(true)
+      ;(e1 as any).msg = 'prop'
+      expect(e1.getAttribute('msg')).toBe('prop')
+      expect(e1.shadowRoot!.innerHTML).toBe(
+        `<div>prop</div><style>div { color: red }</style>`
+      )
+    })
+
+    test('set DOM property before resolve', async () => {
+      const E = defineCustomElement(
+        defineAsyncComponent(() => {
+          return Promise.resolve({
+            props: ['msg'],
+            render(this: any) {
+              return h('div', this.msg)
+            }
+          })
+        })
+      )
+      customElements.define('my-el-async-2', E)
+
+      const e1 = new E()
+
+      // set property before connect
+      e1.msg = 'hello'
+
+      const e2 = new E()
+
+      container.appendChild(e1)
+      container.appendChild(e2)
+
+      // set property after connect but before resolve
+      e2.msg = 'world'
+
+      await new Promise(r => setTimeout(r))
+
+      expect(e1.shadowRoot!.innerHTML).toBe(`<div>hello</div>`)
+      expect(e2.shadowRoot!.innerHTML).toBe(`<div>world</div>`)
+
+      e1.msg = 'world'
+      expect(e1.shadowRoot!.innerHTML).toBe(`<div>world</div>`)
+
+      e2.msg = 'hello'
+      expect(e2.shadowRoot!.innerHTML).toBe(`<div>hello</div>`)
+    })
+
+    test('Number prop casting before resolve', async () => {
+      const E = defineCustomElement(
+        defineAsyncComponent(() => {
+          return Promise.resolve({
+            props: { n: Number },
+            render(this: any) {
+              return h('div', this.n + ',' + typeof this.n)
+            }
+          })
+        })
+      )
+      customElements.define('my-el-async-3', E)
+      container.innerHTML = `<my-el-async-3 n="2e1"></my-el-async-3>`
+
+      await new Promise(r => setTimeout(r))
+
+      const e = container.childNodes[0] as VueElement
+      expect(e.shadowRoot!.innerHTML).toBe(`<div>20,number</div>`)
     })
   })
 })

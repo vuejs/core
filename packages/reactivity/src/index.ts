@@ -9,6 +9,7 @@ export {
   customRef,
   triggerRef,
   Ref,
+  ToRef,
   ToRefs,
   UnwrapRef,
   ShallowUnwrapRef,
@@ -26,17 +27,18 @@ export {
   toRaw,
   ReactiveFlags,
   DeepReadonly,
+  ShallowReactive,
   UnwrapNestedRefs
 } from './reactive'
 export {
   computed,
-  setComputedScheduler,
   ComputedRef,
   WritableComputedRef,
   WritableComputedOptions,
   ComputedGetter,
   ComputedSetter
 } from './computed'
+export { deferredComputed } from './deferredComputed'
 export {
   effect,
   stop,
@@ -51,7 +53,8 @@ export {
   ReactiveEffectOptions,
   EffectScheduler,
   DebuggerOptions,
-  DebuggerEvent
+  DebuggerEvent,
+  DebuggerEventExtraInfo
 } from './effect'
 export {
   effectScope,

@@ -8,9 +8,8 @@ export function patchClass(el: Element, value: string | null, isSVG: boolean) {
   // classes into account.
   const transitionClasses = (el as ElementWithTransition)._vtc
   if (transitionClasses) {
-    value = (value
-      ? [value, ...transitionClasses]
-      : [...transitionClasses]
+    value = (
+      value ? [value, ...transitionClasses] : [...transitionClasses]
     ).join(' ')
   }
   if (value == null) {

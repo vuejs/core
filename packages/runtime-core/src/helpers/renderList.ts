@@ -71,7 +71,7 @@ export function renderList(
     }
     ret = new Array(source)
     for (let i = 0; i < source; i++) {
-      ret[i] = renderItem(i + 1, i)
+      ret[i] = renderItem(i + 1, i, undefined, cached && cached[i])
     }
   } else if (isObject(source)) {
     if (source[Symbol.iterator as any]) {
