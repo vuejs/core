@@ -56,12 +56,22 @@ const Modal = {
 </div>
 
 <script>
-Vue.createApp({
+let app = Vue.createApp({
   components: { Modal },
   data: () => ({
     showModal: false
-  })
-}).mount('#app')
+  }),
+  mounted() {
+    console.log(this)
+  },
+})
+app.component('Model', {
+  mounted() {
+    console.log(this)
+  },
+})
+app.component('Model')
+app.mount('#app')
 </script>
 
 <style>

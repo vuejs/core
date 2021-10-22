@@ -40,6 +40,7 @@ let renderer: Renderer<Element | ShadowRoot> | HydrationRenderer
 let enabledHydration = false
 
 function ensureRenderer() {
+  console.log('--ensureRenderer--');
   return (
     renderer ||
     (renderer = createRenderer<Node, Element | ShadowRoot>(rendererOptions))
@@ -56,6 +57,7 @@ function ensureHydrationRenderer() {
 
 // use explicit type casts here to avoid import() calls in rolled-up d.ts
 export const render = ((...args) => {
+  console.log('--render--');
   ensureRenderer().render(...args)
 }) as RootRenderFunction<Element | ShadowRoot>
 
@@ -64,6 +66,8 @@ export const hydrate = ((...args) => {
 }) as RootHydrateFunction
 
 export const createApp = ((...args) => {
+  console.log('--createApp--');
+  
   const app = ensureRenderer().createApp(...args)
 
   if (__DEV__) {

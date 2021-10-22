@@ -306,6 +306,8 @@ export function createRenderer<
   HostNode = RendererNode,
   HostElement = RendererElement
 >(options: RendererOptions<HostNode, HostElement>) {
+  console.log('--createRenderer--');
+  
   return baseCreateRenderer<HostNode, HostElement>(options)
 }
 
@@ -335,6 +337,7 @@ function baseCreateRenderer(
   options: RendererOptions,
   createHydrationFns?: typeof createHydrationFunctions
 ): any {
+  console.log('--baseCreateRenderer--')
   // compile-time feature flags check
   if (__ESM_BUNDLER__ && !__TEST__) {
     initFeatureFlags()

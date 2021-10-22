@@ -179,6 +179,7 @@ export function createAppAPI<HostElement>(
   hydrate?: RootHydrateFunction
 ): CreateAppFunction<HostElement> {
   return function createApp(rootComponent, rootProps = null) {
+    console.log('--createAppAPI--')
     if (rootProps != null && !isObject(rootProps)) {
       __DEV__ && warn(`root props passed to app.mount() must be an object.`)
       rootProps = null
@@ -250,6 +251,7 @@ export function createAppAPI<HostElement>(
           validateComponentName(name, context.config)
         }
         if (!component) {
+          console.log('--repeat-component--')
           return context.components[name]
         }
         if (__DEV__ && context.components[name]) {
