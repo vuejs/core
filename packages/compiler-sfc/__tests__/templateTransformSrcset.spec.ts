@@ -37,6 +37,9 @@ const src = `
 <img src="https://example.com/logo.png" srcset="https://example.com/logo.png, https://example.com/logo.png 2x"/>
 <img src="/logo.png" srcset="/logo.png, ./logo.png 2x"/>
 <img src="data:image/png;base64,i" srcset="data:image/png;base64,i 1x, data:image/png;base64,i 2x"/>
+<img src="~/logo.png" srcset="~/logo.png"/>
+<img src="@/logo.png" srcset="@/logo.png"/>
+<img src="@/logo.png" srcset="@/logo.png, @/logo.png 2x"/>
 `
 
 describe('compiler sfc: transform srcset', () => {

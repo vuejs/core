@@ -3,6 +3,8 @@
 exports[`compiler sfc: transform srcset transform srcset 1`] = `
 "import { createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 import _imports_0 from './logo.png'
+import _imports_1 from 'logo.png'
+import _imports_2 from '@/logo.png'
 
 
 const _hoisted_1 = _imports_0
@@ -13,6 +15,9 @@ const _hoisted_5 = _imports_0 + ' 2x, ' + _imports_0
 const _hoisted_6 = _imports_0 + ' 2x, ' + _imports_0 + ' 3x'
 const _hoisted_7 = _imports_0 + ', ' + _imports_0 + ' 2x, ' + _imports_0 + ' 3x'
 const _hoisted_8 = \\"/logo.png\\" + ', ' + _imports_0 + ' 2x'
+const _hoisted_9 = _imports_1
+const _hoisted_10 = _imports_2
+const _hoisted_11 = _imports_2 + ', ' + _imports_2 + ' 2x'
 
 export function render(_ctx, _cache) {
   return (_openBlock(), _createElementBlock(_Fragment, null, [
@@ -63,6 +68,18 @@ export function render(_ctx, _cache) {
     _createElementVNode(\\"img\\", {
       src: \\"data:image/png;base64,i\\",
       srcset: \\"data:image/png;base64,i 1x, data:image/png;base64,i 2x\\"
+    }),
+    _createElementVNode(\\"img\\", {
+      src: \\"~/logo.png\\",
+      srcset: _hoisted_9
+    }),
+    _createElementVNode(\\"img\\", {
+      src: \\"@/logo.png\\",
+      srcset: _hoisted_10
+    }),
+    _createElementVNode(\\"img\\", {
+      src: \\"@/logo.png\\",
+      srcset: _hoisted_11
     })
   ], 64 /* STABLE_FRAGMENT */))
 }"
@@ -70,6 +87,13 @@ export function render(_ctx, _cache) {
 
 exports[`compiler sfc: transform srcset transform srcset w/ base 1`] = `
 "import { createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
+import _imports_0 from 'logo.png'
+import _imports_1 from '@/logo.png'
+
+
+const _hoisted_1 = _imports_0
+const _hoisted_2 = _imports_1
+const _hoisted_3 = _imports_1 + ', ' + _imports_1 + ' 2x'
 
 export function render(_ctx, _cache) {
   return (_openBlock(), _createElementBlock(_Fragment, null, [
@@ -120,6 +144,18 @@ export function render(_ctx, _cache) {
     _createElementVNode(\\"img\\", {
       src: \\"data:image/png;base64,i\\",
       srcset: \\"data:image/png;base64,i 1x, data:image/png;base64,i 2x\\"
+    }),
+    _createElementVNode(\\"img\\", {
+      src: \\"~/logo.png\\",
+      srcset: _hoisted_1
+    }),
+    _createElementVNode(\\"img\\", {
+      src: \\"@/logo.png\\",
+      srcset: _hoisted_2
+    }),
+    _createElementVNode(\\"img\\", {
+      src: \\"@/logo.png\\",
+      srcset: _hoisted_3
     })
   ], 64 /* STABLE_FRAGMENT */))
 }"
@@ -129,6 +165,8 @@ exports[`compiler sfc: transform srcset transform srcset w/ includeAbsolute: tru
 "import { createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 import _imports_0 from './logo.png'
 import _imports_1 from '/logo.png'
+import _imports_2 from 'logo.png'
+import _imports_3 from '@/logo.png'
 
 
 const _hoisted_1 = _imports_0
@@ -140,6 +178,9 @@ const _hoisted_6 = _imports_0 + ' 2x, ' + _imports_0 + ' 3x'
 const _hoisted_7 = _imports_0 + ', ' + _imports_0 + ' 2x, ' + _imports_0 + ' 3x'
 const _hoisted_8 = _imports_1 + ', ' + _imports_1 + ' 2x'
 const _hoisted_9 = _imports_1 + ', ' + _imports_0 + ' 2x'
+const _hoisted_10 = _imports_2
+const _hoisted_11 = _imports_3
+const _hoisted_12 = _imports_3 + ', ' + _imports_3 + ' 2x'
 
 export function render(_ctx, _cache) {
   return (_openBlock(), _createElementBlock(_Fragment, null, [
@@ -190,6 +231,18 @@ export function render(_ctx, _cache) {
     _createElementVNode(\\"img\\", {
       src: \\"data:image/png;base64,i\\",
       srcset: \\"data:image/png;base64,i 1x, data:image/png;base64,i 2x\\"
+    }),
+    _createElementVNode(\\"img\\", {
+      src: \\"~/logo.png\\",
+      srcset: _hoisted_10
+    }),
+    _createElementVNode(\\"img\\", {
+      src: \\"@/logo.png\\",
+      srcset: _hoisted_11
+    }),
+    _createElementVNode(\\"img\\", {
+      src: \\"@/logo.png\\",
+      srcset: _hoisted_12
     })
   ], 64 /* STABLE_FRAGMENT */))
 }"

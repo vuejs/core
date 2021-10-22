@@ -83,16 +83,26 @@ export const transformSrcset: NodeTransform = (
           if (options.base) {
             const base = options.base
             const set: string[] = []
-            imageCandidates.forEach(({ url, descriptor }) => {
+            let flag = false
+            for (let { url, descriptor } of imageCandidates) {
               descriptor = descriptor ? ` ${descriptor}` : ``
-              if (isRelativeUrl(url)) {
+              if (url[0] === '.') {
                 set.push((path.posix || path).join(base, url) + descriptor)
-              } else {
+              } else if (
+                isExternalUrl(url) ||
+                isDataUrl(url) ||
+                (!options.includeAbsolute && !isRelativeUrl(url))
+              ) {
                 set.push(url + descriptor)
+              } else {
+                flag = true
+                break
               }
-            })
-            attr.value.content = set.join(', ')
-            return
+            }
+            if (!flag) {
+              attr.value.content = set.join(', ')
+              return
+            }
           }
 
           const compoundExpression = createCompoundExpression([], attr.loc)
