@@ -25,6 +25,40 @@ describe('runtime-dom: props patching', () => {
     expect((el as any)._value).toBe(obj)
   })
 
+  test('value for custom elements', () => {
+    class TestElement extends HTMLElement {
+      constructor() {
+        super()
+      }
+
+      // intentionally uses _value because this is used in "normal" HTMLElement for storing the object of the set property value
+      private _value: any
+      get value() {
+        return this._value
+      }
+
+      set value(val) {
+        this._value = val
+        this.setterCalled++
+      }
+
+      public setterCalled: number = 0
+    }
+    window.customElements.define('test-element', TestElement)
+    const el = document.createElement('test-element') as TestElement
+    patchProp(el, 'value', null, 'foo')
+    expect(el.value).toBe('foo')
+    expect(el.setterCalled).toBe(1)
+    patchProp(el, 'value', null, null)
+    expect(el.value).toBe('')
+    expect(el.setterCalled).toBe(2)
+    expect(el.getAttribute('value')).toBe(null)
+    const obj = {}
+    patchProp(el, 'value', null, obj)
+    expect(el.value).toBe(obj)
+    expect(el.setterCalled).toBe(3)
+  })
+
   // For <input type="text">, setting el.value won't create a `value` attribute
   // so we need to add tests for other elements
   test('value for non-text input', () => {

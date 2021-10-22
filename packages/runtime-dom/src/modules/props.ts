@@ -26,7 +26,12 @@ export function patchDOMProp(
     return
   }
 
-  if (key === 'value' && el.tagName !== 'PROGRESS') {
+  if (
+    key === 'value' &&
+    el.tagName !== 'PROGRESS' &&
+    // custom elements may use _value internally
+    !el.tagName.includes('-')
+  ) {
     // store value as _value as well since
     // non-string values will be stringified.
     el._value = value
