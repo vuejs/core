@@ -44,6 +44,8 @@ const Modal = {
 
 <!-- app -->
 <div id="app">
+  <test></test>
+  <input type="text" v-focus-test>
   <button id="show-modal" @click="showModal = true">Show Modal</button>
   <teleport to="#modal-container">
     <!-- use the modal component, pass in the prop -->
@@ -56,6 +58,7 @@ const Modal = {
 </div>
 
 <script>
+  let { h } = Vue
 let app = Vue.createApp({
   components: { Modal },
   data: () => ({
@@ -65,12 +68,18 @@ let app = Vue.createApp({
     console.log(this)
   },
 })
-app.component('Model', {
-  mounted() {
-    console.log(this)
-  },
+app.component('test', {
+  template: `<h2>我是h2</h2>`,
+  render() {
+    return h('h1', {}, '我是render')
+  }
 })
-app.component('Model')
+app.directive('focus-test', {
+  mounted (el, ...args) {
+    el.focus()
+    console.log(args)
+  }
+})
 app.mount('#app')
 </script>
 

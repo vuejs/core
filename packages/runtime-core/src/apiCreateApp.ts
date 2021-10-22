@@ -189,7 +189,6 @@ export function createAppAPI<HostElement>(
     const installedPlugins = new Set()
 
     let isMounted = false
-
     const app: App = (context.app = {
       _uid: uid++,
       _component: rootComponent as ConcreteComponent,
@@ -302,7 +301,7 @@ export function createAppAPI<HostElement>(
           } else {
             render(vnode, rootContainer, isSVG)
           }
-          isMounted = true
+          isMounted = true // 用于判断当前组件是否已经加载完毕
           app._container = rootContainer
           // for devtools and telemetry
           ;(rootContainer as any).__vue_app__ = app
@@ -350,7 +349,6 @@ export function createAppAPI<HostElement>(
         return app
       }
     })
-
     if (__COMPAT__) {
       installAppCompatProperties(app, context, render)
     }
