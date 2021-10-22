@@ -83,7 +83,6 @@ export class ComputedRefImpl<T> {
  * ```
  *
  * @param getter Function that produces the next value.
- * @param debugOptions
  */
 export function computed<T>(
   getter: ComputedGetter<T>,
@@ -109,7 +108,6 @@ export function computed<T>(
  * ```
  *
  * @param options Object holding the `get` and `set` functions.
- * @param debugOptions
  */
 export function computed<T>(
   options: WritableComputedOptions<T>,
