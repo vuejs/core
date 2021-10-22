@@ -68,10 +68,39 @@ export class ComputedRefImpl<T> {
   }
 }
 
+/**
+ * Takes a getter function and returns an immutable reactive ref object for the
+ * returned value from the getter.
+ *
+ * ```js
+ * const count = ref(1)
+ * const plusOne = computed(() => count.value + 1)
+ *
+ * console.log(plusOne.value) // 2
+ *
+ * plusOne.value++ // error
+ * ```
+ */
 export function computed<T>(
   getter: ComputedGetter<T>,
   debugOptions?: DebuggerOptions
 ): ComputedRef<T>
+/**
+ * Takes an object with get and set functions to create a writable ref object.
+ *
+ * ```js
+ * const count = ref(1)
+ * const plusOne = computed({
+ *  get: () => count.value + 1,
+ *  set: val => {
+ *    count.value = val - 1
+ *  }
+ *})
+ *
+ * plusOne.value = 1
+ * console.log(count.value) // 0
+ * ```
+ */
 export function computed<T>(
   options: WritableComputedOptions<T>,
   debugOptions?: DebuggerOptions
