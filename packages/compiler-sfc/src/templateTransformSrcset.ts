@@ -68,13 +68,15 @@ export const transformSrcset: NodeTransform = (
             }
           }
 
-          const hasQualifiedUrl = imageCandidates.some(({ url }) => {
+          const shouldProcessUrl = (url: string) => {
             return (
               !isExternalUrl(url) &&
               !isDataUrl(url) &&
               (options.includeAbsolute || isRelativeUrl(url))
             )
-          })
+          }
+
+          const hasQualifiedUrl = imageCandidates.some(({ url }) => shouldProcessUrl(url))
           // When srcset does not contain any qualified URLs, skip transforming
           if (!hasQualifiedUrl) {
             return
@@ -83,25 +85,29 @@ export const transformSrcset: NodeTransform = (
           if (options.base) {
             const base = options.base
             const set: string[] = []
-            imageCandidates.forEach(({ url, descriptor }) => {
+            let needHoistPath = false
+            imageCandidates.forEach((imageCandidate) => {
+              let { descriptor, url } = imageCandidate
               descriptor = descriptor ? ` ${descriptor}` : ``
-              if (isRelativeUrl(url)) {
-                set.push((path.posix || path).join(base, url) + descriptor)
+              if (url[0] === '.') {
+                imageCandidate.url = (path.posix || path).join(base, url)
+                set.push(imageCandidate.url + descriptor)
+              } else if (shouldProcessUrl(url)) {
+                needHoistPath = true
               } else {
                 set.push(url + descriptor)
               }
             })
-            attr.value.content = set.join(', ')
-            return
+
+            if (!needHoistPath) {
+              attr.value.content = set.join(', ')
+              return
+            }
           }
 
           const compoundExpression = createCompoundExpression([], attr.loc)
           imageCandidates.forEach(({ url, descriptor }, index) => {
-            if (
-              !isExternalUrl(url) &&
-              !isDataUrl(url) &&
-              (options.includeAbsolute || isRelativeUrl(url))
-            ) {
+            if (shouldProcessUrl(url)) {
               const { path } = parseUrl(url)
               let exp: SimpleExpressionNode
               if (path) {
