@@ -33,6 +33,12 @@ describe('createApp for dom', () => {
     const app = createApp(Root)
     app.config.warnHandler = handler
     app.mount(document.createElement('div')) 
-    expect(originalObj).toMatchObject(Root) // ensure no additional properties are added to Root
+ 
+    // ensure mount is based on a copy of Root object rather than Root object itself 
+    expect(app._component).not.toBe(Root)
+    
+    // ensure no mutation happened to Root object
+    expect(originalObj).toMatchObject(Root)
+    
   })
 })
