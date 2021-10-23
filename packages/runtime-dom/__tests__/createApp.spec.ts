@@ -14,7 +14,7 @@ describe('createApp for dom', () => {
   })
 
   // #4398
-  test('should not mutate original Root options object', () => {
+  test('should not mutate original root component options object', () => {
     
     const originalObj =  {
       data() {
@@ -24,7 +24,7 @@ describe('createApp for dom', () => {
       }
     }
 
-    const handler = jest.fn((msg, instance, trace) => {
+    const handler = jest.fn(msg => {
       expect(msg).toMatch(`Component is missing template or render function`)
     })
 
