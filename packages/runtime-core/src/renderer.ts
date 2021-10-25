@@ -618,7 +618,6 @@ function baseCreateRenderer(
     }
   }
 
-  // 首次渲染或v-if渲染, mounted回调
   const mountElement = (
     vnode: VNode,
     container: RendererElement,
@@ -656,7 +655,6 @@ function baseCreateRenderer(
       if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
         hostSetElementText(el, vnode.children as string)
       } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-        // 挂载子组件
         mountChildren(
           vnode.children as VNodeArrayChildren,
           el,
@@ -670,7 +668,6 @@ function baseCreateRenderer(
       }
 
       if (dirs) {
-        // 调用directive
         invokeDirectiveHook(vnode, null, parentComponent, 'created')
       }
       // props
