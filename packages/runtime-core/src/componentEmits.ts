@@ -113,7 +113,8 @@ export function emit(
   const isModelListener = event.startsWith('update:')
 
   // for v-model update:xxx events, apply modifiers on args
-  const modelArg = isModelListener && event.slice(7)
+  const eventArg = isModelListener && event.slice(7)
+  const modelArg = eventArg && (hyphenate(eventArg) in props ? hyphenate(eventArg) : camelize(eventArg))
   if (modelArg && modelArg in props) {
     const modifiersKey = `${
       modelArg === 'modelValue' ? 'model' : modelArg
