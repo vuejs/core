@@ -167,6 +167,16 @@ export interface ReactiveEffectRunner<T = any> {
   effect: ReactiveEffect
 }
 
+/**
+ * Registers the given function to track reactive updates.
+ *
+ * The given function will be run once immediately. Every time any reactive
+ * property that's accessed within it gets updated, the function will run again.
+ *
+ * @param fn The function that will track reactive updates.
+ * @param options Allows to control the effect's behaviour.
+ * @returns A runner that can be used to control the effect.
+ */
 export function effect<T = any>(
   fn: () => T,
   options?: ReactiveEffectOptions
@@ -188,6 +198,11 @@ export function effect<T = any>(
   return runner
 }
 
+/**
+ * Stops the effect associated with the given runner.
+ *
+ * @param runner Association with the effect to stop tracking.
+ */
 export function stop(runner: ReactiveEffectRunner) {
   runner.effect.stop()
 }
@@ -195,16 +210,25 @@ export function stop(runner: ReactiveEffectRunner) {
 export let shouldTrack = true
 const trackStack: boolean[] = []
 
+/**
+ * Temporarily pauses tracking.
+ */
 export function pauseTracking() {
   trackStack.push(shouldTrack)
   shouldTrack = false
 }
 
+/**
+ * Re-enables effect tracking (if it was paused).
+ */
 export function enableTracking() {
   trackStack.push(shouldTrack)
   shouldTrack = true
 }
 
+/**
+ * Resets the previous global effect tracking state.
+ */
 export function resetTracking() {
   const last = trackStack.pop()
   shouldTrack = last === undefined ? true : last
