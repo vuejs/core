@@ -108,5 +108,10 @@ export function useModel(
 export const getModelModifiers = (
   props: Record<string, any>,
   modelName: string,
-): Record<string, boolean> | undefined =>
-  props[`${modelName === 'modelValue' ? 'model' : modelName}Modifiers`]
+): Record<string, boolean> | undefined => {
+  return modelName === 'modelValue'
+    ? props.modelModifiers
+    : props[`${modelName}Modifiers`] ||
+        props[`${camelize(modelName)}Modifiers`] ||
+        props[`${hyphenate(modelName)}Modifiers`]
+}
