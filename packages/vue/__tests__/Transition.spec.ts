@@ -1688,6 +1688,86 @@ describe('e2e: Transition', () => {
       },
       E2E_TIMEOUT
     )
+
+    test(
+      'transition events should not call onEnter with v-show false',
+      async () => {
+        const beforeEnterSpy = jest.fn()
+        const onEnterSpy = jest.fn()
+        const afterEnterSpy = jest.fn()
+
+        await page().exposeFunction('onEnterSpy', onEnterSpy)
+        await page().exposeFunction('beforeEnterSpy', beforeEnterSpy)
+        await page().exposeFunction('afterEnterSpy', afterEnterSpy)
+
+        await page().evaluate(() => {
+          const {
+            beforeEnterSpy,
+            onEnterSpy,
+            afterEnterSpy,
+          } = window as any
+          const { createApp, ref } = (window as any).Vue
+          createApp({
+            template: `
+            <div id="container">
+              <transition
+                name="test"
+                appear
+                @before-enter="beforeEnterSpy"
+                @enter="onEnterSpy"
+                @after-enter="afterEnterSpy"
+                @before-leave="beforeLeaveSpy"
+                @leave="onLeaveSpy"
+                @after-leave="afterLeaveSpy">
+                <div v-show="toggle" class="test">content</div>
+              </transition>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+            setup: () => {
+              const toggle = ref(false)
+              const click = () => (toggle.value = !toggle.value)
+              return {
+                toggle,
+                click,
+                beforeEnterSpy,
+                onEnterSpy,
+                afterEnterSpy,
+              }
+            }
+          }).mount('#app')
+        })
+        await nextTick()
+
+        expect(await isVisible('.test')).toBe(false)
+
+        expect(beforeEnterSpy).toBeCalledTimes(0)
+        expect(onEnterSpy).toBeCalledTimes(0)
+        // enter
+        expect(await classWhenTransitionStart()).toStrictEqual([
+          'test',
+          'test-enter-from',
+          'test-enter-active'
+        ])
+        expect(beforeEnterSpy).toBeCalledTimes(1)
+        expect(onEnterSpy).toBeCalledTimes(1)
+        expect(afterEnterSpy).not.toBeCalled()
+        await nextFrame()
+        expect(await classList('.test')).toStrictEqual([
+          'test',
+          'test-enter-active',
+          'test-enter-to'
+        ])
+        expect(afterEnterSpy).not.toBeCalled()
+        await transitionFinish()
+        expect(await html('#container')).toBe(
+          '<div class="test" style="">content</div>'
+        )
+        expect(afterEnterSpy).toBeCalled()
+      },
+      E2E_TIMEOUT
+    )
+  })
   })
 
   describe('explicit durations', () => {
