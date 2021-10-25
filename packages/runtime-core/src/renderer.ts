@@ -594,7 +594,6 @@ function baseCreateRenderer(
   ) => {
     isSVG = isSVG || (n2.type as string) === 'svg'
     if (n1 == null) {
-      // n1: prevNode, n2: currNode
       mountElement(
         n2,
         container,
