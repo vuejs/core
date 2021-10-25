@@ -353,6 +353,54 @@ describe('component: emit', () => {
     expect(fn2).toHaveBeenCalledTimes(1)
     expect(fn2).toHaveBeenCalledWith('two')
   })
+  // for hyphenate props and camelize emit
+  test('.trim modifier should work with v-model on component for hyphenate props and camelize emit', () => {
+    const Foo = defineComponent({
+      render() {},
+      created() {
+        this.$emit('update:firstName', ' one ')
+      }
+    })
+
+    const fn1 = jest.fn()
+
+    const Comp = () =>
+      h(Foo, {
+        'first-name': null,
+        'first-nameModifiers': { trim: true },
+        'onUpdate:first-name': fn1,
+      })
+
+    render(h(Comp), nodeOps.createElement('div'))
+
+    expect(fn1).toHaveBeenCalledTimes(1)
+    expect(fn1).toHaveBeenCalledWith('one')
+  })
+
+  // for camelize props and hyphenate emit
+  test('.trim modifier should work with v-model on component for camelize props and hyphenate emit', () => {
+    const Foo = defineComponent({
+      render() {},
+      created() {
+        this.$emit('update:first-name', ' one ')
+      }
+    })
+
+    const fn1 = jest.fn()
+
+    const Comp = () =>
+      h(Foo, {
+        firstName: null,
+        firstNameModifiers: { trim: true },
+        'onUpdate:firstName': fn1,
+
+      })
+
+    render(h(Comp), nodeOps.createElement('div'))
+
+    expect(fn1).toHaveBeenCalledTimes(1)
+    expect(fn1).toHaveBeenCalledWith('one')
+  })
 
   test('isEmitListener', () => {
     const options = {
