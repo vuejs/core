@@ -8,7 +8,11 @@ const staticTemplateCache = new Map<string, DocumentFragment>()
 
 export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
   insert: (child, parent, anchor) => {
-    parent.insertBefore(child, anchor || null)
+    try {
+      parent.insertBefore(child, anchor || null);
+    } catch (e) {
+      parent.insertBefore(child, null);
+    }
   },
 
   remove: child => {
