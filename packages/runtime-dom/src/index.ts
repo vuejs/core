@@ -69,7 +69,7 @@ export const createApp = ((...args) => {
   console.log('--createApp--');
   
   const app = ensureRenderer().createApp(...args)
-
+  debugger
   if (__DEV__) {
     injectNativeTagCheck(app)
     injectCompilerOptionsCheck(app)

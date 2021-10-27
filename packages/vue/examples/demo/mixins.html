@@ -1,0 +1,27 @@
+<script src="../../dist/vue.global.js"></script>
+
+<div id="app">
+  <h1>i am mixins</h1>
+</div>
+<script  type="text/x-template" id="myM">
+  <h2>wo shi myM</h2>
+</script>
+
+<script>
+  const mymixins = {
+    template: '#myM',
+    mounted() {
+      console.log('i am mymixins mounted')
+    },
+    render() {
+      h('div', {}, 'mixins contain')
+    },
+  }
+  const app = Vue.createApp({
+    mixins: [],
+    mounted() {
+      console.log(this)
+    }
+  }).mixin(mymixins)
+  app.mount('#app')
+</script>

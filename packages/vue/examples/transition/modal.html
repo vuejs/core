@@ -77,7 +77,7 @@ app.component('test', {
 app.directive('focus-test', {
   mounted (el, ...args) {
     el.focus()
-    console.log(args)
+    console.log(...args)
   }
 })
 app.mount('#app')
