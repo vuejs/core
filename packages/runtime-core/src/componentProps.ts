@@ -223,7 +223,7 @@ export function updateProps(
         let key = propsToUpdate[i]
         // PROPS flag guarantees rawProps to be non-null
         const value = rawProps![key]
-        if (options && Object.keys(options).length !== 0) {
+        if (options && Object.keys(options).length) {
           // attr / props separation was done on init and will be consistent
           // in this code path, so just check if attrs have it.
           if (hasOwn(attrs, key)) {
