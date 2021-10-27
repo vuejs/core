@@ -120,9 +120,9 @@ type InferPropType<T> = [T] extends [null]
   : T
 
 export type ExtractPropTypes<O> = O extends object
-  ? { [K in keyof O]?: unknown } & // This is needed to keep the relation between the option prop and the props, allowing to use ctrl+click to navigate to the prop options. see: #3656
-      { [K in RequiredKeys<O>]: InferPropType<O[K]> } &
-      { [K in OptionalKeys<O>]?: InferPropType<O[K]> }
+  ? { [K in keyof O]?: unknown } & { // This is needed to keep the relation between the option prop and the props, allowing to use ctrl+click to navigate to the prop options. see: #3656
+      [K in RequiredKeys<O>]: InferPropType<O[K]>
+    } & { [K in OptionalKeys<O>]?: InferPropType<O[K]> }
   : { [K in string]: any }
 
 const enum BooleanFlags {
@@ -223,7 +223,7 @@ export function updateProps(
         let key = propsToUpdate[i]
         // PROPS flag guarantees rawProps to be non-null
         const value = rawProps![key]
-        if (options) {
+        if (options && Object.keys(options).length !== 0) {
           // attr / props separation was done on init and will be consistent
           // in this code path, so just check if attrs have it.
           if (hasOwn(attrs, key)) {

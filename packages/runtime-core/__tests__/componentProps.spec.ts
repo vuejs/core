@@ -13,7 +13,9 @@ import {
   inject,
   watch,
   toRefs,
-  SetupContext
+  SetupContext,
+  openBlock,
+  createBlock
 } from '@vue/runtime-test'
 import { render as domRender, nextTick } from 'vue'
 
@@ -572,5 +574,47 @@ describe('component props', () => {
     expect(() => {
       render(h(Comp, { foo: null }), root)
     }).not.toThrow()
+  })
+
+  // #4857
+  test(`update attrs if props options is empty`, async () => {
+    __DEV__ = false
+    const msg = ref<undefined | string>(undefined)
+    let proxy: any
+
+    const Parent = {
+      props: {},
+      setup() {
+        return () => h(Child)
+      }
+    }
+
+    const Child = {
+      props: {
+        msg: String
+      },
+      setup(props: { msg: String }) {
+        return () => {
+          proxy = props
+        }
+      }
+    }
+
+    const App = {
+      setup() {
+        return () => (
+          openBlock(), createBlock(Parent, { msg: msg.value }, null, 8, ['msg'])
+        )
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    await nextTick()
+    expect(proxy.msg).toBe(undefined)
+    msg.value = 'hello props!'
+    await nextTick()
+    expect(proxy.msg).toBe('hello props!')
+    __DEV__ = true
   })
 })
