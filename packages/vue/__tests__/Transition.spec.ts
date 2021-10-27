@@ -1768,7 +1768,6 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
   })
-  })
 
   describe('explicit durations', () => {
     test(
