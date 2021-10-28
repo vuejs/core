@@ -23,9 +23,12 @@ import {
   toRaw,
   compatUtils,
   DeprecationTypes,
-  ComponentOptions
+  ComponentOptions,
+  VNodeArrayChildren,
+  isVNode,
+  Comment
 } from '@vue/runtime-core'
-import { extend } from '@vue/shared'
+import { extend, PatchFlags, ShapeFlags } from '@vue/shared'
 
 interface Position {
   top: number
@@ -115,7 +118,9 @@ const TransitionGroupImpl: ComponentOptions = {
         tag = 'span'
       }
 
-      prevChildren = children
+      if (children) {
+        prevChildren = children.map(c => storeTransitionVnode(c))
+      }
       children = slots.default ? getTransitionRawChildren(slots.default()) : []
 
       for (let i = 0; i < children.length; i++) {
@@ -217,4 +222,20 @@ function hasCSSTransform(
   const { hasTransform } = getTransitionInfo(clone)
   container.removeChild(clone)
   return hasTransform
+}
+
+// #4830
+// get the actual vnode when subTree is DEV_ROOT_FRAGMENT
+// to access the right transition element
+function storeTransitionVnode(c: VNode) {
+  if (
+    __DEV__ &&
+    c.shapeFlag & ShapeFlags.COMPONENT &&
+    c.component!.subTree.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
+  ) {
+    const children = c.component!.subTree.children as VNodeArrayChildren
+    const vnode = children.find(c => isVNode(c) && c.type !== Comment) as VNode
+    return vnode
+  }
+  return c
 }

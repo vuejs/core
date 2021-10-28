@@ -508,4 +508,37 @@ describe('e2e: TransitionGroup', () => {
 
     expect(`<TransitionGroup> children must be keyed`).toHaveBeenWarned()
   })
+
+  test('DEV_ROOT_FRAGMENT transition item', async () => {
+    await page().evaluate(async () => {
+      const { createApp, ref } = (window as any).Vue
+      createApp({
+        template: `
+            <div id="container">
+              <transition-group name="test">
+                <Comp v-for="item in items" :key="item"/>
+              </transition-group>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+        setup: () => {
+          const items = ref(['a'])
+          const click = () => items.value.push('b', 'c')
+          return { click, items }
+        },
+        components: {
+          Comp: {
+            template: `<div>test</div><!-- comment -->`
+          }
+        }
+      }).mount('#app')
+    })
+    expect(await html('#container')).toBe(`<div>test</div><!-- comment -->`)
+
+    expect(await htmlWhenTransitionStart()).toBe(
+      `<div>test</div><!-- comment -->` +
+        `<div class="test-enter-from test-enter-active">test</div><!-- comment -->` +
+        `<div class="test-enter-from test-enter-active">test</div><!-- comment -->`
+    )
+  })
 })
