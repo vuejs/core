@@ -1200,7 +1200,7 @@ function baseCreateRenderer(
     isSVG,
     optimized
   ) => {
-    // 2.x compat may pre-creaate the component instance before actually
+    // 2.x compat may pre-create the component instance before actually
     // mounting
     const compatMountInstance =
       __COMPAT__ && initialVNode.isCompatRoot && initialVNode.component
