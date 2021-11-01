@@ -54,7 +54,7 @@ jobs:
     env:
       CI_JOB_NUMBER: 1
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2.0.1
