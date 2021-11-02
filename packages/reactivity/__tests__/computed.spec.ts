@@ -33,7 +33,6 @@ describe('reactivity/computed', () => {
     expect(getter).toHaveBeenCalledTimes(1)
 
     // should not compute again
-    cValue.value
     expect(getter).toHaveBeenCalledTimes(1)
 
     // should not compute until needed
@@ -45,14 +44,13 @@ describe('reactivity/computed', () => {
     expect(getter).toHaveBeenCalledTimes(2)
 
     // should not compute again
-    cValue.value
     expect(getter).toHaveBeenCalledTimes(2)
   })
 
   it('should trigger effect', () => {
     const value = reactive<{ foo?: number }>({})
     const cValue = computed(() => value.foo)
-    let dummy
+    let dummy : number
     effect(() => {
       dummy = cValue.value
     })
@@ -81,7 +79,7 @@ describe('reactivity/computed', () => {
     const c1 = computed(getter1)
     const c2 = computed(getter2)
 
-    let dummy
+    let dummy : number
     effect(() => {
       dummy = c2.value
     })
@@ -104,7 +102,7 @@ describe('reactivity/computed', () => {
     const c1 = computed(getter1)
     const c2 = computed(getter2)
 
-    let dummy
+    let dummy : number
     effect(() => {
       dummy = c1.value + c2.value
     })
@@ -122,7 +120,7 @@ describe('reactivity/computed', () => {
   it('should no longer update when stopped', () => {
     const value = reactive<{ foo?: number }>({})
     const cValue = computed(() => value.foo)
-    let dummy
+    let dummy : number
     effect(() => {
       dummy = cValue.value
     })
@@ -131,6 +129,7 @@ describe('reactivity/computed', () => {
     expect(dummy).toBe(1)
     cValue.effect.stop()
     value.foo = 2
+    // dummy should not equal to value
     expect(dummy).toBe(1)
   })
 
@@ -160,7 +159,7 @@ describe('reactivity/computed', () => {
       }
     })
 
-    let dummy
+    let dummy : number
     effect(() => {
       dummy = n.value
     })
@@ -246,7 +245,6 @@ describe('reactivity/computed', () => {
     const c = computed(() => obj.foo, { onTrigger })
 
     // computed won't trigger compute until accessed
-    c.value
 
     obj.foo++
     expect(c.value).toBe(2)
