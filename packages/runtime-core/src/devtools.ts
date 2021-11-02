@@ -33,10 +33,12 @@ export let devtools: DevtoolsHook
 
 let buffer: { event: string; args: any[] }[] = []
 
+let devtoolsNotInstalled = false
+
 function emit(event: string, ...args: any[]) {
   if (devtools) {
     devtools.emit(event, ...args)
-  } else {
+  } else if (!devtoolsNotInstalled) {
     buffer.push({ event, args })
   }
 }
@@ -56,7 +58,10 @@ export function setDevtoolsHook(hook: DevtoolsHook, target: any) {
     // clear buffer after 3s - the user probably doesn't have devtools installed
     // at all, and keeping the buffer will cause memory leaks (#4738)
     setTimeout(() => {
-      buffer = []
+      if (!devtools) {
+        devtoolsNotInstalled = true
+        buffer = []
+      }
     }, 3000)
   }
 }
