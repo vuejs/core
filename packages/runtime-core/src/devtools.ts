@@ -36,11 +36,9 @@ let buffer: { event: string; args: any[] }[] = []
 let devtoolsNotInstalled = false
 
 function emit(event: string, ...args: any[]) {
-  if (devtoolsNotInstalled) {
-    buffer = []
-  } else if (devtools) {
+  if (devtools) {
     devtools.emit(event, ...args)
-  } else {
+  } else if (!devtoolsNotInstalled) {
     buffer.push({ event, args })
   }
 }
