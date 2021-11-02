@@ -1,6 +1,6 @@
 {
   "private": true,
-  "version": "3.2.20",
+  "version": "3.2.21",
   "scripts": {
     "dev": "node scripts/dev.js",
     "build": "node scripts/build.js",
