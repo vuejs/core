@@ -44,6 +44,7 @@ importers:
       serve: ^12.0.0
       todomvc-app-css: ^2.3.0
       ts-jest: ^27.0.5
+      tslib: ^2.3.1
       typescript: ^4.2.2
       vite: ^2.6.0
       vue: workspace:*
@@ -89,6 +90,7 @@ importers:
       serve: 12.0.1
       todomvc-app-css: 2.4.1
       ts-jest: 27.0.5_c167855b7a039eaaa2a6b38847c1969c
+      tslib: 2.3.1
       typescript: 4.4.3
       vite: 2.6.5
       vue: link:packages/vue
@@ -6530,6 +6532,10 @@ packages:
 
   /tslib/2.0.1:
     resolution: {integrity: sha512-SgIkNheinmEBgx1IUNirK0TUD4X9yjjBRTqqjggWCU3pUEqIk3/Uwl3yRixYKT6WjQuGiwDv4NomL3wqRCj+CQ==}
+    dev: true
+
+  /tslib/2.3.1:
+    resolution: {integrity: sha512-77EbyPPpMz+FRFRuAFlWMtmgUWGe9UOG2Z25NqCwiIjRhOf5iKGuzSe5P2w1laq+FkRy4p+PCuVkJSGkzTEKVw==}
     dev: true
 
   /tsutils/3.21.0_typescript@4.4.3:
