@@ -49,7 +49,14 @@ export function setDevtoolsHook(hook: DevtoolsHook, target: any) {
     devtools.enabled = true
     buffer.forEach(({ event, args }) => devtools.emit(event, ...args))
     buffer = []
-  } else {
+  } else if (
+    // handle late devtools injection - only do this if we are in an actual
+    // browser environment to avoid the timer handle stalling test runner exit
+    // (#4815)
+    // eslint-disable-next-line no-restricted-globals
+    typeof window !== 'undefined' &&
+    !navigator.userAgent.includes('jsdom')
+  ) {
     const replay = (target.__VUE_DEVTOOLS_HOOK_REPLAY__ =
       target.__VUE_DEVTOOLS_HOOK_REPLAY__ || [])
     replay.push((newHook: DevtoolsHook) => {
@@ -59,10 +66,15 @@ export function setDevtoolsHook(hook: DevtoolsHook, target: any) {
     // at all, and keeping the buffer will cause memory leaks (#4738)
     setTimeout(() => {
       if (!devtools) {
+        target.__VUE_DEVTOOLS_HOOK_REPLAY__ = null
         devtoolsNotInstalled = true
         buffer = []
       }
     }, 3000)
+  } else {
+    // non-browser env, assume not installed
+    devtoolsNotInstalled = true
+    buffer = []
   }
 }
 
