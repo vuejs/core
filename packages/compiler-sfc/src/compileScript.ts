@@ -685,11 +685,18 @@ export function compileScript(
           }
         }
 
+        const { type, required } = props[key]
         if (!isProd) {
-          const { type, required } = props[key]
           return `${key}: { type: ${toRuntimeTypeString(
             type
           )}, required: ${required}${
+            defaultString ? `, ${defaultString}` : ``
+          } }`
+        } else if (type.indexOf('Boolean') > -1) {
+          // production: if boolean exists, should keep the type.
+          return `${key}: { type: ${toRuntimeTypeString(
+            type
+          )}${
             defaultString ? `, ${defaultString}` : ``
           } }`
         } else {
@@ -1621,15 +1628,13 @@ function extractRuntimeProps(
       m.key.type === 'Identifier'
     ) {
       let type
-      if (!isProd) {
-        if (m.type === 'TSMethodSignature') {
-          type = ['Function']
-        } else if (m.typeAnnotation) {
-          type = inferRuntimeType(
-            m.typeAnnotation.typeAnnotation,
-            declaredTypes
-          )
-        }
+      if (m.type === 'TSMethodSignature') {
+        type = ['Function']
+      } else if (m.typeAnnotation) {
+        type = inferRuntimeType(
+          m.typeAnnotation.typeAnnotation,
+          declaredTypes
+        )
       }
       props[m.key.name] = {
         key: m.key.name,

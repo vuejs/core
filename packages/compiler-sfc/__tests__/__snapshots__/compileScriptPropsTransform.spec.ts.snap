@@ -82,7 +82,9 @@ export default /*#__PURE__*/_defineComponent({
   props: {
     foo: { default: 1 },
     bar: { default: () => {} },
-    baz: null
+    baz: null,
+    boola: { type: Boolean },
+    boolb: { type: [Boolean, Number] }
   },
   setup(__props: any) {
 
