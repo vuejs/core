@@ -113,8 +113,10 @@ export {
 export {
   resolveComponent,
   resolveDirective,
-  resolveDynamicComponent
+  resolveDynamicComponent,
+  resolveDynamicRef
 } from './helpers/resolveAssets'
+
 // For integration with runtime compiler
 export { registerRuntimeCompiler, isRuntimeOnly } from './component'
 export {

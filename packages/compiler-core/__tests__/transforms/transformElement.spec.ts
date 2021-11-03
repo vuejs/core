@@ -22,7 +22,8 @@ import {
   NORMALIZE_CLASS,
   NORMALIZE_STYLE,
   NORMALIZE_PROPS,
-  GUARD_REACTIVE_PROPS
+  GUARD_REACTIVE_PROPS,
+  RESOLVE_DYNAMIC_REF
 } from '../../src/runtimeHelpers'
 import {
   NodeTypes,
@@ -1073,6 +1074,47 @@ describe('compiler: element transform', () => {
                   }
                 ]
               }
+            }
+          }
+        ]
+      })
+    })
+
+    test('inline dynamic ref', () => {
+      const { node, root } = parseWithElementTransform(
+        `<input :ref="refName"/>`,
+        {
+          directiveTransforms: {
+            bind: transformBind
+          },
+          inline: true,
+          bindingMetadata: {
+            refName: BindingTypes.SETUP_REF
+          }
+        }
+      )
+
+      expect(root.helpers).toContain(RESOLVE_DYNAMIC_REF)
+      expect(node.props).toMatchObject({
+        type: NodeTypes.JS_OBJECT_EXPRESSION,
+        properties: [
+          {
+            type: NodeTypes.JS_PROPERTY,
+            key: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'ref',
+              isStatic: true
+            },
+            value: {
+              type: NodeTypes.JS_CALL_EXPRESSION,
+              callee: RESOLVE_DYNAMIC_REF,
+              arguments: [
+                {
+                  type: NodeTypes.SIMPLE_EXPRESSION,
+                  content: 'refName'
+                },
+                '{ refName }'
+              ]
             }
           }
         ]

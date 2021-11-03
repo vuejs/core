@@ -3,11 +3,12 @@ import {
   createObjectProperty,
   createSimpleExpression,
   ExpressionNode,
-  NodeTypes
+  NodeTypes,
+  createCallExpression
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { camelize } from '@vue/shared'
-import { CAMELIZE } from '../runtimeHelpers'
+import { CAMELIZE, RESOLVE_DYNAMIC_REF } from '../runtimeHelpers'
 
 // v-bind without arg is handled directly in ./transformElements.ts due to it affecting
 // codegen for the entire props object. This transform here is only for v-bind
@@ -53,6 +54,29 @@ export const transformBind: DirectiveTransform = (dir, _node, context) => {
     context.onError(createCompilerError(ErrorCodes.X_V_BIND_NO_EXPRESSION, loc))
     return {
       props: [createObjectProperty(arg, createSimpleExpression('', true, loc))]
+    }
+  }
+
+  // process dynamic ref when inline templte
+  if (
+    !__BROWSER__ &&
+    context.inline &&
+    arg.type === NodeTypes.SIMPLE_EXPRESSION &&
+    arg.content === 'ref'
+  ) {
+    const setupContext = `{ ${Object.keys(context.bindingMetadata).join(
+      ', '
+    )} }`
+    return {
+      props: [
+        createObjectProperty(
+          arg,
+          createCallExpression(context.helper(RESOLVE_DYNAMIC_REF), [
+            exp,
+            setupContext
+          ])
+        )
+      ]
     }
   }
 

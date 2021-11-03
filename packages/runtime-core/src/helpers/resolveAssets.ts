@@ -6,9 +6,9 @@ import {
 } from '../component'
 import { currentRenderingInstance } from '../componentRenderContext'
 import { Directive } from '../directives'
-import { camelize, capitalize, isString } from '@vue/shared'
+import { camelize, capitalize, isFunction, isString } from '@vue/shared'
 import { warn } from '../warning'
-import { VNodeTypes } from '../vnode'
+import { VNodeRef, VNodeTypes } from '../vnode'
 
 export const COMPONENTS = 'components'
 export const DIRECTIVES = 'directives'
@@ -134,4 +134,23 @@ function resolve(registry: Record<string, any> | undefined, name: string) {
       registry[camelize(name)] ||
       registry[capitalize(camelize(name))])
   )
+}
+
+/**
+ * @internal
+ */
+export function resolveDynamicRef(
+  ref: VNodeRef,
+  setupContext: Record<string, any>
+) {
+  if (isFunction(ref)) {
+    return ref
+  } else if (isString(ref)) {
+    return (el: any, refs: Record<string, any>) => {
+      refs[ref] = el
+      setupContext[ref].value = el
+    }
+  } else if (__DEV__) {
+    warn(`invalid dynamic template ref value:`, ref)
+  }
 }
