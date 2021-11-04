@@ -23,7 +23,7 @@ jobs:
           node-version: 16
           cache: 'pnpm'
 
-      - run: pnpm install --frozen-lockfile=false
+      - run: pnpm install
 
       - name: Run unit tests
         run: pnpm run test -- --ci
@@ -44,7 +44,7 @@ jobs:
           node-version: 16
           cache: 'pnpm'
 
-      - run: pnpm install --frozen-lockfile=false
+      - run: pnpm install
 
       - name: Run type declaration tests
         run: pnpm run test-dts
@@ -67,7 +67,7 @@ jobs:
           node-version: 16
           cache: 'pnpm'
 
-      - run: pnpm install --frozen-lockfile=false
+      - run: pnpm install
       - run: pnpm run size
 
       # - name: Check build size
