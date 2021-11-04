@@ -33,6 +33,12 @@ const isNonTrackableKeys = /*#__PURE__*/ makeMap(`__proto__,__v_isRef,__isVue`)
 
 const builtInSymbols = new Set(
   Object.getOwnPropertyNames(Symbol)
+    .filter(key => {
+      // ios10.x Object.getOwnPropertyNames(Symbol) can enumerate 'arguments' and 'caller'
+      // fix TypeError "arguments","callee" and "caller" cannot be accessed in strict mode vue
+      const excludes = ['arguments', 'caller'];
+      return !excludes.includes(key);
+    })
     .map(key => (Symbol as any)[key])
     .filter(isSymbol)
 )
