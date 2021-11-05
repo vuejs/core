@@ -145,6 +145,8 @@ function updateVersions(version) {
   updatePackage(path.resolve(__dirname, '..'), version)
   // 2. update all packages
   packages.forEach(p => updatePackage(getPkgRoot(p), version))
+  // 3. update root pnpm-lock.yaml
+  updateYaml(path.resolve(__dirname, '..'), version)
 }
 
 function updatePackage(pkgRoot, version) {
@@ -170,6 +172,22 @@ function updateDeps(pkg, depType, version) {
       deps[dep] = version
     }
   })
+}
+
+function updateYaml(yamlRoot, version) {
+  const yamlPath = path.resolve(yamlRoot, 'pnpm-lock.yaml')
+  let lockYamlStr = fs.readFileSync(yamlPath, 'utf-8')
+  lockYamlStr = lockYamlStr.replaceAll(/@?vue\/?.*: \d+.\d+.\d+/g, versionStr => {
+    if (/vue:/.test(versionStr)) {
+      return versionStr.replace(/\d+.\d+.\d+/, version)
+    }
+    packageName = versionStr.match(/@vue\/(.*?)': \d+.\d+.\d+/)
+    if (packageName && packages.includes(packageName[1])) {
+      return versionStr.replace(/\d+.\d+.\d+/, version)
+    }
+    return versionStr
+  })
+  fs.writeFileSync(yamlPath, lockYamlStr)
 }
 
 async function publishPackage(pkgName, version, runIfNotDry) {
