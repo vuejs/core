@@ -504,6 +504,13 @@ function _createVNode(
     if (children) {
       normalizeChildren(cloned, children)
     }
+
+    // #4903 should track as a block if receiving an existing vnode and
+    // force bail out of optimized mode when patching it.
+    if (isBlockTreeEnabled > 0 && currentBlock) {
+      cloned.patchFlag |= PatchFlags.BAIL
+      currentBlock.push(cloned)
+    }
     return cloned
   }
 

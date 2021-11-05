@@ -23,7 +23,9 @@ import {
   createApp,
   FunctionalComponent,
   renderList,
-  onUnmounted
+  onUnmounted,
+  createElementBlock,
+  resolveDynamicComponent
 } from '@vue/runtime-test'
 import { PatchFlags, SlotFlags } from '@vue/shared'
 import { SuspenseImpl } from '../src/components/Suspense'
@@ -932,5 +934,55 @@ describe('renderer: optimized mode', () => {
     await nextTick()
     // should successfully unmount without error
     expect(inner(root)).toBe(`<!---->`)
+  })
+
+  test('should force bailout when createVNode receiving an existing vnode', async () => {
+    const checked = ref<any>([])
+    const ids = ['a', 'b', 'c']
+    function render(id: string) {
+      const isChecked = checked.value.includes(id)
+      return h('div', null, `${id} is ${isChecked ? 'checked' : 'unchecked'}`)
+    }
+
+    const app = createApp({
+      setup() {
+        return () => {
+          return (
+            openBlock(),
+            createElementBlock(
+              Fragment,
+              null,
+              renderList(ids, (id: string) => {
+                return createVNode(resolveDynamicComponent(render(id)))
+              }),
+              PatchFlags.STABLE_FRAGMENT
+            )
+          )
+        }
+      }
+    })
+
+    app.mount(root)
+    expect(inner(root)).toBe(
+      '<div>a is unchecked</div><div>b is unchecked</div><div>c is unchecked</div>'
+    )
+
+    checked.value.push('a')
+    await nextTick()
+    expect(inner(root)).toBe(
+      '<div>a is checked</div><div>b is unchecked</div><div>c is unchecked</div>'
+    )
+
+    checked.value.push('b')
+    await nextTick()
+    expect(inner(root)).toBe(
+      '<div>a is checked</div><div>b is checked</div><div>c is unchecked</div>'
+    )
+
+    checked.value.shift()
+    await nextTick()
+    expect(inner(root)).toBe(
+      '<div>a is unchecked</div><div>b is checked</div><div>c is unchecked</div>'
+    )
   })
 })
