@@ -694,9 +694,7 @@ export function compileScript(
           } }`
         } else if (type.indexOf('Boolean') > -1) {
           // production: if boolean exists, should keep the type.
-          return `${key}: { type: ${toRuntimeTypeString(
-            type
-          )}${
+          return `${key}: { type: ${toRuntimeTypeString(type)}${
             defaultString ? `, ${defaultString}` : ``
           } }`
         } else {
@@ -1631,10 +1629,7 @@ function extractRuntimeProps(
       if (m.type === 'TSMethodSignature') {
         type = ['Function']
       } else if (m.typeAnnotation) {
-        type = inferRuntimeType(
-          m.typeAnnotation.typeAnnotation,
-          declaredTypes
-        )
+        type = inferRuntimeType(m.typeAnnotation.typeAnnotation, declaredTypes)
       }
       props[m.key.name] = {
         key: m.key.name,
@@ -1961,7 +1956,7 @@ function getObjectOrArrayExpressionKeys(value: Node): string[] {
 
 const templateUsageCheckCache = createCache<string>()
 
-function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
+export function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
   const { content, ast } = sfc.template!
   const cached = templateUsageCheckCache.get(content)
   if (cached) {
