@@ -6,8 +6,8 @@
 
 ## Basic Rules
 
-- `$()` to turn refs into reative variables
-- `$$()` to access the original refs from reative variables
+- `$()` to turn refs into reactive variables
+- `$$()` to access the original refs from reactive variables
 
 ```js
 import { ref, watch } from 'vue'
