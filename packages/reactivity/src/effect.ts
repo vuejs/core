@@ -175,7 +175,7 @@ export interface ReactiveEffectRunner<T = any> {
  *
  * @param fn The function that will track reactive updates.
  * @param options Allows to control the effect's behaviour.
- * @returns A runner that can be used to control the effect.
+ * @returns A runner that can be used to control the effect after creation.
  */
 export function effect<T = any>(
   fn: () => T,
@@ -234,6 +234,16 @@ export function resetTracking() {
   shouldTrack = last === undefined ? true : last
 }
 
+/**
+ * Tracks access to a reactive property.
+ *
+ * This will check which effect is running at the moment and record it as dep
+ * which records all effects that depend on the reactive property.
+ *
+ * @param target Object holding the reactive property.
+ * @param type Defines the type of access to the reactive property.
+ * @param key Identifier of the reactive property.
+ */
 export function track(target: object, type: TrackOpTypes, key: unknown) {
   if (shouldTrack && activeEffect) {
     let depsMap = targetMap.get(target)
@@ -284,6 +294,14 @@ export function trackEffects(
   }
 }
 
+/**
+ * Finds all deps associated with the target (or a specific property) and
+ * triggers the effects stored within.
+ *
+ * @param target The reactive object.
+ * @param type Defines the type of the operation that needs to trigger effects.
+ * @param key Can be used to target a specific reactive property in the target object.
+ */
 export function trigger(
   target: object,
   type: TriggerOpTypes,
