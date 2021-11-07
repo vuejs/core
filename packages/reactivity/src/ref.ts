@@ -259,7 +259,14 @@ const shallowUnwrapHandlers: ProxyHandler<any> = {
 }
 
 /**
- * todo: document? This is used in vue-core's component.ts
+ * Returns a reactive proxy for the given object.
+ *
+ * If the object already is reactive, it's returned as-is. If not, a new
+ * reactive proxy is created. Direct child properties that are refs are properly
+ * handled, as well.
+ *
+ * @param objectWithRefs Either an already-reactive object or a simple object
+ * that contains refs.
  */
 export function proxyRefs<T extends object>(
   objectWithRefs: T
