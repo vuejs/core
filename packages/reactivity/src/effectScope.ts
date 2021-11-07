@@ -107,6 +107,13 @@ export class EffectScope {
   }
 }
 
+/**
+ * Creates a new effect scope that allows automatic collection and disposal of
+ * a group of effects.
+ *
+ * @see {@link https://github.com/vuejs/rfcs/pull/212}
+ * @param detached Can be used to create a "detached" effect scope.
+ */
 export function effectScope(detached?: boolean) {
   return new EffectScope(detached)
 }
@@ -120,10 +127,23 @@ export function recordEffectScope(
   }
 }
 
+/**
+ * Provides access to the current effect scope.
+ *
+ * This may be undefined at times when there's no effect active effect scope at
+ * this very moment.
+ */
 export function getCurrentScope() {
   return activeEffectScope
 }
 
+/**
+ * Allows to add a callback to the current effect scope's cleanup.
+ *
+ * If there is no active effect scope at the moment, this will do nothing.
+ *
+ * @param fn The callback function to attach to the scope's cleanup.
+ */
 export function onScopeDispose(fn: () => void) {
   if (activeEffectScope) {
     activeEffectScope.cleanups.push(fn)
