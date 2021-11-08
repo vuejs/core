@@ -2463,7 +2463,7 @@ export function invokeVNodeHook(
  *
  * #2080
  * Inside keyed `template` fragment static children, if a fragment is moved,
- * the children will always moved so that need inherit el form previous nodes
+ * the children will always be moved so that need inherit el from previous nodes
  * to ensure correct moved position.
  */
 export function traverseStaticChildren(n1: VNode, n2: VNode, shallow = false) {
