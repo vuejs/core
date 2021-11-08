@@ -201,7 +201,7 @@ describe('component: emit', () => {
       emits: [],
       render() {},
       created() {
-        // @ts-ignore
+        // @ts-expect-error `$emit` argument type is inferred from empty component `emits` and thus is `never` here
         this.$emit('foo-bar')
       }
     })

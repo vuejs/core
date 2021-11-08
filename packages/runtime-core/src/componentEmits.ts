@@ -92,15 +92,14 @@ export function emit(
         if (
           !propsOptions ||
           !(
-            toHandlerKey(event) in propsOptions ||
+            // only checking on camelized handler keys since that is what developers should use
+            // https://github.com/vuejs/vue-next/pull/4804#discussion_r736462241
             toHandlerKey(camelize(event)) in propsOptions
           )
         ) {
           warn(
             `Component emitted event "${event}" but it is neither declared in ` +
-              `the emits option nor as an "${toHandlerKey(
-                event
-              )}" or "${toHandlerKey(camelize(event))}" prop.`
+              `the emits option nor as an "${toHandlerKey(camelize(event))}" prop.`
           )
         }
       } else {
