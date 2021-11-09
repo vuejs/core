@@ -1367,7 +1367,7 @@ export function compileScript(
   // <script setup> components are closed by default. If the user did not
   // explicitly call `defineExpose`, call expose() with no args.
   const exposeCall =
-    hasDefineExposeCall || options.inlineTemplate ? `` : `  expose()\n`
+    hasDefineExposeCall || options.inlineTemplate ? `` : `  expose();\n`
   if (isTS) {
     // for TS, make sure the exported type is still valid type with
     // correct props information
