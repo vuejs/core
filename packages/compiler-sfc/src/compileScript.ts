@@ -692,8 +692,12 @@ export function compileScript(
           )}, required: ${required}${
             defaultString ? `, ${defaultString}` : ``
           } }`
-        } else if (type.some(el => el === 'Boolean' || el === 'Function')) {
-          // production: if boolean exists, should keep the type.
+        } else if (
+          type.some(
+            el => el === 'Boolean' || (defaultString && el === 'Function')
+          )
+        ) {
+          // #4783 production: if boolean or defaultString and function exists, should keep the type.
           return `${key}: { type: ${toRuntimeTypeString(type)}${
             defaultString ? `, ${defaultString}` : ``
           } }`
