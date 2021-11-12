@@ -84,7 +84,8 @@ export default /*#__PURE__*/_defineComponent({
     bar: { default: () => {} },
     baz: null,
     boola: { type: Boolean },
-    boolb: { type: [Boolean, Number] }
+    boolb: { type: [Boolean, Number] },
+    func: { type: Function, default: () => () => {} }
   },
   setup(__props: any) {
 

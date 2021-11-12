@@ -83,7 +83,7 @@ describe('sfc props transform', () => {
     const { content } = compile(
       `
       <script setup lang="ts">
-      const { foo = 1, bar = {} } = defineProps<{ foo?: number, bar?: object, baz?: any, boola?: boolean, boolb?: boolean | number }>()
+      const { foo = 1, bar = {}, func = () => {} } = defineProps<{ foo?: number, bar?: object, baz?: any, boola?: boolean, boolb?: boolean | number, func?: Function }>()
       </script>
     `,
       { isProd: true }
@@ -95,7 +95,8 @@ describe('sfc props transform', () => {
     bar: { default: () => {} },
     baz: null,
     boola: { type: Boolean },
-    boolb: { type: [Boolean, Number] }
+    boolb: { type: [Boolean, Number] },
+    func: { type: Function, default: () => () => {} }
   }`)
     assertCode(content)
   })
