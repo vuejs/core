@@ -20,7 +20,6 @@ export function ssrRenderSlot(
   slotScopeId?: string
 ) {
   // template-compiled slots are always rendered as fragments
-  push(`<!--[-->`)
   const slotFn = slots[slotName]
   if (slotFn) {
     const slotBuffer: SSRBufferItem[] = []
@@ -59,7 +58,6 @@ export function ssrRenderSlot(
   } else if (fallbackRenderFn) {
     fallbackRenderFn()
   }
-  push(`<!--]-->`)
 }
 
 const commentRE = /^<!--.*-->$/
