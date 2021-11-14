@@ -128,19 +128,15 @@ type NotUndefined<T> = T extends undefined ? never : T
 
 type InferDefaults<T> = {
   [K in keyof T]?: NotUndefined<T[K]> extends
-    | number
-    | string
-    | boolean
-    | symbol
-    | Function
-    ? NotUndefined<T[K]>
-    : (props: T) => NotUndefined<T[K]>
+    | Record<string, unknown>
+    | ReadonlyArray<any>
+    ? (props: T) => NotUndefined<T[K]>
+    : NotUndefined<T[K]>
 }
 
-type PropsWithDefaults<Base, Defaults> = Base &
-  {
-    [K in keyof Defaults]: K extends keyof Base ? NotUndefined<Base[K]> : never
-  }
+type PropsWithDefaults<Base, Defaults> = Base & {
+  [K in keyof Defaults]: K extends keyof Base ? NotUndefined<Base[K]> : never
+}
 
 /**
  * Vue `<script setup>` compiler macro for providing props default values when

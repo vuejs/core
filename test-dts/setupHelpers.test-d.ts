@@ -21,28 +21,33 @@ describe('defineProps w/ type declaration', () => {
 })
 
 describe('defineProps w/ type declaration + withDefaults', () => {
-  const res = withDefaults(
+  const props = withDefaults(
     defineProps<{
       number?: number
-      arr?: string[]
-      obj?: { x: number }
-      fn?: (e: string) => void
-      x?: string
+      array?: string[]
+      readonlyArray?: readonly string[]
+      object?: { a: number }
+      function?: (x: string) => void
+      string?: string
+      null?: null
     }>(),
     {
-      number: 123,
-      arr: () => [],
-      obj: () => ({ x: 123 }),
-      fn: () => {}
+      number: 1,
+      array: () => [],
+      readonlyArray: () => [],
+      object: () => ({ a: 1 }),
+      function: () => {}
     }
   )
 
-  res.number + 1
-  res.arr.push('hi')
-  res.obj.x
-  res.fn('hi')
-  // @ts-expect-error
-  res.x.slice()
+  expectType<number>(props.number)
+  expectType<string[]>(props.array)
+  expectType<readonly string[]>(props.readonlyArray)
+  expectType<{ a: number }>(props.object)
+  expectType<(x: string) => void>(props.function)
+  // should remain optional if no default is given
+  expectType<string | null | undefined>(props.string)
+  expectType<null | undefined>(props.null)
 })
 
 describe('defineProps w/ runtime declaration', () => {
