@@ -145,9 +145,9 @@ export const def = (obj: object, key: string | symbol, value: any) => {
   })
 }
 
-export const toNumber = (val: any): any => {
-  const n = parseFloat(val)
-  return isNaN(n) ? val : n
+export const toNumber = (value: any): any => {
+  const parsedValue = Number(value)
+  return isNaN(parsedValue) ? value : parsedValue
 }
 
 let _globalThis: any
