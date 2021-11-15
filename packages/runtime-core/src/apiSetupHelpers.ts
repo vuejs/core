@@ -126,27 +126,22 @@ export function defineExpose(exposed?: Record<string, any>) {
 
 type NotUndefined<T> = T extends undefined ? never : T
 
-type BasePropTypes = number | string | boolean | symbol | Function
-
-type IsBasePropType<T> = T extends BasePropTypes ? T : never
-type IsNestedPropType<T> = T extends object | Array<BasePropTypes> ? T : never
-
 type InferDefaults<T> = {
-  [K in keyof T]?:
-    | (IsBasePropType<NotUndefined<T[K]>> extends BasePropTypes
-        ? IsBasePropType<NotUndefined<T[K]>>
-        : never)
-    | (IsNestedPropType<NotUndefined<T[K]>> extends
-        | object
-        | Array<BasePropTypes>
-        ? (props: T) => IsNestedPropType<NotUndefined<T[K]>>
-        : never)
+  [K in keyof T]?: InferDefault<T, NotUndefined<T[K]>>
 }
 
-type PropsWithDefaults<Base, Defaults> = Base &
-  {
-    [K in keyof Defaults]: K extends keyof Base ? NotUndefined<Base[K]> : never
-  }
+type InferDefault<P, T> = T extends
+  | number
+  | string
+  | boolean
+  | symbol
+  | Function
+  ? T
+  : (props: P) => T
+
+type PropsWithDefaults<Base, Defaults> = Base & {
+  [K in keyof Defaults]: K extends keyof Base ? NotUndefined<Base[K]> : never
+}
 
 /**
  * Vue `<script setup>` compiler macro for providing props default values when
