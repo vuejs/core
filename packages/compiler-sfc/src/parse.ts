@@ -404,9 +404,11 @@ function hasSrc(node: ElementNode) {
  * once the empty text nodes (trimmed content) have been filtered out.
  */
 function isEmpty(node: ElementNode) {
-  return (
-    node.children.filter(
-      child => child.type !== NodeTypes.TEXT || child.content.trim() !== ''
-    ).length === 0
-  )
+  for (let i = 0; i < node.children.length; i++) {
+    const child = node.children[i]
+    if (child.type !== NodeTypes.TEXT || child.content.trim() !== '') {
+      return false
+    }
+  }
+  return true
 }
