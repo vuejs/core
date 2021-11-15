@@ -29,6 +29,7 @@ describe('compiler sfc: transform asset url', () => {
 			<img src="~fixtures/logo.png"/>
 			<img src="~/fixtures/logo.png"/>
 			<img src="http://example.com/fixtures/logo.png"/>
+			<img src="//example.com/fixtures/logo.png"/>
 			<img src="/fixtures/logo.png"/>
 			<img src="data:image/png;base64,i"/>
 		`)
@@ -76,7 +77,8 @@ describe('compiler sfc: transform asset url', () => {
     const { code } = compileWithAssetUrls(
       `<img src="./bar.png"/>` +
         `<img src="/bar.png"/>` +
-        `<img src="https://foo.bar/baz.png"/>`,
+        `<img src="https://foo.bar/baz.png"/>` +
+        `<img src="//foo.bar/baz.png"/>`,
       {
         includeAbsolute: true
       }
