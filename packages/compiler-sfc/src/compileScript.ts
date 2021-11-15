@@ -692,11 +692,13 @@ export function compileScript(
           )}, required: ${required}${
             defaultString ? `, ${defaultString}` : ``
           } }`
-        } else if (type.indexOf('Boolean') > -1) {
-          // production: if boolean exists, should keep the type.
-          return `${key}: { type: ${toRuntimeTypeString(
-            type
-          )}${
+        } else if (
+          type.some(
+            el => el === 'Boolean' || (defaultString && el === 'Function')
+          )
+        ) {
+          // #4783 production: if boolean or defaultString and function exists, should keep the type.
+          return `${key}: { type: ${toRuntimeTypeString(type)}${
             defaultString ? `, ${defaultString}` : ``
           } }`
         } else {
@@ -1631,10 +1633,7 @@ function extractRuntimeProps(
       if (m.type === 'TSMethodSignature') {
         type = ['Function']
       } else if (m.typeAnnotation) {
-        type = inferRuntimeType(
-          m.typeAnnotation.typeAnnotation,
-          declaredTypes
-        )
+        type = inferRuntimeType(m.typeAnnotation.typeAnnotation, declaredTypes)
       }
       props[m.key.name] = {
         key: m.key.name,
