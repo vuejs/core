@@ -2437,7 +2437,20 @@ export function setRef(
       doSet()
     }
   } else if (isFunction(ref)) {
-    callWithErrorHandling(ref, owner, ErrorCodes.FUNCTION_REF, [value, refs])
+    const doSet = () => {
+      // need update value
+      const value =
+        vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT
+          ? getExposeProxy(vnode.component!) || vnode.component!.proxy
+          : vnode.el
+      callWithErrorHandling(ref, owner, ErrorCodes.FUNCTION_REF, [value, refs])
+    }
+    if (value) {
+      ;(doSet as SchedulerJob).id = -1
+      queuePostRenderEffect(doSet, parentSuspense)
+    } else {
+      callWithErrorHandling(ref, owner, ErrorCodes.FUNCTION_REF, [value, refs])
+    }
   } else if (__DEV__) {
     warn('Invalid template ref type:', value, `(${typeof value})`)
   }

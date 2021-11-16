@@ -827,6 +827,67 @@ describe('renderer: optimized mode', () => {
     expect(inner(root)).toBe('<div><div>true</div></div>')
   })
 
+  // #4930
+  test('patch Suspense in optimized mode w/ nested await component', async () => {
+    let ref
+    const root = nodeOps.createElement('div')
+
+    jest.useFakeTimers()
+
+    const Child = defineComponent({
+      async setup(props, { expose }) {
+        function sleep(ms: number) {
+          return new Promise(resolve => setTimeout(resolve, ms))
+        }
+        await sleep(500)
+        expose({
+          a: 12
+        })
+        return () => h('div', null, 'hello')
+      }
+    })
+
+    const app = {
+      render() {
+        return (
+          openBlock(),
+          createBlock(
+            Fragment,
+            null,
+            [
+              (openBlock(),
+              createBlock(SuspenseImpl, null, {
+                default: withCtx(() => [
+                  createVNode('div', null, [
+                    createVNode(
+                      Child,
+                      {
+                        ref: value => {
+                          ref = value
+                          //@ts-ignore
+                          expect(ref.a).toBe(12)
+                        }
+                      },
+                      null,
+                      PatchFlags.NEED_PATCH
+                    )
+                  ])
+                ]),
+                _: SlotFlags.STABLE
+              }))
+            ],
+            PatchFlags.STABLE_FRAGMENT
+          )
+        )
+      }
+    }
+
+    render(h(app), root)
+
+    await nextTick()
+    jest.advanceTimersByTime(600)
+  })
+
   // #4183
   test('should not take unmount children fast path /w Suspense', async () => {
     const show = ref(true)
