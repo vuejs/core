@@ -11,6 +11,11 @@ import {
   FunctionalComponent,
   ComponentPublicInstance,
   toRefs,
+  KeepAlive,
+  Teleport,
+  Suspense,
+  Transition,
+  TransitionGroup,
   IsAny
 } from './index'
 
@@ -476,3 +481,12 @@ describe('class', () => {
 
   expectType<number>(props.foo)
 })
+
+
+describe('Register built-in components Teleport, Transition, TransitionGroup, Suspense and KeepAlive should work', () => {
+  defineComponent({ components: { Teleport } })
+  defineComponent({ components: { Suspense } })
+  defineComponent({ components: { KeepAlive } })
+  defineComponent({ components: { Transition } })
+  defineComponent({ components: { TransitionGroup } })
+});
