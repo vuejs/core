@@ -26,7 +26,7 @@ jobs:
       - run: pnpm install
 
       - name: Run unit tests
-        run: pnpm run test -- --ci
+        run: pnpm run test
 
   test-dts:
     runs-on: ubuntu-latest
