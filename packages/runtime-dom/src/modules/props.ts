@@ -31,7 +31,12 @@ export function patchDOMProp(
     // non-string values will be stringified.
     el._value = value
     const newValue = value == null ? '' : value
-    if (el.value !== newValue) {
+    if (
+      el.value !== newValue ||
+      // #4956: for OPTION elements, we need to check for the value attribute because
+      // el.value returns el.textContent if attribute is absent (i.e. hasn't been set yet)
+      (el.tagName === 'OPTION' && el.getAttribute('value') !== newValue)
+    ) {
       el.value = newValue
     }
     if (value == null) {

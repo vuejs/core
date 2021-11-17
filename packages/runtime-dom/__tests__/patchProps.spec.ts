@@ -29,9 +29,12 @@ describe('runtime-dom: props patching', () => {
   // so we need to add tests for other elements
   test('value for non-text input', () => {
     const el = document.createElement('option')
+    el.textContent = 'foo' // #4956
     patchProp(el, 'value', null, 'foo')
+    expect(el.getAttribute('value')).toBe('foo')
     expect(el.value).toBe('foo')
     patchProp(el, 'value', null, null)
+    el.textContent = ''
     expect(el.value).toBe('')
     // #3475
     expect(el.getAttribute('value')).toBe(null)
