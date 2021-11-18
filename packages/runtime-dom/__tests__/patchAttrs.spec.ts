@@ -45,6 +45,12 @@ describe('runtime-dom: attrs patching', () => {
     expect(el.getAttribute('foo')).toBe(null)
   })
 
+  test('symbol attributes', () => {
+    const el = document.createElement('button')
+    patchProp(el, 'aria-label', null, Symbol('Close'))
+    expect(el.getAttribute('aria-label')).toBe('Symbol(Close)')
+  })
+
   // #949
   test('onxxx but non-listener attributes', () => {
     const el = document.createElement('div')

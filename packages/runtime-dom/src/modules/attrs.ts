@@ -1,6 +1,7 @@
 import {
   includeBooleanAttr,
   isSpecialBooleanAttr,
+  isSymbol,
   makeMap,
   NOOP
 } from '@vue/shared'
@@ -36,7 +37,12 @@ export function patchAttr(
     if (value == null || (isBoolean && !includeBooleanAttr(value))) {
       el.removeAttribute(key)
     } else {
-      el.setAttribute(key, isBoolean ? '' : value)
+      // Symbols are explicitly stringified as the underlying library
+      // does not handle them https://github.com/jsdom/webidl-conversions/issues/14
+      el.setAttribute(
+        key,
+        isBoolean ? '' : isSymbol(value) ? value.toString() : value
+      )
     }
   }
 }
