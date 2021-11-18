@@ -537,15 +537,10 @@ function createDuplicateChecker() {
   }
 }
 
-export let shouldCacheAccess = true
-
 export function applyOptions(instance: ComponentInternalInstance) {
   const options = resolveMergedOptions(instance)
   const publicThis = instance.proxy! as any
   const ctx = instance.ctx
-
-  // do not cache property access on public proxy during state initialization
-  shouldCacheAccess = false
 
   // call beforeCreate first before accessing other options since
   // the hook may mutate resolved options (#2791)
@@ -679,9 +674,6 @@ export function applyOptions(instance: ComponentInternalInstance) {
       }
     }
   }
-
-  // state initialization complete at this point - start caching access
-  shouldCacheAccess = true
 
   if (computedOptions) {
     for (const key in computedOptions) {

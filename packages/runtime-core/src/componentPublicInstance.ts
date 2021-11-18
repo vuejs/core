@@ -32,7 +32,6 @@ import {
   OptionTypesType,
   OptionTypesKeys,
   resolveMergedOptions,
-  shouldCacheAccess,
   MergedComponentOptionsOverride
 } from './componentOptions'
 import { EmitsOptions, EmitFn } from './componentEmits'
@@ -251,8 +250,7 @@ const enum AccessTypes {
   SETUP,
   DATA,
   PROPS,
-  CONTEXT,
-  OTHER
+  CONTEXT
 }
 
 export interface ComponentRenderContext {
@@ -321,8 +319,6 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       } else if (ctx !== EMPTY_OBJ && hasOwn(ctx, key)) {
         accessCache![key] = AccessTypes.CONTEXT
         return ctx[key]
-      } else if (!__FEATURE_OPTIONS_API__ || shouldCacheAccess) {
-        accessCache![key] = AccessTypes.OTHER
       }
     }
 
