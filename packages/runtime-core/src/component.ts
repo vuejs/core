@@ -161,7 +161,9 @@ export const enum LifecycleHooks {
   UPDATED = 'u',
   BEFORE_UNMOUNT = 'bum',
   UNMOUNTED = 'um',
+  BEFORE_DEACTIVATE = 'bda',
   DEACTIVATED = 'da',
+  BEFORE_ACTIVATE = 'ba',
   ACTIVATED = 'a',
   RENDER_TRIGGERED = 'rtg',
   RENDER_TRACKED = 'rtc',
@@ -417,7 +419,15 @@ export interface ComponentInternalInstance {
   /**
    * @internal
    */
+  [LifecycleHooks.BEFORE_ACTIVATE]: LifecycleHook
+  /**
+   * @internal
+   */
   [LifecycleHooks.ACTIVATED]: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.BEFORE_DEACTIVATE]: LifecycleHook
   /**
    * @internal
    */
@@ -513,7 +523,9 @@ export function createComponentInstance(
     u: null,
     um: null,
     bum: null,
+    bda: null,
     da: null,
+    ba: null,
     a: null,
     rtg: null,
     rtc: null,
