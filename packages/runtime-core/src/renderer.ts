@@ -337,6 +337,7 @@ function baseCreateRenderer(
   options: RendererOptions,
   createHydrationFns?: typeof createHydrationFunctions
 ): any {
+  debugger
   console.log('--baseCreateRenderer--')
   // compile-time feature flags check
   if (__ESM_BUNDLER__ && !__TEST__) {

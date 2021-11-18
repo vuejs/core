@@ -13,5 +13,7 @@
   },
   "[json]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
-  }
+  },
+  "editor.suggest.snippetsPreventQuickSuggestions": false,
+  "liveServer.settings.port": 5501
 }

@@ -35,10 +35,12 @@ const rendererOptions = extend({ patchProp }, nodeOps)
 
 // lazy create the renderer - this makes core renderer logic tree-shakable
 // in case the user only imports reactivity utilities from Vue.
+// 是一个对象，有声明interface
 let renderer: Renderer<Element | ShadowRoot> | HydrationRenderer
 
 let enabledHydration = false
 
+// 这里获取renderer，取到关键作用
 function ensureRenderer() {
   console.log('--ensureRenderer--');
   return (
@@ -69,13 +71,13 @@ export const createApp = ((...args) => {
   console.log('--createApp--');
   
   const app = ensureRenderer().createApp(...args)
-  debugger
   if (__DEV__) {
     injectNativeTagCheck(app)
     injectCompilerOptionsCheck(app)
   }
 
   const { mount } = app
+
   app.mount = (containerOrSelector: Element | ShadowRoot | string): any => {
     const container = normalizeContainer(containerOrSelector)
     if (!container) return
@@ -105,6 +107,7 @@ export const createApp = ((...args) => {
     // clear content before mounting
     container.innerHTML = ''
     const proxy = mount(container, false, container instanceof SVGElement)
+    // const proxy = null
     if (container instanceof Element) {
       container.removeAttribute('v-cloak')
       container.setAttribute('data-v-app', '')

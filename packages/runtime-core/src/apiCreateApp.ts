@@ -280,6 +280,7 @@ export function createAppAPI<HostElement>(
         isHydrate?: boolean,
         isSVG?: boolean
       ): any {
+        debugger
         if (!isMounted) {
           const vnode = createVNode(
             rootComponent as ConcreteComponent,

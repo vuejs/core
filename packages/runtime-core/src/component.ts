@@ -436,6 +436,7 @@ const emptyAppContext = createAppContext()
 
 let uid = 0
 
+// 组件实例，设置vue组件的所有通用属性，包括attr，props，provides这些vue组件自身带有的属性
 export function createComponentInstance(
   vnode: VNode,
   parent: ComponentInternalInstance | null,

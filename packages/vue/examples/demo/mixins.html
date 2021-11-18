@@ -2,26 +2,28 @@
 
 <div id="app">
   <h1>i am mixins</h1>
+  <mymixins></mymixins>
 </div>
 <script  type="text/x-template" id="myM">
   <h2>wo shi myM</h2>
 </script>
 
 <script>
+  let { h } = Vue
   const mymixins = {
-    template: '#myM',
+    // template: '#myM',
     mounted() {
       console.log('i am mymixins mounted')
     },
     render() {
-      h('div', {}, 'mixins contain')
+      return h('div', {}, 'wojiushitesrt') // 这里会返回vnode
     },
   }
   const app = Vue.createApp({
-    mixins: [],
+    components: {mymixins},
     mounted() {
       console.log(this)
     }
-  }).mixin(mymixins)
+  })
   app.mount('#app')
 </script>
