@@ -1,6 +1,6 @@
 {
   "name": "vue",
-  "version": "3.2.21",
+  "version": "3.2.22",
   "description": "The progressive JavaScript framework for buiding modern web UI.",
   "main": "index.js",
   "module": "dist/vue.runtime.esm-bundler.js",
@@ -21,7 +21,8 @@
         "node": "./index.mjs",
         "default": "./dist/vue.runtime.esm-bundler.js"
       },
-      "require": "./index.js"
+      "require": "./index.js",
+      "types": "./dist/vue.d.ts"
     },
     "./server-renderer": {
       "import": "./server-renderer/index.mjs",
@@ -60,10 +61,10 @@
   },
   "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/vue#readme",
   "dependencies": {
-    "@vue/shared": "3.2.21",
-    "@vue/compiler-dom": "3.2.21",
-    "@vue/runtime-dom": "3.2.21",
-    "@vue/compiler-sfc": "3.2.21",
-    "@vue/server-renderer": "3.2.21"
+    "@vue/shared": "3.2.22",
+    "@vue/compiler-dom": "3.2.22",
+    "@vue/runtime-dom": "3.2.22",
+    "@vue/compiler-sfc": "3.2.22",
+    "@vue/server-renderer": "3.2.22"
   }
 }

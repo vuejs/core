@@ -5,7 +5,7 @@ exports[`sfc ref transform $ unwrapping 1`] = `
     
 export default {
   setup(__props, { expose }) {
-  expose()
+  expose();
 
     let foo = (ref())
     let a = (ref(1))
@@ -26,7 +26,7 @@ exports[`sfc ref transform $ref & $shallowRef declarations 1`] = `
 
 export default {
   setup(__props, { expose }) {
-  expose()
+  expose();
 
     let foo = _ref()
     let a = _ref(1)
@@ -47,7 +47,7 @@ exports[`sfc ref transform usage /w typescript 1`] = `
 
 export default /*#__PURE__*/_defineComponent({
   setup(__props, { expose }) {
-  expose()
+  expose();
 
         let msg = _ref<string | number>('foo');
         let bar = _ref <string | number>('bar');
@@ -79,7 +79,7 @@ exports[`sfc ref transform usage with normal <script> + <script setup> 1`] = `
     
 export default {
   setup(__props, { expose }) {
-  expose()
+  expose();
 
     let b = _ref(0)
     let c = 0

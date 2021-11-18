@@ -45,6 +45,21 @@ describe('defineProps w/ type declaration + withDefaults', () => {
   res.x.slice()
 })
 
+describe('defineProps w/ union type declaration + withDefaults', () => {
+  withDefaults(
+    defineProps<{
+      union1?: number | number[] | { x: number }
+      union2?: number | number[] | { x: number }
+      union3?: number | number[] | { x: number }
+    }>(),
+    {
+      union1: 123,
+      union2: () => [123],
+      union3: () => ({ x: 123 })
+    }
+  )
+})
+
 describe('defineProps w/ runtime declaration', () => {
   // runtime declaration
   const props = defineProps({
