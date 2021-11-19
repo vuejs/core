@@ -20,7 +20,7 @@ describe('SFC compile <script setup>', () => {
       class dd {}
       </script>
       `)
-    expect(content).toMatch('return { aa, bb, cc, dd, a, b, c, d, xx, x }')
+    expect(content).toMatch('return { aa, bb, cc, dd, a, b, c, d, x }')
     expect(bindings).toStrictEqual({
       x: BindingTypes.SETUP_MAYBE_REF,
       a: BindingTypes.SETUP_LET,
@@ -311,6 +311,20 @@ defineExpose({ foo: 123 })
       assertCode(content)
       expect(content.indexOf(`import { x }`)).toEqual(
         content.lastIndexOf(`import { x }`)
+      )
+    })
+
+    test('imports in <script> should not be exposed', () => {
+      assertCode(
+        compile(`
+      <script>
+      import { foo } from './foo'
+      import { bar } from './bar'
+      </script>
+      <script setup>
+      import { baz } from './baz'
+      </script>
+      `).content
       )
     })
   })

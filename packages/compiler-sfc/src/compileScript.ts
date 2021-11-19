@@ -950,14 +950,16 @@ export function compileScript(
             `\`${imported}\` is a compiler macro and no longer needs to be imported.`
           )
           removeSpecifier(i)
-        } else if (existing) {
-          if (existing.source === source && existing.imported === imported) {
-            // already imported in <script setup>, dedupe
-            removeSpecifier(i)
-          } else {
-            error(`different imports aliased to same local name.`, specifier)
-          }
         } else {
+          if (existing) {
+            if (existing.source === source && existing.imported === imported) {
+              // already imported in <script>, dedupe
+              removeSpecifier(i)
+            } else {
+              error(`different imports aliased to same local name.`, specifier)
+            }
+          }
+
           registerUserImport(
             source,
             local,
@@ -1319,7 +1321,11 @@ export function compileScript(
       ...setupBindings
     }
     for (const key in userImports) {
-      if (!userImports[key].isType && userImports[key].isUsedInTemplate) {
+      if (
+        !userImports[key].isType &&
+        userImports[key].isFromSetup &&
+        userImports[key].isUsedInTemplate
+      ) {
         allBindings[key] = true
       }
     }
