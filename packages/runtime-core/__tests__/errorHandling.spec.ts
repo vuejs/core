@@ -9,6 +9,8 @@ import {
   nextTick,
   defineComponent,
   watchEffect,
+  KeepAlive,
+  onActivated,
   createApp
 } from '@vue/runtime-test'
 
@@ -53,6 +55,7 @@ describe('error handling', () => {
 
   test('propagation stoppage', () => {
     const err = new Error('foo')
+    const err2 = new Error('bar')
     const fn = jest.fn()
 
     const Comp = {
@@ -71,7 +74,7 @@ describe('error handling', () => {
           fn(err, info, 'child')
           return false
         })
-        return () => h(GrandChild)
+        return () => h(KeepAlive, null, () => h(GrandChild))
       }
     }
 
@@ -80,17 +83,22 @@ describe('error handling', () => {
         onMounted(() => {
           throw err
         })
+        onActivated(() => {
+          throw err2
+        })
         return () => null
       }
     }
 
     render(h(Comp), nodeOps.createElement('div'))
-    expect(fn).toHaveBeenCalledTimes(1)
+    expect(fn).toHaveBeenCalledTimes(2)
     expect(fn).toHaveBeenCalledWith(err, 'mounted hook', 'child')
+    expect(fn).toHaveBeenCalledWith(err2, 'activated hook', 'child')
   })
 
-  test('async error handling', async () => {
+  test.only('async error handling', async () => {
     const err = new Error('foo')
+    const err2 = new Error('bar')
     const fn = jest.fn()
 
     const Comp = {
@@ -99,7 +107,7 @@ describe('error handling', () => {
           fn(err, info)
           return false
         })
-        return () => h(Child)
+        return () => h(KeepAlive, null, () => h(Child))
       }
     }
 
@@ -108,6 +116,9 @@ describe('error handling', () => {
         onMounted(async () => {
           throw err
         })
+        onActivated(async () => {
+          throw err2
+        })
       },
       render() {}
     }
@@ -115,7 +126,9 @@ describe('error handling', () => {
     render(h(Comp), nodeOps.createElement('div'))
     expect(fn).not.toHaveBeenCalled()
     await new Promise(r => setTimeout(r))
+    expect(fn).toHaveBeenCalledTimes(2)
     expect(fn).toHaveBeenCalledWith(err, 'mounted hook')
+    expect(fn).toHaveBeenCalledWith(err2, 'activated hook')
   })
 
   test('error thrown in onErrorCaptured', () => {
