@@ -21,7 +21,8 @@ import {
   EMPTY_ARR,
   def,
   extend,
-  isOn
+  isOn,
+  IfAny
 } from '@vue/shared'
 import { warn } from './warning'
 import {
@@ -115,7 +116,7 @@ type InferPropType<T> = [T] extends [null]
     : InferPropType<U>
   : [T] extends [Prop<infer V, infer D>]
   ? unknown extends V
-    ? D
+    ? IfAny<V, V, D>
     : V
   : T
 
