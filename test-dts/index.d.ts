@@ -2,7 +2,6 @@
 // use \@ts-expect-error where errors are expected.
 
 export * from '@vue/runtime-dom'
-import { IfAny } from '@vue/shared'
 
 export function describe(_name: string, _fn: () => void): void
 
@@ -15,5 +14,4 @@ export type IsUnion<T, U extends T = T> = (T extends any
   : never) extends false
   ? false
   : true
-
-export type IsAny<T> = IfAny<T, true, false>
+export type IsAny<T> = 0 extends (1 & T) ? true : false

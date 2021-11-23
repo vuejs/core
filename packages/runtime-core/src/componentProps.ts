@@ -21,8 +21,7 @@ import {
   EMPTY_ARR,
   def,
   extend,
-  isOn,
-  IfAny
+  isOn
 } from '@vue/shared'
 import { warn } from './warning'
 import {
@@ -40,6 +39,7 @@ import { createPropsDefaultThis } from './compat/props'
 import { isCompatEnabled, softAssertCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
 import { shouldSkipAttr } from './compat/attrsFallthrough'
+import { IfAny } from './helpers/typeUtils'
 
 export type ComponentPropsOptions<P = Data> =
   | ComponentObjectPropsOptions<P>
