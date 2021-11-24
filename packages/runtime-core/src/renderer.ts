@@ -2465,6 +2465,10 @@ export function invokeVNodeHook(
  * Inside keyed `template` fragment static children, if a fragment is moved,
  * the children will always be moved. Therefore, in order to ensure correct move
  * position, el should be inherited from previous nodes.
+ *
+ * #4942
+ * When a Teleport has text children, it should inhert element from preVNode to
+ * access the right element.
  */
 export function traverseStaticChildren(n1: VNode, n2: VNode, shallow = false) {
   const ch1 = n1.children
@@ -2475,7 +2479,10 @@ export function traverseStaticChildren(n1: VNode, n2: VNode, shallow = false) {
       // guaranteed to be vnodes
       const c1 = ch1[i] as VNode
       let c2 = ch2[i] as VNode
-      if (c2.shapeFlag & ShapeFlags.ELEMENT && !c2.dynamicChildren) {
+      if (
+        c2.shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.TEXT_CHILDREN) &&
+        !c2.dynamicChildren
+      ) {
         if (c2.patchFlag <= 0 || c2.patchFlag === PatchFlags.HYDRATE_EVENTS) {
           c2 = ch2[i] = cloneIfMounted(ch2[i] as VNode)
           c2.el = c1.el

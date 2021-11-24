@@ -471,4 +471,45 @@ describe('renderer: teleport', () => {
     expect(dir.mounted).toHaveBeenCalledTimes(1)
     expect(dir.unmounted).toHaveBeenCalledTimes(1)
   })
+
+  // #4942
+  test('should call traverseStaticChildren with text-children', async () => {
+    const target = nodeOps.createElement('div')
+    const root = nodeOps.createElement('div')
+    const text = ref('foo')
+    const show = ref(true)
+
+    const App = {
+      setup() {
+        return {
+          text,
+          show,
+          target
+        }
+      },
+      render: compile(`
+      <div v-if="show">
+        {{ text }}
+        <teleport :to="target">
+          zoo
+        </teleport>
+      </div>
+      `)
+    }
+    render(h(App), root)
+
+    show.value = false
+    await nextTick()
+
+    show.value = true
+    await nextTick()
+
+    text.value = ''
+    await nextTick()
+
+    show.value = false
+    await nextTick()
+
+    expect(serializeInner(target)).toBe(``)
+  })
 })
