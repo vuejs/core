@@ -240,7 +240,7 @@ const KeepAliveImpl: ComponentOptions = {
       }
 
       const children = slots.default()
-      const rawVNode = children[0]
+      let rawVNode = children[0]
       if (children.length > 1) {
         if (__DEV__) {
           warn(`KeepAlive should contain exactly one component child.`)
@@ -285,6 +285,8 @@ const KeepAliveImpl: ComponentOptions = {
         vnode = cloneVNode(vnode)
         if (rawVNode.shapeFlag & ShapeFlags.SUSPENSE) {
           rawVNode.ssContent = vnode
+        } else {
+          rawVNode = vnode
         }
       }
       // #1513 it's possible for the returned vnode to be cloned due to attr
