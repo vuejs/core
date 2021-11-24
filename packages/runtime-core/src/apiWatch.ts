@@ -6,7 +6,9 @@ import {
   isReactive,
   ReactiveFlags,
   EffectScheduler,
-  DebuggerOptions
+  DebuggerOptions,
+  isProxy,
+  toRaw
 } from '@vue/reactivity'
 import { SchedulerJob, queuePreFlushCb } from './scheduler'
 import {
@@ -429,28 +431,32 @@ export function createPathGetter(ctx: any, path: string) {
 }
 
 export function traverse(value: unknown, seen?: Set<unknown>) {
-  if (!isObject(value) || (value as any)[ReactiveFlags.SKIP]) {
-    return value
+    if (!isObject(value) || (value as any)[ReactiveFlags.SKIP] || !(isProxy(value) || isRef(value))) {
+      return value
+    }
+    seen = seen || new Set()
+    if (seen.has(value)) {
+      return value
+    }
+    seen.add(value)
+    if (isRef(value)) {
+      traverse(value.value, seen)
+    } else {
+      const raw = toRaw(value)
+  
+      if (isArray(raw)) {
+        for (let i = 0; i < (value as Array<any>).length; i++) {
+          traverse(value[i], seen)
+        }
+      } else if (isSet(raw) || isMap(raw)) {
+        (value as Set<any>|Map<any, any>).forEach((v: any) => {
+          traverse(v, seen)
+        })
+      } else if (isPlainObject(raw)) {
+        for (const key in value as Object) {
+          traverse((value as any)[key], seen)
+        }
+      }
+    }
+    return value
   }
-  seen = seen || new Set()
-  if (seen.has(value)) {
-    return value
-  }
-  seen.add(value)
-  if (isRef(value)) {
-    traverse(value.value, seen)
-  } else if (isArray(value)) {
-    for (let i = 0; i < value.length; i++) {
-      traverse(value[i], seen)
-    }
-  } else if (isSet(value) || isMap(value)) {
-    value.forEach((v: any) => {
-      traverse(v, seen)
-    })
-  } else if (isPlainObject(value)) {
-    for (const key in value) {
-      traverse((value as any)[key], seen)
-    }
-  }
-  return value
-}
