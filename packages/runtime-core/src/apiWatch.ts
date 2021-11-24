@@ -7,7 +7,6 @@ import {
   ReactiveFlags,
   EffectScheduler,
   DebuggerOptions,
-  isProxy,
   toRaw
 } from '@vue/reactivity'
 import { SchedulerJob, queuePreFlushCb } from './scheduler'
@@ -431,7 +430,7 @@ export function createPathGetter(ctx: any, path: string) {
 }
 
 export function traverse(value: unknown, seen?: Set<unknown>) {
-    if (!isObject(value) || (value as any)[ReactiveFlags.SKIP] || !(isProxy(value) || isRef(value))) {
+    if (!isObject(value) || (value as any)[ReactiveFlags.SKIP] || !(isReactive(value) || isRef(value))) {
       return value
     }
     seen = seen || new Set()
