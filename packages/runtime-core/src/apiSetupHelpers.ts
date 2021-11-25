@@ -131,6 +131,7 @@ type InferDefaults<T> = {
 }
 
 type InferDefault<P, T> = T extends
+  | null
   | number
   | string
   | boolean
