@@ -5,6 +5,7 @@ export default {
       output: {
         entryFileNames: `[name].js`
       }
-    }
+    },
+    minify: 'terser'
   }
 }
