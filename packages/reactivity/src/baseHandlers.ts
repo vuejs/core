@@ -7,7 +7,8 @@ import {
   readonlyMap,
   reactiveMap,
   shallowReactiveMap,
-  shallowReadonlyMap
+  shallowReadonlyMap,
+  isReadonly
 } from './reactive'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import {
@@ -146,7 +147,7 @@ function createSetter(shallow = false) {
     receiver: object
   ): boolean {
     let oldValue = (target as any)[key]
-    if (!shallow) {
+    if (!shallow && !isReadonly(value)) {
       value = toRaw(value)
       oldValue = toRaw(oldValue)
       if (!isArray(target) && isRef(oldValue) && !isRef(value)) {
