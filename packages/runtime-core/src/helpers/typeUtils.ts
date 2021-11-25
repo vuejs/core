@@ -6,3 +6,5 @@ export type UnionToIntersection<U> = (
 
 // make keys required but keep undefined values
 export type LooseRequired<T> = { [P in string & keyof T]: T[P] }
+
+export type IfAny<T, Y, N> = 0 extends (1 & T) ? Y : N
