@@ -356,8 +356,8 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
           return desc.get.call(instance.proxy)
         } else {
           const val = globalProperties[key]
-          return isFunction(val) && Object.keys(val).length === 0
-            ? val.bind(instance.proxy)
+          return isFunction(val)
+            ? Object.assign(val.bind(instance.proxy), val)
             : val
         }
       } else {
