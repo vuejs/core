@@ -18,7 +18,10 @@ import {
   defineAsyncComponent,
   Component,
   createApp,
-  onActivated
+  onActivated,
+  onMounted,
+  openBlock,
+  createBlock
 } from '@vue/runtime-test'
 import { KeepAliveProps } from '../../src/components/KeepAlive'
 
@@ -902,5 +905,52 @@ describe('KeepAlive', () => {
 
     await nextTick()
     expect(handler).toHaveBeenCalledWith(err, {}, 'activated hook')
+  })
+
+  // #4984
+  test('Use push to trigger onActivated in keepalive', async () => {
+    const fn = jest.fn()
+    const toggle = ref(true)
+
+    const App = {
+      setup() {
+        const keeps = ref<string[]>([])
+
+        onMounted(() => {
+          keeps.value.push('Child')
+        })
+
+        return () => (
+          openBlock(),
+          createBlock(
+            KeepAlive,
+            {
+              include: keeps.value
+            },
+            [toggle.value ? h(Child) : null],
+            1032,
+            ['include']
+          )
+        )
+      }
+    }
+
+    const Child = {
+      name: 'Child',
+      setup() {
+        onActivated(() => {
+          fn()
+        })
+        return () => h('div')
+      }
+    }
+
+    render(h(App), root)
+    await nextTick()
+    toggle.value = false
+    await nextTick()
+    toggle.value = true
+    await nextTick()
+    expect(fn).toHaveBeenCalledTimes(1)
   })
 })
