@@ -33,9 +33,10 @@ export function patchDOMProp(
     const newValue = value == null ? '' : value
     if (
       el.value !== newValue ||
-      // #4956: for OPTION elements, we need to check for the value attribute because
-      // el.value returns el.textContent if attribute is absent (i.e. hasn't been set yet)
-      (el.tagName === 'OPTION' && el.getAttribute('value') !== newValue)
+      // #4956: always set for OPTION elements because its value falls back to
+      // textContent if no value attribute is present. And setting .value for
+      // OPTION has no side effect
+      el.tagName === 'OPTION'
     ) {
       el.value = newValue
     }
