@@ -70,6 +70,101 @@ function plainType(arg: number | Ref<number>) {
   // should still unwrap in objects nested in arrays
   const arr2 = ref([{ a: ref(1) }]).value
   expectType<number>(arr2[0].a)
+
+  // unwrapped collections should all extend the native ones
+  // and be assignable if no unwrapping has happened
+  {
+    const someSet: Set<Ref<number>> = new Set()
+    const someWeakSet: WeakSet<Ref<number>> = new WeakSet()
+    const someMap: Map<string, Ref<number>> = new Map()
+    const someWeakMap: WeakMap<object, Ref<number>> = new WeakMap()
+    const setRef = ref(someSet)
+    const weakSetRef = ref(someWeakSet)
+    const mapRef = ref(someMap)
+    const weakMapRef = ref(someWeakMap)
+
+    expectType<Set<Ref<number>>>(setRef.value)
+    expectType<WeakSet<Ref<number>>>(weakSetRef.value)
+    expectType<Map<string, Ref<number>>>(mapRef.value)
+    expectType<WeakMap<object, Ref<number>>>(weakMapRef.value)
+  }
+
+  // should still unwrap in objects nested in collections
+  {
+    let someSet: Set<{ a: Ref<number> }> = new Set()
+    const setRef = ref(someSet)
+
+    const obj = {
+      a: ref(1)
+    }
+
+    // do not require unwrapped object
+    // on the `add`, `has`, and `delete` method
+    setRef.value.add(obj)
+    setRef.value.has(obj)
+    setRef.value.delete(obj)
+
+    // make sure to unwrap the object when reading
+    for (const { a } of setRef.value.values()) {
+      expectType<number>(a)
+    }
+
+    // @ts-expect-error should not be assignable back
+    // because `a` was unwrapped
+    someSet = setRef.value
+  }
+
+  {
+    let someWeakSet: WeakSet<{ a: Ref<number> }> = new WeakSet()
+    const weakSetRef = ref(someWeakSet)
+
+    const obj = {
+      a: ref(1)
+    }
+
+    weakSetRef.value.add(obj)
+    weakSetRef.value.has(obj)
+    weakSetRef.value.delete(obj)
+
+    // should be assignable back because WeakSets are not unwrapped
+    // (their values can never be read and only be used for lookup)
+    someWeakSet = weakSetRef.value
+  }
+
+  {
+    let someMap: Map<string, { a: Ref<number> }> = new Map()
+    const mapRef = ref(someMap)
+
+    const obj = {
+      a: ref(1)
+    }
+
+    // do not require unwrapped object on the `set` method
+    mapRef.value.set('key', obj)
+
+    // make sure to unwrap the object when reading
+    expectType<{ a: number } | undefined>(mapRef.value.get('key'))
+
+    // @ts-expect-error
+    someMap = mapRef.value
+  }
+
+  {
+    let someWeakMap: WeakMap<{}, { a: Ref<number> }> = new Map()
+    const weakMapRef = ref(someWeakMap)
+
+    const key = {}
+    const obj = {
+      a: ref(1)
+    }
+
+    weakMapRef.value.set(key, obj)
+
+    expectType<{ a: number } | undefined>(weakMapRef.value.get(key))
+
+    // @ts-expect-error
+    someWeakMap = weakMapRef.value
+  }
 }
 
 plainType(1)

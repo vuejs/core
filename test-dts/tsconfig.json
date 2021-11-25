@@ -2,7 +2,8 @@
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "noEmit": true,
-    "declaration": true
+    "declaration": true,
+    "downlevelIteration": true
   },
   "exclude": ["../packages/*/__tests__", "../packages/template-explorer"]
 }

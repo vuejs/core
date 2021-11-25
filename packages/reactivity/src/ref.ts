@@ -66,9 +66,6 @@ export function isRef(r: any): r is Ref {
   return Boolean(r && r.__v_isRef === true)
 }
 
-export function ref<T extends object>(
-  value: T
-): [T] extends [Ref] ? T : Ref<UnwrapRef<T>>
 export function ref<T>(value: T): Ref<UnwrapRef<T>>
 export function ref<T = any>(): Ref<T | undefined>
 export function ref(value?: unknown) {
@@ -287,13 +284,42 @@ export type UnwrapRef<T> = T extends ShallowRef<infer V>
   ? UnwrapRefSimple<V>
   : UnwrapRefSimple<T>
 
+export interface UnwrappedMap<K, V>
+  extends Omit<Map<K, UnwrapRefSimple<V>>, 'set'> {
+  set(key: K, value: V): this
+}
+
+export interface UnwrappedWeakMap<K extends object, V>
+  extends Omit<WeakMap<K, UnwrapRefSimple<V>>, 'set'> {
+  set(key: K, value: V): this
+}
+
+export interface UnwrappedSet<T>
+  extends Omit<Set<UnwrapRefSimple<T>>, 'add' | 'has' | 'delete'> {
+  add(value: T): this
+  has(value: T): boolean
+  delete(value: T): boolean
+}
+
+type UnwrapRefCollectionTypes<T extends CollectionTypes> = T extends Map<
+  infer TMapKey,
+  infer TMap
+>
+  ? UnwrappedMap<TMapKey, TMap>
+  : T extends WeakMap<infer TWeakMapKey, infer TWeakMap>
+  ? UnwrappedWeakMap<TWeakMapKey, TWeakMap>
+  : T extends Set<infer TSet>
+  ? UnwrappedSet<TSet>
+  : T
+
 export type UnwrapRefSimple<T> = T extends
   | Function
-  | CollectionTypes
   | BaseTypes
   | Ref
   | RefUnwrapBailTypes[keyof RefUnwrapBailTypes]
   ? T
+  : T extends CollectionTypes
+  ? UnwrapRefCollectionTypes<T>
   : T extends Array<any>
   ? { [K in keyof T]: UnwrapRefSimple<T[K]> }
   : T extends object & { [ShallowReactiveMarker]?: never }

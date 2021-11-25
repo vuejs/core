@@ -13,6 +13,9 @@ export {
   ToRefs,
   UnwrapRef,
   ShallowRef,
+  UnwrappedMap,
+  UnwrappedWeakMap,
+  UnwrappedSet,
   ShallowUnwrapRef,
   RefUnwrapBailTypes,
   CustomRefFactory
