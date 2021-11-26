@@ -78,7 +78,7 @@ const bar = 1
     // should assign user identifier to it
     expect(content).toMatch(`const props = __props`)
     // should include context options in default export
-    expect(content).toMatch(`export default {
+    expect(content).toMatch(`export default {name: 'anonymous',
   props: {
   foo: String
 },`)
@@ -92,7 +92,7 @@ const bar = 1
     </script>
       `)
     assertCode(content)
-    expect(content).toMatch(`export default {
+    expect(content).toMatch(`export default {name: 'anonymous',
   props: propsModel,`)
   })
 
@@ -123,7 +123,7 @@ const myEmit = defineEmits(['foo', 'bar'])
     // should generate correct setup signature
     expect(content).toMatch(`setup(__props, { expose, emit: myEmit }) {`)
     // should include context options in default export
-    expect(content).toMatch(`export default {
+    expect(content).toMatch(`export default {name: 'anonymous',
   emits: ['foo', 'bar'],`)
   })
 
@@ -699,7 +699,8 @@ const emit = defineEmits(['a', 'b'])
 </script>
       `)
       assertCode(content)
-      expect(content).toMatch(`export default /*#__PURE__*/_defineComponent({
+      expect(content)
+        .toMatch(`export default /*#__PURE__*/_defineComponent({name: 'anonymous',
   props: { foo: String },
   emits: ['a', 'b'],
   setup(__props, { expose, emit }) {`)

@@ -250,6 +250,7 @@ export function compileScript(
   let hasDefinePropsCall = false
   let hasDefineEmitCall = false
   let hasDefineExposeCall = false
+  let hasDefaultExportName = false
   let propsRuntimeDecl: Node | undefined
   let propsRuntimeDefaults: ObjectExpression | undefined
   let propsDestructureDecl: Node | undefined
@@ -799,6 +800,15 @@ export function compileScript(
         defaultExport = node
         const start = node.start! + scriptStartOffset!
         const end = node.declaration.start! + scriptStartOffset!
+        hasDefaultExportName = !!(
+          defaultExport.declaration as ObjectExpression
+        ).properties.filter(s => {
+          return (
+            s.type === 'ObjectProperty' &&
+            s.key.type === 'Identifier' &&
+            s.key.name === 'name'
+          )
+        })
         s.overwrite(start, end, `const ${defaultTempVar} = `)
       } else if (node.type === 'ExportNamedDeclaration') {
         const defaultSpecifier = node.specifiers.find(
@@ -1338,6 +1348,12 @@ export function compileScript(
 
   // 11. finalize default export
   let runtimeOptions = ``
+  if (!hasDefaultExportName && filename) {
+    const match = filename.match(/([^/\\]+)\.\w+$/)
+    if (match) {
+      runtimeOptions += `name: '${match[1]}',`
+    }
+  }
   if (hasInlinedSsrRenderFn) {
     runtimeOptions += `\n  __ssrInlineRender: true,`
   }

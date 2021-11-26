@@ -4,7 +4,7 @@ exports[`sfc props transform aliasing 1`] = `
 "import { toDisplayString as _toDisplayString } from \\"vue\\"
 
 
-export default {
+export default {name: 'anonymous',
   props: ['foo'],
   setup(__props) {
 
@@ -24,7 +24,7 @@ exports[`sfc props transform basic usage 1`] = `
 "import { toDisplayString as _toDisplayString } from \\"vue\\"
 
 
-export default {
+export default {name: 'anonymous',
   props: ['foo'],
   setup(__props) {
 
@@ -42,7 +42,7 @@ return (_ctx, _cache) => {
 exports[`sfc props transform default values w/ runtime declaration 1`] = `
 "import { mergeDefaults as _mergeDefaults } from 'vue'
 
-export default {
+export default {name: 'anonymous',
   props: _mergeDefaults(['foo', 'bar'], {
   foo: 1,
   bar: () => {}
@@ -60,7 +60,7 @@ return () => {}
 exports[`sfc props transform default values w/ type declaration 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
-export default /*#__PURE__*/_defineComponent({
+export default /*#__PURE__*/_defineComponent({name: 'anonymous',
   props: {
     foo: { type: Number, required: false, default: 1 },
     bar: { type: Object, required: false, default: () => {} }
@@ -78,7 +78,7 @@ return () => {}
 exports[`sfc props transform default values w/ type declaration, prod mode 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
-export default /*#__PURE__*/_defineComponent({
+export default /*#__PURE__*/_defineComponent({name: 'anonymous',
   props: {
     foo: { default: 1 },
     bar: { default: () => {} },
@@ -98,7 +98,7 @@ return () => {}
 `;
 
 exports[`sfc props transform nested scope 1`] = `
-"export default {
+"export default {name: 'anonymous',
   props: ['foo', 'bar'],
   setup(__props) {
 
@@ -117,7 +117,7 @@ return () => {}
 exports[`sfc props transform rest spread 1`] = `
 "import { createPropsRestProxy as _createPropsRestProxy } from 'vue'
 
-export default {
+export default {name: 'anonymous',
   props: ['foo', 'bar', 'baz'],
   setup(__props) {
 
