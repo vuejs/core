@@ -477,7 +477,7 @@ function baseCreateRenderer(
 
     // set ref
     if (ref != null && parentComponent) {
-      setRef(ref, n1 && n1.ref, parentSuspense, n2 || n1, !n2)
+      setRef(ref, n1 && n1.ref, parentSuspense, n2 || n1, !n2, parentComponent)
     }
   }
 
@@ -2355,7 +2355,8 @@ export function setRef(
   oldRawRef: VNodeNormalizedRef | null,
   parentSuspense: SuspenseBoundary | null,
   vnode: VNode,
-  isUnmount = false
+  isUnmount = false,
+  parentComponent: ComponentInternalInstance | null = null
 ) {
   if (isArray(rawRef)) {
     rawRef.forEach((r, i) =>
@@ -2370,7 +2371,15 @@ export function setRef(
     return
   }
 
-  if (isAsyncWrapper(vnode) && !isUnmount) {
+  if (
+    isAsyncWrapper(vnode) &&
+    !isUnmount &&
+    // #4999
+    // when async-component in keep-alive, it should set ref to async-component
+    // so actual vnode in async-component can access right ref, because the
+    // keep-alive cache the wrapper vnode
+    !(parentComponent && isKeepAlive(parentComponent.vnode))
+  ) {
     // when mounting async components, nothing needs to be done,
     // because the template ref is forwarded to inner component
     return
