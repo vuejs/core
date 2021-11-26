@@ -113,7 +113,7 @@ export interface SFCScriptCompileOptions {
   templateOptions?: Partial<SFCTemplateCompileOptions>
 }
 
-interface ImportBinding {
+export interface ImportBinding {
   isType: boolean
   imported: string
   source: string
@@ -335,11 +335,7 @@ export function compileScript(
 
     let isUsedInTemplate = true
     if (isTS && sfc.template && !sfc.template.src && !sfc.template.lang) {
-      isUsedInTemplate = new RegExp(
-        // #4274 escape $ since it's a special char in regex
-        // (and is the only regex special char that is valid in identifiers)
-        `[^\\w$_]${local.replace(/\$/g, '\\$')}[^\\w$_]`
-      ).test(resolveTemplateUsageCheckString(sfc))
+      isUsedInTemplate = isImportUsed(local, sfc)
     }
 
     userImports[local] = {
@@ -1441,6 +1437,7 @@ export function compileScript(
   return {
     ...scriptSetup,
     bindings: bindingMetadata,
+    imports: userImports,
     content: s.toString(),
     map: genSourceMap
       ? (s.generateMap({
@@ -1960,7 +1957,7 @@ function getObjectOrArrayExpressionKeys(value: Node): string[] {
 
 const templateUsageCheckCache = createCache<string>()
 
-export function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
+function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
   const { content, ast } = sfc.template!
   const cached = templateUsageCheckCache.get(content)
   if (cached) {
@@ -2017,4 +2014,41 @@ function stripTemplateString(str: string): string {
     return interpMatch.map(m => m.slice(2, -1)).join(',')
   }
   return ''
+}
+
+function isImportUsed(local: string, sfc: SFCDescriptor): boolean {
+  return new RegExp(
+    // #4274 escape $ since it's a special char in regex
+    // (and is the only regex special char that is valid in identifiers)
+    `[^\\w$_]${local.replace(/\$/g, '\\$')}[^\\w$_]`
+  ).test(resolveTemplateUsageCheckString(sfc))
+}
+
+/**
+ * Note: this comparison assumes the prev/next script are already identical,
+ * and only checks the special case where <script setup lang="ts"> unused import
+ * pruning result changes due to template changes.
+ */
+export function hmrShouldReload(
+  prevImports: Record<string, ImportBinding>,
+  next: SFCDescriptor
+): boolean {
+  if (
+    !next.scriptSetup ||
+    (next.scriptSetup.lang !== 'ts' && next.scriptSetup.lang !== 'tsx')
+  ) {
+    return false
+  }
+
+  // for each previous import, check if its used status remain the same based on
+  // the next descriptor's template
+  for (const key in prevImports) {
+    // if an import was previous unused, but now is used, we need to force
+    // reload so that the script now includes that import.
+    if (!prevImports[key].isUsedInTemplate && isImportUsed(key, next)) {
+      return true
+    }
+  }
+
+  return false
 }

@@ -2,7 +2,7 @@
 export { parse } from './parse'
 export { compileTemplate } from './compileTemplate'
 export { compileStyle, compileStyleAsync } from './compileStyle'
-export { compileScript, resolveTemplateUsageCheckString } from './compileScript'
+export { compileScript } from './compileScript'
 export { rewriteDefault } from './rewriteDefault'
 export {
   shouldTransform as shouldTransformRef,
