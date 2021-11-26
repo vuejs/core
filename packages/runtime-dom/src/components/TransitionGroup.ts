@@ -34,6 +34,7 @@ interface Position {
 
 const positionMap = new WeakMap<VNode, Position>()
 const newPositionMap = new WeakMap<VNode, Position>()
+const newTransformMap = new WeakMap<VNode, string[]>()
 
 export type TransitionGroupProps = Omit<TransitionProps, 'mode'> & {
   tag?: string
@@ -84,7 +85,7 @@ const TransitionGroupImpl: ComponentOptions = {
         const el = c.el as ElementWithTransition
         const style = el.style
         addTransitionClass(el, moveClass)
-        style.transform = style.webkitTransform = style.transitionDuration = ''
+        ;[style.transform = style.webkitTransform, style.transitionDuration] = newTransformMap.get(c) || ['', '']
         const cb = ((el as any)._moveCb = (e: TransitionEvent) => {
           if (e && e.target !== el) {
             return
@@ -186,7 +187,8 @@ function applyTranslation(c: VNode): VNode | undefined {
   const dy = oldPos.top - newPos.top
   if (dx || dy) {
     const s = (c.el as HTMLElement).style
-    s.transform = s.webkitTransform = `translate(${dx}px,${dy}px)`
+    newTransformMap.set(c, [s.webkitTransform, s.transitionDuration]);
+    s.transform = s.webkitTransform += ` translate(${dx}px,${dy}px)`;
     s.transitionDuration = '0s'
     return c
   }
