@@ -33,7 +33,8 @@
       "require": "./compiler-sfc/index.js"
     },
     "./dist/*": "./dist/*",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./ref-macros.d.ts": "./ref-macros.d.ts"
   },
   "buildOptions": {
     "name": "Vue",
