@@ -285,6 +285,28 @@ describe('GLOBAL_PROTOTYPE', () => {
     delete Vue.prototype.$test
   })
 
+  test.only('functions keeps additional properties', () => {
+    function test(this: any) {
+      return this.msg
+    }
+    test.additionalFn = () => {
+      return 'additional fn'
+    }
+
+    Vue.prototype.$test = test
+    const vm = new Vue({
+      data() {
+        return {
+          msg: 'test'
+        }
+      }
+    }) as any
+    expect(typeof vm.$test).toBe('function')
+    expect(typeof vm.$test.additionalFn).toBe('function')
+    expect(vm.$test.additionalFn()).toBe('additional fn')
+    delete Vue.prototype.$test
+  })
+
   test('extended prototype', async () => {
     const Foo = Vue.extend()
     Foo.prototype.$test = 1
