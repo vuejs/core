@@ -65,7 +65,7 @@ const isBuiltInDir = makeMap(
 
 export interface SFCScriptCompileOptions {
   /**
-   * Scope ID for prefixing injected CSS varialbes.
+   * Scope ID for prefixing injected CSS variables.
    * This must be consistent with the `id` passed to `compileStyle`.
    */
   id: string
@@ -107,7 +107,7 @@ export interface SFCScriptCompileOptions {
   inlineTemplate?: boolean
   /**
    * Options for template compilation when inlining. Note these are options that
-   * would normally be pased to `compiler-sfc`'s own `compileTemplate()`, not
+   * would normally be passed to `compiler-sfc`'s own `compileTemplate()`, not
    * options passed to `compiler-dom`.
    */
   templateOptions?: Partial<SFCTemplateCompileOptions>
@@ -412,7 +412,7 @@ export function compileScript(
                 default: right
               }
             } else if (prop.value.type === 'Identifier') {
-              // simple destucture
+              // simple destructure
               propsDestructuredBindings[propKey] = {
                 local: prop.value.name
               }
@@ -632,7 +632,7 @@ export function compileScript(
 
   /**
    * check defaults. If the default object is an object literal with only
-   * static properties, we can directly generate more optimzied default
+   * static properties, we can directly generate more optimized default
    * declarations. Otherwise we will have to fallback to runtime merging.
    */
   function hasStaticWithDefaults() {
@@ -1542,7 +1542,7 @@ function walkObjectPattern(
       }
     } else {
       // ...rest
-      // argument can only be identifer when destructuring
+      // argument can only be identifier when destructuring
       const type = isConst ? BindingTypes.SETUP_CONST : BindingTypes.SETUP_LET
       registerBinding(bindings, p.argument as Identifier, type)
     }
@@ -1574,7 +1574,7 @@ function walkPattern(
       : BindingTypes.SETUP_LET
     registerBinding(bindings, node, type)
   } else if (node.type === 'RestElement') {
-    // argument can only be identifer when destructuring
+    // argument can only be identifier when destructuring
     const type = isConst ? BindingTypes.SETUP_CONST : BindingTypes.SETUP_LET
     registerBinding(bindings, node.argument as Identifier, type)
   } else if (node.type === 'ObjectPattern') {
