@@ -1960,7 +1960,7 @@ function getObjectOrArrayExpressionKeys(value: Node): string[] {
 
 const templateUsageCheckCache = createCache<string>()
 
-function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
+export function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
   const { content, ast } = sfc.template!
   const cached = templateUsageCheckCache.get(content)
   if (cached) {
