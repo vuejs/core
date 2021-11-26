@@ -1,4 +1,4 @@
-const escapeRE = /["#$&'()<>]/
+const escapeRE = /["#&'()<>]/
 
 export function escapeHtml(string: unknown) {
   const str = '' + string
@@ -19,9 +19,6 @@ export function escapeHtml(string: unknown) {
         break
       case 35: // #
         escaped='&#35;'
-        break
-      case 36: // $
-        escaped='&#36;'
         break
       case 38: // &
         escaped = '&amp;'
