@@ -3,7 +3,8 @@
 exports[`sfc ref transform $ unwrapping 1`] = `
 "import { ref, shallowRef } from 'vue'
     
-export default {name: 'anonymous',
+export default {
+  name: 'anonymous',
   setup(__props, { expose }) {
   expose();
 
@@ -24,7 +25,8 @@ return { foo, a, b, c, d, ref, shallowRef }
 exports[`sfc ref transform $ref & $shallowRef declarations 1`] = `
 "import { ref as _ref, shallowRef as _shallowRef } from 'vue'
 
-export default {name: 'anonymous',
+export default {
+  name: 'anonymous',
   setup(__props, { expose }) {
   expose();
 
@@ -45,7 +47,8 @@ return { foo, a, b, c, d }
 exports[`sfc ref transform usage /w typescript 1`] = `
 "import { ref as _ref, defineComponent as _defineComponent } from 'vue'
 
-export default /*#__PURE__*/_defineComponent({name: 'anonymous',
+export default /*#__PURE__*/_defineComponent({
+  name: 'anonymous',
   setup(__props, { expose }) {
   expose();
 
@@ -77,7 +80,8 @@ exports[`sfc ref transform usage with normal <script> + <script setup> 1`] = `
     let a = _ref(0)
     let c = _ref(0)
     
-export default {name: 'anonymous',
+export default {
+  name: 'anonymous',
   setup(__props, { expose }) {
   expose();
 

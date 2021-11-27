@@ -798,17 +798,23 @@ export function compileScript(
       } else if (node.type === 'ExportDefaultDeclaration') {
         // export default
         defaultExport = node
+        let tempArray
         const start = node.start! + scriptStartOffset!
         const end = node.declaration.start! + scriptStartOffset!
-        hasDefaultExportName = !!(
-          defaultExport.declaration as ObjectExpression
-        ).properties.filter(s => {
-          return (
+        if (defaultExport.declaration.type === 'ObjectExpression') {
+          tempArray = defaultExport.declaration.properties
+        } else if (
+          defaultExport.declaration.type === 'CallExpression' &&
+          defaultExport.declaration.arguments[0].type === 'ObjectExpression'
+        ) {
+          tempArray = defaultExport.declaration.arguments[0].properties
+        }
+        hasDefaultExportName = !!tempArray?.some(
+          s =>
             s.type === 'ObjectProperty' &&
             s.key.type === 'Identifier' &&
             s.key.name === 'name'
-          )
-        })
+        )
         s.overwrite(start, end, `const ${defaultTempVar} = `)
       } else if (node.type === 'ExportNamedDeclaration') {
         const defaultSpecifier = node.specifiers.find(
@@ -1351,7 +1357,7 @@ export function compileScript(
   if (!hasDefaultExportName && filename) {
     const match = filename.match(/([^/\\]+)\.\w+$/)
     if (match) {
-      runtimeOptions += `name: '${match[1]}',`
+      runtimeOptions += `\n  name: '${match[1]}',`
     }
   }
   if (hasInlinedSsrRenderFn) {
