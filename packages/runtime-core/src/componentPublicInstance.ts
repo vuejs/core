@@ -386,6 +386,15 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
             `but is not defined on instance.`
         )
       }
+    } else if (
+      __DEV__ &&
+      !__TEST__ &&
+      !(key[0] === '$' || key[0] === '_')
+    ) {
+      warn(
+        `Property ${JSON.stringify(key)} was accessed during render ` +
+          `but is not defined on instance.`
+      )
     }
   },
 
