@@ -1091,7 +1091,7 @@ describe('api: watch', () => {
     expect(instance!.scope.effects.length).toBe(1)
   })
 
-  it.only('watchEffect should not track watch callback when instance is not mounted', async () => {
+  it('watchEffect should not track watch callback when instance is not mounted', async () => {
     let _formData: { value: string }
     const Comp = {
       setup() {
