@@ -6,7 +6,9 @@ import {
   isReactive,
   ReactiveFlags,
   EffectScheduler,
-  DebuggerOptions
+  DebuggerOptions,
+  pauseTracking,
+  resetTracking
 } from '@vue/reactivity'
 import { SchedulerJob, queuePreFlushCb } from './scheduler'
 import {
@@ -350,7 +352,9 @@ function doWatch(
       } else {
         // with 'pre' option, the first call must happen before
         // the component is mounted so it is called synchronously.
+        pauseTracking()
         job()
+        resetTracking()
       }
     }
   }
