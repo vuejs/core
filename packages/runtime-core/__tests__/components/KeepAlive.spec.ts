@@ -874,4 +874,43 @@ describe('KeepAlive', () => {
     await nextTick()
     expect(serializeInner(root)).toBe('<p>1</p>')
   })
+
+  test('should correctly set ref with async component', async () => {
+    let resolve: (comp: Component) => void
+    const AsyncComp = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r as any
+        })
+    )
+
+    const toggle = ref(true)
+    const instanceRef = ref<any>(null)
+    const App = {
+      render: () => {
+        return h(KeepAlive, () =>
+          toggle.value ? h(AsyncComp, { ref: instanceRef }) : null
+        )
+      }
+    }
+
+    render(h(App), root)
+
+    resolve!({
+      render() {
+        return h('div')
+      }
+    })
+
+    await timeout()
+    expect(instanceRef.value).not.toBe(null)
+
+    toggle.value = false
+    await nextTick()
+
+    toggle.value = true
+    await nextTick()
+
+    expect(instanceRef.value).not.toBe(null)
+  })
 })
