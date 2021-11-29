@@ -368,7 +368,7 @@ function setFullProps(
             continue
           }
         }
-        if (value !== attrs[key]) {
+        if (!(key in attrs) || value !== attrs[key]) {
           attrs[key] = value
           hasAttrsChanged = true
         }
