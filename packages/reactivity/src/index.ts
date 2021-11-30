@@ -12,6 +12,7 @@ export {
   ToRef,
   ToRefs,
   UnwrapRef,
+  ShallowRef,
   ShallowUnwrapRef,
   RefUnwrapBailTypes
 } from './ref'
