@@ -89,6 +89,7 @@ The following workflow walks through the steps of migrating an actual Vue 2 app 
              }
            }
          })
+     }
    }
    ```
 
