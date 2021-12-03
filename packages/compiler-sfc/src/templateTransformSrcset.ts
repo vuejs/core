@@ -57,7 +57,7 @@ export const transformSrcset: NodeTransform = (
             return { url, descriptor }
           })
 
-          // data urls contains comma after the ecoding so we need to re-merge
+          // data urls contains comma after the encoding so we need to re-merge
           // them
           for (let i = 0; i < imageCandidates.length; i++) {
             const { url } = imageCandidates[i]
