@@ -73,8 +73,30 @@ type PropMethod<T, TConstructor = any> = [T] extends [
   ? { new (): TConstructor; (): T; readonly prototype: TConstructor } // Create Function like constructor
   : never
 
-type RequiredKeys<T> = {
+type BasicPropType =
+  | ObjectConstructor
+  | BooleanConstructor
+  | DateConstructor
+  | ArrayConstructor
+  | FunctionConstructor
+  | StringConstructor
+  | SymbolConstructor
+  | NumberConstructor
+
+type NullableKeys<T> = { [K in keyof T]-?: undefined extends T[K] ? K : never }[keyof T]
+
+type NotVue2PropType<T> = {
   [K in keyof T]: T[K] extends
+  | BasicPropType
+  | Partial<BasicPropType>[]
+  | { type: Partial<BasicPropType>[] | Partial<BasicPropType> | PropType<any>}
+  | PropType<any>
+  ? never
+  : K
+}[keyof T]
+
+type RequiredProps<T> = {
+  [K in keyof T]-?: T[K] extends
     | { required: true }
     | { default: any }
     // don't mark Boolean props as undefined
@@ -83,10 +105,14 @@ type RequiredKeys<T> = {
     ? T[K] extends { default: undefined | (() => undefined) }
       ? never
       : K
+    : K extends NullableKeys<T>
+    ? never
+    : K extends NotVue2PropType<T>
+    ? K
     : never
 }[keyof T]
 
-type OptionalKeys<T> = Exclude<keyof T, RequiredKeys<T>>
+type OptionalProps<T> = Exclude<keyof T, RequiredProps<T>>
 
 type DefaultKeys<T> = {
   [K in keyof T]: T[K] extends
@@ -110,10 +136,20 @@ type InferPropType<T> = [T] extends [null]
   ? boolean
   : [T] extends [DateConstructor | { type: DateConstructor }]
   ? Date
+  : [T] extends [ArrayConstructor | { type: ArrayConstructor }]
+  ? unknown[]
+  : [T] extends [FunctionConstructor | { type: FunctionConstructor }]
+  ? Function
+  : [T] extends [StringConstructor | { type: StringConstructor }]
+  ? string
+  : [T] extends [SymbolConstructor | { type: SymbolConstructor }]
+  ? symbol
+  : [T] extends [NumberConstructor | { type: NumberConstructor }]
+  ? number
   : [T] extends [(infer U)[] | { type: (infer U)[] }]
-  ? U extends DateConstructor
-    ? Date | InferPropType<U>
-    : InferPropType<U>
+  ? U extends BasicPropType
+    ? InferPropType<U>
+    : T
   : [T] extends [Prop<infer V, infer D>]
   ? unknown extends V
     ? IfAny<V, V, D>
@@ -122,8 +158,8 @@ type InferPropType<T> = [T] extends [null]
 
 export type ExtractPropTypes<O> = O extends object
   ? { [K in keyof O]?: unknown } & // This is needed to keep the relation between the option prop and the props, allowing to use ctrl+click to navigate to the prop options. see: #3656
-      { [K in RequiredKeys<O>]: InferPropType<O[K]> } &
-      { [K in OptionalKeys<O>]?: InferPropType<O[K]> }
+      { [K in RequiredProps<O>]: InferPropType<O[K]> } &
+      { [K in OptionalProps<O>]?: InferPropType<O[K]> }
   : { [K in string]: any }
 
 const enum BooleanFlags {

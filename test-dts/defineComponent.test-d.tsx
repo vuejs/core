@@ -275,6 +275,7 @@ describe('with object props', () => {
       hhh={false}
       ggg="foo"
       jjj={() => ''}
+      kkk={null}
       // should allow class/style as attrs
       class="bar"
       style={{ color: 'red' }}
@@ -294,6 +295,7 @@ describe('with object props', () => {
       fff={(a, b) => ({ a: a > +b })}
       hhh={false}
       jjj={() => ''}
+      kkk={1}
     />
   )
 
@@ -331,6 +333,30 @@ describe('with object props', () => {
       }
     }
   })
+})
+
+describe('DefineComponent with HTMLAttributes', () => {
+  type HTMLAttributes = {
+    onClick: Function,
+    someProp: 1 | 2
+  }
+  const props = {
+    propA: Number,
+    propB: [String, Number],
+    propC: {
+      type: String,
+      default: '1111'
+    }
+  }
+  const onClick = () => {}
+  const Comp = defineComponent<HTMLAttributes & typeof props>({
+    setup() {
+      return <div></div>
+    },
+  })
+  expectType<JSX.Element>(<Comp propB={'123'} someProp={1} onClick={onClick} propC={''} />)
+  // @ts-expect-error
+  expectError(<Comp notExist={1} />)
 })
 
 describe('type inference w/ optional props declaration', () => {
