@@ -176,6 +176,21 @@ describe('api: watch', () => {
     ])
   })
 
+  it('watching multiple sources: undefined initial values and immediate: true', async () => {
+    const a = ref()
+    const b = ref()
+    let called = false
+    watch(
+      [a, b],
+      () => {
+        called = true
+      },
+      { immediate: true }
+    )
+    await nextTick()
+    expect(called).toBe(true)
+  })
+
   it('watching multiple sources: readonly array', async () => {
     const state = reactive({ count: 1 })
     const status = ref(false)
