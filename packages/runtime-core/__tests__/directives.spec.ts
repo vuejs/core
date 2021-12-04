@@ -7,7 +7,10 @@ import {
   DirectiveHook,
   VNode,
   DirectiveBinding,
-  nextTick
+  nextTick,
+  Directive,
+  ComponentPublicInstance,
+  getCurrentInstance
 } from '@vue/runtime-test'
 import { currentInstance, ComponentInternalInstance } from '../src/component'
 
@@ -394,5 +397,30 @@ describe('directives', () => {
     await nextTick()
     expect(beforeUpdate).toHaveBeenCalledTimes(1)
     expect(count.value).toBe(1)
+  })
+
+  test('should have currentInstance available', async () => {
+    let instance: ComponentInternalInstance | null
+    let bindingInstance: ComponentPublicInstance | null
+    const beforeMount: Directive = (_, binding) => {
+      instance = getCurrentInstance()
+      bindingInstance = binding.instance
+    }
+    const App = {
+      render() {
+        return withDirectives(h('p', 'Test'), [
+          [
+            {
+              beforeMount
+            }
+          ]
+        ])
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(instance!).not.toBe(null)
+    expect(instance!.proxy).toBe(bindingInstance!)
   })
 })

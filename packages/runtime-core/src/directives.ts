@@ -14,7 +14,12 @@ return withDirectives(h(comp), [
 import { VNode } from './vnode'
 import { isFunction, EMPTY_OBJ, makeMap } from '@vue/shared'
 import { warn } from './warning'
-import { ComponentInternalInstance, Data } from './component'
+import {
+  ComponentInternalInstance,
+  Data,
+  setCurrentInstance,
+  unsetCurrentInstance
+} from './component'
 import { currentRenderingInstance } from './componentRenderContext'
 import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
 import { ComponentPublicInstance } from './componentPublicInstance'
@@ -139,12 +144,14 @@ export function invokeDirectiveHook(
       // disable tracking inside all lifecycle hooks
       // since they can potentially be called inside effects.
       pauseTracking()
+      instance && setCurrentInstance(instance)
       callWithAsyncErrorHandling(hook, instance, ErrorCodes.DIRECTIVE_HOOK, [
         vnode.el,
         binding,
         vnode,
         prevVNode
       ])
+      unsetCurrentInstance()
       resetTracking()
     }
   }
