@@ -337,13 +337,12 @@ describe('with object props', () => {
 
 describe('DefineComponent with HTMLAttributes', () => {
   type HTMLAttributes = {
-    onClick: Function,
+    onClick?: Function,
     someProp: 1 | 2
   }
   const props = {
-    propA: Number,
-    propB: [String, Number],
-    propC: {
+    propA: [String, Number],
+    propB: {
       type: String,
       default: '1111'
     }
@@ -354,9 +353,14 @@ describe('DefineComponent with HTMLAttributes', () => {
       return <div></div>
     },
   })
-  expectType<JSX.Element>(<Comp propB={'123'} someProp={1} onClick={onClick} propC={''} />)
+
+  expectType<JSX.Element>(<Comp propA={'123'} propB={''} onClick={onClick} someProp={1} />)
+  expectType<JSX.Element>(<Comp propB={''} someProp={1} />)
+
   // @ts-expect-error
-  expectError(<Comp notExist={1} />)
+  expectType<JSX.Element>(<Comp propA={'123'} propB={''} onClick={onClick} />)
+  // @ts-expect-error
+  expectError(<Comp notExist={1} propA={'123'} propB={''} onClick={onClick} someProp={1} />)
 })
 
 describe('type inference w/ optional props declaration', () => {

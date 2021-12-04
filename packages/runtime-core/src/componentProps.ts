@@ -87,9 +87,8 @@ type NullableKeys<T> = { [K in keyof T]-?: undefined extends T[K] ? K : never }[
 
 type NotVue2PropType<T> = {
   [K in keyof T]: T[K] extends
-  | BasicPropType
-  | Partial<BasicPropType>[]
-  | { type: Partial<BasicPropType>[] | Partial<BasicPropType> | PropType<any>}
+  | BasicPropType | BasicPropType[]
+  | { type: BasicPropType[] | BasicPropType | PropType<any>}
   | PropType<any>
   ? never
   : K
