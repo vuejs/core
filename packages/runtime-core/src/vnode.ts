@@ -548,7 +548,7 @@ function _createVNode(
     ? ShapeFlags.FUNCTIONAL_COMPONENT
     : 0
 
-  if (__DEV__ && shapeFlag & ShapeFlags.STATEFUL_COMPONENT && isProxy(type)) {
+  if (__DEV__ && shapeFlag && ShapeFlags.STATEFUL_COMPONENT && isProxy(type)) {
     type = toRaw(type)
     warn(
       `Vue received a Component which was made a reactive object. This can ` +
@@ -691,7 +691,7 @@ export function createCommentVNode(
   asBlock: boolean = false
 ): VNode {
   return asBlock
-    ? (openBlock(), createBlock(Comment, null, text))
+    ? (openBlock(),createBlock(Comment, null, text))
     : createVNode(Comment, null, text)
 }
 
