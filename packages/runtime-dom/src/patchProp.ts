@@ -73,10 +73,7 @@ function shouldSetAsProp(
       return true
     }
     // or native onclick with function values
-    if (key in el && nativeOnRE.test(key) && isFunction(value)) {
-      return true
-    }
-    return false
+    return !!(key in el && nativeOnRE.test(key) && isFunction(value))
   }
 
   // spellcheck and draggable are numerated attrs, however their
