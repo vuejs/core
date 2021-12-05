@@ -113,14 +113,14 @@ export const transformSrcset: NodeTransform = (
                     `_imports_${existingImportsIndex}`,
                     false,
                     attr.loc,
-                    ConstantTypes.CAN_HOIST
+                    ConstantTypes.CAN_STRINGIFY
                   )
                 } else {
                   exp = createSimpleExpression(
                     `_imports_${context.imports.length}`,
                     false,
                     attr.loc,
-                    ConstantTypes.CAN_HOIST
+                    ConstantTypes.CAN_STRINGIFY
                   )
                   context.imports.push({ exp, path })
                 }
@@ -131,7 +131,7 @@ export const transformSrcset: NodeTransform = (
                 `"${url}"`,
                 false,
                 attr.loc,
-                ConstantTypes.CAN_HOIST
+                ConstantTypes.CAN_STRINGIFY
               )
               compoundExpression.children.push(exp)
             }
@@ -146,7 +146,7 @@ export const transformSrcset: NodeTransform = (
           })
 
           const hoisted = context.hoist(compoundExpression)
-          hoisted.constType = ConstantTypes.CAN_HOIST
+          hoisted.constType = ConstantTypes.CAN_STRINGIFY
 
           node.props[index] = {
             type: NodeTypes.DIRECTIVE,
