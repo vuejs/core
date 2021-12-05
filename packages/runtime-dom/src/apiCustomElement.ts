@@ -321,7 +321,7 @@ export class VueElement extends BaseClass {
         // HMR
         if (__DEV__) {
           instance.ceReload = newStyles => {
-            // alawys reset styles
+            // always reset styles
             if (this._styles) {
               this._styles.forEach(s => this.shadowRoot!.removeChild(s))
               this._styles.length = 0

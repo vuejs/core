@@ -65,7 +65,7 @@ const isBuiltInDir = makeMap(
 
 export interface SFCScriptCompileOptions {
   /**
-   * Scope ID for prefixing injected CSS varialbes.
+   * Scope ID for prefixing injected CSS variables.
    * This must be consistent with the `id` passed to `compileStyle`.
    */
   id: string
@@ -107,13 +107,13 @@ export interface SFCScriptCompileOptions {
   inlineTemplate?: boolean
   /**
    * Options for template compilation when inlining. Note these are options that
-   * would normally be pased to `compiler-sfc`'s own `compileTemplate()`, not
+   * would normally be passed to `compiler-sfc`'s own `compileTemplate()`, not
    * options passed to `compiler-dom`.
    */
   templateOptions?: Partial<SFCTemplateCompileOptions>
 }
 
-interface ImportBinding {
+export interface ImportBinding {
   isType: boolean
   imported: string
   source: string
@@ -335,11 +335,7 @@ export function compileScript(
 
     let isUsedInTemplate = true
     if (isTS && sfc.template && !sfc.template.src && !sfc.template.lang) {
-      isUsedInTemplate = new RegExp(
-        // #4274 escape $ since it's a special char in regex
-        // (and is the only regex special char that is valid in identifiers)
-        `[^\\w$_]${local.replace(/\$/g, '\\$')}[^\\w$_]`
-      ).test(resolveTemplateUsageCheckString(sfc))
+      isUsedInTemplate = isImportUsed(local, sfc)
     }
 
     userImports[local] = {
@@ -416,7 +412,7 @@ export function compileScript(
                 default: right
               }
             } else if (prop.value.type === 'Identifier') {
-              // simple destucture
+              // simple destructure
               propsDestructuredBindings[propKey] = {
                 local: prop.value.name
               }
@@ -636,7 +632,7 @@ export function compileScript(
 
   /**
    * check defaults. If the default object is an object literal with only
-   * static properties, we can directly generate more optimzied default
+   * static properties, we can directly generate more optimized default
    * declarations. Otherwise we will have to fallback to runtime merging.
    */
   function hasStaticWithDefaults() {
@@ -692,11 +688,13 @@ export function compileScript(
           )}, required: ${required}${
             defaultString ? `, ${defaultString}` : ``
           } }`
-        } else if (type.indexOf('Boolean') > -1) {
-          // production: if boolean exists, should keep the type.
-          return `${key}: { type: ${toRuntimeTypeString(
-            type
-          )}${
+        } else if (
+          type.some(
+            el => el === 'Boolean' || (defaultString && el === 'Function')
+          )
+        ) {
+          // #4783 production: if boolean or defaultString and function exists, should keep the type.
+          return `${key}: { type: ${toRuntimeTypeString(type)}${
             defaultString ? `, ${defaultString}` : ``
           } }`
         } else {
@@ -1374,7 +1372,7 @@ export function compileScript(
   // <script setup> components are closed by default. If the user did not
   // explicitly call `defineExpose`, call expose() with no args.
   const exposeCall =
-    hasDefineExposeCall || options.inlineTemplate ? `` : `  expose()\n`
+    hasDefineExposeCall || options.inlineTemplate ? `` : `  expose();\n`
   if (isTS) {
     // for TS, make sure the exported type is still valid type with
     // correct props information
@@ -1439,6 +1437,7 @@ export function compileScript(
   return {
     ...scriptSetup,
     bindings: bindingMetadata,
+    imports: userImports,
     content: s.toString(),
     map: genSourceMap
       ? (s.generateMap({
@@ -1543,7 +1542,7 @@ function walkObjectPattern(
       }
     } else {
       // ...rest
-      // argument can only be identifer when destructuring
+      // argument can only be identifier when destructuring
       const type = isConst ? BindingTypes.SETUP_CONST : BindingTypes.SETUP_LET
       registerBinding(bindings, p.argument as Identifier, type)
     }
@@ -1575,7 +1574,7 @@ function walkPattern(
       : BindingTypes.SETUP_LET
     registerBinding(bindings, node, type)
   } else if (node.type === 'RestElement') {
-    // argument can only be identifer when destructuring
+    // argument can only be identifier when destructuring
     const type = isConst ? BindingTypes.SETUP_CONST : BindingTypes.SETUP_LET
     registerBinding(bindings, node.argument as Identifier, type)
   } else if (node.type === 'ObjectPattern') {
@@ -1631,10 +1630,7 @@ function extractRuntimeProps(
       if (m.type === 'TSMethodSignature') {
         type = ['Function']
       } else if (m.typeAnnotation) {
-        type = inferRuntimeType(
-          m.typeAnnotation.typeAnnotation,
-          declaredTypes
-        )
+        type = inferRuntimeType(m.typeAnnotation.typeAnnotation, declaredTypes)
       }
       props[m.key.name] = {
         key: m.key.name,
@@ -2018,4 +2014,41 @@ function stripTemplateString(str: string): string {
     return interpMatch.map(m => m.slice(2, -1)).join(',')
   }
   return ''
+}
+
+function isImportUsed(local: string, sfc: SFCDescriptor): boolean {
+  return new RegExp(
+    // #4274 escape $ since it's a special char in regex
+    // (and is the only regex special char that is valid in identifiers)
+    `[^\\w$_]${local.replace(/\$/g, '\\$')}[^\\w$_]`
+  ).test(resolveTemplateUsageCheckString(sfc))
+}
+
+/**
+ * Note: this comparison assumes the prev/next script are already identical,
+ * and only checks the special case where <script setup lang="ts"> unused import
+ * pruning result changes due to template changes.
+ */
+export function hmrShouldReload(
+  prevImports: Record<string, ImportBinding>,
+  next: SFCDescriptor
+): boolean {
+  if (
+    !next.scriptSetup ||
+    (next.scriptSetup.lang !== 'ts' && next.scriptSetup.lang !== 'tsx')
+  ) {
+    return false
+  }
+
+  // for each previous import, check if its used status remain the same based on
+  // the next descriptor's template
+  for (const key in prevImports) {
+    // if an import was previous unused, but now is used, we need to force
+    // reload so that the script now includes that import.
+    if (!prevImports[key].isUsedInTemplate && isImportUsed(key, next)) {
+      return true
+    }
+  }
+
+  return false
 }

@@ -100,7 +100,7 @@ importers:
     specifiers:
       '@babel/parser': ^7.15.0
       '@babel/types': ^7.15.0
-      '@vue/shared': 3.2.21
+      '@vue/shared': 3.2.23
       estree-walker: ^2.0.2
       source-map: ^0.6.1
     dependencies:
@@ -113,8 +113,8 @@ importers:
 
   packages/compiler-dom:
     specifiers:
-      '@vue/compiler-core': 3.2.21
-      '@vue/shared': 3.2.21
+      '@vue/compiler-core': 3.2.23
+      '@vue/shared': 3.2.23
     dependencies:
       '@vue/compiler-core': link:../compiler-core
       '@vue/shared': link:../shared
@@ -125,12 +125,12 @@ importers:
       '@babel/types': ^7.15.0
       '@types/estree': ^0.0.48
       '@types/lru-cache': ^5.1.0
-      '@vue/compiler-core': 3.2.21
-      '@vue/compiler-dom': 3.2.21
-      '@vue/compiler-ssr': 3.2.21
+      '@vue/compiler-core': 3.2.23
+      '@vue/compiler-dom': 3.2.23
+      '@vue/compiler-ssr': 3.2.23
       '@vue/consolidate': ^0.17.3
-      '@vue/ref-transform': 3.2.21
-      '@vue/shared': 3.2.21
+      '@vue/ref-transform': 3.2.23
+      '@vue/shared': 3.2.23
       estree-walker: ^2.0.2
       hash-sum: ^2.0.0
       lru-cache: ^5.1.1
@@ -168,15 +168,15 @@ importers:
 
   packages/compiler-ssr:
     specifiers:
-      '@vue/compiler-dom': 3.2.21
-      '@vue/shared': 3.2.21
+      '@vue/compiler-dom': 3.2.23
+      '@vue/shared': 3.2.23
     dependencies:
       '@vue/compiler-dom': link:../compiler-dom
       '@vue/shared': link:../shared
 
   packages/reactivity:
     specifiers:
-      '@vue/shared': 3.2.21
+      '@vue/shared': 3.2.23
     dependencies:
       '@vue/shared': link:../shared
 
@@ -184,8 +184,8 @@ importers:
     specifiers:
       '@babel/core': ^7.15.0
       '@babel/parser': ^7.15.0
-      '@vue/compiler-core': 3.2.21
-      '@vue/shared': 3.2.21
+      '@vue/compiler-core': 3.2.23
+      '@vue/shared': 3.2.23
       estree-walker: ^2.0.2
       magic-string: ^0.25.7
     dependencies:
@@ -199,16 +199,16 @@ importers:
 
   packages/runtime-core:
     specifiers:
-      '@vue/reactivity': 3.2.21
-      '@vue/shared': 3.2.21
+      '@vue/reactivity': 3.2.23
+      '@vue/shared': 3.2.23
     dependencies:
       '@vue/reactivity': link:../reactivity
       '@vue/shared': link:../shared
 
   packages/runtime-dom:
     specifiers:
-      '@vue/runtime-core': 3.2.21
-      '@vue/shared': 3.2.21
+      '@vue/runtime-core': 3.2.23
+      '@vue/shared': 3.2.23
       csstype: ^2.6.8
     dependencies:
       '@vue/runtime-core': link:../runtime-core
@@ -217,16 +217,16 @@ importers:
 
   packages/runtime-test:
     specifiers:
-      '@vue/runtime-core': 3.2.21
-      '@vue/shared': 3.2.21
+      '@vue/runtime-core': 3.2.23
+      '@vue/shared': 3.2.23
     dependencies:
       '@vue/runtime-core': link:../runtime-core
       '@vue/shared': link:../shared
 
   packages/server-renderer:
     specifiers:
-      '@vue/compiler-ssr': 3.2.21
-      '@vue/shared': 3.2.21
+      '@vue/compiler-ssr': 3.2.23
+      '@vue/shared': 3.2.23
     dependencies:
       '@vue/compiler-ssr': link:../compiler-ssr
       '@vue/shared': link:../shared
@@ -234,12 +234,12 @@ importers:
   packages/sfc-playground:
     specifiers:
       '@vitejs/plugin-vue': ^1.9.3
-      '@vue/repl': ^0.4.3
+      '@vue/repl': ^0.4.4
       file-saver: ^2.0.5
       jszip: ^3.6.0
-      vue: 3.2.21
+      vue: 3.2.23
     dependencies:
-      '@vue/repl': 0.4.3
+      '@vue/repl': 0.4.4
       file-saver: 2.0.5
       jszip: 3.7.1
       vue: link:../vue
@@ -265,11 +265,11 @@ importers:
 
   packages/vue:
     specifiers:
-      '@vue/compiler-dom': 3.2.21
-      '@vue/compiler-sfc': 3.2.21
-      '@vue/runtime-dom': 3.2.21
-      '@vue/server-renderer': 3.2.21
-      '@vue/shared': 3.2.21
+      '@vue/compiler-dom': 3.2.23
+      '@vue/compiler-sfc': 3.2.23
+      '@vue/runtime-dom': 3.2.23
+      '@vue/server-renderer': 3.2.23
+      '@vue/shared': 3.2.23
     dependencies:
       '@vue/compiler-dom': link:../compiler-dom
       '@vue/compiler-sfc': link:../compiler-sfc
@@ -1268,8 +1268,8 @@ packages:
     engines: {node: '>= 0.12.0'}
     dev: true
 
-  /@vue/repl/0.4.3:
-    resolution: {integrity: sha512-C9/hBNFjS6ROwWIMZOQpEz04DBONvgTT7s/LL0esXd8yQaO8UEAPJw8f/dfK5141nwcBZgfzbPtfcGMThddx2w==}
+  /@vue/repl/0.4.4:
+    resolution: {integrity: sha512-Mj0Zasc6V7bymDg7DNiN1bW/MZVNS4PmKzDkG9hq9ysrkrZoTHcwA+gcAxF+25Dfn0Tz8WSZD9FuEgEKoA681g==}
     peerDependencies:
       vue: ^3.2.13
     dev: false

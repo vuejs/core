@@ -381,7 +381,7 @@ function registerKeepAliveHook(
         }
         current = current.parent
       }
-      hook()
+      return hook()
     })
   injectHook(type, wrappedHook, target)
   // In addition to registering it on the target instance, we walk up the parent
