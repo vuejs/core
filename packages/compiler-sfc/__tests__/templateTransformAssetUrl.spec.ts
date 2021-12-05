@@ -160,7 +160,6 @@ describe('compiler sfc: transform asset url', () => {
         transformHoist: stringifyStatic
       }
     )
-    console.log(code)
     expect(code).toMatch(`_createStaticVNode`)
     expect(code).toMatchSnapshot()
   })
