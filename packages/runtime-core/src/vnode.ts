@@ -89,7 +89,7 @@ export type VNodeHook =
   | VNodeUpdateHook[]
 
 // https://github.com/microsoft/TypeScript/issues/33099
-export type VNodeProps = {
+export interface VNodeProps {
   key?: string | number | symbol
   ref?: VNodeRef
 

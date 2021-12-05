@@ -1306,7 +1306,7 @@ type EventHandlers<E> = {
 // named imports.
 import * as RuntimeCore from '@vue/runtime-core'
 
-type ReservedProps = {
+export interface ReservedProps {
   key?: string | number | symbol
   ref?:
     | string

@@ -327,7 +327,7 @@ function applySSRDirectives(
   rawProps: VNodeProps | null,
   dirs: DirectiveBinding[]
 ): VNodeProps {
-  const toMerge: VNodeProps[] = []
+  const toMerge: Record<string, unknown>[] = []
   for (let i = 0; i < dirs.length; i++) {
     const binding = dirs[i]
     const {
@@ -338,7 +338,7 @@ function applySSRDirectives(
       if (props) toMerge.push(props)
     }
   }
-  return mergeProps(rawProps || {}, ...toMerge)
+  return mergeProps((rawProps || {}) as Record<string, unknown>, ...toMerge)
 }
 
 function renderTeleportVNode(
