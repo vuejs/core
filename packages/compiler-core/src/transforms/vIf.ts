@@ -26,7 +26,7 @@ import {
   MemoExpression
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
-import { processExpression } from './transformExpression'
+import { processExpression } from '@vue/compiler-core'
 import { validateBrowserExpression } from '../validateExpression'
 import { FRAGMENT, CREATE_COMMENT } from '../runtimeHelpers'
 import {
