@@ -45,7 +45,7 @@ import {
   FRAGMENT,
   IS_MEMO_SAME
 } from '../runtimeHelpers'
-import { processExpression } from './transformExpression'
+import { processExpression } from '@vue/compiler-core'
 import { validateBrowserExpression } from '../validateExpression'
 import { PatchFlags, PatchFlagNames } from '@vue/shared'
 
@@ -309,7 +309,7 @@ export function processFor(
 const forAliasRE = /([\s\S]*?)\s+(?:in|of)\s+([\s\S]*)/
 // This regex doesn't cover the case if key or index aliases have destructuring,
 // but those do not make sense in the first place, so this works in practice.
-const forIteratorRE = /,([^,\}\]]*)(?:,([^,\}\]]*))?$/
+const forIteratorRE = /,([^,}\]]*)(?:,([^,}\]]*))?$/
 const stripParensRE = /^\(|\)$/g
 
 export interface ForParseResult {
