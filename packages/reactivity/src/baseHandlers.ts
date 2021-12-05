@@ -43,7 +43,7 @@ const shallowGet = /*#__PURE__*/ createGetter(false, true)
 const readonlyGet = /*#__PURE__*/ createGetter(true)
 const shallowReadonlyGet = /*#__PURE__*/ createGetter(true, true)
 
-const arrayInstrumentations = () => {
+const arrayInstrumentations = (() => {
   const instrumentations: Record<string, Function> = {}
   // instrument identity-sensitive Array methods to account for possible reactive
   // values
@@ -74,7 +74,7 @@ const arrayInstrumentations = () => {
     }
   })
   return instrumentations
-}()
+})()
 
 function createGetter(isReadonly = false, shallow = false) {
   return function get(target: Target, key: string | symbol, receiver: object) {
