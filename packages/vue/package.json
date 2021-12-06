@@ -34,7 +34,7 @@
     },
     "./dist/*": "./dist/*",
     "./package.json": "./package.json",
-    "./ref-macros.d.ts": "./ref-macros.d.ts"
+    "./ref-macros": "./ref-macros.d.ts"
   },
   "buildOptions": {
     "name": "Vue",
