@@ -77,7 +77,7 @@ export function ref(value?: unknown) {
 
 declare const ShallowRefMarker: unique symbol
 
-type ShallowRef<T = any> = Ref<T> & { [ShallowRefMarker]?: true }
+export type ShallowRef<T = any> = Ref<T> & { [ShallowRefMarker]?: true }
 
 export function shallowRef<T extends object>(
   value: T
