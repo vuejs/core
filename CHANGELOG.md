@@ -1,3 +1,22 @@
+## [3.2.24](https://github.com/vuejs/vue-next/compare/v3.2.23...v3.2.24) (2021-12-06)
+
+
+### Bug Fixes
+
+* **compat:** maintain compatConfig option in legacy functional comp ([#4974](https://github.com/vuejs/vue-next/issues/4974)) ([ee97cf5](https://github.com/vuejs/vue-next/commit/ee97cf5a4db9e4f135d8eb25aff725eb37363675))
+* **compiler-dom:** avoid bailing stringification on setup const bindings ([29beda7](https://github.com/vuejs/vue-next/commit/29beda7c6f69f79e65f0111cb2d2b8d57d8257bb))
+* **compiler-sfc:** make asset url imports stringifiable ([87c73e9](https://github.com/vuejs/vue-next/commit/87c73e99d6aed0771f8c955ca9d5188ec22c90e7))
+* **package:** ensure ref-macros export is recognized by vue-tsc ([#5003](https://github.com/vuejs/vue-next/issues/5003)) ([f855269](https://github.com/vuejs/vue-next/commit/f8552697fbbdbd444d8322c6b6adeb48cc0b5617))
+* **runtime-core:** handle initial undefined attrs ([#5017](https://github.com/vuejs/vue-next/issues/5017)) ([6d887aa](https://github.com/vuejs/vue-next/commit/6d887aaf591cfa05d5fea978bbd87e3e502bfa86)), closes [#5016](https://github.com/vuejs/vue-next/issues/5016)
+* **types/reactivity:** export ShallowRef type ([#5026](https://github.com/vuejs/vue-next/issues/5026)) ([523b4b7](https://github.com/vuejs/vue-next/commit/523b4b78f5d2e11f1822e09c324a854c790a7863)), closes [#5205](https://github.com/vuejs/vue-next/issues/5205)
+
+
+### Features
+
+* **types/script-setup:** add generic type to defineExpose ([#5035](https://github.com/vuejs/vue-next/issues/5035)) ([34985fe](https://github.com/vuejs/vue-next/commit/34985fee6b23018b6eb6322239db6165c1b0e273))
+
+
+
 ## [3.2.23](https://github.com/vuejs/vue-next/compare/v3.2.22...v3.2.23) (2021-11-26)
 
 
