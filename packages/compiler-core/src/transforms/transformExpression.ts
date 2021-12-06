@@ -345,10 +345,7 @@ function canPrefix(id: Identifier) {
     return false
   }
   // special case for webpack compilation
-  if (id.name === 'require') {
-    return false
-  }
-  return true
+  return id.name !== 'require'
 }
 
 function stringifyExpression(exp: ExpressionNode | string): string {
