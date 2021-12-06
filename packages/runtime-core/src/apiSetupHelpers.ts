@@ -118,7 +118,7 @@ export function defineEmits() {
  * This is only usable inside `<script setup>`, is compiled away in the
  * output and should **not** be actually called at runtime.
  */
-export function defineExpose(exposed?: Record<string, any>) {
+export function defineExpose<Exposed extends Record<string, any> = Record<string, any>>(exposed?: Exposed) {
   if (__DEV__) {
     warnRuntimeUsage(`defineExpose`)
   }
