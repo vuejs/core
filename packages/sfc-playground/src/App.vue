@@ -31,6 +31,8 @@ watchEffect(() => history.replaceState({}, '', store.serialize()))
 <template>
   <Header :store="store" />
   <Repl
+    @keydown.ctrl.s.prevent
+    @keydown.meta.s.prevent
     :store="store"
     :showCompileOutput="true"
     :autoResize="true"
