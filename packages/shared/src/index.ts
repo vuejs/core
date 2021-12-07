@@ -45,6 +45,7 @@ export const hasOwn = (
   key: string | symbol
 ): key is keyof typeof val => hasOwnProperty.call(val, key)
 
+export const isDefined = (val: any): boolean => typeof val !== 'undefined'
 export const isArray = Array.isArray
 export const isMap = (val: unknown): val is Map<any, any> =>
   toTypeString(val) === '[object Map]'
@@ -154,14 +155,14 @@ let _globalThis: any
 export const getGlobalThis = (): any => {
   return (
     _globalThis ||
-    (_globalThis =
-      typeof globalThis !== 'undefined'
+    (_globalThis = 
+      isDefined(globalThis)
         ? globalThis
-        : typeof self !== 'undefined'
+        : isDefined(self)
         ? self
-        : typeof window !== 'undefined'
+        : isDefined(window)
         ? window
-        : typeof global !== 'undefined'
+        : isDefined(global)
         ? global
         : {})
   )
