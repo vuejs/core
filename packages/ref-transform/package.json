@@ -1,6 +1,6 @@
 {
   "name": "@vue/ref-transform",
-  "version": "3.2.23",
+  "version": "3.2.24",
   "description": "@vue/ref-transform",
   "main": "dist/ref-transform.cjs.js",
   "files": [
@@ -29,8 +29,8 @@
   "homepage": "https://github.com/vuejs/vue-next/tree/dev/packages/ref-transform#readme",
   "dependencies": {
     "@babel/parser": "^7.15.0",
-    "@vue/compiler-core": "3.2.23",
-    "@vue/shared": "3.2.23",
+    "@vue/compiler-core": "3.2.24",
+    "@vue/shared": "3.2.24",
     "estree-walker": "^2.0.2",
     "magic-string": "^0.25.7"
   },

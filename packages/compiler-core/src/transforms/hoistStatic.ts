@@ -52,16 +52,6 @@ function walk(
   context: TransformContext,
   doNotHoistNode: boolean = false
 ) {
-  // Some transforms, e.g. transformAssetUrls from @vue/compiler-sfc, replaces
-  // static bindings with expressions. These expressions are guaranteed to be
-  // constant so they are still eligible for hoisting, but they are only
-  // available at runtime and therefore cannot be evaluated ahead of time.
-  // This is only a concern for pre-stringification (via transformHoist by
-  // @vue/compiler-dom), but doing it here allows us to perform only one full
-  // walk of the AST and allow `stringifyStatic` to stop walking as soon as its
-  // stringification threshold is met.
-  let canStringify = true
-
   const { children } = node
   const originalCount = children.length
   let hoistedCount = 0
@@ -77,9 +67,6 @@ function walk(
         ? ConstantTypes.NOT_CONSTANT
         : getConstantType(child, context)
       if (constantType > ConstantTypes.NOT_CONSTANT) {
-        if (constantType < ConstantTypes.CAN_STRINGIFY) {
-          canStringify = false
-        }
         if (constantType >= ConstantTypes.CAN_HOIST) {
           ;(child.codegenNode as VNodeCall).patchFlag =
             PatchFlags.HOISTED + (__DEV__ ? ` /* HOISTED */` : ``)
@@ -110,17 +97,12 @@ function walk(
           }
         }
       }
-    } else if (child.type === NodeTypes.TEXT_CALL) {
-      const contentType = getConstantType(child.content, context)
-      if (contentType > 0) {
-        if (contentType < ConstantTypes.CAN_STRINGIFY) {
-          canStringify = false
-        }
-        if (contentType >= ConstantTypes.CAN_HOIST) {
-          child.codegenNode = context.hoist(child.codegenNode)
-          hoistedCount++
-        }
-      }
+    } else if (
+      child.type === NodeTypes.TEXT_CALL &&
+      getConstantType(child.content, context) >= ConstantTypes.CAN_HOIST
+    ) {
+      child.codegenNode = context.hoist(child.codegenNode)
+      hoistedCount++
     }
 
     // walk further
@@ -148,7 +130,7 @@ function walk(
     }
   }
 
-  if (canStringify && hoistedCount && context.transformHoist) {
+  if (hoistedCount && context.transformHoist) {
     context.transformHoist(children, context, node)
   }
 

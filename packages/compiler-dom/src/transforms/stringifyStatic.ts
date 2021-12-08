@@ -14,7 +14,8 @@ import {
   ElementTypes,
   PlainElementNode,
   JSChildNode,
-  TextCallNode
+  TextCallNode,
+  ConstantTypes
 } from '@vue/compiler-core'
 import {
   isVoidTag,
@@ -171,7 +172,7 @@ const isNonStringifiable = /*#__PURE__*/ makeMap(
 
 /**
  * for a hoisted node, analyze it and return:
- * - false: bailed (contains runtime constant)
+ * - false: bailed (contains non-stringifiable props or runtime constant)
  * - [nc, ec] where
  *   - nc is the number of nodes inside
  *   - ec is the number of element with bindings inside
@@ -213,6 +214,13 @@ function analyzeNode(node: StringifiableNode): [number, number] | false {
           p.arg &&
           (p.arg.type === NodeTypes.COMPOUND_EXPRESSION ||
             (p.arg.isStatic && !isStringifiableAttr(p.arg.content, node.ns)))
+        ) {
+          return bail()
+        }
+        if (
+          p.exp &&
+          (p.exp.type === NodeTypes.COMPOUND_EXPRESSION ||
+            p.exp.constType < ConstantTypes.CAN_STRINGIFY)
         ) {
           return bail()
         }
