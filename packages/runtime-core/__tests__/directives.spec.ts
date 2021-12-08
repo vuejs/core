@@ -395,4 +395,40 @@ describe('directives', () => {
     expect(beforeUpdate).toHaveBeenCalledTimes(1)
     expect(count.value).toBe(1)
   })
+
+  test('should work on dynamic binding directive', async () => {
+    const count = ref(0)
+    const text = ref('')
+    const beforeUpdate = jest.fn(() => count.value++)
+
+    const dirs:any = [
+      [
+        {
+          beforeUpdate: () => {}
+        }
+      ]
+    ]
+
+    const App = {
+      render() {
+        return withDirectives(h('p', text.value), dirs)
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(beforeUpdate).toHaveBeenCalledTimes(0)
+    expect(count.value).toBe(0)
+
+    dirs.push([
+      {
+        beforeUpdate
+      }
+    ])
+
+    text.value = 'foo'
+    await nextTick()
+    expect(beforeUpdate).toHaveBeenCalledTimes(1)
+    expect(count.value).toBe(1)
+  })
 })
