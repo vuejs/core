@@ -50,7 +50,7 @@ export function compile(
   // on slot vnode branches.
   rawOptionsMap.set(ast, options)
 
-  transform(ast, {
+  const { context } = transform(ast, {
     ...options,
     hoistStatic: false,
     nodeTransforms: [
@@ -84,7 +84,7 @@ export function compile(
 
   // traverse the template AST and convert into SSR codegen AST
   // by replacing ast.codegenNode.
-  ssrCodegenTransform(ast, options)
+  ssrCodegenTransform(ast, options, context.rawChildrenMap)
 
   return generate(ast, options)
 }

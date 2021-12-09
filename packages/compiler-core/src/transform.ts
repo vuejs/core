@@ -39,6 +39,7 @@ import {
 import { isVSlot, makeBlock } from './utils'
 import { hoistStatic, isSingleElementRoot } from './transforms/hoistStatic'
 import { CompilerCompatOptions } from './compat/compatConfig'
+import { PlainElementNode } from '@vue/compiler-dom'
 
 // There are two types of transforms:
 //
@@ -81,6 +82,8 @@ export interface ImportItem {
   path: string
 }
 
+export type RawChildrenMap = WeakMap<PlainElementNode, TemplateLiteral['elements'][0]>
+
 export interface TransformContext
   extends Required<
       Omit<TransformOptions, 'filename' | keyof CompilerCompatOptions>
@@ -117,6 +120,7 @@ export interface TransformContext
   hoist(exp: string | JSChildNode | ArrayExpression): SimpleExpressionNode
   cache<T extends JSChildNode>(exp: T, isVNode?: boolean): CacheExpression | T
   constantCache: Map<TemplateChildNode, ConstantTypes>
+  rawChildrenMap: RawChildrenMap
 
   // 2.x Compat only
   filters?: Set<string>
@@ -194,6 +198,7 @@ export function createTransformContext(
     currentNode: root,
     childIndex: 0,
     inVOnce: false,
+    rawChildrenMap: new WeakMap(),
 
     // methods
     helper(name) {
@@ -334,6 +339,10 @@ export function transform(root: RootNode, options: TransformOptions) {
 
   if (__COMPAT__) {
     root.filters = [...context.filters!]
+  }
+
+  return {
+    context
   }
 }
 

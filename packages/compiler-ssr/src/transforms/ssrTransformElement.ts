@@ -48,13 +48,6 @@ import {
 } from '../runtimeHelpers'
 import { SSRTransformContext, processChildren } from '../ssrCodegenTransform'
 
-// for directives with children overwrite (e.g. v-html & v-text), we need to
-// store the raw children so that they can be added in the 2nd pass.
-const rawChildrenMap = new WeakMap<
-  PlainElementNode,
-  TemplateLiteral['elements'][0]
->()
-
 export const ssrTransformElement: NodeTransform = (node, context) => {
   if (
     node.type !== NodeTypes.ELEMENT ||
@@ -62,6 +55,10 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
   ) {
     return
   }
+
+  // for directives with children overwrite (e.g. v-html & v-text), we need to
+  // store the raw children so that they can be added in the 2nd pass.
+  const { rawChildrenMap } = context
 
   return function ssrPostTransformElement() {
     // element
@@ -385,7 +382,7 @@ export function ssrProcessElement(
   // close open tag
   context.pushStringPart(`>`)
 
-  const rawChildren = rawChildrenMap.get(node)
+  const rawChildren = context.rawChildrenMap.get(node)
   if (rawChildren) {
     context.pushStringPart(rawChildren)
   } else if (node.children.length) {

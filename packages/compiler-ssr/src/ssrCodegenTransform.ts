@@ -26,6 +26,7 @@ import { ssrProcessSlotOutlet } from './transforms/ssrTransformSlotOutlet'
 import { ssrProcessComponent } from './transforms/ssrTransformComponent'
 import { ssrProcessElement } from './transforms/ssrTransformElement'
 import { createSSRCompilerError, SSRErrorCodes } from './errors'
+import { RawChildrenMap } from '@vue/compiler-core'
 
 // Because SSR codegen output is completely different from client-side output
 // (e.g. multiple elements can be concatenated into a single template literal
@@ -33,8 +34,8 @@ import { createSSRCompilerError, SSRErrorCodes } from './errors'
 // transform pass to convert the template AST into a fresh JS AST before
 // passing it to codegen.
 
-export function ssrCodegenTransform(ast: RootNode, options: CompilerOptions) {
-  const context = createSSRTransformContext(ast, options)
+export function ssrCodegenTransform(ast: RootNode, options: CompilerOptions, rawChildrenMap: RawChildrenMap) {
+  const context = createSSRTransformContext(ast, options, rawChildrenMap)
 
   // inject SFC <style> CSS variables
   // we do this instead of inlining the expression to ensure the vars are
@@ -68,6 +69,7 @@ export type SSRTransformContext = ReturnType<typeof createSSRTransformContext>
 function createSSRTransformContext(
   root: RootNode,
   options: CompilerOptions,
+  rawChildrenMap: RawChildrenMap = new WeakMap(),
   helpers: Set<symbol> = new Set(),
   withSlotScopeId = false
 ) {
@@ -108,7 +110,8 @@ function createSSRTransformContext(
       // close current string
       currentString = null
       body.push(statement)
-    }
+    },
+    rawChildrenMap
   }
 }
 
@@ -120,6 +123,7 @@ function createChildContext(
   return createSSRTransformContext(
     parent.root,
     parent.options,
+    parent.rawChildrenMap,
     parent.helpers,
     withSlotScopeId
   )
