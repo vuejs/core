@@ -14,8 +14,9 @@ export function normalizeStyle(
         ? parseStringStyle(item)
         : (normalizeStyle(item) as NormalizedStyle)
       if (normalized) {
-        for (const key in normalized) {
-          res[key] = normalized[key]
+        const keys = Object.keys(normalized)
+        for (let j = 0; j < keys.length; j++) {
+          res[keys[j]] = normalized[keys[j]]
         }
       }
     }
