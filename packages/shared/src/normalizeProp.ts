@@ -74,9 +74,10 @@ export function normalizeClass(value: unknown): string {
       }
     }
   } else if (isObject(value)) {
-    for (const name in value) {
-      if (value[name]) {
-        res += name + ' '
+    const keys = Object.keys(value)
+    for (let i = 0; i < keys.length; i++) {
+      if (value[keys[i]]) {
+        res += keys[i] + ' '
       }
     }
   }
