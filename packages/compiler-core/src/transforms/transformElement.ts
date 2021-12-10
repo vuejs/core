@@ -56,7 +56,7 @@ import {
   toValidAssetId,
   findProp,
   isCoreComponent,
-  isBindKey,
+  isStaticArgOf,
   findDir,
   isStaticExp
 } from '../utils'
@@ -120,10 +120,7 @@ export const transformElement: NodeTransform = (node, context) => {
         // updates inside get proper isSVG flag at runtime. (#639, #643)
         // This is technically web-specific, but splitting the logic out of core
         // leads to too much unnecessary complexity.
-        (tag === 'svg' ||
-          tag === 'foreignObject' ||
-          // #938: elements with dynamic keys should be forced into blocks
-          findProp(node, 'key', true)))
+        (tag === 'svg' || tag === 'foreignObject'))
 
     // props
     if (props.length > 0) {
@@ -138,6 +135,10 @@ export const transformElement: NodeTransform = (node, context) => {
               directives.map(dir => buildDirectiveArgs(dir, context))
             ) as DirectiveArguments)
           : undefined
+
+      if (propsBuildResult.shouldUseBlock) {
+        shouldUseBlock = true
+      }
     }
 
     // children
@@ -386,12 +387,15 @@ export function buildProps(
   directives: DirectiveNode[]
   patchFlag: number
   dynamicPropNames: string[]
+  shouldUseBlock: boolean
 } {
-  const { tag, loc: elementLoc } = node
+  const { tag, loc: elementLoc, children } = node
   const isComponent = node.tagType === ElementTypes.COMPONENT
   let properties: ObjectExpression['properties'] = []
   const mergeArgs: PropsExpression[] = []
   const runtimeDirectives: DirectiveNode[] = []
+  const hasChildren = children.length > 0
+  let shouldUseBlock = false
 
   // patchFlag analysis
   let patchFlag = 0
@@ -526,7 +530,7 @@ export function buildProps(
       if (
         name === 'is' ||
         (isVBind &&
-          isBindKey(arg, 'is') &&
+          isStaticArgOf(arg, 'is') &&
           (isComponentTag(tag) ||
             (__COMPAT__ &&
               isCompatEnabled(
@@ -539,6 +543,16 @@ export function buildProps(
       // skip v-on in SSR compilation
       if (isVOn && ssr) {
         continue
+      }
+
+      if (
+        // #938: elements with dynamic keys should be forced into blocks
+        (isVBind && isStaticArgOf(arg, 'key')) ||
+        // inline before-update hooks need to force block so that it is invoked
+        // before children
+        (isVOn && hasChildren && isStaticArgOf(arg, 'vnodeBeforeUpdate', true))
+      ) {
+        shouldUseBlock = true
       }
 
       // special case for v-bind and v-on with no argument
@@ -633,6 +647,11 @@ export function buildProps(
       } else {
         // no built-in transform, this is a user custom directive.
         runtimeDirectives.push(prop)
+        // custom dirs may use beforeUpdate so they need to force blocks
+        // to ensure before-update gets called before children update
+        if (hasChildren) {
+          shouldUseBlock = true
+        }
       }
     }
 
@@ -700,6 +719,7 @@ export function buildProps(
     }
   }
   if (
+    !shouldUseBlock &&
     (patchFlag === 0 || patchFlag === PatchFlags.HYDRATE_EVENTS) &&
     (hasRef || hasVnodeHook || runtimeDirectives.length > 0)
   ) {
@@ -784,7 +804,8 @@ export function buildProps(
     props: propsExpression,
     directives: runtimeDirectives,
     patchFlag,
-    dynamicPropNames
+    dynamicPropNames,
+    shouldUseBlock
   }
 }
 

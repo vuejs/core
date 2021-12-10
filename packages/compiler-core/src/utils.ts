@@ -42,7 +42,14 @@ import {
   WITH_MEMO,
   OPEN_BLOCK
 } from './runtimeHelpers'
-import { isString, isObject, hyphenate, extend, NOOP } from '@vue/shared'
+import {
+  isString,
+  isObject,
+  hyphenate,
+  extend,
+  NOOP,
+  camelize
+} from '@vue/shared'
 import { PropsExpression } from './transforms/transformElement'
 import { parseExpression } from '@babel/parser'
 import { Expression } from '@babel/types'
@@ -282,15 +289,23 @@ export function findProp(
     } else if (
       p.name === 'bind' &&
       (p.exp || allowEmpty) &&
-      isBindKey(p.arg, name)
+      isStaticArgOf(p.arg, name)
     ) {
       return p
     }
   }
 }
 
-export function isBindKey(arg: DirectiveNode['arg'], name: string): boolean {
-  return !!(arg && isStaticExp(arg) && arg.content === name)
+export function isStaticArgOf(
+  arg: DirectiveNode['arg'],
+  name: string,
+  camel?: boolean
+): boolean {
+  return !!(
+    arg &&
+    isStaticExp(arg) &&
+    (camel ? camelize(arg.content) : arg.content) === name
+  )
 }
 
 export function hasDynamicKeyVBind(node: ElementNode): boolean {
@@ -371,7 +386,8 @@ export function injectProp(
    *
    * we need to get the real props before normalization
    */
-  let props = node.type === NodeTypes.VNODE_CALL ? node.props : node.arguments[2]
+  let props =
+    node.type === NodeTypes.VNODE_CALL ? node.props : node.arguments[2]
   let callPath: CallExpression[] = []
   let parentCall: CallExpression | undefined
   if (

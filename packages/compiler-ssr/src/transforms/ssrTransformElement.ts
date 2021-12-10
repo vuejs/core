@@ -22,7 +22,7 @@ import {
   TextNode,
   hasDynamicKeyVBind,
   MERGE_PROPS,
-  isBindKey,
+  isStaticArgOf,
   createSequenceExpression,
   InterpolationNode,
   isStaticExp,
@@ -335,7 +335,7 @@ function isTextareaWithValue(
   return !!(
     node.tag === 'textarea' &&
     prop.name === 'bind' &&
-    isBindKey(prop.arg, 'value')
+    isStaticArgOf(prop.arg, 'value')
   )
 }
 

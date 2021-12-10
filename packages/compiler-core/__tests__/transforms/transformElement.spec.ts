@@ -1202,6 +1202,23 @@ describe('compiler: element transform', () => {
     })
   })
 
+  test('force block for runtime custom directive w/ children', () => {
+    const { node } = parseWithElementTransform(`<div v-foo>hello</div>`)
+    expect(node.isBlock).toBe(true)
+  })
+
+  test('force block for inline before-update handlers w/ children', () => {
+    expect(
+      parseWithElementTransform(`<div @vnode-before-update>hello</div>`).node
+        .isBlock
+    ).toBe(true)
+
+    expect(
+      parseWithElementTransform(`<div @vnodeBeforeUpdate>hello</div>`).node
+        .isBlock
+    ).toBe(true)
+  })
+
   // #938
   test('element with dynamic keys should be forced into blocks', () => {
     const ast = parse(`<div><div :key="foo" /></div>`)

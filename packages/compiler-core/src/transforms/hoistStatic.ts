@@ -168,6 +168,13 @@ export function getConstantType(
       if (codegenNode.type !== NodeTypes.VNODE_CALL) {
         return ConstantTypes.NOT_CONSTANT
       }
+      if (
+        codegenNode.isBlock &&
+        node.tag !== 'svg' &&
+        node.tag !== 'foreignObject'
+      ) {
+        return ConstantTypes.NOT_CONSTANT
+      }
       const flag = getPatchFlag(codegenNode)
       if (!flag) {
         let returnType = ConstantTypes.CAN_STRINGIFY
