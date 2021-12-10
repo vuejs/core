@@ -217,9 +217,6 @@ export function transformAST(
     statement: VariableDeclaration
   ) {
     excludedIds.add(call.callee as Identifier)
-    if (statement.kind !== 'let') {
-      error(`${method}() bindings can only be declared with let`, call)
-    }
     if (method === TO_VAR_SYMBOL) {
       // $
       // remove macro
