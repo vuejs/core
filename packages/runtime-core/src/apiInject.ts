@@ -3,9 +3,13 @@ import { currentInstance } from './component'
 import { currentRenderingInstance } from './componentRenderContext'
 import { warn } from './warning'
 
-export interface InjectionKey<T> extends Symbol {}
+declare const InjectionKeySymbol: unique symbol
+export type InjectionKey<T> = symbol & { [InjectionKeySymbol]: T }
 
-export function provide<T>(key: InjectionKey<T> | string | number, value: T) {
+export function provide<T>(
+  key: InjectionKey<T> | string | number | symbol,
+  value: T
+) {
   if (!currentInstance) {
     if (__DEV__) {
       warn(`provide() can only be used inside setup().`)
@@ -27,19 +31,19 @@ export function provide<T>(key: InjectionKey<T> | string | number, value: T) {
   }
 }
 
-export function inject<T>(key: InjectionKey<T> | string): T | undefined
+export function inject<T>(key: InjectionKey<T> | string | symbol): T | undefined
 export function inject<T>(
-  key: InjectionKey<T> | string,
+  key: InjectionKey<T> | string | symbol,
   defaultValue: T,
   treatDefaultAsFactory?: false
 ): T
 export function inject<T>(
-  key: InjectionKey<T> | string,
+  key: InjectionKey<T> | string | symbol,
   defaultValue: T | (() => T),
   treatDefaultAsFactory: true
 ): T
 export function inject(
-  key: InjectionKey<any> | string,
+  key: InjectionKey<any> | string | symbol,
   defaultValue?: unknown,
   treatDefaultAsFactory = false
 ) {

@@ -40,7 +40,7 @@ describe('api: provide/inject', () => {
 
   it('symbol keys', () => {
     // also verifies InjectionKey type sync
-    const key: InjectionKey<number> = Symbol()
+    const key = Symbol() as InjectionKey<number>
 
     const Provider = {
       setup() {
