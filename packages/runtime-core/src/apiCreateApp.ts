@@ -40,7 +40,7 @@ export interface App<HostElement = any> {
     isSVG?: boolean
   ): ComponentPublicInstance
   unmount(): void
-  provide<T>(key: InjectionKey<T> | string, value: T): this
+  provide<T>(key: InjectionKey<T> | string | symbol, value: T): this
 
   // internal, but we need to expose these for the server-renderer and devtools
   _uid: number
