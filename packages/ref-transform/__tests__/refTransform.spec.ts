@@ -364,12 +364,6 @@ test('handle TS casting syntax', () => {
 })
 
 describe('errors', () => {
-  test('non-let $ref declaration', () => {
-    expect(() => transform(`const a = $ref(1)`)).toThrow(
-      `$ref() bindings can only be declared with let`
-    )
-  })
-
   test('$ref w/ destructure', () => {
     expect(() => transform(`let { a } = $ref(1)`)).toThrow(
       `cannot be used with destructure`
