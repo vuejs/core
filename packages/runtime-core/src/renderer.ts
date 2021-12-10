@@ -826,12 +826,15 @@ function baseCreateRenderer(
     const newProps = n2.props || EMPTY_OBJ
     let vnodeHook: VNodeHook | undefined | null
 
+    // disable recurse in beforeUpdate hooks
+    parentComponent && toggleRecurse(parentComponent, false)
     if ((vnodeHook = newProps.onVnodeBeforeUpdate)) {
       invokeVNodeHook(vnodeHook, parentComponent, n2, n1)
     }
     if (dirs) {
       invokeDirectiveHook(n2, n1, parentComponent, 'beforeUpdate')
     }
+    parentComponent && toggleRecurse(parentComponent, true)
 
     if (__DEV__ && isHmrUpdating) {
       // HMR updated, force full diff
@@ -1318,7 +1321,7 @@ function baseCreateRenderer(
         const { bm, m, parent } = instance
         const isAsyncWrapperVNode = isAsyncWrapper(initialVNode)
 
-        effect.allowRecurse = false
+        toggleRecurse(instance, false)
         // beforeMount hook
         if (bm) {
           invokeArrayFns(bm)
@@ -1336,7 +1339,7 @@ function baseCreateRenderer(
         ) {
           instance.emit('hook:beforeMount')
         }
-        effect.allowRecurse = true
+        toggleRecurse(instance, true)
 
         if (el && hydrateNode) {
           // vnode has adopted host node - perform hydration instead of mount.
@@ -1459,8 +1462,7 @@ function baseCreateRenderer(
         }
 
         // Disallow component effect recursion during pre-lifecycle hooks.
-        effect.allowRecurse = false
-
+        toggleRecurse(instance, false)
         if (next) {
           next.el = vnode.el
           updateComponentPreRender(instance, next, optimized)
@@ -1482,8 +1484,7 @@ function baseCreateRenderer(
         ) {
           instance.emit('hook:beforeUpdate')
         }
-
-        effect.allowRecurse = true
+        toggleRecurse(instance, true)
 
         // render
         if (__DEV__) {
@@ -1552,17 +1553,17 @@ function baseCreateRenderer(
     }
 
     // create reactive effect for rendering
-    const effect = new ReactiveEffect(
+    const effect = (instance.effect = new ReactiveEffect(
       componentUpdateFn,
       () => queueJob(instance.update),
       instance.scope // track it in component's effect scope
-    )
+    ))
 
     const update = (instance.update = effect.run.bind(effect) as SchedulerJob)
     update.id = instance.uid
     // allowRecurse
     // #1801, #2043 component render effects should allow recursive updates
-    effect.allowRecurse = update.allowRecurse = true
+    toggleRecurse(instance, true)
 
     if (__DEV__) {
       effect.onTrack = instance.rtc
@@ -2453,6 +2454,13 @@ export function invokeVNodeHook(
     vnode,
     prevVNode
   ])
+}
+
+function toggleRecurse(
+  { effect, update }: ComponentInternalInstance,
+  allowed: boolean
+) {
+  effect.allowRecurse = update.allowRecurse = allowed
 }
 
 /**
