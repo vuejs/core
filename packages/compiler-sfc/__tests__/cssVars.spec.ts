@@ -160,5 +160,43 @@ describe('CSS vars injection', () => {
         ).content
       )
     })
+
+    //#4185
+    test('should ignore comments', () => {
+      const { content } = compileSFCScript(
+        `<script setup>const color = 'red';const width = 100</script>\n` +
+          `<style>
+            /* comment **/
+            div{ /* color: v-bind(color); */ width:20; }
+            div{ width: v-bind(width); }
+            /* comment */
+          </style>`
+      )
+
+      expect(content).not.toMatch(`"${mockId}-color": (color)`)
+      expect(content).toMatch(`"${mockId}-width": (width)`)
+      assertCode(content)
+    })
+
+    test('w/ <script setup> using the same var multiple times', () => {
+      const { content } = compileSFCScript(
+        `<script setup>
+        const color = 'red'
+        </script>\n` +
+          `<style>
+          div {
+            color: v-bind(color);
+          }
+          p {
+            color: v-bind(color);
+          }
+        </style>`
+      )
+      // color should only be injected once, even if it is twice in style
+      expect(content).toMatch(`_useCssVars(_ctx => ({
+  "${mockId}-color": (color)
+})`)
+      assertCode(content)
+    })
   })
 })

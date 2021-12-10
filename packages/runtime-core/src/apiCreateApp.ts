@@ -3,7 +3,8 @@ import {
   Data,
   validateComponentName,
   Component,
-  ComponentInternalInstance
+  ComponentInternalInstance,
+  getExposeProxy
 } from './component'
 import {
   ComponentOptions,
@@ -82,15 +83,21 @@ export interface AppConfig {
   ) => void
 
   /**
+   * Options to pass to @vue/compiler-dom.
+   * Only supported in runtime compiler build.
+   */
+  compilerOptions: RuntimeCompilerOptions
+
+  /**
    * @deprecated use config.compilerOptions.isCustomElement
    */
   isCustomElement?: (tag: string) => boolean
 
   /**
-   * Options to pass to @vue/compiler-dom.
-   * Only supported in runtime compiler build.
+   * Temporary config for opt-in to unwrap injected refs.
+   * TODO deprecate in 3.3
    */
-  compilerOptions: RuntimeCompilerOptions
+  unwrapInjectedRef?: boolean
 }
 
 export interface AppContext {
@@ -133,7 +140,7 @@ export interface AppContext {
 type PluginInstallFunction = (app: App, ...options: any[]) => any
 
 export type Plugin =
-  | PluginInstallFunction & { install?: PluginInstallFunction }
+  | (PluginInstallFunction & { install?: PluginInstallFunction })
   | {
       install: PluginInstallFunction
     }
@@ -303,7 +310,7 @@ export function createAppAPI<HostElement>(
             devtoolsInitApp(app, version)
           }
 
-          return vnode.component!.proxy
+          return getExposeProxy(vnode.component!) || vnode.component!.proxy
         } else if (__DEV__) {
           warn(
             `App has already been mounted.\n` +

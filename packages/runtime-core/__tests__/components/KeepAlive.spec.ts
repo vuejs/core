@@ -16,7 +16,9 @@ import {
   cloneVNode,
   provide,
   defineAsyncComponent,
-  Component
+  Component,
+  createApp,
+  onActivated
 } from '@vue/runtime-test'
 import { KeepAliveProps } from '../../src/components/KeepAlive'
 
@@ -841,10 +843,8 @@ describe('KeepAlive', () => {
     const instanceRef = ref<any>(null)
     const App = {
       render: () => {
-        return h(
-          KeepAlive,
-          { include: 'Foo' },
-          () => (toggle.value ? h(AsyncComp, { ref: instanceRef }) : null)
+        return h(KeepAlive, { include: 'Foo' }, () =>
+          toggle.value ? h(AsyncComp, { ref: instanceRef }) : null
         )
       }
     }
@@ -875,5 +875,32 @@ describe('KeepAlive', () => {
     toggle.value = true
     await nextTick()
     expect(serializeInner(root)).toBe('<p>1</p>')
+  })
+
+  // #4976
+  test('handle error in async onActivated', async () => {
+    const err = new Error('foo')
+    const handler = jest.fn()
+
+    const app = createApp({
+      setup() {
+        return () => h(KeepAlive, null, () => h(Child))
+      }
+    })
+
+    const Child = {
+      setup() {
+        onActivated(async () => {
+          throw err
+        })
+      },
+      render() {}
+    }
+
+    app.config.errorHandler = handler
+    app.mount(nodeOps.createElement('div'))
+
+    await nextTick()
+    expect(handler).toHaveBeenCalledWith(err, {}, 'activated hook')
   })
 })

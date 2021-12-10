@@ -68,6 +68,14 @@ describe(`runtime-dom: style patching`, () => {
     expect(el.style.width).toBe('0px')
   })
 
+  it('should remove style attribute on falsy value', () => {
+    const el = document.createElement('div')
+    el.style.cssText = 'color: red;'
+    patchProp(el as any, 'style', {}, null)
+    expect(el.hasAttribute('style')).toBe(false)
+    expect(el.style.cssText).toBe('')
+  })
+
   // JSDOM doesn't support custom properties on style object so we have to
   // mock it here.
   function mockElementWithStyle() {

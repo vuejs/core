@@ -161,7 +161,11 @@ const BaseTransitionImpl: ComponentOptions = {
       const rawProps = toRaw(props)
       const { mode } = rawProps
       // check mode
-      if (__DEV__ && mode && !['in-out', 'out-in', 'default'].includes(mode)) {
+      if (
+        __DEV__ &&
+        mode &&
+        mode !== 'in-out' && mode !== 'out-in' && mode !== 'default'
+      ) {
         warn(`invalid <transition> mode: ${mode}`)
       }
 
@@ -257,7 +261,7 @@ if (__COMPAT__) {
 
 // export the public type for h/tsx inference
 // also to avoid inline import() in generated d.ts files
-export const BaseTransition = (BaseTransitionImpl as any) as {
+export const BaseTransition = BaseTransitionImpl as any as {
   new (): {
     $props: BaseTransitionProps<any>
   }

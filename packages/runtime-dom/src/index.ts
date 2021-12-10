@@ -13,9 +13,16 @@ import {
   compatUtils
 } from '@vue/runtime-core'
 import { nodeOps } from './nodeOps'
-import { patchProp, forcePatchProp } from './patchProp'
+import { patchProp } from './patchProp'
 // Importing from the compiler, will be tree-shaken in prod
-import { isFunction, isString, isHTMLTag, isSVGTag, extend } from '@vue/shared'
+import {
+  isFunction,
+  isString,
+  isHTMLTag,
+  isSVGTag,
+  extend,
+  NOOP
+} from '@vue/shared'
 
 declare module '@vue/reactivity' {
   export interface RefUnwrapBailTypes {
@@ -24,16 +31,19 @@ declare module '@vue/reactivity' {
   }
 }
 
-const rendererOptions = extend({ patchProp, forcePatchProp }, nodeOps)
+const rendererOptions = extend({ patchProp }, nodeOps)
 
 // lazy create the renderer - this makes core renderer logic tree-shakable
 // in case the user only imports reactivity utilities from Vue.
-let renderer: Renderer<Element> | HydrationRenderer
+let renderer: Renderer<Element | ShadowRoot> | HydrationRenderer
 
 let enabledHydration = false
 
 function ensureRenderer() {
-  return renderer || (renderer = createRenderer<Node, Element>(rendererOptions))
+  return (
+    renderer ||
+    (renderer = createRenderer<Node, Element | ShadowRoot>(rendererOptions))
+  )
 }
 
 function ensureHydrationRenderer() {
@@ -47,7 +57,7 @@ function ensureHydrationRenderer() {
 // use explicit type casts here to avoid import() calls in rolled-up d.ts
 export const render = ((...args) => {
   ensureRenderer().render(...args)
-}) as RootRenderFunction<Element>
+}) as RootRenderFunction<Element | ShadowRoot>
 
 export const hydrate = ((...args) => {
   ensureHydrationRenderer().hydrate(...args)
@@ -181,6 +191,7 @@ function normalizeContainer(
   }
   if (
     __DEV__ &&
+    window.ShadowRoot &&
     container instanceof window.ShadowRoot &&
     container.mode === 'closed'
   ) {
@@ -190,6 +201,14 @@ function normalizeContainer(
   }
   return container as any
 }
+
+// Custom element support
+export {
+  defineCustomElement,
+  defineSSRCustomElement,
+  VueElement,
+  VueElementConstructor
+} from './apiCustomElement'
 
 // SFC CSS utilities
 export { useCssModule } from './helpers/useCssModule'
@@ -212,6 +231,24 @@ export {
 } from './directives/vModel'
 export { withModifiers, withKeys } from './directives/vOn'
 export { vShow } from './directives/vShow'
+
+import { initVModelForSSR } from './directives/vModel'
+import { initVShowForSSR } from './directives/vShow'
+
+let ssrDirectiveInitialized = false
+
+/**
+ * @internal
+ */
+export const initDirectivesForSSR = __SSR__
+  ? () => {
+      if (!ssrDirectiveInitialized) {
+        ssrDirectiveInitialized = true
+        initVModelForSSR()
+        initVShowForSSR()
+      }
+    }
+  : NOOP
 
 // re-export everything from core
 // h, Component, reactivity API, nextTick, flags & types

@@ -48,12 +48,12 @@ exports[`compiler: codegen Element (callExpression + objectExpression + Template
 "
 return function render(_ctx, _cache) {
   with (_ctx) {
-    return _createVNode(\\"div\\", {
+    return _createElementVNode(\\"div\\", {
       id: \\"foo\\",
       [prop]: bar,
       [foo + bar]: bar
     }, [
-      _createVNode(\\"p\\", { \\"some-key\\": \\"foo\\" })
+      _createElementVNode(\\"p\\", { \\"some-key\\": \\"foo\\" })
     ], 16)
   }
 }"
@@ -98,7 +98,7 @@ exports[`compiler: codegen forNode 1`] = `
 "
 return function render(_ctx, _cache) {
   with (_ctx) {
-    return (_openBlock(true), _createBlock(_Fragment, null, _renderList(), 1))
+    return (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(), 1))
   }
 }"
 `;
@@ -107,7 +107,7 @@ exports[`compiler: codegen forNode with constant expression 1`] = `
 "
 return function render(_ctx, _cache) {
   with (_ctx) {
-    return (_openBlock(), _createBlock(_Fragment, null, _renderList(), 64 /* STABLE_FRAGMENT */))
+    return (_openBlock(), _createElementBlock(_Fragment, null, _renderList(), 64 /* STABLE_FRAGMENT */))
   }
 }"
 `;

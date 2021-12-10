@@ -41,7 +41,10 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
     bindingType &&
     bindingType !== BindingTypes.SETUP_CONST
 
-  if (!expString.trim() || (!isMemberExpression(expString) && !maybeRef)) {
+  if (
+    !expString.trim() ||
+    (!isMemberExpression(expString, context) && !maybeRef)
+  ) {
     context.onError(
       createCompilerError(ErrorCodes.X_V_MODEL_MALFORMED_EXPRESSION, exp.loc)
     )
@@ -73,9 +76,9 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
     if (bindingType === BindingTypes.SETUP_REF) {
       // v-model used on known ref.
       assignmentExp = createCompoundExpression([
-        `${eventArg} => (`,
+        `${eventArg} => ((`,
         createSimpleExpression(rawExp, false, exp.loc),
-        `.value = $event)`
+        `).value = $event)`
       ])
     } else {
       // v-model used on a potentially ref binding in <script setup> inline mode.
@@ -83,16 +86,16 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
       const altAssignment =
         bindingType === BindingTypes.SETUP_LET ? `${rawExp} = $event` : `null`
       assignmentExp = createCompoundExpression([
-        `${eventArg} => (${context.helperString(IS_REF)}(${rawExp}) ? `,
+        `${eventArg} => (${context.helperString(IS_REF)}(${rawExp}) ? (`,
         createSimpleExpression(rawExp, false, exp.loc),
-        `.value = $event : ${altAssignment})`
+        `).value = $event : ${altAssignment})`
       ])
     }
   } else {
     assignmentExp = createCompoundExpression([
-      `${eventArg} => (`,
+      `${eventArg} => ((`,
       exp,
-      ` = $event)`
+      `) = $event)`
     ])
   }
 
@@ -107,6 +110,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
   if (
     !__BROWSER__ &&
     context.prefixIdentifiers &&
+    !context.inVOnce &&
     context.cacheHandlers &&
     !hasScopeRef(exp, context.identifiers)
   ) {

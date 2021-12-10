@@ -1,7 +1,6 @@
 import {
   isReactive,
   reactive,
-  stop,
   track,
   TrackOpTypes,
   trigger,
@@ -252,8 +251,8 @@ export function createCompatVue(
       mergeBase[key] = isArray(superValue)
         ? superValue.slice()
         : isObject(superValue)
-          ? extend(Object.create(null), superValue)
-          : superValue
+        ? extend(Object.create(null), superValue)
+        : superValue
     }
 
     SubVue.options = mergeOptions(
@@ -564,7 +563,7 @@ function installCompatMount(
         }
         delete app._container.__vue_app__
       } else {
-        const { bum, effects, um } = instance
+        const { bum, scope, um } = instance
         // beforeDestroy hooks
         if (bum) {
           invokeArrayFns(bum)
@@ -573,10 +572,8 @@ function installCompatMount(
           instance.emit('hook:beforeDestroy')
         }
         // stop effects
-        if (effects) {
-          for (let i = 0; i < effects.length; i++) {
-            stop(effects[i])
-          }
+        if (scope) {
+          scope.stop()
         }
         // unmounted hook
         if (um) {
@@ -622,7 +619,7 @@ function defineReactive(obj: any, key: string, val: any) {
       Object.keys(val).forEach(key => {
         try {
           defineReactiveSimple(val, key, val[key])
-        } catch (e) {}
+        } catch (e: any) {}
       })
     }
   }

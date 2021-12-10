@@ -38,7 +38,7 @@ describe('renderList', () => {
   })
 
   it('should render an item for entry in an iterable', () => {
-    const iterable = function*() {
+    const iterable = function* () {
       yield 1
       yield 2
       yield 3

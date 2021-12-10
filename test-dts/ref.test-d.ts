@@ -10,7 +10,7 @@ import {
   toRef,
   toRefs,
   ToRefs,
-  watch
+  shallowReactive
 } from './index'
 
 function plainType(arg: number | Ref<number>) {
@@ -101,16 +101,42 @@ bailType(el)
 function withSymbol() {
   const customSymbol = Symbol()
   const obj = {
-    [Symbol.asyncIterator]: { a: 1 },
-    [Symbol.unscopables]: { b: '1' },
-    [customSymbol]: { c: [1, 2, 3] }
+    [Symbol.asyncIterator]: ref(1),
+    [Symbol.hasInstance]: { a: ref('a') },
+    [Symbol.isConcatSpreadable]: { b: ref(true) },
+    [Symbol.iterator]: [ref(1)],
+    [Symbol.match]: new Set<Ref<number>>(),
+    [Symbol.matchAll]: new Map<number, Ref<string>>(),
+    [Symbol.replace]: { arr: [ref('a')] },
+    [Symbol.search]: { set: new Set<Ref<number>>() },
+    [Symbol.species]: { map: new Map<number, Ref<string>>() },
+    [Symbol.split]: new WeakSet<Ref<boolean>>(),
+    [Symbol.toPrimitive]: new WeakMap<Ref<boolean>, string>(),
+    [Symbol.toStringTag]: { weakSet: new WeakSet<Ref<boolean>>() },
+    [Symbol.unscopables]: { weakMap: new WeakMap<Ref<boolean>, string>() },
+    [customSymbol]: { arr: [ref(1)] }
   }
 
   const objRef = ref(obj)
 
-  expectType<{ a: number }>(objRef.value[Symbol.asyncIterator])
-  expectType<{ b: string }>(objRef.value[Symbol.unscopables])
-  expectType<{ c: Array<number> }>(objRef.value[customSymbol])
+  expectType<Ref<number>>(objRef.value[Symbol.asyncIterator])
+  expectType<{ a: Ref<string> }>(objRef.value[Symbol.hasInstance])
+  expectType<{ b: Ref<boolean> }>(objRef.value[Symbol.isConcatSpreadable])
+  expectType<Ref<number>[]>(objRef.value[Symbol.iterator])
+  expectType<Set<Ref<number>>>(objRef.value[Symbol.match])
+  expectType<Map<number, Ref<string>>>(objRef.value[Symbol.matchAll])
+  expectType<{ arr: Ref<string>[] }>(objRef.value[Symbol.replace])
+  expectType<{ set: Set<Ref<number>> }>(objRef.value[Symbol.search])
+  expectType<{ map: Map<number, Ref<string>> }>(objRef.value[Symbol.species])
+  expectType<WeakSet<Ref<boolean>>>(objRef.value[Symbol.split])
+  expectType<WeakMap<Ref<boolean>, string>>(objRef.value[Symbol.toPrimitive])
+  expectType<{ weakSet: WeakSet<Ref<boolean>> }>(
+    objRef.value[Symbol.toStringTag]
+  )
+  expectType<{ weakMap: WeakMap<Ref<boolean>, string> }>(
+    objRef.value[Symbol.unscopables]
+  )
+  expectType<{ arr: Ref<number>[] }>(objRef.value[customSymbol])
 }
 
 withSymbol()
@@ -158,28 +184,45 @@ const p2 = proxyRefs(r2)
 expectType<number>(p2.a)
 expectType<Ref<string>>(p2.obj.k)
 
-// toRef
-const obj = {
-  a: 1,
-  b: ref(1)
+// toRef and toRefs
+{
+  const obj: {
+    a: number
+    b: Ref<number>
+    c: number | string
+  } = {
+    a: 1,
+    b: ref(1),
+    c: 1
+  }
+
+  // toRef
+  expectType<Ref<number>>(toRef(obj, 'a'))
+  expectType<Ref<number>>(toRef(obj, 'b'))
+  // Should not distribute Refs over union
+  expectType<Ref<number | string>>(toRef(obj, 'c'))
+
+  // toRefs
+  expectType<{
+    a: Ref<number>
+    b: Ref<number>
+    // Should not distribute Refs over union
+    c: Ref<number | string>
+  }>(toRefs(obj))
+
+  // Both should not do any unwrapping
+  const someReactive = shallowReactive({
+    a: {
+      b: ref(42)
+    }
+  })
+
+  const toRefResult = toRef(someReactive, 'a')
+  const toRefsResult = toRefs(someReactive)
+
+  expectType<Ref<number>>(toRefResult.value.b)
+  expectType<Ref<number>>(toRefsResult.a.value.b)
 }
-expectType<Ref<number>>(toRef(obj, 'a'))
-expectType<Ref<number>>(toRef(obj, 'b'))
-
-const objWithUnionProp: { a: string | number } = {
-  a: 1
-}
-
-watch(toRef(objWithUnionProp, 'a'), value => {
-  expectType<string | number>(value)
-})
-
-// toRefs
-const objRefs = toRefs(obj)
-expectType<{
-  a: Ref<number>
-  b: Ref<number>
-}>(objRefs)
 
 // #2687
 interface AppData {
@@ -203,3 +246,60 @@ switch (data.state.value) {
     data.state.value = 'state1'
     break
 }
+
+// #3954
+function testUnrefGenerics<T>(p: T | Ref<T>) {
+  expectType<T>(unref(p))
+}
+
+testUnrefGenerics(1)
+
+// #4771
+describe('shallow reactive in reactive', () => {
+  const baz = reactive({
+    foo: shallowReactive({
+      a: {
+        b: ref(42)
+      }
+    })
+  })
+
+  const foo = toRef(baz, 'foo')
+
+  expectType<Ref<number>>(foo.value.a.b)
+  expectType<number>(foo.value.a.b.value)
+})
+
+describe('shallow ref in reactive', () => {
+  const x = reactive({
+    foo: shallowRef({
+      bar: {
+        baz: ref(123),
+        qux: reactive({
+          z: ref(123)
+        })
+      }
+    })
+  })
+
+  expectType<Ref<number>>(x.foo.bar.baz)
+  expectType<number>(x.foo.bar.qux.z)
+})
+
+describe('ref in shallow ref', () => {
+  const x = shallowRef({
+    a: ref(123)
+  })
+
+  expectType<Ref<number>>(x.value.a)
+})
+
+describe('reactive in shallow ref', () => {
+  const x = shallowRef({
+    a: reactive({
+      b: ref(0)
+    })
+  })
+
+  expectType<number>(x.value.a.b)
+})

@@ -34,14 +34,14 @@ export function escapeHtml(string: unknown) {
     }
 
     if (lastIndex !== index) {
-      html += str.substring(lastIndex, index)
+      html += str.slice(lastIndex, index)
     }
 
     lastIndex = index + 1
     html += escaped
   }
 
-  return lastIndex !== index ? html + str.substring(lastIndex, index) : html
+  return lastIndex !== index ? html + str.slice(lastIndex, index) : html
 }
 
 // https://www.w3.org/TR/html52/syntax.html#comments

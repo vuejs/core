@@ -7,6 +7,7 @@ import {
   isOn,
   isSSRSafeAttrName,
   isBooleanAttr,
+  includeBooleanAttr,
   makeMap
 } from '@vue/shared'
 
@@ -52,7 +53,7 @@ export function ssrRenderDynamicAttr(
       ? key // preserve raw name on custom elements
       : propsToAttrMap[key] || key.toLowerCase()
   if (isBooleanAttr(attrKey)) {
-    return value === false ? `` : ` ${attrKey}`
+    return includeBooleanAttr(value) ? ` ${attrKey}` : ``
   } else if (isSSRSafeAttrName(attrKey)) {
     return value === '' ? ` ${attrKey}` : ` ${attrKey}="${escapeHtml(value)}"`
   } else {

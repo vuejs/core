@@ -9,7 +9,8 @@ import {
   renderToString,
   ref,
   defineComponent,
-  createApp
+  createApp,
+  computed
 } from '@vue/runtime-test'
 
 describe('api: options', () => {
@@ -279,6 +280,67 @@ describe('api: options', () => {
     assertCall(spyC, 0, [{ qux: 4 }, { qux: 4 }])
   })
 
+  // #3966
+  test('watch merging from mixins', async () => {
+    const mixinA = {
+      data() {
+        return {
+          fromMixinA: ''
+        }
+      },
+      watch: {
+        obj: {
+          handler(this: any, to: any) {
+            this.fromMixinA = to
+          }
+        }
+      }
+    }
+
+    const mixinB = {
+      data() {
+        return {
+          fromMixinB: ''
+        }
+      },
+      watch: {
+        obj: 'setMixinB'
+      },
+      methods: {
+        setMixinB(this: any, to: any) {
+          this.fromMixinB = to
+        }
+      }
+    }
+
+    let vm: any
+    const Comp = {
+      render() {},
+      mixins: [mixinA, mixinB],
+      data: () => ({
+        obj: 'foo',
+        fromComp: ''
+      }),
+      watch: {
+        obj(this: any, to: any) {
+          this.fromComp = to
+        }
+      },
+      mounted() {
+        vm = this
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+
+    vm.obj = 'bar'
+    await nextTick()
+    expect(vm.fromComp).toBe('bar')
+    expect(vm.fromMixinA).toBe('bar')
+    expect(vm.fromMixinB).toBe('bar')
+  })
+
   test('provide/inject', () => {
     const symbolKey = Symbol()
     const Root = defineComponent({
@@ -363,6 +425,69 @@ describe('api: options', () => {
       }
     })
     expect(renderToString(h(Root))).toBe(`1111234522`)
+  })
+
+  test('provide/inject refs', async () => {
+    const n = ref(0)
+    const np = computed(() => n.value + 1)
+    const Parent = defineComponent({
+      provide() {
+        return {
+          n,
+          np
+        }
+      },
+      render: () => h(Child)
+    })
+    const Child = defineComponent({
+      inject: ['n', 'np'],
+      render(this: any) {
+        return this.n + this.np
+      }
+    })
+    const app = createApp(Parent)
+    // TODO remove in 3.3
+    app.config.unwrapInjectedRef = true
+    const root = nodeOps.createElement('div')
+    app.mount(root)
+    expect(serializeInner(root)).toBe(`1`)
+
+    n.value++
+    await nextTick()
+    expect(serializeInner(root)).toBe(`3`)
+  })
+
+  // TODO remove in 3.3
+  test('provide/inject refs (compat)', async () => {
+    const n = ref(0)
+    const np = computed(() => n.value + 1)
+    const Parent = defineComponent({
+      provide() {
+        return {
+          n,
+          np
+        }
+      },
+      render: () => h(Child)
+    })
+    const Child = defineComponent({
+      inject: ['n', 'np'],
+      render(this: any) {
+        return this.n.value + this.np.value
+      }
+    })
+    const app = createApp(Parent)
+
+    const root = nodeOps.createElement('div')
+    app.mount(root)
+    expect(serializeInner(root)).toBe(`1`)
+
+    n.value++
+    await nextTick()
+    expect(serializeInner(root)).toBe(`3`)
+
+    expect(`injected property "n" is a ref`).toHaveBeenWarned()
+    expect(`injected property "np" is a ref`).toHaveBeenWarned()
   })
 
   test('provide accessing data in extends', () => {
@@ -1140,14 +1265,22 @@ describe('api: options', () => {
 
     test('this.$options[lifecycle-name]', () => {
       const mixin = {
-        mounted() {}
+        mounted() {},
+        beforeUnmount() {},
+        unmounted() {}
       }
       createApp({
         mixins: [mixin],
         mounted() {},
+        beforeUnmount() {},
+        unmounted() {},
         created() {
           expect(this.$options.mounted).toBeInstanceOf(Array)
           expect(this.$options.mounted.length).toBe(2)
+          expect(this.$options.beforeUnmount).toBeInstanceOf(Array)
+          expect(this.$options.beforeUnmount.length).toBe(2)
+          expect(this.$options.unmounted).toBeInstanceOf(Array)
+          expect(this.$options.unmounted.length).toBe(2)
         },
         render: () => null
       }).mount(nodeOps.createElement('div'))

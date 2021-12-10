@@ -97,7 +97,7 @@ describe('component: proxy', () => {
     expect(() => (instanceProxy.$data = {})).toThrow(TypeError)
     expect(`Attempting to mutate public property "$data"`).toHaveBeenWarned()
 
-    const nextTickThis = await instanceProxy.$nextTick(function(this: any) {
+    const nextTickThis = await instanceProxy.$nextTick(function (this: any) {
       return this
     })
     expect(nextTickThis).toBe(instanceProxy)
@@ -193,6 +193,11 @@ describe('component: proxy', () => {
 
     // non-existent
     expect('$foobar' in instanceProxy).toBe(false)
+    expect('baz' in instanceProxy).toBe(false)
+
+    // #4962 triggering getter should not cause non-existent property to
+    // pass the has check
+    instanceProxy.baz
     expect('baz' in instanceProxy).toBe(false)
 
     // set non-existent (goes into proxyTarget sink)

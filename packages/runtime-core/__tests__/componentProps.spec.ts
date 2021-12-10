@@ -556,4 +556,43 @@ describe('component props', () => {
     await nextTick()
     expect(serializeInner(root)).toBe(`foo`)
   })
+
+  test('support null in required + multiple-type declarations', () => {
+    const Comp = {
+      props: {
+        foo: { type: [Function, null], required: true }
+      },
+      render() {}
+    }
+    const root = nodeOps.createElement('div')
+    expect(() => {
+      render(h(Comp, { foo: () => {} }), root)
+    }).not.toThrow()
+
+    expect(() => {
+      render(h(Comp, { foo: null }), root)
+    }).not.toThrow()
+  })
+
+  // #5016
+  test('handling attr with undefined value', () => {
+    const Comp = {
+      render(this: any) {
+        return JSON.stringify(this.$attrs) + Object.keys(this.$attrs)
+      }
+    }
+    const root = nodeOps.createElement('div')
+
+    let attrs: any = { foo: undefined }
+
+    render(h(Comp, attrs), root)
+    expect(serializeInner(root)).toBe(
+      JSON.stringify(attrs) + Object.keys(attrs)
+    )
+
+    render(h(Comp, (attrs = { foo: 'bar' })), root)
+    expect(serializeInner(root)).toBe(
+      JSON.stringify(attrs) + Object.keys(attrs)
+    )
+  })
 })

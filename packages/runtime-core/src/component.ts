@@ -1,20 +1,23 @@
 import { VNode, VNodeChild, isVNode } from './vnode'
 import {
-  ReactiveEffect,
   pauseTracking,
   resetTracking,
   shallowReadonly,
   proxyRefs,
-  markRaw
+  EffectScope,
+  markRaw,
+  track,
+  TrackOpTypes
 } from '@vue/reactivity'
 import {
   ComponentPublicInstance,
   PublicInstanceProxyHandlers,
-  RuntimeCompiledPublicInstanceProxyHandlers,
-  createRenderContext,
+  createDevRenderContext,
   exposePropsOnRenderContext,
   exposeSetupStateOnRenderContext,
-  ComponentPublicInstanceConstructor
+  ComponentPublicInstanceConstructor,
+  publicPropertiesMap,
+  RuntimeCompiledPublicInstanceProxyHandlers
 } from './componentPublicInstance'
 import {
   ComponentPropsOptions,
@@ -57,7 +60,12 @@ import { markAttrsAccessed } from './componentRenderUtils'
 import { currentRenderingInstance } from './componentRenderContext'
 import { startMeasure, endMeasure } from './profiling'
 import { convertLegacyRenderFn } from './compat/renderFn'
-import { globalCompatConfig, validateCompatConfig } from './compat/compatConfig'
+import {
+  CompatConfig,
+  globalCompatConfig,
+  validateCompatConfig
+} from './compat/compatConfig'
+import { SchedulerJob } from './scheduler'
 
 export type Data = Record<string, unknown>
 
@@ -107,6 +115,7 @@ export interface FunctionalComponent<P = {}, E extends EmitsOptions = {}>
   emits?: E | (keyof E)[]
   inheritAttrs?: boolean
   displayName?: string
+  compatConfig?: CompatConfig
 }
 
 export interface ClassComponent {
@@ -169,7 +178,7 @@ export interface SetupContext<E = EmitsOptions> {
   attrs: Data
   slots: Slots
   emit: EmitFn<E>
-  expose: (exposed: Record<string, any>) => void
+  expose: (exposed?: Record<string, any>) => void
 }
 
 /**
@@ -216,9 +225,9 @@ export interface ComponentInternalInstance {
    */
   subTree: VNode
   /**
-   * The reactive effect for rendering and patching the component. Callable.
+   * Bound effect runner to be passed to schedulers
    */
-  update: ReactiveEffect
+  update: SchedulerJob
   /**
    * The render function that returns vdom tree.
    * @internal
@@ -239,7 +248,7 @@ export interface ComponentInternalInstance {
    * so that they can be automatically stopped on component unmount
    * @internal
    */
-  effects: ReactiveEffect[] | null
+  scope: EffectScope
   /**
    * cache for proxy access type to avoid hasOwnProperty calls
    * @internal
@@ -277,12 +286,19 @@ export interface ComponentInternalInstance {
    * @internal
    */
   emitsOptions: ObjectEmitsOptions | null
-
   /**
    * resolved inheritAttrs options
    * @internal
    */
   inheritAttrs?: boolean
+  /**
+   * is custom element?
+   */
+  isCE?: boolean
+  /**
+   * custom element specific HMR method
+   */
+  ceReload?: (newStyles?: string[]) => void
 
   // the rest are only for stateful components ---------------------------------
 
@@ -291,6 +307,7 @@ export interface ComponentInternalInstance {
 
   // exposed properties via expose()
   exposed: Record<string, any> | null
+  exposeProxy: Record<string, any> | null
 
   /**
    * alternative proxy used only for runtime-compiled render functions using
@@ -444,11 +461,12 @@ export function createComponentInstance(
     next: null,
     subTree: null!, // will be set synchronously right after creation
     update: null!, // will be set synchronously right after creation
+    scope: new EffectScope(true /* detached */),
     render: null,
     proxy: null,
     exposed: null,
+    exposeProxy: null,
     withProxy: null,
-    effects: null,
     provides: parent ? parent.provides : Object.create(appContext.provides),
     accessCache: null!,
     renderCache: [],
@@ -462,7 +480,7 @@ export function createComponentInstance(
     emitsOptions: normalizeEmitsOptions(type, appContext),
 
     // emit
-    emit: null as any, // to be set immediately
+    emit: null!, // to be set immediately
     emitted: null,
 
     // props default value
@@ -508,12 +526,17 @@ export function createComponentInstance(
     sp: null
   }
   if (__DEV__) {
-    instance.ctx = createRenderContext(instance)
+    instance.ctx = createDevRenderContext(instance)
   } else {
     instance.ctx = { _: instance }
   }
   instance.root = parent ? parent.root : instance
   instance.emit = emit.bind(null, instance)
+
+  // apply custom element special handling
+  if (vnode.ce) {
+    vnode.ce(instance)
+  }
 
   return instance
 }
@@ -523,10 +546,14 @@ export let currentInstance: ComponentInternalInstance | null = null
 export const getCurrentInstance: () => ComponentInternalInstance | null = () =>
   currentInstance || currentRenderingInstance
 
-export const setCurrentInstance = (
-  instance: ComponentInternalInstance | null
-) => {
+export const setCurrentInstance = (instance: ComponentInternalInstance) => {
   currentInstance = instance
+  instance.scope.on()
+}
+
+export const unsetCurrentInstance = () => {
+  currentInstance && currentInstance.scope.off()
+  currentInstance = null
 }
 
 const isBuiltInTag = /*#__PURE__*/ makeMap('slot,component')
@@ -608,7 +635,7 @@ function setupStatefulComponent(
     const setupContext = (instance.setupContext =
       setup.length > 1 ? createSetupContext(instance) : null)
 
-    currentInstance = instance
+    setCurrentInstance(instance)
     pauseTracking()
     const setupResult = callWithErrorHandling(
       setup,
@@ -617,9 +644,11 @@ function setupStatefulComponent(
       [__DEV__ ? shallowReadonly(instance.props) : instance.props, setupContext]
     )
     resetTracking()
-    currentInstance = null
+    unsetCurrentInstance()
 
     if (isPromise(setupResult)) {
+      setupResult.then(unsetCurrentInstance, unsetCurrentInstance)
+
       if (isSSR) {
         // return the promise so server-renderer can wait on it
         return setupResult
@@ -654,7 +683,7 @@ export function handleSetupResult(
 ) {
   if (isFunction(setupResult)) {
     // setup returned an inline render function
-    if (__NODE_JS__ && (instance.type as ComponentOptions).__ssrInlineRender) {
+    if (__SSR__ && (instance.type as ComponentOptions).__ssrInlineRender) {
       // when the function's name is `ssrRender` (compiled by SFC inline mode),
       // set it as ssrRender instead.
       instance.ssrRender = setupResult
@@ -693,9 +722,7 @@ type CompileFunction = (
 ) => InternalRenderFunction
 
 let compile: CompileFunction | undefined
-
-// dev only
-export const isRuntimeOnly = () => !compile
+let installWithProxy: (i: ComponentInternalInstance) => void
 
 /**
  * For runtime-dom to register the compiler.
@@ -703,7 +730,15 @@ export const isRuntimeOnly = () => !compile
  */
 export function registerRuntimeCompiler(_compile: any) {
   compile = _compile
+  installWithProxy = i => {
+    if (i.render!._rc) {
+      i.withProxy = new Proxy(i.ctx, RuntimeCompiledPublicInstanceProxyHandlers)
+    }
+  }
 }
+
+// dev only
+export const isRuntimeOnly = () => !compile
 
 export function finishComponentSetup(
   instance: ComponentInternalInstance,
@@ -721,18 +756,11 @@ export function finishComponentSetup(
   }
 
   // template / render function normalization
-  if (__NODE_JS__ && isSSR) {
-    // 1. the render function may already exist, returned by `setup`
-    // 2. otherwise try to use the `Component.render`
-    // 3. if the component doesn't have a render function,
-    //    set `instance.render` to NOOP so that it can inherit the render
-    //    function from mixins/extend
-    instance.render = (instance.render ||
-      Component.render ||
-      NOOP) as InternalRenderFunction
-  } else if (!instance.render) {
-    // could be set from setup()
-    if (compile && !Component.render) {
+  // could be already set when returned from setup()
+  if (!instance.render) {
+    // only do on-the-fly compile if not in SSR - SSR on-the-fly compliation
+    // is done by server-renderer
+    if (!isSSR && compile && !Component.render) {
       const template =
         (__COMPAT__ &&
           instance.vnode.props &&
@@ -743,10 +771,8 @@ export function finishComponentSetup(
           startMeasure(instance, `compile`)
         }
         const { isCustomElement, compilerOptions } = instance.appContext.config
-        const {
-          delimiters,
-          compilerOptions: componentCompilerOptions
-        } = Component
+        const { delimiters, compilerOptions: componentCompilerOptions } =
+          Component
         const finalCompilerOptions: CompilerOptions = extend(
           extend(
             {
@@ -776,21 +802,18 @@ export function finishComponentSetup(
     // for runtime-compiled render functions using `with` blocks, the render
     // proxy used needs a different `has` handler which is more performant and
     // also only allows a whitelist of globals to fallthrough.
-    if (instance.render._rc) {
-      instance.withProxy = new Proxy(
-        instance.ctx,
-        RuntimeCompiledPublicInstanceProxyHandlers
-      )
+    if (installWithProxy) {
+      installWithProxy(instance)
     }
   }
 
   // support for 2.x options
   if (__FEATURE_OPTIONS_API__ && !(__COMPAT__ && skipOptions)) {
-    currentInstance = instance
+    setCurrentInstance(instance)
     pauseTracking()
     applyOptions(instance)
     resetTracking()
-    currentInstance = null
+    unsetCurrentInstance()
   }
 
   // warn missing template/render
@@ -804,10 +827,10 @@ export function finishComponentSetup(
           (__ESM_BUNDLER__
             ? ` Configure your bundler to alias "vue" to "vue/dist/vue.esm-bundler.js".`
             : __ESM_BROWSER__
-              ? ` Use "vue.esm-browser.js" instead.`
-              : __GLOBAL__
-                ? ` Use "vue.global.js" instead.`
-                : ``) /* should not happen */
+            ? ` Use "vue.esm-browser.js" instead.`
+            : __GLOBAL__
+            ? ` Use "vue.global.js" instead.`
+            : ``) /* should not happen */
       )
     } else {
       warn(`Component is missing template or render function.`)
@@ -815,21 +838,32 @@ export function finishComponentSetup(
   }
 }
 
-const attrHandlers: ProxyHandler<Data> = {
-  get: (target, key: string) => {
-    if (__DEV__) {
-      markAttrsAccessed()
-    }
-    return target[key]
-  },
-  set: () => {
-    warn(`setupContext.attrs is readonly.`)
-    return false
-  },
-  deleteProperty: () => {
-    warn(`setupContext.attrs is readonly.`)
-    return false
-  }
+function createAttrsProxy(instance: ComponentInternalInstance): Data {
+  return new Proxy(
+    instance.attrs,
+    __DEV__
+      ? {
+          get(target, key: string) {
+            markAttrsAccessed()
+            track(instance, TrackOpTypes.GET, '$attrs')
+            return target[key]
+          },
+          set() {
+            warn(`setupContext.attrs is readonly.`)
+            return false
+          },
+          deleteProperty() {
+            warn(`setupContext.attrs is readonly.`)
+            return false
+          }
+        }
+      : {
+          get(target, key: string) {
+            track(instance, TrackOpTypes.GET, '$attrs')
+            return target[key]
+          }
+        }
+  )
 }
 
 export function createSetupContext(
@@ -839,15 +873,16 @@ export function createSetupContext(
     if (__DEV__ && instance.exposed) {
       warn(`expose() should be called only once per setup().`)
     }
-    instance.exposed = proxyRefs(exposed)
+    instance.exposed = exposed || {}
   }
 
+  let attrs: Data
   if (__DEV__) {
     // We use getters in dev in case libs like test-utils overwrite instance
     // properties (overwrites should not be done in prod)
     return Object.freeze({
       get attrs() {
-        return new Proxy(instance.attrs, attrHandlers)
+        return attrs || (attrs = createAttrsProxy(instance))
       },
       get slots() {
         return shallowReadonly(instance.slots)
@@ -859,7 +894,9 @@ export function createSetupContext(
     })
   } else {
     return {
-      attrs: instance.attrs,
+      get attrs() {
+        return attrs || (attrs = createAttrsProxy(instance))
+      },
       slots: instance.slots,
       emit: instance.emit,
       expose
@@ -867,14 +904,20 @@ export function createSetupContext(
   }
 }
 
-// record effects created during a component's setup() so that they can be
-// stopped when the component unmounts
-export function recordInstanceBoundEffect(
-  effect: ReactiveEffect,
-  instance = currentInstance
-) {
-  if (instance) {
-    ;(instance.effects || (instance.effects = [])).push(effect)
+export function getExposeProxy(instance: ComponentInternalInstance) {
+  if (instance.exposed) {
+    return (
+      instance.exposeProxy ||
+      (instance.exposeProxy = new Proxy(proxyRefs(markRaw(instance.exposed)), {
+        get(target, key: string) {
+          if (key in target) {
+            return target[key]
+          } else if (key in publicPropertiesMap) {
+            return publicPropertiesMap[key](instance)
+          }
+        }
+      }))
+    )
   }
 }
 

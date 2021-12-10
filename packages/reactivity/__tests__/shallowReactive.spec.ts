@@ -15,7 +15,7 @@ describe('shallowReactive', () => {
   })
 
   // #2843
-  test('should allow shallow and normal reactive for same target', async () => {
+  test('should allow shallow and normal reactive for same target', () => {
     const original = { foo: {} }
     const shallowProxy = shallowReactive(original)
     const reactiveProxy = reactive(original)

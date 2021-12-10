@@ -10,8 +10,17 @@ import {
   Slot
 } from '../../src'
 import { PatchFlags } from '@vue/shared'
+import { setCurrentRenderingInstance } from '../../src/componentRenderContext'
 
 describe('renderSlot', () => {
+  beforeEach(() => {
+    setCurrentRenderingInstance({ type: {} } as any)
+  })
+
+  afterEach(() => {
+    setCurrentRenderingInstance(null)
+  })
+
   it('should render slot', () => {
     let child
     const vnode = renderSlot(
@@ -38,7 +47,7 @@ describe('renderSlot', () => {
         return [createVNode('div', null, 'foo', PatchFlags.TEXT)]
       },
       // mock instance
-      { type: {} } as any
+      { type: {}, appContext: {} } as any
     ) as Slot
 
     // manual invocation should not track

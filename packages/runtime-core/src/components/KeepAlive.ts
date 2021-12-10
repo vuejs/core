@@ -46,7 +46,7 @@ export interface KeepAliveProps {
   max?: number | string
 }
 
-type CacheKey = string | number | ConcreteComponent
+type CacheKey = string | number | symbol | ConcreteComponent
 type Cache = Map<CacheKey, VNode>
 type Keys = Set<CacheKey>
 
@@ -329,7 +329,7 @@ if (__COMPAT__) {
 
 // export the public type for h/tsx inference
 // also to avoid inline import() in generated d.ts files
-export const KeepAlive = (KeepAliveImpl as any) as {
+export const KeepAlive = KeepAliveImpl as any as {
   __isKeepAlive: true
   new (): {
     $props: VNodeProps & KeepAliveProps
@@ -381,7 +381,7 @@ function registerKeepAliveHook(
         }
         current = current.parent
       }
-      hook()
+      return hook()
     })
   injectHook(type, wrappedHook, target)
   // In addition to registering it on the target instance, we walk up the parent

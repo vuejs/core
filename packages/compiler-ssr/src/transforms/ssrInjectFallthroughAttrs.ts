@@ -7,7 +7,8 @@ import {
   RootNode,
   TemplateChildNode,
   ParentNode,
-  findDir
+  findDir,
+  isBuiltInType
 } from '@vue/compiler-dom'
 
 const hasSingleChild = (node: ParentNode): boolean =>
@@ -19,6 +20,18 @@ export const ssrInjectFallthroughAttrs: NodeTransform = (node, context) => {
   // transformExpression.
   if (node.type === NodeTypes.ROOT) {
     context.identifiers._attrs = 1
+  }
+
+  if (
+    node.type === NodeTypes.ELEMENT &&
+    node.tagType === ElementTypes.COMPONENT &&
+    (isBuiltInType(node.tag, 'Transition') ||
+      isBuiltInType(node.tag, 'KeepAlive'))
+  ) {
+    if (hasSingleChild(node)) {
+      injectFallthroughAttrs(node.children[0])
+    }
+    return
   }
 
   const parent = context.parent

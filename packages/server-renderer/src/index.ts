@@ -1,7 +1,19 @@
+import { initDirectivesForSSR } from 'vue'
+initDirectivesForSSR()
+
 // public
 export { SSRContext } from './render'
 export { renderToString } from './renderToString'
-export { renderToStream } from './renderToStream'
+export {
+  renderToSimpleStream,
+  renderToNodeStream,
+  pipeToNodeWritable,
+  renderToWebStream,
+  pipeToWebWritable,
+  SimpleReadable,
+  // deprecated
+  renderToStream
+} from './renderToStream'
 
 // internal runtime helpers
 export { renderVNode as ssrRenderVNode } from './render'
@@ -18,6 +30,7 @@ export {
 export { ssrInterpolate } from './helpers/ssrInterpolate'
 export { ssrRenderList } from './helpers/ssrRenderList'
 export { ssrRenderSuspense } from './helpers/ssrRenderSuspense'
+export { includeBooleanAttr as ssrIncludeBooleanAttr } from '@vue/shared'
 
 // v-model helpers
 export {

@@ -49,12 +49,14 @@ async function main() {
     })
 
     if (release === 'custom') {
-      targetVersion = (await prompt({
-        type: 'input',
-        name: 'version',
-        message: 'Input custom version',
-        initial: currentVersion
-      })).version
+      targetVersion = (
+        await prompt({
+          type: 'input',
+          name: 'version',
+          message: 'Input custom version',
+          initial: currentVersion
+        })
+      ).version
     } else {
       targetVersion = release.match(/\((.*)\)/)[1]
     }
@@ -78,7 +80,7 @@ async function main() {
   step('\nRunning tests...')
   if (!skipTests && !isDryRun) {
     await run(bin('jest'), ['--clearCache'])
-    await run('yarn', ['test', '--bail'])
+    await run('pnpm', ['test', '--', '--bail'])
   } else {
     console.log(`(skipped)`)
   }
@@ -90,16 +92,21 @@ async function main() {
   // build all packages with types
   step('\nBuilding all packages...')
   if (!skipBuild && !isDryRun) {
-    await run('yarn', ['build', '--release'])
+    await run('pnpm', ['run', 'build', '--', '--release'])
     // test generated dts files
     step('\nVerifying type declarations...')
-    await run('yarn', ['test-dts-only'])
+    await run('pnpm', ['run', 'test-dts-only'])
   } else {
     console.log(`(skipped)`)
   }
 
   // generate changelog
-  await run(`yarn`, ['changelog'])
+  step('\nGenerating changelog...')
+  await run(`pnpm`, ['run', 'changelog'])
+
+  // update pnpm-lock.yaml
+  step('\nUpdating lockfile...')
+  await run(`pnpm`, ['install', '--prefer-offline'])
 
   const { stdout } = await run('git', ['diff'], { stdio: 'pipe' })
   if (stdout) {
@@ -181,9 +188,21 @@ async function publishPackage(pkgName, version, runIfNotDry) {
     return
   }
 
-  // for now (alpha/beta phase), every package except "vue" can be published as
+  // For now, all 3.x packages except "vue" can be published as
   // `latest`, whereas "vue" will be published under the "next" tag.
-  const releaseTag = args.tag || (pkgName === 'vue' ? 'next' : null)
+  let releaseTag = null
+  if (args.tag) {
+    releaseTag = args.tag
+  } else if (version.includes('alpha')) {
+    releaseTag = 'alpha'
+  } else if (version.includes('beta')) {
+    releaseTag = 'beta'
+  } else if (version.includes('rc')) {
+    releaseTag = 'rc'
+  } else if (pkgName === 'vue') {
+    // TODO remove when 3.x becomes default
+    releaseTag = 'next'
+  }
 
   // TODO use inferred release channel after official 3.0 release
   // const releaseTag = semver.prerelease(version)[0] || null
@@ -191,6 +210,8 @@ async function publishPackage(pkgName, version, runIfNotDry) {
   step(`Publishing ${pkgName}...`)
   try {
     await runIfNotDry(
+      // note: use of yarn is intentional here as we rely on its publishing
+      // behavior.
       'yarn',
       [
         'publish',

@@ -61,7 +61,8 @@ export interface ParserOptions
    */
   decodeEntities?: (rawText: string, asAttr: boolean) => string
   /**
-   * Keep comments in the templates AST, even in production
+   * Whether to keep comments in the templates AST.
+   * This defaults to `true` in development and `false` in production builds.
    */
   comments?: boolean
 }
@@ -78,9 +79,14 @@ export const enum BindingTypes {
    */
   DATA = 'data',
   /**
-   * decalred as a prop
+   * declared as a prop
    */
   PROPS = 'props',
+  /**
+   * a local alias of a `<script setup>` destructured prop.
+   * the original is stored in __propsAliases of the bindingMetadata object.
+   */
+  PROPS_ALIASED = 'props-aliased',
   /**
    * a let binding (may or may not be a ref)
    */
@@ -109,6 +115,7 @@ export type BindingMetadata = {
   [key: string]: BindingTypes | undefined
 } & {
   __isScriptSetup?: boolean
+  __propsAliases?: Record<string, string>
 }
 
 interface SharedTransformCodegenOptions {
@@ -122,11 +129,25 @@ interface SharedTransformCodegenOptions {
    */
   prefixIdentifiers?: boolean
   /**
-   * Generate SSR-optimized render functions instead.
+   * Control whether generate SSR-optimized render functions instead.
    * The resulting function must be attached to the component via the
    * `ssrRender` option instead of `render`.
+   *
+   * When compiler generates code for SSR's fallback branch, we need to set it to false:
+   *  - context.ssr = false
+   *
+   * see `subTransform` in `ssrTransformComponent.ts`
    */
   ssr?: boolean
+  /**
+   * Indicates whether the compiler generates code for SSR,
+   * it is always true when generating code for SSR,
+   * regardless of whether we are generating code for SSR's fallback branch,
+   * this means that when the compiler generates code for SSR's fallback branch:
+   *  - context.ssr = false
+   *  - context.inSSR = true
+   */
+  inSSR?: boolean
   /**
    * Optional binding metadata analyzed from script - used to optimize
    * binding access when `prefixIdentifiers` is enabled.
@@ -260,6 +281,11 @@ export interface CodegenOptions extends SharedTransformCodegenOptions {
    * @default 'vue'
    */
   runtimeModuleName?: string
+  /**
+   * Customize where to import ssr runtime helpers from/**
+   * @default 'vue/server-renderer'
+   */
+  ssrRuntimeModuleName?: string
   /**
    * Customize the global variable name of `Vue` to get helpers from
    * in function mode

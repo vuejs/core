@@ -32,7 +32,7 @@ export function ssrTransformSuspense(
   return () => {
     if (node.children.length) {
       const wipEntry: WIPEntry = {
-        slotsExp: null as any,
+        slotsExp: null!, // to be immediately set
         wipSlots: []
       }
       wipMap.set(node, wipEntry)

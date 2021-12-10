@@ -7,7 +7,8 @@ import {
   readonlyMap,
   reactiveMap,
   shallowReactiveMap,
-  shallowReadonlyMap
+  shallowReadonlyMap,
+  isReadonly
 } from './reactive'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import {
@@ -42,37 +43,40 @@ const shallowGet = /*#__PURE__*/ createGetter(false, true)
 const readonlyGet = /*#__PURE__*/ createGetter(true)
 const shallowReadonlyGet = /*#__PURE__*/ createGetter(true, true)
 
-const arrayInstrumentations: Record<string, Function> = {}
-// instrument identity-sensitive Array methods to account for possible reactive
-// values
-;(['includes', 'indexOf', 'lastIndexOf'] as const).forEach(key => {
-  const method = Array.prototype[key] as any
-  arrayInstrumentations[key] = function(this: unknown[], ...args: unknown[]) {
-    const arr = toRaw(this)
-    for (let i = 0, l = this.length; i < l; i++) {
-      track(arr, TrackOpTypes.GET, i + '')
+const arrayInstrumentations = /*#__PURE__*/ createArrayInstrumentations()
+
+function createArrayInstrumentations() {
+  const instrumentations: Record<string, Function> = {}
+  // instrument identity-sensitive Array methods to account for possible reactive
+  // values
+  ;(['includes', 'indexOf', 'lastIndexOf'] as const).forEach(key => {
+    instrumentations[key] = function (this: unknown[], ...args: unknown[]) {
+      const arr = toRaw(this) as any
+      for (let i = 0, l = this.length; i < l; i++) {
+        track(arr, TrackOpTypes.GET, i + '')
+      }
+      // we run the method using the original args first (which may be reactive)
+      const res = arr[key](...args)
+      if (res === -1 || res === false) {
+        // if that didn't work, run it again using raw values.
+        return arr[key](...args.map(toRaw))
+      } else {
+        return res
+      }
     }
-    // we run the method using the original args first (which may be reactive)
-    const res = method.apply(arr, args)
-    if (res === -1 || res === false) {
-      // if that didn't work, run it again using raw values.
-      return method.apply(arr, args.map(toRaw))
-    } else {
+  })
+  // instrument length-altering mutation methods to avoid length being tracked
+  // which leads to infinite loops in some cases (#2137)
+  ;(['push', 'pop', 'shift', 'unshift', 'splice'] as const).forEach(key => {
+    instrumentations[key] = function (this: unknown[], ...args: unknown[]) {
+      pauseTracking()
+      const res = (toRaw(this) as any)[key].apply(this, args)
+      resetTracking()
       return res
     }
-  }
-})
-// instrument length-altering mutation methods to avoid length being tracked
-// which leads to infinite loops in some cases (#2137)
-;(['push', 'pop', 'shift', 'unshift', 'splice'] as const).forEach(key => {
-  const method = Array.prototype[key] as any
-  arrayInstrumentations[key] = function(this: unknown[], ...args: unknown[]) {
-    pauseTracking()
-    const res = method.apply(this, args)
-    resetTracking()
-    return res
-  }
-})
+  })
+  return instrumentations
+}
 
 function createGetter(isReadonly = false, shallow = false) {
   return function get(target: Target, key: string | symbol, receiver: object) {
@@ -88,8 +92,8 @@ function createGetter(isReadonly = false, shallow = false) {
             ? shallowReadonlyMap
             : readonlyMap
           : shallow
-            ? shallowReactiveMap
-            : reactiveMap
+          ? shallowReactiveMap
+          : reactiveMap
         ).get(target)
     ) {
       return target
@@ -143,7 +147,7 @@ function createSetter(shallow = false) {
     receiver: object
   ): boolean {
     let oldValue = (target as any)[key]
-    if (!shallow) {
+    if (!shallow && !isReadonly(value)) {
       value = toRaw(value)
       oldValue = toRaw(oldValue)
       if (!isArray(target) && isRef(oldValue) && !isRef(value)) {
@@ -224,7 +228,7 @@ export const readonlyHandlers: ProxyHandler<object> = {
   }
 }
 
-export const shallowReactiveHandlers: ProxyHandler<object> = extend(
+export const shallowReactiveHandlers = /*#__PURE__*/ extend(
   {},
   mutableHandlers,
   {
@@ -236,7 +240,7 @@ export const shallowReactiveHandlers: ProxyHandler<object> = extend(
 // Props handlers are special in the sense that it should not unwrap top-level
 // refs (in order to allow refs to be explicitly passed down), but should
 // retain the reactivity of the normal readonly object.
-export const shallowReadonlyHandlers: ProxyHandler<object> = extend(
+export const shallowReadonlyHandlers = /*#__PURE__*/ extend(
   {},
   readonlyHandlers,
   {
