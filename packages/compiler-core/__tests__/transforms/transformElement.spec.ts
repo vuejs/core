@@ -936,7 +936,7 @@ describe('compiler: element transform', () => {
       expect(node.patchFlag).toBe(genFlagText(PatchFlags.NEED_PATCH))
     })
 
-    test('the binding exists (inline ref input)', () => {
+    test('script setup inline mode template ref (binding exists)', () => {
       const { node } = parseWithElementTransform(`<input ref="input"/>`, {
         inline: true,
         bindingMetadata: {
@@ -949,31 +949,30 @@ describe('compiler: element transform', () => {
           {
             type: NodeTypes.JS_PROPERTY,
             key: {
-              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'ref_key',
+              isStatic: true
+            },
+            value: {
+              content: 'input',
+              isStatic: true
+            }
+          },
+          {
+            type: NodeTypes.JS_PROPERTY,
+            key: {
               content: 'ref',
               isStatic: true
             },
             value: {
-              type: NodeTypes.JS_FUNCTION_EXPRESSION,
-              params: ['_value', '_refs'],
-              body: {
-                type: NodeTypes.JS_BLOCK_STATEMENT,
-                body: [
-                  {
-                    content: `_refs['input'] = _value`
-                  },
-                  {
-                    content: 'input.value = _value'
-                  }
-                ]
-              }
+              content: 'input',
+              isStatic: false
             }
           }
         ]
       })
     })
 
-    test('the binding not exists (inline ref input)', () => {
+    test('script setup inline mode template ref (binding does not exist)', () => {
       const { node } = parseWithElementTransform(`<input ref="input"/>`, {
         inline: true
       })
@@ -983,96 +982,12 @@ describe('compiler: element transform', () => {
           {
             type: NodeTypes.JS_PROPERTY,
             key: {
-              type: NodeTypes.SIMPLE_EXPRESSION,
               content: 'ref',
               isStatic: true
             },
             value: {
-              type: NodeTypes.JS_FUNCTION_EXPRESSION,
-              params: ['_value', '_refs'],
-              body: {
-                type: NodeTypes.JS_BLOCK_STATEMENT,
-                body: [
-                  {
-                    content: `_refs['input'] = _value`
-                  }
-                ]
-              }
-            }
-          }
-        ]
-      })
-    })
-
-    test('the binding not exists (inline maybe ref input)', () => {
-      const { node } = parseWithElementTransform(`<input ref="input"/>`, {
-        inline: true,
-        bindingMetadata: {
-          input: BindingTypes.SETUP_MAYBE_REF
-        }
-      })
-      expect(node.props).toMatchObject({
-        type: NodeTypes.JS_OBJECT_EXPRESSION,
-        properties: [
-          {
-            type: NodeTypes.JS_PROPERTY,
-            key: {
-              type: NodeTypes.SIMPLE_EXPRESSION,
-              content: 'ref',
+              content: 'input',
               isStatic: true
-            },
-            value: {
-              type: NodeTypes.JS_FUNCTION_EXPRESSION,
-              params: ['_value', '_refs'],
-              body: {
-                type: NodeTypes.JS_BLOCK_STATEMENT,
-                body: [
-                  {
-                    content: `_refs['input'] = _value`
-                  },
-                  {
-                    content: '_isRef(input) && (input.value = _value)'
-                  }
-                ]
-              }
-            }
-          }
-        ]
-      })
-    })
-
-    test('the binding not exists (inline let ref input)', () => {
-      const { node } = parseWithElementTransform(`<input ref="input"/>`, {
-        inline: true,
-        bindingMetadata: {
-          input: BindingTypes.SETUP_LET
-        }
-      })
-      expect(node.props).toMatchObject({
-        type: NodeTypes.JS_OBJECT_EXPRESSION,
-        properties: [
-          {
-            type: NodeTypes.JS_PROPERTY,
-            key: {
-              type: NodeTypes.SIMPLE_EXPRESSION,
-              content: 'ref',
-              isStatic: true
-            },
-            value: {
-              type: NodeTypes.JS_FUNCTION_EXPRESSION,
-              params: ['_value', '_refs'],
-              body: {
-                type: NodeTypes.JS_BLOCK_STATEMENT,
-                body: [
-                  {
-                    content: `_refs['input'] = _value`
-                  },
-                  {
-                    content:
-                      '_isRef(input) ? input.value = _value : input = _value'
-                  }
-                ]
-              }
             }
           }
         ]

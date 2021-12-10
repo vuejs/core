@@ -40,7 +40,8 @@ import {
   hasOwn,
   invokeArrayFns,
   isArray,
-  getGlobalThis
+  getGlobalThis,
+  remove
 } from '@vue/shared'
 import {
   queueJob,
@@ -86,7 +87,6 @@ import { initFeatureFlags } from './featureFlags'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import { isCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
-import { registerLegacyRef } from './compat/ref'
 
 export interface Renderer<HostElement = RendererElement> {
   render: RootRenderFunction<HostElement>
@@ -2407,40 +2407,53 @@ export function setRef(
     }
   }
 
-  if (isString(ref)) {
-    const doSet = () => {
-      if (__COMPAT__ && isCompatEnabled(DeprecationTypes.V_FOR_REF, owner)) {
-        registerLegacyRef(refs, ref, refValue, owner, rawRef.f, isUnmount)
-      } else {
-        refs[ref] = value
-      }
-      if (hasOwn(setupState, ref)) {
-        setupState[ref] = value
-      }
-    }
-    // #1789: for non-null values, set them after render
-    // null values means this is unmount and it should not overwrite another
-    // ref with the same key
-    if (value) {
-      ;(doSet as SchedulerJob).id = -1
-      queuePostRenderEffect(doSet, parentSuspense)
-    } else {
-      doSet()
-    }
-  } else if (isRef(ref)) {
-    const doSet = () => {
-      ref.value = value
-    }
-    if (value) {
-      ;(doSet as SchedulerJob).id = -1
-      queuePostRenderEffect(doSet, parentSuspense)
-    } else {
-      doSet()
-    }
-  } else if (isFunction(ref)) {
+  if (isFunction(ref)) {
     callWithErrorHandling(ref, owner, ErrorCodes.FUNCTION_REF, [value, refs])
-  } else if (__DEV__) {
-    warn('Invalid template ref type:', value, `(${typeof value})`)
+  } else {
+    const _isString = isString(ref)
+    const _isRef = isRef(ref)
+    if (_isString || _isRef) {
+      const doSet = () => {
+        if (rawRef.f) {
+          const existing = _isString ? refs[ref] : ref.value
+          if (isUnmount) {
+            isArray(existing) && remove(existing, refValue)
+          } else {
+            if (!isArray(existing)) {
+              if (_isString) {
+                refs[ref] = [refValue]
+              } else {
+                ref.value = [refValue]
+                if (rawRef.k) refs[rawRef.k] = ref.value
+              }
+            } else if (!existing.includes(refValue)) {
+              existing.push(refValue)
+            }
+          }
+        } else if (_isString) {
+          refs[ref] = value
+          if (hasOwn(setupState, ref)) {
+            setupState[ref] = value
+          }
+        } else if (isRef(ref)) {
+          ref.value = value
+          if (rawRef.k) refs[rawRef.k] = value
+        } else if (__DEV__) {
+          warn('Invalid template ref type:', ref, `(${typeof ref})`)
+        }
+      }
+      if (value) {
+        // #1789: for non-null values, set them after render
+        // null values means this is unmount and it should not overwrite another
+        // ref with the same key
+        ;(doSet as SchedulerJob).id = -1
+        queuePostRenderEffect(doSet, parentSuspense)
+      } else {
+        doSet()
+      }
+    } else if (__DEV__) {
+      warn('Invalid template ref type:', ref, `(${typeof ref})`)
+    }
   }
 }
 
