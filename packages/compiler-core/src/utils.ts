@@ -42,14 +42,7 @@ import {
   WITH_MEMO,
   OPEN_BLOCK
 } from './runtimeHelpers'
-import {
-  isString,
-  isObject,
-  hyphenate,
-  extend,
-  NOOP,
-  camelize
-} from '@vue/shared'
+import { isString, isObject, hyphenate, extend, NOOP } from '@vue/shared'
 import { PropsExpression } from './transforms/transformElement'
 import { parseExpression } from '@babel/parser'
 import { Expression } from '@babel/types'
@@ -298,14 +291,9 @@ export function findProp(
 
 export function isStaticArgOf(
   arg: DirectiveNode['arg'],
-  name: string,
-  camel?: boolean
+  name: string
 ): boolean {
-  return !!(
-    arg &&
-    isStaticExp(arg) &&
-    (camel ? camelize(arg.content) : arg.content) === name
-  )
+  return !!(arg && isStaticExp(arg) && arg.content === name)
 }
 
 export function hasDynamicKeyVBind(node: ElementNode): boolean {

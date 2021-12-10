@@ -550,7 +550,7 @@ export function buildProps(
         (isVBind && isStaticArgOf(arg, 'key')) ||
         // inline before-update hooks need to force block so that it is invoked
         // before children
-        (isVOn && hasChildren && isStaticArgOf(arg, 'vnodeBeforeUpdate', true))
+        (isVOn && hasChildren && isStaticArgOf(arg, 'vue:before-update'))
       ) {
         shouldUseBlock = true
       }

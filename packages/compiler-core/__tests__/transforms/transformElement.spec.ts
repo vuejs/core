@@ -1209,12 +1209,7 @@ describe('compiler: element transform', () => {
 
   test('force block for inline before-update handlers w/ children', () => {
     expect(
-      parseWithElementTransform(`<div @vnode-before-update>hello</div>`).node
-        .isBlock
-    ).toBe(true)
-
-    expect(
-      parseWithElementTransform(`<div @vnodeBeforeUpdate>hello</div>`).node
+      parseWithElementTransform(`<div @vue:before-update>hello</div>`).node
         .isBlock
     ).toBe(true)
   })
