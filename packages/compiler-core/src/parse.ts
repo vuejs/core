@@ -11,7 +11,7 @@ import {
   advancePositionWithMutation,
   advancePositionWithClone,
   isCoreComponent,
-  isBindKey
+  isStaticArgOf
 } from './utils'
 import {
   Namespaces,
@@ -600,6 +600,7 @@ function parseTag(
           context,
           getSelection(context, start)
         )
+        break
       }
     }
   }
@@ -680,7 +681,7 @@ function isComponent(
       } else if (
         // :is on plain element - only treat as component in compat mode
         p.name === 'bind' &&
-        isBindKey(p.arg, 'is') &&
+        isStaticArgOf(p.arg, 'is') &&
         __COMPAT__ &&
         checkCompatEnabled(
           CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT,
@@ -825,9 +826,9 @@ function parseAttribute(
             context,
             ErrorCodes.X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END
           )
-          content = content.substr(1)
+          content = content.slice(1)
         } else {
-          content = content.substr(1, content.length - 2)
+          content = content.slice(1, content.length - 1)
         }
       } else if (isSlot) {
         // #1241 special case for v-slot: vuetify relies extensively on slot
@@ -855,7 +856,7 @@ function parseAttribute(
       valueLoc.source = valueLoc.source.slice(1, -1)
     }
 
-    const modifiers = match[3] ? match[3].substr(1).split('.') : []
+    const modifiers = match[3] ? match[3].slice(1).split('.') : []
     if (isPropShorthand) modifiers.push('prop')
 
     // 2.x compat v-bind:foo.sync -> v-model:foo
@@ -1167,7 +1168,7 @@ function isEnd(
 function startsWithEndTagOpen(source: string, tag: string): boolean {
   return (
     startsWith(source, '</') &&
-    source.substr(2, tag.length).toLowerCase() === tag.toLowerCase() &&
+    source.slice(2, 2 + tag.length).toLowerCase() === tag.toLowerCase() &&
     /[\t\r\n\f />]/.test(source[2 + tag.length] || '>')
   )
 }

@@ -20,7 +20,7 @@ import {
   walkFunctionParams
 } from '@vue/compiler-core'
 import { parse, ParserPlugin } from '@babel/parser'
-import { babelParserDefaultPlugins, hasOwn } from '@vue/shared'
+import { hasOwn } from '@vue/shared'
 
 const TO_VAR_SYMBOL = '$'
 const TO_REF_SYMBOL = '$$'
@@ -68,7 +68,7 @@ export function transform(
 
   const ast = parse(src, {
     sourceType: 'module',
-    plugins: [...new Set([...babelParserDefaultPlugins, ...plugins])]
+    plugins
   })
   const s = new MagicString(src)
   const res = transformAST(ast.program, s)
@@ -217,9 +217,6 @@ export function transformAST(
     statement: VariableDeclaration
   ) {
     excludedIds.add(call.callee as Identifier)
-    if (statement.kind !== 'let') {
-      error(`${method}() bindings can only be declared with let`, call)
-    }
     if (method === TO_VAR_SYMBOL) {
       // $
       // remove macro

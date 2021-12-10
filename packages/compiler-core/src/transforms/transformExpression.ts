@@ -24,13 +24,7 @@ import {
   walkIdentifiers
 } from '../babelUtils'
 import { advancePositionWithClone, isSimpleIdentifier } from '../utils'
-import {
-  isGloballyWhitelisted,
-  makeMap,
-  babelParserDefaultPlugins,
-  hasOwn,
-  isString
-} from '@vue/shared'
+import { isGloballyWhitelisted, makeMap, hasOwn, isString } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
   Node,
@@ -244,7 +238,7 @@ export function processExpression(
     : `(${rawExp})${asParams ? `=>{}` : ``}`
   try {
     ast = parse(source, {
-      plugins: [...context.expressionPlugins, ...babelParserDefaultPlugins]
+      plugins: context.expressionPlugins
     }).program
   } catch (e: any) {
     context.onError(

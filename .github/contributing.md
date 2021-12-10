@@ -28,7 +28,7 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 
   - If you are resolving a special issue, add `(fix #xxxx[,#xxxx])` (#xxxx is the issue id) in your PR title for a better release log, e.g. `update entities encoding/decoding (fix #3899)`.
   - Provide a detailed description of the bug in the PR. Live demo preferred.
-  - Add appropriate test coverage if applicable. You can check the coverage of your code addition by running `yarn test --coverage`.
+  - Add appropriate test coverage if applicable. You can check the coverage of your code addition by running `npm test -- --coverage`.
 
 - It's OK to have multiple small commits as you work on the PR - GitHub can automatically squash them before merging.
 
@@ -40,12 +40,14 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 
 ## Development Setup
 
-You will need [Node.js](http://nodejs.org) **version 10+**, and [Yarn 1.x](https://yarnpkg.com/en/docs/install).
+You will need [Node.js](https://nodejs.org) **version 10+**, and [PNPM](https://pnpm.io).
+
+We also recommend installing [ni](https://github.com/antfu/ni) to help switching between repos using different package managers. `ni` also provides the handy `nr` command which running npm scripts easier.
 
 After cloning the repo, run:
 
 ```bash
-$ yarn # install the dependencies of the project
+$ pnpm i # install the dependencies of the project
 ```
 
 A high level overview of tools used:
@@ -57,7 +59,9 @@ A high level overview of tools used:
 
 ## Scripts
 
-### `yarn build`
+**The examples below will be using the `nr` command from the [ni](https://github.com/antfu/ni) package.** You can also use plain `npm run`, but you will need to pass all additional arguments after the command after an extra `--`. For example, `nr build runtime --all` is equivalent to `npm run build -- runtime --all`.
+
+### `nr build`
 
 The `build` script builds all public packages (packages without `private: true` in their `package.json`).
 
@@ -65,10 +69,10 @@ Packages to build can be specified with fuzzy matching:
 
 ```bash
 # build runtime-core only
-yarn build runtime-core
+nr build runtime-core
 
 # build all packages matching "runtime"
-yarn build runtime --all
+nr build runtime --all
 ```
 
 #### Build Formats
@@ -91,13 +95,13 @@ More details about each of these formats can be found in the [`vue` package READ
 For example, to build `runtime-core` with the global build only:
 
 ```bash
-yarn build runtime-core -f global
+nr build runtime-core -f global
 ```
 
 Multiple formats can be specified as a comma-separated list:
 
 ```bash
-yarn build runtime-core -f esm-browser,cjs
+nr build runtime-core -f esm-browser,cjs
 ```
 
 #### Build with Source Maps
@@ -112,12 +116,12 @@ The `--types` or `-t` flag will generate type declarations during the build and 
 - Generate an API report in `<projectRoot>/temp/<packageName>.api.md`. This report contains potential warnings emitted by [api-extractor](https://api-extractor.com/).
 - Generate an API model json in `<projectRoot>/temp/<packageName>.api.json`. This file can be used to generate a Markdown version of the exported APIs.
 
-### `yarn dev`
+### `nr dev`
 
 The `dev` script bundles a target package (default: `vue`) in a specified format (default: `global`) in dev mode and watches for changes. This is useful when you want to load up a build in an HTML page for quick debugging:
 
 ```bash
-$ yarn dev
+$ nr dev
 
 > rollup v1.19.4
 > bundles packages/vue/src/index.ts → packages/vue/dist/vue.global.js...
@@ -129,30 +133,29 @@ $ yarn dev
 
 - The `dev` script also supports the `-s` flag for generating source maps, but it will make rebuilds slower.
 
-### `yarn dev-compiler`
+### `nr dev-compiler`
 
 The `dev-compiler` script builds, watches and serves the [Template Explorer](https://github.com/vuejs/vue-next/tree/master/packages/template-explorer) at `http://localhost:5000`. This is extremely useful when working on the compiler.
 
-### `yarn test`
+### `nr test`
 
 The `test` script simply calls the `jest` binary, so all [Jest CLI Options](https://jestjs.io/docs/en/cli) can be used. Some examples:
 
 ```bash
 # run all tests
-$ yarn test
-
-# run tests in watch mode
-$ yarn test --watch
+$ nr test
 
 # run all tests under the runtime-core package
-$ yarn test runtime-core
+$ nr test runtime-core
 
 # run tests in a specific file
-$ yarn test fileName
+$ nr test fileName
 
 # run a specific test in a specific file
-$ yarn test fileName -t 'test name'
+$ nr test fileName -t 'test name'
 ```
+
+The default `test` script includes the `--runInBand` jest flag to improve test stability, especially for the CSS transition related tests. When you are testing specific test specs, you can also run `npx jest` with flags directly to speed up tests (jest runs them in parallel by default).
 
 ## Project Structure
 
@@ -174,7 +177,7 @@ This repository employs a [monorepo](https://en.wikipedia.org/wiki/Monorepo) set
 
 - `compiler-ssr`: Compiler that produces render functions optimized for server-side rendering.
 
-- `template-explorer`: A development tool for debugging compiler output. You can run `yarn dev template-explorer` and open its `index.html` to get a repl of template compilation based on current source code.
+- `template-explorer`: A development tool for debugging compiler output. You can run `nr dev template-explorer` and open its `index.html` to get a repl of template compilation based on current source code.
 
   A [live version](https://vue-next-template-explorer.netlify.com) of the template explorer is also available, which can be used for providing reproductions for compiler bugs. You can also pick the deployment for a specific commit from the [deploy logs](https://app.netlify.com/sites/vue-next-template-explorer/deploys).
 
@@ -192,9 +195,9 @@ import { h } from '@vue/runtime-core'
 
 This is made possible via several configurations:
 
-- For TypeScript, `compilerOptions.path` in `tsconfig.json`
+- For TypeScript, `compilerOptions.paths` in `tsconfig.json`
 - For Jest, `moduleNameMapper` in `jest.config.js`
-- For plain Node.js, they are linked using [Yarn Workspaces](https://yarnpkg.com/blog/2017/08/02/introducing-workspaces/).
+- For plain Node.js, they are linked using [PNPM Workspaces](https://pnpm.io/workspaces).
 
 ### Package Dependencies
 
@@ -245,7 +248,7 @@ Test coverage is continuously deployed at https://vue-next-coverage.netlify.app/
 
 This project uses [tsd](https://github.com/SamVerschueren/tsd) to test the built definition files (`*.d.ts`).
 
-Type tests are located in the `test-dts` directory. To run the dts tests, run `yarn test-dts`. Note that the type test requires all relevant `*.d.ts` files to be built first (and the script does it for you). Once the `d.ts` files are built and up-to-date, the tests can be re-run by simply running `yarn test-dts`.
+Type tests are located in the `test-dts` directory. To run the dts tests, run `nr test-dts`. Note that the type test requires all relevant `*.d.ts` files to be built first (and the script does it for you). Once the `d.ts` files are built and up-to-date, the tests can be re-run by simply running `nr test-dts`.
 
 ## Financial Contribution
 

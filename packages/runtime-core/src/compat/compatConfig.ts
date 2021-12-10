@@ -46,7 +46,6 @@ export const enum DeprecationTypes {
   WATCH_ARRAY = 'WATCH_ARRAY',
   PROPS_DEFAULT_THIS = 'PROPS_DEFAULT_THIS',
 
-  V_FOR_REF = 'V_FOR_REF',
   V_ON_KEYCODE_MODIFIER = 'V_ON_KEYCODE_MODIFIER',
   CUSTOM_DIR = 'CUSTOM_DIR',
 
@@ -296,13 +295,6 @@ export const deprecationData: Record<DeprecationTypes, DeprecationData> = {
       `Custom directive hook "${legacyHook}" has been removed. ` +
       `Use "${newHook}" instead.`,
     link: `https://v3.vuejs.org/guide/migration/custom-directives.html`
-  },
-
-  [DeprecationTypes.V_FOR_REF]: {
-    message:
-      `Ref usage on v-for no longer creates array ref values in Vue 3. ` +
-      `Consider using function refs or refactor to avoid ref usage altogether.`,
-    link: `https://v3.vuejs.org/guide/migration/array-refs.html`
   },
 
   [DeprecationTypes.V_ON_KEYCODE_MODIFIER]: {

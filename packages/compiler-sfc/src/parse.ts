@@ -11,6 +11,7 @@ import { RawSourceMap, SourceMapGenerator } from 'source-map'
 import { TemplateCompiler } from './compileTemplate'
 import { parseCssVars } from './cssVars'
 import { createCache } from './cache'
+import { hmrShouldReload, ImportBinding } from './compileScript'
 
 export interface SFCParseOptions {
   filename?: string
@@ -40,6 +41,7 @@ export interface SFCScriptBlock extends SFCBlock {
   type: 'script'
   setup?: string | boolean
   bindings?: BindingMetadata
+  imports?: Record<string, ImportBinding>
   /**
    * import('\@babel/types').Statement
    */
@@ -49,6 +51,7 @@ export interface SFCScriptBlock extends SFCBlock {
    */
   scriptSetupAst?: any[]
 }
+
 export interface SFCStyleBlock extends SFCBlock {
   type: 'style'
   scoped?: boolean
@@ -64,9 +67,21 @@ export interface SFCDescriptor {
   styles: SFCStyleBlock[]
   customBlocks: SFCBlock[]
   cssVars: string[]
-  // whether the SFC uses :slotted() modifier.
-  // this is used as a compiler optimization hint.
+  /**
+   * whether the SFC uses :slotted() modifier.
+   * this is used as a compiler optimization hint.
+   */
   slotted: boolean
+
+  /**
+   * compare with an existing descriptor to determine whether HMR should perform
+   * a reload vs. re-render.
+   *
+   * Note: this comparison assumes the prev/next script are already identical,
+   * and only checks the special case where <script setup lang="ts"> unused import
+   * pruning result changes due to template changes.
+   */
+  shouldForceReload: (prevImports: Record<string, ImportBinding>) => boolean
 }
 
 export interface SFCParseResult {
@@ -103,7 +118,8 @@ export function parse(
     styles: [],
     customBlocks: [],
     cssVars: [],
-    slotted: false
+    slotted: false,
+    shouldForceReload: prevImports => hmrShouldReload(prevImports, descriptor)
   }
 
   const errors: (CompilerError | SyntaxError)[] = []
@@ -404,9 +420,11 @@ function hasSrc(node: ElementNode) {
  * once the empty text nodes (trimmed content) have been filtered out.
  */
 function isEmpty(node: ElementNode) {
-  return (
-    node.children.filter(
-      child => child.type !== NodeTypes.TEXT || child.content.trim() !== ''
-    ).length === 0
-  )
+  for (let i = 0; i < node.children.length; i++) {
+    const child = node.children[i]
+    if (child.type !== NodeTypes.TEXT || child.content.trim() !== '') {
+      return false
+    }
+  }
+  return true
 }

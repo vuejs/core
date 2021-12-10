@@ -1,6 +1,6 @@
 {
   "name": "@vue/template-explorer",
-  "version": "3.2.19",
+  "version": "3.2.24",
   "private": true,
   "buildOptions": {
     "formats": [
@@ -11,6 +11,7 @@
     "enableNonBrowserBranches": true
   },
   "dependencies": {
-    "monaco-editor": "^0.20.0"
+    "monaco-editor": "^0.20.0",
+    "source-map": "^0.6.1"
   }
 }

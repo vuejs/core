@@ -40,7 +40,8 @@ import {
   hasOwn,
   invokeArrayFns,
   isArray,
-  getGlobalThis
+  getGlobalThis,
+  remove
 } from '@vue/shared'
 import {
   queueJob,
@@ -86,7 +87,6 @@ import { initFeatureFlags } from './featureFlags'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import { isCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
-import { registerLegacyRef } from './compat/ref'
 
 export interface Renderer<HostElement = RendererElement> {
   render: RootRenderFunction<HostElement>
@@ -826,12 +826,15 @@ function baseCreateRenderer(
     const newProps = n2.props || EMPTY_OBJ
     let vnodeHook: VNodeHook | undefined | null
 
+    // disable recurse in beforeUpdate hooks
+    parentComponent && toggleRecurse(parentComponent, false)
     if ((vnodeHook = newProps.onVnodeBeforeUpdate)) {
       invokeVNodeHook(vnodeHook, parentComponent, n2, n1)
     }
     if (dirs) {
       invokeDirectiveHook(n2, n1, parentComponent, 'beforeUpdate')
     }
+    parentComponent && toggleRecurse(parentComponent, true)
 
     if (__DEV__ && isHmrUpdating) {
       // HMR updated, force full diff
@@ -1200,7 +1203,7 @@ function baseCreateRenderer(
     isSVG,
     optimized
   ) => {
-    // 2.x compat may pre-creaate the component instance before actually
+    // 2.x compat may pre-create the component instance before actually
     // mounting
     const compatMountInstance =
       __COMPAT__ && initialVNode.isCompatRoot && initialVNode.component
@@ -1318,7 +1321,7 @@ function baseCreateRenderer(
         const { bm, m, parent } = instance
         const isAsyncWrapperVNode = isAsyncWrapper(initialVNode)
 
-        effect.allowRecurse = false
+        toggleRecurse(instance, false)
         // beforeMount hook
         if (bm) {
           invokeArrayFns(bm)
@@ -1336,7 +1339,7 @@ function baseCreateRenderer(
         ) {
           instance.emit('hook:beforeMount')
         }
-        effect.allowRecurse = true
+        toggleRecurse(instance, true)
 
         if (el && hydrateNode) {
           // vnode has adopted host node - perform hydration instead of mount.
@@ -1459,8 +1462,7 @@ function baseCreateRenderer(
         }
 
         // Disallow component effect recursion during pre-lifecycle hooks.
-        effect.allowRecurse = false
-
+        toggleRecurse(instance, false)
         if (next) {
           next.el = vnode.el
           updateComponentPreRender(instance, next, optimized)
@@ -1482,8 +1484,7 @@ function baseCreateRenderer(
         ) {
           instance.emit('hook:beforeUpdate')
         }
-
-        effect.allowRecurse = true
+        toggleRecurse(instance, true)
 
         // render
         if (__DEV__) {
@@ -1552,17 +1553,17 @@ function baseCreateRenderer(
     }
 
     // create reactive effect for rendering
-    const effect = new ReactiveEffect(
+    const effect = (instance.effect = new ReactiveEffect(
       componentUpdateFn,
       () => queueJob(instance.update),
       instance.scope // track it in component's effect scope
-    )
+    ))
 
     const update = (instance.update = effect.run.bind(effect) as SchedulerJob)
     update.id = instance.uid
     // allowRecurse
     // #1801, #2043 component render effects should allow recursive updates
-    effect.allowRecurse = update.allowRecurse = true
+    toggleRecurse(instance, true)
 
     if (__DEV__) {
       effect.onTrack = instance.rtc
@@ -2406,40 +2407,53 @@ export function setRef(
     }
   }
 
-  if (isString(ref)) {
-    const doSet = () => {
-      if (__COMPAT__ && isCompatEnabled(DeprecationTypes.V_FOR_REF, owner)) {
-        registerLegacyRef(refs, ref, refValue, owner, rawRef.f, isUnmount)
-      } else {
-        refs[ref] = value
-      }
-      if (hasOwn(setupState, ref)) {
-        setupState[ref] = value
-      }
-    }
-    // #1789: for non-null values, set them after render
-    // null values means this is unmount and it should not overwrite another
-    // ref with the same key
-    if (value) {
-      ;(doSet as SchedulerJob).id = -1
-      queuePostRenderEffect(doSet, parentSuspense)
-    } else {
-      doSet()
-    }
-  } else if (isRef(ref)) {
-    const doSet = () => {
-      ref.value = value
-    }
-    if (value) {
-      ;(doSet as SchedulerJob).id = -1
-      queuePostRenderEffect(doSet, parentSuspense)
-    } else {
-      doSet()
-    }
-  } else if (isFunction(ref)) {
+  if (isFunction(ref)) {
     callWithErrorHandling(ref, owner, ErrorCodes.FUNCTION_REF, [value, refs])
-  } else if (__DEV__) {
-    warn('Invalid template ref type:', value, `(${typeof value})`)
+  } else {
+    const _isString = isString(ref)
+    const _isRef = isRef(ref)
+    if (_isString || _isRef) {
+      const doSet = () => {
+        if (rawRef.f) {
+          const existing = _isString ? refs[ref] : ref.value
+          if (isUnmount) {
+            isArray(existing) && remove(existing, refValue)
+          } else {
+            if (!isArray(existing)) {
+              if (_isString) {
+                refs[ref] = [refValue]
+              } else {
+                ref.value = [refValue]
+                if (rawRef.k) refs[rawRef.k] = ref.value
+              }
+            } else if (!existing.includes(refValue)) {
+              existing.push(refValue)
+            }
+          }
+        } else if (_isString) {
+          refs[ref] = value
+          if (hasOwn(setupState, ref)) {
+            setupState[ref] = value
+          }
+        } else if (isRef(ref)) {
+          ref.value = value
+          if (rawRef.k) refs[rawRef.k] = value
+        } else if (__DEV__) {
+          warn('Invalid template ref type:', ref, `(${typeof ref})`)
+        }
+      }
+      if (value) {
+        // #1789: for non-null values, set them after render
+        // null values means this is unmount and it should not overwrite another
+        // ref with the same key
+        ;(doSet as SchedulerJob).id = -1
+        queuePostRenderEffect(doSet, parentSuspense)
+      } else {
+        doSet()
+      }
+    } else if (__DEV__) {
+      warn('Invalid template ref type:', ref, `(${typeof ref})`)
+    }
   }
 }
 
@@ -2455,6 +2469,13 @@ export function invokeVNodeHook(
   ])
 }
 
+function toggleRecurse(
+  { effect, update }: ComponentInternalInstance,
+  allowed: boolean
+) {
+  effect.allowRecurse = update.allowRecurse = allowed
+}
+
 /**
  * #1156
  * When a component is HMR-enabled, we need to make sure that all static nodes
@@ -2463,8 +2484,8 @@ export function invokeVNodeHook(
  *
  * #2080
  * Inside keyed `template` fragment static children, if a fragment is moved,
- * the children will always moved so that need inherit el form previous nodes
- * to ensure correct moved position.
+ * the children will always be moved. Therefore, in order to ensure correct move
+ * position, el should be inherited from previous nodes.
  */
 export function traverseStaticChildren(n1: VNode, n2: VNode, shallow = false) {
   const ch1 = n1.children

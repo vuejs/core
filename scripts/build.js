@@ -7,10 +7,10 @@ or "esm,cjs"):
 
 ```
 # name supports fuzzy match. will build all packages with name containing "dom":
-yarn build dom
+nr build dom
 
 # specify the format to output
-yarn build core --formats cjs
+nr build core --formats cjs
 ```
 */
 

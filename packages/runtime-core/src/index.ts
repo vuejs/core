@@ -161,7 +161,8 @@ export {
   UnwrapRef,
   ShallowUnwrapRef,
   WritableComputedOptions,
-  DeepReadonly
+  DeepReadonly,
+  ShallowReactive
 } from '@vue/reactivity'
 export {
   WatchEffect,

@@ -54,7 +54,7 @@ exports[`CSS vars injection codegen should ignore comments 1`] = `
 
 export default {
   setup(__props, { expose }) {
-  expose()
+  expose();
 
 _useCssVars(_ctx => ({
   \\"xxxxxxxx-width\\": (width)
@@ -71,7 +71,7 @@ exports[`CSS vars injection codegen w/ <script setup> 1`] = `
 
 export default {
   setup(__props, { expose }) {
-  expose()
+  expose();
 
 _useCssVars(_ctx => ({
   \\"xxxxxxxx-color\\": (color)
@@ -88,7 +88,7 @@ exports[`CSS vars injection codegen w/ <script setup> using the same var multipl
 
 export default {
   setup(__props, { expose }) {
-  expose()
+  expose();
 
 _useCssVars(_ctx => ({
   \\"xxxxxxxx-color\\": (color)
@@ -128,7 +128,7 @@ export default {
           foo: String
         },
   setup(__props, { expose }) {
-  expose()
+  expose();
 
 _useCssVars(_ctx => ({
   \\"xxxxxxxx-color\\": (color),

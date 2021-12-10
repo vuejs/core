@@ -45,3 +45,10 @@ declare module '@vue/repl' {
   const ReplStore: any
   export { Repl, ReplStore }
 }
+
+declare interface String {
+  /**
+   * @deprecated Please use String.prototype.slice instead of String.prototype.substring in the repository.
+   */
+  substring(start: number, end?: number): string;
+}

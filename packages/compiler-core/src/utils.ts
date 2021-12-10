@@ -42,14 +42,7 @@ import {
   WITH_MEMO,
   OPEN_BLOCK
 } from './runtimeHelpers'
-import {
-  isString,
-  isObject,
-  hyphenate,
-  extend,
-  babelParserDefaultPlugins,
-  NOOP
-} from '@vue/shared'
+import { isString, isObject, hyphenate, extend, NOOP } from '@vue/shared'
 import { PropsExpression } from './transforms/transformElement'
 import { parseExpression } from '@babel/parser'
 import { Expression } from '@babel/types'
@@ -167,7 +160,7 @@ export const isMemberExpressionNode = __BROWSER__
   : (path: string, context: TransformContext): boolean => {
       try {
         let ret: Expression = parseExpression(path, {
-          plugins: [...context.expressionPlugins, ...babelParserDefaultPlugins]
+          plugins: context.expressionPlugins
         })
         if (ret.type === 'TSAsExpression' || ret.type === 'TSTypeAssertion') {
           ret = ret.expression
@@ -189,10 +182,10 @@ export const isMemberExpression = __BROWSER__
 export function getInnerRange(
   loc: SourceLocation,
   offset: number,
-  length?: number
+  length: number
 ): SourceLocation {
   __TEST__ && assert(offset <= loc.source.length)
-  const source = loc.source.substr(offset, length)
+  const source = loc.source.slice(offset, offset + length)
   const newLoc: SourceLocation = {
     source,
     start: advancePositionWithClone(loc.start, loc.source, offset),
@@ -289,14 +282,17 @@ export function findProp(
     } else if (
       p.name === 'bind' &&
       (p.exp || allowEmpty) &&
-      isBindKey(p.arg, name)
+      isStaticArgOf(p.arg, name)
     ) {
       return p
     }
   }
 }
 
-export function isBindKey(arg: DirectiveNode['arg'], name: string): boolean {
+export function isStaticArgOf(
+  arg: DirectiveNode['arg'],
+  name: string
+): boolean {
   return !!(arg && isStaticExp(arg) && arg.content === name)
 }
 
@@ -370,9 +366,6 @@ export function injectProp(
   context: TransformContext
 ) {
   let propsWithInjection: ObjectExpression | CallExpression | undefined
-  const originalProps =
-    node.type === NodeTypes.VNODE_CALL ? node.props : node.arguments[2]
-
   /**
    * 1. mergeProps(...)
    * 2. toHandlers(...)
@@ -381,7 +374,8 @@ export function injectProp(
    *
    * we need to get the real props before normalization
    */
-  let props = originalProps
+  let props =
+    node.type === NodeTypes.VNODE_CALL ? node.props : node.arguments[2]
   let callPath: CallExpression[] = []
   let parentCall: CallExpression | undefined
   if (

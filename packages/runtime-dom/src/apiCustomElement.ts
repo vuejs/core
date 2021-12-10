@@ -175,24 +175,12 @@ export class VueElement extends BaseClass {
       }
       this.attachShadow({ mode: 'open' })
     }
-
-    // set initial attrs
-    for (let i = 0; i < this.attributes.length; i++) {
-      this._setAttr(this.attributes[i].name)
-    }
-    // watch future attr changes
-    new MutationObserver(mutations => {
-      for (const m of mutations) {
-        this._setAttr(m.attributeName!)
-      }
-    }).observe(this, { attributes: true })
   }
 
   connectedCallback() {
     this._connected = true
     if (!this._instance) {
       this._resolveDef()
-      this._update()
     }
   }
 
@@ -213,10 +201,23 @@ export class VueElement extends BaseClass {
     if (this._resolved) {
       return
     }
+    this._resolved = true
+
+    // set initial attrs
+    for (let i = 0; i < this.attributes.length; i++) {
+      this._setAttr(this.attributes[i].name)
+    }
+
+    // watch future attr changes
+    new MutationObserver(mutations => {
+      for (const m of mutations) {
+        this._setAttr(m.attributeName!)
+      }
+    }).observe(this, { attributes: true })
 
     const resolve = (def: InnerComponentDef) => {
-      this._resolved = true
-      const { props } = def
+
+      const { props, styles } = def
       const hasOptions = !isArray(props)
       const rawKeys = props ? (hasOptions ? Object.keys(props) : props) : []
 
@@ -231,17 +232,15 @@ export class VueElement extends BaseClass {
           }
         }
       }
-      if (numberProps) {
-        this._numberProps = numberProps
-        this._update()
-      }
+      this._numberProps = numberProps
 
       // check if there are props set pre-upgrade or connect
       for (const key of Object.keys(this)) {
         if (key[0] !== '_') {
-          this._setProp(key, this[key as keyof this])
+          this._setProp(key, this[key as keyof this], true, false)
         }
       }
+
       // defining getter/setters on prototype
       for (const key of rawKeys.map(camelize)) {
         Object.defineProperty(this, key, {
@@ -254,6 +253,10 @@ export class VueElement extends BaseClass {
         })
       }
       this._applyStyles(this._getChildrenComponentsStyles(def))
+
+      // initial render
+      this._update()
+
     }
 
     const asyncDef = (this._def as ComponentOptions).__asyncLoader
@@ -282,10 +285,15 @@ export class VueElement extends BaseClass {
   /**
    * @internal
    */
-  protected _setProp(key: string, val: any, shouldReflect = true) {
+  protected _setProp(
+    key: string,
+    val: any,
+    shouldReflect = true,
+    shouldUpdate = true
+  ) {
     if (val !== this._props[key]) {
       this._props[key] = val
-      if (this._instance) {
+      if (shouldUpdate && this._instance) {
         this._update()
       }
       // reflect
@@ -314,7 +322,7 @@ export class VueElement extends BaseClass {
         // HMR
         if (__DEV__) {
           instance.ceReload = newStyles => {
-            // alawys reset styles
+            // always reset styles
             if (this._styles) {
               this._styles.forEach(s => this.shadowRoot!.removeChild(s))
               this._styles.length = 0

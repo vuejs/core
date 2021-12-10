@@ -42,7 +42,11 @@ export const transformOn: DirectiveTransform = (
   let eventName: ExpressionNode
   if (arg.type === NodeTypes.SIMPLE_EXPRESSION) {
     if (arg.isStatic) {
-      const rawName = arg.content
+      let rawName = arg.content
+      // TODO deprecate @vnodeXXX usage
+      if (rawName.startsWith('vue:')) {
+        rawName = `vnode-${rawName.slice(4)}`
+      }
       // for all event listeners, auto convert it to camelCase. See issue #2249
       eventName = createSimpleExpression(
         toHandlerKey(camelize(rawName)),

@@ -1,0 +1,34 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`stringify static html should bail on bindings that are hoisted but not stringifiable 1`] = `
+"const { createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
+
+const _hoisted_1 = /*#__PURE__*/_createElementVNode(\\"div\\", null, [
+  /*#__PURE__*/_createElementVNode(\\"span\\", { class: \\"foo\\" }, \\"foo\\"),
+  /*#__PURE__*/_createElementVNode(\\"span\\", { class: \\"foo\\" }, \\"foo\\"),
+  /*#__PURE__*/_createElementVNode(\\"span\\", { class: \\"foo\\" }, \\"foo\\"),
+  /*#__PURE__*/_createElementVNode(\\"span\\", { class: \\"foo\\" }, \\"foo\\"),
+  /*#__PURE__*/_createElementVNode(\\"span\\", { class: \\"foo\\" }, \\"foo\\"),
+  /*#__PURE__*/_createElementVNode(\\"img\\", { src: _imports_0_ })
+], -1 /* HOISTED */)
+const _hoisted_2 = [
+  _hoisted_1
+]
+
+return function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock(\\"div\\", null, _hoisted_2))
+}"
+`;
+
+exports[`stringify static html should work with bindings that are non-static but stringifiable 1`] = `
+"const { createElementVNode: _createElementVNode, createStaticVNode: _createStaticVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
+
+const _hoisted_1 = /*#__PURE__*/_createStaticVNode(\\"<div><span class=\\\\\\"foo\\\\\\">foo</span><span class=\\\\\\"foo\\\\\\">foo</span><span class=\\\\\\"foo\\\\\\">foo</span><span class=\\\\\\"foo\\\\\\">foo</span><span class=\\\\\\"foo\\\\\\">foo</span><img src=\\\\\\"\\" + _imports_0_ + \\"\\\\\\"></div>\\", 1)
+const _hoisted_2 = [
+  _hoisted_1
+]
+
+return function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock(\\"div\\", null, _hoisted_2))
+}"
+`;

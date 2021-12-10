@@ -573,4 +573,26 @@ describe('component props', () => {
       render(h(Comp, { foo: null }), root)
     }).not.toThrow()
   })
+
+  // #5016
+  test('handling attr with undefined value', () => {
+    const Comp = {
+      render(this: any) {
+        return JSON.stringify(this.$attrs) + Object.keys(this.$attrs)
+      }
+    }
+    const root = nodeOps.createElement('div')
+
+    let attrs: any = { foo: undefined }
+
+    render(h(Comp, attrs), root)
+    expect(serializeInner(root)).toBe(
+      JSON.stringify(attrs) + Object.keys(attrs)
+    )
+
+    render(h(Comp, (attrs = { foo: 'bar' })), root)
+    expect(serializeInner(root)).toBe(
+      JSON.stringify(attrs) + Object.keys(attrs)
+    )
+  })
 })

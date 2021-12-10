@@ -2,6 +2,7 @@ import { isTracking, trackEffects, triggerEffects } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { isArray, hasChanged } from '@vue/shared'
 import { isProxy, toRaw, isReactive, toReactive } from './reactive'
+import type { ShallowReactiveMarker } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
 import { createDep, Dep } from './dep'
 
@@ -65,18 +66,24 @@ export function isRef(r: any): r is Ref {
   return Boolean(r && r.__v_isRef === true)
 }
 
-export function ref<T extends object>(value: T): ToRef<T>
+export function ref<T extends object>(
+  value: T
+): [T] extends [Ref] ? T : Ref<UnwrapRef<T>>
 export function ref<T>(value: T): Ref<UnwrapRef<T>>
 export function ref<T = any>(): Ref<T | undefined>
 export function ref(value?: unknown) {
   return createRef(value, false)
 }
 
+declare const ShallowRefMarker: unique symbol
+
+export type ShallowRef<T = any> = Ref<T> & { [ShallowRefMarker]?: true }
+
 export function shallowRef<T extends object>(
   value: T
-): T extends Ref ? T : Ref<T>
-export function shallowRef<T>(value: T): Ref<T>
-export function shallowRef<T = any>(): Ref<T | undefined>
+): T extends Ref ? T : ShallowRef<T>
+export function shallowRef<T>(value: T): ShallowRef<T>
+export function shallowRef<T = any>(): ShallowRef<T | undefined>
 export function shallowRef(value?: unknown) {
   return createRef(value, true)
 }
@@ -183,9 +190,7 @@ export function customRef<T>(factory: CustomRefFactory<T>): Ref<T> {
 }
 
 export type ToRefs<T = any> = {
-  // #2687: somehow using ToRef<T[K]> here turns the resulting type into
-  // a union of multiple Ref<*> types instead of a single Ref<* | *> type.
-  [K in keyof T]: T[K] extends Ref ? T[K] : Ref<UnwrapRef<T[K]>>
+  [K in keyof T]: ToRef<T[K]>
 }
 export function toRefs<T extends object>(object: T): ToRefs<T> {
   if (__DEV__ && !isProxy(object)) {
@@ -212,7 +217,8 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
   }
 }
 
-export type ToRef<T> = [T] extends [Ref] ? T : Ref<UnwrapRef<T>>
+export type ToRef<T> = [T] extends [Ref] ? T : Ref<T>
+
 export function toRef<T extends object, K extends keyof T>(
   object: T,
   key: K
@@ -256,7 +262,9 @@ export type ShallowUnwrapRef<T> = {
     : T[K]
 }
 
-export type UnwrapRef<T> = T extends Ref<infer V>
+export type UnwrapRef<T> = T extends ShallowRef<infer V>
+  ? V
+  : T extends Ref<infer V>
   ? UnwrapRefSimple<V>
   : UnwrapRefSimple<T>
 
@@ -269,7 +277,7 @@ export type UnwrapRefSimple<T> = T extends
   ? T
   : T extends Array<any>
   ? { [K in keyof T]: UnwrapRefSimple<T[K]> }
-  : T extends object
+  : T extends object & { [ShallowReactiveMarker]?: never }
   ? {
       [P in keyof T]: P extends symbol ? T[P] : UnwrapRef<T[P]>
     }

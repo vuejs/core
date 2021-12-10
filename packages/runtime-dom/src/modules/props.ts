@@ -26,12 +26,23 @@ export function patchDOMProp(
     return
   }
 
-  if (key === 'value' && el.tagName !== 'PROGRESS') {
+  if (
+    key === 'value' &&
+    el.tagName !== 'PROGRESS' &&
+    // custom elements may use _value internally
+    !el.tagName.includes('-')
+  ) {
     // store value as _value as well since
     // non-string values will be stringified.
     el._value = value
     const newValue = value == null ? '' : value
-    if (el.value !== newValue) {
+    if (
+      el.value !== newValue ||
+      // #4956: always set for OPTION elements because its value falls back to
+      // textContent if no value attribute is present. And setting .value for
+      // OPTION has no side effect
+      el.tagName === 'OPTION'
+    ) {
       el.value = newValue
     }
     if (value == null) {

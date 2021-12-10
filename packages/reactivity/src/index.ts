@@ -12,6 +12,7 @@ export {
   ToRef,
   ToRefs,
   UnwrapRef,
+  ShallowRef,
   ShallowUnwrapRef,
   RefUnwrapBailTypes
 } from './ref'
@@ -27,6 +28,7 @@ export {
   toRaw,
   ReactiveFlags,
   DeepReadonly,
+  ShallowReactive,
   UnwrapNestedRefs
 } from './reactive'
 export {

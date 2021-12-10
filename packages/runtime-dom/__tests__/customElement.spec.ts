@@ -173,15 +173,40 @@ describe('defineCustomElement', () => {
       expect(e.shadowRoot!.innerHTML).toBe(`20 number true boolean 2e1 string`)
     })
 
+    // #4772
+    test('attr casting w/ programmatic creation', () => {
+      const E = defineCustomElement({
+        props: {
+          foo: Number
+        },
+        render() {
+          return `foo type: ${typeof this.foo}`
+        }
+      })
+      customElements.define('my-element-programmatic', E)
+      const el = document.createElement('my-element-programmatic') as any
+      el.setAttribute('foo', '123')
+      container.appendChild(el)
+      expect(el.shadowRoot.innerHTML).toBe(`foo type: number`)
+    })
+
     test('handling properties set before upgrading', () => {
       const E = defineCustomElement({
-        props: ['foo'],
+        props: {
+          foo: String,
+          dataAge: Number
+        },
+        setup(props) {
+          expect(props.foo).toBe('hello')
+          expect(props.dataAge).toBe(5)
+        },
         render() {
           return `foo: ${this.foo}`
         }
       })
       const el = document.createElement('my-el-upgrade') as any
       el.foo = 'hello'
+      el.dataset.age = 5
       container.appendChild(el)
       customElements.define('my-el-upgrade', E)
       expect(el.shadowRoot.innerHTML).toBe(`foo: hello`)
@@ -392,10 +417,10 @@ describe('defineCustomElement', () => {
 
       // should inject styles
       expect(e1.shadowRoot!.innerHTML).toBe(
-        `<div>hello</div><style>div { color: red }</style>`
+        `<style>div { color: red }</style><div>hello</div>`
       )
       expect(e2.shadowRoot!.innerHTML).toBe(
-        `<div>world</div><style>div { color: red }</style>`
+        `<style>div { color: red }</style><div>world</div>`
       )
 
       // attr
@@ -403,7 +428,7 @@ describe('defineCustomElement', () => {
       await nextTick()
       expect((e1 as any).msg).toBe('attr')
       expect(e1.shadowRoot!.innerHTML).toBe(
-        `<div>attr</div><style>div { color: red }</style>`
+        `<style>div { color: red }</style><div>attr</div>`
       )
 
       // props
@@ -411,7 +436,7 @@ describe('defineCustomElement', () => {
       ;(e1 as any).msg = 'prop'
       expect(e1.getAttribute('msg')).toBe('prop')
       expect(e1.shadowRoot!.innerHTML).toBe(
-        `<div>prop</div><style>div { color: red }</style>`
+        `<style>div { color: red }</style><div>prop</div>`
       )
     })
 
@@ -420,6 +445,9 @@ describe('defineCustomElement', () => {
         defineAsyncComponent(() => {
           return Promise.resolve({
             props: ['msg'],
+            setup(props) {
+              expect(typeof props.msg).toBe('string')
+            },
             render(this: any) {
               return h('div', this.msg)
             }
@@ -458,6 +486,9 @@ describe('defineCustomElement', () => {
         defineAsyncComponent(() => {
           return Promise.resolve({
             props: { n: Number },
+            setup(props) {
+              expect(props.n).toBe(20)
+            },
             render(this: any) {
               return h('div', this.n + ',' + typeof this.n)
             }
