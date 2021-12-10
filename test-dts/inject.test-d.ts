@@ -1,6 +1,6 @@
 import { provide, inject, InjectionKey, expectType } from './index'
 
-const key: InjectionKey<number> = Symbol()
+const key = Symbol() as InjectionKey<number>
 
 provide(key, 1)
 // @ts-expect-error
