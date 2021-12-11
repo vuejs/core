@@ -344,7 +344,7 @@ return { a }
 }"
 `;
 
-exports[`SFC compile <script setup> binding analysis for destructur 1`] = `
+exports[`SFC compile <script setup> binding analysis for destructure 1`] = `
 "export default {
   setup(__props, { expose }) {
   expose();

@@ -154,7 +154,6 @@ export {
   UnwrapRef,
   ShallowRef,
   ShallowUnwrapRef,
-  RefUnwrapBailTypes,
   CustomRefFactory,
   ReactiveFlags,
   DeepReadonly,
