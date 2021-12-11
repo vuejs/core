@@ -82,14 +82,21 @@ export interface SFCScriptCompileOptions {
    */
   babelParserPlugins?: ParserPlugin[]
   /**
+   * (Experimental) Enable syntax transform for using refs without `.value` and
+   * using destructured props with reactivity
+   */
+  reactivityTransform?: boolean
+  /**
    * (Experimental) Enable syntax transform for using refs without `.value`
    * https://github.com/vuejs/rfcs/discussions/369
+   * @deprecated now part of `reactivityTransform`
    * @default false
    */
   refTransform?: boolean
   /**
    * (Experimental) Enable syntax transform for destructuring from defineProps()
    * https://github.com/vuejs/rfcs/discussions/394
+   * @deprecated now part of `reactivityTransform`
    * @default false
    */
   propsDestructureTransform?: boolean
@@ -132,8 +139,13 @@ export function compileScript(
 ): SFCScriptBlock {
   let { script, scriptSetup, source, filename } = sfc
   // feature flags
-  const enableRefTransform = !!options.refSugar || !!options.refTransform
-  const enablePropsTransform = !!options.propsDestructureTransform
+  // TODO remove support for deprecated options when out of experimental
+  const enableRefTransform =
+    !!options.reactivityTransform ||
+    !!options.refSugar ||
+    !!options.refTransform
+  const enablePropsTransform =
+    !!options.reactivityTransform || !!options.propsDestructureTransform
   const isProd = !!options.isProd
   const genSourceMap = options.sourceMap !== false
   let refBindings: string[] | undefined
@@ -1097,8 +1109,7 @@ export function compileScript(
       s,
       startOffset,
       refBindings,
-      propsDestructuredBindings,
-      !enableRefTransform
+      propsDestructuredBindings
     )
     refBindings = refBindings ? [...refBindings, ...rootRefs] : rootRefs
     for (const h of importedHelpers) {
