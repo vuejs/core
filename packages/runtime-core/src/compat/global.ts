@@ -88,7 +88,7 @@ export type CompatVue = Pick<App, 'version' | 'component' | 'directive'> & {
   compile(template: string): RenderFunction
 
   /**
-   * @deprecated
+   * @deprecated Vue 3 no longer supports extending constructors.
    */
   extend: (options?: ComponentOptions) => CompatVue
   /**
