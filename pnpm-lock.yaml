@@ -129,7 +129,7 @@ importers:
       '@vue/compiler-dom': 3.2.24
       '@vue/compiler-ssr': 3.2.24
       '@vue/consolidate': ^0.17.3
-      '@vue/ref-transform': 3.2.24
+      '@vue/reactivity-transform': 3.2.24
       '@vue/shared': 3.2.24
       estree-walker: ^2.0.2
       hash-sum: ^2.0.0
@@ -147,7 +147,7 @@ importers:
       '@vue/compiler-core': link:../compiler-core
       '@vue/compiler-dom': link:../compiler-dom
       '@vue/compiler-ssr': link:../compiler-ssr
-      '@vue/ref-transform': link:../ref-transform
+      '@vue/reactivity-transform': link:../reactivity-transform
       '@vue/shared': link:../shared
       estree-walker: 2.0.2
       magic-string: 0.25.7
@@ -180,7 +180,7 @@ importers:
     dependencies:
       '@vue/shared': link:../shared
 
-  packages/ref-transform:
+  packages/reactivity-transform:
     specifiers:
       '@babel/core': ^7.15.0
       '@babel/parser': ^7.15.0
