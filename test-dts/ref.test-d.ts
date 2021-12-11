@@ -224,6 +224,13 @@ expectType<Ref<string>>(p2.obj.k)
   expectType<Ref<number>>(toRefsResult.a.value.b)
 }
 
+// toRef default value
+{
+  const obj: { x?: number } = {}
+  const x = toRef(obj, 'x', 1)
+  expectType<Ref<number>>(x)
+}
+
 // #2687
 interface AppData {
   state: 'state1' | 'state2' | 'state3'

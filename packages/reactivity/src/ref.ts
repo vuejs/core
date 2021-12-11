@@ -206,10 +206,15 @@ export function toRefs<T extends object>(object: T): ToRefs<T> {
 class ObjectRefImpl<T extends object, K extends keyof T> {
   public readonly __v_isRef = true
 
-  constructor(private readonly _object: T, private readonly _key: K) {}
+  constructor(
+    private readonly _object: T,
+    private readonly _key: K,
+    private readonly _defaultValue?: T[K]
+  ) {}
 
   get value() {
-    return this._object[this._key]
+    const val = this._object[this._key]
+    return val === undefined ? (this._defaultValue as T[K]) : val
   }
 
   set value(newVal) {
@@ -222,9 +227,23 @@ export type ToRef<T> = [T] extends [Ref] ? T : Ref<T>
 export function toRef<T extends object, K extends keyof T>(
   object: T,
   key: K
+): ToRef<T[K]>
+
+export function toRef<T extends object, K extends keyof T>(
+  object: T,
+  key: K,
+  defaultValue: T[K]
+): ToRef<Exclude<T[K], undefined>>
+
+export function toRef<T extends object, K extends keyof T>(
+  object: T,
+  key: K,
+  defaultValue?: T[K]
 ): ToRef<T[K]> {
   const val = object[key]
-  return isRef(val) ? val : (new ObjectRefImpl(object, key) as any)
+  return isRef(val)
+    ? val
+    : (new ObjectRefImpl(object, key, defaultValue) as any)
 }
 
 // corner case when use narrows type
