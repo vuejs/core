@@ -36,7 +36,7 @@
     "@vue/compiler-core": "3.2.24",
     "@vue/compiler-dom": "3.2.24",
     "@vue/compiler-ssr": "3.2.24",
-    "@vue/ref-transform": "3.2.24",
+    "@vue/reactivity-transform": "3.2.24",
     "@vue/shared": "3.2.24",
     "estree-walker": "^2.0.2",
     "magic-string": "^0.25.7",

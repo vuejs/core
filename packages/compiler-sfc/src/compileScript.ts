@@ -51,7 +51,7 @@ import { createCache } from './cache'
 import {
   shouldTransform as shouldTransformRef,
   transformAST as transformRefAST
-} from '@vue/ref-transform'
+} from '@vue/reactivity-transform'
 
 // Special compiler macros
 const DEFINE_PROPS = 'defineProps'

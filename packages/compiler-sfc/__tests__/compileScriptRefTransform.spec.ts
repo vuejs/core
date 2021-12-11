@@ -2,7 +2,7 @@ import { BindingTypes } from '@vue/compiler-core'
 import { compileSFCScript as compile, assertCode } from './utils'
 
 // this file only tests integration with SFC - main test case for the ref
-// transform can be found in <root>/packages/ref-transform/__tests__
+// transform can be found in <root>/packages/reactivity-transform/__tests__
 describe('sfc ref transform', () => {
   function compileWithRefTransform(src: string) {
     return compile(src, { refTransform: true })

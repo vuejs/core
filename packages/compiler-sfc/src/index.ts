@@ -8,7 +8,7 @@ export {
   shouldTransform as shouldTransformRef,
   transform as transformRef,
   transformAST as transformRefAST
-} from '@vue/ref-transform'
+} from '@vue/reactivity-transform'
 
 // Utilities
 export { parse as babelParse } from '@babel/parser'

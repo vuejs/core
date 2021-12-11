@@ -1,8 +1,8 @@
 {
-  "name": "@vue/ref-transform",
+  "name": "@vue/reactivity-transform",
   "version": "3.2.24",
-  "description": "@vue/ref-transform",
-  "main": "dist/ref-transform.cjs.js",
+  "description": "@vue/reactivity-transform",
+  "main": "dist/reactivity-transform.cjs.js",
   "files": [
     "dist"
   ],
@@ -12,11 +12,11 @@
     ],
     "prod": false
   },
-  "types": "dist/ref-transform.d.ts",
+  "types": "dist/reactivity-transform.d.ts",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/vuejs/vue-next.git",
-    "directory": "packages/ref-transform"
+    "directory": "packages/reactivity-transform"
   },
   "keywords": [
     "vue"
@@ -26,7 +26,7 @@
   "bugs": {
     "url": "https://github.com/vuejs/vue-next/issues"
   },
-  "homepage": "https://github.com/vuejs/vue-next/tree/dev/packages/ref-transform#readme",
+  "homepage": "https://github.com/vuejs/vue-next/tree/dev/packages/reactivity-transform#readme",
   "dependencies": {
     "@babel/parser": "^7.15.0",
     "@vue/compiler-core": "3.2.24",
