@@ -24,7 +24,7 @@ import { hasOwn, isArray, isString } from '@vue/shared'
 
 const TO_VAR_SYMBOL = '$'
 const TO_REF_SYMBOL = '$$'
-const shorthands = ['ref', 'computed', 'shallowRef']
+const shorthands = ['ref', 'computed', 'shallowRef', 'toRef', 'customRef']
 const transformCheckRE = /[^\w]\$(?:\$|ref|computed|shallowRef)?\s*(\(|\<)/
 
 export function shouldTransform(src: string): boolean {
