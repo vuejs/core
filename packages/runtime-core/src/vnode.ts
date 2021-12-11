@@ -42,6 +42,7 @@ import { hmrDirtyComponents } from './hmr'
 import { convertLegacyComponent } from './compat/component'
 import { convertLegacyVModelProps } from './compat/componentVModel'
 import { defineLegacyVNodeProperties } from './compat/renderFn'
+import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
 
 export const Fragment = Symbol(__DEV__ ? 'Fragment' : undefined) as any as {
   __isFragment: true
@@ -810,4 +811,16 @@ export function mergeProps(...args: (Data & VNodeProps)[]) {
     }
   }
   return ret
+}
+
+export function invokeVNodeHook(
+  hook: VNodeHook,
+  instance: ComponentInternalInstance | null,
+  vnode: VNode,
+  prevVNode: VNode | null = null
+) {
+  callWithAsyncErrorHandling(hook, instance, ErrorCodes.VNODE_HOOK, [
+    vnode,
+    prevVNode
+  ])
 }
