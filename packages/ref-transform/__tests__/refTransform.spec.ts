@@ -362,6 +362,22 @@ test('handle TS casting syntax', () => {
   assertCode(code)
 })
 
+test('macro import alias and removal', () => {
+  const { code } = transform(
+    `
+    import { $ as fromRefs, $ref } from 'vue/macros'
+
+    let a = $ref(1)
+    const { x, y } = fromRefs(useMouse())
+    `
+  )
+  // should remove imports
+  expect(code).not.toMatch(`from 'vue/macros'`)
+  expect(code).toMatch(`let a = _ref(1)`)
+  expect(code).toMatch(`const __$temp_1 = (useMouse())`)
+  assertCode(code)
+})
+
 describe('errors', () => {
   test('$ref w/ destructure', () => {
     expect(() => transform(`let { a } = $ref(1)`)).toThrow(

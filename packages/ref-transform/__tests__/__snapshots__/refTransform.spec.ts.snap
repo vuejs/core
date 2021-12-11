@@ -80,6 +80,18 @@ exports[`handle TS casting syntax 1`] = `
       "
 `;
 
+exports[`macro import alias and removal 1`] = `
+"import { ref as _ref, toRef as _toRef } from 'vue'
+
+    
+
+    let a = _ref(1)
+    const __$temp_1 = (useMouse()),
+  x = _toRef(__$temp_1, 'x'),
+  y = _toRef(__$temp_1, 'y')
+    "
+`;
+
 exports[`mixing $ref & $computed declarations 1`] = `
 "import { ref as _ref, computed as _computed } from 'vue'
 

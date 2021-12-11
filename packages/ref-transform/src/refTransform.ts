@@ -22,7 +22,7 @@ import {
 import { parse, ParserPlugin } from '@babel/parser'
 import { hasOwn, isArray, isString } from '@vue/shared'
 
-const TO_VAR_SYMBOL = '$'
+const CONVERT_SYMBOL = '$'
 const ESCAPE_SYMBOL = '$$'
 const shorthands = ['ref', 'computed', 'shallowRef', 'toRef', 'customRef']
 const transformCheckRE = /[^\w]\$(?:\$|ref|computed|shallowRef)?\s*(\(|\<)/
@@ -114,10 +114,44 @@ export function transformAST(
   // TODO remove when out of experimental
   warnExperimental()
 
+  let convertSymbol = CONVERT_SYMBOL
+  let escapeSymbol = ESCAPE_SYMBOL
+
+  // macro import handling
+  for (const node of ast.body) {
+    if (
+      node.type === 'ImportDeclaration' &&
+      node.source.value === 'vue/macros'
+    ) {
+      // remove macro imports
+      s.remove(node.start! + offset, node.end! + offset)
+      // check aliasing
+      for (const specifier of node.specifiers) {
+        if (specifier.type === 'ImportSpecifier') {
+          const imported = (specifier.imported as Identifier).name
+          const local = specifier.local.name
+          if (local !== imported) {
+            if (imported === ESCAPE_SYMBOL) {
+              escapeSymbol = local
+            } else if (imported === CONVERT_SYMBOL) {
+              convertSymbol = local
+            } else {
+              error(
+                `macro imports for ref-creating methods do not support aliasing.`,
+                specifier
+              )
+            }
+          }
+        }
+      }
+    }
+  }
+
   const importedHelpers = new Set<string>()
   const rootScope: Scope = {}
   const scopeStack: Scope[] = [rootScope]
   let currentScope: Scope = rootScope
+  let escapeScope: CallExpression | undefined // inside $$()
   const excludedIds = new WeakSet<Identifier>()
   const parentStack: Node[] = []
   const propsLocalToPublicMap = Object.create(null)
@@ -133,6 +167,16 @@ export function transformAST(
       rootScope[local] = 'prop'
       propsLocalToPublicMap[local] = key
     }
+  }
+
+  function isRefCreationCall(callee: string): string | false {
+    if (callee === convertSymbol) {
+      return convertSymbol
+    }
+    if (callee[0] === '$' && shorthands.includes(callee.slice(1))) {
+      return callee
+    }
+    return false
   }
 
   function error(msg: string, node: Node) {
@@ -174,20 +218,16 @@ export function transformAST(
       if (stmt.type === 'VariableDeclaration') {
         if (stmt.declare) continue
         for (const decl of stmt.declarations) {
-          let toVarCall
+          let refCall
           const isCall =
             decl.init &&
             decl.init.type === 'CallExpression' &&
             decl.init.callee.type === 'Identifier'
           if (
             isCall &&
-            (toVarCall = isToVarCall((decl as any).init.callee.name))
+            (refCall = isRefCreationCall((decl as any).init.callee.name))
           ) {
-            processRefDeclaration(
-              toVarCall,
-              decl.id,
-              decl.init as CallExpression
-            )
+            processRefDeclaration(refCall, decl.id, decl.init as CallExpression)
           } else {
             const isProps =
               isRoot &&
@@ -220,7 +260,7 @@ export function transformAST(
     call: CallExpression
   ) {
     excludedIds.add(call.callee as Identifier)
-    if (method === TO_VAR_SYMBOL) {
+    if (method === convertSymbol) {
       // $
       // remove macro
       s.remove(call.callee.start! + offset, call.callee.end! + offset)
@@ -491,9 +531,6 @@ export function transformAST(
 
   // check root scope first
   walkScope(ast, true)
-
-  // inside $$()
-  let escapeScope: CallExpression | undefined
   ;(walk as any)(ast, {
     enter(node: Node, parent?: Node) {
       parent && parentStack.push(parent)
@@ -544,16 +581,16 @@ export function transformAST(
       if (node.type === 'CallExpression' && node.callee.type === 'Identifier') {
         const callee = node.callee.name
 
-        const toVarCall = isToVarCall(callee)
-        if (toVarCall && (!parent || parent.type !== 'VariableDeclarator')) {
+        const refCall = isRefCreationCall(callee)
+        if (refCall && (!parent || parent.type !== 'VariableDeclarator')) {
           return error(
-            `${toVarCall} can only be used as the initializer of ` +
+            `${refCall} can only be used as the initializer of ` +
               `a variable declaration.`,
             node
           )
         }
 
-        if (callee === ESCAPE_SYMBOL) {
+        if (callee === escapeSymbol) {
           s.remove(node.callee.start! + offset, node.callee.end! + offset)
           escapeScope = node
         }
@@ -594,16 +631,6 @@ export function transformAST(
     rootRefs: Object.keys(rootScope).filter(key => rootScope[key] === true),
     importedHelpers: [...importedHelpers]
   }
-}
-
-function isToVarCall(callee: string): string | false {
-  if (callee === TO_VAR_SYMBOL) {
-    return TO_VAR_SYMBOL
-  }
-  if (callee[0] === TO_VAR_SYMBOL && shorthands.includes(callee.slice(1))) {
-    return callee
-  }
-  return false
 }
 
 const RFC_LINK = `https://github.com/vuejs/rfcs/discussions/369`
