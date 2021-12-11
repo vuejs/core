@@ -145,6 +145,23 @@ describe('sfc props transform', () => {
     })
   })
 
+  test('$$() escape', () => {
+    const { content } = compile(`
+      <script setup>
+      const { foo, bar: baz } = defineProps(['foo'])
+      console.log($$(foo))
+      console.log($$(baz))
+      $$({ foo, baz })
+      </script>
+    `)
+    expect(content).toMatch(`const __props_foo = _toRef(__props, 'foo')`)
+    expect(content).toMatch(`const __props_bar = _toRef(__props, 'bar')`)
+    expect(content).toMatch(`console.log((__props_foo))`)
+    expect(content).toMatch(`console.log((__props_bar))`)
+    expect(content).toMatch(`({ foo: __props_foo, baz: __props_bar })`)
+    assertCode(content)
+  })
+
   describe('errors', () => {
     test('should error on deep destructure', () => {
       expect(() =>

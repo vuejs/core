@@ -23,7 +23,7 @@ import { parse, ParserPlugin } from '@babel/parser'
 import { hasOwn, isArray, isString } from '@vue/shared'
 
 const TO_VAR_SYMBOL = '$'
-const TO_REF_SYMBOL = '$$'
+const ESCAPE_SYMBOL = '$$'
 const shorthands = ['ref', 'computed', 'shallowRef', 'toRef', 'customRef']
 const transformCheckRE = /[^\w]\$(?:\$|ref|computed|shallowRef)?\s*(\(|\<)/
 
@@ -420,30 +420,52 @@ export function transformAST(
         const isProp = bindingType === 'prop'
         if (isStaticProperty(parent) && parent.shorthand) {
           // let binding used in a property shorthand
-          // { foo } -> { foo: foo.value }
-          // { prop } -> { prop: __prop.prop }
           // skip for destructure patterns
           if (
             !(parent as any).inPattern ||
             isInDestructureAssignment(parent, parentStack)
           ) {
             if (isProp) {
-              s.appendLeft(
-                id.end! + offset,
-                `: __props.${propsLocalToPublicMap[id.name]}`
-              )
+              if (escapeScope) {
+                // prop binding in $$()
+                // { prop } -> { prop: __prop_prop }
+                registerEscapedPropBinding(id)
+                s.appendLeft(
+                  id.end! + offset,
+                  `: __props_${propsLocalToPublicMap[id.name]}`
+                )
+              } else {
+                // { prop } -> { prop: __prop.prop }
+                s.appendLeft(
+                  id.end! + offset,
+                  `: __props.${propsLocalToPublicMap[id.name]}`
+                )
+              }
             } else {
+              // { foo } -> { foo: foo.value }
               s.appendLeft(id.end! + offset, `: ${id.name}.value`)
             }
           }
         } else {
           if (isProp) {
-            s.overwrite(
-              id.start! + offset,
-              id.end! + offset,
-              `__props.${propsLocalToPublicMap[id.name]}`
-            )
+            if (escapeScope) {
+              // x --> __props_x
+              registerEscapedPropBinding(id)
+              s.overwrite(
+                id.start! + offset,
+                id.end! + offset,
+                `__props_${propsLocalToPublicMap[id.name]}`
+              )
+            } else {
+              // x --> __props.x
+              s.overwrite(
+                id.start! + offset,
+                id.end! + offset,
+                `__props.${propsLocalToPublicMap[id.name]}`
+              )
+            }
           } else {
+            // x --> x.value
             s.appendLeft(id.end! + offset, '.value')
           }
         }
@@ -453,8 +475,25 @@ export function transformAST(
     return false
   }
 
+  const propBindingRefs: Record<string, true> = {}
+  function registerEscapedPropBinding(id: Identifier) {
+    if (!propBindingRefs.hasOwnProperty(id.name)) {
+      propBindingRefs[id.name] = true
+      const publicKey = propsLocalToPublicMap[id.name]
+      s.prependRight(
+        offset,
+        `const __props_${publicKey} = ${helper(
+          `toRef`
+        )}(__props, '${publicKey}')\n`
+      )
+    }
+  }
+
   // check root scope first
   walkScope(ast, true)
+
+  // inside $$()
+  let escapeScope: CallExpression | undefined
   ;(walk as any)(ast, {
     enter(node: Node, parent?: Node) {
       parent && parentStack.push(parent)
@@ -488,6 +527,8 @@ export function transformAST(
 
       if (
         node.type === 'Identifier' &&
+        // if inside $$(), skip unless this is a destructured prop binding
+        !(escapeScope && rootScope[node.name] !== 'prop') &&
         isReferencedIdentifier(node, parent!, parentStack) &&
         !excludedIds.has(node)
       ) {
@@ -512,9 +553,9 @@ export function transformAST(
           )
         }
 
-        if (callee === TO_REF_SYMBOL) {
+        if (callee === ESCAPE_SYMBOL) {
           s.remove(node.callee.start! + offset, node.callee.end! + offset)
-          return this.skip()
+          escapeScope = node
         }
 
         // TODO remove when out of experimental
@@ -542,6 +583,9 @@ export function transformAST(
       ) {
         scopeStack.pop()
         currentScope = scopeStack[scopeStack.length - 1] || null
+      }
+      if (node === escapeScope) {
+        escapeScope = undefined
       }
     }
   })

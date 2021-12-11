@@ -36,7 +36,7 @@ describe('SFC compile <script setup>', () => {
     assertCode(content)
   })
 
-  test('binding analysis for destructur', () => {
+  test('binding analysis for destructure', () => {
     const { content, bindings } = compile(`
       <script setup>
       const { foo, b: bar, ['x' + 'y']: baz, x: { y, zz: { z }}} = {}
