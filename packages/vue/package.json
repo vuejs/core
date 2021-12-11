@@ -34,6 +34,8 @@
     },
     "./dist/*": "./dist/*",
     "./package.json": "./package.json",
+    "./macros": "./macros.d.ts",
+    "./macros-global": "./macros-global.d.ts",
     "./ref-macros": "./ref-macros.d.ts"
   },
   "buildOptions": {

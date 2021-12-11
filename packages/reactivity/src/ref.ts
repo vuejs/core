@@ -151,7 +151,7 @@ export function proxyRefs<T extends object>(
     : new Proxy(objectWithRefs, shallowUnwrapHandlers)
 }
 
-type CustomRefFactory<T> = (
+export type CustomRefFactory<T> = (
   track: () => void,
   trigger: () => void
 ) => {

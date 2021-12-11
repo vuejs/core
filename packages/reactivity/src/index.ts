@@ -14,7 +14,8 @@ export {
   UnwrapRef,
   ShallowRef,
   ShallowUnwrapRef,
-  RefUnwrapBailTypes
+  RefUnwrapBailTypes,
+  CustomRefFactory
 } from './ref'
 export {
   reactive,
