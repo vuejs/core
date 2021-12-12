@@ -58,6 +58,7 @@
     "@types/node": "^16.4.7",
     "@types/puppeteer": "^5.0.0",
     "@typescript-eslint/parser": "^4.1.1",
+    "@vitejs/plugin-vue": "^1.10.2",
     "@vue/reactivity": "workspace:*",
     "@vue/runtime-core": "workspace:*",
     "@vue/runtime-dom": "workspace:*",

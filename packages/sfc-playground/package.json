@@ -7,9 +7,6 @@
     "build": "vite build",
     "serve": "vite preview"
   },
-  "devDependencies": {
-    "@vitejs/plugin-vue": "^1.9.3"
-  },
   "dependencies": {
     "@vue/repl": "^0.4.5",
     "file-saver": "^2.0.5",
