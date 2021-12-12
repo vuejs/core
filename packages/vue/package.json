@@ -13,6 +13,8 @@
     "dist",
     "compiler-sfc",
     "server-renderer",
+    "macros.d.ts",
+    "macros-global.d.ts",
     "ref-macros.d.ts"
   ],
   "exports": {
