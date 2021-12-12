@@ -1,3 +1,7 @@
+## [3.2.26](https://github.com/vuejs/vue-next/compare/v3.2.25...v3.2.26) (2021-12-12)
+
+
+
 ## [3.2.25](https://github.com/vuejs/vue-next/compare/v3.2.24...v3.2.25) (2021-12-12)
 
 
