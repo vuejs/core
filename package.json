@@ -14,6 +14,7 @@
     "test-e2e": "node scripts/build.js vue -f global -d && jest --filter ./scripts/filter-e2e.js --runInBand",
     "test-dts": "node scripts/build.js shared reactivity runtime-core runtime-dom -dt -f esm-bundler && npm run test-dts-only",
     "test-dts-only": "tsc -p ./test-dts/tsconfig.json && tsc -p ./test-dts/tsconfig.build.json",
+    "test-coverage": "node scripts/build.js vue -f global -d && jest --runInBand --coverage --bail",
     "release": "node scripts/release.js",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s",
     "dev-compiler": "run-p \"dev template-explorer\" serve",
