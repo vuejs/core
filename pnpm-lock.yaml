@@ -47,7 +47,6 @@ importers:
       ts-jest: ^27.0.5
       tslib: ^2.3.1
       typescript: ^4.2.2
-      vite: ^2.7.0
       vue: workspace:*
       yorkie: ^2.0.0
     devDependencies:
@@ -62,7 +61,7 @@ importers:
       '@types/node': 16.11.12
       '@types/puppeteer': 5.4.4
       '@typescript-eslint/parser': 4.33.0_eslint@7.32.0+typescript@4.5.3
-      '@vitejs/plugin-vue': 1.10.2_vite@2.7.1
+      '@vitejs/plugin-vue': 1.10.2
       '@vue/reactivity': link:packages/reactivity
       '@vue/runtime-core': link:packages/runtime-core
       '@vue/runtime-dom': link:packages/runtime-dom
@@ -94,7 +93,6 @@ importers:
       ts-jest: 27.1.1_dc33159234d58f1c7ac35b6119da0e94
       tslib: 2.3.1
       typescript: 4.5.3
-      vite: 2.7.1
       vue: link:packages/vue
       yorkie: 2.0.0
 
@@ -237,19 +235,29 @@ importers:
 
   packages/sfc-playground:
     specifiers:
+      '@vitejs/plugin-vue': ^1.10.2
       '@vue/repl': ^0.4.5
       file-saver: ^2.0.5
       jszip: ^3.6.0
+      vite: ^2.7.1
+      vue: workspace:*
     dependencies:
       '@vue/repl': 0.4.5
       file-saver: 2.0.5
       jszip: 3.7.1
+      vue: link:../vue
+    devDependencies:
+      '@vitejs/plugin-vue': 1.10.2_vite@2.7.1
+      vite: 2.7.1
 
   packages/shared:
     specifiers: {}
 
   packages/size-check:
-    specifiers: {}
+    specifiers:
+      vite: ^2.7.1
+    devDependencies:
+      vite: 2.7.1
 
   packages/template-explorer:
     specifiers:
@@ -1248,6 +1256,13 @@ packages:
     dependencies:
       '@typescript-eslint/types': 4.33.0
       eslint-visitor-keys: 2.1.0
+    dev: true
+
+  /@vitejs/plugin-vue/1.10.2:
+    resolution: {integrity: sha512-/QJ0Z9qfhAFtKRY+r57ziY4BSbGUTGsPRMpB/Ron3QPwBZM4OZAZHdTa4a8PafCwU5DTatXG8TMDoP8z+oDqJw==}
+    engines: {node: '>=12.0.0'}
+    peerDependencies:
+      vite: ^2.5.10
     dev: true
 
   /@vitejs/plugin-vue/1.10.2_vite@2.7.1:
