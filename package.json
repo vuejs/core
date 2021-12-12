@@ -23,7 +23,7 @@
     "serve": "serve",
     "open": "open http://localhost:5000/packages/template-explorer/local.html",
     "preinstall": "node ./scripts/preinstall.js",
-    "prebuild-sfc-playground": "node scripts/build.js compiler ref-transform shared -af cjs && node scripts/build.js runtime reactivity shared -af esm-bundler && node scripts/build.js vue -f esm-bundler-runtime && node scripts/build.js vue -f esm-browser-runtime && node scripts/build.js compiler-sfc -f esm-browser",
+    "prebuild-sfc-playground": "node scripts/build.js compiler reactivity-transform shared -af cjs && node scripts/build.js runtime reactivity shared -af esm-bundler && node scripts/build.js vue -f esm-bundler-runtime && node scripts/build.js vue -f esm-browser-runtime && node scripts/build.js compiler-sfc -f esm-browser",
     "build-sfc-playground": "cd packages/sfc-playground && npm run build"
   },
   "types": "test-dts/index.d.ts",
@@ -58,7 +58,6 @@
     "@types/node": "^16.4.7",
     "@types/puppeteer": "^5.0.0",
     "@typescript-eslint/parser": "^4.1.1",
-    "@vitejs/plugin-vue": "^1.10.2",
     "@vue/reactivity": "workspace:*",
     "@vue/runtime-core": "workspace:*",
     "@vue/runtime-dom": "workspace:*",

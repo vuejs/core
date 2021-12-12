@@ -15,7 +15,6 @@ importers:
       '@types/node': ^16.4.7
       '@types/puppeteer': ^5.0.0
       '@typescript-eslint/parser': ^4.1.1
-      '@vitejs/plugin-vue': ^1.10.2
       '@vue/reactivity': workspace:*
       '@vue/runtime-core': workspace:*
       '@vue/runtime-dom': workspace:*
@@ -62,7 +61,6 @@ importers:
       '@types/node': 16.11.12
       '@types/puppeteer': 5.4.4
       '@typescript-eslint/parser': 4.33.0_eslint@7.32.0+typescript@4.5.3
-      '@vitejs/plugin-vue': 1.10.2_vite@2.7.1
       '@vue/reactivity': link:packages/reactivity
       '@vue/runtime-core': link:packages/runtime-core
       '@vue/runtime-dom': link:packages/runtime-dom
