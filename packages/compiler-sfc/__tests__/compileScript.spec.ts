@@ -169,6 +169,68 @@ defineExpose({ foo: 123 })
   })
 
   describe('<script> and <script setup> co-usage', () => {
+    test('script first', () => {
+      const { content } = compile(`
+      <script>
+      export const n = 1
+
+      export default {}
+      </script>
+      <script setup>
+      import { x } from './x'
+      x()
+      </script>
+      `)
+      assertCode(content)
+    })
+
+    test('script setup first', () => {
+      const { content } = compile(`
+      <script setup>
+      import { x } from './x'
+      x()
+      </script>
+      <script>
+      export const n = 1
+      export default {}
+      </script>
+      `)
+      assertCode(content)
+    })
+
+    test('script setup first, named default export', () => {
+      const { content } = compile(`
+      <script setup>
+      import { x } from './x'
+      x()
+      </script>
+      <script>
+      export const n = 1
+      const def = {}
+      export { def as default }
+      </script>
+      `)
+      assertCode(content)
+    })
+
+    // #4395
+    test('script setup first, lang="ts", script block content export default', () => {
+      const { content } = compile(`
+      <script setup lang="ts">
+      import { x } from './x'
+      x()
+      </script>
+      <script lang="ts">
+      export default {
+        name: "test"
+      }
+      </script>
+      `)
+      // ensure __default__ is declared before used
+      expect(content).toMatch(/const __default__[\S\s]*\.\.\.__default__/m)
+      assertCode(content)
+    })
+
     describe('spaces in ExportDefaultDeclaration node', () => {
       // #4371
       test('with many spaces and newline', () => {
@@ -204,50 +266,6 @@ defineExpose({ foo: 123 })
         `)
         assertCode(content)
       })
-    })
-
-    test('script first', () => {
-      const { content } = compile(`
-      <script>
-      export const n = 1
-      </script>
-      <script setup>
-      import { x } from './x'
-      x()
-      </script>
-      `)
-      assertCode(content)
-    })
-
-    test('script setup first', () => {
-      const { content } = compile(`
-      <script setup>
-      import { x } from './x'
-      x()
-      </script>
-      <script>
-      export const n = 1
-      </script>
-      `)
-      assertCode(content)
-    })
-
-    // #4395
-    test('script setup first, lang="ts", script block content export default', () => {
-      const { content } = compile(`
-      <script setup lang="ts">
-      import { x } from './x'
-      x()
-      </script>
-      <script lang="ts">
-      export default {
-        name: "test"
-      }
-      </script>
-      `)
-      // ensure __default__ is declared before used
-      expect(content).toMatch(/const __default__[\S\s]*\.\.\.__default__/m)
-      assertCode(content)
     })
   })
 

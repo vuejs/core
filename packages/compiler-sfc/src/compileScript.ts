@@ -59,6 +59,9 @@ const DEFINE_EMITS = 'defineEmits'
 const DEFINE_EXPOSE = 'defineExpose'
 const WITH_DEFAULTS = 'withDefaults'
 
+// constants
+const DEFAULT_VAR = `__default__`
+
 const isBuiltInDir = makeMap(
   `once,memo,if,else,else-if,slot,text,html,on,bind,model,show,cloak,is`
 )
@@ -214,14 +217,14 @@ export function compileScript(
         }
       }
       if (cssVars.length) {
-        content = rewriteDefault(content, `__default__`, plugins)
+        content = rewriteDefault(content, DEFAULT_VAR, plugins)
         content += genNormalScriptCssVarsCode(
           cssVars,
           bindings,
           scopeId,
           isProd
         )
-        content += `\nexport default __default__`
+        content += `\nexport default ${DEFAULT_VAR}`
       }
       return {
         ...script,
@@ -251,7 +254,6 @@ export function compileScript(
 
   // metadata that needs to be returned
   const bindingMetadata: BindingMetadata = {}
-  const defaultTempVar = `__default__`
   const helperImports: Set<string> = new Set()
   const userImports: Record<string, ImportBinding> = Object.create(null)
   const userImportAlias: Record<string, string> = Object.create(null)
@@ -780,7 +782,6 @@ export function compileScript(
   // 1. process normal <script> first if it exists
   let scriptAst: Program | undefined
   if (script) {
-    // import dedupe between <script> and <script setup>
     scriptAst = parse(
       script.content,
       {
@@ -809,9 +810,10 @@ export function compileScript(
       } else if (node.type === 'ExportDefaultDeclaration') {
         // export default
         defaultExport = node
+        // export default { ... } --> const __default__ = { ... }
         const start = node.start! + scriptStartOffset!
         const end = node.declaration.start! + scriptStartOffset!
-        s.overwrite(start, end, `const ${defaultTempVar} = `)
+        s.overwrite(start, end, `const ${DEFAULT_VAR} = `)
       } else if (node.type === 'ExportNamedDeclaration') {
         const defaultSpecifier = node.specifiers.find(
           s => s.exported.type === 'Identifier' && s.exported.name === 'default'
@@ -835,13 +837,14 @@ export function compileScript(
             // rewrite to `import { x as __default__ } from './x'` and
             // add to top
             s.prepend(
-              `import { ${defaultSpecifier.local.name} as ${defaultTempVar} } from '${node.source.value}'\n`
+              `import { ${defaultSpecifier.local.name} as ${DEFAULT_VAR} } from '${node.source.value}'\n`
             )
           } else {
             // export { x as default }
             // rewrite to `const __default__ = x` and move to end
-            s.append(
-              `\nconst ${defaultTempVar} = ${defaultSpecifier.local.name}\n`
+            s.appendLeft(
+              scriptEndOffset!,
+              `\nconst ${DEFAULT_VAR} = ${defaultSpecifier.local.name}\n`
             )
           }
         }
@@ -870,6 +873,13 @@ export function compileScript(
       for (const h of importedHelpers) {
         helperImports.add(h)
       }
+    }
+
+    // <script> after <script setup>
+    // we need to move the block up so that `const __default__` is
+    // declared before being used in the actual component definition
+    if (scriptStartOffset! > startOffset) {
+      s.move(scriptStartOffset!, scriptEndOffset!, 0)
     }
   }
 
@@ -1384,46 +1394,33 @@ export function compileScript(
   // explicitly call `defineExpose`, call expose() with no args.
   const exposeCall =
     hasDefineExposeCall || options.inlineTemplate ? `` : `  expose();\n`
+  // wrap setup code with function.
   if (isTS) {
     // for TS, make sure the exported type is still valid type with
     // correct props information
     // we have to use object spread for types to be merged properly
     // user's TS setting should compile it down to proper targets
-    const def = defaultExport ? `\n  ...${defaultTempVar},` : ``
-    // wrap setup code with function.
-    // export the content of <script setup> as a named export, `setup`.
-    // this allows `import { setup } from '*.vue'` for testing purposes.
-    if (defaultExport) {
-      s.prependLeft(
-        startOffset,
-        `\n${hasAwait ? `async ` : ``}function setup(${args}) {\n`
-      )
-      s.append(
-        `\nexport default /*#__PURE__*/${helper(
-          `defineComponent`
-        )}({${def}${runtimeOptions}\n  setup})`
-      )
-    } else {
-      s.prependLeft(
-        startOffset,
-        `\nexport default /*#__PURE__*/${helper(
-          `defineComponent`
-        )}({${def}${runtimeOptions}\n  ${
-          hasAwait ? `async ` : ``
-        }setup(${args}) {\n${exposeCall}`
-      )
-      s.appendRight(endOffset, `})`)
-    }
+    // export default defineComponent({ ...__default__, ... })
+    const def = defaultExport ? `\n  ...${DEFAULT_VAR},` : ``
+    s.prependLeft(
+      startOffset,
+      `\nexport default /*#__PURE__*/${helper(
+        `defineComponent`
+      )}({${def}${runtimeOptions}\n  ${
+        hasAwait ? `async ` : ``
+      }setup(${args}) {\n${exposeCall}`
+    )
+    s.appendRight(endOffset, `})`)
   } else {
     if (defaultExport) {
-      // can't rely on spread operator in non ts mode
+      // without TS, can't rely on rest spread, so we use Object.assign
+      // export default Object.assign(__default__, { ... })
       s.prependLeft(
         startOffset,
-        `\n${hasAwait ? `async ` : ``}function setup(${args}) {\n`
+        `\nexport default /*#__PURE__*/Object.assign(${DEFAULT_VAR}, {${runtimeOptions}\n  ` +
+          `${hasAwait ? `async ` : ``}setup(${args}) {\n${exposeCall}`
       )
-      s.append(
-        `\nexport default /*#__PURE__*/ Object.assign(${defaultTempVar}, {${runtimeOptions}\n  setup\n})\n`
-      )
+      s.appendRight(endOffset, `})`)
     } else {
       s.prependLeft(
         startOffset,
