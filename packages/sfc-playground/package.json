@@ -1,6 +1,6 @@
 {
   "name": "@vue/sfc-playground",
-  "version": "3.2.24",
+  "version": "3.2.25",
   "private": true,
   "scripts": {
     "dev": "vite",
@@ -12,7 +12,7 @@
     "vite": "^2.7.1"
   },
   "dependencies": {
-    "vue": "workspace:*",
+    "vue": "3.2.25",
     "@vue/repl": "^0.4.5",
     "file-saver": "^2.0.5",
     "jszip": "^3.6.0"

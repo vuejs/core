@@ -1,3 +1,30 @@
+## [3.2.25](https://github.com/vuejs/vue-next/compare/v3.2.24...v3.2.25) (2021-12-12)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** generate valid TS in script and script setup co-usage with TS ([7e4f0a8](https://github.com/vuejs/vue-next/commit/7e4f0a869498e7dce601e7c150f402045ea2e79b)), closes [#5094](https://github.com/vuejs/vue-next/issues/5094)
+* **compiler:** force block for custom dirs and inline beforeUpdate hooks ([1c9a481](https://github.com/vuejs/vue-next/commit/1c9a4810fcdd2b6c1c6c3be077aebbecbfcbcf1e))
+* **runtime-core:** disallow recurse in vnode/directive beforeUpdate hooks ([a1167c5](https://github.com/vuejs/vue-next/commit/a1167c57e5514be57505f4bce8d163aa1f92cf14))
+
+
+### Features
+
+* **compiler-core:** support aliasing vue: prefixed events to inline vnode hooks ([4b0ca87](https://github.com/vuejs/vue-next/commit/4b0ca8709a7e2652f4b02665f378d47ba4dbe969))
+* **experimental:** allow const for ref sugar declarations ([9823bd9](https://github.com/vuejs/vue-next/commit/9823bd95d11f22f0ae53f5e0b705a21b6e6e8859))
+* **reactivity-transform/types:** restructure macro types + export types for all shorthand methods ([db729ce](https://github.com/vuejs/vue-next/commit/db729ce99eb13cd18dad600055239c63edd9cfb8))
+* **reactivity-transform:** $$() escape for destructured prop bindings ([198ca14](https://github.com/vuejs/vue-next/commit/198ca14f192f9eb80028153f3d36600e636de3f0))
+* **reactivity-transform:** rename @vue/ref-transform to @vue/reactivity-transform ([d70fd8d](https://github.com/vuejs/vue-next/commit/d70fd8d36b23c987f2ebe3280da785f4d2e7d2ef))
+* **reactivity-transform:** support $-shorthands for all ref-creating APIs ([179fc05](https://github.com/vuejs/vue-next/commit/179fc05a8406eac525c8450153b42fcb5af7d6bb))
+* **reactivity-transform:** support optionally importing macros ([fbd0fe9](https://github.com/vuejs/vue-next/commit/fbd0fe97595f759e12e445c713b732775589fabf))
+* **reactivity-transform:** use toRef() for $() destructure codegen ([93ba6b9](https://github.com/vuejs/vue-next/commit/93ba6b974e4a2ff4ba004fef47ef69cfe980c654))
+* **reactivity:** support default value in toRef() ([2db9c90](https://github.com/vuejs/vue-next/commit/2db9c909c2cf3845f57b2c930c05cd6c17abe3b0))
+* **sfc-playground:** add github link ([#5067](https://github.com/vuejs/vue-next/issues/5067)) ([9ac0dde](https://github.com/vuejs/vue-next/commit/9ac0ddea4beec1a1c4471463d3476ccd019bd84e))
+* **sfc-playground:** prevent ctrl+s default behavior ([#5066](https://github.com/vuejs/vue-next/issues/5066)) ([b027507](https://github.com/vuejs/vue-next/commit/b0275070e4824c5efa868528f610eaced83d8fbc))
+* support ref in v-for, remove compat deprecation warnings ([41c18ef](https://github.com/vuejs/vue-next/commit/41c18effea9dd32ab899b5de3bb0513abdb52ee4))
+
+
+
 ## [3.2.24](https://github.com/vuejs/vue-next/compare/v3.2.23...v3.2.24) (2021-12-06)
 
 
