@@ -98,8 +98,8 @@ importers:
 
   packages/compiler-core:
     specifiers:
-      '@babel/parser': ^7.15.0
-      '@babel/types': ^7.15.0
+      '@babel/parser': ^7.16.4
+      '@babel/types': ^7.16.0
       '@vue/shared': 3.2.24
       estree-walker: ^2.0.2
       source-map: ^0.6.1
@@ -121,8 +121,8 @@ importers:
 
   packages/compiler-sfc:
     specifiers:
-      '@babel/parser': ^7.15.0
-      '@babel/types': ^7.15.0
+      '@babel/parser': ^7.16.4
+      '@babel/types': ^7.16.0
       '@types/estree': ^0.0.48
       '@types/lru-cache': ^5.1.0
       '@vue/compiler-core': 3.2.24
@@ -182,8 +182,9 @@ importers:
 
   packages/reactivity-transform:
     specifiers:
-      '@babel/core': ^7.15.0
-      '@babel/parser': ^7.15.0
+      '@babel/core': ^7.16.0
+      '@babel/parser': ^7.16.4
+      '@babel/types': ^7.16.0
       '@vue/compiler-core': 3.2.24
       '@vue/shared': 3.2.24
       estree-walker: ^2.0.2
@@ -196,6 +197,7 @@ importers:
       magic-string: 0.25.7
     devDependencies:
       '@babel/core': 7.16.0
+      '@babel/types': 7.16.0
 
   packages/runtime-core:
     specifiers:

@@ -33,11 +33,11 @@
   "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/compiler-core#readme",
   "dependencies": {
     "@vue/shared": "3.2.24",
-    "@babel/parser": "^7.15.0",
+    "@babel/parser": "^7.16.4",
     "estree-walker": "^2.0.2",
     "source-map": "^0.6.1"
   },
   "devDependencies": {
-    "@babel/types": "^7.15.0"
+    "@babel/types": "^7.16.0"
   }
 }
