@@ -33,7 +33,8 @@ export {
   SFCBlock,
   SFCTemplateBlock,
   SFCScriptBlock,
-  SFCStyleBlock
+  SFCStyleBlock,
+  SFCParseResult
 } from './parse'
 export {
   TemplateCompiler,
@@ -46,6 +47,7 @@ export {
   SFCStyleCompileResults
 } from './compileStyle'
 export { SFCScriptCompileOptions } from './compileScript'
+export { AssetURLOptions, AssetURLTagConfig } from './templateTransformAssetUrl'
 export {
   CompilerOptions,
   CompilerError,
