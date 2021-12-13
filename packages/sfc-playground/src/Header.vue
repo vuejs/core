@@ -191,7 +191,7 @@ h1 img {
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 520px) {
   h1 span {
     display: none;
   }
