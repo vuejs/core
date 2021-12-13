@@ -323,6 +323,52 @@ describe('defineCustomElement', () => {
       await nextTick()
       expect(consumer.shadowRoot!.innerHTML).toBe(`<div>changed!</div>`)
     })
+
+    test('inherited from ancestors', async () => {
+      const fooA = ref('FooA!')
+      const fooB = ref('FooB!')
+      const ProviderA = defineCustomElement({
+        provide: {
+          fooA
+        },
+        render() {
+          return h('provider-b')
+        }
+      })
+      const ProviderB = defineCustomElement({
+        provide: {
+          fooB
+        },
+        render() {
+          return h('my-multi-consumer')
+        }
+      })
+
+      const Consumer = defineCustomElement({
+        setup() {
+          const fooA = inject<Ref>('fooA')!
+          const fooB = inject<Ref>('fooB')!
+          return () => h('div', `${fooA.value} ${fooB.value}`)
+        }
+      })
+
+      customElements.define('provider-a', ProviderA)
+      customElements.define('provider-b', ProviderB)
+      customElements.define('my-multi-consumer', Consumer)
+      container.innerHTML = `<provider-a><provider-a>`
+      const providerA = container.childNodes[0] as VueElement
+      const providerB = providerA.shadowRoot!.childNodes[0] as VueElement
+      const consumer = providerB.shadowRoot!.childNodes[0] as VueElement
+
+      expect(consumer.shadowRoot!.innerHTML).toBe(`<div>FooA! FooB!</div>`)
+
+      fooA.value = 'changedA!'
+      fooB.value = 'changedB!'
+      await nextTick()
+      expect(consumer.shadowRoot!.innerHTML).toBe(
+        `<div>changedA! changedB!</div>`
+      )
+    })
   })
 
   describe('styles', () => {
