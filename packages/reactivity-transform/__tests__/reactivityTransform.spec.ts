@@ -102,6 +102,30 @@ test('$computed declaration', () => {
   assertCode(code)
 })
 
+test('$toRef declaration', () => {
+  const { code, rootRefs, importedHelpers } = transform(`
+    let a = $toRef(b)
+    `)
+  expect(code).toMatch(`
+    let a = _toRef(b)
+    `)
+  expect(rootRefs).toStrictEqual(['a'])
+  expect(importedHelpers).toStrictEqual(['toRef'])
+  assertCode(code)
+})
+
+test('$customRef declaration', () => {
+  const { code, rootRefs, importedHelpers } = transform(`
+    let a = $customRef((track, trigger) => {})
+    `)
+  expect(code).toMatch(`
+    let a = _customRef((track, trigger) => {})
+    `)
+  expect(rootRefs).toStrictEqual(['a'])
+  expect(importedHelpers).toStrictEqual(['customRef'])
+  assertCode(code)
+})
+
 test('mixing $ref & $computed declarations', () => {
   const { code, rootRefs, importedHelpers } = transform(`
     let a = $ref(1), b = $computed(() => a + 1)
