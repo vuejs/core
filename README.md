@@ -74,8 +74,7 @@ It is recommended to use [VSCode](https://code.visualstudio.com/). There are cur
 ### TypeScript Support
 
 - All Vue 3 packages ship with types.
-- [vue-tsc](https://github.com/johnsoncodehk/vue-tsc) perform TypeScript type checks / diagnostics on Vue SFCs via the command line.
-- [vue-dts-gen](https://github.com/egoist/vue-dts-gen): generate TypeScript definitions from Vue SFCs.
+- [vue-tsc](https://github.com/johnsoncodehk/volar/tree/master/packages/vue-tsc) perform TypeScript type checks / diagnostics on Vue SFCs via the command line, generate TypeScript definitions from Vue SFCs.
 
 ### Other Projects
 
