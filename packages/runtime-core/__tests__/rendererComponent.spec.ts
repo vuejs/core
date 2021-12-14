@@ -10,7 +10,10 @@ import {
   inject,
   Ref,
   watch,
-  SetupContext
+  SetupContext,
+  createSlots,
+  openBlock,
+  createElementBlock
 } from '@vue/runtime-test'
 
 describe('renderer: component', () => {
@@ -353,5 +356,44 @@ describe('renderer: component', () => {
     await nextTick()
     expect(serializeInner(root)).toBe(`<h1>1</h1>`)
     expect(spy).toHaveBeenCalledTimes(2)
+  })
+  // #5091
+  test('the named slot component containing SVG should be updated correctly', async () => {
+    const flag = ref(true)
+    const Child = {
+      setup(_: any, { slots }: SetupContext) {
+        return () => h('div', null, slots.content && slots.content())
+      }
+    }
+    const App = {
+      setup() {
+        return () =>
+          h(
+            Child,
+            null,
+            createSlots({ _: 2 as any }, [
+              flag.value
+                ? {
+                    name: 'content',
+                    fn: () => [h('svg', null, h('text', null, 'a'))]
+                  }
+                : {
+                    name: 'content',
+                    fn: () => [
+                      (openBlock(),
+                      createElementBlock('svg', null, [h('text', null, 'b')]))
+                    ]
+                  }
+            ])
+          )
+      }
+    }
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<div><svg><text>a</text></svg></div>`)
+
+    flag.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div><svg><text>b</text></svg></div>`)
   })
 })
