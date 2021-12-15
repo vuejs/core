@@ -70,7 +70,8 @@ function createArrayInstrumentations() {
   ;(['push', 'pop', 'shift', 'unshift', 'splice'] as const).forEach(key => {
     instrumentations[key] = function (this: unknown[], ...args: unknown[]) {
       pauseTracking()
-      const res = (Array.prototype as any)[key].apply(this, args)
+      // @ts-ignore
+      const res = this[key](...args)
       resetTracking()
       return res
     }
