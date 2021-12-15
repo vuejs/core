@@ -7,7 +7,7 @@ import {
   defineComponent,
   reactive,
   serializeInner,
-  shallowRef,
+  shallowRef
 } from '@vue/runtime-test'
 
 // reference: https://vue-composition-api-rfc.netlify.com/api.html#template-refs
