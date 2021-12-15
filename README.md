@@ -1,6 +1,6 @@
 # vue-next [![npm](https://img.shields.io/npm/v/vue/next.svg)](https://www.npmjs.com/package/vue/v/next) [![build status](https://github.com/vuejs/vue-next/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/vuejs/vue-next/actions/workflows/ci.yml)
 
-This is the repository for Vue 3.0.2
+This is the repository for Vue 3.0.3
 
 ## Quickstart
 
