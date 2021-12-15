@@ -10,7 +10,7 @@ import {
 } from './vnode'
 import { Teleport, TeleportProps } from './components/Teleport'
 import { Suspense, SuspenseProps } from './components/Suspense'
-import { isObject, isArray } from '@vue/shared'
+import { isObject, isArray ,arraySlice} from '@vue/shared'
 import { RawSlots } from './componentSlots'
 import {
   FunctionalComponent,
@@ -187,7 +187,7 @@ export function h(type: any, propsOrChildren?: any, children?: any): VNode {
     }
   } else {
     if (l > 3) {
-      children = Array.prototype.slice.call(arguments, 2)
+      children = arraySlice.call(arguments, 2)
     } else if (l === 3 && isVNode(children)) {
       children = [children]
     }

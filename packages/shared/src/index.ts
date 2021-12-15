@@ -64,6 +64,8 @@ export const isPromise = <T = any>(val: unknown): val is Promise<T> => {
 }
 
 export const objectToString = Object.prototype.toString
+export const arrayPrototype = Array.prototype
+export const arraySlice = Array.prototype.slice
 export const toTypeString = (value: unknown): string =>
   objectToString.call(value)
 

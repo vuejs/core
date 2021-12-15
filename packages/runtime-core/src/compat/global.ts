@@ -13,7 +13,8 @@ import {
   isArray,
   isObject,
   isString,
-  invokeArrayFns
+  invokeArrayFns,
+  arrayPrototype
 } from '@vue/shared'
 import { warn } from '../warning'
 import { cloneVNode, createVNode } from '../vnode'
@@ -612,7 +613,7 @@ function defineReactive(obj: any, key: string, val: any) {
         // @ts-ignore
         val[m] = (...args: any[]) => {
           // @ts-ignore
-          Array.prototype[m].call(reactiveVal, ...args)
+          arrayPrototype[m].call(reactiveVal, ...args)
         }
       })
     } else {
