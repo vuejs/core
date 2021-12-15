@@ -1044,7 +1044,7 @@ function parseTextData(
   if (
     mode === TextModes.RAWTEXT ||
     mode === TextModes.CDATA ||
-    rawText.indexOf('&') === -1
+    !rawText.includes('&')
   ) {
     return rawText
   } else {

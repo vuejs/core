@@ -345,7 +345,7 @@ function matches(pattern: MatchPattern, name: string): boolean {
   if (isArray(pattern)) {
     return pattern.some((p: string | RegExp) => matches(p, name))
   } else if (isString(pattern)) {
-    return pattern.split(',').indexOf(name) > -1
+    return pattern.split(',').includes(name)
   } else if (pattern.test) {
     return pattern.test(name)
   }
