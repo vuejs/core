@@ -222,7 +222,7 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
   }
 }
 
-export type ToRef<T> = [T] extends [Ref] ? T : Ref<T>
+export type ToRef<T> = [T] extends [Ref<T>] ? T : Ref<T>
 
 export function toRef<T extends object, K extends keyof T>(
   object: T,
