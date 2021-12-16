@@ -148,11 +148,11 @@ function parseChildren(
   const parent = last(ancestors)
   const ns = parent ? parent.ns : Namespaces.HTML
   const nodes: TemplateChildNode[] = []
-
-  while (!isEnd(context, mode, ancestors)) {
+  
+  while (!isEnd(context, mode, ancestors)) {  
+    const s = context.source
+    let node: TemplateChildNode | TemplateChildNode[] | undefined = undefined
     __TEST__ && assert(context.source.length > 0)
-  	const s = context.source
-  	let node: TemplateChildNode | TemplateChildNode[] | undefined = undefined
 
     if (mode === TextModes.DATA || mode === TextModes.RCDATA) {
       if (!context.inVPre && startsWith(s, context.options.delimiters[0])) {
