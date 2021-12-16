@@ -310,7 +310,8 @@ export function hasDynamicKeyVBind(node: ElementNode): boolean {
 export function isText(
   node: TemplateChildNode
 ): node is TextNode | InterpolationNode {
-  return node.type === NodeTypes.INTERPOLATION || node.type === NodeTypes.TEXT
+  const { type } = node
+  return type === NodeTypes.INTERPOLATION || type === NodeTypes.TEXT
 }
 
 export function isVSlot(p: ElementNode['props'][0]): p is DirectiveNode {
