@@ -162,13 +162,15 @@ export const isMemberExpressionNode = __BROWSER__
         let ret: Expression = parseExpression(path, {
           plugins: context.expressionPlugins
         })
-        if (ret.type === 'TSAsExpression' || ret.type === 'TSTypeAssertion') {
+        const type = ret.type
+        if (type === 'TSAsExpression' || type === 'TSTypeAssertion') {
           ret = ret.expression
         }
+
         return (
-          ret.type === 'MemberExpression' ||
-          ret.type === 'OptionalMemberExpression' ||
-          ret.type === 'Identifier'
+          type === 'MemberExpression' ||
+          type === 'OptionalMemberExpression' ||
+          type === 'Identifier'
         )
       } catch (e) {
         return false
