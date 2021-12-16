@@ -857,6 +857,7 @@ function buildDirectiveArgs(
   dir: DirectiveNode,
   context: TransformContext
 ): ArrayExpression {
+  const { name, exp, arg, modifiers, loc } = dir
   const dirArgs: ArrayExpression['elements'] = []
   const runtime = directiveImportMap.get(dir)
   if (runtime) {
@@ -866,27 +867,26 @@ function buildDirectiveArgs(
     // user directive.
     // see if we have directives exposed via <script setup>
     const fromSetup =
-      !__BROWSER__ && resolveSetupReference('v-' + dir.name, context)
+      !__BROWSER__ && resolveSetupReference('v-' + name, context)
     if (fromSetup) {
       dirArgs.push(fromSetup)
     } else {
       // inject statement for resolving directive
       context.helper(RESOLVE_DIRECTIVE)
-      context.directives.add(dir.name)
-      dirArgs.push(toValidAssetId(dir.name, `directive`))
+      context.directives.add(name)
+      dirArgs.push(toValidAssetId(name, `directive`))
     }
   }
-  const { loc } = dir
-  if (dir.exp) dirArgs.push(dir.exp)
-  if (dir.arg) {
-    if (!dir.exp) {
+  if (exp) dirArgs.push(exp)
+  if (arg) {
+    if (!exp) {
       dirArgs.push(`void 0`)
     }
-    dirArgs.push(dir.arg)
+    dirArgs.push(arg)
   }
-  if (Object.keys(dir.modifiers).length) {
-    if (!dir.arg) {
-      if (!dir.exp) {
+  if (Object.keys(modifiers).length) {
+    if (!arg) {
+      if (!exp) {
         dirArgs.push(`void 0`)
       }
       dirArgs.push(`void 0`)
@@ -894,14 +894,14 @@ function buildDirectiveArgs(
     const trueExpression = createSimpleExpression(`true`, false, loc)
     dirArgs.push(
       createObjectExpression(
-        dir.modifiers.map(modifier =>
+        modifiers.map(modifier =>
           createObjectProperty(modifier, trueExpression)
         ),
         loc
       )
     )
   }
-  return createArrayExpression(dirArgs, dir.loc)
+  return createArrayExpression(dirArgs, loc)
 }
 
 function stringifyDynamicPropNames(props: string[]): string {
