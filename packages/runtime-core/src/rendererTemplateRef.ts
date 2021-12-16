@@ -52,7 +52,7 @@ export function setRef(
       : vnode.el
   const value = isUnmount ? null : refValue
 
-  const { i: owner, r: ref } = rawRef
+  const { i: owner, r: ref, k: rawRefKey, f: rawRefMaker } = rawRef
   if (__DEV__ && !owner) {
     warn(
       `Missing ref owner context. ref cannot be used on hoisted vnodes. ` +
@@ -83,7 +83,7 @@ export function setRef(
     const _isRef = isRef(ref)
     if (_isString || _isRef) {
       const doSet = () => {
-        if (rawRef.f) {
+        if (rawRefMaker) {
           const existing = _isString ? refs[ref] : ref.value
           if (isUnmount) {
             isArray(existing) && remove(existing, refValue)
@@ -93,7 +93,7 @@ export function setRef(
                 refs[ref] = [refValue]
               } else {
                 ref.value = [refValue]
-                if (rawRef.k) refs[rawRef.k] = ref.value
+                if (rawRefKey) refs[rawRefKey] = ref.value
               }
             } else if (!existing.includes(refValue)) {
               existing.push(refValue)
@@ -106,7 +106,7 @@ export function setRef(
           }
         } else if (isRef(ref)) {
           ref.value = value
-          if (rawRef.k) refs[rawRef.k] = value
+          if (rawRefKey) refs[rawRefKey] = value
         } else if (__DEV__) {
           warn('Invalid template ref type:', ref, `(${typeof ref})`)
         }
