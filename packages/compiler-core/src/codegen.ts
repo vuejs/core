@@ -194,7 +194,7 @@ export function generate(
   } = {}
 ): CodegenResult {
   const context = createCodegenContext(ast, options)
-  if (options.onContextCreated) options.onContextCreated(context)
+  options.onContextCreated?.(context)
   const {
     mode,
     push,
