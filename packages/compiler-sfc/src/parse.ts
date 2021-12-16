@@ -297,12 +297,12 @@ function createBlock(
   source: string,
   pad: SFCParseOptions['pad']
 ): SFCBlock {
-  const type = node.tag
+  const { tag: type, children } = node
   let { start, end } = node.loc
   let content = ''
-  if (node.children.length) {
-    start = node.children[0].loc.start
-    end = node.children[node.children.length - 1].loc.end
+  if (children.length) {
+    start = children[0].loc.start
+    end = children[children.length - 1].loc.end
     content = source.slice(start.offset, end.offset)
   } else {
     const offset = node.loc.source.indexOf(`</`)
@@ -332,18 +332,19 @@ function createBlock(
   }
   node.props.forEach(p => {
     if (p.type === NodeTypes.ATTRIBUTE) {
-      attrs[p.name] = p.value ? p.value.content || true : true
-      if (p.name === 'lang') {
-        block.lang = p.value && p.value.content
-      } else if (p.name === 'src') {
-        block.src = p.value && p.value.content
+      const { name, value } = p
+      attrs[name] = value ? value.content || true : true
+      if (name === 'lang') {
+        block.lang = value && value.content
+      } else if (name === 'src') {
+        block.src = value && value.content
       } else if (type === 'style') {
-        if (p.name === 'scoped') {
+        if (name === 'scoped') {
           ;(block as SFCStyleBlock).scoped = true
-        } else if (p.name === 'module') {
-          ;(block as SFCStyleBlock).module = attrs[p.name]
+        } else if (name === 'module') {
+          ;(block as SFCStyleBlock).module = attrs[name]
         }
-      } else if (type === 'script' && p.name === 'setup') {
+      } else if (type === 'script' && name === 'setup') {
         ;(block as SFCScriptBlock).setup = attrs.setup
       }
     }

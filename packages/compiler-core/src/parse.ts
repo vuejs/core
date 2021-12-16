@@ -149,10 +149,10 @@ function parseChildren(
   const ns = parent ? parent.ns : Namespaces.HTML
   const nodes: TemplateChildNode[] = []
 
+  const s = context.source
+  let node: TemplateChildNode | TemplateChildNode[] | undefined = undefined
   while (!isEnd(context, mode, ancestors)) {
     __TEST__ && assert(context.source.length > 0)
-    const s = context.source
-    let node: TemplateChildNode | TemplateChildNode[] | undefined = undefined
 
     if (mode === TextModes.DATA || mode === TextModes.RCDATA) {
       if (!context.inVPre && startsWith(s, context.options.delimiters[0])) {
@@ -641,16 +641,16 @@ function isComponent(
   props: (AttributeNode | DirectiveNode)[],
   context: ParserContext
 ) {
-  const options = context.options
-  if (options.isCustomElement(tag)) {
+  const { isCustomElement, isBuiltInComponent, isNativeTag } = context.options
+  if (isCustomElement(tag)) {
     return false
   }
   if (
     tag === 'component' ||
     /^[A-Z]/.test(tag) ||
     isCoreComponent(tag) ||
-    (options.isBuiltInComponent && options.isBuiltInComponent(tag)) ||
-    (options.isNativeTag && !options.isNativeTag(tag))
+    (isBuiltInComponent && isBuiltInComponent(tag)) ||
+    (isNativeTag && isNativeTag(tag))
   ) {
     return true
   }
@@ -658,8 +658,9 @@ function isComponent(
   // casting
   for (let i = 0; i < props.length; i++) {
     const p = props[i]
+    const name = p.name
     if (p.type === NodeTypes.ATTRIBUTE) {
-      if (p.name === 'is' && p.value) {
+      if (name === 'is' && p.value) {
         if (p.value.content.startsWith('vue:')) {
           return true
         } else if (
@@ -676,11 +677,11 @@ function isComponent(
     } else {
       // directive
       // v-is (TODO Deprecate)
-      if (p.name === 'is') {
+      if (name === 'is') {
         return true
       } else if (
         // :is on plain element - only treat as component in compat mode
-        p.name === 'bind' &&
+        name === 'bind' &&
         isStaticArgOf(p.arg, 'is') &&
         __COMPAT__ &&
         checkCompatEnabled(

@@ -45,6 +45,7 @@ import {
 import { isString, isObject, hyphenate, extend, NOOP } from '@vue/shared'
 import { PropsExpression } from './transforms/transformElement'
 import { parseExpression } from '@babel/parser'
+import { Expression } from '@babel/types'
 
 export const isStaticExp = (p: JSChildNode): p is SimpleExpressionNode =>
   p.type === NodeTypes.SIMPLE_EXPRESSION && p.isStatic
@@ -158,17 +159,16 @@ export const isMemberExpressionNode = __BROWSER__
   ? (NOOP as any as (path: string, context: TransformContext) => boolean)
   : (path: string, context: TransformContext): boolean => {
       try {
-        let { type, expression } = parseExpression(path, {
+        let ret: Expression = parseExpression(path, {
           plugins: context.expressionPlugins
-        }) as any
-
-        if (type === 'TSAsExpression' || type === 'TSTypeAssertion') {
-          type = expression.type
+        })
+        if (ret.type === 'TSAsExpression' || ret.type === 'TSTypeAssertion') {
+          ret = ret.expression
         }
         return (
-          type === 'MemberExpression' ||
-          type === 'OptionalMemberExpression' ||
-          type === 'Identifier'
+          ret.type === 'MemberExpression' ||
+          ret.type === 'OptionalMemberExpression' ||
+          ret.type === 'Identifier'
         )
       } catch (e) {
         return false
