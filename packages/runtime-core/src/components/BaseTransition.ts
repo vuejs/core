@@ -141,9 +141,9 @@ const BaseTransitionImpl: ComponentOptions = {
 
     let prevTransitionKey: any
 
+    const children =
+      slots.default && getTransitionRawChildren(slots.default(), true)
     return () => {
-      const children =
-        slots.default && getTransitionRawChildren(slots.default(), true)
       if (!children || !children.length) {
         return
       }
@@ -164,7 +164,9 @@ const BaseTransitionImpl: ComponentOptions = {
       if (
         __DEV__ &&
         mode &&
-        mode !== 'in-out' && mode !== 'out-in' && mode !== 'default'
+        mode !== 'in-out' &&
+        mode !== 'out-in' &&
+        mode !== 'default'
       ) {
         warn(`invalid <transition> mode: ${mode}`)
       }
