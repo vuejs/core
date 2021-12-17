@@ -141,9 +141,9 @@ const BaseTransitionImpl: ComponentOptions = {
 
     let prevTransitionKey: any
 
-    const children =
-      slots.default && getTransitionRawChildren(slots.default(), true)
     return () => {
+      const children =
+        slots.default && getTransitionRawChildren(slots.default(), true)
       if (!children || !children.length) {
         return
       }
