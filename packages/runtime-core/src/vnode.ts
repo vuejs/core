@@ -400,7 +400,7 @@ function createBaseVNode(
   isBlockNode = false,
   needFullChildrenNormalization = false
 ) {
-  const vnode = {
+  const vnode = { 
     __v_isVNode: true,
     __v_skip: true,
     type,
@@ -500,7 +500,7 @@ function _createVNode(
     // createVNode receiving an existing vnode. This happens in cases like
     // <component :is="vnode"/>
     // #2078 make sure to merge refs during the clone instead of overwriting it
-    const cloned = cloneVNode(type, props, true /* mergeRef: true */)
+    const cloned = cloneVNode(type, props, true /* mergeRef: true */) // 进行合并props参数，说明vnode已经有了，但是参数没有
     if (children) {
       normalizeChildren(cloned, children)
     }
@@ -582,7 +582,7 @@ export function guardReactiveProps(props: (Data & VNodeProps) | null) {
 export function cloneVNode<T, U>(
   vnode: VNode<T, U>,
   extraProps?: (Data & VNodeProps) | null,
-  mergeRef = false
+  mergeRef = false // 是否合并ref参数
 ): VNode<T, U> {
   // This is intentionally NOT using spread or extend to avoid the runtime
   // key enumeration cost.

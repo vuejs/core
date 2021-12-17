@@ -487,12 +487,14 @@ function baseCreateRenderer(
 
   const processText: ProcessTextOrCommentFn = (n1, n2, container, anchor) => {
     if (n1 == null) {
+      // 创建文本节点
       hostInsert(
         (n2.el = hostCreateText(n2.children as string)),
         container,
         anchor
       )
     } else {
+      // !  用在赋值的内容后时，使null和undefined类型可以赋值给其他类型并通过编译
       const el = (n2.el = n1.el!)
       if (n2.children !== n1.children) {
         hostSetText(el, n2.children as string)
@@ -507,13 +509,14 @@ function baseCreateRenderer(
     anchor
   ) => {
     if (n1 == null) {
+      // 插入节点到指定dom元素上
       hostInsert(
-        (n2.el = hostCreateComment((n2.children as string) || '')),
+        (n2.el = hostCreateComment((n2.children as string) || '')), // 创建注释节点
         container,
         anchor
       )
     } else {
-      // there's no support for dynamic comments
+      // 不支持动态注释
       n2.el = n1.el
     }
   }
@@ -794,6 +797,7 @@ function baseCreateRenderer(
     optimized,
     start = 0
   ) => {
+    debugger
     for (let i = start; i < children.length; i++) {
       const child = (children[i] = optimized
         ? cloneIfMounted(children[i] as VNode)
@@ -1171,7 +1175,9 @@ function baseCreateRenderer(
   ) => {
     n2.slotScopeIds = slotScopeIds
     if (n1 == null) {
+      // 进行与运算符操作
       if (n2.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
+        // 代码块中添加;避免多个JS文件合并压缩的时候防止文件之间没有;分隔导致错误.
         ;(parentComponent!.ctx as KeepAliveContext).activate(
           n2,
           container,

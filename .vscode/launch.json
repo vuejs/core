@@ -5,16 +5,29 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "vue3-minxins",
+      "type": "chrome",
+      "request": "launch",
+      "sourceMaps": true,
+      "file": "${workspaceRoot}/packages/vue/examples/demo/mixins.html"
+    },
+    {
       "name": "Jest",
       "type": "node",
       "request": "launch",
       "program": "${workspaceFolder}/node_modules/.bin/jest",
       "stopOnEntry": false,
-      "args": ["${fileBasename}", "--runInBand", "--detectOpenHandles"],
+      "args": [
+        "${fileBasename}",
+        "--runInBand",
+        "--detectOpenHandles"
+      ],
       "cwd": "${workspaceFolder}",
       "preLaunchTask": null,
       "runtimeExecutable": null,
-      "runtimeArgs": ["--nolazy"],
+      "runtimeArgs": [
+        "--nolazy"
+      ],
       "env": {
         "NODE_ENV": "development"
       },

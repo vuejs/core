@@ -8,7 +8,7 @@
  * Patch flags can be combined using the | bitwise operator and can be checked
  * using the & operator, e.g.
  *
- * ```js
+ * ```js 
  * const flag = TEXT | CLASS
  * if (flag & TEXT) { ... }
  * ```
