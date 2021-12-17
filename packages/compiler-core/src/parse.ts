@@ -641,16 +641,16 @@ function isComponent(
   props: (AttributeNode | DirectiveNode)[],
   context: ParserContext
 ) {
-  const options = context.options
-  if (options.isCustomElement(tag)) {
+  const { isCustomElement, isBuiltInComponent, isNativeTag } = context.options
+  if (isCustomElement(tag)) {
     return false
   }
   if (
     tag === 'component' ||
     /^[A-Z]/.test(tag) ||
     isCoreComponent(tag) ||
-    (options.isBuiltInComponent && options.isBuiltInComponent(tag)) ||
-    (options.isNativeTag && !options.isNativeTag(tag))
+    (isBuiltInComponent && isBuiltInComponent(tag)) ||
+    (isNativeTag && !isNativeTag(tag))
   ) {
     return true
   }
