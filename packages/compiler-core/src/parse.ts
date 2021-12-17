@@ -658,8 +658,9 @@ function isComponent(
   // casting
   for (let i = 0; i < props.length; i++) {
     const p = props[i]
+    const { name } = p
     if (p.type === NodeTypes.ATTRIBUTE) {
-      if (p.name === 'is' && p.value) {
+      if (name === 'is' && p.value) {
         if (p.value.content.startsWith('vue:')) {
           return true
         } else if (
@@ -676,11 +677,11 @@ function isComponent(
     } else {
       // directive
       // v-is (TODO Deprecate)
-      if (p.name === 'is') {
+      if (name === 'is') {
         return true
       } else if (
         // :is on plain element - only treat as component in compat mode
-        p.name === 'bind' &&
+        name === 'bind' &&
         isStaticArgOf(p.arg, 'is') &&
         __COMPAT__ &&
         checkCompatEnabled(
