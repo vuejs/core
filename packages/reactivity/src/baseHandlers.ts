@@ -119,10 +119,13 @@ function createGetter(isReadonly = false, shallow = false) {
       return res
     }
 
-    if (isRef(res) && !(targetIsArray && isIntegerKey(key))) {
-      // ref unwrapping - does not apply for Array + integer key.
-      return res.value
-    } else if (isObject(res)) {
+    if (isRef(res)) {
+      // ref unwrapping - ignore for Array + integer key.
+      const isIgnore = targetIsArray && isIntegerKey(key)
+      return isIgnore ? res : res.value
+    }
+    
+    if (isObject(res)) {
       // Convert returned value into a proxy as well. we do the isObject check
       // here to avoid invalid value warning. Also need to lazy access readonly
       // and reactive here to avoid circular dependency.
