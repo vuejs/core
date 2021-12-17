@@ -660,8 +660,9 @@ function isComponent(
     const p = props[i]
     const { name } = p
     if (p.type === NodeTypes.ATTRIBUTE) {
-      if (name === 'is' && p.value) {
-        if (p.value.content.startsWith('vue:')) {
+      const { value } = p
+      if (name === 'is' && value) {
+        if (value.content.startsWith('vue:')) {
           return true
         } else if (
           __COMPAT__ &&
