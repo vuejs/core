@@ -1979,9 +1979,7 @@ describe('e2e: Transition', () => {
         </div>
       `
     }).mount(document.createElement('div'))
-    expect(
-      `invalid <transition> mode: none`
-    ).toHaveBeenWarned()
+    expect(`invalid <transition> mode: none`).toHaveBeenWarned()
   })
 
   // #3227
