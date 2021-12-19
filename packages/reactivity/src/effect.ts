@@ -10,11 +10,6 @@ import {
   wasTracked
 } from './dep'
 
-// The main WeakMap that stores {target -> key -> dep} connections.
-// Conceptually, it's easier to think of a dependency as a Dep class
-// which maintains a Set of subscribers, but we simply store them as
-// raw Sets to reduce memory overhead.
-
 // The number of effects currently being tracked recursively.
 let effectTrackDepth = 0
 
@@ -188,12 +183,12 @@ export function track(target: object, type: TrackOpTypes, key: unknown) {
     return
   }
   // @ts-ignore
-  let depsMap = target?._deps
+  let depsMap = target._deps
   if (!depsMap) {
     depsMap = new Map()
     Object.defineProperty(target, '_deps', {
-      enumerable: false,
       configurable: true,
+      enumerable: false,
       writable: true,
       value: depsMap
     })
@@ -254,7 +249,7 @@ export function trigger(
   oldTarget?: Map<unknown, unknown> | Set<unknown>
 ) {
   // @ts-ignore
-  const depsMap = target?._deps
+  const depsMap: Map<any, Dep> = target._deps
   if (!depsMap) {
     // never been tracked
     return
@@ -266,7 +261,7 @@ export function trigger(
     // trigger all effects for target
     deps = [...depsMap.values()]
   } else if (key === 'length' && isArray(target)) {
-    depsMap.forEach((dep: any, key: any) => {
+    depsMap.forEach((dep, key) => {
       if (key === 'length' || key >= (newValue as number)) {
         deps.push(dep)
       }
