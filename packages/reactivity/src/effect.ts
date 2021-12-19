@@ -191,9 +191,10 @@ export function track(target: object, type: TrackOpTypes, key: unknown) {
   let depsMap = target?._deps
   if (!depsMap) {
     depsMap = new Map()
-
     Object.defineProperty(target, '_deps', {
       enumerable: false,
+      configurable: true,
+      writable: true,
       value: depsMap
     })
   }
