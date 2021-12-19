@@ -80,6 +80,7 @@ function createArrayInstrumentations() {
 
 function createGetter(isReadonly = false, shallow = false) {
   return function get(target: Target, key: string | symbol, receiver: object) {
+    if (key === ReactiveFlags.DEPS) return target[ReactiveFlags.DEPS]
     if (key === ReactiveFlags.IS_REACTIVE) {
       return !isReadonly
     } else if (key === ReactiveFlags.IS_READONLY) {

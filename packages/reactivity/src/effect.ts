@@ -9,7 +9,7 @@ import {
   newTracked,
   wasTracked
 } from './dep'
-
+import { ReactiveFlags } from './reactive'
 // The number of effects currently being tracked recursively.
 let effectTrackDepth = 0
 
@@ -183,13 +183,11 @@ export function track(target: object, type: TrackOpTypes, key: unknown) {
     return
   }
   // @ts-ignore
-  let depsMap = target._deps
+  let depsMap = target[ReactiveFlags.DEPS]
   if (!depsMap) {
     depsMap = new Map()
-    Object.defineProperty(target, '_deps', {
-      configurable: true,
+    Object.defineProperty(target, ReactiveFlags.DEPS, {
       enumerable: false,
-      writable: true,
       value: depsMap
     })
   }
@@ -249,7 +247,7 @@ export function trigger(
   oldTarget?: Map<unknown, unknown> | Set<unknown>
 ) {
   // @ts-ignore
-  const depsMap: Map<any, Dep> = target._deps
+  const depsMap: Map<any, Dep> = target[ReactiveFlags.DEPS]
   if (!depsMap) {
     // never been tracked
     return
