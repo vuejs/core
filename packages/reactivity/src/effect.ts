@@ -14,8 +14,6 @@ import {
 // Conceptually, it's easier to think of a dependency as a Dep class
 // which maintains a Set of subscribers, but we simply store them as
 // raw Sets to reduce memory overhead.
-type KeyToDepMap = Map<any, Dep>
-const targetMap = new WeakMap<any, KeyToDepMap>()
 
 // The number of effects currently being tracked recursively.
 let effectTrackDepth = 0
@@ -189,9 +187,15 @@ export function track(target: object, type: TrackOpTypes, key: unknown) {
   if (!isTracking()) {
     return
   }
-  let depsMap = targetMap.get(target)
+  // @ts-ignore
+  let depsMap = target?._deps
   if (!depsMap) {
-    targetMap.set(target, (depsMap = new Map()))
+    depsMap = new Map()
+
+    Object.defineProperty(target, '_deps', {
+      enumerable: false,
+      value: depsMap
+    })
   }
   let dep = depsMap.get(key)
   if (!dep) {
@@ -248,7 +252,8 @@ export function trigger(
   oldValue?: unknown,
   oldTarget?: Map<unknown, unknown> | Set<unknown>
 ) {
-  const depsMap = targetMap.get(target)
+  // @ts-ignore
+  const depsMap = target?._deps
   if (!depsMap) {
     // never been tracked
     return
@@ -260,7 +265,7 @@ export function trigger(
     // trigger all effects for target
     deps = [...depsMap.values()]
   } else if (key === 'length' && isArray(target)) {
-    depsMap.forEach((dep, key) => {
+    depsMap.forEach((dep: any, key: any) => {
       if (key === 'length' || key >= (newValue as number)) {
         deps.push(dep)
       }
