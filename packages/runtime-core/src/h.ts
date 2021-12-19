@@ -10,7 +10,7 @@ import {
 } from './vnode'
 import { Teleport, TeleportProps } from './components/Teleport'
 import { Suspense, SuspenseProps } from './components/Suspense'
-import { isObject, isArray ,arraySlice} from '@vue/shared'
+import { isObject, isArray, arraySlice } from '@vue/shared'
 import { RawSlots } from './componentSlots'
 import {
   FunctionalComponent,
