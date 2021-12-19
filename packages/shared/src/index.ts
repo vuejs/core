@@ -39,11 +39,13 @@ export const remove = <T>(arr: T[], el: T) => {
   }
 }
 
-const hasOwnProperty = Object.prototype.hasOwnProperty
+const hasOwnProperty = Object.prototype.hasOwnProperty.call.bind(
+  Object.prototype.hasOwnProperty
+)
 export const hasOwn = (
   val: object,
   key: string | symbol
-): key is keyof typeof val => hasOwnProperty.call(val, key)
+): key is keyof typeof val => hasOwnProperty(val, key) as boolean
 
 export const isArray = Array.isArray
 export const isMap = (val: unknown): val is Map<any, any> =>
@@ -63,11 +65,11 @@ export const isPromise = <T = any>(val: unknown): val is Promise<T> => {
   return isObject(val) && isFunction(val.then) && isFunction(val.catch)
 }
 
+export const arraySlice = Array.prototype.slice.call.bind(Array.prototype.slice)
 export const objectToString = Object.prototype.toString
-export const arrayPrototype = Array.prototype
-export const arraySlice = Array.prototype.slice
-export const toTypeString = (value: unknown): string =>
-  objectToString.call(value)
+
+const _toTypeString = objectToString.call.bind(objectToString)
+const toTypeString = (value: unknown): string => _toTypeString(value) as string
 
 export const toRawType = (value: unknown): string => {
   // extract "RawType" from strings like "[object RawType]"

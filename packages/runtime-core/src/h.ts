@@ -187,7 +187,7 @@ export function h(type: any, propsOrChildren?: any, children?: any): VNode {
     }
   } else {
     if (l > 3) {
-      children = arraySlice.call(arguments, 2)
+      children = arraySlice(arguments, 2)
     } else if (l === 3 && isVNode(children)) {
       children = [children]
     }
