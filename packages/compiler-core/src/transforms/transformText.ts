@@ -15,20 +15,19 @@ import { getConstantType } from './hoistStatic'
 // Merge adjacent text nodes and expressions into a single expression
 // e.g. <div>abc {{ d }} {{ e }}</div> should have a single expression node as child.
 export const transformText: NodeTransform = (node, context) => {
-  const type = node.type
   if (
-    type === NodeTypes.ROOT ||
-    type === NodeTypes.ELEMENT ||
-    type === NodeTypes.FOR ||
-    type === NodeTypes.IF_BRANCH
+    node.type === NodeTypes.ROOT ||
+    node.type === NodeTypes.ELEMENT ||
+    node.type === NodeTypes.FOR ||
+    node.type === NodeTypes.IF_BRANCH
   ) {
     // perform the transform on node exit so that all expressions have already
     // been processed.
-    const children = node.children
-    let currentContainer: CompoundExpressionNode | undefined = undefined
-    let hasText = false
-
     return () => {
+      const children = node.children
+      let currentContainer: CompoundExpressionNode | undefined = undefined
+      let hasText = false
+
       for (let i = 0; i < children.length; i++) {
         const child = children[i]
         if (isText(child)) {
@@ -62,8 +61,8 @@ export const transformText: NodeTransform = (node, context) => {
         // setting textContent of the element.
         // for component root it's always normalized anyway.
         (children.length === 1 &&
-          (type === NodeTypes.ROOT ||
-            (type === NodeTypes.ELEMENT &&
+          (node.type === NodeTypes.ROOT ||
+            (node.type === NodeTypes.ELEMENT &&
               node.tagType === ElementTypes.ELEMENT &&
               // #3756
               // custom directives can potentially add DOM elements arbitrarily,
