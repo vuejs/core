@@ -171,8 +171,14 @@ export function h<P>(
 ): VNode
 
 // Actual implementation
-export function h(type: any, propsOrChildren?: any, children?: any): VNode {
-  const l = arguments.length
+export function h(
+  type: any,
+  propsOrChildren?: any,
+  children?: any,
+  ..._args: []
+): VNode {
+  const args = [type, propsOrChildren, children, ..._args].filter(Boolean)
+  const l = args.length
   if (l === 2) {
     if (isObject(propsOrChildren) && !isArray(propsOrChildren)) {
       // single vnode without props
@@ -187,7 +193,7 @@ export function h(type: any, propsOrChildren?: any, children?: any): VNode {
     }
   } else {
     if (l > 3) {
-      children = Array.prototype.slice.call(arguments, 2)
+      children = Array.prototype.slice.call(args, 2)
     } else if (l === 3 && isVNode(children)) {
       children = [children]
     }
