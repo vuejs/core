@@ -12,7 +12,8 @@ import { PluginCreator } from 'postcss'
 import hash from 'hash-sum'
 
 export const CSS_VARS_HELPER = `useCssVars`
-export const cssVarRE = /\bv-bind\(\s*(?:'([^']+)'|"([^"]+)"|([^'"][^)]*))\s*\)/g
+export const cssVarRE =
+  /\bv-bind\(\s*(?:'([^']+)'|"([^"]+)"|([^'"][^)]*))\s*\)/g
 
 export function genCssVarsFromList(
   vars: string[],
@@ -31,7 +32,11 @@ function genVarName(id: string, raw: string, isProd: boolean): string {
     return `${id}-${raw.replace(/([^\w-])/g, '_')}`
   }
 }
-
+/**
+ * 在这里解析style中的变量 v-bind
+ * @param sfc
+ * @returns
+ */
 export function parseCssVars(sfc: SFCDescriptor): string[] {
   const vars: string[] = []
   sfc.styles.forEach(style => {
