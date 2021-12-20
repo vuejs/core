@@ -1,0 +1,14 @@
+<script src="../../dist/vue.global.js"></script>
+<div id="app">
+  <h1>i am h1</h1>
+  <h2>i am h2</h2>
+</div>
+<script>
+  let { createApp } = Vue
+
+  createApp({
+    mounted() {
+      console.log('this is fragment')
+    }
+  }).mount('#app')
+</script>

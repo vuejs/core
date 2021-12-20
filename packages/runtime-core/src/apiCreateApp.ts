@@ -179,7 +179,6 @@ export function createAppAPI<HostElement>(
   hydrate?: RootHydrateFunction
 ): CreateAppFunction<HostElement> {
   return function createApp(rootComponent, rootProps = null) {
-    debugger
     console.log('--createAppAPI--')
     if (rootProps != null && !isObject(rootProps)) {
       __DEV__ && warn(`root props passed to app.mount() must be an object.`)
@@ -281,7 +280,6 @@ export function createAppAPI<HostElement>(
         isHydrate?: boolean,
         isSVG?: boolean
       ): any {
-        debugger
         if (!isMounted) {
           const vnode = createVNode(
             rootComponent as ConcreteComponent,

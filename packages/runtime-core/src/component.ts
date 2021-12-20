@@ -591,7 +591,6 @@ function setupStatefulComponent(
   instance: ComponentInternalInstance,
   isSSR: boolean
 ) {
-  debugger
   const Component = instance.type as ComponentOptions
 
   if (__DEV__) {

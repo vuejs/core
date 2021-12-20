@@ -79,10 +79,12 @@ export const createApp = ((...args) => {
   const { mount } = app
 
   app.mount = (containerOrSelector: Element | ShadowRoot | string): any => {
+    // 兼容不同的平台，有些平台是没有ele元素的，比如ios开发
     const container = normalizeContainer(containerOrSelector)
     if (!container) return
 
     const component = app._component
+    // function是沒有內容的，并且判断render或者template有没有内容
     if (!isFunction(component) && !component.render && !component.template) {
       // __UNSAFE__
       // Reason: potential execution of JS expressions in in-DOM template.

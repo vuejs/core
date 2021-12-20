@@ -337,7 +337,6 @@ function baseCreateRenderer(
   options: RendererOptions,
   createHydrationFns?: typeof createHydrationFunctions
 ): any {
-  debugger
   console.log('--baseCreateRenderer--')
   // compile-time feature flags check
   if (__ESM_BUNDLER__ && !__TEST__) {
@@ -797,7 +796,6 @@ function baseCreateRenderer(
     optimized,
     start = 0
   ) => {
-    debugger
     for (let i = start; i < children.length; i++) {
       const child = (children[i] = optimized
         ? cloneIfMounted(children[i] as VNode)
@@ -1075,6 +1073,7 @@ function baseCreateRenderer(
     slotScopeIds: string[] | null,
     optimized: boolean
   ) => {
+    debugger
     const fragmentStartAnchor = (n2.el = n1 ? n1.el : hostCreateText(''))!
     const fragmentEndAnchor = (n2.anchor = n1 ? n1.anchor : hostCreateText(''))!
 
