@@ -109,10 +109,10 @@ export const transformFor = createStructuralDirectiveTransform(
         node.loc
       ) as ForCodegenNode
 
+      const isTemplate = isTemplateNode(node)
       return () => {
         // finish the codegen now that all children have been traversed
         let childBlock: BlockCodegenNode
-        const isTemplate = isTemplateNode(node)
         const { children } = forNode
 
         // check <template v-for> key placement
