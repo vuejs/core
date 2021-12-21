@@ -12,7 +12,8 @@ export function makeMap(
   const map: Record<string, boolean> = Object.create(null)
   const list: Array<string> = str.split(',')
   for (let i = 0; i < list.length; i++) {
-    map[list[i]] = true
+    const val = list[i]
+    map[expectsLowerCase ? val.toLowerCase() : val] = true
   }
-  return expectsLowerCase ? val => !!map[val.toLowerCase()] : val => !!map[val]
+  return val => map[val]
 }
