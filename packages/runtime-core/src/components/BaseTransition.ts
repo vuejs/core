@@ -164,9 +164,7 @@ const BaseTransitionImpl: ComponentOptions = {
       if (
         __DEV__ &&
         mode &&
-        mode !== 'in-out' &&
-        mode !== 'out-in' &&
-        mode !== 'default'
+        mode !== 'in-out' && mode !== 'out-in' && mode !== 'default'
       ) {
         warn(`invalid <transition> mode: ${mode}`)
       }
