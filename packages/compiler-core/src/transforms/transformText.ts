@@ -23,11 +23,10 @@ export const transformText: NodeTransform = (node, context) => {
   ) {
     // perform the transform on node exit so that all expressions have already
     // been processed.
+    const children = node.children
+    let currentContainer: CompoundExpressionNode | undefined = undefined
+    let hasText = false
     return () => {
-      const children = node.children
-      let currentContainer: CompoundExpressionNode | undefined = undefined
-      let hasText = false
-
       for (let i = 0; i < children.length; i++) {
         const child = children[i]
         if (isText(child)) {
