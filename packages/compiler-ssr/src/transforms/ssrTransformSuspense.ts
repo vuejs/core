@@ -29,8 +29,9 @@ export function ssrTransformSuspense(
   node: ComponentNode,
   context: TransformContext
 ) {
+  const length = node.children.length
   return () => {
-    if (node.children.length) {
+    if (length) {
       const wipEntry: WIPEntry = {
         slotsExp: null!, // to be immediately set
         wipSlots: []
