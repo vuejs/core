@@ -66,9 +66,8 @@ export const isPromise = <T = any>(val: unknown): val is Promise<T> => {
 }
 
 export const objectToString = Object.prototype.toString
-const toTypeString = objectToString.call.bind(objectToString) as (
-  value: unknown
-) => string
+export const toTypeString = (value: unknown): string =>
+  objectToString.call(value)
 
 export const toRawType = (value: unknown): string => {
   // extract "RawType" from strings like "[object RawType]"
