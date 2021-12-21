@@ -1,4 +1,4 @@
-import { isArray, isDate, isObject } from './'
+import { isArray, isDate, isObject, hasOwn } from './'
 
 function looseCompareArrays(a: any[], b: any[]) {
   if (a.length !== b.length) return false
@@ -34,8 +34,8 @@ export function looseEqual(a: any, b: any): boolean {
       return false
     }
     for (const key in a) {
-      const aHasKey = a.hasOwnProperty(key)
-      const bHasKey = b.hasOwnProperty(key)
+      const aHasKey = hasOwn(a, key)
+      const bHasKey = hasOwn(b, key)
       if (
         (aHasKey && !bHasKey) ||
         (!aHasKey && bHasKey) ||
