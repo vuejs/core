@@ -1,0 +1,66 @@
+name: "\U0001F41E Bug report"
+description: Create a report to help us improve
+labels: ["bug: pending triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Before You Start...**
+        The issue list is reserved exclusively for bug reports and feature requests. That means we do not accept usage questions. If you open an issue that does not conform to the requirements, **it will be closed immediately**.
+        [Why are we so strict about this?](https://new-issue.vuejs.org/?repo=vuejs/vue&type=bug-report#why-strict)
+
+        For usage questions, please use the following resources:
+
+        - Read the [docs](https://vuejs.org/guide/)
+        - Watch [video tutorials](https://laracasts.com/series/learn-vue-2-step-by-step)
+        - Ask on the [forums](https://forum.vuejs.org/)
+        - Ask on the [chat](https://chat.vuejs.org/)
+        - Look for / ask questions on [Stack Overflow](https://stackoverflow.com/questions/ask?tags=vue.js)
+
+        Also try to search for your issue - it may have already been answered or even fixed in the development branch. However, if you find that an old, closed issue still persists in the latest version, you should open a new issue using the form below instead of commenting on the old issue.
+  - type: input
+    id: reproduction-link
+    attributes:
+      label: Link to minimal reproduction
+      description: |
+        For Vue 3 core reproductions, try reproducing it in [The SFC Playground](https://sfc.vuejs.org/). If it is a Vue 2 bug or cannot be reproduced in the playground, you can use [CodePen](https://codepen.io/pen/), [CodeSandbox](https://codesandbox.io/s/vue) or provide a GitHub repo.
+        [What is a minimal reproduction, and why is it required?](https://new-issue.vuejs.org/?repo=vuejs/vue&type=bug-report#why-repro)
+        Please do not just fill in a random link. We will close your issue if you do that.
+      placeholder: Reproduction Link
+    validations:
+      required: true
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to reproduce
+      description: |
+        What do we need to do after opening your repro in order to make the bug happen? Clear and concise reproduction instructions are important for us to be able to triage your issue in a timely manner. Note that you can use [Markdown](https://guides.github.com/features/mastering-markdown/) to format lists and code.
+      placeholder: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What is expected?
+    validations:
+      required: true
+  - type: textarea
+    id: actually-happening
+    attributes:
+      label: What is actually happening?
+    validations:
+      required: true
+  - type: textarea
+    id: system-info
+    attributes:
+      label: System Info
+      description: Output of `npx envinfo --system --npmPackages vue --binaries --browsers`
+      render: shell
+      placeholder: System, Binaries, Browsers
+    validations:
+      required: true
+  - type: textarea
+    id: additional-comments
+    attributes:
+      label: Any additional comments?
+      description: e.g. some background/context of how you ran into this bug.

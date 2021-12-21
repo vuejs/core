@@ -1,0 +1,40 @@
+name: "\U0001F680 New feature proposal"
+description: Suggest an idea for this project
+labels: ["enhancement: pending triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Before You Start...**
+        The issue list is reserved exclusively for bug reports and feature requests. That means we do not accept usage questions. If you open an issue that does not conform to the requirements, **it will be closed immediately**.
+        [Why are we so strict about this?](https://new-issue.vuejs.org/?repo=vuejs/vue&type=bug-report#why-strict)
+
+        For usage questions, please use the following resources:
+
+        - Read the [docs](https://vuejs.org/guide/)
+        - Watch [video tutorials](https://laracasts.com/series/learn-vue-2-step-by-step)
+        - Ask on the [forums](https://forum.vuejs.org/)
+        - Ask on the [chat](https://chat.vuejs.org/)
+        - Look for / ask questions on [Stack Overflow](https://stackoverflow.com/questions/ask?tags=vue.js)
+
+        Also try to search for your issue - it may have already been answered or even fixed in the development branch. However, if you find that an old, closed issue still persists in the latest version, you should open a new issue using the form below instead of commenting on the old issue.
+  - type: textarea
+    id: problem-description
+    attributes:
+      label: What problem does this feature solve?
+      description: |
+        Explain your use case, context, and rationale behind this feature request. More importantly, what is the **end user experience** you are trying to build that led to the need for this feature?
+
+        An important design goal of Vue is keeping the API surface small and straightforward. In general, we only consider adding new features that solve a problem that cannot be easily dealt with using existing APIs (i.e. not just an alternative way of doing things that can already be done). The problem should also be common enough to justify the addition.
+      placeholder: Problem description
+    validations:
+      required: true
+  - type: textarea
+    id: proposed-API
+    attributes:
+      label: What does the proposed API look like?
+      description: |
+        Describe how you propose to solve the problem and provide code samples of how the API would work once implemented. Note that you can use [Markdown](https://guides.github.com/features/mastering-markdown/) to format your code blocks.
+      placeholder: Steps to reproduce
+    validations:
+      required: true
