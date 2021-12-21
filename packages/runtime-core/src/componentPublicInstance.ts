@@ -260,6 +260,7 @@ export interface ComponentRenderContext {
   _: ComponentInternalInstance
 }
 
+// 对实例进行proxy代理
 export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
   get({ _: instance }: ComponentRenderContext, key: string) {
     const { ctx, setupState, data, props, accessCache, type, appContext } =

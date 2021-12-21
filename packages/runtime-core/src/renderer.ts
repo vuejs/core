@@ -2327,6 +2327,7 @@ function baseCreateRenderer(
     } else {
       patch(container._vnode || null, vnode, container, null, null, null, isSVG)
     }
+    // 清空队列里面的回调内容
     flushPostFlushCbs()
     container._vnode = vnode
   }

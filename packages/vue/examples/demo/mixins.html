@@ -9,9 +9,9 @@
 </script>
 
 <script>
-  let { h } = Vue
+  let { h, ref } = Vue
   const mymixins = {
-    // template: '#myM',
+    template: '#myM',
     mounted() {
       console.log('i am mymixins mounted')
     },
@@ -21,6 +21,11 @@
   }
   const app = Vue.createApp({
     components: {mymixins},
+    setup() {
+      let a = ref(8)
+      console.log('8888')
+      return { a }
+    },
     mounted() {
       console.log(this)
     }
