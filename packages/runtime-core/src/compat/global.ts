@@ -88,7 +88,7 @@ export type CompatVue = Pick<App, 'version' | 'component' | 'directive'> & {
   compile(template: string): RenderFunction
 
   /**
-   * @deprecated
+   * @deprecated Vue 3 no longer supports extending constructors.
    */
   extend: (options?: ComponentOptions) => CompatVue
   /**
@@ -602,7 +602,7 @@ const methodsToPatch = [
 const patched = new WeakSet<object>()
 
 function defineReactive(obj: any, key: string, val: any) {
-  // it's possible for the orignial object to be mutated after being defined
+  // it's possible for the original object to be mutated after being defined
   // and expecting reactivity... we are covering it here because this seems to
   // be a bit more common.
   if (isObject(val) && !isReactive(val) && !patched.has(val)) {

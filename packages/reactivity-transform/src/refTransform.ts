@@ -4,10 +4,10 @@ import {
   BlockStatement,
   CallExpression,
   ObjectPattern,
-  VariableDeclaration,
   ArrayPattern,
   Program,
-  VariableDeclarator
+  VariableDeclarator,
+  Expression
 } from '@babel/types'
 import MagicString, { SourceMap } from 'magic-string'
 import { walk } from 'estree-walker'
@@ -20,11 +20,11 @@ import {
   walkFunctionParams
 } from '@vue/compiler-core'
 import { parse, ParserPlugin } from '@babel/parser'
-import { hasOwn } from '@vue/shared'
+import { hasOwn, isArray, isString } from '@vue/shared'
 
-const TO_VAR_SYMBOL = '$'
-const TO_REF_SYMBOL = '$$'
-const shorthands = ['ref', 'computed', 'shallowRef']
+const CONVERT_SYMBOL = '$'
+const ESCAPE_SYMBOL = '$$'
+const shorthands = ['ref', 'computed', 'shallowRef', 'toRef', 'customRef']
 const transformCheckRE = /[^\w]\$(?:\$|ref|computed|shallowRef)?\s*(\(|\<)/
 
 export function shouldTransform(src: string): boolean {
@@ -71,7 +71,7 @@ export function transform(
     plugins
   })
   const s = new MagicString(src)
-  const res = transformAST(ast.program, s)
+  const res = transformAST(ast.program, s, 0)
 
   // inject helper imports
   if (res.importedHelpers.length) {
@@ -106,21 +106,52 @@ export function transformAST(
       local: string // local identifier, may be different
       default?: any
     }
-  >,
-  rewritePropsOnly = false
+  >
 ): {
   rootRefs: string[]
   importedHelpers: string[]
 } {
   // TODO remove when out of experimental
-  if (!rewritePropsOnly) {
-    warnExperimental()
+  warnExperimental()
+
+  let convertSymbol = CONVERT_SYMBOL
+  let escapeSymbol = ESCAPE_SYMBOL
+
+  // macro import handling
+  for (const node of ast.body) {
+    if (
+      node.type === 'ImportDeclaration' &&
+      node.source.value === 'vue/macros'
+    ) {
+      // remove macro imports
+      s.remove(node.start! + offset, node.end! + offset)
+      // check aliasing
+      for (const specifier of node.specifiers) {
+        if (specifier.type === 'ImportSpecifier') {
+          const imported = (specifier.imported as Identifier).name
+          const local = specifier.local.name
+          if (local !== imported) {
+            if (imported === ESCAPE_SYMBOL) {
+              escapeSymbol = local
+            } else if (imported === CONVERT_SYMBOL) {
+              convertSymbol = local
+            } else {
+              error(
+                `macro imports for ref-creating methods do not support aliasing.`,
+                specifier
+              )
+            }
+          }
+        }
+      }
+    }
   }
 
   const importedHelpers = new Set<string>()
   const rootScope: Scope = {}
   const scopeStack: Scope[] = [rootScope]
   let currentScope: Scope = rootScope
+  let escapeScope: CallExpression | undefined // inside $$()
   const excludedIds = new WeakSet<Identifier>()
   const parentStack: Node[] = []
   const propsLocalToPublicMap = Object.create(null)
@@ -138,8 +169,17 @@ export function transformAST(
     }
   }
 
+  function isRefCreationCall(callee: string): string | false {
+    if (callee === convertSymbol) {
+      return convertSymbol
+    }
+    if (callee[0] === '$' && shorthands.includes(callee.slice(1))) {
+      return callee
+    }
+    return false
+  }
+
   function error(msg: string, node: Node) {
-    if (rewritePropsOnly) return
     const e = new Error(msg)
     ;(e as any).node = node
     throw e
@@ -164,26 +204,30 @@ export function transformAST(
 
   const registerRefBinding = (id: Identifier) => registerBinding(id, true)
 
+  let tempVarCount = 0
+  function genTempVar() {
+    return `__$temp_${++tempVarCount}`
+  }
+
+  function snip(node: Node) {
+    return s.original.slice(node.start! + offset, node.end! + offset)
+  }
+
   function walkScope(node: Program | BlockStatement, isRoot = false) {
     for (const stmt of node.body) {
       if (stmt.type === 'VariableDeclaration') {
         if (stmt.declare) continue
         for (const decl of stmt.declarations) {
-          let toVarCall
+          let refCall
           const isCall =
             decl.init &&
             decl.init.type === 'CallExpression' &&
             decl.init.callee.type === 'Identifier'
           if (
             isCall &&
-            (toVarCall = isToVarCall((decl as any).init.callee.name))
+            (refCall = isRefCreationCall((decl as any).init.callee.name))
           ) {
-            processRefDeclaration(
-              toVarCall,
-              decl.init as CallExpression,
-              decl.id,
-              stmt
-            )
+            processRefDeclaration(refCall, decl.id, decl.init as CallExpression)
           } else {
             const isProps =
               isRoot &&
@@ -212,15 +256,11 @@ export function transformAST(
 
   function processRefDeclaration(
     method: string,
-    call: CallExpression,
     id: VariableDeclarator['id'],
-    statement: VariableDeclaration
+    call: CallExpression
   ) {
     excludedIds.add(call.callee as Identifier)
-    if (statement.kind !== 'let') {
-      error(`${method}() bindings can only be declared with let`, call)
-    }
-    if (method === TO_VAR_SYMBOL) {
+    if (method === convertSymbol) {
       // $
       // remove macro
       s.remove(call.callee.start! + offset, call.callee.end! + offset)
@@ -228,9 +268,9 @@ export function transformAST(
         // single variable
         registerRefBinding(id)
       } else if (id.type === 'ObjectPattern') {
-        processRefObjectPattern(id, statement)
+        processRefObjectPattern(id, call)
       } else if (id.type === 'ArrayPattern') {
-        processRefArrayPattern(id, statement)
+        processRefArrayPattern(id, call)
       }
     } else {
       // shorthands
@@ -250,15 +290,24 @@ export function transformAST(
 
   function processRefObjectPattern(
     pattern: ObjectPattern,
-    statement: VariableDeclaration
+    call: CallExpression,
+    tempVar?: string,
+    path: PathSegment[] = []
   ) {
+    if (!tempVar) {
+      tempVar = genTempVar()
+      // const { x } = $(useFoo()) --> const __$temp_1 = useFoo()
+      s.overwrite(pattern.start! + offset, pattern.end! + offset, tempVar)
+    }
+
     for (const p of pattern.properties) {
       let nameId: Identifier | undefined
+      let key: Expression | string | undefined
+      let defaultValue: Expression | undefined
       if (p.type === 'ObjectProperty') {
         if (p.key.start! === p.value.start!) {
-          // shorthand { foo } --> { foo: __foo }
+          // shorthand { foo }
           nameId = p.key as Identifier
-          s.appendLeft(nameId.end! + offset, `: __${nameId.name}`)
           if (p.value.type === 'Identifier') {
             // avoid shorthand value identifier from being processed
             excludedIds.add(p.value)
@@ -268,33 +317,56 @@ export function transformAST(
           ) {
             // { foo = 1 }
             excludedIds.add(p.value.left)
+            defaultValue = p.value.right
           }
         } else {
+          key = p.computed ? p.key : (p.key as Identifier).name
           if (p.value.type === 'Identifier') {
-            // { foo: bar } --> { foo: __bar }
+            // { foo: bar }
             nameId = p.value
-            s.prependRight(nameId.start! + offset, `__`)
           } else if (p.value.type === 'ObjectPattern') {
-            processRefObjectPattern(p.value, statement)
+            processRefObjectPattern(p.value, call, tempVar, [...path, key])
           } else if (p.value.type === 'ArrayPattern') {
-            processRefArrayPattern(p.value, statement)
+            processRefArrayPattern(p.value, call, tempVar, [...path, key])
           } else if (p.value.type === 'AssignmentPattern') {
-            // { foo: bar = 1 } --> { foo: __bar = 1 }
-            nameId = p.value.left as Identifier
-            s.prependRight(nameId.start! + offset, `__`)
+            if (p.value.left.type === 'Identifier') {
+              // { foo: bar = 1 }
+              nameId = p.value.left
+              defaultValue = p.value.right
+            } else if (p.value.left.type === 'ObjectPattern') {
+              processRefObjectPattern(p.value.left, call, tempVar, [
+                ...path,
+                [key, p.value.right]
+              ])
+            } else if (p.value.left.type === 'ArrayPattern') {
+              processRefArrayPattern(p.value.left, call, tempVar, [
+                ...path,
+                [key, p.value.right]
+              ])
+            } else {
+              // MemberExpression case is not possible here, ignore
+            }
           }
         }
       } else {
-        // rest element { ...foo } --> { ...__foo }
-        nameId = p.argument as Identifier
-        s.prependRight(nameId.start! + offset, `__`)
+        // rest element { ...foo }
+        error(`reactivity destructure does not support rest elements.`, p)
       }
       if (nameId) {
         registerRefBinding(nameId)
-        // append binding declarations after the parent statement
+        // inject toRef() after original replaced pattern
+        const source = pathToString(tempVar, path)
+        const keyStr = isString(key)
+          ? `'${key}'`
+          : key
+          ? snip(key)
+          : `'${nameId.name}'`
+        const defaultStr = defaultValue ? `, ${snip(defaultValue)}` : ``
         s.appendLeft(
-          statement.end! + offset,
-          `\nconst ${nameId.name} = ${helper('shallowRef')}(__${nameId.name});`
+          call.end! + offset,
+          `,\n  ${nameId.name} = ${helper(
+            'toRef'
+          )}(${source}, ${keyStr}${defaultStr})`
         )
       }
     }
@@ -302,35 +374,77 @@ export function transformAST(
 
   function processRefArrayPattern(
     pattern: ArrayPattern,
-    statement: VariableDeclaration
+    call: CallExpression,
+    tempVar?: string,
+    path: PathSegment[] = []
   ) {
-    for (const e of pattern.elements) {
+    if (!tempVar) {
+      // const [x] = $(useFoo()) --> const __$temp_1 = useFoo()
+      tempVar = genTempVar()
+      s.overwrite(pattern.start! + offset, pattern.end! + offset, tempVar)
+    }
+
+    for (let i = 0; i < pattern.elements.length; i++) {
+      const e = pattern.elements[i]
       if (!e) continue
       let nameId: Identifier | undefined
+      let defaultValue: Expression | undefined
       if (e.type === 'Identifier') {
         // [a] --> [__a]
         nameId = e
       } else if (e.type === 'AssignmentPattern') {
-        // [a = 1] --> [__a = 1]
+        // [a = 1]
         nameId = e.left as Identifier
+        defaultValue = e.right
       } else if (e.type === 'RestElement') {
-        // [...a] --> [...__a]
-        nameId = e.argument as Identifier
+        // [...a]
+        error(`reactivity destructure does not support rest elements.`, e)
       } else if (e.type === 'ObjectPattern') {
-        processRefObjectPattern(e, statement)
+        processRefObjectPattern(e, call, tempVar, [...path, i])
       } else if (e.type === 'ArrayPattern') {
-        processRefArrayPattern(e, statement)
+        processRefArrayPattern(e, call, tempVar, [...path, i])
       }
       if (nameId) {
         registerRefBinding(nameId)
-        // prefix original
-        s.prependRight(nameId.start! + offset, `__`)
-        // append binding declarations after the parent statement
+        // inject toRef() after original replaced pattern
+        const source = pathToString(tempVar, path)
+        const defaultStr = defaultValue ? `, ${snip(defaultValue)}` : ``
         s.appendLeft(
-          statement.end! + offset,
-          `\nconst ${nameId.name} = ${helper('shallowRef')}(__${nameId.name});`
+          call.end! + offset,
+          `,\n  ${nameId.name} = ${helper(
+            'toRef'
+          )}(${source}, ${i}${defaultStr})`
         )
       }
+    }
+  }
+
+  type PathSegmentAtom = Expression | string | number
+
+  type PathSegment =
+    | PathSegmentAtom
+    | [PathSegmentAtom, Expression /* default value */]
+
+  function pathToString(source: string, path: PathSegment[]): string {
+    if (path.length) {
+      for (const seg of path) {
+        if (isArray(seg)) {
+          source = `(${source}${segToString(seg[0])} || ${snip(seg[1])})`
+        } else {
+          source += segToString(seg)
+        }
+      }
+    }
+    return source
+  }
+
+  function segToString(seg: PathSegmentAtom): string {
+    if (typeof seg === 'number') {
+      return `[${seg}]`
+    } else if (typeof seg === 'string') {
+      return `.${seg}`
+    } else {
+      return snip(seg)
     }
   }
 
@@ -344,36 +458,54 @@ export function transformAST(
       const bindingType = scope[id.name]
       if (bindingType) {
         const isProp = bindingType === 'prop'
-        if (rewritePropsOnly && !isProp) {
-          return true
-        }
-        // ref
         if (isStaticProperty(parent) && parent.shorthand) {
           // let binding used in a property shorthand
-          // { foo } -> { foo: foo.value }
-          // { prop } -> { prop: __prop.prop }
           // skip for destructure patterns
           if (
             !(parent as any).inPattern ||
             isInDestructureAssignment(parent, parentStack)
           ) {
             if (isProp) {
-              s.appendLeft(
-                id.end! + offset,
-                `: __props.${propsLocalToPublicMap[id.name]}`
-              )
+              if (escapeScope) {
+                // prop binding in $$()
+                // { prop } -> { prop: __prop_prop }
+                registerEscapedPropBinding(id)
+                s.appendLeft(
+                  id.end! + offset,
+                  `: __props_${propsLocalToPublicMap[id.name]}`
+                )
+              } else {
+                // { prop } -> { prop: __prop.prop }
+                s.appendLeft(
+                  id.end! + offset,
+                  `: __props.${propsLocalToPublicMap[id.name]}`
+                )
+              }
             } else {
+              // { foo } -> { foo: foo.value }
               s.appendLeft(id.end! + offset, `: ${id.name}.value`)
             }
           }
         } else {
           if (isProp) {
-            s.overwrite(
-              id.start! + offset,
-              id.end! + offset,
-              `__props.${propsLocalToPublicMap[id.name]}`
-            )
+            if (escapeScope) {
+              // x --> __props_x
+              registerEscapedPropBinding(id)
+              s.overwrite(
+                id.start! + offset,
+                id.end! + offset,
+                `__props_${propsLocalToPublicMap[id.name]}`
+              )
+            } else {
+              // x --> __props.x
+              s.overwrite(
+                id.start! + offset,
+                id.end! + offset,
+                `__props.${propsLocalToPublicMap[id.name]}`
+              )
+            }
           } else {
+            // x --> x.value
             s.appendLeft(id.end! + offset, '.value')
           }
         }
@@ -381,6 +513,20 @@ export function transformAST(
       return true
     }
     return false
+  }
+
+  const propBindingRefs: Record<string, true> = {}
+  function registerEscapedPropBinding(id: Identifier) {
+    if (!propBindingRefs.hasOwnProperty(id.name)) {
+      propBindingRefs[id.name] = true
+      const publicKey = propsLocalToPublicMap[id.name]
+      s.prependRight(
+        offset,
+        `const __props_${publicKey} = ${helper(
+          `toRef`
+        )}(__props, '${publicKey}')\n`
+      )
+    }
   }
 
   // check root scope first
@@ -418,6 +564,8 @@ export function transformAST(
 
       if (
         node.type === 'Identifier' &&
+        // if inside $$(), skip unless this is a destructured prop binding
+        !(escapeScope && rootScope[node.name] !== 'prop') &&
         isReferencedIdentifier(node, parent!, parentStack) &&
         !excludedIds.has(node)
       ) {
@@ -433,18 +581,18 @@ export function transformAST(
       if (node.type === 'CallExpression' && node.callee.type === 'Identifier') {
         const callee = node.callee.name
 
-        const toVarCall = isToVarCall(callee)
-        if (toVarCall && (!parent || parent.type !== 'VariableDeclarator')) {
+        const refCall = isRefCreationCall(callee)
+        if (refCall && (!parent || parent.type !== 'VariableDeclarator')) {
           return error(
-            `${toVarCall} can only be used as the initializer of ` +
+            `${refCall} can only be used as the initializer of ` +
               `a variable declaration.`,
             node
           )
         }
 
-        if (callee === TO_REF_SYMBOL) {
+        if (callee === escapeSymbol) {
           s.remove(node.callee.start! + offset, node.callee.end! + offset)
-          return this.skip()
+          escapeScope = node
         }
 
         // TODO remove when out of experimental
@@ -473,6 +621,9 @@ export function transformAST(
         scopeStack.pop()
         currentScope = scopeStack[scopeStack.length - 1] || null
       }
+      if (node === escapeScope) {
+        escapeScope = undefined
+      }
     }
   })
 
@@ -480,16 +631,6 @@ export function transformAST(
     rootRefs: Object.keys(rootScope).filter(key => rootScope[key] === true),
     importedHelpers: [...importedHelpers]
   }
-}
-
-function isToVarCall(callee: string): string | false {
-  if (callee === TO_VAR_SYMBOL) {
-    return TO_VAR_SYMBOL
-  }
-  if (callee[0] === TO_VAR_SYMBOL && shorthands.includes(callee.slice(1))) {
-    return callee
-  }
-  return false
 }
 
 const RFC_LINK = `https://github.com/vuejs/rfcs/discussions/369`
@@ -501,7 +642,7 @@ function warnExperimental() {
     return
   }
   warnOnce(
-    `@vue/ref-transform is an experimental feature.\n` +
+    `Reactivity transform is an experimental feature.\n` +
       `Experimental features may change behavior between patch versions.\n` +
       `It is recommended to pin your vue dependencies to exact versions to avoid breakage.\n` +
       `You can follow the proposal's status at ${RFC_LINK}.`

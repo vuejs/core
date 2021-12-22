@@ -1,4 +1,4 @@
-# @vue/ref-transform
+# @vue/reactivity-transform
 
 > ⚠️ This is experimental and currently only provided for testing and feedback. It may break during patches or even be removed. Use at your own risk!
 >
@@ -6,32 +6,50 @@
 
 ## Basic Rules
 
-- `$()` to turn refs into reative variables
-- `$$()` to access the original refs from reative variables
+- Ref-creating APIs have `$`-prefixed versions that create reactive variables instead. They also do not need to be explicitly imported. These include:
+  - `ref`
+  - `computed`
+  - `shallowRef`
+  - `customRef`
+  - `toRef`
+- `$()` can be used to destructure an object into reactive variables, or turn existing refs into reactive variables
+- `$$()` to "escape" the transform, which allows access to underlying refs
 
 ```js
-import { ref, watch } from 'vue'
+import { watchEffect } from 'vue'
 
 // bind ref as a variable
-let count = $(ref(0))
+let count = $ref(0)
 
-// no need for .value
-console.log(count)
-
-// get the actual ref
-watch($$(count), c => console.log(`count changed to ${c}`))
+watchEffect(() => {
+  // no need for .value
+  console.log(count)
+})
 
 // assignments are reactive
 count++
+
+// get the actual ref
+console.log($$(count)) // { value: 1 }
 ```
 
-### Shorthands
+Macros can be optionally imported to make it more explicit:
 
-A few commonly used APIs have shorthands (which also removes the need to import them):
+```js
+// not necessary, but also works
+import { $, $ref } from 'vue/macros'
 
-- `$(ref(0))` -> `$ref(0)`
-- `$(computed(() => 123))` -> `$computed(() => 123)`
-- `$(shallowRef({}))` -> `$shallowRef({})`
+let count = $ref(0)
+const { x, y } = $(useMouse())
+```
+
+### Global Types
+
+To enable types for the macros globally, include the following in a `.d.ts` file:
+
+```ts
+/// <reference types="vue/macros-global" />
+```
 
 ## API
 
@@ -42,7 +60,7 @@ This package is the lower-level transform that can be used standalone. Higher-le
 Can be used to do a cheap check to determine whether full transform should be performed.
 
 ```js
-import { shouldTransform } from '@vue/ref-transform'
+import { shouldTransform } from '@vue/reactivity-transform'
 
 shouldTransform(`let a = ref(0)`) // false
 shouldTransform(`let a = $ref(0)`) // true
@@ -51,7 +69,7 @@ shouldTransform(`let a = $ref(0)`) // true
 ### `transform`
 
 ```js
-import { transform } from '@vue/ref-transform'
+import { transform } from '@vue/reactivity-transform'
 
 const src = `let a = $ref(0); a++`
 const {
@@ -86,7 +104,7 @@ interface RefTransformOptions {
 Transform with an existing Babel AST + MagicString instance. This is used internally by `@vue/compiler-sfc` to avoid double parse/transform cost.
 
 ```js
-import { transformAST } from '@vue/ref-transform'
+import { transformAST } from '@vue/reactivity-transform'
 import { parse } from '@babel/parser'
 import MagicString from 'magic-string'
 

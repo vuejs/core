@@ -1,3 +1,105 @@
+## [3.2.26](https://github.com/vuejs/vue-next/compare/v3.2.25...v3.2.26) (2021-12-12)
+
+
+
+## [3.2.25](https://github.com/vuejs/vue-next/compare/v3.2.24...v3.2.25) (2021-12-12)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** generate valid TS in script and script setup co-usage with TS ([7e4f0a8](https://github.com/vuejs/vue-next/commit/7e4f0a869498e7dce601e7c150f402045ea2e79b)), closes [#5094](https://github.com/vuejs/vue-next/issues/5094)
+* **compiler:** force block for custom dirs and inline beforeUpdate hooks ([1c9a481](https://github.com/vuejs/vue-next/commit/1c9a4810fcdd2b6c1c6c3be077aebbecbfcbcf1e))
+* **runtime-core:** disallow recurse in vnode/directive beforeUpdate hooks ([a1167c5](https://github.com/vuejs/vue-next/commit/a1167c57e5514be57505f4bce8d163aa1f92cf14))
+
+
+### Features
+
+* **compiler-core:** support aliasing vue: prefixed events to inline vnode hooks ([4b0ca87](https://github.com/vuejs/vue-next/commit/4b0ca8709a7e2652f4b02665f378d47ba4dbe969))
+* **experimental:** allow const for ref sugar declarations ([9823bd9](https://github.com/vuejs/vue-next/commit/9823bd95d11f22f0ae53f5e0b705a21b6e6e8859))
+* **reactivity-transform/types:** restructure macro types + export types for all shorthand methods ([db729ce](https://github.com/vuejs/vue-next/commit/db729ce99eb13cd18dad600055239c63edd9cfb8))
+* **reactivity-transform:** $$() escape for destructured prop bindings ([198ca14](https://github.com/vuejs/vue-next/commit/198ca14f192f9eb80028153f3d36600e636de3f0))
+* **reactivity-transform:** rename @vue/ref-transform to @vue/reactivity-transform ([d70fd8d](https://github.com/vuejs/vue-next/commit/d70fd8d36b23c987f2ebe3280da785f4d2e7d2ef))
+* **reactivity-transform:** support $-shorthands for all ref-creating APIs ([179fc05](https://github.com/vuejs/vue-next/commit/179fc05a8406eac525c8450153b42fcb5af7d6bb))
+* **reactivity-transform:** support optionally importing macros ([fbd0fe9](https://github.com/vuejs/vue-next/commit/fbd0fe97595f759e12e445c713b732775589fabf))
+* **reactivity-transform:** use toRef() for $() destructure codegen ([93ba6b9](https://github.com/vuejs/vue-next/commit/93ba6b974e4a2ff4ba004fef47ef69cfe980c654))
+* **reactivity:** support default value in toRef() ([2db9c90](https://github.com/vuejs/vue-next/commit/2db9c909c2cf3845f57b2c930c05cd6c17abe3b0))
+* **sfc-playground:** add github link ([#5067](https://github.com/vuejs/vue-next/issues/5067)) ([9ac0dde](https://github.com/vuejs/vue-next/commit/9ac0ddea4beec1a1c4471463d3476ccd019bd84e))
+* **sfc-playground:** prevent ctrl+s default behavior ([#5066](https://github.com/vuejs/vue-next/issues/5066)) ([b027507](https://github.com/vuejs/vue-next/commit/b0275070e4824c5efa868528f610eaced83d8fbc))
+* support ref in v-for, remove compat deprecation warnings ([41c18ef](https://github.com/vuejs/vue-next/commit/41c18effea9dd32ab899b5de3bb0513abdb52ee4))
+
+
+
+## [3.2.24](https://github.com/vuejs/vue-next/compare/v3.2.23...v3.2.24) (2021-12-06)
+
+
+### Bug Fixes
+
+* **compat:** maintain compatConfig option in legacy functional comp ([#4974](https://github.com/vuejs/vue-next/issues/4974)) ([ee97cf5](https://github.com/vuejs/vue-next/commit/ee97cf5a4db9e4f135d8eb25aff725eb37363675))
+* **compiler-dom:** avoid bailing stringification on setup const bindings ([29beda7](https://github.com/vuejs/vue-next/commit/29beda7c6f69f79e65f0111cb2d2b8d57d8257bb))
+* **compiler-sfc:** make asset url imports stringifiable ([87c73e9](https://github.com/vuejs/vue-next/commit/87c73e99d6aed0771f8c955ca9d5188ec22c90e7))
+* **package:** ensure ref-macros export is recognized by vue-tsc ([#5003](https://github.com/vuejs/vue-next/issues/5003)) ([f855269](https://github.com/vuejs/vue-next/commit/f8552697fbbdbd444d8322c6b6adeb48cc0b5617))
+* **runtime-core:** handle initial undefined attrs ([#5017](https://github.com/vuejs/vue-next/issues/5017)) ([6d887aa](https://github.com/vuejs/vue-next/commit/6d887aaf591cfa05d5fea978bbd87e3e502bfa86)), closes [#5016](https://github.com/vuejs/vue-next/issues/5016)
+* **types/reactivity:** export ShallowRef type ([#5026](https://github.com/vuejs/vue-next/issues/5026)) ([523b4b7](https://github.com/vuejs/vue-next/commit/523b4b78f5d2e11f1822e09c324a854c790a7863)), closes [#5205](https://github.com/vuejs/vue-next/issues/5205)
+
+
+### Features
+
+* **types/script-setup:** add generic type to defineExpose ([#5035](https://github.com/vuejs/vue-next/issues/5035)) ([34985fe](https://github.com/vuejs/vue-next/commit/34985fee6b23018b6eb6322239db6165c1b0e273))
+
+
+
+## [3.2.23](https://github.com/vuejs/vue-next/compare/v3.2.22...v3.2.23) (2021-11-26)
+
+
+### Bug Fixes
+
+* **reactivity:** retain readonly proxies when setting as reactive property ([d145128](https://github.com/vuejs/vue-next/commit/d145128ab400f4563eb3727626d0942ea5f4980a)), closes [#4986](https://github.com/vuejs/vue-next/issues/4986)
+* **runtime-core:** fix component public instance has check for accessed non-existent properties ([aac0466](https://github.com/vuejs/vue-next/commit/aac0466cb8819fd132fbcc9c4d3e1014c14e2ad8)), closes [#4962](https://github.com/vuejs/vue-next/issues/4962)
+* **runtime-core:** handle error in async KeepAlive hooks ([#4978](https://github.com/vuejs/vue-next/issues/4978)) ([820a143](https://github.com/vuejs/vue-next/commit/820a14345798edc0ab673bae8ce3181e479d9cca))
+* **runtime-dom:** fix option element value patching edge case ([#4959](https://github.com/vuejs/vue-next/issues/4959)) ([89b2f92](https://github.com/vuejs/vue-next/commit/89b2f924fc82d7f71dcb8ffbacb386fd5cf9ade2)), closes [#4956](https://github.com/vuejs/vue-next/issues/4956)
+* **runtime-dom:** patchDOMProps should not set _value if element is custom element ([#4839](https://github.com/vuejs/vue-next/issues/4839)) ([1701bf3](https://github.com/vuejs/vue-next/commit/1701bf3968f001dd3a2bc9f41e3e7e0f1b13e922))
+* **types:** export ref-macros.d.ts ([1245709](https://github.com/vuejs/vue-next/commit/124570973df4ddfdd38e43bf1e92b9710321e5d9))
+* **types:** fix propType<any> type inference ([#4985](https://github.com/vuejs/vue-next/issues/4985)) ([3c449cd](https://github.com/vuejs/vue-next/commit/3c449cd408840d35987fb32b39737fbf093809d6)), closes [#4983](https://github.com/vuejs/vue-next/issues/4983)
+* **types:** scrip-setup+ts: ensure proper handling of `null` as default prop value. ([#4979](https://github.com/vuejs/vue-next/issues/4979)) ([f2d2d7b](https://github.com/vuejs/vue-next/commit/f2d2d7b2d236f256531ae9ad2048bd939c92d834)), closes [#4868](https://github.com/vuejs/vue-next/issues/4868)
+
+
+### Features
+
+* **compiler-sfc:** export resolveTemplateUsageCheckString for HMR plugin use ([#4908](https://github.com/vuejs/vue-next/issues/4908)) ([c61baac](https://github.com/vuejs/vue-next/commit/c61baac75a03b938bc728a8de961ba93736a0ff6))
+* **compiler-sfc:** expose properties for more accurate HMR ([68c45e7](https://github.com/vuejs/vue-next/commit/68c45e73da902e715df9614800a7ab43d6579198)), closes [#4358](https://github.com/vuejs/vue-next/issues/4358) [#4908](https://github.com/vuejs/vue-next/issues/4908)
+
+
+
+## [3.2.22](https://github.com/vuejs/vue-next/compare/v3.2.21...v3.2.22) (2021-11-15)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** add type for props include Function in prod mode ([#4938](https://github.com/vuejs/vue-next/issues/4938)) ([9c42a1e](https://github.com/vuejs/vue-next/commit/9c42a1e2a3385f3b33faed5cdcc430bf8c1fc4b2))
+* **compiler-sfc:** add type for props's properties in prod mode ([#4790](https://github.com/vuejs/vue-next/issues/4790)) ([090df08](https://github.com/vuejs/vue-next/commit/090df0837eb0aedd8a02fd0107b7668ca5c136a1)), closes [#4783](https://github.com/vuejs/vue-next/issues/4783)
+* **compiler-sfc:** externalRE support automatic http/https prefix url pattern ([#4922](https://github.com/vuejs/vue-next/issues/4922)) ([574070f](https://github.com/vuejs/vue-next/commit/574070f43f804fd855f4ee319936ec770a56cef0)), closes [#4920](https://github.com/vuejs/vue-next/issues/4920)
+* **compiler-sfc:** fix expose codegen edge case ([#4919](https://github.com/vuejs/vue-next/issues/4919)) ([31fd590](https://github.com/vuejs/vue-next/commit/31fd590fd47e2dc89b84687ffe26a5c6f05fea34)), closes [#4917](https://github.com/vuejs/vue-next/issues/4917)
+* **devtool:** improve devtools late injection browser env detection ([#4890](https://github.com/vuejs/vue-next/issues/4890)) ([fa2237f](https://github.com/vuejs/vue-next/commit/fa2237f1d824eac511c4246135318594c48dc121))
+* **runtime-core:** improve dedupe listeners when attr fallthrough ([#4912](https://github.com/vuejs/vue-next/issues/4912)) ([b4eb7e3](https://github.com/vuejs/vue-next/commit/b4eb7e3866d7dc722d93a48f4faae1696d4e7023)), closes [#4859](https://github.com/vuejs/vue-next/issues/4859)
+* **types/sfc:** fix withDefaults type inference when using union types ([#4925](https://github.com/vuejs/vue-next/issues/4925)) ([04e5835](https://github.com/vuejs/vue-next/commit/04e58351965caf489ac68e4961ef70448d954912))
+
+
+
+## [3.2.21](https://github.com/vuejs/vue-next/compare/v3.2.20...v3.2.21) (2021-11-02)
+
+
+### Bug Fixes
+
+* **custom-element:** fix custom element props access on initial render ([4b7f76e](https://github.com/vuejs/vue-next/commit/4b7f76e36a7fc650986a20eca258f7a5d912424f)), closes [#4792](https://github.com/vuejs/vue-next/issues/4792)
+* **custom-element:** fix initial attr type casting for programmtically created elements ([3ca8317](https://github.com/vuejs/vue-next/commit/3ca83179d1a798f65e4e70215c511e2f1b64adb6)), closes [#4772](https://github.com/vuejs/vue-next/issues/4772)
+* **devtools:** avoid open handle in non-browser env ([6916d72](https://github.com/vuejs/vue-next/commit/6916d725a06a57e92ff9d046ccf132c305cd0a51)), closes [#4815](https://github.com/vuejs/vue-next/issues/4815)
+* **devtools:** fix memory leak when devtools is not installed ([#4833](https://github.com/vuejs/vue-next/issues/4833)) ([6b32f0d](https://github.com/vuejs/vue-next/commit/6b32f0d976c0aac8bb2c1b78fedd03e76fb391eb)), closes [#4829](https://github.com/vuejs/vue-next/issues/4829)
+* **runtime-core:** add `v-memo` to built-in directives check ([#4787](https://github.com/vuejs/vue-next/issues/4787)) ([5eb7263](https://github.com/vuejs/vue-next/commit/5eb72630a53a8dd82c2b8a9705c21a8075161a3d))
+* **runtime-dom:** fix behavior regression for v-show + style display binding ([3f38d59](https://github.com/vuejs/vue-next/commit/3f38d599f5aacdd3eeaa9475251a24f74e7ae3b4)), closes [#4768](https://github.com/vuejs/vue-next/issues/4768)
+* **types:** fix ref unwrapping type inference for nested shallowReactive & shallowRef ([20a3615](https://github.com/vuejs/vue-next/commit/20a361541cc5faffa82cbf3f2d49639a97b3b678)), closes [#4771](https://github.com/vuejs/vue-next/issues/4771)
+
+
+
 ## [3.2.20](https://github.com/vuejs/vue-next/compare/v3.2.19...v3.2.20) (2021-10-08)
 
 

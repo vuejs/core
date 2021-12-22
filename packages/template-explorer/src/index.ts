@@ -40,6 +40,9 @@ window.init = () => {
       localStorage.getItem('state') ||
       `{}`
   )
+  // functions are not persistable, so delete it in case we sometimes need
+  // to debug with custom nodeTransforms
+  delete persistedState.options.nodeTransforms
 
   ssrMode.value = persistedState.ssr
   Object.assign(compilerOptions, persistedState.options)

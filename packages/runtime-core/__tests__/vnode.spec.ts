@@ -12,7 +12,7 @@ import {
 } from '../src/vnode'
 import { Data } from '../src/component'
 import { ShapeFlags, PatchFlags } from '@vue/shared'
-import { h, reactive, isReactive, setBlockTracking } from '../src'
+import { h, reactive, isReactive, setBlockTracking, ref } from '../src'
 import { createApp, nodeOps, serializeInner } from '@vue/runtime-test'
 import { setCurrentRenderingInstance } from '../src/componentRenderContext'
 
@@ -236,20 +236,24 @@ describe('vnode', () => {
 
     setCurrentRenderingInstance(mockInstance1)
     const original = createVNode('div', { ref: 'foo' })
-    expect(original.ref).toStrictEqual({ i: mockInstance1, r: 'foo' })
+    expect(original.ref).toMatchObject({
+      i: mockInstance1,
+      r: 'foo',
+      f: false
+    })
 
     // clone and preserve original ref
     const cloned1 = cloneVNode(original)
-    expect(cloned1.ref).toStrictEqual({ i: mockInstance1, r: 'foo' })
+    expect(cloned1.ref).toMatchObject({ i: mockInstance1, r: 'foo', f: false })
 
     // cloning with new ref, but with same context instance
     const cloned2 = cloneVNode(original, { ref: 'bar' })
-    expect(cloned2.ref).toStrictEqual({ i: mockInstance1, r: 'bar' })
+    expect(cloned2.ref).toMatchObject({ i: mockInstance1, r: 'bar', f: false })
 
     // cloning and adding ref to original that has no ref
     const original2 = createVNode('div')
     const cloned3 = cloneVNode(original2, { ref: 'bar' })
-    expect(cloned3.ref).toStrictEqual({ i: mockInstance1, r: 'bar' })
+    expect(cloned3.ref).toMatchObject({ i: mockInstance1, r: 'bar', f: false })
 
     // cloning with different context instance
     setCurrentRenderingInstance(mockInstance2)
@@ -257,16 +261,35 @@ describe('vnode', () => {
     // clone and preserve original ref
     const cloned4 = cloneVNode(original)
     // #1311 should preserve original context instance!
-    expect(cloned4.ref).toStrictEqual({ i: mockInstance1, r: 'foo' })
+    expect(cloned4.ref).toMatchObject({ i: mockInstance1, r: 'foo', f: false })
 
     // cloning with new ref, but with same context instance
     const cloned5 = cloneVNode(original, { ref: 'bar' })
     // new ref should use current context instance and overwrite original
-    expect(cloned5.ref).toStrictEqual({ i: mockInstance2, r: 'bar' })
+    expect(cloned5.ref).toMatchObject({ i: mockInstance2, r: 'bar', f: false })
 
     // cloning and adding ref to original that has no ref
     const cloned6 = cloneVNode(original2, { ref: 'bar' })
-    expect(cloned6.ref).toStrictEqual({ i: mockInstance2, r: 'bar' })
+    expect(cloned6.ref).toMatchObject({ i: mockInstance2, r: 'bar', f: false })
+
+    const original3 = createVNode('div', { ref: 'foo', ref_for: true })
+    expect(original3.ref).toMatchObject({
+      i: mockInstance2,
+      r: 'foo',
+      f: true
+    })
+    const cloned7 = cloneVNode(original3, { ref: 'bar', ref_for: true })
+    expect(cloned7.ref).toMatchObject({ i: mockInstance2, r: 'bar', f: true })
+
+    const r = ref()
+    const original4 = createVNode('div', { ref: r, ref_key: 'foo' })
+    expect(original4.ref).toMatchObject({
+      i: mockInstance2,
+      r,
+      k: 'foo'
+    })
+    const cloned8 = cloneVNode(original4)
+    expect(cloned8.ref).toMatchObject({ i: mockInstance2, r, k: 'foo' })
 
     setCurrentRenderingInstance(null)
   })
@@ -277,14 +300,14 @@ describe('vnode', () => {
 
     setCurrentRenderingInstance(mockInstance1)
     const original = createVNode('div', { ref: 'foo' })
-    expect(original.ref).toStrictEqual({ i: mockInstance1, r: 'foo' })
+    expect(original.ref).toMatchObject({ i: mockInstance1, r: 'foo', f: false })
 
     // clone and preserve original ref
     setCurrentRenderingInstance(mockInstance2)
     const cloned1 = cloneVNode(original, { ref: 'bar' }, true)
-    expect(cloned1.ref).toStrictEqual([
-      { i: mockInstance1, r: 'foo' },
-      { i: mockInstance2, r: 'bar' }
+    expect(cloned1.ref).toMatchObject([
+      { i: mockInstance1, r: 'foo', f: false },
+      { i: mockInstance2, r: 'bar', f: false }
     ])
 
     setCurrentRenderingInstance(null)

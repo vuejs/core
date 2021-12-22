@@ -194,3 +194,28 @@ export function render(_ctx, _cache) {
   ], 64 /* STABLE_FRAGMENT */))
 }"
 `;
+
+exports[`compiler sfc: transform srcset transform srcset w/ stringify 1`] = `
+"import { createElementVNode as _createElementVNode, createStaticVNode as _createStaticVNode, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
+import _imports_0 from './logo.png'
+import _imports_1 from '/logo.png'
+
+
+const _hoisted_1 = _imports_0
+const _hoisted_2 = _imports_0 + ' 2x'
+const _hoisted_3 = _imports_0 + ' 2x'
+const _hoisted_4 = _imports_0 + ', ' + _imports_0 + ' 2x'
+const _hoisted_5 = _imports_0 + ' 2x, ' + _imports_0
+const _hoisted_6 = _imports_0 + ' 2x, ' + _imports_0 + ' 3x'
+const _hoisted_7 = _imports_0 + ', ' + _imports_0 + ' 2x, ' + _imports_0 + ' 3x'
+const _hoisted_8 = _imports_1 + ', ' + _imports_1 + ' 2x'
+const _hoisted_9 = _imports_1 + ', ' + _imports_0 + ' 2x'
+const _hoisted_10 = /*#__PURE__*/_createStaticVNode(\\"<img src=\\\\\\"./logo.png\\\\\\" srcset=\\\\\\"\\\\\\"><img src=\\\\\\"./logo.png\\\\\\" srcset=\\\\\\"\\" + _hoisted_1 + \\"\\\\\\"><img src=\\\\\\"./logo.png\\\\\\" srcset=\\\\\\"\\" + _hoisted_2 + \\"\\\\\\"><img src=\\\\\\"./logo.png\\\\\\" srcset=\\\\\\"\\" + _hoisted_3 + \\"\\\\\\"><img src=\\\\\\"./logo.png\\\\\\" srcset=\\\\\\"\\" + _hoisted_4 + \\"\\\\\\"><img src=\\\\\\"./logo.png\\\\\\" srcset=\\\\\\"\\" + _hoisted_5 + \\"\\\\\\"><img src=\\\\\\"./logo.png\\\\\\" srcset=\\\\\\"\\" + _hoisted_6 + \\"\\\\\\"><img src=\\\\\\"./logo.png\\\\\\" srcset=\\\\\\"\\" + _hoisted_7 + \\"\\\\\\"><img src=\\\\\\"/logo.png\\\\\\" srcset=\\\\\\"\\" + _hoisted_8 + \\"\\\\\\"><img src=\\\\\\"https://example.com/logo.png\\\\\\" srcset=\\\\\\"https://example.com/logo.png, https://example.com/logo.png 2x\\\\\\"><img src=\\\\\\"/logo.png\\\\\\" srcset=\\\\\\"\\" + _hoisted_9 + \\"\\\\\\"><img src=\\\\\\"data:image/png;base64,i\\\\\\" srcset=\\\\\\"data:image/png;base64,i 1x, data:image/png;base64,i 2x\\\\\\">\\", 12)
+const _hoisted_22 = [
+  _hoisted_10
+]
+
+export function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock(\\"div\\", null, _hoisted_22))
+}"
+`;

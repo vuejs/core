@@ -7,14 +7,16 @@ import {
   Fragment,
   VNodeHook,
   createVNode,
-  createTextVNode
+  createTextVNode,
+  invokeVNodeHook
 } from './vnode'
 import { flushPostFlushCbs } from './scheduler'
 import { ComponentInternalInstance } from './component'
 import { invokeDirectiveHook } from './directives'
 import { warn } from './warning'
 import { PatchFlags, ShapeFlags, isReservedProp, isOn } from '@vue/shared'
-import { RendererInternals, invokeVNodeHook, setRef } from './renderer'
+import { RendererInternals } from './renderer'
+import { setRef } from './rendererTemplateRef'
 import {
   SuspenseImpl,
   SuspenseBoundary,

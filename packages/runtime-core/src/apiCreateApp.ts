@@ -83,7 +83,7 @@ export interface AppConfig {
   ) => void
 
   /**
-   * Options to pass to @vue/compiler-dom.
+   * Options to pass to `@vue/compiler-dom`.
    * Only supported in runtime compiler build.
    */
   compilerOptions: RuntimeCompilerOptions

@@ -12,8 +12,10 @@ export {
   ToRef,
   ToRefs,
   UnwrapRef,
+  ShallowRef,
   ShallowUnwrapRef,
-  RefUnwrapBailTypes
+  RefUnwrapBailTypes,
+  CustomRefFactory
 } from './ref'
 export {
   reactive,

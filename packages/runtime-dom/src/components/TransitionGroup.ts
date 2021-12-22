@@ -27,13 +27,8 @@ import {
 } from '@vue/runtime-core'
 import { extend } from '@vue/shared'
 
-interface Position {
-  top: number
-  left: number
-}
-
-const positionMap = new WeakMap<VNode, Position>()
-const newPositionMap = new WeakMap<VNode, Position>()
+const positionMap = new WeakMap<VNode, DOMRect>()
+const newPositionMap = new WeakMap<VNode, DOMRect>()
 
 export type TransitionGroupProps = Omit<TransitionProps, 'mode'> & {
   tag?: string
