@@ -4,12 +4,12 @@ import { compileSFCScript as compile, assertCode } from './utils'
 // this file only tests integration with SFC - main test case for the ref
 // transform can be found in <root>/packages/reactivity-transform/__tests__
 describe('sfc ref transform', () => {
-  function compileWithRefTransform(src: string) {
-    return compile(src, { refTransform: true })
+  function compileWithReactivityTransform(src: string) {
+    return compile(src, { reactivityTransform: true })
   }
 
   test('$ unwrapping', () => {
-    const { content, bindings } = compileWithRefTransform(`<script setup>
+    const { content, bindings } = compileWithReactivityTransform(`<script setup>
     import { ref, shallowRef } from 'vue'
     let foo = $(ref())
     let a = $(ref(1))
@@ -46,7 +46,7 @@ describe('sfc ref transform', () => {
   })
 
   test('$ref & $shallowRef declarations', () => {
-    const { content, bindings } = compileWithRefTransform(`<script setup>
+    const { content, bindings } = compileWithReactivityTransform(`<script setup>
     let foo = $ref()
     let a = $ref(1)
     let b = $shallowRef({
@@ -82,7 +82,7 @@ describe('sfc ref transform', () => {
   })
 
   test('usage in normal <script>', () => {
-    const { content } = compileWithRefTransform(`<script>
+    const { content } = compileWithReactivityTransform(`<script>
     export default {
       setup() {
         let count = $ref(0)
@@ -100,7 +100,7 @@ describe('sfc ref transform', () => {
   })
 
   test('usage /w typescript', () => {
-    const { content } = compileWithRefTransform(`
+    const { content } = compileWithReactivityTransform(`
       <script setup lang="ts">
         let msg = $ref<string | number>('foo');
         let bar = $ref <string | number>('bar');
@@ -113,7 +113,7 @@ describe('sfc ref transform', () => {
   })
 
   test('usage with normal <script> + <script setup>', () => {
-    const { content, bindings } = compileWithRefTransform(`<script>
+    const { content, bindings } = compileWithReactivityTransform(`<script>
     let a = $ref(0)
     let c = $ref(0)
     </script>
@@ -156,7 +156,7 @@ describe('sfc ref transform', () => {
           bar
         })
       </script>`,
-          { refTransform: true }
+          { reactivityTransform: true }
         )
       ).toThrow(`cannot reference locally declared variables`)
 
@@ -168,7 +168,7 @@ describe('sfc ref transform', () => {
           bar
         })
       </script>`,
-          { refTransform: true }
+          { reactivityTransform: true }
         )
       ).toThrow(`cannot reference locally declared variables`)
     })
