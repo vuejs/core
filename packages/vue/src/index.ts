@@ -74,7 +74,7 @@ function compileToFunction(
   // with keys that cannot be mangled, and can be quite heavy size-wise.
   // In the global build we know `Vue` is available globally so we can avoid
   // the wildcard object.
-  // __GLOBAL__为true的情况就说明vue在全局中存在，那么就可以通过执行new Function中入参的code，运行code（规定入参为字符串，但在函数内部会自动转成js代码）
+  // __GLOBAL__为true的情况就说明vue在全局中存在，那么就可以通过执行new Function中入参的code，运行code（规定入参为字符串，但在函数内部会自动转成js代码） // 生成了vnode
   const render = (
     __GLOBAL__ ? new Function(code)() : new Function('Vue', code)(runtimeDom) // runtimeDom为了设置全局的环境
   ) as RenderFunction
