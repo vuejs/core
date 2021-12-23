@@ -707,7 +707,7 @@ export interface TextareaHTMLAttributes extends HTMLAttributes {
   readonly?: Booleanish
   required?: Booleanish
   rows?: Numberish
-  value?: string | string[] | number
+  value?: any // we support :value to be bound to anything w/ v-model
   wrap?: string
 }
 
