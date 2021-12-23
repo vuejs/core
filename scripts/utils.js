@@ -4,6 +4,9 @@ const targets = (exports.targets = fs.readdirSync('packages').filter(f => {
   if (!fs.statSync(`packages/${f}`).isDirectory()) {
     return false
   }
+  if(!fs.existsSync(`packages/${f}/package.json`)){
+    return false
+  }
   const pkg = require(`../packages/${f}/package.json`)
   if (pkg.private && !pkg.buildOptions) {
     return false
