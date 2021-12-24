@@ -189,15 +189,18 @@ export function track(target: object, type: TrackOpTypes, key: unknown) {
   if (!isTracking()) {
     return
   }
+  // 依赖的map,将instance当做key存在targetMap里面
   let depsMap = targetMap.get(target)
   if (!depsMap) {
     targetMap.set(target, (depsMap = new Map()))
   }
+  // depsMap也是一个Map对象，负责存储key对应的map关系
   let dep = depsMap.get(key)
   if (!dep) {
     depsMap.set(key, (dep = createDep()))
   }
 
+  // targetMap ==》 depsMap ==》 dep（Set()）
   const eventInfo = __DEV__
     ? { effect: activeEffect, target, type, key }
     : undefined

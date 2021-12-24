@@ -263,6 +263,7 @@ export interface ComponentRenderContext {
 // 对实例进行proxy代理
 export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
   get({ _: instance }: ComponentRenderContext, key: string) {
+    // 从当前实例里面拿出当前this环境，setup return出去的数据，data里面，通过prop传递的参数，当前的访问缓存，type标签，root顶级的全文环境
     const { ctx, setupState, data, props, accessCache, type, appContext } =
       instance
 
@@ -271,6 +272,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       return true
     }
 
+    // 开发环境，通过如果是<script setup>，那么就会去优先获取setupState的内容
     // prioritize <script setup> bindings during dev.
     // this allows even properties that start with _ or $ to be used - so that
     // it aligns with the production behavior where the render fn is inlined and
@@ -284,6 +286,8 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       return setupState[key]
     }
 
+    // 已经访问过的属性，就会把key存储在accessCache缓存里面，二次访问的速度就会快很多知道在哪个属性里面找
+    // hasOwn这个方法比直接访问比较耗内存，这属于内存优化
     // data / props / ctx
     // This getter gets called for every property access on the render context
     // during render and is a major hotspot. The most expensive part of this
@@ -305,6 +309,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
             return props![key]
           // default: just fallthrough
         }
+        // 获取数据的先后顺序
       } else if (setupState !== EMPTY_OBJ && hasOwn(setupState, key)) {
         accessCache![key] = AccessTypes.SETUP
         return setupState[key]
@@ -327,14 +332,18 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       }
     }
 
+    // 获取定义的公共$属性
     const publicGetter = publicPropertiesMap[key]
     let cssModule, globalProperties
+    // 通过$访问公共属性
     // public $xxx properties
     if (publicGetter) {
+      // 这里额外处理$attrs的参数
       if (key === '$attrs') {
         track(instance, TrackOpTypes.GET, key)
         __DEV__ && markAttrsAccessed()
       }
+      // 直接返回实例对象对应的key属性
       return publicGetter(instance)
     } else if (
       // css module (injected by vue-loader)

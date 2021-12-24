@@ -70,6 +70,27 @@ function compileToFunction(
     warn(codeFrame ? `${message}\n${codeFrame}` : message)
   }
 
+    // 这是code类型显示
+  // 'const _Vue = Vue
+  //   const { createVNode: _createVNode, createElementVNode: _createElementVNode } = _Vue
+        // 这里放到顶层，因为这个静态数据，不会改变，二次掉用的时候直接调用缓存，内存优化
+  //   const _hoisted_1 = /*#__PURE__*/_createElementVNode("h1", null, "i am mixins", -1 /* HOISTED */)
+
+  //   return function render(_ctx, _cache) {
+  //     with (_ctx) {
+  //       const { createElementVNode: _createElementVNode, resolveComponent: _resolveComponent, createVNode: _createVNode, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
+
+  //       const _component_mymixins = _resolveComponent("mymixins")
+
+  //       return (_openBlock(), _createElementBlock(_Fragment, null, [
+  //         _hoisted_1, // 这里调用顶层的数据
+  //         _createVNode(_component_mymixins) // 动态数据，重新加载创建vnode
+  //       ], 64 /* STABLE_FRAGMENT */))
+  //     }
+  //   }'
+
+
+
   // The wildcard import results in a huge object with every export
   // with keys that cannot be mangled, and can be quite heavy size-wise.
   // In the global build we know `Vue` is available globally so we can avoid
