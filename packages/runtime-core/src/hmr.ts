@@ -112,6 +112,13 @@ function reload(id: string, newComp: HMRComponent) {
   for (const instance of instances) {
     const oldComp = normalizeClassComponent(instance.type as HMRComponent)
 
+    //#5073 # need to cleanup the cache in keep-alive and reset the shapeFlag
+    if(instance.parent && (instance.parent.type as ComponentOptions).__isKeepAlive) {
+      const vnode = instance.vnode
+      const key = vnode.key == null ? vnode.type : vnode.key;
+      (instance.parent.ctx as any).pruneCacheEntry(key)
+    }
+
     if (!hmrDirtyComponents.has(oldComp)) {
       // 1. Update existing comp definition to match new one
       if (oldComp !== record.initialDef) {

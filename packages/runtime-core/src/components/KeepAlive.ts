@@ -42,6 +42,7 @@ import { setTransitionHooks } from './BaseTransition'
 import { ComponentRenderContext } from '../componentPublicInstance'
 import { devtoolsComponentAdded } from '../devtools'
 import { isAsyncWrapper } from '../apiAsyncComponent'
+import { registerHMR, unregisterHMR } from '../hmr'
 
 type MatchPattern = string | RegExp | string[] | RegExp[]
 
@@ -121,6 +122,9 @@ const KeepAliveImpl: ComponentOptions = {
 
     sharedContext.activate = (vnode, container, anchor, isSVG, optimized) => {
       const instance = vnode.component!
+      if(__DEV__ && instance.type.__hmrId) {
+        registerHMR(instance);
+      }
       move(vnode, container, anchor, MoveType.ENTER, parentSuspense)
       // in case props have changed
       patch(
@@ -153,6 +157,9 @@ const KeepAliveImpl: ComponentOptions = {
 
     sharedContext.deactivate = (vnode: VNode) => {
       const instance = vnode.component!
+      if(__DEV__ && instance.type.__hmrId) {
+        unregisterHMR(instance);
+      }
       move(vnode, storageContainer, null, MoveType.LEAVE, parentSuspense)
       queuePostRenderEffect(() => {
         if (instance.da) {
@@ -170,6 +177,8 @@ const KeepAliveImpl: ComponentOptions = {
         devtoolsComponentAdded(instance)
       }
     }
+
+    sharedContext.pruneCacheEntry = pruneCacheEntry
 
     function unmount(vnode: VNode) {
       // reset the shapeFlag so it can be properly unmounted

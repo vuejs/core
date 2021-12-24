@@ -469,4 +469,61 @@ describe('hot module replacement', () => {
     render(h(Foo), root)
     expect(serializeInner(root)).toBe('bar')
   })
+
+  test('reload for keep-alive instance',async () => {
+    const parentId = 'keep-alive-parent-reload'
+    const barId = 'keep-alive-bar-reload'
+    const fooId = 'keep-alive-foo-reload'
+    const root = nodeOps.createElement('div')
+    const Bar: ComponentOptions = {
+      __hmrId: barId,
+      render: compileToFunction(`<div>bar</div>`)
+    }
+    const Foo: ComponentOptions = {
+      __hmrId: fooId,
+      render: compileToFunction(`<div>foo</div>`)
+    }
+    const Parent: ComponentOptions = {
+      __hmrId: parentId,
+      data() {
+        return {
+          value: 'bar'
+        }
+      },
+      components: {
+        foo: Foo,
+        bar: Bar
+      },
+      render: compileToFunction(`
+        <button @click="value = value === 'bar'?'foo':'bar'">switch</button>
+        <keep-alive>
+          <component :is="value"></component>
+        </keep-alive>
+      `)
+    }
+    createRecord(parentId, Parent)
+    createRecord(barId, Bar)
+    createRecord(fooId, Foo)
+    const app = createApp(Parent)
+    app.mount(root)
+    expect(serializeInner(root)).toBe('<button>switch</button><div>bar</div>')
+    reload(barId, {
+      __hmrId: barId,
+      render: compileToFunction(`<div>bar1</div>`)
+    })
+    await nextTick()
+    expect(serializeInner(root)).toBe('<button>switch</button><div>bar1</div>')
+    triggerEvent(root.children[1] as TestElement, 'click')
+    await nextTick()
+    expect(serializeInner(root)).toBe('<button>switch</button><div>foo</div>')
+    triggerEvent(root.children[1] as TestElement, 'click')
+    await nextTick()
+    expect(serializeInner(root)).toBe('<button>switch</button><div>bar1</div>')
+    reload(barId, {
+      __hmrId: barId,
+      render: compileToFunction(`<div>bar2</div>`)
+    })
+    await nextTick()
+    expect(serializeInner(root)).toBe('<button>switch</button><div>bar2</div>')
+  })
 })
