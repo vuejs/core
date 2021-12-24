@@ -19,8 +19,7 @@ const store = new ReplStore({
 // enable experimental features
 const sfcOptions = {
   script: {
-    refTransform: true,
-    propsDestructureTransform: true
+    reactivityTransform: true
   }
 }
 

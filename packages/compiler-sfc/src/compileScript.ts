@@ -104,7 +104,7 @@ export interface SFCScriptCompileOptions {
    */
   propsDestructureTransform?: boolean
   /**
-   * @deprecated use `refTransform` instead.
+   * @deprecated use `reactivityTransform` instead.
    */
   refSugar?: boolean
   /**
