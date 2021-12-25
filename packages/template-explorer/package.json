@@ -1,15 +1,17 @@
 {
   "name": "@vue/template-explorer",
-  "version": "3.0.5",
+  "version": "3.2.26",
   "private": true,
   "buildOptions": {
     "formats": [
       "global"
     ],
+    "compat": true,
     "env": "development",
     "enableNonBrowserBranches": true
   },
   "dependencies": {
-    "monaco-editor": "^0.20.0"
+    "monaco-editor": "^0.20.0",
+    "source-map": "^0.6.1"
   }
 }

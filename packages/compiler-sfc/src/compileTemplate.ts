@@ -18,10 +18,10 @@ import {
   transformSrcset,
   createSrcsetTransformWithOptions
 } from './templateTransformSrcset'
-import { isObject } from '@vue/shared'
+import { generateCodeFrame, isObject } from '@vue/shared'
 import * as CompilerDOM from '@vue/compiler-dom'
 import * as CompilerSSR from '@vue/compiler-ssr'
-import consolidate from 'consolidate'
+import consolidate from '@vue/consolidate'
 import { warnOnce } from './warn'
 import { genCssVarsFromList } from './cssVars'
 
@@ -45,6 +45,7 @@ export interface SFCTemplateCompileOptions {
   filename: string
   id: string
   scoped?: boolean
+  slotted?: boolean
   isProd?: boolean
   ssr?: boolean
   ssrCssVars?: string[]
@@ -118,7 +119,9 @@ export function compileTemplate(
   const preprocessor = preprocessLang
     ? preprocessCustomRequire
       ? preprocessCustomRequire(preprocessLang)
-      : require('consolidate')[preprocessLang as keyof typeof consolidate]
+      : __ESM_BROWSER__
+      ? undefined
+      : consolidate[preprocessLang as keyof typeof consolidate]
     : false
   if (preprocessor) {
     try {
@@ -126,7 +129,7 @@ export function compileTemplate(
         ...options,
         source: preprocess(options, preprocessor)
       })
-    } catch (e) {
+    } catch (e: any) {
       return {
         code: `export default function render() {}`,
         source: options.source,
@@ -139,14 +142,10 @@ export function compileTemplate(
       code: `export default function render() {}`,
       source: options.source,
       tips: [
-        `Component ${
-          options.filename
-        } uses lang ${preprocessLang} for template. Please install the language preprocessor.`
+        `Component ${options.filename} uses lang ${preprocessLang} for template. Please install the language preprocessor.`
       ],
       errors: [
-        `Component ${
-          options.filename
-        } uses lang ${preprocessLang} for template, however it is not installed.`
+        `Component ${options.filename} uses lang ${preprocessLang} for template, however it is not installed.`
       ]
     }
   } else {
@@ -158,6 +157,7 @@ function doCompileTemplate({
   filename,
   id,
   scoped,
+  slotted,
   inMap,
   source,
   ssr = false,
@@ -168,6 +168,7 @@ function doCompileTemplate({
   transformAssetUrls
 }: SFCTemplateCompileOptions): SFCTemplateCompileResults {
   const errors: CompilerError[] = []
+  const warnings: CompilerError[] = []
 
   let nodeTransforms: NodeTransform[] = []
   if (isObject(transformAssetUrls)) {
@@ -204,11 +205,13 @@ function doCompileTemplate({
         ? genCssVarsFromList(ssrCssVars, shortId, isProd)
         : '',
     scopeId: scoped ? longId : undefined,
+    slotted,
+    sourceMap: true,
     ...compilerOptions,
     nodeTransforms: nodeTransforms.concat(compilerOptions.nodeTransforms || []),
     filename,
-    sourceMap: true,
-    onError: e => errors.push(e)
+    onError: e => errors.push(e),
+    onWarn: w => warnings.push(w)
   })
 
   // inMap should be the map produced by ./parse.ts which is a simple line-only
@@ -223,7 +226,19 @@ function doCompileTemplate({
     }
   }
 
-  return { code, ast, preamble, source, errors, tips: [], map }
+  const tips = warnings.map(w => {
+    let msg = w.message
+    if (w.loc) {
+      msg += `\n${generateCodeFrame(
+        source,
+        w.loc.start.offset,
+        w.loc.end.offset
+      )}`
+    }
+    return msg
+  })
+
+  return { code, ast, preamble, source, errors, tips, map }
 }
 
 function mapLines(oldMap: RawSourceMap, newMap: RawSourceMap): RawSourceMap {

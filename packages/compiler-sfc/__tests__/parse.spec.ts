@@ -111,16 +111,53 @@ h1 { color: red }
     )
   })
 
-  test('should keep template nodes with no content', () => {
+  test('should parse correct range for root level self closing tag', () => {
+    const content = `\n  <div/>\n`
+    const { descriptor } = parse(`<template>${content}</template>`)
+    expect(descriptor.template).toBeTruthy()
+    expect(descriptor.template!.content).toBe(content)
+    expect(descriptor.template!.loc).toMatchObject({
+      start: { line: 1, column: 11, offset: 10 },
+      end: {
+        line: 3,
+        column: 1,
+        offset: 10 + content.length
+      },
+      source: content
+    })
+  })
+
+  test('should parse correct range for blocks with no content (self closing)', () => {
     const { descriptor } = parse(`<template/>`)
     expect(descriptor.template).toBeTruthy()
     expect(descriptor.template!.content).toBeFalsy()
+    expect(descriptor.template!.loc).toMatchObject({
+      start: { line: 1, column: 1, offset: 0 },
+      end: { line: 1, column: 1, offset: 0 },
+      source: ''
+    })
+  })
+
+  test('should parse correct range for blocks with no content (explicit)', () => {
+    const { descriptor } = parse(`<template></template>`)
+    expect(descriptor.template).toBeTruthy()
+    expect(descriptor.template!.content).toBeFalsy()
+    expect(descriptor.template!.loc).toMatchObject({
+      start: { line: 1, column: 11, offset: 10 },
+      end: { line: 1, column: 11, offset: 10 },
+      source: ''
+    })
   })
 
   test('should ignore other nodes with no content', () => {
     expect(parse(`<script/>`).descriptor.script).toBe(null)
+    expect(parse(`<script> \n\t  </script>`).descriptor.script).toBe(null)
     expect(parse(`<style/>`).descriptor.styles.length).toBe(0)
+    expect(parse(`<style> \n\t </style>`).descriptor.styles.length).toBe(0)
     expect(parse(`<custom/>`).descriptor.customBlocks.length).toBe(0)
+    expect(
+      parse(`<custom> \n\t </custom>`).descriptor.customBlocks.length
+    ).toBe(0)
   })
 
   test('handle empty nodes with src attribute', () => {
@@ -130,6 +167,28 @@ h1 { color: red }
     expect(descriptor.script!.attrs['src']).toBe('com')
   })
 
+  test('ignoreEmpty: false', () => {
+    const { descriptor } = parse(
+      `<script></script>\n<script setup>\n</script>`,
+      {
+        ignoreEmpty: false
+      }
+    )
+    expect(descriptor.script).toBeTruthy()
+    expect(descriptor.script!.loc).toMatchObject({
+      source: '',
+      start: { line: 1, column: 9, offset: 8 },
+      end: { line: 1, column: 9, offset: 8 }
+    })
+
+    expect(descriptor.scriptSetup).toBeTruthy()
+    expect(descriptor.scriptSetup!.loc).toMatchObject({
+      source: '\n',
+      start: { line: 2, column: 15, offset: 32 },
+      end: { line: 3, column: 1, offset: 33 }
+    })
+  })
+
   test('nested templates', () => {
     const content = `
     <template v-if="ok">ok</template>
@@ -137,6 +196,15 @@ h1 { color: red }
     `
     const { descriptor } = parse(`<template>${content}</template>`)
     expect(descriptor.template!.content).toBe(content)
+  })
+
+  test('treat empty lang attribute as the html', () => {
+    const content = `<div><template v-if="ok">ok</template></div>`
+    const { descriptor, errors } = parse(
+      `<template lang="">${content}</template>`
+    )
+    expect(descriptor.template!.content).toBe(content)
+    expect(errors.length).toBe(0)
   })
 
   // #1120
@@ -159,6 +227,24 @@ h1 { color: red }
     </template>
     `)
     expect(errors.length).toBe(0)
+  })
+
+  test('slotted detection', async () => {
+    expect(parse(`<template>hi</template>`).descriptor.slotted).toBe(false)
+    expect(
+      parse(`<template>hi</template><style>h1{color:red;}</style>`).descriptor
+        .slotted
+    ).toBe(false)
+    expect(
+      parse(
+        `<template>hi</template><style scoped>:slotted(h1){color:red;}</style>`
+      ).descriptor.slotted
+    ).toBe(true)
+    expect(
+      parse(
+        `<template>hi</template><style scoped>::v-slotted(h1){color:red;}</style>`
+      ).descriptor.slotted
+    ).toBe(true)
   })
 
   test('error tolerance', () => {

@@ -180,7 +180,8 @@ export function ssrProcessComponent(
     } else if (component === TRANSITION_GROUP) {
       return ssrProcessTransitionGroup(node, context)
     } else {
-      // real fall-through (e.g. KeepAlive): just render its children.
+      // real fall-through: Transition / KeepAlive
+      // just render its children.
       processChildren(node.children, context)
     }
   } else {
@@ -203,6 +204,12 @@ export function ssrProcessComponent(
         vnodeBranch
       )
     }
+
+    // component is inside a slot, inherit slot scope Id
+    if (context.withSlotScopeId) {
+      node.ssrCodegenNode.arguments.push(`_scopeId`)
+    }
+
     if (typeof component === 'string') {
       // static component
       context.pushStatement(
@@ -218,9 +225,8 @@ export function ssrProcessComponent(
 
 export const rawOptionsMap = new WeakMap<RootNode, CompilerOptions>()
 
-const [baseNodeTransforms, baseDirectiveTransforms] = getBaseTransformPreset(
-  true
-)
+const [baseNodeTransforms, baseDirectiveTransforms] =
+  getBaseTransformPreset(true)
 const vnodeNodeTransforms = [...baseNodeTransforms, ...DOMNodeTransforms]
 const vnodeDirectiveTransforms = {
   ...baseDirectiveTransforms,
@@ -234,6 +240,7 @@ function createVNodeSlotBranch(
 ): ReturnStatement {
   // apply a sub-transform using vnode-based transforms.
   const rawOptions = rawOptionsMap.get(parentContext.root)!
+
   const subOptions = {
     ...rawOptions,
     // overwrite with vnode-based transforms
@@ -287,16 +294,28 @@ function subTransform(
   // inherit parent scope analysis state
   childContext.scopes = { ...parentContext.scopes }
   childContext.identifiers = { ...parentContext.identifiers }
+  childContext.imports = parentContext.imports
   // traverse
   traverseNode(childRoot, childContext)
-  // merge helpers/components/directives/imports into parent context
-  ;(['helpers', 'components', 'directives', 'imports'] as const).forEach(
-    key => {
-      childContext[key].forEach((value: any) => {
+  // merge helpers/components/directives into parent context
+  ;(['helpers', 'components', 'directives'] as const).forEach(key => {
+    childContext[key].forEach((value: any, helperKey: any) => {
+      if (key === 'helpers') {
+        const parentCount = parentContext.helpers.get(helperKey)
+        if (parentCount === undefined) {
+          parentContext.helpers.set(helperKey, value)
+        } else {
+          parentContext.helpers.set(helperKey, value + parentCount)
+        }
+      } else {
         ;(parentContext[key] as any).add(value)
-      })
-    }
-  )
+      }
+    })
+  })
+  // imports/hoists are not merged because:
+  // - imports are only used for asset urls and should be consistent between
+  //   node/client branches
+  // - hoists are not enabled for the client branch here
 }
 
 function clone(v: any): any {

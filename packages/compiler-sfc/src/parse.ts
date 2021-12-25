@@ -9,15 +9,16 @@ import {
 import * as CompilerDOM from '@vue/compiler-dom'
 import { RawSourceMap, SourceMapGenerator } from 'source-map'
 import { TemplateCompiler } from './compileTemplate'
-import { Statement } from '@babel/types'
 import { parseCssVars } from './cssVars'
-import { warnExperimental } from './warn'
+import { createCache } from './cache'
+import { hmrShouldReload, ImportBinding } from './compileScript'
 
 export interface SFCParseOptions {
   filename?: string
   sourceMap?: boolean
   sourceRoot?: string
   pad?: boolean | 'line' | 'space'
+  ignoreEmpty?: boolean
   compiler?: TemplateCompiler
 }
 
@@ -40,8 +41,15 @@ export interface SFCScriptBlock extends SFCBlock {
   type: 'script'
   setup?: string | boolean
   bindings?: BindingMetadata
-  scriptAst?: Statement[]
-  scriptSetupAst?: Statement[]
+  imports?: Record<string, ImportBinding>
+  /**
+   * import('\@babel/types').Statement
+   */
+  scriptAst?: any[]
+  /**
+   * import('\@babel/types').Statement
+   */
+  scriptSetupAst?: any[]
 }
 
 export interface SFCStyleBlock extends SFCBlock {
@@ -59,6 +67,21 @@ export interface SFCDescriptor {
   styles: SFCStyleBlock[]
   customBlocks: SFCBlock[]
   cssVars: string[]
+  /**
+   * whether the SFC uses :slotted() modifier.
+   * this is used as a compiler optimization hint.
+   */
+  slotted: boolean
+
+  /**
+   * compare with an existing descriptor to determine whether HMR should perform
+   * a reload vs. re-render.
+   *
+   * Note: this comparison assumes the prev/next script are already identical,
+   * and only checks the special case where <script setup lang="ts"> unused import
+   * pruning result changes due to template changes.
+   */
+  shouldForceReload: (prevImports: Record<string, ImportBinding>) => boolean
 }
 
 export interface SFCParseResult {
@@ -66,14 +89,7 @@ export interface SFCParseResult {
   errors: (CompilerError | SyntaxError)[]
 }
 
-const SFC_CACHE_MAX_SIZE = 500
-const sourceToSFC =
-  __GLOBAL__ || __ESM_BROWSER__
-    ? new Map<string, SFCParseResult>()
-    : (new (require('lru-cache'))(SFC_CACHE_MAX_SIZE) as Map<
-        string,
-        SFCParseResult
-      >)
+const sourceToSFC = createCache<SFCParseResult>()
 
 export function parse(
   source: string,
@@ -82,6 +98,7 @@ export function parse(
     filename = 'anonymous.vue',
     sourceRoot = '',
     pad = false,
+    ignoreEmpty = true,
     compiler = CompilerDOM
   }: SFCParseOptions = {}
 ): SFCParseResult {
@@ -100,7 +117,9 @@ export function parse(
     scriptSetup: null,
     styles: [],
     customBlocks: [],
-    cssVars: []
+    cssVars: [],
+    slotted: false,
+    shouldForceReload: prevImports => hmrShouldReload(prevImports, descriptor)
   }
 
   const errors: (CompilerError | SyntaxError)[] = []
@@ -121,6 +140,7 @@ export function parse(
               p.type === NodeTypes.ATTRIBUTE &&
               p.name === 'lang' &&
               p.value &&
+              p.value.content &&
               p.value.content !== 'html'
           ))
       ) {
@@ -138,7 +158,13 @@ export function parse(
     if (node.type !== NodeTypes.ELEMENT) {
       return
     }
-    if (!node.children.length && !hasSrc(node) && node.tag !== 'template') {
+    // we only want to keep the nodes that are not empty (when the tag is not a template)
+    if (
+      ignoreEmpty &&
+      node.tag !== 'template' &&
+      isEmpty(node) &&
+      !hasSrc(node)
+    ) {
       return
     }
     switch (node.tag) {
@@ -150,6 +176,18 @@ export function parse(
             false
           ) as SFCTemplateBlock)
           templateBlock.ast = node
+
+          // warn against 2.x <template functional>
+          if (templateBlock.attrs.functional) {
+            const err = new SyntaxError(
+              `<template functional> is no longer supported in Vue 3, since ` +
+                `functional components no longer have significant performance ` +
+                `difference from stateful ones. Just use a normal <template> ` +
+                `instead.`
+            ) as CompilerError
+            err.loc = node.props.find(p => p.name === 'functional')!.loc
+            errors.push(err)
+          }
         } else {
           errors.push(createDuplicateBlockError(node))
         }
@@ -226,9 +264,12 @@ export function parse(
 
   // parse CSS vars
   descriptor.cssVars = parseCssVars(descriptor)
-  if (descriptor.cssVars.length) {
-    warnExperimental(`v-bind() CSS variable injection`, 231)
-  }
+
+  // check if the SFC uses :slotted
+  const slottedRE = /(?:::v-|:)slotted\(/
+  descriptor.slotted = descriptor.styles.some(
+    s => s.scoped && slottedRE.test(s.content)
+  )
 
   const result = {
     descriptor,
@@ -263,6 +304,16 @@ function createBlock(
     start = node.children[0].loc.start
     end = node.children[node.children.length - 1].loc.end
     content = source.slice(start.offset, end.offset)
+  } else {
+    const offset = node.loc.source.indexOf(`</`)
+    if (offset > -1) {
+      start = {
+        line: start.line,
+        column: start.column + offset,
+        offset: start.offset + offset
+      }
+    }
+    end = { ...start }
   }
   const loc = {
     source: content,
@@ -362,4 +413,18 @@ function hasSrc(node: ElementNode) {
     }
     return p.name === 'src'
   })
+}
+
+/**
+ * Returns true if the node has no children
+ * once the empty text nodes (trimmed content) have been filtered out.
+ */
+function isEmpty(node: ElementNode) {
+  for (let i = 0; i < node.children.length; i++) {
+    const child = node.children[i]
+    if (child.type !== NodeTypes.TEXT || child.content.trim() !== '') {
+      return false
+    }
+  }
+  return true
 }

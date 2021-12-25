@@ -9,9 +9,14 @@ import {
   Suspense,
   onMounted,
   defineAsyncComponent,
-  defineComponent
+  defineComponent,
+  createTextVNode,
+  createVNode,
+  withDirectives,
+  vModelCheckbox
 } from '@vue/runtime-dom'
 import { renderToString, SSRContext } from '@vue/server-renderer'
+import { PatchFlags } from '../../shared/src'
 
 function mountWithHydration(html: string, render: () => any) {
   const container = document.createElement('div')
@@ -45,6 +50,14 @@ describe('SSR hydration', () => {
     msg.value = 'bar'
     await nextTick()
     expect(container.textContent).toBe('bar')
+  })
+
+  test('empty text', async () => {
+    const { container } = mountWithHydration('<div></div>', () =>
+      h('div', createTextVNode(''))
+    )
+    expect(container.textContent).toBe('')
+    expect(`Hydration children mismatch in <div>`).not.toHaveBeenWarned()
   })
 
   test('comment', () => {
@@ -448,6 +461,60 @@ describe('SSR hydration', () => {
     expect(text.textContent).toBe('bye')
   })
 
+  test('handle click error in ssr mode', async () => {
+    const App = {
+      setup() {
+        const throwError = () => {
+          throw new Error('Sentry Error')
+        }
+        return { throwError }
+      },
+      template: `
+        <div>
+          <button class="parent-click" @click="throwError">click me</button>
+        </div>`
+    }
+
+    const container = document.createElement('div')
+    // server render
+    container.innerHTML = await renderToString(h(App))
+    // hydrate
+    const app = createSSRApp(App)
+    const handler = (app.config.errorHandler = jest.fn())
+    app.mount(container)
+    // assert interactions
+    // parent button click
+    triggerEvent('click', container.querySelector('.parent-click')!)
+    expect(handler).toHaveBeenCalled()
+  })
+
+  test('handle blur error in ssr mode', async () => {
+    const App = {
+      setup() {
+        const throwError = () => {
+          throw new Error('Sentry Error')
+        }
+        return { throwError }
+      },
+      template: `
+        <div>
+          <input class="parent-click" @blur="throwError"/>
+        </div>`
+    }
+
+    const container = document.createElement('div')
+    // server render
+    container.innerHTML = await renderToString(h(App))
+    // hydrate
+    const app = createSSRApp(App)
+    const handler = (app.config.errorHandler = jest.fn())
+    app.mount(container)
+    // assert interactions
+    // parent blur event
+    triggerEvent('blur', container.querySelector('.parent-click')!)
+    expect(handler).toHaveBeenCalled()
+  })
+
   test('Suspense', async () => {
     const AsyncChild = {
       async setup() {
@@ -615,6 +682,173 @@ describe('SSR hydration', () => {
     // should be hydrated now
     triggerEvent('click', container.querySelector('button')!)
     expect(spy).toHaveBeenCalled()
+  })
+
+  test('update async wrapper before resolve', async () => {
+    const Comp = {
+      render() {
+        return h('h1', 'Async component')
+      }
+    }
+    let serverResolve: any
+    let AsyncComp = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          serverResolve = r
+        })
+    )
+
+    const bol = ref(true)
+    const App = {
+      setup() {
+        onMounted(() => {
+          // change state, this makes updateComponent(AsyncComp) execute before
+          // the async component is resolved
+          bol.value = false
+        })
+
+        return () => {
+          return [bol.value ? 'hello' : 'world', h(AsyncComp)]
+        }
+      }
+    }
+
+    // server render
+    const htmlPromise = renderToString(h(App))
+    serverResolve(Comp)
+    const html = await htmlPromise
+    expect(html).toMatchInlineSnapshot(
+      `"<!--[-->hello<h1>Async component</h1><!--]-->"`
+    )
+
+    // hydration
+    let clientResolve: any
+    AsyncComp = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          clientResolve = r
+        })
+    )
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    createSSRApp(App).mount(container)
+
+    // resolve
+    clientResolve(Comp)
+    await new Promise(r => setTimeout(r))
+
+    // should be hydrated now
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<!--[-->world<h1>Async component</h1><!--]-->"`
+    )
+  })
+
+  // #3787
+  test('unmount async wrapper before load', async () => {
+    let resolve: any
+    const AsyncComp = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r
+        })
+    )
+
+    const show = ref(true)
+    const root = document.createElement('div')
+    root.innerHTML = '<div><div>async</div></div>'
+
+    createSSRApp({
+      render() {
+        return h('div', [show.value ? h(AsyncComp) : h('div', 'hi')])
+      }
+    }).mount(root)
+
+    show.value = false
+    await nextTick()
+    expect(root.innerHTML).toBe('<div><div>hi</div></div>')
+    resolve({})
+  })
+
+  test('unmount async wrapper before load (fragment)', async () => {
+    let resolve: any
+    const AsyncComp = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r
+        })
+    )
+
+    const show = ref(true)
+    const root = document.createElement('div')
+    root.innerHTML = '<div><!--[-->async<!--]--></div>'
+
+    createSSRApp({
+      render() {
+        return h('div', [show.value ? h(AsyncComp) : h('div', 'hi')])
+      }
+    }).mount(root)
+
+    show.value = false
+    await nextTick()
+    expect(root.innerHTML).toBe('<div><div>hi</div></div>')
+    resolve({})
+  })
+
+  test('elements with camel-case in svg ', () => {
+    const { vnode, container } = mountWithHydration(
+      '<animateTransform></animateTransform>',
+      () => h('animateTransform')
+    )
+    expect(vnode.el).toBe(container.firstChild)
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+  })
+
+  test('SVG as a mount container', () => {
+    const svgContainer = document.createElement('svg')
+    svgContainer.innerHTML = '<g></g>'
+    const app = createSSRApp({
+      render: () => h('g')
+    })
+
+    expect(
+      (
+        app.mount(svgContainer).$.subTree as VNode<Node, Element> & {
+          el: Element
+        }
+      ).el instanceof SVGElement
+    )
+  })
+
+  test('force hydrate input v-model with non-string value bindings', () => {
+    const { container } = mountWithHydration(
+      '<input type="checkbox" value="true">',
+      () =>
+        withDirectives(
+          createVNode(
+            'input',
+            { type: 'checkbox', 'true-value': true },
+            null,
+            PatchFlags.PROPS,
+            ['true-value']
+          ),
+          [[vModelCheckbox, true]]
+        )
+    )
+    expect((container.firstChild as any)._trueValue).toBe(true)
+  })
+
+  test('force hydrate select option with non-string value bindings', () => {
+    const { container } = mountWithHydration(
+      '<select><option :value="true">ok</option></select>',
+      () =>
+        h('select', [
+          // hoisted because bound value is a constant...
+          createVNode('option', { value: true }, null, -1 /* HOISTED */)
+        ])
+    )
+    expect((container.firstChild!.firstChild as any)._value).toBe(true)
   })
 
   describe('mismatch handling', () => {

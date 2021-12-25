@@ -1,8 +1,10 @@
-import { track, trigger } from './effect'
+import { isTracking, trackEffects, triggerEffects } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
-import { isArray, isObject, hasChanged } from '@vue/shared'
-import { reactive, isProxy, toRaw, isReactive } from './reactive'
+import { isArray, hasChanged } from '@vue/shared'
+import { isProxy, toRaw, isReactive, toReactive } from './reactive'
+import type { ShallowReactiveMarker } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
+import { createDep, Dep } from './dep'
 
 declare const RefSymbol: unique symbol
 
@@ -20,72 +22,111 @@ export interface Ref<T = any> {
   _shallow?: boolean
 }
 
-export type ToRef<T> = T extends Ref ? T : Ref<UnwrapRef<T>>
-export type ToRefs<T = any> = {
-  // #2687: somehow using ToRef<T[K]> here turns the resulting type into
-  // a union of multiple Ref<*> types instead of a single Ref<* | *> type.
-  [K in keyof T]: T[K] extends Ref ? T[K] : Ref<UnwrapRef<T[K]>>
+type RefBase<T> = {
+  dep?: Dep
+  value: T
 }
 
-const convert = <T extends unknown>(val: T): T =>
-  isObject(val) ? reactive(val) : val
+export function trackRefValue(ref: RefBase<any>) {
+  if (isTracking()) {
+    ref = toRaw(ref)
+    if (!ref.dep) {
+      ref.dep = createDep()
+    }
+    if (__DEV__) {
+      trackEffects(ref.dep, {
+        target: ref,
+        type: TrackOpTypes.GET,
+        key: 'value'
+      })
+    } else {
+      trackEffects(ref.dep)
+    }
+  }
+}
+
+export function triggerRefValue(ref: RefBase<any>, newVal?: any) {
+  ref = toRaw(ref)
+  if (ref.dep) {
+    if (__DEV__) {
+      triggerEffects(ref.dep, {
+        target: ref,
+        type: TriggerOpTypes.SET,
+        key: 'value',
+        newValue: newVal
+      })
+    } else {
+      triggerEffects(ref.dep)
+    }
+  }
+}
 
 export function isRef<T>(r: Ref<T> | unknown): r is Ref<T>
 export function isRef(r: any): r is Ref {
   return Boolean(r && r.__v_isRef === true)
 }
 
-export function ref<T extends object>(value: T): ToRef<T>
+export function ref<T extends object>(
+  value: T
+): [T] extends [Ref] ? T : Ref<UnwrapRef<T>>
 export function ref<T>(value: T): Ref<UnwrapRef<T>>
 export function ref<T = any>(): Ref<T | undefined>
 export function ref(value?: unknown) {
-  return createRef(value)
+  return createRef(value, false)
 }
+
+declare const ShallowRefMarker: unique symbol
+
+export type ShallowRef<T = any> = Ref<T> & { [ShallowRefMarker]?: true }
 
 export function shallowRef<T extends object>(
   value: T
-): T extends Ref ? T : Ref<T>
-export function shallowRef<T>(value: T): Ref<T>
-export function shallowRef<T = any>(): Ref<T | undefined>
+): T extends Ref ? T : ShallowRef<T>
+export function shallowRef<T>(value: T): ShallowRef<T>
+export function shallowRef<T = any>(): ShallowRef<T | undefined>
 export function shallowRef(value?: unknown) {
   return createRef(value, true)
 }
 
-class RefImpl<T> {
-  private _value: T
-
-  public readonly __v_isRef = true
-
-  constructor(private _rawValue: T, public readonly _shallow = false) {
-    this._value = _shallow ? _rawValue : convert(_rawValue)
-  }
-
-  get value() {
-    track(toRaw(this), TrackOpTypes.GET, 'value')
-    return this._value
-  }
-
-  set value(newVal) {
-    if (hasChanged(toRaw(newVal), this._rawValue)) {
-      this._rawValue = newVal
-      this._value = this._shallow ? newVal : convert(newVal)
-      trigger(toRaw(this), TriggerOpTypes.SET, 'value', newVal)
-    }
-  }
-}
-
-function createRef(rawValue: unknown, shallow = false) {
+function createRef(rawValue: unknown, shallow: boolean) {
   if (isRef(rawValue)) {
     return rawValue
   }
   return new RefImpl(rawValue, shallow)
 }
 
-export function triggerRef(ref: Ref) {
-  trigger(toRaw(ref), TriggerOpTypes.SET, 'value', __DEV__ ? ref.value : void 0)
+class RefImpl<T> {
+  private _value: T
+  private _rawValue: T
+
+  public dep?: Dep = undefined
+  public readonly __v_isRef = true
+
+  constructor(value: T, public readonly _shallow: boolean) {
+    this._rawValue = _shallow ? value : toRaw(value)
+    this._value = _shallow ? value : toReactive(value)
+  }
+
+  get value() {
+    trackRefValue(this)
+    return this._value
+  }
+
+  set value(newVal) {
+    newVal = this._shallow ? newVal : toRaw(newVal)
+    if (hasChanged(newVal, this._rawValue)) {
+      this._rawValue = newVal
+      this._value = this._shallow ? newVal : toReactive(newVal)
+      triggerRefValue(this, newVal)
+    }
+  }
 }
 
-export function unref<T>(ref: T): T extends Ref<infer V> ? V : T {
+export function triggerRef(ref: Ref) {
+  triggerRefValue(ref, __DEV__ ? ref.value : void 0)
+}
+
+export function unref<T>(ref: T | Ref<T>): T {
   return isRef(ref) ? (ref.value as any) : ref
 }
 
@@ -119,6 +160,8 @@ export type CustomRefFactory<T> = (
 }
 
 class CustomRefImpl<T> {
+  public dep?: Dep = undefined
+
   private readonly _get: ReturnType<CustomRefFactory<T>>['get']
   private readonly _set: ReturnType<CustomRefFactory<T>>['set']
 
@@ -126,8 +169,8 @@ class CustomRefImpl<T> {
 
   constructor(factory: CustomRefFactory<T>) {
     const { get, set } = factory(
-      () => track(this, TrackOpTypes.GET, 'value'),
-      () => trigger(this, TriggerOpTypes.SET, 'value')
+      () => trackRefValue(this),
+      () => triggerRefValue(this)
     )
     this._get = get
     this._set = set
@@ -146,6 +189,9 @@ export function customRef<T>(factory: CustomRefFactory<T>): Ref<T> {
   return new CustomRefImpl(factory) as any
 }
 
+export type ToRefs<T = any> = {
+  [K in keyof T]: ToRef<T[K]>
+}
 export function toRefs<T extends object>(object: T): ToRefs<T> {
   if (__DEV__ && !isProxy(object)) {
     console.warn(`toRefs() expects a reactive object but received a plain one.`)
@@ -160,10 +206,15 @@ export function toRefs<T extends object>(object: T): ToRefs<T> {
 class ObjectRefImpl<T extends object, K extends keyof T> {
   public readonly __v_isRef = true
 
-  constructor(private readonly _object: T, private readonly _key: K) {}
+  constructor(
+    private readonly _object: T,
+    private readonly _key: K,
+    private readonly _defaultValue?: T[K]
+  ) {}
 
   get value() {
-    return this._object[this._key]
+    const val = this._object[this._key]
+    return val === undefined ? (this._defaultValue as T[K]) : val
   }
 
   set value(newVal) {
@@ -171,13 +222,28 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
   }
 }
 
+export type ToRef<T> = [T] extends [Ref] ? T : Ref<T>
+
 export function toRef<T extends object, K extends keyof T>(
   object: T,
   key: K
+): ToRef<T[K]>
+
+export function toRef<T extends object, K extends keyof T>(
+  object: T,
+  key: K,
+  defaultValue: T[K]
+): ToRef<Exclude<T[K], undefined>>
+
+export function toRef<T extends object, K extends keyof T>(
+  object: T,
+  key: K,
+  defaultValue?: T[K]
 ): ToRef<T[K]> {
-  return isRef(object[key])
-    ? object[key]
-    : (new ObjectRefImpl(object, key) as any)
+  const val = object[key]
+  return isRef(val)
+    ? val
+    : (new ObjectRefImpl(object, key, defaultValue) as any)
 }
 
 // corner case when use narrows type
@@ -205,14 +271,23 @@ type BaseTypes = string | number | boolean
 export interface RefUnwrapBailTypes {}
 
 export type ShallowUnwrapRef<T> = {
-  [K in keyof T]: T[K] extends Ref<infer V> ? V : T[K]
+  [K in keyof T]: T[K] extends Ref<infer V>
+    ? V
+    : // if `V` is `unknown` that means it does not extend `Ref` and is undefined
+    T[K] extends Ref<infer V> | undefined
+    ? unknown extends V
+      ? undefined
+      : V | undefined
+    : T[K]
 }
 
-export type UnwrapRef<T> = T extends Ref<infer V>
+export type UnwrapRef<T> = T extends ShallowRef<infer V>
+  ? V
+  : T extends Ref<infer V>
   ? UnwrapRefSimple<V>
   : UnwrapRefSimple<T>
 
-type UnwrapRefSimple<T> = T extends
+export type UnwrapRefSimple<T> = T extends
   | Function
   | CollectionTypes
   | BaseTypes
@@ -220,36 +295,9 @@ type UnwrapRefSimple<T> = T extends
   | RefUnwrapBailTypes[keyof RefUnwrapBailTypes]
   ? T
   : T extends Array<any>
-    ? { [K in keyof T]: UnwrapRefSimple<T[K]> }
-    : T extends object ? UnwrappedObject<T> : T
-
-// Extract all known symbols from an object
-// when unwrapping Object the symbols are not `in keyof`, this should cover all the
-// known symbols
-type SymbolExtract<T> = (T extends { [Symbol.asyncIterator]: infer V }
-  ? { [Symbol.asyncIterator]: V }
-  : {}) &
-  (T extends { [Symbol.hasInstance]: infer V }
-    ? { [Symbol.hasInstance]: V }
-    : {}) &
-  (T extends { [Symbol.isConcatSpreadable]: infer V }
-    ? { [Symbol.isConcatSpreadable]: V }
-    : {}) &
-  (T extends { [Symbol.iterator]: infer V } ? { [Symbol.iterator]: V } : {}) &
-  (T extends { [Symbol.match]: infer V } ? { [Symbol.match]: V } : {}) &
-  (T extends { [Symbol.matchAll]: infer V } ? { [Symbol.matchAll]: V } : {}) &
-  (T extends { [Symbol.replace]: infer V } ? { [Symbol.replace]: V } : {}) &
-  (T extends { [Symbol.search]: infer V } ? { [Symbol.search]: V } : {}) &
-  (T extends { [Symbol.species]: infer V } ? { [Symbol.species]: V } : {}) &
-  (T extends { [Symbol.split]: infer V } ? { [Symbol.split]: V } : {}) &
-  (T extends { [Symbol.toPrimitive]: infer V }
-    ? { [Symbol.toPrimitive]: V }
-    : {}) &
-  (T extends { [Symbol.toStringTag]: infer V }
-    ? { [Symbol.toStringTag]: V }
-    : {}) &
-  (T extends { [Symbol.unscopables]: infer V }
-    ? { [Symbol.unscopables]: V }
-    : {})
-
-type UnwrappedObject<T> = { [P in keyof T]: UnwrapRef<T[P]> } & SymbolExtract<T>
+  ? { [K in keyof T]: UnwrapRefSimple<T[K]> }
+  : T extends object & { [ShallowReactiveMarker]?: never }
+  ? {
+      [P in keyof T]: P extends symbol ? T[P] : UnwrapRef<T[P]>
+    }
+  : T

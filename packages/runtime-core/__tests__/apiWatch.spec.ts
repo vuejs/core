@@ -15,7 +15,10 @@ import {
   nodeOps,
   serializeInner,
   TestElement,
-  h
+  h,
+  createApp,
+  watchPostEffect,
+  watchSyncEffect
 } from '@vue/runtime-test'
 import {
   ITERATE_KEY,
@@ -24,7 +27,8 @@ import {
   TriggerOpTypes,
   triggerRef,
   shallowRef,
-  Ref
+  Ref,
+  effectScope
 } from '@vue/reactivity'
 
 // reference: https://vue-composition-api-rfc.netlify.com/api.html#watch
@@ -166,7 +170,10 @@ describe('api: watch', () => {
     state.count++
     count.value++
     await nextTick()
-    expect(dummy).toMatchObject([[2, 2, 3], [1, 1, 2]])
+    expect(dummy).toMatchObject([
+      [2, 2, 3],
+      [1, 1, 2]
+    ])
   })
 
   it('watching multiple sources: readonly array', async () => {
@@ -186,7 +193,10 @@ describe('api: watch', () => {
     state.count++
     status.value = true
     await nextTick()
-    expect(dummy).toMatchObject([[2, true], [1, false]])
+    expect(dummy).toMatchObject([
+      [2, true],
+      [1, false]
+    ])
   })
 
   it('watching multiple sources: reactive object (with automatic deep: true)', async () => {
@@ -362,6 +372,32 @@ describe('api: watch', () => {
     expect(result).toBe(true)
   })
 
+  it('watchPostEffect', async () => {
+    const count = ref(0)
+    let result
+    const assertion = jest.fn(count => {
+      result = serializeInner(root) === `${count}`
+    })
+
+    const Comp = {
+      setup() {
+        watchPostEffect(() => {
+          assertion(count.value)
+        })
+        return () => count.value
+      }
+    }
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(assertion).toHaveBeenCalledTimes(1)
+    expect(result).toBe(true)
+
+    count.value++
+    await nextTick()
+    expect(assertion).toHaveBeenCalledTimes(2)
+    expect(result).toBe(true)
+  })
+
   it('flush timing: sync', async () => {
     const count = ref(0)
     const count2 = ref(0)
@@ -392,6 +428,48 @@ describe('api: watch', () => {
             flush: 'sync'
           }
         )
+        return () => count.value
+      }
+    }
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(assertion).toHaveBeenCalledTimes(1)
+    expect(result1).toBe(true)
+    expect(result2).toBe(true)
+
+    count.value++
+    count2.value++
+    await nextTick()
+    expect(assertion).toHaveBeenCalledTimes(3)
+    expect(result1).toBe(true)
+    expect(result2).toBe(true)
+  })
+
+  it('watchSyncEffect', async () => {
+    const count = ref(0)
+    const count2 = ref(0)
+
+    let callCount = 0
+    let result1
+    let result2
+    const assertion = jest.fn(count => {
+      callCount++
+      // on mount, the watcher callback should be called before DOM render
+      // on update, should be called before the count is updated
+      const expectedDOM = callCount === 1 ? `` : `${count - 1}`
+      result1 = serializeInner(root) === expectedDOM
+
+      // in a sync callback, state mutation on the next line should not have
+      // executed yet on the 2nd call, but will be on the 3rd call.
+      const expectedState = callCount < 3 ? 0 : 1
+      result2 = count2.value === expectedState
+    })
+
+    const Comp = {
+      setup() {
+        watchSyncEffect(() => {
+          assertion(count.value)
+        })
         return () => count.value
       }
     }
@@ -540,7 +618,10 @@ describe('api: watch', () => {
         count: ref(0)
       },
       array: [1, 2, 3],
-      map: new Map([['a', 1], ['b', 2]]),
+      map: new Map([
+        ['a', 1],
+        ['b', 2]
+      ]),
       set: new Set([1, 2, 3])
     })
 
@@ -811,7 +892,7 @@ describe('api: watch', () => {
   })
 
   // https://github.com/vuejs/vue-next/issues/2381
-  test('$watch should always register its effects with itw own instance', async () => {
+  test('$watch should always register its effects with its own instance', async () => {
     let instance: ComponentInternalInstance | null
     let _show: Ref<boolean>
 
@@ -840,21 +921,173 @@ describe('api: watch', () => {
       mounted() {
         // this call runs while Comp is currentInstance, but
         // the effect for this `$watch` should nontheless be registered with Child
-        this.comp!.$watch(() => this.show, () => void 0)
+        this.comp!.$watch(
+          () => this.show,
+          () => void 0
+        )
       }
     })
 
     render(h(Comp), nodeOps.createElement('div'))
 
     expect(instance!).toBeDefined()
-    expect(instance!.effects).toBeInstanceOf(Array)
-    expect(instance!.effects!.length).toBe(1)
+    expect(instance!.scope.effects).toBeInstanceOf(Array)
+    // includes the component's own render effect AND the watcher effect
+    expect(instance!.scope.effects.length).toBe(2)
 
     _show!.value = false
 
     await nextTick()
     await nextTick()
 
-    expect(instance!.effects![0].active).toBe(false)
+    expect(instance!.scope.effects[0].active).toBe(false)
+  })
+
+  test('this.$watch should pass `this.proxy` to watch source as the first argument ', () => {
+    let instance: any
+    const source = jest.fn()
+
+    const Comp = defineComponent({
+      render() {},
+      created(this: any) {
+        instance = this
+        this.$watch(source, function () {})
+      }
+    })
+
+    const root = nodeOps.createElement('div')
+    createApp(Comp).mount(root)
+
+    expect(instance).toBeDefined()
+    expect(source).toHaveBeenCalledWith(instance)
+  })
+
+  test('should not leak `this.proxy` to setup()', () => {
+    const source = jest.fn()
+
+    const Comp = defineComponent({
+      render() {},
+      setup() {
+        watch(source, () => {})
+      }
+    })
+
+    const root = nodeOps.createElement('div')
+    createApp(Comp).mount(root)
+    // should not have any arguments
+    expect(source.mock.calls[0]).toMatchObject([])
+  })
+
+  // #2728
+  test('pre watcher callbacks should not track dependencies', async () => {
+    const a = ref(0)
+    const b = ref(0)
+    const updated = jest.fn()
+
+    const Child = defineComponent({
+      props: ['a'],
+      updated,
+      watch: {
+        a() {
+          b.value
+        }
+      },
+      render() {
+        return h('div', this.a)
+      }
+    })
+
+    const Parent = defineComponent({
+      render() {
+        return h(Child, { a: a.value })
+      }
+    })
+
+    const root = nodeOps.createElement('div')
+    createApp(Parent).mount(root)
+
+    a.value++
+    await nextTick()
+    expect(updated).toHaveBeenCalledTimes(1)
+
+    b.value++
+    await nextTick()
+    // should not track b as dependency of Child
+    expect(updated).toHaveBeenCalledTimes(1)
+  })
+
+  test('watching keypath', async () => {
+    const spy = jest.fn()
+    const Comp = defineComponent({
+      render() {},
+      data() {
+        return {
+          a: {
+            b: 1
+          }
+        }
+      },
+      watch: {
+        'a.b': spy
+      },
+      created(this: any) {
+        this.$watch('a.b', spy)
+      },
+      mounted(this: any) {
+        this.a.b++
+      }
+    })
+
+    const root = nodeOps.createElement('div')
+    createApp(Comp).mount(root)
+
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(2)
+  })
+
+  it('watching sources: ref<any[]>', async () => {
+    const foo = ref([1])
+    const spy = jest.fn()
+    watch(foo, () => {
+      spy()
+    })
+    foo.value = foo.value.slice()
+    await nextTick()
+    expect(spy).toBeCalledTimes(1)
+  })
+
+  it('watching multiple sources: computed', async () => {
+    let count = 0
+    const value = ref('1')
+    const plus = computed(() => !!value.value)
+    watch([plus], () => {
+      count++
+    })
+    value.value = '2'
+    await nextTick()
+    expect(plus.value).toBe(true)
+    expect(count).toBe(0)
+  })
+
+  // #4158
+  test('watch should not register in owner component if created inside detached scope', () => {
+    let instance: ComponentInternalInstance
+    const Comp = {
+      setup() {
+        instance = getCurrentInstance()!
+        effectScope(true).run(() => {
+          watch(
+            () => 1,
+            () => {}
+          )
+        })
+        return () => ''
+      }
+    }
+    const root = nodeOps.createElement('div')
+    createApp(Comp).mount(root)
+    // should not record watcher in detached scope and only the instance's
+    // own update effect
+    expect(instance!.scope.effects.length).toBe(1)
   })
 })

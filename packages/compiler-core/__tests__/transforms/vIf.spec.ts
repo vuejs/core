@@ -22,6 +22,7 @@ import {
   CREATE_COMMENT,
   FRAGMENT,
   MERGE_PROPS,
+  NORMALIZE_PROPS,
   RENDER_SLOT
 } from '../../src/runtimeHelpers'
 import { createObjectMatcher } from '../testUtils'
@@ -247,7 +248,7 @@ describe('compiler: v-if', () => {
       ])
     })
 
-    test('error on v-else-if missing adjacent v-if', () => {
+    test('error on v-else-if missing adjacent v-if or v-else-if', () => {
       const onError = jest.fn()
 
       const { node: node1 } = parseWithIfTransform(`<div v-else-if="foo"/>`, {
@@ -281,6 +282,21 @@ describe('compiler: v-if', () => {
         {
           code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
           loc: node3.loc
+        }
+      ])
+
+      const {
+        node: { branches }
+      } = parseWithIfTransform(
+        `<div v-if="notOk"/><div v-else/><div v-else-if="ok"/>`,
+        { onError },
+        0
+      )
+
+      expect(onError.mock.calls[3]).toMatchObject([
+        {
+          code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
+          loc: branches[branches.length - 1].loc
         }
       ])
     })
@@ -556,8 +572,14 @@ describe('compiler: v-if', () => {
       const branch1 = codegenNode.consequent as VNodeCall
       expect(branch1.props).toMatchObject({
         type: NodeTypes.JS_CALL_EXPRESSION,
-        callee: MERGE_PROPS,
-        arguments: [createObjectMatcher({ key: `[0]` }), { content: `obj` }]
+        callee: NORMALIZE_PROPS,
+        arguments: [
+          {
+            type: NodeTypes.JS_CALL_EXPRESSION,
+            callee: MERGE_PROPS,
+            arguments: [createObjectMatcher({ key: `[0]` }), { content: `obj` }]
+          }
+        ]
       })
     })
 

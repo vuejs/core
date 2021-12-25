@@ -20,7 +20,8 @@ export const vShow: ObjectDirective<VShowElement> = {
     }
   },
   updated(el, { value, oldValue }, { transition }) {
-    if (transition && value !== oldValue) {
+    if (!value === !oldValue) return
+    if (transition) {
       if (value) {
         transition.beforeEnter(el)
         setDisplay(el, true)
@@ -39,14 +40,16 @@ export const vShow: ObjectDirective<VShowElement> = {
   }
 }
 
-if (__NODE_JS__) {
+function setDisplay(el: VShowElement, value: unknown): void {
+  el.style.display = value ? el._vod : 'none'
+}
+
+// SSR vnode transforms, only used when user includes client-oriented render
+// function in SSR
+export function initVShowForSSR() {
   vShow.getSSRProps = ({ value }) => {
     if (!value) {
       return { style: { display: 'none' } }
     }
   }
-}
-
-function setDisplay(el: VShowElement, value: unknown): void {
-  el.style.display = value ? el._vod : 'none'
 }

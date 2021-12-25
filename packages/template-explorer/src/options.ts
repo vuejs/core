@@ -6,13 +6,15 @@ export const ssrMode = ref(false)
 
 export const compilerOptions: CompilerOptions = reactive({
   mode: 'module',
+  filename: 'Foo.vue',
   prefixIdentifiers: false,
-  optimizeImports: false,
   hoistStatic: false,
   cacheHandlers: false,
   scopeId: null,
   inline: false,
   ssrCssVars: `{ color }`,
+  compatConfig: { MODE: 3 },
+  whitespace: 'condense',
   bindingMetadata: {
     TestComponent: BindingTypes.SETUP_CONST,
     setupRef: BindingTypes.SETUP_REF,
@@ -46,8 +48,7 @@ const App = {
         h(
           'a',
           {
-            href:
-              'https://app.netlify.com/sites/vue-next-template-explorer/deploys',
+            href: 'https://app.netlify.com/sites/vue-next-template-explorer/deploys',
             target: `_blank`
           },
           'History'
@@ -80,6 +81,32 @@ const App = {
                 }
               }),
               h('label', { for: 'mode-function' }, 'function')
+            ]),
+
+            // whitespace handling
+            h('li', { id: 'whitespace' }, [
+              h('span', { class: 'label' }, 'whitespace: '),
+              h('input', {
+                type: 'radio',
+                id: 'whitespace-condense',
+                name: 'whitespace',
+                checked: compilerOptions.whitespace === 'condense',
+                onChange() {
+                  compilerOptions.whitespace = 'condense'
+                }
+              }),
+              h('label', { for: 'whitespace-condense' }, 'condense'),
+              ' ',
+              h('input', {
+                type: 'radio',
+                id: 'whitespace-preserve',
+                name: 'whitespace',
+                checked: compilerOptions.whitespace === 'preserve',
+                onChange() {
+                  compilerOptions.whitespace = 'preserve'
+                }
+              }),
+              h('label', { for: 'whitespace-preserve' }, 'preserve')
             ]),
 
             // SSR
@@ -119,7 +146,9 @@ const App = {
                 checked: compilerOptions.hoistStatic && !isSSR,
                 disabled: isSSR,
                 onChange(e: Event) {
-                  compilerOptions.hoistStatic = (e.target as HTMLInputElement).checked
+                  compilerOptions.hoistStatic = (
+                    e.target as HTMLInputElement
+                  ).checked
                 }
               }),
               h('label', { for: 'hoist' }, 'hoistStatic')
@@ -133,7 +162,9 @@ const App = {
                 checked: usePrefix && compilerOptions.cacheHandlers && !isSSR,
                 disabled: !usePrefix || isSSR,
                 onChange(e: Event) {
-                  compilerOptions.cacheHandlers = (e.target as HTMLInputElement).checked
+                  compilerOptions.cacheHandlers = (
+                    e.target as HTMLInputElement
+                  ).checked
                 }
               }),
               h('label', { for: 'cache' }, 'cacheHandlers')
@@ -163,24 +194,29 @@ const App = {
                 id: 'inline',
                 checked: compilerOptions.inline,
                 onChange(e: Event) {
-                  compilerOptions.inline = (e.target as HTMLInputElement).checked
+                  compilerOptions.inline = (
+                    e.target as HTMLInputElement
+                  ).checked
                 }
               }),
               h('label', { for: 'inline' }, 'inline')
             ]),
 
-            // toggle optimizeImports
+            // compat mode
             h('li', [
               h('input', {
                 type: 'checkbox',
-                id: 'optimize-imports',
-                disabled: !isModule || isSSR,
-                checked: isModule && !isSSR && compilerOptions.optimizeImports,
+                id: 'compat',
+                checked: compilerOptions.compatConfig!.MODE === 2,
                 onChange(e: Event) {
-                  compilerOptions.optimizeImports = (e.target as HTMLInputElement).checked
+                  compilerOptions.compatConfig!.MODE = (
+                    e.target as HTMLInputElement
+                  ).checked
+                    ? 2
+                    : 3
                 }
               }),
-              h('label', { for: 'optimize-imports' }, 'optimizeImports')
+              h('label', { for: 'compat' }, 'v2 compat mode')
             ])
           ])
         ])

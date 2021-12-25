@@ -9,10 +9,13 @@ export {
   customRef,
   triggerRef,
   Ref,
+  ToRef,
   ToRefs,
   UnwrapRef,
+  ShallowRef,
   ShallowUnwrapRef,
-  RefUnwrapBailTypes
+  RefUnwrapBailTypes,
+  CustomRefFactory
 } from './ref'
 export {
   reactive,
@@ -25,7 +28,9 @@ export {
   markRaw,
   toRaw,
   ReactiveFlags,
-  DeepReadonly
+  DeepReadonly,
+  ShallowReactive,
+  UnwrapNestedRefs
 } from './reactive'
 export {
   computed,
@@ -35,6 +40,7 @@ export {
   ComputedGetter,
   ComputedSetter
 } from './computed'
+export { deferredComputed } from './deferredComputed'
 export {
   effect,
   stop,
@@ -45,7 +51,17 @@ export {
   resetTracking,
   ITERATE_KEY,
   ReactiveEffect,
+  ReactiveEffectRunner,
   ReactiveEffectOptions,
-  DebuggerEvent
+  EffectScheduler,
+  DebuggerOptions,
+  DebuggerEvent,
+  DebuggerEventExtraInfo
 } from './effect'
+export {
+  effectScope,
+  EffectScope,
+  getCurrentScope,
+  onScopeDispose
+} from './effectScope'
 export { TrackOpTypes, TriggerOpTypes } from './operations'

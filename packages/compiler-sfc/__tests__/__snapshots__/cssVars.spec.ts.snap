@@ -49,17 +49,53 @@ __default__.setup = __setup__
 export default __default__"
 `;
 
+exports[`CSS vars injection codegen should ignore comments 1`] = `
+"import { useCssVars as _useCssVars, unref as _unref } from 'vue'
+
+export default {
+  setup(__props, { expose }) {
+  expose();
+
+_useCssVars(_ctx => ({
+  \\"xxxxxxxx-width\\": (width)
+}))
+const color = 'red';const width = 100
+return { color, width }
+}
+
+}"
+`;
+
 exports[`CSS vars injection codegen w/ <script setup> 1`] = `
 "import { useCssVars as _useCssVars, unref as _unref } from 'vue'
 
 export default {
-  expose: [],
-  setup(__props) {
+  setup(__props, { expose }) {
+  expose();
 
 _useCssVars(_ctx => ({
   \\"xxxxxxxx-color\\": (color)
 }))
 const color = 'red'
+return { color }
+}
+
+}"
+`;
+
+exports[`CSS vars injection codegen w/ <script setup> using the same var multiple times 1`] = `
+"import { useCssVars as _useCssVars, unref as _unref } from 'vue'
+
+export default {
+  setup(__props, { expose }) {
+  expose();
+
+_useCssVars(_ctx => ({
+  \\"xxxxxxxx-color\\": (color)
+}))
+
+        const color = 'red'
+        
 return { color }
 }
 
@@ -88,11 +124,11 @@ exports[`CSS vars injection w/ <script setup> binding analysis 1`] = `
 import { ref } from 'vue'
         
 export default {
-  expose: [],
   props: {
           foo: String
         },
-  setup(__props) {
+  setup(__props, { expose }) {
+  expose();
 
 _useCssVars(_ctx => ({
   \\"xxxxxxxx-color\\": (color),
@@ -108,4 +144,27 @@ return { color, size, ref }
 }
 
 }"
+`;
+
+exports[`CSS vars injection w/ normal <script> binding analysis 1`] = `
+"
+      const __default__ = {
+        setup() {
+          return {
+            size: ref('100px')
+          }
+        }
+      }
+      
+import { useCssVars as _useCssVars } from 'vue'
+const __injectCSSVars__ = () => {
+_useCssVars(_ctx => ({
+  \\"xxxxxxxx-size\\": (_ctx.size)
+}))}
+const __setup__ = __default__.setup
+__default__.setup = __setup__
+  ? (props, ctx) => { __injectCSSVars__();return __setup__(props, ctx) }
+  : __injectCSSVars__
+
+export default __default__"
 `;

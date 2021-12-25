@@ -26,4 +26,85 @@ describe('compiler sfc: rewriteDefault', () => {
       const script = a"
     `)
   })
+
+  test('w/ comments', async () => {
+    expect(rewriteDefault(`// export default\nexport default {}`, 'script'))
+      .toMatchInlineSnapshot(`
+      "// export default
+      const script = {}"
+    `)
+  })
+
+  test('export named default multiline', () => {
+    expect(
+      rewriteDefault(`let App = {}\n export {\nApp as default\n}`, '_sfc_main')
+    ).toMatchInlineSnapshot(`
+      "let App = {}
+       export {
+      
+      }
+      const _sfc_main = App"
+    `)
+  })
+
+  test('export named default multiline /w comments', () => {
+    expect(
+      rewriteDefault(
+        `const a = 1 \n export {\n a as b,\n a as default,\n a as c}\n` +
+          `// export { myFunction as default }`,
+        'script'
+      )
+    ).toMatchInlineSnapshot(`
+      "const a = 1 
+       export {
+       a as b,
+       
+       a as c}
+      // export { myFunction as default }
+      const script = a"
+    `)
+  })
+
+  test('export default class', async () => {
+    expect(rewriteDefault(`export default class Foo {}`, 'script'))
+      .toMatchInlineSnapshot(`
+      "class Foo {}
+      const script = Foo"
+    `)
+  })
+
+  test('export default class w/ comments', async () => {
+    expect(
+      rewriteDefault(`// export default\nexport default class Foo {}`, 'script')
+    ).toMatchInlineSnapshot(`
+      "// export default
+      class Foo {}
+      const script = Foo"
+    `)
+  })
+
+  test('export default class w/ comments 2', async () => {
+    expect(
+      rewriteDefault(
+        `export default {}\n` + `// export default class Foo {}`,
+        'script'
+      )
+    ).toMatchInlineSnapshot(`
+      "const script = {}
+      // export default class Foo {}"
+    `)
+  })
+
+  test('export default class w/ comments 3', async () => {
+    expect(
+      rewriteDefault(
+        `/*\nexport default class Foo {}*/\n` + `export default class Bar {}`,
+        'script'
+      )
+    ).toMatchInlineSnapshot(`
+      "/*
+      export default class Foo {}*/
+      const script = class Bar {}"
+    `)
+  })
 })

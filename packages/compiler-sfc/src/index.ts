@@ -4,7 +4,27 @@ export { compileTemplate } from './compileTemplate'
 export { compileStyle, compileStyleAsync } from './compileStyle'
 export { compileScript } from './compileScript'
 export { rewriteDefault } from './rewriteDefault'
-export { generateCodeFrame } from '@vue/compiler-core'
+export {
+  shouldTransform as shouldTransformRef,
+  transform as transformRef,
+  transformAST as transformRefAST
+} from '@vue/reactivity-transform'
+
+// Utilities
+export { parse as babelParse } from '@babel/parser'
+import MagicString from 'magic-string'
+export { MagicString }
+// technically internal but we want it in @vue/repl, cast it as any to avoid
+// relying on estree types
+import { walk as _walk } from 'estree-walker'
+export const walk = _walk as any
+export {
+  generateCodeFrame,
+  walkIdentifiers,
+  extractIdentifiers,
+  isInDestructureAssignment,
+  isStaticProperty
+} from '@vue/compiler-core'
 
 // Types
 export {
@@ -13,7 +33,8 @@ export {
   SFCBlock,
   SFCTemplateBlock,
   SFCScriptBlock,
-  SFCStyleBlock
+  SFCStyleBlock,
+  SFCParseResult
 } from './parse'
 export {
   TemplateCompiler,
@@ -26,6 +47,7 @@ export {
   SFCStyleCompileResults
 } from './compileStyle'
 export { SFCScriptCompileOptions } from './compileScript'
+export { AssetURLOptions, AssetURLTagConfig } from './templateTransformAssetUrl'
 export {
   CompilerOptions,
   CompilerError,

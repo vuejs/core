@@ -57,7 +57,7 @@ describe('ssr: element', () => {
       expect(compile(`<textarea v-bind="obj">fallback</textarea>`).code)
         .toMatchInlineSnapshot(`
         "const { mergeProps: _mergeProps } = require(\\"vue\\")
-        const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require(\\"@vue/server-renderer\\")
+        const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require(\\"vue/server-renderer\\")
 
         return function ssrRender(_ctx, _push, _parent, _attrs) {
           let _temp0
@@ -71,6 +71,28 @@ describe('ssr: element', () => {
       `)
     })
 
+    test('multiple _ssrInterpolate at parent and child import dependency once', () => {
+      expect(
+        compile(`<div>{{ hello }}<textarea v-bind="a"></textarea></div>`).code
+      ).toMatchInlineSnapshot(`
+        "const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require(\\"vue/server-renderer\\")
+
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
+          let _temp0
+
+          _push(\`<div\${
+            _ssrRenderAttrs(_attrs)
+          }>\${
+            _ssrInterpolate(_ctx.hello)
+          }<textarea\${
+            _ssrRenderAttrs(_temp0 = _ctx.a, \\"textarea\\")
+          }>\${
+            _ssrInterpolate((\\"value\\" in _temp0) ? _temp0.value : \\"\\")
+          }</textarea></div>\`)
+        }"
+      `)
+    })
+
     test('should pass tag to custom elements w/ dynamic v-bind', () => {
       expect(
         compile(`<my-foo v-bind="obj"></my-foo>`, {
@@ -78,7 +100,7 @@ describe('ssr: element', () => {
         }).code
       ).toMatchInlineSnapshot(`
         "const { mergeProps: _mergeProps } = require(\\"vue\\")
-        const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"@vue/server-renderer\\")
+        const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
         return function ssrRender(_ctx, _push, _parent, _attrs) {
           _push(\`<my-foo\${_ssrRenderAttrs(_mergeProps(_ctx.obj, _attrs), \\"my-foo\\")}></my-foo>\`)
@@ -155,7 +177,7 @@ describe('ssr: element', () => {
       expect(getCompiledString(`<input type="checkbox" :checked="checked">`))
         .toMatchInlineSnapshot(`
         "\`<input type=\\"checkbox\\"\${
-            (_ctx.checked) ? \\" checked\\" : \\"\\"
+            (_ssrIncludeBooleanAttr(_ctx.checked)) ? \\" checked\\" : \\"\\"
           }>\`"
       `)
     })
