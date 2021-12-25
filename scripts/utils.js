@@ -1,11 +1,13 @@
 const fs = require('fs')
+const path = require('path')
 const chalk = require('chalk')
 
 const targets = (exports.targets = fs.readdirSync('packages').filter(f => {
-  if (!fs.statSync(`packages/${f}`).isDirectory()) {
+  const pkgPath = path.resolve(`packages/${f}/package.json`)
+  if (!fs.existsSync(pkgPath)) {
     return false
   }
-  const pkg = require(`../packages/${f}/package.json`)
+  const pkg = require(pkgPath)
   if (pkg.private && !pkg.buildOptions) {
     return false
   }
