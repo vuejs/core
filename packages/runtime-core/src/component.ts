@@ -764,7 +764,7 @@ export function finishComponentSetup(
   // template / render function normalization
   // could be already set when returned from setup()
   if (!instance.render) {
-    // only do on-the-fly compile if not in SSR - SSR on-the-fly compliation
+    // only do on-the-fly compile if not in SSR - SSR on-the-fly compilation
     // is done by server-renderer
     if (!isSSR && compile && !Component.render) {
       const template =
