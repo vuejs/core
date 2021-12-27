@@ -374,4 +374,73 @@ describe('api: lifecycle hooks', () => {
       newValue: 3
     })
   })
+  
+  it('the same function (argument to onMounted) reference should be called', async () => {
+    const root = nodeOps.createElement('div')
+    let mountsCount = 0
+    let _mountsCount = 0
+    let unmountsCount = 0
+    let _unmountsCount = 0
+    
+    function handleMounted () {
+      mountsCount++
+    }
+    
+    function _handleMounted () {
+      _mountsCount++
+    }
+    
+    function handleUnmounted ()  {
+      unmountsCount++
+    }
+    
+    function _handleUnmounted ()  {
+      _unmountsCount++
+    }
+    
+    const Comp = {
+      setup() {
+        onMounted(handleMounted)
+        // this `handleMounted` can be deduped
+        onMounted(handleMounted)
+        
+        onMounted(() => _handleMounted())
+        onUnmounted(handleUnmounted)
+        onMounted(() => _handleUnmounted())
+        
+        return () => h('div')
+      }
+    }
+    const isShow = ref(false)
+    const App = {
+      setup() {
+        return () => {
+          return isShow.value ? h(Comp): null
+        }
+      }
+    }
+    render(h(App), root)
+    
+    isShow.value  = true
+    await nextTick()
+    expect(mountsCount).toBe(1)
+    expect(_mountsCount).toBe(1)
+    
+    
+    isShow.value  = false
+    await nextTick()
+    expect(unmountsCount).toBe(1)
+    expect(_unmountsCount).toBe(1)
+    
+    isShow.value  = true
+    await nextTick()
+    expect(_mountsCount).toBe(2)
+    expect(mountsCount).toBe(2)
+    
+    isShow.value  = false
+    await nextTick()
+    expect(unmountsCount).toBe(2)
+    expect(_unmountsCount).toBe(2)
+  })
+  
 })

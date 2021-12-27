@@ -28,7 +28,11 @@ export function injectHook(
     const wrappedHook =
       hook.__weh ||
       (hook.__weh = (...args: unknown[]) => {
-        if (target.isUnmounted) {
+        if (target.isMounted && target.isUnmounted) {
+          
+          // do nothing, just skip the `else if (target.isUnmounted)` judgment
+          // #4861
+        } else if (target.isUnmounted) {
           return
         }
         // disable tracking inside all lifecycle hooks
