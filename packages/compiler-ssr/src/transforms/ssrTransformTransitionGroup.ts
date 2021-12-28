@@ -1,5 +1,37 @@
-import { ComponentNode, findProp, NodeTypes } from '@vue/compiler-dom'
+import {
+  ComponentNode,
+  findProp,
+  NodeTypes,
+  createCallExpression,
+  buildProps,
+  createTemplateLiteral,
+  DirectiveNode,
+  AttributeNode
+} from '@vue/compiler-dom'
 import { processChildren, SSRTransformContext } from '../ssrCodegenTransform'
+import { SSR_RENDER_ATTRS } from '../runtimeHelpers'
+
+function injectProp(
+  node: ComponentNode,
+  context: SSRTransformContext,
+  tag: AttributeNode | DirectiveNode
+) {
+  const { props } = buildProps(
+    node,
+    context as any,
+    node.props.filter(p => p !== tag),
+    true /* ssr */
+  )
+  if (props) {
+    context.pushStatement(
+      createCallExpression(`_push`, [
+        createTemplateLiteral([
+          createCallExpression(context.helper(SSR_RENDER_ATTRS), [props])
+        ])
+      ])
+    )
+  }
+}
 
 export function ssrProcessTransitionGroup(
   node: ComponentNode,
@@ -11,6 +43,7 @@ export function ssrProcessTransitionGroup(
       // dynamic :tag
       context.pushStringPart(`<`)
       context.pushStringPart(tag.exp!)
+      injectProp(node, context, tag)
       context.pushStringPart(`>`)
 
       processChildren(
@@ -30,7 +63,9 @@ export function ssrProcessTransitionGroup(
       context.pushStringPart(`>`)
     } else {
       // static tag
-      context.pushStringPart(`<${tag.value!.content}>`)
+      context.pushStringPart(`<${tag.value!.content}`)
+      injectProp(node, context, tag)
+      context.pushStringPart(`>`)
       processChildren(node.children, context, false, true)
       context.pushStringPart(`</${tag.value!.content}>`)
     }

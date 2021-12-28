@@ -313,7 +313,7 @@ describe('ssr: components', () => {
       test('with static tag', () => {
         expect(
           compile(
-            `<transition-group tag="ul"><div v-for="i in list"/></transition-group>`
+            `<transition-group tag="ul" class="red"><div v-for="i in list"/></transition-group>`
           ).code
         ).toMatchInlineSnapshot(`
           "const { ssrRenderList: _ssrRenderList } = require(\\"vue/server-renderer\\")
