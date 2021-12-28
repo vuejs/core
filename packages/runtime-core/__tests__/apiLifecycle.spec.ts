@@ -374,7 +374,7 @@ describe('api: lifecycle hooks', () => {
       newValue: 3
     })
   })
-  
+  // #4861
   it('the same function (argument to onMounted) reference should be called', async () => {
     const root = nodeOps.createElement('div')
     let mountsCount = 0
