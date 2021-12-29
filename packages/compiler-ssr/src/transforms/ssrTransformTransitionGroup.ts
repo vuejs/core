@@ -6,7 +6,8 @@ import {
   buildProps,
   createTemplateLiteral,
   DirectiveNode,
-  AttributeNode
+  AttributeNode,
+  createTransformContext
 } from '@vue/compiler-dom'
 import { processChildren, SSRTransformContext } from '../ssrCodegenTransform'
 import { SSR_RENDER_ATTRS } from '../runtimeHelpers'
@@ -18,7 +19,7 @@ function injectProp(
 ) {
   const { props } = buildProps(
     node,
-    context as any,
+    createTransformContext(context.root, context.options),
     node.props.filter(p => p !== tag),
     true /* ssr */
   )

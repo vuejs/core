@@ -316,10 +316,12 @@ describe('ssr: components', () => {
             `<transition-group tag="ul" class="red"><div v-for="i in list"/></transition-group>`
           ).code
         ).toMatchInlineSnapshot(`
-          "const { ssrRenderList: _ssrRenderList } = require(\\"vue/server-renderer\\")
+          "const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderList: _ssrRenderList } = require(\\"vue/server-renderer\\")
 
           return function ssrRender(_ctx, _push, _parent, _attrs) {
-            _push(\`<ul>\`)
+            _push(\`<ul\`)
+            _push(\`\${_ssrRenderAttrs(_mergeProps({ class: \\"red\\" }, _attrs))}\`)
+            _push(\`>\`)
             _ssrRenderList(_ctx.list, (i) => {
               _push(\`<div></div>\`)
             })
@@ -334,10 +336,12 @@ describe('ssr: components', () => {
             `<transition-group :tag="someTag"><div v-for="i in list"/></transition-group>`
           ).code
         ).toMatchInlineSnapshot(`
-          "const { ssrRenderList: _ssrRenderList } = require(\\"vue/server-renderer\\")
+          "const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderList: _ssrRenderList } = require(\\"vue/server-renderer\\")
 
           return function ssrRender(_ctx, _push, _parent, _attrs) {
-            _push(\`<\${_ctx.someTag}>\`)
+            _push(\`<\${_ctx.someTag}\`)
+            _push(\`\${_ssrRenderAttrs(_attrs)}\`)
+            _push(\`>\`)
             _ssrRenderList(_ctx.list, (i) => {
               _push(\`<div></div>\`)
             })
