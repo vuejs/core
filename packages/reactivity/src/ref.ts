@@ -5,6 +5,7 @@ import { isProxy, toRaw, isReactive, toReactive } from './reactive'
 import type { ShallowReactiveMarker } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
 import { createDep, Dep } from './dep'
+import { ComputedRef } from './computed'
 
 declare const RefSymbol: unique symbol
 
@@ -281,7 +282,9 @@ export type ShallowUnwrapRef<T> = {
     : T[K]
 }
 
-export type UnwrapRef<T> = T extends ShallowRef<infer V>
+export type UnwrapRef<T> = T extends ComputedRef
+  ? T
+  : T extends ShallowRef<infer V>
   ? V
   : T extends Ref<infer V>
   ? UnwrapRefSimple<V>

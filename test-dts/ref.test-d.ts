@@ -1,3 +1,4 @@
+import { computed } from '@vue/reactivity'
 import {
   Ref,
   ref,
@@ -309,4 +310,14 @@ describe('reactive in shallow ref', () => {
   })
 
   expectType<number>(x.value.a.b)
+})
+
+describe('computed in reactive', () => {
+  const foo = computed(() => 'foo')
+
+  const a = reactive({
+    foo
+  })
+
+  expectType<typeof foo>(a.foo)
 })
