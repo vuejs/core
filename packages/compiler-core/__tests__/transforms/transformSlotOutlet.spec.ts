@@ -339,7 +339,7 @@ describe('compiler: transform <slot> outlets', () => {
     })
   })
 
-  test('slot with slotted: false', async () => {
+  test('slot with slotted: false', () => {
     const ast = parseWithSlots(`<slot/>`, { slotted: false, scopeId: 'foo' })
     expect((ast.children[0] as ElementNode).codegenNode).toMatchObject({
       type: NodeTypes.JS_CALL_EXPRESSION,
