@@ -39,7 +39,8 @@ import { createPropsDefaultThis } from './compat/props'
 import { isCompatEnabled, softAssertCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
 import { shouldSkipAttr } from './compat/attrsFallthrough'
-import { IfAny } from './helpers/typeUtils'
+import type {  IfAny } from '../../shared/src/typeUtils';
+
 
 export type ComponentPropsOptions<P = Data> =
   | ComponentObjectPropsOptions<P>

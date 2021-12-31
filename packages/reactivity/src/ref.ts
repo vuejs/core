@@ -5,7 +5,7 @@ import { isProxy, toRaw, isReactive, toReactive } from './reactive'
 import type { ShallowReactiveMarker } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
 import { createDep, Dep } from './dep'
-import { IfAny } from 'packages/runtime-core/src/helpers/typeUtils'
+import type { IfAny } from '../../shared/src/typeUtils';
 
 declare const RefSymbol: unique symbol
 
