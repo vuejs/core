@@ -5,6 +5,7 @@ import { isProxy, toRaw, isReactive, toReactive } from './reactive'
 import type { ShallowReactiveMarker } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
 import { createDep, Dep } from './dep'
+import { IfAny } from 'packages/runtime-core/src/helpers/typeUtils'
 
 declare const RefSymbol: unique symbol
 
@@ -222,7 +223,8 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
   }
 }
 
-export type ToRef<T> = [T] extends [Ref] ? T : Ref<T>
+export type ToRef<T> = IfAny<T,Ref<T>,[T] extends [Ref] ? T : Ref<T>>
+
 
 export function toRef<T extends object, K extends keyof T>(
   object: T,
