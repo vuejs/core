@@ -403,7 +403,7 @@ defineExpose({ foo: 123 })
       assertCode(content)
     })
 
-    // #4340 interpolations in tempalte strings
+    // #4340 interpolations in template strings
     test('js template string interpolations', () => {
       const { content } = compile(`
         <script setup lang="ts">
