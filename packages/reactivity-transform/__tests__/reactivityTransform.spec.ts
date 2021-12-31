@@ -127,15 +127,43 @@ test('accessing ref binding', () => {
   assertCode(code)
 })
 
-test('cases that should not append .value', () => {
-  const { code } = transform(`
+describe('cases that should not append .value', () => {
+  test('member expression', () => {
+    const { code } = transform(`
+      let a = $ref(1)
+      console.log(b.a)
+      `)
+    expect(code).not.toMatch(`a.value`)
+  })
+
+  test('function argument', () => {
+    const { code } = transform(`
+      let a = $ref(1)
+      function get(a) {
+        return a + 1
+      }
+      function get2({ a }) {
+        return a + 1
+      }
+      function get3([a]) {
+        return a + 1
+      }
+      `)
+    expect(code).not.toMatch(`a.value`)
+  })
+
+  test('for in/of loops', () => {
+    const { code } = transform(`
     let a = $ref(1)
-    console.log(b.a)
-    function get(a) {
-      return a + 1
+    for (const [a, b] of arr) {
+      console.log(a)
+    }
+    for (let a in arr) {
+      console.log(a)
     }
     `)
-  expect(code).not.toMatch(`a.value`)
+    expect(code).not.toMatch(`a.value`)
+  })
 })
 
 test('mutating ref binding', () => {

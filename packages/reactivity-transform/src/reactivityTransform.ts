@@ -7,7 +7,8 @@ import {
   ArrayPattern,
   Program,
   VariableDeclarator,
-  Expression
+  Expression,
+  VariableDeclaration
 } from '@babel/types'
 import MagicString, { SourceMap } from 'magic-string'
 import { walk } from 'estree-walker'
@@ -216,40 +217,49 @@ export function transformAST(
   function walkScope(node: Program | BlockStatement, isRoot = false) {
     for (const stmt of node.body) {
       if (stmt.type === 'VariableDeclaration') {
-        if (stmt.declare) continue
-        for (const decl of stmt.declarations) {
-          let refCall
-          const isCall =
-            decl.init &&
-            decl.init.type === 'CallExpression' &&
-            decl.init.callee.type === 'Identifier'
-          if (
-            isCall &&
-            (refCall = isRefCreationCall((decl as any).init.callee.name))
-          ) {
-            processRefDeclaration(refCall, decl.id, decl.init as CallExpression)
-          } else {
-            const isProps =
-              isRoot &&
-              isCall &&
-              (decl as any).init.callee.name === 'defineProps'
-            for (const id of extractIdentifiers(decl.id)) {
-              if (isProps) {
-                // for defineProps destructure, only exclude them since they
-                // are already passed in as knownProps
-                excludedIds.add(id)
-              } else {
-                registerBinding(id)
-              }
-            }
-          }
-        }
+        walkVariableDeclaration(stmt, isRoot)
       } else if (
         stmt.type === 'FunctionDeclaration' ||
         stmt.type === 'ClassDeclaration'
       ) {
         if (stmt.declare || !stmt.id) continue
         registerBinding(stmt.id)
+      } else if (
+        (stmt.type === 'ForOfStatement' || stmt.type === 'ForInStatement') &&
+        stmt.left.type === 'VariableDeclaration'
+      ) {
+        walkVariableDeclaration(stmt.left)
+      }
+    }
+  }
+
+  function walkVariableDeclaration(stmt: VariableDeclaration, isRoot = false) {
+    if (stmt.declare) {
+      return
+    }
+    for (const decl of stmt.declarations) {
+      let refCall
+      const isCall =
+        decl.init &&
+        decl.init.type === 'CallExpression' &&
+        decl.init.callee.type === 'Identifier'
+      if (
+        isCall &&
+        (refCall = isRefCreationCall((decl as any).init.callee.name))
+      ) {
+        processRefDeclaration(refCall, decl.id, decl.init as CallExpression)
+      } else {
+        const isProps =
+          isRoot && isCall && (decl as any).init.callee.name === 'defineProps'
+        for (const id of extractIdentifiers(decl.id)) {
+          if (isProps) {
+            // for defineProps destructure, only exclude them since they
+            // are already passed in as knownProps
+            excludedIds.add(id)
+          } else {
+            registerBinding(id)
+          }
+        }
       }
     }
   }
