@@ -719,7 +719,7 @@ function testRender(type: string, render: typeof renderToString) {
 
     describe('scopeId', () => {
       // note: here we are only testing scopeId handling for vdom serialization.
-      // compiled srr render functions will include scopeId directly in strings.
+      // compiled ssr render functions will include scopeId directly in strings.
 
       test('basic', async () => {
         const Foo = {
