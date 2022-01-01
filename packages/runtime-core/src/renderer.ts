@@ -2112,6 +2112,7 @@ function baseCreateRenderer(
           doRemove
         )
       } else if (
+        patchFlag > 0 &&
         dynamicChildren &&
         // #1153: fast path should not be taken for non-stable (v-for) fragments
         (type !== Fragment ||
