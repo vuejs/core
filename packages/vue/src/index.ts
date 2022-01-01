@@ -75,7 +75,11 @@ function compileToFunction(
   // In the global build we know `Vue` is available globally so we can avoid
   // the wildcard object.
   const render = (
-    __GLOBAL__ ? new Function(code)() : new Function('Vue', code)(runtimeDom)
+    __GLOBAL__
+      // https://github.com/vuejs/vue-next/issues/5196
+      // @ts-ignore
+      ? new Function('Vue', code)(Vue)
+      : new Function('Vue', code)(runtimeDom)
   ) as RenderFunction
 
   // mark the function as runtime compiled
