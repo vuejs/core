@@ -211,6 +211,21 @@ return function render(_ctx, _cache) {
 }"
 `;
 
+exports[`compiler: hoistStatic transform prefixIdentifiers should NOT hoist elements with cached handlers + other bindings 1`] = `
+"import { normalizeClass as _normalizeClass, createElementVNode as _createElementVNode, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
+
+export function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock(\\"div\\", null, [
+    _createElementVNode(\\"div\\", null, [
+      _createElementVNode(\\"div\\", {
+        class: _normalizeClass({}),
+        onClick: _cache[0] || (_cache[0] = (...args) => (_ctx.foo && _ctx.foo(...args)))
+      })
+    ])
+  ]))
+}"
+`;
+
 exports[`compiler: hoistStatic transform prefixIdentifiers should NOT hoist elements with cached handlers 1`] = `
 "import { createElementVNode as _createElementVNode, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 

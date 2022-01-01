@@ -20,7 +20,6 @@ export const enum CompilerDeprecationTypes {
   COMPILER_V_BIND_OBJECT_ORDER = 'COMPILER_V_BIND_OBJECT_ORDER',
   COMPILER_V_ON_NATIVE = 'COMPILER_V_ON_NATIVE',
   COMPILER_V_IF_V_FOR_PRECEDENCE = 'COMPILER_V_IF_V_FOR_PRECEDENCE',
-  COMPILER_V_FOR_REF = 'COMPILER_V_FOR_REF',
   COMPILER_NATIVE_TEMPLATE = 'COMPILER_NATIVE_TEMPLATE',
   COMPILER_INLINE_TEMPLATE = 'COMPILER_INLINE_TEMPLATE',
   COMPILER_FILTERS = 'COMPILER_FILTER'
@@ -77,13 +76,6 @@ const deprecationData: Record<CompilerDeprecationTypes, DeprecationData> = {
       `with <template> tags or use a computed property that filters v-for ` +
       `data source.`,
     link: `https://v3.vuejs.org/guide/migration/v-if-v-for.html`
-  },
-
-  [CompilerDeprecationTypes.COMPILER_V_FOR_REF]: {
-    message:
-      `Ref usage on v-for no longer creates array ref values in Vue 3. ` +
-      `Consider using function refs or refactor to avoid ref usage altogether.`,
-    link: `https://v3.vuejs.org/guide/migration/array-refs.html`
   },
 
   [CompilerDeprecationTypes.COMPILER_NATIVE_TEMPLATE]: {

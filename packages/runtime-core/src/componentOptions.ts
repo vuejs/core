@@ -714,7 +714,7 @@ export function applyOptions(instance: ComponentInternalInstance) {
           `Plain object usage is no longer supported.`
       )
     }
-    const data = (dataOptions as any).call(publicThis, publicThis)
+    const data = dataOptions.call(publicThis, publicThis)
     if (__DEV__ && isPromise(data)) {
       warn(
         `data() returned a Promise - note data() cannot be async; If you ` +
@@ -1078,7 +1078,9 @@ export const internalOptionMergeStrats: Record<string, Function> = {
   beforeUpdate: mergeAsArray,
   updated: mergeAsArray,
   beforeDestroy: mergeAsArray,
+  beforeUnmount: mergeAsArray,
   destroyed: mergeAsArray,
+  unmounted: mergeAsArray,
   activated: mergeAsArray,
   deactivated: mergeAsArray,
   errorCaptured: mergeAsArray,

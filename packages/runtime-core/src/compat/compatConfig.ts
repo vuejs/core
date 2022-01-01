@@ -46,7 +46,6 @@ export const enum DeprecationTypes {
   WATCH_ARRAY = 'WATCH_ARRAY',
   PROPS_DEFAULT_THIS = 'PROPS_DEFAULT_THIS',
 
-  V_FOR_REF = 'V_FOR_REF',
   V_ON_KEYCODE_MODIFIER = 'V_ON_KEYCODE_MODIFIER',
   CUSTOM_DIR = 'CUSTOM_DIR',
 
@@ -298,13 +297,6 @@ export const deprecationData: Record<DeprecationTypes, DeprecationData> = {
     link: `https://v3.vuejs.org/guide/migration/custom-directives.html`
   },
 
-  [DeprecationTypes.V_FOR_REF]: {
-    message:
-      `Ref usage on v-for no longer creates array ref values in Vue 3. ` +
-      `Consider using function refs or refactor to avoid ref usage altogether.`,
-    link: `https://v3.vuejs.org/guide/migration/array-refs.html`
-  },
-
   [DeprecationTypes.V_ON_KEYCODE_MODIFIER]: {
     message:
       `Using keyCode as v-on modifier is no longer supported. ` +
@@ -429,7 +421,7 @@ export const deprecationData: Record<DeprecationTypes, DeprecationData> = {
     message: name =>
       `"${name}" is a Vue 2 private API that no longer exists in Vue 3. ` +
       `If you are seeing this warning only due to a dependency, you can ` +
-      `suppress this warning via { PRIVATE_APIS: 'supress-warning' }.`
+      `suppress this warning via { PRIVATE_APIS: 'suppress-warning' }.`
   }
 }
 

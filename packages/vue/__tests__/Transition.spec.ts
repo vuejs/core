@@ -1969,6 +1969,21 @@ describe('e2e: Transition', () => {
     ).toHaveBeenWarned()
   })
 
+  test('warn when invalid transition mode', () => {
+    createApp({
+      template: `
+        <div id="container">
+          <transition name="test" mode="none">
+            <div class="test">content</div>
+          </transition>
+        </div>
+      `
+    }).mount(document.createElement('div'))
+    expect(
+      `invalid <transition> mode: none`
+    ).toHaveBeenWarned()
+  })
+
   // #3227
   test(`HOC w/ merged hooks`, async () => {
     const innerSpy = jest.fn()

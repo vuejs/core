@@ -33,14 +33,17 @@ export function render(_ctx, _cache) {
 `;
 
 exports[`compiler sfc: transform asset url support uri fragment 1`] = `
-"import { openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
+"import { createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 import _imports_0 from '@svg/file.svg'
 
 
 const _hoisted_1 = _imports_0 + '#fragment'
 
 export function render(_ctx, _cache) {
-  return (_openBlock(), _createElementBlock(\\"use\\", { href: _hoisted_1 }))
+  return (_openBlock(), _createElementBlock(_Fragment, null, [
+    _createElementVNode(\\"use\\", { href: _hoisted_1 }),
+    _createElementVNode(\\"use\\", { href: _hoisted_1 })
+  ], 64 /* STABLE_FRAGMENT */))
 }"
 `;
 
@@ -64,9 +67,26 @@ export function render(_ctx, _cache) {
     _createElementVNode(\\"img\\", { src: _imports_1 }),
     _createElementVNode(\\"img\\", { src: _imports_1 }),
     _createElementVNode(\\"img\\", { src: \\"http://example.com/fixtures/logo.png\\" }),
+    _createElementVNode(\\"img\\", { src: \\"//example.com/fixtures/logo.png\\" }),
     _createElementVNode(\\"img\\", { src: \\"/fixtures/logo.png\\" }),
     _createElementVNode(\\"img\\", { src: \\"data:image/png;base64,i\\" })
   ], 64 /* STABLE_FRAGMENT */))
+}"
+`;
+
+exports[`compiler sfc: transform asset url transform with stringify 1`] = `
+"import { createElementVNode as _createElementVNode, createStaticVNode as _createStaticVNode, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
+import _imports_0 from './bar.png'
+import _imports_1 from '/bar.png'
+
+
+const _hoisted_1 = /*#__PURE__*/_createStaticVNode(\\"<img src=\\\\\\"\\" + _imports_0 + \\"\\\\\\"><img src=\\\\\\"\\" + _imports_1 + \\"\\\\\\"><img src=\\\\\\"https://foo.bar/baz.png\\\\\\"><img src=\\\\\\"//foo.bar/baz.png\\\\\\"><img src=\\\\\\"\\" + _imports_0 + \\"\\\\\\">\\", 5)
+const _hoisted_6 = [
+  _hoisted_1
+]
+
+export function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock(\\"div\\", null, _hoisted_6))
 }"
 `;
 
@@ -96,7 +116,8 @@ export function render(_ctx, _cache) {
   return (_openBlock(), _createElementBlock(_Fragment, null, [
     _createElementVNode(\\"img\\", { src: _imports_0 }),
     _createElementVNode(\\"img\\", { src: _imports_1 }),
-    _createElementVNode(\\"img\\", { src: \\"https://foo.bar/baz.png\\" })
+    _createElementVNode(\\"img\\", { src: \\"https://foo.bar/baz.png\\" }),
+    _createElementVNode(\\"img\\", { src: \\"//foo.bar/baz.png\\" })
   ], 64 /* STABLE_FRAGMENT */))
 }"
 `;

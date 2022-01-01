@@ -141,7 +141,7 @@ export function defineAsyncComponent<
       // suspense-controlled or SSR.
       if (
         (__FEATURE_SUSPENSE__ && suspensible && instance.suspense) ||
-        (__NODE_JS__ && isInSSRComponentSetup)
+        (__SSR__ && isInSSRComponentSetup)
       ) {
         return load()
           .then(comp => {
@@ -206,7 +206,7 @@ export function defineAsyncComponent<
         }
       }
     }
-  }) as any
+  }) as T
 }
 
 function createInnerComp(

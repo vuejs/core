@@ -465,4 +465,13 @@ describe('reactivity/readonly', () => {
       'Set operation on key "randomProperty" failed: target is readonly.'
     ).toHaveBeenWarned()
   })
+
+  // #4986
+  test('setting a readonly object as a property of a reactive object should retain readonly proxy', () => {
+    const r = readonly({})
+    const rr = reactive({}) as any
+    rr.foo = r
+    expect(rr.foo).toBe(r)
+    expect(isReadonly(rr.foo)).toBe(true)
+  })
 })

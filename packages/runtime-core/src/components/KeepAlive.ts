@@ -8,7 +8,13 @@ import {
   getComponentName,
   ComponentOptions
 } from '../component'
-import { VNode, cloneVNode, isVNode, VNodeProps } from '../vnode'
+import {
+  VNode,
+  cloneVNode,
+  isVNode,
+  VNodeProps,
+  invokeVNodeHook
+} from '../vnode'
 import { warn } from '../warning'
 import {
   onBeforeUnmount,
@@ -30,8 +36,7 @@ import {
   queuePostRenderEffect,
   MoveType,
   RendererElement,
-  RendererNode,
-  invokeVNodeHook
+  RendererNode
 } from '../renderer'
 import { setTransitionHooks } from './BaseTransition'
 import { ComponentRenderContext } from '../componentPublicInstance'
@@ -381,7 +386,7 @@ function registerKeepAliveHook(
         }
         current = current.parent
       }
-      hook()
+      return hook()
     })
   injectHook(type, wrappedHook, target)
   // In addition to registering it on the target instance, we walk up the parent

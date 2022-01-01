@@ -35,7 +35,6 @@ describe('reactivity/ref', () => {
     // same value should not trigger
     a.value = 2
     expect(calls).toBe(2)
-    expect(dummy).toBe(2)
   })
 
   it('should make nested properties reactive', () => {
@@ -268,6 +267,18 @@ describe('reactivity/ref', () => {
     // should keep ref
     const r = { x: ref(1) }
     expect(toRef(r, 'x')).toBe(r.x)
+  })
+
+  test('toRef default value', () => {
+    const a: { x: number | undefined } = { x: undefined }
+    const x = toRef(a, 'x', 1)
+    expect(x.value).toBe(1)
+
+    a.x = 2
+    expect(x.value).toBe(2)
+
+    a.x = undefined
+    expect(x.value).toBe(1)
   })
 
   test('toRefs', () => {

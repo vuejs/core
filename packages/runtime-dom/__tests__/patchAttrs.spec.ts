@@ -23,6 +23,18 @@ describe('runtime-dom: attrs patching', () => {
     expect(el.getAttribute('readonly')).toBe('')
     patchProp(el, 'readonly', true, false)
     expect(el.getAttribute('readonly')).toBe(null)
+    patchProp(el, 'readonly', false, '')
+    expect(el.getAttribute('readonly')).toBe('')
+    patchProp(el, 'readonly', '', 0)
+    expect(el.getAttribute('readonly')).toBe(null)
+    patchProp(el, 'readonly', 0, '0')
+    expect(el.getAttribute('readonly')).toBe('')
+    patchProp(el, 'readonly', '0', false)
+    expect(el.getAttribute('readonly')).toBe(null)
+    patchProp(el, 'readonly', false, 1)
+    expect(el.getAttribute('readonly')).toBe('')
+    patchProp(el, 'readonly', 1, undefined)
+    expect(el.getAttribute('readonly')).toBe(null)
   })
 
   test('attributes', () => {

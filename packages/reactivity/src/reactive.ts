@@ -99,12 +99,18 @@ export function reactive(target: object) {
   )
 }
 
+export declare const ShallowReactiveMarker: unique symbol
+
+export type ShallowReactive<T> = T & { [ShallowReactiveMarker]?: true }
+
 /**
  * Return a shallowly-reactive copy of the original object, where only the root
  * level properties are reactive. It also does not auto-unwrap refs (even at the
  * root level).
  */
-export function shallowReactive<T extends object>(target: T): T {
+export function shallowReactive<T extends object>(
+  target: T
+): ShallowReactive<T> {
   return createReactiveObject(
     target,
     false,
@@ -132,6 +138,8 @@ export type DeepReadonly<T> = T extends Builtin
   ? WeakSet<DeepReadonly<U>>
   : T extends Promise<infer U>
   ? Promise<DeepReadonly<U>>
+  : T extends Ref<infer U>
+  ? Ref<DeepReadonly<U>>
   : T extends {}
   ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
   : Readonly<T>
@@ -233,3 +241,9 @@ export function markRaw<T extends object>(value: T): T {
   def(value, ReactiveFlags.SKIP, true)
   return value
 }
+
+export const toReactive = <T extends unknown>(value: T): T =>
+  isObject(value) ? reactive(value) : value
+
+export const toReadonly = <T extends unknown>(value: T): T =>
+  isObject(value) ? readonly(value as Record<any, any>) : value

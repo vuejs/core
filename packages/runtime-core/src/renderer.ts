@@ -9,17 +9,15 @@ import {
   createVNode,
   isSameVNodeType,
   Static,
-  VNodeNormalizedRef,
   VNodeHook,
-  VNodeNormalizedRefAtom,
-  VNodeProps
+  VNodeProps,
+  invokeVNodeHook
 } from './vnode'
 import {
   ComponentInternalInstance,
   ComponentOptions,
   createComponentInstance,
   Data,
-  getExposeProxy,
   setupComponent
 } from './component'
 import {
@@ -29,15 +27,12 @@ import {
   updateHOCHostEl
 } from './componentRenderUtils'
 import {
-  isString,
   EMPTY_OBJ,
   EMPTY_ARR,
   isReservedProp,
-  isFunction,
   PatchFlags,
   ShapeFlags,
   NOOP,
-  hasOwn,
   invokeArrayFns,
   isArray,
   getGlobalThis
@@ -50,16 +45,12 @@ import {
   flushPreFlushCbs,
   SchedulerJob
 } from './scheduler'
-import {
-  isRef,
-  pauseTracking,
-  resetTracking,
-  ReactiveEffect
-} from '@vue/reactivity'
+import { pauseTracking, resetTracking, ReactiveEffect } from '@vue/reactivity'
 import { updateProps } from './componentProps'
 import { updateSlots } from './componentSlots'
 import { pushWarningContext, popWarningContext, warn } from './warning'
 import { createAppAPI, CreateAppFunction } from './apiCreateApp'
+import { setRef } from './rendererTemplateRef'
 import {
   SuspenseBoundary,
   queueEffectWithSuspense,
@@ -68,11 +59,6 @@ import {
 import { TeleportImpl, TeleportVNode } from './components/Teleport'
 import { isKeepAlive, KeepAliveContext } from './components/KeepAlive'
 import { registerHMR, unregisterHMR, isHmrUpdating } from './hmr'
-import {
-  ErrorCodes,
-  callWithErrorHandling,
-  callWithAsyncErrorHandling
-} from './errorHandling'
 import { createHydrationFunctions, RootHydrateFunction } from './hydration'
 import { invokeDirectiveHook } from './directives'
 import { startMeasure, endMeasure } from './profiling'
@@ -86,7 +72,6 @@ import { initFeatureFlags } from './featureFlags'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import { isCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
-import { registerLegacyRef } from './compat/ref'
 
 export interface Renderer<HostElement = RendererElement> {
   render: RootRenderFunction<HostElement>
@@ -340,10 +325,10 @@ function baseCreateRenderer(
     initFeatureFlags()
   }
 
+  const target = getGlobalThis()
+  target.__VUE__ = true
   if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-    const target = getGlobalThis()
-    target.__VUE__ = true
-    setDevtoolsHook(target.__VUE_DEVTOOLS_GLOBAL_HOOK__)
+    setDevtoolsHook(target.__VUE_DEVTOOLS_GLOBAL_HOOK__, target)
   }
 
   const {
@@ -826,18 +811,50 @@ function baseCreateRenderer(
     const newProps = n2.props || EMPTY_OBJ
     let vnodeHook: VNodeHook | undefined | null
 
+    // disable recurse in beforeUpdate hooks
+    parentComponent && toggleRecurse(parentComponent, false)
     if ((vnodeHook = newProps.onVnodeBeforeUpdate)) {
       invokeVNodeHook(vnodeHook, parentComponent, n2, n1)
     }
     if (dirs) {
       invokeDirectiveHook(n2, n1, parentComponent, 'beforeUpdate')
     }
+    parentComponent && toggleRecurse(parentComponent, true)
 
     if (__DEV__ && isHmrUpdating) {
       // HMR updated, force full diff
       patchFlag = 0
       optimized = false
       dynamicChildren = null
+    }
+
+    const areChildrenSVG = isSVG && n2.type !== 'foreignObject'
+    if (dynamicChildren) {
+      patchBlockChildren(
+        n1.dynamicChildren!,
+        dynamicChildren,
+        el,
+        parentComponent,
+        parentSuspense,
+        areChildrenSVG,
+        slotScopeIds
+      )
+      if (__DEV__ && parentComponent && parentComponent.type.__hmrId) {
+        traverseStaticChildren(n1, n2)
+      }
+    } else if (!optimized) {
+      // full diff
+      patchChildren(
+        n1,
+        n2,
+        el,
+        null,
+        parentComponent,
+        parentSuspense,
+        areChildrenSVG,
+        slotScopeIds,
+        false
+      )
     }
 
     if (patchFlag > 0) {
@@ -922,35 +939,6 @@ function baseCreateRenderer(
       )
     }
 
-    const areChildrenSVG = isSVG && n2.type !== 'foreignObject'
-    if (dynamicChildren) {
-      patchBlockChildren(
-        n1.dynamicChildren!,
-        dynamicChildren,
-        el,
-        parentComponent,
-        parentSuspense,
-        areChildrenSVG,
-        slotScopeIds
-      )
-      if (__DEV__ && parentComponent && parentComponent.type.__hmrId) {
-        traverseStaticChildren(n1, n2)
-      }
-    } else if (!optimized) {
-      // full diff
-      patchChildren(
-        n1,
-        n2,
-        el,
-        null,
-        parentComponent,
-        parentSuspense,
-        areChildrenSVG,
-        slotScopeIds,
-        false
-      )
-    }
-
     if ((vnodeHook = newProps.onVnodeUpdated) || dirs) {
       queuePostRenderEffect(() => {
         vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, n2, n1)
@@ -984,8 +972,7 @@ function baseCreateRenderer(
           // which also requires the correct parent container
           !isSameVNodeType(oldVNode, newVNode) ||
           // - In the case of a component, it could contain anything.
-          oldVNode.shapeFlag & ShapeFlags.COMPONENT ||
-          oldVNode.shapeFlag & ShapeFlags.TELEPORT)
+          oldVNode.shapeFlag & (ShapeFlags.COMPONENT | ShapeFlags.TELEPORT))
           ? hostParentNode(oldVNode.el)!
           : // In other cases, the parent container is not actually used so we
             // just pass the block element here to avoid a DOM parentNode call.
@@ -1201,7 +1188,7 @@ function baseCreateRenderer(
     isSVG,
     optimized
   ) => {
-    // 2.x compat may pre-creaate the component instance before actually
+    // 2.x compat may pre-create the component instance before actually
     // mounting
     const compatMountInstance =
       __COMPAT__ && initialVNode.isCompatRoot && initialVNode.component
@@ -1317,14 +1304,18 @@ function baseCreateRenderer(
         let vnodeHook: VNodeHook | null | undefined
         const { el, props } = initialVNode
         const { bm, m, parent } = instance
+        const isAsyncWrapperVNode = isAsyncWrapper(initialVNode)
 
-        effect.allowRecurse = false
+        toggleRecurse(instance, false)
         // beforeMount hook
         if (bm) {
           invokeArrayFns(bm)
         }
         // onVnodeBeforeMount
-        if ((vnodeHook = props && props.onVnodeBeforeMount)) {
+        if (
+          !isAsyncWrapperVNode &&
+          (vnodeHook = props && props.onVnodeBeforeMount)
+        ) {
           invokeVNodeHook(vnodeHook, parent, initialVNode)
         }
         if (
@@ -1333,7 +1324,7 @@ function baseCreateRenderer(
         ) {
           instance.emit('hook:beforeMount')
         }
-        effect.allowRecurse = true
+        toggleRecurse(instance, true)
 
         if (el && hydrateNode) {
           // vnode has adopted host node - perform hydration instead of mount.
@@ -1360,7 +1351,7 @@ function baseCreateRenderer(
             }
           }
 
-          if (isAsyncWrapper(initialVNode)) {
+          if (isAsyncWrapperVNode) {
             ;(initialVNode.type as ComponentOptions).__asyncLoader!().then(
               // note: we are moving the render call into an async callback,
               // which means it won't track dependencies - but it's ok because
@@ -1401,7 +1392,10 @@ function baseCreateRenderer(
           queuePostRenderEffect(m, parentSuspense)
         }
         // onVnodeMounted
-        if ((vnodeHook = props && props.onVnodeMounted)) {
+        if (
+          !isAsyncWrapperVNode &&
+          (vnodeHook = props && props.onVnodeMounted)
+        ) {
           const scopedInitialVNode = initialVNode
           queuePostRenderEffect(
             () => invokeVNodeHook(vnodeHook!, parent, scopedInitialVNode),
@@ -1452,6 +1446,8 @@ function baseCreateRenderer(
           pushWarningContext(next || instance.vnode)
         }
 
+        // Disallow component effect recursion during pre-lifecycle hooks.
+        toggleRecurse(instance, false)
         if (next) {
           next.el = vnode.el
           updateComponentPreRender(instance, next, optimized)
@@ -1459,8 +1455,6 @@ function baseCreateRenderer(
           next = vnode
         }
 
-        // Disallow component effect recursion during pre-lifecycle hooks.
-        effect.allowRecurse = false
         // beforeUpdate hook
         if (bu) {
           invokeArrayFns(bu)
@@ -1475,7 +1469,7 @@ function baseCreateRenderer(
         ) {
           instance.emit('hook:beforeUpdate')
         }
-        effect.allowRecurse = true
+        toggleRecurse(instance, true)
 
         // render
         if (__DEV__) {
@@ -1544,17 +1538,17 @@ function baseCreateRenderer(
     }
 
     // create reactive effect for rendering
-    const effect = new ReactiveEffect(
+    const effect = (instance.effect = new ReactiveEffect(
       componentUpdateFn,
       () => queueJob(instance.update),
       instance.scope // track it in component's effect scope
-    )
+    ))
 
     const update = (instance.update = effect.run.bind(effect) as SchedulerJob)
     update.id = instance.uid
     // allowRecurse
     // #1801, #2043 component render effects should allow recursive updates
-    effect.allowRecurse = update.allowRecurse = true
+    toggleRecurse(instance, true)
 
     if (__DEV__) {
       effect.onTrack = instance.rtc
@@ -2086,9 +2080,13 @@ function baseCreateRenderer(
     }
 
     const shouldInvokeDirs = shapeFlag & ShapeFlags.ELEMENT && dirs
+    const shouldInvokeVnodeHook = !isAsyncWrapper(vnode)
 
     let vnodeHook: VNodeHook | undefined | null
-    if ((vnodeHook = props && props.onVnodeBeforeUnmount)) {
+    if (
+      shouldInvokeVnodeHook &&
+      (vnodeHook = props && props.onVnodeBeforeUnmount)
+    ) {
       invokeVNodeHook(vnodeHook, parentComponent, vnode)
     }
 
@@ -2129,8 +2127,8 @@ function baseCreateRenderer(
         )
       } else if (
         (type === Fragment &&
-          (patchFlag & PatchFlags.KEYED_FRAGMENT ||
-            patchFlag & PatchFlags.UNKEYED_FRAGMENT)) ||
+          patchFlag &
+            (PatchFlags.KEYED_FRAGMENT | PatchFlags.UNKEYED_FRAGMENT)) ||
         (!optimized && shapeFlag & ShapeFlags.ARRAY_CHILDREN)
       ) {
         unmountChildren(children as VNode[], parentComponent, parentSuspense)
@@ -2141,7 +2139,11 @@ function baseCreateRenderer(
       }
     }
 
-    if ((vnodeHook = props && props.onVnodeUnmounted) || shouldInvokeDirs) {
+    if (
+      (shouldInvokeVnodeHook &&
+        (vnodeHook = props && props.onVnodeUnmounted)) ||
+      shouldInvokeDirs
+    ) {
       queuePostRenderEffect(() => {
         vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
         shouldInvokeDirs &&
@@ -2334,109 +2336,11 @@ function baseCreateRenderer(
   }
 }
 
-export function setRef(
-  rawRef: VNodeNormalizedRef,
-  oldRawRef: VNodeNormalizedRef | null,
-  parentSuspense: SuspenseBoundary | null,
-  vnode: VNode,
-  isUnmount = false
+function toggleRecurse(
+  { effect, update }: ComponentInternalInstance,
+  allowed: boolean
 ) {
-  if (isArray(rawRef)) {
-    rawRef.forEach((r, i) =>
-      setRef(
-        r,
-        oldRawRef && (isArray(oldRawRef) ? oldRawRef[i] : oldRawRef),
-        parentSuspense,
-        vnode,
-        isUnmount
-      )
-    )
-    return
-  }
-
-  if (isAsyncWrapper(vnode) && !isUnmount) {
-    // when mounting async components, nothing needs to be done,
-    // because the template ref is forwarded to inner component
-    return
-  }
-
-  const refValue =
-    vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT
-      ? getExposeProxy(vnode.component!) || vnode.component!.proxy
-      : vnode.el
-  const value = isUnmount ? null : refValue
-
-  const { i: owner, r: ref } = rawRef
-  if (__DEV__ && !owner) {
-    warn(
-      `Missing ref owner context. ref cannot be used on hoisted vnodes. ` +
-        `A vnode with ref must be created inside the render function.`
-    )
-    return
-  }
-  const oldRef = oldRawRef && (oldRawRef as VNodeNormalizedRefAtom).r
-  const refs = owner.refs === EMPTY_OBJ ? (owner.refs = {}) : owner.refs
-  const setupState = owner.setupState
-
-  // dynamic ref changed. unset old ref
-  if (oldRef != null && oldRef !== ref) {
-    if (isString(oldRef)) {
-      refs[oldRef] = null
-      if (hasOwn(setupState, oldRef)) {
-        setupState[oldRef] = null
-      }
-    } else if (isRef(oldRef)) {
-      oldRef.value = null
-    }
-  }
-
-  if (isString(ref)) {
-    const doSet = () => {
-      if (__COMPAT__ && isCompatEnabled(DeprecationTypes.V_FOR_REF, owner)) {
-        registerLegacyRef(refs, ref, refValue, owner, rawRef.f, isUnmount)
-      } else {
-        refs[ref] = value
-      }
-      if (hasOwn(setupState, ref)) {
-        setupState[ref] = value
-      }
-    }
-    // #1789: for non-null values, set them after render
-    // null values means this is unmount and it should not overwrite another
-    // ref with the same key
-    if (value) {
-      ;(doSet as SchedulerJob).id = -1
-      queuePostRenderEffect(doSet, parentSuspense)
-    } else {
-      doSet()
-    }
-  } else if (isRef(ref)) {
-    const doSet = () => {
-      ref.value = value
-    }
-    if (value) {
-      ;(doSet as SchedulerJob).id = -1
-      queuePostRenderEffect(doSet, parentSuspense)
-    } else {
-      doSet()
-    }
-  } else if (isFunction(ref)) {
-    callWithErrorHandling(ref, owner, ErrorCodes.FUNCTION_REF, [value, refs])
-  } else if (__DEV__) {
-    warn('Invalid template ref type:', value, `(${typeof value})`)
-  }
-}
-
-export function invokeVNodeHook(
-  hook: VNodeHook,
-  instance: ComponentInternalInstance | null,
-  vnode: VNode,
-  prevVNode: VNode | null = null
-) {
-  callWithAsyncErrorHandling(hook, instance, ErrorCodes.VNODE_HOOK, [
-    vnode,
-    prevVNode
-  ])
+  effect.allowRecurse = update.allowRecurse = allowed
 }
 
 /**
@@ -2447,8 +2351,8 @@ export function invokeVNodeHook(
  *
  * #2080
  * Inside keyed `template` fragment static children, if a fragment is moved,
- * the children will always moved so that need inherit el form previous nodes
- * to ensure correct moved position.
+ * the children will always be moved. Therefore, in order to ensure correct move
+ * position, el should be inherited from previous nodes.
  */
 export function traverseStaticChildren(n1: VNode, n2: VNode, shallow = false) {
   const ch1 = n1.children

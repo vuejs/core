@@ -157,7 +157,7 @@ describe('INSTANCE_EVENT_EMITTER', () => {
   })
 
   it('$off event + fn', () => {
-    const spy2 = jasmine.createSpy('emitter')
+    const spy2 = jest.fn()
     vm.$on('test', spy)
     vm.$on('test', spy2)
     vm.$off('test', spy)

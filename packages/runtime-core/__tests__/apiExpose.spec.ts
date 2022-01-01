@@ -1,4 +1,4 @@
-import { nodeOps, render } from '@vue/runtime-test'
+import { createApp, nodeOps, render } from '@vue/runtime-test'
 import { defineComponent, h, ref } from '../src'
 
 describe('api: expose', () => {
@@ -168,6 +168,26 @@ describe('api: expose', () => {
     })
     const root = nodeOps.createElement('div')
     render(h(Parent), root)
+  })
+
+  test('with mount', () => {
+    const Component = defineComponent({
+      setup(_, { expose }) {
+        expose({
+          foo: 1
+        })
+        return {
+          bar: 2
+        }
+      },
+      render() {
+        return h('div')
+      }
+    })
+    const root = nodeOps.createElement('div')
+    const vm = createApp(Component).mount(root) as any
+    expect(vm.foo).toBe(1)
+    expect(vm.bar).toBe(undefined)
   })
 
   test('expose should allow access to built-in instance properties', () => {

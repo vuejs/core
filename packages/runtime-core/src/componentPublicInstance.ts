@@ -280,11 +280,11 @@ if (__COMPAT__) {
 }
 
 const enum AccessTypes {
+  OTHER,
   SETUP,
   DATA,
   PROPS,
-  CONTEXT,
-  OTHER
+  CONTEXT
 }
 
 export interface ComponentRenderContext {
@@ -469,7 +469,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
   ) {
     let normalizedProps
     return (
-      accessCache![key] !== undefined ||
+      !!accessCache![key] ||
       (data !== EMPTY_OBJ && hasOwn(data, key)) ||
       (setupState !== EMPTY_OBJ && hasOwn(setupState, key)) ||
       ((normalizedProps = propsOptions[0]) && hasOwn(normalizedProps, key)) ||
@@ -570,20 +570,22 @@ export function exposeSetupStateOnRenderContext(
 ) {
   const { ctx, setupState } = instance
   Object.keys(toRaw(setupState)).forEach(key => {
-    if (!setupState.__isScriptSetup && (key[0] === '$' || key[0] === '_')) {
-      warn(
-        `setup() return property ${JSON.stringify(
-          key
-        )} should not start with "$" or "_" ` +
-          `which are reserved prefixes for Vue internals.`
-      )
-      return
+    if (!setupState.__isScriptSetup) {
+      if (key[0] === '$' || key[0] === '_') {
+        warn(
+          `setup() return property ${JSON.stringify(
+            key
+          )} should not start with "$" or "_" ` +
+            `which are reserved prefixes for Vue internals.`
+        )
+        return
+      }
+      Object.defineProperty(ctx, key, {
+        enumerable: true,
+        configurable: true,
+        get: () => setupState[key],
+        set: NOOP
+      })
     }
-    Object.defineProperty(ctx, key, {
-      enumerable: true,
-      configurable: true,
-      get: () => setupState[key],
-      set: NOOP
-    })
   })
 }

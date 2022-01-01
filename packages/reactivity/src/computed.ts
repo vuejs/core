@@ -4,8 +4,11 @@ import { isFunction, NOOP } from '@vue/shared'
 import { ReactiveFlags, toRaw } from './reactive'
 import { Dep } from './dep'
 
+declare const ComputedRefSymbol: unique symbol
+
 export interface ComputedRef<T = any> extends WritableComputedRef<T> {
   readonly value: T
+  [ComputedRefSymbol]: true
 }
 
 export interface WritableComputedRef<T> extends Ref<T> {
@@ -75,7 +78,8 @@ export function computed<T>(
   let getter: ComputedGetter<T>
   let setter: ComputedSetter<T>
 
-  if (isFunction(getterOrOptions)) {
+  const onlyGetter = isFunction(getterOrOptions)
+  if (onlyGetter) {
     getter = getterOrOptions
     setter = __DEV__
       ? () => {
@@ -87,11 +91,7 @@ export function computed<T>(
     setter = getterOrOptions.set
   }
 
-  const cRef = new ComputedRefImpl(
-    getter,
-    setter,
-    isFunction(getterOrOptions) || !getterOrOptions.set
-  )
+  const cRef = new ComputedRefImpl(getter, setter, onlyGetter || !setter)
 
   if (__DEV__ && debugOptions) {
     cRef.effect.onTrack = debugOptions.onTrack

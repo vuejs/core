@@ -154,6 +154,7 @@ export class VueElement extends BaseClass {
 
   private _connected = false
   private _resolved = false
+  private _numberProps: Record<string, true> | null = null
   private _styles?: HTMLStyleElement[]
 
   constructor(
@@ -173,25 +174,12 @@ export class VueElement extends BaseClass {
       }
       this.attachShadow({ mode: 'open' })
     }
-
-    // set initial attrs
-    for (let i = 0; i < this.attributes.length; i++) {
-      this._setAttr(this.attributes[i].name)
-    }
-    // watch future attr changes
-    const observer = new MutationObserver(mutations => {
-      for (const m of mutations) {
-        this._setAttr(m.attributeName!)
-      }
-    })
-    observer.observe(this, { attributes: true })
   }
 
   connectedCallback() {
     this._connected = true
     if (!this._instance) {
       this._resolveDef()
-      render(this._createVNode(), this.shadowRoot!)
     }
   }
 
@@ -212,18 +200,46 @@ export class VueElement extends BaseClass {
     if (this._resolved) {
       return
     }
+    this._resolved = true
+
+    // set initial attrs
+    for (let i = 0; i < this.attributes.length; i++) {
+      this._setAttr(this.attributes[i].name)
+    }
+
+    // watch future attr changes
+    new MutationObserver(mutations => {
+      for (const m of mutations) {
+        this._setAttr(m.attributeName!)
+      }
+    }).observe(this, { attributes: true })
 
     const resolve = (def: InnerComponentDef) => {
-      this._resolved = true
+      const { props, styles } = def
+      const hasOptions = !isArray(props)
+      const rawKeys = props ? (hasOptions ? Object.keys(props) : props) : []
+
+      // cast Number-type props set before resolve
+      let numberProps
+      if (hasOptions) {
+        for (const key in this._props) {
+          const opt = props[key]
+          if (opt === Number || (opt && opt.type === Number)) {
+            this._props[key] = toNumber(this._props[key])
+            ;(numberProps || (numberProps = Object.create(null)))[key] = true
+          }
+        }
+      }
+      this._numberProps = numberProps
+
       // check if there are props set pre-upgrade or connect
       for (const key of Object.keys(this)) {
         if (key[0] !== '_') {
-          this._setProp(key, this[key as keyof this])
+          this._setProp(key, this[key as keyof this], true, false)
         }
       }
-      const { props, styles } = def
+
       // defining getter/setters on prototype
-      const rawKeys = props ? (isArray(props) ? props : Object.keys(props)) : []
       for (const key of rawKeys.map(camelize)) {
         Object.defineProperty(this, key, {
           get() {
@@ -234,7 +250,12 @@ export class VueElement extends BaseClass {
           }
         })
       }
+
+      // apply CSS
       this._applyStyles(styles)
+
+      // initial render
+      this._update()
     }
 
     const asyncDef = (this._def as ComponentOptions).__asyncLoader
@@ -246,7 +267,11 @@ export class VueElement extends BaseClass {
   }
 
   protected _setAttr(key: string) {
-    this._setProp(camelize(key), toNumber(this.getAttribute(key)), false)
+    let value = this.getAttribute(key)
+    if (this._numberProps && this._numberProps[key]) {
+      value = toNumber(value)
+    }
+    this._setProp(camelize(key), value, false)
   }
 
   /**
@@ -259,11 +284,16 @@ export class VueElement extends BaseClass {
   /**
    * @internal
    */
-  protected _setProp(key: string, val: any, shouldReflect = true) {
+  protected _setProp(
+    key: string,
+    val: any,
+    shouldReflect = true,
+    shouldUpdate = true
+  ) {
     if (val !== this._props[key]) {
       this._props[key] = val
-      if (this._instance) {
-        render(this._createVNode(), this.shadowRoot!)
+      if (shouldUpdate && this._instance) {
+        this._update()
       }
       // reflect
       if (shouldReflect) {
@@ -278,6 +308,10 @@ export class VueElement extends BaseClass {
     }
   }
 
+  private _update() {
+    render(this._createVNode(), this.shadowRoot!)
+  }
+
   private _createVNode(): VNode<any, any> {
     const vnode = createVNode(this._def, extend({}, this._props))
     if (!this._instance) {
@@ -287,7 +321,7 @@ export class VueElement extends BaseClass {
         // HMR
         if (__DEV__) {
           instance.ceReload = newStyles => {
-            // alawys reset styles
+            // always reset styles
             if (this._styles) {
               this._styles.forEach(s => this.shadowRoot!.removeChild(s))
               this._styles.length = 0
@@ -298,7 +332,7 @@ export class VueElement extends BaseClass {
             if (!(this._def as ComponentOptions).__asyncLoader) {
               // reload
               this._instance = null
-              render(this._createVNode(), this.shadowRoot!)
+              this._update()
             }
           }
         }

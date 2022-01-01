@@ -5,6 +5,7 @@ import {
   ExpressionNode,
   NodeTransform,
   NodeTypes,
+  SimpleExpressionNode,
   SourceLocation,
   TransformContext
 } from '@vue/compiler-core'
@@ -153,31 +154,48 @@ function getImportsExpressionExp(
   context: TransformContext
 ): ExpressionNode {
   if (path) {
-    const existing = context.imports.find(i => i.path === path)
-    if (existing) {
-      return existing.exp as ExpressionNode
-    }
-    const name = `_imports_${context.imports.length}`
-    const exp = createSimpleExpression(
-      name,
-      false,
-      loc,
-      ConstantTypes.CAN_HOIST
-    )
-    context.imports.push({ exp, path })
-    if (hash && path) {
-      return context.hoist(
-        createSimpleExpression(
-          `${name} + '${hash}'`,
-          false,
-          loc,
-          ConstantTypes.CAN_HOIST
-        )
-      )
+    let name: string
+    let exp: SimpleExpressionNode
+    const existingIndex = context.imports.findIndex(i => i.path === path)
+    if (existingIndex > -1) {
+      name = `_imports_${existingIndex}`
+      exp = context.imports[existingIndex].exp as SimpleExpressionNode
     } else {
+      name = `_imports_${context.imports.length}`
+      exp = createSimpleExpression(
+        name,
+        false,
+        loc,
+        ConstantTypes.CAN_STRINGIFY
+      )
+      context.imports.push({ exp, path })
+    }
+
+    if (!hash) {
       return exp
     }
+
+    const hashExp = `${name} + '${hash}'`
+    const existingHoistIndex = context.hoists.findIndex(h => {
+      return (
+        h &&
+        h.type === NodeTypes.SIMPLE_EXPRESSION &&
+        !h.isStatic &&
+        h.content === hashExp
+      )
+    })
+    if (existingHoistIndex > -1) {
+      return createSimpleExpression(
+        `_hoisted_${existingHoistIndex + 1}`,
+        false,
+        loc,
+        ConstantTypes.CAN_STRINGIFY
+      )
+    }
+    return context.hoist(
+      createSimpleExpression(hashExp, false, loc, ConstantTypes.CAN_STRINGIFY)
+    )
   } else {
-    return createSimpleExpression(`''`, false, loc, ConstantTypes.CAN_HOIST)
+    return createSimpleExpression(`''`, false, loc, ConstantTypes.CAN_STRINGIFY)
   }
 }

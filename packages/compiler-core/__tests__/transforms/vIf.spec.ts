@@ -248,7 +248,7 @@ describe('compiler: v-if', () => {
       ])
     })
 
-    test('error on v-else-if missing adjacent v-if', () => {
+    test('error on v-else-if missing adjacent v-if or v-else-if', () => {
       const onError = jest.fn()
 
       const { node: node1 } = parseWithIfTransform(`<div v-else-if="foo"/>`, {
@@ -282,6 +282,21 @@ describe('compiler: v-if', () => {
         {
           code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
           loc: node3.loc
+        }
+      ])
+
+      const {
+        node: { branches }
+      } = parseWithIfTransform(
+        `<div v-if="notOk"/><div v-else/><div v-else-if="ok"/>`,
+        { onError },
+        0
+      )
+
+      expect(onError.mock.calls[3]).toMatchObject([
+        {
+          code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
+          loc: branches[branches.length - 1].loc
         }
       ])
     })

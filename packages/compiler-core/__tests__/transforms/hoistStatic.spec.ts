@@ -590,6 +590,25 @@ describe('compiler: hoistStatic transform', () => {
       ).toMatchSnapshot()
     })
 
+    test('should NOT hoist elements with cached handlers + other bindings', () => {
+      const root = transformWithHoist(
+        `<div><div><div :class="{}" @click="foo"/></div></div>`,
+        {
+          prefixIdentifiers: true,
+          cacheHandlers: true
+        }
+      )
+
+      expect(root.cached).toBe(1)
+      expect(root.hoists.length).toBe(0)
+      expect(
+        generate(root, {
+          mode: 'module',
+          prefixIdentifiers: true
+        }).code
+      ).toMatchSnapshot()
+    })
+
     test('should NOT hoist keyed template v-for with plain element child', () => {
       const root = transformWithHoist(
         `<div><template v-for="item in items" :key="item"><span/></template></div>`

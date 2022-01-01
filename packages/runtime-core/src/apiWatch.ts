@@ -280,7 +280,7 @@ function doWatch(
 
   // in SSR there is no need to setup an actual effect, and it should be noop
   // unless it's eager
-  if (__NODE_JS__ && isInSSRComponentSetup) {
+  if (__SSR__ && isInSSRComponentSetup) {
     // we will also not call the invalidate callback (+ runner is not set up)
     onInvalidate = NOOP
     if (!cb) {
@@ -428,7 +428,7 @@ export function createPathGetter(ctx: any, path: string) {
   }
 }
 
-export function traverse(value: unknown, seen: Set<unknown> = new Set()) {
+export function traverse(value: unknown, seen?: Set<unknown>) {
   if (!isObject(value) || (value as any)[ReactiveFlags.SKIP]) {
     return value
   }

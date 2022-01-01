@@ -40,6 +40,9 @@ window.init = () => {
       localStorage.getItem('state') ||
       `{}`
   )
+  // functions are not persistable, so delete it in case we sometimes need
+  // to debug with custom nodeTransforms
+  delete persistedState.options.nodeTransforms
 
   ssrMode.value = persistedState.ssr
   Object.assign(compilerOptions, persistedState.options)
@@ -71,7 +74,7 @@ window.init = () => {
       lastSuccessfulCode = code + `\n\n// Check the console for the AST`
       lastSuccessfulMap = new SourceMapConsumer(map!)
       lastSuccessfulMap!.computeColumnSpans()
-    } catch (e) {
+    } catch (e: any) {
       lastSuccessfulCode = `/* ERROR: ${e.message} (see console for more info) */`
       console.error(e)
     }
