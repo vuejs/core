@@ -527,6 +527,7 @@ function _createVNode(
     // <component :is="vnode"/>
     // #2078 make sure to merge refs during the clone instead of overwriting it
     const cloned = cloneVNode(type, props, true /* mergeRef: true */)
+    cloned.scopeId = currentScopeId
     if (children) {
       normalizeChildren(cloned, children)
     }
