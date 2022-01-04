@@ -4,7 +4,7 @@ import { BindingTypes } from '@vue/compiler-core'
 
 export const ssrMode = ref(false)
 
-export const compilerOptions: CompilerOptions = reactive({
+export const defaultOptions: CompilerOptions = {
   mode: 'module',
   filename: 'Foo.vue',
   prefixIdentifiers: false,
@@ -24,7 +24,11 @@ export const compilerOptions: CompilerOptions = reactive({
     setupProp: BindingTypes.PROPS,
     vMySetupDir: BindingTypes.SETUP_CONST
   }
-})
+}
+
+export const compilerOptions: CompilerOptions = reactive(
+  Object.assign({}, defaultOptions)
+)
 
 const App = {
   setup() {
