@@ -42,7 +42,9 @@ window.init = () => {
   )
   // functions are not persistable, so delete it in case we sometimes need
   // to debug with custom nodeTransforms
-  delete persistedState.options.nodeTransforms
+  if (persistedState.options) {
+    delete persistedState.options.nodeTransforms
+  }
 
   ssrMode.value = persistedState.ssr
   Object.assign(compilerOptions, persistedState.options)
