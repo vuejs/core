@@ -11,7 +11,8 @@ import {
   toRefs,
   ToRefs,
   shallowReactive,
-  watch
+  watch,
+  readonly
 } from './index'
 
 function plainType(arg: number | Ref<number>) {
@@ -207,6 +208,9 @@ expectType<{
   a: Ref<number>
   b: Ref<number>
 }>(objRefs)
+
+// readonly() + ref()
+expectType<Readonly<Ref<number>>>(readonly(ref(1)))
 
 // #2687
 interface AppData {

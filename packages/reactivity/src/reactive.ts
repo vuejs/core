@@ -139,7 +139,7 @@ export type DeepReadonly<T> = T extends Builtin
   : T extends Promise<infer U>
   ? Promise<DeepReadonly<U>>
   : T extends Ref<infer U>
-  ? Ref<DeepReadonly<U>>
+  ? Readonly<Ref<DeepReadonly<U>>>
   : T extends {}
   ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
   : Readonly<T>
