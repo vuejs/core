@@ -894,7 +894,7 @@ export function createSetupContext(
         return shallowReadonly(instance.slots)
       },
       get emit() {
-        return (event: string, ...args: any[]) => instance.emit(event, ...args)
+        return instance.emit
       },
       expose
     })
