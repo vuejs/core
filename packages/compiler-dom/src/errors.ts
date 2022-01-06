@@ -5,7 +5,7 @@ import {
   ErrorCodes
 } from '@vue/compiler-core'
 
-export interface DOMCompilerError extends CompilerError {
+interface DOMCompilerError extends CompilerError {
   code: DOMErrorCodes
 }
 
@@ -35,7 +35,7 @@ export const enum DOMErrorCodes {
   __EXTEND_POINT__
 }
 
-export const DOMErrorMessages: { [code: number]: string } = {
+const DOMErrorMessages: { [code: number]: string } = {
   [DOMErrorCodes.X_V_HTML_NO_EXPRESSION]: `v-html is missing expression.`,
   [DOMErrorCodes.X_V_HTML_WITH_CHILDREN]: `v-html will override element children.`,
   [DOMErrorCodes.X_V_TEXT_NO_EXPRESSION]: `v-text is missing expression.`,

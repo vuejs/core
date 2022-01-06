@@ -16,7 +16,7 @@ import { handleError, ErrorCodes } from './errorHandling'
 import { isKeepAlive } from './components/KeepAlive'
 import { queueJob } from './scheduler'
 
-export type AsyncComponentResolveResult<T = Component> = T | { default: T } // es modules
+type AsyncComponentResolveResult<T = Component> = T | { default: T } // es modules
 
 export type AsyncComponentLoader<T = any> = () => Promise<
   AsyncComponentResolveResult<T>

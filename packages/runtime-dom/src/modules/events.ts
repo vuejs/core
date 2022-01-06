@@ -52,7 +52,7 @@ export function addEventListener(
   el.addEventListener(event, handler, options)
 }
 
-export function removeEventListener(
+function removeEventListener(
   el: Element,
   event: string,
   handler: EventListener,

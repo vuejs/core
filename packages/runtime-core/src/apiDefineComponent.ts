@@ -26,9 +26,7 @@ import {
   ComponentPublicInstanceConstructor
 } from './componentPublicInstance'
 
-export type PublicProps = VNodeProps &
-  AllowedComponentProps &
-  ComponentCustomProps
+type PublicProps = VNodeProps & AllowedComponentProps & ComponentCustomProps
 
 export type DefineComponent<
   PropsOrPropOptions = {},

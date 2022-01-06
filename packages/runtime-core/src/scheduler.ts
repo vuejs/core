@@ -31,7 +31,7 @@ export interface SchedulerJob extends Function {
   ownerInstance?: ComponentInternalInstance
 }
 
-export type SchedulerJobs = SchedulerJob | SchedulerJob[]
+type SchedulerJobs = SchedulerJob | SchedulerJob[]
 
 let isFlushing = false
 let isFlushPending = false

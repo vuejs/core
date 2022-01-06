@@ -38,7 +38,7 @@ export type DirectiveHook<T = any, Prev = VNode<any, T> | null, V = any> = (
   prevVNode: Prev
 ) => void
 
-export type SSRDirectiveHook = (
+type SSRDirectiveHook = (
   binding: DirectiveBinding,
   vnode: VNode
 ) => Data | undefined
@@ -61,7 +61,7 @@ export type Directive<T = any, V = any> =
   | ObjectDirective<T, V>
   | FunctionDirective<T, V>
 
-export type DirectiveModifiers = Record<string, boolean>
+type DirectiveModifiers = Record<string, boolean>
 
 const isBuiltInDirective = /*#__PURE__*/ makeMap(
   'bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,slot,text,memo'

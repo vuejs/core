@@ -57,7 +57,7 @@ export const ErrorTypeStrings: Record<number | string, string> = {
     'Please open an issue at https://new-issue.vuejs.org/?repo=vuejs/vue-next'
 }
 
-export type ErrorTypes = LifecycleHooks | ErrorCodes
+type ErrorTypes = LifecycleHooks | ErrorCodes
 
 export function callWithErrorHandling(
   fn: Function,

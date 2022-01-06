@@ -235,7 +235,7 @@ type UnmountChildrenFn = (
   start?: number
 ) => void
 
-export type MountComponentFn = (
+type MountComponentFn = (
   initialVNode: VNode,
   container: RendererElement,
   anchor: RendererNode | null,

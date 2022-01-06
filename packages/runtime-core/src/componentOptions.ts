@@ -882,7 +882,7 @@ function callHook(
   )
 }
 
-export function createWatcher(
+function createWatcher(
   raw: ComponentWatchOptionItem,
   ctx: Data,
   publicThis: ComponentPublicInstance,

@@ -1,7 +1,7 @@
 import { isArray, isString, isObject, hyphenate } from './'
 import { isNoUnitNumericStyleProp } from './domAttrConfig'
 
-export type NormalizedStyle = Record<string, string | number>
+type NormalizedStyle = Record<string, string | number>
 
 export function normalizeStyle(
   value: unknown

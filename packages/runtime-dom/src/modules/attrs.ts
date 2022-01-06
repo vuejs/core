@@ -46,7 +46,7 @@ const isEnumeratedAttr = __COMPAT__
   ? /*#__PURE__*/ makeMap('contenteditable,draggable,spellcheck')
   : NOOP
 
-export function compatCoerceAttr(
+function compatCoerceAttr(
   el: Element,
   key: string,
   value: unknown,
