@@ -46,7 +46,6 @@ export {
   stop,
   trigger,
   track,
-  enableTracking,
   pauseTracking,
   resetTracking,
   ITERATE_KEY,

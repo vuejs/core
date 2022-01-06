@@ -102,7 +102,7 @@ export const enum ErrorCodes {
   __EXTEND_POINT__
 }
 
-export const errorMessages: Record<ErrorCodes, string> = {
+const errorMessages: Record<ErrorCodes, string> = {
   // parse errors
   [ErrorCodes.ABRUPT_CLOSING_OF_EMPTY_COMMENT]: 'Illegal comment.',
   [ErrorCodes.CDATA_IN_HTML_CONTENT]:
