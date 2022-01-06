@@ -260,7 +260,7 @@ export const TeleportImpl = {
   hydrate: hydrateTeleport
 }
 
-export const enum TeleportMoveTypes {
+const enum TeleportMoveTypes {
   TARGET_CHANGE,
   TOGGLE, // enable / disable
   REORDER // moved in the main view

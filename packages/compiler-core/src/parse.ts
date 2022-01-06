@@ -66,7 +66,7 @@ const decodeMap: Record<string, string> = {
   quot: '"'
 }
 
-export const defaultParserOptions: MergedParserOptions = {
+const defaultParserOptions: MergedParserOptions = {
   delimiters: [`{{`, `}}`],
   getNamespace: () => Namespaces.HTML,
   getTextMode: () => TextModes.DATA,

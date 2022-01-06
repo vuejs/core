@@ -175,7 +175,7 @@ export function pauseTracking() {
   shouldTrack = false
 }
 
-export function enableTracking() {
+function enableTracking() {
   trackStack.push(shouldTrack)
   shouldTrack = true
 }

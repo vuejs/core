@@ -65,7 +65,7 @@ export type VNodeTypes =
   | typeof TeleportImpl
   | typeof SuspenseImpl
 
-export type VNodeRef =
+type VNodeRef =
   | string
   | Ref
   | ((ref: object | null, refs: Record<string, any>) => void)

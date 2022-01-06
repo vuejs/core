@@ -551,7 +551,7 @@ export function validateCompatConfig(
   }
 }
 
-export function getCompatConfigForKey(
+function getCompatConfigForKey(
   key: DeprecationTypes | 'MODE',
   instance: ComponentInternalInstance | null
 ) {

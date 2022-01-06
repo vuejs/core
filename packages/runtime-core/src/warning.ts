@@ -71,7 +71,7 @@ export function warn(msg: string, ...args: any[]) {
   resetTracking()
 }
 
-export function getComponentTrace(): ComponentTraceStack {
+function getComponentTrace(): ComponentTraceStack {
   let currentVNode: VNode | null = stack[stack.length - 1]
   if (!currentVNode) {
     return []

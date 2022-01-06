@@ -12,9 +12,7 @@ const eventRegistryMap = /*#__PURE__*/ new WeakMap<
   EventRegistry
 >()
 
-export function getRegistry(
-  instance: ComponentInternalInstance
-): EventRegistry {
+function getRegistry(instance: ComponentInternalInstance): EventRegistry {
   let events = eventRegistryMap.get(instance)
   if (!events) {
     eventRegistryMap.set(instance, (events = Object.create(null)))

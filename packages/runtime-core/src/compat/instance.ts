@@ -42,7 +42,7 @@ import { resolveMergedOptions } from '../componentOptions'
 export type LegacyPublicInstance = ComponentPublicInstance &
   LegacyPublicProperties
 
-export interface LegacyPublicProperties {
+interface LegacyPublicProperties {
   $set(target: object, key: string, value: any): void
   $delete(target: object, key: string): void
   $mount(el?: string | Element): this

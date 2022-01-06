@@ -387,10 +387,7 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
   }
 }
 
-export function traverseChildren(
-  parent: ParentNode,
-  context: TransformContext
-) {
+function traverseChildren(parent: ParentNode, context: TransformContext) {
   let i = 0
   const nodeRemoved = () => {
     i--

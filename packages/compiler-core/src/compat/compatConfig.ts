@@ -3,7 +3,7 @@ import { CompilerError } from '../errors'
 import { ParserContext } from '../parse'
 import { TransformContext } from '../transform'
 
-export type CompilerCompatConfig = Partial<
+type CompilerCompatConfig = Partial<
   Record<CompilerDeprecationTypes, boolean | 'suppress-warning'>
 > & {
   MODE?: 2 | 3

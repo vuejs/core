@@ -69,12 +69,12 @@ export interface TransitionHooks<
   delayedLeave?(): void
 }
 
-export type TransitionHookCaller = (
+type TransitionHookCaller = (
   hook: ((el: any) => void) | Array<(el: any) => void> | undefined,
   args?: any[]
 ) => void
 
-export type PendingCallback = (cancelled?: boolean) => void
+type PendingCallback = (cancelled?: boolean) => void
 
 export interface TransitionState {
   isMounted: boolean
@@ -85,7 +85,7 @@ export interface TransitionState {
   leavingVNodes: Map<any, Record<string, VNode>>
 }
 
-export interface TransitionElement {
+interface TransitionElement {
   // in persisted mode (e.g. v-show), the same element is toggled, so the
   // pending enter/leave callbacks may need to be cancelled if the state is toggled
   // before it finishes.
@@ -164,7 +164,9 @@ const BaseTransitionImpl: ComponentOptions = {
       if (
         __DEV__ &&
         mode &&
-        mode !== 'in-out' && mode !== 'out-in' && mode !== 'default'
+        mode !== 'in-out' &&
+        mode !== 'out-in' &&
+        mode !== 'default'
       ) {
         warn(`invalid <transition> mode: ${mode}`)
       }

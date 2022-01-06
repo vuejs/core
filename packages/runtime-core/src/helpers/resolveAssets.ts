@@ -10,11 +10,11 @@ import { camelize, capitalize, isString } from '@vue/shared'
 import { warn } from '../warning'
 import { VNodeTypes } from '../vnode'
 
-export const COMPONENTS = 'components'
-export const DIRECTIVES = 'directives'
-export const FILTERS = 'filters'
+const COMPONENTS = 'components'
+const DIRECTIVES = 'directives'
+const FILTERS = 'filters'
 
-export type AssetTypes = typeof COMPONENTS | typeof DIRECTIVES | typeof FILTERS
+type AssetTypes = typeof COMPONENTS | typeof DIRECTIVES | typeof FILTERS
 
 /**
  * @private
