@@ -387,7 +387,7 @@ export const deprecationData: Record<DeprecationTypes, DeprecationData> = {
           : hasOwn(comp.props, 'modelValue'))
       ) {
         return (
-          `Component delcares "modelValue" prop, which is Vue 3 usage, but ` +
+          `Component declares "modelValue" prop, which is Vue 3 usage, but ` +
           `is running under Vue 2 compat v-model behavior. You can ${configMsg}`
         )
       }

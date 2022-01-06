@@ -153,6 +153,7 @@ export function walkBlockDeclarations(
   block: BlockStatement | Program,
   onIdent: (node: Identifier) => void
 ) {
+  // stmt for statement
   for (const stmt of block.body) {
     if (stmt.type === 'VariableDeclaration') {
       if (stmt.declare) continue

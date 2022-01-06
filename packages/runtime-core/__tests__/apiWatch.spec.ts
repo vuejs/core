@@ -920,7 +920,7 @@ describe('api: watch', () => {
       },
       mounted() {
         // this call runs while Comp is currentInstance, but
-        // the effect for this `$watch` should nontheless be registered with Child
+        // the effect for this `$watch` should nonetheless be registered with Child
         this.comp!.$watch(
           () => this.show,
           () => void 0

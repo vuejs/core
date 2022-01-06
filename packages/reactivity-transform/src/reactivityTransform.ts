@@ -215,6 +215,7 @@ export function transformAST(
   }
 
   function walkScope(node: Program | BlockStatement, isRoot = false) {
+    // stmt for statement
     for (const stmt of node.body) {
       if (stmt.type === 'VariableDeclaration') {
         walkVariableDeclaration(stmt, isRoot)

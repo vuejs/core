@@ -78,7 +78,7 @@ describe('compiler: element transform', () => {
     expect(root.components).toContain(`Foo`)
   })
 
-  test('resolve implcitly self-referencing component', () => {
+  test('resolve implicitly self-referencing component', () => {
     const { root } = parseWithElementTransform(`<Example/>`, {
       filename: `/foo/bar/Example.vue?vue&type=template`
     })

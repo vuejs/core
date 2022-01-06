@@ -1,5 +1,5 @@
 // since v-memo really is a compiler + runtime combo feature, we are performing
-// more of an itegration test here.
+// more of an integration test here.
 import { ComponentOptions, createApp, nextTick } from 'vue'
 
 describe('v-memo', () => {

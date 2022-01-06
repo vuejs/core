@@ -276,7 +276,7 @@ export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
   // Non-standard Attributes
   autocapitalize?: string
   autocorrect?: string
-  autocave?: string
+  autocave?: string // autoclave ? Not Sure.
   color?: string
   itemprop?: string
   itemscope?: Booleanish
@@ -568,7 +568,7 @@ export interface ObjectHTMLAttributes extends HTMLAttributes {
   type?: string
   usemap?: string
   width?: Numberish
-  wmode?: string
+  wmode?: string //? Is there a mistake here
 }
 
 export interface OlHTMLAttributes extends HTMLAttributes {
