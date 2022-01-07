@@ -2112,10 +2112,11 @@ function baseCreateRenderer(
           doRemove
         )
       } else if (
-        patchFlag > 0 &&
         dynamicChildren &&
+        dynamicChildren.length > 0 &&
         // #1153: fast path should not be taken for non-stable (v-for) fragments
-        (type !== Fragment || patchFlag & PatchFlags.STABLE_FRAGMENT)
+        (type !== Fragment ||
+          (patchFlag > 0 && patchFlag & PatchFlags.STABLE_FRAGMENT))
       ) {
         // fast path for block nodes: only need to unmount dynamic children.
         unmountChildren(

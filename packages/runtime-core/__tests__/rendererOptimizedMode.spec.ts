@@ -935,7 +935,7 @@ describe('renderer: optimized mode', () => {
     expect(inner(root)).toBe(`<!---->`)
   })
 
-  test('should not take unmount children fast path without patchFlag', async () => {
+  test('should not take unmount children fast path if dynamicChildren is empty', async () => {
     const show = ref(true)
     const spyUnmounted = jest.fn()
 
