@@ -23,6 +23,7 @@ import {
   createApp,
   FunctionalComponent,
   renderList,
+  setBlockTracking,
   onUnmounted
 } from '@vue/runtime-test'
 import { PatchFlags, SlotFlags } from '@vue/shared'
@@ -932,5 +933,41 @@ describe('renderer: optimized mode', () => {
     await nextTick()
     // should successfully unmount without error
     expect(inner(root)).toBe(`<!---->`)
+  })
+
+  test('should not take unmount children fast path without patchFlag', async () => {
+    const show = ref(true)
+    const spyUnmounted = jest.fn()
+
+    const Child = {
+      setup() {
+        onUnmounted(spyUnmounted)
+        return () => createVNode('div', null, 'Child')
+      }
+    }
+
+    const cache: any = []
+    const app = createApp({
+      render() {
+        return show.value
+          ? (openBlock(),
+            createBlock('div', null, [
+              cache[0] ||
+                (setBlockTracking(-1),
+                (cache[0] = createVNode('div', null, [createVNode(Child)])),
+                setBlockTracking(1),
+                cache[0])
+            ]))
+          : createCommentVNode('v-if', true)
+      }
+    })
+
+    app.mount(root)
+    expect(inner(root)).toBe('<div><div><div>Child</div></div></div>')
+
+    show.value = false
+    await nextTick()
+    expect(inner(root)).toBe('<!--v-if-->')
+    expect(spyUnmounted).toHaveBeenCalledTimes(1)
   })
 })
