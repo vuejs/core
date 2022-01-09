@@ -1557,7 +1557,6 @@ function baseCreateRenderer(
       effect.onTrigger = instance.rtg
         ? e => invokeArrayFns(instance.rtg!, e)
         : void 0
-      // @ts-ignore (for scheduler)
       update.ownerInstance = instance
     }
 
