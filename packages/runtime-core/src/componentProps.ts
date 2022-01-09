@@ -303,7 +303,11 @@ export function updateProps(
     // attrs point to the same object so it should already have been updated.
     if (attrs !== rawCurrentProps) {
       for (const key in attrs) {
-        if (!rawProps || !hasOwn(rawProps, key)) {
+        if (
+          !rawProps ||
+          (!hasOwn(rawProps, key) &&
+            (!__COMPAT__ || !hasOwn(rawProps, key + 'Native')))
+        ) {
           delete attrs[key]
           hasAttrsChanged = true
         }
