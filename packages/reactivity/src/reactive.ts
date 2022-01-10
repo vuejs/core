@@ -166,9 +166,7 @@ export function readonly<T extends object>(
  * returned properties.
  * This is used for creating the props proxy object for stateful components.
  */
-export function shallowReadonly<T extends object>(
-  target: T
-): Readonly<{ [K in keyof T]: UnwrapNestedRefs<T[K]> }> {
+export function shallowReadonly<T extends object>(target: T): Readonly<T> {
   return createReactiveObject(
     target,
     true,
