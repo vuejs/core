@@ -647,7 +647,7 @@ const RFC_LINK = `https://github.com/vuejs/rfcs/discussions/369`
 const hasWarned: Record<string, boolean> = {}
 
 function warnExperimental() {
-  // eslint-disable-next-line
+  // eslint-disable-next-line no-restricted-globals
   if (typeof window !== 'undefined') {
     return
   }

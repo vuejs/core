@@ -1,10 +1,8 @@
-/* eslint-disable no-restricted-globals */
-
 let decoder: HTMLDivElement
 
 export function decodeHtmlBrowser(raw: string, asAttr = false): string {
   if (!decoder) {
-    decoder = document.createElement('div')
+    decoder = document.createElement('div') // eslint-disable-line no-restricted-globals
   }
   if (asAttr) {
     decoder.innerHTML = `<div foo="${raw.replace(/"/g, '&quot;')}">`

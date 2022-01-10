@@ -3,8 +3,8 @@ import { EMPTY_OBJ, extend, isArray, isFunction, isObject } from '@vue/shared'
 import { ComponentInternalInstance, ComponentOptions } from './component'
 import { ComponentPublicInstance } from './componentPublicInstance'
 
+/* eslint-disable no-restricted-globals */
 export function initCustomFormatter() {
-  /* eslint-disable no-restricted-globals */
   if (!__DEV__ || typeof window === 'undefined') {
     return
   }
@@ -189,10 +189,10 @@ export function initCustomFormatter() {
     }
     return `Ref`
   }
-
-  if ((window as any).devtoolsFormatters) {
-    ;(window as any).devtoolsFormatters.push(formatter)
+  const wind = window as any
+  if (wind.devtoolsFormatters) {
+    wind.devtoolsFormatters.push(formatter)
   } else {
-    ;(window as any).devtoolsFormatters = [formatter]
+    wind.devtoolsFormatters = [formatter]
   }
 }

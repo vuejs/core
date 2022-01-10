@@ -43,6 +43,7 @@ function emit(event: string, ...args: any[]) {
   }
 }
 
+/* eslint-disable no-restricted-globals */
 export function setDevtoolsHook(hook: DevtoolsHook, target: any) {
   devtools = hook
   if (devtools) {
@@ -53,7 +54,6 @@ export function setDevtoolsHook(hook: DevtoolsHook, target: any) {
     // handle late devtools injection - only do this if we are in an actual
     // browser environment to avoid the timer handle stalling test runner exit
     // (#4815)
-    // eslint-disable-next-line no-restricted-globals
     typeof window !== 'undefined' &&
     // some envs mock window but not fully
     window.HTMLElement &&
