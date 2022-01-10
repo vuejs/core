@@ -6,7 +6,7 @@ import {
 } from '../component'
 import { currentRenderingInstance } from '../componentRenderContext'
 import { Directive } from '../directives'
-import { camelize, capitalize, isString } from '@vue/shared'
+import { camelize, capitalize, isString, isHTMLTag, isSVGTag } from '@vue/shared'
 import { warn } from '../warning'
 import { VNodeTypes } from '../vnode'
 
@@ -33,6 +33,9 @@ export const NULL_DYNAMIC_COMPONENT = Symbol()
  */
 export function resolveDynamicComponent(component: unknown): VNodeTypes {
   if (isString(component)) {
+    // disambiguate between native element and component
+    if (isHTMLTag(component) || isSVGTag(component)) return component
+
     return resolveAsset(COMPONENTS, component, false) || component
   } else {
     // invalid types will fallthrough to createVNode and raise warning

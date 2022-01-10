@@ -96,6 +96,28 @@ describe('resolveAssets', () => {
     expect(component3!).toBe(Root) // fallback when resolve fails
   })
 
+  test('resolve dynamic component of native element should take highest proirity', () => {
+    const Root = {
+      name: 'Button',
+      setup() {
+        return () => {
+          return createVNode(
+            resolveDynamicComponent('button') as string,
+            null,
+            {
+              default: () => 'native button'
+            }
+          )
+        }
+      }
+    }
+
+    const app = createApp(Root)
+    const root = nodeOps.createElement('div')
+    app.mount(root)
+    expect(serializeInner(root)).toBe('<button>native button</button>')
+  })
+
   describe('warning', () => {
     test('used outside render() or setup()', () => {
       resolveComponent('foo')
