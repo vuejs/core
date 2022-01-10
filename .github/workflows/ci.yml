@@ -70,7 +70,7 @@ jobs:
       - run: pnpm install
       - run: pnpm run size
 
-  size:
+  eslint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
