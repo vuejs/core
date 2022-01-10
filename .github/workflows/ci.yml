@@ -70,6 +70,25 @@ jobs:
       - run: pnpm install
       - run: pnpm run size
 
+  size:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2.0.1
+        with:
+          version: 6.15.1
+
+      - name: Set node version to 16
+        uses: actions/setup-node@v2
+        with:
+          node-version: 16
+          cache: 'pnpm'
+
+      - run: pnpm install
+      - run: pnpm run lint
+
       # - name: Check build size
       #   uses: posva/size-check-action@v1.1.2
       #   with:
