@@ -127,11 +127,7 @@ export function triggerRef(ref: Ref) {
 }
 
 export function unref<T>(ref: T | Ref<T>): T {
-  if (isRef(ref)) {
-    return ref._shallow ? ref.value : toRaw(ref.value)
-  } else {
-    return ref
-  }
+  return isRef(ref) ? (toRaw(ref.value) as any) : ref
 }
 
 const shallowUnwrapHandlers: ProxyHandler<any> = {
