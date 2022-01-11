@@ -194,6 +194,12 @@ describe('reactivity/ref', () => {
   test('unref', () => {
     expect(unref(1)).toBe(1)
     expect(unref(ref(1))).toBe(1)
+
+    const foo = {
+      bar: 1
+    }
+    expect(isReactive(unref(ref(foo)))).toBe(false) // should not be reactive
+    expect(unref(ref(foo))).toBe(foo)
   })
 
   test('shallowRef', () => {
