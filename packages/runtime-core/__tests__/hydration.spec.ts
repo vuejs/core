@@ -17,6 +17,7 @@ import {
 } from '@vue/runtime-dom'
 import { renderToString, SSRContext } from '@vue/server-renderer'
 import { PatchFlags } from '../../shared/src'
+import { renderSlot } from '../src/helpers/renderSlot'
 
 function mountWithHydration(html: string, render: () => any) {
   const container = document.createElement('div')
@@ -849,6 +850,26 @@ describe('SSR hydration', () => {
         ])
     )
     expect((container.firstChild!.firstChild as any)._value).toBe(true)
+  })
+
+  test('components with fragments', () => {
+    const { container } = mountWithHydration(
+      '<!--[-->foo<!--]-->',
+      () =>
+        h(defineComponent({
+          props: {
+            title: {
+              type: String,
+              required: true,
+            },
+          },
+
+          render() {
+            return renderSlot(this.$slots, 'title', undefined, () => [this.title])
+          }
+        }), { title: 'foo' })
+    )
+    expect(container.textContent).toBe('foo')
   })
 
   describe('mismatch handling', () => {

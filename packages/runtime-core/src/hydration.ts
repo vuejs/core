@@ -385,7 +385,6 @@ export function createHydrationFunctions(
     slotScopeIds: string[] | null,
     optimized: boolean
   ): Node | null => {
-    optimized = optimized || !!parentVNode.dynamicChildren
     const children = parentVNode.children as VNode[]
     const l = children.length
     let hasWarned = false
