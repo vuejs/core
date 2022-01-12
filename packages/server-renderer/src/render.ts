@@ -86,7 +86,7 @@ export function renderComponentVNode(
   const instance = createComponentInstance(vnode, parentComponent, null)
   const res = setupComponent(instance, true /* isSSR */)
   const hasAsyncSetup = isPromise(res)
-  const prefetches = instance.sp
+  const prefetches = instance.sp /* LifecycleHooks.SERVER_PREFETCH */
   if (hasAsyncSetup || prefetches) {
     let p: Promise<unknown> = hasAsyncSetup
       ? (res as Promise<void>)
