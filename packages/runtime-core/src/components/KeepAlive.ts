@@ -43,7 +43,7 @@ import { ComponentRenderContext } from '../componentPublicInstance'
 import { devtoolsComponentAdded } from '../devtools'
 import { isAsyncWrapper } from '../apiAsyncComponent'
 
-type MatchPattern = string | RegExp | string[] | RegExp[]
+type MatchPattern = string | RegExp | (string | RegExp)[]
 
 export interface KeepAliveProps {
   include?: MatchPattern
