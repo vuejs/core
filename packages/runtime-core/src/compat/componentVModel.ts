@@ -1,4 +1,4 @@
-import { ShapeFlags } from '@vue/shared'
+import { ShapeFlags, extend } from '@vue/shared'
 import { ComponentInternalInstance, ComponentOptions } from '../component'
 import { callWithErrorHandling, ErrorCodes } from '../errorHandling'
 import { VNode } from '../vnode'
@@ -38,7 +38,10 @@ export function convertLegacyVModelProps(vnode: VNode) {
     // v3 compiled model code -> v2 compat props
     // modelValue -> value
     // onUpdate:modelValue -> onModelCompat:input
-    const { prop = 'value', event = 'input' } = (type as any).model || {}
+    const model = (type as any).model || {}
+    const mixins = (type as any).mixins || []
+    mixins.forEach((m: any) => m.model && extend(model, m.model))
+    const { prop = 'value', event = 'input' } = model
     if (prop !== 'modelValue') {
       props[prop] = props.modelValue
       delete props.modelValue
