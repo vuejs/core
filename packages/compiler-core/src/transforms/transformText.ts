@@ -11,6 +11,7 @@ import { isText } from '../utils'
 import { CREATE_TEXT } from '../runtimeHelpers'
 import { PatchFlags, PatchFlagNames } from '@vue/shared'
 import { getConstantType } from './hoistStatic'
+import { createCompoundExpression } from '../ast'
 
 // Merge adjacent text nodes and expressions into a single expression
 // e.g. <div>abc {{ d }} {{ e }}</div> should have a single expression node as child.
@@ -36,11 +37,10 @@ export const transformText: NodeTransform = (node, context) => {
             const next = children[j]
             if (isText(next)) {
               if (!currentContainer) {
-                currentContainer = children[i] = {
-                  type: NodeTypes.COMPOUND_EXPRESSION,
-                  loc: child.loc,
-                  children: [child]
-                }
+                currentContainer = children[i] = createCompoundExpression(
+                  [child],
+                  child.loc
+                )
               }
               // merge adjacent text node into current
               currentContainer.children.push(` + `, next)
