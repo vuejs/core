@@ -128,7 +128,7 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
       // needed by many libs / render fns
       $vnode: i => i.vnode,
 
-      // inject addtional properties into $options for compat
+      // inject additional properties into $options for compat
       // e.g. vuex needs this.$options.parent
       $options: i => {
         const res = extend({}, resolveMergedOptions(i))

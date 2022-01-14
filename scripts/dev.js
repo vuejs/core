@@ -30,7 +30,7 @@ const outfile = resolve(
 )
 const relativeOutfile = relative(process.cwd(), outfile)
 
-// resolve extenrals
+// resolve externals
 // TODO this logic is largely duplicated from rollup.config.js
 let external = []
 if (!inlineDeps) {
