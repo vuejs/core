@@ -123,15 +123,18 @@ The `dev` script bundles a target package (default: `vue`) in a specified format
 ```bash
 $ nr dev
 
-> rollup v1.19.4
-> bundles packages/vue/src/index.ts → packages/vue/dist/vue.global.js...
+> watching: packages/vue/dist/vue.global.js
 ```
 
-- The `dev` script also supports fuzzy match for the target package, but will only match the first package matched.
+- **Important:** output of the `dev` script is for development and debugging only. While it has the same runtime behavior, the generated code should never be published to npm.
+
+- The `dev` script does not support fuzzy match - you must specify the full package name, e.g. `nr dev runtime-core`.
 
 - The `dev` script supports specifying build format via the `-f` flag just like the `build` script.
 
 - The `dev` script also supports the `-s` flag for generating source maps, but it will make rebuilds slower.
+
+- The `dev` script supports the `-i` flag for inlining all deps. This is useful when debugging `esm-bundler` builds which externalizes deps by default.
 
 ### `nr dev-compiler`
 
