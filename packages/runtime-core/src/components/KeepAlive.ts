@@ -174,7 +174,7 @@ const KeepAliveImpl: ComponentOptions = {
     function unmount(vnode: VNode) {
       // reset the shapeFlag so it can be properly unmounted
       resetShapeFlag(vnode)
-      _unmount(vnode, instance, parentSuspense)
+      _unmount(vnode, instance, parentSuspense, true)
     }
 
     function pruneCache(filter?: (name: string) => boolean) {
