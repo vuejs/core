@@ -222,6 +222,11 @@ expectType<Ref<string>>(p2.obj.k)
 
   expectType<Ref<number>>(toRefResult.value.b)
   expectType<Ref<number>>(toRefsResult.a.value.b)
+
+  // #5188
+  const props = { foo: 1 } as { foo: any }
+  const { foo } = toRefs(props)
+  expectType<Ref<any>>(foo)
 }
 
 // toRef default value

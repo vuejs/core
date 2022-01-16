@@ -1,6 +1,6 @@
 import { isTracking, trackEffects, triggerEffects } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
-import { isArray, hasChanged } from '@vue/shared'
+import { isArray, hasChanged, IfAny } from '@vue/shared'
 import { isProxy, toRaw, isReactive, toReactive } from './reactive'
 import type { ShallowReactiveMarker } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
@@ -222,7 +222,7 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
   }
 }
 
-export type ToRef<T> = [T] extends [Ref] ? T : Ref<T>
+export type ToRef<T> = IfAny<T, Ref<T>, [T] extends [Ref] ? T : Ref<T>>
 
 export function toRef<T extends object, K extends keyof T>(
   object: T,
