@@ -12,7 +12,8 @@ import {
   cloneVNode,
   VNodeArrayChildren,
   isVNode,
-  blockStack
+  blockStack,
+  Fragment
 } from './vnode'
 import { handleError, ErrorCodes } from './errorHandling'
 import { PatchFlags, ShapeFlags, isOn, isModelListener } from '@vue/shared'
@@ -253,6 +254,11 @@ const getChildRoot = (
   if (!childRoot) {
     return [vnode, undefined]
   }
+
+  if (childRoot.type === Fragment) {
+    return getChildRoot(childRoot)
+  }
+
   const index = rawChildren.indexOf(childRoot)
   const dynamicIndex = dynamicChildren ? dynamicChildren.indexOf(childRoot) : -1
   const setRoot = (updatedRoot: VNode) => {
