@@ -1,3 +1,30 @@
+## [3.2.27](https://github.com/vuejs/vue-next/compare/v3.2.26...v3.2.27) (2022-01-16)
+
+
+### Bug Fixes
+
+* **KeepAlive:** remove cached VNode properly ([#5260](https://github.com/vuejs/vue-next/issues/5260)) ([2e3e183](https://github.com/vuejs/vue-next/commit/2e3e183b4f19c9e25865e35438653cbc9bf01afc)), closes [#5258](https://github.com/vuejs/vue-next/issues/5258)
+* **reactivity-transform:** should not rewrite for...in / for...of scope variables ([7007ffb](https://github.com/vuejs/vue-next/commit/7007ffb2c796d6d56b9c8e278c54dc1cefd7b58f))
+* **sfc-playground:** hide title to avoid overlap ([#5099](https://github.com/vuejs/vue-next/issues/5099)) ([44b9527](https://github.com/vuejs/vue-next/commit/44b95276f5c086e1d88fa3c686a5f39eb5bb7821))
+* **ssr:** make computed inactive during ssr, fix memory leak ([f4f0966](https://github.com/vuejs/vue-next/commit/f4f0966b33863ac0fca6a20cf9e8ddfbb311ae87)), closes [#5208](https://github.com/vuejs/vue-next/issues/5208)
+* **ssr:** remove missing ssr directive transform error ([55cc4af](https://github.com/vuejs/vue-next/commit/55cc4af25e6f4924b267620bd965e496f260d41a))
+* **types/tsx:** allow ref_for type on tsx elements ([78df8c7](https://github.com/vuejs/vue-next/commit/78df8c78c4539d2408278d1a11612b6bbc47d22f))
+* **types:** fix shallowReadonly type ([92f11d6](https://github.com/vuejs/vue-next/commit/92f11d6740929f5b591740e30ae5fba50940ec82))
+* **types:** handle ToRef<any> ([5ac7030](https://github.com/vuejs/vue-next/commit/5ac703055fa83cb1e8a173bbd6a4d6c33707a3c3)), closes [#5188](https://github.com/vuejs/vue-next/issues/5188)
+* **types:** KeepAlive match pattern should allow mixed array ([3007d5b](https://github.com/vuejs/vue-next/commit/3007d5b4cafed1da445bc498f771bd2c79eda6fc))
+
+
+### Features
+
+* **types:** simplify `ExtractPropTypes` to avoid props JSDocs being removed ([#5166](https://github.com/vuejs/vue-next/issues/5166)) ([a570b38](https://github.com/vuejs/vue-next/commit/a570b38741a7dc259772c5ccce7ea8a1638eb0bd))
+
+
+### Performance Improvements
+
+* improve memory usage for static vnodes ([ed9eb62](https://github.com/vuejs/vue-next/commit/ed9eb62e5992bd575d999c4197330d8bad622cfb))
+
+
+
 ## [3.2.26](https://github.com/vuejs/vue-next/compare/v3.2.25...v3.2.26) (2021-12-12)
 
 

@@ -1,6 +1,6 @@
 {
   "name": "vue",
-  "version": "3.2.26",
+  "version": "3.2.27",
   "description": "The progressive JavaScript framework for building modern web UI.",
   "main": "index.js",
   "module": "dist/vue.runtime.esm-bundler.js",
@@ -66,10 +66,10 @@
   },
   "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/vue#readme",
   "dependencies": {
-    "@vue/shared": "3.2.26",
-    "@vue/compiler-dom": "3.2.26",
-    "@vue/runtime-dom": "3.2.26",
-    "@vue/compiler-sfc": "3.2.26",
-    "@vue/server-renderer": "3.2.26"
+    "@vue/shared": "3.2.27",
+    "@vue/compiler-dom": "3.2.27",
+    "@vue/runtime-dom": "3.2.27",
+    "@vue/compiler-sfc": "3.2.27",
+    "@vue/server-renderer": "3.2.27"
   }
 }
