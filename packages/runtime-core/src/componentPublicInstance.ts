@@ -13,7 +13,8 @@ import {
   NOOP,
   extend,
   isString,
-  isFunction
+  isFunction,
+  UnionToIntersection
 } from '@vue/shared'
 import {
   toRaw,
@@ -40,7 +41,6 @@ import { Slots } from './componentSlots'
 import { markAttrsAccessed } from './componentRenderUtils'
 import { currentRenderingInstance } from './componentRenderContext'
 import { warn } from './warning'
-import { UnionToIntersection } from './helpers/typeUtils'
 import { installCompatInstanceProperties } from './compat/instance'
 
 /**
