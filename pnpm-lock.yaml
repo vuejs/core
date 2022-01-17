@@ -31,7 +31,7 @@ importers:
       jest: ^27.1.0
       lint-staged: ^10.2.10
       lodash: ^4.17.15
-      marked: ^0.7.0
+      marked: ^4.0.10
       minimist: ^1.2.0
       npm-run-all: ^4.1.5
       prettier: ^2.3.1
@@ -79,7 +79,7 @@ importers:
       jest: 27.4.4
       lint-staged: 10.5.4
       lodash: 4.17.21
-      marked: 0.7.0
+      marked: 4.0.10
       minimist: 1.2.5
       npm-run-all: 4.1.5
       prettier: 2.5.1
@@ -4978,9 +4978,9 @@ packages:
     engines: {node: '>=8'}
     dev: true
 
-  /marked/0.7.0:
-    resolution: {integrity: sha512-c+yYdCZJQrsRjTPhUx7VKkApw9bwDkNbHUKo1ovgcfDjb2kc8rLuRbIFyXL5WOEUwzSSKo3IXpph2K6DqB/KZg==}
-    engines: {node: '>=0.10.0'}
+  /marked/4.0.10:
+    resolution: {integrity: sha512-+QvuFj0nGgO970fySghXGmuw+Fd0gD2x3+MqCWLIPf5oxdv1Ka6b2q+z9RP01P/IaKPMEramy+7cNy/Lw8c3hw==}
+    engines: {node: '>= 12'}
     hasBin: true
     dev: true
 
