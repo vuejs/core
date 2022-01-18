@@ -15,7 +15,7 @@
   "types": "dist/reactivity-transform.d.ts",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vuejs/vue-next.git",
+    "url": "git+https://github.com/vuejs/core.git",
     "directory": "packages/reactivity-transform"
   },
   "keywords": [
@@ -24,9 +24,9 @@
   "author": "Evan You",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/vuejs/vue-next/issues"
+    "url": "https://github.com/vuejs/core/issues"
   },
-  "homepage": "https://github.com/vuejs/vue-next/tree/dev/packages/reactivity-transform#readme",
+  "homepage": "https://github.com/vuejs/core/tree/dev/packages/reactivity-transform#readme",
   "dependencies": {
     "@babel/parser": "^7.16.4",
     "@vue/compiler-core": "3.2.27",

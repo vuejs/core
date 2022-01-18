@@ -137,7 +137,7 @@ export const deprecationData: Record<DeprecationTypes, DeprecationData> = {
     message:
       `config.devtools has been removed. To enable devtools for ` +
       `production, configure the __VUE_PROD_DEVTOOLS__ compile-time flag.`,
-    link: `https://github.com/vuejs/vue-next/tree/master/packages/vue#bundler-build-feature-flags`
+    link: `https://github.com/vuejs/core/tree/main/packages/vue#bundler-build-feature-flags`
   },
 
   [DeprecationTypes.CONFIG_KEY_CODES]: {

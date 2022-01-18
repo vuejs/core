@@ -372,7 +372,7 @@ defineExpose({ foo: 123 })
       assertCode(content)
     })
 
-    // https://github.com/vuejs/vue-next/issues/4599
+    // https://github.com/vuejs/core/issues/4599
     test('attribute expressions', () => {
       const { content } = compile(`
         <script setup lang="ts">

@@ -15,7 +15,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vuejs/vue-next.git",
+    "url": "git+https://github.com/vuejs/core.git",
     "directory": "packages/compiler-ssr"
   },
   "keywords": [
@@ -24,9 +24,9 @@
   "author": "Evan You",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/vuejs/vue-next/issues"
+    "url": "https://github.com/vuejs/core/issues"
   },
-  "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/compiler-ssr#readme",
+  "homepage": "https://github.com/vuejs/core/tree/main/packages/compiler-ssr#readme",
   "dependencies": {
     "@vue/shared": "3.2.27",
     "@vue/compiler-dom": "3.2.27"

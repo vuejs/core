@@ -446,7 +446,7 @@ describe('reactivity/readonly', () => {
     ).toHaveBeenWarned()
   })
 
-  // https://github.com/vuejs/vue-next/issues/3376
+  // https://github.com/vuejs/core/issues/3376
   test('calling readonly on computed should allow computed to set its private properties', () => {
     const r = ref<boolean>(false)
     const c = computed(() => r.value)

@@ -719,7 +719,7 @@ function parseAttributes(
     const attr = parseAttribute(context, attributeNames)
 
     // Trim whitespace between class
-    // https://github.com/vuejs/vue-next/issues/4251
+    // https://github.com/vuejs/core/issues/4251
     if (
       attr.type === NodeTypes.ATTRIBUTE &&
       attr.value &&

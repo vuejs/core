@@ -43,7 +43,7 @@ const App = {
         h(
           'a',
           {
-            href: `https://github.com/vuejs/vue-next/tree/${__COMMIT__}`,
+            href: `https://github.com/vuejs/core/tree/${__COMMIT__}`,
             target: `_blank`
           },
           `@${__COMMIT__}`

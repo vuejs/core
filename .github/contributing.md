@@ -2,7 +2,7 @@
 
 Hi! I'm really excited that you are interested in contributing to Vue.js. Before submitting your contribution, please make sure to take a moment and read through the following guidelines:
 
-- [Code of Conduct](https://github.com/vuejs/vue/blob/dev/.github/CODE_OF_CONDUCT.md)
+- [Code of Conduct](https://vuejs.org/about/coc.html)
 - [Issue Reporting Guidelines](#issue-reporting-guidelines)
 - [Pull Request Guidelines](#pull-request-guidelines)
 - [Development Setup](#development-setup)
@@ -90,7 +90,7 @@ Additional formats that only apply to the main `vue` package:
 - **`esm-bundler-runtime`**
 - **`esm-browser-runtime`**
 
-More details about each of these formats can be found in the [`vue` package README](https://github.com/vuejs/vue-next/blob/master/packages/vue/README.md#which-dist-file-to-use) and the [Rollup config file](https://github.com/vuejs/vue-next/blob/master/rollup.config.js).
+More details about each of these formats can be found in the [`vue` package README](https://github.com/vuejs/core/blob/main/packages/vue/README.md#which-dist-file-to-use) and the [Rollup config file](https://github.com/vuejs/core/blob/main/rollup.config.js).
 
 For example, to build `runtime-core` with the global build only:
 
@@ -138,7 +138,7 @@ $ nr dev
 
 ### `nr dev-compiler`
 
-The `dev-compiler` script builds, watches and serves the [Template Explorer](https://github.com/vuejs/vue-next/tree/master/packages/template-explorer) at `http://localhost:5000`. This is extremely useful when working on the compiler.
+The `dev-compiler` script builds, watches and serves the [Template Explorer](https://github.com/vuejs/core/tree/main/packages/template-explorer) at `http://localhost:5000`. This is extremely useful when working on the compiler.
 
 ### `nr test`
 
