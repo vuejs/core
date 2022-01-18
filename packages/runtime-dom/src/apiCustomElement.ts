@@ -175,6 +175,7 @@ export class VueElement extends BaseClass {
   private _resolved = false
   private _numberProps: Record<string, true> | null = null
   private _styles?: HTMLStyleElement[]
+  private _slots: Node[]
 
   constructor(
     private _def: InnerComponentDef,
@@ -189,6 +190,11 @@ export class VueElement extends BaseClass {
       },
       this._config
     )
+
+    if (!this._config.shadowRoot) {
+      this._slots = Array.from(this.children).map(n => n.cloneNode(true))
+      this.replaceChildren()
+    }
 
     if (this._config.shadowRoot) {
       if (this.shadowRoot && hydrate) {
@@ -350,11 +356,34 @@ export class VueElement extends BaseClass {
   }
 
   private _createVNode(): VNode<any, any> {
-    const vnode = createVNode(this._def, extend({}, this._props))
+    let childs = null
+    // web components without shadow DOM do not supports native slot
+    // so, we create a VNode based on the content of child nodes.
+    // NB: named slots are currently not supported
+    if (!this._config.shadowRoot) {
+      childs = () => {
+        const toObj = (a: NamedNodeMap) => {
+          const res = {}
+          for (let i = 0, l = a.length; i < l; i++) {
+            const attr = a[i]
+            res[attr.nodeName] = attr.nodeValue
+          }
+          return res
+        }
+        return this._slots.map(n => {
+          const attrs = n.attributes ? toObj(n.attributes) : {}
+          attrs.innerHTML = n.innerHTML
+          return createVNode(n.tagName, attrs, null)
+        })
+      }
+    }
+    const vnode = createVNode(this._def, extend({}, this._props), childs)
     if (!this._instance) {
       vnode.ce = instance => {
         this._instance = instance
-        instance.isCE = true
+        if (this._config.shadowRoot) {
+          instance.isCE = true
+        }
         // HMR
         if (__DEV__) {
           instance.ceReload = newStyles => {
