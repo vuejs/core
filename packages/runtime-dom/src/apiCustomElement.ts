@@ -217,13 +217,15 @@ export class VueElement extends BaseClass {
     const resolve = (def: InnerComponentDef) => {
       const { props, styles } = def
       const hasOptions = !isArray(props)
-      const rawKeys = props ? (hasOptions ? Object.keys(props) : props) : []
+      const propsVal = props ? (hasOptions ? Object.keys(props) : props) : []
+      const attrs = Object.keys(this._props).filter( p => !propsVal.includes(p))
+      const rawKeys = [...propsVal.concat(attrs)]
 
       // cast Number-type props set before resolve
       let numberProps
       if (hasOptions) {
         for (const key in this._props) {
-          const opt = props[key]
+          const opt = props && props[key]
           if (opt === Number || (opt && opt.type === Number)) {
             this._props[key] = toNumber(this._props[key])
             ;(numberProps || (numberProps = Object.create(null)))[key] = true
@@ -235,7 +237,10 @@ export class VueElement extends BaseClass {
       // check if there are props set pre-upgrade or connect
       for (const key of Object.keys(this)) {
         if (key[0] !== '_') {
-          this._setProp(key, this[key as keyof this], true, false)
+          const isProps = propsVal.includes(key)
+          const isAttrs = attrs.includes(key)
+          isProps || isAttrs || rawKeys.push(key)
+          this._setProp(key, this[key as keyof this], isProps, false)
         }
       }
 
@@ -246,7 +251,7 @@ export class VueElement extends BaseClass {
             return this._getProp(key)
           },
           set(val) {
-            this._setProp(key, val)
+            this._setProp(key, val, propsVal.includes(key))
           }
         })
       }

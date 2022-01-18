@@ -212,6 +212,42 @@ describe('defineCustomElement', () => {
     })
   })
 
+  describe('attrs', () => {
+    const E = defineCustomElement({
+      render() {
+        return [
+          h('div', null, this.$attrs.foo as string)
+        ]
+      }
+    })
+    customElements.define('my-el-attrs', E)
+
+    test('attrs via attribute', async () => {
+      container.innerHTML = `<my-el-attrs foo="hello"></my-el-attrs>`
+      const e = container.childNodes[0] as VueElement
+      expect(e.shadowRoot!.innerHTML).toBe('<div>hello</div>')
+
+      e.setAttribute('foo', 'changed')
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe('<div>changed</div>')
+    })
+
+    test('attrs via properties', async () => {
+      const e = new E() as any
+      e.foo = 'one'
+      container.appendChild(e)
+      expect(e.shadowRoot!.innerHTML).toBe('<div>one</div>')
+
+      e.foo = 'two'
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe('<div>two</div>')
+
+      e.foo = true
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe('<div>true</div>')
+    })
+  })
+
   describe('emits', () => {
     const E = defineCustomElement({
       setup(_, { emit }) {
