@@ -15,6 +15,7 @@ export {
   isProxy,
   isReactive,
   isReadonly,
+  isShallow,
   // advanced
   customRef,
   triggerRef,

@@ -1,4 +1,10 @@
-import { isReactive, reactive, shallowReactive } from '../src/reactive'
+import {
+  isReactive,
+  isShallow,
+  reactive,
+  shallowReactive,
+  shallowReadonly
+} from '../src/reactive'
 
 import { effect } from '../src/effect'
 
@@ -22,6 +28,11 @@ describe('shallowReactive', () => {
     expect(shallowProxy).not.toBe(reactiveProxy)
     expect(isReactive(shallowProxy.foo)).toBe(false)
     expect(isReactive(reactiveProxy.foo)).toBe(true)
+  })
+
+  test('isShallow', () => {
+    expect(isShallow(shallowReactive({}))).toBe(true)
+    expect(isShallow(shallowReadonly({}))).toBe(true)
   })
 
   describe('collections', () => {
