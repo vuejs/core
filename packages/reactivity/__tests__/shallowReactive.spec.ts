@@ -35,6 +35,26 @@ describe('shallowReactive', () => {
     expect(isShallow(shallowReadonly({}))).toBe(true)
   })
 
+  // #5271
+  test('should respect shallow reactive nested inside reactive on reset', () => {
+    const r = reactive({ foo: shallowReactive({ bar: {} }) })
+    expect(isShallow(r.foo)).toBe(true)
+    expect(isReactive(r.foo.bar)).toBe(false)
+
+    r.foo = shallowReactive({ bar: {} })
+    expect(isShallow(r.foo)).toBe(true)
+    expect(isReactive(r.foo.bar)).toBe(false)
+  })
+
+  test('should respect shallow/deep versions of same target on access', () => {
+    const original = {}
+    const shallow = shallowReactive(original)
+    const deep = reactive(original)
+    const r = reactive({ shallow, deep })
+    expect(r.shallow).toBe(shallow)
+    expect(r.deep).toBe(deep)
+  })
+
   describe('collections', () => {
     test('should be reactive', () => {
       const shallowSet = shallowReactive(new Set())
