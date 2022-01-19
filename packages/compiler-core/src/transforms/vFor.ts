@@ -60,6 +60,14 @@ export const transformFor = createStructuralDirectiveTransform(
         forNode.source
       ]) as ForRenderListExpression
       const memo = findDir(node, 'memo')
+
+      if (memo && isTemplateNode(node)) {
+        memo.exp = processExpression(
+          memo.exp! as SimpleExpressionNode,
+          context
+        )
+      }
+
       const keyProp = findProp(node, `key`)
       const keyExp =
         keyProp &&
