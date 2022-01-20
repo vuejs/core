@@ -235,6 +235,11 @@ export function transformAST(
         stmt.declaration.type === 'VariableDeclaration'
       ) {
         walkVariableDeclaration(stmt.declaration, isRoot)
+      } else if (
+        stmt.type === 'LabeledStatement' &&
+        stmt.body.type === 'VariableDeclaration'
+      ) {
+        walkVariableDeclaration(stmt.body, isRoot)
       }
     }
   }
