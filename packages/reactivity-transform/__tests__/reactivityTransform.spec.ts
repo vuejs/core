@@ -19,7 +19,7 @@ test('$ unwrapping', () => {
   const { code, rootRefs } = transform(`
     import { ref, shallowRef } from 'vue'
     let foo = $(ref())
-    let a = $(ref(1))
+    export let a = $(ref(1))
     let b = $(shallowRef({
       count: 0
     }))
@@ -30,7 +30,7 @@ test('$ unwrapping', () => {
   expect(code).not.toMatch(`$(ref(1))`)
   expect(code).not.toMatch(`$(shallowRef({`)
   expect(code).toMatch(`let foo = (ref())`)
-  expect(code).toMatch(`let a = (ref(1))`)
+  expect(code).toMatch(`export let a = (ref(1))`)
   expect(code).toMatch(`
     let b = (shallowRef({
       count: 0
