@@ -799,7 +799,8 @@ export function mergeProps(...args: (Data & VNodeProps)[]) {
         const incoming = toMerge[key]
         if (
           existing !== incoming &&
-          !(isArray(existing) && existing.includes(incoming))
+          !(isArray(existing) && existing.includes(incoming)) &&
+          incoming
         ) {
           ret[key] = existing
             ? [].concat(existing as any, incoming as any)
