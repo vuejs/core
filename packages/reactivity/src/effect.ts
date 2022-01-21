@@ -9,6 +9,7 @@ import {
   newTracked,
   wasTracked
 } from './dep'
+import { ComputedRefImpl } from './computed'
 
 // The main WeakMap that stores {target -> key -> dep} connections.
 // Conceptually, it's easier to think of a dependency as a Dep class
@@ -54,9 +55,16 @@ export class ReactiveEffect<T = any> {
   active = true
   deps: Dep[] = []
 
-  // can be attached after creation
-  computed?: boolean
+  /**
+   * Can be attached after creation
+   * @internal
+   */
+  computed?: ComputedRefImpl<T>
+  /**
+   * @internal
+   */
   allowRecurse?: boolean
+
   onStop?: () => void
   // dev only
   onTrack?: (event: DebuggerEvent) => void

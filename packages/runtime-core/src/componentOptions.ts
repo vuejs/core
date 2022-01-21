@@ -19,7 +19,8 @@ import {
   LooseRequired,
   UnionToIntersection
 } from '@vue/shared'
-import { computed, isRef, Ref } from '@vue/reactivity'
+import { isRef, Ref } from '@vue/reactivity'
+import { computed } from './apiComputed'
 import {
   watch,
   WatchOptions,

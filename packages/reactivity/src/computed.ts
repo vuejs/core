@@ -23,15 +23,17 @@ export interface WritableComputedOptions<T> {
   set: ComputedSetter<T>
 }
 
-class ComputedRefImpl<T> {
+export class ComputedRefImpl<T> {
   public dep?: Dep = undefined
 
   private _value!: T
-  private _dirty = true
   public readonly effect: ReactiveEffect<T>
 
   public readonly __v_isRef = true
   public readonly [ReactiveFlags.IS_READONLY]: boolean
+
+  public _dirty = true
+  public _cacheable: boolean
 
   constructor(
     getter: ComputedGetter<T>,
@@ -45,7 +47,8 @@ class ComputedRefImpl<T> {
         triggerRefValue(this)
       }
     })
-    this.effect.active = !isSSR
+    this.effect.computed = this
+    this.effect.active = this._cacheable = !isSSR
     this[ReactiveFlags.IS_READONLY] = isReadonly
   }
 
@@ -53,7 +56,7 @@ class ComputedRefImpl<T> {
     // the computed ref may get wrapped by other proxies e.g. readonly() #3376
     const self = toRaw(this)
     trackRefValue(self)
-    if (self._dirty) {
+    if (self._dirty || !self._cacheable) {
       self._dirty = false
       self._value = self.effect.run()!
     }
