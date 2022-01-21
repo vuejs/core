@@ -438,7 +438,8 @@ describe('reactivity/readonly', () => {
   })
 
   test('should make ref readonly', () => {
-    const n: any = readonly(ref(1))
+    const n = readonly(ref(1))
+    // @ts-expect-error
     n.value = 2
     expect(n.value).toBe(1)
     expect(
