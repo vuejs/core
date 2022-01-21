@@ -75,7 +75,7 @@ export class ReactiveEffect<T = any> {
     if (!this.active) {
       return this.fn()
     }
-    if (!effectStack.includes(this)) {
+    if (!effectStack.length || !effectStack.includes(this)) {
       try {
         effectStack.push((activeEffect = this))
         enableTracking()
