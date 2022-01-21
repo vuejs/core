@@ -1,3 +1,32 @@
+## <small>3.2.28 (2022-01-21)</small>
+
+* build: fix build script ([3d80b15](https://github.com/vuejs/vue-next/commit/3d80b15))
+* fix(compat): convertLegacyVModelProps should merge model option in mixins (#5251) ([72130ac](https://github.com/vuejs/vue-next/commit/72130ac)), closes [#5251](https://github.com/vuejs/vue-next/issues/5251)
+* fix(compat): ensure fallthrough *Native events are not dropped during props update (#5228) ([97f6bd9](https://github.com/vuejs/vue-next/commit/97f6bd9)), closes [#5228](https://github.com/vuejs/vue-next/issues/5228)
+* fix(compat): simulate Vue 2.6.14 version in compat build (#5293) ([d0b9708](https://github.com/vuejs/vue-next/commit/d0b9708)), closes [#5293](https://github.com/vuejs/vue-next/issues/5293)
+* fix(compiler-core): handle v-memo in template v-for (#5291) ([9f55e6f](https://github.com/vuejs/vue-next/commit/9f55e6f)), closes [#5291](https://github.com/vuejs/vue-next/issues/5291) [#5288](https://github.com/vuejs/vue-next/issues/5288)
+* fix(compiler-sfc): support complex expression in CSS v-bind() (#5114) ([95d49bf](https://github.com/vuejs/vue-next/commit/95d49bf)), closes [#5114](https://github.com/vuejs/vue-next/issues/5114) [#5109](https://github.com/vuejs/vue-next/issues/5109)
+* fix(compiler-sfc/reactivity-transform): fix edge case where normal script has ref macros but script  ([4768f26](https://github.com/vuejs/vue-next/commit/4768f26))
+* fix(reactivity-transform): apply transform for labelled variable declarations ([a05b000](https://github.com/vuejs/vue-next/commit/a05b000)), closes [/github.com/vuejs/core/issues/5298#issuecomment-1017970061](https://github.com//github.com/vuejs/core/issues/5298/issues/issuecomment-1017970061)
+* fix(reactivity-transform): apply transform on exported variable declarations ([a81a992](https://github.com/vuejs/vue-next/commit/a81a992)), closes [#5298](https://github.com/vuejs/vue-next/issues/5298)
+* fix(reactivity): differentiate shallow/deep proxies of same target when nested in reactive ([9c304bf](https://github.com/vuejs/vue-next/commit/9c304bf)), closes [#5271](https://github.com/vuejs/vue-next/issues/5271)
+* fix(reactivity): mutating a readonly ref nested in a reactive object should fail. (#5048) ([171f5e9](https://github.com/vuejs/vue-next/commit/171f5e9)), closes [#5048](https://github.com/vuejs/vue-next/issues/5048) [#5042](https://github.com/vuejs/vue-next/issues/5042)
+* fix(runtime-core): ensure mergeProps skips undefined event handlers (#5299) ([c35ec47](https://github.com/vuejs/vue-next/commit/c35ec47)), closes [#5299](https://github.com/vuejs/vue-next/issues/5299) [#5296](https://github.com/vuejs/vue-next/issues/5296)
+* fix(ssr): only cache computed getters during render phase ([2f91872](https://github.com/vuejs/vue-next/commit/2f91872)), closes [#5300](https://github.com/vuejs/vue-next/issues/5300)
+* fix(types): calling readonly() with ref() should return Readonly<Ref<T>> (#5212) ([c64907d](https://github.com/vuejs/vue-next/commit/c64907d)), closes [#5212](https://github.com/vuejs/vue-next/issues/5212)
+* refactor: includes instead of indexOf (#5117) ([63210fe](https://github.com/vuejs/vue-next/commit/63210fe)), closes [#5117](https://github.com/vuejs/vue-next/issues/5117)
+* chore: bump marked ([0c06c74](https://github.com/vuejs/vue-next/commit/0c06c74))
+* chore: comment dom tag config usage [ci skip] ([b2bac9f](https://github.com/vuejs/vue-next/commit/b2bac9f))
+* chore: fix typo (#5261) [ci skip] ([e603fd2](https://github.com/vuejs/vue-next/commit/e603fd2)), closes [#5261](https://github.com/vuejs/vue-next/issues/5261)
+* chore: fix typo (#5282) [ci skip] ([e802275](https://github.com/vuejs/vue-next/commit/e802275)), closes [#5282](https://github.com/vuejs/vue-next/issues/5282)
+* chore: type improvements (#5264) ([92e04a6](https://github.com/vuejs/vue-next/commit/92e04a6)), closes [#5264](https://github.com/vuejs/vue-next/issues/5264)
+* chore: update repo references ([ae4b078](https://github.com/vuejs/vue-next/commit/ae4b078))
+* perf(reactivity): optimize effect run condition ([25bc654](https://github.com/vuejs/vue-next/commit/25bc654))
+* feat(reactivity): add isShallow api ([9fda941](https://github.com/vuejs/vue-next/commit/9fda941))
+* docs(contributing): missing structure info for compiler-sfc (#3559) [ci skip] ([8cbfe09](https://github.com/vuejs/vue-next/commit/8cbfe09)), closes [#3559](https://github.com/vuejs/vue-next/issues/3559)
+
+
+
 ## [3.2.27](https://github.com/vuejs/core/compare/v3.2.26...v3.2.27) (2022-01-16)
 
 
