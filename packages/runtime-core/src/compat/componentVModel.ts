@@ -1,4 +1,4 @@
-import { ShapeFlags, extend } from '@vue/shared'
+import { extend, ShapeFlags } from '@vue/shared'
 import { ComponentInternalInstance, ComponentOptions } from '../component'
 import { callWithErrorHandling, ErrorCodes } from '../errorHandling'
 import { VNode } from '../vnode'
@@ -15,6 +15,7 @@ const warnedTypes = new WeakSet()
 
 export function convertLegacyVModelProps(vnode: VNode) {
   const { type, shapeFlag, props, dynamicProps } = vnode
+  const comp = type as ComponentOptions
   if (shapeFlag & ShapeFlags.COMPONENT && props && 'modelValue' in props) {
     if (
       !isCompatEnabled(
@@ -28,19 +29,18 @@ export function convertLegacyVModelProps(vnode: VNode) {
       return
     }
 
-    if (__DEV__ && !warnedTypes.has(type as ComponentOptions)) {
+    if (__DEV__ && !warnedTypes.has(comp)) {
       pushWarningContext(vnode)
-      warnDeprecation(DeprecationTypes.COMPONENT_V_MODEL, { type } as any, type)
+      warnDeprecation(DeprecationTypes.COMPONENT_V_MODEL, { type } as any, comp)
       popWarningContext()
-      warnedTypes.add(type as ComponentOptions)
+      warnedTypes.add(comp)
     }
 
     // v3 compiled model code -> v2 compat props
     // modelValue -> value
     // onUpdate:modelValue -> onModelCompat:input
-    const model = (type as any).model || {}
-    const mixins = (type as any).mixins
-    mixins && mixins.forEach((m: any) => m.model && extend(model, m.model))
+    const model = comp.model || {}
+    applyModelFromMixins(model, comp.mixins)
     const { prop = 'value', event = 'input' } = model
     if (prop !== 'modelValue') {
       props[prop] = props.modelValue
@@ -52,6 +52,15 @@ export function convertLegacyVModelProps(vnode: VNode) {
     }
     props[compatModelEventPrefix + event] = props['onUpdate:modelValue']
     delete props['onUpdate:modelValue']
+  }
+}
+
+function applyModelFromMixins(model: any, mixins?: ComponentOptions[]) {
+  if (mixins) {
+    mixins.forEach(m => {
+      if (m.model) extend(model, m.model)
+      if (m.mixins) applyModelFromMixins(model, m.mixins)
+    })
   }
 }
 
