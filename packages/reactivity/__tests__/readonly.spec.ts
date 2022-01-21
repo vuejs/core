@@ -474,4 +474,15 @@ describe('reactivity/readonly', () => {
     expect(rr.foo).toBe(r)
     expect(isReadonly(rr.foo)).toBe(true)
   })
+
+  test('attemptingt to write to a readonly ref nested in a reactive object should fail', () => {
+    const r = ref(false)
+    const ror = readonly(r)
+    const obj = reactive({ ror })
+    try {
+      obj.ror = true
+    } catch (e) {}
+
+    expect(obj.ror).toBe(false)
+  })
 })
