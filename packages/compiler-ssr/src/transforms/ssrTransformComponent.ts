@@ -51,7 +51,7 @@ import { isSymbol, isObject, isArray } from '@vue/shared'
 
 // We need to construct the slot functions in the 1st pass to ensure proper
 // scope tracking, but the children of each slot cannot be processed until
-// the 2nd pass, so we store the WIP slot functions in a weakmap during the 1st
+// the 2nd pass, so we store the WIP slot functions in a weakMap during the 1st
 // pass and complete them in the 2nd pass.
 const wipMap = new WeakMap<ComponentNode, WIPSlotEntry[]>()
 
