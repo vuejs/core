@@ -39,8 +39,8 @@ export function convertLegacyVModelProps(vnode: VNode) {
     // modelValue -> value
     // onUpdate:modelValue -> onModelCompat:input
     const model = (type as any).model || {}
-    const mixins = (type as any).mixins || []
-    mixins.forEach((m: any) => m.model && extend(model, m.model))
+    const mixins = (type as any).mixins
+    mixins && mixins.forEach((m: any) => m.model && extend(model, m.model))
     const { prop = 'value', event = 'input' } = model
     if (prop !== 'modelValue') {
       props[prop] = props.modelValue
