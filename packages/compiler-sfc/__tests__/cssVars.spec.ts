@@ -198,5 +198,30 @@ describe('CSS vars injection', () => {
 })`)
       assertCode(content)
     })
+
+    test('should work with w/ complex expression', () => {
+      const { content } = compileSFCScript(
+        `<script setup>
+        let a = 100
+        let b = 200
+        </script>\n` +
+          `<style>
+          div {
+            color: v-bind((a + b) / 2 + 'px' );
+          }
+          div {
+            color: v-bind    ((a + b) / 2 + 'px' );
+          }
+          p {
+            color: v-bind(((a + b)) / (2 * a));
+          }
+        </style>`
+      )
+      expect(content).toMatch(`_useCssVars(_ctx => ({
+  "${mockId}-_a___b____2____px__": ((_unref(a) + _unref(b)) / 2 + 'px' ),
+  "${mockId}-__a___b______2___a_": (((_unref(a) + _unref(b))) / (2 * _unref(a)))
+})`)
+      assertCode(content)
+    })
   })
 })
