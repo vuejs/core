@@ -146,6 +146,19 @@ describe('sfc ref transform', () => {
     })
   })
 
+  test('usage with normal <script> (has macro usage) + <script setup> (no macro usage)', () => {
+    const { content } = compileWithReactivityTransform(`
+    <script>
+    let data = $ref()
+    </script>
+    <script setup>
+    console.log(data)
+    </script>
+    `)
+    expect(content).toMatch(`console.log(data.value)`)
+    assertCode(content)
+  })
+
   describe('errors', () => {
     test('defineProps/Emit() referencing ref declarations', () => {
       expect(() =>
