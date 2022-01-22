@@ -206,6 +206,10 @@ describe('CSS vars injection', () => {
         let b = 200
         </script>\n` +
           `<style>
+          span{
+            width: calc(v-bind(a) - 3px);
+            height: calc(v-bind('b') - 3px);
+          }
           div {
             color: v-bind((a + b) / 2 + 'px' );
           }
@@ -218,6 +222,8 @@ describe('CSS vars injection', () => {
         </style>`
       )
       expect(content).toMatch(`_useCssVars(_ctx => ({
+  "${mockId}-a": (_unref(a)),
+  "${mockId}-b": (_unref(b)),
   "${mockId}-_a___b____2____px__": ((_unref(a) + _unref(b)) / 2 + 'px' ),
   "${mockId}-__a___b______2___a_": (((_unref(a) + _unref(b))) / (2 * _unref(a)))
 })`)

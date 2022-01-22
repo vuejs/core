@@ -74,6 +74,8 @@ export default {
   expose();
 
 _useCssVars(_ctx => ({
+  \\"xxxxxxxx-a\\": (_unref(a)),
+  \\"xxxxxxxx-b\\": (_unref(b)),
   \\"xxxxxxxx-_a___b____2____px__\\": ((_unref(a) + _unref(b)) / 2 + 'px' ),
   \\"xxxxxxxx-__a___b______2___a_\\": (((_unref(a) + _unref(b))) / (2 * _unref(a)))
 }))
