@@ -75,6 +75,7 @@ export default {
 
 _useCssVars(_ctx => ({
   \\"xxxxxxxx-foo\\": (_unref(foo)),
+  \\"xxxxxxxx-foo____px_\\": (_unref(foo) + 'px'),
   \\"xxxxxxxx-_a___b____2____px_\\": ((_unref(a) + _unref(b)) / 2 + 'px'),
   \\"xxxxxxxx-__a___b______2___a_\\": (((_unref(a) + _unref(b))) / (2 * _unref(a)))
 }))
