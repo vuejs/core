@@ -4,7 +4,8 @@ import {
   transform,
   ErrorCodes,
   BindingTypes,
-  NodeTransform
+  NodeTransform,
+  transformExpression
 } from '../../src'
 import {
   RESOLVE_COMPONENT,
@@ -773,6 +774,37 @@ describe('compiler: element transform', () => {
     })
   })
 
+  test(`props merging: style w/ transformExpression`, () => {
+    const { node, root } = parseWithElementTransform(
+      `<div style="color: green" :style="{ color: 'red' }" />`,
+      {
+        nodeTransforms: [transformExpression, transformStyle, transformElement],
+        directiveTransforms: {
+          bind: transformBind
+        },
+        prefixIdentifiers: true
+      }
+    )
+    expect(root.helpers).toContain(NORMALIZE_STYLE)
+    expect(node.props).toMatchObject({
+      type: NodeTypes.JS_OBJECT_EXPRESSION,
+      properties: [
+        {
+          type: NodeTypes.JS_PROPERTY,
+          key: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: `style`,
+            isStatic: true
+          },
+          value: {
+            type: NodeTypes.JS_CALL_EXPRESSION,
+            callee: NORMALIZE_STYLE
+          }
+        }
+      ]
+    })
+  })
+
   test(`props merging: class`, () => {
     const { node, root } = parseWithElementTransform(
       `<div class="foo" :class="{ bar: isBar }" />`,
@@ -904,6 +936,64 @@ describe('compiler: element transform', () => {
       expect(node.patchFlag).toBe(genFlagText(PatchFlags.NEED_PATCH))
     })
 
+    test('script setup inline mode template ref (binding exists)', () => {
+      const { node } = parseWithElementTransform(`<input ref="input"/>`, {
+        inline: true,
+        bindingMetadata: {
+          input: BindingTypes.SETUP_REF
+        }
+      })
+      expect(node.props).toMatchObject({
+        type: NodeTypes.JS_OBJECT_EXPRESSION,
+        properties: [
+          {
+            type: NodeTypes.JS_PROPERTY,
+            key: {
+              content: 'ref_key',
+              isStatic: true
+            },
+            value: {
+              content: 'input',
+              isStatic: true
+            }
+          },
+          {
+            type: NodeTypes.JS_PROPERTY,
+            key: {
+              content: 'ref',
+              isStatic: true
+            },
+            value: {
+              content: 'input',
+              isStatic: false
+            }
+          }
+        ]
+      })
+    })
+
+    test('script setup inline mode template ref (binding does not exist)', () => {
+      const { node } = parseWithElementTransform(`<input ref="input"/>`, {
+        inline: true
+      })
+      expect(node.props).toMatchObject({
+        type: NodeTypes.JS_OBJECT_EXPRESSION,
+        properties: [
+          {
+            type: NodeTypes.JS_PROPERTY,
+            key: {
+              content: 'ref',
+              isStatic: true
+            },
+            value: {
+              content: 'input',
+              isStatic: true
+            }
+          }
+        ]
+      })
+    })
+
     test('HYDRATE_EVENTS', () => {
       // ignore click events (has dedicated fast path)
       const { node } = parseWithElementTransform(`<div @click="foo" />`, {
@@ -1025,6 +1115,18 @@ describe('compiler: element transform', () => {
       tag: `"svg"`,
       isBlock: true
     })
+  })
+
+  test('force block for runtime custom directive w/ children', () => {
+    const { node } = parseWithElementTransform(`<div v-foo>hello</div>`)
+    expect(node.isBlock).toBe(true)
+  })
+
+  test('force block for inline before-update handlers w/ children', () => {
+    expect(
+      parseWithElementTransform(`<div @vue:before-update>hello</div>`).node
+        .isBlock
+    ).toBe(true)
   })
 
   // #938

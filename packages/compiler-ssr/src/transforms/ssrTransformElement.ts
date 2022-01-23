@@ -22,7 +22,7 @@ import {
   TextNode,
   hasDynamicKeyVBind,
   MERGE_PROPS,
-  isBindKey,
+  isStaticArgOf,
   createSequenceExpression,
   InterpolationNode,
   isStaticExp,
@@ -43,7 +43,8 @@ import {
   SSR_RENDER_DYNAMIC_ATTR,
   SSR_RENDER_ATTRS,
   SSR_INTERPOLATE,
-  SSR_GET_DYNAMIC_MODEL_PROPS
+  SSR_GET_DYNAMIC_MODEL_PROPS,
+  SSR_INCLUDE_BOOLEAN_ATTR
 } from '../runtimeHelpers'
 import { SSRTransformContext, processChildren } from '../ssrCodegenTransform'
 
@@ -178,18 +179,10 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
           if (!hasDynamicVBind) {
             node.children = [createInterpolation(prop.exp, prop.loc)]
           }
-        } else {
+        } else if (!hasDynamicVBind) {
           // Directive transforms.
           const directiveTransform = context.directiveTransforms[prop.name]
-          if (!directiveTransform) {
-            // no corresponding ssr directive transform found.
-            context.onError(
-              createSSRCompilerError(
-                SSRErrorCodes.X_SSR_CUSTOM_DIRECTIVE_NO_TRANSFORM,
-                prop.loc
-              )
-            )
-          } else if (!hasDynamicVBind) {
+          if (directiveTransform) {
             const { props, ssrTagParts } = directiveTransform(
               prop,
               node,
@@ -237,7 +230,10 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
                   if (isBooleanAttr(attrName)) {
                     openTag.push(
                       createConditionalExpression(
-                        value,
+                        createCallExpression(
+                          context.helper(SSR_INCLUDE_BOOLEAN_ATTR),
+                          [value]
+                        ),
                         createSimpleExpression(' ' + attrName, true),
                         createSimpleExpression('', true),
                         false /* no newline */
@@ -331,7 +327,7 @@ function isTextareaWithValue(
   return !!(
     node.tag === 'textarea' &&
     prop.name === 'bind' &&
-    isBindKey(prop.arg, 'value')
+    isStaticArgOf(prop.arg, 'value')
   )
 }
 

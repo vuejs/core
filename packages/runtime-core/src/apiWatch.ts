@@ -1,5 +1,6 @@
 import {
   isRef,
+  isShallow,
   Ref,
   ComputedRef,
   ReactiveEffect,
@@ -40,14 +41,14 @@ import { DeprecationTypes } from './compat/compatConfig'
 import { checkCompatEnabled, isCompatEnabled } from './compat/compatConfig'
 import { ObjectWatchOptionItem } from './componentOptions'
 
-export type WatchEffect = (onInvalidate: InvalidateCbRegistrator) => void
+export type WatchEffect = (onCleanup: OnCleanup) => void
 
 export type WatchSource<T = any> = Ref<T> | ComputedRef<T> | (() => T)
 
 export type WatchCallback<V = any, OV = any> = (
   value: V,
   oldValue: OV,
-  onInvalidate: InvalidateCbRegistrator
+  onCleanup: OnCleanup
 ) => any
 
 type MapSources<T, Immediate> = {
@@ -62,7 +63,7 @@ type MapSources<T, Immediate> = {
     : never
 }
 
-type InvalidateCbRegistrator = (cb: () => void) => void
+type OnCleanup = (cleanupFn: () => void) => void
 
 export interface WatchOptionsBase extends DebuggerOptions {
   flush?: 'pre' | 'post' | 'sync'
@@ -205,7 +206,7 @@ function doWatch(
 
   if (isRef(source)) {
     getter = () => source.value
-    forceTrigger = !!source._shallow
+    forceTrigger = isShallow(source)
   } else if (isReactive(source)) {
     getter = () => source
     deep = true
@@ -242,7 +243,7 @@ function doWatch(
           source,
           instance,
           ErrorCodes.WATCH_CALLBACK,
-          [onInvalidate]
+          [onCleanup]
         )
       }
     }
@@ -272,7 +273,7 @@ function doWatch(
   }
 
   let cleanup: () => void
-  let onInvalidate: InvalidateCbRegistrator = (fn: () => void) => {
+  let onCleanup: OnCleanup = (fn: () => void) => {
     cleanup = effect.onStop = () => {
       callWithErrorHandling(fn, instance, ErrorCodes.WATCH_CLEANUP)
     }
@@ -280,16 +281,16 @@ function doWatch(
 
   // in SSR there is no need to setup an actual effect, and it should be noop
   // unless it's eager
-  if (__NODE_JS__ && isInSSRComponentSetup) {
+  if (__SSR__ && isInSSRComponentSetup) {
     // we will also not call the invalidate callback (+ runner is not set up)
-    onInvalidate = NOOP
+    onCleanup = NOOP
     if (!cb) {
       getter()
     } else if (immediate) {
       callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
         getter(),
         isMultiSource ? [] : undefined,
-        onInvalidate
+        onCleanup
       ])
     }
     return NOOP
@@ -323,7 +324,7 @@ function doWatch(
           newValue,
           // pass undefined as the old value when it's changed for the first time
           oldValue === INITIAL_WATCHER_VALUE ? undefined : oldValue,
-          onInvalidate
+          onCleanup
         ])
         oldValue = newValue
       }
@@ -428,7 +429,7 @@ export function createPathGetter(ctx: any, path: string) {
   }
 }
 
-export function traverse(value: unknown, seen: Set<unknown> = new Set()) {
+export function traverse(value: unknown, seen?: Set<unknown>) {
   if (!isObject(value) || (value as any)[ReactiveFlags.SKIP]) {
     return value
   }

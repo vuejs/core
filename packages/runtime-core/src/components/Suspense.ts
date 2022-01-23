@@ -6,7 +6,9 @@ import {
   openBlock,
   closeBlock,
   currentBlock,
-  createVNode
+  Comment,
+  createVNode,
+  isBlockTreeEnabled
 } from '../vnode'
 import { isFunction, isArray, ShapeFlags, toNumber } from '@vue/shared'
 import { ComponentInternalInstance, handleSetupResult } from '../component'
@@ -726,8 +728,8 @@ function normalizeSuspenseChildren(vnode: VNode) {
 function normalizeSuspenseSlot(s: any) {
   let block: VNode[] | null | undefined
   if (isFunction(s)) {
-    const isCompiledSlot = s._c
-    if (isCompiledSlot) {
+    const trackBlock = isBlockTreeEnabled && s._c
+    if (trackBlock) {
       // disableTracking: false
       // allow block tracking for compiled slots
       // (see ./componentRenderContext.ts)
@@ -735,7 +737,7 @@ function normalizeSuspenseSlot(s: any) {
       openBlock()
     }
     s = s()
-    if (isCompiledSlot) {
+    if (trackBlock) {
       s._d = true
       block = currentBlock
       closeBlock()

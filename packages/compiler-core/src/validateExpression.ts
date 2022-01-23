@@ -46,7 +46,7 @@ export function validateBrowserExpression(
         ? ` ${exp} `
         : `return ${asParams ? `(${exp}) => {}` : `(${exp})`}`
     )
-  } catch (e) {
+  } catch (e: any) {
     let message = e.message
     const keywordMatch = exp
       .replace(stripStringRE, '')

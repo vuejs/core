@@ -3,7 +3,6 @@
 export const version = __VERSION__
 export {
   // core
-  computed,
   reactive,
   ref,
   readonly,
@@ -16,6 +15,7 @@ export {
   isProxy,
   isReactive,
   isReadonly,
+  isShallow,
   // advanced
   customRef,
   triggerRef,
@@ -34,6 +34,7 @@ export {
   getCurrentScope,
   onScopeDispose
 } from '@vue/reactivity'
+export { computed } from './apiComputed'
 export {
   watch,
   watchEffect,
@@ -70,6 +71,7 @@ export {
   withDefaults,
   // internal
   mergeDefaults,
+  createPropsRestProxy,
   withAsyncContext
 } from './apiSetupHelpers'
 
@@ -147,18 +149,30 @@ declare module '@vue/reactivity' {
 }
 
 export {
-  ReactiveEffectOptions,
-  DebuggerEvent,
-  TrackOpTypes,
-  TriggerOpTypes,
   Ref,
+  ToRef,
+  ToRefs,
+  UnwrapRef,
+  ShallowRef,
+  ShallowUnwrapRef,
+  CustomRefFactory,
+  ReactiveFlags,
+  DeepReadonly,
+  ShallowReactive,
+  UnwrapNestedRefs,
   ComputedRef,
   WritableComputedRef,
-  UnwrapRef,
-  ShallowUnwrapRef,
   WritableComputedOptions,
-  ToRefs,
-  DeepReadonly
+  ComputedGetter,
+  ComputedSetter,
+  ReactiveEffectRunner,
+  ReactiveEffectOptions,
+  EffectScheduler,
+  DebuggerOptions,
+  DebuggerEvent,
+  DebuggerEventExtraInfo,
+  TrackOpTypes,
+  TriggerOpTypes
 } from '@vue/reactivity'
 export {
   WatchEffect,
@@ -313,9 +327,7 @@ const _ssrUtils = {
  * SSR utils for \@vue/server-renderer. Only exposed in cjs builds.
  * @internal
  */
-export const ssrUtils = (
-  __NODE_JS__ || __ESM_BUNDLER__ ? _ssrUtils : null
-) as typeof _ssrUtils
+export const ssrUtils = (__SSR__ ? _ssrUtils : null) as typeof _ssrUtils
 
 // 2.x COMPAT ------------------------------------------------------------------
 
@@ -351,13 +363,3 @@ const _compatUtils = {
 export const compatUtils = (
   __COMPAT__ ? _compatUtils : null
 ) as typeof _compatUtils
-
-// Ref sugar macros ------------------------------------------------------------
-// for dts generation only
-export {
-  $ref,
-  $shallowRef,
-  $computed,
-  $raw,
-  $fromRefs
-} from './helpers/refSugar'

@@ -435,4 +435,38 @@ describe('hot module replacement', () => {
     expect(createSpy1).toHaveBeenCalledTimes(1)
     expect(createSpy2).toHaveBeenCalledTimes(1)
   })
+
+  // #4757
+  test('rerender for component that has no active instance yet', () => {
+    const id = 'no-active-instance-rerender'
+    const Foo: ComponentOptions = {
+      __hmrId: id,
+      render: () => 'foo'
+    }
+
+    createRecord(id, Foo)
+    rerender(id, () => 'bar')
+
+    const root = nodeOps.createElement('div')
+    render(h(Foo), root)
+    expect(serializeInner(root)).toBe('bar')
+  })
+
+  test('reload for component that has no active instance yet', () => {
+    const id = 'no-active-instance-reload'
+    const Foo: ComponentOptions = {
+      __hmrId: id,
+      render: () => 'foo'
+    }
+
+    createRecord(id, Foo)
+    reload(id, {
+      __hmrId: id,
+      render: () => 'bar'
+    })
+
+    const root = nodeOps.createElement('div')
+    render(h(Foo), root)
+    expect(serializeInner(root)).toBe('bar')
+  })
 })

@@ -80,7 +80,7 @@ async function main() {
   step('\nRunning tests...')
   if (!skipTests && !isDryRun) {
     await run(bin('jest'), ['--clearCache'])
-    await run('yarn', ['test', '--bail'])
+    await run('pnpm', ['test', '--', '--bail'])
   } else {
     console.log(`(skipped)`)
   }
@@ -92,16 +92,21 @@ async function main() {
   // build all packages with types
   step('\nBuilding all packages...')
   if (!skipBuild && !isDryRun) {
-    await run('yarn', ['build', '--release'])
+    await run('pnpm', ['run', 'build', '--', '--release'])
     // test generated dts files
     step('\nVerifying type declarations...')
-    await run('yarn', ['test-dts-only'])
+    await run('pnpm', ['run', 'test-dts-only'])
   } else {
     console.log(`(skipped)`)
   }
 
   // generate changelog
-  await run(`yarn`, ['changelog'])
+  step('\nGenerating changelog...')
+  await run(`pnpm`, ['run', 'changelog'])
+
+  // update pnpm-lock.yaml
+  step('\nUpdating lockfile...')
+  await run(`pnpm`, ['install', '--prefer-offline'])
 
   const { stdout } = await run('git', ['diff'], { stdio: 'pipe' })
   if (stdout) {
@@ -205,6 +210,8 @@ async function publishPackage(pkgName, version, runIfNotDry) {
   step(`Publishing ${pkgName}...`)
   try {
     await runIfNotDry(
+      // note: use of yarn is intentional here as we rely on its publishing
+      // behavior.
       'yarn',
       [
         'publish',

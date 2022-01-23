@@ -60,8 +60,8 @@ describe('runtime-dom: node-ops', () => {
       expect(parent.innerHTML).toBe(content)
       expect(first).toBe(parent.firstChild)
       expect(last).toBe(parent.lastChild)
-      expect(first.namespaceURI).toMatch('svg')
-      expect(last.namespaceURI).toMatch('svg')
+      expect((first as Element).namespaceURI).toMatch('svg')
+      expect((last as Element).namespaceURI).toMatch('svg')
     })
 
     test('fresh insertion as svg, with anchor', () => {
@@ -79,8 +79,31 @@ describe('runtime-dom: node-ops', () => {
       expect(parent.innerHTML).toBe(content + existing)
       expect(first).toBe(parent.firstChild)
       expect(last).toBe(parent.childNodes[parent.childNodes.length - 2])
-      expect(first.namespaceURI).toMatch('svg')
-      expect(last.namespaceURI).toMatch('svg')
+      expect((first as Element).namespaceURI).toMatch('svg')
+      expect((last as Element).namespaceURI).toMatch('svg')
+    })
+
+    test('cached insertion', () => {
+      const content = `<div>one</div><div>two</div>three`
+      const existing = `<div>existing</div>`
+      const parent = document.createElement('div')
+      parent.innerHTML = existing
+      const anchor = parent.firstChild
+
+      const cached = document.createElement('div')
+      cached.innerHTML = content
+
+      const nodes = nodeOps.insertStaticContent!(
+        content,
+        parent,
+        anchor,
+        false,
+        cached.firstChild,
+        cached.lastChild
+      )
+      expect(parent.innerHTML).toBe(content + existing)
+      expect(nodes[0]).toBe(parent.firstChild)
+      expect(nodes[1]).toBe(parent.childNodes[parent.childNodes.length - 2])
     })
   })
 })

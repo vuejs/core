@@ -6,7 +6,7 @@ exports[`compiler: transform v-model compound expression (with prefixIdentifiers
 export function render(_ctx, _cache) {
   return (_openBlock(), _createElementBlock(\\"input\\", {
     modelValue: _ctx.model[_ctx.index],
-    \\"onUpdate:modelValue\\": $event => (_ctx.model[_ctx.index] = $event)
+    \\"onUpdate:modelValue\\": $event => ((_ctx.model[_ctx.index]) = $event)
   }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"]))
 }"
 `;
@@ -20,7 +20,7 @@ return function render(_ctx, _cache) {
 
     return (_openBlock(), _createElementBlock(\\"input\\", {
       modelValue: model[index],
-      \\"onUpdate:modelValue\\": $event => (model[index] = $event)
+      \\"onUpdate:modelValue\\": $event => ((model[index]) = $event)
     }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"]))
   }
 }"
@@ -39,11 +39,11 @@ return function render(_ctx, _cache) {
 .
 foo 
 ,
-      \\"onUpdate:modelValue\\": $event => (
+      \\"onUpdate:modelValue\\": $event => ((
  model
 .
 foo 
- = $event)
+) = $event)
     }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"]))
   }
 }"
@@ -55,7 +55,7 @@ exports[`compiler: transform v-model simple expression (with prefixIdentifiers) 
 export function render(_ctx, _cache) {
   return (_openBlock(), _createElementBlock(\\"input\\", {
     modelValue: _ctx.model,
-    \\"onUpdate:modelValue\\": $event => (_ctx.model = $event)
+    \\"onUpdate:modelValue\\": $event => ((_ctx.model) = $event)
   }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"]))
 }"
 `;
@@ -69,7 +69,7 @@ return function render(_ctx, _cache) {
 
     return (_openBlock(), _createElementBlock(\\"input\\", {
       modelValue: model,
-      \\"onUpdate:modelValue\\": $event => (model = $event)
+      \\"onUpdate:modelValue\\": $event => ((model) = $event)
     }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"]))
   }
 }"
@@ -84,7 +84,7 @@ return function render(_ctx, _cache) {
 
     return (_openBlock(), _createElementBlock(\\"input\\", {
       value: model,
-      \\"onUpdate:value\\": $event => (model = $event)
+      \\"onUpdate:value\\": $event => ((model) = $event)
     }, null, 40 /* PROPS, HYDRATE_EVENTS */, [\\"value\\", \\"onUpdate:value\\"]))
   }
 }"
@@ -96,7 +96,7 @@ exports[`compiler: transform v-model with dynamic argument (with prefixIdentifie
 export function render(_ctx, _cache) {
   return (_openBlock(), _createElementBlock(\\"input\\", _normalizeProps({
     [_ctx.value]: _ctx.model,
-    [\\"onUpdate:\\" + _ctx.value]: $event => (_ctx.model = $event)
+    [\\"onUpdate:\\" + _ctx.value]: $event => ((_ctx.model) = $event)
   }), null, 16 /* FULL_PROPS */))
 }"
 `;
@@ -110,7 +110,7 @@ return function render(_ctx, _cache) {
 
     return (_openBlock(), _createElementBlock(\\"input\\", _normalizeProps({
       [value]: model,
-      [\\"onUpdate:\\" + value]: $event => (model = $event)
+      [\\"onUpdate:\\" + value]: $event => ((model) = $event)
     }), null, 16 /* FULL_PROPS */))
   }
 }"

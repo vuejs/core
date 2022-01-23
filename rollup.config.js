@@ -36,7 +36,6 @@ const outputConfigs = {
     file: resolve(`dist/${name}.global.js`),
     format: `iife`
   },
-
   // runtime-only builds, for main "vue" package only
   'esm-bundler-runtime': {
     file: resolve(`dist/${name}.runtime.esm-bundler.js`),
@@ -81,18 +80,18 @@ function createConfig(format, output, plugins = []) {
     process.exit(1)
   }
 
-  output.exports = 'auto'
-  output.sourcemap = !!process.env.SOURCE_MAP
-  output.externalLiveBindings = false
-
   const isProductionBuild =
     process.env.__DEV__ === 'false' || /\.prod\.js$/.test(output.file)
   const isBundlerESMBuild = /esm-bundler/.test(format)
   const isBrowserESMBuild = /esm-browser/.test(format)
   const isNodeBuild = format === 'cjs'
   const isGlobalBuild = /global/.test(format)
-  const isCompatBuild = !!packageOptions.compat
   const isCompatPackage = pkg.name === '@vue/compat'
+  const isCompatBuild = !!packageOptions.compat
+
+  output.exports = isCompatPackage ? 'auto' : 'named'
+  output.sourcemap = !!process.env.SOURCE_MAP
+  output.externalLiveBindings = false
 
   if (isGlobalBuild) {
     output.name = packageOptions.name
@@ -140,7 +139,7 @@ function createConfig(format, output, plugins = []) {
     }
   } else {
     // Node / esm-bundler builds.
-    // externalize all deps unless it's the compat build.
+    // externalize all direct deps unless it's the compat build.
     external = [
       ...Object.keys(pkg.dependencies || {}),
       ...Object.keys(pkg.peerDependencies || {}),
@@ -148,21 +147,38 @@ function createConfig(format, output, plugins = []) {
     ]
   }
 
-  // the browser builds of @vue/compiler-sfc requires postcss to be available
-  // as a global (e.g. http://wzrd.in/standalone/postcss)
-  output.globals = {
-    postcss: 'postcss'
+  // we are bundling forked consolidate.js in compiler-sfc which dynamically
+  // requires a ton of template engines which should be ignored.
+  let cjsIgnores = []
+  if (pkg.name === '@vue/compiler-sfc') {
+    const consolidatePath = require.resolve('@vue/consolidate/package.json', {
+      paths: [packageDir]
+    })
+    cjsIgnores = [
+      ...Object.keys(require(consolidatePath).devDependencies),
+      'vm',
+      'crypto',
+      'react-dom/server',
+      'teacup/lib/express',
+      'arc-templates/dist/es5',
+      'then-pug',
+      'then-jade'
+    ]
   }
 
   const nodePlugins =
-    packageOptions.enableNonBrowserBranches && format !== 'cjs'
+    (format === 'cjs' && Object.keys(pkg.devDependencies || {}).length) ||
+    packageOptions.enableNonBrowserBranches
       ? [
           // @ts-ignore
           require('@rollup/plugin-commonjs')({
-            sourceMap: false
+            sourceMap: false,
+            ignore: cjsIgnores
           }),
-          // @ts-ignore
-          require('rollup-plugin-polyfill-node')(),
+          ...(format === 'cjs'
+            ? []
+            : // @ts-ignore
+              [require('rollup-plugin-polyfill-node')()]),
           require('@rollup/plugin-node-resolve').nodeResolve()
         ]
       : []
@@ -229,6 +245,17 @@ function createReplacePlugin(
     __ESM_BROWSER__: isBrowserESMBuild,
     // is targeting Node (SSR)?
     __NODE_JS__: isNodeBuild,
+    // need SSR-specific branches?
+    __SSR__: isNodeBuild || isBundlerESMBuild,
+
+    // for compiler-sfc browser build inlined deps
+    ...(isBrowserESMBuild
+      ? {
+          'process.env': '({})',
+          'process.platform': '""',
+          'process.stdout': 'null'
+        }
+      : {}),
 
     // 2.x compat build
     __COMPAT__: isCompatBuild,

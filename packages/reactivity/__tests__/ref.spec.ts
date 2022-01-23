@@ -10,6 +10,7 @@ import {
 } from '../src/index'
 import { computed } from '@vue/runtime-dom'
 import { shallowRef, unref, customRef, triggerRef } from '../src/ref'
+import { isShallow } from '../src/reactive'
 
 describe('reactivity/ref', () => {
   it('should hold a value', () => {
@@ -35,7 +36,6 @@ describe('reactivity/ref', () => {
     // same value should not trigger
     a.value = 2
     expect(calls).toBe(2)
-    expect(dummy).toBe(2)
   })
 
   it('should make nested properties reactive', () => {
@@ -228,6 +228,10 @@ describe('reactivity/ref', () => {
     expect(dummy).toBe(2)
   })
 
+  test('shallowRef isShallow', () => {
+    expect(isShallow(shallowRef({ a: 1 }))).toBe(true)
+  })
+
   test('isRef', () => {
     expect(isRef(ref(1))).toBe(true)
     expect(isRef(computed(() => 1))).toBe(true)
@@ -268,6 +272,18 @@ describe('reactivity/ref', () => {
     // should keep ref
     const r = { x: ref(1) }
     expect(toRef(r, 'x')).toBe(r.x)
+  })
+
+  test('toRef default value', () => {
+    const a: { x: number | undefined } = { x: undefined }
+    const x = toRef(a, 'x', 1)
+    expect(x.value).toBe(1)
+
+    a.x = 2
+    expect(x.value).toBe(2)
+
+    a.x = undefined
+    expect(x.value).toBe(1)
   })
 
   test('toRefs', () => {

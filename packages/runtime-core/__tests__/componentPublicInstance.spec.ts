@@ -195,6 +195,11 @@ describe('component: proxy', () => {
     expect('$foobar' in instanceProxy).toBe(false)
     expect('baz' in instanceProxy).toBe(false)
 
+    // #4962 triggering getter should not cause non-existent property to
+    // pass the has check
+    instanceProxy.baz
+    expect('baz' in instanceProxy).toBe(false)
+
     // set non-existent (goes into proxyTarget sink)
     instanceProxy.baz = 1
     expect('baz' in instanceProxy).toBe(true)

@@ -1,28 +1,30 @@
 {
   "private": true,
-  "version": "3.2.2",
-  "workspaces": [
-    "packages/*"
-  ],
+  "version": "3.2.28",
   "scripts": {
     "dev": "node scripts/dev.js",
     "build": "node scripts/build.js",
-    "size": "node scripts/build.js vue runtime-dom size-check -p -f global",
+    "size": "run-s size-global size-baseline",
+    "size-global": "node scripts/build.js vue runtime-dom -f global -p",
+    "size-baseline": "node scripts/build.js runtime-dom runtime-core reactivity shared -f esm-bundler && cd packages/size-check && vite build && node brotli",
     "lint": "eslint --ext .ts packages/*/src/**.ts",
     "format": "prettier --write --parser typescript \"packages/**/*.ts?(x)\"",
-    "test": "node scripts/build.js vue -f global -d && jest --runInBand",
-    "test-dts": "node scripts/build.js shared reactivity runtime-core runtime-dom -dt -f esm-bundler && yarn test-dts-only",
+    "test": "run-s \"test-unit -- {@}\" \"test-e2e -- {@}\" --",
+    "test-unit": "jest --filter ./scripts/filter-unit.js",
+    "test-e2e": "node scripts/build.js vue -f global -d && jest --filter ./scripts/filter-e2e.js --runInBand",
+    "test-dts": "node scripts/build.js shared reactivity runtime-core runtime-dom -dt -f esm-bundler && npm run test-dts-only",
     "test-dts-only": "tsc -p ./test-dts/tsconfig.json && tsc -p ./test-dts/tsconfig.build.json",
+    "test-coverage": "node scripts/build.js vue -f global -d && jest --runInBand --coverage --bail",
     "release": "node scripts/release.js",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s",
-    "dev-compiler": "npm-run-all --parallel \"dev template-explorer\" serve",
-    "dev-sfc": "npm-run-all --parallel \"dev compiler-sfc -f esm-browser\" \"dev runtime-core -f esm-bundler\" \"dev runtime-dom -f esm-bundler\" serve-sfc-playground",
-    "serve-sfc-playground": "vite packages/sfc-playground",
+    "dev-compiler": "run-p \"dev template-explorer\" serve",
+    "dev-sfc": "run-p \"dev compiler-sfc -- -f esm-browser\" \"dev vue -- -if esm-bundler-runtime \" serve-sfc-playground",
+    "serve-sfc-playground": "vite packages/sfc-playground --host",
     "serve": "serve",
     "open": "open http://localhost:5000/packages/template-explorer/local.html",
-    "preinstall": "node ./scripts/checkYarn.js",
-    "prebuild-sfc-playground": "node scripts/build.js compiler shared -af cjs && node scripts/build.js runtime reactivity shared -af esm-bundler && node scripts/build.js vue -f esm-bundler-runtime && node scripts/build.js vue -f esm-browser-runtime && node scripts/build.js compiler-sfc -f esm-browser",
-    "build-sfc-playground": "cd packages/sfc-playground && vite build"
+    "preinstall": "node ./scripts/preinstall.js",
+    "prebuild-sfc-playground": "node scripts/build.js compiler reactivity-transform shared -af cjs && node scripts/build.js runtime reactivity shared -af esm-bundler && node scripts/build.js vue -f esm-bundler-runtime && node scripts/build.js vue -f esm-browser-runtime && node scripts/build.js compiler-sfc -f esm-browser",
+    "build-sfc-playground": "cd packages/sfc-playground && npm run build"
   },
   "types": "test-dts/index.d.ts",
   "tsd": {
@@ -42,30 +44,41 @@
     ]
   },
   "engines": {
-    "node": ">=10.0.0"
+    "node": ">=16.5.0"
   },
   "devDependencies": {
     "@babel/types": "^7.12.0",
+    "@esbuild-plugins/node-modules-polyfill": "^0.1.4",
     "@microsoft/api-extractor": "^7.15.1",
     "@rollup/plugin-commonjs": "^18.0.0",
     "@rollup/plugin-json": "^4.0.0",
     "@rollup/plugin-node-resolve": "^11.2.1",
     "@rollup/plugin-replace": "^2.3.4",
     "@types/hash-sum": "^1.0.0",
-    "@types/jest": "^26.0.16",
+    "@types/jest": "^27.0.1",
     "@types/node": "^16.4.7",
     "@types/puppeteer": "^5.0.0",
     "@typescript-eslint/parser": "^4.1.1",
+    "@vue/reactivity": "workspace:*",
+    "@vue/runtime-core": "workspace:*",
+    "@vue/runtime-dom": "workspace:*",
     "brotli": "^1.3.2",
     "chalk": "^4.1.0",
     "conventional-changelog-cli": "^2.0.31",
     "csstype": "^3.0.3",
     "enquirer": "^2.3.2",
+    "esbuild": "^0.14.11",
     "eslint": "^7.7.0",
     "execa": "^4.0.2",
     "fs-extra": "^9.0.1",
+<<<<<<< HEAD
     "jest": "^27.4.5",
+=======
+    "jest": "^27.1.0",
+>>>>>>> 283df0ad6866d212d0ce4c249259d6d31d7302c1
     "lint-staged": "^10.2.10",
+    "lodash": "^4.17.15",
+    "marked": "^4.0.10",
     "minimist": "^1.2.0",
     "npm-run-all": "^4.1.5",
     "prettier": "^2.3.1",
@@ -78,8 +91,16 @@
     "rollup-plugin-typescript2": "^0.27.2",
     "semver": "^7.3.2",
     "serve": "^12.0.0",
+<<<<<<< HEAD
     "ts-jest": "^27.1.2",
+=======
+    "todomvc-app-css": "^2.3.0",
+    "ts-jest": "^27.0.5",
+    "tslib": "^2.3.1",
+>>>>>>> 283df0ad6866d212d0ce4c249259d6d31d7302c1
     "typescript": "^4.2.2",
+    "vite": "^2.7.12",
+    "vue": "workspace:*",
     "yorkie": "^2.0.0"
   }
 }

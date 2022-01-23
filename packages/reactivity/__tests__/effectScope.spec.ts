@@ -173,7 +173,7 @@ describe('reactivity/effect/scope', () => {
     expect(doubled).toBe(undefined)
   })
 
-  it('should fire onDispose hook', () => {
+  it('should fire onScopeDispose hook', () => {
     let dummy = 0
 
     const scope = new EffectScope()
@@ -192,7 +192,7 @@ describe('reactivity/effect/scope', () => {
     expect(dummy).toBe(7)
   })
 
-  it('should warn onDispose() is called when there is no active effect scope', () => {
+  it('should warn onScopeDispose() is called when there is no active effect scope', () => {
     const spy = jest.fn()
     const scope = new EffectScope()
     scope.run(() => {
@@ -204,14 +204,14 @@ describe('reactivity/effect/scope', () => {
     onScopeDispose(spy)
 
     expect(
-      '[Vue warn] onDispose() is called when there is no active effect scope to be associated with.'
+      '[Vue warn] onScopeDispose() is called when there is no active effect scope to be associated with.'
     ).toHaveBeenWarned()
 
     scope.stop()
     expect(spy).toHaveBeenCalledTimes(1)
   })
 
-  it('should derefence child scope from parent scope after stopping child scope (no memleaks)', async () => {
+  it('should derefence child scope from parent scope after stopping child scope (no memleaks)', () => {
     const parent = new EffectScope()
     const child = parent.run(() => new EffectScope())!
     expect(parent.scopes!.includes(child)).toBe(true)

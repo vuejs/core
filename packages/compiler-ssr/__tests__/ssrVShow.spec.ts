@@ -8,7 +8,7 @@ describe('ssr: v-show', () => {
   test('basic as root', () => {
     expect(compile(`<div v-show="foo"/>`).code).toMatchInlineSnapshot(`
       "const { mergeProps: _mergeProps } = require(\\"vue\\")
-      const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"@vue/server-renderer\\")
+      const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<div\${_ssrRenderAttrs(_mergeProps({
@@ -21,7 +21,7 @@ describe('ssr: v-show', () => {
   test('basic', () => {
     expect(compileWithWrapper(`<div v-show="foo"/>`).code)
       .toMatchInlineSnapshot(`
-      "const { ssrRenderStyle: _ssrRenderStyle, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"@vue/server-renderer\\")
+      "const { ssrRenderStyle: _ssrRenderStyle, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<div\${
@@ -36,7 +36,7 @@ describe('ssr: v-show', () => {
   test('with static style', () => {
     expect(compileWithWrapper(`<div style="color:red" v-show="foo"/>`).code)
       .toMatchInlineSnapshot(`
-      "const { ssrRenderStyle: _ssrRenderStyle, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"@vue/server-renderer\\")
+      "const { ssrRenderStyle: _ssrRenderStyle, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<div\${
@@ -55,7 +55,7 @@ describe('ssr: v-show', () => {
     expect(
       compileWithWrapper(`<div :style="{ color: 'red' }" v-show="foo"/>`).code
     ).toMatchInlineSnapshot(`
-      "const { ssrRenderStyle: _ssrRenderStyle, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"@vue/server-renderer\\")
+      "const { ssrRenderStyle: _ssrRenderStyle, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<div\${
@@ -76,7 +76,7 @@ describe('ssr: v-show', () => {
         `<div style="color:red" :style="{ fontSize: 14 }" v-show="foo"/>`
       ).code
     ).toMatchInlineSnapshot(`
-      "const { ssrRenderStyle: _ssrRenderStyle, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"@vue/server-renderer\\")
+      "const { ssrRenderStyle: _ssrRenderStyle, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<div\${
@@ -99,7 +99,7 @@ describe('ssr: v-show', () => {
       ).code
     ).toMatchInlineSnapshot(`
       "const { mergeProps: _mergeProps } = require(\\"vue\\")
-      const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"@vue/server-renderer\\")
+      const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<div\${

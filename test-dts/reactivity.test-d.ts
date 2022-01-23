@@ -1,3 +1,4 @@
+import { shallowReadonly } from '@vue/reactivity'
 import { ref, readonly, describe, expectError, expectType, Ref } from './index'
 
 describe('should support DeepReadonly', () => {
@@ -12,4 +13,12 @@ describe('should support DeepReadonly', () => {
 describe('readonly ref', () => {
   const r = readonly(ref({ count: 1 }))
   expectType<Ref>(r)
+})
+
+describe('shallowReadonly ref unwrap', () => {
+  const r = shallowReadonly({ count: { n: ref(1) } })
+  // @ts-expect-error
+  r.count = 2
+  expectType<Ref>(r.count.n)
+  r.count.n.value = 123
 })

@@ -1,4 +1,5 @@
-import { isPromise } from '../../shared/src'
+import { ComponentPropsOptions } from '@vue/runtime-core'
+import { isArray, isPromise, isFunction } from '@vue/shared'
 import {
   getCurrentInstance,
   setCurrentInstance,
@@ -7,11 +8,7 @@ import {
   unsetCurrentInstance
 } from './component'
 import { EmitFn, EmitsOptions } from './componentEmits'
-import {
-  ComponentObjectPropsOptions,
-  PropOptions,
-  ExtractPropTypes
-} from './componentProps'
+import { ComponentObjectPropsOptions, ExtractPropTypes } from './componentProps'
 import { warn } from './warning'
 
 // dev only
@@ -40,7 +37,7 @@ const warnRuntimeUsage = (method: string) =>
  * })
  * ```
  *
- * Equivalent type-based decalration:
+ * Equivalent type-based declaration:
  * ```ts
  * // will be compiled into equivalent runtime declarations
  * const props = defineProps<{
@@ -79,7 +76,7 @@ export function defineProps() {
  * const emit = defineEmits(['change', 'update'])
  * ```
  *
- * Example type-based decalration:
+ * Example type-based declaration:
  * ```ts
  * const emit = defineEmits<{
  *   (event: 'change'): void
@@ -114,14 +111,16 @@ export function defineEmits() {
  * instance properties when it is accessed by a parent component via template
  * refs.
  *
- * `<script setup>` components are closed by default - i.e. varaibles inside
+ * `<script setup>` components are closed by default - i.e. variables inside
  * the `<script setup>` scope is not exposed to parent unless explicitly exposed
  * via `defineExpose`.
  *
  * This is only usable inside `<script setup>`, is compiled away in the
  * output and should **not** be actually called at runtime.
  */
-export function defineExpose(exposed?: Record<string, any>) {
+export function defineExpose<
+  Exposed extends Record<string, any> = Record<string, any>
+>(exposed?: Exposed) {
   if (__DEV__) {
     warnRuntimeUsage(`defineExpose`)
   }
@@ -130,24 +129,26 @@ export function defineExpose(exposed?: Record<string, any>) {
 type NotUndefined<T> = T extends undefined ? never : T
 
 type InferDefaults<T> = {
-  [K in keyof T]?: NotUndefined<T[K]> extends
-    | number
-    | string
-    | boolean
-    | symbol
-    | Function
-    ? NotUndefined<T[K]>
-    : (props: T) => NotUndefined<T[K]>
+  [K in keyof T]?: InferDefault<T, NotUndefined<T[K]>>
 }
 
-type PropsWithDefaults<Base, Defaults> = Base &
-  {
-    [K in keyof Defaults]: K extends keyof Base ? NotUndefined<Base[K]> : never
-  }
+type InferDefault<P, T> = T extends
+  | null
+  | number
+  | string
+  | boolean
+  | symbol
+  | Function
+  ? T
+  : (props: P) => T
+
+type PropsWithDefaults<Base, Defaults> = Base & {
+  [K in keyof Defaults]: K extends keyof Base ? NotUndefined<Base[K]> : never
+}
 
 /**
  * Vue `<script setup>` compiler macro for providing props default values when
- * using type-based `defineProps` decalration.
+ * using type-based `defineProps` declaration.
  *
  * Example usage:
  * ```ts
@@ -195,21 +196,51 @@ function getContext(): SetupContext {
  * @internal
  */
 export function mergeDefaults(
-  // the base props is compiler-generated and guaranteed to be in this shape.
-  props: Record<string, PropOptions | null>,
+  raw: ComponentPropsOptions,
   defaults: Record<string, any>
-) {
+): ComponentObjectPropsOptions {
+  const props = isArray(raw)
+    ? raw.reduce(
+        (normalized, p) => ((normalized[p] = {}), normalized),
+        {} as ComponentObjectPropsOptions
+      )
+    : raw
   for (const key in defaults) {
-    const val = props[key]
-    if (val) {
-      val.default = defaults[key]
-    } else if (val === null) {
+    const opt = props[key]
+    if (opt) {
+      if (isArray(opt) || isFunction(opt)) {
+        props[key] = { type: opt, default: defaults[key] }
+      } else {
+        opt.default = defaults[key]
+      }
+    } else if (opt === null) {
       props[key] = { default: defaults[key] }
     } else if (__DEV__) {
       warn(`props default key "${key}" has no corresponding declaration.`)
     }
   }
   return props
+}
+
+/**
+ * Used to create a proxy for the rest element when destructuring props with
+ * defineProps().
+ * @internal
+ */
+export function createPropsRestProxy(
+  props: any,
+  excludedKeys: string[]
+): Record<string, any> {
+  const ret: Record<string, any> = {}
+  for (const key in props) {
+    if (!excludedKeys.includes(key)) {
+      Object.defineProperty(ret, key, {
+        enumerable: true,
+        get: () => props[key]
+      })
+    }
+  }
+  return ret
 }
 
 /**

@@ -15,7 +15,7 @@ export type LegacyConfig = {
   silent?: boolean
   /**
    * @deprecated use __VUE_PROD_DEVTOOLS__ compile-time feature flag instead
-   * https://github.com/vuejs/vue-next/tree/master/packages/vue#bundler-build-feature-flags
+   * https://github.com/vuejs/core/tree/main/packages/vue#bundler-build-feature-flags
    */
   devtools?: boolean
   /**

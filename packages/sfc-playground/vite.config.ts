@@ -9,15 +9,11 @@ const commit = execa.sync('git', ['rev-parse', 'HEAD']).stdout.slice(0, 7)
 export default defineConfig({
   plugins: [vue(), copyVuePlugin()],
   define: {
-    __COMMIT__: JSON.stringify(commit)
-  },
-  resolve: {
-    alias: {
-      '@vue/compiler-sfc': '@vue/compiler-sfc/dist/compiler-sfc.esm-browser.js'
-    }
+    __COMMIT__: JSON.stringify(commit),
+    __VUE_PROD_DEVTOOLS__: JSON.stringify(true)
   },
   optimizeDeps: {
-    exclude: ['consolidate']
+    exclude: ['@vue/repl']
   }
 })
 
@@ -32,7 +28,7 @@ function copyVuePlugin(): Plugin {
       if (!fs.existsSync(filePath)) {
         throw new Error(
           `vue.runtime.esm-browser.js not built. ` +
-            `Run "yarn build vue -f esm-browser" first.`
+            `Run "nr build vue -f esm-browser" first.`
         )
       }
       this.emitFile({

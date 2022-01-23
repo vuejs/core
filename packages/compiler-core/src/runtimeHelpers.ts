@@ -34,7 +34,6 @@ export const TO_HANDLER_KEY = Symbol(__DEV__ ? `toHandlerKey` : ``)
 export const SET_BLOCK_TRACKING = Symbol(__DEV__ ? `setBlockTracking` : ``)
 export const PUSH_SCOPE_ID = Symbol(__DEV__ ? `pushScopeId` : ``)
 export const POP_SCOPE_ID = Symbol(__DEV__ ? `popScopeId` : ``)
-export const WITH_SCOPE_ID = Symbol(__DEV__ ? `withScopeId` : ``)
 export const WITH_CTX = Symbol(__DEV__ ? `withCtx` : ``)
 export const UNREF = Symbol(__DEV__ ? `unref` : ``)
 export const IS_REF = Symbol(__DEV__ ? `isRef` : ``)
@@ -79,7 +78,6 @@ export const helperNameMap: any = {
   [SET_BLOCK_TRACKING]: `setBlockTracking`,
   [PUSH_SCOPE_ID]: `pushScopeId`,
   [POP_SCOPE_ID]: `popScopeId`,
-  [WITH_SCOPE_ID]: `withScopeId`,
   [WITH_CTX]: `withCtx`,
   [UNREF]: `unref`,
   [IS_REF]: `isRef`,

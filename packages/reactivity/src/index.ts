@@ -9,16 +9,20 @@ export {
   customRef,
   triggerRef,
   Ref,
+  ToRef,
   ToRefs,
   UnwrapRef,
+  ShallowRef,
   ShallowUnwrapRef,
-  RefUnwrapBailTypes
+  RefUnwrapBailTypes,
+  CustomRefFactory
 } from './ref'
 export {
   reactive,
   readonly,
   isReactive,
   isReadonly,
+  isShallow,
   isProxy,
   shallowReactive,
   shallowReadonly,
@@ -26,6 +30,7 @@ export {
   toRaw,
   ReactiveFlags,
   DeepReadonly,
+  ShallowReactive,
   UnwrapNestedRefs
 } from './reactive'
 export {
@@ -51,7 +56,8 @@ export {
   ReactiveEffectOptions,
   EffectScheduler,
   DebuggerOptions,
-  DebuggerEvent
+  DebuggerEvent,
+  DebuggerEventExtraInfo
 } from './effect'
 export {
   effectScope,

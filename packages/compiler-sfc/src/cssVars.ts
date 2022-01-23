@@ -13,7 +13,11 @@ import hash from 'hash-sum'
 
 export const CSS_VARS_HELPER = `useCssVars`
 export const cssVarRE =
+<<<<<<< HEAD
   /\bv-bind\(\s*(?:'([^']+)'|"([^"]+)"|([^'"][^)]*))\s*\)/g
+=======
+  /\bv-bind\s*\(\s*(?:'([^']+)'|"([^"]+)"|([^'"][^;]*))\s*\)/g
+>>>>>>> 283df0ad6866d212d0ce4c249259d6d31d7302c1
 
 export function genCssVarsFromList(
   vars: string[],

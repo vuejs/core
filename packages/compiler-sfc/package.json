@@ -1,8 +1,9 @@
 {
   "name": "@vue/compiler-sfc",
-  "version": "3.2.2",
+  "version": "3.2.28",
   "description": "@vue/compiler-sfc",
   "main": "dist/compiler-sfc.cjs.js",
+  "module": "dist/compiler-sfc.esm-browser.js",
   "types": "dist/compiler-sfc.d.ts",
   "files": [
     "dist"
@@ -18,7 +19,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vuejs/vue-next.git",
+    "url": "git+https://github.com/vuejs/core.git",
     "directory": "packages/compiler-sfc"
   },
   "keywords": [
@@ -27,32 +28,32 @@
   "author": "Evan You",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/vuejs/vue-next/issues"
+    "url": "https://github.com/vuejs/core/issues"
   },
-  "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/compiler-sfc#readme",
+  "homepage": "https://github.com/vuejs/core/tree/main/packages/compiler-sfc#readme",
   "dependencies": {
-    "@babel/parser": "^7.13.9",
-    "@babel/types": "^7.13.0",
-    "@types/estree": "^0.0.48",
-    "@vue/compiler-core": "3.2.2",
-    "@vue/compiler-dom": "3.2.2",
-    "@vue/compiler-ssr": "3.2.2",
-    "@vue/shared": "3.2.2",
-    "consolidate": "^0.16.0",
-    "estree-walker": "^2.0.1",
-    "hash-sum": "^2.0.0",
-    "lru-cache": "^5.1.1",
+    "@babel/parser": "^7.16.4",
+    "@vue/compiler-core": "3.2.28",
+    "@vue/compiler-dom": "3.2.28",
+    "@vue/compiler-ssr": "3.2.28",
+    "@vue/reactivity-transform": "3.2.28",
+    "@vue/shared": "3.2.28",
+    "estree-walker": "^2.0.2",
     "magic-string": "^0.25.7",
-    "merge-source-map": "^1.1.0",
-    "postcss": "^8.1.10",
-    "postcss-modules": "^4.0.0",
-    "postcss-selector-parser": "^6.0.4",
-    "source-map": "^0.6.1"
+    "source-map": "^0.6.1",
+    "postcss": "^8.1.10"
   },
   "devDependencies": {
-    "@types/consolidate": "^0.14.0",
+    "@types/estree": "^0.0.48",
+    "@babel/types": "^7.16.0",
     "@types/lru-cache": "^5.1.0",
     "pug": "^3.0.1",
-    "sass": "^1.26.9"
+    "sass": "^1.26.9",
+    "@vue/consolidate": "^0.17.3",
+    "hash-sum": "^2.0.0",
+    "lru-cache": "^5.1.1",
+    "merge-source-map": "^1.1.0",
+    "postcss-modules": "^4.0.0",
+    "postcss-selector-parser": "^6.0.4"
   }
 }
