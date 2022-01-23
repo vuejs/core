@@ -74,14 +74,16 @@ export default {
   expose();
 
 _useCssVars(_ctx => ({
-  \\"xxxxxxxx-_a___b____2____px__\\": ((_unref(a) + _unref(b)) / 2 + 'px' ),
+  \\"xxxxxxxx-foo\\": (_unref(foo)),
+  \\"xxxxxxxx-_a___b____2____px_\\": ((_unref(a) + _unref(b)) / 2 + 'px'),
   \\"xxxxxxxx-__a___b______2___a_\\": (((_unref(a) + _unref(b))) / (2 * _unref(a)))
 }))
 
         let a = 100
         let b = 200
+        let foo = 300
         
-return { a, b }
+return { a, b, foo }
 }
 
 }"

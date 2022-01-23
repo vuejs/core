@@ -204,8 +204,13 @@ describe('CSS vars injection', () => {
         `<script setup>
         let a = 100
         let b = 200
+        let foo = 300
         </script>\n` +
           `<style>
+          p{
+            width: calc(v-bind(foo) - 3px);
+            height: calc(v-bind('foo') - 3px);
+          }
           div {
             color: v-bind((a + b) / 2 + 'px' );
           }
@@ -218,7 +223,8 @@ describe('CSS vars injection', () => {
         </style>`
       )
       expect(content).toMatch(`_useCssVars(_ctx => ({
-  "${mockId}-_a___b____2____px__": ((_unref(a) + _unref(b)) / 2 + 'px' ),
+  "${mockId}-foo": (_unref(foo)),
+  "${mockId}-_a___b____2____px_": ((_unref(a) + _unref(b)) / 2 + 'px'),
   "${mockId}-__a___b______2___a_": (((_unref(a) + _unref(b))) / (2 * _unref(a)))
 })`)
       assertCode(content)
