@@ -76,7 +76,10 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
   insertStaticContent(content, parent, anchor, isSVG, start, end) {
     // <parent> before | first ... last | anchor </parent>
     const before = anchor ? anchor.previousSibling : parent.lastChild
-    if (start && end) {
+    // #5308 can only take cached path if:
+    // - has a single root node
+    // - nextSibling info is still available
+    if (start && (start === end || start.nextSibling)) {
       // cached
       while (true) {
         parent.insertBefore(start!.cloneNode(true), anchor)
