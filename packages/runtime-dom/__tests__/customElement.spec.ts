@@ -247,6 +247,29 @@ describe('defineCustomElement', () => {
       expect(el.maxAge).toBe(50)
       expect(el.shadowRoot.innerHTML).toBe('max age: 50/type: number')
     })
+
+    test('handle properties set before connecting', () => {
+      const obj = {}
+      const E = defineCustomElement({
+        props: {
+          foo: String,
+          post: Object
+        },
+        setup(props) {
+          expect(props.foo).toBe('hello')
+          expect(props.post).toBe(obj)
+        },
+        render() {
+          return `foo: ${this.foo}`
+        }
+      })
+      customElements.define('my-el-preconnect', E)
+      const el = document.createElement('my-el-preconnect') as any
+      el.foo = 'hello'
+      el.post = obj
+
+      container.appendChild(el)
+    })
   })
 
   describe('attrs', () => {
