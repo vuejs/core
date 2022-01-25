@@ -264,7 +264,8 @@ export class VueElement extends BaseClass {
 
       // cast Number-type props set before resolve
       let numberProps
-      if (hasOptions) {
+      // add props check to fix https://github.com/vuejs/core/issues/5326
+      if (hasOptions && props) {
         for (const key in this._props) {
           const opt = props[key]
           if (opt === Number || (opt && opt.type === Number)) {
