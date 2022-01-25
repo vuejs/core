@@ -22,6 +22,7 @@ import {
   ComponentOptions
 } from '@vue/runtime-core'
 import { camelize, extend, hyphenate, isArray, toNumber } from '@vue/shared'
+import HTMLParsedElement from 'html-parsed-element'
 import { hydrate, render } from '.'
 
 export type VueElementConstructor<P = {}> = {
@@ -160,7 +161,7 @@ export const defineSSRCustomElement = ((
 }) as typeof defineCustomElement
 
 const BaseClass = (
-  typeof HTMLElement !== 'undefined' ? HTMLElement : class {}
+  typeof HTMLElement !== 'undefined' ? HTMLParsedElement : class {}
 ) as typeof HTMLElement
 
 type InnerComponentDef = ConcreteComponent & { styles?: string[] }
@@ -191,11 +192,6 @@ export class VueElement extends BaseClass {
       this._config
     )
 
-    if (!this._config.shadowRoot) {
-      this._slots = Array.from(this.children).map(n => n.cloneNode(true))
-      this.replaceChildren()
-    }
-
     if (this._config.shadowRoot) {
       if (this.shadowRoot && hydrate) {
         hydrate(this._createVNode(), this._root!)
@@ -220,6 +216,23 @@ export class VueElement extends BaseClass {
   }
 
   connectedCallback() {
+    if (this._config.shadowRoot) {
+      this._connect()
+    } else {
+      super.connectedCallback()
+    }
+  }
+
+  // use of parsedCallback when shadowRoot is disabled
+  // to wait for slots to be parsed
+  // see https://stackoverflow.com/a/52884370
+  parsedCallback() {
+    if (!this._config.shadowRoot) {
+      this._connect()
+    }
+  }
+
+  _connect() {
     this._connected = true
     if (!this._instance) {
       this._resolveDef()
@@ -293,6 +306,12 @@ export class VueElement extends BaseClass {
             this._setProp(key, val)
           }
         })
+      }
+
+      // replace slot
+      if (!this._config.shadowRoot) {
+        this._slots = Array.from(this.children).map(n => n.cloneNode(true))
+        this.replaceChildren()
       }
 
       // apply CSS
