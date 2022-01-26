@@ -12,7 +12,7 @@ return withDirectives(h(comp), [
 */
 
 import { VNode } from './vnode'
-import { isFunction, EMPTY_OBJ, makeMap } from '@vue/shared'
+import { isFunction, EMPTY_OBJ, makeMap, extend } from '@vue/shared'
 import { warn } from './warning'
 import { ComponentInternalInstance, Data } from './component'
 import { currentRenderingInstance } from './componentRenderContext'
@@ -53,6 +53,7 @@ export interface ObjectDirective<T = any, V = any> {
   unmounted?: DirectiveHook<T, null, V>
   getSSRProps?: SSRDirectiveHook
   deep?: boolean
+  install?: (binding: DirectiveBinding) => ObjectDirective
 }
 
 export type FunctionDirective<T = any, V = any> = DirectiveHook<T, any, V>
@@ -106,14 +107,18 @@ export function withDirectives<T extends VNode>(
     if (dir.deep) {
       traverse(value)
     }
-    bindings.push({
+    let binding = {
       dir,
       instance,
       value,
       oldValue: void 0,
       arg,
       modifiers
-    })
+    }
+    if (dir.install) {
+      extend(binding.dir, dir.install(binding))
+    }
+    bindings.push(binding)
   }
   return vnode
 }

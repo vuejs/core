@@ -395,4 +395,81 @@ describe('directives', () => {
     expect(beforeUpdate).toHaveBeenCalledTimes(1)
     expect(count.value).toBe(1)
   })
+
+  it('directive install hooks', async () => {
+    const count = ref(0)
+    let d1_installed_created = jest.fn()
+    let d1_installed_mounted = jest.fn()
+    let d1_installed_beforeMounted = jest.fn()
+    let d1_installed_beforeupdate = jest.fn()
+    let d1_installed_updated = jest.fn()
+    let d1_installed_beforeUnmount = jest.fn()
+    let d1_installed_unmounted = jest.fn()
+
+    let mounted_overwritten = jest.fn()
+
+    const d1 = {
+      install() {
+        return {
+          created: d1_installed_created,
+          mounted: d1_installed_mounted,
+          beforeMount: d1_installed_beforeMounted,
+          beforeUpdate: d1_installed_beforeupdate,
+          updated: d1_installed_updated,
+          beforeUnmount: d1_installed_beforeUnmount,
+          unmounted: d1_installed_unmounted
+        }
+      },
+      mounted: mounted_overwritten
+    }
+
+    // test that install doesn't override hooks that it does not provide.
+    let d2_created = jest.fn()
+    let d2_installed_mounted = jest.fn()
+    let d2_install = jest
+      .fn()
+      .mockReturnValue({ mounted: d2_installed_mounted })
+    const d2 = {
+      install: d2_install,
+      created: d2_created
+    }
+
+    const Comp = {
+      render() {
+        return withDirectives(h('div', [count.value]), [[d1], [d2]])
+      }
+    }
+
+    const App = {
+      name: 'App',
+      render() {
+        return h('div', [h(Comp)])
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+
+    count.value++
+
+    await nextTick()
+
+    // all installed hooks called
+    expect(d1_installed_created).toHaveBeenCalled()
+    expect(d1_installed_mounted).toHaveBeenCalled()
+    expect(d1_installed_beforeMounted).toHaveBeenCalled()
+    expect(d1_installed_beforeupdate).toHaveBeenCalled()
+    expect(d1_installed_updated).toHaveBeenCalled()
+
+    expect(mounted_overwritten).not.toHaveBeenCalled()
+
+    expect(d2_created).toHaveBeenCalled()
+    expect(d2_install).toHaveBeenCalled()
+    expect(d2_installed_mounted).toHaveBeenCalled()
+
+    render(null, root)
+
+    expect(d1_installed_beforeUnmount).toHaveBeenCalledTimes(1)
+    expect(d1_installed_unmounted).toHaveBeenCalledTimes(1)
+  })
 })
