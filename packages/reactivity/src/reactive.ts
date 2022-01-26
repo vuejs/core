@@ -204,7 +204,7 @@ function createReactiveObject(
   if (existingProxy) {
     return existingProxy
   }
-  // only a whitelist of value types can be observed.
+  // only a free list of value types can be observed.
   const targetType = getTargetType(target)
   if (targetType === TargetType.INVALID) {
     return target
