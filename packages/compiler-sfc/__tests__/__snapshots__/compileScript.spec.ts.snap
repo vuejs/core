@@ -4,8 +4,10 @@ exports[`SFC compile <script setup> <script> and <script setup> co-usage script 
 "import { x } from './x'
       
       export const n = 1
+
+      const __default__ = {}
       
-export default {
+export default /*#__PURE__*/Object.assign(__default__, {
   setup(__props, { expose }) {
   expose();
 
@@ -14,13 +16,15 @@ export default {
 return { n, x }
 }
 
-}"
+})"
 `;
 
 exports[`SFC compile <script setup> <script> and <script setup> co-usage script setup first 1`] = `
-"import { x } from './x'
+"export const n = 1
+      const __default__ = {}
+      import { x } from './x'
       
-export default {
+export default /*#__PURE__*/Object.assign(__default__, {
   setup(__props, { expose }) {
   expose();
 
@@ -29,29 +33,48 @@ export default {
 return { n, x }
 }
 
-}
-      export const n = 1"
+})"
 `;
 
 exports[`SFC compile <script setup> <script> and <script setup> co-usage script setup first, lang="ts", script block content export default 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
-import { x } from './x'
+
+      const __default__ = {
+        name: \\"test\\"
+      }
+      import { x } from './x'
       
-function setup(__props, { expose }) {
+export default /*#__PURE__*/_defineComponent({
+  ...__default__,
+  setup(__props, { expose }) {
+  expose();
 
       x()
       
 return { x }
 }
 
+})"
+`;
 
-      const __default__ = {
-        name: \\"test\\"
-      }
+exports[`SFC compile <script setup> <script> and <script setup> co-usage script setup first, named default export 1`] = `
+"export const n = 1
+      const def = {}
       
-export default /*#__PURE__*/_defineComponent({
-  ...__default__,
-  setup})"
+      
+const __default__ = def
+import { x } from './x'
+      
+export default /*#__PURE__*/Object.assign(__default__, {
+  setup(__props, { expose }) {
+  expose();
+
+      x()
+      
+return { n, def, x }
+}
+
+})"
 `;
 
 exports[`SFC compile <script setup> <script> and <script setup> co-usage spaces in ExportDefaultDeclaration node with many spaces and newline 1`] = `
@@ -62,16 +85,15 @@ exports[`SFC compile <script setup> <script> and <script setup> co-usage spaces 
           some:'option'
         }
         
-function setup(__props, { expose }) {
+export default /*#__PURE__*/Object.assign(__default__, {
+  setup(__props, { expose }) {
+  expose();
 
         x()
         
 return { n, x }
 }
 
-
-export default /*#__PURE__*/ Object.assign(__default__, {
-  setup
 })"
 `;
 
@@ -83,16 +105,15 @@ exports[`SFC compile <script setup> <script> and <script setup> co-usage spaces 
           some:'option'
         }
         
-function setup(__props, { expose }) {
+export default /*#__PURE__*/Object.assign(__default__, {
+  setup(__props, { expose }) {
+  expose();
 
         x()
         
 return { n, x }
 }
 
-
-export default /*#__PURE__*/ Object.assign(__default__, {
-  setup
 })"
 `;
 
@@ -344,7 +365,7 @@ return { a }
 }"
 `;
 
-exports[`SFC compile <script setup> binding analysis for destructur 1`] = `
+exports[`SFC compile <script setup> binding analysis for destructure 1`] = `
 "export default {
   setup(__props, { expose }) {
   expose();
@@ -980,7 +1001,12 @@ return () => {}
 `;
 
 exports[`SFC compile <script setup> should expose top level declarations 1`] = `
-"import { x } from './x'
+"import { xx } from './x'
+      let aa = 1
+      const bb = 2
+      function cc() {}
+      class dd {}
+      import { x } from './x'
       
 export default {
   setup(__props, { expose }) {
@@ -994,12 +1020,7 @@ export default {
 return { aa, bb, cc, dd, a, b, c, d, xx, x }
 }
 
-}
-      import { xx } from './x'
-      let aa = 1
-      const bb = 2
-      function cc() {}
-      class dd {}"
+}"
 `;
 
 exports[`SFC compile <script setup> with TypeScript const Enum 1`] = `

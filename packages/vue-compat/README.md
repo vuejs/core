@@ -18,7 +18,7 @@ While we've tried hard to make the migration build mimic Vue 2 behavior as much 
 
 - Internet Explorer 11 support: [Vue 3 has officially dropped the plan for IE11 support](https://github.com/vuejs/rfcs/blob/master/active-rfcs/0038-vue3-ie11-support.md). If you still need to support IE11 or below, you will have to stay on Vue 2.
 
-- Server-side rendering: the migration build can be used for SSR, but migrating a custom SSR setup is much more involved. The general idea is replacing `vue-server-renderer` with [`@vue/server-renderer`](https://github.com/vuejs/vue-next/tree/master/packages/server-renderer). Vue 3 no longer provides a bundle renderer and it is recommended to use Vue 3 SSR with [Vite](https://vitejs.dev/guide/ssr.html). If you are using [Nuxt.js](https://nuxtjs.org/), it is probably better to wait for Nuxt 3.
+- Server-side rendering: the migration build can be used for SSR, but migrating a custom SSR setup is much more involved. The general idea is replacing `vue-server-renderer` with [`@vue/server-renderer`](https://github.com/vuejs/core/tree/main/packages/server-renderer). Vue 3 no longer provides a bundle renderer and it is recommended to use Vue 3 SSR with [Vite](https://vitejs.dev/guide/ssr.html). If you are using [Nuxt.js](https://nuxtjs.org/), it is probably better to wait for Nuxt 3.
 
 ### Expectations
 
@@ -89,6 +89,7 @@ The following workflow walks through the steps of migrating an actual Vue 2 app 
              }
            }
          })
+     }
    }
    ```
 
@@ -258,7 +259,7 @@ Features that start with `COMPILER_` are compiler-specific: if you are using the
 | ID                                    | Type | Description                                                             | Docs                                                                                           |
 | ------------------------------------- | ---- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | GLOBAL_MOUNT_CONTAINER                | ⨂    | Mounted application does not replace the element it's mounted to        | [link](https://v3.vuejs.org/guide/migration/mount-changes.html)                                                    |
-| CONFIG_DEVTOOLS                       | ⨂    | production devtools is now a build-time flag                            | [link](https://github.com/vuejs/vue-next/tree/master/packages/vue#bundler-build-feature-flags) |
+| CONFIG_DEVTOOLS                       | ⨂    | production devtools is now a build-time flag                            | [link](https://github.com/vuejs/core/tree/main/packages/vue#bundler-build-feature-flags) |
 | COMPILER_V_IF_V_FOR_PRECEDENCE        | ⨂    | `v-if` and `v-for` precedence when used on the same element has changed | [link](https://v3.vuejs.org/guide/migration/v-if-v-for.html)                                                       |
 | COMPILER_V_IF_SAME_KEY                | ⨂    | `v-if` branches can no longer have the same key                         | [link](https://v3.vuejs.org/guide/migration/key-attribute.html#on-conditional-branches)                            |
 | COMPILER_V_FOR_TEMPLATE_KEY_PLACEMENT | ⨂    | `<template v-for>` key should now be placed on `<template>`             | [link](https://v3.vuejs.org/guide/migration/key-attribute.html#with-template-v-for)                                |

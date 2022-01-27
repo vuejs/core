@@ -1,6 +1,6 @@
 {
   "name": "@vue/reactivity",
-  "version": "3.2.23",
+  "version": "3.2.29",
   "description": "@vue/reactivity",
   "main": "index.js",
   "module": "dist/reactivity.esm-bundler.js",
@@ -14,7 +14,7 @@
   "sideEffects": false,
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vuejs/vue-next.git",
+    "url": "git+https://github.com/vuejs/core.git",
     "directory": "packages/reactivity"
   },
   "buildOptions": {
@@ -32,10 +32,10 @@
   "author": "Evan You",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/vuejs/vue-next/issues"
+    "url": "https://github.com/vuejs/core/issues"
   },
-  "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/reactivity#readme",
+  "homepage": "https://github.com/vuejs/core/tree/main/packages/reactivity#readme",
   "dependencies": {
-    "@vue/shared": "3.2.23"
+    "@vue/shared": "3.2.29"
   }
 }

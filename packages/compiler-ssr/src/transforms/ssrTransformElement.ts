@@ -22,7 +22,7 @@ import {
   TextNode,
   hasDynamicKeyVBind,
   MERGE_PROPS,
-  isBindKey,
+  isStaticArgOf,
   createSequenceExpression,
   InterpolationNode,
   isStaticExp,
@@ -179,18 +179,10 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
           if (!hasDynamicVBind) {
             node.children = [createInterpolation(prop.exp, prop.loc)]
           }
-        } else {
+        } else if (!hasDynamicVBind) {
           // Directive transforms.
           const directiveTransform = context.directiveTransforms[prop.name]
-          if (!directiveTransform) {
-            // no corresponding ssr directive transform found.
-            context.onError(
-              createSSRCompilerError(
-                SSRErrorCodes.X_SSR_CUSTOM_DIRECTIVE_NO_TRANSFORM,
-                prop.loc
-              )
-            )
-          } else if (!hasDynamicVBind) {
+          if (directiveTransform) {
             const { props, ssrTagParts } = directiveTransform(
               prop,
               node,
@@ -335,7 +327,7 @@ function isTextareaWithValue(
   return !!(
     node.tag === 'textarea' &&
     prop.name === 'bind' &&
-    isBindKey(prop.arg, 'value')
+    isStaticArgOf(prop.arg, 'value')
   )
 }
 

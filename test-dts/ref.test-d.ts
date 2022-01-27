@@ -10,7 +10,8 @@ import {
   toRef,
   toRefs,
   ToRefs,
-  shallowReactive
+  shallowReactive,
+  readonly
 } from './index'
 
 function plainType(arg: number | Ref<number>) {
@@ -222,7 +223,22 @@ expectType<Ref<string>>(p2.obj.k)
 
   expectType<Ref<number>>(toRefResult.value.b)
   expectType<Ref<number>>(toRefsResult.a.value.b)
+
+  // #5188
+  const props = { foo: 1 } as { foo: any }
+  const { foo } = toRefs(props)
+  expectType<Ref<any>>(foo)
 }
+
+// toRef default value
+{
+  const obj: { x?: number } = {}
+  const x = toRef(obj, 'x', 1)
+  expectType<Ref<number>>(x)
+}
+
+// readonly() + ref()
+expectType<Readonly<Ref<number>>>(readonly(ref(1)))
 
 // #2687
 interface AppData {

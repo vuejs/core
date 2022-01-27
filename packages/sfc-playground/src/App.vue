@@ -19,8 +19,7 @@ const store = new ReplStore({
 // enable experimental features
 const sfcOptions = {
   script: {
-    refTransform: true,
-    propsDestructureTransform: true
+    reactivityTransform: true
   }
 }
 
@@ -31,6 +30,8 @@ watchEffect(() => history.replaceState({}, '', store.serialize()))
 <template>
   <Header :store="store" />
   <Repl
+    @keydown.ctrl.s.prevent
+    @keydown.meta.s.prevent
     :store="store"
     :showCompileOutput="true"
     :autoResize="true"

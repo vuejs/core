@@ -181,8 +181,8 @@ describe('stringify static html', () => {
     ])
   })
 
-  test('should bail on runtime constant v-bind bindings', () => {
-    const { ast } = compile(
+  test('should bail on bindings that are hoisted but not stringifiable', () => {
+    const { ast, code } = compile(
       `<div><div>${repeat(
         `<span class="foo">foo</span>`,
         StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
@@ -216,13 +216,62 @@ describe('stringify static html', () => {
     expect(ast.hoists).toMatchObject([
       {
         // the expression and the tree are still hoistable
-        // but if it's stringified it will be NodeTypes.CALL_EXPRESSION
+        // but should stay NodeTypes.VNODE_CALL
+        // if it's stringified it will be NodeTypes.JS_CALL_EXPRESSION
         type: NodeTypes.VNODE_CALL
       },
       {
         type: NodeTypes.JS_ARRAY_EXPRESSION
       }
     ])
+    expect(code).toMatchSnapshot()
+  })
+
+  test('should work with bindings that are non-static but stringifiable', () => {
+    // if a binding is non-static but marked as CAN_STRINGIFY, it means it's
+    // a known reference to a constant string.
+    const { ast, code } = compile(
+      `<div><div>${repeat(
+        `<span class="foo">foo</span>`,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+      )}<img src="./foo" /></div></div>`,
+      {
+        hoistStatic: true,
+        prefixIdentifiers: true,
+        transformHoist: stringifyStatic,
+        nodeTransforms: [
+          node => {
+            if (node.type === NodeTypes.ELEMENT && node.tag === 'img') {
+              const exp = createSimpleExpression(
+                '_imports_0_',
+                false,
+                node.loc,
+                ConstantTypes.CAN_STRINGIFY
+              )
+              node.props[0] = {
+                type: NodeTypes.DIRECTIVE,
+                name: 'bind',
+                arg: createSimpleExpression('src', true),
+                exp,
+                modifiers: [],
+                loc: node.loc
+              }
+            }
+          }
+        ]
+      }
+    )
+    expect(ast.hoists).toMatchObject([
+      {
+        // the hoisted node should be NodeTypes.JS_CALL_EXPRESSION
+        // of `createStaticVNode()` instead of dynamic NodeTypes.VNODE_CALL
+        type: NodeTypes.JS_CALL_EXPRESSION
+      },
+      {
+        type: NodeTypes.JS_ARRAY_EXPRESSION
+      }
+    ])
+    expect(code).toMatchSnapshot()
   })
 
   // #1128

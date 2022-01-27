@@ -59,6 +59,7 @@ export const transformFor = createStructuralDirectiveTransform(
       const renderExp = createCallExpression(helper(RENDER_LIST), [
         forNode.source
       ]) as ForRenderListExpression
+      const isTemplate = isTemplateNode(node)
       const memo = findDir(node, 'memo')
       const keyProp = findProp(node, `key`)
       const keyExp =
@@ -68,21 +69,23 @@ export const transformFor = createStructuralDirectiveTransform(
           : keyProp.exp!)
       const keyProperty = keyProp ? createObjectProperty(`key`, keyExp!) : null
 
-      if (
-        !__BROWSER__ &&
-        context.prefixIdentifiers &&
-        keyProperty &&
-        keyProp!.type !== NodeTypes.ATTRIBUTE
-      ) {
-        // #2085 process :key expression needs to be processed in order for it
-        // to behave consistently for <template v-for> and <div v-for>.
-        // In the case of `<template v-for>`, the node is discarded and never
-        // traversed so its key expression won't be processed by the normal
-        // transforms.
-        keyProperty.value = processExpression(
-          keyProperty.value as SimpleExpressionNode,
-          context
-        )
+      if (!__BROWSER__ && isTemplate) {
+        // #2085 / #5288 process :key and v-memo expressions need to be
+        // processed on `<template v-for>`. In this case the node is discarded
+        // and never traversed so its binding expressions won't be processed
+        // by the normal transforms.
+        if (memo) {
+          memo.exp = processExpression(
+            memo.exp! as SimpleExpressionNode,
+            context
+          )
+        }
+        if (keyProperty && keyProp!.type !== NodeTypes.ATTRIBUTE) {
+          keyProperty.value = processExpression(
+            keyProperty.value as SimpleExpressionNode,
+            context
+          )
+        }
       }
 
       const isStableFragment =
@@ -112,7 +115,6 @@ export const transformFor = createStructuralDirectiveTransform(
       return () => {
         // finish the codegen now that all children have been traversed
         let childBlock: BlockCodegenNode
-        const isTemplate = isTemplateNode(node)
         const { children } = forNode
 
         // check <template v-for> key placement
