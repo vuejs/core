@@ -21,7 +21,8 @@ import {
   EMPTY_ARR,
   def,
   extend,
-  isOn
+  isOn,
+  IfAny
 } from '@vue/shared'
 import { warn } from './warning'
 import {
@@ -39,7 +40,6 @@ import { createPropsDefaultThis } from './compat/props'
 import { isCompatEnabled, softAssertCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
 import { shouldSkipAttr } from './compat/attrsFallthrough'
-import { IfAny } from './helpers/typeUtils'
 
 export type ComponentPropsOptions<P = Data> =
   | ComponentObjectPropsOptions<P>
@@ -303,7 +303,11 @@ export function updateProps(
     // attrs point to the same object so it should already have been updated.
     if (attrs !== rawCurrentProps) {
       for (const key in attrs) {
-        if (!rawProps || !hasOwn(rawProps, key)) {
+        if (
+          !rawProps ||
+          (!hasOwn(rawProps, key) &&
+            (!__COMPAT__ || !hasOwn(rawProps, key + 'Native')))
+        ) {
           delete attrs[key]
           hasAttrsChanged = true
         }

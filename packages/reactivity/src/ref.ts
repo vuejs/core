@@ -1,6 +1,6 @@
 import { isTracking, trackEffects, triggerEffects } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
-import { isArray, hasChanged } from '@vue/shared'
+import { isArray, hasChanged, IfAny } from '@vue/shared'
 import { isProxy, toRaw, isReactive, toReactive } from './reactive'
 import type { ShallowReactiveMarker } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
@@ -16,10 +16,6 @@ export interface Ref<T = any> {
    * autocomplete, so we use a private Symbol instead.
    */
   [RefSymbol]: true
-  /**
-   * @internal
-   */
-  _shallow?: boolean
 }
 
 type RefBase<T> = {
@@ -102,9 +98,9 @@ class RefImpl<T> {
   public dep?: Dep = undefined
   public readonly __v_isRef = true
 
-  constructor(value: T, public readonly _shallow: boolean) {
-    this._rawValue = _shallow ? value : toRaw(value)
-    this._value = _shallow ? value : toReactive(value)
+  constructor(value: T, public readonly __v_isShallow: boolean) {
+    this._rawValue = __v_isShallow ? value : toRaw(value)
+    this._value = __v_isShallow ? value : toReactive(value)
   }
 
   get value() {
@@ -113,10 +109,10 @@ class RefImpl<T> {
   }
 
   set value(newVal) {
-    newVal = this._shallow ? newVal : toRaw(newVal)
+    newVal = this.__v_isShallow ? newVal : toRaw(newVal)
     if (hasChanged(newVal, this._rawValue)) {
       this._rawValue = newVal
-      this._value = this._shallow ? newVal : toReactive(newVal)
+      this._value = this.__v_isShallow ? newVal : toReactive(newVal)
       triggerRefValue(this, newVal)
     }
   }
@@ -222,7 +218,7 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
   }
 }
 
-export type ToRef<T> = [T] extends [Ref] ? T : Ref<T>
+export type ToRef<T> = IfAny<T, Ref<T>, [T] extends [Ref] ? T : Ref<T>>
 
 export function toRef<T extends object, K extends keyof T>(
   object: T,

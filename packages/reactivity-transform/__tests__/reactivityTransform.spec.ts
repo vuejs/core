@@ -19,18 +19,19 @@ test('$ unwrapping', () => {
   const { code, rootRefs } = transform(`
     import { ref, shallowRef } from 'vue'
     let foo = $(ref())
-    let a = $(ref(1))
+    export let a = $(ref(1))
     let b = $(shallowRef({
       count: 0
     }))
     let c = () => {}
     let d
+    label: var e = $(ref())
     `)
   expect(code).not.toMatch(`$(ref())`)
   expect(code).not.toMatch(`$(ref(1))`)
   expect(code).not.toMatch(`$(shallowRef({`)
   expect(code).toMatch(`let foo = (ref())`)
-  expect(code).toMatch(`let a = (ref(1))`)
+  expect(code).toMatch(`export let a = (ref(1))`)
   expect(code).toMatch(`
     let b = (shallowRef({
       count: 0
@@ -39,19 +40,21 @@ test('$ unwrapping', () => {
   // normal declarations left untouched
   expect(code).toMatch(`let c = () => {}`)
   expect(code).toMatch(`let d`)
-  expect(rootRefs).toStrictEqual(['foo', 'a', 'b'])
+  expect(code).toMatch(`label: var e = (ref())`)
+  expect(rootRefs).toStrictEqual(['foo', 'a', 'b', 'e'])
   assertCode(code)
 })
 
 test('$ref & $shallowRef declarations', () => {
   const { code, rootRefs, importedHelpers } = transform(`
     let foo = $ref()
-    let a = $ref(1)
+    export let a = $ref(1)
     let b = $shallowRef({
       count: 0
     })
     let c = () => {}
     let d
+    label: var e = $ref()
     `)
   expect(code).toMatch(
     `import { ref as _ref, shallowRef as _shallowRef } from 'vue'`
@@ -69,7 +72,8 @@ test('$ref & $shallowRef declarations', () => {
   // normal declarations left untouched
   expect(code).toMatch(`let c = () => {}`)
   expect(code).toMatch(`let d`)
-  expect(rootRefs).toStrictEqual(['foo', 'a', 'b'])
+  expect(code).toMatch(`label: var e = _ref()`)
+  expect(rootRefs).toStrictEqual(['foo', 'a', 'b', 'e'])
   expect(importedHelpers).toStrictEqual(['ref', 'shallowRef'])
   assertCode(code)
 })

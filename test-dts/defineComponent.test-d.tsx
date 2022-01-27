@@ -286,6 +286,7 @@ describe('with object props', () => {
       key={'foo'}
       // should allow ref
       ref={'foo'}
+      ref_for={true}
     />
   )
 

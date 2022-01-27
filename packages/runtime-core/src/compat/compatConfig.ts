@@ -137,7 +137,7 @@ export const deprecationData: Record<DeprecationTypes, DeprecationData> = {
     message:
       `config.devtools has been removed. To enable devtools for ` +
       `production, configure the __VUE_PROD_DEVTOOLS__ compile-time flag.`,
-    link: `https://github.com/vuejs/vue-next/tree/master/packages/vue#bundler-build-feature-flags`
+    link: `https://github.com/vuejs/core/tree/main/packages/vue#bundler-build-feature-flags`
   },
 
   [DeprecationTypes.CONFIG_KEY_CODES]: {
@@ -387,7 +387,7 @@ export const deprecationData: Record<DeprecationTypes, DeprecationData> = {
           : hasOwn(comp.props, 'modelValue'))
       ) {
         return (
-          `Component delcares "modelValue" prop, which is Vue 3 usage, but ` +
+          `Component declares "modelValue" prop, which is Vue 3 usage, but ` +
           `is running under Vue 2 compat v-model behavior. You can ${configMsg}`
         )
       }

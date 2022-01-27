@@ -49,7 +49,7 @@ export function inject(
   if (instance) {
     // #2400
     // to support `app.use` plugins,
-    // fallback to appContext's `provides` if the intance is at root
+    // fallback to appContext's `provides` if the instance is at root
     const provides =
       instance.parent == null
         ? instance.vnode.appContext && instance.vnode.appContext.provides

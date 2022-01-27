@@ -1,6 +1,6 @@
 {
   "private": true,
-  "version": "3.2.26",
+  "version": "3.2.29",
   "scripts": {
     "dev": "node scripts/dev.js",
     "build": "node scripts/build.js",
@@ -18,7 +18,7 @@
     "release": "node scripts/release.js",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s",
     "dev-compiler": "run-p \"dev template-explorer\" serve",
-    "dev-sfc": "run-p \"dev compiler-sfc -- -f esm-browser\" \"dev runtime-core -- -f esm-bundler\" \"dev runtime-dom -- -f esm-bundler\" serve-sfc-playground",
+    "dev-sfc": "run-p \"dev compiler-sfc -- -f esm-browser\" \"dev vue -- -if esm-bundler-runtime \" serve-sfc-playground",
     "serve-sfc-playground": "vite packages/sfc-playground --host",
     "serve": "serve",
     "open": "open http://localhost:5000/packages/template-explorer/local.html",
@@ -48,6 +48,7 @@
   },
   "devDependencies": {
     "@babel/types": "^7.12.0",
+    "@esbuild-plugins/node-modules-polyfill": "^0.1.4",
     "@microsoft/api-extractor": "^7.15.1",
     "@rollup/plugin-commonjs": "^18.0.0",
     "@rollup/plugin-json": "^4.0.0",
@@ -66,13 +67,14 @@
     "conventional-changelog-cli": "^2.0.31",
     "csstype": "^3.0.3",
     "enquirer": "^2.3.2",
+    "esbuild": "^0.14.11",
     "eslint": "^7.7.0",
     "execa": "^4.0.2",
     "fs-extra": "^9.0.1",
     "jest": "^27.1.0",
     "lint-staged": "^10.2.10",
     "lodash": "^4.17.15",
-    "marked": "^0.7.0",
+    "marked": "^4.0.10",
     "minimist": "^1.2.0",
     "npm-run-all": "^4.1.5",
     "prettier": "^2.3.1",
@@ -86,11 +88,11 @@
     "semver": "^7.3.2",
     "serve": "^12.0.0",
     "todomvc-app-css": "^2.3.0",
-    "tslib": "^2.3.1",
     "ts-jest": "^27.0.5",
+    "tslib": "^2.3.1",
     "typescript": "^4.2.2",
+    "vite": "^2.7.12",
     "vue": "workspace:*",
-    "vite": "^2.7.1",
     "yorkie": "^2.0.0"
   }
 }

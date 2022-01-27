@@ -838,7 +838,7 @@ function testRender(type: string, render: typeof renderToString) {
       expect(fn2).toBeCalledWith('async child error')
     })
 
-    // https://github.com/vuejs/vue-next/issues/3322
+    // https://github.com/vuejs/core/issues/3322
     test('effect onInvalidate does not error', async () => {
       const noop = () => {}
       const app = createApp({

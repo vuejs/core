@@ -1015,7 +1015,7 @@ describe('compiler: parse', () => {
       })
     })
 
-    // https://github.com/vuejs/vue-next/issues/4251
+    // https://github.com/vuejs/core/issues/4251
     test('class attribute should ignore whitespace when parsed', () => {
       const ast = baseParse('<div class=" \n\t c \t\n "></div>')
       const element = ast.children[0] as ElementNode
