@@ -29,10 +29,10 @@ export class EffectScope {
   run<T>(fn: () => T): T | undefined {
     if (this.active) {
       try {
-        this.on()
+        activeEffectScope = this
         return fn()
       } finally {
-        this.off()
+        activeEffectScope = this.parent
       }
     } else if (__DEV__) {
       warn(`cannot run an inactive effect scope.`)
@@ -40,15 +40,11 @@ export class EffectScope {
   }
 
   on() {
-    if (this.active) {
-      activeEffectScope = this
-    }
+    activeEffectScope = this
   }
 
   off() {
-    if (this.active) {
-      activeEffectScope = this.parent
-    }
+    activeEffectScope = this.parent
   }
 
   stop(fromParent?: boolean) {
