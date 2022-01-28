@@ -2,7 +2,6 @@ import { ReactiveEffect } from './effect'
 import { warn } from './warning'
 
 let activeEffectScope: EffectScope | undefined
-const effectScopeStack: EffectScope[] = []
 
 export class EffectScope {
   active = true
@@ -42,24 +41,29 @@ export class EffectScope {
 
   on() {
     if (this.active) {
-      effectScopeStack.push(this)
       activeEffectScope = this
     }
   }
 
   off() {
     if (this.active) {
-      effectScopeStack.pop()
-      activeEffectScope = effectScopeStack[effectScopeStack.length - 1]
+      activeEffectScope = this.parent
     }
   }
 
   stop(fromParent?: boolean) {
     if (this.active) {
-      this.effects.forEach(e => e.stop())
-      this.cleanups.forEach(cleanup => cleanup())
+      let i, l
+      for (i = 0, l = this.effects.length; i < l; i++) {
+        this.effects[i].stop()
+      }
+      for (i = 0, l = this.cleanups.length; i < l; i++) {
+        this.cleanups[i]()
+      }
       if (this.scopes) {
-        this.scopes.forEach(e => e.stop(true))
+        for (i = 0, l = this.scopes.length; i < l; i++) {
+          this.scopes[i].stop(true)
+        }
       }
       // nested scope, dereference from parent to avoid memory leaks
       if (this.parent && !fromParent) {
@@ -81,9 +85,8 @@ export function effectScope(detached?: boolean) {
 
 export function recordEffectScope(
   effect: ReactiveEffect,
-  scope?: EffectScope | null
+  scope: EffectScope | undefined = activeEffectScope
 ) {
-  scope = scope || activeEffectScope
   if (scope && scope.active) {
     scope.effects.push(effect)
   }
