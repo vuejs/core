@@ -45,7 +45,7 @@ export type DebuggerEventExtraInfo = {
   oldTarget?: Map<any, any> | Set<any>
 }
 
-let activeEffect: ReactiveEffect | undefined
+export let activeEffect: ReactiveEffect | undefined
 
 export const ITERATE_KEY = Symbol(__DEV__ ? 'iterate' : '')
 export const MAP_KEY_ITERATE_KEY = Symbol(__DEV__ ? 'Map key iterate' : '')
@@ -181,7 +181,7 @@ export function stop(runner: ReactiveEffectRunner) {
   runner.effect.stop()
 }
 
-let shouldTrack = true
+export let shouldTrack = true
 const trackStack: boolean[] = []
 
 export function pauseTracking() {
@@ -200,27 +200,22 @@ export function resetTracking() {
 }
 
 export function track(target: object, type: TrackOpTypes, key: unknown) {
-  if (!isTracking()) {
-    return
-  }
-  let depsMap = targetMap.get(target)
-  if (!depsMap) {
-    targetMap.set(target, (depsMap = new Map()))
-  }
-  let dep = depsMap.get(key)
-  if (!dep) {
-    depsMap.set(key, (dep = createDep()))
-  }
+  if (shouldTrack && activeEffect) {
+    let depsMap = targetMap.get(target)
+    if (!depsMap) {
+      targetMap.set(target, (depsMap = new Map()))
+    }
+    let dep = depsMap.get(key)
+    if (!dep) {
+      depsMap.set(key, (dep = createDep()))
+    }
 
-  const eventInfo = __DEV__
-    ? { effect: activeEffect, target, type, key }
-    : undefined
+    const eventInfo = __DEV__
+      ? { effect: activeEffect, target, type, key }
+      : undefined
 
-  trackEffects(dep, eventInfo)
-}
-
-export function isTracking() {
-  return shouldTrack && !!activeEffect
+    trackEffects(dep, eventInfo)
+  }
 }
 
 export function trackEffects(

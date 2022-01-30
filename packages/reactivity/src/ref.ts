@@ -1,4 +1,9 @@
-import { isTracking, trackEffects, triggerEffects } from './effect'
+import {
+  activeEffect,
+  shouldTrack,
+  trackEffects,
+  triggerEffects
+} from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { isArray, hasChanged, IfAny } from '@vue/shared'
 import { isProxy, toRaw, isReactive, toReactive } from './reactive'
@@ -24,19 +29,16 @@ type RefBase<T> = {
 }
 
 export function trackRefValue(ref: RefBase<any>) {
-  if (isTracking()) {
+  if (shouldTrack && activeEffect) {
     ref = toRaw(ref)
-    if (!ref.dep) {
-      ref.dep = createDep()
-    }
     if (__DEV__) {
-      trackEffects(ref.dep, {
+      trackEffects(ref.dep || (ref.dep = createDep()), {
         target: ref,
         type: TrackOpTypes.GET,
         key: 'value'
       })
     } else {
-      trackEffects(ref.dep)
+      trackEffects(ref.dep || (ref.dep = createDep()))
     }
   }
 }
