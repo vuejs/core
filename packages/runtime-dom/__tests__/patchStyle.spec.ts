@@ -37,7 +37,18 @@ describe(`runtime-dom: style patching`, () => {
 
   it('remove if falsy value', () => {
     const el = document.createElement('div')
-    patchProp(el, 'style', { color: 'red' }, { color: undefined })
+    patchProp(el, 'style', null, {
+      color: undefined,
+      '--color': false,
+      borderRadius: null
+    })
+    expect(el.style.cssText.replace(/\s/g, '')).toBe('')
+    patchProp(
+      el,
+      'style',
+      { color: 'red' },
+      { color: undefined, '--color': false, borderRadius: false }
+    )
     expect(el.style.cssText.replace(/\s/g, '')).toBe('')
   })
 

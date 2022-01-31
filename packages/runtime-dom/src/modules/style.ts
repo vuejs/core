@@ -42,6 +42,7 @@ function setStyle(
   name: string,
   val: string | string[]
 ) {
+  val = val == null || (val as any) === false ? '' : val
   if (isArray(val)) {
     val.forEach(v => setStyle(style, name, v))
   } else {
