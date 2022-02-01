@@ -34,7 +34,7 @@ const formatDate = v => v.replace(/T|Z/g, ' ')
 
 createApp({
   setup() {
-    const currentBranch = ref('master')
+    const currentBranch = ref('main')
     const commits = ref(null)
 
     watchEffect(() => {
@@ -47,7 +47,7 @@ createApp({
     })
 
     return {
-      branches: ['master', 'sync'],
+      branches: ['main', 'pnpm'],
       currentBranch,
       commits,
       truncate,

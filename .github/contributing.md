@@ -17,7 +17,7 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 
 ## Pull Request Guidelines
 
-- Checkout a topic branch from a base branch, e.g. `master`, and merge back against that branch.
+- Checkout a topic branch from a base branch, e.g. `main`, and merge back against that branch.
 
 - If adding a new feature:
 
