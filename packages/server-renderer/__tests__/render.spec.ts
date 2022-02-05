@@ -856,11 +856,11 @@ function testRender(type: string, render: typeof renderToString) {
         await render(
           createApp({
             components: {
-              A: defineComponent({
+              A: {
                 ssrRender(_ctx, _push) {
                   _push(`<div>A</div>`)
                 }
-              }),
+              },
               B: {
                 render: () => h('div', 'B')
               }
