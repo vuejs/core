@@ -2,7 +2,7 @@
  * @jest-environment node
  */
 
-import { createApp, defineComponent } from 'vue'
+import { createApp } from 'vue'
 import { renderToString } from '../src/renderToString'
 
 describe('ssr: compiler options', () => {
@@ -125,7 +125,7 @@ describe('ssr: compiler options', () => {
       template,
       // No compilerOptions on the root
       components: {
-        MyChild: defineComponent({
+        MyChild: {
           template,
           compilerOptions: {
             isCustomElement: tag => tag.startsWith('x-')
@@ -138,7 +138,7 @@ describe('ssr: compiler options', () => {
               }
             }
           }
-        })
+        }
       }
     })
     expect(await renderToString(app)).toBe(

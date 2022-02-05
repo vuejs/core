@@ -1138,11 +1138,15 @@ describe('expose component types', () => {
 
   const parent = defineComponent({
     components: {
-      child
+      child,
+      child2: {
+        template: `<div></div>`
+      }
     }
   })
 
   expectType<typeof child>(parent.components!.child)
+  expectType<Component>(parent.components!.child2)
 
   // global components
   expectType<KeepAliveProps>(new parent.components!.KeepAlive().$props)
@@ -1155,7 +1159,7 @@ describe('expose component types', () => {
 
 describe('directive typing', () => {
   const customDirective: Directive = {
-    created(el) {}
+    created(_) {}
   }
 
   const comp = defineComponent({
@@ -1163,11 +1167,17 @@ describe('directive typing', () => {
       a: String
     },
     directives: {
-      customDirective
+      customDirective,
+      localDirective: {
+        created(_, { arg }) {
+          expectType<string | undefined>(arg)
+        }
+      }
     }
   })
 
   expectType<typeof customDirective>(comp.directives!.customDirective)
+  expectType<Directive>(comp.directives!.localDirective)
 
   // global directive
   expectType<typeof vShow>(comp.directives!.vShow)

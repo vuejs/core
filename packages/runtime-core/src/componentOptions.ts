@@ -143,8 +143,14 @@ export interface ComponentOptionsBase<
   // Luckily `render()` doesn't need any arguments nor does it care about return
   // type.
   render?: Function
-  components?: LC
-  directives?: Directives
+
+  // NOTE: extending both LC and Record<string, Component> allows objects to be forced
+  // to be of type Component, while still inferring LC generic
+  components?: LC & Record<string, Component>
+  // NOTE: extending both Directives and Record<string, Directive> allows objects to be forced
+  // to be of type Directive, while still inferring Directives generic
+  directives?: Directives & Record<string, Directive>
+
   inheritAttrs?: boolean
   emits?: (E | EE[]) & ThisType<void>
   expose?: Exposed[]

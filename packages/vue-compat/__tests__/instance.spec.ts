@@ -239,8 +239,7 @@ test('INSTANCE_LISTENERS', () => {
     components: {
       child: {
         template: `<div/>`,
-        mounted(this: LegacyPublicInstance) {
-          // @ts-expect-error $listeners type: Record<string, Function | Function[]>
+        mounted() {
           listeners = this.$listeners
         }
       }
@@ -264,7 +263,7 @@ describe('INSTANCE_SCOPED_SLOTS', () => {
       components: {
         child: {
           compatConfig: { RENDER_FUNCTION: false },
-          render(this: LegacyPublicInstance) {
+          render() {
             slots = this.$scopedSlots
           }
         }
