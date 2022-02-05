@@ -12,7 +12,7 @@ return withDirectives(h(comp), [
 */
 
 import { VNode } from './vnode'
-import { isFunction, EMPTY_OBJ, makeMap } from '@vue/shared'
+import { isFunction, EMPTY_OBJ, isBuiltInDirective } from '@vue/shared'
 import { warn } from './warning'
 import { ComponentInternalInstance, Data } from './component'
 import { currentRenderingInstance } from './componentRenderContext'
@@ -99,10 +99,6 @@ export type Directive<
   | FunctionDirective<HostElement, Value, Modifiers, Arg>
 
 export type DirectiveModifiers<K extends string = string> = Record<K, boolean>
-
-const isBuiltInDirective = /*#__PURE__*/ makeMap(
-  'bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,slot,text,memo'
-)
 
 export function validateDirectiveName(name: string) {
   if (isBuiltInDirective(name)) {
