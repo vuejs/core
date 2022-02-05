@@ -296,9 +296,6 @@ describe('INSTANCE_SCOPED_SLOTS', () => {
             scopedSlots = this.$scopedSlots
           }
         }
-      },
-      render() {
-        this.$
       }
     }).$mount()
 
