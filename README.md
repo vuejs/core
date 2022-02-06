@@ -20,3 +20,11 @@ This is the repository for Vue 3.x.
 Please consult the [Migration Guide](http://v3-migration.vuejs.org/).
 
 Also note: Vue 3 does not support IE11 ([RFC](https://github.com/vuejs/rfcs/blob/master/active-rfcs/0038-vue3-ie11-support.md) | [Discussion](https://github.com/vuejs/rfcs/discussions/296)).
+
+## Sponsors
+
+Vue.js is an MIT-licensed open source project with its ongoing development made possible entirely by the support of these awesome [backers](https://github.com/vuejs/core/blob/main/BACKERS.md). If you'd like to join them, please consider [ sponsor Vue's development](https://staging.vuejs.org/sponsor/).
+
+<p align="center">
+  <img src="https://sponsors.vuejs.org/sponsors.svg">
+</p>
