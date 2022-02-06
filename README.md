@@ -26,7 +26,7 @@ Also note: Vue 3 does not support IE11 ([RFC](https://github.com/vuejs/rfcs/blob
 Vue.js is an MIT-licensed open source project with its ongoing development made possible entirely by the support of these awesome [backers](https://github.com/vuejs/core/blob/main/BACKERS.md). If you'd like to join them, please consider [ sponsor Vue's development](https://staging.vuejs.org/sponsor/).
 
 <p align="center">
-  <a target="_blank" href="https://sponsors.vuejs.org/sponsors.svg">
+  <a target="_blank" href="https://staging.vuejs.org/sponsor/">
     <img alt="sponsors" src="https://sponsors.vuejs.org/sponsors.svg">
   </a>
 </p>
