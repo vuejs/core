@@ -1,16 +1,16 @@
-# vuejs/core [![npm](https://img.shields.io/npm/v/vue/next.svg)](https://www.npmjs.com/package/vue/v/next) [![build status](https://github.com/vuejs/core/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/vuejs/core/actions/workflows/ci.yml)
+# vuejs/core [![npm](https://img.shields.io/npm/v/vue.svg)](https://www.npmjs.com/package/vue) [![build status](https://github.com/vuejs/core/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/vuejs/core/actions/workflows/ci.yml)
 
 This is the repository for Vue 3.x.
 
 ## Quickstart
 
-- Via CDN: `<script src="https://unpkg.com/vue@next"></script>`
+- Via CDN: `<script src="https://unpkg.com/vue@3"></script>`
 - Try in the browser on [StackBlitz](https://vite.new/vue)
 - Scaffold via [create-vue](https://github.com/vuejs/create-vue):
 
   ```bash
   # npm
-  npm init vue@latest
+  npm init vue@3
   # yarn
   yarn create vue
   ```
