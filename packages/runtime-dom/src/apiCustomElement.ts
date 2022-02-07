@@ -216,16 +216,16 @@ export class VueElement extends BaseClass {
 
     const resolve = (def: InnerComponentDef) => {
       const { props, styles } = def
-      const hasOptions = !isArray(props)
+      const hasOptions = props && !isArray(props)
       const propsVal = props ? (hasOptions ? Object.keys(props) : props) : []
-      const attrs = Object.keys(this._props).filter( p => !propsVal.includes(p))
+      const attrs = Object.keys(this._props).filter(p => !propsVal.includes(p))
       const rawKeys = [...propsVal.concat(attrs)]
 
       // cast Number-type props set before resolve
       let numberProps
       if (hasOptions) {
         for (const key in this._props) {
-          const opt = props && props[key]
+          const opt = props[key]
           if (opt === Number || (opt && opt.type === Number)) {
             this._props[key] = toNumber(this._props[key])
             ;(numberProps || (numberProps = Object.create(null)))[key] = true
