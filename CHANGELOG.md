@@ -1,3 +1,17 @@
+## [3.2.30](https://github.com/vuejs/core/compare/v3.2.29...v3.2.30) (2022-02-07)
+
+
+### Features
+
+* **ssr:** support custom directive getSSRProps in optimized compilation ([60cf175](https://github.com/vuejs/core/commit/60cf175d88236db2c2a4a02900c92e26ceea0073)), closes [#5304](https://github.com/vuejs/core/issues/5304)
+
+
+### Performance Improvements
+
+* **reactivity:** optimize effect/effectScope active state tracking ([2993a24](https://github.com/vuejs/core/commit/2993a246181df12e367b7abdfce0954244e8f7ec))
+
+
+
 ## [3.2.29](https://github.com/vuejs/vue-next/compare/v3.2.28...v3.2.29) (2022-01-23)
 
 
