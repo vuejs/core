@@ -232,7 +232,10 @@ describe('defineCustomElement', () => {
         emit('created')
         return () =>
           h('div', {
-            onClick: () => emit('my-click', 1)
+            onClick: () => {
+              emit('my-click', 1)
+              emit('myClick', 1) // validate hypenization
+            }
           })
       }
     })
@@ -252,8 +255,11 @@ describe('defineCustomElement', () => {
       const spy = jest.fn()
       e.addEventListener('my-click', spy)
       e.shadowRoot!.childNodes[0].dispatchEvent(new CustomEvent('click'))
-      expect(spy).toHaveBeenCalled()
+      expect(spy).toHaveBeenCalledTimes(2)
       expect(spy.mock.calls[0][0]).toMatchObject({
+        detail: [1]
+      })
+      expect(spy.mock.calls[1][0]).toMatchObject({
         detail: [1]
       })
     })

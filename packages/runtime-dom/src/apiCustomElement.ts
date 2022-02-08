@@ -354,7 +354,7 @@ export class VueElement extends BaseClass {
         // intercept emit
         instance.emit = (event: string, ...args: any[]) => {
           this.dispatchEvent(
-            new CustomEvent(event, {
+            new CustomEvent(hyphenate(event), {
               detail: args
             })
           )
