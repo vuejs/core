@@ -1308,20 +1308,24 @@ import * as RuntimeCore from '@vue/runtime-core'
 
 type ReservedProps = {
   key?: string | number | symbol
-  ref?:
-    | string
-    | RuntimeCore.Ref
-    | ((ref: Element | RuntimeCore.ComponentPublicInstance | null) => void)
   ref_for?: boolean
   ref_key?: string
 }
+
+type RefProp<T> = string | RuntimeCore.Ref<T | null> | ((ref: T | null) => void)
 
 type ElementAttrs<T> = T & ReservedProps
 
 type NativeElements = {
   [K in keyof IntrinsicElementAttributes]: ElementAttrs<
     IntrinsicElementAttributes[K]
-  >
+  > & {
+    ref?: RefProp<
+      K extends keyof HTMLElementTagNameMap
+        ? HTMLElementTagNameMap[K]
+        : HTMLElement
+    >
+  }
 }
 
 declare global {
@@ -1339,6 +1343,30 @@ declare global {
       [name: string]: any
     }
     interface IntrinsicAttributes extends ReservedProps {}
+
+    interface IntrinsicClassAttributes<T> extends ReservedProps {}
+
+    // managed based props, this will be used to override the props defined
+    // used mainly to set `ref` property correct
+    type LibraryManagedAttributes<C, P> = {
+      ref?: P extends { ref?: infer R } // it already exists, most likely NativeElement
+        ? R
+        : RefProp<
+            C extends { new (): infer I }
+              ? I
+              : C extends RuntimeCore.FunctionalComponent
+              ? C
+              : C extends RuntimeCore.FunctionalComponent<infer Props, infer E>
+              ? E extends RuntimeCore.EmitsOptions
+                ? RuntimeCore.ComponentPublicInstance<Props, {}, {}, {}, {}, E>
+                : { x: 1 } & RuntimeCore.ComponentPublicInstance<Props>
+              : C extends (props: infer Props) => any
+              ? RuntimeCore.ComponentPublicInstance<Props>
+              : C extends () => any
+              ? RuntimeCore.ComponentPublicInstance<{}>
+              : Element | RuntimeCore.ComponentPublicInstance
+          >
+    } & P
   }
 }
 

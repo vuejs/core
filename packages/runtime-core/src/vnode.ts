@@ -65,10 +65,10 @@ export type VNodeTypes =
   | typeof TeleportImpl
   | typeof SuspenseImpl
 
-export type VNodeRef =
+export type VNodeRef<T = object> =
   | string
-  | Ref
-  | ((ref: object | null, refs: Record<string, any>) => void)
+  | Ref<T | null>
+  | ((ref: T | null, refs: Record<string, any>) => void)
 
 export type VNodeNormalizedRefAtom = {
   i: ComponentInternalInstance
@@ -90,9 +90,9 @@ export type VNodeHook =
   | VNodeUpdateHook[]
 
 // https://github.com/microsoft/TypeScript/issues/33099
-export type VNodeProps = {
+export type VNodeProps<ComponentInstance = object> = {
   key?: string | number | symbol
-  ref?: VNodeRef
+  ref?: VNodeRef<ComponentInstance>
   ref_for?: boolean
   ref_key?: string
 

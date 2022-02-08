@@ -906,7 +906,7 @@ describe('api: watch', () => {
 
     const Comp = defineComponent({
       setup() {
-        const comp = ref<ComponentPublicInstance | undefined>()
+        const comp = ref<ComponentPublicInstance | null>()
         const show = ref(true)
         _show = show
         return { comp, show }

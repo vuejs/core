@@ -26,7 +26,8 @@ import {
   ComponentPublicInstanceConstructor
 } from './componentPublicInstance'
 
-export type PublicProps = VNodeProps &
+// NOTE omit `ref` since that will be overridden by JSX.d.ts
+export type PublicProps = Omit<VNodeProps, 'ref'> &
   AllowedComponentProps &
   ComponentCustomProps
 

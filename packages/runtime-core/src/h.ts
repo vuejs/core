@@ -52,7 +52,7 @@ h(Component, {}, {}) // named slots
 h(Component, null, {})
 **/
 
-type RawProps = VNodeProps & {
+type RawProps<ComponentInstance = object> = VNodeProps<ComponentInstance> & {
   // used to differ from a single VNode object as children
   __v_isVNode?: never
   // used to differ from Array children
