@@ -2,7 +2,7 @@ import {reactive} from '@vue/reactivity'
 import {getCurrentInstance} from './component'
 
 /**
- * this debug function is helper for watching states in the vue devtool (it runs only in dev mode)
+ * this debug function is a helper for watching states in the vue devtool (it runs only in dev mode)
  * @example
  * const Component = defineComponent({
  *   setup() {
