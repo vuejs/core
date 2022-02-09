@@ -178,14 +178,19 @@ function checkFileSize(filePath) {
     return
   }
   const file = fs.readFileSync(filePath)
-  const minSize = (file.length / 1024).toFixed(2) + 'kb'
+  const minSize = getFileSize(file)
   const gzipped = gzipSync(file)
-  const gzippedSize = (gzipped.length / 1024).toFixed(2) + 'kb'
+  const gzippedSize = getFileSize(gzipped)
   const compressed = compress(file)
-  const compressedSize = (compressed.length / 1024).toFixed(2) + 'kb'
+  const compressedSize = getFileSize(compressed)
   console.log(
     `${chalk.gray(
       chalk.bold(path.basename(filePath))
     )} min:${minSize} / gzip:${gzippedSize} / brotli:${compressedSize}`
   )
 }
+
+function getFileSize(file) {
+  return (file.length / 1024).toFixed(2) + 'kb'
+}
+
