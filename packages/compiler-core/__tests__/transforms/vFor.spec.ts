@@ -265,35 +265,6 @@ describe('compiler: v-for', () => {
       )
     })
 
-    test('<template v-for> key placement', () => {
-      const onError = jest.fn()
-      parseWithForTransform(
-        `
-      <template v-for="item in items">
-        <div :key="item.id"/>
-      </template>`,
-        { onError }
-      )
-
-      expect(onError).toHaveBeenCalledTimes(1)
-      expect(onError).toHaveBeenCalledWith(
-        expect.objectContaining({
-          code: ErrorCodes.X_V_FOR_TEMPLATE_KEY_PLACEMENT
-        })
-      )
-
-      // should not warn on nested v-for keys
-      parseWithForTransform(
-        `
-      <template v-for="item in items">
-        <div v-for="c in item.children" :key="c.id"/>
-      </template>`,
-        { onError }
-      )
-      expect(onError).toHaveBeenCalledTimes(1)
-    })
-  })
-
   describe('source location', () => {
     test('value & source', () => {
       const source = '<span v-for="item in items" />'

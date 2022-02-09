@@ -117,24 +117,6 @@ export const transformFor = createStructuralDirectiveTransform(
         let childBlock: BlockCodegenNode
         const { children } = forNode
 
-        // check <template v-for> key placement
-        if ((__DEV__ || !__BROWSER__) && isTemplate) {
-          node.children.some(c => {
-            if (c.type === NodeTypes.ELEMENT) {
-              const key = findProp(c, 'key')
-              if (key) {
-                context.onError(
-                  createCompilerError(
-                    ErrorCodes.X_V_FOR_TEMPLATE_KEY_PLACEMENT,
-                    key.loc
-                  )
-                )
-                return true
-              }
-            }
-          })
-        }
-
         const needFragmentWrapper =
           children.length !== 1 || children[0].type !== NodeTypes.ELEMENT
         const slotOutlet = isSlotOutlet(node)
