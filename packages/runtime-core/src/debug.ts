@@ -16,12 +16,11 @@ import {getCurrentInstance} from './component'
  * })
  * @param states any states you want to see in the vue devtool
  */
-export const debug = (states: Record<string, any>) => {
-  if (!__DEV__) {
-    return
-  }
+export const debug = __DEV__ ? (states: Record<string, any>) => {
   const instance = getCurrentInstance()
   if (instance) {
     instance.setupState = reactive(Object.assign({}, states, instance.setupState))
   }
+} : (states: Record<string, any>) => {
+  // empty
 }
