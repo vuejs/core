@@ -264,6 +264,7 @@ describe('compiler: v-for', () => {
         })
       )
     })
+  })
 
   describe('source location', () => {
     test('value & source', () => {
