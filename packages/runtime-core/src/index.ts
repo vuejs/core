@@ -261,6 +261,7 @@ export {
   AsyncComponentLoader
 } from './apiAsyncComponent'
 export { HMRRuntime } from './hmr'
+export { debug } from './debug'
 
 // Internal API ----------------------------------------------------------------
 
