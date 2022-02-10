@@ -171,3 +171,19 @@ export const getGlobalThis = (): any => {
         : {})
   )
 }
+
+const optionsModifierRE = /(?:Once|Passive|Capture)$/
+
+export function parseEventName(name: string): [string, EventListenerOptions | undefined] {
+  let options: EventListenerOptions | undefined
+  if (optionsModifierRE.test(name)) {
+    options = {}
+    let m
+    while ((m = name.match(optionsModifierRE))) {
+      name = name.slice(0, name.length - m[0].length)
+      ;(options as any)[m[0].toLowerCase()] = true
+      options
+    }
+  }
+  return [hyphenate(name.slice(2)), options]
+}

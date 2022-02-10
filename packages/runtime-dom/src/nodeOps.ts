@@ -1,4 +1,5 @@
 import { RendererOptions } from '@vue/runtime-core'
+import { parseEventName } from '@vue/shared'
 
 export const svgNS = 'http://www.w3.org/2000/svg'
 
@@ -13,7 +14,23 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
 
   remove: child => {
     const parent = child.parentNode
+    function removeVEI (node: any) {
+      const _vei = node._vei
+      if (_vei) {
+        Object.keys(_vei).forEach(key => {
+          const [name] = parseEventName(key)
+          node.removeEventListener(name, _vei[key])
+        })
+        node._vei = null
+      }
+    }
+    // #5363
     if (parent) {
+      const nodeList = (child as Element).querySelectorAll ? (child as Element).querySelectorAll('*') : []
+      for (let i = 0; i < nodeList.length; i ++) {
+        removeVEI(nodeList)
+      }
+      removeVEI(child)
       parent.removeChild(child)
     }
   },

@@ -1,4 +1,4 @@
-import { hyphenate, isArray } from '@vue/shared'
+import { isArray, parseEventName } from '@vue/shared'
 import {
   ComponentInternalInstance,
   callWithAsyncErrorHandling
@@ -75,7 +75,7 @@ export function patchEvent(
     // patch
     existingInvoker.value = nextValue
   } else {
-    const [name, options] = parseName(rawName)
+    const [name, options] = parseEventName(rawName)
     if (nextValue) {
       // add
       const invoker = (invokers[rawName] = createInvoker(nextValue, instance))
@@ -86,22 +86,6 @@ export function patchEvent(
       invokers[rawName] = undefined
     }
   }
-}
-
-const optionsModifierRE = /(?:Once|Passive|Capture)$/
-
-function parseName(name: string): [string, EventListenerOptions | undefined] {
-  let options: EventListenerOptions | undefined
-  if (optionsModifierRE.test(name)) {
-    options = {}
-    let m
-    while ((m = name.match(optionsModifierRE))) {
-      name = name.slice(0, name.length - m[0].length)
-      ;(options as any)[m[0].toLowerCase()] = true
-      options
-    }
-  }
-  return [hyphenate(name.slice(2)), options]
 }
 
 function createInvoker(
