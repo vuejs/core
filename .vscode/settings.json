@@ -15,5 +15,6 @@
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
   "editor.suggest.snippetsPreventQuickSuggestions": false,
-  "liveServer.settings.port": 5502
+  "liveServer.settings.port": 5502,
+  "aiXcoder.showTrayIcon": true
 }

@@ -1176,6 +1176,7 @@ function baseCreateRenderer(
       // 进行与运算符操作
       if (n2.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
         // 代码块中添加;避免多个JS文件合并压缩的时候防止文件之间没有;分隔导致错误.
+        // 缓存组件，直接从缓存里面拿取
         ;(parentComponent!.ctx as KeepAliveContext).activate(
           n2,
           container,
