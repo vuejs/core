@@ -11,7 +11,9 @@ import {
   FunctionalComponent,
   ComponentPublicInstance,
   toRefs,
-  IsAny
+  IsAny,
+  getCurrentInstance,
+  ComponentCustomProperties
 } from './index'
 
 declare function extractComponentOptions<Props, RawBindings>(
@@ -475,4 +477,13 @@ describe('class', () => {
   const { props } = extractComponentOptions(MyComponent)
 
   expectType<number>(props.foo)
+})
+
+describe('getCurrentInstance', () => {
+  const instance = getCurrentInstance()!
+
+  expectType<ComponentCustomProperties>(
+    instance.appContext.config.globalProperties
+  )
+  expectType<ComponentCustomProperties>(instance.proxy!)
 })
