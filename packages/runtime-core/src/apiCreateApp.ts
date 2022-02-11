@@ -11,7 +11,10 @@ import {
   MergedComponentOptions,
   RuntimeCompilerOptions
 } from './componentOptions'
-import { ComponentPublicInstance } from './componentPublicInstance'
+import {
+  ComponentCustomProperties,
+  ComponentPublicInstance
+} from './componentPublicInstance'
 import { Directive, validateDirectiveName } from './directives'
 import { RootRenderFunction } from './renderer'
 import { InjectionKey } from './apiInject'
@@ -64,42 +67,13 @@ export interface App<HostElement = any> {
 
 export type OptionMergeFunction = (to: unknown, from: unknown) => any
 
-/**
- * Custom properties added to globalProperties object.
- *
- * @example
- * Here is an example of adding a property `$myAttribute` to the global instance:
- * ```ts
- * import { createApp, ref } from 'vue'
- * import type { Ref } from 'vue'
- *
- * declare module '@vue/runtime-core' {
- *   interface GlobalProperties {
- *     $myAttribute: Ref<boolean>
- *   }
- * }
- *
- * const app = createApp({})
- * app.config.globalProperties.$myAttribute = ref(false);
- *
- * const vm = app.mount('#app')
- * // we can access the property on the app
- * app.config.globalProperties.$myAttribute
- * // or when using `getCurrentInstance()`
- * getCurrentInstance()!.appContext.config.globalProperties.$myAttribute
- * ```
- */
-export interface GlobalProperties {
-  [key: string]: any
-}
-
 export interface AppConfig {
   // @private
   readonly isNativeTag?: (tag: string) => boolean
 
   performance: boolean
   optionMergeStrategies: Record<string, OptionMergeFunction>
-  globalProperties: GlobalProperties
+  globalProperties: ComponentCustomProperties
   errorHandler?: (
     err: unknown,
     instance: ComponentPublicInstance | null,
