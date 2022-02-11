@@ -1,11 +1,4 @@
-import {
-  ComponentCustomProperties,
-  defineComponent,
-  describe,
-  expectError,
-  expectType,
-  getCurrentInstance
-} from './index'
+import { defineComponent, expectError, expectType } from './index'
 
 declare module '@vue/runtime-core' {
   interface ComponentCustomOptions {
@@ -13,7 +6,7 @@ declare module '@vue/runtime-core' {
   }
 
   interface ComponentCustomProperties {
-    state: 'stopped' | 'running'
+    state?: 'stopped' | 'running'
   }
 
   interface ComponentCustomProps {
@@ -42,6 +35,14 @@ export const Custom = defineComponent({
       expectError(this.notExisting)
       this.counter++
       this.state = 'running'
+
+      this.$.appContext.config.globalProperties.state = 'running'
+
+      expectError(
+        // @ts-expect-error
+        (this.$.appContext.config.globalProperties.state = 'not valid')
+      )
+
       // @ts-expect-error
       expectError((this.state = 'not valid'))
     }
@@ -62,15 +63,3 @@ expectError(<Custom baz="baz" />)
 expectError(<Custom baz={1} notExist={1} />)
 // @ts-expect-error
 expectError(<Custom baz={1} custom="custom" />)
-
-describe('getCurrentInstance', () => {
-  const instance = getCurrentInstance()!
-
-  expectType<ComponentCustomProperties>(
-    instance.appContext.config.globalProperties
-  )
-  expectType<ComponentCustomProperties>(instance.proxy!)
-  expectType<'stopped' | 'running'>(
-    instance.appContext.config.globalProperties.state
-  )
-})
