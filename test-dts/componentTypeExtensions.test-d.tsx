@@ -1,4 +1,11 @@
-import { defineComponent, expectError, expectType } from './index'
+import {
+  ComponentCustomProperties,
+  defineComponent,
+  describe,
+  expectError,
+  expectType,
+  getCurrentInstance
+} from './index'
 
 declare module '@vue/runtime-core' {
   interface ComponentCustomOptions {
@@ -55,3 +62,15 @@ expectError(<Custom baz="baz" />)
 expectError(<Custom baz={1} notExist={1} />)
 // @ts-expect-error
 expectError(<Custom baz={1} custom="custom" />)
+
+describe('getCurrentInstance', () => {
+  const instance = getCurrentInstance()!
+
+  expectType<ComponentCustomProperties>(
+    instance.appContext.config.globalProperties
+  )
+  expectType<ComponentCustomProperties>(instance.proxy!)
+  expectType<'stopped' | 'running'>(
+    instance.appContext.config.globalProperties.state
+  )
+})
