@@ -206,7 +206,8 @@ export {
   ComponentInternalInstance,
   SetupContext,
   ComponentCustomProps,
-  AllowedComponentProps
+  AllowedComponentProps,
+  ComponentInstance
 } from './component'
 export { DefineComponent } from './apiDefineComponent'
 export {

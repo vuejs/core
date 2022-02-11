@@ -70,6 +70,27 @@ import { SchedulerJob } from './scheduler'
 
 export type Data = Record<string, unknown>
 
+export type ComponentInstance<T> = T extends { new (): ComponentPublicInstance }
+  ? InstanceType<T>
+  : T extends FunctionalComponent<infer Props, infer Emits>
+  ? ComponentPublicInstance<Props, {}, {}, {}, {}, Emits>
+  : T extends Component<
+      infer Props,
+      infer RawBindings,
+      infer D,
+      infer C,
+      infer M
+    >
+  ? // NOTE we override Props/RawBindings/D to make sure is not `unknown`
+    ComponentPublicInstance<
+      unknown extends Props ? {} : Props,
+      unknown extends RawBindings ? {} : RawBindings,
+      unknown extends D ? {} : D,
+      C,
+      M
+    >
+  : never // not a vue Component
+
 /**
  * For extending allowed non-declared props on components in TSX
  */

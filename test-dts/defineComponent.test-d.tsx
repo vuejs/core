@@ -12,7 +12,8 @@ import {
   ComponentOptions,
   SetupContext,
   IsUnion,
-  h
+  h,
+  ComponentInstance
 } from './index'
 
 describe('with object props', () => {
@@ -1066,7 +1067,7 @@ describe('extract instance type', () => {
     }
   })
 
-  const compA = {} as InstanceType<typeof CompA>
+  const compA = {} as ComponentInstance<typeof CompA>
 
   expectType<boolean>(compA.a)
   expectType<string>(compA.b)
@@ -1114,7 +1115,7 @@ describe('async setup', () => {
     }
   })
 
-  const vm = {} as InstanceType<typeof Comp>
+  const vm = {} as ComponentInstance<typeof Comp>
   // assert setup context unwrapping
   expectType<number>(vm.a)
   expectType<string>(vm.b.c.value)
