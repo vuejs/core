@@ -450,7 +450,8 @@ export function createComponentInstance(
   const instance: ComponentInternalInstance = {
     uid: uid++,
     vnode,
-    type,
+    // {mounted: ƒ, template: '\n  <h1 name="钟阳山" value="888">i am h1</h1>\n  <h2>i am h2</h2>'}
+    type, // 通过转变template的内容，生成了script内容。
     parent,
     appContext,
     root: null!, // to be immediately set
