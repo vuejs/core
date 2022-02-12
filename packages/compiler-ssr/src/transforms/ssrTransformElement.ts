@@ -338,7 +338,6 @@ export function buildSSRProps(
   }
   if (directives.length) {
     for (const dir of directives) {
-      context.directives.add(dir.name)
       mergePropsArgs.push(
         createCallExpression(context.helper(SSR_GET_DIRECTIVE_PROPS), [
           `_ctx`,
