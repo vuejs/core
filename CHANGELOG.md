@@ -1,3 +1,14 @@
+## [3.2.31](https://github.com/vuejs/core/compare/v3.2.30...v3.2.31) (2022-02-12)
+
+
+### Bug Fixes
+
+* **compiler-ssr:** no need to inject resolveDirective calls for setup custom directives ([436c500](https://github.com/vuejs/core/commit/436c500d2c418930652fededc4882540dcd0c987))
+* **runtime-core:** allow spying on proxy methods ([#4216](https://github.com/vuejs/core/issues/4216)) ([8457d8b](https://github.com/vuejs/core/commit/8457d8b980674b09547edb2dae28091306fe6aa8))
+* **ssr:** always hydrate children for HMR ([#5406](https://github.com/vuejs/core/issues/5406)) ([0342fae](https://github.com/vuejs/core/commit/0342fae8ad0e71866e9b9725a1f9c471db775c76)), closes [#5405](https://github.com/vuejs/core/issues/5405)
+
+
+
 ## [3.2.30](https://github.com/vuejs/core/compare/v3.2.29...v3.2.30) (2022-02-07)
 
 
