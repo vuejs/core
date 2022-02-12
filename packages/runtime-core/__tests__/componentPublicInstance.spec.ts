@@ -257,13 +257,13 @@ describe('component: proxy', () => {
     expect(instanceProxy.isDisplayed).toBe(true)
   })
 
-  test('allow spying on proxy methods', () => {
+  test('allow jest spying on proxy methods with Object.defineProperty', () => {
     let instanceProxy: any
     const Comp = {
       render() {},
       setup() {
         return {
-          toggle() {}
+          toggle() { return 'a'}
         }
       },
       mounted() {
@@ -274,10 +274,42 @@ describe('component: proxy', () => {
     const app = createApp(Comp)
 
     app.mount(nodeOps.createElement('div'))
+    
+    // access 'toggle' to ensure key is cached
+    let v1 = instanceProxy.toggle()
 
-    const spy = jest.spyOn(instanceProxy, 'toggle')
+    // reconfigure "toggle" to be getter based.
+    let getCalledTimes = 0
+    Object.defineProperty(instanceProxy, 'toggle', {
+      get(){
+        getCalledTimes++
+        return  ()=> 'b'
+      }
+    })
 
+    // getter should not be evaluated on definition
+    expect(getCalledTimes).toEqual(0)
+
+    // invoke "toggle" after "defineProperty"
+    let v2 = instanceProxy.toggle()
+    expect(getCalledTimes).toEqual(1)
+
+    // expect toggle getter not to be cached. it can't be
     instanceProxy.toggle()
+    expect(getCalledTimes).toEqual(2)
+    
+    // attaching jest spy, triggers the getter once, cache it and override the property.
+    // also uses Object.defineProperty 
+    const spy = jest.spyOn(instanceProxy, 'toggle')
+    expect(getCalledTimes).toEqual(3)
+
+    // toggle getter is not going to be evaluated due to jest wrapper caching it result
+    let v3 = instanceProxy.toggle()
+    expect(getCalledTimes).toEqual(3)
+
+    expect(v1).toEqual('a')
+    expect(v2).toEqual('b')
+    expect(v3).toEqual('b')
 
     expect(spy).toHaveBeenCalled()
   })

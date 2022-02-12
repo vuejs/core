@@ -455,7 +455,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     descriptor: PropertyDescriptor
   ) {
     if (descriptor.get != null) {
-      this.set!(target, key, descriptor.get(), null)
+      target.$.accessCache[key] = 0;
     } else if (descriptor.value != null) {
       this.set!(target, key, descriptor.value, null)
     }
