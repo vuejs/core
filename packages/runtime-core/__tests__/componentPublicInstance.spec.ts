@@ -214,6 +214,74 @@ describe('component: proxy', () => {
     ])
   })
 
+  test('allow updating proxy with Object.defineProperty', () => {
+    let instanceProxy: any
+    const Comp = {
+      render() {},
+      setup() {
+        return {
+          isDisplayed: true
+        }
+      },
+      mounted() {
+        instanceProxy = this
+      }
+    }
+
+    const app = createApp(Comp)
+
+    app.mount(nodeOps.createElement('div'))
+
+    Object.defineProperty(instanceProxy, 'isDisplayed', { value: false })
+
+    expect(instanceProxy.isDisplayed).toBe(false)
+
+    Object.defineProperty(instanceProxy, 'isDisplayed', { value: true })
+
+    expect(instanceProxy.isDisplayed).toBe(true)
+
+    Object.defineProperty(instanceProxy, 'isDisplayed', {
+      get() {
+        return false
+      }
+    })
+
+    expect(instanceProxy.isDisplayed).toBe(false)
+
+    Object.defineProperty(instanceProxy, 'isDisplayed', {
+      get() {
+        return true
+      }
+    })
+
+    expect(instanceProxy.isDisplayed).toBe(true)
+  })
+
+  test('allow spying on proxy methods', () => {
+    let instanceProxy: any
+    const Comp = {
+      render() {},
+      setup() {
+        return {
+          toggle() {}
+        }
+      },
+      mounted() {
+        instanceProxy = this
+      }
+    }
+
+    const app = createApp(Comp)
+
+    app.mount(nodeOps.createElement('div'))
+
+    const spy = jest.spyOn(instanceProxy, 'toggle')
+
+    instanceProxy.toggle()
+
+    expect(spy).toHaveBeenCalled()
+  })
+
   // #864
   test('should not warn declared but absent props', () => {
     const Comp = {
