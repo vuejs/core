@@ -314,6 +314,37 @@ describe('component: proxy', () => {
     expect(spy).toHaveBeenCalled()
   })
 
+  test('defineProperty on proxy property with value descriptor', () => {
+    let instanceProxy: any
+    const Comp = {
+      render() {},
+      setup() {
+        return {
+          toggle:'a'
+        }
+      },
+      mounted() {
+        instanceProxy = this
+      }
+    }
+
+    const app = createApp(Comp)
+
+    app.mount(nodeOps.createElement('div'))
+    
+    let v1 = instanceProxy.toggle
+
+    Object.defineProperty(instanceProxy, 'toggle', {
+      value:'b'
+    })
+
+    let v2 = instanceProxy.toggle
+
+    expect(v1).toEqual('a')
+    expect(v2).toEqual('b')
+ 
+  })
+
   // #864
   test('should not warn declared but absent props', () => {
     const Comp = {
