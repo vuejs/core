@@ -337,11 +337,16 @@ describe('component: proxy', () => {
     Object.defineProperty(instanceProxy, 'toggle', {
       value:'b'
     })
-
     let v2 = instanceProxy.toggle
+
+    Object.defineProperty(instanceProxy, 'toggle', {
+      value:null
+    })
+    let v3 = instanceProxy.toggle
 
     expect(v1).toEqual('a')
     expect(v2).toEqual('b')
+    expect(v3).toBeNull()    
  
   })
 
