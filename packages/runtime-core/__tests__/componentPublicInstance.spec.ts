@@ -257,13 +257,17 @@ describe('component: proxy', () => {
     expect(instanceProxy.isDisplayed).toBe(true)
   })
 
+ 
   test('allow jest spying on proxy methods with Object.defineProperty', () => {
+    // #5417
     let instanceProxy: any
     const Comp = {
       render() {},
       setup() {
         return {
-          toggle() { return 'a'}
+          toggle() {
+            return 'a'
+          }
         }
       },
       mounted() {
@@ -274,53 +278,52 @@ describe('component: proxy', () => {
     const app = createApp(Comp)
 
     app.mount(nodeOps.createElement('div'))
-    
+
     // access 'toggle' to ensure key is cached
     let v1 = instanceProxy.toggle()
+    expect(v1).toEqual('a')
 
     // reconfigure "toggle" to be getter based.
     let getCalledTimes = 0
     Object.defineProperty(instanceProxy, 'toggle', {
-      get(){
+      get() {
         getCalledTimes++
-        return  ()=> 'b'
+        return () => 'b'
       }
     })
 
-    // getter should not be evaluated on definition
+    // getter should not be evaluated on initial definition
     expect(getCalledTimes).toEqual(0)
 
     // invoke "toggle" after "defineProperty"
-    let v2 = instanceProxy.toggle()
+    const v2 = instanceProxy.toggle()
+    expect(v2).toEqual('b')
     expect(getCalledTimes).toEqual(1)
 
     // expect toggle getter not to be cached. it can't be
     instanceProxy.toggle()
     expect(getCalledTimes).toEqual(2)
-    
+
     // attaching jest spy, triggers the getter once, cache it and override the property.
-    // also uses Object.defineProperty 
+    // also uses Object.defineProperty
     const spy = jest.spyOn(instanceProxy, 'toggle')
     expect(getCalledTimes).toEqual(3)
 
-    // toggle getter is not going to be evaluated due to jest wrapper caching it result
-    let v3 = instanceProxy.toggle()
-    expect(getCalledTimes).toEqual(3)
-
-    expect(v1).toEqual('a')
-    expect(v2).toEqual('b')
+    // expect getter to not evaluate the jest spy caches its value
+    const v3 = instanceProxy.toggle()
     expect(v3).toEqual('b')
-
     expect(spy).toHaveBeenCalled()
+    expect(getCalledTimes).toEqual(3)
   })
 
   test('defineProperty on proxy property with value descriptor', () => {
+    // #5417
     let instanceProxy: any
     const Comp = {
       render() {},
       setup() {
         return {
-          toggle:'a'
+          toggle: 'a'
         }
       },
       mounted() {
@@ -331,23 +334,50 @@ describe('component: proxy', () => {
     const app = createApp(Comp)
 
     app.mount(nodeOps.createElement('div'))
-    
-    let v1 = instanceProxy.toggle
 
-    Object.defineProperty(instanceProxy, 'toggle', {
-      value:'b'
-    })
-    let v2 = instanceProxy.toggle
-
-    Object.defineProperty(instanceProxy, 'toggle', {
-      value:null
-    })
-    let v3 = instanceProxy.toggle
-
+    const v1 = instanceProxy.toggle
     expect(v1).toEqual('a')
+
+    Object.defineProperty(instanceProxy, 'toggle', {
+      value: 'b'
+    })
+    const v2 = instanceProxy.toggle
     expect(v2).toEqual('b')
-    expect(v3).toBeNull()    
- 
+
+    Object.defineProperty(instanceProxy, 'toggle', {
+      value: null
+    })
+    const v3 = instanceProxy.toggle
+    expect(v3).toBeNull()
+  })
+
+  test('defineProperty on proxy property with null value descriptor', () => {
+    // #5417
+    let instanceProxy: any
+    const Comp = {
+      render() {},
+      setup() {
+        return {
+          toggle: 'a'
+        }
+      },
+      mounted() {
+        instanceProxy = this
+      }
+    }
+
+    const app = createApp(Comp)
+
+    app.mount(nodeOps.createElement('div'))
+
+    const v1 = instanceProxy.toggle
+    expect(v1).toEqual('a')
+    Object.defineProperty(instanceProxy, 'toggle', {
+      value: null
+    })
+
+    const v2 = instanceProxy.toggle
+    expect(v2).toBeNull()
   })
 
   // #864
