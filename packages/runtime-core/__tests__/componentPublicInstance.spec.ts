@@ -344,6 +344,7 @@ describe('component: proxy', () => {
     const v2 = instanceProxy.toggle
     expect(v2).toEqual('b')
 
+    // expect null to be a settable value
     Object.defineProperty(instanceProxy, 'toggle', {
       value: null
     })
@@ -351,14 +352,23 @@ describe('component: proxy', () => {
     expect(v3).toBeNull()
   })
 
-  test('defineProperty on proxy property with null value descriptor', () => {
+  test('defineProperty on public instance proxy should work with SETUP,DATA,CONTEXT,PROPS', () => {
     // #5417
     let instanceProxy: any
     const Comp = {
+      props: ['fromProp'],
+      data() {
+        return { name: 'data.name' }
+      },
+      computed: {
+        greet() {
+          return 'Hi ' + (this as any).name
+        }
+      },
       render() {},
       setup() {
         return {
-          toggle: 'a'
+          fromSetup: true
         }
       },
       mounted() {
@@ -366,19 +376,56 @@ describe('component: proxy', () => {
       }
     }
 
-    const app = createApp(Comp)
-
-    app.mount(nodeOps.createElement('div'))
-
-    const v1 = instanceProxy.toggle
-    expect(v1).toEqual('a')
-    Object.defineProperty(instanceProxy, 'toggle', {
-      value: null
+    const app = createApp(Comp, {
+      fromProp: true
     })
 
-    const v2 = instanceProxy.toggle
-    expect(v2).toBeNull()
+    app.mount(nodeOps.createElement('div'))
+    expect(instanceProxy.greet).toEqual('Hi data.name')
+
+    // define property on data
+    Object.defineProperty(instanceProxy, 'name', {
+      get() {
+        return 'getter.name'
+      }
+    })
+
+    // computed is same still cached
+    expect(instanceProxy.greet).toEqual('Hi data.name')
+
+    // trigger computed
+    instanceProxy.name = ''
+
+    // expect "greet" to evaluated and use name from context getter
+    expect(instanceProxy.greet).toEqual('Hi getter.name')
+
+    // defineProperty on computed ( context )
+    Object.defineProperty(instanceProxy, 'greet', {
+      get() {
+        return 'Hi greet.getter.computed'
+      }
+    })
+    expect(instanceProxy.greet).toEqual('Hi greet.getter.computed')
+
+    // defineProperty on setupState
+    expect(instanceProxy.fromSetup).toBe(true)
+    Object.defineProperty(instanceProxy, 'fromSetup', {
+      get() {
+        return false
+      }
+    })
+    expect(instanceProxy.fromSetup).toBe(false)
+
+    // defineProperty on Props
+    expect(instanceProxy.fromProp).toBe(true)
+    Object.defineProperty(instanceProxy, 'fromProp', {
+      get() {
+        return false
+      }
+    })
+    expect(instanceProxy.fromProp).toBe(false)
   })
+
 
   // #864
   test('should not warn declared but absent props', () => {
