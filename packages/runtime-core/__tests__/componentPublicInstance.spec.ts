@@ -280,7 +280,7 @@ describe('component: proxy', () => {
     app.mount(nodeOps.createElement('div'))
 
     // access 'toggle' to ensure key is cached
-    let v1 = instanceProxy.toggle()
+    const v1 = instanceProxy.toggle()
     expect(v1).toEqual('a')
 
     // reconfigure "toggle" to be getter based.
