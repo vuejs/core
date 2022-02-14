@@ -455,8 +455,9 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     descriptor: PropertyDescriptor
   ) {
     if (descriptor.get != null) {
-      this.set!(target, key, descriptor.get(), null)
-    } else if (descriptor.value != null) {
+      // invalidate key cache of a getter based property #5417
+      target.$.accessCache[key] = 0;
+    } else if (hasOwn(descriptor,'value')) {
       this.set!(target, key, descriptor.value, null)
     }
     return Reflect.defineProperty(target, key, descriptor)
