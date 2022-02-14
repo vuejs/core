@@ -1227,7 +1227,7 @@ function baseCreateRenderer(
 
     if (__DEV__) {
       pushWarningContext(initialVNode)
-      startMeasure(instance, `mount`)
+      startMeasure(instance, `mount`) // 面板功能
     }
 
     // inject renderer internals for keepAlive
