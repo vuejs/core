@@ -1,3 +1,4 @@
+import { DefineComponent } from '@vue/runtime-core'
 import {
   describe,
   h,
@@ -149,7 +150,6 @@ describe('h support for generic component type', () => {
   function foo(bar: Component) {
     h(bar)
     h(bar, 'hello')
-    // @ts-expect-error
     h(bar, { id: 'ok' }, 'hello')
   }
   foo({})
@@ -232,4 +232,19 @@ describe('resolveComponent should work', () => {
   h(resolveComponent('test'), {
     message: '1'
   })
+})
+
+// #5431
+describe('h should work with multiple types', () => {
+  const serializers = {
+    Paragraph: 'p',
+    Component: {} as Component,
+    DefineComponent: {} as DefineComponent
+  }
+
+  const sampleComponent = serializers['' as keyof typeof serializers]
+
+  h(sampleComponent)
+  h(sampleComponent, {})
+  h(sampleComponent, {}, [])
 })
