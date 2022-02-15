@@ -5,6 +5,13 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Launch Chrome",
+      "request": "launch",
+      "type": "pwa-chrome",
+      "url": "http://localhost:5000",
+      "webRoot": "${workspaceFolder}"
+    },
+    {
       "name": "Jest",
       "type": "node",
       "request": "launch",
