@@ -20,8 +20,8 @@ describe('sfc props transform', () => {
       <template>{{ foo }}</template>
     `)
     expect(content).not.toMatch(`const { foo } =`)
-    expect(content).toMatch(`console.log(__props.foo)`)
-    expect(content).toMatch(`_toDisplayString(__props.foo)`)
+    expect(content).toMatch(`console.log(__props['foo'])`)
+    expect(content).toMatch(`_toDisplayString(__props['foo'])`)
     assertCode(content)
     expect(bindings).toStrictEqual({
       foo: BindingTypes.PROPS
@@ -40,7 +40,7 @@ describe('sfc props transform', () => {
     `)
     expect(content).not.toMatch(`const { foo, bar } =`)
     expect(content).toMatch(`console.log(foo)`)
-    expect(content).toMatch(`console.log(__props.bar)`)
+    expect(content).toMatch(`console.log(__props['bar'])`)
     assertCode(content)
     expect(bindings).toStrictEqual({
       foo: BindingTypes.PROPS,
@@ -112,9 +112,9 @@ describe('sfc props transform', () => {
     `)
     expect(content).not.toMatch(`const { foo: bar } =`)
     expect(content).toMatch(`let x = foo`) // should not process
-    expect(content).toMatch(`let y = __props.foo`)
-    // should convert bar to __props.foo in template expressions
-    expect(content).toMatch(`_toDisplayString(__props.foo + __props.foo)`)
+    expect(content).toMatch(`let y = __props['foo']`)
+    // should convert bar to __props['foo'] in template expressions
+    expect(content).toMatch(`_toDisplayString(__props['foo'] + __props['foo'])`)
     assertCode(content)
     expect(bindings).toStrictEqual({
       x: BindingTypes.SETUP_LET,
@@ -123,6 +123,25 @@ describe('sfc props transform', () => {
       bar: BindingTypes.PROPS_ALIASED,
       __propsAliases: {
         bar: 'foo'
+      }
+    })
+  })
+
+  test('aliasing w/ StringLiteral', () => {
+    const { content, bindings } = compile(`
+      <script setup>
+      const { 'foo.bar': fooBar } = defineProps({ 'foo.bar': Function })
+      let x = fooBar
+      </script>
+      <template>{{ fooBar }}</template>
+    `)
+    assertCode(content)
+    expect(bindings).toStrictEqual({
+      x: BindingTypes.SETUP_LET,
+      'foo.bar': BindingTypes.PROPS,
+      fooBar: BindingTypes.PROPS_ALIASED,
+      __propsAliases: {
+        fooBar: 'foo.bar'
       }
     })
   })

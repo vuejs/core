@@ -499,7 +499,7 @@ export function transformAST(
                 // { prop } -> { prop: __prop.prop }
                 s.appendLeft(
                   id.end! + offset,
-                  `: __props.${propsLocalToPublicMap[id.name]}`
+                  `: __props['${propsLocalToPublicMap[id.name]}']`
                 )
               }
             } else {
@@ -518,11 +518,11 @@ export function transformAST(
                 `__props_${propsLocalToPublicMap[id.name]}`
               )
             } else {
-              // x --> __props.x
+              // x --> __props['x']
               s.overwrite(
                 id.start! + offset,
                 id.end! + offset,
-                `__props.${propsLocalToPublicMap[id.name]}`
+                `__props['${propsLocalToPublicMap[id.name]}']`
               )
             }
           } else {

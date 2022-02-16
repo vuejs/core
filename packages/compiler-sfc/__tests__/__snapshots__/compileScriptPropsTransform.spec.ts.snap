@@ -30,10 +30,29 @@ export default {
 
       
       let x = foo
-      let y = __props.foo
+      let y = __props['foo']
       
 return (_ctx, _cache) => {
-  return _toDisplayString(__props.foo + __props.foo)
+  return _toDisplayString(__props['foo'] + __props['foo'])
+}
+}
+
+}"
+`;
+
+exports[`sfc props transform aliasing w/ StringLiteral 1`] = `
+"import { toDisplayString as _toDisplayString } from \\"vue\\"
+
+
+export default {
+  props: { 'foo.bar': Function },
+  setup(__props) {
+
+      
+      let x = __props['foo.bar']
+      
+return (_ctx, _cache) => {
+  return _toDisplayString(__props['foo.bar'])
 }
 }
 
@@ -49,10 +68,10 @@ export default {
   setup(__props) {
 
       
-      console.log(__props.foo)
+      console.log(__props['foo'])
       
 return (_ctx, _cache) => {
-  return _toDisplayString(__props.foo)
+  return _toDisplayString(__props['foo'])
 }
 }
 
@@ -125,7 +144,7 @@ exports[`sfc props transform nested scope 1`] = `
       
       function test(foo) {
         console.log(foo)
-        console.log(__props.bar)
+        console.log(__props['bar'])
       }
       
 return () => {}
