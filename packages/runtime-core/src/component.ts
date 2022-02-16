@@ -618,8 +618,11 @@ function setupStatefulComponent(
       )
     }
   }
+  // 创建代理器缓存
   // 0. create render proxy property access cache
   instance.accessCache = Object.create(null)
+  // 创建公共代理
+  // 标志原始值，并且不被代理观察到
   // 1. create public instance / render proxy
   // also mark it raw so it's never observed
   instance.proxy = markRaw(new Proxy(instance.ctx, PublicInstanceProxyHandlers))
