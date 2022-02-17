@@ -8,13 +8,11 @@
       "name": "Jest",
       "type": "node",
       "request": "launch",
-      "program": "${workspaceFolder}/node_modules/.bin/jest",
       "stopOnEntry": false,
       "args": ["${fileBasename}", "--runInBand", "--detectOpenHandles"],
       "cwd": "${workspaceFolder}",
       "preLaunchTask": null,
-      "runtimeExecutable": null,
-      "runtimeArgs": ["--nolazy"],
+      "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/jest",
       "env": {
         "NODE_ENV": "development"
       },
