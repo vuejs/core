@@ -28,7 +28,7 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
     if (parent) {
       const nodeList = (child as Element).querySelectorAll ? (child as Element).querySelectorAll('*') : []
       for (let i = 0; i < nodeList.length; i ++) {
-        removeVEI(nodeList)
+        removeVEI(nodeList[i])
       }
       removeVEI(child)
       parent.removeChild(child)
