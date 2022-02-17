@@ -1,6 +1,35 @@
 import { isArray, isString, isObject, hyphenate } from './'
 import { isNoUnitNumericStyleProp } from './domAttrConfig'
 
+const hashedCustomProperty = /^[0-9a-f]{8}-/i;
+const customPropertyPrefix = '--';
+
+function normalizeCustomProperty(value: Record<string, string> | string): Record<string, string> | string {
+  if (isObject(value)) {
+    const objectKeys = Object.keys(value);
+    const res: Record<string, string> = {};
+
+    for (let i = 0; i < objectKeys.length; i++) {
+      const item = objectKeys[i];
+
+      if (item.match(hashedCustomProperty)) {
+        res[`${customPropertyPrefix}${item}`] = value[item];
+        continue;
+      }
+
+      res[item] = value[item];
+    }
+
+    return res;
+  }
+
+  if (value.match(hashedCustomProperty)) {
+    return `${customPropertyPrefix}${value}`;
+  }
+
+  return value;
+}
+
 export type NormalizedStyle = Record<string, string | number>
 
 export function normalizeStyle(
@@ -21,9 +50,9 @@ export function normalizeStyle(
     }
     return res
   } else if (isString(value)) {
-    return value
+    return normalizeCustomProperty(value);
   } else if (isObject(value)) {
-    return value
+    return normalizeCustomProperty(value);
   }
 }
 
