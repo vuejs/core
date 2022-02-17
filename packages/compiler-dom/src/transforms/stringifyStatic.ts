@@ -225,6 +225,9 @@ function analyzeNode(node: StringifiableNode): [number, number] | false {
           return bail()
         }
       }
+      if (p.type === NodeTypes.DIRECTIVE && p.name === 'html') {
+        return bail()
+      }
     }
     for (let i = 0; i < node.children.length; i++) {
       nc++

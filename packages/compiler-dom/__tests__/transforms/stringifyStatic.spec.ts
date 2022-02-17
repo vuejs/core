@@ -388,6 +388,28 @@ describe('stringify static html', () => {
     })
   })
 
+  //#5439
+  test('should bail on v-html', () => {
+    const { ast } = compileWithStringify(
+      `<div><div>
+      ${repeat(
+        `<span class="foo"/>`,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+      )}
+      <code v-html="'&lt;span&gt;SHOW &lt;/span&gt;'"/>
+      </div></div>`
+    )
+
+    expect(ast.hoists).toMatchObject([
+      {
+        type: NodeTypes.VNODE_CALL // not CALL_EXPRESSION
+      },
+      {
+        type: NodeTypes.JS_ARRAY_EXPRESSION
+      }
+    ])
+  })
+
   test('should remove attribute for `null`', () => {
     const { ast } = compileWithStringify(
       `<div>${repeat(
