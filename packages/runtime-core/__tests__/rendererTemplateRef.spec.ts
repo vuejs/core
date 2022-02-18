@@ -442,4 +442,43 @@ describe('api: template refs', () => {
     await nextTick()
     expect(mapRefs()).toMatchObject(['2', '3', '4'])
   })
+
+  // #5447
+  test('string ref in v-for', async () => {
+    const list = reactive([1, 2, 3])
+    const listRefs = ref([])
+    const mapRefs = () => listRefs.value.map(n => serializeInner(n))
+    const App = {
+      setup() {
+        return { listRefs }
+      },
+      render() {
+        return h(
+          'ul',
+          list.map(i =>
+            h(
+              'li',
+              {
+                ref: 'listRefs',
+                ref_for: true
+              },
+              i
+            )
+          )
+        )
+      }
+    }
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+
+    expect(mapRefs()).toMatchObject(['1', '2', '3'])
+
+    list.push(4)
+    await nextTick()
+    expect(mapRefs()).toMatchObject(['1', '2', '3', '4'])
+
+    list.shift()
+    await nextTick()
+    expect(mapRefs()).toMatchObject(['2', '3', '4'])
+  })
 })
