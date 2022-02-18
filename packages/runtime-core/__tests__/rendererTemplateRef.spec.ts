@@ -446,7 +446,7 @@ describe('api: template refs', () => {
    
 
   test('named ref in v-for', async () => {
-    const show = ref(true)
+    const show = ref(true);
     const list = reactive([1, 2, 3])
     const listRefs = ref([])
     const mapRefs = () => listRefs.value.map(n => serializeInner(n))
