@@ -1,15 +1,29 @@
 <script src="../../dist/vue.global.js"></script>
 <div id="app">
   <h1 name="钟阳山" value="888">i am h1</h1>
-  <h2>i am h2</h2>
+  <h2 v-if="name == 'zys'">i am h2</h2>
+  <h3 @click="fn">{{ name }}</h3>
 </div>
 <script>
-  let { createApp } = Vue
+  let { createApp, setup } = Vue
 
   createApp({
+    data() {
+      return {
+        name: 'zys'
+      }
+    },
     mounted() {
       console.log('this is fragment')
-    }
+    },
+    setup(props) {
+      console.log(8888);
+    },
+    methods: {
+      fn() {
+        this.name = 'tets'
+      }
+    }, 
   }).mount('#app')
 </script>
 

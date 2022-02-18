@@ -633,11 +633,11 @@ function setupStatefulComponent(
   const { setup } = Component
   if (setup) {
     const setupContext = (instance.setupContext =
-      setup.length > 1 ? createSetupContext(instance) : null)
-
+      setup.length > 1 ? createSetupContext(instance) : null) // setup.length长度判断是判断入参的参数个数
+  // ------------start，错误信息收集---------- 
     setCurrentInstance(instance)
     pauseTracking()
-    const setupResult = callWithErrorHandling(
+    const setupResult = callWithErrorHandling( // 执行setup函数，报错了就对报错信息收集
       setup,
       instance,
       ErrorCodes.SETUP_FUNCTION,
@@ -645,7 +645,7 @@ function setupStatefulComponent(
     )
     resetTracking()
     unsetCurrentInstance()
-
+    // ------------end-----------
     if (isPromise(setupResult)) {
       setupResult.then(unsetCurrentInstance, unsetCurrentInstance)
 

@@ -1312,6 +1312,7 @@ function baseCreateRenderer(
     }
   }
 
+  // 并且对页面代理，页面发送改变就会触发patch
   const setupRenderEffect: SetupRenderEffectFn = (
     instance,
     initialVNode,
