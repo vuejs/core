@@ -24,6 +24,7 @@ import { RawSlots } from './componentSlots'
 import { isProxy, Ref, toRaw, ReactiveFlags, isRef } from '@vue/reactivity'
 import { AppContext } from './apiCreateApp'
 import {
+  Suspense,
   SuspenseImpl,
   isSuspense,
   SuspenseBoundary
@@ -31,7 +32,7 @@ import {
 import { DirectiveBinding } from './directives'
 import { TransitionHooks } from './components/BaseTransition'
 import { warn } from './warning'
-import { TeleportImpl, isTeleport } from './components/Teleport'
+import { Teleport, TeleportImpl, isTeleport } from './components/Teleport'
 import {
   currentRenderingInstance,
   currentScopeId
@@ -62,7 +63,9 @@ export type VNodeTypes =
   | typeof Static
   | typeof Comment
   | typeof Fragment
+  | typeof Teleport
   | typeof TeleportImpl
+  | typeof Suspense
   | typeof SuspenseImpl
 
 export type VNodeRef =
