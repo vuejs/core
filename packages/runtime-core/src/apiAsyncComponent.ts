@@ -6,7 +6,6 @@ import {
   isInSSRComponentSetup,
   ComponentOptions
 } from './component'
-  
 import { isFunction, isObject, ShapeFlags } from '@vue/shared'
 import { ComponentPublicInstance } from './componentPublicInstance'
 import { createVNode, VNode } from './vnode'
