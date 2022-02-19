@@ -218,7 +218,7 @@ function createInnerComp(
   // ensure inner component inherits the async wrapper's ref owner
   vnode.ref = ref
   
-  if (isKeepAlive(parent)) {
+  if (parent && isKeepAlive(parent)) {
     vnode.shapeFlag |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
   }
   return vnode
