@@ -57,7 +57,7 @@ onMounted(async () => {
 
 async function fetchVersions(): Promise<string[]> {
   const res = await fetch(
-    `https://api.github.com/repos/vuejs/vue-next/releases?per_page=100`
+    `https://api.github.com/repos/vuejs/core/releases?per_page=100`
   )
   const releases: any[] = await res.json()
   const versions = releases.map(r =>
@@ -131,7 +131,7 @@ async function fetchVersions(): Promise<string[]> {
           class="github"
       >
         <a
-            href="https://github.com/vuejs/vue-next/tree/master/packages/sfc-playground"
+            href="https://github.com/vuejs/core/tree/main/packages/sfc-playground"
             target="_blank"
         >
           <GitHub />

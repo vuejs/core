@@ -151,8 +151,11 @@ function createConfig(format, output, plugins = []) {
   // requires a ton of template engines which should be ignored.
   let cjsIgnores = []
   if (pkg.name === '@vue/compiler-sfc') {
+    const consolidatePath = require.resolve('@vue/consolidate/package.json', {
+      paths: [packageDir]
+    })
     cjsIgnores = [
-      ...Object.keys(require('@vue/consolidate/package.json').devDependencies),
+      ...Object.keys(require(consolidatePath).devDependencies),
       'vm',
       'crypto',
       'react-dom/server',

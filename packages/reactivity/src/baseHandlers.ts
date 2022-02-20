@@ -8,7 +8,8 @@ import {
   reactiveMap,
   shallowReactiveMap,
   shallowReadonlyMap,
-  isReadonly
+  isReadonly,
+  isShallow
 } from './reactive'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import {
@@ -84,6 +85,8 @@ function createGetter(isReadonly = false, shallow = false) {
       return !isReadonly
     } else if (key === ReactiveFlags.IS_READONLY) {
       return isReadonly
+    } else if (key === ReactiveFlags.IS_SHALLOW) {
+      return shallow
     } else if (
       key === ReactiveFlags.RAW &&
       receiver ===
@@ -147,9 +150,14 @@ function createSetter(shallow = false) {
     receiver: object
   ): boolean {
     let oldValue = (target as any)[key]
+    if (isReadonly(oldValue) && isRef(oldValue) && !isRef(value)) {
+      return false
+    }
     if (!shallow && !isReadonly(value)) {
-      value = toRaw(value)
-      oldValue = toRaw(oldValue)
+      if (!isShallow(value)) {
+        value = toRaw(value)
+        oldValue = toRaw(oldValue)
+      }
       if (!isArray(target) && isRef(oldValue) && !isRef(value)) {
         oldValue.value = value
         return true

@@ -310,7 +310,7 @@ defineExpose({ foo: 123 })
       let foo = $ref(1)
       </script>
       `,
-        { refTransform: true }
+        { reactivityTransform: true }
       )
       assertCode(content)
       expect(content).toMatch(`import { ref } from 'vue'`)
@@ -372,7 +372,7 @@ defineExpose({ foo: 123 })
       assertCode(content)
     })
 
-    // https://github.com/vuejs/vue-next/issues/4599
+    // https://github.com/vuejs/core/issues/4599
     test('attribute expressions', () => {
       const { content } = compile(`
         <script setup lang="ts">
@@ -1108,7 +1108,7 @@ const emit = defineEmits(['a', 'b'])
   describe('async/await detection', () => {
     function assertAwaitDetection(code: string, shouldAsync = true) {
       const { content } = compile(`<script setup>${code}</script>`, {
-        refTransform: true
+        reactivityTransform: true
       })
       if (shouldAsync) {
         expect(content).toMatch(`let __temp, __restore`)

@@ -5,7 +5,8 @@ import {
   isFunction,
   isPlainObject,
   isSet,
-  objectToString
+  objectToString,
+  isString
 } from './index'
 
 /**
@@ -13,7 +14,9 @@ import {
  * @private
  */
 export const toDisplayString = (val: unknown): string => {
-  return val == null
+  return isString(val)
+    ? val
+    : val == null
     ? ''
     : isArray(val) ||
       (isObject(val) &&
