@@ -1,7 +1,7 @@
 import { isArray, isString, isObject, hyphenate } from './'
 import { isNoUnitNumericStyleProp } from './domAttrConfig'
 
-const hashedCustomProperty = /^[0-9a-f]{8}-/i;
+const hashedCustomProperty = /^[0-9a-f]{8}/i;
 const customPropertyPrefix = '--';
 
 function normalizeCustomProperty(value: Record<string, string> | string): Record<string, string> | string {
