@@ -295,8 +295,7 @@ function doWatch(
     }
     return NOOP
   }
-
-  let oldValue = isMultiSource ? [] : INITIAL_WATCHER_VALUE
+  let oldValue = INITIAL_WATCHER_VALUE
   const job: SchedulerJob = () => {
     if (!effect.active) {
       return
@@ -309,7 +308,8 @@ function doWatch(
         forceTrigger ||
         (isMultiSource
           ? (newValue as any[]).some((v, i) =>
-              hasChanged(v, (oldValue as any[])[i])
+              // keep hasChanged result consistency(return true) between both multi source and single source cases for the first time
+              hasChanged(v, oldValue === INITIAL_WATCHER_VALUE ? INITIAL_WATCHER_VALUE : (oldValue as any[])[i])
             )
           : hasChanged(newValue, oldValue)) ||
         (__COMPAT__ &&
@@ -322,8 +322,8 @@ function doWatch(
         }
         callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
           newValue,
-          // pass undefined as the old value when it's changed for the first time
-          oldValue === INITIAL_WATCHER_VALUE ? undefined : oldValue,
+          // pass undefined(and [] for multisource) as the old value when it's changed for the first time
+          oldValue === INITIAL_WATCHER_VALUE ? (isMultiSource ? [] : undefined) : oldValue,
           onCleanup
         ])
         oldValue = newValue
