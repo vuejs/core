@@ -713,6 +713,24 @@ describe('api: watch', () => {
     expect(spy).toHaveBeenCalledTimes(3)
   })
 
+  it('immediate: triggers with multisource when initial value is undefined', async () => {
+    const state = ref()
+    const spy = jest.fn()
+    watch([state], spy, { immediate: true })
+    expect(spy).toHaveBeenCalled()
+    state.value = 3
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(2)
+    // testing if undefined can trigger the watcher
+    state.value = undefined
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(3)
+    // it shouldn't trigger if the same value is set
+    state.value = undefined
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(3)
+  })
+
   it('warn immediate option when using effect', async () => {
     const count = ref(0)
     let dummy
