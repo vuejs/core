@@ -808,6 +808,7 @@ export function finishComponentSetup(
   }
 
   // support for 2.x options
+  // 支持vue2的选项
   if (__FEATURE_OPTIONS_API__ && !(__COMPAT__ && skipOptions)) {
     setCurrentInstance(instance)
     pauseTracking()
