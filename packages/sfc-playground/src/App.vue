@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import Header from './Header.vue'
 import { Repl, ReplStore } from '@vue/repl'
-import { watchEffect } from 'vue'
+import { watchEffect, ref } from 'vue'
 
 const setVH = () => {
   document.documentElement.style.setProperty('--vh', window.innerHeight + `px`)
@@ -23,12 +23,14 @@ const sfcOptions = {
   }
 }
 
+const autoUrl = ref(true);
+
 // persist state
-watchEffect(() => history.replaceState({}, '', store.serialize()))
+watchEffect(() => autoUrl.value && history.replaceState({}, '', store.serialize()))
 </script>
 
 <template>
-  <Header :store="store" />
+  <Header :store="store" v-model:auto-url="autoUrl" />
   <Repl
     @keydown.ctrl.s.prevent
     @keydown.meta.s.prevent
