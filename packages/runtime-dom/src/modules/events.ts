@@ -117,7 +117,10 @@ function createInvoker(
     // AFTER it was attached.
     const timeStamp = e.timeStamp || _getNow()
 
-    if (skipTimestampCheck || timeStamp >= invoker.attached - 1) {
+    // Skip the timestamp check if the skipEventsTimestampCheck app config is set to true.
+    const appSkipTimestampCheck = instance?.appContext?.config.skipEventsTimestampCheck === true
+
+    if (appSkipTimestampCheck || skipTimestampCheck || timeStamp >= invoker.attached - 1) {
       callWithAsyncErrorHandling(
         patchStopImmediatePropagation(e, invoker.value),
         instance,

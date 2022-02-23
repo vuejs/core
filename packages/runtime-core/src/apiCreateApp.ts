@@ -81,6 +81,7 @@ export interface AppConfig {
     instance: ComponentPublicInstance | null,
     trace: string
   ) => void
+  skipEventsTimestampCheck: boolean
 
   /**
    * Options to pass to `@vue/compiler-dom`.
@@ -155,7 +156,8 @@ export function createAppContext(): AppContext {
       optionMergeStrategies: {},
       errorHandler: undefined,
       warnHandler: undefined,
-      compilerOptions: {}
+      compilerOptions: {},
+      skipEventsTimestampCheck: false
     },
     mixins: [],
     components: {},
