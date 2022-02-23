@@ -17,7 +17,8 @@ let _getNow: () => number = Date.now
 
 let skipTimestampCheck = false
 
-if (typeof window !== 'undefined') {
+const isBrowser = typeof window !== 'undefined' && typeof document !== 'undefined'
+if (isBrowser) {
   // Determine what event timestamp the browser is using. Annoyingly, the
   // timestamp can either be hi-res (relative to page load) or low-res
   // (relative to UNIX epoch), so in order to compare time we have to use the
