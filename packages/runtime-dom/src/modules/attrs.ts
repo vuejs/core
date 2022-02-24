@@ -1,4 +1,5 @@
 import {
+  hyphenate,
   includeBooleanAttr,
   isSpecialBooleanAttr,
   makeMap,
@@ -36,7 +37,7 @@ export function patchAttr(
     if (value == null || (isBoolean && !includeBooleanAttr(value))) {
       el.removeAttribute(key)
     } else {
-      el.setAttribute(key, isBoolean ? '' : value)
+      el.setAttribute(hyphenate(key), isBoolean ? '' : value)
     }
   }
 }

@@ -53,4 +53,12 @@ describe('runtime-dom: attrs patching', () => {
     patchProp(el, 'onwards', 'a', null)
     expect(el.getAttribute('onwards')).toBe(null)
   })
+
+  test('camelCase attribute name properly hyphenated', () => {
+    const el = document.createElement('div')
+    patchProp(el, 'customAttribute', null, 'a')
+    expect(el.getAttribute('custom-attribute')).toBe('a')
+    patchProp(el, 'custom-attribute', 'a', null)
+    expect(el.getAttribute('custom-attribute')).toBe(null)
+  })
 })
