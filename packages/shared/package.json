@@ -9,6 +9,7 @@
     "index.js",
     "dist"
   ],
+  "sideEffects": false,
   "buildOptions": {
     "formats": [
       "esm-bundler",
