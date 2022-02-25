@@ -263,4 +263,11 @@ describe('runtime-dom: props patching', () => {
     )
     expect(el.value).toBe('baz')
   })
+
+  test('translate attribute', () => {
+    const el = document.createElement('div')
+    patchProp(el, 'translate', null, 'no')
+    expect(el.translate).toBeFalsy()
+    expect(el.getAttribute('translate')).toBe('no')
+  })
 })

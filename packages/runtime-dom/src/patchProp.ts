@@ -105,6 +105,12 @@ function shouldSetAsProp(
     return false
   }
 
+  // #5462 translate is an enumerated attr, however its
+  // corresponding DOM property are actually boolean.
+  if (key === 'translate') {
+    return false
+  }
+
   // native onclick with string value, must be set as attribute
   if (nativeOnRE.test(key) && isString(value)) {
     return false
