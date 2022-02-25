@@ -1348,7 +1348,7 @@ function baseCreateRenderer(
           instance.emit('hook:beforeMount')
         }
         effect.allowRecurse = true
-
+        // 服务器端的vnode
         if (el && hydrateNode) {
           // vnode has adopted host node - perform hydration instead of mount.
           const hydrateSubTree = () => {
@@ -1387,7 +1387,7 @@ function baseCreateRenderer(
           }
         } else {
           if (__DEV__) {
-            startMeasure(instance, `render`)
+            startMeasure(instance, `render`) // 这个是看板的提示，进行到哪一步了
           }
           const subTree = (instance.subTree = renderComponentRoot(instance))
           if (__DEV__) {

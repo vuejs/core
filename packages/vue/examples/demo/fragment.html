@@ -5,9 +5,12 @@
   <h3 @click="fn">{{ name }}</h3>
 </div>
 <script>
-  let { createApp, setup } = Vue
+  let { createApp, setup, h } = Vue
 
   createApp({
+    render() {
+      return h('div', {name: 'zys' } , '88888')
+    },
     data() {
       return {
         name: 'zys'
