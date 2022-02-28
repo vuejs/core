@@ -79,13 +79,13 @@ function shouldSetAsProp(
     return false
   }
 
-  // spellcheck and draggable are numerated attrs, however their
-  // corresponding DOM properties are actually booleans - this leads to
-  // setting it with a string "false" value leading it to be coerced to
-  // `true`, so we need to always treat them as attributes.
+  // these are enumerated attrs, however their corresponding DOM properties
+  // are actually booleans - this leads to setting it with a string "false"
+  // value leading it to be coerced to `true`, so we need to always treat
+  // them as attributes.
   // Note that `contentEditable` doesn't have this problem: its DOM
   // property is also enumerated string values.
-  if (key === 'spellcheck' || key === 'draggable') {
+  if (key === 'spellcheck' || key === 'draggable' || key === 'translate') {
     return false
   }
 
@@ -102,12 +102,6 @@ function shouldSetAsProp(
 
   // #2766 <textarea type> must be set as attribute
   if (key === 'type' && el.tagName === 'TEXTAREA') {
-    return false
-  }
-
-  // #5462 translate is an enumerated attr, however its
-  // corresponding DOM property are actually boolean.
-  if (key === 'translate') {
     return false
   }
 
