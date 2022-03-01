@@ -188,6 +188,8 @@ export function emit(
   }
 }
 
+// 获取emits的顺序，com ==> com_mixins ==> extends ==> global_mixins
+// 从上往下的执行顺序
 export function normalizeEmitsOptions(
   comp: ConcreteComponent,
   appContext: AppContext,
@@ -199,25 +201,30 @@ export function normalizeEmitsOptions(
     return cached
   }
 
+  // 拿出组件的emits
   const raw = comp.emits
   let normalized: ObjectEmitsOptions = {}
 
+  // 开始合并mixin和extends中的emits
   // apply mixin/extends props
   let hasExtends = false
   if (__FEATURE_OPTIONS_API__ && !isFunction(comp)) {
-    const extendEmits = (raw: ComponentOptions) => {
+    const extendEmits = (raw: ComponentOptions) => { // 递归调用自身
       const normalizedFromExtend = normalizeEmitsOptions(raw, appContext, true)
       if (normalizedFromExtend) {
         hasExtends = true
         extend(normalized, normalizedFromExtend)
       }
     }
+    // 判断全局的mixins
     if (!asMixin && appContext.mixins.length) {
       appContext.mixins.forEach(extendEmits)
     }
+    // extends是一个对象，组件内部的extends
     if (comp.extends) {
       extendEmits(comp.extends)
     }
+    // 组件内部的mixins
     if (comp.mixins) {
       comp.mixins.forEach(extendEmits)
     }
@@ -231,10 +238,12 @@ export function normalizeEmitsOptions(
   if (isArray(raw)) {
     raw.forEach(key => (normalized[key] = null))
   } else {
+    // 通过object.asign,合并值，但是raw的优先级最高
     extend(normalized, raw)
   }
 
   cache.set(comp, normalized)
+  // 组件内的优先级最高
   return normalized
 }
 
