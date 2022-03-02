@@ -1,6 +1,5 @@
 import { isFunction } from '@vue/shared'
-import { currentInstance } from './component'
-import { currentRenderingInstance } from './componentRenderContext'
+import { currentInstance, getCurrentInstance } from './component'
 import { warn } from './warning'
 
 export interface InjectionKey<T> extends Symbol {}
@@ -45,14 +44,14 @@ export function inject(
 ) {
   // fallback to `currentRenderingInstance` so that this can be called in
   // a functional component
-  const instance = currentInstance || currentRenderingInstance
+  const instance = getCurrentInstance()
   if (instance) {
     // #2400
     // to support `app.use` plugins,
     // fallback to appContext's `provides` if the instance is at root
     const provides =
       instance.parent == null
-        ? instance.vnode.appContext && instance.vnode.appContext.provides
+        ? instance.vnode.appContext?.provides
         : instance.parent.provides
 
     if (provides && (key as string | symbol) in provides) {
