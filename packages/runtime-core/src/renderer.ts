@@ -966,10 +966,11 @@ function baseCreateRenderer(
   }
 
   // The fast path for blocks.
+  // 动态节点说明是编译器编译的，有可能是有teleport和fragment，component这些情况
   const patchBlockChildren: PatchBlockChildrenFn = (
     oldChildren,
     newChildren,
-    fallbackContainer,
+    fallbackContainer, // 后备容器
     parentComponent,
     parentSuspense,
     isSVG,
@@ -1566,9 +1567,10 @@ function baseCreateRenderer(
     const effect = new ReactiveEffect(
       componentUpdateFn,
       () => queueJob(instance.update),
-      instance.scope // track it in component's effect scope
+      instance.scope // track it in component's effect scope 在组件的内部追踪记录所有effect
     )
 
+    // 初次调用的mouted，二次由trigger触发依赖，执行instance.update，更新页面
     const update = (instance.update = effect.run.bind(effect) as SchedulerJob)
     update.id = instance.uid
     // allowRecurse
@@ -1623,10 +1625,13 @@ function baseCreateRenderer(
     const prevShapeFlag = n1 ? n1.shapeFlag : 0
     const c2 = n2.children
 
+    // 都是获取新节点进行判断
     const { patchFlag, shapeFlag } = n2
+    // 这里是判断patchFlags补丁标志，进入比较算法
     // fast path
     if (patchFlag > 0) {
       if (patchFlag & PatchFlags.KEYED_FRAGMENT) {
+        // patch代表子代都是数组类型，带有key的
         // this could be either fully-keyed or mixed (some keyed some not)
         // presence of patchFlag means children are guaranteed to be arrays
         patchKeyedChildren(
@@ -1642,6 +1647,7 @@ function baseCreateRenderer(
         )
         return
       } else if (patchFlag & PatchFlags.UNKEYED_FRAGMENT) {
+        // 没有key的
         // unkeyed
         patchUnkeyedChildren(
           c1 as VNode[],

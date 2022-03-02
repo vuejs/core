@@ -340,6 +340,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     if (publicGetter) {
       // 这里额外处理$attrs的参数
       if (key === '$attrs') {
+        // 追踪$attrs参数,只对$attrs收集依赖
         track(instance, TrackOpTypes.GET, key)
         __DEV__ && markAttrsAccessed()
       }

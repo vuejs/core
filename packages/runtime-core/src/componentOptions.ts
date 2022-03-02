@@ -662,6 +662,7 @@ export function applyOptions(instance: ComponentInternalInstance) {
     if (!isObject(data)) {
       __DEV__ && warn(`data() should return an object.`)
     } else {
+      // 对组件内部的data进行代理
       instance.data = reactive(data)
       if (__DEV__) {
         for (const key in data) {

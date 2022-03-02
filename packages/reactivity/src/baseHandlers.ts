@@ -164,6 +164,7 @@ function createSetter(shallow = false) {
     const result = Reflect.set(target, key, value, receiver)
     // don't trigger if target is something up in the prototype chain of original
     if (target === toRaw(receiver)) {
+      // 触发更新，通知页面更新
       if (!hadKey) {
         trigger(target, TriggerOpTypes.ADD, key, value)
       } else if (hasChanged(value, oldValue)) {
@@ -179,6 +180,7 @@ function deleteProperty(target: object, key: string | symbol): boolean {
   const oldValue = (target as any)[key]
   const result = Reflect.deleteProperty(target, key)
   if (result && hadKey) {
+    // 触发更新，通知页面更新
     trigger(target, TriggerOpTypes.DELETE, key, undefined, oldValue)
   }
   return result
