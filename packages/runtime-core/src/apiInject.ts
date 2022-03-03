@@ -51,7 +51,7 @@ export function inject(
     // fallback to appContext's `provides` if the instance is at root
     const provides =
       instance.parent == null
-        ? instance.vnode.appContext?.provides
+        ? instance.vnode.appContext && instance.vnode.appContext.provides
         : instance.parent.provides
 
     if (provides && (key as string | symbol) in provides) {
