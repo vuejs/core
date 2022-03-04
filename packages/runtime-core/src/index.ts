@@ -42,6 +42,7 @@ export {
   watchSyncEffect
 } from './apiWatch'
 export {
+  createHook,
   onBeforeMount,
   onMounted,
   onBeforeUpdate,
