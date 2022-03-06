@@ -226,7 +226,8 @@ export function updateProps(
         let key = propsToUpdate[i]
         // PROPS flag guarantees rawProps to be non-null
         const value = rawProps![key]
-        if (options) {
+        let camelizedKey
+        if (options && hasOwn(options, (camelizedKey = camelize(key)))) {
           // attr / props separation was done on init and will be consistent
           // in this code path, so just check if attrs have it.
           if (hasOwn(attrs, key)) {
@@ -235,7 +236,6 @@ export function updateProps(
               hasAttrsChanged = true
             }
           } else {
-            const camelizedKey = camelize(key)
             props[camelizedKey] = resolvePropValue(
               options,
               rawCurrentProps,
