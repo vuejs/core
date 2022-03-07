@@ -12,6 +12,7 @@ import {
   shallowReadonlyCollectionHandlers
 } from './collectionHandlers'
 import { UnwrapRefSimple, Ref } from './ref'
+import { warn } from './warning'
 
 export const enum ReactiveFlags {
   SKIP = '__v_skip',
@@ -187,7 +188,7 @@ function createReactiveObject(
 ) {
   if (!isObject(target)) {
     if (__DEV__) {
-      console.warn(`value cannot be made reactive: ${String(target)}`)
+      warn(`value cannot be made reactive: ${String(target)}`)
     }
     return target
   }
