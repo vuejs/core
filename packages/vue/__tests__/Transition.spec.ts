@@ -2023,4 +2023,75 @@ describe('e2e: Transition', () => {
     expect(outerSpy).toHaveBeenCalledTimes(1)
     expect(root.innerHTML).toBe(`<!---->`)
   })
+
+  // #5500
+  test(`Get the correct name of the Transition component in dev mode`, async () => {
+    await page().evaluate(duration => {
+      const { createApp, ref, openBlock, createElementBlock, Fragment, createCommentVNode, createElementVNode } = (window as any).Vue
+      createApp({
+        template: `
+        <div id="container">
+          <transition :name="view.transitionName" duration="${duration * 2}">
+            <KeepAlive>
+              <component :is="view.name"></component>
+            </KeepAlive>
+          </transition>
+        </div>
+        <button id="changeViewBtn" @click="change">button</button>
+        `,
+        components: {
+          one: {
+            render() {
+              return (openBlock(), createElementBlock(Fragment, null, [
+                createCommentVNode(" Comment! "),
+                createElementVNode("div", { class: "one" }, "one", -1)
+              ], 2112))
+            },
+          },
+          two: {
+            template: '<div class=\"two\">two</div>'
+          }
+        },
+        setup: () => {
+          const view = ref({
+            name: 'one',
+            transitionName: 'slide-left'
+          })
+          const change = () => {
+            view.value = {
+              name: 'two',
+              transitionName: 'slide-right'
+            }
+          }
+          return { view, change }
+        },
+      }).mount('#app')
+    }, duration)
+    expect(await html('#container')).toBe('<!-- Comment! --><div class=\"one\">one</div>')
+
+    await page().evaluate(() => {
+      ;(document.querySelector('#changeViewBtn') as any)!.click()
+    })
+
+    expect(await classList('.one')).toStrictEqual([
+      'one',
+      'slide-right-leave-from',
+      'slide-right-leave-active'
+    ])
+
+    expect(await classList('.two')).toStrictEqual([
+      'two',
+      'slide-right-enter-from',
+      'slide-right-enter-active'
+    ])
+
+    await transitionFinish(duration)
+    expect(await html('#container')).toBe(
+      `<div class="one slide-right-leave-active slide-right-leave-to">one</div>` +
+      `<div class="two slide-right-enter-active slide-right-enter-to">two</div>`
+    )
+
+    await transitionFinish(duration)
+    expect(await html('#container')).toBe(`<div class=\"two\">two</div>`)
+  }, E2E_TIMEOUT)
 })
