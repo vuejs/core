@@ -14,7 +14,7 @@ export function startMeasure(
   }
 
   if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-    devtoolsPerfStart(instance, type, supported ? perf.now() : Date.now())
+    devtoolsPerfStart(instance, type, isSupported() ? perf.now() : Date.now())
   }
 }
 
@@ -33,7 +33,7 @@ export function endMeasure(instance: ComponentInternalInstance, type: string) {
   }
 
   if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-    devtoolsPerfEnd(instance, type, supported ? perf.now() : Date.now())
+    devtoolsPerfEnd(instance, type, isSupported() ? perf.now() : Date.now())
   }
 }
 
