@@ -105,5 +105,4 @@ export function patchDOMProp(
     }
   }
   needRemove && el.removeAttribute(key)
-  return value
 }
