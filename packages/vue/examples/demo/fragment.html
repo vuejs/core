@@ -3,14 +3,15 @@
   <h1 name="钟阳山" value="888">i am h1</h1>
   <h2 v-if="name == 'zys'">i am h2</h2>
   <h3 @click="fn">{{ name }}</h3>
+  <h1 id="h2">666</h1>
 </div>
 <script>
   let { createApp, setup, h } = Vue
 
   createApp({
-    render() {
-      return h('div', {name: 'zys' } , '88888')
-    },
+    // render() {
+    //   return h('div', {name: 'zys' } , '88888')
+    // },
     data() {
       return {
         name: 'zys'
@@ -23,6 +24,10 @@
     },
     mounted() {
       console.log('this is fragment')
+      setTimeout(() => {
+        let id = document.getElementById('h2')
+        id.innerText='iiiii'
+      }, 5000)
     },
     setup(props) {
       console.log(8888);
