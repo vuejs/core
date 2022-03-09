@@ -30,6 +30,7 @@ import {
   makeMap
 } from '@vue/shared'
 import { isRef } from './ref'
+import { warn } from './warning'
 
 const isNonTrackableKeys = /*#__PURE__*/ makeMap(`__proto__,__v_isRef,__isVue`)
 
@@ -218,7 +219,7 @@ export const readonlyHandlers: ProxyHandler<object> = {
   get: readonlyGet,
   set(target, key) {
     if (__DEV__) {
-      console.warn(
+      warn(
         `Set operation on key "${String(key)}" failed: target is readonly.`,
         target
       )
@@ -227,7 +228,7 @@ export const readonlyHandlers: ProxyHandler<object> = {
   },
   deleteProperty(target, key) {
     if (__DEV__) {
-      console.warn(
+      warn(
         `Delete operation on key "${String(key)}" failed: target is readonly.`,
         target
       )
