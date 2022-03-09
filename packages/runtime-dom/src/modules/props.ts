@@ -59,7 +59,9 @@ export function patchDOMProp(
       return
     } else if (value == null && type === 'string') {
       // e.g. <div :id="null">
-      el[key] = ''
+      try {
+        el[key] = ''
+      } catch {}
       el.removeAttribute(key)
       return
     } else if (type === 'number') {
