@@ -131,9 +131,6 @@ export class ReactiveEffect<T = any> {
 function cleanupEffect(effect: ReactiveEffect) {
   const { deps } = effect
   if (deps.length) {
-    for (let i = 0; i < deps.length; i++) {
-      deps[i].delete(effect)
-    }
     deps.length = 0
   }
 }
