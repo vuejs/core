@@ -6,7 +6,7 @@ import {getCurrentInstance} from './component'
  * @example
  * const Component = defineComponent({
  *   setup() {
- *  const name = ref('foo')
+ *     const name = ref('foo')
  *     debug({
  *       // watch states in the vue devtool
  *       name,
