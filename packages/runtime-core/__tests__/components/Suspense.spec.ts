@@ -1232,4 +1232,25 @@ describe('Suspense', () => {
     await nextTick()
     expect(serializeInner(root)).toBe(`<div>parent<!----></div>`)
   })
+
+  test('warn if using async setup when not in a Suspense boundary', () => {
+    const Child = {
+      name: 'Child',
+      async setup() {
+        return () => h('div', 'child')
+      }
+    }
+    const Parent = {
+      setup() {
+        return () => h('div', [h(Child)])
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Parent), root)
+
+    expect(
+      `Component <Child>: setup function returned a promise, but no <Suspense> boundary was found in the parent component tree. Therefore, this component can't render.`
+    ).toHaveBeenWarned()
+  })
 })
