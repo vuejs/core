@@ -280,6 +280,16 @@ export function createAppAPI<HostElement>(
         isSVG?: boolean
       ): any {
         if (!isMounted) {
+          // #5571
+          if ((rootContainer as any)._vnode) {
+            if (__DEV__) {
+              warn(
+                `There is already an app instance mounted on the host container.\n` +
+                  ` If you want to remount another app on the same host container,` +
+                  ` you need to unmount the prev app by \`app.unmount()\``
+              )
+            }
+          }
           const vnode = createVNode(
             rootComponent as ConcreteComponent,
             rootProps
