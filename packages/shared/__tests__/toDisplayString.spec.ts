@@ -70,6 +70,9 @@ describe('toDisplayString', () => {
         np
       })
     ).toBe(JSON.stringify({ n: 1, np: 2 }, null, 2))
+    // #5578
+    const nums = [ref('text')]
+    expect(toDisplayString(nums[0])).toBe('text')
   })
 
   test('objects with custom toString', () => {
