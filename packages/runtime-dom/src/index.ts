@@ -84,7 +84,7 @@ export const createApp = ((...args) => {
         if (__DEV__) {
           warn(`Please do not mount two identical apps on the same node.`)
         }
-        return (container as any)._vnode.component!.proxy
+        (container as any).__vue_app__.unmount()
       }
     }
     if (!isFunction(component) && !component.render && !component.template) {
