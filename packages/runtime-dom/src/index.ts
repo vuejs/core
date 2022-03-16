@@ -77,6 +77,16 @@ export const createApp = ((...args) => {
     if (!container) return
 
     const component = app._component
+    // #5571 the same component into the same container
+    if ((container as any).__vue_app__) {
+      const prevComponent = (container as any).__vue_app__._component
+      if (prevComponent === component) {
+        if (__DEV__) {
+          warn(`Please do not mount two identical apps on the same node.`)
+        }
+        return (container as any)._vnode.component!.proxy
+      }
+    }
     if (!isFunction(component) && !component.render && !component.template) {
       // __UNSAFE__
       // Reason: potential execution of JS expressions in in-DOM template.
