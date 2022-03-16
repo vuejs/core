@@ -13,7 +13,11 @@ import {
  * For converting {{ interpolation }} values to displayed strings.
  * @private
  */
-export const toDisplayString = (val: unknown): string => {
+export const toDisplayString = (val: any): string => {
+  //fix #5578
+  if (val && val.__v_isRef) {
+    return toDisplayString(val.value)
+  }
   return isString(val)
     ? val
     : val == null
