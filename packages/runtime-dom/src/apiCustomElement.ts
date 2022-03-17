@@ -341,13 +341,8 @@ export class VueElement extends BaseClass {
               this._styles.length = 0
             }
             this._applyStyles(newStyles)
-            // if this is an async component, ceReload is called from the inner
-            // component so no need to reload the async wrapper
-            if (!(this._def as ComponentOptions).__asyncLoader) {
-              // reload
-              this._instance = null
-              this._update()
-            }
+            this._instance = null
+            this._update()
           }
         }
 
