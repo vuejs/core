@@ -848,6 +848,7 @@ function baseCreateRenderer(
 
     const areChildrenSVG = isSVG && n2.type !== 'foreignObject'
     if (dynamicChildren) {
+      // 经过compiler
       patchBlockChildren(
         n1.dynamicChildren!,
         dynamicChildren,
@@ -1733,6 +1734,10 @@ function baseCreateRenderer(
     const newLength = c2.length
     const commonLength = Math.min(oldLength, newLength)
     let i
+    // 只对最小长度的进行patch
+    // 旧child长于新child，直接卸载
+    // 旧child短于新child，直接mounted
+    // 好暴力呀，我以为有什么可以优化判断的
     for (i = 0; i < commonLength; i++) {
       const nextChild = (c2[i] = optimized
         ? cloneIfMounted(c2[i] as VNode)
