@@ -8,13 +8,23 @@ export class EffectScope {
   effects: ReactiveEffect[] = []
   cleanups: (() => void)[] = []
 
+  /**
+   * only assinged by undetached scope
+   */
   parent: EffectScope | undefined
+  /**
+   * record undetached scopes
+   */
   scopes: EffectScope[] | undefined
   /**
    * track a child scope's index in its parent's scopes array for optimized
    * removal
    */
   private index: number | undefined
+  /**
+   *  activeEffectScope in context not died should be recorded
+   */
+  private aliveEffectScope: EffectScope | undefined
 
   constructor(detached = false) {
     if (!detached && activeEffectScope) {
@@ -29,10 +39,12 @@ export class EffectScope {
   run<T>(fn: () => T): T | undefined {
     if (this.active) {
       try {
+        this.aliveEffectScope = activeEffectScope
         activeEffectScope = this
         return fn()
       } finally {
-        activeEffectScope = this.parent
+        activeEffectScope = this.aliveEffectScope
+        delete this.aliveEffectScope
       }
     } else if (__DEV__) {
       warn(`cannot run an inactive effect scope.`)
@@ -40,11 +52,13 @@ export class EffectScope {
   }
 
   on() {
+    this.aliveEffectScope = activeEffectScope
     activeEffectScope = this
   }
 
   off() {
-    activeEffectScope = this.parent
+    activeEffectScope = this.aliveEffectScope
+    delete this.aliveEffectScope
   }
 
   stop(fromParent?: boolean) {

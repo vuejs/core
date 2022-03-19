@@ -6,7 +6,8 @@ import {
   onScopeDispose,
   computed,
   ref,
-  ComputedRef
+  ComputedRef,
+  getCurrentScope,
 } from '../src'
 
 describe('reactivity/effect/scope', () => {
@@ -262,5 +263,18 @@ describe('reactivity/effect/scope', () => {
     expect(computedSpy).toHaveBeenCalledTimes(2)
     expect(watchSpy).toHaveBeenCalledTimes(1)
     expect(watchEffectSpy).toHaveBeenCalledTimes(2)
+  })
+
+  it('getCurrentScope() should not get undefined when new EffectScope(true) inside parentScope.run function ', () => {
+    const spy = jest.fn()
+    const parentScope = new EffectScope()
+
+    parentScope.run(() => {
+      const childScope = new EffectScope(true)
+      childScope.run(spy)
+
+      expect(getCurrentScope()).not.toBeUndefined()
+      expect(getCurrentScope() === parentScope).toBe(true)
+    })
   })
 })
