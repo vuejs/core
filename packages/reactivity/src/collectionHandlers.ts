@@ -43,7 +43,7 @@ function get(
   }
 }
 
-function has(this: CollectionTypes, key: unknown, isReadonly = false): boolean {
+function has(this: CollectionTypes, key: unknown, isReadonly = false): boolean { // 声明返回值是一个boolean
   const target = (this as any)[ReactiveFlags.RAW]
   const rawTarget = toRaw(target)
   const rawKey = toRaw(key)
