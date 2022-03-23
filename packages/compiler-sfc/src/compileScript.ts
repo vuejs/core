@@ -660,6 +660,15 @@ export function compileScript(
     )
   }
 
+	function genRuntimeFunctionPropParameters(params: ObjectMethod['params'], source: string) {
+		if (!params.length) {
+			return ''
+		}
+		return params.reduce((result, paramNode) => {
+			return `${result}${result ? ',' : ''}${ source.slice(paramNode.start!, paramNode.end!)}`
+		}, '')
+	}
+
   function genRuntimeProps(props: Record<string, PropTypeData>) {
     const keys = Object.keys(props)
     if (!keys.length) {
@@ -686,7 +695,7 @@ export function compileScript(
                 prop.value.end!
               )}`
             } else {
-              defaultString = `default() ${scriptSetupSource.slice(
+              defaultString = `default(${genRuntimeFunctionPropParameters(prop.params, scriptSetupSource)}) ${scriptSetupSource.slice(
                 prop.body.start!,
                 prop.body.end!
               )}`

@@ -902,10 +902,14 @@ const emit = defineEmits(['a', 'b'])
         foo?: string
         bar?: number;
         baz: boolean;
-        qux?(): number
+        qux?(): number;
+				toLowerCase: (str: string) => string
+				toUpperCase: (str: string) => string
       }>(), {
         foo: 'hi',
-        qux() { return 1 }
+        qux() { return 1 },
+        toLowerCase: (str: string) => str.toLowerCase(),
+        toUpperCase(str: string){ return str.toUpperCase() } 
       })
       </script>
       `)
@@ -918,8 +922,14 @@ const emit = defineEmits(['a', 'b'])
       expect(content).toMatch(
         `qux: { type: Function, required: false, default() { return 1 } }`
       )
+	    expect(content).toMatch(
+		    `toLowerCase: { type: Function, required: true, default: (str: string) => str.toLowerCase() }`
+	    )
+	    expect(content).toMatch(
+		    `toUpperCase: { type: Function, required: true, default(str: string) { return str.toUpperCase() } }`
+	    )
       expect(content).toMatch(
-        `{ foo: string, bar?: number, baz: boolean, qux(): number }`
+        `{ foo: string, bar?: number, baz: boolean, qux(): number, toLowerCase: (str: string) => string, toUpperCase: (str: string) => string }`
       )
       expect(content).toMatch(`const props = __props`)
       expect(bindings).toStrictEqual({
@@ -927,6 +937,8 @@ const emit = defineEmits(['a', 'b'])
         bar: BindingTypes.PROPS,
         baz: BindingTypes.PROPS,
         qux: BindingTypes.PROPS,
+	      toLowerCase: BindingTypes.PROPS,
+	      toUpperCase: BindingTypes.PROPS,
         props: BindingTypes.SETUP_CONST
       })
     })
