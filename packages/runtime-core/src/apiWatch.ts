@@ -1,5 +1,6 @@
 import {
   isRef,
+  isShallow,
   Ref,
   ComputedRef,
   ReactiveEffect,
@@ -205,7 +206,7 @@ function doWatch(
 
   if (isRef(source)) {
     getter = () => source.value
-    forceTrigger = !!source._shallow
+    forceTrigger = isShallow(source)
   } else if (isReactive(source)) {
     getter = () => source
     deep = true

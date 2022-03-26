@@ -58,14 +58,14 @@ class DeferredComputedRefImpl<T> {
         // value invalidation in case of sync access; normal effects are
         // deferred to be triggered in scheduler.
         for (const e of this.dep) {
-          if (e.computed) {
+          if (e.computed instanceof DeferredComputedRefImpl) {
             e.scheduler!(true /* computedTrigger */)
           }
         }
       }
       this._dirty = true
     })
-    this.effect.computed = true
+    this.effect.computed = this as any
   }
 
   private _get() {

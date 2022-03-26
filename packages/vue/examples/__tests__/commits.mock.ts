@@ -18,9 +18,9 @@ export default {
         message: 'test: add test for runtime-dom/modules/class (#75)',
         tree: {
           sha: 'f53f761827af281db86c31d113086c068c1d0789',
-          url: 'https://api.github.com/repos/vuejs/vue-next/git/trees/f53f761827af281db86c31d113086c068c1d0789'
+          url: 'https://api.github.com/repos/vuejs/core/git/trees/f53f761827af281db86c31d113086c068c1d0789'
         },
-        url: 'https://api.github.com/repos/vuejs/vue-next/git/commits/d1527fbee422c7170e56845e55b49c4fd6de72a7',
+        url: 'https://api.github.com/repos/vuejs/core/git/commits/d1527fbee422c7170e56845e55b49c4fd6de72a7',
         comment_count: 0,
         verification: {
           verified: false,
@@ -29,11 +29,11 @@ export default {
           payload: null
         }
       },
-      url: 'https://api.github.com/repos/vuejs/vue-next/commits/d1527fbee422c7170e56845e55b49c4fd6de72a7',
+      url: 'https://api.github.com/repos/vuejs/core/commits/d1527fbee422c7170e56845e55b49c4fd6de72a7',
       html_url:
-        'https://github.com/vuejs/vue-next/commit/d1527fbee422c7170e56845e55b49c4fd6de72a7',
+        'https://github.com/vuejs/core/commit/d1527fbee422c7170e56845e55b49c4fd6de72a7',
       comments_url:
-        'https://api.github.com/repos/vuejs/vue-next/commits/d1527fbee422c7170e56845e55b49c4fd6de72a7/comments',
+        'https://api.github.com/repos/vuejs/core/commits/d1527fbee422c7170e56845e55b49c4fd6de72a7/comments',
       author: {
         login: 'sodatea',
         id: 3277634,
@@ -84,9 +84,9 @@ export default {
       parents: [
         {
           sha: '2383b45e322272ddc102d6914c149b284a25d04f',
-          url: 'https://api.github.com/repos/vuejs/vue-next/commits/2383b45e322272ddc102d6914c149b284a25d04f',
+          url: 'https://api.github.com/repos/vuejs/core/commits/2383b45e322272ddc102d6914c149b284a25d04f',
           html_url:
-            'https://github.com/vuejs/vue-next/commit/2383b45e322272ddc102d6914c149b284a25d04f'
+            'https://github.com/vuejs/core/commit/2383b45e322272ddc102d6914c149b284a25d04f'
         }
       ]
     },
@@ -108,9 +108,9 @@ export default {
         message: 'chore: fix typo (#530) [ci skip]',
         tree: {
           sha: '2a5872ff8dc8ccb8121abd7e890ac3c0c9f1209f',
-          url: 'https://api.github.com/repos/vuejs/vue-next/git/trees/2a5872ff8dc8ccb8121abd7e890ac3c0c9f1209f'
+          url: 'https://api.github.com/repos/vuejs/core/git/trees/2a5872ff8dc8ccb8121abd7e890ac3c0c9f1209f'
         },
-        url: 'https://api.github.com/repos/vuejs/vue-next/git/commits/2383b45e322272ddc102d6914c149b284a25d04f',
+        url: 'https://api.github.com/repos/vuejs/core/git/commits/2383b45e322272ddc102d6914c149b284a25d04f',
         comment_count: 0,
         verification: {
           verified: false,
@@ -119,11 +119,11 @@ export default {
           payload: null
         }
       },
-      url: 'https://api.github.com/repos/vuejs/vue-next/commits/2383b45e322272ddc102d6914c149b284a25d04f',
+      url: 'https://api.github.com/repos/vuejs/core/commits/2383b45e322272ddc102d6914c149b284a25d04f',
       html_url:
-        'https://github.com/vuejs/vue-next/commit/2383b45e322272ddc102d6914c149b284a25d04f',
+        'https://github.com/vuejs/core/commit/2383b45e322272ddc102d6914c149b284a25d04f',
       comments_url:
-        'https://api.github.com/repos/vuejs/vue-next/commits/2383b45e322272ddc102d6914c149b284a25d04f/comments',
+        'https://api.github.com/repos/vuejs/core/commits/2383b45e322272ddc102d6914c149b284a25d04f/comments',
       author: {
         login: 'gcaaa31928',
         id: 6309392,
@@ -175,9 +175,9 @@ export default {
       parents: [
         {
           sha: 'e7e1314cccd1a66fcf8b8526ec21350ec16cc3ad',
-          url: 'https://api.github.com/repos/vuejs/vue-next/commits/e7e1314cccd1a66fcf8b8526ec21350ec16cc3ad',
+          url: 'https://api.github.com/repos/vuejs/core/commits/e7e1314cccd1a66fcf8b8526ec21350ec16cc3ad',
           html_url:
-            'https://github.com/vuejs/vue-next/commit/e7e1314cccd1a66fcf8b8526ec21350ec16cc3ad'
+            'https://github.com/vuejs/core/commit/e7e1314cccd1a66fcf8b8526ec21350ec16cc3ad'
         }
       ]
     },
@@ -199,9 +199,9 @@ export default {
         message: 'test: fix warning',
         tree: {
           sha: 'd942b17681e2e2fbbcd2ee04092390c7f2cf534d',
-          url: 'https://api.github.com/repos/vuejs/vue-next/git/trees/d942b17681e2e2fbbcd2ee04092390c7f2cf534d'
+          url: 'https://api.github.com/repos/vuejs/core/git/trees/d942b17681e2e2fbbcd2ee04092390c7f2cf534d'
         },
-        url: 'https://api.github.com/repos/vuejs/vue-next/git/commits/e7e1314cccd1a66fcf8b8526ec21350ec16cc3ad',
+        url: 'https://api.github.com/repos/vuejs/core/git/commits/e7e1314cccd1a66fcf8b8526ec21350ec16cc3ad',
         comment_count: 0,
         verification: {
           verified: false,
@@ -210,11 +210,11 @@ export default {
           payload: null
         }
       },
-      url: 'https://api.github.com/repos/vuejs/vue-next/commits/e7e1314cccd1a66fcf8b8526ec21350ec16cc3ad',
+      url: 'https://api.github.com/repos/vuejs/core/commits/e7e1314cccd1a66fcf8b8526ec21350ec16cc3ad',
       html_url:
-        'https://github.com/vuejs/vue-next/commit/e7e1314cccd1a66fcf8b8526ec21350ec16cc3ad',
+        'https://github.com/vuejs/core/commit/e7e1314cccd1a66fcf8b8526ec21350ec16cc3ad',
       comments_url:
-        'https://api.github.com/repos/vuejs/vue-next/commits/e7e1314cccd1a66fcf8b8526ec21350ec16cc3ad/comments',
+        'https://api.github.com/repos/vuejs/core/commits/e7e1314cccd1a66fcf8b8526ec21350ec16cc3ad/comments',
       author: {
         login: 'yyx990803',
         id: 499550,
@@ -266,9 +266,9 @@ export default {
       parents: [
         {
           sha: '12ec62e6881f83dfa6c7f8a3c3650ec2567e6b1e',
-          url: 'https://api.github.com/repos/vuejs/vue-next/commits/12ec62e6881f83dfa6c7f8a3c3650ec2567e6b1e',
+          url: 'https://api.github.com/repos/vuejs/core/commits/12ec62e6881f83dfa6c7f8a3c3650ec2567e6b1e',
           html_url:
-            'https://github.com/vuejs/vue-next/commit/12ec62e6881f83dfa6c7f8a3c3650ec2567e6b1e'
+            'https://github.com/vuejs/core/commit/12ec62e6881f83dfa6c7f8a3c3650ec2567e6b1e'
         }
       ]
     }
@@ -292,9 +292,9 @@ export default {
         message: 'chore: fix tests',
         tree: {
           sha: '6ac7bd078a6eb0ad32b5102e0c5d2c29f2b20a48',
-          url: 'https://api.github.com/repos/vuejs/vue-next/git/trees/6ac7bd078a6eb0ad32b5102e0c5d2c29f2b20a48'
+          url: 'https://api.github.com/repos/vuejs/core/git/trees/6ac7bd078a6eb0ad32b5102e0c5d2c29f2b20a48'
         },
-        url: 'https://api.github.com/repos/vuejs/vue-next/git/commits/ecf4da822eea97f5db5fa769d39f994755384a4b',
+        url: 'https://api.github.com/repos/vuejs/core/git/commits/ecf4da822eea97f5db5fa769d39f994755384a4b',
         comment_count: 0,
         verification: {
           verified: false,
@@ -303,11 +303,11 @@ export default {
           payload: null
         }
       },
-      url: 'https://api.github.com/repos/vuejs/vue-next/commits/ecf4da822eea97f5db5fa769d39f994755384a4b',
+      url: 'https://api.github.com/repos/vuejs/core/commits/ecf4da822eea97f5db5fa769d39f994755384a4b',
       html_url:
-        'https://github.com/vuejs/vue-next/commit/ecf4da822eea97f5db5fa769d39f994755384a4b',
+        'https://github.com/vuejs/core/commit/ecf4da822eea97f5db5fa769d39f994755384a4b',
       comments_url:
-        'https://api.github.com/repos/vuejs/vue-next/commits/ecf4da822eea97f5db5fa769d39f994755384a4b/comments',
+        'https://api.github.com/repos/vuejs/core/commits/ecf4da822eea97f5db5fa769d39f994755384a4b/comments',
       author: {
         login: 'yyx990803',
         id: 499550,
@@ -359,9 +359,9 @@ export default {
       parents: [
         {
           sha: 'ca296812d54aff123472d7147b83fddfb634d9bc',
-          url: 'https://api.github.com/repos/vuejs/vue-next/commits/ca296812d54aff123472d7147b83fddfb634d9bc',
+          url: 'https://api.github.com/repos/vuejs/core/commits/ca296812d54aff123472d7147b83fddfb634d9bc',
           html_url:
-            'https://github.com/vuejs/vue-next/commit/ca296812d54aff123472d7147b83fddfb634d9bc'
+            'https://github.com/vuejs/core/commit/ca296812d54aff123472d7147b83fddfb634d9bc'
         }
       ]
     },
@@ -383,9 +383,9 @@ export default {
         message: 'refactor: bring back clone for reused nodes',
         tree: {
           sha: '2cec32c97686e0ee9af1b87f0abdbbbdc18b6de6',
-          url: 'https://api.github.com/repos/vuejs/vue-next/git/trees/2cec32c97686e0ee9af1b87f0abdbbbdc18b6de6'
+          url: 'https://api.github.com/repos/vuejs/core/git/trees/2cec32c97686e0ee9af1b87f0abdbbbdc18b6de6'
         },
-        url: 'https://api.github.com/repos/vuejs/vue-next/git/commits/ca296812d54aff123472d7147b83fddfb634d9bc',
+        url: 'https://api.github.com/repos/vuejs/core/git/commits/ca296812d54aff123472d7147b83fddfb634d9bc',
         comment_count: 0,
         verification: {
           verified: false,
@@ -394,11 +394,11 @@ export default {
           payload: null
         }
       },
-      url: 'https://api.github.com/repos/vuejs/vue-next/commits/ca296812d54aff123472d7147b83fddfb634d9bc',
+      url: 'https://api.github.com/repos/vuejs/core/commits/ca296812d54aff123472d7147b83fddfb634d9bc',
       html_url:
-        'https://github.com/vuejs/vue-next/commit/ca296812d54aff123472d7147b83fddfb634d9bc',
+        'https://github.com/vuejs/core/commit/ca296812d54aff123472d7147b83fddfb634d9bc',
       comments_url:
-        'https://api.github.com/repos/vuejs/vue-next/commits/ca296812d54aff123472d7147b83fddfb634d9bc/comments',
+        'https://api.github.com/repos/vuejs/core/commits/ca296812d54aff123472d7147b83fddfb634d9bc/comments',
       author: {
         login: 'yyx990803',
         id: 499550,
@@ -450,9 +450,9 @@ export default {
       parents: [
         {
           sha: 'e6be55a4989edb6f8750dbaa14eb693ec1f0d67b',
-          url: 'https://api.github.com/repos/vuejs/vue-next/commits/e6be55a4989edb6f8750dbaa14eb693ec1f0d67b',
+          url: 'https://api.github.com/repos/vuejs/core/commits/e6be55a4989edb6f8750dbaa14eb693ec1f0d67b',
           html_url:
-            'https://github.com/vuejs/vue-next/commit/e6be55a4989edb6f8750dbaa14eb693ec1f0d67b'
+            'https://github.com/vuejs/core/commit/e6be55a4989edb6f8750dbaa14eb693ec1f0d67b'
         }
       ]
     },
@@ -474,9 +474,9 @@ export default {
         message: 'chore: relax render type for tsx',
         tree: {
           sha: '7e2b3bb92ab91f755b2251e4a7903e6dd2042602',
-          url: 'https://api.github.com/repos/vuejs/vue-next/git/trees/7e2b3bb92ab91f755b2251e4a7903e6dd2042602'
+          url: 'https://api.github.com/repos/vuejs/core/git/trees/7e2b3bb92ab91f755b2251e4a7903e6dd2042602'
         },
-        url: 'https://api.github.com/repos/vuejs/vue-next/git/commits/e6be55a4989edb6f8750dbaa14eb693ec1f0d67b',
+        url: 'https://api.github.com/repos/vuejs/core/git/commits/e6be55a4989edb6f8750dbaa14eb693ec1f0d67b',
         comment_count: 0,
         verification: {
           verified: false,
@@ -485,11 +485,11 @@ export default {
           payload: null
         }
       },
-      url: 'https://api.github.com/repos/vuejs/vue-next/commits/e6be55a4989edb6f8750dbaa14eb693ec1f0d67b',
+      url: 'https://api.github.com/repos/vuejs/core/commits/e6be55a4989edb6f8750dbaa14eb693ec1f0d67b',
       html_url:
-        'https://github.com/vuejs/vue-next/commit/e6be55a4989edb6f8750dbaa14eb693ec1f0d67b',
+        'https://github.com/vuejs/core/commit/e6be55a4989edb6f8750dbaa14eb693ec1f0d67b',
       comments_url:
-        'https://api.github.com/repos/vuejs/vue-next/commits/e6be55a4989edb6f8750dbaa14eb693ec1f0d67b/comments',
+        'https://api.github.com/repos/vuejs/core/commits/e6be55a4989edb6f8750dbaa14eb693ec1f0d67b/comments',
       author: {
         login: 'yyx990803',
         id: 499550,
@@ -541,9 +541,9 @@ export default {
       parents: [
         {
           sha: 'ccc835caff0344baad3c92ce786ad4f804bf667b',
-          url: 'https://api.github.com/repos/vuejs/vue-next/commits/ccc835caff0344baad3c92ce786ad4f804bf667b',
+          url: 'https://api.github.com/repos/vuejs/core/commits/ccc835caff0344baad3c92ce786ad4f804bf667b',
           html_url:
-            'https://github.com/vuejs/vue-next/commit/ccc835caff0344baad3c92ce786ad4f804bf667b'
+            'https://github.com/vuejs/core/commit/ccc835caff0344baad3c92ce786ad4f804bf667b'
         }
       ]
     }

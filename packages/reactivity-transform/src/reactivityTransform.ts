@@ -229,6 +229,17 @@ export function transformAST(
         stmt.left.type === 'VariableDeclaration'
       ) {
         walkVariableDeclaration(stmt.left)
+      } else if (
+        stmt.type === 'ExportNamedDeclaration' &&
+        stmt.declaration &&
+        stmt.declaration.type === 'VariableDeclaration'
+      ) {
+        walkVariableDeclaration(stmt.declaration, isRoot)
+      } else if (
+        stmt.type === 'LabeledStatement' &&
+        stmt.body.type === 'VariableDeclaration'
+      ) {
+        walkVariableDeclaration(stmt.body, isRoot)
       }
     }
   }
@@ -562,6 +573,7 @@ export function transformAST(
         return
       }
 
+      // skip type nodes
       if (
         parent &&
         parent.type.startsWith('TS') &&

@@ -4,12 +4,13 @@ exports[`$ unwrapping 1`] = `
 "
     import { ref, shallowRef } from 'vue'
     let foo = (ref())
-    let a = (ref(1))
+    export let a = (ref(1))
     let b = (shallowRef({
       count: 0
     }))
     let c = () => {}
     let d
+    label: var e = (ref())
     "
 `;
 
@@ -34,12 +35,13 @@ exports[`$ref & $shallowRef declarations 1`] = `
 "import { ref as _ref, shallowRef as _shallowRef } from 'vue'
 
     let foo = _ref()
-    let a = _ref(1)
+    export let a = _ref(1)
     let b = _shallowRef({
       count: 0
     })
     let c = () => {}
     let d
+    label: var e = _ref()
     "
 `;
 

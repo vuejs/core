@@ -62,7 +62,7 @@ window.init = () => {
   if (persistedState) {
     // functions are not persistable, so delete it in case we sometimes need
     // to debug with custom nodeTransforms
-    delete persistedState.options.nodeTransforms
+    delete persistedState.options?.nodeTransforms
     ssrMode.value = persistedState.ssr
     Object.assign(compilerOptions, persistedState.options)
   }
@@ -142,7 +142,7 @@ window.init = () => {
   }
 
   const editor = monaco.editor.create(document.getElementById('source')!, {
-    value: persistedState?.src || `<div>Hello World!</div>`,
+    value: persistedState?.src || `<div>Hello World</div>`,
     language: 'html',
     ...sharedEditorOptions,
     wordWrap: 'bounded'

@@ -15,9 +15,12 @@ import {
   isObject,
   isArray,
   NOOP,
-  isPromise
+  isPromise,
+  LooseRequired,
+  UnionToIntersection
 } from '@vue/shared'
-import { computed, isRef, Ref } from '@vue/reactivity'
+import { isRef, Ref } from '@vue/reactivity'
+import { computed } from './apiComputed'
 import {
   watch,
   WatchOptions,
@@ -60,7 +63,6 @@ import {
 import { warn } from './warning'
 import { VNodeChild } from './vnode'
 import { callWithAsyncErrorHandling } from './errorHandling'
-import { LooseRequired, UnionToIntersection } from './helpers/typeUtils'
 import { deepMergeData } from './compat/data'
 import { DeprecationTypes } from './compat/compatConfig'
 import {

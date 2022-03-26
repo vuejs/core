@@ -623,7 +623,7 @@ export function cloneVNode<T, U>(
     shapeFlag: vnode.shapeFlag,
     // if the vnode is cloned with extra props, we can no longer assume its
     // existing patch flag to be reliable and need to add the FULL_PROPS flag.
-    // note: perserve flag for fragments since they use the flag for children
+    // note: preserve flag for fragments since they use the flag for children
     // fast paths only.
     patchFlag:
       extraProps && vnode.type !== Fragment
@@ -798,6 +798,7 @@ export function mergeProps(...args: (Data & VNodeProps)[]) {
         const existing = ret[key]
         const incoming = toMerge[key]
         if (
+          incoming &&
           existing !== incoming &&
           !(isArray(existing) && existing.includes(incoming))
         ) {
