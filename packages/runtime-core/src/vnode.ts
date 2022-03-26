@@ -719,7 +719,7 @@ export function normalizeVNode(child: VNodeChild): VNode {
     return cloneIfMounted(child)
   } else {
     // strings and numbers
-    return createVNode(Text, null, String(child))
+    return createTextVNode(String(child))
   }
 }
 
