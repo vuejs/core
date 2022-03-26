@@ -234,7 +234,7 @@ export function updateProps(
               attrs[key] = value
               hasAttrsChanged = true
             }
-          } else if(hasOwn(options,camelize(key))){
+          } else {
             const camelizedKey = camelize(key)
             props[camelizedKey] = resolvePropValue(
               options,
