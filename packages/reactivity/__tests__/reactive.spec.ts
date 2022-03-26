@@ -16,6 +16,10 @@ describe('reactivity/reactive', () => {
     expect('foo' in observed).toBe(true)
     // ownKeys
     expect(Object.keys(observed)).toEqual(['foo'])
+
+    // #5626
+    Object.preventExtensions(original)
+    expect(isReactive(reactive(original))).toBe(false)
   })
 
   test('proto', () => {
