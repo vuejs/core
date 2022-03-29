@@ -276,7 +276,7 @@ export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
   // Non-standard Attributes
   autocapitalize?: string
   autocorrect?: string
-  autocave?: string
+  autosave?: string
   color?: string
   itemprop?: string
   itemscope?: Booleanish
