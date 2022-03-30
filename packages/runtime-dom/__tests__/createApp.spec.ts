@@ -3,7 +3,7 @@ import { nodeOps } from '../src/nodeOps'
 
 describe('createApp for dom', () => {
   // #5571 the same component into the same container
-  test.only('mount', () => {
+  test('mount', () => {
     const Comp = defineComponent({
       props: {
         count: {
