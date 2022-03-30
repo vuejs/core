@@ -18,7 +18,8 @@ import {
   ComponentOptions,
   createComponentInstance,
   Data,
-  setupComponent
+  setupComponent,
+  LifecycleHooks
 } from './component'
 import {
   filterSingleRoot,
@@ -126,7 +127,8 @@ export interface RendererOptions<
     anchor: HostNode | null,
     isSVG: boolean,
     start?: HostNode | null,
-    end?: HostNode | null
+    end?: HostNode | null,
+    noCache?: boolean
   ): [HostNode, HostNode]
 }
 
@@ -515,7 +517,8 @@ function baseCreateRenderer(
       anchor,
       isSVG,
       n2.el,
-      n2.anchor
+      n2.anchor,
+      !!n2.component?.[LifecycleHooks.BEFORE_UNMOUNT]
     )
   }
 

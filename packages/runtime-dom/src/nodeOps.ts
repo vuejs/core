@@ -73,13 +73,13 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
   // Reason: innerHTML.
   // Static content here can only come from compiled templates.
   // As long as the user only uses trusted templates, this is safe.
-  insertStaticContent(content, parent, anchor, isSVG, start, end) {
+  insertStaticContent(content, parent, anchor, isSVG, start, end, noCache) {
     // <parent> before | first ... last | anchor </parent>
     const before = anchor ? anchor.previousSibling : parent.lastChild
     // #5308 can only take cached path if:
     // - has a single root node
     // - nextSibling info is still available
-    if (start && (start === end || start.nextSibling)) {
+    if (!noCache && start && (start === end || start.nextSibling)) {
       // cached
       while (true) {
         parent.insertBefore(start!.cloneNode(true), anchor)
