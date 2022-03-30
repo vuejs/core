@@ -390,7 +390,7 @@ function baseCreateRenderer(
         break
       case Static:
         if (n1 == null) {
-          mountStaticNode(n2, container, anchor, isSVG)
+          mountStaticNode(parentComponent, n2, container, anchor, isSVG)
         } else if (__DEV__) {
           patchStaticNode(n1, n2, container, isSVG)
         }
@@ -504,6 +504,7 @@ function baseCreateRenderer(
   }
 
   const mountStaticNode = (
+    parentComponent: ComponentInternalInstance | null,
     n2: VNode,
     container: RendererElement,
     anchor: RendererNode | null,
@@ -518,7 +519,7 @@ function baseCreateRenderer(
       isSVG,
       n2.el,
       n2.anchor,
-      !!n2.component?.[LifecycleHooks.BEFORE_UNMOUNT]
+      !!parentComponent?.[LifecycleHooks.BEFORE_UNMOUNT]
     )
   }
 
