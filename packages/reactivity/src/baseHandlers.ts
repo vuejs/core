@@ -79,11 +79,14 @@ function createArrayInstrumentations() {
 
 function createGetter(isReadonly = false, shallow = false) {
   return function get(target: Target, key: string | symbol, receiver: object) {
+    // 判断是否是reactive
     if (key === ReactiveFlags.IS_REACTIVE) {
       return !isReadonly
+    // 判断是否是readoly
     } else if (key === ReactiveFlags.IS_READONLY) {
       return isReadonly
     } else if (
+      // 获取原对象
       key === ReactiveFlags.RAW &&
       receiver ===
         (isReadonly
@@ -111,6 +114,7 @@ function createGetter(isReadonly = false, shallow = false) {
     }
 
     if (!isReadonly) {
+      // 对target的key进行收集，TrackOpTypes.GET为收集的来源方式
       track(target, TrackOpTypes.GET, key)
     }
 
@@ -128,6 +132,8 @@ function createGetter(isReadonly = false, shallow = false) {
       // Convert returned value into a proxy as well. we do the isObject check
       // here to avoid invalid value warning. Also need to lazy access readonly
       // and reactive here to avoid circular dependency.
+
+      // 对返回值是对象的还要进行深层次的代理
       return isReadonly ? readonly(res) : reactive(res)
     }
 
@@ -147,8 +153,10 @@ function createSetter(shallow = false) {
   ): boolean {
     let oldValue = (target as any)[key]
     if (!shallow) {
+      // 都拿到没有代理的元数据
       value = toRaw(value)
       oldValue = toRaw(oldValue)
+      // 处理ref情况，没有按照ref的.value操作，不给赋值
       if (!isArray(target) && isRef(oldValue) && !isRef(value)) {
         oldValue.value = value
         return true
@@ -157,6 +165,8 @@ function createSetter(shallow = false) {
       // in shallow mode, objects are set as-is regardless of reactive or not
     }
 
+    // 1. 是数组，判断下标是否短于数组长度
+    // 2. 对象，判断是否拥有key值
     const hadKey =
       isArray(target) && isIntegerKey(key)
         ? Number(key) < target.length
@@ -166,9 +176,9 @@ function createSetter(shallow = false) {
     if (target === toRaw(receiver)) {
       // 触发更新，通知页面更新
       if (!hadKey) {
-        trigger(target, TriggerOpTypes.ADD, key, value)
+        trigger(target, TriggerOpTypes.ADD, key, value) // 匹配不上，新增的
       } else if (hasChanged(value, oldValue)) {
-        trigger(target, TriggerOpTypes.SET, key, value, oldValue)
+        trigger(target, TriggerOpTypes.SET, key, value, oldValue) // 匹配上了，只是更改
       }
     }
     return result

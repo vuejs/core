@@ -174,6 +174,7 @@ function doWatch(
   cb: WatchCallback | null,
   { immediate, deep, flush, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ
 ): WatchStopHandle {
+  debugger
   if (__DEV__ && !cb) {
     if (immediate !== undefined) {
       warn(
@@ -319,6 +320,7 @@ function doWatch(
         if (cleanup) {
           cleanup()
         }
+        // 处理回调方法，方法里面收集错误报错
         callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
           newValue,
           // pass undefined as the old value when it's changed for the first time
@@ -355,6 +357,8 @@ function doWatch(
     }
   }
 
+  // 这里开始声明effect，依赖收集就会收集到当前的环境
+  // 触发更新的时候就触发调度器
   const effect = new ReactiveEffect(getter, scheduler)
 
   if (__DEV__) {

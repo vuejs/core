@@ -27,6 +27,7 @@ type RefBase<T> = {
   value: T
 }
 
+// ref类型的就是用this下面绑定dep(set结构)，dep里面添加了刚刚声明的activeEffect
 export function trackRefValue(ref: RefBase<any>) {
   if (isTracking()) {
     ref = toRaw(ref)

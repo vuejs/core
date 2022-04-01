@@ -38,9 +38,15 @@ class ComputedRefImpl<T> {
     private readonly _setter: ComputedSetter<T>,
     isReadonly: boolean
   ) {
+    // 依赖的数据发生改变，setter触发其收集的依赖
+    // 依赖收集将会触发调度器
+    // 
     this.effect = new ReactiveEffect(getter, () => {
+      // 用dirty字段来执行缓存
+      // 只有数据变动才通知触发更新，更新computed
       if (!this._dirty) {
         this._dirty = true
+        // 这里是触发自定义的effect
         triggerRefValue(this)
       }
     })
@@ -50,6 +56,8 @@ class ComputedRefImpl<T> {
   get value() {
     // the computed ref may get wrapped by other proxies e.g. readonly() #3376
     const self = toRaw(this)
+    debugger
+    // 直接收集自身的reactiveEffect，用
     trackRefValue(self)
     if (self._dirty) {
       self._dirty = false

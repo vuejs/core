@@ -96,7 +96,7 @@ export function reactive(target: object) {
     false,
     mutableHandlers,
     mutableCollectionHandlers,
-    reactiveMap
+    reactiveMap // 用来收集当前target是否已经被proxy了
   )
 }
 
@@ -196,6 +196,7 @@ function createReactiveObject(
   }
   // target is already a Proxy, return it.
   // exception: calling readonly() on a reactive object
+
   // 目标已经是代理对象，并且期望是readonly
   if (
     target[ReactiveFlags.RAW] &&

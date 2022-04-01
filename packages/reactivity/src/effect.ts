@@ -27,6 +27,8 @@ export let trackOpBit = 1
  * This value is chosen to enable modern JS engines to use a SMI on all platforms.
  * When recursion depth is greater, fall back to using a full cleanup.
  */
+
+// 声明最深30层递归达到js引擎极致
 const maxMarkerBits = 30
 
 export type EffectScheduler = (...args: any[]) => any
@@ -66,6 +68,7 @@ export class ReactiveEffect<T = any> {
 
   constructor(
     public fn: () => T,
+    // public声明了全局可以通过this.scheduler访问
     public scheduler: EffectScheduler | null = null,
     scope?: EffectScope | null
   ) {
@@ -73,11 +76,12 @@ export class ReactiveEffect<T = any> {
   }
 
   run() {
+    // effects栈已经被stop清空了
     if (!this.active) {
       // 判断当前已经被收集过了，可以直接触发回调函数
       return this.fn()
     }
-    // 判断当前effect栈中是否已经存在当前effect
+    // 判断当前effect栈中是没有存在当前effect
     if (!effectStack.includes(this)) {
       try {
         effectStack.push((activeEffect = this)) // 在effect栈中加入当前effect，并且将当前effect设为活跃effect
@@ -197,7 +201,9 @@ export function resetTracking() {
 }
 
 // 追踪收集依赖
+// 生成指定的数据结构
 export function track(target: object, type: TrackOpTypes, key: unknown) {
+  // 只有在正有activeEffect状态，才能在执行追踪
   if (!isTracking()) {
     return
   }
@@ -212,10 +218,10 @@ export function track(target: object, type: TrackOpTypes, key: unknown) {
   if (!dep) {
     depsMap.set(key, (dep = createDep()))
   }
-
+  // 默认数据结构 {target: {key: [w:0,n:0]}}
   // targetMap ==》 depsMap ==》 dep（Set()）
   const eventInfo = __DEV__
-    ? { effect: activeEffect, target, type, key }
+    ? { effect: activeEffect, target, type, key } // type只是用于开发环境的说明
     : undefined
 
   trackEffects(dep, eventInfo)
@@ -227,14 +233,15 @@ export function isTracking() {
 
 export function trackEffects(
   dep: Dep, // 依赖值
-  debuggerEventExtraInfo?: DebuggerEventExtraInfo // 信息提示
+  debuggerEventExtraInfo?: DebuggerEventExtraInfo // 信息提示,开发环境
 ) {
   let shouldTrack = false
+  // 没有超过最大长度
   if (effectTrackDepth <= maxMarkerBits) {
     // 没有被收集依赖
     if (!newTracked(dep)) {
       dep.n |= trackOpBit // set newly tracked
-      // 没有被收集，应该进行收集依赖
+      // 没有被收集，应该进行收集依赖，true
       shouldTrack = !wasTracked(dep)
     }
   } else {
@@ -246,7 +253,7 @@ export function trackEffects(
     // 运行收集依赖
   if (shouldTrack) {
     dep.add(activeEffect!)
-    // 在活动effect的收集依赖值到deps里面
+    // 在活动effect的收集依赖值到deps里面，相互嵌套了
     activeEffect!.deps.push(dep)
     if (__DEV__ && activeEffect!.onTrack) {
       // 开发环境加入报错信息
@@ -270,9 +277,12 @@ export function trigger(
   oldValue?: unknown,
   oldTarget?: Map<unknown, unknown> | Set<unknown>
 ) {
+  debugger
+  // track阶段收集到的依赖
   const depsMap = targetMap.get(target)
   if (!depsMap) {
     // never been tracked
+    // 没有收集到依赖
     return
   }
 
@@ -280,8 +290,12 @@ export function trigger(
   if (type === TriggerOpTypes.CLEAR) {
     // collection being cleared
     // trigger all effects for target
+
+    // 将target下的所有deps拿出来，执行清空
     deps = [...depsMap.values()]
   } else if (key === 'length' && isArray(target)) {
+    // 1.通过操作数组长度，将多出来的dep拿出来
+    // 2.array1[1,2,3] ==> array1.length = 2 ==> 3就要去掉
     depsMap.forEach((dep, key) => {
       if (key === 'length' || key >= (newValue as number)) {
         deps.push(dep)
@@ -289,7 +303,8 @@ export function trigger(
     })
   } else {
     // schedule runs for SET | ADD | DELETE
-    if (key !== void 0) {
+    if (key !== void 0) { // key !== undefined
+      // 取出key对应的dep，如果是Add，是没有dep
       deps.push(depsMap.get(key))
     }
 
@@ -336,6 +351,7 @@ export function trigger(
     }
   } else {
     const effects: ReactiveEffect[] = []
+    // 拿出所有的依赖项
     for (const dep of deps) {
       if (dep) {
         effects.push(...dep)
@@ -350,16 +366,22 @@ export function trigger(
 }
 
 export function triggerEffects(
-  dep: Dep | ReactiveEffect[],
+  dep: Dep | ReactiveEffect[], // [ReactiveEffect, w, n]
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
+  debugger
   // spread into array for stabilization
   for (const effect of isArray(dep) ? dep : [...dep]) {
+    // 这里就是触发了effect里面的fn或者scheduler
+
+    // effect == activeEffect 说明当前effect正在触发，不需要重复触发
     if (effect !== activeEffect || effect.allowRecurse) {
       if (__DEV__ && effect.onTrigger) {
         effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
       }
       if (effect.scheduler) {
+        // class里面声明了这个属性
+        // ReactiveEffect(scheduler)
         effect.scheduler()
       } else {
         effect.run()
