@@ -2317,6 +2317,7 @@ function baseCreateRenderer(
     optimized = false,
     start = 0
   ) => {
+    // 声明start开始的位置
     for (let i = start; i < children.length; i++) {
       unmount(children[i], parentComponent, parentSuspense, doRemove, optimized)
     }

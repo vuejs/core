@@ -55,7 +55,7 @@ export const MAP_KEY_ITERATE_KEY = Symbol(__DEV__ ? 'Map key iterate' : '')
 
 export class ReactiveEffect<T = any> {
   active = true
-  deps: Dep[] = []
+  deps: Dep[] = [] // 当前的effect收集到的所以依赖effect。
 
   // can be attached after creation
   computed?: boolean
@@ -76,6 +76,7 @@ export class ReactiveEffect<T = any> {
   }
 
   run() {
+    debugger
     // effects栈已经被stop清空了
     if (!this.active) {
       // 判断当前已经被收集过了，可以直接触发回调函数
@@ -91,10 +92,10 @@ export class ReactiveEffect<T = any> {
 
           // 最大栈内存
         if (effectTrackDepth <= maxMarkerBits) {
-          // 对dep进行标志
+          // 对dep进行标志, dep的w = 1// 表明已经被track
           initDepMarkers(this)
         } else {
-          // 删除当前effect的dep
+          // 删除当前effect的deps
           cleanupEffect(this)
         }
         return this.fn()
@@ -203,6 +204,7 @@ export function resetTracking() {
 // 追踪收集依赖
 // 生成指定的数据结构
 export function track(target: object, type: TrackOpTypes, key: unknown) {
+  debugger
   // 只有在正有activeEffect状态，才能在执行追踪
   if (!isTracking()) {
     return
@@ -235,6 +237,7 @@ export function trackEffects(
   dep: Dep, // 依赖值
   debuggerEventExtraInfo?: DebuggerEventExtraInfo // 信息提示,开发环境
 ) {
+  debugger
   let shouldTrack = false
   // 没有超过最大长度
   if (effectTrackDepth <= maxMarkerBits) {
@@ -254,7 +257,7 @@ export function trackEffects(
   if (shouldTrack) {
     dep.add(activeEffect!)
     // 在活动effect的收集依赖值到deps里面，相互嵌套了
-    activeEffect!.deps.push(dep)
+    activeEffect!.deps.push(dep) // Set [[dep], [dep]]
     if (__DEV__ && activeEffect!.onTrack) {
       // 开发环境加入报错信息
       activeEffect!.onTrack(

@@ -1,0 +1,54 @@
+<script src="../../dist/vue.global.js"></script>
+<div id="app">
+  <h3 @click="fn">woshi 按钮</h3>
+  <!-- <h1 id="h2">{{ getName1 }}</h1> -->
+  <h1 id="h2">{{ state.count }}</h1>
+</div>
+<script>
+  let { createApp, setup, h, reactive, watch } = Vue
+
+  createApp({
+
+    data() {
+      return { age: 1 }
+    },
+    setup() {
+      const state = reactive({ count: 0 })
+      watch(
+        () => state.count,
+        (count, prevCount) => {
+          debugger
+        }
+      )
+      return { state }
+    },
+    watch: {
+      age(val, newV) {
+        debugger
+        console.log('hhhh');
+      }
+    },
+    // computed: {
+    //   getName1() {
+    //     console.log(this.age);
+    //     return this.age + 69
+    //   }
+    // },
+    mounted() {
+      // console.dir(this.getName1);
+      // console.dir(this.age);
+    },
+    methods: {
+      fn() {
+        // this.age = 89
+        this.state.count = 89
+      }
+    }, 
+  }).mount('#app')
+</script>
+
+<style>
+  .di {
+    width: 88px;
+  }
+</style>

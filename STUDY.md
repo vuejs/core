@@ -37,3 +37,8 @@ depsMap.forEach((dep, key) => {
 // 依赖变动触发更新的时候就触发调度器cb
 const effect = new ReactiveEffect(getter, scheduler)
 ```
+
+- 通过watch绑定state.count,同时页面中也使用到了这个字段，所有在targetMap(state)==>depsMap(count)==>dep[ReactiveEffect(watch),ReactiveEffect(componentUpdate)](w:1,n:0是原型属性),trigger阶段通过遍历触发dep。依次触发。
+但是很多的key都绑定componentUpdate，如果每个数据改变都要触发页面更新，要耗费很多性能，所以componentUpdate的scheduler里面加入了quene(),这个方法是异步执行了，所以等到同步任务执行完毕之后再执行异步任务，所以$nextTicker为什么是在页面渲染好之后再执行呢，因为页面这个微任务在队列里面，后面加入的微任务需要前面的微任务执行完之后才能执行。
+
+数据更新之后触发了trigger(set)，但是数据被访问了，就会重新触发track(get)。
