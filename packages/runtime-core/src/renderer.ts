@@ -2196,7 +2196,7 @@ function baseCreateRenderer(
     // For fragments, directly remove all contained DOM nodes.
     // (fragment child nodes cannot have transition)
     let next
-    while (cur !== end) {
+    while (cur && cur !== end) {
       next = hostNextSibling(cur)!
       hostRemove(cur)
       cur = next
