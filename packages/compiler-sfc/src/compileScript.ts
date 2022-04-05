@@ -48,10 +48,7 @@ import { compileTemplate, SFCTemplateCompileOptions } from './compileTemplate'
 import { warnOnce } from './warn'
 import { rewriteDefault } from './rewriteDefault'
 import { createCache } from './cache'
-import {
-  shouldTransform as shouldTransformRef,
-  transformAST as transformRefAST
-} from '@vue/reactivity-transform'
+import { shouldTransform, transformAST } from '@vue/reactivity-transform'
 
 // Special compiler macros
 const DEFINE_PROPS = 'defineProps'
@@ -104,7 +101,7 @@ export interface SFCScriptCompileOptions {
    */
   propsDestructureTransform?: boolean
   /**
-   * @deprecated use `refTransform` instead.
+   * @deprecated use `reactivityTransform` instead.
    */
   refSugar?: boolean
   /**
@@ -143,7 +140,7 @@ export function compileScript(
   let { script, scriptSetup, source, filename } = sfc
   // feature flags
   // TODO remove support for deprecated options when out of experimental
-  const enableRefTransform =
+  const enableReactivityTransform =
     !!options.reactivityTransform ||
     !!options.refSugar ||
     !!options.refTransform
@@ -170,6 +167,8 @@ export function compileScript(
     scriptLang === 'tsx' ||
     scriptSetupLang === 'ts' ||
     scriptSetupLang === 'tsx'
+
+  // resolve parser plugins
   const plugins: ParserPlugin[] = []
   if (!isTS || scriptLang === 'tsx' || scriptSetupLang === 'tsx') {
     plugins.push('jsx')
@@ -193,11 +192,11 @@ export function compileScript(
         sourceType: 'module'
       }).program
       const bindings = analyzeScriptBindings(scriptAst.body)
-      if (enableRefTransform && shouldTransformRef(content)) {
+      if (enableReactivityTransform && shouldTransform(content)) {
         const s = new MagicString(source)
         const startOffset = script.loc.start.offset
         const endOffset = script.loc.end.offset
-        const { importedHelpers } = transformRefAST(scriptAst, s, startOffset)
+        const { importedHelpers } = transformAST(scriptAst, s, startOffset)
         if (importedHelpers.length) {
           s.prepend(
             `import { ${importedHelpers
@@ -862,14 +861,14 @@ export function compileScript(
       }
     }
 
-    // apply ref transform
-    if (enableRefTransform && shouldTransformRef(script.content)) {
-      const { rootRefs: rootVars, importedHelpers } = transformRefAST(
+    // apply reactivity transform
+    if (enableReactivityTransform && shouldTransform(script.content)) {
+      const { rootRefs, importedHelpers } = transformAST(
         scriptAst,
         s,
         scriptStartOffset!
       )
-      refBindings = rootVars
+      refBindings = rootRefs
       for (const h of importedHelpers) {
         helperImports.add(h)
       }
@@ -1109,12 +1108,14 @@ export function compileScript(
     }
   }
 
-  // 3. Apply ref sugar transform
+  // 3. Apply reactivity transform
   if (
-    (enableRefTransform && shouldTransformRef(scriptSetup.content)) ||
+    (enableReactivityTransform &&
+      // normal <script> had ref bindings that maybe used in <script setup>
+      (refBindings || shouldTransform(scriptSetup.content))) ||
     propsDestructureDecl
   ) {
-    const { rootRefs, importedHelpers } = transformRefAST(
+    const { rootRefs, importedHelpers } = transformAST(
       scriptSetupAst,
       s,
       startOffset,

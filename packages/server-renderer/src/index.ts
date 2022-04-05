@@ -30,6 +30,7 @@ export {
 export { ssrInterpolate } from './helpers/ssrInterpolate'
 export { ssrRenderList } from './helpers/ssrRenderList'
 export { ssrRenderSuspense } from './helpers/ssrRenderSuspense'
+export { ssrGetDirectiveProps } from './helpers/ssrGetDirectiveProps'
 export { includeBooleanAttr as ssrIncludeBooleanAttr } from '@vue/shared'
 
 // v-model helpers

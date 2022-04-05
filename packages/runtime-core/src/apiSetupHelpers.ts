@@ -111,14 +111,16 @@ export function defineEmits() {
  * instance properties when it is accessed by a parent component via template
  * refs.
  *
- * `<script setup>` components are closed by default - i.e. varaibles inside
+ * `<script setup>` components are closed by default - i.e. variables inside
  * the `<script setup>` scope is not exposed to parent unless explicitly exposed
  * via `defineExpose`.
  *
  * This is only usable inside `<script setup>`, is compiled away in the
  * output and should **not** be actually called at runtime.
  */
-export function defineExpose<Exposed extends Record<string, any> = Record<string, any>>(exposed?: Exposed) {
+export function defineExpose<
+  Exposed extends Record<string, any> = Record<string, any>
+>(exposed?: Exposed) {
   if (__DEV__) {
     warnRuntimeUsage(`defineExpose`)
   }

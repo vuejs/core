@@ -6,7 +6,7 @@ describe('sfc props transform', () => {
   function compile(src: string, options?: Partial<SFCScriptCompileOptions>) {
     return compileSFCScript(src, {
       inlineTemplate: true,
-      propsDestructureTransform: true,
+      reactivityTransform: true,
       ...options
     })
   }

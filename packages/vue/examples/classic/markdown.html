@@ -14,7 +14,7 @@ Vue.createApp({
   }),
   computed: {
     compiledMarkdown() {
-      return marked(this.input, { sanitize: true })
+      return marked.marked(this.input, { sanitize: true })
     }
   },
   methods: {
