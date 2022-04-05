@@ -17,8 +17,8 @@ export class EffectScope {
   private index: number | undefined
 
   constructor(detached = false) {
+    this.parent = activeEffectScope
     if (!detached && activeEffectScope) {
-      this.parent = activeEffectScope
       this.index =
         (activeEffectScope.scopes || (activeEffectScope.scopes = [])).push(
           this
@@ -62,12 +62,12 @@ export class EffectScope {
         }
       }
       // nested scope, dereference from parent to avoid memory leaks
-      if (this.parent && !fromParent) {
+      if (this.index !== undefined && this.parent && !fromParent) {
         // optimized O(1) removal
         const last = this.parent.scopes!.pop()
         if (last && last !== this) {
-          this.parent.scopes![this.index!] = last
-          last.index = this.index!
+          this.parent.scopes![this.index] = last
+          last.index = this.index
         }
       }
       this.active = false
