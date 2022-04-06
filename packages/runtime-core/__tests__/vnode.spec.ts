@@ -12,7 +12,7 @@ import {
 } from '../src/vnode'
 import { Data } from '../src/component'
 import { ShapeFlags, PatchFlags } from '@vue/shared'
-import { h, reactive, isReactive, setBlockTracking, ref } from '../src'
+import { h, reactive, isReactive, setBlockTracking, ref, withCtx } from '../src'
 import { createApp, nodeOps, serializeInner } from '@vue/runtime-test'
 import { setCurrentRenderingInstance } from '../src/componentRenderContext'
 
@@ -612,6 +612,29 @@ describe('vnode', () => {
           setBlockTracking(1),
           vnode1
         ]))
+      expect(vnode.dynamicChildren).toStrictEqual([])
+    })
+    // #5657
+    test('error of slot function execution should not affect block tracking', () => {
+      const error = new Error('slot execution error')
+      let caughtError
+      const slot = withCtx(
+        () => {
+          throw error
+        },
+        { type: {}, appContext: {} } as any
+      )
+      try {
+        slot()
+      } catch (e) {
+        caughtError = e
+      }
+      expect(caughtError).toBe(error)
+      expect(
+        `[Vue warn]: Unhandled error during execution of slot function`
+      ).toHaveBeenWarned()
+
+      const vnode = (openBlock(), createBlock('div'))
       expect(vnode.dynamicChildren).toStrictEqual([])
     })
   })
