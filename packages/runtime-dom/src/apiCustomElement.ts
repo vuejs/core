@@ -216,7 +216,7 @@ export class VueElement extends BaseClass {
 
     const resolve = (def: InnerComponentDef) => {
       const { props, styles } = def
-      const hasOptions = !isArray(props)
+      const hasOptions = !!props && !isArray(props)
       const rawKeys = props ? (hasOptions ? Object.keys(props) : props) : []
 
       // cast Number-type props set before resolve

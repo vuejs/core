@@ -210,6 +210,19 @@ describe('defineCustomElement', () => {
       customElements.define('my-el-upgrade', E)
       expect(el.shadowRoot.innerHTML).toBe(`foo: hello`)
     })
+
+    test('handling error with attributes but no props declaration', () => {
+      const E = defineCustomElement({
+        render() {
+          return h('div', null, 'success')
+        }
+      })
+      customElements.define('my-el-no-declare', E)
+      const el = document.createElement('my-el-no-declare') as any
+      el.setAttribute('class', 'foo')
+      container.appendChild(el)
+      expect(el.shadowRoot.childNodes[0].getAttribute('class')).toBe('foo')
+    })
   })
 
   describe('emits', () => {
