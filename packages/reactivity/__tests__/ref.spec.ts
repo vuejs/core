@@ -10,6 +10,7 @@ import {
 } from '../src/index'
 import { computed } from '@vue/runtime-dom'
 import { shallowRef, unref, customRef, triggerRef } from '../src/ref'
+import { isShallow } from '../src/reactive'
 
 describe('reactivity/ref', () => {
   it('should hold a value', () => {
@@ -225,6 +226,10 @@ describe('reactivity/ref', () => {
     // force trigger
     triggerRef(sref)
     expect(dummy).toBe(2)
+  })
+
+  test('shallowRef isShallow', () => {
+    expect(isShallow(shallowRef({ a: 1 }))).toBe(true)
   })
 
   test('isRef', () => {

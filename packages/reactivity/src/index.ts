@@ -22,6 +22,7 @@ export {
   readonly,
   isReactive,
   isReadonly,
+  isShallow,
   isProxy,
   shallowReactive,
   shallowReadonly,

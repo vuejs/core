@@ -170,7 +170,7 @@ export function createCompatVue(
     }
   }
 
-  Vue.version = __VERSION__
+  Vue.version = `2.6.14-compat:${__VERSION__}`
   Vue.config = singletonApp.config
 
   Vue.use = (p, ...options) => {

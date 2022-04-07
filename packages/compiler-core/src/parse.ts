@@ -719,7 +719,7 @@ function parseAttributes(
     const attr = parseAttribute(context, attributeNames)
 
     // Trim whitespace between class
-    // https://github.com/vuejs/vue-next/issues/4251
+    // https://github.com/vuejs/core/issues/4251
     if (
       attr.type === NodeTypes.ATTRIBUTE &&
       attr.value &&
@@ -1044,7 +1044,7 @@ function parseTextData(
   if (
     mode === TextModes.RAWTEXT ||
     mode === TextModes.CDATA ||
-    rawText.indexOf('&') === -1
+    !rawText.includes('&')
   ) {
     return rawText
   } else {

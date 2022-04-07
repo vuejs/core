@@ -891,7 +891,7 @@ describe('api: watch', () => {
     expect(spy).toHaveBeenCalledTimes(1)
   })
 
-  // https://github.com/vuejs/vue-next/issues/2381
+  // https://github.com/vuejs/core/issues/2381
   test('$watch should always register its effects with its own instance', async () => {
     let instance: ComponentInternalInstance | null
     let _show: Ref<boolean>

@@ -288,5 +288,56 @@ describe('ssr: element', () => {
           }></div>\`"
       `)
     })
+
+    test('custom dir', () => {
+      expect(getCompiledString(`<div v-xxx:x.y="z" />`)).toMatchInlineSnapshot(`
+        "\`<div\${
+            _ssrRenderAttrs(_ssrGetDirectiveProps(_ctx, _directive_xxx, _ctx.z, \\"x\\", { y: true }))
+          }></div>\`"
+      `)
+    })
+
+    test('custom dir with normal attrs', () => {
+      expect(getCompiledString(`<div class="foo" v-xxx />`))
+        .toMatchInlineSnapshot(`
+        "\`<div\${
+            _ssrRenderAttrs(_mergeProps({ class: \\"foo\\" }, _ssrGetDirectiveProps(_ctx, _directive_xxx)))
+          }></div>\`"
+      `)
+    })
+
+    test('custom dir with v-bind', () => {
+      expect(getCompiledString(`<div :title="foo" :class="bar" v-xxx />`))
+        .toMatchInlineSnapshot(`
+        "\`<div\${
+            _ssrRenderAttrs(_mergeProps({
+              title: _ctx.foo,
+              class: _ctx.bar
+            }, _ssrGetDirectiveProps(_ctx, _directive_xxx)))
+          }></div>\`"
+      `)
+    })
+
+    test('custom dir with object v-bind', () => {
+      expect(getCompiledString(`<div v-bind="x" v-xxx />`))
+        .toMatchInlineSnapshot(`
+        "\`<div\${
+            _ssrRenderAttrs(_mergeProps(_ctx.x, _ssrGetDirectiveProps(_ctx, _directive_xxx)))
+          }></div>\`"
+      `)
+    })
+
+    test('custom dir with object v-bind + normal bindings', () => {
+      expect(
+        getCompiledString(`<div v-bind="x" class="foo" v-xxx title="bar" />`)
+      ).toMatchInlineSnapshot(`
+        "\`<div\${
+            _ssrRenderAttrs(_mergeProps(_ctx.x, {
+              class: \\"foo\\",
+              title: \\"bar\\"
+            }, _ssrGetDirectiveProps(_ctx, _directive_xxx)))
+          }></div>\`"
+      `)
+    })
   })
 })
