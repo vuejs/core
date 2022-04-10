@@ -16,10 +16,16 @@ export interface WritableComputedRef<T> extends Ref<T> {
 }
 
 export type ComputedGetter<T> = () => T
+export type ComputedGetterWithVModel<T> = (vm: any) => T
 export type ComputedSetter<T> = (v: T) => void
 
 export interface WritableComputedOptions<T> {
   get: ComputedGetter<T>
+  set: ComputedSetter<T>
+}
+
+export interface WritableComputedOptionsWithVModel<T> {
+  get: ComputedGetterWithVModel<T>
   set: ComputedSetter<T>
 }
 
