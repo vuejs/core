@@ -1090,4 +1090,40 @@ describe('api: watch', () => {
     // own update effect
     expect(instance!.scope.effects.length).toBe(1)
   })
+
+  it('watchEffect should not track watch callback when instance is not mounted', async () => {
+    let _formData: { value: string }
+    const Comp = {
+      setup() {
+        const formData = reactive({
+          value: ''
+        })
+        _formData = formData
+        const options = reactive([{
+          value: 'value1'
+        }, {
+          value: 'value2'
+        }])
+        watch(formData, () => {
+          // just track formData.value
+          return formData.value
+        })
+        watchEffect(()=>{
+          formData.value = options[0].value
+        })
+        return () => ''
+      }
+    }
+    const root = nodeOps.createElement('div')
+    createApp(Comp).mount(root)
+
+    _formData!.value = 'value2'
+    await nextTick()
+    expect(_formData!.value).toBe('value2')
+
+    _formData!.value = 'value1'
+    await nextTick()
+    expect(_formData!.value).toBe('value1')
+  })
+
 })
