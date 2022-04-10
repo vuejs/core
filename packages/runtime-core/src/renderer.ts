@@ -2213,7 +2213,7 @@ function baseCreateRenderer(
       unregisterHMR(instance)
     }
 
-    const { bum, scope, update, subTree, um } = instance
+    const { bum, scope, update, um } = instance
 
     // beforeUnmount hook
     if (bum) {
@@ -2230,11 +2230,28 @@ function baseCreateRenderer(
     // stop effects in component scope
     scope.stop()
 
+    let { subTree } = instance
+
     // update may be null if a component is unmounted before its async
     // setup has resolved.
     if (update) {
       // so that scheduler will no longer invoke it
       update.active = false
+
+      if (
+        __DEV__ &&
+        subTree.patchFlag > 0 &&
+        subTree.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
+      ) {
+        let root = filterSingleRoot(subTree.children as VNodeArrayChildren)
+        if (root) {
+          (subTree.children as VNodeArrayChildren).forEach( n => {
+            root === n || unmount(n as VNode, instance, parentSuspense, doRemove)
+          })
+          subTree = root
+        }
+      }
+
       unmount(subTree, instance, parentSuspense, doRemove)
     }
     // unmounted hook

@@ -7,6 +7,11 @@ import {
   DirectiveHook,
   VNode,
   DirectiveBinding,
+  openBlock,
+  createElementBlock,
+  Fragment,
+  createCommentVNode,
+  serializeInner,
   nextTick
 } from '@vue/runtime-test'
 import { currentInstance, ComponentInternalInstance } from '../src/component'
@@ -368,7 +373,7 @@ describe('directives', () => {
     expect(d2.mounted).toHaveBeenCalled()
   })
 
-  test('should disable tracking inside directive lifecycle hooks', async () => {
+  it('should disable tracking inside directive lifecycle hooks', async () => {
     const count = ref(0)
     const text = ref('')
     const beforeUpdate = jest.fn(() => count.value++)
@@ -394,5 +399,47 @@ describe('directives', () => {
     await nextTick()
     expect(beforeUpdate).toHaveBeenCalledTimes(1)
     expect(count.value).toBe(1)
+  })
+
+  // #5407
+  it('execute directive lifecycle hooks when unmount the SingleRoot', async () => {
+    const show = ref(true)
+    const directive = {
+      mounted: jest.fn(),
+      unmounted: jest.fn()
+    }
+    const App = {
+      render() {
+        return show.value
+          ? withDirectives(h(Comp), [[directive]])
+          : createCommentVNode('v-if', true)
+      }
+    }
+
+    const Comp = {
+      render() {
+        return (openBlock(), createElementBlock(Fragment, null, [
+          createCommentVNode('Text Node'),
+          h('div', null, 'With text node')
+        ], 2122))
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(directive.mounted).toHaveBeenCalled()
+    expect(serializeInner(root)).toBe(`<!--Text Node--><div>With text node</div>`)
+
+    show.value = false
+    await nextTick()
+
+    expect(directive.unmounted).toHaveBeenCalled()
+    expect(serializeInner(root)).toBe(`<!--v-if-->`)
+
+    show.value = true
+    await nextTick()
+
+    expect(directive.mounted).toHaveBeenCalled()
+    expect(serializeInner(root)).toBe(`<!--Text Node--><div>With text node</div>`)
   })
 })
