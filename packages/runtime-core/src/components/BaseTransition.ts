@@ -164,7 +164,9 @@ const BaseTransitionImpl: ComponentOptions = {
       if (
         __DEV__ &&
         mode &&
-        mode !== 'in-out' && mode !== 'out-in' && mode !== 'default'
+        mode !== 'in-out' &&
+        mode !== 'out-in' &&
+        mode !== 'default'
       ) {
         warn(`invalid <transition> mode: ${mode}`)
       }
@@ -460,22 +462,28 @@ export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks) {
 
 export function getTransitionRawChildren(
   children: VNode[],
-  keepComment: boolean = false
+  keepComment: boolean = false,
+  parentKey?: VNode['key']
 ): VNode[] {
   let ret: VNode[] = []
   let keyedFragmentCount = 0
   for (let i = 0; i < children.length; i++) {
-    const child = children[i]
+    let child = children[i]
+    // #5360 inherit parent key in case of <template v-for>
+    const key =
+      parentKey == null
+        ? child.key
+        : String(parentKey) + String(child.key != null ? child.key : i)
     // handle fragment children case, e.g. v-for
     if (child.type === Fragment) {
       if (child.patchFlag & PatchFlags.KEYED_FRAGMENT) keyedFragmentCount++
       ret = ret.concat(
-        getTransitionRawChildren(child.children as VNode[], keepComment)
+        getTransitionRawChildren(child.children as VNode[], keepComment, key)
       )
     }
     // comment placeholders should be skipped, e.g. v-if
     else if (keepComment || child.type !== Comment) {
-      ret.push(child)
+      ret.push(key != null ? cloneVNode(child, { key }) : child)
     }
   }
   // #1126 if a transition children list contains multiple sub fragments, these
