@@ -8,7 +8,13 @@ export class EffectScope {
   effects: ReactiveEffect[] = []
   cleanups: (() => void)[] = []
 
+  /**
+   * only assinged by undetached scope
+   */
   parent: EffectScope | undefined
+  /**
+   * record undetached scopes
+   */
   scopes: EffectScope[] | undefined
   /**
    * track a child scope's index in its parent's scopes array for optimized
@@ -28,11 +34,12 @@ export class EffectScope {
 
   run<T>(fn: () => T): T | undefined {
     if (this.active) {
+      const currentEffectScope = activeEffectScope
       try {
         activeEffectScope = this
         return fn()
       } finally {
-        activeEffectScope = this.parent
+        activeEffectScope = currentEffectScope
       }
     } else if (__DEV__) {
       warn(`cannot run an inactive effect scope.`)
