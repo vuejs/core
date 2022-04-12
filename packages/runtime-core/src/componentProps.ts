@@ -197,7 +197,6 @@ export function updateProps(
   rawPrevProps: Data | null,
   optimized: boolean
 ) {
-  debugger
   const {
     props,
     attrs,
