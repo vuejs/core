@@ -91,6 +91,9 @@ export function setRef(
             if (!isArray(existing)) {
               if (_isString) {
                 refs[ref] = [refValue]
+                if (hasOwn(setupState, ref)) {
+                  setupState[ref] = refs[ref]
+                }
               } else {
                 ref.value = [refValue]
                 if (rawRef.k) refs[rawRef.k] = ref.value
