@@ -224,8 +224,7 @@ export function updateProps(
       const propsToUpdate = instance.vnode.dynamicProps!
       for (let i = 0; i < propsToUpdate.length; i++) {
         let key = propsToUpdate[i]
-      // if the prop key is a declared emit event listener.
-      // use continue to skip this prop
+        // skip if the prop key is a declared emit event listener
         if (isEmitListener(instance.emitsOptions, key)){
           continue
         }
