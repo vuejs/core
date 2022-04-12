@@ -179,7 +179,6 @@ export function createAppAPI<HostElement>(
   hydrate?: RootHydrateFunction
 ): CreateAppFunction<HostElement> {
   return function createApp(rootComponent, rootProps = null) {
-
     if (!isFunction(rootComponent)) {
       rootComponent = { ...rootComponent }
     }
