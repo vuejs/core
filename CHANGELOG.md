@@ -1,3 +1,19 @@
+## [3.2.32](https://github.com/vuejs/core/compare/v3.2.31...v3.2.32) (2022-04-12)
+
+
+### Bug Fixes
+
+* **devtools:** perf: use high-resolution time ([1070f12](https://github.com/vuejs/core/commit/1070f127a78bfe7da6fe550cc272ef11a1f434a0))
+* **reactivity:** fix currentScope loss when running detached effect scope ([#5575](https://github.com/vuejs/core/issues/5575)) ([0a301d4](https://github.com/vuejs/core/commit/0a301d4dabd667526cbcd96e88b50741b519a812))
+* **runtime-core/template-ref:** named ref in v-for regression fix ([#5118](https://github.com/vuejs/core/issues/5118)) ([cee1eaf](https://github.com/vuejs/core/commit/cee1eafb4d2d5df901c9536ac59c321be72598b5)), closes [#5116](https://github.com/vuejs/core/issues/5116) [#5447](https://github.com/vuejs/core/issues/5447) [#5525](https://github.com/vuejs/core/issues/5525)
+* **runtime-core:** allow spying on proxy methods regression ([#5417](https://github.com/vuejs/core/issues/5417)) ([1574edd](https://github.com/vuejs/core/commit/1574edd490bd5cc0a213bc9f48ff41a1dc43ab22)), closes [#5415](https://github.com/vuejs/core/issues/5415) [#4216](https://github.com/vuejs/core/issues/4216)
+* **runtime-core:** Avoid mutating original options object in createApp ([#4840](https://github.com/vuejs/core/issues/4840)) ([d121a9b](https://github.com/vuejs/core/commit/d121a9bc7e7af59adb2d2803954cfeee95b35270)), closes [#4398](https://github.com/vuejs/core/issues/4398)
+* **runtime-core:** ensure custom directive instance properly exposes properties on closed instances. ([#5022](https://github.com/vuejs/core/issues/5022)) ([f44087e](https://github.com/vuejs/core/commit/f44087e171282cb77f1e23d86516a527e4c5804b)), closes [#5018](https://github.com/vuejs/core/issues/5018)
+* **runtime-core:** fix event listener as dynamicProp is added erroneously to props ([#5517](https://github.com/vuejs/core/issues/5517)) ([8eceabd](https://github.com/vuejs/core/commit/8eceabd14ebab2ba6523f920134b02fdf21e0a1c)), closes [#5520](https://github.com/vuejs/core/issues/5520)
+* **transition:** ensure flattened transition group children inherit parent keys ([4311ddd](https://github.com/vuejs/core/commit/4311dddfa72b405b20f469f8f219ec3027972f55)), closes [#4718](https://github.com/vuejs/core/issues/4718) [#5360](https://github.com/vuejs/core/issues/5360) [#5392](https://github.com/vuejs/core/issues/5392)
+
+
+
 ## [3.2.31](https://github.com/vuejs/core/compare/v3.2.30...v3.2.31) (2022-02-12)
 
 
