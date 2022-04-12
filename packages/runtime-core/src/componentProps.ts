@@ -225,6 +225,10 @@ export function updateProps(
       const propsToUpdate = instance.vnode.dynamicProps!
       for (let i = 0; i < propsToUpdate.length; i++) {
         let key = propsToUpdate[i]
+        // skip if the prop key is a declared emit event listener
+        if (isEmitListener(instance.emitsOptions, key)){
+          continue
+        }
         // PROPS flag guarantees rawProps to be non-null
         const value = rawProps![key]
         if (options) {
