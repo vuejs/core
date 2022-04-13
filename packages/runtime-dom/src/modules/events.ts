@@ -13,8 +13,9 @@ interface Invoker extends EventListener {
 type EventValue = Function | Function[]
 
 // Async edge case fix requires storing an event listener's attach timestamp.
-const { _getNow, skipTimestampCheck } = /*#__PURE__*/ (() => {
-  const result = { _getNow: Date.now, skipTimestampCheck: false }
+const [_getNow, skipTimestampCheck] = /*#__PURE__*/ (() => {
+  let _getNow = Date.now
+  let skipTimestampCheck = false
   if (typeof window !== 'undefined') {
     // Determine what event timestamp the browser is using. Annoyingly, the
     // timestamp can either be hi-res (relative to page load) or low-res
@@ -24,14 +25,14 @@ const { _getNow, skipTimestampCheck } = /*#__PURE__*/ (() => {
       // if the low-res timestamp which is bigger than the event timestamp
       // (which is evaluated AFTER) it means the event is using a hi-res timestamp,
       // and we need to use the hi-res version for event listeners as well.
-      result._getNow = () => performance.now()
+      _getNow = () => performance.now()
     }
     // #3485: Firefox <= 53 has incorrect Event.timeStamp implementation
     // and does not fire microtasks in between event propagation, so safe to exclude.
     const ffMatch = navigator.userAgent.match(/firefox\/(\d+)/i)
-    result.skipTimestampCheck = !!(ffMatch && Number(ffMatch[1]) <= 53)
+    skipTimestampCheck = !!(ffMatch && Number(ffMatch[1]) <= 53)
   }
-  return result
+  return [_getNow, skipTimestampCheck]
 })()
 
 // To avoid the overhead of repeatedly calling performance.now(), we cache
