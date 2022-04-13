@@ -670,7 +670,10 @@ function setupStatefulComponent(
         if (__DEV__ && !instance.suspense) {
           const name = Component.name ?? 'Anonymous'
           warn(
-            `Component <${name}>: setup function returned a promise, but no <Suspense> boundary was found in the parent component tree. Therefore, this component can't render.`
+            `Component <${name}>: setup function returned a promise, but no ` +
+              `<Suspense> boundary was found in the parent component tree. ` +
+              `A component with async setup() must be nested in a <Suspense> ` +
+              `in order to be rendered.`
           )
         }
       } else if (__DEV__) {

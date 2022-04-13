@@ -709,7 +709,7 @@ describe('Suspense', () => {
       <div v-if="errorMessage">{{ errorMessage }}</div>
       <Suspense v-else>
         <div>
-          <Async />     
+          <Async />
         </div>
         <template #fallback>
           <div>fallback</div>
@@ -1250,7 +1250,7 @@ describe('Suspense', () => {
     render(h(Parent), root)
 
     expect(
-      `Component <Child>: setup function returned a promise, but no <Suspense> boundary was found in the parent component tree. Therefore, this component can't render.`
+      `A component with async setup() must be nested in a <Suspense>`
     ).toHaveBeenWarned()
   })
 })
