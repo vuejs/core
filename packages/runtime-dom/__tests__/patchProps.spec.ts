@@ -242,12 +242,14 @@ describe('runtime-dom: props patching', () => {
     expect(el.getAttribute('size')).toBe(null)
     expect('Failed setting prop "size" on <input>').toHaveBeenWarnedLast()
   })
+
   test('select with type (string property)', () => {
     const el = document.createElement('select')
     patchProp(el, 'type', null, 'test')
     expect(el.type).toBe('select-one')
     expect('Failed setting prop "type" on <select>').toHaveBeenWarnedLast()
   })
+
   test('select with willValidate (boolean property)', () => {
     const el = document.createElement('select')
     patchProp(el, 'willValidate', true, null)
