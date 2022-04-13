@@ -98,7 +98,6 @@ function parseName(name: string): [string, EventListenerOptions | undefined] {
     while ((m = name.match(optionsModifierRE))) {
       name = name.slice(0, name.length - m[0].length)
       ;(options as any)[m[0].toLowerCase()] = true
-      options
     }
   }
   return [hyphenate(name.slice(2)), options]
