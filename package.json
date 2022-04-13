@@ -1,6 +1,6 @@
 {
   "private": true,
-  "version": "3.2.31",
+  "version": "3.2.32",
   "scripts": {
     "dev": "node scripts/dev.js",
     "build": "node scripts/build.js",
@@ -67,7 +67,7 @@
     "conventional-changelog-cli": "^2.0.31",
     "csstype": "^3.0.3",
     "enquirer": "^2.3.2",
-    "esbuild": "^0.14.11",
+    "esbuild": "^0.14.35",
     "eslint": "^7.7.0",
     "execa": "^4.0.2",
     "fs-extra": "^9.0.1",
@@ -91,7 +91,7 @@
     "ts-jest": "^27.0.5",
     "tslib": "^2.3.1",
     "typescript": "^4.2.2",
-    "vite": "^2.7.12",
+    "vite": "^2.9.0",
     "vue": "workspace:*",
     "yorkie": "^2.0.0"
   }
