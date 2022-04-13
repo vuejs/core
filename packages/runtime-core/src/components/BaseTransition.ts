@@ -20,6 +20,7 @@ import { ShapeFlags, PatchFlags } from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import { RendererElement } from '../renderer'
 
+
 export interface BaseTransitionProps<HostElement = RendererElement> {
   mode?: 'in-out' | 'out-in' | 'default'
   appear?: boolean
@@ -140,16 +141,19 @@ const BaseTransitionImpl: ComponentOptions = {
     const state = useTransitionState()
 
     let prevTransitionKey: any
-
+    const filterCommentChild = (children:Array<VNode>) =>{
+      return children.filter((child:VNode)=>{
+        return child.type !== Comment
+      })
+    }
     return () => {
       const children =
         slots.default && getTransitionRawChildren(slots.default(), true)
       if (!children || !children.length) {
         return
       }
-
       // warn multiple elements
-      if (__DEV__ && children.length > 1) {
+      if (__DEV__ && filterCommentChild(children).length > 1) {
         warn(
           '<transition> can only be used on a single element or component. Use ' +
             '<transition-group> for lists.'
