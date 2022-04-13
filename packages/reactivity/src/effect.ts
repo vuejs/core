@@ -64,6 +64,10 @@ export class ReactiveEffect<T = any> {
    * @internal
    */
   allowRecurse?: boolean
+  /**
+   * @internal
+   */
+  private deferStop?: boolean
 
   onStop?: () => void
   // dev only
@@ -114,11 +118,18 @@ export class ReactiveEffect<T = any> {
       activeEffect = this.parent
       shouldTrack = lastShouldTrack
       this.parent = undefined
+
+      if (this.deferStop) {
+        this.stop()
+      }
     }
   }
 
   stop() {
-    if (this.active) {
+    // stopped while running itself - defer the cleanup
+    if (activeEffect === this) {
+      this.deferStop = true
+    } else if (this.active) {
       cleanupEffect(this)
       if (this.onStop) {
         this.onStop()
