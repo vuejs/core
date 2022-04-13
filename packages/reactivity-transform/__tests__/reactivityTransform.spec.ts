@@ -222,12 +222,18 @@ test('should not rewrite scope variable', () => {
         console.log(d)
         console.log(e)
       }
+      let err = $ref(null)
+      try {
+      } catch (err) {
+        console.log(err)
+      }
     `)
   expect(code).toMatch('console.log(a)')
   expect(code).toMatch('console.log(b.value)')
   expect(code).toMatch('console.log(c)')
   expect(code).toMatch('console.log(d.value)')
   expect(code).toMatch('console.log(e)')
+  expect(code).toMatch('console.log(err)')
   assertCode(code)
 })
 
