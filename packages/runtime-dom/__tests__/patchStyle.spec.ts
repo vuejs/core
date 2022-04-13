@@ -39,15 +39,15 @@ describe(`runtime-dom: style patching`, () => {
     const el = document.createElement('div')
     patchProp(el, 'style', null, {
       color: undefined,
-      '--color': false,
       borderRadius: null
     })
     expect(el.style.cssText.replace(/\s/g, '')).toBe('')
+
     patchProp(
       el,
       'style',
       { color: 'red' },
-      { color: undefined, '--color': false, borderRadius: false }
+      { color: null, borderRadius: undefined }
     )
     expect(el.style.cssText.replace(/\s/g, '')).toBe('')
   })

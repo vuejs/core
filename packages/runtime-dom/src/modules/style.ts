@@ -42,10 +42,10 @@ function setStyle(
   name: string,
   val: string | string[]
 ) {
-  val = val == null || (val as any) === false ? '' : val
   if (isArray(val)) {
     val.forEach(v => setStyle(style, name, v))
   } else {
+    if (val == null) val = ''
     if (name.startsWith('--')) {
       // custom property definition
       style.setProperty(name, val)
