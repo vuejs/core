@@ -285,7 +285,7 @@ describe('GLOBAL_PROTOTYPE', () => {
     delete Vue.prototype.$test
   })
 
-  test.only('functions keeps additional properties', () => {
+  test('functions keeps additional properties', () => {
     function test(this: any) {
       return this.msg
     }
