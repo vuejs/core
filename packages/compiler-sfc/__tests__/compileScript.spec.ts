@@ -1103,6 +1103,17 @@ const emit = defineEmits(['a', 'b'])
         Foo: BindingTypes.SETUP_CONST
       })
     })
+
+    test('import type', () => {
+      const { content } = compile(
+        `<script setup lang="ts">
+        import type { Foo } from './main.ts'
+        import { type Bar, Baz } from './main.ts'
+        </script>`
+      )
+      expect(content).toMatch(`return { Baz }`)
+      assertCode(content)
+    })
   })
 
   describe('async/await detection', () => {

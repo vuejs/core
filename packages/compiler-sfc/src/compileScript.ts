@@ -802,7 +802,9 @@ export function compileScript(
             node.source.value,
             specifier.local.name,
             imported,
-            node.importKind === 'type',
+            node.importKind === 'type' ||
+              (specifier.type === 'ImportSpecifier' &&
+                specifier.importKind === 'type'),
             false
           )
         }
@@ -979,7 +981,9 @@ export function compileScript(
             source,
             local,
             imported,
-            node.importKind === 'type',
+            node.importKind === 'type' ||
+              (specifier.type === 'ImportSpecifier' &&
+                specifier.importKind === 'type'),
             true
           )
         }
