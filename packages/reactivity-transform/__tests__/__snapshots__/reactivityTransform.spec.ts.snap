@@ -216,6 +216,11 @@ exports[`should not rewrite scope variable 1`] = `
         console.log(d.value)
         console.log(e)
       }
+      let err = _ref(null)
+      try {
+      } catch (err) {
+        console.log(err)
+      }
     "
 `;
 
