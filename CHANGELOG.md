@@ -1,3 +1,24 @@
+## [3.2.33](https://github.com/vuejs/core/compare/v3.2.32...v3.2.33) (2022-04-14)
+
+
+### Bug Fixes
+
+* **compat:** copy additional properties for functions bound via globalProperties ([#4873](https://github.com/vuejs/core/issues/4873)) ([1612971](https://github.com/vuejs/core/commit/16129714714e19c5c6bfbd05c439ff68bcac00b9)), closes [#4403](https://github.com/vuejs/core/issues/4403)
+* **compiler-sfc:** handle type modifier in import specifiers ([#5498](https://github.com/vuejs/core/issues/5498)) ([8e29ef6](https://github.com/vuejs/core/commit/8e29ef6019d1b9d9c8f67b4ebba0223b8e0f914c))
+* **custom-elements:** work with async component + slots ([#4657](https://github.com/vuejs/core/issues/4657)) ([f4d2c9f](https://github.com/vuejs/core/commit/f4d2c9fc6afea827a081c1eeab78ce5c0cc620ca)), closes [#4639](https://github.com/vuejs/core/issues/4639)
+* **reactivity-transform:** should not rewrite catch param ([#5711](https://github.com/vuejs/core/issues/5711)) ([1f14f19](https://github.com/vuejs/core/commit/1f14f194396bf9296a1046d3f680d6d318cd0e40)), closes [#5709](https://github.com/vuejs/core/issues/5709)
+* **reactivity:** fix ref tracking of self-stopping effects ([154233a](https://github.com/vuejs/core/commit/154233abdb19b8330bbc1ff0d3e007f2558cd81c)), closes [#5707](https://github.com/vuejs/core/issues/5707)
+* **runtime-core:** ensure custom events are not emitted anymore after unmount. ([#5679](https://github.com/vuejs/core/issues/5679)) ([71c9536](https://github.com/vuejs/core/commit/71c953662528c4f0be68e7b412585c6809794528)), closes [#5674](https://github.com/vuejs/core/issues/5674)
+* **runtime-core:** fix use of non-existent-in-prod internal property in defineProperty trap ([f641c4b](https://github.com/vuejs/core/commit/f641c4b2289dfdbbbea87538e36fa35f2a115ddc)), closes [#5710](https://github.com/vuejs/core/issues/5710)
+* **runtime-dom:** catch more cases of DOM property setting error ([#5552](https://github.com/vuejs/core/issues/5552)) ([fa1d14c](https://github.com/vuejs/core/commit/fa1d14c2c82a70743ed837ee91c8966373aa8142)), closes [#5545](https://github.com/vuejs/core/issues/5545)
+* **runtime-dom:** patch translate as an attr ([#5485](https://github.com/vuejs/core/issues/5485)) ([2c09969](https://github.com/vuejs/core/commit/2c09969b1316b88f9a60406ce7c49cf1110bc400)), closes [#5462](https://github.com/vuejs/core/issues/5462)
+* **runtime-dom:** properly handle style properties with undefined values ([#5348](https://github.com/vuejs/core/issues/5348)) ([85af139](https://github.com/vuejs/core/commit/85af1398637ee91c6ebabb73bf42250320311e19)), closes [#5322](https://github.com/vuejs/core/issues/5322)
+* **ssr:** avoid rendering reserved internal keys in output ([#5564](https://github.com/vuejs/core/issues/5564)) ([cc238cd](https://github.com/vuejs/core/commit/cc238cdb8e9e90b700c22dfb0530d395e60c9836)), closes [#5563](https://github.com/vuejs/core/issues/5563)
+* **transition:** fix broken leave transition on dev root fragment ([#5268](https://github.com/vuejs/core/issues/5268)) ([767d212](https://github.com/vuejs/core/commit/767d212d20a9a488d183610d048ba131bbfd067e))
+* **transition:** handle transition for v-if branches with comment ([62eba63](https://github.com/vuejs/core/commit/62eba63172414ae0aa895d4b1927c7889c398f2f)), closes [#5675](https://github.com/vuejs/core/issues/5675)
+
+
+
 ## [3.2.32](https://github.com/vuejs/core/compare/v3.2.31...v3.2.32) (2022-04-12)
 
 
