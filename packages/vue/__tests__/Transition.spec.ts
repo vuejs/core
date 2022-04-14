@@ -2039,7 +2039,7 @@ describe('e2e: Transition', () => {
           template: `
             <div id="container">
               <transition>
-                <Comp class="test" v-if="toggle">      
+                <Comp class="test" v-if="toggle">
                   <div>content</div>
                 </Comp>
               </transition>
