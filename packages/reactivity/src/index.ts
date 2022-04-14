@@ -38,9 +38,9 @@ export {
   ComputedRef,
   WritableComputedRef,
   WritableComputedOptions,
-  WritableComputedOptionsWithVModel,
+  WritableComputedOptionsWithInstance,
   ComputedGetter,
-  ComputedGetterWithVModel,
+  ComputedGetterWithInstance,
   ComputedSetter
 } from './computed'
 export { deferredComputed } from './deferredComputed'
