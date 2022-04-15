@@ -50,6 +50,12 @@ export let activeEffect: ReactiveEffect | undefined
 export const ITERATE_KEY = Symbol(__DEV__ ? 'iterate' : '')
 export const MAP_KEY_ITERATE_KEY = Symbol(__DEV__ ? 'Map key iterate' : '')
 
+/** processEffectType */
+const enum ProcessEffectType {
+  NORMALEFFECT,
+  COMPUTEDEFFECT
+}
+
 export class ReactiveEffect<T = any> {
   active = true
   deps: Dep[] = []
@@ -349,13 +355,25 @@ export function triggerEffects(
 ) {
   // spread into array for stabilization
   const effects = isArray(dep) ? dep : [...dep]
-  for (const effect of effects) {
-    if (effect.computed) {
-      triggerEffect(effect, debuggerEventExtraInfo)
-    }
+  for (const type of [
+    ProcessEffectType.COMPUTEDEFFECT,
+    ProcessEffectType.NORMALEFFECT
+  ]) {
+    processEffect(effects, type, debuggerEventExtraInfo)
   }
+}
+
+function processEffect(
+  effects: ReactiveEffect[],
+  type: ProcessEffectType,
+  debuggerEventExtraInfo?: DebuggerEventExtraInfo | undefined
+) {
   for (const effect of effects) {
-    if (!effect.computed) {
+    if (
+      type === ProcessEffectType.COMPUTEDEFFECT
+        ? effect.computed
+        : !effect.computed
+    ) {
       triggerEffect(effect, debuggerEventExtraInfo)
     }
   }
