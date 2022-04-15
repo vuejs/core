@@ -182,6 +182,8 @@ export function flushPreFlushCbs(
 }
 
 export function flushPostFlushCbs(seen?: CountMap) {
+  // flush any pre cbs queued during the flush (e.g. pre watchers)
+  flushPreFlushCbs()
   if (pendingPostFlushCbs.length) {
     const deduped = [...new Set(pendingPostFlushCbs)]
     pendingPostFlushCbs.length = 0
