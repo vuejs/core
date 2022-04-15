@@ -283,7 +283,7 @@ export function trigger(
     })
   } else {
     // schedule runs for SET | ADD | DELETE
-    if (!key) {
+    if (key) {
       deps.push(depsMap.get(key))
     }
 
