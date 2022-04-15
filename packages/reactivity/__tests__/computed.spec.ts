@@ -170,6 +170,23 @@ describe('reactivity/computed', () => {
     expect(dummy).toBe(-1)
   })
 
+  // #5720
+  it('should invalidate before non-computed effects', () => {
+    let plusOneValues: number[] = []
+    const n = ref(0)
+    const plusOne = computed(() => n.value + 1)
+    effect(() => {
+      n.value
+      plusOneValues.push(plusOne.value)
+    })
+    // access plusOne, causing it to be non-dirty
+    plusOne.value
+    // mutate n
+    n.value++
+    // on the 2nd run, plusOne.value should have already updated.
+    expect(plusOneValues).toMatchObject([1, 2, 2])
+  })
+
   it('should warn if trying to set a readonly computed', () => {
     const n = ref(1)
     const plusOne = computed(() => n.value + 1)
