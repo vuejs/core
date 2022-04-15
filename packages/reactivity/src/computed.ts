@@ -58,7 +58,7 @@ export class ComputedRefImpl<T> {
     trackRefValue(self)
     if (self._dirty || !self._cacheable) {
       self._dirty = false
-      self._value = self.effect.run()!
+      return (self._value = self.effect.run()!)
     }
     return self._value
   }
