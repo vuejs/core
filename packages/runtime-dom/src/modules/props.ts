@@ -18,6 +18,7 @@ export function patchDOMProp(
   parentSuspense: any,
   unmountChildren: any
 ) {
+  const originValue = value
   if (key === 'innerHTML' || key === 'textContent') {
     if (prevChildren) {
       unmountChildren(prevChildren, parentComponent, parentSuspense)
@@ -96,7 +97,7 @@ export function patchDOMProp(
   try {
     el[key] = value
   } catch (e: any) {
-    if (__DEV__) {
+    if (__DEV__ && !Object.is(originValue, undefined)) {
       warn(
         `Failed setting prop "${key}" on <${el.tagName.toLowerCase()}>: ` +
           `value ${value} is invalid.`,
