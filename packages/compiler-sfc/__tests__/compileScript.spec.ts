@@ -172,6 +172,112 @@ const myEmit = defineEmits(['foo', 'bar'])
     expect(content).toMatch(`emits: ['a'],`)
   })
 
+  describe('defineOptions()', () => {
+    test('basic usage', () => {
+      const { content } = compile(`
+<script setup>
+defineOptions({ name: 'FooApp' })
+</script>
+  `)
+      assertCode(content)
+      // should remove defineOptions import and call
+      expect(content).not.toMatch('defineOptions')
+      // should include context options in default export
+      expect(content).toMatch(`export default {
+  ...{ name: 'FooApp' },`)
+    })
+
+    it('should report an error with two defineProps', () => {
+      expect(() =>
+        compile(`
+        <script setup>
+        defineOptions({ name: 'FooApp' })
+        defineOptions({ name: 'BarApp' })
+        </script>
+        `)
+      ).toThrowError('[@vue/compiler-sfc] duplicate defineOptions() call')
+    })
+
+    it('should report an error with props or emits property', () => {
+      expect(() =>
+        compile(`
+        <script setup>
+        defineOptions({ props: { foo: String } })
+        </script>
+        `)
+      ).toThrowError(
+        '[@vue/compiler-sfc] defineOptions() use defineProps or defineEmits instead.'
+      )
+
+      expect(() =>
+        compile(`
+        <script setup>
+        defineOptions({ emits: ['update'] })
+        </script>
+      `)
+      ).toThrowError(
+        '[@vue/compiler-sfc] defineOptions() use defineProps or defineEmits instead.'
+      )
+    })
+
+    it('should report an error with type generic', () => {
+      expect(() =>
+        compile(`
+        <script setup lang="ts">
+        defineOptions<{ name: 'FooApp' }>()
+        </script>
+        `)
+      ).toThrowError(
+        '[@vue/compiler-sfc] defineOptions() cannot accept type arguments'
+      )
+    })
+
+    it('should report an error with both normal script and script setup', () => {
+      expect(() =>
+        compile(`
+        <script>
+        export default { name: 'FooApp' }
+        </script>
+        <script setup>
+        defineOptions({ name: 'BarApp' })
+        </script>
+        `)
+      ).toThrowError(
+        '[@vue/compiler-sfc] defineOptions() cannot be used, with both script and script-setup'
+      )
+    })
+
+    it('should report an error with a wrong argument', () => {
+      expect(() =>
+        compile(`
+        <script setup>
+        defineOptions('str')
+        </script>
+        `)
+      ).toThrowError(
+        '[@vue/compiler-sfc] defineOptions() argument must be an object'
+      )
+      expect(() =>
+        compile(`
+        <script setup>
+        defineOptions(123)
+        </script>
+        `)
+      ).toThrowError(
+        '[@vue/compiler-sfc] defineOptions() argument must be an object'
+      )
+      expect(() =>
+        compile(`
+        <script setup>
+        defineOptions(true)
+        </script>
+        `)
+      ).toThrowError(
+        '[@vue/compiler-sfc] defineOptions() argument must be an object'
+      )
+    })
+  })
+
   test('defineExpose()', () => {
     const { content } = compile(`
 <script setup>

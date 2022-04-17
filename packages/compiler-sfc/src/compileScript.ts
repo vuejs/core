@@ -677,7 +677,10 @@ export function compileScript(
       error(`duplicate ${DEFINE_OPTIONS}() call`, node)
     }
     if (script) {
-      error(`cannot be used, with both script and script-setup`, node)
+      error(
+        `${DEFINE_OPTIONS}() cannot be used, with both script and script-setup`,
+        node
+      )
     }
     if (node.typeParameters) {
       error(`${DEFINE_OPTIONS}() cannot accept type arguments`, node)
