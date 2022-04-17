@@ -62,6 +62,7 @@ const DEFINE_PROPS = 'defineProps'
 const DEFINE_EMITS = 'defineEmits'
 const DEFINE_EXPOSE = 'defineExpose'
 const WITH_DEFAULTS = 'withDefaults'
+const DEFINE_OPTIONS = 'defineOptions'
 
 // constants
 const DEFAULT_VAR = `__default__`
@@ -289,6 +290,7 @@ export function compileScript(
   let hasDefineExposeCall = false
   let hasDefaultExportName = false
   let hasDefaultExportRender = false
+  let hasDefineOptionsCall = false
   let propsRuntimeDecl: Node | undefined
   let propsRuntimeDefaults: ObjectExpression | undefined
   let propsDestructureDecl: Node | undefined
@@ -300,6 +302,7 @@ export function compileScript(
   let emitsTypeDecl: EmitsDeclType | undefined
   let emitsTypeDeclRaw: Node | undefined
   let emitIdentifier: string | undefined
+  let optionsRuntimeDecl: Node | undefined
   let hasAwait = false
   let hasInlinedSsrRenderFn = false
   // props/emits declared via types
@@ -664,6 +667,39 @@ export function compileScript(
         }
       })
     })
+  }
+
+  function processDefineOptions(node: Node): boolean {
+    if (!isCallOf(node, DEFINE_OPTIONS)) {
+      return false
+    }
+    if (hasDefineOptionsCall) {
+      error(`duplicate ${DEFINE_OPTIONS}() call`, node)
+    }
+    if (script) {
+      error(`cannot be used, with both script and script-setup`, node)
+    }
+    if (node.typeParameters) {
+      error(`${DEFINE_OPTIONS}() cannot accept type arguments`, node)
+    }
+
+    hasDefineOptionsCall = true
+    optionsRuntimeDecl = node.arguments[0]
+    if (optionsRuntimeDecl.type !== 'ObjectExpression') {
+      error(`${DEFINE_OPTIONS}() argument must be an object`, node)
+    }
+
+    const hasPropOrEmits = optionsRuntimeDecl.properties.some(
+      prop =>
+        (prop.type === 'ObjectProperty' || prop.type === 'ObjectMethod') &&
+        prop.key.type === 'Identifier' &&
+        (prop.key.name === 'props' || prop.key.name === 'emits')
+    )
+    if (hasPropOrEmits) {
+      error(`${DEFINE_OPTIONS}() use defineProps or defineEmits instead.`, node)
+    }
+
+    return true
   }
 
   function resolveQualifiedType(
@@ -1194,6 +1230,7 @@ export function compileScript(
       if (
         processDefineProps(node.expression) ||
         processDefineEmits(node.expression) ||
+        processDefineOptions(node.expression) ||
         processWithDefaults(node.expression)
       ) {
         s.remove(node.start! + startOffset, node.end! + startOffset)
@@ -1214,6 +1251,14 @@ export function compileScript(
       for (let i = 0; i < total; i++) {
         const decl = node.declarations[i]
         if (decl.init) {
+          if (processDefineOptions(decl.init)) {
+            error(
+              `${DEFINE_OPTIONS}() A has no return value, ` +
+                `it cannot be assigned a value.`,
+              node
+            )
+          }
+
           // defineProps / defineEmits
           const isDefineProps =
             processDefineProps(decl.init, decl.id, node.kind) ||
@@ -1358,6 +1403,7 @@ export function compileScript(
   checkInvalidScopeReference(propsRuntimeDefaults, DEFINE_PROPS)
   checkInvalidScopeReference(propsDestructureDecl, DEFINE_PROPS)
   checkInvalidScopeReference(emitsRuntimeDecl, DEFINE_EMITS)
+  checkInvalidScopeReference(optionsRuntimeDecl, DEFINE_OPTIONS)
 
   // 6. remove non-script content
   if (script) {
@@ -1643,6 +1689,11 @@ export function compileScript(
       .trim()},`
   } else if (emitsTypeDecl) {
     runtimeOptions += genRuntimeEmits(typeDeclaredEmits)
+  }
+  if (optionsRuntimeDecl) {
+    runtimeOptions = `\n  ...${scriptSetup.content
+      .slice(optionsRuntimeDecl.start!, optionsRuntimeDecl.end!)
+      .trim()},${runtimeOptions}`
   }
 
   // <script setup> components are closed by default. If the user did not
