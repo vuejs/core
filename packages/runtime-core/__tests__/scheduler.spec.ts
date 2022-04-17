@@ -22,6 +22,7 @@ describe('scheduler', () => {
     job2()
 
     expect(calls.length).toBe(1)
+    expect(calls).toMatchObject(['job2'])
     await dummyThen
     // job1 will be pushed in nextTick
     expect(calls.length).toBe(2)
