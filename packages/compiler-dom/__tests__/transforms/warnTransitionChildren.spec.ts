@@ -139,7 +139,7 @@ describe('compiler warnings', () => {
   })
 })
 
-test('the v-if/else-if/else branchs in Transition should ignore comments', () => {
+test('the v-if/else-if/else branches in Transition should ignore comments', () => {
   expect(
     compile(`
     <transition>

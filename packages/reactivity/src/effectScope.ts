@@ -18,7 +18,7 @@ export class EffectScope {
   cleanups: (() => void)[] = []
 
   /**
-   * only assinged by undetached scope
+   * only assigned by undetached scope
    * @internal
    */
   parent: EffectScope | undefined

@@ -2023,7 +2023,7 @@ foo
         isPreTag: tag => tag === 'pre'
       })
       const elementAfterPre = ast.children[1] as ElementNode
-      // should not affect the <span> and condense its whitepsace inside
+      // should not affect the <span> and condense its whitespace inside
       expect((elementAfterPre.children[0] as TextNode).content).toBe(` foo bar`)
     })
 

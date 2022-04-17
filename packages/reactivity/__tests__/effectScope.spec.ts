@@ -120,7 +120,7 @@ describe('reactivity/effect/scope', () => {
     counter.num = 6
     expect(dummy).toBe(7)
 
-    // nested scope should not be stoped
+    // nested scope should not be stopped
     expect(doubled).toBe(12)
   })
 
@@ -212,7 +212,7 @@ describe('reactivity/effect/scope', () => {
     expect(spy).toHaveBeenCalledTimes(1)
   })
 
-  it('should derefence child scope from parent scope after stopping child scope (no memleaks)', () => {
+  it('should dereference child scope from parent scope after stopping child scope (no memleaks)', () => {
     const parent = new EffectScope()
     const child = parent.run(() => new EffectScope())!
     expect(parent.scopes!.includes(child)).toBe(true)
