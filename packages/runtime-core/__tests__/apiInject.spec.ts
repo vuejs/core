@@ -134,7 +134,8 @@ describe('api: provide/inject', () => {
         // override parent value
         provide('foo', 'fooOverride')
         provide('baz', 'baz')
-        return () => h(Consumer)
+        const foo = inject('foo')
+        return () => [foo, h(Consumer)]
       }
     }
 
@@ -143,13 +144,13 @@ describe('api: provide/inject', () => {
         const foo = inject('foo')
         const bar = inject('bar')
         const baz = inject('baz')
-        return () => [foo, bar, baz].join(',')
+        return () => [, foo, bar, baz].join(',')
       }
     }
 
     const root = nodeOps.createElement('div')
     render(h(ProviderOne), root)
-    expect(serialize(root)).toBe(`<div>fooOverride,bar,baz</div>`)
+    expect(serialize(root)).toBe(`<div>foo,fooOverride,bar,baz</div>`)
   })
 
   it('reactivity with refs', async () => {
