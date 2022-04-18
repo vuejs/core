@@ -56,8 +56,10 @@ export function setDevtoolsHook(hook: DevtoolsHook, target: any) {
     // eslint-disable-next-line no-restricted-globals
     typeof window !== 'undefined' &&
     // some envs mock window but not fully
+    // eslint-disable-next-line no-restricted-globals
     window.HTMLElement &&
     // also exclude jsdom
+    // eslint-disable-next-line no-restricted-globals
     !window.navigator?.userAgent?.includes('jsdom')
   ) {
     const replay = (target.__VUE_DEVTOOLS_HOOK_REPLAY__ =

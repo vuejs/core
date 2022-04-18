@@ -180,7 +180,7 @@ export function createAppAPI<HostElement>(
 ): CreateAppFunction<HostElement> {
   return function createApp(rootComponent, rootProps = null) {
     if (!isFunction(rootComponent)) {
-      rootComponent = { ...rootComponent }
+      rootComponent = Object.assign({}, rootComponent);
     }
 
     if (rootProps != null && !isObject(rootProps)) {

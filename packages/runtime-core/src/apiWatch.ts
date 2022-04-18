@@ -92,7 +92,7 @@ export function watchPostEffect(
     effect,
     null,
     (__DEV__
-      ? { ...options, flush: 'post' }
+      ? Object.assign({}, options, { flush: 'post' })
       : { flush: 'post' }) as WatchOptionsBase
   )
 }
@@ -105,7 +105,7 @@ export function watchSyncEffect(
     effect,
     null,
     (__DEV__
-      ? { ...options, flush: 'sync' }
+      ? Object.assign({}, options, { flush: 'sync' })
       : { flush: 'sync' }) as WatchOptionsBase
   )
 }

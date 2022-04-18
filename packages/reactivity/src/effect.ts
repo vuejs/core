@@ -248,10 +248,9 @@ export function trackEffects(
     dep.add(activeEffect!)
     activeEffect!.deps.push(dep)
     if (__DEV__ && activeEffect!.onTrack) {
-      activeEffect!.onTrack({
+      activeEffect!.onTrack(Object.assign({
         effect: activeEffect!,
-        ...debuggerEventExtraInfo!
-      })
+      }, debuggerEventExtraInfo))
     }
   }
 }
