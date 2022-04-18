@@ -5,7 +5,8 @@ import {
   createCallExpression,
   CallExpression,
   ElementTypes,
-  ConstantTypes
+  ConstantTypes,
+  TemplateChildNode
 } from '../ast'
 import { isText } from '../utils'
 import { CREATE_TEXT } from '../runtimeHelpers'
@@ -27,32 +28,56 @@ export const transformText: NodeTransform = (node, context) => {
       const children = node.children
       let currentContainer: CompoundExpressionNode | undefined = undefined
       let hasText = false
+      let leftTextIndex = 0
+      const n = children.length
+      const deleted = new Set<number>()
 
-      for (let i = 0; i < children.length; i++) {
-        const child = children[i]
-        if (isText(child)) {
-          hasText = true
-          for (let j = i + 1; j < children.length; j++) {
-            const next = children[j]
-            if (isText(next)) {
-              if (!currentContainer) {
-                currentContainer = children[i] = {
-                  type: NodeTypes.COMPOUND_EXPRESSION,
-                  loc: child.loc,
-                  children: [child]
-                }
-              }
-              // merge adjacent text node into current
-              currentContainer.children.push(` + `, next)
-              children.splice(j, 1)
-              j--
-            } else {
-              currentContainer = undefined
-              break
-            }
+      do {
+        for (; leftTextIndex < n; ++leftTextIndex) {
+          if (isText(children[leftTextIndex])) {
+            hasText = true
+            break
           }
         }
+
+        if (leftTextIndex + 1 >= n) break
+
+        let rightTextIndex = leftTextIndex + 1
+
+        for (; rightTextIndex < n; ++rightTextIndex) {
+          const child = children[rightTextIndex]
+          if (isText(child)) {
+            if (!currentContainer) {
+              const leftTextChild = children[leftTextIndex]
+              currentContainer = children[leftTextIndex] = {
+                type: NodeTypes.COMPOUND_EXPRESSION,
+                loc: leftTextChild.loc,
+                children: [leftTextChild as any]
+              }
+            }
+
+            // merge adjacent text node into current
+            currentContainer.children.push(` + `, child)
+            deleted.add(rightTextIndex)
+          } else {
+            break
+          }
+        }
+
+        leftTextIndex = rightTextIndex
+        currentContainer = undefined
+      } while (true)
+
+      const nextChildren: TemplateChildNode[] = []
+
+      for (let i = 0; i < n; ++i) {
+        if (!deleted.has(i)) {
+          nextChildren.push(children[i])
+        }
       }
+
+      node.children.length = 0
+      node.children.push(...nextChildren)
 
       if (
         !hasText ||
