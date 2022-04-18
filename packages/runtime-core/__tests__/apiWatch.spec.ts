@@ -18,7 +18,8 @@ import {
   h,
   createApp,
   watchPostEffect,
-  watchSyncEffect
+  watchSyncEffect,
+  onMounted
 } from '@vue/runtime-test'
 import {
   ITERATE_KEY,
@@ -579,6 +580,33 @@ describe('api: watch', () => {
     b.value++
     await nextTick()
     expect(calls).toEqual(['render', 'watcher 1', 'watcher 2', 'render'])
+  })
+
+  // #5721
+  it('flush: pre triggered in component setup should be buffered and called before mounted', () => {
+    const count = ref(0)
+    const calls: string[] = []
+    const App = {
+      render() {},
+      setup() {
+        watch(
+          count,
+          () => {
+            calls.push('watch ' + count.value)
+          },
+          { flush: 'pre' }
+        )
+        onMounted(() => {
+          calls.push('mounted')
+        })
+        // mutate multiple times
+        count.value++
+        count.value++
+        count.value++
+      }
+    }
+    render(h(App), nodeOps.createElement('div'))
+    expect(calls).toMatchObject(['watch 3', 'mounted'])
   })
 
   // #1852
