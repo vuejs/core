@@ -25,6 +25,19 @@ module.exports = {
     ]
   },
   overrides: [
+    // configs or scripts run in Node
+    {
+      files: [
+        '.eslintrc.js',
+        'jest.config.js',
+        'rollup.config.js',
+        'scripts/**'
+      ],
+      rules: {
+        'no-restricted-globals': ['error', ...DOMGlobals],
+        'no-restricted-syntax': 'off'
+      }
+    },
     // tests, no restrictions (runs in Node / jest with jsdom)
     {
       files: ['**/__tests__/**', 'test-dts/**'],
