@@ -43,8 +43,8 @@ describe('sfc props transform', () => {
     assertCode(content)
     expect(bindings).toStrictEqual({
       foo: BindingTypes.PROPS,
-      bar: BindingTypes.SETUP_CONST,
-      hello: BindingTypes.SETUP_CONST
+      bar: BindingTypes.LITERAL_CONST,
+      hello: BindingTypes.LITERAL_CONST
     })
   })
 
@@ -259,7 +259,7 @@ describe('sfc props transform', () => {
       expect(() =>
         compile(
           `<script setup>
-          const x = 1
+          let x = 1
           const {
             foo = () => x
           } = defineProps(['foo'])
