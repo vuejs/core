@@ -117,6 +117,37 @@ describe('api: options', () => {
     expect(serializeInner(root)).toBe(`<div>4</div>`)
   })
 
+
+  test('methods item type', () => {
+
+    interface IComp {
+      data: { foo: number, baz: number },
+      methods: {
+        inc(): void,
+        getNumber(): number,
+      }
+    }
+
+    //Using interface IComp give defineComponent type
+    const Comp = defineComponent<IComp>({
+      data() {
+        return {
+          foo: 1,
+          // baz type is getNumber type
+          baz: this.getNumber()
+        }
+      },
+      methods: {
+        inc() {
+          this.foo++
+        },
+        getNumber(): number {
+          return 1
+        },
+      },
+    })
+  })
+
   test('component’s own methods have higher priority than global properties', async () => {
     const app = createApp({
       methods: {
@@ -315,7 +346,7 @@ describe('api: options', () => {
 
     let vm: any
     const Comp = {
-      render() {},
+      render() { },
       mixins: [mixinA, mixinB],
       data: () => ({
         obj: 'foo',
@@ -372,12 +403,12 @@ describe('api: options', () => {
     })
 
     const defineChild = (injectOptions: any, injectedKey = 'b') =>
-      ({
-        inject: injectOptions,
-        render() {
-          return this[injectedKey]
-        }
-      } as any)
+    ({
+      inject: injectOptions,
+      render() {
+        return this[injectedKey]
+      }
+    } as any)
 
     const ChildA = defineChild(['a'], 'a')
     const ChildB = defineChild({ b: 'a' })
@@ -866,7 +897,7 @@ describe('api: options', () => {
         }
       },
       methods: {
-        sayA() {}
+        sayA() { }
       },
       mounted(this: any) {
         expect(this.a).toBe(1)
@@ -903,7 +934,7 @@ describe('api: options', () => {
         }
       },
       methods: {
-        sayA() {}
+        sayA() { }
       },
       mounted(this: any) {
         expect(this.a).toBe(1)
@@ -993,7 +1024,7 @@ describe('api: options', () => {
       created() {
         calls.push('selfCreated')
       },
-      render() {}
+      render() { }
     }
 
     renderToString(h(Comp))
@@ -1126,7 +1157,7 @@ describe('api: options', () => {
     let vm: any
     const Comp = {
       mixins: [mixin1, mixin2, mixin3],
-      render() {},
+      render() { },
       created() {
         vm = this
       }
@@ -1265,15 +1296,15 @@ describe('api: options', () => {
 
     test('this.$options[lifecycle-name]', () => {
       const mixin = {
-        mounted() {},
-        beforeUnmount() {},
-        unmounted() {}
+        mounted() { },
+        beforeUnmount() { },
+        unmounted() { }
       }
       createApp({
         mixins: [mixin],
-        mounted() {},
-        beforeUnmount() {},
-        unmounted() {},
+        mounted() { },
+        beforeUnmount() { },
+        unmounted() { },
         created() {
           expect(this.$options.mounted).toBeInstanceOf(Array)
           expect(this.$options.mounted.length).toBe(2)
@@ -1316,13 +1347,13 @@ describe('api: options', () => {
     test('this.$options.methods', () => {
       const mixin = {
         methods: {
-          fn1() {}
+          fn1() { }
         }
       }
       createApp({
         mixins: [mixin],
         methods: {
-          fn2() {}
+          fn2() { }
         },
         created() {
           expect(this.$options.methods.fn1).toBeInstanceOf(Function)
@@ -1335,13 +1366,13 @@ describe('api: options', () => {
     test('this.$options.computed', () => {
       const mixin = {
         computed: {
-          c1() {}
+          c1() { }
         }
       }
       createApp({
         mixins: [mixin],
         computed: {
-          c2() {}
+          c2() { }
         },
         created() {
           expect(this.$options.computed.c1).toBeInstanceOf(Function)
@@ -1390,7 +1421,7 @@ describe('api: options', () => {
             handler: 'notExistingMethod2'
           }
         },
-        render() {}
+        render() { }
       }
 
       const root = nodeOps.createElement('div')
@@ -1407,7 +1438,7 @@ describe('api: options', () => {
     test('Invalid watch option', () => {
       const Comp = {
         watch: { foo: true },
-        render() {}
+        render() { }
       }
 
       const root = nodeOps.createElement('div')
@@ -1421,10 +1452,10 @@ describe('api: options', () => {
       const Comp = {
         computed: {
           foo: {
-            set() {}
+            set() { }
           }
         },
-        render() {}
+        render() { }
       }
 
       const root = nodeOps.createElement('div')
@@ -1437,13 +1468,13 @@ describe('api: options', () => {
       const Comp = {
         computed: {
           foo: {
-            get() {}
+            get() { }
           }
         },
         mounted() {
           instance = this
         },
-        render() {}
+        render() { }
       }
 
       const root = nodeOps.createElement('div')
@@ -1490,14 +1521,14 @@ describe('api: options', () => {
         methods: {
           foo: 1
         },
-        render() {}
+        render() { }
       }
 
       const root = nodeOps.createElement('div')
       render(h(Comp), root)
       expect(
         `Method "foo" has type "number" in the component definition. ` +
-          `Did you reference the function correctly?`
+        `Did you reference the function correctly?`
       ).toHaveBeenWarned()
     })
 
@@ -1507,9 +1538,9 @@ describe('api: options', () => {
           foo: Number
         },
         methods: {
-          foo() {}
+          foo() { }
         },
-        render() {}
+        render() { }
       }
 
       const root = nodeOps.createElement('div')
@@ -1558,7 +1589,7 @@ describe('api: options', () => {
         data: () => ({
           foo: 1
         }),
-        render() {}
+        render() { }
       }
 
       const root = nodeOps.createElement('div')
@@ -1609,9 +1640,9 @@ describe('api: options', () => {
           foo: 1
         }),
         methods: {
-          foo() {}
+          foo() { }
         },
-        render() {}
+        render() { }
       }
 
       const root = nodeOps.createElement('div')
@@ -1625,9 +1656,9 @@ describe('api: options', () => {
       const Comp = {
         props: { foo: Number },
         computed: {
-          foo() {}
+          foo() { }
         },
-        render() {}
+        render() { }
       }
 
       const root = nodeOps.createElement('div')
@@ -1656,8 +1687,8 @@ describe('api: options', () => {
       const ChildA = {
         computed: {
           a: {
-            get() {},
-            set() {}
+            get() { },
+            set() { }
           }
         },
         inject: ['a'],
@@ -1676,12 +1707,12 @@ describe('api: options', () => {
     test('computed property is already declared in methods', () => {
       const Comp = {
         computed: {
-          foo() {}
+          foo() { }
         },
         methods: {
-          foo() {}
+          foo() { }
         },
-        render() {}
+        render() { }
       }
 
       const root = nodeOps.createElement('div')
@@ -1697,9 +1728,9 @@ describe('api: options', () => {
           foo: 1
         }),
         computed: {
-          foo() {}
+          foo() { }
         },
-        render() {}
+        render() { }
       }
 
       const root = nodeOps.createElement('div')

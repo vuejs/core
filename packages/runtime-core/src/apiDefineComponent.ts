@@ -26,6 +26,25 @@ import {
   ComponentPublicInstanceConstructor
 } from './componentPublicInstance'
 
+type NoItem2Default<T, Key, Default> = Key extends keyof T ? NonNullable<T[Key]> : Default
+
+type TPropsType = 'PROPS' | 'ARRAYPROPS' | 'OBJECTPROPS';
+
+interface IDefineComponentGeneric<PropsType extends TPropsType> {
+  props?: PropsType extends 'PROPS' ? {}
+  : PropsType extends 'ARRAYPROPS' ? string
+  : PropsType extends 'OBJECTPROPS' ? Readonly<ComponentPropsOptions>
+  : never,
+  RawBindings?: {},
+  data?: {},
+  computed?: ComputedOptions,
+  methods?: MethodOptions,
+  mixin?: ComponentOptionsMixin,
+  extends?: ComponentOptionsMixin,
+  emits?: EmitsOptions,
+  ee?: string,
+}
+
 export type PublicProps = VNodeProps &
   AllowedComponentProps &
   ComponentCustomProps
@@ -43,27 +62,27 @@ export type DefineComponent<
   PP = PublicProps,
   Props = Readonly<
     PropsOrPropOptions extends ComponentPropsOptions
-      ? ExtractPropTypes<PropsOrPropOptions>
-      : PropsOrPropOptions
+    ? ExtractPropTypes<PropsOrPropOptions>
+    : PropsOrPropOptions
   > &
-    ({} extends E ? {} : EmitsToProps<E>),
+  ({} extends E ? {} : EmitsToProps<E>),
   Defaults = ExtractDefaultPropTypes<PropsOrPropOptions>
-> = ComponentPublicInstanceConstructor<
-  CreateComponentPublicInstance<
-    Props,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    PP & Props,
-    Defaults,
-    true
-  > &
+  > = ComponentPublicInstanceConstructor<
+    CreateComponentPublicInstance<
+      Props,
+      RawBindings,
+      D,
+      C,
+      M,
+      Mixin,
+      Extends,
+      E,
+      PP & Props,
+      Defaults,
+      true
+    > &
     Props
-> &
+  > &
   ComponentOptionsBase<
     Props,
     RawBindings,
@@ -96,93 +115,88 @@ export function defineComponent<Props, RawBindings = object>(
 // (uses user defined props interface)
 // return type is for Vetur and TSX support
 export function defineComponent<
-  Props = {},
-  RawBindings = {},
-  D = {},
-  C extends ComputedOptions = {},
-  M extends MethodOptions = {},
-  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = EmitsOptions,
-  EE extends string = string
->(
-  options: ComponentOptionsWithoutProps<
-    Props,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    EE
+  T extends IDefineComponentGeneric<'PROPS'>,
+  >(
+    options: ComponentOptionsWithoutProps<
+      NoItem2Default<T, 'props', {}>,
+      NoItem2Default<T, 'RawBindings', {}>,
+      NoItem2Default<T, 'data', {}>,
+      NoItem2Default<T, 'computed', {}>,
+      NoItem2Default<T, 'methods', {}>,
+      NoItem2Default<T, 'mixin', ComponentOptionsMixin>,
+      NoItem2Default<T, 'extends', ComponentOptionsMixin>,
+      NoItem2Default<T, 'emits', EmitsOptions>,
+      NoItem2Default<T, 'ee', string>
+    >
+  ): DefineComponent<
+    NoItem2Default<T, 'props', {}>,
+    NoItem2Default<T, 'RawBindings', {}>,
+    NoItem2Default<T, 'data', {}>,
+    NoItem2Default<T, 'computed', {}>,
+    NoItem2Default<T, 'methods', {}>,
+    NoItem2Default<T, 'mixin', ComponentOptionsMixin>,
+    NoItem2Default<T, 'extends', ComponentOptionsMixin>,
+    NoItem2Default<T, 'emits', EmitsOptions>,
+    NoItem2Default<T, 'ee', string>
   >
-): DefineComponent<Props, RawBindings, D, C, M, Mixin, Extends, E, EE>
 
 // overload 3: object format with array props declaration
 // props inferred as { [key in PropNames]?: any }
 // return type is for Vetur and TSX support
 export function defineComponent<
-  PropNames extends string,
-  RawBindings,
-  D,
-  C extends ComputedOptions = {},
-  M extends MethodOptions = {},
-  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = Record<string, any>,
-  EE extends string = string
->(
-  options: ComponentOptionsWithArrayProps<
-    PropNames,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    EE
+  T extends IDefineComponentGeneric<'ARRAYPROPS'>,
+  >(
+    options: ComponentOptionsWithArrayProps<
+      NoItem2Default<T, 'props', string>,
+      NoItem2Default<T, 'RawBindings', {}>,
+      NoItem2Default<T, 'data', {}>,
+      NoItem2Default<T, 'computed', {}>,
+      NoItem2Default<T, 'methods', {}>,
+      NoItem2Default<T, 'mixin', ComponentOptionsMixin>,
+      NoItem2Default<T, 'extends', ComponentOptionsMixin>,
+      NoItem2Default<T, 'emits', EmitsOptions>,
+      NoItem2Default<T, 'ee', string>
+    >
+  ): DefineComponent<
+    NoItem2Default<T, 'props', {}>,
+    NoItem2Default<T, 'RawBindings', {}>,
+    NoItem2Default<T, 'data', {}>,
+    NoItem2Default<T, 'computed', {}>,
+    NoItem2Default<T, 'methods', {}>,
+    NoItem2Default<T, 'mixin', ComponentOptionsMixin>,
+    NoItem2Default<T, 'extends', ComponentOptionsMixin>,
+    NoItem2Default<T, 'emits', EmitsOptions>,
+    NoItem2Default<T, 'ee', string>
   >
-): DefineComponent<
-  Readonly<{ [key in PropNames]?: any }>,
-  RawBindings,
-  D,
-  C,
-  M,
-  Mixin,
-  Extends,
-  E,
-  EE
->
 
 // overload 4: object format with object props declaration
 // see `ExtractPropTypes` in ./componentProps.ts
 export function defineComponent<
   // the Readonly constraint allows TS to treat the type of { required: true }
   // as constant instead of boolean.
-  PropsOptions extends Readonly<ComponentPropsOptions>,
-  RawBindings,
-  D,
-  C extends ComputedOptions = {},
-  M extends MethodOptions = {},
-  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = Record<string, any>,
-  EE extends string = string
+  T extends IDefineComponentGeneric<'OBJECTPROPS'>
 >(
   options: ComponentOptionsWithObjectProps<
-    PropsOptions,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    EE
+    NoItem2Default<T, 'props', Readonly<ComponentPropsOptions>>,
+    NoItem2Default<T, 'RawBindings', {}>,
+    NoItem2Default<T, 'data', {}>,
+    NoItem2Default<T, 'computed', {}>,
+    NoItem2Default<T, 'methods', {}>,
+    NoItem2Default<T, 'mixin', ComponentOptionsMixin>,
+    NoItem2Default<T, 'extends', ComponentOptionsMixin>,
+    NoItem2Default<T, 'emits', EmitsOptions>,
+    NoItem2Default<T, 'ee', string>
   >
-): DefineComponent<PropsOptions, RawBindings, D, C, M, Mixin, Extends, E, EE>
+): DefineComponent<
+  NoItem2Default<T, 'props', {}>,
+  NoItem2Default<T, 'RawBindings', {}>,
+  NoItem2Default<T, 'data', {}>,
+  NoItem2Default<T, 'computed', {}>,
+  NoItem2Default<T, 'methods', {}>,
+  NoItem2Default<T, 'mixin', ComponentOptionsMixin>,
+  NoItem2Default<T, 'extends', ComponentOptionsMixin>,
+  NoItem2Default<T, 'emits', EmitsOptions>,
+  NoItem2Default<T, 'ee', string>>
 
 // implementation, close to no-op
 export function defineComponent(options: unknown) {
