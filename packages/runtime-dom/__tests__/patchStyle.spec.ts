@@ -87,6 +87,16 @@ describe(`runtime-dom: style patching`, () => {
     expect(el.style.cssText).toBe('')
   })
 
+  it('should not overwritten the same value', () => {
+    const el = document.createElement('div')
+    patchProp(el, 'style', {}, { left: '10px' })
+    expect(el.style.getPropertyValue('left')).toBe('10px')
+    el.style.left = '20px'
+    expect(el.style.getPropertyValue('left')).toBe('20px')
+    patchProp(el, 'style', { left: '10px' }, { left: '10px' })
+    expect(el.style.getPropertyValue('left')).toBe('20px')
+  })
+
   // JSDOM doesn't support custom properties on style object so we have to
   // mock it here.
   function mockElementWithStyle() {
