@@ -189,7 +189,8 @@ export {
   AppContext,
   Plugin,
   CreateAppFunction,
-  OptionMergeFunction
+  OptionMergeFunction,
+  ExtractPluginArg
 } from './apiCreateApp'
 export {
   VNode,

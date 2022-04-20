@@ -11,7 +11,8 @@ import {
   Plugin,
   ref,
   getCurrentInstance,
-  defineComponent
+  defineComponent,
+  App
 } from '@vue/runtime-test'
 
 describe('api: createApp', () => {
@@ -273,12 +274,12 @@ describe('api: createApp', () => {
 
   test('use', () => {
     const PluginA: Plugin = app => app.provide('foo', 1)
-    const PluginB: Plugin = {
-      install: (app, arg1, arg2) => app.provide('bar', arg1 + arg2)
+    const PluginB = {
+      install: (app: App, arg1: number, arg2: number) => app.provide('bar', arg1 + arg2)
     }
     class PluginC {
       someProperty = {}
-      static install() {
+      static install(app: App) {
         app.provide('baz', 2)
       }
     }

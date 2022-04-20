@@ -23,6 +23,7 @@ import {
   AppConfig,
   AppContext,
   CreateAppFunction,
+  ExtractPluginArg,
   Plugin
 } from '../apiCreateApp'
 import {
@@ -77,7 +78,7 @@ export type CompatVue = Pick<App, 'version' | 'component' | 'directive'> & {
 
   nextTick: typeof nextTick
 
-  use(plugin: Plugin, ...options: any[]): CompatVue
+  use<T extends Plugin>(plugin: T, ...options: ExtractPluginArg<T>): CompatVue
   mixin(mixin: ComponentOptions): CompatVue
 
   component(name: string): Component | undefined

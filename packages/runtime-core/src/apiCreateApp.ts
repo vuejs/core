@@ -28,7 +28,7 @@ import { ObjectEmitsOptions } from './componentEmits'
 export interface App<HostElement = any> {
   version: string
   config: AppConfig
-  use(plugin: Plugin, ...options: any[]): this
+  use<T extends Plugin>(plugin: T, ...options: ExtractPluginArg<T>): this
   mixin(mixin: ComponentOptions): this
   component(name: string): Component | undefined
   component(name: string, component: Component): this
@@ -139,11 +139,17 @@ export interface AppContext {
 
 type PluginInstallFunction = (app: App, ...options: any[]) => any
 
-export type Plugin =
-  | (PluginInstallFunction & { install?: PluginInstallFunction })
+export type Plugin<T extends PluginInstallFunction = PluginInstallFunction> =
+  | (T & { install?: T })
   | {
-      install: PluginInstallFunction
+      install: T
     }
+
+export type ExtractPluginArg<T> = T extends Plugin<infer R>
+    ? R extends (app: App, ...arg: infer S) => any
+        ? S
+        : never
+    : never;
 
 export function createAppContext(): AppContext {
   return {
@@ -215,7 +221,7 @@ export function createAppAPI<HostElement>(
         }
       },
 
-      use(plugin: Plugin, ...options: any[]) {
+      use<T extends Plugin>(plugin: T, ...options: ExtractPluginArg<T>) {
         if (installedPlugins.has(plugin)) {
           __DEV__ && warn(`Plugin has already been applied to target app.`)
         } else if (plugin && isFunction(plugin.install)) {
