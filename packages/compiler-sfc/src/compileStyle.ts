@@ -1,243 +1,134 @@
-import postcss, {
-  ProcessOptions,
-  Result,
-  SourceMap,
-  Message,
-  LazyResult
-} from 'postcss'
-import trimPlugin from './stylePluginTrim'
-import scopedPlugin from './stylePluginScoped'
 import {
-  processors,
-  StylePreprocessor,
-  StylePreprocessorResults,
-  PreprocessLang
-} from './stylePreprocessors'
-import { RawSourceMap } from 'source-map'
-import { cssVarsPlugin } from './cssVars'
-import postcssModules from 'postcss-modules'
+  processExpression,
+  createTransformContext,
+  createSimpleExpression,
+  createRoot,
+  NodeTypes,
+  SimpleExpressionNode,
+  BindingMetadata
+} from '@vue/compiler-dom'
+import { SFCDescriptor } from './parse'
+import { PluginCreator } from 'postcss'
+import hash from 'hash-sum'
 
-export interface SFCStyleCompileOptions {
-  source: string
-  filename: string
-  id: string
-  scoped?: boolean
-  trim?: boolean
-  isProd?: boolean
-  inMap?: RawSourceMap
-  preprocessLang?: PreprocessLang
-  preprocessOptions?: any
-  preprocessCustomRequire?: (id: string) => any
-  postcssOptions?: any
-  postcssPlugins?: any[]
-  /**
-   * @deprecated use `inMap` instead.
-   */
-  map?: RawSourceMap
+export const CSS_VARS_HELPER = `useCssVars`
+// match v-bind() with max 2-levels of nested parens.
+const cssVarRE = /v-bind\s*\(((?:[^)(]+|\((?:[^)(]+|\([^)(]*\))*\))*)\)/g
+
+export function genCssVarsFromList(
+  vars: string[],
+  id: string,
+  isProd: boolean
+): string {
+  return `{\n  ${vars
+    .map(key => `"${genVarName(id, key, isProd)}": (${key})`)
+    .join(',\n  ')}\n}`
 }
 
-/**
- * Aligns with postcss-modules
- * https://github.com/css-modules/postcss-modules
- */
-export interface CSSModulesOptions {
-  scopeBehaviour?: 'global' | 'local'
-  generateScopedName?:
-    | string
-    | ((name: string, filename: string, css: string) => string)
-  hashPrefix?: string
-  localsConvention?: 'camelCase' | 'camelCaseOnly' | 'dashes' | 'dashesOnly'
-  exportGlobals?: boolean
-  globalModulePaths?: RegExp[]
+function genVarName(id: string, raw: string, isProd: boolean): string {
+  if (isProd) {
+    return hash(id + raw)
+  } else {
+    return `${id}-${raw.replace(/([^\w-])/g, '_')}`
+  }
 }
 
-export interface SFCAsyncStyleCompileOptions extends SFCStyleCompileOptions {
-  isAsync?: boolean
-  // css modules support, note this requires async so that we can get the
-  // resulting json
-  modules?: boolean
-  modulesOptions?: CSSModulesOptions
+function normalizeExpression(exp: string) {
+  exp = exp.trim()
+  if (
+    (exp[0] === `'` && exp[exp.length - 1] === `'`) ||
+    (exp[0] === `"` && exp[exp.length - 1] === `"`)
+  ) {
+    return exp.slice(1, -1)
+  }
+  return exp
 }
 
-export interface SFCStyleCompileResults {
-  code: string
-  map: RawSourceMap | undefined
-  rawResult: Result | LazyResult | undefined
-  errors: Error[]
-  modules?: Record<string, string>
-  dependencies: Set<string>
-}
-
-export function compileStyle(
-  options: SFCStyleCompileOptions
-): SFCStyleCompileResults {
-  return doCompileStyle({
-    ...options,
-    isAsync: false
-  }) as SFCStyleCompileResults
-}
-
-export function compileStyleAsync(
-  options: SFCAsyncStyleCompileOptions
-): Promise<SFCStyleCompileResults> {
-  return doCompileStyle({
-    ...options,
-    isAsync: true
-  }) as Promise<SFCStyleCompileResults>
-}
-
-export function doCompileStyle(
-  options: SFCAsyncStyleCompileOptions
-): SFCStyleCompileResults | Promise<SFCStyleCompileResults> {
-  const {
-    filename,
-    id,
-    scoped = false,
-    trim = true,
-    isProd = false,
-    modules = false,
-    modulesOptions = {},
-    preprocessLang,
-    postcssOptions,
-    postcssPlugins
-  } = options
-  const preprocessor = preprocessLang && processors[preprocessLang]
-  const preProcessedSource = preprocessor && preprocess(options, preprocessor)
-  const map = preProcessedSource
-    ? preProcessedSource.map
-    : options.inMap || options.map
-  const source = preProcessedSource ? preProcessedSource.code : options.source
-
-  const shortId = id.replace(/^data-v-/, '')
-  const longId = `data-v-${shortId}`
-
-  const plugins = (postcssPlugins || []).slice()
-  plugins.unshift(cssVarsPlugin({ id: shortId, isProd }))
-  if (trim) {
-    plugins.push(trimPlugin())
-  }
-  if (scoped) {
-    plugins.push(scopedPlugin(longId))
-  }
-  let cssModules: Record<string, string> | undefined
-  if (modules) {
-    if (__GLOBAL__ || __ESM_BROWSER__) {
-      throw new Error(
-        '[@vue/compiler-sfc] `modules` option is not supported in the browser build.'
-      )
-    }
-    if (!options.isAsync) {
-      throw new Error(
-        '[@vue/compiler-sfc] `modules` option can only be used with compileStyleAsync().'
-      )
-    }
-    plugins.push(
-      postcssModules({
-        ...modulesOptions,
-        getJSON: (_cssFileName: string, json: Record<string, string>) => {
-          cssModules = json
-        }
-      })
-    )
-  }
-
-  const postCSSOptions: ProcessOptions = {
-    ...postcssOptions,
-    to: filename,
-    from: filename
-  }
-  if (map) {
-    postCSSOptions.map = {
-      inline: false,
-      annotation: false,
-      prev: map
-    }
-  }
-
-  let result: LazyResult | undefined
-  let code: string | undefined
-  let outMap: SourceMap | undefined
-  // stylus output include plain css. so need remove the repeat item
-  const dependencies = new Set(
-    preProcessedSource ? preProcessedSource.dependencies : []
-  )
-  // sass has filename self when provided filename option
-  dependencies.delete(filename)
-
-  const errors: Error[] = []
-  if (preProcessedSource && preProcessedSource.errors.length) {
-    errors.push(...preProcessedSource.errors)
-  }
-
-  const recordPlainCssDependencies = (messages: Message[]) => {
-    messages.forEach(msg => {
-      if (msg.type === 'dependency') {
-        // postcss output path is absolute position path
-        dependencies.add(msg.file)
+export function parseCssVars(sfc: SFCDescriptor): string[] {
+  const vars: string[] = []
+  sfc.styles.forEach(style => {
+    let match
+    // ignore v-bind() in comments /* ... */
+    const content = style.content.replace(/\/\*([\s\S]*?)\*\//g, '')
+    while ((match = cssVarRE.exec(content))) {
+      const variable = normalizeExpression(match[1])
+      if (!vars.includes(variable)) {
+        vars.push(variable)
       }
-    })
-    return dependencies
-  }
-
-  try {
-    result = postcss(plugins).process(source, postCSSOptions)
-
-    // In async mode, return a promise.
-    if (options.isAsync) {
-      return result
-        .then(result => ({
-          code: result.css || '',
-          map: result.map && result.map.toJSON(),
-          errors,
-          modules: cssModules,
-          rawResult: result,
-          dependencies: recordPlainCssDependencies(result.messages)
-        }))
-        .catch(error => ({
-          code: '',
-          map: undefined,
-          errors: [...errors, error],
-          rawResult: undefined,
-          dependencies
-        }))
     }
-
-    recordPlainCssDependencies(result.messages)
-    // force synchronous transform (we know we only have sync plugins)
-    code = result.css
-    outMap = result.map
-  } catch (e: any) {
-    errors.push(e)
-  }
-
-  return {
-    code: code || ``,
-    map: outMap && outMap.toJSON(),
-    errors,
-    rawResult: result,
-    dependencies
-  }
+  })
+  return vars
 }
 
-function preprocess(
-  options: SFCStyleCompileOptions,
-  preprocessor: StylePreprocessor
-): StylePreprocessorResults {
-  if ((__ESM_BROWSER__ || __GLOBAL__) && !options.preprocessCustomRequire) {
-    throw new Error(
-      `[@vue/compiler-sfc] Style preprocessing in the browser build must ` +
-        `provide the \`preprocessCustomRequire\` option to return the in-browser ` +
-        `version of the preprocessor.`
-    )
-  }
+// for compileStyle
+export interface CssVarsPluginOptions {
+  id: string
+  isProd: boolean
+}
 
-  return preprocessor(
-    options.source,
-    options.inMap || options.map,
-    {
-      filename: options.filename,
-      ...options.preprocessOptions
-    },
-    options.preprocessCustomRequire
+export const cssVarsPlugin: PluginCreator<CssVarsPluginOptions> = opts => {
+  const { id, isProd } = opts!
+  return {
+    postcssPlugin: 'vue-sfc-vars',
+    Declaration(decl) {
+      // rewrite CSS variables
+      if (cssVarRE.test(decl.value)) {
+        decl.value = decl.value.replace(cssVarRE, (_, $1) => {
+          return `var(--${genVarName(id, normalizeExpression($1), isProd)})`
+        })
+      }
+    }
+  }
+}
+cssVarsPlugin.postcss = true
+
+export function genCssVarsCode(
+  vars: string[],
+  bindings: BindingMetadata,
+  id: string,
+  isProd: boolean
+) {
+  const varsExp = genCssVarsFromList(vars, id, isProd)
+  const exp = createSimpleExpression(varsExp, false)
+  const context = createTransformContext(createRoot([]), {
+    prefixIdentifiers: true,
+    inline: true,
+    bindingMetadata: bindings.__isScriptSetup === false ? undefined : bindings
+  })
+  const transformed = processExpression(exp, context)
+  const transformedString =
+    transformed.type === NodeTypes.SIMPLE_EXPRESSION
+      ? transformed.content
+      : transformed.children
+          .map(c => {
+            return typeof c === 'string'
+              ? c
+              : (c as SimpleExpressionNode).content
+          })
+          .join('')
+
+  return `_${CSS_VARS_HELPER}(_ctx => (${transformedString}))`
+}
+
+// <script setup> already gets the calls injected as part of the transform
+// this is only for single normal <script>
+export function genNormalScriptCssVarsCode(
+  cssVars: string[],
+  bindings: BindingMetadata,
+  id: string,
+  isProd: boolean
+): string {
+  return (
+    `\nimport { ${CSS_VARS_HELPER} as _${CSS_VARS_HELPER} } from 'vue'\n` +
+    `const __injectCSSVars__ = () => {\n${genCssVarsCode(
+      cssVars,
+      bindings,
+      id,
+      isProd
+    )}}\n` +
+    `const __setup__ = __default__.setup\n` +
+    `__default__.setup = __setup__\n` +
+    `  ? (props, ctx) => { __injectCSSVars__();return __setup__(props, ctx) }\n` +
+    `  : __injectCSSVars__\n`
   )
 }
