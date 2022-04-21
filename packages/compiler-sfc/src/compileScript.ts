@@ -1831,10 +1831,7 @@ function canNeverBeRef(node: Node, userReactiveImport: string): boolean {
         userReactiveImport
       )
     default:
-      if (node.type.endsWith('Literal')) {
-        return true
-      }
-      return false
+      return node.type.endsWith('Literal')
   }
 }
 
