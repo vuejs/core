@@ -306,12 +306,7 @@ function subTransform(
   ;(['helpers', 'components', 'directives'] as const).forEach(key => {
     childContext[key].forEach((value: any, helperKey: any) => {
       if (key === 'helpers') {
-        const parentCount = parentContext.helpers.get(helperKey)
-        if (parentCount === undefined) {
-          parentContext.helpers.set(helperKey, value)
-        } else {
-          parentContext.helpers.set(helperKey, value + parentCount)
-        }
+        parentContext.helper(helperKey)
       } else {
         ;(parentContext[key] as any).add(value)
       }
