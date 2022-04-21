@@ -1345,7 +1345,33 @@ export function compileScript(
         allBindings[key] = true
       }
     }
-    returned = `{ ${Object.keys(allBindings).join(', ')} }`
+
+    /*
+    build getter/setter for setup result. ensures functionality is comparable 
+    with inlined template function.
+    */
+    let bindingGetters = []
+    for (let name in allBindings){
+      let binding = allBindings[name]
+      /*
+      true - binding of an import specifier
+      */
+      if(['setup-let', true].includes(binding)){
+        let setterArgName = name!=='v'?'v':'_v' // resolve possible conflict between var binding and argument name.
+        let getterSetter = `get ${name}(){return ${name}}`
+        
+        // exlude setter for import
+        if(binding !== true){
+          getterSetter += `, set ${name}(${setterArgName}){${name}=${setterArgName}}`
+        }
+     
+        bindingGetters.push(getterSetter)
+      } else {
+        bindingGetters.push(name)
+      }
+    }
+
+    returned = `{ ${(bindingGetters).join(', ')} }`
   }
 
   if (!options.inlineTemplate && !__TEST__) {

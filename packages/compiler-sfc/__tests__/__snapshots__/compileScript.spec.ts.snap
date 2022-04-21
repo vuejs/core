@@ -13,7 +13,7 @@ export default /*#__PURE__*/Object.assign(__default__, {
 
       x()
       
-return { n, x }
+return { n, get x(){return x} }
 }
 
 })"
@@ -30,7 +30,7 @@ export default /*#__PURE__*/Object.assign(__default__, {
 
       x()
       
-return { n, x }
+return { n, get x(){return x} }
 }
 
 })"
@@ -51,7 +51,7 @@ export default /*#__PURE__*/_defineComponent({
 
       x()
       
-return { x }
+return { get x(){return x} }
 }
 
 })"
@@ -71,7 +71,7 @@ export default /*#__PURE__*/Object.assign(__default__, {
 
       x()
       
-return { n, def, x }
+return { n, def, get x(){return x} }
 }
 
 })"
@@ -91,7 +91,7 @@ export default /*#__PURE__*/Object.assign(__default__, {
 
         x()
         
-return { n, x }
+return { n, get x(){return x} }
 }
 
 })"
@@ -111,7 +111,7 @@ export default /*#__PURE__*/Object.assign(__default__, {
 
         x()
         
-return { n, x }
+return { n, get x(){return x} }
 }
 
 })"
@@ -276,7 +276,7 @@ let a = _ref(1 + ((
   __restore(),
   __temp
 )))
-return { a }
+return { get a(){return a}, set a(v){a=v} }
 }
 
 }"
@@ -416,7 +416,7 @@ const props = __props
 
     
     
-return { props, propsModel }
+return { props, get propsModel(){return propsModel} }
 }
 
 }"
@@ -433,7 +433,7 @@ export default {
 const props = __props
 
     
-return { props, x }
+return { props, get x(){return x} }
 }
 
 }"
@@ -502,7 +502,7 @@ export default /*#__PURE__*/_defineComponent({
 
         const cond = true
         
-return { cond, bar, baz }
+return { cond, get bar(){return bar}, get baz(){return baz} }
 }
 
 })"
@@ -518,7 +518,7 @@ export default /*#__PURE__*/_defineComponent({
 
         const fooBar: FooBar = 1
         
-return { fooBar, FooBaz, FooQux, foo }
+return { fooBar, get FooBaz(){return FooBaz}, get FooQux(){return FooQux}, get foo(){return foo} }
 }
 
 })"
@@ -533,7 +533,7 @@ export default /*#__PURE__*/_defineComponent({
   expose();
 
         
-return { vMyDir }
+return { get vMyDir(){return vMyDir} }
 }
 
 })"
@@ -548,7 +548,7 @@ export default /*#__PURE__*/_defineComponent({
   expose();
 
         
-return { VAR, VAR3 }
+return { get VAR(){return VAR}, get VAR3(){return VAR3} }
 }
 
 })"
@@ -563,7 +563,7 @@ export default /*#__PURE__*/_defineComponent({
   expose();
 
         
-return { FooBaz, Last }
+return { get FooBaz(){return FooBaz}, get Last(){return Last} }
 }
 
 })"
@@ -578,7 +578,7 @@ export default /*#__PURE__*/_defineComponent({
   expose();
 
       
-return { x, z, x$y }
+return { get x(){return x}, get z(){return z}, get x$y(){return x$y} }
 }
 
 })"
@@ -602,7 +602,7 @@ export default {
         
         
         
-return { bar }
+return { get bar(){return bar} }
 }
 
 }"
@@ -641,7 +641,7 @@ export default {
 
       let foo = _ref(1)
       
-return { foo, ref }
+return { get foo(){return foo}, set foo(v){foo=v}, get ref(){return ref} }
 }
 
 }"
@@ -656,7 +656,7 @@ export default {
 
         x()
         
-return { x }
+return { get x(){return x} }
 }
 
 }"
@@ -675,7 +675,7 @@ export default {
       
       const r = ref(0)
       
-return { r, ref }
+return { r, get ref(){return ref} }
 }
 
 }"
@@ -690,7 +690,7 @@ export default {
   expose();
 
         
-return { a, b }
+return { get a(){return a}, get b(){return b} }
 }
 
 }"
@@ -705,7 +705,7 @@ export default {
   expose();
 
           
-return { ref }
+return { get ref(){return ref} }
 }
 
 }"
@@ -1017,7 +1017,7 @@ export default {
       function c() {}
       class d {}
       
-return { aa, bb, cc, dd, a, b, c, d, xx, x }
+return { get aa(){return aa}, set aa(v){aa=v}, bb, cc, dd, get a(){return a}, set a(v){a=v}, b, c, d, get xx(){return xx}, get x(){return x} }
 }
 
 }"
@@ -1361,7 +1361,7 @@ export default /*#__PURE__*/_defineComponent({
   expose();
 
         
-return { Baz }
+return { get Baz(){return Baz} }
 }
 
 })"
@@ -1422,7 +1422,7 @@ const props = __props as {
 
       
       
-return { props, defaults }
+return { props, get defaults(){return defaults} }
 }
 
 })"

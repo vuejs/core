@@ -20,7 +20,8 @@ describe('SFC compile <script setup>', () => {
       class dd {}
       </script>
       `)
-    expect(content).toMatch('return { aa, bb, cc, dd, a, b, c, d, xx, x }')
+    expect(content).toMatch('return { get aa(){return aa}, set aa(v){aa=v}, bb, cc, dd, get a(){return a}, set a(v){a=v}, b, c, d, get xx(){return xx}, get x(){return x} }')
+    
     expect(bindings).toStrictEqual({
       x: BindingTypes.SETUP_MAYBE_REF,
       a: BindingTypes.SETUP_LET,
@@ -355,7 +356,7 @@ defineExpose({ foo: 123 })
       // FooBaz: used as PascalCase component
       // FooQux: used as kebab-case component
       // foo: lowercase component
-      expect(content).toMatch(`return { fooBar, FooBaz, FooQux, foo }`)
+      expect(content).toMatch(`return { fooBar, get FooBaz(){return FooBaz}, get FooQux(){return FooQux}, get foo(){return foo} }`)
       assertCode(content)
     })
 
@@ -368,7 +369,7 @@ defineExpose({ foo: 123 })
           <div v-my-dir></div>
         </template>
         `)
-      expect(content).toMatch(`return { vMyDir }`)
+      expect(content).toMatch(`return { get vMyDir(){return vMyDir} }`)
       assertCode(content)
     })
 
@@ -383,7 +384,7 @@ defineExpose({ foo: 123 })
           <div :class="[cond ? '' : bar(), 'default']" :style="baz"></div>
         </template>
         `)
-      expect(content).toMatch(`return { cond, bar, baz }`)
+      expect(content).toMatch(`return { cond, get bar(){return bar}, get baz(){return baz} }`)
       assertCode(content)
     })
 
@@ -399,7 +400,7 @@ defineExpose({ foo: 123 })
       // x: used in interpolation
       // y: should not be matched by {{ yy }} or 'y' in binding exps
       // x$y: #4274 should escape special chars when creating Regex
-      expect(content).toMatch(`return { x, z, x$y }`)
+      expect(content).toMatch(`return { get x(){return x}, get z(){return z}, get x$y(){return x$y} }`)
       assertCode(content)
     })
 
@@ -414,7 +415,7 @@ defineExpose({ foo: 123 })
         </template>
         `)
       // VAR2 should not be matched
-      expect(content).toMatch(`return { VAR, VAR3 }`)
+      expect(content).toMatch(`return { get VAR(){return VAR}, get VAR3(){return VAR3} }`)
       assertCode(content)
     })
 
@@ -429,7 +430,7 @@ defineExpose({ foo: 123 })
           <Last/>
         </template>
         `)
-      expect(content).toMatch(`return { FooBaz, Last }`)
+      expect(content).toMatch(`return { get FooBaz(){return FooBaz}, get Last(){return Last} }`)
       assertCode(content)
     })
   })
@@ -1111,7 +1112,7 @@ const emit = defineEmits(['a', 'b'])
         import { type Bar, Baz } from './main.ts'
         </script>`
       )
-      expect(content).toMatch(`return { Baz }`)
+      expect(content).toMatch(`return { get Baz(){return Baz} }`)
       assertCode(content)
     })
   })
