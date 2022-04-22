@@ -138,7 +138,7 @@ export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
 }
 
 function setChecked(
-  el: HTMLInputElement,
+  el: HTMLInputElement & { _trueValue?: any; _falseValue?: any },
   { value, oldValue }: DirectiveBinding,
   vnode: VNode
 ) {
@@ -150,7 +150,11 @@ function setChecked(
   } else if (isSet(value)) {
     el.checked = value.has(vnode.props!.value)
   } else if (value !== oldValue) {
-    el.checked = looseEqual(value, getCheckboxValue(el, true))
+    if (el._trueValue === undefined && el._falseValue === undefined) {
+      el.checked = looseEqual(!!value, getCheckboxValue(el, true))
+    } else {
+      el.checked = looseEqual(value, getCheckboxValue(el, true))
+    }
   }
 }
 

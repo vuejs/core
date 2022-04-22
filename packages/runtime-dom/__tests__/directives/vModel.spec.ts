@@ -308,6 +308,47 @@ describe('vModel', () => {
     expect(data.value).toEqual(false)
   })
 
+  it('should work with checkbox with truthy/falsy values', async () => {
+    const component = defineComponent({
+      data() {
+        return { value: 1 }
+      },
+      render() {
+        return [
+          withVModel(
+            h('input', {
+              type: 'checkbox',
+              'onUpdate:modelValue': setValue.bind(this)
+            }),
+            this.value
+          )
+        ]
+      }
+    })
+    render(h(component), root)
+
+    const input = root.querySelector('input')
+    const data = root._vnode.component.data
+
+    input.checked = true
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toEqual(true)
+
+    data.value = 0
+    await nextTick()
+    expect(input.checked).toEqual(false)
+
+    data.value = 1
+    await nextTick()
+    expect(input.checked).toEqual(true)
+
+    input.checked = false
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toEqual(false)
+  })
+
   it('should work with checkbox and true-value/false-value', async () => {
     const component = defineComponent({
       data() {
