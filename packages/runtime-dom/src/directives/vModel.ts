@@ -266,6 +266,24 @@ export const vModelDynamic: ObjectDirective<
   }
 }
 
+function resolveDynamicModel(tagName: string, type: string | undefined) {
+  switch (tagName.toUpperCase()) {
+    case 'SELECT':
+      return vModelSelect
+    case 'TEXTAREA':
+      return vModelText
+    default:
+      switch (type) {
+        case 'checkbox':
+          return vModelCheckbox
+        case 'radio':
+          return vModelRadio
+        default:
+          return vModelText
+      }
+  }
+}
+
 function callModelHook(
   el: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
   binding: DirectiveBinding,
@@ -273,26 +291,10 @@ function callModelHook(
   prevVNode: VNode | null,
   hook: keyof ObjectDirective
 ) {
-  let modelToUse: ObjectDirective
-  switch (el.tagName) {
-    case 'SELECT':
-      modelToUse = vModelSelect
-      break
-    case 'TEXTAREA':
-      modelToUse = vModelText
-      break
-    default:
-      switch (vnode.props && vnode.props.type) {
-        case 'checkbox':
-          modelToUse = vModelCheckbox
-          break
-        case 'radio':
-          modelToUse = vModelRadio
-          break
-        default:
-          modelToUse = vModelText
-      }
-  }
+  const modelToUse = resolveDynamicModel(
+    el.tagName,
+    vnode.props && vnode.props.type
+  )
   const fn = modelToUse[hook] as DirectiveHook
   fn && fn(el, binding, vnode, prevVNode)
 }
@@ -319,6 +321,19 @@ export function initVModelForSSR() {
       }
     } else if (value) {
       return { checked: true }
+    }
+  }
+
+  vModelDynamic.getSSRProps = (binding, vnode) => {
+    if (typeof vnode.type !== 'string') {
+      return
+    }
+    const modelToUse = resolveDynamicModel(
+      vnode.type,
+      vnode.props && vnode.props.type
+    )
+    if (modelToUse.getSSRProps) {
+      return modelToUse.getSSRProps(binding, vnode)
     }
   }
 }
