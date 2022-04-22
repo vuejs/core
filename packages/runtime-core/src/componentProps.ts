@@ -211,9 +211,7 @@ export function updateProps(
     // - #1942 if hmr is enabled with sfc component
     // - vite#872 non-sfc component used by sfc component
     !(
-      __DEV__ &&
-      (instance.type.__hmrId ||
-        (instance.parent && instance.parent.type.__hmrId))
+      __DEV__ && isHmr(instance)
     ) &&
     (optimized || patchFlag > 0) &&
     !(patchFlag & PatchFlags.FULL_PROPS)
@@ -726,4 +724,17 @@ function isExplicable(type: string): boolean {
  */
 function isBoolean(...args: string[]): boolean {
   return args.some(elem => elem.toLowerCase() === 'boolean')
+}
+
+/**
+ * dev only
+ */
+ function isHmr(instance:ComponentInternalInstance|null): boolean {
+   while(instance) {
+      if(instance.type.__hmrId) {
+        return true
+      }
+      instance = instance.parent
+   }
+  return false
 }

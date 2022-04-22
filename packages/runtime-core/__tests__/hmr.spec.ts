@@ -469,4 +469,28 @@ describe('hot module replacement', () => {
     render(h(Foo), root)
     expect(serializeInner(root)).toBe('bar')
   })
+
+  // #5767  
+  test('rerender for nested component coming from an external npm package with static props', () => {
+    const id = 'parent'
+    const Child: ComponentOptions = {
+      props: {
+        msg: String
+      },
+      render: compileToFunction(`<div>{{msg}}</div><slot/>`)
+    }
+    const Parent: ComponentOptions = {
+      __hmrId: id,
+      components: { Child },
+      render: compileToFunction(`<Child msg="outer"><Child msg="inner" /></Child>`)
+    }
+
+    createRecord(id, Parent)
+    const root = nodeOps.createElement('div')
+    render(h(Parent), root)
+    expect(serializeInner(root)).toBe(`<div>outer</div><div>inner</div>`)
+
+    rerender(id, compileToFunction(`<Child msg="outer"><Child msg="in" /></Child>`))
+    expect(serializeInner(root)).toBe(`<div>outer</div><div>in</div>`)
+  })
 })
