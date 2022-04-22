@@ -1,4 +1,4 @@
-import { isArray, isString, isObject, hyphenate } from './'
+import { isArray, isString, isObject, hyphenate, extend } from './'
 import { isNoUnitNumericStyleProp } from './domAttrConfig'
 
 export type NormalizedStyle = Record<string, string | number>
@@ -23,7 +23,10 @@ export function normalizeStyle(
   } else if (isString(value)) {
     return value
   } else if (isObject(value)) {
-    return value
+    // store normalized style under a different key for next diff
+    // make sure to clone it if it's reactive, since the user likely wants
+    // to mutate it.
+    return extend({}, value)
   }
 }
 
