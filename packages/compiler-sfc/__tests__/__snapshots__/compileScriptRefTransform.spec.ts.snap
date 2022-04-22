@@ -36,7 +36,7 @@ export default {
     let c = () => {}
     let d
     
-return { foo, a, b, c, d }
+return { get foo(){return foo}, set foo(v){foo=v}, get a(){return a}, set a(v){a=v}, get b(){return b}, set b(v){b=v}, get c(){return c}, set c(v){c=v}, get d(){return d}, set d(v){d=v} }
 }
 
 }"
@@ -52,7 +52,7 @@ export default /*#__PURE__*/_defineComponent({
         let msg = _ref<string | number>('foo');
         let bar = _ref <string | number>('bar');
       
-return { msg, bar }
+return { get msg(){return msg}, set msg(v){msg=v}, get bar(){return bar}, set bar(v){bar=v} }
 }
 
 })"
@@ -82,7 +82,7 @@ export default {
 
     console.log(data.value)
     
-return { data }
+return { get data(){return data}, set data(v){data=v} }
 }
 
 }"
@@ -106,7 +106,7 @@ export default {
       c++
     }
     
-return { a, c, b, change }
+return { get a(){return a}, set a(v){a=v}, get c(){return c}, set c(v){c=v}, get b(){return b}, set b(v){b=v}, change }
 }
 
 }"

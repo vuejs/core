@@ -84,7 +84,7 @@ _useCssVars(_ctx => ({
         let b = 200
         let foo = 300
         
-return { a, b, foo }
+return { get a(){return a}, set a(v){a=v}, get b(){return b}, set b(v){b=v}, get foo(){return foo}, set foo(v){foo=v} }
 }
 
 }"
@@ -164,7 +164,7 @@ _useCssVars(_ctx => ({
         const size = ref('10px')
         
         
-return { color, size, ref }
+return { color, size, get ref(){return ref} }
 }
 
 }"
