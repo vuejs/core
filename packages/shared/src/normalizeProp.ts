@@ -23,7 +23,6 @@ export function normalizeStyle(
   } else if (isString(value)) {
     return value
   } else if (isObject(value)) {
-    // store normalized style under a different key for next diff
     // make sure to clone it if it's reactive, since the user likely wants
     // to mutate it.
     return extend({}, value)
