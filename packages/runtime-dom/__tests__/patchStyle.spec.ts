@@ -87,7 +87,7 @@ describe(`runtime-dom: style patching`, () => {
     expect(el.style.cssText).toBe('')
   })
 
-  it('should not overwritten the same value', () => {
+  it('should not update style if its not change', () => {
     const el = document.createElement('div')
     patchProp(el, 'style', {}, { left: '10px' })
     expect(el.style.getPropertyValue('left')).toBe('10px')
