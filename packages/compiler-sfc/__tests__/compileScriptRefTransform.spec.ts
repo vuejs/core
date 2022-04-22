@@ -32,7 +32,7 @@ describe('sfc ref transform', () => {
     // normal declarations left untouched
     expect(content).toMatch(`let c = () => {}`)
     expect(content).toMatch(`let d`)
-    expect(content).toMatch(`return { foo, a, b, c, d, ref, shallowRef }`)
+    expect(content).toMatch(`return { get foo(){return foo}, set foo(v){foo=v}, get a(){return a}, set a(v){a=v}, get b(){return b}, set b(v){b=v}, get c(){return c}, set c(v){c=v}, get d(){return d}, set d(v){d=v}, get ref(){return ref}, get shallowRef(){return shallowRef} }`)
     assertCode(content)
     expect(bindings).toStrictEqual({
       foo: BindingTypes.SETUP_REF,

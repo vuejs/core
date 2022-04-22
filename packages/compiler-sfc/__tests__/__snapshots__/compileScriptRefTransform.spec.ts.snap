@@ -15,7 +15,7 @@ export default {
     let c = () => {}
     let d
     
-return { foo, a, b, c, d, ref, shallowRef }
+return { get foo(){return foo}, set foo(v){foo=v}, get a(){return a}, set a(v){a=v}, get b(){return b}, set b(v){b=v}, get c(){return c}, set c(v){c=v}, get d(){return d}, set d(v){d=v}, get ref(){return ref}, get shallowRef(){return shallowRef} }
 }
 
 }"
