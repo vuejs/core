@@ -1315,6 +1315,46 @@ return {  }
 })"
 `;
 
+exports[`SFC compile <script setup> with TypeScript defineProps wrapped has other arguments 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+import { useProps } from './useProps'
+	      
+export default /*#__PURE__*/_defineComponent({
+  props: {
+    foo: { type: String, required: false, default: 'bar' }
+  },
+  setup(__props: any, { expose }) {
+  expose();
+
+const { foo } = useProps(__props as { foo: string }, { readonly: true })
+
+        
+      
+return { foo, useProps }
+}
+
+})"
+`;
+
+exports[`SFC compile <script setup> with TypeScript defineProps wrapped not have variable declaration 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+import { watchProps } from './watchProps'
+	      
+export default /*#__PURE__*/_defineComponent({
+  props: {
+    foo: { type: String, required: false, default: 'bar' }
+  },
+  setup(__props: any, { expose }) {
+  expose();
+
+        watchProps(__props as { foo: string }, { deep: true })
+      
+return { watchProps }
+}
+
+})"
+`;
+
 exports[`SFC compile <script setup> with TypeScript defineProps/Emit w/ runtime options 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
@@ -1380,6 +1420,48 @@ export default /*#__PURE__*/_defineComponent({
 
         
 return { D, C, B, Foo }
+}
+
+})"
+`;
+
+exports[`SFC compile <script setup> with TypeScript toRefs(defineProps()) 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+import { toRefs } from 'vue'
+	      
+export default /*#__PURE__*/_defineComponent({
+  props: {
+    foo: { type: String, required: false }
+  },
+  setup(__props: any, { expose }) {
+  expose();
+
+const { foo } = toRefs(__props as { foo?: string })
+
+        
+      
+return { foo, toRefs }
+}
+
+})"
+`;
+
+exports[`SFC compile <script setup> with TypeScript toRefs(withDefaults(defineProps())) 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+import { toRefs } from 'vue'
+	      
+export default /*#__PURE__*/_defineComponent({
+  props: {
+    foo: { type: String, required: false, default: 'bar' }
+  },
+  setup(__props: any, { expose }) {
+  expose();
+
+const { foo } = toRefs(__props as { foo: string })
+
+        
+      
+return { foo, toRefs }
 }
 
 })"

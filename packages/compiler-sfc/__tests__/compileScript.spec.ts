@@ -954,6 +954,84 @@ const emit = defineEmits(['a', 'b'])
       )
     })
 
+    test('toRefs(defineProps())', () => {
+      const { content, bindings } = compile(`
+      <script setup lang="ts">
+        import { toRefs } from 'vue'
+	      const { foo } = toRefs(defineProps<{ foo?: string }>())
+      </script>
+      `)
+      assertCode(content)
+      expect(content).toMatch(`foo: { type: String, required: false }`)
+      expect(content).toMatch(
+        `const { foo } = toRefs(__props as { foo?: string })`.trim()
+      )
+      expect(bindings).toStrictEqual({
+        foo: BindingTypes.SETUP_MAYBE_REF,
+        toRefs: BindingTypes.SETUP_CONST
+      })
+    })
+
+    test('toRefs(withDefaults(defineProps()))', () => {
+      const { content, bindings } = compile(`
+      <script setup lang="ts">
+        import { toRefs } from 'vue'
+	      const { foo } = toRefs(withDefaults(defineProps<{ foo?: string }>(), { foo: 'bar' }))
+      </script>
+      `)
+      assertCode(content)
+      expect(content).toMatch(
+        `foo: { type: String, required: false, default: 'bar' }`
+      )
+      expect(content).toMatch(
+        `const { foo } = toRefs(__props as { foo: string })`.trim()
+      )
+      expect(bindings).toStrictEqual({
+        foo: BindingTypes.SETUP_MAYBE_REF,
+        toRefs: BindingTypes.SETUP_CONST
+      })
+    })
+
+    test('defineProps wrapped has other arguments', () => {
+      const { content, bindings } = compile(`
+      <script setup lang="ts">
+        import { useProps } from './useProps'
+	      const { foo } = useProps(withDefaults(defineProps<{ foo?: string }>(), { foo: 'bar' }), { readonly: true })
+      </script>
+      `)
+      assertCode(content)
+      expect(content).toMatch(
+        `foo: { type: String, required: false, default: 'bar' }`
+      )
+      expect(content).toMatch(
+        `const { foo } = useProps(__props as { foo: string }, { readonly: true })`.trim()
+      )
+      expect(bindings).toStrictEqual({
+        foo: BindingTypes.SETUP_MAYBE_REF,
+        useProps: BindingTypes.SETUP_MAYBE_REF
+      })
+    })
+
+    test('defineProps wrapped not have variable declaration', () => {
+      const { content, bindings } = compile(`
+      <script setup lang="ts">
+        import { watchProps } from './watchProps'
+	      watchProps(withDefaults(defineProps<{ foo?: string }>(), { foo: 'bar' }), { deep: true })
+      </script>
+      `)
+      assertCode(content)
+      expect(content).toMatch(
+        `foo: { type: String, required: false, default: 'bar' }`
+      )
+      expect(content).toMatch(
+        `watchProps(__props as { foo: string }, { deep: true })`.trim()
+      )
+      expect(bindings).toStrictEqual({
+        foo: BindingTypes.PROPS,
+        watchProps: BindingTypes.SETUP_MAYBE_REF
+      })
+    })
+
     test('defineEmits w/ type', () => {
       const { content } = compile(`
       <script setup lang="ts">

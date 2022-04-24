@@ -270,6 +270,8 @@ export function compileScript(
   let propsTypeDecl: TSTypeLiteral | TSInterfaceBody | undefined
   let propsTypeDeclRaw: Node | undefined
   let propsIdentifier: string | undefined
+  let propsWrapperStart: string | undefined
+  let propsWrapperEnd: string | undefined
   let emitsRuntimeDecl: Node | undefined
   let emitsTypeDecl:
     | TSFunctionType
@@ -358,6 +360,13 @@ export function compileScript(
       isFromSetup,
       isUsedInTemplate
     }
+  }
+
+  const __PROPS = '__props'
+  function getPropsAsTyped() {
+    return `${__PROPS}${
+      propsTypeDecl ? ` as ${genSetupPropsType(propsTypeDecl)}` : ``
+    }`
   }
 
   function processDefineProps(node: Node, declId?: LVal): boolean {
@@ -484,6 +493,33 @@ export function compileScript(
       )
     }
     return true
+  }
+
+  function processDefinePropsWithOther(node: Node, declId?: LVal) {
+    if (!isCall(node)) {
+      return false
+    }
+    const hookIndex = node.arguments.findIndex(
+      arg => isCallOf(arg, DEFINE_PROPS) || isCallOf(arg, WITH_DEFAULTS)
+    )
+    if (hookIndex === -1) {
+      return false
+    }
+    const definePropsOrWithDefaults = node.arguments[hookIndex]
+
+    propsWrapperStart = scriptSetup!.content.slice(
+      node.start!,
+      definePropsOrWithDefaults.start!
+    )
+    propsWrapperEnd = scriptSetup!.content.slice(
+      definePropsOrWithDefaults.end!,
+      node.end!
+    )
+
+    return (
+      processDefineProps(definePropsOrWithDefaults, declId) ||
+      processWithDefaults(definePropsOrWithDefaults, declId)
+    )
   }
 
   function processDefineEmits(node: Node, declId?: LVal): boolean {
@@ -997,6 +1033,17 @@ export function compileScript(
         processWithDefaults(node.expression)
       ) {
         s.remove(node.start! + startOffset, node.end! + startOffset)
+      } else if (processDefinePropsWithOther(node.expression)) {
+        const definePropsOrWithDefaults = (
+          node.expression as CallExpression
+        ).arguments.find(
+          arg => isCallOf(arg, DEFINE_PROPS) || isCallOf(arg, WITH_DEFAULTS)
+        )
+        s.overwrite(
+          definePropsOrWithDefaults!.start! + startOffset,
+          definePropsOrWithDefaults!.end! + startOffset,
+          `${getPropsAsTyped()}`
+        )
       } else if (processDefineExpose(node.expression)) {
         // defineExpose({}) -> expose({})
         const callee = (node.expression as CallExpression).callee
@@ -1017,7 +1064,8 @@ export function compileScript(
           // defineProps / defineEmits
           const isDefineProps =
             processDefineProps(decl.init, decl.id) ||
-            processWithDefaults(decl.init, decl.id)
+            processWithDefaults(decl.init, decl.id) ||
+            processDefinePropsWithOther(decl.init, decl.id)
           const isDefineEmits = processDefineEmits(decl.init, decl.id)
           if (isDefineProps || isDefineEmits) {
             if (left === 1) {
@@ -1221,7 +1269,7 @@ export function compileScript(
   }
 
   // 9. finalize setup() argument signature
-  let args = `__props`
+  let args = __PROPS
   if (propsTypeDecl) {
     // mark as any and only cast on assignment
     // since the user defined complex types may be incompatible with the
@@ -1234,8 +1282,10 @@ export function compileScript(
   if (propsIdentifier) {
     s.prependLeft(
       startOffset,
-      `\nconst ${propsIdentifier} = __props${
-        propsTypeDecl ? ` as ${genSetupPropsType(propsTypeDecl)}` : ``
+      `\nconst ${propsIdentifier} = ${
+        propsWrapperStart || ''
+      }${getPropsAsTyped()}${
+        propsWrapperStart && propsWrapperEnd ? propsWrapperEnd : ''
       }\n`
     )
   }
@@ -1792,14 +1842,22 @@ function genRuntimeEmits(emits: Set<string>) {
     : ``
 }
 
+function isCall(
+  node: Node | null | undefined
+): node is Exclude<CallExpression, 'callee'> & { callee: Identifier } {
+  return !!(
+    node &&
+    node.type === 'CallExpression' &&
+    node.callee.type === 'Identifier'
+  )
+}
+
 function isCallOf(
   node: Node | null | undefined,
   test: string | ((id: string) => boolean)
 ): node is CallExpression {
   return !!(
-    node &&
-    node.type === 'CallExpression' &&
-    node.callee.type === 'Identifier' &&
+    isCall(node) &&
     (typeof test === 'string'
       ? node.callee.name === test
       : test(node.callee.name))
