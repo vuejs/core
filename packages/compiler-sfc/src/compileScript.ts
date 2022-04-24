@@ -943,6 +943,11 @@ export function compileScript(
     // declared before being used in the actual component definition
     if (scriptStartOffset! > startOffset) {
       s.move(scriptStartOffset!, scriptEndOffset!, 0)
+      const content = s.slice(scriptStartOffset!, scriptEndOffset!)
+      // when the script content not end with `\n` we add `\n` for the script content
+      if(!/(\n *$)/.test(content)) {
+        s.overwrite(scriptStartOffset!,scriptEndOffset!,`${content}\n`)
+      }
     }
   }
 
