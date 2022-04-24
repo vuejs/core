@@ -1,5 +1,20 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`SFC compile <script setup> <script> after <script setup> the script content not end with \`\\n\` 1`] = `
+"const n = 1
+import { x } from './x'
+    
+export default {
+  setup(__props, { expose }) {
+  expose();
+
+    
+return { n, x }
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> <script> and <script setup> co-usage script first 1`] = `
 "import { x } from './x'
       

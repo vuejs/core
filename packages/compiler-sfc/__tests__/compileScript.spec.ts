@@ -168,6 +168,16 @@ defineExpose({ foo: 123 })
     expect(content).toMatch(/\bexpose\(\{ foo: 123 \}\)/)
   })
 
+  test('<script> after <script setup> the script content not end with `\\n`',() => {
+    const { content } = compile(`
+    <script setup>
+    import { x } from './x'
+    </script>
+    <script>const n = 1</script>
+    `)
+    assertCode(content)
+  })
+
   describe('<script> and <script setup> co-usage', () => {
     test('script first', () => {
       const { content } = compile(`
