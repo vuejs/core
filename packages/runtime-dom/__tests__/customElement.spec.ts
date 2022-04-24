@@ -231,6 +231,23 @@ describe('defineCustomElement', () => {
       el['max-age'] = 100
       expect(el.maxAge).toBe(100)
     })
+
+    test('set number value in dom property', () => {
+      const E = defineCustomElement({
+        props: {
+          maxAge: Number
+        },
+        render() {
+          return `max age: ${this.maxAge}/type: ${typeof this.maxAge}`
+        }
+      })
+      customElements.define('my-element-number-property', E)
+      const el = document.createElement('my-element-number-property') as any
+      container.appendChild(el)
+      el.maxAge = 50
+      expect(el.maxAge).toBe(50)
+      expect(el.shadowRoot.innerHTML).toBe('max age: 50/type: number')
+    })
   })
 
   describe('emits', () => {
