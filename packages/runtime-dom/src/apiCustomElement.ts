@@ -241,14 +241,10 @@ export class VueElement extends BaseClass {
 
       // defining getter/setters on prototype
       for (const key of rawKeys.map(camelize)) {
-        Object.defineProperty(this, key, {
-          get() {
-            return this._getProp(key)
-          },
-          set(val) {
-            this._setProp(key, val)
-          }
-        })
+        this._defineElementProperty(key)
+        if (hyphenate(key) !== key) {
+          this._defineElementProperty(hyphenate(key), key, false)
+        }
       }
 
       // apply CSS
@@ -266,9 +262,27 @@ export class VueElement extends BaseClass {
     }
   }
 
+  private _defineElementProperty(
+    key: string,
+    originalKey = key,
+    shouldReflect = true
+  ) {
+    Object.defineProperty(this, key, {
+      get() {
+        return this._getProp(originalKey)
+      },
+      set(val) {
+        this._setProp(originalKey, val, shouldReflect)
+      }
+    })
+  }
+
   protected _setAttr(key: string) {
     let value = this.getAttribute(key)
-    if (this._numberProps && this._numberProps[key]) {
+    if (
+      this._numberProps &&
+      (this._numberProps[key] || this._numberProps[camelize(key)])
+    ) {
       value = toNumber(value)
     }
     this._setProp(camelize(key), value, false)

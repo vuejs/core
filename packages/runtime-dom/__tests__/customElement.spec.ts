@@ -210,6 +210,27 @@ describe('defineCustomElement', () => {
       customElements.define('my-el-upgrade', E)
       expect(el.shadowRoot.innerHTML).toBe(`foo: hello`)
     })
+
+    // #5687
+    test('using .xx-xx underlined naming conventions when used by WebComponent is reactive', () => {
+      const E = defineCustomElement({
+        props: {
+          maxAge: Number
+        },
+        render() {
+          return `max age: ${this.maxAge}`
+        }
+      })
+      customElements.define('my-element-hyphenate', E)
+      const el = document.createElement('my-element-hyphenate') as any
+      el.setAttribute('max-age', 0)
+      container.appendChild(el)
+      expect(el.maxAge).toBe(0)
+      el.maxAge = 50
+      expect(el.maxAge).toBe(50)
+      el['max-age'] = 100
+      expect(el.maxAge).toBe(100)
+    })
   })
 
   describe('emits', () => {
