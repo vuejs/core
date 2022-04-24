@@ -22,6 +22,7 @@ import {
 } from './component'
 import {
   filterSingleRoot,
+  hasPropsChanged,
   renderComponentRoot,
   shouldUpdateComponent,
   updateHOCHostEl
@@ -1004,7 +1005,7 @@ function baseCreateRenderer(
     parentSuspense: SuspenseBoundary | null,
     isSVG: boolean
   ) => {
-    if (oldProps !== newProps) {
+    if (hasPropsChanged(oldProps, newProps, null)) {
       for (const key in newProps) {
         // empty string is not valid prop
         if (isReservedProp(key)) continue

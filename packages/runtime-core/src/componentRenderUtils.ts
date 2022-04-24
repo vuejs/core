@@ -386,7 +386,7 @@ export function shouldUpdateComponent(
   return false
 }
 
-function hasPropsChanged(
+export function hasPropsChanged(
   prevProps: Data,
   nextProps: Data,
   emitsOptions: ComponentInternalInstance['emitsOptions']
