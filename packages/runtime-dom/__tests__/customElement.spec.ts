@@ -232,6 +232,7 @@ describe('defineCustomElement', () => {
       expect(el.maxAge).toBe(100)
     })
 
+    // # 5793
     test('set number value in dom property', () => {
       const E = defineCustomElement({
         props: {

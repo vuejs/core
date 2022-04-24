@@ -245,7 +245,7 @@ export class VueElement extends BaseClass {
       for (const key of rawKeys.map(camelize)) {
         this._defineElementProperty(key)
         if (hyphenate(key) !== key) {
-          this._defineElementProperty(hyphenate(key), key, false)
+          this._defineElementProperty(hyphenate(key), key)
         }
       }
 
@@ -264,17 +264,13 @@ export class VueElement extends BaseClass {
     }
   }
 
-  private _defineElementProperty(
-    key: string,
-    originalKey = key,
-    shouldReflect = true
-  ) {
+  private _defineElementProperty(key: string, originalKey = key) {
     Object.defineProperty(this, key, {
       get() {
         return this._getProp(originalKey)
       },
       set(val) {
-        this._setProp(originalKey, val, shouldReflect)
+        this._setProp(originalKey, val)
       }
     })
   }
