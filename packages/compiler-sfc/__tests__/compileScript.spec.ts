@@ -167,7 +167,26 @@ defineExpose({ foo: 123 })
     // should replace callee
     expect(content).toMatch(/\bexpose\(\{ foo: 123 \}\)/)
   })
-
+  test('between two blocks should have "\n"', () => {
+    const { content } = compile(`
+    <script setup>
+    import foo from './foo'
+    </script>
+    // <script>
+    // const bar = 1;
+    // </script>
+      `)
+      expect(content).not.toMatch('// import foo')
+  })
+  test('between two blocks should have "\n"', () => {
+      const { content } = compile(`
+      <script setup>
+      import foo from './foo'
+      </script>
+      <script>const bar = 1</script>
+        `)
+      expect(content).not.toMatch(`const bar = 1import foo from './foo'`)
+  })
   describe('<script> and <script setup> co-usage', () => {
     test('script first', () => {
       const { content } = compile(`

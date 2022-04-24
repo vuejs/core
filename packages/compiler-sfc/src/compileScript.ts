@@ -879,8 +879,10 @@ export function compileScript(
     // <script> after <script setup>
     // we need to move the block up so that `const __default__` is
     // declared before being used in the actual component definition
+    // between two blocks should have '\n'
     if (scriptStartOffset! > startOffset) {
-      s.move(scriptStartOffset!, scriptEndOffset!, 0)
+        s.overwrite(scriptStartOffset!,scriptEndOffset!,s.slice(scriptStartOffset!, scriptEndOffset!)+'\n')
+        s.move(scriptStartOffset!, scriptEndOffset!, 0)
     }
   }
 
@@ -1445,7 +1447,7 @@ export function compileScript(
     )
   }
 
-  s.trim()
+  s.trim('\s[^\n]')
 
   return {
     ...scriptSetup,
