@@ -1,4 +1,5 @@
 import { vi } from 'vitest'
+import { Fragment, TransitionGroup, VNode, VNodeArrayChildren } from '@vue/runtime-dom'
 import {
   nodeOps,
   render,
@@ -1193,5 +1194,39 @@ describe('BaseTransition', () => {
     test('w/ KeepAlive', async () => {
       await runTestWithKeepAlive(testInOutBeforeFinish)
     })
+  })
+})
+
+
+describe('TransitionGroup', () => {
+  // #5761: When child has v-if, v-if will result in keys of number type for branches 
+  test('should avoid existing number type child keys duplicate with default index when inherit parent key in case of <template v-for>', () => {
+    // <TransitionGroup>
+    //  <template v-for="(item, idx) of ['A', 'B']" :key="item">
+    //    <div></div> // key: A0/B0
+    //    <div :key=0></div> simulate v-if branch key. Keys should be A1/B1, otherwise duplicate A0/B0
+    //    <div></div> // key: A2/B2
+    //  </template>
+    // </TransitionGroup>
+    
+    const transitionGroupVNode = h(TransitionGroup, {}, () => ['A', 'B'].map((item, idx ) => {
+      return h(Fragment, { key: item }, [
+        h('div', {}, '' ),
+        h('div', { key: 0 }, '' ), // simulate v-if branch key
+        h('div', {}, '' ),
+      ] ) 
+    }))
+
+    render(
+      transitionGroupVNode,
+      nodeOps.createElement('div')
+    )
+
+    expect(((transitionGroupVNode.component?.subTree.children as VNodeArrayChildren)[0] as VNode).key).toBe('A0')
+    expect(((transitionGroupVNode.component?.subTree.children as VNodeArrayChildren)[1] as VNode).key).toBe('A1')
+    expect(((transitionGroupVNode.component?.subTree.children as VNodeArrayChildren)[2] as VNode).key).toBe('A2')
+    expect(((transitionGroupVNode.component?.subTree.children as VNodeArrayChildren)[3] as VNode).key).toBe('B0')
+    expect(((transitionGroupVNode.component?.subTree.children as VNodeArrayChildren)[4] as VNode).key).toBe('B1')
+    expect(((transitionGroupVNode.component?.subTree.children as VNodeArrayChildren)[5] as VNode).key).toBe('B2')
   })
 })
