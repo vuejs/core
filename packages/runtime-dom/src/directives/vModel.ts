@@ -267,7 +267,7 @@ export const vModelDynamic: ObjectDirective<
 }
 
 function resolveDynamicModel(tagName: string, type: string | undefined) {
-  switch (tagName.toUpperCase()) {
+  switch (tagName) {
     case 'SELECT':
       return vModelSelect
     case 'TEXTAREA':
@@ -329,7 +329,8 @@ export function initVModelForSSR() {
       return
     }
     const modelToUse = resolveDynamicModel(
-      vnode.type,
+      // resolveDynamicModel expects an uppercase tag name, but vnode.type is lowercase
+      vnode.type.toUpperCase(),
       vnode.props && vnode.props.type
     )
     if (modelToUse.getSSRProps) {
