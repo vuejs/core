@@ -2,7 +2,8 @@ import {
   toRaw,
   shallowReactive,
   trigger,
-  TriggerOpTypes
+  TriggerOpTypes,
+  reactive
 } from '@vue/reactivity'
 import {
   EMPTY_OBJ,
@@ -447,7 +448,8 @@ function resolvePropValue(
       }
     }
   }
-  return value
+  // #5698
+  return isObject(value) ? reactive(value) : value
 }
 
 export function normalizePropsOptions(
