@@ -627,6 +627,13 @@ export function compileScript(
     )
 
     const containsNestedAwait = /\bawait\b/.test(argumentStr)
+    for (let pos = startOffset + node.start! - 1; pos > 0; pos--) {
+      if (/\s/.test(source[pos])) {
+        continue
+      }
+      needSemi = needSemi || /['"`A-Za-z0-9_$\]]/.test(source[pos])
+      break
+    }
 
     s.overwrite(
       node.start! + startOffset,
@@ -1067,7 +1074,7 @@ export function compileScript(
           }
           if (child.type === 'AwaitExpression') {
             hasAwait = true
-            const needsSemi = [parent, ...scriptSetupAst.body].some(n => {
+            const needsSemi = scriptSetupAst.body.some(n => {
               return n.type === 'ExpressionStatement' && n.start === child.start
             })
             processAwait(

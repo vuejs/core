@@ -262,6 +262,29 @@ return {  }
 }"
 `;
 
+exports[`SFC compile <script setup> async/await detection nested statements with preceding statements 1`] = `
+"import { withAsyncContext as _withAsyncContext } from 'vue'
+
+export default {
+  async setup(__props, { expose }) {
+  expose();
+
+let __temp, __restore
+
+      if (ok) {
+        const a = 'test'
+        ;(
+  ([__temp,__restore] = _withAsyncContext(() => foo)),
+  await __temp,
+  __restore()
+)
+      }
+return {  }
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> async/await detection ref 1`] = `
 "import { withAsyncContext as _withAsyncContext, ref as _ref } from 'vue'
 

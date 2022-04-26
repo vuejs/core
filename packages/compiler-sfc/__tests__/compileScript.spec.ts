@@ -1164,6 +1164,14 @@ const emit = defineEmits(['a', 'b'])
       assertAwaitDetection(`if (ok) { await foo } else { await bar }`)
     })
 
+    test('nested statements with preceding statements', () => {
+      assertAwaitDetection(`
+      if (ok) {
+        const a = 'test'
+        await foo
+      }`)
+    })
+
     test('should ignore await inside functions', () => {
       // function declaration
       assertAwaitDetection(`async function foo() { await bar }`, false)
