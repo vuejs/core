@@ -1067,7 +1067,7 @@ export function compileScript(
           }
           if (child.type === 'AwaitExpression') {
             hasAwait = true
-            const needsSemi = scriptSetupAst.body.some(n => {
+            const needsSemi = [parent, ...scriptSetupAst.body].some(n => {
               return n.type === 'ExpressionStatement' && n.start === child.start
             })
             processAwait(
