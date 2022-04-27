@@ -194,6 +194,173 @@ return {  }
 }"
 `;
 
+exports[`SFC compile <script setup> async/await detection multiple \`if for\` nested statements 1`] = `
+"import { withAsyncContext as _withAsyncContext } from 'vue'
+
+export default {
+  async setup(__props, { expose }) {
+  expose();
+
+let __temp, __restore
+if (ok) { 
+        for (let a of [1,2,3]) {
+          (
+  ([__temp,__restore] = _withAsyncContext(() => a)),
+  await __temp,
+  __restore()
+)
+        }
+        for (let a of [1,2,3]) {
+          (
+  ([__temp,__restore] = _withAsyncContext(() => a)),
+  await __temp,
+  __restore()
+)
+          ;(
+  ([__temp,__restore] = _withAsyncContext(() => a)),
+  await __temp,
+  __restore()
+)
+        }
+      }
+return {  }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> async/await detection multiple \`if while\` nested statements 1`] = `
+"import { withAsyncContext as _withAsyncContext } from 'vue'
+
+export default {
+  async setup(__props, { expose }) {
+  expose();
+
+let __temp, __restore
+if (ok) { 
+        while (d) {
+          (
+  ([__temp,__restore] = _withAsyncContext(() => 5)),
+  await __temp,
+  __restore()
+)
+        }
+        while (d) {
+          (
+  ([__temp,__restore] = _withAsyncContext(() => 5)),
+  await __temp,
+  __restore()
+)
+          ;(
+  ([__temp,__restore] = _withAsyncContext(() => 6)),
+  await __temp,
+  __restore()
+)
+          if (c) {
+            let f = 10
+            10 + (
+  ([__temp,__restore] = _withAsyncContext(() => 7)),
+  __temp = await __temp,
+  __restore(),
+  __temp
+)
+          } else {
+            (
+  ([__temp,__restore] = _withAsyncContext(() => 8)),
+  await __temp,
+  __restore()
+)
+            ;(
+  ([__temp,__restore] = _withAsyncContext(() => 9)),
+  await __temp,
+  __restore()
+)
+          }
+        }
+      }
+return {  }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> async/await detection multiple \`if\` nested statements 1`] = `
+"import { withAsyncContext as _withAsyncContext } from 'vue'
+
+export default {
+  async setup(__props, { expose }) {
+  expose();
+
+let __temp, __restore
+if (ok) { 
+        let a = 'foo'
+        ;(
+  ([__temp,__restore] = _withAsyncContext(() => 0)),
+  __temp = await __temp,
+  __restore(),
+  __temp
+) + (
+  ([__temp,__restore] = _withAsyncContext(() => 1)),
+  __temp = await __temp,
+  __restore(),
+  __temp
+)
+        ;(
+  ([__temp,__restore] = _withAsyncContext(() => 2)),
+  await __temp,
+  __restore()
+)
+      } else if (a) {
+        (
+  ([__temp,__restore] = _withAsyncContext(() => 10)),
+  await __temp,
+  __restore()
+)
+        if (b) {
+          (
+  ([__temp,__restore] = _withAsyncContext(() => 0)),
+  __temp = await __temp,
+  __restore(),
+  __temp
+) + (
+  ([__temp,__restore] = _withAsyncContext(() => 1)),
+  __temp = await __temp,
+  __restore(),
+  __temp
+)
+        } else {
+          let a = 'foo'
+          ;(
+  ([__temp,__restore] = _withAsyncContext(() => 2)),
+  await __temp,
+  __restore()
+)
+        }
+        if (b) {
+          (
+  ([__temp,__restore] = _withAsyncContext(() => 3)),
+  await __temp,
+  __restore()
+)
+          ;(
+  ([__temp,__restore] = _withAsyncContext(() => 4)),
+  await __temp,
+  __restore()
+)
+        }
+      } else { 
+        (
+  ([__temp,__restore] = _withAsyncContext(() => 5)),
+  await __temp,
+  __restore()
+)
+      }
+return {  }
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> async/await detection nested await 1`] = `
 "import { withAsyncContext as _withAsyncContext } from 'vue'
 

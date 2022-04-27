@@ -1195,6 +1195,59 @@ const emit = defineEmits(['a', 'b'])
       assertAwaitDetection(`if (ok) { await foo } else { await bar }`)
     })
 
+    test('multiple `if` nested statements', () => {
+      assertAwaitDetection(`if (ok) { 
+        let a = 'foo'
+        await 0 + await 1
+        await 2
+      } else if (a) {
+        await 10
+        if (b) {
+          await 0 + await 1
+        } else {
+          let a = 'foo'
+          await 2
+        }
+        if (b) {
+          await 3
+          await 4
+        }
+      } else { 
+        await 5
+      }`)
+    })
+
+    test('multiple `if while` nested statements', () => {
+      assertAwaitDetection(`if (ok) { 
+        while (d) {
+          await 5
+        }
+        while (d) {
+          await 5
+          await 6
+          if (c) {
+            let f = 10
+            10 + await 7
+          } else {
+            await 8
+            await 9
+          }
+        }
+      }`)
+    })
+
+    test('multiple `if for` nested statements', () => {
+      assertAwaitDetection(`if (ok) { 
+        for (let a of [1,2,3]) {
+          await a
+        }
+        for (let a of [1,2,3]) {
+          await a
+          await a
+        }
+      }`)
+    })
+
     test('should ignore await inside functions', () => {
       // function declaration
       assertAwaitDetection(`async function foo() { await bar }`, false)
