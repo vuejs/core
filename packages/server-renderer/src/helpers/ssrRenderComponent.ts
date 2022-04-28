@@ -1,3 +1,4 @@
+import { isFunction } from '@vue/shared'
 import { Component, ComponentInternalInstance, createVNode, Slots } from 'vue'
 import { Props, renderComponentVNode, SSRBuffer } from '../render'
 import { SSRSlots } from './ssrRenderSlot'
@@ -10,7 +11,9 @@ export function ssrRenderComponent(
   slotScopeId?: string
 ): SSRBuffer | Promise<SSRBuffer> {
   return renderComponentVNode(
-    createVNode(comp, props, children),
+    isFunction(comp) && parentComponent
+      ? (parentComponent.subTree = createVNode(comp, props, children))
+      : createVNode(comp, props, children),
     parentComponent,
     slotScopeId
   )
