@@ -253,6 +253,18 @@ describe('compiler: v-for', () => {
       )
     })
 
+    test('missing source and have multiple spaces with', () => {
+      const onError = jest.fn()
+      parseWithForTransform('<span v-for="item in  " />', { onError })
+
+      expect(onError).toHaveBeenCalledTimes(1)
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: ErrorCodes.X_V_FOR_MALFORMED_EXPRESSION
+        })
+      )
+    })
+
     test('missing value', () => {
       const onError = jest.fn()
       parseWithForTransform('<span v-for="in items" />', { onError })
