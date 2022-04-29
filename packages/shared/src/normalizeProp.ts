@@ -3,6 +3,8 @@ import { isNoUnitNumericStyleProp } from './domAttrConfig'
 
 export type NormalizedStyle = Record<string, string | number>
 
+// 样式的标准形式
+// CSSStyleDeclaration <div style="{ color: 'red', fontSize: '13px' }"></div>
 export function normalizeStyle(
   value: unknown
 ): NormalizedStyle | string | undefined {
@@ -31,6 +33,7 @@ const listDelimiterRE = /;(?![^(]*\))/g
 const propertyDelimiterRE = /:(.+)/
 
 export function parseStringStyle(cssText: string): NormalizedStyle {
+  // <div style="font-size: 14px; color: #303133;"></div>
   const ret: NormalizedStyle = {}
   cssText.split(listDelimiterRE).forEach(item => {
     if (item) {
@@ -68,6 +71,8 @@ export function normalizeClass(value: unknown): string {
     res = value
   } else if (isArray(value)) {
     for (let i = 0; i < value.length; i++) {
+      // 处理数组元素不是字符串的情况
+      // <div :class="[{ active: isActive }, errorClass]"></div>
       const normalized = normalizeClass(value[i])
       if (normalized) {
         res += normalized + ' '

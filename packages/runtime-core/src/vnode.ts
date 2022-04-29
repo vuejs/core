@@ -407,6 +407,7 @@ function createBaseVNode(
   isBlockNode = false,
   needFullChildrenNormalization = false
 ) {
+  // 定义 vnode 数据结构
   const vnode = {
     __v_isVNode: true,
     __v_skip: true,
@@ -478,6 +479,7 @@ function createBaseVNode(
     defineLegacyVNodeProperties(vnode)
   }
 
+  // 返回生成的虚拟 DOM
   return vnode
 }
 
@@ -487,6 +489,8 @@ export const createVNode = (
   __DEV__ ? createVNodeWithArgsTransform : _createVNode
 ) as typeof _createVNode
 
+// 内部创建虚拟 DOM
+// 对外 h 函数
 function _createVNode(
   type: VNodeTypes | ClassComponent | typeof NULL_DYNAMIC_COMPONENT,
   props: (Data & VNodeProps) | null = null,
@@ -524,11 +528,13 @@ function _createVNode(
   }
 
   // class & style normalization.
+  // class & style props 支持对象及数组 需要转换成标准的字符串形式
   if (props) {
     // for reactive or proxy objects, we need to clone it to enable mutation.
     props = guardReactiveProps(props)!
     let { class: klass, style } = props
     if (klass && !isString(klass)) {
+      // class props 标准化   'el-button el-button--primary is-circle'
       props.class = normalizeClass(klass)
     }
     if (isObject(style)) {
