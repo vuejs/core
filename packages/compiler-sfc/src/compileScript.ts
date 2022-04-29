@@ -277,6 +277,8 @@ export function compileScript(
     | TSInterfaceBody
     | undefined
   let emitsTypeDeclRaw: Node | undefined
+  // propsTypeDecl or emitsTypeDecl decl from normal script
+  let isTypeDeclFromNormalScript = false
   let emitIdentifier: string | undefined
   let hasAwait = false
   let hasInlinedSsrRenderFn = false
@@ -554,12 +556,20 @@ export function compileScript(
           return isQualifiedType(node.declaration)
         }
       }
-      const body = scriptAst
-        ? [...scriptSetupAst.body, ...scriptAst.body]
-        : scriptSetupAst.body
-      for (const node of body) {
+      
+      if (scriptAst) {
+        for (const node of scriptAst.body) {
+          const qualified = isQualifiedType(node)
+          if (qualified) {
+            isTypeDeclFromNormalScript = true
+            return qualified
+          }
+        }
+      }
+      for (const node of scriptSetupAst.body) {
         const qualified = isQualifiedType(node)
         if (qualified) {
+          isTypeDeclFromNormalScript = false
           return qualified
         }
       }
@@ -740,7 +750,7 @@ export function compileScript(
   }
 
   function genSetupPropsType(node: TSTypeLiteral | TSInterfaceBody) {
-    const scriptSetupSource = scriptSetup!.content
+    const scriptSource = isTypeDeclFromNormalScript ? script!.content : scriptSetup!.content
     if (hasStaticWithDefaults()) {
       // if withDefaults() is used, we need to remove the optional flags
       // on props that have default values
@@ -761,20 +771,20 @@ export function compileScript(
             res +=
               m.key.name +
               (m.type === 'TSMethodSignature' ? '()' : '') +
-              scriptSetupSource.slice(
+              scriptSource.slice(
                 m.typeAnnotation.start!,
                 m.typeAnnotation.end!
               ) +
               ', '
           } else {
             res +=
-              scriptSetupSource.slice(m.start!, m.typeAnnotation.end!) + `, `
+              scriptSource.slice(m.start!, m.typeAnnotation.end!) + `, `
           }
         }
       }
       return (res.length ? res.slice(0, -2) : res) + ` }`
     } else {
-      return scriptSetupSource.slice(node.start!, node.end!)
+      return scriptSource.slice(node.start!, node.end!)
     }
   }
 

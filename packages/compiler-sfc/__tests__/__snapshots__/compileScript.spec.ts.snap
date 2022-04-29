@@ -1450,3 +1450,27 @@ return { props }
 
 })"
 `;
+
+exports[`SFC compile <script setup> with TypeScript withDefaults + normal script 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+        interface Props {
+          a?: string;
+        }
+      
+export default /*#__PURE__*/_defineComponent({
+  props: {
+    a: { type: String, required: false, default: \\"a\\" }
+  },
+  setup(__props: any, { expose }) {
+  expose();
+
+const props = __props as { a: string }
+
+        
+      
+return { props }
+}
+
+})"
+`;

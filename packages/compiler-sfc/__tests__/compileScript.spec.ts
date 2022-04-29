@@ -954,6 +954,22 @@ const emit = defineEmits(['a', 'b'])
       )
     })
 
+    test('withDefaults + normal script', () => {
+      const { content } = compile(`
+      <script lang="ts">
+        interface Props {
+          a?: string;
+        }
+      </script>
+      <script setup lang="ts">
+        const props = withDefaults(defineProps<Props>(), {
+          a: "a",
+        });
+      </script>
+      `)
+      assertCode(content)
+    })
+
     test('defineEmits w/ type', () => {
       const { content } = compile(`
       <script setup lang="ts">
