@@ -128,6 +128,12 @@ export interface ImportBinding {
   isUsedInTemplate: boolean
 }
 
+type FromNormalScript = { __fromNormalScript?: boolean }
+
+type PropsDeclType = (TSTypeLiteral | TSInterfaceBody) & FromNormalScript
+
+type EmitsDescType = (TSFunctionType | TSTypeLiteral | TSInterfaceBody) & FromNormalScript
+
 /**
  * Compile `<script setup>`
  * It requires the whole SFC descriptor because we need to handle and merge
@@ -267,18 +273,12 @@ export function compileScript(
   let propsRuntimeDefaults: ObjectExpression | undefined
   let propsDestructureDecl: Node | undefined
   let propsDestructureRestId: string | undefined
-  let propsTypeDecl: TSTypeLiteral | TSInterfaceBody | undefined
+  let propsTypeDecl: PropsDeclType | undefined
   let propsTypeDeclRaw: Node | undefined
   let propsIdentifier: string | undefined
   let emitsRuntimeDecl: Node | undefined
-  let emitsTypeDecl:
-    | TSFunctionType
-    | TSTypeLiteral
-    | TSInterfaceBody
-    | undefined
+  let emitsTypeDecl: EmitsDescType | undefined
   let emitsTypeDeclRaw: Node | undefined
-  // propsTypeDecl/emitsTypeDecl declared from normal script
-  let isTypeDeclFromNormalScript = false
   let emitIdentifier: string | undefined
   let hasAwait = false
   let hasInlinedSsrRenderFn = false
@@ -388,7 +388,7 @@ export function compileScript(
       propsTypeDecl = resolveQualifiedType(
         propsTypeDeclRaw,
         node => node.type === 'TSTypeLiteral'
-      ) as TSTypeLiteral | TSInterfaceBody | undefined
+      ) as PropsDeclType | undefined
 
       if (!propsTypeDecl) {
         error(
@@ -510,7 +510,7 @@ export function compileScript(
       emitsTypeDecl = resolveQualifiedType(
         emitsTypeDeclRaw,
         node => node.type === 'TSFunctionType' || node.type === 'TSTypeLiteral'
-      ) as TSFunctionType | TSTypeLiteral | TSInterfaceBody | undefined
+      ) as EmitsDescType | undefined
 
       if (!emitsTypeDecl) {
         error(
@@ -531,7 +531,7 @@ export function compileScript(
   function resolveQualifiedType(
     node: Node,
     qualifier: (node: Node) => boolean
-  ) {
+  ): (Node & FromNormalScript)| undefined {
     if (qualifier(node)) {
       return node
     }
@@ -557,20 +557,16 @@ export function compileScript(
         }
       }
 
-      if (scriptAst) {
-        for (const node of scriptAst.body) {
-          const qualified = isQualifiedType(node)
-          if (qualified) {
-            isTypeDeclFromNormalScript = true
-            return qualified
-          }
-        }
-      }
-      for (const node of scriptSetupAst.body) {
-        const qualified = isQualifiedType(node)
+      const body = scriptAst
+        ? [...scriptSetupAst.body, ...scriptAst.body]
+        : scriptSetupAst.body
+      
+      for (let i = 0; i < body.length; i++) {
+        const qualified = isQualifiedType(body[i])
         if (qualified) {
-          isTypeDeclFromNormalScript = false
-          return qualified
+          ;(qualified as Node & FromNormalScript).__fromNormalScript =
+            scriptAst && i >= scriptSetupAst.body.length
+          return qualified 
         }
       }
     }
@@ -749,8 +745,8 @@ export function compileScript(
     }
   }
 
-  function genSetupPropsType(node: TSTypeLiteral | TSInterfaceBody) {
-    const scriptSource = isTypeDeclFromNormalScript
+  function genSetupPropsType(node: PropsDeclType) {
+    const scriptSource = node.__fromNormalScript
       ? script!.content
       : scriptSetup!.content
     if (hasStaticWithDefaults()) {
@@ -1278,7 +1274,7 @@ export function compileScript(
   if (destructureElements.length) {
     args += `, { ${destructureElements.join(', ')} }`
     if (emitsTypeDecl) {
-      const content = isTypeDeclFromNormalScript ? script!.content: scriptSetup.content
+      const content = emitsTypeDecl.__fromNormalScript ? script!.content : scriptSetup.content
       args += `: { emit: (${content.slice(
         emitsTypeDecl.start!,
         emitsTypeDecl.end!
