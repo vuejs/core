@@ -265,6 +265,16 @@ describe('compiler: v-for', () => {
       )
     })
 
+    test('source containing string expression with spaces', () => {
+      const { node: forNode } = parseWithForTransform(
+        `<span v-for="item in state ['my items']" />`
+      )
+      expect(forNode.keyAlias).toBeUndefined()
+      expect(forNode.objectIndexAlias).toBeUndefined()
+      expect((forNode.valueAlias as SimpleExpressionNode).content).toBe('item')
+      expect((forNode.source as SimpleExpressionNode).content).toBe("state ['my items']")
+    })
+
     test('missing value', () => {
       const onError = vi.fn()
       parseWithForTransform('<span v-for="in items" />', { onError })
