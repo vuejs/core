@@ -67,6 +67,7 @@ export function callWithErrorHandling(
 ) {
   let res
   try {
+    // 执行自定义的告警处理函数
     res = args ? fn(...args) : fn()
   } catch (err) {
     handleError(err, instance, type)

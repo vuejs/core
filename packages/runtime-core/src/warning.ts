@@ -36,6 +36,9 @@ export function warn(msg: string, ...args: any[]) {
   pauseTracking()
 
   const instance = stack.length ? stack[stack.length - 1].component : null
+
+  // 获取用户自定义的告警处理函数
+  // app.config.warnHandler = (msg, instance, trace) => {}
   const appWarnHandler = instance && instance.appContext.config.warnHandler
   const trace = getComponentTrace()
 
@@ -65,6 +68,7 @@ export function warn(msg: string, ...args: any[]) {
     ) {
       warnArgs.push(`\n`, ...formatTrace(trace))
     }
+    // 打印告警信息
     console.warn(...warnArgs)
   }
 
