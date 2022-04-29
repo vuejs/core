@@ -132,7 +132,7 @@ type FromNormalScript = { __fromNormalScript?: boolean }
 
 type PropsDeclType = (TSTypeLiteral | TSInterfaceBody) & FromNormalScript
 
-type EmitsDescType = (TSFunctionType | TSTypeLiteral | TSInterfaceBody) & FromNormalScript
+type EmitsDeclType = (TSFunctionType | TSTypeLiteral | TSInterfaceBody) & FromNormalScript
 
 /**
  * Compile `<script setup>`
@@ -277,7 +277,7 @@ export function compileScript(
   let propsTypeDeclRaw: Node | undefined
   let propsIdentifier: string | undefined
   let emitsRuntimeDecl: Node | undefined
-  let emitsTypeDecl: EmitsDescType | undefined
+  let emitsTypeDecl: EmitsDeclType | undefined
   let emitsTypeDeclRaw: Node | undefined
   let emitIdentifier: string | undefined
   let hasAwait = false
@@ -510,7 +510,7 @@ export function compileScript(
       emitsTypeDecl = resolveQualifiedType(
         emitsTypeDeclRaw,
         node => node.type === 'TSFunctionType' || node.type === 'TSTypeLiteral'
-      ) as EmitsDescType | undefined
+      ) as EmitsDeclType | undefined
 
       if (!emitsTypeDecl) {
         error(
