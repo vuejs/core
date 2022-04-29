@@ -1172,6 +1172,24 @@ return { emit }
 })"
 `;
 
+exports[`SFC compile <script setup> with TypeScript defineEmits w/ type from normal script 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+        export interface Emits { (e: 'foo' | 'bar'): void }
+      
+export default /*#__PURE__*/_defineComponent({
+  emits: [\\"foo\\", \\"bar\\"],
+  setup(__props, { expose, emit }: { emit: ({ (e: 'foo' | 'bar'): void }), expose: any, slots: any, attrs: any }) {
+  expose();
+
+      
+      
+return { emit }
+}
+
+})"
+`;
+
 exports[`SFC compile <script setup> with TypeScript defineProps w/ exported interface 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 export interface Props { x?: number }
@@ -1428,30 +1446,7 @@ return { props, defaults }
 })"
 `;
 
-exports[`SFC compile <script setup> with TypeScript withDefaults (static) 1`] = `
-"import { defineComponent as _defineComponent } from 'vue'
-
-export default /*#__PURE__*/_defineComponent({
-  props: {
-    foo: { type: String, required: false, default: 'hi' },
-    bar: { type: Number, required: false },
-    baz: { type: Boolean, required: true },
-    qux: { type: Function, required: false, default() { return 1 } }
-  },
-  setup(__props: any, { expose }) {
-  expose();
-
-const props = __props as { foo: string, bar?: number, baz: boolean, qux(): number }
-
-      
-      
-return { props }
-}
-
-})"
-`;
-
-exports[`SFC compile <script setup> with TypeScript withDefaults + normal script 1`] = `
+exports[`SFC compile <script setup> with TypeScript withDefaults (static) + normal script 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
         interface Props {
@@ -1468,6 +1463,29 @@ export default /*#__PURE__*/_defineComponent({
 const props = __props as { a: string }
 
         
+      
+return { props }
+}
+
+})"
+`;
+
+exports[`SFC compile <script setup> with TypeScript withDefaults (static) 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  props: {
+    foo: { type: String, required: false, default: 'hi' },
+    bar: { type: Number, required: false },
+    baz: { type: Boolean, required: true },
+    qux: { type: Function, required: false, default() { return 1 } }
+  },
+  setup(__props: any, { expose }) {
+  expose();
+
+const props = __props as { foo: string, bar?: number, baz: boolean, qux(): number }
+
+      
       
 return { props }
 }

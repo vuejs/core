@@ -277,7 +277,7 @@ export function compileScript(
     | TSInterfaceBody
     | undefined
   let emitsTypeDeclRaw: Node | undefined
-  // propsTypeDecl or emitsTypeDecl decl from normal script
+  // propsTypeDecl/emitsTypeDecl declared from normal script
   let isTypeDeclFromNormalScript = false
   let emitIdentifier: string | undefined
   let hasAwait = false
@@ -556,7 +556,7 @@ export function compileScript(
           return isQualifiedType(node.declaration)
         }
       }
-      
+
       if (scriptAst) {
         for (const node of scriptAst.body) {
           const qualified = isQualifiedType(node)
@@ -750,7 +750,9 @@ export function compileScript(
   }
 
   function genSetupPropsType(node: TSTypeLiteral | TSInterfaceBody) {
-    const scriptSource = isTypeDeclFromNormalScript ? script!.content : scriptSetup!.content
+    const scriptSource = isTypeDeclFromNormalScript
+      ? script!.content
+      : scriptSetup!.content
     if (hasStaticWithDefaults()) {
       // if withDefaults() is used, we need to remove the optional flags
       // on props that have default values
@@ -777,8 +779,7 @@ export function compileScript(
               ) +
               ', '
           } else {
-            res +=
-              scriptSource.slice(m.start!, m.typeAnnotation.end!) + `, `
+            res += scriptSource.slice(m.start!, m.typeAnnotation.end!) + `, `
           }
         }
       }
@@ -1277,7 +1278,8 @@ export function compileScript(
   if (destructureElements.length) {
     args += `, { ${destructureElements.join(', ')} }`
     if (emitsTypeDecl) {
-      args += `: { emit: (${scriptSetup.content.slice(
+      const content = isTypeDeclFromNormalScript ? script!.content: scriptSetup.content
+      args += `: { emit: (${content.slice(
         emitsTypeDecl.start!,
         emitsTypeDecl.end!
       )}), expose: any, slots: any, attrs: any }`
