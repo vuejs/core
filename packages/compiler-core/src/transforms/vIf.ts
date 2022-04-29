@@ -272,9 +272,13 @@ function createChildrenCodegenNode(
       let patchFlagText = PatchFlagNames[PatchFlags.STABLE_FRAGMENT]
       // check if the fragment actually contains a single valid child with
       // the rest being comments
+      const commentNodeCount = children.filter(
+        c => c.type === NodeTypes.COMMENT
+      ).length
       if (
         __DEV__ &&
-        children.filter(c => c.type !== NodeTypes.COMMENT).length === 1
+        commentNodeCount &&
+        children.length - commentNodeCount === 1
       ) {
         patchFlag |= PatchFlags.DEV_ROOT_FRAGMENT
         patchFlagText += `, ${PatchFlagNames[PatchFlags.DEV_ROOT_FRAGMENT]}`
