@@ -122,7 +122,8 @@ export function emit(
     const { number, trim } = props[modifiersKey] || EMPTY_OBJ
     if (trim) {
       args = rawArgs.map(a => a.trim())
-    } else if (number) {
+    }
+    if (number) {
       args = rawArgs.map(toNumber)
     }
   }
