@@ -56,7 +56,8 @@ export const vModelText: ModelDirective<
       let domValue: string | number = el.value
       if (trim) {
         domValue = domValue.trim()
-      } else if (castToNumber) {
+      } 
+      if (castToNumber) {
         domValue = toNumber(domValue)
       }
       el._assign(domValue)
