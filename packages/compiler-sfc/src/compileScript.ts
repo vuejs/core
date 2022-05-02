@@ -172,6 +172,12 @@ export function compileScript(
   const plugins: ParserPlugin[] = []
   if (!isTS || scriptLang === 'tsx' || scriptSetupLang === 'tsx') {
     plugins.push('jsx')
+  } else {
+    // If don't match the case of adding jsx, should remove the jsx from the babelParserPlugins
+    if (options.babelParserPlugins)
+      options.babelParserPlugins = options.babelParserPlugins.filter(
+        n => n !== 'jsx'
+      )
   }
   if (options.babelParserPlugins) plugins.push(...options.babelParserPlugins)
   if (isTS) plugins.push('typescript', 'decorators-legacy')
