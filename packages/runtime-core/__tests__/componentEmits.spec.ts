@@ -354,6 +354,37 @@ describe('component: emit', () => {
     expect(fn2).toHaveBeenCalledWith('two')
   })
 
+  test('.trim and .number modifiers should work with v-model on component', () => {
+    const Foo = defineComponent({
+      render() {},
+      created() {
+        this.$emit('update:modelValue', ' 1 ')
+        this.$emit('update:foo', '  2  ')
+      }
+    })
+
+    const fn1 = jest.fn()
+    const fn2 = jest.fn()
+
+    const Comp = () =>
+      h(Foo, {
+        modelValue: null,
+        modelModifiers: { trim: true, number: true },
+        'onUpdate:modelValue': fn1,
+
+        foo: null,
+        fooModifiers: { trim: true, number: true },
+        'onUpdate:foo': fn2
+      })
+
+    render(h(Comp), nodeOps.createElement('div'))
+
+    expect(fn1).toHaveBeenCalledTimes(1)
+    expect(fn1).toHaveBeenCalledWith(1)
+    expect(fn2).toHaveBeenCalledTimes(1)
+    expect(fn2).toHaveBeenCalledWith(2)
+  })
+
   test('isEmitListener', () => {
     const options = {
       click: null,
