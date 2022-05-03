@@ -210,4 +210,17 @@ describe('v-memo', () => {
     // should update
     expect(el.innerHTML).toBe(`<div>2</div><div>2</div><div>2</div>`)
   })
+
+  test('v-memo dependency is NaN should be equal', async () => {
+    const [el, vm] = mount({
+      template: `<div v-memo="[x]">{{ y }}</div>`,
+      data: () => ({ x: NaN, y: 0 })
+    })
+    expect(el.innerHTML).toBe(`<div>0</div>`)
+
+    vm.y++
+    // should not update
+    await nextTick()
+    expect(el.innerHTML).toBe(`<div>0</div>`)
+  })
 })
