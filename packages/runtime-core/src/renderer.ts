@@ -1004,7 +1004,6 @@ function baseCreateRenderer(
     parentSuspense: SuspenseBoundary | null,
     isSVG: boolean
   ) => {
-    if (oldProps !== newProps) {
       for (const key in newProps) {
         // empty string is not valid prop
         if (isReservedProp(key)) continue
@@ -1045,7 +1044,6 @@ function baseCreateRenderer(
       if ('value' in newProps) {
         hostPatchProp(el, 'value', oldProps.value, newProps.value)
       }
-    }
   }
 
   const processFragment = (
