@@ -119,3 +119,49 @@ const {
 
 console.log(s.toString()) // let a = _ref(0); a.value++
 ```
+
+### `createReactivityTransformer`
+
+Create a transformer with custom options.
+
+```js
+import { createReactivityTransformer } from '@vue/reactivity-transform'
+
+const transformer = createReactivityTransformer({
+  /* options */
+})
+
+transformer.shouldTransform(code)
+transformer.transform(code)
+```
+
+## Custom Shorthands
+
+To use custom $-prefixed shorthands, you can pass them as a list to `createReactivityTransformer`:
+
+```js
+import { createReactivityTransformer } from '@vue/reactivity-transform'
+
+const transformer = createReactivityTransformer({
+  // define custom shorthands
+  shorthands: ['useFoo', 'useBar']
+})
+
+transformer.transform(code)
+```
+
+Unlike built-in shorthands, custom shorthands are will NOT be auto imported.
+
+```ts
+const foo = $useFoo() // equivalent $(useFoo())
+console.log(foo)
+```
+
+will be transformed to
+
+```ts
+const foo = useFoo()
+console.log(foo.value)
+```
+
+The importing and TypeScript definitions should be handled by upper-level tooling.

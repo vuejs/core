@@ -13,7 +13,13 @@ import {
 } from '@vue/compiler-dom'
 import { SFCDescriptor, SFCScriptBlock } from './parse'
 import { parse as _parse, ParserOptions, ParserPlugin } from '@babel/parser'
-import { camelize, capitalize, generateCodeFrame, makeMap } from '@vue/shared'
+import {
+  camelize,
+  capitalize,
+  generateCodeFrame,
+  isObject,
+  makeMap
+} from '@vue/shared'
 import {
   Node,
   Declaration,
@@ -48,7 +54,10 @@ import { compileTemplate, SFCTemplateCompileOptions } from './compileTemplate'
 import { warnOnce } from './warn'
 import { rewriteDefault } from './rewriteDefault'
 import { createCache } from './cache'
-import { shouldTransform, transformAST } from '@vue/reactivity-transform'
+import {
+  createReactivityTransformer,
+  ReactivityTransformerOptions
+} from '@vue/reactivity-transform'
 
 // Special compiler macros
 const DEFINE_PROPS = 'defineProps'
@@ -85,7 +94,7 @@ export interface SFCScriptCompileOptions {
    * (Experimental) Enable syntax transform for using refs without `.value` and
    * using destructured props with reactivity
    */
-  reactivityTransform?: boolean
+  reactivityTransform?: boolean | ReactivityTransformerOptions
   /**
    * (Experimental) Enable syntax transform for using refs without `.value`
    * https://github.com/vuejs/rfcs/discussions/369
@@ -146,6 +155,13 @@ export function compileScript(
     !!options.refTransform
   const enablePropsTransform =
     !!options.reactivityTransform || !!options.propsDestructureTransform
+  const reactivityTransformer = enableReactivityTransform
+    ? createReactivityTransformer(
+        isObject(options.reactivityTransform)
+          ? options.reactivityTransform
+          : undefined
+      )
+    : undefined
   const isProd = !!options.isProd
   const genSourceMap = options.sourceMap !== false
   let refBindings: string[] | undefined
@@ -192,11 +208,11 @@ export function compileScript(
         sourceType: 'module'
       }).program
       const bindings = analyzeScriptBindings(scriptAst.body)
-      if (enableReactivityTransform && shouldTransform(content)) {
+      if (enableReactivityTransform && reactivityTransformer?.shouldTransform(content)) {
         const s = new MagicString(source)
         const startOffset = script.loc.start.offset
         const endOffset = script.loc.end.offset
-        const { importedHelpers } = transformAST(scriptAst, s, startOffset)
+        const { importedHelpers } = reactivityTransformer.transformAST(scriptAst, s, startOffset)
         if (importedHelpers.length) {
           s.prepend(
             `import { ${importedHelpers
@@ -864,8 +880,8 @@ export function compileScript(
     }
 
     // apply reactivity transform
-    if (enableReactivityTransform && shouldTransform(script.content)) {
-      const { rootRefs, importedHelpers } = transformAST(
+    if (enableReactivityTransform && reactivityTransformer?.shouldTransform(script.content)) {
+      const { rootRefs, importedHelpers } = reactivityTransformer.transformAST(
         scriptAst,
         s,
         scriptStartOffset!
@@ -1116,10 +1132,10 @@ export function compileScript(
   if (
     (enableReactivityTransform &&
       // normal <script> had ref bindings that maybe used in <script setup>
-      (refBindings || shouldTransform(scriptSetup.content))) ||
+      (refBindings || reactivityTransformer?.shouldTransform(scriptSetup.content))) ||
     propsDestructureDecl
   ) {
-    const { rootRefs, importedHelpers } = transformAST(
+    const { rootRefs, importedHelpers } = reactivityTransformer!.transformAST(
       scriptSetupAst,
       s,
       startOffset,

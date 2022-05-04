@@ -5,6 +5,7 @@ export { compileStyle, compileStyleAsync } from './compileStyle'
 export { compileScript } from './compileScript'
 export { rewriteDefault } from './rewriteDefault'
 export {
+  createReactivityTransformer,
   shouldTransform as shouldTransformRef,
   transform as transformRef,
   transformAST as transformRefAST

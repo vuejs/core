@@ -1,5 +1,5 @@
 import { parse } from '@babel/parser'
-import { transform } from '../src'
+import { createReactivityTransformer, transform } from '../src'
 
 function assertCode(code: string) {
   // parse the generated code to make sure it is valid
@@ -458,4 +458,23 @@ describe('errors', () => {
       `does not support rest element`
     )
   })
+})
+
+test('custom shorthands', () => {
+  const transformer = createReactivityTransformer({
+    shorthands: ['useFoo', 'useBar']
+  })
+
+  const { code } = transformer.transform(
+    `
+    const foo = $useFoo()
+    const { bar } = $useBar()
+    console.log(foo, bar)
+    `
+  )
+
+  expect(code).toMatch(`const foo = useFoo()`)
+  expect(code).toMatch(`const __$temp_1 = useBar()`)
+  expect(code).toMatch(`bar = _toRef(__$temp_1, 'bar')`)
+  expect(code).toMatch(`console.log(foo.value, bar.value)`)
 })
