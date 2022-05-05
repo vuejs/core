@@ -125,7 +125,7 @@ export type ExtractPropTypes<O> = {
   [K in keyof Pick<O, RequiredKeys<O>>]: InferPropType<O[K]>
 } & {
   // use `keyof Pick<O, OptionalKeys<O>>` instead of `OptionalKeys<O>` to support IDE features
-  [K in keyof Pick<O, OptionalKeys<O>>]?: InferPropType<O[K]>
+  [K in keyof Pick<O, OptionalKeys<O>>]?: InferPropType<O[K]> | null
 }
 
 const enum BooleanFlags {
@@ -225,7 +225,7 @@ export function updateProps(
       for (let i = 0; i < propsToUpdate.length; i++) {
         let key = propsToUpdate[i]
         // skip if the prop key is a declared emit event listener
-        if (isEmitListener(instance.emitsOptions, key)){
+        if (isEmitListener(instance.emitsOptions, key)) {
           continue
         }
         // PROPS flag guarantees rawProps to be non-null

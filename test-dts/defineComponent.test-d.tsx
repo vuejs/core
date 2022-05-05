@@ -17,34 +17,34 @@ import {
 
 describe('with object props', () => {
   interface ExpectedProps {
-    a?: number | undefined
+    a?: number | undefined | null
     b: string
-    e?: Function
+    e?: Function | null
     h: boolean
-    j: undefined | (() => string | undefined)
+    j: undefined | (() => string | undefined) | null
     bb: string
     bbb: string
-    bbbb: string | undefined
-    bbbbb: string | undefined
-    cc?: string[] | undefined
+    bbbb: string | undefined | null
+    bbbbb: string | undefined | null
+    cc?: string[] | undefined | null
     dd: { n: 1 }
-    ee?: () => string
-    ff?: (a: number, b: string) => { a: boolean }
-    ccc?: string[] | undefined
+    ee?: (() => string) | null
+    ff?: ((a: number, b: string) => { a: boolean }) | null
+    ccc?: string[] | undefined | null
     ddd: string[]
     eee: () => { a: string }
     fff: (a: number, b: string) => { a: boolean }
     hhh: boolean
     ggg: 'foo' | 'bar'
     ffff: (a: number, b: string) => { a: boolean }
-    iii?: (() => string) | (() => number)
+    iii?: (() => string) | (() => number) | null
     jjj: ((arg1: string) => string) | ((arg1: string, arg2: string) => string)
-    kkk?: any
-    validated?: string
-    date?: Date
-    l?: Date
-    ll?: Date | number
-    lll?: string | number
+    kkk?: any | null
+    validated?: string | null
+    date?: Date | null
+    l?: Date | null
+    ll?: Date | number | null
+    lll?: string | number | null
   }
 
   type GT = string & { __brand: unknown }
@@ -162,7 +162,7 @@ describe('with object props', () => {
       expectType<ExpectedProps['ggg']>(props.ggg)
       expectType<ExpectedProps['ffff']>(props.ffff)
       if (typeof props.iii !== 'function') {
-        expectType<undefined>(props.iii)
+        expectType<undefined | null>(props.iii)
       }
       expectType<ExpectedProps['iii']>(props.iii)
       expectType<IsUnion<typeof props.jjj>>(true)
@@ -206,7 +206,7 @@ describe('with object props', () => {
       expectType<ExpectedProps['hhh']>(props.hhh)
       expectType<ExpectedProps['ggg']>(props.ggg)
       if (typeof props.iii !== 'function') {
-        expectType<undefined>(props.iii)
+        expectType<undefined | null>(props.iii)
       }
       expectType<ExpectedProps['iii']>(props.iii)
       expectType<IsUnion<typeof props.jjj>>(true)
@@ -233,7 +233,7 @@ describe('with object props', () => {
       expectType<ExpectedProps['hhh']>(this.hhh)
       expectType<ExpectedProps['ggg']>(this.ggg)
       if (typeof this.iii !== 'function') {
-        expectType<undefined>(this.iii)
+        expectType<undefined | null>(this.iii)
       }
       expectType<ExpectedProps['iii']>(this.iii)
       const { jjj } = this
@@ -398,7 +398,7 @@ describe('type inference w/ options API', () => {
     data() {
       // Limitation: we cannot expose the return result of setup() on `this`
       // here in data() - somehow that would mess up the inference
-      expectType<number | undefined>(this.a)
+      expectType<number | undefined | null>(this.a)
       return {
         c: this.a || 123,
         someRef: ref(0)
@@ -431,7 +431,7 @@ describe('type inference w/ options API', () => {
     },
     created() {
       // props
-      expectType<number | undefined>(this.a)
+      expectType<number | undefined | null>(this.a)
       // returned from setup()
       expectType<number>(this.b)
       // returned from data()
@@ -445,7 +445,7 @@ describe('type inference w/ options API', () => {
     methods: {
       doSomething() {
         // props
-        expectType<number | undefined>(this.a)
+        expectType<number | undefined | null>(this.a)
         // returned from setup()
         expectType<number>(this.b)
         // returned from data()
@@ -461,7 +461,7 @@ describe('type inference w/ options API', () => {
     },
     render() {
       // props
-      expectType<number | undefined>(this.a)
+      expectType<number | undefined | null>(this.a)
       // returned from setup()
       expectType<number>(this.b)
       // returned from data()
@@ -471,7 +471,7 @@ describe('type inference w/ options API', () => {
       // computed get/set
       expectType<number>(this.e)
       // method
-      expectType<() => number | undefined>(this.returnSomething)
+      expectType<() => number | undefined | null>(this.returnSomething)
     }
   })
 })
@@ -1070,7 +1070,7 @@ describe('extract instance type', () => {
 
   expectType<boolean>(compA.a)
   expectType<string>(compA.b)
-  expectType<number | undefined>(compA.c)
+  expectType<number | undefined | null>(compA.c)
   // mixins
   expectType<string>(compA.mA)
   // extends

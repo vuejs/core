@@ -74,7 +74,7 @@ describe('defineProps w/ runtime declaration', () => {
     }
   })
   expectType<{
-    foo?: string
+    foo?: string | null
     bar: number
     baz: unknown[]
   }>(props)

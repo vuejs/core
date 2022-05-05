@@ -104,6 +104,7 @@ describe('h inference w/ defineComponent', () => {
   h(Foo, { bar: 1, foo: 'ok' })
   // should allow extraneous props (attrs fallthrough)
   h(Foo, { bar: 1, foo: 'ok', class: 'extra' })
+  h(Foo, { bar: 1, foo: null })
   // @ts-expect-error should fail on missing required prop
   expectError(h(Foo, {}))
   //  @ts-expect-error

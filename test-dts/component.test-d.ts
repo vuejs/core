@@ -24,45 +24,45 @@ declare function extractComponentOptions<Props, RawBindings>(
 
 describe('object props', () => {
   interface ExpectedProps {
-    a?: number | undefined
+    a?: number | undefined | null
     b: string
-    e?: Function
+    e?: Function | null
     bb: string
     bbb: string
-    cc?: string[] | undefined
+    cc?: string[] | undefined | null
     dd: { n: 1 }
-    ee?: () => string
-    ff?: (a: number, b: string) => { a: boolean }
-    ccc?: string[] | undefined
+    ee?: (() => string) | null
+    ff?: ((a: number, b: string) => { a: boolean }) | null
+    ccc?: string[] | undefined | null
     ddd: string[]
     eee: () => { a: string }
     fff: (a: number, b: string) => { a: boolean }
     hhh: boolean
     ggg: 'foo' | 'bar'
     ffff: (a: number, b: string) => { a: boolean }
-    validated?: string
-    object?: object
+    validated?: string | null
+    object?: object | null
   }
 
   interface ExpectedRefs {
-    a: Ref<number | undefined>
+    a: Ref<number | undefined | null>
     b: Ref<string>
-    e: Ref<Function | undefined>
+    e: Ref<Function | undefined | null>
     bb: Ref<string>
     bbb: Ref<string>
-    cc: Ref<string[] | undefined>
+    cc: Ref<string[] | undefined | null>
     dd: Ref<{ n: 1 }>
-    ee: Ref<(() => string) | undefined>
-    ff: Ref<((a: number, b: string) => { a: boolean }) | undefined>
-    ccc: Ref<string[] | undefined>
+    ee: Ref<(() => string) | undefined | null>
+    ff: Ref<((a: number, b: string) => { a: boolean }) | undefined | null>
+    ccc: Ref<string[] | undefined | null>
     ddd: Ref<string[]>
     eee: Ref<() => { a: string }>
     fff: Ref<(a: number, b: string) => { a: boolean }>
     hhh: Ref<boolean>
     ggg: Ref<'foo' | 'bar'>
     ffff: Ref<(a: number, b: string) => { a: boolean }>
-    validated: Ref<string | undefined>
-    object: Ref<object | undefined>
+    validated: Ref<string | undefined | null>
+    object: Ref<object | undefined | null>
     zzz: any
   }
 
