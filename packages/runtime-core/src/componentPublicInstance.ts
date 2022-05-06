@@ -237,9 +237,10 @@ const getPublicInstance = (
   return getPublicInstance(i.parent)
 }
 
-export const publicPropertiesMap: PublicPropertiesMap = /*#__PURE__*/ extend(
-  Object.create(null),
-  {
+export const publicPropertiesMap: PublicPropertiesMap =
+  // Move PURE marker to new line to workaround compiler discarding it
+  // due to type annotation
+  /*#__PURE__*/ extend(Object.create(null), {
     $: i => i,
     $el: i => i.vnode.el,
     $data: i => i.data,
@@ -254,8 +255,7 @@ export const publicPropertiesMap: PublicPropertiesMap = /*#__PURE__*/ extend(
     $forceUpdate: i => () => queueJob(i.update),
     $nextTick: i => nextTick.bind(i.proxy!),
     $watch: i => (__FEATURE_OPTIONS_API__ ? instanceWatch.bind(i) : NOOP)
-  } as PublicPropertiesMap
-)
+  } as PublicPropertiesMap)
 
 if (__COMPAT__) {
   installCompatInstanceProperties(publicPropertiesMap)
@@ -370,7 +370,9 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
           return desc.get.call(instance.proxy)
         } else {
           const val = globalProperties[key]
-          return isFunction(val) ? val.bind(instance.proxy) : val
+          return isFunction(val)
+            ? Object.assign(val.bind(instance.proxy), val)
+            : val
         }
       } else {
         return globalProperties[key]
@@ -470,7 +472,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
   ) {
     if (descriptor.get != null) {
       // invalidate key cache of a getter based property #5417
-      target.$.accessCache[key] = 0
+      target._.accessCache![key] = 0
     } else if (hasOwn(descriptor, 'value')) {
       this.set!(target, key, descriptor.value, null)
     }

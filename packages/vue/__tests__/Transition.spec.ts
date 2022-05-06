@@ -1979,9 +1979,7 @@ describe('e2e: Transition', () => {
         </div>
       `
     }).mount(document.createElement('div'))
-    expect(
-      `invalid <transition> mode: none`
-    ).toHaveBeenWarned()
+    expect(`invalid <transition> mode: none`).toHaveBeenWarned()
   })
 
   // #3227
@@ -2023,4 +2021,74 @@ describe('e2e: Transition', () => {
     expect(outerSpy).toHaveBeenCalledTimes(1)
     expect(root.innerHTML).toBe(`<!---->`)
   })
+
+  test(
+    'should work with dev root fragment',
+    async () => {
+      await page().evaluate(() => {
+        const { createApp, ref } = (window as any).Vue
+        createApp({
+          components: {
+            Comp: {
+              template: `
+                  <!-- Broken! -->
+                  <div><slot /></div>
+                `
+            }
+          },
+          template: `
+            <div id="container">
+              <transition>
+                <Comp class="test" v-if="toggle">
+                  <div>content</div>
+                </Comp>
+              </transition>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+          setup: () => {
+            const toggle = ref(true)
+            const click = () => (toggle.value = !toggle.value)
+            return { toggle, click }
+          }
+        }).mount('#app')
+      })
+      expect(await html('#container')).toBe(
+        '<!-- Broken! --><div class="test"><div>content</div></div>'
+      )
+
+      // leave
+      expect(await classWhenTransitionStart()).toStrictEqual([
+        'test',
+        'v-leave-from',
+        'v-leave-active'
+      ])
+      await nextFrame()
+      expect(await classList('.test')).toStrictEqual([
+        'test',
+        'v-leave-active',
+        'v-leave-to'
+      ])
+      await transitionFinish()
+      expect(await html('#container')).toBe('<!--v-if-->')
+
+      // enter
+      expect(await classWhenTransitionStart()).toStrictEqual([
+        'test',
+        'v-enter-from',
+        'v-enter-active'
+      ])
+      await nextFrame()
+      expect(await classList('.test')).toStrictEqual([
+        'test',
+        'v-enter-active',
+        'v-enter-to'
+      ])
+      await transitionFinish()
+      expect(await html('#container')).toBe(
+        '<!-- Broken! --><div class="test"><div>content</div></div>'
+      )
+    },
+    E2E_TIMEOUT
+  )
 })
