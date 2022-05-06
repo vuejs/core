@@ -12,7 +12,7 @@ import { CollectionTypes } from './collectionHandlers'
 import { createDep, Dep } from './dep'
 
 declare const RefSymbol: unique symbol
-declare const RawSymbol: unique symbol
+export declare const RawSymbol: unique symbol
 
 export interface Ref<T = any> {
   value: T
