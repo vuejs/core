@@ -77,6 +77,7 @@ export function compile(
       on: noopDirectiveTransform,
       cloak: noopDirectiveTransform,
       once: noopDirectiveTransform,
+      memo: noopDirectiveTransform,
       ...(options.directiveTransforms || {}) // user transforms
     }
   })

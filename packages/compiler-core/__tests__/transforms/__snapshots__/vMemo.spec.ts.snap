@@ -36,7 +36,7 @@ exports[`compiler: v-memo transform on template v-for 1`] = `
 export function render(_ctx, _cache) {
   return (_openBlock(), _createElementBlock(\\"div\\", null, [
     (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.list, ({ x, y }, __, ___, _cached) => {
-      const _memo = ([x, y === z])
+      const _memo = ([x, y === _ctx.z])
       if (_cached && _cached.key === x && _isMemoSame(_cached, _memo)) return _cached
       const _item = (_openBlock(), _createElementBlock(\\"span\\", { key: x }, \\"foobar\\"))
       _item.memo = _memo

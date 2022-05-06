@@ -8,7 +8,8 @@ import {
   isArray,
   isFunction,
   isOn,
-  toNumber
+  toNumber,
+  UnionToIntersection
 } from '@vue/shared'
 import {
   ComponentInternalInstance,
@@ -18,7 +19,6 @@ import {
 } from './component'
 import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
 import { warn } from './warning'
-import { UnionToIntersection } from './helpers/typeUtils'
 import { devtoolsComponentEmit } from './devtools'
 import { AppContext } from './apiCreateApp'
 import { emit as compatInstanceEmit } from './compat/instanceEventEmitter'
@@ -73,6 +73,7 @@ export function emit(
   event: string,
   ...rawArgs: any[]
 ) {
+  if (instance.isUnmounted) return
   const props = instance.vnode.props || EMPTY_OBJ
 
   if (__DEV__) {

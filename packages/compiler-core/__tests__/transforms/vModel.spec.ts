@@ -65,12 +65,12 @@ describe('compiler: transform v-model', () => {
       },
       value: {
         children: [
-          '$event => (',
+          '$event => ((',
           {
             content: 'model',
             isStatic: false
           },
-          ' = $event)'
+          ') = $event)'
         ]
       }
     })
@@ -104,12 +104,12 @@ describe('compiler: transform v-model', () => {
       },
       value: {
         children: [
-          '$event => (',
+          '$event => ((',
           {
             content: '_ctx.model',
             isStatic: false
           },
-          ' = $event)'
+          ') = $event)'
         ]
       }
     })
@@ -142,12 +142,12 @@ describe('compiler: transform v-model', () => {
       },
       value: {
         children: [
-          '$event => (',
+          '$event => ((',
           {
             content: '\n model\n.\nfoo \n',
             isStatic: false
           },
-          ' = $event)'
+          ') = $event)'
         ]
       }
     })
@@ -179,12 +179,12 @@ describe('compiler: transform v-model', () => {
       },
       value: {
         children: [
-          '$event => (',
+          '$event => ((',
           {
             content: 'model[index]',
             isStatic: false
           },
-          ' = $event)'
+          ') = $event)'
         ]
       }
     })
@@ -228,7 +228,7 @@ describe('compiler: transform v-model', () => {
       },
       value: {
         children: [
-          '$event => (',
+          '$event => ((',
           {
             children: [
               {
@@ -243,7 +243,7 @@ describe('compiler: transform v-model', () => {
               ']'
             ]
           },
-          ' = $event)'
+          ') = $event)'
         ]
       }
     })
@@ -274,12 +274,12 @@ describe('compiler: transform v-model', () => {
       },
       value: {
         children: [
-          '$event => (',
+          '$event => ((',
           {
             content: 'model',
             isStatic: false
           },
-          ' = $event)'
+          ') = $event)'
         ]
       }
     })
@@ -322,12 +322,12 @@ describe('compiler: transform v-model', () => {
               },
               value: {
                 children: [
-                  '$event => (',
+                  '$event => ((',
                   {
                     content: 'model',
                     isStatic: false
                   },
-                  ' = $event)'
+                  ') = $event)'
                 ]
               }
             }
@@ -376,12 +376,12 @@ describe('compiler: transform v-model', () => {
               },
               value: {
                 children: [
-                  '$event => (',
+                  '$event => ((',
                   {
                     content: '_ctx.model',
                     isStatic: false
                   },
-                  ' = $event)'
+                  ') = $event)'
                 ]
               }
             }

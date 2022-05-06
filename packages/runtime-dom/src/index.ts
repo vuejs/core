@@ -15,7 +15,14 @@ import {
 import { nodeOps } from './nodeOps'
 import { patchProp } from './patchProp'
 // Importing from the compiler, will be tree-shaken in prod
-import { isFunction, isString, isHTMLTag, isSVGTag, extend } from '@vue/shared'
+import {
+  isFunction,
+  isString,
+  isHTMLTag,
+  isSVGTag,
+  extend,
+  NOOP
+} from '@vue/shared'
 
 declare module '@vue/reactivity' {
   export interface RefUnwrapBailTypes {
@@ -24,7 +31,7 @@ declare module '@vue/reactivity' {
   }
 }
 
-const rendererOptions = extend({ patchProp }, nodeOps)
+const rendererOptions = /*#__PURE__*/ extend({ patchProp }, nodeOps)
 
 // lazy create the renderer - this makes core renderer logic tree-shakable
 // in case the user only imports reactivity utilities from Vue.
@@ -224,6 +231,24 @@ export {
 } from './directives/vModel'
 export { withModifiers, withKeys } from './directives/vOn'
 export { vShow } from './directives/vShow'
+
+import { initVModelForSSR } from './directives/vModel'
+import { initVShowForSSR } from './directives/vShow'
+
+let ssrDirectiveInitialized = false
+
+/**
+ * @internal
+ */
+export const initDirectivesForSSR = __SSR__
+  ? () => {
+      if (!ssrDirectiveInitialized) {
+        ssrDirectiveInitialized = true
+        initVModelForSSR()
+        initVShowForSSR()
+      }
+    }
+  : NOOP
 
 // re-export everything from core
 // h, Component, reactivity API, nextTick, flags & types

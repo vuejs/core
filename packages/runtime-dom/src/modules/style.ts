@@ -5,20 +5,8 @@ type Style = string | Record<string, string | string[]> | null
 
 export function patchStyle(el: Element, prev: Style, next: Style) {
   const style = (el as HTMLElement).style
-  if (!next) {
-    el.removeAttribute('style')
-  } else if (isString(next)) {
-    if (prev !== next) {
-      const current = style.display
-      style.cssText = next
-      // indicates that the `display` of the element is controlled by `v-show`,
-      // so we always keep the current `display` value regardless of the `style` value,
-      // thus handing over control to `v-show`.
-      if ('_vod' in el) {
-        style.display = current
-      }
-    }
-  } else {
+  const isCssString = isString(next)
+  if (next && !isCssString) {
     for (const key in next) {
       setStyle(style, key, next[key])
     }
@@ -28,6 +16,21 @@ export function patchStyle(el: Element, prev: Style, next: Style) {
           setStyle(style, key, '')
         }
       }
+    }
+  } else {
+    const currentDisplay = style.display
+    if (isCssString) {
+      if (prev !== next) {
+        style.cssText = next as string
+      }
+    } else if (prev) {
+      el.removeAttribute('style')
+    }
+    // indicates that the `display` of the element is controlled by `v-show`,
+    // so we always keep the current `display` value regardless of the `style`
+    // value, thus handing over control to `v-show`.
+    if ('_vod' in el) {
+      style.display = currentDisplay
     }
   }
 }
@@ -42,6 +45,7 @@ function setStyle(
   if (isArray(val)) {
     val.forEach(v => setStyle(style, name, v))
   } else {
+    if (val == null) val = ''
     if (name.startsWith('--')) {
       // custom property definition
       style.setProperty(name, val)

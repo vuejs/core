@@ -7,14 +7,16 @@ import {
   Fragment,
   VNodeHook,
   createVNode,
-  createTextVNode
+  createTextVNode,
+  invokeVNodeHook
 } from './vnode'
 import { flushPostFlushCbs } from './scheduler'
 import { ComponentInternalInstance } from './component'
 import { invokeDirectiveHook } from './directives'
 import { warn } from './warning'
 import { PatchFlags, ShapeFlags, isReservedProp, isOn } from '@vue/shared'
-import { RendererInternals, invokeVNodeHook, setRef } from './renderer'
+import { RendererInternals } from './renderer'
+import { setRef } from './rendererTemplateRef'
 import {
   SuspenseImpl,
   SuspenseBoundary,
@@ -271,7 +273,8 @@ export function createHydrationFunctions(
     // e.g. <option :value="obj">, <input type="checkbox" :true-value="1">
     const forcePatchValue = (type === 'input' && dirs) || type === 'option'
     // skip props & children if this is hoisted static nodes
-    if (forcePatchValue || patchFlag !== PatchFlags.HOISTED) {
+    // #5405 in dev, always hydrate children for HMR
+    if (__DEV__ || forcePatchValue || patchFlag !== PatchFlags.HOISTED) {
       if (dirs) {
         invokeDirectiveHook(vnode, null, parentComponent, 'created')
       }
@@ -280,21 +283,36 @@ export function createHydrationFunctions(
         if (
           forcePatchValue ||
           !optimized ||
-          patchFlag & PatchFlags.FULL_PROPS ||
-          patchFlag & PatchFlags.HYDRATE_EVENTS
+          patchFlag & (PatchFlags.FULL_PROPS | PatchFlags.HYDRATE_EVENTS)
         ) {
           for (const key in props) {
             if (
               (forcePatchValue && key.endsWith('value')) ||
               (isOn(key) && !isReservedProp(key))
             ) {
-              patchProp(el, key, null, props[key])
+              patchProp(
+                el,
+                key,
+                null,
+                props[key],
+                false,
+                undefined,
+                parentComponent
+              )
             }
           }
         } else if (props.onClick) {
           // Fast path for click listeners (which is most often) to avoid
           // iterating through props.
-          patchProp(el, 'onClick', null, props.onClick)
+          patchProp(
+            el,
+            'onClick',
+            null,
+            props.onClick,
+            false,
+            undefined,
+            parentComponent
+          )
         }
       }
       // vnode / directive hooks

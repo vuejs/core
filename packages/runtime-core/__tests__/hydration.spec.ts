@@ -461,6 +461,60 @@ describe('SSR hydration', () => {
     expect(text.textContent).toBe('bye')
   })
 
+  test('handle click error in ssr mode', async () => {
+    const App = {
+      setup() {
+        const throwError = () => {
+          throw new Error('Sentry Error')
+        }
+        return { throwError }
+      },
+      template: `
+        <div>
+          <button class="parent-click" @click="throwError">click me</button>
+        </div>`
+    }
+
+    const container = document.createElement('div')
+    // server render
+    container.innerHTML = await renderToString(h(App))
+    // hydrate
+    const app = createSSRApp(App)
+    const handler = (app.config.errorHandler = jest.fn())
+    app.mount(container)
+    // assert interactions
+    // parent button click
+    triggerEvent('click', container.querySelector('.parent-click')!)
+    expect(handler).toHaveBeenCalled()
+  })
+
+  test('handle blur error in ssr mode', async () => {
+    const App = {
+      setup() {
+        const throwError = () => {
+          throw new Error('Sentry Error')
+        }
+        return { throwError }
+      },
+      template: `
+        <div>
+          <input class="parent-click" @blur="throwError"/>
+        </div>`
+    }
+
+    const container = document.createElement('div')
+    // server render
+    container.innerHTML = await renderToString(h(App))
+    // hydrate
+    const app = createSSRApp(App)
+    const handler = (app.config.errorHandler = jest.fn())
+    app.mount(container)
+    // assert interactions
+    // parent blur event
+    triggerEvent('blur', container.querySelector('.parent-click')!)
+    expect(handler).toHaveBeenCalled()
+  })
+
   test('Suspense', async () => {
     const AsyncChild = {
       async setup() {

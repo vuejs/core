@@ -1,14 +1,7 @@
-import { toRaw, reactive, readonly, ReactiveFlags } from './reactive'
+import { toRaw, ReactiveFlags, toReactive, toReadonly } from './reactive'
 import { track, trigger, ITERATE_KEY, MAP_KEY_ITERATE_KEY } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
-import {
-  isObject,
-  capitalize,
-  hasOwn,
-  hasChanged,
-  toRawType,
-  isMap
-} from '@vue/shared'
+import { capitalize, hasOwn, hasChanged, toRawType, isMap } from '@vue/shared'
 
 export type CollectionTypes = IterableCollections | WeakCollections
 
@@ -16,12 +9,6 @@ type IterableCollections = Map<any, any> | Set<any>
 type WeakCollections = WeakMap<any, any> | WeakSet<any>
 type MapTypes = Map<any, any> | WeakMap<any, any>
 type SetTypes = Set<any> | WeakSet<any>
-
-const toReactive = <T extends unknown>(value: T): T =>
-  isObject(value) ? reactive(value) : value
-
-const toReadonly = <T extends unknown>(value: T): T =>
-  isObject(value) ? readonly(value as Record<any, any>) : value
 
 const toShallow = <T extends unknown>(value: T): T => value
 

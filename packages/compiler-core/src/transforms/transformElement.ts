@@ -29,7 +29,8 @@ import {
   isObject,
   isReservedProp,
   capitalize,
-  camelize
+  camelize,
+  isBuiltInDirective
 } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
@@ -52,7 +53,7 @@ import {
   toValidAssetId,
   findProp,
   isCoreComponent,
-  isBindKey,
+  isStaticArgOf,
   findDir,
   isStaticExp
 } from '../utils'
@@ -116,10 +117,7 @@ export const transformElement: NodeTransform = (node, context) => {
         // updates inside get proper isSVG flag at runtime. (#639, #643)
         // This is technically web-specific, but splitting the logic out of core
         // leads to too much unnecessary complexity.
-        (tag === 'svg' ||
-          tag === 'foreignObject' ||
-          // #938: elements with dynamic keys should be forced into blocks
-          findProp(node, 'key', true)))
+        (tag === 'svg' || tag === 'foreignObject'))
 
     // props
     if (props.length > 0) {
@@ -134,6 +132,10 @@ export const transformElement: NodeTransform = (node, context) => {
               directives.map(dir => buildDirectiveArgs(dir, context))
             ) as DirectiveArguments)
           : undefined
+
+      if (propsBuildResult.shouldUseBlock) {
+        shouldUseBlock = true
+      }
     }
 
     // children
@@ -382,12 +384,15 @@ export function buildProps(
   directives: DirectiveNode[]
   patchFlag: number
   dynamicPropNames: string[]
+  shouldUseBlock: boolean
 } {
-  const { tag, loc: elementLoc } = node
+  const { tag, loc: elementLoc, children } = node
   const isComponent = node.tagType === ElementTypes.COMPONENT
   let properties: ObjectExpression['properties'] = []
   const mergeArgs: PropsExpression[] = []
   const runtimeDirectives: DirectiveNode[] = []
+  const hasChildren = children.length > 0
+  let shouldUseBlock = false
 
   // patchFlag analysis
   let patchFlag = 0
@@ -462,11 +467,30 @@ export function buildProps(
       let isStatic = true
       if (name === 'ref') {
         hasRef = true
+        if (context.scopes.vFor > 0) {
+          properties.push(
+            createObjectProperty(
+              createSimpleExpression('ref_for', true),
+              createSimpleExpression('true')
+            )
+          )
+        }
         // in inline mode there is no setupState object, so we can't use string
         // keys to set the ref. Instead, we need to transform it to pass the
-        // acrtual ref instead.
-        if (!__BROWSER__ && context.inline) {
+        // actual ref instead.
+        if (
+          !__BROWSER__ &&
+          value &&
+          context.inline &&
+          context.bindingMetadata[value.content]
+        ) {
           isStatic = false
+          properties.push(
+            createObjectProperty(
+              createSimpleExpression('ref_key', true),
+              createSimpleExpression(value.content, true, value.loc)
+            )
+          )
         }
       }
       // skip is on <component>, or is="vue:xxx"
@@ -519,7 +543,7 @@ export function buildProps(
       if (
         name === 'is' ||
         (isVBind &&
-          isBindKey(arg, 'is') &&
+          isStaticArgOf(arg, 'is') &&
           (isComponentTag(tag) ||
             (__COMPAT__ &&
               isCompatEnabled(
@@ -532,6 +556,25 @@ export function buildProps(
       // skip v-on in SSR compilation
       if (isVOn && ssr) {
         continue
+      }
+
+      if (
+        // #938: elements with dynamic keys should be forced into blocks
+        (isVBind && isStaticArgOf(arg, 'key')) ||
+        // inline before-update hooks need to force block so that it is invoked
+        // before children
+        (isVOn && hasChildren && isStaticArgOf(arg, 'vue:before-update'))
+      ) {
+        shouldUseBlock = true
+      }
+
+      if (isVBind && isStaticArgOf(arg, 'ref') && context.scopes.vFor > 0) {
+        properties.push(
+          createObjectProperty(
+            createSimpleExpression('ref_for', true),
+            createSimpleExpression('true')
+          )
+        )
       }
 
       // special case for v-bind and v-on with no argument
@@ -623,29 +666,15 @@ export function buildProps(
             directiveImportMap.set(prop, needRuntime)
           }
         }
-      } else {
+      } else if (!isBuiltInDirective(name)) {
         // no built-in transform, this is a user custom directive.
         runtimeDirectives.push(prop)
+        // custom dirs may use beforeUpdate so they need to force blocks
+        // to ensure before-update gets called before children update
+        if (hasChildren) {
+          shouldUseBlock = true
+        }
       }
-    }
-
-    if (
-      __COMPAT__ &&
-      prop.type === NodeTypes.ATTRIBUTE &&
-      prop.name === 'ref' &&
-      context.scopes.vFor > 0 &&
-      checkCompatEnabled(
-        CompilerDeprecationTypes.COMPILER_V_FOR_REF,
-        context,
-        prop.loc
-      )
-    ) {
-      properties.push(
-        createObjectProperty(
-          createSimpleExpression('refInFor', true),
-          createSimpleExpression('true', false)
-        )
-      )
     }
   }
 
@@ -693,6 +722,7 @@ export function buildProps(
     }
   }
   if (
+    !shouldUseBlock &&
     (patchFlag === 0 || patchFlag === PatchFlags.HYDRATE_EVENTS) &&
     (hasRef || hasVnodeHook || runtimeDirectives.length > 0)
   ) {
@@ -738,7 +768,10 @@ export function buildProps(
             !isStaticExp(styleProp.value) &&
             // the static style is compiled into an object,
             // so use `hasStyleBinding` to ensure that it is a dynamic style binding
-            hasStyleBinding
+            (hasStyleBinding ||
+              // v-bind:style and style both exist,
+              // v-bind:style with static literal object
+              styleProp.value.type === NodeTypes.JS_ARRAY_EXPRESSION)
           ) {
             styleProp.value = createCallExpression(
               context.helper(NORMALIZE_STYLE),
@@ -774,7 +807,8 @@ export function buildProps(
     props: propsExpression,
     directives: runtimeDirectives,
     patchFlag,
-    dynamicPropNames
+    dynamicPropNames,
+    shouldUseBlock
   }
 }
 
@@ -797,7 +831,7 @@ function dedupeProperties(properties: Property[]): Property[] {
     const name = prop.key.content
     const existing = knownProps.get(name)
     if (existing) {
-      if (name === 'style' || name === 'class' || name.startsWith('on')) {
+      if (name === 'style' || name === 'class' || isOn(name)) {
         mergeAsArray(existing, prop)
       }
       // unexpected duplicate, should have emitted error during parse
@@ -820,7 +854,7 @@ function mergeAsArray(existing: Property, incoming: Property) {
   }
 }
 
-function buildDirectiveArgs(
+export function buildDirectiveArgs(
   dir: DirectiveNode,
   context: TransformContext
 ): ArrayExpression {
@@ -881,5 +915,5 @@ function stringifyDynamicPropNames(props: string[]): string {
 }
 
 function isComponentTag(tag: string) {
-  return tag[0].toLowerCase() + tag.slice(1) === 'component'
+  return tag === 'component' || tag === 'Component'
 }

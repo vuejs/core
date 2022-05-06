@@ -1,6 +1,7 @@
 import {
   ref,
   readonly,
+  shallowReadonly,
   describe,
   expectError,
   expectType,
@@ -50,4 +51,12 @@ describe('should support markRaw', () => {
   expectType<Ref<number>>(r.plain.raw.ref)
   // @ts-expect-error it should unwrap
   expectType<Ref<number>>(r.plain.reactive.ref)
+})
+
+describe('shallowReadonly ref unwrap', () => {
+  const r = shallowReadonly({ count: { n: ref(1) } })
+  // @ts-expect-error
+  r.count = 2
+  expectType<Ref>(r.count.n)
+  r.count.n.value = 123
 })

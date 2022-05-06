@@ -1,6 +1,6 @@
 {
   "name": "@vue/server-renderer",
-  "version": "3.2.2",
+  "version": "3.2.33",
   "description": "@vue/server-renderer",
   "main": "index.js",
   "module": "dist/server-renderer.esm-bundler.js",
@@ -18,7 +18,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vuejs/vue-next.git",
+    "url": "git+https://github.com/vuejs/core.git",
     "directory": "packages/server-renderer"
   },
   "keywords": [
@@ -27,14 +27,14 @@
   "author": "Evan You",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/vuejs/vue-next/issues"
+    "url": "https://github.com/vuejs/core/issues"
   },
-  "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/server-renderer#readme",
+  "homepage": "https://github.com/vuejs/core/tree/main/packages/server-renderer#readme",
   "peerDependencies": {
-    "vue": "3.2.2"
+    "vue": "3.2.33"
   },
   "dependencies": {
-    "@vue/shared": "3.2.2",
-    "@vue/compiler-ssr": "3.2.2"
+    "@vue/shared": "3.2.33",
+    "@vue/compiler-ssr": "3.2.33"
   }
 }

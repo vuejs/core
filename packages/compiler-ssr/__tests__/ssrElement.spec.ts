@@ -57,7 +57,7 @@ describe('ssr: element', () => {
       expect(compile(`<textarea v-bind="obj">fallback</textarea>`).code)
         .toMatchInlineSnapshot(`
         "const { mergeProps: _mergeProps } = require(\\"vue\\")
-        const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require(\\"@vue/server-renderer\\")
+        const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require(\\"vue/server-renderer\\")
 
         return function ssrRender(_ctx, _push, _parent, _attrs) {
           let _temp0
@@ -75,7 +75,7 @@ describe('ssr: element', () => {
       expect(
         compile(`<div>{{ hello }}<textarea v-bind="a"></textarea></div>`).code
       ).toMatchInlineSnapshot(`
-        "const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require(\\"@vue/server-renderer\\")
+        "const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require(\\"vue/server-renderer\\")
 
         return function ssrRender(_ctx, _push, _parent, _attrs) {
           let _temp0
@@ -100,7 +100,7 @@ describe('ssr: element', () => {
         }).code
       ).toMatchInlineSnapshot(`
         "const { mergeProps: _mergeProps } = require(\\"vue\\")
-        const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"@vue/server-renderer\\")
+        const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
         return function ssrRender(_ctx, _push, _parent, _attrs) {
           _push(\`<my-foo\${_ssrRenderAttrs(_mergeProps(_ctx.obj, _attrs), \\"my-foo\\")}></my-foo>\`)
@@ -177,7 +177,7 @@ describe('ssr: element', () => {
       expect(getCompiledString(`<input type="checkbox" :checked="checked">`))
         .toMatchInlineSnapshot(`
         "\`<input type=\\"checkbox\\"\${
-            (_ctx.checked) ? \\" checked\\" : \\"\\"
+            (_ssrIncludeBooleanAttr(_ctx.checked)) ? \\" checked\\" : \\"\\"
           }>\`"
       `)
     })
@@ -285,6 +285,57 @@ describe('ssr: element', () => {
         .toMatchInlineSnapshot(`
         "\`<div\${
             _ssrRenderAttrs(_ctx.foo)
+          }></div>\`"
+      `)
+    })
+
+    test('custom dir', () => {
+      expect(getCompiledString(`<div v-xxx:x.y="z" />`)).toMatchInlineSnapshot(`
+        "\`<div\${
+            _ssrRenderAttrs(_ssrGetDirectiveProps(_ctx, _directive_xxx, _ctx.z, \\"x\\", { y: true }))
+          }></div>\`"
+      `)
+    })
+
+    test('custom dir with normal attrs', () => {
+      expect(getCompiledString(`<div class="foo" v-xxx />`))
+        .toMatchInlineSnapshot(`
+        "\`<div\${
+            _ssrRenderAttrs(_mergeProps({ class: \\"foo\\" }, _ssrGetDirectiveProps(_ctx, _directive_xxx)))
+          }></div>\`"
+      `)
+    })
+
+    test('custom dir with v-bind', () => {
+      expect(getCompiledString(`<div :title="foo" :class="bar" v-xxx />`))
+        .toMatchInlineSnapshot(`
+        "\`<div\${
+            _ssrRenderAttrs(_mergeProps({
+              title: _ctx.foo,
+              class: _ctx.bar
+            }, _ssrGetDirectiveProps(_ctx, _directive_xxx)))
+          }></div>\`"
+      `)
+    })
+
+    test('custom dir with object v-bind', () => {
+      expect(getCompiledString(`<div v-bind="x" v-xxx />`))
+        .toMatchInlineSnapshot(`
+        "\`<div\${
+            _ssrRenderAttrs(_mergeProps(_ctx.x, _ssrGetDirectiveProps(_ctx, _directive_xxx)))
+          }></div>\`"
+      `)
+    })
+
+    test('custom dir with object v-bind + normal bindings', () => {
+      expect(
+        getCompiledString(`<div v-bind="x" class="foo" v-xxx title="bar" />`)
+      ).toMatchInlineSnapshot(`
+        "\`<div\${
+            _ssrRenderAttrs(_mergeProps(_ctx.x, {
+              class: \\"foo\\",
+              title: \\"bar\\"
+            }, _ssrGetDirectiveProps(_ctx, _directive_xxx)))
           }></div>\`"
       `)
     })

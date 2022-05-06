@@ -45,7 +45,7 @@ const scss: StylePreprocessor = (source, map, options, load = require) => {
     }
 
     return { code: result.css.toString(), errors: [], dependencies }
-  } catch (e) {
+  } catch (e: any) {
     return { code: '', errors: [e], dependencies: [] }
   }
 }
@@ -114,7 +114,7 @@ const styl: StylePreprocessor = (source, map, options, load = require) => {
     }
 
     return { code: result, errors: [], dependencies }
-  } catch (e) {
+  } catch (e: any) {
     return { code: '', errors: [e], dependencies: [] }
   }
 }

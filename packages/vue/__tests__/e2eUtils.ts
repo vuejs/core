@@ -41,7 +41,7 @@ export function setupPuppeteer() {
 
     page.on('console', e => {
       if (e.type() === 'error') {
-        const err = e.args()[0] as any
+        const err = e.args()[0]
         console.error(
           `Error from Puppeteer-loaded page:\n`,
           err._remoteObject.description

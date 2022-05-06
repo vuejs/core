@@ -1,7 +1,12 @@
 import * as m from 'monaco-editor'
 import { compile, CompilerError, CompilerOptions } from '@vue/compiler-dom'
 import { compile as ssrCompile } from '@vue/compiler-ssr'
-import { compilerOptions, initOptions, ssrMode } from './options'
+import {
+  defaultOptions,
+  compilerOptions,
+  initOptions,
+  ssrMode
+} from './options'
 import { toRaw, watchEffect } from '@vue/runtime-dom'
 import { SourceMapConsumer } from 'source-map'
 import theme from './theme'
@@ -35,14 +40,32 @@ window.init = () => {
   monaco.editor.defineTheme('my-theme', theme)
   monaco.editor.setTheme('my-theme')
 
-  const persistedState: PersistedState = JSON.parse(
-    decodeURIComponent(window.location.hash.slice(1)) ||
-      localStorage.getItem('state') ||
-      `{}`
-  )
+  let persistedState: PersistedState | undefined
 
-  ssrMode.value = persistedState.ssr
-  Object.assign(compilerOptions, persistedState.options)
+  try {
+    let hash = window.location.hash.slice(1)
+    try {
+      hash = escape(atob(hash))
+    } catch (e) {}
+    persistedState = JSON.parse(
+      decodeURIComponent(hash) || localStorage.getItem('state') || `{}`
+    )
+  } catch (e: any) {
+    // bad stored state, clear it
+    console.warn(
+      'Persisted state in localStorage seems to be corrupted, please reload.\n' +
+        e.message
+    )
+    localStorage.clear()
+  }
+
+  if (persistedState) {
+    // functions are not persistable, so delete it in case we sometimes need
+    // to debug with custom nodeTransforms
+    delete persistedState.options?.nodeTransforms
+    ssrMode.value = persistedState.ssr
+    Object.assign(compilerOptions, persistedState.options)
+  }
 
   let lastSuccessfulCode: string
   let lastSuccessfulMap: SourceMapConsumer | undefined = undefined
@@ -71,7 +94,7 @@ window.init = () => {
       lastSuccessfulCode = code + `\n\n// Check the console for the AST`
       lastSuccessfulMap = new SourceMapConsumer(map!)
       lastSuccessfulMap!.computeColumnSpans()
-    } catch (e) {
+    } catch (e: any) {
       lastSuccessfulCode = `/* ERROR: ${e.message} (see console for more info) */`
       console.error(e)
     }
@@ -94,13 +117,24 @@ window.init = () => {
   function reCompile() {
     const src = editor.getValue()
     // every time we re-compile, persist current state
+
+    const optionsToSave = {}
+    let key: keyof CompilerOptions
+    for (key in compilerOptions) {
+      const val = compilerOptions[key]
+      if (typeof val !== 'object' && val !== defaultOptions[key]) {
+        // @ts-ignore
+        optionsToSave[key] = val
+      }
+    }
+
     const state = JSON.stringify({
       src,
       ssr: ssrMode.value,
-      options: compilerOptions
+      options: optionsToSave
     } as PersistedState)
     localStorage.setItem('state', state)
-    window.location.hash = encodeURIComponent(state)
+    window.location.hash = btoa(unescape(encodeURIComponent(state)))
     const res = compileCode(src)
     if (res) {
       output.setValue(res)
@@ -108,7 +142,7 @@ window.init = () => {
   }
 
   const editor = monaco.editor.create(document.getElementById('source')!, {
-    value: persistedState.src || `<div>Hello World!</div>`,
+    value: persistedState?.src || `<div>Hello World</div>`,
     language: 'html',
     ...sharedEditorOptions,
     wordWrap: 'bounded'

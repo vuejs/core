@@ -15,6 +15,8 @@ describe('ssr: renderAttrs', () => {
     expect(
       ssrRenderAttrs({
         key: 1,
+        ref_key: 'foo',
+        ref_for: 'bar',
         ref: () => {},
         onClick: () => {}
       })
@@ -50,9 +52,11 @@ describe('ssr: renderAttrs', () => {
     expect(
       ssrRenderAttrs({
         checked: true,
-        multiple: false
+        multiple: false,
+        readonly: 0,
+        disabled: ''
       })
-    ).toBe(` checked`) // boolean attr w/ false should be ignored
+    ).toBe(` checked disabled`) // boolean attr w/ false should be ignored
   })
 
   test('ignore falsy values', () => {

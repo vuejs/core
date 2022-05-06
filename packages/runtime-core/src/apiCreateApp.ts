@@ -3,7 +3,8 @@ import {
   Data,
   validateComponentName,
   Component,
-  ComponentInternalInstance
+  ComponentInternalInstance,
+  getExposeProxy
 } from './component'
 import {
   ComponentOptions,
@@ -82,7 +83,7 @@ export interface AppConfig {
   ) => void
 
   /**
-   * Options to pass to @vue/compiler-dom.
+   * Options to pass to `@vue/compiler-dom`.
    * Only supported in runtime compiler build.
    */
   compilerOptions: RuntimeCompilerOptions
@@ -178,6 +179,10 @@ export function createAppAPI<HostElement>(
   hydrate?: RootHydrateFunction
 ): CreateAppFunction<HostElement> {
   return function createApp(rootComponent, rootProps = null) {
+    if (!isFunction(rootComponent)) {
+      rootComponent = { ...rootComponent }
+    }
+
     if (rootProps != null && !isObject(rootProps)) {
       __DEV__ && warn(`root props passed to app.mount() must be an object.`)
       rootProps = null
@@ -309,7 +314,7 @@ export function createAppAPI<HostElement>(
             devtoolsInitApp(app, version)
           }
 
-          return vnode.component!.proxy
+          return getExposeProxy(vnode.component!) || vnode.component!.proxy
         } else if (__DEV__) {
           warn(
             `App has already been mounted.\n` +

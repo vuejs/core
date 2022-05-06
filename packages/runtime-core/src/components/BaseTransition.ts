@@ -148,12 +148,25 @@ const BaseTransitionImpl: ComponentOptions = {
         return
       }
 
-      // warn multiple elements
-      if (__DEV__ && children.length > 1) {
-        warn(
-          '<transition> can only be used on a single element or component. Use ' +
-            '<transition-group> for lists.'
-        )
+      let child: VNode = children[0]
+      if (children.length > 1) {
+        let hasFound = false
+        // locate first non-comment child
+        for (const c of children) {
+          if (c.type !== Comment) {
+            if (__DEV__ && hasFound) {
+              // warn more than one non-comment child
+              warn(
+                '<transition> can only be used on a single element or component. ' +
+                  'Use <transition-group> for lists.'
+              )
+              break
+            }
+            child = c
+            hasFound = true
+            if (!__DEV__) break
+          }
+        }
       }
 
       // there's no need to track reactivity for these props so use the raw
@@ -161,12 +174,16 @@ const BaseTransitionImpl: ComponentOptions = {
       const rawProps = toRaw(props)
       const { mode } = rawProps
       // check mode
-      if (__DEV__ && mode && !['in-out', 'out-in', 'default'].includes(mode)) {
+      if (
+        __DEV__ &&
+        mode &&
+        mode !== 'in-out' &&
+        mode !== 'out-in' &&
+        mode !== 'default'
+      ) {
         warn(`invalid <transition> mode: ${mode}`)
       }
 
-      // at this point children has a guaranteed length of 1.
-      const child = children[0]
       if (state.isLeaving) {
         return emptyPlaceholder(child)
       }
@@ -456,22 +473,28 @@ export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks) {
 
 export function getTransitionRawChildren(
   children: VNode[],
-  keepComment: boolean = false
+  keepComment: boolean = false,
+  parentKey?: VNode['key']
 ): VNode[] {
   let ret: VNode[] = []
   let keyedFragmentCount = 0
   for (let i = 0; i < children.length; i++) {
-    const child = children[i]
+    let child = children[i]
+    // #5360 inherit parent key in case of <template v-for>
+    const key =
+      parentKey == null
+        ? child.key
+        : String(parentKey) + String(child.key != null ? child.key : i)
     // handle fragment children case, e.g. v-for
     if (child.type === Fragment) {
       if (child.patchFlag & PatchFlags.KEYED_FRAGMENT) keyedFragmentCount++
       ret = ret.concat(
-        getTransitionRawChildren(child.children as VNode[], keepComment)
+        getTransitionRawChildren(child.children as VNode[], keepComment, key)
       )
     }
     // comment placeholders should be skipped, e.g. v-if
     else if (keepComment || child.type !== Comment) {
-      ret.push(child)
+      ret.push(key != null ? cloneVNode(child, { key }) : child)
     }
   }
   // #1126 if a transition children list contains multiple sub fragments, these
