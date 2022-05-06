@@ -70,6 +70,18 @@ import { SchedulerJob } from './scheduler'
 
 export type Data = Record<string, unknown>
 
+/**
+ * Public utility type for extracting the instance type of a component.
+ * Works with all valid component definition types. This is intended to replace
+ * the usage of `InstanceType<typeof Comp>` which only works for
+ * constructor-based component definition types.
+ * 
+ * Exmaple:
+ * ```ts
+ * const MyComp = { ... }
+ * declare const instance: ComponentInstance<typeof MyComp>
+ * ```
+ */
 export type ComponentInstance<T> = T extends { new (): ComponentPublicInstance }
   ? InstanceType<T>
   : T extends FunctionalComponent<infer Props, infer Emits>
