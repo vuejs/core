@@ -76,7 +76,6 @@ export class ReactiveEffect<T = any> {
   }
 
   run() {
-    debugger
     // effects栈已经被stop清空了
     if (!this.active) {
       // 判断当前已经被收集过了，可以直接触发回调函数
@@ -204,7 +203,6 @@ export function resetTracking() {
 // 追踪收集依赖
 // 生成指定的数据结构
 export function track(target: object, type: TrackOpTypes, key: unknown) {
-  debugger
   // 只有在正有activeEffect状态，才能在执行追踪
   if (!isTracking()) {
     return
@@ -237,7 +235,6 @@ export function trackEffects(
   dep: Dep, // 依赖值
   debuggerEventExtraInfo?: DebuggerEventExtraInfo // 信息提示,开发环境
 ) {
-  debugger
   let shouldTrack = false
   // 没有超过最大长度
   if (effectTrackDepth <= maxMarkerBits) {

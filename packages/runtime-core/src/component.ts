@@ -637,7 +637,7 @@ function setupStatefulComponent(
   // ------------start，错误信息收集---------- 
     setCurrentInstance(instance)
     pauseTracking()
-    const setupResult = callWithErrorHandling( // 执行setup函数，报错了就对报错信息收集
+    const setupResult = callWithErrorHandling( // 执行setup函数
       setup,
       instance,
       ErrorCodes.SETUP_FUNCTION,
@@ -681,6 +681,7 @@ export function handleSetupResult(
   setupResult: unknown,
   isSSR: boolean
 ) {
+  // 返回的是render
   if (isFunction(setupResult)) {
     // setup returned an inline render function
     if (__SSR__ && (instance.type as ComponentOptions).__ssrInlineRender) {
@@ -690,6 +691,7 @@ export function handleSetupResult(
     } else {
       instance.render = setupResult as InternalRenderFunction
     }
+    // 返回的是数据
   } else if (isObject(setupResult)) {
     if (__DEV__ && isVNode(setupResult)) {
       warn(
@@ -702,6 +704,7 @@ export function handleSetupResult(
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
       instance.devtoolsRawSetupState = setupResult
     }
+    // 对返回数据进行解构
     instance.setupState = proxyRefs(setupResult)
     if (__DEV__) {
       exposeSetupStateOnRenderContext(instance)
@@ -808,7 +811,7 @@ export function finishComponentSetup(
   }
 
   // support for 2.x options
-  // 支持vue2的选项
+  // 支持vue2的选项-生命周期函数-应用api
   if (__FEATURE_OPTIONS_API__ && !(__COMPAT__ && skipOptions)) {
     setCurrentInstance(instance)
     pauseTracking()

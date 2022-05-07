@@ -6,7 +6,7 @@
   <h1 id="h2">666</h1>
 </div>
 <script>
-  let { createApp, setup, h } = Vue
+  let { createApp, setup, h, onMounted } = Vue
 
   createApp({
     // render() {
@@ -32,6 +32,10 @@
     },
     setup(props) {
       console.log(8888);
+      onMounted(() => {
+        console.log('this is onMounted');
+        debugger
+      })
     },
     methods: {
       fn() {
