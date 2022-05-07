@@ -1,6 +1,6 @@
 {
   "name": "@vue/compiler-sfc",
-  "version": "3.2.26",
+  "version": "3.2.33",
   "description": "@vue/compiler-sfc",
   "main": "dist/compiler-sfc.cjs.js",
   "module": "dist/compiler-sfc.esm-browser.js",
@@ -19,7 +19,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vuejs/vue-next.git",
+    "url": "git+https://github.com/vuejs/core.git",
     "directory": "packages/compiler-sfc"
   },
   "keywords": [
@@ -28,16 +28,16 @@
   "author": "Evan You",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/vuejs/vue-next/issues"
+    "url": "https://github.com/vuejs/core/issues"
   },
-  "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/compiler-sfc#readme",
+  "homepage": "https://github.com/vuejs/core/tree/main/packages/compiler-sfc#readme",
   "dependencies": {
     "@babel/parser": "^7.16.4",
-    "@vue/compiler-core": "3.2.26",
-    "@vue/compiler-dom": "3.2.26",
-    "@vue/compiler-ssr": "3.2.26",
-    "@vue/reactivity-transform": "3.2.26",
-    "@vue/shared": "3.2.26",
+    "@vue/compiler-core": "3.2.33",
+    "@vue/compiler-dom": "3.2.33",
+    "@vue/compiler-ssr": "3.2.33",
+    "@vue/reactivity-transform": "3.2.33",
+    "@vue/shared": "3.2.33",
     "estree-walker": "^2.0.2",
     "magic-string": "^0.25.7",
     "source-map": "^0.6.1",

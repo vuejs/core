@@ -372,7 +372,7 @@ defineExpose({ foo: 123 })
       assertCode(content)
     })
 
-    // https://github.com/vuejs/vue-next/issues/4599
+    // https://github.com/vuejs/core/issues/4599
     test('attribute expressions', () => {
       const { content } = compile(`
         <script setup lang="ts">
@@ -1102,6 +1102,17 @@ const emit = defineEmits(['a', 'b'])
       expect(bindings).toStrictEqual({
         Foo: BindingTypes.SETUP_CONST
       })
+    })
+
+    test('import type', () => {
+      const { content } = compile(
+        `<script setup lang="ts">
+        import type { Foo } from './main.ts'
+        import { type Bar, Baz } from './main.ts'
+        </script>`
+      )
+      expect(content).toMatch(`return { Baz }`)
+      assertCode(content)
     })
   })
 

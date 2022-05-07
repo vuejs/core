@@ -16,17 +16,21 @@ export declare const enum RefTypes {
   WritableComputedRef = 3
 }
 
-type RefValue<T> = T extends null | undefined
-  ? T
-  : T & { [RefType]?: RefTypes.Ref }
+type RefValue<T> = T extends null | undefined ? T : ReactiveVariable<T>
 
-type ComputedRefValue<T> = T extends null | undefined
-  ? T
-  : T & { [RefType]?: RefTypes.ComputedRef }
+type ReactiveVariable<T> = T & { [RefType]?: RefTypes.Ref }
+
+type ComputedRefValue<T> = T extends null | undefined ? T : ComputedVariable<T>
+
+type ComputedVariable<T> = T & { [RefType]?: RefTypes.ComputedRef }
 
 type WritableComputedRefValue<T> = T extends null | undefined
   ? T
-  : T & { [RefType]?: RefTypes.WritableComputedRef }
+  : WritableComputedVariable<T>
+
+type WritableComputedVariable<T> = T & {
+  [RefType]?: RefTypes.WritableComputedRef
+}
 
 type NormalObject<T extends object> = T & { [RefType]?: never }
 

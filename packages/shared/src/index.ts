@@ -12,6 +12,7 @@ export * from './domAttrConfig'
 export * from './escapeHtml'
 export * from './looseEqual'
 export * from './toDisplayString'
+export * from './typeUtils'
 
 export const EMPTY_OBJ: { readonly [key: string]: any } = __DEV__
   ? Object.freeze({})
@@ -87,6 +88,10 @@ export const isReservedProp = /*#__PURE__*/ makeMap(
     'onVnodeBeforeMount,onVnodeMounted,' +
     'onVnodeBeforeUpdate,onVnodeUpdated,' +
     'onVnodeBeforeUnmount,onVnodeUnmounted'
+)
+
+export const isBuiltInDirective = /*#__PURE__*/ makeMap(
+  'bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,slot,text,memo'
 )
 
 const cacheStringFunction = <T extends (str: string) => string>(fn: T): T => {

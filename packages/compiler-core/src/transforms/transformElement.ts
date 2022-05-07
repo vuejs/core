@@ -29,7 +29,8 @@ import {
   isObject,
   isReservedProp,
   capitalize,
-  camelize
+  camelize,
+  isBuiltInDirective
 } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
@@ -665,7 +666,7 @@ export function buildProps(
             directiveImportMap.set(prop, needRuntime)
           }
         }
-      } else {
+      } else if (!isBuiltInDirective(name)) {
         // no built-in transform, this is a user custom directive.
         runtimeDirectives.push(prop)
         // custom dirs may use beforeUpdate so they need to force blocks
@@ -853,7 +854,7 @@ function mergeAsArray(existing: Property, incoming: Property) {
   }
 }
 
-function buildDirectiveArgs(
+export function buildDirectiveArgs(
   dir: DirectiveNode,
   context: TransformContext
 ): ArrayExpression {

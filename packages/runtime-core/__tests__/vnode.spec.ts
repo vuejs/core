@@ -446,6 +446,10 @@ describe('vnode', () => {
         onClick: [clickHandler1, clickHandler2],
         onFocus: focusHandler2
       })
+      let props3: Data = { onClick: undefined }
+      expect(mergeProps(props1, props3)).toMatchObject({
+        onClick: clickHandler1
+      })
     })
 
     test('default', () => {

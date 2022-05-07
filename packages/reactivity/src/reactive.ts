@@ -11,12 +11,13 @@ import {
   shallowCollectionHandlers,
   shallowReadonlyCollectionHandlers
 } from './collectionHandlers'
-import { UnwrapRefSimple, Ref } from './ref'
+import { UnwrapRefSimple, Ref, RawSymbol } from './ref'
 
 export const enum ReactiveFlags {
   SKIP = '__v_skip',
   IS_REACTIVE = '__v_isReactive',
   IS_READONLY = '__v_isReadonly',
+  IS_SHALLOW = '__v_isShallow',
   RAW = '__v_raw'
 }
 
@@ -24,6 +25,7 @@ export interface Target {
   [ReactiveFlags.SKIP]?: boolean
   [ReactiveFlags.IS_REACTIVE]?: boolean
   [ReactiveFlags.IS_READONLY]?: boolean
+  [ReactiveFlags.IS_SHALLOW]?: boolean
   [ReactiveFlags.RAW]?: any
 }
 
@@ -87,7 +89,7 @@ export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRefSimple<T>
 export function reactive<T extends object>(target: T): UnwrapNestedRefs<T>
 export function reactive(target: object) {
   // if trying to observe a readonly proxy, return the readonly version.
-  if (target && (target as Target)[ReactiveFlags.IS_READONLY]) {
+  if (isReadonly(target)) {
     return target
   }
   return createReactiveObject(
@@ -139,7 +141,7 @@ export type DeepReadonly<T> = T extends Builtin
   : T extends Promise<infer U>
   ? Promise<DeepReadonly<U>>
   : T extends Ref<infer U>
-  ? Ref<DeepReadonly<U>>
+  ? Readonly<Ref<DeepReadonly<U>>>
   : T extends {}
   ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
   : Readonly<T>
@@ -166,9 +168,7 @@ export function readonly<T extends object>(
  * returned properties.
  * This is used for creating the props proxy object for stateful components.
  */
-export function shallowReadonly<T extends object>(
-  target: T
-): Readonly<{ [K in keyof T]: UnwrapNestedRefs<T[K]> }> {
+export function shallowReadonly<T extends object>(target: T): Readonly<T> {
   return createReactiveObject(
     target,
     true,
@@ -228,6 +228,10 @@ export function isReadonly(value: unknown): boolean {
   return !!(value && (value as Target)[ReactiveFlags.IS_READONLY])
 }
 
+export function isShallow(value: unknown): boolean {
+  return !!(value && (value as Target)[ReactiveFlags.IS_SHALLOW])
+}
+
 export function isProxy(value: unknown): boolean {
   return isReactive(value) || isReadonly(value)
 }
@@ -237,7 +241,9 @@ export function toRaw<T>(observed: T): T {
   return raw ? toRaw(raw) : observed
 }
 
-export function markRaw<T extends object>(value: T): T {
+export function markRaw<T extends object>(
+  value: T
+): T & { [RawSymbol]?: true } {
   def(value, ReactiveFlags.SKIP, true)
   return value
 }

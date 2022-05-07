@@ -1,6 +1,6 @@
 {
   "name": "@vue/shared",
-  "version": "3.2.26",
+  "version": "3.2.33",
   "description": "internal utils shared across @vue packages",
   "main": "index.js",
   "module": "dist/shared.esm-bundler.js",
@@ -9,6 +9,7 @@
     "index.js",
     "dist"
   ],
+  "sideEffects": false,
   "buildOptions": {
     "formats": [
       "esm-bundler",
@@ -17,7 +18,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vuejs/vue-next.git",
+    "url": "git+https://github.com/vuejs/core.git",
     "directory": "packages/shared"
   },
   "keywords": [
@@ -26,7 +27,7 @@
   "author": "Evan You",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/vuejs/vue-next/issues"
+    "url": "https://github.com/vuejs/core/issues"
   },
-  "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/shared#readme"
+  "homepage": "https://github.com/vuejs/core/tree/main/packages/shared#readme"
 }

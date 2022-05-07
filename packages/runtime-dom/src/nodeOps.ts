@@ -4,7 +4,7 @@ export const svgNS = 'http://www.w3.org/2000/svg'
 
 const doc = (typeof document !== 'undefined' ? document : null) as Document
 
-const staticTemplateCache = new Map<string, DocumentFragment>()
+const templateContainer = doc && /*#__PURE__*/ doc.createElement('template')
 
 export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
   insert: (child, parent, anchor) => {
@@ -73,14 +73,22 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
   // Reason: innerHTML.
   // Static content here can only come from compiled templates.
   // As long as the user only uses trusted templates, this is safe.
-  insertStaticContent(content, parent, anchor, isSVG) {
+  insertStaticContent(content, parent, anchor, isSVG, start, end) {
     // <parent> before | first ... last | anchor </parent>
     const before = anchor ? anchor.previousSibling : parent.lastChild
-    let template = staticTemplateCache.get(content)
-    if (!template) {
-      const t = doc.createElement('template')
-      t.innerHTML = isSVG ? `<svg>${content}</svg>` : content
-      template = t.content
+    // #5308 can only take cached path if:
+    // - has a single root node
+    // - nextSibling info is still available
+    if (start && (start === end || start.nextSibling)) {
+      // cached
+      while (true) {
+        parent.insertBefore(start!.cloneNode(true), anchor)
+        if (start === end || !(start = start!.nextSibling)) break
+      }
+    } else {
+      // fresh insert
+      templateContainer.innerHTML = isSVG ? `<svg>${content}</svg>` : content
+      const template = templateContainer.content
       if (isSVG) {
         // remove outer svg wrapper
         const wrapper = template.firstChild!
@@ -89,9 +97,8 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
         }
         template.removeChild(wrapper)
       }
-      staticTemplateCache.set(content, template)
+      parent.insertBefore(template, anchor)
     }
-    parent.insertBefore(template.cloneNode(true), anchor)
     return [
       // first
       before ? before.nextSibling! : parent.firstChild!,

@@ -1,12 +1,18 @@
-import { isTracking, trackEffects, triggerEffects } from './effect'
+import {
+  activeEffect,
+  shouldTrack,
+  trackEffects,
+  triggerEffects
+} from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
-import { isArray, hasChanged } from '@vue/shared'
+import { isArray, hasChanged, IfAny } from '@vue/shared'
 import { isProxy, toRaw, isReactive, toReactive } from './reactive'
 import type { ShallowReactiveMarker } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
 import { createDep, Dep } from './dep'
 
 declare const RefSymbol: unique symbol
+export declare const RawSymbol: unique symbol
 
 export interface Ref<T = any> {
   value: T
@@ -16,10 +22,6 @@ export interface Ref<T = any> {
    * autocomplete, so we use a private Symbol instead.
    */
   [RefSymbol]: true
-  /**
-   * @internal
-   */
-  _shallow?: boolean
 }
 
 type RefBase<T> = {
@@ -28,19 +30,16 @@ type RefBase<T> = {
 }
 
 export function trackRefValue(ref: RefBase<any>) {
-  if (isTracking()) {
+  if (shouldTrack && activeEffect) {
     ref = toRaw(ref)
-    if (!ref.dep) {
-      ref.dep = createDep()
-    }
     if (__DEV__) {
-      trackEffects(ref.dep, {
+      trackEffects(ref.dep || (ref.dep = createDep()), {
         target: ref,
         type: TrackOpTypes.GET,
         key: 'value'
       })
     } else {
-      trackEffects(ref.dep)
+      trackEffects(ref.dep || (ref.dep = createDep()))
     }
   }
 }
@@ -63,7 +62,7 @@ export function triggerRefValue(ref: RefBase<any>, newVal?: any) {
 
 export function isRef<T>(r: Ref<T> | unknown): r is Ref<T>
 export function isRef(r: any): r is Ref {
-  return Boolean(r && r.__v_isRef === true)
+  return !!(r && r.__v_isRef === true)
 }
 
 export function ref<T extends object>(
@@ -102,9 +101,9 @@ class RefImpl<T> {
   public dep?: Dep = undefined
   public readonly __v_isRef = true
 
-  constructor(value: T, public readonly _shallow: boolean) {
-    this._rawValue = _shallow ? value : toRaw(value)
-    this._value = _shallow ? value : toReactive(value)
+  constructor(value: T, public readonly __v_isShallow: boolean) {
+    this._rawValue = __v_isShallow ? value : toRaw(value)
+    this._value = __v_isShallow ? value : toReactive(value)
   }
 
   get value() {
@@ -113,10 +112,10 @@ class RefImpl<T> {
   }
 
   set value(newVal) {
-    newVal = this._shallow ? newVal : toRaw(newVal)
+    newVal = this.__v_isShallow ? newVal : toRaw(newVal)
     if (hasChanged(newVal, this._rawValue)) {
       this._rawValue = newVal
-      this._value = this._shallow ? newVal : toReactive(newVal)
+      this._value = this.__v_isShallow ? newVal : toReactive(newVal)
       triggerRefValue(this, newVal)
     }
   }
@@ -222,7 +221,7 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
   }
 }
 
-export type ToRef<T> = [T] extends [Ref] ? T : Ref<T>
+export type ToRef<T> = IfAny<T, Ref<T>, [T] extends [Ref] ? T : Ref<T>>
 
 export function toRef<T extends object, K extends keyof T>(
   object: T,
@@ -293,6 +292,7 @@ export type UnwrapRefSimple<T> = T extends
   | BaseTypes
   | Ref
   | RefUnwrapBailTypes[keyof RefUnwrapBailTypes]
+  | { [RawSymbol]?: true }
   ? T
   : T extends Array<any>
   ? { [K in keyof T]: UnwrapRefSimple<T[K]> }
