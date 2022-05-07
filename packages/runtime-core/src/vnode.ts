@@ -10,7 +10,8 @@ import {
   PatchFlags,
   ShapeFlags,
   SlotFlags,
-  isOn
+  isOn,
+  isBoolean
 } from '@vue/shared'
 import {
   ComponentInternalInstance,
@@ -702,7 +703,7 @@ export function createCommentVNode(
 }
 
 export function normalizeVNode(child: VNodeChild): VNode {
-  if (child == null || typeof child === 'boolean') {
+  if (child == null || isBoolean(child)) {
     // empty placeholder
     return createVNode(Comment)
   } else if (isArray(child)) {

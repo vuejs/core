@@ -1,5 +1,6 @@
 import {
   includeBooleanAttr,
+  isBoolean,
   isSpecialBooleanAttr,
   makeMap,
   NOOP
@@ -56,7 +57,7 @@ export function compatCoerceAttr(
     const v2CocercedValue =
       value === null
         ? 'false'
-        : typeof value !== 'boolean' && value !== undefined
+        : !isBoolean(value) && value !== undefined
         ? 'true'
         : null
     if (

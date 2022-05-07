@@ -5,7 +5,7 @@ import {
   ConcreteComponent,
   formatComponentName
 } from './component'
-import { isString, isFunction, isNumber } from '@vue/shared'
+import { isString, isFunction, isNumber, isBoolean } from '@vue/shared'
 import { toRaw, isRef, pauseTracking, resetTracking } from '@vue/reactivity'
 import { callWithErrorHandling, ErrorCodes } from './errorHandling'
 
@@ -146,7 +146,7 @@ function formatProp(key: string, value: unknown, raw?: boolean): any {
     return raw ? value : [`${key}=${value}`]
   } else if (
     isNumber(value) ||
-    typeof value === 'boolean' ||
+    isBoolean(value) ||
     value == null
   ) {
     return raw ? value : [`${key}=${value}`]
