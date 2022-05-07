@@ -7,7 +7,7 @@ import {
   compatUtils,
   DeprecationTypes
 } from '@vue/runtime-core'
-import { isObject, toNumber, extend, isArray } from '@vue/shared'
+import { isObject, toNumber, extend, isArray, isNumber } from '@vue/shared'
 
 const TRANSITION = 'transition'
 const ANIMATION = 'animation'
@@ -276,7 +276,7 @@ function NumberOf(val: unknown): number {
 }
 
 function validateDuration(val: unknown) {
-  if (typeof val !== 'number') {
+  if (!isNumber(val)) {
     warn(
       `<transition> explicit duration is not a valid number - ` +
         `got ${JSON.stringify(val)}.`

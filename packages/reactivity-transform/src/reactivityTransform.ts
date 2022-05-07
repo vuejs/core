@@ -21,7 +21,7 @@ import {
   walkFunctionParams
 } from '@vue/compiler-core'
 import { parse, ParserPlugin } from '@babel/parser'
-import { hasOwn, isArray, isString } from '@vue/shared'
+import { hasOwn, isArray, isNumber, isString } from '@vue/shared'
 
 const CONVERT_SYMBOL = '$'
 const ESCAPE_SYMBOL = '$$'
@@ -460,7 +460,7 @@ export function transformAST(
   }
 
   function segToString(seg: PathSegmentAtom): string {
-    if (typeof seg === 'number') {
+    if (isNumber(seg)) {
       return `[${seg}]`
     } else if (typeof seg === 'string') {
       return `.${seg}`

@@ -1,5 +1,5 @@
 import { VNode, VNodeChild } from '../vnode'
-import { isArray, isString, isObject } from '@vue/shared'
+import { isArray, isString, isObject, isNumber } from '@vue/shared'
 import { warn } from '../warning'
 
 /**
@@ -64,7 +64,7 @@ export function renderList(
     for (let i = 0, l = source.length; i < l; i++) {
       ret[i] = renderItem(source[i], i, undefined, cached && cached[i])
     }
-  } else if (typeof source === 'number') {
+  } else if (isNumber(source)) {
     if (__DEV__ && !Number.isInteger(source)) {
       warn(`The v-for range expect an integer value but got ${source}.`)
       return []

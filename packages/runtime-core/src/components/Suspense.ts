@@ -10,7 +10,7 @@ import {
   createVNode,
   isBlockTreeEnabled
 } from '../vnode'
-import { isFunction, isArray, ShapeFlags, toNumber } from '@vue/shared'
+import { isFunction, isArray, ShapeFlags, toNumber, isNumber } from '@vue/shared'
 import { ComponentInternalInstance, handleSetupResult } from '../component'
 import { Slots } from '../componentSlots'
 import {
@@ -427,7 +427,7 @@ function createSuspenseBoundary(
     anchor,
     deps: 0,
     pendingId: 0,
-    timeout: typeof timeout === 'number' ? timeout : -1,
+    timeout: isNumber(timeout) ? timeout : -1,
     activeBranch: null,
     pendingBranch: null,
     isInFallback: true,
