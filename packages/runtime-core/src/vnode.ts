@@ -714,7 +714,7 @@ export function normalizeVNode(child: VNodeChild): VNode {
       // #3666, avoid reference pollution when reusing vnode
       child.slice()
     )
-  } else if (typeof child === 'object') {
+  } else if (isObject(child)) {
     // already vnode, this should be the most common since compiled templates
     // always produce all-vnode children arrays
     return cloneIfMounted(child)
@@ -736,7 +736,7 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
     children = null
   } else if (isArray(children)) {
     type = ShapeFlags.ARRAY_CHILDREN
-  } else if (typeof children === 'object') {
+  } else if (isObject(children)) {
     if (shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.TELEPORT)) {
       // Normalize slot to plain children for plain element and Teleport
       const slot = (children as any).default

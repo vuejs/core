@@ -6,7 +6,7 @@ import {
   createApp,
   ssrContextKey
 } from 'vue'
-import { isString, isPromise } from '@vue/shared'
+import { isString, isPromise, isFunction } from '@vue/shared'
 import { renderComponentVNode, SSRBuffer, SSRContext } from './render'
 import { Readable, Writable } from 'stream'
 
@@ -137,7 +137,7 @@ export function renderToWebStream(
   input: App | VNode,
   context: SSRContext = {}
 ): ReadableStream {
-  if (typeof ReadableStream !== 'function') {
+  if (!isFunction(ReadableStream)) {
     throw new Error(
       `ReadableStream constructor is not available in the global scope. ` +
         `If the target environment does support web streams, consider using ` +

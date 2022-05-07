@@ -10,6 +10,7 @@ import {
 import { SFCDescriptor } from './parse'
 import { PluginCreator } from 'postcss'
 import hash from 'hash-sum'
+import { isString } from '@vue/shared'
 
 export const CSS_VARS_HELPER = `useCssVars`
 // match v-bind() with max 2-levels of nested parens.
@@ -101,7 +102,7 @@ export function genCssVarsCode(
       ? transformed.content
       : transformed.children
           .map(c => {
-            return typeof c === 'string'
+            return isString(c)
               ? c
               : (c as SimpleExpressionNode).content
           })

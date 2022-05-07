@@ -13,7 +13,7 @@ import {
 } from '@vue/compiler-dom'
 import { SFCDescriptor, SFCScriptBlock } from './parse'
 import { parse as _parse, ParserOptions, ParserPlugin } from '@babel/parser'
-import { camelize, capitalize, generateCodeFrame, makeMap } from '@vue/shared'
+import { camelize, capitalize, generateCodeFrame, isString, makeMap } from '@vue/shared'
 import {
   Node,
   Declaration,
@@ -1304,7 +1304,7 @@ export function compileScript(
         tips.forEach(warnOnce)
       }
       const err = errors[0]
-      if (typeof err === 'string') {
+      if (isString(err)) {
         throw new Error(err)
       } else if (err) {
         if (err.loc) {
@@ -1804,7 +1804,7 @@ function isCallOf(
     node &&
     node.type === 'CallExpression' &&
     node.callee.type === 'Identifier' &&
-    (typeof test === 'string'
+    (isString(test)
       ? node.callee.name === test
       : test(node.callee.name))
   )
