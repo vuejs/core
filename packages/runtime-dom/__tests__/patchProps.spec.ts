@@ -205,7 +205,7 @@ describe('runtime-dom: props patching', () => {
   test('form attribute', () => {
     const el = document.createElement('input')
     patchProp(el, 'form', null, 'foo')
-    // non existant element
+    // non existent element
     expect(el.form).toBe(null)
     expect(el.getAttribute('form')).toBe('foo')
     // remove attribute

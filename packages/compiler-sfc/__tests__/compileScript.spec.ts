@@ -64,7 +64,7 @@ const bar = 1
   `)
     // should generate working code
     assertCode(content)
-    // should anayze bindings
+    // should analyze bindings
     expect(bindings).toStrictEqual({
       foo: BindingTypes.PROPS,
       bar: BindingTypes.SETUP_CONST,
@@ -403,7 +403,7 @@ defineExpose({ foo: 123 })
       assertCode(content)
     })
 
-    // #4340 interpolations in tempalte strings
+    // #4340 interpolations in template strings
     test('js template string interpolations', () => {
       const { content } = compile(`
         <script setup lang="ts">
