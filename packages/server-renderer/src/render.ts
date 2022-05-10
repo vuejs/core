@@ -163,9 +163,7 @@ function renderComponentSubTree(
         instance
       )
     } else {
-      const componentName = comp.name
-        ? `${comp.name}`
-        : `# undefined Component name #`
+      const componentName = comp.name || comp.__file || `<Anonymous>`
       warn(`Component ${componentName} is missing template or render function.`)
       push(`<!---->`)
     }
