@@ -1,27 +1,20 @@
 import { E2E_TIMEOUT, setupPuppeteer } from './e2eUtils'
 import path from 'path'
-import { h, createApp, Transition } from 'vue'
+import { h, createApp, Transition, ref, nextTick } from 'vue'
 
 describe('e2e: Transition', () => {
-  const {
-    page,
-    html,
-    classList,
-    isVisible,
-    timeout,
-    nextFrame,
-    click
-  } = setupPuppeteer()
+  const { page, html, classList, isVisible, timeout, nextFrame, click } =
+    setupPuppeteer()
   const baseUrl = `file://${path.resolve(__dirname, './transition.html')}`
 
-  const duration = 50
-  const buffer = 5
+  const duration = process.env.CI ? 200 : 50
+  const buffer = process.env.CI ? 20 : 5
 
   const transitionFinish = (time = duration) => timeout(time + buffer)
 
   const classWhenTransitionStart = () =>
     page().evaluate(() => {
-      (document.querySelector('#toggleBtn') as any)!.click()
+      ;(document.querySelector('#toggleBtn') as any)!.click()
       return Promise.resolve().then(() => {
         return document.querySelector('#container div')!.className.split(/\s+/g)
       })
@@ -29,7 +22,7 @@ describe('e2e: Transition', () => {
 
   beforeEach(async () => {
     await page().goto(baseUrl)
-    await page().waitFor('#app')
+    await page().waitForSelector('#app')
   })
 
   describe('transition with v-if', () => {
@@ -860,13 +853,17 @@ describe('e2e: Transition', () => {
           'test-anim-long-leave-active',
           'test-anim-long-leave-to'
         ])
-        await new Promise(r => {
-          setTimeout(r, duration + 5)
-        })
-        expect(await classList('#container div')).toStrictEqual([
-          'test-anim-long-leave-active',
-          'test-anim-long-leave-to'
-        ])
+
+        if (!process.env.CI) {
+          await new Promise(r => {
+            setTimeout(r, duration - buffer)
+          })
+          expect(await classList('#container div')).toStrictEqual([
+            'test-anim-long-leave-active',
+            'test-anim-long-leave-to'
+          ])
+        }
+
         await transitionFinish(duration * 2)
         expect(await html('#container')).toBe('<!--v-if-->')
 
@@ -880,13 +877,17 @@ describe('e2e: Transition', () => {
           'test-anim-long-enter-active',
           'test-anim-long-enter-to'
         ])
-        await new Promise(r => {
-          setTimeout(r, duration + 5)
-        })
-        expect(await classList('#container div')).toStrictEqual([
-          'test-anim-long-enter-active',
-          'test-anim-long-enter-to'
-        ])
+
+        if (!process.env.CI) {
+          await new Promise(r => {
+            setTimeout(r, duration - buffer)
+          })
+          expect(await classList('#container div')).toStrictEqual([
+            'test-anim-long-enter-active',
+            'test-anim-long-enter-to'
+          ])
+        }
+
         await transitionFinish(duration * 2)
         expect(await html('#container')).toBe('<div class="">content</div>')
       },
@@ -1058,7 +1059,7 @@ describe('e2e: Transition', () => {
 
         // change view -> 'two'
         await page().evaluate(() => {
-          (document.querySelector('#changeViewBtn') as any)!.click()
+          ;(document.querySelector('#changeViewBtn') as any)!.click()
         })
         // enter
         expect(await classWhenTransitionStart()).toStrictEqual([
@@ -1077,7 +1078,7 @@ describe('e2e: Transition', () => {
 
         // change view -> 'one'
         await page().evaluate(() => {
-          (document.querySelector('#changeViewBtn') as any)!.click()
+          ;(document.querySelector('#changeViewBtn') as any)!.click()
         })
         // leave
         expect(await classWhenTransitionStart()).toStrictEqual([
@@ -1164,7 +1165,7 @@ describe('e2e: Transition', () => {
 
         // enter
         const enterClass = await page().evaluate(async () => {
-          (document.querySelector('#toggleBtn') as any)!.click()
+          ;(document.querySelector('#toggleBtn') as any)!.click()
           // nextTrick for patch start
           await Promise.resolve()
           // nextTrick for Suspense resolve
@@ -1309,11 +1310,74 @@ describe('e2e: Transition', () => {
         )
         await transitionFinish()
         await nextFrame()
-        expect(await html('#container')).toBe(
-          '<div class="test v-enter-active v-enter-to">two</div>'
-        )
+        // expect(await html('#container')).toBe(
+        //   '<div class="test v-enter-active v-enter-to">two</div>'
+        // )
         await transitionFinish()
         expect(await html('#container')).toBe('<div class="test">two</div>')
+      },
+      E2E_TIMEOUT
+    )
+
+    // #3963
+    test(
+      'Suspense fallback should work with transition',
+      async () => {
+        await page().evaluate(() => {
+          const { createApp, shallowRef, h } = (window as any).Vue
+
+          const One = {
+            template: `<div>{{ msg }}</div>`,
+            setup() {
+              return new Promise(_resolve => {
+                // @ts-ignore
+                window.resolve = () =>
+                  _resolve({
+                    msg: 'success'
+                  })
+              })
+            }
+          }
+
+          createApp({
+            template: `
+              <div id="container">
+                <transition mode="out-in">
+                  <Suspense :timeout="0">
+                    <template #default>
+                      <component :is="view" />
+                    </template>
+                    <template #fallback>
+                      <div>Loading...</div>
+                    </template>
+                  </Suspense>
+                </transition>
+              </div>
+              <button id="toggleBtn" @click="click">button</button>
+            `,
+            setup: () => {
+              const view = shallowRef(null)
+              const click = () => {
+                view.value = view.value ? null : h(One)
+              }
+              return { view, click }
+            }
+          }).mount('#app')
+        })
+
+        expect(await html('#container')).toBe('<!---->')
+
+        await click('#toggleBtn')
+        await nextFrame()
+        expect(await html('#container')).toBe('<div class="">Loading...</div>')
+
+        await page().evaluate(() => {
+          // @ts-ignore
+          window.resolve()
+        })
+
+        await transitionFinish(duration * 2)
+        expect(await html('#container')).toBe('<div class="">success</div>')
       },
       E2E_TIMEOUT
     )
@@ -1626,23 +1690,6 @@ describe('e2e: Transition', () => {
     )
   })
 
-  test(
-    'warn when used on multiple elements',
-    async () => {
-      createApp({
-        render() {
-          return h(Transition, null, {
-            default: () => [h('div'), h('div')]
-          })
-        }
-      }).mount(document.createElement('div'))
-      expect(
-        '<transition> can only be used on a single element or component'
-      ).toHaveBeenWarned()
-    },
-    E2E_TIMEOUT
-  )
-
   describe('explicit durations', () => {
     test(
       'single value',
@@ -1865,7 +1912,7 @@ describe('e2e: Transition', () => {
           'test-enter-active',
           'test-enter-to'
         ])
-        await transitionFinish(200)
+        await transitionFinish(duration * 4)
         expect(await html('#container')).toBe('<div class="test">content</div>')
       },
       E2E_TIMEOUT
@@ -1908,4 +1955,140 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
   })
+
+  test('warn when used on multiple elements', async () => {
+    createApp({
+      render() {
+        return h(Transition, null, {
+          default: () => [h('div'), h('div')]
+        })
+      }
+    }).mount(document.createElement('div'))
+    expect(
+      '<transition> can only be used on a single element or component'
+    ).toHaveBeenWarned()
+  })
+
+  test('warn when invalid transition mode', () => {
+    createApp({
+      template: `
+        <div id="container">
+          <transition name="test" mode="none">
+            <div class="test">content</div>
+          </transition>
+        </div>
+      `
+    }).mount(document.createElement('div'))
+    expect(`invalid <transition> mode: none`).toHaveBeenWarned()
+  })
+
+  // #3227
+  test(`HOC w/ merged hooks`, async () => {
+    const innerSpy = jest.fn()
+    const outerSpy = jest.fn()
+
+    const MyTransition = {
+      render(this: any) {
+        return h(
+          Transition,
+          {
+            onLeave(el, end) {
+              innerSpy()
+              end()
+            }
+          },
+          this.$slots.default
+        )
+      }
+    }
+
+    const toggle = ref(true)
+
+    const root = document.createElement('div')
+    createApp({
+      render() {
+        return h(MyTransition, { onLeave: () => outerSpy() }, () =>
+          toggle.value ? h('div') : null
+        )
+      }
+    }).mount(root)
+
+    expect(root.innerHTML).toBe(`<div></div>`)
+
+    toggle.value = false
+    await nextTick()
+    expect(innerSpy).toHaveBeenCalledTimes(1)
+    expect(outerSpy).toHaveBeenCalledTimes(1)
+    expect(root.innerHTML).toBe(`<!---->`)
+  })
+
+  test(
+    'should work with dev root fragment',
+    async () => {
+      await page().evaluate(() => {
+        const { createApp, ref } = (window as any).Vue
+        createApp({
+          components: {
+            Comp: {
+              template: `
+                  <!-- Broken! -->
+                  <div><slot /></div>
+                `
+            }
+          },
+          template: `
+            <div id="container">
+              <transition>
+                <Comp class="test" v-if="toggle">
+                  <div>content</div>
+                </Comp>
+              </transition>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+          setup: () => {
+            const toggle = ref(true)
+            const click = () => (toggle.value = !toggle.value)
+            return { toggle, click }
+          }
+        }).mount('#app')
+      })
+      expect(await html('#container')).toBe(
+        '<!-- Broken! --><div class="test"><div>content</div></div>'
+      )
+
+      // leave
+      expect(await classWhenTransitionStart()).toStrictEqual([
+        'test',
+        'v-leave-from',
+        'v-leave-active'
+      ])
+      await nextFrame()
+      expect(await classList('.test')).toStrictEqual([
+        'test',
+        'v-leave-active',
+        'v-leave-to'
+      ])
+      await transitionFinish()
+      expect(await html('#container')).toBe('<!--v-if-->')
+
+      // enter
+      expect(await classWhenTransitionStart()).toStrictEqual([
+        'test',
+        'v-enter-from',
+        'v-enter-active'
+      ])
+      await nextFrame()
+      expect(await classList('.test')).toStrictEqual([
+        'test',
+        'v-enter-active',
+        'v-enter-to'
+      ])
+      await transitionFinish()
+      expect(await html('#container')).toBe(
+        '<!-- Broken! --><div class="test"><div>content</div></div>'
+      )
+    },
+    E2E_TIMEOUT
+  )
 })

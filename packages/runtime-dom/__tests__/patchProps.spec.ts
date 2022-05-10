@@ -9,6 +9,7 @@ describe('runtime-dom: props patching', () => {
     // prop with string value should be set to empty string on null values
     patchProp(el, 'id', null, null)
     expect(el.id).toBe('')
+    expect(el.getAttribute('id')).toBe(null)
   })
 
   test('value', () => {
@@ -17,10 +18,60 @@ describe('runtime-dom: props patching', () => {
     expect(el.value).toBe('foo')
     patchProp(el, 'value', null, null)
     expect(el.value).toBe('')
+    expect(el.getAttribute('value')).toBe(null)
     const obj = {}
     patchProp(el, 'value', null, obj)
     expect(el.value).toBe(obj.toString())
     expect((el as any)._value).toBe(obj)
+  })
+
+  test('value for custom elements', () => {
+    class TestElement extends HTMLElement {
+      constructor() {
+        super()
+      }
+
+      // intentionally uses _value because this is used in "normal" HTMLElement for storing the object of the set property value
+      private _value: any
+      get value() {
+        return this._value
+      }
+
+      set value(val) {
+        this._value = val
+        this.setterCalled++
+      }
+
+      public setterCalled: number = 0
+    }
+    window.customElements.define('test-element', TestElement)
+    const el = document.createElement('test-element') as TestElement
+    patchProp(el, 'value', null, 'foo')
+    expect(el.value).toBe('foo')
+    expect(el.setterCalled).toBe(1)
+    patchProp(el, 'value', null, null)
+    expect(el.value).toBe('')
+    expect(el.setterCalled).toBe(2)
+    expect(el.getAttribute('value')).toBe(null)
+    const obj = {}
+    patchProp(el, 'value', null, obj)
+    expect(el.value).toBe(obj)
+    expect(el.setterCalled).toBe(3)
+  })
+
+  // For <input type="text">, setting el.value won't create a `value` attribute
+  // so we need to add tests for other elements
+  test('value for non-text input', () => {
+    const el = document.createElement('option')
+    el.textContent = 'foo' // #4956
+    patchProp(el, 'value', null, 'foo')
+    expect(el.getAttribute('value')).toBe('foo')
+    expect(el.value).toBe('foo')
+    patchProp(el, 'value', null, null)
+    el.textContent = ''
+    expect(el.value).toBe('')
+    // #3475
+    expect(el.getAttribute('value')).toBe(null)
   })
 
   test('boolean prop', () => {
@@ -28,6 +79,18 @@ describe('runtime-dom: props patching', () => {
     patchProp(el, 'multiple', null, '')
     expect(el.multiple).toBe(true)
     patchProp(el, 'multiple', null, null)
+    expect(el.multiple).toBe(false)
+    patchProp(el, 'multiple', null, true)
+    expect(el.multiple).toBe(true)
+    patchProp(el, 'multiple', null, 0)
+    expect(el.multiple).toBe(false)
+    patchProp(el, 'multiple', null, '0')
+    expect(el.multiple).toBe(true)
+    patchProp(el, 'multiple', null, false)
+    expect(el.multiple).toBe(false)
+    patchProp(el, 'multiple', null, 1)
+    expect(el.multiple).toBe(true)
+    patchProp(el, 'multiple', null, undefined)
     expect(el.multiple).toBe(false)
   })
 
@@ -148,5 +211,80 @@ describe('runtime-dom: props patching', () => {
     // remove attribute
     patchProp(el, 'form', 'foo', null)
     expect(el.getAttribute('form')).toBe(null)
+  })
+
+  test('readonly type prop on textarea', () => {
+    const el = document.createElement('textarea')
+    // just to verify that it doesn't throw when i.e. switching a dynamic :is from an 'input' to a 'textarea'
+    // see https://github.com/vuejs/core/issues/2766
+    patchProp(el, 'type', 'text', null)
+  })
+
+  test('force patch as prop', () => {
+    const el = document.createElement('div') as any
+    patchProp(el, '.x', null, 1)
+    expect(el.x).toBe(1)
+  })
+
+  test('force patch as attribute', () => {
+    const el = document.createElement('div') as any
+    el.x = 1
+    patchProp(el, '^x', null, 2)
+    expect(el.x).toBe(1)
+    expect(el.getAttribute('x')).toBe('2')
+  })
+
+  test('input with size (number property)', () => {
+    const el = document.createElement('input')
+    patchProp(el, 'size', null, 100)
+    expect(el.size).toBe(100)
+    patchProp(el, 'size', 100, null)
+    expect(el.getAttribute('size')).toBe(null)
+    expect('Failed setting prop "size" on <input>').toHaveBeenWarnedLast()
+  })
+
+  test('select with type (string property)', () => {
+    const el = document.createElement('select')
+    patchProp(el, 'type', null, 'test')
+    expect(el.type).toBe('select-one')
+    expect('Failed setting prop "type" on <select>').toHaveBeenWarnedLast()
+  })
+
+  test('select with willValidate (boolean property)', () => {
+    const el = document.createElement('select')
+    patchProp(el, 'willValidate', true, null)
+    expect(el.willValidate).toBe(true)
+    expect(
+      'Failed setting prop "willValidate" on <select>'
+    ).toHaveBeenWarnedLast()
+  })
+
+  test('patch value for select', () => {
+    const root = document.createElement('div')
+    render(
+      h('select', { value: 'foo' }, [
+        h('option', { value: 'foo' }, 'foo'),
+        h('option', { value: 'bar' }, 'bar')
+      ]),
+      root
+    )
+    const el = root.children[0] as HTMLSelectElement
+    expect(el.value).toBe('foo')
+
+    render(
+      h('select', { value: 'baz' }, [
+        h('option', { value: 'foo' }, 'foo'),
+        h('option', { value: 'baz' }, 'baz')
+      ]),
+      root
+    )
+    expect(el.value).toBe('baz')
+  })
+
+  test('translate attribute', () => {
+    const el = document.createElement('div')
+    patchProp(el, 'translate', null, 'no')
+    expect(el.translate).toBeFalsy()
+    expect(el.getAttribute('translate')).toBe('no')
   })
 })

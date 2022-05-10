@@ -3,14 +3,16 @@ import { isNoUnitNumericStyleProp } from './domAttrConfig'
 
 export type NormalizedStyle = Record<string, string | number>
 
-export function normalizeStyle(value: unknown): NormalizedStyle | undefined {
+export function normalizeStyle(
+  value: unknown
+): NormalizedStyle | string | undefined {
   if (isArray(value)) {
-    const res: Record<string, string | number> = {}
+    const res: NormalizedStyle = {}
     for (let i = 0; i < value.length; i++) {
       const item = value[i]
-      const normalized = normalizeStyle(
-        isString(item) ? parseStringStyle(item) : item
-      )
+      const normalized = isString(item)
+        ? parseStringStyle(item)
+        : (normalizeStyle(item) as NormalizedStyle)
       if (normalized) {
         for (const key in normalized) {
           res[key] = normalized[key]
@@ -18,6 +20,8 @@ export function normalizeStyle(value: unknown): NormalizedStyle | undefined {
       }
     }
     return res
+  } else if (isString(value)) {
+    return value
   } else if (isObject(value)) {
     return value
   }
@@ -37,9 +41,11 @@ export function parseStringStyle(cssText: string): NormalizedStyle {
   return ret
 }
 
-export function stringifyStyle(styles: NormalizedStyle | undefined): string {
+export function stringifyStyle(
+  styles: NormalizedStyle | string | undefined
+): string {
   let ret = ''
-  if (!styles) {
+  if (!styles || isString(styles)) {
     return ret
   }
   for (const key in styles) {
@@ -75,4 +81,16 @@ export function normalizeClass(value: unknown): string {
     }
   }
   return res.trim()
+}
+
+export function normalizeProps(props: Record<string, any> | null) {
+  if (!props) return null
+  let { class: klass, style } = props
+  if (klass && !isString(klass)) {
+    props.class = normalizeClass(klass)
+  }
+  if (style) {
+    props.style = normalizeStyle(style)
+  }
+  return props
 }

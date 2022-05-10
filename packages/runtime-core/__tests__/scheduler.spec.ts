@@ -44,6 +44,42 @@ describe('scheduler', () => {
       expect(calls).toEqual(['job1', 'job2'])
     })
 
+    it("should insert jobs in ascending order of job's id when flushing", async () => {
+      const calls: string[] = []
+      const job1 = () => {
+        calls.push('job1')
+
+        queueJob(job2)
+        queueJob(job3)
+      }
+
+      const job2 = () => {
+        calls.push('job2')
+        queueJob(job4)
+        queueJob(job5)
+      }
+      job2.id = 10
+
+      const job3 = () => {
+        calls.push('job3')
+      }
+      job3.id = 1
+
+      const job4 = () => {
+        calls.push('job4')
+      }
+
+      const job5 = () => {
+        calls.push('job5')
+      }
+
+      queueJob(job1)
+
+      expect(calls).toEqual([])
+      await nextTick()
+      expect(calls).toEqual(['job1', 'job3', 'job2', 'job4', 'job5'])
+    })
+
     it('should dedupe queued jobs', async () => {
       const calls: string[] = []
       const job1 = () => {
@@ -197,6 +233,16 @@ describe('scheduler', () => {
       queueJob(job1)
       await nextTick()
       expect(calls).toEqual(['cb1', 'cb2', 'job1'])
+    })
+
+    // #3806
+    it('queue preFlushCb inside postFlushCb', async () => {
+      const cb = jest.fn()
+      queuePostFlushCb(() => {
+        queuePreFlushCb(cb)
+      })
+      await nextTick()
+      expect(cb).toHaveBeenCalled()
     })
   })
 
@@ -443,7 +489,7 @@ describe('scheduler', () => {
     })
     try {
       await nextTick()
-    } catch (e) {
+    } catch (e: any) {
       expect(e).toBe(err)
     }
     expect(
@@ -525,5 +571,27 @@ describe('scheduler', () => {
 
     await nextTick()
     expect(count).toBe(1)
+  })
+
+  // #910
+  test('should not run stopped reactive effects', async () => {
+    const spy = jest.fn()
+
+    // simulate parent component that toggles child
+    const job1 = () => {
+      // @ts-ignore
+      job2.active = false
+    }
+    // simulate child that's triggered by the same reactive change that
+    // triggers its toggle
+    const job2 = () => spy()
+    expect(spy).toHaveBeenCalledTimes(0)
+
+    queueJob(job1)
+    queueJob(job2)
+    await nextTick()
+
+    // should not be called
+    expect(spy).toHaveBeenCalledTimes(0)
   })
 })

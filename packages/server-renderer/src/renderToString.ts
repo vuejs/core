@@ -74,9 +74,9 @@ async function resolveTeleports(context: SSRContext) {
     for (const key in context.__teleportBuffers) {
       // note: it's OK to await sequentially here because the Promises were
       // created eagerly in parallel.
-      context.teleports[key] = await unrollBuffer((await Promise.all(
-        context.__teleportBuffers[key]
-      )) as SSRBuffer)
+      context.teleports[key] = await unrollBuffer(
+        (await Promise.all(context.__teleportBuffers[key])) as SSRBuffer
+      )
     }
   }
 }

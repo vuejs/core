@@ -5,9 +5,9 @@ import { makeMap } from './makeMap'
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Element
 const HTML_TAGS =
   'html,body,base,head,link,meta,style,title,address,article,aside,footer,' +
-  'header,h1,h2,h3,h4,h5,h6,hgroup,nav,section,div,dd,dl,dt,figcaption,' +
+  'header,h1,h2,h3,h4,h5,h6,nav,section,div,dd,dl,dt,figcaption,' +
   'figure,picture,hr,img,li,main,ol,p,pre,ul,a,b,abbr,bdi,bdo,br,cite,code,' +
-  'data,dfn,em,i,kbd,mark,q,rp,rt,rtc,ruby,s,samp,small,span,strong,sub,sup,' +
+  'data,dfn,em,i,kbd,mark,q,rp,rt,ruby,s,samp,small,span,strong,sub,sup,' +
   'time,u,var,wbr,area,audio,map,track,video,embed,object,param,source,' +
   'canvas,script,noscript,del,ins,caption,col,colgroup,table,thead,tbody,td,' +
   'th,tr,button,datalist,fieldset,form,input,label,legend,meter,optgroup,' +
@@ -30,11 +30,18 @@ const SVG_TAGS =
 const VOID_TAGS =
   'area,base,br,col,embed,hr,img,input,link,meta,param,source,track,wbr'
 
-const FORM_TAGS =
-  'button,datalist,fieldset,input,keygen,label,legend,meter,optgroup,option,' +
-  'output,progress,select,textarea'
-
+/**
+ * Compiler only.
+ * Do NOT use in runtime code paths unless behind `__DEV__` flag.
+ */
 export const isHTMLTag = /*#__PURE__*/ makeMap(HTML_TAGS)
+/**
+ * Compiler only.
+ * Do NOT use in runtime code paths unless behind `__DEV__` flag.
+ */
 export const isSVGTag = /*#__PURE__*/ makeMap(SVG_TAGS)
+/**
+ * Compiler only.
+ * Do NOT use in runtime code paths unless behind `__DEV__` flag.
+ */
 export const isVoidTag = /*#__PURE__*/ makeMap(VOID_TAGS)
-export const isFormTag = /*#__PURE__*/ makeMap(FORM_TAGS, true)

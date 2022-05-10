@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg" href="/logo.svg" />
+    <title>Vue SFC Playground</title>
+    <script>
+      // process shim for old versions of @vue/compiler-sfc dependency
+      window.process = { env: {} }
+      const saved = localStorage.getItem('vue-sfc-playground-prefer-dark')
+      if (
+        saved !== 'false' ||
+        window.matchMedia('(prefers-color-scheme: dark)').matches
+      ) {
+        document.documentElement.classList.add('dark')
+      }
+    </script>
+    <script type="module" src="/src/main.ts"></script>
+  </head>
+  <body>
+    <div id="app"></div>
+  </body>
+</html>

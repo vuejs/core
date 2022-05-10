@@ -7,7 +7,7 @@ import * as runtimeDom from '@vue/runtime-dom'
 import { isString, NOOP, generateCodeFrame, extend } from '@vue/shared'
 import { InternalRenderFunction } from 'packages/runtime-core/src/component'
 
-if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+if (__DEV__) {
   initDev()
 }
 
@@ -49,34 +49,34 @@ function compileToFunction(
     extend(
       {
         hoistStatic: true,
-        onError(err: CompilerError) {
-          if (__DEV__) {
-            const message = `Template compilation error: ${err.message}`
-            const codeFrame =
-              err.loc &&
-              generateCodeFrame(
-                template as string,
-                err.loc.start.offset,
-                err.loc.end.offset
-              )
-            warn(codeFrame ? `${message}\n${codeFrame}` : message)
-          } else {
-            /* istanbul ignore next */
-            throw err
-          }
-        }
-      },
+        onError: __DEV__ ? onError : undefined,
+        onWarn: __DEV__ ? e => onError(e, true) : NOOP
+      } as CompilerOptions,
       options
     )
   )
+
+  function onError(err: CompilerError, asWarning = false) {
+    const message = asWarning
+      ? err.message
+      : `Template compilation error: ${err.message}`
+    const codeFrame =
+      err.loc &&
+      generateCodeFrame(
+        template as string,
+        err.loc.start.offset,
+        err.loc.end.offset
+      )
+    warn(codeFrame ? `${message}\n${codeFrame}` : message)
+  }
 
   // The wildcard import results in a huge object with every export
   // with keys that cannot be mangled, and can be quite heavy size-wise.
   // In the global build we know `Vue` is available globally so we can avoid
   // the wildcard object.
-  const render = (__GLOBAL__
-    ? new Function(code)()
-    : new Function('Vue', code)(runtimeDom)) as RenderFunction
+  const render = (
+    __GLOBAL__ ? new Function(code)() : new Function('Vue', code)(runtimeDom)
+  ) as RenderFunction
 
   // mark the function as runtime compiled
   ;(render as InternalRenderFunction)._rc = true

@@ -8,14 +8,16 @@ import {
 import {
   mutableCollectionHandlers,
   readonlyCollectionHandlers,
-  shallowCollectionHandlers
+  shallowCollectionHandlers,
+  shallowReadonlyCollectionHandlers
 } from './collectionHandlers'
-import { UnwrapRef, Ref } from './ref'
+import { UnwrapRefSimple, Ref, RawSymbol } from './ref'
 
 export const enum ReactiveFlags {
   SKIP = '__v_skip',
   IS_REACTIVE = '__v_isReactive',
   IS_READONLY = '__v_isReadonly',
+  IS_SHALLOW = '__v_isShallow',
   RAW = '__v_raw'
 }
 
@@ -23,11 +25,14 @@ export interface Target {
   [ReactiveFlags.SKIP]?: boolean
   [ReactiveFlags.IS_REACTIVE]?: boolean
   [ReactiveFlags.IS_READONLY]?: boolean
+  [ReactiveFlags.IS_SHALLOW]?: boolean
   [ReactiveFlags.RAW]?: any
 }
 
 export const reactiveMap = new WeakMap<Target, any>()
+export const shallowReactiveMap = new WeakMap<Target, any>()
 export const readonlyMap = new WeakMap<Target, any>()
+export const shallowReadonlyMap = new WeakMap<Target, any>()
 
 const enum TargetType {
   INVALID = 0,
@@ -57,7 +62,7 @@ function getTargetType(value: Target) {
 }
 
 // only unwrap nested ref
-type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRef<T>
+export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRefSimple<T>
 
 /**
  * Creates a reactive copy of the original object.
@@ -84,28 +89,36 @@ type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRef<T>
 export function reactive<T extends object>(target: T): UnwrapNestedRefs<T>
 export function reactive(target: object) {
   // if trying to observe a readonly proxy, return the readonly version.
-  if (target && (target as Target)[ReactiveFlags.IS_READONLY]) {
+  if (isReadonly(target)) {
     return target
   }
   return createReactiveObject(
     target,
     false,
     mutableHandlers,
-    mutableCollectionHandlers
+    mutableCollectionHandlers,
+    reactiveMap
   )
 }
+
+export declare const ShallowReactiveMarker: unique symbol
+
+export type ShallowReactive<T> = T & { [ShallowReactiveMarker]?: true }
 
 /**
  * Return a shallowly-reactive copy of the original object, where only the root
  * level properties are reactive. It also does not auto-unwrap refs (even at the
  * root level).
  */
-export function shallowReactive<T extends object>(target: T): T {
+export function shallowReactive<T extends object>(
+  target: T
+): ShallowReactive<T> {
   return createReactiveObject(
     target,
     false,
     shallowReactiveHandlers,
-    shallowCollectionHandlers
+    shallowCollectionHandlers,
+    shallowReactiveMap
   )
 }
 
@@ -114,22 +127,24 @@ type Builtin = Primitive | Function | Date | Error | RegExp
 export type DeepReadonly<T> = T extends Builtin
   ? T
   : T extends Map<infer K, infer V>
-    ? ReadonlyMap<DeepReadonly<K>, DeepReadonly<V>>
-    : T extends ReadonlyMap<infer K, infer V>
-      ? ReadonlyMap<DeepReadonly<K>, DeepReadonly<V>>
-      : T extends WeakMap<infer K, infer V>
-        ? WeakMap<DeepReadonly<K>, DeepReadonly<V>>
-        : T extends Set<infer U>
-          ? ReadonlySet<DeepReadonly<U>>
-          : T extends ReadonlySet<infer U>
-            ? ReadonlySet<DeepReadonly<U>>
-            : T extends WeakSet<infer U>
-              ? WeakSet<DeepReadonly<U>>
-              : T extends Promise<infer U>
-                ? Promise<DeepReadonly<U>>
-                : T extends {}
-                  ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
-                  : Readonly<T>
+  ? ReadonlyMap<DeepReadonly<K>, DeepReadonly<V>>
+  : T extends ReadonlyMap<infer K, infer V>
+  ? ReadonlyMap<DeepReadonly<K>, DeepReadonly<V>>
+  : T extends WeakMap<infer K, infer V>
+  ? WeakMap<DeepReadonly<K>, DeepReadonly<V>>
+  : T extends Set<infer U>
+  ? ReadonlySet<DeepReadonly<U>>
+  : T extends ReadonlySet<infer U>
+  ? ReadonlySet<DeepReadonly<U>>
+  : T extends WeakSet<infer U>
+  ? WeakSet<DeepReadonly<U>>
+  : T extends Promise<infer U>
+  ? Promise<DeepReadonly<U>>
+  : T extends Ref<infer U>
+  ? Readonly<Ref<DeepReadonly<U>>>
+  : T extends {}
+  ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
+  : Readonly<T>
 
 /**
  * Creates a readonly copy of the original object. Note the returned copy is not
@@ -142,7 +157,8 @@ export function readonly<T extends object>(
     target,
     true,
     readonlyHandlers,
-    readonlyCollectionHandlers
+    readonlyCollectionHandlers,
+    readonlyMap
   )
 }
 
@@ -152,14 +168,13 @@ export function readonly<T extends object>(
  * returned properties.
  * This is used for creating the props proxy object for stateful components.
  */
-export function shallowReadonly<T extends object>(
-  target: T
-): Readonly<{ [K in keyof T]: UnwrapNestedRefs<T[K]> }> {
+export function shallowReadonly<T extends object>(target: T): Readonly<T> {
   return createReactiveObject(
     target,
     true,
     shallowReadonlyHandlers,
-    readonlyCollectionHandlers
+    shallowReadonlyCollectionHandlers,
+    shallowReadonlyMap
   )
 }
 
@@ -167,7 +182,8 @@ function createReactiveObject(
   target: Target,
   isReadonly: boolean,
   baseHandlers: ProxyHandler<any>,
-  collectionHandlers: ProxyHandler<any>
+  collectionHandlers: ProxyHandler<any>,
+  proxyMap: WeakMap<Target, any>
 ) {
   if (!isObject(target)) {
     if (__DEV__) {
@@ -184,7 +200,6 @@ function createReactiveObject(
     return target
   }
   // target already has corresponding Proxy
-  const proxyMap = isReadonly ? readonlyMap : reactiveMap
   const existingProxy = proxyMap.get(target)
   if (existingProxy) {
     return existingProxy
@@ -213,17 +228,28 @@ export function isReadonly(value: unknown): boolean {
   return !!(value && (value as Target)[ReactiveFlags.IS_READONLY])
 }
 
+export function isShallow(value: unknown): boolean {
+  return !!(value && (value as Target)[ReactiveFlags.IS_SHALLOW])
+}
+
 export function isProxy(value: unknown): boolean {
   return isReactive(value) || isReadonly(value)
 }
 
 export function toRaw<T>(observed: T): T {
-  return (
-    (observed && toRaw((observed as Target)[ReactiveFlags.RAW])) || observed
-  )
+  const raw = observed && (observed as Target)[ReactiveFlags.RAW]
+  return raw ? toRaw(raw) : observed
 }
 
-export function markRaw<T extends object>(value: T): T {
+export function markRaw<T extends object>(
+  value: T
+): T & { [RawSymbol]?: true } {
   def(value, ReactiveFlags.SKIP, true)
   return value
 }
+
+export const toReactive = <T extends unknown>(value: T): T =>
+  isObject(value) ? reactive(value) : value
+
+export const toReadonly = <T extends unknown>(value: T): T =>
+  isObject(value) ? readonly(value as Record<any, any>) : value
