@@ -29,6 +29,7 @@ export {
 // Types
 export {
   SFCParseOptions,
+  SFCParseResult,
   SFCDescriptor,
   SFCBlock,
   SFCTemplateBlock,
