@@ -141,7 +141,7 @@ describe('sfc props transform', () => {
       foo: BindingTypes.PROPS,
       bar: BindingTypes.PROPS,
       baz: BindingTypes.PROPS,
-      rest: BindingTypes.SETUP_CONST
+      rest: BindingTypes.SETUP_REACTIVE_CONST
     })
   })
 

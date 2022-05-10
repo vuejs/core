@@ -68,7 +68,7 @@ const bar = 1
     expect(bindings).toStrictEqual({
       foo: BindingTypes.PROPS,
       bar: BindingTypes.SETUP_CONST,
-      props: BindingTypes.SETUP_CONST
+      props: BindingTypes.SETUP_REACTIVE_CONST
     })
 
     // should remove defineOptions import and call
