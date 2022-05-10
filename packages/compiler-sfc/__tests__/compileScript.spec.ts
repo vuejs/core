@@ -1550,4 +1550,59 @@ describe('SFC analyze <script> bindings', () => {
       foo: BindingTypes.PROPS
     })
   })
+
+  describe('auto name inference', () => {
+    test('basic', () => {
+      const { content } = compile(
+        `<script setup>const a = 1</script>
+        <template>{{ a }}</template>`,
+        undefined,
+        {
+          filename: 'FooBar.vue'
+        }
+      )
+      expect(content).toMatch(`export default {
+  name: 'FooBar'`)
+      assertCode(content)
+    })
+
+    test('do not overwrite manual name (object)', () => {
+      const { content } = compile(
+        `<script>
+        export default {
+          name: 'Baz'
+        }
+        </script>
+        <script setup>const a = 1</script>
+        <template>{{ a }}</template>`,
+        undefined,
+        {
+          filename: 'FooBar.vue'
+        }
+      )
+      expect(content).not.toMatch(`name: 'FooBar'`)
+      expect(content).toMatch(`name: 'Baz'`)
+      assertCode(content)
+    })
+
+    test('do not overwrite manual name (call)', () => {
+      const { content } = compile(
+        `<script>
+        import { defineComponent } from 'vue'
+        export default defineComponent({
+          name: 'Baz'
+        })
+        </script>
+        <script setup>const a = 1</script>
+        <template>{{ a }}</template>`,
+        undefined,
+        {
+          filename: 'FooBar.vue'
+        }
+      )
+      expect(content).not.toMatch(`name: 'FooBar'`)
+      expect(content).toMatch(`name: 'Baz'`)
+      assertCode(content)
+    })
+  })
 })
