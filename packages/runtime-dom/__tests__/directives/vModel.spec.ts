@@ -597,6 +597,76 @@ describe('vModel', () => {
     expect(bar.checked).toEqual(true)
   })
 
+  it('should work with range #5875', async () => {
+    const component = defineComponent({
+      data() {
+        return { value: 50 }
+      },
+      render() {
+        return [
+          withVModel(
+            h('input', {
+              type: 'range',
+              min: 1,
+              max: 100,
+              class: 'foo',
+              'onUpdate:modelValue': setValue.bind(this)
+            }),
+            this.value,
+            {
+              number: true
+            }
+          ),
+          withVModel(
+            h('input', {
+              type: 'range',
+              min: 1,
+              max: 100,
+              class: 'bar',
+              'onUpdate:modelValue': setValue.bind(this),
+              onChange: Change
+            }),
+            this.value,
+            {
+              number: true,
+              lazy: true
+            }
+          )
+        ]
+      }
+    })
+    render(h(component), root)
+
+    const foo = root.querySelector('.foo')
+    const bar = root.querySelector('.bar')
+    const data = root._vnode.component.data
+
+    function Change() {
+      setTimeout(() => {
+         data.value = 0;
+      })
+    }
+
+    foo.value = 20
+    triggerEvent('input', foo)
+    await nextTick()
+    expect(data.value).toEqual(20)
+
+    bar.value = 30
+    triggerEvent('change', foo)
+    await nextTick()
+    setTimeout(() => {
+      expect(data.value).toEqual(30)
+    })
+
+    data.value = 60
+    await nextTick()
+    expect(foo.value).toEqual('60')
+    setTimeout(() => {
+      expect(bar.value).toEqual('0')
+    })
+  })
+
   it('should work with single select', async () => {
     const component = defineComponent({
       data() {
