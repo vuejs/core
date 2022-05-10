@@ -59,7 +59,7 @@ describe('sfc props transform', () => {
     // function
     expect(content).toMatch(`props: _mergeDefaults(['foo', 'bar'], {
   foo: 1,
-  bar: () => {}
+  bar: () => ({})
 })`)
     assertCode(content)
   })
@@ -74,7 +74,7 @@ describe('sfc props transform', () => {
     // function
     expect(content).toMatch(`props: {
     foo: { type: Number, required: false, default: 1 },
-    bar: { type: Object, required: false, default: () => {} }
+    bar: { type: Object, required: false, default: () => ({}) }
   }`)
     assertCode(content)
   })
@@ -92,11 +92,11 @@ describe('sfc props transform', () => {
     // function
     expect(content).toMatch(`props: {
     foo: { default: 1 },
-    bar: { default: () => {} },
+    bar: { default: () => ({}) },
     baz: null,
     boola: { type: Boolean },
     boolb: { type: [Boolean, Number] },
-    func: { type: Function, default: () => () => {} }
+    func: { type: Function, default: () => (() => {}) }
   }`)
     assertCode(content)
   })

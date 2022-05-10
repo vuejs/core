@@ -735,7 +735,7 @@ export function compileScript(
         destructured.default.end!
       )
       const isLiteral = destructured.default.type.endsWith('Literal')
-      return isLiteral ? value : `() => ${value}`
+      return isLiteral ? value : `() => (${value})`
     }
   }
 
