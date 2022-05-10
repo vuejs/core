@@ -28,7 +28,7 @@ jobs:
       - name: Run unit tests
         run: pnpm run test
 
-  test-dts:
+  lint-and-test-dts:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -45,6 +45,9 @@ jobs:
           cache: 'pnpm'
 
       - run: pnpm install
+
+      - name: Run eslint
+        run: pnpm run lint
 
       - name: Run type declaration tests
         run: pnpm run test-dts
