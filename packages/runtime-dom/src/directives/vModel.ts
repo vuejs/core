@@ -18,7 +18,7 @@ import {
 type AssignerFn = (value: any) => void
 
 const getModelAssigner = (vnode: VNode): AssignerFn => {
-  const fn = vnode.props!['onUpdate:modelValue'] || vnode.props!['onModelCompat:input']
+  const fn = vnode.props!['onUpdate:modelValue'] || (__COMPAT__ && vnode.props!['onModelCompat:input'])
   return isArray(fn) ? value => invokeArrayFns(fn, value) : fn
 }
 
