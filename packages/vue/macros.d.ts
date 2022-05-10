@@ -55,7 +55,7 @@ type DestructureRefs<T extends object> = {
 }
 
 /**
- * Vue ref transform macro for accessing underlying refs of reactive varaibles.
+ * Vue ref transform macro for accessing underlying refs of reactive variables.
  */
 export declare function $$<T extends object>(arg: NormalObject<T>): ToRawRefs<T>
 export declare function $$<T>(value: RefValue<T>): Ref<T>
