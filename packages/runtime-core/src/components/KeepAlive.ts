@@ -285,6 +285,10 @@ const KeepAliveImpl: ComponentOptions = {
       const key = vnode.key == null ? comp : vnode.key
       const cachedVNode = cache.get(key)
 
+      // avoid vnode being unmounted
+      // before cloneVNode
+      vnode.shapeFlag |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+
       // clone vnode if it's reused because we are going to mutate it
       if (vnode.el) {
         vnode = cloneVNode(vnode)
@@ -319,8 +323,6 @@ const KeepAliveImpl: ComponentOptions = {
           pruneCacheEntry(keys.values().next().value)
         }
       }
-      // avoid vnode being unmounted
-      vnode.shapeFlag |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
 
       current = vnode
       return rawVNode
