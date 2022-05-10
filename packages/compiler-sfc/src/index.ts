@@ -34,8 +34,7 @@ export {
   SFCBlock,
   SFCTemplateBlock,
   SFCScriptBlock,
-  SFCStyleBlock,
-  SFCParseResult
+  SFCStyleBlock
 } from './parse'
 export {
   TemplateCompiler,
