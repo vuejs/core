@@ -29,12 +29,12 @@ export {
 // Types
 export {
   SFCParseOptions,
+  SFCParseResult,
   SFCDescriptor,
   SFCBlock,
   SFCTemplateBlock,
   SFCScriptBlock,
-  SFCStyleBlock,
-  SFCParseResult
+  SFCStyleBlock
 } from './parse'
 export {
   TemplateCompiler,

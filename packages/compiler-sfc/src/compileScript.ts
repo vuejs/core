@@ -11,7 +11,7 @@ import {
   isFunctionType,
   walkIdentifiers
 } from '@vue/compiler-dom'
-import { SFCDescriptor, SFCScriptBlock } from './parse'
+import { DEFAULT_FILENAME, SFCDescriptor, SFCScriptBlock } from './parse'
 import { parse as _parse, ParserOptions, ParserPlugin } from '@babel/parser'
 import { camelize, capitalize, generateCodeFrame, makeMap } from '@vue/shared'
 import {
@@ -172,6 +172,12 @@ export function compileScript(
   const plugins: ParserPlugin[] = []
   if (!isTS || scriptLang === 'tsx' || scriptSetupLang === 'tsx') {
     plugins.push('jsx')
+  } else {
+    // If don't match the case of adding jsx, should remove the jsx from the babelParserPlugins
+    if (options.babelParserPlugins)
+      options.babelParserPlugins = options.babelParserPlugins.filter(
+        n => n !== 'jsx'
+      )
   }
   if (options.babelParserPlugins) plugins.push(...options.babelParserPlugins)
   if (isTS) plugins.push('typescript', 'decorators-legacy')
@@ -263,6 +269,7 @@ export function compileScript(
   let hasDefinePropsCall = false
   let hasDefineEmitCall = false
   let hasDefineExposeCall = false
+  let hasDefaultExportName = false
   let propsRuntimeDecl: Node | undefined
   let propsRuntimeDefaults: ObjectExpression | undefined
   let propsDestructureDecl: Node | undefined
@@ -735,7 +742,7 @@ export function compileScript(
         destructured.default.end!
       )
       const isLiteral = destructured.default.type.endsWith('Literal')
-      return isLiteral ? value : `() => ${value}`
+      return isLiteral ? value : `() => (${value})`
     }
   }
 
@@ -802,13 +809,34 @@ export function compileScript(
             node.source.value,
             specifier.local.name,
             imported,
-            node.importKind === 'type',
+            node.importKind === 'type' ||
+              (specifier.type === 'ImportSpecifier' &&
+                specifier.importKind === 'type'),
             false
           )
         }
       } else if (node.type === 'ExportDefaultDeclaration') {
         // export default
         defaultExport = node
+
+        // check if user has manually specified `name` option in export default
+        // if yes, skip infer later
+        let optionProperties
+        if (defaultExport.declaration.type === 'ObjectExpression') {
+          optionProperties = defaultExport.declaration.properties
+        } else if (
+          defaultExport.declaration.type === 'CallExpression' &&
+          defaultExport.declaration.arguments[0].type === 'ObjectExpression'
+        ) {
+          optionProperties = defaultExport.declaration.arguments[0].properties
+        }
+        hasDefaultExportName = !!optionProperties?.some(
+          s =>
+            s.type === 'ObjectProperty' &&
+            s.key.type === 'Identifier' &&
+            s.key.name === 'name'
+        )
+
         // export default { ... } --> const __default__ = { ... }
         const start = node.start! + scriptStartOffset!
         const end = node.declaration.start! + scriptStartOffset!
@@ -979,7 +1007,9 @@ export function compileScript(
             source,
             local,
             imported,
-            node.importKind === 'type',
+            node.importKind === 'type' ||
+              (specifier.type === 'ImportSpecifier' &&
+                specifier.importKind === 'type'),
             true
           )
         }
@@ -1177,7 +1207,8 @@ export function compileScript(
   // props aliases
   if (propsDestructureDecl) {
     if (propsDestructureRestId) {
-      bindingMetadata[propsDestructureRestId] = BindingTypes.SETUP_CONST
+      bindingMetadata[propsDestructureRestId] =
+        BindingTypes.SETUP_REACTIVE_CONST
     }
     for (const key in propsDestructuredBindings) {
       const { local } = propsDestructuredBindings[key]
@@ -1360,6 +1391,12 @@ export function compileScript(
 
   // 11. finalize default export
   let runtimeOptions = ``
+  if (!hasDefaultExportName && filename && filename !== DEFAULT_FILENAME) {
+    const match = filename.match(/([^/\\]+)\.\w+$/)
+    if (match) {
+      runtimeOptions += `\n  name: '${match[1]}',`
+    }
+  }
   if (hasInlinedSsrRenderFn) {
     runtimeOptions += `\n  __ssrInlineRender: true,`
   }
@@ -1489,14 +1526,18 @@ function walkDeclaration(
         const userReactiveBinding = userImportAlias['reactive'] || 'reactive'
         if (isCallOf(init, userReactiveBinding)) {
           // treat reactive() calls as let since it's meant to be mutable
-          bindingType = BindingTypes.SETUP_LET
+          bindingType = isConst
+            ? BindingTypes.SETUP_REACTIVE_CONST
+            : BindingTypes.SETUP_LET
         } else if (
           // if a declaration is a const literal, we can mark it so that
           // the generated render fn code doesn't need to unref() it
           isDefineCall ||
           (isConst && canNeverBeRef(init!, userReactiveBinding))
         ) {
-          bindingType = BindingTypes.SETUP_CONST
+          bindingType = isCallOf(init, DEFINE_PROPS)
+            ? BindingTypes.SETUP_REACTIVE_CONST
+            : BindingTypes.SETUP_CONST
         } else if (isConst) {
           if (isCallOf(init, userImportAlias['ref'] || 'ref')) {
             bindingType = BindingTypes.SETUP_REF

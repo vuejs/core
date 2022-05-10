@@ -1015,7 +1015,7 @@ describe('vModel', () => {
     bar.selected = false
     data.value = new Set([{ foo: 1 }, { bar: 1 }])
     await nextTick()
-    // whithout looseEqual, here is different from Array
+    // without looseEqual, here is different from Array
     expect(foo.selected).toEqual(false)
     expect(bar.selected).toEqual(false)
   })

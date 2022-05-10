@@ -73,6 +73,7 @@ export function emit(
   event: string,
   ...rawArgs: any[]
 ) {
+  if (instance.isUnmounted) return
   const props = instance.vnode.props || EMPTY_OBJ
 
   if (__DEV__) {

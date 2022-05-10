@@ -1288,7 +1288,6 @@ function baseCreateRenderer(
       }
     } else {
       // no update needed. just copy over properties
-      n2.component = n1.component
       n2.el = n1.el
       instance.vnode = n2
     }
@@ -1544,11 +1543,11 @@ function baseCreateRenderer(
     // create reactive effect for rendering
     const effect = (instance.effect = new ReactiveEffect(
       componentUpdateFn,
-      () => queueJob(instance.update),
+      () => queueJob(update),
       instance.scope // track it in component's effect scope
     ))
 
-    const update = (instance.update = effect.run.bind(effect) as SchedulerJob)
+    const update: SchedulerJob = (instance.update = () => effect.run())
     update.id = instance.uid
     // allowRecurse
     // #1801, #2043 component render effects should allow recursive updates
@@ -1561,7 +1560,6 @@ function baseCreateRenderer(
       effect.onTrigger = instance.rtg
         ? e => invokeArrayFns(instance.rtg!, e)
         : void 0
-      // @ts-ignore (for scheduler)
       update.ownerInstance = instance
     }
 
@@ -2159,7 +2157,23 @@ function baseCreateRenderer(
   const remove: RemoveFn = vnode => {
     const { type, el, anchor, transition } = vnode
     if (type === Fragment) {
-      removeFragment(el!, anchor!)
+      if (
+        __DEV__ &&
+        vnode.patchFlag > 0 &&
+        vnode.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT &&
+        transition &&
+        !transition.persisted
+      ) {
+        ;(vnode.children as VNode[]).forEach(child => {
+          if (child.type === Comment) {
+            hostRemove(child.el!)
+          } else {
+            remove(child)
+          }
+        })
+      } else {
+        removeFragment(el!, anchor!)
+      }
       return
     }
 

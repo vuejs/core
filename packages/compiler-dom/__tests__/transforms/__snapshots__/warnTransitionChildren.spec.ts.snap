@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`the v-if/else-if/else branchs in Transition should ignore comments 1`] = `
+exports[`the v-if/else-if/else branches in Transition should ignore comments 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {

@@ -51,51 +51,48 @@ export function patchDOMProp(
     return
   }
 
+  let needRemove = false
   if (value === '' || value == null) {
     const type = typeof el[key]
     if (type === 'boolean') {
       // e.g. <select multiple> compiles to { multiple: '' }
-      el[key] = includeBooleanAttr(value)
-      return
+      value = includeBooleanAttr(value)
     } else if (value == null && type === 'string') {
       // e.g. <div :id="null">
-      el[key] = ''
-      el.removeAttribute(key)
-      return
+      value = ''
+      needRemove = true
     } else if (type === 'number') {
       // e.g. <img :width="null">
       // the value of some IDL attr must be greater than 0, e.g. input.size = 0 -> error
-      try {
-        el[key] = 0
-      } catch {}
-      el.removeAttribute(key)
-      return
+      value = 0
+      needRemove = true
+    }
+  } else {
+    if (
+      __COMPAT__ &&
+      value === false &&
+      compatUtils.isCompatEnabled(
+        DeprecationTypes.ATTR_FALSE_VALUE,
+        parentComponent
+      )
+    ) {
+      const type = typeof el[key]
+      if (type === 'string' || type === 'number') {
+        __DEV__ &&
+          compatUtils.warnDeprecation(
+            DeprecationTypes.ATTR_FALSE_VALUE,
+            parentComponent,
+            key
+          )
+        value = type === 'number' ? 0 : ''
+        needRemove = true
+      }
     }
   }
 
-  if (
-    __COMPAT__ &&
-    value === false &&
-    compatUtils.isCompatEnabled(
-      DeprecationTypes.ATTR_FALSE_VALUE,
-      parentComponent
-    )
-  ) {
-    const type = typeof el[key]
-    if (type === 'string' || type === 'number') {
-      __DEV__ &&
-        compatUtils.warnDeprecation(
-          DeprecationTypes.ATTR_FALSE_VALUE,
-          parentComponent,
-          key
-        )
-      el[key] = type === 'number' ? 0 : ''
-      el.removeAttribute(key)
-      return
-    }
-  }
-
-  // some properties perform value validation and throw
+  // some properties perform value validation and throw,
+  // some properties has getter, no setter, will error in 'use strict'
+  // eg. <select :type="null"></select> <select :willValidate="null"></select>
   try {
     el[key] = value
   } catch (e: any) {
@@ -107,4 +104,5 @@ export function patchDOMProp(
       )
     }
   }
+  needRemove && el.removeAttribute(key)
 }

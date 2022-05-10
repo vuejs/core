@@ -459,7 +459,7 @@ describe('reactivity/readonly', () => {
     expect(
       'Set operation on key "_dirty" failed: target is readonly.'
     ).not.toHaveBeenWarned()
-    // @ts-expect-error - non-existant property
+    // @ts-expect-error - non-existent property
     rC.randomProperty = true
 
     expect(
@@ -476,7 +476,7 @@ describe('reactivity/readonly', () => {
     expect(isReadonly(rr.foo)).toBe(true)
   })
 
-  test('attemptingt to write plain value to a readonly ref nested in a reactive object should fail', () => {
+  test('attempting to write plain value to a readonly ref nested in a reactive object should fail', () => {
     const r = ref(false)
     const ror = readonly(r)
     const obj = reactive({ ror })
