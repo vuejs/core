@@ -9,7 +9,6 @@ import {
 } from './component'
 import { queueJob, queuePostFlushCb } from './scheduler'
 import { extend, getGlobalThis } from '@vue/shared'
-import { warn } from './warning'
 
 type HMRComponent = ComponentOptions | ClassComponent
 
