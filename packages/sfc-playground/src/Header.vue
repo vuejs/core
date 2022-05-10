@@ -5,6 +5,7 @@ import Sun from './icons/Sun.vue'
 import Moon from './icons/Moon.vue'
 import Share from './icons/Share.vue'
 import Download from './icons/Download.vue'
+import GitHub from './icons/GitHub.vue'
 
 // @ts-ignore
 const { store } = defineProps(['store'])
@@ -56,7 +57,7 @@ onMounted(async () => {
 
 async function fetchVersions(): Promise<string[]> {
   const res = await fetch(
-    `https://api.github.com/repos/vuejs/vue-next/releases?per_page=100`
+    `https://api.github.com/repos/vuejs/core/releases?per_page=100`
   )
   const releases: any[] = await res.json()
   const versions = releases.map(r =>
@@ -125,6 +126,17 @@ async function fetchVersions(): Promise<string[]> {
       >
         <Download />
       </button>
+      <button
+          title="View on GitHub"
+          class="github"
+      >
+        <a
+            href="https://github.com/vuejs/core/tree/main/packages/sfc-playground"
+            target="_blank"
+        >
+          <GitHub />
+        </a>
+      </button>
     </div>
   </nav>
 </template>
@@ -179,7 +191,7 @@ h1 img {
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 520px) {
   h1 span {
     display: none;
   }
@@ -272,7 +284,8 @@ h1 img {
 }
 
 .share,
-.download {
+.download,
+.github {
   margin: 0 2px;
 }
 </style>

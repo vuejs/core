@@ -48,10 +48,7 @@ import { compileTemplate, SFCTemplateCompileOptions } from './compileTemplate'
 import { warnOnce } from './warn'
 import { rewriteDefault } from './rewriteDefault'
 import { createCache } from './cache'
-import {
-  shouldTransform as shouldTransformRef,
-  transformAST as transformRefAST
-} from '@vue/ref-transform'
+import { shouldTransform, transformAST } from '@vue/reactivity-transform'
 
 // Special compiler macros
 const DEFINE_PROPS = 'defineProps'
@@ -59,13 +56,16 @@ const DEFINE_EMITS = 'defineEmits'
 const DEFINE_EXPOSE = 'defineExpose'
 const WITH_DEFAULTS = 'withDefaults'
 
+// constants
+const DEFAULT_VAR = `__default__`
+
 const isBuiltInDir = makeMap(
   `once,memo,if,else,else-if,slot,text,html,on,bind,model,show,cloak,is`
 )
 
 export interface SFCScriptCompileOptions {
   /**
-   * Scope ID for prefixing injected CSS varialbes.
+   * Scope ID for prefixing injected CSS variables.
    * This must be consistent with the `id` passed to `compileStyle`.
    */
   id: string
@@ -82,19 +82,26 @@ export interface SFCScriptCompileOptions {
    */
   babelParserPlugins?: ParserPlugin[]
   /**
+   * (Experimental) Enable syntax transform for using refs without `.value` and
+   * using destructured props with reactivity
+   */
+  reactivityTransform?: boolean
+  /**
    * (Experimental) Enable syntax transform for using refs without `.value`
    * https://github.com/vuejs/rfcs/discussions/369
+   * @deprecated now part of `reactivityTransform`
    * @default false
    */
   refTransform?: boolean
   /**
    * (Experimental) Enable syntax transform for destructuring from defineProps()
    * https://github.com/vuejs/rfcs/discussions/394
+   * @deprecated now part of `reactivityTransform`
    * @default false
    */
   propsDestructureTransform?: boolean
   /**
-   * @deprecated use `refTransform` instead.
+   * @deprecated use `reactivityTransform` instead.
    */
   refSugar?: boolean
   /**
@@ -107,7 +114,7 @@ export interface SFCScriptCompileOptions {
   inlineTemplate?: boolean
   /**
    * Options for template compilation when inlining. Note these are options that
-   * would normally be pased to `compiler-sfc`'s own `compileTemplate()`, not
+   * would normally be passed to `compiler-sfc`'s own `compileTemplate()`, not
    * options passed to `compiler-dom`.
    */
   templateOptions?: Partial<SFCTemplateCompileOptions>
@@ -132,8 +139,13 @@ export function compileScript(
 ): SFCScriptBlock {
   let { script, scriptSetup, source, filename } = sfc
   // feature flags
-  const enableRefTransform = !!options.refSugar || !!options.refTransform
-  const enablePropsTransform = !!options.propsDestructureTransform
+  // TODO remove support for deprecated options when out of experimental
+  const enableReactivityTransform =
+    !!options.reactivityTransform ||
+    !!options.refSugar ||
+    !!options.refTransform
+  const enablePropsTransform =
+    !!options.reactivityTransform || !!options.propsDestructureTransform
   const isProd = !!options.isProd
   const genSourceMap = options.sourceMap !== false
   let refBindings: string[] | undefined
@@ -155,6 +167,8 @@ export function compileScript(
     scriptLang === 'tsx' ||
     scriptSetupLang === 'ts' ||
     scriptSetupLang === 'tsx'
+
+  // resolve parser plugins
   const plugins: ParserPlugin[] = []
   if (!isTS || scriptLang === 'tsx' || scriptSetupLang === 'tsx') {
     plugins.push('jsx')
@@ -178,11 +192,11 @@ export function compileScript(
         sourceType: 'module'
       }).program
       const bindings = analyzeScriptBindings(scriptAst.body)
-      if (enableRefTransform && shouldTransformRef(content)) {
+      if (enableReactivityTransform && shouldTransform(content)) {
         const s = new MagicString(source)
         const startOffset = script.loc.start.offset
         const endOffset = script.loc.end.offset
-        const { importedHelpers } = transformRefAST(scriptAst, s, startOffset)
+        const { importedHelpers } = transformAST(scriptAst, s, startOffset)
         if (importedHelpers.length) {
           s.prepend(
             `import { ${importedHelpers
@@ -202,14 +216,14 @@ export function compileScript(
         }
       }
       if (cssVars.length) {
-        content = rewriteDefault(content, `__default__`, plugins)
+        content = rewriteDefault(content, DEFAULT_VAR, plugins)
         content += genNormalScriptCssVarsCode(
           cssVars,
           bindings,
           scopeId,
           isProd
         )
-        content += `\nexport default __default__`
+        content += `\nexport default ${DEFAULT_VAR}`
       }
       return {
         ...script,
@@ -239,7 +253,6 @@ export function compileScript(
 
   // metadata that needs to be returned
   const bindingMetadata: BindingMetadata = {}
-  const defaultTempVar = `__default__`
   const helperImports: Set<string> = new Set()
   const userImports: Record<string, ImportBinding> = Object.create(null)
   const userImportAlias: Record<string, string> = Object.create(null)
@@ -413,7 +426,7 @@ export function compileScript(
                 default: right
               }
             } else if (prop.value.type === 'Identifier') {
-              // simple destucture
+              // simple destructure
               propsDestructuredBindings[propKey] = {
                 local: prop.value.name
               }
@@ -633,7 +646,7 @@ export function compileScript(
 
   /**
    * check defaults. If the default object is an object literal with only
-   * static properties, we can directly generate more optimzied default
+   * static properties, we can directly generate more optimized default
    * declarations. Otherwise we will have to fallback to runtime merging.
    */
   function hasStaticWithDefaults() {
@@ -723,7 +736,7 @@ export function compileScript(
         destructured.default.end!
       )
       const isLiteral = destructured.default.type.endsWith('Literal')
-      return isLiteral ? value : `() => ${value}`
+      return isLiteral ? value : `() => (${value})`
     }
   }
 
@@ -769,7 +782,6 @@ export function compileScript(
   // 1. process normal <script> first if it exists
   let scriptAst: Program | undefined
   if (script) {
-    // import dedupe between <script> and <script setup>
     scriptAst = parse(
       script.content,
       {
@@ -791,13 +803,16 @@ export function compileScript(
             node.source.value,
             specifier.local.name,
             imported,
-            node.importKind === 'type',
+            node.importKind === 'type' ||
+              (specifier.type === 'ImportSpecifier' &&
+                specifier.importKind === 'type'),
             false
           )
         }
       } else if (node.type === 'ExportDefaultDeclaration') {
         // export default
         defaultExport = node
+        // export default { ... } --> const __default__ = { ... }
         let tempArray
         const start = node.start! + scriptStartOffset!
         const end = node.declaration.start! + scriptStartOffset!
@@ -815,7 +830,7 @@ export function compileScript(
             s.key.type === 'Identifier' &&
             s.key.name === 'name'
         )
-        s.overwrite(start, end, `const ${defaultTempVar} = `)
+        s.overwrite(start, end, `const ${DEFAULT_VAR} = `)
       } else if (node.type === 'ExportNamedDeclaration') {
         const defaultSpecifier = node.specifiers.find(
           s => s.exported.type === 'Identifier' && s.exported.name === 'default'
@@ -839,13 +854,14 @@ export function compileScript(
             // rewrite to `import { x as __default__ } from './x'` and
             // add to top
             s.prepend(
-              `import { ${defaultSpecifier.local.name} as ${defaultTempVar} } from '${node.source.value}'\n`
+              `import { ${defaultSpecifier.local.name} as ${DEFAULT_VAR} } from '${node.source.value}'\n`
             )
           } else {
             // export { x as default }
             // rewrite to `const __default__ = x` and move to end
-            s.append(
-              `\nconst ${defaultTempVar} = ${defaultSpecifier.local.name}\n`
+            s.appendLeft(
+              scriptEndOffset!,
+              `\nconst ${DEFAULT_VAR} = ${defaultSpecifier.local.name}\n`
             )
           }
         }
@@ -863,17 +879,24 @@ export function compileScript(
       }
     }
 
-    // apply ref transform
-    if (enableRefTransform && shouldTransformRef(script.content)) {
-      const { rootRefs: rootVars, importedHelpers } = transformRefAST(
+    // apply reactivity transform
+    if (enableReactivityTransform && shouldTransform(script.content)) {
+      const { rootRefs, importedHelpers } = transformAST(
         scriptAst,
         s,
         scriptStartOffset!
       )
-      refBindings = rootVars
+      refBindings = rootRefs
       for (const h of importedHelpers) {
         helperImports.add(h)
       }
+    }
+
+    // <script> after <script setup>
+    // we need to move the block up so that `const __default__` is
+    // declared before being used in the actual component definition
+    if (scriptStartOffset! > startOffset) {
+      s.move(scriptStartOffset!, scriptEndOffset!, 0)
     }
   }
 
@@ -974,7 +997,9 @@ export function compileScript(
             source,
             local,
             imported,
-            node.importKind === 'type',
+            node.importKind === 'type' ||
+              (specifier.type === 'ImportSpecifier' &&
+                specifier.importKind === 'type'),
             true
           )
         }
@@ -1103,18 +1128,19 @@ export function compileScript(
     }
   }
 
-  // 3. Apply ref sugar transform
+  // 3. Apply reactivity transform
   if (
-    (enableRefTransform && shouldTransformRef(scriptSetup.content)) ||
+    (enableReactivityTransform &&
+      // normal <script> had ref bindings that maybe used in <script setup>
+      (refBindings || shouldTransform(scriptSetup.content))) ||
     propsDestructureDecl
   ) {
-    const { rootRefs, importedHelpers } = transformRefAST(
+    const { rootRefs, importedHelpers } = transformAST(
       scriptSetupAst,
       s,
       startOffset,
       refBindings,
-      propsDestructuredBindings,
-      !enableRefTransform
+      propsDestructuredBindings
     )
     refBindings = refBindings ? [...refBindings, ...rootRefs] : rootRefs
     for (const h of importedHelpers) {
@@ -1395,46 +1421,33 @@ export function compileScript(
   // explicitly call `defineExpose`, call expose() with no args.
   const exposeCall =
     hasDefineExposeCall || options.inlineTemplate ? `` : `  expose();\n`
+  // wrap setup code with function.
   if (isTS) {
     // for TS, make sure the exported type is still valid type with
     // correct props information
     // we have to use object spread for types to be merged properly
     // user's TS setting should compile it down to proper targets
-    const def = defaultExport ? `\n  ...${defaultTempVar},` : ``
-    // wrap setup code with function.
-    // export the content of <script setup> as a named export, `setup`.
-    // this allows `import { setup } from '*.vue'` for testing purposes.
-    if (defaultExport) {
-      s.prependLeft(
-        startOffset,
-        `\n${hasAwait ? `async ` : ``}function setup(${args}) {\n`
-      )
-      s.append(
-        `\nexport default /*#__PURE__*/${helper(
-          `defineComponent`
-        )}({${def}${runtimeOptions}\n  setup})`
-      )
-    } else {
-      s.prependLeft(
-        startOffset,
-        `\nexport default /*#__PURE__*/${helper(
-          `defineComponent`
-        )}({${def}${runtimeOptions}\n  ${
-          hasAwait ? `async ` : ``
-        }setup(${args}) {\n${exposeCall}`
-      )
-      s.appendRight(endOffset, `})`)
-    }
+    // export default defineComponent({ ...__default__, ... })
+    const def = defaultExport ? `\n  ...${DEFAULT_VAR},` : ``
+    s.prependLeft(
+      startOffset,
+      `\nexport default /*#__PURE__*/${helper(
+        `defineComponent`
+      )}({${def}${runtimeOptions}\n  ${
+        hasAwait ? `async ` : ``
+      }setup(${args}) {\n${exposeCall}`
+    )
+    s.appendRight(endOffset, `})`)
   } else {
     if (defaultExport) {
-      // can't rely on spread operator in non ts mode
+      // without TS, can't rely on rest spread, so we use Object.assign
+      // export default Object.assign(__default__, { ... })
       s.prependLeft(
         startOffset,
-        `\n${hasAwait ? `async ` : ``}function setup(${args}) {\n`
+        `\nexport default /*#__PURE__*/Object.assign(${DEFAULT_VAR}, {${runtimeOptions}\n  ` +
+          `${hasAwait ? `async ` : ``}setup(${args}) {\n${exposeCall}`
       )
-      s.append(
-        `\nexport default /*#__PURE__*/ Object.assign(${defaultTempVar}, {${runtimeOptions}\n  setup\n})\n`
-      )
+      s.appendRight(endOffset, `})`)
     } else {
       s.prependLeft(
         startOffset,
@@ -1564,7 +1577,7 @@ function walkObjectPattern(
       }
     } else {
       // ...rest
-      // argument can only be identifer when destructuring
+      // argument can only be identifier when destructuring
       const type = isConst ? BindingTypes.SETUP_CONST : BindingTypes.SETUP_LET
       registerBinding(bindings, p.argument as Identifier, type)
     }
@@ -1596,7 +1609,7 @@ function walkPattern(
       : BindingTypes.SETUP_LET
     registerBinding(bindings, node, type)
   } else if (node.type === 'RestElement') {
-    // argument can only be identifer when destructuring
+    // argument can only be identifier when destructuring
     const type = isConst ? BindingTypes.SETUP_CONST : BindingTypes.SETUP_LET
     registerBinding(bindings, node.argument as Identifier, type)
   } else if (node.type === 'ObjectPattern') {

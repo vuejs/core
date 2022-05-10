@@ -1,4 +1,9 @@
-import { generate, baseParse, transform } from '@vue/compiler-core'
+import {
+  generate,
+  baseParse,
+  transform,
+  TransformOptions
+} from '@vue/compiler-core'
 import {
   transformAssetUrl,
   createAssetUrlTransformWithOptions,
@@ -7,8 +12,13 @@ import {
 } from '../src/templateTransformAssetUrl'
 import { transformElement } from '../../compiler-core/src/transforms/transformElement'
 import { transformBind } from '../../compiler-core/src/transforms/vBind'
+import { stringifyStatic } from '../../compiler-dom/src/transforms/stringifyStatic'
 
-function compileWithAssetUrls(template: string, options?: AssetURLOptions) {
+function compileWithAssetUrls(
+  template: string,
+  options?: AssetURLOptions,
+  transformOptions?: TransformOptions
+) {
   const ast = baseParse(template)
   const t = options
     ? createAssetUrlTransformWithOptions(normalizeOptions(options))
@@ -17,7 +27,8 @@ function compileWithAssetUrls(template: string, options?: AssetURLOptions) {
     nodeTransforms: [t, transformElement],
     directiveTransforms: {
       bind: transformBind
-    }
+    },
+    ...transformOptions
   })
   return generate(ast, { mode: 'module' })
 }
@@ -129,6 +140,27 @@ describe('compiler sfc: transform asset url', () => {
       base: '//localhost'
     })
 
+    expect(code).toMatchSnapshot()
+  })
+
+  test('transform with stringify', () => {
+    const { code } = compileWithAssetUrls(
+      `<div>` +
+        `<img src="./bar.png"/>` +
+        `<img src="/bar.png"/>` +
+        `<img src="https://foo.bar/baz.png"/>` +
+        `<img src="//foo.bar/baz.png"/>` +
+        `<img src="./bar.png"/>` +
+        `</div>`,
+      {
+        includeAbsolute: true
+      },
+      {
+        hoistStatic: true,
+        transformHoist: stringifyStatic
+      }
+    )
+    expect(code).toMatch(`_createStaticVNode`)
     expect(code).toMatchSnapshot()
   })
 })

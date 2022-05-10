@@ -21,7 +21,8 @@ import {
   EMPTY_ARR,
   def,
   extend,
-  isOn
+  isOn,
+  IfAny
 } from '@vue/shared'
 import { warn } from './warning'
 import {
@@ -39,7 +40,6 @@ import { createPropsDefaultThis } from './compat/props'
 import { isCompatEnabled, softAssertCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
 import { shouldSkipAttr } from './compat/attrsFallthrough'
-import { IfAny } from './helpers/typeUtils'
 
 export type ComponentPropsOptions<P = Data> =
   | ComponentObjectPropsOptions<P>
@@ -120,11 +120,13 @@ type InferPropType<T> = [T] extends [null]
     : V
   : T
 
-export type ExtractPropTypes<O> = O extends object
-  ? { [K in keyof O]?: unknown } & // This is needed to keep the relation between the option prop and the props, allowing to use ctrl+click to navigate to the prop options. see: #3656
-      { [K in RequiredKeys<O>]: InferPropType<O[K]> } &
-      { [K in OptionalKeys<O>]?: InferPropType<O[K]> }
-  : { [K in string]: any }
+export type ExtractPropTypes<O> = {
+  // use `keyof Pick<O, RequiredKeys<O>>` instead of `RequiredKeys<O>` to support IDE features
+  [K in keyof Pick<O, RequiredKeys<O>>]: InferPropType<O[K]>
+} & {
+  // use `keyof Pick<O, OptionalKeys<O>>` instead of `OptionalKeys<O>` to support IDE features
+  [K in keyof Pick<O, OptionalKeys<O>>]?: InferPropType<O[K]>
+}
 
 const enum BooleanFlags {
   shouldCast,
@@ -222,6 +224,10 @@ export function updateProps(
       const propsToUpdate = instance.vnode.dynamicProps!
       for (let i = 0; i < propsToUpdate.length; i++) {
         let key = propsToUpdate[i]
+        // skip if the prop key is a declared emit event listener
+        if (isEmitListener(instance.emitsOptions, key)){
+          continue
+        }
         // PROPS flag guarantees rawProps to be non-null
         const value = rawProps![key]
         if (options) {
@@ -301,7 +307,11 @@ export function updateProps(
     // attrs point to the same object so it should already have been updated.
     if (attrs !== rawCurrentProps) {
       for (const key in attrs) {
-        if (!rawProps || !hasOwn(rawProps, key)) {
+        if (
+          !rawProps ||
+          (!hasOwn(rawProps, key) &&
+            (!__COMPAT__ || !hasOwn(rawProps, key + 'Native')))
+        ) {
           delete attrs[key]
           hasAttrsChanged = true
         }
@@ -369,7 +379,7 @@ function setFullProps(
             continue
           }
         }
-        if (value !== attrs[key]) {
+        if (!(key in attrs) || value !== attrs[key]) {
           attrs[key] = value
           hasAttrsChanged = true
         }

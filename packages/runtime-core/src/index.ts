@@ -3,7 +3,6 @@
 export const version = __VERSION__
 export {
   // core
-  computed,
   reactive,
   ref,
   readonly,
@@ -16,6 +15,7 @@ export {
   isProxy,
   isReactive,
   isReadonly,
+  isShallow,
   // advanced
   customRef,
   triggerRef,
@@ -34,6 +34,7 @@ export {
   getCurrentScope,
   onScopeDispose
 } from '@vue/reactivity'
+export { computed } from './apiComputed'
 export {
   watch,
   watchEffect,
@@ -151,18 +152,27 @@ export {
   Ref,
   ToRef,
   ToRefs,
-  ReactiveEffectOptions,
-  DebuggerEvent,
-  DebuggerOptions,
-  TrackOpTypes,
-  TriggerOpTypes,
+  UnwrapRef,
+  ShallowRef,
+  ShallowUnwrapRef,
+  CustomRefFactory,
+  ReactiveFlags,
+  DeepReadonly,
+  ShallowReactive,
+  UnwrapNestedRefs,
   ComputedRef,
   WritableComputedRef,
-  UnwrapRef,
-  ShallowUnwrapRef,
   WritableComputedOptions,
-  DeepReadonly,
-  ShallowReactive
+  ComputedGetter,
+  ComputedSetter,
+  ReactiveEffectRunner,
+  ReactiveEffectOptions,
+  EffectScheduler,
+  DebuggerOptions,
+  DebuggerEvent,
+  DebuggerEventExtraInfo,
+  TrackOpTypes,
+  TriggerOpTypes
 } from '@vue/reactivity'
 export {
   WatchEffect,

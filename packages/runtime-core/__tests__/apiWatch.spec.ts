@@ -18,7 +18,8 @@ import {
   h,
   createApp,
   watchPostEffect,
-  watchSyncEffect
+  watchSyncEffect,
+  onMounted
 } from '@vue/runtime-test'
 import {
   ITERATE_KEY,
@@ -581,6 +582,33 @@ describe('api: watch', () => {
     expect(calls).toEqual(['render', 'watcher 1', 'watcher 2', 'render'])
   })
 
+  // #5721
+  it('flush: pre triggered in component setup should be buffered and called before mounted', () => {
+    const count = ref(0)
+    const calls: string[] = []
+    const App = {
+      render() {},
+      setup() {
+        watch(
+          count,
+          () => {
+            calls.push('watch ' + count.value)
+          },
+          { flush: 'pre' }
+        )
+        onMounted(() => {
+          calls.push('mounted')
+        })
+        // mutate multiple times
+        count.value++
+        count.value++
+        count.value++
+      }
+    }
+    render(h(App), nodeOps.createElement('div'))
+    expect(calls).toMatchObject(['watch 3', 'mounted'])
+  })
+
   // #1852
   it('flush: post watcher should fire after template refs updated', async () => {
     const toggle = ref(false)
@@ -891,7 +919,7 @@ describe('api: watch', () => {
     expect(spy).toHaveBeenCalledTimes(1)
   })
 
-  // https://github.com/vuejs/vue-next/issues/2381
+  // https://github.com/vuejs/core/issues/2381
   test('$watch should always register its effects with its own instance', async () => {
     let instance: ComponentInternalInstance | null
     let _show: Ref<boolean>

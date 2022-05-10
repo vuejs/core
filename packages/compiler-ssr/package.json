@@ -1,6 +1,6 @@
 {
   "name": "@vue/compiler-ssr",
-  "version": "3.2.23",
+  "version": "3.2.33",
   "description": "@vue/compiler-ssr",
   "main": "dist/compiler-ssr.cjs.js",
   "types": "dist/compiler-ssr.d.ts",
@@ -15,7 +15,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vuejs/vue-next.git",
+    "url": "git+https://github.com/vuejs/core.git",
     "directory": "packages/compiler-ssr"
   },
   "keywords": [
@@ -24,11 +24,11 @@
   "author": "Evan You",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/vuejs/vue-next/issues"
+    "url": "https://github.com/vuejs/core/issues"
   },
-  "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/compiler-ssr#readme",
+  "homepage": "https://github.com/vuejs/core/tree/main/packages/compiler-ssr#readme",
   "dependencies": {
-    "@vue/shared": "3.2.23",
-    "@vue/compiler-dom": "3.2.23"
+    "@vue/shared": "3.2.33",
+    "@vue/compiler-dom": "3.2.33"
   }
 }

@@ -7,7 +7,8 @@ import {
   EffectScope,
   markRaw,
   track,
-  TrackOpTypes
+  TrackOpTypes,
+  ReactiveEffect
 } from '@vue/reactivity'
 import {
   ComponentPublicInstance,
@@ -60,7 +61,11 @@ import { markAttrsAccessed } from './componentRenderUtils'
 import { currentRenderingInstance } from './componentRenderContext'
 import { startMeasure, endMeasure } from './profiling'
 import { convertLegacyRenderFn } from './compat/renderFn'
-import { globalCompatConfig, validateCompatConfig } from './compat/compatConfig'
+import {
+  CompatConfig,
+  globalCompatConfig,
+  validateCompatConfig
+} from './compat/compatConfig'
 import { SchedulerJob } from './scheduler'
 
 export type Data = Record<string, unknown>
@@ -111,6 +116,7 @@ export interface FunctionalComponent<P = {}, E extends EmitsOptions = {}>
   emits?: E | (keyof E)[]
   inheritAttrs?: boolean
   displayName?: string
+  compatConfig?: CompatConfig
 }
 
 export interface ClassComponent {
@@ -219,6 +225,10 @@ export interface ComponentInternalInstance {
    * Root vnode of this component's own vdom tree
    */
   subTree: VNode
+  /**
+   * Render effect instance
+   */
+  effect: ReactiveEffect
   /**
    * Bound effect runner to be passed to schedulers
    */
@@ -455,6 +465,7 @@ export function createComponentInstance(
     root: null!, // to be immediately set
     next: null,
     subTree: null!, // will be set synchronously right after creation
+    effect: null!,
     update: null!, // will be set synchronously right after creation
     scope: new EffectScope(true /* detached */),
     render: null,
@@ -643,7 +654,6 @@ function setupStatefulComponent(
 
     if (isPromise(setupResult)) {
       setupResult.then(unsetCurrentInstance, unsetCurrentInstance)
-
       if (isSSR) {
         // return the promise so server-renderer can wait on it
         return setupResult
@@ -657,6 +667,15 @@ function setupStatefulComponent(
         // async setup returned Promise.
         // bail here and wait for re-entry.
         instance.asyncDep = setupResult
+        if (__DEV__ && !instance.suspense) {
+          const name = Component.name ?? 'Anonymous'
+          warn(
+            `Component <${name}>: setup function returned a promise, but no ` +
+              `<Suspense> boundary was found in the parent component tree. ` +
+              `A component with async setup() must be nested in a <Suspense> ` +
+              `in order to be rendered.`
+          )
+        }
       } else if (__DEV__) {
         warn(
           `setup() returned a Promise, but the version of Vue you are using ` +
@@ -753,7 +772,7 @@ export function finishComponentSetup(
   // template / render function normalization
   // could be already set when returned from setup()
   if (!instance.render) {
-    // only do on-the-fly compile if not in SSR - SSR on-the-fly compliation
+    // only do on-the-fly compile if not in SSR - SSR on-the-fly compilation
     // is done by server-renderer
     if (!isSSR && compile && !Component.render) {
       const template =

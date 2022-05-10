@@ -365,4 +365,136 @@ describe('api: template refs', () => {
     expect(elRef1.value).toBeNull()
     expect(elRef1.value).toBe(elRef2.value)
   })
+
+  // compiled output of <script setup> inline mode
+  test('raw ref with ref_key', () => {
+    let refs: any
+
+    const el = ref()
+
+    const App = {
+      mounted() {
+        refs = (this as any).$refs
+      },
+      render() {
+        return h(
+          'div',
+          {
+            ref: el,
+            ref_key: 'el'
+          },
+          'hello'
+        )
+      }
+    }
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+
+    expect(serializeInner(el.value)).toBe('hello')
+    expect(serializeInner(refs.el)).toBe('hello')
+  })
+
+  // compiled output of v-for + template ref
+  test('ref in v-for', async () => {
+    const show = ref(true)
+    const list = reactive([1, 2, 3])
+    const listRefs = ref([])
+    const mapRefs = () => listRefs.value.map(n => serializeInner(n))
+
+    const App = {
+      render() {
+        return show.value
+          ? h(
+              'ul',
+              list.map(i =>
+                h(
+                  'li',
+                  {
+                    ref: listRefs,
+                    ref_for: true
+                  },
+                  i
+                )
+              )
+            )
+          : null
+      }
+    }
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+
+    expect(mapRefs()).toMatchObject(['1', '2', '3'])
+
+    list.push(4)
+    await nextTick()
+    expect(mapRefs()).toMatchObject(['1', '2', '3', '4'])
+
+    list.shift()
+    await nextTick()
+    expect(mapRefs()).toMatchObject(['2', '3', '4'])
+
+    show.value = !show.value
+    await nextTick()
+
+    expect(mapRefs()).toMatchObject([])
+
+    show.value = !show.value
+    await nextTick()
+    expect(mapRefs()).toMatchObject(['2', '3', '4'])
+  })
+
+   
+
+  test('named ref in v-for', async () => {
+    const show = ref(true);
+    const list = reactive([1, 2, 3])
+    const listRefs = ref([])
+    const mapRefs = () => listRefs.value.map(n => serializeInner(n))
+
+    const App = {
+      setup() {
+        return { listRefs }
+      },
+      render() {
+        return show.value
+          ? h(
+              'ul',
+              list.map(i =>
+                h(
+                  'li',
+                  {
+                    ref: 'listRefs',
+                    ref_for: true
+                  },
+                  i
+                )
+              )
+            )
+          : null
+      }
+    }
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+
+    expect(mapRefs()).toMatchObject(['1', '2', '3'])
+
+    list.push(4)
+    await nextTick()
+    expect(mapRefs()).toMatchObject(['1', '2', '3', '4'])
+
+    list.shift()
+    await nextTick()
+    expect(mapRefs()).toMatchObject(['2', '3', '4'])
+
+    show.value = !show.value
+    await nextTick()
+
+    expect(mapRefs()).toMatchObject([])
+
+    show.value = !show.value
+    await nextTick()
+    expect(mapRefs()).toMatchObject(['2', '3', '4'])
+  })
+
+
 })

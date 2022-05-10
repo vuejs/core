@@ -36,7 +36,7 @@ describe('SFC compile <script setup>', () => {
     assertCode(content)
   })
 
-  test('binding analysis for destructur', () => {
+  test('binding analysis for destructure', () => {
     const { content, bindings } = compile(`
       <script setup>
       const { foo, b: bar, ['x' + 'y']: baz, x: { y, zz: { z }}} = {}
@@ -172,6 +172,68 @@ defineExpose({ foo: 123 })
   })
 
   describe('<script> and <script setup> co-usage', () => {
+    test('script first', () => {
+      const { content } = compile(`
+      <script>
+      export const n = 1
+
+      export default {}
+      </script>
+      <script setup>
+      import { x } from './x'
+      x()
+      </script>
+      `)
+      assertCode(content)
+    })
+
+    test('script setup first', () => {
+      const { content } = compile(`
+      <script setup>
+      import { x } from './x'
+      x()
+      </script>
+      <script>
+      export const n = 1
+      export default {}
+      </script>
+      `)
+      assertCode(content)
+    })
+
+    test('script setup first, named default export', () => {
+      const { content } = compile(`
+      <script setup>
+      import { x } from './x'
+      x()
+      </script>
+      <script>
+      export const n = 1
+      const def = {}
+      export { def as default }
+      </script>
+      `)
+      assertCode(content)
+    })
+
+    // #4395
+    test('script setup first, lang="ts", script block content export default', () => {
+      const { content } = compile(`
+      <script setup lang="ts">
+      import { x } from './x'
+      x()
+      </script>
+      <script lang="ts">
+      export default {
+        name: "test"
+      }
+      </script>
+      `)
+      // ensure __default__ is declared before used
+      expect(content).toMatch(/const __default__[\S\s]*\.\.\.__default__/m)
+      assertCode(content)
+    })
+
     describe('spaces in ExportDefaultDeclaration node', () => {
       // #4371
       test('with many spaces and newline', () => {
@@ -207,50 +269,6 @@ defineExpose({ foo: 123 })
         `)
         assertCode(content)
       })
-    })
-
-    test('script first', () => {
-      const { content } = compile(`
-      <script>
-      export const n = 1
-      </script>
-      <script setup>
-      import { x } from './x'
-      x()
-      </script>
-      `)
-      assertCode(content)
-    })
-
-    test('script setup first', () => {
-      const { content } = compile(`
-      <script setup>
-      import { x } from './x'
-      x()
-      </script>
-      <script>
-      export const n = 1
-      </script>
-      `)
-      assertCode(content)
-    })
-
-    // #4395
-    test('script setup first, lang="ts", script block content export default', () => {
-      const { content } = compile(`
-      <script setup lang="ts">
-      import { x } from './x'
-      x()
-      </script>
-      <script lang="ts">
-      export default {
-        name: "test"
-      }
-      </script>
-      `)
-      // ensure __default__ is declared before used
-      expect(content).toMatch(/const __default__[\S\s]*\.\.\.__default__/m)
-      assertCode(content)
     })
   })
 
@@ -295,7 +313,7 @@ defineExpose({ foo: 123 })
       let foo = $ref(1)
       </script>
       `,
-        { refTransform: true }
+        { reactivityTransform: true }
       )
       assertCode(content)
       expect(content).toMatch(`import { ref } from 'vue'`)
@@ -357,7 +375,7 @@ defineExpose({ foo: 123 })
       assertCode(content)
     })
 
-    // https://github.com/vuejs/vue-next/issues/4599
+    // https://github.com/vuejs/core/issues/4599
     test('attribute expressions', () => {
       const { content } = compile(`
         <script setup lang="ts">
@@ -1089,12 +1107,23 @@ const emit = defineEmits(['a', 'b'])
         Foo: BindingTypes.SETUP_CONST
       })
     })
+
+    test('import type', () => {
+      const { content } = compile(
+        `<script setup lang="ts">
+        import type { Foo } from './main.ts'
+        import { type Bar, Baz } from './main.ts'
+        </script>`
+      )
+      expect(content).toMatch(`return { Baz }`)
+      assertCode(content)
+    })
   })
 
   describe('async/await detection', () => {
     function assertAwaitDetection(code: string, shouldAsync = true) {
       const { content } = compile(`<script setup>${code}</script>`, {
-        refTransform: true
+        reactivityTransform: true
       })
       if (shouldAsync) {
         expect(content).toMatch(`let __temp, __restore`)

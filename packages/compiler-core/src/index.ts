@@ -54,7 +54,9 @@ export {
 export {
   transformElement,
   resolveComponentType,
-  buildProps
+  buildProps,
+  buildDirectiveArgs,
+  PropsExpression
 } from './transforms/transformElement'
 export { processSlotOutlet } from './transforms/transformSlotOutlet'
 export { generateCodeFrame } from '@vue/shared'

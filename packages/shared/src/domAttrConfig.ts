@@ -26,7 +26,7 @@ export const isBooleanAttr = /*#__PURE__*/ makeMap(
 
 /**
  * Boolean attributes should be included if the value is truthy or ''.
- * e.g. <select multiple> compiles to { multiple: '' }
+ * e.g. `<select multiple>` compiles to `{ multiple: '' }`
  */
 export function includeBooleanAttr(value: unknown): boolean {
   return !!value || value === ''
