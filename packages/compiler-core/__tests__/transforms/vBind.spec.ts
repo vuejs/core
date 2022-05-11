@@ -14,7 +14,8 @@ import { transformElement } from '../../src/transforms/transformElement'
 import {
   CAMELIZE,
   helperNameMap,
-  NORMALIZE_PROPS
+  NORMALIZE_PROPS,
+  NORMALIZE_STYLE
 } from '../../src/runtimeHelpers'
 import { transformExpression } from '../../src/transforms/transformExpression'
 
@@ -307,6 +308,29 @@ describe('compiler: transform v-bind', () => {
       value: {
         content: `id`,
         isStatic: false
+      }
+    })
+  })
+  test('Bind array constant to style', () => {
+    const node = parseWithVBind(`<div v-bind:style="[color:red]"/>`)
+    const props = (node.codegenNode as VNodeCall).props as ObjectExpression
+    debugger
+    expect(props.properties[0]).toMatchObject({
+      key: {
+        type:4,
+        content: `style`,
+        isStatic: true,
+        constType:3
+      },
+      value: {
+        type:14,
+        callee:NORMALIZE_STYLE,
+        arguments:[
+          {type : 4,
+          content : "[color:red]",
+          isStatic : false,
+          constType : 0,}
+        ]
       }
     })
   })
