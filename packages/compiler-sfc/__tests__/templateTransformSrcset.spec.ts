@@ -26,6 +26,7 @@ function compileWithSrcset(
     ? createSrcsetTransformWithOptions(normalizeOptions(options))
     : transformSrcset
   transform(ast, {
+    hoistStatic: true,
     nodeTransforms: [srcsetTransform, transformElement],
     directiveTransforms: {
       bind: transformBind

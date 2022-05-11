@@ -3,6 +3,7 @@ import {
   ConstantTypes,
   createCompoundExpression,
   createSimpleExpression,
+  ExpressionNode,
   NodeTransform,
   NodeTypes,
   SimpleExpressionNode
@@ -145,14 +146,17 @@ export const transformSrcset: NodeTransform = (
             }
           })
 
-          const hoisted = context.hoist(compoundExpression)
-          hoisted.constType = ConstantTypes.CAN_STRINGIFY
+          let exp: ExpressionNode = compoundExpression
+          if (context.hoistStatic) {
+            exp = context.hoist(compoundExpression)
+            exp.constType = ConstantTypes.CAN_STRINGIFY
+          }
 
           node.props[index] = {
             type: NodeTypes.DIRECTIVE,
             name: 'bind',
             arg: createSimpleExpression('srcset', true, attr.loc),
-            exp: hoisted,
+            exp,
             modifiers: [],
             loc: attr.loc
           }
