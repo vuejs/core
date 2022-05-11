@@ -270,6 +270,7 @@ export function compileScript(
   let hasDefineEmitCall = false
   let hasDefineExposeCall = false
   let hasDefaultExportName = false
+  let hasDefaultExportRender = false
   let propsRuntimeDecl: Node | undefined
   let propsRuntimeDefaults: ObjectExpression | undefined
   let propsDestructureDecl: Node | undefined
@@ -819,8 +820,11 @@ export function compileScript(
         // export default
         defaultExport = node
 
-        // check if user has manually specified `name` option in export default
-        // if yes, skip infer later
+        // check if user has manually specified `name` or 'render` option in
+        // export default
+        // if has name, skip name inference
+        // if has render and no template, generate return object instead of
+        // empty render function (#4980)
         let optionProperties
         if (defaultExport.declaration.type === 'ObjectExpression') {
           optionProperties = defaultExport.declaration.properties
@@ -830,12 +834,25 @@ export function compileScript(
         ) {
           optionProperties = defaultExport.declaration.arguments[0].properties
         }
-        hasDefaultExportName = !!optionProperties?.some(
-          s =>
-            s.type === 'ObjectProperty' &&
-            s.key.type === 'Identifier' &&
-            s.key.name === 'name'
-        )
+        if (optionProperties) {
+          for (const s of optionProperties) {
+            if (
+              s.type === 'ObjectProperty' &&
+              s.key.type === 'Identifier' &&
+              s.key.name === 'name'
+            ) {
+              hasDefaultExportName = true
+            }
+            if (
+              (s.type === 'ObjectMethod' || s.type === 'ObjectProperty') &&
+              s.key.type === 'Identifier' &&
+              s.key.name === 'render'
+            ) {
+              // TODO warn when we provide a better way to do it?
+              hasDefaultExportRender = true
+            }
+          }
+        }
 
         // export default { ... } --> const __default__ = { ... }
         const start = node.start! + scriptStartOffset!
@@ -1303,7 +1320,21 @@ export function compileScript(
 
   // 10. generate return statement
   let returned
-  if (options.inlineTemplate) {
+  if (!options.inlineTemplate || (!sfc.template && hasDefaultExportRender)) {
+    // non-inline mode, or has manual render in normal <script>
+    // return bindings from script and script setup
+    const allBindings: Record<string, any> = {
+      ...scriptBindings,
+      ...setupBindings
+    }
+    for (const key in userImports) {
+      if (!userImports[key].isType && userImports[key].isUsedInTemplate) {
+        allBindings[key] = true
+      }
+    }
+    returned = `{ ${Object.keys(allBindings).join(', ')} }`
+  } else {
+    // inline mode
     if (sfc.template && !sfc.template.src) {
       if (options.templateOptions && options.templateOptions.ssr) {
         hasInlinedSsrRenderFn = true
@@ -1361,18 +1392,6 @@ export function compileScript(
     } else {
       returned = `() => {}`
     }
-  } else {
-    // return bindings from script and script setup
-    const allBindings: Record<string, any> = {
-      ...scriptBindings,
-      ...setupBindings
-    }
-    for (const key in userImports) {
-      if (!userImports[key].isType && userImports[key].isUsedInTemplate) {
-        allBindings[key] = true
-      }
-    }
-    returned = `{ ${Object.keys(allBindings).join(', ')} }`
   }
 
   if (!options.inlineTemplate && !__TEST__) {
