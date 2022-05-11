@@ -20,7 +20,9 @@ import {
   isReservedProp,
   EMPTY_ARR,
   def,
-  extend
+  extend,
+  isOn,
+  IfAny
 } from '@vue/shared'
 import { warn } from './warning'
 import {
@@ -28,11 +30,16 @@ import {
   ComponentInternalInstance,
   ComponentOptions,
   ConcreteComponent,
-  setCurrentInstance
+  setCurrentInstance,
+  unsetCurrentInstance
 } from './component'
 import { isEmitListener } from './componentEmits'
 import { InternalObjectKey } from './vnode'
 import { AppContext } from './apiCreateApp'
+import { createPropsDefaultThis } from './compat/props'
+import { isCompatEnabled, softAssertCompatEnabled } from './compat/compatConfig'
+import { DeprecationTypes } from './compat/compatConfig'
+import { shouldSkipAttr } from './compat/attrsFallthrough'
 
 export type ComponentPropsOptions<P = Data> =
   | ComponentObjectPropsOptions<P>
@@ -46,7 +53,7 @@ export type Prop<T, D = T> = PropOptions<T, D> | PropType<T>
 
 type DefaultFactory<T> = (props: Data) => T | null | undefined
 
-interface PropOptions<T = any, D = T> {
+export interface PropOptions<T = any, D = T> {
   type?: PropType<T> | true | null
   required?: boolean
   default?: D | DefaultFactory<D> | null | undefined | object
@@ -60,7 +67,9 @@ type PropConstructor<T = any> =
   | { (): T }
   | PropMethod<T>
 
-type PropMethod<T, TConstructor = any> = T extends (...args: any) => any // if is function with args
+type PropMethod<T, TConstructor = any> = [T] extends [
+  ((...args: any) => any) | undefined
+] // if is function with args, allowing non-required functions
   ? { new (): TConstructor; (): T; readonly prototype: TConstructor } // Create Function like constructor
   : never
 
@@ -71,7 +80,9 @@ type RequiredKeys<T> = {
     // don't mark Boolean props as undefined
     | BooleanConstructor
     | { type: BooleanConstructor }
-    ? K
+    ? T[K] extends { default: undefined | (() => undefined) }
+      ? never
+      : K
     : never
 }[keyof T]
 
@@ -89,22 +100,33 @@ type DefaultKeys<T> = {
     : never
 }[keyof T]
 
-type InferPropType<T> = T extends null
+type InferPropType<T> = [T] extends [null]
   ? any // null & true would fail to infer
-  : T extends { type: null | true }
-    ? any // As TS issue https://github.com/Microsoft/TypeScript/issues/14829 // somehow `ObjectConstructor` when inferred from { (): T } becomes `any` // `BooleanConstructor` when inferred from PropConstructor(with PropMethod) becomes `Boolean`
-    : T extends ObjectConstructor | { type: ObjectConstructor }
-      ? Record<string, any>
-      : T extends BooleanConstructor | { type: BooleanConstructor }
-        ? boolean
-        : T extends DateConstructor | { type: DateConstructor }
-          ? Date
-          : T extends Prop<infer V, infer D> ? (unknown extends V ? D : V) : T
+  : [T] extends [{ type: null | true }]
+  ? any // As TS issue https://github.com/Microsoft/TypeScript/issues/14829 // somehow `ObjectConstructor` when inferred from { (): T } becomes `any` // `BooleanConstructor` when inferred from PropConstructor(with PropMethod) becomes `Boolean`
+  : [T] extends [ObjectConstructor | { type: ObjectConstructor }]
+  ? Record<string, any>
+  : [T] extends [BooleanConstructor | { type: BooleanConstructor }]
+  ? boolean
+  : [T] extends [DateConstructor | { type: DateConstructor }]
+  ? Date
+  : [T] extends [(infer U)[] | { type: (infer U)[] }]
+  ? U extends DateConstructor
+    ? Date | InferPropType<U>
+    : InferPropType<U>
+  : [T] extends [Prop<infer V, infer D>]
+  ? unknown extends V
+    ? IfAny<V, V, D>
+    : V
+  : T
 
-export type ExtractPropTypes<O> = O extends object
-  ? { [K in RequiredKeys<O>]: InferPropType<O[K]> } &
-      { [K in OptionalKeys<O>]?: InferPropType<O[K]> }
-  : { [K in string]: any }
+export type ExtractPropTypes<O> = {
+  // use `keyof Pick<O, RequiredKeys<O>>` instead of `RequiredKeys<O>` to support IDE features
+  [K in keyof Pick<O, RequiredKeys<O>>]: InferPropType<O[K]>
+} & {
+  // use `keyof Pick<O, OptionalKeys<O>>` instead of `OptionalKeys<O>` to support IDE features
+  [K in keyof Pick<O, OptionalKeys<O>>]?: InferPropType<O[K]>
+}
 
 const enum BooleanFlags {
   shouldCast,
@@ -137,10 +159,21 @@ export function initProps(
   const props: Data = {}
   const attrs: Data = {}
   def(attrs, InternalObjectKey, 1)
+
+  instance.propsDefaults = Object.create(null)
+
   setFullProps(instance, rawProps, props, attrs)
+
+  // ensure all declared prop keys are present
+  for (const key in instance.propsOptions[0]) {
+    if (!(key in props)) {
+      props[key] = undefined
+    }
+  }
+
   // validation
   if (__DEV__) {
-    validateProps(props, instance)
+    validateProps(rawProps || {}, props, instance)
   }
 
   if (isStateful) {
@@ -171,6 +204,7 @@ export function updateProps(
   } = instance
   const rawCurrentProps = toRaw(props)
   const [options] = instance.propsOptions
+  let hasAttrsChanged = false
 
   if (
     // always force full diff in dev
@@ -189,14 +223,21 @@ export function updateProps(
       // the props.
       const propsToUpdate = instance.vnode.dynamicProps!
       for (let i = 0; i < propsToUpdate.length; i++) {
-        const key = propsToUpdate[i]
+        let key = propsToUpdate[i]
+        // skip if the prop key is a declared emit event listener
+        if (isEmitListener(instance.emitsOptions, key)){
+          continue
+        }
         // PROPS flag guarantees rawProps to be non-null
         const value = rawProps![key]
         if (options) {
           // attr / props separation was done on init and will be consistent
           // in this code path, so just check if attrs have it.
           if (hasOwn(attrs, key)) {
-            attrs[key] = value
+            if (value !== attrs[key]) {
+              attrs[key] = value
+              hasAttrsChanged = true
+            }
           } else {
             const camelizedKey = camelize(key)
             props[camelizedKey] = resolvePropValue(
@@ -204,17 +245,30 @@ export function updateProps(
               rawCurrentProps,
               camelizedKey,
               value,
-              instance
+              instance,
+              false /* isAbsent */
             )
           }
         } else {
-          attrs[key] = value
+          if (__COMPAT__) {
+            if (isOn(key) && key.endsWith('Native')) {
+              key = key.slice(0, -6) // remove Native postfix
+            } else if (shouldSkipAttr(key, instance)) {
+              continue
+            }
+          }
+          if (value !== attrs[key]) {
+            attrs[key] = value
+            hasAttrsChanged = true
+          }
         }
       }
     }
   } else {
     // full props update.
-    setFullProps(instance, rawProps, props, attrs)
+    if (setFullProps(instance, rawProps, props, attrs)) {
+      hasAttrsChanged = true
+    }
     // in case of dynamic props, check if we need to delete keys from
     // the props object
     let kebabKey: string
@@ -237,10 +291,11 @@ export function updateProps(
           ) {
             props[key] = resolvePropValue(
               options,
-              rawProps || EMPTY_OBJ,
+              rawCurrentProps,
               key,
               undefined,
-              instance
+              instance,
+              true /* isAbsent */
             )
           }
         } else {
@@ -252,18 +307,25 @@ export function updateProps(
     // attrs point to the same object so it should already have been updated.
     if (attrs !== rawCurrentProps) {
       for (const key in attrs) {
-        if (!rawProps || !hasOwn(rawProps, key)) {
+        if (
+          !rawProps ||
+          (!hasOwn(rawProps, key) &&
+            (!__COMPAT__ || !hasOwn(rawProps, key + 'Native')))
+        ) {
           delete attrs[key]
+          hasAttrsChanged = true
         }
       }
     }
   }
 
   // trigger updates for $attrs in case it's used in component slots
-  trigger(instance, TriggerOpTypes.SET, '$attrs')
+  if (hasAttrsChanged) {
+    trigger(instance, TriggerOpTypes.SET, '$attrs')
+  }
 
-  if (__DEV__ && rawProps) {
-    validateProps(props, instance)
+  if (__DEV__) {
+    validateProps(rawProps || {}, props, instance)
   }
 }
 
@@ -274,40 +336,74 @@ function setFullProps(
   attrs: Data
 ) {
   const [options, needCastKeys] = instance.propsOptions
+  let hasAttrsChanged = false
+  let rawCastValues: Data | undefined
   if (rawProps) {
-    for (const key in rawProps) {
-      const value = rawProps[key]
+    for (let key in rawProps) {
       // key, ref are reserved and never passed down
       if (isReservedProp(key)) {
         continue
       }
+
+      if (__COMPAT__) {
+        if (key.startsWith('onHook:')) {
+          softAssertCompatEnabled(
+            DeprecationTypes.INSTANCE_EVENT_HOOKS,
+            instance,
+            key.slice(2).toLowerCase()
+          )
+        }
+        if (key === 'inline-template') {
+          continue
+        }
+      }
+
+      const value = rawProps[key]
       // prop option names are camelized during normalization, so to support
       // kebab -> camel conversion here we need to camelize the key.
       let camelKey
       if (options && hasOwn(options, (camelKey = camelize(key)))) {
-        props[camelKey] = value
+        if (!needCastKeys || !needCastKeys.includes(camelKey)) {
+          props[camelKey] = value
+        } else {
+          ;(rawCastValues || (rawCastValues = {}))[camelKey] = value
+        }
       } else if (!isEmitListener(instance.emitsOptions, key)) {
         // Any non-declared (either as a prop or an emitted event) props are put
         // into a separate `attrs` object for spreading. Make sure to preserve
         // original key casing
-        attrs[key] = value
+        if (__COMPAT__) {
+          if (isOn(key) && key.endsWith('Native')) {
+            key = key.slice(0, -6) // remove Native postfix
+          } else if (shouldSkipAttr(key, instance)) {
+            continue
+          }
+        }
+        if (!(key in attrs) || value !== attrs[key]) {
+          attrs[key] = value
+          hasAttrsChanged = true
+        }
       }
     }
   }
 
   if (needCastKeys) {
     const rawCurrentProps = toRaw(props)
+    const castValues = rawCastValues || EMPTY_OBJ
     for (let i = 0; i < needCastKeys.length; i++) {
       const key = needCastKeys[i]
       props[key] = resolvePropValue(
         options!,
         rawCurrentProps,
         key,
-        rawCurrentProps[key],
-        instance
+        castValues[key],
+        instance,
+        !hasOwn(castValues, key)
       )
     }
   }
+
+  return hasAttrsChanged
 }
 
 function resolvePropValue(
@@ -315,7 +411,8 @@ function resolvePropValue(
   props: Data,
   key: string,
   value: unknown,
-  instance: ComponentInternalInstance
+  instance: ComponentInternalInstance,
+  isAbsent: boolean
 ) {
   const opt = options[key]
   if (opt != null) {
@@ -324,16 +421,27 @@ function resolvePropValue(
     if (hasDefault && value === undefined) {
       const defaultValue = opt.default
       if (opt.type !== Function && isFunction(defaultValue)) {
-        setCurrentInstance(instance)
-        value = defaultValue(props)
-        setCurrentInstance(null)
+        const { propsDefaults } = instance
+        if (key in propsDefaults) {
+          value = propsDefaults[key]
+        } else {
+          setCurrentInstance(instance)
+          value = propsDefaults[key] = defaultValue.call(
+            __COMPAT__ &&
+              isCompatEnabled(DeprecationTypes.PROPS_DEFAULT_THIS, instance)
+              ? createPropsDefaultThis(instance, props, key)
+              : null,
+            props
+          )
+          unsetCurrentInstance()
+        }
       } else {
         value = defaultValue
       }
     }
     // boolean casting
     if (opt[BooleanFlags.shouldCast]) {
-      if (!hasOwn(props, key) && !hasDefault) {
+      if (isAbsent && !hasDefault) {
         value = false
       } else if (
         opt[BooleanFlags.shouldCastTrue] &&
@@ -351,8 +459,10 @@ export function normalizePropsOptions(
   appContext: AppContext,
   asMixin = false
 ): NormalizedPropsOptions {
-  if (!appContext.deopt && comp.__props) {
-    return comp.__props
+  const cache = appContext.propsCache
+  const cached = cache.get(comp)
+  if (cached) {
+    return cached
   }
 
   const raw = comp.props
@@ -363,6 +473,9 @@ export function normalizePropsOptions(
   let hasExtends = false
   if (__FEATURE_OPTIONS_API__ && !isFunction(comp)) {
     const extendProps = (raw: ComponentOptions) => {
+      if (__COMPAT__ && isFunction(raw)) {
+        raw = raw.options
+      }
       hasExtends = true
       const [props, keys] = normalizePropsOptions(raw, appContext, true)
       extend(normalized, props)
@@ -380,7 +493,8 @@ export function normalizePropsOptions(
   }
 
   if (!raw && !hasExtends) {
-    return (comp.__props = EMPTY_ARR as any)
+    cache.set(comp, EMPTY_ARR as any)
+    return EMPTY_ARR as any
   }
 
   if (isArray(raw)) {
@@ -418,7 +532,9 @@ export function normalizePropsOptions(
     }
   }
 
-  return (comp.__props = [normalized, needCastKeys])
+  const res: NormalizedPropsOptions = [normalized, needCastKeys]
+  cache.set(comp, res)
+  return res
 }
 
 function validatePropName(key: string) {
@@ -434,7 +550,7 @@ function validatePropName(key: string) {
 // so that it works across vms / iframes.
 function getType(ctor: Prop<any>): string {
   const match = ctor && ctor.toString().match(/^\s*function (\w+)/)
-  return match ? match[1] : ''
+  return match ? match[1] : ctor === null ? 'null' : ''
 }
 
 function isSameType(a: Prop<any>, b: Prop<any>): boolean {
@@ -446,11 +562,7 @@ function getTypeIndex(
   expectedTypes: PropType<any> | void | null | true
 ): number {
   if (isArray(expectedTypes)) {
-    for (let i = 0, len = expectedTypes.length; i < len; i++) {
-      if (isSameType(expectedTypes[i], type)) {
-        return i
-      }
-    }
+    return expectedTypes.findIndex(t => isSameType(t, type))
   } else if (isFunction(expectedTypes)) {
     return isSameType(expectedTypes, type) ? 0 : -1
   }
@@ -460,13 +572,22 @@ function getTypeIndex(
 /**
  * dev only
  */
-function validateProps(props: Data, instance: ComponentInternalInstance) {
-  const rawValues = toRaw(props)
+function validateProps(
+  rawProps: Data,
+  props: Data,
+  instance: ComponentInternalInstance
+) {
+  const resolvedValues = toRaw(props)
   const options = instance.propsOptions[0]
   for (const key in options) {
     let opt = options[key]
     if (opt == null) continue
-    validateProp(key, rawValues[key], opt, !hasOwn(rawValues, key))
+    validateProp(
+      key,
+      resolvedValues[key],
+      opt,
+      !hasOwn(rawProps, key) && !hasOwn(rawProps, hyphenate(key))
+    )
   }
 }
 
@@ -537,6 +658,8 @@ function assertType(value: unknown, type: PropConstructor): AssertionResult {
     valid = isObject(value)
   } else if (expectedType === 'Array') {
     valid = isArray(value)
+  } else if (expectedType === 'null') {
+    valid = value === null
   } else {
     valid = value instanceof type
   }
@@ -556,7 +679,7 @@ function getInvalidTypeMessage(
 ): string {
   let message =
     `Invalid prop: type check failed for prop "${name}".` +
-    ` Expected ${expectedTypes.map(capitalize).join(', ')}`
+    ` Expected ${expectedTypes.map(capitalize).join(' | ')}`
   const expectedType = expectedTypes[0]
   const receivedType = toRawType(value)
   const expectedValue = styleValue(value, expectedType)

@@ -12,12 +12,15 @@ return withDirectives(h(comp), [
 */
 
 import { VNode } from './vnode'
-import { isFunction, EMPTY_OBJ, makeMap } from '@vue/shared'
+import { isFunction, EMPTY_OBJ, isBuiltInDirective } from '@vue/shared'
 import { warn } from './warning'
-import { ComponentInternalInstance, Data } from './component'
+import { ComponentInternalInstance, Data, getExposeProxy } from './component'
 import { currentRenderingInstance } from './componentRenderContext'
 import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
 import { ComponentPublicInstance } from './componentPublicInstance'
+import { mapCompatDirectiveHook } from './compat/customDirective'
+import { pauseTracking, resetTracking } from '@vue/reactivity'
+import { traverse } from './apiWatch'
 
 export interface DirectiveBinding<V = any> {
   instance: ComponentPublicInstance | null
@@ -49,6 +52,7 @@ export interface ObjectDirective<T = any, V = any> {
   beforeUnmount?: DirectiveHook<T, null, V>
   unmounted?: DirectiveHook<T, null, V>
   getSSRProps?: SSRDirectiveHook
+  deep?: boolean
 }
 
 export type FunctionDirective<T = any, V = any> = DirectiveHook<T, any, V>
@@ -58,10 +62,6 @@ export type Directive<T = any, V = any> =
   | FunctionDirective<T, V>
 
 export type DirectiveModifiers = Record<string, boolean>
-
-const isBuiltInDirective = /*#__PURE__*/ makeMap(
-  'bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,slot,text'
-)
 
 export function validateDirectiveName(name: string) {
   if (isBuiltInDirective(name)) {
@@ -89,7 +89,9 @@ export function withDirectives<T extends VNode>(
     __DEV__ && warn(`withDirectives can only be used inside render functions.`)
     return vnode
   }
-  const instance = internalInstance.proxy
+  const instance =
+    (getExposeProxy(internalInstance) as ComponentPublicInstance) ||
+    internalInstance.proxy
   const bindings: DirectiveBinding[] = vnode.dirs || (vnode.dirs = [])
   for (let i = 0; i < directives.length; i++) {
     let [dir, value, arg, modifiers = EMPTY_OBJ] = directives[i]
@@ -98,6 +100,9 @@ export function withDirectives<T extends VNode>(
         mounted: dir,
         updated: dir
       } as ObjectDirective
+    }
+    if (dir.deep) {
+      traverse(value)
     }
     bindings.push({
       dir,
@@ -124,14 +129,21 @@ export function invokeDirectiveHook(
     if (oldBindings) {
       binding.oldValue = oldBindings[i].value
     }
-    const hook = binding.dir[name] as DirectiveHook | undefined
+    let hook = binding.dir[name] as DirectiveHook | DirectiveHook[] | undefined
+    if (__COMPAT__ && !hook) {
+      hook = mapCompatDirectiveHook(name, binding.dir, instance)
+    }
     if (hook) {
+      // disable tracking inside all lifecycle hooks
+      // since they can potentially be called inside effects.
+      pauseTracking()
       callWithAsyncErrorHandling(hook, instance, ErrorCodes.DIRECTIVE_HOOK, [
         vnode.el,
         binding,
         vnode,
         prevVNode
       ])
+      resetTracking()
     }
   }
 }

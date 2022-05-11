@@ -129,11 +129,6 @@ export function buildSlots(
   const slotsProperties: Property[] = []
   const dynamicSlots: (ConditionalExpression | CallExpression)[] = []
 
-  const buildDefaultSlotProperty = (
-    props: ExpressionNode | undefined,
-    children: TemplateChildNode[]
-  ) => createObjectProperty(`default`, buildSlotFn(props, children, loc))
-
   // If the slot is inside a v-for or another v-slot, force it to be dynamic
   // since it likely uses a scope variable.
   let hasDynamicSlots = context.scopes.vSlot > 0 || context.scopes.vFor > 0
@@ -302,10 +297,27 @@ export function buildSlots(
   }
 
   if (!onComponentSlot) {
+    const buildDefaultSlotProperty = (
+      props: ExpressionNode | undefined,
+      children: TemplateChildNode[]
+    ) => {
+      const fn = buildSlotFn(props, children, loc)
+      if (__COMPAT__ && context.compatConfig) {
+        fn.isNonScopedSlot = true
+      }
+      return createObjectProperty(`default`, fn)
+    }
+
     if (!hasTemplateSlots) {
       // implicit default slot (on component)
       slotsProperties.push(buildDefaultSlotProperty(undefined, children))
-    } else if (implicitDefaultChildren.length) {
+    } else if (
+      implicitDefaultChildren.length &&
+      // #3766
+      // with whitespace: 'preserve', whitespaces between slots will end up in
+      // implicitDefaultChildren. Ignore if all implicit children are whitespaces.
+      implicitDefaultChildren.some(node => isNonWhitespaceContent(node))
+    ) {
       // implicit default slot (mixed with named slots)
       if (hasNamedDefaultSlot) {
         context.onError(
@@ -325,8 +337,8 @@ export function buildSlots(
   const slotFlag = hasDynamicSlots
     ? SlotFlags.DYNAMIC
     : hasForwardedSlots(node.children)
-      ? SlotFlags.FORWARDED
-      : SlotFlags.STABLE
+    ? SlotFlags.FORWARDED
+    : SlotFlags.STABLE
 
   let slots = createObjectExpression(
     slotsProperties.concat(
@@ -372,8 +384,7 @@ function hasForwardedSlots(children: TemplateChildNode[]): boolean {
       case NodeTypes.ELEMENT:
         if (
           child.tagType === ElementTypes.SLOT ||
-          (child.tagType === ElementTypes.ELEMENT &&
-            hasForwardedSlots(child.children))
+          hasForwardedSlots(child.children)
         ) {
           return true
         }
@@ -390,4 +401,12 @@ function hasForwardedSlots(children: TemplateChildNode[]): boolean {
     }
   }
   return false
+}
+
+function isNonWhitespaceContent(node: TemplateChildNode): boolean {
+  if (node.type !== NodeTypes.TEXT && node.type !== NodeTypes.TEXT_CALL)
+    return true
+  return node.type === NodeTypes.TEXT
+    ? !!node.content.trim()
+    : isNonWhitespaceContent(node.content)
 }

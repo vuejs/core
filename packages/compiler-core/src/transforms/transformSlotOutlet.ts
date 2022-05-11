@@ -7,7 +7,7 @@ import {
   SlotOutletNode,
   createFunctionExpression
 } from '../ast'
-import { isSlotOutlet, isBindKey, isStaticExp } from '../utils'
+import { isSlotOutlet, isStaticArgOf, isStaticExp } from '../utils'
 import { buildProps, PropsExpression } from './transformElement'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { RENDER_SLOT } from '../runtimeHelpers'
@@ -20,29 +20,27 @@ export const transformSlotOutlet: NodeTransform = (node, context) => {
 
     const slotArgs: CallExpression['arguments'] = [
       context.prefixIdentifiers ? `_ctx.$slots` : `$slots`,
-      slotName
+      slotName,
+      '{}',
+      'undefined',
+      'true'
     ]
+    let expectedLen = 2
 
     if (slotProps) {
-      slotArgs.push(slotProps)
+      slotArgs[2] = slotProps
+      expectedLen = 3
     }
 
     if (children.length) {
-      if (!slotProps) {
-        slotArgs.push(`{}`)
-      }
-      slotArgs.push(createFunctionExpression([], children, false, false, loc))
+      slotArgs[3] = createFunctionExpression([], children, false, false, loc)
+      expectedLen = 4
     }
 
-    if (context.slotted) {
-      if (!slotProps) {
-        slotArgs.push(`{}`)
-      }
-      if (!children.length) {
-        slotArgs.push(`undefined`)
-      }
-      slotArgs.push(`true`)
+    if (context.scopeId && !context.slotted) {
+      expectedLen = 5
     }
+    slotArgs.splice(expectedLen) // remove unused arguments
 
     node.codegenNode = createCallExpression(
       context.helper(RENDER_SLOT),
@@ -77,7 +75,7 @@ export function processSlotOutlet(
         }
       }
     } else {
-      if (p.name === 'bind' && isBindKey(p.arg, 'name')) {
+      if (p.name === 'bind' && isStaticArgOf(p.arg, 'name')) {
         if (p.exp) slotName = p.exp
       } else {
         if (p.name === 'bind' && p.arg && isStaticExp(p.arg)) {

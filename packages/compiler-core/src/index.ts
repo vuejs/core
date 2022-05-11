@@ -31,6 +31,7 @@ export {
 
 export * from './ast'
 export * from './utils'
+export * from './babelUtils'
 export * from './runtimeHelpers'
 
 export { getBaseTransformPreset, TransformPreset } from './compile'
@@ -53,7 +54,16 @@ export {
 export {
   transformElement,
   resolveComponentType,
-  buildProps
+  buildProps,
+  buildDirectiveArgs,
+  PropsExpression
 } from './transforms/transformElement'
 export { processSlotOutlet } from './transforms/transformSlotOutlet'
 export { generateCodeFrame } from '@vue/shared'
+
+// v2 compat only
+export {
+  checkCompatEnabled,
+  warnDeprecation,
+  CompilerDeprecationTypes
+} from './compat/compatConfig'

@@ -30,6 +30,8 @@ import { SourceMapGenerator, RawSourceMap } from 'source-map'
 import {
   advancePositionWithMutation,
   assert,
+  getVNodeBlockHelper,
+  getVNodeHelper,
   isSimpleIdentifier,
   toValidAssetId
 } from './utils'
@@ -43,12 +45,14 @@ import {
   SET_BLOCK_TRACKING,
   CREATE_COMMENT,
   CREATE_TEXT,
-  SET_SCOPE_ID,
+  PUSH_SCOPE_ID,
+  POP_SCOPE_ID,
   WITH_DIRECTIVES,
-  CREATE_BLOCK,
+  CREATE_ELEMENT_VNODE,
   OPEN_BLOCK,
   CREATE_STATIC,
-  WITH_CTX
+  WITH_CTX,
+  RESOLVE_FILTER
 } from './runtimeHelpers'
 import { ImportItem } from './transform'
 
@@ -64,10 +68,7 @@ export interface CodegenResult {
 }
 
 export interface CodegenContext
-  extends Omit<
-      Required<CodegenOptions>,
-      'bindingMetadata' | 'inline' | 'isTS'
-    > {
+  extends Omit<Required<CodegenOptions>, 'bindingMetadata' | 'inline'> {
   source: string
   code: string
   line: number
@@ -94,7 +95,10 @@ function createCodegenContext(
     optimizeImports = false,
     runtimeGlobalName = `Vue`,
     runtimeModuleName = `vue`,
-    ssr = false
+    ssrRuntimeModuleName = 'vue/server-renderer',
+    ssr = false,
+    isTS = false,
+    inSSR = false
   }: CodegenOptions
 ): CodegenContext {
   const context: CodegenContext = {
@@ -106,7 +110,10 @@ function createCodegenContext(
     optimizeImports,
     runtimeGlobalName,
     runtimeModuleName,
+    ssrRuntimeModuleName,
     ssr,
+    isTS,
+    inSSR,
     source: ast.loc.source,
     code: ``,
     column: 1,
@@ -195,11 +202,13 @@ export function generate(
     indent,
     deindent,
     newline,
+    scopeId,
     ssr
   } = context
 
   const hasHelpers = ast.helpers.length > 0
   const useWithBlock = !prefixIdentifiers && mode !== 'module'
+  const genScopeId = !__BROWSER__ && scopeId != null && mode === 'module'
   const isSetupInlined = !__BROWSER__ && !!options.inline
 
   // preambles
@@ -209,11 +218,10 @@ export function generate(
     ? createCodegenContext(ast, options)
     : context
   if (!__BROWSER__ && mode === 'module') {
-    genModulePreamble(ast, preambleContext, isSetupInlined)
+    genModulePreamble(ast, preambleContext, genScopeId, isSetupInlined)
   } else {
     genFunctionPreamble(ast, preambleContext)
   }
-
   // enter render function
   const functionName = ssr ? `ssrRender` : `render`
   const args = ssr ? ['_ctx', '_push', '_parent', '_attrs'] : ['_ctx', '_cache']
@@ -262,6 +270,12 @@ export function generate(
       newline()
     }
   }
+  if (__COMPAT__ && ast.filters && ast.filters.length) {
+    newline()
+    genAssets(ast.filters, 'filter', context)
+    newline()
+  }
+
   if (ast.temps > 0) {
     push(`let `)
     for (let i = 0; i < ast.temps; i++) {
@@ -307,7 +321,8 @@ function genFunctionPreamble(ast: RootNode, context: CodegenContext) {
     push,
     newline,
     runtimeModuleName,
-    runtimeGlobalName
+    runtimeGlobalName,
+    ssrRuntimeModuleName
   } = context
   const VueBinding =
     !__BROWSER__ && ssr
@@ -333,6 +348,7 @@ function genFunctionPreamble(ast: RootNode, context: CodegenContext) {
       if (ast.hoists.length) {
         const staticHelpers = [
           CREATE_VNODE,
+          CREATE_ELEMENT_VNODE,
           CREATE_COMMENT,
           CREATE_TEXT,
           CREATE_STATIC
@@ -350,7 +366,7 @@ function genFunctionPreamble(ast: RootNode, context: CodegenContext) {
     push(
       `const { ${ast.ssrHelpers
         .map(aliasHelper)
-        .join(', ')} } = require("@vue/server-renderer")\n`
+        .join(', ')} } = require("${ssrRuntimeModuleName}")\n`
     )
   }
   genHoists(ast.hoists, context)
@@ -361,6 +377,7 @@ function genFunctionPreamble(ast: RootNode, context: CodegenContext) {
 function genModulePreamble(
   ast: RootNode,
   context: CodegenContext,
+  genScopeId: boolean,
   inline?: boolean
 ) {
   const {
@@ -368,13 +385,11 @@ function genModulePreamble(
     newline,
     optimizeImports,
     runtimeModuleName,
-    scopeId,
-    mode
+    ssrRuntimeModuleName
   } = context
 
-  const genScopeId = !__BROWSER__ && scopeId != null && mode === 'module'
   if (genScopeId && ast.hoists.length) {
-    ast.helpers.push(SET_SCOPE_ID)
+    ast.helpers.push(PUSH_SCOPE_ID, POP_SCOPE_ID)
   }
 
   // generate import statements for helpers
@@ -408,7 +423,7 @@ function genModulePreamble(
     push(
       `import { ${ast.ssrHelpers
         .map(s => `${helperNameMap[s]} as _${helperNameMap[s]}`)
-        .join(', ')} } from "@vue/server-renderer"\n`
+        .join(', ')} } from "${ssrRuntimeModuleName}"\n`
     )
   }
 
@@ -427,16 +442,27 @@ function genModulePreamble(
 
 function genAssets(
   assets: string[],
-  type: 'component' | 'directive',
-  { helper, push, newline }: CodegenContext
+  type: 'component' | 'directive' | 'filter',
+  { helper, push, newline, isTS }: CodegenContext
 ) {
   const resolver = helper(
-    type === 'component' ? RESOLVE_COMPONENT : RESOLVE_DIRECTIVE
+    __COMPAT__ && type === 'filter'
+      ? RESOLVE_FILTER
+      : type === 'component'
+      ? RESOLVE_COMPONENT
+      : RESOLVE_DIRECTIVE
   )
   for (let i = 0; i < assets.length; i++) {
-    const id = assets[i]
+    let id = assets[i]
+    // potential component implicit self-reference inferred from SFC filename
+    const maybeSelfReference = id.endsWith('__self')
+    if (maybeSelfReference) {
+      id = id.slice(0, -6)
+    }
     push(
-      `const ${toValidAssetId(id, type)} = ${resolver}(${JSON.stringify(id)})`
+      `const ${toValidAssetId(id, type)} = ${resolver}(${JSON.stringify(id)}${
+        maybeSelfReference ? `, true` : ``
+      })${isTS ? `!` : ``}`
     )
     if (i < assets.length - 1) {
       newline()
@@ -453,25 +479,33 @@ function genHoists(hoists: (JSChildNode | null)[], context: CodegenContext) {
   const genScopeId = !__BROWSER__ && scopeId != null && mode !== 'function'
   newline()
 
-  // push scope Id before initializing hoisted vnodes so that these vnodes
-  // get the proper scopeId as well.
+  // generate inlined withScopeId helper
   if (genScopeId) {
-    push(`${helper(SET_SCOPE_ID)}("${scopeId}")`)
+    push(
+      `const _withScopeId = n => (${helper(
+        PUSH_SCOPE_ID
+      )}("${scopeId}"),n=n(),${helper(POP_SCOPE_ID)}(),n)`
+    )
     newline()
   }
 
-  hoists.forEach((exp, i) => {
+  for (let i = 0; i < hoists.length; i++) {
+    const exp = hoists[i]
     if (exp) {
-      push(`const _hoisted_${i + 1} = `)
+      const needScopeIdWrapper = genScopeId && exp.type === NodeTypes.VNODE_CALL
+      push(
+        `const _hoisted_${i + 1} = ${
+          needScopeIdWrapper ? `${PURE_ANNOTATION} _withScopeId(() => ` : ``
+        }`
+      )
       genNode(exp, context)
+      if (needScopeIdWrapper) {
+        push(`)`)
+      }
       newline()
     }
-  })
-
-  if (genScopeId) {
-    push(`${helper(SET_SCOPE_ID)}(null)`)
-    newline()
   }
+
   context.pure = false
 }
 
@@ -599,11 +633,11 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
     case NodeTypes.JS_CACHE_EXPRESSION:
       genCacheExpression(node, context)
       break
+    case NodeTypes.JS_BLOCK_STATEMENT:
+      genNodeList(node.body, context, true, false)
+      break
 
     // SSR only types
-    case NodeTypes.JS_BLOCK_STATEMENT:
-      !__BROWSER__ && genNodeList(node.body, context, true, false)
-      break
     case NodeTypes.JS_TEMPLATE_LITERAL:
       !__BROWSER__ && genTemplateLiteral(node, context)
       break
@@ -689,13 +723,11 @@ function genExpressionAsPropertyKey(
 }
 
 function genComment(node: CommentNode, context: CodegenContext) {
-  if (__DEV__) {
-    const { push, helper, pure } = context
-    if (pure) {
-      push(PURE_ANNOTATION)
-    }
-    push(`${helper(CREATE_COMMENT)}(${JSON.stringify(node.content)})`, node)
+  const { push, helper, pure } = context
+  if (pure) {
+    push(PURE_ANNOTATION)
   }
+  push(`${helper(CREATE_COMMENT)}(${JSON.stringify(node.content)})`, node)
 }
 
 function genVNodeCall(node: VNodeCall, context: CodegenContext) {
@@ -708,7 +740,8 @@ function genVNodeCall(node: VNodeCall, context: CodegenContext) {
     dynamicProps,
     directives,
     isBlock,
-    disableTracking
+    disableTracking,
+    isComponent
   } = node
   if (directives) {
     push(helper(WITH_DIRECTIVES) + `(`)
@@ -719,7 +752,10 @@ function genVNodeCall(node: VNodeCall, context: CodegenContext) {
   if (pure) {
     push(PURE_ANNOTATION)
   }
-  push(helper(isBlock ? CREATE_BLOCK : CREATE_VNODE) + `(`, node)
+  const callHelper: symbol = isBlock
+    ? getVNodeBlockHelper(context.inSSR, isComponent)
+    : getVNodeHelper(context.inSSR, isComponent)
+  push(helper(callHelper) + `(`, node)
   genNodeList(
     genNullableArgs([tag, props, children, patchFlag, dynamicProps]),
     context
@@ -786,7 +822,7 @@ function genObjectExpression(node: ObjectExpression, context: CodegenContext) {
 }
 
 function genArrayExpression(node: ArrayExpression, context: CodegenContext) {
-  genNodeListAsArray(node.elements, context)
+  genNodeListAsArray(node.elements as CodegenNode[], context)
 }
 
 function genFunctionExpression(
@@ -795,7 +831,6 @@ function genFunctionExpression(
 ) {
   const { push, indent, deindent } = context
   const { params, returns, body, newline, isSlot } = node
-
   if (isSlot) {
     // wrap slot functions with owner context
     push(`_${helperNameMap[WITH_CTX]}(`)
@@ -828,6 +863,9 @@ function genFunctionExpression(
     push(`}`)
   }
   if (isSlot) {
+    if (__COMPAT__ && node.isNonScopedSlot) {
+      push(`, undefined, true`)
+    }
     push(`)`)
   }
 }

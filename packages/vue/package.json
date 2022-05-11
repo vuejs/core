@@ -1,7 +1,7 @@
 {
   "name": "vue",
-  "version": "3.0.7",
-  "description": "vue",
+  "version": "3.2.33",
+  "description": "The progressive JavaScript framework for building modern web UI.",
   "main": "index.js",
   "module": "dist/vue.runtime.esm-bundler.js",
   "types": "dist/vue.d.ts",
@@ -9,8 +9,37 @@
   "jsdelivr": "dist/vue.global.js",
   "files": [
     "index.js",
-    "dist"
+    "index.mjs",
+    "dist",
+    "compiler-sfc",
+    "server-renderer",
+    "macros.d.ts",
+    "macros-global.d.ts",
+    "ref-macros.d.ts"
   ],
+  "exports": {
+    ".": {
+      "import": {
+        "node": "./index.mjs",
+        "default": "./dist/vue.runtime.esm-bundler.js"
+      },
+      "require": "./index.js",
+      "types": "./dist/vue.d.ts"
+    },
+    "./server-renderer": {
+      "import": "./server-renderer/index.mjs",
+      "require": "./server-renderer/index.js"
+    },
+    "./compiler-sfc": {
+      "import": "./compiler-sfc/index.mjs",
+      "require": "./compiler-sfc/index.js"
+    },
+    "./dist/*": "./dist/*",
+    "./package.json": "./package.json",
+    "./macros": "./macros.d.ts",
+    "./macros-global": "./macros-global.d.ts",
+    "./ref-macros": "./ref-macros.d.ts"
+  },
   "buildOptions": {
     "name": "Vue",
     "formats": [
@@ -25,7 +54,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vuejs/vue-next.git"
+    "url": "git+https://github.com/vuejs/core.git"
   },
   "keywords": [
     "vue"
@@ -33,17 +62,14 @@
   "author": "Evan You",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/vuejs/vue-next/issues"
+    "url": "https://github.com/vuejs/core/issues"
   },
-  "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/vue#readme",
+  "homepage": "https://github.com/vuejs/core/tree/main/packages/vue#readme",
   "dependencies": {
-    "@vue/shared": "3.0.7",
-    "@vue/compiler-dom": "3.0.7",
-    "@vue/runtime-dom": "3.0.7"
-  },
-  "devDependencies": {
-    "lodash": "^4.17.15",
-    "marked": "^0.7.0",
-    "todomvc-app-css": "^2.3.0"
+    "@vue/shared": "3.2.33",
+    "@vue/compiler-dom": "3.2.33",
+    "@vue/runtime-dom": "3.2.33",
+    "@vue/compiler-sfc": "3.2.33",
+    "@vue/server-renderer": "3.2.33"
   }
 }

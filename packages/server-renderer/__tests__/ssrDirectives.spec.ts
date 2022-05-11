@@ -1,3 +1,7 @@
+/**
+ * @jest-environment node
+ */
+
 import { renderToString } from '../src/renderToString'
 import {
   createApp,
@@ -6,8 +10,10 @@ import {
   vShow,
   vModelText,
   vModelRadio,
-  vModelCheckbox
+  vModelCheckbox,
+  resolveDirective
 } from 'vue'
+import { ssrGetDirectiveProps, ssrRenderAttrs } from '../src'
 
 describe('ssr: directives', () => {
   describe('template v-show', () => {
@@ -370,7 +376,7 @@ describe('ssr: directives', () => {
     })
   })
 
-  test('custom directive w/ getSSRProps', async () => {
+  test('custom directive w/ getSSRProps (vdom)', async () => {
     expect(
       await renderToString(
         createApp({
@@ -389,5 +395,36 @@ describe('ssr: directives', () => {
         })
       )
     ).toBe(`<div id="foo"></div>`)
+  })
+
+  test('custom directive w/ getSSRProps (optimized)', async () => {
+    expect(
+      await renderToString(
+        createApp({
+          data() {
+            return {
+              x: 'foo'
+            }
+          },
+          directives: {
+            xxx: {
+              getSSRProps({ value, arg, modifiers }) {
+                return { id: [value, arg, modifiers.ok].join('-') }
+              }
+            }
+          },
+          ssrRender(_ctx, _push, _parent, _attrs) {
+            const _directive_xxx = resolveDirective('xxx')!
+            _push(
+              `<div${ssrRenderAttrs(
+                ssrGetDirectiveProps(_ctx, _directive_xxx, _ctx.x, 'arg', {
+                  ok: true
+                })
+              )}></div>`
+            )
+          }
+        })
+      )
+    ).toBe(`<div id="foo-arg-true"></div>`)
   })
 })

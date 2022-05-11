@@ -2,17 +2,16 @@
 
 > Lower level utilities for compiling Vue Single File Components
 
+**Note: as of 3.2.13+, this package is included as a dependency of the main `vue` package and can be accessed as `vue/compiler-sfc`. This means you no longer need to explicitly install this package and ensure its version match that of `vue`'s. Just use the main `vue/compiler-sfc` deep import instead.**
+
 This package contains lower level utilities that you can use if you are writing a plugin / transform for a bundler or module system that compiles Vue Single File Components (SFCs) into JavaScript. It is used in [vue-loader](https://github.com/vuejs/vue-loader), [rollup-plugin-vue](https://github.com/vuejs/rollup-plugin-vue) and [vite](https://github.com/vitejs/vite).
-
-## Browser Build Notes
-
-The browser build relies on a browser-bundled build of `postcss` to be available under the global `postcss` (since it can't be properly bundled by Rollup).
 
 ## API
 
 The API is intentionally low-level due to the various considerations when integrating Vue SFCs in a build system:
 
 - Separate hot-module replacement (HMR) for script, template and styles
+
   - template updates should not reset component state
   - style updates should be performed without component re-render
 
@@ -77,7 +76,5 @@ export default script
 4. In style transform, use `compileStyle` to compile raw CSS to handle `<style scoped>`, `<style module>` and CSS variable injection.
 
 Options needed for these APIs can be passed via the query string.
-
-
 
 For detailed API references and options, check out the source type definitions. For actual usage of these APIs, check out [rollup-plugin-vue](https://github.com/vuejs/rollup-plugin-vue/tree/next) or [vue-loader](https://github.com/vuejs/vue-loader/tree/next).

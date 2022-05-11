@@ -1,6 +1,6 @@
 {
   "name": "@vue/runtime-dom",
-  "version": "3.0.7",
+  "version": "3.2.33",
   "description": "@vue/runtime-dom",
   "main": "index.js",
   "module": "dist/runtime-dom.esm-bundler.js",
@@ -22,7 +22,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vuejs/vue-next.git",
+    "url": "git+https://github.com/vuejs/core.git",
     "directory": "packages/runtime-dom"
   },
   "keywords": [
@@ -31,12 +31,12 @@
   "author": "Evan You",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/vuejs/vue-next/issues"
+    "url": "https://github.com/vuejs/core/issues"
   },
-  "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/runtime-dom#readme",
+  "homepage": "https://github.com/vuejs/core/tree/main/packages/runtime-dom#readme",
   "dependencies": {
-    "@vue/shared": "3.0.7",
-    "@vue/runtime-core": "3.0.7",
+    "@vue/shared": "3.2.33",
+    "@vue/runtime-core": "3.2.33",
     "csstype": "^2.6.8"
   }
 }

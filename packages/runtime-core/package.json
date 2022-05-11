@@ -1,6 +1,6 @@
 {
   "name": "@vue/runtime-core",
-  "version": "3.0.7",
+  "version": "3.2.33",
   "description": "@vue/runtime-core",
   "main": "index.js",
   "module": "dist/runtime-core.esm-bundler.js",
@@ -19,7 +19,7 @@
   "sideEffects": false,
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vuejs/vue-next.git",
+    "url": "git+https://github.com/vuejs/core.git",
     "directory": "packages/runtime-core"
   },
   "keywords": [
@@ -28,11 +28,11 @@
   "author": "Evan You",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/vuejs/vue-next/issues"
+    "url": "https://github.com/vuejs/core/issues"
   },
-  "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/runtime-core#readme",
+  "homepage": "https://github.com/vuejs/core/tree/main/packages/runtime-core#readme",
   "dependencies": {
-    "@vue/shared": "3.0.7",
-    "@vue/reactivity": "3.0.7"
+    "@vue/shared": "3.2.33",
+    "@vue/reactivity": "3.2.33"
   }
 }

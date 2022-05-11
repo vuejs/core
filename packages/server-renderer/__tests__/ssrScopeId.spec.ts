@@ -1,4 +1,8 @@
-import { createApp, mergeProps, withCtx } from 'vue'
+/**
+ * @jest-environment node
+ */
+
+import { createApp, h, mergeProps, withCtx } from 'vue'
 import { renderToString } from '../src/renderToString'
 import { ssrRenderComponent, ssrRenderAttrs, ssrRenderSlot } from '../src'
 
@@ -153,5 +157,30 @@ describe('ssr: scopedId runtime behavior', () => {
         `<!--[--><!--[--><div root slotted-s wrapper-s></div><!--]--><!--]-->` +
         `</div>`
     )
+  })
+
+  // #3513
+  test('scopeId inheritance across ssr-compiled andn on-ssr compiled parent chain', async () => {
+    const Child = {
+      ssrRender: (ctx: any, push: any, parent: any, attrs: any) => {
+        push(`<div${ssrRenderAttrs(attrs)}></div>`)
+      }
+    }
+
+    const Middle = {
+      render() {
+        return h(Child)
+      }
+    }
+
+    const Comp = {
+      __scopeId: 'parent',
+      ssrRender: (ctx: any, push: any, parent: any) => {
+        push(ssrRenderComponent(Middle, null, null, parent))
+      }
+    }
+
+    const result = await renderToString(createApp(Comp)) // output: `<div></div>`
+    expect(result).toBe(`<div parent></div>`)
   })
 })

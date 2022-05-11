@@ -6,12 +6,12 @@ describe('e2e: TransitionGroup', () => {
   const { page, html, nextFrame, timeout } = setupPuppeteer()
   const baseUrl = `file://${path.resolve(__dirname, './transition.html')}`
 
-  const duration = 50
-  const buffer = 5
+  const duration = process.env.CI ? 200 : 50
+  const buffer = process.env.CI ? 20 : 5
 
   const htmlWhenTransitionStart = () =>
     page().evaluate(() => {
-      (document.querySelector('#toggleBtn') as any)!.click()
+      ;(document.querySelector('#toggleBtn') as any)!.click()
       return Promise.resolve().then(() => {
         return document.querySelector('#container')!.innerHTML
       })
@@ -21,7 +21,7 @@ describe('e2e: TransitionGroup', () => {
 
   beforeEach(async () => {
     await page().goto(baseUrl)
-    await page().waitFor('#app')
+    await page().waitForSelector('#app')
   })
 
   test(
@@ -346,7 +346,7 @@ describe('e2e: TransitionGroup', () => {
       )
       // not sure why but we just have to wait really long for this to
       // pass consistently :/
-      await transitionFinish(duration * 4)
+      await transitionFinish(duration * 4 + buffer)
       expect(await html('#container')).toBe(
         `<div class="" style="">a</div>` +
           `<div class="" style="">b</div>` +

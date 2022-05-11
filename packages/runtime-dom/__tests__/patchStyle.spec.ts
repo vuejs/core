@@ -37,7 +37,18 @@ describe(`runtime-dom: style patching`, () => {
 
   it('remove if falsy value', () => {
     const el = document.createElement('div')
-    patchProp(el, 'style', { color: 'red' }, { color: undefined })
+    patchProp(el, 'style', null, {
+      color: undefined,
+      borderRadius: null
+    })
+    expect(el.style.cssText.replace(/\s/g, '')).toBe('')
+
+    patchProp(
+      el,
+      'style',
+      { color: 'red' },
+      { color: null, borderRadius: undefined }
+    )
     expect(el.style.cssText.replace(/\s/g, '')).toBe('')
   })
 
@@ -66,6 +77,14 @@ describe(`runtime-dom: style patching`, () => {
     const el = document.createElement('div')
     patchProp(el as any, 'style', { width: '100px' }, { width: 0 })
     expect(el.style.width).toBe('0px')
+  })
+
+  it('should remove style attribute on falsy value', () => {
+    const el = document.createElement('div')
+    el.style.cssText = 'color: red;'
+    patchProp(el as any, 'style', {}, null)
+    expect(el.hasAttribute('style')).toBe(false)
+    expect(el.style.cssText).toBe('')
   })
 
   // JSDOM doesn't support custom properties on style object so we have to

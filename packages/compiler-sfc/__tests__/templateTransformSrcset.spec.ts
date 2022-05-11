@@ -1,4 +1,9 @@
-import { generate, baseParse, transform } from '@vue/compiler-core'
+import {
+  generate,
+  baseParse,
+  transform,
+  TransformOptions
+} from '@vue/compiler-core'
 import {
   transformSrcset,
   createSrcsetTransformWithOptions
@@ -9,17 +14,24 @@ import {
   AssetURLOptions,
   normalizeOptions
 } from '../src/templateTransformAssetUrl'
+import { stringifyStatic } from '../../compiler-dom/src/transforms/stringifyStatic'
 
-function compileWithSrcset(template: string, options?: AssetURLOptions) {
+function compileWithSrcset(
+  template: string,
+  options?: AssetURLOptions,
+  transformOptions?: TransformOptions
+) {
   const ast = baseParse(template)
   const srcsetTransform = options
     ? createSrcsetTransformWithOptions(normalizeOptions(options))
     : transformSrcset
   transform(ast, {
+    hoistStatic: true,
     nodeTransforms: [srcsetTransform, transformElement],
     directiveTransforms: {
       bind: transformBind
-    }
+    },
+    ...transformOptions
   })
   return generate(ast, { mode: 'module' })
 }
@@ -58,5 +70,32 @@ describe('compiler sfc: transform srcset', () => {
         includeAbsolute: true
       }).code
     ).toMatchSnapshot()
+  })
+
+  test('transform srcset w/ stringify', () => {
+    const code = compileWithSrcset(
+      `<div>${src}</div>`,
+      {
+        includeAbsolute: true
+      },
+      {
+        hoistStatic: true,
+        transformHoist: stringifyStatic
+      }
+    ).code
+    expect(code).toMatch(`_createStaticVNode`)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('srcset w/ explicit base option', () => {
+    const code = compileWithSrcset(
+      `
+      <img srcset="@/logo.png, @/logo.png 2x"/>
+      <img srcset="@/logo.png 1x, ./logo.png 2x"/>
+    `,
+      { base: '/foo/' },
+      { hoistStatic: true }
+    ).code
+    expect(code).toMatchSnapshot()
   })
 })
