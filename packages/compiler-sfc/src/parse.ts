@@ -13,6 +13,8 @@ import { parseCssVars } from './cssVars'
 import { createCache } from './cache'
 import { hmrShouldReload, ImportBinding } from './compileScript'
 
+export const DEFAULT_FILENAME = 'anonymous.vue'
+
 export interface SFCParseOptions {
   filename?: string
   sourceMap?: boolean
@@ -95,7 +97,7 @@ export function parse(
   source: string,
   {
     sourceMap = true,
-    filename = 'anonymous.vue',
+    filename = DEFAULT_FILENAME,
     sourceRoot = '',
     pad = false,
     ignoreEmpty = true,

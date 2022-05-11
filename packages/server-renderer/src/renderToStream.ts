@@ -100,7 +100,7 @@ export function renderToNodeStream(
   context: SSRContext = {}
 ): Readable {
   const stream: Readable = __NODE_JS__
-    ? new (require('stream').Readable)()
+    ? new (require('stream').Readable)({ read() {} })
     : null
 
   if (!stream) {

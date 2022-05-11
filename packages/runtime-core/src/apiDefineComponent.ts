@@ -6,7 +6,8 @@ import {
   ComponentOptionsWithObjectProps,
   ComponentOptionsMixin,
   RenderFunction,
-  ComponentOptionsBase
+  ComponentOptionsBase,
+  ComponentProvideOptions
 } from './componentOptions'
 import {
   SetupContext,
@@ -47,6 +48,8 @@ export type DefineComponent<
   LC extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
+  Provide extends ComponentProvideOptions = ComponentProvideOptions,
+  RawOptions extends {} = {},
   PP = PublicProps,
   Props = Readonly<
     PropsOrPropOptions extends ComponentPropsOptions
@@ -55,25 +58,26 @@ export type DefineComponent<
   > &
     ({} extends E ? {} : EmitsToProps<E>),
   Defaults = ExtractDefaultPropTypes<PropsOrPropOptions>
-> = ComponentPublicInstanceConstructor<
-  CreateComponentPublicInstance<
-    Props,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    PP & Props,
-    Defaults,
-    true,
-    LC & GlobalComponents,
-    Directives & GlobalDirectives,
-    Exposed
+> = RawOptions &
+  ComponentPublicInstanceConstructor<
+    CreateComponentPublicInstance<
+      Props,
+      RawBindings,
+      D,
+      C,
+      M,
+      Mixin,
+      Extends,
+      E,
+      PP & Props,
+      Defaults,
+      true,
+      LC & GlobalComponents,
+      Directives & GlobalDirectives,
+      Exposed
+    > &
+      Props
   > &
-    Props
-> &
   ComponentOptionsBase<
     Props,
     RawBindings,
@@ -87,7 +91,8 @@ export type DefineComponent<
     LC & GlobalComponents,
     Directives & GlobalDirectives,
     Exposed,
-    Defaults
+    Defaults,
+    Provide
   > &
   PP
 
@@ -120,22 +125,26 @@ export function defineComponent<
   EE extends string = string,
   LC extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
-  Exposed extends string = string
+  Exposed extends string = string,
+  Provide extends ComponentProvideOptions = ComponentProvideOptions,
+  Options extends {} = {}
 >(
-  options: ComponentOptionsWithoutProps<
-    Props,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    EE,
-    LC,
-    Directives,
-    Exposed
-  >
+  options: Options &
+    ComponentOptionsWithoutProps<
+      Props,
+      RawBindings,
+      D,
+      C,
+      M,
+      Mixin,
+      Extends,
+      E,
+      EE,
+      LC,
+      Directives,
+      Exposed,
+      Provide
+    >
 ): DefineComponent<
   Props,
   RawBindings,
@@ -148,7 +157,9 @@ export function defineComponent<
   EE,
   LC,
   Directives,
-  Exposed
+  Exposed,
+  Provide,
+  Options
 >
 
 // overload 3: object format with array props declaration
@@ -166,7 +177,9 @@ export function defineComponent<
   EE extends string = string,
   LC extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
-  Exposed extends string = string
+  Exposed extends string = string,
+  Provide extends ComponentProvideOptions = ComponentProvideOptions,
+  Options extends {} = {}
 >(
   options: ComponentOptionsWithArrayProps<
     PropNames,
@@ -180,7 +193,8 @@ export function defineComponent<
     EE,
     LC,
     Directives,
-    Exposed
+    Exposed,
+    Provide
   >
 ): DefineComponent<
   Readonly<{ [key in PropNames]?: any }>,
@@ -194,7 +208,9 @@ export function defineComponent<
   EE,
   LC,
   Directives,
-  Exposed
+  Exposed,
+  Provide,
+  Options
 >
 
 // overload 4: object format with object props declaration
@@ -213,7 +229,9 @@ export function defineComponent<
   EE extends string = string,
   LC extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
-  Exposed extends string = string
+  Exposed extends string = string,
+  Provide extends ComponentProvideOptions = ComponentProvideOptions,
+  Options extends {} = {}
 >(
   options: ComponentOptionsWithObjectProps<
     PropsOptions,
@@ -227,7 +245,8 @@ export function defineComponent<
     EE,
     LC,
     Directives,
-    Exposed
+    Exposed,
+    Provide
   >
 ): DefineComponent<
   PropsOptions,
@@ -241,7 +260,9 @@ export function defineComponent<
   EE,
   LC,
   Directives,
-  Exposed
+  Exposed,
+  Provide,
+  Options
 >
 
 // implementation, close to no-op

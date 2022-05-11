@@ -64,6 +64,10 @@ export class ReactiveEffect<T = any> {
    * @internal
    */
   allowRecurse?: boolean
+  /**
+   * @internal
+   */
+  private deferStop?: boolean
 
   onStop?: () => void
   // dev only
@@ -114,11 +118,18 @@ export class ReactiveEffect<T = any> {
       activeEffect = this.parent
       shouldTrack = lastShouldTrack
       this.parent = undefined
+
+      if (this.deferStop) {
+        this.stop()
+      }
     }
   }
 
   stop() {
-    if (this.active) {
+    // stopped while running itself - defer the cleanup
+    if (activeEffect === this) {
+      this.deferStop = true
+    } else if (this.active) {
       cleanupEffect(this)
       if (this.onStop) {
         this.onStop()
@@ -237,14 +248,10 @@ export function trackEffects(
     dep.add(activeEffect!)
     activeEffect!.deps.push(dep)
     if (__DEV__ && activeEffect!.onTrack) {
-      activeEffect!.onTrack(
-        Object.assign(
-          {
-            effect: activeEffect!
-          },
-          debuggerEventExtraInfo
-        )
-      )
+      activeEffect!.onTrack({
+        effect: activeEffect!,
+        ...debuggerEventExtraInfo!
+      })
     }
   }
 }
@@ -341,16 +348,31 @@ export function triggerEffects(
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
   // spread into array for stabilization
-  for (const effect of isArray(dep) ? dep : [...dep]) {
-    if (effect !== activeEffect || effect.allowRecurse) {
-      if (__DEV__ && effect.onTrigger) {
-        effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
-      }
-      if (effect.scheduler) {
-        effect.scheduler()
-      } else {
-        effect.run()
-      }
+  const effects = isArray(dep) ? dep : [...dep]
+  for (const effect of effects) {
+    if (effect.computed) {
+      triggerEffect(effect, debuggerEventExtraInfo)
+    }
+  }
+  for (const effect of effects) {
+    if (!effect.computed) {
+      triggerEffect(effect, debuggerEventExtraInfo)
+    }
+  }
+}
+
+function triggerEffect(
+  effect: ReactiveEffect,
+  debuggerEventExtraInfo?: DebuggerEventExtraInfo
+) {
+  if (effect !== activeEffect || effect.allowRecurse) {
+    if (__DEV__ && effect.onTrigger) {
+      effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
+    }
+    if (effect.scheduler) {
+      effect.scheduler()
+    } else {
+      effect.run()
     }
   }
 }

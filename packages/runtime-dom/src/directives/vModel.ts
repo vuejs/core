@@ -18,7 +18,9 @@ import {
 type AssignerFn = (value: any) => void
 
 const getModelAssigner = (vnode: VNode): AssignerFn => {
-  const fn = vnode.props!['onUpdate:modelValue']
+  const fn =
+    vnode.props!['onUpdate:modelValue'] ||
+    (__COMPAT__ && vnode.props!['onModelCompat:input'])
   return isArray(fn) ? value => invokeArrayFns(fn, value) : fn
 }
 
@@ -30,14 +32,8 @@ function onCompositionEnd(e: Event) {
   const target = e.target as any
   if (target.composing) {
     target.composing = false
-    trigger(target, 'input')
+    target.dispatchEvent(new Event('input'))
   }
-}
-
-function trigger(el: HTMLElement, type: string) {
-  const e = document.createEvent('HTMLEvents')
-  e.initEvent(type, true, true)
-  el.dispatchEvent(e)
 }
 
 type ModelDirective<T, Modifiers extends string = string> = ObjectDirective<

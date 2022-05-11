@@ -120,8 +120,9 @@ export interface ComponentOptionsBase<
   LC extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
-  Defaults = {}
-> extends LegacyOptions<Props, D, C, M, Mixin, Extends>,
+  Defaults = {},
+  Provide extends ComponentProvideOptions = ComponentProvideOptions
+> extends LegacyOptions<Props, D, C, M, Mixin, Extends, Provide>,
     ComponentInternalOptions,
     ComponentCustomOptions {
   setup?: (
@@ -235,6 +236,7 @@ export type ComponentOptionsWithoutProps<
   LC extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
+  Provide extends ComponentProvideOptions = ComponentProvideOptions,
   PE = Props & EmitsToProps<E>
 > = ComponentOptionsBase<
   PE,
@@ -249,7 +251,8 @@ export type ComponentOptionsWithoutProps<
   LC,
   Directives,
   Exposed,
-  {}
+  {},
+  Provide
 > & {
   props?: undefined
 } & ThisType<
@@ -284,6 +287,7 @@ export type ComponentOptionsWithArrayProps<
   LC extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
+  Provide extends ComponentProvideOptions = ComponentProvideOptions,
   Props = Readonly<{ [key in PropNames]?: any }> & EmitsToProps<E>
 > = ComponentOptionsBase<
   Props,
@@ -298,7 +302,8 @@ export type ComponentOptionsWithArrayProps<
   LC,
   Directives,
   Exposed,
-  {}
+  {},
+  Provide
 > & {
   props: PropNames[]
 } & ThisType<
@@ -333,6 +338,7 @@ export type ComponentOptionsWithObjectProps<
   LC extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
+  Provide extends ComponentProvideOptions = ComponentProvideOptions,
   Props = Readonly<ExtractPropTypes<PropsOptions>> & EmitsToProps<E>,
   Defaults = ExtractDefaultPropTypes<PropsOptions>
 > = ComponentOptionsBase<
@@ -348,7 +354,8 @@ export type ComponentOptionsWithObjectProps<
   LC,
   Directives,
   Exposed,
-  Defaults
+  Defaults,
+  Provide
 > & {
   props: PropsOptions & ThisType<void>
 } & ThisType<
@@ -453,6 +460,10 @@ type ComponentWatchOptionItem = WatchOptionItem | WatchOptionItem[]
 
 type ComponentWatchOptions = Record<string, ComponentWatchOptionItem>
 
+export type ComponentProvideOptions = ObjectProvideOptions | Function
+
+type ObjectProvideOptions = Record<string | symbol, unknown>
+
 type ComponentInjectOptions = string[] | ObjectInjectOptions
 
 type ObjectInjectOptions = Record<
@@ -466,7 +477,8 @@ interface LegacyOptions<
   C extends ComputedOptions,
   M extends MethodOptions,
   Mixin extends ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin
+  Extends extends ComponentOptionsMixin,
+  Provide extends ComponentProvideOptions = ComponentProvideOptions
 > {
   compatConfig?: CompatConfig
 
@@ -500,7 +512,7 @@ interface LegacyOptions<
   computed?: C
   methods?: M
   watch?: ComponentWatchOptions
-  provide?: Data | Function
+  provide?: Provide
   inject?: ComponentInjectOptions
 
   // assets
@@ -540,8 +552,8 @@ interface LegacyOptions<
    *
    * type-only, used to assist Mixin's type inference,
    * typescript will try to simplify the inferred `Mixin` type,
-   * with the `__differenciator`, typescript won't be able to combine different mixins,
-   * because the `__differenciator` will be different
+   * with the `__differentiator`, typescript won't be able to combine different mixins,
+   * because the `__differentiator` will be different
    */
   __differentiator?: keyof D | keyof C | keyof M
 }

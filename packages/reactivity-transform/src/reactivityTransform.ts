@@ -566,6 +566,16 @@ export function transformAST(
         return
       }
 
+      // catch param
+      if (node.type === 'CatchClause') {
+        scopeStack.push((currentScope = {}))
+        if (node.param && node.param.type === 'Identifier') {
+          registerBinding(node.param)
+        }
+        walkScope(node.body)
+        return
+      }
+
       // non-function block scopes
       if (node.type === 'BlockStatement' && !isFunctionType(parent!)) {
         scopeStack.push((currentScope = {}))

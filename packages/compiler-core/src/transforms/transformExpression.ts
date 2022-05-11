@@ -122,7 +122,11 @@ export function processExpression(
       const isDestructureAssignment =
         parent && isInDestructureAssignment(parent, parentStack)
 
-      if (type === BindingTypes.SETUP_CONST || localVars[raw]) {
+      if (
+        type === BindingTypes.SETUP_CONST ||
+        type === BindingTypes.SETUP_REACTIVE_CONST ||
+        localVars[raw]
+      ) {
         return raw
       } else if (type === BindingTypes.SETUP_REF) {
         return `${raw}.value`

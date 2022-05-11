@@ -1,4 +1,8 @@
-const e2eTests = ['/Transition', '/TransitionGroup', '/examples/']
+const e2eTests = [
+  'vue/__tests__/Transition',
+  'vue/__tests__/TransitionGroup',
+  'vue/examples/'
+]
 
 module.exports = list => {
   return {

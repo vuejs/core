@@ -188,11 +188,8 @@ function renderComponentSubTree(
         slotScopeId
       )
     } else {
-      warn(
-        `Component ${
-          comp.name ? `${comp.name} ` : ``
-        } is missing template or render function.`
-      )
+      const componentName = comp.name || comp.__file || `<Anonymous>`
+      warn(`Component ${componentName} is missing template or render function.`)
       push(`<!---->`)
     }
   }
@@ -356,7 +353,9 @@ function renderTeleportVNode(
   const target = vnode.props && vnode.props.to
   const disabled = vnode.props && vnode.props.disabled
   if (!target) {
-    warn(`[@vue/server-renderer] Teleport is missing target prop.`)
+    if (!disabled) {
+      warn(`[@vue/server-renderer] Teleport is missing target prop.`)
+    }
     return []
   }
   if (!isString(target)) {

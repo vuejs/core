@@ -4,15 +4,33 @@ import { warn } from './warning'
 let activeEffectScope: EffectScope | undefined
 
 export class EffectScope {
+  /**
+   * @internal
+   */
   active = true
+  /**
+   * @internal
+   */
   effects: ReactiveEffect[] = []
+  /**
+   * @internal
+   */
   cleanups: (() => void)[] = []
 
+  /**
+   * only assigned by undetached scope
+   * @internal
+   */
   parent: EffectScope | undefined
+  /**
+   * record undetached scopes
+   * @internal
+   */
   scopes: EffectScope[] | undefined
   /**
    * track a child scope's index in its parent's scopes array for optimized
    * removal
+   * @internal
    */
   private index: number | undefined
 
@@ -28,21 +46,30 @@ export class EffectScope {
 
   run<T>(fn: () => T): T | undefined {
     if (this.active) {
+      const currentEffectScope = activeEffectScope
       try {
         activeEffectScope = this
         return fn()
       } finally {
-        activeEffectScope = this.parent
+        activeEffectScope = currentEffectScope
       }
     } else if (__DEV__) {
       warn(`cannot run an inactive effect scope.`)
     }
   }
 
+  /**
+   * This should only be called on non-detached scopes
+   * @internal
+   */
   on() {
     activeEffectScope = this
   }
 
+  /**
+   * This should only be called on non-detached scopes
+   * @internal
+   */
   off() {
     activeEffectScope = this.parent
   }
