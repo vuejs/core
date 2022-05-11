@@ -208,7 +208,9 @@ export function processExpression(
   // fast path if expression is a simple identifier.
   const rawExp = node.content
   // bail constant on parens (function invocation) and dot (member access)
-  const bailConstant = rawExp.indexOf(`(`) > -1 || rawExp.indexOf('.') > 0
+  // fix: #5106
+  const rawExpTrim = node.content.trim();
+  const bailConstant = rawExp.indexOf(`(`) > -1 || rawExp.indexOf('.') > 0 || (rawExpTrim[0] === '[' && rawExpTrim[rawExpTrim.length - 1] === ']')
 
   if (isSimpleIdentifier(rawExp)) {
     const isScopeVarReference = context.identifiers[rawExp]

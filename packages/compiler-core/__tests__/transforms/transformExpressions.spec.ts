@@ -99,7 +99,23 @@ describe('compiler: expression transform', () => {
       content: `_ctx.baz`
     })
   })
-
+  // fix: #5106
+  test('directive value is array', () => {
+    const node = parseWithExpressionTransform(
+      `<div v-foo:arg="[1]"/>`
+    ) as ElementNode
+    const arg = (node.props[0] as DirectiveNode).arg!
+    expect(arg).toMatchObject({
+      type: NodeTypes.SIMPLE_EXPRESSION,
+      content: `arg`
+    })
+    const exp = (node.props[0] as DirectiveNode).exp!
+    expect(exp).toMatchObject({
+      type: NodeTypes.SIMPLE_EXPRESSION,
+      content: `[1]`,
+      constType:ConstantTypes.NOT_CONSTANT
+    })
+  })
   test('dynamic directive arg', () => {
     const node = parseWithExpressionTransform(
       `<div v-foo:[arg]="baz"/>`
