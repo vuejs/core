@@ -181,21 +181,22 @@ export function defineComponent<
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
   Options extends {} = {}
 >(
-  options: ComponentOptionsWithArrayProps<
-    PropNames,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    EE,
-    LC,
-    Directives,
-    Exposed,
-    Provide
-  >
+  options: Options &
+    ComponentOptionsWithArrayProps<
+      PropNames,
+      RawBindings,
+      D,
+      C,
+      M,
+      Mixin,
+      Extends,
+      E,
+      EE,
+      LC,
+      Directives,
+      Exposed,
+      Provide
+    >
 ): DefineComponent<
   Readonly<{ [key in PropNames]?: any }>,
   RawBindings,
@@ -233,21 +234,22 @@ export function defineComponent<
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
   Options extends {} = {}
 >(
-  options: ComponentOptionsWithObjectProps<
-    PropsOptions,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    EE,
-    LC,
-    Directives,
-    Exposed,
-    Provide
-  >
+  options: Options &
+    ComponentOptionsWithObjectProps<
+      PropsOptions,
+      RawBindings,
+      D,
+      C,
+      M,
+      Mixin,
+      Extends,
+      E,
+      EE,
+      LC,
+      Directives,
+      Exposed,
+      Provide
+    >
 ): DefineComponent<
   PropsOptions,
   RawBindings,
