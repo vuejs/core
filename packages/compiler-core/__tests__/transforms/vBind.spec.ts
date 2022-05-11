@@ -314,7 +314,6 @@ describe('compiler: transform v-bind', () => {
   test('Bind array constant to style', () => {
     const node = parseWithVBind(`<div v-bind:style="[color:red]"/>`)
     const props = (node.codegenNode as VNodeCall).props as ObjectExpression
-    debugger
     expect(props.properties[0]).toMatchObject({
       key: {
         type:4,
