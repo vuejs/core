@@ -713,6 +713,7 @@ function baseCreateRenderer(
       (!parentSuspense || (parentSuspense && !parentSuspense.pendingBranch)) &&
       transition &&
       !transition.persisted
+    if (transition) debugger
     if (needCallTransitionHooks) {
       transition!.beforeEnter(el)
     }
@@ -1098,6 +1099,8 @@ function baseCreateRenderer(
       if (
         patchFlag > 0 &&
         patchFlag & PatchFlags.STABLE_FRAGMENT &&
+        // #5523 dev root fragment may inherit directives so always force update
+        !(__DEV__ && patchFlag & PatchFlags.DEV_ROOT_FRAGMENT) &&
         dynamicChildren &&
         // #2715 the previous fragment could've been a BAILed one as a result
         // of renderSlot() with no valid children
