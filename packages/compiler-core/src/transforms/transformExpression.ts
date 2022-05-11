@@ -60,11 +60,15 @@ export const transformExpression: NodeTransform = (node, context) => {
           exp.type === NodeTypes.SIMPLE_EXPRESSION &&
           !(dir.name === 'on' && arg)
         ) {
+          const isBindStyle = dir.name === 'bind' && arg && (arg as SimpleExpressionNode).content && (arg as SimpleExpressionNode).content === 'style'
           dir.exp = processExpression(
             exp,
             context,
             // slot args must be processed as function params
-            dir.name === 'slot'
+            dir.name === 'slot',
+            false,
+            Object.create(context.identifiers),
+            (isBindStyle ? true : false)
           )
         }
         if (arg && arg.type === NodeTypes.SIMPLE_EXPRESSION && !arg.isStatic) {
@@ -94,7 +98,8 @@ export function processExpression(
   asParams = false,
   // v-on handler values may contain multiple statements
   asRawStatements = false,
-  localVars: Record<string, number> = Object.create(context.identifiers)
+  localVars: Record<string, number> = Object.create(context.identifiers),
+  isBindStyle:boolean | undefined = false,
 ): ExpressionNode {
   if (__BROWSER__) {
     if (__DEV__) {
@@ -210,7 +215,7 @@ export function processExpression(
   // bail constant on parens (function invocation) and dot (member access)
   // fix: #5106
   const rawExpTrim = node.content.trim();
-  const bailConstant = rawExp.indexOf(`(`) > -1 || rawExp.indexOf('.') > 0 || (rawExpTrim[0] === '[' && rawExpTrim[rawExpTrim.length - 1] === ']')
+  const bailConstant = rawExp.indexOf(`(`) > -1 || rawExp.indexOf('.') > 0 || (rawExpTrim[0] === '[' && rawExpTrim[rawExpTrim.length - 1] === ']' && isBindStyle)
 
   if (isSimpleIdentifier(rawExp)) {
     const isScopeVarReference = context.identifiers[rawExp]
