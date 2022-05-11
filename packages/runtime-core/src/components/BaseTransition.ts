@@ -333,6 +333,19 @@ export function resolveTransitionHooks(
       )
   }
 
+  const callAsyncHook = (
+    hook: Hook<(el: any, done: () => void) => void>,
+    args: [TransitionElement, () => void]
+  ) => {
+    const done = args[1]
+    callHook(hook, args)
+    if (isArray(hook)) {
+      if (hook.every(hook => hook.length <= 1)) done()
+    } else if (hook.length <= 1) {
+      done()
+    }
+  }
+
   const hooks: TransitionHooks<TransitionElement> = {
     mode,
     persisted,
@@ -390,14 +403,7 @@ export function resolveTransitionHooks(
         el._enterCb = undefined
       })
       if (hook) {
-        callHook(hook, [el, done])
-        if (isArray(hook)) {
-          if (hook.every(hook => hook.length <= 1)) {
-            done()
-          }
-        } else if (hook.length <= 1) {
-          done()
-        }
+        callAsyncHook(hook, [el, done])
       } else {
         done()
       }
@@ -429,14 +435,7 @@ export function resolveTransitionHooks(
       })
       leavingVNodesCache[key] = vnode
       if (onLeave) {
-        callHook(onLeave, [el, done])
-        if (isArray(onLeave)) {
-          if (onLeave.every(hook => hook.length <= 1)) {
-            done()
-          }
-        } else if (onLeave.length <= 1) {
-          done()
-        }
+        callAsyncHook(onLeave, [el, done])
       } else {
         done()
       }
