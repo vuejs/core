@@ -69,40 +69,45 @@ export const transformSrcset: NodeTransform = (
             }
           }
 
-          const hasQualifiedUrl = imageCandidates.some(({ url }) => {
+          const shouldProcessUrl = (url: string) => {
             return (
               !isExternalUrl(url) &&
               !isDataUrl(url) &&
               (options.includeAbsolute || isRelativeUrl(url))
             )
-          })
+          }
           // When srcset does not contain any qualified URLs, skip transforming
-          if (!hasQualifiedUrl) {
+          if (!imageCandidates.some(({ url }) => shouldProcessUrl(url))) {
             return
           }
 
           if (options.base) {
             const base = options.base
             const set: string[] = []
-            imageCandidates.forEach(({ url, descriptor }) => {
+            let needImportTransform = false
+
+            imageCandidates.forEach(candidate => {
+              let { url, descriptor } = candidate
               descriptor = descriptor ? ` ${descriptor}` : ``
-              if (isRelativeUrl(url)) {
-                set.push((path.posix || path).join(base, url) + descriptor)
+              if (url[0] === '.') {
+                candidate.url = (path.posix || path).join(base, url)
+                set.push(candidate.url + descriptor)
+              } else if (shouldProcessUrl(url)) {
+                needImportTransform = true
               } else {
                 set.push(url + descriptor)
               }
             })
-            attr.value.content = set.join(', ')
-            return
+
+            if (!needImportTransform) {
+              attr.value.content = set.join(', ')
+              return
+            }
           }
 
           const compoundExpression = createCompoundExpression([], attr.loc)
           imageCandidates.forEach(({ url, descriptor }, index) => {
-            if (
-              !isExternalUrl(url) &&
-              !isDataUrl(url) &&
-              (options.includeAbsolute || isRelativeUrl(url))
-            ) {
+            if (shouldProcessUrl(url)) {
               const { path } = parseUrl(url)
               let exp: SimpleExpressionNode
               if (path) {

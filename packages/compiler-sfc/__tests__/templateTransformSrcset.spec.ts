@@ -86,4 +86,16 @@ describe('compiler sfc: transform srcset', () => {
     expect(code).toMatch(`_createStaticVNode`)
     expect(code).toMatchSnapshot()
   })
+
+  test('srcset w/ explicit base option', () => {
+    const code = compileWithSrcset(
+      `
+      <img srcset="@/logo.png, @/logo.png 2x"/>
+      <img srcset="@/logo.png 1x, ./logo.png 2x"/>
+    `,
+      { base: '/foo/' },
+      { hoistStatic: true }
+    ).code
+    expect(code).toMatchSnapshot()
+  })
 })
