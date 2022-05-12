@@ -519,6 +519,7 @@ defineExpose({ foo: 123 })
         import { ref } from 'vue'
         import Foo, { bar } from './Foo.vue'
         import other from './util'
+        import * as tree from './tree'
         const count = ref(0)
         const constant = {}
         const maybe = foo()
@@ -528,6 +529,7 @@ defineExpose({ foo: 123 })
         <template>
           <Foo>{{ bar }}</Foo>
           <div @click="fn">{{ count }} {{ constant }} {{ maybe }} {{ lett }} {{ other }}</div>
+          {{ tree.foo() }}
         </template>
         `,
         { inlineTemplate: true }
@@ -546,6 +548,8 @@ defineExpose({ foo: 123 })
       expect(content).toMatch(`unref(maybe)`)
       // should unref() on let bindings
       expect(content).toMatch(`unref(lett)`)
+      // no need to unref namespace import (this also preserves tree-shaking)
+      expect(content).toMatch(`tree.foo()`)
       // no need to unref function declarations
       expect(content).toMatch(`{ onClick: fn }`)
       // no need to mark constant fns in patch flag
