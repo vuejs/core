@@ -46,7 +46,7 @@ jobs:
 
       - run: pnpm install
 
-      - name: Run unit tests
+      - name: Run e2e tests
         run: pnpm run test-e2e
 
   lint-and-test-dts:
