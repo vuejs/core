@@ -57,6 +57,8 @@ import { ImportItem } from './transform'
 const PURE_ANNOTATION = `/*#__PURE__*/`
 const WITH_ID = `_withId`
 
+const aliasHelper = (s: symbol) => `${helperNameMap[s]}: _${helperNameMap[s]}`
+
 type CodegenNode = TemplateChildNode | JSChildNode | SSRCodegenNode
 
 export interface CodegenResult {
@@ -311,8 +313,6 @@ export function generate(
     map: context.map ? (context.map as any).toJSON() : undefined
   }
 }
-
-const aliasHelper = (s: symbol) => `${helperNameMap[s]}: _${helperNameMap[s]}`
 
 function genFunctionPreamble(ast: RootNode, context: CodegenContext) {
   const {
