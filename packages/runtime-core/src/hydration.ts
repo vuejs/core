@@ -113,7 +113,7 @@ export function createHydrationFunctions(
           nextNode = onMismatch()
         } else {
           if ((node as Text).data !== vnode.children) {
-            hasMismatch = true;
+            hasMismatch = true
             __DEV__ &&
               warn(
                 `Hydration text mismatch:` +
@@ -351,7 +351,7 @@ export function createHydrationFunctions(
         )
         let hasWarned = false
         while (next) {
-          hasMismatch = true;
+          hasMismatch = true
           if (__DEV__ && !hasWarned) {
             warn(
               `Hydration children mismatch in <${vnode.type as string}>: ` +
@@ -366,7 +366,7 @@ export function createHydrationFunctions(
         }
       } else if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
         if (el.textContent !== vnode.children) {
-          hasMismatch = true;
+          hasMismatch = true
           __DEV__ &&
             warn(
               `Hydration text content mismatch in <${
@@ -411,7 +411,7 @@ export function createHydrationFunctions(
       } else if (vnode.type === Text && !vnode.children) {
         continue
       } else {
-        hasMismatch = true;
+        hasMismatch = true
         if (__DEV__ && !hasWarned) {
           warn(
             `Hydration children mismatch in <${container.tagName.toLowerCase()}>: ` +
@@ -465,7 +465,7 @@ export function createHydrationFunctions(
     } else {
       // fragment didn't hydrate successfully, since we didn't get a end anchor
       // back. This should have led to node/children mismatch warnings.
-      hasMismatch = true;
+      hasMismatch = true
       // since the anchor is missing, we need to create one and insert it
       insert((vnode.anchor = createComment(`]`)), container, next)
       return next
@@ -480,7 +480,7 @@ export function createHydrationFunctions(
     slotScopeIds: string[] | null,
     isFragment: boolean
   ): Node | null => {
-    hasMismatch = true;
+    hasMismatch = true
     __DEV__ &&
       warn(
         `Hydration node mismatch:\n- Client vnode:`,
