@@ -5,19 +5,18 @@ body:
   - type: markdown
     attributes:
       value: |
-        **Before You Start...**
-        The issue list is reserved exclusively for bug reports and feature requests. That means we do not accept usage questions. If you open an issue that does not conform to the requirements, **it will be closed immediately**.
-        [Why are we so strict about this?](https://new-issue.vuejs.org/?repo=vuejs/vue&type=bug-report#why-strict)
+       **Before You Start...**
 
-        For usage questions, please use the following resources:
+        This form is only for submitting feature requests. If you have a usage question
+        or are unsure if this is really a bug, make sure to:
 
-        - Read the [docs](https://vuejs.org/guide/)
-        - Watch [video tutorials](https://laracasts.com/series/learn-vue-2-step-by-step)
-        - Ask on the [forums](https://forum.vuejs.org/)
-        - Ask on the [chat](https://chat.vuejs.org/)
+        - Read the [docs](https://vuejs.org/)
+        - Ask on [Discord Chat](https://chat.vuejs.org/)
+        - Ask on [GitHub Discussions](https://github.com/vuejs/core/discussions)
         - Look for / ask questions on [Stack Overflow](https://stackoverflow.com/questions/ask?tags=vue.js)
 
-        Also try to search for your issue - it may have already been answered or even fixed in the development branch. However, if you find that an old, closed issue still persists in the latest version, you should open a new issue using the form below instead of commenting on the old issue.
+        Also try to search for your issue - another user may have already requested something similar!
+
   - type: textarea
     id: problem-description
     attributes:
