@@ -29,7 +29,7 @@ export const DOMNodeTransforms: NodeTransform[] = [
 ]
 
 export const DOMDirectiveTransforms: Record<string, DirectiveTransform> = {
-cloak: noopDirectiveTransform,
+  cloak: noopDirectiveTransform,
   html: transformVHtml,
   text: transformVText,
   model: transformModel, // override compiler-core
