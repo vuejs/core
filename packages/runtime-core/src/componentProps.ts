@@ -135,7 +135,8 @@ const enum BooleanFlags {
 
 // extract props which defined with default from prop options
 export type ExtractDefaultPropTypes<O> = O extends object
-  ? { [K in DefaultKeys<O>]: InferPropType<O[K]> }
+  // use `keyof Pick<O, DefaultKeys<O>>` instead of `DefaultKeys<O>` to support IDE features
+  ? { [K in keyof Pick<O, DefaultKeys<O>>]: InferPropType<O[K]> }
   : {}
 
 type NormalizedProp =
@@ -224,6 +225,10 @@ export function updateProps(
       const propsToUpdate = instance.vnode.dynamicProps!
       for (let i = 0; i < propsToUpdate.length; i++) {
         let key = propsToUpdate[i]
+        // skip if the prop key is a declared emit event listener
+        if (isEmitListener(instance.emitsOptions, key)){
+          continue
+        }
         // PROPS flag guarantees rawProps to be non-null
         const value = rawProps![key]
         if (options) {

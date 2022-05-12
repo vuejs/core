@@ -33,7 +33,8 @@ import {
   TELEPORT,
   TRANSITION_GROUP,
   CREATE_VNODE,
-  CallExpression
+  CallExpression,
+  JSChildNode
 } from '@vue/compiler-dom'
 import { SSR_RENDER_COMPONENT, SSR_RENDER_VNODE } from '../runtimeHelpers'
 import {
@@ -48,6 +49,7 @@ import {
 } from './ssrTransformSuspense'
 import { ssrProcessTransitionGroup } from './ssrTransformTransitionGroup'
 import { isSymbol, isObject, isArray } from '@vue/shared'
+import { buildSSRProps } from './ssrTransformElement'
 
 // We need to construct the slot functions in the 1st pass to ensure proper
 // scope tracking, but the children of each slot cannot be processed until
@@ -110,12 +112,15 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
       })
     }
 
-    const props =
-      node.props.length > 0
-        ? // note we are not passing ssr: true here because for components, v-on
-          // handlers should still be passed
-          buildProps(node, context).props || `null`
-        : `null`
+    let propsExp: string | JSChildNode = `null`
+    if (node.props.length) {
+      // note we are not passing ssr: true here because for components, v-on
+      // handlers should still be passed
+      const { props, directives } = buildProps(node, context)
+      if (props || directives.length) {
+        propsExp = buildSSRProps(props, directives, context)
+      }
+    }
 
     const wipEntries: WIPSlotEntry[] = []
     wipMap.set(node, wipEntries)
@@ -151,7 +156,7 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
           `_push`,
           createCallExpression(context.helper(CREATE_VNODE), [
             component,
-            props,
+            propsExp,
             slots
           ]),
           `_parent`
@@ -160,7 +165,7 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
     } else {
       node.ssrCodegenNode = createCallExpression(
         context.helper(SSR_RENDER_COMPONENT),
-        [component, props, slots, `_parent`]
+        [component, propsExp, slots, `_parent`]
       )
     }
   }

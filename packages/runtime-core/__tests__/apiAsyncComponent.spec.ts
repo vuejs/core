@@ -4,9 +4,11 @@ import {
   Component,
   ref,
   nextTick,
-  Suspense
+  Suspense,
+  KeepAlive
 } from '../src'
 import { createApp, nodeOps, serializeInner } from '@vue/runtime-test'
+import { onActivated } from '../src/components/KeepAlive'
 
 const timeout = (n: number = 0) => new Promise(r => setTimeout(r, n))
 
@@ -799,4 +801,38 @@ describe('api: defineAsyncComponent', () => {
     expect(vnodeHooks.onVnodeBeforeUnmount).toHaveBeenCalledTimes(1)
     expect(vnodeHooks.onVnodeUnmounted).toHaveBeenCalledTimes(1)
   })
+
+  test('with keepalive', async () => {
+    const spy = jest.fn()
+    let resolve: (comp: Component) => void
+
+    const Foo = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r as any
+        })
+    )
+
+    const root = nodeOps.createElement('div')
+    const app = createApp({
+      render: () => h(KeepAlive, [h(Foo)])
+    })
+
+    app.mount(root)
+    await nextTick()
+
+    resolve!({
+      setup() {
+        onActivated(() => {
+          spy()
+        })
+        return () => 'resolved'
+      }
+    })
+
+    await timeout()
+    expect(serializeInner(root)).toBe('resolved')
+    expect(spy).toBeCalledTimes(1)
+  })
+
 })

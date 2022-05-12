@@ -29,7 +29,8 @@ import {
   isObject,
   isReservedProp,
   capitalize,
-  camelize
+  camelize,
+  isBuiltInDirective
 } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
@@ -351,7 +352,9 @@ function resolveSetupReference(name: string, context: TransformContext) {
     }
   }
 
-  const fromConst = checkType(BindingTypes.SETUP_CONST)
+  const fromConst =
+    checkType(BindingTypes.SETUP_CONST) ||
+    checkType(BindingTypes.SETUP_REACTIVE_CONST)
   if (fromConst) {
     return context.inline
       ? // in inline mode, const setup bindings (e.g. imports) can be used as-is
@@ -665,7 +668,7 @@ export function buildProps(
             directiveImportMap.set(prop, needRuntime)
           }
         }
-      } else {
+      } else if (!isBuiltInDirective(name)) {
         // no built-in transform, this is a user custom directive.
         runtimeDirectives.push(prop)
         // custom dirs may use beforeUpdate so they need to force blocks
@@ -853,7 +856,7 @@ function mergeAsArray(existing: Property, incoming: Property) {
   }
 }
 
-function buildDirectiveArgs(
+export function buildDirectiveArgs(
   dir: DirectiveNode,
   context: TransformContext
 ): ArrayExpression {

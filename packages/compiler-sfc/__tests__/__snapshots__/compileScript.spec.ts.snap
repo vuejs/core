@@ -1,5 +1,48 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`SFC analyze <script> bindings auto name inference basic 1`] = `
+"export default {
+  name: 'FooBar',
+  setup(__props, { expose }) {
+  expose();
+const a = 1
+return { a }
+}
+
+}"
+`;
+
+exports[`SFC analyze <script> bindings auto name inference do not overwrite manual name (call) 1`] = `
+"import { defineComponent } from 'vue'
+        const __default__ = defineComponent({
+          name: 'Baz'
+        })
+        
+export default /*#__PURE__*/Object.assign(__default__, {
+  setup(__props, { expose }) {
+  expose();
+const a = 1
+return { a, defineComponent }
+}
+
+})"
+`;
+
+exports[`SFC analyze <script> bindings auto name inference do not overwrite manual name (object) 1`] = `
+"const __default__ = {
+          name: 'Baz'
+        }
+        
+export default /*#__PURE__*/Object.assign(__default__, {
+  setup(__props, { expose }) {
+  expose();
+const a = 1
+return { a }
+}
+
+})"
+`;
+
 exports[`SFC compile <script setup> <script> and <script setup> co-usage script first 1`] = `
 "import { x } from './x'
       
@@ -1346,6 +1389,22 @@ export default /*#__PURE__*/_defineComponent({
 
         
 return {  }
+}
+
+})"
+`;
+
+exports[`SFC compile <script setup> with TypeScript import type 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+import type { Foo } from './main.ts'
+        import { type Bar, Baz } from './main.ts'
+        
+export default /*#__PURE__*/_defineComponent({
+  setup(__props, { expose }) {
+  expose();
+
+        
+return { Baz }
 }
 
 })"

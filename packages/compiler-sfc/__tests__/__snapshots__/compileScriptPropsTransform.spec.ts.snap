@@ -65,7 +65,7 @@ exports[`sfc props transform default values w/ runtime declaration 1`] = `
 export default {
   props: _mergeDefaults(['foo', 'bar'], {
   foo: 1,
-  bar: () => {}
+  bar: () => ({})
 }),
   setup(__props) {
 
@@ -83,7 +83,7 @@ exports[`sfc props transform default values w/ type declaration 1`] = `
 export default /*#__PURE__*/_defineComponent({
   props: {
     foo: { type: Number, required: false, default: 1 },
-    bar: { type: Object, required: false, default: () => {} }
+    bar: { type: Object, required: false, default: () => ({}) }
   },
   setup(__props: any) {
 
@@ -101,11 +101,11 @@ exports[`sfc props transform default values w/ type declaration, prod mode 1`] =
 export default /*#__PURE__*/_defineComponent({
   props: {
     foo: { default: 1 },
-    bar: { default: () => {} },
+    bar: { default: () => ({}) },
     baz: null,
     boola: { type: Boolean },
     boolb: { type: [Boolean, Number] },
-    func: { type: Function, default: () => () => {} }
+    func: { type: Function, default: () => (() => {}) }
   },
   setup(__props: any) {
 

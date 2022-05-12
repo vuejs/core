@@ -276,7 +276,7 @@ export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
   // Non-standard Attributes
   autocapitalize?: string
   autocorrect?: string
-  autocave?: string
+  autosave?: string
   color?: string
   itemprop?: string
   itemscope?: Booleanish
@@ -467,6 +467,7 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   formnovalidate?: Booleanish
   formtarget?: string
   height?: Numberish
+  indeterminate?: boolean
   list?: string
   max?: Numberish
   maxlength?: Numberish

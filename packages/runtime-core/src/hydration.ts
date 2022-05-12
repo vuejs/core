@@ -97,9 +97,14 @@ export function createHydrationFunctions(
         isFragmentStart
       )
 
-    const { type, ref, shapeFlag } = vnode
+    const { type, ref, shapeFlag, patchFlag } = vnode
     const domType = node.nodeType
     vnode.el = node
+
+    if (patchFlag === PatchFlags.BAIL) {
+      optimized = false
+      vnode.dynamicChildren = null
+    }
 
     let nextNode: Node | null = null
     switch (type) {
@@ -273,7 +278,8 @@ export function createHydrationFunctions(
     // e.g. <option :value="obj">, <input type="checkbox" :true-value="1">
     const forcePatchValue = (type === 'input' && dirs) || type === 'option'
     // skip props & children if this is hoisted static nodes
-    if (forcePatchValue || patchFlag !== PatchFlags.HOISTED) {
+    // #5405 in dev, always hydrate children for HMR
+    if (__DEV__ || forcePatchValue || patchFlag !== PatchFlags.HOISTED) {
       if (dirs) {
         invokeDirectiveHook(vnode, null, parentComponent, 'created')
       }
