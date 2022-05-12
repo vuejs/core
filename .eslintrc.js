@@ -7,6 +7,7 @@ module.exports = {
     sourceType: 'module'
   },
   rules: {
+    'no-debugger': 'error',
     'no-unused-vars': [
       'error',
       // we are only using this rule to check for unused arguments since TS
