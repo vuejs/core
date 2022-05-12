@@ -713,7 +713,6 @@ function baseCreateRenderer(
       (!parentSuspense || (parentSuspense && !parentSuspense.pendingBranch)) &&
       transition &&
       !transition.persisted
-    if (transition) debugger
     if (needCallTransitionHooks) {
       transition!.beforeEnter(el)
     }
