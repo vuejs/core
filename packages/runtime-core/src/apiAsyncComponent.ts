@@ -6,7 +6,7 @@ import {
   isInSSRComponentSetup,
   ComponentOptions
 } from './component'
-import { isFunction, isObject, ShapeFlags } from '@vue/shared'
+import { isFunction, isObject } from '@vue/shared'
 import { ComponentPublicInstance } from './componentPublicInstance'
 import { createVNode, VNode } from './vnode'
 import { defineComponent } from './apiDefineComponent'
@@ -211,14 +211,13 @@ export function defineAsyncComponent<
 
 function createInnerComp(
   comp: ConcreteComponent,
-  { vnode: { ref, props, children }, parent }: ComponentInternalInstance
+  {
+    vnode: { ref, props, children, shapeFlag },
+    parent
+  }: ComponentInternalInstance
 ) {
   const vnode = createVNode(comp, props, children)
   // ensure inner component inherits the async wrapper's ref owner
   vnode.ref = ref
-  
-  if (parent && isKeepAlive(parent.vnode)) {
-    vnode.shapeFlag |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-  }
   return vnode
 }

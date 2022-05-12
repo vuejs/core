@@ -802,7 +802,7 @@ describe('api: defineAsyncComponent', () => {
     expect(vnodeHooks.onVnodeUnmounted).toHaveBeenCalledTimes(1)
   })
 
-  test('with keepalive', async () => {
+  test('with KeepAlive', async () => {
     const spy = jest.fn()
     let resolve: (comp: Component) => void
 
@@ -813,9 +813,12 @@ describe('api: defineAsyncComponent', () => {
         })
     )
 
+    const Bar = defineAsyncComponent(() => Promise.resolve(() => 'Bar'))
+
+    const toggle = ref(true)
     const root = nodeOps.createElement('div')
     const app = createApp({
-      render: () => h(KeepAlive, [h(Foo)])
+      render: () => h(KeepAlive, [toggle.value ? h(Foo) : h(Bar)])
     })
 
     app.mount(root)
@@ -826,13 +829,16 @@ describe('api: defineAsyncComponent', () => {
         onActivated(() => {
           spy()
         })
-        return () => 'resolved'
+        return () => 'Foo'
       }
     })
 
     await timeout()
-    expect(serializeInner(root)).toBe('resolved')
+    expect(serializeInner(root)).toBe('Foo')
     expect(spy).toBeCalledTimes(1)
-  })
 
+    toggle.value = false
+    await timeout()
+    expect(serializeInner(root)).toBe('Bar')
+  })
 })
