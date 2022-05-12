@@ -153,7 +153,7 @@ describe('component: emit', () => {
       emits: ['foo'],
       render() {},
       created() {
-        // @ts-ignore
+        // @ts-expect-error
         this.$emit('bar')
       }
     })
@@ -170,7 +170,7 @@ describe('component: emit', () => {
       },
       render() {},
       created() {
-        // @ts-ignore
+        // @ts-expect-error
         this.$emit('bar')
       }
     })
@@ -186,7 +186,7 @@ describe('component: emit', () => {
       emits: [],
       render() {},
       created() {
-        // @ts-ignore
+        // @ts-expect-error
         this.$emit('foo')
       }
     })
