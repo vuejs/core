@@ -12,7 +12,12 @@ import {
   walkIdentifiers
 } from '@vue/compiler-dom'
 import { DEFAULT_FILENAME, SFCDescriptor, SFCScriptBlock } from './parse'
-import { parse as _parse, ParserOptions, ParserPlugin } from '@babel/parser'
+import {
+  parse as _parse,
+  parseExpression,
+  ParserOptions,
+  ParserPlugin
+} from '@babel/parser'
 import { camelize, capitalize, generateCodeFrame, makeMap } from '@vue/shared'
 import {
   Node,
@@ -348,14 +353,23 @@ export function compileScript(
     local: string,
     imported: string | false,
     isType: boolean,
-    isFromSetup: boolean
+    isFromSetup: boolean,
+    needTemplateUsageCheck: boolean
   ) {
     if (source === 'vue' && imported) {
       userImportAlias[imported] = local
     }
 
-    let isUsedInTemplate = true
-    if (isTS && sfc.template && !sfc.template.src && !sfc.template.lang) {
+    // template usage check is only needed in non-inline mode, so we can skip
+    // the work if inlineTemplate is true.
+    let isUsedInTemplate = needTemplateUsageCheck
+    if (
+      needTemplateUsageCheck &&
+      isTS &&
+      sfc.template &&
+      !sfc.template.src &&
+      !sfc.template.lang
+    ) {
       isUsedInTemplate = isImportUsed(local, sfc)
     }
 
@@ -813,7 +827,8 @@ export function compileScript(
             node.importKind === 'type' ||
               (specifier.type === 'ImportSpecifier' &&
                 specifier.importKind === 'type'),
-            false
+            false,
+            !options.inlineTemplate
           )
         }
       } else if (node.type === 'ExportDefaultDeclaration') {
@@ -1027,7 +1042,8 @@ export function compileScript(
             node.importKind === 'type' ||
               (specifier.type === 'ImportSpecifier' &&
                 specifier.importKind === 'type'),
-            true
+            true,
+            !options.inlineTemplate
           )
         }
       }
@@ -2051,14 +2067,14 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
                 code += `,v${capitalize(camelize(prop.name))}`
               }
               if (prop.exp) {
-                code += `,${stripStrings(
+                code += `,${processExp(
                   (prop.exp as SimpleExpressionNode).content
                 )}`
               }
             }
           }
         } else if (node.type === NodeTypes.INTERPOLATION) {
-          code += `,${stripStrings(
+          code += `,${processExp(
             (node.content as SimpleExpressionNode).content
           )}`
         }
@@ -2069,6 +2085,19 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
   code += ';'
   templateUsageCheckCache.set(content, code)
   return code
+}
+
+function processExp(exp: string) {
+  if (/ as \w|<.*>/.test(exp)) {
+    let ret = ''
+    // has potential type cast or generic arguments that uses types
+    const ast = parseExpression(exp, { plugins: ['typescript'] })
+    walkIdentifiers(ast, node => {
+      ret += `,` + node.name
+    })
+    return ret
+  }
+  return stripStrings(exp)
 }
 
 function stripStrings(exp: string) {

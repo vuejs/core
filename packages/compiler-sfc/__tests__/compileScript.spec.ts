@@ -432,6 +432,23 @@ defineExpose({ foo: 123 })
       expect(content).toMatch(`return { FooBaz, Last }`)
       assertCode(content)
     })
+
+    test('TS annotations', () => {
+      const { content } = compile(`
+        <script setup lang="ts">
+        import { Foo, Bar, Baz } from './x'
+        const a = 1
+        function b() {}
+        </script>
+        <template>
+          {{ a as Foo }}
+          {{ b<Bar>() }}
+          {{ Baz }}
+        </template>
+        `)
+      expect(content).toMatch(`return { a, b, Baz }`)
+      assertCode(content)
+    })
   })
 
   describe('inlineTemplate mode', () => {
