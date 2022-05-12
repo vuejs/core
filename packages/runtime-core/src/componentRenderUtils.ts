@@ -215,6 +215,8 @@ export function renderComponentRoot(
           `The directives will not function as intended.`
       )
     }
+    // clone before mutating since the root may be a hoisted vnode
+    root = cloneVNode(root)
     root.dirs = root.dirs ? root.dirs.concat(vnode.dirs) : vnode.dirs
   }
   // inherit transition data
