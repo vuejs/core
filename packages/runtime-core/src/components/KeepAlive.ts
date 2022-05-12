@@ -42,6 +42,7 @@ import { setTransitionHooks } from './BaseTransition'
 import { ComponentRenderContext } from '../componentPublicInstance'
 import { devtoolsComponentAdded } from '../devtools'
 import { isAsyncWrapper } from '../apiAsyncComponent'
+import { invalidateJob } from '../scheduler'
 
 type MatchPattern = string | RegExp | (string | RegExp)[]
 
@@ -121,6 +122,7 @@ const KeepAliveImpl: ComponentOptions = {
 
     sharedContext.activate = (vnode, container, anchor, isSVG, optimized) => {
       const instance = vnode.component!
+
       move(vnode, container, anchor, MoveType.ENTER, parentSuspense)
       // in case props have changed
       patch(
@@ -153,6 +155,13 @@ const KeepAliveImpl: ComponentOptions = {
 
     sharedContext.deactivate = (vnode: VNode) => {
       const instance = vnode.component!
+      if (vnode.transition) {
+        vnode.transition.effects.push(() => {
+          instance.update()
+        })
+        invalidateJob(instance.update)
+      }
+
       move(vnode, storageContainer, null, MoveType.LEAVE, parentSuspense)
       queuePostRenderEffect(() => {
         if (instance.da) {
