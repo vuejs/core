@@ -1037,7 +1037,7 @@ describe('compiler: parse', () => {
             offset: 0
           }
         },
-        ns: 0,
+        ns: Namespaces.HTML,
         props: [
           {
             loc: {
@@ -1054,7 +1054,7 @@ describe('compiler: parse', () => {
               }
             },
             name: 'class',
-            type: 6,
+            type: NodeTypes.ATTRIBUTE,
             value: {
               content: 'c',
               loc: {
@@ -1070,13 +1070,13 @@ describe('compiler: parse', () => {
                   offset: 11
                 }
               },
-              type: 2
+              type: NodeTypes.TEXT
             }
           }
         ],
         tag: 'div',
-        tagType: 0,
-        type: 1
+        tagType: ElementTypes.ELEMENT,
+        type: NodeTypes.ELEMENT
       })
     })
 

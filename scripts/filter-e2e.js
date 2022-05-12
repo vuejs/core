@@ -1,3 +1,5 @@
+const path = require('path')
+
 const e2eTests = [
   'vue/__tests__/Transition',
   'vue/__tests__/TransitionGroup',
@@ -7,7 +9,7 @@ const e2eTests = [
 module.exports = list => {
   return {
     filtered: list
-      .filter(t => e2eTests.some(tt => t.includes(tt)))
+      .filter(t => e2eTests.some(tt => t.includes(path.normalize(tt))))
       .map(test => ({ test }))
   }
 }

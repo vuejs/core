@@ -18,7 +18,12 @@ import {
   defineAsyncComponent,
   Component,
   createApp,
-  onActivated
+  onActivated,
+  onUnmounted,
+  onMounted,
+  reactive,
+  shallowRef,
+  onDeactivated
 } from '@vue/runtime-test'
 import { KeepAliveProps } from '../../src/components/KeepAlive'
 
@@ -902,5 +907,74 @@ describe('KeepAlive', () => {
 
     await nextTick()
     expect(handler).toHaveBeenCalledWith(err, {}, 'activated hook')
+  })
+
+  // #3648
+  test('should avoid unmount later included components', async () => {
+    const unmountedA = jest.fn()
+    const mountedA = jest.fn()
+    const activatedA = jest.fn()
+    const deactivatedA = jest.fn()
+    const unmountedB = jest.fn()
+    const mountedB = jest.fn()
+
+    const A = {
+      name: 'A',
+      setup() {
+        onMounted(mountedA)
+        onUnmounted(unmountedA)
+        onActivated(activatedA)
+        onDeactivated(deactivatedA)
+        return () => 'A'
+      }
+    }
+    const B = {
+      name: 'B',
+      setup() {
+        onMounted(mountedB)
+        onUnmounted(unmountedB)
+        return () => 'B'
+      }
+    }
+
+    const include = reactive<string[]>([])
+    const current = shallowRef(A)
+    const app = createApp({
+      setup() {
+        return () => {
+          return [
+            h(
+              KeepAlive,
+              {
+                include
+              },
+              h(current.value)
+            )
+          ]
+        }
+      }
+    })
+
+    app.mount(root)
+
+    expect(serializeInner(root)).toBe(`A`)
+    expect(mountedA).toHaveBeenCalledTimes(1)
+    expect(unmountedA).toHaveBeenCalledTimes(0)
+    expect(activatedA).toHaveBeenCalledTimes(0)
+    expect(deactivatedA).toHaveBeenCalledTimes(0)
+    expect(mountedB).toHaveBeenCalledTimes(0)
+    expect(unmountedB).toHaveBeenCalledTimes(0)
+
+    include.push('A') // cache A
+    await nextTick()
+    current.value = B // toggle to B
+    await nextTick()
+    expect(serializeInner(root)).toBe(`B`)
+    expect(mountedA).toHaveBeenCalledTimes(1)
+    expect(unmountedA).toHaveBeenCalledTimes(0)
+    expect(activatedA).toHaveBeenCalledTimes(0)
+    expect(deactivatedA).toHaveBeenCalledTimes(1)
+    expect(mountedB).toHaveBeenCalledTimes(1)
+    expect(unmountedB).toHaveBeenCalledTimes(0)
   })
 })
