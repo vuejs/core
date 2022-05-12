@@ -215,7 +215,15 @@ export function renderComponentRoot(
           `The directives will not function as intended.`
       )
     }
-    root.dirs = root.dirs ? root.dirs.concat(vnode.dirs) : vnode.dirs
+    if (
+      __DEV__ &&
+      result.patchFlag > 0 &&
+      result.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
+    ) {
+      root.dirs = vnode.dirs
+    } else {
+      root.dirs = root.dirs ? root.dirs.concat(vnode.dirs) : vnode.dirs
+    }
   }
   // inherit transition data
   if (vnode.transition) {
