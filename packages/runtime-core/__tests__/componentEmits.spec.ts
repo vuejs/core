@@ -6,7 +6,8 @@ import {
   defineComponent,
   h,
   nodeOps,
-  toHandlers
+  toHandlers,
+  nextTick
 } from '@vue/runtime-test'
 import { isEmitListener } from '../src/componentEmits'
 
@@ -152,7 +153,7 @@ describe('component: emit', () => {
       emits: ['foo'],
       render() {},
       created() {
-        // @ts-ignore
+        // @ts-expect-error
         this.$emit('bar')
       }
     })
@@ -169,7 +170,7 @@ describe('component: emit', () => {
       },
       render() {},
       created() {
-        // @ts-ignore
+        // @ts-expect-error
         this.$emit('bar')
       }
     })
@@ -185,7 +186,7 @@ describe('component: emit', () => {
       emits: [],
       render() {},
       created() {
-        // @ts-ignore
+        // @ts-expect-error
         this.$emit('foo')
       }
     })
@@ -373,5 +374,30 @@ describe('component: emit', () => {
     expect(isEmitListener(options, 'onFooBar')).toBe(true)
     // PascalCase option
     expect(isEmitListener(options, 'onFooBaz')).toBe(true)
+  })
+
+  test('does not emit after unmount', async () => {
+    const fn = jest.fn()
+    const Foo = defineComponent({
+      emits: ['closing'],
+      async beforeUnmount() {
+        await this.$nextTick()
+        this.$emit('closing', true)
+      },
+      render() {
+        return h('div')
+      }
+    })
+    const Comp = () =>
+      h(Foo, {
+        onClosing: fn
+      })
+
+    const el = nodeOps.createElement('div')
+    render(h(Comp), el)
+    await nextTick()
+    render(null, el)
+    await nextTick()
+    expect(fn).not.toHaveBeenCalled()
   })
 })

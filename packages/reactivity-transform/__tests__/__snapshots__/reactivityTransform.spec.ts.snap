@@ -4,12 +4,13 @@ exports[`$ unwrapping 1`] = `
 "
     import { ref, shallowRef } from 'vue'
     let foo = (ref())
-    let a = (ref(1))
+    export let a = (ref(1))
     let b = (shallowRef({
       count: 0
     }))
     let c = () => {}
     let d
+    label: var e = (ref())
     "
 `;
 
@@ -34,12 +35,13 @@ exports[`$ref & $shallowRef declarations 1`] = `
 "import { ref as _ref, shallowRef as _shallowRef } from 'vue'
 
     let foo = _ref()
-    let a = _ref(1)
+    export let a = _ref(1)
     let b = _shallowRef({
       count: 0
     })
     let c = () => {}
     let d
+    label: var e = _ref()
     "
 `;
 
@@ -182,7 +184,7 @@ exports[`object destructure 1`] = `
   d = _toRef(__$temp_1, 'd', 1),
   f = _toRef(__$temp_1, 'e', 2),
   h = _toRef(__$temp_1, g)
-    let __$temp_2 = (useSomthing(() => 1)),
+    let __$temp_2 = (useSomething(() => 1)),
   foo = _toRef(__$temp_2, 'foo');
     console.log(n.value, a.value, c.value, d.value, f.value, h.value, foo.value)
     "
@@ -213,6 +215,11 @@ exports[`should not rewrite scope variable 1`] = `
         console.log(c)
         console.log(d.value)
         console.log(e)
+      }
+      let err = _ref(null)
+      try {
+      } catch (err) {
+        console.log(err)
       }
     "
 `;

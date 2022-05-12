@@ -37,14 +37,11 @@ exports[`compiler: transform v-model input w/ dynamic v-bind 2`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { vModelDynamic: _vModelDynamic, resolveDirective: _resolveDirective, withDirectives: _withDirectives, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
-
-    const _directive_bind = _resolveDirective(\\"bind\\")
+    const { vModelDynamic: _vModelDynamic, withDirectives: _withDirectives, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return _withDirectives((_openBlock(), _createElementBlock(\\"input\\", {
       \\"onUpdate:modelValue\\": $event => ((model) = $event)
     }, null, 8 /* PROPS */, [\\"onUpdate:modelValue\\"])), [
-      [_directive_bind, val, key],
       [_vModelDynamic, model]
     ])
   }
@@ -152,14 +149,11 @@ exports[`compiler: transform v-model simple expression for input (dynamic type) 
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { vModelDynamic: _vModelDynamic, resolveDirective: _resolveDirective, withDirectives: _withDirectives, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
-
-    const _directive_bind = _resolveDirective(\\"bind\\")
+    const { vModelDynamic: _vModelDynamic, withDirectives: _withDirectives, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return _withDirectives((_openBlock(), _createElementBlock(\\"input\\", {
       \\"onUpdate:modelValue\\": $event => ((model) = $event)
     }, null, 8 /* PROPS */, [\\"onUpdate:modelValue\\"])), [
-      [_directive_bind, foo, \\"type\\"],
       [_vModelDynamic, model]
     ])
   }

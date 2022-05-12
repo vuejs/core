@@ -11,7 +11,7 @@ import {
   isFunctionType,
   walkIdentifiers
 } from '@vue/compiler-dom'
-import { SFCDescriptor, SFCScriptBlock } from './parse'
+import { DEFAULT_FILENAME, SFCDescriptor, SFCScriptBlock } from './parse'
 import { parse as _parse, ParserOptions, ParserPlugin } from '@babel/parser'
 import { camelize, capitalize, generateCodeFrame, makeMap } from '@vue/shared'
 import {
@@ -48,10 +48,7 @@ import { compileTemplate, SFCTemplateCompileOptions } from './compileTemplate'
 import { warnOnce } from './warn'
 import { rewriteDefault } from './rewriteDefault'
 import { createCache } from './cache'
-import {
-  shouldTransform as shouldTransformRef,
-  transformAST as transformRefAST
-} from '@vue/reactivity-transform'
+import { shouldTransform, transformAST } from '@vue/reactivity-transform'
 
 // Special compiler macros
 const DEFINE_PROPS = 'defineProps'
@@ -104,7 +101,7 @@ export interface SFCScriptCompileOptions {
    */
   propsDestructureTransform?: boolean
   /**
-   * @deprecated use `refTransform` instead.
+   * @deprecated use `reactivityTransform` instead.
    */
   refSugar?: boolean
   /**
@@ -143,7 +140,7 @@ export function compileScript(
   let { script, scriptSetup, source, filename } = sfc
   // feature flags
   // TODO remove support for deprecated options when out of experimental
-  const enableRefTransform =
+  const enableReactivityTransform =
     !!options.reactivityTransform ||
     !!options.refSugar ||
     !!options.refTransform
@@ -170,9 +167,17 @@ export function compileScript(
     scriptLang === 'tsx' ||
     scriptSetupLang === 'ts' ||
     scriptSetupLang === 'tsx'
+
+  // resolve parser plugins
   const plugins: ParserPlugin[] = []
   if (!isTS || scriptLang === 'tsx' || scriptSetupLang === 'tsx') {
     plugins.push('jsx')
+  } else {
+    // If don't match the case of adding jsx, should remove the jsx from the babelParserPlugins
+    if (options.babelParserPlugins)
+      options.babelParserPlugins = options.babelParserPlugins.filter(
+        n => n !== 'jsx'
+      )
   }
   if (options.babelParserPlugins) plugins.push(...options.babelParserPlugins)
   if (isTS) plugins.push('typescript', 'decorators-legacy')
@@ -193,11 +198,11 @@ export function compileScript(
         sourceType: 'module'
       }).program
       const bindings = analyzeScriptBindings(scriptAst.body)
-      if (enableRefTransform && shouldTransformRef(content)) {
+      if (enableReactivityTransform && shouldTransform(content)) {
         const s = new MagicString(source)
         const startOffset = script.loc.start.offset
         const endOffset = script.loc.end.offset
-        const { importedHelpers } = transformRefAST(scriptAst, s, startOffset)
+        const { importedHelpers } = transformAST(scriptAst, s, startOffset)
         if (importedHelpers.length) {
           s.prepend(
             `import { ${importedHelpers
@@ -264,6 +269,8 @@ export function compileScript(
   let hasDefinePropsCall = false
   let hasDefineEmitCall = false
   let hasDefineExposeCall = false
+  let hasDefaultExportName = false
+  let hasDefaultExportRender = false
   let propsRuntimeDecl: Node | undefined
   let propsRuntimeDefaults: ObjectExpression | undefined
   let propsDestructureDecl: Node | undefined
@@ -736,7 +743,7 @@ export function compileScript(
         destructured.default.end!
       )
       const isLiteral = destructured.default.type.endsWith('Literal')
-      return isLiteral ? value : `() => ${value}`
+      return isLiteral ? value : `() => (${value})`
     }
   }
 
@@ -803,13 +810,50 @@ export function compileScript(
             node.source.value,
             specifier.local.name,
             imported,
-            node.importKind === 'type',
+            node.importKind === 'type' ||
+              (specifier.type === 'ImportSpecifier' &&
+                specifier.importKind === 'type'),
             false
           )
         }
       } else if (node.type === 'ExportDefaultDeclaration') {
         // export default
         defaultExport = node
+
+        // check if user has manually specified `name` or 'render` option in
+        // export default
+        // if has name, skip name inference
+        // if has render and no template, generate return object instead of
+        // empty render function (#4980)
+        let optionProperties
+        if (defaultExport.declaration.type === 'ObjectExpression') {
+          optionProperties = defaultExport.declaration.properties
+        } else if (
+          defaultExport.declaration.type === 'CallExpression' &&
+          defaultExport.declaration.arguments[0].type === 'ObjectExpression'
+        ) {
+          optionProperties = defaultExport.declaration.arguments[0].properties
+        }
+        if (optionProperties) {
+          for (const s of optionProperties) {
+            if (
+              s.type === 'ObjectProperty' &&
+              s.key.type === 'Identifier' &&
+              s.key.name === 'name'
+            ) {
+              hasDefaultExportName = true
+            }
+            if (
+              (s.type === 'ObjectMethod' || s.type === 'ObjectProperty') &&
+              s.key.type === 'Identifier' &&
+              s.key.name === 'render'
+            ) {
+              // TODO warn when we provide a better way to do it?
+              hasDefaultExportRender = true
+            }
+          }
+        }
+
         // export default { ... } --> const __default__ = { ... }
         const start = node.start! + scriptStartOffset!
         const end = node.declaration.start! + scriptStartOffset!
@@ -862,14 +906,14 @@ export function compileScript(
       }
     }
 
-    // apply ref transform
-    if (enableRefTransform && shouldTransformRef(script.content)) {
-      const { rootRefs: rootVars, importedHelpers } = transformRefAST(
+    // apply reactivity transform
+    if (enableReactivityTransform && shouldTransform(script.content)) {
+      const { rootRefs, importedHelpers } = transformAST(
         scriptAst,
         s,
         scriptStartOffset!
       )
-      refBindings = rootVars
+      refBindings = rootRefs
       for (const h of importedHelpers) {
         helperImports.add(h)
       }
@@ -980,7 +1024,9 @@ export function compileScript(
             source,
             local,
             imported,
-            node.importKind === 'type',
+            node.importKind === 'type' ||
+              (specifier.type === 'ImportSpecifier' &&
+                specifier.importKind === 'type'),
             true
           )
         }
@@ -1109,12 +1155,14 @@ export function compileScript(
     }
   }
 
-  // 3. Apply ref sugar transform
+  // 3. Apply reactivity transform
   if (
-    (enableRefTransform && shouldTransformRef(scriptSetup.content)) ||
+    (enableReactivityTransform &&
+      // normal <script> had ref bindings that maybe used in <script setup>
+      (refBindings || shouldTransform(scriptSetup.content))) ||
     propsDestructureDecl
   ) {
-    const { rootRefs, importedHelpers } = transformRefAST(
+    const { rootRefs, importedHelpers } = transformAST(
       scriptSetupAst,
       s,
       startOffset,
@@ -1176,7 +1224,8 @@ export function compileScript(
   // props aliases
   if (propsDestructureDecl) {
     if (propsDestructureRestId) {
-      bindingMetadata[propsDestructureRestId] = BindingTypes.SETUP_CONST
+      bindingMetadata[propsDestructureRestId] =
+        BindingTypes.SETUP_REACTIVE_CONST
     }
     for (const key in propsDestructuredBindings) {
       const { local } = propsDestructuredBindings[key]
@@ -1271,7 +1320,21 @@ export function compileScript(
 
   // 10. generate return statement
   let returned
-  if (options.inlineTemplate) {
+  if (!options.inlineTemplate || (!sfc.template && hasDefaultExportRender)) {
+    // non-inline mode, or has manual render in normal <script>
+    // return bindings from script and script setup
+    const allBindings: Record<string, any> = {
+      ...scriptBindings,
+      ...setupBindings
+    }
+    for (const key in userImports) {
+      if (!userImports[key].isType && userImports[key].isUsedInTemplate) {
+        allBindings[key] = true
+      }
+    }
+    returned = `{ ${Object.keys(allBindings).join(', ')} }`
+  } else {
+    // inline mode
     if (sfc.template && !sfc.template.src) {
       if (options.templateOptions && options.templateOptions.ssr) {
         hasInlinedSsrRenderFn = true
@@ -1329,18 +1392,6 @@ export function compileScript(
     } else {
       returned = `() => {}`
     }
-  } else {
-    // return bindings from script and script setup
-    const allBindings: Record<string, any> = {
-      ...scriptBindings,
-      ...setupBindings
-    }
-    for (const key in userImports) {
-      if (!userImports[key].isType && userImports[key].isUsedInTemplate) {
-        allBindings[key] = true
-      }
-    }
-    returned = `{ ${Object.keys(allBindings).join(', ')} }`
   }
 
   if (!options.inlineTemplate && !__TEST__) {
@@ -1359,6 +1410,12 @@ export function compileScript(
 
   // 11. finalize default export
   let runtimeOptions = ``
+  if (!hasDefaultExportName && filename && filename !== DEFAULT_FILENAME) {
+    const match = filename.match(/([^/\\]+)\.\w+$/)
+    if (match) {
+      runtimeOptions += `\n  name: '${match[1]}',`
+    }
+  }
   if (hasInlinedSsrRenderFn) {
     runtimeOptions += `\n  __ssrInlineRender: true,`
   }
@@ -1488,14 +1545,18 @@ function walkDeclaration(
         const userReactiveBinding = userImportAlias['reactive'] || 'reactive'
         if (isCallOf(init, userReactiveBinding)) {
           // treat reactive() calls as let since it's meant to be mutable
-          bindingType = BindingTypes.SETUP_LET
+          bindingType = isConst
+            ? BindingTypes.SETUP_REACTIVE_CONST
+            : BindingTypes.SETUP_LET
         } else if (
           // if a declaration is a const literal, we can mark it so that
           // the generated render fn code doesn't need to unref() it
           isDefineCall ||
           (isConst && canNeverBeRef(init!, userReactiveBinding))
         ) {
-          bindingType = BindingTypes.SETUP_CONST
+          bindingType = isCallOf(init, DEFINE_PROPS)
+            ? BindingTypes.SETUP_REACTIVE_CONST
+            : BindingTypes.SETUP_CONST
         } else if (isConst) {
           if (isCallOf(init, userImportAlias['ref'] || 'ref')) {
             bindingType = BindingTypes.SETUP_REF

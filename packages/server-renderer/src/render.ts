@@ -86,7 +86,7 @@ export function renderComponentVNode(
   const instance = createComponentInstance(vnode, parentComponent, null)
   const res = setupComponent(instance, true /* isSSR */)
   const hasAsyncSetup = isPromise(res)
-  const prefetches = instance.sp
+  const prefetches = instance.sp /* LifecycleHooks.SERVER_PREFETCH */
   if (hasAsyncSetup || prefetches) {
     let p: Promise<unknown> = hasAsyncSetup
       ? (res as Promise<void>)
@@ -126,6 +126,12 @@ function renderComponentSubTree(
       isString(comp.template)
     ) {
       comp.ssrRender = ssrCompile(comp.template, instance)
+    }
+
+    // perf: enable caching of computed getters during render
+    // since there cannot be state mutations during render.
+    for (const e of instance.scope.effects) {
+      if (e.computed) e.computed._cacheable = true
     }
 
     const ssrRender = instance.ssrRender || comp.ssrRender
@@ -182,11 +188,8 @@ function renderComponentSubTree(
         slotScopeId
       )
     } else {
-      warn(
-        `Component ${
-          comp.name ? `${comp.name} ` : ``
-        } is missing template or render function.`
-      )
+      const componentName = comp.name || comp.__file || `<Anonymous>`
+      warn(`Component ${componentName} is missing template or render function.`)
       push(`<!---->`)
     }
   }
@@ -350,7 +353,9 @@ function renderTeleportVNode(
   const target = vnode.props && vnode.props.to
   const disabled = vnode.props && vnode.props.disabled
   if (!target) {
-    warn(`[@vue/server-renderer] Teleport is missing target prop.`)
+    if (!disabled) {
+      warn(`[@vue/server-renderer] Teleport is missing target prop.`)
+    }
     return []
   }
   if (!isString(target)) {

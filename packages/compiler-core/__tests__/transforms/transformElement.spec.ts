@@ -5,7 +5,8 @@ import {
   ErrorCodes,
   BindingTypes,
   NodeTransform,
-  transformExpression
+  transformExpression,
+  baseCompile
 } from '../../src'
 import {
   RESOLVE_COMPONENT,
@@ -66,6 +67,7 @@ function parseWithBind(template: string, options?: CompilerOptions) {
   return parseWithElementTransform(template, {
     ...options,
     directiveTransforms: {
+      ...options?.directiveTransforms,
       bind: transformBind
     }
   })
@@ -78,7 +80,7 @@ describe('compiler: element transform', () => {
     expect(root.components).toContain(`Foo`)
   })
 
-  test('resolve implcitly self-referencing component', () => {
+  test('resolve implicitly self-referencing component', () => {
     const { root } = parseWithElementTransform(`<Example/>`, {
       filename: `/foo/bar/Example.vue?vue&type=template`
     })
@@ -932,7 +934,11 @@ describe('compiler: element transform', () => {
     })
 
     test('NEED_PATCH (vnode hooks)', () => {
-      const { node } = parseWithBind(`<div @vnodeUpdated="foo" />`)
+      const root = baseCompile(`<div @vnodeUpdated="foo" />`, {
+        prefixIdentifiers: true,
+        cacheHandlers: true
+      }).ast
+      const node = (root as any).children[0].codegenNode
       expect(node.patchFlag).toBe(genFlagText(PatchFlags.NEED_PATCH))
     })
 

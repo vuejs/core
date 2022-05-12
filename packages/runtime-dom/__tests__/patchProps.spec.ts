@@ -205,7 +205,7 @@ describe('runtime-dom: props patching', () => {
   test('form attribute', () => {
     const el = document.createElement('input')
     patchProp(el, 'form', null, 'foo')
-    // non existant element
+    // non existent element
     expect(el.form).toBe(null)
     expect(el.getAttribute('form')).toBe('foo')
     // remove attribute
@@ -216,7 +216,7 @@ describe('runtime-dom: props patching', () => {
   test('readonly type prop on textarea', () => {
     const el = document.createElement('textarea')
     // just to verify that it doesn't throw when i.e. switching a dynamic :is from an 'input' to a 'textarea'
-    // see https://github.com/vuejs/vue-next/issues/2766
+    // see https://github.com/vuejs/core/issues/2766
     patchProp(el, 'type', 'text', null)
   })
 
@@ -234,12 +234,29 @@ describe('runtime-dom: props patching', () => {
     expect(el.getAttribute('x')).toBe('2')
   })
 
-  test('input with size', () => {
+  test('input with size (number property)', () => {
     const el = document.createElement('input')
     patchProp(el, 'size', null, 100)
     expect(el.size).toBe(100)
     patchProp(el, 'size', 100, null)
     expect(el.getAttribute('size')).toBe(null)
+    expect('Failed setting prop "size" on <input>').toHaveBeenWarnedLast()
+  })
+
+  test('select with type (string property)', () => {
+    const el = document.createElement('select')
+    patchProp(el, 'type', null, 'test')
+    expect(el.type).toBe('select-one')
+    expect('Failed setting prop "type" on <select>').toHaveBeenWarnedLast()
+  })
+
+  test('select with willValidate (boolean property)', () => {
+    const el = document.createElement('select')
+    patchProp(el, 'willValidate', true, null)
+    expect(el.willValidate).toBe(true)
+    expect(
+      'Failed setting prop "willValidate" on <select>'
+    ).toHaveBeenWarnedLast()
   })
 
   test('patch value for select', () => {
@@ -262,5 +279,12 @@ describe('runtime-dom: props patching', () => {
       root
     )
     expect(el.value).toBe('baz')
+  })
+
+  test('translate attribute', () => {
+    const el = document.createElement('div')
+    patchProp(el, 'translate', null, 'no')
+    expect(el.translate).toBeFalsy()
+    expect(el.getAttribute('translate')).toBe('no')
   })
 })

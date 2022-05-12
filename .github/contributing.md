@@ -2,7 +2,7 @@
 
 Hi! I'm really excited that you are interested in contributing to Vue.js. Before submitting your contribution, please make sure to take a moment and read through the following guidelines:
 
-- [Code of Conduct](https://github.com/vuejs/vue/blob/dev/.github/CODE_OF_CONDUCT.md)
+- [Code of Conduct](https://vuejs.org/about/coc.html)
 - [Issue Reporting Guidelines](#issue-reporting-guidelines)
 - [Pull Request Guidelines](#pull-request-guidelines)
 - [Development Setup](#development-setup)
@@ -17,7 +17,7 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 
 ## Pull Request Guidelines
 
-- Checkout a topic branch from a base branch, e.g. `master`, and merge back against that branch.
+- Checkout a topic branch from a base branch, e.g. `main`, and merge back against that branch.
 
 - If adding a new feature:
 
@@ -40,7 +40,7 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 
 ## Development Setup
 
-You will need [Node.js](https://nodejs.org) **version 10+**, and [PNPM](https://pnpm.io).
+You will need [Node.js](https://nodejs.org) **version 16+**, and [PNPM](https://pnpm.io) **version 7+**.
 
 We also recommend installing [ni](https://github.com/antfu/ni) to help switching between repos using different package managers. `ni` also provides the handy `nr` command which running npm scripts easier.
 
@@ -90,7 +90,7 @@ Additional formats that only apply to the main `vue` package:
 - **`esm-bundler-runtime`**
 - **`esm-browser-runtime`**
 
-More details about each of these formats can be found in the [`vue` package README](https://github.com/vuejs/vue-next/blob/master/packages/vue/README.md#which-dist-file-to-use) and the [Rollup config file](https://github.com/vuejs/vue-next/blob/master/rollup.config.js).
+More details about each of these formats can be found in the [`vue` package README](https://github.com/vuejs/core/blob/main/packages/vue/README.md#which-dist-file-to-use) and the [Rollup config file](https://github.com/vuejs/core/blob/main/rollup.config.js).
 
 For example, to build `runtime-core` with the global build only:
 
@@ -123,19 +123,22 @@ The `dev` script bundles a target package (default: `vue`) in a specified format
 ```bash
 $ nr dev
 
-> rollup v1.19.4
-> bundles packages/vue/src/index.ts → packages/vue/dist/vue.global.js...
+> watching: packages/vue/dist/vue.global.js
 ```
 
-- The `dev` script also supports fuzzy match for the target package, but will only match the first package matched.
+- **Important:** output of the `dev` script is for development and debugging only. While it has the same runtime behavior, the generated code should never be published to npm.
+
+- The `dev` script does not support fuzzy match - you must specify the full package name, e.g. `nr dev runtime-core`.
 
 - The `dev` script supports specifying build format via the `-f` flag just like the `build` script.
 
 - The `dev` script also supports the `-s` flag for generating source maps, but it will make rebuilds slower.
 
+- The `dev` script supports the `-i` flag for inlining all deps. This is useful when debugging `esm-bundler` builds which externalizes deps by default.
+
 ### `nr dev-compiler`
 
-The `dev-compiler` script builds, watches and serves the [Template Explorer](https://github.com/vuejs/vue-next/tree/master/packages/template-explorer) at `http://localhost:5000`. This is extremely useful when working on the compiler.
+The `dev-compiler` script builds, watches and serves the [Template Explorer](https://github.com/vuejs/core/tree/main/packages/template-explorer) at `http://localhost:5000`. This is extremely useful when working on the compiler.
 
 ### `nr test`
 
@@ -174,6 +177,8 @@ This repository employs a [monorepo](https://en.wikipedia.org/wiki/Monorepo) set
 - `compiler-core`: The platform-agnostic compiler core. Includes the extensible base of the compiler and all platform-agnostic plugins.
 
 - `compiler-dom`: Compiler with additional plugins specifically targeting the browser.
+
+- `compiler-sfc`: Lower level utilities for compiling Vue Single File Components.
 
 - `compiler-ssr`: Compiler that produces render functions optimized for server-side rendering.
 

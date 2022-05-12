@@ -7,7 +7,8 @@ import {
   ArrayPattern,
   Program,
   VariableDeclarator,
-  Expression
+  Expression,
+  VariableDeclaration
 } from '@babel/types'
 import MagicString, { SourceMap } from 'magic-string'
 import { walk } from 'estree-walker'
@@ -216,40 +217,60 @@ export function transformAST(
   function walkScope(node: Program | BlockStatement, isRoot = false) {
     for (const stmt of node.body) {
       if (stmt.type === 'VariableDeclaration') {
-        if (stmt.declare) continue
-        for (const decl of stmt.declarations) {
-          let refCall
-          const isCall =
-            decl.init &&
-            decl.init.type === 'CallExpression' &&
-            decl.init.callee.type === 'Identifier'
-          if (
-            isCall &&
-            (refCall = isRefCreationCall((decl as any).init.callee.name))
-          ) {
-            processRefDeclaration(refCall, decl.id, decl.init as CallExpression)
-          } else {
-            const isProps =
-              isRoot &&
-              isCall &&
-              (decl as any).init.callee.name === 'defineProps'
-            for (const id of extractIdentifiers(decl.id)) {
-              if (isProps) {
-                // for defineProps destructure, only exclude them since they
-                // are already passed in as knownProps
-                excludedIds.add(id)
-              } else {
-                registerBinding(id)
-              }
-            }
-          }
-        }
+        walkVariableDeclaration(stmt, isRoot)
       } else if (
         stmt.type === 'FunctionDeclaration' ||
         stmt.type === 'ClassDeclaration'
       ) {
         if (stmt.declare || !stmt.id) continue
         registerBinding(stmt.id)
+      } else if (
+        (stmt.type === 'ForOfStatement' || stmt.type === 'ForInStatement') &&
+        stmt.left.type === 'VariableDeclaration'
+      ) {
+        walkVariableDeclaration(stmt.left)
+      } else if (
+        stmt.type === 'ExportNamedDeclaration' &&
+        stmt.declaration &&
+        stmt.declaration.type === 'VariableDeclaration'
+      ) {
+        walkVariableDeclaration(stmt.declaration, isRoot)
+      } else if (
+        stmt.type === 'LabeledStatement' &&
+        stmt.body.type === 'VariableDeclaration'
+      ) {
+        walkVariableDeclaration(stmt.body, isRoot)
+      }
+    }
+  }
+
+  function walkVariableDeclaration(stmt: VariableDeclaration, isRoot = false) {
+    if (stmt.declare) {
+      return
+    }
+    for (const decl of stmt.declarations) {
+      let refCall
+      const isCall =
+        decl.init &&
+        decl.init.type === 'CallExpression' &&
+        decl.init.callee.type === 'Identifier'
+      if (
+        isCall &&
+        (refCall = isRefCreationCall((decl as any).init.callee.name))
+      ) {
+        processRefDeclaration(refCall, decl.id, decl.init as CallExpression)
+      } else {
+        const isProps =
+          isRoot && isCall && (decl as any).init.callee.name === 'defineProps'
+        for (const id of extractIdentifiers(decl.id)) {
+          if (isProps) {
+            // for defineProps destructure, only exclude them since they
+            // are already passed in as knownProps
+            excludedIds.add(id)
+          } else {
+            registerBinding(id)
+          }
+        }
       }
     }
   }
@@ -545,6 +566,16 @@ export function transformAST(
         return
       }
 
+      // catch param
+      if (node.type === 'CatchClause') {
+        scopeStack.push((currentScope = {}))
+        if (node.param && node.param.type === 'Identifier') {
+          registerBinding(node.param)
+        }
+        walkScope(node.body)
+        return
+      }
+
       // non-function block scopes
       if (node.type === 'BlockStatement' && !isFunctionType(parent!)) {
         scopeStack.push((currentScope = {}))
@@ -552,6 +583,7 @@ export function transformAST(
         return
       }
 
+      // skip type nodes
       if (
         parent &&
         parent.type.startsWith('TS') &&
@@ -660,6 +692,6 @@ function warnOnce(msg: string) {
 
 function warn(msg: string) {
   console.warn(
-    `\x1b[1m\x1b[33m[@vue/ref-transform]\x1b[0m\x1b[33m ${msg}\x1b[0m\n`
+    `\x1b[1m\x1b[33m[@vue/reactivity-transform]\x1b[0m\x1b[33m ${msg}\x1b[0m\n`
   )
 }
