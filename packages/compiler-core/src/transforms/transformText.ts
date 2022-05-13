@@ -5,13 +5,13 @@ import {
   createCallExpression,
   CallExpression,
   ElementTypes,
-  ConstantTypes
+  ConstantTypes,
+  createCompoundExpression
 } from '../ast'
 import { isText } from '../utils'
 import { CREATE_TEXT } from '../runtimeHelpers'
 import { PatchFlags, PatchFlagNames } from '@vue/shared'
 import { getConstantType } from './hoistStatic'
-import { createCompoundExpression } from '../ast'
 
 // Merge adjacent text nodes and expressions into a single expression
 // e.g. <div>abc {{ d }} {{ e }}</div> should have a single expression node as child.
