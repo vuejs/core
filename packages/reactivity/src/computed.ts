@@ -1,6 +1,6 @@
 import { DebuggerOptions, ReactiveEffect } from './effect'
 import { Ref, trackRefValue, triggerRefValue } from './ref'
-import { isFunction, NOOP } from '@vue/shared'
+import { hasChanged, isFunction, NOOP } from '@vue/shared'
 import { ReactiveFlags, toRaw } from './reactive'
 import { Dep } from './dep'
 
@@ -71,7 +71,7 @@ export class ComputedRefImpl<T> {
     trackRefValue(self)
     if (self._dirty || !self._cacheable) {
       const newValue = self.effect.run()!
-      if (self._value !== newValue) {
+      if (hasChanged(self._value, newValue)) {
         triggerRefValue(this, undefined)
       }
       self._value = newValue
