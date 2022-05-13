@@ -16,7 +16,7 @@ Vue.js is an MIT-licensed open source project with its ongoing development made 
 
 ## Questions
 
-For questions and support please use [the official forum](https://forum.vuejs.org) or [community chat](https://chat.vuejs.org/). The issue list of this repo is **exclusively** for bug reports and feature requests.
+For questions and support please use [GitHub Discussions](https://github.com/vuejs/core/discussions) or [community chat](https://chat.vuejs.org/). The issue list of this repo is **exclusively** for bug reports and feature requests.
 
 ## Issues
 
