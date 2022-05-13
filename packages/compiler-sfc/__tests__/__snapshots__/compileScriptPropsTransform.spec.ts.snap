@@ -40,25 +40,6 @@ return (_ctx, _cache) => {
 }"
 `;
 
-exports[`sfc props transform aliasing w/ StringLiteral 1`] = `
-"import { toDisplayString as _toDisplayString } from \\"vue\\"
-
-
-export default {
-  props: { 'foo.bar': Function },
-  setup(__props) {
-
-      
-      let x = __props[\\"foo.bar\\"]
-      
-return (_ctx, _cache) => {
-  return _toDisplayString(__props[\\"foo.bar\\"])
-}
-}
-
-}"
-`;
-
 exports[`sfc props transform basic usage 1`] = `
 "import { toDisplayString as _toDisplayString } from \\"vue\\"
 
@@ -158,14 +139,14 @@ exports[`sfc props transform non-identifier prop names 1`] = `
 
 
 export default {
-  props: ['onUpdate:foo'],
+  props: { 'foo.bar': Function },
   setup(__props) {
 
       
-      console.log(__props[\\"onUpdate:foo\\"])
+      let x = __props[\\"foo.bar\\"]
       
 return (_ctx, _cache) => {
-  return _toDisplayString(__props[\\"onUpdate:foo\\"])
+  return _toDisplayString(__props[\\"foo.bar\\"])
 }
 }
 

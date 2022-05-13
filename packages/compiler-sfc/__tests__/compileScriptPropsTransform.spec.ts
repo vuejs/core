@@ -136,7 +136,7 @@ describe('sfc props transform', () => {
       </script>
       <template>{{ fooBar }}</template>
     `)
-    expect(content).toMatch(`x = (__props["foo.bar"])`)
+    expect(content).toMatch(`x = __props["foo.bar"]`)
     expect(content).toMatch(`toDisplayString(__props["foo.bar"])`)
     assertCode(content)
     expect(bindings).toStrictEqual({
