@@ -524,7 +524,7 @@ describe('compiler: expression transform', () => {
         `<div>{{ props }} {{ setup }} {{ setupConst }} {{ data }} {{ options }}</div>`,
         { inline: true }
       )
-      expect(code).toMatch(`__props['props']`)
+      expect(code).toMatch(`__props.props`)
       expect(code).toMatch(`_unref(setup)`)
       expect(code).toMatch(`_toDisplayString(setupConst)`)
       expect(code).toMatch(`_ctx.data`)

@@ -20,8 +20,8 @@ describe('sfc props transform', () => {
       <template>{{ foo }}</template>
     `)
     expect(content).not.toMatch(`const { foo } =`)
-    expect(content).toMatch(`console.log(__props['foo'])`)
-    expect(content).toMatch(`_toDisplayString(__props['foo'])`)
+    expect(content).toMatch(`console.log(__props.foo)`)
+    expect(content).toMatch(`_toDisplayString(__props.foo)`)
     assertCode(content)
     expect(bindings).toStrictEqual({
       foo: BindingTypes.PROPS
@@ -40,7 +40,7 @@ describe('sfc props transform', () => {
     `)
     expect(content).not.toMatch(`const { foo, bar } =`)
     expect(content).toMatch(`console.log(foo)`)
-    expect(content).toMatch(`console.log(__props['bar'])`)
+    expect(content).toMatch(`console.log(__props.bar)`)
     assertCode(content)
     expect(bindings).toStrictEqual({
       foo: BindingTypes.PROPS,
@@ -112,9 +112,9 @@ describe('sfc props transform', () => {
     `)
     expect(content).not.toMatch(`const { foo: bar } =`)
     expect(content).toMatch(`let x = foo`) // should not process
-    expect(content).toMatch(`let y = __props['foo']`)
-    // should convert bar to __props['foo'] in template expressions
-    expect(content).toMatch(`_toDisplayString(__props['foo'] + __props['foo'])`)
+    expect(content).toMatch(`let y = __props.foo`)
+    // should convert bar to __props.foo in template expressions
+    expect(content).toMatch(`_toDisplayString(__props.foo + __props.foo)`)
     assertCode(content)
     expect(bindings).toStrictEqual({
       x: BindingTypes.SETUP_LET,
@@ -178,6 +178,20 @@ describe('sfc props transform', () => {
     expect(content).toMatch(`console.log((__props_foo))`)
     expect(content).toMatch(`console.log((__props_bar))`)
     expect(content).toMatch(`({ foo: __props_foo, baz: __props_bar })`)
+    assertCode(content)
+  })
+
+  // #5425
+  test('non-identifier prop names', () => {
+    const { content } = compile(`
+      <script setup>
+      const { 'onUpdate:foo': foo } = defineProps(['onUpdate:foo'])
+      console.log(foo)
+      </script>
+      <template>{{ foo }}</template>
+    `)
+    expect(content).toMatch(`console.log(__props["onUpdate:foo"])`)
+    expect(content).toMatch(`toDisplayString(__props["onUpdate:foo"])`)
     assertCode(content)
   })
 

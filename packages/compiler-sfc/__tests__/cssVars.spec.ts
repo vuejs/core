@@ -66,7 +66,7 @@ describe('CSS vars injection', () => {
     expect(content).toMatch(`_useCssVars(_ctx => ({
   "${mockId}-color": (color),
   "${mockId}-size": (size.value),
-  "${mockId}-foo": (__props['foo'])
+  "${mockId}-foo": (__props.foo)
 })`)
     expect(content).toMatch(
       `import { useCssVars as _useCssVars, unref as _unref } from 'vue'`
