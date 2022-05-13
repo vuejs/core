@@ -195,6 +195,7 @@ export function defineAsyncComponent<
 
       load()
         .then(() => {
+          clearTimers()
           loaded.value = true
           if (instance.parent && isKeepAlive(instance.parent.vnode)) {
             // parent is keep-alive, force update so the loaded component's
@@ -203,10 +204,10 @@ export function defineAsyncComponent<
           }
         })
         .catch(err => {
+          clearTimers()
           onError(err)
           error.value = err
         })
-        .finally(clearTimers)
 
       return () => {
         if (loaded.value && resolvedComp) {
