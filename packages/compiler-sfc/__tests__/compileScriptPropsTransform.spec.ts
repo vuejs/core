@@ -127,7 +127,8 @@ describe('sfc props transform', () => {
     })
   })
 
-  test('aliasing w/ StringLiteral', () => {
+  // #5425
+  test('non-identifier prop names', () => {
     const { content, bindings } = compile(`
       <script setup>
       const { 'foo.bar': fooBar } = defineProps({ 'foo.bar': Function })
@@ -135,6 +136,8 @@ describe('sfc props transform', () => {
       </script>
       <template>{{ fooBar }}</template>
     `)
+    expect(content).toMatch(`x = (__props["foo.bar"])`)
+    expect(content).toMatch(`toDisplayString(__props["foo.bar"])`)
     assertCode(content)
     expect(bindings).toStrictEqual({
       x: BindingTypes.SETUP_LET,
@@ -178,20 +181,6 @@ describe('sfc props transform', () => {
     expect(content).toMatch(`console.log((__props_foo))`)
     expect(content).toMatch(`console.log((__props_bar))`)
     expect(content).toMatch(`({ foo: __props_foo, baz: __props_bar })`)
-    assertCode(content)
-  })
-
-  // #5425
-  test('non-identifier prop names', () => {
-    const { content } = compile(`
-      <script setup>
-      const { 'onUpdate:foo': foo } = defineProps(['onUpdate:foo'])
-      console.log(foo)
-      </script>
-      <template>{{ foo }}</template>
-    `)
-    expect(content).toMatch(`console.log(__props["onUpdate:foo"])`)
-    expect(content).toMatch(`toDisplayString(__props["onUpdate:foo"])`)
     assertCode(content)
   })
 
