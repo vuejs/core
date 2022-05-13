@@ -2,7 +2,7 @@
  * @jest-environment node
  */
 
-import { createApp, createSSRApp, h, Teleport } from 'vue'
+import { createApp, h, Teleport } from 'vue'
 import { renderToString } from '../src/renderToString'
 import { SSRContext } from '../src/render'
 import { ssrRenderTeleport } from '../src/helpers/ssrRenderTeleport'
@@ -125,7 +125,7 @@ describe('ssrRenderTeleport', () => {
       async setup() {}
     }
     const html = await renderToString(
-      createSSRApp({
+      h({
         template: '<async-component />',
         components: { asyncComponent }
       }),
