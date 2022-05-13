@@ -1,6 +1,7 @@
 {
   "private": true,
   "version": "3.2.33",
+  "packageManager": "pnpm@7.1.0",
   "scripts": {
     "dev": "node scripts/dev.js",
     "build": "node scripts/build.js",
