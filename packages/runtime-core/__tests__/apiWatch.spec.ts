@@ -892,6 +892,21 @@ describe('api: watch', () => {
     expect(sideEffect).toBe(2)
   })
 
+  test('should force trigger on triggerRef when watching multiple sources: shallow ref array', async () => {
+    const v = shallowRef([] as any)
+    const spy = jest.fn()
+    watch([v], () => {
+      spy()
+    })
+
+    v.value.push(1)
+    triggerRef(v)
+
+    await nextTick()
+    // should trigger now
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
   // #2125
   test('watchEffect should not recursively trigger itself', async () => {
     const spy = jest.fn()
