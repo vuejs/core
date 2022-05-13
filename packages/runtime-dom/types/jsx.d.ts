@@ -457,7 +457,7 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   autocomplete?: string
   autofocus?: Booleanish
   capture?: boolean | 'user' | 'environment' // https://www.w3.org/tr/html-media-capture/#the-capture-attribute
-  checked?: Booleanish | any[] // for IDE v-model multi-checkbox support
+  checked?: Booleanish | any[] | Set<any> // for IDE v-model multi-checkbox support
   crossorigin?: string
   disabled?: Booleanish
   form?: string
