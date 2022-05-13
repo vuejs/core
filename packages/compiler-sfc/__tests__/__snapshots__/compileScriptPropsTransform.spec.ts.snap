@@ -134,6 +134,25 @@ return () => {}
 }"
 `;
 
+exports[`sfc props transform non-identifier prop names 1`] = `
+"import { toDisplayString as _toDisplayString } from \\"vue\\"
+
+
+export default {
+  props: { 'foo.bar': Function },
+  setup(__props) {
+
+      
+      let x = __props[\\"foo.bar\\"]
+      
+return (_ctx, _cache) => {
+  return _toDisplayString(__props[\\"foo.bar\\"])
+}
+}
+
+}"
+`;
+
 exports[`sfc props transform rest spread 1`] = `
 "import { createPropsRestProxy as _createPropsRestProxy } from 'vue'
 

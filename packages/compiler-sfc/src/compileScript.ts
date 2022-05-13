@@ -431,7 +431,11 @@ export function compileScript(
                 prop.key
               )
             }
-            const propKey = (prop.key as Identifier).name
+            
+            const propKey = prop.key.type === 'StringLiteral'
+              ? prop.key.value
+              : (prop.key as Identifier).name
+            
             if (prop.value.type === 'AssignmentPattern') {
               // default value { foo = 123 }
               const { left, right } = prop.value
