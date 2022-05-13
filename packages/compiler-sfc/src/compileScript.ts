@@ -208,11 +208,11 @@ export function compileScript(
         sourceType: 'module'
       }).program
       const bindings = analyzeScriptBindings(scriptAst.body)
-      if (enableReactivityTransform && reactivityTransformer?.shouldTransform(content)) {
+      if (enableReactivityTransform && reactivityTransformer!.shouldTransform(content)) {
         const s = new MagicString(source)
         const startOffset = script.loc.start.offset
         const endOffset = script.loc.end.offset
-        const { importedHelpers } = reactivityTransformer.transformAST(scriptAst, s, startOffset)
+        const { importedHelpers } = reactivityTransformer!.transformAST(scriptAst, s, startOffset)
         if (importedHelpers.length) {
           s.prepend(
             `import { ${importedHelpers
@@ -880,8 +880,8 @@ export function compileScript(
     }
 
     // apply reactivity transform
-    if (enableReactivityTransform && reactivityTransformer?.shouldTransform(script.content)) {
-      const { rootRefs, importedHelpers } = reactivityTransformer.transformAST(
+    if (enableReactivityTransform && reactivityTransformer!.shouldTransform(script.content)) {
+      const { rootRefs, importedHelpers } = reactivityTransformer!.transformAST(
         scriptAst,
         s,
         scriptStartOffset!
@@ -1132,7 +1132,7 @@ export function compileScript(
   if (
     (enableReactivityTransform &&
       // normal <script> had ref bindings that maybe used in <script setup>
-      (refBindings || reactivityTransformer?.shouldTransform(scriptSetup.content))) ||
+      (refBindings || reactivityTransformer!.shouldTransform(scriptSetup.content))) ||
     propsDestructureDecl
   ) {
     const { rootRefs, importedHelpers } = reactivityTransformer!.transformAST(
