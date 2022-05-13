@@ -111,7 +111,7 @@ return function render(_ctx, _cache) {
       ? (_openBlock(), _createElementBlock(\\"div\\", { key: 0 }))
       : orNot
         ? (_openBlock(), _createElementBlock(\\"p\\", { key: 1 }))
-        : (_openBlock(), _createElementBlock(_Fragment, { key: 2 }, [\\"fine\\"], 64 /* STABLE_FRAGMENT */))
+        : (_openBlock(), _createElementBlock(_Fragment, { key: 2 }, [\\"fine\\"], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */))
   }
 }"
 `;

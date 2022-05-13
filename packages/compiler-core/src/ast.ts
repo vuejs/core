@@ -259,6 +259,9 @@ export interface IfBranchNode extends Node {
   condition: ExpressionNode | undefined // else
   children: TemplateChildNode[]
   userKey?: AttributeNode | DirectiveNode
+  isTemplateIf?: boolean
+  isFragment?: boolean
+  isDevFragment?: boolean
 }
 
 export interface ForNode extends Node {

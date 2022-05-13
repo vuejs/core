@@ -83,63 +83,7 @@ describe('compiler: v-if', () => {
       expect(node.branches[0].children[2].type).toBe(NodeTypes.ELEMENT)
       expect((node.branches[0].children[2] as ElementNode).tag).toBe(`p`)
     })
-    test('template v-if with one child v-if', () => {
-      const { node } = parseWithIfTransform(
-        `<template v-if="ok"><div v-if="ok"/> </template>`
-      )
-      expect(node.type).toBe(NodeTypes.IF)
-      expect(node.branches.length).toBe(1)
-      expect((node.branches[0].condition as SimpleExpressionNode).content).toBe(
-        `ok`
-      )
-      expect(node.branches[0].children.length).toBe(1)
-      expect(node.branches[0].children[0].type).toBe(NodeTypes.IF)
-      expect(
-        (
-          (node.branches[0].children[0] as IfNode).branches[0]
-            .children[0] as ElementNode
-        ).tag
-      ).toBe(`div`)
-      expect((node.codegenNode.consequent as VNodeCall).patchFlag).toBe(
-        '64 /* STABLE_FRAGMENT */'
-      )
-    })
-    test('template v-if with one child v-if and comment', () => {
-      const { node } = parseWithIfTransform(
-        `
-            <template v-if="ok">
-                <div v-if="ok" >1</div> 
-                <!-- <div></div>-->
-            </template>`
-      )
-      const { node: MultipleCommentNode } = parseWithIfTransform(
-        `
-            <template v-if="ok">
-                <div v-if="ok" >1</div> 
-                <!-- <div></div>-->
-                <!-- <div></div>-->
-            </template>`
-      )
-      expect((node.codegenNode.consequent as VNodeCall).patchFlag).toBe(
-        '2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */'
-      )
-      expect(
-        (MultipleCommentNode.codegenNode.consequent as VNodeCall).patchFlag
-      ).toBe('2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */')
-    })
-    test('template v-if with Multiple child v-if and comment', () => {
-      const { node } = parseWithIfTransform(
-        `
-            <template v-if="ok">
-                <div v-if="ok" >1</div> 
-                <div>2</div>
-                <!-- <div></div>-->
-            </template>`
-      )
-      expect((node.codegenNode.consequent as VNodeCall).patchFlag).toBe(
-        '64 /* STABLE_FRAGMENT */'
-      )
-    })
+
     test('component v-if', () => {
       const { node } = parseWithIfTransform(`<Component v-if="ok"></Component>`)
       expect(node.type).toBe(NodeTypes.IF)

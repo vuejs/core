@@ -16,7 +16,7 @@ return function render(_ctx, _cache) {
         ? (_openBlock(), _createElementBlock(\\"div\\", { key: 0 }, \\"yes\\"))
         : (_openBlock(), _createElementBlock(_Fragment, { key: 1 }, [
             _createTextVNode(\\"no\\")
-          ], 64 /* STABLE_FRAGMENT */)),
+          ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */)),
       (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(list, (value, index) => {
         return (_openBlock(), _createElementBlock(\\"div\\", null, [
           _createElementVNode(\\"span\\", null, _toDisplayString(value + index), 1 /* TEXT */)
@@ -40,7 +40,7 @@ return function render(_ctx, _cache) {
       ? (_openBlock(), _createElementBlock(\\"div\\", { key: 0 }, \\"yes\\"))
       : (_openBlock(), _createElementBlock(_Fragment, { key: 1 }, [
           _createTextVNode(\\"no\\")
-        ], 64 /* STABLE_FRAGMENT */)),
+        ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */)),
     (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.list, (value, index) => {
       return (_openBlock(), _createElementBlock(\\"div\\", null, [
         _createElementVNode(\\"span\\", null, _toDisplayString(value + index), 1 /* TEXT */)
@@ -63,7 +63,7 @@ export function render(_ctx, _cache) {
       ? (_openBlock(), _createElementBlock(\\"div\\", { key: 0 }, \\"yes\\"))
       : (_openBlock(), _createElementBlock(_Fragment, { key: 1 }, [
           _createTextVNode(\\"no\\")
-        ], 64 /* STABLE_FRAGMENT */)),
+        ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */)),
     (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.list, (value, index) => {
       return (_openBlock(), _createElementBlock(\\"div\\", null, [
         _createElementVNode(\\"span\\", null, _toDisplayString(value + index), 1 /* TEXT */)

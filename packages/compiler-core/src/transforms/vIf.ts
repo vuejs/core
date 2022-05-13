@@ -209,15 +209,23 @@ export function processIf(
 }
 
 function createIfBranch(node: ElementNode, dir: DirectiveNode): IfBranchNode {
+  const isTemplateIf = node.tagType === ElementTypes.TEMPLATE
+  const children =
+    isTemplateIf && !findDir(node, 'for') ? node.children : [node]
+  const isFragment =
+    children.length !== 1 || children[0].type !== NodeTypes.ELEMENT
+  const isDevFragment =
+    isFragment &&
+    children.filter(c => c.type !== NodeTypes.COMMENT).length === 1
+
   return {
     type: NodeTypes.IF_BRANCH,
     loc: node.loc,
     condition: dir.name === 'else' ? undefined : dir.exp,
-    children:
-      node.tagType === ElementTypes.TEMPLATE && !findDir(node, 'for')
-        ? node.children
-        : [node],
-    userKey: findProp(node, `key`)
+    children,
+    userKey: findProp(node, `key`),
+    isFragment,
+    isDevFragment
   }
 }
 
@@ -259,9 +267,7 @@ function createChildrenCodegenNode(
   )
   const { children } = branch
   const firstChild = children[0]
-  const needFragmentWrapper =
-    children.length !== 1 || firstChild.type !== NodeTypes.ELEMENT
-  if (needFragmentWrapper) {
+  if (branch.isFragment) {
     if (children.length === 1 && firstChild.type === NodeTypes.FOR) {
       // optimize away nested fragments when child is a ForNode
       const vnodeCall = firstChild.codegenNode!
@@ -272,14 +278,7 @@ function createChildrenCodegenNode(
       let patchFlagText = PatchFlagNames[PatchFlags.STABLE_FRAGMENT]
       // check if the fragment actually contains a single valid child with
       // the rest being comments
-      const commentNodeCount = children.filter(
-        c => c.type === NodeTypes.COMMENT
-      ).length
-      if (
-        __DEV__ &&
-        commentNodeCount &&
-        children.length - commentNodeCount === 1
-      ) {
+      if (branch.isDevFragment) {
         patchFlag |= PatchFlags.DEV_ROOT_FRAGMENT
         patchFlagText += `, ${PatchFlagNames[PatchFlags.DEV_ROOT_FRAGMENT]}`
       }
