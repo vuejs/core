@@ -33,7 +33,8 @@ import {
   TELEPORT,
   TRANSITION_GROUP,
   CREATE_VNODE,
-  CallExpression
+  CallExpression,
+  JSChildNode
 } from '@vue/compiler-dom'
 import { SSR_RENDER_COMPONENT, SSR_RENDER_VNODE } from '../runtimeHelpers'
 import {
@@ -48,10 +49,11 @@ import {
 } from './ssrTransformSuspense'
 import { ssrProcessTransitionGroup } from './ssrTransformTransitionGroup'
 import { isSymbol, isObject, isArray } from '@vue/shared'
+import { buildSSRProps } from './ssrTransformElement'
 
 // We need to construct the slot functions in the 1st pass to ensure proper
 // scope tracking, but the children of each slot cannot be processed until
-// the 2nd pass, so we store the WIP slot functions in a weakmap during the 1st
+// the 2nd pass, so we store the WIP slot functions in a weakMap during the 1st
 // pass and complete them in the 2nd pass.
 const wipMap = new WeakMap<ComponentNode, WIPSlotEntry[]>()
 
@@ -110,12 +112,15 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
       })
     }
 
-    const props =
-      node.props.length > 0
-        ? // note we are not passing ssr: true here because for components, v-on
-          // handlers should still be passed
-          buildProps(node, context).props || `null`
-        : `null`
+    let propsExp: string | JSChildNode = `null`
+    if (node.props.length) {
+      // note we are not passing ssr: true here because for components, v-on
+      // handlers should still be passed
+      const { props, directives } = buildProps(node, context)
+      if (props || directives.length) {
+        propsExp = buildSSRProps(props, directives, context)
+      }
+    }
 
     const wipEntries: WIPSlotEntry[] = []
     wipMap.set(node, wipEntries)
@@ -151,7 +156,7 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
           `_push`,
           createCallExpression(context.helper(CREATE_VNODE), [
             component,
-            props,
+            propsExp,
             slots
           ]),
           `_parent`
@@ -160,7 +165,7 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
     } else {
       node.ssrCodegenNode = createCallExpression(
         context.helper(SSR_RENDER_COMPONENT),
-        [component, props, slots, `_parent`]
+        [component, propsExp, slots, `_parent`]
       )
     }
   }
@@ -180,7 +185,8 @@ export function ssrProcessComponent(
     } else if (component === TRANSITION_GROUP) {
       return ssrProcessTransitionGroup(node, context)
     } else {
-      // real fall-through (e.g. KeepAlive): just render its children.
+      // real fall-through: Transition / KeepAlive
+      // just render its children.
       processChildren(node.children, context)
     }
   } else {
@@ -206,7 +212,7 @@ export function ssrProcessComponent(
 
     // component is inside a slot, inherit slot scope Id
     if (context.withSlotScopeId) {
-      node.ssrCodegenNode!.arguments.push(`_scopeId`)
+      node.ssrCodegenNode.arguments.push(`_scopeId`)
     }
 
     if (typeof component === 'string') {
@@ -224,9 +230,8 @@ export function ssrProcessComponent(
 
 export const rawOptionsMap = new WeakMap<RootNode, CompilerOptions>()
 
-const [baseNodeTransforms, baseDirectiveTransforms] = getBaseTransformPreset(
-  true
-)
+const [baseNodeTransforms, baseDirectiveTransforms] =
+  getBaseTransformPreset(true)
 const vnodeNodeTransforms = [...baseNodeTransforms, ...DOMNodeTransforms]
 const vnodeDirectiveTransforms = {
   ...baseDirectiveTransforms,
@@ -240,6 +245,7 @@ function createVNodeSlotBranch(
 ): ReturnStatement {
   // apply a sub-transform using vnode-based transforms.
   const rawOptions = rawOptionsMap.get(parentContext.root)!
+
   const subOptions = {
     ...rawOptions,
     // overwrite with vnode-based transforms

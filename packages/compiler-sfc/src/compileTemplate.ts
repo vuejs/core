@@ -21,7 +21,7 @@ import {
 import { generateCodeFrame, isObject } from '@vue/shared'
 import * as CompilerDOM from '@vue/compiler-dom'
 import * as CompilerSSR from '@vue/compiler-ssr'
-import consolidate from 'consolidate'
+import consolidate from '@vue/consolidate'
 import { warnOnce } from './warn'
 import { genCssVarsFromList } from './cssVars'
 
@@ -119,7 +119,9 @@ export function compileTemplate(
   const preprocessor = preprocessLang
     ? preprocessCustomRequire
       ? preprocessCustomRequire(preprocessLang)
-      : require('consolidate')[preprocessLang as keyof typeof consolidate]
+      : __ESM_BROWSER__
+      ? undefined
+      : consolidate[preprocessLang as keyof typeof consolidate]
     : false
   if (preprocessor) {
     try {
@@ -127,7 +129,7 @@ export function compileTemplate(
         ...options,
         source: preprocess(options, preprocessor)
       })
-    } catch (e) {
+    } catch (e: any) {
       return {
         code: `export default function render() {}`,
         source: options.source,
@@ -140,14 +142,10 @@ export function compileTemplate(
       code: `export default function render() {}`,
       source: options.source,
       tips: [
-        `Component ${
-          options.filename
-        } uses lang ${preprocessLang} for template. Please install the language preprocessor.`
+        `Component ${options.filename} uses lang ${preprocessLang} for template. Please install the language preprocessor.`
       ],
       errors: [
-        `Component ${
-          options.filename
-        } uses lang ${preprocessLang} for template, however it is not installed.`
+        `Component ${options.filename} uses lang ${preprocessLang} for template, however it is not installed.`
       ]
     }
   } else {
@@ -208,10 +206,10 @@ function doCompileTemplate({
         : '',
     scopeId: scoped ? longId : undefined,
     slotted,
+    sourceMap: true,
     ...compilerOptions,
     nodeTransforms: nodeTransforms.concat(compilerOptions.nodeTransforms || []),
     filename,
-    sourceMap: true,
     onError: e => errors.push(e),
     onWarn: w => warnings.push(w)
   })

@@ -51,7 +51,7 @@ export function legacyBindObjectProps(
 
           if (isSync) {
             const on = data.on || (data.on = {})
-            on[`update:${key}`] = function($event: any) {
+            on[`update:${key}`] = function ($event: any) {
               value[key] = $event
             }
           }
@@ -157,7 +157,7 @@ export function legacyCheckKeyCodes(
 
 function isKeyNotMatch<T>(expect: T | T[], actual: T): boolean {
   if (isArray(expect)) {
-    return expect.indexOf(actual) === -1
+    return !expect.includes(actual)
   } else {
     return expect !== actual
   }

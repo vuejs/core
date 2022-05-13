@@ -135,6 +135,44 @@ describe('api: setup context', () => {
     expect(serializeInner(root)).toMatch(`<div class="baz"></div>`)
   })
 
+  // #4161
+  it('context.attrs in child component slots', async () => {
+    const toggle = ref(true)
+
+    const Parent = {
+      render: () => h(Child, toggle.value ? { id: 'foo' } : { class: 'baz' })
+    }
+
+    const Wrapper = {
+      render(this: any) {
+        return this.$slots.default()
+      }
+    }
+
+    const Child = {
+      inheritAttrs: false,
+      setup(_: any, { attrs }: any) {
+        return () => {
+          const vnode = h(Wrapper, null, {
+            default: () => [h('div', attrs)],
+            _: 1 // mark stable slots
+          })
+          vnode.dynamicChildren = [] // force optimized mode
+          return vnode
+        }
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Parent), root)
+    expect(serializeInner(root)).toMatch(`<div id="foo"></div>`)
+
+    // should update even though it's not reactive
+    toggle.value = false
+    await nextTick()
+    expect(serializeInner(root)).toMatch(`<div class="baz"></div>`)
+  })
+
   it('context.slots', async () => {
     const id = ref('foo')
 

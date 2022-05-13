@@ -1,3 +1,4 @@
+import { computed, ref } from '@vue/reactivity'
 import { toDisplayString } from '../src'
 
 describe('toDisplayString', () => {
@@ -18,11 +19,74 @@ describe('toDisplayString', () => {
     expect(toDisplayString(obj)).toBe(JSON.stringify(obj, null, 2))
     const arr = [obj]
     expect(toDisplayString(arr)).toBe(JSON.stringify(arr, null, 2))
+
+    const objWithToStringOverride = {
+      foo: 555,
+      toString() {
+        return 'override'
+      }
+    }
+    expect(toDisplayString(objWithToStringOverride)).toBe('override')
+
+    const objWithNonInvokableToString = {
+      foo: 555,
+      toString: null
+    }
+    expect(toDisplayString(objWithNonInvokableToString)).toBe(
+      `{
+  "foo": 555,
+  "toString": null
+}`
+    )
+
+    // object created from null does not have .toString in its prototype
+    const nullObjectWithoutToString = Object.create(null)
+    nullObjectWithoutToString.bar = 1
+    expect(toDisplayString(nullObjectWithoutToString)).toBe(
+      `{
+  "bar": 1
+}`
+    )
+
+    // array toString override is ignored
+    const arrWithToStringOverride = [1, 2, 3]
+    arrWithToStringOverride.toString = () =>
+      'override for array is not supported'
+    expect(toDisplayString(arrWithToStringOverride)).toBe(
+      `[
+  1,
+  2,
+  3
+]`
+    )
+  })
+
+  test('refs', () => {
+    const n = ref(1)
+    const np = computed(() => n.value + 1)
+    expect(
+      toDisplayString({
+        n,
+        np
+      })
+    ).toBe(JSON.stringify({ n: 1, np: 2 }, null, 2))
+  })
+
+  test('objects with custom toString', () => {
+    class TestClass {
+      toString() {
+        return 'foo'
+      }
+    }
+    const instance = new TestClass()
+    expect(toDisplayString(instance)).toBe('foo')
+    const obj = { toString: () => 'bar' }
+    expect(toDisplayString(obj)).toBe('bar')
   })
 
   test('native objects', () => {
     const div = document.createElement('div')
-    expect(toDisplayString(div)).toBe(`"[object HTMLDivElement]"`)
+    expect(toDisplayString(div)).toBe('[object HTMLDivElement]')
     expect(toDisplayString({ div })).toMatchInlineSnapshot(`
       "{
         \\"div\\": \\"[object HTMLDivElement]\\"

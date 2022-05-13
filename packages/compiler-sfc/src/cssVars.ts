@@ -12,7 +12,8 @@ import { PluginCreator } from 'postcss'
 import hash from 'hash-sum'
 
 export const CSS_VARS_HELPER = `useCssVars`
-export const cssVarRE = /\bv-bind\(\s*(?:'([^']+)'|"([^"]+)"|([^'"][^)]*))\s*\)/g
+// match v-bind() with max 2-levels of nested parens.
+const cssVarRE = /v-bind\s*\(((?:[^)(]+|\((?:[^)(]+|\([^)(]*\))*\))*)\)/g
 
 export function genCssVarsFromList(
   vars: string[],
@@ -32,12 +33,28 @@ function genVarName(id: string, raw: string, isProd: boolean): string {
   }
 }
 
+function normalizeExpression(exp: string) {
+  exp = exp.trim()
+  if (
+    (exp[0] === `'` && exp[exp.length - 1] === `'`) ||
+    (exp[0] === `"` && exp[exp.length - 1] === `"`)
+  ) {
+    return exp.slice(1, -1)
+  }
+  return exp
+}
+
 export function parseCssVars(sfc: SFCDescriptor): string[] {
   const vars: string[] = []
   sfc.styles.forEach(style => {
     let match
-    while ((match = cssVarRE.exec(style.content))) {
-      vars.push(match[1] || match[2] || match[3])
+    // ignore v-bind() in comments /* ... */
+    const content = style.content.replace(/\/\*([\s\S]*?)\*\//g, '')
+    while ((match = cssVarRE.exec(content))) {
+      const variable = normalizeExpression(match[1])
+      if (!vars.includes(variable)) {
+        vars.push(variable)
+      }
     }
   })
   return vars
@@ -56,8 +73,8 @@ export const cssVarsPlugin: PluginCreator<CssVarsPluginOptions> = opts => {
     Declaration(decl) {
       // rewrite CSS variables
       if (cssVarRE.test(decl.value)) {
-        decl.value = decl.value.replace(cssVarRE, (_, $1, $2, $3) => {
-          return `var(--${genVarName(id, $1 || $2 || $3, isProd)})`
+        decl.value = decl.value.replace(cssVarRE, (_, $1) => {
+          return `var(--${genVarName(id, normalizeExpression($1), isProd)})`
         })
       }
     }

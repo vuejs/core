@@ -1,7 +1,6 @@
 import {
   isReactive,
   reactive,
-  stop,
   track,
   TrackOpTypes,
   trigger,
@@ -89,7 +88,7 @@ export type CompatVue = Pick<App, 'version' | 'component' | 'directive'> & {
   compile(template: string): RenderFunction
 
   /**
-   * @deprecated
+   * @deprecated Vue 3 no longer supports extending constructors.
    */
   extend: (options?: ComponentOptions) => CompatVue
   /**
@@ -171,7 +170,7 @@ export function createCompatVue(
     }
   }
 
-  Vue.version = __VERSION__
+  Vue.version = `2.6.14-compat:${__VERSION__}`
   Vue.config = singletonApp.config
 
   Vue.use = (p, ...options) => {
@@ -252,8 +251,8 @@ export function createCompatVue(
       mergeBase[key] = isArray(superValue)
         ? superValue.slice()
         : isObject(superValue)
-          ? extend(Object.create(null), superValue)
-          : superValue
+        ? extend(Object.create(null), superValue)
+        : superValue
     }
 
     SubVue.options = mergeOptions(
@@ -564,7 +563,7 @@ function installCompatMount(
         }
         delete app._container.__vue_app__
       } else {
-        const { bum, effects, um } = instance
+        const { bum, scope, um } = instance
         // beforeDestroy hooks
         if (bum) {
           invokeArrayFns(bum)
@@ -573,10 +572,8 @@ function installCompatMount(
           instance.emit('hook:beforeDestroy')
         }
         // stop effects
-        if (effects) {
-          for (let i = 0; i < effects.length; i++) {
-            stop(effects[i])
-          }
+        if (scope) {
+          scope.stop()
         }
         // unmounted hook
         if (um) {
@@ -605,7 +602,7 @@ const methodsToPatch = [
 const patched = new WeakSet<object>()
 
 function defineReactive(obj: any, key: string, val: any) {
-  // it's possible for the orignial object to be mutated after being defined
+  // it's possible for the original object to be mutated after being defined
   // and expecting reactivity... we are covering it here because this seems to
   // be a bit more common.
   if (isObject(val) && !isReactive(val) && !patched.has(val)) {
@@ -622,7 +619,7 @@ function defineReactive(obj: any, key: string, val: any) {
       Object.keys(val).forEach(key => {
         try {
           defineReactiveSimple(val, key, val[key])
-        } catch (e) {}
+        } catch (e: any) {}
       })
     }
   }

@@ -6,7 +6,9 @@ import {
   openBlock,
   closeBlock,
   currentBlock,
-  createVNode
+  Comment,
+  createVNode,
+  isBlockTreeEnabled
 } from '../vnode'
 import { isFunction, isArray, ShapeFlags, toNumber } from '@vue/shared'
 import { ComponentInternalInstance, handleSetupResult } from '../component'
@@ -87,11 +89,19 @@ export const SuspenseImpl = {
 }
 
 // Force-casted public typing for h and TSX props inference
-export const Suspense = ((__FEATURE_SUSPENSE__
-  ? SuspenseImpl
-  : null) as any) as {
+export const Suspense = (__FEATURE_SUSPENSE__ ? SuspenseImpl : null) as any as {
   __isSuspense: true
   new (): { $props: VNodeProps & SuspenseProps }
+}
+
+function triggerEvent(
+  vnode: VNode,
+  name: 'onResolve' | 'onPending' | 'onFallback'
+) {
+  const eventListener = vnode.props && vnode.props[name]
+  if (isFunction(eventListener)) {
+    eventListener()
+  }
 }
 
 function mountSuspense(
@@ -137,6 +147,10 @@ function mountSuspense(
   // now check if we have encountered any async deps
   if (suspense.deps > 0) {
     // has async
+    // invoke @fallback event
+    triggerEvent(vnode, 'onPending')
+    triggerEvent(vnode, 'onFallback')
+
     // mount the fallback tree
     patch(
       null,
@@ -304,10 +318,7 @@ function patchSuspense(
     } else {
       // root node toggled
       // invoke @pending event
-      const onPending = n2.props && n2.props.onPending
-      if (isFunction(onPending)) {
-        onPending()
-      }
+      triggerEvent(n2, 'onPending')
       // mount pending branch in off-dom container
       suspense.pendingBranch = newBranch
       suspense.pendingId++
@@ -501,10 +512,7 @@ function createSuspenseBoundary(
       suspense.effects = []
 
       // invoke @resolve event
-      const onResolve = vnode.props && vnode.props.onResolve
-      if (isFunction(onResolve)) {
-        onResolve()
-      }
+      triggerEvent(vnode, 'onResolve')
     },
 
     fallback(fallbackVNode) {
@@ -512,19 +520,11 @@ function createSuspenseBoundary(
         return
       }
 
-      const {
-        vnode,
-        activeBranch,
-        parentComponent,
-        container,
-        isSVG
-      } = suspense
+      const { vnode, activeBranch, parentComponent, container, isSVG } =
+        suspense
 
       // invoke @fallback event
-      const onFallback = vnode.props && vnode.props.onFallback
-      if (isFunction(onFallback)) {
-        onFallback()
-      }
+      triggerEvent(vnode, 'onFallback')
 
       const anchor = next(activeBranch!)
       const mountFallback = () => {
@@ -551,6 +551,8 @@ function createSuspenseBoundary(
       if (delayEnter) {
         activeBranch!.transition!.afterLeave = mountFallback
       }
+      suspense.isInFallback = true
+
       // unmount current active branch
       unmount(
         activeBranch!,
@@ -559,7 +561,6 @@ function createSuspenseBoundary(
         true // shouldRemove
       )
 
-      suspense.isInFallback = true
       if (!delayEnter) {
         mountFallback()
       }
@@ -727,8 +728,8 @@ function normalizeSuspenseChildren(vnode: VNode) {
 function normalizeSuspenseSlot(s: any) {
   let block: VNode[] | null | undefined
   if (isFunction(s)) {
-    const isCompiledSlot = s._c
-    if (isCompiledSlot) {
+    const trackBlock = isBlockTreeEnabled && s._c
+    if (trackBlock) {
       // disableTracking: false
       // allow block tracking for compiled slots
       // (see ./componentRenderContext.ts)
@@ -736,7 +737,7 @@ function normalizeSuspenseSlot(s: any) {
       openBlock()
     }
     s = s()
-    if (isCompiledSlot) {
+    if (trackBlock) {
       s._d = true
       block = currentBlock
       closeBlock()
@@ -750,7 +751,7 @@ function normalizeSuspenseSlot(s: any) {
     s = singleChild
   }
   s = normalizeVNode(s)
-  if (block) {
+  if (block && !s.dynamicChildren) {
     s.dynamicChildren = block.filter(c => c !== s)
   }
   return s

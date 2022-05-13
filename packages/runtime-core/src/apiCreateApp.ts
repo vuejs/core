@@ -2,7 +2,9 @@ import {
   ConcreteComponent,
   Data,
   validateComponentName,
-  Component
+  Component,
+  ComponentInternalInstance,
+  getExposeProxy
 } from './component'
 import {
   ComponentOptions,
@@ -46,6 +48,7 @@ export interface App<HostElement = any> {
   _props: Data | null
   _container: HostElement | null
   _context: AppContext
+  _instance: ComponentInternalInstance | null
 
   /**
    * v2 compat only
@@ -80,15 +83,21 @@ export interface AppConfig {
   ) => void
 
   /**
+   * Options to pass to `@vue/compiler-dom`.
+   * Only supported in runtime compiler build.
+   */
+  compilerOptions: RuntimeCompilerOptions
+
+  /**
    * @deprecated use config.compilerOptions.isCustomElement
    */
   isCustomElement?: (tag: string) => boolean
 
   /**
-   * Options to pass to @vue/compiler-dom.
-   * Only supported in runtime compiler build.
+   * Temporary config for opt-in to unwrap injected refs.
+   * TODO deprecate in 3.3
    */
-  compilerOptions: RuntimeCompilerOptions
+  unwrapInjectedRef?: boolean
 }
 
 export interface AppContext {
@@ -131,7 +140,7 @@ export interface AppContext {
 type PluginInstallFunction = (app: App, ...options: any[]) => any
 
 export type Plugin =
-  | PluginInstallFunction & { install?: PluginInstallFunction }
+  | (PluginInstallFunction & { install?: PluginInstallFunction })
   | {
       install: PluginInstallFunction
     }
@@ -170,6 +179,10 @@ export function createAppAPI<HostElement>(
   hydrate?: RootHydrateFunction
 ): CreateAppFunction<HostElement> {
   return function createApp(rootComponent, rootProps = null) {
+    if (!isFunction(rootComponent)) {
+      rootComponent = { ...rootComponent }
+    }
+
     if (rootProps != null && !isObject(rootProps)) {
       __DEV__ && warn(`root props passed to app.mount() must be an object.`)
       rootProps = null
@@ -186,6 +199,7 @@ export function createAppAPI<HostElement>(
       _props: rootProps,
       _container: null,
       _context: context,
+      _instance: null,
 
       version,
 
@@ -270,6 +284,14 @@ export function createAppAPI<HostElement>(
         isSVG?: boolean
       ): any {
         if (!isMounted) {
+          // #5571
+          if (__DEV__ && (rootContainer as any).__vue_app__) {
+            warn(
+              `There is already an app instance mounted on the host container.\n` +
+                ` If you want to mount another app on the same host container,` +
+                ` you need to unmount the previous app by calling \`app.unmount()\` first.`
+            )
+          }
           const vnode = createVNode(
             rootComponent as ConcreteComponent,
             rootProps
@@ -296,10 +318,11 @@ export function createAppAPI<HostElement>(
           ;(rootContainer as any).__vue_app__ = app
 
           if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+            app._instance = vnode.component
             devtoolsInitApp(app, version)
           }
 
-          return vnode.component!.proxy
+          return getExposeProxy(vnode.component!) || vnode.component!.proxy
         } else if (__DEV__) {
           warn(
             `App has already been mounted.\n` +
@@ -314,6 +337,7 @@ export function createAppAPI<HostElement>(
         if (isMounted) {
           render(null, app._container)
           if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+            app._instance = null
             devtoolsUnmountApp(app)
           }
           delete app._container.__vue_app__
@@ -329,9 +353,8 @@ export function createAppAPI<HostElement>(
               `It will be overwritten with the new value.`
           )
         }
-        // TypeScript doesn't allow symbols as index type
-        // https://github.com/Microsoft/TypeScript/issues/24587
-        context.provides[key as string] = value
+
+        context.provides[key as string | symbol] = value
 
         return app
       }

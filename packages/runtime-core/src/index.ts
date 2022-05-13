@@ -15,6 +15,7 @@ export {
   isProxy,
   isReactive,
   isReadonly,
+  isShallow,
   // advanced
   customRef,
   triggerRef,
@@ -22,10 +23,24 @@ export {
   shallowReactive,
   shallowReadonly,
   markRaw,
-  toRaw
+  toRaw,
+  // effect
+  effect,
+  stop,
+  ReactiveEffect,
+  // effect scope
+  effectScope,
+  EffectScope,
+  getCurrentScope,
+  onScopeDispose
 } from '@vue/reactivity'
 export { computed } from './apiComputed'
-export { watch, watchEffect } from './apiWatch'
+export {
+  watch,
+  watchEffect,
+  watchPostEffect,
+  watchSyncEffect
+} from './apiWatch'
 export {
   onBeforeMount,
   onMounted,
@@ -44,7 +59,21 @@ export { provide, inject } from './apiInject'
 export { nextTick } from './scheduler'
 export { defineComponent } from './apiDefineComponent'
 export { defineAsyncComponent } from './apiAsyncComponent'
-export { defineProps, defineEmit, useContext } from './apiSetupHelpers'
+export { useAttrs, useSlots } from './apiSetupHelpers'
+
+// <script setup> API ----------------------------------------------------------
+
+export {
+  // macros runtime, for typing and warnings only
+  defineProps,
+  defineEmits,
+  defineExpose,
+  withDefaults,
+  // internal
+  mergeDefaults,
+  createPropsRestProxy,
+  withAsyncContext
+} from './apiSetupHelpers'
 
 // Advanced API ----------------------------------------------------------------
 
@@ -120,22 +149,32 @@ declare module '@vue/reactivity' {
 }
 
 export {
-  ReactiveEffect,
-  ReactiveEffectOptions,
-  DebuggerEvent,
-  TrackOpTypes,
-  TriggerOpTypes,
   Ref,
+  ToRef,
+  ToRefs,
+  UnwrapRef,
+  ShallowRef,
+  ShallowUnwrapRef,
+  CustomRefFactory,
+  ReactiveFlags,
+  DeepReadonly,
+  ShallowReactive,
+  UnwrapNestedRefs,
   ComputedRef,
   WritableComputedRef,
-  UnwrapRef,
-  ShallowUnwrapRef,
   WritableComputedOptions,
-  ToRefs,
-  DeepReadonly
+  ComputedGetter,
+  ComputedSetter,
+  ReactiveEffectRunner,
+  ReactiveEffectOptions,
+  EffectScheduler,
+  DebuggerOptions,
+  DebuggerEvent,
+  DebuggerEventExtraInfo,
+  TrackOpTypes,
+  TriggerOpTypes
 } from '@vue/reactivity'
 export {
-  // types
   WatchEffect,
   WatchOptions,
   WatchOptionsBase,
@@ -186,7 +225,8 @@ export {
 export { EmitsOptions, ObjectEmitsOptions } from './componentEmits'
 export {
   ComponentPublicInstance,
-  ComponentCustomProperties
+  ComponentCustomProperties,
+  CreateComponentPublicInstance
 } from './componentPublicInstance'
 export {
   Renderer,
@@ -239,19 +279,26 @@ export { renderList } from './helpers/renderList'
 export { toHandlers } from './helpers/toHandlers'
 export { renderSlot } from './helpers/renderSlot'
 export { createSlots } from './helpers/createSlots'
+export { withMemo, isMemoSame } from './helpers/withMemo'
 export {
   openBlock,
   createBlock,
   setBlockTracking,
   createTextVNode,
   createCommentVNode,
-  createStaticVNode
+  createStaticVNode,
+  createElementVNode,
+  createElementBlock,
+  guardReactiveProps
 } from './vnode'
 export {
   toDisplayString,
   camelize,
   capitalize,
-  toHandlerKey
+  toHandlerKey,
+  normalizeProps,
+  normalizeClass,
+  normalizeStyle
 } from '@vue/shared'
 
 // For test-utils
@@ -280,7 +327,7 @@ const _ssrUtils = {
  * SSR utils for \@vue/server-renderer. Only exposed in cjs builds.
  * @internal
  */
-export const ssrUtils = (__NODE_JS__ ? _ssrUtils : null) as typeof _ssrUtils
+export const ssrUtils = (__SSR__ ? _ssrUtils : null) as typeof _ssrUtils
 
 // 2.x COMPAT ------------------------------------------------------------------
 
@@ -313,6 +360,6 @@ const _compatUtils = {
 /**
  * @internal only exposed in compat builds.
  */
-export const compatUtils = (__COMPAT__
-  ? _compatUtils
-  : null) as typeof _compatUtils
+export const compatUtils = (
+  __COMPAT__ ? _compatUtils : null
+) as typeof _compatUtils

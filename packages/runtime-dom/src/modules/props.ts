@@ -3,6 +3,7 @@
 // This can come from explicit usage of v-html or innerHTML as a prop in render
 
 import { warn, DeprecationTypes, compatUtils } from '@vue/runtime-core'
+import { includeBooleanAttr } from '@vue/shared'
 
 // functions. The user is responsible for using them with only trusted content.
 export function patchDOMProp(
@@ -25,12 +26,23 @@ export function patchDOMProp(
     return
   }
 
-  if (key === 'value' && el.tagName !== 'PROGRESS') {
+  if (
+    key === 'value' &&
+    el.tagName !== 'PROGRESS' &&
+    // custom elements may use _value internally
+    !el.tagName.includes('-')
+  ) {
     // store value as _value as well since
     // non-string values will be stringified.
     el._value = value
     const newValue = value == null ? '' : value
-    if (el.value !== newValue) {
+    if (
+      el.value !== newValue ||
+      // #4956: always set for OPTION elements because its value falls back to
+      // textContent if no value attribute is present. And setting .value for
+      // OPTION has no side effect
+      el.tagName === 'OPTION'
+    ) {
       el.value = newValue
     }
     if (value == null) {
@@ -39,51 +51,51 @@ export function patchDOMProp(
     return
   }
 
+  let needRemove = false
   if (value === '' || value == null) {
     const type = typeof el[key]
-    if (value === '' && type === 'boolean') {
+    if (type === 'boolean') {
       // e.g. <select multiple> compiles to { multiple: '' }
-      el[key] = true
-      return
+      value = includeBooleanAttr(value)
     } else if (value == null && type === 'string') {
       // e.g. <div :id="null">
-      el[key] = ''
-      el.removeAttribute(key)
-      return
+      value = ''
+      needRemove = true
     } else if (type === 'number') {
       // e.g. <img :width="null">
-      el[key] = 0
-      el.removeAttribute(key)
-      return
+      // the value of some IDL attr must be greater than 0, e.g. input.size = 0 -> error
+      value = 0
+      needRemove = true
+    }
+  } else {
+    if (
+      __COMPAT__ &&
+      value === false &&
+      compatUtils.isCompatEnabled(
+        DeprecationTypes.ATTR_FALSE_VALUE,
+        parentComponent
+      )
+    ) {
+      const type = typeof el[key]
+      if (type === 'string' || type === 'number') {
+        __DEV__ &&
+          compatUtils.warnDeprecation(
+            DeprecationTypes.ATTR_FALSE_VALUE,
+            parentComponent,
+            key
+          )
+        value = type === 'number' ? 0 : ''
+        needRemove = true
+      }
     }
   }
 
-  if (
-    __COMPAT__ &&
-    value === false &&
-    compatUtils.isCompatEnabled(
-      DeprecationTypes.ATTR_FALSE_VALUE,
-      parentComponent
-    )
-  ) {
-    const type = typeof el[key]
-    if (type === 'string' || type === 'number') {
-      __DEV__ &&
-        compatUtils.warnDeprecation(
-          DeprecationTypes.ATTR_FALSE_VALUE,
-          parentComponent,
-          key
-        )
-      el[key] = type === 'number' ? 0 : ''
-      el.removeAttribute(key)
-      return
-    }
-  }
-
-  // some properties perform value validation and throw
+  // some properties perform value validation and throw,
+  // some properties has getter, no setter, will error in 'use strict'
+  // eg. <select :type="null"></select> <select :willValidate="null"></select>
   try {
     el[key] = value
-  } catch (e) {
+  } catch (e: any) {
     if (__DEV__) {
       warn(
         `Failed setting prop "${key}" on <${el.tagName.toLowerCase()}>: ` +
@@ -92,4 +104,5 @@ export function patchDOMProp(
       )
     }
   }
+  needRemove && el.removeAttribute(key)
 }

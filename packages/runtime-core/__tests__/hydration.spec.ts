@@ -10,9 +10,13 @@ import {
   onMounted,
   defineAsyncComponent,
   defineComponent,
-  createTextVNode
+  createTextVNode,
+  createVNode,
+  withDirectives,
+  vModelCheckbox
 } from '@vue/runtime-dom'
 import { renderToString, SSRContext } from '@vue/server-renderer'
+import { PatchFlags } from '../../shared/src'
 
 function mountWithHydration(html: string, render: () => any) {
   const container = document.createElement('div')
@@ -457,6 +461,60 @@ describe('SSR hydration', () => {
     expect(text.textContent).toBe('bye')
   })
 
+  test('handle click error in ssr mode', async () => {
+    const App = {
+      setup() {
+        const throwError = () => {
+          throw new Error('Sentry Error')
+        }
+        return { throwError }
+      },
+      template: `
+        <div>
+          <button class="parent-click" @click="throwError">click me</button>
+        </div>`
+    }
+
+    const container = document.createElement('div')
+    // server render
+    container.innerHTML = await renderToString(h(App))
+    // hydrate
+    const app = createSSRApp(App)
+    const handler = (app.config.errorHandler = jest.fn())
+    app.mount(container)
+    // assert interactions
+    // parent button click
+    triggerEvent('click', container.querySelector('.parent-click')!)
+    expect(handler).toHaveBeenCalled()
+  })
+
+  test('handle blur error in ssr mode', async () => {
+    const App = {
+      setup() {
+        const throwError = () => {
+          throw new Error('Sentry Error')
+        }
+        return { throwError }
+      },
+      template: `
+        <div>
+          <input class="parent-click" @blur="throwError"/>
+        </div>`
+    }
+
+    const container = document.createElement('div')
+    // server render
+    container.innerHTML = await renderToString(h(App))
+    // hydrate
+    const app = createSSRApp(App)
+    const handler = (app.config.errorHandler = jest.fn())
+    app.mount(container)
+    // assert interactions
+    // parent blur event
+    triggerEvent('blur', container.querySelector('.parent-click')!)
+    expect(handler).toHaveBeenCalled()
+  })
+
   test('Suspense', async () => {
     const AsyncChild = {
       async setup() {
@@ -755,10 +813,42 @@ describe('SSR hydration', () => {
     })
 
     expect(
-      (app.mount(svgContainer).$.subTree as VNode<Node, Element> & {
-        el: Element
-      }).el instanceof SVGElement
+      (
+        app.mount(svgContainer).$.subTree as VNode<Node, Element> & {
+          el: Element
+        }
+      ).el instanceof SVGElement
     )
+  })
+
+  test('force hydrate input v-model with non-string value bindings', () => {
+    const { container } = mountWithHydration(
+      '<input type="checkbox" value="true">',
+      () =>
+        withDirectives(
+          createVNode(
+            'input',
+            { type: 'checkbox', 'true-value': true },
+            null,
+            PatchFlags.PROPS,
+            ['true-value']
+          ),
+          [[vModelCheckbox, true]]
+        )
+    )
+    expect((container.firstChild as any)._trueValue).toBe(true)
+  })
+
+  test('force hydrate select option with non-string value bindings', () => {
+    const { container } = mountWithHydration(
+      '<select><option :value="true">ok</option></select>',
+      () =>
+        h('select', [
+          // hoisted because bound value is a constant...
+          createVNode('option', { value: true }, null, -1 /* HOISTED */)
+        ])
+    )
+    expect((container.firstChild!.firstChild as any)._value).toBe(true)
   })
 
   describe('mismatch handling', () => {

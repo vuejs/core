@@ -7,14 +7,16 @@ import {
   Fragment,
   VNodeHook,
   createVNode,
-  createTextVNode
+  createTextVNode,
+  invokeVNodeHook
 } from './vnode'
 import { flushPostFlushCbs } from './scheduler'
 import { ComponentInternalInstance } from './component'
 import { invokeDirectiveHook } from './directives'
 import { warn } from './warning'
 import { PatchFlags, ShapeFlags, isReservedProp, isOn } from '@vue/shared'
-import { RendererInternals, invokeVNodeHook, setRef } from './renderer'
+import { RendererInternals } from './renderer'
+import { setRef } from './rendererTemplateRef'
 import {
   SuspenseImpl,
   SuspenseBoundary,
@@ -25,7 +27,7 @@ import { isAsyncWrapper } from './apiAsyncComponent'
 
 export type RootHydrateFunction = (
   vnode: VNode<Node, Element>,
-  container: Element
+  container: Element | ShadowRoot
 ) => void
 
 const enum DOMNodeTypes {
@@ -57,12 +59,14 @@ export function createHydrationFunctions(
   } = rendererInternals
 
   const hydrate: RootHydrateFunction = (vnode, container) => {
-    if (__DEV__ && !container.hasChildNodes()) {
-      warn(
-        `Attempting to hydrate existing markup but container is empty. ` +
-          `Performing full mount instead.`
-      )
+    if (!container.hasChildNodes()) {
+      __DEV__ &&
+        warn(
+          `Attempting to hydrate existing markup but container is empty. ` +
+            `Performing full mount instead.`
+        )
       patch(null, vnode, container)
+      flushPostFlushCbs()
       return
     }
     hasMismatch = false
@@ -93,9 +97,14 @@ export function createHydrationFunctions(
         isFragmentStart
       )
 
-    const { type, ref, shapeFlag } = vnode
+    const { type, ref, shapeFlag, patchFlag } = vnode
     const domType = node.nodeType
     vnode.el = node
+
+    if (patchFlag === PatchFlags.BAIL) {
+      optimized = false
+      vnode.dynamicChildren = null
+    }
 
     let nextNode: Node | null = null
     switch (type) {
@@ -132,10 +141,10 @@ export function createHydrationFunctions(
           // if the static vnode has its content stripped during build,
           // adopt it from the server-rendered HTML.
           const needToAdoptContent = !(vnode.children as string).length
-          for (let i = 0; i < vnode.staticCount; i++) {
+          for (let i = 0; i < vnode.staticCount!; i++) {
             if (needToAdoptContent)
               vnode.children += (nextNode as Element).outerHTML
-            if (i === vnode.staticCount - 1) {
+            if (i === vnode.staticCount! - 1) {
               vnode.anchor = nextNode
             }
             nextNode = nextSibling(nextNode)!
@@ -264,28 +273,51 @@ export function createHydrationFunctions(
     optimized: boolean
   ) => {
     optimized = optimized || !!vnode.dynamicChildren
-    const { props, patchFlag, shapeFlag, dirs } = vnode
+    const { type, props, patchFlag, shapeFlag, dirs } = vnode
+    // #4006 for form elements with non-string v-model value bindings
+    // e.g. <option :value="obj">, <input type="checkbox" :true-value="1">
+    const forcePatchValue = (type === 'input' && dirs) || type === 'option'
     // skip props & children if this is hoisted static nodes
-    if (patchFlag !== PatchFlags.HOISTED) {
+    // #5405 in dev, always hydrate children for HMR
+    if (__DEV__ || forcePatchValue || patchFlag !== PatchFlags.HOISTED) {
       if (dirs) {
         invokeDirectiveHook(vnode, null, parentComponent, 'created')
       }
       // props
       if (props) {
         if (
+          forcePatchValue ||
           !optimized ||
-          (patchFlag & PatchFlags.FULL_PROPS ||
-            patchFlag & PatchFlags.HYDRATE_EVENTS)
+          patchFlag & (PatchFlags.FULL_PROPS | PatchFlags.HYDRATE_EVENTS)
         ) {
           for (const key in props) {
-            if (!isReservedProp(key) && isOn(key)) {
-              patchProp(el, key, null, props[key])
+            if (
+              (forcePatchValue && key.endsWith('value')) ||
+              (isOn(key) && !isReservedProp(key))
+            ) {
+              patchProp(
+                el,
+                key,
+                null,
+                props[key],
+                false,
+                undefined,
+                parentComponent
+              )
             }
           }
         } else if (props.onClick) {
           // Fast path for click listeners (which is most often) to avoid
           // iterating through props.
-          patchProp(el, 'onClick', null, props.onClick)
+          patchProp(
+            el,
+            'onClick',
+            null,
+            props.onClick,
+            false,
+            undefined,
+            parentComponent
+          )
         }
       }
       // vnode / directive hooks
@@ -337,7 +369,9 @@ export function createHydrationFunctions(
           hasMismatch = true
           __DEV__ &&
             warn(
-              `Hydration text content mismatch in <${vnode.type as string}>:\n` +
+              `Hydration text content mismatch in <${
+                vnode.type as string
+              }>:\n` +
                 `- Client: ${el.textContent}\n` +
                 `- Server: ${vnode.children as string}`
             )
@@ -456,8 +490,8 @@ export function createHydrationFunctions(
         node.nodeType === DOMNodeTypes.TEXT
           ? `(text)`
           : isComment(node) && node.data === '['
-            ? `(start of fragment)`
-            : ``
+          ? `(start of fragment)`
+          : ``
       )
     vnode.el = null
 

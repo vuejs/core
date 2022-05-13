@@ -216,7 +216,10 @@ describe('renderer: component', () => {
     const Child = {
       props: ['value'],
       setup(props: any, { emit }: SetupContext) {
-        watch(() => props.value, (val: number) => emit('update', val))
+        watch(
+          () => props.value,
+          (val: number) => emit('update', val)
+        )
 
         return () => {
           return h('div', props.value)
@@ -320,5 +323,35 @@ describe('renderer: component', () => {
     render(null, root)
     expect(serializeInner(root)).toBe(``)
     expect(ids).toEqual([ids[0], ids[0] + 1, ids[0] + 2])
+  })
+
+  test('child component props update should not lead to double update', async () => {
+    const text = ref(0)
+    const spy = jest.fn()
+
+    const App = {
+      render() {
+        return h(Comp, { text: text.value })
+      }
+    }
+
+    const Comp = {
+      props: ['text'],
+      render(this: any) {
+        spy()
+        return h('h1', this.text)
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+
+    expect(serializeInner(root)).toBe(`<h1>0</h1>`)
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    text.value++
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<h1>1</h1>`)
+    expect(spy).toHaveBeenCalledTimes(2)
   })
 })

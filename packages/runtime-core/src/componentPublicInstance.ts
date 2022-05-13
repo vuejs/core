@@ -1,6 +1,7 @@
 import {
   ComponentInternalInstance,
   Data,
+  getExposeProxy,
   isStatefulComponent
 } from './component'
 import { nextTick, queueJob } from './scheduler'
@@ -12,14 +13,12 @@ import {
   NOOP,
   extend,
   isString,
-  makeMap,
-  isFunction
+  isFunction,
+  UnionToIntersection
 } from '@vue/shared'
 import {
-  ReactiveEffect,
   toRaw,
   shallowReadonly,
-  ReactiveFlags,
   track,
   TrackOpTypes,
   ShallowUnwrapRef,
@@ -35,14 +34,14 @@ import {
   OptionTypesKeys,
   resolveMergedOptions,
   shouldCacheAccess,
-  MergedComponentOptionsOverride
+  MergedComponentOptionsOverride,
+  ComponentProvideOptions
 } from './componentOptions'
 import { EmitsOptions, EmitFn } from './componentEmits'
 import { Slots } from './componentSlots'
 import { markAttrsAccessed } from './componentRenderUtils'
 import { currentRenderingInstance } from './componentRenderContext'
 import { warn } from './warning'
-import { UnionToIntersection } from './helpers/typeUtils'
 import { installCompatInstanceProperties } from './compat/instance'
 
 /**
@@ -73,7 +72,9 @@ import { installCompatInstanceProperties } from './compat/instance'
 export interface ComponentCustomProperties {}
 
 type IsDefaultMixinComponent<T> = T extends ComponentOptionsMixin
-  ? ComponentOptionsMixin extends T ? true : false
+  ? ComponentOptionsMixin extends T
+    ? true
+    : false
   : false
 
 type MixinToOptionTypes<T> = T extends ComponentOptionsBase<
@@ -150,7 +151,8 @@ export type CreateComponentPublicInstance<
   PublicM extends MethodOptions = UnwrapMixinsType<PublicMixin, 'M'> &
     EnsureNonVoid<M>,
   PublicDefaults = UnwrapMixinsType<PublicMixin, 'Defaults'> &
-    EnsureNonVoid<Defaults>
+    EnsureNonVoid<Defaults>,
+  Provide extends ComponentProvideOptions = ComponentProvideOptions
 > = ComponentPublicInstance<
   PublicP,
   PublicB,
@@ -161,7 +163,19 @@ export type CreateComponentPublicInstance<
   PublicProps,
   PublicDefaults,
   MakeDefaultsOptional,
-  ComponentOptionsBase<P, B, D, C, M, Mixin, Extends, E, string, Defaults>
+  ComponentOptionsBase<
+    P,
+    B,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    string,
+    Defaults,
+    Provide
+  >
 >
 
 // public properties exposed on the proxy, which is used as the render context
@@ -191,7 +205,7 @@ export type ComponentPublicInstance<
   $emit: EmitFn<E>
   $el: any
   $options: Options & MergedComponentOptionsOverride
-  $forceUpdate: ReactiveEffect
+  $forceUpdate: () => void
   $nextTick: typeof nextTick
   $watch(
     source: string | Function,
@@ -219,37 +233,40 @@ const getPublicInstance = (
   i: ComponentInternalInstance | null
 ): ComponentPublicInstance | ComponentInternalInstance['exposed'] | null => {
   if (!i) return null
-  if (isStatefulComponent(i)) return i.exposed ? i.exposed : i.proxy
+  if (isStatefulComponent(i)) return getExposeProxy(i) || i.proxy
   return getPublicInstance(i.parent)
 }
 
-const publicPropertiesMap: PublicPropertiesMap = extend(Object.create(null), {
-  $: i => i,
-  $el: i => i.vnode.el,
-  $data: i => i.data,
-  $props: i => (__DEV__ ? shallowReadonly(i.props) : i.props),
-  $attrs: i => (__DEV__ ? shallowReadonly(i.attrs) : i.attrs),
-  $slots: i => (__DEV__ ? shallowReadonly(i.slots) : i.slots),
-  $refs: i => (__DEV__ ? shallowReadonly(i.refs) : i.refs),
-  $parent: i => getPublicInstance(i.parent),
-  $root: i => getPublicInstance(i.root),
-  $emit: i => i.emit,
-  $options: i => (__FEATURE_OPTIONS_API__ ? resolveMergedOptions(i) : i.type),
-  $forceUpdate: i => () => queueJob(i.update),
-  $nextTick: i => nextTick.bind(i.proxy!),
-  $watch: i => (__FEATURE_OPTIONS_API__ ? instanceWatch.bind(i) : NOOP)
-} as PublicPropertiesMap)
+export const publicPropertiesMap: PublicPropertiesMap =
+  // Move PURE marker to new line to workaround compiler discarding it
+  // due to type annotation
+  /*#__PURE__*/ extend(Object.create(null), {
+    $: i => i,
+    $el: i => i.vnode.el,
+    $data: i => i.data,
+    $props: i => (__DEV__ ? shallowReadonly(i.props) : i.props),
+    $attrs: i => (__DEV__ ? shallowReadonly(i.attrs) : i.attrs),
+    $slots: i => (__DEV__ ? shallowReadonly(i.slots) : i.slots),
+    $refs: i => (__DEV__ ? shallowReadonly(i.refs) : i.refs),
+    $parent: i => getPublicInstance(i.parent),
+    $root: i => getPublicInstance(i.root),
+    $emit: i => i.emit,
+    $options: i => (__FEATURE_OPTIONS_API__ ? resolveMergedOptions(i) : i.type),
+    $forceUpdate: i => i.f || (i.f = () => queueJob(i.update)),
+    $nextTick: i => i.n || (i.n = nextTick.bind(i.proxy!)),
+    $watch: i => (__FEATURE_OPTIONS_API__ ? instanceWatch.bind(i) : NOOP)
+  } as PublicPropertiesMap)
 
 if (__COMPAT__) {
   installCompatInstanceProperties(publicPropertiesMap)
 }
 
 const enum AccessTypes {
+  OTHER,
   SETUP,
   DATA,
   PROPS,
-  CONTEXT,
-  OTHER
+  CONTEXT
 }
 
 export interface ComponentRenderContext {
@@ -257,28 +274,29 @@ export interface ComponentRenderContext {
   _: ComponentInternalInstance
 }
 
-export const isReservedPrefix = /*#__PURE__*/ makeMap('_,$')
+export const isReservedPrefix = (key: string) => key === '_' || key === '$'
 
 export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
   get({ _: instance }: ComponentRenderContext, key: string) {
-    const {
-      ctx,
-      setupState,
-      data,
-      props,
-      accessCache,
-      type,
-      appContext
-    } = instance
-
-    // let @vue/reactivity know it should never observe Vue public instances.
-    if (key === ReactiveFlags.SKIP) {
-      return true
-    }
+    const { ctx, setupState, data, props, accessCache, type, appContext } =
+      instance
 
     // for internal formatters to know that this is a Vue instance
     if (__DEV__ && key === '__isVue') {
       return true
+    }
+
+    // prioritize <script setup> bindings during dev.
+    // this allows even properties that start with _ or $ to be used - so that
+    // it aligns with the production behavior where the render fn is inlined and
+    // indeed has access to all declared variables.
+    if (
+      __DEV__ &&
+      setupState !== EMPTY_OBJ &&
+      setupState.__isScriptSetup &&
+      hasOwn(setupState, key)
+    ) {
+      return setupState[key]
     }
 
     // data / props / ctx
@@ -354,7 +372,9 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
           return desc.get.call(instance.proxy)
         } else {
           const val = globalProperties[key]
-          return isFunction(val) ? val.bind(instance.proxy) : val
+          return isFunction(val)
+            ? Object.assign(val.bind(instance.proxy), val)
+            : val
         }
       } else {
         return globalProperties[key]
@@ -391,8 +411,10 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     const { data, setupState, ctx } = instance
     if (setupState !== EMPTY_OBJ && hasOwn(setupState, key)) {
       setupState[key] = value
+      return true
     } else if (data !== EMPTY_OBJ && hasOwn(data, key)) {
       data[key] = value
+      return true
     } else if (hasOwn(instance.props, key)) {
       __DEV__ &&
         warn(
@@ -431,7 +453,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
   ) {
     let normalizedProps
     return (
-      accessCache![key] !== undefined ||
+      !!accessCache![key] ||
       (data !== EMPTY_OBJ && hasOwn(data, key)) ||
       (setupState !== EMPTY_OBJ && hasOwn(setupState, key)) ||
       ((normalizedProps = propsOptions[0]) && hasOwn(normalizedProps, key)) ||
@@ -439,6 +461,20 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       hasOwn(publicPropertiesMap, key) ||
       hasOwn(appContext.config.globalProperties, key)
     )
+  },
+
+  defineProperty(
+    target: ComponentRenderContext,
+    key: string,
+    descriptor: PropertyDescriptor
+  ) {
+    if (descriptor.get != null) {
+      // invalidate key cache of a getter based property #5417
+      target._.accessCache![key] = 0
+    } else if (hasOwn(descriptor, 'value')) {
+      this.set!(target, key, descriptor.value, null)
+    }
+    return Reflect.defineProperty(target, key, descriptor)
   }
 }
 
@@ -452,7 +488,7 @@ if (__DEV__ && !__TEST__) {
   }
 }
 
-export const RuntimeCompiledPublicInstanceProxyHandlers = extend(
+export const RuntimeCompiledPublicInstanceProxyHandlers = /*#__PURE__*/ extend(
   {},
   PublicInstanceProxyHandlers,
   {
@@ -477,10 +513,11 @@ export const RuntimeCompiledPublicInstanceProxyHandlers = extend(
   }
 )
 
+// dev only
 // In dev mode, the proxy target exposes the same properties as seen on `this`
 // for easier console inspection. In prod mode it will be an empty object so
 // these properties definitions can be skipped.
-export function createRenderContext(instance: ComponentInternalInstance) {
+export function createDevRenderContext(instance: ComponentInternalInstance) {
   const target: Record<string, any> = {}
 
   // expose internal instance for proxy handlers
@@ -531,20 +568,22 @@ export function exposeSetupStateOnRenderContext(
 ) {
   const { ctx, setupState } = instance
   Object.keys(toRaw(setupState)).forEach(key => {
-    if (isReservedPrefix(key[0])) {
-      warn(
-        `setup() return property ${JSON.stringify(
-          key
-        )} should not start with "$" or "_" ` +
-          `which are reserved prefixes for Vue internals.`
-      )
-      return
+    if (!setupState.__isScriptSetup) {
+      if (isReservedPrefix(key[0])) {
+        warn(
+          `setup() return property ${JSON.stringify(
+            key
+          )} should not start with "$" or "_" ` +
+            `which are reserved prefixes for Vue internals.`
+        )
+        return
+      }
+      Object.defineProperty(ctx, key, {
+        enumerable: true,
+        configurable: true,
+        get: () => setupState[key],
+        set: NOOP
+      })
     }
-    Object.defineProperty(ctx, key, {
-      enumerable: true,
-      configurable: true,
-      get: () => setupState[key],
-      set: NOOP
-    })
   })
 }

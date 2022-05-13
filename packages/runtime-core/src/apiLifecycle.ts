@@ -3,7 +3,8 @@ import {
   currentInstance,
   isInSSRComponentSetup,
   LifecycleHooks,
-  setCurrentInstance
+  setCurrentInstance,
+  unsetCurrentInstance
 } from './component'
 import { ComponentPublicInstance } from './componentPublicInstance'
 import { callWithAsyncErrorHandling, ErrorTypeStrings } from './errorHandling'
@@ -38,7 +39,7 @@ export function injectHook(
         // can only be false when the user does something really funky.
         setCurrentInstance(target)
         const res = callWithAsyncErrorHandling(hook, target, type, args)
-        setCurrentInstance(null)
+        unsetCurrentInstance()
         resetTracking()
         return res
       })
@@ -62,12 +63,12 @@ export function injectHook(
   }
 }
 
-export const createHook = <T extends Function = () => any>(
-  lifecycle: LifecycleHooks
-) => (hook: T, target: ComponentInternalInstance | null = currentInstance) =>
-  // post-create lifecycle registrations are noops during SSR (except for serverPrefetch)
-  (!isInSSRComponentSetup || lifecycle === LifecycleHooks.SERVER_PREFETCH) &&
-  injectHook(lifecycle, hook, target)
+export const createHook =
+  <T extends Function = () => any>(lifecycle: LifecycleHooks) =>
+  (hook: T, target: ComponentInternalInstance | null = currentInstance) =>
+    // post-create lifecycle registrations are noops during SSR (except for serverPrefetch)
+    (!isInSSRComponentSetup || lifecycle === LifecycleHooks.SERVER_PREFETCH) &&
+    injectHook(lifecycle, hook, target)
 
 export const onBeforeMount = createHook(LifecycleHooks.BEFORE_MOUNT)
 export const onMounted = createHook(LifecycleHooks.MOUNTED)

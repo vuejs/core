@@ -69,11 +69,12 @@ const DOMTransitionPropsValidators = {
   leaveToClass: String
 }
 
-export const TransitionPropsValidators = (Transition.props = /*#__PURE__*/ extend(
-  {},
-  (BaseTransition as any).props,
-  DOMTransitionPropsValidators
-))
+export const TransitionPropsValidators = (Transition.props =
+  /*#__PURE__*/ extend(
+    {},
+    (BaseTransition as any).props,
+    DOMTransitionPropsValidators
+  ))
 
 /**
  * #3227 Incoming hooks may be merged into arrays when wrapping Transition
@@ -173,7 +174,10 @@ export function resolveTransitionProps(
     done && done()
   }
 
+  let isLeaving = false
   const finishLeave = (el: Element, done?: () => void) => {
+    isLeaving = false
+    removeTransitionClass(el, leaveFromClass)
     removeTransitionClass(el, leaveToClass)
     removeTransitionClass(el, leaveActiveClass)
     done && done()
@@ -220,6 +224,7 @@ export function resolveTransitionProps(
     onEnter: makeEnterHook(false),
     onAppear: makeEnterHook(true),
     onLeave(el, done) {
+      isLeaving = true
       const resolve = () => finishLeave(el, done)
       addTransitionClass(el, leaveFromClass)
       if (__COMPAT__ && legacyClassEnabled) {
@@ -229,6 +234,10 @@ export function resolveTransitionProps(
       forceReflow()
       addTransitionClass(el, leaveActiveClass)
       nextFrame(() => {
+        if (!isLeaving) {
+          // cancelled
+          return
+        }
         removeTransitionClass(el, leaveFromClass)
         if (__COMPAT__ && legacyClassEnabled) {
           removeTransitionClass(el, legacyLeaveFromClass)

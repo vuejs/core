@@ -1,14 +1,7 @@
-import { toRaw, reactive, readonly, ReactiveFlags } from './reactive'
+import { toRaw, ReactiveFlags, toReactive, toReadonly } from './reactive'
 import { track, trigger, ITERATE_KEY, MAP_KEY_ITERATE_KEY } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
-import {
-  isObject,
-  capitalize,
-  hasOwn,
-  hasChanged,
-  toRawType,
-  isMap
-} from '@vue/shared'
+import { capitalize, hasOwn, hasChanged, toRawType, isMap } from '@vue/shared'
 
 export type CollectionTypes = IterableCollections | WeakCollections
 
@@ -16,12 +9,6 @@ type IterableCollections = Map<any, any> | Set<any>
 type WeakCollections = WeakMap<any, any> | WeakSet<any>
 type MapTypes = Map<any, any> | WeakMap<any, any>
 type SetTypes = Set<any> | WeakSet<any>
-
-const toReactive = <T extends unknown>(value: T): T =>
-  isObject(value) ? reactive(value) : value
-
-const toReadonly = <T extends unknown>(value: T): T =>
-  isObject(value) ? readonly(value as Record<any, any>) : value
 
 const toShallow = <T extends unknown>(value: T): T => value
 
@@ -39,10 +26,12 @@ function get(
   target = (target as any)[ReactiveFlags.RAW]
   const rawTarget = toRaw(target)
   const rawKey = toRaw(key)
-  if (key !== rawKey) {
-    !isReadonly && track(rawTarget, TrackOpTypes.GET, key)
+  if (!isReadonly) {
+    if (key !== rawKey) {
+      track(rawTarget, TrackOpTypes.GET, key)
+    }
+    track(rawTarget, TrackOpTypes.GET, rawKey)
   }
-  !isReadonly && track(rawTarget, TrackOpTypes.GET, rawKey)
   const { has } = getProto(rawTarget)
   const wrap = isShallow ? toShallow : isReadonly ? toReadonly : toReactive
   if (has.call(rawTarget, key)) {
@@ -60,10 +49,12 @@ function has(this: CollectionTypes, key: unknown, isReadonly = false): boolean {
   const target = (this as any)[ReactiveFlags.RAW]
   const rawTarget = toRaw(target)
   const rawKey = toRaw(key)
-  if (key !== rawKey) {
-    !isReadonly && track(rawTarget, TrackOpTypes.HAS, key)
+  if (!isReadonly) {
+    if (key !== rawKey) {
+      track(rawTarget, TrackOpTypes.HAS, key)
+    }
+    track(rawTarget, TrackOpTypes.HAS, rawKey)
   }
-  !isReadonly && track(rawTarget, TrackOpTypes.HAS, rawKey)
   return key === rawKey
     ? target.has(key)
     : target.has(key) || target.has(rawKey)
@@ -184,7 +175,7 @@ function createIterableMethod(
   isReadonly: boolean,
   isShallow: boolean
 ) {
-  return function(
+  return function (
     this: IterableCollections,
     ...args: unknown[]
   ): Iterable & Iterator {
@@ -224,7 +215,7 @@ function createIterableMethod(
 }
 
 function createReadonlyMethod(type: TriggerOpTypes): Function {
-  return function(this: CollectionTypes, ...args: unknown[]) {
+  return function (this: CollectionTypes, ...args: unknown[]) {
     if (__DEV__) {
       const key = args[0] ? `on key "${args[0]}" ` : ``
       console.warn(
@@ -236,93 +227,109 @@ function createReadonlyMethod(type: TriggerOpTypes): Function {
   }
 }
 
-const mutableInstrumentations: Record<string, Function> = {
-  get(this: MapTypes, key: unknown) {
-    return get(this, key)
-  },
-  get size() {
-    return size((this as unknown) as IterableCollections)
-  },
-  has,
-  add,
-  set,
-  delete: deleteEntry,
-  clear,
-  forEach: createForEach(false, false)
+function createInstrumentations() {
+  const mutableInstrumentations: Record<string, Function> = {
+    get(this: MapTypes, key: unknown) {
+      return get(this, key)
+    },
+    get size() {
+      return size(this as unknown as IterableCollections)
+    },
+    has,
+    add,
+    set,
+    delete: deleteEntry,
+    clear,
+    forEach: createForEach(false, false)
+  }
+
+  const shallowInstrumentations: Record<string, Function> = {
+    get(this: MapTypes, key: unknown) {
+      return get(this, key, false, true)
+    },
+    get size() {
+      return size(this as unknown as IterableCollections)
+    },
+    has,
+    add,
+    set,
+    delete: deleteEntry,
+    clear,
+    forEach: createForEach(false, true)
+  }
+
+  const readonlyInstrumentations: Record<string, Function> = {
+    get(this: MapTypes, key: unknown) {
+      return get(this, key, true)
+    },
+    get size() {
+      return size(this as unknown as IterableCollections, true)
+    },
+    has(this: MapTypes, key: unknown) {
+      return has.call(this, key, true)
+    },
+    add: createReadonlyMethod(TriggerOpTypes.ADD),
+    set: createReadonlyMethod(TriggerOpTypes.SET),
+    delete: createReadonlyMethod(TriggerOpTypes.DELETE),
+    clear: createReadonlyMethod(TriggerOpTypes.CLEAR),
+    forEach: createForEach(true, false)
+  }
+
+  const shallowReadonlyInstrumentations: Record<string, Function> = {
+    get(this: MapTypes, key: unknown) {
+      return get(this, key, true, true)
+    },
+    get size() {
+      return size(this as unknown as IterableCollections, true)
+    },
+    has(this: MapTypes, key: unknown) {
+      return has.call(this, key, true)
+    },
+    add: createReadonlyMethod(TriggerOpTypes.ADD),
+    set: createReadonlyMethod(TriggerOpTypes.SET),
+    delete: createReadonlyMethod(TriggerOpTypes.DELETE),
+    clear: createReadonlyMethod(TriggerOpTypes.CLEAR),
+    forEach: createForEach(true, true)
+  }
+
+  const iteratorMethods = ['keys', 'values', 'entries', Symbol.iterator]
+  iteratorMethods.forEach(method => {
+    mutableInstrumentations[method as string] = createIterableMethod(
+      method,
+      false,
+      false
+    )
+    readonlyInstrumentations[method as string] = createIterableMethod(
+      method,
+      true,
+      false
+    )
+    shallowInstrumentations[method as string] = createIterableMethod(
+      method,
+      false,
+      true
+    )
+    shallowReadonlyInstrumentations[method as string] = createIterableMethod(
+      method,
+      true,
+      true
+    )
+  })
+
+  return [
+    mutableInstrumentations,
+    readonlyInstrumentations,
+    shallowInstrumentations,
+    shallowReadonlyInstrumentations
+  ]
 }
 
-const shallowInstrumentations: Record<string, Function> = {
-  get(this: MapTypes, key: unknown) {
-    return get(this, key, false, true)
-  },
-  get size() {
-    return size((this as unknown) as IterableCollections)
-  },
-  has,
-  add,
-  set,
-  delete: deleteEntry,
-  clear,
-  forEach: createForEach(false, true)
-}
-
-const readonlyInstrumentations: Record<string, Function> = {
-  get(this: MapTypes, key: unknown) {
-    return get(this, key, true)
-  },
-  get size() {
-    return size((this as unknown) as IterableCollections, true)
-  },
-  has(this: MapTypes, key: unknown) {
-    return has.call(this, key, true)
-  },
-  add: createReadonlyMethod(TriggerOpTypes.ADD),
-  set: createReadonlyMethod(TriggerOpTypes.SET),
-  delete: createReadonlyMethod(TriggerOpTypes.DELETE),
-  clear: createReadonlyMethod(TriggerOpTypes.CLEAR),
-  forEach: createForEach(true, false)
-}
-
-const shallowReadonlyInstrumentations: Record<string, Function> = {
-  get(this: MapTypes, key: unknown) {
-    return get(this, key, true, true)
-  },
-  get size() {
-    return size((this as unknown) as IterableCollections, true)
-  },
-  has(this: MapTypes, key: unknown) {
-    return has.call(this, key, true)
-  },
-  add: createReadonlyMethod(TriggerOpTypes.ADD),
-  set: createReadonlyMethod(TriggerOpTypes.SET),
-  delete: createReadonlyMethod(TriggerOpTypes.DELETE),
-  clear: createReadonlyMethod(TriggerOpTypes.CLEAR),
-  forEach: createForEach(true, true)
-}
-
-const iteratorMethods = ['keys', 'values', 'entries', Symbol.iterator]
-iteratorMethods.forEach(method => {
-  mutableInstrumentations[method as string] = createIterableMethod(
-    method,
-    false,
-    false
-  )
-  readonlyInstrumentations[method as string] = createIterableMethod(
-    method,
-    true,
-    false
-  )
-  shallowInstrumentations[method as string] = createIterableMethod(
-    method,
-    false,
-    true
-  )
-  shallowReadonlyInstrumentations[method as string] = createIterableMethod(
-    method,
-    true,
-    true
-  )
-})
+const [
+  mutableInstrumentations,
+  readonlyInstrumentations,
+  shallowInstrumentations,
+  shallowReadonlyInstrumentations
+] = /* #__PURE__*/ createInstrumentations()
 
 function createInstrumentationGetter(isReadonly: boolean, shallow: boolean) {
   const instrumentations = shallow
@@ -330,8 +337,8 @@ function createInstrumentationGetter(isReadonly: boolean, shallow: boolean) {
       ? shallowReadonlyInstrumentations
       : shallowInstrumentations
     : isReadonly
-      ? readonlyInstrumentations
-      : mutableInstrumentations
+    ? readonlyInstrumentations
+    : mutableInstrumentations
 
   return (
     target: CollectionTypes,
@@ -357,22 +364,21 @@ function createInstrumentationGetter(isReadonly: boolean, shallow: boolean) {
 }
 
 export const mutableCollectionHandlers: ProxyHandler<CollectionTypes> = {
-  get: createInstrumentationGetter(false, false)
+  get: /*#__PURE__*/ createInstrumentationGetter(false, false)
 }
 
 export const shallowCollectionHandlers: ProxyHandler<CollectionTypes> = {
-  get: createInstrumentationGetter(false, true)
+  get: /*#__PURE__*/ createInstrumentationGetter(false, true)
 }
 
 export const readonlyCollectionHandlers: ProxyHandler<CollectionTypes> = {
-  get: createInstrumentationGetter(true, false)
+  get: /*#__PURE__*/ createInstrumentationGetter(true, false)
 }
 
-export const shallowReadonlyCollectionHandlers: ProxyHandler<
-  CollectionTypes
-> = {
-  get: createInstrumentationGetter(true, true)
-}
+export const shallowReadonlyCollectionHandlers: ProxyHandler<CollectionTypes> =
+  {
+    get: /*#__PURE__*/ createInstrumentationGetter(true, true)
+  }
 
 function checkIdentityKeys(
   target: CollectionTypes,

@@ -22,7 +22,8 @@ import {
   SetupContext,
   createApp,
   FunctionalComponent,
-  renderList
+  renderList,
+  onUnmounted
 } from '@vue/runtime-test'
 import { PatchFlags, SlotFlags } from '@vue/shared'
 import { SuspenseImpl } from '../src/components/Suspense'
@@ -417,11 +418,12 @@ describe('renderer: optimized mode', () => {
     const Comp = defineComponent({
       setup(_props, { slots }) {
         return () => {
-          const vnode = (openBlock(),
-          (block = createBlock('div', null, {
-            default: withCtx(() => [renderSlot(slots, 'default')]),
-            _: SlotFlags.FORWARDED
-          })))
+          const vnode =
+            (openBlock(),
+            (block = createBlock('div', null, {
+              default: withCtx(() => [renderSlot(slots, 'default')]),
+              _: SlotFlags.FORWARDED
+            })))
 
           return vnode
         }
@@ -449,8 +451,9 @@ describe('renderer: optimized mode', () => {
     expect(block!.dynamicChildren![0].type).toBe(Fragment)
     expect(block!.dynamicChildren![0].dynamicChildren!.length).toBe(1)
     expect(
-      serialize(block!.dynamicChildren![0].dynamicChildren![0]
-        .el as TestElement)
+      serialize(
+        block!.dynamicChildren![0].dynamicChildren![0].el as TestElement
+      )
     ).toBe('<p>0</p>')
 
     foo.value++
@@ -824,10 +827,59 @@ describe('renderer: optimized mode', () => {
     expect(inner(root)).toBe('<div><div>true</div></div>')
   })
 
+  // #4183
+  test('should not take unmount children fast path /w Suspense', async () => {
+    const show = ref(true)
+    const spyUnmounted = jest.fn()
+
+    const Parent = {
+      setup(props: any, { slots }: SetupContext) {
+        return () => (
+          openBlock(),
+          createBlock(SuspenseImpl, null, {
+            default: withCtx(() => [renderSlot(slots, 'default')]),
+            _: SlotFlags.FORWARDED
+          })
+        )
+      }
+    }
+
+    const Child = {
+      setup() {
+        onUnmounted(spyUnmounted)
+        return () => createVNode('div', null, show.value, PatchFlags.TEXT)
+      }
+    }
+
+    const app = createApp({
+      render() {
+        return show.value
+          ? (openBlock(),
+            createBlock(
+              Parent,
+              { key: 0 },
+              {
+                default: withCtx(() => [createVNode(Child)]),
+                _: SlotFlags.STABLE
+              }
+            ))
+          : createCommentVNode('v-if', true)
+      }
+    })
+
+    app.mount(root)
+    expect(inner(root)).toBe('<div>true</div>')
+
+    show.value = false
+    await nextTick()
+    expect(inner(root)).toBe('<!--v-if-->')
+    expect(spyUnmounted).toHaveBeenCalledTimes(1)
+  })
+
   // #3881
   // root cause: fragment inside a compiled slot passed to component which
   // programmatically invokes the slot. The entire slot should de-opt but
-  // the fragment was incorretly put in optimized mode which causes it to skip
+  // the fragment was incorrectly put in optimized mode which causes it to skip
   // updates for its inner components.
   test('fragments inside programmatically invoked compiled slot should de-opt properly', async () => {
     const Parent: FunctionalComponent = (_, { slots }) => slots.default!()

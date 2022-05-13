@@ -1,0 +1,48 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`inject persisted when child has v-show 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { vShow: _vShow, createElementVNode: _createElementVNode, withDirectives: _withDirectives, Transition: _Transition, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
+    return (_openBlock(), _createBlock(_Transition, { persisted: \\"\\" }, {
+      default: _withCtx(() => [
+        _withDirectives(_createElementVNode(\\"div\\", null, null, 512 /* NEED_PATCH */), [
+          [_vShow, ok]
+        ])
+      ]),
+      _: 1 /* STABLE */
+    }))
+  }
+}"
+`;
+
+exports[`the v-if/else-if/else branches in Transition should ignore comments 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode, createElementVNode: _createElementVNode, Fragment: _Fragment, Transition: _Transition, withCtx: _withCtx, createBlock: _createBlock } = _Vue
+
+    return (_openBlock(), _createBlock(_Transition, null, {
+      default: _withCtx(() => [
+        a
+          ? (_openBlock(), _createElementBlock(\\"div\\", { key: 0 }, \\"hey\\"))
+          : b
+            ? (_openBlock(), _createElementBlock(\\"div\\", { key: 1 }, \\"hey\\"))
+            : (_openBlock(), _createElementBlock(\\"div\\", { key: 2 }, [
+                c
+                  ? (_openBlock(), _createElementBlock(\\"p\\", { key: 0 }))
+                  : (_openBlock(), _createElementBlock(_Fragment, { key: 1 }, [
+                      _createCommentVNode(\\" this should not be ignored \\"),
+                      _createElementVNode(\\"p\\")
+                    ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */))
+              ]))
+      ]),
+      _: 1 /* STABLE */
+    }))
+  }
+}"
+`;

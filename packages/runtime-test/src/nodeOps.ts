@@ -166,7 +166,7 @@ function insert(child: TestNode, parent: TestElement, ref?: TestNode | null) {
   }
 }
 
-function remove(child: TestNode, logOp: boolean = true) {
+function remove(child: TestNode, logOp = true) {
   const parent = child.parentNode
   if (parent) {
     if (logOp) {
@@ -224,7 +224,7 @@ function nextSibling(node: TestNode): TestNode | null {
   return parent.children[i + 1] || null
 }
 
-function querySelector(): any {
+function querySelector(): never {
   throw new Error('querySelector not supported in test renderer.')
 }
 

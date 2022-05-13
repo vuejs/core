@@ -4,8 +4,7 @@ export const svgNS = 'http://www.w3.org/2000/svg'
 
 const doc = (typeof document !== 'undefined' ? document : null) as Document
 
-let tempContainer: HTMLElement
-let tempSVGContainer: SVGElement
+const templateContainer = doc && /*#__PURE__*/ doc.createElement('template')
 
 export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
   insert: (child, parent, anchor) => {
@@ -74,20 +73,37 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
   // Reason: innerHTML.
   // Static content here can only come from compiled templates.
   // As long as the user only uses trusted templates, this is safe.
-  insertStaticContent(content, parent, anchor, isSVG) {
-    const temp = isSVG
-      ? tempSVGContainer ||
-        (tempSVGContainer = doc.createElementNS(svgNS, 'svg'))
-      : tempContainer || (tempContainer = doc.createElement('div'))
-    temp.innerHTML = content
-    const first = temp.firstChild as Element
-    let node: Element | null = first
-    let last: Element = node
-    while (node) {
-      last = node
-      nodeOps.insert(node, parent, anchor)
-      node = temp.firstChild as Element
+  insertStaticContent(content, parent, anchor, isSVG, start, end) {
+    // <parent> before | first ... last | anchor </parent>
+    const before = anchor ? anchor.previousSibling : parent.lastChild
+    // #5308 can only take cached path if:
+    // - has a single root node
+    // - nextSibling info is still available
+    if (start && (start === end || start.nextSibling)) {
+      // cached
+      while (true) {
+        parent.insertBefore(start!.cloneNode(true), anchor)
+        if (start === end || !(start = start!.nextSibling)) break
+      }
+    } else {
+      // fresh insert
+      templateContainer.innerHTML = isSVG ? `<svg>${content}</svg>` : content
+      const template = templateContainer.content
+      if (isSVG) {
+        // remove outer svg wrapper
+        const wrapper = template.firstChild!
+        while (wrapper.firstChild) {
+          template.appendChild(wrapper.firstChild)
+        }
+        template.removeChild(wrapper)
+      }
+      parent.insertBefore(template, anchor)
     }
-    return [first, last]
+    return [
+      // first
+      before ? before.nextSibling! : parent.firstChild!,
+      // last
+      anchor ? anchor.previousSibling! : parent.lastChild!
+    ]
   }
 }

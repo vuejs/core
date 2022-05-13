@@ -18,7 +18,9 @@ import {
 type AssignerFn = (value: any) => void
 
 const getModelAssigner = (vnode: VNode): AssignerFn => {
-  const fn = vnode.props!['onUpdate:modelValue']
+  const fn =
+    vnode.props!['onUpdate:modelValue'] ||
+    (__COMPAT__ && vnode.props!['onModelCompat:input'])
   return isArray(fn) ? value => invokeArrayFns(fn, value) : fn
 }
 
@@ -30,14 +32,8 @@ function onCompositionEnd(e: Event) {
   const target = e.target as any
   if (target.composing) {
     target.composing = false
-    trigger(target, 'input')
+    target.dispatchEvent(new Event('input'))
   }
-}
-
-function trigger(el: HTMLElement, type: string) {
-  const e = document.createEvent('HTMLEvents')
-  e.initEvent(type, true, true)
-  el.dispatchEvent(e)
 }
 
 type ModelDirective<T> = ObjectDirective<T & { _assign: AssignerFn }>
@@ -49,13 +45,15 @@ export const vModelText: ModelDirective<
 > = {
   created(el, { modifiers: { lazy, trim, number } }, vnode) {
     el._assign = getModelAssigner(vnode)
-    const castToNumber = number || el.type === 'number'
+    const castToNumber =
+      number || (vnode.props && vnode.props.type === 'number')
     addEventListener(el, lazy ? 'change' : 'input', e => {
       if ((e.target as any).composing) return
       let domValue: string | number = el.value
       if (trim) {
         domValue = domValue.trim()
-      } else if (castToNumber) {
+      }
+      if (castToNumber) {
         domValue = toNumber(domValue)
       }
       el._assign(domValue)
@@ -79,11 +77,14 @@ export const vModelText: ModelDirective<
   mounted(el, { value }) {
     el.value = value == null ? '' : value
   },
-  beforeUpdate(el, { value, modifiers: { trim, number } }, vnode) {
+  beforeUpdate(el, { value, modifiers: { lazy, trim, number } }, vnode) {
     el._assign = getModelAssigner(vnode)
     // avoid clearing unresolved text. #2302
     if ((el as any).composing) return
-    if (document.activeElement === el) {
+    if (document.activeElement === el && el.type !== 'range') {
+      if (lazy) {
+        return
+      }
       if (trim && el.value.trim() === value) {
         return
       }
@@ -99,6 +100,8 @@ export const vModelText: ModelDirective<
 }
 
 export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
+  // #4096 array checkboxes need to be deep traversed
+  deep: true,
   created(el, _, vnode) {
     el._assign = getModelAssigner(vnode)
     addEventListener(el, 'change', () => {
@@ -171,14 +174,15 @@ export const vModelRadio: ModelDirective<HTMLInputElement> = {
 }
 
 export const vModelSelect: ModelDirective<HTMLSelectElement> = {
+  // <select multiple> value need to be deep traversed
+  deep: true,
   created(el, { value, modifiers: { number } }, vnode) {
     const isSetModel = isSet(value)
     addEventListener(el, 'change', () => {
       const selectedVal = Array.prototype.filter
         .call(el.options, (o: HTMLOptionElement) => o.selected)
-        .map(
-          (o: HTMLOptionElement) =>
-            number ? toNumber(getValue(o)) : getValue(o)
+        .map((o: HTMLOptionElement) =>
+          number ? toNumber(getValue(o)) : getValue(o)
         )
       el._assign(
         el.multiple
@@ -296,8 +300,9 @@ function callModelHook(
   fn && fn(el, binding, vnode, prevVNode)
 }
 
-// SSR vnode transforms
-if (__NODE_JS__) {
+// SSR vnode transforms, only used when user includes client-oriented render
+// function in SSR
+export function initVModelForSSR() {
   vModelText.getSSRProps = ({ value }) => ({ value })
 
   vModelRadio.getSSRProps = ({ value }, vnode) => {

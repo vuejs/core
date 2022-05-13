@@ -8,7 +8,13 @@ import {
   getComponentName,
   ComponentOptions
 } from '../component'
-import { VNode, cloneVNode, isVNode, VNodeProps } from '../vnode'
+import {
+  VNode,
+  cloneVNode,
+  isVNode,
+  VNodeProps,
+  invokeVNodeHook
+} from '../vnode'
 import { warn } from '../warning'
 import {
   onBeforeUnmount,
@@ -30,15 +36,15 @@ import {
   queuePostRenderEffect,
   MoveType,
   RendererElement,
-  RendererNode,
-  invokeVNodeHook
+  RendererNode
 } from '../renderer'
 import { setTransitionHooks } from './BaseTransition'
 import { ComponentRenderContext } from '../componentPublicInstance'
 import { devtoolsComponentAdded } from '../devtools'
 import { isAsyncWrapper } from '../apiAsyncComponent'
+import { isSuspense } from './Suspense'
 
-type MatchPattern = string | RegExp | string[] | RegExp[]
+type MatchPattern = string | RegExp | (string | RegExp)[]
 
 export interface KeepAliveProps {
   include?: MatchPattern
@@ -46,7 +52,7 @@ export interface KeepAliveProps {
   max?: number | string
 }
 
-type CacheKey = string | number | ConcreteComponent
+type CacheKey = string | number | symbol | ConcreteComponent
 type Cache = Map<CacheKey, VNode>
 type Keys = Set<CacheKey>
 
@@ -169,7 +175,7 @@ const KeepAliveImpl: ComponentOptions = {
     function unmount(vnode: VNode) {
       // reset the shapeFlag so it can be properly unmounted
       resetShapeFlag(vnode)
-      _unmount(vnode, instance, parentSuspense)
+      _unmount(vnode, instance, parentSuspense, true)
     }
 
     function pruneCache(filter?: (name: string) => boolean) {
@@ -318,7 +324,7 @@ const KeepAliveImpl: ComponentOptions = {
       vnode.shapeFlag |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
 
       current = vnode
-      return rawVNode
+      return isSuspense(rawVNode.type) ? rawVNode : vnode
     }
   }
 }
@@ -329,7 +335,7 @@ if (__COMPAT__) {
 
 // export the public type for h/tsx inference
 // also to avoid inline import() in generated d.ts files
-export const KeepAlive = (KeepAliveImpl as any) as {
+export const KeepAlive = KeepAliveImpl as any as {
   __isKeepAlive: true
   new (): {
     $props: VNodeProps & KeepAliveProps
@@ -340,7 +346,7 @@ function matches(pattern: MatchPattern, name: string): boolean {
   if (isArray(pattern)) {
     return pattern.some((p: string | RegExp) => matches(p, name))
   } else if (isString(pattern)) {
-    return pattern.split(',').indexOf(name) > -1
+    return pattern.split(',').includes(name)
   } else if (pattern.test) {
     return pattern.test(name)
   }
@@ -381,7 +387,7 @@ function registerKeepAliveHook(
         }
         current = current.parent
       }
-      hook()
+      return hook()
     })
   injectHook(type, wrappedHook, target)
   // In addition to registering it on the target instance, we walk up the parent

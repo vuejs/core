@@ -110,7 +110,12 @@ function resolveAsset(
     }
 
     if (__DEV__ && warnMissing && !res) {
-      warn(`Failed to resolve ${type.slice(0, -1)}: ${name}`)
+      const extra =
+        type === COMPONENTS
+          ? `\nIf this is a native custom element, make sure to exclude it from ` +
+            `component resolution via compilerOptions.isCustomElement.`
+          : ``
+      warn(`Failed to resolve ${type.slice(0, -1)}: ${name}${extra}`)
     }
 
     return res

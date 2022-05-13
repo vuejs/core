@@ -63,7 +63,11 @@ const normalizeSlot = (
   rawSlot: Function,
   ctx: ComponentInternalInstance | null | undefined
 ): Slot => {
-  const normalized = withCtx((props: any) => {
+  if ((rawSlot as any)._n) {
+    // already normalized - #5353
+    return rawSlot as Slot
+  }
+  const normalized = withCtx((...args: any[]) => {
     if (__DEV__ && currentInstance) {
       warn(
         `Slot "${key}" invoked outside of the render function: ` +
@@ -71,7 +75,7 @@ const normalizeSlot = (
           `Invoke the slot function inside the render function instead.`
       )
     }
-    return normalizeSlotValue(rawSlot(props))
+    return normalizeSlotValue(rawSlot(...args))
   }, ctx) as Slot
   // NOT a compiled slot
   ;(normalized as ContextualRenderFn)._c = false

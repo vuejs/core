@@ -1,8 +1,12 @@
 import { Data } from '../component'
 import { Slots, RawSlots } from '../componentSlots'
-import { ContextualRenderFn } from '../componentRenderContext'
-import { Comment, isVNode } from '../vnode'
 import {
+  ContextualRenderFn,
+  currentRenderingInstance
+} from '../componentRenderContext'
+import {
+  Comment,
+  isVNode,
   VNodeArrayChildren,
   openBlock,
   createBlock,
@@ -11,6 +15,8 @@ import {
 } from '../vnode'
 import { PatchFlags, SlotFlags } from '@vue/shared'
 import { warn } from '../warning'
+import { createVNode } from '@vue/runtime-core'
+import { isAsyncWrapper } from '../apiAsyncComponent'
 
 /**
  * Compiler runtime helper for rendering `<slot/>`
@@ -25,6 +31,19 @@ export function renderSlot(
   fallback?: () => VNodeArrayChildren,
   noSlotted?: boolean
 ): VNode {
+  if (
+    currentRenderingInstance!.isCE ||
+    (currentRenderingInstance!.parent &&
+      isAsyncWrapper(currentRenderingInstance!.parent) &&
+      currentRenderingInstance!.parent.isCE)
+  ) {
+    return createVNode(
+      'slot',
+      name === 'default' ? null : { name },
+      fallback && fallback()
+    )
+  }
+
   let slot = slots[name]
 
   if (__DEV__ && slot && slot.length > 1) {

@@ -1,3 +1,7 @@
+/**
+ * @jest-environment node
+ */
+
 import { createApp, h, Teleport } from 'vue'
 import { renderToString } from '../src/renderToString'
 import { SSRContext } from '../src/render'
@@ -112,5 +116,22 @@ describe('ssrRenderTeleport', () => {
     expect(ctx.teleports!['#target']).toBe(
       '<span>hello</span><!---->world<!---->'
     )
+  })
+
+  test('teleport inside async component', async () => {
+    const ctx: SSRContext = {}
+    const asyncComponent = {
+      template: '<teleport to="#target"><div>content</div></teleport>',
+      async setup() {}
+    }
+    const html = await renderToString(
+      h({
+        template: '<async-component />',
+        components: { asyncComponent }
+      }),
+      ctx
+    )
+    expect(html).toBe('<!--teleport start--><!--teleport end-->')
+    expect(ctx.teleports!['#target']).toBe(`<div>content</div><!---->`)
   })
 })

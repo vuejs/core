@@ -29,7 +29,9 @@
 import { VNode } from '@vue/runtime-core'
 import * as CSS from 'csstype'
 
-export interface CSSProperties extends CSS.Properties<string | number> {
+export interface CSSProperties
+  extends CSS.Properties<string | number>,
+    CSS.PropertiesHyphen<string | number> {
   /**
    * The index signature was removed to enable closed typing for style
    * using CSSType. You're able to use type assertion or module augmentation
@@ -38,6 +40,8 @@ export interface CSSProperties extends CSS.Properties<string | number> {
    * For examples and more information, visit:
    * https://github.com/frenic/csstype#what-should-i-do-when-i-get-type-errors
    */
+      
+  [v: `--${string}`]: string | number | undefined
 }
 
 type Booleanish = boolean | 'true' | 'false'
@@ -232,7 +236,7 @@ interface AriaAttributes {
 }
 
 // Vue's style normalization supports nested arrays
-type StyleValue = string | CSSProperties | Array<StyleValue>
+export type StyleValue = string | CSSProperties | Array<StyleValue>
 
 export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
   innerHTML?: string
@@ -274,7 +278,7 @@ export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
   // Non-standard Attributes
   autocapitalize?: string
   autocorrect?: string
-  autocave?: string
+  autosave?: string
   color?: string
   itemprop?: string
   itemscope?: Booleanish
@@ -455,7 +459,7 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   autocomplete?: string
   autofocus?: Booleanish
   capture?: boolean | 'user' | 'environment' // https://www.w3.org/tr/html-media-capture/#the-capture-attribute
-  checked?: Booleanish
+  checked?: Booleanish | any[] | Set<any> // for IDE v-model multi-checkbox support
   crossorigin?: string
   disabled?: Booleanish
   form?: string
@@ -465,6 +469,7 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   formnovalidate?: Booleanish
   formtarget?: string
   height?: Numberish
+  indeterminate?: boolean
   list?: string
   max?: Numberish
   maxlength?: Numberish
@@ -480,7 +485,7 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   src?: string
   step?: Numberish
   type?: string
-  value?: string | string[] | number
+  value?: any // we support :value to be bound to anything w/ v-model
   width?: Numberish
 }
 
@@ -584,7 +589,7 @@ export interface OptionHTMLAttributes extends HTMLAttributes {
   disabled?: Booleanish
   label?: string
   selected?: Booleanish
-  value?: string | string[] | number
+  value?: any // we support :value to be bound to anything w/ v-model
 }
 
 export interface OutputHTMLAttributes extends HTMLAttributes {
@@ -624,7 +629,7 @@ export interface SelectHTMLAttributes extends HTMLAttributes {
   name?: string
   required?: Booleanish
   size?: Numberish
-  value?: string | string[] | number
+  value?: any // we support :value to be bound to anything w/ v-model
 }
 
 export interface SourceHTMLAttributes extends HTMLAttributes {
@@ -1296,10 +1301,8 @@ export interface Events {
   onTransitionstart: TransitionEvent
 }
 
-type StringKeyOf<T> = Extract<keyof T, string>
-
 type EventHandlers<E> = {
-  [K in StringKeyOf<E>]?: E[K] extends Function ? E[K] : (payload: E[K]) => void
+  [K in keyof E]?: E[K] extends Function ? E[K] : (payload: E[K]) => void
 }
 
 // use namespace import to avoid collision with generated types which use
@@ -1307,17 +1310,19 @@ type EventHandlers<E> = {
 import * as RuntimeCore from '@vue/runtime-core'
 
 type ReservedProps = {
-  key?: string | number
+  key?: string | number | symbol
   ref?:
     | string
     | RuntimeCore.Ref
-    | ((ref: Element | RuntimeCore.ComponentInternalInstance | null) => void)
+    | ((ref: Element | RuntimeCore.ComponentPublicInstance | null) => void)
+  ref_for?: boolean
+  ref_key?: string
 }
 
 type ElementAttrs<T> = T & ReservedProps
 
 type NativeElements = {
-  [K in StringKeyOf<IntrinsicElementAttributes>]: ElementAttrs<
+  [K in keyof IntrinsicElementAttributes]: ElementAttrs<
     IntrinsicElementAttributes[K]
   >
 }

@@ -8,7 +8,8 @@ import {
   isArray,
   isFunction,
   isOn,
-  toNumber
+  toNumber,
+  UnionToIntersection
 } from '@vue/shared'
 import {
   ComponentInternalInstance,
@@ -18,7 +19,6 @@ import {
 } from './component'
 import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
 import { warn } from './warning'
-import { UnionToIntersection } from './helpers/typeUtils'
 import { devtoolsComponentEmit } from './devtools'
 import { AppContext } from './apiCreateApp'
 import { emit as compatInstanceEmit } from './compat/instanceEventEmitter'
@@ -31,7 +31,27 @@ export type ObjectEmitsOptions = Record<
   string,
   ((...args: any[]) => any) | null
 >
+
 export type EmitsOptions = ObjectEmitsOptions | string[]
+
+export type EmitsToProps<T extends EmitsOptions> = T extends string[]
+  ? {
+      [K in string & `on${Capitalize<T[number]>}`]?: (...args: any[]) => any
+    }
+  : T extends ObjectEmitsOptions
+  ? {
+      [K in string &
+        `on${Capitalize<string & keyof T>}`]?: K extends `on${infer C}`
+        ? T[Uncapitalize<C>] extends null
+          ? (...args: any[]) => any
+          : (
+              ...args: T[Uncapitalize<C>] extends (...args: infer P) => any
+                ? P
+                : never
+            ) => any
+        : never
+    }
+  : {}
 
 export type EmitFn<
   Options = ObjectEmitsOptions,
@@ -39,20 +59,21 @@ export type EmitFn<
 > = Options extends Array<infer V>
   ? (event: V, ...args: any[]) => void
   : {} extends Options // if the emit is empty object (usually the default value for emit) should be converted to function
-    ? (event: string, ...args: any[]) => void
-    : UnionToIntersection<
-        {
-          [key in Event]: Options[key] extends ((...args: infer Args) => any)
-            ? (event: key, ...args: Args) => void
-            : (event: key, ...args: any[]) => void
-        }[Event]
-      >
+  ? (event: string, ...args: any[]) => void
+  : UnionToIntersection<
+      {
+        [key in Event]: Options[key] extends (...args: infer Args) => any
+          ? (event: key, ...args: Args) => void
+          : (event: key, ...args: any[]) => void
+      }[Event]
+    >
 
 export function emit(
   instance: ComponentInternalInstance,
   event: string,
   ...rawArgs: any[]
 ) {
+  if (instance.isUnmounted) return
   const props = instance.vnode.props || EMPTY_OBJ
 
   if (__DEV__) {
@@ -101,7 +122,8 @@ export function emit(
     const { number, trim } = props[modifiersKey] || EMPTY_OBJ
     if (trim) {
       args = rawArgs.map(a => a.trim())
-    } else if (number) {
+    }
+    if (number) {
       args = rawArgs.map(toNumber)
     }
   }
@@ -149,10 +171,11 @@ export function emit(
   const onceHandler = props[handlerName + `Once`]
   if (onceHandler) {
     if (!instance.emitted) {
-      ;(instance.emitted = {} as Record<string, boolean>)[handlerName] = true
+      instance.emitted = {} as Record<any, boolean>
     } else if (instance.emitted[handlerName]) {
       return
     }
+    instance.emitted[handlerName] = true
     callWithAsyncErrorHandling(
       onceHandler,
       instance,

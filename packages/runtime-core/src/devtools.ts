@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-globals */
 import { App } from './apiCreateApp'
 import { Fragment, Text, Comment, Static } from './vnode'
 import { ComponentInternalInstance } from './component'
@@ -21,6 +22,7 @@ const enum DevtoolsHooks {
 }
 
 interface DevtoolsHook {
+  enabled?: boolean
   emit: (event: string, ...payload: any[]) => void
   on: (event: string, handler: Function) => void
   once: (event: string, handler: Function) => void
@@ -30,14 +32,57 @@ interface DevtoolsHook {
 
 export let devtools: DevtoolsHook
 
-export function setDevtoolsHook(hook: DevtoolsHook) {
+let buffer: { event: string; args: any[] }[] = []
+
+let devtoolsNotInstalled = false
+
+function emit(event: string, ...args: any[]) {
+  if (devtools) {
+    devtools.emit(event, ...args)
+  } else if (!devtoolsNotInstalled) {
+    buffer.push({ event, args })
+  }
+}
+
+export function setDevtoolsHook(hook: DevtoolsHook, target: any) {
   devtools = hook
+  if (devtools) {
+    devtools.enabled = true
+    buffer.forEach(({ event, args }) => devtools.emit(event, ...args))
+    buffer = []
+  } else if (
+    // handle late devtools injection - only do this if we are in an actual
+    // browser environment to avoid the timer handle stalling test runner exit
+    // (#4815)
+    typeof window !== 'undefined' &&
+    // some envs mock window but not fully
+    window.HTMLElement &&
+    // also exclude jsdom
+    !window.navigator?.userAgent?.includes('jsdom')
+  ) {
+    const replay = (target.__VUE_DEVTOOLS_HOOK_REPLAY__ =
+      target.__VUE_DEVTOOLS_HOOK_REPLAY__ || [])
+    replay.push((newHook: DevtoolsHook) => {
+      setDevtoolsHook(newHook, target)
+    })
+    // clear buffer after 3s - the user probably doesn't have devtools installed
+    // at all, and keeping the buffer will cause memory leaks (#4738)
+    setTimeout(() => {
+      if (!devtools) {
+        target.__VUE_DEVTOOLS_HOOK_REPLAY__ = null
+        devtoolsNotInstalled = true
+        buffer = []
+      }
+    }, 3000)
+  } else {
+    // non-browser env, assume not installed
+    devtoolsNotInstalled = true
+    buffer = []
+  }
 }
 
 export function devtoolsInitApp(app: App, version: string) {
-  // TODO queue if devtools is undefined
-  if (!devtools) return
-  devtools.emit(DevtoolsHooks.APP_INIT, app, version, {
+  emit(DevtoolsHooks.APP_INIT, app, version, {
     Fragment,
     Text,
     Comment,
@@ -46,26 +91,22 @@ export function devtoolsInitApp(app: App, version: string) {
 }
 
 export function devtoolsUnmountApp(app: App) {
-  if (!devtools) return
-  devtools.emit(DevtoolsHooks.APP_UNMOUNT, app)
+  emit(DevtoolsHooks.APP_UNMOUNT, app)
 }
 
 export const devtoolsComponentAdded = /*#__PURE__*/ createDevtoolsComponentHook(
   DevtoolsHooks.COMPONENT_ADDED
 )
 
-export const devtoolsComponentUpdated = /*#__PURE__*/ createDevtoolsComponentHook(
-  DevtoolsHooks.COMPONENT_UPDATED
-)
+export const devtoolsComponentUpdated =
+  /*#__PURE__*/ createDevtoolsComponentHook(DevtoolsHooks.COMPONENT_UPDATED)
 
-export const devtoolsComponentRemoved = /*#__PURE__*/ createDevtoolsComponentHook(
-  DevtoolsHooks.COMPONENT_REMOVED
-)
+export const devtoolsComponentRemoved =
+  /*#__PURE__*/ createDevtoolsComponentHook(DevtoolsHooks.COMPONENT_REMOVED)
 
 function createDevtoolsComponentHook(hook: DevtoolsHooks) {
   return (component: ComponentInternalInstance) => {
-    if (!devtools) return
-    devtools.emit(
+    emit(
       hook,
       component.appContext.app,
       component.uid,
@@ -85,15 +126,7 @@ export const devtoolsPerfEnd = /*#__PURE__*/ createDevtoolsPerformanceHook(
 
 function createDevtoolsPerformanceHook(hook: DevtoolsHooks) {
   return (component: ComponentInternalInstance, type: string, time: number) => {
-    if (!devtools) return
-    devtools.emit(
-      hook,
-      component.appContext.app,
-      component.uid,
-      component,
-      type,
-      time
-    )
+    emit(hook, component.appContext.app, component.uid, component, type, time)
   }
 }
 
@@ -102,8 +135,7 @@ export function devtoolsComponentEmit(
   event: string,
   params: any[]
 ) {
-  if (!devtools) return
-  devtools.emit(
+  emit(
     DevtoolsHooks.COMPONENT_EMIT,
     component.appContext.app,
     component,

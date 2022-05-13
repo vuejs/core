@@ -145,10 +145,10 @@ describe('GLOBAL_EXTEND', () => {
   })
 
   it('should not merge nested mixins created with Vue.extend', () => {
-    const a = jest.fn();
-    const b = jest.fn();
-    const c = jest.fn();
-    const d = jest.fn();
+    const a = jest.fn()
+    const b = jest.fn()
+    const c = jest.fn()
+    const d = jest.fn()
     const A = Vue.extend({
       created: a
     })
@@ -163,7 +163,9 @@ describe('GLOBAL_EXTEND', () => {
     const D = Vue.extend({
       mixins: [C],
       created: d,
-      render() { return null },
+      render() {
+        return null
+      }
     })
     new D().$mount()
     expect(a.mock.calls.length).toStrictEqual(1)
@@ -255,7 +257,7 @@ describe('GLOBAL_PROTOTYPE', () => {
   })
 
   test('method this context', () => {
-    Vue.prototype.$test = function() {
+    Vue.prototype.$test = function () {
       return this.msg
     }
     const vm = new Vue({
@@ -280,6 +282,28 @@ describe('GLOBAL_PROTOTYPE', () => {
       }
     }) as any
     expect(vm.$test).toBe('getter')
+    delete Vue.prototype.$test
+  })
+
+  test('functions keeps additional properties', () => {
+    function test(this: any) {
+      return this.msg
+    }
+    test.additionalFn = () => {
+      return 'additional fn'
+    }
+
+    Vue.prototype.$test = test
+    const vm = new Vue({
+      data() {
+        return {
+          msg: 'test'
+        }
+      }
+    }) as any
+    expect(typeof vm.$test).toBe('function')
+    expect(typeof vm.$test.additionalFn).toBe('function')
+    expect(vm.$test.additionalFn()).toBe('additional fn')
     delete Vue.prototype.$test
   })
 

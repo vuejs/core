@@ -771,6 +771,18 @@ describe('compiler: transform component slots', () => {
       const { slots } = parseWithSlots(`<Comp><slot v-for="a in b"/></Comp>`)
       expect(slots).toMatchObject(toMatch)
     })
+
+    test('<slot> tag w/ template', () => {
+      const { slots } = parseWithSlots(
+        `<Comp><template #default><slot/></template></Comp>`
+      )
+      expect(slots).toMatchObject(toMatch)
+    })
+
+    test('<slot w/ nested component>', () => {
+      const { slots } = parseWithSlots(`<Comp><Comp><slot/></Comp></Comp>`)
+      expect(slots).toMatchObject(toMatch)
+    })
   })
 
   describe('errors', () => {
