@@ -648,7 +648,7 @@ function defineReactiveSimple(obj: any, key: string, val: any) {
     },
     set(newVal) {
       val = isObject(newVal) ? reactive(newVal) : newVal
-      trigger(obj, TriggerOpTypes.SET, key, newVal)
+      trigger(obj, TriggerOpTypes.SET, undefined, key, newVal)
     }
   })
 }

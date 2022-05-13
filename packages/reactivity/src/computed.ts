@@ -33,6 +33,7 @@ export class ComputedRefImpl<T> {
   public readonly [ReactiveFlags.IS_READONLY]: boolean = false
 
   public _dirty = true
+  public _computedsToAskDirty: ComputedRefImpl<any>[] = []
   public _cacheable: boolean
 
   constructor(
@@ -41,10 +42,13 @@ export class ComputedRefImpl<T> {
     isReadonly: boolean,
     isSSR: boolean
   ) {
-    this.effect = new ReactiveEffect(getter, () => {
-      if (!this._dirty) {
+    this.effect = new ReactiveEffect(getter, (_c) => {
+      if (_c) {
+        this._computedsToAskDirty.push(_c)
+      }
+      else if (!this._dirty) {
         this._dirty = true
-        triggerRefValue(this)
+        triggerRefValue(this, this)
       }
     })
     this.effect.computed = this
@@ -55,11 +59,24 @@ export class ComputedRefImpl<T> {
   get value() {
     // the computed ref may get wrapped by other proxies e.g. readonly() #3376
     const self = toRaw(this)
+    if (!self._dirty) {
+      for (const computedToAskDirty of self._computedsToAskDirty) {
+        computedToAskDirty.value
+        if (self._dirty) {
+          break
+        }
+      }
+    }
     trackRefValue(self)
     if (self._dirty || !self._cacheable) {
+      const newValue = self.effect.run()!
+      if (self._value !== newValue) {
+        triggerRefValue(this, undefined)
+      }
+      self._value = newValue
       self._dirty = false
-      self._value = self.effect.run()!
     }
+    self._computedsToAskDirty.length = 0
     return self._value
   }
 

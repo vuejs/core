@@ -18,6 +18,7 @@ import {
 import type { ShallowReactiveMarker } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
 import { createDep, Dep } from './dep'
+import { ComputedRefImpl } from './computed'
 
 declare const RefSymbol: unique symbol
 export declare const RawSymbol: unique symbol
@@ -52,19 +53,19 @@ export function trackRefValue(ref: RefBase<any>) {
   }
 }
 
-export function triggerRefValue(ref: RefBase<any>, newVal?: any) {
+export function triggerRefValue(ref: RefBase<any>, computedToAskDirty: ComputedRefImpl<any> | undefined, newVal?: any) {
   ref = toRaw(ref)
   const dep = ref.dep
   if (dep) {
     if (__DEV__) {
-      triggerEffects(dep, {
+      triggerEffects(dep, computedToAskDirty, {
         target: ref,
         type: TriggerOpTypes.SET,
         key: 'value',
         newValue: newVal
       })
     } else {
-      triggerEffects(dep)
+      triggerEffects(dep, computedToAskDirty)
     }
   }
 }
@@ -155,7 +156,7 @@ class RefImpl<T> {
     if (hasChanged(newVal, this._rawValue)) {
       this._rawValue = newVal
       this._value = useDirectValue ? newVal : toReactive(newVal)
-      triggerRefValue(this, newVal)
+      triggerRefValue(this, undefined, newVal)
     }
   }
 }
@@ -282,7 +283,7 @@ class CustomRefImpl<T> {
   constructor(factory: CustomRefFactory<T>) {
     const { get, set } = factory(
       () => trackRefValue(this),
-      () => triggerRefValue(this)
+      () => triggerRefValue(this, undefined)
     )
     this._get = get
     this._set = set

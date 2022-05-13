@@ -38,7 +38,7 @@ class DeferredComputedRefImpl<T> {
     let compareTarget: any
     let hasCompareTarget = false
     let scheduled = false
-    this.effect = new ReactiveEffect(getter, (computedTrigger?: boolean) => {
+    this.effect = new ReactiveEffect(getter, (_c, computedTrigger?: boolean) => {
       if (this.dep) {
         if (computedTrigger) {
           compareTarget = this._value
@@ -49,7 +49,7 @@ class DeferredComputedRefImpl<T> {
           hasCompareTarget = false
           scheduler(() => {
             if (this.effect.active && this._get() !== valueToCompare) {
-              triggerRefValue(this)
+              triggerRefValue(this, undefined)
             }
             scheduled = false
           })
@@ -59,7 +59,7 @@ class DeferredComputedRefImpl<T> {
         // deferred to be triggered in scheduler.
         for (const e of this.dep) {
           if (e.computed instanceof DeferredComputedRefImpl) {
-            e.scheduler!(true /* computedTrigger */)
+            e.scheduler!(undefined, true /* computedTrigger */)
           }
         }
       }

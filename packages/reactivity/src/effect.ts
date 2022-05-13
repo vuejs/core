@@ -30,7 +30,7 @@ export let trackOpBit = 1
  */
 const maxMarkerBits = 30
 
-export type EffectScheduler = (...args: any[]) => any
+export type EffectScheduler = (computedToAskDirty: ComputedRefImpl<any> | undefined, ...args: any[]) => any
 
 export type DebuggerEvent = {
   effect: ReactiveEffect
@@ -305,6 +305,7 @@ export function trackEffects(
 export function trigger(
   target: object,
   type: TriggerOpTypes,
+  computedToAskDirty: ComputedRefImpl<any> | undefined,
   key?: unknown,
   newValue?: unknown,
   oldValue?: unknown,
@@ -370,9 +371,9 @@ export function trigger(
   if (deps.length === 1) {
     if (deps[0]) {
       if (__DEV__) {
-        triggerEffects(deps[0], eventInfo)
+        triggerEffects(deps[0], computedToAskDirty, eventInfo)
       } else {
-        triggerEffects(deps[0])
+        triggerEffects(deps[0], computedToAskDirty)
       }
     }
   } else {
@@ -383,33 +384,28 @@ export function trigger(
       }
     }
     if (__DEV__) {
-      triggerEffects(createDep(effects), eventInfo)
+      triggerEffects(createDep(effects), computedToAskDirty, eventInfo)
     } else {
-      triggerEffects(createDep(effects))
+      triggerEffects(createDep(effects), computedToAskDirty)
     }
   }
 }
 
 export function triggerEffects(
   dep: Dep | ReactiveEffect[],
+  computedToAskDirty: ComputedRefImpl<any> | undefined,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
   // spread into array for stabilization
   const effects = isArray(dep) ? dep : [...dep]
   for (const effect of effects) {
-    if (effect.computed) {
-      triggerEffect(effect, debuggerEventExtraInfo)
-    }
-  }
-  for (const effect of effects) {
-    if (!effect.computed) {
-      triggerEffect(effect, debuggerEventExtraInfo)
-    }
+    triggerEffect(effect, computedToAskDirty, debuggerEventExtraInfo)
   }
 }
 
 function triggerEffect(
   effect: ReactiveEffect,
+  computedToAskDirty: ComputedRefImpl<any> | undefined,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
   if (effect !== activeEffect || effect.allowRecurse) {
@@ -417,7 +413,7 @@ function triggerEffect(
       effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
     }
     if (effect.scheduler) {
-      effect.scheduler()
+      effect.scheduler(computedToAskDirty)
     } else {
       effect.run()
     }

@@ -333,7 +333,7 @@ export function updateProps(
 
   // trigger updates for $attrs in case it's used in component slots
   if (hasAttrsChanged) {
-    trigger(instance, TriggerOpTypes.SET, '$attrs')
+    trigger(instance, TriggerOpTypes.SET, undefined, '$attrs')
   }
 
   if (__DEV__) {
