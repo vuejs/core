@@ -1126,48 +1126,42 @@ export function compileScript(
 
     // walk statements & named exports / variable declarations for top level
     // await
-    let body = scriptSetupAst.body
     if (
       (node.type === 'VariableDeclaration' && !node.declare) ||
       node.type.endsWith('Statement')
     ) {
+      const scope: Statement[][] = [scriptSetupAst.body]
       ;(walk as any)(node, {
         enter(child: Node, parent: Node) {
           if (isFunctionType(child)) {
             this.skip()
           }
-          if (child.type === 'ExpressionStatement') {
-            if (
-              child.expression.type === 'AwaitExpression' ||
-              child.expression.type === 'BinaryExpression'
-            ) {
-              // set the parent of the AwaitExpression's body to the variable body
-              if (parent && parent.type === 'BlockStatement') {
-                body = parent.body
-              } else {
-                body = scriptSetupAst.body
-              }
-            }
+          if (child.type === 'BlockStatement') {
+            scope.push(child.body)
           }
           if (child.type === 'AwaitExpression') {
             hasAwait = true
-            // set the AwaitExpression's index in the parent of the AwaitExpression's body to the variable AwaitIndex
-            let AwaitIndex = 0
-            let needsSemi = body.some((n, index) => {
-              AwaitIndex = index
-              return n.type === 'ExpressionStatement' && n.start === child.start
+            // if the await expression is an expression statement and
+            // - is in the root scope
+            // - or is not the first statement in a nested block scope
+            // then it needs a semicolon before the generated code.
+            const currentScope = scope[scope.length - 1]
+            const needsSemi = currentScope.some((n, i) => {
+              return (
+                (scope.length === 1 || i > 0) &&
+                n.type === 'ExpressionStatement' &&
+                n.start === child.start
+              )
             })
-            // if the variable body is not equal scriptSetupAst.body
-            if (body !== scriptSetupAst.body) {
-              // judge the AwaitExpression is not in the first of the parent of the AwaitExpression's body
-              needsSemi = needsSemi && AwaitIndex > 0
-            }
             processAwait(
               child,
               needsSemi,
               parent.type === 'ExpressionStatement'
             )
           }
+        },
+        exit(node: Node) {
+          if (node.type === 'BlockStatement') scope.pop()
         }
       })
     }
