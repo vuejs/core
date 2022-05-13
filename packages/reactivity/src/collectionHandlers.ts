@@ -73,7 +73,7 @@ function add(this: SetTypes, value: unknown) {
   const hadKey = proto.has.call(target, value)
   if (!hadKey) {
     target.add(value)
-    trigger(target, TriggerOpTypes.ADD, undefined, value, value)
+    trigger(target, TriggerOpTypes.ADD, value, value)
   }
   return this
 }
@@ -94,9 +94,9 @@ function set(this: MapTypes, key: unknown, value: unknown) {
   const oldValue = get.call(target, key)
   target.set(key, value)
   if (!hadKey) {
-    trigger(target, TriggerOpTypes.ADD, undefined, key, value)
+    trigger(target, TriggerOpTypes.ADD, key, value)
   } else if (hasChanged(value, oldValue)) {
-    trigger(target, TriggerOpTypes.SET, undefined, key, value, oldValue)
+    trigger(target, TriggerOpTypes.SET, key, value, oldValue)
   }
   return this
 }
@@ -116,7 +116,7 @@ function deleteEntry(this: CollectionTypes, key: unknown) {
   // forward the operation before queueing reactions
   const result = target.delete(key)
   if (hadKey) {
-    trigger(target, TriggerOpTypes.DELETE, undefined, key, undefined, oldValue)
+    trigger(target, TriggerOpTypes.DELETE, key, undefined, oldValue)
   }
   return result
 }

@@ -305,7 +305,6 @@ export function trackEffects(
 export function trigger(
   target: object,
   type: TriggerOpTypes,
-  computedToAskDirty: ComputedRefImpl<any> | undefined,
   key?: unknown,
   newValue?: unknown,
   oldValue?: unknown,
@@ -371,9 +370,9 @@ export function trigger(
   if (deps.length === 1) {
     if (deps[0]) {
       if (__DEV__) {
-        triggerEffects(deps[0], computedToAskDirty, eventInfo)
+        triggerEffects(deps[0], undefined, eventInfo)
       } else {
-        triggerEffects(deps[0], computedToAskDirty)
+        triggerEffects(deps[0], undefined)
       }
     }
   } else {
@@ -384,9 +383,9 @@ export function trigger(
       }
     }
     if (__DEV__) {
-      triggerEffects(createDep(effects), computedToAskDirty, eventInfo)
+      triggerEffects(createDep(effects), undefined, eventInfo)
     } else {
-      triggerEffects(createDep(effects), computedToAskDirty)
+      triggerEffects(createDep(effects), undefined)
     }
   }
 }
