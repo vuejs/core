@@ -18,7 +18,13 @@ import {
   ParserOptions,
   ParserPlugin
 } from '@babel/parser'
-import { camelize, capitalize, generateCodeFrame, isObject,makeMap } from '@vue/shared'
+import {
+  camelize,
+  capitalize,
+  generateCodeFrame,
+  isObject,
+  makeMap
+} from '@vue/shared'
 import {
   Node,
   Declaration,
@@ -213,11 +219,18 @@ export function compileScript(
         sourceType: 'module'
       }).program
       const bindings = analyzeScriptBindings(scriptAst.body)
-      if (enableReactivityTransform && reactivityTransformer!.shouldTransform(content)) {
+      if (
+        enableReactivityTransform &&
+        reactivityTransformer!.shouldTransform(content)
+      ) {
         const s = new MagicString(source)
         const startOffset = script.loc.start.offset
         const endOffset = script.loc.end.offset
-        const { importedHelpers } = reactivityTransformer!.transformAST(scriptAst, s, startOffset)
+        const { importedHelpers } = reactivityTransformer!.transformAST(
+          scriptAst,
+          s,
+          startOffset
+        )
         if (importedHelpers.length) {
           s.prepend(
             `import { ${importedHelpers
@@ -441,11 +454,12 @@ export function compileScript(
                 prop.key
               )
             }
-            
-            const propKey = prop.key.type === 'StringLiteral'
-              ? prop.key.value
-              : (prop.key as Identifier).name
-            
+
+            const propKey =
+              prop.key.type === 'StringLiteral'
+                ? prop.key.value
+                : (prop.key as Identifier).name
+
             if (prop.value.type === 'AssignmentPattern') {
               // default value { foo = 123 }
               const { left, right } = prop.value
@@ -936,7 +950,10 @@ export function compileScript(
     }
 
     // apply reactivity transform
-    if (enableReactivityTransform && reactivityTransformer!.shouldTransform(script.content)) {
+    if (
+      enableReactivityTransform &&
+      reactivityTransformer!.shouldTransform(script.content)
+    ) {
       const { rootRefs, importedHelpers } = reactivityTransformer!.transformAST(
         scriptAst,
         s,
@@ -1212,7 +1229,8 @@ export function compileScript(
   if (
     (enableReactivityTransform &&
       // normal <script> had ref bindings that maybe used in <script setup>
-      (refBindings || reactivityTransformer!.shouldTransform(scriptSetup.content))) ||
+      (refBindings ||
+        reactivityTransformer!.shouldTransform(scriptSetup.content))) ||
     propsDestructureDecl
   ) {
     const { rootRefs, importedHelpers } = reactivityTransformer!.transformAST(
