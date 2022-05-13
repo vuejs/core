@@ -399,7 +399,14 @@ export function triggerEffects(
   // spread into array for stabilization
   const effects = isArray(dep) ? dep : [...dep]
   for (const effect of effects) {
-    triggerEffect(effect, computedToAskDirty, debuggerEventExtraInfo)
+    if (effect.computed) {
+      triggerEffect(effect, computedToAskDirty, debuggerEventExtraInfo)
+    }
+  }
+  for (const effect of effects) {
+    if (!effect.computed) {
+      triggerEffect(effect, computedToAskDirty, debuggerEventExtraInfo)
+    }
   }
 }
 
