@@ -232,5 +232,6 @@ async function publishPackage(pkgName, version, runIfNotDry) {
 }
 
 main().catch(err => {
+  updateVersions(currentVersion)
   console.error(err)
 })

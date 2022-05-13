@@ -15,8 +15,7 @@ describe('createApp for dom', () => {
 
   // #4398
   test('should not mutate original root component options object', () => {
-    
-    const originalObj =  {
+    const originalObj = {
       data() {
         return {
           counter: 0
@@ -28,17 +27,16 @@ describe('createApp for dom', () => {
       expect(msg).toMatch(`Component is missing template or render function`)
     })
 
-    const Root = { ...originalObj}
-    
+    const Root = { ...originalObj }
+
     const app = createApp(Root)
     app.config.warnHandler = handler
-    app.mount(document.createElement('div')) 
- 
-    // ensure mount is based on a copy of Root object rather than Root object itself 
+    app.mount(document.createElement('div'))
+
+    // ensure mount is based on a copy of Root object rather than Root object itself
     expect(app._component).not.toBe(Root)
-    
+
     // ensure no mutation happened to Root object
     expect(originalObj).toMatchObject(Root)
-    
   })
 })

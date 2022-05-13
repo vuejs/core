@@ -510,6 +510,14 @@ function _createVNode(
     if (children) {
       normalizeChildren(cloned, children)
     }
+    if (isBlockTreeEnabled > 0 && !isBlockNode && currentBlock) {
+      if (cloned.shapeFlag & ShapeFlags.COMPONENT) {
+        currentBlock[currentBlock.indexOf(type)] = cloned
+      } else {
+        currentBlock.push(cloned)
+      }
+    }
+    cloned.patchFlag |= PatchFlags.BAIL
     return cloned
   }
 

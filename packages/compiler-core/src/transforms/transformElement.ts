@@ -352,7 +352,9 @@ function resolveSetupReference(name: string, context: TransformContext) {
     }
   }
 
-  const fromConst = checkType(BindingTypes.SETUP_CONST)
+  const fromConst =
+    checkType(BindingTypes.SETUP_CONST) ||
+    checkType(BindingTypes.SETUP_REACTIVE_CONST)
   if (fromConst) {
     return context.inline
       ? // in inline mode, const setup bindings (e.g. imports) can be used as-is
@@ -765,10 +767,11 @@ export function buildProps(
           }
           if (
             styleProp &&
-            !isStaticExp(styleProp.value) &&
             // the static style is compiled into an object,
             // so use `hasStyleBinding` to ensure that it is a dynamic style binding
             (hasStyleBinding ||
+              (styleProp.value.type === NodeTypes.SIMPLE_EXPRESSION &&
+                styleProp.value.content.trim()[0] === `[`) ||
               // v-bind:style and style both exist,
               // v-bind:style with static literal object
               styleProp.value.type === NodeTypes.JS_ARRAY_EXPRESSION)

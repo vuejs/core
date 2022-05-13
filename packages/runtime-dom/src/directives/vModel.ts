@@ -18,7 +18,9 @@ import {
 type AssignerFn = (value: any) => void
 
 const getModelAssigner = (vnode: VNode): AssignerFn => {
-  const fn = vnode.props!['onUpdate:modelValue']
+  const fn =
+    vnode.props!['onUpdate:modelValue'] ||
+    (__COMPAT__ && vnode.props!['onModelCompat:input'])
   return isArray(fn) ? value => invokeArrayFns(fn, value) : fn
 }
 
@@ -50,7 +52,8 @@ export const vModelText: ModelDirective<
       let domValue: string | number = el.value
       if (trim) {
         domValue = domValue.trim()
-      } else if (castToNumber) {
+      }
+      if (castToNumber) {
         domValue = toNumber(domValue)
       }
       el._assign(domValue)
@@ -78,7 +81,7 @@ export const vModelText: ModelDirective<
     el._assign = getModelAssigner(vnode)
     // avoid clearing unresolved text. #2302
     if ((el as any).composing) return
-    if (document.activeElement === el) {
+    if (document.activeElement === el && el.type !== 'range') {
       if (lazy) {
         return
       }

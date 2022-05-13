@@ -1,5 +1,5 @@
 export default {
-  master: [
+  main: [
     {
       sha: 'd1527fbee422c7170e56845e55b49c4fd6de72a7',
       node_id:
@@ -273,7 +273,7 @@ export default {
       ]
     }
   ],
-  sync: [
+  'v2-compat': [
     {
       sha: 'ecf4da822eea97f5db5fa769d39f994755384a4b',
       node_id:

@@ -97,9 +97,14 @@ export function createHydrationFunctions(
         isFragmentStart
       )
 
-    const { type, ref, shapeFlag } = vnode
+    const { type, ref, shapeFlag, patchFlag } = vnode
     const domType = node.nodeType
     vnode.el = node
+
+    if (patchFlag === PatchFlags.BAIL) {
+      optimized = false
+      vnode.dynamicChildren = null
+    }
 
     let nextNode: Node | null = null
     switch (type) {

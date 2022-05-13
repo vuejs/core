@@ -1,4 +1,5 @@
 import { compile } from '../src'
+import { ssrHelpers, SSR_RENDER_SLOT_INNER } from '../src/runtimeHelpers'
 
 describe('ssr: <slot>', () => {
   test('basic', () => {
@@ -111,6 +112,18 @@ describe('ssr: <slot>', () => {
           }),
           _: 3 /* FORWARDED */
         }, _parent))
+      }"
+    `)
+  })
+
+  test('inside transition', () => {
+    const { code } = compile(`<transition><slot/></transition>`)
+    expect(code).toMatch(ssrHelpers[SSR_RENDER_SLOT_INNER])
+    expect(code).toMatchInlineSnapshot(`
+      "const { ssrRenderSlotInner: _ssrRenderSlotInner } = require(\\"vue/server-renderer\\")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _ssrRenderSlotInner(_ctx.$slots, \\"default\\", {}, null, _push, _parent)
       }"
     `)
   })

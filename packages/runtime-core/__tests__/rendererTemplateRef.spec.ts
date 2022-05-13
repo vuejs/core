@@ -443,10 +443,8 @@ describe('api: template refs', () => {
     expect(mapRefs()).toMatchObject(['2', '3', '4'])
   })
 
-   
-
   test('named ref in v-for', async () => {
-    const show = ref(true);
+    const show = ref(true)
     const list = reactive([1, 2, 3])
     const listRefs = ref([])
     const mapRefs = () => listRefs.value.map(n => serializeInner(n))
@@ -495,6 +493,4 @@ describe('api: template refs', () => {
     await nextTick()
     expect(mapRefs()).toMatchObject(['2', '3', '4'])
   })
-
-
 })
