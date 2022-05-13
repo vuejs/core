@@ -1,0 +1,70 @@
+version: 2
+updates:
+- package-ecosystem: npm
+  directory: "/"
+  schedule:
+    interval: monthly
+  open-pull-requests-limit: 10
+  versioning-strategy: lockfile-only
+  ignore:
+  - dependency-name: "@types/node"
+    versions:
+    - 14.14.24
+    - 14.14.37
+  - dependency-name: "@babel/parser"
+    versions:
+    - 7.12.11
+    - 7.12.13
+    - 7.12.14
+    - 7.12.15
+    - 7.12.16
+    - 7.12.17
+    - 7.13.0
+    - 7.13.10
+    - 7.13.11
+    - 7.13.13
+    - 7.13.4
+    - 7.13.9
+  - dependency-name: eslint
+    versions:
+    - 7.23.0
+  - dependency-name: postcss
+    versions:
+    - 8.2.4
+    - 8.2.5
+    - 8.2.7
+    - 8.2.8
+  - dependency-name: typescript
+    versions:
+    - 4.2.2
+  - dependency-name: "@babel/types"
+    versions:
+    - 7.12.12
+    - 7.12.13
+    - 7.12.17
+    - 7.13.0
+  - dependency-name: pug-code-gen
+    versions:
+    - 2.0.3
+  - dependency-name: estree-walker
+    versions:
+    - 2.0.2
+  - dependency-name: "@typescript-eslint/parser"
+    versions:
+    - 4.14.2
+    - 4.15.0
+  - dependency-name: "@microsoft/api-extractor"
+    versions:
+    - 7.13.1
+  - dependency-name: rollup
+    versions:
+    - 2.38.5
+  - dependency-name: node-notifier
+    versions:
+    - 8.0.1
+- package-ecosystem: "github-actions"
+  directory: "/"
+  schedule:
+    interval: monthly
+  open-pull-requests-limit: 10
+  versioning-strategy: lockfile-only

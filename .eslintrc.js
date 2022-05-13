@@ -6,7 +6,9 @@ module.exports = {
   parserOptions: {
     sourceType: 'module'
   },
+  plugins: ["jest"],
   rules: {
+    'no-debugger': 'error',
     'no-unused-vars': [
       'error',
       // we are only using this rule to check for unused arguments since TS
@@ -16,11 +18,13 @@ module.exports = {
     // most of the codebase are expected to be env agnostic
     'no-restricted-globals': ['error', ...DOMGlobals, ...NodeGlobals],
     // since we target ES2015 for baseline support, we need to forbid object
-    // rest spread usage (both assign and destructure)
+    // rest spread usage in destructure as it compiles into a verbose helper.
+    // TS now compiles assignment spread into Object.assign() calls so that
+    // is allowed.
     'no-restricted-syntax': [
       'error',
-      'ObjectExpression > SpreadElement',
-      'ObjectPattern > RestElement'
+      'ObjectPattern > RestElement',
+      'AwaitExpression'
     ]
   },
   overrides: [
@@ -29,7 +33,9 @@ module.exports = {
       files: ['**/__tests__/**', 'test-dts/**'],
       rules: {
         'no-restricted-globals': 'off',
-        'no-restricted-syntax': 'off'
+        'no-restricted-syntax': 'off',
+        'jest/no-disabled-tests': 'error',
+        'jest/no-focused-tests': 'error'
       }
     },
     // shared, may be used in any env
@@ -41,14 +47,16 @@ module.exports = {
     },
     // Packages targeting DOM
     {
-      files: ['packages/{vue,runtime-dom}/**'],
+      files: ['packages/{vue,vue-compat,runtime-dom}/**'],
       rules: {
         'no-restricted-globals': ['error', ...NodeGlobals]
       }
     },
     // Packages targeting Node
     {
-      files: ['packages/{compiler-sfc,compiler-ssr,server-renderer}/**'],
+      files: [
+        'packages/{compiler-sfc,compiler-ssr,server-renderer,reactivity-transform}/**'
+      ],
       rules: {
         'no-restricted-globals': ['error', ...DOMGlobals],
         'no-restricted-syntax': 'off'
@@ -56,7 +64,7 @@ module.exports = {
     },
     // Private package, browser only + no syntax restrictions
     {
-      files: ['packages/template-explorer/**'],
+      files: ['packages/template-explorer/**', 'packages/sfc-playground/**'],
       rules: {
         'no-restricted-globals': ['error', ...NodeGlobals],
         'no-restricted-syntax': 'off'

@@ -12,18 +12,7 @@ export * from './domAttrConfig'
 export * from './escapeHtml'
 export * from './looseEqual'
 export * from './toDisplayString'
-
-/**
- * List of @babel/parser plugins that are used for template expression
- * transforms and SFC script transforms. By default we enable proposals slated
- * for ES2020. This will need to be updated as the spec moves forward.
- * Full list at https://babeljs.io/docs/en/next/babel-parser#plugins
- */
-export const babelParserDefaultPlugins = [
-  'bigInt',
-  'optionalChaining',
-  'nullishCoalescingOperator'
-] as const
+export * from './typeUtils'
 
 export const EMPTY_OBJ: { readonly [key: string]: any } = __DEV__
   ? Object.freeze({})
@@ -63,7 +52,7 @@ export const isMap = (val: unknown): val is Map<any, any> =>
 export const isSet = (val: unknown): val is Set<any> =>
   toTypeString(val) === '[object Set]'
 
-export const isDate = (val: unknown): val is Date => val instanceof Date
+export const isDate = (val: unknown): val is Date => toTypeString(val) === '[object Date]'
 export const isFunction = (val: unknown): val is Function =>
   typeof val === 'function'
 export const isString = (val: unknown): val is string => typeof val === 'string'
@@ -95,10 +84,14 @@ export const isIntegerKey = (key: unknown) =>
 
 export const isReservedProp = /*#__PURE__*/ makeMap(
   // the leading comma is intentional so empty string "" is also included
-  ',key,ref,' +
+  ',key,ref,ref_for,ref_key,' +
     'onVnodeBeforeMount,onVnodeMounted,' +
     'onVnodeBeforeUpdate,onVnodeUpdated,' +
     'onVnodeBeforeUnmount,onVnodeUnmounted'
+)
+
+export const isBuiltInDirective = /*#__PURE__*/ makeMap(
+  'bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,slot,text,memo'
 )
 
 const cacheStringFunction = <T extends (str: string) => string>(fn: T): T => {
@@ -113,11 +106,9 @@ const camelizeRE = /-(\w)/g
 /**
  * @private
  */
-export const camelize = cacheStringFunction(
-  (str: string): string => {
-    return str.replace(camelizeRE, (_, c) => (c ? c.toUpperCase() : ''))
-  }
-)
+export const camelize = cacheStringFunction((str: string): string => {
+  return str.replace(camelizeRE, (_, c) => (c ? c.toUpperCase() : ''))
+})
 
 const hyphenateRE = /\B([A-Z])/g
 /**
@@ -137,13 +128,13 @@ export const capitalize = cacheStringFunction(
 /**
  * @private
  */
-export const toHandlerKey = cacheStringFunction(
-  (str: string) => (str ? `on${capitalize(str)}` : ``)
+export const toHandlerKey = cacheStringFunction((str: string) =>
+  str ? `on${capitalize(str)}` : ``
 )
 
 // compare whether a value has changed, accounting for NaN.
 export const hasChanged = (value: any, oldValue: any): boolean =>
-  value !== oldValue && (value === value || oldValue === oldValue)
+  !Object.is(value, oldValue)
 
 export const invokeArrayFns = (fns: Function[], arg?: any) => {
   for (let i = 0; i < fns.length; i++) {
@@ -172,11 +163,19 @@ export const getGlobalThis = (): any => {
       typeof globalThis !== 'undefined'
         ? globalThis
         : typeof self !== 'undefined'
-          ? self
-          : typeof window !== 'undefined'
-            ? window
-            : typeof global !== 'undefined'
-              ? global
-              : {})
+        ? self
+        : typeof window !== 'undefined'
+        ? window
+        : typeof global !== 'undefined'
+        ? global
+        : {})
   )
+}
+
+const identRE = /^[_$a-zA-Z\xA0-\uFFFF][_$a-zA-Z0-9\xA0-\uFFFF]*$/
+
+export function genPropsAccessExp(name: string) {
+  return identRE.test(name)
+    ? `__props.${name}`
+    : `__props[${JSON.stringify(name)}]`
 }

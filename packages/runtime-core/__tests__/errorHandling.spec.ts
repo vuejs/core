@@ -8,7 +8,8 @@ import {
   ref,
   nextTick,
   defineComponent,
-  watchEffect
+  watchEffect,
+  createApp
 } from '@vue/runtime-test'
 
 describe('error handling', () => {
@@ -182,7 +183,7 @@ describe('error handling', () => {
   })
 
   // unlike other lifecycle hooks, created/beforeCreate are called as part of
-  // the options API initiualization process instead of by the renderer.
+  // the options API initialization process instead of by the renderer.
   test('in created/beforeCreate hook', () => {
     const err = new Error('foo')
     const fn = jest.fn()
@@ -489,7 +490,7 @@ describe('error handling', () => {
 
     try {
       await Promise.all(res)
-    } catch (e) {
+    } catch (e: any) {
       expect(e).toBe(err)
     }
     expect(fn).toHaveBeenCalledWith(err, 'component event handler')
@@ -534,6 +535,52 @@ describe('error handling', () => {
 
     groupCollapsed.mockRestore()
     log.mockRestore()
+  })
+
+  //# 3127
+  test('handle error in watch & watchEffect', async () => {
+    const error1 = new Error('error1')
+    const error2 = new Error('error2')
+    const error3 = new Error('error3')
+    const error4 = new Error('error4')
+    const handler = jest.fn()
+
+    const app = createApp({
+      setup() {
+        const count = ref(1)
+        watch(
+          count,
+          () => {
+            throw error1
+          },
+          { immediate: true }
+        )
+        watch(
+          count,
+          async () => {
+            throw error2
+          },
+          { immediate: true }
+        )
+        watchEffect(() => {
+          throw error3
+        })
+        watchEffect(async () => {
+          throw error4
+        })
+      },
+      render() {}
+    })
+
+    app.config.errorHandler = handler
+    app.mount(nodeOps.createElement('div'))
+
+    await nextTick()
+    expect(handler).toHaveBeenCalledWith(error1, {}, 'watcher callback')
+    expect(handler).toHaveBeenCalledWith(error2, {}, 'watcher callback')
+    expect(handler).toHaveBeenCalledWith(error3, {}, 'watcher callback')
+    expect(handler).toHaveBeenCalledWith(error4, {}, 'watcher callback')
+    expect(handler).toHaveBeenCalledTimes(4)
   })
 
   // native event handler handling should be tested in respective renderers

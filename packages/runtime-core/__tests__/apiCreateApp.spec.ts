@@ -30,6 +30,11 @@ describe('api: createApp', () => {
     const root1 = nodeOps.createElement('div')
     createApp(Comp).mount(root1)
     expect(serializeInner(root1)).toBe(`0`)
+    //#5571 mount multiple apps to the same host element
+    createApp(Comp).mount(root1)
+    expect(
+      `There is already an app instance mounted on the host container`
+    ).toHaveBeenWarned()
 
     // mount with props
     const root2 = nodeOps.createElement('div')
@@ -84,7 +89,7 @@ describe('api: createApp', () => {
         const bar = inject('bar')
         try {
           inject('__proto__')
-        } catch (e) {}
+        } catch (e: any) {}
         return () => `${foo},${bar}`
       }
     }
@@ -481,4 +486,55 @@ describe('api: createApp', () => {
     app.mount(root)
     expect(serializeInner(root)).toBe('hello')
   })
+
+  test('return property "_" should not overwrite "ctx._", __isScriptSetup: false', () => {
+    const Comp = defineComponent({
+      setup() {
+        return {
+          _: ref(0) // return property "_" should not overwrite "ctx._"
+        }
+      },
+      render() {
+        return h('input', {
+          ref: 'input'
+        })
+      }
+    })
+
+    const root1 = nodeOps.createElement('div')
+    createApp(Comp).mount(root1)
+
+    expect(
+      `setup() return property "_" should not start with "$" or "_" which are reserved prefixes for Vue internals.`
+    ).toHaveBeenWarned()
+  })
+
+  test('return property "_" should not overwrite "ctx._", __isScriptSetup: true', () => {
+    const Comp = defineComponent({
+      setup() {
+        return {
+          _: ref(0), // return property "_" should not overwrite "ctx._"
+          __isScriptSetup: true // mock __isScriptSetup = true
+        }
+      },
+      render() {
+        return h('input', {
+          ref: 'input'
+        })
+      }
+    })
+
+    const root1 = nodeOps.createElement('div')
+    const app = createApp(Comp).mount(root1)
+
+    // trigger
+    app.$refs.input
+
+    expect(
+      `TypeError: Cannot read property '__isScriptSetup' of undefined`
+    ).not.toHaveBeenWarned()
+  })
+
+  // config.compilerOptions is tested in packages/vue since it is only
+  // supported in the full build.
 })

@@ -3,7 +3,7 @@
 import { initDev } from './dev'
 import { warn } from '@vue/runtime-dom'
 
-if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+if (__DEV__) {
   initDev()
 }
 
@@ -16,10 +16,10 @@ export const compile = () => {
         (__ESM_BUNDLER__
           ? ` Configure your bundler to alias "vue" to "vue/dist/vue.esm-bundler.js".`
           : __ESM_BROWSER__
-            ? ` Use "vue.esm-browser.js" instead.`
-            : __GLOBAL__
-              ? ` Use "vue.global.js" instead.`
-              : ``) /* should not happen */
+          ? ` Use "vue.esm-browser.js" instead.`
+          : __GLOBAL__
+          ? ` Use "vue.global.js" instead.`
+          : ``) /* should not happen */
     )
   }
 }

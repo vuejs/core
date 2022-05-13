@@ -31,7 +31,8 @@ import {
   RESOLVE_COMPONENT,
   CREATE_COMMENT,
   FRAGMENT,
-  RENDER_LIST
+  RENDER_LIST,
+  CREATE_ELEMENT_VNODE
 } from '../src/runtimeHelpers'
 import { createElementWithCodegen, genFlagText } from './testUtils'
 import { PatchFlags } from '@vue/shared'
@@ -60,11 +61,7 @@ describe('compiler: codegen', () => {
     })
     const { code } = generate(root, { mode: 'module' })
     expect(code).toMatch(
-      `import { ${helperNameMap[CREATE_VNODE]} as _${
-        helperNameMap[CREATE_VNODE]
-      }, ${helperNameMap[RESOLVE_DIRECTIVE]} as _${
-        helperNameMap[RESOLVE_DIRECTIVE]
-      } } from "vue"`
+      `import { ${helperNameMap[CREATE_VNODE]} as _${helperNameMap[CREATE_VNODE]}, ${helperNameMap[RESOLVE_DIRECTIVE]} as _${helperNameMap[RESOLVE_DIRECTIVE]} } from "vue"`
     )
     expect(code).toMatchSnapshot()
   })
@@ -75,16 +72,10 @@ describe('compiler: codegen', () => {
     })
     const { code } = generate(root, { mode: 'module', optimizeImports: true })
     expect(code).toMatch(
-      `import { ${helperNameMap[CREATE_VNODE]}, ${
-        helperNameMap[RESOLVE_DIRECTIVE]
-      } } from "vue"`
+      `import { ${helperNameMap[CREATE_VNODE]}, ${helperNameMap[RESOLVE_DIRECTIVE]} } from "vue"`
     )
     expect(code).toMatch(
-      `const _${helperNameMap[CREATE_VNODE]} = ${
-        helperNameMap[CREATE_VNODE]
-      }, _${helperNameMap[RESOLVE_DIRECTIVE]} = ${
-        helperNameMap[RESOLVE_DIRECTIVE]
-      }`
+      `const _${helperNameMap[CREATE_VNODE]} = ${helperNameMap[CREATE_VNODE]}, _${helperNameMap[RESOLVE_DIRECTIVE]} = ${helperNameMap[RESOLVE_DIRECTIVE]}`
     )
     expect(code).toMatchSnapshot()
   })
@@ -96,11 +87,7 @@ describe('compiler: codegen', () => {
     const { code } = generate(root, { mode: 'function' })
     expect(code).toMatch(`const _Vue = Vue`)
     expect(code).toMatch(
-      `const { ${helperNameMap[CREATE_VNODE]}: _${
-        helperNameMap[CREATE_VNODE]
-      }, ${helperNameMap[RESOLVE_DIRECTIVE]}: _${
-        helperNameMap[RESOLVE_DIRECTIVE]
-      } } = _Vue`
+      `const { ${helperNameMap[CREATE_VNODE]}: _${helperNameMap[CREATE_VNODE]}, ${helperNameMap[RESOLVE_DIRECTIVE]}: _${helperNameMap[RESOLVE_DIRECTIVE]} } = _Vue`
     )
     expect(code).toMatchSnapshot()
   })
@@ -115,18 +102,14 @@ describe('compiler: codegen', () => {
     })
     expect(code).not.toMatch(`const _Vue = Vue`)
     expect(code).toMatch(
-      `const { ${helperNameMap[CREATE_VNODE]}: _${
-        helperNameMap[CREATE_VNODE]
-      }, ${helperNameMap[RESOLVE_DIRECTIVE]}: _${
-        helperNameMap[RESOLVE_DIRECTIVE]
-      } } = Vue`
+      `const { ${helperNameMap[CREATE_VNODE]}: _${helperNameMap[CREATE_VNODE]}, ${helperNameMap[RESOLVE_DIRECTIVE]}: _${helperNameMap[RESOLVE_DIRECTIVE]} } = Vue`
     )
     expect(code).toMatchSnapshot()
   })
 
   test('assets + temps', () => {
     const root = createRoot({
-      components: [`Foo`, `bar-baz`, `barbaz`],
+      components: [`Foo`, `bar-baz`, `barbaz`, `Qux__self`],
       directives: [`my_dir_0`, `my_dir_1`],
       temps: 3
     })
@@ -135,24 +118,20 @@ describe('compiler: codegen', () => {
       `const _component_Foo = _${helperNameMap[RESOLVE_COMPONENT]}("Foo")\n`
     )
     expect(code).toMatch(
-      `const _component_bar_baz = _${
-        helperNameMap[RESOLVE_COMPONENT]
-      }("bar-baz")\n`
+      `const _component_bar_baz = _${helperNameMap[RESOLVE_COMPONENT]}("bar-baz")\n`
     )
     expect(code).toMatch(
-      `const _component_barbaz = _${
-        helperNameMap[RESOLVE_COMPONENT]
-      }("barbaz")\n`
+      `const _component_barbaz = _${helperNameMap[RESOLVE_COMPONENT]}("barbaz")\n`
+    )
+    // implicit self reference from SFC filename
+    expect(code).toMatch(
+      `const _component_Qux = _${helperNameMap[RESOLVE_COMPONENT]}("Qux", true)\n`
     )
     expect(code).toMatch(
-      `const _directive_my_dir_0 = _${
-        helperNameMap[RESOLVE_DIRECTIVE]
-      }("my_dir_0")\n`
+      `const _directive_my_dir_0 = _${helperNameMap[RESOLVE_DIRECTIVE]}("my_dir_0")\n`
     )
     expect(code).toMatch(
-      `const _directive_my_dir_1 = _${
-        helperNameMap[RESOLVE_DIRECTIVE]
-      }("my_dir_1")\n`
+      `const _directive_my_dir_1 = _${helperNameMap[RESOLVE_DIRECTIVE]}("my_dir_1")\n`
     )
     expect(code).toMatch(`let _temp0, _temp1, _temp2`)
     expect(code).toMatchSnapshot()
@@ -389,12 +368,12 @@ describe('compiler: codegen', () => {
       })
     )
     expect(code).toMatch(`
-    return _${helperNameMap[CREATE_VNODE]}("div", {
+    return _${helperNameMap[CREATE_ELEMENT_VNODE]}("div", {
       id: "foo",
       [prop]: bar,
       [foo + bar]: bar
     }, [
-      _${helperNameMap[CREATE_VNODE]}("p", { "some-key": "foo" })
+      _${helperNameMap[CREATE_ELEMENT_VNODE]}("p", { "some-key": "foo" })
     ], ${PatchFlags.FULL_PROPS})`)
     expect(code).toMatchSnapshot()
   })
@@ -652,11 +631,11 @@ describe('compiler: codegen', () => {
 
     test('tag only', () => {
       expect(genCode(createVNodeCall(null, `"div"`))).toMatchInlineSnapshot(`
-              "return _createVNode(\\"div\\")
+              "return _createElementVNode(\\"div\\")
                "
           `)
       expect(genCode(createVNodeCall(null, FRAGMENT))).toMatchInlineSnapshot(`
-              "return _createVNode(_Fragment)
+              "return _createElementVNode(_Fragment)
                "
           `)
     })
@@ -664,7 +643,7 @@ describe('compiler: codegen', () => {
     test('with props', () => {
       expect(genCode(createVNodeCall(null, `"div"`, mockProps)))
         .toMatchInlineSnapshot(`
-              "return _createVNode(\\"div\\", { foo: \\"bar\\" })
+              "return _createElementVNode(\\"div\\", { foo: \\"bar\\" })
                "
           `)
     })
@@ -672,7 +651,7 @@ describe('compiler: codegen', () => {
     test('with children, no props', () => {
       expect(genCode(createVNodeCall(null, `"div"`, undefined, mockChildren)))
         .toMatchInlineSnapshot(`
-        "return _createVNode(\\"div\\", null, children)
+        "return _createElementVNode(\\"div\\", null, children)
          "
       `)
     })
@@ -680,7 +659,7 @@ describe('compiler: codegen', () => {
     test('with children + props', () => {
       expect(genCode(createVNodeCall(null, `"div"`, mockProps, mockChildren)))
         .toMatchInlineSnapshot(`
-        "return _createVNode(\\"div\\", { foo: \\"bar\\" }, children)
+        "return _createElementVNode(\\"div\\", { foo: \\"bar\\" }, children)
          "
       `)
     })
@@ -688,7 +667,7 @@ describe('compiler: codegen', () => {
     test('with patchFlag and no children/props', () => {
       expect(genCode(createVNodeCall(null, `"div"`, undefined, undefined, '1')))
         .toMatchInlineSnapshot(`
-        "return _createVNode(\\"div\\", null, null, 1)
+        "return _createElementVNode(\\"div\\", null, null, 1)
          "
       `)
     })
@@ -708,7 +687,7 @@ describe('compiler: codegen', () => {
           )
         )
       ).toMatchInlineSnapshot(`
-        "return (_openBlock(), _createBlock(\\"div\\", { foo: \\"bar\\" }, children))
+        "return (_openBlock(), _createElementBlock(\\"div\\", { foo: \\"bar\\" }, children))
          "
       `)
     })
@@ -729,7 +708,7 @@ describe('compiler: codegen', () => {
           )
         )
       ).toMatchInlineSnapshot(`
-        "return (_openBlock(true), _createBlock(\\"div\\", { foo: \\"bar\\" }, children))
+        "return (_openBlock(true), _createElementBlock(\\"div\\", { foo: \\"bar\\" }, children))
          "
       `)
     })
@@ -748,7 +727,7 @@ describe('compiler: codegen', () => {
           )
         )
       ).toMatchInlineSnapshot(`
-        "return _withDirectives(_createVNode(\\"div\\", { foo: \\"bar\\" }, children), [
+        "return _withDirectives(_createElementVNode(\\"div\\", { foo: \\"bar\\" }, children), [
               [foo, bar]
             ])
          "
@@ -770,7 +749,7 @@ describe('compiler: codegen', () => {
           )
         )
       ).toMatchInlineSnapshot(`
-        "return _withDirectives((_openBlock(), _createBlock(\\"div\\", { foo: \\"bar\\" }, children)), [
+        "return _withDirectives((_openBlock(), _createElementBlock(\\"div\\", { foo: \\"bar\\" }, children)), [
               [foo, bar]
             ])
          "

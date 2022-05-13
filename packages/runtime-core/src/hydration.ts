@@ -5,24 +5,29 @@ import {
   Comment,
   Static,
   Fragment,
-  VNodeHook
+  VNodeHook,
+  createVNode,
+  createTextVNode,
+  invokeVNodeHook
 } from './vnode'
 import { flushPostFlushCbs } from './scheduler'
-import { ComponentOptions, ComponentInternalInstance } from './component'
+import { ComponentInternalInstance } from './component'
 import { invokeDirectiveHook } from './directives'
 import { warn } from './warning'
 import { PatchFlags, ShapeFlags, isReservedProp, isOn } from '@vue/shared'
-import { RendererInternals, invokeVNodeHook, setRef } from './renderer'
+import { RendererInternals } from './renderer'
+import { setRef } from './rendererTemplateRef'
 import {
   SuspenseImpl,
   SuspenseBoundary,
   queueEffectWithSuspense
 } from './components/Suspense'
 import { TeleportImpl, TeleportVNode } from './components/Teleport'
+import { isAsyncWrapper } from './apiAsyncComponent'
 
 export type RootHydrateFunction = (
   vnode: VNode<Node, Element>,
-  container: Element
+  container: Element | ShadowRoot
 ) => void
 
 const enum DOMNodeTypes {
@@ -54,16 +59,18 @@ export function createHydrationFunctions(
   } = rendererInternals
 
   const hydrate: RootHydrateFunction = (vnode, container) => {
-    if (__DEV__ && !container.hasChildNodes()) {
-      warn(
-        `Attempting to hydrate existing markup but container is empty. ` +
-          `Performing full mount instead.`
-      )
+    if (!container.hasChildNodes()) {
+      __DEV__ &&
+        warn(
+          `Attempting to hydrate existing markup but container is empty. ` +
+            `Performing full mount instead.`
+        )
       patch(null, vnode, container)
+      flushPostFlushCbs()
       return
     }
     hasMismatch = false
-    hydrateNode(container.firstChild!, vnode, null, null)
+    hydrateNode(container.firstChild!, vnode, null, null, null)
     flushPostFlushCbs()
     if (hasMismatch && !__TEST__) {
       // this error should show up in production
@@ -76,6 +83,7 @@ export function createHydrationFunctions(
     vnode: VNode,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
+    slotScopeIds: string[] | null,
     optimized = false
   ): Node | null => {
     const isFragmentStart = isComment(node) && node.data === '['
@@ -85,12 +93,18 @@ export function createHydrationFunctions(
         vnode,
         parentComponent,
         parentSuspense,
+        slotScopeIds,
         isFragmentStart
       )
 
-    const { type, ref, shapeFlag } = vnode
+    const { type, ref, shapeFlag, patchFlag } = vnode
     const domType = node.nodeType
     vnode.el = node
+
+    if (patchFlag === PatchFlags.BAIL) {
+      optimized = false
+      vnode.dynamicChildren = null
+    }
 
     let nextNode: Node | null = null
     switch (type) {
@@ -127,10 +141,10 @@ export function createHydrationFunctions(
           // if the static vnode has its content stripped during build,
           // adopt it from the server-rendered HTML.
           const needToAdoptContent = !(vnode.children as string).length
-          for (let i = 0; i < vnode.staticCount; i++) {
+          for (let i = 0; i < vnode.staticCount!; i++) {
             if (needToAdoptContent)
               vnode.children += (nextNode as Element).outerHTML
-            if (i === vnode.staticCount - 1) {
+            if (i === vnode.staticCount! - 1) {
               vnode.anchor = nextNode
             }
             nextNode = nextSibling(nextNode)!
@@ -147,6 +161,7 @@ export function createHydrationFunctions(
             vnode,
             parentComponent,
             parentSuspense,
+            slotScopeIds,
             optimized
           )
         }
@@ -155,7 +170,8 @@ export function createHydrationFunctions(
         if (shapeFlag & ShapeFlags.ELEMENT) {
           if (
             domType !== DOMNodeTypes.ELEMENT ||
-            vnode.type !== (node as Element).tagName.toLowerCase()
+            (vnode.type as string).toLowerCase() !==
+              (node as Element).tagName.toLowerCase()
           ) {
             nextNode = onMismatch()
           } else {
@@ -164,6 +180,7 @@ export function createHydrationFunctions(
               vnode,
               parentComponent,
               parentSuspense,
+              slotScopeIds,
               optimized
             )
           }
@@ -171,31 +188,43 @@ export function createHydrationFunctions(
           // when setting up the render effect, if the initial vnode already
           // has .el set, the component will perform hydration instead of mount
           // on its sub-tree.
+          vnode.slotScopeIds = slotScopeIds
           const container = parentNode(node)!
-          const hydrateComponent = () => {
-            mountComponent(
-              vnode,
-              container,
-              null,
-              parentComponent,
-              parentSuspense,
-              isSVGContainer(container),
-              optimized
-            )
-          }
-          // async component
-          const loadAsync = (vnode.type as ComponentOptions).__asyncLoader
-          if (loadAsync) {
-            loadAsync().then(hydrateComponent)
-          } else {
-            hydrateComponent()
-          }
+          mountComponent(
+            vnode,
+            container,
+            null,
+            parentComponent,
+            parentSuspense,
+            isSVGContainer(container),
+            optimized
+          )
+
           // component may be async, so in the case of fragments we cannot rely
           // on component's rendered output to determine the end of the fragment
           // instead, we do a lookahead to find the end anchor node.
           nextNode = isFragmentStart
             ? locateClosingAsyncAnchor(node)
             : nextSibling(node)
+
+          // #3787
+          // if component is async, it may get moved / unmounted before its
+          // inner component is loaded, so we need to give it a placeholder
+          // vnode that matches its adopted DOM.
+          if (isAsyncWrapper(vnode)) {
+            let subTree
+            if (isFragmentStart) {
+              subTree = createVNode(Fragment)
+              subTree.anchor = nextNode
+                ? nextNode.previousSibling
+                : container.lastChild
+            } else {
+              subTree =
+                node.nodeType === 3 ? createTextVNode('') : createVNode('div')
+            }
+            subTree.el = node
+            vnode.component!.subTree = subTree
+          }
         } else if (shapeFlag & ShapeFlags.TELEPORT) {
           if (domType !== DOMNodeTypes.COMMENT) {
             nextNode = onMismatch()
@@ -205,6 +234,7 @@ export function createHydrationFunctions(
               vnode as TeleportVNode,
               parentComponent,
               parentSuspense,
+              slotScopeIds,
               optimized,
               rendererInternals,
               hydrateChildren
@@ -217,6 +247,7 @@ export function createHydrationFunctions(
             parentComponent,
             parentSuspense,
             isSVGContainer(parentNode(node)!),
+            slotScopeIds,
             optimized,
             rendererInternals,
             hydrateNode
@@ -238,31 +269,55 @@ export function createHydrationFunctions(
     vnode: VNode,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
+    slotScopeIds: string[] | null,
     optimized: boolean
   ) => {
     optimized = optimized || !!vnode.dynamicChildren
-    const { props, patchFlag, shapeFlag, dirs } = vnode
+    const { type, props, patchFlag, shapeFlag, dirs } = vnode
+    // #4006 for form elements with non-string v-model value bindings
+    // e.g. <option :value="obj">, <input type="checkbox" :true-value="1">
+    const forcePatchValue = (type === 'input' && dirs) || type === 'option'
     // skip props & children if this is hoisted static nodes
-    if (patchFlag !== PatchFlags.HOISTED) {
+    // #5405 in dev, always hydrate children for HMR
+    if (__DEV__ || forcePatchValue || patchFlag !== PatchFlags.HOISTED) {
       if (dirs) {
         invokeDirectiveHook(vnode, null, parentComponent, 'created')
       }
       // props
       if (props) {
         if (
+          forcePatchValue ||
           !optimized ||
-          (patchFlag & PatchFlags.FULL_PROPS ||
-            patchFlag & PatchFlags.HYDRATE_EVENTS)
+          patchFlag & (PatchFlags.FULL_PROPS | PatchFlags.HYDRATE_EVENTS)
         ) {
           for (const key in props) {
-            if (!isReservedProp(key) && isOn(key)) {
-              patchProp(el, key, null, props[key])
+            if (
+              (forcePatchValue && key.endsWith('value')) ||
+              (isOn(key) && !isReservedProp(key))
+            ) {
+              patchProp(
+                el,
+                key,
+                null,
+                props[key],
+                false,
+                undefined,
+                parentComponent
+              )
             }
           }
         } else if (props.onClick) {
           // Fast path for click listeners (which is most often) to avoid
           // iterating through props.
-          patchProp(el, 'onClick', null, props.onClick)
+          patchProp(
+            el,
+            'onClick',
+            null,
+            props.onClick,
+            false,
+            undefined,
+            parentComponent
+          )
         }
       }
       // vnode / directive hooks
@@ -291,6 +346,7 @@ export function createHydrationFunctions(
           el,
           parentComponent,
           parentSuspense,
+          slotScopeIds,
           optimized
         )
         let hasWarned = false
@@ -313,7 +369,9 @@ export function createHydrationFunctions(
           hasMismatch = true
           __DEV__ &&
             warn(
-              `Hydration text content mismatch in <${vnode.type as string}>:\n` +
+              `Hydration text content mismatch in <${
+                vnode.type as string
+              }>:\n` +
                 `- Client: ${el.textContent}\n` +
                 `- Server: ${vnode.children as string}`
             )
@@ -330,6 +388,7 @@ export function createHydrationFunctions(
     container: Element,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
+    slotScopeIds: string[] | null,
     optimized: boolean
   ): Node | null => {
     optimized = optimized || !!parentVNode.dynamicChildren
@@ -346,8 +405,11 @@ export function createHydrationFunctions(
           vnode,
           parentComponent,
           parentSuspense,
+          slotScopeIds,
           optimized
         )
+      } else if (vnode.type === Text && !vnode.children) {
+        continue
       } else {
         hasMismatch = true
         if (__DEV__ && !hasWarned) {
@@ -365,7 +427,8 @@ export function createHydrationFunctions(
           null,
           parentComponent,
           parentSuspense,
-          isSVGContainer(container)
+          isSVGContainer(container),
+          slotScopeIds
         )
       }
     }
@@ -377,8 +440,16 @@ export function createHydrationFunctions(
     vnode: VNode,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
+    slotScopeIds: string[] | null,
     optimized: boolean
   ) => {
+    const { slotScopeIds: fragmentSlotScopeIds } = vnode
+    if (fragmentSlotScopeIds) {
+      slotScopeIds = slotScopeIds
+        ? slotScopeIds.concat(fragmentSlotScopeIds)
+        : fragmentSlotScopeIds
+    }
+
     const container = parentNode(node)!
     const next = hydrateChildren(
       nextSibling(node)!,
@@ -386,6 +457,7 @@ export function createHydrationFunctions(
       container,
       parentComponent,
       parentSuspense,
+      slotScopeIds,
       optimized
     )
     if (next && isComment(next) && next.data === ']') {
@@ -405,6 +477,7 @@ export function createHydrationFunctions(
     vnode: VNode,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
+    slotScopeIds: string[] | null,
     isFragment: boolean
   ): Node | null => {
     hasMismatch = true
@@ -417,8 +490,8 @@ export function createHydrationFunctions(
         node.nodeType === DOMNodeTypes.TEXT
           ? `(text)`
           : isComment(node) && node.data === '['
-            ? `(start of fragment)`
-            : ``
+          ? `(start of fragment)`
+          : ``
       )
     vnode.el = null
 
@@ -446,7 +519,8 @@ export function createHydrationFunctions(
       next,
       parentComponent,
       parentSuspense,
-      isSVGContainer(container)
+      isSVGContainer(container),
+      slotScopeIds
     )
     return next
   }

@@ -4,9 +4,11 @@ import {
   Component,
   ref,
   nextTick,
-  Suspense
+  Suspense,
+  KeepAlive
 } from '../src'
 import { createApp, nodeOps, serializeInner } from '@vue/runtime-test'
+import { onActivated } from '../src/components/KeepAlive'
 
 const timeout = (n: number = 0) => new Promise(r => setTimeout(r, n))
 
@@ -662,7 +664,7 @@ describe('api: defineAsyncComponent', () => {
         })
     )
 
-    const fooRef = ref()
+    const fooRef = ref<any>(null)
     const toggle = ref(true)
     const root = nodeOps.createElement('div')
     createApp({
@@ -696,5 +698,147 @@ describe('api: defineAsyncComponent', () => {
     await nextTick()
     expect(serializeInner(root)).toBe('resolved')
     expect(fooRef.value.id).toBe('foo')
+  })
+
+  // #3188
+  test('the forwarded template ref should always exist when doing multi patching', async () => {
+    let resolve: (comp: Component) => void
+    const Foo = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r as any
+        })
+    )
+
+    const fooRef = ref<any>(null)
+    const toggle = ref(true)
+    const updater = ref(0)
+
+    const root = nodeOps.createElement('div')
+    createApp({
+      render: () =>
+        toggle.value ? [h(Foo, { ref: fooRef }), updater.value] : null
+    }).mount(root)
+
+    expect(serializeInner(root)).toBe('<!---->0')
+    expect(fooRef.value).toBe(null)
+
+    resolve!({
+      data() {
+        return {
+          id: 'foo'
+        }
+      },
+      render: () => 'resolved'
+    })
+
+    await timeout()
+    expect(serializeInner(root)).toBe('resolved0')
+    expect(fooRef.value.id).toBe('foo')
+
+    updater.value++
+    await nextTick()
+    expect(serializeInner(root)).toBe('resolved1')
+    expect(fooRef.value.id).toBe('foo')
+
+    toggle.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe('<!---->')
+    expect(fooRef.value).toBe(null)
+  })
+
+  test('vnode hooks on async wrapper', async () => {
+    let resolve: (comp: Component) => void
+    const Foo = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r as any
+        })
+    )
+    const updater = ref(0)
+
+    const vnodeHooks = {
+      onVnodeBeforeMount: jest.fn(),
+      onVnodeMounted: jest.fn(),
+      onVnodeBeforeUpdate: jest.fn(),
+      onVnodeUpdated: jest.fn(),
+      onVnodeBeforeUnmount: jest.fn(),
+      onVnodeUnmounted: jest.fn()
+    }
+
+    const toggle = ref(true)
+
+    const root = nodeOps.createElement('div')
+    createApp({
+      render: () => (toggle.value ? [h(Foo, vnodeHooks), updater.value] : null)
+    }).mount(root)
+
+    expect(serializeInner(root)).toBe('<!---->0')
+
+    resolve!({
+      data() {
+        return {
+          id: 'foo'
+        }
+      },
+      render: () => 'resolved'
+    })
+
+    await timeout()
+    expect(serializeInner(root)).toBe('resolved0')
+    expect(vnodeHooks.onVnodeBeforeMount).toHaveBeenCalledTimes(1)
+    expect(vnodeHooks.onVnodeMounted).toHaveBeenCalledTimes(1)
+
+    updater.value++
+    await nextTick()
+    expect(serializeInner(root)).toBe('resolved1')
+    expect(vnodeHooks.onVnodeBeforeUpdate).toHaveBeenCalledTimes(1)
+    expect(vnodeHooks.onVnodeUpdated).toHaveBeenCalledTimes(1)
+
+    toggle.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe('<!---->')
+    expect(vnodeHooks.onVnodeBeforeUnmount).toHaveBeenCalledTimes(1)
+    expect(vnodeHooks.onVnodeUnmounted).toHaveBeenCalledTimes(1)
+  })
+
+  test('with KeepAlive', async () => {
+    const spy = jest.fn()
+    let resolve: (comp: Component) => void
+
+    const Foo = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r as any
+        })
+    )
+
+    const Bar = defineAsyncComponent(() => Promise.resolve(() => 'Bar'))
+
+    const toggle = ref(true)
+    const root = nodeOps.createElement('div')
+    const app = createApp({
+      render: () => h(KeepAlive, [toggle.value ? h(Foo) : h(Bar)])
+    })
+
+    app.mount(root)
+    await nextTick()
+
+    resolve!({
+      setup() {
+        onActivated(() => {
+          spy()
+        })
+        return () => 'Foo'
+      }
+    })
+
+    await timeout()
+    expect(serializeInner(root)).toBe('Foo')
+    expect(spy).toBeCalledTimes(1)
+
+    toggle.value = false
+    await timeout()
+    expect(serializeInner(root)).toBe('Bar')
   })
 })

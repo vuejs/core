@@ -17,7 +17,7 @@ const triggerEvent = (type: string, el: Element) => {
 const withVModel = (node: VNode, arg: any, mods?: any) =>
   withDirectives(node, [[vModelDynamic, arg, '', mods]])
 
-const setValue = function(this: any, value: any) {
+const setValue = function (this: any, value: any) {
   this.value = value
 }
 
@@ -68,6 +68,37 @@ describe('vModel', () => {
     data.value = undefined
     await nextTick()
     expect(input.value).toEqual('')
+  })
+
+  it('should work with number input', async () => {
+    const component = defineComponent({
+      data() {
+        return { value: null }
+      },
+      render() {
+        return [
+          withVModel(
+            h('input', {
+              type: 'number',
+              'onUpdate:modelValue': setValue.bind(this)
+            }),
+            this.value
+          )
+        ]
+      }
+    })
+    render(h(component), root)
+
+    const input = root.querySelector('input')!
+    const data = root._vnode.component.data
+    expect(input.value).toEqual('')
+    expect(input.type).toEqual('number')
+
+    input.value = 1
+    triggerEvent('input', input)
+    await nextTick()
+    expect(typeof data.value).toEqual('number')
+    expect(data.value).toEqual(1)
   })
 
   it('should work with multiple listeners', async () => {
@@ -170,7 +201,7 @@ describe('vModel', () => {
   it('should support modifiers', async () => {
     const component = defineComponent({
       data() {
-        return { number: null, trim: null, lazy: null }
+        return { number: null, trim: null, lazy: null, trimNumber: null }
       },
       render() {
         return [
@@ -200,6 +231,19 @@ describe('vModel', () => {
           ),
           withVModel(
             h('input', {
+              class: 'trim-number',
+              'onUpdate:modelValue': (val: any) => {
+                this.trimNumber = val
+              }
+            }),
+            this.trimNumber,
+            {
+              trim: true,
+              number: true
+            }
+          ),
+          withVModel(
+            h('input', {
               class: 'lazy',
               'onUpdate:modelValue': (val: any) => {
                 this.lazy = val
@@ -217,6 +261,7 @@ describe('vModel', () => {
 
     const number = root.querySelector('.number')
     const trim = root.querySelector('.trim')
+    const trimNumber = root.querySelector('.trim-number')
     const lazy = root.querySelector('.lazy')
     const data = root._vnode.component.data
 
@@ -229,6 +274,16 @@ describe('vModel', () => {
     triggerEvent('input', trim)
     await nextTick()
     expect(data.trim).toEqual('hello, world')
+
+    trimNumber.value = '    1    '
+    triggerEvent('input', trimNumber)
+    await nextTick()
+    expect(data.trimNumber).toEqual(1)
+
+    trimNumber.value = '    +01.2    '
+    triggerEvent('input', trimNumber)
+    await nextTick()
+    expect(data.trimNumber).toEqual(1.2)
 
     lazy.value = 'foo'
     triggerEvent('change', lazy)
@@ -984,7 +1039,7 @@ describe('vModel', () => {
     bar.selected = false
     data.value = new Set([{ foo: 1 }, { bar: 1 }])
     await nextTick()
-    // whithout looseEqual, here is different from Array
+    // without looseEqual, here is different from Array
     expect(foo.selected).toEqual(false)
     expect(bar.selected).toEqual(false)
   })

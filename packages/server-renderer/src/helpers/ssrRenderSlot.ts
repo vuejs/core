@@ -1,5 +1,6 @@
 import { ComponentInternalInstance, Slots } from 'vue'
 import { Props, PushFn, renderVNodeChildren, SSRBufferItem } from '../render'
+import { isArray } from '@vue/shared'
 
 export type SSRSlots = Record<string, SSRSlot>
 export type SSRSlot = (
@@ -15,13 +16,34 @@ export function ssrRenderSlot(
   slotProps: Props,
   fallbackRenderFn: (() => void) | null,
   push: PushFn,
-  parentComponent: ComponentInternalInstance
+  parentComponent: ComponentInternalInstance,
+  slotScopeId?: string
 ) {
   // template-compiled slots are always rendered as fragments
   push(`<!--[-->`)
+  ssrRenderSlotInner(
+    slots,
+    slotName,
+    slotProps,
+    fallbackRenderFn,
+    push,
+    parentComponent,
+    slotScopeId
+  )
+  push(`<!--]-->`)
+}
+
+export function ssrRenderSlotInner(
+  slots: Slots | SSRSlots,
+  slotName: string,
+  slotProps: Props,
+  fallbackRenderFn: (() => void) | null,
+  push: PushFn,
+  parentComponent: ComponentInternalInstance,
+  slotScopeId?: string
+) {
   const slotFn = slots[slotName]
   if (slotFn) {
-    const scopeId = parentComponent && parentComponent.type.__scopeId
     const slotBuffer: SSRBufferItem[] = []
     const bufferedPush = (item: SSRBufferItem) => {
       slotBuffer.push(item)
@@ -30,11 +52,11 @@ export function ssrRenderSlot(
       slotProps,
       bufferedPush,
       parentComponent,
-      scopeId ? ` ${scopeId}-s` : ``
+      slotScopeId ? ' ' + slotScopeId : ''
     )
-    if (Array.isArray(ret)) {
+    if (isArray(ret)) {
       // normal slot
-      renderVNodeChildren(push, ret, parentComponent)
+      renderVNodeChildren(push, ret, parentComponent, slotScopeId)
     } else {
       // ssr slot.
       // check if the slot renders all comments, in which case use the fallback
@@ -58,7 +80,6 @@ export function ssrRenderSlot(
   } else if (fallbackRenderFn) {
     fallbackRenderFn()
   }
-  push(`<!--]-->`)
 }
 
 const commentRE = /^<!--.*-->$/

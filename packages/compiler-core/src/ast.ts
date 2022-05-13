@@ -5,13 +5,13 @@ import {
   CREATE_SLOTS,
   RENDER_LIST,
   OPEN_BLOCK,
-  CREATE_BLOCK,
   FRAGMENT,
-  CREATE_VNODE,
-  WITH_DIRECTIVES
+  WITH_DIRECTIVES,
+  WITH_MEMO
 } from './runtimeHelpers'
 import { PropsExpression } from './transforms/transformElement'
 import { ImportItem, TransformContext } from './transform'
+import { getVNodeBlockHelper, getVNodeHelper } from './utils'
 
 // Vue template is a platform-agnostic superset of HTML (syntax only).
 // More namespaces like SVG and MathML are declared by platform specific
@@ -108,7 +108,10 @@ export interface RootNode extends Node {
   cached: number
   temps: number
   ssrHelpers?: symbol[]
-  codegenNode?: TemplateChildNode | JSChildNode | BlockStatement | undefined
+  codegenNode?: TemplateChildNode | JSChildNode | BlockStatement
+
+  // v2 compat only
+  filters?: string[]
 }
 
 export type ElementNode =
@@ -133,6 +136,7 @@ export interface PlainElementNode extends BaseElementNode {
     | VNodeCall
     | SimpleExpressionNode // when hoisted
     | CacheExpression // when cached by v-once
+    | MemoExpression // when cached by v-memo
     | undefined
   ssrCodegenNode?: TemplateLiteral
 }
@@ -142,6 +146,7 @@ export interface ComponentNode extends BaseElementNode {
   codegenNode:
     | VNodeCall
     | CacheExpression // when cached by v-once
+    | MemoExpression // when cached by v-memo
     | undefined
   ssrCodegenNode?: CallExpression
 }
@@ -216,6 +221,7 @@ export interface SimpleExpressionNode extends Node {
    * the identifiers declared inside the function body.
    */
   identifiers?: string[]
+  isHandlerKey?: boolean
 }
 
 export interface InterpolationNode extends Node {
@@ -231,13 +237,15 @@ export interface CompoundExpressionNode extends Node {
     | InterpolationNode
     | TextNode
     | string
-    | symbol)[]
+    | symbol
+  )[]
 
   /**
    * an expression parsed as the params of a function will track
    * the identifiers declared inside the function body.
    */
   identifiers?: string[]
+  isHandlerKey?: boolean
 }
 
 export interface IfNode extends Node {
@@ -251,6 +259,7 @@ export interface IfBranchNode extends Node {
   condition: ExpressionNode | undefined // else
   children: TemplateChildNode[]
   userKey?: AttributeNode | DirectiveNode
+  isTemplateIf?: boolean
 }
 
 export interface ForNode extends Node {
@@ -284,12 +293,14 @@ export interface VNodeCall extends Node {
     | TemplateTextChildNode // single text child
     | SlotsExpression // component slots
     | ForRenderListExpression // v-for fragment call
+    | SimpleExpressionNode // hoisted
     | undefined
   patchFlag: string | undefined
-  dynamicProps: string | undefined
+  dynamicProps: string | SimpleExpressionNode | undefined
   directives: DirectiveArguments | undefined
   isBlock: boolean
   disableTracking: boolean
+  isComponent: boolean
 }
 
 // JS Node Types ---------------------------------------------------------------
@@ -319,7 +330,8 @@ export interface CallExpression extends Node {
     | JSChildNode
     | SSRCodegenNode
     | TemplateChildNode
-    | TemplateChildNode[])[]
+    | TemplateChildNode[]
+  )[]
 }
 
 export interface ObjectExpression extends Node {
@@ -335,7 +347,7 @@ export interface Property extends Node {
 
 export interface ArrayExpression extends Node {
   type: NodeTypes.JS_ARRAY_EXPRESSION
-  elements: Array<string | JSChildNode>
+  elements: Array<string | Node>
 }
 
 export interface FunctionExpression extends Node {
@@ -349,6 +361,11 @@ export interface FunctionExpression extends Node {
    * withScopeId() wrapper
    */
   isSlot: boolean
+  /**
+   * __COMPAT__ only, indicates a slot function that should be excluded from
+   * the legacy $scopedSlots instance property.
+   */
+  isNonScopedSlot?: boolean
 }
 
 export interface ConditionalExpression extends Node {
@@ -364,6 +381,15 @@ export interface CacheExpression extends Node {
   index: number
   value: JSChildNode
   isVNode: boolean
+}
+
+export interface MemoExpression extends CallExpression {
+  callee: typeof WITH_MEMO
+  arguments: [ExpressionNode, MemoFactory, string, string]
+}
+
+interface MemoFactory extends FunctionExpression {
+  returns: BlockCodegenNode
 }
 
 // SSR-specific Node Types -----------------------------------------------------
@@ -416,8 +442,8 @@ export interface DirectiveArguments extends ArrayExpression {
 }
 
 export interface DirectiveArgumentNode extends ArrayExpression {
-  elements:  // dir, exp, arg, modifiers
-    | [string]
+  elements: // dir, exp, arg, modifiers
+  | [string]
     | [string, ExpressionNode]
     | [string, ExpressionNode, ExpressionNode]
     | [string, ExpressionNode, ExpressionNode, ObjectExpression]
@@ -426,8 +452,8 @@ export interface DirectiveArgumentNode extends ArrayExpression {
 // renderSlot(...)
 export interface RenderSlotCall extends CallExpression {
   callee: typeof RENDER_SLOT
-  arguments:  // $slots, name, props, fallback
-    | [string, string | ExpressionNode]
+  arguments: // $slots, name, props, fallback
+  | [string, string | ExpressionNode]
     | [string, string | ExpressionNode, PropsExpression]
     | [
         string,
@@ -490,8 +516,8 @@ export interface DynamicSlotFnProperty extends Property {
 export type BlockCodegenNode = VNodeCall | RenderSlotCall
 
 export interface IfConditionalExpression extends ConditionalExpression {
-  consequent: BlockCodegenNode
-  alternate: BlockCodegenNode | IfConditionalExpression
+  consequent: BlockCodegenNode | MemoExpression
+  alternate: BlockCodegenNode | IfConditionalExpression | MemoExpression
 }
 
 export interface ForCodegenNode extends VNodeCall {
@@ -552,14 +578,15 @@ export function createVNodeCall(
   directives?: VNodeCall['directives'],
   isBlock: VNodeCall['isBlock'] = false,
   disableTracking: VNodeCall['disableTracking'] = false,
+  isComponent: VNodeCall['isComponent'] = false,
   loc = locStub
 ): VNodeCall {
   if (context) {
     if (isBlock) {
       context.helper(OPEN_BLOCK)
-      context.helper(CREATE_BLOCK)
+      context.helper(getVNodeBlockHelper(context.inSSR, isComponent))
     } else {
-      context.helper(CREATE_VNODE)
+      context.helper(getVNodeHelper(context.inSSR, isComponent))
     }
     if (directives) {
       context.helper(WITH_DIRECTIVES)
@@ -576,6 +603,7 @@ export function createVNodeCall(
     directives,
     isBlock,
     disableTracking,
+    isComponent,
     loc
   }
 }
@@ -616,7 +644,7 @@ export function createObjectProperty(
 
 export function createSimpleExpression(
   content: SimpleExpressionNode['content'],
-  isStatic: SimpleExpressionNode['isStatic'],
+  isStatic: SimpleExpressionNode['isStatic'] = false,
   loc: SourceLocation = locStub,
   constType: ConstantTypes = ConstantTypes.NOT_CONSTANT
 ): SimpleExpressionNode {
@@ -667,7 +695,7 @@ export function createCallExpression<T extends CallExpression['callee']>(
     loc,
     callee,
     arguments: args
-  } as any
+  } as InferCodegenNodeType<T>
 }
 
 export function createFunctionExpression(

@@ -3,6 +3,7 @@ import {
   ConstantTypes,
   createCompoundExpression,
   createSimpleExpression,
+  ExpressionNode,
   NodeTransform,
   NodeTypes,
   SimpleExpressionNode
@@ -57,50 +58,60 @@ export const transformSrcset: NodeTransform = (
             return { url, descriptor }
           })
 
-          // for data url need recheck url
+          // data urls contains comma after the encoding so we need to re-merge
+          // them
           for (let i = 0; i < imageCandidates.length; i++) {
-            if (imageCandidates[i].url.trim().startsWith('data:')) {
+            const { url } = imageCandidates[i]
+            if (isDataUrl(url)) {
               imageCandidates[i + 1].url =
-                imageCandidates[i].url + ',' + imageCandidates[i + 1].url
+                url + ',' + imageCandidates[i + 1].url
               imageCandidates.splice(i, 1)
             }
           }
 
-          // When srcset does not contain any relative URLs, skip transforming
-          if (
-            !options.includeAbsolute &&
-            !imageCandidates.some(({ url }) => isRelativeUrl(url))
-          ) {
+          const shouldProcessUrl = (url: string) => {
+            return (
+              !isExternalUrl(url) &&
+              !isDataUrl(url) &&
+              (options.includeAbsolute || isRelativeUrl(url))
+            )
+          }
+          // When srcset does not contain any qualified URLs, skip transforming
+          if (!imageCandidates.some(({ url }) => shouldProcessUrl(url))) {
             return
           }
 
           if (options.base) {
             const base = options.base
             const set: string[] = []
-            imageCandidates.forEach(({ url, descriptor }) => {
+            let needImportTransform = false
+
+            imageCandidates.forEach(candidate => {
+              let { url, descriptor } = candidate
               descriptor = descriptor ? ` ${descriptor}` : ``
-              if (isRelativeUrl(url)) {
-                set.push((path.posix || path).join(base, url) + descriptor)
+              if (url[0] === '.') {
+                candidate.url = (path.posix || path).join(base, url)
+                set.push(candidate.url + descriptor)
+              } else if (shouldProcessUrl(url)) {
+                needImportTransform = true
               } else {
                 set.push(url + descriptor)
               }
             })
-            attr.value.content = set.join(', ')
-            return
+
+            if (!needImportTransform) {
+              attr.value.content = set.join(', ')
+              return
+            }
           }
 
           const compoundExpression = createCompoundExpression([], attr.loc)
           imageCandidates.forEach(({ url, descriptor }, index) => {
-            if (
-              !isExternalUrl(url) &&
-              !isDataUrl(url) &&
-              (options.includeAbsolute || isRelativeUrl(url))
-            ) {
+            if (shouldProcessUrl(url)) {
               const { path } = parseUrl(url)
               let exp: SimpleExpressionNode
               if (path) {
-                const importsArray = Array.from(context.imports)
-                const existingImportsIndex = importsArray.findIndex(
+                const existingImportsIndex = context.imports.findIndex(
                   i => i.path === path
                 )
                 if (existingImportsIndex > -1) {
@@ -108,16 +119,16 @@ export const transformSrcset: NodeTransform = (
                     `_imports_${existingImportsIndex}`,
                     false,
                     attr.loc,
-                    ConstantTypes.CAN_HOIST
+                    ConstantTypes.CAN_STRINGIFY
                   )
                 } else {
                   exp = createSimpleExpression(
-                    `_imports_${importsArray.length}`,
+                    `_imports_${context.imports.length}`,
                     false,
                     attr.loc,
-                    ConstantTypes.CAN_HOIST
+                    ConstantTypes.CAN_STRINGIFY
                   )
-                  context.imports.add({ exp, path })
+                  context.imports.push({ exp, path })
                 }
                 compoundExpression.children.push(exp)
               }
@@ -126,28 +137,31 @@ export const transformSrcset: NodeTransform = (
                 `"${url}"`,
                 false,
                 attr.loc,
-                ConstantTypes.CAN_HOIST
+                ConstantTypes.CAN_STRINGIFY
               )
               compoundExpression.children.push(exp)
             }
             const isNotLast = imageCandidates.length - 1 > index
             if (descriptor && isNotLast) {
-              compoundExpression.children.push(` + '${descriptor}, ' + `)
+              compoundExpression.children.push(` + ' ${descriptor}, ' + `)
             } else if (descriptor) {
-              compoundExpression.children.push(` + '${descriptor}'`)
+              compoundExpression.children.push(` + ' ${descriptor}'`)
             } else if (isNotLast) {
               compoundExpression.children.push(` + ', ' + `)
             }
           })
 
-          const hoisted = context.hoist(compoundExpression)
-          hoisted.constType = ConstantTypes.CAN_HOIST
+          let exp: ExpressionNode = compoundExpression
+          if (context.hoistStatic) {
+            exp = context.hoist(compoundExpression)
+            exp.constType = ConstantTypes.CAN_STRINGIFY
+          }
 
           node.props[index] = {
             type: NodeTypes.DIRECTIVE,
             name: 'bind',
             arg: createSimpleExpression('srcset', true, attr.loc),
-            exp: hoisted,
+            exp,
             modifiers: [],
             loc: attr.loc
           }

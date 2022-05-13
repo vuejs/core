@@ -26,7 +26,7 @@ describe('compiler: v-once transform', () => {
     expect(root.helpers).toContain(SET_BLOCK_TRACKING)
     expect(root.codegenNode).toMatchObject({
       type: NodeTypes.JS_CACHE_EXPRESSION,
-      index: 1,
+      index: 0,
       value: {
         type: NodeTypes.VNODE_CALL,
         tag: `"div"`
@@ -41,7 +41,7 @@ describe('compiler: v-once transform', () => {
     expect(root.helpers).toContain(SET_BLOCK_TRACKING)
     expect((root.children[0] as any).children[0].codegenNode).toMatchObject({
       type: NodeTypes.JS_CACHE_EXPRESSION,
-      index: 1,
+      index: 0,
       value: {
         type: NodeTypes.VNODE_CALL,
         tag: `"div"`
@@ -56,7 +56,7 @@ describe('compiler: v-once transform', () => {
     expect(root.helpers).toContain(SET_BLOCK_TRACKING)
     expect((root.children[0] as any).children[0].codegenNode).toMatchObject({
       type: NodeTypes.JS_CACHE_EXPRESSION,
-      index: 1,
+      index: 0,
       value: {
         type: NodeTypes.VNODE_CALL,
         tag: `_component_Comp`
@@ -71,13 +71,20 @@ describe('compiler: v-once transform', () => {
     expect(root.helpers).toContain(SET_BLOCK_TRACKING)
     expect((root.children[0] as any).children[0].codegenNode).toMatchObject({
       type: NodeTypes.JS_CACHE_EXPRESSION,
-      index: 1,
+      index: 0,
       value: {
         type: NodeTypes.JS_CALL_EXPRESSION,
         callee: RENDER_SLOT
       }
     })
     expect(generate(root).code).toMatchSnapshot()
+  })
+
+  // v-once inside v-once should not be cached
+  test('inside v-once', () => {
+    const root = transformWithOnce(`<div v-once><div v-once/></div>`)
+    expect(root.cached).not.toBe(2)
+    expect(root.cached).toBe(1)
   })
 
   // cached nodes should be ignored by hoistStatic transform
@@ -90,7 +97,7 @@ describe('compiler: v-once transform', () => {
     expect(root.hoists.length).toBe(0)
     expect((root.children[0] as any).children[0].codegenNode).toMatchObject({
       type: NodeTypes.JS_CACHE_EXPRESSION,
-      index: 1,
+      index: 0,
       value: {
         type: NodeTypes.VNODE_CALL,
         tag: `"div"`

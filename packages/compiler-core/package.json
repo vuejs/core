@@ -1,6 +1,6 @@
 {
   "name": "@vue/compiler-core",
-  "version": "3.0.5",
+  "version": "3.2.33",
   "description": "@vue/compiler-core",
   "main": "index.js",
   "module": "dist/compiler-core.esm-bundler.js",
@@ -11,6 +11,7 @@
   ],
   "buildOptions": {
     "name": "VueCompilerCore",
+    "compat": true,
     "formats": [
       "esm-bundler",
       "cjs"
@@ -18,7 +19,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vuejs/vue-next.git",
+    "url": "git+https://github.com/vuejs/core.git",
     "directory": "packages/compiler-core"
   },
   "keywords": [
@@ -27,14 +28,16 @@
   "author": "Evan You",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/vuejs/vue-next/issues"
+    "url": "https://github.com/vuejs/core/issues"
   },
-  "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/compiler-core#readme",
+  "homepage": "https://github.com/vuejs/core/tree/main/packages/compiler-core#readme",
   "dependencies": {
-    "@vue/shared": "3.0.5",
-    "@babel/parser": "^7.12.0",
-    "@babel/types": "^7.12.0",
-    "estree-walker": "^2.0.1",
+    "@vue/shared": "3.2.33",
+    "@babel/parser": "^7.16.4",
+    "estree-walker": "^2.0.2",
     "source-map": "^0.6.1"
+  },
+  "devDependencies": {
+    "@babel/types": "^7.16.0"
   }
 }
