@@ -43,12 +43,13 @@ export class ComputedRefImpl<T> {
     isSSR: boolean
   ) {
     this.effect = new ReactiveEffect(getter, (_c) => {
-      if (_c) {
-        this._computedsToAskDirty.push(_c)
-        triggerRefValue(this, this)
-      }
-      else if (!this._dirty) {
-        this._dirty = true
+      if (!this._dirty) {
+        if (_c) {
+          this._computedsToAskDirty.push(_c)
+        }
+        else {
+          this._dirty = true
+        }
         triggerRefValue(this, this)
       }
     })
