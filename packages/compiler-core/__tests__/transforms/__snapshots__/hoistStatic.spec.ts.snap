@@ -211,6 +211,30 @@ return function render(_ctx, _cache) {
 }"
 `;
 
+exports[`compiler: hoistStatic transform prefixIdentifiers should NOT hoist SVG with directives 1`] = `
+"const _Vue = Vue
+const { createElementVNode: _createElementVNode } = _Vue
+
+const _hoisted_1 = /*#__PURE__*/_createElementVNode(\\"path\\", { d: \\"M2,3H5.5L12\\" }, null, -1 /* HOISTED */)
+const _hoisted_2 = [
+  _hoisted_1
+]
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { createElementVNode: _createElementVNode, resolveDirective: _resolveDirective, openBlock: _openBlock, createElementBlock: _createElementBlock, withDirectives: _withDirectives } = _Vue
+
+    const _directive_foo = _resolveDirective(\\"foo\\")
+
+    return (_openBlock(), _createElementBlock(\\"div\\", null, [
+      _withDirectives((_openBlock(), _createElementBlock(\\"svg\\", null, _hoisted_2)), [
+        [_directive_foo]
+      ])
+    ]))
+  }
+}"
+`;
+
 exports[`compiler: hoistStatic transform prefixIdentifiers should NOT hoist elements with cached handlers + other bindings 1`] = `
 "import { normalizeClass as _normalizeClass, createElementVNode as _createElementVNode, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 
