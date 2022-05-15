@@ -352,7 +352,10 @@ export function triggerEffects(
   for (const effect of effects) {
     if (effect.computed) {
       triggerEffect(effect, debuggerEventExtraInfo)
-    } else {
+    }
+  }
+  for (const effect of effects) {
+    if (!effect.computed) {
       triggerEffect(effect, debuggerEventExtraInfo)
     }
   }
