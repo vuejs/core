@@ -15,6 +15,11 @@ import { ComputedRefImpl } from './computed'
 // Conceptually, it's easier to think of a dependency as a Dep class
 // which maintains a Set of subscribers, but we simply store them as
 // raw Sets to reduce memory overhead.
+
+// 建立目标对象 - 字段 - 副作用函数（WeakMap - Map - Set）之间的关联关系
+// 对象 - 字段  WeakMap<target, key>
+// 字段 - dep   Map<key, dep>
+// dep 副作用函数集合   Set
 type KeyToDepMap = Map<any, Dep>
 const targetMap = new WeakMap<any, KeyToDepMap>()
 
@@ -45,6 +50,7 @@ export type DebuggerEventExtraInfo = {
   oldTarget?: Map<any, any> | Set<any>
 }
 
+// 当前副作用函数
 export let activeEffect: ReactiveEffect | undefined
 
 export const ITERATE_KEY = Symbol(__DEV__ ? 'iterate' : '')
@@ -83,6 +89,28 @@ export class ReactiveEffect<T = any> {
     recordEffectScope(this, scope)
   }
 
+  // parent 非常关键，用于解决 effect 嵌套的问题，如何控制全局变量 activeEffect
+  // 实际场景 - 组件嵌套（渲染函数就是在 effect 中执行的）
+
+  // 示例
+  // const data = { foo: true, bar: true, baz: true };
+  // const obj = new Proxy(data, {
+  //   /* ... */
+  // });
+  // let tmp1, tmp2, tmp3;
+  // effect(function fn1() {
+  //   console.log("fn1");
+  //   effect(function fn2() {
+  //     console.log("fn2");
+  //     effect(function fn3() {
+  //       console.log("fn3");
+  //       tmp3 = obj.baz;
+  //     });
+  //     tmp2 = obj.bar;
+  //   });
+  //   tmp1 = obj.foo;
+  // });
+
   run() {
     if (!this.active) {
       return this.fn()
@@ -96,6 +124,7 @@ export class ReactiveEffect<T = any> {
       parent = parent.parent
     }
     try {
+      // 通过 parent 表达嵌套关系
       this.parent = activeEffect
       activeEffect = this
       shouldTrack = true
@@ -115,6 +144,7 @@ export class ReactiveEffect<T = any> {
 
       trackOpBit = 1 << --effectTrackDepth
 
+      // 内层的副作用函数执行完成后，将当前副作用函数设置为外层的副作用函数
       activeEffect = this.parent
       shouldTrack = lastShouldTrack
       this.parent = undefined
@@ -139,6 +169,8 @@ export class ReactiveEffect<T = any> {
   }
 }
 
+// 清理副作用函数
+// 分支切换（三元表达式），遗留的副作用函数会导致不必要的更新
 function cleanupEffect(effect: ReactiveEffect) {
   const { deps } = effect
   if (deps.length) {
@@ -167,6 +199,7 @@ export interface ReactiveEffectRunner<T = any> {
   effect: ReactiveEffect
 }
 
+// 注册副作用函数
 export function effect<T = any>(
   fn: () => T,
   options?: ReactiveEffectOptions
@@ -181,6 +214,7 @@ export function effect<T = any>(
     if (options.scope) recordEffectScope(_effect, options.scope)
   }
   if (!options || !options.lazy) {
+    // 是否立即执行副作用函数
     _effect.run()
   }
   const runner = _effect.run.bind(_effect) as ReactiveEffectRunner
@@ -210,6 +244,7 @@ export function resetTracking() {
   shouldTrack = last === undefined ? true : last
 }
 
+// 收集副作用函数（依赖）
 export function track(target: object, type: TrackOpTypes, key: unknown) {
   if (shouldTrack && activeEffect) {
     let depsMap = targetMap.get(target)
@@ -245,7 +280,9 @@ export function trackEffects(
   }
 
   if (shouldTrack) {
+    // 将当前副作用函数添加到被代理对象 key 的依赖集合 dep 中
     dep.add(activeEffect!)
+    // 副作用函数的 deps 属性存储所有包含当前副作用函数的依赖集合
     activeEffect!.deps.push(dep)
     if (__DEV__ && activeEffect!.onTrack) {
       activeEffect!.onTrack({
@@ -256,6 +293,7 @@ export function trackEffects(
   }
 }
 
+// 触发副作用函数的执行
 export function trigger(
   target: object,
   type: TriggerOpTypes,
@@ -366,10 +404,19 @@ function triggerEffect(
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
   if (effect !== activeEffect || effect.allowRecurse) {
+    // 无限递归场景
+    // 示例
+    // const data = { foo: 1 };
+    // const obj = new Proxy(data, {
+    //   /* ... */
+    // });
+    // effect(obj.foo++);
+    // 如果 trigger 触发执行的副作用函数（effect）与当前正在执行的副作用函数（activeEffect）相同，则不触发执行
     if (__DEV__ && effect.onTrigger) {
       effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
     }
     if (effect.scheduler) {
+      // 调度执行 - 决定副作用函数执行的时机、次数以及方式
       effect.scheduler()
     } else {
       effect.run()

@@ -36,6 +36,7 @@ export type SchedulerJobs = SchedulerJob | SchedulerJob[]
 let isFlushing = false
 let isFlushPending = false
 
+// 调度任务队列
 const queue: SchedulerJob[] = []
 let flushIndex = 0
 
@@ -97,6 +98,7 @@ export function queueJob(job: SchedulerJob) {
     job !== currentPreFlushParentJob
   ) {
     if (job.id == null) {
+      // 将任务添加到队列中
       queue.push(job)
     } else {
       queue.splice(findInsertionIndex(job.id), 0, job)
@@ -108,6 +110,7 @@ export function queueJob(job: SchedulerJob) {
 function queueFlush() {
   if (!isFlushing && !isFlushPending) {
     isFlushPending = true
+    // 在微任务队列中刷新调度任务队列
     currentFlushPromise = resolvedPromise.then(flushJobs)
   }
 }
@@ -257,6 +260,7 @@ function flushJobs(seen?: CountMap) {
           continue
         }
         // console.log(`running:`, job.id)
+        // 执行调度任务
         callWithErrorHandling(job, null, ErrorCodes.SCHEDULER)
       }
     }

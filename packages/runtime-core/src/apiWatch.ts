@@ -155,6 +155,8 @@ export function watch<
 ): WatchStopHandle
 
 // implementation
+// 具体实现
+// 观测响应式数据，当数据发生变化时通知并执行相应的回调函数
 export function watch<T = any, Immediate extends Readonly<boolean> = false>(
   source: T | WatchSource<T>,
   cb: any,
@@ -167,6 +169,7 @@ export function watch<T = any, Immediate extends Readonly<boolean> = false>(
         `supports \`watch(source, cb, options?) signature.`
     )
   }
+  // 调用内部方法
   return doWatch(source as any, cb, options)
 }
 
@@ -204,13 +207,28 @@ function doWatch(
   let forceTrigger = false
   let isMultiSource = false
 
+  // const x = ref(0)
+  // const y = ref(0)
   if (isRef(source)) {
+    // watch ref
+    // watch(x, (newX) => {
+    //   console.log(`x is ${newX}`);
+    // });
     getter = () => source.value
     forceTrigger = isShallow(source)
   } else if (isReactive(source)) {
+    // 不能监听单个 reactive 对象属性
+    // const obj = reactive({ count: 0 })
+    // watch(obj.count, (count) => {
+    //   console.log(`count is: ${count}`);
+    // });
     getter = () => source
     deep = true
   } else if (isArray(source)) {
+    // watch array source
+    // watch([x, () => y.value], ([newX, newY]) => {
+    //   console.log(`x is ${newX} and y is ${newY}`);
+    // });
     isMultiSource = true
     forceTrigger = source.some(isReactive)
     getter = () =>
@@ -226,6 +244,13 @@ function doWatch(
         }
       })
   } else if (isFunction(source)) {
+    // watch getter
+    // watch(
+    //   () => x.value + y.value,
+    //   (sum) => {
+    //     console.log(`sum of x + y is: ${sum}`);
+    //   }
+    // );
     if (cb) {
       // getter with cb
       getter = () =>
@@ -269,9 +294,10 @@ function doWatch(
 
   if (cb && deep) {
     const baseGetter = getter
+    // 递归读取对象上的任意属性，从而当任意属性发生变化时都能够触发回调函数执行
     getter = () => traverse(baseGetter())
   }
-
+  // cleanup 用于存储用户注册的过期回调
   let cleanup: () => void
   let onCleanup: OnCleanup = (fn: () => void) => {
     cleanup = effect.onStop = () => {
@@ -303,6 +329,7 @@ function doWatch(
     }
     if (cb) {
       // watch(source, cb)
+      // 获取副作用函数的新值
       const newValue = effect.run()
       if (
         deep ||
@@ -317,15 +344,19 @@ function doWatch(
           isCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance))
       ) {
         // cleanup before running cb again
+        // 在执行回调函数之前先调用过期回调函数
         if (cleanup) {
           cleanup()
         }
+        // 执行回调函数
         callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
           newValue,
           // pass undefined as the old value when it's changed for the first time
           oldValue === INITIAL_WATCHER_VALUE ? undefined : oldValue,
+          // 
           onCleanup
         ])
+        // 更新旧值
         oldValue = newValue
       }
     } else {
@@ -339,7 +370,10 @@ function doWatch(
   job.allowRecurse = !!cb
 
   let scheduler: EffectScheduler
+  // flush 指定调度函数（scheduler）的执行时机
+  // pre post 指的是组件更新前后
   if (flush === 'sync') {
+    // 同步执行
     scheduler = job as any // the scheduler function gets called directly
   } else if (flush === 'post') {
     scheduler = () => queuePostRenderEffect(job, instance && instance.suspense)
@@ -347,6 +381,7 @@ function doWatch(
     // default: 'pre'
     scheduler = () => queuePreFlushCb(job)
   }
+
 
   const effect = new ReactiveEffect(getter, scheduler)
 
@@ -360,6 +395,7 @@ function doWatch(
     if (immediate) {
       job()
     } else {
+      // 第一次执行副作用函数拿到旧值
       oldValue = effect.run()
     }
   } else if (flush === 'post') {

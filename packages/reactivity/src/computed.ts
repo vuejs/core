@@ -41,9 +41,13 @@ export class ComputedRefImpl<T> {
     isReadonly: boolean,
     isSSR: boolean
   ) {
+    // 基于副作用函数实现计算属性
     this.effect = new ReactiveEffect(getter, () => {
       if (!this._dirty) {
+        // getter 函数依赖的响应式数据变化时重置 _dirty
+        // 这样计算属性就会重新计算值并更新缓存
         this._dirty = true
+        // 当计算属性依赖的响应式数据变化时，手动调用 trigger 函数出发响应
         triggerRefValue(this)
       }
     })
@@ -52,11 +56,15 @@ export class ComputedRefImpl<T> {
     this[ReactiveFlags.IS_READONLY] = isReadonly
   }
 
+  // 访问器属性
   get value() {
     // the computed ref may get wrapped by other proxies e.g. readonly() #3376
     const self = toRaw(this)
+    // 当读取 value 属性时，手动调用 track 函数进行追踪
     trackRefValue(self)
     if (self._dirty || !self._cacheable) {
+      // _dirty 表示是否要重新计算
+      // 配合 _value 实现计算属性的缓存
       self._dirty = false
       self._value = self.effect.run()!
     }
