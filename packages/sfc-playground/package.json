@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "vue": "3.2.33",
-    "@vue/repl": "^1.0.0",
+    "@vue/repl": "^1.1.0",
     "file-saver": "^2.0.5",
     "jszip": "^3.6.0"
   }

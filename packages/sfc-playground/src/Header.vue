@@ -8,7 +8,8 @@ import Download from './icons/Download.vue'
 import GitHub from './icons/GitHub.vue'
 
 // @ts-ignore
-const { store } = defineProps(['store'])
+const props = defineProps(['store', 'dev'])
+const { store } = props
 
 const currentCommit = __COMMIT__
 const activeVersion = ref(`@${currentCommit}`)
@@ -112,6 +113,14 @@ async function fetchVersions(): Promise<string[]> {
           </li>
         </ul>
       </div>
+      <button
+        title="Toggle development production mode"
+        class="toggle-dev"
+        :class="{ dev }"
+        @click="$emit('toggle-dev')"
+      >
+        {{ dev ? 'DEV' : 'PROD' }}
+      </button>
       <button title="Toggle dark mode" class="toggle-dark" @click="toggleDark">
         <Sun class="light" />
         <Moon class="dark" />
@@ -126,13 +135,10 @@ async function fetchVersions(): Promise<string[]> {
       >
         <Download />
       </button>
-      <button
-          title="View on GitHub"
-          class="github"
-      >
+      <button title="View on GitHub" class="github">
         <a
-            href="https://github.com/vuejs/core/tree/main/packages/sfc-playground"
-            target="_blank"
+          href="https://github.com/vuejs/core/tree/main/packages/sfc-playground"
+          target="_blank"
         >
           <GitHub />
         </a>
@@ -226,6 +232,16 @@ h1 img {
   position: absolute;
   right: 0;
   top: 22px;
+}
+
+.toggle-dev {
+  color: #f07178;
+  font-size: 12px;
+  line-height: var(--nav-height);
+}
+
+.toggle-dev.dev {
+  color: #c3e88d;
 }
 
 .toggle-dark svg {
