@@ -68,7 +68,7 @@ export type VNodeTypes =
 export type VNodeRef =
   | string
   | Ref
-  | ((ref: object | null, refs: Record<string, any>) => void)
+  | ((ref: any, refs: Record<string, any>) => void)
 
 export type VNodeNormalizedRefAtom = {
   i: ComponentInternalInstance
