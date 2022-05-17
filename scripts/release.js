@@ -80,7 +80,7 @@ async function main() {
   step('\nRunning tests...')
   if (!skipTests && !isDryRun) {
     await run(bin('jest'), ['--clearCache'])
-    await run('pnpm', ['test', '--', '--bail'])
+    await run('pnpm', ['test', '--bail'])
   } else {
     console.log(`(skipped)`)
   }
@@ -92,7 +92,7 @@ async function main() {
   // build all packages with types
   step('\nBuilding all packages...')
   if (!skipBuild && !isDryRun) {
-    await run('pnpm', ['run', 'build', '--', '--release'])
+    await run('pnpm', ['run', 'build', '--release'])
     // test generated dts files
     step('\nVerifying type declarations...')
     await run('pnpm', ['run', 'test-dts-only'])
