@@ -202,7 +202,7 @@ function doCompileTemplate({
     cacheHandlers: true,
     ssrCssVars:
       ssr && ssrCssVars && ssrCssVars.length
-        ? genCssVarsFromList(ssrCssVars, shortId, isProd)
+        ? genCssVarsFromList(ssrCssVars, shortId, isProd, true)
         : '',
     scopeId: scoped ? longId : undefined,
     slotted,

@@ -18,10 +18,13 @@ const cssVarRE = /v-bind\s*\(((?:[^)(]+|\((?:[^)(]+|\([^)(]*\))*\))*)\)/g
 export function genCssVarsFromList(
   vars: string[],
   id: string,
-  isProd: boolean
+  isProd: boolean,
+  isSSR = false
 ): string {
   return `{\n  ${vars
-    .map(key => `"${genVarName(id, key, isProd)}": (${key})`)
+    .map(
+      key => `"${isSSR ? `--` : ``}${genVarName(id, key, isProd)}": (${key})`
+    )
     .join(',\n  ')}\n}`
 }
 
