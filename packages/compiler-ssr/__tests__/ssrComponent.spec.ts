@@ -17,6 +17,20 @@ describe('ssr: components', () => {
     `)
   })
 
+  // event listeners should still be passed
+  test('event listeners', () => {
+    expect(compile(`<foo @click="bar" />`).code).toMatchInlineSnapshot(`
+      "const { resolveComponent: _resolveComponent, mergeProps: _mergeProps } = require(\\"vue\\")
+      const { ssrRenderComponent: _ssrRenderComponent } = require(\\"vue/server-renderer\\")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        const _component_foo = _resolveComponent(\\"foo\\")
+
+        _push(_ssrRenderComponent(_component_foo, _mergeProps({ onClick: _ctx.bar }, _attrs), null, _parent))
+      }"
+    `)
+  })
+
   test('dynamic component', () => {
     expect(compile(`<component is="foo" prop="b" />`).code)
       .toMatchInlineSnapshot(`
