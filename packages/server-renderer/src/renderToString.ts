@@ -70,7 +70,7 @@ export async function renderToString(
   return result
 }
 
-async function resolveTeleports(context: SSRContext) {
+export async function resolveTeleports(context: SSRContext) {
   if (context.__teleportBuffers) {
     context.teleports = context.teleports || {}
     for (const key in context.__teleportBuffers) {

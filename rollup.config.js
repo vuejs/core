@@ -84,6 +84,7 @@ function createConfig(format, output, plugins = []) {
     process.env.__DEV__ === 'false' || /\.prod\.js$/.test(output.file)
   const isBundlerESMBuild = /esm-bundler/.test(format)
   const isBrowserESMBuild = /esm-browser/.test(format)
+  const isServerRenderer = name === 'server-renderer'
   const isNodeBuild = format === 'cjs'
   const isGlobalBuild = /global/.test(format)
   const isCompatPackage = pkg.name === '@vue/compat'
@@ -106,6 +107,7 @@ function createConfig(format, output, plugins = []) {
     cacheRoot: path.resolve(__dirname, 'node_modules/.rts2_cache'),
     tsconfigOverride: {
       compilerOptions: {
+        target: isServerRenderer || isNodeBuild ? 'es2020' : 'es2015',
         sourceMap: output.sourcemap,
         declaration: shouldEmitDeclarations,
         declarationMap: shouldEmitDeclarations

@@ -1,6 +1,6 @@
 {
   "private": true,
-  "version": "3.2.33",
+  "version": "3.2.34-beta.1",
   "packageManager": "pnpm@7.1.0",
   "scripts": {
     "dev": "node scripts/dev.js",
@@ -8,7 +8,7 @@
     "size": "run-s size-global size-baseline",
     "size-global": "node scripts/build.js vue runtime-dom -f global -p",
     "size-baseline": "node scripts/build.js runtime-dom runtime-core reactivity shared -f esm-bundler && cd packages/size-check && vite build && node brotli",
-    "lint": "eslint --ext .ts packages/*/src/**.ts",
+    "lint": "eslint --ext .ts packages/*/{src,__tests__}/**.ts",
     "format": "prettier --write --parser typescript \"packages/**/*.ts?(x)\"",
     "test": "run-s \"test-unit {@}\" \"test-e2e {@}\"",
     "test-unit": "jest --filter ./scripts/filter-unit.js",
@@ -70,6 +70,7 @@
     "enquirer": "^2.3.2",
     "esbuild": "^0.14.35",
     "eslint": "^7.7.0",
+    "eslint-plugin-jest": "26.1.5",
     "execa": "^4.0.2",
     "fs-extra": "^9.0.1",
     "jest": "^27.1.0",

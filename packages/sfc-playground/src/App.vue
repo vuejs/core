@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import Header from './Header.vue'
 import { Repl, ReplStore } from '@vue/repl'
-import { watchEffect } from 'vue'
+import { ref, watchEffect } from 'vue'
 
 const setVH = () => {
   document.documentElement.style.setProperty('--vh', window.innerHeight + `px`)
@@ -9,8 +9,11 @@ const setVH = () => {
 window.addEventListener('resize', setVH)
 setVH()
 
+const hash = location.hash.slice(1)
+const useDevMode = ref(hash.startsWith('__DEV__'))
+
 const store = new ReplStore({
-  serializedState: location.hash.slice(1),
+  serializedState: useDevMode.value ? hash.slice(7) : hash,
   defaultVueRuntimeURL: import.meta.env.PROD
     ? `${location.origin}/vue.runtime.esm-browser.js`
     : `${location.origin}/src/vue-dev-proxy`
@@ -19,16 +22,28 @@ const store = new ReplStore({
 // enable experimental features
 const sfcOptions = {
   script: {
+    inlineTemplate: !useDevMode.value,
     reactivityTransform: true
   }
 }
 
 // persist state
-watchEffect(() => history.replaceState({}, '', store.serialize()))
+watchEffect(() => {
+  const newHash = store
+    .serialize()
+    .replace(/^#/, useDevMode.value ? `#__DEV__` : `#`)
+  history.replaceState({}, '', newHash)
+})
+
+function toggleDevMode() {
+  const dev = (useDevMode.value = !useDevMode.value)
+  sfcOptions.script.inlineTemplate = !dev
+  store.setFiles(store.getFiles())
+}
 </script>
 
 <template>
-  <Header :store="store" />
+  <Header :store="store" :dev="useDevMode" @toggle-dev="toggleDevMode" />
   <Repl
     @keydown.ctrl.s.prevent
     @keydown.meta.s.prevent
