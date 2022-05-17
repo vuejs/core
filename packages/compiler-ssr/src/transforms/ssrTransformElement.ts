@@ -89,6 +89,8 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
         node,
         context,
         node.props,
+        false /* isComponent */,
+        false /* isDynamicComponent */,
         true /* ssr */
       )
       if (props || directives.length) {

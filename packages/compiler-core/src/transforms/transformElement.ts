@@ -121,7 +121,13 @@ export const transformElement: NodeTransform = (node, context) => {
 
     // props
     if (props.length > 0) {
-      const propsBuildResult = buildProps(node, context)
+      const propsBuildResult = buildProps(
+        node,
+        context,
+        undefined,
+        isComponent,
+        isDynamicComponent
+      )
       vnodeProps = propsBuildResult.props
       patchFlag = propsBuildResult.patchFlag
       dynamicPropNames = propsBuildResult.dynamicPropNames
@@ -380,6 +386,8 @@ export function buildProps(
   node: ElementNode,
   context: TransformContext,
   props: ElementNode['props'] = node.props,
+  isComponent: boolean,
+  isDynamicComponent: boolean,
   ssr = false
 ): {
   props: PropsExpression | undefined
@@ -389,7 +397,6 @@ export function buildProps(
   shouldUseBlock: boolean
 } {
   const { tag, loc: elementLoc, children } = node
-  const isComponent = node.tagType === ElementTypes.COMPONENT
   let properties: ObjectExpression['properties'] = []
   const mergeArgs: PropsExpression[] = []
   const runtimeDirectives: DirectiveNode[] = []
@@ -411,8 +418,8 @@ export function buildProps(
       const name = key.content
       const isEventHandler = isOn(name)
       if (
-        !isComponent &&
         isEventHandler &&
+        (!isComponent || isDynamicComponent) &&
         // omit the flag for click handlers because hydration gives click
         // dedicated fast path.
         name.toLowerCase() !== 'onclick' &&

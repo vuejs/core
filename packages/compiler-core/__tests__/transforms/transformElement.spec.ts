@@ -1053,6 +1053,21 @@ describe('compiler: element transform', () => {
         genFlagText([PatchFlags.PROPS, PatchFlags.HYDRATE_EVENTS])
       )
     })
+
+    // #5870
+    test('HYDRATE_EVENTS on dynamic component', () => {
+      const { node } = parseWithElementTransform(
+        `<component :is="foo" @input="foo" />`,
+        {
+          directiveTransforms: {
+            on: transformOn
+          }
+        }
+      )
+      expect(node.patchFlag).toBe(
+        genFlagText([PatchFlags.PROPS, PatchFlags.HYDRATE_EVENTS])
+      )
+    })
   })
 
   describe('dynamic component', () => {

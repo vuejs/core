@@ -34,7 +34,8 @@ import {
   TRANSITION_GROUP,
   CREATE_VNODE,
   CallExpression,
-  JSChildNode
+  JSChildNode,
+  RESOLVE_DYNAMIC_COMPONENT
 } from '@vue/compiler-dom'
 import { SSR_RENDER_COMPONENT, SSR_RENDER_VNODE } from '../runtimeHelpers'
 import {
@@ -83,6 +84,8 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
   }
 
   const component = resolveComponentType(node, context, true /* ssr */)
+  const isDynamicComponent =
+    isObject(component) && component.callee === RESOLVE_DYNAMIC_COMPONENT
   componentTypeMap.set(node, component)
 
   if (isSymbol(component)) {
@@ -116,7 +119,13 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
     if (node.props.length) {
       // note we are not passing ssr: true here because for components, v-on
       // handlers should still be passed
-      const { props, directives } = buildProps(node, context)
+      const { props, directives } = buildProps(
+        node,
+        context,
+        undefined,
+        true,
+        isDynamicComponent
+      )
       if (props || directives.length) {
         propsExp = buildSSRProps(props, directives, context)
       }
