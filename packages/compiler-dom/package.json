@@ -1,6 +1,6 @@
 {
   "name": "@vue/compiler-dom",
-  "version": "3.2.33",
+  "version": "3.2.34-beta.1",
   "description": "@vue/compiler-dom",
   "main": "index.js",
   "module": "dist/compiler-dom.esm-bundler.js",
@@ -37,7 +37,7 @@
   },
   "homepage": "https://github.com/vuejs/core/tree/main/packages/compiler-dom#readme",
   "dependencies": {
-    "@vue/shared": "3.2.33",
-    "@vue/compiler-core": "3.2.33"
+    "@vue/shared": "3.2.34-beta.1",
+    "@vue/compiler-core": "3.2.34-beta.1"
   }
 }
