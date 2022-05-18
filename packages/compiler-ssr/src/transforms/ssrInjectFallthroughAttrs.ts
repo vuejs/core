@@ -11,8 +11,11 @@ import {
   isBuiltInType
 } from '@vue/compiler-dom'
 
+const filterChild = (node: ParentNode) =>
+  node.children.filter(n => n.type !== NodeTypes.COMMENT)
+
 const hasSingleChild = (node: ParentNode): boolean =>
-  node.children.filter(n => n.type !== NodeTypes.COMMENT).length === 1
+  filterChild(node).length === 1
 
 export const ssrInjectFallthroughAttrs: NodeTransform = (node, context) => {
   // _attrs is provided as a function argument.
@@ -28,10 +31,13 @@ export const ssrInjectFallthroughAttrs: NodeTransform = (node, context) => {
     (isBuiltInType(node.tag, 'Transition') ||
       isBuiltInType(node.tag, 'KeepAlive'))
   ) {
-    if (hasSingleChild(node)) {
-      injectFallthroughAttrs(node.children[0])
+    const rootChildren = filterChild(context.root)
+    if (rootChildren.length === 1 && rootChildren[0] === node) {
+      if (hasSingleChild(node)) {
+        injectFallthroughAttrs(node.children[0])
+      }
+      return
     }
-    return
   }
 
   const parent = context.parent
