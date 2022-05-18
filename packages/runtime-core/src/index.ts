@@ -217,6 +217,7 @@ export {
   ComponentOptionsWithArrayProps,
   ComponentCustomOptions,
   ComponentOptionsBase,
+  ComponentProvideOptions,
   RenderFunction,
   MethodOptions,
   ComputedOptions,
