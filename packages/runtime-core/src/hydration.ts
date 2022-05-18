@@ -207,6 +207,15 @@ export function createHydrationFunctions(
             ? locateClosingAsyncAnchor(node)
             : nextSibling(node)
 
+          // #4293 teleport as component root
+          if (
+            nextNode &&
+            isComment(nextNode) &&
+            nextNode.data === 'teleport end'
+          ) {
+            nextNode = nextSibling(nextNode)
+          }
+
           // #3787
           // if component is async, it may get moved / unmounted before its
           // inner component is loaded, so we need to give it a placeholder
