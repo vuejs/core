@@ -366,6 +366,35 @@ describe('SSR hydration', () => {
     )
   })
 
+  test('Teleport (as component root)', () => {
+    const teleportContainer = document.createElement('div')
+    teleportContainer.id = 'teleport4'
+    teleportContainer.innerHTML = `hello<!---->`
+    document.body.appendChild(teleportContainer)
+
+    const wrapper = {
+      render() {
+        return h(Teleport, { to: '#teleport4' }, ['hello'])
+      }
+    }
+
+    const { vnode, container } = mountWithHydration(
+      '<div><!--teleport start--><!--teleport end--><div></div></div>',
+      () => h('div', [h(wrapper), h('div')])
+    )
+    expect(vnode.el).toBe(container.firstChild)
+    // component el
+    const wrapperVNode = (vnode as any).children[0]
+    const tpStart = container.firstChild?.firstChild
+    const tpEnd = tpStart?.nextSibling
+    expect(wrapperVNode.el).toBe(tpStart)
+    expect(wrapperVNode.component.subTree.el).toBe(tpStart)
+    expect(wrapperVNode.component.subTree.anchor).toBe(tpEnd)
+    // next node hydrate properly
+    const nextVNode = (vnode as any).children[1]
+    expect(nextVNode.el).toBe(container.firstChild?.lastChild)
+  })
+
   // compile SSR + client render fn from the same template & hydrate
   test('full compiler integration', async () => {
     const mounted: string[] = []
