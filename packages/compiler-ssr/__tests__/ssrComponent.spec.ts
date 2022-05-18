@@ -280,46 +280,92 @@ describe('ssr: components', () => {
       `)
     })
 
-    test('built-in fallthroughs', () => {
-      expect(compile(`<transition><div/></transition>`).code)
-        .toMatchInlineSnapshot(`
-        "const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
+    describe('built-in fallthroughs', () => {
+      test('transition', () => {
+        expect(compile(`<transition><div/></transition>`).code)
+          .toMatchInlineSnapshot(`
+                  "const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent, _attrs) {
-          _push(\`<div\${_ssrRenderAttrs(_attrs)}></div>\`)
-        }"
-      `)
+                  return function ssrRender(_ctx, _push, _parent, _attrs) {
+                    _push(\`<div\${_ssrRenderAttrs(_attrs)}></div>\`)
+                  }"
+              `)
+      })
 
-      // should inject attrs if root with coomments
-      expect(compile(`<!--root--><transition><div/></transition>`).code)
-        .toMatchInlineSnapshot(`
-        "const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
+      test('keep-alive', () => {
+        expect(compile(`<keep-alive><foo/></keep-alive>`).code)
+          .toMatchInlineSnapshot(`
+                  "const { resolveComponent: _resolveComponent } = require(\\"vue\\")
+                  const { ssrRenderComponent: _ssrRenderComponent } = require(\\"vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent, _attrs) {
-          _push(\`<!--[--><!--root--><div\${_ssrRenderAttrs(_attrs)}></div><!--]-->\`)
-        }"
-      `)
+                  return function ssrRender(_ctx, _push, _parent, _attrs) {
+                    const _component_foo = _resolveComponent(\\"foo\\")
 
-      // should not inject attrs if not root
-      expect(compile(`<div/><transition><div/></transition>`).code)
-        .toMatchInlineSnapshot(`
-        "
-        return function ssrRender(_ctx, _push, _parent, _attrs) {
-          _push(\`<!--[--><div></div><div></div><!--]-->\`)
-        }"
-      `)
+                    _push(_ssrRenderComponent(_component_foo, _attrs, null, _parent))
+                  }"
+              `)
+      })
 
-      expect(compile(`<keep-alive><foo/></keep-alive>`).code)
-        .toMatchInlineSnapshot(`
-        "const { resolveComponent: _resolveComponent } = require(\\"vue\\")
-        const { ssrRenderComponent: _ssrRenderComponent } = require(\\"vue/server-renderer\\")
+      test('should inject attrs if root with coomments', () => {
+        expect(compile(`<!--root--><transition><div/></transition>`).code)
+          .toMatchInlineSnapshot(`
+                  "const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent, _attrs) {
-          const _component_foo = _resolveComponent(\\"foo\\")
+                  return function ssrRender(_ctx, _push, _parent, _attrs) {
+                    _push(\`<!--[--><!--root--><div\${_ssrRenderAttrs(_attrs)}></div><!--]-->\`)
+                  }"
+              `)
+      })
 
-          _push(_ssrRenderComponent(_component_foo, _attrs, null, _parent))
-        }"
-      `)
+      test('should not inject attrs if not root', () => {
+        expect(compile(`<div/><transition><div/></transition>`).code)
+          .toMatchInlineSnapshot(`
+                  "
+                  return function ssrRender(_ctx, _push, _parent, _attrs) {
+                    _push(\`<!--[--><div></div><div></div><!--]-->\`)
+                  }"
+              `)
+      })
+
+      // #5352
+      test('should push marker string if is slot root', () => {
+        expect(
+          compile(`<foo><transition><div v-if="false"/></transition></foo>`)
+            .code
+        ).toMatchInlineSnapshot(`
+          "const { resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock, createCommentVNode: _createCommentVNode, Transition: _Transition, createVNode: _createVNode } = require(\\"vue\\")
+          const { ssrRenderComponent: _ssrRenderComponent } = require(\\"vue/server-renderer\\")
+
+          return function ssrRender(_ctx, _push, _parent, _attrs) {
+            const _component_foo = _resolveComponent(\\"foo\\")
+
+            _push(_ssrRenderComponent(_component_foo, _attrs, {
+              default: _withCtx((_, _push, _parent, _scopeId) => {
+                if (_push) {
+                  _push(\`\`)
+                  if (false) {
+                    _push(\`<div\${_scopeId}></div>\`)
+                  } else {
+                    _push(\`<!---->\`)
+                  }
+                } else {
+                  return [
+                    _createVNode(_Transition, null, {
+                      default: _withCtx(() => [
+                        false
+                          ? (_openBlock(), _createBlock(\\"div\\", { key: 0 }))
+                          : _createCommentVNode(\\"v-if\\", true)
+                      ]),
+                      _: 1 /* STABLE */
+                    })
+                  ]
+                }
+              }),
+              _: 1 /* STABLE */
+            }, _parent))
+          }"
+        `)
+      })
     })
 
     // transition-group should flatten and concat its children fragments into

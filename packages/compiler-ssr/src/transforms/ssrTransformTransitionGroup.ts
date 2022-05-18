@@ -14,7 +14,7 @@ export function ssrProcessTransitionGroup(
       context.pushStringPart(`>`)
 
       processChildren(
-        node.children,
+        node,
         context,
         false,
         /**
@@ -31,11 +31,11 @@ export function ssrProcessTransitionGroup(
     } else {
       // static tag
       context.pushStringPart(`<${tag.value!.content}>`)
-      processChildren(node.children, context, false, true)
+      processChildren(node, context, false, true)
       context.pushStringPart(`</${tag.value!.content}>`)
     }
   } else {
     // fragment
-    processChildren(node.children, context, true, true)
+    processChildren(node, context, true, true)
   }
 }

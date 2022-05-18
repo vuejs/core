@@ -428,7 +428,7 @@ export function ssrProcessElement(
   if (rawChildren) {
     context.pushStringPart(rawChildren)
   } else if (node.children.length) {
-    processChildren(node.children, context)
+    processChildren(node, context)
   }
 
   if (!isVoidTag(node.tag)) {

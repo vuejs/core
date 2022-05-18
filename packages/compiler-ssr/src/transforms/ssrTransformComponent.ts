@@ -58,7 +58,10 @@ import { buildSSRProps } from './ssrTransformElement'
 // pass and complete them in the 2nd pass.
 const wipMap = new WeakMap<ComponentNode, WIPSlotEntry[]>()
 
+const WIP_SLOT = Symbol()
+
 interface WIPSlotEntry {
+  type: typeof WIP_SLOT
   fn: FunctionExpression
   children: TemplateChildNode[]
   vnodeBranch: ReturnStatement
@@ -143,6 +146,7 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
         loc
       )
       wipEntries.push({
+        type: WIP_SLOT,
         fn,
         children,
         // also collect the corresponding vnode branch built earlier
@@ -182,7 +186,8 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
 
 export function ssrProcessComponent(
   node: ComponentNode,
-  context: SSRTransformContext
+  context: SSRTransformContext,
+  parent: { children: TemplateChildNode[] }
 ) {
   const component = componentTypeMap.get(node)!
   if (!node.ssrCodegenNode) {
@@ -196,13 +201,19 @@ export function ssrProcessComponent(
     } else {
       // real fall-through: Transition / KeepAlive
       // just render its children.
-      processChildren(node.children, context)
+      // #5352: if is at root level of a slot, push an empty string.
+      // this does not affect the final output, but avoids all-comment slot
+      // content of being treated as empty by ssrRenderSlot().
+      if ((parent as WIPSlotEntry).type === WIP_SLOT) {
+        context.pushStringPart(``)
+      }
+      processChildren(node, context)
     }
   } else {
     // finish up slot function expressions from the 1st pass.
     const wipEntries = wipMap.get(node) || []
     for (let i = 0; i < wipEntries.length; i++) {
-      const { fn, children, vnodeBranch } = wipEntries[i]
+      const { fn, vnodeBranch } = wipEntries[i]
       // For each slot, we generate two branches: one SSR-optimized branch and
       // one normal vnode-based branch. The branches are taken based on the
       // presence of the 2nd `_push` argument (which is only present if the slot
@@ -210,7 +221,7 @@ export function ssrProcessComponent(
       fn.body = createIfStatement(
         createSimpleExpression(`_push`, false),
         processChildrenAsStatement(
-          children,
+          wipEntries[i],
           context,
           false,
           true /* withSlotScopeId */
