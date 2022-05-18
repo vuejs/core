@@ -291,6 +291,94 @@ describe('vModel', () => {
     expect(data.lazy).toEqual('foo')
   })
 
+  it('should work with range', async () => {
+    const component = defineComponent({
+      data() {
+        return { value: 25 }
+      },
+      render() {
+        return [
+          withVModel(
+            h('input', {
+              type: 'range',
+              min: 1,
+              max: 100,
+              class: 'foo',
+              'onUpdate:modelValue': setValue.bind(this)
+            }),
+            this.value,
+            {
+              number: true
+            }
+          ),
+          withVModel(
+            h('input', {
+              type: 'range',
+              min: 1,
+              max: 100,
+              class: 'bar',
+              'onUpdate:modelValue': setValue.bind(this)
+            }),
+            this.value,
+            {
+              lazy: true
+            }
+          )
+        ]
+      }
+    })
+    render(h(component), root)
+
+    const foo = root.querySelector('.foo')
+    const bar = root.querySelector('.bar')
+    const data = root._vnode.component.data
+
+    foo.value = 20
+    triggerEvent('input', foo)
+    await nextTick()
+    expect(data.value).toEqual(20)
+
+    foo.value = 200
+    triggerEvent('input', foo)
+    await nextTick()
+    expect(data.value).toEqual(100)
+
+    foo.value = -1
+    triggerEvent('input', foo)
+    await nextTick()
+    expect(data.value).toEqual(1)
+
+    bar.value = 30
+    triggerEvent('change', bar)
+    await nextTick()
+    expect(data.value).toEqual('30')
+
+    bar.value = 200
+    triggerEvent('change', bar)
+    await nextTick()
+    expect(data.value).toEqual('100')
+
+    bar.value = -1
+    triggerEvent('change', bar)
+    await nextTick()
+    expect(data.value).toEqual('1')
+
+    data.value = 60
+    await nextTick()
+    expect(foo.value).toEqual('60')
+    expect(bar.value).toEqual('60')
+
+    data.value = -1
+    await nextTick()
+    expect(foo.value).toEqual('1')
+    expect(bar.value).toEqual('1')
+
+    data.value = 200
+    await nextTick()
+    expect(foo.value).toEqual('100')
+    expect(bar.value).toEqual('100')
+  })
+
   it('should work with checkbox', async () => {
     const component = defineComponent({
       data() {
