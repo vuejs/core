@@ -1771,6 +1771,8 @@ function inferRuntimeType(
       return ['Number']
     case 'TSBooleanKeyword':
       return ['Boolean']
+    case 'TSUndefinedKeyword':
+      return ['undefined']
     case 'TSObjectKeyword':
       return ['Object']
     case 'TSTypeLiteral':
