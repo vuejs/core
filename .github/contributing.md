@@ -19,6 +19,8 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 
 - Checkout a topic branch from a base branch, e.g. `main`, and merge back against that branch.
 
+- [Make sure to tick the "Allow edits from maintainers" box](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/allowing-changes-to-a-pull-request-branch-created-from-a-fork). This allows us to directly make minor edits / refactors and saves a lot of time.
+
 - If adding a new feature:
 
   - Add accompanying test case.
