@@ -2,6 +2,7 @@ import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import { isArray, NOOP } from '@vue/shared'
 import { ComponentInternalInstance, getComponentName } from './component'
 import { warn } from './warning'
+import { WRAPPEDHOOK } from './apiLifecycle'
 
 export interface SchedulerJob extends Function {
   id?: number
@@ -46,6 +47,11 @@ let preFlushIndex = 0
 const pendingPostFlushCbs: SchedulerJob[] = []
 let activePostFlushCbs: SchedulerJob[] | null = null
 let postFlushIndex = 0
+
+// only for Suspense when `<transition>` wrapped in `<suspense>`
+const pendingSuspenseFlushCbs: SchedulerJob[] = []
+let activeSuspenseFlushCbs: SchedulerJob[] | null = null
+let suspenseFlushIndex = 0
 
 const resolvedPromise = /*#__PURE__*/ Promise.resolve() as Promise<any>
 let currentFlushPromise: Promise<void> | null = null
@@ -149,6 +155,15 @@ export function queuePostFlushCb(cb: SchedulerJobs) {
   queueCb(cb, activePostFlushCbs, pendingPostFlushCbs, postFlushIndex)
 }
 
+export function queueSuspenseFlushCb(cb: SchedulerJobs) {
+  queueCb(
+    cb,
+    activeSuspenseFlushCbs,
+    pendingSuspenseFlushCbs,
+    suspenseFlushIndex
+  )
+}
+
 export function flushPreFlushCbs(
   seen?: CountMap,
   parentJob: SchedulerJob | null = null
@@ -219,6 +234,36 @@ export function flushPostFlushCbs(seen?: CountMap) {
   }
 }
 
+export function flushSuspenseFlushCbs(seen?: CountMap) {
+  if (pendingSuspenseFlushCbs.length) {
+    const deduped = [...new Set(pendingSuspenseFlushCbs)]
+    pendingSuspenseFlushCbs.length = 0
+
+    activeSuspenseFlushCbs = deduped
+    if (__DEV__) {
+      seen = seen || new Map()
+    }
+
+    activeSuspenseFlushCbs.sort((a, b) => getId(a) - getId(b))
+
+    for (
+      suspenseFlushIndex = 0;
+      suspenseFlushIndex < activeSuspenseFlushCbs.length;
+      suspenseFlushIndex++
+    ) {
+      if (
+        __DEV__ &&
+        checkRecursiveUpdates(seen!, activeSuspenseFlushCbs[suspenseFlushIndex])
+      ) {
+        continue
+      }
+      activeSuspenseFlushCbs[suspenseFlushIndex]()
+    }
+    activeSuspenseFlushCbs = null
+    suspenseFlushIndex = 0
+  }
+}
+
 const getId = (job: SchedulerJob): number =>
   job.id == null ? Infinity : job.id
 
@@ -264,7 +309,13 @@ function flushJobs(seen?: CountMap) {
     flushIndex = 0
     queue.length = 0
 
-    flushPostFlushCbs(seen)
+    if (!pendingPostFlushCbs.find(n => (n as WRAPPEDHOOK)._isSuspense)) {
+      flushPostFlushCbs(seen)
+      flushSuspenseFlushCbs(seen)
+    } else {
+      queueSuspenseFlushCb(pendingPostFlushCbs)
+      pendingPostFlushCbs.length = 0
+    }
 
     isFlushing = false
     currentFlushPromise = null
