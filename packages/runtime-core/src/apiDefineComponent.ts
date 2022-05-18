@@ -42,7 +42,7 @@ export type DefineComponent<
   E extends EmitsOptions = {},
   EE extends string = string,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
-  RawOptions extends Record<string, any> = {},
+  RawOptions extends {} = {},
   PP = PublicProps,
   Props = Readonly<
     PropsOrPropOptions extends ComponentPropsOptions
@@ -122,7 +122,18 @@ export function defineComponent<
     E,
     EE,
     Provide
-  > = {}
+  > = ComponentOptionsWithoutProps<
+    Props,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    EE,
+    Provide
+  >
 >(
   options: Options &
     ComponentOptionsWithoutProps<
