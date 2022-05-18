@@ -25,7 +25,7 @@ const [_getNow, skipTimestampCheck] = /*#__PURE__*/ (() => {
       // if the low-res timestamp which is bigger than the event timestamp
       // (which is evaluated AFTER) it means the event is using a hi-res timestamp,
       // and we need to use the hi-res version for event listeners as well.
-      _getNow = () => performance.now()
+      _getNow = performance.now.bind(performance)
     }
     // #3485: Firefox <= 53 has incorrect Event.timeStamp implementation
     // and does not fire microtasks in between event propagation, so safe to exclude.
