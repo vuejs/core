@@ -42,7 +42,7 @@ export type DefineComponent<
   E extends EmitsOptions = {},
   EE extends string = string,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
-  RawOptions extends {} = {},
+  RawOptions extends Record<string, any> = {},
   PP = PublicProps,
   Props = Readonly<
     PropsOrPropOptions extends ComponentPropsOptions
@@ -111,7 +111,18 @@ export function defineComponent<
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
-  Options extends {} = {}
+  Options extends ComponentOptionsWithoutProps<
+    Props,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    EE,
+    Provide
+  > = {}
 >(
   options: Options &
     ComponentOptionsWithoutProps<
@@ -154,7 +165,29 @@ export function defineComponent<
   E extends EmitsOptions = Record<string, any>,
   EE extends string = string,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
-  Options extends {} = {}
+  Options extends ComponentOptionsWithArrayProps<
+    PropNames,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    EE,
+    Provide
+  > = ComponentOptionsWithArrayProps<
+    PropNames,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    EE,
+    Provide
+  >
 >(
   options: Options &
     ComponentOptionsWithArrayProps<
@@ -198,7 +231,29 @@ export function defineComponent<
   E extends EmitsOptions = Record<string, any>,
   EE extends string = string,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
-  Options extends {} = {}
+  Options extends ComponentOptionsWithObjectProps<
+    PropsOptions,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    EE,
+    Provide
+  > = ComponentOptionsWithObjectProps<
+    PropsOptions,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    EE,
+    Provide
+  >
 >(
   options: Options &
     ComponentOptionsWithObjectProps<
