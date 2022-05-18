@@ -26,10 +26,10 @@ describe('transition-group', () => {
         `<transition-group tag="ul"><div v-for="i in list"/></transition-group>`
       ).code
     ).toMatchInlineSnapshot(`
-      "const { ssrRenderList: _ssrRenderList } = require(\\"vue/server-renderer\\")
+      "const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderList: _ssrRenderList } = require(\\"vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _push(\`<ul>\`)
+        _push(\`<ul\${_ssrRenderAttrs(_attrs)}>\`)
         _ssrRenderList(_ctx.list, (i) => {
           _push(\`<div></div>\`)
         })
@@ -44,10 +44,14 @@ describe('transition-group', () => {
         `<transition-group :tag="someTag"><div v-for="i in list"/></transition-group>`
       ).code
     ).toMatchInlineSnapshot(`
-      "const { ssrRenderList: _ssrRenderList } = require(\\"vue/server-renderer\\")
+      "const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderList: _ssrRenderList } = require(\\"vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _push(\`<\${_ctx.someTag}>\`)
+        _push(\`<\${
+          _ctx.someTag
+        }\${
+          _ssrRenderAttrs(_attrs)
+        }>\`)
         _ssrRenderList(_ctx.list, (i) => {
           _push(\`<div></div>\`)
         })
@@ -82,6 +86,25 @@ describe('transition-group', () => {
           _push(\`<!---->\`)
         }
         _push(\`<!--]-->\`)
+      }"
+    `)
+  })
+
+  test('attribute fallthrough', () => {
+    expect(
+      compile(
+        `<transition-group tag="ul" class="red" id="ok">
+        </transition-group>`
+      ).code
+    ).toMatchInlineSnapshot(`
+      "const { mergeProps: _mergeProps } = require(\\"vue\\")
+      const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<ul\${_ssrRenderAttrs(_mergeProps({
+          class: \\"red\\",
+          id: \\"ok\\"
+        }, _attrs))}></ul>\`)
       }"
     `)
   })

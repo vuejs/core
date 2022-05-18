@@ -48,7 +48,10 @@ import {
   ssrProcessSuspense,
   ssrTransformSuspense
 } from './ssrTransformSuspense'
-import { ssrProcessTransitionGroup } from './ssrTransformTransitionGroup'
+import {
+  ssrProcessTransitionGroup,
+  ssrTransformTransitionGroup
+} from './ssrTransformTransitionGroup'
 import { isSymbol, isObject, isArray } from '@vue/shared'
 import { buildSSRProps } from './ssrTransformElement'
 
@@ -95,7 +98,10 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
     if (component === SUSPENSE) {
       return ssrTransformSuspense(node, context)
     }
-    return // built-in component: fallthrough
+    if (component === TRANSITION_GROUP) {
+      return ssrTransformTransitionGroup(node, context)
+    }
+    return // other built-in components: fallthrough
   }
 
   // Build the fallback vnode-based branch for the component's slots.
