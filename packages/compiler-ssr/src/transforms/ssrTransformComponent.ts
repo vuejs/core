@@ -35,7 +35,8 @@ import {
   CREATE_VNODE,
   CallExpression,
   JSChildNode,
-  RESOLVE_DYNAMIC_COMPONENT
+  RESOLVE_DYNAMIC_COMPONENT,
+  TRANSITION
 } from '@vue/compiler-dom'
 import { SSR_RENDER_COMPONENT, SSR_RENDER_VNODE } from '../runtimeHelpers'
 import {
@@ -212,6 +213,10 @@ export function ssrProcessComponent(
       // content of being treated as empty by ssrRenderSlot().
       if ((parent as WIPSlotEntry).type === WIP_SLOT) {
         context.pushStringPart(``)
+      }
+      // #5351: filter out comment children inside transition
+      if (component === TRANSITION) {
+        node.children = node.children.filter(c => c.type !== NodeTypes.COMMENT)
       }
       processChildren(node, context)
     }
