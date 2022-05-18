@@ -202,7 +202,7 @@ describe('SSR hydration', () => {
     const fn = jest.fn()
     const teleportContainer = document.createElement('div')
     teleportContainer.id = 'teleport'
-    teleportContainer.innerHTML = `<span>foo</span><span class="foo"></span><!---->`
+    teleportContainer.innerHTML = `<span>foo</span><span class="foo"></span><!--teleport anchor-->`
     document.body.appendChild(teleportContainer)
 
     const { vnode, container } = mountWithHydration(
@@ -233,7 +233,7 @@ describe('SSR hydration', () => {
     msg.value = 'bar'
     await nextTick()
     expect(teleportContainer.innerHTML).toBe(
-      `<span>bar</span><span class="bar"></span><!---->`
+      `<span>bar</span><span class="bar"></span><!--teleport anchor-->`
     )
   })
 
@@ -263,7 +263,7 @@ describe('SSR hydration', () => {
 
     const teleportHtml = ctx.teleports!['#teleport2']
     expect(teleportHtml).toMatchInlineSnapshot(
-      `"<span>foo</span><span class=\\"foo\\"></span><!----><span>foo2</span><span class=\\"foo2\\"></span><!---->"`
+      `"<span>foo</span><span class=\\"foo\\"></span><!--teleport anchor--><span>foo2</span><span class=\\"foo2\\"></span><!--teleport anchor-->"`
     )
 
     teleportContainer.innerHTML = teleportHtml
@@ -300,7 +300,7 @@ describe('SSR hydration', () => {
     msg.value = 'bar'
     await nextTick()
     expect(teleportContainer.innerHTML).toMatchInlineSnapshot(
-      `"<span>bar</span><span class=\\"bar\\"></span><!----><span>bar2</span><span class=\\"bar2\\"></span><!---->"`
+      `"<span>bar</span><span class=\\"bar\\"></span><!--teleport anchor--><span>bar2</span><span class=\\"bar2\\"></span><!--teleport anchor-->"`
     )
   })
 
@@ -327,7 +327,7 @@ describe('SSR hydration', () => {
     )
 
     const teleportHtml = ctx.teleports!['#teleport3']
-    expect(teleportHtml).toMatchInlineSnapshot(`"<!---->"`)
+    expect(teleportHtml).toMatchInlineSnapshot(`"<!--teleport anchor-->"`)
 
     teleportContainer.innerHTML = teleportHtml
     document.body.appendChild(teleportContainer)
@@ -369,7 +369,7 @@ describe('SSR hydration', () => {
   test('Teleport (as component root)', () => {
     const teleportContainer = document.createElement('div')
     teleportContainer.id = 'teleport4'
-    teleportContainer.innerHTML = `hello<!---->`
+    teleportContainer.innerHTML = `hello<!--teleport anchor-->`
     document.body.appendChild(teleportContainer)
 
     const wrapper = {
@@ -393,6 +393,38 @@ describe('SSR hydration', () => {
     // next node hydrate properly
     const nextVNode = (vnode as any).children[1]
     expect(nextVNode.el).toBe(container.firstChild?.lastChild)
+  })
+
+  test('Teleport (nested)', () => {
+    const teleportContainer = document.createElement('div')
+    teleportContainer.id = 'teleport5'
+    teleportContainer.innerHTML = `<div><!--teleport start--><!--teleport end--></div><!--teleport anchor--><div>child</div><!--teleport anchor-->`
+    document.body.appendChild(teleportContainer)
+
+    const { vnode, container } = mountWithHydration(
+      '<!--teleport start--><!--teleport end-->',
+      () =>
+        h(Teleport, { to: '#teleport5' }, [
+          h('div', [h(Teleport, { to: '#teleport5' }, [h('div', 'child')])])
+        ])
+    )
+
+    expect(vnode.el).toBe(container.firstChild)
+    expect(vnode.anchor).toBe(container.lastChild)
+
+    const childDivVNode = (vnode as any).children[0]
+    const div = teleportContainer.firstChild
+    expect(childDivVNode.el).toBe(div)
+    expect(vnode.targetAnchor).toBe(div?.nextSibling)
+
+    const childTeleportVNode = childDivVNode.children[0]
+    expect(childTeleportVNode.el).toBe(div?.firstChild)
+    expect(childTeleportVNode.anchor).toBe(div?.lastChild)
+
+    expect(childTeleportVNode.targetAnchor).toBe(teleportContainer.lastChild)
+    expect(childTeleportVNode.children[0].el).toBe(
+      teleportContainer.lastChild?.previousSibling
+    )
   })
 
   // compile SSR + client render fn from the same template & hydrate
