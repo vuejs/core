@@ -1,5 +1,6 @@
 import {
   describe,
+  test,
   Component,
   defineComponent,
   PropType,
@@ -1045,7 +1046,7 @@ describe('emits', () => {
 })
 
 describe('componentOptions setup should be `SetupContext`', () => {
-  expect<ComponentOptions['setup']>(
+  expectType<ComponentOptions['setup']>(
     {} as (props: Record<string, any>, ctx: SetupContext) => any
   )
 })
@@ -1139,6 +1140,20 @@ describe('async setup', () => {
 
   // setup context properties should be mutable
   vm.a = 2
+})
+
+// #5948
+describe('DefineComponent should infer correct types when assigning to Component', () => {
+  let component: Component
+  component = defineComponent({
+    setup(_, { attrs, slots }) {
+      // @ts-expect-error should not be any
+      expectType<[]>(attrs)
+      // @ts-expect-error should not be any
+      expectType<[]>(slots)
+    }
+  })
+  expectType<Component>(component)
 })
 
 // check if defineComponent can be exported
