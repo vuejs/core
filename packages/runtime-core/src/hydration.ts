@@ -121,7 +121,7 @@ export function createHydrationFunctions(
           // #5728 empty text node inside a slot can cause hydration failure
           // because the server rendered HTML won't contain a text node
           if (vnode.children === '') {
-            insert((vnode.el = createText('')), node.parentElement!, node)
+            insert((vnode.el = createText('')), parentNode(node)!, node)
             nextNode = node
           } else {
             nextNode = onMismatch()
