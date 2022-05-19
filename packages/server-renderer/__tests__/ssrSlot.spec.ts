@@ -49,6 +49,36 @@ describe('ssr: slot', () => {
     ).toBe(`<div><!--[--><!--]--></div>`)
   })
 
+  test('empty slot (manual comments)', async () => {
+    expect(
+      await renderToString(
+        createApp({
+          components: {
+            one: {
+              template: `<div><slot/></div>`
+            }
+          },
+          template: `<one><!--hello--></one>`
+        })
+      )
+    ).toBe(`<div><!--[--><!--]--></div>`)
+  })
+
+  test('empty slot (multi-line comments)', async () => {
+    expect(
+      await renderToString(
+        createApp({
+          components: {
+            one: {
+              template: `<div><slot/></div>`
+            }
+          },
+          template: `<one><!--he\nllo--></one>`
+        })
+      )
+    ).toBe(`<div><!--[--><!--]--></div>`)
+  })
+
   test('multiple elements', async () => {
     expect(
       await renderToString(

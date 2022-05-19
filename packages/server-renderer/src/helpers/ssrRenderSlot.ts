@@ -82,7 +82,7 @@ export function ssrRenderSlotInner(
   }
 }
 
-const commentRE = /<!--.*?-->/g
+const commentRE = /<!--[^]*?-->/gm
 function isComment(item: SSRBufferItem) {
   return (
     typeof item === 'string' &&
