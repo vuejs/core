@@ -46,6 +46,25 @@ export const ssrInjectFallthroughAttrs: NodeTransform = (node, context) => {
   }
 
   if (node.type === NodeTypes.IF_BRANCH && hasSingleChild(node)) {
+    // detect cases where the parent v-if is not the only root level node
+    let hasEncounteredIf = false
+    for (const c of filterChild(parent)) {
+      if (
+        c.type === NodeTypes.IF ||
+        (c.type === NodeTypes.ELEMENT && findDir(c, 'if'))
+      ) {
+        // multiple root v-if
+        if (hasEncounteredIf) return
+        hasEncounteredIf = true
+      } else if (
+        // node before v-if
+        !hasEncounteredIf ||
+        // non else nodes
+        !(c.type === NodeTypes.ELEMENT && findDir(c, /else/, true))
+      ) {
+        return
+      }
+    }
     injectFallthroughAttrs(node.children[0])
   } else if (hasSingleChild(parent)) {
     injectFallthroughAttrs(node)

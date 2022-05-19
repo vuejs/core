@@ -306,27 +306,6 @@ describe('ssr: components', () => {
               `)
       })
 
-      test('should inject attrs if root with coomments', () => {
-        expect(compile(`<!--root--><transition><div/></transition>`).code)
-          .toMatchInlineSnapshot(`
-                  "const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
-
-                  return function ssrRender(_ctx, _push, _parent, _attrs) {
-                    _push(\`<!--[--><!--root--><div\${_ssrRenderAttrs(_attrs)}></div><!--]-->\`)
-                  }"
-              `)
-      })
-
-      test('should not inject attrs if not root', () => {
-        expect(compile(`<div/><transition><div/></transition>`).code)
-          .toMatchInlineSnapshot(`
-                  "
-                  return function ssrRender(_ctx, _push, _parent, _attrs) {
-                    _push(\`<!--[--><div></div><div></div><!--]-->\`)
-                  }"
-              `)
-      })
-
       // #5352
       test('should push marker string if is slot root', () => {
         expect(
