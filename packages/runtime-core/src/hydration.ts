@@ -110,7 +110,18 @@ export function createHydrationFunctions(
     switch (type) {
       case Text:
         if (domType !== DOMNodeTypes.TEXT) {
-          nextNode = onMismatch()
+          // #5728 empty text node inside a slot can cause hydration failure
+          // because the server rendered HTML won't contain a text node
+          if (vnode.children === '') {
+            insert(
+              (vnode.el = document.createTextNode('')),
+              node.parentElement!,
+              node
+            )
+            nextNode = node
+          } else {
+            nextNode = onMismatch()
+          }
         } else {
           if ((node as Text).data !== vnode.children) {
             hasMismatch = true

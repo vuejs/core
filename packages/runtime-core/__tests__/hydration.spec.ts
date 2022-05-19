@@ -13,7 +13,8 @@ import {
   createTextVNode,
   createVNode,
   withDirectives,
-  vModelCheckbox
+  vModelCheckbox,
+  renderSlot
 } from '@vue/runtime-dom'
 import { renderToString, SSRContext } from '@vue/server-renderer'
 import { PatchFlags } from '../../shared/src'
@@ -910,6 +911,24 @@ describe('SSR hydration', () => {
         ])
     )
     expect((container.firstChild!.firstChild as any)._value).toBe(true)
+  })
+
+  // #5728
+  test('empty text node in slot', () => {
+    const Comp = {
+      render(this: any) {
+        return renderSlot(this.$slots, 'default', {}, () => [
+          createTextVNode('')
+        ])
+      }
+    }
+    const { container, vnode } = mountWithHydration('<!--[--><!--]-->', () => h(Comp))
+    expect(container.childNodes.length).toBe(3)
+    const text = container.childNodes[1]
+    expect(text.nodeType).toBe(3)
+    expect(vnode.el).toBe(container.childNodes[0])
+    // component => slot fragment => text node
+    expect((vnode as any).component?.subTree.children[0].el).toBe(text)
   })
 
   describe('mismatch handling', () => {
