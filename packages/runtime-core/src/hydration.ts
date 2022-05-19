@@ -55,7 +55,15 @@ export function createHydrationFunctions(
   const {
     mt: mountComponent,
     p: patch,
-    o: { patchProp, nextSibling, parentNode, remove, insert, createComment }
+    o: {
+      patchProp,
+      createText,
+      nextSibling,
+      parentNode,
+      remove,
+      insert,
+      createComment
+    }
   } = rendererInternals
 
   const hydrate: RootHydrateFunction = (vnode, container) => {
@@ -113,11 +121,7 @@ export function createHydrationFunctions(
           // #5728 empty text node inside a slot can cause hydration failure
           // because the server rendered HTML won't contain a text node
           if (vnode.children === '') {
-            insert(
-              (vnode.el = document.createTextNode('')),
-              node.parentElement!,
-              node
-            )
+            insert((vnode.el = createText('')), node.parentElement!, node)
             nextNode = node
           } else {
             nextNode = onMismatch()
