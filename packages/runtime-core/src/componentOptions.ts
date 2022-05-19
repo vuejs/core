@@ -455,20 +455,20 @@ interface LegacyOptions<
   extends?: Extends
 
   // lifecycle
-  beforeCreate?(): void
-  created?(): void
-  beforeMount?(): void
-  mounted?(): void
-  beforeUpdate?(): void
-  updated?(): void
-  activated?(): void
-  deactivated?(): void
+  beforeCreate?(): any
+  created?(): any
+  beforeMount?(): any
+  mounted?(): any
+  beforeUpdate?(): any
+  updated?(): any
+  activated?(): any
+  deactivated?(): any
   /** @deprecated use `beforeUnmount` instead */
-  beforeDestroy?(): void
-  beforeUnmount?(): void
+  beforeDestroy?(): any
+  beforeUnmount?(): any
   /** @deprecated use `unmounted` instead */
-  destroyed?(): void
-  unmounted?(): void
+  destroyed?(): any
+  unmounted?(): any
   renderTracked?: DebuggerHook
   renderTriggered?: DebuggerHook
   errorCaptured?: ErrorCapturedHook
