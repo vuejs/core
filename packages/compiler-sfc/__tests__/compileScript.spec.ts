@@ -446,7 +446,7 @@ defineExpose({ foo: 123 })
     test('TS annotations', () => {
       const { content } = compile(`
         <script setup lang="ts">
-        import { Foo, Bar, Baz } from './x'
+        import { Foo, Bar, Baz, Qux, Fred } from './x'
         const a = 1
         function b() {}
         </script>
@@ -454,6 +454,8 @@ defineExpose({ foo: 123 })
           {{ a as Foo }}
           {{ b<Bar>() }}
           {{ Baz }}
+          <Comp v-slot="{ data }: Qux">{{ data }}</Comp>
+          <div v-for="{ z = x as Qux } in list as Fred"/>
         </template>
         `)
       expect(content).toMatch(`return { a, b, Baz }`)

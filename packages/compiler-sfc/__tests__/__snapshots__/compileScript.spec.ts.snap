@@ -722,7 +722,7 @@ return { props, a, emit }
 
 exports[`SFC compile <script setup> dev mode import usage check TS annotations 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
-import { Foo, Bar, Baz } from './x'
+import { Foo, Bar, Baz, Qux, Fred } from './x'
         
 export default /*#__PURE__*/_defineComponent({
   setup(__props, { expose }) {

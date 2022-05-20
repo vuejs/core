@@ -65,7 +65,7 @@ const WITH_DEFAULTS = 'withDefaults'
 const DEFAULT_VAR = `__default__`
 
 const isBuiltInDir = makeMap(
-  `once,memo,if,else,else-if,slot,text,html,on,bind,model,show,cloak,is`
+  `once,memo,if,for,else,else-if,slot,text,html,on,bind,model,show,cloak,is`
 )
 
 export interface SFCScriptCompileOptions {
@@ -2103,7 +2103,8 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
               }
               if (prop.exp) {
                 code += `,${processExp(
-                  (prop.exp as SimpleExpressionNode).content
+                  (prop.exp as SimpleExpressionNode).content,
+                  prop.name
                 )}`
               }
             }
@@ -2122,8 +2123,19 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
   return code
 }
 
-function processExp(exp: string) {
-  if (/ as \w|<.*>/.test(exp)) {
+const forAliasRE = /([\s\S]*?)\s+(?:in|of)\s+([\s\S]*)/
+
+function processExp(exp: string, dir?: string): string {
+  if (/ as\s+\w|<.*>|:/.test(exp)) {
+    if (dir === 'slot') {
+      exp = `(${exp})=>{}`
+    } else if (dir === 'for') {
+      const inMatch = exp.match(forAliasRE)
+      if (inMatch) {
+        const [, LHS, RHS] = inMatch
+        return processExp(`(${LHS})=>{}`) + processExp(RHS)
+      }
+    }
     let ret = ''
     // has potential type cast or generic arguments that uses types
     const ast = parseExpression(exp, { plugins: ['typescript'] })
