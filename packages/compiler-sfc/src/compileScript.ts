@@ -2101,7 +2101,7 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
               if (!isBuiltInDir(prop.name)) {
                 code += `,v${capitalize(camelize(prop.name))}`
               }
-              if (prop.exp) {
+              if (prop.exp && prop.name !== 'slot') {
                 code += `,${processExp(
                   (prop.exp as SimpleExpressionNode).content
                 )}`
@@ -2123,7 +2123,7 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
 }
 
 function processExp(exp: string) {
-  if (/ as \w|<.*>/.test(exp)) {
+  if (/ as\s+\w|<.*>/.test(exp)) {
     let ret = ''
     // has potential type cast or generic arguments that uses types
     const ast = parseExpression(exp, { plugins: ['typescript'] })

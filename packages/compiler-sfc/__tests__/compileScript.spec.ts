@@ -446,17 +446,22 @@ defineExpose({ foo: 123 })
     test('TS annotations', () => {
       const { content } = compile(`
         <script setup lang="ts">
-        import { Foo, Bar, Baz } from './x'
+        import { h } from 'vue'
+        import { Foo, Bar, Baz, Qux } from './x'
         const a = 1
         function b() {}
+        const comp = () => h('div', 'test');
         </script>
         <template>
-          {{ a as Foo }}
+          <component :is="comp">
+            <template #default="{ data }: Qux<string>"></template>
+          </component>
+          {{ a as  Foo }}
           {{ b<Bar>() }}
           {{ Baz }}
         </template>
         `)
-      expect(content).toMatch(`return { a, b, Baz }`)
+      expect(content).toMatch(`return { a, b, comp, Baz }`)
       assertCode(content)
     })
   })
