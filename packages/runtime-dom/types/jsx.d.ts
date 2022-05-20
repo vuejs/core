@@ -40,7 +40,7 @@ export interface CSSProperties
    * For examples and more information, visit:
    * https://github.com/frenic/csstype#what-should-i-do-when-i-get-type-errors
    */
-      
+
   [v: `--${string}`]: string | number | undefined
 }
 
@@ -1311,10 +1311,7 @@ import * as RuntimeCore from '@vue/runtime-core'
 
 type ReservedProps = {
   key?: string | number | symbol
-  ref?:
-    | string
-    | RuntimeCore.Ref
-    | ((ref: Element | RuntimeCore.ComponentPublicInstance | null) => void)
+  ref?: RuntimeCore.VNodeRef
   ref_for?: boolean
   ref_key?: string
 }
