@@ -118,9 +118,8 @@ export interface ComponentOptionsBase<
   Extends extends ComponentOptionsMixin,
   E extends EmitsOptions,
   EE extends string = string,
-  Defaults = {},
-  Provide extends ComponentProvideOptions = ComponentProvideOptions
-> extends LegacyOptions<Props, D, C, M, Mixin, Extends, Provide>,
+  Defaults = {}
+> extends LegacyOptions<Props, D, C, M, Mixin, Extends>,
     ComponentInternalOptions,
     ComponentCustomOptions {
   setup?: (
@@ -226,7 +225,6 @@ export type ComponentOptionsWithoutProps<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
-  Provide extends ComponentProvideOptions = ComponentProvideOptions,
   PE = Props & EmitsToProps<E>
 > = ComponentOptionsBase<
   PE,
@@ -238,8 +236,7 @@ export type ComponentOptionsWithoutProps<
   Extends,
   E,
   EE,
-  {},
-  Provide
+  {}
 > & {
   props?: undefined
 } & ThisType<
@@ -256,7 +253,6 @@ export type ComponentOptionsWithArrayProps<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
-  Provide extends ComponentProvideOptions = ComponentProvideOptions,
   Props = Readonly<{ [key in PropNames]?: any }> & EmitsToProps<E>
 > = ComponentOptionsBase<
   Props,
@@ -268,8 +264,7 @@ export type ComponentOptionsWithArrayProps<
   Extends,
   E,
   EE,
-  {},
-  Provide
+  {}
 > & {
   props: PropNames[]
 } & ThisType<
@@ -295,7 +290,6 @@ export type ComponentOptionsWithObjectProps<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
-  Provide extends ComponentProvideOptions = ComponentProvideOptions,
   Props = Readonly<ExtractPropTypes<PropsOptions>> & EmitsToProps<E>,
   Defaults = ExtractDefaultPropTypes<PropsOptions>
 > = ComponentOptionsBase<
@@ -308,8 +302,7 @@ export type ComponentOptionsWithObjectProps<
   Extends,
   E,
   EE,
-  Defaults,
-  Provide
+  Defaults
 > & {
   props: PropsOptions & ThisType<void>
 } & ThisType<
@@ -409,8 +402,7 @@ interface LegacyOptions<
   C extends ComputedOptions,
   M extends MethodOptions,
   Mixin extends ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin,
-  Provide extends ComponentProvideOptions = ComponentProvideOptions
+  Extends extends ComponentOptionsMixin
 > {
   compatConfig?: CompatConfig
 
@@ -444,7 +436,7 @@ interface LegacyOptions<
   computed?: C
   methods?: M
   watch?: ComponentWatchOptions
-  provide?: Provide
+  provide?: ComponentProvideOptions
   inject?: ComponentInjectOptions
 
   // assets

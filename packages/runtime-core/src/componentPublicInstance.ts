@@ -34,8 +34,7 @@ import {
   OptionTypesKeys,
   resolveMergedOptions,
   shouldCacheAccess,
-  MergedComponentOptionsOverride,
-  ComponentProvideOptions
+  MergedComponentOptionsOverride
 } from './componentOptions'
 import { EmitsOptions, EmitFn } from './componentEmits'
 import { Slots } from './componentSlots'
@@ -151,8 +150,7 @@ export type CreateComponentPublicInstance<
   PublicM extends MethodOptions = UnwrapMixinsType<PublicMixin, 'M'> &
     EnsureNonVoid<M>,
   PublicDefaults = UnwrapMixinsType<PublicMixin, 'Defaults'> &
-    EnsureNonVoid<Defaults>,
-  Provide extends ComponentProvideOptions = ComponentProvideOptions
+    EnsureNonVoid<Defaults>
 > = ComponentPublicInstance<
   PublicP,
   PublicB,
@@ -163,19 +161,7 @@ export type CreateComponentPublicInstance<
   PublicProps,
   PublicDefaults,
   MakeDefaultsOptional,
-  ComponentOptionsBase<
-    P,
-    B,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    string,
-    Defaults,
-    Provide
-  >
+  ComponentOptionsBase<P, B, D, C, M, Mixin, Extends, E, string, Defaults>
 >
 
 // public properties exposed on the proxy, which is used as the render context
