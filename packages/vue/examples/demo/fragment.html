@@ -6,7 +6,7 @@
   <h1 id="h2">666</h1>
 </div>
 <script>
-  let { createApp, setup, h, ref, onMounted } = Vue
+  let { createApp, setup, h, ref, onMounted, reactive } = Vue
 
   createApp({
     // render() {
@@ -31,11 +31,14 @@
     //   }, 5000)
     // },
     setup(props) {
-      let num = ref(0)
+      // let num = ref(0) 
+      const obj = reactive({
+        name: 'zys'
+      })
       console.log(8888);
       onMounted(() => {
-        console.log('this is onMounted', num.value); // 回调函数还是能获取当前所属环境
-        debugger
+        // console.log('this is onMounted', num.value); // 回调函数还是能获取当前所属环境
+        console.log(obj.name);
       })
     },
     methods: {

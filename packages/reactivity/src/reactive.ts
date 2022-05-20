@@ -217,6 +217,7 @@ function createReactiveObject(
   if (targetType === TargetType.INVALID) {
     return target
   }
+  debugger
   // 对target进行代理
   const proxy = new Proxy(
     target,

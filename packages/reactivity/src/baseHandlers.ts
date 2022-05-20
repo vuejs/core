@@ -8,7 +8,7 @@ import {
   reactiveMap,
   shallowReactiveMap,
   shallowReadonlyMap
-} from './reactive'
+} from './reactive' // 数据源通用共享
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import {
   track,
@@ -78,7 +78,9 @@ function createArrayInstrumentations() {
 }
 
 function createGetter(isReadonly = false, shallow = false) {
+  // 返回函数，实现一个闭包的效果
   return function get(target: Target, key: string | symbol, receiver: object) {
+    debugger
     // 判断是否是reactive
     if (key === ReactiveFlags.IS_REACTIVE) {
       return !isReadonly
@@ -193,6 +195,7 @@ function deleteProperty(target: object, key: string | symbol): boolean {
     // 触发更新，通知页面更新
     trigger(target, TriggerOpTypes.DELETE, key, undefined, oldValue)
   }
+  // 返回个状态
   return result
 }
 

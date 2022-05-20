@@ -66,7 +66,6 @@ export function injectHook(
 export const createHook =
   <T extends Function = () => any>(lifecycle: LifecycleHooks) =>
   (hook: T, target: ComponentInternalInstance | null = currentInstance) => {
-    debugger
     // post-create lifecycle registrations are noops during SSR (except for serverPrefetch)
     // 获取当前钩子周期，并且传入hook函数，默认当前实例
     (!isInSSRComponentSetup || lifecycle === LifecycleHooks.SERVER_PREFETCH) &&
