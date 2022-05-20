@@ -19,7 +19,8 @@ import {
   TemplateTextChildNode,
   DirectiveArguments,
   createVNodeCall,
-  ConstantTypes
+  ConstantTypes,
+  PlainElementNode
 } from '../ast'
 import {
   PatchFlags,
@@ -156,7 +157,8 @@ export const transformElement: NodeTransform = (node, context) => {
         shouldUseBlock = true
         // 2. Force keep-alive to always be updated, since it uses raw children.
         patchFlag |= PatchFlags.DYNAMIC_SLOTS
-        if (__DEV__ && node.children.length > 1) {
+        // warn if <KeepAlive> has multiple children
+        if (__DEV__ && hasMultipleChildren(node)) {
           context.onError(
             createCompilerError(ErrorCodes.X_KEEP_ALIVE_INVALID_CHILDREN, {
               start: node.children[0].loc.start,
@@ -927,3 +929,12 @@ function stringifyDynamicPropNames(props: string[]): string {
 function isComponentTag(tag: string) {
   return tag === 'component' || tag === 'Component'
 }
+
+function hasMultipleChildren(node: ComponentNode | PlainElementNode): boolean {
+  // filter out potential comment nodes.
+  const children = (node.children = node.children.filter(
+    c => c.type !== NodeTypes.COMMENT 
+  ))
+
+  return children.length !== 1
+} 
