@@ -1,3 +1,14 @@
+## [3.2.35](https://github.com/vuejs/core/compare/v3.2.34...v3.2.35) (2022-05-20)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** fix usage detection for types in v-for/v-slot expressions ([583b625](https://github.com/vuejs/core/commit/583b6259870211c32efee0bb4a60b342799d80f7)), closes [#5959](https://github.com/vuejs/core/issues/5959)
+* **types:** fix typescript error when spreading `$props`([#5968](https://github.com/vuejs/core/issues/5968)) ([0c7fd13](https://github.com/vuejs/core/commit/0c7fd13ea628a2f1b72c6f4150c0dba32da4468e))
+* **types:** restore DefineComponent argument order ([8071ef4](https://github.com/vuejs/core/commit/8071ef47b5adcd5fcd9d0d2ea2cefff5c34ce095)), closes [#5416](https://github.com/vuejs/core/issues/5416) [#3796](https://github.com/vuejs/core/issues/3796) [#5967](https://github.com/vuejs/core/issues/5967)
+
+
+
 ## [3.2.34](https://github.com/vuejs/core/compare/v3.2.34-beta.1...v3.2.34) (2022-05-19)
 
 
