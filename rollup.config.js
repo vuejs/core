@@ -107,7 +107,7 @@ function createConfig(format, output, plugins = []) {
     cacheRoot: path.resolve(__dirname, 'node_modules/.rts2_cache'),
     tsconfigOverride: {
       compilerOptions: {
-        target: isServerRenderer || isNodeBuild ? 'es2020' : 'es2015',
+        target: isServerRenderer || isNodeBuild ? 'es2019' : 'es2015',
         sourceMap: output.sourcemap,
         declaration: shouldEmitDeclarations,
         declarationMap: shouldEmitDeclarations
