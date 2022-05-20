@@ -43,6 +43,7 @@ import { convertLegacyComponent } from './compat/component'
 import { convertLegacyVModelProps } from './compat/componentVModel'
 import { defineLegacyVNodeProperties } from './compat/renderFn'
 import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
+import { ComponentPublicInstance } from './componentPublicInstance'
 
 export const Fragment = Symbol(__DEV__ ? 'Fragment' : undefined) as any as {
   __isFragment: true
@@ -68,7 +69,10 @@ export type VNodeTypes =
 export type VNodeRef =
   | string
   | Ref
-  | ((ref: object | null, refs: Record<string, any>) => void)
+  | ((
+      ref: Element | ComponentPublicInstance | null,
+      refs: Record<string, any>
+    ) => void)
 
 export type VNodeNormalizedRefAtom = {
   i: ComponentInternalInstance

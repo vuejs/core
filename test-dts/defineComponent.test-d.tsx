@@ -1144,6 +1144,25 @@ describe('DefineComponent should infer correct types when assigning to Component
   expectType<Component>(component)
 })
 
+// #5969
+describe('should allow to assign props', () => {
+  const Child = defineComponent({
+    props: {
+      bar: String
+    }
+  })
+
+  const Parent = defineComponent({
+    props: {
+      ...Child.props,
+      foo: String
+    }
+  })
+
+  const child = new Child()
+  expectType<JSX.Element>(<Parent {...child.$props} />)
+})
+
 // check if defineComponent can be exported
 export default {
   // function components
