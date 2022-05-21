@@ -174,7 +174,7 @@ export function resolveTransitionProps(
     done && done()
   }
 
-  const finishLeave = (el: Element, done?: () => void) => {
+  const finishLeave = (el: Element & { _isLeaving?: boolean }, done?: () => void) => {
     el._isLeaving = false
     removeTransitionClass(el, leaveFromClass)
     removeTransitionClass(el, leaveToClass)
@@ -222,7 +222,7 @@ export function resolveTransitionProps(
     },
     onEnter: makeEnterHook(false),
     onAppear: makeEnterHook(true),
-    onLeave(el, done) {
+    onLeave(el: Element & { _isLeaving?: boolean }, done) {
       el._isLeaving = true
       const resolve = () => finishLeave(el, done)
       addTransitionClass(el, leaveFromClass)
