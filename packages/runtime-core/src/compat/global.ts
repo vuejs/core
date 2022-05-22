@@ -383,7 +383,7 @@ function applySingletonAppMutations(app: App) {
   // copy over asset registries and deopt flag
   ;['mixins', 'components', 'directives', 'filters', 'deopt'].forEach(key => {
     // @ts-ignore
-    app._context[key] = singletonApp._context[key]
+    app._context[key] = { ...singletonApp._context[key] }
   })
 
   // copy over global config mutations
