@@ -380,21 +380,12 @@ function installLegacyAPIs(app: App) {
 }
 
 function applySingletonAppMutations(app: App) {
-  // create asset registry proxies which lookup from singleton and fallback to local registry
-  (['mixins', 'components', 'directives', 'filters'] as const).forEach(key => {
+  // copy over asset registries and deopt flag
+  app._context.mixins = [...singletonApp._context.mixins]
+  ;['components', 'directives', 'filters'].forEach(key => {
     // @ts-ignore
-    app._context[key] = new Proxy(app._context[key]!, {
-      get(target, prop) {
-        if (prop in singletonApp._context[key]!) {
-          // @ts-ignore
-          return singletonApp._context[key][prop];
-        }
-        return Reflect.get(target, prop);
-      }
-    })
+    app._context[key] = Object.create(singletonApp._context[key])
   })
-  // @ts-ignore
-  app._context.deopt = singletonApp._context.deopt
 
   // copy over global config mutations
   isCopyingConfig = true
