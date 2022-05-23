@@ -448,3 +448,25 @@ test('global asset registration should affect apps created via createApp', () =>
   expect(vm.$el.textContent).toBe('foo')
   delete singletonApp._context.components.foo
 })
+
+test('post-facto global asset registration should affect apps created via createApp', () => {
+  const app = createApp({
+    template: '<foo/>'
+  })
+  Vue.component('foo', { template: 'foo' })
+  const vm = app.mount(document.createElement('div')) as any;
+  expect(vm.$el.textContent).toBe('foo')
+  delete singletonApp._context.components.foo
+})
+
+test('local asset registration should not affect other local apps', () => {
+  const app1 = createApp({});
+  const app2 = createApp({});
+
+  app1.component('foo', {});
+  app2.component('foo', {});
+
+  expect(
+    `Component "foo" has already been registered in target app`
+  ).not.toHaveBeenWarned()
+})

@@ -381,9 +381,10 @@ function installLegacyAPIs(app: App) {
 
 function applySingletonAppMutations(app: App) {
   // copy over asset registries and deopt flag
-  ;['mixins', 'components', 'directives', 'filters', 'deopt'].forEach(key => {
+  app._context.mixins = [...singletonApp._context.mixins]
+  ;['components', 'directives', 'filters'].forEach(key => {
     // @ts-ignore
-    app._context[key] = singletonApp._context[key]
+    app._context[key] = Object.create(singletonApp._context[key])
   })
 
   // copy over global config mutations
