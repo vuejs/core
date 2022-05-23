@@ -150,7 +150,7 @@ const transformer = createReactivityTransformer({
 transformer.transform(code)
 ```
 
-Unlike built-in shorthands, custom shorthands are will NOT be auto imported.
+Unlike built-in shorthands, custom shorthands will NOT be auto imported.
 
 ```ts
 const foo = $useFoo() // equivalent $(useFoo())
