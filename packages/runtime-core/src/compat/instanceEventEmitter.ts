@@ -52,7 +52,7 @@ export function once(
 ) {
   const wrapped = (...args: any[]) => {
     off(instance, event, wrapped)
-    fn.call(instance.proxy, ...args)
+    fn.apply(instance.proxy, args)
   }
   wrapped.fn = fn
   on(instance, event, wrapped)
