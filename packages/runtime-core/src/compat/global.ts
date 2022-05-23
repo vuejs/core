@@ -399,7 +399,7 @@ function applySingletonAppMutations(app: App) {
     }
     const val = singletonApp.config[key as keyof AppConfig]
     // @ts-ignore
-    app.config[key] = val
+    app.config[key] = isObject(val) ? Object.create(val) : val
 
     // compat for runtime ignoredElements -> isCustomElement
     if (
