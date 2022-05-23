@@ -1,3 +1,21 @@
+## [3.2.36](https://github.com/vuejs/core/compare/v3.2.35...v3.2.36) (2022-05-23)
+
+
+### Bug Fixes
+
+* **compat:** fix app-level asset registration affecting other local apps ([#5979](https://github.com/vuejs/core/issues/5979)) ([7fb5732](https://github.com/vuejs/core/commit/7fb57327b9d0e4d9eb675149f167d915fb0d59fa))
+* **compat:** fix globalProperties pollution in v3 mode ([2f07e34](https://github.com/vuejs/core/commit/2f07e3460bf51bc1b083f3d03b3d192e042d2d75)), closes [#5699](https://github.com/vuejs/core/issues/5699)
+* **compiler-core:** fix svg with directives being incorrectly hoisted ([#5919](https://github.com/vuejs/core/issues/5919)) ([7fbc933](https://github.com/vuejs/core/commit/7fbc933f4d80c0259ee24872ba790681cf3cbe76)), closes [#5289](https://github.com/vuejs/core/issues/5289)
+* **sfc/types:** allow use default factory for primitive types in `withDefaults` ([#5939](https://github.com/vuejs/core/issues/5939)) ([b546282](https://github.com/vuejs/core/commit/b5462822d6c0a43866deef2b3437bbe3bbfb3625)), closes [#5938](https://github.com/vuejs/core/issues/5938)
+* **transition:** fix cancel leave regression ([#5974](https://github.com/vuejs/core/issues/5974)) ([dddbd96](https://github.com/vuejs/core/commit/dddbd96dfe69292cee401f72d2703e8fb3708a14)), closes [#5973](https://github.com/vuejs/core/issues/5973)
+
+
+### Performance Improvements
+
+* improve the performance of getNow ([#5944](https://github.com/vuejs/core/issues/5944)) ([3bdc41d](https://github.com/vuejs/core/commit/3bdc41dff305422cb5334a64353c314bce1202a4))
+
+
+
 ## [3.2.35](https://github.com/vuejs/core/compare/v3.2.34...v3.2.35) (2022-05-20)
 
 
