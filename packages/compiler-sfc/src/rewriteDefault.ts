@@ -66,7 +66,7 @@ export function rewriteDefault(
                 `import { ${input.slice(
                   specifier.local.start!,
                   specifier.local.end!
-                )} } from '${node.source?.value}'\n`
+                )} } from '${node.source.value}'\n`
               )
               s.overwrite(specifier.start!, end, ``)
               s.append(`\nconst ${as} = ${specifier.local.name}`)
