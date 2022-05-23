@@ -26,7 +26,9 @@ const postfix = format.endsWith('-runtime')
 
 const outfile = resolve(
   __dirname,
-  `../packages/${target}/dist/${target}.${postfix}.js`
+  `../packages/${target}/dist/${
+    target === 'vue-compat' ? `vue` : target
+  }.${postfix}.js`
 )
 const relativeOutfile = relative(process.cwd(), outfile)
 
@@ -92,7 +94,7 @@ build({
     __ESM_BROWSER__: String(format.includes('esm-browser')),
     __NODE_JS__: String(format === 'cjs'),
     __SSR__: String(format === 'cjs' || format.includes('esm-bundler')),
-    __COMPAT__: `false`,
+    __COMPAT__: String(target === 'vue-compat'),
     __FEATURE_SUSPENSE__: `true`,
     __FEATURE_OPTIONS_API__: `true`,
     __FEATURE_PROD_DEVTOOLS__: `false`
