@@ -27,7 +27,7 @@ import { isAsyncWrapper } from './apiAsyncComponent'
 
 export type RootHydrateFunction = (
   vnode: VNode<Node, Element>,
-  container: Element | ShadowRoot
+  container: (Element | ShadowRoot) & { _vnode?: VNode }
 ) => void
 
 const enum DOMNodeTypes {
@@ -75,11 +75,13 @@ export function createHydrationFunctions(
         )
       patch(null, vnode, container)
       flushPostFlushCbs()
+      container._vnode = vnode
       return
     }
     hasMismatch = false
     hydrateNode(container.firstChild!, vnode, null, null, null)
     flushPostFlushCbs()
+    container._vnode = vnode
     if (hasMismatch && !__TEST__) {
       // this error should show up in production
       console.error(`Hydration completed but contains mismatches.`)

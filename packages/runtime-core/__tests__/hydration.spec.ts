@@ -922,13 +922,42 @@ describe('SSR hydration', () => {
         ])
       }
     }
-    const { container, vnode } = mountWithHydration('<!--[--><!--]-->', () => h(Comp))
+    const { container, vnode } = mountWithHydration('<!--[--><!--]-->', () =>
+      h(Comp)
+    )
     expect(container.childNodes.length).toBe(3)
     const text = container.childNodes[1]
     expect(text.nodeType).toBe(3)
     expect(vnode.el).toBe(container.childNodes[0])
     // component => slot fragment => text node
     expect((vnode as any).component?.subTree.children[0].el).toBe(text)
+  })
+
+  test('app.unmount()', async () => {
+    const container = document.createElement('DIV')
+    container.innerHTML = '<button></button>'
+    const App = defineComponent({
+      setup(_, { expose }) {
+        const count = ref(0)
+
+        expose({ count })
+
+        return () =>
+          h('button', {
+            onClick: () => count.value++
+          })
+      }
+    })
+
+    const app = createSSRApp(App)
+    const vm = app.mount(container)
+    await nextTick()
+    expect((container as any)._vnode).toBeDefined()
+    // @ts-expect-error - expose()'d properties are not available on vm type
+    expect(vm.count).toBe(0)
+
+    app.unmount()
+    expect((container as any)._vnode).toBe(null)
   })
 
   describe('mismatch handling', () => {
