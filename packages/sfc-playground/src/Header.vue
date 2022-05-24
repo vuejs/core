@@ -94,7 +94,8 @@ async function fetchVersions(): Promise<string[]> {
     <div class="links">
       <div class="version" @click.stop>
         <span class="active-version" @click="toggle">
-          Version: {{ activeVersion }}
+          Version
+          <span class="number">{{ activeVersion }}</span>
         </span>
         <ul class="versions" :class="{ expanded }">
           <li v-if="!publishedVersions"><a>loading versions...</a></li>
@@ -119,7 +120,7 @@ async function fetchVersions(): Promise<string[]> {
         :class="{ dev }"
         @click="$emit('toggle-dev')"
       >
-        {{ dev ? 'DEV' : 'PROD' }}
+        <span>{{ dev ? 'DEV' : 'PROD' }}</span>
       </button>
       <button title="Toggle dark mode" class="toggle-dark" @click="toggleDark">
         <Sun class="light" />
@@ -152,6 +153,10 @@ nav {
   --bg: #fff;
   --bg-light: #fff;
   --border: #ddd;
+  --btn: #666;
+  --highlight: #333;
+  --green: #3ca877;
+  --red: #f07178;
 
   color: var(--base);
   height: var(--nav-height);
@@ -170,25 +175,21 @@ nav {
   --bg: #1a1a1a;
   --bg-light: #242424;
   --border: #383838;
+  --highlight: #fff;
 
   box-shadow: none;
   border-bottom: 1px solid var(--border);
 }
 
 h1 {
-  margin: 0;
-  line-height: var(--nav-height);
   font-weight: 500;
-  display: inline-block;
-  vertical-align: middle;
+  display: inline-flex;
+  place-items: center;
 }
 
 h1 img {
   height: 24px;
-  vertical-align: middle;
   margin-right: 10px;
-  position: relative;
-  top: -2px;
 }
 
 @media (max-width: 560px) {
@@ -208,7 +209,6 @@ h1 img {
 }
 
 .version {
-  display: inline-block;
   margin-right: 12px;
   position: relative;
 }
@@ -216,38 +216,40 @@ h1 img {
 .active-version {
   cursor: pointer;
   position: relative;
-  display: inline-block;
-  vertical-align: middle;
-  line-height: var(--nav-height);
-  padding-right: 15px;
+  display: inline-flex;
+  place-items: center;
 }
 
-.active-version:after {
+.active-version .number {
+  color: var(--green);
+  margin-left: 4px;
+}
+
+.active-version::after {
   content: '';
   width: 0;
   height: 0;
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
   border-top: 6px solid #aaa;
-  position: absolute;
-  right: 0;
-  top: 22px;
+  margin-left: 8px;
 }
 
-.toggle-dev {
-  color: #f07178;
+.toggle-dev span {
   font-size: 12px;
-  line-height: var(--nav-height);
+  background: var(--red);
+  color: #fff;
+  border-radius: 4px;
+  padding: 4px 6px;
 }
 
-.toggle-dev.dev {
-  color: #c3e88d;
+.toggle-dev.dev span {
+  background: var(--green);
 }
 
 .toggle-dark svg {
   width: 18px;
   height: 18px;
-  fill: #666;
 }
 
 .toggle-dark .dark,
@@ -259,12 +261,22 @@ h1 img {
   display: inline-block;
 }
 
-.version:hover .active-version:after {
-  border-top-color: var(--base);
+.links button,
+.links button a {
+  color: var(--btn);
 }
 
-.dark .version:hover .active-version:after {
-  border-top-color: #fff;
+.links button:hover,
+.links button:hover a {
+  color: var(--highlight);
+}
+
+.version:hover .active-version::after {
+  border-top-color: var(--btn);
+}
+
+.dark .version:hover .active-version::after {
+  border-top-color: var(--highlight);
 }
 
 .versions {
@@ -292,16 +304,19 @@ h1 img {
 }
 
 .versions a:hover {
-  color: #3ca877;
+  color: var(--green);
 }
 
 .versions.expanded {
   display: block;
 }
 
-.share,
-.download,
-.github {
-  margin: 0 2px;
+.links > * {
+  display: flex;
+  align-items: center;
+}
+
+.links > * + * {
+  margin-left: 4px;
 }
 </style>
