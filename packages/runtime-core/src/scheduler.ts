@@ -162,7 +162,7 @@ export function flushPreFlushCbs(
     }
     for (
       preFlushIndex = 0;
-      preFlushIndex < activePreFlushCbs.length;
+      preFlushIndex < (activePreFlushCbs && activePreFlushCbs.length);
       preFlushIndex++
     ) {
       if (
