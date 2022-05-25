@@ -423,6 +423,7 @@ export interface IframeHTMLAttributes extends HTMLAttributes {
   allowtransparency?: Booleanish
   frameborder?: Numberish
   height?: Numberish
+  loading?: 'eager' | 'lazy'
   marginheight?: Numberish
   marginwidth?: Numberish
   name?: string
@@ -440,6 +441,7 @@ export interface ImgHTMLAttributes extends HTMLAttributes {
   crossorigin?: 'anonymous' | 'use-credentials' | ''
   decoding?: 'async' | 'auto' | 'sync'
   height?: Numberish
+  loading?: 'eager' | 'lazy'
   sizes?: string
   src?: string
   srcset?: string
