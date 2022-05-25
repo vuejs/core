@@ -8,7 +8,7 @@ import Download from './icons/Download.vue'
 import GitHub from './icons/GitHub.vue'
 
 // @ts-ignore
-const props = defineProps(['store', 'dev'])
+const props = defineProps(['store', 'dev', 'ssr'])
 const { store } = props
 
 const currentCommit = __COMMIT__
@@ -122,6 +122,14 @@ async function fetchVersions(): Promise<string[]> {
       >
         <span>{{ dev ? 'DEV' : 'PROD' }}</span>
       </button>
+      <button
+        title="Toggle server rendering mode"
+        class="toggle-ssr"
+        :class="{ enabled: ssr }"
+        @click="$emit('toggle-ssr')"
+      >
+        <span>{{ ssr ? 'SSR ON' : 'SSR OFF' }}</span>
+      </button>
       <button title="Toggle dark mode" class="toggle-dark" @click="toggleDark">
         <Sun class="light" />
         <Moon class="dark" />
@@ -156,7 +164,7 @@ nav {
   --btn: #666;
   --highlight: #333;
   --green: #3ca877;
-  --red: #f07178;
+  --purple: #904cbc;
 
   color: var(--base);
   height: var(--nav-height);
@@ -235,16 +243,29 @@ h1 img {
   margin-left: 8px;
 }
 
-.toggle-dev span {
+.toggle-dev span,
+.toggle-ssr span {
   font-size: 12px;
-  background: var(--red);
-  color: #fff;
   border-radius: 4px;
   padding: 4px 6px;
 }
 
+.toggle-dev span {
+  background: var(--purple);
+  color: #fff;
+}
+
 .toggle-dev.dev span {
   background: var(--green);
+}
+
+.toggle-ssr span {
+  background-color: #333;
+}
+
+.toggle-ssr.enabled span {
+  color: #fff;
+  background-color: var(--green);
 }
 
 .toggle-dark svg {

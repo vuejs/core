@@ -9,14 +9,27 @@ const setVH = () => {
 window.addEventListener('resize', setVH)
 setVH()
 
-const hash = location.hash.slice(1)
-const useDevMode = ref(hash.startsWith('__DEV__'))
+const useDevMode = ref(false)
+const useSSRMode = ref(false)
+
+let hash = location.hash.slice(1)
+if (hash.startsWith('__DEV__')) {
+  hash = hash.slice(7)
+  useDevMode.value = true
+}
+if (hash.startsWith('__SSR__')) {
+  hash = hash.slice(7)
+  useSSRMode.value = true
+}
 
 const store = new ReplStore({
-  serializedState: useDevMode.value ? hash.slice(7) : hash,
+  serializedState: hash,
   defaultVueRuntimeURL: import.meta.env.PROD
     ? `${location.origin}/vue.runtime.esm-browser.js`
-    : `${location.origin}/src/vue-dev-proxy`
+    : `${location.origin}/src/vue-dev-proxy`,
+  defaultVueServerRendererURL: import.meta.env.PROD
+    ? `${location.origin}/server-renderer.esm-browser.js`
+    : `${location.origin}/src/vue-server-renderer-dev-proxy`
 })
 
 // enable experimental features
@@ -31,6 +44,7 @@ const sfcOptions = {
 watchEffect(() => {
   const newHash = store
     .serialize()
+    .replace(/^#/, useSSRMode.value ? `#__SSR__` : `#`)
     .replace(/^#/, useDevMode.value ? `#__DEV__` : `#`)
   history.replaceState({}, '', newHash)
 })
@@ -40,13 +54,25 @@ function toggleDevMode() {
   sfcOptions.script.inlineTemplate = !dev
   store.setFiles(store.getFiles())
 }
+
+function toggleSSR() {
+  useSSRMode.value = !useSSRMode.value
+  store.setFiles(store.getFiles())
+}
 </script>
 
 <template>
-  <Header :store="store" :dev="useDevMode" @toggle-dev="toggleDevMode" />
+  <Header
+    :store="store"
+    :dev="useDevMode"
+    :ssr="useSSRMode"
+    @toggle-dev="toggleDevMode"
+    @toggle-ssr="toggleSSR"
+  />
   <Repl
     @keydown.ctrl.s.prevent
     @keydown.meta.s.prevent
+    :ssr="useSSRMode"
     :store="store"
     :showCompileOutput="true"
     :autoResize="true"
