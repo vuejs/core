@@ -165,6 +165,7 @@ nav {
   --highlight: #333;
   --green: #3ca877;
   --purple: #904cbc;
+  --btn-bg: #eee;
 
   color: var(--base);
   height: var(--nav-height);
@@ -184,6 +185,7 @@ nav {
   --bg-light: #242424;
   --border: #383838;
   --highlight: #fff;
+  --btn-bg: #333;
 
   box-shadow: none;
   border-bottom: 1px solid var(--border);
@@ -260,7 +262,7 @@ h1 img {
 }
 
 .toggle-ssr span {
-  background-color: #333;
+  background-color: var(--btn-bg);
 }
 
 .toggle-ssr.enabled span {
