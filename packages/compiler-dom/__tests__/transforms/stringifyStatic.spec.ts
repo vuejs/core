@@ -433,4 +433,25 @@ describe('stringify static html', () => {
       ]
     })
   })
+
+  // #5439
+  test('stringify v-html', () => {
+    const { code } = compileWithStringify(`
+      <pre  data-type="js"><code v-html="'&lt;span&gt;show-it &lt;/span&gt;'"></code></pre>
+      <div class>
+        <span class>1</span><span class>2</span>
+      </div>`)
+    expect(code).toMatch(`<code><span>show-it </span></code>`)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('stringify v-text', () => {
+    const { code } = compileWithStringify(`
+      <pre  data-type="js"><code v-text="'&lt;span&gt;show-it &lt;/span&gt;'"></code></pre>
+      <div class>
+        <span class>1</span><span class>2</span>
+      </div>`)
+    expect(code).toMatch(`<code>&lt;span&gt;show-it &lt;/span&gt;</code>`)
+    expect(code).toMatchSnapshot()
+  })
 })

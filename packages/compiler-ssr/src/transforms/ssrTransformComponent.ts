@@ -33,7 +33,10 @@ import {
   TELEPORT,
   TRANSITION_GROUP,
   CREATE_VNODE,
-  CallExpression
+  CallExpression,
+  JSChildNode,
+  RESOLVE_DYNAMIC_COMPONENT,
+  TRANSITION
 } from '@vue/compiler-dom'
 import { SSR_RENDER_COMPONENT, SSR_RENDER_VNODE } from '../runtimeHelpers'
 import {
@@ -46,8 +49,12 @@ import {
   ssrProcessSuspense,
   ssrTransformSuspense
 } from './ssrTransformSuspense'
-import { ssrProcessTransitionGroup } from './ssrTransformTransitionGroup'
+import {
+  ssrProcessTransitionGroup,
+  ssrTransformTransitionGroup
+} from './ssrTransformTransitionGroup'
 import { isSymbol, isObject, isArray } from '@vue/shared'
+import { buildSSRProps } from './ssrTransformElement'
 
 // We need to construct the slot functions in the 1st pass to ensure proper
 // scope tracking, but the children of each slot cannot be processed until
@@ -55,7 +62,10 @@ import { isSymbol, isObject, isArray } from '@vue/shared'
 // pass and complete them in the 2nd pass.
 const wipMap = new WeakMap<ComponentNode, WIPSlotEntry[]>()
 
+const WIP_SLOT = Symbol()
+
 interface WIPSlotEntry {
+  type: typeof WIP_SLOT
   fn: FunctionExpression
   children: TemplateChildNode[]
   vnodeBranch: ReturnStatement
@@ -81,13 +91,18 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
   }
 
   const component = resolveComponentType(node, context, true /* ssr */)
+  const isDynamicComponent =
+    isObject(component) && component.callee === RESOLVE_DYNAMIC_COMPONENT
   componentTypeMap.set(node, component)
 
   if (isSymbol(component)) {
     if (component === SUSPENSE) {
       return ssrTransformSuspense(node, context)
     }
-    return // built-in component: fallthrough
+    if (component === TRANSITION_GROUP) {
+      return ssrTransformTransitionGroup(node, context)
+    }
+    return // other built-in components: fallthrough
   }
 
   // Build the fallback vnode-based branch for the component's slots.
@@ -110,12 +125,21 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
       })
     }
 
-    const props =
-      node.props.length > 0
-        ? // note we are not passing ssr: true here because for components, v-on
-          // handlers should still be passed
-          buildProps(node, context).props || `null`
-        : `null`
+    let propsExp: string | JSChildNode = `null`
+    if (node.props.length) {
+      // note we are not passing ssr: true here because for components, v-on
+      // handlers should still be passed
+      const { props, directives } = buildProps(
+        node,
+        context,
+        undefined,
+        true,
+        isDynamicComponent
+      )
+      if (props || directives.length) {
+        propsExp = buildSSRProps(props, directives, context)
+      }
+    }
 
     const wipEntries: WIPSlotEntry[] = []
     wipMap.set(node, wipEntries)
@@ -129,6 +153,7 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
         loc
       )
       wipEntries.push({
+        type: WIP_SLOT,
         fn,
         children,
         // also collect the corresponding vnode branch built earlier
@@ -151,7 +176,7 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
           `_push`,
           createCallExpression(context.helper(CREATE_VNODE), [
             component,
-            props,
+            propsExp,
             slots
           ]),
           `_parent`
@@ -160,7 +185,7 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
     } else {
       node.ssrCodegenNode = createCallExpression(
         context.helper(SSR_RENDER_COMPONENT),
-        [component, props, slots, `_parent`]
+        [component, propsExp, slots, `_parent`]
       )
     }
   }
@@ -168,7 +193,8 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
 
 export function ssrProcessComponent(
   node: ComponentNode,
-  context: SSRTransformContext
+  context: SSRTransformContext,
+  parent: { children: TemplateChildNode[] }
 ) {
   const component = componentTypeMap.get(node)!
   if (!node.ssrCodegenNode) {
@@ -182,13 +208,23 @@ export function ssrProcessComponent(
     } else {
       // real fall-through: Transition / KeepAlive
       // just render its children.
-      processChildren(node.children, context)
+      // #5352: if is at root level of a slot, push an empty string.
+      // this does not affect the final output, but avoids all-comment slot
+      // content of being treated as empty by ssrRenderSlot().
+      if ((parent as WIPSlotEntry).type === WIP_SLOT) {
+        context.pushStringPart(``)
+      }
+      // #5351: filter out comment children inside transition
+      if (component === TRANSITION) {
+        node.children = node.children.filter(c => c.type !== NodeTypes.COMMENT)
+      }
+      processChildren(node, context)
     }
   } else {
     // finish up slot function expressions from the 1st pass.
     const wipEntries = wipMap.get(node) || []
     for (let i = 0; i < wipEntries.length; i++) {
-      const { fn, children, vnodeBranch } = wipEntries[i]
+      const { fn, vnodeBranch } = wipEntries[i]
       // For each slot, we generate two branches: one SSR-optimized branch and
       // one normal vnode-based branch. The branches are taken based on the
       // presence of the 2nd `_push` argument (which is only present if the slot
@@ -196,7 +232,7 @@ export function ssrProcessComponent(
       fn.body = createIfStatement(
         createSimpleExpression(`_push`, false),
         processChildrenAsStatement(
-          children,
+          wipEntries[i],
           context,
           false,
           true /* withSlotScopeId */

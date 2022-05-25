@@ -73,6 +73,7 @@ export function emit(
   event: string,
   ...rawArgs: any[]
 ) {
+  if (instance.isUnmounted) return
   const props = instance.vnode.props || EMPTY_OBJ
 
   if (__DEV__) {
@@ -121,7 +122,8 @@ export function emit(
     const { number, trim } = props[modifiersKey] || EMPTY_OBJ
     if (trim) {
       args = rawArgs.map(a => a.trim())
-    } else if (number) {
+    }
+    if (number) {
       args = rawArgs.map(toNumber)
     }
   }

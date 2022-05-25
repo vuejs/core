@@ -52,7 +52,7 @@ export const isMap = (val: unknown): val is Map<any, any> =>
 export const isSet = (val: unknown): val is Set<any> =>
   toTypeString(val) === '[object Set]'
 
-export const isDate = (val: unknown): val is Date => val instanceof Date
+export const isDate = (val: unknown): val is Date => toTypeString(val) === '[object Date]'
 export const isFunction = (val: unknown): val is Function =>
   typeof val === 'function'
 export const isString = (val: unknown): val is string => typeof val === 'string'
@@ -88,6 +88,10 @@ export const isReservedProp = /*#__PURE__*/ makeMap(
     'onVnodeBeforeMount,onVnodeMounted,' +
     'onVnodeBeforeUpdate,onVnodeUpdated,' +
     'onVnodeBeforeUnmount,onVnodeUnmounted'
+)
+
+export const isBuiltInDirective = /*#__PURE__*/ makeMap(
+  'bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,slot,text,memo'
 )
 
 const cacheStringFunction = <T extends (str: string) => string>(fn: T): T => {
@@ -166,4 +170,12 @@ export const getGlobalThis = (): any => {
         ? global
         : {})
   )
+}
+
+const identRE = /^[_$a-zA-Z\xA0-\uFFFF][_$a-zA-Z0-9\xA0-\uFFFF]*$/
+
+export function genPropsAccessExp(name: string) {
+  return identRE.test(name)
+    ? `__props.${name}`
+    : `__props[${JSON.stringify(name)}]`
 }

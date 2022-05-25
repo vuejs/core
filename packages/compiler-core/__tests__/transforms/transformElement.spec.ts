@@ -5,7 +5,8 @@ import {
   ErrorCodes,
   BindingTypes,
   NodeTransform,
-  transformExpression
+  transformExpression,
+  baseCompile
 } from '../../src'
 import {
   RESOLVE_COMPONENT,
@@ -66,6 +67,7 @@ function parseWithBind(template: string, options?: CompilerOptions) {
   return parseWithElementTransform(template, {
     ...options,
     directiveTransforms: {
+      ...options?.directiveTransforms,
       bind: transformBind
     }
   })
@@ -78,7 +80,7 @@ describe('compiler: element transform', () => {
     expect(root.components).toContain(`Foo`)
   })
 
-  test('resolve implcitly self-referencing component', () => {
+  test('resolve implicitly self-referencing component', () => {
     const { root } = parseWithElementTransform(`<Example/>`, {
       filename: `/foo/bar/Example.vue?vue&type=template`
     })
@@ -805,6 +807,37 @@ describe('compiler: element transform', () => {
     })
   })
 
+  test(':style with array literal', () => {
+    const { node, root } = parseWithElementTransform(
+      `<div :style="[{ color: 'red' }]" />`,
+      {
+        nodeTransforms: [transformExpression, transformStyle, transformElement],
+        directiveTransforms: {
+          bind: transformBind
+        },
+        prefixIdentifiers: true
+      }
+    )
+    expect(root.helpers).toContain(NORMALIZE_STYLE)
+    expect(node.props).toMatchObject({
+      type: NodeTypes.JS_OBJECT_EXPRESSION,
+      properties: [
+        {
+          type: NodeTypes.JS_PROPERTY,
+          key: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: `style`,
+            isStatic: true
+          },
+          value: {
+            type: NodeTypes.JS_CALL_EXPRESSION,
+            callee: NORMALIZE_STYLE
+          }
+        }
+      ]
+    })
+  })
+
   test(`props merging: class`, () => {
     const { node, root } = parseWithElementTransform(
       `<div class="foo" :class="{ bar: isBar }" />`,
@@ -932,7 +965,11 @@ describe('compiler: element transform', () => {
     })
 
     test('NEED_PATCH (vnode hooks)', () => {
-      const { node } = parseWithBind(`<div @vnodeUpdated="foo" />`)
+      const root = baseCompile(`<div @vnodeUpdated="foo" />`, {
+        prefixIdentifiers: true,
+        cacheHandlers: true
+      }).ast
+      const node = (root as any).children[0].codegenNode
       expect(node.patchFlag).toBe(genFlagText(PatchFlags.NEED_PATCH))
     })
 
@@ -1013,6 +1050,21 @@ describe('compiler: element transform', () => {
         }
       )
       expect(node2.patchFlag).toBe(
+        genFlagText([PatchFlags.PROPS, PatchFlags.HYDRATE_EVENTS])
+      )
+    })
+
+    // #5870
+    test('HYDRATE_EVENTS on dynamic component', () => {
+      const { node } = parseWithElementTransform(
+        `<component :is="foo" @input="foo" />`,
+        {
+          directiveTransforms: {
+            on: transformOn
+          }
+        }
+      )
+      expect(node.patchFlag).toBe(
         genFlagText([PatchFlags.PROPS, PatchFlags.HYDRATE_EVENTS])
       )
     })

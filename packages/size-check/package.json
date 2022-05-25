@@ -1,6 +1,6 @@
 {
   "name": "@vue/size-check",
-  "version": "3.2.29",
+  "version": "3.2.36",
   "private": true,
   "scripts": {
     "build": "vite build"

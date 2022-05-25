@@ -1,6 +1,6 @@
 {
   "name": "@vue/runtime-test",
-  "version": "3.2.29",
+  "version": "3.2.36",
   "description": "@vue/runtime-test",
   "private": true,
   "main": "index.js",
@@ -25,7 +25,7 @@
   },
   "homepage": "https://github.com/vuejs/core/tree/main/packages/runtime-test#readme",
   "dependencies": {
-    "@vue/shared": "3.2.29",
-    "@vue/runtime-core": "3.2.29"
+    "@vue/shared": "3.2.36",
+    "@vue/runtime-core": "3.2.36"
   }
 }

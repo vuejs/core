@@ -18,10 +18,13 @@ const cssVarRE = /v-bind\s*\(((?:[^)(]+|\((?:[^)(]+|\([^)(]*\))*\))*)\)/g
 export function genCssVarsFromList(
   vars: string[],
   id: string,
-  isProd: boolean
+  isProd: boolean,
+  isSSR = false
 ): string {
   return `{\n  ${vars
-    .map(key => `"${genVarName(id, key, isProd)}": (${key})`)
+    .map(
+      key => `"${isSSR ? `--` : ``}${genVarName(id, key, isProd)}": (${key})`
+    )
     .join(',\n  ')}\n}`
 }
 
@@ -33,7 +36,7 @@ function genVarName(id: string, raw: string, isProd: boolean): string {
   }
 }
 
-function noramlizeExpression(exp: string) {
+function normalizeExpression(exp: string) {
   exp = exp.trim()
   if (
     (exp[0] === `'` && exp[exp.length - 1] === `'`) ||
@@ -51,7 +54,7 @@ export function parseCssVars(sfc: SFCDescriptor): string[] {
     // ignore v-bind() in comments /* ... */
     const content = style.content.replace(/\/\*([\s\S]*?)\*\//g, '')
     while ((match = cssVarRE.exec(content))) {
-      const variable = noramlizeExpression(match[1])
+      const variable = normalizeExpression(match[1])
       if (!vars.includes(variable)) {
         vars.push(variable)
       }
@@ -74,7 +77,7 @@ export const cssVarsPlugin: PluginCreator<CssVarsPluginOptions> = opts => {
       // rewrite CSS variables
       if (cssVarRE.test(decl.value)) {
         decl.value = decl.value.replace(cssVarRE, (_, $1) => {
-          return `var(--${genVarName(id, noramlizeExpression($1), isProd)})`
+          return `var(--${genVarName(id, normalizeExpression($1), isProd)})`
         })
       }
     }

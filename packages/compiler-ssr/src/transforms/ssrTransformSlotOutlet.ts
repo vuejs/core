@@ -4,9 +4,13 @@ import {
   processSlotOutlet,
   createCallExpression,
   SlotOutletNode,
-  createFunctionExpression
+  createFunctionExpression,
+  NodeTypes,
+  ElementTypes,
+  resolveComponentType,
+  TRANSITION
 } from '@vue/compiler-dom'
-import { SSR_RENDER_SLOT } from '../runtimeHelpers'
+import { SSR_RENDER_SLOT, SSR_RENDER_SLOT_INNER } from '../runtimeHelpers'
 import {
   SSRTransformContext,
   processChildrenAsStatement
@@ -31,10 +35,24 @@ export const ssrTransformSlotOutlet: NodeTransform = (node, context) => {
       args.push(`"${context.scopeId}-s"`)
     }
 
-    node.ssrCodegenNode = createCallExpression(
-      context.helper(SSR_RENDER_SLOT),
-      args
-    )
+    let method = SSR_RENDER_SLOT
+
+    // #3989
+    // check if this is a single slot inside a transition wrapper - since
+    // transition will unwrap the slot fragment into a single vnode at runtime,
+    // we need to avoid rendering the slot as a fragment.
+    const parent = context.parent
+    if (
+      parent &&
+      parent.type === NodeTypes.ELEMENT &&
+      parent.tagType === ElementTypes.COMPONENT &&
+      resolveComponentType(parent, context, true) === TRANSITION &&
+      parent.children.filter(c => c.type === NodeTypes.ELEMENT).length === 1
+    ) {
+      method = SSR_RENDER_SLOT_INNER
+    }
+
+    node.ssrCodegenNode = createCallExpression(context.helper(method), args)
   }
 }
 
@@ -47,7 +65,7 @@ export function ssrProcessSlotOutlet(
   // has fallback content
   if (node.children.length) {
     const fallbackRenderFn = createFunctionExpression([])
-    fallbackRenderFn.body = processChildrenAsStatement(node.children, context)
+    fallbackRenderFn.body = processChildrenAsStatement(node, context)
     // _renderSlot(slots, name, props, fallback, ...)
     renderCall.arguments[3] = fallbackRenderFn
   }

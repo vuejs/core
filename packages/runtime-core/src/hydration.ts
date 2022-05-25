@@ -27,7 +27,7 @@ import { isAsyncWrapper } from './apiAsyncComponent'
 
 export type RootHydrateFunction = (
   vnode: VNode<Node, Element>,
-  container: Element | ShadowRoot
+  container: (Element | ShadowRoot) & { _vnode?: VNode }
 ) => void
 
 const enum DOMNodeTypes {
@@ -55,7 +55,15 @@ export function createHydrationFunctions(
   const {
     mt: mountComponent,
     p: patch,
-    o: { patchProp, nextSibling, parentNode, remove, insert, createComment }
+    o: {
+      patchProp,
+      createText,
+      nextSibling,
+      parentNode,
+      remove,
+      insert,
+      createComment
+    }
   } = rendererInternals
 
   const hydrate: RootHydrateFunction = (vnode, container) => {
@@ -67,11 +75,13 @@ export function createHydrationFunctions(
         )
       patch(null, vnode, container)
       flushPostFlushCbs()
+      container._vnode = vnode
       return
     }
     hasMismatch = false
     hydrateNode(container.firstChild!, vnode, null, null, null)
     flushPostFlushCbs()
+    container._vnode = vnode
     if (hasMismatch && !__TEST__) {
       // this error should show up in production
       console.error(`Hydration completed but contains mismatches.`)
@@ -97,15 +107,27 @@ export function createHydrationFunctions(
         isFragmentStart
       )
 
-    const { type, ref, shapeFlag } = vnode
+    const { type, ref, shapeFlag, patchFlag } = vnode
     const domType = node.nodeType
     vnode.el = node
+
+    if (patchFlag === PatchFlags.BAIL) {
+      optimized = false
+      vnode.dynamicChildren = null
+    }
 
     let nextNode: Node | null = null
     switch (type) {
       case Text:
         if (domType !== DOMNodeTypes.TEXT) {
-          nextNode = onMismatch()
+          // #5728 empty text node inside a slot can cause hydration failure
+          // because the server rendered HTML won't contain a text node
+          if (vnode.children === '') {
+            insert((vnode.el = createText('')), parentNode(node)!, node)
+            nextNode = node
+          } else {
+            nextNode = onMismatch()
+          }
         } else {
           if ((node as Text).data !== vnode.children) {
             hasMismatch = true
@@ -202,6 +224,15 @@ export function createHydrationFunctions(
             ? locateClosingAsyncAnchor(node)
             : nextSibling(node)
 
+          // #4293 teleport as component root
+          if (
+            nextNode &&
+            isComment(nextNode) &&
+            nextNode.data === 'teleport end'
+          ) {
+            nextNode = nextSibling(nextNode)
+          }
+
           // #3787
           // if component is async, it may get moved / unmounted before its
           // inner component is loaded, so we need to give it a placeholder
@@ -273,7 +304,8 @@ export function createHydrationFunctions(
     // e.g. <option :value="obj">, <input type="checkbox" :true-value="1">
     const forcePatchValue = (type === 'input' && dirs) || type === 'option'
     // skip props & children if this is hoisted static nodes
-    if (forcePatchValue || patchFlag !== PatchFlags.HOISTED) {
+    // #5405 in dev, always hydrate children for HMR
+    if (__DEV__ || forcePatchValue || patchFlag !== PatchFlags.HOISTED) {
       if (dirs) {
         invokeDirectiveHook(vnode, null, parentComponent, 'created')
       }
