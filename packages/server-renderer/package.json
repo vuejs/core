@@ -13,6 +13,7 @@
     "name": "VueServerRenderer",
     "formats": [
       "esm-bundler",
+      "esm-browser",
       "cjs"
     ]
   },
