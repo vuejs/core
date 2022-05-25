@@ -442,6 +442,7 @@ export interface ImgHTMLAttributes extends HTMLAttributes {
   decoding?: 'async' | 'auto' | 'sync'
   height?: Numberish
   loading?: 'eager' | 'lazy'
+  referrerpolicy?: string
   sizes?: string
   src?: string
   srcset?: string
