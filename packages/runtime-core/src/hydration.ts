@@ -150,7 +150,7 @@ export function createHydrationFunctions(
         }
         break
       case Static:
-        if (domType !== DOMNodeTypes.ELEMENT) {
+        if (domType !== DOMNodeTypes.ELEMENT && domType !== DOMNodeTypes.TEXT) {
           nextNode = onMismatch()
         } else {
           // determine anchor, adopt content
