@@ -150,7 +150,7 @@ export function createHydrationFunctions(
         }
         break
       case Static:
-        if (domType !== DOMNodeTypes.ELEMENT) {
+        if (domType !== DOMNodeTypes.ELEMENT && domType !== DOMNodeTypes.TEXT) {
           nextNode = onMismatch()
         } else {
           // determine anchor, adopt content
@@ -160,7 +160,10 @@ export function createHydrationFunctions(
           const needToAdoptContent = !(vnode.children as string).length
           for (let i = 0; i < vnode.staticCount!; i++) {
             if (needToAdoptContent)
-              vnode.children += (nextNode as Element).outerHTML
+              vnode.children +=
+                nextNode.nodeType === DOMNodeTypes.ELEMENT
+                  ? (nextNode as Element).outerHTML
+                  : (nextNode as Text).data
             if (i === vnode.staticCount! - 1) {
               vnode.anchor = nextNode
             }
