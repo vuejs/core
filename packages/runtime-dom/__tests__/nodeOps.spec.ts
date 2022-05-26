@@ -26,6 +26,32 @@ describe('runtime-dom: node-ops', () => {
     expect(option2.selected).toBe(true)
   })
 
+  test("the <input>'s value, checked attrs should be set in createElement", () => {
+    const value = 'foo'
+    const checked = true
+
+    const el = nodeOps.createElement('input', false, undefined, {
+      value,
+      checked
+    }) as HTMLInputElement
+
+    el.value = value + value
+    el.checked = !checked
+
+    expect(el.getAttribute('value')).toBe(value)
+    expect(el.getAttribute('checked')).toBe('')
+  })
+
+  test("the <option>'s selected attr should be set in createElement", () => {
+    const el = nodeOps.createElement('option', false, undefined, {
+      selected: true
+    }) as HTMLOptionElement
+
+    el.selected = false
+
+    expect(el.getAttribute('selected')).toBe('')
+  })
+
   describe('insertStaticContent', () => {
     test('fresh insertion', () => {
       const content = `<div>one</div><div>two</div>three`

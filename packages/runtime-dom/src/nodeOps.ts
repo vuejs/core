@@ -27,6 +27,19 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
       ;(el as HTMLSelectElement).setAttribute('multiple', props.multiple)
     }
 
+    if (tag === 'option' && props && props.selected) {
+      el.setAttribute('selected', '')
+    }
+
+    if (tag === 'input' && props) {
+      if (props.value) {
+        el.setAttribute('value', props.value)
+      }
+      if (props.checked) {
+        el.setAttribute('checked', '')
+      }
+    }
+
     return el
   },
 
