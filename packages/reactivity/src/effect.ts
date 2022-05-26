@@ -314,7 +314,9 @@ export function trigger(
     // trigger all effects for target
     deps = [...depsMap.values()]
   } else if (key === 'length' && isArray(target)) {
+    // 修改了数组的 length 属性，会隐式地影响数组元素
     depsMap.forEach((dep, key) => {
+      // 索引值大于或等于新的 length 属性值的元素才需要触发响应
       if (key === 'length' || key >= (newValue as number)) {
         deps.push(dep)
       }
@@ -329,25 +331,34 @@ export function trigger(
     switch (type) {
       case TriggerOpTypes.ADD:
         if (!isArray(target)) {
+          // 新增对象属性会影响 for in 操作（通过 ITERATE_KEY 关联）
           deps.push(depsMap.get(ITERATE_KEY))
           if (isMap(target)) {
+            // ADD 会操作会影响 Map 的 keys 迭代器
             deps.push(depsMap.get(MAP_KEY_ITERATE_KEY))
           }
         } else if (isIntegerKey(key)) {
+          // 新增数组项会影响 length
           // new index added to array -> length changes
           deps.push(depsMap.get('length'))
         }
         break
       case TriggerOpTypes.DELETE:
         if (!isArray(target)) {
+          // 同样的，删除对象属性也会影响 for in 操作
           deps.push(depsMap.get(ITERATE_KEY))
           if (isMap(target)) {
+            // DELETE 会操作会影响 Map 的 keys 迭代器
             deps.push(depsMap.get(MAP_KEY_ITERATE_KEY))
           }
         }
+        // 注意：删除数组项不会改变 length
         break
       case TriggerOpTypes.SET:
         if (isMap(target)) {
+          // 如果操作类型是 SET，并且目标对象是 Map 类型的数据
+          // 也应该触发那些与 ITERATE_KEY 相关联的副作用函数的重新执行
+          // 原因：set 操作会影响 Map 的键和值，进而影响 forEach
           deps.push(depsMap.get(ITERATE_KEY))
         }
         break

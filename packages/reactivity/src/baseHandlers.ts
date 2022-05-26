@@ -34,6 +34,7 @@ import { warn } from './warning'
 
 const isNonTrackableKeys = /*#__PURE__*/ makeMap(`__proto__,__v_isRef,__isVue`)
 
+// ES 内置的 symbols
 const builtInSymbols = new Set(
   /*#__PURE__*/
   Object.getOwnPropertyNames(Symbol)
@@ -52,6 +53,8 @@ function createArrayInstrumentations() {
   const instrumentations: Record<string, Function> = {}
   // instrument identity-sensitive Array methods to account for possible reactive
   // values
+
+  // 重写数组的查找方法
   ;(['includes', 'indexOf', 'lastIndexOf'] as const).forEach(key => {
     instrumentations[key] = function (this: unknown[], ...args: unknown[]) {
       const arr = toRaw(this) as any
@@ -70,10 +73,14 @@ function createArrayInstrumentations() {
   })
   // instrument length-altering mutation methods to avoid length being tracked
   // which leads to infinite loops in some cases (#2137)
+
+  // 重写隐式修改数组长度的方法
   ;(['push', 'pop', 'shift', 'unshift', 'splice'] as const).forEach(key => {
     instrumentations[key] = function (this: unknown[], ...args: unknown[]) {
       pauseTracking()
+      // 暂停追踪
       const res = (toRaw(this) as any)[key].apply(this, args)
+      // 恢复追踪
       resetTracking()
       return res
     }
@@ -107,30 +114,39 @@ function createGetter(isReadonly = false, shallow = false) {
     const targetIsArray = isArray(target)
 
     if (!isReadonly && targetIsArray && hasOwn(arrayInstrumentations, key)) {
+      // 对于特定的数组方法
       return Reflect.get(arrayInstrumentations, key, receiver)
     }
 
+    // 对于 Reflect 的理解
+    // 为什么不是 const res = target[key]
     const res = Reflect.get(target, key, receiver)
 
     if (isSymbol(key) ? builtInSymbols.has(key) : isNonTrackableKeys(key)) {
+      // 排除语言自带的 symbol（比如 Symbol.iterator） 和 不可追踪的 key
       return res
     }
 
     if (!isReadonly) {
+      // 不需要为只读属性建立响应联系
       track(target, TrackOpTypes.GET, key)
     }
 
     if (shallow) {
+      // 浅响应直接返回对象属性值
       return res
     }
 
     if (isRef(res)) {
+      // 如果对象属性值是 ref 自动解包
       // ref unwrapping - does not apply for Array + integer key.
       const shouldUnwrap = !targetIsArray || !isIntegerKey(key)
       return shouldUnwrap ? res.value : res
     }
 
     if (isObject(res)) {
+      // 如果对象属性值是对象，对其进行递归的 readonly、reactive 处理
+      // 深只读 深响应
       // Convert returned value into a proxy as well. we do the isObject check
       // here to avoid invalid value warning. Also need to lazy access readonly
       // and reactive here to avoid circular dependency.
@@ -168,16 +184,22 @@ function createSetter(shallow = false) {
       // in shallow mode, objects are set as-is regardless of reactive or not
     }
 
+    // 对于数组，如果索引小于length，说明是 SET 操作，否则为 ADD 操作
     const hadKey =
       isArray(target) && isIntegerKey(key)
         ? Number(key) < target.length
         : hasOwn(target, key)
     const result = Reflect.set(target, key, value, receiver)
     // don't trigger if target is something up in the prototype chain of original
+    // target === toRaw(receiver) 说明 receiver 就是 target 的代理对象
+    // 也就是说：只有当 receiver 是 target 的代理对象时才触发更新
+    // 这样就能屏蔽由原型引起的更新，从而避免不必要的更新操作
     if (target === toRaw(receiver)) {
       if (!hadKey) {
+        // 新增对象属性是 ADD 操作
         trigger(target, TriggerOpTypes.ADD, key, value)
       } else if (hasChanged(value, oldValue)) {
+        // 比较新值与旧值，不全等且都不是 NaN 的时候才触发
         trigger(target, TriggerOpTypes.SET, key, value, oldValue)
       }
     }
@@ -195,6 +217,7 @@ function deleteProperty(target: object, key: string | symbol): boolean {
   return result
 }
 
+// 与 in 操作符对应的拦截函数
 function has(target: object, key: string | symbol): boolean {
   const result = Reflect.has(target, key)
   if (!isSymbol(key) || !builtInSymbols.has(key)) {
@@ -203,7 +226,10 @@ function has(target: object, key: string | symbol): boolean {
   return result
 }
 
+// 与 for in 循环对应的拦截函数
 function ownKeys(target: object): (string | symbol)[] {
+  // ITERATE_KEY（全局唯一标识）作为 for in 操作关联的 key
+  // 对于数组，添加新元素或是修改数组长度（本质都是修改数组的 length 属性）都会影响 for in 循环对数组的遍历
   track(target, TrackOpTypes.ITERATE, isArray(target) ? 'length' : ITERATE_KEY)
   return Reflect.ownKeys(target)
 }

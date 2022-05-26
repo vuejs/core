@@ -26,7 +26,7 @@ export interface Target {
   [ReactiveFlags.IS_REACTIVE]?: boolean
   [ReactiveFlags.IS_READONLY]?: boolean
   [ReactiveFlags.IS_SHALLOW]?: boolean
-  [ReactiveFlags.RAW]?: any
+  [ReactiveFlags.RAW]?: any   // 原始对象
 }
 
 export const reactiveMap = new WeakMap<Target, any>()
@@ -67,11 +67,15 @@ export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRefSimple<T>
 /**
  * Creates a reactive copy of the original object.
  *
+ * reactive 默认是深响应 相对 shallowReactive 浅响应
+ * 
  * The reactive conversion is "deep"—it affects all nested properties. In the
  * ES2015 Proxy based implementation, the returned proxy is **not** equal to the
  * original object. It is recommended to work exclusively with the reactive
  * proxy and avoid relying on the original object.
  *
+ * reactive 会自动对内部的 ref 进行解包
+ * 
  * A reactive object also automatically unwraps refs contained in it, so you
  * don't need to use `.value` when accessing and mutating their value:
  *
@@ -106,6 +110,8 @@ export declare const ShallowReactiveMarker: unique symbol
 export type ShallowReactive<T> = T & { [ShallowReactiveMarker]?: true }
 
 /**
+ * 浅响应只会对第一层属性（根属性）进行响应式处理，并且不会对 ref 进行解包
+ * 
  * Return a shallowly-reactive copy of the original object, where only the root
  * level properties are reactive. It also does not auto-unwrap refs (even at the
  * root level).
@@ -146,6 +152,8 @@ export type DeepReadonly<T> = T extends Builtin
   ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
   : Readonly<T>
 
+
+// 深只读  
 /**
  * Creates a readonly copy of the original object. Note the returned copy is not
  * made reactive, but `readonly` can be called on an already reactive object.
@@ -162,6 +170,7 @@ export function readonly<T extends object>(
   )
 }
 
+// 浅只读
 /**
  * Returns a reactive-copy of the original object, where only the root level
  * properties are readonly, and does NOT unwrap refs nor recursively convert
@@ -197,6 +206,7 @@ function createReactiveObject(
     target[ReactiveFlags.RAW] &&
     !(isReadonly && target[ReactiveFlags.IS_REACTIVE])
   ) {
+    // 通过 target[ReactiveFlags.RAW] 获取原始对象
     return target
   }
   // target already has corresponding Proxy
@@ -236,6 +246,7 @@ export function isProxy(value: unknown): boolean {
   return isReactive(value) || isReadonly(value)
 }
 
+// 获取原始对象
 export function toRaw<T>(observed: T): T {
   const raw = observed && (observed as Target)[ReactiveFlags.RAW]
   return raw ? toRaw(raw) : observed

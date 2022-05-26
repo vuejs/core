@@ -58,16 +58,21 @@ function has(this: CollectionTypes, key: unknown, isReadonly = false): boolean {
 
 function size(target: IterableCollections, isReadonly = false) {
   target = (target as any)[ReactiveFlags.RAW]
+  // 任何新增修改操作都会影响 size 属性，因此将收集的副作用函数与 ITERATE_KEY 关联
   !isReadonly && track(toRaw(target), TrackOpTypes.ITERATE, ITERATE_KEY)
+  // 注意区别
+  // return Reflect.get(tagret, 'size', receiver)
   return Reflect.get(target, 'size', target)
 }
 
 function add(this: SetTypes, value: unknown) {
+  // toRaw 获取原始集合对象
   value = toRaw(value)
   const target = toRaw(this)
   const proto = getProto(target)
   const hadKey = proto.has.call(target, value)
   if (!hadKey) {
+    // 只在添加的元素不存在于集合中时才触发响应
     target.add(value)
     trigger(target, TriggerOpTypes.ADD, value, value)
   }
@@ -90,8 +95,10 @@ function set(this: MapTypes, key: unknown, value: unknown) {
   const oldValue = get.call(target, key)
   target.set(key, value)
   if (!hadKey) {
+    // key 不存在 ADD 操作
     trigger(target, TriggerOpTypes.ADD, key, value)
   } else if (hasChanged(value, oldValue)) {
+    // key 存在 SET 操作
     trigger(target, TriggerOpTypes.SET, key, value, oldValue)
   }
   return this
@@ -112,6 +119,7 @@ function deleteEntry(this: CollectionTypes, key: unknown) {
   // forward the operation before queueing reactions
   const result = target.delete(key)
   if (hadKey) {
+    // 只在删除的元素存在于集合中时才触发响应
     trigger(target, TriggerOpTypes.DELETE, key, undefined, oldValue)
   }
   return result
@@ -143,11 +151,14 @@ function createForEach(isReadonly: boolean, isShallow: boolean) {
     const target = observed[ReactiveFlags.RAW]
     const rawTarget = toRaw(target)
     const wrap = isShallow ? toShallow : isReadonly ? toReadonly : toReactive
+    // delete 和 add 方法会改变集合的成员数量进而影响 forEach，因此将收集的副作用函数与 ITERATE_KEY 关联
     !isReadonly && track(rawTarget, TrackOpTypes.ITERATE, ITERATE_KEY)
     return target.forEach((value: unknown, key: unknown) => {
       // important: make sure the callback is
       // 1. invoked with the reactive map as `this` and 3rd arg
       // 2. the value received should be a corresponding reactive/readonly.
+
+      // wrap(value) wrap(key) - 确保 forEach 回调函数中的 value、key 参数是响应式的
       return callback.call(thisArg, wrap(value), wrap(key), observed)
     })
   }
@@ -181,8 +192,11 @@ function createIterableMethod(
     const isPair =
       method === 'entries' || (method === Symbol.iterator && targetIsMap)
     const isKeyOnly = method === 'keys' && targetIsMap
+    // 集合的代理对象本身没有迭代器方法，需要借助原始的迭代器
     const innerIterator = target[method](...args)
     const wrap = isShallow ? toShallow : isReadonly ? toReadonly : toReactive
+    // 这里与副作用函数建立联系的 key 有两种 MAP_KEY_ITERATE_KEY、ITERATE_KEY
+    // 对于 keys 迭代器，它只关心 Map 的 key 是否发生变化
     !isReadonly &&
       track(
         rawTarget,
@@ -192,7 +206,9 @@ function createIterableMethod(
     // return a wrapped iterator which returns observed versions of the
     // values emitted from the real iterator
     return {
+      // 迭代器协议
       // iterator protocol
+      // 借用原始的迭代器实现代理对象的迭代器 - next 方法 、value 和 done 属性
       next() {
         const { value, done } = innerIterator.next()
         return done
@@ -202,6 +218,7 @@ function createIterableMethod(
               done
             }
       },
+      // 可迭代协议
       // iterable protocol
       [Symbol.iterator]() {
         return this
@@ -223,12 +240,17 @@ function createReadonlyMethod(type: TriggerOpTypes): Function {
   }
 }
 
+// 重写集合方法
 function createInstrumentations() {
   const mutableInstrumentations: Record<string, Function> = {
     get(this: MapTypes, key: unknown) {
       return get(this, key)
     },
+    // 访问器属性 size
+    // const s = new Set([1, 2, 3])
+    // console.log(s.size)
     get size() {
+      // ts 双重断言 (... as ... as ...)
       return size(this as unknown as IterableCollections)
     },
     has,
@@ -288,6 +310,10 @@ function createInstrumentations() {
     forEach: createForEach(true, true)
   }
 
+  // 重写四个迭代器方法
+  // 你也许不知道 entries 与 Symbol.iterator 是等价的
+  // const m = new Map()
+  // m[Symbol.iterator] === m.entries   // true
   const iteratorMethods = ['keys', 'values', 'entries', Symbol.iterator]
   iteratorMethods.forEach(method => {
     mutableInstrumentations[method as string] = createIterableMethod(

@@ -133,6 +133,7 @@ export const toHandlerKey = cacheStringFunction((str: string) =>
 )
 
 // compare whether a value has changed, accounting for NaN.
+// 判断值是否发生改变，与 == 不同的是不会发生强制类型转换，与 === 不同的是对于有符号的 0 和 NaN 的处理不同
 export const hasChanged = (value: any, oldValue: any): boolean =>
   !Object.is(value, oldValue)
 
