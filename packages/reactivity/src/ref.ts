@@ -141,9 +141,11 @@ const shallowUnwrapHandlers: ProxyHandler<any> = {
   }
 }
 
+// 自动脱 ref
 export function proxyRefs<T extends object>(
   objectWithRefs: T
 ): ShallowUnwrapRef<T> {
+  // reactive 内部已实现自动脱 ref
   return isReactive(objectWithRefs)
     ? objectWithRefs
     : new Proxy(objectWithRefs, shallowUnwrapHandlers)
@@ -190,6 +192,8 @@ export function customRef<T>(factory: CustomRefFactory<T>): Ref<T> {
 export type ToRefs<T = any> = {
   [K in keyof T]: ToRef<T[K]>
 }
+
+// 批量转 ref
 export function toRefs<T extends object>(object: T): ToRefs<T> {
   if (__DEV__ && !isProxy(object)) {
     console.warn(`toRefs() expects a reactive object but received a plain one.`)
@@ -233,6 +237,7 @@ export function toRef<T extends object, K extends keyof T>(
   defaultValue: T[K]
 ): ToRef<Exclude<T[K], undefined>>
 
+// 将对象的属性值转成 ref
 export function toRef<T extends object, K extends keyof T>(
   object: T,
   key: K,
