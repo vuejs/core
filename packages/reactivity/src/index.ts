@@ -17,6 +17,7 @@ export {
   RefUnwrapBailTypes,
   CustomRefFactory
 } from './ref'
+export type { RawSymbol } from './ref'
 export {
   reactive,
   readonly,
