@@ -1050,4 +1050,31 @@ describe('SSR hydration', () => {
       expect(`Hydration children mismatch`).toHaveBeenWarned()
     })
   })
+
+  // #6008
+  describe('hydrate Static vnode', () => {
+    test('domType is ELEMENT should match', () => {
+      const html = ` A <wbr> <code>0</code> <wbr> B <wbr> <code>1</code> C <code>2</code> <wbr> D <wbr> <code>E</code>`
+      const { vnode, container } = mountWithHydration(html, () =>
+        createStaticVNode(
+          ` A <wbr> <code>0</code> <wbr> B <wbr> <code>1</code> C <code>2</code> <wbr> D <wbr> <code>E</code>`,
+          18
+        )
+      )
+      expect(vnode.el).toBe(container.firstChild)
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('domType is TEXT should match', () => {
+      const html = `<wbr>A<wbr><code>0</code> <wbr> B <wbr> <code>1</code> C <code>2</code> <wbr> D <wbr> <code>E</code>`
+      const { vnode, container } = mountWithHydration(html, () =>
+        createStaticVNode(
+          `<wbr>A<wbr><code>0</code> <wbr> B <wbr> <code>1</code> C <code>2</code> <wbr> D <wbr> <code>E</code>`,
+          18
+        )
+      )
+      expect(vnode.el).toBe(container.firstChild)
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    })
+  })
 })
