@@ -231,6 +231,7 @@ describe('api: lifecycle hooks', () => {
     }
 
     const Mid = {
+      props: ['count'],
       setup(props: any) {
         onBeforeMount(() => calls.push('mid onBeforeMount'))
         onMounted(() => calls.push('mid onMounted'))
@@ -243,6 +244,7 @@ describe('api: lifecycle hooks', () => {
     }
 
     const Child = {
+      props: ['count'],
       setup(props: any) {
         onBeforeMount(() => calls.push('child onBeforeMount'))
         onMounted(() => calls.push('child onMounted'))
