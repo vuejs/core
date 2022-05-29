@@ -4,7 +4,8 @@ import {
   h,
   nodeOps,
   nextTick,
-  getCurrentInstance
+  getCurrentInstance,
+  withCtx
 } from '@vue/runtime-test'
 import { normalizeVNode } from '../src/vnode'
 import { createSlots } from '../src/helpers/createSlots'
@@ -86,7 +87,7 @@ describe('component: slots', () => {
 
     render(
       h(Comp, null, {
-        header
+        header: withCtx(() => 'header', proxy)
       }),
       nodeOps.createElement('div')
     )
