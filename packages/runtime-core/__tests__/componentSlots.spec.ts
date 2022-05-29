@@ -82,8 +82,6 @@ describe('component: slots', () => {
         return h('div')
       }
     }
-    const header = () => 'header'
-    ;(header as any)._n = true // mark as normalized
 
     render(
       h(Comp, null, {
