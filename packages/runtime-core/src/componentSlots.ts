@@ -65,7 +65,7 @@ const normalizeSlot = (
 ): Slot => {
   if ((rawSlot as any)._n) {
     // already normalized - #5353
-    return rawSlot as Slot
+    return ((...args: any[]) => normalizeSlotValue(rawSlot(...args))) as Slot
   }
   const normalized = withCtx((...args: any[]) => {
     if (__DEV__ && currentInstance) {

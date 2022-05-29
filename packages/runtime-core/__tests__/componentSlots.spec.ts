@@ -72,6 +72,28 @@ describe('component: slots', () => {
     expect(proxy.slots.header()).toMatchObject([normalizeVNode('header')])
   })
 
+  // #5353
+  test('initSlots: ensure raw Slots are only normalized once by withContext', () => {
+    let proxy: any
+    const Comp = {
+      render() {
+        proxy = getCurrentInstance()
+        return h('div')
+      }
+    }
+    const header = () => 'header'
+    ;(header as any)._n = true // mark as normalized
+
+    render(
+      h(Comp, null, {
+        header
+      }),
+      nodeOps.createElement('div')
+    )
+    // should return an array of VNodes
+    expect(proxy.slots.header()).toMatchObject([normalizeVNode('header')])
+  })
+
   test('initSlots: instance.slots should be set correctly (when vnode.shapeFlag is not SLOTS_CHILDREN)', () => {
     const { slots } = renderWithSlots([h('span')])
 
