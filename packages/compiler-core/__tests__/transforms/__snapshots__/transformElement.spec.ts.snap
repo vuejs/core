@@ -1,0 +1,11 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`compiler: element transform <KeepAlive> multiple children should ignore comments 1`] = `
+"const { createCommentVNode: _createCommentVNode, resolveDynamicComponent: _resolveDynamicComponent, openBlock: _openBlock, createBlock: _createBlock, KeepAlive: _KeepAlive } = Vue
+
+return function render(_ctx, _cache) {
+  return (_openBlock(), _createBlock(_KeepAlive, null, [
+    (_openBlock(), _createBlock(_resolveDynamicComponent(_ctx.activeComponent)))
+  ], 1024 /* DYNAMIC_SLOTS */))
+}"
+`;
