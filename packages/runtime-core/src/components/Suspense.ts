@@ -91,7 +91,13 @@ export const SuspenseImpl = {
 // Force-casted public typing for h and TSX props inference
 export const Suspense = (__FEATURE_SUSPENSE__ ? SuspenseImpl : null) as any as {
   __isSuspense: true
-  new (): { $props: VNodeProps & SuspenseProps }
+  new (): {
+    $props: VNodeProps & SuspenseProps
+    $slots: {
+      default(): VNode[]
+      fallback(): VNode[]
+    }
+  }
 }
 
 function triggerEvent(
