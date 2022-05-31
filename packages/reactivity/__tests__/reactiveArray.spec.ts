@@ -99,6 +99,24 @@ describe('reactivity/reactive/Array', () => {
     expect(fn).toHaveBeenCalledTimes(1)
   })
 
+  //#6018
+  test('edge case: array length-decrease mutation methods (splice,pop,shift) work with JSON.stringify', () => {
+    const arr = ref([1])
+    const fn1 = jest.fn()
+    const fn2 = jest.fn()
+    effect(() => {
+      fn1()
+      if (arr.value.length > 0) {
+        fn2(JSON.stringify(arr.value))
+      }
+    })
+    expect(fn1).toHaveBeenCalledTimes(1)
+    expect(fn2).toHaveBeenCalledTimes(1)
+    arr.value.splice(0)
+    expect(fn1).toHaveBeenCalledTimes(2)
+    expect(fn2).toHaveBeenCalledTimes(1)
+  })
+
   test('add existing index on Array should not trigger length dependency', () => {
     const array = new Array(3)
     const observed = reactive(array)
