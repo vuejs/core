@@ -350,7 +350,7 @@ function matches(pattern: MatchPattern, name: string): boolean {
     return pattern.some((p: string | RegExp) => matches(p, name))
   } else if (isString(pattern)) {
     return pattern.split(',').includes(name)
-  } else if (pattern.test) {
+  } else if (pattern instanceof RegExp) {
     return pattern.test(name)
   }
   /* istanbul ignore next */
