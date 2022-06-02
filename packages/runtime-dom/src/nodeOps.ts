@@ -35,6 +35,7 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
   createComment: text => doc.createComment(text),
 
   setText: (node, text) => {
+    // 通过 nodeValue 更新文本节点内容
     node.nodeValue = text
   },
 

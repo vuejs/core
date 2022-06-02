@@ -289,6 +289,7 @@ export const queuePostRenderEffect = __FEATURE_SUSPENSE__
  * })
  * ```
  */
+// 创建通用渲染器，不局限于特定平台（浏览器）
 export function createRenderer<
   HostNode = RendererNode,
   HostElement = RendererElement
@@ -351,6 +352,8 @@ function baseCreateRenderer(
 
   // Note: functions inside this closure should use `const xxx = () => {}`
   // style in order to prevent being inlined by minifiers.
+
+  // 更新操作入口
   const patch: PatchFn = (
     n1,
     n2,
@@ -362,12 +365,14 @@ function baseCreateRenderer(
     slotScopeIds = null,
     optimized = __DEV__ && isHmrUpdating ? false : !!n2.dynamicChildren
   ) => {
+    // n1 表示旧的 vnode, n2 表示新的 vnode
     if (n1 === n2) {
       return
     }
 
     // patching & not same type, unmount old tree
     if (n1 && !isSameVNodeType(n1, n2)) {
+      // 新旧 vnode 类型不同, 卸载旧的节点树
       anchor = getNextHostNode(n1)
       unmount(n1, parentComponent, parentSuspense, true)
       n1 = null
@@ -379,6 +384,8 @@ function baseCreateRenderer(
     }
 
     const { type, ref, shapeFlag } = n2
+    // 根据类型进行分发
+    // 不同类型的 vnode 其更新的处理方法是不一样的
     switch (type) {
       case Text:
         processText(n1, n2, container, anchor)
@@ -470,12 +477,14 @@ function baseCreateRenderer(
 
   const processText: ProcessTextOrCommentFn = (n1, n2, container, anchor) => {
     if (n1 == null) {
+      // 没有旧节点，直接创建新节点并挂载
       hostInsert(
         (n2.el = hostCreateText(n2.children as string)),
         container,
         anchor
       )
     } else {
+      // 存在旧节点，更新文本节点的文本内容即可
       const el = (n2.el = n1.el!)
       if (n2.children !== n1.children) {
         hostSetText(el, n2.children as string)
@@ -606,6 +615,7 @@ function baseCreateRenderer(
     }
   }
 
+  // 挂载子节点
   const mountElement = (
     vnode: VNode,
     container: RendererElement,
@@ -631,6 +641,7 @@ function baseCreateRenderer(
       // only do this in production since cloned trees cannot be HMR updated.
       el = vnode.el = hostCloneNode(vnode.el)
     } else {
+      // vnode.el 是对真实 DOM 的引用，这样就建立起了虚拟 DOM 和真实 DOM 之间的联系
       el = vnode.el = hostCreateElement(
         vnode.type as string,
         isSVG,
@@ -641,8 +652,10 @@ function baseCreateRenderer(
       // mount children first, since some props may rely on child content
       // being already rendered, e.g. `<select value>`
       if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
+        // 文本子节点
         hostSetElementText(el, vnode.children as string)
       } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        // 子节点数组
         mountChildren(
           vnode.children as VNodeArrayChildren,
           el,
@@ -659,6 +672,7 @@ function baseCreateRenderer(
         invokeDirectiveHook(vnode, null, parentComponent, 'created')
       }
       // props
+      // 设置节点属性
       if (props) {
         for (const key in props) {
           if (key !== 'value' && !isReservedProp(key)) {
@@ -768,6 +782,7 @@ function baseCreateRenderer(
     }
   }
 
+  // 挂载子节点
   const mountChildren: MountChildrenFn = (
     children,
     container,
@@ -2056,6 +2071,7 @@ function baseCreateRenderer(
     }
   }
 
+  // 卸载操作
   const unmount: UnmountFn = (
     vnode,
     parentComponent,
@@ -2079,6 +2095,7 @@ function baseCreateRenderer(
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
+      // 被 keep-alive 缓存的组件失活时调用 deactivate
       ;(parentComponent!.ctx as KeepAliveContext).deactivate(vnode)
       return
     }
@@ -2091,6 +2108,7 @@ function baseCreateRenderer(
       shouldInvokeVnodeHook &&
       (vnodeHook = props && props.onVnodeBeforeUnmount)
     ) {
+      // 执行 beforeMount 钩子
       invokeVNodeHook(vnodeHook, parentComponent, vnode)
     }
 
@@ -2103,6 +2121,7 @@ function baseCreateRenderer(
       }
 
       if (shouldInvokeDirs) {
+        // 执行指令钩子
         invokeDirectiveHook(vnode, null, parentComponent, 'beforeUnmount')
       }
 
@@ -2325,6 +2344,7 @@ function baseCreateRenderer(
       patch(container._vnode || null, vnode, container, null, null, null, isSVG)
     }
     flushPostFlushCbs()
+    // _vnode 是旧的 vnode
     container._vnode = vnode
   }
 

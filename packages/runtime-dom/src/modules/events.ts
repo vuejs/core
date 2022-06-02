@@ -80,6 +80,7 @@ export function patchEvent(
     if (nextValue) {
       // add
       const invoker = (invokers[rawName] = createInvoker(nextValue, instance))
+      // 为 DOM 元素添加事件
       addEventListener(el, name, invoker, options)
     } else if (existingInvoker) {
       // remove
@@ -115,9 +116,12 @@ function createInvoker(
     // the solution is simple: we save the timestamp when a handler is attached,
     // and the handler would only fire if the event passed to it was fired
     // AFTER it was attached.
+
+    // 获取事件发生的时间
     const timeStamp = e.timeStamp || _getNow()
 
     if (skipTimestampCheck || timeStamp >= invoker.attached - 1) {
+      // 只有当事件发生的时间晚于事件处理函数被绑定的时间，才会执行事件处理函数
       callWithAsyncErrorHandling(
         patchStopImmediatePropagation(e, invoker.value),
         instance,
@@ -127,6 +131,7 @@ function createInvoker(
     }
   }
   invoker.value = initialValue
+  // 保存事件处理函数被绑定的时间
   invoker.attached = getNow()
   return invoker
 }
