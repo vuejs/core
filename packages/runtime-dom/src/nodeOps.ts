@@ -32,7 +32,7 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
     }
 
     if (tag === 'input' && props) {
-      if (props.value) {
+      if (props.value != null) {
         el.setAttribute('value', props.value)
       }
       if (props.checked) {
