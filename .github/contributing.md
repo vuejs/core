@@ -30,7 +30,7 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 
   - If you are resolving a special issue, add `(fix #xxxx[,#xxxx])` (#xxxx is the issue id) in your PR title for a better release log, e.g. `update entities encoding/decoding (fix #3899)`.
   - Provide a detailed description of the bug in the PR. Live demo preferred.
-  - Add appropriate test coverage if applicable. You can check the coverage of your code addition by running `npm test -- --coverage`.
+  - Add appropriate test coverage if applicable. You can check the coverage of your code addition by running `pnpm test -- --coverage`.
 
 - It's OK to have multiple small commits as you work on the PR - GitHub can automatically squash them before merging.
 
