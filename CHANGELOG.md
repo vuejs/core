@@ -1,3 +1,16 @@
+## [3.2.37](https://github.com/vuejs/core/compare/v3.2.36...v3.2.37) (2022-06-06)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** improve css v-bind parsing ([e60244b](https://github.com/vuejs/core/commit/e60244bcdf0b386de1560ff7c205ae0870bab355)), closes [#6022](https://github.com/vuejs/core/issues/6022)
+* **runtime-core:** hydrate Static vnode ([#6015](https://github.com/vuejs/core/issues/6015)) ([11e17a1](https://github.com/vuejs/core/commit/11e17a1a29cf3d0b37628241d63ff3e8d8525f95)), closes [#6008](https://github.com/vuejs/core/issues/6008)
+* **sfc:** avoid auto name inference leading to unwanted recursion ([9734b31](https://github.com/vuejs/core/commit/9734b31c312244a2b5c5cf83c75d7b34076a0c4b)), closes [#5965](https://github.com/vuejs/core/issues/5965) [#6027](https://github.com/vuejs/core/issues/6027) [#6029](https://github.com/vuejs/core/issues/6029)
+* **ssr:** ensure app  can be unmounted when created with createSSRApp() ([#5992](https://github.com/vuejs/core/issues/5992)) ([d4d3319](https://github.com/vuejs/core/commit/d4d3319c1be16dc9a046b2c5521096debc205f25)), closes [#5990](https://github.com/vuejs/core/issues/5990)
+* **ssr:** hydration for transition wrapper components with empty slot content ([#5995](https://github.com/vuejs/core/issues/5995)) ([eb22a62](https://github.com/vuejs/core/commit/eb22a62798d845a8756b0a73b68afdd874feda59)), closes [#5991](https://github.com/vuejs/core/issues/5991)
+
+
+
 ## [3.2.36](https://github.com/vuejs/core/compare/v3.2.35...v3.2.36) (2022-05-23)
 
 
