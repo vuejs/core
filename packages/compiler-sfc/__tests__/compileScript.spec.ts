@@ -1650,7 +1650,7 @@ describe('SFC analyze <script> bindings', () => {
         }
       )
       expect(content).toMatch(`export default {
-  name: 'FooBar'`)
+  __name: 'FooBar'`)
       assertCode(content)
     })
 
