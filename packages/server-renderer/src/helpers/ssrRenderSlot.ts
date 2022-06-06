@@ -60,27 +60,25 @@ export function ssrRenderSlotInner(
       renderVNodeChildren(push, ret, parentComponent, slotScopeId)
     } else {
       // ssr slot.
+      // check if the slot renders all comments, in which case use the fallback
+      let isEmptySlot = true
       if (transition) {
-        for (let i = 0; i < slotBuffer.length; i++) {
-          push(slotBuffer[i])
-        }
+        isEmptySlot = false
       } else {
-        // check if the slot renders all comments, in which case use the fallback
-        let isEmptySlot = true
         for (let i = 0; i < slotBuffer.length; i++) {
           if (!isComment(slotBuffer[i])) {
             isEmptySlot = false
             break
           }
         }
-        if (isEmptySlot) {
-          if (fallbackRenderFn) {
-            fallbackRenderFn()
-          }
-        } else {
-          for (let i = 0; i < slotBuffer.length; i++) {
-            push(slotBuffer[i])
-          }
+      }
+      if (isEmptySlot) {
+        if (fallbackRenderFn) {
+          fallbackRenderFn()
+        }
+      } else {
+        for (let i = 0; i < slotBuffer.length; i++) {
+          push(slotBuffer[i])
         }
       }
     }
