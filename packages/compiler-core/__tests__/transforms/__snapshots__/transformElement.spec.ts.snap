@@ -5,7 +5,9 @@ exports[`compiler: element transform <KeepAlive> multiple children should ignore
 
 return function render(_ctx, _cache) {
   return (_openBlock(), _createBlock(_KeepAlive, null, [
-    (_openBlock(), _createBlock(_resolveDynamicComponent(_ctx.activeComponent)))
+    _createCommentVNode(\\"this should be ignored \\"),
+    (_openBlock(), _createBlock(_resolveDynamicComponent(_ctx.activeComponent))),
+    _createCommentVNode(\\"this should be ignored \\")
   ], 1024 /* DYNAMIC_SLOTS */))
 }"
 `;
