@@ -68,21 +68,21 @@ describe('reactivity/readonly', () => {
         `Set operation on key "Symbol(qux)" failed: target is readonly.`
       ).toHaveBeenWarnedLast()
 
-      // @ts-ignore
+      // @ts-expect-error
       delete wrapped.foo
       expect(wrapped.foo).toBe(1)
       expect(
         `Delete operation on key "foo" failed: target is readonly.`
       ).toHaveBeenWarnedLast()
 
-      // @ts-ignore
+      // @ts-expect-error
       delete wrapped.bar.baz
       expect(wrapped.bar.baz).toBe(2)
       expect(
         `Delete operation on key "baz" failed: target is readonly.`
       ).toHaveBeenWarnedLast()
 
-      // @ts-ignore
+      // @ts-expect-error
       delete wrapped[qux]
       expect(wrapped[qux]).toBe(3)
       expect(
@@ -459,7 +459,7 @@ describe('reactivity/readonly', () => {
     expect(
       'Set operation on key "_dirty" failed: target is readonly.'
     ).not.toHaveBeenWarned()
-    // @ts-expect-error - non-existant property
+    // @ts-expect-error - non-existent property
     rC.randomProperty = true
 
     expect(
@@ -476,7 +476,7 @@ describe('reactivity/readonly', () => {
     expect(isReadonly(rr.foo)).toBe(true)
   })
 
-  test('attemptingt to write plain value to a readonly ref nested in a reactive object should fail', () => {
+  test('attempting to write plain value to a readonly ref nested in a reactive object should fail', () => {
     const r = ref(false)
     const ror = readonly(r)
     const obj = reactive({ ror })

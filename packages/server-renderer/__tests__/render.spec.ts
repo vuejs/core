@@ -676,7 +676,7 @@ function testRender(type: string, render: typeof renderToString) {
           render: () => h('p', 'hello')
         }
         expect(await render(h(KeepAlive, () => h(MyComp)))).toBe(
-          `<!--[--><p>hello</p><!--]-->`
+          `<p>hello</p>`
         )
       })
 

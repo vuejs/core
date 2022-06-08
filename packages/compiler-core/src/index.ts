@@ -59,6 +59,7 @@ export {
   PropsExpression
 } from './transforms/transformElement'
 export { processSlotOutlet } from './transforms/transformSlotOutlet'
+export { getConstantType } from './transforms/hoistStatic'
 export { generateCodeFrame } from '@vue/shared'
 
 // v2 compat only

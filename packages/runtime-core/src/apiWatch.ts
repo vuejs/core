@@ -92,7 +92,7 @@ export function watchPostEffect(
     effect,
     null,
     (__DEV__
-      ? Object.assign(options || {}, { flush: 'post' })
+      ? { ...options, flush: 'post' }
       : { flush: 'post' }) as WatchOptionsBase
   )
 }
@@ -105,7 +105,7 @@ export function watchSyncEffect(
     effect,
     null,
     (__DEV__
-      ? Object.assign(options || {}, { flush: 'sync' })
+      ? { ...options, flush: 'sync' }
       : { flush: 'sync' }) as WatchOptionsBase
   )
 }
@@ -212,7 +212,7 @@ function doWatch(
     deep = true
   } else if (isArray(source)) {
     isMultiSource = true
-    forceTrigger = source.some(isReactive)
+    forceTrigger = source.some(s => isReactive(s) || isShallow(s))
     getter = () =>
       source.map(s => {
         if (isRef(s)) {
@@ -345,15 +345,7 @@ function doWatch(
     scheduler = () => queuePostRenderEffect(job, instance && instance.suspense)
   } else {
     // default: 'pre'
-    scheduler = () => {
-      if (!instance || instance.isMounted) {
-        queuePreFlushCb(job)
-      } else {
-        // with 'pre' option, the first call must happen before
-        // the component is mounted so it is called synchronously.
-        job()
-      }
-    }
+    scheduler = () => queuePreFlushCb(job)
   }
 
   const effect = new ReactiveEffect(getter, scheduler)
