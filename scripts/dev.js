@@ -11,6 +11,7 @@ const args = require('minimist')(process.argv.slice(2))
 const target = args._[0] || 'vue'
 const format = args.f || 'global'
 const inlineDeps = args.i || args.inline
+const sourceMap = args.s || args.sourcemap || false
 const pkg = require(resolve(__dirname, `../packages/${target}/package.json`))
 
 // resolve output
@@ -73,7 +74,7 @@ build({
   outfile,
   bundle: true,
   external,
-  sourcemap: true,
+  sourcemap: sourceMap ? true : false,
   format: outputFormat,
   globalName: pkg.buildOptions?.name,
   platform: format === 'cjs' ? 'node' : 'browser',
