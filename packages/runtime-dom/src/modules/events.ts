@@ -16,7 +16,7 @@ type EventValue = Function | Function[]
 const [_getNow, skipTimestampCheck] = /*#__PURE__*/ (() => {
   let _getNow = Date.now
   let skipTimestampCheck = false
-  if (typeof window !== 'undefined') {
+  if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     // Determine what event timestamp the browser is using. Annoyingly, the
     // timestamp can either be hi-res (relative to page load) or low-res
     // (relative to UNIX epoch), so in order to compare time we have to use the
