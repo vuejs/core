@@ -13,9 +13,9 @@ import {
   cloneVNode,
   isVNode,
   VNodeProps,
-  invokeVNodeHook
+  invokeVNodeHook,
+  Comment
 } from '../vnode'
-import { warn } from '../warning'
 import {
   onBeforeUnmount,
   injectHook,
@@ -249,13 +249,21 @@ const KeepAliveImpl: ComponentOptions = {
       }
 
       const children = slots.default()
-      const rawVNode = children[0]
+      let rawVNode = children[0]
       if (children.length > 1) {
-        if (__DEV__) {
-          warn(`KeepAlive should contain exactly one component child.`)
+        let hasFound = false
+        // locate first non-comment child
+        for (const c of children) {
+          if (c.type !== Comment) {
+            rawVNode = c
+            hasFound = true
+            break
+          }
         }
-        current = null
-        return children
+        if(!hasFound){
+          current = null
+          return children
+        }
       } else if (
         !isVNode(rawVNode) ||
         (!(rawVNode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) &&
