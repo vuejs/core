@@ -87,11 +87,11 @@ export function ssrRenderSlotInner(
   }
 }
 
+const commentTestRE = /^<!--.*-->$/s
 const commentRE = /<!--[^]*?-->/gm
 function isComment(item: SSRBufferItem) {
-  return (
-    typeof item === 'string' &&
-    commentRE.test(item) &&
-    !item.replace(commentRE, '').trim()
-  )
+  if (typeof item !== 'string' || !commentTestRE.test(item)) return false
+  // if item is '<!---->' or '<!--[-->' or '<!--]-->', return true directly
+  if (item.length <= 8) return true
+  return !item.replace(commentRE, '').trim()
 }
