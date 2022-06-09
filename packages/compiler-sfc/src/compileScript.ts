@@ -1463,7 +1463,7 @@ export function compileScript(
   if (!hasDefaultExportName && filename && filename !== DEFAULT_FILENAME) {
     const match = filename.match(/([^/\\]+)\.\w+$/)
     if (match) {
-      runtimeOptions += `\n  name: '${match[1]}',`
+      runtimeOptions += `\n  __name: '${match[1]}',`
     }
   }
   if (hasInlinedSsrRenderFn) {

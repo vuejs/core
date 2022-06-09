@@ -97,6 +97,28 @@ describe('SSR hydration', () => {
     expect(s.children).toBe(staticContent)
   })
 
+  // #6008
+  test('static (with text node as starting node)', () => {
+    const html = ` A <span>foo</span> B`
+    const { vnode, container } = mountWithHydration(html, () =>
+      createStaticVNode(` A <span>foo</span> B`, 3)
+    )
+    expect(vnode.el).toBe(container.firstChild)
+    expect(vnode.anchor).toBe(container.lastChild)
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+  })
+
+  test('static with content adoption', () => {
+    const html = ` A <span>foo</span> B`
+    const { vnode, container } = mountWithHydration(html, () =>
+      createStaticVNode(``, 3)
+    )
+    expect(vnode.el).toBe(container.firstChild)
+    expect(vnode.anchor).toBe(container.lastChild)
+    expect(vnode.children).toBe(html)
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+  })
+
   test('element with text children', async () => {
     const msg = ref('foo')
     const { vnode, container } = mountWithHydration(

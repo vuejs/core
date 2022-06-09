@@ -123,7 +123,7 @@ describe('ssr: <slot>', () => {
       "const { ssrRenderSlotInner: _ssrRenderSlotInner } = require(\\"vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _ssrRenderSlotInner(_ctx.$slots, \\"default\\", {}, null, _push, _parent)
+        _ssrRenderSlotInner(_ctx.$slots, \\"default\\", {}, null, _push, _parent, null, true)
       }"
     `)
   })
