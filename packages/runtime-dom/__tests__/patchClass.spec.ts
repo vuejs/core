@@ -11,6 +11,14 @@ describe('runtime-dom: class patching', () => {
     expect(el.className).toBe('')
   })
 
+  test('class should remove when className is empty', () => {
+    const el = document.createElement('div')
+    patchProp(el, 'class', null, 'foo')
+    expect(el.className).toBe('foo')
+    patchProp(el, 'class', null, '')
+    expect(el.hasAttribute('class')).toBeFalsy()
+  })
+
   test('transition class', () => {
     const el = document.createElement('div') as ElementWithTransition
     el._vtc = new Set(['bar', 'baz'])
