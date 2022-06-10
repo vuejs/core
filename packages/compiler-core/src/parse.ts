@@ -182,7 +182,11 @@ function parseChildren(
         // https://html.spec.whatwg.org/multipage/parsing.html#tag-open-state
         if (s.length === 1) {
           emitError(context, ErrorCodes.EOF_BEFORE_TAG_NAME, 1)
-        } else if (s[1] === '!') {
+          nodeWorker(node);
+          continue;
+        }
+
+        if (s[1] === '!') {
           // https://html.spec.whatwg.org/multipage/parsing.html#markup-declaration-open-state
           if (startsWith(s, '<!--')) {
             node = parseComment(context)
@@ -200,7 +204,11 @@ function parseChildren(
             emitError(context, ErrorCodes.INCORRECTLY_OPENED_COMMENT)
             node = parseBogusComment(context)
           }
-        } else if (s[1] === '/') {
+          nodeWorker(node);
+          continue;
+        }
+
+        if (s[1] === '/') {
           // https://html.spec.whatwg.org/multipage/parsing.html#end-tag-open-state
           if (s.length === 2) {
             emitError(context, ErrorCodes.EOF_BEFORE_TAG_NAME, 2)
@@ -220,7 +228,11 @@ function parseChildren(
             )
             node = parseBogusComment(context)
           }
-        } else if (/[a-z]/i.test(s[1])) {
+          nodeWorker(node);
+          continue;
+        }
+
+        if (/[a-z]/i.test(s[1])) {
           node = parseElement(context, ancestors)
 
           // 2.x <template> with no directive compat
@@ -246,16 +258,22 @@ function parseChildren(
               )
             node = node.children
           }
-        } else if (s[1] === '?') {
+          nodeWorker(node);
+          continue;
+        }
+
+        if (s[1] === '?') {
           emitError(
             context,
             ErrorCodes.UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME,
             1
           )
           node = parseBogusComment(context)
-        } else {
-          emitError(context, ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME, 1)
+          nodeWorker(node);
+          continue;
         }
+
+        emitError(context, ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME, 1)
       }
     }
     nodeWorker(node);
