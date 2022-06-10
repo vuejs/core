@@ -146,7 +146,7 @@ export const transformElement: NodeTransform = (node, context) => {
 
     // children
       if (node.children.length > 0) {
-      let filterdChildren = [...node.children]
+      let filterdChildren = node.children
       if (vnodeTag === KEEP_ALIVE) {
         // Although a built-in component, we compile KeepAlive with raw children
         // instead of slot functions so that it can be used inside Transition
