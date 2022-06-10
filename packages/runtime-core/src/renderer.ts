@@ -1501,7 +1501,7 @@ function baseCreateRenderer(
           prevTree,
           nextTree,
           // parent may have changed if it's in a teleport
-          hostParentNode(prevTree.el!)!,
+          prevTree.el! && hostParentNode(prevTree.el!)!,
           // anchor may have changed if it's in a fragment
           getNextHostNode(prevTree),
           instance,
@@ -2314,7 +2314,7 @@ function baseCreateRenderer(
   }
 
   const getNextHostNode: NextFn = vnode => {
-    if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
+    if (vnode.shapeFlag & ShapeFlags.COMPONENT && vnode.component!.subTree) {
       return getNextHostNode(vnode.component!.subTree)
     }
     if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
