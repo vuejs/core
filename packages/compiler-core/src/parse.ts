@@ -140,6 +140,8 @@ function createParserContext(
   }
 }
 
+
+
 function parseChildren(
   context: ParserContext,
   mode: TextModes,
@@ -149,21 +151,6 @@ function parseChildren(
   const ns = parent ? parent.ns : Namespaces.HTML
   const nodes: TemplateChildNode[] = []
 
-
-  const nodeWorker = (node: TemplateChildNode | TemplateChildNode[] | undefined) => {
-    if (!node) {
-      node = parseText(context, mode)
-    }
-
-    if (isArray(node)) {
-      for (let i = 0; i < node.length; i++) {
-        pushNode(nodes, node[i])
-      }
-    } else {
-      pushNode(nodes, node)
-    }
-  }
-
   while (!isEnd(context, mode, ancestors)) {
     __TEST__ && assert(context.source.length > 0)
     const s = context.source
@@ -172,80 +159,50 @@ function parseChildren(
     if (mode === TextModes.DATA || mode === TextModes.RCDATA) {
       if (!context.inVPre && startsWith(s, context.options.delimiters[0])) {
         // '{{'
-        node = parseInterpolation(context, mode);
-        nodeWorker(node);
-        continue;
-      }
-
-      if (mode === TextModes.DATA && s[0] === '<') {
+        node = parseInterpolation(context, mode)
+      } else if (mode === TextModes.DATA && s[0] === '<') {
         // https://html.spec.whatwg.org/multipage/parsing.html#tag-open-state
         if (s.length === 1) {
-          emitError(context, ErrorCodes.EOF_BEFORE_TAG_NAME, 1);
-          continue;
-        }
-
-        if (s[1] === '!') {
+          emitError(context, ErrorCodes.EOF_BEFORE_TAG_NAME, 1)
+        } else if (s[1] === '!') {
           // https://html.spec.whatwg.org/multipage/parsing.html#markup-declaration-open-state
           if (startsWith(s, '<!--')) {
             node = parseComment(context)
-            nodeWorker(node);
-            continue;
-          }
-
-          if (startsWith(s, '<!DOCTYPE')) {
+          } else if (startsWith(s, '<!DOCTYPE')) {
             // Ignore DOCTYPE by a limitation.
             node = parseBogusComment(context)
-            nodeWorker(node);
-            continue;
-          }
-
-          if (startsWith(s, '<![CDATA[')) {
+          } else if (startsWith(s, '<![CDATA[')) {
             if (ns !== Namespaces.HTML) {
               node = parseCDATA(context, ancestors)
             } else {
               emitError(context, ErrorCodes.CDATA_IN_HTML_CONTENT)
               node = parseBogusComment(context)
             }
-            nodeWorker(node);
-            continue;
+          } else {
+            emitError(context, ErrorCodes.INCORRECTLY_OPENED_COMMENT)
+            node = parseBogusComment(context)
           }
-
-          emitError(context, ErrorCodes.INCORRECTLY_OPENED_COMMENT)
-          node = parseBogusComment(context)
-          nodeWorker(node);
-          continue;
-        }
-
-        if (s[1] === '/') {
+        } else if (s[1] === '/') {
           // https://html.spec.whatwg.org/multipage/parsing.html#end-tag-open-state
           if (s.length === 2) {
             emitError(context, ErrorCodes.EOF_BEFORE_TAG_NAME, 2)
-            continue;
-          }
-
-          if (s[2] === '>') {
+          } else if (s[2] === '>') {
             emitError(context, ErrorCodes.MISSING_END_TAG_NAME, 2)
             advanceBy(context, 3)
-            continue;
-          }
-
-          if (/[a-z]/i.test(s[2])) {
+            continue
+          } else if (/[a-z]/i.test(s[2])) {
             emitError(context, ErrorCodes.X_INVALID_END_TAG)
             parseTag(context, TagType.End, parent)
-            continue;
+            continue
+          } else {
+            emitError(
+              context,
+              ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
+              2
+            )
+            node = parseBogusComment(context)
           }
-
-          emitError(
-            context,
-            ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
-            2
-          )
-          node = parseBogusComment(context)
-          nodeWorker(node);
-          continue;
-        }
-
-        if (/[a-z]/i.test(s[1])) {
+        } else if (/[a-z]/i.test(s[1])) {
           node = parseElement(context, ancestors)
 
           // 2.x <template> with no directive compat
@@ -270,30 +227,30 @@ function parseChildren(
                 node.loc
               )
             node = node.children
-
-            nodeWorker(node);
-            continue;
           }
-          nodeWorker(node);
-          continue;
-        }
-
-        if (s[1] === '?') {
+        } else if (s[1] === '?') {
           emitError(
             context,
             ErrorCodes.UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME,
             1
           )
           node = parseBogusComment(context)
-          nodeWorker(node);
-          continue;
+        } else {
+          emitError(context, ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME, 1)
         }
-
-        emitError(context, ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME, 1);
-        continue;
       }
     }
-    nodeWorker(node);
+    if (!node) {
+      node = parseText(context, mode)
+    }
+
+    if (isArray(node)) {
+      for (let i = 0; i < node.length; i++) {
+        pushNode(nodes, node[i])
+      }
+    } else {
+      pushNode(nodes, node)
+    }
   }
 
   // Whitespace handling strategy like v2
