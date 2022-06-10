@@ -189,21 +189,31 @@ function parseChildren(
         if (s[1] === '!') {
           // https://html.spec.whatwg.org/multipage/parsing.html#markup-declaration-open-state
           if (startsWith(s, '<!--')) {
-            node = parseComment(context)
-          } else if (startsWith(s, '<!DOCTYPE')) {
+            node = parseComment(context);
+            nodeWorker(node);
+            continue;
+          }
+
+          if (startsWith(s, '<!DOCTYPE')) {
             // Ignore DOCTYPE by a limitation.
-            node = parseBogusComment(context)
-          } else if (startsWith(s, '<![CDATA[')) {
+            node = parseBogusComment(context);
+            nodeWorker(node);
+            continue;
+          }
+
+          if (startsWith(s, '<![CDATA[')) {
             if (ns !== Namespaces.HTML) {
               node = parseCDATA(context, ancestors)
             } else {
               emitError(context, ErrorCodes.CDATA_IN_HTML_CONTENT)
               node = parseBogusComment(context)
             }
-          } else {
-            emitError(context, ErrorCodes.INCORRECTLY_OPENED_COMMENT)
-            node = parseBogusComment(context)
+            nodeWorker(node);
+            continue;
           }
+
+          emitError(context, ErrorCodes.INCORRECTLY_OPENED_COMMENT)
+          node = parseBogusComment(context)
           nodeWorker(node);
           continue;
         }
@@ -211,8 +221,12 @@ function parseChildren(
         if (s[1] === '/') {
           // https://html.spec.whatwg.org/multipage/parsing.html#end-tag-open-state
           if (s.length === 2) {
-            emitError(context, ErrorCodes.EOF_BEFORE_TAG_NAME, 2)
-          } else if (s[2] === '>') {
+            emitError(context, ErrorCodes.EOF_BEFORE_TAG_NAME, 2);
+            nodeWorker(node);
+            continue;
+          }
+
+          if (s[2] === '>') {
             emitError(context, ErrorCodes.MISSING_END_TAG_NAME, 2)
             advanceBy(context, 3)
             continue
@@ -220,14 +234,14 @@ function parseChildren(
             emitError(context, ErrorCodes.X_INVALID_END_TAG)
             parseTag(context, TagType.End, parent)
             continue
-          } else {
-            emitError(
-              context,
-              ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
-              2
-            )
-            node = parseBogusComment(context)
           }
+
+          emitError(
+            context,
+            ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
+            2
+          )
+          node = parseBogusComment(context)
           nodeWorker(node);
           continue;
         }
