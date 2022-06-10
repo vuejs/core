@@ -151,6 +151,20 @@ function parseChildren(
   const ns = parent ? parent.ns : Namespaces.HTML
   const nodes: TemplateChildNode[] = []
 
+  function nodeWorker (node: TemplateChildNode | TemplateChildNode[] | undefined) {
+    if (!node) {
+      node = parseText(context, mode)
+    }
+
+    if (isArray(node)) {
+      for (let i = 0; i < node.length; i++) {
+        pushNode(nodes, node[i])
+      }
+    } else {
+      pushNode(nodes, node)
+    }
+  }
+
   while (!isEnd(context, mode, ancestors)) {
     __TEST__ && assert(context.source.length > 0)
     const s = context.source
@@ -159,8 +173,12 @@ function parseChildren(
     if (mode === TextModes.DATA || mode === TextModes.RCDATA) {
       if (!context.inVPre && startsWith(s, context.options.delimiters[0])) {
         // '{{'
-        node = parseInterpolation(context, mode)
-      } else if (mode === TextModes.DATA && s[0] === '<') {
+        node = parseInterpolation(context, mode);
+        nodeWorker(node);
+        continue;
+      }
+
+      if (mode === TextModes.DATA && s[0] === '<') {
         // https://html.spec.whatwg.org/multipage/parsing.html#tag-open-state
         if (s.length === 1) {
           emitError(context, ErrorCodes.EOF_BEFORE_TAG_NAME, 1)
@@ -240,17 +258,7 @@ function parseChildren(
         }
       }
     }
-    if (!node) {
-      node = parseText(context, mode)
-    }
-
-    if (isArray(node)) {
-      for (let i = 0; i < node.length; i++) {
-        pushNode(nodes, node[i])
-      }
-    } else {
-      pushNode(nodes, node)
-    }
+    nodeWorker(node);
   }
 
   // Whitespace handling strategy like v2
