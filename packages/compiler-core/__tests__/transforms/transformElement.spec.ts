@@ -1244,7 +1244,7 @@ describe('compiler: element transform', () => {
       else expect(spy).not.toHaveBeenCalled()
     }
 
-    test('does not warn if has one children', () => {
+    test('does not warn if has one child', () => {
       checkWarning(
         `<KeepAlive>
            <component :is="activeComponent"/>
