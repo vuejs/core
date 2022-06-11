@@ -1253,11 +1253,34 @@ describe('compiler: element transform', () => {
       )
     })
 
+    test('does not warn if has one component child and multiple comment children', () => {
+      checkWarning(
+        `<KeepAlive>
+            <!-- this should be ignored -->
+            <component :is="activeComponent"/>
+            <!-- this should be ignored -->
+         </KeepAlive>`,
+        false
+      )
+    })
+  
     test('warn if has multiple children', () => {
       checkWarning(
         `<KeepAlive>
           <component :is="activeComponent"/>
           <component :is="activeComponent2"/>
+         </KeepAlive>`,
+        true
+      )
+    })
+
+    test('warn if has multiple component child and multiple comment children', () => {
+      checkWarning(
+        `<KeepAlive>
+          <!-- this should be ignored -->
+           <component :is="activeComponent"/>
+           <component :is="activeComponent2"/>
+          <!-- this should be ignored -->
          </KeepAlive>`,
         true
       )
