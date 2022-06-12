@@ -183,4 +183,94 @@ describe('ssr: scopedId runtime behavior', () => {
     const result = await renderToString(createApp(Comp)) // output: `<div></div>`
     expect(result).toBe(`<div parent></div>`)
   })
+
+  // #6093
+  test(':slotted on forwarded slots on component', async () => {
+    const Wrapper = {
+      __scopeId: 'wrapper',
+      ssrRender: (ctx: any, push: any, parent: any, attrs: any) => {
+        // <div class="wrapper"><slot/></div>
+        push(
+          `<div${ssrRenderAttrs(
+            mergeProps({ class: 'wrapper' }, attrs)
+          )} wrapper>`
+        )
+        ssrRenderSlot(
+          ctx.$slots,
+          'default',
+          {},
+          null,
+          push,
+          parent,
+          'wrapper-s'
+        )
+        push(`</div>`)
+      }
+    }
+
+    const Slotted = {
+      __scopeId: 'slotted',
+      ssrRender: (ctx: any, push: any, parent: any, attrs: any) => {
+        // <Wrapper><slot/></Wrapper>
+        push(
+          ssrRenderComponent(
+            Wrapper,
+            attrs,
+            {
+              default: withCtx(
+                (_: any, push: any, parent: any, scopeId: string) => {
+                  ssrRenderSlot(
+                    ctx.$slots,
+                    'default',
+                    {},
+                    null,
+                    push,
+                    parent,
+                    'slotted-s' + scopeId
+                  )
+                }
+              ),
+              _: 1
+            } as any,
+            parent
+          )
+        )
+      }
+    }
+
+    const Child = {
+      ssrRender: (ctx: any, push: any, parent: any, attrs: any) => {
+        push(`<div${ssrRenderAttrs(attrs)}></div>`)
+      }
+    }
+
+    const Root = {
+      __scopeId: 'root',
+      // <Slotted><Child></Child></Slotted>
+      ssrRender: (_: any, push: any, parent: any, attrs: any) => {
+        push(
+          ssrRenderComponent(
+            Slotted,
+            attrs,
+            {
+              default: withCtx(
+                (_: any, push: any, parent: any, scopeId: string) => {
+                  push(ssrRenderComponent(Child, null, null, parent, scopeId))
+                }
+              ),
+              _: 1
+            } as any,
+            parent
+          )
+        )
+      }
+    }
+
+    const result = await renderToString(createApp(Root))
+    expect(result).toBe(
+      `<div class="wrapper" root slotted wrapper>` +
+        `<!--[--><!--[--><div root slotted-s wrapper-s></div><!--]--><!--]-->` +
+        `</div>`
+    )
+  })
 })

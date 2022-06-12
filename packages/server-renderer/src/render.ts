@@ -169,7 +169,10 @@ function renderComponentSubTree(
 
       if (slotScopeId) {
         if (!hasCloned) attrs = { ...attrs }
-        attrs![slotScopeId.trim()] = ''
+        const slotScopeIdList = slotScopeId.trim().split(' ')
+        for (let i = 0; i < slotScopeIdList.length; i++) {
+          attrs![slotScopeIdList[i]] = ''
+        }
       }
 
       // set current rendering instance for asset resolution
