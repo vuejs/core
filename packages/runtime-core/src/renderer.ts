@@ -1174,6 +1174,7 @@ function baseCreateRenderer(
   ) => {
     n2.slotScopeIds = slotScopeIds
     if (n1 == null) {
+      // 不存在旧的 VNode 挂载操作
       if (n2.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
         ;(parentComponent!.ctx as KeepAliveContext).activate(
           n2,
@@ -1194,6 +1195,7 @@ function baseCreateRenderer(
         )
       }
     } else {
+      // 旧的 VNode 存在 更新操作
       updateComponent(n1, n2, optimized)
     }
   }
@@ -1557,6 +1559,8 @@ function baseCreateRenderer(
     }
 
     // create reactive effect for rendering
+    
+    // 组件渲染副作用调度执行
     const effect = (instance.effect = new ReactiveEffect(
       componentUpdateFn,
       () => queueJob(instance.update),

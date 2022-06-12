@@ -446,6 +446,7 @@ const emptyAppContext = createAppContext()
 
 let uid = 0
 
+// 创建组件实例
 export function createComponentInstance(
   vnode: VNode,
   parent: ComponentInternalInstance | null,
@@ -464,11 +465,11 @@ export function createComponentInstance(
     appContext,
     root: null!, // to be immediately set
     next: null,
-    subTree: null!, // will be set synchronously right after creation
+    subTree: null!, // will be set synchronously right after creation   渲染函数返回的虚拟 DOM
     effect: null!,
     update: null!, // will be set synchronously right after creation
     scope: new EffectScope(true /* detached */),
-    render: null,
+    render: null,   // 渲染函数
     proxy: null,
     exposed: null,
     exposeProxy: null,
@@ -496,6 +497,7 @@ export function createComponentInstance(
     inheritAttrs: type.inheritAttrs,
 
     // state
+    // 组件状态
     ctx: EMPTY_OBJ,
     data: EMPTY_OBJ,
     props: EMPTY_OBJ,
@@ -513,6 +515,7 @@ export function createComponentInstance(
 
     // lifecycle hooks
     // not using enums here because it results in computed properties
+    // 生命周期钩子
     isMounted: false,
     isUnmounted: false,
     isDeactivated: false,
@@ -647,6 +650,7 @@ function setupStatefulComponent(
       setup,
       instance,
       ErrorCodes.SETUP_FUNCTION,
+      // setup 函数接收的第一个参数为外部传递给组件的 props，第二个参数 setupContext 包含了组件相关的数据和方法
       [__DEV__ ? shallowReadonly(instance.props) : instance.props, setupContext]
     )
     resetTracking()
@@ -696,6 +700,7 @@ export function handleSetupResult(
   isSSR: boolean
 ) {
   if (isFunction(setupResult)) {
+    // 情况一：setup 返回一个函数，该函数将作为组件的渲染函数
     // setup returned an inline render function
     if (__SSR__ && (instance.type as ComponentOptions).__ssrInlineRender) {
       // when the function's name is `ssrRender` (compiled by SFC inline mode),
@@ -705,6 +710,7 @@ export function handleSetupResult(
       instance.render = setupResult as InternalRenderFunction
     }
   } else if (isObject(setupResult)) {
+    // 情况二：setup 返回一个对象，该对象中包含的数据将暴露给模版使用
     if (__DEV__ && isVNode(setupResult)) {
       warn(
         `setup() should not return VNodes directly - ` +
@@ -716,6 +722,7 @@ export function handleSetupResult(
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
       instance.devtoolsRawSetupState = setupResult
     }
+    // 通过 proxyRefs 对 setup 返回值进行脱 ref 处理，模版无需 .value 操作
     instance.setupState = proxyRefs(setupResult)
     if (__DEV__) {
       exposeSetupStateOnRenderContext(instance)
@@ -880,6 +887,7 @@ function createAttrsProxy(instance: ComponentInternalInstance): Data {
   )
 }
 
+// 创建 setup 上下文对象
 export function createSetupContext(
   instance: ComponentInternalInstance
 ): SetupContext {
@@ -908,11 +916,15 @@ export function createSetupContext(
     })
   } else {
     return {
+      // 为组件传递 props 时，没有显示声明为 props 的属性会保存到 attrs 对象中
       get attrs() {
         return attrs || (attrs = createAttrsProxy(instance))
       },
+      // 组件接收到的插槽
       slots: instance.slots,
+      // 一个函数，用来发射自定义事件
       emit: instance.emit,
+      // 一个函数，用来显示地对外暴露组件数据
       expose
     }
   }

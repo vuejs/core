@@ -68,6 +68,7 @@ export type EmitFn<
       }[Event]
     >
 
+// 定义 emit 函数
 export function emit(
   instance: ComponentInternalInstance,
   event: string,
@@ -159,6 +160,7 @@ export function emit(
   }
 
   if (handler) {
+    // 调用事件处理函数并传递参数 args
     callWithAsyncErrorHandling(
       handler,
       instance,
