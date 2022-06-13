@@ -678,7 +678,7 @@ export function compileScript(
     }
     if (script) {
       error(
-        `${DEFINE_OPTIONS}() cannot be used, with both script and script-setup`,
+        `${DEFINE_OPTIONS}() cannot be used, with both <script> and <script setup>`,
         node
       )
     }

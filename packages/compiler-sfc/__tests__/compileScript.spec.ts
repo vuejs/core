@@ -243,7 +243,7 @@ defineOptions({ name: 'FooApp' })
         </script>
         `)
       ).toThrowError(
-        '[@vue/compiler-sfc] defineOptions() cannot be used, with both script and script-setup'
+        '[@vue/compiler-sfc] defineOptions() cannot be used, with both <script> and <script setup>'
       )
     })
 
