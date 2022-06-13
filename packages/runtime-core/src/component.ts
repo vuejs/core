@@ -472,7 +472,7 @@ export function createComponentInstance(
   const instance: ComponentInternalInstance = {
     uid: uid++,
     vnode,
-    type,
+    type: isObject(type) ? {...type} : type,
     parent,
     appContext,
     root: null!, // to be immediately set

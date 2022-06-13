@@ -570,21 +570,9 @@ export function applyOptions(instance: ComponentInternalInstance) {
     inject: injectOptions,
     // lifecycle
     created,
-    beforeMount,
-    mounted,
-    beforeUpdate,
-    updated,
-    activated,
-    deactivated,
     beforeDestroy,
-    beforeUnmount,
     destroyed,
-    unmounted,
     render,
-    renderTracked,
-    renderTriggered,
-    errorCaptured,
-    serverPrefetch,
     // public API
     expose,
     inheritAttrs,
@@ -757,18 +745,18 @@ export function applyOptions(instance: ComponentInternalInstance) {
     }
   }
 
-  registerLifecycleHook(onBeforeMount, beforeMount)
-  registerLifecycleHook(onMounted, mounted)
-  registerLifecycleHook(onBeforeUpdate, beforeUpdate)
-  registerLifecycleHook(onUpdated, updated)
-  registerLifecycleHook(onActivated, activated)
-  registerLifecycleHook(onDeactivated, deactivated)
-  registerLifecycleHook(onErrorCaptured, errorCaptured)
-  registerLifecycleHook(onRenderTracked, renderTracked)
-  registerLifecycleHook(onRenderTriggered, renderTriggered)
-  registerLifecycleHook(onBeforeUnmount, beforeUnmount)
-  registerLifecycleHook(onUnmounted, unmounted)
-  registerLifecycleHook(onServerPrefetch, serverPrefetch)
+  registerLifecycleHook(onBeforeMount, options.beforeMount)
+  registerLifecycleHook(onMounted, options.mounted)
+  registerLifecycleHook(onBeforeUpdate, options.beforeUpdate)
+  registerLifecycleHook(onUpdated, options.updated)
+  registerLifecycleHook(onActivated, options.activated)
+  registerLifecycleHook(onDeactivated, options.deactivated)
+  registerLifecycleHook(onErrorCaptured, options.errorCaptured)
+  registerLifecycleHook(onRenderTracked, options.renderTracked)
+  registerLifecycleHook(onRenderTriggered, options.renderTriggered)
+  registerLifecycleHook(onBeforeUnmount, options.beforeUnmount)
+  registerLifecycleHook(onUnmounted, options.unmounted)
+  registerLifecycleHook(onServerPrefetch, options.serverPrefetch)
 
   if (__COMPAT__) {
     if (

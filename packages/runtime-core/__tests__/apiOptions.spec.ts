@@ -660,6 +660,59 @@ describe('api: options', () => {
     ])
   })
 
+  // #6075
+  test('options are completely isolated', async () => {
+    const count = ref(0)
+    const count2 = ref(2)
+    const root = nodeOps.createElement('div')
+    const calls: string[] = []
+
+    const Root = {
+      render() {
+        return [h(Child, { count: count2.value, name: 'child1'}), h(Child, { count: count.value, name: "child2"})]
+      }
+    }
+
+    const Child = {
+      props: {
+        count: Number,
+        name: String
+      },
+      beforeCreate(this: any) {
+        calls.push(`mid ${this.name} beforeCreate`)
+      },
+      created(this: any) {
+        if (!!this.count) {
+          this.$options.mounted = []
+        }
+        calls.push(`mid ${this.name} created`)
+      },
+      beforeMount(this: any) {
+        calls.push(`mid ${this.name} onBeforeMount`)
+      },
+      mounted(this: any) {
+        calls.push(`mid ${this.name} onMounted`)
+      },
+      render(this: any) {
+        return h('div', this.$props.count)
+      }
+    }
+    
+    // mount
+    render(h(Root), root)
+
+    expect(calls).toEqual([
+      'mid child1 beforeCreate',
+      'mid child1 created',
+      'mid child1 onBeforeMount',
+      'mid child2 beforeCreate',
+      'mid child2 created',
+      'mid child2 onBeforeMount',
+      'mid child2 onMounted'
+    ])
+
+  })
+
   test('mixins', () => {
     const calls: string[] = []
     const mixinA = {

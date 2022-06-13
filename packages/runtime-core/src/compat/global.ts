@@ -530,7 +530,7 @@ function installCompatMount(
           }
         }
         instance.render = null
-        ;(component as ComponentOptions).template = container.innerHTML
+        ;(component as ComponentOptions).template = (instance.type as ComponentOptions).template = container.innerHTML
         finishComponentSetup(instance, false, true /* skip options */)
       }
 

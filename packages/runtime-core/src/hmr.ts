@@ -110,7 +110,7 @@ function reload(id: string, newComp: HMRComponent) {
   const instances = [...record.instances]
 
   for (const instance of instances) {
-    const oldComp = normalizeClassComponent(instance.type as HMRComponent)
+    const oldComp = normalizeClassComponent(instance.vnode.type as HMRComponent)
 
     if (!hmrDirtyComponents.has(oldComp)) {
       // 1. Update existing comp definition to match new one
