@@ -576,6 +576,15 @@ export function validateComponentName(name: string, config: AppConfig) {
   }
 }
 
+// 判断是否为有状态组件 相对于函数式组件
+
+// function MyFuncComp(props) {
+//   return { type: 'h1', children: props.title }
+// }
+// MyFuncComp.props = {
+//   title: String
+// }
+
 export function isStatefulComponent(instance: ComponentInternalInstance) {
   return instance.vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT
 }
@@ -590,6 +599,7 @@ export function setupComponent(
 
   const { props, children } = instance.vnode
   const isStateful = isStatefulComponent(instance)
+  // 函数式组件对 props 的处理与有状态组件不一样
   initProps(instance, props, isStateful, isSSR)
   initSlots(instance, children)
 

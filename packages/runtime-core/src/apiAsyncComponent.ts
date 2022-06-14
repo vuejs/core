@@ -22,19 +22,20 @@ export type AsyncComponentLoader<T = any> = () => Promise<
   AsyncComponentResolveResult<T>
 >
 
+// 异步组件选项
 export interface AsyncComponentOptions<T = any> {
-  loader: AsyncComponentLoader<T>
-  loadingComponent?: Component
-  errorComponent?: Component
-  delay?: number
-  timeout?: number
+  loader: AsyncComponentLoader<T>   // 异步组件加载器
+  loadingComponent?: Component      // loading 组件
+  errorComponent?: Component        // error 组件
+  delay?: number    // loading 组件展示延时时长
+  timeout?: number  // 组件加载超时时长
   suspensible?: boolean
   onError?: (
     error: Error,
     retry: () => void,
     fail: () => void,
     attempts: number
-  ) => any
+  ) => any    // onError 回调提供重试机制
 }
 
 export const isAsyncWrapper = (i: ComponentInternalInstance | VNode): boolean =>
@@ -44,6 +45,7 @@ export function defineAsyncComponent<
   T extends Component = { new (): ComponentPublicInstance }
 >(source: AsyncComponentLoader<T> | AsyncComponentOptions<T>): T {
   if (isFunction(source)) {
+    // 将参数统一成对象形式，如果参数是一个函数则将其作为加载器
     source = { loader: source }
   }
 
@@ -66,7 +68,8 @@ export function defineAsyncComponent<
     pendingRequest = null
     return load()
   }
-
+  
+  // 加载器函数返回一个 Promise 实例
   const load = (): Promise<ConcreteComponent> => {
     let thisRequest: Promise<ConcreteComponent>
     return (
@@ -196,12 +199,15 @@ export function defineAsyncComponent<
 
       return () => {
         if (loaded.value && resolvedComp) {
+          // 加载成功
           return createInnerComp(resolvedComp, instance)
         } else if (error.value && errorComponent) {
+          // 记载失败
           return createVNode(errorComponent as ConcreteComponent, {
             error: error.value
           })
         } else if (loadingComponent && !delayed.value) {
+          // 正在加载
           return createVNode(loadingComponent as ConcreteComponent)
         }
       }
