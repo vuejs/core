@@ -160,15 +160,7 @@ export const getGlobalThis = (): any => {
   return (
     _globalThis ||
     (_globalThis =
-      typeof globalThis !== 'undefined'
-        ? globalThis
-        : typeof self !== 'undefined'
-        ? self
-        : typeof window !== 'undefined'
-        ? window
-        : typeof global !== 'undefined'
-        ? global
-        : {})
+      [globalThis, self, window, global].find(_this => typeof _this !== 'undefined') || {})
   )
 }
 
