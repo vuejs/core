@@ -279,6 +279,9 @@ if (__COMPAT__) {
 export const BaseTransition = BaseTransitionImpl as any as {
   new (): {
     $props: BaseTransitionProps<any>
+    $slots: {
+      default(): VNode[]
+    }
   }
 }
 
