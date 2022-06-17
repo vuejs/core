@@ -1,4 +1,4 @@
-import { TransformOptions } from './options'
+import { ParserOptions, TransformOptions } from './options'
 import {
   RootNode,
   NodeTypes,
@@ -117,6 +117,7 @@ export interface TransformContext
   hoist(exp: string | JSChildNode | ArrayExpression): SimpleExpressionNode
   cache<T extends JSChildNode>(exp: T, isVNode?: boolean): CacheExpression | T
   constantCache: Map<TemplateChildNode, ConstantTypes>
+  whitespace?: ParserOptions["whitespace"]
 
   // 2.x Compat only
   filters?: Set<string>
@@ -145,8 +146,9 @@ export function createTransformContext(
     isTS = false,
     onError = defaultOnError,
     onWarn = defaultOnWarn,
-    compatConfig
-  }: TransformOptions
+    compatConfig,
+    whitespace
+  }: TransformOptions & ParserOptions
 ): TransformContext {
   const nameMatch = filename.replace(/\?.*$/, '').match(/([^/\\]+)\.\w+$/)
   const context: TransformContext = {
@@ -172,6 +174,7 @@ export function createTransformContext(
     onError,
     onWarn,
     compatConfig,
+    whitespace,
 
     // state
     root,
