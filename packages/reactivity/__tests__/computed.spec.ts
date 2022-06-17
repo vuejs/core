@@ -6,11 +6,14 @@ import {
   WritableComputedRef,
   isReadonly,
   DebuggerEvent,
+  ReactiveEffect,
   toRaw,
   TrackOpTypes,
   ITERATE_KEY,
   TriggerOpTypes
 } from '../src'
+import { ComputedRefImpl } from '../src/computed'
+import { createDep } from '../src/dep'
 
 describe('reactivity/computed', () => {
   it('should return updated value', () => {
@@ -288,5 +291,55 @@ describe('reactivity/computed', () => {
       key: 'foo',
       oldValue: 2
     })
+  })
+
+  it('should invalidate cache if new value is set', () => {
+    const initialValue = 'initial Value'
+    const newValue = 'new value'
+    let rawValue = initialValue
+    const computedRef = computed({
+      get: () => rawValue,
+      set: (newValue) => rawValue = newValue,
+    })
+    expect(computedRef.value).toEqual(initialValue)
+
+    computedRef.value = newValue
+    expect(rawValue).toEqual(newValue)
+    expect(computedRef.value).toEqual(newValue)
+  })
+
+  it('should trigger ref event if new value is set', () => {
+    const initialValue = 'initial Value'
+    let rawValue = initialValue
+    const computedRef = computed({
+      get: () => rawValue,
+      set: (newValue) => rawValue = newValue,
+    }) as unknown as ComputedRefImpl<string>
+
+    expect(computedRef.value).toEqual(initialValue)
+    expect(computedRef).toBeInstanceOf(ComputedRefImpl)
+
+    const listener = jest.fn(() => 'dummy')
+    computedRef.dep = createDep([
+      new ReactiveEffect<any>(listener)
+    ])
+    computedRef.value = 'new value'
+    expect(listener).toHaveBeenCalledTimes(1)
+  })
+
+  it('should NOT trigger ref event if same value is assigned', () => {
+    let rawValue = 'initial value'
+    const computedRef = computed({
+      get: () => rawValue,
+      set: (newValue) => rawValue = newValue,
+    }) as unknown as ComputedRefImpl<string>
+    expect(computedRef.value).toEqual('initial value')
+
+    const listener = jest.fn(() => 'dummy')
+    computedRef.dep = createDep([
+      new ReactiveEffect<any>(listener)
+    ])
+    computedRef.value = 'initial value'
+    expect(listener).toHaveBeenCalledTimes(0)
   })
 })
