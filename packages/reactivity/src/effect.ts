@@ -208,6 +208,10 @@ export function track(target: object, type: TrackOpTypes, key: unknown) {
     return
   }
   // 依赖的map,将instance当做key存在targetMap里面
+  console.log('---8888---');
+  
+  console.log(targetMap);
+  
   let depsMap = targetMap.get(target)
   if (!depsMap) {
     targetMap.set(target, (depsMap = new Map()))

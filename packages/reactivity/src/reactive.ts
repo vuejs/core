@@ -91,6 +91,7 @@ export function reactive(target: object) {
   if (target && (target as Target)[ReactiveFlags.IS_READONLY]) {
     return target
   }
+  // 闭包，将数据暂存到内存里面
   return createReactiveObject(
     target,
     false,
@@ -211,14 +212,14 @@ function createReactiveObject(
     return existingProxy
   }
   // only a whitelist of value types can be observed.
-  // 获取target的类型
+  // 获取target的数据类型-object,array,map,set
   const targetType = getTargetType(target)
   // 无效的
   if (targetType === TargetType.INVALID) {
     return target
   }
   debugger
-  // 对target进行代理
+  // 对target进行代理，并且安排处理函数
   const proxy = new Proxy(
     target,
     targetType === TargetType.COLLECTION ? collectionHandlers : baseHandlers

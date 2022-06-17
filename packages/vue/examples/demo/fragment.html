@@ -2,7 +2,8 @@
 <div id="app">
   <h1 name="钟阳山" value="888">i am h1</h1>
   <h2 v-if="name == 'zys'">i am h2</h2>
-  <h3 @click="fn">{{ name }}</h3>
+  <h3 @click="fn">{{ obj.obj.age }}</h3>
+  <h3 @click="fn">{{ obj1.obj.age }}</h3>
   <h1 id="h2">666</h1>
 </div>
 <script>
@@ -33,17 +34,29 @@
     setup(props) {
       // let num = ref(0) 
       const obj = reactive({
-        name: 'zys'
+        name: 'zys',
+        obj: {
+          age: 18
+        }
+      })
+      const obj1 = reactive({
+        name: 'zys',
+        obj: {
+          age: 18
+        }
       })
       console.log(8888);
       onMounted(() => {
         // console.log('this is onMounted', num.value); // 回调函数还是能获取当前所属环境
-        console.log(obj.name);
+        console.log(obj.obj.age);
+        console.log(obj1.obj.age);
       })
+      return { obj, obj1 }
     },
     methods: {
       fn() {
-        this.name = 'tets'
+        console.log(888);
+        this.obj.obj.age = 'tets'
       }
     }, 
   }).mount('#app')

@@ -88,7 +88,9 @@ function createGetter(isReadonly = false, shallow = false) {
     } else if (key === ReactiveFlags.IS_READONLY) {
       return isReadonly
     } else if (
-      // 获取原对象
+      // 获取原始数据
+      // 原始数据有可能保存在四大map对象里面
+      // readonlyMap  shallowReadonlyMap reactiveMap shallowReactiveMap
       key === ReactiveFlags.RAW &&
       receiver ===
         (isReadonly
@@ -130,14 +132,14 @@ function createGetter(isReadonly = false, shallow = false) {
       return shouldUnwrap ? res.value : res
     }
 
-    if (isObject(res)) {
-      // Convert returned value into a proxy as well. we do the isObject check
-      // here to avoid invalid value warning. Also need to lazy access readonly
-      // and reactive here to avoid circular dependency.
+    // if (isObject(res)) {
+    //   // Convert returned value into a proxy as well. we do the isObject check
+    //   // here to avoid invalid value warning. Also need to lazy access readonly
+    //   // and reactive here to avoid circular dependency.
 
-      // 对返回值是对象的还要进行深层次的代理
-      return isReadonly ? readonly(res) : reactive(res)
-    }
+    //   // 对返回值是对象的还要进行深层次的代理,这样才能收集到依赖
+    //   return isReadonly ? readonly(res) : reactive(res)
+    // }
 
     return res
   }
