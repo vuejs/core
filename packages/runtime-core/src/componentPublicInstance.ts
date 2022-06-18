@@ -193,9 +193,11 @@ export type ComponentPublicInstance<
   $options: Options & MergedComponentOptionsOverride
   $forceUpdate: () => void
   $nextTick: typeof nextTick
-  $watch(
-    source: string | Function,
-    cb: Function,
+  $watch<T extends string | ((...args: any) => any)>(
+    source: T,
+    cb: T extends (...args: any) => infer R
+      ? (...args: [R, R]) => any
+      : Function,
     options?: WatchOptions
   ): WatchStopHandle
 } & P &
