@@ -197,7 +197,7 @@ export type ComponentPublicInstance<
     source: T,
     cb: T extends (...args: any) => infer R
       ? (...args: [R, R]) => any
-      : Function,
+      : (...args: any) => any,
     options?: WatchOptions
   ): WatchStopHandle
 } & P &
