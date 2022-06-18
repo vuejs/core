@@ -8,7 +8,8 @@ import {
   cloneVNode,
   mergeProps,
   normalizeVNode,
-  transformVNodeArgs
+  transformVNodeArgs,
+  isBlockTreeEnabled
 } from '../src/vnode'
 import { Data } from '../src/component'
 import { ShapeFlags, PatchFlags } from '@vue/shared'
@@ -616,26 +617,26 @@ describe('vnode', () => {
     })
     // #5657
     test('error of slot function execution should not affect block tracking', () => {
-      const error = new Error('slot execution error')
-      let caughtError
-      const slot = withCtx(
+      expect(isBlockTreeEnabled).toStrictEqual(1)
+      const slotFn = withCtx(
         () => {
-          throw error
+          throw new Error('slot execution error')
         },
         { type: {}, appContext: {} } as any
       )
-      try {
-        slot()
-      } catch (e) {
-        caughtError = e
+      const Parent = {
+        setup(_: any, { slots }: any) {
+          return () => {
+            try {
+              slots.default()
+            } catch (e) {}
+          }
+        }
       }
-      expect(caughtError).toBe(error)
-      expect(
-        `[Vue warn]: Unhandled error during execution of slot function`
-      ).toHaveBeenWarned()
-
-      const vnode = (openBlock(), createBlock('div'))
-      expect(vnode.dynamicChildren).toStrictEqual([])
+      const vnode =
+        (openBlock(), createBlock(Parent, null, { default: slotFn }))
+      createApp(vnode).mount(nodeOps.createElement('div'))
+      expect(isBlockTreeEnabled).toStrictEqual(1)
     })
   })
 

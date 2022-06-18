@@ -1,7 +1,6 @@
 import { ComponentInternalInstance } from './component'
 import { devtoolsComponentUpdated } from './devtools'
 import { setBlockTracking } from './vnode'
-import { handleError, ErrorCodes } from './errorHandling'
 
 /**
  * mark the current rendering instance for asset resolution (e.g.
@@ -93,8 +92,6 @@ export function withCtx(
     let res
     try {
       res = fn(...args)
-    } catch (e) {
-      handleError(e, prevInstance, ErrorCodes.SLOT_FUNCTION)
     } finally {
       setCurrentRenderingInstance(prevInstance)
       if (renderFnWithContext._d) {
