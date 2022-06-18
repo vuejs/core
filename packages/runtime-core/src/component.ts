@@ -942,6 +942,15 @@ export function getExposeProxy(instance: ComponentInternalInstance) {
           } else if (key in publicPropertiesMap) {
             return publicPropertiesMap[key](instance)
           }
+        },
+        has(target, key: string) {
+          if (key in target) {
+            return true
+          } else if (key in publicPropertiesMap) {
+            return true
+          }
+
+          return false
         }
       }))
     )
