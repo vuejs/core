@@ -20,8 +20,7 @@ export const enum ErrorCodes {
   APP_WARN_HANDLER,
   FUNCTION_REF,
   ASYNC_COMPONENT_LOADER,
-  SCHEDULER,
-  SLOT_FUNCTION
+  SCHEDULER
 }
 
 export const ErrorTypeStrings: Record<number | string, string> = {
@@ -55,8 +54,7 @@ export const ErrorTypeStrings: Record<number | string, string> = {
   [ErrorCodes.ASYNC_COMPONENT_LOADER]: 'async component loader',
   [ErrorCodes.SCHEDULER]:
     'scheduler flush. This is likely a Vue internals bug. ' +
-    'Please open an issue at https://new-issue.vuejs.org/?repo=vuejs/core',
-  [ErrorCodes.SLOT_FUNCTION]: 'slot function'
+    'Please open an issue at https://new-issue.vuejs.org/?repo=vuejs/core'
 }
 
 export type ErrorTypes = LifecycleHooks | ErrorCodes
