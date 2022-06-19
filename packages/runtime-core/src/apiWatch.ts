@@ -286,7 +286,7 @@ function doWatch(
     onCleanup = NOOP
     if (!cb) {
       getter()
-    } else if (immediate) {
+    } else if (immediate || flush === 'sync') {
       callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
         getter(),
         isMultiSource ? [] : undefined,
