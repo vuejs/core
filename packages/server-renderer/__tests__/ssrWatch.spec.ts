@@ -3,7 +3,7 @@ import { renderToString } from '../src/renderToString'
 
 describe('ssr: watch', () => {
   // #6013
-  test('should work w/ flush:sync option', async () => {
+  test('should work w/ flush:sync', async () => {
     const App = defineComponent(async () => {
       const count = ref(0)
       let msg = ''
