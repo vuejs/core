@@ -280,20 +280,22 @@ function doWatch(
   }
 
   // in SSR there is no need to setup an actual effect, and it should be noop
-  // unless it's eager
+  // unless it's eager or sync flush
   if (__SSR__ && isInSSRComponentSetup) {
     // we will also not call the invalidate callback (+ runner is not set up)
     onCleanup = NOOP
     if (!cb) {
       getter()
-    } else if (immediate || flush === 'sync') {
+    } else if (immediate) {
       callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
         getter(),
         isMultiSource ? [] : undefined,
         onCleanup
       ])
     }
-    return NOOP
+    if (flush !== 'sync') {
+      return NOOP
+    }
   }
 
   let oldValue = isMultiSource ? [] : INITIAL_WATCHER_VALUE

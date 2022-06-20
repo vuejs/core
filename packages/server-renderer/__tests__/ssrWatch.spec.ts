@@ -4,7 +4,7 @@ import { renderToString } from '../src/renderToString'
 describe('ssr: watch', () => {
   // #6013
   test('should work w/ flush:sync', async () => {
-    const App = defineComponent(async () => {
+    const App = defineComponent(() => {
       const count = ref(0)
       let msg = ''
       watch(
@@ -21,5 +21,23 @@ describe('ssr: watch', () => {
     const app = createSSRApp(App)
     const html = await renderToString(app)
     expect(html).toMatch('hello world')
+  })
+  test('should work w/ flush:sync', async () => {
+    const App = defineComponent(() => {
+      const count = ref(0)
+      let msg = 'abc'
+      watch(
+        count,
+        () => {
+          msg = 'hello world'
+        },
+        { flush: 'sync' }
+      )
+      expect(msg).toBe('abc')
+      return () => h('div', null, msg)
+    })
+    const app = createSSRApp(App)
+    const html = await renderToString(app)
+    expect(html).toMatch('abc')
   })
 })
