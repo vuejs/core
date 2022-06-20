@@ -252,4 +252,4 @@ export const toReactive = <T extends unknown>(value: T): T =>
   isObject(value) ? reactive(value) : value
 
 export const toReadonly = <T extends unknown>(value: T): T =>
-  isObject(value) ? readonly(value as Record<any, any>) : value
+  isObject(value) ? readonly(value) : value
