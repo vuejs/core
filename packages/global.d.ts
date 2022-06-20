@@ -42,7 +42,7 @@ declare module '@vue/repl' {
 
 declare interface String {
   /**
-   * @deprecated Please use String.prototype.slice instead of String.prototype.substring in the repository.
+   * @deprecated Please use String.prototype.slice instead of String.prototype.substr in the repository.
    */
-  substring(start: number, end?: number): string
+  substr(start: number, end?: number): string
 }
