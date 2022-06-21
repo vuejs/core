@@ -418,17 +418,47 @@ describe('SSR hydration', () => {
     expect(nextVNode.el).toBe(container.firstChild?.lastChild)
   })
 
-  test('Teleport (nested)', () => {
+  test('Teleport (as component root, disabled)', () => {
     const teleportContainer = document.createElement('div')
     teleportContainer.id = 'teleport5'
+    document.body.appendChild(teleportContainer)
+
+    const wrapper = {
+      render() {
+        return h(Teleport, { to: '#teleport5', disabled: true }, [
+          h('div', ['hello'])
+        ])
+      }
+    }
+
+    const { vnode, container } = mountWithHydration(
+      '<div><!--teleport start--><div>hello</div><!--teleport end--><div></div></div>',
+      () => h('div', [h(wrapper), h('div')])
+    )
+    expect(vnode.el).toBe(container.firstChild)
+    // component el
+    const wrapperVNode = (vnode as any).children[0]
+    const tpStart = container.firstChild?.firstChild
+    const tpEnd = tpStart?.nextSibling?.nextSibling
+    expect(wrapperVNode.el).toBe(tpStart)
+    expect(wrapperVNode.component.subTree.el).toBe(tpStart)
+    expect(wrapperVNode.component.subTree.anchor).toBe(tpEnd)
+    // next node hydrate properly
+    const nextVNode = (vnode as any).children[1]
+    expect(nextVNode.el).toBe(container.firstChild?.lastChild)
+  })
+
+  test('Teleport (nested)', () => {
+    const teleportContainer = document.createElement('div')
+    teleportContainer.id = 'teleport6'
     teleportContainer.innerHTML = `<div><!--teleport start--><!--teleport end--></div><!--teleport anchor--><div>child</div><!--teleport anchor-->`
     document.body.appendChild(teleportContainer)
 
     const { vnode, container } = mountWithHydration(
       '<!--teleport start--><!--teleport end-->',
       () =>
-        h(Teleport, { to: '#teleport5' }, [
-          h('div', [h(Teleport, { to: '#teleport5' }, [h('div', 'child')])])
+        h(Teleport, { to: '#teleport6' }, [
+          h('div', [h(Teleport, { to: '#teleport6' }, [h('div', 'child')])])
         ])
     )
 

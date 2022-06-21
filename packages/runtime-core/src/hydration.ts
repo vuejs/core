@@ -227,13 +227,19 @@ export function createHydrationFunctions(
             ? locateClosingAsyncAnchor(node)
             : nextSibling(node)
 
-          // #4293 teleport as component root
-          if (
-            nextNode &&
-            isComment(nextNode) &&
-            nextNode.data === 'teleport end'
-          ) {
-            nextNode = nextSibling(nextNode)
+          // #6152 teleport as component root
+          if (isComment(node) && node.data === 'teleport start') {
+            while (
+              nextNode && !(
+                isComment(nextNode) &&
+                nextNode.data === 'teleport end'
+              )
+            ) {
+              nextNode = nextSibling(nextNode)
+            }
+            if (nextNode) {
+              nextNode = nextSibling(nextNode)
+            }
           }
 
           // #3787
