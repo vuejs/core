@@ -516,7 +516,12 @@ function _createVNode(
     }
     if (isBlockTreeEnabled > 0 && !isBlockNode && currentBlock) {
       if (cloned.shapeFlag & ShapeFlags.COMPONENT) {
-        currentBlock[currentBlock.indexOf(type)] = cloned
+        const index = currentBlock.indexOf(type)
+        if (index === -1) {
+          currentBlock.push(cloned)
+        } else {
+          currentBlock[index] = cloned
+        }
       } else {
         currentBlock.push(cloned)
       }
