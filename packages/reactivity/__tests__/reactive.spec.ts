@@ -233,6 +233,9 @@ describe('reactivity/reactive', () => {
     // symbol
     const s = Symbol()
     assertValue(s)
+    // bigint
+    const bn = BigInt('9007199254740991')
+    assertValue(bn)
 
     // built-ins should work and return same value
     const p = Promise.resolve()
