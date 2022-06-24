@@ -282,6 +282,7 @@ export function compileScript(
   let propsDestructureRestId: string | undefined
   let propsTypeDecl: TSTypeLiteral | TSInterfaceBody | undefined
   let propsTypeDeclRaw: Node | undefined
+  let propsTypeDeclInScript = false
   let propsIdentifier: string | undefined
   let emitsRuntimeDecl: Node | undefined
   let emitsTypeDecl:
@@ -405,10 +406,10 @@ export function compileScript(
       }
 
       propsTypeDeclRaw = node.typeParameters.params[0]
-      propsTypeDecl = resolveQualifiedType(
+      ;[propsTypeDecl, propsTypeDeclInScript] = resolveQualifiedType(
         propsTypeDeclRaw,
         node => node.type === 'TSTypeLiteral'
-      ) as TSTypeLiteral | TSInterfaceBody | undefined
+      ) as [TSTypeLiteral | TSInterfaceBody | undefined, boolean]
 
       if (!propsTypeDecl) {
         error(
@@ -532,10 +533,10 @@ export function compileScript(
       }
 
       emitsTypeDeclRaw = node.typeParameters.params[0]
-      emitsTypeDecl = resolveQualifiedType(
+      ;[emitsTypeDecl] = resolveQualifiedType(
         emitsTypeDeclRaw,
         node => node.type === 'TSFunctionType' || node.type === 'TSTypeLiteral'
-      ) as TSFunctionType | TSTypeLiteral | TSInterfaceBody | undefined
+      ) as [TSFunctionType | TSTypeLiteral | TSInterfaceBody | undefined, boolean]
 
       if (!emitsTypeDecl) {
         error(
@@ -558,7 +559,7 @@ export function compileScript(
     qualifier: (node: Node) => boolean
   ) {
     if (qualifier(node)) {
-      return node
+      return [node, false]
     }
     if (
       node.type === 'TSTypeReference' &&
@@ -587,7 +588,7 @@ export function compileScript(
       for (const node of body) {
         const qualified = isQualifiedType(node)
         if (qualified) {
-          return qualified
+          return [qualified, !scriptSetupAst.body.includes(node)]
         }
       }
     }
@@ -767,7 +768,7 @@ export function compileScript(
   }
 
   function genSetupPropsType(node: TSTypeLiteral | TSInterfaceBody) {
-    const scriptSetupSource = scriptSetup!.content
+    const scriptSetupSource = (!propsTypeDeclInScript ? scriptSetup : script)!.content
     if (hasStaticWithDefaults()) {
       // if withDefaults() is used, we need to remove the optional flags
       // on props that have default values
