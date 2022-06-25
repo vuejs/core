@@ -210,6 +210,20 @@ describe('defineCustomElement', () => {
       customElements.define('my-el-upgrade', E)
       expect(el.shadowRoot.innerHTML).toBe(`foo: hello`)
     })
+
+    // https://github.com/vuejs/core/issues/6163
+    test('handle components with no props', async () => {
+      const E = defineCustomElement({
+        render() {
+          return h('div', 'foo')
+        }
+      })
+      customElements.define('my-element-noprops', E)
+      const el = document.createElement('my-element-noprops')
+      container.appendChild(el)
+      await nextTick()
+      expect(el.shadowRoot!.innerHTML).toMatchInlineSnapshot('"<div>foo</div>"')
+    })
   })
 
   describe('emits', () => {
