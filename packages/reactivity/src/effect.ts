@@ -336,19 +336,19 @@ export function trigger(
       }
     }
     if (__DEV__) {
-      triggerEffects(createDep(effects), eventInfo)
+      triggerEffects(new Set(effects), eventInfo)
     } else {
-      triggerEffects(createDep(effects))
+      triggerEffects(new Set(effects))
     }
   }
 }
 
 export function triggerEffects(
-  dep: Dep | ReactiveEffect[],
+  dep: Dep | Set<ReactiveEffect>,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
   // spread into array for stabilization
-  const effects = isArray(dep) ? dep : [...dep]
+  const effects = [...dep]
   for (const effect of effects) {
     if (effect.computed) {
       triggerEffect(effect, debuggerEventExtraInfo)
