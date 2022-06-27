@@ -4,9 +4,6 @@ import { warn } from './warning'
 let activeEffectScope: EffectScope | undefined
 
 export class EffectScope {
-  /**
-   * @internal
-   */
   active = true
   /**
    * @internal
