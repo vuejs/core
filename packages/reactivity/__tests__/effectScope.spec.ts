@@ -26,6 +26,14 @@ describe('reactivity/effect/scope', () => {
     expect(new EffectScope().run(() => 1)).toBe(1)
   })
 
+  it('should work w/ active property', () => {
+    const scope = new EffectScope()
+    scope.run(() => 1)
+    expect(scope.active).toBe(true)
+    scope.stop()
+    expect(scope.active).toBe(false)
+  })
+
   it('should collect the effects', () => {
     const scope = new EffectScope()
     scope.run(() => {
