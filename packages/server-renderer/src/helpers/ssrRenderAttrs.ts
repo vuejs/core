@@ -12,7 +12,9 @@ import {
 } from '@vue/shared'
 
 // leading comma for empty string ""
-const shouldIgnoreProp = makeMap(`,key,ref,innerHTML,textContent`)
+const shouldIgnoreProp = makeMap(
+  `,key,ref,innerHTML,textContent,ref_key,ref_for`
+)
 
 export function ssrRenderAttrs(
   props: Record<string, unknown>,

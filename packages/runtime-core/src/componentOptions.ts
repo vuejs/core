@@ -58,7 +58,8 @@ import { EmitsOptions, EmitsToProps } from './componentEmits'
 import { Directive } from './directives'
 import {
   CreateComponentPublicInstance,
-  ComponentPublicInstance
+  ComponentPublicInstance,
+  isReservedPrefix
 } from './componentPublicInstance'
 import { warn } from './warning'
 import { VNodeChild } from './vnode'
@@ -384,6 +385,10 @@ type ComponentWatchOptionItem = WatchOptionItem | WatchOptionItem[]
 
 type ComponentWatchOptions = Record<string, ComponentWatchOptionItem>
 
+export type ComponentProvideOptions = ObjectProvideOptions | Function
+
+type ObjectProvideOptions = Record<string | symbol, unknown>
+
 type ComponentInjectOptions = string[] | ObjectInjectOptions
 
 type ObjectInjectOptions = Record<
@@ -431,7 +436,7 @@ interface LegacyOptions<
   computed?: C
   methods?: M
   watch?: ComponentWatchOptions
-  provide?: Data | Function
+  provide?: ComponentProvideOptions
   inject?: ComponentInjectOptions
 
   // assets
@@ -471,8 +476,8 @@ interface LegacyOptions<
    *
    * type-only, used to assist Mixin's type inference,
    * typescript will try to simplify the inferred `Mixin` type,
-   * with the `__differenciator`, typescript won't be able to combine different mixins,
-   * because the `__differenciator` will be different
+   * with the `__differentiator`, typescript won't be able to combine different mixins,
+   * because the `__differentiator` will be different
    */
   __differentiator?: keyof D | keyof C | keyof M
 }
@@ -669,7 +674,7 @@ export function applyOptions(instance: ComponentInternalInstance) {
         for (const key in data) {
           checkDuplicateProperties!(OptionTypes.DATA, key)
           // expose data on ctx during dev
-          if (key[0] !== '$' && key[0] !== '_') {
+          if (!isReservedPrefix(key[0])) {
             Object.defineProperty(ctx, key, {
               configurable: true,
               enumerable: true,

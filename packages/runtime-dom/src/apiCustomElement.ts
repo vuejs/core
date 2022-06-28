@@ -122,13 +122,13 @@ export function defineCustomElement(options: {
 
 export function defineCustomElement(
   options: any,
-  hydate?: RootHydrateFunction
+  hydrate?: RootHydrateFunction
 ): VueElementConstructor {
   const Comp = defineComponent(options as any)
   class VueCustomElement extends VueElement {
     static def = Comp
     constructor(initialProps?: Record<string, any>) {
-      super(Comp, initialProps, hydate)
+      super(Comp, initialProps, hydrate)
     }
   }
 

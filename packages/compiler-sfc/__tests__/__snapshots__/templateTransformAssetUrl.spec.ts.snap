@@ -38,11 +38,13 @@ import _imports_0 from '@svg/file.svg'
 
 
 const _hoisted_1 = _imports_0 + '#fragment'
+const _hoisted_2 = /*#__PURE__*/_createElementVNode(\\"use\\", { href: _hoisted_1 }, null, -1 /* HOISTED */)
+const _hoisted_3 = /*#__PURE__*/_createElementVNode(\\"use\\", { href: _hoisted_1 }, null, -1 /* HOISTED */)
 
 export function render(_ctx, _cache) {
   return (_openBlock(), _createElementBlock(_Fragment, null, [
-    _createElementVNode(\\"use\\", { href: _hoisted_1 }),
-    _createElementVNode(\\"use\\", { href: _hoisted_1 })
+    _hoisted_2,
+    _hoisted_3
   ], 64 /* STABLE_FRAGMENT */))
 }"
 `;

@@ -16,9 +16,11 @@ import { warn } from '../warning'
 import { isKeepAlive } from './KeepAlive'
 import { toRaw } from '@vue/reactivity'
 import { callWithAsyncErrorHandling, ErrorCodes } from '../errorHandling'
-import { ShapeFlags, PatchFlags } from '@vue/shared'
+import { ShapeFlags, PatchFlags, isArray } from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import { RendererElement } from '../renderer'
+
+type Hook<T = () => void> = T | T[]
 
 export interface BaseTransitionProps<HostElement = RendererElement> {
   mode?: 'in-out' | 'out-in' | 'default'
@@ -34,20 +36,20 @@ export interface BaseTransitionProps<HostElement = RendererElement> {
   // Hooks. Using camel case for easier usage in render functions & JSX.
   // In templates these can be written as @before-enter="xxx" as prop names
   // are camelized.
-  onBeforeEnter?: (el: HostElement) => void
-  onEnter?: (el: HostElement, done: () => void) => void
-  onAfterEnter?: (el: HostElement) => void
-  onEnterCancelled?: (el: HostElement) => void
+  onBeforeEnter?: Hook<(el: HostElement) => void>
+  onEnter?: Hook<(el: HostElement, done: () => void) => void>
+  onAfterEnter?: Hook<(el: HostElement) => void>
+  onEnterCancelled?: Hook<(el: HostElement) => void>
   // leave
-  onBeforeLeave?: (el: HostElement) => void
-  onLeave?: (el: HostElement, done: () => void) => void
-  onAfterLeave?: (el: HostElement) => void
-  onLeaveCancelled?: (el: HostElement) => void // only fired in persisted mode
+  onBeforeLeave?: Hook<(el: HostElement) => void>
+  onLeave?: Hook<(el: HostElement, done: () => void) => void>
+  onAfterLeave?: Hook<(el: HostElement) => void>
+  onLeaveCancelled?: Hook<(el: HostElement) => void> // only fired in persisted mode
   // appear
-  onBeforeAppear?: (el: HostElement) => void
-  onAppear?: (el: HostElement, done: () => void) => void
-  onAfterAppear?: (el: HostElement) => void
-  onAppearCancelled?: (el: HostElement) => void
+  onBeforeAppear?: Hook<(el: HostElement) => void>
+  onAppear?: Hook<(el: HostElement, done: () => void) => void>
+  onAfterAppear?: Hook<(el: HostElement) => void>
+  onAppearCancelled?: Hook<(el: HostElement) => void>
 }
 
 export interface TransitionHooks<
@@ -69,9 +71,9 @@ export interface TransitionHooks<
   delayedLeave?(): void
 }
 
-export type TransitionHookCaller = (
-  hook: ((el: any) => void) | Array<(el: any) => void> | undefined,
-  args?: any[]
+export type TransitionHookCaller = <T extends any[] = [el: any]>(
+  hook: Hook<(...args: T) => void> | undefined,
+  args?: T
 ) => void
 
 export type PendingCallback = (cancelled?: boolean) => void
@@ -148,12 +150,25 @@ const BaseTransitionImpl: ComponentOptions = {
         return
       }
 
-      // warn multiple elements
-      if (__DEV__ && children.length > 1) {
-        warn(
-          '<transition> can only be used on a single element or component. Use ' +
-            '<transition-group> for lists.'
-        )
+      let child: VNode = children[0]
+      if (children.length > 1) {
+        let hasFound = false
+        // locate first non-comment child
+        for (const c of children) {
+          if (c.type !== Comment) {
+            if (__DEV__ && hasFound) {
+              // warn more than one non-comment child
+              warn(
+                '<transition> can only be used on a single element or component. ' +
+                  'Use <transition-group> for lists.'
+              )
+              break
+            }
+            child = c
+            hasFound = true
+            if (!__DEV__) break
+          }
+        }
       }
 
       // there's no need to track reactivity for these props so use the raw
@@ -164,13 +179,13 @@ const BaseTransitionImpl: ComponentOptions = {
       if (
         __DEV__ &&
         mode &&
-        mode !== 'in-out' && mode !== 'out-in' && mode !== 'default'
+        mode !== 'in-out' &&
+        mode !== 'out-in' &&
+        mode !== 'default'
       ) {
         warn(`invalid <transition> mode: ${mode}`)
       }
 
-      // at this point children has a guaranteed length of 1.
-      const child = children[0]
       if (state.isLeaving) {
         return emptyPlaceholder(child)
       }
@@ -318,6 +333,19 @@ export function resolveTransitionHooks(
       )
   }
 
+  const callAsyncHook = (
+    hook: Hook<(el: any, done: () => void) => void>,
+    args: [TransitionElement, () => void]
+  ) => {
+    const done = args[1]
+    callHook(hook, args)
+    if (isArray(hook)) {
+      if (hook.every(hook => hook.length <= 1)) done()
+    } else if (hook.length <= 1) {
+      done()
+    }
+  }
+
   const hooks: TransitionHooks<TransitionElement> = {
     mode,
     persisted,
@@ -375,10 +403,7 @@ export function resolveTransitionHooks(
         el._enterCb = undefined
       })
       if (hook) {
-        hook(el, done)
-        if (hook.length <= 1) {
-          done()
-        }
+        callAsyncHook(hook, [el, done])
       } else {
         done()
       }
@@ -410,10 +435,7 @@ export function resolveTransitionHooks(
       })
       leavingVNodesCache[key] = vnode
       if (onLeave) {
-        onLeave(el, done)
-        if (onLeave.length <= 1) {
-          done()
-        }
+        callAsyncHook(onLeave, [el, done])
       } else {
         done()
       }
@@ -460,22 +482,28 @@ export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks) {
 
 export function getTransitionRawChildren(
   children: VNode[],
-  keepComment: boolean = false
+  keepComment: boolean = false,
+  parentKey?: VNode['key']
 ): VNode[] {
   let ret: VNode[] = []
   let keyedFragmentCount = 0
   for (let i = 0; i < children.length; i++) {
-    const child = children[i]
+    let child = children[i]
+    // #5360 inherit parent key in case of <template v-for>
+    const key =
+      parentKey == null
+        ? child.key
+        : String(parentKey) + String(child.key != null ? child.key : i)
     // handle fragment children case, e.g. v-for
     if (child.type === Fragment) {
       if (child.patchFlag & PatchFlags.KEYED_FRAGMENT) keyedFragmentCount++
       ret = ret.concat(
-        getTransitionRawChildren(child.children as VNode[], keepComment)
+        getTransitionRawChildren(child.children as VNode[], keepComment, key)
       )
     }
     // comment placeholders should be skipped, e.g. v-if
     else if (keepComment || child.type !== Comment) {
-      ret.push(child)
+      ret.push(key != null ? cloneVNode(child, { key }) : child)
     }
   }
   // #1126 if a transition children list contains multiple sub fragments, these

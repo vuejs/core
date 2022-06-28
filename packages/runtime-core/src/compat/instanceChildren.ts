@@ -1,4 +1,4 @@
-import { ShapeFlags } from '@vue/shared/src'
+import { ShapeFlags } from '@vue/shared'
 import { ComponentInternalInstance } from '../component'
 import { ComponentPublicInstance } from '../componentPublicInstance'
 import { VNode } from '../vnode'

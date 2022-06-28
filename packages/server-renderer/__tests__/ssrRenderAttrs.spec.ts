@@ -15,6 +15,8 @@ describe('ssr: renderAttrs', () => {
     expect(
       ssrRenderAttrs({
         key: 1,
+        ref_key: 'foo',
+        ref_for: 'bar',
         ref: () => {},
         onClick: () => {}
       })
