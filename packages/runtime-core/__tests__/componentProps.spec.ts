@@ -443,6 +443,29 @@ describe('component props', () => {
     expect(serializeInner(root)).toMatch('<div>60000000100000111</div>')
   })
 
+  test('props type support undefined', () => {
+    let proxy: any
+    const Comp = {
+      props: {
+        foo: undefined,
+        bar: undefined
+      },
+      render() {
+        proxy = this
+      }
+    }
+    render(
+      h(Comp, {
+        foo: undefined,
+        bar: 1
+      }),
+      nodeOps.createElement('div')
+    )
+
+    expect(proxy.bar).toBe(1)
+    expect('type check failed for prop "bar"').toHaveBeenWarned()
+  })
+
   // #3474
   test('should cache the value returned from the default factory to avoid unnecessary watcher trigger', async () => {
     let count = 0

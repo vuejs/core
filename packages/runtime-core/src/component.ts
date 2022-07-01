@@ -813,7 +813,7 @@ export function finishComponentSetup(
         if (__COMPAT__) {
           // pass runtime compat config into the compiler
           finalCompilerOptions.compatConfig = Object.create(globalCompatConfig)
-          if (Component.compatConfig) {
+          if (Component.compatConfig && finalCompilerOptions.compatConfig) {
             extend(finalCompilerOptions.compatConfig, Component.compatConfig)
           }
         }

@@ -66,6 +66,7 @@ type PropConstructor<T = any> =
   | { new (...args: any[]): T & {} }
   | { (): T }
   | PropMethod<T>
+  | undefined
 
 type PropMethod<T, TConstructor = any> = [T] extends [
   ((...args: any) => any) | undefined
@@ -517,7 +518,9 @@ export function normalizePropsOptions(
       if (validatePropName(normalizedKey)) {
         const opt = raw[key]
         const prop: NormalizedProp = (normalized[normalizedKey] =
-          isArray(opt) || isFunction(opt) ? { type: opt } : opt)
+          isArray(opt) || isFunction(opt) || opt === undefined
+            ? { type: opt }
+            : opt)
         if (prop) {
           const booleanIndex = getTypeIndex(Boolean, prop.type)
           const stringIndex = getTypeIndex(String, prop.type)
@@ -551,7 +554,13 @@ function validatePropName(key: string) {
 // so that it works across vms / iframes.
 function getType(ctor: Prop<any>): string {
   const match = ctor && ctor.toString().match(/^\s*function (\w+)/)
-  return match ? match[1] : ctor === null ? 'null' : ''
+  return match
+    ? match[1]
+    : ctor === null
+    ? 'null'
+    : ctor === undefined
+    ? 'undefined'
+    : ''
 }
 
 function isSameType(a: Prop<any>, b: Prop<any>): boolean {
@@ -582,7 +591,7 @@ function validateProps(
   const options = instance.propsOptions[0]
   for (const key in options) {
     let opt = options[key]
-    if (opt == null) continue
+    if (opt === null) continue
     validateProp(
       key,
       resolvedValues[key],
@@ -601,6 +610,7 @@ function validateProp(
   prop: PropOptions,
   isAbsent: boolean
 ) {
+  const typeInProp = 'type' in prop
   const { type, required, validator } = prop
   // required!
   if (required && isAbsent) {
@@ -612,7 +622,7 @@ function validateProp(
     return
   }
   // type check
-  if (type != null && type !== true) {
+  if (type !== null && type !== true && typeInProp) {
     let isValid = false
     const types = isArray(type) ? type : [type]
     const expectedTypes = []
@@ -648,22 +658,27 @@ type AssertionResult = {
 function assertType(value: unknown, type: PropConstructor): AssertionResult {
   let valid
   const expectedType = getType(type)
-  if (isSimpleType(expectedType)) {
-    const t = typeof value
-    valid = t === expectedType.toLowerCase()
-    // for primitive wrapper objects
-    if (!valid && t === 'object') {
+  if (type !== undefined) {
+    if (isSimpleType(expectedType)) {
+      const t = typeof value
+      valid = t === expectedType.toLowerCase()
+      // for primitive wrapper objects
+      if (!valid && t === 'object') {
+        valid = value instanceof type
+      }
+    } else if (expectedType === 'Object') {
+      valid = isObject(value)
+    } else if (expectedType === 'Array') {
+      valid = isArray(value)
+    } else if (expectedType === 'null') {
+      valid = value === null
+    } else {
       valid = value instanceof type
     }
-  } else if (expectedType === 'Object') {
-    valid = isObject(value)
-  } else if (expectedType === 'Array') {
-    valid = isArray(value)
-  } else if (expectedType === 'null') {
-    valid = value === null
   } else {
-    valid = value instanceof type
+    valid = value === undefined
   }
+
   return {
     valid,
     expectedType
