@@ -2,7 +2,7 @@ import {
   toRaw,
   shallowReactive,
   trigger,
-  TriggerOpTypes
+  TriggerOpTypes, unref
 } from '@vue/reactivity'
 import {
   EMPTY_OBJ,
@@ -648,21 +648,22 @@ type AssertionResult = {
 function assertType(value: unknown, type: PropConstructor): AssertionResult {
   let valid
   const expectedType = getType(type)
+  let rawValue = unref(value)
   if (isSimpleType(expectedType)) {
-    const t = typeof value
+    const t = typeof rawValue
     valid = t === expectedType.toLowerCase()
     // for primitive wrapper objects
     if (!valid && t === 'object') {
-      valid = value instanceof type
+      valid = rawValue instanceof type
     }
   } else if (expectedType === 'Object') {
-    valid = isObject(value)
+    valid = isObject(rawValue)
   } else if (expectedType === 'Array') {
-    valid = isArray(value)
+    valid = isArray(rawValue)
   } else if (expectedType === 'null') {
-    valid = value === null
+    valid = rawValue === null
   } else {
-    valid = value instanceof type
+    valid = rawValue instanceof type
   }
   return {
     valid,
@@ -678,13 +679,14 @@ function getInvalidTypeMessage(
   value: unknown,
   expectedTypes: string[]
 ): string {
+  const rawValue = unref(value)
   let message =
     `Invalid prop: type check failed for prop "${name}".` +
     ` Expected ${expectedTypes.map(capitalize).join(' | ')}`
   const expectedType = expectedTypes[0]
-  const receivedType = toRawType(value)
-  const expectedValue = styleValue(value, expectedType)
-  const receivedValue = styleValue(value, receivedType)
+  const receivedType = toRawType(rawValue)
+  const expectedValue = styleValue(rawValue, expectedType)
+  const receivedValue = styleValue(rawValue, receivedType)
   // check if we need to specify expected value
   if (
     expectedTypes.length === 1 &&

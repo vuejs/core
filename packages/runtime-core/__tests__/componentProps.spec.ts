@@ -595,4 +595,31 @@ describe('component props', () => {
       JSON.stringify(attrs) + Object.keys(attrs)
     )
   })
+  test('correctly report warnings when ref', () => {
+    const fooRefNum = ref(1)
+    const fooNum = 1
+   const fooStr = '1'
+   const fooRefStr = ref('1')
+    const Comp = {
+      props: {
+        foo: {
+          type:Number
+        }
+      },
+      render() {}
+    }
+    const root = nodeOps.createElement('div')
+    expect(() => {
+      render(h(Comp, { foo: fooRefNum }), root)
+    }).not.toThrow()
+    expect(() => {
+      render(h(Comp, { foo: fooNum }), root)
+    }).not.toThrow()
+    render(h(Comp, { foo: fooStr }), root)
+    expect(
+      `[Vue warn]: Invalid prop: type check failed for prop "foo". Expected Number with value 1, got String with value "1"`
+    ).toHaveBeenWarned()
+    render(h(Comp, { foo: fooRefStr }), root)
+    expect(`[Vue warn]: Invalid prop: type check failed for prop "foo". Expected Number with value 1, got String with value "1"`).toHaveBeenWarned()
+  })
 })
