@@ -132,7 +132,7 @@ function testRender(type: string, render: typeof renderToString) {
                   data() {
                     return { msg: 'hello' }
                   },
-                  render(this: any) {
+                  render() {
                     return h('div', this.msg)
                   }
                 })
@@ -152,7 +152,7 @@ function testRender(type: string, render: typeof renderToString) {
                     data() {
                       return { msg: 'hello' }
                     },
-                    render(this: any) {
+                    render() {
                       return h('div', this.msg)
                     }
                   })
