@@ -187,7 +187,7 @@ export function compileScript(
   if (options.babelParserPlugins) plugins.push(...options.babelParserPlugins)
   if (isTS) {
     plugins.push('typescript')
-    if (plugins.includes('decorators')) {
+    if (!plugins.includes('decorators')) {
       plugins.push('decorators-legacy')
     }
   }
