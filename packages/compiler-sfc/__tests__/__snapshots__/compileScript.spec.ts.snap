@@ -1039,19 +1039,22 @@ return (_ctx, _cache) => {
 `;
 
 exports[`SFC compile <script setup> inlineTemplate mode ssr codegen 1`] = `
-"import { ssrRenderAttrs as _ssrRenderAttrs, ssrInterpolate as _ssrInterpolate } from \\"vue/server-renderer\\"
+"import { unref as _unref } from 'vue'
+import { ssrRenderAttrs as _ssrRenderAttrs, ssrInterpolate as _ssrInterpolate } from \\"vue/server-renderer\\"
 
-import { ref } from 'vue'
+import { ref,computed } from 'vue'
         
 export default {
   __ssrInlineRender: true,
   setup(__props) {
 
         const count = ref(0)
+        const background = computed(() => 'red')
         
 return (_ctx, _push, _parent, _attrs) => {
   const _cssVars = { style: {
-  \\"--xxxxxxxx-count\\": (count.value)
+  \\"--xxxxxxxx-count\\": (count.value),
+  \\"--xxxxxxxx-background\\": (_unref(background))
 }}
   _push(\`<!--[--><div\${
     _ssrRenderAttrs(_cssVars)

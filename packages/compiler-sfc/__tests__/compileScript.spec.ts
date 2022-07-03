@@ -707,15 +707,16 @@ defineExpose({ foo: 123 })
       const { content } = compile(
         `
         <script setup>
-        import { ref } from 'vue'
+        import { ref,computed } from 'vue'
         const count = ref(0)
+        const background = computed(() => 'red')
         </script>
         <template>
           <div>{{ count }}</div>
           <div>static</div>
         </template>
         <style>
-        div { color: v-bind(count) }
+        div { color: v-bind(count);background: v-bind(background); }
         </style>
         `,
         {
@@ -729,6 +730,7 @@ defineExpose({ foo: 123 })
       expect(content).toMatch(`return (_ctx, _push`)
       expect(content).toMatch(`ssrInterpolate`)
       expect(content).not.toMatch(`useCssVars`)
+      expect(content).toMatch(`unref as _unref`)
       expect(content).toMatch(`"--${mockId}-count": (count.value)`)
       assertCode(content)
     })

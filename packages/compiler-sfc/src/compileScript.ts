@@ -1310,17 +1310,23 @@ export function compileScript(
   }
 
   // 8. inject `useCssVars` calls
-  if (
-    cssVars.length &&
-    // no need to do this when targeting SSR
-    !(options.inlineTemplate && options.templateOptions?.ssr)
-  ) {
-    helperImports.add(CSS_VARS_HELPER)
-    helperImports.add('unref')
-    s.prependRight(
-      startOffset,
-      `\n${genCssVarsCode(cssVars, bindingMetadata, scopeId, isProd)}\n`
-    )
+  if (cssVars.length) {
+    if (options.inlineTemplate && options.templateOptions?.ssr) {
+      // ssr w/ `setup-maybe-ref` inject `unref`
+      if (
+        Object.values(bindingMetadata).includes(BindingTypes.SETUP_MAYBE_REF)
+      ) {
+        helperImports.add('unref')
+      }
+    } else {
+      // no need to do this when targeting SSR
+      helperImports.add(CSS_VARS_HELPER)
+      helperImports.add('unref')
+      s.prependRight(
+        startOffset,
+        `\n${genCssVarsCode(cssVars, bindingMetadata, scopeId, isProd)}\n`
+      )
+    }
   }
 
   // 9. finalize setup() argument signature
