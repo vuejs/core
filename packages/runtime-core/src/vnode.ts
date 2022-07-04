@@ -21,7 +21,7 @@ import {
   isClassComponent
 } from './component'
 import { RawSlots } from './componentSlots'
-import { isProxy, Ref, toRaw, ReactiveFlags, isRef } from '@vue/reactivity'
+import {isProxy, Ref, toRaw, ReactiveFlags, isRef} from '@vue/reactivity'
 import { AppContext } from './apiCreateApp'
 import {
   SuspenseImpl,
@@ -593,9 +593,8 @@ function _createVNode(
 export function guardReactiveProps(props: (Data & VNodeProps) | null) {
   if (!props) return null
   return isProxy(props) || InternalObjectKey in props
-    ? JSON.parse(JSON.stringify(props)) as (Data & VNodeProps)
+    ? extend({},mergeProps(props))
     : props
-    // JSON.parse(JSON.stringify(props)) as (Data & VNodeProps)
 }
 
 export function cloneVNode<T, U>(
