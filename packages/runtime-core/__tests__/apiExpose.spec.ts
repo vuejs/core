@@ -203,7 +203,9 @@ describe('api: expose', () => {
         return h('div')
       },
       setup(_, { expose }) {
-        expose()
+        expose({
+          foo: 42
+        })
         return () => h(GrandChild, { ref: grandChildRef })
       }
     })
@@ -218,6 +220,7 @@ describe('api: expose', () => {
     render(h(Parent), root)
     expect('$el' in childRef.value).toBe(true)
     expect(childRef.value.$el.tag).toBe('div')
+    expect('foo' in childRef.value).toBe(true)
     expect('$parent' in grandChildRef.value).toBe(true)
     expect(grandChildRef.value.$parent).toBe(childRef.value)
     expect(grandChildRef.value.$parent.$parent).toBe(grandChildRef.value.$root)
