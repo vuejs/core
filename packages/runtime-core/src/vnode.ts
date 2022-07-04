@@ -593,8 +593,9 @@ function _createVNode(
 export function guardReactiveProps(props: (Data & VNodeProps) | null) {
   if (!props) return null
   return isProxy(props) || InternalObjectKey in props
-    ? extend({}, props)
+    ? JSON.parse(JSON.stringify(props)) as (Data & VNodeProps)
     : props
+    // JSON.parse(JSON.stringify(props)) as (Data & VNodeProps)
 }
 
 export function cloneVNode<T, U>(
