@@ -46,7 +46,7 @@
     ]
   },
   "engines": {
-    "node": ">=16.5.0"
+    "node": ">=16.11.0"
   },
   "devDependencies": {
     "@babel/types": "^7.12.0",

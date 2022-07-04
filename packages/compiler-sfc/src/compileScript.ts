@@ -185,7 +185,12 @@ export function compileScript(
       )
   }
   if (options.babelParserPlugins) plugins.push(...options.babelParserPlugins)
-  if (isTS) plugins.push('typescript', 'decorators-legacy')
+  if (isTS) {
+    plugins.push('typescript')
+    if (!plugins.includes('decorators')) {
+      plugins.push('decorators-legacy')
+    }
+  }
 
   if (!scriptSetup) {
     if (!script) {
@@ -2129,6 +2134,8 @@ function processExp(exp: string, dir?: string): string {
   if (/ as\s+\w|<.*>|:/.test(exp)) {
     if (dir === 'slot') {
       exp = `(${exp})=>{}`
+    } else if (dir === 'on') {
+      exp = `()=>{${exp}}`
     } else if (dir === 'for') {
       const inMatch = exp.match(forAliasRE)
       if (inMatch) {
