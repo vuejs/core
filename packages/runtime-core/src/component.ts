@@ -106,6 +106,10 @@ export interface ComponentInternalOptions {
    * This one should be exposed so that devtools can make use of it
    */
   __file?: string
+  /**
+   * name inferred from filename
+   */
+  __name?: string
 }
 
 export interface FunctionalComponent<P = {}, E extends EmitsOptions = {}>
@@ -949,11 +953,12 @@ const classify = (str: string): string =>
   str.replace(classifyRE, c => c.toUpperCase()).replace(/[-_]/g, '')
 
 export function getComponentName(
-  Component: ConcreteComponent
-): string | undefined {
+  Component: ConcreteComponent,
+  includeInferred = true
+): string | false | undefined {
   return isFunction(Component)
     ? Component.displayName || Component.name
-    : Component.name
+    : Component.name || (includeInferred && Component.__name)
 }
 
 /* istanbul ignore next */

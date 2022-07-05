@@ -111,7 +111,7 @@ export function defineAsyncComponent<
     )
   }
 
-  return defineComponent<{}>({
+  return defineComponent({
     name: 'AsyncComponentWrapper',
 
     __asyncLoader: load,

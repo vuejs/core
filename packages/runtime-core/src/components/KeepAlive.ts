@@ -96,8 +96,11 @@ const KeepAliveImpl: ComponentOptions = {
 
     // if the internal renderer is not registered, it indicates that this is server-side rendering,
     // for KeepAlive, we just need to render its children
-    if (!sharedContext.renderer) {
-      return slots.default
+    if (__SSR__ && !sharedContext.renderer) {
+      return () => {
+        const children = slots.default && slots.default()
+        return children && children.length === 1 ? children[0] : children
+      }
     }
 
     const cache: Cache = new Map()

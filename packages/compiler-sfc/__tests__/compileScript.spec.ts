@@ -1,5 +1,5 @@
 import { BindingTypes } from '@vue/compiler-core'
-import { compileSFCScript as compile, assertCode } from './utils'
+import { compileSFCScript as compile, assertCode, mockId } from './utils'
 
 describe('SFC compile <script setup>', () => {
   test('should expose top level declarations', () => {
@@ -168,7 +168,7 @@ defineExpose({ foo: 123 })
     expect(content).toMatch(/\bexpose\(\{ foo: 123 \}\)/)
   })
 
-  test('<script> after <script setup> the script content not end with `\\n`',() => {
+  test('<script> after <script setup> the script content not end with `\\n`', () => {
     const { content } = compile(`
     <script setup>
     import { x } from './x'
@@ -446,7 +446,7 @@ defineExpose({ foo: 123 })
     test('TS annotations', () => {
       const { content } = compile(`
         <script setup lang="ts">
-        import { Foo, Bar, Baz } from './x'
+        import { Foo, Bar, Baz, Qux, Fred } from './x'
         const a = 1
         function b() {}
         </script>
@@ -454,10 +454,25 @@ defineExpose({ foo: 123 })
           {{ a as Foo }}
           {{ b<Bar>() }}
           {{ Baz }}
+          <Comp v-slot="{ data }: Qux">{{ data }}</Comp>
+          <div v-for="{ z = x as Qux } in list as Fred"/>
         </template>
         `)
       expect(content).toMatch(`return { a, b, Baz }`)
       assertCode(content)
+    })
+
+    // vuejs/vue#12591
+    test('v-on inline statement', () => {
+      // should not error
+      compile(`
+      <script setup lang="ts">
+        import { foo } from './foo'
+      </script>
+      <template>
+        <div @click="$emit('update:a');"></div>
+      </tempalte>
+      `)
     })
   })
 
@@ -726,6 +741,8 @@ defineExpose({ foo: 123 })
       expect(content).toMatch(`\n  __ssrInlineRender: true,\n`)
       expect(content).toMatch(`return (_ctx, _push`)
       expect(content).toMatch(`ssrInterpolate`)
+      expect(content).not.toMatch(`useCssVars`)
+      expect(content).toMatch(`"--${mockId}-count": (count.value)`)
       assertCode(content)
     })
   })
@@ -1196,7 +1213,7 @@ const emit = defineEmits(['a', 'b'])
     })
 
     test('multiple `if` nested statements', () => {
-      assertAwaitDetection(`if (ok) { 
+      assertAwaitDetection(`if (ok) {
         let a = 'foo'
         await 0 + await 1
         await 2
@@ -1212,13 +1229,13 @@ const emit = defineEmits(['a', 'b'])
           await 3
           await 4
         }
-      } else { 
+      } else {
         await 5
       }`)
     })
 
     test('multiple `if while` nested statements', () => {
-      assertAwaitDetection(`if (ok) { 
+      assertAwaitDetection(`if (ok) {
         while (d) {
           await 5
         }
@@ -1237,7 +1254,7 @@ const emit = defineEmits(['a', 'b'])
     })
 
     test('multiple `if for` nested statements', () => {
-      assertAwaitDetection(`if (ok) { 
+      assertAwaitDetection(`if (ok) {
         for (let a of [1,2,3]) {
           await a
         }
@@ -1646,7 +1663,7 @@ describe('SFC analyze <script> bindings', () => {
         }
       )
       expect(content).toMatch(`export default {
-  name: 'FooBar'`)
+  __name: 'FooBar'`)
       assertCode(content)
     })
 

@@ -52,7 +52,7 @@ export const isMap = (val: unknown): val is Map<any, any> =>
 export const isSet = (val: unknown): val is Set<any> =>
   toTypeString(val) === '[object Set]'
 
-export const isDate = (val: unknown): val is Date => val instanceof Date
+export const isDate = (val: unknown): val is Date => toTypeString(val) === '[object Date]'
 export const isFunction = (val: unknown): val is Function =>
   typeof val === 'function'
 export const isString = (val: unknown): val is string => typeof val === 'string'

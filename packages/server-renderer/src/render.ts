@@ -4,6 +4,7 @@ import {
   ComponentInternalInstance,
   DirectiveBinding,
   Fragment,
+  FunctionalComponent,
   mergeProps,
   ssrUtils,
   Static,
@@ -112,12 +113,17 @@ function renderComponentSubTree(
   const comp = instance.type as Component
   const { getBuffer, push } = createBuffer()
   if (isFunction(comp)) {
-    renderVNode(
-      push,
-      (instance.subTree = renderComponentRoot(instance)),
-      instance,
-      slotScopeId
-    )
+    let root = renderComponentRoot(instance)
+    // #5817 scope ID attrs not falling through if functional component doesn't
+    // have props
+    if (!(comp as FunctionalComponent).props) {
+      for (const key in instance.attrs) {
+        if (key.startsWith(`data-v-`)) {
+          ;(root.props || (root.props = {}))[key] = ``
+        }
+      }
+    }
+    renderVNode(push, (instance.subTree = root), instance, slotScopeId)
   } else {
     if (
       (!instance.render || instance.render === NOOP) &&

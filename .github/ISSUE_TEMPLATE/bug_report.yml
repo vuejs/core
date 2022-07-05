@@ -18,6 +18,12 @@ body:
         However, if you find that an old, closed issue still persists in the latest version,
         you should open a new issue using the form below instead of commenting on the old issue.
   - type: input
+    id: version
+    attributes:
+      label: Vue version
+    validations:
+      required: true
+  - type: input
     id: reproduction-link
     attributes:
       label: Link to minimal reproduction

@@ -4,6 +4,7 @@
 export * from '@vue/runtime-dom'
 
 export function describe(_name: string, _fn: () => void): void
+export function test(_name: string, _fn: () => any): void
 
 export function expectType<T>(value: T): void
 export function expectError<T>(value: T): void
@@ -15,4 +16,4 @@ export type IsUnion<T, U extends T = T> = (
   ? false
   : true
 
-export type IsAny<T> = 0 extends (1 & T) ? true : false
+export type IsAny<T> = 0 extends 1 & T ? true : false

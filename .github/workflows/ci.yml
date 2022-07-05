@@ -13,9 +13,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v2.0.1
-        with:
-          version: 7.0.1
+        uses: pnpm/action-setup@v2
 
       - name: Set node version to 16
         uses: actions/setup-node@v2
@@ -34,9 +32,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v2.0.1
-        with:
-          version: 7.0.1
+        uses: pnpm/action-setup@v2
 
       - name: Set node version to 16
         uses: actions/setup-node@v2
@@ -55,9 +51,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v2.0.1
-        with:
-          version: 7.0.1
+        uses: pnpm/action-setup@v2
 
       - name: Set node version to 16
         uses: actions/setup-node@v2
@@ -81,9 +75,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v2.0.1
-        with:
-          version: 7.0.1
+        uses: pnpm/action-setup@v2
 
       - name: Set node version to 16
         uses: actions/setup-node@v2

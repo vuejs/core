@@ -34,8 +34,7 @@ import {
   OptionTypesKeys,
   resolveMergedOptions,
   shouldCacheAccess,
-  MergedComponentOptionsOverride,
-  ComponentProvideOptions
+  MergedComponentOptionsOverride
 } from './componentOptions'
 import { EmitsOptions, EmitFn } from './componentEmits'
 import { Slots } from './componentSlots'
@@ -151,8 +150,7 @@ export type CreateComponentPublicInstance<
   PublicM extends MethodOptions = UnwrapMixinsType<PublicMixin, 'M'> &
     EnsureNonVoid<M>,
   PublicDefaults = UnwrapMixinsType<PublicMixin, 'Defaults'> &
-    EnsureNonVoid<Defaults>,
-  Provide extends ComponentProvideOptions = ComponentProvideOptions
+    EnsureNonVoid<Defaults>
 > = ComponentPublicInstance<
   PublicP,
   PublicB,
@@ -163,19 +161,7 @@ export type CreateComponentPublicInstance<
   PublicProps,
   PublicDefaults,
   MakeDefaultsOptional,
-  ComponentOptionsBase<
-    P,
-    B,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    string,
-    Defaults,
-    Provide
-  >
+  ComponentOptionsBase<P, B, D, C, M, Mixin, Extends, E, string, Defaults>
 >
 
 // public properties exposed on the proxy, which is used as the render context
@@ -273,6 +259,8 @@ export interface ComponentRenderContext {
   [key: string]: any
   _: ComponentInternalInstance
 }
+
+export const isReservedPrefix = (key: string) => key === '_' || key === '$'
 
 export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
   get({ _: instance }: ComponentRenderContext, key: string) {
@@ -385,11 +373,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
         // to infinite warning loop
         key.indexOf('__v') !== 0)
     ) {
-      if (
-        data !== EMPTY_OBJ &&
-        (key[0] === '$' || key[0] === '_') &&
-        hasOwn(data, key)
-      ) {
+      if (data !== EMPTY_OBJ && isReservedPrefix(key[0]) && hasOwn(data, key)) {
         warn(
           `Property ${JSON.stringify(
             key
@@ -571,7 +555,7 @@ export function exposeSetupStateOnRenderContext(
   const { ctx, setupState } = instance
   Object.keys(toRaw(setupState)).forEach(key => {
     if (!setupState.__isScriptSetup) {
-      if (key[0] === '$' || key[0] === '_') {
+      if (isReservedPrefix(key[0])) {
         warn(
           `setup() return property ${JSON.stringify(
             key

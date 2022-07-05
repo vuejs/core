@@ -87,7 +87,13 @@ export function processSlotOutlet(
   }
 
   if (nonNameProps.length > 0) {
-    const { props, directives } = buildProps(node, context, nonNameProps)
+    const { props, directives } = buildProps(
+      node,
+      context,
+      nonNameProps,
+      false,
+      false
+    )
     slotProps = props
 
     if (directives.length) {

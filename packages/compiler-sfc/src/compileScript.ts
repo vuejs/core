@@ -74,7 +74,7 @@ const WITH_DEFAULTS = 'withDefaults'
 const DEFAULT_VAR = `__default__`
 
 const isBuiltInDir = makeMap(
-  `once,memo,if,else,else-if,slot,text,html,on,bind,model,show,cloak,is`
+  `once,memo,if,for,else,else-if,slot,text,html,on,bind,model,show,cloak,is`
 )
 
 export interface SFCScriptCompileOptions {
@@ -201,7 +201,12 @@ export function compileScript(
       )
   }
   if (options.babelParserPlugins) plugins.push(...options.babelParserPlugins)
-  if (isTS) plugins.push('typescript', 'decorators-legacy')
+  if (isTS) {
+    plugins.push('typescript')
+    if (!plugins.includes('decorators')) {
+      plugins.push('decorators-legacy')
+    }
+  }
 
   if (!scriptSetup) {
     if (!script) {
@@ -1332,7 +1337,11 @@ export function compileScript(
   }
 
   // 8. inject `useCssVars` calls
-  if (cssVars.length) {
+  if (
+    cssVars.length &&
+    // no need to do this when targeting SSR
+    !(options.inlineTemplate && options.templateOptions?.ssr)
+  ) {
     helperImports.add(CSS_VARS_HELPER)
     helperImports.add('unref')
     s.prependRight(
@@ -1486,7 +1495,7 @@ export function compileScript(
   if (!hasDefaultExportName && filename && filename !== DEFAULT_FILENAME) {
     const match = filename.match(/([^/\\]+)\.\w+$/)
     if (match) {
-      runtimeOptions += `\n  name: '${match[1]}',`
+      runtimeOptions += `\n  __name: '${match[1]}',`
     }
   }
   if (hasInlinedSsrRenderFn) {
@@ -1833,6 +1842,7 @@ function inferRuntimeType(
           case 'WeakSet':
           case 'WeakMap':
           case 'Date':
+          case 'Promise':
             return [node.typeName.name]
           case 'Record':
           case 'Partial':
@@ -2125,7 +2135,8 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
               }
               if (prop.exp) {
                 code += `,${processExp(
-                  (prop.exp as SimpleExpressionNode).content
+                  (prop.exp as SimpleExpressionNode).content,
+                  prop.name
                 )}`
               }
             }
@@ -2144,8 +2155,21 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
   return code
 }
 
-function processExp(exp: string) {
-  if (/ as \w|<.*>/.test(exp)) {
+const forAliasRE = /([\s\S]*?)\s+(?:in|of)\s+([\s\S]*)/
+
+function processExp(exp: string, dir?: string): string {
+  if (/ as\s+\w|<.*>|:/.test(exp)) {
+    if (dir === 'slot') {
+      exp = `(${exp})=>{}`
+    } else if (dir === 'on') {
+      exp = `()=>{${exp}}`
+    } else if (dir === 'for') {
+      const inMatch = exp.match(forAliasRE)
+      if (inMatch) {
+        const [, LHS, RHS] = inMatch
+        return processExp(`(${LHS})=>{}`) + processExp(RHS)
+      }
+    }
     let ret = ''
     // has potential type cast or generic arguments that uses types
     const ast = parseExpression(exp, { plugins: ['typescript'] })

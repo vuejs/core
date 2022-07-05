@@ -107,7 +107,7 @@ export function setRef(
           if (hasOwn(setupState, ref)) {
             setupState[ref] = value
           }
-        } else if (isRef(ref)) {
+        } else if (_isRef) {
           ref.value = value
           if (rawRef.k) refs[rawRef.k] = value
         } else if (__DEV__) {
