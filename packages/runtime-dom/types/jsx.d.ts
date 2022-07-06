@@ -234,13 +234,14 @@ interface AriaAttributes {
   'aria-valuetext'?: string
 }
 
-// Vue's style normalization supports nested arrays
+// Vue's style and class normalization supports nested arrays
 export type StyleValue = string | CSSProperties | Array<StyleValue>
+export type ClassValue = string | Record<string, unknown> | Array<ClassValue>
 
 export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
   innerHTML?: string
 
-  class?: any
+  class?: ClassValue
   style?: StyleValue
 
   // Standard HTML Attributes
@@ -734,8 +735,8 @@ export interface SVGAttributes extends AriaAttributes, EventHandlers<Events> {
    * SVG Styling Attributes
    * @see https://www.w3.org/TR/SVG/styling.html#ElementSpecificStyling
    */
-  class?: any
-  style?: string | CSSProperties
+  class?: ClassValue
+  style?: StyleValue
 
   color?: string
   height?: Numberish
