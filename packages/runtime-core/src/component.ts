@@ -814,6 +814,7 @@ export function finishComponentSetup(
           // pass runtime compat config into the compiler
           finalCompilerOptions.compatConfig = Object.create(globalCompatConfig)
           if (Component.compatConfig) {
+            // @ts-expect-error types are not compatible
             extend(finalCompilerOptions.compatConfig, Component.compatConfig)
           }
         }
