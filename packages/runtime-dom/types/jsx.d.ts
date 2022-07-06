@@ -236,7 +236,7 @@ interface AriaAttributes {
 
 // Vue's style and class normalization supports nested arrays
 export type StyleValue = string | CSSProperties | Array<StyleValue>
-export type ClassValue = string | Record<string, unknown> | Array<ClassValue>
+export type ClassValue = unknown | Record<string, unknown> | Array<ClassValue>
 
 export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
   innerHTML?: string

@@ -23,6 +23,11 @@ expectType<JSX.Element>(
   <div style={[{ color: 'red' }, [{ fontSize: '1em' }]]} />
 )
 
+// allow array, object classes and nested classes
+expectType<JSX.Element>(<div class="" />)
+expectType<JSX.Element>(<div class={[undefined && '', { 'foo': true }, '']} />)
+expectType<JSX.Element>(<div class={{ 'foo': true, 'bar': undefined }} />)
+
 // @ts-expect-error unknown prop
 expectError(<div foo="bar" />)
 
