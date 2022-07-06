@@ -977,4 +977,74 @@ describe('KeepAlive', () => {
     expect(mountedB).toHaveBeenCalledTimes(1)
     expect(unmountedB).toHaveBeenCalledTimes(0)
   })
+
+  // #6225
+  test('should different key of the same component call unmount', async () => {
+    const unmountedA = jest.fn()
+    const mountedA = jest.fn()
+
+    const A = {
+      name: 'A',
+      setup() {
+        onMounted(() => mountedA())
+        onUnmounted(() => unmountedA())
+        return () => 'A' + key.value
+      }
+    }
+    const B = {
+      name: 'B',
+      setup() {
+        return () => 'B'
+      }
+    }
+
+    const include = ref('A')
+    const key = ref('1')
+    const current = shallowRef(A)
+    const app = createApp({
+      setup() {
+        return () => {
+          return [
+            h(
+              KeepAlive,
+              {
+                include: include.value,
+              },
+              h(
+                current.value,
+                {
+                  key: key.value
+                }
+              )
+            )
+          ]
+        }
+      }
+    })
+
+    app.mount(root)
+
+    expect(serializeInner(root)).toBe(`A1`)
+    expect(mountedA).toHaveBeenCalledTimes(1)
+    expect(unmountedA).toHaveBeenCalledTimes(0)
+    
+    key.value = '2' // switch to A2
+    await nextTick()
+    expect(serializeInner(root)).toBe(`A2`)
+    expect(mountedA).toHaveBeenCalledTimes(2)
+    expect(unmountedA).toHaveBeenCalledTimes(0)
+
+
+    include.value = 'B' // switch cache B
+    await nextTick()
+    expect(serializeInner(root)).toBe(`A2`)
+    expect(mountedA).toHaveBeenCalledTimes(2)
+    expect(unmountedA).toHaveBeenCalledTimes(1) // A1 unmounted
+
+    current.value = B // switch to B
+    await nextTick()
+    expect(serializeInner(root)).toBe(`B`)
+    expect(mountedA).toHaveBeenCalledTimes(2)
+    expect(unmountedA).toHaveBeenCalledTimes(2) // A2 unmounted
+  })
 })

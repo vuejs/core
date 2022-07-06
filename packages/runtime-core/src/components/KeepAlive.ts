@@ -192,7 +192,7 @@ const KeepAliveImpl: ComponentOptions = {
 
     function pruneCacheEntry(key: CacheKey) {
       const cached = cache.get(key) as VNode
-      if (!current || cached.type !== current.type) {
+      if (!current || cached.type !== current.type || cached.key !== current.key) {
         unmount(cached)
       } else if (current) {
         // current active instance should no longer be kept-alive.
