@@ -2168,7 +2168,9 @@ function baseCreateRenderer(
 
   const remove: RemoveFn = vnode => {
     const { type, el, anchor, transition } = vnode
-    if (type === Fragment) {
+    const isFragment = type === Fragment
+
+    if (!transition && isFragment) {
       removeFragment(el!, anchor!)
       return
     }
@@ -2179,19 +2181,20 @@ function baseCreateRenderer(
     }
 
     const performRemove = () => {
-      hostRemove(el!)
+      isFragment ? removeFragment(el!, anchor!) : hostRemove(el!)
       if (transition && !transition.persisted && transition.afterLeave) {
         transition.afterLeave()
       }
     }
 
     if (
-      vnode.shapeFlag & ShapeFlags.ELEMENT &&
       transition &&
-      !transition.persisted
+      !transition.persisted &&
+      (vnode.shapeFlag & ShapeFlags.ELEMENT || isFragment)
     ) {
       const { leave, delayLeave } = transition
-      const performLeave = () => leave(el!, performRemove)
+      const effectiveEl = isFragment ? getFirstElement(el!, anchor!) : el!
+      const performLeave = () => leave(effectiveEl, performRemove)
       if (delayLeave) {
         delayLeave(vnode.el!, performRemove, performLeave)
       } else {
@@ -2200,6 +2203,22 @@ function baseCreateRenderer(
     } else {
       performRemove()
     }
+
+    // if (
+    //   vnode.shapeFlag & ShapeFlags.ELEMENT &&
+    //   transition &&
+    //   !transition.persisted
+    // ) {
+    //   const { leave, delayLeave } = transition
+    //   const performLeave = () => leave(el!, performRemove)
+    //   if (delayLeave) {
+    //     delayLeave(vnode.el!, performRemove, performLeave)
+    //   } else {
+    //     performLeave()
+    //   }
+    // } else {
+    //   performRemove()
+    // }
   }
 
   const removeFragment = (cur: RendererNode, end: RendererNode) => {
@@ -2212,6 +2231,14 @@ function baseCreateRenderer(
       cur = next
     }
     hostRemove(end)
+  }
+
+  const getFirstElement = (cur: RendererNode, end: RendererNode) => {
+    while (cur.nodeType !== Node.ELEMENT_NODE && cur !== end) {
+      cur = hostNextSibling(cur)!
+    }
+
+    return cur
   }
 
   const unmountComponent = (
