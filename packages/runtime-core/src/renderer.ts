@@ -2203,22 +2203,6 @@ function baseCreateRenderer(
     } else {
       performRemove()
     }
-
-    // if (
-    //   vnode.shapeFlag & ShapeFlags.ELEMENT &&
-    //   transition &&
-    //   !transition.persisted
-    // ) {
-    //   const { leave, delayLeave } = transition
-    //   const performLeave = () => leave(el!, performRemove)
-    //   if (delayLeave) {
-    //     delayLeave(vnode.el!, performRemove, performLeave)
-    //   } else {
-    //     performLeave()
-    //   }
-    // } else {
-    //   performRemove()
-    // }
   }
 
   const removeFragment = (cur: RendererNode, end: RendererNode) => {
