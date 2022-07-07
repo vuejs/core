@@ -2123,7 +2123,7 @@ describe('e2e: Transition', () => {
   })
 
   test(
-    'should work with dev root fragment',
+    'toggle single component with comments before the single root element',
     async () => {
       await page().evaluate(() => {
         const { createApp, ref } = (window as any).Vue
@@ -2131,9 +2131,9 @@ describe('e2e: Transition', () => {
           components: {
             Comp: {
               template: `
-                  <!-- Broken! -->
-                  <div><slot /></div>
-                `
+                <!-- Broken! -->
+                <div><slot /></div>
+              `
             }
           },
           template: `
@@ -2191,4 +2191,75 @@ describe('e2e: Transition', () => {
     },
     E2E_TIMEOUT
   )
+
+  test(
+    'toggle multiple components with comments before the single root element',
+    async () => {
+      await page().evaluate(() => {
+        const { createApp, ref } = (window as any).Vue
+        createApp({
+          components: {
+            One: {
+              template:  `
+                <!-- Breaking Comment -->
+                <div class="one">One</div>
+              `
+            },
+            Two: {
+              template: `<div class="two">Two</div>`
+            }
+          },
+          template: `
+            <button id="toggleBtn" @click="click">button</button>
+            <div id="container">
+              <transition mode="out-in">
+                <One v-if="toggle"></One>
+                <Two v-else></Two>
+              </transition>
+            </div>
+          `,
+          setup: () => {
+            const toggle = ref(true)
+            const click = () => (toggle.value = !toggle.value)
+            return { toggle, click }
+          }
+        }).mount('#app')
+      })
+
+      expect(await html('#container')).toBe(
+        '<!-- Breaking Comment --><div class="one">One</div>'
+      )
+
+      // one -> two
+      expect(await classWhenTransitionStart()).toStrictEqual([
+        'one',
+        'v-leave-from',
+        'v-leave-active'
+      ])
+      await nextFrame()
+      expect(await classList('.two')).toStrictEqual([
+        'two',
+        'v-enter-from',
+        'v-enter-active'
+      ])
+      await transitionFinish(duration * 2)
+      expect(await html('#container')).toBe('<div class="two">Two</div>')
+
+      // two -> one
+      expect(await classWhenTransitionStart()).toStrictEqual([
+        'two',
+        'v-leave-from',
+        'v-leave-active'
+      ])
+      await nextFrame()
+      expect(await classList('.one')).toStrictEqual([
+        'one',
+        'v-enter-from',
+        'v-enter-active'
+      ])
+      await transitionFinish(duration * 2)
+      expect(await html('#container')).toBe(
+        '<!-- Breaking Comment --><div class="one">One</div>'
+      )
+    }, E2E_TIMEOUT)
 })
