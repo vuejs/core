@@ -128,14 +128,14 @@ function testRender(type: string, render: typeof renderToString) {
           await render(
             createApp(
               defineComponent({
-                extends: {
+                extends: defineComponent({
                   data() {
                     return { msg: 'hello' }
                   },
-                  render(this: any) {
+                  render() {
                     return h('div', this.msg)
                   }
-                }
+                })
               })
             )
           )
@@ -148,14 +148,14 @@ function testRender(type: string, render: typeof renderToString) {
             createApp(
               defineComponent({
                 mixins: [
-                  {
+                  defineComponent({
                     data() {
                       return { msg: 'hello' }
                     },
-                    render(this: any) {
+                    render() {
                       return h('div', this.msg)
                     }
-                  }
+                  })
                 ]
               })
             )
@@ -675,9 +675,7 @@ function testRender(type: string, render: typeof renderToString) {
         const MyComp = {
           render: () => h('p', 'hello')
         }
-        expect(await render(h(KeepAlive, () => h(MyComp)))).toBe(
-          `<!--[--><p>hello</p><!--]-->`
-        )
+        expect(await render(h(KeepAlive, () => h(MyComp)))).toBe(`<p>hello</p>`)
       })
 
       test('Transition', async () => {
@@ -838,7 +836,7 @@ function testRender(type: string, render: typeof renderToString) {
       expect(fn2).toBeCalledWith('async child error')
     })
 
-    // https://github.com/vuejs/vue-next/issues/3322
+    // https://github.com/vuejs/core/issues/3322
     test('effect onInvalidate does not error', async () => {
       const noop = () => {}
       const app = createApp({

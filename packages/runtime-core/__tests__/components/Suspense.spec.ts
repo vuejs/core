@@ -709,7 +709,7 @@ describe('Suspense', () => {
       <div v-if="errorMessage">{{ errorMessage }}</div>
       <Suspense v-else>
         <div>
-          <Async />     
+          <Async />
         </div>
         <template #fallback>
           <div>fallback</div>
@@ -1032,7 +1032,7 @@ describe('Suspense', () => {
     await nextTick()
     expect(deps.length).toBe(2)
 
-    // switch before two resovles
+    // switch before two resolves
     view.value = Three
     await nextTick()
     expect(deps.length).toBe(3)
@@ -1098,7 +1098,7 @@ describe('Suspense', () => {
     await nextTick()
     expect(deps.length).toBe(2)
 
-    // switch back before two resovles
+    // switch back before two resolves
     view.value = One
     await nextTick()
     expect(deps.length).toBe(2)
@@ -1231,5 +1231,26 @@ describe('Suspense', () => {
     toggle.value = false
     await nextTick()
     expect(serializeInner(root)).toBe(`<div>parent<!----></div>`)
+  })
+
+  test('warn if using async setup when not in a Suspense boundary', () => {
+    const Child = {
+      name: 'Child',
+      async setup() {
+        return () => h('div', 'child')
+      }
+    }
+    const Parent = {
+      setup() {
+        return () => h('div', [h(Child)])
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Parent), root)
+
+    expect(
+      `A component with async setup() must be nested in a <Suspense>`
+    ).toHaveBeenWarned()
   })
 })

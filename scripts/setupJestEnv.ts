@@ -1,7 +1,7 @@
 expect.extend({
   toHaveBeenWarned(received: string) {
     asserted.add(received)
-    const passed = warn.mock.calls.some(args => args[0].indexOf(received) > -1)
+    const passed = warn.mock.calls.some(args => args[0].includes(received))
     if (passed) {
       return {
         pass: true,
@@ -23,7 +23,7 @@ expect.extend({
   toHaveBeenWarnedLast(received: string) {
     asserted.add(received)
     const passed =
-      warn.mock.calls[warn.mock.calls.length - 1][0].indexOf(received) > -1
+      warn.mock.calls[warn.mock.calls.length - 1][0].includes(received)
     if (passed) {
       return {
         pass: true,
@@ -43,7 +43,7 @@ expect.extend({
     asserted.add(received)
     let found = 0
     warn.mock.calls.forEach(args => {
-      if (args[0].indexOf(received) > -1) {
+      if (args[0].includes(received)) {
         found++
       }
     })
@@ -78,7 +78,7 @@ afterEach(() => {
     .map(args => args[0])
     .filter(received => {
       return !assertedArray.some(assertedMsg => {
-        return received.indexOf(assertedMsg) > -1
+        return received.includes(assertedMsg)
       })
     })
   warn.mockRestore()

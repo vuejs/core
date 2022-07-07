@@ -42,7 +42,8 @@ import { hmrDirtyComponents } from './hmr'
 import { convertLegacyComponent } from './compat/component'
 import { convertLegacyVModelProps } from './compat/componentVModel'
 import { defineLegacyVNodeProperties } from './compat/renderFn'
-import { convertLegacyRefInFor } from './compat/ref'
+import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
+import { ComponentPublicInstance } from './componentPublicInstance'
 
 export const Fragment = Symbol(__DEV__ ? 'Fragment' : undefined) as any as {
   __isFragment: true
@@ -68,12 +69,16 @@ export type VNodeTypes =
 export type VNodeRef =
   | string
   | Ref
-  | ((ref: object | null, refs: Record<string, any>) => void)
+  | ((
+      ref: Element | ComponentPublicInstance | null,
+      refs: Record<string, any>
+    ) => void)
 
 export type VNodeNormalizedRefAtom = {
   i: ComponentInternalInstance
   r: VNodeRef
-  f?: boolean // v2 compat only, refInFor marker
+  k?: string // setup ref key
+  f?: boolean // refInFor marker
 }
 
 export type VNodeNormalizedRef =
@@ -92,6 +97,8 @@ export type VNodeHook =
 export type VNodeProps = {
   key?: string | number | symbol
   ref?: VNodeRef
+  ref_for?: boolean
+  ref_key?: string
 
   // vnode hooks
   onVnodeBeforeMount?: VNodeMountHook | VNodeMountHook[]
@@ -380,11 +387,15 @@ export const InternalObjectKey = `__vInternal`
 const normalizeKey = ({ key }: VNodeProps): VNode['key'] =>
   key != null ? key : null
 
-const normalizeRef = ({ ref }: VNodeProps): VNodeNormalizedRefAtom | null => {
+const normalizeRef = ({
+  ref,
+  ref_key,
+  ref_for
+}: VNodeProps): VNodeNormalizedRefAtom | null => {
   return (
     ref != null
       ? isString(ref) || isRef(ref) || isFunction(ref)
-        ? { i: currentRenderingInstance, r: ref }
+        ? { i: currentRenderingInstance, r: ref, k: ref_key, f: !!ref_for }
         : ref
       : null
   ) as any
@@ -468,7 +479,6 @@ function createBaseVNode(
 
   if (__COMPAT__) {
     convertLegacyVModelProps(vnode)
-    convertLegacyRefInFor(vnode)
     defineLegacyVNodeProperties(vnode)
   }
 
@@ -504,6 +514,14 @@ function _createVNode(
     if (children) {
       normalizeChildren(cloned, children)
     }
+    if (isBlockTreeEnabled > 0 && !isBlockNode && currentBlock) {
+      if (cloned.shapeFlag & ShapeFlags.COMPONENT) {
+        currentBlock[currentBlock.indexOf(type)] = cloned
+      } else {
+        currentBlock.push(cloned)
+      }
+    }
+    cloned.patchFlag |= PatchFlags.BAIL
     return cloned
   }
 
@@ -617,7 +635,7 @@ export function cloneVNode<T, U>(
     shapeFlag: vnode.shapeFlag,
     // if the vnode is cloned with extra props, we can no longer assume its
     // existing patch flag to be reliable and need to add the FULL_PROPS flag.
-    // note: perserve flag for fragments since they use the flag for children
+    // note: preserve flag for fragments since they use the flag for children
     // fast paths only.
     patchFlag:
       extraProps && vnode.type !== Fragment
@@ -791,7 +809,11 @@ export function mergeProps(...args: (Data & VNodeProps)[]) {
       } else if (isOn(key)) {
         const existing = ret[key]
         const incoming = toMerge[key]
-        if (existing !== incoming) {
+        if (
+          incoming &&
+          existing !== incoming &&
+          !(isArray(existing) && existing.includes(incoming))
+        ) {
           ret[key] = existing
             ? [].concat(existing as any, incoming as any)
             : incoming
@@ -802,4 +824,16 @@ export function mergeProps(...args: (Data & VNodeProps)[]) {
     }
   }
   return ret
+}
+
+export function invokeVNodeHook(
+  hook: VNodeHook,
+  instance: ComponentInternalInstance | null,
+  vnode: VNode,
+  prevVNode: VNode | null = null
+) {
+  callWithAsyncErrorHandling(hook, instance, ErrorCodes.VNODE_HOOK, [
+    vnode,
+    prevVNode
+  ])
 }

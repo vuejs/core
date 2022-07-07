@@ -28,12 +28,14 @@ describe('defineProps w/ type declaration + withDefaults', () => {
       obj?: { x: number }
       fn?: (e: string) => void
       x?: string
+      genStr?: string
     }>(),
     {
       number: 123,
       arr: () => [],
       obj: () => ({ x: 123 }),
-      fn: () => {}
+      fn: () => {},
+      genStr: () => ''
     }
   )
 
@@ -43,6 +45,24 @@ describe('defineProps w/ type declaration + withDefaults', () => {
   res.fn('hi')
   // @ts-expect-error
   res.x.slice()
+  res.genStr.slice()
+})
+
+describe('defineProps w/ union type declaration + withDefaults', () => {
+  withDefaults(
+    defineProps<{
+      union1?: number | number[] | { x: number }
+      union2?: number | number[] | { x: number }
+      union3?: number | number[] | { x: number }
+      union4?: number | number[] | { x: number }
+    }>(),
+    {
+      union1: 123,
+      union2: () => [123],
+      union3: () => ({ x: 123 }),
+      union4: () => 123,
+    }
+  )
 })
 
 describe('defineProps w/ runtime declaration', () => {

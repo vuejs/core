@@ -22,15 +22,19 @@ import {
   TextNode,
   hasDynamicKeyVBind,
   MERGE_PROPS,
-  isBindKey,
+  isStaticArgOf,
   createSequenceExpression,
   InterpolationNode,
   isStaticExp,
-  AttributeNode
+  AttributeNode,
+  buildDirectiveArgs,
+  TransformContext,
+  PropsExpression
 } from '@vue/compiler-dom'
 import {
   escapeHtml,
   isBooleanAttr,
+  isBuiltInDirective,
   isSSRSafeAttrName,
   NO,
   propsToAttrMap
@@ -44,7 +48,8 @@ import {
   SSR_RENDER_ATTRS,
   SSR_INTERPOLATE,
   SSR_GET_DYNAMIC_MODEL_PROPS,
-  SSR_INCLUDE_BOOLEAN_ATTR
+  SSR_INCLUDE_BOOLEAN_ATTR,
+  SSR_GET_DIRECTIVE_PROPS
 } from '../runtimeHelpers'
 import { SSRTransformContext, processChildren } from '../ssrCodegenTransform'
 
@@ -71,16 +76,28 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
     const needTagForRuntime =
       node.tag === 'textarea' || node.tag.indexOf('-') > 0
 
-    // v-bind="obj" or v-bind:[key] can potentially overwrite other static
-    // attrs and can affect final rendering result, so when they are present
-    // we need to bail out to full `renderAttrs`
+    // v-bind="obj", v-bind:[key] and custom directives can potentially
+    // overwrite other static attrs and can affect final rendering result,
+    // so when they are present we need to bail out to full `renderAttrs`
     const hasDynamicVBind = hasDynamicKeyVBind(node)
-    if (hasDynamicVBind) {
-      const { props } = buildProps(node, context, node.props, true /* ssr */)
-      if (props) {
+    const hasCustomDir = node.props.some(
+      p => p.type === NodeTypes.DIRECTIVE && !isBuiltInDirective(p.name)
+    )
+    const needMergeProps = hasDynamicVBind || hasCustomDir
+    if (needMergeProps) {
+      const { props, directives } = buildProps(
+        node,
+        context,
+        node.props,
+        false /* isComponent */,
+        false /* isDynamicComponent */,
+        true /* ssr */
+      )
+      if (props || directives.length) {
+        const mergedProps = buildSSRProps(props, directives, context)
         const propsExp = createCallExpression(
           context.helper(SSR_RENDER_ATTRS),
-          [props]
+          [mergedProps]
         )
 
         if (node.tag === 'textarea') {
@@ -99,7 +116,7 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
             propsExp.arguments = [
               createAssignmentExpression(
                 createSimpleExpression(tempId, false),
-                props
+                mergedProps
               )
             ]
             rawChildrenMap.set(
@@ -128,7 +145,7 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
             const tempExp = createSimpleExpression(tempId, false)
             propsExp.arguments = [
               createSequenceExpression([
-                createAssignmentExpression(tempExp, props),
+                createAssignmentExpression(tempExp, mergedProps),
                 createCallExpression(context.helper(MERGE_PROPS), [
                   tempExp,
                   createCallExpression(
@@ -176,21 +193,13 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
             createCompilerError(ErrorCodes.X_V_SLOT_MISPLACED, prop.loc)
           )
         } else if (isTextareaWithValue(node, prop) && prop.exp) {
-          if (!hasDynamicVBind) {
+          if (!needMergeProps) {
             node.children = [createInterpolation(prop.exp, prop.loc)]
           }
-        } else {
+        } else if (!needMergeProps && prop.name !== 'on') {
           // Directive transforms.
           const directiveTransform = context.directiveTransforms[prop.name]
-          if (!directiveTransform) {
-            // no corresponding ssr directive transform found.
-            context.onError(
-              createSSRCompilerError(
-                SSRErrorCodes.X_SSR_CUSTOM_DIRECTIVE_NO_TRANSFORM,
-                prop.loc
-              )
-            )
-          } else if (!hasDynamicVBind) {
+          if (directiveTransform) {
             const { props, ssrTagParts } = directiveTransform(
               prop,
               node,
@@ -285,7 +294,7 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
         // special case: value on <textarea>
         if (node.tag === 'textarea' && prop.name === 'value' && prop.value) {
           rawChildrenMap.set(node, escapeHtml(prop.value.content))
-        } else if (!hasDynamicVBind) {
+        } else if (!needMergeProps) {
           if (prop.name === 'key' || prop.name === 'ref') {
             continue
           }
@@ -315,6 +324,36 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
   }
 }
 
+export function buildSSRProps(
+  props: PropsExpression | undefined,
+  directives: DirectiveNode[],
+  context: TransformContext
+): JSChildNode {
+  let mergePropsArgs: JSChildNode[] = []
+  if (props) {
+    if (props.type === NodeTypes.JS_CALL_EXPRESSION) {
+      // already a mergeProps call
+      mergePropsArgs = props.arguments as JSChildNode[]
+    } else {
+      mergePropsArgs.push(props)
+    }
+  }
+  if (directives.length) {
+    for (const dir of directives) {
+      mergePropsArgs.push(
+        createCallExpression(context.helper(SSR_GET_DIRECTIVE_PROPS), [
+          `_ctx`,
+          ...buildDirectiveArgs(dir, context).elements
+        ] as JSChildNode[])
+      )
+    }
+  }
+
+  return mergePropsArgs.length > 1
+    ? createCallExpression(context.helper(MERGE_PROPS), mergePropsArgs)
+    : mergePropsArgs[0]
+}
+
 function isTrueFalseValue(prop: DirectiveNode | AttributeNode) {
   if (prop.type === NodeTypes.DIRECTIVE) {
     return (
@@ -335,7 +374,7 @@ function isTextareaWithValue(
   return !!(
     node.tag === 'textarea' &&
     prop.name === 'bind' &&
-    isBindKey(prop.arg, 'value')
+    isStaticArgOf(prop.arg, 'value')
   )
 }
 
@@ -389,7 +428,7 @@ export function ssrProcessElement(
   if (rawChildren) {
     context.pushStringPart(rawChildren)
   } else if (node.children.length) {
-    processChildren(node.children, context)
+    processChildren(node, context)
   }
 
   if (!isVoidTag(node.tag)) {

@@ -7,7 +7,7 @@ import {
   SlotOutletNode,
   createFunctionExpression
 } from '../ast'
-import { isSlotOutlet, isBindKey, isStaticExp } from '../utils'
+import { isSlotOutlet, isStaticArgOf, isStaticExp } from '../utils'
 import { buildProps, PropsExpression } from './transformElement'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { RENDER_SLOT } from '../runtimeHelpers'
@@ -75,7 +75,7 @@ export function processSlotOutlet(
         }
       }
     } else {
-      if (p.name === 'bind' && isBindKey(p.arg, 'name')) {
+      if (p.name === 'bind' && isStaticArgOf(p.arg, 'name')) {
         if (p.exp) slotName = p.exp
       } else {
         if (p.name === 'bind' && p.arg && isStaticExp(p.arg)) {
@@ -87,7 +87,13 @@ export function processSlotOutlet(
   }
 
   if (nonNameProps.length > 0) {
-    const { props, directives } = buildProps(node, context, nonNameProps)
+    const { props, directives } = buildProps(
+      node,
+      context,
+      nonNameProps,
+      false,
+      false
+    )
     slotProps = props
 
     if (directives.length) {

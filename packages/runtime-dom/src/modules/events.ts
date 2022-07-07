@@ -13,31 +13,32 @@ interface Invoker extends EventListener {
 type EventValue = Function | Function[]
 
 // Async edge case fix requires storing an event listener's attach timestamp.
-let _getNow: () => number = Date.now
-
-let skipTimestampCheck = false
-
-if (typeof window !== 'undefined') {
-  // Determine what event timestamp the browser is using. Annoyingly, the
-  // timestamp can either be hi-res (relative to page load) or low-res
-  // (relative to UNIX epoch), so in order to compare time we have to use the
-  // same timestamp type when saving the flush timestamp.
-  if (_getNow() > document.createEvent('Event').timeStamp) {
-    // if the low-res timestamp which is bigger than the event timestamp
-    // (which is evaluated AFTER) it means the event is using a hi-res timestamp,
-    // and we need to use the hi-res version for event listeners as well.
-    _getNow = () => performance.now()
+const [_getNow, skipTimestampCheck] = /*#__PURE__*/ (() => {
+  let _getNow = Date.now
+  let skipTimestampCheck = false
+  if (typeof window !== 'undefined') {
+    // Determine what event timestamp the browser is using. Annoyingly, the
+    // timestamp can either be hi-res (relative to page load) or low-res
+    // (relative to UNIX epoch), so in order to compare time we have to use the
+    // same timestamp type when saving the flush timestamp.
+    if (Date.now() > document.createEvent('Event').timeStamp) {
+      // if the low-res timestamp which is bigger than the event timestamp
+      // (which is evaluated AFTER) it means the event is using a hi-res timestamp,
+      // and we need to use the hi-res version for event listeners as well.
+      _getNow = performance.now.bind(performance)
+    }
+    // #3485: Firefox <= 53 has incorrect Event.timeStamp implementation
+    // and does not fire microtasks in between event propagation, so safe to exclude.
+    const ffMatch = navigator.userAgent.match(/firefox\/(\d+)/i)
+    skipTimestampCheck = !!(ffMatch && Number(ffMatch[1]) <= 53)
   }
-  // #3485: Firefox <= 53 has incorrect Event.timeStamp implementation
-  // and does not fire microtasks in between event propagation, so safe to exclude.
-  const ffMatch = navigator.userAgent.match(/firefox\/(\d+)/i)
-  skipTimestampCheck = !!(ffMatch && Number(ffMatch[1]) <= 53)
-}
+  return [_getNow, skipTimestampCheck]
+})()
 
 // To avoid the overhead of repeatedly calling performance.now(), we cache
 // and use the same timestamp for all event listeners attached in the same tick.
 let cachedNow: number = 0
-const p = Promise.resolve()
+const p = /*#__PURE__*/ Promise.resolve()
 const reset = () => {
   cachedNow = 0
 }
@@ -98,7 +99,6 @@ function parseName(name: string): [string, EventListenerOptions | undefined] {
     while ((m = name.match(optionsModifierRE))) {
       name = name.slice(0, name.length - m[0].length)
       ;(options as any)[m[0].toLowerCase()] = true
-      options
     }
   }
   return [hyphenate(name.slice(2)), options]
@@ -141,7 +141,7 @@ function patchStopImmediatePropagation(
       originalStop.call(e)
       ;(e as any)._stopped = true
     }
-    return value.map(fn => (e: Event) => !(e as any)._stopped && fn(e))
+    return value.map(fn => (e: Event) => !(e as any)._stopped && fn && fn(e))
   } else {
     return value
   }

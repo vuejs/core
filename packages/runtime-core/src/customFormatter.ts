@@ -1,5 +1,6 @@
 import { isReactive, isReadonly, isRef, Ref, toRaw } from '@vue/reactivity'
 import { EMPTY_OBJ, extend, isArray, isFunction, isObject } from '@vue/shared'
+import { isShallow } from '../../reactivity/src/reactive'
 import { ComponentInternalInstance, ComponentOptions } from './component'
 import { ComponentPublicInstance } from './componentPublicInstance'
 
@@ -38,7 +39,7 @@ export function initCustomFormatter() {
         return [
           'div',
           {},
-          ['span', vueStyle, 'Reactive'],
+          ['span', vueStyle, isShallow(obj) ? 'ShallowReactive' : 'Reactive'],
           '<',
           formatValue(obj),
           `>${isReadonly(obj) ? ` (readonly)` : ``}`
@@ -47,7 +48,7 @@ export function initCustomFormatter() {
         return [
           'div',
           {},
-          ['span', vueStyle, 'Readonly'],
+          ['span', vueStyle, isShallow(obj) ? 'ShallowReadonly' : 'Readonly'],
           '<',
           formatValue(obj),
           '>'
@@ -181,7 +182,7 @@ export function initCustomFormatter() {
   }
 
   function genRefFlag(v: Ref) {
-    if (v._shallow) {
+    if (isShallow(v)) {
       return `ShallowRef`
     }
     if ((v as any).effect) {

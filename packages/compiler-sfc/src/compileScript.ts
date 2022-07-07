@@ -11,8 +11,13 @@ import {
   isFunctionType,
   walkIdentifiers
 } from '@vue/compiler-dom'
-import { SFCDescriptor, SFCScriptBlock } from './parse'
-import { parse as _parse, ParserOptions, ParserPlugin } from '@babel/parser'
+import { DEFAULT_FILENAME, SFCDescriptor, SFCScriptBlock } from './parse'
+import {
+  parse as _parse,
+  parseExpression,
+  ParserOptions,
+  ParserPlugin
+} from '@babel/parser'
 import { camelize, capitalize, generateCodeFrame, makeMap } from '@vue/shared'
 import {
   Node,
@@ -48,10 +53,7 @@ import { compileTemplate, SFCTemplateCompileOptions } from './compileTemplate'
 import { warnOnce } from './warn'
 import { rewriteDefault } from './rewriteDefault'
 import { createCache } from './cache'
-import {
-  shouldTransform as shouldTransformRef,
-  transformAST as transformRefAST
-} from '@vue/ref-transform'
+import { shouldTransform, transformAST } from '@vue/reactivity-transform'
 
 // Special compiler macros
 const DEFINE_PROPS = 'defineProps'
@@ -59,13 +61,16 @@ const DEFINE_EMITS = 'defineEmits'
 const DEFINE_EXPOSE = 'defineExpose'
 const WITH_DEFAULTS = 'withDefaults'
 
+// constants
+const DEFAULT_VAR = `__default__`
+
 const isBuiltInDir = makeMap(
-  `once,memo,if,else,else-if,slot,text,html,on,bind,model,show,cloak,is`
+  `once,memo,if,for,else,else-if,slot,text,html,on,bind,model,show,cloak,is`
 )
 
 export interface SFCScriptCompileOptions {
   /**
-   * Scope ID for prefixing injected CSS varialbes.
+   * Scope ID for prefixing injected CSS variables.
    * This must be consistent with the `id` passed to `compileStyle`.
    */
   id: string
@@ -82,19 +87,26 @@ export interface SFCScriptCompileOptions {
    */
   babelParserPlugins?: ParserPlugin[]
   /**
+   * (Experimental) Enable syntax transform for using refs without `.value` and
+   * using destructured props with reactivity
+   */
+  reactivityTransform?: boolean
+  /**
    * (Experimental) Enable syntax transform for using refs without `.value`
    * https://github.com/vuejs/rfcs/discussions/369
+   * @deprecated now part of `reactivityTransform`
    * @default false
    */
   refTransform?: boolean
   /**
    * (Experimental) Enable syntax transform for destructuring from defineProps()
    * https://github.com/vuejs/rfcs/discussions/394
+   * @deprecated now part of `reactivityTransform`
    * @default false
    */
   propsDestructureTransform?: boolean
   /**
-   * @deprecated use `refTransform` instead.
+   * @deprecated use `reactivityTransform` instead.
    */
   refSugar?: boolean
   /**
@@ -107,13 +119,13 @@ export interface SFCScriptCompileOptions {
   inlineTemplate?: boolean
   /**
    * Options for template compilation when inlining. Note these are options that
-   * would normally be pased to `compiler-sfc`'s own `compileTemplate()`, not
+   * would normally be passed to `compiler-sfc`'s own `compileTemplate()`, not
    * options passed to `compiler-dom`.
    */
   templateOptions?: Partial<SFCTemplateCompileOptions>
 }
 
-interface ImportBinding {
+export interface ImportBinding {
   isType: boolean
   imported: string
   source: string
@@ -132,8 +144,13 @@ export function compileScript(
 ): SFCScriptBlock {
   let { script, scriptSetup, source, filename } = sfc
   // feature flags
-  const enableRefTransform = !!options.refSugar || !!options.refTransform
-  const enablePropsTransform = !!options.propsDestructureTransform
+  // TODO remove support for deprecated options when out of experimental
+  const enableReactivityTransform =
+    !!options.reactivityTransform ||
+    !!options.refSugar ||
+    !!options.refTransform
+  const enablePropsTransform =
+    !!options.reactivityTransform || !!options.propsDestructureTransform
   const isProd = !!options.isProd
   const genSourceMap = options.sourceMap !== false
   let refBindings: string[] | undefined
@@ -155,12 +172,25 @@ export function compileScript(
     scriptLang === 'tsx' ||
     scriptSetupLang === 'ts' ||
     scriptSetupLang === 'tsx'
+
+  // resolve parser plugins
   const plugins: ParserPlugin[] = []
   if (!isTS || scriptLang === 'tsx' || scriptSetupLang === 'tsx') {
     plugins.push('jsx')
+  } else {
+    // If don't match the case of adding jsx, should remove the jsx from the babelParserPlugins
+    if (options.babelParserPlugins)
+      options.babelParserPlugins = options.babelParserPlugins.filter(
+        n => n !== 'jsx'
+      )
   }
   if (options.babelParserPlugins) plugins.push(...options.babelParserPlugins)
-  if (isTS) plugins.push('typescript', 'decorators-legacy')
+  if (isTS) {
+    plugins.push('typescript')
+    if (!plugins.includes('decorators')) {
+      plugins.push('decorators-legacy')
+    }
+  }
 
   if (!scriptSetup) {
     if (!script) {
@@ -178,11 +208,11 @@ export function compileScript(
         sourceType: 'module'
       }).program
       const bindings = analyzeScriptBindings(scriptAst.body)
-      if (enableRefTransform && shouldTransformRef(content)) {
+      if (enableReactivityTransform && shouldTransform(content)) {
         const s = new MagicString(source)
         const startOffset = script.loc.start.offset
         const endOffset = script.loc.end.offset
-        const { importedHelpers } = transformRefAST(scriptAst, s, startOffset)
+        const { importedHelpers } = transformAST(scriptAst, s, startOffset)
         if (importedHelpers.length) {
           s.prepend(
             `import { ${importedHelpers
@@ -202,14 +232,14 @@ export function compileScript(
         }
       }
       if (cssVars.length) {
-        content = rewriteDefault(content, `__default__`, plugins)
+        content = rewriteDefault(content, DEFAULT_VAR, plugins)
         content += genNormalScriptCssVarsCode(
           cssVars,
           bindings,
           scopeId,
           isProd
         )
-        content += `\nexport default __default__`
+        content += `\nexport default ${DEFAULT_VAR}`
       }
       return {
         ...script,
@@ -239,7 +269,6 @@ export function compileScript(
 
   // metadata that needs to be returned
   const bindingMetadata: BindingMetadata = {}
-  const defaultTempVar = `__default__`
   const helperImports: Set<string> = new Set()
   const userImports: Record<string, ImportBinding> = Object.create(null)
   const userImportAlias: Record<string, string> = Object.create(null)
@@ -250,6 +279,8 @@ export function compileScript(
   let hasDefinePropsCall = false
   let hasDefineEmitCall = false
   let hasDefineExposeCall = false
+  let hasDefaultExportName = false
+  let hasDefaultExportRender = false
   let propsRuntimeDecl: Node | undefined
   let propsRuntimeDefaults: ObjectExpression | undefined
   let propsDestructureDecl: Node | undefined
@@ -327,19 +358,24 @@ export function compileScript(
     local: string,
     imported: string | false,
     isType: boolean,
-    isFromSetup: boolean
+    isFromSetup: boolean,
+    needTemplateUsageCheck: boolean
   ) {
     if (source === 'vue' && imported) {
       userImportAlias[imported] = local
     }
 
-    let isUsedInTemplate = true
-    if (isTS && sfc.template && !sfc.template.src && !sfc.template.lang) {
-      isUsedInTemplate = new RegExp(
-        // #4274 escape $ since it's a special char in regex
-        // (and is the only regex special char that is valid in identifiers)
-        `[^\\w$_]${local.replace(/\$/g, '\\$')}[^\\w$_]`
-      ).test(resolveTemplateUsageCheckString(sfc))
+    // template usage check is only needed in non-inline mode, so we can skip
+    // the work if inlineTemplate is true.
+    let isUsedInTemplate = needTemplateUsageCheck
+    if (
+      needTemplateUsageCheck &&
+      isTS &&
+      sfc.template &&
+      !sfc.template.src &&
+      !sfc.template.lang
+    ) {
+      isUsedInTemplate = isImportUsed(local, sfc)
     }
 
     userImports[local] = {
@@ -400,7 +436,12 @@ export function compileScript(
                 prop.key
               )
             }
-            const propKey = (prop.key as Identifier).name
+
+            const propKey =
+              prop.key.type === 'StringLiteral'
+                ? prop.key.value
+                : (prop.key as Identifier).name
+
             if (prop.value.type === 'AssignmentPattern') {
               // default value { foo = 123 }
               const { left, right } = prop.value
@@ -416,7 +457,7 @@ export function compileScript(
                 default: right
               }
             } else if (prop.value.type === 'Identifier') {
-              // simple destucture
+              // simple destructure
               propsDestructuredBindings[propKey] = {
                 local: prop.value.name
               }
@@ -636,7 +677,7 @@ export function compileScript(
 
   /**
    * check defaults. If the default object is an object literal with only
-   * static properties, we can directly generate more optimzied default
+   * static properties, we can directly generate more optimized default
    * declarations. Otherwise we will have to fallback to runtime merging.
    */
   function hasStaticWithDefaults() {
@@ -692,11 +733,13 @@ export function compileScript(
           )}, required: ${required}${
             defaultString ? `, ${defaultString}` : ``
           } }`
-        } else if (type.indexOf('Boolean') > -1) {
-          // production: if boolean exists, should keep the type.
-          return `${key}: { type: ${toRuntimeTypeString(
-            type
-          )}${
+        } else if (
+          type.some(
+            el => el === 'Boolean' || (defaultString && el === 'Function')
+          )
+        ) {
+          // #4783 production: if boolean or defaultString and function exists, should keep the type.
+          return `${key}: { type: ${toRuntimeTypeString(type)}${
             defaultString ? `, ${defaultString}` : ``
           } }`
         } else {
@@ -724,7 +767,7 @@ export function compileScript(
         destructured.default.end!
       )
       const isLiteral = destructured.default.type.endsWith('Literal')
-      return isLiteral ? value : `() => ${value}`
+      return isLiteral ? value : `() => (${value})`
     }
   }
 
@@ -770,7 +813,6 @@ export function compileScript(
   // 1. process normal <script> first if it exists
   let scriptAst: Program | undefined
   if (script) {
-    // import dedupe between <script> and <script setup>
     scriptAst = parse(
       script.content,
       {
@@ -792,16 +834,55 @@ export function compileScript(
             node.source.value,
             specifier.local.name,
             imported,
-            node.importKind === 'type',
-            false
+            node.importKind === 'type' ||
+              (specifier.type === 'ImportSpecifier' &&
+                specifier.importKind === 'type'),
+            false,
+            !options.inlineTemplate
           )
         }
       } else if (node.type === 'ExportDefaultDeclaration') {
         // export default
         defaultExport = node
+
+        // check if user has manually specified `name` or 'render` option in
+        // export default
+        // if has name, skip name inference
+        // if has render and no template, generate return object instead of
+        // empty render function (#4980)
+        let optionProperties
+        if (defaultExport.declaration.type === 'ObjectExpression') {
+          optionProperties = defaultExport.declaration.properties
+        } else if (
+          defaultExport.declaration.type === 'CallExpression' &&
+          defaultExport.declaration.arguments[0].type === 'ObjectExpression'
+        ) {
+          optionProperties = defaultExport.declaration.arguments[0].properties
+        }
+        if (optionProperties) {
+          for (const s of optionProperties) {
+            if (
+              s.type === 'ObjectProperty' &&
+              s.key.type === 'Identifier' &&
+              s.key.name === 'name'
+            ) {
+              hasDefaultExportName = true
+            }
+            if (
+              (s.type === 'ObjectMethod' || s.type === 'ObjectProperty') &&
+              s.key.type === 'Identifier' &&
+              s.key.name === 'render'
+            ) {
+              // TODO warn when we provide a better way to do it?
+              hasDefaultExportRender = true
+            }
+          }
+        }
+
+        // export default { ... } --> const __default__ = { ... }
         const start = node.start! + scriptStartOffset!
         const end = node.declaration.start! + scriptStartOffset!
-        s.overwrite(start, end, `const ${defaultTempVar} = `)
+        s.overwrite(start, end, `const ${DEFAULT_VAR} = `)
       } else if (node.type === 'ExportNamedDeclaration') {
         const defaultSpecifier = node.specifiers.find(
           s => s.exported.type === 'Identifier' && s.exported.name === 'default'
@@ -825,13 +906,14 @@ export function compileScript(
             // rewrite to `import { x as __default__ } from './x'` and
             // add to top
             s.prepend(
-              `import { ${defaultSpecifier.local.name} as ${defaultTempVar} } from '${node.source.value}'\n`
+              `import { ${defaultSpecifier.local.name} as ${DEFAULT_VAR} } from '${node.source.value}'\n`
             )
           } else {
             // export { x as default }
             // rewrite to `const __default__ = x` and move to end
-            s.append(
-              `\nconst ${defaultTempVar} = ${defaultSpecifier.local.name}\n`
+            s.appendLeft(
+              scriptEndOffset!,
+              `\nconst ${DEFAULT_VAR} = ${defaultSpecifier.local.name}\n`
             )
           }
         }
@@ -849,17 +931,28 @@ export function compileScript(
       }
     }
 
-    // apply ref transform
-    if (enableRefTransform && shouldTransformRef(script.content)) {
-      const { rootRefs: rootVars, importedHelpers } = transformRefAST(
+    // apply reactivity transform
+    if (enableReactivityTransform && shouldTransform(script.content)) {
+      const { rootRefs, importedHelpers } = transformAST(
         scriptAst,
         s,
         scriptStartOffset!
       )
-      refBindings = rootVars
+      refBindings = rootRefs
       for (const h of importedHelpers) {
         helperImports.add(h)
       }
+    }
+
+    // <script> after <script setup>
+    // we need to move the block up so that `const __default__` is
+    // declared before being used in the actual component definition
+    if (scriptStartOffset! > startOffset) {
+      // if content doesn't end with newline, add one
+      if (!/\n$/.test(script.content.trim())) {
+        s.appendLeft(scriptEndOffset!, `\n`)
+      }
+      s.move(scriptStartOffset!, scriptEndOffset!, 0)
     }
   }
 
@@ -932,10 +1025,13 @@ export function compileScript(
       for (let i = 0; i < node.specifiers.length; i++) {
         const specifier = node.specifiers[i]
         const local = specifier.local.name
-        const imported =
+        let imported =
           specifier.type === 'ImportSpecifier' &&
           specifier.imported.type === 'Identifier' &&
           specifier.imported.name
+        if (specifier.type === 'ImportNamespaceSpecifier') {
+          imported = '*'
+        }
         const source = node.source.value
         const existing = userImports[local]
         if (
@@ -960,8 +1056,11 @@ export function compileScript(
             source,
             local,
             imported,
-            node.importKind === 'type',
-            true
+            node.importKind === 'type' ||
+              (specifier.type === 'ImportSpecifier' &&
+                specifier.importKind === 'type'),
+            true,
+            !options.inlineTemplate
           )
         }
       }
@@ -1037,15 +1136,28 @@ export function compileScript(
       (node.type === 'VariableDeclaration' && !node.declare) ||
       node.type.endsWith('Statement')
     ) {
+      const scope: Statement[][] = [scriptSetupAst.body]
       ;(walk as any)(node, {
         enter(child: Node, parent: Node) {
           if (isFunctionType(child)) {
             this.skip()
           }
+          if (child.type === 'BlockStatement') {
+            scope.push(child.body)
+          }
           if (child.type === 'AwaitExpression') {
             hasAwait = true
-            const needsSemi = scriptSetupAst.body.some(n => {
-              return n.type === 'ExpressionStatement' && n.start === child.start
+            // if the await expression is an expression statement and
+            // - is in the root scope
+            // - or is not the first statement in a nested block scope
+            // then it needs a semicolon before the generated code.
+            const currentScope = scope[scope.length - 1]
+            const needsSemi = currentScope.some((n, i) => {
+              return (
+                (scope.length === 1 || i > 0) &&
+                n.type === 'ExpressionStatement' &&
+                n.start === child.start
+              )
             })
             processAwait(
               child,
@@ -1053,6 +1165,9 @@ export function compileScript(
               parent.type === 'ExpressionStatement'
             )
           }
+        },
+        exit(node: Node) {
+          if (node.type === 'BlockStatement') scope.pop()
         }
       })
     }
@@ -1089,18 +1204,19 @@ export function compileScript(
     }
   }
 
-  // 3. Apply ref sugar transform
+  // 3. Apply reactivity transform
   if (
-    (enableRefTransform && shouldTransformRef(scriptSetup.content)) ||
+    (enableReactivityTransform &&
+      // normal <script> had ref bindings that maybe used in <script setup>
+      (refBindings || shouldTransform(scriptSetup.content))) ||
     propsDestructureDecl
   ) {
-    const { rootRefs, importedHelpers } = transformRefAST(
+    const { rootRefs, importedHelpers } = transformAST(
       scriptSetupAst,
       s,
       startOffset,
       refBindings,
-      propsDestructuredBindings,
-      !enableRefTransform
+      propsDestructuredBindings
     )
     refBindings = refBindings ? [...refBindings, ...rootRefs] : rootRefs
     for (const h of importedHelpers) {
@@ -1121,7 +1237,7 @@ export function compileScript(
   checkInvalidScopeReference(propsRuntimeDecl, DEFINE_PROPS)
   checkInvalidScopeReference(propsRuntimeDefaults, DEFINE_PROPS)
   checkInvalidScopeReference(propsDestructureDecl, DEFINE_PROPS)
-  checkInvalidScopeReference(emitsRuntimeDecl, DEFINE_PROPS)
+  checkInvalidScopeReference(emitsRuntimeDecl, DEFINE_EMITS)
 
   // 6. remove non-script content
   if (script) {
@@ -1157,7 +1273,8 @@ export function compileScript(
   // props aliases
   if (propsDestructureDecl) {
     if (propsDestructureRestId) {
-      bindingMetadata[propsDestructureRestId] = BindingTypes.SETUP_CONST
+      bindingMetadata[propsDestructureRestId] =
+        BindingTypes.SETUP_REACTIVE_CONST
     }
     for (const key in propsDestructuredBindings) {
       const { local } = propsDestructuredBindings[key]
@@ -1173,7 +1290,9 @@ export function compileScript(
   )) {
     if (isType) continue
     bindingMetadata[key] =
-      (imported === 'default' && source.endsWith('.vue')) || source === 'vue'
+      imported === '*' ||
+      (imported === 'default' && source.endsWith('.vue')) ||
+      source === 'vue'
         ? BindingTypes.SETUP_CONST
         : BindingTypes.SETUP_MAYBE_REF
   }
@@ -1191,7 +1310,11 @@ export function compileScript(
   }
 
   // 8. inject `useCssVars` calls
-  if (cssVars.length) {
+  if (
+    cssVars.length &&
+    // no need to do this when targeting SSR
+    !(options.inlineTemplate && options.templateOptions?.ssr)
+  ) {
     helperImports.add(CSS_VARS_HELPER)
     helperImports.add('unref')
     s.prependRight(
@@ -1252,7 +1375,21 @@ export function compileScript(
 
   // 10. generate return statement
   let returned
-  if (options.inlineTemplate) {
+  if (!options.inlineTemplate || (!sfc.template && hasDefaultExportRender)) {
+    // non-inline mode, or has manual render in normal <script>
+    // return bindings from script and script setup
+    const allBindings: Record<string, any> = {
+      ...scriptBindings,
+      ...setupBindings
+    }
+    for (const key in userImports) {
+      if (!userImports[key].isType && userImports[key].isUsedInTemplate) {
+        allBindings[key] = true
+      }
+    }
+    returned = `{ ${Object.keys(allBindings).join(', ')} }`
+  } else {
+    // inline mode
     if (sfc.template && !sfc.template.src) {
       if (options.templateOptions && options.templateOptions.ssr) {
         hasInlinedSsrRenderFn = true
@@ -1310,18 +1447,6 @@ export function compileScript(
     } else {
       returned = `() => {}`
     }
-  } else {
-    // return bindings from script and script setup
-    const allBindings: Record<string, any> = {
-      ...scriptBindings,
-      ...setupBindings
-    }
-    for (const key in userImports) {
-      if (!userImports[key].isType && userImports[key].isUsedInTemplate) {
-        allBindings[key] = true
-      }
-    }
-    returned = `{ ${Object.keys(allBindings).join(', ')} }`
   }
 
   if (!options.inlineTemplate && !__TEST__) {
@@ -1340,6 +1465,12 @@ export function compileScript(
 
   // 11. finalize default export
   let runtimeOptions = ``
+  if (!hasDefaultExportName && filename && filename !== DEFAULT_FILENAME) {
+    const match = filename.match(/([^/\\]+)\.\w+$/)
+    if (match) {
+      runtimeOptions += `\n  __name: '${match[1]}',`
+    }
+  }
   if (hasInlinedSsrRenderFn) {
     runtimeOptions += `\n  __ssrInlineRender: true,`
   }
@@ -1374,47 +1505,34 @@ export function compileScript(
   // <script setup> components are closed by default. If the user did not
   // explicitly call `defineExpose`, call expose() with no args.
   const exposeCall =
-    hasDefineExposeCall || options.inlineTemplate ? `` : `  expose()\n`
+    hasDefineExposeCall || options.inlineTemplate ? `` : `  expose();\n`
+  // wrap setup code with function.
   if (isTS) {
     // for TS, make sure the exported type is still valid type with
     // correct props information
     // we have to use object spread for types to be merged properly
     // user's TS setting should compile it down to proper targets
-    const def = defaultExport ? `\n  ...${defaultTempVar},` : ``
-    // wrap setup code with function.
-    // export the content of <script setup> as a named export, `setup`.
-    // this allows `import { setup } from '*.vue'` for testing purposes.
-    if (defaultExport) {
-      s.prependLeft(
-        startOffset,
-        `\n${hasAwait ? `async ` : ``}function setup(${args}) {\n`
-      )
-      s.append(
-        `\nexport default /*#__PURE__*/${helper(
-          `defineComponent`
-        )}({${def}${runtimeOptions}\n  setup})`
-      )
-    } else {
-      s.prependLeft(
-        startOffset,
-        `\nexport default /*#__PURE__*/${helper(
-          `defineComponent`
-        )}({${def}${runtimeOptions}\n  ${
-          hasAwait ? `async ` : ``
-        }setup(${args}) {\n${exposeCall}`
-      )
-      s.appendRight(endOffset, `})`)
-    }
+    // export default defineComponent({ ...__default__, ... })
+    const def = defaultExport ? `\n  ...${DEFAULT_VAR},` : ``
+    s.prependLeft(
+      startOffset,
+      `\nexport default /*#__PURE__*/${helper(
+        `defineComponent`
+      )}({${def}${runtimeOptions}\n  ${
+        hasAwait ? `async ` : ``
+      }setup(${args}) {\n${exposeCall}`
+    )
+    s.appendRight(endOffset, `})`)
   } else {
     if (defaultExport) {
-      // can't rely on spread operator in non ts mode
+      // without TS, can't rely on rest spread, so we use Object.assign
+      // export default Object.assign(__default__, { ... })
       s.prependLeft(
         startOffset,
-        `\n${hasAwait ? `async ` : ``}function setup(${args}) {\n`
+        `\nexport default /*#__PURE__*/Object.assign(${DEFAULT_VAR}, {${runtimeOptions}\n  ` +
+          `${hasAwait ? `async ` : ``}setup(${args}) {\n${exposeCall}`
       )
-      s.append(
-        `\nexport default /*#__PURE__*/ Object.assign(${defaultTempVar}, {${runtimeOptions}\n  setup\n})\n`
-      )
+      s.appendRight(endOffset, `})`)
     } else {
       s.prependLeft(
         startOffset,
@@ -1439,6 +1557,7 @@ export function compileScript(
   return {
     ...scriptSetup,
     bindings: bindingMetadata,
+    imports: userImports,
     content: s.toString(),
     map: genSourceMap
       ? (s.generateMap({
@@ -1481,14 +1600,18 @@ function walkDeclaration(
         const userReactiveBinding = userImportAlias['reactive'] || 'reactive'
         if (isCallOf(init, userReactiveBinding)) {
           // treat reactive() calls as let since it's meant to be mutable
-          bindingType = BindingTypes.SETUP_LET
+          bindingType = isConst
+            ? BindingTypes.SETUP_REACTIVE_CONST
+            : BindingTypes.SETUP_LET
         } else if (
           // if a declaration is a const literal, we can mark it so that
           // the generated render fn code doesn't need to unref() it
           isDefineCall ||
           (isConst && canNeverBeRef(init!, userReactiveBinding))
         ) {
-          bindingType = BindingTypes.SETUP_CONST
+          bindingType = isCallOf(init, DEFINE_PROPS)
+            ? BindingTypes.SETUP_REACTIVE_CONST
+            : BindingTypes.SETUP_CONST
         } else if (isConst) {
           if (isCallOf(init, userImportAlias['ref'] || 'ref')) {
             bindingType = BindingTypes.SETUP_REF
@@ -1543,7 +1666,7 @@ function walkObjectPattern(
       }
     } else {
       // ...rest
-      // argument can only be identifer when destructuring
+      // argument can only be identifier when destructuring
       const type = isConst ? BindingTypes.SETUP_CONST : BindingTypes.SETUP_LET
       registerBinding(bindings, p.argument as Identifier, type)
     }
@@ -1575,7 +1698,7 @@ function walkPattern(
       : BindingTypes.SETUP_LET
     registerBinding(bindings, node, type)
   } else if (node.type === 'RestElement') {
-    // argument can only be identifer when destructuring
+    // argument can only be identifier when destructuring
     const type = isConst ? BindingTypes.SETUP_CONST : BindingTypes.SETUP_LET
     registerBinding(bindings, node.argument as Identifier, type)
   } else if (node.type === 'ObjectPattern') {
@@ -1631,10 +1754,7 @@ function extractRuntimeProps(
       if (m.type === 'TSMethodSignature') {
         type = ['Function']
       } else if (m.typeAnnotation) {
-        type = inferRuntimeType(
-          m.typeAnnotation.typeAnnotation,
-          declaredTypes
-        )
+        type = inferRuntimeType(m.typeAnnotation.typeAnnotation, declaredTypes)
       }
       props[m.key.name] = {
         key: m.key.name,
@@ -1695,6 +1815,7 @@ function inferRuntimeType(
           case 'WeakSet':
           case 'WeakMap':
           case 'Date':
+          case 'Promise':
             return [node.typeName.name]
           case 'Record':
           case 'Partial':
@@ -1986,14 +2107,15 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
                 code += `,v${capitalize(camelize(prop.name))}`
               }
               if (prop.exp) {
-                code += `,${stripStrings(
-                  (prop.exp as SimpleExpressionNode).content
+                code += `,${processExp(
+                  (prop.exp as SimpleExpressionNode).content,
+                  prop.name
                 )}`
               }
             }
           }
         } else if (node.type === NodeTypes.INTERPOLATION) {
-          code += `,${stripStrings(
+          code += `,${processExp(
             (node.content as SimpleExpressionNode).content
           )}`
         }
@@ -2004,6 +2126,32 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
   code += ';'
   templateUsageCheckCache.set(content, code)
   return code
+}
+
+const forAliasRE = /([\s\S]*?)\s+(?:in|of)\s+([\s\S]*)/
+
+function processExp(exp: string, dir?: string): string {
+  if (/ as\s+\w|<.*>|:/.test(exp)) {
+    if (dir === 'slot') {
+      exp = `(${exp})=>{}`
+    } else if (dir === 'on') {
+      exp = `()=>{${exp}}`
+    } else if (dir === 'for') {
+      const inMatch = exp.match(forAliasRE)
+      if (inMatch) {
+        const [, LHS, RHS] = inMatch
+        return processExp(`(${LHS})=>{}`) + processExp(RHS)
+      }
+    }
+    let ret = ''
+    // has potential type cast or generic arguments that uses types
+    const ast = parseExpression(exp, { plugins: ['typescript'] })
+    walkIdentifiers(ast, node => {
+      ret += `,` + node.name
+    })
+    return ret
+  }
+  return stripStrings(exp)
 }
 
 function stripStrings(exp: string) {
@@ -2018,4 +2166,41 @@ function stripTemplateString(str: string): string {
     return interpMatch.map(m => m.slice(2, -1)).join(',')
   }
   return ''
+}
+
+function isImportUsed(local: string, sfc: SFCDescriptor): boolean {
+  return new RegExp(
+    // #4274 escape $ since it's a special char in regex
+    // (and is the only regex special char that is valid in identifiers)
+    `[^\\w$_]${local.replace(/\$/g, '\\$')}[^\\w$_]`
+  ).test(resolveTemplateUsageCheckString(sfc))
+}
+
+/**
+ * Note: this comparison assumes the prev/next script are already identical,
+ * and only checks the special case where <script setup lang="ts"> unused import
+ * pruning result changes due to template changes.
+ */
+export function hmrShouldReload(
+  prevImports: Record<string, ImportBinding>,
+  next: SFCDescriptor
+): boolean {
+  if (
+    !next.scriptSetup ||
+    (next.scriptSetup.lang !== 'ts' && next.scriptSetup.lang !== 'tsx')
+  ) {
+    return false
+  }
+
+  // for each previous import, check if its used status remain the same based on
+  // the next descriptor's template
+  for (const key in prevImports) {
+    // if an import was previous unused, but now is used, we need to force
+    // reload so that the script now includes that import.
+    if (!prevImports[key].isUsedInTemplate && isImportUsed(key, next)) {
+      return true
+    }
+  }
+
+  return false
 }
