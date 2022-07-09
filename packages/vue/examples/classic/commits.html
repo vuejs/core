@@ -10,7 +10,7 @@
       v-model="currentBranch">
     <label :for="branch">{{ branch }}</label>
   </template>
-  <p>vuejs/vue@{{ currentBranch }}</p>
+  <p>vuejs/core@{{ currentBranch }}</p>
   <ul>
     <li v-for="{ html_url, sha, author, commit } in commits">
       <a :href="html_url" target="_blank" class="commit">{{ sha.slice(0, 7) }}</a>
@@ -26,8 +26,8 @@ const API_URL = `https://api.github.com/repos/vuejs/core/commits?per_page=3&sha=
 
 Vue.createApp({
   data: () => ({
-    branches: ['master', 'sync'],
-    currentBranch: 'master',
+    branches: ['main', 'v2-compat'],
+    currentBranch: 'main',
     commits: null
   }),
 

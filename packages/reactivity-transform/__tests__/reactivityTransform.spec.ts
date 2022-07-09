@@ -222,19 +222,25 @@ test('should not rewrite scope variable', () => {
         console.log(d)
         console.log(e)
       }
+      let err = $ref(null)
+      try {
+      } catch (err) {
+        console.log(err)
+      }
     `)
   expect(code).toMatch('console.log(a)')
   expect(code).toMatch('console.log(b.value)')
   expect(code).toMatch('console.log(c)')
   expect(code).toMatch('console.log(d.value)')
   expect(code).toMatch('console.log(e)')
+  expect(code).toMatch('console.log(err)')
   assertCode(code)
 })
 
 test('object destructure', () => {
   const { code, rootRefs } = transform(`
     let n = $ref(1), { a, b: c, d = 1, e: f = 2, [g]: h } = $(useFoo())
-    let { foo } = $(useSomthing(() => 1));
+    let { foo } = $(useSomething(() => 1));
     console.log(n, a, c, d, f, h, foo)
     `)
   expect(code).toMatch(`a = _toRef(__$temp_1, 'a')`)

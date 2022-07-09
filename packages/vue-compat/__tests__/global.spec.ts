@@ -1,6 +1,6 @@
 import Vue from '@vue/compat'
 import { effect, isReactive } from '@vue/reactivity'
-import { nextTick } from '@vue/runtime-core'
+import { h, nextTick } from '@vue/runtime-core'
 import {
   DeprecationTypes,
   deprecationData,
@@ -285,6 +285,28 @@ describe('GLOBAL_PROTOTYPE', () => {
     delete Vue.prototype.$test
   })
 
+  test('functions keeps additional properties', () => {
+    function test(this: any) {
+      return this.msg
+    }
+    test.additionalFn = () => {
+      return 'additional fn'
+    }
+
+    Vue.prototype.$test = test
+    const vm = new Vue({
+      data() {
+        return {
+          msg: 'test'
+        }
+      }
+    }) as any
+    expect(typeof vm.$test).toBe('function')
+    expect(typeof vm.$test.additionalFn).toBe('function')
+    expect(vm.$test.additionalFn()).toBe('additional fn')
+    delete Vue.prototype.$test
+  })
+
   test('extended prototype', async () => {
     const Foo = Vue.extend()
     Foo.prototype.$test = 1
@@ -425,4 +447,58 @@ test('global asset registration should affect apps created via createApp', () =>
   }).mount(document.createElement('div')) as any
   expect(vm.$el.textContent).toBe('foo')
   delete singletonApp._context.components.foo
+})
+
+test('post-facto global asset registration should affect apps created via createApp', () => {
+  const app = createApp({
+    template: '<foo/>'
+  })
+  Vue.component('foo', { template: 'foo' })
+  const vm = app.mount(document.createElement('div')) as any
+  expect(vm.$el.textContent).toBe('foo')
+  delete singletonApp._context.components.foo
+})
+
+test('local asset registration should not affect other local apps', () => {
+  const app1 = createApp({})
+  const app2 = createApp({})
+
+  app1.component('foo', {})
+  app2.component('foo', {})
+
+  expect(
+    `Component "foo" has already been registered in target app`
+  ).not.toHaveBeenWarned()
+})
+
+test('local app-level mixin registration should not affect other local apps', () => {
+  const app1 = createApp({ render: () => h('div') })
+  const app2 = createApp({})
+
+  const mixin = { created: jest.fn() }
+  app1.mixin(mixin)
+  app2.mixin(mixin)
+
+  expect(`Mixin has already been applied`).not.toHaveBeenWarned()
+
+  app1.mount(document.createElement('div'))
+  expect(mixin.created).toHaveBeenCalledTimes(1)
+})
+
+// #5699
+test('local app config should not affect other local apps in v3 mode', () => {
+  Vue.configureCompat({ MODE: 3 })
+  const app1 = createApp({
+    render: () => h('div'),
+    provide() {
+      return {
+        test: 123
+      }
+    }
+  })
+  app1.config.globalProperties.test = () => {}
+  app1.mount(document.createElement('div'))
+
+  const app2 = createApp({})
+  expect(app2.config.globalProperties.test).toBe(undefined)
 })

@@ -1,6 +1,6 @@
 {
   "name": "@vue/reactivity-transform",
-  "version": "3.2.31",
+  "version": "3.2.37",
   "description": "@vue/reactivity-transform",
   "main": "dist/reactivity-transform.cjs.js",
   "files": [
@@ -29,8 +29,8 @@
   "homepage": "https://github.com/vuejs/core/tree/dev/packages/reactivity-transform#readme",
   "dependencies": {
     "@babel/parser": "^7.16.4",
-    "@vue/compiler-core": "3.2.31",
-    "@vue/shared": "3.2.31",
+    "@vue/compiler-core": "3.2.37",
+    "@vue/shared": "3.2.37",
     "estree-walker": "^2.0.2",
     "magic-string": "^0.25.7"
   },

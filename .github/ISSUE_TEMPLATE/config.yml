@@ -1,8 +1,11 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Create new issue
-    url: https://new-issue.vuejs.org/?repo=vuejs/core
-    about: Please use the following link to create a new issue.
+  - name: Discord Chat
+    url: https://chat.vuejs.org
+    about: Ask questions and discuss with other Vue users in real time.
+  - name: Questions & Discussions
+    url: https://github.com/vuejs/core/discussions
+    about: Use GitHub discussions for message-board style questions and discussions.
   - name: Patreon
     url: https://www.patreon.com/evanyou
     about: Love Vue.js? Please consider supporting us via Patreon.

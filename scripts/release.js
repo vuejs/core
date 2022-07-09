@@ -80,7 +80,7 @@ async function main() {
   step('\nRunning tests...')
   if (!skipTests && !isDryRun) {
     await run(bin('jest'), ['--clearCache'])
-    await run('pnpm', ['test', '--', '--bail'])
+    await run('pnpm', ['test', '--bail'])
   } else {
     console.log(`(skipped)`)
   }
@@ -92,7 +92,7 @@ async function main() {
   // build all packages with types
   step('\nBuilding all packages...')
   if (!skipBuild && !isDryRun) {
-    await run('pnpm', ['run', 'build', '--', '--release'])
+    await run('pnpm', ['run', 'build', '--release'])
     // test generated dts files
     step('\nVerifying type declarations...')
     await run('pnpm', ['run', 'test-dts-only'])
@@ -199,9 +199,6 @@ async function publishPackage(pkgName, version, runIfNotDry) {
     releaseTag = 'rc'
   }
 
-  // TODO use inferred release channel after official 3.0 release
-  // const releaseTag = semver.prerelease(version)[0] || null
-
   step(`Publishing ${pkgName}...`)
   try {
     await runIfNotDry(
@@ -232,5 +229,6 @@ async function publishPackage(pkgName, version, runIfNotDry) {
 }
 
 main().catch(err => {
+  updateVersions(currentVersion)
   console.error(err)
 })
