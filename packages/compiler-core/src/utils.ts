@@ -537,3 +537,10 @@ export function makeBlock(
     helper(getVNodeBlockHelper(inSSR, node.isComponent))
   }
 }
+
+export function trimArrowFunctionWrapParens(content: string): string {
+  content = content.trim()
+  return !/^\([^)]*?\)\s*=>/.test(content) && content.startsWith('(') && content.endsWith(')')
+    ? trimArrowFunctionWrapParens(content.replace(/^\(|\)$/g, ''))
+    : content
+}
