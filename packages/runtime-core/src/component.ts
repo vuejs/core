@@ -788,7 +788,7 @@ export function finishComponentSetup(
         (__COMPAT__ &&
           instance.vnode.props &&
           instance.vnode.props['inline-template']) ||
-        Component.template
+        Component.template || instance.ctx.$options.template
       if (template) {
         if (__DEV__) {
           startMeasure(instance, `compile`)
