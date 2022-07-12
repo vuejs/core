@@ -19,9 +19,17 @@ import {
   nextTick,
   warn,
   ConcreteComponent,
-  ComponentOptions
+  ComponentOptions,
+  unref
 } from '@vue/runtime-core'
-import { camelize, extend, hyphenate, isArray, toNumber } from '@vue/shared'
+import {
+  camelize,
+  extend,
+  hasOwn,
+  hyphenate,
+  isArray,
+  toNumber
+} from '@vue/shared'
 import { hydrate, render } from '.'
 
 export type VueElementConstructor<P = {}> = {
@@ -256,6 +264,9 @@ export class VueElement extends BaseClass {
 
       // initial render
       this._update()
+
+      // applyExpose
+      this._applyExpose()
     }
 
     const asyncDef = (this._def as ComponentOptions).__asyncLoader
@@ -263,6 +274,27 @@ export class VueElement extends BaseClass {
       asyncDef().then(resolve)
     } else {
       resolve(this._def)
+    }
+  }
+
+  private _applyExpose() {
+    if (!this._instance || !this._instance.exposed) {
+      return
+    }
+    const exposed = this._instance.exposed
+    for (const key of Object.keys(exposed)) {
+      // if existing attributes are exposed
+      if (hasOwn(this, key)) {
+        warn(`Exposed property "${key}" already exists on custom element.`)
+        continue
+      }
+      // exposed properties are readonly
+      Object.defineProperty(this, key, {
+        get() {
+          // Unpack ref to avoid external modifications
+          return unref(exposed[key])
+        }
+      })
     }
   }
 
@@ -346,7 +378,7 @@ export class VueElement extends BaseClass {
           )
         }
 
-        // locate nearest Vue custom element parent for provide/inject
+        // locate nearest vue custom element parent for provide/inject
         let parent: Node | null = this
         while (
           (parent =
