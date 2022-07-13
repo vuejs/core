@@ -226,7 +226,9 @@ export function normalizeEmitsOptions(
   }
 
   if (!raw && !hasExtends) {
-    cache.set(comp, null)
+    if (comp && typeof comp === 'object') {
+      cache.set(comp, null)
+    }
     return null
   }
 
@@ -236,7 +238,9 @@ export function normalizeEmitsOptions(
     extend(normalized, raw)
   }
 
-  cache.set(comp, normalized)
+  if (comp && typeof comp === 'object') {
+    cache.set(comp, normalized)
+  }
   return normalized
 }
 

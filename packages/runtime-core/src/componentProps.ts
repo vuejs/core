@@ -494,7 +494,9 @@ export function normalizePropsOptions(
   }
 
   if (!raw && !hasExtends) {
-    cache.set(comp, EMPTY_ARR as any)
+    if (comp && typeof comp === 'object') {
+      cache.set(comp, EMPTY_ARR as any)
+    }
     return EMPTY_ARR as any
   }
 
@@ -534,7 +536,9 @@ export function normalizePropsOptions(
   }
 
   const res: NormalizedPropsOptions = [normalized, needCastKeys]
-  cache.set(comp, res)
+  if (comp && typeof comp === 'object') {
+    cache.set(comp, res)
+  }
   return res
 }
 

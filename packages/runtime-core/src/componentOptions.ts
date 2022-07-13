@@ -966,8 +966,9 @@ export function resolveMergedOptions(
     }
     mergeOptions(resolved, base, optionMergeStrategies)
   }
-
-  cache.set(base, resolved)
+  if (base && typeof base === 'object') {
+    cache.set(base, resolved)
+  }
   return resolved
 }
 
