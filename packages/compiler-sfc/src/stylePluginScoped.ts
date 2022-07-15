@@ -1,6 +1,6 @@
 import { PluginCreator, Rule, AtRule } from 'postcss'
 import selectorParser from 'postcss-selector-parser'
-import { warn } from './warn'
+import { warnOnce } from './warn'
 
 const animationNameRE = /^(-\w+-)?animation-name$/
 const animationRE = /^(-\w+-)?animation$/
@@ -95,7 +95,7 @@ function rewriteSelector(
     ) {
       n.value = ' '
       n.spaces.before = n.spaces.after = ''
-      warn(
+      warnOnce(
         `the >>> and /deep/ combinators have been deprecated. ` +
           `Use :deep() instead.`
       )
@@ -129,7 +129,7 @@ function rewriteSelector(
         } else {
           // DEPRECATED usage
           // .foo ::v-deep .bar -> .foo[xxxxxxx] .bar
-          warn(
+          warnOnce(
             `::v-deep usage as a combinator has ` +
               `been deprecated. Use :deep(<inner-selector>) instead.`
           )
