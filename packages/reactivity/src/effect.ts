@@ -87,7 +87,7 @@ export class ReactiveEffect<T = any> {
     if (!this.active) {
       return this.fn()
     }
-    let parent: ReactiveEffect | undefined = activeEffect
+    let parent: activeEffect = activeEffect
     let lastShouldTrack = shouldTrack
     while (parent) {
       if (parent === this) {
