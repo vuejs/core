@@ -365,11 +365,11 @@ function triggerEffect(
   effect: ReactiveEffect,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
-  if (effect !== activeEffect || effect.allowRecurse) {
+  if ( effect.allowRecurse) {
     if (__DEV__ && effect.onTrigger) {
       effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
     }
-    if (effect.scheduler) {
+    if (effect.scheduler && effect !== activeEffect ) {
       effect.scheduler()
     } else {
       effect.run()
