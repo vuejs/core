@@ -199,6 +199,18 @@ exports[`object destructure w/ mid-path default values 1`] = `
   "
 `;
 
+exports[`shorthands 1`] = `
+"import { ref as _ref, computed as _computed, shallowRef as _shallowRef, customRef as _customRef, toRef as _toRef, toRefs as _toRefs } from 'vue'
+
+  let a = _ref(1)
+  let b = _computed(() => 1)
+  let c = _shallowRef(1)
+  let d = _customRef({})
+  let e = _toRef({ foo }, 'foo')
+  let f = _toRefs({ foo })
+  "
+`;
+
 exports[`should not rewrite scope variable 1`] = `
 "import { ref as _ref } from 'vue'
 

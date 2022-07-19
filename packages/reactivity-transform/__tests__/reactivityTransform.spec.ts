@@ -305,6 +305,24 @@ test('$$', () => {
   assertCode(code)
 })
 
+test('shorthands', () => {
+  const { code } = transform(`
+  let a = $ref(1)
+  let b = $computed(() => 1)
+  let c = $shallowRef(1)
+  let d = $customRef({})
+  let e = $toRef({ foo }, 'foo')
+  let f = $toRefs({ foo })
+  `)
+  expect(code).toMatch(`a = _ref(1)`)
+  expect(code).toMatch(`b = _computed(() => 1)`)
+  expect(code).toMatch(`c = _shallowRef(1)`)
+  expect(code).toMatch(`d = _customRef({})`)
+  expect(code).toMatch(`e = _toRef({ foo }, 'foo')`)
+  expect(code).toMatch(`f = _toRefs({ foo })`)
+  assertCode(code)
+})
+
 test('nested scopes', () => {
   const { code, rootRefs } = transform(`
     let a = $ref(0)
