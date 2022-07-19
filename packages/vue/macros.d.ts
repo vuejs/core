@@ -98,6 +98,8 @@ export declare function $toRef<T extends object, K extends keyof T>(
   defaultValue: T[K]
 ): RefValue<Exclude<T[K], undefined>>
 
+export declare function $toRefs<T extends object>(object: T): DestructureRefs<T>
+
 export declare function $customRef<T>(factory: CustomRefFactory<T>): RefValue<T>
 
 export declare function $computed<T>(

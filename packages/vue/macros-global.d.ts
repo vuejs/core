@@ -5,7 +5,8 @@ import {
   $shallowRef as _$shallowRef,
   $computed as _$computed,
   $customRef as _$customRef,
-  $toRef as _$toRef
+  $toRef as _$toRef,
+  $toRefs as _$toRefs
 } from './macros'
 
 declare global {
@@ -16,4 +17,5 @@ declare global {
   const $computed: typeof _$computed
   const $customRef: typeof _$customRef
   const $toRef: typeof _$toRef
+  const $toRefs: typeof _$toRefs
 }
