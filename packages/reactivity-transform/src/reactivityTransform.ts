@@ -25,7 +25,14 @@ import { hasOwn, isArray, isString, genPropsAccessExp } from '@vue/shared'
 
 const CONVERT_SYMBOL = '$'
 const ESCAPE_SYMBOL = '$$'
-const shorthands = ['ref', 'computed', 'shallowRef', 'toRef', 'customRef']
+const shorthands = [
+  'ref',
+  'computed',
+  'shallowRef',
+  'toRef',
+  'toRefs',
+  'customRef'
+]
 const transformCheckRE = /[^\w]\$(?:\$|ref|computed|shallowRef)?\s*(\(|\<)/
 
 export function shouldTransform(src: string): boolean {
