@@ -123,6 +123,12 @@ export interface SFCScriptCompileOptions {
    * options passed to `compiler-dom`.
    */
   templateOptions?: Partial<SFCTemplateCompileOptions>
+  /**
+   * Enable/disable automatically infer component name from filename when using script setup.
+   * https://github.com/vuejs/core/pull/4997
+   * Defaults to true.
+   */
+  filenameAsComponentName?: boolean
 }
 
 export interface ImportBinding {
@@ -153,6 +159,7 @@ export function compileScript(
     !!options.reactivityTransform || !!options.propsDestructureTransform
   const isProd = !!options.isProd
   const genSourceMap = options.sourceMap !== false
+  const filenameAsComponentName = options.filenameAsComponentName !== false
   let refBindings: string[] | undefined
 
   if (!options.id) {
@@ -1465,7 +1472,12 @@ export function compileScript(
 
   // 11. finalize default export
   let runtimeOptions = ``
-  if (!hasDefaultExportName && filename && filename !== DEFAULT_FILENAME) {
+  if (
+    filenameAsComponentName &&
+    !hasDefaultExportName &&
+    filename &&
+    filename !== DEFAULT_FILENAME
+  ) {
     const match = filename.match(/([^/\\]+)\.\w+$/)
     if (match) {
       runtimeOptions += `\n  __name: '${match[1]}',`
