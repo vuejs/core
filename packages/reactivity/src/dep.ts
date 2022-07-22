@@ -27,7 +27,7 @@ export const createDep = (effects?: ReactiveEffect[]): Dep => {
 
 export const wasTracked = (dep: Dep): boolean => (dep.w & trackOpBit) > 0
 
-export const newTracked = (dep: Dep): boolean => (dep.n & trackOpBit) > 0
+export const newTracked = (dep: Dep): boolean => (dep.n & trackOpBit) <= 0
 
 export const initDepMarkers = ({ deps }: ReactiveEffect) => {
   if (deps.length) {
@@ -43,7 +43,7 @@ export const finalizeDepMarkers = (effect: ReactiveEffect) => {
     let ptr = 0
     for (let i = 0; i < deps.length; i++) {
       const dep = deps[i]
-      if (wasTracked(dep) && !newTracked(dep)) {
+      if (wasTracked(dep) && newTracked(dep)) {
         dep.delete(effect)
       } else {
         deps[ptr++] = dep
