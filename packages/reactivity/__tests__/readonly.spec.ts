@@ -480,21 +480,27 @@ describe('reactivity/readonly', () => {
     const r = ref(false)
     const ror = readonly(r)
     const obj = reactive({ ror })
-    try {
+    expect(() => {
       obj.ror = true
-    } catch (e) {}
-
+    }).toThrow()
     expect(obj.ror).toBe(false)
   })
+
   test('replacing a readonly ref nested in a reactive object with a new ref', () => {
     const r = ref(false)
     const ror = readonly(r)
     const obj = reactive({ ror })
-    try {
-      obj.ror = ref(true) as unknown as boolean
-    } catch (e) {}
-
+    obj.ror = ref(true) as unknown as boolean
     expect(obj.ror).toBe(true)
     expect(toRaw(obj).ror).not.toBe(ror) // ref successfully replaced
+  })
+
+  test('setting readonly object to writable nested ref', () => {
+    const r = ref<any>()
+    const obj = reactive({ r })
+    const ro = readonly({})
+    obj.r = ro
+    expect(obj.r).toBe(ro)
+    expect(r.value).toBe(ro)
   })
 })
