@@ -6,12 +6,26 @@ import {
   shallowReadonlyHandlers
 } from './baseHandlers'
 import {
+  CollectionTypes,
   mutableCollectionHandlers,
   readonlyCollectionHandlers,
   shallowCollectionHandlers,
   shallowReadonlyCollectionHandlers
 } from './collectionHandlers'
 import type { UnwrapRefSimple, Ref, RawSymbol } from './ref'
+
+export declare const CollectionReactiveMarker: unique symbol
+export declare const CollectionReadonlyMarker: unique symbol
+export declare const ShallowReactiveMarker: unique symbol
+
+export type IsCollectionReadonly<T extends object> = T extends {
+  [CollectionReadonlyMarker]?: true
+} ? true : false
+
+export type IsCollectionReactive<T extends object> = T extends {
+  [CollectionReactiveMarker]?: true
+} ? true : false
+
 
 export const enum ReactiveFlags {
   SKIP = '__v_skip',
@@ -64,6 +78,11 @@ function getTargetType(value: Target) {
 // only unwrap nested ref
 export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRefSimple<T>
 
+export type ReactiveObject<T> = 
+  T extends CollectionTypes 
+    ? UnwrapNestedRefs<T> & { [CollectionReactiveMarker]?: true }
+    : UnwrapNestedRefs<T>
+
 /**
  * Creates a reactive copy of the original object.
  *
@@ -86,7 +105,7 @@ export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRefSimple<T>
  * count.value // -> 1
  * ```
  */
-export function reactive<T extends object>(target: T): UnwrapNestedRefs<T>
+export function reactive<T extends object>(target: T): ReactiveObject<T>
 export function reactive(target: object) {
   // if trying to observe a readonly proxy, return the readonly version.
   if (isReadonly(target)) {
@@ -100,8 +119,6 @@ export function reactive(target: object) {
     reactiveMap
   )
 }
-
-export declare const ShallowReactiveMarker: unique symbol
 
 export type ShallowReactive<T> = T & { [ShallowReactiveMarker]?: true }
 
@@ -146,13 +163,17 @@ export type DeepReadonly<T> = T extends Builtin
   ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
   : Readonly<T>
 
+export type ReadonlyObject<T> = 
+  T extends CollectionTypes 
+    ? DeepReadonly<UnwrapNestedRefs<T>> & { [CollectionReadonlyMarker]?: true }
+    : DeepReadonly<UnwrapNestedRefs<T>>
 /**
  * Creates a readonly copy of the original object. Note the returned copy is not
  * made reactive, but `readonly` can be called on an already reactive object.
  */
 export function readonly<T extends object>(
   target: T
-): DeepReadonly<UnwrapNestedRefs<T>> {
+): ReadonlyObject<T> {
   return createReactiveObject(
     target,
     true,

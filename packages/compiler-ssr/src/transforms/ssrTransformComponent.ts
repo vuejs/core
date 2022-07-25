@@ -334,19 +334,18 @@ function subTransform(
   // traverse
   traverseNode(childRoot, childContext)
   // merge helpers/components/directives into parent context
-  ;(['helpers', 'components', 'directives'] as const).forEach(key => {
-    childContext[key].forEach((value: any, helperKey: any) => {
-      if (key === 'helpers') {
-        const parentCount = parentContext.helpers.get(helperKey)
-        if (parentCount === undefined) {
-          parentContext.helpers.set(helperKey, value)
-        } else {
-          parentContext.helpers.set(helperKey, value + parentCount)
-        }
-      } else {
-        ;(parentContext[key] as any).add(value)
-      }
+  ;(['components', 'directives'] as const).forEach(key => {
+    childContext[key].forEach((value: any) => {
+      ;(parentContext[key] as any).add(value)
     })
+  })
+  childContext['helpers'].forEach((value: any, helperKey: any) => {
+    const parentCount = parentContext.helpers.get(helperKey)
+    if (parentCount === undefined) {
+      parentContext.helpers.set(helperKey, value)
+    } else {
+      parentContext.helpers.set(helperKey, value + parentCount)
+    }
   })
   // imports/hoists are not merged because:
   // - imports are only used for asset urls and should be consistent between
