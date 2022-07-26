@@ -1,4 +1,4 @@
-import { toRaw, ReactiveFlags, toReactive, toReadonly } from './reactive'
+import { toRaw, ReactiveFlags, toReactive, toReadonly, shallowReadonlyMap, readonlyMap, shallowReactiveMap, reactiveMap, Target } from './reactive'
 import { track, trigger, ITERATE_KEY, MAP_KEY_ITERATE_KEY } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { capitalize, hasOwn, hasChanged, toRawType, isMap } from '@vue/shared'
@@ -349,7 +349,17 @@ function createInstrumentationGetter(isReadonly: boolean, shallow: boolean) {
       return !isReadonly
     } else if (key === ReactiveFlags.IS_READONLY) {
       return isReadonly
-    } else if (key === ReactiveFlags.RAW) {
+    } else if (
+      key === ReactiveFlags.RAW &&
+      receiver ===
+        (isReadonly
+          ? shallow
+            ? shallowReadonlyMap
+            : readonlyMap
+          : shallow
+            ? shallowReactiveMap
+            : reactiveMap).get(target as Target)
+      ) {
       return target
     }
 

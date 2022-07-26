@@ -173,6 +173,14 @@ describe('reactivity/reactive', () => {
     expect(raw).not.toBe(toRaw(original))
   })
 
+  test('toRaw on collection types using reactive as prototype', () => {
+    const originalCollection = reactive(new Map())
+    const collection = Object.create(originalCollection)
+    const rawCollection = toRaw(collection)
+    expect(rawCollection).toBe(collection)
+    expect(rawCollection).not.toBe(toRaw(originalCollection))
+  })
+
   test('should not unwrap Ref<T>', () => {
     const observedNumberRef = reactive(ref(1))
     const observedObjectRef = reactive(ref({ foo: 1 }))
