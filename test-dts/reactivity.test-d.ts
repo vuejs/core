@@ -172,6 +172,50 @@ describe('collection-type', () => {
       expectType<{foo: number}>(v2)
       expectType<Map<{ foo: Ref<number> }, string>>(m)
     })
+  })
+  it('normal use under non-reactive', () => {
+    const m = new Map<string, number>()
+    const s = new Set<string>()
+    const mr = new Map<{a: Ref<number>}, {b: Ref<number>}>()
+    const sr = new Set<{a: Ref<number>}>()
+    const objA = {
+      a: ref(1)
+    }
+    const objB = {
+      b: ref(1)
+    }
 
+    m.set('a', 1)
+    s.add('b')
+    mr.set(objA, objB)
+    sr.add(objA)
+
+    expectType<Map<string, number>>(m)
+    expectType<Set<string>>(s)
+    expectType<Map<{a: Ref<number>}, {b: Ref<number>}>>(mr)
+    expectType<Set<{a: Ref<number>}>>(sr)
+    expectType<number>(m.get('a')!)
+    expectType<{b: Ref<number>}>(mr.get(objA)!)
+
+    m.forEach((v1, v2, m) => {
+      expectType<number>(v1)
+      expectType<string>(v2)
+      expectType<Map<string, number>>(m)
+    })
+    s.forEach((v1, v2, s) => {
+      expectType<string>(v1)
+      expectType<string>(v2)
+      expectType<Set<string>>(s)
+    })
+    mr.forEach((v1, v2, m) => {
+      expectType<{b: Ref<number>}>(v1)
+      expectType<{a: Ref<number>}>(v2)
+      expectType<Map<{a: Ref<number>}, {b: Ref<number>}>>(m)
+    })
+    sr.forEach((v1, v2, s) => {
+      expectType<{a: Ref<number>}>(v1)
+      expectType<{a: Ref<number>}>(v2)
+      expectType<Set<{a: Ref<number>}>>(s)
+    })
   })
 })
