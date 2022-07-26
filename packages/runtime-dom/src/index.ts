@@ -10,7 +10,8 @@ import {
   RootHydrateFunction,
   isRuntimeOnly,
   DeprecationTypes,
-  compatUtils
+  compatUtils,
+  RendererOptions
 } from '@vue/runtime-core'
 import { nodeOps } from './nodeOps'
 import { patchProp } from './patchProp'
@@ -32,6 +33,15 @@ declare module '@vue/reactivity' {
 }
 
 const rendererOptions = /*#__PURE__*/ extend({ patchProp }, nodeOps)
+
+export function setRendererOptions(
+  options:
+    | Partial<RendererOptions>
+    | ((options: RendererOptions) => Partial<RendererOptions>)
+): void {
+  const inputOptions = isFunction(options) ? options(rendererOptions) : options;
+  Object.assign(rendererOptions, inputOptions);
+}
 
 // lazy create the renderer - this makes core renderer logic tree-shakable
 // in case the user only imports reactivity utilities from Vue.
