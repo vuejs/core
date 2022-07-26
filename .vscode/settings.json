@@ -16,5 +16,6 @@
   },
   "editor.suggest.snippetsPreventQuickSuggestions": false,
   "liveServer.settings.port": 5503,
-  "aiXcoder.showTrayIcon": true
+  "aiXcoder.showTrayIcon": true,
+  "commentTranslate.source": "Baidu"
 }
