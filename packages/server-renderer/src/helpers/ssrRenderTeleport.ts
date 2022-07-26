@@ -10,11 +10,16 @@ export function ssrRenderTeleport(
 ) {
   parentPush('<!--teleport start-->')
 
-  const context = parentComponent.appContext.provides[
-    ssrContextKey as any
-  ] as SSRContext
+  // in the node.js environment,
+  // [parentComponent.appContext.provides] is [Object: null prototype]
+  const convertedProvides: Record<string, any> = {}
+  Reflect.ownKeys(parentComponent.appContext.provides).forEach((key: string | symbol) => {
+    convertedProvides[key.toString()] = parentComponent.appContext.provides[key]
+  })
+  const context = convertedProvides[ssrContextKey.toString()] as SSRContext
+
   const teleportBuffers =
-    context.__teleportBuffers || (context.__teleportBuffers = {})
+    context?.__teleportBuffers || (context.__teleportBuffers = {})
   const targetBuffer = teleportBuffers[target] || (teleportBuffers[target] = [])
   // record current index of the target buffer to handle nested teleports
   // since the parent needs to be rendered before the child
