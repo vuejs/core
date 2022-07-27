@@ -66,3 +66,4 @@ export {
   onScopeDispose
 } from './effectScope'
 export { TrackOpTypes, TriggerOpTypes } from './operations'
+export { CollectionUnwrapRefs } from './collectionHandlers'

@@ -12,7 +12,7 @@ import { track, trigger, ITERATE_KEY, MAP_KEY_ITERATE_KEY } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { capitalize, hasOwn, hasChanged, toRawType, isMap } from '@vue/shared'
 
-type CollectionUnwrapRefs<T extends object, V> = 
+export type CollectionUnwrapRefs<T extends object, V> = 
   IsCollectionReactive<T> extends true
   ? ReactiveObject<V>
   : IsCollectionReadonly<T> extends true

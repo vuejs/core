@@ -4,11 +4,12 @@
   "description": "@vue/reactivity",
   "main": "index.js",
   "module": "dist/reactivity.esm-bundler.js",
-  "types": "dist/reactivity.d.ts",
+  "types": "index.d.ts",
   "unpkg": "dist/reactivity.global.js",
   "jsdelivr": "dist/reactivity.global.js",
   "files": [
     "index.js",
+    "index.d.ts",
     "dist"
   ],
   "sideEffects": false,
