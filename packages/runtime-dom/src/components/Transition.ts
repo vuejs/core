@@ -192,7 +192,7 @@ export function resolveTransitionProps(
       callHook(hook, [el, resolve])
       nextFrame(() => {
         removeTransitionClass(el, isAppear ? appearFromClass : enterFromClass)
-        if (__COMPAT__ && legacyClassEnabled) {
+        if (__COMPAT__ && legacyClassEnabled && legacyAppearFromClass && legacyEnterFromClass) {
           removeTransitionClass(
             el,
             isAppear ? legacyAppearFromClass : legacyEnterFromClass
@@ -210,7 +210,7 @@ export function resolveTransitionProps(
     onBeforeEnter(el) {
       callHook(onBeforeEnter, [el])
       addTransitionClass(el, enterFromClass)
-      if (__COMPAT__ && legacyClassEnabled) {
+      if (__COMPAT__ && legacyClassEnabled && legacyEnterFromClass) {
         addTransitionClass(el, legacyEnterFromClass)
       }
       addTransitionClass(el, enterActiveClass)
@@ -218,7 +218,7 @@ export function resolveTransitionProps(
     onBeforeAppear(el) {
       callHook(onBeforeAppear, [el])
       addTransitionClass(el, appearFromClass)
-      if (__COMPAT__ && legacyClassEnabled) {
+      if (__COMPAT__ && legacyClassEnabled && legacyAppearFromClass) {
         addTransitionClass(el, legacyAppearFromClass)
       }
       addTransitionClass(el, appearActiveClass)
@@ -229,7 +229,7 @@ export function resolveTransitionProps(
       el._isLeaving = true
       const resolve = () => finishLeave(el, done)
       addTransitionClass(el, leaveFromClass)
-      if (__COMPAT__ && legacyClassEnabled) {
+      if (__COMPAT__ && legacyClassEnabled && legacyLeaveFromClass) {
         addTransitionClass(el, legacyLeaveFromClass)
       }
       // force reflow so *-leave-from classes immediately take effect (#2593)
@@ -241,7 +241,7 @@ export function resolveTransitionProps(
           return
         }
         removeTransitionClass(el, leaveFromClass)
-        if (__COMPAT__ && legacyClassEnabled) {
+        if (__COMPAT__ && legacyClassEnabled && legacyLeaveFromClass) {
           removeTransitionClass(el, legacyLeaveFromClass)
         }
         addTransitionClass(el, leaveToClass)
