@@ -191,8 +191,40 @@ export class VueElement extends BaseClass {
             `defined as hydratable. Use \`defineSSRCustomElement\`.`
         )
       }
-      this.attachShadow({ mode: 'open' })
+      this.attachShadow({ mode: 'open' });
+      
+      nextTick(() => {
+        if (this.shadowRoot?.children) {
+          this.customNamedSlots(this.shadowRoot?.children);
+        }
+      });
     }
+  }
+  
+  private customNamedSlots(shadowRootChildren: HTMLCollection) {
+    const getAllTemplates: NodeListOf<HTMLTemplateElement> =
+      this.querySelectorAll('template');
+
+    getAllTemplates.forEach((template: HTMLTemplateElement) => {
+      for (let i = 0; i < template.attributes.length; i++) {
+        Array.from(shadowRootChildren).forEach((el: Element) => {
+          const getElToInject: Element | null = el.querySelector(
+            `[data-provide-${template.attributes[i].name}]`
+          );
+
+          if (getElToInject) {
+            let contentWrapper: HTMLSpanElement =
+              document.createElement('span');
+            contentWrapper.setAttribute(
+              `data-injected-${template.attributes[i].name}`,
+              ''
+            );
+            contentWrapper.append(template.content);
+            getElToInject.appendChild(contentWrapper);
+          }
+        });
+      }
+    });
   }
 
   attributeChangedCallback(name: string, _oldValue: string, newValue: string) {
