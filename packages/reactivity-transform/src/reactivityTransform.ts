@@ -27,7 +27,7 @@ const CONVERT_SYMBOL = '$'
 const ESCAPE_SYMBOL = '$$'
 const shorthands = ['ref', 'computed', 'shallowRef', 'toRef', 'customRef']
 const transformCheckRE =
-  /[^\w]\$(?:\$|ref|computed|shallowRef|toRef)?\s*(\(|\<)/
+  /[^\w]\$(?:\$|ref|computed|shallowRef|toRef|customRef)?\s*(\(|\<)/
 
 export function shouldTransform(src: string): boolean {
   return transformCheckRE.test(src)
