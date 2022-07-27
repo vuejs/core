@@ -89,7 +89,7 @@ export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRefSimple<T>
 export function reactive<T extends object>(target: T): UnwrapNestedRefs<T>
 export function reactive(target: object) {
   // if trying to observe a readonly proxy, return the readonly version.
-  if (isReadonly(target) || isRef(target)) {
+  if (isReadonly(target)) {
     return target
   }
   return createReactiveObject(
@@ -189,6 +189,11 @@ function createReactiveObject(
     if (__DEV__) {
       console.warn(`value cannot be made reactive: ${String(target)}`)
     }
+    return target
+  }
+
+  // target is ref, return it
+  if (!isReadonly && isRef(target)) {
     return target
   }
   // target is already a Proxy, return it.
