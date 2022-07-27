@@ -12,6 +12,13 @@
       "file": "${workspaceRoot}/packages/vue/examples/demo/mixins.html"
     },
     {
+      "name": "vue3-watch",
+      "type": "chrome",
+      "request": "launch",
+      "sourceMaps": true,
+      "file": "${workspaceRoot}/packages/vue/examples/demo/watch.html"
+    },
+    {
       "name": "vue3-fragment",
       "type": "chrome",
       "request": "launch",

@@ -281,7 +281,6 @@ export function trigger(
   oldValue?: unknown,
   oldTarget?: Map<unknown, unknown> | Set<unknown>
 ) {
-  debugger
   // track阶段收集到的依赖
   const depsMap = targetMap.get(target)
   if (!depsMap) {
@@ -373,7 +372,6 @@ export function triggerEffects(
   dep: Dep | ReactiveEffect[], // [ReactiveEffect, w, n]
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
-  debugger
   // spread into array for stabilization
   for (const effect of isArray(dep) ? dep : [...dep]) {
     // 这里就是触发了effect里面的fn或者scheduler

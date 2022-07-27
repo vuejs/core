@@ -80,7 +80,6 @@ function createArrayInstrumentations() {
 function createGetter(isReadonly = false, shallow = false) {
   // 返回函数，实现一个闭包的效果
   return function get(target: Target, key: string | symbol, receiver: object) {
-    debugger
     // 判断是否是reactive
     if (key === ReactiveFlags.IS_REACTIVE) {
       return !isReadonly
