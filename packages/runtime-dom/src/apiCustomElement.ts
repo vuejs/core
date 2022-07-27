@@ -224,6 +224,8 @@ export class VueElement extends BaseClass {
           }
         });
       }
+      
+      this.removeChild(template);
     });
   }
 
