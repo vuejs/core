@@ -38,6 +38,32 @@ describe('reactivity/ref', () => {
     expect(calls).toBe(2)
   })
 
+  it('ref wrapped in reactive should not track internal _value access', ()=>{
+    const a = ref(1)
+    const b = reactive(a)
+    let calls = 0 
+    let dummy 
+
+    effect(()=>{
+      calls++
+      dummy = b.value // this will observe both b.value and a.value access 
+    })
+    expect(calls).toBe(1)
+    expect(dummy).toBe(1)
+
+    // mutating a.value should only trigger effect once
+    calls = 0 
+    a.value = 3
+    expect(calls).toBe(1)
+    expect(dummy).toBe(3)
+
+    // mutating b.value should trigger the effect twice. (once for a.value change and once for b.value change)
+    calls = 0 
+    b.value = 5
+    expect(calls).toBe(2) 
+    expect(dummy).toBe(5)
+  })
+
   it('should make nested properties reactive', () => {
     const a = ref({
       count: 1
