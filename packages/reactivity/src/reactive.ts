@@ -11,7 +11,7 @@ import {
   shallowCollectionHandlers,
   shallowReadonlyCollectionHandlers
 } from './collectionHandlers'
-import { UnwrapRefSimple, Ref, RawSymbol, isRef } from './ref'
+import type { UnwrapRefSimple, Ref, RawSymbol } from './ref'
 
 export const enum ReactiveFlags {
   SKIP = '__v_skip',
@@ -192,10 +192,6 @@ function createReactiveObject(
     return target
   }
 
-  // target is ref, return it
-  if (!isReadonly && isRef(target)) {
-    return target
-  }
   // target is already a Proxy, return it.
   // exception: calling readonly() on a reactive object
   if (

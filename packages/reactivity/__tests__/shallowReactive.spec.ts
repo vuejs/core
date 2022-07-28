@@ -77,6 +77,17 @@ describe('shallowReactive', () => {
     expect(r.deep).toBe(deep)
   })
 
+  test('ref is called as an argument to shallowReactive', () => {
+    const obj = shallowReactive(ref(1))
+    const spy1 = jest.fn(() => obj.value)
+
+    effect(spy1)
+
+    obj.value = 2
+    expect(spy1).toBeCalledTimes(2)
+    expect(isReactive(obj)).toBe(true)
+  })
+
   describe('collections', () => {
     test('should be reactive', () => {
       const shallowSet = shallowReactive(new Set())

@@ -107,7 +107,7 @@ function createGetter(isReadonly = false, shallow = false) {
     ) {
       return target
     }
-
+    const rawTarget = toRaw(target)
     const targetIsArray = isArray(target)
 
     if (!isReadonly && targetIsArray && hasOwn(arrayInstrumentations, key)) {
@@ -120,7 +120,7 @@ function createGetter(isReadonly = false, shallow = false) {
       return res
     }
 
-    if (!isReadonly) {
+    if (!isReadonly && !isRef(rawTarget)) {
       track(target, TrackOpTypes.GET, key)
     }
 

@@ -401,26 +401,6 @@ describe('reactivity/ref', () => {
     expect(spy2).toBeCalledTimes(1)
   })
 
-  test('ref is called as an argument to reactive', () => {
-    const obj = reactive(ref(1))
-    const spy1 = jest.fn(() => obj.value)
-
-    effect(spy1)
-
-    obj.value = 2
-    expect(spy1).toBeCalledTimes(2)
-  })
-
-  test('ref is called as an argument to shallowReactive', () => {
-    const obj = shallowReactive(ref(1))
-    const spy1 = jest.fn(() => obj.value)
-
-    effect(spy1)
-
-    obj.value = 2
-    expect(spy1).toBeCalledTimes(2)
-  })
-
   test('ref should preserve value shallow/readonly-ness', () => {
     const original = {}
     const r = reactive(original)
