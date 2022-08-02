@@ -7,6 +7,7 @@ import {
 } from '../src/reactive'
 
 import { effect } from '../src/effect'
+import { Ref, isRef, ref } from '../src/ref'
 
 describe('shallowReactive', () => {
   test('should not make non-reactive properties reactive', () => {
@@ -44,6 +45,27 @@ describe('shallowReactive', () => {
     r.foo = shallowReactive({ bar: {} })
     expect(isShallow(r.foo)).toBe(true)
     expect(isReactive(r.foo.bar)).toBe(false)
+  })
+
+  // vuejs/vue#12597
+  test('should not unwrap refs', () => {
+    const foo = shallowReactive({
+      bar: ref(123)
+    })
+    expect(isRef(foo.bar)).toBe(true)
+    expect(foo.bar.value).toBe(123)
+  })
+
+  // vuejs/vue#12688
+  test('should not mutate refs', () => {
+    const original = ref(123)
+    const foo = shallowReactive<{ bar: Ref<number> | number }>({
+      bar: original
+    })
+    expect(foo.bar).toBe(original)
+    foo.bar = 234
+    expect(foo.bar).toBe(234)
+    expect(original.value).toBe(123)
   })
 
   test('should respect shallow/deep versions of same target on access', () => {

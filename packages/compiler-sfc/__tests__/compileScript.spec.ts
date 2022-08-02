@@ -461,6 +461,19 @@ defineExpose({ foo: 123 })
       expect(content).toMatch(`return { a, b, Baz }`)
       assertCode(content)
     })
+
+    // vuejs/vue#12591
+    test('v-on inline statement', () => {
+      // should not error
+      compile(`
+      <script setup lang="ts">
+        import { foo } from './foo'
+      </script>
+      <template>
+        <div @click="$emit('update:a');"></div>
+      </tempalte>
+      `)
+    })
   })
 
   describe('inlineTemplate mode', () => {
