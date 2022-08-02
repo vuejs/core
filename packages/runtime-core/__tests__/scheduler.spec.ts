@@ -179,7 +179,7 @@ describe('scheduler', () => {
         calls.push('job1')
       }
       const cb1 = () => {
-        // queueJob in postFlushCb
+        // queueJob in preFlushCb
         calls.push('cb1')
         queueJob(job1)
       }
