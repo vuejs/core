@@ -32,3 +32,23 @@ return function render(_ctx, _cache) {
   return (_openBlock(), _createElementBlock(\\"div\\", null, _hoisted_2))
 }"
 `;
+
+exports[`stringify static html stringify v-html 1`] = `
+"const { createElementVNode: _createElementVNode, createStaticVNode: _createStaticVNode } = Vue
+
+const _hoisted_1 = /*#__PURE__*/_createStaticVNode(\\"<pre data-type=\\\\\\"js\\\\\\"><code><span>show-it </span></code></pre><div class><span class>1</span><span class>2</span></div>\\", 2)
+
+return function render(_ctx, _cache) {
+  return _hoisted_1
+}"
+`;
+
+exports[`stringify static html stringify v-text 1`] = `
+"const { createElementVNode: _createElementVNode, createStaticVNode: _createStaticVNode } = Vue
+
+const _hoisted_1 = /*#__PURE__*/_createStaticVNode(\\"<pre data-type=\\\\\\"js\\\\\\"><code>&lt;span&gt;show-it &lt;/span&gt;</code></pre><div class><span class>1</span><span class>2</span></div>\\", 2)
+
+return function render(_ctx, _cache) {
+  return _hoisted_1
+}"
+`;

@@ -4,6 +4,7 @@ import {
   ComponentInternalInstance,
   DirectiveBinding,
   Fragment,
+  FunctionalComponent,
   mergeProps,
   ssrUtils,
   Static,
@@ -112,12 +113,17 @@ function renderComponentSubTree(
   const comp = instance.type as Component
   const { getBuffer, push } = createBuffer()
   if (isFunction(comp)) {
-    renderVNode(
-      push,
-      (instance.subTree = renderComponentRoot(instance)),
-      instance,
-      slotScopeId
-    )
+    let root = renderComponentRoot(instance)
+    // #5817 scope ID attrs not falling through if functional component doesn't
+    // have props
+    if (!(comp as FunctionalComponent).props) {
+      for (const key in instance.attrs) {
+        if (key.startsWith(`data-v-`)) {
+          ;(root.props || (root.props = {}))[key] = ``
+        }
+      }
+    }
+    renderVNode(push, (instance.subTree = root), instance, slotScopeId)
   } else {
     if (
       (!instance.render || instance.render === NOOP) &&
@@ -188,11 +194,8 @@ function renderComponentSubTree(
         slotScopeId
       )
     } else {
-      warn(
-        `Component ${
-          comp.name ? `${comp.name} ` : ``
-        } is missing template or render function.`
-      )
+      const componentName = comp.name || comp.__file || `<Anonymous>`
+      warn(`Component ${componentName} is missing template or render function.`)
       push(`<!---->`)
     }
   }
@@ -356,7 +359,9 @@ function renderTeleportVNode(
   const target = vnode.props && vnode.props.to
   const disabled = vnode.props && vnode.props.disabled
   if (!target) {
-    warn(`[@vue/server-renderer] Teleport is missing target prop.`)
+    if (!disabled) {
+      warn(`[@vue/server-renderer] Teleport is missing target prop.`)
+    }
     return []
   }
   if (!isString(target)) {

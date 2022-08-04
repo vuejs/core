@@ -28,11 +28,11 @@ describe('toDisplayString', () => {
     }
     expect(toDisplayString(objWithToStringOverride)).toBe('override')
 
-    const objWithNonInvokeableToString = {
+    const objWithNonInvokableToString = {
       foo: 555,
       toString: null
     }
-    expect(toDisplayString(objWithNonInvokeableToString)).toBe(
+    expect(toDisplayString(objWithNonInvokableToString)).toBe(
       `{
   "foo": 555,
   "toString": null

@@ -25,6 +25,17 @@ describe('compiler sfc: rewriteDefault', () => {
        export { a as b,  a as c}
       const script = a"
     `)
+
+    expect(
+      rewriteDefault(
+        `const a = 1 \n export { a as b, a as default    , a as c}`,
+        'script'
+      )
+    ).toMatchInlineSnapshot(`
+      "const a = 1 
+       export { a as b,  a as c}
+      const script = a"
+    `)
   })
 
   test('w/ comments', async () => {
@@ -62,6 +73,81 @@ describe('compiler sfc: rewriteDefault', () => {
        a as c}
       // export { myFunction as default }
       const script = a"
+    `)
+
+    expect(
+      rewriteDefault(
+        `const a = 1 \n export {\n a as b,\n a as default      ,\n a as c}\n` +
+          `// export { myFunction as default }`,
+        'script'
+      )
+    ).toMatchInlineSnapshot(`
+      "const a = 1 
+       export {
+       a as b,
+       
+       a as c}
+      // export { myFunction as default }
+      const script = a"
+    `)
+  })
+
+  test(`export { default } from '...'`, async () => {
+    expect(
+      rewriteDefault(`export { default, foo } from './index.js'`, 'script')
+    ).toMatchInlineSnapshot(`
+    "import { default as __VUE_DEFAULT__ } from './index.js'
+    export {  foo } from './index.js'
+    const script = __VUE_DEFAULT__"
+    `)
+
+    expect(
+      rewriteDefault(`export { default    , foo } from './index.js'`, 'script')
+    ).toMatchInlineSnapshot(`
+    "import { default as __VUE_DEFAULT__ } from './index.js'
+    export {  foo } from './index.js'
+    const script = __VUE_DEFAULT__"
+    `)
+
+    expect(
+      rewriteDefault(`export { foo,   default } from './index.js'`, 'script')
+    ).toMatchInlineSnapshot(`
+    "import { default as __VUE_DEFAULT__ } from './index.js'
+    export { foo,    } from './index.js'
+    const script = __VUE_DEFAULT__"
+    `)
+
+    expect(
+      rewriteDefault(
+        `export { foo as default, bar } from './index.js'`,
+        'script'
+      )
+    ).toMatchInlineSnapshot(`
+    "import { foo } from './index.js'
+    export {  bar } from './index.js'
+    const script = foo"
+    `)
+
+    expect(
+      rewriteDefault(
+        `export { foo as default     , bar } from './index.js'`,
+        'script'
+      )
+    ).toMatchInlineSnapshot(`
+    "import { foo } from './index.js'
+    export {  bar } from './index.js'
+    const script = foo"
+    `)
+
+    expect(
+      rewriteDefault(
+        `export { bar,   foo as default } from './index.js'`,
+        'script'
+      )
+    ).toMatchInlineSnapshot(`
+    "import { foo } from './index.js'
+    export { bar,    } from './index.js'
+    const script = foo"
     `)
   })
 

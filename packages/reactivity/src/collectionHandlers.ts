@@ -26,10 +26,12 @@ function get(
   target = (target as any)[ReactiveFlags.RAW]
   const rawTarget = toRaw(target)
   const rawKey = toRaw(key)
-  if (key !== rawKey) {
-    !isReadonly && track(rawTarget, TrackOpTypes.GET, key)
+  if (!isReadonly) {
+    if (key !== rawKey) {
+      track(rawTarget, TrackOpTypes.GET, key)
+    }
+    track(rawTarget, TrackOpTypes.GET, rawKey)
   }
-  !isReadonly && track(rawTarget, TrackOpTypes.GET, rawKey)
   const { has } = getProto(rawTarget)
   const wrap = isShallow ? toShallow : isReadonly ? toReadonly : toReactive
   if (has.call(rawTarget, key)) {
@@ -47,10 +49,12 @@ function has(this: CollectionTypes, key: unknown, isReadonly = false): boolean {
   const target = (this as any)[ReactiveFlags.RAW]
   const rawTarget = toRaw(target)
   const rawKey = toRaw(key)
-  if (key !== rawKey) {
-    !isReadonly && track(rawTarget, TrackOpTypes.HAS, key)
+  if (!isReadonly) {
+    if (key !== rawKey) {
+      track(rawTarget, TrackOpTypes.HAS, key)
+    }
+    track(rawTarget, TrackOpTypes.HAS, rawKey)
   }
-  !isReadonly && track(rawTarget, TrackOpTypes.HAS, rawKey)
   return key === rawKey
     ? target.has(key)
     : target.has(key) || target.has(rawKey)

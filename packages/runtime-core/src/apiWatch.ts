@@ -230,7 +230,7 @@ function doWatch(
     //   console.log(`x is ${newX} and y is ${newY}`);
     // });
     isMultiSource = true
-    forceTrigger = source.some(isReactive)
+    forceTrigger = source.some(s => isReactive(s) || isShallow(s))
     getter = () =>
       source.map(s => {
         if (isRef(s)) {

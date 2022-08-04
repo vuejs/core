@@ -616,5 +616,11 @@ describe('compiler: hoistStatic transform', () => {
       expect(root.hoists.length).toBe(0)
       expect(generate(root).code).toMatchSnapshot()
     })
+
+    test('should NOT hoist SVG with directives', () => {
+      const root = transformWithHoist(`<div><svg v-foo><path d="M2,3H5.5L12"/></svg></div>`)
+      expect(root.hoists.length).toBe(2)
+      expect(generate(root).code).toMatchSnapshot()
+    })
   })
 })

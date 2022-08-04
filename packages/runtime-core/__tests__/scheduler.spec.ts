@@ -179,7 +179,7 @@ describe('scheduler', () => {
         calls.push('job1')
       }
       const cb1 = () => {
-        // queueJob in postFlushCb
+        // queueJob in preFlushCb
         calls.push('cb1')
         queueJob(job1)
       }
@@ -539,18 +539,6 @@ describe('scheduler', () => {
     queuePostFlushCb(cb)
     await nextTick()
     expect(count).toBe(5)
-  })
-
-  test('should prevent duplicate queue', async () => {
-    let count = 0
-    const job = () => {
-      count++
-    }
-    job.cb = true
-    queueJob(job)
-    queueJob(job)
-    await nextTick()
-    expect(count).toBe(1)
   })
 
   // #1947 flushPostFlushCbs should handle nested calls

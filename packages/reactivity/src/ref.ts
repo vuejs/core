@@ -6,12 +6,20 @@ import {
 } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { isArray, hasChanged, IfAny } from '@vue/shared'
-import { isProxy, toRaw, isReactive, toReactive } from './reactive'
+import {
+  isProxy,
+  toRaw,
+  isReactive,
+  toReactive,
+  isReadonly,
+  isShallow
+} from './reactive'
 import type { ShallowReactiveMarker } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
 import { createDep, Dep } from './dep'
 
 declare const RefSymbol: unique symbol
+export declare const RawSymbol: unique symbol
 
 export interface Ref<T = any> {
   value: T
@@ -111,10 +119,12 @@ class RefImpl<T> {
   }
 
   set value(newVal) {
-    newVal = this.__v_isShallow ? newVal : toRaw(newVal)
+    const useDirectValue =
+      this.__v_isShallow || isShallow(newVal) || isReadonly(newVal)
+    newVal = useDirectValue ? newVal : toRaw(newVal)
     if (hasChanged(newVal, this._rawValue)) {
       this._rawValue = newVal
-      this._value = this.__v_isShallow ? newVal : toReactive(newVal)
+      this._value = useDirectValue ? newVal : toReactive(newVal)
       triggerRefValue(this, newVal)
     }
   }
@@ -296,6 +306,7 @@ export type UnwrapRefSimple<T> = T extends
   | BaseTypes
   | Ref
   | RefUnwrapBailTypes[keyof RefUnwrapBailTypes]
+  | { [RawSymbol]?: true }
   ? T
   : T extends Array<any>
   ? { [K in keyof T]: UnwrapRefSimple<T[K]> }

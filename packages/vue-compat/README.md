@@ -281,7 +281,7 @@ Features that start with `COMPILER_` are compiler-specific: if you are using the
 
 | ID                 | Type | Description                           | Docs                                     |
 | ------------------ | ---- | ------------------------------------- | ---------------------------------------- |
-| TRANSITION_CLASSES | ⭘    | Transtion enter/leave classes changed | [link](https://v3-migration.vuejs.org/breaking-changes/transition.html) |
+| TRANSITION_CLASSES | ⭘    | Transition enter/leave classes changed | [link](https://v3-migration.vuejs.org/breaking-changes/transition.html) |
 
 ### Fully Compatible
 
