@@ -13,9 +13,15 @@ describe('defineProps w/ type declaration', () => {
   // type declaration
   const props = defineProps<{
     foo: string
+    x?: string
   }>()
   // explicitly declared type should be refined
   expectType<string>(props.foo)
+
+  // force check the actual type doing expectType<string|undefined>(props.x) does not
+  // error when is not undefined, this way it does
+  // #6420
+  expectType<typeof props['x']>({} as unknown as string | undefined)
   // @ts-expect-error
   props.bar
 })

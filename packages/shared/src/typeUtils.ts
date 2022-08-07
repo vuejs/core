@@ -10,3 +10,12 @@ export type LooseRequired<T> = { [P in string & keyof T]: T[P] }
 // If the the type T accepts type "any", output type Y, otherwise output type N.
 // https://stackoverflow.com/questions/49927523/disallow-call-with-any/49928360#49928360
 export type IfAny<T, Y, N> = 0 extends 1 & T ? Y : N
+
+// Extract optional properties from a type
+// https://stackoverflow.com/a/53899815
+export type OptionalPropertyOf<T extends object> = Exclude<
+  {
+    [K in keyof T]: T extends Record<K, T[K]> ? never : K
+  }[keyof T],
+  undefined
+>

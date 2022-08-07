@@ -58,7 +58,14 @@ export function defineProps<
   PP extends ComponentObjectPropsOptions = ComponentObjectPropsOptions
 >(props: PP): Readonly<ExtractPropTypes<PP>>
 // overload 3: typed-based declaration
-export function defineProps<TypeProps>(): Readonly<TypeProps>
+export function defineProps<T>(): T extends object
+  ? {
+      // use needed to remove the optional property
+      [K in keyof Required<T>]: K extends OptionalPropertyOf<T>
+        ? T[K] | undefined
+        : T[K]
+    }
+  : Readonly<T>
 // implementation
 export function defineProps() {
   if (__DEV__) {
