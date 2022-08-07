@@ -1,5 +1,5 @@
 import { ComponentPropsOptions } from '@vue/runtime-core'
-import { isArray, isPromise, isFunction } from '@vue/shared'
+import { isArray, isPromise, isFunction, OptionalPropertyOf } from '@vue/shared'
 import {
   getCurrentInstance,
   setCurrentInstance,
