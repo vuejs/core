@@ -158,10 +158,10 @@ function createSetter(shallow = false) {
     if (isReadonly(oldValue) && isRef(oldValue) && !isRef(value)) {
       return false
     }
-    if (!shallow && !isReadonly(value)) {
-      if (!isShallow(value)) {
-        value = toRaw(value)
+    if (!shallow) {
+      if (!isShallow(value) && !isReadonly(value)) {
         oldValue = toRaw(oldValue)
+        value = toRaw(value)
       }
       if (!isArray(target) && isRef(oldValue) && !isRef(value)) {
         oldValue.value = value
