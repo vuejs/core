@@ -7,6 +7,7 @@ import {
   hyphenate,
   isArray,
   isFunction,
+  isObject,
   isOn,
   toNumber,
   UnionToIntersection
@@ -226,7 +227,7 @@ export function normalizeEmitsOptions(
   }
 
   if (!raw && !hasExtends) {
-    if (comp && typeof comp === 'object') {
+    if (isObject(comp)) {
       cache.set(comp, null)
     }
     return null
@@ -238,7 +239,7 @@ export function normalizeEmitsOptions(
     extend(normalized, raw)
   }
 
-  if (comp && typeof comp === 'object') {
+  if (isObject(comp)) {
     cache.set(comp, normalized)
   }
   return normalized
