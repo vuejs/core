@@ -1309,7 +1309,7 @@ type EventHandlers<E> = {
 import * as RuntimeCore from '@vue/runtime-core'
 
 type ReservedProps = {
-  key?: string | number | symbol
+  key?: String | string | number | symbol
   ref?: RuntimeCore.VNodeRef
   ref_for?: boolean
   ref_key?: string

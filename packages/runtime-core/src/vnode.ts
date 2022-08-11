@@ -95,7 +95,7 @@ export type VNodeHook =
 
 // https://github.com/microsoft/TypeScript/issues/33099
 export type VNodeProps = {
-  key?: string | number | symbol
+  key?: String | string | number | symbol
   ref?: VNodeRef
   ref_for?: boolean
   ref_key?: string
