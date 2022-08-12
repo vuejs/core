@@ -809,7 +809,9 @@ export function compileScript(
         if (destructured) {
           defaultString = `default: ${destructured}`
         } else if (hasStaticDefaults) {
-          const prop = propsRuntimeDefaults!.properties.find(node => {
+          const prop = (
+            propsRuntimeDefaults as ObjectExpression
+          ).properties.find(node => {
             if (node.type === 'SpreadElement') return false
             return resolveObjectKey(node.key, node.computed) === key
           }) as ObjectProperty | ObjectMethod
@@ -897,7 +899,7 @@ export function compileScript(
           m.key.type === 'Identifier'
         ) {
           if (
-            propsRuntimeDefaults!.properties.some(p => {
+            (propsRuntimeDefaults as ObjectExpression).properties.some(p => {
               if (p.type === 'SpreadElement') return false
               return (
                 resolveObjectKey(p.key, p.computed) ===
