@@ -290,7 +290,7 @@ export function compileScript(
   let hasDefaultExportName = false
   let hasDefaultExportRender = false
   let propsRuntimeDecl: Node | undefined
-  let propsRuntimeDefaults: ObjectExpression | undefined
+  let propsRuntimeDefaults: Node | undefined
   let propsDestructureDecl: Node | undefined
   let propsDestructureRestId: string | undefined
   let propsTypeDecl: PropsDeclType | undefined
@@ -528,16 +528,14 @@ export function compileScript(
           node.callee
         )
       }
-      propsRuntimeDefaults = node.arguments[1] as ObjectExpression
-      if (
-        !propsRuntimeDefaults ||
-        propsRuntimeDefaults.type !== 'ObjectExpression'
-      ) {
+      propsRuntimeDefaults = node.arguments[1]
+      if (!propsRuntimeDefaults) {
         error(
-          `The 2nd argument of ${WITH_DEFAULTS} must be an object literal.`,
+          `The 2nd argument of ${WITH_DEFAULTS} is required.`,
           propsRuntimeDefaults || node
         )
       }
+      checkInvalidScopeReference(propsRuntimeDefaults, WITH_DEFAULTS)
     } else {
       error(
         `${WITH_DEFAULTS}' first argument must be a ${DEFINE_PROPS} call.`,
