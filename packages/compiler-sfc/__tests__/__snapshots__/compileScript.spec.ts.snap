@@ -653,6 +653,27 @@ return {  }
 }"
 `;
 
+exports[`SFC compile <script setup> defineProps starts with parenthesis 1`] = `
+"export default {
+  props: {
+            foo: String
+          },
+  setup(__props, { expose }) {
+  expose();
+
+const props = __props;
+
+          
+          (() => {
+             console.log(props)
+          })();
+      
+return { props }
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> defineProps w/ external definition 1`] = `
 "import { propsModel } from './props'
     

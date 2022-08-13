@@ -96,6 +96,22 @@ const bar = 1
   props: propsModel,`)
   })
 
+  // #6428
+  test('defineProps starts with parenthesis', () => {
+    const { content } = compile(`
+      <script setup>
+          const props = defineProps({
+            foo: String
+          });
+          (() => {
+             console.log(props)
+          })();
+      </script>
+      `)
+
+    assertCode(content)
+  })
+
   // #4764
   test('defineProps w/ leading code', () => {
     const { content } = compile(`
@@ -1703,21 +1719,6 @@ describe('SFC analyze <script> bindings', () => {
       )
       expect(content).not.toMatch(`name: 'FooBar'`)
       expect(content).toMatch(`name: 'Baz'`)
-      assertCode(content)
-    })
-
-    test('defineProps starts with parenthesis', () => {
-      const { content } = compile(`
-        <script setup>
-            const props = defineProps({
-              foo: String
-            });
-            (() => {
-               console.log(props)
-            })();
-        </script>
-        `)
-
       assertCode(content)
     })
   })
