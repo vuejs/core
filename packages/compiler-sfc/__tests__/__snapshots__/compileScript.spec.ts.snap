@@ -12,27 +12,6 @@ return { a }
 }"
 `;
 
-exports[`SFC analyze <script> bindings auto name inference defineProps starts with parenthesis 1`] = `
-"export default {
-  props: {
-              foo: String
-            },
-  setup(__props, { expose }) {
-  expose();
-
-const props = __props;
-
-            
-            (() => {
-               console.log(props)
-            })();
-        
-return { props }
-}
-
-}"
-`;
-
 exports[`SFC analyze <script> bindings auto name inference do not overwrite manual name (call) 1`] = `
 "import { defineComponent } from 'vue'
         const __default__ = defineComponent({
