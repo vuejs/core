@@ -42,7 +42,7 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
     el.textContent = text
   },
 
-  parentNode: node => node.parentNode as Element | null,
+  parentNode: node => (node ? node.parentNode : null) as Element | null,
 
   nextSibling: node => node.nextSibling,
 

@@ -12,7 +12,8 @@ import {
   watchEffect,
   onUnmounted,
   onErrorCaptured,
-  shallowRef
+  shallowRef,
+  KeepAlive
 } from '@vue/runtime-test'
 import { createApp } from 'vue'
 
@@ -1252,5 +1253,55 @@ describe('Suspense', () => {
     expect(
       `A component with async setup() must be nested in a <Suspense>`
     ).toHaveBeenWarned()
+  })
+
+  // #6416
+  
+  test('test keepalive with suspense', async () => {
+    const Async = defineAsyncComponent({
+      render() {
+        return h('div', 'async')
+      }
+    })
+    const sync = {
+      render() {
+        return h('div', 'sync')
+      }
+    }
+    const components = [Async, sync]
+    const viewRef = ref(0)
+    const root = nodeOps.createElement('div')
+    const App = {
+      render() {
+        return h(KeepAlive, null, {
+          default: () => {
+            return h(Suspense, null, {
+              default: h(components[viewRef.value]),
+              fallback: h('div', 'Loading-dynamic-components')
+            })
+          }
+        })
+      }
+    }
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<div>Loading-dynamic-components</div>`)
+
+    viewRef.value = 1
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>sync</div>`)
+
+    viewRef.value = 0
+    await nextTick()
+
+    expect(serializeInner(root)).toBe('<!---->')
+
+    await Promise.all(deps)
+    await nextTick()
+    // when async resolve,it should be <div>async</div>
+    expect(serializeInner(root)).toBe('<div>async</div>')
+
+    viewRef.value = 1
+    await nextTick() //TypeError: Cannot read properties of null (reading 'parentNode'),This has been fixed
+    expect(serializeInner(root)).toBe(`<div>sync</div>`) 
   })
 })

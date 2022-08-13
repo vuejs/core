@@ -321,7 +321,7 @@ function patchSuspense(
       triggerEvent(n2, 'onPending')
       // mount pending branch in off-dom container
       suspense.pendingBranch = newBranch
-      suspense.pendingId++
+      if (suspense.pendingId > 0) suspense.pendingId--
       patch(
         null,
         newBranch,
