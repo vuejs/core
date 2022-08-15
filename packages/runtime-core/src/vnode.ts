@@ -413,7 +413,7 @@ function createBaseVNode(
 ) {
   const vnode = {
     __v_isVNode: true,
-    __v_skip: true,
+    [ReactiveFlags.SKIP]: true,
     type,
     props,
     key: props && normalizeKey(props),
@@ -608,7 +608,7 @@ export function cloneVNode<T, U>(
   const mergedProps = extraProps ? mergeProps(props || {}, extraProps) : props
   const cloned: VNode = {
     __v_isVNode: true,
-    __v_skip: true,
+    [ReactiveFlags.SKIP]: true,
     type: vnode.type,
     props: mergedProps,
     key: mergedProps && normalizeKey(mergedProps),
