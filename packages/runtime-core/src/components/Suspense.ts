@@ -775,7 +775,8 @@ export function queueEffectWithSuspense(
 function setActiveBranch(suspense: SuspenseBoundary, branch: VNode) {
   suspense.activeBranch = branch
   const { vnode, parentComponent } = suspense
-  const el = (vnode.el = branch.el)
+  const el = branch.el
+  if (el) vnode.el = el
   // in case suspense is the root node of a component,
   // recursively update the HOC el
   if (parentComponent && parentComponent.subTree === vnode) {
