@@ -127,6 +127,8 @@ export function processExpression(
       // ({ x } = y)
       const isDestructureAssignment =
         parent && isInDestructureAssignment(parent, parentStack)
+      // new constructor
+      const isNewExpression = parent && parent.type === 'NewExpression'
 
       if (
         type === BindingTypes.SETUP_CONST ||
@@ -137,6 +139,9 @@ export function processExpression(
       } else if (type === BindingTypes.SETUP_REF) {
         return `${raw}.value`
       } else if (type === BindingTypes.SETUP_MAYBE_REF) {
+        if (isNewExpression) {
+          return `${context.helperString(UNREF)}(${node.content})`
+        }
         // const binding that may or may not be ref
         // if it's not a ref, then assignments don't make sense -
         // so we ignore the non-ref assignment case and generate code
@@ -269,33 +274,37 @@ export function processExpression(
 
   walkIdentifiers(
     ast,
-    (node, parent, _, isReferenced, isLocal) => {
-      if (isStaticPropertyKey(node, parent!)) {
+    (id, parent, _, isReferenced, isLocal) => {
+      if (isStaticPropertyKey(id, parent!)) {
         return
       }
       // v2 wrapped filter call
-      if (__COMPAT__ && node.name.startsWith('_filter_')) {
+      if (__COMPAT__ && id.name.startsWith('_filter_')) {
         return
       }
 
-      const needPrefix = isReferenced && canPrefix(node)
+      const needPrefix = isReferenced && canPrefix(id)
       if (needPrefix && !isLocal) {
         if (isStaticProperty(parent!) && parent.shorthand) {
           // property shorthand like { foo }, we need to add the key since
           // we rewrite the value
-          ;(node as QualifiedId).prefix = `${node.name}: `
+          ;(id as QualifiedId).prefix = `${id.name}: `
         }
-        node.name = rewriteIdentifier(node.name, parent, node)
-        ids.push(node as QualifiedId)
+        if (parent && parent.type === 'NewExpression') {
+          node.content = rewriteIdentifier(id.name, parent, id)
+        } else {
+          id.name = rewriteIdentifier(id.name, parent, id)
+          ids.push(id as QualifiedId)
+        }
       } else {
         // The identifier is considered constant unless it's pointing to a
         // local scope variable (a v-for alias, or a v-slot prop)
         if (!(needPrefix && isLocal) && !bailConstant) {
-          ;(node as QualifiedId).isConstant = true
+          ;(id as QualifiedId).isConstant = true
         }
         // also generate sub-expressions for other identifiers for better
         // source map support. (except for property keys which are static)
-        ids.push(node as QualifiedId)
+        ids.push(id as QualifiedId)
       }
     },
     true, // invoke on ALL identifiers

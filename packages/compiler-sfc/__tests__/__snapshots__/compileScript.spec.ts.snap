@@ -1154,6 +1154,23 @@ return (_ctx, _cache) => {
 }"
 `;
 
+exports[`SFC compile <script setup> inlineTemplate mode template new constructor codegen 1`] = `
+"import { unref as _unref, toDisplayString as _toDisplayString, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
+
+import A from './A.js'
+        
+export default {
+  setup(__props) {
+
+        
+return (_ctx, _cache) => {
+  return (_openBlock(), _createElementBlock(\\"div\\", null, _toDisplayString(_unref(new A())), 1 /* TEXT */))
+}
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> inlineTemplate mode template update expression codegen 1`] = `
 "import { createElementVNode as _createElementVNode, isRef as _isRef, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 

@@ -703,6 +703,20 @@ defineExpose({ foo: 123 })
       assertCode(content)
     })
 
+    test('template new constructor codegen', () => {
+      const { content } = compile(
+        `<script setup>
+        import A from './A.js'
+        </script>
+        <template>
+          <div>{{new A()}}</div>
+        </template>
+        `,
+        { inlineTemplate: true }
+      )
+      assertCode(content)
+    })
+
     test('ssr codegen', () => {
       const { content } = compile(
         `
