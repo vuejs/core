@@ -129,6 +129,7 @@ describe('ssr: inject <style vars>', () => {
     expect(result.ast.helpers).toMatchInlineSnapshot(`
       Array [
         Symbol(mergeProps),
+        Symbol(unref),
       ]
     `)
   })
