@@ -36,7 +36,8 @@ import {
   Node,
   Identifier,
   AssignmentExpression,
-  UpdateExpression
+  UpdateExpression,
+  isNewExpression
 } from '@babel/types'
 import { validateBrowserExpression } from '../validateExpression'
 import { parse } from '@babel/parser'
@@ -127,6 +128,8 @@ export function processExpression(
       // ({ x } = y)
       const isDestructureAssignment =
         parent && isInDestructureAssignment(parent, parentStack)
+      // new Class()
+      const isNewAssignment = parent && isNewExpression(parent)
 
       if (
         type === BindingTypes.SETUP_CONST ||
@@ -143,6 +146,8 @@ export function processExpression(
         // that assumes the value to be a ref for more efficiency
         return isAssignmentLVal || isUpdateArg || isDestructureAssignment
           ? `${raw}.value`
+          : isNewAssignment
+          ? `(${context.helperString(UNREF)}(${raw}))`
           : `${context.helperString(UNREF)}(${raw})`
       } else if (type === BindingTypes.SETUP_LET) {
         if (isAssignmentLVal) {

@@ -538,13 +538,14 @@ defineExpose({ foo: 123 })
     })
 
     test('avoid unref() when necessary', () => {
-      // function, const, component import
+      // function, const, class, component import
       const { content } = compile(
         `<script setup>
         import { ref } from 'vue'
         import Foo, { bar } from './Foo.vue'
         import other from './util'
         import * as tree from './tree'
+        import TestClass from './TestClass'
         const count = ref(0)
         const constant = {}
         const maybe = foo()
@@ -553,7 +554,7 @@ defineExpose({ foo: 123 })
         </script>
         <template>
           <Foo>{{ bar }}</Foo>
-          <div @click="fn">{{ count }} {{ constant }} {{ maybe }} {{ lett }} {{ other }}</div>
+          <div @click="fn">{{ count }} {{ constant }} {{ maybe }} {{ lett }} {{ other }} {{ new TestClass() }}</div>
           {{ tree.foo() }}
         </template>
         `,
@@ -565,6 +566,8 @@ defineExpose({ foo: 123 })
       expect(content).toMatch(`unref(bar)`)
       // should unref other imports
       expect(content).toMatch(`unref(other)`)
+      // #6483 should add an extra set of parentheses after new
+      expect(content).toMatch(`new (_unref(TestClass))()`)
       // no need to unref constant literals
       expect(content).not.toMatch(`unref(constant)`)
       // should directly use .value for known refs
