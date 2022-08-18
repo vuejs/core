@@ -982,7 +982,7 @@ return (_ctx, _cache) => {
       ]),
       _: 1 /* STABLE */
     }),
-    _createElementVNode(\\"div\\", { onClick: fn }, _toDisplayString(count.value) + \\" \\" + _toDisplayString(constant) + \\" \\" + _toDisplayString(_unref(maybe)) + \\" \\" + _toDisplayString(_unref(lett)) + \\" \\" + _toDisplayString(_unref(other)) + \\" \\" + _toDisplayString(new (_unref(TestClass))()), 1 /* TEXT */),
+    _createElementVNode(\\"div\\", { onClick: fn }, _toDisplayString(count.value) + \\" \\" + _toDisplayString(constant) + \\" \\" + _toDisplayString(_unref(maybe)) + \\" \\" + _toDisplayString(_unref(lett)) + \\" \\" + _toDisplayString(_unref(other)) + \\" \\" + _toDisplayString(_unref(new (_unref(TestClass))())), 1 /* TEXT */),
     _createTextVNode(\\" \\" + _toDisplayString(tree.foo()), 1 /* TEXT */)
   ], 64 /* STABLE_FRAGMENT */))
 }

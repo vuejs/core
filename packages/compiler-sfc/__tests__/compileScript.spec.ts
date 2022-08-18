@@ -567,7 +567,7 @@ defineExpose({ foo: 123 })
       // should unref other imports
       expect(content).toMatch(`unref(other)`)
       // #6483 should add an extra set of parentheses after new
-      expect(content).toMatch(`new (_unref(TestClass))()`)
+      expect(content).toMatch(`_unref(new (_unref(TestClass))())`)
       // no need to unref constant literals
       expect(content).not.toMatch(`unref(constant)`)
       // should directly use .value for known refs

@@ -216,6 +216,13 @@ export function processExpression(
     return `_ctx.${raw}`
   }
 
+  const rewriteNewExpression = (raw: string, id: Identifier, parent: Node) => {
+    return `${context.helperString(UNREF)}(${raw.slice(
+      0,
+      id.start! - 1
+    )}${rewriteIdentifier(id.name, parent, id)}${raw.slice(id.end! - 1)})`
+  }
+
   // fast path if expression is a simple identifier.
   const rawExp = node.content
   // bail constant on parens (function invocation) and dot (member access)
@@ -274,33 +281,38 @@ export function processExpression(
 
   walkIdentifiers(
     ast,
-    (node, parent, _, isReferenced, isLocal) => {
-      if (isStaticPropertyKey(node, parent!)) {
+    (id, parent, _, isReferenced, isLocal) => {
+      if (isStaticPropertyKey(id, parent!)) {
         return
       }
       // v2 wrapped filter call
-      if (__COMPAT__ && node.name.startsWith('_filter_')) {
+      if (__COMPAT__ && id.name.startsWith('_filter_')) {
         return
       }
 
-      const needPrefix = isReferenced && canPrefix(node)
+      const needPrefix = isReferenced && canPrefix(id)
       if (needPrefix && !isLocal) {
         if (isStaticProperty(parent!) && parent.shorthand) {
           // property shorthand like { foo }, we need to add the key since
           // we rewrite the value
-          ;(node as QualifiedId).prefix = `${node.name}: `
+          ;(id as QualifiedId).prefix = `${id.name}: `
         }
-        node.name = rewriteIdentifier(node.name, parent, node)
-        ids.push(node as QualifiedId)
+
+        if (parent && isNewExpression(parent)) {
+          node.content = rewriteNewExpression(node.content, id, parent)
+        } else {
+          id.name = rewriteIdentifier(id.name, parent, id)
+          ids.push(id as QualifiedId)
+        }
       } else {
         // The identifier is considered constant unless it's pointing to a
         // local scope variable (a v-for alias, or a v-slot prop)
         if (!(needPrefix && isLocal) && !bailConstant) {
-          ;(node as QualifiedId).isConstant = true
+          ;(id as QualifiedId).isConstant = true
         }
         // also generate sub-expressions for other identifiers for better
         // source map support. (except for property keys which are static)
-        ids.push(node as QualifiedId)
+        ids.push(id as QualifiedId)
       }
     },
     true, // invoke on ALL identifiers
