@@ -128,8 +128,6 @@ export function processExpression(
       // ({ x } = y)
       const isDestructureAssignment =
         parent && isInDestructureAssignment(parent, parentStack)
-      // new Class()
-      const isNewAssignment = parent && isNewExpression(parent)
 
       if (
         type === BindingTypes.SETUP_CONST ||
@@ -146,8 +144,6 @@ export function processExpression(
         // that assumes the value to be a ref for more efficiency
         return isAssignmentLVal || isUpdateArg || isDestructureAssignment
           ? `${raw}.value`
-          : isNewAssignment
-          ? `(${context.helperString(UNREF)}(${raw}))`
           : `${context.helperString(UNREF)}(${raw})`
       } else if (type === BindingTypes.SETUP_LET) {
         if (isAssignmentLVal) {
@@ -220,7 +216,7 @@ export function processExpression(
     return `${context.helperString(UNREF)}(${raw.slice(
       0,
       id.start! - 1
-    )}${rewriteIdentifier(id.name, parent, id)}${raw.slice(id.end! - 1)})`
+    )}(${rewriteIdentifier(id.name, parent, id)})${raw.slice(id.end! - 1)})`
   }
 
   // fast path if expression is a simple identifier.
