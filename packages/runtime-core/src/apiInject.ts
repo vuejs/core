@@ -6,7 +6,7 @@ import { warn } from './warning'
 
 export interface InjectionKey<T> extends Symbol {}
 
-export function provide<T, K = InjectionKey<T> | string | number>(
+export function provide<T, K = InjectionKey<T> | string>(
   key: K,
   value: K extends InjectionKey<infer V> ? V : T
 ) {
