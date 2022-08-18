@@ -146,6 +146,10 @@ export function emit(
           `You should probably use "${hyphenate(event)}" instead of "${event}".`
       )
     }
+    if(!props[toHandlerKey(lowerCaseEvent)]) {
+      warn(`Event "${lowerCaseEvent}" is emitted in component ` +
+          `${formatComponentName(instance, instance.type)} but the handler did not registered for "${event}". `);
+    }
   }
 
   let handlerName
