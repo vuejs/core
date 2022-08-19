@@ -28,11 +28,13 @@
     },
     "./server-renderer": {
       "import": "./server-renderer/index.mjs",
-      "require": "./server-renderer/index.js"
+      "require": "./server-renderer/index.js",
+      "types": "./server-renderer/index.d.ts"
     },
     "./compiler-sfc": {
       "import": "./compiler-sfc/index.mjs",
-      "require": "./compiler-sfc/index.js"
+      "require": "./compiler-sfc/index.js",
+      "types": "./compiler-sfc/index.d.ts"
     },
     "./dist/*": "./dist/*",
     "./package.json": "./package.json",
