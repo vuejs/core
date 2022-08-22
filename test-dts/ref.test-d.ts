@@ -319,3 +319,24 @@ describe('reactive in shallow ref', () => {
 
   expectType<number>(x.value.a.b)
 })
+
+
+
+describe('ref in readonly array', () => {
+  test('as an argument to the ref method', () => {
+    const r = ref([ref(1), 2, ref(3), reactive({a: ref(1)})] as const)
+    expectType<Ref<number>>(r.value[0])
+  })
+  test('as an argument to the reactive method', () => {
+    const r = reactive([ref(1), ref(2), ref(3)])
+    expectType<Ref<number>>(r[0])
+  })
+  test('properties as parameters of the reactive method', () => {
+    const r = reactive({
+      a: [ref(1), 2, ref(3)] as const,
+      b: ref(2)
+    })
+    expectType<Ref<number>>(r.a[0])
+    expectType<number>(r.b)
+  })
+})

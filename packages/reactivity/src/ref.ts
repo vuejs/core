@@ -303,7 +303,7 @@ export type UnwrapRefSimple<T> = T extends
   | RefUnwrapBailTypes[keyof RefUnwrapBailTypes]
   | { [RawSymbol]?: true }
   ? T
-  : T extends Array<any>
+  : T extends Array<any> | ReadonlyArray<any>
   ? { [K in keyof T]: UnwrapRefSimple<T[K]> }
   : T extends object & { [ShallowReactiveMarker]?: never }
   ? {
