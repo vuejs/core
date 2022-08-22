@@ -9,7 +9,7 @@ import {
   EffectScheduler,
   DebuggerOptions
 } from '@vue/reactivity'
-import { SchedulerJob, queuePreFlushCb } from './scheduler'
+import { SchedulerJob, queueJob } from './scheduler'
 import {
   EMPTY_OBJ,
   isObject,
@@ -345,7 +345,9 @@ function doWatch(
     scheduler = () => queuePostRenderEffect(job, instance && instance.suspense)
   } else {
     // default: 'pre'
-    scheduler = () => queuePreFlushCb(job)
+    job.pre = true
+    if (instance) job.id = instance.uid
+    scheduler = () => queueJob(job)
   }
 
   const effect = new ReactiveEffect(getter, scheduler)
