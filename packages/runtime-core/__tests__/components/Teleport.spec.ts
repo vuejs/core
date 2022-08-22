@@ -168,6 +168,31 @@ describe('renderer: teleport', () => {
     expect(serializeInner(target)).toBe('')
   })
 
+  // #6347
+  test('descendent component should be unmounted when teleport is disabled and unmounted', () => {
+    const root = nodeOps.createElement('div')
+
+    const CompWithHook = {
+      render() {
+        return [h('p'), h('p')]
+      },
+      beforeUnmount: jest.fn(),
+      unmounted: jest.fn()
+    }
+
+    render(
+      h(() => [h(Teleport, { to: null, disabled: true }, h(CompWithHook))]),
+      root
+    )
+    expect(CompWithHook.beforeUnmount).toBeCalledTimes(0)
+    expect(CompWithHook.unmounted).toBeCalledTimes(0)
+
+    render(null, root)
+
+    expect(CompWithHook.beforeUnmount).toBeCalledTimes(1)
+    expect(CompWithHook.unmounted).toBeCalledTimes(1)
+  })
+
   test('multiple teleport with same target', () => {
     const target = nodeOps.createElement('div')
     const root = nodeOps.createElement('div')

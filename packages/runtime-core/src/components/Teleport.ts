@@ -230,7 +230,7 @@ export const TeleportImpl = {
     parentSuspense: SuspenseBoundary | null,
     optimized: boolean,
     { um: unmount, o: { remove: hostRemove } }: RendererInternals,
-    doRemove: Boolean
+    doRemove: boolean
   ) {
     const { shapeFlag, children, anchor, targetAnchor, target, props } = vnode
 
@@ -238,20 +238,19 @@ export const TeleportImpl = {
       hostRemove(targetAnchor!)
     }
 
-    // an unmounted teleport should always remove its children if not disabled
-    if (doRemove || !isTeleportDisabled(props)) {
-      hostRemove(anchor!)
-      if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-        for (let i = 0; i < (children as VNode[]).length; i++) {
-          const child = (children as VNode[])[i]
-          unmount(
-            child,
-            parentComponent,
-            parentSuspense,
-            true,
-            !!child.dynamicChildren
-          )
-        }
+    // an unmounted teleport should always unmount its children whether it's disabled or not
+    doRemove && hostRemove(anchor!)
+    if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      const shouldRemove = doRemove || !isTeleportDisabled(props)
+      for (let i = 0; i < (children as VNode[]).length; i++) {
+        const child = (children as VNode[])[i]
+        unmount(
+          child,
+          parentComponent,
+          parentSuspense,
+          shouldRemove,
+          !!child.dynamicChildren
+        )
       }
     }
   },
