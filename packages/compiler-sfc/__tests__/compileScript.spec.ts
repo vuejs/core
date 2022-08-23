@@ -801,6 +801,7 @@ const emit = defineEmits(['a', 'b'])
         symbol: symbol
 
         union: string | number
+        unionWithUndefined: number | undefined
         literalUnion: 'foo' | 'bar'
         literalUnionNumber: 1 | 2 | 3 | 4 | 5
         literalUnionMixed: 'foo' | 1 | boolean
@@ -831,6 +832,9 @@ const emit = defineEmits(['a', 'b'])
       expect(content).toMatch(`symbol: { type: Symbol, required: true }`)
       expect(content).toMatch(
         `union: { type: [String, Number], required: true }`
+      )
+      expect(content).toMatch(
+        `unionWithUndefined: { type: Number, required: false }`
       )
       expect(content).toMatch(`literalUnion: { type: String, required: true }`)
       expect(content).toMatch(
@@ -863,6 +867,7 @@ const emit = defineEmits(['a', 'b'])
         method: BindingTypes.PROPS,
         symbol: BindingTypes.PROPS,
         union: BindingTypes.PROPS,
+        unionWithUndefined: BindingTypes.PROPS,
         literalUnion: BindingTypes.PROPS,
         literalUnionNumber: BindingTypes.PROPS,
         literalUnionMixed: BindingTypes.PROPS,

@@ -1522,6 +1522,7 @@ export default /*#__PURE__*/_defineComponent({
     method: { type: Function, required: true },
     symbol: { type: Symbol, required: true },
     union: { type: [String, Number], required: true },
+    unionWithUndefined: { type: Number, required: false },
     literalUnion: { type: String, required: true },
     literalUnionNumber: { type: Number, required: true },
     literalUnionMixed: { type: [String, Number, Boolean], required: true },

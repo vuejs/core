@@ -1756,9 +1756,16 @@ function extractRuntimeProps(
       } else if (m.typeAnnotation) {
         type = inferRuntimeType(m.typeAnnotation.typeAnnotation, declaredTypes)
       }
+
+      let undefinedIdx = type?.indexOf('undefined') ?? -1
+
+      if (undefinedIdx > -1) {
+        type?.splice(undefinedIdx, 1)
+      }
+
       props[m.key.name] = {
         key: m.key.name,
-        required: !m.optional,
+        required: !m.optional && undefinedIdx === -1,
         type: type || [`null`]
       }
     }
@@ -1846,6 +1853,9 @@ function inferRuntimeType(
 
     case 'TSSymbolKeyword':
       return ['Symbol']
+
+    case 'TSUndefinedKeyword':
+      return ['undefined']
 
     default:
       return [`null`] // no runtime check
