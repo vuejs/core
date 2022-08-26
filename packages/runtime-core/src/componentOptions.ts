@@ -118,8 +118,10 @@ export interface ComponentOptionsBase<
   Extends extends ComponentOptionsMixin,
   E extends EmitsOptions,
   EE extends string = string,
-  Defaults = {}
-> extends LegacyOptions<Props, D, C, M, Mixin, Extends>,
+  Defaults = {},
+  I extends ComponentInjectOptions = {},
+  II extends string = string
+> extends LegacyOptions<Props, D, C, M, Mixin, Extends, I, II>,
     ComponentInternalOptions,
     ComponentCustomOptions {
   setup?: (
@@ -225,7 +227,9 @@ export type ComponentOptionsWithoutProps<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
-  PE = Props & EmitsToProps<E>
+  I extends ComponentInjectOptions = {},
+  II extends string = string,
+  PE = Props & EmitsToProps<E>,
 > = ComponentOptionsBase<
   PE,
   RawBindings,
@@ -236,11 +240,13 @@ export type ComponentOptionsWithoutProps<
   Extends,
   E,
   EE,
-  {}
+  {},
+  I,
+  II
 > & {
   props?: undefined
 } & ThisType<
-    CreateComponentPublicInstance<PE, RawBindings, D, C, M, Mixin, Extends, E>
+    CreateComponentPublicInstance<PE, RawBindings, D, C, M, Mixin, Extends, E, PE, {}, false, I>
   >
 
 export type ComponentOptionsWithArrayProps<
@@ -253,6 +259,8 @@ export type ComponentOptionsWithArrayProps<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
+  I extends ComponentInjectOptions = {},
+  II extends string = string,
   Props = Readonly<{ [key in PropNames]?: any }> & EmitsToProps<E>
 > = ComponentOptionsBase<
   Props,
@@ -264,7 +272,9 @@ export type ComponentOptionsWithArrayProps<
   Extends,
   E,
   EE,
-  {}
+  {},
+  I,
+  II
 > & {
   props: PropNames[]
 } & ThisType<
@@ -276,7 +286,11 @@ export type ComponentOptionsWithArrayProps<
       M,
       Mixin,
       Extends,
-      E
+      E,
+      Props,
+      {},
+      false,
+      I
     >
   >
 
@@ -290,8 +304,10 @@ export type ComponentOptionsWithObjectProps<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
+  I extends ComponentInjectOptions = {},
+  II extends string = string,
   Props = Readonly<ExtractPropTypes<PropsOptions>> & EmitsToProps<E>,
-  Defaults = ExtractDefaultPropTypes<PropsOptions>
+  Defaults = ExtractDefaultPropTypes<PropsOptions>,
 > = ComponentOptionsBase<
   Props,
   RawBindings,
@@ -302,7 +318,9 @@ export type ComponentOptionsWithObjectProps<
   Extends,
   E,
   EE,
-  Defaults
+  Defaults,
+  I,
+  II
 > & {
   props: PropsOptions & ThisType<void>
 } & ThisType<
@@ -317,7 +335,8 @@ export type ComponentOptionsWithObjectProps<
       E,
       Props,
       Defaults,
-      false
+      false,
+      I
     >
   >
 
@@ -389,12 +408,22 @@ export type ComponentProvideOptions = ObjectProvideOptions | Function
 
 type ObjectProvideOptions = Record<string | symbol, unknown>
 
-type ComponentInjectOptions = string[] | ObjectInjectOptions
+export type ComponentInjectOptions = string[] | ObjectInjectOptions
 
 type ObjectInjectOptions = Record<
   string | symbol,
   string | symbol | { from?: string | symbol; default?: unknown }
 >
+
+export type InjectToObject<T extends ComponentInjectOptions> = T extends string[]
+? {
+  [K in T[number]]?: unknown
+}
+: T extends ObjectInjectOptions
+? {
+  [K in keyof T]?: unknown
+}
+: never
 
 interface LegacyOptions<
   Props,
@@ -402,7 +431,9 @@ interface LegacyOptions<
   C extends ComputedOptions,
   M extends MethodOptions,
   Mixin extends ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin
+  Extends extends ComponentOptionsMixin,
+  I extends ComponentInjectOptions,
+  II extends string
 > {
   compatConfig?: CompatConfig
 
@@ -437,7 +468,7 @@ interface LegacyOptions<
   methods?: M
   watch?: ComponentWatchOptions
   provide?: ComponentProvideOptions
-  inject?: ComponentInjectOptions
+  inject?: I | II[]
 
   // assets
   filters?: Record<string, Function>

@@ -1033,6 +1033,68 @@ describe('emits', () => {
   })
 })
 
+describe('inject', () => {
+  // with object inject
+  defineComponent({
+    props: {
+      a: String
+    },
+    inject: {
+      foo: 'foo',
+      bar: 'bar',
+    },
+    created() {
+      expectType<unknown>(this.foo)
+      expectType<unknown>(this.bar)
+      //  @ts-expect-error
+      expectError(this.foobar = 1)
+    }
+  })
+
+  // with array inject
+  defineComponent({
+    props: ['a', 'b'],
+    inject: ['foo', 'bar'],
+    created() {
+      expectType<unknown>(this.foo)
+      expectType<unknown>(this.bar)
+      //  @ts-expect-error
+      expectError(this.foobar = 1)
+    }
+  })
+
+  // with no props
+  defineComponent({
+    inject: {
+      foo: {
+        from: 'pfoo',
+        default: 'foo'
+      },
+      bar: {
+        from: 'pbar',
+        default: 'bar'
+      },
+    },
+    created() {
+      expectType<unknown>(this.foo)
+      expectType<unknown>(this.bar)
+      //  @ts-expect-error
+      expectError(this.foobar = 1)
+    }
+  })
+
+  // without inject
+  defineComponent({
+    props: ['a', 'b'],
+    created() {
+      //  @ts-expect-error
+      expectError(this.foo = 1)
+      //  @ts-expect-error
+      expectError(this.bar = 1)
+    }
+  })
+})
+
 describe('componentOptions setup should be `SetupContext`', () => {
   expectType<ComponentOptions['setup']>(
     {} as (props: Record<string, any>, ctx: SetupContext) => any
