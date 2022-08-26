@@ -19,6 +19,7 @@ import { callWithAsyncErrorHandling, ErrorCodes } from '../errorHandling'
 import { ShapeFlags, PatchFlags, isArray } from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import { RendererElement } from '../renderer'
+import { isTeleport } from './Teleport'
 
 type Hook<T = () => void> = T | T[]
 
@@ -150,26 +151,7 @@ const BaseTransitionImpl: ComponentOptions = {
         return
       }
 
-      let child: VNode = children[0]
-      if (children.length > 1) {
-        let hasFound = false
-        // locate first non-comment child
-        for (const c of children) {
-          if (c.type !== Comment) {
-            if (__DEV__ && hasFound) {
-              // warn more than one non-comment child
-              warn(
-                '<transition> can only be used on a single element or component. ' +
-                  'Use <transition-group> for lists.'
-              )
-              break
-            }
-            child = c
-            hasFound = true
-            if (!__DEV__) break
-          }
-        }
-      }
+      let child: VNode = findNonCommentChild(children)
 
       // there's no need to track reactivity for these props so use the raw
       // props for a bit better perf
@@ -192,7 +174,7 @@ const BaseTransitionImpl: ComponentOptions = {
 
       // in the case of <transition><keep-alive/></transition>, we need to
       // compare the type of the kept-alive children.
-      const innerChild = getKeepAliveChild(child)
+      const innerChild = getInnerChild(child)
       if (!innerChild) {
         return emptyPlaceholder(child)
       }
@@ -206,7 +188,7 @@ const BaseTransitionImpl: ComponentOptions = {
       setTransitionHooks(innerChild, enterHooks)
 
       const oldChild = instance.subTree
-      const oldInnerChild = oldChild && getKeepAliveChild(oldChild)
+      const oldInnerChild = oldChild && getInnerChild(oldChild)
 
       let transitionKeyChanged = false
       const { getTransitionKey } = innerChild.type as any
@@ -272,6 +254,30 @@ const BaseTransitionImpl: ComponentOptions = {
 
 if (__COMPAT__) {
   BaseTransitionImpl.__isBuiltIn = true
+}
+
+function findNonCommentChild(children: VNode[]): VNode {
+  let child: VNode = children[0]
+  if (children.length > 1) {
+    let hasFound = false
+    // locate first non-comment child
+    for (const c of children) {
+      if (c.type !== Comment) {
+        if (__DEV__ && hasFound) {
+          // warn more than one non-comment child
+          warn(
+            '<transition> can only be used on a single element or component. ' +
+            'Use <transition-group> for lists.'
+          )
+          break
+        }
+        child = c
+        hasFound = true
+        if (!__DEV__) break
+      }
+    }
+  }
+  return child
 }
 
 // export the public type for h/tsx inference
@@ -461,12 +467,14 @@ function emptyPlaceholder(vnode: VNode): VNode | undefined {
   }
 }
 
-function getKeepAliveChild(vnode: VNode): VNode | undefined {
+function getInnerChild(vnode: VNode): VNode | undefined {
   return isKeepAlive(vnode)
     ? vnode.children
       ? ((vnode.children as VNodeArrayChildren)[0] as VNode)
       : undefined
-    : vnode
+    : isTeleport(vnode.type)
+      ? findNonCommentChild(vnode.children! as VNode[])
+      : vnode
 }
 
 export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks) {
