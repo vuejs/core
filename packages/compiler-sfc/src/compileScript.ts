@@ -676,28 +676,21 @@ export function compileScript(
     if (hasDefineOptionsCall) {
       error(`duplicate ${DEFINE_OPTIONS}() call`, node)
     }
-    if (script) {
-      error(
-        `${DEFINE_OPTIONS}() cannot be used, with both <script> and <script setup>`,
-        node
-      )
-    }
     if (node.typeParameters) {
       error(`${DEFINE_OPTIONS}() cannot accept type arguments`, node)
     }
 
     hasDefineOptionsCall = true
     optionsRuntimeDecl = node.arguments[0]
-    if (optionsRuntimeDecl.type !== 'ObjectExpression') {
-      error(`${DEFINE_OPTIONS}() argument must be an object`, node)
-    }
 
-    const hasPropOrEmits = optionsRuntimeDecl.properties.some(
-      prop =>
-        (prop.type === 'ObjectProperty' || prop.type === 'ObjectMethod') &&
-        prop.key.type === 'Identifier' &&
-        (prop.key.name === 'props' || prop.key.name === 'emits')
-    )
+    const hasPropOrEmits =
+      optionsRuntimeDecl.type === 'ObjectExpression' &&
+      optionsRuntimeDecl.properties.some(
+        prop =>
+          (prop.type === 'ObjectProperty' || prop.type === 'ObjectMethod') &&
+          prop.key.type === 'Identifier' &&
+          (prop.key.name === 'props' || prop.key.name === 'emits')
+      )
     if (hasPropOrEmits) {
       error(`${DEFINE_OPTIONS}() use defineProps or defineEmits instead.`, node)
     }
