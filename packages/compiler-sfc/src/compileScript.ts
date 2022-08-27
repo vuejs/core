@@ -1686,10 +1686,12 @@ export function compileScript(
   } else if (emitsTypeDecl) {
     runtimeOptions += genRuntimeEmits(typeDeclaredEmits)
   }
+
+  let definedOptions = ''
   if (optionsRuntimeDecl) {
-    runtimeOptions = `\n  ...${scriptSetup.content
+    definedOptions = scriptSetup.content
       .slice(optionsRuntimeDecl.start!, optionsRuntimeDecl.end!)
-      .trim()},${runtimeOptions}`
+      .trim()
   }
 
   // <script setup> components are closed by default. If the user did not
@@ -1703,7 +1705,9 @@ export function compileScript(
     // we have to use object spread for types to be merged properly
     // user's TS setting should compile it down to proper targets
     // export default defineComponent({ ...__default__, ... })
-    const def = defaultExport ? `\n  ...${DEFAULT_VAR},` : ``
+    const def =
+      (defaultExport ? `\n  ...${DEFAULT_VAR},` : ``) +
+      (definedOptions ? `\n  ...${definedOptions},` : '')
     s.prependLeft(
       startOffset,
       `\nexport default /*#__PURE__*/${helper(
@@ -1714,12 +1718,16 @@ export function compileScript(
     )
     s.appendRight(endOffset, `})`)
   } else {
-    if (defaultExport) {
+    if (defaultExport || definedOptions) {
       // without TS, can't rely on rest spread, so we use Object.assign
       // export default Object.assign(__default__, { ... })
       s.prependLeft(
         startOffset,
-        `\nexport default /*#__PURE__*/Object.assign(${DEFAULT_VAR}, {${runtimeOptions}\n  ` +
+        `\nexport default /*#__PURE__*/Object.assign(${
+          defaultExport ? DEFAULT_VAR : ''
+        }${defaultExport && definedOptions ? ', ' : ''}${
+          definedOptions ? definedOptions : ''
+        }, {${runtimeOptions}\n  ` +
           `${hasAwait ? `async ` : ``}setup(${args}) {\n${exposeCall}`
       )
       s.appendRight(endOffset, `})`)

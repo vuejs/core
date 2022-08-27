@@ -635,8 +635,7 @@ return {  }
 `;
 
 exports[`SFC compile <script setup> > defineOptions() > basic usage 1`] = `
-"export default {
-  ...{ name: 'FooApp' },
+"export default /*#__PURE__*/Object.assign({ name: 'FooApp' }, {
   setup(__props, { expose }) {
   expose();
 
@@ -645,7 +644,7 @@ exports[`SFC compile <script setup> > defineOptions() > basic usage 1`] = `
 return {  }
 }
 
-}"
+})"
 `;
 
 exports[`SFC compile <script setup> > defineProps w/ external definition 1`] = `

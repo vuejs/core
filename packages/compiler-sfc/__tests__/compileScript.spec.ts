@@ -183,8 +183,9 @@ defineOptions({ name: 'FooApp' })
       // should remove defineOptions import and call
       expect(content).not.toMatch('defineOptions')
       // should include context options in default export
-      expect(content).toMatch(`export default {
-  ...{ name: 'FooApp' },`)
+      expect(content).toMatch(
+        `export default /*#__PURE__*/Object.assign({ name: 'FooApp' }, `
+      )
     })
 
     it('should report an error with two defineProps', () => {
@@ -229,51 +230,6 @@ defineOptions({ name: 'FooApp' })
         `)
       ).toThrowError(
         '[@vue/compiler-sfc] defineOptions() cannot accept type arguments'
-      )
-    })
-
-    it('should report an error with both normal script and script setup', () => {
-      expect(() =>
-        compile(`
-        <script>
-        export default { name: 'FooApp' }
-        </script>
-        <script setup>
-        defineOptions({ name: 'BarApp' })
-        </script>
-        `)
-      ).toThrowError(
-        '[@vue/compiler-sfc] defineOptions() cannot be used, with both <script> and <script setup>'
-      )
-    })
-
-    it('should report an error with a wrong argument', () => {
-      expect(() =>
-        compile(`
-        <script setup>
-        defineOptions('str')
-        </script>
-        `)
-      ).toThrowError(
-        '[@vue/compiler-sfc] defineOptions() argument must be an object'
-      )
-      expect(() =>
-        compile(`
-        <script setup>
-        defineOptions(123)
-        </script>
-        `)
-      ).toThrowError(
-        '[@vue/compiler-sfc] defineOptions() argument must be an object'
-      )
-      expect(() =>
-        compile(`
-        <script setup>
-        defineOptions(true)
-        </script>
-        `)
-      ).toThrowError(
-        '[@vue/compiler-sfc] defineOptions() argument must be an object'
       )
     })
   })
