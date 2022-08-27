@@ -1724,10 +1724,8 @@ export function compileScript(
       s.prependLeft(
         startOffset,
         `\nexport default /*#__PURE__*/Object.assign(${
-          defaultExport ? DEFAULT_VAR : ''
-        }${defaultExport && definedOptions ? ', ' : ''}${
-          definedOptions ? definedOptions : ''
-        }, {${runtimeOptions}\n  ` +
+          defaultExport ? `${DEFAULT_VAR}, ` : ''
+        }${definedOptions ? `${definedOptions}, ` : ''}{${runtimeOptions}\n  ` +
           `${hasAwait ? `async ` : ``}setup(${args}) {\n${exposeCall}`
       )
       s.appendRight(endOffset, `})`)
