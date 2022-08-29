@@ -1,3 +1,4 @@
+import { BindingTypes } from '@vue/compiler-dom'
 import { compile } from '../src'
 
 describe('ssr: inject <style vars>', () => {
@@ -109,6 +110,27 @@ describe('ssr: inject <style vars>', () => {
           _: 1 /* STABLE */
         })
       }"
+    `)
+  })
+
+  test('inject helpers', () => {
+    const result = compile(`<div/>`, {
+      inline: true,
+      bindingMetadata: { dynamic: BindingTypes.SETUP_MAYBE_REF },
+      ssrCssVars: '{ "--hash": (dynamic) }'
+    })
+
+    expect(result.code).toMatchInlineSnapshot(`
+      "(_ctx, _push, _parent, _attrs) => {
+        const _cssVars = { style: { \\"--hash\\": (_unref(dynamic)) }}
+        _push(\`<div\${_ssrRenderAttrs(_mergeProps(_attrs, _cssVars))}></div>\`)
+      }"
+    `)
+    expect(result.ast.helpers).toMatchInlineSnapshot(`
+      Array [
+        Symbol(mergeProps),
+        Symbol(unref),
+      ]
     `)
   })
 })
