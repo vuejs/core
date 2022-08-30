@@ -178,16 +178,10 @@ export function initProps(
   instance.attrs = attrs
 }
 
-function inHmrContext(instance: ComponentInternalInstance) {
-  if (instance.type.__hmrId) {
-    return instance.type.__hmrId
-  }
-  let parent = instance.parent
-  while (parent) {
-    if (parent.type.__file) {
-      return parent.type.__hmrId
-    }
-    parent = parent.parent
+function isInHmrContext(instance: ComponentInternalInstance | null) {
+  while (instance) {
+    if (instance.type.__hmrId) return true
+    instance = instance.parent
   }
 }
 
@@ -210,7 +204,7 @@ export function updateProps(
     // always force full diff in dev
     // - #1942 if hmr is enabled with sfc component
     // - vite#872 non-sfc component used by sfc component
-    !(__DEV__ && inHmrContext(instance)) &&
+    !(__DEV__ && isInHmrContext(instance)) &&
     (optimized || patchFlag > 0) &&
     !(patchFlag & PatchFlags.FULL_PROPS)
   ) {
