@@ -647,7 +647,7 @@ export function buildProps(
               type: NodeTypes.JS_CALL_EXPRESSION,
               loc,
               callee: context.helper(TO_HANDLERS),
-              arguments: [exp]
+              arguments: isComponent ? [exp] : [exp, `true`]
             })
           }
         } else {
