@@ -43,7 +43,8 @@ export function render(_ctx, _cache) {
           name: \\"foo\\",
           fn: _withCtx(() => [
             _createElementVNode(\\"div\\")
-          ])
+          ]),
+          key: \\"0\\"
         }
       : undefined,
     _renderList(_ctx.list, (i) => {
