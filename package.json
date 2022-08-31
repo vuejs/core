@@ -94,7 +94,7 @@
     "ts-jest": "^27.0.5",
     "tslib": "^2.4.0",
     "typescript": "^4.8.0",
-    "vite": "^2.9.8",
+    "vite": "^3.0.0",
     "vue": "workspace:*",
     "yorkie": "^2.0.0"
   }
