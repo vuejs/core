@@ -35,7 +35,8 @@ import {
   applyOptions,
   ComponentOptions,
   ComputedOptions,
-  MethodOptions
+  MethodOptions,
+  resolveMergedOptions
 } from './componentOptions'
 import {
   EmitsOptions,
@@ -788,7 +789,8 @@ export function finishComponentSetup(
         (__COMPAT__ &&
           instance.vnode.props &&
           instance.vnode.props['inline-template']) ||
-        Component.template || (instance.ctx.$options as any).template
+        Component.template ||
+        resolveMergedOptions(instance).template
       if (template) {
         if (__DEV__) {
           startMeasure(instance, `compile`)
