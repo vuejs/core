@@ -175,7 +175,7 @@ export type CreateAppFunction<HostElement> = (
 let uid = 0
 
 export function createAppAPI<HostElement>(
-  render: RootRenderFunction,
+  render: RootRenderFunction<HostElement>,
   hydrate?: RootHydrateFunction
 ): CreateAppFunction<HostElement> {
   return function createApp(rootComponent, rootProps = null) {

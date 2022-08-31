@@ -52,9 +52,7 @@ export interface BaseTransitionProps<HostElement = RendererElement> {
   onAppearCancelled?: Hook<(el: HostElement) => void>
 }
 
-export interface TransitionHooks<
-  HostElement extends RendererElement = RendererElement
-> {
+export interface TransitionHooks<HostElement = RendererElement> {
   mode: BaseTransitionProps['mode']
   persisted: boolean
   beforeEnter(el: HostElement): void
