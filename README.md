@@ -20,7 +20,7 @@ Vue.js is an MIT-licensed open source project with its ongoing development made 
 
 <p align="center">
   <a target="_blank" href="https://vuejs.org/sponsor/#current-sponsors">
-    <img alt="sponsors" src="https://sponsors.vuejs.org/sponsors.svg">
+    <img alt="sponsors" src="https://sponsors.vuejs.org/sponsors.svg?v2">
   </a>
 </p>
 
