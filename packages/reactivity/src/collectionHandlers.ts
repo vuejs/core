@@ -9,7 +9,7 @@ type IterableCollections = Map<any, any> | Set<any>
 type WeakCollections = WeakMap<any, any> | WeakSet<any>
 type MapTypes = Map<any, any> | WeakMap<any, any>
 type SetTypes = Set<any> | WeakSet<any>
-
+type instrumentationsType = Record<string, Function | number>
 const toShallow = <T extends unknown>(value: T): T => value
 
 const getProto = <T extends CollectionTypes>(v: T): any =>
@@ -228,7 +228,7 @@ function createReadonlyMethod(type: TriggerOpTypes): Function {
 }
 
 function createInstrumentations() {
-  const mutableInstrumentations: Record<string, Function> = {
+  const mutableInstrumentations: instrumentationsType = {
     get(this: MapTypes, key: unknown) {
       return get(this, key)
     },
@@ -243,7 +243,7 @@ function createInstrumentations() {
     forEach: createForEach(false, false)
   }
 
-  const shallowInstrumentations: Record<string, Function> = {
+  const shallowInstrumentations: instrumentationsType = {
     get(this: MapTypes, key: unknown) {
       return get(this, key, false, true)
     },
@@ -258,7 +258,7 @@ function createInstrumentations() {
     forEach: createForEach(false, true)
   }
 
-  const readonlyInstrumentations: Record<string, Function> = {
+  const readonlyInstrumentations: instrumentationsType = {
     get(this: MapTypes, key: unknown) {
       return get(this, key, true)
     },
@@ -275,7 +275,7 @@ function createInstrumentations() {
     forEach: createForEach(true, false)
   }
 
-  const shallowReadonlyInstrumentations: Record<string, Function> = {
+  const shallowReadonlyInstrumentations: instrumentationsType = {
     get(this: MapTypes, key: unknown) {
       return get(this, key, true, true)
     },
