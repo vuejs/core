@@ -652,8 +652,7 @@ function setupStatefulComponent(
   // 2. call setup()
   const { setup } = Component
   if (setup) {
-    const setupContext = (instance.setupContext =
-      setup.length > 1 ? createSetupContext(instance) : null)
+    const setupContext = instance.setupContext = createSetupContext(instance)
 
     setCurrentInstance(instance)
     pauseTracking()
