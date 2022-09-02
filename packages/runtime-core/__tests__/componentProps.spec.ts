@@ -131,6 +131,22 @@ describe('component props', () => {
     expect(props).toBe(attrs)
   })
 
+  test('functional with default props declaration', () => {
+    let props: any
+    let attrs: any
+
+    const Comp: FunctionalComponent = (_props = {}, { attrs: _attrs }) => {
+      props = _props
+      attrs = _attrs
+    }
+    
+    const root = nodeOps.createElement('div')
+
+    render(h(Comp), root)
+    expect(props).toEqual({})
+    expect(attrs).toEqual({})
+
+  })
   test('boolean casting', () => {
     let proxy: any
     const Comp = {
