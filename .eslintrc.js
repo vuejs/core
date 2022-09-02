@@ -6,7 +6,9 @@ module.exports = {
   parserOptions: {
     sourceType: 'module'
   },
+  plugins: ["jest"],
   rules: {
+    'no-debugger': 'error',
     'no-unused-vars': [
       'error',
       // we are only using this rule to check for unused arguments since TS
@@ -31,7 +33,9 @@ module.exports = {
       files: ['**/__tests__/**', 'test-dts/**'],
       rules: {
         'no-restricted-globals': 'off',
-        'no-restricted-syntax': 'off'
+        'no-restricted-syntax': 'off',
+        'jest/no-disabled-tests': 'error',
+        'jest/no-focused-tests': 'error'
       }
     },
     // shared, may be used in any env

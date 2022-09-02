@@ -127,6 +127,28 @@ describe('sfc props transform', () => {
     })
   })
 
+  // #5425
+  test('non-identifier prop names', () => {
+    const { content, bindings } = compile(`
+      <script setup>
+      const { 'foo.bar': fooBar } = defineProps({ 'foo.bar': Function })
+      let x = fooBar
+      </script>
+      <template>{{ fooBar }}</template>
+    `)
+    expect(content).toMatch(`x = __props["foo.bar"]`)
+    expect(content).toMatch(`toDisplayString(__props["foo.bar"])`)
+    assertCode(content)
+    expect(bindings).toStrictEqual({
+      x: BindingTypes.SETUP_LET,
+      'foo.bar': BindingTypes.PROPS,
+      fooBar: BindingTypes.PROPS_ALIASED,
+      __propsAliases: {
+        fooBar: 'foo.bar'
+      }
+    })
+  })
+
   test('rest spread', () => {
     const { content, bindings } = compile(`
       <script setup>

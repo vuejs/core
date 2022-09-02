@@ -12,6 +12,7 @@ import {
   createApp,
   computed
 } from '@vue/runtime-test'
+import { render as domRender } from 'vue'
 
 describe('api: options', () => {
   test('data', async () => {
@@ -1035,6 +1036,19 @@ describe('api: options', () => {
     expect(renderToString(h(Comp))).toBe('base,base')
   })
 
+  test('extends template', () => {
+    const Comp = {
+      extends: {
+        template: `<h1>Foo</h1>`
+      }
+    }
+
+    const root = document.createElement('div') as any
+    domRender(h(Comp), root)
+    expect(root.innerHTML).toBe(`<h1>Foo</h1>`)
+  })
+
+
   test('options defined in component have higher priority', async () => {
     const Mixin = {
       msg1: 'base'
@@ -1411,7 +1425,7 @@ describe('api: options', () => {
       }
 
       const root = nodeOps.createElement('div')
-      // @ts-ignore
+      // @ts-expect-error
       render(h(Comp), root)
 
       expect('Invalid watch option: "foo"').toHaveBeenWarned()

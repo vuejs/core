@@ -7,15 +7,13 @@ on:
     branches:
       - main
 jobs:
-  test:
+  unit-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v2.0.1
-        with:
-          version: 6.15.1
+        uses: pnpm/action-setup@v2
 
       - name: Set node version to 16
         uses: actions/setup-node@v2
@@ -26,7 +24,26 @@ jobs:
       - run: pnpm install
 
       - name: Run unit tests
-        run: pnpm run test
+        run: pnpm run test-unit
+
+  e2e-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+
+      - name: Set node version to 16
+        uses: actions/setup-node@v2
+        with:
+          node-version: 16
+          cache: 'pnpm'
+
+      - run: pnpm install
+
+      - name: Run e2e tests
+        run: pnpm run test-e2e
 
   lint-and-test-dts:
     runs-on: ubuntu-latest
@@ -34,9 +51,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v2.0.1
-        with:
-          version: 6.15.1
+        uses: pnpm/action-setup@v2
 
       - name: Set node version to 16
         uses: actions/setup-node@v2
@@ -60,9 +75,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v2.0.1
-        with:
-          version: 6.15.1
+        uses: pnpm/action-setup@v2
 
       - name: Set node version to 16
         uses: actions/setup-node@v2

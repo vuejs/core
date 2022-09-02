@@ -279,6 +279,7 @@ function stringifyElement(
   context: TransformContext
 ): string {
   let res = `<${node.tag}`
+  let innerHTML = ''
   for (let i = 0; i < node.props.length; i++) {
     const p = node.props[i]
     if (p.type === NodeTypes.ATTRIBUTE) {
@@ -286,28 +287,38 @@ function stringifyElement(
       if (p.value) {
         res += `="${escapeHtml(p.value.content)}"`
       }
-    } else if (p.type === NodeTypes.DIRECTIVE && p.name === 'bind') {
-      const exp = p.exp as SimpleExpressionNode
-      if (exp.content[0] === '_') {
-        // internally generated string constant references
-        // e.g. imported URL strings via compiler-sfc transformAssetUrl plugin
-        res += ` ${(p.arg as SimpleExpressionNode).content}="__VUE_EXP_START__${
-          exp.content
-        }__VUE_EXP_END__"`
-        continue
-      }
-      // constant v-bind, e.g. :foo="1"
-      let evaluated = evaluateConstant(exp)
-      if (evaluated != null) {
-        const arg = p.arg && (p.arg as SimpleExpressionNode).content
-        if (arg === 'class') {
-          evaluated = normalizeClass(evaluated)
-        } else if (arg === 'style') {
-          evaluated = stringifyStyle(normalizeStyle(evaluated))
+    } else if (p.type === NodeTypes.DIRECTIVE) {
+      if (p.name === 'bind') {
+        const exp = p.exp as SimpleExpressionNode
+        if (exp.content[0] === '_') {
+          // internally generated string constant references
+          // e.g. imported URL strings via compiler-sfc transformAssetUrl plugin
+          res += ` ${
+            (p.arg as SimpleExpressionNode).content
+          }="__VUE_EXP_START__${exp.content}__VUE_EXP_END__"`
+          continue
         }
-        res += ` ${(p.arg as SimpleExpressionNode).content}="${escapeHtml(
-          evaluated
-        )}"`
+        // constant v-bind, e.g. :foo="1"
+        let evaluated = evaluateConstant(exp)
+        if (evaluated != null) {
+          const arg = p.arg && (p.arg as SimpleExpressionNode).content
+          if (arg === 'class') {
+            evaluated = normalizeClass(evaluated)
+          } else if (arg === 'style') {
+            evaluated = stringifyStyle(normalizeStyle(evaluated))
+          }
+          res += ` ${(p.arg as SimpleExpressionNode).content}="${escapeHtml(
+            evaluated
+          )}"`
+        }
+      } else if (p.name === 'html') {
+        // #5439 v-html with constant value
+        // not sure why would anyone do this but it can happen
+        innerHTML = evaluateConstant(p.exp as SimpleExpressionNode)
+      } else if (p.name === 'text') {
+        innerHTML = escapeHtml(
+          toDisplayString(evaluateConstant(p.exp as SimpleExpressionNode))
+        )
       }
     }
   }
@@ -315,8 +326,12 @@ function stringifyElement(
     res += ` ${context.scopeId}`
   }
   res += `>`
-  for (let i = 0; i < node.children.length; i++) {
-    res += stringifyNode(node.children[i], context)
+  if (innerHTML) {
+    res += innerHTML
+  } else {
+    for (let i = 0; i < node.children.length; i++) {
+      res += stringifyNode(node.children[i], context)
+    }
   }
   if (!isVoidTag(node.tag)) {
     res += `</${node.tag}>`

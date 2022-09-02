@@ -68,21 +68,21 @@ describe('reactivity/readonly', () => {
         `Set operation on key "Symbol(qux)" failed: target is readonly.`
       ).toHaveBeenWarnedLast()
 
-      // @ts-ignore
+      // @ts-expect-error
       delete wrapped.foo
       expect(wrapped.foo).toBe(1)
       expect(
         `Delete operation on key "foo" failed: target is readonly.`
       ).toHaveBeenWarnedLast()
 
-      // @ts-ignore
+      // @ts-expect-error
       delete wrapped.bar.baz
       expect(wrapped.bar.baz).toBe(2)
       expect(
         `Delete operation on key "baz" failed: target is readonly.`
       ).toHaveBeenWarnedLast()
 
-      // @ts-ignore
+      // @ts-expect-error
       delete wrapped[qux]
       expect(wrapped[qux]).toBe(3)
       expect(
@@ -480,21 +480,27 @@ describe('reactivity/readonly', () => {
     const r = ref(false)
     const ror = readonly(r)
     const obj = reactive({ ror })
-    try {
+    expect(() => {
       obj.ror = true
-    } catch (e) {}
-
+    }).toThrow()
     expect(obj.ror).toBe(false)
   })
+
   test('replacing a readonly ref nested in a reactive object with a new ref', () => {
     const r = ref(false)
     const ror = readonly(r)
     const obj = reactive({ ror })
-    try {
-      obj.ror = ref(true) as unknown as boolean
-    } catch (e) {}
-
+    obj.ror = ref(true) as unknown as boolean
     expect(obj.ror).toBe(true)
     expect(toRaw(obj).ror).not.toBe(ror) // ref successfully replaced
+  })
+
+  test('setting readonly object to writable nested ref', () => {
+    const r = ref<any>()
+    const obj = reactive({ r })
+    const ro = readonly({})
+    obj.r = ro
+    expect(obj.r).toBe(ro)
+    expect(r.value).toBe(ro)
   })
 })

@@ -40,6 +40,7 @@ export interface CSSProperties
    * For examples and more information, visit:
    * https://github.com/frenic/csstype#what-should-i-do-when-i-get-type-errors
    */
+  [v: `--${string}`]: string | number | undefined
 }
 
 type Booleanish = boolean | 'true' | 'false'
@@ -457,7 +458,7 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   autocomplete?: string
   autofocus?: Booleanish
   capture?: boolean | 'user' | 'environment' // https://www.w3.org/tr/html-media-capture/#the-capture-attribute
-  checked?: Booleanish | any[] // for IDE v-model multi-checkbox support
+  checked?: Booleanish | any[] | Set<any> // for IDE v-model multi-checkbox support
   crossorigin?: string
   disabled?: Booleanish
   form?: string
@@ -467,6 +468,7 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   formnovalidate?: Booleanish
   formtarget?: string
   height?: Numberish
+  indeterminate?: boolean
   list?: string
   max?: Numberish
   maxlength?: Numberish
@@ -1308,10 +1310,7 @@ import * as RuntimeCore from '@vue/runtime-core'
 
 type ReservedProps = {
   key?: string | number | symbol
-  ref?:
-    | string
-    | RuntimeCore.Ref
-    | ((ref: Element | RuntimeCore.ComponentPublicInstance | null) => void)
+  ref?: RuntimeCore.VNodeRef
   ref_for?: boolean
   ref_key?: string
 }

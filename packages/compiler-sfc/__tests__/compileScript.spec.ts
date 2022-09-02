@@ -1,5 +1,5 @@
 import { BindingTypes } from '@vue/compiler-core'
-import { compileSFCScript as compile, assertCode } from './utils'
+import { compileSFCScript as compile, assertCode, mockId } from './utils'
 
 describe('SFC compile <script setup>', () => {
   test('should expose top level declarations', () => {
@@ -166,6 +166,16 @@ defineExpose({ foo: 123 })
     expect(content).toMatch(`setup(__props, { expose }) {`)
     // should replace callee
     expect(content).toMatch(/\bexpose\(\{ foo: 123 \}\)/)
+  })
+
+  test('<script> after <script setup> the script content not end with `\\n`', () => {
+    const { content } = compile(`
+    <script setup>
+    import { x } from './x'
+    </script>
+    <script>const n = 1</script>
+    `)
+    assertCode(content)
   })
 
   describe('<script> and <script setup> co-usage', () => {
@@ -432,6 +442,38 @@ defineExpose({ foo: 123 })
       expect(content).toMatch(`return { FooBaz, Last }`)
       assertCode(content)
     })
+
+    test('TS annotations', () => {
+      const { content } = compile(`
+        <script setup lang="ts">
+        import { Foo, Bar, Baz, Qux, Fred } from './x'
+        const a = 1
+        function b() {}
+        </script>
+        <template>
+          {{ a as Foo }}
+          {{ b<Bar>() }}
+          {{ Baz }}
+          <Comp v-slot="{ data }: Qux">{{ data }}</Comp>
+          <div v-for="{ z = x as Qux } in list as Fred"/>
+        </template>
+        `)
+      expect(content).toMatch(`return { a, b, Baz }`)
+      assertCode(content)
+    })
+
+    // vuejs/vue#12591
+    test('v-on inline statement', () => {
+      // should not error
+      compile(`
+      <script setup lang="ts">
+        import { foo } from './foo'
+      </script>
+      <template>
+        <div @click="$emit('update:a');"></div>
+      </tempalte>
+      `)
+    })
   })
 
   describe('inlineTemplate mode', () => {
@@ -502,6 +544,7 @@ defineExpose({ foo: 123 })
         import { ref } from 'vue'
         import Foo, { bar } from './Foo.vue'
         import other from './util'
+        import * as tree from './tree'
         const count = ref(0)
         const constant = {}
         const maybe = foo()
@@ -511,6 +554,7 @@ defineExpose({ foo: 123 })
         <template>
           <Foo>{{ bar }}</Foo>
           <div @click="fn">{{ count }} {{ constant }} {{ maybe }} {{ lett }} {{ other }}</div>
+          {{ tree.foo() }}
         </template>
         `,
         { inlineTemplate: true }
@@ -529,6 +573,8 @@ defineExpose({ foo: 123 })
       expect(content).toMatch(`unref(maybe)`)
       // should unref() on let bindings
       expect(content).toMatch(`unref(lett)`)
+      // no need to unref namespace import (this also preserves tree-shaking)
+      expect(content).toMatch(`tree.foo()`)
       // no need to unref function declarations
       expect(content).toMatch(`{ onClick: fn }`)
       // no need to mark constant fns in patch flag
@@ -695,6 +741,8 @@ defineExpose({ foo: 123 })
       expect(content).toMatch(`\n  __ssrInlineRender: true,\n`)
       expect(content).toMatch(`return (_ctx, _push`)
       expect(content).toMatch(`ssrInterpolate`)
+      expect(content).not.toMatch(`useCssVars`)
+      expect(content).toMatch(`"--${mockId}-count": (count.value)`)
       assertCode(content)
     })
   })
@@ -1164,6 +1212,59 @@ const emit = defineEmits(['a', 'b'])
       assertAwaitDetection(`if (ok) { await foo } else { await bar }`)
     })
 
+    test('multiple `if` nested statements', () => {
+      assertAwaitDetection(`if (ok) {
+        let a = 'foo'
+        await 0 + await 1
+        await 2
+      } else if (a) {
+        await 10
+        if (b) {
+          await 0 + await 1
+        } else {
+          let a = 'foo'
+          await 2
+        }
+        if (b) {
+          await 3
+          await 4
+        }
+      } else {
+        await 5
+      }`)
+    })
+
+    test('multiple `if while` nested statements', () => {
+      assertAwaitDetection(`if (ok) {
+        while (d) {
+          await 5
+        }
+        while (d) {
+          await 5
+          await 6
+          if (c) {
+            let f = 10
+            10 + await 7
+          } else {
+            await 8
+            await 9
+          }
+        }
+      }`)
+    })
+
+    test('multiple `if for` nested statements', () => {
+      assertAwaitDetection(`if (ok) {
+        for (let a of [1,2,3]) {
+          await a
+        }
+        for (let a of [1,2,3]) {
+          await a
+          await a
+        }
+      }`)
+    })
+
     test('should ignore await inside functions', () => {
       // function declaration
       assertAwaitDetection(`async function foo() { await bar }`, false)
@@ -1562,7 +1663,7 @@ describe('SFC analyze <script> bindings', () => {
         }
       )
       expect(content).toMatch(`export default {
-  name: 'FooBar'`)
+  __name: 'FooBar'`)
       assertCode(content)
     })
 

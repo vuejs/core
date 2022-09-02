@@ -6,8 +6,7 @@ import {
   ComponentOptionsWithObjectProps,
   ComponentOptionsMixin,
   RenderFunction,
-  ComponentOptionsBase,
-  ComponentProvideOptions
+  ComponentOptionsBase
 } from './componentOptions'
 import {
   SetupContext,
@@ -41,8 +40,6 @@ export type DefineComponent<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = {},
   EE extends string = string,
-  Provide extends ComponentProvideOptions = ComponentProvideOptions,
-  RawOptions extends {} = {},
   PP = PublicProps,
   Props = Readonly<
     PropsOrPropOptions extends ComponentPropsOptions
@@ -51,23 +48,22 @@ export type DefineComponent<
   > &
     ({} extends E ? {} : EmitsToProps<E>),
   Defaults = ExtractDefaultPropTypes<PropsOrPropOptions>
-> = RawOptions &
-  ComponentPublicInstanceConstructor<
-    CreateComponentPublicInstance<
-      Props,
-      RawBindings,
-      D,
-      C,
-      M,
-      Mixin,
-      Extends,
-      E,
-      PP & Props,
-      Defaults,
-      true
-    > &
-      Props
+> = ComponentPublicInstanceConstructor<
+  CreateComponentPublicInstance<
+    Props,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    PP & Props,
+    Defaults,
+    true
   > &
+    Props
+> &
   ComponentOptionsBase<
     Props,
     RawBindings,
@@ -78,8 +74,7 @@ export type DefineComponent<
     Extends,
     E,
     EE,
-    Defaults,
-    Provide
+    Defaults
   > &
   PP
 
@@ -108,37 +103,21 @@ export function defineComponent<
   M extends MethodOptions = {},
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = EmitsOptions,
-  EE extends string = string,
-  Provide extends ComponentProvideOptions = ComponentProvideOptions,
-  Options extends {} = {}
+  E extends EmitsOptions = {},
+  EE extends string = string
 >(
-  options: Options &
-    ComponentOptionsWithoutProps<
-      Props,
-      RawBindings,
-      D,
-      C,
-      M,
-      Mixin,
-      Extends,
-      E,
-      EE,
-      Provide
-    >
-): DefineComponent<
-  Props,
-  RawBindings,
-  D,
-  C,
-  M,
-  Mixin,
-  Extends,
-  E,
-  EE,
-  Provide,
-  Options
->
+  options: ComponentOptionsWithoutProps<
+    Props,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    EE
+  >
+): DefineComponent<Props, RawBindings, D, C, M, Mixin, Extends, E, EE>
 
 // overload 3: object format with array props declaration
 // props inferred as { [key in PropNames]?: any }
@@ -151,24 +130,20 @@ export function defineComponent<
   M extends MethodOptions = {},
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = Record<string, any>,
-  EE extends string = string,
-  Provide extends ComponentProvideOptions = ComponentProvideOptions,
-  Options extends {} = {}
+  E extends EmitsOptions = {},
+  EE extends string = string
 >(
-  options: Options &
-    ComponentOptionsWithArrayProps<
-      PropNames,
-      RawBindings,
-      D,
-      C,
-      M,
-      Mixin,
-      Extends,
-      E,
-      EE,
-      Provide
-    >
+  options: ComponentOptionsWithArrayProps<
+    PropNames,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    EE
+  >
 ): DefineComponent<
   Readonly<{ [key in PropNames]?: any }>,
   RawBindings,
@@ -178,9 +153,7 @@ export function defineComponent<
   Mixin,
   Extends,
   E,
-  EE,
-  Provide,
-  Options
+  EE
 >
 
 // overload 4: object format with object props declaration
@@ -195,37 +168,21 @@ export function defineComponent<
   M extends MethodOptions = {},
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = Record<string, any>,
-  EE extends string = string,
-  Provide extends ComponentProvideOptions = ComponentProvideOptions,
-  Options extends {} = {}
+  E extends EmitsOptions = {},
+  EE extends string = string
 >(
-  options: Options &
-    ComponentOptionsWithObjectProps<
-      PropsOptions,
-      RawBindings,
-      D,
-      C,
-      M,
-      Mixin,
-      Extends,
-      E,
-      EE,
-      Provide
-    >
-): DefineComponent<
-  PropsOptions,
-  RawBindings,
-  D,
-  C,
-  M,
-  Mixin,
-  Extends,
-  E,
-  EE,
-  Provide,
-  Options
->
+  options: ComponentOptionsWithObjectProps<
+    PropsOptions,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    EE
+  >
+): DefineComponent<PropsOptions, RawBindings, D, C, M, Mixin, Extends, E, EE>
 
 // implementation, close to no-op
 export function defineComponent(options: unknown) {
