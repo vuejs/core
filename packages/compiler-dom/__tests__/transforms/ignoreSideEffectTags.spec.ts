@@ -39,6 +39,20 @@ describe('compiler: ignore side effect tags', () => {
     expect(err).toBeUndefined()
   })
 
+  it('should ignore style in svg(defs)', () => {
+    let err: CompilerError | undefined
+    const { code } = compile(
+      `<svg><g/><defs><style>h1 { color: red }</style></defs></svg>`,
+      {
+        onError(e) {
+          err = e
+        }
+      }
+    )
+    expect(code).toMatch('style')
+    expect(err).toBeUndefined()
+  })
+
   it('should ignore style not in svg', () => {
     let err: CompilerError | undefined
     const { code } = compile(`<div><style>h1 { color: red }</style></div>`, {

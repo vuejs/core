@@ -3,7 +3,8 @@ import { DOMErrorCodes, createDOMCompilerError } from '../errors'
 
 export const ignoreSideEffectTags: NodeTransform = (node, context) => {
   const inSvg = context.parent
-    ? context.parent.type === NodeTypes.ELEMENT && context.parent.tag === 'svg'
+    ? context.parent.type === NodeTypes.ELEMENT &&
+      (context.parent.tag === 'svg' || context.parent.tag === 'defs')
     : false
   if (
     node.type === NodeTypes.ELEMENT &&
