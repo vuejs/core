@@ -755,6 +755,7 @@ export interface SVGAttributes extends AriaAttributes, EventHandlers<Events> {
   tabindex?: Numberish
 
   // SVG Specific attributes
+  /** @deprecated */
   'accent-height'?: Numberish
   accumulate?: 'none' | 'sum'
   additive?: 'replace' | 'sum'
@@ -773,29 +774,38 @@ export interface SVGAttributes extends AriaAttributes, EventHandlers<Events> {
     | 'mathematical'
     | 'inherit'
   allowReorder?: 'no' | 'yes'
+  /** @deprecated */
   alphabetic?: Numberish
   amplitude?: Numberish
+  /** @deprecated */
   'arabic-form'?: 'initial' | 'medial' | 'terminal' | 'isolated'
+  /** @deprecated */
   ascent?: Numberish
   attributeName?: string
-  attributeType?: string
+  /** @deprecated */
+  attributeType?: 'auto' | 'CSS' | 'XML'
   autoReverse?: Numberish
   azimuth?: Numberish
   baseFrequency?: Numberish
-  'baseline-shift'?: Numberish
+  'baseline-shift'?: Numberish | 'sub' | 'super'
+  /** @deprecated */
   baseProfile?: Numberish
+  /** @deprecated */
   bbox?: Numberish
   begin?: Numberish
   bias?: Numberish
   by?: Numberish
-  calcMode?: Numberish
+  calcMode?: 'linear' | 'discrete' | 'paced' | 'spline'
+  /** @deprecated */
   'cap-height'?: Numberish
+  /** @deprecated */
   clip?: Numberish
   'clip-path'?: string
-  clipPathUnits?: Numberish
-  'clip-rule'?: Numberish
-  'color-interpolation'?: Numberish
-  'color-interpolation-filters'?: 'auto' | 'sRGB' | 'linearRGB' | 'inherit'
+  clipPathUnits?: 'userSpaceOnUse' | 'objectBoundingBox'
+  'clip-rule'?: 'nonzero' | 'evenodd'
+  'color-interpolation'?: 'auto' | 'sRGB' | 'linearRGB'
+  'color-interpolation-filters'?: 'auto' | 'sRGB' | 'linearRGB'
+  /** @deprecated */
   'color-profile'?: Numberish
   'color-rendering'?: Numberish
   contentScriptType?: Numberish
@@ -805,27 +815,39 @@ export interface SVGAttributes extends AriaAttributes, EventHandlers<Events> {
   cy?: Numberish
   d?: string
   decelerate?: Numberish
+  /** @deprecated */
   descent?: Numberish
   diffuseConstant?: Numberish
-  direction?: Numberish
+  direction?: 'ltr' | 'ttb'
   display?: Numberish
   divisor?: Numberish
-  'dominant-baseline'?: Numberish
-  dur?: Numberish
+  'dominant-baseline'?:
+    | 'auto'
+    | 'text-bottom'
+    | 'alphabetic'
+    | 'ideographic'
+    | 'middle'
+    | 'central'
+    | 'mathematical'
+    | 'hanging'
+    | 'text-top'
+  dur?: Numberish | 'media' | 'indefinite'
   dx?: Numberish
   dy?: Numberish
-  edgeMode?: Numberish
+  edgeMode?: 'duplicate' | 'wrap' | 'none'
   elevation?: Numberish
+  /** @deprecated */
   'enable-background'?: Numberish
   end?: Numberish
   exponent?: Numberish
   externalResourcesRequired?: Numberish
   fill?: string
   'fill-opacity'?: Numberish
-  'fill-rule'?: 'nonzero' | 'evenodd' | 'inherit'
+  'fill-rule'?: 'nonzero' | 'evenodd'
   filter?: string
+  /** @deprecated */
   filterRes?: Numberish
-  filterUnits?: Numberish
+  filterUnits?: 'userSpaceOnUse' | 'objectBoundingBox'
   'flood-color'?: Numberish
   'flood-opacity'?: Numberish
   focusable?: Numberish
@@ -833,27 +855,38 @@ export interface SVGAttributes extends AriaAttributes, EventHandlers<Events> {
   'font-size'?: Numberish
   'font-size-adjust'?: Numberish
   'font-stretch'?: Numberish
-  'font-style'?: Numberish
+  'font-style'?: 'normal' | 'italic' | 'oblique'
   'font-variant'?: Numberish
   'font-weight'?: Numberish
+  /** @deprecated */
   format?: Numberish
   from?: Numberish
   fx?: Numberish
   fy?: Numberish
+  /** @deprecated */
   g1?: Numberish
+  /** @deprecated */
   g2?: Numberish
+  /** @deprecated */
   'glyph-name'?: Numberish
+  /** @deprecated */
   'glyph-orientation-horizontal'?: Numberish
+  /** @deprecated */
   'glyph-orientation-vertical'?: Numberish
+  /** @deprecated */
   glyphRef?: Numberish
   gradientTransform?: string
-  gradientUnits?: string
+  gradientUnits?: 'userSpaceOnUse' | 'objectBoundingBox'
+  /** @deprecated */
   hanging?: Numberish
+  /** @deprecated */
   'horiz-adv-x'?: Numberish
+  /** @deprecated */
   'horiz-origin-x'?: Numberish
   href?: string
+  /** @deprecated */
   ideographic?: Numberish
-  'image-rendering'?: Numberish
+  'image-rendering'?: 'auto' | 'optimizeSpeed' | 'optimizeQuality'
   in2?: Numberish
   in?: string
   intercept?: Numberish
@@ -861,15 +894,18 @@ export interface SVGAttributes extends AriaAttributes, EventHandlers<Events> {
   k2?: Numberish
   k3?: Numberish
   k4?: Numberish
+  /** @deprecated */
   k?: Numberish
   kernelMatrix?: Numberish
+  /** @deprecated */
   kernelUnitLength?: Numberish
+  /** @deprecated */
   kerning?: Numberish
   keyPoints?: Numberish
   keySplines?: Numberish
   keyTimes?: Numberish
-  lengthAdjust?: Numberish
-  'letter-spacing'?: Numberish
+  lengthAdjust?: 'spacing' | 'spacingAndGlyphs'
+  'letter-spacing'?: 'normal' | Numberish
   'lighting-color'?: Numberish
   limitingConeAngle?: Numberish
   local?: Numberish
@@ -877,70 +913,105 @@ export interface SVGAttributes extends AriaAttributes, EventHandlers<Events> {
   markerHeight?: Numberish
   'marker-mid'?: string
   'marker-start'?: string
-  markerUnits?: Numberish
+  markerUnits?: 'userSpaceOnUse' | 'strokeWidth'
   markerWidth?: Numberish
   mask?: string
-  maskContentUnits?: Numberish
-  maskUnits?: Numberish
+  maskContentUnits?: 'userSpaceOnUse' | 'objectBoundingBox'
+  maskUnits?: 'userSpaceOnUse' | 'objectBoundingBox'
+  /** @deprecated */
   mathematical?: Numberish
-  mode?: Numberish
+  mode?:
+    | 'normal'
+    | 'multiply'
+    | 'screen'
+    | 'overlay'
+    | 'darken'
+    | 'lighten'
+    | 'color-dodge'
+    | 'color-burn'
+    | 'hard-light'
+    | 'soft-light'
+    | 'difference'
+    | 'exclusion'
+    | 'hue'
+    | 'saturation'
+    | 'color'
+    | 'luminosity'
   numOctaves?: Numberish
   offset?: Numberish
   opacity?: Numberish
-  operator?: Numberish
+  operator?: 'over' | 'in' | 'out' | 'atop' | 'xor' | 'lighter' | 'arithmetic'
   order?: Numberish
   orient?: Numberish
-  orientation?: Numberish
+  /** @deprecated */
+  orientation?: 'h' | 'v'
   origin?: Numberish
-  overflow?: Numberish
+  overflow?: 'visible' | 'hidden' | 'scroll' | 'auto'
   'overline-position'?: Numberish
   'overline-thickness'?: Numberish
   'paint-order'?: Numberish
+  /** @deprecated */
   'panose-1'?: Numberish
   pathLength?: Numberish
-  patternContentUnits?: string
+  patternContentUnits?: 'userSpaceOnUse' | 'objectBoundingBox'
   patternTransform?: Numberish
-  patternUnits?: string
-  'pointer-events'?: Numberish
+  patternUnits?: 'userSpaceOnUse' | 'objectBoundingBox'
+  'pointer-events'?:
+    | 'bounding-box'
+    | 'visiblePainted'
+    | 'visibleFill'
+    | 'visibleStroke'
+    | 'visible'
+    | 'painted'
+    | 'fill'
+    | 'stroke'
+    | 'all'
+    | 'none'
+    | 'inherit'
   points?: string
   pointsAtX?: Numberish
   pointsAtY?: Numberish
   pointsAtZ?: Numberish
-  preserveAlpha?: Numberish
+  preserveAlpha?: Booleanish
   preserveAspectRatio?: string
-  primitiveUnits?: Numberish
+  primitiveUnits?: 'userSpaceOnUse' | 'objectBoundingBox'
   r?: Numberish
   radius?: Numberish
   refX?: Numberish
   refY?: Numberish
   renderingIntent?: Numberish
-  repeatCount?: Numberish
-  repeatDur?: Numberish
+  repeatCount?: Numberish | 'indefinite'
+  repeatDur?: Numberish | 'indefinite'
   requiredExtensions?: Numberish
+  /** @deprecated */
   requiredFeatures?: Numberish
-  restart?: Numberish
+  restart?: 'always' | 'whenNotActive' | 'never'
   result?: string
-  rotate?: Numberish
+  rotate?: 'auto' | 'auto-reverse' | Numberish
   rx?: Numberish
   ry?: Numberish
   scale?: Numberish
   seed?: Numberish
-  'shape-rendering'?: Numberish
+  'shape-rendering'?: 'auto' | 'optimizeSpeed' | 'crispEdges' | 'geometricPrecision'
+  /** @deprecated */
   slope?: Numberish
-  spacing?: Numberish
+  spacing?: 'auto' | 'exact'
   specularConstant?: Numberish
   specularExponent?: Numberish
   speed?: Numberish
-  spreadMethod?: string
+  spreadMethod?: 'pad' | 'reflect' | 'repeat'
   startOffset?: Numberish
   stdDeviation?: Numberish
+  /** @deprecated */
   stemh?: Numberish
+  /** @deprecated */
   stemv?: Numberish
-  stitchTiles?: Numberish
+  stitchTiles?: 'noStitch' | 'stitch'
   'stop-color'?: string
   'stop-opacity'?: Numberish
   'strikethrough-position'?: Numberish
   'strikethrough-thickness'?: Numberish
+  /** @deprecated */
   string?: Numberish
   stroke?: string
   'stroke-dasharray'?: Numberish
@@ -955,55 +1026,78 @@ export interface SVGAttributes extends AriaAttributes, EventHandlers<Events> {
   tableValues?: Numberish
   targetX?: Numberish
   targetY?: Numberish
-  'text-anchor'?: string
+  'text-anchor'?: 'start' | 'middle' | 'end'
   'text-decoration'?: Numberish
   textLength?: Numberish
-  'text-rendering'?: Numberish
+  'text-rendering'?: 'auto' | 'optimizeSpeed' | 'optimizeLegibility' | 'geometricPrecision'
   to?: Numberish
   transform?: string
+  /** @deprecated */
   u1?: Numberish
+  /** @deprecated */
   u2?: Numberish
   'underline-position'?: Numberish
   'underline-thickness'?: Numberish
+  /** @deprecated */
   unicode?: Numberish
-  'unicode-bidi'?: Numberish
+  'unicode-bidi'?: 'normal' | 'embed' | 'isolate' | 'bidi-override' | 'isolate-override' | 'plaintext' | 'inherit'
+  /** @deprecated */
   'unicode-range'?: Numberish
   'unitsPer-em'?: Numberish
+  /** @deprecated */
   'v-alphabetic'?: Numberish
   values?: string
-  'vector-effect'?: Numberish
+  'vector-effect'?: 'none' | 'non-scaling-stroke' | 'non-scaling-size' | 'non-rotation' | 'fixed-position'
+  /** @deprecated */
   version?: string
+  /** @deprecated */
   'vert-adv-y'?: Numberish
+  /** @deprecated */
   'vert-origin-x'?: Numberish
+  /** @deprecated */
   'vert-origin-y'?: Numberish
+  /** @deprecated */
   'v-hanging'?: Numberish
+  /** @deprecated */
   'v-ideographic'?: Numberish
   viewBox?: string
+  /** @deprecated */
   viewTarget?: Numberish
-  visibility?: Numberish
+  visibility?: 'visible' | 'hidden' | 'collapse'
+  /** @deprecated */
   'v-mathematical'?: Numberish
+  /** @deprecated */
   widths?: Numberish
-  'word-spacing'?: Numberish
-  'writing-mode'?: Numberish
+  'word-spacing'?: 'normal' | Numberish
+  'writing-mode'?: 'horizontal-tb' | 'vertical-rl' | 'vertical-lr'
   x1?: Numberish
   x2?: Numberish
   x?: Numberish
-  xChannelSelector?: string
+  xChannelSelector?: 'R' | 'G' | 'B' | 'A'
+  /** @deprecated */
   'x-height'?: Numberish
+  /** @deprecated */
   xlinkActuate?: string
+  /** @deprecated */
   xlinkArcrole?: string
+  /** @deprecated */
   xlinkHref?: string
+  /** @deprecated */
   xlinkRole?: string
+  /** @deprecated */
   xlinkShow?: string
+  /** @deprecated */
   xlinkTitle?: string
+  /** @deprecated */
   xlinkType?: string
   xmlns?: string
   y1?: Numberish
   y2?: Numberish
   y?: Numberish
-  yChannelSelector?: string
+  yChannelSelector?: 'R' | 'G' | 'B' | 'A'
   z?: Numberish
-  zoomAndPan?: string
+  /** @deprecated */
+  zoomAndPan?: 'disable' | 'magnify'
 }
 
 interface IntrinsicElementAttributes {
