@@ -96,6 +96,8 @@ describe('reactivity/ref', () => {
     const b = ref(a)
 
     expect(typeof (b.value + 1)).toBe('number')
+   
+    expect(a === b).toBe(true)
   })
 
   it('should unwrap nested values in types', () => {
