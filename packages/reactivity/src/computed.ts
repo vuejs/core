@@ -81,15 +81,22 @@ export function computed<T>(
   debugOptions?: DebuggerOptions,
   isSSR = false
 ) {
-  const _setter = __DEV__
-    ? () => {
-        console.warn('Write operation failed: computed value is readonly')
-      }
-    : NOOP
+  let getter: ComputedGetter<T>
+  let setter: ComputedSetter<T>
+
   const onlyGetter = isFunction(getterOrOptions)
-  
-  const getter = onlyGetter ? getterOrOptions : getterOrOptions.get
-  const setter = onlyGetter ? _setter : getterOrOptions.set
+  if (onlyGetter) {
+    getter = getterOrOptions
+    setter = __DEV__
+      ? () => {
+          console.warn('Write operation failed: computed value is readonly')
+        }
+      : NOOP
+  } else {
+    getter = getterOrOptions.get
+    setter = getterOrOptions.set
+  }
+
   const cRef = new ComputedRefImpl(getter, setter, onlyGetter || !setter, isSSR)
 
   if (__DEV__ && debugOptions && !isSSR) {
