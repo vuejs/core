@@ -131,7 +131,7 @@ class RefImpl<T> {
 }
 
 export function triggerRef(ref: Ref) {
-  triggerRefValue(ref, __DEV__ ? ref.value : void 0)
+  triggerRefValue(ref, ref.value)
 }
 
 export function unref<T>(ref: T | Ref<T>): T {
