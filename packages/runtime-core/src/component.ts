@@ -308,7 +308,7 @@ export interface ComponentInternalInstance {
   /**
    * custom element specific HMR method
    */
-  ceReload?: (newStyles?: string[]) => void
+  ceReload?: (newComponent: ComponentOptions) => void
 
   // the rest are only for stateful components ---------------------------------
 

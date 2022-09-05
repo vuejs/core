@@ -215,7 +215,7 @@ export class VueElement extends BaseClass {
     }).observe(this, { attributes: true })
 
     const resolve = (def: InnerComponentDef) => {
-      const { props, styles } = def
+      const { props } = def
       const hasOptions = !isArray(props)
       const rawKeys = props ? (hasOptions ? Object.keys(props) : props) : []
 
@@ -252,7 +252,7 @@ export class VueElement extends BaseClass {
       }
 
       // apply CSS
-      this._applyStyles(styles)
+      this._applyStyles(def)
 
       // initial render
       this._update()
@@ -320,13 +320,13 @@ export class VueElement extends BaseClass {
         instance.isCE = true
         // HMR
         if (__DEV__) {
-          instance.ceReload = newStyles => {
+          instance.ceReload = newComponent => {
             // always reset styles
             if (this._styles) {
               this._styles.forEach(s => this.shadowRoot!.removeChild(s))
               this._styles.length = 0
             }
-            this._applyStyles(newStyles)
+            this._applyStyles(newComponent)
             // if this is an async component, ceReload is called from the inner
             // component so no need to reload the async wrapper
             if (!(this._def as ComponentOptions).__asyncLoader) {
@@ -362,17 +362,28 @@ export class VueElement extends BaseClass {
     return vnode
   }
 
-  private _applyStyles(styles: string[] | undefined) {
-    if (styles) {
-      styles.forEach(css => {
-        const s = document.createElement('style')
-        s.textContent = css
-        this.shadowRoot!.appendChild(s)
+  private _applyStyles(def: InnerComponentDef) {
+    const options = def as ComponentOptions;
+
+    if (options.__asyncLoader) {
+      options.__asyncLoader().then(this._applyStyles.bind(this));
+      return;
+    }
+    if (options.styles) {
+      for (const style of options.styles) {
+        const tag = document.createElement("style");
+        tag.textContent = style;
+        this.shadowRoot!.appendChild(tag);
         // record for HMR
         if (__DEV__) {
-          ;(this._styles || (this._styles = [])).push(s)
+          (this._styles || (this._styles = [])).push(tag)
         }
-      })
+      }
+    }
+    if (options.components) {
+      for (const sub of Object.values(options.components)) {
+        this._applyStyles(sub as ComponentOptions);
+      }
     }
   }
 }
