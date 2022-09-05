@@ -1498,8 +1498,10 @@ export function compileScript(
   } else if (propsTypeDecl) {
     runtimeOptions += genRuntimeProps(typeDeclaredProps)
   }
-  const components = Array.from(componentImports).join(", ")
-  runtimeOptions += `\n  components: { ${components} },`
+  if (componentImports.size) {
+    const components = Array.from(componentImports).join(", ")
+    runtimeOptions += `\n  components: { ${components} },`
+  }
   if (emitsRuntimeDecl) {
     runtimeOptions += `\n  emits: ${scriptSetup.content
       .slice(emitsRuntimeDecl.start!, emitsRuntimeDecl.end!)
