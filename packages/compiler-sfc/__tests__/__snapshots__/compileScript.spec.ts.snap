@@ -606,6 +606,22 @@ return { foo, bar, baz, y, z }
 }"
 `;
 
+exports[`SFC compile <script setup> component imports 1`] = `
+"import SubComponent from \\"subcomponent.vue\\"
+      import OtherComponent from \\"OtherComponent.vue\\"
+      
+export default {
+  components: { SubComponent, OtherComponent },
+  setup(__props, { expose }) {
+  expose();
+
+      
+return { SubComponent, OtherComponent }
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> defineEmits() 1`] = `
 "export default {
   emits: ['foo', 'bar'],

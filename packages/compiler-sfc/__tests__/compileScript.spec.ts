@@ -168,6 +168,18 @@ defineExpose({ foo: 123 })
     expect(content).toMatch(/\bexpose\(\{ foo: 123 \}\)/)
   })
 
+  test('component imports', () => {
+    const { content } = compile(`
+      <script setup>
+      import SubComponent from "subcomponent.vue"
+      import OtherComponent from "OtherComponent.vue"
+      </script>
+    `)
+    assertCode(content)
+    // imported components should be declared in the components option
+    expect(content).toMatch('components: { SubComponent, OtherComponent }')
+  });
+
   test('<script> after <script setup> the script content not end with `\\n`', () => {
     const { content } = compile(`
     <script setup>
