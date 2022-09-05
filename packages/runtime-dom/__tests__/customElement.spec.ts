@@ -1,4 +1,5 @@
 import {
+  defineComponent,
   defineAsyncComponent,
   defineCustomElement,
   h,
@@ -338,6 +339,55 @@ describe('defineCustomElement', () => {
       const el = container.childNodes[0] as VueElement
       const style = el.shadowRoot?.querySelector('style')!
       expect(style.textContent).toBe(`div { color: red; }`)
+    })
+
+    test('should attach styles of subcomponents to shadow dom', () => {
+      const Bar = defineComponent({
+        styles: [`span { color: green; }`],
+        render() {
+          return h('span', 'there')
+        }
+      })
+      const Foo = defineCustomElement({
+        styles: [`div { color: red; }`],
+        components: { Bar },
+        render() {
+          return h('div', ['hello', h(Bar)])
+        }
+      })
+      customElements.define('my-el-with-more-styles', Foo)
+      container.innerHTML = `<my-el-with-more-styles></my-el-with-more-styles>`
+      const el = container.childNodes[0] as VueElement
+      const styles = el.shadowRoot?.querySelectorAll('style')!
+      expect(styles.length).toBe(2)
+      expect(styles[0].textContent).toBe(`div { color: red; }`)
+      expect(styles[1].textContent).toBe(`span { color: green; }`)
+    })
+
+    test('should attach styles of async subcomponents to shadow dom', async () => {
+      const prom = Promise.resolve({
+        styles: [`span { color: green; }`],
+        render() {
+          return h('span', 'there')
+        }
+      })
+      const Bar = defineAsyncComponent(() => prom)
+      const Foo = defineCustomElement({
+        styles: [`div { color: red; }`],
+        components: { Bar },
+        render() {
+          return h('div', ['hello', h(Bar)])
+        }
+      })
+      customElements.define('my-el-with-async-styles', Foo)
+      container.innerHTML = `<my-el-with-async-styles></my-el-with-async-styles>`
+
+      await new Promise(r => setTimeout(r))
+      const el = container.childNodes[0] as VueElement
+      const styles = el.shadowRoot?.querySelectorAll('style')!
+      expect(styles.length).toBe(2)
+      expect(styles[0].textContent).toBe(`div { color: red; }`)
+      expect(styles[1].textContent).toBe(`span { color: green; }`)
     })
   })
 
