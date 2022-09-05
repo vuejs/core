@@ -2116,6 +2116,11 @@ function baseCreateRenderer(
       setRef(ref, null, parentSuspense, vnode, true)
     }
 
+    // #6593 should clean memo cache when unmount 
+    if (vnode.cleanMemoCache) { 
+      vnode.cleanMemoCache()
+    }
+
     if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
       ;(parentComponent!.ctx as KeepAliveContext).deactivate(vnode)
       return

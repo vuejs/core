@@ -229,6 +229,10 @@ export interface VNode<
    */
   memo?: any[]
   /**
+   * @internal clean v-memo cache
+   */
+  cleanMemoCache?: Function
+  /**
    * @internal __COMPAT__ only
    */
   isCompatRoot?: true
