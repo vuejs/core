@@ -366,7 +366,7 @@ function doWatch(
     }
   } else if (flush === 'post') {
     queuePostRenderEffect(
-      effect.run.bind(effect),
+      () => effect.run(),
       instance && instance.suspense
     )
   } else {
@@ -375,8 +375,8 @@ function doWatch(
 
   return () => {
     effect.stop()
-    if (instance && instance.scope) {
-      remove(instance.scope.effects!, effect)
+    if (instance?.scope) {
+      remove(instance.scope.effects, effect)
     }
   }
 }
