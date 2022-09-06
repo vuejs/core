@@ -316,9 +316,7 @@ export function trigger(
   const eventInfo = { target, type, key, newValue, oldValue, oldTarget }
 
   if (deps.length === 1) {
-    if (deps[0]) {
-      triggerEffects(deps[0], eventInfo)
-    }
+    triggerEffects(deps[0], eventInfo)
   } else {
     const effects: ReactiveEffect[] = []
     for (const dep of deps) {
@@ -332,9 +330,10 @@ export function trigger(
 }
 
 export function triggerEffects(
-  dep: Dep,
+  dep: Dep | undefined,
   debuggerEventExtraInfo: DebuggerEventExtraInfo
 ) {
+  if (!dep) return
   // spread into array for stabilization
   const effects = isArray(dep) ? dep : [...dep]
   for (const effect of effects) {
