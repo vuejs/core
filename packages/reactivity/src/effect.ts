@@ -216,22 +216,19 @@ export function track(target: object, type: TrackOpTypes, key: unknown) {
     if (!depsMap) {
       targetMap.set(target, (depsMap = new Map()))
     }
+
     let dep = depsMap.get(key)
     if (!dep) {
       depsMap.set(key, (dep = createDep()))
     }
 
-    const eventInfo = __DEV__
-      ? { effect: activeEffect, target, type, key }
-      : undefined
-
-    trackEffects(dep, eventInfo)
+    trackEffects(dep, { target, type, key })
   }
 }
 
 export function trackEffects(
   dep: Dep,
-  debuggerEventExtraInfo?: DebuggerEventExtraInfo
+  debuggerEventExtraInfo: DebuggerEventExtraInfo
 ) {
   let shouldTrack = false
   if (effectTrackDepth <= maxMarkerBits) {
@@ -250,7 +247,7 @@ export function trackEffects(
     if (__DEV__ && activeEffect!.onTrack) {
       activeEffect!.onTrack({
         effect: activeEffect!,
-        ...debuggerEventExtraInfo!
+        ...debuggerEventExtraInfo
       })
     }
   }
@@ -316,17 +313,11 @@ export function trigger(
     }
   }
 
-  const eventInfo = __DEV__
-    ? { target, type, key, newValue, oldValue, oldTarget }
-    : undefined
+  const eventInfo = { target, type, key, newValue, oldValue, oldTarget }
 
   if (deps.length === 1) {
     if (deps[0]) {
-      if (__DEV__) {
-        triggerEffects(deps[0], eventInfo)
-      } else {
-        triggerEffects(deps[0])
-      }
+      triggerEffects(deps[0], eventInfo)
     }
   } else {
     const effects: ReactiveEffect[] = []
@@ -335,17 +326,14 @@ export function trigger(
         effects.push(...dep)
       }
     }
-    if (__DEV__) {
-      triggerEffects(createDep(effects), eventInfo)
-    } else {
-      triggerEffects(createDep(effects))
-    }
+
+    triggerEffects(createDep(effects), eventInfo)
   }
 }
 
 export function triggerEffects(
-  dep: Dep | ReactiveEffect[],
-  debuggerEventExtraInfo?: DebuggerEventExtraInfo
+  dep: Dep,
+  debuggerEventExtraInfo: DebuggerEventExtraInfo
 ) {
   // spread into array for stabilization
   const effects = isArray(dep) ? dep : [...dep]
@@ -363,11 +351,11 @@ export function triggerEffects(
 
 function triggerEffect(
   effect: ReactiveEffect,
-  debuggerEventExtraInfo?: DebuggerEventExtraInfo
+  debuggerEventExtraInfo: DebuggerEventExtraInfo
 ) {
   if (effect !== activeEffect || effect.allowRecurse) {
     if (__DEV__ && effect.onTrigger) {
-      effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
+      effect.onTrigger({ effect, ...debuggerEventExtraInfo })
     }
     if (effect.scheduler) {
       effect.scheduler()
