@@ -69,7 +69,7 @@ export function triggerRefValue(ref: RefBase<any>, newVal?: any) {
 
 export function isRef<T>(r: Ref<T> | unknown): r is Ref<T>
 export function isRef(r: any): r is Ref {
-  return !!(r && r.__v_isRef === true)
+  return !!r?.__v_isRef
 }
 
 export function ref<T extends object>(
