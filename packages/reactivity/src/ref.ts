@@ -39,32 +39,23 @@ type RefBase<T> = {
 export function trackRefValue(ref: RefBase<any>) {
   if (shouldTrack && activeEffect) {
     ref = toRaw(ref)
-    if (__DEV__) {
-      trackEffects(ref.dep || (ref.dep = createDep()), {
-        target: ref,
-        type: TrackOpTypes.GET,
-        key: 'value'
-      })
-    } else {
-      trackEffects(ref.dep || (ref.dep = createDep()))
-    }
+
+    trackEffects(ref.dep || (ref.dep = createDep()), {
+      target: ref,
+      type: TrackOpTypes.GET,
+      key: 'value'
+    })
   }
 }
 
 export function triggerRefValue(ref: RefBase<any>, newVal?: any) {
   ref = toRaw(ref)
-  if (ref.dep) {
-    if (__DEV__) {
-      triggerEffects(ref.dep, {
-        target: ref,
-        type: TriggerOpTypes.SET,
-        key: 'value',
-        newValue: newVal
-      })
-    } else {
-      triggerEffects(ref.dep)
-    }
-  }
+  triggerEffects(ref.dep, {
+    target: ref,
+    type: TriggerOpTypes.SET,
+    key: 'value',
+    newValue: newVal
+  })
 }
 
 export function isRef<T>(r: Ref<T> | unknown): r is Ref<T>
