@@ -97,12 +97,17 @@ export function computed<T>(
     setter = getterOrOptions.set
   }
 
-  const cRef = new ComputedRefImpl(getter, setter, onlyGetter || !setter, isSSR)
+  const computedIns = new ComputedRefImpl(
+    getter,
+    setter,
+    onlyGetter || !setter,
+    isSSR
+  )
 
   if (__DEV__ && debugOptions && !isSSR) {
-    cRef.effect.onTrack = debugOptions.onTrack
-    cRef.effect.onTrigger = debugOptions.onTrigger
+    computedIns.effect.onTrack = debugOptions.onTrack
+    computedIns.effect.onTrigger = debugOptions.onTrigger
   }
 
-  return cRef as any
+  return computedIns as any
 }
