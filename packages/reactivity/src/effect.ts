@@ -180,11 +180,12 @@ export function effect<T = any>(
     extend(_effect, options)
     if (options.scope) recordEffectScope(_effect, options.scope)
   }
-  if (!options || !options.lazy) {
-    _effect.run()
-  }
-  const runner = _effect.run.bind(_effect) as ReactiveEffectRunner
+
+  const runner = () => _effect.run()
   runner.effect = _effect
+  if (!options?.lazy) {
+    runner()
+  }
   return runner
 }
 
