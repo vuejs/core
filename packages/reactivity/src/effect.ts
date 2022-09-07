@@ -175,14 +175,14 @@ export function effect<T = any>(
     fn = (fn as ReactiveEffectRunner).effect.fn
   }
 
-  const theEffect = new ReactiveEffect(fn)
+  const effectIns = new ReactiveEffect(fn)
   if (options) {
-    extend(theEffect, options)
-    if (options.scope) recordEffectScope(theEffect, options.scope)
+    extend(effectIns, options)
+    if (options.scope) recordEffectScope(effectIns, options.scope)
   }
 
-  const runner = () => theEffect.run()
-  runner.effect = theEffect
+  const runner = () => effectIns.run()
+  runner.effect = effectIns
   if (!options?.lazy) {
     runner()
   }
