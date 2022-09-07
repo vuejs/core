@@ -123,18 +123,20 @@ function deleteEntry(this: CollectionTypes, key: unknown) {
 
 function clear(this: IterableCollections) {
   const target = toRaw(this)
-  const hadItems = target.size !== 0
-  const oldTarget = __DEV__
-    ? isMap(target)
-      ? new Map(target)
-      : new Set(target)
-    : undefined
-  // forward the operation before queueing reactions
-  const result = target.clear()
-  if (hadItems) {
+  if (target.size) {
+    // should get oldTarget BEFORE forward the operation
+    const oldTarget = __DEV__
+      ? isMap(target)
+        ? new Map(target)
+        : new Set(target)
+      : undefined
+
+    // should forward the operation BEFORE queueing reactions
+    target.clear()
     trigger(target, TriggerOpTypes.CLEAR, undefined, undefined, oldTarget)
+  } else {
+    target.clear()
   }
-  return result
 }
 
 function createForEach(isReadonly: boolean, isShallow: boolean) {
