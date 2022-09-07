@@ -190,8 +190,8 @@ function createSetter(shallow = false) {
 
 function deleteProperty(target: object, key: string | symbol): boolean {
   const result = Reflect.deleteProperty(target, key)
+  const oldValue = (target as any)[key]
   if (result && hasOwn(target, key)) {
-    const oldValue = (target as any)[key]
     trigger(target, TriggerOpTypes.DELETE, key, undefined, oldValue)
   }
   return result
