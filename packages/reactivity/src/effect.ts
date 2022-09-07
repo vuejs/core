@@ -171,7 +171,9 @@ export function effect<T = any>(
   fn: () => T,
   options?: ReactiveEffectOptions
 ): ReactiveEffectRunner {
-  fn = (fn as ReactiveEffectRunner)?.effect.fn
+  if ((fn as ReactiveEffectRunner).effect) {
+    fn = (fn as ReactiveEffectRunner).effect.fn
+  }
 
   const theEffect = new ReactiveEffect(fn)
   if (options) {
