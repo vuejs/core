@@ -171,18 +171,16 @@ export function effect<T = any>(
   fn: () => T,
   options?: ReactiveEffectOptions
 ): ReactiveEffectRunner {
-  if ((fn as ReactiveEffectRunner).effect) {
-    fn = (fn as ReactiveEffectRunner).effect.fn
-  }
+  fn = (fn as ReactiveEffectRunner)?.effect.fn
 
-  const _effect = new ReactiveEffect(fn)
+  const theEffect = new ReactiveEffect(fn)
   if (options) {
-    extend(_effect, options)
-    if (options.scope) recordEffectScope(_effect, options.scope)
+    extend(theEffect, options)
+    if (options.scope) recordEffectScope(theEffect, options.scope)
   }
 
-  const runner = () => _effect.run()
-  runner.effect = _effect
+  const runner = () => theEffect.run()
+  runner.effect = theEffect
   if (!options?.lazy) {
     runner()
   }
