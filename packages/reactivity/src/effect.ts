@@ -346,18 +346,17 @@ export function triggerEffects(
   dep: Dep | undefined,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
-  if(dep === undefined) return
-  // spread into array for stabilization
-  const effects = dep
-  for (const effect of effects) {
+  if(!dep) return
+  const effectRemains = []
+  for (const effect of dep) {
     if (effect.computed) {
       triggerEffect(effect, debuggerEventExtraInfo)
+    } else {
+      effectRemains.push(effect)
     }
   }
-  for (const effect of effects) {
-    if (!effect.computed) {
-      triggerEffect(effect, debuggerEventExtraInfo)
-    }
+  for (const effect of effectRemains) {
+    triggerEffect(effect, debuggerEventExtraInfo)
   }
 }
 
