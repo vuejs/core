@@ -103,7 +103,7 @@ class RefImpl<T> {
   private _value: T
   private _rawValue: T
 
-  public dep?: Dep
+  public dep?: Dep = undefined
   public readonly __v_isRef = true
 
   constructor(value: T, public readonly __v_isShallow: boolean) {
