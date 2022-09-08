@@ -335,9 +335,9 @@ export function trigger(
       }
     }
     if (__DEV__) {
-      triggerEffects(effects, eventInfo)
+      triggerEffects(createDep(effects), eventInfo)
     } else {
-      triggerEffects(effects)
+      triggerEffects(createDep(effects))
     }
   }
 }
