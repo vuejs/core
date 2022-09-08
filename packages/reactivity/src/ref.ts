@@ -53,17 +53,15 @@ export function trackRefValue(ref: RefBase<any>) {
 
 export function triggerRefValue(ref: RefBase<any>, newVal?: any) {
   ref = toRaw(ref)
-  if (ref.dep) {
-    if (__DEV__) {
-      triggerEffects(ref.dep, {
-        target: ref,
-        type: TriggerOpTypes.SET,
-        key: 'value',
-        newValue: newVal
-      })
-    } else {
-      triggerEffects(ref.dep)
-    }
+  if (__DEV__) {
+    triggerEffects(ref.dep, {
+      target: ref,
+      type: TriggerOpTypes.SET,
+      key: 'value',
+      newValue: newVal
+    })
+  } else {
+    triggerEffects(ref.dep)
   }
 }
 
@@ -131,7 +129,7 @@ class RefImpl<T> {
 }
 
 export function triggerRef(ref: Ref) {
-  triggerRefValue(ref, ref.value)
+  triggerRefValue(ref, __DEV__ ? ref.value : void 0)
 }
 
 export function unref<T>(ref: T | Ref<T>): T {
