@@ -348,7 +348,7 @@ export function triggerEffects(
 ) {
   if(dep === undefined) return
   // spread into array for stabilization
-  const effects = [...dep]
+  const effects = dep
   for (const effect of effects) {
     if (effect.computed) {
       triggerEffect(effect, debuggerEventExtraInfo)
