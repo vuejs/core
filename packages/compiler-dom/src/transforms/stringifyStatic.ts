@@ -302,7 +302,7 @@ function stringifyElement(
         // #6568
         if (
           isBooleanAttr((p.arg as SimpleExpressionNode).content) &&
-          exp.content == 'false'
+          exp.content === 'false'
         ) {
           continue
         }
