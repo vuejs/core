@@ -28,7 +28,8 @@ import {
   normalizeStyle,
   stringifyStyle,
   makeMap,
-  isKnownSvgAttr
+  isKnownSvgAttr,
+  isBooleanAttr
 } from '@vue/shared'
 import { DOMNamespaces } from '../parserOptions'
 
@@ -296,6 +297,13 @@ function stringifyElement(
           res += ` ${
             (p.arg as SimpleExpressionNode).content
           }="__VUE_EXP_START__${exp.content}__VUE_EXP_END__"`
+          continue
+        }
+        // #6568
+        if (
+          isBooleanAttr((p.arg as SimpleExpressionNode).content) &&
+          exp.content == 'false'
+        ) {
           continue
         }
         // constant v-bind, e.g. :foo="1"
