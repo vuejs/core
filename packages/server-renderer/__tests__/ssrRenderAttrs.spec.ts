@@ -143,10 +143,12 @@ describe('ssr: renderStyle', () => {
     expect(
       ssrRenderAttrs({
         style: {
-          color: 'red'
+          color: 'red',
+          '--a': 2,
+          '-webkit-line-clamp': 2
         }
       })
-    ).toBe(` style="color:red;"`)
+    ).toBe(` style="color:red;--a:2;-webkit-line-clamp:2;"`)
   })
 
   test('standalone', () => {
