@@ -1,3 +1,45 @@
+## [3.2.39](https://github.com/vuejs/core/compare/v3.2.38...v3.2.39) (2022-09-08)
+
+
+### Bug Fixes
+
+* **runtime-core:** avoid double firing when mounting inside a watcher callback ([6aaf8ef](https://github.com/vuejs/core/commit/6aaf8efefffdb0d4b93f178b2bb36cd3c6bc31b8)), closes [#6614](https://github.com/vuejs/core/issues/6614)
+* **runtime-core:** support extends template for runtime compiler ([#6250](https://github.com/vuejs/core/issues/6250)) ([9875ecd](https://github.com/vuejs/core/commit/9875ecd762155732008e397d450edb0f8c01b05c)), closes [#6249](https://github.com/vuejs/core/issues/6249)
+* **ssr:** reset current instance ([#6184](https://github.com/vuejs/core/issues/6184)) ([6493da5](https://github.com/vuejs/core/commit/6493da5bfa4624267248deb3d31dca2a4fb22aee)), closes [#6110](https://github.com/vuejs/core/issues/6110)
+* **types:** support TypeScript 4.8 ([5381abc](https://github.com/vuejs/core/commit/5381abc0571e58a9be6cf482dc50c8db8300f86c)), closes [#6554](https://github.com/vuejs/core/issues/6554)
+
+
+
+## [3.2.38](https://github.com/vuejs/core/compare/v3.2.37...v3.2.38) (2022-08-30)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** fix template usage check edge case for v-on statements ([769e555](https://github.com/vuejs/core/commit/769e5555f9d9004ce541613341652db859881570))
+* **compiler-sfc:** only add decorators-legacy parser plugin when new decorators plugin is not used ([3ff8369](https://github.com/vuejs/core/commit/3ff83694f523e3fe148d22a469ed742b46603bb4))
+* **compiler-sfc:** rewriteDefault for class with decorators ([#6320](https://github.com/vuejs/core/issues/6320)) ([81a7819](https://github.com/vuejs/core/commit/81a7819535c4382ba7817c817722bac6d41921d8)), closes [#6318](https://github.com/vuejs/core/issues/6318)
+* **custom-element:** fix event listeners with capital letter event names on custom elements ([0739f89](https://github.com/vuejs/core/commit/0739f8909a0e56ae0fa760f233dfb8c113c9bde2))
+* **hmr:** fix HMR for nested non-SFC components ([#4077](https://github.com/vuejs/core/issues/4077)) ([96eb745](https://github.com/vuejs/core/commit/96eb7452548293c343613ab778248a5da9619f45))
+* **reactivity:** fix shallow/readonly edge cases ([a95554d](https://github.com/vuejs/core/commit/a95554d35c65e5bfd0bf9d1c5b908ae789345a6d))
+* **runtime-core:** only set cache for object keys ([#6266](https://github.com/vuejs/core/issues/6266)) ([c3465c1](https://github.com/vuejs/core/commit/c3465c1e889651df925324ed2a10ac2d5f229110))
+* **slots:** ensure different branches of dynamic slots have different keys ([00036bb](https://github.com/vuejs/core/commit/00036bb52c4e641b2be7fa55c39ced9448163b0f)), closes [#6202](https://github.com/vuejs/core/issues/6202)
+* **ssr:** forward helpers provided by CSS `v-bind` ([#6489](https://github.com/vuejs/core/issues/6489)) ([2024d11](https://github.com/vuejs/core/commit/2024d11db03d9c6e49e20b3355f3df0ba04bb834)), closes [#6201](https://github.com/vuejs/core/issues/6201)
+* **types:** add types field for sub package exports ([c1ee6ca](https://github.com/vuejs/core/commit/c1ee6caa82da89b3a9c33e2253c07a681ebb2628))
+* **types:** fix on* props incorrect type for TS 4.7 ([#6216](https://github.com/vuejs/core/issues/6216)) ([8dcb6c7](https://github.com/vuejs/core/commit/8dcb6c7bbdd2905469e2bb11dfff27b58cc784b2)), closes [#6052](https://github.com/vuejs/core/issues/6052)
+* **watch:** flush:pre watchers should not fire if state change causes ([78c199d](https://github.com/vuejs/core/commit/78c199d6dbe8931520b75d8bfe0d49366a06922a)), closes [#2291](https://github.com/vuejs/core/issues/2291)
+
+
+### Features
+
+* **custom-elements:** automatically respect custom elements when compiling in browser ([9f8f07e](https://github.com/vuejs/core/commit/9f8f07ed38b2e003f308875fe3a3e4c0d5477b32))
+
+
+### Performance Improvements
+
+* **ssr:** improve isComment check ([#6078](https://github.com/vuejs/core/issues/6078)) ([25f7a16](https://github.com/vuejs/core/commit/25f7a16a6eccbfa8d857977dcf1f23fb36b830b5))
+
+
+
 ## [3.2.37](https://github.com/vuejs/core/compare/v3.2.36...v3.2.37) (2022-06-06)
 
 

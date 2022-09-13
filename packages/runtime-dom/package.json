@@ -1,6 +1,6 @@
 {
   "name": "@vue/runtime-dom",
-  "version": "3.2.37",
+  "version": "3.2.39",
   "description": "@vue/runtime-dom",
   "main": "index.js",
   "module": "dist/runtime-dom.esm-bundler.js",
@@ -35,8 +35,8 @@
   },
   "homepage": "https://github.com/vuejs/core/tree/main/packages/runtime-dom#readme",
   "dependencies": {
-    "@vue/shared": "3.2.37",
-    "@vue/runtime-core": "3.2.37",
+    "@vue/shared": "3.2.39",
+    "@vue/runtime-core": "3.2.39",
     "csstype": "^2.6.8"
   }
 }

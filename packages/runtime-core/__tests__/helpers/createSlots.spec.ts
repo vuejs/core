@@ -17,6 +17,15 @@ describe('createSlot', () => {
     expect(actual).toEqual({ descriptor: slot })
   })
 
+  it('should attach key', () => {
+    const dynamicSlot = [{ name: 'descriptor', fn: slot, key: '1' }]
+
+    const actual = createSlots(record, dynamicSlot)
+    const ret = actual.descriptor()
+    // @ts-ignore
+    expect(ret.key).toBe('1')
+  })
+
   it('should add all slots to the record', () => {
     const dynamicSlot = [
       { name: 'descriptor', fn: slot },
