@@ -126,7 +126,7 @@ export function invokeDirectiveHook(
   const oldBindings = prevVNode && prevVNode.dirs!
   for (let i = 0; i < bindings.length; i++) {
     const binding = bindings[i]
-    if (oldBindings) {
+    if (oldBindings && oldBindings[i]) {
       binding.oldValue = oldBindings[i].value
     }
     let hook = binding.dir[name] as DirectiveHook | DirectiveHook[] | undefined
