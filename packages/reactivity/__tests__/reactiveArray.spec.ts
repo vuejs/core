@@ -100,14 +100,15 @@ describe('reactivity/reactive/Array', () => {
   })
 
   //#6018
-  test('edge case: array length-decrease mutation methods (splice,pop,shift) work with JSON.stringify', () => {
+  test('edge case: avoid trigger in deleteProperty when the length of the array decrease', () => {
     const arr = ref([1])
     const fn1 = jest.fn()
     const fn2 = jest.fn()
     effect(() => {
       fn1()
       if (arr.value.length > 0) {
-        fn2(JSON.stringify(arr.value))
+        arr.value.slice()
+        fn2()
       }
     })
     expect(fn1).toHaveBeenCalledTimes(1)
