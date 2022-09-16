@@ -474,6 +474,18 @@ defineExpose({ foo: 123 })
       </tempalte>
       `)
     })
+
+    test('v-on contain object', () => {
+      // should not error
+      compile(`
+      <script setup lang="ts">
+        import { foo } from './foo'
+      </script>
+      <template>
+        <div v-on="{ foo }"></div>
+      </tempalte>
+      `)
+    })
   })
 
   describe('inlineTemplate mode', () => {
