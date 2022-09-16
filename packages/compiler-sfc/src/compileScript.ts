@@ -2135,7 +2135,11 @@ function processExp(exp: string, dir?: string): string {
     if (dir === 'slot') {
       exp = `(${exp})=>{}`
     } else if (dir === 'on') {
-      exp = `()=>{${exp}}`
+      if (/^\{.*\}$/.test(exp.trim())) {
+        exp = `()=>(${exp})`
+      } else {
+        exp = `()=>{${exp}}`
+      }
     } else if (dir === 'for') {
       const inMatch = exp.match(forAliasRE)
       if (inMatch) {
