@@ -7,7 +7,9 @@ import {
   h,
   nodeOps,
   toHandlers,
-  nextTick
+  nextTick,
+  ref,
+  watchEffect
 } from '@vue/runtime-test'
 import { isEmitListener } from '../src/componentEmits'
 
@@ -430,5 +432,37 @@ describe('component: emit', () => {
     render(null, el)
     await nextTick()
     expect(fn).not.toHaveBeenCalled()
+  })
+
+  test('should not track during listener execution', async () => {
+    const counter = ref(0)
+    const Comp = defineComponent({
+      emits: ['interaction'],
+      setup(props, { emit }) {
+        const doEmit = ref(true)
+        watchEffect(() => {
+          if (doEmit.value) emit('interaction')
+        })
+        return () => h('div')
+      }
+    })
+    const el = nodeOps.createElement('div')
+    render(
+      h(Comp, {
+        onInteraction: async () => {
+          if (counter.value < 5) {
+            await nextTick()
+            counter.value++
+          }
+        }
+      }),
+      el
+    )
+
+    await nextTick()
+    await nextTick()
+    await nextTick()
+
+    expect(counter.value).toBe(1)
   })
 })
