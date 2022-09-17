@@ -397,7 +397,10 @@ export function injectProp(
     // if doesn't override user provided keys
     const first = props.arguments[0] as string | JSChildNode
     if (!isString(first) && first.type === NodeTypes.JS_OBJECT_EXPRESSION) {
-      first.properties.unshift(prop)
+      // #6631
+      if (!isAlreadyExists(prop, first)) {
+        first.properties.unshift(prop)
+      }
     } else {
       if (props.callee === TO_HANDLERS) {
         // #2366
@@ -411,17 +414,7 @@ export function injectProp(
     }
     !propsWithInjection && (propsWithInjection = props)
   } else if (props.type === NodeTypes.JS_OBJECT_EXPRESSION) {
-    let alreadyExists = false
-    // check existing key to avoid overriding user provided keys
-    if (prop.key.type === NodeTypes.SIMPLE_EXPRESSION) {
-      const propKeyName = prop.key.content
-      alreadyExists = props.properties.some(
-        p =>
-          p.key.type === NodeTypes.SIMPLE_EXPRESSION &&
-          p.key.content === propKeyName
-      )
-    }
-    if (!alreadyExists) {
+    if (!isAlreadyExists(prop, props)) {
       props.properties.unshift(prop)
     }
     propsWithInjection = props
@@ -451,6 +444,20 @@ export function injectProp(
       node.arguments[2] = propsWithInjection
     }
   }
+}
+
+// check existing key to avoid overriding user provided keys
+function isAlreadyExists(prop: Property, props: ObjectExpression) {
+  let result = false
+  if (prop.key.type === NodeTypes.SIMPLE_EXPRESSION) {
+    const propKeyName = prop.key.content
+    result = props.properties.some(
+      p =>
+        p.key.type === NodeTypes.SIMPLE_EXPRESSION &&
+        p.key.content === propKeyName
+    )
+  }
+  return result
 }
 
 export function toValidAssetId(
