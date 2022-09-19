@@ -15,7 +15,6 @@ import {
   CacheExpression,
   createCacheExpression,
   TemplateLiteral,
-  createVNodeCall,
   ConstantTypes,
   ArrayExpression
 } from './ast'
@@ -23,8 +22,6 @@ import {
   isString,
   isArray,
   NOOP,
-  PatchFlags,
-  PatchFlagNames,
   EMPTY_OBJ,
   capitalize,
   camelize
@@ -32,11 +29,11 @@ import {
 import { defaultOnError, defaultOnWarn } from './errors'
 import {
   TO_DISPLAY_STRING,
-  FRAGMENT,
   helperNameMap,
-  CREATE_COMMENT
+  CREATE_COMMENT,
+  CREATE_STATIC
 } from './runtimeHelpers'
-import { isVSlot, makeBlock } from './utils'
+import { isVSlot, makeBlock, makeFragmentBlock } from './utils'
 import { hoistStatic, isSingleElementRoot } from './transforms/hoistStatic'
 import { CompilerCompatOptions } from './compat/compatConfig'
 
@@ -120,6 +117,20 @@ export interface TransformContext
 
   // 2.x Compat only
   filters?: Set<string>
+}
+
+const prefix = '_hoisted_'
+const isSingleHoistStaticRoot = (
+  root: RootNode,
+  context: TransformContext
+): boolean => {
+  const { children } = root
+  const { hoists } = context
+  return (
+    children.length === 1 &&
+    (children[0] as any).codegenNode?.content?.startsWith(prefix) &&
+    (hoists[0] as any)?.callee === CREATE_STATIC
+  )
 }
 
 export function createTransformContext(
@@ -282,7 +293,7 @@ export function createTransformContext(
       if (isString(exp)) exp = createSimpleExpression(exp)
       context.hoists.push(exp)
       const identifier = createSimpleExpression(
-        `_hoisted_${context.hoists.length}`,
+        `${prefix}${context.hoists.length}`,
         false,
         exp.loc,
         ConstantTypes.CAN_HOIST
@@ -338,12 +349,18 @@ export function transform(root: RootNode, options: TransformOptions) {
 }
 
 function createRootCodegen(root: RootNode, context: TransformContext) {
-  const { helper } = context
   const { children } = root
   if (children.length === 1) {
     const child = children[0]
+    // #6637
+    if (isSingleHoistStaticRoot(root, context)) {
+      // when the root is only one child and it is a static node,
+      // we need to return a fragment block to keep in line with
+      // the server-side rendering behavior to prevent warning when hydrating
+      makeFragmentBlock(root, context)
+    }
     // if the single child is an element, turn it into a block.
-    if (isSingleElementRoot(root, child) && child.codegenNode) {
+    else if (isSingleElementRoot(root, child) && child.codegenNode) {
       // single element root is never hoisted so codegenNode will never be
       // SimpleExpressionNode
       const codegenNode = child.codegenNode
@@ -359,29 +376,7 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
     }
   } else if (children.length > 1) {
     // root has multiple nodes - return a fragment block.
-    let patchFlag = PatchFlags.STABLE_FRAGMENT
-    let patchFlagText = PatchFlagNames[PatchFlags.STABLE_FRAGMENT]
-    // check if the fragment actually contains a single valid child with
-    // the rest being comments
-    if (
-      __DEV__ &&
-      children.filter(c => c.type !== NodeTypes.COMMENT).length === 1
-    ) {
-      patchFlag |= PatchFlags.DEV_ROOT_FRAGMENT
-      patchFlagText += `, ${PatchFlagNames[PatchFlags.DEV_ROOT_FRAGMENT]}`
-    }
-    root.codegenNode = createVNodeCall(
-      context,
-      helper(FRAGMENT),
-      undefined,
-      root.children,
-      patchFlag + (__DEV__ ? ` /* ${patchFlagText} */` : ``),
-      undefined,
-      undefined,
-      true,
-      undefined,
-      false /* isComponent */
-    )
+    makeFragmentBlock(root, context)
   } else {
     // no children = noop. codegen will return null.
   }

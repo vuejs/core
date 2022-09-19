@@ -23,7 +23,8 @@ import {
   VNodeCall,
   SimpleExpressionNode,
   BlockCodegenNode,
-  MemoExpression
+  MemoExpression,
+  createVNodeCall
 } from './ast'
 import { TransformContext } from './transform'
 import {
@@ -40,9 +41,10 @@ import {
   CREATE_VNODE,
   CREATE_ELEMENT_VNODE,
   WITH_MEMO,
-  OPEN_BLOCK
+  OPEN_BLOCK,
+  FRAGMENT
 } from './runtimeHelpers'
-import { isString, isObject, hyphenate, extend, NOOP } from '@vue/shared'
+import { isString, isObject, hyphenate, extend, NOOP, PatchFlags, PatchFlagNames } from '@vue/shared'
 import { PropsExpression } from './transforms/transformElement'
 import { parseExpression } from '@babel/parser'
 import { Expression } from '@babel/types'
@@ -536,4 +538,32 @@ export function makeBlock(
     helper(OPEN_BLOCK)
     helper(getVNodeBlockHelper(inSSR, node.isComponent))
   }
+}
+
+export function makeFragmentBlock(root: RootNode, context: TransformContext) {
+  const { helper } = context
+  const { children } = root
+  let patchFlag = PatchFlags.STABLE_FRAGMENT
+  let patchFlagText = PatchFlagNames[PatchFlags.STABLE_FRAGMENT]
+  // check if the fragment actually contains a single valid child with
+  // the rest being comments
+  if (
+    __DEV__ &&
+    children.filter(c => c.type !== NodeTypes.COMMENT).length === 1
+  ) {
+    patchFlag |= PatchFlags.DEV_ROOT_FRAGMENT
+    patchFlagText += `, ${PatchFlagNames[PatchFlags.DEV_ROOT_FRAGMENT]}`
+  }
+  root.codegenNode = createVNodeCall(
+    context,
+    helper(FRAGMENT),
+    undefined,
+    root.children,
+    patchFlag + (__DEV__ ? ` /* ${patchFlagText} */` : ``),
+    undefined,
+    undefined,
+    true,
+    undefined,
+    false
+  )
 }
