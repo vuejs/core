@@ -34,21 +34,25 @@ return function render(_ctx, _cache) {
 `;
 
 exports[`stringify static html stringify v-html 1`] = `
-"const { createElementVNode: _createElementVNode, createStaticVNode: _createStaticVNode } = Vue
+"const { createElementVNode: _createElementVNode, createStaticVNode: _createStaticVNode, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
 
 const _hoisted_1 = /*#__PURE__*/_createStaticVNode(\\"<pre data-type=\\\\\\"js\\\\\\"><code><span>show-it </span></code></pre><div class><span class>1</span><span class>2</span></div>\\", 2)
 
 return function render(_ctx, _cache) {
-  return _hoisted_1
+  return (_openBlock(), _createElementBlock(_Fragment, null, [
+    _hoisted_1
+  ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */))
 }"
 `;
 
 exports[`stringify static html stringify v-text 1`] = `
-"const { createElementVNode: _createElementVNode, createStaticVNode: _createStaticVNode } = Vue
+"const { createElementVNode: _createElementVNode, createStaticVNode: _createStaticVNode, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
 
 const _hoisted_1 = /*#__PURE__*/_createStaticVNode(\\"<pre data-type=\\\\\\"js\\\\\\"><code>&lt;span&gt;show-it &lt;/span&gt;</code></pre><div class><span class>1</span><span class>2</span></div>\\", 2)
 
 return function render(_ctx, _cache) {
-  return _hoisted_1
+  return (_openBlock(), _createElementBlock(_Fragment, null, [
+    _hoisted_1
+  ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */))
 }"
 `;
