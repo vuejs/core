@@ -17,11 +17,14 @@ import { transformModel } from './transforms/vModel'
 import { transformOn } from './transforms/vOn'
 import { transformShow } from './transforms/vShow'
 import { transformTransition } from './transforms/Transition'
-import { stringifyStatic } from './transforms/stringifyStatic'
+import {
+  stringifyStatic,
+  StringifyThresholds
+} from './transforms/stringifyStatic'
 import { ignoreSideEffectTags } from './transforms/ignoreSideEffectTags'
 import { extend } from '@vue/shared'
 
-export { parserOptions }
+export { parserOptions, StringifyThresholds }
 
 export const DOMNodeTransforms: NodeTransform[] = [
   transformStyle,

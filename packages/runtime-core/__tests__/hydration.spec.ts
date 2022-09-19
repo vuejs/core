@@ -17,6 +17,7 @@ import {
   renderSlot
 } from '@vue/runtime-dom'
 import { renderToString, SSRContext } from '@vue/server-renderer'
+import { StringifyThresholds } from '@vue/compiler-dom'
 import { PatchFlags } from '../../shared/src'
 
 function mountWithHydration(html: string, render: () => any) {
@@ -543,6 +544,26 @@ describe('SSR hydration', () => {
     triggerEvent('input', input)
     await nextTick()
     expect(text.textContent).toBe('bye')
+  })
+
+  // #6637
+  test('the result of client render should be the same as server render', async () => {
+    const App = {
+      // the quantity must reach the threshold to be reproduce
+      template: `<div></div>`.repeat(StringifyThresholds.NODE_COUNT)
+    }
+    const container = document.createElement('div')
+
+    // server render
+    const serverSide = await renderToString(h(App))
+    container.innerHTML = serverSide
+
+    // client render
+    createSSRApp(App).mount(container)
+    const clientSide = container.innerHTML
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(serverSide).toBe(clientSide)
   })
 
   test('handle click error in ssr mode', async () => {
