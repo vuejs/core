@@ -20,10 +20,7 @@ describe('stringify static html', () => {
   }
 
   function repeat(code: string, n: number): string {
-    return new Array(n)
-      .fill(0)
-      .map(() => code)
-      .join('')
+    return code.repeat(n)
   }
 
   test('should bail on non-eligible static trees', () => {
