@@ -59,7 +59,7 @@ export type DirectiveTransform = (
   context: TransformContext,
   // a platform specific compiler can import the base transform and augment
   // it by passing in this optional argument.
-  augmentor?: (ret: DirectiveTransformResult) => DirectiveTransformResult
+  argument?: (ret: DirectiveTransformResult) => DirectiveTransformResult
 ) => DirectiveTransformResult
 
 export interface DirectiveTransformResult {
