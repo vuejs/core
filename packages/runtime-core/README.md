@@ -2,7 +2,7 @@
 
 > This package is published only for typing and building custom renderers. It is NOT meant to be used in applications.
 
-For full exposed APIs, see `src/index.ts`. You can also run `yarn build runtime-core --types` from repo root, which will generate an API report at `temp/runtime-core.api.md`.
+For full exposed APIs, see `src/index.ts`. You can also run `npm run build runtime-core -- --types` from repo root, which will generate an API report at `temp/runtime-core.api.md`.
 
 ## Building a Custom Renderer
 
