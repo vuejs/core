@@ -33,7 +33,7 @@ export const transformOn: DirectiveTransform = (
   dir,
   node,
   context,
-  argument
+  augmentor
 ) => {
   const { loc, modifiers, arg } = dir as VOnDirectiveNode
   if (!dir.exp && !modifiers.length) {
@@ -163,9 +163,9 @@ export const transformOn: DirectiveTransform = (
     ]
   }
 
-  // apply extended compiler argument
-  if (argument) {
-    ret = argument(ret)
+  // apply extended compiler augmentor
+  if (augmentor) {
+    ret = augmentor(ret)
   }
 
   if (shouldCache) {
