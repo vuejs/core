@@ -9,6 +9,7 @@ import {
   isFunction,
   isObject,
   isOn,
+  isString,
   toNumber,
   UnionToIntersection
 } from '@vue/shared'
@@ -122,7 +123,18 @@ export function emit(
     }Modifiers`
     const { number, trim } = props[modifiersKey] || EMPTY_OBJ
     if (trim) {
-      args = rawArgs.map(a => a.trim())
+      args = rawArgs.map(a => {
+        if(isString(a)) {
+          return a.trim();
+        } else {
+          if (__DEV__) {
+            warn(
+              `Incompatible type: ${a} is not String.`
+            )
+          }
+          return a;
+        }
+      })
     }
     if (number) {
       args = rawArgs.map(toNumber)
