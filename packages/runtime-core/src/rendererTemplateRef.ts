@@ -12,7 +12,7 @@ import {
 import { isAsyncWrapper } from './apiAsyncComponent'
 import { getExposeProxy } from './component'
 import { warn } from './warning'
-import { isRef } from '@vue/reactivity'
+import {isRef, reactive} from '@vue/reactivity'
 import { callWithErrorHandling, ErrorCodes } from './errorHandling'
 import { SchedulerJob } from './scheduler'
 import { queuePostRenderEffect } from './renderer'
@@ -61,7 +61,7 @@ export function setRef(
     return
   }
   const oldRef = oldRawRef && (oldRawRef as VNodeNormalizedRefAtom).r
-  const refs = owner.refs === EMPTY_OBJ ? (owner.refs = {}) : owner.refs
+  const refs = owner.refs === EMPTY_OBJ ? (owner.refs = reactive({})) : owner.refs
   const setupState = owner.setupState
 
   // dynamic ref changed. unset old ref
