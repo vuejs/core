@@ -123,18 +123,7 @@ export function emit(
     }Modifiers`
     const { number, trim } = props[modifiersKey] || EMPTY_OBJ
     if (trim) {
-      args = rawArgs.map(a => {
-        if(isString(a)) {
-          return a.trim();
-        } else {
-          if (__DEV__) {
-            warn(
-              `Incompatible type: ${a} is not String.`
-            )
-          }
-          return a;
-        }
-      })
+      args = rawArgs.map(a => (isString(a) ? a.trim() : a))
     }
     if (number) {
       args = rawArgs.map(toNumber)

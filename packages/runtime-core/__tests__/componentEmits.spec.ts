@@ -355,6 +355,38 @@ describe('component: emit', () => {
     expect(fn2).toHaveBeenCalledWith('two')
   })
 
+  // #6711
+  test('.trim modifier only works with string parameters.', () => {
+    const Foo = defineComponent({
+      render() {},
+      created() {
+        this.$emit('update:modelValue', ' one ', { one: 'one' })
+        this.$emit('update:foo', '  two  ', ['two'])
+      }
+    })
+
+    const fn1 = jest.fn()
+    const fn2 = jest.fn()
+
+    const Comp = () =>
+      h(Foo, {
+        modelValue: null,
+        modelModifiers: { trim: true },
+        'onUpdate:modelValue': fn1,
+
+        foo: null,
+        fooModifiers: { trim: true },
+        'onUpdate:foo': fn2
+      })
+
+    render(h(Comp), nodeOps.createElement('div'))
+
+    expect(fn1).toHaveBeenCalledTimes(1)
+    expect(fn1).toHaveBeenCalledWith('one', { one: 'one' })
+    expect(fn2).toHaveBeenCalledTimes(1)
+    expect(fn2).toHaveBeenCalledWith('two', ['two'])
+  })
+
   test('.trim and .number modifiers should work with v-model on component', () => {
     const Foo = defineComponent({
       render() {},
