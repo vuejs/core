@@ -71,7 +71,7 @@ module.exports = {
       }
     },
     {
-      files: ['scripts/**', '.eslintrc.js'],
+      files: ['scripts/**', '.eslintrc.js', 'packages/**/index.js', 'packages/size-check/**'],
       rules: {
         'no-restricted-globals': 'off',
         'no-restricted-syntax': 'off'
