@@ -69,6 +69,13 @@ module.exports = {
         'no-restricted-globals': ['error', ...NodeGlobals],
         'no-restricted-syntax': 'off'
       }
+    },
+    {
+      files: ['scripts/**', '.eslintrc.js'],
+      rules: {
+        'no-restricted-globals': 'off',
+        'no-restricted-syntax': 'off'
+      }
     }
   ]
 }
