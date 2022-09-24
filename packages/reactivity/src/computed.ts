@@ -41,26 +41,37 @@ export class ComputedRefImpl<T> {
     isReadonly: boolean,
     isSSR: boolean
   ) {
-    this.effect = new ReactiveEffect(getter, () => {
-      if (!this._dirty) {
-        this._dirty = true
-        triggerRefValue(this)
+    this.effect = new ReactiveEffect(
+      getter,
+      (deferredComputedTrigger?: boolean) => {
+        if (deferredComputedTrigger) {
+          this._dirty = true
+        }else{
+          if (!this._dirty) {
+            this._dirty = true
+          }
+          triggerRefValue(this)
+        }
       }
-    })
+    )
     this.effect.computed = this
     this.effect.active = this._cacheable = !isSSR
     this[ReactiveFlags.IS_READONLY] = isReadonly
+  }
+
+  private _get() {
+    if (this._dirty || !this._cacheable) {
+      this._dirty = false
+      return (this._value = this.effect.run()!)
+    }
+    return this._value
   }
 
   get value() {
     // the computed ref may get wrapped by other proxies e.g. readonly() #3376
     const self = toRaw(this)
     trackRefValue(self)
-    if (self._dirty || !self._cacheable) {
-      self._dirty = false
-      self._value = self.effect.run()!
-    }
-    return self._value
+    return self._get()
   }
 
   set value(newValue: T) {

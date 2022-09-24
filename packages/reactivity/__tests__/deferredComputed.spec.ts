@@ -166,6 +166,32 @@ describe('deferred computed', () => {
     expect(effectSpy).toHaveBeenCalledTimes(2)
   })
 
+  test('sync access to computed property should get the latest value', () => {
+    const bSpy = jest.fn()
+    const c1Spy = jest.fn()
+    const c2Spy = jest.fn()
+
+    const a = ref(0)
+    const b = deferredComputed(() => {
+      bSpy()
+      return a.value
+    })
+    const c1 = deferredComputed(() => {
+      c1Spy()
+      return b.value
+    })
+    const c2 = computed(() => {
+      c2Spy()
+      return b.value
+    })
+    // emit computed getter
+    c1.value;c2.value;
+    a.value = 2
+    // sync access
+    expect(c1.value).toEqual(2)
+    expect(c2.value).toEqual(2)
+  })
+
   test('should not compute if deactivated before scheduler is called', async () => {
     const c1Spy = jest.fn()
     const src = ref(0)
