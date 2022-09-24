@@ -1255,7 +1255,7 @@ describe('Suspense', () => {
     ).toHaveBeenWarned()
   })
 
-  test('nested async components with dynamics', async () => {
+  test('nested suspense with suspensible', async () => {
     const calls: string[] = []
     let expected = ''
 
@@ -1319,9 +1319,9 @@ describe('Suspense', () => {
     /**
      *  <Suspense>
      *    <component :is="outerToggle ? outerB : outerA">
-     *      <div>
+     *      <Suspense suspensible>
      *        <component :is="innerToggle ? innerB : innerA" />
-     *      </div>
+     *      </Suspense>
      *    </component>
      *  </Suspense>
      */
@@ -1331,7 +1331,9 @@ describe('Suspense', () => {
           h(Suspense, null, {
             default: [
               h(outerToggle.value ? OuterB : OuterA, null, {
-                default: () => h(innerToggle.value ? InnerB : InnerA)
+                default: () => h(Suspense, { suspensible: true },{
+                  default: h(innerToggle.value ? InnerB : InnerA)
+                })
               })
             ],
             fallback: h('div', 'fallback outer')
