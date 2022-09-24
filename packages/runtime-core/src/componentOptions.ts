@@ -42,7 +42,8 @@ import {
   onRenderTriggered,
   DebuggerHook,
   ErrorCapturedHook,
-  onServerPrefetch
+  onServerPrefetch,
+  HOOK
 } from './apiLifecycle'
 import {
   reactive,
@@ -748,12 +749,22 @@ export function applyOptions(instance: ComponentInternalInstance) {
 
   function registerLifecycleHook(
     register: Function,
-    hook?: Function | Function[]
+    hook?: HOOK | HOOK[] | ErrorCapturedHook | ErrorCapturedHook[]
   ) {
     if (isArray(hook)) {
-      hook.forEach(_hook => register(_hook.bind(publicThis)))
+      hook.forEach(_hook => {
+        const bind = _hook.bind(publicThis)
+        if (_hook._isGlobalMixin) {
+          bind._isGlobalMixin = true
+        }
+        register(bind)
+      })
     } else if (hook) {
-      register((hook as Function).bind(publicThis))
+      const bind = hook.bind(publicThis)
+      if (hook._isGlobalMixin) {
+        bind._isGlobalMixin = true
+      }
+      register(bind)
     }
   }
 

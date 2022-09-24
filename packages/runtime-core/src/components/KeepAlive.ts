@@ -21,7 +21,8 @@ import {
   injectHook,
   onUnmounted,
   onMounted,
-  onUpdated
+  onUpdated,
+  WRAPPEDHOOK
 } from '../apiLifecycle'
 import {
   isString,
@@ -410,7 +411,7 @@ function registerKeepAliveHook(
 }
 
 function injectToKeepAliveRoot(
-  hook: Function & { __weh?: Function },
+  hook: Function & { __weh?: WRAPPEDHOOK; _isGlobalMixin?: boolean },
   type: LifecycleHooks,
   target: ComponentInternalInstance,
   keepAliveRoot: ComponentInternalInstance

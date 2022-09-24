@@ -236,6 +236,12 @@ export function createAppAPI<HostElement>(
       mixin(mixin: ComponentOptions) {
         if (__FEATURE_OPTIONS_API__) {
           if (!context.mixins.includes(mixin)) {
+            for (let m in mixin) {
+              if (isFunction(mixin[m])) {
+                // mark globalMixin
+                mixin[m]._isGlobalMixin = true
+              }
+            }
             context.mixins.push(mixin)
           } else if (__DEV__) {
             warn(

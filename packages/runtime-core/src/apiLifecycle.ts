@@ -14,18 +14,23 @@ import { DebuggerEvent, pauseTracking, resetTracking } from '@vue/reactivity'
 
 export { onActivated, onDeactivated } from './components/KeepAlive'
 
+export type WRAPPEDHOOK = {
+  (hook: Function & { __weh?: WRAPPEDHOOK; _isGlobalMixin?: boolean }): void
+  _isGlobalMixin?: boolean
+}
+
 export function injectHook(
   type: LifecycleHooks,
-  hook: Function & { __weh?: Function },
+  hook: Function & { __weh?: WRAPPEDHOOK; _isGlobalMixin?: boolean },
   target: ComponentInternalInstance | null = currentInstance,
   prepend: boolean = false
-): Function | undefined {
+): WRAPPEDHOOK | undefined {
   if (target) {
     const hooks = target[type] || (target[type] = [])
     // cache the error handling wrapper for injected hooks so the same hook
     // can be properly deduped by the scheduler. "__weh" stands for "with error
     // handling".
-    const wrappedHook =
+    const wrappedHook: WRAPPEDHOOK =
       hook.__weh ||
       (hook.__weh = (...args: unknown[]) => {
         if (target.isUnmounted) {
@@ -43,8 +48,22 @@ export function injectHook(
         resetTracking()
         return res
       })
+    if (hook._isGlobalMixin) {
+      wrappedHook._isGlobalMixin = hook._isGlobalMixin
+    }
     if (prepend) {
-      hooks.unshift(wrappedHook)
+      let index = -1
+      for (let i = hooks.length - 1; i >= 0; i--) {
+        if ((hooks[i] as WRAPPEDHOOK)._isGlobalMixin) {
+          index = i
+          break
+        }
+      }
+      if (index === -1) {
+        hooks.unshift(wrappedHook)
+      } else {
+        hooks.splice(index + 1, 0, wrappedHook)
+      }
     } else {
       hooks.push(wrappedHook)
     }
@@ -63,12 +82,17 @@ export function injectHook(
   }
 }
 
+export interface HOOK {
+  (e: DebuggerEvent): void
+  _isGlobalMixin?: boolean
+}
+
 export const createHook =
-  <T extends Function = () => any>(lifecycle: LifecycleHooks) =>
+  <T extends HOOK>(lifecycle: LifecycleHooks) =>
   (hook: T, target: ComponentInternalInstance | null = currentInstance) =>
     // post-create lifecycle registrations are noops during SSR (except for serverPrefetch)
     (!isInSSRComponentSetup || lifecycle === LifecycleHooks.SERVER_PREFETCH) &&
-    injectHook(lifecycle, hook, target)
+    injectHook(lifecycle, hook, target, hook._isGlobalMixin ? true : false)
 
 export const onBeforeMount = createHook(LifecycleHooks.BEFORE_MOUNT)
 export const onMounted = createHook(LifecycleHooks.MOUNTED)
@@ -86,11 +110,12 @@ export const onRenderTracked = createHook<DebuggerHook>(
   LifecycleHooks.RENDER_TRACKED
 )
 
-export type ErrorCapturedHook<TError = unknown> = (
-  err: TError,
-  instance: ComponentPublicInstance | null,
-  info: string
-) => boolean | void
+export type ErrorCapturedHook<TError = unknown> = {
+  (err: TError, instance: ComponentPublicInstance | null, info: string):
+    | boolean
+    | void
+  _isGlobalMixin?: boolean
+}
 
 export function onErrorCaptured<TError = Error>(
   hook: ErrorCapturedHook<TError>,
