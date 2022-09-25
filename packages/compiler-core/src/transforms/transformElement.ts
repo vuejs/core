@@ -668,7 +668,7 @@ export function buildProps(
         // has built-in directive transform.
         const { props, needRuntime } = directiveTransform(prop, node, context)
         !ssr && props.forEach(analyzePatchFlag)
-        if (arg && !isStaticExp(arg)) {
+        if (isVOn && arg && !isStaticExp(arg)) {
           if (properties.length) {
             mergeArgs.push(
               createObjectExpression(dedupeProperties(properties), elementLoc)
