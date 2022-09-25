@@ -668,7 +668,17 @@ export function buildProps(
         // has built-in directive transform.
         const { props, needRuntime } = directiveTransform(prop, node, context)
         !ssr && props.forEach(analyzePatchFlag)
-        properties.push(...props)
+        if (arg && !isStaticExp(arg)) {
+          if (properties.length) {
+            mergeArgs.push(
+              createObjectExpression(dedupeProperties(properties), elementLoc)
+            )
+            properties = []
+          }
+          mergeArgs.push(createObjectExpression(props, elementLoc))
+        } else {
+          properties.push(...props)
+        }
         if (needRuntime) {
           runtimeDirectives.push(prop)
           if (isSymbol(needRuntime)) {
