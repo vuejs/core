@@ -144,11 +144,10 @@ describe('ssr: renderStyle', () => {
       ssrRenderAttrs({
         style: {
           color: 'red',
-          '--a': 2,
-          '-webkit-line-clamp': 2
+          '--a': 2
         }
       })
-    ).toBe(` style="color:red;--a:2;-webkit-line-clamp:2;"`)
+    ).toBe(` style="color:red;--a:2;"`)
   })
 
   test('standalone', () => {

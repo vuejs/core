@@ -63,7 +63,6 @@ export const isNoUnitNumericStyleProp = /*#__PURE__*/ makeMap(
     `grid-row,grid-row-end,grid-row-span,grid-row-start,grid-column,` +
     `grid-column-end,grid-column-span,grid-column-start,font-weight,line-clamp,` +
     `line-height,opacity,order,orphans,tab-size,widows,z-index,zoom,` +
-    `-webkit-line-clamp,` +
     // SVG
     `fill-opacity,flood-opacity,stop-opacity,stroke-dasharray,stroke-dashoffset,` +
     `stroke-miterlimit,stroke-opacity,stroke-width`
