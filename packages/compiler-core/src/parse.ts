@@ -257,34 +257,41 @@ function parseChildren(
     const shouldCondense = context.options.whitespace !== 'preserve'
     for (let i = 0; i < nodes.length; i++) {
       const node = nodes[i]
-      if (!context.inPre && node.type === NodeTypes.TEXT) {
-        if (!/[^\t\r\n\f ]/.test(node.content)) {
-          const prev = nodes[i - 1]
-          const next = nodes[i + 1]
-          // Remove if:
-          // - the whitespace is the first or last node, or:
-          // - (condense mode) the whitespace is adjacent to a comment, or:
-          // - (condense mode) the whitespace is between two elements AND contains newline
-          if (
-            !prev ||
-            !next ||
-            (shouldCondense &&
-              (prev.type === NodeTypes.COMMENT ||
-                next.type === NodeTypes.COMMENT ||
-                (prev.type === NodeTypes.ELEMENT &&
-                  next.type === NodeTypes.ELEMENT &&
-                  /[\r\n]/.test(node.content))))
-          ) {
-            removedWhitespace = true
-            nodes[i] = null as any
-          } else {
-            // Otherwise, the whitespace is condensed into a single space
-            node.content = ' '
+      if (node.type === NodeTypes.TEXT) {
+        if (!context.inPre) {
+          if (!/[^\t\r\n\f ]/.test(node.content)) {
+            const prev = nodes[i - 1]
+            const next = nodes[i + 1]
+            // Remove if:
+            // - the whitespace is the first or last node, or:
+            // - (condense mode) the whitespace is adjacent to a comment, or:
+            // - (condense mode) the whitespace is between two elements AND contains newline
+            if (
+              !prev ||
+              !next ||
+              (shouldCondense &&
+                (prev.type === NodeTypes.COMMENT ||
+                  next.type === NodeTypes.COMMENT ||
+                  (prev.type === NodeTypes.ELEMENT &&
+                    next.type === NodeTypes.ELEMENT &&
+                    /[\r\n]/.test(node.content))))
+            ) {
+              removedWhitespace = true
+              nodes[i] = null as any
+            } else {
+              // Otherwise, the whitespace is condensed into a single space
+              node.content = ' '
+            }
+          } else if (shouldCondense) {
+            // in condense mode, consecutive whitespaces in text are condensed
+            // down to a single space.
+            node.content = node.content.replace(/[\t\r\n\f ]+/g, ' ')
           }
-        } else if (shouldCondense) {
-          // in condense mode, consecutive whitespaces in text are condensed
-          // down to a single space.
-          node.content = node.content.replace(/[\t\r\n\f ]+/g, ' ')
+        } else {
+          // #6410 normalize windows newlines in <pre>:
+          // in SSR, browsers normalize server-rendered \r\n into a single \n
+          // in the DOM
+          node.content = node.content.replace(/\r\n/g, '\n')
         }
       }
       // Remove comment nodes if desired by configuration.
