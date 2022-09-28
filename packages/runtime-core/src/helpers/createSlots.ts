@@ -33,7 +33,8 @@ export function createSlots(
             const res = slot.fn(...args)
             // attach branch key so each conditional branch is considered a
             // different fragment
-            ;(res as any).key = slot.key
+            // #6651 res can be undefined in SSR in string push mode
+            if (res) (res as any).key = slot.key
             return res
           }
         : slot.fn
