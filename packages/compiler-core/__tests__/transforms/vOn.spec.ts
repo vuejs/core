@@ -271,6 +271,21 @@ describe('compiler: transform v-on', () => {
     })
   })
 
+  test('should NOT wrap as function if expression is already function expression (with Typescript)', () => {
+    const { node } = parseWithVOn(`<div @click="(e: any): any => foo(e)"/>`)
+    expect((node.codegenNode as VNodeCall).props).toMatchObject({
+      properties: [
+        {
+          key: { content: `onClick` },
+          value: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: `(e: any): any => foo(e)`
+          }
+        }
+      ]
+    })
+  })
+
   test('should NOT wrap as function if expression is already function expression (with newlines)', () => {
     const { node } = parseWithVOn(
       `<div @click="
