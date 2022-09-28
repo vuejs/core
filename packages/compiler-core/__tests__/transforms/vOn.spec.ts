@@ -568,6 +568,18 @@ describe('compiler: transform v-on', () => {
       expect(root.cached).toBe(1)
     })
 
+    test('should not be cached if the function references closure variables (v-for, v-slot)', () => {
+      const { root } = parseWithVOn(
+        `<div v-for="value in items" :key="value"><div v-on:click="foo(value)"/></div>`,
+        {
+          prefixIdentifiers: true,
+          cacheHandlers: true
+        }
+      )
+      expect(root.cached).not.toBe(2)
+      expect(root.cached).toBe(1)
+    })
+
     test('inline function expression handler', () => {
       const { root, node } = parseWithVOn(`<div v-on:click="() => foo()" />`, {
         prefixIdentifiers: true,
