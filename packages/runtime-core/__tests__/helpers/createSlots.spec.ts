@@ -26,6 +26,14 @@ describe('createSlot', () => {
     expect(ret.key).toBe('1')
   })
 
+  it('should check nullability', () => {
+    const slot = (() => {}) as Slot
+    const dynamicSlot = [{ name: 'descriptor', fn: slot, key: '1' }]
+
+    const actual = createSlots(record, dynamicSlot)
+    expect(actual).toHaveProperty('descriptor')
+  })
+
   it('should add all slots to the record', () => {
     const dynamicSlot = [
       { name: 'descriptor', fn: slot },
