@@ -1,6 +1,6 @@
 {
   "private": true,
-  "version": "3.2.39",
+  "version": "3.2.40",
   "packageManager": "pnpm@7.1.0",
   "scripts": {
     "dev": "node scripts/dev.js",
