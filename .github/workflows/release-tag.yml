@@ -5,8 +5,12 @@ on:
 
 name: Create Release
 
+permissions: {}
 jobs:
   build:
+    permissions:
+      contents: write # to create release (yyx990803/release-tag)
+
     name: Create Release
     runs-on: ubuntu-latest
     steps:
