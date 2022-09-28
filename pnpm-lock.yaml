@@ -285,7 +285,14 @@ importers:
       '@vue/shared': link:../shared
 
   packages/vue-compat:
-    specifiers: {}
+    specifiers:
+      '@babel/parser': ^7.16.4
+      estree-walker: ^2.0.2
+      source-map: ^0.6.1
+    dependencies:
+      '@babel/parser': 7.16.4
+      estree-walker: 2.0.2
+      source-map: 0.6.1
 
 packages:
 
@@ -6590,7 +6597,7 @@ packages:
     dev: true
 
   /source-map/0.5.7:
-    resolution: {integrity: sha1-igOdLRAh0i0eoUyA2OpGi6LvP8w=}
+    resolution: {integrity: sha512-LbrmJOMUSdEVxIKvdcJzQC+nQhe8FUZQTXQy6+I75skNgn3OoQ0DZA8YnFa7gp8tqtL3KPf1kmo0R5DoApeSGQ==}
     engines: {node: '>=0.10.0'}
     dev: true
 
