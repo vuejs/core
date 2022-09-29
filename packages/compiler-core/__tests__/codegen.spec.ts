@@ -41,7 +41,7 @@ function createRoot(options: Partial<RootNode> = {}): RootNode {
   return {
     type: NodeTypes.ROOT,
     children: [],
-    helpers: [],
+    helpers: new Set(),
     components: [],
     directives: [],
     imports: [],
@@ -57,7 +57,7 @@ function createRoot(options: Partial<RootNode> = {}): RootNode {
 describe('compiler: codegen', () => {
   test('module mode preamble', () => {
     const root = createRoot({
-      helpers: [CREATE_VNODE, RESOLVE_DIRECTIVE]
+      helpers: new Set([CREATE_VNODE, RESOLVE_DIRECTIVE])
     })
     const { code } = generate(root, { mode: 'module' })
     expect(code).toMatch(
@@ -68,7 +68,7 @@ describe('compiler: codegen', () => {
 
   test('module mode preamble w/ optimizeImports: true', () => {
     const root = createRoot({
-      helpers: [CREATE_VNODE, RESOLVE_DIRECTIVE]
+      helpers: new Set([CREATE_VNODE, RESOLVE_DIRECTIVE])
     })
     const { code } = generate(root, { mode: 'module', optimizeImports: true })
     expect(code).toMatch(
@@ -82,7 +82,7 @@ describe('compiler: codegen', () => {
 
   test('function mode preamble', () => {
     const root = createRoot({
-      helpers: [CREATE_VNODE, RESOLVE_DIRECTIVE]
+      helpers: new Set([CREATE_VNODE, RESOLVE_DIRECTIVE])
     })
     const { code } = generate(root, { mode: 'function' })
     expect(code).toMatch(`const _Vue = Vue`)
@@ -94,7 +94,7 @@ describe('compiler: codegen', () => {
 
   test('function mode preamble w/ prefixIdentifiers: true', () => {
     const root = createRoot({
-      helpers: [CREATE_VNODE, RESOLVE_DIRECTIVE]
+      helpers: new Set([CREATE_VNODE, RESOLVE_DIRECTIVE])
     })
     const { code } = generate(root, {
       mode: 'function',

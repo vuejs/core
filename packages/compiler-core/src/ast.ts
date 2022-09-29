@@ -556,7 +556,7 @@ export function createRoot(
   return {
     type: NodeTypes.ROOT,
     children,
-    helpers: [],
+    helpers: new Set(),
     components: [],
     directives: [],
     hoists: [],
