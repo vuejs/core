@@ -1,6 +1,6 @@
 {
   "name": "@vue/template-explorer",
-  "version": "3.2.37",
+  "version": "3.2.40",
   "private": true,
   "buildOptions": {
     "formats": [

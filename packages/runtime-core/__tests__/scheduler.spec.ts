@@ -534,4 +534,16 @@ describe('scheduler', () => {
     // should not be called
     expect(spy).toHaveBeenCalledTimes(0)
   })
+
+  it('flushPreFlushCbs inside a pre job', async () => {
+    const spy = jest.fn()
+    const job = () => {
+      spy()
+      flushPreFlushCbs()
+    }
+    job.pre = true
+    queueJob(job)
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
 })

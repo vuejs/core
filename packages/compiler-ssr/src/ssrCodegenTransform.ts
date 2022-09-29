@@ -40,13 +40,18 @@ export function ssrCodegenTransform(ast: RootNode, options: CompilerOptions) {
   // we do this instead of inlining the expression to ensure the vars are
   // only resolved once per render
   if (options.ssrCssVars) {
+    const cssContext = createTransformContext(createRoot([]), options)
     const varsExp = processExpression(
       createSimpleExpression(options.ssrCssVars, false),
-      createTransformContext(createRoot([]), options)
+      cssContext
     )
     context.body.push(
       createCompoundExpression([`const _cssVars = { style: `, varsExp, `}`])
     )
+    Array.from(cssContext.helpers.keys()).forEach(helper => {
+      if (!ast.helpers.includes(helper))
+        ast.helpers.push(helper)
+    })
   }
 
   const isFragment =

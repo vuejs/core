@@ -1,6 +1,6 @@
 {
   "name": "@vue/compat",
-  "version": "3.2.37",
+  "version": "3.2.40",
   "description": "Vue 3 compatibility build for Vue 2",
   "main": "index.js",
   "module": "dist/vue.runtime.esm-bundler.js",
@@ -37,7 +37,12 @@
     "url": "https://github.com/vuejs/core/issues"
   },
   "homepage": "https://github.com/vuejs/core/tree/main/packages/vue-compat#readme",
+  "dependencies": {
+    "@babel/parser": "^7.16.4",
+    "estree-walker": "^2.0.2",
+    "source-map": "^0.6.1"
+  },
   "peerDependencies": {
-    "vue": "3.2.37"
+    "vue": "3.2.40"
   }
 }
