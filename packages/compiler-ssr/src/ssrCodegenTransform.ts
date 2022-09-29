@@ -48,9 +48,10 @@ export function ssrCodegenTransform(ast: RootNode, options: CompilerOptions) {
     context.body.push(
       createCompoundExpression([`const _cssVars = { style: `, varsExp, `}`])
     )
-    Array.from(cssContext.helpers.keys()).forEach(helper =>
-      ast.helpers.push(helper)
-    )
+    Array.from(cssContext.helpers.keys()).forEach(helper => {
+      if (!ast.helpers.includes(helper))
+        ast.helpers.push(helper)
+    })
   }
 
   const isFragment =
