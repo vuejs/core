@@ -155,7 +155,6 @@ export function parse(
       errors.push(e)
     }
   })
-
   ast.children.forEach(node => {
     if (node.type !== NodeTypes.ELEMENT) {
       return
@@ -224,7 +223,13 @@ export function parse(
         break
     }
   })
-
+  if (!descriptor.template && !descriptor.script && !descriptor.scriptSetup) {
+    errors.push(
+      new SyntaxError(
+        `Single file Component at least has a <template> or a <script> tag.`
+      )
+    )
+  }
   if (descriptor.scriptSetup) {
     if (descriptor.scriptSetup.src) {
       errors.push(
