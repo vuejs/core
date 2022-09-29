@@ -82,9 +82,6 @@ export const vModelText: ModelDirective<
     // avoid clearing unresolved text. #2302
     if ((el as any).composing) return
     if (document.activeElement === el && el.type !== 'range') {
-      if (lazy) {
-        return
-      }
       if (trim && el.value.trim() === value) {
         return
       }
