@@ -992,20 +992,22 @@ function baseCreateRenderer(
     parentSuspense: SuspenseBoundary | null,
     isSVG: boolean
   ) => {
-    if (oldProps !== newProps && oldProps !== EMPTY_OBJ) {
-      for (const key in oldProps) {
-        if (!isReservedProp(key) && !(key in newProps)) {
-          hostPatchProp(
-            el,
-            key,
-            oldProps[key],
-            null,
-            isSVG,
-            vnode.children as VNode[],
-            parentComponent,
-            parentSuspense,
-            unmountChildren
-          )
+    if (oldProps !== newProps) {
+      if (oldProps !== EMPTY_OBJ) {
+        for (const key in oldProps) {
+          if (!isReservedProp(key) && !(key in newProps)) {
+            hostPatchProp(
+              el,
+              key,
+              oldProps[key],
+              null,
+              isSVG,
+              vnode.children as VNode[],
+              parentComponent,
+              parentSuspense,
+              unmountChildren
+            )
+          }
         }
       }
       for (const key in newProps) {
