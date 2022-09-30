@@ -34,6 +34,7 @@ export interface SFCStyleCompileOptions {
    * @deprecated use `inMap` instead.
    */
   map?: RawSourceMap
+  warnDeprecatedDeepSelector?: boolean
 }
 
 /**
@@ -99,7 +100,8 @@ export function doCompileStyle(
     modulesOptions = {},
     preprocessLang,
     postcssOptions,
-    postcssPlugins
+    postcssPlugins,
+    warnDeprecatedDeepSelector = true
   } = options
   const preprocessor = preprocessLang && processors[preprocessLang]
   const preProcessedSource = preprocessor && preprocess(options, preprocessor)
@@ -117,7 +119,7 @@ export function doCompileStyle(
     plugins.push(trimPlugin())
   }
   if (scoped) {
-    plugins.push(scopedPlugin(longId))
+    plugins.push(scopedPlugin({ id: longId, warnDeprecatedDeepSelector }))
   }
   let cssModules: Record<string, string> | undefined
   if (modules) {

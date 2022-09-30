@@ -5,14 +5,36 @@ import { warn } from './warn'
 const animationNameRE = /^(-\w+-)?animation-name$/
 const animationRE = /^(-\w+-)?animation$/
 
-const scopedPlugin: PluginCreator<string> = (id = '') => {
+interface RewriteSelectorOptions {
+  id: string
+  selector: selectorParser.Selector
+  selectorRoot: selectorParser.Root
+  slotted?: boolean
+  warnDeprecatedDeepSelector?: boolean
+}
+
+interface ProcessRuleOptions
+  extends Pick<RewriteSelectorOptions, 'warnDeprecatedDeepSelector'> {
+  id: string
+  rule: Rule
+}
+
+export interface StyleScopedPluginOptions
+  extends Pick<RewriteSelectorOptions, 'warnDeprecatedDeepSelector'> {
+  id: string
+}
+
+const scopedPlugin: PluginCreator<StyleScopedPluginOptions> = (
+  opts = { id: '' }
+) => {
+  const { id = '', warnDeprecatedDeepSelector } = opts
   const keyframes = Object.create(null)
   const shortId = id.replace(/^data-v-/, '')
 
   return {
     postcssPlugin: 'vue-sfc-scoped',
     Rule(rule) {
-      processRule(id, rule)
+      processRule({ id, rule, warnDeprecatedDeepSelector })
     },
     AtRule(node) {
       if (
@@ -61,7 +83,11 @@ const scopedPlugin: PluginCreator<string> = (id = '') => {
 
 const processedRules = new WeakSet<Rule>()
 
-function processRule(id: string, rule: Rule) {
+function processRule({
+  id,
+  rule,
+  warnDeprecatedDeepSelector
+}: ProcessRuleOptions) {
   if (
     processedRules.has(rule) ||
     (rule.parent &&
@@ -73,17 +99,23 @@ function processRule(id: string, rule: Rule) {
   processedRules.add(rule)
   rule.selector = selectorParser(selectorRoot => {
     selectorRoot.each(selector => {
-      rewriteSelector(id, selector, selectorRoot)
+      rewriteSelector({
+        id,
+        selector,
+        selectorRoot,
+        warnDeprecatedDeepSelector
+      })
     })
   }).processSync(rule.selector)
 }
 
-function rewriteSelector(
-  id: string,
-  selector: selectorParser.Selector,
-  selectorRoot: selectorParser.Root,
-  slotted = false
-) {
+function rewriteSelector({
+  id,
+  selector,
+  selectorRoot,
+  slotted = false,
+  warnDeprecatedDeepSelector = true
+}: RewriteSelectorOptions) {
   let node: selectorParser.Node | null = null
   let shouldInject = true
   // find the last child node to insert attribute selector
@@ -95,10 +127,11 @@ function rewriteSelector(
     ) {
       n.value = ' '
       n.spaces.before = n.spaces.after = ''
-      warn(
-        `the >>> and /deep/ combinators have been deprecated. ` +
-          `Use :deep() instead.`
-      )
+      warnDeprecatedDeepSelector &&
+        warn(
+          `the >>> and /deep/ combinators have been deprecated. ` +
+            `Use :deep() instead.`
+        )
       return false
     }
 
@@ -129,10 +162,11 @@ function rewriteSelector(
         } else {
           // DEPRECATED usage
           // .foo ::v-deep .bar -> .foo[xxxxxxx] .bar
-          warn(
-            `::v-deep usage as a combinator has ` +
-              `been deprecated. Use :deep(<inner-selector>) instead.`
-          )
+          warnDeprecatedDeepSelector &&
+            warn(
+              `::v-deep usage as a combinator has ` +
+                `been deprecated. Use :deep(<inner-selector>) instead.`
+            )
           const prev = selector.at(selector.index(n) - 1)
           if (prev && isSpaceCombinator(prev)) {
             selector.removeChild(prev)
@@ -146,7 +180,12 @@ function rewriteSelector(
       // instead.
       // ::v-slotted(.foo) -> .foo[xxxxxxx-s]
       if (value === ':slotted' || value === '::v-slotted') {
-        rewriteSelector(id, n.nodes[0], selectorRoot, true /* slotted */)
+        rewriteSelector({
+          id,
+          selector: n.nodes[0],
+          selectorRoot,
+          slotted: true
+        })
         let last: selectorParser.Selector['nodes'][0] = n
         n.nodes[0].each(ss => {
           selector.insertAfter(last, ss)

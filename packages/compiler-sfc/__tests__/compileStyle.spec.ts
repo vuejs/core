@@ -268,6 +268,56 @@ describe('SFC scoped CSS', () => {
       ).toHaveBeenWarned()
     })
   })
+
+  describe('warn off deprecated syntax', () => {
+    test('::v-deep as combinator', () => {
+      expect(
+        compileScoped(`::v-deep .foo { color: red; }`, {
+          warnDeprecatedDeepSelector: false
+        })
+      ).toMatchInlineSnapshot(`
+        "[data-v-test] .foo { color: red;
+        }"
+      `)
+      expect(
+        compileScoped(`.bar ::v-deep .foo { color: red; }`, {
+          warnDeprecatedDeepSelector: false
+        })
+      ).toMatchInlineSnapshot(`
+        ".bar[data-v-test] .foo { color: red;
+        }"
+      `)
+      expect(
+        `::v-deep usage as a combinator has been deprecated.`
+      ).toHaveBeenWarnedTimes(0)
+    })
+
+    test('>>> (deprecated syntax)', () => {
+      const code = compileScoped(`>>> .foo { color: red; }`, {
+        warnDeprecatedDeepSelector: false
+      })
+      expect(code).toMatchInlineSnapshot(`
+        "[data-v-test] .foo { color: red;
+        }"
+      `)
+      expect(
+        `the >>> and /deep/ combinators have been deprecated.`
+      ).toHaveBeenWarnedTimes(0)
+    })
+
+    test('/deep/ (deprecated syntax)', () => {
+      const code = compileScoped(`/deep/ .foo { color: red; }`, {
+        warnDeprecatedDeepSelector: false
+      })
+      expect(code).toMatchInlineSnapshot(`
+        "[data-v-test] .foo { color: red;
+        }"
+      `)
+      expect(
+        `the >>> and /deep/ combinators have been deprecated.`
+      ).toHaveBeenWarnedTimes(0)
+    })
+  })
 })
 
 describe('SFC CSS modules', () => {
