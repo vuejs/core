@@ -211,7 +211,7 @@ export function renderComponentRoot(
 
   // inherit directives
   if (vnode.dirs) {
-    if (__DEV__ && !isElementRoot(root)) {
+    if (!isElementRoot(root)) {
       warn(
         `Runtime directive used on component with non-element root node. ` +
           `The directives will not function as intended.`
@@ -223,7 +223,7 @@ export function renderComponentRoot(
   }
   // inherit transition data
   if (vnode.transition) {
-    if (__DEV__ && !isElementRoot(root)) {
+    if (!isElementRoot(root)) {
       warn(
         `Component inside <Transition> renders non-element root node ` +
           `that cannot be animated.`
