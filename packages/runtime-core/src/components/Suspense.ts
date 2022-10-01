@@ -424,7 +424,7 @@ function createSuspenseBoundary(
 
   // if set `suspensible: true`, set the current suspense as a dep of parent suspense
   let parentSuspenseId: number | undefined
-  let isSuspensible =
+  const isSuspensible =
     vnode.props?.suspensible != null && vnode.props.suspensible !== false
   if (isSuspensible) {
     if (parentSuspense?.pendingBranch) {
