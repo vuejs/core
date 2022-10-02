@@ -133,7 +133,7 @@ const KeepAliveImpl: ComponentOptions = {
         vnode,
         container,
         anchor,
-        instance.parent,
+        instance,
         parentSuspense,
         isSVG,
         vnode.slotScopeIds,
