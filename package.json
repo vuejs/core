@@ -8,7 +8,7 @@
     "size": "run-s size-global size-baseline",
     "size-global": "node scripts/build.js vue runtime-dom -f global -p",
     "size-baseline": "node scripts/build.js runtime-dom runtime-core reactivity shared -f esm-bundler && cd packages/size-check && vite build && node brotli",
-    "lint": "eslint --ext .ts packages/*/{src,__tests__}/**.ts",
+    "lint": "eslint --cache --ext .ts packages/*/{src,__tests__}/**.ts",
     "format": "prettier --write --cache --parser typescript \"packages/**/*.ts?(x)\"",
     "test": "run-s \"test-unit {@}\" \"test-e2e {@}\"",
     "test-unit": "jest --filter ./scripts/filter-unit.js",
