@@ -109,6 +109,7 @@ const _devtoolsComponentRemoved = /*#__PURE__*/ createDevtoolsComponentHook(
 export const devtoolsComponentRemoved = (
   component: ComponentInternalInstance
 ) => {
+  // _buffer is not available in iframe #6812
   if (devtools && Array.isArray(devtools._buffer) && devtools._buffer.length) {
     let wasBuffered = false
     devtools._buffer = devtools._buffer.filter(item => {
