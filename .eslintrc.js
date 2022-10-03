@@ -70,10 +70,11 @@ module.exports = {
         'no-restricted-syntax': 'off'
       }
     },
+    // Node scripts
     {
       files: ['scripts/**', './*.js', 'packages/**/index.js', 'packages/size-check/**'],
       rules: {
-        'no-restricted-globals': ['off', ...NodeGlobals],
+        'no-restricted-globals': 'off',
         'no-restricted-syntax': 'off'
       }
     }
