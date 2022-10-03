@@ -33,14 +33,10 @@ const styleCommentRE = /\/\*.*?\*\//g
 
 export function parseStringStyle(cssText: string): NormalizedStyle {
   const ret: NormalizedStyle = {}
-  cssText.split(listDelimiterRE).forEach(item => {
+  cssText.replace(styleCommentRE, '').split(listDelimiterRE).forEach(item => {
     if (item) {
       const tmp = item.split(propertyDelimiterRE)
-      if (tmp.length > 1) {
-        const key = tmp[0].replace(styleCommentRE, '').trim()
-        const value = tmp[1].replace(styleCommentRE, '').trim()
-        ret[key] = value
-      }
+      tmp.length > 1 && (ret[tmp[0].trim()] = tmp[1].trim())
     }
   })
   return ret
