@@ -54,9 +54,9 @@ export const transformOn: DirectiveTransform = (
           ? // for component and vnode lifecycle event listeners, auto convert
             // it to camelCase. See issue #2249
             toHandlerKey(camelize(rawName))
-            // preserve case for plain element listeners that have uppercase
+          : // preserve case for plain element listeners that have uppercase
             // letters, as these may be custom elements' custom events
-          : `on:${rawName}`
+            `on:${rawName}`
       eventName = createSimpleExpression(eventString, true, arg.loc)
     } else {
       // #2388
