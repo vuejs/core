@@ -30,7 +30,7 @@ function genVarName(id: string, raw: string, isProd: boolean): string {
   if (isProd) {
     return hash(id + raw)
   } else {
-    return `${id}-${raw.replace(/([^\w-])/g, '_')}`
+    return `${id}-${raw.replace(/([^\w-])/g, s => `\\${s}`)}`
   }
 }
 

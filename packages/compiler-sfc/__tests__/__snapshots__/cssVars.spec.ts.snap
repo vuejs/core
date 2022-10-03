@@ -75,9 +75,9 @@ export default {
 
 _useCssVars(_ctx => ({
   \\"xxxxxxxx-foo\\": (_unref(foo)),
-  \\"xxxxxxxx-foo____px_\\": (_unref(foo) + 'px'),
-  \\"xxxxxxxx-_a___b____2____px_\\": ((_unref(a) + _unref(b)) / 2 + 'px'),
-  \\"xxxxxxxx-__a___b______2___a_\\": (((_unref(a) + _unref(b))) / (2 * _unref(a)))
+  \\"xxxxxxxx-foo\\\\ \\\\+\\\\ \\\\'px\\\\'\\": (_unref(foo) + 'px'),
+  \\"xxxxxxxx-\\\\(a\\\\ \\\\+\\\\ b\\\\)\\\\ \\\\/\\\\ 2\\\\ \\\\+\\\\ \\\\'px\\\\'\\": ((_unref(a) + _unref(b)) / 2 + 'px'),
+  \\"xxxxxxxx-\\\\(\\\\(a\\\\ \\\\+\\\\ b\\\\)\\\\)\\\\ \\\\/\\\\ \\\\(2\\\\ \\\\*\\\\ a\\\\)\\": (((_unref(a) + _unref(b))) / (2 * _unref(a)))
 }))
 
         let a = 100
@@ -133,7 +133,7 @@ import { useCssVars as _useCssVars } from 'vue'
 const __injectCSSVars__ = () => {
 _useCssVars(_ctx => ({
   \\"xxxxxxxx-color\\": (_ctx.color),
-  \\"xxxxxxxx-font_size\\": (_ctx.font.size)
+  \\"xxxxxxxx-font\\\\.size\\": (_ctx.font.size)
 }))}
 const __setup__ = __default__.setup
 __default__.setup = __setup__

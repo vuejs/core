@@ -12,7 +12,7 @@ describe('CSS vars injection', () => {
     )
     expect(content).toMatch(`_useCssVars(_ctx => ({
   "${mockId}-color": (_ctx.color),
-  "${mockId}-font_size": (_ctx.font.size)
+  "${mockId}-font\\.size": (_ctx.font.size)
 })`)
     assertCode(content)
   })
@@ -86,7 +86,24 @@ describe('CSS vars injection', () => {
     expect(code).toMatchInlineSnapshot(`
       ".foo {
               color: var(--test-color);
-              font-size: var(--test-font_size);
+              font-size: var(--test-font\\\\.size);
+      }"
+    `)
+
+    // #6803
+    expect(
+      compileStyle({
+        source: `.foo {
+        color: v-bind(蓝色);
+        font-size: v-bind(字体);
+      }`,
+        filename: 'test.css',
+        id: 'data-v-test'
+      }).code
+    ).toMatchInlineSnapshot(`
+      ".foo {
+              color: var(--test-\\\\蓝\\\\色);
+              font-size: var(--test-\\\\字\\\\体);
       }"
     `)
   })
@@ -225,10 +242,10 @@ describe('CSS vars injection', () => {
       )
       expect(content).toMatch(`_useCssVars(_ctx => ({
   "${mockId}-foo": (_unref(foo)),
-  "${mockId}-foo____px_": (_unref(foo) + 'px'),
-  "${mockId}-_a___b____2____px_": ((_unref(a) + _unref(b)) / 2 + 'px'),
-  "${mockId}-__a___b______2___a_": (((_unref(a) + _unref(b))) / (2 * _unref(a)))
-})`)
+  "${mockId}-foo\\ \\+\\ \\'px\\'": (_unref(foo) + 'px'),
+  "${mockId}-\\(a\\ \\+\\ b\\)\\ \\/\\ 2\\ \\+\\ \\'px\\'": ((_unref(a) + _unref(b)) / 2 + 'px'),
+  "${mockId}-\\(\\(a\\ \\+\\ b\\)\\)\\ \\/\\ \\(2\\ \\*\\ a\\)": (((_unref(a) + _unref(b))) / (2 * _unref(a)))
+}))`)
       assertCode(content)
     })
 
