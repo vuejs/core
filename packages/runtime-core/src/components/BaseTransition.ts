@@ -52,9 +52,7 @@ export interface BaseTransitionProps<HostElement = RendererElement> {
   onAppearCancelled?: Hook<(el: HostElement) => void>
 }
 
-export interface TransitionHooks<
-  HostElement extends RendererElement = RendererElement
-> {
+export interface TransitionHooks<HostElement = RendererElement> {
   mode: BaseTransitionProps['mode']
   persisted: boolean
   beforeEnter(el: HostElement): void
@@ -276,7 +274,7 @@ if (__COMPAT__) {
 
 // export the public type for h/tsx inference
 // also to avoid inline import() in generated d.ts files
-export const BaseTransition = BaseTransitionImpl as any as {
+export const BaseTransition = BaseTransitionImpl as unknown as {
   new (): {
     $props: BaseTransitionProps<any>
   }

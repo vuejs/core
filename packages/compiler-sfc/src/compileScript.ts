@@ -185,7 +185,12 @@ export function compileScript(
       )
   }
   if (options.babelParserPlugins) plugins.push(...options.babelParserPlugins)
-  if (isTS) plugins.push('typescript', 'decorators-legacy')
+  if (isTS) {
+    plugins.push('typescript')
+    if (!plugins.includes('decorators')) {
+      plugins.push('decorators-legacy')
+    }
+  }
 
   if (!scriptSetup) {
     if (!script) {
@@ -1463,7 +1468,7 @@ export function compileScript(
   if (!hasDefaultExportName && filename && filename !== DEFAULT_FILENAME) {
     const match = filename.match(/([^/\\]+)\.\w+$/)
     if (match) {
-      runtimeOptions += `\n  name: '${match[1]}',`
+      runtimeOptions += `\n  __name: '${match[1]}',`
     }
   }
   if (hasInlinedSsrRenderFn) {
@@ -2129,6 +2134,8 @@ function processExp(exp: string, dir?: string): string {
   if (/ as\s+\w|<.*>|:/.test(exp)) {
     if (dir === 'slot') {
       exp = `(${exp})=>{}`
+    } else if (dir === 'on') {
+      exp = `()=>{return ${exp}}`
     } else if (dir === 'for') {
       const inMatch = exp.match(forAliasRE)
       if (inMatch) {

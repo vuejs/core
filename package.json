@@ -1,6 +1,6 @@
 {
   "private": true,
-  "version": "3.2.36",
+  "version": "3.2.40",
   "packageManager": "pnpm@7.1.0",
   "scripts": {
     "dev": "node scripts/dev.js",
@@ -46,12 +46,12 @@
     ]
   },
   "engines": {
-    "node": ">=16.5.0"
+    "node": ">=16.11.0"
   },
   "devDependencies": {
     "@babel/types": "^7.12.0",
     "@esbuild-plugins/node-modules-polyfill": "^0.1.4",
-    "@microsoft/api-extractor": "^7.15.1",
+    "@microsoft/api-extractor": "~7.20.0",
     "@rollup/plugin-commonjs": "^18.0.0",
     "@rollup/plugin-json": "^4.0.0",
     "@rollup/plugin-node-resolve": "^11.2.1",
@@ -93,8 +93,8 @@
     "todomvc-app-css": "^2.3.0",
     "ts-jest": "^27.0.5",
     "tslib": "^2.4.0",
-    "typescript": "^4.6.4",
-    "vite": "^2.9.8",
+    "typescript": "^4.8.0",
+    "vite": "^3.0.0",
     "vue": "workspace:*",
     "yorkie": "^2.0.0"
   }

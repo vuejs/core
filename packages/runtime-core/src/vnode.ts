@@ -606,7 +606,7 @@ export function cloneVNode<T, U>(
   // key enumeration cost.
   const { props, ref, patchFlag, children } = vnode
   const mergedProps = extraProps ? mergeProps(props || {}, extraProps) : props
-  const cloned: VNode = {
+  const cloned: VNode<T, U> = {
     __v_isVNode: true,
     __v_skip: true,
     type: vnode.type,
@@ -661,7 +661,7 @@ export function cloneVNode<T, U>(
     anchor: vnode.anchor
   }
   if (__COMPAT__) {
-    defineLegacyVNodeProperties(cloned)
+    defineLegacyVNodeProperties(cloned as VNode)
   }
   return cloned as any
 }
@@ -737,7 +737,10 @@ export function normalizeVNode(child: VNodeChild): VNode {
 
 // optimized normalization for template-compiled render fns
 export function cloneIfMounted(child: VNode): VNode {
-  return child.el === null || child.memo ? child : cloneVNode(child)
+  return (child.el === null && child.patchFlag !== PatchFlags.HOISTED) ||
+    child.memo
+    ? child
+    : cloneVNode(child)
 }
 
 export function normalizeChildren(vnode: VNode, children: unknown) {

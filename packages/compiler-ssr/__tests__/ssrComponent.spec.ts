@@ -166,7 +166,8 @@ describe('ssr: components', () => {
                         _createTextVNode(\\"foo\\")
                       ]
                     }
-                  })
+                  }),
+                  key: \\"0\\"
                 }
               : undefined
           ]), _parent))

@@ -20,7 +20,8 @@ import {
   resolveDynamicComponent,
   renderSlot,
   onErrorCaptured,
-  onServerPrefetch
+  onServerPrefetch,
+  getCurrentInstance
 } from 'vue'
 import { escapeHtml } from '@vue/shared'
 import { renderToString } from '../src/renderToString'
@@ -128,14 +129,14 @@ function testRender(type: string, render: typeof renderToString) {
           await render(
             createApp(
               defineComponent({
-                extends: {
+                extends: defineComponent({
                   data() {
                     return { msg: 'hello' }
                   },
-                  render(this: any) {
+                  render() {
                     return h('div', this.msg)
                   }
-                }
+                })
               })
             )
           )
@@ -148,14 +149,14 @@ function testRender(type: string, render: typeof renderToString) {
             createApp(
               defineComponent({
                 mixins: [
-                  {
+                  defineComponent({
                     data() {
                       return { msg: 'hello' }
                     },
-                    render(this: any) {
+                    render() {
                       return h('div', this.msg)
                     }
-                  }
+                  })
                 ]
               })
             )
@@ -675,9 +676,7 @@ function testRender(type: string, render: typeof renderToString) {
         const MyComp = {
           render: () => h('p', 'hello')
         }
-        expect(await render(h(KeepAlive, () => h(MyComp)))).toBe(
-          `<p>hello</p>`
-        )
+        expect(await render(h(KeepAlive, () => h(MyComp)))).toBe(`<p>hello</p>`)
       })
 
       test('Transition', async () => {
@@ -780,6 +779,23 @@ function testRender(type: string, render: typeof renderToString) {
           `Template compilation error: Unexpected EOF in tag.`
         ).toHaveBeenWarned()
         expect(`Element is missing end tag`).toHaveBeenWarned()
+      })
+
+      // #6110
+      test('reset current instance after rendering error', async () => {
+        const prev = getCurrentInstance()
+        expect(prev).toBe(null)
+        try {
+          await render(
+            createApp({
+              data() {
+                return { msg: null }
+              },
+              template: `<div>{{ msg.text }}</div>`
+            })
+          )
+        } catch {}
+        expect(getCurrentInstance()).toBe(prev)
       })
     })
 

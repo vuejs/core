@@ -101,7 +101,8 @@ function parseName(name: string): [string, EventListenerOptions | undefined] {
       ;(options as any)[m[0].toLowerCase()] = true
     }
   }
-  return [hyphenate(name.slice(2)), options]
+  const event = name[2] === ':' ? name.slice(3) : hyphenate(name.slice(2))
+  return [event, options]
 }
 
 function createInvoker(

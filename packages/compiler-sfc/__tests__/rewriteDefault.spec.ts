@@ -190,7 +190,60 @@ describe('compiler sfc: rewriteDefault', () => {
     ).toMatchInlineSnapshot(`
       "/*
       export default class Foo {}*/
-      const script = class Bar {}"
+      class Bar {}
+      const script = Bar"
+    `)
+  })
+
+  test('@Component\nexport default class', async () => {
+    expect(rewriteDefault(`@Component\nexport default class Foo {}`, 'script'))
+      .toMatchInlineSnapshot(`
+      "@Component
+      class Foo {}
+      const script = Foo"
+    `)
+  })
+
+  test('@Component\nexport default class w/ comments', async () => {
+    expect(
+      rewriteDefault(
+        `// export default\n@Component\nexport default class Foo {}`,
+        'script'
+      )
+    ).toMatchInlineSnapshot(`
+      "// export default
+      @Component
+      class Foo {}
+      const script = Foo"
+    `)
+  })
+
+  test('@Component\nexport default class w/ comments 2', async () => {
+    expect(
+      rewriteDefault(
+        `export default {}\n` + `// @Component\n// export default class Foo {}`,
+        'script'
+      )
+    ).toMatchInlineSnapshot(`
+      "const script = {}
+      // @Component
+      // export default class Foo {}"
+    `)
+  })
+
+  test('@Component\nexport default class w/ comments 3', async () => {
+    expect(
+      rewriteDefault(
+        `/*\n@Component\nexport default class Foo {}*/\n` +
+          `export default class Bar {}`,
+        'script'
+      )
+    ).toMatchInlineSnapshot(`
+      "/*
+      @Component
+      export default class Foo {}*/
+      class Bar {}
+      const script = Bar"
     `)
   })
 })
