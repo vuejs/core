@@ -503,38 +503,40 @@ describe('api: template refs', () => {
         return { listRefs }
       },
       render() {
-        return  h(
-                'div',
-                null,
-                [
-                  h('div',null,String(listRefs.value)),
-                  h(
-                      'ul',
-                      list.value.map(i =>
-                          h(
-                              'li',
-                              {
-                                ref: 'listRefs',
-                                ref_for: true
-                              },
-                              i
-                          )
-                      )
-                  )
-                ]
+        return h('div', null, [
+          h('div', null, String(listRefs.value)),
+          h(
+            'ul',
+            list.value.map(i =>
+              h(
+                'li',
+                {
+                  ref: 'listRefs',
+                  ref_for: true
+                },
+                i
+              )
             )
+          )
+        ])
       }
     }
     const root = nodeOps.createElement('div')
     render(h(App), root)
 
     await nextTick()
-    expect(String(listRefs.value)).toBe('[object Object],[object Object],[object Object]')
-    expect(serializeInner(root)).toBe('<div><div>[object Object],[object Object],[object Object]</div><ul><li>1</li><li>2</li><li>3</li></ul></div>')
+    expect(String(listRefs.value)).toBe(
+      '[object Object],[object Object],[object Object]'
+    )
+    expect(serializeInner(root)).toBe(
+      '<div><div>[object Object],[object Object],[object Object]</div><ul><li>1</li><li>2</li><li>3</li></ul></div>'
+    )
 
-    list.value.splice(0,1);
+    list.value.splice(0, 1)
     await nextTick()
     expect(String(listRefs.value)).toBe('[object Object],[object Object]')
-    expect(serializeInner(root)).toBe('<div><div>[object Object],[object Object]</div><ul><li>2</li><li>3</li></ul></div>')
+    expect(serializeInner(root)).toBe(
+      '<div><div>[object Object],[object Object]</div><ul><li>2</li><li>3</li></ul></div>'
+    )
   })
 })
