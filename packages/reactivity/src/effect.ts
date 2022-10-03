@@ -1,5 +1,5 @@
 import { TrackOpTypes, TriggerOpTypes } from './operations'
-import { extend, isArray, isIntegerKey, isMap } from '@vue/shared'
+import { extend, isArray, isIntegerKey, isMap, toNumber } from '@vue/shared'
 import { EffectScope, recordEffectScope } from './effectScope'
 import {
   createDep,
@@ -277,7 +277,7 @@ export function trigger(
     deps = [...depsMap.values()]
   } else if (key === 'length' && isArray(target)) {
     depsMap.forEach((dep, key) => {
-      if (key === 'length' || key >= (newValue as number)) {
+      if (key === 'length' || key >= toNumber(newValue)) {
         deps.push(dep)
       }
     })
