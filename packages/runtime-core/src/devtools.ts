@@ -28,7 +28,7 @@ interface DevtoolsHook {
   once: (event: string, handler: Function) => void
   off: (event: string, handler: Function) => void
   appRecords: AppRecord[]
-  _buffer: any[][]
+  _buffer?: any[][]
 }
 
 export let devtools: DevtoolsHook
@@ -109,7 +109,7 @@ const _devtoolsComponentRemoved = /*#__PURE__*/ createDevtoolsComponentHook(
 export const devtoolsComponentRemoved = (
   component: ComponentInternalInstance
 ) => {
-  if (devtools && devtools._buffer.length) {
+  if (devtools && Array.isArray(devtools._buffer) && devtools._buffer.length) {
     let wasBuffered = false
     devtools._buffer = devtools._buffer.filter(item => {
       if (item.some(arg => arg === component)) {
