@@ -160,8 +160,9 @@ export function emit(
     handler = props[(handlerName = toHandlerKey(hyphenate(event)))]
   }
 
+  let result
   if (handler) {
-    callWithAsyncErrorHandling(
+    result = callWithAsyncErrorHandling(
       handler,
       instance,
       ErrorCodes.COMPONENT_EVENT_HANDLER,
@@ -177,7 +178,7 @@ export function emit(
       return
     }
     instance.emitted[handlerName] = true
-    callWithAsyncErrorHandling(
+    result = callWithAsyncErrorHandling(
       onceHandler,
       instance,
       ErrorCodes.COMPONENT_EVENT_HANDLER,
@@ -189,6 +190,8 @@ export function emit(
     compatModelEmit(instance, event, args)
     return compatInstanceEmit(instance, event, args)
   }
+  
+  return result
 }
 
 export function normalizeEmitsOptions(
