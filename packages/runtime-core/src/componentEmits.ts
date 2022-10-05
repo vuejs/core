@@ -180,7 +180,7 @@ export function emit(
       instance.emitted[handlerName] = true
       
       const values = callWithAsyncErrorHandling(
-        handler,
+        onceHandler,
         instance,
         ErrorCodes.COMPONENT_EVENT_HANDLER,
         args
