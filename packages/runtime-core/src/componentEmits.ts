@@ -176,7 +176,9 @@ export function emit(
   if (onceHandler) {
     if (!instance.emitted) {
       instance.emitted = {} as Record<any, boolean>
-    } else if (!instance.emitted[handlerName]) {
+    }
+    
+    if (!instance.emitted[handlerName]) {
       instance.emitted[handlerName] = true
       
       const values = callWithAsyncErrorHandling(
