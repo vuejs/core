@@ -83,9 +83,11 @@ type ToRawRefs<T extends object> = {
     : T[K]
 }
 
-export declare function $ref<T>(arg?: T | Ref<T>): RefValue<UnwrapRef<T>>
+export declare function $ref<T>(): RefValue<T | undefined>
+export declare function $ref<T>(arg: T | Ref<T>): RefValue<UnwrapRef<T>>
 
-export declare function $shallowRef<T>(arg?: T): RefValue<T>
+export declare function $shallowRef<T>(): RefValue<T | undefined>
+export declare function $shallowRef<T>(arg: T): RefValue<T>
 
 export declare function $toRef<T extends object, K extends keyof T>(
   object: T,
