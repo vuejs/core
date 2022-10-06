@@ -199,16 +199,10 @@ export function processExpression(
     } else {
       if (type && type.startsWith('setup')) {
         // setup bindings in non-inline mode
-        if (
-          parent &&
-          parent.type === 'CallExpression' &&
-          (type === BindingTypes.SETUP_LET || type === BindingTypes.SETUP_CONST)
-        ) {
-          // #6822 No access `this` through function declaration in <script setup>
-          return `$setup.${raw}.bind()`
-        } else {
-          return `$setup.${raw}`
-        }
+        // #6822 No access `this` through function declaration in <script setup>
+        return parent && parent.type === 'CallExpression'
+          ? `$setup.${raw}.bind()`
+          : `$setup.${raw}`
       } else if (type === BindingTypes.PROPS_ALIASED) {
         return `$props['${bindingMetadata.__propsAliases![raw]}']`
       } else if (type) {

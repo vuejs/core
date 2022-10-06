@@ -120,7 +120,11 @@ export const transformOn: DirectiveTransform = (
       // avoiding the need to be patched.
       if (shouldCache && isMemberExp) {
         if (exp.type === NodeTypes.SIMPLE_EXPRESSION) {
-          exp.content = `${exp.content} && ${exp.content}(...args)`
+          if (exp.content.startsWith('$setup')) {
+            exp.content = `${exp.content} && ${exp.content}.call(undefined, ...args)`
+          } else {
+            exp.content = `${exp.content} && ${exp.content}(...args)`
+          }
         } else {
           exp.children = [...exp.children, ` && `, ...exp.children, `(...args)`]
         }
