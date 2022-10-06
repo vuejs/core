@@ -540,7 +540,7 @@ describe('compiler: expression transform', () => {
       )
       expect(code).toMatch(`$setup.setupConst.bind()`)
       expect(code).toMatch(`$setup.setupLet.bind()`)
-      expect(code).not.toMatch(`$setup.setup.bind()`)
+      expect(code).toMatch(`$setup.setup.bind()`)
     })
   })
 })
