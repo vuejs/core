@@ -79,6 +79,10 @@ describe('CSS vars injection', () => {
       source: `.foo {
         color: v-bind(color);
         font-size: v-bind('font.size');
+
+        font-weight: v-bind(_φ);
+        font-size: v-bind(1-字号);
+        font-family: v-bind(フォント);
       }`,
       filename: 'test.css',
       id: 'data-v-test'
@@ -87,23 +91,10 @@ describe('CSS vars injection', () => {
       ".foo {
               color: var(--test-color);
               font-size: var(--test-font\\\\.size);
-      }"
-    `)
 
-    // #6803
-    expect(
-      compileStyle({
-        source: `.foo {
-        color: v-bind(蓝色);
-        font-size: v-bind(字体);
-      }`,
-        filename: 'test.css',
-        id: 'data-v-test'
-      }).code
-    ).toMatchInlineSnapshot(`
-      ".foo {
-              color: var(--test-\\\\蓝\\\\色);
-              font-size: var(--test-\\\\字\\\\体);
+              font-weight: var(--test-_φ);
+              font-size: var(--test-1-字号);
+              font-family: var(--test-フォント);
       }"
     `)
   })
