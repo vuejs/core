@@ -264,14 +264,19 @@ function parseChildren(
             const next = nodes[i + 1]
             // Remove if:
             // - the whitespace is the first or last node, or:
-            // - (condense mode) the whitespace is adjacent to a comment, or:
+            // - (condense mode) the whitespace is between twos comments, or:
+            // - (condense mode) the whitespace is between comment and element, or:
             // - (condense mode) the whitespace is between two elements AND contains newline
             if (
               !prev ||
               !next ||
               (shouldCondense &&
-                (prev.type === NodeTypes.COMMENT ||
-                  next.type === NodeTypes.COMMENT ||
+                ((prev.type === NodeTypes.COMMENT &&
+                  next.type === NodeTypes.COMMENT) ||
+                  (prev.type === NodeTypes.COMMENT && 
+                  next.type === NodeTypes.ELEMENT) ||
+                  (prev.type === NodeTypes.ELEMENT &&
+                  next.type === NodeTypes.COMMENT) ||
                   (prev.type === NodeTypes.ELEMENT &&
                     next.type === NodeTypes.ELEMENT &&
                     /[\r\n]/.test(node.content))))

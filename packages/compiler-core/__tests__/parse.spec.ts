@@ -1980,6 +1980,17 @@ foo
       expect(ast.children[2].type).toBe(NodeTypes.INTERPOLATION)
     })
 
+    it('should NOT remove whitespaces w/ newline between interpolation and comment', () => {
+      const ast = parse(`<!-- foo --> \n {{msg}}`)
+      expect(ast.children.length).toBe(3)
+      expect(ast.children[0].type).toBe(NodeTypes.COMMENT)
+      expect(ast.children[1]).toMatchObject({
+        type: NodeTypes.TEXT,
+        content: ' '
+      })
+      expect(ast.children[2].type).toBe(NodeTypes.INTERPOLATION)
+    })
+    
     it('should NOT remove whitespaces w/o newline between elements', () => {
       const ast = parse(`<div/> <div/> <div/>`)
       expect(ast.children.length).toBe(5)
