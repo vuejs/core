@@ -8,7 +8,13 @@ import {
   getComponentName,
   ComponentOptions
 } from '../component'
-import { VNode, cloneVNode, isVNode, VNodeProps } from '../vnode'
+import {
+  VNode,
+  cloneVNode,
+  isVNode,
+  VNodeProps,
+  invokeVNodeHook
+} from '../vnode'
 import { warn } from '../warning'
 import {
   onBeforeUnmount,
@@ -30,15 +36,15 @@ import {
   queuePostRenderEffect,
   MoveType,
   RendererElement,
-  RendererNode,
-  invokeVNodeHook
+  RendererNode
 } from '../renderer'
 import { setTransitionHooks } from './BaseTransition'
 import { ComponentRenderContext } from '../componentPublicInstance'
 import { devtoolsComponentAdded } from '../devtools'
 import { isAsyncWrapper } from '../apiAsyncComponent'
+import { isSuspense } from './Suspense'
 
-type MatchPattern = string | RegExp | string[] | RegExp[]
+type MatchPattern = string | RegExp | (string | RegExp)[]
 
 export interface KeepAliveProps {
   include?: MatchPattern
@@ -90,8 +96,11 @@ const KeepAliveImpl: ComponentOptions = {
 
     // if the internal renderer is not registered, it indicates that this is server-side rendering,
     // for KeepAlive, we just need to render its children
-    if (!sharedContext.renderer) {
-      return slots.default
+    if (__SSR__ && !sharedContext.renderer) {
+      return () => {
+        const children = slots.default && slots.default()
+        return children && children.length === 1 ? children[0] : children
+      }
     }
 
     const cache: Cache = new Map()
@@ -169,7 +178,7 @@ const KeepAliveImpl: ComponentOptions = {
     function unmount(vnode: VNode) {
       // reset the shapeFlag so it can be properly unmounted
       resetShapeFlag(vnode)
-      _unmount(vnode, instance, parentSuspense)
+      _unmount(vnode, instance, parentSuspense, true)
     }
 
     function pruneCache(filter?: (name: string) => boolean) {
@@ -318,7 +327,7 @@ const KeepAliveImpl: ComponentOptions = {
       vnode.shapeFlag |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
 
       current = vnode
-      return rawVNode
+      return isSuspense(rawVNode.type) ? rawVNode : vnode
     }
   }
 }
@@ -340,7 +349,7 @@ function matches(pattern: MatchPattern, name: string): boolean {
   if (isArray(pattern)) {
     return pattern.some((p: string | RegExp) => matches(p, name))
   } else if (isString(pattern)) {
-    return pattern.split(',').indexOf(name) > -1
+    return pattern.split(',').includes(name)
   } else if (pattern.test) {
     return pattern.test(name)
   }

@@ -1,6 +1,13 @@
-import { isReactive, reactive, shallowReactive } from '../src/reactive'
+import {
+  isReactive,
+  isShallow,
+  reactive,
+  shallowReactive,
+  shallowReadonly
+} from '../src/reactive'
 
 import { effect } from '../src/effect'
+import { Ref, isRef, ref } from '../src/ref'
 
 describe('shallowReactive', () => {
   test('should not make non-reactive properties reactive', () => {
@@ -22,6 +29,52 @@ describe('shallowReactive', () => {
     expect(shallowProxy).not.toBe(reactiveProxy)
     expect(isReactive(shallowProxy.foo)).toBe(false)
     expect(isReactive(reactiveProxy.foo)).toBe(true)
+  })
+
+  test('isShallow', () => {
+    expect(isShallow(shallowReactive({}))).toBe(true)
+    expect(isShallow(shallowReadonly({}))).toBe(true)
+  })
+
+  // #5271
+  test('should respect shallow reactive nested inside reactive on reset', () => {
+    const r = reactive({ foo: shallowReactive({ bar: {} }) })
+    expect(isShallow(r.foo)).toBe(true)
+    expect(isReactive(r.foo.bar)).toBe(false)
+
+    r.foo = shallowReactive({ bar: {} })
+    expect(isShallow(r.foo)).toBe(true)
+    expect(isReactive(r.foo.bar)).toBe(false)
+  })
+
+  // vuejs/vue#12597
+  test('should not unwrap refs', () => {
+    const foo = shallowReactive({
+      bar: ref(123)
+    })
+    expect(isRef(foo.bar)).toBe(true)
+    expect(foo.bar.value).toBe(123)
+  })
+
+  // vuejs/vue#12688
+  test('should not mutate refs', () => {
+    const original = ref(123)
+    const foo = shallowReactive<{ bar: Ref<number> | number }>({
+      bar: original
+    })
+    expect(foo.bar).toBe(original)
+    foo.bar = 234
+    expect(foo.bar).toBe(234)
+    expect(original.value).toBe(123)
+  })
+
+  test('should respect shallow/deep versions of same target on access', () => {
+    const original = {}
+    const shallow = shallowReactive(original)
+    const deep = reactive(original)
+    const r = reactive({ shallow, deep })
+    expect(r.shallow).toBe(shallow)
+    expect(r.deep).toBe(deep)
   })
 
   describe('collections', () => {

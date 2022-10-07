@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-globals */
 import { App } from './apiCreateApp'
 import { Fragment, Text, Comment, Static } from './vnode'
 import { ComponentInternalInstance } from './component'
@@ -27,6 +28,11 @@ interface DevtoolsHook {
   once: (event: string, handler: Function) => void
   off: (event: string, handler: Function) => void
   appRecords: AppRecord[]
+  /**
+   * Added at https://github.com/vuejs/devtools/commit/f2ad51eea789006ab66942e5a27c0f0986a257f9
+   * Returns wether the arg was buffered or not
+   */
+  cleanupBuffer?: (matchArg: unknown) => boolean
 }
 
 export let devtools: DevtoolsHook
@@ -53,7 +59,6 @@ export function setDevtoolsHook(hook: DevtoolsHook, target: any) {
     // handle late devtools injection - only do this if we are in an actual
     // browser environment to avoid the timer handle stalling test runner exit
     // (#4815)
-    // eslint-disable-next-line no-restricted-globals
     typeof window !== 'undefined' &&
     // some envs mock window but not fully
     window.HTMLElement &&
@@ -101,8 +106,22 @@ export const devtoolsComponentAdded = /*#__PURE__*/ createDevtoolsComponentHook(
 export const devtoolsComponentUpdated =
   /*#__PURE__*/ createDevtoolsComponentHook(DevtoolsHooks.COMPONENT_UPDATED)
 
-export const devtoolsComponentRemoved =
-  /*#__PURE__*/ createDevtoolsComponentHook(DevtoolsHooks.COMPONENT_REMOVED)
+const _devtoolsComponentRemoved = /*#__PURE__*/ createDevtoolsComponentHook(
+  DevtoolsHooks.COMPONENT_REMOVED
+)
+
+export const devtoolsComponentRemoved = (
+  component: ComponentInternalInstance
+) => {
+  if (
+    devtools &&
+    typeof devtools.cleanupBuffer === 'function' &&
+    // remove the component if it wasn't buffered
+    !devtools.cleanupBuffer(component)
+  ) {
+    _devtoolsComponentRemoved(component)
+  }
+}
 
 function createDevtoolsComponentHook(hook: DevtoolsHooks) {
   return (component: ComponentInternalInstance) => {

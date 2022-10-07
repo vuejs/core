@@ -44,6 +44,22 @@
 
       "tsdoc-undefined-tag": {
         "logLevel": "none"
+      },
+
+      "tsdoc-escape-greater-than": {
+        "logLevel": "none"
+      },
+
+      "tsdoc-malformed-inline-tag": {
+        "logLevel": "none"
+      },
+
+      "tsdoc-escape-right-brace": {
+        "logLevel": "none"
+      },
+
+      "tsdoc-unnecessary-backslash": {
+        "logLevel": "none"
       }
     }
   }

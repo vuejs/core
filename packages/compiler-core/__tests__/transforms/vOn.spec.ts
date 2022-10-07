@@ -438,6 +438,32 @@ describe('compiler: transform v-on', () => {
     })
   })
 
+  test('vue: prefixed events', () => {
+    const { node } = parseWithVOn(
+      `<div v-on:vue:mounted="onMount" @vue:before-update="onBeforeUpdate" />`
+    )
+    expect((node.codegenNode as VNodeCall).props).toMatchObject({
+      properties: [
+        {
+          key: {
+            content: `onVnodeMounted`
+          },
+          value: {
+            content: `onMount`
+          }
+        },
+        {
+          key: {
+            content: `onVnodeBeforeUpdate`
+          },
+          value: {
+            content: `onBeforeUpdate`
+          }
+        }
+      ]
+    })
+  })
+
   describe('cacheHandler', () => {
     test('empty handler', () => {
       const { root, node } = parseWithVOn(`<div v-on:click.prevent />`, {

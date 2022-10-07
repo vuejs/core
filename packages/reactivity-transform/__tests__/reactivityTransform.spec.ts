@@ -19,18 +19,19 @@ test('$ unwrapping', () => {
   const { code, rootRefs } = transform(`
     import { ref, shallowRef } from 'vue'
     let foo = $(ref())
-    let a = $(ref(1))
+    export let a = $(ref(1))
     let b = $(shallowRef({
       count: 0
     }))
     let c = () => {}
     let d
+    label: var e = $(ref())
     `)
   expect(code).not.toMatch(`$(ref())`)
   expect(code).not.toMatch(`$(ref(1))`)
   expect(code).not.toMatch(`$(shallowRef({`)
   expect(code).toMatch(`let foo = (ref())`)
-  expect(code).toMatch(`let a = (ref(1))`)
+  expect(code).toMatch(`export let a = (ref(1))`)
   expect(code).toMatch(`
     let b = (shallowRef({
       count: 0
@@ -39,19 +40,21 @@ test('$ unwrapping', () => {
   // normal declarations left untouched
   expect(code).toMatch(`let c = () => {}`)
   expect(code).toMatch(`let d`)
-  expect(rootRefs).toStrictEqual(['foo', 'a', 'b'])
+  expect(code).toMatch(`label: var e = (ref())`)
+  expect(rootRefs).toStrictEqual(['foo', 'a', 'b', 'e'])
   assertCode(code)
 })
 
 test('$ref & $shallowRef declarations', () => {
   const { code, rootRefs, importedHelpers } = transform(`
     let foo = $ref()
-    let a = $ref(1)
+    export let a = $ref(1)
     let b = $shallowRef({
       count: 0
     })
     let c = () => {}
     let d
+    label: var e = $ref()
     `)
   expect(code).toMatch(
     `import { ref as _ref, shallowRef as _shallowRef } from 'vue'`
@@ -69,7 +72,8 @@ test('$ref & $shallowRef declarations', () => {
   // normal declarations left untouched
   expect(code).toMatch(`let c = () => {}`)
   expect(code).toMatch(`let d`)
-  expect(rootRefs).toStrictEqual(['foo', 'a', 'b'])
+  expect(code).toMatch(`label: var e = _ref()`)
+  expect(rootRefs).toStrictEqual(['foo', 'a', 'b', 'e'])
   expect(importedHelpers).toStrictEqual(['ref', 'shallowRef'])
   assertCode(code)
 })
@@ -127,15 +131,43 @@ test('accessing ref binding', () => {
   assertCode(code)
 })
 
-test('cases that should not append .value', () => {
-  const { code } = transform(`
+describe('cases that should not append .value', () => {
+  test('member expression', () => {
+    const { code } = transform(`
+      let a = $ref(1)
+      console.log(b.a)
+      `)
+    expect(code).not.toMatch(`a.value`)
+  })
+
+  test('function argument', () => {
+    const { code } = transform(`
+      let a = $ref(1)
+      function get(a) {
+        return a + 1
+      }
+      function get2({ a }) {
+        return a + 1
+      }
+      function get3([a]) {
+        return a + 1
+      }
+      `)
+    expect(code).not.toMatch(`a.value`)
+  })
+
+  test('for in/of loops', () => {
+    const { code } = transform(`
     let a = $ref(1)
-    console.log(b.a)
-    function get(a) {
-      return a + 1
+    for (const [a, b] of arr) {
+      console.log(a)
+    }
+    for (let a in arr) {
+      console.log(a)
     }
     `)
-  expect(code).not.toMatch(`a.value`)
+    expect(code).not.toMatch(`a.value`)
+  })
 })
 
 test('mutating ref binding', () => {
@@ -190,51 +222,60 @@ test('should not rewrite scope variable', () => {
         console.log(d)
         console.log(e)
       }
+      let err = $ref(null)
+      try {
+      } catch (err) {
+        console.log(err)
+      }
     `)
   expect(code).toMatch('console.log(a)')
   expect(code).toMatch('console.log(b.value)')
   expect(code).toMatch('console.log(c)')
   expect(code).toMatch('console.log(d.value)')
   expect(code).toMatch('console.log(e)')
+  expect(code).toMatch('console.log(err)')
   assertCode(code)
 })
 
 test('object destructure', () => {
   const { code, rootRefs } = transform(`
-    let n = $ref(1), { a, b: c, d = 1, e: f = 2, ...g } = $(useFoo())
-    let { foo } = $(useSomthing(() => 1));
-    console.log(n, a, c, d, f, g, foo)
+    let n = $ref(1), { a, b: c, d = 1, e: f = 2, [g]: h } = $(useFoo())
+    let { foo } = $(useSomething(() => 1));
+    console.log(n, a, c, d, f, h, foo)
     `)
+  expect(code).toMatch(`a = _toRef(__$temp_1, 'a')`)
+  expect(code).toMatch(`c = _toRef(__$temp_1, 'b')`)
+  expect(code).toMatch(`d = _toRef(__$temp_1, 'd', 1)`)
+  expect(code).toMatch(`f = _toRef(__$temp_1, 'e', 2)`)
+  expect(code).toMatch(`h = _toRef(__$temp_1, g)`)
+  expect(code).toMatch(`foo = _toRef(__$temp_2, 'foo')`)
   expect(code).toMatch(
-    `let n = _ref(1), { a: __a, b: __c, d: __d = 1, e: __f = 2, ...__g } = (useFoo())`
+    `console.log(n.value, a.value, c.value, d.value, f.value, h.value, foo.value)`
   )
-  expect(code).toMatch(`let { foo: __foo } = (useSomthing(() => 1))`)
-  expect(code).toMatch(`\nconst a = _shallowRef(__a);`)
-  expect(code).not.toMatch(`\nconst b = _shallowRef(__b);`)
-  expect(code).toMatch(`\nconst c = _shallowRef(__c);`)
-  expect(code).toMatch(`\nconst d = _shallowRef(__d);`)
-  expect(code).not.toMatch(`\nconst e = _shallowRef(__e);`)
-  expect(code).toMatch(`\nconst f = _shallowRef(__f);`)
-  expect(code).toMatch(`\nconst g = _shallowRef(__g);`)
-  expect(code).toMatch(`\nconst foo = _shallowRef(__foo);`)
-  expect(code).toMatch(
-    `console.log(n.value, a.value, c.value, d.value, f.value, g.value, foo.value)`
-  )
-  expect(rootRefs).toStrictEqual(['n', 'a', 'c', 'd', 'f', 'g', 'foo'])
+  expect(rootRefs).toStrictEqual(['n', 'a', 'c', 'd', 'f', 'h', 'foo'])
+  assertCode(code)
+})
+
+test('object destructure w/ mid-path default values', () => {
+  const { code, rootRefs } = transform(`
+    const { a: { b } = { b: 123 }} = $(useFoo())
+    console.log(b)
+  `)
+  expect(code).toMatch(`b = _toRef((__$temp_1.a || { b: 123 }), 'b')`)
+  expect(code).toMatch(`console.log(b.value)`)
+  expect(rootRefs).toStrictEqual(['b'])
   assertCode(code)
 })
 
 test('array destructure', () => {
   const { code, rootRefs } = transform(`
-    let n = $ref(1), [a, b = 1, ...c] = $(useFoo())
-    console.log(n, a, b, c)
+    let n = $ref(1), [a, b = 1] = $(useFoo())
+    console.log(n, a, b)
     `)
-  expect(code).toMatch(`let n = _ref(1), [__a, __b = 1, ...__c] = (useFoo())`)
-  expect(code).toMatch(`\nconst a = _shallowRef(__a);`)
-  expect(code).toMatch(`\nconst b = _shallowRef(__b);`)
-  expect(code).toMatch(`\nconst c = _shallowRef(__c);`)
-  expect(code).toMatch(`console.log(n.value, a.value, b.value, c.value)`)
-  expect(rootRefs).toStrictEqual(['n', 'a', 'b', 'c'])
+  expect(code).toMatch(`a = _toRef(__$temp_1, 0)`)
+  expect(code).toMatch(`b = _toRef(__$temp_1, 1, 1)`)
+  expect(code).toMatch(`console.log(n.value, a.value, b.value)`)
+  expect(rootRefs).toStrictEqual(['n', 'a', 'b'])
   assertCode(code)
 })
 
@@ -244,13 +285,9 @@ test('nested destructure', () => {
     let { c: [d, e] } = $(useBar())
     console.log(b, d, e)
     `)
-  expect(code).toMatch(`let [{ a: { b: __b }}] = (useFoo())`)
-  expect(code).toMatch(`let { c: [__d, __e] } = (useBar())`)
-  expect(code).not.toMatch(`\nconst a = _shallowRef(__a);`)
-  expect(code).not.toMatch(`\nconst c = _shallowRef(__c);`)
-  expect(code).toMatch(`\nconst b = _shallowRef(__b);`)
-  expect(code).toMatch(`\nconst d = _shallowRef(__d);`)
-  expect(code).toMatch(`\nconst e = _shallowRef(__e);`)
+  expect(code).toMatch(`b = _toRef(__$temp_1[0].a, 'b')`)
+  expect(code).toMatch(`d = _toRef(__$temp_2.c, 0)`)
+  expect(code).toMatch(`e = _toRef(__$temp_2.c, 1)`)
   expect(rootRefs).toStrictEqual(['b', 'd', 'e'])
   assertCode(code)
 })
@@ -363,13 +400,23 @@ test('handle TS casting syntax', () => {
   assertCode(code)
 })
 
-describe('errors', () => {
-  test('non-let $ref declaration', () => {
-    expect(() => transform(`const a = $ref(1)`)).toThrow(
-      `$ref() bindings can only be declared with let`
-    )
-  })
+test('macro import alias and removal', () => {
+  const { code } = transform(
+    `
+    import { $ as fromRefs, $ref } from 'vue/macros'
 
+    let a = $ref(1)
+    const { x, y } = fromRefs(useMouse())
+    `
+  )
+  // should remove imports
+  expect(code).not.toMatch(`from 'vue/macros'`)
+  expect(code).toMatch(`let a = _ref(1)`)
+  expect(code).toMatch(`const __$temp_1 = (useMouse())`)
+  assertCode(code)
+})
+
+describe('errors', () => {
   test('$ref w/ destructure', () => {
     expect(() => transform(`let { a } = $ref(1)`)).toThrow(
       `cannot be used with destructure`
@@ -401,5 +448,14 @@ describe('errors', () => {
     const hasOwn = (val, key) => hasOwnProperty.call(val, key)
     `)
     expect(code).not.toMatch('.value')
+  })
+
+  test('rest element in $() destructure', () => {
+    expect(() => transform(`let { a, ...b } = $(foo())`)).toThrow(
+      `does not support rest element`
+    )
+    expect(() => transform(`let [a, ...b] = $(foo())`)).toThrow(
+      `does not support rest element`
+    )
   })
 })

@@ -7,7 +7,8 @@ import {
   DirectiveHook,
   VNode,
   DirectiveBinding,
-  nextTick
+  nextTick,
+  defineComponent
 } from '@vue/runtime-test'
 import { currentInstance, ComponentInternalInstance } from '../src/component'
 
@@ -394,5 +395,30 @@ describe('directives', () => {
     await nextTick()
     expect(beforeUpdate).toHaveBeenCalledTimes(1)
     expect(count.value).toBe(1)
+  })
+
+  test('should receive exposeProxy for closed instances', async () => {
+    let res: string
+    const App = defineComponent({
+      setup(_, { expose }) {
+        expose({
+          msg: 'Test'
+        })
+
+        return () =>
+          withDirectives(h('p', 'Lore Ipsum'), [
+            [
+              {
+                mounted(el, { instance }) {
+                  res = (instance as any).msg as string
+                }
+              }
+            ]
+          ])
+      }
+    })
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(res!).toBe('Test')
   })
 })

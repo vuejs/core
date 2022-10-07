@@ -122,13 +122,13 @@ export function defineCustomElement(options: {
 
 export function defineCustomElement(
   options: any,
-  hydate?: RootHydrateFunction
+  hydrate?: RootHydrateFunction
 ): VueElementConstructor {
   const Comp = defineComponent(options as any)
   class VueCustomElement extends VueElement {
     static def = Comp
     constructor(initialProps?: Record<string, any>) {
-      super(Comp, initialProps, hydate)
+      super(Comp, initialProps, hydrate)
     }
   }
 
@@ -321,7 +321,7 @@ export class VueElement extends BaseClass {
         // HMR
         if (__DEV__) {
           instance.ceReload = newStyles => {
-            // alawys reset styles
+            // always reset styles
             if (this._styles) {
               this._styles.forEach(s => this.shadowRoot!.removeChild(s))
               this._styles.length = 0

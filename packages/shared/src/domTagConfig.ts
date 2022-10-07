@@ -30,6 +30,18 @@ const SVG_TAGS =
 const VOID_TAGS =
   'area,base,br,col,embed,hr,img,input,link,meta,param,source,track,wbr'
 
+/**
+ * Compiler only.
+ * Do NOT use in runtime code paths unless behind `__DEV__` flag.
+ */
 export const isHTMLTag = /*#__PURE__*/ makeMap(HTML_TAGS)
+/**
+ * Compiler only.
+ * Do NOT use in runtime code paths unless behind `__DEV__` flag.
+ */
 export const isSVGTag = /*#__PURE__*/ makeMap(SVG_TAGS)
+/**
+ * Compiler only.
+ * Do NOT use in runtime code paths unless behind `__DEV__` flag.
+ */
 export const isVoidTag = /*#__PURE__*/ makeMap(VOID_TAGS)

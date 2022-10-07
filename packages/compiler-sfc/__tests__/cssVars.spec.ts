@@ -1,4 +1,4 @@
-import { compileStyle } from '../src'
+import { compileStyle, parse } from '../src'
 import { mockId, compileSFCScript, assertCode } from './utils'
 
 describe('CSS vars injection', () => {
@@ -197,6 +197,55 @@ describe('CSS vars injection', () => {
   "${mockId}-color": (color)
 })`)
       assertCode(content)
+    })
+
+    test('should work with w/ complex expression', () => {
+      const { content } = compileSFCScript(
+        `<script setup>
+        let a = 100
+        let b = 200
+        let foo = 300
+        </script>\n` +
+          `<style>
+          p{
+            width: calc(v-bind(foo) - 3px);
+            height: calc(v-bind('foo') - 3px);
+            top: calc(v-bind(foo + 'px') - 3px);
+          }
+          div {
+            color: v-bind((a + b) / 2 + 'px' );
+          }
+          div {
+            color: v-bind    ((a + b) / 2 + 'px' );
+          }
+          p {
+            color: v-bind(((a + b)) / (2 * a));
+          }
+        </style>`
+      )
+      expect(content).toMatch(`_useCssVars(_ctx => ({
+  "${mockId}-foo": (_unref(foo)),
+  "${mockId}-foo____px_": (_unref(foo) + 'px'),
+  "${mockId}-_a___b____2____px_": ((_unref(a) + _unref(b)) / 2 + 'px'),
+  "${mockId}-__a___b______2___a_": (((_unref(a) + _unref(b))) / (2 * _unref(a)))
+})`)
+      assertCode(content)
+    })
+
+    // #6022
+    test('should be able to parse incomplete expressions', () => {
+      const {
+        descriptor: { cssVars }
+      } = parse(
+        `<script setup>let xxx = 1</script>
+        <style scoped>
+        label {
+          font-weight: v-bind("count.toString(");
+          font-weight: v-bind(xxx);
+        }
+        </style>`
+      )
+      expect(cssVars).toMatchObject([`count.toString(`, `xxx`])
     })
   })
 })

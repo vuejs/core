@@ -457,5 +457,33 @@ describe('defineCustomElement', () => {
       const e = container.childNodes[0] as VueElement
       expect(e.shadowRoot!.innerHTML).toBe(`<div>20,number</div>`)
     })
+
+    test('with slots', async () => {
+      const E = defineCustomElement(
+        defineAsyncComponent(() => {
+          return Promise.resolve({
+            render(this: any) {
+              return [
+                h('div', null, [
+                  renderSlot(this.$slots, 'default', undefined, () => [
+                    h('div', 'fallback')
+                  ])
+                ]),
+                h('div', null, renderSlot(this.$slots, 'named'))
+              ]
+            }
+          })
+        })
+      )
+      customElements.define('my-el-async-slots', E)
+      container.innerHTML = `<my-el-async-slots><span>hi</span></my-el-async-slots>`
+
+      await new Promise(r => setTimeout(r))
+
+      const e = container.childNodes[0] as VueElement
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `<div><slot><div>fallback</div></slot></div><div><slot name="named"></slot></div>`
+      )
+    })
   })
 })
