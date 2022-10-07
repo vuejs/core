@@ -471,7 +471,7 @@ defineExpose({ foo: 123 })
       </script>
       <template>
         <div @click="$emit('update:a');"></div>
-      </tempalte>
+      </template>
       `)
     })
   })

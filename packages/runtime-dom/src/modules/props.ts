@@ -63,7 +63,6 @@ export function patchDOMProp(
       needRemove = true
     } else if (type === 'number') {
       // e.g. <img :width="null">
-      // the value of some IDL attr must be greater than 0, e.g. input.size = 0 -> error
       value = 0
       needRemove = true
     }
@@ -96,7 +95,8 @@ export function patchDOMProp(
   try {
     el[key] = value
   } catch (e: any) {
-    if (__DEV__) {
+    // do not warn if value is auto-coerced from nullish values
+    if (__DEV__ && !needRemove) {
       warn(
         `Failed setting prop "${key}" on <${el.tagName.toLowerCase()}>: ` +
           `value ${value} is invalid.`,

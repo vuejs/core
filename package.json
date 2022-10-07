@@ -1,6 +1,6 @@
 {
   "private": true,
-  "version": "3.2.39",
+  "version": "3.2.40",
   "packageManager": "pnpm@7.1.0",
   "scripts": {
     "dev": "node scripts/dev.js",
@@ -8,8 +8,8 @@
     "size": "run-s size-global size-baseline",
     "size-global": "node scripts/build.js vue runtime-dom -f global -p",
     "size-baseline": "node scripts/build.js runtime-dom runtime-core reactivity shared -f esm-bundler && cd packages/size-check && vite build && node brotli",
-    "lint": "eslint --ext .ts packages/*/{src,__tests__}/**.ts",
-    "format": "prettier --write --parser typescript \"packages/**/*.ts?(x)\"",
+    "lint": "eslint --cache --ext .ts packages/*/{src,__tests__}/**.ts",
+    "format": "prettier --write --cache --parser typescript \"packages/**/*.ts?(x)\"",
     "test": "run-s \"test-unit {@}\" \"test-e2e {@}\"",
     "test-unit": "jest --filter ./scripts/filter-unit.js",
     "test-e2e": "node scripts/build.js vue -f global -d && jest --filter ./scripts/filter-e2e.js --runInBand",
@@ -80,7 +80,7 @@
     "marked": "^4.0.10",
     "minimist": "^1.2.0",
     "npm-run-all": "^4.1.5",
-    "prettier": "^2.3.1",
+    "prettier": "^2.7.1",
     "puppeteer": "^10.0.0",
     "rollup": "~2.38.5",
     "rollup-plugin-node-builtins": "^2.1.2",

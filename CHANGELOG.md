@@ -1,3 +1,25 @@
+## [3.2.40](https://github.com/vuejs/core/compare/v3.2.39...v3.2.40) (2022-09-28)
+
+
+### Bug Fixes
+
+* **compat:** list cjs dependencies for compat build ([96cd924](https://github.com/vuejs/core/commit/96cd924e440984a37e4759673f3c16921b69affe)), closes [#6602](https://github.com/vuejs/core/issues/6602)
+* **compiler-dom:** remove v-bind boolean attribute with literal false value when stringifying ([#6635](https://github.com/vuejs/core/issues/6635)) ([6c6fe2c](https://github.com/vuejs/core/commit/6c6fe2c0cd89ce513503b1f85e0ddb696fd81e54)), closes [#6617](https://github.com/vuejs/core/issues/6617)
+* **compiler-sfc:** fix expression check for v-on with object literal value ([#6652](https://github.com/vuejs/core/issues/6652)) ([6958ec1](https://github.com/vuejs/core/commit/6958ec1b37fb4a9244ae222a35fcac032d26ad8a)), closes [#6650](https://github.com/vuejs/core/issues/6650) [#6674](https://github.com/vuejs/core/issues/6674)
+* **compilre-core:** dynamic v-on and static v-on should be merged ([#6747](https://github.com/vuejs/core/issues/6747)) ([f9d43b9](https://github.com/vuejs/core/commit/f9d43b99f83af7fc140938a1d8d2db89666fb4e1)), closes [#6742](https://github.com/vuejs/core/issues/6742)
+* **runtime-core:** avoid hoisted vnodes retaining detached DOM nodes ([fc5bdb3](https://github.com/vuejs/core/commit/fc5bdb36ed429d6c3c956f373206ce75467adaf3)), closes [#6591](https://github.com/vuejs/core/issues/6591)
+* **runtime-core:** Lifecycle hooks should support callbacks shared by reference ([#6687](https://github.com/vuejs/core/issues/6687)) ([c71a08e](https://github.com/vuejs/core/commit/c71a08e6fd44ee06c6b4f61d67727a7b7503605e)), closes [#6686](https://github.com/vuejs/core/issues/6686)
+* **runtime-core:** remove prod-only hoisted clone behavior for manual DOM manipulation compat ([aa70188](https://github.com/vuejs/core/commit/aa70188c41fab1a4139748dd7b7c71532d063f3a)), closes [#6727](https://github.com/vuejs/core/issues/6727) [#6739](https://github.com/vuejs/core/issues/6739)
+* **runtime-core:** unset removed props first in full diff mode ([c0d8db8](https://github.com/vuejs/core/commit/c0d8db81a636f0ad1e725b7c04608d3a211cf163)), closes [#6571](https://github.com/vuejs/core/issues/6571)
+* **runtime-dom:** fix unnecessary warning when setting coerced dom property value ([b1817fe](https://github.com/vuejs/core/commit/b1817fe9eeb66a18f405ada9072149515654a9bd)), closes [#6616](https://github.com/vuejs/core/issues/6616)
+* **ssr:** avoid ast.helpers duplication ([#6664](https://github.com/vuejs/core/issues/6664)) ([57ffc3e](https://github.com/vuejs/core/commit/57ffc3e546395ba048009396a4b82d3f968cca2c))
+* **ssr:** fix dynamic slot regression in ssr ([8963c55](https://github.com/vuejs/core/commit/8963c5508cde3a0c990b2748787ffb582b16f23f)), closes [#6651](https://github.com/vuejs/core/issues/6651)
+* **ssr:** fix hydration mismatch when entire multi-root template is stringified ([9698dd3](https://github.com/vuejs/core/commit/9698dd3cf1dfdb95d4dc4b4f7bd24ff94b4b5d84)), closes [#6637](https://github.com/vuejs/core/issues/6637)
+* **ssr:** fix pre tag windows newline hydration mismatch ([0382019](https://github.com/vuejs/core/commit/03820193a8f768293d665ca2753439fe73aed0fd)), closes [#6410](https://github.com/vuejs/core/issues/6410)
+* **ssr:** respect case when rendering dynamic attrs on svg ([121eb32](https://github.com/vuejs/core/commit/121eb32fb0a21cf9988d788cfad1b4249b15997b)), closes [#6755](https://github.com/vuejs/core/issues/6755)
+
+
+
 ## [3.2.39](https://github.com/vuejs/core/compare/v3.2.38...v3.2.39) (2022-09-08)
 
 

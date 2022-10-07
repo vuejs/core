@@ -30,7 +30,7 @@ body:
       description: |
         The easiest way to provide a reproduction is by showing the bug in [The SFC Playground](https://sfc.vuejs.org/).
         If it cannot be reproduced in the playground and requires a proper build setup, try [StackBlitz](https://vite.new/vue).
-        If neither of these are suitable, you can always provide a GitHub reporistory.
+        If neither of these are suitable, you can always provide a GitHub repository.
 
         The reproduction should be **minimal** - i.e. it should contain only the bare minimum amount of code needed
         to show the bug. See [Bug Reproduction Guidelines](https://github.com/vuejs/core/blob/main/.github/bug-repro-guidelines.md) for more details.
