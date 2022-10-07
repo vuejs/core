@@ -295,7 +295,7 @@ function doWatch(
     return NOOP
   }
 
-  let oldValue = isMultiSource
+  let oldValue: any = isMultiSource
     ? new Array((source as []).length).fill(INITIAL_WATCHER_VALUE)
     : INITIAL_WATCHER_VALUE
   const job: SchedulerJob = () => {
@@ -324,7 +324,10 @@ function doWatch(
         callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
           newValue,
           // pass undefined as the old value when it's changed for the first time
-          oldValue === INITIAL_WATCHER_VALUE ? undefined : oldValue,
+          oldValue === INITIAL_WATCHER_VALUE ||
+          (isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE)
+            ? undefined
+            : oldValue,
           onInvalidate
         ])
         oldValue = newValue

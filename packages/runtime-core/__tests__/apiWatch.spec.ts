@@ -182,8 +182,10 @@ describe('api: watch', () => {
     let called = false
     watch(
       [a, b],
-      () => {
+      (newVal, oldVal) => {
         called = true
+        expect(newVal).toMatchObject([undefined, undefined])
+        expect(oldVal).toBeUndefined()
       },
       { immediate: true }
     )
