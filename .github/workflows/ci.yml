@@ -68,6 +68,9 @@ jobs:
       - name: Run eslint
         run: pnpm run lint
 
+      - name: Run prettier
+        run: pnpm run format-check
+
       - name: Run type declaration tests
         run: pnpm run test-dts
 
