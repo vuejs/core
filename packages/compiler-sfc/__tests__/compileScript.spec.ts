@@ -188,7 +188,7 @@ defineOptions({ name: 'FooApp' })
       )
     })
 
-    it('should report an error with two defineProps', () => {
+    it('should emit an error with two defineProps', () => {
       expect(() =>
         compile(`
         <script setup>
@@ -199,7 +199,7 @@ defineOptions({ name: 'FooApp' })
       ).toThrowError('[@vue/compiler-sfc] duplicate defineOptions() call')
     })
 
-    it('should report an error with props or emits property', () => {
+    it('should emit an error with props or emits property', () => {
       expect(() =>
         compile(`
         <script setup>
@@ -221,7 +221,7 @@ defineOptions({ name: 'FooApp' })
       )
     })
 
-    it('should report an error with type generic', () => {
+    it('should emit an error with type generic', () => {
       expect(() =>
         compile(`
         <script setup lang="ts">

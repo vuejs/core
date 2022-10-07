@@ -1249,8 +1249,7 @@ export function compileScript(
         if (decl.init) {
           if (processDefineOptions(decl.init)) {
             error(
-              `${DEFINE_OPTIONS}() A has no return value, ` +
-                `it cannot be assigned a value.`,
+              `${DEFINE_OPTIONS}() has no returning value, it cannot be assigned.`,
               node
             )
           }
