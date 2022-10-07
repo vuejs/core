@@ -42,8 +42,7 @@ export const IS_MEMO_SAME = Symbol(__DEV__ ? `isMemoSame` : ``)
 
 // Name mapping for runtime helpers that need to be imported from 'vue' in
 // generated code. Make sure these are correctly exported in the runtime!
-// Using `any` here because TS doesn't allow symbols as index type.
-export const helperNameMap: any = {
+export const helperNameMap: Record<symbol, string> = {
   [FRAGMENT]: `Fragment`,
   [TELEPORT]: `Teleport`,
   [SUSPENSE]: `Suspense`,
@@ -85,7 +84,7 @@ export const helperNameMap: any = {
   [IS_MEMO_SAME]: `isMemoSame`
 }
 
-export function registerRuntimeHelpers(helpers: any) {
+export function registerRuntimeHelpers(helpers: Record<symbol, string>) {
   Object.getOwnPropertySymbols(helpers).forEach(s => {
     helperNameMap[s] = helpers[s]
   })
