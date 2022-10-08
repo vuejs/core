@@ -12,7 +12,7 @@ import {
 import { isAsyncWrapper } from './apiAsyncComponent'
 import { getExposeProxy } from './component'
 import { warn } from './warning'
-import { isRef, reactive } from '@vue/reactivity'
+import { isRef } from '@vue/reactivity'
 import { callWithErrorHandling, ErrorCodes } from './errorHandling'
 import { SchedulerJob } from './scheduler'
 import { queuePostRenderEffect } from './renderer'
@@ -61,8 +61,7 @@ export function setRef(
     return
   }
   const oldRef = oldRawRef && (oldRawRef as VNodeNormalizedRefAtom).r
-  const refs =
-    owner.refs === EMPTY_OBJ ? (owner.refs = reactive({})) : owner.refs
+  const refs = owner.refs === EMPTY_OBJ ? (owner.refs = {}) : owner.refs
   const setupState = owner.setupState
 
   // dynamic ref changed. unset old ref
@@ -94,6 +93,11 @@ export function setRef(
                 refs[ref] = [refValue]
                 if (hasOwn(setupState, ref)) {
                   setupState[ref] = refs[ref]
+                  // #6697
+                  // Only valid in composition Api:
+                  // setupState is assigned to refs to ensure
+                  // that the variable 'existing' can be used as a template dependency
+                  refs[ref] = setupState[ref]
                 }
               } else {
                 ref.value = [refValue]
