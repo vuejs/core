@@ -9,7 +9,7 @@ type PluginAOptionType = {
 }
 
 const PluginA = {
-  install(app: App, ...options: PluginAOptionType[]) {
+  install(app: App, options: PluginAOptionType) {
     options[0].option1
     options[0].option2
     options[0].option3
