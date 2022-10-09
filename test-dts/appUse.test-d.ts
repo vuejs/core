@@ -9,7 +9,7 @@ type PluginAOptionType = {
 }
 
 const PluginA = {
-  install(app: App, options: PluginAOptionType) {
+  install(app: App, ...options: PluginAOptionType[]) {
     options[0].option1
     options[0].option2
     options[0].option3
@@ -38,6 +38,7 @@ createApp({})
   .use(PluginA, 1)
   .use(PluginA, { option2: 1, option3: true })
   .use(PluginA, { option1: 'foo', option2: 1, option3: true })
+  .use(PluginA, { option1: 'foo', option2: 1, option3: true }, { option2: 1, option3: true })
 
   // @ts-expect-error option2 (required) missing
   .use(PluginA, { option3: true })
