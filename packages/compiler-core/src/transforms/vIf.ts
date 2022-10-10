@@ -129,7 +129,12 @@ export function processIf(
     let i = siblings.indexOf(node)
     while (i-- >= -1) {
       const sibling = siblings[i]
-      if (__DEV__ && sibling && sibling.type === NodeTypes.COMMENT) {
+      if (
+        __DEV__ &&
+        !__TEST__ &&
+        sibling &&
+        sibling.type === NodeTypes.COMMENT
+      ) {
         context.removeNode(sibling)
         comments.unshift(sibling)
         continue
@@ -141,6 +146,9 @@ export function processIf(
           sibling.type === NodeTypes.COMMENT)
       ) {
         context.removeNode(sibling)
+        if (sibling.type === NodeTypes.COMMENT) {
+          comments.unshift(sibling)
+        }
         continue
       }
 
