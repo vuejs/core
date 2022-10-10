@@ -239,7 +239,10 @@ const BaseTransitionImpl: ComponentOptions = {
           leavingHooks.afterLeave = () => {
             state.isLeaving = false
             // #6835
-            instance.update.active !== false && instance.update()
+            // it also needs to be updated when active is undefined
+            if (instance.update.active !== false) {
+              instance.update()
+            }
           }
           return emptyPlaceholder(child)
         } else if (mode === 'in-out' && innerChild.type !== Comment) {
