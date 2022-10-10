@@ -25,11 +25,16 @@ describe('reactivity/reactive', () => {
     // read prop of reactiveObject will cause reactiveObj[prop] to be reactive
     // @ts-ignore
     const prototype = reactiveObj['__proto__']
+    expect(isReactive(prototype)).toBe(false)
+
     const otherObj = { data: ['a'] }
     expect(isReactive(otherObj)).toBe(false)
     const reactiveOther = reactive(otherObj)
     expect(isReactive(reactiveOther)).toBe(true)
     expect(reactiveOther.data[0]).toBe('a')
+    
+    const reactiveOtherReferenceChild = reactiveOther.data
+    expect(isReactive(reactiveOtherReferenceChild)).toBe(true)
   })
 
   test('nested reactives', () => {
