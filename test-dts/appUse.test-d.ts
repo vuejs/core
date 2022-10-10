@@ -1,71 +1,95 @@
-import { createApp } from './index'
+import { createApp, App, Plugin } from './index'
 
-type App = ReturnType<typeof createApp>
+const app = createApp({})
 
-type PluginAOptionType = {
+// Plugin without types accept anything
+const PluginWithoutType: Plugin = {
+  install(app: App) {}
+}
+
+app.use(PluginWithoutType)
+app.use(PluginWithoutType, 2)
+app.use(PluginWithoutType, { anything: 'goes' }, true)
+
+type PluginOptions = {
   option1?: string
   option2: number
   option3: boolean
 }
 
-const PluginA = {
-  install(app: App, ...options: PluginAOptionType[]) {
-    options[0].option1
-    options[0].option2
-    options[0].option3
+const PluginWithObjectOptions = {
+  install(app: App, options: PluginOptions) {
+    options.option1
+    options.option2
+    options.option3
   }
 }
 
-const PluginB = {
+for (const Plugin of [
+  PluginWithObjectOptions,
+  PluginWithObjectOptions.install
+]) {
+  // @ts-expect-error: no params
+  app.use(Plugin)
+
+  // @ts-expect-error option2 and option3 (required) missing
+  app.use(Plugin, {})
+  // @ts-expect-error type mismatch
+  app.use(Plugin, undefined)
+  // valid options
+  app.use(Plugin, { option2: 1, option3: true })
+  app.use(Plugin, { option1: 'foo', option2: 1, option3: true })
+}
+
+const PluginNoOptions = {
   install(app: App) {}
 }
 
-const PluginC = (app: App, ...options: string[]) => {}
+for (const Plugin of [PluginNoOptions, PluginNoOptions.install]) {
+  // no args
+  app.use(Plugin)
+  // @ts-expect-error unexpected plugin option
+  app.use(Plugin, {})
+  // @ts-expect-error only no options is valid
+  app.use(Plugin, undefined)
+}
 
-createApp({})
-  .use(PluginA)
+const PluginMultipleArgs = {
+  install: (app: App, a: string, b: number) => {}
+}
+
+for (const Plugin of [PluginMultipleArgs, PluginMultipleArgs.install]) {
+  // @ts-expect-error: 2 arguments expected
+  app.use(Plugin, 'hey')
+  app.use(Plugin, 'hey', 2)
+}
+
+const PluginOptionalOptions = {
+  install(
+    app: App,
+    options: PluginOptions = { option2: 2, option3: true, option1: 'foo' }
+  ) {
+    options.option1
+    options.option2
+    options.option3
+  }
+}
+
+for (const Plugin of [PluginOptionalOptions, PluginOptionalOptions.install]) {
+  // both version are valid
+  app.use(Plugin)
+  app.use(Plugin, undefined)
+
   // @ts-expect-error option2 and option3 (required) missing
-  .use(PluginA, {})
-  // @ts-expect-error type mismatch
-  .use(PluginA, true)
-  // @ts-expect-error type mismatch
-  .use(PluginA, undefined)
-  // @ts-expect-error type mismatch
-  .use(PluginA, null)
-  // @ts-expect-error type mismatch
-  .use(PluginA, 'foo')
-  // @ts-expect-error type mismatch
-  .use(PluginA, 1)
-  .use(PluginA, { option2: 1, option3: true })
-  .use(PluginA, { option1: 'foo', option2: 1, option3: true })
-  .use(PluginA, { option1: 'foo', option2: 1, option3: true }, { option2: 1, option3: true })
+  app.use(Plugin, {})
+  // valid options
+  app.use(Plugin, { option2: 1, option3: true })
+  app.use(Plugin, { option1: 'foo', option2: 1, option3: true })
+}
 
-  // @ts-expect-error option2 (required) missing
-  .use(PluginA, { option3: true })
+// still valid but it's better to use the regular function because this one can accept an optional param
+const PluginTyped: Plugin<PluginOptions> = (app, options) => {}
 
-  .use(PluginB)
-  // @ts-expect-error unexpected plugin option
-  .use(PluginB, {})
-  // @ts-expect-error unexpected plugin option
-  .use(PluginB, true)
-  // @ts-expect-error unexpected plugin option
-  .use(PluginB, undefined)
-  // @ts-expect-error unexpected plugin option
-  .use(PluginB, null)
-  // @ts-expect-error type mismatch
-  .use(PluginB, 'foo')
-  // @ts-expect-error type mismatch
-  .use(PluginB, 1)
-
-  .use(PluginC)
-  // @ts-expect-error unexpected plugin option
-  .use(PluginC, {})
-  // @ts-expect-error unexpected plugin option
-  .use(PluginC, true)
-  // @ts-expect-error unexpected plugin option
-  .use(PluginC, undefined)
-  // @ts-expect-error unexpected plugin option
-  .use(PluginC, null)
-  .use(PluginC, 'foo')
-  // @ts-expect-error type mismatch
-  .use(PluginC, 1)
+// @ts-expect-error: needs options
+app.use(PluginTyped)
+app.use(PluginTyped, { option2: 2, option3: true })
