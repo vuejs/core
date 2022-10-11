@@ -49,8 +49,7 @@ export function ssrCodegenTransform(ast: RootNode, options: CompilerOptions) {
       createCompoundExpression([`const _cssVars = { style: `, varsExp, `}`])
     )
     Array.from(cssContext.helpers.keys()).forEach(helper => {
-      if (!ast.helpers.includes(helper))
-        ast.helpers.push(helper)
+      if (!ast.helpers.includes(helper)) ast.helpers.push(helper)
     })
   }
 

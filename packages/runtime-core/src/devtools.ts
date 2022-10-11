@@ -28,7 +28,11 @@ interface DevtoolsHook {
   once: (event: string, handler: Function) => void
   off: (event: string, handler: Function) => void
   appRecords: AppRecord[]
-  _buffer: any[][]
+  /**
+   * Added at https://github.com/vuejs/devtools/commit/f2ad51eea789006ab66942e5a27c0f0986a257f9
+   * Returns wether the arg was buffered or not
+   */
+  cleanupBuffer?: (matchArg: unknown) => boolean
 }
 
 export let devtools: DevtoolsHook
@@ -109,18 +113,14 @@ const _devtoolsComponentRemoved = /*#__PURE__*/ createDevtoolsComponentHook(
 export const devtoolsComponentRemoved = (
   component: ComponentInternalInstance
 ) => {
-  if (devtools && devtools._buffer.length) {
-    let wasBuffered = false
-    devtools._buffer = devtools._buffer.filter(item => {
-      if (item.some(arg => arg === component)) {
-        wasBuffered = true
-        return false
-      }
-      return true
-    })
-    if (wasBuffered) return
+  if (
+    devtools &&
+    typeof devtools.cleanupBuffer === 'function' &&
+    // remove the component if it wasn't buffered
+    !devtools.cleanupBuffer(component)
+  ) {
+    _devtoolsComponentRemoved(component)
   }
-  _devtoolsComponentRemoved(component)
 }
 
 function createDevtoolsComponentHook(hook: DevtoolsHooks) {
