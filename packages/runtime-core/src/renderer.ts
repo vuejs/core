@@ -2391,6 +2391,11 @@ export function traverseStaticChildren(n1: VNode, n2: VNode, shallow = false) {
       if (__DEV__ && c2.type === Comment && !c2.el) {
         c2.el = c1.el
       }
+      // #6852
+      // also inherit for text nodes
+      if (c2.type === Text && !c2.el) {
+        c2.el = c1.el
+      }
     }
   }
 }
