@@ -11,7 +11,8 @@ import {
   Static,
   VNodeHook,
   VNodeProps,
-  invokeVNodeHook
+  invokeVNodeHook,
+  VNodeTypes
 } from './vnode'
 import {
   ComponentInternalInstance,
@@ -93,6 +94,7 @@ export interface RendererOptions<
   HostNode = RendererNode,
   HostElement = RendererElement
 > {
+  getPriorProps(type: VNodeTypes): Array<string>
   patchProp(
     el: HostElement,
     key: string,
@@ -341,6 +343,7 @@ function baseCreateRenderer(
   const {
     insert: hostInsert,
     remove: hostRemove,
+    getPriorProps: hostGetPriorProps,
     patchProp: hostPatchProp,
     createElement: hostCreateElement,
     createText: hostCreateText,
@@ -655,6 +658,23 @@ function baseCreateRenderer(
     setScopeId(el, vnode, vnode.scopeId, slotScopeIds, parentComponent)
     // props
     if (props) {
+      const priorProps = hostGetPriorProps(type)
+      priorProps.forEach(key => {
+        if (key in props) {
+          hostPatchProp(
+            el,
+            key,
+            null,
+            props[key],
+            isSVG,
+            vnode.children as VNode[],
+            parentComponent,
+            parentSuspense,
+            unmountChildren
+          )
+          delete props[key]
+        }
+      })
       for (const key in props) {
         if (key !== 'value' && !isReservedProp(key)) {
           hostPatchProp(
