@@ -1,4 +1,4 @@
-import { baseCompile as compile } from '../src'
+import { baseCompile as compile, CompilerOptions } from '../src'
 import { SourceMapConsumer, RawSourceMap } from 'source-map'
 
 describe('compiler: integration tests', () => {
@@ -10,6 +10,8 @@ describe('compiler: integration tests', () => {
   <div v-for="(value, index) in list"><span>{{ value + index }}</span></div>
 </div>
 `.trim()
+  const comp1 = `<Comp><template v-if="true" #header>Header</template></Comp>`
+  const comp2 = `<Comp><template #header>Header</template></Comp>`
 
   interface Pos {
     line: number
@@ -45,11 +47,9 @@ describe('compiler: integration tests', () => {
   }
 
   test('function mode', () => {
-    const { code, map } = compile(source, {
-      sourceMap: true,
-      filename: `foo.vue`
-    })
-
+    const config = { sourceMap: true, filename: `foo.vue` }
+    const { code, map } = compile(source, config)
+    
     expect(code).toMatchSnapshot()
     expect(map!.sources).toEqual([`foo.vue`])
     expect(map!.sourcesContent).toEqual([source])
@@ -107,14 +107,17 @@ describe('compiler: integration tests', () => {
     expect(
       consumer.originalPositionFor(getPositionInCode(code, `value + index`))
     ).toMatchObject(getPositionInCode(source, `value + index`))
+
+    expect(compile(comp1, config).code).toEqual(compile(comp2, config).code)
   })
 
   test('function mode w/ prefixIdentifiers: true', () => {
-    const { code, map } = compile(source, {
+    const config = {
       sourceMap: true,
       filename: `foo.vue`,
       prefixIdentifiers: true
-    })
+    }
+    const { code, map } = compile(source, config)
 
     expect(code).toMatchSnapshot()
     expect(map!.sources).toEqual([`foo.vue`])
@@ -182,14 +185,17 @@ describe('compiler: integration tests', () => {
     expect(
       consumer.originalPositionFor(getPositionInCode(code, `value + index`))
     ).toMatchObject(getPositionInCode(source, `value + index`))
+
+    expect(compile(comp1, config).code).toEqual(compile(comp2, config).code)
   })
 
   test('module mode', () => {
-    const { code, map } = compile(source, {
+    let config: CompilerOptions = {
       mode: 'module',
       sourceMap: true,
       filename: `foo.vue`
-    })
+    }
+    const { code, map } = compile(source, config)
 
     expect(code).toMatchSnapshot()
     expect(map!.sources).toEqual([`foo.vue`])
@@ -257,5 +263,8 @@ describe('compiler: integration tests', () => {
     expect(
       consumer.originalPositionFor(getPositionInCode(code, `value + index`))
     ).toMatchObject(getPositionInCode(source, `value + index`))
+
+    expect(compile(comp1, config).code).toEqual(compile(comp2, config).code)
   })
+
 })

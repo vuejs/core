@@ -207,14 +207,26 @@ export function buildSlots(
     let vElse: DirectiveNode | undefined
     let vFor: DirectiveNode | undefined
     if ((vIf = findDir(slotElement, 'if'))) {
-      hasDynamicSlots = true
-      dynamicSlots.push(
-        createConditionalExpression(
-          vIf.exp!,
-          buildDynamicSlot(slotName, slotFunction, conditionalBranchIndex++),
-          defaultFallback
+
+      // #6833
+      // If v-if="true" in the slots, ignore it.
+      let isStatic = false
+      let vIfExp = vIf.exp as SimpleExpressionNode
+      if (slotDir && vIfExp.content === 'true') {
+        isStatic = vIfExp.isStatic = true
+      }
+      hasDynamicSlots = !isStatic
+      if (isStatic) {
+        slotsProperties.push(createObjectProperty(slotName, slotFunction))
+      } else {
+        dynamicSlots.push(
+          createConditionalExpression(
+            vIfExp,
+            buildDynamicSlot(slotName, slotFunction, conditionalBranchIndex++),
+            defaultFallback
+          )
         )
-      )
+      }
     } else if (
       (vElse = findDir(slotElement, /^else(-if)?$/, true /* allowEmpty */))
     ) {
