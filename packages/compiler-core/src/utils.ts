@@ -398,7 +398,7 @@ export function injectProp(
     const first = props.arguments[0] as string | JSChildNode
     if (!isString(first) && first.type === NodeTypes.JS_OBJECT_EXPRESSION) {
       // #6631
-      if (!isAlreadyExists(prop, first)) {
+      if (!isPropExists(prop, first)) {
         first.properties.unshift(prop)
       }
     } else {
@@ -414,7 +414,7 @@ export function injectProp(
     }
     !propsWithInjection && (propsWithInjection = props)
   } else if (props.type === NodeTypes.JS_OBJECT_EXPRESSION) {
-    if (!isAlreadyExists(prop, props)) {
+    if (!isPropExists(prop, props)) {
       props.properties.unshift(prop)
     }
     propsWithInjection = props
@@ -447,7 +447,7 @@ export function injectProp(
 }
 
 // check existing key to avoid overriding user provided keys
-function isAlreadyExists(prop: Property, props: ObjectExpression) {
+function isPropExists(prop: Property, props: ObjectExpression) {
   let result = false
   if (prop.key.type === NodeTypes.SIMPLE_EXPRESSION) {
     const propKeyName = prop.key.content
