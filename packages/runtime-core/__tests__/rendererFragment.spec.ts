@@ -315,4 +315,40 @@ describe('renderer: fragment', () => {
       `<!--comment--><span></span><div>two</div><!--comment--><span></span><div>one</div>`
     )
   })
+
+  // #6852
+  test('`template` keyed fragment w/ text', () => {
+    const root = nodeOps.createElement('div')
+
+    const renderFn = (items: string[]) => {
+      return (
+        openBlock(true),
+        createBlock(
+          Fragment,
+          null,
+          renderList(items, item => {
+            return (
+              openBlock(),
+              createBlock(
+                Fragment,
+                { key: item },
+                [
+                  createTextVNode('text'),
+                  createVNode('div', null, item, PatchFlags.TEXT)
+                ],
+                PatchFlags.STABLE_FRAGMENT
+              )
+            )
+          }),
+          PatchFlags.KEYED_FRAGMENT
+        )
+      )
+    }
+
+    render(renderFn(['one', 'two']), root)
+    expect(serializeInner(root)).toBe(`text<div>one</div>text<div>two</div>`)
+
+    render(renderFn(['two', 'one']), root)
+    expect(serializeInner(root)).toBe(`text<div>two</div>text<div>one</div>`)
+  })
 })
