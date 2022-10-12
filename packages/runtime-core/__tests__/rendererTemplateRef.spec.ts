@@ -9,6 +9,7 @@ import {
   serializeInner,
   shallowRef
 } from '@vue/runtime-test'
+import { watchEffect } from '@vue/runtime-core'
 
 // reference: https://vue-composition-api-rfc.netlify.com/api.html#template-refs
 
@@ -492,5 +493,62 @@ describe('api: template refs', () => {
     show.value = !show.value
     await nextTick()
     expect(mapRefs()).toMatchObject(['2', '3', '4'])
+  })
+
+  test('named ref in v-for with watchEffect', async () => {
+    const show = ref(true)
+    const list = reactive([1, 2, 3])
+    const listRefs = ref([])
+    const check = ref()
+
+    const mapRefs = () => listRefs.value.map(n => serializeInner(n))
+    watchEffect(() => (check.value = mapRefs()))
+
+    const App = {
+      setup() {
+        return { listRefs }
+      },
+      render() {
+        return show.value
+          ? h(
+              'ul',
+              list.map(i =>
+                h(
+                  'li',
+                  {
+                    ref: 'listRefs',
+                    ref_for: true
+                  },
+                  i
+                )
+              )
+            )
+          : null
+      }
+    }
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+
+    expect(check.value).toMatchObject([])
+
+    await nextTick()
+    expect(check.value).toMatchObject(['1', '2', '3'])
+
+    list.push(4)
+    await nextTick()
+    expect(check.value).toMatchObject(['1', '2', '3', '4'])
+
+    list.shift()
+    await nextTick()
+    expect(check.value).toMatchObject(['2', '3', '4'])
+
+    show.value = !show.value
+    await nextTick()
+
+    expect(check.value).toMatchObject([])
+
+    show.value = !show.value
+    await nextTick()
+    expect(check.value).toMatchObject(['2', '3', '4'])
   })
 })
