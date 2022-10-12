@@ -11,11 +11,12 @@ const nativeOnRE = /^on[a-z]/
 type DOMRendererOptions = RendererOptions<Node, Element>
 
 const IMGPRIORPROPS = ['loading']
-export function getPriorProps(type: VNodeTypes) {
+export function getPriorityProps(type: VNodeTypes) {
   let result: Array<string> = []
   switch (type) {
     case 'img':
       result = IMGPRIORPROPS
+      break
     default:
       break
   }

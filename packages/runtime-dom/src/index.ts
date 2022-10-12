@@ -13,7 +13,7 @@ import {
   compatUtils
 } from '@vue/runtime-core'
 import { nodeOps } from './nodeOps'
-import { getPriorProps, patchProp } from './patchProp'
+import { getPriorityProps, patchProp } from './patchProp'
 // Importing from the compiler, will be tree-shaken in prod
 import {
   isFunction,
@@ -31,7 +31,7 @@ declare module '@vue/reactivity' {
 }
 
 const rendererOptions = /*#__PURE__*/ extend(
-  { getPriorProps, patchProp },
+  { getPriorityProps, patchProp },
   nodeOps
 )
 
