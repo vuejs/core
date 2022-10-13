@@ -38,10 +38,13 @@ import {
   isCompatEnabled
 } from './compatConfig'
 import { compatModelEventPrefix } from './componentVModel'
+import { resolveMergedOptions } from '../componentOptions'
 
 export function convertLegacyRenderFn(instance: ComponentInternalInstance) {
   const Component = instance.type as ComponentOptions
-  const render = Component.render as InternalRenderFunction | undefined
+  const render = (Component.render || resolveMergedOptions(instance).render) as
+    | InternalRenderFunction
+    | undefined
 
   // v3 runtime compiled, or already checked / wrapped
   if (!render || render._rc || render._compatChecked || render._compatWrapped) {
