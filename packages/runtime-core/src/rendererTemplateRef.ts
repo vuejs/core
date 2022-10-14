@@ -84,7 +84,11 @@ export function setRef(
     if (_isString || _isRef) {
       const doSet = () => {
         if (rawRef.f) {
-          const existing = _isString ? refs[ref] : ref.value
+          const existing = _isString
+            ? hasOwn(setupState, ref)
+              ? setupState[ref]
+              : refs[ref]
+            : ref.value
           if (isUnmount) {
             isArray(existing) && remove(existing, refValue)
           } else {
@@ -93,11 +97,6 @@ export function setRef(
                 refs[ref] = [refValue]
                 if (hasOwn(setupState, ref)) {
                   setupState[ref] = refs[ref]
-                  // #6697
-                  // Only valid in composition Api:
-                  // setupState is assigned to refs to ensure
-                  // that the variable 'existing' can be used as a template dependency
-                  refs[ref] = setupState[ref]
                 }
               } else {
                 ref.value = [refValue]
