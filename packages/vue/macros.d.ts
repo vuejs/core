@@ -64,7 +64,7 @@ export declare function $$<T>(
   value: WritableComputedRefValue<T>
 ): WritableComputedRef<T>
 
-type ToRawRefs<T extends object> = {
+type ToRawRefs<T extends object> = T extends Array<any> ? Ref<T> : {
   [K in keyof T]: T[K] extends RefValue<infer V>
     ? Ref<V>
     : T[K] extends ComputedRefValue<infer V>
