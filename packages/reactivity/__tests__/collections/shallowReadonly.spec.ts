@@ -2,7 +2,7 @@ import { isReactive, isReadonly, shallowReadonly } from '../../src'
 
 describe('reactivity/collections', () => {
   describe('shallowReadonly/Map', () => {
-    ;[Map, WeakMap].forEach(Collection => {
+    ;[Map, WeakMap].forEach((Collection: any) => {
       test('should make the map/weak-map readonly', () => {
         const key = {}
         const val = { foo: 1 }
@@ -81,7 +81,7 @@ describe('reactivity/collections', () => {
 
   describe('shallowReadonly/Set', () => {
     test('should make the set/weak-set readonly', () => {
-      ;[Set, WeakSet].forEach(Collection => {
+      ;[Set, WeakSet].forEach((Collection: any) => {
         const obj = { foo: 1 }
         const original = new Collection([obj])
         const sroSet = shallowReadonly(original)

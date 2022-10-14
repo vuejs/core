@@ -1,7 +1,40 @@
-import { toRaw, ReactiveFlags, toReactive, toReadonly } from './reactive'
+import { 
+  toRaw,
+  ReactiveFlags,
+  toReactive,
+  toReadonly,
+  ReactiveObject,
+  IsCollectionReactive,
+  IsCollectionReadonly,
+  ReadonlyObject
+} from './reactive'
 import { track, trigger, ITERATE_KEY, MAP_KEY_ITERATE_KEY } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { capitalize, hasOwn, hasChanged, toRawType, isMap } from '@vue/shared'
+
+export type CollectionUnwrapRefs<T extends object, V> = 
+  IsCollectionReactive<T> extends true
+  ? ReactiveObject<V>
+  : IsCollectionReadonly<T> extends true
+  ? ReadonlyObject<T>
+  : V
+
+declare global {
+  interface Map<K, V> {
+    get<T extends ThisType<Map<K, V>>>(this: T, key: K): CollectionUnwrapRefs<T, V> | undefined
+    forEach<T extends ThisType<Map<K, V>>>(this: T, callbackfn: (value: CollectionUnwrapRefs<T, V>, key: CollectionUnwrapRefs<T, K>, map: T) => void, thisArg?: any): void;
+  }
+  interface WeakMap<K, V> {
+    get<T extends ThisType<WeakMap<K, V>>>(this: T, key: K): CollectionUnwrapRefs<T, V> | undefined
+    forEach<T extends ThisType<WeakMap<K, V>>>(this: T, callbackfn: (value: CollectionUnwrapRefs<T, V>, key: CollectionUnwrapRefs<T, K>, map: T) => void, thisArg?: any): void;
+  }
+  interface Set<T> {
+    forEach<TT extends ThisType<Set<T>>>(this: TT, callbackfn: (value1: CollectionUnwrapRefs<TT, T>, value2: CollectionUnwrapRefs<TT, T>, set: TT) => void, thisArg?: any): void;
+  }
+  interface WeakSet<T> {
+    forEach<TT extends ThisType<WeakSet<T>>>(this: TT, callbackfn: (value1: CollectionUnwrapRefs<TT, T>, value2: CollectionUnwrapRefs<TT, T>, set: TT) => void, thisArg?: any): void;
+  }
+}
 
 export type CollectionTypes = IterableCollections | WeakCollections
 
