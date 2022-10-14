@@ -89,10 +89,14 @@ export function withCtx(
       setBlockTracking(-1)
     }
     const prevInstance = setCurrentRenderingInstance(ctx)
-    const res = fn(...args)
-    setCurrentRenderingInstance(prevInstance)
-    if (renderFnWithContext._d) {
-      setBlockTracking(1)
+    let res
+    try {
+      res = fn(...args)
+    } finally {
+      setCurrentRenderingInstance(prevInstance)
+      if (renderFnWithContext._d) {
+        setBlockTracking(1)
+      }
     }
 
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
