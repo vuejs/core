@@ -222,27 +222,29 @@ This is made possible via several configurations:
 
 ### Package Dependencies
 
-```
-                                    +---------------------+
-                                    |                     |
-                                    |  @vue/compiler-sfc  |
-                                    |                     |
-                                    +-----+--------+------+
-                                          |        |
-                                          v        v
-                      +---------------------+    +----------------------+
-                      |                     |    |                      |
-        +------------>|  @vue/compiler-dom  +--->|  @vue/compiler-core  |
-        |             |                     |    |                      |
-   +----+----+        +---------------------+    +----------------------+
-   |         |
-   |   vue   |
-   |         |
-   +----+----+        +---------------------+    +----------------------+    +-------------------+
-        |             |                     |    |                      |    |                   |
-        +------------>|  @vue/runtime-dom   +--->|  @vue/runtime-core   +--->|  @vue/reactivity  |
-                      |                     |    |                      |    |                   |
-                      +---------------------+    +----------------------+    +-------------------+
+```mermaid
+  flowchart LR
+    compiler-sfc["@vue/compiler-sfc"]
+    compiler-dom["@vue/compiler-dom"]
+    compiler-core["@vue/compiler-core"]
+    vue["vue"]
+    runtime-dom["@vue/runtime-dom"]
+    runtime-core["@vue/runtime-core"]
+    reactivity["@vue/reactivity"]
+    
+    subgraph "Runtime Packages"
+      runtime-dom --> runtime-core
+      runtime-core --> reactivity
+    end
+    
+    subgraph "Compiler Packages"
+      compiler-sfc --> compiler-core
+      compiler-sfc --> compiler-dom
+      compiler-dom --> compiler-core
+    end
+    
+    vue ---> compiler-dom
+    vue --> runtime-dom
 ```
 
 There are some rules to follow when importing across package boundaries:
