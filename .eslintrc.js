@@ -69,6 +69,14 @@ module.exports = {
         'no-restricted-globals': ['error', ...NodeGlobals],
         'no-restricted-syntax': 'off'
       }
+    },
+    // Node scripts
+    {
+      files: ['scripts/**', './*.js', 'packages/**/index.js', 'packages/size-check/**'],
+      rules: {
+        'no-restricted-globals': 'off',
+        'no-restricted-syntax': 'off'
+      }
     }
   ]
 }

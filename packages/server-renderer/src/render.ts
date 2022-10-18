@@ -174,18 +174,21 @@ function renderComponentSubTree(
 
       // set current rendering instance for asset resolution
       const prev = setCurrentRenderingInstance(instance)
-      ssrRender(
-        instance.proxy,
-        push,
-        instance,
-        attrs,
-        // compiler-optimized bindings
-        instance.props,
-        instance.setupState,
-        instance.data,
-        instance.ctx
-      )
-      setCurrentRenderingInstance(prev)
+      try {
+        ssrRender(
+          instance.proxy,
+          push,
+          instance,
+          attrs,
+          // compiler-optimized bindings
+          instance.props,
+          instance.setupState,
+          instance.data,
+          instance.ctx
+        )
+      } finally {
+        setCurrentRenderingInstance(prev)
+      }
     } else if (instance.render && instance.render !== NOOP) {
       renderVNode(
         push,

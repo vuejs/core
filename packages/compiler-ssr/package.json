@@ -1,6 +1,6 @@
 {
   "name": "@vue/compiler-ssr",
-  "version": "3.2.38",
+  "version": "3.2.41",
   "description": "@vue/compiler-ssr",
   "main": "dist/compiler-ssr.cjs.js",
   "types": "dist/compiler-ssr.d.ts",
@@ -28,7 +28,7 @@
   },
   "homepage": "https://github.com/vuejs/core/tree/main/packages/compiler-ssr#readme",
   "dependencies": {
-    "@vue/shared": "3.2.38",
-    "@vue/compiler-dom": "3.2.38"
+    "@vue/shared": "3.2.41",
+    "@vue/compiler-dom": "3.2.41"
   }
 }

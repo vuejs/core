@@ -413,6 +413,16 @@ export function buildProps(
   let hasVnodeHook = false
   const dynamicPropNames: string[] = []
 
+  const pushMergeArg = (arg?: PropsExpression) => {
+    if (properties.length) {
+      mergeArgs.push(
+        createObjectExpression(dedupeProperties(properties), elementLoc)
+      )
+      properties = []
+    }
+    if (arg) mergeArgs.push(arg)
+  }
+
   const analyzePatchFlag = ({ key, value }: Property) => {
     if (isStaticExp(key)) {
       const name = key.content
@@ -590,13 +600,9 @@ export function buildProps(
       if (!arg && (isVBind || isVOn)) {
         hasDynamicKeys = true
         if (exp) {
-          if (properties.length) {
-            mergeArgs.push(
-              createObjectExpression(dedupeProperties(properties), elementLoc)
-            )
-            properties = []
-          }
           if (isVBind) {
+            // have to merge early for compat build check
+            pushMergeArg()
             if (__COMPAT__) {
               // 2.x v-bind object order compat
               if (__DEV__) {
@@ -643,7 +649,7 @@ export function buildProps(
             mergeArgs.push(exp)
           } else {
             // v-on="obj" -> toHandlers(obj)
-            mergeArgs.push({
+            pushMergeArg({
               type: NodeTypes.JS_CALL_EXPRESSION,
               loc,
               callee: context.helper(TO_HANDLERS),
@@ -668,7 +674,11 @@ export function buildProps(
         // has built-in directive transform.
         const { props, needRuntime } = directiveTransform(prop, node, context)
         !ssr && props.forEach(analyzePatchFlag)
-        properties.push(...props)
+        if (isVOn && arg && !isStaticExp(arg)) {
+          pushMergeArg(createObjectExpression(props, elementLoc))
+        } else {
+          properties.push(...props)
+        }
         if (needRuntime) {
           runtimeDirectives.push(prop)
           if (isSymbol(needRuntime)) {
@@ -691,11 +701,8 @@ export function buildProps(
 
   // has v-bind="object" or v-on="object", wrap with mergeProps
   if (mergeArgs.length) {
-    if (properties.length) {
-      mergeArgs.push(
-        createObjectExpression(dedupeProperties(properties), elementLoc)
-      )
-    }
+    // close up any not-yet-merged props
+    pushMergeArg()
     if (mergeArgs.length > 1) {
       propsExpression = createCallExpression(
         context.helper(MERGE_PROPS),

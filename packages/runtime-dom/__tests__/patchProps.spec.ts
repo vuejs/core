@@ -240,6 +240,8 @@ describe('runtime-dom: props patching', () => {
     expect(el.size).toBe(100)
     patchProp(el, 'size', 100, null)
     expect(el.getAttribute('size')).toBe(null)
+    expect('Failed setting prop "size" on <input>').not.toHaveBeenWarned()
+    patchProp(el, 'size', null, 'foobar')
     expect('Failed setting prop "size" on <input>').toHaveBeenWarnedLast()
   })
 
