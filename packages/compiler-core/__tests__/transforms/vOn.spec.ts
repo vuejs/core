@@ -68,6 +68,43 @@ describe('compiler: transform v-on', () => {
     })
   })
 
+  // # fix: #6900 Ensure consistent behavior of @update:modelValue and @update:model-value
+  test('consistent behavior of @update:modelValue and @update:model-value', () => {
+    const { node } = parseWithVOn(`<div v-on:update:modelValue="handler"/>`)
+    const { node: nodeV } = parseWithVOn(
+      `<div v-on:update:model-value="handler"/>`
+    )
+    expect((node.codegenNode as VNodeCall).props).toMatchObject({
+      properties: [
+        {
+          key: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: 'onUpdate:modelValue'
+          },
+          value: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: `handler`,
+            isStatic: false
+          }
+        }
+      ]
+    })
+    expect((nodeV.codegenNode as VNodeCall).props).toMatchObject({
+      properties: [
+        {
+          key: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: 'onUpdate:modelValue'
+          },
+          value: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: `handler`,
+            isStatic: false
+          }
+        }
+      ]
+    })
+  })
   test('dynamic arg', () => {
     const { node } = parseWithVOn(`<div v-on:[event]="handler"/>`)
     expect((node.codegenNode as VNodeCall).props).toMatchObject({
