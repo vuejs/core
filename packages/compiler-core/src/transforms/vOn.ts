@@ -49,11 +49,9 @@ export const transformOn: DirectiveTransform = (
       }
       const eventString =
         node.tagType === ElementTypes.COMPONENT ||
+        node.tagType === ElementTypes.SLOT ||
         rawName.startsWith('vnode') ||
-        (!/[A-Z]/.test(rawName) ||
-          // See issue #6900,Ensure consistent behavior of
-          // @update:modelValue and @update:model-value
-        rawName === 'update:modelValue')
+        !/[A-Z]/.test(rawName)
           ? // for component and vnode lifecycle event listeners, auto convert
             // it to camelCase. See issue #2249
             toHandlerKey(camelize(rawName))

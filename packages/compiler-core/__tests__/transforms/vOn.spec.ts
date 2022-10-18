@@ -8,11 +8,12 @@ import {
   NodeTypes,
   ObjectExpression,
   transform,
-  VNodeCall
+  VNodeCall, RenderSlotCall,
 } from '../../src'
 import { transformOn } from '../../src/transforms/vOn'
 import { transformElement } from '../../src/transforms/transformElement'
 import { transformExpression } from '../../src/transforms/transformExpression'
+import {parseWithSlots} from "./vSlot.spec";
 
 function parseWithVOn(template: string, options: CompilerOptions = {}) {
   const ast = parse(template, options)
@@ -68,18 +69,17 @@ describe('compiler: transform v-on', () => {
     })
   })
 
-  // # fix: #6900 Ensure consistent behavior of @update:modelValue and @update:model-value
+  // # fix: #6900
   test('consistent behavior of @update:modelValue and @update:model-value', () => {
-    const { node } = parseWithVOn(`<div v-on:update:modelValue="handler"/>`)
-    const { node: nodeV } = parseWithVOn(
-      `<div v-on:update:model-value="handler"/>`
-    )
-    expect((node.codegenNode as VNodeCall).props).toMatchObject({
+    const { root:rootUpper } = parseWithSlots(`<div><slot @foo:modelValue="handler" /></div>`)
+    const slotNodeUpper = ((rootUpper).codegenNode! as VNodeCall).children as ElementNode[]
+    const propertiesObjUpper= (slotNodeUpper[0].codegenNode! as RenderSlotCall).arguments[2]
+    expect(propertiesObjUpper).toMatchObject({
       properties: [
         {
           key: {
             type: NodeTypes.SIMPLE_EXPRESSION,
-            content: 'onUpdate:modelValue'
+            content: 'onFoo:modelValue',
           },
           value: {
             type: NodeTypes.SIMPLE_EXPRESSION,
@@ -89,12 +89,16 @@ describe('compiler: transform v-on', () => {
         }
       ]
     })
-    expect((nodeV.codegenNode as VNodeCall).props).toMatchObject({
+
+    const { root } = parseWithSlots(`<div><slot @foo:model-Value="handler" /></div>`)
+    const slotNode = ((root).codegenNode! as VNodeCall).children as ElementNode[]
+    const propertiesObj = (slotNode[0].codegenNode! as RenderSlotCall).arguments[2]
+    expect(propertiesObj).toMatchObject({
       properties: [
         {
           key: {
             type: NodeTypes.SIMPLE_EXPRESSION,
-            content: 'onUpdate:modelValue'
+            content: 'onFoo:modelValue',
           },
           value: {
             type: NodeTypes.SIMPLE_EXPRESSION,
