@@ -50,8 +50,8 @@ export const transformOn: DirectiveTransform = (
       const eventString =
         node.tagType === ElementTypes.COMPONENT ||
         rawName.startsWith('vnode') ||
-        !/[A-Z]/.test(rawName) ||
-        rawName === 'update:modelValue'
+        (!/[A-Z]/.test(rawName) ||
+        rawName === 'update:modelValue')
           ? // for component and vnode lifecycle event listeners, auto convert
             // it to camelCase. See issue #2249
             toHandlerKey(camelize(rawName))
