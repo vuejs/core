@@ -165,6 +165,7 @@ export const transformOn: DirectiveTransform = (
       )
     ]
   }
+
   // apply extended compiler augmentor
   if (augmentor) {
     ret = augmentor(ret)
