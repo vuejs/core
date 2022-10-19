@@ -11,7 +11,8 @@ import {
   VNodeCall,
   SlotsExpression,
   ObjectExpression,
-  SimpleExpressionNode
+  SimpleExpressionNode,
+  RenderSlotCall
 } from '../../src'
 import { transformElement } from '../../src/transforms/transformElement'
 import { transformOn } from '../../src/transforms/vOn'
@@ -28,10 +29,7 @@ import { PatchFlags } from '@vue/shared'
 import { transformFor } from '../../src/transforms/vFor'
 import { transformIf } from '../../src/transforms/vIf'
 
-export function parseWithSlots(
-  template: string,
-  options: CompilerOptions = {}
-) {
+function parseWithSlots(template: string, options: CompilerOptions = {}) {
   const ast = parse(template, {
     whitespace: options.whitespace
   })
@@ -790,6 +788,56 @@ describe('compiler: transform component slots', () => {
     test('<slot w/ nested component>', () => {
       const { slots } = parseWithSlots(`<Comp><Comp><slot/></Comp></Comp>`)
       expect(slots).toMatchObject(toMatch)
+    })
+
+    // # fix: #6900
+    test('consistent behavior of @xxx:modelValue and @xxx:model-value', () => {
+      const { root: rootUpper } = parseWithSlots(
+        `<div><slot @foo:modelValue="handler" /></div>`
+      )
+      const slotNodeUpper = (rootUpper.codegenNode! as VNodeCall)
+        .children as ElementNode[]
+      const propertiesObjUpper = (
+        slotNodeUpper[0].codegenNode! as RenderSlotCall
+      ).arguments[2]
+      expect(propertiesObjUpper).toMatchObject({
+        properties: [
+          {
+            key: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'onFoo:modelValue'
+            },
+            value: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: `handler`,
+              isStatic: false
+            }
+          }
+        ]
+      })
+
+      const { root } = parseWithSlots(
+        `<div><slot @foo:model-Value="handler" /></div>`
+      )
+      const slotNode = (root.codegenNode! as VNodeCall)
+        .children as ElementNode[]
+      const propertiesObj = (slotNode[0].codegenNode! as RenderSlotCall)
+        .arguments[2]
+      expect(propertiesObj).toMatchObject({
+        properties: [
+          {
+            key: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'onFoo:modelValue'
+            },
+            value: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: `handler`,
+              isStatic: false
+            }
+          }
+        ]
+      })
     })
   })
 
