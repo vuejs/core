@@ -595,4 +595,23 @@ describe('component props', () => {
       JSON.stringify(attrs) + Object.keys(attrs)
     )
   })
+
+  // #691ef
+  test('should not mutate original props long-form definition object', () => {
+    const props = {
+      msg: {
+        type: String
+      }
+    }
+    const Comp = defineComponent({
+      props,
+      render() {}
+    })
+
+    const root = nodeOps.createElement('div')
+
+    render(h(Comp, { msg: 'test' }), root)
+
+    expect(Object.keys(props.msg).length).toBe(1)
+  })
 })
