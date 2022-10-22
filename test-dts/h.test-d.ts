@@ -9,7 +9,8 @@ import {
   Component,
   expectError,
   expectAssignable,
-  resolveComponent
+  resolveComponent,
+  expectType
 } from './index'
 
 describe('h inference w/ element', () => {
@@ -231,5 +232,23 @@ describe('resolveComponent should work', () => {
   h(resolveComponent('test'))
   h(resolveComponent('test'), {
     message: '1'
+  })
+})
+
+// #6886
+describe('component w/ optional props declaration', () => {
+  const MyComponent = defineComponent<{ a: number[]; msg: string }>({
+    setup(props) {
+      expectType<string>(props.msg)
+      expectType<number[]>(props.a)
+      return {
+        b: 1
+      }
+    }
+  })
+
+  h(MyComponent, {
+    a: [1, 2],
+    msg: 'hello world'
   })
 })
