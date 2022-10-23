@@ -145,8 +145,6 @@ export interface AppContext {
 
 type PluginInstallFunction<Options> = Options extends unknown[]
   ? (app: App, ...options: Options) => any
-  : Options extends undefined
-  ? (app: App, options?: Options) => any
   : (app: App, options: Options) => any
 
 export type Plugin<Options = any[]> =
