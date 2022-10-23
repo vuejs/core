@@ -969,6 +969,8 @@ export function resolveMergedOptions(
   if (isObject(base)) {
     cache.set(base, resolved)
   }
+  resolved.props = instance.propsOptions[0]
+  resolved.emits = instance.emits
   return resolved
 }
 
@@ -1000,6 +1002,8 @@ export function mergeOptions(
           `"expose" option is ignored when declared in mixins or extends. ` +
             `It should only be declared in the base component itself.`
         )
+    } else if (key === "props" || key === "emits") {
+      continue
     } else {
       const strat = internalOptionMergeStrats[key] || (strats && strats[key])
       to[key] = strat ? strat(to[key], from[key]) : from[key]
@@ -1010,8 +1014,6 @@ export function mergeOptions(
 
 export const internalOptionMergeStrats: Record<string, Function> = {
   data: mergeDataFn,
-  props: mergeObjectOptions, // TODO
-  emits: mergeObjectOptions, // TODO
   // objects
   methods: mergeObjectOptions,
   computed: mergeObjectOptions,
