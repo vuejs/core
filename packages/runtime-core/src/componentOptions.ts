@@ -969,8 +969,12 @@ export function resolveMergedOptions(
   if (isObject(base)) {
     cache.set(base, resolved)
   }
-  resolved.props = instance.propsOptions[0]
-  resolved.emits = instance.emitsOptions
+  if(instance.propsOptions[0]){
+    resolved.props = instance.propsOptions[0]
+  }
+  if(instance.emitsOptions){
+    resolved.emits = instance.emitsOptions
+  }
   return resolved
 }
 
