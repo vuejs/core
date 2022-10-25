@@ -335,6 +335,20 @@ function patchSuspense(
         slotScopeIds,
         optimized
       )
+      let shapeFlag = newBranch.shapeFlag
+      let asyncResolved = true
+      let vnode = newBranch
+      const keepAlive = !!(shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE)
+      while (keepAlive && shapeFlag & ShapeFlags.COMPONENT && vnode.component) {
+        asyncResolved = vnode.component.asyncResolved
+        if (!asyncResolved) {
+            vnode.component.suspenseId = suspense.pendingId
+            suspense.deps++
+            break
+        }
+        vnode = vnode.component.subTree
+        shapeFlag = vnode.shapeFlag
+      }
       if (suspense.deps <= 0) {
         // incoming branch has no async deps, resolve now.
         suspense.resolve()
@@ -346,7 +360,7 @@ function patchSuspense(
               suspense.fallback(newFallback)
             }
           }, timeout)
-        } else if (timeout === 0) {
+        } else if (timeout === 0 || !asyncResolved) {
           suspense.fallback(newFallback)
         }
       }
