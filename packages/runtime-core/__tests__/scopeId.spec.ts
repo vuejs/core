@@ -126,7 +126,7 @@ describe('scopeId runtime support', () => {
     const root = nodeOps.createElement('div')
     render(h(Root), root)
     expect(serializeInner(root)).toBe(
-      `<div class="wrapper" wrapper slotted root>` +
+      `<div wrapper slotted root class="wrapper">` +
         `<div root slotted-s>hoisted</div>` +
         `<div root slotted-s>dynamic</div>` +
         `</div>`
