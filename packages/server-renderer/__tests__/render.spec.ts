@@ -21,7 +21,11 @@ import {
   renderSlot,
   onErrorCaptured,
   onServerPrefetch,
-  getCurrentInstance
+  getCurrentInstance,
+  createSSRApp,
+  unref,
+  useCssVars,
+  computed
 } from 'vue'
 import { escapeHtml } from '@vue/shared'
 import { renderToString } from '../src/renderToString'
@@ -1099,6 +1103,29 @@ function testRender(type: string, render: typeof renderToString) {
       }
       expect(renderError).toBe(null)
       expect((capturedError as unknown as Error).message).toBe('An error')
+    })
+
+    // #6926
+    test('should work with css vars', async () => {
+      const app = createSSRApp({
+        setup() {
+          useCssVars((ctx: any) => ({
+            top: unref(top),
+            color: ctx.color,
+          }))
+          const top = computed(() => '10px')
+          const color = ref('red')
+          return {
+            top,
+            color,
+          }
+        },
+        render() {
+          return h('div')
+        }
+      })
+      const html = await renderToString(app)
+      expect(html).toBe('<div></div>')
     })
   })
 }

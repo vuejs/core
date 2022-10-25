@@ -285,7 +285,11 @@ function doWatch(
     // we will also not call the invalidate callback (+ runner is not set up)
     onCleanup = NOOP
     if (!cb) {
-      getter()
+      if (flush === 'post') {
+        queuePostRenderEffect(getter, instance && instance.suspense)
+      } else {
+        getter()
+      }
     } else if (immediate) {
       callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
         getter(),
