@@ -153,7 +153,7 @@ describe('scopeId runtime support', () => {
     render(h(Root2), root2)
     expect(serializeInner(root2)).toBe(
       `<div wrapper slotted root class="wrapper">` +
-        `<div class="wrapper" wrapper root slotted-s>` +
+        `<div wrapper root slotted-s class="wrapper">` +
         `<div root>hoisted</div>` +
         `<div root>dynamic</div>` +
         `</div>` +
