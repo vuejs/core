@@ -576,7 +576,7 @@ function validateProps(
       key,
       resolvedValues[key],
       opt,
-      shallowReadonly(resolvedValues),
+      __DEV__ ? shallowReadonly(resolvedValues) : resolvedValues,
       !hasOwn(rawProps, key) && !hasOwn(rawProps, hyphenate(key))
     )
   }
