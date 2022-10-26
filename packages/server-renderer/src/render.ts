@@ -45,7 +45,13 @@ export type Props = Record<string, unknown>
 export type SSRContext = {
   [key: string]: any
   teleports?: Record<string, string>
+  /**
+   * @internal
+   */
   __teleportBuffers?: Record<string, SSRBuffer>
+  /**
+   * @internal
+   */
   __watcherHandles?: (() => void)[]
 }
 

@@ -1,10 +1,9 @@
-import { SSRContext } from '@vue/server-renderer'
 import { inject } from '../apiInject'
 import { warn } from '../warning'
 
 export const ssrContextKey = Symbol(__DEV__ ? `ssrContext` : ``)
 
-export const useSSRContext = <T = SSRContext>() => {
+export const useSSRContext = <T = Record<string, any>>() => {
   if (!__GLOBAL__) {
     const ctx = inject<T>(ssrContextKey)
     if (!ctx) {

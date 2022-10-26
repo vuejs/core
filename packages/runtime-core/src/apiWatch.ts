@@ -41,6 +41,7 @@ import { DeprecationTypes } from './compat/compatConfig'
 import { checkCompatEnabled, isCompatEnabled } from './compat/compatConfig'
 import { ObjectWatchOptionItem } from './componentOptions'
 import { useSSRContext } from '@vue/runtime-core'
+import { SSRContext } from '@vue/server-renderer'
 
 export type WatchEffect = (onCleanup: OnCleanup) => void
 
@@ -296,7 +297,7 @@ function doWatch(
       ])
     }
     if (flush === 'sync') {
-      const ctx = useSSRContext()!
+      const ctx = useSSRContext() as SSRContext
       ssrCleanup = ctx.__watcherHandles || (ctx.__watcherHandles = [])
     } else {
       return NOOP
