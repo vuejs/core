@@ -13,6 +13,7 @@ const TRANSITION = 'transition'
 const ANIMATION = 'animation'
 
 type AnimationTypes = typeof TRANSITION | typeof ANIMATION
+
 export interface TransitionProps extends BaseTransitionProps<Element> {
   name?: string
   type?: AnimationTypes
