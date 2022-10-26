@@ -879,7 +879,7 @@ describe('renderer: optimized mode', () => {
   // #3881
   // root cause: fragment inside a compiled slot passed to component which
   // programmatically invokes the slot. The entire slot should de-opt but
-  // the fragment was incorretly put in optimized mode which causes it to skip
+  // the fragment was incorrectly put in optimized mode which causes it to skip
   // updates for its inner components.
   test('fragments inside programmatically invoked compiled slot should de-opt properly', async () => {
     const Parent: FunctionalComponent = (_, { slots }) => slots.default!()

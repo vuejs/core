@@ -66,7 +66,14 @@ export function renderSlot(
   const validSlotContent = slot && ensureValidVNode(slot(props))
   const rendered = createBlock(
     Fragment,
-    { key: props.key || `_${name}` },
+    {
+      key:
+        props.key ||
+        // slot content array of a dynamic conditional slot may have a branch
+        // key attached in the `createSlots` helper, respect that
+        (validSlotContent && (validSlotContent as any).key) ||
+        `_${name}`
+    },
     validSlotContent || (fallback ? fallback() : []),
     validSlotContent && (slots as RawSlots)._ === SlotFlags.STABLE
       ? PatchFlags.STABLE_FRAGMENT

@@ -4,6 +4,7 @@ export const SSR_INTERPOLATE = Symbol(`ssrInterpolate`)
 export const SSR_RENDER_VNODE = Symbol(`ssrRenderVNode`)
 export const SSR_RENDER_COMPONENT = Symbol(`ssrRenderComponent`)
 export const SSR_RENDER_SLOT = Symbol(`ssrRenderSlot`)
+export const SSR_RENDER_SLOT_INNER = Symbol(`ssrRenderSlotInner`)
 export const SSR_RENDER_CLASS = Symbol(`ssrRenderClass`)
 export const SSR_RENDER_STYLE = Symbol(`ssrRenderStyle`)
 export const SSR_RENDER_ATTRS = Symbol(`ssrRenderAttrs`)
@@ -24,6 +25,7 @@ export const ssrHelpers = {
   [SSR_RENDER_VNODE]: `ssrRenderVNode`,
   [SSR_RENDER_COMPONENT]: `ssrRenderComponent`,
   [SSR_RENDER_SLOT]: `ssrRenderSlot`,
+  [SSR_RENDER_SLOT_INNER]: `ssrRenderSlotInner`,
   [SSR_RENDER_CLASS]: `ssrRenderClass`,
   [SSR_RENDER_STYLE]: `ssrRenderStyle`,
   [SSR_RENDER_ATTRS]: `ssrRenderAttrs`,

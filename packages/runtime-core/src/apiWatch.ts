@@ -9,7 +9,7 @@ import {
   EffectScheduler,
   DebuggerOptions
 } from '@vue/reactivity'
-import { SchedulerJob, queuePreFlushCb } from './scheduler'
+import { SchedulerJob, queueJob } from './scheduler'
 import {
   EMPTY_OBJ,
   isObject,
@@ -212,7 +212,7 @@ function doWatch(
     deep = true
   } else if (isArray(source)) {
     isMultiSource = true
-    forceTrigger = source.some(isReactive)
+    forceTrigger = source.some(s => isReactive(s) || isShallow(s))
     getter = () =>
       source.map(s => {
         if (isRef(s)) {
@@ -296,7 +296,9 @@ function doWatch(
     return NOOP
   }
 
-  let oldValue = isMultiSource ? [] : INITIAL_WATCHER_VALUE
+  let oldValue: any = isMultiSource
+    ? new Array((source as []).length).fill(INITIAL_WATCHER_VALUE)
+    : INITIAL_WATCHER_VALUE
   const job: SchedulerJob = () => {
     if (!effect.active) {
       return
@@ -323,7 +325,10 @@ function doWatch(
         callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
           newValue,
           // pass undefined as the old value when it's changed for the first time
-          oldValue === INITIAL_WATCHER_VALUE ? undefined : oldValue,
+          oldValue === INITIAL_WATCHER_VALUE ||
+          (isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE)
+            ? undefined
+            : oldValue,
           onCleanup
         ])
         oldValue = newValue
@@ -345,7 +350,9 @@ function doWatch(
     scheduler = () => queuePostRenderEffect(job, instance && instance.suspense)
   } else {
     // default: 'pre'
-    scheduler = () => queuePreFlushCb(job)
+    job.pre = true
+    if (instance) job.id = instance.uid
+    scheduler = () => queueJob(job)
   }
 
   const effect = new ReactiveEffect(getter, scheduler)

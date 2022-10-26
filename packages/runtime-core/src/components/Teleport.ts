@@ -52,13 +52,13 @@ const resolveTarget = <T = RendererElement>(
               `ideally should be outside of the entire Vue component tree.`
           )
       }
-      return target as any
+      return target as T
     }
   } else {
     if (__DEV__ && !targetSelector && !isTeleportDisabled(props)) {
       warn(`Invalid Teleport target: ${targetSelector}`)
     }
-    return targetSelector as any
+    return targetSelector as T
   }
 }
 
@@ -353,7 +353,26 @@ function hydrateTeleport(
         vnode.targetAnchor = targetNode
       } else {
         vnode.anchor = nextSibling(node)
-        vnode.targetAnchor = hydrateChildren(
+
+        // lookahead until we find the target anchor
+        // we cannot rely on return value of hydrateChildren() because there
+        // could be nested teleports
+        let targetAnchor = targetNode
+        while (targetAnchor) {
+          targetAnchor = nextSibling(targetAnchor)
+          if (
+            targetAnchor &&
+            targetAnchor.nodeType === 8 &&
+            (targetAnchor as Comment).data === 'teleport anchor'
+          ) {
+            vnode.targetAnchor = targetAnchor
+            ;(target as TeleportTargetElement)._lpa =
+              vnode.targetAnchor && nextSibling(vnode.targetAnchor as Node)
+            break
+          }
+        }
+
+        hydrateChildren(
           targetNode,
           vnode,
           target,
@@ -363,15 +382,13 @@ function hydrateTeleport(
           optimized
         )
       }
-      ;(target as TeleportTargetElement)._lpa =
-        vnode.targetAnchor && nextSibling(vnode.targetAnchor as Node)
     }
   }
   return vnode.anchor && nextSibling(vnode.anchor as Node)
 }
 
 // Force-casted public typing for h and TSX props inference
-export const Teleport = TeleportImpl as any as {
+export const Teleport = TeleportImpl as unknown as {
   __isTeleport: true
   new (): { $props: VNodeProps & TeleportProps }
 }

@@ -135,14 +135,14 @@ describe('defineCustomElement', () => {
     test('attribute -> prop type casting', async () => {
       const E = defineCustomElement({
         props: {
-          foo: Number,
+          fooBar: Number, // test casting of camelCase prop names
           bar: Boolean,
           baz: String
         },
         render() {
           return [
-            this.foo,
-            typeof this.foo,
+            this.fooBar,
+            typeof this.fooBar,
             this.bar,
             typeof this.bar,
             this.baz,
@@ -151,7 +151,7 @@ describe('defineCustomElement', () => {
         }
       })
       customElements.define('my-el-props-cast', E)
-      container.innerHTML = `<my-el-props-cast foo="1" baz="12345"></my-el-props-cast>`
+      container.innerHTML = `<my-el-props-cast foo-bar="1" baz="12345"></my-el-props-cast>`
       const e = container.childNodes[0] as VueElement
       expect(e.shadowRoot!.innerHTML).toBe(
         `1 number false boolean 12345 string`
@@ -161,7 +161,7 @@ describe('defineCustomElement', () => {
       await nextTick()
       expect(e.shadowRoot!.innerHTML).toBe(`1 number true boolean 12345 string`)
 
-      e.setAttribute('foo', '2e1')
+      e.setAttribute('foo-bar', '2e1')
       await nextTick()
       expect(e.shadowRoot!.innerHTML).toBe(
         `20 number true boolean 12345 string`

@@ -1032,7 +1032,7 @@ describe('Suspense', () => {
     await nextTick()
     expect(deps.length).toBe(2)
 
-    // switch before two resovles
+    // switch before two resolves
     view.value = Three
     await nextTick()
     expect(deps.length).toBe(3)
@@ -1098,7 +1098,7 @@ describe('Suspense', () => {
     await nextTick()
     expect(deps.length).toBe(2)
 
-    // switch back before two resovles
+    // switch back before two resolves
     view.value = One
     await nextTick()
     expect(deps.length).toBe(2)

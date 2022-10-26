@@ -183,7 +183,7 @@ describe('error handling', () => {
   })
 
   // unlike other lifecycle hooks, created/beforeCreate are called as part of
-  // the options API initiualization process instead of by the renderer.
+  // the options API initialization process instead of by the renderer.
   test('in created/beforeCreate hook', () => {
     const err = new Error('foo')
     const fn = jest.fn()

@@ -59,7 +59,7 @@ describe('sfc props transform', () => {
     // function
     expect(content).toMatch(`props: _mergeDefaults(['foo', 'bar'], {
   foo: 1,
-  bar: () => {}
+  bar: () => ({})
 })`)
     assertCode(content)
   })
@@ -74,7 +74,7 @@ describe('sfc props transform', () => {
     // function
     expect(content).toMatch(`props: {
     foo: { type: Number, required: false, default: 1 },
-    bar: { type: Object, required: false, default: () => {} }
+    bar: { type: Object, required: false, default: () => ({}) }
   }`)
     assertCode(content)
   })
@@ -92,11 +92,11 @@ describe('sfc props transform', () => {
     // function
     expect(content).toMatch(`props: {
     foo: { default: 1 },
-    bar: { default: () => {} },
+    bar: { default: () => ({}) },
     baz: null,
     boola: { type: Boolean },
     boolb: { type: [Boolean, Number] },
-    func: { type: Function, default: () => () => {} }
+    func: { type: Function, default: () => (() => {}) }
   }`)
     assertCode(content)
   })
@@ -127,6 +127,28 @@ describe('sfc props transform', () => {
     })
   })
 
+  // #5425
+  test('non-identifier prop names', () => {
+    const { content, bindings } = compile(`
+      <script setup>
+      const { 'foo.bar': fooBar } = defineProps({ 'foo.bar': Function })
+      let x = fooBar
+      </script>
+      <template>{{ fooBar }}</template>
+    `)
+    expect(content).toMatch(`x = __props["foo.bar"]`)
+    expect(content).toMatch(`toDisplayString(__props["foo.bar"])`)
+    assertCode(content)
+    expect(bindings).toStrictEqual({
+      x: BindingTypes.SETUP_LET,
+      'foo.bar': BindingTypes.PROPS,
+      fooBar: BindingTypes.PROPS_ALIASED,
+      __propsAliases: {
+        fooBar: 'foo.bar'
+      }
+    })
+  })
+
   test('rest spread', () => {
     const { content, bindings } = compile(`
       <script setup>
@@ -141,7 +163,7 @@ describe('sfc props transform', () => {
       foo: BindingTypes.PROPS,
       bar: BindingTypes.PROPS,
       baz: BindingTypes.PROPS,
-      rest: BindingTypes.SETUP_CONST
+      rest: BindingTypes.SETUP_REACTIVE_CONST
     })
   })
 

@@ -98,6 +98,17 @@ describe('ssr: renderAttrs', () => {
       )
     ).toBe(` fooBar="ok"`)
   })
+
+  test('preserve name on svg elements', () => {
+    expect(
+      ssrRenderAttrs(
+        {
+          viewBox: 'foo'
+        },
+        'svg'
+      )
+    ).toBe(` viewBox="foo"`)
+  })
 })
 
 describe('ssr: renderAttr', () => {

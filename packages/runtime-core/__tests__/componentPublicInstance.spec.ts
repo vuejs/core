@@ -257,7 +257,6 @@ describe('component: proxy', () => {
     expect(instanceProxy.isDisplayed).toBe(true)
   })
 
- 
   test('allow jest spying on proxy methods with Object.defineProperty', () => {
     // #5417
     let instanceProxy: any
@@ -425,7 +424,6 @@ describe('component: proxy', () => {
     })
     expect(instanceProxy.fromProp).toBe(false)
   })
-
 
   // #864
   test('should not warn declared but absent props', () => {
