@@ -6,7 +6,7 @@ describe('sfc props transform', () => {
   function compile(src: string, options?: Partial<SFCScriptCompileOptions>) {
     return compileSFCScript(src, {
       inlineTemplate: true,
-      propsDestructureTransform: true,
+      reactivityTransform: true,
       ...options
     })
   }
@@ -59,7 +59,7 @@ describe('sfc props transform', () => {
     // function
     expect(content).toMatch(`props: _mergeDefaults(['foo', 'bar'], {
   foo: 1,
-  bar: () => {}
+  bar: () => ({})
 })`)
     assertCode(content)
   })
@@ -74,7 +74,7 @@ describe('sfc props transform', () => {
     // function
     expect(content).toMatch(`props: {
     foo: { type: Number, required: false, default: 1 },
-    bar: { type: Object, required: false, default: () => {} }
+    bar: { type: Object, required: false, default: () => ({}) }
   }`)
     assertCode(content)
   })
@@ -83,7 +83,7 @@ describe('sfc props transform', () => {
     const { content } = compile(
       `
       <script setup lang="ts">
-      const { foo = 1, bar = {} } = defineProps<{ foo?: number, bar?: object, baz?: any }>()
+      const { foo = 1, bar = {}, func = () => {} } = defineProps<{ foo?: number, bar?: object, baz?: any, boola?: boolean, boolb?: boolean | number, func?: Function }>()
       </script>
     `,
       { isProd: true }
@@ -92,8 +92,11 @@ describe('sfc props transform', () => {
     // function
     expect(content).toMatch(`props: {
     foo: { default: 1 },
-    bar: { default: () => {} },
-    baz: null
+    bar: { default: () => ({}) },
+    baz: null,
+    boola: { type: Boolean },
+    boolb: { type: [Boolean, Number] },
+    func: { type: Function, default: () => (() => {}) }
   }`)
     assertCode(content)
   })
@@ -124,6 +127,28 @@ describe('sfc props transform', () => {
     })
   })
 
+  // #5425
+  test('non-identifier prop names', () => {
+    const { content, bindings } = compile(`
+      <script setup>
+      const { 'foo.bar': fooBar } = defineProps({ 'foo.bar': Function })
+      let x = fooBar
+      </script>
+      <template>{{ fooBar }}</template>
+    `)
+    expect(content).toMatch(`x = __props["foo.bar"]`)
+    expect(content).toMatch(`toDisplayString(__props["foo.bar"])`)
+    assertCode(content)
+    expect(bindings).toStrictEqual({
+      x: BindingTypes.SETUP_LET,
+      'foo.bar': BindingTypes.PROPS,
+      fooBar: BindingTypes.PROPS_ALIASED,
+      __propsAliases: {
+        fooBar: 'foo.bar'
+      }
+    })
+  })
+
   test('rest spread', () => {
     const { content, bindings } = compile(`
       <script setup>
@@ -138,8 +163,25 @@ describe('sfc props transform', () => {
       foo: BindingTypes.PROPS,
       bar: BindingTypes.PROPS,
       baz: BindingTypes.PROPS,
-      rest: BindingTypes.SETUP_CONST
+      rest: BindingTypes.SETUP_REACTIVE_CONST
     })
+  })
+
+  test('$$() escape', () => {
+    const { content } = compile(`
+      <script setup>
+      const { foo, bar: baz } = defineProps(['foo'])
+      console.log($$(foo))
+      console.log($$(baz))
+      $$({ foo, baz })
+      </script>
+    `)
+    expect(content).toMatch(`const __props_foo = _toRef(__props, 'foo')`)
+    expect(content).toMatch(`const __props_bar = _toRef(__props, 'bar')`)
+    expect(content).toMatch(`console.log((__props_foo))`)
+    expect(content).toMatch(`console.log((__props_bar))`)
+    expect(content).toMatch(`({ foo: __props_foo, baz: __props_bar })`)
+    assertCode(content)
   })
 
   describe('errors', () => {

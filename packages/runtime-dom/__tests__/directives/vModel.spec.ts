@@ -201,7 +201,7 @@ describe('vModel', () => {
   it('should support modifiers', async () => {
     const component = defineComponent({
       data() {
-        return { number: null, trim: null, lazy: null }
+        return { number: null, trim: null, lazy: null, trimNumber: null }
       },
       render() {
         return [
@@ -231,6 +231,19 @@ describe('vModel', () => {
           ),
           withVModel(
             h('input', {
+              class: 'trim-number',
+              'onUpdate:modelValue': (val: any) => {
+                this.trimNumber = val
+              }
+            }),
+            this.trimNumber,
+            {
+              trim: true,
+              number: true
+            }
+          ),
+          withVModel(
+            h('input', {
               class: 'lazy',
               'onUpdate:modelValue': (val: any) => {
                 this.lazy = val
@@ -248,6 +261,7 @@ describe('vModel', () => {
 
     const number = root.querySelector('.number')
     const trim = root.querySelector('.trim')
+    const trimNumber = root.querySelector('.trim-number')
     const lazy = root.querySelector('.lazy')
     const data = root._vnode.component.data
 
@@ -261,10 +275,108 @@ describe('vModel', () => {
     await nextTick()
     expect(data.trim).toEqual('hello, world')
 
+    trimNumber.value = '    1    '
+    triggerEvent('input', trimNumber)
+    await nextTick()
+    expect(data.trimNumber).toEqual(1)
+
+    trimNumber.value = '    +01.2    '
+    triggerEvent('input', trimNumber)
+    await nextTick()
+    expect(data.trimNumber).toEqual(1.2)
+
     lazy.value = 'foo'
     triggerEvent('change', lazy)
     await nextTick()
     expect(data.lazy).toEqual('foo')
+  })
+
+  it('should work with range', async () => {
+    const component = defineComponent({
+      data() {
+        return { value: 25 }
+      },
+      render() {
+        return [
+          withVModel(
+            h('input', {
+              type: 'range',
+              min: 1,
+              max: 100,
+              class: 'foo',
+              'onUpdate:modelValue': setValue.bind(this)
+            }),
+            this.value,
+            {
+              number: true
+            }
+          ),
+          withVModel(
+            h('input', {
+              type: 'range',
+              min: 1,
+              max: 100,
+              class: 'bar',
+              'onUpdate:modelValue': setValue.bind(this)
+            }),
+            this.value,
+            {
+              lazy: true
+            }
+          )
+        ]
+      }
+    })
+    render(h(component), root)
+
+    const foo = root.querySelector('.foo')
+    const bar = root.querySelector('.bar')
+    const data = root._vnode.component.data
+
+    foo.value = 20
+    triggerEvent('input', foo)
+    await nextTick()
+    expect(data.value).toEqual(20)
+
+    foo.value = 200
+    triggerEvent('input', foo)
+    await nextTick()
+    expect(data.value).toEqual(100)
+
+    foo.value = -1
+    triggerEvent('input', foo)
+    await nextTick()
+    expect(data.value).toEqual(1)
+
+    bar.value = 30
+    triggerEvent('change', bar)
+    await nextTick()
+    expect(data.value).toEqual('30')
+
+    bar.value = 200
+    triggerEvent('change', bar)
+    await nextTick()
+    expect(data.value).toEqual('100')
+
+    bar.value = -1
+    triggerEvent('change', bar)
+    await nextTick()
+    expect(data.value).toEqual('1')
+
+    data.value = 60
+    await nextTick()
+    expect(foo.value).toEqual('60')
+    expect(bar.value).toEqual('60')
+
+    data.value = -1
+    await nextTick()
+    expect(foo.value).toEqual('1')
+    expect(bar.value).toEqual('1')
+
+    data.value = 200
+    await nextTick()
+    expect(foo.value).toEqual('100')
+    expect(bar.value).toEqual('100')
   })
 
   it('should work with checkbox', async () => {
@@ -1015,7 +1127,7 @@ describe('vModel', () => {
     bar.selected = false
     data.value = new Set([{ foo: 1 }, { bar: 1 }])
     await nextTick()
-    // whithout looseEqual, here is different from Array
+    // without looseEqual, here is different from Array
     expect(foo.selected).toEqual(false)
     expect(bar.selected).toEqual(false)
   })

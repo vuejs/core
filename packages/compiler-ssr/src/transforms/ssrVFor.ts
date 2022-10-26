@@ -33,7 +33,7 @@ export function ssrProcessFor(
     createForLoopParams(node.parseResult)
   )
   renderLoop.body = processChildrenAsStatement(
-    node.children,
+    node,
     context,
     needFragmentWrapper
   )

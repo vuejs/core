@@ -1,5 +1,6 @@
 import {
   isRef,
+  isShallow,
   Ref,
   ComputedRef,
   ReactiveEffect,
@@ -8,7 +9,7 @@ import {
   EffectScheduler,
   DebuggerOptions
 } from '@vue/reactivity'
-import { SchedulerJob, queuePreFlushCb } from './scheduler'
+import { SchedulerJob, queueJob } from './scheduler'
 import {
   EMPTY_OBJ,
   isObject,
@@ -40,14 +41,14 @@ import { DeprecationTypes } from './compat/compatConfig'
 import { checkCompatEnabled, isCompatEnabled } from './compat/compatConfig'
 import { ObjectWatchOptionItem } from './componentOptions'
 
-export type WatchEffect = (onInvalidate: InvalidateCbRegistrator) => void
+export type WatchEffect = (onCleanup: OnCleanup) => void
 
 export type WatchSource<T = any> = Ref<T> | ComputedRef<T> | (() => T)
 
 export type WatchCallback<V = any, OV = any> = (
   value: V,
   oldValue: OV,
-  onInvalidate: InvalidateCbRegistrator
+  onCleanup: OnCleanup
 ) => any
 
 type MapSources<T, Immediate> = {
@@ -62,7 +63,7 @@ type MapSources<T, Immediate> = {
     : never
 }
 
-type InvalidateCbRegistrator = (cb: () => void) => void
+type OnCleanup = (cleanupFn: () => void) => void
 
 export interface WatchOptionsBase extends DebuggerOptions {
   flush?: 'pre' | 'post' | 'sync'
@@ -91,7 +92,7 @@ export function watchPostEffect(
     effect,
     null,
     (__DEV__
-      ? Object.assign(options || {}, { flush: 'post' })
+      ? { ...options, flush: 'post' }
       : { flush: 'post' }) as WatchOptionsBase
   )
 }
@@ -104,7 +105,7 @@ export function watchSyncEffect(
     effect,
     null,
     (__DEV__
-      ? Object.assign(options || {}, { flush: 'sync' })
+      ? { ...options, flush: 'sync' }
       : { flush: 'sync' }) as WatchOptionsBase
   )
 }
@@ -205,13 +206,13 @@ function doWatch(
 
   if (isRef(source)) {
     getter = () => source.value
-    forceTrigger = !!source._shallow
+    forceTrigger = isShallow(source)
   } else if (isReactive(source)) {
     getter = () => source
     deep = true
   } else if (isArray(source)) {
     isMultiSource = true
-    forceTrigger = source.some(isReactive)
+    forceTrigger = source.some(s => isReactive(s) || isShallow(s))
     getter = () =>
       source.map(s => {
         if (isRef(s)) {
@@ -242,7 +243,7 @@ function doWatch(
           source,
           instance,
           ErrorCodes.WATCH_CALLBACK,
-          [onInvalidate]
+          [onCleanup]
         )
       }
     }
@@ -272,7 +273,7 @@ function doWatch(
   }
 
   let cleanup: () => void
-  let onInvalidate: InvalidateCbRegistrator = (fn: () => void) => {
+  let onCleanup: OnCleanup = (fn: () => void) => {
     cleanup = effect.onStop = () => {
       callWithErrorHandling(fn, instance, ErrorCodes.WATCH_CLEANUP)
     }
@@ -282,20 +283,22 @@ function doWatch(
   // unless it's eager
   if (__SSR__ && isInSSRComponentSetup) {
     // we will also not call the invalidate callback (+ runner is not set up)
-    onInvalidate = NOOP
+    onCleanup = NOOP
     if (!cb) {
       getter()
     } else if (immediate) {
       callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
         getter(),
         isMultiSource ? [] : undefined,
-        onInvalidate
+        onCleanup
       ])
     }
     return NOOP
   }
 
-  let oldValue = isMultiSource ? [] : INITIAL_WATCHER_VALUE
+  let oldValue: any = isMultiSource
+    ? new Array((source as []).length).fill(INITIAL_WATCHER_VALUE)
+    : INITIAL_WATCHER_VALUE
   const job: SchedulerJob = () => {
     if (!effect.active) {
       return
@@ -322,8 +325,11 @@ function doWatch(
         callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
           newValue,
           // pass undefined as the old value when it's changed for the first time
-          oldValue === INITIAL_WATCHER_VALUE ? undefined : oldValue,
-          onInvalidate
+          oldValue === INITIAL_WATCHER_VALUE ||
+          (isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE)
+            ? undefined
+            : oldValue,
+          onCleanup
         ])
         oldValue = newValue
       }
@@ -344,15 +350,9 @@ function doWatch(
     scheduler = () => queuePostRenderEffect(job, instance && instance.suspense)
   } else {
     // default: 'pre'
-    scheduler = () => {
-      if (!instance || instance.isMounted) {
-        queuePreFlushCb(job)
-      } else {
-        // with 'pre' option, the first call must happen before
-        // the component is mounted so it is called synchronously.
-        job()
-      }
-    }
+    job.pre = true
+    if (instance) job.id = instance.uid
+    scheduler = () => queueJob(job)
   }
 
   const effect = new ReactiveEffect(getter, scheduler)

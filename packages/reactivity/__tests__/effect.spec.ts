@@ -1,4 +1,5 @@
 import {
+  ref,
   reactive,
   effect,
   stop,
@@ -65,22 +66,22 @@ describe('reactivity/effect', () => {
 
   it('should observe delete operations', () => {
     let dummy
-    const obj = reactive({ prop: 'value' })
+    const obj = reactive<{
+      prop?: string
+    }>({ prop: 'value' })
     effect(() => (dummy = obj.prop))
 
     expect(dummy).toBe('value')
-    // @ts-ignore
     delete obj.prop
     expect(dummy).toBe(undefined)
   })
 
   it('should observe has operations', () => {
     let dummy
-    const obj = reactive<{ prop: string | number }>({ prop: 'value' })
+    const obj = reactive<{ prop?: string | number }>({ prop: 'value' })
     effect(() => (dummy = 'prop' in obj))
 
     expect(dummy).toBe(true)
-    // @ts-ignore
     delete obj.prop
     expect(dummy).toBe(false)
     obj.prop = 12
@@ -89,13 +90,12 @@ describe('reactivity/effect', () => {
 
   it('should observe properties on the prototype chain', () => {
     let dummy
-    const counter = reactive({ num: 0 })
+    const counter = reactive<{ num?: number }>({ num: 0 })
     const parentCounter = reactive({ num: 2 })
     Object.setPrototypeOf(counter, parentCounter)
     effect(() => (dummy = counter.num))
 
     expect(dummy).toBe(0)
-    // @ts-ignore
     delete counter.num
     expect(dummy).toBe(2)
     parentCounter.num = 4
@@ -106,16 +106,14 @@ describe('reactivity/effect', () => {
 
   it('should observe has operations on the prototype chain', () => {
     let dummy
-    const counter = reactive({ num: 0 })
-    const parentCounter = reactive({ num: 2 })
+    const counter = reactive<{ num?: number }>({ num: 0 })
+    const parentCounter = reactive<{ num?: number }>({ num: 2 })
     Object.setPrototypeOf(counter, parentCounter)
     effect(() => (dummy = 'num' in counter))
 
     expect(dummy).toBe(true)
-    // @ts-ignore
     delete counter.num
     expect(dummy).toBe(true)
-    // @ts-ignore
     delete parentCounter.num
     expect(dummy).toBe(false)
     counter.num = 3
@@ -219,7 +217,7 @@ describe('reactivity/effect', () => {
   it('should observe symbol keyed properties', () => {
     const key = Symbol('symbol keyed prop')
     let dummy, hasDummy
-    const obj = reactive({ [key]: 'value' })
+    const obj = reactive<{ [key]?: string }>({ [key]: 'value' })
     effect(() => (dummy = obj[key]))
     effect(() => (hasDummy = key in obj))
 
@@ -227,7 +225,6 @@ describe('reactivity/effect', () => {
     expect(hasDummy).toBe(true)
     obj[key] = 'newValue'
     expect(dummy).toBe('newValue')
-    // @ts-ignore
     delete obj[key]
     expect(dummy).toBe(undefined)
     expect(hasDummy).toBe(false)
@@ -751,7 +748,7 @@ describe('reactivity/effect', () => {
     const onTrigger = jest.fn((e: DebuggerEvent) => {
       events.push(e)
     })
-    const obj = reactive({ foo: 1 })
+    const obj = reactive<{ foo?: number }>({ foo: 1 })
     const runner = effect(
       () => {
         dummy = obj.foo
@@ -759,7 +756,7 @@ describe('reactivity/effect', () => {
       { onTrigger }
     )
 
-    obj.foo++
+    obj.foo!++
     expect(dummy).toBe(2)
     expect(onTrigger).toHaveBeenCalledTimes(1)
     expect(events[0]).toEqual({
@@ -771,7 +768,6 @@ describe('reactivity/effect', () => {
       newValue: 2
     })
 
-    // @ts-ignore
     delete obj.foo
     expect(dummy).toBeUndefined()
     expect(onTrigger).toHaveBeenCalledTimes(2)
@@ -799,6 +795,26 @@ describe('reactivity/effect', () => {
     // stopped effect should still be manually callable
     runner()
     expect(dummy).toBe(3)
+  })
+
+  // #5707
+  // when an effect completes its run, it should clear the tracking bits of
+  // its tracked deps. However, if the effect stops itself, the deps list is
+  // emptied so their bits are never cleared.
+  it('edge case: self-stopping effect tracking ref', () => {
+    const c = ref(true)
+    const runner = effect(() => {
+      // reference ref
+      if (!c.value) {
+        // stop itself while running
+        stop(runner)
+      }
+    })
+    // trigger run
+    c.value = !c.value
+    // should clear bits
+    expect((c as any).dep.w).toBe(0)
+    expect((c as any).dep.n).toBe(0)
   })
 
   it('events: onStop', () => {
@@ -904,6 +920,22 @@ describe('reactivity/effect', () => {
     expect(fnSpy2).toHaveBeenCalledTimes(1)
     observed2.obj2 = obj2
     expect(fnSpy2).toHaveBeenCalledTimes(1)
+  })
+
+  it('should be triggered when set length with string', () => {
+    let ret1 = 'idle'
+    let ret2 = 'idle'
+    const arr1 = reactive(new Array(11).fill(0))
+    const arr2 = reactive(new Array(11).fill(0))
+    effect(() => {
+      ret1 = arr1[10] === undefined ? 'arr[10] is set to empty' : 'idle'
+    })
+    effect(() => {
+      ret2 = arr2[10] === undefined ? 'arr[10] is set to empty' : 'idle'
+    })
+    arr1.length = 2
+    arr2.length = '2' as any
+    expect(ret1).toBe(ret2)
   })
 
   describe('readonly + reactive for Map', () => {

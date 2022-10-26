@@ -80,7 +80,7 @@ async function main() {
   step('\nRunning tests...')
   if (!skipTests && !isDryRun) {
     await run(bin('jest'), ['--clearCache'])
-    await run('npm', ['test', '--', '--bail'])
+    await run('pnpm', ['test', '--bail'])
   } else {
     console.log(`(skipped)`)
   }
@@ -92,16 +92,21 @@ async function main() {
   // build all packages with types
   step('\nBuilding all packages...')
   if (!skipBuild && !isDryRun) {
-    await run('npm', ['run', 'build', '--', '--release'])
+    await run('pnpm', ['run', 'build', '--release'])
     // test generated dts files
     step('\nVerifying type declarations...')
-    await run('npm', ['run', 'test-dts-only'])
+    await run('pnpm', ['run', 'test-dts-only'])
   } else {
     console.log(`(skipped)`)
   }
 
   // generate changelog
-  await run(`npm`, ['run', 'changelog'])
+  step('\nGenerating changelog...')
+  await run(`pnpm`, ['run', 'changelog'])
+
+  // update pnpm-lock.yaml
+  step('\nUpdating lockfile...')
+  await run(`pnpm`, ['install', '--prefer-offline'])
 
   const { stdout } = await run('git', ['diff'], { stdio: 'pipe' })
   if (stdout) {
@@ -183,8 +188,6 @@ async function publishPackage(pkgName, version, runIfNotDry) {
     return
   }
 
-  // For now, all 3.x packages except "vue" can be published as
-  // `latest`, whereas "vue" will be published under the "next" tag.
   let releaseTag = null
   if (args.tag) {
     releaseTag = args.tag
@@ -194,13 +197,7 @@ async function publishPackage(pkgName, version, runIfNotDry) {
     releaseTag = 'beta'
   } else if (version.includes('rc')) {
     releaseTag = 'rc'
-  } else if (pkgName === 'vue') {
-    // TODO remove when 3.x becomes default
-    releaseTag = 'next'
   }
-
-  // TODO use inferred release channel after official 3.0 release
-  // const releaseTag = semver.prerelease(version)[0] || null
 
   step(`Publishing ${pkgName}...`)
   try {
@@ -232,5 +229,6 @@ async function publishPackage(pkgName, version, runIfNotDry) {
 }
 
 main().catch(err => {
+  updateVersions(currentVersion)
   console.error(err)
 })

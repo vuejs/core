@@ -5,8 +5,12 @@ on:
 
 name: Create Release
 
+permissions: {}
 jobs:
   build:
+    permissions:
+      contents: write # to create release (yyx990803/release-tag)
+
     name: Create Release
     runs-on: ubuntu-latest
     steps:
@@ -20,4 +24,4 @@ jobs:
         with:
           tag_name: ${{ github.ref }}
           body: |
-            Please refer to [CHANGELOG.md](https://github.com/vuejs/vue-next/blob/master/CHANGELOG.md) for details.
+            Please refer to [CHANGELOG.md](https://github.com/vuejs/core/blob/main/CHANGELOG.md) for details.

@@ -12,6 +12,7 @@ export * from './domAttrConfig'
 export * from './escapeHtml'
 export * from './looseEqual'
 export * from './toDisplayString'
+export * from './typeUtils'
 
 export const EMPTY_OBJ: { readonly [key: string]: any } = __DEV__
   ? Object.freeze({})
@@ -51,7 +52,8 @@ export const isMap = (val: unknown): val is Map<any, any> =>
 export const isSet = (val: unknown): val is Set<any> =>
   toTypeString(val) === '[object Set]'
 
-export const isDate = (val: unknown): val is Date => val instanceof Date
+export const isDate = (val: unknown): val is Date =>
+  toTypeString(val) === '[object Date]'
 export const isFunction = (val: unknown): val is Function =>
   typeof val === 'function'
 export const isString = (val: unknown): val is string => typeof val === 'string'
@@ -83,10 +85,14 @@ export const isIntegerKey = (key: unknown) =>
 
 export const isReservedProp = /*#__PURE__*/ makeMap(
   // the leading comma is intentional so empty string "" is also included
-  ',key,ref,' +
+  ',key,ref,ref_for,ref_key,' +
     'onVnodeBeforeMount,onVnodeMounted,' +
     'onVnodeBeforeUpdate,onVnodeUpdated,' +
     'onVnodeBeforeUnmount,onVnodeUnmounted'
+)
+
+export const isBuiltInDirective = /*#__PURE__*/ makeMap(
+  'bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,slot,text,memo'
 )
 
 const cacheStringFunction = <T extends (str: string) => string>(fn: T): T => {
@@ -94,7 +100,7 @@ const cacheStringFunction = <T extends (str: string) => string>(fn: T): T => {
   return ((str: string) => {
     const hit = cache[str]
     return hit || (cache[str] = fn(str))
-  }) as any
+  }) as T
 }
 
 const camelizeRE = /-(\w)/g
@@ -165,4 +171,12 @@ export const getGlobalThis = (): any => {
         ? global
         : {})
   )
+}
+
+const identRE = /^[_$a-zA-Z\xA0-\uFFFF][_$a-zA-Z0-9\xA0-\uFFFF]*$/
+
+export function genPropsAccessExp(name: string) {
+  return identRE.test(name)
+    ? `__props.${name}`
+    : `__props[${JSON.stringify(name)}]`
 }

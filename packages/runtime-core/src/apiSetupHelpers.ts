@@ -111,14 +111,16 @@ export function defineEmits() {
  * instance properties when it is accessed by a parent component via template
  * refs.
  *
- * `<script setup>` components are closed by default - i.e. varaibles inside
+ * `<script setup>` components are closed by default - i.e. variables inside
  * the `<script setup>` scope is not exposed to parent unless explicitly exposed
  * via `defineExpose`.
  *
  * This is only usable inside `<script setup>`, is compiled away in the
  * output and should **not** be actually called at runtime.
  */
-export function defineExpose(exposed?: Record<string, any>) {
+export function defineExpose<
+  Exposed extends Record<string, any> = Record<string, any>
+>(exposed?: Exposed) {
   if (__DEV__) {
     warnRuntimeUsage(`defineExpose`)
   }
@@ -127,20 +129,22 @@ export function defineExpose(exposed?: Record<string, any>) {
 type NotUndefined<T> = T extends undefined ? never : T
 
 type InferDefaults<T> = {
-  [K in keyof T]?: NotUndefined<T[K]> extends
-    | number
-    | string
-    | boolean
-    | symbol
-    | Function
-    ? NotUndefined<T[K]>
-    : (props: T) => NotUndefined<T[K]>
+  [K in keyof T]?: InferDefault<T, NotUndefined<T[K]>>
 }
 
-type PropsWithDefaults<Base, Defaults> = Base &
-  {
-    [K in keyof Defaults]: K extends keyof Base ? NotUndefined<Base[K]> : never
-  }
+type InferDefault<P, T> = T extends
+  | null
+  | number
+  | string
+  | boolean
+  | symbol
+  | Function
+  ? T | ((props: P) => T)
+  : (props: P) => T
+
+type PropsWithDefaults<Base, Defaults> = Base & {
+  [K in keyof Defaults]: K extends keyof Base ? NotUndefined<Base[K]> : never
+}
 
 /**
  * Vue `<script setup>` compiler macro for providing props default values when

@@ -122,13 +122,13 @@ export function defineCustomElement(options: {
 
 export function defineCustomElement(
   options: any,
-  hydate?: RootHydrateFunction
+  hydrate?: RootHydrateFunction
 ): VueElementConstructor {
   const Comp = defineComponent(options as any)
   class VueCustomElement extends VueElement {
     static def = Comp
     constructor(initialProps?: Record<string, any>) {
-      super(Comp, initialProps, hydate)
+      super(Comp, initialProps, hydrate)
     }
   }
 
@@ -180,7 +180,6 @@ export class VueElement extends BaseClass {
     this._connected = true
     if (!this._instance) {
       this._resolveDef()
-      this._update()
     }
   }
 
@@ -231,17 +230,15 @@ export class VueElement extends BaseClass {
           }
         }
       }
-      if (numberProps) {
-        this._numberProps = numberProps
-        this._update()
-      }
+      this._numberProps = numberProps
 
       // check if there are props set pre-upgrade or connect
       for (const key of Object.keys(this)) {
         if (key[0] !== '_') {
-          this._setProp(key, this[key as keyof this])
+          this._setProp(key, this[key as keyof this], true, false)
         }
       }
+
       // defining getter/setters on prototype
       for (const key of rawKeys.map(camelize)) {
         Object.defineProperty(this, key, {
@@ -253,7 +250,12 @@ export class VueElement extends BaseClass {
           }
         })
       }
+
+      // apply CSS
       this._applyStyles(styles)
+
+      // initial render
+      this._update()
     }
 
     const asyncDef = (this._def as ComponentOptions).__asyncLoader
@@ -266,10 +268,11 @@ export class VueElement extends BaseClass {
 
   protected _setAttr(key: string) {
     let value = this.getAttribute(key)
-    if (this._numberProps && this._numberProps[key]) {
+    const camelKey = camelize(key)
+    if (this._numberProps && this._numberProps[camelKey]) {
       value = toNumber(value)
     }
-    this._setProp(camelize(key), value, false)
+    this._setProp(camelKey, value, false)
   }
 
   /**
@@ -282,10 +285,15 @@ export class VueElement extends BaseClass {
   /**
    * @internal
    */
-  protected _setProp(key: string, val: any, shouldReflect = true) {
+  protected _setProp(
+    key: string,
+    val: any,
+    shouldReflect = true,
+    shouldUpdate = true
+  ) {
     if (val !== this._props[key]) {
       this._props[key] = val
-      if (this._instance) {
+      if (shouldUpdate && this._instance) {
         this._update()
       }
       // reflect
@@ -314,7 +322,7 @@ export class VueElement extends BaseClass {
         // HMR
         if (__DEV__) {
           instance.ceReload = newStyles => {
-            // alawys reset styles
+            // always reset styles
             if (this._styles) {
               this._styles.forEach(s => this.shadowRoot!.removeChild(s))
               this._styles.length = 0

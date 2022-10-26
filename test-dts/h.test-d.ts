@@ -47,6 +47,7 @@ describe('h inference w/ Fragment', () => {
 
 describe('h inference w/ Teleport', () => {
   h(Teleport, { to: '#foo' }, 'hello')
+  h(Teleport, { to: '#foo' }, { default() {} })
   // @ts-expect-error
   expectError(h(Teleport))
   // @ts-expect-error
@@ -144,12 +145,11 @@ describe('h inference w/ defineComponent', () => {
 //   expectError(h(Foo, { bar: 1, foo: 1 }))
 // })
 
-// #922
+// #922 and #3218
 describe('h support for generic component type', () => {
   function foo(bar: Component) {
     h(bar)
     h(bar, 'hello')
-    // @ts-expect-error
     h(bar, { id: 'ok' }, 'hello')
   }
   foo({})

@@ -88,7 +88,7 @@ export type CompatVue = Pick<App, 'version' | 'component' | 'directive'> & {
   compile(template: string): RenderFunction
 
   /**
-   * @deprecated
+   * @deprecated Vue 3 no longer supports extending constructors.
    */
   extend: (options?: ComponentOptions) => CompatVue
   /**
@@ -170,7 +170,7 @@ export function createCompatVue(
     }
   }
 
-  Vue.version = __VERSION__
+  Vue.version = `2.6.14-compat:${__VERSION__}`
   Vue.config = singletonApp.config
 
   Vue.use = (p, ...options) => {
@@ -324,7 +324,7 @@ export function createCompatVue(
 export function installAppCompatProperties(
   app: App,
   context: AppContext,
-  render: RootRenderFunction
+  render: RootRenderFunction<any>
 ) {
   installFilterMethod(app, context)
   installLegacyOptionMergeStrats(app.config)
@@ -381,9 +381,10 @@ function installLegacyAPIs(app: App) {
 
 function applySingletonAppMutations(app: App) {
   // copy over asset registries and deopt flag
-  ;['mixins', 'components', 'directives', 'filters', 'deopt'].forEach(key => {
+  app._context.mixins = [...singletonApp._context.mixins]
+  ;['components', 'directives', 'filters'].forEach(key => {
     // @ts-ignore
-    app._context[key] = singletonApp._context[key]
+    app._context[key] = Object.create(singletonApp._context[key])
   })
 
   // copy over global config mutations
@@ -398,7 +399,7 @@ function applySingletonAppMutations(app: App) {
     }
     const val = singletonApp.config[key as keyof AppConfig]
     // @ts-ignore
-    app.config[key] = val
+    app.config[key] = isObject(val) ? Object.create(val) : val
 
     // compat for runtime ignoredElements -> isCustomElement
     if (
@@ -602,7 +603,7 @@ const methodsToPatch = [
 const patched = new WeakSet<object>()
 
 function defineReactive(obj: any, key: string, val: any) {
-  // it's possible for the orignial object to be mutated after being defined
+  // it's possible for the original object to be mutated after being defined
   // and expecting reactivity... we are covering it here because this seems to
   // be a bit more common.
   if (isObject(val) && !isReactive(val) && !patched.has(val)) {

@@ -53,23 +53,23 @@ export function compatCoerceAttr(
   instance: ComponentInternalInstance | null = null
 ): boolean {
   if (isEnumeratedAttr(key)) {
-    const v2CocercedValue =
+    const v2CoercedValue =
       value === null
         ? 'false'
         : typeof value !== 'boolean' && value !== undefined
         ? 'true'
         : null
     if (
-      v2CocercedValue &&
+      v2CoercedValue &&
       compatUtils.softAssertCompatEnabled(
         DeprecationTypes.ATTR_ENUMERATED_COERCION,
         instance,
         key,
         value,
-        v2CocercedValue
+        v2CoercedValue
       )
     ) {
-      el.setAttribute(key, v2CocercedValue)
+      el.setAttribute(key, v2CoercedValue)
       return true
     }
   } else if (

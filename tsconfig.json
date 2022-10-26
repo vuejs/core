@@ -4,6 +4,7 @@
     "outDir": "dist",
     "sourceMap": false,
     "target": "es2016",
+    "newLine": "LF",
     "useDefineForClassFields": false,
     "module": "esnext",
     "moduleResolution": "node",

@@ -1,57 +1,141 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`SFC compile <script setup> <script> and <script setup> co-usage script first 1`] = `
-"import { x } from './x'
-      
-      export const n = 1
-      
+exports[`SFC analyze <script> bindings auto name inference basic 1`] = `
+"export default {
+  __name: 'FooBar',
+  setup(__props, { expose }) {
+  expose();
+const a = 1
+return { a }
+}
+
+}"
+`;
+
+exports[`SFC analyze <script> bindings auto name inference do not overwrite manual name (call) 1`] = `
+"import { defineComponent } from 'vue'
+        const __default__ = defineComponent({
+          name: 'Baz'
+        })
+        
+export default /*#__PURE__*/Object.assign(__default__, {
+  setup(__props, { expose }) {
+  expose();
+const a = 1
+return { a, defineComponent }
+}
+
+})"
+`;
+
+exports[`SFC analyze <script> bindings auto name inference do not overwrite manual name (object) 1`] = `
+"const __default__ = {
+          name: 'Baz'
+        }
+        
+export default /*#__PURE__*/Object.assign(__default__, {
+  setup(__props, { expose }) {
+  expose();
+const a = 1
+return { a }
+}
+
+})"
+`;
+
+exports[`SFC compile <script setup> <script> after <script setup> the script content not end with \`\\n\` 1`] = `
+"const n = 1
+import { x } from './x'
+    
 export default {
   setup(__props, { expose }) {
-  expose()
+  expose();
 
-      x()
-      
+    
 return { n, x }
 }
 
 }"
 `;
 
-exports[`SFC compile <script setup> <script> and <script setup> co-usage script setup first 1`] = `
+exports[`SFC compile <script setup> <script> and <script setup> co-usage script first 1`] = `
 "import { x } from './x'
       
-export default {
+      export const n = 1
+
+      const __default__ = {}
+      
+export default /*#__PURE__*/Object.assign(__default__, {
   setup(__props, { expose }) {
-  expose()
+  expose();
 
       x()
       
 return { n, x }
 }
 
+})"
+`;
+
+exports[`SFC compile <script setup> <script> and <script setup> co-usage script setup first 1`] = `
+"export const n = 1
+      const __default__ = {}
+      
+import { x } from './x'
+      
+export default /*#__PURE__*/Object.assign(__default__, {
+  setup(__props, { expose }) {
+  expose();
+
+      x()
+      
+return { n, x }
 }
-      export const n = 1"
+
+})"
 `;
 
 exports[`SFC compile <script setup> <script> and <script setup> co-usage script setup first, lang="ts", script block content export default 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
+
+      const __default__ = {
+        name: \\"test\\"
+      }
+      
 import { x } from './x'
       
-function setup(__props, { expose }) {
+export default /*#__PURE__*/_defineComponent({
+  ...__default__,
+  setup(__props, { expose }) {
+  expose();
 
       x()
       
 return { x }
 }
 
+})"
+`;
 
-      const __default__ = {
-        name: \\"test\\"
-      }
+exports[`SFC compile <script setup> <script> and <script setup> co-usage script setup first, named default export 1`] = `
+"export const n = 1
+      const def = {}
       
-export default /*#__PURE__*/_defineComponent({
-  ...__default__,
-  setup})"
+      
+const __default__ = def
+
+import { x } from './x'
+      
+export default /*#__PURE__*/Object.assign(__default__, {
+  setup(__props, { expose }) {
+  expose();
+
+      x()
+      
+return { n, def, x }
+}
+
+})"
 `;
 
 exports[`SFC compile <script setup> <script> and <script setup> co-usage spaces in ExportDefaultDeclaration node with many spaces and newline 1`] = `
@@ -62,16 +146,15 @@ exports[`SFC compile <script setup> <script> and <script setup> co-usage spaces 
           some:'option'
         }
         
-function setup(__props, { expose }) {
+export default /*#__PURE__*/Object.assign(__default__, {
+  setup(__props, { expose }) {
+  expose();
 
         x()
         
 return { n, x }
 }
 
-
-export default /*#__PURE__*/ Object.assign(__default__, {
-  setup
 })"
 `;
 
@@ -83,16 +166,15 @@ exports[`SFC compile <script setup> <script> and <script setup> co-usage spaces 
           some:'option'
         }
         
-function setup(__props, { expose }) {
+export default /*#__PURE__*/Object.assign(__default__, {
+  setup(__props, { expose }) {
+  expose();
 
         x()
         
 return { n, x }
 }
 
-
-export default /*#__PURE__*/ Object.assign(__default__, {
-  setup
 })"
 `;
 
@@ -101,7 +183,7 @@ exports[`SFC compile <script setup> async/await detection expression statement 1
 
 export default {
   async setup(__props, { expose }) {
-  expose()
+  expose();
 
 let __temp, __restore
 ;(
@@ -115,12 +197,179 @@ return {  }
 }"
 `;
 
+exports[`SFC compile <script setup> async/await detection multiple \`if for\` nested statements 1`] = `
+"import { withAsyncContext as _withAsyncContext } from 'vue'
+
+export default {
+  async setup(__props, { expose }) {
+  expose();
+
+let __temp, __restore
+if (ok) {
+        for (let a of [1,2,3]) {
+          (
+  ([__temp,__restore] = _withAsyncContext(() => a)),
+  await __temp,
+  __restore()
+)
+        }
+        for (let a of [1,2,3]) {
+          (
+  ([__temp,__restore] = _withAsyncContext(() => a)),
+  await __temp,
+  __restore()
+)
+          ;(
+  ([__temp,__restore] = _withAsyncContext(() => a)),
+  await __temp,
+  __restore()
+)
+        }
+      }
+return {  }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> async/await detection multiple \`if while\` nested statements 1`] = `
+"import { withAsyncContext as _withAsyncContext } from 'vue'
+
+export default {
+  async setup(__props, { expose }) {
+  expose();
+
+let __temp, __restore
+if (ok) {
+        while (d) {
+          (
+  ([__temp,__restore] = _withAsyncContext(() => 5)),
+  await __temp,
+  __restore()
+)
+        }
+        while (d) {
+          (
+  ([__temp,__restore] = _withAsyncContext(() => 5)),
+  await __temp,
+  __restore()
+)
+          ;(
+  ([__temp,__restore] = _withAsyncContext(() => 6)),
+  await __temp,
+  __restore()
+)
+          if (c) {
+            let f = 10
+            10 + (
+  ([__temp,__restore] = _withAsyncContext(() => 7)),
+  __temp = await __temp,
+  __restore(),
+  __temp
+)
+          } else {
+            (
+  ([__temp,__restore] = _withAsyncContext(() => 8)),
+  await __temp,
+  __restore()
+)
+            ;(
+  ([__temp,__restore] = _withAsyncContext(() => 9)),
+  await __temp,
+  __restore()
+)
+          }
+        }
+      }
+return {  }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> async/await detection multiple \`if\` nested statements 1`] = `
+"import { withAsyncContext as _withAsyncContext } from 'vue'
+
+export default {
+  async setup(__props, { expose }) {
+  expose();
+
+let __temp, __restore
+if (ok) {
+        let a = 'foo'
+        ;(
+  ([__temp,__restore] = _withAsyncContext(() => 0)),
+  __temp = await __temp,
+  __restore(),
+  __temp
+) + (
+  ([__temp,__restore] = _withAsyncContext(() => 1)),
+  __temp = await __temp,
+  __restore(),
+  __temp
+)
+        ;(
+  ([__temp,__restore] = _withAsyncContext(() => 2)),
+  await __temp,
+  __restore()
+)
+      } else if (a) {
+        (
+  ([__temp,__restore] = _withAsyncContext(() => 10)),
+  await __temp,
+  __restore()
+)
+        if (b) {
+          (
+  ([__temp,__restore] = _withAsyncContext(() => 0)),
+  __temp = await __temp,
+  __restore(),
+  __temp
+) + (
+  ([__temp,__restore] = _withAsyncContext(() => 1)),
+  __temp = await __temp,
+  __restore(),
+  __temp
+)
+        } else {
+          let a = 'foo'
+          ;(
+  ([__temp,__restore] = _withAsyncContext(() => 2)),
+  await __temp,
+  __restore()
+)
+        }
+        if (b) {
+          (
+  ([__temp,__restore] = _withAsyncContext(() => 3)),
+  await __temp,
+  __restore()
+)
+          ;(
+  ([__temp,__restore] = _withAsyncContext(() => 4)),
+  await __temp,
+  __restore()
+)
+        }
+      } else {
+        (
+  ([__temp,__restore] = _withAsyncContext(() => 5)),
+  await __temp,
+  __restore()
+)
+      }
+return {  }
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> async/await detection nested await 1`] = `
 "import { withAsyncContext as _withAsyncContext } from 'vue'
 
 export default {
   async setup(__props, { expose }) {
-  expose()
+  expose();
 
 let __temp, __restore
 ;(
@@ -144,7 +393,7 @@ exports[`SFC compile <script setup> async/await detection nested await 2`] = `
 
 export default {
   async setup(__props, { expose }) {
-  expose()
+  expose();
 
 let __temp, __restore
 ;(
@@ -168,7 +417,7 @@ exports[`SFC compile <script setup> async/await detection nested await 3`] = `
 
 export default {
   async setup(__props, { expose }) {
-  expose()
+  expose();
 
 let __temp, __restore
 ;(
@@ -197,7 +446,7 @@ exports[`SFC compile <script setup> async/await detection nested leading await i
 
 export default {
   async setup(__props, { expose }) {
-  expose()
+  expose();
 
 let __temp, __restore
 foo()
@@ -223,7 +472,7 @@ exports[`SFC compile <script setup> async/await detection nested statements 1`] 
 
 export default {
   async setup(__props, { expose }) {
-  expose()
+  expose();
 
 let __temp, __restore
 if (ok) { (
@@ -246,7 +495,7 @@ exports[`SFC compile <script setup> async/await detection ref 1`] = `
 
 export default {
   async setup(__props, { expose }) {
-  expose()
+  expose();
 
 let __temp, __restore
 let a = _ref(1 + ((
@@ -264,7 +513,7 @@ return { a }
 exports[`SFC compile <script setup> async/await detection should ignore await inside functions 1`] = `
 "export default {
   setup(__props, { expose }) {
-  expose()
+  expose();
 async function foo() { await bar }
 return { foo }
 }
@@ -275,7 +524,7 @@ return { foo }
 exports[`SFC compile <script setup> async/await detection should ignore await inside functions 2`] = `
 "export default {
   setup(__props, { expose }) {
-  expose()
+  expose();
 const foo = async () => { await bar }
 return { foo }
 }
@@ -286,7 +535,7 @@ return { foo }
 exports[`SFC compile <script setup> async/await detection should ignore await inside functions 3`] = `
 "export default {
   setup(__props, { expose }) {
-  expose()
+  expose();
 const obj = { async method() { await bar }}
 return { obj }
 }
@@ -297,7 +546,7 @@ return { obj }
 exports[`SFC compile <script setup> async/await detection should ignore await inside functions 4`] = `
 "export default {
   setup(__props, { expose }) {
-  expose()
+  expose();
 const cls = class Foo { async method() { await bar }}
 return { cls }
 }
@@ -310,7 +559,7 @@ exports[`SFC compile <script setup> async/await detection single line conditions
 
 export default {
   async setup(__props, { expose }) {
-  expose()
+  expose();
 
 let __temp, __restore
 if (false) (
@@ -329,7 +578,7 @@ exports[`SFC compile <script setup> async/await detection variable 1`] = `
 
 export default {
   async setup(__props, { expose }) {
-  expose()
+  expose();
 
 let __temp, __restore
 const a = 1 + ((
@@ -344,10 +593,10 @@ return { a }
 }"
 `;
 
-exports[`SFC compile <script setup> binding analysis for destructur 1`] = `
+exports[`SFC compile <script setup> binding analysis for destructure 1`] = `
 "export default {
   setup(__props, { expose }) {
-  expose()
+  expose();
 
       const { foo, b: bar, ['x' + 'y']: baz, x: { y, zz: { z }}} = {}
       
@@ -361,7 +610,7 @@ exports[`SFC compile <script setup> defineEmits() 1`] = `
 "export default {
   emits: ['foo', 'bar'],
   setup(__props, { expose, emit: myEmit }) {
-  expose()
+  expose();
 
 
 
@@ -389,7 +638,7 @@ exports[`SFC compile <script setup> defineProps w/ external definition 1`] = `
 export default {
   props: propsModel,
   setup(__props, { expose }) {
-  expose()
+  expose();
 
 const props = __props
 
@@ -407,7 +656,7 @@ exports[`SFC compile <script setup> defineProps w/ leading code 1`] = `
 export default {
   props: {},
   setup(__props, { expose }) {
-  expose()
+  expose();
 
 const props = __props
 
@@ -424,7 +673,7 @@ exports[`SFC compile <script setup> defineProps() 1`] = `
   foo: String
 },
   setup(__props, { expose }) {
-  expose()
+  expose();
 
 const props = __props
 
@@ -442,7 +691,7 @@ exports[`SFC compile <script setup> defineProps/defineEmits in multi-variable de
   props: ['item'],
   emits: ['a'],
   setup(__props, { expose, emit }) {
-  expose()
+  expose();
 
 const props = __props
 
@@ -459,7 +708,7 @@ exports[`SFC compile <script setup> defineProps/defineEmits in multi-variable de
   props: ['item'],
   emits: ['a'],
   setup(__props, { expose, emit }) {
-  expose()
+  expose();
 
 const props = __props
 
@@ -471,13 +720,30 @@ return { props, a, emit }
 }"
 `;
 
+exports[`SFC compile <script setup> dev mode import usage check TS annotations 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+import { Foo, Bar, Baz, Qux, Fred } from './x'
+        
+export default /*#__PURE__*/_defineComponent({
+  setup(__props, { expose }) {
+  expose();
+
+        const a = 1
+        function b() {}
+        
+return { a, b, Baz }
+}
+
+})"
+`;
+
 exports[`SFC compile <script setup> dev mode import usage check attribute expressions 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 import { bar, baz } from './x'
         
 export default /*#__PURE__*/_defineComponent({
   setup(__props, { expose }) {
-  expose()
+  expose();
 
         const cond = true
         
@@ -493,7 +759,7 @@ import { FooBar, FooBaz, FooQux, foo } from './x'
         
 export default /*#__PURE__*/_defineComponent({
   setup(__props, { expose }) {
-  expose()
+  expose();
 
         const fooBar: FooBar = 1
         
@@ -509,7 +775,7 @@ import { vMyDir } from './x'
         
 export default /*#__PURE__*/_defineComponent({
   setup(__props, { expose }) {
-  expose()
+  expose();
 
         
 return { vMyDir }
@@ -524,7 +790,7 @@ import { VAR, VAR2, VAR3 } from './x'
         
 export default /*#__PURE__*/_defineComponent({
   setup(__props, { expose }) {
-  expose()
+  expose();
 
         
 return { VAR, VAR3 }
@@ -539,7 +805,7 @@ import { FooBaz, Last } from './x'
         
 export default /*#__PURE__*/_defineComponent({
   setup(__props, { expose }) {
-  expose()
+  expose();
 
         
 return { FooBaz, Last }
@@ -554,7 +820,7 @@ import { x, y, z, x$y } from './x'
       
 export default /*#__PURE__*/_defineComponent({
   setup(__props, { expose }) {
-  expose()
+  expose();
 
       
 return { x, z, x$y }
@@ -576,7 +842,7 @@ export default {
           foo: () => bar > 1
         },
   setup(__props, { expose }) {
-  expose()
+  expose();
 
         
         
@@ -598,7 +864,7 @@ exports[`SFC compile <script setup> errors should allow defineProps/Emit() refer
             foo: bar => bar > 1
           },
   setup(__props, { expose }) {
-  expose()
+  expose();
 
           const bar = 1
           
@@ -616,7 +882,7 @@ import { ref } from 'vue'
       
 export default {
   setup(__props, { expose }) {
-  expose()
+  expose();
 
       let foo = _ref(1)
       
@@ -631,7 +897,7 @@ exports[`SFC compile <script setup> imports import dedupe between <script> and <
         
 export default {
   setup(__props, { expose }) {
-  expose()
+  expose();
 
         x()
         
@@ -648,7 +914,7 @@ export default {
   props: ['foo'],
   emits: ['bar'],
   setup(__props, { expose }) {
-  expose()
+  expose();
 
       
       
@@ -666,7 +932,7 @@ exports[`SFC compile <script setup> imports should extract comment for import or
         
 export default {
   setup(__props, { expose }) {
-  expose()
+  expose();
 
         
 return { a, b }
@@ -681,7 +947,7 @@ exports[`SFC compile <script setup> imports should hoist and expose imports 1`] 
         
 export default {
   setup(__props, { expose }) {
-  expose()
+  expose();
 
           
 return { ref }
@@ -696,6 +962,7 @@ exports[`SFC compile <script setup> inlineTemplate mode avoid unref() when neces
 import { ref } from 'vue'
         import Foo, { bar } from './Foo.vue'
         import other from './util'
+        import * as tree from './tree'
         
 export default {
   setup(__props) {
@@ -714,7 +981,8 @@ return (_ctx, _cache) => {
       ]),
       _: 1 /* STABLE */
     }),
-    _createElementVNode(\\"div\\", { onClick: fn }, _toDisplayString(count.value) + \\" \\" + _toDisplayString(constant) + \\" \\" + _toDisplayString(_unref(maybe)) + \\" \\" + _toDisplayString(_unref(lett)) + \\" \\" + _toDisplayString(_unref(other)), 1 /* TEXT */)
+    _createElementVNode(\\"div\\", { onClick: fn }, _toDisplayString(count.value) + \\" \\" + _toDisplayString(constant) + \\" \\" + _toDisplayString(_unref(maybe)) + \\" \\" + _toDisplayString(_unref(lett)) + \\" \\" + _toDisplayString(_unref(other)), 1 /* TEXT */),
+    _createTextVNode(\\" \\" + _toDisplayString(tree.foo()), 1 /* TEXT */)
   ], 64 /* STABLE_FRAGMENT */))
 }
 }
@@ -771,8 +1039,7 @@ return (_ctx, _cache) => {
 `;
 
 exports[`SFC compile <script setup> inlineTemplate mode ssr codegen 1`] = `
-"import { useCssVars as _useCssVars, unref as _unref } from 'vue'
-import { ssrRenderAttrs as _ssrRenderAttrs, ssrInterpolate as _ssrInterpolate } from \\"vue/server-renderer\\"
+"import { ssrRenderAttrs as _ssrRenderAttrs, ssrInterpolate as _ssrInterpolate } from \\"vue/server-renderer\\"
 
 import { ref } from 'vue'
         
@@ -780,15 +1047,11 @@ export default {
   __ssrInlineRender: true,
   setup(__props) {
 
-_useCssVars(_ctx => ({
-  \\"xxxxxxxx-count\\": (count.value)
-}))
-
         const count = ref(0)
         
 return (_ctx, _push, _parent, _attrs) => {
   const _cssVars = { style: {
-  \\"xxxxxxxx-count\\": (count.value)
+  \\"--xxxxxxxx-count\\": (count.value)
 }}
   _push(\`<!--[--><div\${
     _ssrRenderAttrs(_cssVars)
@@ -980,11 +1243,17 @@ return () => {}
 `;
 
 exports[`SFC compile <script setup> should expose top level declarations 1`] = `
-"import { x } from './x'
+"import { xx } from './x'
+      let aa = 1
+      const bb = 2
+      function cc() {}
+      class dd {}
+      
+import { x } from './x'
       
 export default {
   setup(__props, { expose }) {
-  expose()
+  expose();
 
       let a = 1
       const b = 2
@@ -994,12 +1263,7 @@ export default {
 return { aa, bb, cc, dd, a, b, c, d, xx, x }
 }
 
-}
-      import { xx } from './x'
-      let aa = 1
-      const bb = 2
-      function cc() {}
-      class dd {}"
+}"
 `;
 
 exports[`SFC compile <script setup> with TypeScript const Enum 1`] = `
@@ -1008,7 +1272,7 @@ const enum Foo { A = 123 }
         
 export default /*#__PURE__*/_defineComponent({
   setup(__props, { expose }) {
-  expose()
+  expose();
 
         
 return { Foo }
@@ -1024,7 +1288,7 @@ export interface Emits { (e: 'foo' | 'bar'): void }
 export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\"],
   setup(__props, { expose, emit }: { emit: ({ (e: 'foo' | 'bar'): void }), expose: any, slots: any, attrs: any }) {
-  expose()
+  expose();
 
       
       
@@ -1041,7 +1305,7 @@ export type Emits = { (e: 'foo' | 'bar'): void }
 export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\"],
   setup(__props, { expose, emit }: { emit: ({ (e: 'foo' | 'bar'): void }), expose: any, slots: any, attrs: any }) {
-  expose()
+  expose();
 
       
       
@@ -1058,7 +1322,7 @@ interface Emits { (e: 'foo' | 'bar'): void }
 export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\"],
   setup(__props, { expose, emit }: { emit: ({ (e: 'foo' | 'bar'): void }), expose: any, slots: any, attrs: any }) {
-  expose()
+  expose();
 
       
       
@@ -1075,7 +1339,7 @@ export type Emits = (e: 'foo' | 'bar') => void
 export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\"],
   setup(__props, { expose, emit }: { emit: ((e: 'foo' | 'bar') => void), expose: any, slots: any, attrs: any }) {
-  expose()
+  expose();
 
       
       
@@ -1092,7 +1356,7 @@ type Emits = (e: 'foo' | 'bar') => void
 export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\"],
   setup(__props, { expose, emit }: { emit: ((e: 'foo' | 'bar') => void), expose: any, slots: any, attrs: any }) {
-  expose()
+  expose();
 
       
       
@@ -1109,7 +1373,7 @@ type Emits = { (e: 'foo' | 'bar'): void }
 export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\"],
   setup(__props, { expose, emit }: { emit: ({ (e: 'foo' | 'bar'): void }), expose: any, slots: any, attrs: any }) {
-  expose()
+  expose();
 
       
       
@@ -1125,7 +1389,7 @@ exports[`SFC compile <script setup> with TypeScript defineEmits w/ type (type li
 export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\", \\"baz\\"],
   setup(__props, { expose, emit }: { emit: ({(e: 'foo' | 'bar'): void; (e: 'baz', id: number): void;}), expose: any, slots: any, attrs: any }) {
-  expose()
+  expose();
 
       
       
@@ -1141,7 +1405,7 @@ exports[`SFC compile <script setup> with TypeScript defineEmits w/ type 1`] = `
 export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\"],
   setup(__props, { expose, emit }: { emit: ((e: 'foo' | 'bar') => void), expose: any, slots: any, attrs: any }) {
-  expose()
+  expose();
 
       
       
@@ -1160,7 +1424,7 @@ export default /*#__PURE__*/_defineComponent({
     x: { type: Number, required: false }
   },
   setup(__props: any, { expose }) {
-  expose()
+  expose();
 
       
       
@@ -1180,7 +1444,7 @@ export default /*#__PURE__*/_defineComponent({
     x: { type: Number, required: false }
   },
   setup(__props: any, { expose }) {
-  expose()
+  expose();
 
         
       
@@ -1199,7 +1463,7 @@ export default /*#__PURE__*/_defineComponent({
     x: { type: Number, required: false }
   },
   setup(__props: any, { expose }) {
-  expose()
+  expose();
 
       
       
@@ -1218,7 +1482,7 @@ export default /*#__PURE__*/_defineComponent({
     x: { type: Number, required: false }
   },
   setup(__props: any, { expose }) {
-  expose()
+  expose();
 
       
       
@@ -1265,7 +1529,7 @@ export default /*#__PURE__*/_defineComponent({
     foo: { type: [Function, null], required: true }
   },
   setup(__props: any, { expose }) {
-  expose()
+  expose();
 
       
       
@@ -1284,7 +1548,7 @@ export default /*#__PURE__*/_defineComponent({
     x: { type: Number, required: false }
   },
   setup(__props: any, { expose }) {
-  expose()
+  expose();
 
       
       
@@ -1301,7 +1565,7 @@ export default /*#__PURE__*/_defineComponent({
   props: { foo: String },
   emits: ['a', 'b'],
   setup(__props, { expose, emit }) {
-  expose()
+  expose();
 
 const props = __props
 
@@ -1321,10 +1585,26 @@ export interface Foo {}
       
 export default /*#__PURE__*/_defineComponent({
   setup(__props, { expose }) {
-  expose()
+  expose();
 
         
 return {  }
+}
+
+})"
+`;
+
+exports[`SFC compile <script setup> with TypeScript import type 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+import type { Foo } from './main.ts'
+        import { type Bar, Baz } from './main.ts'
+        
+export default /*#__PURE__*/_defineComponent({
+  setup(__props, { expose }) {
+  expose();
+
+        
+return { Baz }
 }
 
 })"
@@ -1336,7 +1616,7 @@ enum Foo { A = 123 }
         
 export default /*#__PURE__*/_defineComponent({
   setup(__props, { expose }) {
-  expose()
+  expose();
 
         
 return { Foo }
@@ -1355,7 +1635,7 @@ enum Foo { A = 123 }
         
 export default /*#__PURE__*/_defineComponent({
   setup(__props, { expose }) {
-  expose()
+  expose();
 
         
 return { D, C, B, Foo }
@@ -1375,7 +1655,7 @@ export default /*#__PURE__*/_defineComponent({
     baz: { type: Boolean, required: true }
   }, { ...defaults }),
   setup(__props: any, { expose }) {
-  expose()
+  expose();
 
 const props = __props as {
         foo?: string
@@ -1402,7 +1682,7 @@ export default /*#__PURE__*/_defineComponent({
     qux: { type: Function, required: false, default() { return 1 } }
   },
   setup(__props: any, { expose }) {
-  expose()
+  expose();
 
 const props = __props as { foo: string, bar?: number, baz: boolean, qux(): number }
 

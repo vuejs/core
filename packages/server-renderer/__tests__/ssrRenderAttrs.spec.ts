@@ -15,6 +15,8 @@ describe('ssr: renderAttrs', () => {
     expect(
       ssrRenderAttrs({
         key: 1,
+        ref_key: 'foo',
+        ref_for: 'bar',
         ref: () => {},
         onClick: () => {}
       })
@@ -95,6 +97,17 @@ describe('ssr: renderAttrs', () => {
         'my-el'
       )
     ).toBe(` fooBar="ok"`)
+  })
+
+  test('preserve name on svg elements', () => {
+    expect(
+      ssrRenderAttrs(
+        {
+          viewBox: 'foo'
+        },
+        'svg'
+      )
+    ).toBe(` viewBox="foo"`)
   })
 })
 

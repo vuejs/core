@@ -1,7 +1,7 @@
 import { WritableComputedRef } from '@vue/reactivity'
 import { expectType, ref, computed, Ref, ComputedRef } from './index'
-import 'vue/ref-macros'
-import { RefType, RefTypes } from 'vue/ref-macros'
+import 'vue/macros-global'
+import { RefType, RefTypes } from 'vue/macros'
 
 // wrapping refs
 

@@ -108,7 +108,7 @@ export function h(
 export function h(
   type: typeof Teleport,
   props: RawProps & TeleportProps,
-  children: RawChildren
+  children: RawChildren | RawSlots
 ): VNode
 
 // suspense
@@ -141,9 +141,9 @@ export function h<P>(
 ): VNode
 
 // component without props
-export function h(
-  type: Component,
-  props: null,
+export function h<P>(
+  type: Component<P>,
+  props?: (RawProps & P) | null,
   children?: RawChildren | RawSlots
 ): VNode
 

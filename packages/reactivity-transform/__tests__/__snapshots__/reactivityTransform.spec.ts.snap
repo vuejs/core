@@ -4,12 +4,13 @@ exports[`$ unwrapping 1`] = `
 "
     import { ref, shallowRef } from 'vue'
     let foo = (ref())
-    let a = (ref(1))
+    export let a = (ref(1))
     let b = (shallowRef({
       count: 0
     }))
     let c = () => {}
     let d
+    label: var e = (ref())
     "
 `;
 
@@ -34,12 +35,13 @@ exports[`$ref & $shallowRef declarations 1`] = `
 "import { ref as _ref, shallowRef as _shallowRef } from 'vue'
 
     let foo = _ref()
-    let a = _ref(1)
+    export let a = _ref(1)
     let b = _shallowRef({
       count: 0
     })
     let c = () => {}
     let d
+    label: var e = _ref()
     "
 `;
 
@@ -55,13 +57,12 @@ exports[`accessing ref binding 1`] = `
 `;
 
 exports[`array destructure 1`] = `
-"import { ref as _ref, shallowRef as _shallowRef } from 'vue'
+"import { ref as _ref, toRef as _toRef } from 'vue'
 
-    let n = _ref(1), [__a, __b = 1, ...__c] = (useFoo())
-const a = _shallowRef(__a);
-const b = _shallowRef(__b);
-const c = _shallowRef(__c);
-    console.log(n.value, a.value, b.value, c.value)
+    let n = _ref(1), __$temp_1 = (useFoo()),
+  a = _toRef(__$temp_1, 0),
+  b = _toRef(__$temp_1, 1, 1)
+    console.log(n.value, a.value, b.value)
     "
 `;
 
@@ -79,6 +80,18 @@ exports[`handle TS casting syntax 1`] = `
       console.log(a.value! + <number>a.value)
       console.log((a.value as number) + <number>a.value)
       "
+`;
+
+exports[`macro import alias and removal 1`] = `
+"import { ref as _ref, toRef as _toRef } from 'vue'
+
+    
+
+    let a = _ref(1)
+    const __$temp_1 = (useMouse()),
+  x = _toRef(__$temp_1, 'x'),
+  y = _toRef(__$temp_1, 'y')
+    "
 `;
 
 exports[`mixing $ref & $computed declarations 1`] = `
@@ -114,13 +127,13 @@ exports[`mutating ref binding 1`] = `
 `;
 
 exports[`nested destructure 1`] = `
-"import { shallowRef as _shallowRef } from 'vue'
+"import { toRef as _toRef } from 'vue'
 
-    let [{ a: { b: __b }}] = (useFoo())
-const b = _shallowRef(__b);
-    let { c: [__d, __e] } = (useBar())
-const d = _shallowRef(__d);
-const e = _shallowRef(__e);
+    let __$temp_1 = (useFoo()),
+  b = _toRef(__$temp_1[0].a, 'b')
+    let __$temp_2 = (useBar()),
+  d = _toRef(__$temp_2.c, 0),
+  e = _toRef(__$temp_2.c, 1)
     console.log(b.value, d.value, e.value)
     "
 `;
@@ -163,18 +176,27 @@ exports[`nested scopes 1`] = `
 `;
 
 exports[`object destructure 1`] = `
-"import { ref as _ref, shallowRef as _shallowRef } from 'vue'
+"import { ref as _ref, toRef as _toRef } from 'vue'
 
-    let n = _ref(1), { a: __a, b: __c, d: __d = 1, e: __f = 2, ...__g } = (useFoo())
-const a = _shallowRef(__a);
-const c = _shallowRef(__c);
-const d = _shallowRef(__d);
-const f = _shallowRef(__f);
-const g = _shallowRef(__g);
-    let { foo: __foo } = (useSomthing(() => 1));
-const foo = _shallowRef(__foo);
-    console.log(n.value, a.value, c.value, d.value, f.value, g.value, foo.value)
+    let n = _ref(1), __$temp_1 = (useFoo()),
+  a = _toRef(__$temp_1, 'a'),
+  c = _toRef(__$temp_1, 'b'),
+  d = _toRef(__$temp_1, 'd', 1),
+  f = _toRef(__$temp_1, 'e', 2),
+  h = _toRef(__$temp_1, g)
+    let __$temp_2 = (useSomething(() => 1)),
+  foo = _toRef(__$temp_2, 'foo');
+    console.log(n.value, a.value, c.value, d.value, f.value, h.value, foo.value)
     "
+`;
+
+exports[`object destructure w/ mid-path default values 1`] = `
+"import { toRef as _toRef } from 'vue'
+
+    const __$temp_1 = (useFoo()),
+  b = _toRef((__$temp_1.a || { b: 123 }), 'b')
+    console.log(b.value)
+  "
 `;
 
 exports[`should not rewrite scope variable 1`] = `
@@ -193,6 +215,11 @@ exports[`should not rewrite scope variable 1`] = `
         console.log(c)
         console.log(d.value)
         console.log(e)
+      }
+      let err = _ref(null)
+      try {
+      } catch (err) {
+        console.log(err)
       }
     "
 `;

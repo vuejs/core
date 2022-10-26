@@ -11,7 +11,7 @@ import {
   toRefs,
   ToRefs,
   shallowReactive,
-  watch
+  readonly
 } from './index'
 
 function plainType(arg: number | Ref<number>) {
@@ -185,28 +185,60 @@ const p2 = proxyRefs(r2)
 expectType<number>(p2.a)
 expectType<Ref<string>>(p2.obj.k)
 
-// toRef
-const obj = {
-  a: 1,
-  b: ref(1)
+// toRef and toRefs
+{
+  const obj: {
+    a: number
+    b: Ref<number>
+    c: number | string
+  } = {
+    a: 1,
+    b: ref(1),
+    c: 1
+  }
+
+  // toRef
+  expectType<Ref<number>>(toRef(obj, 'a'))
+  expectType<Ref<number>>(toRef(obj, 'b'))
+  // Should not distribute Refs over union
+  expectType<Ref<number | string>>(toRef(obj, 'c'))
+
+  // toRefs
+  expectType<{
+    a: Ref<number>
+    b: Ref<number>
+    // Should not distribute Refs over union
+    c: Ref<number | string>
+  }>(toRefs(obj))
+
+  // Both should not do any unwrapping
+  const someReactive = shallowReactive({
+    a: {
+      b: ref(42)
+    }
+  })
+
+  const toRefResult = toRef(someReactive, 'a')
+  const toRefsResult = toRefs(someReactive)
+
+  expectType<Ref<number>>(toRefResult.value.b)
+  expectType<Ref<number>>(toRefsResult.a.value.b)
+
+  // #5188
+  const props = { foo: 1 } as { foo: any }
+  const { foo } = toRefs(props)
+  expectType<Ref<any>>(foo)
 }
-expectType<Ref<number>>(toRef(obj, 'a'))
-expectType<Ref<number>>(toRef(obj, 'b'))
 
-const objWithUnionProp: { a: string | number } = {
-  a: 1
+// toRef default value
+{
+  const obj: { x?: number } = {}
+  const x = toRef(obj, 'x', 1)
+  expectType<Ref<number>>(x)
 }
 
-watch(toRef(objWithUnionProp, 'a'), value => {
-  expectType<string | number>(value)
-})
-
-// toRefs
-const objRefs = toRefs(obj)
-expectType<{
-  a: Ref<number>
-  b: Ref<number>
-}>(objRefs)
+// readonly() + ref()
+expectType<Readonly<Ref<number>>>(readonly(ref(1)))
 
 // #2687
 interface AppData {
@@ -237,20 +269,6 @@ function testUnrefGenerics<T>(p: T | Ref<T>) {
 }
 
 testUnrefGenerics(1)
-
-// #4732
-describe('ref in shallow reactive', () => {
-  const baz = shallowReactive({
-    foo: {
-      bar: ref(42)
-    }
-  })
-
-  const foo = toRef(baz, 'foo')
-
-  expectType<Ref<number>>(foo.value.bar)
-  expectType<number>(foo.value.bar.value)
-})
 
 // #4771
 describe('shallow reactive in reactive', () => {

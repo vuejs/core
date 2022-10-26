@@ -6,7 +6,8 @@ import {
   defineComponent,
   h,
   nodeOps,
-  toHandlers
+  toHandlers,
+  nextTick
 } from '@vue/runtime-test'
 import { isEmitListener } from '../src/componentEmits'
 
@@ -152,7 +153,7 @@ describe('component: emit', () => {
       emits: ['foo'],
       render() {},
       created() {
-        // @ts-ignore
+        // @ts-expect-error
         this.$emit('bar')
       }
     })
@@ -169,7 +170,7 @@ describe('component: emit', () => {
       },
       render() {},
       created() {
-        // @ts-ignore
+        // @ts-expect-error
         this.$emit('bar')
       }
     })
@@ -185,7 +186,7 @@ describe('component: emit', () => {
       emits: [],
       render() {},
       created() {
-        // @ts-ignore
+        // @ts-expect-error
         this.$emit('foo')
       }
     })
@@ -354,6 +355,37 @@ describe('component: emit', () => {
     expect(fn2).toHaveBeenCalledWith('two')
   })
 
+  test('.trim and .number modifiers should work with v-model on component', () => {
+    const Foo = defineComponent({
+      render() {},
+      created() {
+        this.$emit('update:modelValue', '    +01.2    ')
+        this.$emit('update:foo', '    1    ')
+      }
+    })
+
+    const fn1 = jest.fn()
+    const fn2 = jest.fn()
+
+    const Comp = () =>
+      h(Foo, {
+        modelValue: null,
+        modelModifiers: { trim: true, number: true },
+        'onUpdate:modelValue': fn1,
+
+        foo: null,
+        fooModifiers: { trim: true, number: true },
+        'onUpdate:foo': fn2
+      })
+
+    render(h(Comp), nodeOps.createElement('div'))
+
+    expect(fn1).toHaveBeenCalledTimes(1)
+    expect(fn1).toHaveBeenCalledWith(1.2)
+    expect(fn2).toHaveBeenCalledTimes(1)
+    expect(fn2).toHaveBeenCalledWith(1)
+  })
+
   test('isEmitListener', () => {
     const options = {
       click: null,
@@ -373,5 +405,30 @@ describe('component: emit', () => {
     expect(isEmitListener(options, 'onFooBar')).toBe(true)
     // PascalCase option
     expect(isEmitListener(options, 'onFooBaz')).toBe(true)
+  })
+
+  test('does not emit after unmount', async () => {
+    const fn = jest.fn()
+    const Foo = defineComponent({
+      emits: ['closing'],
+      async beforeUnmount() {
+        await this.$nextTick()
+        this.$emit('closing', true)
+      },
+      render() {
+        return h('div')
+      }
+    })
+    const Comp = () =>
+      h(Foo, {
+        onClosing: fn
+      })
+
+    const el = nodeOps.createElement('div')
+    render(h(Comp), el)
+    await nextTick()
+    render(null, el)
+    await nextTick()
+    expect(fn).not.toHaveBeenCalled()
   })
 })

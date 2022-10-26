@@ -1,7 +1,7 @@
 {
   "name": "vue",
-  "version": "3.2.20",
-  "description": "The progressive JavaScript framework for buiding modern web UI.",
+  "version": "3.2.41",
+  "description": "The progressive JavaScript framework for building modern web UI.",
   "main": "index.js",
   "module": "dist/vue.runtime.esm-bundler.js",
   "types": "dist/vue.d.ts",
@@ -13,6 +13,8 @@
     "dist",
     "compiler-sfc",
     "server-renderer",
+    "macros.d.ts",
+    "macros-global.d.ts",
     "ref-macros.d.ts"
   ],
   "exports": {
@@ -21,18 +23,24 @@
         "node": "./index.mjs",
         "default": "./dist/vue.runtime.esm-bundler.js"
       },
-      "require": "./index.js"
+      "require": "./index.js",
+      "types": "./dist/vue.d.ts"
     },
     "./server-renderer": {
       "import": "./server-renderer/index.mjs",
-      "require": "./server-renderer/index.js"
+      "require": "./server-renderer/index.js",
+      "types": "./server-renderer/index.d.ts"
     },
     "./compiler-sfc": {
       "import": "./compiler-sfc/index.mjs",
-      "require": "./compiler-sfc/index.js"
+      "require": "./compiler-sfc/index.js",
+      "types": "./compiler-sfc/index.d.ts"
     },
     "./dist/*": "./dist/*",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./macros": "./macros.d.ts",
+    "./macros-global": "./macros-global.d.ts",
+    "./ref-macros": "./ref-macros.d.ts"
   },
   "buildOptions": {
     "name": "Vue",
@@ -48,7 +56,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vuejs/vue-next.git"
+    "url": "git+https://github.com/vuejs/core.git"
   },
   "keywords": [
     "vue"
@@ -56,14 +64,14 @@
   "author": "Evan You",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/vuejs/vue-next/issues"
+    "url": "https://github.com/vuejs/core/issues"
   },
-  "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/vue#readme",
+  "homepage": "https://github.com/vuejs/core/tree/main/packages/vue#readme",
   "dependencies": {
-    "@vue/shared": "3.2.20",
-    "@vue/compiler-dom": "3.2.20",
-    "@vue/runtime-dom": "3.2.20",
-    "@vue/compiler-sfc": "3.2.20",
-    "@vue/server-renderer": "3.2.20"
+    "@vue/shared": "3.2.41",
+    "@vue/compiler-dom": "3.2.41",
+    "@vue/runtime-dom": "3.2.41",
+    "@vue/compiler-sfc": "3.2.41",
+    "@vue/server-renderer": "3.2.41"
   }
 }

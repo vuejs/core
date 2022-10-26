@@ -1,20 +1,75 @@
-import { ComponentNode, findProp, NodeTypes } from '@vue/compiler-dom'
+import {
+  AttributeNode,
+  buildProps,
+  ComponentNode,
+  createCallExpression,
+  DirectiveNode,
+  findProp,
+  JSChildNode,
+  NodeTypes,
+  TransformContext
+} from '@vue/compiler-dom'
+import { SSR_RENDER_ATTRS } from '../runtimeHelpers'
 import { processChildren, SSRTransformContext } from '../ssrCodegenTransform'
+import { buildSSRProps } from './ssrTransformElement'
 
+const wipMap = new WeakMap<ComponentNode, WIPEntry>()
+
+interface WIPEntry {
+  tag: AttributeNode | DirectiveNode
+  propsExp: string | JSChildNode | null
+}
+
+// phase 1: build props
+export function ssrTransformTransitionGroup(
+  node: ComponentNode,
+  context: TransformContext
+) {
+  return () => {
+    const tag = findProp(node, 'tag')
+    if (tag) {
+      const otherProps = node.props.filter(p => p !== tag)
+      const { props, directives } = buildProps(
+        node,
+        context,
+        otherProps,
+        true /* isComponent */,
+        false /* isDynamicComponent */,
+        true /* ssr (skip event listeners) */
+      )
+      let propsExp = null
+      if (props || directives.length) {
+        propsExp = createCallExpression(context.helper(SSR_RENDER_ATTRS), [
+          buildSSRProps(props, directives, context)
+        ])
+      }
+      wipMap.set(node, {
+        tag,
+        propsExp
+      })
+    }
+  }
+}
+
+// phase 2: process children
 export function ssrProcessTransitionGroup(
   node: ComponentNode,
   context: SSRTransformContext
 ) {
-  const tag = findProp(node, 'tag')
-  if (tag) {
+  const entry = wipMap.get(node)
+  if (entry) {
+    const { tag, propsExp } = entry
     if (tag.type === NodeTypes.DIRECTIVE) {
       // dynamic :tag
       context.pushStringPart(`<`)
       context.pushStringPart(tag.exp!)
+      if (propsExp) {
+        context.pushStringPart(propsExp)
+      }
       context.pushStringPart(`>`)
 
       processChildren(
-        node.children,
+        node,
         context,
         false,
         /**
@@ -30,12 +85,16 @@ export function ssrProcessTransitionGroup(
       context.pushStringPart(`>`)
     } else {
       // static tag
-      context.pushStringPart(`<${tag.value!.content}>`)
-      processChildren(node.children, context, false, true)
+      context.pushStringPart(`<${tag.value!.content}`)
+      if (propsExp) {
+        context.pushStringPart(propsExp)
+      }
+      context.pushStringPart(`>`)
+      processChildren(node, context, false, true)
       context.pushStringPart(`</${tag.value!.content}>`)
     }
   } else {
     // fragment
-    processChildren(node.children, context, true, true)
+    processChildren(node, context, true, true)
   }
 }

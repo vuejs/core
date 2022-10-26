@@ -68,21 +68,21 @@ describe('reactivity/readonly', () => {
         `Set operation on key "Symbol(qux)" failed: target is readonly.`
       ).toHaveBeenWarnedLast()
 
-      // @ts-ignore
+      // @ts-expect-error
       delete wrapped.foo
       expect(wrapped.foo).toBe(1)
       expect(
         `Delete operation on key "foo" failed: target is readonly.`
       ).toHaveBeenWarnedLast()
 
-      // @ts-ignore
+      // @ts-expect-error
       delete wrapped.bar.baz
       expect(wrapped.bar.baz).toBe(2)
       expect(
         `Delete operation on key "baz" failed: target is readonly.`
       ).toHaveBeenWarnedLast()
 
-      // @ts-ignore
+      // @ts-expect-error
       delete wrapped[qux]
       expect(wrapped[qux]).toBe(3)
       expect(
@@ -438,7 +438,8 @@ describe('reactivity/readonly', () => {
   })
 
   test('should make ref readonly', () => {
-    const n: any = readonly(ref(1))
+    const n = readonly(ref(1))
+    // @ts-expect-error
     n.value = 2
     expect(n.value).toBe(1)
     expect(
@@ -446,7 +447,7 @@ describe('reactivity/readonly', () => {
     ).toHaveBeenWarned()
   })
 
-  // https://github.com/vuejs/vue-next/issues/3376
+  // https://github.com/vuejs/core/issues/3376
   test('calling readonly on computed should allow computed to set its private properties', () => {
     const r = ref<boolean>(false)
     const c = computed(() => r.value)
@@ -458,11 +459,48 @@ describe('reactivity/readonly', () => {
     expect(
       'Set operation on key "_dirty" failed: target is readonly.'
     ).not.toHaveBeenWarned()
-    // @ts-expect-error - non-existant property
+    // @ts-expect-error - non-existent property
     rC.randomProperty = true
 
     expect(
       'Set operation on key "randomProperty" failed: target is readonly.'
     ).toHaveBeenWarned()
+  })
+
+  // #4986
+  test('setting a readonly object as a property of a reactive object should retain readonly proxy', () => {
+    const r = readonly({})
+    const rr = reactive({}) as any
+    rr.foo = r
+    expect(rr.foo).toBe(r)
+    expect(isReadonly(rr.foo)).toBe(true)
+  })
+
+  test('attempting to write plain value to a readonly ref nested in a reactive object should fail', () => {
+    const r = ref(false)
+    const ror = readonly(r)
+    const obj = reactive({ ror })
+    expect(() => {
+      obj.ror = true
+    }).toThrow()
+    expect(obj.ror).toBe(false)
+  })
+
+  test('replacing a readonly ref nested in a reactive object with a new ref', () => {
+    const r = ref(false)
+    const ror = readonly(r)
+    const obj = reactive({ ror })
+    obj.ror = ref(true) as unknown as boolean
+    expect(obj.ror).toBe(true)
+    expect(toRaw(obj).ror).not.toBe(ror) // ref successfully replaced
+  })
+
+  test('setting readonly object to writable nested ref', () => {
+    const r = ref<any>()
+    const obj = reactive({ r })
+    const ro = readonly({})
+    obj.r = ro
+    expect(obj.r).toBe(ro)
+    expect(r.value).toBe(ro)
   })
 })

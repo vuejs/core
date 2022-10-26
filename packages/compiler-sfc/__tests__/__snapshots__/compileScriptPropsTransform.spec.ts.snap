@@ -1,5 +1,25 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`sfc props transform $$() escape 1`] = `
+"import { toRef as _toRef } from 'vue'
+
+export default {
+  props: ['foo'],
+  setup(__props) {
+const __props_bar = _toRef(__props, 'bar')
+const __props_foo = _toRef(__props, 'foo')
+
+      
+      console.log((__props_foo))
+      console.log((__props_bar))
+      ({ foo: __props_foo, baz: __props_bar })
+      
+return () => {}
+}
+
+}"
+`;
+
 exports[`sfc props transform aliasing 1`] = `
 "import { toDisplayString as _toDisplayString } from \\"vue\\"
 
@@ -45,7 +65,7 @@ exports[`sfc props transform default values w/ runtime declaration 1`] = `
 export default {
   props: _mergeDefaults(['foo', 'bar'], {
   foo: 1,
-  bar: () => {}
+  bar: () => ({})
 }),
   setup(__props) {
 
@@ -63,7 +83,7 @@ exports[`sfc props transform default values w/ type declaration 1`] = `
 export default /*#__PURE__*/_defineComponent({
   props: {
     foo: { type: Number, required: false, default: 1 },
-    bar: { type: Object, required: false, default: () => {} }
+    bar: { type: Object, required: false, default: () => ({}) }
   },
   setup(__props: any) {
 
@@ -81,8 +101,11 @@ exports[`sfc props transform default values w/ type declaration, prod mode 1`] =
 export default /*#__PURE__*/_defineComponent({
   props: {
     foo: { default: 1 },
-    bar: { default: () => {} },
-    baz: null
+    bar: { default: () => ({}) },
+    baz: null,
+    boola: { type: Boolean },
+    boolb: { type: [Boolean, Number] },
+    func: { type: Function, default: () => (() => {}) }
   },
   setup(__props: any) {
 
@@ -106,6 +129,25 @@ exports[`sfc props transform nested scope 1`] = `
       }
       
 return () => {}
+}
+
+}"
+`;
+
+exports[`sfc props transform non-identifier prop names 1`] = `
+"import { toDisplayString as _toDisplayString } from \\"vue\\"
+
+
+export default {
+  props: { 'foo.bar': Function },
+  setup(__props) {
+
+      
+      let x = __props[\\"foo.bar\\"]
+      
+return (_ctx, _cache) => {
+  return _toDisplayString(__props[\\"foo.bar\\"])
+}
 }
 
 }"

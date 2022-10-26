@@ -1,6 +1,6 @@
 {
   "name": "@vue/compat",
-  "version": "3.2.20",
+  "version": "3.2.41",
   "description": "Vue 3 compatibility build for Vue 2",
   "main": "index.js",
   "module": "dist/vue.runtime.esm-bundler.js",
@@ -26,7 +26,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vuejs/vue-next.git"
+    "url": "git+https://github.com/vuejs/core.git"
   },
   "keywords": [
     "vue"
@@ -34,10 +34,15 @@
   "author": "Evan You",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/vuejs/vue-next/issues"
+    "url": "https://github.com/vuejs/core/issues"
   },
-  "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/vue-compat#readme",
+  "homepage": "https://github.com/vuejs/core/tree/main/packages/vue-compat#readme",
+  "dependencies": {
+    "@babel/parser": "^7.16.4",
+    "estree-walker": "^2.0.2",
+    "source-map": "^0.6.1"
+  },
   "peerDependencies": {
-    "vue": "3.2.20"
+    "vue": "3.2.41"
   }
 }
