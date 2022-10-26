@@ -447,17 +447,14 @@ export function compileScript(
         // props destructure - handle compilation sugar
         for (const prop of declId.properties) {
           if (prop.type === 'ObjectProperty') {
-            if (prop.computed) {
+            const propKey = resolveObjectKey(prop.key, prop.computed)
+
+            if (!propKey) {
               error(
                 `${DEFINE_PROPS}() destructure cannot use computed key.`,
                 prop.key
               )
             }
-
-            const propKey =
-              prop.key.type === 'StringLiteral'
-                ? prop.key.value
-                : (prop.key as Identifier).name
 
             if (prop.value.type === 'AssignmentPattern') {
               // default value { foo = 123 }
@@ -774,7 +771,8 @@ export function compileScript(
       propsRuntimeDefaults.type === 'ObjectExpression' &&
       propsRuntimeDefaults.properties.every(
         node =>
-          (node.type === 'ObjectProperty' && !node.computed) ||
+          (node.type === 'ObjectProperty' &&
+            (!node.computed || node.key.type.endsWith('Literal'))) ||
           node.type === 'ObjectMethod'
       )
     )
@@ -795,9 +793,10 @@ export function compileScript(
         if (destructured) {
           defaultString = `default: ${destructured}`
         } else if (hasStaticDefaults) {
-          const prop = propsRuntimeDefaults!.properties.find(
-            (node: any) => node.key.name === key
-          ) as ObjectProperty | ObjectMethod
+          const prop = propsRuntimeDefaults!.properties.find(node => {
+            if (node.type === 'SpreadElement') return false
+            return resolveObjectKey(node.key, node.computed) === key
+          }) as ObjectProperty | ObjectMethod
           if (prop) {
             if (prop.type === 'ObjectProperty') {
               // prop has corresponding static default value
@@ -874,9 +873,13 @@ export function compileScript(
           m.key.type === 'Identifier'
         ) {
           if (
-            propsRuntimeDefaults!.properties.some(
-              (p: any) => p.key.name === (m.key as Identifier).name
-            )
+            propsRuntimeDefaults!.properties.some(p => {
+              if (p.type === 'SpreadElement') return false
+              return (
+                resolveObjectKey(p.key, p.computed) ===
+                (m.key as Identifier).name
+              )
+            })
           ) {
             res +=
               m.key.name +
@@ -2139,16 +2142,9 @@ function analyzeBindingsFromOptions(node: ObjectExpression): BindingMetadata {
 function getObjectExpressionKeys(node: ObjectExpression): string[] {
   const keys = []
   for (const prop of node.properties) {
-    if (
-      (prop.type === 'ObjectProperty' || prop.type === 'ObjectMethod') &&
-      !prop.computed
-    ) {
-      if (prop.key.type === 'Identifier') {
-        keys.push(prop.key.name)
-      } else if (prop.key.type === 'StringLiteral') {
-        keys.push(prop.key.value)
-      }
-    }
+    if (prop.type === 'SpreadElement') continue
+    const key = resolveObjectKey(prop.key, prop.computed)
+    if (key) keys.push(String(key))
   }
   return keys
 }
@@ -2296,4 +2292,15 @@ export function hmrShouldReload(
   }
 
   return false
+}
+
+export function resolveObjectKey(node: Node, computed: boolean) {
+  switch (node.type) {
+    case 'StringLiteral':
+    case 'NumericLiteral':
+      return node.value
+    case 'Identifier':
+      if (!computed) return node.name
+  }
+  return undefined
 }
