@@ -276,8 +276,9 @@ export function trigger(
     // trigger all effects for target
     deps = [...depsMap.values()]
   } else if (key === 'length' && isArray(target)) {
+    const newLength = toNumber(newValue)
     depsMap.forEach((dep, key) => {
-      if (key === 'length' || key >= toNumber(newValue)) {
+      if (key === 'length' || key >= newLength) {
         deps.push(dep)
       }
     })
