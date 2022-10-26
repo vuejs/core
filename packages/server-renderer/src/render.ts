@@ -46,6 +46,7 @@ export type SSRContext = {
   [key: string]: any
   teleports?: Record<string, string>
   __teleportBuffers?: Record<string, SSRBuffer>
+  __watcherHandles?: (() => void)[]
 }
 
 // Each component has a buffer array.

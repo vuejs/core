@@ -1,5 +1,5 @@
 import { createSSRApp, defineComponent, h, watch, ref } from 'vue'
-import { renderToString } from '../src/renderToString'
+import { SSRContext, renderToString } from '../src'
 
 describe('ssr: watch', () => {
   // #6013
@@ -18,26 +18,13 @@ describe('ssr: watch', () => {
       expect(msg).toBe('hello world')
       return () => h('div', null, msg)
     })
+
     const app = createSSRApp(App)
-    const html = await renderToString(app)
+    const ctx: SSRContext = {}
+    const html = await renderToString(app, ctx)
+
+    expect(ctx.__watcherHandles!.length).toBe(1)
+
     expect(html).toMatch('hello world')
-  })
-  test('should work w/ flush:sync', async () => {
-    const App = defineComponent(() => {
-      const count = ref(0)
-      let msg = 'abc'
-      watch(
-        count,
-        () => {
-          msg = 'hello world'
-        },
-        { flush: 'sync' }
-      )
-      expect(msg).toBe('abc')
-      return () => h('div', null, msg)
-    })
-    const app = createSSRApp(App)
-    const html = await renderToString(app)
-    expect(html).toMatch('abc')
   })
 })
