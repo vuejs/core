@@ -1507,7 +1507,7 @@ export default /*#__PURE__*/_defineComponent({
     x: { type: Number, required: false }
   },
   setup(__props: any, { expose }) {
-  expose()
+  expose();
 
         
       
