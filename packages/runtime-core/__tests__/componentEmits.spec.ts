@@ -385,6 +385,28 @@ describe('component: emit', () => {
     expect(fn2).toHaveBeenCalledTimes(1)
     expect(fn2).toHaveBeenCalledWith(1)
   })
+  
+  test('only trim string parameter when work with v-model on component', () => {
+    const Foo = defineComponent({
+      render() {},
+      created() {
+        this.$emit('update:modelValue', ' foo ', { bar: ' bar ' })
+      }
+    })
+
+    const fn = jest.fn()
+    const Comp = () =>
+      h(Foo, {
+        modelValue: null,
+        modelModifiers: { trim: true },
+        'onUpdate:modelValue': fn
+      })
+
+    render(h(Comp), nodeOps.createElement('div'))
+
+    expect(fn).toHaveBeenCalledTimes(1)
+    expect(fn).toHaveBeenCalledWith('foo', { bar: ' bar ' })
+  })
 
   test('isEmitListener', () => {
     const options = {
