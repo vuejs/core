@@ -184,6 +184,7 @@ function tryWrap(fn: (id: string, arg: any) => any): Function {
     try {
       return fn(id, arg)
     } catch (e: any) {
+      hmrDirtyComponents.clear()
       console.error(e)
       console.warn(
         `[HMR] Something went wrong during Vue component hot-reload. ` +
