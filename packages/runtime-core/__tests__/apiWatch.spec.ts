@@ -177,6 +177,23 @@ describe('api: watch', () => {
     ])
   })
 
+  it('watching multiple sources: undefined initial values and immediate: true', async () => {
+    const a = ref()
+    const b = ref()
+    let called = false
+    watch(
+      [a, b],
+      (newVal, oldVal) => {
+        called = true
+        expect(newVal).toMatchObject([undefined, undefined])
+        expect(oldVal).toBeUndefined()
+      },
+      { immediate: true }
+    )
+    await nextTick()
+    expect(called).toBe(true)
+  })
+
   it('watching multiple sources: readonly array', async () => {
     const state = reactive({ count: 1 })
     const status = ref(false)
@@ -214,7 +231,7 @@ describe('api: watch', () => {
   })
 
   it('warn invalid watch source', () => {
-    // @ts-ignore
+    // @ts-expect-error
     watch(1, () => {})
     expect(`Invalid watch source`).toHaveBeenWarned()
   })
@@ -509,7 +526,8 @@ describe('api: watch', () => {
     expect(cb).not.toHaveBeenCalled()
   })
 
-  it('should fire on component unmount w/ flush: pre', async () => {
+  // #2291
+  it('should not fire on component unmount w/ flush: pre', async () => {
     const toggle = ref(true)
     const cb = jest.fn()
     const Comp = {
@@ -527,7 +545,7 @@ describe('api: watch', () => {
     expect(cb).not.toHaveBeenCalled()
     toggle.value = false
     await nextTick()
-    expect(cb).toHaveBeenCalledTimes(1)
+    expect(cb).not.toHaveBeenCalled()
   })
 
   // #1763
@@ -748,7 +766,7 @@ describe('api: watch', () => {
       () => {
         dummy = count.value
       },
-      // @ts-ignore
+      // @ts-expect-error
       { immediate: false }
     )
     expect(dummy).toBe(0)
@@ -767,7 +785,7 @@ describe('api: watch', () => {
         spy()
         return arr
       },
-      // @ts-ignore
+      // @ts-expect-error
       { deep: true }
     )
     expect(spy).toHaveBeenCalledTimes(1)
@@ -818,7 +836,7 @@ describe('api: watch', () => {
     const onTrigger = jest.fn((e: DebuggerEvent) => {
       events.push(e)
     })
-    const obj = reactive({ foo: 1 })
+    const obj = reactive<{ foo?: number }>({ foo: 1 })
     watchEffect(
       () => {
         dummy = obj.foo
@@ -828,7 +846,7 @@ describe('api: watch', () => {
     await nextTick()
     expect(dummy).toBe(1)
 
-    obj.foo++
+    obj.foo!++
     await nextTick()
     expect(dummy).toBe(2)
     expect(onTrigger).toHaveBeenCalledTimes(1)
@@ -839,7 +857,6 @@ describe('api: watch', () => {
       newValue: 2
     })
 
-    // @ts-ignore
     delete obj.foo
     await nextTick()
     expect(dummy).toBeUndefined()
@@ -891,6 +908,21 @@ describe('api: watch', () => {
     await nextTick()
     // should trigger now
     expect(sideEffect).toBe(2)
+  })
+
+  test('should force trigger on triggerRef when watching multiple sources: shallow ref array', async () => {
+    const v = shallowRef([] as any)
+    const spy = jest.fn()
+    watch([v], () => {
+      spy()
+    })
+
+    v.value.push(1)
+    triggerRef(v)
+
+    await nextTick()
+    // should trigger now
+    expect(spy).toHaveBeenCalledTimes(1)
   })
 
   // #2125

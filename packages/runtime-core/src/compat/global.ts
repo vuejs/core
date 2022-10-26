@@ -324,7 +324,7 @@ export function createCompatVue(
 export function installAppCompatProperties(
   app: App,
   context: AppContext,
-  render: RootRenderFunction
+  render: RootRenderFunction<any>
 ) {
   installFilterMethod(app, context)
   installLegacyOptionMergeStrats(app.config)
@@ -381,9 +381,10 @@ function installLegacyAPIs(app: App) {
 
 function applySingletonAppMutations(app: App) {
   // copy over asset registries and deopt flag
-  ;['mixins', 'components', 'directives', 'filters', 'deopt'].forEach(key => {
+  app._context.mixins = [...singletonApp._context.mixins]
+  ;['components', 'directives', 'filters'].forEach(key => {
     // @ts-ignore
-    app._context[key] = singletonApp._context[key]
+    app._context[key] = Object.create(singletonApp._context[key])
   })
 
   // copy over global config mutations
@@ -398,7 +399,7 @@ function applySingletonAppMutations(app: App) {
     }
     const val = singletonApp.config[key as keyof AppConfig]
     // @ts-ignore
-    app.config[key] = val
+    app.config[key] = isObject(val) ? Object.create(val) : val
 
     // compat for runtime ignoredElements -> isCustomElement
     if (

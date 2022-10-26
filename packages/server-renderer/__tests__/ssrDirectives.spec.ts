@@ -11,6 +11,7 @@ import {
   vModelText,
   vModelRadio,
   vModelCheckbox,
+  vModelDynamic,
   resolveDirective
 } from 'vue'
 import { ssrGetDirectiveProps, ssrRenderAttrs } from '../src'
@@ -368,6 +369,100 @@ describe('ssr: directives', () => {
               return withDirectives(
                 h('input', { type: 'checkbox', value: 'foo' }),
                 [[vModelCheckbox, []]]
+              )
+            }
+          })
+        )
+      ).toBe(`<input type="checkbox" value="foo">`)
+    })
+  })
+
+  describe('vnode v-model dynamic', () => {
+    test('text', async () => {
+      expect(
+        await renderToString(
+          createApp({
+            render() {
+              return withDirectives(h('input'), [[vModelDynamic, 'hello']])
+            }
+          })
+        )
+      ).toBe(`<input value="hello">`)
+    })
+
+    test('radio', async () => {
+      expect(
+        await renderToString(
+          createApp({
+            render() {
+              return withDirectives(
+                h('input', { type: 'radio', value: 'hello' }),
+                [[vModelDynamic, 'hello']]
+              )
+            }
+          })
+        )
+      ).toBe(`<input type="radio" value="hello" checked>`)
+
+      expect(
+        await renderToString(
+          createApp({
+            render() {
+              return withDirectives(
+                h('input', { type: 'radio', value: 'hello' }),
+                [[vModelDynamic, 'foo']]
+              )
+            }
+          })
+        )
+      ).toBe(`<input type="radio" value="hello">`)
+    })
+
+    test('checkbox', async () => {
+      expect(
+        await renderToString(
+          createApp({
+            render() {
+              return withDirectives(h('input', { type: 'checkbox' }), [
+                [vModelDynamic, true]
+              ])
+            }
+          })
+        )
+      ).toBe(`<input type="checkbox" checked>`)
+
+      expect(
+        await renderToString(
+          createApp({
+            render() {
+              return withDirectives(h('input', { type: 'checkbox' }), [
+                [vModelDynamic, false]
+              ])
+            }
+          })
+        )
+      ).toBe(`<input type="checkbox">`)
+
+      expect(
+        await renderToString(
+          createApp({
+            render() {
+              return withDirectives(
+                h('input', { type: 'checkbox', value: 'foo' }),
+                [[vModelDynamic, ['foo']]]
+              )
+            }
+          })
+        )
+      ).toBe(`<input type="checkbox" value="foo" checked>`)
+
+      expect(
+        await renderToString(
+          createApp({
+            render() {
+              return withDirectives(
+                h('input', { type: 'checkbox', value: 'foo' }),
+                [[vModelDynamic, []]]
               )
             }
           })

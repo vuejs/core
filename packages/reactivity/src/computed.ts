@@ -30,7 +30,7 @@ export class ComputedRefImpl<T> {
   public readonly effect: ReactiveEffect<T>
 
   public readonly __v_isRef = true
-  public readonly [ReactiveFlags.IS_READONLY]: boolean
+  public readonly [ReactiveFlags.IS_READONLY]: boolean = false
 
   public _dirty = true
   public _cacheable: boolean

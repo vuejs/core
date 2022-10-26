@@ -122,13 +122,13 @@ export function defineCustomElement(options: {
 
 export function defineCustomElement(
   options: any,
-  hydate?: RootHydrateFunction
+  hydrate?: RootHydrateFunction
 ): VueElementConstructor {
   const Comp = defineComponent(options as any)
   class VueCustomElement extends VueElement {
     static def = Comp
     constructor(initialProps?: Record<string, any>) {
-      super(Comp, initialProps, hydate)
+      super(Comp, initialProps, hydrate)
     }
   }
 
@@ -268,10 +268,11 @@ export class VueElement extends BaseClass {
 
   protected _setAttr(key: string) {
     let value = this.getAttribute(key)
-    if (this._numberProps && this._numberProps[key]) {
+    const camelKey = camelize(key)
+    if (this._numberProps && this._numberProps[camelKey]) {
       value = toNumber(value)
     }
-    this._setProp(camelize(key), value, false)
+    this._setProp(camelKey, value, false)
   }
 
   /**

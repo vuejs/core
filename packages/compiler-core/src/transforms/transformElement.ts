@@ -121,7 +121,13 @@ export const transformElement: NodeTransform = (node, context) => {
 
     // props
     if (props.length > 0) {
-      const propsBuildResult = buildProps(node, context)
+      const propsBuildResult = buildProps(
+        node,
+        context,
+        undefined,
+        isComponent,
+        isDynamicComponent
+      )
       vnodeProps = propsBuildResult.props
       patchFlag = propsBuildResult.patchFlag
       dynamicPropNames = propsBuildResult.dynamicPropNames
@@ -352,7 +358,9 @@ function resolveSetupReference(name: string, context: TransformContext) {
     }
   }
 
-  const fromConst = checkType(BindingTypes.SETUP_CONST)
+  const fromConst =
+    checkType(BindingTypes.SETUP_CONST) ||
+    checkType(BindingTypes.SETUP_REACTIVE_CONST)
   if (fromConst) {
     return context.inline
       ? // in inline mode, const setup bindings (e.g. imports) can be used as-is
@@ -378,6 +386,8 @@ export function buildProps(
   node: ElementNode,
   context: TransformContext,
   props: ElementNode['props'] = node.props,
+  isComponent: boolean,
+  isDynamicComponent: boolean,
   ssr = false
 ): {
   props: PropsExpression | undefined
@@ -387,7 +397,6 @@ export function buildProps(
   shouldUseBlock: boolean
 } {
   const { tag, loc: elementLoc, children } = node
-  const isComponent = node.tagType === ElementTypes.COMPONENT
   let properties: ObjectExpression['properties'] = []
   const mergeArgs: PropsExpression[] = []
   const runtimeDirectives: DirectiveNode[] = []
@@ -404,13 +413,23 @@ export function buildProps(
   let hasVnodeHook = false
   const dynamicPropNames: string[] = []
 
+  const pushMergeArg = (arg?: PropsExpression) => {
+    if (properties.length) {
+      mergeArgs.push(
+        createObjectExpression(dedupeProperties(properties), elementLoc)
+      )
+      properties = []
+    }
+    if (arg) mergeArgs.push(arg)
+  }
+
   const analyzePatchFlag = ({ key, value }: Property) => {
     if (isStaticExp(key)) {
       const name = key.content
       const isEventHandler = isOn(name)
       if (
-        !isComponent &&
         isEventHandler &&
+        (!isComponent || isDynamicComponent) &&
         // omit the flag for click handlers because hydration gives click
         // dedicated fast path.
         name.toLowerCase() !== 'onclick' &&
@@ -581,13 +600,9 @@ export function buildProps(
       if (!arg && (isVBind || isVOn)) {
         hasDynamicKeys = true
         if (exp) {
-          if (properties.length) {
-            mergeArgs.push(
-              createObjectExpression(dedupeProperties(properties), elementLoc)
-            )
-            properties = []
-          }
           if (isVBind) {
+            // have to merge early for compat build check
+            pushMergeArg()
             if (__COMPAT__) {
               // 2.x v-bind object order compat
               if (__DEV__) {
@@ -634,11 +649,11 @@ export function buildProps(
             mergeArgs.push(exp)
           } else {
             // v-on="obj" -> toHandlers(obj)
-            mergeArgs.push({
+            pushMergeArg({
               type: NodeTypes.JS_CALL_EXPRESSION,
               loc,
               callee: context.helper(TO_HANDLERS),
-              arguments: [exp]
+              arguments: isComponent ? [exp] : [exp, `true`]
             })
           }
         } else {
@@ -659,7 +674,11 @@ export function buildProps(
         // has built-in directive transform.
         const { props, needRuntime } = directiveTransform(prop, node, context)
         !ssr && props.forEach(analyzePatchFlag)
-        properties.push(...props)
+        if (isVOn && arg && !isStaticExp(arg)) {
+          pushMergeArg(createObjectExpression(props, elementLoc))
+        } else {
+          properties.push(...props)
+        }
         if (needRuntime) {
           runtimeDirectives.push(prop)
           if (isSymbol(needRuntime)) {
@@ -682,11 +701,8 @@ export function buildProps(
 
   // has v-bind="object" or v-on="object", wrap with mergeProps
   if (mergeArgs.length) {
-    if (properties.length) {
-      mergeArgs.push(
-        createObjectExpression(dedupeProperties(properties), elementLoc)
-      )
-    }
+    // close up any not-yet-merged props
+    pushMergeArg()
     if (mergeArgs.length > 1) {
       propsExpression = createCallExpression(
         context.helper(MERGE_PROPS),
@@ -765,10 +781,11 @@ export function buildProps(
           }
           if (
             styleProp &&
-            !isStaticExp(styleProp.value) &&
             // the static style is compiled into an object,
             // so use `hasStyleBinding` to ensure that it is a dynamic style binding
             (hasStyleBinding ||
+              (styleProp.value.type === NodeTypes.SIMPLE_EXPRESSION &&
+                styleProp.value.content.trim()[0] === `[`) ||
               // v-bind:style and style both exist,
               // v-bind:style with static literal object
               styleProp.value.type === NodeTypes.JS_ARRAY_EXPRESSION)

@@ -98,7 +98,7 @@ describe('object props', () => {
         ff: Function as PropType<(a: number, b: string) => { a: boolean }>,
         // explicit type casting with constructor
         ccc: Array as () => string[],
-        // required + contructor type casting
+        // required + constructor type casting
         ddd: {
           type: Array as () => string[],
           required: true
@@ -281,7 +281,7 @@ describe('object props', () => {
         ff: Function as PropType<(a: number, b: string) => { a: boolean }>,
         // explicit type casting with constructor
         ccc: Array as () => string[],
-        // required + contructor type casting
+        // required + constructor type casting
         ddd: {
           type: Array as () => string[],
           required: true

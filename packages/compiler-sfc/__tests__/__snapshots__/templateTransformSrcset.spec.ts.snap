@@ -1,5 +1,23 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`compiler sfc: transform srcset srcset w/ explicit base option 1`] = `
+"import { createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
+import _imports_0 from '@/logo.png'
+
+
+const _hoisted_1 = _imports_0 + ', ' + _imports_0 + ' 2x'
+const _hoisted_2 = _imports_0 + ' 1x, ' + \\"/foo/logo.png\\" + ' 2x'
+const _hoisted_3 = /*#__PURE__*/_createElementVNode(\\"img\\", { srcset: _hoisted_1 }, null, -1 /* HOISTED */)
+const _hoisted_4 = /*#__PURE__*/_createElementVNode(\\"img\\", { srcset: _hoisted_2 }, null, -1 /* HOISTED */)
+
+export function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock(_Fragment, null, [
+    _hoisted_3,
+    _hoisted_4
+  ], 64 /* STABLE_FRAGMENT */))
+}"
+`;
+
 exports[`compiler sfc: transform srcset transform srcset 1`] = `
 "import { createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 import _imports_0 from './logo.png'
@@ -13,57 +31,69 @@ const _hoisted_5 = _imports_0 + ' 2x, ' + _imports_0
 const _hoisted_6 = _imports_0 + ' 2x, ' + _imports_0 + ' 3x'
 const _hoisted_7 = _imports_0 + ', ' + _imports_0 + ' 2x, ' + _imports_0 + ' 3x'
 const _hoisted_8 = \\"/logo.png\\" + ', ' + _imports_0 + ' 2x'
+const _hoisted_9 = /*#__PURE__*/_createElementVNode(\\"img\\", {
+  src: \\"./logo.png\\",
+  srcset: \\"\\"
+}, null, -1 /* HOISTED */)
+const _hoisted_10 = /*#__PURE__*/_createElementVNode(\\"img\\", {
+  src: \\"./logo.png\\",
+  srcset: _hoisted_1
+}, null, -1 /* HOISTED */)
+const _hoisted_11 = /*#__PURE__*/_createElementVNode(\\"img\\", {
+  src: \\"./logo.png\\",
+  srcset: _hoisted_2
+}, null, -1 /* HOISTED */)
+const _hoisted_12 = /*#__PURE__*/_createElementVNode(\\"img\\", {
+  src: \\"./logo.png\\",
+  srcset: _hoisted_3
+}, null, -1 /* HOISTED */)
+const _hoisted_13 = /*#__PURE__*/_createElementVNode(\\"img\\", {
+  src: \\"./logo.png\\",
+  srcset: _hoisted_4
+}, null, -1 /* HOISTED */)
+const _hoisted_14 = /*#__PURE__*/_createElementVNode(\\"img\\", {
+  src: \\"./logo.png\\",
+  srcset: _hoisted_5
+}, null, -1 /* HOISTED */)
+const _hoisted_15 = /*#__PURE__*/_createElementVNode(\\"img\\", {
+  src: \\"./logo.png\\",
+  srcset: _hoisted_6
+}, null, -1 /* HOISTED */)
+const _hoisted_16 = /*#__PURE__*/_createElementVNode(\\"img\\", {
+  src: \\"./logo.png\\",
+  srcset: _hoisted_7
+}, null, -1 /* HOISTED */)
+const _hoisted_17 = /*#__PURE__*/_createElementVNode(\\"img\\", {
+  src: \\"/logo.png\\",
+  srcset: \\"/logo.png, /logo.png 2x\\"
+}, null, -1 /* HOISTED */)
+const _hoisted_18 = /*#__PURE__*/_createElementVNode(\\"img\\", {
+  src: \\"https://example.com/logo.png\\",
+  srcset: \\"https://example.com/logo.png, https://example.com/logo.png 2x\\"
+}, null, -1 /* HOISTED */)
+const _hoisted_19 = /*#__PURE__*/_createElementVNode(\\"img\\", {
+  src: \\"/logo.png\\",
+  srcset: _hoisted_8
+}, null, -1 /* HOISTED */)
+const _hoisted_20 = /*#__PURE__*/_createElementVNode(\\"img\\", {
+  src: \\"data:image/png;base64,i\\",
+  srcset: \\"data:image/png;base64,i 1x, data:image/png;base64,i 2x\\"
+}, null, -1 /* HOISTED */)
 
 export function render(_ctx, _cache) {
   return (_openBlock(), _createElementBlock(_Fragment, null, [
-    _createElementVNode(\\"img\\", {
-      src: \\"./logo.png\\",
-      srcset: \\"\\"
-    }),
-    _createElementVNode(\\"img\\", {
-      src: \\"./logo.png\\",
-      srcset: _hoisted_1
-    }),
-    _createElementVNode(\\"img\\", {
-      src: \\"./logo.png\\",
-      srcset: _hoisted_2
-    }),
-    _createElementVNode(\\"img\\", {
-      src: \\"./logo.png\\",
-      srcset: _hoisted_3
-    }),
-    _createElementVNode(\\"img\\", {
-      src: \\"./logo.png\\",
-      srcset: _hoisted_4
-    }),
-    _createElementVNode(\\"img\\", {
-      src: \\"./logo.png\\",
-      srcset: _hoisted_5
-    }),
-    _createElementVNode(\\"img\\", {
-      src: \\"./logo.png\\",
-      srcset: _hoisted_6
-    }),
-    _createElementVNode(\\"img\\", {
-      src: \\"./logo.png\\",
-      srcset: _hoisted_7
-    }),
-    _createElementVNode(\\"img\\", {
-      src: \\"/logo.png\\",
-      srcset: \\"/logo.png, /logo.png 2x\\"
-    }),
-    _createElementVNode(\\"img\\", {
-      src: \\"https://example.com/logo.png\\",
-      srcset: \\"https://example.com/logo.png, https://example.com/logo.png 2x\\"
-    }),
-    _createElementVNode(\\"img\\", {
-      src: \\"/logo.png\\",
-      srcset: _hoisted_8
-    }),
-    _createElementVNode(\\"img\\", {
-      src: \\"data:image/png;base64,i\\",
-      srcset: \\"data:image/png;base64,i 1x, data:image/png;base64,i 2x\\"
-    })
+    _hoisted_9,
+    _hoisted_10,
+    _hoisted_11,
+    _hoisted_12,
+    _hoisted_13,
+    _hoisted_14,
+    _hoisted_15,
+    _hoisted_16,
+    _hoisted_17,
+    _hoisted_18,
+    _hoisted_19,
+    _hoisted_20
   ], 64 /* STABLE_FRAGMENT */))
 }"
 `;
@@ -71,56 +101,69 @@ export function render(_ctx, _cache) {
 exports[`compiler sfc: transform srcset transform srcset w/ base 1`] = `
 "import { createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 
+const _hoisted_1 = /*#__PURE__*/_createElementVNode(\\"img\\", {
+  src: \\"./logo.png\\",
+  srcset: \\"\\"
+}, null, -1 /* HOISTED */)
+const _hoisted_2 = /*#__PURE__*/_createElementVNode(\\"img\\", {
+  src: \\"./logo.png\\",
+  srcset: \\"/foo/logo.png\\"
+}, null, -1 /* HOISTED */)
+const _hoisted_3 = /*#__PURE__*/_createElementVNode(\\"img\\", {
+  src: \\"./logo.png\\",
+  srcset: \\"/foo/logo.png 2x\\"
+}, null, -1 /* HOISTED */)
+const _hoisted_4 = /*#__PURE__*/_createElementVNode(\\"img\\", {
+  src: \\"./logo.png\\",
+  srcset: \\"/foo/logo.png 2x\\"
+}, null, -1 /* HOISTED */)
+const _hoisted_5 = /*#__PURE__*/_createElementVNode(\\"img\\", {
+  src: \\"./logo.png\\",
+  srcset: \\"/foo/logo.png, /foo/logo.png 2x\\"
+}, null, -1 /* HOISTED */)
+const _hoisted_6 = /*#__PURE__*/_createElementVNode(\\"img\\", {
+  src: \\"./logo.png\\",
+  srcset: \\"/foo/logo.png 2x, /foo/logo.png\\"
+}, null, -1 /* HOISTED */)
+const _hoisted_7 = /*#__PURE__*/_createElementVNode(\\"img\\", {
+  src: \\"./logo.png\\",
+  srcset: \\"/foo/logo.png 2x, /foo/logo.png 3x\\"
+}, null, -1 /* HOISTED */)
+const _hoisted_8 = /*#__PURE__*/_createElementVNode(\\"img\\", {
+  src: \\"./logo.png\\",
+  srcset: \\"/foo/logo.png, /foo/logo.png 2x, /foo/logo.png 3x\\"
+}, null, -1 /* HOISTED */)
+const _hoisted_9 = /*#__PURE__*/_createElementVNode(\\"img\\", {
+  src: \\"/logo.png\\",
+  srcset: \\"/logo.png, /logo.png 2x\\"
+}, null, -1 /* HOISTED */)
+const _hoisted_10 = /*#__PURE__*/_createElementVNode(\\"img\\", {
+  src: \\"https://example.com/logo.png\\",
+  srcset: \\"https://example.com/logo.png, https://example.com/logo.png 2x\\"
+}, null, -1 /* HOISTED */)
+const _hoisted_11 = /*#__PURE__*/_createElementVNode(\\"img\\", {
+  src: \\"/logo.png\\",
+  srcset: \\"/logo.png, /foo/logo.png 2x\\"
+}, null, -1 /* HOISTED */)
+const _hoisted_12 = /*#__PURE__*/_createElementVNode(\\"img\\", {
+  src: \\"data:image/png;base64,i\\",
+  srcset: \\"data:image/png;base64,i 1x, data:image/png;base64,i 2x\\"
+}, null, -1 /* HOISTED */)
+
 export function render(_ctx, _cache) {
   return (_openBlock(), _createElementBlock(_Fragment, null, [
-    _createElementVNode(\\"img\\", {
-      src: \\"./logo.png\\",
-      srcset: \\"\\"
-    }),
-    _createElementVNode(\\"img\\", {
-      src: \\"./logo.png\\",
-      srcset: \\"/foo/logo.png\\"
-    }),
-    _createElementVNode(\\"img\\", {
-      src: \\"./logo.png\\",
-      srcset: \\"/foo/logo.png 2x\\"
-    }),
-    _createElementVNode(\\"img\\", {
-      src: \\"./logo.png\\",
-      srcset: \\"/foo/logo.png 2x\\"
-    }),
-    _createElementVNode(\\"img\\", {
-      src: \\"./logo.png\\",
-      srcset: \\"/foo/logo.png, /foo/logo.png 2x\\"
-    }),
-    _createElementVNode(\\"img\\", {
-      src: \\"./logo.png\\",
-      srcset: \\"/foo/logo.png 2x, /foo/logo.png\\"
-    }),
-    _createElementVNode(\\"img\\", {
-      src: \\"./logo.png\\",
-      srcset: \\"/foo/logo.png 2x, /foo/logo.png 3x\\"
-    }),
-    _createElementVNode(\\"img\\", {
-      src: \\"./logo.png\\",
-      srcset: \\"/foo/logo.png, /foo/logo.png 2x, /foo/logo.png 3x\\"
-    }),
-    _createElementVNode(\\"img\\", {
-      src: \\"/logo.png\\",
-      srcset: \\"/logo.png, /logo.png 2x\\"
-    }),
-    _createElementVNode(\\"img\\", {
-      src: \\"https://example.com/logo.png\\",
-      srcset: \\"https://example.com/logo.png, https://example.com/logo.png 2x\\"
-    }),
-    _createElementVNode(\\"img\\", {
-      src: \\"/logo.png\\",
-      srcset: \\"/logo.png, /foo/logo.png 2x\\"
-    }),
-    _createElementVNode(\\"img\\", {
-      src: \\"data:image/png;base64,i\\",
-      srcset: \\"data:image/png;base64,i 1x, data:image/png;base64,i 2x\\"
-    })
+    _hoisted_1,
+    _hoisted_2,
+    _hoisted_3,
+    _hoisted_4,
+    _hoisted_5,
+    _hoisted_6,
+    _hoisted_7,
+    _hoisted_8,
+    _hoisted_9,
+    _hoisted_10,
+    _hoisted_11,
+    _hoisted_12
   ], 64 /* STABLE_FRAGMENT */))
 }"
 `;
@@ -140,57 +183,69 @@ const _hoisted_6 = _imports_0 + ' 2x, ' + _imports_0 + ' 3x'
 const _hoisted_7 = _imports_0 + ', ' + _imports_0 + ' 2x, ' + _imports_0 + ' 3x'
 const _hoisted_8 = _imports_1 + ', ' + _imports_1 + ' 2x'
 const _hoisted_9 = _imports_1 + ', ' + _imports_0 + ' 2x'
+const _hoisted_10 = /*#__PURE__*/_createElementVNode(\\"img\\", {
+  src: \\"./logo.png\\",
+  srcset: \\"\\"
+}, null, -1 /* HOISTED */)
+const _hoisted_11 = /*#__PURE__*/_createElementVNode(\\"img\\", {
+  src: \\"./logo.png\\",
+  srcset: _hoisted_1
+}, null, -1 /* HOISTED */)
+const _hoisted_12 = /*#__PURE__*/_createElementVNode(\\"img\\", {
+  src: \\"./logo.png\\",
+  srcset: _hoisted_2
+}, null, -1 /* HOISTED */)
+const _hoisted_13 = /*#__PURE__*/_createElementVNode(\\"img\\", {
+  src: \\"./logo.png\\",
+  srcset: _hoisted_3
+}, null, -1 /* HOISTED */)
+const _hoisted_14 = /*#__PURE__*/_createElementVNode(\\"img\\", {
+  src: \\"./logo.png\\",
+  srcset: _hoisted_4
+}, null, -1 /* HOISTED */)
+const _hoisted_15 = /*#__PURE__*/_createElementVNode(\\"img\\", {
+  src: \\"./logo.png\\",
+  srcset: _hoisted_5
+}, null, -1 /* HOISTED */)
+const _hoisted_16 = /*#__PURE__*/_createElementVNode(\\"img\\", {
+  src: \\"./logo.png\\",
+  srcset: _hoisted_6
+}, null, -1 /* HOISTED */)
+const _hoisted_17 = /*#__PURE__*/_createElementVNode(\\"img\\", {
+  src: \\"./logo.png\\",
+  srcset: _hoisted_7
+}, null, -1 /* HOISTED */)
+const _hoisted_18 = /*#__PURE__*/_createElementVNode(\\"img\\", {
+  src: \\"/logo.png\\",
+  srcset: _hoisted_8
+}, null, -1 /* HOISTED */)
+const _hoisted_19 = /*#__PURE__*/_createElementVNode(\\"img\\", {
+  src: \\"https://example.com/logo.png\\",
+  srcset: \\"https://example.com/logo.png, https://example.com/logo.png 2x\\"
+}, null, -1 /* HOISTED */)
+const _hoisted_20 = /*#__PURE__*/_createElementVNode(\\"img\\", {
+  src: \\"/logo.png\\",
+  srcset: _hoisted_9
+}, null, -1 /* HOISTED */)
+const _hoisted_21 = /*#__PURE__*/_createElementVNode(\\"img\\", {
+  src: \\"data:image/png;base64,i\\",
+  srcset: \\"data:image/png;base64,i 1x, data:image/png;base64,i 2x\\"
+}, null, -1 /* HOISTED */)
 
 export function render(_ctx, _cache) {
   return (_openBlock(), _createElementBlock(_Fragment, null, [
-    _createElementVNode(\\"img\\", {
-      src: \\"./logo.png\\",
-      srcset: \\"\\"
-    }),
-    _createElementVNode(\\"img\\", {
-      src: \\"./logo.png\\",
-      srcset: _hoisted_1
-    }),
-    _createElementVNode(\\"img\\", {
-      src: \\"./logo.png\\",
-      srcset: _hoisted_2
-    }),
-    _createElementVNode(\\"img\\", {
-      src: \\"./logo.png\\",
-      srcset: _hoisted_3
-    }),
-    _createElementVNode(\\"img\\", {
-      src: \\"./logo.png\\",
-      srcset: _hoisted_4
-    }),
-    _createElementVNode(\\"img\\", {
-      src: \\"./logo.png\\",
-      srcset: _hoisted_5
-    }),
-    _createElementVNode(\\"img\\", {
-      src: \\"./logo.png\\",
-      srcset: _hoisted_6
-    }),
-    _createElementVNode(\\"img\\", {
-      src: \\"./logo.png\\",
-      srcset: _hoisted_7
-    }),
-    _createElementVNode(\\"img\\", {
-      src: \\"/logo.png\\",
-      srcset: _hoisted_8
-    }),
-    _createElementVNode(\\"img\\", {
-      src: \\"https://example.com/logo.png\\",
-      srcset: \\"https://example.com/logo.png, https://example.com/logo.png 2x\\"
-    }),
-    _createElementVNode(\\"img\\", {
-      src: \\"/logo.png\\",
-      srcset: _hoisted_9
-    }),
-    _createElementVNode(\\"img\\", {
-      src: \\"data:image/png;base64,i\\",
-      srcset: \\"data:image/png;base64,i 1x, data:image/png;base64,i 2x\\"
-    })
+    _hoisted_10,
+    _hoisted_11,
+    _hoisted_12,
+    _hoisted_13,
+    _hoisted_14,
+    _hoisted_15,
+    _hoisted_16,
+    _hoisted_17,
+    _hoisted_18,
+    _hoisted_19,
+    _hoisted_20,
+    _hoisted_21
   ], 64 /* STABLE_FRAGMENT */))
 }"
 `;

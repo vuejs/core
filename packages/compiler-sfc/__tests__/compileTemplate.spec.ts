@@ -153,3 +153,33 @@ test('should generate the correct imports expression', () => {
   expect(code).toMatch(`_ssrRenderAttr(\"src\", _imports_1)`)
   expect(code).toMatch(`_createVNode(\"img\", { src: _imports_1 })`)
 })
+
+// #3874
+test('should not hoist srcset URLs in SSR mode', () => {
+  const { code } = compile({
+    filename: 'example.vue',
+    source: `
+    <picture>
+      <source srcset="./img/foo.svg"/>
+      <img src="./img/foo.svg"/>
+    </picture>
+    <router-link>
+      <picture>
+        <source srcset="./img/bar.svg"/>
+        <img src="./img/bar.svg"/>
+      </picture>
+    </router-link>
+    `,
+    ssr: true
+  })
+  expect(code).toMatchSnapshot()
+})
+
+// #6742
+test('dynamic v-on + static v-on should merged', () => {
+  const source = `<input @blur="onBlur" @[validateEvent]="onValidateEvent">`
+
+  const result = compile({ filename: 'example.vue', source })
+
+  expect(result.code).toMatchSnapshot()
+})

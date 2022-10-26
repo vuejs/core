@@ -84,6 +84,7 @@ function createConfig(format, output, plugins = []) {
     process.env.__DEV__ === 'false' || /\.prod\.js$/.test(output.file)
   const isBundlerESMBuild = /esm-bundler/.test(format)
   const isBrowserESMBuild = /esm-browser/.test(format)
+  const isServerRenderer = name === 'server-renderer'
   const isNodeBuild = format === 'cjs'
   const isGlobalBuild = /global/.test(format)
   const isCompatPackage = pkg.name === '@vue/compat'
@@ -106,6 +107,7 @@ function createConfig(format, output, plugins = []) {
     cacheRoot: path.resolve(__dirname, 'node_modules/.rts2_cache'),
     tsconfigOverride: {
       compilerOptions: {
+        target: isServerRenderer || isNodeBuild ? 'es2019' : 'es2015',
         sourceMap: output.sourcemap,
         declaration: shouldEmitDeclarations,
         declarationMap: shouldEmitDeclarations
@@ -202,7 +204,8 @@ function createConfig(format, output, plugins = []) {
           !packageOptions.enableNonBrowserBranches,
         isGlobalBuild,
         isNodeBuild,
-        isCompatBuild
+        isCompatBuild,
+        isServerRenderer
       ),
       ...nodePlugins,
       ...plugins
@@ -226,7 +229,8 @@ function createReplacePlugin(
   isBrowserBuild,
   isGlobalBuild,
   isNodeBuild,
-  isCompatBuild
+  isCompatBuild,
+  isServerRenderer
 ) {
   const replacements = {
     __COMMIT__: `"${process.env.COMMIT}"`,
@@ -246,7 +250,7 @@ function createReplacePlugin(
     // is targeting Node (SSR)?
     __NODE_JS__: isNodeBuild,
     // need SSR-specific branches?
-    __SSR__: isNodeBuild || isBundlerESMBuild,
+    __SSR__: isNodeBuild || isBundlerESMBuild || isServerRenderer,
 
     // for compiler-sfc browser build inlined deps
     ...(isBrowserESMBuild

@@ -21,7 +21,7 @@ import {
   walkFunctionParams
 } from '@vue/compiler-core'
 import { parse, ParserPlugin } from '@babel/parser'
-import { hasOwn, isArray, isString } from '@vue/shared'
+import { hasOwn, isArray, isString, genPropsAccessExp } from '@vue/shared'
 
 const CONVERT_SYMBOL = '$'
 const ESCAPE_SYMBOL = '$$'
@@ -489,17 +489,17 @@ export function transformAST(
             if (isProp) {
               if (escapeScope) {
                 // prop binding in $$()
-                // { prop } -> { prop: __prop_prop }
+                // { prop } -> { prop: __props_prop }
                 registerEscapedPropBinding(id)
                 s.appendLeft(
                   id.end! + offset,
                   `: __props_${propsLocalToPublicMap[id.name]}`
                 )
               } else {
-                // { prop } -> { prop: __prop.prop }
+                // { prop } -> { prop: __props.prop }
                 s.appendLeft(
                   id.end! + offset,
-                  `: __props.${propsLocalToPublicMap[id.name]}`
+                  `: ${genPropsAccessExp(propsLocalToPublicMap[id.name])}`
                 )
               }
             } else {
@@ -522,7 +522,7 @@ export function transformAST(
               s.overwrite(
                 id.start! + offset,
                 id.end! + offset,
-                `__props.${propsLocalToPublicMap[id.name]}`
+                genPropsAccessExp(propsLocalToPublicMap[id.name])
               )
             }
           } else {

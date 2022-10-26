@@ -30,6 +30,11 @@ describe('api: createApp', () => {
     const root1 = nodeOps.createElement('div')
     createApp(Comp).mount(root1)
     expect(serializeInner(root1)).toBe(`0`)
+    //#5571 mount multiple apps to the same host element
+    createApp(Comp).mount(root1)
+    expect(
+      `There is already an app instance mounted on the host container`
+    ).toHaveBeenWarned()
 
     // mount with props
     const root2 = nodeOps.createElement('div')

@@ -1,6 +1,25 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`the v-if/else-if/else branchs in Transition should ignore comments 1`] = `
+exports[`inject persisted when child has v-show 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { vShow: _vShow, createElementVNode: _createElementVNode, withDirectives: _withDirectives, Transition: _Transition, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
+    return (_openBlock(), _createBlock(_Transition, { persisted: \\"\\" }, {
+      default: _withCtx(() => [
+        _withDirectives(_createElementVNode(\\"div\\", null, null, 512 /* NEED_PATCH */), [
+          [_vShow, ok]
+        ])
+      ]),
+      _: 1 /* STABLE */
+    }))
+  }
+}"
+`;
+
+exports[`the v-if/else-if/else branches in Transition should ignore comments 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {

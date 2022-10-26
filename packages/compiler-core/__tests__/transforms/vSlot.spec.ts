@@ -568,7 +568,8 @@ describe('compiler: transform component slots', () => {
                 fn: {
                   type: NodeTypes.JS_FUNCTION_EXPRESSION,
                   returns: [{ type: NodeTypes.TEXT, content: `hello` }]
-                }
+                },
+                key: `0`
               }),
               alternate: {
                 content: `undefined`,
@@ -616,7 +617,8 @@ describe('compiler: transform component slots', () => {
                       content: { content: `props` }
                     }
                   ]
-                }
+                },
+                key: `0`
               }),
               alternate: {
                 content: `undefined`,
@@ -660,7 +662,8 @@ describe('compiler: transform component slots', () => {
                   type: NodeTypes.JS_FUNCTION_EXPRESSION,
                   params: undefined,
                   returns: [{ type: NodeTypes.TEXT, content: `foo` }]
-                }
+                },
+                key: `0`
               }),
               alternate: {
                 type: NodeTypes.JS_CONDITIONAL_EXPRESSION,
@@ -671,7 +674,8 @@ describe('compiler: transform component slots', () => {
                     type: NodeTypes.JS_FUNCTION_EXPRESSION,
                     params: { content: `props` },
                     returns: [{ type: NodeTypes.TEXT, content: `bar` }]
-                  }
+                  },
+                  key: `1`
                 }),
                 alternate: createObjectMatcher({
                   name: `one`,
@@ -679,7 +683,8 @@ describe('compiler: transform component slots', () => {
                     type: NodeTypes.JS_FUNCTION_EXPRESSION,
                     params: undefined,
                     returns: [{ type: NodeTypes.TEXT, content: `baz` }]
-                  }
+                  },
+                  key: `2`
                 })
               }
             }

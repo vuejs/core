@@ -8,7 +8,8 @@ import Download from './icons/Download.vue'
 import GitHub from './icons/GitHub.vue'
 
 // @ts-ignore
-const { store } = defineProps(['store'])
+const props = defineProps(['store', 'dev', 'ssr'])
+const { store } = props
 
 const currentCommit = __COMMIT__
 const activeVersion = ref(`@${currentCommit}`)
@@ -53,6 +54,11 @@ onMounted(async () => {
   window.addEventListener('click', () => {
     expanded.value = false
   })
+  window.addEventListener('blur', () => {
+    if (document.activeElement?.tagName === 'IFRAME') {
+      expanded.value = false
+    }
+  });
 })
 
 async function fetchVersions(): Promise<string[]> {
@@ -93,7 +99,8 @@ async function fetchVersions(): Promise<string[]> {
     <div class="links">
       <div class="version" @click.stop>
         <span class="active-version" @click="toggle">
-          Version: {{ activeVersion }}
+          Version
+          <span class="number">{{ activeVersion }}</span>
         </span>
         <ul class="versions" :class="{ expanded }">
           <li v-if="!publishedVersions"><a>loading versions...</a></li>
@@ -112,6 +119,22 @@ async function fetchVersions(): Promise<string[]> {
           </li>
         </ul>
       </div>
+      <button
+        title="Toggle development production mode"
+        class="toggle-dev"
+        :class="{ dev }"
+        @click="$emit('toggle-dev')"
+      >
+        <span>{{ dev ? 'DEV' : 'PROD' }}</span>
+      </button>
+      <button
+        title="Toggle server rendering mode"
+        class="toggle-ssr"
+        :class="{ enabled: ssr }"
+        @click="$emit('toggle-ssr')"
+      >
+        <span>{{ ssr ? 'SSR ON' : 'SSR OFF' }}</span>
+      </button>
       <button title="Toggle dark mode" class="toggle-dark" @click="toggleDark">
         <Sun class="light" />
         <Moon class="dark" />
@@ -126,13 +149,10 @@ async function fetchVersions(): Promise<string[]> {
       >
         <Download />
       </button>
-      <button
-          title="View on GitHub"
-          class="github"
-      >
+      <button title="View on GitHub" class="github">
         <a
-            href="https://github.com/vuejs/core/tree/main/packages/sfc-playground"
-            target="_blank"
+          href="https://github.com/vuejs/core/tree/main/packages/sfc-playground"
+          target="_blank"
         >
           <GitHub />
         </a>
@@ -146,6 +166,11 @@ nav {
   --bg: #fff;
   --bg-light: #fff;
   --border: #ddd;
+  --btn: #666;
+  --highlight: #333;
+  --green: #3ca877;
+  --purple: #904cbc;
+  --btn-bg: #eee;
 
   color: var(--base);
   height: var(--nav-height);
@@ -164,25 +189,22 @@ nav {
   --bg: #1a1a1a;
   --bg-light: #242424;
   --border: #383838;
+  --highlight: #fff;
+  --btn-bg: #333;
 
   box-shadow: none;
   border-bottom: 1px solid var(--border);
 }
 
 h1 {
-  margin: 0;
-  line-height: var(--nav-height);
   font-weight: 500;
-  display: inline-block;
-  vertical-align: middle;
+  display: inline-flex;
+  place-items: center;
 }
 
 h1 img {
   height: 24px;
-  vertical-align: middle;
   margin-right: 10px;
-  position: relative;
-  top: -2px;
 }
 
 @media (max-width: 560px) {
@@ -202,7 +224,6 @@ h1 img {
 }
 
 .version {
-  display: inline-block;
   margin-right: 12px;
   position: relative;
 }
@@ -210,28 +231,53 @@ h1 img {
 .active-version {
   cursor: pointer;
   position: relative;
-  display: inline-block;
-  vertical-align: middle;
-  line-height: var(--nav-height);
-  padding-right: 15px;
+  display: inline-flex;
+  place-items: center;
 }
 
-.active-version:after {
+.active-version .number {
+  color: var(--green);
+  margin-left: 4px;
+}
+
+.active-version::after {
   content: '';
   width: 0;
   height: 0;
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
   border-top: 6px solid #aaa;
-  position: absolute;
-  right: 0;
-  top: 22px;
+  margin-left: 8px;
+}
+
+.toggle-dev span,
+.toggle-ssr span {
+  font-size: 12px;
+  border-radius: 4px;
+  padding: 4px 6px;
+}
+
+.toggle-dev span {
+  background: var(--purple);
+  color: #fff;
+}
+
+.toggle-dev.dev span {
+  background: var(--green);
+}
+
+.toggle-ssr span {
+  background-color: var(--btn-bg);
+}
+
+.toggle-ssr.enabled span {
+  color: #fff;
+  background-color: var(--green);
 }
 
 .toggle-dark svg {
   width: 18px;
   height: 18px;
-  fill: #666;
 }
 
 .toggle-dark .dark,
@@ -243,12 +289,22 @@ h1 img {
   display: inline-block;
 }
 
-.version:hover .active-version:after {
-  border-top-color: var(--base);
+.links button,
+.links button a {
+  color: var(--btn);
 }
 
-.dark .version:hover .active-version:after {
-  border-top-color: #fff;
+.links button:hover,
+.links button:hover a {
+  color: var(--highlight);
+}
+
+.version:hover .active-version::after {
+  border-top-color: var(--btn);
+}
+
+.dark .version:hover .active-version::after {
+  border-top-color: var(--highlight);
 }
 
 .versions {
@@ -276,16 +332,19 @@ h1 img {
 }
 
 .versions a:hover {
-  color: #3ca877;
+  color: var(--green);
 }
 
 .versions.expanded {
   display: block;
 }
 
-.share,
-.download,
-.github {
-  margin: 0 2px;
+.links > * {
+  display: flex;
+  align-items: center;
+}
+
+.links > * + * {
+  margin-left: 4px;
 }
 </style>
