@@ -26,7 +26,13 @@ import {
   VNodeCall,
   SequenceExpression
 } from './ast'
-import { SourceMapGenerator, RawSourceMap } from 'source-map'
+import {
+  GenMapping,
+  EncodedSourceMap,
+  addMapping,
+  setSourceContent,
+  toEncodedMap
+} from '@jridgewell/gen-mapping'
 import {
   advancePositionWithMutation,
   assert,
@@ -66,7 +72,7 @@ export interface CodegenResult {
   code: string
   preamble: string
   ast: RootNode
-  map?: RawSourceMap
+  map?: EncodedSourceMap
 }
 
 export interface CodegenContext
@@ -78,7 +84,7 @@ export interface CodegenContext
   offset: number
   indentLevel: number
   pure: boolean
-  map?: SourceMapGenerator
+  map?: GenMapping
   helper(key: symbol): string
   push(code: string, node?: CodegenNode): void
   indent(): void
@@ -138,11 +144,11 @@ function createCodegenContext(
               name = content
             }
           }
-          addMapping(node.loc.start, name)
+          addMappingAt(node.loc.start, name)
         }
         advancePositionWithMutation(context, code)
         if (node && node.loc !== locStub) {
-          addMapping(node.loc.end)
+          addMappingAt(node.loc.end)
         }
       }
     },
@@ -165,9 +171,9 @@ function createCodegenContext(
     context.push('\n' + `  `.repeat(n))
   }
 
-  function addMapping(loc: Position, name?: string) {
-    context.map!.addMapping({
-      name,
+  function addMappingAt(loc: Position, name?: string) {
+    addMapping(context.map!, {
+      name: name!, // NOTE: name accepts string | null | undefined
       source: context.filename,
       original: {
         line: loc.line,
@@ -181,9 +187,9 @@ function createCodegenContext(
   }
 
   if (!__BROWSER__ && sourceMap) {
-    // lazy require source-map implementation, only in non-browser builds
-    context.map = new SourceMapGenerator()
-    context.map!.setSourceContent(filename, context.source)
+    // lazy require gen-mapping implementation, only in non-browser builds
+    context.map = new GenMapping()
+    setSourceContent(context.map, filename, context.source)
   }
 
   return context
@@ -307,8 +313,7 @@ export function generate(
     ast,
     code: context.code,
     preamble: isSetupInlined ? preambleContext.code : ``,
-    // SourceMapGenerator does have toJSON() method but it's not in the types
-    map: context.map ? (context.map as any).toJSON() : undefined
+    map: !__BROWSER__ && context.map ? toEncodedMap(context.map) : undefined
   }
 }
 

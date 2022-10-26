@@ -1,11 +1,11 @@
-import merge from 'merge-source-map'
-import { RawSourceMap } from 'source-map'
+import merge from '@ampproject/remapping'
+import { EncodedSourceMap } from '@jridgewell/trace-mapping'
 import { SFCStyleCompileOptions } from './compileStyle'
 import { isFunction } from '@vue/shared'
 
 export type StylePreprocessor = (
   source: string,
-  map: RawSourceMap | undefined,
+  map: EncodedSourceMap | undefined,
   options: {
     [key: string]: any
     additionalData?: string | ((source: string, filename: string) => string)

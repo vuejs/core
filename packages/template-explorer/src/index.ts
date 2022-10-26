@@ -8,7 +8,12 @@ import {
   ssrMode
 } from './options'
 import { toRaw, watchEffect } from '@vue/runtime-dom'
-import { SourceMapConsumer } from 'source-map'
+import {
+  decodedMappings,
+  generatedPositionFor,
+  originalPositionFor,
+  TraceMap
+} from '@jridgewell/trace-mapping'
 import theme from './theme'
 
 declare global {
@@ -68,7 +73,7 @@ window.init = () => {
   }
 
   let lastSuccessfulCode: string
-  let lastSuccessfulMap: SourceMapConsumer | undefined = undefined
+  let lastSuccessfulMap: TraceMap | undefined = undefined
   function compileCode(source: string): string {
     console.clear()
     try {
@@ -76,8 +81,8 @@ window.init = () => {
       const compileFn = ssrMode.value ? ssrCompile : compile
       const start = performance.now()
       const { code, ast, map } = compileFn(source, {
-        filename: 'ExampleTemplate.vue',
         ...compilerOptions,
+        filename: 'ExampleTemplate.vue',
         sourceMap: true,
         onError: err => {
           errors.push(err)
@@ -92,8 +97,7 @@ window.init = () => {
       console.log(`AST: `, ast)
       console.log(`Options: `, toRaw(compilerOptions))
       lastSuccessfulCode = code + `\n\n// Check the console for the AST`
-      lastSuccessfulMap = new SourceMapConsumer(map!)
-      lastSuccessfulMap!.computeColumnSpans()
+      lastSuccessfulMap = new TraceMap(map!)
     } catch (e: any) {
       lastSuccessfulCode = `/* ERROR: ${e.message} (see console for more info) */`
       console.error(e)
@@ -181,19 +185,25 @@ window.init = () => {
     debounce(e => {
       clearEditorDecos()
       if (lastSuccessfulMap) {
-        const pos = lastSuccessfulMap.generatedPositionFor({
+        const pos = generatedPositionFor(lastSuccessfulMap, {
           source: 'ExampleTemplate.vue',
           line: e.position.lineNumber,
           column: e.position.column - 1
         })
         if (pos.line != null && pos.column != null) {
+          const decoded = decodedMappings(lastSuccessfulMap)
+          const segments = decoded[pos.line-1] ?? []
+          const i = segments.findIndex(seg => seg[0] === pos.column)
+          const lastSegment = i > 0 ? segments[i + 1] : undefined
+          const lastColumn = lastSegment?.[0]
+
           prevOutputDecos = output.deltaDecorations(prevOutputDecos, [
             {
               range: new monaco.Range(
                 pos.line,
                 pos.column + 1,
                 pos.line,
-                pos.lastColumn ? pos.lastColumn + 2 : pos.column + 2
+                lastColumn ? lastColumn + 2 : pos.column + 2
               ),
               options: {
                 inlineClassName: `highlight`
@@ -220,7 +230,7 @@ window.init = () => {
     debounce(e => {
       clearOutputDecos()
       if (lastSuccessfulMap) {
-        const pos = lastSuccessfulMap.originalPositionFor({
+        const pos = originalPositionFor(lastSuccessfulMap, {
           line: e.position.lineNumber,
           column: e.position.column - 1
         })

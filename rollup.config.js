@@ -137,7 +137,7 @@ function createConfig(format, output, plugins = []) {
     if (!packageOptions.enableNonBrowserBranches) {
       // normal browser builds - non-browser only imports are tree-shaken,
       // they are only listed here to suppress warnings.
-      external = ['source-map', '@babel/parser', 'estree-walker']
+      external = ['@jridgewell/gen-mapping', '@babel/parser', 'estree-walker']
     }
   } else {
     // Node / esm-bundler builds.

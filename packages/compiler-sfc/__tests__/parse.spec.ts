@@ -1,6 +1,6 @@
 import { parse } from '../src'
 import { baseParse, baseCompile } from '@vue/compiler-core'
-import { SourceMapConsumer } from 'source-map'
+import { eachMapping, TraceMap } from '@jridgewell/trace-mapping'
 
 describe('compiler:sfc', () => {
   describe('source map', () => {
@@ -13,9 +13,10 @@ describe('compiler:sfc', () => {
 
       expect(style.map).not.toBeUndefined()
 
-      const consumer = new SourceMapConsumer(style.map!)
-      consumer.eachMapping(mapping => {
-        expect(mapping.originalLine - mapping.generatedLine).toBe(padding)
+      const consumer = new TraceMap(style.map!)
+      eachMapping(consumer, mapping => {
+        expect(mapping.originalLine).not.toBeNull()
+        expect(mapping.originalLine! - mapping.generatedLine).toBe(padding)
       })
     })
 
@@ -28,9 +29,10 @@ describe('compiler:sfc', () => {
 
       expect(script!.map).not.toBeUndefined()
 
-      const consumer = new SourceMapConsumer(script!.map!)
-      consumer.eachMapping(mapping => {
-        expect(mapping.originalLine - mapping.generatedLine).toBe(padding)
+      const consumer = new TraceMap(script!.map!)
+      eachMapping(consumer, mapping => {
+        expect(mapping.originalLine).not.toBeNull()
+        expect(mapping.originalLine! - mapping.generatedLine).toBe(padding)
       })
     })
 
@@ -42,9 +44,10 @@ describe('compiler:sfc', () => {
 
       expect(custom!.map).not.toBeUndefined()
 
-      const consumer = new SourceMapConsumer(custom!.map!)
-      consumer.eachMapping(mapping => {
-        expect(mapping.originalLine - mapping.generatedLine).toBe(padding)
+      const consumer = new TraceMap(custom.map!)
+      eachMapping(consumer, mapping => {
+        expect(mapping.originalLine).not.toBeNull()
+        expect(mapping.originalLine! - mapping.generatedLine).toBe(padding)
       })
     })
   })

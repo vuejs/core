@@ -13,7 +13,7 @@ import {
   StylePreprocessorResults,
   PreprocessLang
 } from './stylePreprocessors'
-import { RawSourceMap } from 'source-map'
+import { EncodedSourceMap } from '@jridgewell/trace-mapping'
 import { cssVarsPlugin } from './cssVars'
 import postcssModules from 'postcss-modules'
 
@@ -24,7 +24,7 @@ export interface SFCStyleCompileOptions {
   scoped?: boolean
   trim?: boolean
   isProd?: boolean
-  inMap?: RawSourceMap
+  inMap?: EncodedSourceMap
   preprocessLang?: PreprocessLang
   preprocessOptions?: any
   preprocessCustomRequire?: (id: string) => any
@@ -33,7 +33,7 @@ export interface SFCStyleCompileOptions {
   /**
    * @deprecated use `inMap` instead.
    */
-  map?: RawSourceMap
+  map?: EncodedSourceMap
 }
 
 /**
@@ -61,7 +61,7 @@ export interface SFCAsyncStyleCompileOptions extends SFCStyleCompileOptions {
 
 export interface SFCStyleCompileResults {
   code: string
-  map: RawSourceMap | undefined
+  map: EncodedSourceMap | undefined
   rawResult: Result | LazyResult | undefined
   errors: Error[]
   modules?: Record<string, string>
@@ -187,7 +187,8 @@ export function doCompileStyle(
       return result
         .then(result => ({
           code: result.css || '',
-          map: result.map && result.map.toJSON(),
+          map: (result.map &&
+            result.map.toJSON()) as unknown as EncodedSourceMap,
           errors,
           modules: cssModules,
           rawResult: result,
@@ -212,7 +213,7 @@ export function doCompileStyle(
 
   return {
     code: code || ``,
-    map: outMap && outMap.toJSON(),
+    map: (outMap && outMap.toJSON()) as unknown as EncodedSourceMap,
     errors,
     rawResult: result,
     dependencies

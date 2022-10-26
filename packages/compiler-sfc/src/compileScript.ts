@@ -43,7 +43,7 @@ import {
   Expression
 } from '@babel/types'
 import { walk } from 'estree-walker'
-import { RawSourceMap } from 'source-map'
+import { EncodedSourceMap } from '@jridgewell/gen-mapping'
 import {
   CSS_VARS_HELPER,
   genCssVarsCode,
@@ -228,7 +228,7 @@ export function compileScript(
             source: filename,
             hires: true,
             includeContent: true
-          }) as unknown as RawSourceMap
+          }) as EncodedSourceMap
         }
       }
       if (cssVars.length) {
@@ -1564,7 +1564,7 @@ export function compileScript(
           source: filename,
           hires: true,
           includeContent: true
-        }) as unknown as RawSourceMap)
+        }) as EncodedSourceMap)
       : undefined,
     scriptAst: scriptAst?.body,
     scriptSetupAst: scriptSetupAst?.body

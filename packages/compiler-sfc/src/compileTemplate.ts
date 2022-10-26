@@ -6,7 +6,19 @@ import {
   ParserOptions,
   RootNode
 } from '@vue/compiler-core'
-import { SourceMapConsumer, SourceMapGenerator, RawSourceMap } from 'source-map'
+import {
+  GenMapping,
+  EncodedSourceMap,
+  addMapping,
+  toEncodedMap,
+  setSourceContent
+} from '@jridgewell/gen-mapping'
+import {
+  eachMapping,
+  originalPositionFor,
+  sourceContentFor,
+  TraceMap
+} from '@jridgewell/trace-mapping'
 import {
   transformAssetUrl,
   AssetURLOptions,
@@ -37,7 +49,7 @@ export interface SFCTemplateCompileResults {
   source: string
   tips: string[]
   errors: (string | CompilerError)[]
-  map?: RawSourceMap
+  map?: EncodedSourceMap
 }
 
 export interface SFCTemplateCompileOptions {
@@ -49,7 +61,7 @@ export interface SFCTemplateCompileOptions {
   isProd?: boolean
   ssr?: boolean
   ssrCssVars?: string[]
-  inMap?: RawSourceMap
+  inMap?: EncodedSourceMap
   compiler?: TemplateCompiler
   compilerOptions?: CompilerOptions
   preprocessLang?: string
@@ -241,20 +253,26 @@ function doCompileTemplate({
   return { code, ast, preamble, source, errors, tips, map }
 }
 
-function mapLines(oldMap: RawSourceMap, newMap: RawSourceMap): RawSourceMap {
+function mapLines(
+  oldMap: EncodedSourceMap,
+  newMap: EncodedSourceMap
+): EncodedSourceMap {
   if (!oldMap) return newMap
   if (!newMap) return oldMap
 
-  const oldMapConsumer = new SourceMapConsumer(oldMap)
-  const newMapConsumer = new SourceMapConsumer(newMap)
-  const mergedMapGenerator = new SourceMapGenerator()
+  const oldMapConsumer = new TraceMap(oldMap)
+  const newMapConsumer = new TraceMap(newMap)
+  const mergedMapGenerator = new GenMapping({
+    sourceRoot: oldMap.sourceRoot,
+    file: oldMap.file
+  })
 
-  newMapConsumer.eachMapping(m => {
+  eachMapping(newMapConsumer, m => {
     if (m.originalLine == null) {
       return
     }
 
-    const origPosInOldMap = oldMapConsumer.originalPositionFor({
+    const origPosInOldMap = originalPositionFor(oldMapConsumer, {
       line: m.originalLine,
       column: m.originalColumn
     })
@@ -263,7 +281,7 @@ function mapLines(oldMap: RawSourceMap, newMap: RawSourceMap): RawSourceMap {
       return
     }
 
-    mergedMapGenerator.addMapping({
+    addMapping(mergedMapGenerator, {
       generated: {
         line: m.generatedLine,
         column: m.generatedColumn
@@ -275,31 +293,29 @@ function mapLines(oldMap: RawSourceMap, newMap: RawSourceMap): RawSourceMap {
         column: m.originalColumn
       },
       source: origPosInOldMap.source,
-      name: origPosInOldMap.name
+      name: origPosInOldMap.name! // NOTE: name accepts string | null | undefined
     })
   })
 
-  // source-map's type definition is incomplete
-  const generator = mergedMapGenerator as any
-  ;(oldMapConsumer as any).sources.forEach((sourceFile: string) => {
-    generator._sources.add(sourceFile)
-    const sourceContent = oldMapConsumer.sourceContentFor(sourceFile)
+  oldMapConsumer.sources.forEach(sourceFile => {
+    if (!sourceFile) return
+    const sourceContent = sourceContentFor(oldMapConsumer, sourceFile)
     if (sourceContent != null) {
-      mergedMapGenerator.setSourceContent(sourceFile, sourceContent)
+      setSourceContent(mergedMapGenerator, sourceFile, sourceContent)
     }
   })
 
-  generator._sourceRoot = oldMap.sourceRoot
-  generator._file = oldMap.file
-  return generator.toJSON()
+  return toEncodedMap(mergedMapGenerator)
 }
 
 function patchErrors(
   errors: CompilerError[],
   source: string,
-  inMap: RawSourceMap
+  inMap: EncodedSourceMap
 ) {
   const originalSource = inMap.sourcesContent![0]
+  if (originalSource === null) return
+
   const offset = originalSource.indexOf(source)
   const lineOffset = originalSource.slice(0, offset).split(/\r?\n/).length - 1
   errors.forEach(err => {

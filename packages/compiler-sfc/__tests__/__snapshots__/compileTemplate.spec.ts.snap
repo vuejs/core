@@ -60,10 +60,12 @@ export function ssrRender(_ctx, _push, _parent, _attrs) {
 
 exports[`source map 1`] = `
 Object {
+  "file": undefined,
   "mappings": ";;;wBACE,oBAA8B;IAAzB,oBAAmB,4BAAbA,WAAM",
   "names": Array [
     "render",
   ],
+  "sourceRoot": undefined,
   "sources": Array [
     "example.vue",
   ],

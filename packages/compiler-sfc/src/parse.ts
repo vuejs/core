@@ -7,7 +7,13 @@ import {
   BindingMetadata
 } from '@vue/compiler-core'
 import * as CompilerDOM from '@vue/compiler-dom'
-import { RawSourceMap, SourceMapGenerator } from 'source-map'
+import {
+  addMapping,
+  EncodedSourceMap,
+  GenMapping,
+  setSourceContent,
+  toEncodedMap
+} from '@jridgewell/gen-mapping'
 import { TemplateCompiler } from './compileTemplate'
 import { parseCssVars } from './cssVars'
 import { createCache } from './cache'
@@ -29,7 +35,7 @@ export interface SFCBlock {
   content: string
   attrs: Record<string, string | true>
   loc: SourceLocation
-  map?: RawSourceMap
+  map?: EncodedSourceMap
   lang?: string
   src?: string
 }
@@ -363,19 +369,19 @@ function generateSourceMap(
   generated: string,
   sourceRoot: string,
   lineOffset: number
-): RawSourceMap {
-  const map = new SourceMapGenerator({
+): EncodedSourceMap {
+  const map = new GenMapping({
     file: filename.replace(/\\/g, '/'),
     sourceRoot: sourceRoot.replace(/\\/g, '/')
   })
-  map.setSourceContent(filename, source)
+  setSourceContent(map, filename, source)
   generated.split(splitRE).forEach((line, index) => {
     if (!emptyRE.test(line)) {
       const originalLine = index + 1 + lineOffset
       const generatedLine = index + 1
       for (let i = 0; i < line.length; i++) {
         if (!/\s/.test(line[i])) {
-          map.addMapping({
+          addMapping(map, {
             source: filename,
             original: {
               line: originalLine,
@@ -390,7 +396,7 @@ function generateSourceMap(
       }
     }
   })
-  return JSON.parse(map.toString())
+  return toEncodedMap(map)
 }
 
 function padContent(
