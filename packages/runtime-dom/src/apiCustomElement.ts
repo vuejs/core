@@ -198,6 +198,13 @@ export class VueElement extends BaseClass {
    */
   private _resolveDef() {
     if (this._resolved) {
+      //#6934 if you use Both of KeepAlive and CustemElement,
+      //CustemElement will not recreate,so the property of 
+      //"_resolved" would be "true",it means that should update it
+      if (this._resolved) {
+        this._applyStyles(this._def.styles)
+        this._update()
+      }
       return
     }
     this._resolved = true
