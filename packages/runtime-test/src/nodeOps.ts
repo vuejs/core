@@ -18,11 +18,15 @@ export const enum NodeOpTypes {
 export interface TestElement {
   id: number
   type: NodeTypes.ELEMENT
+  nodeType: number | null
   parentNode: TestElement | null
   tag: string
+  tagName: string
   children: TestNode[]
   props: Record<string, any>
-  eventListeners: Record<string, Function | Function[]> | null
+  eventListeners: Record<string, Function | Function[]> | null,
+  hasChildNodes(): boolean,
+  get firstChild(): TestNode | null
 }
 
 export interface TestText {
@@ -75,11 +79,19 @@ function createElement(tag: string): TestElement {
   const node: TestElement = {
     id: nodeId++,
     type: NodeTypes.ELEMENT,
+    nodeType: null,
     tag,
+    tagName: tag,
     children: [],
     props: {},
     parentNode: null,
-    eventListeners: null
+    eventListeners: null,
+    hasChildNodes() {
+      return this.children.length > 0
+    },
+    get firstChild() {
+      return this.children[0] || null
+    },
   }
   logNodeOp({
     type: NodeOpTypes.CREATE,

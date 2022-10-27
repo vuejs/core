@@ -307,7 +307,7 @@ export function createHydrationFunctions(
     optimized: boolean
   ) => {
     optimized = optimized || !!vnode.dynamicChildren
-    const { type, props, patchFlag, shapeFlag, dirs } = vnode
+    const { type, props, patchFlag, shapeFlag, transition, dirs } = vnode
     // #4006 for form elements with non-string v-model value bindings
     // e.g. <option :value="obj">, <input type="checkbox" :true-value="1">
     const forcePatchValue = (type === 'input' && dirs) || type === 'option'
@@ -362,9 +362,23 @@ export function createHydrationFunctions(
       if (dirs) {
         invokeDirectiveHook(vnode, null, parentComponent, 'beforeMount')
       }
-      if ((vnodeHooks = props && props.onVnodeMounted) || dirs) {
+      // #6951 Copied from https://github.com/vuejs/core/blob/aa70188c41fab1a4139748dd7b7c71532d063f3a/packages/runtime-core/src/renderer.ts#L698-L706
+      const needCallTransitionHooks =
+        (!parentSuspense ||
+          (parentSuspense && !parentSuspense.pendingBranch)) &&
+        transition &&
+        !transition.persisted
+      if (needCallTransitionHooks) {
+        transition!.beforeEnter(el)
+      }
+      if (
+        (vnodeHooks = props && props.onVnodeMounted) ||
+        needCallTransitionHooks ||
+        dirs
+      ) {
         queueEffectWithSuspense(() => {
           vnodeHooks && invokeVNodeHook(vnodeHooks, parentComponent, vnode)
+          needCallTransitionHooks && transition!.enter(el)
           dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
         }, parentSuspense)
       }

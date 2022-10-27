@@ -2,7 +2,8 @@ import {
   createRenderer,
   VNode,
   RootRenderFunction,
-  CreateAppFunction
+  CreateAppFunction,
+  createHydrationRenderer
 } from '@vue/runtime-core'
 import { nodeOps, TestElement } from './nodeOps'
 import { patchProp } from './patchProp'
@@ -11,6 +12,9 @@ import { extend } from '@vue/shared'
 
 const { render: baseRender, createApp: baseCreateApp } = createRenderer(
   extend({ patchProp }, nodeOps)
+)
+export const { hydrate } = createHydrationRenderer(
+  extend({ patchProp }, nodeOps) as any
 )
 
 export const render = baseRender as RootRenderFunction<TestElement>

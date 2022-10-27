@@ -10,16 +10,19 @@ import {
   serialize,
   VNodeProps,
   KeepAlive,
-  TestElement
+  TestElement,
+  hydrate,
 } from '@vue/runtime-test'
 
 function mount(
   props: BaseTransitionProps,
   slot: () => any,
-  withKeepAlive = false
+  withKeepAlive = false,
+  root = nodeOps.createElement('div'),
+  isHydrate = false
 ) {
-  const root = nodeOps.createElement('div')
-  render(
+  const func: any = isHydrate ? hydrate : render
+  func(
     h(BaseTransition, props, () => {
       return withKeepAlive ? h(KeepAlive, null, slot()) : slot()
     }),
@@ -143,6 +146,31 @@ describe('BaseTransition', () => {
       appear: true
     })
     mount(props, () => h('div'))
+    expect(props.onBeforeAppear).toHaveBeenCalledTimes(1)
+    expect(props.onAppear).toHaveBeenCalledTimes(1)
+    expect(props.onAfterAppear).not.toHaveBeenCalled()
+
+    // enter should not be called
+    expect(props.onBeforeEnter).not.toHaveBeenCalled()
+    expect(props.onEnter).not.toHaveBeenCalled()
+    expect(props.onAfterEnter).not.toHaveBeenCalled()
+
+    cbs.doneEnter[`<div></div>`]()
+    expect(props.onAfterAppear).toHaveBeenCalledTimes(1)
+    expect(props.onAfterEnter).not.toHaveBeenCalled()
+  })
+
+  test('hydration w/ appear: true w/ appear hooks', () => {
+    const { props, cbs } = mockProps({
+      appear: true
+    })
+    const root = nodeOps.createElement('div')
+    const child = nodeOps.createElement('div')
+    root.nodeType = 1
+    child.nodeType = 1
+    child.parentNode = root
+    root.children.push(child)
+    mount(props, () => h('div'), false, root, true)
     expect(props.onBeforeAppear).toHaveBeenCalledTimes(1)
     expect(props.onAppear).toHaveBeenCalledTimes(1)
     expect(props.onAfterAppear).not.toHaveBeenCalled()
