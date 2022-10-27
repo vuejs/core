@@ -501,7 +501,8 @@ export function buildProps(
           !__BROWSER__ &&
           value &&
           context.inline &&
-          context.bindingMetadata[value.content]
+          context.bindingMetadata[value.content] &&
+          context.bindingMetadata[value.content] !== 'props'
         ) {
           isStatic = false
           properties.push(
