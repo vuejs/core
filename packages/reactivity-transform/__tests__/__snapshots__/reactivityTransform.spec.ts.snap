@@ -18,11 +18,22 @@ exports[`$$ 1`] = `
 "import { ref as _ref } from 'vue'
 
     let a = _ref(1)
-    let count = 0
     const b = a
     const c = { a }
-    (count++,count)
     callExternal(a)
+    "
+`;
+
+exports[`$$ with some edge cases 1`] = `
+"import { ref as _ref } from 'vue'
+
+    let a = _ref(1)
+    const af=()=>{}
+    console.log(a)
+    ;(count++,count)
+    let r1 = (count++,count)
+    let r2 = _ref(af((count++,count)))
+    let r3 = { a:(count++,count) }
     "
 `;
 

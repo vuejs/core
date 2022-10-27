@@ -556,8 +556,17 @@ export function transformAST(
   function unwrapMacro(node: CallExpression) {
     const argsLength = node.arguments.length
     if (argsLength > 1) {
-      // some edge cases
+      // handle some edge cases
       s.remove(node.callee.start! + offset, node.callee.end! + offset)
+      // resolve nested
+      let i = parentStack.length - 1
+      while (i >= 0) {
+        if (parentStack[i].type === 'VariableDeclarator') {
+          return
+        }
+        i--
+      }
+      s.appendLeft(node.callee.start! + offset, ';')
     } else if (argsLength) {
       // remove macro $( and $$(
       s.remove(node.callee.start! + offset, node.arguments[0].start! + offset)

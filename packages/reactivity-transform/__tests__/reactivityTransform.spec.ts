@@ -295,16 +295,31 @@ test('nested destructure', () => {
 test('$$', () => {
   const { code } = transform(`
     let a = $ref(1)
-    let count = 0
     const b = $$(a)
     const c = $$({ a })
-    $$(count++,count)
     callExternal($$(a))
     `)
   expect(code).toMatch(`const b = a`)
   expect(code).toMatch(`const c = { a }`)
   expect(code).toMatch(`callExternal(a)`)
-  expect(code).toMatch(`(count++,count)`)
+  assertCode(code)
+})
+
+test('$$ with some edge cases',()=>{
+  const { code } = transform(`
+    let a = $ref(1)
+    const af=()=>{}
+    console.log($$(a))
+    $$(count++,count)
+    let r1 = $$(count++,count)
+    let r2 = $ref(af($$(count++,count)))
+    let r3 = { a:$$(count++,count) }
+    `)
+  console.log(code)
+  expect(code).toMatch(`;(count++,count)`)
+  expect(code).toMatch(`let r1 = (count++,count)`)
+  expect(code).toMatch(`let r2 = _ref(af((count++,count)))`)
+  expect(code).toMatch(`let r3 = { a:(count++,count) }`)
   assertCode(code)
 })
 
