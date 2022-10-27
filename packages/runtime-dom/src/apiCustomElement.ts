@@ -28,6 +28,23 @@ export type VueElementConstructor<P = {}> = {
   new (initialProps?: Record<string, any>): VueElement & P
 }
 
+const cacheCustomElement = new WeakMap()
+//HMR: if you use "define" before update.
+//After HMR, "define" will be re-run.
+//But the same "customElement" has been
+//registered before update,it could be 
+//trigger an error by DOM.
+const hasDefined = new Array()  
+const rawDefine = window.customElements.define
+const wrapperDefine: typeof rawDefine = function(name, ...args){
+  if(hasDefined.includes(name)){
+     return 
+  }
+  hasDefined.push(name)
+  return rawDefine.call(window.customElements, name , ...args)
+}
+window.customElements.define = wrapperDefine
+
 // defineCustomElement provides the same type inference as defineComponent
 // so most of the following overloads should be kept in sync w/ defineComponent.
 
@@ -114,22 +131,6 @@ export function defineCustomElement<
   > & { styles?: string[] }
 ): VueElementConstructor<ExtractPropTypes<PropsOptions>>
 
-const cacheCustomElement = new WeakMap()
-//HMR: if you use "define" before update.
-//After HMR, "define" will be re-run.
-//But the same "customElement" has been
-//registered before update,it could be 
-//trigger an error by DOM.
-const hasDefined = new Array()  
-const rawDefine = window.customElements.define
-const wrapperDefine: typeof rawDefine = function(name, ...args){
-  if(hasDefined.includes(name)){
-     return 
-  }
-  hasDefined.push(name)
-  return rawDefine.call(window.customElements, name , ...args)
-}
-window.customElements.define = wrapperDefine
 // overload 5: defining a custom element from the returned value of
 // `defineComponent`
 export function defineCustomElement(options: {
