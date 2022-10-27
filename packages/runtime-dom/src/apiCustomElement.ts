@@ -28,7 +28,6 @@ export type VueElementConstructor<P = {}> = {
   new (initialProps?: Record<string, any>): VueElement & P
 }
 const win = (typeof window !== 'undefined' ? window : null) as Window
-const cacheCustomElement = new WeakMap()
 //HMR: if you use "define" before update.
 //After HMR, "define" will be re-run.
 //But the same "customElement" has been
@@ -144,9 +143,6 @@ export function defineCustomElement(
   options: any,
   hydrate?: RootHydrateFunction
 ): VueElementConstructor {
-  if(cacheCustomElement.has(options)){
-    return cacheCustomElement.get(options)
-  }
   const Comp = defineComponent(options as any)
   class VueCustomElement extends VueElement {
     static def = Comp
@@ -154,7 +150,7 @@ export function defineCustomElement(
       super(Comp, initialProps, hydrate)
     }
   }
-  cacheCustomElement.set(options, VueCustomElement)
+  
   return VueCustomElement
 }
 
