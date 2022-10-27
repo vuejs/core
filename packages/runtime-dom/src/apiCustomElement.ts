@@ -34,15 +34,15 @@ const cacheCustomElement = new WeakMap()
 //But the same "customElement" has been
 //registered before update,it could be 
 //trigger an error by DOM.
-if(window){
+if(custemElements){
   const hasDefined = new Array()
-  const rawDefine = window.customElements.define
+  const rawDefine = customElements.define
   const wrapperDefine: typeof rawDefine = function(name, ...args){
     if(hasDefined.includes(name)){
       return 
     }
     hasDefined.push(name)
-    return rawDefine.call(window.customElements, name , ...args)
+    return rawDefine.call(customElements, name , ...args)
   }
   window.customElements.define = wrapperDefine
 }
