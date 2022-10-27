@@ -189,6 +189,7 @@ export class VueElement extends BaseClass {
       if (!this._connected) {
         render(null, this.shadowRoot!)
         this._instance = null
+        this._resolved = false
       }
     })
   }
