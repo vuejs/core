@@ -284,7 +284,7 @@ export function transformAST(
     if (method === convertSymbol) {
       // $
       // remove macro
-      s.remove(call.callee.start! + offset, call.callee.end! + offset)
+      unwrapMacro(call)
       if (id.type === 'Identifier') {
         // single variable
         registerRefBinding(id)
@@ -550,6 +550,22 @@ export function transformAST(
     }
   }
 
+  /**
+   * unwrap the code form the macro($、$$), fix #6312 and keep the ideally behavior with the RFC#369
+   */
+  function unwrapMacro(node: CallExpression) {
+    const argsLength = node.arguments.length
+    if (argsLength > 1) {
+      // some edge cases
+      s.remove(node.callee.start! + offset, node.callee.end! + offset)
+    } else if (argsLength) {
+      // remove macro $( and $$(
+      s.remove(node.callee.start! + offset, node.arguments[0].start! + offset)
+      // remove the end of macro
+      s.remove(node.arguments[argsLength - 1].end! + offset, node.end! + offset)
+    }
+  }
+
   // check root scope first
   walkScope(ast, true)
   ;(walk as any)(ast, {
@@ -623,7 +639,7 @@ export function transformAST(
         }
 
         if (callee === escapeSymbol) {
-          s.remove(node.callee.start! + offset, node.callee.end! + offset)
+          unwrapMacro(node)
           escapeScope = node
         }
 

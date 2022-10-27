@@ -7,11 +7,11 @@ export default {
   setup(__props, { expose }) {
   expose();
 
-    let foo = (ref())
-    let a = (ref(1))
-    let b = (shallowRef({
+    let foo = ref()
+    let a = ref(1)
+    let b = shallowRef({
       count: 0
-    }))
+    })
     let c = () => {}
     let d
     
@@ -65,7 +65,7 @@ exports[`sfc ref transform usage in normal <script> 1`] = `
       setup() {
         let count = _ref(0)
         const inc = () => count.value++
-        return ({ count })
+        return { count }
       }
     }
     "

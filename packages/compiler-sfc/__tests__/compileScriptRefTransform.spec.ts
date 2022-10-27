@@ -22,12 +22,12 @@ describe('sfc ref transform', () => {
     expect(content).not.toMatch(`$(ref())`)
     expect(content).not.toMatch(`$(ref(1))`)
     expect(content).not.toMatch(`$(shallowRef({`)
-    expect(content).toMatch(`let foo = (ref())`)
-    expect(content).toMatch(`let a = (ref(1))`)
+    expect(content).toMatch(`let foo = ref()`)
+    expect(content).toMatch(`let a = ref(1)`)
     expect(content).toMatch(`
-    let b = (shallowRef({
+    let b = shallowRef({
       count: 0
-    }))
+    })
     `)
     // normal declarations left untouched
     expect(content).toMatch(`let c = () => {}`)
@@ -95,7 +95,7 @@ describe('sfc ref transform', () => {
     expect(content).toMatch(`import { ref as _ref } from 'vue'`)
     expect(content).toMatch(`let count = _ref(0)`)
     expect(content).toMatch(`count.value++`)
-    expect(content).toMatch(`return ({ count })`)
+    expect(content).toMatch(`return { count }`)
     assertCode(content)
   })
 

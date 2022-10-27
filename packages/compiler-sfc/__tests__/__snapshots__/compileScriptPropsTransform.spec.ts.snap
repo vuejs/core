@@ -10,9 +10,9 @@ const __props_bar = _toRef(__props, 'bar')
 const __props_foo = _toRef(__props, 'foo')
 
       
-      console.log((__props_foo))
-      console.log((__props_bar))
-      ({ foo: __props_foo, baz: __props_bar })
+      console.log(__props_foo)
+      console.log(__props_bar)
+      console.log({ foo: __props_foo, baz: __props_bar })
       
 return () => {}
 }

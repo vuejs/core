@@ -30,17 +30,17 @@ test('$ unwrapping', () => {
   expect(code).not.toMatch(`$(ref())`)
   expect(code).not.toMatch(`$(ref(1))`)
   expect(code).not.toMatch(`$(shallowRef({`)
-  expect(code).toMatch(`let foo = (ref())`)
-  expect(code).toMatch(`export let a = (ref(1))`)
+  expect(code).toMatch(`let foo = ref()`)
+  expect(code).toMatch(`export let a = ref(1)`)
   expect(code).toMatch(`
-    let b = (shallowRef({
+    let b = shallowRef({
       count: 0
-    }))
+    })
     `)
   // normal declarations left untouched
   expect(code).toMatch(`let c = () => {}`)
   expect(code).toMatch(`let d`)
-  expect(code).toMatch(`label: var e = (ref())`)
+  expect(code).toMatch(`label: var e = ref()`)
   expect(rootRefs).toStrictEqual(['foo', 'a', 'b', 'e'])
   assertCode(code)
 })
@@ -295,13 +295,16 @@ test('nested destructure', () => {
 test('$$', () => {
   const { code } = transform(`
     let a = $ref(1)
+    let count = 0
     const b = $$(a)
     const c = $$({ a })
+    $$(count++,count)
     callExternal($$(a))
     `)
-  expect(code).toMatch(`const b = (a)`)
-  expect(code).toMatch(`const c = ({ a })`)
-  expect(code).toMatch(`callExternal((a))`)
+  expect(code).toMatch(`const b = a`)
+  expect(code).toMatch(`const c = { a }`)
+  expect(code).toMatch(`callExternal(a)`)
+  expect(code).toMatch(`(count++,count)`)
   assertCode(code)
 })
 
@@ -358,7 +361,7 @@ test('nested scopes', () => {
   // inner bar shadowed by function declaration
   expect(code).toMatch(`bar() // inner bar`)
 
-  expect(code).toMatch(`return ({ a, b, c, d })`)
+  expect(code).toMatch(`return { a, b, c, d }`)
   assertCode(code)
 })
 
@@ -412,7 +415,7 @@ test('macro import alias and removal', () => {
   // should remove imports
   expect(code).not.toMatch(`from 'vue/macros'`)
   expect(code).toMatch(`let a = _ref(1)`)
-  expect(code).toMatch(`const __$temp_1 = (useMouse())`)
+  expect(code).toMatch(`const __$temp_1 = useMouse()`)
   assertCode(code)
 })
 
