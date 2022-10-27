@@ -385,7 +385,7 @@ describe('component: emit', () => {
     expect(fn2).toHaveBeenCalledTimes(1)
     expect(fn2).toHaveBeenCalledWith(1)
   })
-  
+
   test('only trim string parameter when work with v-model on component', () => {
     const Foo = defineComponent({
       render() {},
