@@ -121,15 +121,15 @@ const cacheCustomElement = new WeakMap()
 //registered before update,it could be 
 //trigger an error by DOM.
 const hasDefined = new Array()  
-const beforeDefine = window.customElements.define
-window.customElements.define = function(name, ...args){
+const rawDefine = window.customElements.define
+const wrapperDefine: typeof rawDefine = function(name, ...args){
   if(hasDefined.includes(name)){
      return 
   }
   hasDefined.push(name)
-  return beforeDefine.call(window.customElements, name , ...args)
+  return rawDefine.call(window.customElements, name , ...args)
 }
-
+window.customElements.define = wrapperDefine
 // overload 5: defining a custom element from the returned value of
 // `defineComponent`
 export function defineCustomElement(options: {
