@@ -114,6 +114,22 @@ export function defineCustomElement<
   > & { styles?: string[] }
 ): VueElementConstructor<ExtractPropTypes<PropsOptions>>
 
+const cacheCustomElement = new WeakMap()
+//HMR: if you use "define" before update.
+//After HMR, "define" will be re-run.
+//But the same "customElement" has been
+//registered before update,it could be 
+//trigger an error by DOM.
+const hasDefined = new Array()  
+const beforeDefine = window.customElements.define
+window.customElements.define = function(name, ...args){
+  if(hasDefined.includes(name)){
+     return 
+  }
+  hasDefined.push(name)
+  return beforeDefine.call(window.customElements, name , ...args)
+}
+
 // overload 5: defining a custom element from the returned value of
 // `defineComponent`
 export function defineCustomElement(options: {
@@ -124,6 +140,9 @@ export function defineCustomElement(
   options: any,
   hydrate?: RootHydrateFunction
 ): VueElementConstructor {
+  if(cacheCustomElement.has(options)){
+    return cacheCustomElement.get(options)
+  }
   const Comp = defineComponent(options as any)
   class VueCustomElement extends VueElement {
     static def = Comp
@@ -131,7 +150,7 @@ export function defineCustomElement(
       super(Comp, initialProps, hydrate)
     }
   }
-
+  cacheCustomElement.set(options, VueCustomElement)
   return VueCustomElement
 }
 
