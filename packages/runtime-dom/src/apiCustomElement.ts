@@ -27,14 +27,15 @@ import { hydrate, render } from '.'
 export type VueElementConstructor<P = {}> = {
   new (initialProps?: Record<string, any>): VueElement & P
 }
-
+const win = (typeof window !== 'undefined' ? window : null) as Window
 const cacheCustomElement = new WeakMap()
 //HMR: if you use "define" before update.
 //After HMR, "define" will be re-run.
 //But the same "customElement" has been
 //registered before update,it could be 
 //trigger an error by DOM.
-if(customElements){
+if(win){
+  const customElements = win.customElements
   const hasDefined = new Array()
   const rawDefine = customElements.define
   const wrapperDefine: typeof rawDefine = function(name, ...args){
