@@ -27,11 +27,11 @@ exports[`$$ 1`] = `
 exports[`$$ with some edge cases 1`] = `
 "import { ref as _ref } from 'vue'
 
-    a
+    count
     console.log(a)
     ;(a,b)
     ;(a,b)
-    count = (a++,b)
+    count = ( a++ ,b)
     count = ()=>(a++,b)
     let r1 = _ref(a, (a++,b))
     let r2 = { a:(a++,b),b:a }

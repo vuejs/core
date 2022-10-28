@@ -561,19 +561,25 @@ export function transformAST(
 
     if (argsLength === 1) {
       const bracketEnd = node.arguments[argsLength - 1].end! + offset
-
       // remove brackets of macros
-      s.remove(bracketStart, bracketStart + 1)
-      s.remove(bracketEnd, bracketEnd + 1)
+      if (node.arguments[0].type === 'SequenceExpression') {
+        // fix $$((a,b))
+        s.remove(bracketStart, bracketStart + 1)
+        s.remove(bracketEnd, bracketEnd + 1)
+      } else {
+        // fix space place
+        s.remove(node.start! + offset, node.arguments[0].start! + offset)
+        s.remove(bracketEnd, node.end! + offset)
+      }
 
       // avoid traversal of like `$$(a)`
-      if(node.arguments[0].type!=="CallExpression"){
-        return;
+      if (node.arguments[0].type !== 'CallExpression') {
+        return
       }
     }
 
     // avoid invalid traversal for $
-    if (!escapeScope|| node.extra) {
+    if (!escapeScope || node.extra) {
       return
     }
 
@@ -584,22 +590,13 @@ export function transformAST(
       const curParent = parentStack[i--]
       if (
         curParent.type === 'ExpressionStatement' &&
-        isIsolateExpression(curParent.expression, node)
+        isIsolateExpression(curParent.expression, node, escapeSymbol)
       ) {
         // split the unwrapped code `()()` to `();()`
         s.appendLeft(node.callee.start! + offset, ';')
         return
       }
     }
-  }
-
-  function isIsolateExpression(expression: Expression, node: CallExpression) {
-    return (
-      expression.type === 'CallExpression' &&
-      expression.callee.type === 'Identifier' &&
-      expression.callee.name === escapeSymbol &&
-      !expression.arguments.includes(node)
-    )
   }
 
   // check root scope first
@@ -715,6 +712,19 @@ export function transformAST(
     rootRefs: Object.keys(rootScope).filter(key => rootScope[key] === true),
     importedHelpers: [...importedHelpers]
   }
+}
+
+function isIsolateExpression(
+  expression: Expression,
+  node: CallExpression,
+  escapeSymbol: string
+) {
+  return (
+    expression.type === 'CallExpression' &&
+    expression.callee.type === 'Identifier' &&
+    expression.callee.name === escapeSymbol &&
+    !expression.arguments.includes(node)
+  )
 }
 
 const RFC_LINK = `https://github.com/vuejs/rfcs/discussions/369`

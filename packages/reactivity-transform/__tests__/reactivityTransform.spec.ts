@@ -307,14 +307,14 @@ test('$$', () => {
 
 test('$$ with some edge cases',()=>{
   const { code } = transform(`
-    $$(a)
+    $$ (count )
     console.log($$($$(a)))
     $$(a,b)
     $$($$((a,b)))
-    count = $$(a++,b)
+    count = $$( a++ ,b)
     count = ()=>$$(a++,b)
     let r1 = $ref(a, $$(a++,b))
-    let r2 = { a:$$(a++,b),b:$$(a) }
+    let r2 = { a:$$(a++,b),b:$$ (a) }
     switch(c){
       case d:
         $$(a)
@@ -326,7 +326,7 @@ test('$$ with some edge cases',()=>{
   expect(code).toMatch(`((count++,count,(count,a)))`)
   expect(code).toMatch(`;(a,b)`)
   expect(code).toMatch(`log(a)`)
-  expect(code).toMatch(`count = (a++,b)`)
+  expect(code).toMatch(`count = ( a++ ,b)`)
   expect(code).toMatch(`()=>(a++,b)`)
   expect(code).toMatch(`_ref(a, (a++,b))`)
   expect(code).toMatch(`{ a:(a++,b),b:a }`)
