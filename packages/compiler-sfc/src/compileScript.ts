@@ -271,6 +271,7 @@ export function compileScript(
   // metadata that needs to be returned
   const bindingMetadata: BindingMetadata = {}
   const helperImports: Set<string> = new Set()
+  const componentImports: Set<string> = new Set()
   const userImports: Record<string, ImportBinding> = Object.create(null)
   const userImportAlias: Record<string, string> = Object.create(null)
   const scriptBindings: Record<string, BindingTypes> = Object.create(null)
@@ -364,6 +365,9 @@ export function compileScript(
   ) {
     if (source === 'vue' && imported) {
       userImportAlias[imported] = local
+    }
+    if (source.endsWith('.vue')) {
+      componentImports.add(local)
     }
 
     // template usage check is only needed in non-inline mode, so we can skip
@@ -1565,6 +1569,10 @@ export function compileScript(
     runtimeOptions += `\n  props: ${declCode},`
   } else if (propsTypeDecl) {
     runtimeOptions += genRuntimeProps(typeDeclaredProps)
+  }
+  if (componentImports.size) {
+    const components = Array.from(componentImports).join(", ")
+    runtimeOptions += `\n  components: { ${components} },`
   }
   if (emitsRuntimeDecl) {
     runtimeOptions += `\n  emits: ${scriptSetup.content

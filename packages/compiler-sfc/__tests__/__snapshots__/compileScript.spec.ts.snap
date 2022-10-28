@@ -606,6 +606,22 @@ return { foo, bar, baz, y, z }
 }"
 `;
 
+exports[`SFC compile <script setup> component imports 1`] = `
+"import SubComponent from \\"subcomponent.vue\\"
+      import OtherComponent from \\"OtherComponent.vue\\"
+      
+export default {
+  components: { SubComponent, OtherComponent },
+  setup(__props, { expose }) {
+  expose();
+
+      
+return { SubComponent, OtherComponent }
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> defineEmits() 1`] = `
 "export default {
   emits: ['foo', 'bar'],
@@ -965,6 +981,7 @@ import { ref } from 'vue'
         import * as tree from './tree'
         
 export default {
+  components: { Foo, bar },
   setup(__props) {
 
         const count = ref(0)
@@ -998,6 +1015,7 @@ import ChildComp from './Child.vue'
         import vMyDir from './my-dir'
         
 export default {
+  components: { ChildComp, SomeOtherComp },
   setup(__props) {
 
         

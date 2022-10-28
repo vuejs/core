@@ -129,7 +129,7 @@ function reload(id: string, newComp: HMRComponent) {
     if (instance.ceReload) {
       // custom element
       hmrDirtyComponents.add(oldComp)
-      instance.ceReload((newComp as any).styles)
+      instance.ceReload(newComp)
       hmrDirtyComponents.delete(oldComp)
     } else if (instance.parent) {
       // 4. Force the parent instance to re-render. This will cause all updated
@@ -142,7 +142,7 @@ function reload(id: string, newComp: HMRComponent) {
         (instance.parent.type as ComponentOptions).__asyncLoader &&
         instance.parent.ceReload
       ) {
-        instance.parent.ceReload((newComp as any).styles)
+        instance.parent.ceReload(newComp)
       }
     } else if (instance.appContext.reload) {
       // root instance mounted via createApp() has a reload method
