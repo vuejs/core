@@ -555,33 +555,51 @@ export function transformAST(
    */
   function unwrapMacro(node: CallExpression) {
     const argsLength = node.arguments.length
-    s.remove(node.callee.start! + offset, node.callee.end! + offset)
-    if (!argsLength) {
-      return
-    } else if (argsLength === 1) {
-      // remove brackets of macro
-      s.remove(node.callee.end! + offset, node.arguments[0].start! + offset)
-      s.remove(node.arguments[argsLength - 1].end! + offset, node.end! + offset)
-    } else {
-      // handle some edge cases for macro $$
-      // resolve nested
-      let i = parentStack.length - 1
-      while (i >= 0) {
-        const curParent = parentStack[i--]
-        // see @__tests__:$$ with some edge cases
-        if (
-          curParent.type === 'VariableDeclarator' ||
-          curParent.type === 'AssignmentExpression' ||
-          (curParent.type === 'ExpressionStatement' &&
-            (curParent.expression.extra ||
-              (curParent.expression.type === 'CallExpression' &&
-                curParent.expression.arguments.includes(node))))
-        ) {
-          return
-        }
+    const bracketStart = node.callee.end! + offset
+
+    s.remove(node.callee.start! + offset, bracketStart)
+
+    if (argsLength === 1) {
+      const bracketEnd = node.arguments[argsLength - 1].end! + offset
+
+      // remove brackets of macros
+      s.remove(bracketStart, bracketStart + 1)
+      s.remove(bracketEnd, bracketEnd + 1)
+
+      // avoid traversal of like `$$(a)`
+      if(node.arguments[0].type!=="CallExpression"){
+        return;
       }
-      s.appendLeft(node.callee.start! + offset, ';')
     }
+
+    // avoid invalid traversal for $
+    if (!escapeScope|| node.extra) {
+      return
+    }
+
+    // fix some edge cases for macro $$, eg. $$(a,b)
+    // resolve nested
+    let i = parentStack.length - 1
+    while (i >= 0) {
+      const curParent = parentStack[i--]
+      if (
+        curParent.type === 'ExpressionStatement' &&
+        isIsolateExpression(curParent.expression, node)
+      ) {
+        // split the unwrapped code `()()` to `();()`
+        s.appendLeft(node.callee.start! + offset, ';')
+        return
+      }
+    }
+  }
+
+  function isIsolateExpression(expression: Expression, node: CallExpression) {
+    return (
+      expression.type === 'CallExpression' &&
+      expression.callee.type === 'Identifier' &&
+      expression.callee.name === escapeSymbol &&
+      !expression.arguments.includes(node)
+    )
   }
 
   // check root scope first
@@ -657,8 +675,8 @@ export function transformAST(
         }
 
         if (callee === escapeSymbol) {
-          unwrapMacro(node)
           escapeScope = node
+          unwrapMacro(node)
         }
 
         // TODO remove when out of experimental

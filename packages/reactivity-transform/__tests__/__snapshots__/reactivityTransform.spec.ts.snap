@@ -27,17 +27,21 @@ exports[`$$ 1`] = `
 exports[`$$ with some edge cases 1`] = `
 "import { ref as _ref } from 'vue'
 
-    let a = _ref(1), e = _ref()
-    ()
-    ;(count++,count)
-    ((count++,count))
-    count = (count++,count)
-    count = ()=>(count++,count)
-    const af=()=>((count++,count))
-    let c = _ref(a.value, (count++,count))
-    let r1 = (count++,count)
-    let r2 = _ref(af((count++,count)))
-    let r3 = { a:(count++,count) }
+    a
+    console.log(a)
+    ;(a,b)
+    ;(a,b)
+    count = (a++,b)
+    count = ()=>(a++,b)
+    let r1 = _ref(a, (a++,b))
+    let r2 = { a:(a++,b),b:a }
+    switch(c){
+      case d:
+        a
+        ;(h,f)
+        break
+    }
+    ((count++,count,(count,a)))
     "
 `;
 

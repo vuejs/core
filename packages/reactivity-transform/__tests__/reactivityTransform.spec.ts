@@ -307,26 +307,31 @@ test('$$', () => {
 
 test('$$ with some edge cases',()=>{
   const { code } = transform(`
-    let a = $ref(1), e = $ref()
-    $$()
-    $$(count++,count)
-    ($$(count++,count))
-    count = $$(count++,count)
-    count = ()=>$$(count++,count)
-    const af=()=>($$(count++,count))
-    let c = $ref(a, $$(count++,count))
-    let r1 = $$(count++,count)
-    let r2 = $ref(af($$(count++,count)))
-    let r3 = { a:$$(count++,count) }
+    $$(a)
+    console.log($$($$(a)))
+    $$(a,b)
+    $$($$((a,b)))
+    count = $$(a++,b)
+    count = ()=>$$(a++,b)
+    let r1 = $ref(a, $$(a++,b))
+    let r2 = { a:$$(a++,b),b:$$(a) }
+    switch(c){
+      case d:
+        $$(a)
+        $$($$(h,f))
+        break
+    }
+    ($$(count++,$$(count),$$(count,a)))
     `)
-  expect(code).toMatch(`;(count++,count)`)
-  expect(code).toMatch(`((count++,count))`)
-  expect(code).toMatch(`count = (count++,count)`)
-  expect(code).toMatch(`()=>(count++,count)`)
-  expect(code).toMatch(`()=>((count++,count))`)
-  expect(code).toMatch(`let r1 = (count++,count)`)
-  expect(code).toMatch(`let r2 = _ref(af((count++,count)))`)
-  expect(code).toMatch(`let r3 = { a:(count++,count) }`)
+  expect(code).toMatch(`((count++,count,(count,a)))`)
+  expect(code).toMatch(`;(a,b)`)
+  expect(code).toMatch(`log(a)`)
+  expect(code).toMatch(`count = (a++,b)`)
+  expect(code).toMatch(`()=>(a++,b)`)
+  expect(code).toMatch(`_ref(a, (a++,b))`)
+  expect(code).toMatch(`{ a:(a++,b),b:a }`)
+  expect(code).toMatch(`switch(c)`)
+  expect(code).toMatch(`;(h,f)`)
   assertCode(code)
 })
 
