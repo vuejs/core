@@ -1433,7 +1433,7 @@ export function compileScript(
   if (
     cssVars.length &&
     // no need to do this when targeting SSR
-    !(options.inlineTemplate && options.templateOptions?.ssr)
+    !(scriptSetup && options.templateOptions?.ssr)
   ) {
     helperImports.add(CSS_VARS_HELPER)
     helperImports.add('unref')
