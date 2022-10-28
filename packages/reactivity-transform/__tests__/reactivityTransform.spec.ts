@@ -307,16 +307,23 @@ test('$$', () => {
 
 test('$$ with some edge cases',()=>{
   const { code } = transform(`
-    let a = $ref(1)
-    const af=()=>{}
-    console.log($$(a))
+    let a = $ref(1), e = $ref()
+    $$()
     $$(count++,count)
+    ($$(count++,count))
+    count = $$(count++,count)
+    count = ()=>$$(count++,count)
+    const af=()=>($$(count++,count))
+    let c = $ref(a, $$(count++,count))
     let r1 = $$(count++,count)
     let r2 = $ref(af($$(count++,count)))
     let r3 = { a:$$(count++,count) }
     `)
-  console.log(code)
   expect(code).toMatch(`;(count++,count)`)
+  expect(code).toMatch(`((count++,count))`)
+  expect(code).toMatch(`count = (count++,count)`)
+  expect(code).toMatch(`()=>(count++,count)`)
+  expect(code).toMatch(`()=>((count++,count))`)
   expect(code).toMatch(`let r1 = (count++,count)`)
   expect(code).toMatch(`let r2 = _ref(af((count++,count)))`)
   expect(code).toMatch(`let r3 = { a:(count++,count) }`)

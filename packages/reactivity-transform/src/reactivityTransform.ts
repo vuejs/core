@@ -555,23 +555,32 @@ export function transformAST(
    */
   function unwrapMacro(node: CallExpression) {
     const argsLength = node.arguments.length
-    if (argsLength > 1) {
-      // handle some edge cases
-      s.remove(node.callee.start! + offset, node.callee.end! + offset)
+    s.remove(node.callee.start! + offset, node.callee.end! + offset)
+    if (!argsLength) {
+      return
+    } else if (argsLength === 1) {
+      // remove brackets of macro
+      s.remove(node.callee.end! + offset, node.arguments[0].start! + offset)
+      s.remove(node.arguments[argsLength - 1].end! + offset, node.end! + offset)
+    } else {
+      // handle some edge cases for macro $$
       // resolve nested
       let i = parentStack.length - 1
       while (i >= 0) {
-        if (parentStack[i].type === 'VariableDeclarator') {
+        const curParent = parentStack[i--]
+        // see @__tests__:$$ with some edge cases
+        if (
+          curParent.type === 'VariableDeclarator' ||
+          curParent.type === 'AssignmentExpression' ||
+          (curParent.type === 'ExpressionStatement' &&
+            (curParent.expression.extra ||
+              (curParent.expression.type === 'CallExpression' &&
+                curParent.expression.arguments.includes(node))))
+        ) {
           return
         }
-        i--
       }
       s.appendLeft(node.callee.start! + offset, ';')
-    } else if (argsLength) {
-      // remove macro $( and $$(
-      s.remove(node.callee.start! + offset, node.arguments[0].start! + offset)
-      // remove the end of macro
-      s.remove(node.arguments[argsLength - 1].end! + offset, node.end! + offset)
     }
   }
 
