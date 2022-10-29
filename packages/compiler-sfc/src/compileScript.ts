@@ -553,7 +553,7 @@ export function compileScript(
     }
 
     if (declId) {
-      emitIdentifier = scriptSetup!.content.slice(declId.start!, declId.end!)
+      emitIdentifier = (declId.type === 'Identifier') ? declId.name : scriptSetup!.content.slice(declId.start!, declId.end!)
     }
 
     return true

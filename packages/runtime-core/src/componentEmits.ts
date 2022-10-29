@@ -8,6 +8,7 @@ import {
   isArray,
   isFunction,
   isObject,
+  isString,
   isOn,
   toNumber,
   UnionToIntersection
@@ -122,7 +123,7 @@ export function emit(
     }Modifiers`
     const { number, trim } = props[modifiersKey] || EMPTY_OBJ
     if (trim) {
-      args = rawArgs.map(a => a.trim())
+      args = rawArgs.map(a => isString(a) ? a.trim() : a)
     }
     if (number) {
       args = rawArgs.map(toNumber)
