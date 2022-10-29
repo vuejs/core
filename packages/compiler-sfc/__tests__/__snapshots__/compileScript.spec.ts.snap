@@ -1315,6 +1315,23 @@ return { emit }
 })"
 `;
 
+exports[`SFC compile <script setup> with TypeScript defineEmits w/ type (interface ts type) 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+interface Emits { (e: 'foo'): void }
+      
+export default /*#__PURE__*/_defineComponent({
+  emits: ['foo'],
+  setup(__props, { expose, emit }) {
+  expose();
+
+      
+      
+return { emit }
+}
+
+})"
+`;
+
 exports[`SFC compile <script setup> with TypeScript defineEmits w/ type (interface) 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 interface Emits { (e: 'foo' | 'bar'): void }
@@ -1466,6 +1483,33 @@ export default /*#__PURE__*/_defineComponent({
   expose();
 
       
+      
+return {  }
+}
+
+})"
+`;
+
+exports[`SFC compile <script setup> with TypeScript defineProps w/ extends interface 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+interface Bar extends Foo { y?: number }
+        interface Props extends Bar {
+          z: number
+          y: string
+        }
+        
+        interface Foo { x?: number }
+      
+export default /*#__PURE__*/_defineComponent({
+  props: {
+    z: { type: Number, required: true },
+    y: { type: String, required: true },
+    x: { type: Number, required: false }
+  },
+  setup(__props: any, { expose }) {
+  expose();
+
+        
       
 return {  }
 }

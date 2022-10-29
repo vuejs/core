@@ -885,6 +885,31 @@ const emit = defineEmits(['a', 'b'])
       })
     })
 
+    test('defineProps w/ extends interface', () => {
+      const { content, bindings } = compile(`
+      <script lang="ts">
+        interface Foo { x?: number }
+      </script>
+      <script setup lang="ts">
+        interface Bar extends Foo { y?: number }
+        interface Props extends Bar {
+          z: number
+          y: string
+        }
+        defineProps<Props>()
+      </script>
+      `)
+      assertCode(content)
+      expect(content).toMatch(`z: { type: Number, required: true }`)
+      expect(content).toMatch(`y: { type: String, required: true }`)
+      expect(content).toMatch(`x: { type: Number, required: false }`)
+      expect(bindings).toStrictEqual({
+        x: BindingTypes.PROPS,
+        y: BindingTypes.PROPS,
+        z: BindingTypes.PROPS
+      })
+    })
+
     test('defineProps w/ exported interface', () => {
       const { content, bindings } = compile(`
       <script setup lang="ts">
@@ -1106,6 +1131,19 @@ const emit = defineEmits(['a', 'b'])
       assertCode(content)
       expect(content).toMatch(`emit: ((e: 'foo' | 'bar') => void),`)
       expect(content).toMatch(`emits: ["foo", "bar"]`)
+    })
+
+    // #5393
+    test('defineEmits w/ type (interface ts type)', () => {
+      const { content } = compile(`
+      <script setup lang="ts">
+      interface Emits { (e: 'foo'): void }
+      const emit: Emits = defineEmits(['foo'])
+      </script>
+      `)
+      assertCode(content)
+      expect(content).toMatch(`setup(__props, { expose, emit }) {`)
+      expect(content).toMatch(`emits: ['foo']`)
     })
 
     test('runtime Enum', () => {
