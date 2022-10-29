@@ -1061,6 +1061,10 @@ function baseCreateRenderer(
       patchFlag = 0
       optimized = false
       dynamicChildren = null
+      if (n1?.dynamicChildren?.length === 0 && n2.dynamicChildren?.length && n2.dynamicChildren?.length > 0) {
+        unmount(n1, parentComponent, parentSuspense, true, false)
+        n1 = null
+      }
     }
 
     // check if this is a slot fragment with :slotted scope ids
