@@ -49,7 +49,7 @@ export const transformOn: DirectiveTransform = (
       }
       const eventString =
         node.tagType === ElementTypes.COMPONENT ||
-        // fix:6900
+        // fix #6900
         node.tagType === ElementTypes.SLOT ||
         rawName.startsWith('vnode') ||
         !/[A-Z]/.test(rawName)
