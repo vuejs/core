@@ -554,23 +554,28 @@ export function transformAST(
    * unwrap the code form the macro($、$$), fix #6312 and keep the ideally behavior with the RFC#369
    */
   function unwrapMacro(node: CallExpression) {
-    const argsLength = node.arguments.length
     const bracketStart = node.callee.end! + offset
-
     s.remove(node.callee.start! + offset, bracketStart)
 
-    if (argsLength === 1) {
-      const bracketEnd = node.arguments[argsLength - 1].end! + offset
+    if (node.arguments.length === 1) {
+      const bracketEnd = node.arguments.at(-1)!.end! + offset
       // remove brackets of macros
-      const argsType = node.arguments[0].type
+      const firstArg = node.arguments[0]
+      const argsType = firstArg.type
       if (
         argsType === 'CallExpression' ||
         argsType === 'Identifier' ||
         argsType === 'ObjectExpression'
       ) {
-        // fix space place
-        s.remove(node.start! + offset, node.arguments[0].start! + offset)
-        s.remove(bracketEnd, node.end! + offset)
+        const leading = firstArg.leadingComments?.at(0)!.start ?? Infinity
+        const trailing = firstArg.trailingComments?.at(-1)!.end ?? 0
+        console.log(leading, trailing)
+        // fix space & comments place
+        s.remove(
+          node.start! + offset,
+          Math.min(firstArg.start!, leading) + offset
+        )
+        s.remove(Math.max(bracketEnd, trailing + offset), node.end! + offset)
 
         // avoid traversal of like `$$(a)`
         if (argsType === 'Identifier') {

@@ -27,6 +27,9 @@ exports[`$$ 1`] = `
 exports[`$$ with some edge cases 1`] = `
 "import { ref as _ref } from 'vue'
 
+    /* 2 */ count /* 2 */
+    ;(   count /* 2 */, /**/ a   )
+    ;   (count /* 2 */, /**/ a /**/   )
     {
       a:(count,a)
     }
