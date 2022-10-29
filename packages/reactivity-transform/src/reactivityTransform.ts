@@ -569,7 +569,6 @@ export function transformAST(
       ) {
         const leading = firstArg.leadingComments?.at(0)!.start ?? Infinity
         const trailing = firstArg.trailingComments?.at(-1)!.end ?? 0
-        console.log(leading, trailing)
         // fix space & comments place
         s.remove(
           node.start! + offset,

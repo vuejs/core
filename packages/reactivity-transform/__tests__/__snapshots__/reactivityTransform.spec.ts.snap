@@ -38,7 +38,7 @@ exports[`$$ with some edge cases 1`] = `
     count
     console.log(a)
     ;(a,b)
-    ;(a,b)
+    ;(a++,b)
     count = ( a++ ,b)
     count = ()=>(a++,b)
     let r1 = _ref(a, (a++,b))
