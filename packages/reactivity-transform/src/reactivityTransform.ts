@@ -562,19 +562,24 @@ export function transformAST(
     if (argsLength === 1) {
       const bracketEnd = node.arguments[argsLength - 1].end! + offset
       // remove brackets of macros
-      if (node.arguments[0].type === 'SequenceExpression') {
-        // fix $$((a,b))
-        s.remove(bracketStart, bracketStart + 1)
-        s.remove(bracketEnd, bracketEnd + 1)
-      } else {
+      const argsType = node.arguments[0].type
+      if (
+        argsType === 'CallExpression' ||
+        argsType === 'Identifier' ||
+        argsType === 'ObjectExpression'
+      ) {
         // fix space place
         s.remove(node.start! + offset, node.arguments[0].start! + offset)
         s.remove(bracketEnd, node.end! + offset)
-      }
 
-      // avoid traversal of like `$$(a)`
-      if (node.arguments[0].type !== 'CallExpression') {
-        return
+        // avoid traversal of like `$$(a)`
+        if (argsType === 'Identifier') {
+          return
+        }
+      } else if (argsType === 'SequenceExpression') {
+        // fix $$((a,b))
+        s.remove(bracketStart, bracketStart + 1)
+        s.remove(bracketEnd, bracketEnd + 1)
       }
     }
 
@@ -585,18 +590,33 @@ export function transformAST(
 
     // fix some edge cases for macro $$, eg. $$(a,b)
     // resolve nested
+    if (isIsolateExpression(node)) {
+      // split the unwrapped code `()()` to `();()`
+      s.appendLeft(node.callee.start! + offset, ';')
+    }
+  }
+
+  function isIsolateExpression(node: CallExpression) {
     let i = parentStack.length - 1
     while (i >= 0) {
-      const curParent = parentStack[i--]
-      if (
-        curParent.type === 'ExpressionStatement' &&
-        isIsolateExpression(curParent.expression, node, escapeSymbol)
-      ) {
-        // split the unwrapped code `()()` to `();()`
-        s.appendLeft(node.callee.start! + offset, ';')
-        return
+      const curParent = parentStack[i]
+      if (curParent.type !== 'ExpressionStatement') {
+        i--
+        continue
       }
+      const expression = curParent.expression
+      if (
+        expression.type === 'CallExpression' &&
+        expression.callee.type === 'Identifier' &&
+        expression.callee.name === escapeSymbol &&
+        !expression.arguments.includes(node) &&
+        (i < 1 || parentStack[i - 1].type !== 'LabeledStatement')
+      ) {
+        return true
+      }
+      i--
     }
+    return false
   }
 
   // check root scope first
@@ -712,19 +732,6 @@ export function transformAST(
     rootRefs: Object.keys(rootScope).filter(key => rootScope[key] === true),
     importedHelpers: [...importedHelpers]
   }
-}
-
-function isIsolateExpression(
-  expression: Expression,
-  node: CallExpression,
-  escapeSymbol: string
-) {
-  return (
-    expression.type === 'CallExpression' &&
-    expression.callee.type === 'Identifier' &&
-    expression.callee.name === escapeSymbol &&
-    !expression.arguments.includes(node)
-  )
 }
 
 const RFC_LINK = `https://github.com/vuejs/rfcs/discussions/369`

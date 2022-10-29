@@ -307,6 +307,11 @@ test('$$', () => {
 
 test('$$ with some edge cases',()=>{
   const { code } = transform(`
+    {
+      a:$$(count,a)
+    }
+    $$((count) + 1)
+    $$([count])
     $$ (count )
     console.log($$($$(a)))
     $$(a,b)
@@ -323,7 +328,9 @@ test('$$ with some edge cases',()=>{
     }
     ($$(count++,$$(count),$$(count,a)))
     `)
-  expect(code).toMatch(`((count++,count,(count,a)))`)
+  expect(code).toMatch("a:(count,a)")
+  expect(code).toMatch(";((count) + 1)")
+  expect(code).toMatch(";([count])")
   expect(code).toMatch(`;(a,b)`)
   expect(code).toMatch(`log(a)`)
   expect(code).toMatch(`count = ( a++ ,b)`)
@@ -332,6 +339,7 @@ test('$$ with some edge cases',()=>{
   expect(code).toMatch(`{ a:(a++,b),b:a }`)
   expect(code).toMatch(`switch(c)`)
   expect(code).toMatch(`;(h,f)`)
+  expect(code).toMatch(`((count++,count,(count,a)))`)
   assertCode(code)
 })
 
