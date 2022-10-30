@@ -1,16 +1,29 @@
 // @ts-check
+import { createRequire } from 'module'
+import { fileURLToPath } from 'url'
 import path from 'path'
 import ts from 'rollup-plugin-typescript2'
 import replace from '@rollup/plugin-replace'
 import json from '@rollup/plugin-json'
+import chalk from 'chalk'
+import commonJS from '@rollup/plugin-commonjs'
+import polyfillNode from 'rollup-plugin-polyfill-node'
+import { nodeResolve } from '@rollup/plugin-node-resolve'
+import { terser } from 'rollup-plugin-terser'
 
 if (!process.env.TARGET) {
   throw new Error('TARGET package must be specified via --environment flag.')
 }
 
+const require = createRequire(import.meta.url)
+const __dirname = fileURLToPath(new URL('.', import.meta.url))
+
 const masterVersion = require('./package.json').version
+const consolidatePkg = require('@vue/consolidate/package.json')
+
 const packagesDir = path.resolve(__dirname, 'packages')
 const packageDir = path.resolve(packagesDir, process.env.TARGET)
+
 const resolve = p => path.resolve(packageDir, p)
 const pkg = require(resolve(`package.json`))
 const packageOptions = pkg.buildOptions || {}
@@ -76,7 +89,7 @@ export default packageConfigs
 
 function createConfig(format, output, plugins = []) {
   if (!output) {
-    console.log(require('chalk').yellow(`invalid format: "${format}"`))
+    console.log(chalk.yellow(`invalid format: "${format}"`))
     process.exit(1)
   }
 
@@ -153,11 +166,8 @@ function createConfig(format, output, plugins = []) {
   // requires a ton of template engines which should be ignored.
   let cjsIgnores = []
   if (pkg.name === '@vue/compiler-sfc') {
-    const consolidatePath = require.resolve('@vue/consolidate/package.json', {
-      paths: [packageDir]
-    })
     cjsIgnores = [
-      ...Object.keys(require(consolidatePath).devDependencies),
+      ...Object.keys(consolidatePkg.devDependencies),
       'vm',
       'crypto',
       'react-dom/server',
@@ -172,16 +182,12 @@ function createConfig(format, output, plugins = []) {
     (format === 'cjs' && Object.keys(pkg.devDependencies || {}).length) ||
     packageOptions.enableNonBrowserBranches
       ? [
-          // @ts-ignore
-          require('@rollup/plugin-commonjs')({
+          commonJS({
             sourceMap: false,
             ignore: cjsIgnores
           }),
-          ...(format === 'cjs'
-            ? []
-            : // @ts-ignore
-              [require('rollup-plugin-polyfill-node')()]),
-          require('@rollup/plugin-node-resolve').nodeResolve()
+          ...(format === 'cjs' ? [] : [polyfillNode()]),
+          nodeResolve()
         ]
       : []
 
@@ -301,7 +307,6 @@ function createProductionConfig(format) {
 }
 
 function createMinifiedConfig(format) {
-  const { terser } = require('rollup-plugin-terser')
   return createConfig(
     format,
     {
