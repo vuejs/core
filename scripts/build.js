@@ -92,6 +92,7 @@ async function build(target) {
     'rollup',
     [
       '-c',
+      '--bundleConfigAsCjs',
       '--environment',
       [
         `COMMIT:${commit}`,
