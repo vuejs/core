@@ -670,18 +670,20 @@ export function transformAST(
         return this.skip()
       }
 
-      if (
-        node.type === 'Identifier' &&
-        // if inside $$(), skip unless this is a destructured prop binding
-        !(escapeScope && rootScope[node.name] !== 'prop') &&
-        isReferencedIdentifier(node, parent!, parentStack) &&
-        !excludedIds.has(node)
-      ) {
-        // walk up the scope chain to check if id should be appended .value
-        let i = scopeStack.length
-        while (i--) {
-          if (rewriteId(scopeStack[i], node, parent!, parentStack)) {
-            return
+      if (node.type === 'Identifier') {
+        const binding = rootScope[node.name]
+        if (
+          // if inside $$(), skip unless this is a destructured prop binding
+          !(escapeScope && (!binding || !binding.isProp)) &&
+          isReferencedIdentifier(node, parent!, parentStack) &&
+          !excludedIds.has(node)
+        ) {
+          // walk up the scope chain to check if id should be appended .value
+          let i = scopeStack.length
+          while (i--) {
+            if (rewriteId(scopeStack[i], node, parent!, parentStack)) {
+              return
+            }
           }
         }
       }
