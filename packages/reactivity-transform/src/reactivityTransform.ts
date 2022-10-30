@@ -546,10 +546,15 @@ export function transformAST(
       const binding = scope[id.name]
 
       if (binding) {
-        if (binding.isConst && parent.type === 'AssignmentExpression') {
+        if (
+          binding.isConst &&
+          (parent.type === 'AssignmentExpression' ||
+            parent.type === 'UpdateExpression')
+        ) {
           error(`Assignment to constant variable.`, id)
         }
 
+        const { isProp } = binding
         if (isStaticProperty(parent) && parent.shorthand) {
           // let binding used in a property shorthand
           // skip for destructure patterns
@@ -557,7 +562,7 @@ export function transformAST(
             !(parent as any).inPattern ||
             isInDestructureAssignment(parent, parentStack)
           ) {
-            if (binding.isProp) {
+            if (isProp) {
               if (escapeScope) {
                 // prop binding in $$()
                 // { prop } -> { prop: __props_prop }
@@ -579,7 +584,7 @@ export function transformAST(
             }
           }
         } else {
-          if (binding.isProp) {
+          if (isProp) {
             if (escapeScope) {
               // x --> __props_x
               registerEscapedPropBinding(id)
@@ -737,8 +742,7 @@ export function transformAST(
   return {
     rootRefs: Object.keys(rootScope).filter(key => {
       const binding = rootScope[key]
-      if (!binding) return false
-      return !binding.isProp
+      return binding && !binding.isProp
     }),
     importedHelpers: [...importedHelpers]
   }
