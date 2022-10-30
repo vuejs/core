@@ -487,4 +487,11 @@ describe('errors', () => {
       `does not support rest element`
     )
   })
+
+  test('assignment to constant variable', () => {
+    expect(() =>
+      transform(`const foo = $ref(0)
+    foo = 1`)
+    ).toThrow(`Assignment to constant variable.`)
+  })
 })
