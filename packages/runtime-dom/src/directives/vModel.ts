@@ -99,13 +99,7 @@ export const vModelText: ModelDirective<
         ? Number(el.value)
         : el.value
     if (elValue !== newValue) {
-      if (Number(el.value) !== newValue) {
-        el.value = newValue
-      }
-    } else {
-      if (el.value !== newValue) {
-        el.value = newValue
-      }
+      el.value = newValue
     }
   }
 }
