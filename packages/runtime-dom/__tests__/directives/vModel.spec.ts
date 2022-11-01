@@ -101,6 +101,7 @@ describe('vModel', () => {
     expect(data.value).toEqual(1)
   })
 
+  // #7003
   it('should work with number input and be able to update rendering correctly', async () => {
     const setValue1 = function (this: any, value: any) {
       this.value1 = value
