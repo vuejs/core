@@ -31,7 +31,10 @@ function genVarName(id: string, raw: string, isProd: boolean): string {
     return hash(id + raw)
   } else {
     // escape ASCII Punctuation & Symbols
-    return `${id}-${raw.replace(/[ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g, s => `\\${s}`)}`
+    return `${id}-${raw.replace(
+      /[ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g,
+      s => `\\${s}`
+    )}`
   }
 }
 
