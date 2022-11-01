@@ -117,7 +117,7 @@ describe('vModel', () => {
         return [
           withVModel(
             h('input', {
-              id:'input_num1',
+              id: 'input_num1',
               type: 'number',
               'onUpdate:modelValue': setValue1.bind(this)
             }),
@@ -125,7 +125,7 @@ describe('vModel', () => {
           ),
           withVModel(
             h('input', {
-              id:'input_num2',
+              id: 'input_num2',
               type: 'number',
               'onUpdate:modelValue': setValue2.bind(this)
             }),
