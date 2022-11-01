@@ -65,7 +65,7 @@ script.__scopeId = 'xxxxxx'
 export default script
 ```
 
-### High Level Workflow
+### Higher Level Workflow
 
 1. In facade transform, parse the source into descriptor with the `parse` API and generate the above facade module code based on the descriptor;
 
