@@ -93,7 +93,7 @@ export const vModelText: ModelDirective<
       }
     }
     const newValue = value == null ? '' : value
-    // #7003
+    // #7003 v-model can update correctly when the element is an input of type number
     if (el.type === 'number' && vnode.type === 'input') {
       if (Number(el.value) !== newValue) {
         el.value = newValue
