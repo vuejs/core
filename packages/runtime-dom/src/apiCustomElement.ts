@@ -215,7 +215,7 @@ export class VueElement extends BaseClass {
     }).observe(this, { attributes: true })
 
     const resolve = (def: InnerComponentDef) => {
-      const { props, styles } = def
+      const { props = {}, styles } = def
       const hasOptions = !isArray(props)
       const rawKeys = props ? (hasOptions ? Object.keys(props) : props) : []
 
