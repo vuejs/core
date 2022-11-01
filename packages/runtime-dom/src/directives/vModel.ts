@@ -93,8 +93,14 @@ export const vModelText: ModelDirective<
       }
     }
     const newValue = value == null ? '' : value
-    if (el.value !== newValue) {
-      el.value = newValue
+    if (el.type === 'number' && vnode.type === 'input') {
+      if (Number(el.value) !== newValue) {
+        el.value = newValue
+      }
+    } else {
+      if (el.value !== newValue) {
+        el.value = newValue
+      }
     }
   }
 }
