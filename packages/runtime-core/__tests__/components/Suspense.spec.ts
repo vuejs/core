@@ -1235,7 +1235,7 @@ describe('Suspense', () => {
     expect(serializeInner(root)).toBe(`<div>parent<!----></div>`)
   })
 
-  // #2215
+  // #6811
   test('post flush watchers in toggled components', async () => {
     let cnt = 0
 
