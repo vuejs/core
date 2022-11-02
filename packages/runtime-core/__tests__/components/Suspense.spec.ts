@@ -12,7 +12,9 @@ import {
   watchEffect,
   onUnmounted,
   onErrorCaptured,
-  shallowRef
+  shallowRef,
+  inject,
+  provide
 } from '@vue/runtime-test'
 import { createApp } from 'vue'
 
@@ -1231,6 +1233,72 @@ describe('Suspense', () => {
     toggle.value = false
     await nextTick()
     expect(serializeInner(root)).toBe(`<div>parent<!----></div>`)
+  })
+
+  // #2215
+  test('post flush watchers in toggled components', async () => {
+    let cnt = 0
+
+    const CompA = {
+      template: `<div>A</div>`,
+      setup: async () => {
+        const route = inject<any>('route')
+
+        watch(
+          () => route.value,
+          () => cnt++,
+          { immediate: true, flush: 'post' }
+        )
+      }
+    }
+
+    const CompB = {
+      template: `<div>B</div>`,
+      setup: async () => {
+        const route = inject<any>('route')
+
+        watch(
+          () => route.value,
+          () => cnt++,
+          { immediate: true, flush: 'post' }
+        )
+      }
+    }
+
+    const route = shallowRef(CompA)
+
+    const Parent = {
+      template: `
+        <Suspense>
+          <Component :is="route" />
+        </Suspense>
+      `,
+      setup: () => {
+        provide('route', route)
+        return { route }
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Parent), root)
+
+    // wait for flush
+    await nextTick()
+    // wait for child async setup resolve
+    await nextTick()
+
+    expect(serializeInner(root)).toBe(`<div>A</div>`)
+    expect(cnt).toBe(1)
+
+    route.value = CompB
+
+    // wait for flush
+    await nextTick()
+    // wait for child async setup resolve
+    await nextTick()
+
+    expect(serializeInner(root)).toBe(`<div>B</div>`)
+    expect(cnt).toBe(2)
   })
 
   test('warn if using async setup when not in a Suspense boundary', () => {

@@ -769,7 +769,7 @@ export function queueEffectWithSuspense(
     } else {
       suspense.effects.push(fn)
     }
-  } else {
+  } else if (!suspense) {
     queuePostFlushCb(fn)
   }
 }
