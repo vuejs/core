@@ -26,6 +26,7 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>) {
   }
 
   const setVars = () =>
+    instance.subTree &&
     setVarsOnVNode(instance.subTree, getter(instance.proxy!))
   watchPostEffect(setVars)
   onMounted(() => {
