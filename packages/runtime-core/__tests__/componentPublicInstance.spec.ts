@@ -4,7 +4,9 @@ import {
   getCurrentInstance,
   nodeOps,
   createApp,
-  shallowReadonly
+  shallowReadonly,
+  defineComponent,
+  onMounted
 } from '@vue/runtime-test'
 import { ComponentInternalInstance, ComponentOptions } from '../src/component'
 
@@ -457,5 +459,55 @@ describe('component: proxy', () => {
         Symbol.unscopables
       )} was accessed during render ` + `but is not defined on instance.`
     ).toHaveBeenWarned()
+  })
+
+  test('onMounted should called when child component mount during parent component setup', () => {
+    let tag1 = 2
+    let tag2 = 4
+    let tag3 = 3
+
+    const Comp3 = defineComponent({
+      render() {},
+      setup() {
+        const instance = getCurrentInstance()
+        onMounted(() => {
+          expect(instance).toEqual(getCurrentInstance())
+          tag3 = 1
+        })
+      }
+    })
+
+    const show3 = () => render(h(Comp3), nodeOps.createElement('div'))
+
+    const Comp2 = defineComponent({
+      render() {},
+      setup() {
+        const instance = getCurrentInstance()
+        show3()
+        onMounted(() => {
+          expect(instance).toEqual(getCurrentInstance())
+          tag2 = 1
+        })
+      }
+    })
+
+    const show2 = () => render(h(Comp2), nodeOps.createElement('div'))
+
+    const Comp1 = defineComponent({
+      render() {},
+      setup() {
+        const instance = getCurrentInstance()
+        show2()
+        onMounted(() => {
+          expect(instance).toEqual(getCurrentInstance())
+          tag1 = 1
+        })
+      }
+    })
+
+    render(h(Comp1), nodeOps.createElement('div'))
+
+    expect(tag1).toEqual(tag2)
+    expect(tag2).toEqual(tag3)
   })
 })
