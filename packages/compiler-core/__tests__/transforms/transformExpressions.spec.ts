@@ -194,7 +194,7 @@ describe('compiler: expression transform', () => {
         .content
     ).toMatchObject({
       type: NodeTypes.COMPOUND_EXPRESSION,
-      children: ['new ', { content: 'Error' }, '()'],
+      children: ['new ', { content: 'Error' }, '()']
     })
   })
 
