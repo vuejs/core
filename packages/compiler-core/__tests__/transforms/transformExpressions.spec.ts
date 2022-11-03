@@ -188,6 +188,14 @@ describe('compiler: expression transform', () => {
       type: NodeTypes.COMPOUND_EXPRESSION,
       children: [{ content: `Math` }, `.`, { content: `max` }, `(1, 2)`]
     })
+
+    expect(
+      (parseWithExpressionTransform(`{{ new Error() }}`) as InterpolationNode)
+        .content
+    ).toMatchObject({
+      type: NodeTypes.COMPOUND_EXPRESSION,
+      children: ['new ', { content: 'Error' }, '()'],
+    })
   })
 
   test('should not prefix reserved literals', () => {
