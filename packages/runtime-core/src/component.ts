@@ -563,7 +563,7 @@ export function createComponentInstance(
 
 export let currentInstance: ComponentInternalInstance | null = null
 
-const instanceStack: ComponentInternalInstance[] = [];
+const instanceStack: ComponentInternalInstance[] = []
 
 export const getCurrentInstance: () => ComponentInternalInstance | null = () =>
   currentInstance || currentRenderingInstance
