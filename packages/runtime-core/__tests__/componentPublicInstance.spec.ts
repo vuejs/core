@@ -484,6 +484,7 @@ describe('component: proxy', () => {
       setup() {
         const instance = getCurrentInstance()
         show3()
+        expect(instance).toEqual(getCurrentInstance())
         onMounted(() => {
           expect(instance).toEqual(getCurrentInstance())
           tag2 = 1
@@ -498,6 +499,7 @@ describe('component: proxy', () => {
       setup() {
         const instance = getCurrentInstance()
         show2()
+        expect(instance).toEqual(getCurrentInstance())
         onMounted(() => {
           expect(instance).toEqual(getCurrentInstance())
           tag1 = 1
