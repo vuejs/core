@@ -144,13 +144,15 @@ describe('ssr: renderStyle', () => {
       ssrRenderAttrs({
         style: {
           color: 'red',
-          "--37b1dc3d-numberValue": 2,
-          "--37b1dc3d-stringValue": 'str',
-          "--37b1dc3d-undefinedValue": undefined,
-          "--37b1dc3d-booleanValue": true
+          '--37b1dc3d-numberValue': 2,
+          '--37b1dc3d-stringValue': 'str',
+          '--37b1dc3d-undefinedValue': undefined,
+          '--37b1dc3d-booleanValue': true
         }
       })
-    ).toBe(` style="color:red;--37b1dc3d-numberValue:2;--37b1dc3d-stringValue:str;--37b1dc3d-undefinedValue:undefined;--37b1dc3d-booleanValue:true;"`)
+    ).toBe(
+      ` style="color:red;--37b1dc3d-numberValue:2;--37b1dc3d-stringValue:str;--37b1dc3d-undefinedValue:undefined;--37b1dc3d-booleanValue:true;"`
+    )
   })
 
   test('standalone', () => {
