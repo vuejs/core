@@ -37,7 +37,7 @@ describe('ssr: attrs fallthrough', () => {
     `)
   })
 
-  test('fallthrough component content (root with coomments)', () => {
+  test('fallthrough component content (root with comments)', () => {
     expect(compile(`<!--root--><transition><div/></transition>`).code)
       .toMatchInlineSnapshot(`
               "const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")

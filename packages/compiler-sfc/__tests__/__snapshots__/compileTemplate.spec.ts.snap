@@ -1,5 +1,17 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`dynamic v-on + static v-on should merged 1`] = `
+"import { toHandlerKey as _toHandlerKey, mergeProps as _mergeProps, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
+
+export function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock(\\"input\\", _mergeProps({
+    onBlur: _cache[0] || (_cache[0] = (...args) => (_ctx.onBlur && _ctx.onBlur(...args)))
+  }, {
+    [_toHandlerKey(_ctx.validateEvent)]: _cache[1] || (_cache[1] = (...args) => (_ctx.onValidateEvent && _ctx.onValidateEvent(...args)))
+  }), null, 16 /* FULL_PROPS */))
+}"
+`;
+
 exports[`should not hoist srcset URLs in SSR mode 1`] = `
 "import { resolveComponent as _resolveComponent, withCtx as _withCtx, createVNode as _createVNode } from \\"vue\\"
 import { ssrRenderAttr as _ssrRenderAttr, ssrRenderComponent as _ssrRenderComponent } from \\"vue/server-renderer\\"

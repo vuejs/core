@@ -11,7 +11,10 @@ import {
   MergedComponentOptions,
   RuntimeCompilerOptions
 } from './componentOptions'
-import { ComponentPublicInstance } from './componentPublicInstance'
+import {
+  ComponentCustomProperties,
+  ComponentPublicInstance
+} from './componentPublicInstance'
 import { Directive, validateDirectiveName } from './directives'
 import { RootRenderFunction } from './renderer'
 import { InjectionKey } from './apiInject'
@@ -70,7 +73,7 @@ export interface AppConfig {
 
   performance: boolean
   optionMergeStrategies: Record<string, OptionMergeFunction>
-  globalProperties: Record<string, any>
+  globalProperties: ComponentCustomProperties & Record<string, any>
   errorHandler?: (
     err: unknown,
     instance: ComponentPublicInstance | null,
@@ -175,7 +178,7 @@ export type CreateAppFunction<HostElement> = (
 let uid = 0
 
 export function createAppAPI<HostElement>(
-  render: RootRenderFunction,
+  render: RootRenderFunction<HostElement>,
   hydrate?: RootHydrateFunction
 ): CreateAppFunction<HostElement> {
   return function createApp(rootComponent, rootProps = null) {

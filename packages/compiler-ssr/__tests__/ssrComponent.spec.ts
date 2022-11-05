@@ -104,6 +104,11 @@ describe('ssr: components', () => {
       `)
     })
 
+    test('empty attribute should not produce syntax error', () => {
+      // previously this would produce syntax error `default: _withCtx((, _push, ...)`
+      expect(compile(`<foo v-slot="">foo</foo>`).code).not.toMatch(`(,`)
+    })
+
     test('named slots', () => {
       expect(
         compile(`<foo>
@@ -166,7 +171,8 @@ describe('ssr: components', () => {
                         _createTextVNode(\\"foo\\")
                       ]
                     }
-                  })
+                  }),
+                  key: \\"0\\"
                 }
               : undefined
           ]), _parent))

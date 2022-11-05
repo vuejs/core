@@ -174,3 +174,12 @@ test('should not hoist srcset URLs in SSR mode', () => {
   })
   expect(code).toMatchSnapshot()
 })
+
+// #6742
+test('dynamic v-on + static v-on should merged', () => {
+  const source = `<input @blur="onBlur" @[validateEvent]="onValidateEvent">`
+
+  const result = compile({ filename: 'example.vue', source })
+
+  expect(result.code).toMatchSnapshot()
+})

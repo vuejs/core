@@ -40,6 +40,20 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 
 - No need to worry about code style as long as you have installed the dev dependencies - modified files are automatically formatted with Prettier on commit (by invoking [Git Hooks](https://git-scm.com/docs/githooks) via [yorkie](https://github.com/yyx990803/yorkie)).
 
+### Advanced Pull Request Tips
+
+- The PR should fix the intended bug **only** and not introduce unrelated changes. This includes unnecessary refactors - a PR should focus on the fix and not code style, this makes it easier to trace changes in the future.
+
+- Consider the performance / size impact of the changes, and whether the bug being fixes justifies the cost. If the bug being fixed is a very niche edge case, we should try to minimize the size / perf cost to make it worthwhile.
+
+  - Is the code perf-sensitive (e.g. in "hot paths" like component updates or the vdom patch function?)
+    - If the branch is dev-only, performance is less of a concern.
+
+  - Check how much extra bundle size the change introduces.
+    - Make sure to put dev-only code in `__DEV__` branches so they are tree-shakable.
+    - Runtime code is more sensitive to size increase than compiler code.
+    - Make sure it doesn't accidentally cause dev-only or compiler-only code branches to be included in the runtime build. Notable case is that some functions in `@vue/shared` are compiler-only and should not be used in runtime code, e.g. `isHTMLTag` and `isSVGTag`.
+
 ## Development Setup
 
 You will need [Node.js](https://nodejs.org) **version 16+**, and [PNPM](https://pnpm.io) **version 7+**.

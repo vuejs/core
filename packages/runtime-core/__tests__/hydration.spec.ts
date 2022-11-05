@@ -982,6 +982,14 @@ describe('SSR hydration', () => {
     expect((container as any)._vnode).toBe(null)
   })
 
+  // #6637
+  test('stringified root fragment', () => {
+    mountWithHydration(`<!--[--><div></div><!--]-->`, () =>
+      createStaticVNode(`<div></div>`, 1)
+    )
+    expect(`mismatch`).not.toHaveBeenWarned()
+  })
+
   describe('mismatch handling', () => {
     test('text node', () => {
       const { container } = mountWithHydration(`foo`, () => 'bar')

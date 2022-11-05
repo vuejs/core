@@ -6,7 +6,7 @@ module.exports = {
   parserOptions: {
     sourceType: 'module'
   },
-  plugins: ["jest"],
+  plugins: ['jest'],
   rules: {
     'no-debugger': 'error',
     'no-unused-vars': [
@@ -67,6 +67,19 @@ module.exports = {
       files: ['packages/template-explorer/**', 'packages/sfc-playground/**'],
       rules: {
         'no-restricted-globals': ['error', ...NodeGlobals],
+        'no-restricted-syntax': 'off'
+      }
+    },
+    // Node scripts
+    {
+      files: [
+        'scripts/**',
+        './*.js',
+        'packages/**/index.js',
+        'packages/size-check/**'
+      ],
+      rules: {
+        'no-restricted-globals': 'off',
         'no-restricted-syntax': 'off'
       }
     }
