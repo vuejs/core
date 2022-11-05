@@ -143,10 +143,14 @@ describe('ssr: renderStyle', () => {
     expect(
       ssrRenderAttrs({
         style: {
-          color: 'red'
+          color: 'red',
+          "--37b1dc3d-numberValue": 2,
+          "--37b1dc3d-stringValue": 'str',
+          "--37b1dc3d-undefinedValue": undefined,
+          "--37b1dc3d-booleanValue": true
         }
       })
-    ).toBe(` style="color:red;"`)
+    ).toBe(` style="color:red;--37b1dc3d-numberValue:2;--37b1dc3d-stringValue:str;--37b1dc3d-undefinedValue:undefined;--37b1dc3d-booleanValue:true;"`)
   })
 
   test('standalone', () => {

@@ -50,10 +50,12 @@ export function stringifyStyle(
   }
   for (const key in styles) {
     const value = styles[key]
-    const normalizedKey = key.startsWith(`--`) ? key : hyphenate(key)
+    const isStyleVar = key.startsWith('--')
+    const normalizedKey = isStyleVar ? key : hyphenate(key)
     if (
       isString(value) ||
-      (typeof value === 'number' && isNoUnitNumericStyleProp(normalizedKey))
+      (typeof value === 'number' && isNoUnitNumericStyleProp(normalizedKey)) ||
+      isStyleVar
     ) {
       // only render valid values
       ret += `${normalizedKey}:${value};`
