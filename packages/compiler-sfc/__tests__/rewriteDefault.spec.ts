@@ -14,6 +14,14 @@ describe('compiler sfc: rewriteDefault', () => {
     ).toMatchInlineSnapshot(`"const script = {}"`)
   })
 
+  test('rewrite variable value default', () => {
+    expect(rewriteDefault(`export  const foo = 'default'`, 'script'))
+      .toMatchInlineSnapshot(`
+    "export  const foo = 'default'
+    const script = {}"
+    `)
+  })
+
   test('rewrite export named default', () => {
     expect(
       rewriteDefault(
