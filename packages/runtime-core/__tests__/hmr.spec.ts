@@ -151,6 +151,44 @@ describe('hot module replacement', () => {
     expect(mountSpy).toHaveBeenCalledTimes(1)
   })
 
+  test('reload KeepAlive slot', async () => {
+    const root = nodeOps.createElement('div')
+    const childId = 'test-child-keep-alive'
+    const unmountSpy = jest.fn()
+    const mountSpy = jest.fn()
+
+    const Child: ComponentOptions = {
+      __hmrId: childId,
+      data() {
+        return { count: 0 }
+      },
+      unmounted: unmountSpy,
+      render: compileToFunction(`<div>{{ count }}</div>`)
+    }
+    createRecord(childId, Child)
+
+    const Parent: ComponentOptions = {
+      components: { Child },
+      render: compileToFunction(`<KeepAlive><Child/></KeepAlive>`)
+    }
+
+    render(h(Parent), root)
+    expect(serializeInner(root)).toBe(`<div>0</div>`)
+
+    reload(childId, {
+      __hmrId: childId,
+      data() {
+        return { count: 1 }
+      },
+      mounted: mountSpy,
+      render: compileToFunction(`<div>{{ count }}</div>`)
+    })
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>1</div>`)
+    expect(unmountSpy).toHaveBeenCalledTimes(1)
+    expect(mountSpy).toHaveBeenCalledTimes(1)
+  })
+
   test('reload class component', async () => {
     const root = nodeOps.createElement('div')
     const childId = 'test4-child'
