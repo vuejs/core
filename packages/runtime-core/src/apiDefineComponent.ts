@@ -184,7 +184,7 @@ export function defineComponent<
   >
 ): DefineComponent<PropsOptions, RawBindings, D, C, M, Mixin, Extends, E, EE>
 
-// implementation, close to no-op
+// implementation, close to no-op how to make it
 export function defineComponent(options: unknown) {
   return isFunction(options) ? { setup: options, name: options.name } : options
 }
