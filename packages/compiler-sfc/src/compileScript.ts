@@ -129,6 +129,7 @@ export interface SFCScriptCompileOptions {
 export interface ImportBinding {
   isType: boolean
   imported: string
+  local: string
   source: string
   isFromSetup: boolean
   isUsedInTemplate: boolean
@@ -272,7 +273,6 @@ export function compileScript(
   const bindingMetadata: BindingMetadata = {}
   const helperImports: Set<string> = new Set()
   const userImports: Record<string, ImportBinding> = Object.create(null)
-  const userImportAlias: Record<string, string> = Object.create(null)
   const scriptBindings: Record<string, BindingTypes> = Object.create(null)
   const setupBindings: Record<string, BindingTypes> = Object.create(null)
 
@@ -362,10 +362,6 @@ export function compileScript(
     isFromSetup: boolean,
     needTemplateUsageCheck: boolean
   ) {
-    if (source === 'vue' && imported) {
-      userImportAlias[imported] = local
-    }
-
     // template usage check is only needed in non-inline mode, so we can skip
     // the work if inlineTemplate is true.
     let isUsedInTemplate = needTemplateUsageCheck
@@ -382,6 +378,7 @@ export function compileScript(
     userImports[local] = {
       isType,
       imported: imported || 'default',
+      local,
       source,
       isFromSetup,
       isUsedInTemplate
@@ -990,7 +987,7 @@ export function compileScript(
           }
         }
         if (node.declaration) {
-          walkDeclaration(node.declaration, scriptBindings, userImportAlias)
+          walkDeclaration(node.declaration, scriptBindings, userImports)
         }
       } else if (
         (node.type === 'VariableDeclaration' ||
@@ -999,7 +996,7 @@ export function compileScript(
           node.type === 'TSEnumDeclaration') &&
         !node.declare
       ) {
-        walkDeclaration(node, scriptBindings, userImportAlias)
+        walkDeclaration(node, scriptBindings, userImports)
       }
     }
 
@@ -1199,7 +1196,7 @@ export function compileScript(
         node.type === 'ClassDeclaration') &&
       !node.declare
     ) {
-      walkDeclaration(node, setupBindings, userImportAlias)
+      walkDeclaration(node, setupBindings, userImports)
     }
 
     // walk statements & named exports / variable declarations for top level
@@ -1654,8 +1651,17 @@ function registerBinding(
 function walkDeclaration(
   node: Declaration,
   bindings: Record<string, BindingTypes>,
-  userImportAlias: Record<string, string>
+  userImports: Record<string, ImportBinding>
 ) {
+  function getUserBinding(name: string) {
+    const binding = Object.values(userImports).find(
+      binding => binding.source === 'vue' && binding.imported === name
+    )
+    if (binding) return binding.local
+    else if (!userImports[name]) return name
+    return undefined
+  }
+
   if (node.type === 'VariableDeclaration') {
     const isConst = node.kind === 'const'
     // export const foo = ...
@@ -1669,7 +1675,7 @@ function walkDeclaration(
       )
       if (id.type === 'Identifier') {
         let bindingType
-        const userReactiveBinding = userImportAlias['reactive'] || 'reactive'
+        const userReactiveBinding = getUserBinding('reactive')
         if (isCallOf(init, userReactiveBinding)) {
           // treat reactive() calls as let since it's meant to be mutable
           bindingType = isConst
@@ -1685,7 +1691,7 @@ function walkDeclaration(
             ? BindingTypes.SETUP_REACTIVE_CONST
             : BindingTypes.SETUP_CONST
         } else if (isConst) {
-          if (isCallOf(init, userImportAlias['ref'] || 'ref')) {
+          if (isCallOf(init, getUserBinding('ref'))) {
             bindingType = BindingTypes.SETUP_REF
           } else {
             bindingType = BindingTypes.SETUP_MAYBE_REF
@@ -1982,10 +1988,11 @@ function genRuntimeEmits(emits: Set<string>) {
 
 function isCallOf(
   node: Node | null | undefined,
-  test: string | ((id: string) => boolean)
+  test: string | ((id: string) => boolean) | null | undefined
 ): node is CallExpression {
   return !!(
     node &&
+    test &&
     node.type === 'CallExpression' &&
     node.callee.type === 'Identifier' &&
     (typeof test === 'string'
@@ -1994,7 +2001,7 @@ function isCallOf(
   )
 }
 
-function canNeverBeRef(node: Node, userReactiveImport: string): boolean {
+function canNeverBeRef(node: Node, userReactiveImport?: string): boolean {
   if (isCallOf(node, userReactiveImport)) {
     return true
   }
