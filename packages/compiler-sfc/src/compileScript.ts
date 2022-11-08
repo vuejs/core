@@ -1411,7 +1411,7 @@ export function compileScript(
       startOffset,
       `\nconst ${propsIdentifier} = __props${
         propsTypeDecl ? ` as ${genSetupPropsType(propsTypeDecl)}` : ``
-      }\n`
+      };\n`
     )
   }
   if (propsDestructureRestId) {
