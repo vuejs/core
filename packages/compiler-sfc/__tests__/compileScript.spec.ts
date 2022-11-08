@@ -391,6 +391,19 @@ defineExpose({ foo: 123 })
           bar: BindingTypes.SETUP_REACTIVE_CONST
         })
       })
+
+      test('aliased usage before import site', () => {
+        const { bindings } = compile(`
+        <script setup>
+          const bar = x(1)
+          import { reactive as x } from 'vue'
+        </script>
+      `)
+        expect(bindings).toStrictEqual({
+          bar: BindingTypes.SETUP_REACTIVE_CONST,
+          x: BindingTypes.SETUP_CONST
+        })
+      })
     })
   })
 

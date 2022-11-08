@@ -354,6 +354,25 @@ export function compileScript(
     )
   }
 
+  function hoistNode(node: Statement) {
+    const start = node.start! + startOffset
+    let end = node.end! + startOffset
+    // locate comment
+    if (node.trailingComments && node.trailingComments.length > 0) {
+      const lastCommentNode =
+        node.trailingComments[node.trailingComments.length - 1]
+      end = lastCommentNode.end + startOffset
+    }
+    // locate the end of whitespace between this statement and the next
+    while (end <= source.length) {
+      if (!/\s/.test(source.charAt(end))) {
+        break
+      }
+      end++
+    }
+    s.move(start, end, 0)
+  }
+
   function registerUserImport(
     source: string,
     local: string,
@@ -891,6 +910,7 @@ export function compileScript(
       scriptStartOffset!
     )
 
+    // walk import declarations first
     for (const node of scriptAst.body) {
       if (node.type === 'ImportDeclaration') {
         // record imports for dedupe
@@ -910,7 +930,11 @@ export function compileScript(
             !options.inlineTemplate
           )
         }
-      } else if (node.type === 'ExportDefaultDeclaration') {
+      }
+    }
+
+    for (const node of scriptAst.body) {
+      if (node.type === 'ExportDefaultDeclaration') {
         // export default
         defaultExport = node
 
@@ -1040,39 +1064,9 @@ export function compileScript(
   )
 
   for (const node of scriptSetupAst.body) {
-    const start = node.start! + startOffset
-    let end = node.end! + startOffset
-    // locate comment
-    if (node.trailingComments && node.trailingComments.length > 0) {
-      const lastCommentNode =
-        node.trailingComments[node.trailingComments.length - 1]
-      end = lastCommentNode.end + startOffset
-    }
-    // locate the end of whitespace between this statement and the next
-    while (end <= source.length) {
-      if (!/\s/.test(source.charAt(end))) {
-        break
-      }
-      end++
-    }
-
-    // (Dropped) `ref: x` bindings
-    if (
-      node.type === 'LabeledStatement' &&
-      node.label.name === 'ref' &&
-      node.body.type === 'ExpressionStatement'
-    ) {
-      error(
-        `ref sugar using the label syntax was an experimental proposal and ` +
-          `has been dropped based on community feedback. Please check out ` +
-          `the new proposal at https://github.com/vuejs/rfcs/discussions/369`,
-        node
-      )
-    }
-
     if (node.type === 'ImportDeclaration') {
       // import declarations are moved to top
-      s.move(start, end, 0)
+      hoistNode(node)
 
       // dedupe imports
       let removed = 0
@@ -1136,6 +1130,26 @@ export function compileScript(
       if (node.specifiers.length && removed === node.specifiers.length) {
         s.remove(node.start! + startOffset, node.end! + startOffset)
       }
+    }
+  }
+
+  for (const node of scriptSetupAst.body) {
+    // already processed
+    if (node.type === 'ImportDeclaration') continue
+
+    // (Dropped) `ref: x` bindings
+    // TODO remove when out of experimental
+    if (
+      node.type === 'LabeledStatement' &&
+      node.label.name === 'ref' &&
+      node.body.type === 'ExpressionStatement'
+    ) {
+      error(
+        `ref sugar using the label syntax was an experimental proposal and ` +
+          `has been dropped based on community feedback. Please check out ` +
+          `the new proposal at https://github.com/vuejs/rfcs/discussions/369`,
+        node
+      )
     }
 
     if (node.type === 'ExpressionStatement') {
@@ -1268,7 +1282,7 @@ export function compileScript(
         (node.type === 'VariableDeclaration' && node.declare)
       ) {
         recordType(node, declaredTypes)
-        s.move(start, end, 0)
+        hoistNode(node)
       }
     }
   }
