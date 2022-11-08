@@ -222,7 +222,8 @@ export {
   RenderFunction,
   MethodOptions,
   ComputedOptions,
-  RuntimeCompilerOptions
+  RuntimeCompilerOptions,
+  ComponentInjectOptions
 } from './componentOptions'
 export { EmitsOptions, ObjectEmitsOptions } from './componentEmits'
 export {
