@@ -640,7 +640,7 @@ export default {
   setup(__props, { expose }) {
   expose();
 
-const props = __props
+const props = __props;
 
     
     
@@ -658,7 +658,7 @@ export default {
   setup(__props, { expose }) {
   expose();
 
-const props = __props
+const props = __props;
 
     
 return { props, x }
@@ -675,7 +675,7 @@ exports[`SFC compile <script setup> defineProps() 1`] = `
   setup(__props, { expose }) {
   expose();
 
-const props = __props
+const props = __props;
 
 
 const bar = 1
@@ -693,7 +693,7 @@ exports[`SFC compile <script setup> defineProps/defineEmits in multi-variable de
   setup(__props, { expose, emit }) {
   expose();
 
-const props = __props
+const props = __props;
 
     
     
@@ -710,11 +710,28 @@ exports[`SFC compile <script setup> defineProps/defineEmits in multi-variable de
   setup(__props, { expose, emit }) {
   expose();
 
-const props = __props
+const props = __props;
 
     const a = 1;
     
 return { props, a, emit }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> defineProps/defineEmits in multi-variable declaration fix #6757  1`] = `
+"export default {
+  props: ['item'],
+  emits: ['a'],
+  setup(__props, { expose, emit }) {
+  expose();
+
+const props = __props
+
+    const a = 1;
+    
+return { a, props, emit }
 }
 
 }"
@@ -1315,6 +1332,23 @@ return { emit }
 })"
 `;
 
+exports[`SFC compile <script setup> with TypeScript defineEmits w/ type (interface ts type) 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+interface Emits { (e: 'foo'): void }
+      
+export default /*#__PURE__*/_defineComponent({
+  emits: ['foo'],
+  setup(__props, { expose, emit }) {
+  expose();
+
+      
+      
+return { emit }
+}
+
+})"
+`;
+
 exports[`SFC compile <script setup> with TypeScript defineEmits w/ type (interface) 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 interface Emits { (e: 'foo' | 'bar'): void }
@@ -1473,6 +1507,33 @@ return {  }
 })"
 `;
 
+exports[`SFC compile <script setup> with TypeScript defineProps w/ extends interface 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+interface Bar extends Foo { y?: number }
+        interface Props extends Bar {
+          z: number
+          y: string
+        }
+        
+        interface Foo { x?: number }
+      
+export default /*#__PURE__*/_defineComponent({
+  props: {
+    z: { type: Number, required: true },
+    y: { type: String, required: true },
+    x: { type: Number, required: false }
+  },
+  setup(__props: any, { expose }) {
+  expose();
+
+        
+      
+return {  }
+}
+
+})"
+`;
+
 exports[`SFC compile <script setup> with TypeScript defineProps w/ interface 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 interface Props { x?: number }
@@ -1567,7 +1628,7 @@ export default /*#__PURE__*/_defineComponent({
   setup(__props, { expose, emit }) {
   expose();
 
-const props = __props
+const props = __props;
 
 
 
@@ -1661,7 +1722,7 @@ const props = __props as {
         foo?: string
         bar?: number
         baz: boolean
-      }
+      };
 
       
       
@@ -1684,7 +1745,7 @@ export default /*#__PURE__*/_defineComponent({
   setup(__props: any, { expose }) {
   expose();
 
-const props = __props as { foo: string, bar?: number, baz: boolean, qux(): number }
+const props = __props as { foo: string, bar?: number, baz: boolean, qux(): number };
 
       
       

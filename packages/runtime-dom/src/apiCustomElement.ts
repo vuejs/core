@@ -215,7 +215,7 @@ export class VueElement extends BaseClass {
     }).observe(this, { attributes: true })
 
     const resolve = (def: InnerComponentDef) => {
-      const { props, styles } = def
+      const { props = {}, styles } = def
       const hasOptions = !isArray(props)
       const rawKeys = props ? (hasOptions ? Object.keys(props) : props) : []
 
@@ -268,10 +268,11 @@ export class VueElement extends BaseClass {
 
   protected _setAttr(key: string) {
     let value = this.getAttribute(key)
-    if (this._numberProps && this._numberProps[key]) {
+    const camelKey = camelize(key)
+    if (this._numberProps && this._numberProps[camelKey]) {
       value = toNumber(value)
     }
-    this._setProp(camelize(key), value, false)
+    this._setProp(camelKey, value, false)
   }
 
   /**

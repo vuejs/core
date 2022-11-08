@@ -6,8 +6,8 @@ exports[`sfc props transform $$() escape 1`] = `
 export default {
   props: ['foo'],
   setup(__props) {
-const __props_bar = _toRef(__props, 'bar')
-const __props_foo = _toRef(__props, 'foo')
+const __props_bar = _toRef(__props, 'bar');
+const __props_foo = _toRef(__props, 'foo');
 
       
       console.log((__props_foo))
@@ -160,7 +160,7 @@ export default {
   props: ['foo', 'bar', 'baz'],
   setup(__props) {
 
-const rest = _createPropsRestProxy(__props, [\\"foo\\",\\"bar\\"])
+const rest = _createPropsRestProxy(__props, [\\"foo\\",\\"bar\\"]);
 
       
       

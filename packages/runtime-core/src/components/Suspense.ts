@@ -89,7 +89,9 @@ export const SuspenseImpl = {
 }
 
 // Force-casted public typing for h and TSX props inference
-export const Suspense = (__FEATURE_SUSPENSE__ ? SuspenseImpl : null) as any as {
+export const Suspense = (__FEATURE_SUSPENSE__
+  ? SuspenseImpl
+  : null) as unknown as {
   __isSuspense: true
   new (): { $props: VNodeProps & SuspenseProps }
 }

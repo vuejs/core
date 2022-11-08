@@ -71,10 +71,10 @@ export function validateDirectiveName(name: string) {
 
 // Directive, value, argument, modifiers
 export type DirectiveArguments = Array<
-  | [Directive]
-  | [Directive, any]
-  | [Directive, any, string]
-  | [Directive, any, string, DirectiveModifiers]
+  | [Directive | undefined]
+  | [Directive | undefined, any]
+  | [Directive | undefined, any, string]
+  | [Directive | undefined, any, string, DirectiveModifiers]
 >
 
 /**
@@ -95,23 +95,25 @@ export function withDirectives<T extends VNode>(
   const bindings: DirectiveBinding[] = vnode.dirs || (vnode.dirs = [])
   for (let i = 0; i < directives.length; i++) {
     let [dir, value, arg, modifiers = EMPTY_OBJ] = directives[i]
-    if (isFunction(dir)) {
-      dir = {
-        mounted: dir,
-        updated: dir
-      } as ObjectDirective
+    if (dir) {
+      if (isFunction(dir)) {
+        dir = {
+          mounted: dir,
+          updated: dir
+        } as ObjectDirective
+      }
+      if (dir.deep) {
+        traverse(value)
+      }
+      bindings.push({
+        dir,
+        instance,
+        value,
+        oldValue: void 0,
+        arg,
+        modifiers
+      })
     }
-    if (dir.deep) {
-      traverse(value)
-    }
-    bindings.push({
-      dir,
-      instance,
-      value,
-      oldValue: void 0,
-      arg,
-      modifiers
-    })
   }
   return vnode
 }
