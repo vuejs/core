@@ -628,6 +628,24 @@ describe('compiler: v-if', () => {
       expect(branch1.props).toMatchObject(createObjectMatcher({ key: `[0]` }))
     })
 
+    // #6631
+    test('avoid duplicate keys', () => {
+      const {
+        node: { codegenNode }
+      } = parseWithIfTransform(`<div v-if="ok" key="custom_key" v-bind="obj"/>`)
+      const branch1 = codegenNode.consequent as VNodeCall
+      expect(branch1.props).toMatchObject({
+        type: NodeTypes.JS_CALL_EXPRESSION,
+        callee: MERGE_PROPS,
+        arguments: [
+          createObjectMatcher({
+            key: 'custom_key'
+          }),
+          { content: `obj` }
+        ]
+      })
+    })
+
     test('with spaces between branches', () => {
       const {
         node: { codegenNode }

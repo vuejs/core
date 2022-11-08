@@ -1,5 +1,4 @@
 import { isArray, isString, isObject, hyphenate } from './'
-import { isNoUnitNumericStyleProp } from './domAttrConfig'
 
 export type NormalizedStyle = Record<string, string | number>
 
@@ -51,10 +50,7 @@ export function stringifyStyle(
   for (const key in styles) {
     const value = styles[key]
     const normalizedKey = key.startsWith(`--`) ? key : hyphenate(key)
-    if (
-      isString(value) ||
-      (typeof value === 'number' && isNoUnitNumericStyleProp(normalizedKey))
-    ) {
+    if (isString(value) || typeof value === 'number') {
       // only render valid values
       ret += `${normalizedKey}:${value};`
     }

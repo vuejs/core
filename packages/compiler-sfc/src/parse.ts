@@ -44,14 +44,8 @@ export interface SFCScriptBlock extends SFCBlock {
   setup?: string | boolean
   bindings?: BindingMetadata
   imports?: Record<string, ImportBinding>
-  /**
-   * import('\@babel/types').Statement
-   */
-  scriptAst?: any[]
-  /**
-   * import('\@babel/types').Statement
-   */
-  scriptSetupAst?: any[]
+  scriptAst?: import('@babel/types').Statement[]
+  scriptSetupAst?: import('@babel/types').Statement[]
 }
 
 export interface SFCStyleBlock extends SFCBlock {
