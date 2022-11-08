@@ -28,7 +28,7 @@ export function normalizeStyle(
 }
 
 const listDelimiterRE = /;(?![^(]*\))/g
-const propertyDelimiterRE = /:(.+)/s
+const propertyDelimiterRE = /:([^]+)/
 
 export function parseStringStyle(cssText: string): NormalizedStyle {
   const ret: NormalizedStyle = {}
