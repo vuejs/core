@@ -299,10 +299,10 @@ export function transformAST(
         processRefDeclaration(refCall, decl.id, decl.init as CallExpression)
       } else {
         const isProps =
-          isRoot && isCall && (decl as any).init.callee.name === 'defineProps'
+          isRoot && isCall && (decl as any).init.callee.name === '$defineProps'
         for (const id of extractIdentifiers(decl.id)) {
           if (isProps) {
-            // for defineProps destructure, only exclude them since they
+            // for $defineProps destructure, only exclude them since they
             // are already passed in as knownProps
             excludedIds.add(id)
           } else {

@@ -58,6 +58,7 @@ import { shouldTransform, transformAST } from '@vue/reactivity-transform'
 
 // Special compiler macros
 const DEFINE_PROPS = 'defineProps'
+const DOLLAR_DEFINE_PROPS = '$defineProps'
 const DEFINE_EMITS = 'defineEmits'
 const DEFINE_EXPOSE = 'defineExpose'
 const WITH_DEFAULTS = 'withDefaults'
@@ -405,7 +406,7 @@ export function compileScript(
   }
 
   function processDefineProps(node: Node, declId?: LVal): boolean {
-    if (!isCallOf(node, DEFINE_PROPS)) {
+    if (!isCallOf(node, DEFINE_PROPS) && !isCallOf(node, DOLLAR_DEFINE_PROPS)) {
       return false
     }
 
@@ -442,7 +443,11 @@ export function compileScript(
     }
 
     if (declId) {
-      if (enablePropsTransform && declId.type === 'ObjectPattern') {
+      if (
+        enablePropsTransform &&
+        isCallOf(node, DOLLAR_DEFINE_PROPS) &&
+        declId.type === 'ObjectPattern'
+      ) {
         propsDestructureDecl = declId
         // props destructure - handle compilation sugar
         for (const prop of declId.properties) {
@@ -1704,9 +1709,13 @@ function walkDeclaration(
     for (const { id, init } of node.declarations) {
       const isDefineCall = !!(
         isConst &&
-        isCallOf(
-          init,
-          c => c === DEFINE_PROPS || c === DEFINE_EMITS || c === WITH_DEFAULTS
+        isCallOf(init, c =>
+          [
+            DEFINE_PROPS,
+            DOLLAR_DEFINE_PROPS,
+            DEFINE_EMITS,
+            WITH_DEFAULTS
+          ].includes(c)
         )
       )
       if (id.type === 'Identifier') {
@@ -1723,9 +1732,10 @@ function walkDeclaration(
           isDefineCall ||
           (isConst && canNeverBeRef(init!, userReactiveBinding))
         ) {
-          bindingType = isCallOf(init, DEFINE_PROPS)
-            ? BindingTypes.SETUP_REACTIVE_CONST
-            : BindingTypes.SETUP_CONST
+          bindingType =
+            isCallOf(init, DEFINE_PROPS) || isCallOf(init, DOLLAR_DEFINE_PROPS)
+              ? BindingTypes.SETUP_REACTIVE_CONST
+              : BindingTypes.SETUP_CONST
         } else if (isConst) {
           if (isCallOf(init, userImportAliases['ref'])) {
             bindingType = BindingTypes.SETUP_REF
@@ -1737,7 +1747,10 @@ function walkDeclaration(
         }
         registerBinding(bindings, id, bindingType)
       } else {
-        if (isCallOf(init, DEFINE_PROPS)) {
+        if (
+          isCallOf(init, DEFINE_PROPS) ||
+          isCallOf(init, DOLLAR_DEFINE_PROPS)
+        ) {
           // skip walking props destructure
           return
         }

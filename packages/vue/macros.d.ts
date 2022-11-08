@@ -5,7 +5,9 @@ import {
   WritableComputedOptions,
   DebuggerOptions,
   WritableComputedRef,
-  CustomRefFactory
+  CustomRefFactory,
+  ComponentObjectPropsOptions,
+  ExtractPropTypes
 } from '@vue/runtime-dom'
 
 export declare const RefType: unique symbol
@@ -17,6 +19,10 @@ export declare const enum RefTypes {
 }
 
 type RefValue<T> = T extends null | undefined ? T : ReactiveVariable<T>
+
+type RefObject<T> = {
+  [Key in keyof T]: RefValue<T[Key]>
+}
 
 type ReactiveVariable<T> = T & { [RefType]?: RefTypes.Ref }
 
@@ -110,3 +116,14 @@ export declare function $computed<T>(
   options: WritableComputedOptions<T>,
   debuggerOptions?: DebuggerOptions
 ): WritableComputedRefValue<T>
+
+// overload 1: runtime props w/ array
+export function $defineProps<PropNames extends string = string>(
+  props: PropNames[]
+): { [key in PropNames]?: any }
+// overload 2: runtime props w/ object
+export function $defineProps<
+  PP extends ComponentObjectPropsOptions = ComponentObjectPropsOptions
+>(props: PP): RefObject<ExtractPropTypes<PP>>
+// overload 3: typed-based declaration
+export function $defineProps<TypeProps>(): RefObject<TypeProps>
