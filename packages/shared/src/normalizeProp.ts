@@ -55,7 +55,7 @@ export function stringifyStyle(
     if (
       isString(value) ||
       (typeof value === 'number' &&
-        (isNoUnitNumericStyleProp(normalizedKey) || isCustomProperty))
+        (isCustomProperty || isNoUnitNumericStyleProp(normalizedKey)))
     ) {
       // only render valid values
       ret += `${normalizedKey}:${value};`
