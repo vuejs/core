@@ -321,8 +321,8 @@ export function transformAST(
       s.overwrite(pattern.start! + offset, pattern.end! + offset, tempVar)
     }
 
+    let nameId: Identifier | undefined
     for (const p of pattern.properties) {
-      let nameId: Identifier | undefined
       let key: Expression | string | undefined
       let defaultValue: Expression | undefined
       if (p.type === 'ObjectProperty') {
@@ -391,6 +391,9 @@ export function transformAST(
         )
       }
     }
+    if (nameId) {
+      s.appendLeft(call.end! + offset, ';')
+    }
   }
 
   function processRefArrayPattern(
@@ -405,10 +408,10 @@ export function transformAST(
       s.overwrite(pattern.start! + offset, pattern.end! + offset, tempVar)
     }
 
+    let nameId: Identifier | undefined
     for (let i = 0; i < pattern.elements.length; i++) {
       const e = pattern.elements[i]
       if (!e) continue
-      let nameId: Identifier | undefined
       let defaultValue: Expression | undefined
       if (e.type === 'Identifier') {
         // [a] --> [__a]
@@ -437,6 +440,9 @@ export function transformAST(
           )}(${source}, ${i}${defaultStr})`
         )
       }
+    }
+    if (nameId) {
+      s.appendLeft(call.end! + offset, ';')
     }
   }
 
@@ -545,7 +551,7 @@ export function transformAST(
         offset,
         `const __props_${publicKey} = ${helper(
           `toRef`
-        )}(__props, '${publicKey}')\n`
+        )}(__props, '${publicKey}');\n`
       )
     }
   }

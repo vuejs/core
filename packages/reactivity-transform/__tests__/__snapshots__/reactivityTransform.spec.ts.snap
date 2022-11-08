@@ -61,7 +61,7 @@ exports[`array destructure 1`] = `
 
     let n = _ref(1), __$temp_1 = (useFoo()),
   a = _toRef(__$temp_1, 0),
-  b = _toRef(__$temp_1, 1, 1)
+  b = _toRef(__$temp_1, 1, 1);
     console.log(n.value, a.value, b.value)
     "
 `;
@@ -90,7 +90,7 @@ exports[`macro import alias and removal 1`] = `
     let a = _ref(1)
     const __$temp_1 = (useMouse()),
   x = _toRef(__$temp_1, 'x'),
-  y = _toRef(__$temp_1, 'y')
+  y = _toRef(__$temp_1, 'y');
     "
 `;
 
@@ -130,10 +130,10 @@ exports[`nested destructure 1`] = `
 "import { toRef as _toRef } from 'vue'
 
     let __$temp_1 = (useFoo()),
-  b = _toRef(__$temp_1[0].a, 'b')
+  b = _toRef(__$temp_1[0].a, 'b');
     let __$temp_2 = (useBar()),
   d = _toRef(__$temp_2.c, 0),
-  e = _toRef(__$temp_2.c, 1)
+  e = _toRef(__$temp_2.c, 1);
     console.log(b.value, d.value, e.value)
     "
 `;
@@ -183,9 +183,9 @@ exports[`object destructure 1`] = `
   c = _toRef(__$temp_1, 'b'),
   d = _toRef(__$temp_1, 'd', 1),
   f = _toRef(__$temp_1, 'e', 2),
-  h = _toRef(__$temp_1, g)
+  h = _toRef(__$temp_1, g);
     let __$temp_2 = (useSomething(() => 1)),
-  foo = _toRef(__$temp_2, 'foo');
+  foo = _toRef(__$temp_2, 'foo');;
     console.log(n.value, a.value, c.value, d.value, f.value, h.value, foo.value)
     "
 `;
@@ -194,7 +194,7 @@ exports[`object destructure w/ mid-path default values 1`] = `
 "import { toRef as _toRef } from 'vue'
 
     const __$temp_1 = (useFoo()),
-  b = _toRef((__$temp_1.a || { b: 123 }), 'b')
+  b = _toRef((__$temp_1.a || { b: 123 }), 'b');
     console.log(b.value)
   "
 `;
