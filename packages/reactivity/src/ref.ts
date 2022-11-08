@@ -5,7 +5,14 @@ import {
   triggerEffects
 } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
-import { isArray, hasChanged, IfAny } from '@vue/shared'
+import {
+  isArray,
+  hasChanged,
+  IfAny,
+  IsReadonlyKey,
+  MarkReadonly,
+  IsEqual
+} from '@vue/shared'
 import {
   isProxy,
   toRaw,
@@ -17,6 +24,7 @@ import {
 import type { ShallowReactiveMarker } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
 import { createDep, Dep } from './dep'
+import { ComputedRef } from './computed'
 
 declare const RefSymbol: unique symbol
 export declare const RawSymbol: unique symbol
@@ -198,7 +206,9 @@ export function customRef<T>(factory: CustomRefFactory<T>): Ref<T> {
 }
 
 export type ToRefs<T = any> = {
-  [K in keyof T]: ToRef<T[K]>
+  -readonly [K in keyof T]: IsReadonlyKey<T, K> extends true
+    ? Readonly<ToRef<T[K]>>
+    : ToRef<T[K]>
 }
 export function toRefs<T extends object>(object: T): ToRefs<T> {
   if (__DEV__ && !isProxy(object)) {
@@ -235,7 +245,7 @@ export type ToRef<T> = IfAny<T, Ref<T>, [T] extends [Ref] ? T : Ref<T>>
 export function toRef<T extends object, K extends keyof T>(
   object: T,
   key: K
-): ToRef<T[K]>
+): IsReadonlyKey<T, K> extends true ? Readonly<ToRef<T[K]>> : ToRef<T[K]>
 
 export function toRef<T extends object, K extends keyof T>(
   object: T,
@@ -305,7 +315,28 @@ export type UnwrapRefSimple<T> = T extends
   : T extends ReadonlyArray<any>
   ? { [K in keyof T]: UnwrapRefSimple<T[K]> }
   : T extends object & { [ShallowReactiveMarker]?: never }
-  ? {
-      [P in keyof T]: P extends symbol ? T[P] : UnwrapRef<T[P]>
-    }
+  ? MarkReadonly<
+      {
+        [P in keyof T]: P extends symbol ? T[P] : UnwrapRef<T[P]>
+      },
+      ReadonlyKeysAfterUnwrapRef<T>
+    >
   : T
+
+type ReadonlyKeysAfterUnwrapRef<T> = {
+  [K in keyof T]: IfAny<
+    T[K],
+    never,
+    IsReadonlyKey<T, K> extends true
+      ? K
+      : T[K] extends ComputedRef
+      ? K
+      : IsReadonlyRef<T[K]> extends true
+      ? K
+      : never
+  >
+}[keyof T]
+
+type IsReadonlyRef<T> = T extends Ref<infer U>
+  ? IsEqual<Readonly<Ref<U>>, T>
+  : false

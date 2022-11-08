@@ -481,6 +481,7 @@ describe('reactivity/readonly', () => {
     const ror = readonly(r)
     const obj = reactive({ ror })
     expect(() => {
+      // @ts-expect-error setting readonly field
       obj.ror = true
     }).toThrow()
     expect(obj.ror).toBe(false)
@@ -490,6 +491,7 @@ describe('reactivity/readonly', () => {
     const r = ref(false)
     const ror = readonly(r)
     const obj = reactive({ ror })
+    // @ts-expect-error setting readonly field
     obj.ror = ref(true) as unknown as boolean
     expect(obj.ror).toBe(true)
     expect(toRaw(obj).ror).not.toBe(ror) // ref successfully replaced

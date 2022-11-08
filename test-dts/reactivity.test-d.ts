@@ -7,7 +7,9 @@ import {
   expectType,
   Ref,
   reactive,
-  markRaw
+  markRaw,
+  Equals,
+  computed
 } from './index'
 
 describe('should support DeepReadonly', () => {
@@ -70,4 +72,18 @@ describe('should unwrap tuple correctly', () => {
   const tuple: [Ref<number>] = [ref(0)]
   const reactiveTuple = reactive(tuple)
   expectType<Ref<number>>(reactiveTuple[0])
+})
+
+describe('should add readonly accordingly', () => {
+  {
+    // readonly ref
+    const r = reactive({ foo: readonly(ref('foo')), bar: 3 })
+    expectType<Equals<{ readonly foo: string; bar: number }, typeof r>>(true)
+  }
+  {
+    // computed
+    // #5159
+    const r = reactive({ foo: computed(() => 'foo') })
+    expectType<Equals<{ readonly foo: string }, typeof r>>(true)
+  }
 })
