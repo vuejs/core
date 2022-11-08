@@ -5,7 +5,7 @@ import {
   triggerEffects
 } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
-import { isArray, hasChanged, IfAny } from '@vue/shared'
+import { isArray, hasChanged, IfAny, IfReadonlyKey } from '@vue/shared'
 import {
   isProxy,
   toRaw,
@@ -198,7 +198,10 @@ export function customRef<T>(factory: CustomRefFactory<T>): Ref<T> {
 }
 
 export type ToRefs<T = any> = {
-  [K in keyof T]: ToRef<T[K]>
+  -readonly [K in keyof T]: {
+    0: ToRef<T[K]>
+    1: Readonly<ToRef<T[K]>>
+  }[IfReadonlyKey<T, K>]
 }
 export function toRefs<T extends object>(object: T): ToRefs<T> {
   if (__DEV__ && !isProxy(object)) {
@@ -235,7 +238,10 @@ export type ToRef<T> = IfAny<T, Ref<T>, [T] extends [Ref] ? T : Ref<T>>
 export function toRef<T extends object, K extends keyof T>(
   object: T,
   key: K
-): ToRef<T[K]>
+): {
+  0: ToRef<T[K]>
+  1: Readonly<ToRef<T[K]>>
+}[IfReadonlyKey<T, K>]
 
 export function toRef<T extends object, K extends keyof T>(
   object: T,

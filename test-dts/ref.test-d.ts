@@ -11,7 +11,8 @@ import {
   toRefs,
   ToRefs,
   shallowReactive,
-  readonly
+  readonly,
+  Equals
 } from './index'
 
 function plainType(arg: number | Ref<number>) {
@@ -191,10 +192,13 @@ expectType<Ref<string>>(p2.obj.k)
     a: number
     b: Ref<number>
     c: number | string
+    readonly d: number
+    readonly e?: string | number
   } = {
     a: 1,
     b: ref(1),
-    c: 1
+    c: 1,
+    d: 3
   }
 
   // toRef
@@ -202,14 +206,28 @@ expectType<Ref<string>>(p2.obj.k)
   expectType<Ref<number>>(toRef(obj, 'b'))
   // Should not distribute Refs over union
   expectType<Ref<number | string>>(toRef(obj, 'c'))
+  // Should respect readonly properties
+  const d = toRef(obj, 'd')
+  expectType<Equals<Readonly<Ref<number>>, typeof d>>(true)
+  const e = toRef(obj, 'e')
+  expectType<Equals<Readonly<Ref<number | string | undefined>>, typeof e>>(true)
 
   // toRefs
-  expectType<{
-    a: Ref<number>
-    b: Ref<number>
-    // Should not distribute Refs over union
-    c: Ref<number | string>
-  }>(toRefs(obj))
+  const refs = toRefs(obj)
+  expectType<
+    Equals<
+      {
+        a: Ref<number>
+        b: Ref<number>
+        // Should not distribute Refs over union
+        c: Ref<number | string>
+        // Should respect readonly properties
+        d: Readonly<Ref<number>>
+        e?: Readonly<Ref<string | number | undefined>>
+      },
+      typeof refs
+    >
+  >(true)
 
   // Both should not do any unwrapping
   const someReactive = shallowReactive({
@@ -228,6 +246,12 @@ expectType<Ref<string>>(p2.obj.k)
   const props = { foo: 1 } as { foo: any }
   const { foo } = toRefs(props)
   expectType<Ref<any>>(foo)
+
+  // partially #5159
+  {
+    const ref = toRefs(readonly(reactive({ foo: 'foo' })))
+    expectType<Equals<{ foo: Readonly<Ref<string>> }, typeof ref>>(true)
+  }
 }
 
 // toRef default value

@@ -17,3 +17,9 @@ export type IsUnion<T, U extends T = T> = (
   : true
 
 export type IsAny<T> = 0 extends 1 & T ? true : false
+
+export type Equals<A1 extends any, A2 extends any> = (<A>() => A extends A2
+  ? 1
+  : 0) extends <A>() => A extends A1 ? 1 : 0
+  ? true
+  : false
