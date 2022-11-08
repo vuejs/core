@@ -6,8 +6,8 @@ exports[`sfc props transform $$() escape 1`] = `
 export default {
   props: ['foo'],
   setup(__props) {
-const __props_bar = _toRef(__props, 'bar')
-const __props_foo = _toRef(__props, 'foo')
+const __props_bar = _toRef(__props, 'bar');
+const __props_foo = _toRef(__props, 'foo');
 
       
       console.log((__props_foo))
@@ -65,7 +65,7 @@ exports[`sfc props transform default values w/ runtime declaration 1`] = `
 export default {
   props: _mergeDefaults(['foo', 'bar'], {
   foo: 1,
-  bar: () => {}
+  bar: () => ({})
 }),
   setup(__props) {
 
@@ -83,7 +83,7 @@ exports[`sfc props transform default values w/ type declaration 1`] = `
 export default /*#__PURE__*/_defineComponent({
   props: {
     foo: { type: Number, required: false, default: 1 },
-    bar: { type: Object, required: false, default: () => {} }
+    bar: { type: Object, required: false, default: () => ({}) }
   },
   setup(__props: any) {
 
@@ -101,11 +101,11 @@ exports[`sfc props transform default values w/ type declaration, prod mode 1`] =
 export default /*#__PURE__*/_defineComponent({
   props: {
     foo: { default: 1 },
-    bar: { default: () => {} },
+    bar: { default: () => ({}) },
     baz: null,
     boola: { type: Boolean },
     boolb: { type: [Boolean, Number] },
-    func: { type: Function, default: () => () => {} }
+    func: { type: Function, default: () => (() => {}) }
   },
   setup(__props: any) {
 
@@ -134,6 +134,25 @@ return () => {}
 }"
 `;
 
+exports[`sfc props transform non-identifier prop names 1`] = `
+"import { toDisplayString as _toDisplayString } from \\"vue\\"
+
+
+export default {
+  props: { 'foo.bar': Function },
+  setup(__props) {
+
+      
+      let x = __props[\\"foo.bar\\"]
+      
+return (_ctx, _cache) => {
+  return _toDisplayString(__props[\\"foo.bar\\"])
+}
+}
+
+}"
+`;
+
 exports[`sfc props transform rest spread 1`] = `
 "import { createPropsRestProxy as _createPropsRestProxy } from 'vue'
 
@@ -141,7 +160,7 @@ export default {
   props: ['foo', 'bar', 'baz'],
   setup(__props) {
 
-const rest = _createPropsRestProxy(__props, [\\"foo\\",\\"bar\\"])
+const rest = _createPropsRestProxy(__props, [\\"foo\\",\\"bar\\"]);
 
       
       

@@ -21,7 +21,7 @@ import {
   walkFunctionParams
 } from '@vue/compiler-core'
 import { parse, ParserPlugin } from '@babel/parser'
-import { hasOwn, isArray, isString } from '@vue/shared'
+import { hasOwn, isArray, isString, genPropsAccessExp } from '@vue/shared'
 
 const CONVERT_SYMBOL = '$'
 const ESCAPE_SYMBOL = '$$'
@@ -321,8 +321,8 @@ export function transformAST(
       s.overwrite(pattern.start! + offset, pattern.end! + offset, tempVar)
     }
 
+    let nameId: Identifier | undefined
     for (const p of pattern.properties) {
-      let nameId: Identifier | undefined
       let key: Expression | string | undefined
       let defaultValue: Expression | undefined
       if (p.type === 'ObjectProperty') {
@@ -391,6 +391,9 @@ export function transformAST(
         )
       }
     }
+    if (nameId) {
+      s.appendLeft(call.end! + offset, ';')
+    }
   }
 
   function processRefArrayPattern(
@@ -405,10 +408,10 @@ export function transformAST(
       s.overwrite(pattern.start! + offset, pattern.end! + offset, tempVar)
     }
 
+    let nameId: Identifier | undefined
     for (let i = 0; i < pattern.elements.length; i++) {
       const e = pattern.elements[i]
       if (!e) continue
-      let nameId: Identifier | undefined
       let defaultValue: Expression | undefined
       if (e.type === 'Identifier') {
         // [a] --> [__a]
@@ -437,6 +440,9 @@ export function transformAST(
           )}(${source}, ${i}${defaultStr})`
         )
       }
+    }
+    if (nameId) {
+      s.appendLeft(call.end! + offset, ';')
     }
   }
 
@@ -489,17 +495,17 @@ export function transformAST(
             if (isProp) {
               if (escapeScope) {
                 // prop binding in $$()
-                // { prop } -> { prop: __prop_prop }
+                // { prop } -> { prop: __props_prop }
                 registerEscapedPropBinding(id)
                 s.appendLeft(
                   id.end! + offset,
                   `: __props_${propsLocalToPublicMap[id.name]}`
                 )
               } else {
-                // { prop } -> { prop: __prop.prop }
+                // { prop } -> { prop: __props.prop }
                 s.appendLeft(
                   id.end! + offset,
-                  `: __props.${propsLocalToPublicMap[id.name]}`
+                  `: ${genPropsAccessExp(propsLocalToPublicMap[id.name])}`
                 )
               }
             } else {
@@ -522,7 +528,7 @@ export function transformAST(
               s.overwrite(
                 id.start! + offset,
                 id.end! + offset,
-                `__props.${propsLocalToPublicMap[id.name]}`
+                genPropsAccessExp(propsLocalToPublicMap[id.name])
               )
             }
           } else {
@@ -545,7 +551,7 @@ export function transformAST(
         offset,
         `const __props_${publicKey} = ${helper(
           `toRef`
-        )}(__props, '${publicKey}')\n`
+        )}(__props, '${publicKey}');\n`
       )
     }
   }

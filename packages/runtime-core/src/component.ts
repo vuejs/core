@@ -35,7 +35,8 @@ import {
   applyOptions,
   ComponentOptions,
   ComputedOptions,
-  MethodOptions
+  MethodOptions,
+  resolveMergedOptions
 } from './componentOptions'
 import {
   EmitsOptions,
@@ -106,6 +107,10 @@ export interface ComponentInternalOptions {
    * This one should be exposed so that devtools can make use of it
    */
   __file?: string
+  /**
+   * name inferred from filename
+   */
+  __name?: string
 }
 
 export interface FunctionalComponent<P = {}, E extends EmitsOptions = {}>
@@ -440,6 +445,15 @@ export interface ComponentInternalInstance {
    * @internal
    */
   [LifecycleHooks.SERVER_PREFETCH]: LifecycleHook<() => Promise<unknown>>
+
+  /**
+   * For caching bound $forceUpdate on public proxy access
+   */
+  f?: () => void
+  /**
+   * For caching bound $nextTick on public proxy access
+   */
+  n?: () => Promise<void>
 }
 
 const emptyAppContext = createAppContext()
@@ -477,7 +491,7 @@ export function createComponentInstance(
     accessCache: null!,
     renderCache: [],
 
-    // local resovled assets
+    // local resolved assets
     components: null,
     directives: null,
 
@@ -779,7 +793,8 @@ export function finishComponentSetup(
         (__COMPAT__ &&
           instance.vnode.props &&
           instance.vnode.props['inline-template']) ||
-        Component.template
+        Component.template ||
+        resolveMergedOptions(instance).template
       if (template) {
         if (__DEV__) {
           startMeasure(instance, `compile`)
@@ -801,6 +816,7 @@ export function finishComponentSetup(
           // pass runtime compat config into the compiler
           finalCompilerOptions.compatConfig = Object.create(globalCompatConfig)
           if (Component.compatConfig) {
+            // @ts-expect-error types are not compatible
             extend(finalCompilerOptions.compatConfig, Component.compatConfig)
           }
         }
@@ -929,6 +945,9 @@ export function getExposeProxy(instance: ComponentInternalInstance) {
           } else if (key in publicPropertiesMap) {
             return publicPropertiesMap[key](instance)
           }
+        },
+        has(target, key: string) {
+          return key in target || key in publicPropertiesMap
         }
       }))
     )
@@ -940,11 +959,12 @@ const classify = (str: string): string =>
   str.replace(classifyRE, c => c.toUpperCase()).replace(/[-_]/g, '')
 
 export function getComponentName(
-  Component: ConcreteComponent
-): string | undefined {
+  Component: ConcreteComponent,
+  includeInferred = true
+): string | false | undefined {
   return isFunction(Component)
     ? Component.displayName || Component.name
-    : Component.name
+    : Component.name || (includeInferred && Component.__name)
 }
 
 /* istanbul ignore next */

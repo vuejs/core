@@ -21,21 +21,24 @@ function copyVuePlugin(): Plugin {
   return {
     name: 'copy-vue',
     generateBundle() {
-      const filePath = path.resolve(
-        __dirname,
-        '../vue/dist/vue.runtime.esm-browser.js'
-      )
-      if (!fs.existsSync(filePath)) {
-        throw new Error(
-          `vue.runtime.esm-browser.js not built. ` +
-            `Run "nr build vue -f esm-browser" first.`
-        )
+      const copyFile = (file: string) => {
+        const filePath = path.resolve(__dirname, file)
+        const basename = path.basename(file)
+        if (!fs.existsSync(filePath)) {
+          throw new Error(
+            `${basename} not built. ` +
+              `Run "nr build vue -f esm-browser" first.`
+          )
+        }
+        this.emitFile({
+          type: 'asset',
+          fileName: basename,
+          source: fs.readFileSync(filePath, 'utf-8')
+        })
       }
-      this.emitFile({
-        type: 'asset',
-        fileName: 'vue.runtime.esm-browser.js',
-        source: fs.readFileSync(filePath, 'utf-8')
-      })
+
+      copyFile(`../vue/dist/vue.runtime.esm-browser.js`)
+      copyFile(`../server-renderer/dist/server-renderer.esm-browser.js`)
     }
   }
 }

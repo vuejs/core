@@ -1,5 +1,5 @@
 import { BindingTypes } from '@vue/compiler-core'
-import { compileSFCScript as compile, assertCode } from './utils'
+import { compileSFCScript as compile, assertCode, mockId } from './utils'
 
 describe('SFC compile <script setup>', () => {
   test('should expose top level declarations', () => {
@@ -64,11 +64,11 @@ const bar = 1
   `)
     // should generate working code
     assertCode(content)
-    // should anayze bindings
+    // should analyze bindings
     expect(bindings).toStrictEqual({
       foo: BindingTypes.PROPS,
       bar: BindingTypes.SETUP_CONST,
-      props: BindingTypes.SETUP_CONST
+      props: BindingTypes.SETUP_REACTIVE_CONST
     })
 
     // should remove defineOptions import and call
@@ -141,6 +141,21 @@ const myEmit = defineEmits(['foo', 'bar'])
     expect(content).toMatch(`emits: ['a'],`)
   })
 
+  // #6757
+  test('defineProps/defineEmits in multi-variable declaration fix #6757 ', () => {
+    const { content } = compile(`
+    <script setup>
+    const a = 1,
+          props = defineProps(['item']),
+          emit = defineEmits(['a']);
+    </script>
+  `)
+    assertCode(content)
+    expect(content).toMatch(`const a = 1;`) // test correct removal
+    expect(content).toMatch(`props: ['item'],`)
+    expect(content).toMatch(`emits: ['a'],`)
+  })
+
   test('defineProps/defineEmits in multi-variable declaration (full removal)', () => {
     const { content } = compile(`
     <script setup>
@@ -166,6 +181,16 @@ defineExpose({ foo: 123 })
     expect(content).toMatch(`setup(__props, { expose }) {`)
     // should replace callee
     expect(content).toMatch(/\bexpose\(\{ foo: 123 \}\)/)
+  })
+
+  test('<script> after <script setup> the script content not end with `\\n`', () => {
+    const { content } = compile(`
+    <script setup>
+    import { x } from './x'
+    </script>
+    <script>const n = 1</script>
+    `)
+    assertCode(content)
   })
 
   describe('<script> and <script setup> co-usage', () => {
@@ -331,6 +356,55 @@ defineExpose({ foo: 123 })
         content.lastIndexOf(`import { x }`)
       )
     })
+
+    describe('import ref/reactive function from other place', () => {
+      test('import directly', () => {
+        const { bindings } = compile(`
+        <script setup>
+          import { ref, reactive } from './foo'
+
+          const foo = ref(1)
+          const bar = reactive(1)
+        </script>
+      `)
+        expect(bindings).toStrictEqual({
+          ref: BindingTypes.SETUP_MAYBE_REF,
+          reactive: BindingTypes.SETUP_MAYBE_REF,
+          foo: BindingTypes.SETUP_MAYBE_REF,
+          bar: BindingTypes.SETUP_MAYBE_REF
+        })
+      })
+
+      test('import w/ alias', () => {
+        const { bindings } = compile(`
+        <script setup>
+          import { ref as _ref, reactive as _reactive } from './foo'
+
+          const foo = ref(1)
+          const bar = reactive(1)
+        </script>
+      `)
+        expect(bindings).toStrictEqual({
+          _reactive: BindingTypes.SETUP_MAYBE_REF,
+          _ref: BindingTypes.SETUP_MAYBE_REF,
+          foo: BindingTypes.SETUP_MAYBE_REF,
+          bar: BindingTypes.SETUP_MAYBE_REF
+        })
+      })
+
+      test('aliased usage before import site', () => {
+        const { bindings } = compile(`
+        <script setup>
+          const bar = x(1)
+          import { reactive as x } from 'vue'
+        </script>
+      `)
+        expect(bindings).toStrictEqual({
+          bar: BindingTypes.SETUP_REACTIVE_CONST,
+          x: BindingTypes.SETUP_CONST
+        })
+      })
+    })
   })
 
   // in dev mode, declared bindings are returned as an object from setup()
@@ -403,7 +477,7 @@ defineExpose({ foo: 123 })
       assertCode(content)
     })
 
-    // #4340 interpolations in tempalte strings
+    // #4340 interpolations in template strings
     test('js template string interpolations', () => {
       const { content } = compile(`
         <script setup lang="ts">
@@ -431,6 +505,38 @@ defineExpose({ foo: 123 })
         `)
       expect(content).toMatch(`return { FooBaz, Last }`)
       assertCode(content)
+    })
+
+    test('TS annotations', () => {
+      const { content } = compile(`
+        <script setup lang="ts">
+        import { Foo, Bar, Baz, Qux, Fred } from './x'
+        const a = 1
+        function b() {}
+        </script>
+        <template>
+          {{ a as Foo }}
+          {{ b<Bar>() }}
+          {{ Baz }}
+          <Comp v-slot="{ data }: Qux">{{ data }}</Comp>
+          <div v-for="{ z = x as Qux } in list as Fred"/>
+        </template>
+        `)
+      expect(content).toMatch(`return { a, b, Baz }`)
+      assertCode(content)
+    })
+
+    // vuejs/vue#12591
+    test('v-on inline statement', () => {
+      // should not error
+      compile(`
+      <script setup lang="ts">
+        import { foo } from './foo'
+      </script>
+      <template>
+        <div @click="$emit('update:a');"></div>
+      </template>
+      `)
     })
   })
 
@@ -502,6 +608,7 @@ defineExpose({ foo: 123 })
         import { ref } from 'vue'
         import Foo, { bar } from './Foo.vue'
         import other from './util'
+        import * as tree from './tree'
         const count = ref(0)
         const constant = {}
         const maybe = foo()
@@ -511,6 +618,7 @@ defineExpose({ foo: 123 })
         <template>
           <Foo>{{ bar }}</Foo>
           <div @click="fn">{{ count }} {{ constant }} {{ maybe }} {{ lett }} {{ other }}</div>
+          {{ tree.foo() }}
         </template>
         `,
         { inlineTemplate: true }
@@ -529,6 +637,8 @@ defineExpose({ foo: 123 })
       expect(content).toMatch(`unref(maybe)`)
       // should unref() on let bindings
       expect(content).toMatch(`unref(lett)`)
+      // no need to unref namespace import (this also preserves tree-shaking)
+      expect(content).toMatch(`tree.foo()`)
       // no need to unref function declarations
       expect(content).toMatch(`{ onClick: fn }`)
       // no need to mark constant fns in patch flag
@@ -695,6 +805,8 @@ defineExpose({ foo: 123 })
       expect(content).toMatch(`\n  __ssrInlineRender: true,\n`)
       expect(content).toMatch(`return (_ctx, _push`)
       expect(content).toMatch(`ssrInterpolate`)
+      expect(content).not.toMatch(`useCssVars`)
+      expect(content).toMatch(`"--${mockId}-count": (count.value)`)
       assertCode(content)
     })
   })
@@ -834,6 +946,31 @@ const emit = defineEmits(['a', 'b'])
       expect(content).toMatch(`x: { type: Number, required: false }`)
       expect(bindings).toStrictEqual({
         x: BindingTypes.PROPS
+      })
+    })
+
+    test('defineProps w/ extends interface', () => {
+      const { content, bindings } = compile(`
+      <script lang="ts">
+        interface Foo { x?: number }
+      </script>
+      <script setup lang="ts">
+        interface Bar extends Foo { y?: number }
+        interface Props extends Bar {
+          z: number
+          y: string
+        }
+        defineProps<Props>()
+      </script>
+      `)
+      assertCode(content)
+      expect(content).toMatch(`z: { type: Number, required: true }`)
+      expect(content).toMatch(`y: { type: String, required: true }`)
+      expect(content).toMatch(`x: { type: Number, required: false }`)
+      expect(bindings).toStrictEqual({
+        x: BindingTypes.PROPS,
+        y: BindingTypes.PROPS,
+        z: BindingTypes.PROPS
       })
     })
 
@@ -1060,6 +1197,19 @@ const emit = defineEmits(['a', 'b'])
       expect(content).toMatch(`emits: ["foo", "bar"]`)
     })
 
+    // #5393
+    test('defineEmits w/ type (interface ts type)', () => {
+      const { content } = compile(`
+      <script setup lang="ts">
+      interface Emits { (e: 'foo'): void }
+      const emit: Emits = defineEmits(['foo'])
+      </script>
+      `)
+      assertCode(content)
+      expect(content).toMatch(`setup(__props, { expose, emit }) {`)
+      expect(content).toMatch(`emits: ['foo']`)
+    })
+
     test('runtime Enum', () => {
       const { content, bindings } = compile(
         `<script setup lang="ts">
@@ -1162,6 +1312,59 @@ const emit = defineEmits(['a', 'b'])
 
     test('nested statements', () => {
       assertAwaitDetection(`if (ok) { await foo } else { await bar }`)
+    })
+
+    test('multiple `if` nested statements', () => {
+      assertAwaitDetection(`if (ok) {
+        let a = 'foo'
+        await 0 + await 1
+        await 2
+      } else if (a) {
+        await 10
+        if (b) {
+          await 0 + await 1
+        } else {
+          let a = 'foo'
+          await 2
+        }
+        if (b) {
+          await 3
+          await 4
+        }
+      } else {
+        await 5
+      }`)
+    })
+
+    test('multiple `if while` nested statements', () => {
+      assertAwaitDetection(`if (ok) {
+        while (d) {
+          await 5
+        }
+        while (d) {
+          await 5
+          await 6
+          if (c) {
+            let f = 10
+            10 + await 7
+          } else {
+            await 8
+            await 9
+          }
+        }
+      }`)
+    })
+
+    test('multiple `if for` nested statements', () => {
+      assertAwaitDetection(`if (ok) {
+        for (let a of [1,2,3]) {
+          await a
+        }
+        for (let a of [1,2,3]) {
+          await a
+          await a
+        }
+      }`)
     })
 
     test('should ignore await inside functions', () => {
@@ -1548,6 +1751,61 @@ describe('SFC analyze <script> bindings', () => {
       d: BindingTypes.SETUP_MAYBE_REF,
       e: BindingTypes.SETUP_LET,
       foo: BindingTypes.PROPS
+    })
+  })
+
+  describe('auto name inference', () => {
+    test('basic', () => {
+      const { content } = compile(
+        `<script setup>const a = 1</script>
+        <template>{{ a }}</template>`,
+        undefined,
+        {
+          filename: 'FooBar.vue'
+        }
+      )
+      expect(content).toMatch(`export default {
+  __name: 'FooBar'`)
+      assertCode(content)
+    })
+
+    test('do not overwrite manual name (object)', () => {
+      const { content } = compile(
+        `<script>
+        export default {
+          name: 'Baz'
+        }
+        </script>
+        <script setup>const a = 1</script>
+        <template>{{ a }}</template>`,
+        undefined,
+        {
+          filename: 'FooBar.vue'
+        }
+      )
+      expect(content).not.toMatch(`name: 'FooBar'`)
+      expect(content).toMatch(`name: 'Baz'`)
+      assertCode(content)
+    })
+
+    test('do not overwrite manual name (call)', () => {
+      const { content } = compile(
+        `<script>
+        import { defineComponent } from 'vue'
+        export default defineComponent({
+          name: 'Baz'
+        })
+        </script>
+        <script setup>const a = 1</script>
+        <template>{{ a }}</template>`,
+        undefined,
+        {
+          filename: 'FooBar.vue'
+        }
+      )
+      expect(content).not.toMatch(`name: 'FooBar'`)
+      expect(content).toMatch(`name: 'Baz'`)
+      assertCode(content)
     })
   })
 })

@@ -97,12 +97,6 @@ function walk(
           }
         }
       }
-    } else if (
-      child.type === NodeTypes.TEXT_CALL &&
-      getConstantType(child.content, context) >= ConstantTypes.CAN_HOIST
-    ) {
-      child.codegenNode = context.hoist(child.codegenNode)
-      hoistedCount++
     }
 
     // walk further
@@ -230,6 +224,15 @@ export function getConstantType(
         // static then they don't need to be blocks since there will be no
         // nested updates.
         if (codegenNode.isBlock) {
+          // except set custom directives.
+          for (let i = 0; i < node.props.length; i++) {
+            const p = node.props[i]
+            if (p.type === NodeTypes.DIRECTIVE) {
+              constantCache.set(node, ConstantTypes.NOT_CONSTANT)
+              return ConstantTypes.NOT_CONSTANT
+            }
+          }
+
           context.removeHelper(OPEN_BLOCK)
           context.removeHelper(
             getVNodeBlockHelper(context.inSSR, codegenNode.isComponent)

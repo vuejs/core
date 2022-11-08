@@ -34,7 +34,9 @@ import {
   OptionTypesKeys,
   resolveMergedOptions,
   shouldCacheAccess,
-  MergedComponentOptionsOverride
+  MergedComponentOptionsOverride,
+  InjectToObject,
+  ComponentInjectOptions
 } from './componentOptions'
 import { EmitsOptions, EmitFn } from './componentEmits'
 import { Slots } from './componentSlots'
@@ -141,6 +143,7 @@ export type CreateComponentPublicInstance<
   PublicProps = P,
   Defaults = {},
   MakeDefaultsOptional extends boolean = false,
+  I extends ComponentInjectOptions = {},
   PublicMixin = IntersectionMixin<Mixin> & IntersectionMixin<Extends>,
   PublicP = UnwrapMixinsType<PublicMixin, 'P'> & EnsureNonVoid<P>,
   PublicB = UnwrapMixinsType<PublicMixin, 'B'> & EnsureNonVoid<B>,
@@ -161,7 +164,8 @@ export type CreateComponentPublicInstance<
   PublicProps,
   PublicDefaults,
   MakeDefaultsOptional,
-  ComponentOptionsBase<P, B, D, C, M, Mixin, Extends, E, string, Defaults>
+  ComponentOptionsBase<P, B, D, C, M, Mixin, Extends, E, string, Defaults>,
+  I
 >
 
 // public properties exposed on the proxy, which is used as the render context
@@ -176,7 +180,8 @@ export type ComponentPublicInstance<
   PublicProps = P,
   Defaults = {},
   MakeDefaultsOptional extends boolean = false,
-  Options = ComponentOptionsBase<any, any, any, any, any, any, any, any, any>
+  Options = ComponentOptionsBase<any, any, any, any, any, any, any, any, any>,
+  I extends ComponentInjectOptions = {}
 > = {
   $: ComponentInternalInstance
   $data: D
@@ -193,9 +198,11 @@ export type ComponentPublicInstance<
   $options: Options & MergedComponentOptionsOverride
   $forceUpdate: () => void
   $nextTick: typeof nextTick
-  $watch(
-    source: string | Function,
-    cb: Function,
+  $watch<T extends string | ((...args: any) => any)>(
+    source: T,
+    cb: T extends (...args: any) => infer R
+      ? (...args: [R, R]) => any
+      : (...args: any) => any,
     options?: WatchOptions
   ): WatchStopHandle
 } & P &
@@ -203,7 +210,8 @@ export type ComponentPublicInstance<
   UnwrapNestedRefs<D> &
   ExtractComputedReturns<C> &
   M &
-  ComponentCustomProperties
+  ComponentCustomProperties &
+  InjectToObject<I>
 
 export type PublicPropertiesMap = Record<
   string,
@@ -238,8 +246,8 @@ export const publicPropertiesMap: PublicPropertiesMap =
     $root: i => getPublicInstance(i.root),
     $emit: i => i.emit,
     $options: i => (__FEATURE_OPTIONS_API__ ? resolveMergedOptions(i) : i.type),
-    $forceUpdate: i => () => queueJob(i.update),
-    $nextTick: i => nextTick.bind(i.proxy!),
+    $forceUpdate: i => i.f || (i.f = () => queueJob(i.update)),
+    $nextTick: i => i.n || (i.n = nextTick.bind(i.proxy!)),
     $watch: i => (__FEATURE_OPTIONS_API__ ? instanceWatch.bind(i) : NOOP)
   } as PublicPropertiesMap)
 
@@ -259,6 +267,8 @@ export interface ComponentRenderContext {
   [key: string]: any
   _: ComponentInternalInstance
 }
+
+export const isReservedPrefix = (key: string) => key === '_' || key === '$'
 
 export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
   get({ _: instance }: ComponentRenderContext, key: string) {
@@ -371,11 +381,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
         // to infinite warning loop
         key.indexOf('__v') !== 0)
     ) {
-      if (
-        data !== EMPTY_OBJ &&
-        (key[0] === '$' || key[0] === '_') &&
-        hasOwn(data, key)
-      ) {
+      if (data !== EMPTY_OBJ && isReservedPrefix(key[0]) && hasOwn(data, key)) {
         warn(
           `Property ${JSON.stringify(
             key
@@ -557,7 +563,7 @@ export function exposeSetupStateOnRenderContext(
   const { ctx, setupState } = instance
   Object.keys(toRaw(setupState)).forEach(key => {
     if (!setupState.__isScriptSetup) {
-      if (key[0] === '$' || key[0] === '_') {
+      if (isReservedPrefix(key[0])) {
         warn(
           `setup() return property ${JSON.stringify(
             key

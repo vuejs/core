@@ -31,6 +31,7 @@ import {
   invokeArrayFns
 } from '@vue/shared'
 import { watch } from '../apiWatch'
+import { hmrDirtyComponents } from '../hmr'
 import {
   RendererInternals,
   queuePostRenderEffect,
@@ -42,6 +43,7 @@ import { setTransitionHooks } from './BaseTransition'
 import { ComponentRenderContext } from '../componentPublicInstance'
 import { devtoolsComponentAdded } from '../devtools'
 import { isAsyncWrapper } from '../apiAsyncComponent'
+import { isSuspense } from './Suspense'
 
 type MatchPattern = string | RegExp | (string | RegExp)[]
 
@@ -95,8 +97,11 @@ const KeepAliveImpl: ComponentOptions = {
 
     // if the internal renderer is not registered, it indicates that this is server-side rendering,
     // for KeepAlive, we just need to render its children
-    if (!sharedContext.renderer) {
-      return slots.default
+    if (__SSR__ && !sharedContext.renderer) {
+      return () => {
+        const children = slots.default && slots.default()
+        return children && children.length === 1 ? children[0] : children
+      }
     }
 
     const cache: Cache = new Map()
@@ -276,7 +281,8 @@ const KeepAliveImpl: ComponentOptions = {
 
       if (
         (include && (!name || !matches(include, name))) ||
-        (exclude && name && matches(exclude, name))
+        (exclude && name && matches(exclude, name)) ||
+        (__DEV__ && hmrDirtyComponents.has(comp))
       ) {
         current = vnode
         return rawVNode
@@ -323,7 +329,7 @@ const KeepAliveImpl: ComponentOptions = {
       vnode.shapeFlag |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
 
       current = vnode
-      return rawVNode
+      return isSuspense(rawVNode.type) ? rawVNode : vnode
     }
   }
 }

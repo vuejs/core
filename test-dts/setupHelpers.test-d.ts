@@ -27,13 +27,19 @@ describe('defineProps w/ type declaration + withDefaults', () => {
       arr?: string[]
       obj?: { x: number }
       fn?: (e: string) => void
+      genStr?: string
       x?: string
+      y?: string
+      z?: string
     }>(),
     {
       number: 123,
       arr: () => [],
       obj: () => ({ x: 123 }),
-      fn: () => {}
+      fn: () => {},
+      genStr: () => '',
+      y: undefined,
+      z: 'string'
     }
   )
 
@@ -41,8 +47,15 @@ describe('defineProps w/ type declaration + withDefaults', () => {
   res.arr.push('hi')
   res.obj.x
   res.fn('hi')
+  res.genStr.slice()
   // @ts-expect-error
   res.x.slice()
+  // @ts-expect-error
+  res.y.slice()
+
+  expectType<string | undefined>(res.x)
+  expectType<string | undefined>(res.y)
+  expectType<string>(res.z)
 })
 
 describe('defineProps w/ union type declaration + withDefaults', () => {
@@ -51,11 +64,13 @@ describe('defineProps w/ union type declaration + withDefaults', () => {
       union1?: number | number[] | { x: number }
       union2?: number | number[] | { x: number }
       union3?: number | number[] | { x: number }
+      union4?: number | number[] | { x: number }
     }>(),
     {
       union1: 123,
       union2: () => [123],
-      union3: () => ({ x: 123 })
+      union3: () => ({ x: 123 }),
+      union4: () => 123,
     }
   )
 })
