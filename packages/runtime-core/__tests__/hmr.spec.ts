@@ -151,6 +151,7 @@ describe('hot module replacement', () => {
     expect(mountSpy).toHaveBeenCalledTimes(1)
   })
 
+  // #7042
   test('reload KeepAlive slot', async () => {
     const root = nodeOps.createElement('div')
     const childId = 'test-child-keep-alive'
