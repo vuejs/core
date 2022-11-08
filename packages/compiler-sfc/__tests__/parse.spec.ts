@@ -313,10 +313,10 @@ h1 { color: red }
     })
 
     // # 6676
-    test('should throw error if <template> nor <script> is included i', () => {
+    test('should throw error if no <template> or <script> is present', () => {
       assertWarning(
         parse(`import { ref } from 'vue'`).errors,
-        `Single file Component at least has a <template> or a <script> tag.`
+        `At least one <template> or <script> is required in a single file component`
       )
     })
   })
