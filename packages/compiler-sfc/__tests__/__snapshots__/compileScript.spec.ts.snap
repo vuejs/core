@@ -44,9 +44,9 @@ return { a }
 `;
 
 exports[`SFC compile <script setup> <script> after <script setup> the script content not end with \`\\n\` 1`] = `
-"const n = 1
-import { x } from './x'
-    
+"import { x } from './x'
+    const n = 1
+
 export default {
   setup(__props, { expose }) {
   expose();
@@ -78,11 +78,12 @@ return { n, x }
 `;
 
 exports[`SFC compile <script setup> <script> and <script setup> co-usage script setup first 1`] = `
-"export const n = 1
+"import { x } from './x'
+      
+      export const n = 1
       const __default__ = {}
       
-import { x } from './x'
-      
+
 export default /*#__PURE__*/Object.assign(__default__, {
   setup(__props, { expose }) {
   expose();
@@ -97,13 +98,13 @@ return { n, x }
 
 exports[`SFC compile <script setup> <script> and <script setup> co-usage script setup first, lang="ts", script block content export default 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
-
+import { x } from './x'
+      
       const __default__ = {
         name: \\"test\\"
       }
       
-import { x } from './x'
-      
+
 export default /*#__PURE__*/_defineComponent({
   ...__default__,
   setup(__props, { expose }) {
@@ -118,14 +119,15 @@ return { x }
 `;
 
 exports[`SFC compile <script setup> <script> and <script setup> co-usage script setup first, named default export 1`] = `
-"export const n = 1
+"import { x } from './x'
+      
+      export const n = 1
       const def = {}
       
       
 const __default__ = def
 
-import { x } from './x'
-      
+
 export default /*#__PURE__*/Object.assign(__default__, {
   setup(__props, { expose }) {
   expose();
@@ -1260,14 +1262,15 @@ return () => {}
 `;
 
 exports[`SFC compile <script setup> should expose top level declarations 1`] = `
-"import { xx } from './x'
+"import { x } from './x'
+      
+      import { xx } from './x'
       let aa = 1
       const bb = 2
       function cc() {}
       class dd {}
       
-import { x } from './x'
-      
+
 export default {
   setup(__props, { expose }) {
   expose();

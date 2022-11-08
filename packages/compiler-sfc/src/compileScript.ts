@@ -898,10 +898,10 @@ export function compileScript(
     }
   }
 
-  // 1. process normal <script> first if it exists
-  let scriptAst: Program | undefined
-  if (script) {
-    scriptAst = parse(
+  // 0. parse both <script> and <script setup> blocks
+  const scriptAst =
+    script &&
+    parse(
       script.content,
       {
         plugins,
@@ -910,7 +910,21 @@ export function compileScript(
       scriptStartOffset!
     )
 
-    // walk import declarations first
+  const scriptSetupAst = parse(
+    scriptSetup.content,
+    {
+      plugins: [
+        ...plugins,
+        // allow top level await but only inside <script setup>
+        'topLevelAwait'
+      ],
+      sourceType: 'module'
+    },
+    startOffset
+  )
+
+  // 1.1 walk import delcarations of <script>
+  if (scriptAst) {
     for (const node of scriptAst.body) {
       if (node.type === 'ImportDeclaration') {
         // record imports for dedupe
@@ -932,7 +946,88 @@ export function compileScript(
         }
       }
     }
+  }
 
+  // 1.2 walk import declarations of <script setup>
+  for (const node of scriptSetupAst.body) {
+    if (node.type === 'ImportDeclaration') {
+      // import declarations are moved to top
+      hoistNode(node)
+
+      // dedupe imports
+      let removed = 0
+      const removeSpecifier = (i: number) => {
+        const removeLeft = i > removed
+        removed++
+        const current = node.specifiers[i]
+        const next = node.specifiers[i + 1]
+        s.remove(
+          removeLeft
+            ? node.specifiers[i - 1].end! + startOffset
+            : current.start! + startOffset,
+          next && !removeLeft
+            ? next.start! + startOffset
+            : current.end! + startOffset
+        )
+      }
+
+      for (let i = 0; i < node.specifiers.length; i++) {
+        const specifier = node.specifiers[i]
+        const local = specifier.local.name
+        let imported =
+          specifier.type === 'ImportSpecifier' &&
+          specifier.imported.type === 'Identifier' &&
+          specifier.imported.name
+        if (specifier.type === 'ImportNamespaceSpecifier') {
+          imported = '*'
+        }
+        const source = node.source.value
+        const existing = userImports[local]
+        if (
+          source === 'vue' &&
+          (imported === DEFINE_PROPS ||
+            imported === DEFINE_EMITS ||
+            imported === DEFINE_EXPOSE)
+        ) {
+          warnOnce(
+            `\`${imported}\` is a compiler macro and no longer needs to be imported.`
+          )
+          removeSpecifier(i)
+        } else if (existing) {
+          if (existing.source === source && existing.imported === imported) {
+            // already imported in <script setup>, dedupe
+            removeSpecifier(i)
+          } else {
+            error(`different imports aliased to same local name.`, specifier)
+          }
+        } else {
+          registerUserImport(
+            source,
+            local,
+            imported,
+            node.importKind === 'type' ||
+              (specifier.type === 'ImportSpecifier' &&
+                specifier.importKind === 'type'),
+            true,
+            !options.inlineTemplate
+          )
+        }
+      }
+      if (node.specifiers.length && removed === node.specifiers.length) {
+        s.remove(node.start! + startOffset, node.end! + startOffset)
+      }
+    }
+  }
+
+  // 1.3 resolve possible user import alias of `ref` and `reactive`
+  const vueImportAliases: Record<string, string> = {}
+  for (const key in userImports) {
+    const { source, imported, local } = userImports[key]
+    if (source === 'vue') vueImportAliases[imported] = local
+  }
+
+  // 2.1 process normal <script> body
+  if (script && scriptAst) {
     for (const node of scriptAst.body) {
       if (node.type === 'ExportDefaultDeclaration') {
         // export default
@@ -1011,7 +1106,7 @@ export function compileScript(
           }
         }
         if (node.declaration) {
-          walkDeclaration(node.declaration, scriptBindings, userImports)
+          walkDeclaration(node.declaration, scriptBindings, vueImportAliases)
         }
       } else if (
         (node.type === 'VariableDeclaration' ||
@@ -1020,7 +1115,7 @@ export function compileScript(
           node.type === 'TSEnumDeclaration') &&
         !node.declare
       ) {
-        walkDeclaration(node, scriptBindings, userImports)
+        walkDeclaration(node, scriptBindings, vueImportAliases)
       }
     }
 
@@ -1049,94 +1144,8 @@ export function compileScript(
     }
   }
 
-  // 2. parse <script setup> and  walk over top level statements
-  const scriptSetupAst = parse(
-    scriptSetup.content,
-    {
-      plugins: [
-        ...plugins,
-        // allow top level await but only inside <script setup>
-        'topLevelAwait'
-      ],
-      sourceType: 'module'
-    },
-    startOffset
-  )
-
+  // 2.2 process <script setup> body
   for (const node of scriptSetupAst.body) {
-    if (node.type === 'ImportDeclaration') {
-      // import declarations are moved to top
-      hoistNode(node)
-
-      // dedupe imports
-      let removed = 0
-      const removeSpecifier = (i: number) => {
-        const removeLeft = i > removed
-        removed++
-        const current = node.specifiers[i]
-        const next = node.specifiers[i + 1]
-        s.remove(
-          removeLeft
-            ? node.specifiers[i - 1].end! + startOffset
-            : current.start! + startOffset,
-          next && !removeLeft
-            ? next.start! + startOffset
-            : current.end! + startOffset
-        )
-      }
-
-      for (let i = 0; i < node.specifiers.length; i++) {
-        const specifier = node.specifiers[i]
-        const local = specifier.local.name
-        let imported =
-          specifier.type === 'ImportSpecifier' &&
-          specifier.imported.type === 'Identifier' &&
-          specifier.imported.name
-        if (specifier.type === 'ImportNamespaceSpecifier') {
-          imported = '*'
-        }
-        const source = node.source.value
-        const existing = userImports[local]
-        if (
-          source === 'vue' &&
-          (imported === DEFINE_PROPS ||
-            imported === DEFINE_EMITS ||
-            imported === DEFINE_EXPOSE)
-        ) {
-          warnOnce(
-            `\`${imported}\` is a compiler macro and no longer needs to be imported.`
-          )
-          removeSpecifier(i)
-        } else if (existing) {
-          if (existing.source === source && existing.imported === imported) {
-            // already imported in <script setup>, dedupe
-            removeSpecifier(i)
-          } else {
-            error(`different imports aliased to same local name.`, specifier)
-          }
-        } else {
-          registerUserImport(
-            source,
-            local,
-            imported,
-            node.importKind === 'type' ||
-              (specifier.type === 'ImportSpecifier' &&
-                specifier.importKind === 'type'),
-            true,
-            !options.inlineTemplate
-          )
-        }
-      }
-      if (node.specifiers.length && removed === node.specifiers.length) {
-        s.remove(node.start! + startOffset, node.end! + startOffset)
-      }
-    }
-  }
-
-  for (const node of scriptSetupAst.body) {
-    // already processed
-    if (node.type === 'ImportDeclaration') continue
-
     // (Dropped) `ref: x` bindings
     // TODO remove when out of experimental
     if (
@@ -1210,7 +1219,7 @@ export function compileScript(
         node.type === 'ClassDeclaration') &&
       !node.declare
     ) {
-      walkDeclaration(node, setupBindings, userImports)
+      walkDeclaration(node, setupBindings, vueImportAliases)
     }
 
     // walk statements & named exports / variable declarations for top level
@@ -1665,17 +1674,8 @@ function registerBinding(
 function walkDeclaration(
   node: Declaration,
   bindings: Record<string, BindingTypes>,
-  userImports: Record<string, ImportBinding>
+  userImportAliases: Record<string, string>
 ) {
-  function getUserBinding(name: string) {
-    const binding = Object.values(userImports).find(
-      binding => binding.source === 'vue' && binding.imported === name
-    )
-    if (binding) return binding.local
-    else if (!userImports[name]) return name
-    return undefined
-  }
-
   if (node.type === 'VariableDeclaration') {
     const isConst = node.kind === 'const'
     // export const foo = ...
@@ -1689,7 +1689,7 @@ function walkDeclaration(
       )
       if (id.type === 'Identifier') {
         let bindingType
-        const userReactiveBinding = getUserBinding('reactive')
+        const userReactiveBinding = userImportAliases['reactive']
         if (isCallOf(init, userReactiveBinding)) {
           // treat reactive() calls as let since it's meant to be mutable
           bindingType = isConst
@@ -1705,7 +1705,7 @@ function walkDeclaration(
             ? BindingTypes.SETUP_REACTIVE_CONST
             : BindingTypes.SETUP_CONST
         } else if (isConst) {
-          if (isCallOf(init, getUserBinding('ref'))) {
+          if (isCallOf(init, userImportAliases['ref'])) {
             bindingType = BindingTypes.SETUP_REF
           } else {
             bindingType = BindingTypes.SETUP_MAYBE_REF

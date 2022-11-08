@@ -387,8 +387,8 @@ defineExpose({ foo: 123 })
         expect(bindings).toStrictEqual({
           _reactive: BindingTypes.SETUP_MAYBE_REF,
           _ref: BindingTypes.SETUP_MAYBE_REF,
-          foo: BindingTypes.SETUP_REF,
-          bar: BindingTypes.SETUP_REACTIVE_CONST
+          foo: BindingTypes.SETUP_MAYBE_REF,
+          bar: BindingTypes.SETUP_MAYBE_REF
         })
       })
 
