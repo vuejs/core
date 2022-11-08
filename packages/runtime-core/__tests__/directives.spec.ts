@@ -430,10 +430,7 @@ describe('directives', () => {
       name: 'App',
       render() {
         // simulates the code generated on an unknown directive
-        return withDirectives(h('div'), [
-          [undefined],
-          [d1]
-        ])
+        return withDirectives(h('div'), [[undefined], [d1]])
       }
     }
 
