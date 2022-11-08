@@ -31,7 +31,6 @@ import {
   invokeArrayFns
 } from '@vue/shared'
 import { watch } from '../apiWatch'
-import { hmrDirtyComponents } from '../hmr'
 import {
   RendererInternals,
   queuePostRenderEffect,
@@ -281,8 +280,7 @@ const KeepAliveImpl: ComponentOptions = {
 
       if (
         (include && (!name || !matches(include, name))) ||
-        (exclude && name && matches(exclude, name)) ||
-        (__DEV__ && hmrDirtyComponents.has(comp))
+        (exclude && name && matches(exclude, name))
       ) {
         current = vnode
         return rawVNode
