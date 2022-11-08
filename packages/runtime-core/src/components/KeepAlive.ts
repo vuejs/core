@@ -282,7 +282,7 @@ const KeepAliveImpl: ComponentOptions = {
       if (
         (include && (!name || !matches(include, name))) ||
         (exclude && name && matches(exclude, name)) ||
-        hmrDirtyComponents.has(comp)
+        (__DEV__ && hmrDirtyComponents.has(comp))
 
       ) {
         current = vnode
