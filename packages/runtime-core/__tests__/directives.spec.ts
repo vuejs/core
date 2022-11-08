@@ -242,7 +242,7 @@ describe('directives', () => {
       expect(root.children[0]).toBe(el)
 
       // node should not have been updated yet
-      // expect(el.children[0].text).toBe(`${count.value - 1}`)
+      expect(el.children[0].text).toBe(`${count.value - 1}`)
 
       assertBindings(binding)
 
@@ -420,5 +420,25 @@ describe('directives', () => {
     const root = nodeOps.createElement('div')
     render(h(App), root)
     expect(res!).toBe('Test')
+  })
+
+  test('should not throw with unknown directive', async () => {
+    const d1 = {
+      mounted: jest.fn()
+    }
+    const App = {
+      name: 'App',
+      render() {
+        // simulates the code generated on an unknown directive
+        return withDirectives(h('div'), [
+          [undefined],
+          [d1]
+        ])
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(d1.mounted).toHaveBeenCalled()
   })
 })
