@@ -149,7 +149,6 @@ export function parse(
       errors.push(e)
     }
   })
-
   ast.children.forEach(node => {
     if (node.type !== NodeTypes.ELEMENT) {
       return
@@ -218,7 +217,13 @@ export function parse(
         break
     }
   })
-
+  if (!descriptor.template && !descriptor.script && !descriptor.scriptSetup) {
+    errors.push(
+      new SyntaxError(
+        `At least one <template> or <script> is required in a single file component.`
+      )
+    )
+  }
   if (descriptor.scriptSetup) {
     if (descriptor.scriptSetup.src) {
       errors.push(

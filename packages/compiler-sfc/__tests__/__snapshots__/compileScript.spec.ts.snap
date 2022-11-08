@@ -727,7 +727,7 @@ exports[`SFC compile <script setup> defineProps/defineEmits in multi-variable de
   setup(__props, { expose, emit }) {
   expose();
 
-const props = __props
+const props = __props;
 
     const a = 1;
     
