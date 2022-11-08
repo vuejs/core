@@ -14,7 +14,7 @@ describe('sfc props transform', () => {
   test('basic usage', () => {
     const { content, bindings } = compile(`
       <script setup>
-      const { foo } = defineProps(['foo'])
+      const { foo } = $defineProps(['foo'])
       console.log(foo)
       </script>
       <template>{{ foo }}</template>
@@ -31,7 +31,7 @@ describe('sfc props transform', () => {
   test('nested scope', () => {
     const { content, bindings } = compile(`
       <script setup>
-      const { foo, bar } = defineProps(['foo', 'bar'])
+      const { foo, bar } = $defineProps(['foo', 'bar'])
       function test(foo) {
         console.log(foo)
         console.log(bar)
@@ -52,7 +52,7 @@ describe('sfc props transform', () => {
   test('default values w/ runtime declaration', () => {
     const { content } = compile(`
       <script setup>
-      const { foo = 1, bar = {} } = defineProps(['foo', 'bar'])
+      const { foo = 1, bar = {} } = $defineProps(['foo', 'bar'])
       </script>
     `)
     // literals can be used as-is, non-literals are always returned from a
@@ -67,7 +67,7 @@ describe('sfc props transform', () => {
   test('default values w/ type declaration', () => {
     const { content } = compile(`
       <script setup lang="ts">
-      const { foo = 1, bar = {} } = defineProps<{ foo?: number, bar?: object }>()
+      const { foo = 1, bar = {} } = $defineProps<{ foo?: number, bar?: object }>()
       </script>
     `)
     // literals can be used as-is, non-literals are always returned from a
@@ -83,7 +83,7 @@ describe('sfc props transform', () => {
     const { content } = compile(
       `
       <script setup lang="ts">
-      const { foo = 1, bar = {}, func = () => {} } = defineProps<{ foo?: number, bar?: object, baz?: any, boola?: boolean, boolb?: boolean | number, func?: Function }>()
+      const { foo = 1, bar = {}, func = () => {} } = $defineProps<{ foo?: number, bar?: object, baz?: any, boola?: boolean, boolb?: boolean | number, func?: Function }>()
       </script>
     `,
       { isProd: true }
@@ -104,7 +104,7 @@ describe('sfc props transform', () => {
   test('aliasing', () => {
     const { content, bindings } = compile(`
       <script setup>
-      const { foo: bar } = defineProps(['foo'])
+      const { foo: bar } = $defineProps(['foo'])
       let x = foo
       let y = bar
       </script>
@@ -131,7 +131,7 @@ describe('sfc props transform', () => {
   test('non-identifier prop names', () => {
     const { content, bindings } = compile(`
       <script setup>
-      const { 'foo.bar': fooBar } = defineProps({ 'foo.bar': Function })
+      const { 'foo.bar': fooBar } = $defineProps({ 'foo.bar': Function })
       let x = fooBar
       </script>
       <template>{{ fooBar }}</template>
@@ -152,7 +152,7 @@ describe('sfc props transform', () => {
   test('rest spread', () => {
     const { content, bindings } = compile(`
       <script setup>
-      const { foo, bar, ...rest } = defineProps(['foo', 'bar', 'baz'])
+      const { foo, bar, ...rest } = $defineProps(['foo', 'bar', 'baz'])
       </script>
     `)
     expect(content).toMatch(
@@ -170,7 +170,7 @@ describe('sfc props transform', () => {
   test('$$() escape', () => {
     const { content } = compile(`
       <script setup>
-      const { foo, bar: baz } = defineProps(['foo'])
+      const { foo, bar: baz } = $defineProps(['foo'])
       console.log($$(foo))
       console.log($$(baz))
       $$({ foo, baz })
@@ -206,13 +206,13 @@ describe('sfc props transform', () => {
     test('should error on deep destructure', () => {
       expect(() =>
         compile(
-          `<script setup>const { foo: [bar] } = defineProps(['foo'])</script>`
+          `<script setup>const { foo: [bar] } = $defineProps(['foo'])</script>`
         )
       ).toThrow(`destructure does not support nested patterns`)
 
       expect(() =>
         compile(
-          `<script setup>const { foo: { bar } } = defineProps(['foo'])</script>`
+          `<script setup>const { foo: { bar } } = $defineProps(['foo'])</script>`
         )
       ).toThrow(`destructure does not support nested patterns`)
     })
@@ -220,7 +220,7 @@ describe('sfc props transform', () => {
     test('should error on computed key', () => {
       expect(() =>
         compile(
-          `<script setup>const { [foo]: bar } = defineProps(['foo'])</script>`
+          `<script setup>const { [foo]: bar } = $defineProps(['foo'])</script>`
         )
       ).toThrow(`destructure cannot use computed key`)
     })
@@ -229,7 +229,7 @@ describe('sfc props transform', () => {
       expect(() =>
         compile(
           `<script setup lang="ts">
-          const { foo } = withDefaults(defineProps<{ foo: string }>(), { foo: 'foo' })
+          const { foo } = withDefaults($defineProps<{ foo: string }>(), { foo: 'foo' })
           </script>`
         )
       ).toThrow(`withDefaults() is unnecessary when using destructure`)
@@ -242,7 +242,7 @@ describe('sfc props transform', () => {
           const x = 1
           const {
             foo = () => x
-          } = defineProps(['foo'])
+          } = $defineProps(['foo'])
           </script>`
         )
       ).toThrow(`cannot reference locally declared variables`)
