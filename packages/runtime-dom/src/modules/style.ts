@@ -1,5 +1,5 @@
 import { isString, hyphenate, capitalize, isArray } from '@vue/shared'
-import { camelize } from '@vue/runtime-core'
+import { camelize, warn } from '@vue/runtime-core'
 
 type Style = string | Record<string, string | string[]> | null
 
@@ -35,6 +35,7 @@ export function patchStyle(el: Element, prev: Style, next: Style) {
   }
 }
 
+const semicolonRE = /[^\\];\s*$/
 const importantRE = /\s*!important$/
 
 function setStyle(
@@ -46,6 +47,13 @@ function setStyle(
     val.forEach(v => setStyle(style, name, v))
   } else {
     if (val == null) val = ''
+    if (__DEV__) {
+      if (semicolonRE.test(val)) {
+        warn(
+          `Unexpected semicolon at the end of '${name}' style value: '${val}'`
+        )
+      }
+    }
     if (name.startsWith('--')) {
       // custom property definition
       style.setProperty(name, val)
