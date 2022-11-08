@@ -712,6 +712,27 @@ describe('compiler: v-if', () => {
       expect(b1.children[3].type).toBe(NodeTypes.ELEMENT)
       expect((b1.children[3] as ElementNode).tag).toBe(`p`)
     })
+
+    // #6843
+    test('should parse correctly with comments: true in prod', () => {
+      __DEV__ = false
+      parseWithIfTransform(
+        `
+          <template v-if="ok">
+            <!--comment1-->
+            <div v-if="ok2">
+              <!--comment2-->
+            </div>
+            <!--comment3-->
+            <b v-else/>
+            <!--comment4-->
+            <p/>
+          </template>
+        `,
+        { comments: true }
+      )
+      __DEV__ = true
+    })
   })
 
   test('v-on with v-if', () => {
