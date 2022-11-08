@@ -28,7 +28,7 @@ export {
   shallowReadonly,
   markRaw,
   toRaw,
-  MarkRaw,
+  Raw,
   ReactiveFlags,
   DeepReadonly,
   ShallowReactive,
