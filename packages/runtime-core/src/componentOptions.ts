@@ -229,7 +229,7 @@ export type ComponentOptionsWithoutProps<
   EE extends string = string,
   I extends ComponentInjectOptions = {},
   II extends string = string,
-  PE = Props & EmitsToProps<E>,
+  PE = Props & EmitsToProps<E>
 > = ComponentOptionsBase<
   PE,
   RawBindings,
@@ -246,7 +246,20 @@ export type ComponentOptionsWithoutProps<
 > & {
   props?: undefined
 } & ThisType<
-    CreateComponentPublicInstance<PE, RawBindings, D, C, M, Mixin, Extends, E, PE, {}, false, I>
+    CreateComponentPublicInstance<
+      PE,
+      RawBindings,
+      D,
+      C,
+      M,
+      Mixin,
+      Extends,
+      E,
+      PE,
+      {},
+      false,
+      I
+    >
   >
 
 export type ComponentOptionsWithArrayProps<
@@ -307,7 +320,7 @@ export type ComponentOptionsWithObjectProps<
   I extends ComponentInjectOptions = {},
   II extends string = string,
   Props = Readonly<ExtractPropTypes<PropsOptions>> & EmitsToProps<E>,
-  Defaults = ExtractDefaultPropTypes<PropsOptions>,
+  Defaults = ExtractDefaultPropTypes<PropsOptions>
 > = ComponentOptionsBase<
   Props,
   RawBindings,
@@ -415,15 +428,16 @@ type ObjectInjectOptions = Record<
   string | symbol | { from?: string | symbol; default?: unknown }
 >
 
-export type InjectToObject<T extends ComponentInjectOptions> = T extends string[]
-? {
-  [K in T[number]]?: unknown
-}
-: T extends ObjectInjectOptions
-? {
-  [K in keyof T]?: unknown
-}
-: never
+export type InjectToObject<T extends ComponentInjectOptions> =
+  T extends string[]
+    ? {
+        [K in T[number]]?: unknown
+      }
+    : T extends ObjectInjectOptions
+    ? {
+        [K in keyof T]?: unknown
+      }
+    : never
 
 interface LegacyOptions<
   Props,

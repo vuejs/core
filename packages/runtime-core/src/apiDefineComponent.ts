@@ -138,7 +138,7 @@ export function defineComponent<
   E extends EmitsOptions = {},
   EE extends string = string,
   I extends ComponentInjectOptions = {},
-  II extends string = string,
+  II extends string = string
 >(
   options: ComponentOptionsWithArrayProps<
     PropNames,
@@ -180,7 +180,7 @@ export function defineComponent<
   E extends EmitsOptions = {},
   EE extends string = string,
   I extends ComponentInjectOptions = {},
-  II extends string = string,
+  II extends string = string
 >(
   options: ComponentOptionsWithObjectProps<
     PropsOptions,

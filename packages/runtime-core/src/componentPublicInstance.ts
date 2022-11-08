@@ -153,7 +153,7 @@ export type CreateComponentPublicInstance<
   PublicM extends MethodOptions = UnwrapMixinsType<PublicMixin, 'M'> &
     EnsureNonVoid<M>,
   PublicDefaults = UnwrapMixinsType<PublicMixin, 'Defaults'> &
-    EnsureNonVoid<Defaults>,
+    EnsureNonVoid<Defaults>
 > = ComponentPublicInstance<
   PublicP,
   PublicB,
