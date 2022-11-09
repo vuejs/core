@@ -305,7 +305,7 @@ test('$$', () => {
   assertCode(code)
 })
 
-test('$$ with some edge cases',()=>{
+test('$$ with some edge cases', () => {
   const { code } = transform(`
     $$(  /* 2 */ count /* 2 */   )
     $$(   count /* 2 */, /**/ a   )
