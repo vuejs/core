@@ -253,13 +253,13 @@ describe('compiler: transform v-model', () => {
   })
 
   test('with argument', () => {
-    const root = parseWithVModel('<input v-model:value="model" />')
+    const root = parseWithVModel('<input v-model:foo-value="model" />')
     const node = root.children[0] as ElementNode
     const props = ((node.codegenNode as VNodeCall).props as ObjectExpression)
       .properties
     expect(props[0]).toMatchObject({
       key: {
-        content: 'value',
+        content: 'foo-value',
         isStatic: true
       },
       value: {
@@ -270,7 +270,7 @@ describe('compiler: transform v-model', () => {
 
     expect(props[1]).toMatchObject({
       key: {
-        content: 'onUpdate:value',
+        content: 'onUpdate:fooValue',
         isStatic: true
       },
       value: {
