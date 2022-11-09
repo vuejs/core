@@ -1063,6 +1063,32 @@ describe('compiler: element transform', () => {
       })
     })
 
+    test('script setup inline mode template ref (binding does not exist but props with the same name exist)', () => {
+      const { node } = parseWithElementTransform(`<input ref="msg"/>`, {
+        inline: true,
+        bindingMetadata: {
+          msg: BindingTypes.PROPS,
+          ref: BindingTypes.SETUP_CONST
+        }
+      })
+      expect(node.props).toMatchObject({
+        type: NodeTypes.JS_OBJECT_EXPRESSION,
+        properties: [
+          {
+            type: NodeTypes.JS_PROPERTY,
+            key: {
+              content: 'ref',
+              isStatic: true
+            },
+            value: {
+              content: 'msg',
+              isStatic: true
+            }
+          }
+        ]
+      })
+    })
+
     test('HYDRATE_EVENTS', () => {
       // ignore click events (has dedicated fast path)
       const { node } = parseWithElementTransform(`<div @click="foo" />`, {
