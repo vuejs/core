@@ -188,7 +188,7 @@ describe('sfc props transform', () => {
   test('computed static key', () => {
     const { content, bindings } = compile(`
     <script setup>
-    const { ['foo']: foo } = defineProps(['foo'])
+    const { ['foo']: foo } = $defineProps(['foo'])
     console.log(foo)
     </script>
     <template>{{ foo }}</template>
