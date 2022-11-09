@@ -186,7 +186,7 @@ describe('api: watch', () => {
       (newVal, oldVal) => {
         called = true
         expect(newVal).toMatchObject([undefined, undefined])
-        expect(oldVal).toBeUndefined()
+        expect(oldVal).toMatchObject([undefined, undefined])
       },
       { immediate: true }
     )
