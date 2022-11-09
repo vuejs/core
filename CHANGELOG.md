@@ -1,3 +1,12 @@
+## [3.2.44](https://github.com/vuejs/core/compare/v3.2.43...v3.2.44) (2022-11-09)
+
+
+### Bug Fixes
+
+* **watch:** for immediate watch with single source, ensure cb is called with undefined as oldValue ([#7075](https://github.com/vuejs/core/issues/7075)) ([5dc593b](https://github.com/vuejs/core/commit/5dc593ba2833e98eab12bd6c73765805b172185a)), closes [#7074](https://github.com/vuejs/core/issues/7074)
+
+
+
 ## [3.2.43](https://github.com/vuejs/core/compare/v3.2.42...v3.2.43) (2022-11-09)
 
 
