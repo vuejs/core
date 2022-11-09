@@ -25,20 +25,21 @@
     "serve-sfc-playground": "vite packages/sfc-playground --host",
     "serve": "serve",
     "open": "open http://localhost:5000/packages/template-explorer/local.html",
-    "preinstall": "node ./scripts/preinstall.js",
     "prebuild-sfc-playground": "node scripts/build.js compiler reactivity-transform shared -af cjs && node scripts/build.js runtime reactivity shared -af esm-bundler && node scripts/build.js vue -f esm-bundler-runtime && node scripts/build.js vue -f esm-browser-runtime && node scripts/build.js compiler-sfc server-renderer -f esm-browser",
-    "build-sfc-playground": "cd packages/sfc-playground && npm run build"
+    "build-sfc-playground": "cd packages/sfc-playground && npm run build",
+    "preinstall": "node ./scripts/preinstall.js",
+    "postinstall": "simple-git-hooks"
   },
   "types": "test-dts/index.d.ts",
   "tsd": {
     "directory": "test-dts"
   },
-  "gitHooks": {
-    "pre-commit": "lint-staged",
-    "commit-msg": "node scripts/verifyCommit.js"
+  "simple-git-hooks": {
+    "pre-commit": "pnpm lint-staged",
+    "commit-msg": "node scripts/verifyCommit.mjs"
   },
   "lint-staged": {
-    "*.js": [
+    "*.{js,json}": [
       "prettier --write"
     ],
     "*.ts?(x)": [
@@ -92,12 +93,12 @@
     "semver": "^7.3.2",
     "serve": "^12.0.0",
     "terser": "^5.15.1",
+    "simple-git-hooks": "^2.8.1",
     "todomvc-app-css": "^2.3.0",
     "ts-jest": "^27.0.5",
     "tslib": "^2.4.0",
     "typescript": "^4.8.0",
     "vite": "^3.0.0",
-    "vue": "workspace:*",
-    "yorkie": "^2.0.0"
+    "vue": "workspace:*"
   }
 }

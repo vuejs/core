@@ -1,12 +1,14 @@
-// Invoked on the commit-msg git hook by yorkie.
+import chalk from 'chalk'
+import { readFileSync } from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
 
-const chalk = require('chalk')
-const msgPath = process.env.GIT_PARAMS
-const msg = require('fs')
-  .readFileSync(msgPath, 'utf-8')
-  .trim()
+const dirname = path.dirname(fileURLToPath(import.meta.url), '..')
+const msgPath = path.resolve(dirname, '../.git/COMMIT_EDITMSG')
+const msg = readFileSync(msgPath, 'utf-8').trim()
 
-const commitRE = /^(revert: )?(feat|fix|docs|dx|style|refactor|perf|test|workflow|build|ci|chore|types|wip|release)(\(.+\))?: .{1,50}/
+const commitRE =
+  /^(revert: )?(feat|fix|docs|dx|style|refactor|perf|test|workflow|build|ci|chore|types|wip|release)(\(.+\))?: .{1,50}/
 
 if (!commitRE.test(msg)) {
   console.log()
