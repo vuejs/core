@@ -1,3 +1,12 @@
+## [3.2.43](https://github.com/vuejs/core/compare/v3.2.42...v3.2.43) (2022-11-09)
+
+
+### Bug Fixes
+
+* **watch:** ensure oldValue in multi-source watcher is always an array ([23e85e2](https://github.com/vuejs/core/commit/23e85e21a50926c48dea4f978e212e4301c20037)), closes [#7070](https://github.com/vuejs/core/issues/7070)
+
+
+
 ## [3.2.42](https://github.com/vuejs/core/compare/v3.2.41...v3.2.42) (2022-11-09)
 
 
