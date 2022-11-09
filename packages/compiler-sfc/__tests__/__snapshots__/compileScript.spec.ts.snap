@@ -1743,12 +1743,13 @@ export default /*#__PURE__*/_defineComponent({
     foo: { type: String, required: false, default: 'hi' },
     bar: { type: Number, required: false },
     baz: { type: Boolean, required: true },
-    qux: { type: Function, required: false, default() { return 1 } }
+    qux: { type: Function, required: false, default() { return 1 } },
+    quux: { type: Function, required: false, default() { } }
   },
   setup(__props: any, { expose }) {
   expose();
 
-const props = __props as { foo: string, bar?: number, baz: boolean, qux(): number };
+const props = __props as { foo: string, bar?: number, baz: boolean, qux(): number, quux(): void };
 
       
       

@@ -59,6 +59,25 @@ return (_ctx, _cache) => {
 }"
 `;
 
+exports[`sfc props transform computed static key 1`] = `
+"import { toDisplayString as _toDisplayString } from \\"vue\\"
+
+
+export default {
+  props: ['foo'],
+  setup(__props) {
+
+    
+    console.log(__props.foo)
+    
+return (_ctx, _cache) => {
+  return _toDisplayString(__props.foo)
+}
+}
+
+}"
+`;
+
 exports[`sfc props transform default values w/ runtime declaration 1`] = `
 "import { mergeDefaults as _mergeDefaults } from 'vue'
 
