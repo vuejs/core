@@ -745,7 +745,7 @@ describe('api: watch', () => {
     const state = ref()
     const spy = jest.fn()
     watch(() => state.value, spy, { immediate: true })
-    expect(spy).toHaveBeenCalled()
+    expect(spy).toHaveBeenCalledWith(undefined, undefined, expect.any(Function))
     state.value = 3
     await nextTick()
     expect(spy).toHaveBeenCalledTimes(2)
