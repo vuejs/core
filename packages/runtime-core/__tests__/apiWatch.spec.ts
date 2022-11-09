@@ -183,10 +183,10 @@ describe('api: watch', () => {
     let called = false
     watch(
       [a, b],
-      (newVal, oldVal) => {
+      ([newA, newB], [oldA, oldB]) => {
         called = true
-        expect(newVal).toMatchObject([undefined, undefined])
-        expect(oldVal).toBeUndefined()
+        expect([newA, newB]).toMatchObject([undefined, undefined])
+        expect([oldA, oldB]).toMatchObject([undefined, undefined])
       },
       { immediate: true }
     )

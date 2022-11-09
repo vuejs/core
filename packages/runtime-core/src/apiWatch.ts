@@ -335,7 +335,7 @@ function doWatch(
           // pass undefined as the old value when it's changed for the first time
           oldValue === INITIAL_WATCHER_VALUE ||
           (isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE)
-            ? undefined
+            ? []
             : oldValue,
           onCleanup
         ])
