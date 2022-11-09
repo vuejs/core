@@ -8,7 +8,11 @@ import {
   Program,
   VariableDeclarator,
   Expression,
-  VariableDeclaration
+  VariableDeclaration,
+  ImportDeclaration,
+  ImportSpecifier,
+  ImportDefaultSpecifier,
+  ImportNamespaceSpecifier
 } from '@babel/types'
 import MagicString, { SourceMap } from 'magic-string'
 import { walk } from 'estree-walker'
@@ -25,6 +29,7 @@ import { hasOwn, isArray, isString, genPropsAccessExp } from '@vue/shared'
 
 const CONVERT_SYMBOL = '$'
 const ESCAPE_SYMBOL = '$$'
+const IMPORT_SOURCE = 'vue/macros'
 const shorthands = ['ref', 'computed', 'shallowRef', 'toRef', 'customRef']
 const transformCheckRE = /[^\w]\$(?:\$|ref|computed|shallowRef)?\s*(\(|\<)/
 
@@ -48,14 +53,21 @@ export interface RefTransformResults {
   importedHelpers: string[]
 }
 
+export interface ImportBinding {
+  local: string
+  imported: string
+  source: string
+  specifier: ImportSpecifier | ImportDefaultSpecifier | ImportNamespaceSpecifier
+}
+
 export function transform(
-  src: string,
-  {
-    filename,
-    sourceMap,
-    parserPlugins,
-    importHelpersFrom = 'vue'
-  }: RefTransformOptions = {}
+    src: string,
+    {
+      filename,
+      sourceMap,
+      parserPlugins,
+      importHelpersFrom = 'vue'
+    }: RefTransformOptions = {}
 ): RefTransformResults {
   const plugins: ParserPlugin[] = parserPlugins || []
   if (filename) {
@@ -77,9 +89,9 @@ export function transform(
   // inject helper imports
   if (res.importedHelpers.length) {
     s.prepend(
-      `import { ${res.importedHelpers
-        .map(h => `${h} as _${h}`)
-        .join(', ')} } from '${importHelpersFrom}'\n`
+        `import { ${res.importedHelpers
+            .map(h => `${h} as _${h}`)
+            .join(', ')} } from '${importHelpersFrom}'\n`
     )
   }
 
@@ -87,27 +99,27 @@ export function transform(
     ...res,
     code: s.toString(),
     map: sourceMap
-      ? s.generateMap({
+        ? s.generateMap({
           source: filename,
           hires: true,
           includeContent: true
         })
-      : null
+        : null
   }
 }
 
 export function transformAST(
-  ast: Program,
-  s: MagicString,
-  offset = 0,
-  knownRefs?: string[],
-  knownProps?: Record<
-    string, // public prop key
-    {
-      local: string // local identifier, may be different
-      default?: any
-    }
-  >
+    ast: Program,
+    s: MagicString,
+    offset = 0,
+    knownRefs?: string[],
+    knownProps?: Record<
+        string, // public prop key
+        {
+          local: string // local identifier, may be different
+          default?: any
+        }
+        >
 ): {
   rootRefs: string[]
   importedHelpers: string[]
@@ -115,37 +127,38 @@ export function transformAST(
   // TODO remove when out of experimental
   warnExperimental()
 
-  let convertSymbol = CONVERT_SYMBOL
-  let escapeSymbol = ESCAPE_SYMBOL
+  const userImports: Record<string, ImportBinding> = Object.create(null)
+  for (const node of ast.body) {
+    if (node.type !== 'ImportDeclaration') continue
+    walkImportDeclaration(node)
+  }
 
   // macro import handling
-  for (const node of ast.body) {
-    if (
-      node.type === 'ImportDeclaration' &&
-      node.source.value === 'vue/macros'
-    ) {
-      // remove macro imports
-      s.remove(node.start! + offset, node.end! + offset)
-      // check aliasing
-      for (const specifier of node.specifiers) {
-        if (specifier.type === 'ImportSpecifier') {
-          const imported = (specifier.imported as Identifier).name
-          const local = specifier.local.name
-          if (local !== imported) {
-            if (imported === ESCAPE_SYMBOL) {
-              escapeSymbol = local
-            } else if (imported === CONVERT_SYMBOL) {
-              convertSymbol = local
-            } else {
-              error(
-                `macro imports for ref-creating methods do not support aliasing.`,
-                specifier
-              )
-            }
-          }
-        }
+  let convertSymbol: string | undefined
+  let escapeSymbol: string | undefined
+  for (const { local, imported, source, specifier } of Object.values(
+      userImports
+  )) {
+    if (source === IMPORT_SOURCE) {
+      if (imported === ESCAPE_SYMBOL) {
+        escapeSymbol = local
+      } else if (imported === CONVERT_SYMBOL) {
+        convertSymbol = local
+      } else if (imported !== local) {
+        error(
+            `macro imports for ref-creating methods do not support aliasing.`,
+            specifier
+        )
       }
     }
+  }
+
+  // default symbol
+  if (!convertSymbol && !userImports[CONVERT_SYMBOL]) {
+    convertSymbol = CONVERT_SYMBOL
+  }
+  if (!escapeSymbol && !userImports[ESCAPE_SYMBOL]) {
+    escapeSymbol = ESCAPE_SYMBOL
   }
 
   const importedHelpers = new Set<string>()
@@ -170,7 +183,32 @@ export function transformAST(
     }
   }
 
+  function walkImportDeclaration(node: ImportDeclaration) {
+    const source = node.source.value
+    if (source === IMPORT_SOURCE) {
+      s.remove(node.start! + offset, node.end! + offset)
+    }
+
+    for (const specifier of node.specifiers) {
+      const local = specifier.local.name
+      const imported =
+          (specifier.type === 'ImportSpecifier' &&
+              specifier.imported.type === 'Identifier' &&
+              specifier.imported.name) ||
+          'default'
+      userImports[local] = {
+        source,
+        local,
+        imported,
+        specifier
+      }
+    }
+  }
+
   function isRefCreationCall(callee: string): string | false {
+    if (!convertSymbol || currentScope[convertSymbol] !== undefined) {
+      return false
+    }
     if (callee === convertSymbol) {
       return convertSymbol
     }
@@ -197,8 +235,8 @@ export function transformAST(
       currentScope[id.name] = isRef
     } else {
       error(
-        'registerBinding called without active scope, something is wrong.',
-        id
+          'registerBinding called without active scope, something is wrong.',
+          id
       )
     }
   }
@@ -219,25 +257,25 @@ export function transformAST(
       if (stmt.type === 'VariableDeclaration') {
         walkVariableDeclaration(stmt, isRoot)
       } else if (
-        stmt.type === 'FunctionDeclaration' ||
-        stmt.type === 'ClassDeclaration'
+          stmt.type === 'FunctionDeclaration' ||
+          stmt.type === 'ClassDeclaration'
       ) {
         if (stmt.declare || !stmt.id) continue
         registerBinding(stmt.id)
       } else if (
-        (stmt.type === 'ForOfStatement' || stmt.type === 'ForInStatement') &&
-        stmt.left.type === 'VariableDeclaration'
+          (stmt.type === 'ForOfStatement' || stmt.type === 'ForInStatement') &&
+          stmt.left.type === 'VariableDeclaration'
       ) {
         walkVariableDeclaration(stmt.left)
       } else if (
-        stmt.type === 'ExportNamedDeclaration' &&
-        stmt.declaration &&
-        stmt.declaration.type === 'VariableDeclaration'
+          stmt.type === 'ExportNamedDeclaration' &&
+          stmt.declaration &&
+          stmt.declaration.type === 'VariableDeclaration'
       ) {
         walkVariableDeclaration(stmt.declaration, isRoot)
       } else if (
-        stmt.type === 'LabeledStatement' &&
-        stmt.body.type === 'VariableDeclaration'
+          stmt.type === 'LabeledStatement' &&
+          stmt.body.type === 'VariableDeclaration'
       ) {
         walkVariableDeclaration(stmt.body, isRoot)
       }
@@ -251,17 +289,17 @@ export function transformAST(
     for (const decl of stmt.declarations) {
       let refCall
       const isCall =
-        decl.init &&
-        decl.init.type === 'CallExpression' &&
-        decl.init.callee.type === 'Identifier'
+          decl.init &&
+          decl.init.type === 'CallExpression' &&
+          decl.init.callee.type === 'Identifier'
       if (
-        isCall &&
-        (refCall = isRefCreationCall((decl as any).init.callee.name))
+          isCall &&
+          (refCall = isRefCreationCall((decl as any).init.callee.name))
       ) {
         processRefDeclaration(refCall, decl.id, decl.init as CallExpression)
       } else {
         const isProps =
-          isRoot && isCall && (decl as any).init.callee.name === 'defineProps'
+            isRoot && isCall && (decl as any).init.callee.name === 'defineProps'
         for (const id of extractIdentifiers(decl.id)) {
           if (isProps) {
             // for defineProps destructure, only exclude them since they
@@ -276,9 +314,9 @@ export function transformAST(
   }
 
   function processRefDeclaration(
-    method: string,
-    id: VariableDeclarator['id'],
-    call: CallExpression
+      method: string,
+      id: VariableDeclarator['id'],
+      call: CallExpression
   ) {
     excludedIds.add(call.callee as Identifier)
     if (method === convertSymbol) {
@@ -299,9 +337,9 @@ export function transformAST(
         registerRefBinding(id)
         // replace call
         s.overwrite(
-          call.start! + offset,
-          call.start! + method.length + offset,
-          helper(method.slice(1))
+            call.start! + offset,
+            call.start! + method.length + offset,
+            helper(method.slice(1))
         )
       } else {
         error(`${method}() cannot be used with destructure patterns.`, call)
@@ -310,10 +348,10 @@ export function transformAST(
   }
 
   function processRefObjectPattern(
-    pattern: ObjectPattern,
-    call: CallExpression,
-    tempVar?: string,
-    path: PathSegment[] = []
+      pattern: ObjectPattern,
+      call: CallExpression,
+      tempVar?: string,
+      path: PathSegment[] = []
   ) {
     if (!tempVar) {
       tempVar = genTempVar()
@@ -333,8 +371,8 @@ export function transformAST(
             // avoid shorthand value identifier from being processed
             excludedIds.add(p.value)
           } else if (
-            p.value.type === 'AssignmentPattern' &&
-            p.value.left.type === 'Identifier'
+              p.value.type === 'AssignmentPattern' &&
+              p.value.left.type === 'Identifier'
           ) {
             // { foo = 1 }
             excludedIds.add(p.value.left)
@@ -378,16 +416,16 @@ export function transformAST(
         // inject toRef() after original replaced pattern
         const source = pathToString(tempVar, path)
         const keyStr = isString(key)
-          ? `'${key}'`
-          : key
-          ? snip(key)
-          : `'${nameId.name}'`
+            ? `'${key}'`
+            : key
+                ? snip(key)
+                : `'${nameId.name}'`
         const defaultStr = defaultValue ? `, ${snip(defaultValue)}` : ``
         s.appendLeft(
-          call.end! + offset,
-          `,\n  ${nameId.name} = ${helper(
-            'toRef'
-          )}(${source}, ${keyStr}${defaultStr})`
+            call.end! + offset,
+            `,\n  ${nameId.name} = ${helper(
+                'toRef'
+            )}(${source}, ${keyStr}${defaultStr})`
         )
       }
     }
@@ -397,10 +435,10 @@ export function transformAST(
   }
 
   function processRefArrayPattern(
-    pattern: ArrayPattern,
-    call: CallExpression,
-    tempVar?: string,
-    path: PathSegment[] = []
+      pattern: ArrayPattern,
+      call: CallExpression,
+      tempVar?: string,
+      path: PathSegment[] = []
   ) {
     if (!tempVar) {
       // const [x] = $(useFoo()) --> const __$temp_1 = useFoo()
@@ -434,10 +472,10 @@ export function transformAST(
         const source = pathToString(tempVar, path)
         const defaultStr = defaultValue ? `, ${snip(defaultValue)}` : ``
         s.appendLeft(
-          call.end! + offset,
-          `,\n  ${nameId.name} = ${helper(
-            'toRef'
-          )}(${source}, ${i}${defaultStr})`
+            call.end! + offset,
+            `,\n  ${nameId.name} = ${helper(
+                'toRef'
+            )}(${source}, ${i}${defaultStr})`
         )
       }
     }
@@ -449,8 +487,8 @@ export function transformAST(
   type PathSegmentAtom = Expression | string | number
 
   type PathSegment =
-    | PathSegmentAtom
-    | [PathSegmentAtom, Expression /* default value */]
+      | PathSegmentAtom
+      | [PathSegmentAtom, Expression /* default value */]
 
   function pathToString(source: string, path: PathSegment[]): string {
     if (path.length) {
@@ -476,10 +514,10 @@ export function transformAST(
   }
 
   function rewriteId(
-    scope: Scope,
-    id: Identifier,
-    parent: Node,
-    parentStack: Node[]
+      scope: Scope,
+      id: Identifier,
+      parent: Node,
+      parentStack: Node[]
   ): boolean {
     if (hasOwn(scope, id.name)) {
       const bindingType = scope[id.name]
@@ -489,8 +527,8 @@ export function transformAST(
           // let binding used in a property shorthand
           // skip for destructure patterns
           if (
-            !(parent as any).inPattern ||
-            isInDestructureAssignment(parent, parentStack)
+              !(parent as any).inPattern ||
+              isInDestructureAssignment(parent, parentStack)
           ) {
             if (isProp) {
               if (escapeScope) {
@@ -498,14 +536,14 @@ export function transformAST(
                 // { prop } -> { prop: __props_prop }
                 registerEscapedPropBinding(id)
                 s.appendLeft(
-                  id.end! + offset,
-                  `: __props_${propsLocalToPublicMap[id.name]}`
+                    id.end! + offset,
+                    `: __props_${propsLocalToPublicMap[id.name]}`
                 )
               } else {
                 // { prop } -> { prop: __props.prop }
                 s.appendLeft(
-                  id.end! + offset,
-                  `: ${genPropsAccessExp(propsLocalToPublicMap[id.name])}`
+                    id.end! + offset,
+                    `: ${genPropsAccessExp(propsLocalToPublicMap[id.name])}`
                 )
               }
             } else {
@@ -519,16 +557,16 @@ export function transformAST(
               // x --> __props_x
               registerEscapedPropBinding(id)
               s.overwrite(
-                id.start! + offset,
-                id.end! + offset,
-                `__props_${propsLocalToPublicMap[id.name]}`
+                  id.start! + offset,
+                  id.end! + offset,
+                  `__props_${propsLocalToPublicMap[id.name]}`
               )
             } else {
               // x --> __props.x
               s.overwrite(
-                id.start! + offset,
-                id.end! + offset,
-                genPropsAccessExp(propsLocalToPublicMap[id.name])
+                  id.start! + offset,
+                  id.end! + offset,
+                  genPropsAccessExp(propsLocalToPublicMap[id.name])
               )
             }
           } else {
@@ -548,10 +586,10 @@ export function transformAST(
       propBindingRefs[id.name] = true
       const publicKey = propsLocalToPublicMap[id.name]
       s.prependRight(
-        offset,
-        `const __props_${publicKey} = ${helper(
-          `toRef`
-        )}(__props, '${publicKey}');\n`
+          offset,
+          `const __props_${publicKey} = ${helper(
+              `toRef`
+          )}(__props, '${publicKey}');\n`
       )
     }
   }
@@ -569,16 +607,16 @@ export function transformAST(
       const firstArg = node.arguments[0]
       const argsType = firstArg.type
       if (
-        argsType === 'CallExpression' ||
-        argsType === 'Identifier' ||
-        argsType === 'ObjectExpression'
+          argsType === 'CallExpression' ||
+          argsType === 'Identifier' ||
+          argsType === 'ObjectExpression'
       ) {
         const leading = firstArg.leadingComments?.at(0)!.start ?? Infinity
         const trailing = firstArg.trailingComments?.at(-1)!.end ?? 0
         // fix space & comments place
         s.remove(
-          node.start! + offset,
-          Math.min(firstArg.start!, leading) + offset
+            node.start! + offset,
+            Math.min(firstArg.start!, leading) + offset
         )
         s.remove(Math.max(bracketEnd, trailing + offset), node.end! + offset)
 
@@ -616,11 +654,11 @@ export function transformAST(
       }
       const expression = curParent.expression
       if (
-        expression.type === 'CallExpression' &&
-        expression.callee.type === 'Identifier' &&
-        expression.callee.name === escapeSymbol &&
-        !expression.arguments.includes(node) &&
-        (i < 1 || parentStack[i - 1].type !== 'LabeledStatement')
+          expression.type === 'CallExpression' &&
+          expression.callee.type === 'Identifier' &&
+          expression.callee.name === escapeSymbol &&
+          !expression.arguments.includes(node) &&
+          (i < 1 || parentStack[i - 1].type !== 'LabeledStatement')
       ) {
         return true
       }
@@ -664,21 +702,21 @@ export function transformAST(
 
       // skip type nodes
       if (
-        parent &&
-        parent.type.startsWith('TS') &&
-        parent.type !== 'TSAsExpression' &&
-        parent.type !== 'TSNonNullExpression' &&
-        parent.type !== 'TSTypeAssertion'
+          parent &&
+          parent.type.startsWith('TS') &&
+          parent.type !== 'TSAsExpression' &&
+          parent.type !== 'TSNonNullExpression' &&
+          parent.type !== 'TSTypeAssertion'
       ) {
         return this.skip()
       }
 
       if (
-        node.type === 'Identifier' &&
-        // if inside $$(), skip unless this is a destructured prop binding
-        !(escapeScope && rootScope[node.name] !== 'prop') &&
-        isReferencedIdentifier(node, parent!, parentStack) &&
-        !excludedIds.has(node)
+          node.type === 'Identifier' &&
+          // if inside $$(), skip unless this is a destructured prop binding
+          !(escapeScope && rootScope[node.name] !== 'prop') &&
+          isReferencedIdentifier(node, parent!, parentStack) &&
+          !excludedIds.has(node)
       ) {
         // walk up the scope chain to check if id should be appended .value
         let i = scopeStack.length
@@ -695,13 +733,17 @@ export function transformAST(
         const refCall = isRefCreationCall(callee)
         if (refCall && (!parent || parent.type !== 'VariableDeclarator')) {
           return error(
-            `${refCall} can only be used as the initializer of ` +
+              `${refCall} can only be used as the initializer of ` +
               `a variable declaration.`,
-            node
+              node
           )
         }
 
-        if (callee === escapeSymbol) {
+        if (
+            escapeSymbol &&
+            currentScope[escapeSymbol] === undefined &&
+            callee === escapeSymbol
+        ) {
           escapeScope = node
           unwrapMacro(node)
         }
@@ -709,16 +751,16 @@ export function transformAST(
         // TODO remove when out of experimental
         if (callee === '$raw') {
           error(
-            `$raw() has been replaced by $$(). ` +
+              `$raw() has been replaced by $$(). ` +
               `See ${RFC_LINK} for latest updates.`,
-            node
+              node
           )
         }
         if (callee === '$fromRef') {
           error(
-            `$fromRef() has been replaced by $(). ` +
+              `$fromRef() has been replaced by $(). ` +
               `See ${RFC_LINK} for latest updates.`,
-            node
+              node
           )
         }
       }
@@ -726,8 +768,8 @@ export function transformAST(
     leave(node: Node, parent?: Node) {
       parent && parentStack.pop()
       if (
-        (node.type === 'BlockStatement' && !isFunctionType(parent!)) ||
-        isFunctionType(node)
+          (node.type === 'BlockStatement' && !isFunctionType(parent!)) ||
+          isFunctionType(node)
       ) {
         scopeStack.pop()
         currentScope = scopeStack[scopeStack.length - 1] || null
@@ -753,7 +795,7 @@ function warnExperimental() {
     return
   }
   warnOnce(
-    `Reactivity transform is an experimental feature.\n` +
+      `Reactivity transform is an experimental feature.\n` +
       `Experimental features may change behavior between patch versions.\n` +
       `It is recommended to pin your vue dependencies to exact versions to avoid breakage.\n` +
       `You can follow the proposal's status at ${RFC_LINK}.`
@@ -762,7 +804,7 @@ function warnExperimental() {
 
 function warnOnce(msg: string) {
   const isNodeProd =
-    typeof process !== 'undefined' && process.env.NODE_ENV === 'production'
+      typeof process !== 'undefined' && process.env.NODE_ENV === 'production'
   if (!isNodeProd && !__TEST__ && !hasWarned[msg]) {
     hasWarned[msg] = true
     warn(msg)
@@ -771,6 +813,6 @@ function warnOnce(msg: string) {
 
 function warn(msg: string) {
   console.warn(
-    `\x1b[1m\x1b[33m[@vue/reactivity-transform]\x1b[0m\x1b[33m ${msg}\x1b[0m\n`
+      `\x1b[1m\x1b[33m[@vue/reactivity-transform]\x1b[0m\x1b[33m ${msg}\x1b[0m\n`
   )
 }
