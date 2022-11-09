@@ -8,7 +8,11 @@ import {
   Program,
   VariableDeclarator,
   Expression,
-  VariableDeclaration
+  VariableDeclaration,
+  ImportDeclaration,
+  ImportSpecifier,
+  ImportDefaultSpecifier,
+  ImportNamespaceSpecifier
 } from '@babel/types'
 import MagicString, { SourceMap } from 'magic-string'
 import { walk } from 'estree-walker'
@@ -25,6 +29,7 @@ import { hasOwn, isArray, isString, genPropsAccessExp } from '@vue/shared'
 
 const CONVERT_SYMBOL = '$'
 const ESCAPE_SYMBOL = '$$'
+const IMPORT_SOURCE = 'vue/macros'
 const shorthands = ['ref', 'computed', 'shallowRef', 'toRef', 'customRef']
 const transformCheckRE = /[^\w]\$(?:\$|ref|computed|shallowRef)?\s*(\(|\<)/
 
@@ -46,6 +51,13 @@ export interface RefTransformResults {
   map: SourceMap | null
   rootRefs: string[]
   importedHelpers: string[]
+}
+
+export interface ImportBinding {
+  local: string
+  imported: string
+  source: string
+  specifier: ImportSpecifier | ImportDefaultSpecifier | ImportNamespaceSpecifier
 }
 
 export function transform(
@@ -115,37 +127,38 @@ export function transformAST(
   // TODO remove when out of experimental
   warnExperimental()
 
-  let convertSymbol = CONVERT_SYMBOL
-  let escapeSymbol = ESCAPE_SYMBOL
+  const userImports: Record<string, ImportBinding> = Object.create(null)
+  for (const node of ast.body) {
+    if (node.type !== 'ImportDeclaration') continue
+    walkImportDeclaration(node)
+  }
 
   // macro import handling
-  for (const node of ast.body) {
-    if (
-      node.type === 'ImportDeclaration' &&
-      node.source.value === 'vue/macros'
-    ) {
-      // remove macro imports
-      s.remove(node.start! + offset, node.end! + offset)
-      // check aliasing
-      for (const specifier of node.specifiers) {
-        if (specifier.type === 'ImportSpecifier') {
-          const imported = (specifier.imported as Identifier).name
-          const local = specifier.local.name
-          if (local !== imported) {
-            if (imported === ESCAPE_SYMBOL) {
-              escapeSymbol = local
-            } else if (imported === CONVERT_SYMBOL) {
-              convertSymbol = local
-            } else {
-              error(
-                `macro imports for ref-creating methods do not support aliasing.`,
-                specifier
-              )
-            }
-          }
-        }
+  let convertSymbol: string | undefined
+  let escapeSymbol: string | undefined
+  for (const { local, imported, source, specifier } of Object.values(
+    userImports
+  )) {
+    if (source === IMPORT_SOURCE) {
+      if (imported === ESCAPE_SYMBOL) {
+        escapeSymbol = local
+      } else if (imported === CONVERT_SYMBOL) {
+        convertSymbol = local
+      } else if (imported !== local) {
+        error(
+          `macro imports for ref-creating methods do not support aliasing.`,
+          specifier
+        )
       }
     }
+  }
+
+  // default symbol
+  if (!convertSymbol && !userImports[CONVERT_SYMBOL]) {
+    convertSymbol = CONVERT_SYMBOL
+  }
+  if (!escapeSymbol && !userImports[ESCAPE_SYMBOL]) {
+    escapeSymbol = ESCAPE_SYMBOL
   }
 
   const importedHelpers = new Set<string>()
@@ -170,7 +183,32 @@ export function transformAST(
     }
   }
 
+  function walkImportDeclaration(node: ImportDeclaration) {
+    const source = node.source.value
+    if (source === IMPORT_SOURCE) {
+      s.remove(node.start! + offset, node.end! + offset)
+    }
+
+    for (const specifier of node.specifiers) {
+      const local = specifier.local.name
+      const imported =
+        (specifier.type === 'ImportSpecifier' &&
+          specifier.imported.type === 'Identifier' &&
+          specifier.imported.name) ||
+        'default'
+      userImports[local] = {
+        source,
+        local,
+        imported,
+        specifier
+      }
+    }
+  }
+
   function isRefCreationCall(callee: string): string | false {
+    if (!convertSymbol || currentScope[convertSymbol] !== undefined) {
+      return false
+    }
     if (callee === convertSymbol) {
       return convertSymbol
     }
@@ -321,8 +359,8 @@ export function transformAST(
       s.overwrite(pattern.start! + offset, pattern.end! + offset, tempVar)
     }
 
+    let nameId: Identifier | undefined
     for (const p of pattern.properties) {
-      let nameId: Identifier | undefined
       let key: Expression | string | undefined
       let defaultValue: Expression | undefined
       if (p.type === 'ObjectProperty') {
@@ -391,6 +429,9 @@ export function transformAST(
         )
       }
     }
+    if (nameId) {
+      s.appendLeft(call.end! + offset, ';')
+    }
   }
 
   function processRefArrayPattern(
@@ -405,10 +446,10 @@ export function transformAST(
       s.overwrite(pattern.start! + offset, pattern.end! + offset, tempVar)
     }
 
+    let nameId: Identifier | undefined
     for (let i = 0; i < pattern.elements.length; i++) {
       const e = pattern.elements[i]
       if (!e) continue
-      let nameId: Identifier | undefined
       let defaultValue: Expression | undefined
       if (e.type === 'Identifier') {
         // [a] --> [__a]
@@ -437,6 +478,9 @@ export function transformAST(
           )}(${source}, ${i}${defaultStr})`
         )
       }
+    }
+    if (nameId) {
+      s.appendLeft(call.end! + offset, ';')
     }
   }
 
@@ -545,7 +589,7 @@ export function transformAST(
         offset,
         `const __props_${publicKey} = ${helper(
           `toRef`
-        )}(__props, '${publicKey}')\n`
+        )}(__props, '${publicKey}');\n`
       )
     }
   }
@@ -622,7 +666,11 @@ export function transformAST(
           )
         }
 
-        if (callee === escapeSymbol) {
+        if (
+          escapeSymbol &&
+          currentScope[escapeSymbol] === undefined &&
+          callee === escapeSymbol
+        ) {
           s.remove(node.callee.start! + offset, node.callee.end! + offset)
           escapeScope = node
         }

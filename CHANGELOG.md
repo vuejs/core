@@ -1,3 +1,17 @@
+## [3.2.41](https://github.com/vuejs/core/compare/v3.2.40...v3.2.41) (2022-10-14)
+
+
+### Bug Fixes
+
+* **devtools:** avoid memory leak caused by devtools event buffer ([24f4c47](https://github.com/vuejs/core/commit/24f4c479d661698afd967cf428f9439be4578a04)), closes [#6591](https://github.com/vuejs/core/issues/6591)
+* **devtools:** use cleanupBuffer instead of modifying _buffer ([#6812](https://github.com/vuejs/core/issues/6812)) ([35a113e](https://github.com/vuejs/core/commit/35a113eda43a49e921a6eb60d45db81dc847d665))
+* **effectScope:** calling off() of a detached scope should not break currentScope ([a71f9ac](https://github.com/vuejs/core/commit/a71f9ac41af464fdb69220e69c50739dd3a8f365))
+* **runtime-core:** ensure that errors in slot function execution do not affect block tracking ([#5670](https://github.com/vuejs/core/issues/5670)) ([82a73da](https://github.com/vuejs/core/commit/82a73da351bb5d26735f734ae2540a3033c00c9e)), closes [#5657](https://github.com/vuejs/core/issues/5657)
+* **runtime-core:** fix v-for ref reactivity behavior difference between prod and dev ([#6714](https://github.com/vuejs/core/issues/6714)) ([9ae796d](https://github.com/vuejs/core/commit/9ae796d1567f1b0acb08659a2363a54b525a9ee4)), closes [#6697](https://github.com/vuejs/core/issues/6697)
+* **runtime-dom:** fix event timestamp check in iframes ([5ee4053](https://github.com/vuejs/core/commit/5ee40532a63e0b792e0c1eccf3cf68546a4e23e9)), closes [#2513](https://github.com/vuejs/core/issues/2513) [#3933](https://github.com/vuejs/core/issues/3933) [#5474](https://github.com/vuejs/core/issues/5474)
+
+
+
 ## [3.2.40](https://github.com/vuejs/core/compare/v3.2.39...v3.2.40) (2022-09-28)
 
 

@@ -36,7 +36,8 @@ import {
   CallExpression,
   JSChildNode,
   RESOLVE_DYNAMIC_COMPONENT,
-  TRANSITION
+  TRANSITION,
+  stringifyExpression
 } from '@vue/compiler-dom'
 import { SSR_RENDER_COMPONENT, SSR_RENDER_VNODE } from '../runtimeHelpers'
 import {
@@ -145,8 +146,9 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
     wipMap.set(node, wipEntries)
 
     const buildSSRSlotFn: SlotFnBuilder = (props, children, loc) => {
+      const param0 = (props && stringifyExpression(props)) || `_`
       const fn = createFunctionExpression(
-        [props || `_`, `_push`, `_parent`, `_scopeId`],
+        [param0, `_push`, `_parent`, `_scopeId`],
         undefined, // no return, assign body later
         true, // newline
         true, // isSlot

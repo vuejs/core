@@ -44,9 +44,9 @@ return { a }
 `;
 
 exports[`SFC compile <script setup> <script> after <script setup> the script content not end with \`\\n\` 1`] = `
-"const n = 1
-import { x } from './x'
-    
+"import { x } from './x'
+    const n = 1
+
 export default {
   setup(__props, { expose }) {
   expose();
@@ -78,11 +78,12 @@ return { n, x }
 `;
 
 exports[`SFC compile <script setup> <script> and <script setup> co-usage script setup first 1`] = `
-"export const n = 1
+"import { x } from './x'
+      
+      export const n = 1
       const __default__ = {}
       
-import { x } from './x'
-      
+
 export default /*#__PURE__*/Object.assign(__default__, {
   setup(__props, { expose }) {
   expose();
@@ -97,13 +98,13 @@ return { n, x }
 
 exports[`SFC compile <script setup> <script> and <script setup> co-usage script setup first, lang="ts", script block content export default 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
-
+import { x } from './x'
+      
       const __default__ = {
         name: \\"test\\"
       }
       
-import { x } from './x'
-      
+
 export default /*#__PURE__*/_defineComponent({
   ...__default__,
   setup(__props, { expose }) {
@@ -118,14 +119,15 @@ return { x }
 `;
 
 exports[`SFC compile <script setup> <script> and <script setup> co-usage script setup first, named default export 1`] = `
-"export const n = 1
+"import { x } from './x'
+      
+      export const n = 1
       const def = {}
       
       
 const __default__ = def
 
-import { x } from './x'
-      
+
 export default /*#__PURE__*/Object.assign(__default__, {
   setup(__props, { expose }) {
   expose();
@@ -640,7 +642,7 @@ export default {
   setup(__props, { expose }) {
   expose();
 
-const props = __props
+const props = __props;
 
     
     
@@ -658,7 +660,7 @@ export default {
   setup(__props, { expose }) {
   expose();
 
-const props = __props
+const props = __props;
 
     
 return { props, x }
@@ -675,7 +677,7 @@ exports[`SFC compile <script setup> defineProps() 1`] = `
   setup(__props, { expose }) {
   expose();
 
-const props = __props
+const props = __props;
 
 
 const bar = 1
@@ -693,7 +695,7 @@ exports[`SFC compile <script setup> defineProps/defineEmits in multi-variable de
   setup(__props, { expose, emit }) {
   expose();
 
-const props = __props
+const props = __props;
 
     
     
@@ -710,11 +712,28 @@ exports[`SFC compile <script setup> defineProps/defineEmits in multi-variable de
   setup(__props, { expose, emit }) {
   expose();
 
-const props = __props
+const props = __props;
 
     const a = 1;
     
 return { props, a, emit }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> defineProps/defineEmits in multi-variable declaration fix #6757  1`] = `
+"export default {
+  props: ['item'],
+  emits: ['a'],
+  setup(__props, { expose, emit }) {
+  expose();
+
+const props = __props;
+
+    const a = 1;
+    
+return { a, props, emit }
 }
 
 }"
@@ -1243,14 +1262,15 @@ return () => {}
 `;
 
 exports[`SFC compile <script setup> should expose top level declarations 1`] = `
-"import { xx } from './x'
+"import { x } from './x'
+      
+      import { xx } from './x'
       let aa = 1
       const bb = 2
       function cc() {}
       class dd {}
       
-import { x } from './x'
-      
+
 export default {
   setup(__props, { expose }) {
   expose();
@@ -1305,6 +1325,23 @@ export type Emits = { (e: 'foo' | 'bar'): void }
 export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\"],
   setup(__props, { expose, emit }: { emit: ({ (e: 'foo' | 'bar'): void }), expose: any, slots: any, attrs: any }) {
+  expose();
+
+      
+      
+return { emit }
+}
+
+})"
+`;
+
+exports[`SFC compile <script setup> with TypeScript defineEmits w/ type (interface ts type) 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+interface Emits { (e: 'foo'): void }
+      
+export default /*#__PURE__*/_defineComponent({
+  emits: ['foo'],
+  setup(__props, { expose, emit }) {
   expose();
 
       
@@ -1473,6 +1510,33 @@ return {  }
 })"
 `;
 
+exports[`SFC compile <script setup> with TypeScript defineProps w/ extends interface 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+interface Bar extends Foo { y?: number }
+        interface Props extends Bar {
+          z: number
+          y: string
+        }
+        
+        interface Foo { x?: number }
+      
+export default /*#__PURE__*/_defineComponent({
+  props: {
+    z: { type: Number, required: true },
+    y: { type: String, required: true },
+    x: { type: Number, required: false }
+  },
+  setup(__props: any, { expose }) {
+  expose();
+
+        
+      
+return {  }
+}
+
+})"
+`;
+
 exports[`SFC compile <script setup> with TypeScript defineProps w/ interface 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 interface Props { x?: number }
@@ -1567,7 +1631,7 @@ export default /*#__PURE__*/_defineComponent({
   setup(__props, { expose, emit }) {
   expose();
 
-const props = __props
+const props = __props;
 
 
 
@@ -1661,7 +1725,7 @@ const props = __props as {
         foo?: string
         bar?: number
         baz: boolean
-      }
+      };
 
       
       
@@ -1684,7 +1748,7 @@ export default /*#__PURE__*/_defineComponent({
   setup(__props: any, { expose }) {
   expose();
 
-const props = __props as { foo: string, bar?: number, baz: boolean, qux(): number }
+const props = __props as { foo: string, bar?: number, baz: boolean, qux(): number };
 
       
       

@@ -14,15 +14,15 @@ jobs:
   unit-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2
 
-      - name: Set node version to 16
-        uses: actions/setup-node@v2
+      - name: Set node version to 18
+        uses: actions/setup-node@v3
         with:
-          node-version: 16
+          node-version: 18
           cache: 'pnpm'
 
       - run: pnpm install
@@ -33,15 +33,15 @@ jobs:
   e2e-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2
 
-      - name: Set node version to 16
-        uses: actions/setup-node@v2
+      - name: Set node version to 18
+        uses: actions/setup-node@v3
         with:
-          node-version: 16
+          node-version: 18
           cache: 'pnpm'
 
       - run: pnpm install
@@ -52,21 +52,24 @@ jobs:
   lint-and-test-dts:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2
 
-      - name: Set node version to 16
-        uses: actions/setup-node@v2
+      - name: Set node version to 18
+        uses: actions/setup-node@v3
         with:
-          node-version: 16
+          node-version: 18
           cache: 'pnpm'
 
       - run: pnpm install
 
       - name: Run eslint
         run: pnpm run lint
+
+      # - name: Run prettier
+        # run: pnpm run format-check
 
       - name: Run type declaration tests
         run: pnpm run test-dts
@@ -76,15 +79,15 @@ jobs:
     env:
       CI_JOB_NUMBER: 1
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2
 
-      - name: Set node version to 16
-        uses: actions/setup-node@v2
+      - name: Set node version to 18
+        uses: actions/setup-node@v3
         with:
-          node-version: 16
+          node-version: 18
           cache: 'pnpm'
 
       - run: pnpm install

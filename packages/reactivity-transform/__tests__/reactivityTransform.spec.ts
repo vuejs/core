@@ -416,6 +416,35 @@ test('macro import alias and removal', () => {
   assertCode(code)
 })
 
+// #6838
+test('should not overwrite importing', () => {
+  const { code } = transform(
+    `
+    import { $, $$ } from './foo'
+    $('foo')
+    $$('bar')
+    `
+  )
+  assertCode(code)
+})
+
+// #6838
+test('should not overwrite current scope', () => {
+  const { code } = transform(
+    `
+    const fn = () => {
+      const $ = () => 'foo'
+      const $ref = () => 'bar'
+      const $$ = () => 'baz'
+      console.log($())
+      console.log($ref())
+      console.log($$())
+    }
+    `
+  )
+  assertCode(code)
+})
+
 describe('errors', () => {
   test('$ref w/ destructure', () => {
     expect(() => transform(`let { a } = $ref(1)`)).toThrow(

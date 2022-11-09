@@ -19,7 +19,8 @@ import {
   nextTick,
   warn,
   ConcreteComponent,
-  ComponentOptions
+  ComponentOptions,
+  ComponentInjectOptions
 } from '@vue/runtime-core'
 import { camelize, extend, hyphenate, isArray, toNumber } from '@vue/shared'
 import { hydrate, render } from '.'
@@ -49,7 +50,9 @@ export function defineCustomElement<
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
-  EE extends string = string
+  EE extends string = string,
+  I extends ComponentInjectOptions = {},
+  II extends string = string
 >(
   options: ComponentOptionsWithoutProps<
     Props,
@@ -60,7 +63,9 @@ export function defineCustomElement<
     Mixin,
     Extends,
     E,
-    EE
+    EE,
+    I,
+    II
   > & { styles?: string[] }
 ): VueElementConstructor<Props>
 
@@ -74,7 +79,9 @@ export function defineCustomElement<
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = Record<string, any>,
-  EE extends string = string
+  EE extends string = string,
+  I extends ComponentInjectOptions = {},
+  II extends string = string
 >(
   options: ComponentOptionsWithArrayProps<
     PropNames,
@@ -85,7 +92,9 @@ export function defineCustomElement<
     Mixin,
     Extends,
     E,
-    EE
+    EE,
+    I,
+    II
   > & { styles?: string[] }
 ): VueElementConstructor<{ [K in PropNames]: any }>
 
@@ -99,7 +108,9 @@ export function defineCustomElement<
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = Record<string, any>,
-  EE extends string = string
+  EE extends string = string,
+  I extends ComponentInjectOptions = {},
+  II extends string = string
 >(
   options: ComponentOptionsWithObjectProps<
     PropsOptions,
@@ -110,7 +121,9 @@ export function defineCustomElement<
     Mixin,
     Extends,
     E,
-    EE
+    EE,
+    I,
+    II
   > & { styles?: string[] }
 ): VueElementConstructor<ExtractPropTypes<PropsOptions>>
 
@@ -215,7 +228,7 @@ export class VueElement extends BaseClass {
     }).observe(this, { attributes: true })
 
     const resolve = (def: InnerComponentDef) => {
-      const { props, styles } = def
+      const { props = {}, styles } = def
       const hasOptions = !isArray(props)
       const rawKeys = props ? (hasOptions ? Object.keys(props) : props) : []
 
@@ -268,10 +281,11 @@ export class VueElement extends BaseClass {
 
   protected _setAttr(key: string) {
     let value = this.getAttribute(key)
-    if (this._numberProps && this._numberProps[key]) {
+    const camelKey = camelize(key)
+    if (this._numberProps && this._numberProps[camelKey]) {
       value = toNumber(value)
     }
-    this._setProp(camelize(key), value, false)
+    this._setProp(camelKey, value, false)
   }
 
   /**
