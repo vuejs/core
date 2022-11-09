@@ -333,10 +333,11 @@ function doWatch(
         callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
           newValue,
           // pass undefined as the old value when it's changed for the first time
-          oldValue === INITIAL_WATCHER_VALUE ||
-          (isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE)
-            ? []
-            : oldValue,
+          oldValue === INITIAL_WATCHER_VALUE 
+            ? undefined
+            : (isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE)
+              ? []
+              : oldValue,
           onCleanup
         ])
         oldValue = newValue
