@@ -48,10 +48,10 @@ export const transformOn: DirectiveTransform = (
         rawName = `vnode-${rawName.slice(4)}`
       }
       const eventString =
-        node.tagType === ElementTypes.COMPONENT ||
+        node.tagType !== ElementTypes.ELEMENT ||
         rawName.startsWith('vnode') ||
         !/[A-Z]/.test(rawName)
-          ? // for component and vnode lifecycle event listeners, auto convert
+          ? // for non-element and vnode lifecycle event listeners, auto convert
             // it to camelCase. See issue #2249
             toHandlerKey(camelize(rawName))
           : // preserve case for plain element listeners that have uppercase

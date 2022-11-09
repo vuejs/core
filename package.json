@@ -1,6 +1,6 @@
 {
   "private": true,
-  "version": "3.2.41",
+  "version": "3.2.42",
   "packageManager": "pnpm@7.1.0",
   "scripts": {
     "dev": "node scripts/dev.js",
@@ -91,6 +91,7 @@
     "rollup-plugin-typescript2": "^0.27.2",
     "semver": "^7.3.2",
     "serve": "^12.0.0",
+    "terser": "^5.15.1",
     "todomvc-app-css": "^2.3.0",
     "ts-jest": "^27.0.5",
     "tslib": "^2.4.0",
