@@ -45,6 +45,7 @@ importers:
       rollup-plugin-typescript2: ^0.27.2
       semver: ^7.3.2
       serve: ^12.0.0
+      terser: ^5.15.1
       todomvc-app-css: ^2.3.0
       ts-jest: ^27.0.5
       tslib: ^2.4.0
@@ -94,11 +95,12 @@ importers:
       rollup-plugin-typescript2: 0.27.3_5n3xkh745miirxxwrc7sr3qioi
       semver: 7.3.5
       serve: 12.0.1
+      terser: 5.15.1
       todomvc-app-css: 2.4.1
       ts-jest: 27.1.1_by43bc54xkygl7pua4gfvniboa
       tslib: 2.4.0
       typescript: 4.8.2
-      vite: 3.0.9
+      vite: 3.0.9_terser@5.15.1
       vue: link:packages/vue
       yorkie: 2.0.0
 
@@ -903,6 +905,43 @@ packages:
       '@types/node': 16.11.12
       '@types/yargs': 16.0.4
       chalk: 4.1.2
+    dev: true
+
+  /@jridgewell/gen-mapping/0.3.2:
+    resolution: {integrity: sha512-mh65xKQAzI6iBcFzwv28KVWSmCkdRBWoOh+bYQGW3+6OZvbbN3TqMGo5hqYxQniRcH9F2VZIoJCm4pa3BPDK/A==}
+    engines: {node: '>=6.0.0'}
+    dependencies:
+      '@jridgewell/set-array': 1.1.2
+      '@jridgewell/sourcemap-codec': 1.4.14
+      '@jridgewell/trace-mapping': 0.3.17
+    dev: true
+
+  /@jridgewell/resolve-uri/3.1.0:
+    resolution: {integrity: sha512-F2msla3tad+Mfht5cJq7LSXcdudKTWCVYUgw6pLFOOHSTtZlj6SWNYAp+AhuqLmWdBO2X5hPrLcu8cVP8fy28w==}
+    engines: {node: '>=6.0.0'}
+    dev: true
+
+  /@jridgewell/set-array/1.1.2:
+    resolution: {integrity: sha512-xnkseuNADM0gt2bs+BvhO0p78Mk762YnZdsuzFV018NoG1Sj1SCQvpSqa7XUaTam5vAGasABV9qXASMKnFMwMw==}
+    engines: {node: '>=6.0.0'}
+    dev: true
+
+  /@jridgewell/source-map/0.3.2:
+    resolution: {integrity: sha512-m7O9o2uR8k2ObDysZYzdfhb08VuEml5oWGiosa1VdaPZ/A6QyPkAJuwN0Q1lhULOf6B7MtQmHENS743hWtCrgw==}
+    dependencies:
+      '@jridgewell/gen-mapping': 0.3.2
+      '@jridgewell/trace-mapping': 0.3.17
+    dev: true
+
+  /@jridgewell/sourcemap-codec/1.4.14:
+    resolution: {integrity: sha512-XPSJHWmi394fuUuzDnGz1wiKqWfo1yXecHQMRf2l6hztTO+nPru658AyDngaBe7isIxEkRsPR3FZh+s7iVa4Uw==}
+    dev: true
+
+  /@jridgewell/trace-mapping/0.3.17:
+    resolution: {integrity: sha512-MCNzAp77qzKca9+W/+I0+sEpaUnZoeasnghNeVc41VZCEKaCH73Vq3BZZ/SzWIgrqE4H4ceI+p+b6C0mHf9T4g==}
+    dependencies:
+      '@jridgewell/resolve-uri': 3.1.0
+      '@jridgewell/sourcemap-codec': 1.4.14
     dev: true
 
   /@microsoft/api-extractor-model/7.16.0:
@@ -6357,7 +6396,7 @@ packages:
       jest-worker: 26.6.2
       rollup: 2.38.5
       serialize-javascript: 4.0.0
-      terser: 5.10.0
+      terser: 5.15.1
     dev: true
 
   /rollup-plugin-typescript2/0.27.3_5n3xkh745miirxxwrc7sr3qioi:
@@ -6896,17 +6935,14 @@ packages:
       supports-hyperlinks: 2.2.0
     dev: true
 
-  /terser/5.10.0:
-    resolution: {integrity: sha512-AMmF99DMfEDiRJfxfY5jj5wNH/bYO09cniSqhfoyxc8sFoYIgkJy86G04UoZU5VjlpnplVu0K6Tx6E9b5+DlHA==}
+  /terser/5.15.1:
+    resolution: {integrity: sha512-K1faMUvpm/FBxjBXud0LWVAGxmvoPbZbfTCYbSgaaYQaIXI3/TdI7a7ZGA73Zrou6Q8Zmz3oeUTsp/dj+ag2Xw==}
     engines: {node: '>=10'}
     hasBin: true
-    peerDependenciesMeta:
-      acorn:
-        optional: true
     dependencies:
+      '@jridgewell/source-map': 0.3.2
       acorn: 8.6.0
       commander: 2.20.3
-      source-map: 0.7.3
       source-map-support: 0.5.21
     dev: true
 
@@ -7237,6 +7273,34 @@ packages:
       postcss: 8.4.16
       resolve: 1.22.1
       rollup: 2.77.3
+    optionalDependencies:
+      fsevents: 2.3.2
+    dev: true
+
+  /vite/3.0.9_terser@5.15.1:
+    resolution: {integrity: sha512-waYABTM+G6DBTCpYAxvevpG50UOlZuynR0ckTK5PawNVt7ebX6X7wNXHaGIO6wYYFXSM7/WcuFuO2QzhBB6aMw==}
+    engines: {node: ^14.18.0 || >=16.0.0}
+    hasBin: true
+    peerDependencies:
+      less: '*'
+      sass: '*'
+      stylus: '*'
+      terser: ^5.4.0
+    peerDependenciesMeta:
+      less:
+        optional: true
+      sass:
+        optional: true
+      stylus:
+        optional: true
+      terser:
+        optional: true
+    dependencies:
+      esbuild: 0.14.54
+      postcss: 8.4.16
+      resolve: 1.22.1
+      rollup: 2.77.3
+      terser: 5.15.1
     optionalDependencies:
       fsevents: 2.3.2
     dev: true
