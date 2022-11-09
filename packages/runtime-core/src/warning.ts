@@ -31,6 +31,8 @@ export function popWarningContext() {
 }
 
 export function warn(msg: string, ...args: any[]) {
+  if (!__DEV__) return
+
   // avoid props formatting or warn handler tracking deps that might be mutated
   // during patch, leading to infinite recursion.
   pauseTracking()
