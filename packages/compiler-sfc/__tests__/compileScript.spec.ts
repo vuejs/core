@@ -1041,10 +1041,14 @@ const emit = defineEmits(['a', 'b'])
         baz: boolean;
         qux?(): number;
         quux?(): void
+        quuxx?: Promise<string>;
+        fred?: string
       }>(), {
         foo: 'hi',
         qux() { return 1 },
-        ['quux']() { }
+        ['quux']() { },
+        async quuxx() { return await Promise.resolve('hi') },
+        get fred() { return 'fred' }
       })
       </script>
       `)
@@ -1061,7 +1065,13 @@ const emit = defineEmits(['a', 'b'])
         `quux: { type: Function, required: false, default() { } }`
       )
       expect(content).toMatch(
-        `{ foo: string, bar?: number, baz: boolean, qux(): number, quux(): void }`
+        `quuxx: { type: Promise, required: false, async default() { return await Promise.resolve('hi') } }`
+      )
+      expect(content).toMatch(
+        `fred: { type: String, required: false, get default() { return 'fred' } }`
+      )
+      expect(content).toMatch(
+        `{ foo: string, bar?: number, baz: boolean, qux(): number, quux(): void, quuxx: Promise<string>, fred: string }`
       )
       expect(content).toMatch(`const props = __props`)
       expect(bindings).toStrictEqual({
@@ -1070,6 +1080,8 @@ const emit = defineEmits(['a', 'b'])
         baz: BindingTypes.PROPS,
         qux: BindingTypes.PROPS,
         quux: BindingTypes.PROPS,
+        quuxx: BindingTypes.PROPS,
+        fred: BindingTypes.PROPS,
         props: BindingTypes.SETUP_CONST
       })
     })

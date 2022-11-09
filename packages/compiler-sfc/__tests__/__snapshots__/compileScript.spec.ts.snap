@@ -1744,12 +1744,14 @@ export default /*#__PURE__*/_defineComponent({
     bar: { type: Number, required: false },
     baz: { type: Boolean, required: true },
     qux: { type: Function, required: false, default() { return 1 } },
-    quux: { type: Function, required: false, default() { } }
+    quux: { type: Function, required: false, default() { } },
+    quuxx: { type: Promise, required: false, async default() { return await Promise.resolve('hi') } },
+    fred: { type: String, required: false, get default() { return 'fred' } }
   },
   setup(__props: any, { expose }) {
   expose();
 
-const props = __props as { foo: string, bar?: number, baz: boolean, qux(): number, quux(): void };
+const props = __props as { foo: string, bar?: number, baz: boolean, qux(): number, quux(): void, quuxx: Promise<string>, fred: string };
 
       
       

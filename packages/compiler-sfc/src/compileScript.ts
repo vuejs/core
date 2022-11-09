@@ -805,7 +805,9 @@ export function compileScript(
                 prop.value.end!
               )}`
             } else {
-              defaultString = `default() ${scriptSetupSource.slice(
+              defaultString = `${prop.async ? 'async ' : ''}${
+                prop.kind !== 'method' ? `${prop.kind} ` : ''
+              }default() ${scriptSetupSource.slice(
                 prop.body.start!,
                 prop.body.end!
               )}`
