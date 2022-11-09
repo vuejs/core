@@ -1301,7 +1301,7 @@ export interface Events {
 }
 
 type EventHandlers<E> = {
-  [K in keyof E]?: E[K] extends Function ? E[K] : (payload: E[K]) => void
+  [K in keyof E]?: E[K] extends (...args: any) => any ? E[K] : (payload: E[K]) => void
 }
 
 // use namespace import to avoid collision with generated types which use

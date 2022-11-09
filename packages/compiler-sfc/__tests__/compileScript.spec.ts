@@ -141,6 +141,21 @@ const myEmit = defineEmits(['foo', 'bar'])
     expect(content).toMatch(`emits: ['a'],`)
   })
 
+  // #6757
+  test('defineProps/defineEmits in multi-variable declaration fix #6757 ', () => {
+    const { content } = compile(`
+    <script setup>
+    const a = 1,
+          props = defineProps(['item']),
+          emit = defineEmits(['a']);
+    </script>
+  `)
+    assertCode(content)
+    expect(content).toMatch(`const a = 1;`) // test correct removal
+    expect(content).toMatch(`props: ['item'],`)
+    expect(content).toMatch(`emits: ['a'],`)
+  })
+
   test('defineProps/defineEmits in multi-variable declaration (full removal)', () => {
     const { content } = compile(`
     <script setup>
@@ -340,6 +355,55 @@ defineExpose({ foo: 123 })
       expect(content.indexOf(`import { x }`)).toEqual(
         content.lastIndexOf(`import { x }`)
       )
+    })
+
+    describe('import ref/reactive function from other place', () => {
+      test('import directly', () => {
+        const { bindings } = compile(`
+        <script setup>
+          import { ref, reactive } from './foo'
+
+          const foo = ref(1)
+          const bar = reactive(1)
+        </script>
+      `)
+        expect(bindings).toStrictEqual({
+          ref: BindingTypes.SETUP_MAYBE_REF,
+          reactive: BindingTypes.SETUP_MAYBE_REF,
+          foo: BindingTypes.SETUP_MAYBE_REF,
+          bar: BindingTypes.SETUP_MAYBE_REF
+        })
+      })
+
+      test('import w/ alias', () => {
+        const { bindings } = compile(`
+        <script setup>
+          import { ref as _ref, reactive as _reactive } from './foo'
+
+          const foo = ref(1)
+          const bar = reactive(1)
+        </script>
+      `)
+        expect(bindings).toStrictEqual({
+          _reactive: BindingTypes.SETUP_MAYBE_REF,
+          _ref: BindingTypes.SETUP_MAYBE_REF,
+          foo: BindingTypes.SETUP_MAYBE_REF,
+          bar: BindingTypes.SETUP_MAYBE_REF
+        })
+      })
+
+      test('aliased usage before import site', () => {
+        const { bindings } = compile(`
+        <script setup>
+          const bar = x(1)
+          import { reactive as x } from 'vue'
+        </script>
+      `)
+        expect(bindings).toStrictEqual({
+          bar: BindingTypes.SETUP_REACTIVE_CONST,
+          x: BindingTypes.SETUP_CONST
+        })
+      })
     })
   })
 
