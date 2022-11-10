@@ -48,8 +48,9 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
   const maybeRef =
     !__BROWSER__ &&
     context.inline &&
-    bindingType &&
-    bindingType !== BindingTypes.SETUP_CONST
+    (bindingType === BindingTypes.SETUP_LET ||
+      bindingType === BindingTypes.SETUP_REF ||
+      bindingType === BindingTypes.SETUP_MAYBE_REF)
 
   if (
     !expString.trim() ||

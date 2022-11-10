@@ -673,6 +673,26 @@ defineExpose({ foo: 123 })
       assertCode(content)
     })
 
+    test('v-model should not generate ref assignment code for non-setup bindings', () => {
+      const { content } = compile(
+        `<script setup>
+        import { ref } from 'vue'
+        const count = ref(0)
+        </script>
+        <script>
+        export default {
+          data() { return { foo: 123 } }
+        }
+        </script>
+        <template>
+          <input v-model="foo">
+        </template>
+        `,
+        { inlineTemplate: true }
+      )
+      expect(content).not.toMatch(`_isRef(foo)`)
+    })
+
     test('template assignment expression codegen', () => {
       const { content } = compile(
         `<script setup>
