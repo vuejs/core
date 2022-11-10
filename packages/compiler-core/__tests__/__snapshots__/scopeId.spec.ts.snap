@@ -38,7 +38,7 @@ export function render(_ctx, _cache) {
   const _component_Child = _resolveComponent(\\"Child\\")
 
   return (_openBlock(), _createBlock(_component_Child, null, _createSlots({ _: 2 /* DYNAMIC */ }, [
-    (_ctx.ok)
+    (_setBlockTracking(-1),_cache[0]=(_ctx.ok),_setBlockTracking(1),_cache[0])
       ? {
           name: \\"foo\\",
           fn: _withCtx(() => [

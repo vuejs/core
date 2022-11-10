@@ -28,7 +28,7 @@ import {
 import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
-import { FRAGMENT, CREATE_COMMENT } from '../runtimeHelpers'
+import { FRAGMENT, CREATE_COMMENT, SET_BLOCK_TRACKING } from '../runtimeHelpers'
 import {
   injectProp,
   findDir,
@@ -226,6 +226,7 @@ function createCodegenNodeForBranch(
   context: TransformContext
 ): IfConditionalExpression | BlockCodegenNode | MemoExpression {
   if (branch.condition) {
+    !context.inSSR && context.helper(SET_BLOCK_TRACKING)
     return createConditionalExpression(
       branch.condition,
       createChildrenCodegenNode(branch, keyIndex, context),
@@ -234,7 +235,9 @@ function createCodegenNodeForBranch(
       createCallExpression(context.helper(CREATE_COMMENT), [
         __DEV__ ? '"v-if"' : '""',
         'true'
-      ])
+      ]),
+      true,
+      context.cached++
     ) as IfConditionalExpression
   } else {
     return createChildrenCodegenNode(branch, keyIndex, context)

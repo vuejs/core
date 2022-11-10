@@ -243,7 +243,6 @@ describe('compiler: codegen', () => {
         }
       })
     )
-    expect(code).toMatch(/return foo\s+\? bar\s+: baz/)
     expect(code).toMatchSnapshot()
   })
 
@@ -403,17 +402,25 @@ describe('compiler: codegen', () => {
           createConditionalExpression(
             createSimpleExpression(`orNot`, false),
             createCallExpression(`bar`),
-            createCallExpression(`baz`)
-          )
+            createCallExpression(`baz`),
+            true,
+            1
+          ),
+          true,
+          2
         )
       })
     )
-    expect(code).toMatch(
-      `return ok
+    expect(code).toMatch(`
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    return (_setBlockTracking(-1),_cache[2]=ok,_setBlockTracking(1),_cache[2])
       ? foo()
-      : orNot
+      : (_setBlockTracking(-1),_cache[1]=orNot,_setBlockTracking(1),_cache[1])
         ? bar()
-        : baz()`
+        : baz()
+  }
+}`
     )
     expect(code).toMatchSnapshot()
   })

@@ -186,9 +186,9 @@ exports[`compiler: v-for codegen v-if + v-for 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode } = _Vue
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock, setBlockTracking: _setBlockTracking, createCommentVNode: _createCommentVNode } = _Vue
 
-    return ok
+    return (_setBlockTracking(-1),_cache[0]=ok,_setBlockTracking(1),_cache[0])
       ? (_openBlock(true), _createElementBlock(_Fragment, { key: 0 }, _renderList(list, (i) => {
           return (_openBlock(), _createElementBlock(\\"div\\"))
         }), 256 /* UNKEYED_FRAGMENT */))
@@ -202,9 +202,9 @@ exports[`compiler: v-for codegen v-if + v-for on <template> 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode } = _Vue
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock, setBlockTracking: _setBlockTracking, createCommentVNode: _createCommentVNode } = _Vue
 
-    return ok
+    return (_setBlockTracking(-1),_cache[0]=ok,_setBlockTracking(1),_cache[0])
       ? (_openBlock(true), _createElementBlock(_Fragment, { key: 0 }, _renderList(list, (i) => {
           return (_openBlock(), _createElementBlock(_Fragment, null, [], 64 /* STABLE_FRAGMENT */))
         }), 256 /* UNKEYED_FRAGMENT */))

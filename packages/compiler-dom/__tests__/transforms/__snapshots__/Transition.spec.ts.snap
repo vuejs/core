@@ -24,16 +24,16 @@ exports[`the v-if/else-if/else branches in Transition should ignore comments 1`]
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode, createElementVNode: _createElementVNode, Fragment: _Fragment, Transition: _Transition, withCtx: _withCtx, createBlock: _createBlock } = _Vue
+    const { setBlockTracking: _setBlockTracking, openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode, createElementVNode: _createElementVNode, Fragment: _Fragment, Transition: _Transition, withCtx: _withCtx, createBlock: _createBlock } = _Vue
 
     return (_openBlock(), _createBlock(_Transition, null, {
       default: _withCtx(() => [
-        a
+        (_setBlockTracking(-1),_cache[0]=a,_setBlockTracking(1),_cache[0])
           ? (_openBlock(), _createElementBlock(\\"div\\", { key: 0 }, \\"hey\\"))
-          : b
+          : (_setBlockTracking(-1),_cache[1]=b,_setBlockTracking(1),_cache[1])
             ? (_openBlock(), _createElementBlock(\\"div\\", { key: 1 }, \\"hey\\"))
             : (_openBlock(), _createElementBlock(\\"div\\", { key: 2 }, [
-                c
+                (_setBlockTracking(-1),_cache[2]=c,_setBlockTracking(1),_cache[2])
                   ? (_openBlock(), _createElementBlock(\\"p\\", { key: 0 }))
                   : (_openBlock(), _createElementBlock(_Fragment, { key: 1 }, [
                       _createCommentVNode(\\" this should not be ignored \\"),

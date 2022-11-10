@@ -5,14 +5,14 @@ exports[`compiler: integration tests function mode 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { toDisplayString: _toDisplayString, openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode, createTextVNode: _createTextVNode, Fragment: _Fragment, renderList: _renderList, createElementVNode: _createElementVNode, normalizeClass: _normalizeClass } = _Vue
+    const { toDisplayString: _toDisplayString, setBlockTracking: _setBlockTracking, openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode, createTextVNode: _createTextVNode, Fragment: _Fragment, renderList: _renderList, createElementVNode: _createElementVNode, normalizeClass: _normalizeClass } = _Vue
 
     return (_openBlock(), _createElementBlock(\\"div\\", {
       id: \\"foo\\",
       class: _normalizeClass(bar.baz)
     }, [
       _createTextVNode(_toDisplayString(world.burn()) + \\" \\", 1 /* TEXT */),
-      ok
+      (_setBlockTracking(-1),_cache[0]=ok,_setBlockTracking(1),_cache[0])
         ? (_openBlock(), _createElementBlock(\\"div\\", { key: 0 }, \\"yes\\"))
         : (_openBlock(), _createElementBlock(_Fragment, { key: 1 }, [
             _createTextVNode(\\"no\\")
@@ -28,7 +28,7 @@ return function render(_ctx, _cache) {
 `;
 
 exports[`compiler: integration tests function mode w/ prefixIdentifiers: true 1`] = `
-"const { toDisplayString: _toDisplayString, openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode, createTextVNode: _createTextVNode, Fragment: _Fragment, renderList: _renderList, createElementVNode: _createElementVNode, normalizeClass: _normalizeClass } = Vue
+"const { toDisplayString: _toDisplayString, setBlockTracking: _setBlockTracking, openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode, createTextVNode: _createTextVNode, Fragment: _Fragment, renderList: _renderList, createElementVNode: _createElementVNode, normalizeClass: _normalizeClass } = Vue
 
 return function render(_ctx, _cache) {
   return (_openBlock(), _createElementBlock(\\"div\\", {
@@ -36,7 +36,7 @@ return function render(_ctx, _cache) {
     class: _normalizeClass(_ctx.bar.baz)
   }, [
     _createTextVNode(_toDisplayString(_ctx.world.burn()) + \\" \\", 1 /* TEXT */),
-    (_ctx.ok)
+    (_setBlockTracking(-1),_cache[0]=(_ctx.ok),_setBlockTracking(1),_cache[0])
       ? (_openBlock(), _createElementBlock(\\"div\\", { key: 0 }, \\"yes\\"))
       : (_openBlock(), _createElementBlock(_Fragment, { key: 1 }, [
           _createTextVNode(\\"no\\")
@@ -51,7 +51,7 @@ return function render(_ctx, _cache) {
 `;
 
 exports[`compiler: integration tests module mode 1`] = `
-"import { toDisplayString as _toDisplayString, openBlock as _openBlock, createElementBlock as _createElementBlock, createCommentVNode as _createCommentVNode, createTextVNode as _createTextVNode, Fragment as _Fragment, renderList as _renderList, createElementVNode as _createElementVNode, normalizeClass as _normalizeClass } from \\"vue\\"
+"import { toDisplayString as _toDisplayString, setBlockTracking as _setBlockTracking, openBlock as _openBlock, createElementBlock as _createElementBlock, createCommentVNode as _createCommentVNode, createTextVNode as _createTextVNode, Fragment as _Fragment, renderList as _renderList, createElementVNode as _createElementVNode, normalizeClass as _normalizeClass } from \\"vue\\"
 
 export function render(_ctx, _cache) {
   return (_openBlock(), _createElementBlock(\\"div\\", {
@@ -59,7 +59,7 @@ export function render(_ctx, _cache) {
     class: _normalizeClass(_ctx.bar.baz)
   }, [
     _createTextVNode(_toDisplayString(_ctx.world.burn()) + \\" \\", 1 /* TEXT */),
-    (_ctx.ok)
+    (_setBlockTracking(-1),_cache[0]=(_ctx.ok),_setBlockTracking(1),_cache[0])
       ? (_openBlock(), _createElementBlock(\\"div\\", { key: 0 }, \\"yes\\"))
       : (_openBlock(), _createElementBlock(_Fragment, { key: 1 }, [
           _createTextVNode(\\"no\\")

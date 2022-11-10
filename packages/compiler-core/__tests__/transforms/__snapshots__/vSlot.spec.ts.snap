@@ -53,7 +53,7 @@ return function render(_ctx, _cache) {
   const _component_Comp = _resolveComponent(\\"Comp\\")
 
   return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({ _: 2 /* DYNAMIC */ }, [
-    (_ctx.ok)
+    (_setBlockTracking(-1),_cache[0]=(_ctx.ok),_setBlockTracking(1),_cache[0])
       ? {
           name: \\"one\\",
           fn: _withCtx((props) => [_toDisplayString(props)]),
@@ -74,13 +74,13 @@ return function render(_ctx, _cache) {
     const _component_Comp = _resolveComponent(\\"Comp\\")
 
     return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({ _: 2 /* DYNAMIC */ }, [
-      ok
+      (_setBlockTracking(-1),_cache[0]=ok,_setBlockTracking(1),_cache[0])
         ? {
             name: \\"one\\",
             fn: _withCtx(() => [\\"foo\\"]),
             key: \\"0\\"
           }
-        : orNot
+        : (_setBlockTracking(-1),_cache[1]=orNot,_setBlockTracking(1),_cache[1])
           ? {
               name: \\"two\\",
               fn: _withCtx((props) => [\\"bar\\"]),
@@ -106,7 +106,7 @@ return function render(_ctx, _cache) {
     const _component_Comp = _resolveComponent(\\"Comp\\")
 
     return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({ _: 2 /* DYNAMIC */ }, [
-      ok
+      (_setBlockTracking(-1),_cache[0]=ok,_setBlockTracking(1),_cache[0])
         ? {
             name: \\"one\\",
             fn: _withCtx(() => [\\"hello\\"]),

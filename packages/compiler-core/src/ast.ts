@@ -374,6 +374,7 @@ export interface ConditionalExpression extends Node {
   consequent: JSChildNode
   alternate: JSChildNode
   newline: boolean
+  index?: number
 }
 
 export interface CacheExpression extends Node {
@@ -719,7 +720,8 @@ export function createConditionalExpression(
   test: ConditionalExpression['test'],
   consequent: ConditionalExpression['consequent'],
   alternate: ConditionalExpression['alternate'],
-  newline = true
+  newline = true,
+  index?: number
 ): ConditionalExpression {
   return {
     type: NodeTypes.JS_CONDITIONAL_EXPRESSION,
@@ -727,6 +729,7 @@ export function createConditionalExpression(
     consequent,
     alternate,
     newline,
+    index: index,
     loc: locStub
   }
 }

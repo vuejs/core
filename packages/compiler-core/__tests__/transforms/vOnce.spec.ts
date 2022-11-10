@@ -108,7 +108,7 @@ describe('compiler: v-once transform', () => {
 
   test('with v-if/else', () => {
     const root = transformWithOnce(`<div v-if="BOOLEAN" v-once /><p v-else/>`)
-    expect(root.cached).toBe(1)
+    expect(root.cached).toBe(2)
     expect(root.helpers).toContain(SET_BLOCK_TRACKING)
     expect(root.children[0]).toMatchObject({
       type: NodeTypes.IF,

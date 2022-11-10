@@ -872,7 +872,9 @@ function genConditionalExpression(
   context: CodegenContext
 ) {
   const { test, consequent, alternate, newline: needNewline } = node
-  const { push, indent, deindent, newline } = context
+  const { push, helper, indent, deindent, newline } = context
+
+  !context.inSSR && push(`(${helper(SET_BLOCK_TRACKING)}(-1),_cache[${node.index!}]=`)
   if (test.type === NodeTypes.SIMPLE_EXPRESSION) {
     const needsParens = !isSimpleIdentifier(test.content)
     needsParens && push(`(`)
@@ -883,6 +885,8 @@ function genConditionalExpression(
     genNode(test, context)
     push(`)`)
   }
+  !context.inSSR && push(`,${helper(SET_BLOCK_TRACKING)}(1),_cache[${node.index!}])`)
+  
   needNewline && indent()
   context.indentLevel++
   needNewline || push(` `)

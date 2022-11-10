@@ -212,7 +212,9 @@ export function buildSlots(
         createConditionalExpression(
           vIf.exp!,
           buildDynamicSlot(slotName, slotFunction, conditionalBranchIndex++),
-          defaultFallback
+          defaultFallback,
+          true,
+          context.cached++
         )
       )
     } else if (
@@ -249,7 +251,9 @@ export function buildSlots(
                 slotFunction,
                 conditionalBranchIndex++
               ),
-              defaultFallback
+              defaultFallback,
+              true,
+              context.cached++
             )
           : buildDynamicSlot(slotName, slotFunction, conditionalBranchIndex++)
       } else {

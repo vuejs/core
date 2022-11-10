@@ -65,18 +65,18 @@ export function render(_ctx, _cache) {
 `;
 
 exports[`compiler: v-memo transform on v-if 1`] = `
-"import { createElementVNode as _createElementVNode, createTextVNode as _createTextVNode, openBlock as _openBlock, createElementBlock as _createElementBlock, withMemo as _withMemo, createCommentVNode as _createCommentVNode, resolveComponent as _resolveComponent, createBlock as _createBlock } from \\"vue\\"
+"import { createElementVNode as _createElementVNode, createTextVNode as _createTextVNode, openBlock as _openBlock, createElementBlock as _createElementBlock, withMemo as _withMemo, setBlockTracking as _setBlockTracking, createCommentVNode as _createCommentVNode, resolveComponent as _resolveComponent, createBlock as _createBlock } from \\"vue\\"
 
 export function render(_ctx, _cache) {
   const _component_Comp = _resolveComponent(\\"Comp\\")
 
   return (_openBlock(), _createElementBlock(\\"div\\", null, [
-    (_ctx.ok)
+    (_setBlockTracking(-1),_cache[1]=(_ctx.ok),_setBlockTracking(1),_cache[1])
       ? _withMemo([_ctx.x], () => (_openBlock(), _createElementBlock(\\"div\\", { key: 0 }, [
           _createElementVNode(\\"span\\", null, \\"foo\\"),
           _createTextVNode(\\"bar\\")
         ])), _cache, 0)
-      : _withMemo([_ctx.x], () => (_openBlock(), _createBlock(_component_Comp, { key: 1 })), _cache, 1)
+      : _withMemo([_ctx.x], () => (_openBlock(), _createBlock(_component_Comp, { key: 1 })), _cache, 2)
   ]))
 }"
 `;

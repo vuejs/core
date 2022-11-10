@@ -35,9 +35,9 @@ exports[`compiler: codegen ConditionalExpression 1`] = `
 "
 return function render(_ctx, _cache) {
   with (_ctx) {
-    return ok
+    return (_setBlockTracking(-1),_cache[2]=ok,_setBlockTracking(1),_cache[2])
       ? foo()
-      : orNot
+      : (_setBlockTracking(-1),_cache[1]=orNot,_setBlockTracking(1),_cache[1])
         ? bar()
         : baz()
   }
@@ -148,7 +148,7 @@ exports[`compiler: codegen ifNode 1`] = `
 "
 return function render(_ctx, _cache) {
   with (_ctx) {
-    return foo
+    return (_setBlockTracking(-1),_cache[undefined]=foo,_setBlockTracking(1),_cache[undefined])
       ? bar
       : baz
   }
