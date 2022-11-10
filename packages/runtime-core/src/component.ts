@@ -573,17 +573,20 @@ export function createComponentInstance(
 
 export let currentInstance: ComponentInternalInstance | null = null
 
+const instanceStack: ComponentInternalInstance[] = []
+
 export const getCurrentInstance: () => ComponentInternalInstance | null = () =>
   currentInstance || currentRenderingInstance
 
 export const setCurrentInstance = (instance: ComponentInternalInstance) => {
+  currentInstance && instanceStack.push(currentInstance)
   currentInstance = instance
   instance.scope.on()
 }
 
 export const unsetCurrentInstance = () => {
   currentInstance && currentInstance.scope.off()
-  currentInstance = null
+  currentInstance = instanceStack.pop() || null
 }
 
 const isBuiltInTag = /*#__PURE__*/ makeMap('slot,component')
