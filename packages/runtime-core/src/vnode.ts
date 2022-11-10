@@ -206,6 +206,11 @@ export interface VNode<
   appContext: AppContext | null
 
   /**
+   * @internal lexical scope owner instance
+   */
+  ctx: ComponentInternalInstance | null
+
+  /**
    * @internal attached by v-memo
    */
   memo?: any[]
@@ -439,7 +444,8 @@ function createBaseVNode(
     patchFlag,
     dynamicProps,
     dynamicChildren: null,
-    appContext: null
+    appContext: null,
+    ctx: currentRenderingInstance
   } as VNode
 
   if (needFullChildrenNormalization) {
@@ -661,7 +667,8 @@ export function cloneVNode<T, U>(
     ssContent: vnode.ssContent && cloneVNode(vnode.ssContent),
     ssFallback: vnode.ssFallback && cloneVNode(vnode.ssFallback),
     el: vnode.el,
-    anchor: vnode.anchor
+    anchor: vnode.anchor,
+    ctx: vnode.ctx
   }
   if (__COMPAT__) {
     defineLegacyVNodeProperties(cloned as VNode)

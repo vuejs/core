@@ -218,6 +218,30 @@ describe('useCssVars', () => {
     }
   })
 
+  test('with teleport in child slot', async () => {
+    document.body.innerHTML = ''
+    const state = reactive({ color: 'red' })
+    const root = document.createElement('div')
+    const target = document.body
+
+    const Child: FunctionalComponent = (_, { slots }) => {
+      return h('div', slots.default && slots.default())
+    }
+
+    const App = {
+      setup() {
+        useCssVars(() => state)
+        return () => h(Child, () => [h(Teleport, { to: target }, [h('div')])])
+      }
+    }
+
+    render(h(App), root)
+    await nextTick()
+    for (const c of [].slice.call(target.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+    }
+  })
+
   test('with teleport(change subTree)', async () => {
     document.body.innerHTML = ''
     const state = reactive({ color: 'red' })
