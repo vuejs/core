@@ -10,7 +10,8 @@ import {
   ComponentNode,
   NodeTypes,
   VNodeCall,
-  NORMALIZE_PROPS
+  NORMALIZE_PROPS,
+  BindingTypes
 } from '../../src'
 import { ErrorCodes } from '../../src/errors'
 import { transformModel } from '../../src/transforms/vModel'
@@ -552,6 +553,23 @@ describe('compiler: transform v-model', () => {
       parseWithVModel('<span v-for="i in list" v-model="i" />', {
         onError,
         prefixIdentifiers: true
+      })
+
+      expect(onError).toHaveBeenCalledTimes(1)
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: ErrorCodes.X_V_MODEL_ON_SCOPE_VARIABLE
+        })
+      )
+    })
+
+    test('used on props', () => {
+      const onError = jest.fn()
+      parseWithVModel('<div v-model="p" />', {
+        onError,
+        bindingMetadata: {
+          p: BindingTypes.PROPS
+        }
       })
 
       expect(onError).toHaveBeenCalledTimes(1)
