@@ -149,6 +149,18 @@ describe('compiler sfc: rewriteDefault', () => {
     export { bar,    } from './index.js'
     const script = foo"
     `)
+
+    expect(
+      rewriteDefault(
+        `export { foo as default } from './index.js' \n const foo = 1`,
+        'script'
+      )
+    ).toMatchInlineSnapshot(`
+    "import { foo } from './index.js'
+    export {  } from './index.js' 
+     const foo = 1
+    const script = foo"
+    `)
   })
 
   test('export default class', async () => {
