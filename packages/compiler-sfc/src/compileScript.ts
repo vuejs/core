@@ -1486,8 +1486,20 @@ export function compileScript(
     }
     returned = `{ `
     for (const key in allBindings) {
-      if (bindingMetadata[key] === BindingTypes.SETUP_LET) {
+      if (
+        allBindings[key] === true &&
+        userImports[key].source !== 'vue' &&
+        !userImports[key].source.endsWith('.vue')
+      ) {
+        // generate getter for import bindings
+        // skip vue imports since we know they will never change
         returned += `get ${key}() { return ${key} }, `
+      } else if (bindingMetadata[key] === BindingTypes.SETUP_LET) {
+        // local let binding, also add setter
+        const setArg = key === 'v' ? `_v` : `v`
+        returned +=
+          `get ${key}() { return ${key} }, ` +
+          `set ${key}(${setArg}) { ${key} = ${setArg} }, `
       } else {
         returned += `${key}, `
       }
