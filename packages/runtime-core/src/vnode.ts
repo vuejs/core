@@ -357,6 +357,14 @@ export function isSameVNodeType(n1: VNode, n2: VNode): boolean {
     n2.shapeFlag & ShapeFlags.COMPONENT &&
     hmrDirtyComponents.has(n2.type as ConcreteComponent)
   ) {
+    // #7042, ensure the vnode being unmounted during HMR
+    if (n1.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
+      n1.shapeFlag -= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+    }
+    // #7042, ensure the vnode being mounted as fresh during HMR
+    if (n2.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
+      n2.shapeFlag -= ShapeFlags.COMPONENT_KEPT_ALIVE
+    }
     // HMR only: if the component has been hot-updated, force a reload.
     return false
   }
