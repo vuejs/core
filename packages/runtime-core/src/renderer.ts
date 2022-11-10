@@ -2386,6 +2386,10 @@ export function traverseStaticChildren(n1: VNode, n2: VNode, shallow = false) {
         }
         if (!shallow) traverseStaticChildren(c1, c2)
       }
+      // #6852 also inherit for text nodes
+      if (c2.type === Text) {
+        c2.el = c1.el
+      }
       // also inherit for comment nodes, but not placeholders (e.g. v-if which
       // would have received .el during block patch)
       if (__DEV__ && c2.type === Comment && !c2.el) {
