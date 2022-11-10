@@ -303,10 +303,12 @@ export interface ComponentInternalInstance {
   inheritAttrs?: boolean
   /**
    * is custom element?
+   * @internal
    */
   isCE?: boolean
   /**
    * custom element specific HMR method
+   * @internal
    */
   ceReload?: (newStyles?: string[]) => void
 
@@ -448,10 +450,12 @@ export interface ComponentInternalInstance {
 
   /**
    * For caching bound $forceUpdate on public proxy access
+   * @internal
    */
   f?: () => void
   /**
    * For caching bound $nextTick on public proxy access
+   * @internal
    */
   n?: () => Promise<void>
 }
