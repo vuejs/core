@@ -182,6 +182,14 @@ importers:
       '@vue/compiler-dom': link:../compiler-dom
       '@vue/shared': link:../shared
 
+  packages/jsx:
+    specifiers:
+      '@vue/runtime-core': 3.2.44
+      csstype: ^3.1.1
+    dependencies:
+      '@vue/runtime-core': link:../runtime-core
+      csstype: 3.1.1
+
   packages/reactivity:
     specifiers:
       '@vue/shared': 3.2.44
@@ -2459,6 +2467,10 @@ packages:
   /csstype/3.0.10:
     resolution: {integrity: sha512-2u44ZG2OcNUO9HDp/Jl8C07x6pU/eTR3ncV91SiK3dhG9TWvRVsCoJw14Ckx5DgWkzGA3waZWO3d7pgqpUI/XA==}
     dev: true
+
+  /csstype/3.1.1:
+    resolution: {integrity: sha512-DJR/VvkAvSZW9bTouZue2sSxDwdTN92uHjqeKVm+0dAqdfNykRzQ95tay8aXMBAAPpUiq4Qcug2L7neoRh2Egw==}
+    dev: false
 
   /dargs/7.0.0:
     resolution: {integrity: sha512-2iy1EkLdlBzQGvbweYRFxmFath8+K7+AKB0TlhHWkNuH+TmovaMH/Wp7V7R4u7f4SnX3OgLsU9t1NI9ioDnUpg==}

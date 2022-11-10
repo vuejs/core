@@ -1,6 +1,7 @@
 // This directory contains a number of d.ts assertions
 // use \@ts-expect-error where errors are expected.
 
+import '../packages/jsx/register'
 export * from '@vue/runtime-dom'
 
 export function describe(_name: string, _fn: () => void): void

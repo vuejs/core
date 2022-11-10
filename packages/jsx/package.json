@@ -1,0 +1,35 @@
+{
+  "name": "@vue/jsx",
+  "version": "3.2.44",
+  "description": "@vue/jsx",
+  "main": "dist/jsx.cjs.js",
+  "types": "dist/jsx.d.ts",
+  "files": [
+    "register.d.ts",
+    "dist"
+  ],
+  "buildOptions": {
+    "formats": [
+      "cjs"
+    ]
+  },
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vuejs/core.git",
+    "directory": "packages/jsx"
+  },
+  "keywords": [
+    "vue"
+  ],
+  "author": "Rahul Kadyan",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/vuejs/core/issues"
+  },
+  "homepage": "https://github.com/vuejs/core/tree/main/packages/jsx#readme",
+  "dependencies": {
+    "csstype": "^3.1.1",
+    "@vue/runtime-core": "3.2.44"
+  }
+}
