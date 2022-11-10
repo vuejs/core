@@ -222,6 +222,8 @@ export const TeleportImpl = {
         }
       }
     }
+
+    updateCssVars(parentComponent, n2)
   },
 
   remove(
@@ -383,6 +385,7 @@ function hydrateTeleport(
         )
       }
     }
+    updateCssVars(parentComponent, vnode)
   }
   return vnode.anchor && nextSibling(vnode.anchor as Node)
 }
@@ -391,4 +394,21 @@ function hydrateTeleport(
 export const Teleport = TeleportImpl as unknown as {
   __isTeleport: true
   new (): { $props: VNodeProps & TeleportProps }
+}
+
+function updateCssVars(
+  parentComponent: ComponentInternalInstance | null,
+  vnode: VNode
+) {
+  // presence of .ut method indicates owner component uses css vars.
+  // code path here can assume browser environment.
+  if (parentComponent && parentComponent.ut) {
+    let node = (vnode.children as VNode[])[0].el!
+    while (node !== vnode.targetAnchor) {
+      if (node.nodeType === 1)
+        node.setAttribute('data-v-owner', parentComponent.uid)
+      node = node.nextSibling
+    }
+    parentComponent.ut()
+  }
 }
