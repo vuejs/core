@@ -1280,7 +1280,7 @@ export default {
       function c() {}
       class d {}
       
-return { aa, bb, cc, dd, a, b, c, d, xx, x }
+return { get aa() { return aa }, bb, cc, dd, get a() { return a }, b, c, d, xx, x }
 }
 
 }"

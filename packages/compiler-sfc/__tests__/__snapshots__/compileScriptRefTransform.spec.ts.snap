@@ -15,7 +15,7 @@ export default {
     let c = () => {}
     let d
     
-return { foo, a, b, c, d, ref, shallowRef }
+return { foo, a, b, get c() { return c }, get d() { return d }, ref, shallowRef }
 }
 
 }"
@@ -36,7 +36,7 @@ export default {
     let c = () => {}
     let d
     
-return { foo, a, b, c, d }
+return { foo, a, b, get c() { return c }, get d() { return d } }
 }
 
 }"

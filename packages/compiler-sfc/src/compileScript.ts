@@ -1484,7 +1484,15 @@ export function compileScript(
         allBindings[key] = true
       }
     }
-    returned = `{ ${Object.keys(allBindings).join(', ')} }`
+    returned = `{ `
+    for (const key in allBindings) {
+      if (bindingMetadata[key] === BindingTypes.SETUP_LET) {
+        returned += `get ${key}() { return ${key} }, `
+      } else {
+        returned += `${key}, `
+      }
+    }
+    returned = returned.replace(/, $/, '') + ` }`
   } else {
     // inline mode
     if (sfc.template && !sfc.template.src) {
