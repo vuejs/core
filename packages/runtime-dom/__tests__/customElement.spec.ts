@@ -215,6 +215,30 @@ describe('defineCustomElement', () => {
       expect(el.hasAttribute('not-prop')).toBe(false)
     })
 
+    test('handle properties set before connecting', () => {
+      const obj = { a: 1 }
+      const E = defineCustomElement({
+        props: {
+          foo: String,
+          post: Object
+        },
+        setup(props) {
+          expect(props.foo).toBe('hello')
+          expect(props.post).toBe(obj)
+        },
+        render() {
+          return JSON.stringify(this.post)
+        }
+      })
+      customElements.define('my-el-preconnect', E)
+      const el = document.createElement('my-el-preconnect') as any
+      el.foo = 'hello'
+      el.post = obj
+
+      container.appendChild(el)
+      expect(el.shadowRoot.innerHTML).toBe(JSON.stringify(obj))
+    })
+
     // https://github.com/vuejs/core/issues/6163
     test('handle components with no props', async () => {
       const E = defineCustomElement({
