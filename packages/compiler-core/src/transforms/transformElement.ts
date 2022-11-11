@@ -497,19 +497,21 @@ export function buildProps(
         // in inline mode there is no setupState object, so we can't use string
         // keys to set the ref. Instead, we need to transform it to pass the
         // actual ref instead.
-        if (
-          !__BROWSER__ &&
-          value &&
-          context.inline &&
-          context.bindingMetadata[value.content]
-        ) {
-          isStatic = false
-          properties.push(
-            createObjectProperty(
-              createSimpleExpression('ref_key', true),
-              createSimpleExpression(value.content, true, value.loc)
+        if (!__BROWSER__ && value && context.inline) {
+          const binding = context.bindingMetadata[value.content]
+          if (
+            binding === BindingTypes.SETUP_LET ||
+            binding === BindingTypes.SETUP_REF ||
+            binding === BindingTypes.SETUP_MAYBE_REF
+          ) {
+            isStatic = false
+            properties.push(
+              createObjectProperty(
+                createSimpleExpression('ref_key', true),
+                createSimpleExpression(value.content, true, value.loc)
+              )
             )
-          )
+          }
         }
       }
       // skip is on <component>, or is="vue:xxx"
