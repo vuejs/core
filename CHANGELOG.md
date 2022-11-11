@@ -1,3 +1,29 @@
+## [3.2.45](https://github.com/vuejs/core/compare/v3.2.44...v3.2.45) (2022-11-11)
+
+
+### Bug Fixes
+
+* **compiler/v-model:** catch incorrect v-model usage on prop bindings ([001184e](https://github.com/vuejs/core/commit/001184e6bbbc85c4698f460b1f810beca3aed262)), closes [#5584](https://github.com/vuejs/core/issues/5584)
+* **custom-elements:** also dispatch hyphenated version of emitted events ([#5378](https://github.com/vuejs/core/issues/5378)) ([0b39e46](https://github.com/vuejs/core/commit/0b39e46192c6258d5bf9d3b6992b84edb0b641d3)), closes [#5373](https://github.com/vuejs/core/issues/5373)
+* **custom-elements:** custom element should re-instantiate when inserted again ([#6966](https://github.com/vuejs/core/issues/6966)) ([67890da](https://github.com/vuejs/core/commit/67890daad1a8474c5178565f32a4efa427db911a)), closes [#6934](https://github.com/vuejs/core/issues/6934)
+* **custom-elements:** define declared properties in constructor ([#5328](https://github.com/vuejs/core/issues/5328)) ([55382ae](https://github.com/vuejs/core/commit/55382aed58aa3d937f442ad9445b3fff83a07de1))
+* **custom-elements:** ensure custom elements can inherit provides from ancestors ([#5098](https://github.com/vuejs/core/issues/5098)) ([192dcb6](https://github.com/vuejs/core/commit/192dcb648c0630ac20d2009eed512e142a72654a)), closes [#5096](https://github.com/vuejs/core/issues/5096)
+* **custom-elements:** fix event emitting for async custom elements ([#5601](https://github.com/vuejs/core/issues/5601)) ([665f2ae](https://github.com/vuejs/core/commit/665f2ae121ec31d65cf22bd577f12fb1d9ffa4a2)), closes [#5599](https://github.com/vuejs/core/issues/5599)
+* **custom-elements:** fix number type props casting check ([89f37ce](https://github.com/vuejs/core/commit/89f37ceb62363c77697d177675790a9ab81ba34f)), closes [#5793](https://github.com/vuejs/core/issues/5793) [#5794](https://github.com/vuejs/core/issues/5794)
+* **custom-elements:** properties set pre-upgrade should not show up in $attrs ([afe8899](https://github.com/vuejs/core/commit/afe889999cbcaa11020c46c30b591a5ee6c3d4cf))
+* **custom-elements:** respect slot props in custom element mode ([ffef822](https://github.com/vuejs/core/commit/ffef8228694b39638f07c0fe5bc30d826262b672))
+* **custom-elements:** should not reflect non-decalred properties set before upgrade ([5e50909](https://github.com/vuejs/core/commit/5e509091000779acbfae4c85cc1cc3973b1b2e64))
+* **hmr/keep-alive:** fix error in reload component ([#7049](https://github.com/vuejs/core/issues/7049)) ([a54bff2](https://github.com/vuejs/core/commit/a54bff2c9c8e1d908b4a0f3826ac715c9a35e68c)), closes [#7042](https://github.com/vuejs/core/issues/7042)
+* **runtime-core:** fix move/removal of static fragments containing text nodes ([#6858](https://github.com/vuejs/core/issues/6858)) ([4049ffc](https://github.com/vuejs/core/commit/4049ffcf29dc12dca71f682edf0b422a5c502e23)), closes [#6852](https://github.com/vuejs/core/issues/6852)
+* **sfc:** also generate getter for import bindings during dev ([0594400](https://github.com/vuejs/core/commit/0594400980d3bdc394e92db63fc939a6609f7a94))
+* **sfc:** ensure `<script setup>` binding behavior consistency on `this` between prod and dev ([f73925d](https://github.com/vuejs/core/commit/f73925d76a76ee259749b8b48cb68895f539a00f)), closes [#6248](https://github.com/vuejs/core/issues/6248)
+* **sfc:** ensure consistent dev/prod behavior for non-reactive variables declared in `<script setup>` ([5a3d45a](https://github.com/vuejs/core/commit/5a3d45ae29e26938a36e16c7ab9a804bfe4bcb08)), closes [#5655](https://github.com/vuejs/core/issues/5655)
+* **teleport/css-v-bind:** fix css v-bind for teleported content ([42239cf](https://github.com/vuejs/core/commit/42239cf2846f50b6ac2c060dad381113840d9ea1)), closes [#4605](https://github.com/vuejs/core/issues/4605) [#4609](https://github.com/vuejs/core/issues/4609)
+* **teleport/css-v-bind:** fix css v-bind in teleport in child component slot ([11214ee](https://github.com/vuejs/core/commit/11214eedd2699e15106c44927f4d1206b111fbd3))
+* **v-model:** fix incorrect codegen for non-ref bindings ([15e889a](https://github.com/vuejs/core/commit/15e889afaf75143484946b2dde281572ebf9e8ab)), closes [#6241](https://github.com/vuejs/core/issues/6241)
+
+
+
 ## [3.2.44](https://github.com/vuejs/core/compare/v3.2.43...v3.2.44) (2022-11-09)
 
 
