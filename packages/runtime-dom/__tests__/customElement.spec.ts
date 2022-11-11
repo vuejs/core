@@ -234,7 +234,9 @@ describe('defineCustomElement', () => {
           h('div', {
             onClick: () => {
               emit('my-click', 1)
-              emit('myClick', 1) // validate hypenization
+            },
+            onMousedown: () => {
+              emit('myEvent', 1) // validate hypenization
             }
           })
       }
@@ -255,13 +257,25 @@ describe('defineCustomElement', () => {
       const spy = jest.fn()
       e.addEventListener('my-click', spy)
       e.shadowRoot!.childNodes[0].dispatchEvent(new CustomEvent('click'))
-      expect(spy).toHaveBeenCalledTimes(2)
+      expect(spy).toHaveBeenCalledTimes(1)
       expect(spy.mock.calls[0][0]).toMatchObject({
         detail: [1]
       })
-      expect(spy.mock.calls[1][0]).toMatchObject({
-        detail: [1]
-      })
+    })
+
+    // #5373
+    test('case transform for camelCase event', () => {
+      container.innerHTML = `<my-el-emits></my-el-emits>`
+      const e = container.childNodes[0] as VueElement
+      const spy1 = jest.fn()
+      e.addEventListener('myEvent', spy1)
+      const spy2 = jest.fn()
+      // emitting myEvent, but listening for my-event. This happens when
+      // using the custom element in a Vue template
+      e.addEventListener('my-event', spy2)
+      e.shadowRoot!.childNodes[0].dispatchEvent(new CustomEvent('mousedown'))
+      expect(spy1).toHaveBeenCalledTimes(1)
+      expect(spy2).toHaveBeenCalledTimes(1)
     })
   })
 
