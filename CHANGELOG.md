@@ -1125,7 +1125,7 @@ Please refer to changelogs of previous beta releases for bug fixes included in t
 
 ### Features
 
-- [Migration Build](https://v3.vuejs.org/guide/migration/migration-build.html)
+- [Migration Build](https://v3-migration.vuejs.org/migration-build.html)
 - **compiler-core:** whitespace handling strategy ([dee3d6a](https://github.com/vuejs/core/commit/dee3d6ab8b4da6653d15eb148c51d9878007f6b6))
 - support component-level `compilerOptions` when using runtime compiler ([ce0bbe0](https://github.com/vuejs/core/commit/ce0bbe053abaf8ba18de8baf535e175048596ee5))
 - **config:** support configuring runtime compiler via `app.config.compilerOptions` ([091e6d6](https://github.com/vuejs/core/commit/091e6d67bfcc215227d78be578c68ead542481ad))
