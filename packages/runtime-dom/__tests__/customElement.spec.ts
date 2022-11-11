@@ -292,9 +292,7 @@ describe('defineCustomElement', () => {
       const spy = jest.fn()
       e.addEventListener('my-click', spy)
       // this feels brittle but seems necessary to reach the node in the DOM.
-      await nextTick()
-      await nextTick()
-      await nextTick()
+      await customElements.whenDefined('my-async-el-emits')
       e.shadowRoot!.childNodes[0].dispatchEvent(new CustomEvent('click'))
       expect(spy).toHaveBeenCalled()
       expect(spy.mock.calls[0][0]).toMatchObject({
