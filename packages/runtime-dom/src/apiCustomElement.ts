@@ -248,7 +248,12 @@ export class VueElement extends BaseClass {
       // check if there are props set pre-upgrade or connect
       for (const key of Object.keys(this)) {
         if (key[0] !== '_') {
-          this._setProp(key, this[key as keyof this], true, false)
+          this._setProp(
+            key,
+            this[key as keyof this],
+            rawKeys.includes(key),
+            false
+          )
         }
       }
 

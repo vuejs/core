@@ -201,15 +201,18 @@ describe('defineCustomElement', () => {
           expect(props.dataAge).toBe(5)
         },
         render() {
-          return `foo: ${this.foo}`
+          return h('div', `foo: ${this.foo}`)
         }
       })
       const el = document.createElement('my-el-upgrade') as any
       el.foo = 'hello'
       el.dataset.age = 5
+      el.notProp = 1
       container.appendChild(el)
       customElements.define('my-el-upgrade', E)
-      expect(el.shadowRoot.innerHTML).toBe(`foo: hello`)
+      expect(el.shadowRoot.firstChild.innerHTML).toBe(`foo: hello`)
+      // should not reflect if not declared as a prop
+      expect(el.hasAttribute('not-prop')).toBe(false)
     })
 
     // https://github.com/vuejs/core/issues/6163
