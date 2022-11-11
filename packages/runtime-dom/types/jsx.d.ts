@@ -1,1 +1,1 @@
-export {}
+import '@vue/jsx/register'

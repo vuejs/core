@@ -225,10 +225,12 @@ importers:
 
   packages/runtime-dom:
     specifiers:
+      '@vue/jsx': 3.2.44
       '@vue/runtime-core': 3.2.44
       '@vue/shared': 3.2.44
       csstype: ^2.6.8
     dependencies:
+      '@vue/jsx': link:../jsx
       '@vue/runtime-core': link:../runtime-core
       '@vue/shared': link:../shared
       csstype: 2.6.19

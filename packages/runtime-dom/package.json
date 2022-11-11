@@ -35,6 +35,7 @@
   },
   "homepage": "https://github.com/vuejs/core/tree/main/packages/runtime-dom#readme",
   "dependencies": {
+    "@vue/jsx": "3.2.44",
     "@vue/shared": "3.2.44",
     "@vue/runtime-core": "3.2.44",
     "csstype": "^2.6.8"
