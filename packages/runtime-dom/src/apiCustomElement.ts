@@ -234,11 +234,15 @@ export class VueElement extends BaseClass {
       // cast Number-type props set before resolve
       let numberProps
       if (props && !isArray(props)) {
-        for (const key in this._props) {
+        for (const key in props) {
           const opt = props[key]
           if (opt === Number || (opt && opt.type === Number)) {
-            this._props[key] = toNumber(this._props[key])
-            ;(numberProps || (numberProps = Object.create(null)))[key] = true
+            if (key in this._props) {
+              this._props[key] = toNumber(this._props[key])
+            }
+            ;(numberProps || (numberProps = Object.create(null)))[
+              camelize(key)
+            ] = true
           }
         }
       }
