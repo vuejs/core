@@ -17,18 +17,3 @@ export type IsUnion<T, U extends T = T> = (
   : true
 
 export type IsAny<T> = 0 extends 1 & T ? true : false
-
-import { h } from '@vue/jsx'
-// Duplicating @vue/jsx/register here to be able to run dts tests
-// without building types.
-declare global {
-  namespace JSX {
-    interface Element extends h.JSX.Element {}
-    interface ElementClass extends h.JSX.ElementClass {}
-    interface ElementAttributesProperty
-      extends h.JSX.ElementAttributesProperty {}
-    interface IntrinsicElements extends h.JSX.IntrinsicElements {}
-    interface IntrinsicAttributes extends h.JSX.IntrinsicAttributes {}
-    interface ElementChildrenAttribute extends h.JSX.ElementChildrenAttribute {}
-  }
-}

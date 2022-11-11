@@ -14,7 +14,7 @@
     "test": "run-s \"test-unit {@}\" \"test-e2e {@}\"",
     "test-unit": "jest --filter ./scripts/filter-unit.js",
     "test-e2e": "node scripts/build.js vue -f global -d && jest --filter ./scripts/filter-e2e.js --runInBand",
-    "test-dts": "node scripts/build.js shared reactivity runtime-core runtime-dom -dt -f esm-bundler && npm run test-dts-only",
+    "test-dts": "node scripts/build.js shared reactivity runtime-core jsx runtime-dom -dt -f esm-bundler && npm run test-dts-only",
     "test-dts-only": "tsc -p ./test-dts/tsconfig.json && tsc -p ./test-dts/tsconfig.build.json",
     "test-coverage": "node scripts/build.js vue -f global -d && jest --runInBand --coverage --bail",
     "release": "node scripts/release.js",
