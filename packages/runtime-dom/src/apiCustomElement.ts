@@ -179,7 +179,11 @@ export class VueElement extends BaseClass {
   connectedCallback() {
     this._connected = true
     if (!this._instance) {
-      this._resolveDef()
+      if (this._resolved) {
+        this._update()
+      } else {
+        this._resolveDef()
+      }
     }
   }
 
@@ -197,14 +201,6 @@ export class VueElement extends BaseClass {
    * resolve inner component definition (handle possible async component)
    */
   private _resolveDef() {
-    if (this._resolved) {
-      //#6934 if you use Both of KeepAlive and CustemElement,
-      //CustemElement will not recreate,so the property of 
-      //"_resolved" would be "true",it means that should update it
-      this._applyStyles(this._def.styles)
-      this._update()
-      return
-    }
     this._resolved = true
 
     // set initial attrs
