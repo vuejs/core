@@ -230,6 +230,33 @@ describe('defineCustomElement', () => {
     })
   })
 
+  describe('attrs', () => {
+    const E = defineCustomElement({
+      render() {
+        return [h('div', null, this.$attrs.foo as string)]
+      }
+    })
+    customElements.define('my-el-attrs', E)
+
+    test('attrs via attribute', async () => {
+      container.innerHTML = `<my-el-attrs foo="hello"></my-el-attrs>`
+      const e = container.childNodes[0] as VueElement
+      expect(e.shadowRoot!.innerHTML).toBe('<div>hello</div>')
+
+      e.setAttribute('foo', 'changed')
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe('<div>changed</div>')
+    })
+
+    test('non-declared properties should not show up in $attrs', () => {
+      const e = new E()
+      // @ts-ignore
+      e.foo = '123'
+      container.appendChild(e)
+      expect(e.shadowRoot!.innerHTML).toBe('<div></div>')
+    })
+  })
+
   describe('emits', () => {
     const CompDef = defineComponent({
       setup(_, { emit }) {

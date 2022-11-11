@@ -228,13 +228,12 @@ export class VueElement extends BaseClass {
     }).observe(this, { attributes: true })
 
     const resolve = (def: InnerComponentDef) => {
-      const { props = {}, styles } = def
-      const hasOptions = !isArray(props)
-      const rawKeys = props ? (hasOptions ? Object.keys(props) : props) : []
+      const { props, styles } = def
+      const declaredPropKeys = isArray(props) ? props : Object.keys(props || {})
 
       // cast Number-type props set before resolve
       let numberProps
-      if (hasOptions) {
+      if (props && !isArray(props)) {
         for (const key in this._props) {
           const opt = props[key]
           if (opt === Number || (opt && opt.type === Number)) {
@@ -247,18 +246,13 @@ export class VueElement extends BaseClass {
 
       // check if there are props set pre-upgrade or connect
       for (const key of Object.keys(this)) {
-        if (key[0] !== '_') {
-          this._setProp(
-            key,
-            this[key as keyof this],
-            rawKeys.includes(key),
-            false
-          )
+        if (key[0] !== '_' && declaredPropKeys.includes(key)) {
+          this._setProp(key, this[key as keyof this], true, false)
         }
       }
 
       // defining getter/setters on prototype
-      for (const key of rawKeys.map(camelize)) {
+      for (const key of declaredPropKeys.map(camelize)) {
         Object.defineProperty(this, key, {
           get() {
             return this._getProp(key)
