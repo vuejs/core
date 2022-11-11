@@ -31,7 +31,6 @@ import {
   invokeArrayFns
 } from '@vue/shared'
 import { watch } from '../apiWatch'
-import { hmrDirtyComponents } from '../hmr'
 import {
   RendererInternals,
   queuePostRenderEffect,
@@ -281,8 +280,7 @@ const KeepAliveImpl: ComponentOptions = {
 
       if (
         (include && (!name || !matches(include, name))) ||
-        (exclude && name && matches(exclude, name)) ||
-        (__DEV__ && hmrDirtyComponents.has(comp))
+        (exclude && name && matches(exclude, name))
       ) {
         current = vnode
         return rawVNode
@@ -426,14 +424,9 @@ function injectToKeepAliveRoot(
 }
 
 function resetShapeFlag(vnode: VNode) {
-  let shapeFlag = vnode.shapeFlag
-  if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
-    shapeFlag -= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-  }
-  if (shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
-    shapeFlag -= ShapeFlags.COMPONENT_KEPT_ALIVE
-  }
-  vnode.shapeFlag = shapeFlag
+  // bitwise operations to remove keep alive flags
+  vnode.shapeFlag &= ~ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+  vnode.shapeFlag &= ~ShapeFlags.COMPONENT_KEPT_ALIVE
 }
 
 function getInnerChild(vnode: VNode) {

@@ -31,9 +31,6 @@
     "postinstall": "simple-git-hooks"
   },
   "types": "test-dts/index.d.ts",
-  "tsd": {
-    "directory": "test-dts"
-  },
   "simple-git-hooks": {
     "pre-commit": "pnpm lint-staged",
     "commit-msg": "node scripts/verifyCommit.mjs"

@@ -4,7 +4,8 @@ import {
   getCurrentInstance,
   nodeOps,
   createApp,
-  shallowReadonly
+  shallowReadonly,
+  defineComponent
 } from '@vue/runtime-test'
 import { ComponentInternalInstance, ComponentOptions } from '../src/component'
 
@@ -457,5 +458,25 @@ describe('component: proxy', () => {
         Symbol.unscopables
       )} was accessed during render ` + `but is not defined on instance.`
     ).toHaveBeenWarned()
+  })
+
+  test('should prevent mutating script setup bindings', () => {
+    const Comp = defineComponent({
+      render() {},
+      setup() {
+        return {
+          __isScriptSetup: true,
+          foo: 1
+        }
+      },
+      mounted() {
+        expect('foo' in this).toBe(false)
+        try {
+          this.foo = 123
+        } catch (e) {}
+      }
+    })
+    render(h(Comp), nodeOps.createElement('div'))
+    expect(`Cannot mutate <script setup> binding "foo"`).toHaveBeenWarned()
   })
 })

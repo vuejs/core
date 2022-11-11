@@ -368,6 +368,7 @@ export class VueElement extends BaseClass {
         ) {
           if (parent instanceof VueElement) {
             instance.parent = parent._instance
+            instance.provides = parent._instance!.provides
             break
           }
         }
