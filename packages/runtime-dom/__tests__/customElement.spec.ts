@@ -72,6 +72,18 @@ describe('defineCustomElement', () => {
       expect(e._instance).toBe(i)
       expect(e.shadowRoot!.innerHTML).toBe('<div>hello</div>')
     })
+
+    test('remove then insert again', async () => {
+      container.innerHTML = `<my-element></my-element>`
+      const e = container.childNodes[0] as VueElement
+      container.removeChild(e)
+      await nextTick()
+      expect(e._instance).toBe(null)
+      expect(e.shadowRoot!.innerHTML).toBe('')
+      container.appendChild(e)
+      expect(e._instance).toBeTruthy()
+      expect(e.shadowRoot!.innerHTML).toBe('<div>hello</div>')
+    })
   })
 
   describe('props', () => {
