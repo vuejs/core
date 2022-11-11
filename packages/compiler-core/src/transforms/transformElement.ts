@@ -19,7 +19,8 @@ import {
   TemplateTextChildNode,
   DirectiveArguments,
   createVNodeCall,
-  ConstantTypes
+  ConstantTypes,
+  SimpleExpressionNode,
 } from '../ast'
 import {
   PatchFlags,
@@ -689,6 +690,10 @@ export function buildProps(
         }
       } else if (!isBuiltInDirective(name)) {
         // no built-in transform, this is a user custom directive.
+        // # 6283
+        if (ssr && prop.exp && !(prop.exp as SimpleExpressionNode).content){
+          (prop.exp as SimpleExpressionNode).content = 'undefined'
+        }
         runtimeDirectives.push(prop)
         // custom dirs may use beforeUpdate so they need to force blocks
         // to ensure before-update gets called before children update
