@@ -1,5 +1,5 @@
 /** @jsx h */
-import { h } from '../packages/jsx'
+import { h } from '@vue/jsx'
 // TSX w/ defineComponent is tested in defineComponent.test-d.tsx
 import {
   KeepAlive,
