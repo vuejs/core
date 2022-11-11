@@ -351,13 +351,22 @@ export class VueElement extends BaseClass {
           }
         }
 
-        // intercept emit
-        instance.emit = (event: string, ...args: any[]) => {
+        const dispatch = (event: string, args: any[]) => {
           this.dispatchEvent(
             new CustomEvent(event, {
               detail: args
             })
           )
+        }
+
+        // intercept emit
+        instance.emit = (event: string, ...args: any[]) => {
+          // dispatch both the raw and hyphenated versions of an event
+          // to match Vue behavior
+          dispatch(event, args)
+          if (hyphenate(event) !== event) {
+            dispatch(hyphenate(event), args)
+          }
         }
 
         // locate nearest Vue custom element parent for provide/inject
