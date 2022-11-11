@@ -196,7 +196,11 @@ export class VueElement extends BaseClass {
   connectedCallback() {
     this._connected = true
     if (!this._instance) {
-      this._resolveDef()
+      if (this._resolved) {
+        this._update()
+      } else {
+        this._resolveDef()
+      }
     }
   }
 
@@ -214,9 +218,6 @@ export class VueElement extends BaseClass {
    * resolve inner component definition (handle possible async component)
    */
   private _resolveDef() {
-    if (this._resolved) {
-      return
-    }
     this._resolved = true
 
     // set initial attrs
