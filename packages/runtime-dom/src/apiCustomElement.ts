@@ -22,7 +22,14 @@ import {
   ComponentOptions,
   ComponentInjectOptions
 } from '@vue/runtime-core'
-import { camelize, extend, hyphenate, isArray, toNumber } from '@vue/shared'
+import {
+  camelize,
+  extend,
+  hyphenate,
+  isArray,
+  toNumber,
+  hasOwn
+} from '@vue/shared'
 import { hydrate, render } from '.'
 
 export type VueElementConstructor<P = {}> = {
@@ -231,6 +238,15 @@ export class VueElement extends BaseClass {
       const { props = {}, styles } = def
       const hasOptions = !isArray(props)
       const rawKeys = props ? (hasOptions ? Object.keys(props) : props) : []
+
+      // set default prop
+      rawKeys.forEach(key => {
+        if (!props[key]) return
+        const defaultProp = props[key].default
+        if (!hasOwn(this._props, key) && defaultProp !== undefined) {
+          this._setProp(key, defaultProp)
+        }
+      })
 
       // cast Number-type props set before resolve
       let numberProps
