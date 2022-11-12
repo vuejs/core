@@ -590,26 +590,58 @@ describe('compiler: transform v-on', () => {
     })
 
     test('inline async arrow function expression handler', () => {
-      const { root, node } = parseWithVOn(
+      const inputs = [
         `<div v-on:click="async () => await foo()" />`,
+        `<Comp v-on:click="(async now => msg = now)" />`,
+        `<Comp v-on:click="(now => msg = now)" />`,
+        `<Comp v-on:click="async now => msg = now" />`
+      ]
+      const outputs = [
         {
+          type: NodeTypes.JS_CACHE_EXPRESSION,
+          index: 0,
+          value: {
+            type: NodeTypes.COMPOUND_EXPRESSION,
+            children: [`async () => await `, { content: `_ctx.foo` }, `()`]
+          }
+        },
+        {
+          type: NodeTypes.JS_CACHE_EXPRESSION,
+          index: 0,
+          value: {
+            type: NodeTypes.COMPOUND_EXPRESSION,
+            children: [`(async `, { content: `now` }, ` => `, { content: `_ctx.msg` }, ` = `, { content: `now` }, `)`]
+          }
+        },
+        {
+          type: NodeTypes.JS_CACHE_EXPRESSION,
+          index: 0,
+          value: {
+            type: NodeTypes.COMPOUND_EXPRESSION,
+            children: [`(`, { content: `now` }, ` => `, { content: `_ctx.msg` }, ` = `, { content: `now` }, `)`]
+          }
+        },
+        {
+          type: NodeTypes.JS_CACHE_EXPRESSION,
+          index: 0,
+          value: {
+            type: NodeTypes.COMPOUND_EXPRESSION,
+            children: [`async `, { content: `now` }, ` => `, { content: `_ctx.msg` }, ` = `, { content: `now` }]
+          }
+        }
+      ]
+
+      inputs.forEach((input, index) => {
+        const { root, node } = parseWithVOn(input, {
           prefixIdentifiers: true,
           cacheHandlers: true
-        }
-      )
-      expect(root.cached).toBe(1)
-      const vnodeCall = node.codegenNode as VNodeCall
-      // should not treat cached handler as dynamicProp, so no flags
-      expect(vnodeCall.patchFlag).toBeUndefined()
-      expect(
-        (vnodeCall.props as ObjectExpression).properties[0].value
-      ).toMatchObject({
-        type: NodeTypes.JS_CACHE_EXPRESSION,
-        index: 0,
-        value: {
-          type: NodeTypes.COMPOUND_EXPRESSION,
-          children: [`async () => await `, { content: `_ctx.foo` }, `()`]
-        }
+        })
+        expect(root.cached).toBe(1)
+        const vnodeCall = node.codegenNode as VNodeCall
+        // should not treat cached handler as dynamicProp, so no flags
+        expect(vnodeCall.patchFlag).toBeUndefined()
+        expect((vnodeCall.props as ObjectExpression).properties[0].value)
+          .toMatchObject(outputs[index])
       })
     })
 
