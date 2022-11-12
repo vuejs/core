@@ -729,7 +729,7 @@ export function createConditionalExpression(
     consequent,
     alternate,
     newline,
-    index: index,
+    index,
     loc: locStub
   }
 }
