@@ -569,6 +569,7 @@ describe('hot module replacement', () => {
     expect(serializeInner(root)).toBe(`2`)
   })
 
+  // #6978
   test('rerender in change hoisted nodes', () => {
     const root = nodeOps.createElement('div')
     const appId = 'test-app-id'
