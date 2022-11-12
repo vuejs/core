@@ -58,7 +58,7 @@ export function defineProps<
   PP extends ComponentObjectPropsOptions = ComponentObjectPropsOptions
 >(props: PP): Readonly<ExtractPropTypes<PP>>
 // overload 3: typed-based declaration
-// The Boolean absent props will be cast to false, so the return type
+// the Boolean absent props will be cast to false, so the return type
 // must be a boolean type
 export function defineProps<TypeProps>(): Readonly<
   {
@@ -159,14 +159,22 @@ type PropsWithDefaults<Base, Defaults> = {
     ? Defaults[K] extends undefined
       ? never
       : K
-    : K]: Base[K]
+    : K]: Base[K];
 } & {
   [K in keyof Base as K extends keyof Defaults
     ? Defaults[K] extends undefined
       ? K
       : never
-    : never]?: Base[K] | undefined
-}
+    : never]?: Base[K] | undefined;
+} & Readonly<{
+  [K in keyof Defaults as Defaults[K] extends undefined
+    ? never
+    : K]: K extends keyof Base
+    ? Defaults[K] extends undefined
+      ? Base[K]
+      : NotUndefined<Base[K]>
+    : never;
+}>
 
 /**
  * Vue `<script setup>` compiler macro for providing props default values when
