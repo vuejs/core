@@ -154,12 +154,18 @@ type InferDefault<P, T> = T extends
   ? T | ((props: P) => T)
   : (props: P) => T
 
-type PropsWithDefaults<Base, Defaults> = Base & {
-  [K in keyof Defaults]: K extends keyof Base
+type PropsWithDefaults<Base, Defaults> = {
+  [K in keyof Base as K extends keyof Defaults
     ? Defaults[K] extends undefined
-      ? Base[K]
-      : NotUndefined<Base[K]>
-    : never
+      ? never
+      : K
+    : K]: Base[K]
+} & {
+  [K in keyof Base as K extends keyof Defaults
+    ? Defaults[K] extends undefined
+      ? K
+      : never
+    : never]?: Base[K] | undefined
 }
 
 /**
