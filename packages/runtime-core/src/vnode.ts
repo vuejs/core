@@ -39,7 +39,7 @@ import {
 } from './componentRenderContext'
 import { RendererNode, RendererElement } from './renderer'
 import { NULL_DYNAMIC_COMPONENT } from './helpers/resolveAssets'
-import { hmrDirtyComponents } from './hmr'
+import { hmrDirtyComponents, isHmrUpdating } from './hmr'
 import { convertLegacyComponent } from './compat/component'
 import { convertLegacyVModelProps } from './compat/componentVModel'
 import { defineLegacyVNodeProperties } from './compat/renderFn'
@@ -423,6 +423,12 @@ function createBaseVNode(
   isBlockNode = false,
   needFullChildrenNormalization = false
 ) {
+  // #6978 the children maybe a hoisted array that should be cloned
+  // since it maybe changed during HMR
+  if (__DEV__ && isHmrUpdating && isArray(children)) {
+    children = [...children]
+  }
+
   const vnode = {
     __v_isVNode: true,
     __v_skip: true,

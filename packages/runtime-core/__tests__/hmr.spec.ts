@@ -21,7 +21,7 @@ const { createRecord, rerender, reload } = __VUE_HMR_RUNTIME__
 registerRuntimeCompiler(compileToFunction)
 
 function compileToFunction(template: string) {
-  const { code } = baseCompile(template)
+  const { code } = baseCompile(template, { hoistStatic: true })
   const render = new Function('Vue', code)(
     runtimeTest
   ) as InternalRenderFunction
@@ -567,5 +567,33 @@ describe('hot module replacement', () => {
 
     rerender(parentId, compileToFunction(`<Child>2</Child>`))
     expect(serializeInner(root)).toBe(`2`)
+  })
+
+  test('rerender in change hoisted nodes', () => {
+    const root = nodeOps.createElement('div')
+    const appId = 'test-app-id'
+    const App: ComponentOptions = {
+      __hmrId: appId,
+      render: compileToFunction(
+        `<div v-for="item of 2"><div>1</div></div><p>2</p><p>3</p>`
+      )
+    }
+    createRecord(appId, App)
+
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(
+      `<div><div>1</div></div><div><div>1</div></div><p>2</p><p>3</p>`
+    )
+
+    // move the <p>3</p> into the <div>1</div>
+    rerender(
+      appId,
+      compileToFunction(
+        `<div v-for="item of 2"><div>1<p>3</p></div></div><p>2</p>`
+      )
+    )
+    expect(serializeInner(root)).toBe(
+      `<div><div>1<p>3</p></div></div><div><div>1<p>3</p></div></div><p>2</p>`
+    )
   })
 })
