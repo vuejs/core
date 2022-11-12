@@ -970,10 +970,10 @@ export function resolveMergedOptions(
     cache.set(base, resolved)
   }
   if(instance.propsOptions[0]){
-    resolved.props = instance.propsOptions[0]
+    resolved.props = extend(Object.create(null), instance.propsOptions[0])
   }
   if(instance.emitsOptions){
-    resolved.emits = instance.emitsOptions
+    resolved.emits = extend(Object.create(null), instance.emitsOptions)
   }
   return resolved
 }
