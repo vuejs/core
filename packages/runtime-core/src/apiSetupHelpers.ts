@@ -58,7 +58,19 @@ export function defineProps<
   PP extends ComponentObjectPropsOptions = ComponentObjectPropsOptions
 >(props: PP): Readonly<ExtractPropTypes<PP>>
 // overload 3: typed-based declaration
-export function defineProps<TypeProps>(): Readonly<TypeProps>
+// The Boolean absent props will be cast to false, so the return type
+// must be a boolean type
+export function defineProps<TypeProps>(): Readonly<
+  {
+    [K in keyof TypeProps as TypeProps[K] extends boolean | undefined
+      ? K
+      : never]-?: TypeProps[K]
+  } & {
+    [K in keyof TypeProps as TypeProps[K] extends boolean | undefined
+      ? never
+      : K]: TypeProps[K]
+  }
+>
 // implementation
 export function defineProps() {
   if (__DEV__) {
