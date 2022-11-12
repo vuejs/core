@@ -13,9 +13,12 @@ describe('defineProps w/ type declaration', () => {
   // type declaration
   const props = defineProps<{
     foo: string
+    bool?: boolean
   }>()
   // explicitly declared type should be refined
   expectType<string>(props.foo)
+  // the Boolean absent props will be cast to false
+  expectType<boolean>(props.bool)
   // @ts-expect-error
   props.bar
 })
@@ -23,6 +26,7 @@ describe('defineProps w/ type declaration', () => {
 describe('defineProps w/ type declaration + withDefaults', () => {
   const res = withDefaults(
     defineProps<{
+      bool?: boolean
       number?: number
       arr?: string[]
       obj?: { x: number }
@@ -33,6 +37,7 @@ describe('defineProps w/ type declaration + withDefaults', () => {
       z?: string
     }>(),
     {
+      bool: undefined,
       number: 123,
       arr: () => [],
       obj: () => ({ x: 123 }),
@@ -53,6 +58,7 @@ describe('defineProps w/ type declaration + withDefaults', () => {
   // @ts-expect-error
   res.y.slice()
 
+  expectType<boolean | undefined>(res.bool)
   expectType<string | undefined>(res.x)
   expectType<string | undefined>(res.y)
   expectType<string>(res.z)
@@ -70,7 +76,7 @@ describe('defineProps w/ union type declaration + withDefaults', () => {
       union1: 123,
       union2: () => [123],
       union3: () => ({ x: 123 }),
-      union4: () => 123,
+      union4: () => 123
     }
   )
 })
