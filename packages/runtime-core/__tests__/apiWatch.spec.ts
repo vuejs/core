@@ -549,6 +549,36 @@ describe('api: watch', () => {
     expect(cb).not.toHaveBeenCalled()
   })
 
+  // #7030
+  it('should not fire on child component unmount w/ flush: pre', async () => {
+    const visible = ref(true)
+    const cb = jest.fn()
+    const Parent = defineComponent({
+      props: ['visible'],
+      render() {
+        return this.visible ? h(Comp) : null
+      }
+    })
+    const Comp = {
+      setup() {
+        watch(visible, cb, { flush: 'pre' })
+      },
+      render() {}
+    }
+    const App = {
+      render() {
+        return h(Parent, {
+          visible: visible.value
+        })
+      }
+    }
+    render(h(App), nodeOps.createElement('div'))
+    expect(cb).not.toHaveBeenCalled()
+    visible.value = false
+    await nextTick()
+    expect(cb).not.toHaveBeenCalled()
+  })
+
   // #1763
   it('flush: pre watcher watching props should fire before child update', async () => {
     const a = ref(0)

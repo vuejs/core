@@ -1584,7 +1584,7 @@ function baseCreateRenderer(
     pauseTracking()
     // props update may have triggered pre-flush watchers.
     // flush them before the render update.
-    flushPreFlushCbs()
+    flushPreFlushCbs(instance)
     resetTracking()
   }
 

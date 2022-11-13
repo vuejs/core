@@ -25,9 +25,9 @@ export interface SchedulerJob extends Function {
    */
   allowRecurse?: boolean
   /**
-   * Attached by renderer.ts when setting up a component's render effect
-   * Used to obtain component information when reporting max recursive updates.
-   * dev only.
+   * 1. Attached by renderer.ts when setting up a component's render effect
+   * Used to obtain component information when reporting max recursive updates in dev.
+   * 2. Attached by apiWatch.ts when use a pre watcher
    */
   ownerInstance?: ComponentInternalInstance
 }
@@ -134,6 +134,7 @@ export function queuePostFlushCb(cb: SchedulerJobs) {
 }
 
 export function flushPreFlushCbs(
+  instance?: ComponentInternalInstance,
   seen?: CountMap,
   // if currently flushing, skip the current job itself
   i = isFlushing ? flushIndex + 1 : 0
@@ -145,6 +146,9 @@ export function flushPreFlushCbs(
     const cb = queue[i]
     if (cb && cb.pre) {
       if (__DEV__ && checkRecursiveUpdates(seen!, cb)) {
+        continue
+      }
+      if (instance && instance !== cb.ownerInstance) {
         continue
       }
       queue.splice(i, 1)
