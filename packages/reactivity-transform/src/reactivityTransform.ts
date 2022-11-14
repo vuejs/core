@@ -595,7 +595,7 @@ export function transformAST(
   }
 
   /**
-   * unwrap the code form the macro($、$$), fix #6312 and keep the ideally behavior with the RFC#369
+   * unwrap the code form the macro($、$$), fix #6312 and keep the desired behavior from RFC#369
    */
   function unwrapMacro(node: CallExpression) {
     const bracketStart = node.callee.end! + offset
