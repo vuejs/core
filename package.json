@@ -74,7 +74,7 @@
     "conventional-changelog-cli": "^2.0.31",
     "csstype": "^3.0.3",
     "enquirer": "^2.3.2",
-    "esbuild": "^0.14.35",
+    "esbuild": "^0.15.13",
     "eslint": "^7.7.0",
     "eslint-plugin-jest": "26.1.5",
     "execa": "^4.0.2",
