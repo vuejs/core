@@ -671,8 +671,29 @@ export function transformAST(
           currentScope[escapeSymbol] === undefined &&
           callee === escapeSymbol
         ) {
-          s.remove(node.callee.start! + offset, node.callee.end! + offset)
           escapeScope = node
+          s.remove(node.callee.start! + offset, node.callee.end! + offset)
+
+          if (parent?.type === 'ExpressionStatement') {
+            // edge case where the call expression is an expression statement
+            // if its own - prepend semicolon to avoid it being parsed as
+            // function invocation of previous line
+            let i =
+              (node.leadingComments
+                ? node.leadingComments[0].start
+                : node.start)! + offset
+            while (i--) {
+              const char = s.original.charAt(i)
+              if (char === '\n') {
+                // only insert semi if it's actually the fisrt thign after
+                // newline
+                s.prependRight(node.start! + offset, ';')
+                break
+              } else if (!/\s/.test(char)) {
+                break
+              }
+            }
+          }
         }
 
         // TODO remove when out of experimental

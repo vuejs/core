@@ -24,6 +24,35 @@ exports[`$$ 1`] = `
     "
 `;
 
+exports[`$$ with some edge cases 1`] = `
+"import { ref as _ref } from 'vue'
+
+    ;(  /* 2 */ count /* 2 */   )
+    ;(   count /* 2 */, /**/ a   )
+    ;(   (count /* 2 */, /**/ a) /**/   )
+    {
+      a:(count,a)
+    }
+    ;((count) + 1)
+    ;([count])
+    ; (count )
+    console.log(((a)))
+    ;(a,b)
+    ;(((a++,b)))
+    count = ( a++ ,b)
+    count = ()=>(a++,b)
+    let r1 = _ref(a, (a++,b))
+    let r2 = { a:(a++,b),b: (a) }
+    switch((c)){
+      case d:
+        ;(a)
+        ;((h,f))
+        break
+    }
+    ((count++,(count),(count,a)))
+    "
+`;
+
 exports[`$computed declaration 1`] = `
 "import { computed as _computed } from 'vue'
 

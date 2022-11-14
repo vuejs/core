@@ -305,6 +305,50 @@ test('$$', () => {
   assertCode(code)
 })
 
+test('$$ with some edge cases', () => {
+  const { code } = transform(`
+    $$(  /* 2 */ count /* 2 */   )
+    $$(   count /* 2 */, /**/ a   )
+    $$(   (count /* 2 */, /**/ a) /**/   )
+    {
+      a:$$(count,a)
+    }
+    $$((count) + 1)
+    $$([count])
+    $$ (count )
+    console.log($$($$(a)))
+    $$(a,b)
+    $$($$((a++,b)))
+    count = $$( a++ ,b)
+    count = ()=>$$(a++,b)
+    let r1 = $ref(a, $$(a++,b))
+    let r2 = { a:$$(a++,b),b:$$ (a) }
+    switch($$(c)){
+      case d:
+        $$(a)
+        $$($$(h,f))
+        break
+    }
+    ($$(count++,$$(count),$$(count,a)))
+    `)
+  expect(code).toMatch(`/* 2 */ count /* 2 */`)
+  expect(code).toMatch(`;(   count /* 2 */, /**/ a   )`)
+  expect(code).toMatch(`;(   (count /* 2 */, /**/ a) /**/   )`)
+  expect(code).toMatch(`a:(count,a)`)
+  expect(code).toMatch(`;((count) + 1)`)
+  expect(code).toMatch(`;([count])`)
+  expect(code).toMatch(`;(a,b)`)
+  expect(code).toMatch(`log(((a)))`)
+  expect(code).toMatch(`count = ( a++ ,b)`)
+  expect(code).toMatch(`()=>(a++,b)`)
+  expect(code).toMatch(`_ref(a, (a++,b))`)
+  expect(code).toMatch(`{ a:(a++,b),b: (a) }`)
+  expect(code).toMatch(`switch((c))`)
+  expect(code).toMatch(`;((h,f))`)
+  expect(code).toMatch(`((count++,(count),(count,a)))`)
+  assertCode(code)
+})
+
 test('nested scopes', () => {
   const { code, rootRefs } = transform(`
     let a = $ref(0)
