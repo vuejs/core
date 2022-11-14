@@ -423,7 +423,7 @@ function createSuspenseBoundary(
     o: { parentNode, remove }
   } = rendererInternals
 
-  const timeout = toNumber(vnode.props && vnode.props.timeout)
+  const timeout = vnode.props ? toNumber(vnode.props.timeout) : undefined
   if (__DEV__) {
     assertNumber(timeout, `Suspense timeout`)
   }

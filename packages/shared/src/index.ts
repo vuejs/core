@@ -163,10 +163,11 @@ export const looseToNumber = (val: any): any => {
 }
 
 /**
+ * Only conerces number-like strings
  * "123-foo" will be returned as-is
  */
 export const toNumber = (val: any): any => {
-  const n = Number(val)
+  const n = isString(val) ? Number(val) : NaN
   return isNaN(n) ? val : n
 }
 
