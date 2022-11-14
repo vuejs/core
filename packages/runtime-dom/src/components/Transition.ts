@@ -283,7 +283,9 @@ function normalizeDuration(
 
 function NumberOf(val: unknown): number {
   const res = toNumber(val)
-  if (__DEV__) assertNumber(res, '<transition> explicit duration')
+  if (__DEV__) {
+    assertNumber(res, '<transition> explicit duration')
+  }
   return res
 }
 

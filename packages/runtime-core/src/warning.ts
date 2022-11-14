@@ -168,7 +168,9 @@ function formatProp(key: string, value: unknown, raw?: boolean): any {
  */
 export function assertNumber(val: unknown, type: string) {
   if (!__DEV__) return
-  if (typeof val !== 'number') {
+  if (val === undefined) {
+    return
+  } else if (typeof val !== 'number') {
     warn(`${type} is not a valid number - ` + `got ${JSON.stringify(val)}.`)
   } else if (isNaN(val)) {
     warn(`${type} is NaN - ` + 'the duration expression might be incorrect.')
