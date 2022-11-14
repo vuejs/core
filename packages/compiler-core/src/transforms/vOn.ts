@@ -16,7 +16,8 @@ import { validateBrowserExpression } from '../validateExpression'
 import { hasScopeRef, isMemberExpression } from '../utils'
 import { TO_HANDLER_KEY } from '../runtimeHelpers'
 
-const fnExpRE = /^\s*([\w$_]+|\([^)]*?\))\s*=>|^\s*function(?:\s+[\w$]+)?\s*\(/
+const fnExpRE =
+  /^\s*([\w$_]+|(async\s*)?\([^)]*?\))\s*(:[^=]+)?=>|^\s*(async\s+)?function(?:\s+[\w$]+)?\s*\(/
 
 export interface VOnDirectiveNode extends DirectiveNode {
   // v-on without arg is handled directly in ./transformElements.ts due to it affecting
@@ -41,13 +42,22 @@ export const transformOn: DirectiveTransform = (
   let eventName: ExpressionNode
   if (arg.type === NodeTypes.SIMPLE_EXPRESSION) {
     if (arg.isStatic) {
-      const rawName = arg.content
-      // for all event listeners, auto convert it to camelCase. See issue #2249
-      eventName = createSimpleExpression(
-        toHandlerKey(camelize(rawName)),
-        true,
-        arg.loc
-      )
+      let rawName = arg.content
+      // TODO deprecate @vnodeXXX usage
+      if (rawName.startsWith('vue:')) {
+        rawName = `vnode-${rawName.slice(4)}`
+      }
+      const eventString =
+        node.tagType !== ElementTypes.ELEMENT ||
+        rawName.startsWith('vnode') ||
+        !/[A-Z]/.test(rawName)
+          ? // for non-element and vnode lifecycle event listeners, auto convert
+            // it to camelCase. See issue #2249
+            toHandlerKey(camelize(rawName))
+          : // preserve case for plain element listeners that have uppercase
+            // letters, as these may be custom elements' custom events
+            `on:${rawName}`
+      eventName = createSimpleExpression(eventString, true, arg.loc)
     } else {
       // #2388
       eventName = createCompoundExpression([
@@ -70,9 +80,9 @@ export const transformOn: DirectiveTransform = (
   if (exp && !exp.content.trim()) {
     exp = undefined
   }
-  let shouldCache: boolean = context.cacheHandlers && !exp
+  let shouldCache: boolean = context.cacheHandlers && !exp && !context.inVOnce
   if (exp) {
-    const isMemberExp = isMemberExpression(exp.content)
+    const isMemberExp = isMemberExpression(exp.content, context)
     const isInlineStatement = !(isMemberExp || fnExpRE.test(exp.content))
     const hasMultipleStatements = exp.content.includes(`;`)
 
@@ -90,6 +100,8 @@ export const transformOn: DirectiveTransform = (
       // to scope variables.
       shouldCache =
         context.cacheHandlers &&
+        // unnecessary to cache inside v-once
+        !context.inVOnce &&
         // runtime constants don't need to be cached
         // (this is analyzed by compileScript in SFC <script setup>)
         !(exp.type === NodeTypes.SIMPLE_EXPRESSION && exp.constType > 0) &&
@@ -163,5 +175,7 @@ export const transformOn: DirectiveTransform = (
     ret.props[0].value = context.cache(ret.props[0].value)
   }
 
+  // mark the key as handler for props normalization check
+  ret.props.forEach(p => (p.key.isHandlerKey = true))
   return ret
 }

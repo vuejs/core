@@ -96,14 +96,14 @@ const transformClick = (key: ExpressionNode, event: string) => {
   return isStaticClick
     ? createSimpleExpression(event, true)
     : key.type !== NodeTypes.SIMPLE_EXPRESSION
-      ? createCompoundExpression([
-          `(`,
-          key,
-          `) === "onClick" ? "${event}" : (`,
-          key,
-          `)`
-        ])
-      : key
+    ? createCompoundExpression([
+        `(`,
+        key,
+        `) === "onClick" ? "${event}" : (`,
+        key,
+        `)`
+      ])
+    : key
 }
 
 export const transformOn: DirectiveTransform = (dir, node, context) => {
@@ -112,11 +112,8 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
     if (!modifiers.length) return baseResult
 
     let { key, value: handlerExp } = baseResult.props[0]
-    const {
-      keyModifiers,
-      nonKeyModifiers,
-      eventOptionModifiers
-    } = resolveModifiers(key, modifiers, context, dir.loc)
+    const { keyModifiers, nonKeyModifiers, eventOptionModifiers } =
+      resolveModifiers(key, modifiers, context, dir.loc)
 
     // normalize click.right and click.middle since they don't actually fire
     if (nonKeyModifiers.includes('right')) {

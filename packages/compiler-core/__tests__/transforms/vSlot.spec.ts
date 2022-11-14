@@ -9,7 +9,10 @@ import {
   ForNode,
   ComponentNode,
   VNodeCall,
-  SlotsExpression
+  SlotsExpression,
+  ObjectExpression,
+  SimpleExpressionNode,
+  RenderSlotCall
 } from '../../src'
 import { transformElement } from '../../src/transforms/transformElement'
 import { transformOn } from '../../src/transforms/vOn'
@@ -27,7 +30,9 @@ import { transformFor } from '../../src/transforms/vFor'
 import { transformIf } from '../../src/transforms/vIf'
 
 function parseWithSlots(template: string, options: CompilerOptions = {}) {
-  const ast = parse(template)
+  const ast = parse(template, {
+    whitespace: options.whitespace
+  })
   transform(ast, {
     nodeTransforms: [
       transformIf,
@@ -564,7 +569,8 @@ describe('compiler: transform component slots', () => {
                 fn: {
                   type: NodeTypes.JS_FUNCTION_EXPRESSION,
                   returns: [{ type: NodeTypes.TEXT, content: `hello` }]
-                }
+                },
+                key: `0`
               }),
               alternate: {
                 content: `undefined`,
@@ -612,7 +618,8 @@ describe('compiler: transform component slots', () => {
                       content: { content: `props` }
                     }
                   ]
-                }
+                },
+                key: `0`
               }),
               alternate: {
                 content: `undefined`,
@@ -656,7 +663,8 @@ describe('compiler: transform component slots', () => {
                   type: NodeTypes.JS_FUNCTION_EXPRESSION,
                   params: undefined,
                   returns: [{ type: NodeTypes.TEXT, content: `foo` }]
-                }
+                },
+                key: `0`
               }),
               alternate: {
                 type: NodeTypes.JS_CONDITIONAL_EXPRESSION,
@@ -667,7 +675,8 @@ describe('compiler: transform component slots', () => {
                     type: NodeTypes.JS_FUNCTION_EXPRESSION,
                     params: { content: `props` },
                     returns: [{ type: NodeTypes.TEXT, content: `bar` }]
-                  }
+                  },
+                  key: `1`
                 }),
                 alternate: createObjectMatcher({
                   name: `one`,
@@ -675,7 +684,8 @@ describe('compiler: transform component slots', () => {
                     type: NodeTypes.JS_FUNCTION_EXPRESSION,
                     params: undefined,
                     returns: [{ type: NodeTypes.TEXT, content: `baz` }]
-                  }
+                  },
+                  key: `2`
                 })
               }
             }
@@ -766,6 +776,68 @@ describe('compiler: transform component slots', () => {
     test('<slot> tag w/ v-for', () => {
       const { slots } = parseWithSlots(`<Comp><slot v-for="a in b"/></Comp>`)
       expect(slots).toMatchObject(toMatch)
+    })
+
+    test('<slot> tag w/ template', () => {
+      const { slots } = parseWithSlots(
+        `<Comp><template #default><slot/></template></Comp>`
+      )
+      expect(slots).toMatchObject(toMatch)
+    })
+
+    test('<slot w/ nested component>', () => {
+      const { slots } = parseWithSlots(`<Comp><Comp><slot/></Comp></Comp>`)
+      expect(slots).toMatchObject(toMatch)
+    })
+
+    // # fix: #6900
+    test('consistent behavior of @xxx:modelValue and @xxx:model-value', () => {
+      const { root: rootUpper } = parseWithSlots(
+        `<div><slot @foo:modelValue="handler" /></div>`
+      )
+      const slotNodeUpper = (rootUpper.codegenNode! as VNodeCall)
+        .children as ElementNode[]
+      const propertiesObjUpper = (
+        slotNodeUpper[0].codegenNode! as RenderSlotCall
+      ).arguments[2]
+      expect(propertiesObjUpper).toMatchObject({
+        properties: [
+          {
+            key: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'onFoo:modelValue'
+            },
+            value: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: `handler`,
+              isStatic: false
+            }
+          }
+        ]
+      })
+
+      const { root } = parseWithSlots(
+        `<div><slot @foo:model-Value="handler" /></div>`
+      )
+      const slotNode = (root.codegenNode! as VNodeCall)
+        .children as ElementNode[]
+      const propertiesObj = (slotNode[0].codegenNode! as RenderSlotCall)
+        .arguments[2]
+      expect(propertiesObj).toMatchObject({
+        properties: [
+          {
+            key: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'onFoo:modelValue'
+            },
+            value: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: `handler`,
+              isStatic: false
+            }
+          }
+        ]
+      })
     })
   })
 
@@ -860,6 +932,66 @@ describe('compiler: transform component slots', () => {
           }
         }
       })
+    })
+  })
+
+  describe(`with whitespace: 'preserve'`, () => {
+    test('named default slot + implicit whitespace content', () => {
+      const source = `
+      <Comp>
+        <template #header> Header </template>
+        <template #default> Default </template>
+      </Comp>
+      `
+      const { root } = parseWithSlots(source, {
+        whitespace: 'preserve'
+      })
+
+      expect(
+        `Extraneous children found when component already has explicitly named default slot.`
+      ).not.toHaveBeenWarned()
+      expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
+    })
+
+    test('implicit default slot', () => {
+      const source = `
+      <Comp>
+        <template #header> Header </template>
+        <p/>
+      </Comp>
+      `
+      const { root } = parseWithSlots(source, {
+        whitespace: 'preserve'
+      })
+
+      expect(
+        `Extraneous children found when component already has explicitly named default slot.`
+      ).not.toHaveBeenWarned()
+      expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
+    })
+
+    test('should not generate whitespace only default slot', () => {
+      const source = `
+      <Comp>
+        <template #header> Header </template>
+        <template #footer> Footer </template>
+      </Comp>
+      `
+      const { root } = parseWithSlots(source, {
+        whitespace: 'preserve'
+      })
+
+      // slots is vnodeCall's children as an ObjectExpression
+      const slots = (root as any).children[0].codegenNode.children
+        .properties as ObjectExpression['properties']
+
+      // should be: header, footer, _ (no default)
+      expect(slots.length).toBe(3)
+      expect(
+        slots.some(p => (p.key as SimpleExpressionNode).content === 'default')
+      ).toBe(false)
+
+      expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
     })
   })
 })

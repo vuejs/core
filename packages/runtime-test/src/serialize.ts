@@ -43,8 +43,8 @@ function serializeElement(
       return isOn(key) || value == null
         ? ``
         : value === ``
-          ? key
-          : `${key}=${JSON.stringify(value)}`
+        ? key
+        : `${key}=${JSON.stringify(value)}`
     })
     .filter(Boolean)
     .join(' ')

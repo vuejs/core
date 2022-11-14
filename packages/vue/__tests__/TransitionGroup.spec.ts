@@ -11,7 +11,7 @@ describe('e2e: TransitionGroup', () => {
 
   const htmlWhenTransitionStart = () =>
     page().evaluate(() => {
-      (document.querySelector('#toggleBtn') as any)!.click()
+      ;(document.querySelector('#toggleBtn') as any)!.click()
       return Promise.resolve().then(() => {
         return document.querySelector('#container')!.innerHTML
       })
@@ -21,7 +21,7 @@ describe('e2e: TransitionGroup', () => {
 
   beforeEach(async () => {
     await page().goto(baseUrl)
-    await page().waitFor('#app')
+    await page().waitForSelector('#app')
   })
 
   test(
@@ -346,7 +346,7 @@ describe('e2e: TransitionGroup', () => {
       )
       // not sure why but we just have to wait really long for this to
       // pass consistently :/
-      await transitionFinish(duration * 4)
+      await transitionFinish(duration * 4 + buffer)
       expect(await html('#container')).toBe(
         `<div class="" style="">a</div>` +
           `<div class="" style="">b</div>` +

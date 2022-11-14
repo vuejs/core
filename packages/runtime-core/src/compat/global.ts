@@ -1,7 +1,6 @@
 import {
   isReactive,
   reactive,
-  stop,
   track,
   TrackOpTypes,
   trigger,
@@ -34,16 +33,20 @@ import {
   isRuntimeOnly,
   setupComponent
 } from '../component'
-import { RenderFunction, mergeOptions } from '../componentOptions'
+import {
+  RenderFunction,
+  mergeOptions,
+  internalOptionMergeStrats
+} from '../componentOptions'
 import { ComponentPublicInstance } from '../componentPublicInstance'
 import { devtoolsInitApp, devtoolsUnmountApp } from '../devtools'
 import { Directive } from '../directives'
 import { nextTick } from '../scheduler'
 import { version } from '..'
 import {
-  installLegacyConfigProperties,
-  LegacyConfig,
-  legacyOptionMergeStrats
+  installLegacyConfigWarnings,
+  installLegacyOptionMergeStrats,
+  LegacyConfig
 } from './globalConfig'
 import { LegacyDirective } from './customDirective'
 import {
@@ -85,7 +88,7 @@ export type CompatVue = Pick<App, 'version' | 'component' | 'directive'> & {
   compile(template: string): RenderFunction
 
   /**
-   * @deprecated
+   * @deprecated Vue 3 no longer supports extending constructors.
    */
   extend: (options?: ComponentOptions) => CompatVue
   /**
@@ -167,7 +170,7 @@ export function createCompatVue(
     }
   }
 
-  Vue.version = __VERSION__
+  Vue.version = `2.6.14-compat:${__VERSION__}`
   Vue.config = singletonApp.config
 
   Vue.use = (p, ...options) => {
@@ -230,8 +233,7 @@ export function createCompatVue(
           mergeOptions(
             extend({}, SubVue.options),
             inlineOptions,
-            null,
-            legacyOptionMergeStrats as any
+            internalOptionMergeStrats as any
           ),
           SubVue
         )
@@ -249,15 +251,14 @@ export function createCompatVue(
       mergeBase[key] = isArray(superValue)
         ? superValue.slice()
         : isObject(superValue)
-          ? extend(Object.create(null), superValue)
-          : superValue
+        ? extend(Object.create(null), superValue)
+        : superValue
     }
 
     SubVue.options = mergeOptions(
       mergeBase,
       extendOptions,
-      null,
-      legacyOptionMergeStrats as any
+      internalOptionMergeStrats as any
     )
 
     SubVue.options._base = SubVue
@@ -304,8 +305,7 @@ export function createCompatVue(
       mergeOptions(
         parent,
         child,
-        vm && vm.$,
-        vm ? undefined : (legacyOptionMergeStrats as any)
+        vm ? undefined : (internalOptionMergeStrats as any)
       ),
     defineReactive
   }
@@ -324,9 +324,10 @@ export function createCompatVue(
 export function installAppCompatProperties(
   app: App,
   context: AppContext,
-  render: RootRenderFunction
+  render: RootRenderFunction<any>
 ) {
   installFilterMethod(app, context)
+  installLegacyOptionMergeStrats(app.config)
 
   if (!singletonApp) {
     // this is the call of creating the singleton itself so the rest is
@@ -337,7 +338,7 @@ export function installAppCompatProperties(
   installCompatMount(app, context, render)
   installLegacyAPIs(app)
   applySingletonAppMutations(app)
-  if (__DEV__) installLegacyConfigProperties(app.config)
+  if (__DEV__) installLegacyConfigWarnings(app.config)
 }
 
 function installFilterMethod(app: App, context: AppContext) {
@@ -380,9 +381,10 @@ function installLegacyAPIs(app: App) {
 
 function applySingletonAppMutations(app: App) {
   // copy over asset registries and deopt flag
-  ;['mixins', 'components', 'directives', 'filters', 'deopt'].forEach(key => {
+  app._context.mixins = [...singletonApp._context.mixins]
+  ;['components', 'directives', 'filters'].forEach(key => {
     // @ts-ignore
-    app._context[key] = singletonApp._context[key]
+    app._context[key] = Object.create(singletonApp._context[key])
   })
 
   // copy over global config mutations
@@ -397,7 +399,7 @@ function applySingletonAppMutations(app: App) {
     }
     const val = singletonApp.config[key as keyof AppConfig]
     // @ts-ignore
-    app.config[key] = val
+    app.config[key] = isObject(val) ? Object.create(val) : val
 
     // compat for runtime ignoredElements -> isCustomElement
     if (
@@ -470,6 +472,7 @@ function installCompatMount(
     }
     setupComponent(instance)
     vnode.component = instance
+    vnode.isCompatRoot = true
 
     // $mount & $destroy
     // these are defined on ctx and picked up by the $mount/$destroy
@@ -561,7 +564,7 @@ function installCompatMount(
         }
         delete app._container.__vue_app__
       } else {
-        const { bum, effects, um } = instance
+        const { bum, scope, um } = instance
         // beforeDestroy hooks
         if (bum) {
           invokeArrayFns(bum)
@@ -570,10 +573,8 @@ function installCompatMount(
           instance.emit('hook:beforeDestroy')
         }
         // stop effects
-        if (effects) {
-          for (let i = 0; i < effects.length; i++) {
-            stop(effects[i])
-          }
+        if (scope) {
+          scope.stop()
         }
         // unmounted hook
         if (um) {
@@ -602,7 +603,7 @@ const methodsToPatch = [
 const patched = new WeakSet<object>()
 
 function defineReactive(obj: any, key: string, val: any) {
-  // it's possible for the orignial object to be mutated after being defined
+  // it's possible for the original object to be mutated after being defined
   // and expecting reactivity... we are covering it here because this seems to
   // be a bit more common.
   if (isObject(val) && !isReactive(val) && !patched.has(val)) {
@@ -619,7 +620,7 @@ function defineReactive(obj: any, key: string, val: any) {
       Object.keys(val).forEach(key => {
         try {
           defineReactiveSimple(val, key, val[key])
-        } catch (e) {}
+        } catch (e: any) {}
       })
     }
   }

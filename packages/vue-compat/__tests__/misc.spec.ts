@@ -205,7 +205,7 @@ test('ATTR_FALSE_VALUE', () => {
   ).toHaveBeenWarned()
 })
 
-test('ATTR_ENUMERATED_COERSION', () => {
+test('ATTR_ENUMERATED_COERCION', () => {
   const vm = new Vue({
     template: `<div :draggable="null" :spellcheck="0" contenteditable="foo" />`
   }).$mount()
@@ -213,15 +213,21 @@ test('ATTR_ENUMERATED_COERSION', () => {
   expect(vm.$el.getAttribute('spellcheck')).toBe('true')
   expect(vm.$el.getAttribute('contenteditable')).toBe('true')
   expect(
-    (deprecationData[DeprecationTypes.ATTR_ENUMERATED_COERSION]
-      .message as Function)('draggable', null, 'false')
+    (
+      deprecationData[DeprecationTypes.ATTR_ENUMERATED_COERCION]
+        .message as Function
+    )('draggable', null, 'false')
   ).toHaveBeenWarned()
   expect(
-    (deprecationData[DeprecationTypes.ATTR_ENUMERATED_COERSION]
-      .message as Function)('spellcheck', 0, 'true')
+    (
+      deprecationData[DeprecationTypes.ATTR_ENUMERATED_COERCION]
+        .message as Function
+    )('spellcheck', 0, 'true')
   ).toHaveBeenWarned()
   expect(
-    (deprecationData[DeprecationTypes.ATTR_ENUMERATED_COERSION]
-      .message as Function)('contenteditable', 'foo', 'true')
+    (
+      deprecationData[DeprecationTypes.ATTR_ENUMERATED_COERCION]
+        .message as Function
+    )('contenteditable', 'foo', 'true')
   ).toHaveBeenWarned()
 })

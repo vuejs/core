@@ -77,7 +77,7 @@ describe('e2e: svg', () => {
     )}`
 
     await page().goto(baseUrl)
-    await page().waitFor('svg')
+    await page().waitForSelector('svg')
     expect(await count('g')).toBe(1)
     expect(await count('polygon')).toBe(1)
     expect(await count('circle')).toBe(1)

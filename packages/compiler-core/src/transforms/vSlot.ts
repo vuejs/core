@@ -160,6 +160,7 @@ export function buildSlots(
   let hasNamedDefaultSlot = false
   const implicitDefaultChildren: TemplateChildNode[] = []
   const seenSlotNames = new Set<string>()
+  let conditionalBranchIndex = 0
 
   for (let i = 0; i < children.length; i++) {
     const slotElement = children[i]
@@ -210,7 +211,7 @@ export function buildSlots(
       dynamicSlots.push(
         createConditionalExpression(
           vIf.exp!,
-          buildDynamicSlot(slotName, slotFunction),
+          buildDynamicSlot(slotName, slotFunction, conditionalBranchIndex++),
           defaultFallback
         )
       )
@@ -243,10 +244,14 @@ export function buildSlots(
         conditional.alternate = vElse.exp
           ? createConditionalExpression(
               vElse.exp,
-              buildDynamicSlot(slotName, slotFunction),
+              buildDynamicSlot(
+                slotName,
+                slotFunction,
+                conditionalBranchIndex++
+              ),
               defaultFallback
             )
-          : buildDynamicSlot(slotName, slotFunction)
+          : buildDynamicSlot(slotName, slotFunction, conditionalBranchIndex++)
       } else {
         context.onError(
           createCompilerError(ErrorCodes.X_V_ELSE_NO_ADJACENT_IF, vElse.loc)
@@ -311,7 +316,13 @@ export function buildSlots(
     if (!hasTemplateSlots) {
       // implicit default slot (on component)
       slotsProperties.push(buildDefaultSlotProperty(undefined, children))
-    } else if (implicitDefaultChildren.length) {
+    } else if (
+      implicitDefaultChildren.length &&
+      // #3766
+      // with whitespace: 'preserve', whitespaces between slots will end up in
+      // implicitDefaultChildren. Ignore if all implicit children are whitespaces.
+      implicitDefaultChildren.some(node => isNonWhitespaceContent(node))
+    ) {
       // implicit default slot (mixed with named slots)
       if (hasNamedDefaultSlot) {
         context.onError(
@@ -331,8 +342,8 @@ export function buildSlots(
   const slotFlag = hasDynamicSlots
     ? SlotFlags.DYNAMIC
     : hasForwardedSlots(node.children)
-      ? SlotFlags.FORWARDED
-      : SlotFlags.STABLE
+    ? SlotFlags.FORWARDED
+    : SlotFlags.STABLE
 
   let slots = createObjectExpression(
     slotsProperties.concat(
@@ -363,12 +374,19 @@ export function buildSlots(
 
 function buildDynamicSlot(
   name: ExpressionNode,
-  fn: FunctionExpression
+  fn: FunctionExpression,
+  index?: number
 ): ObjectExpression {
-  return createObjectExpression([
+  const props = [
     createObjectProperty(`name`, name),
     createObjectProperty(`fn`, fn)
-  ])
+  ]
+  if (index != null) {
+    props.push(
+      createObjectProperty(`key`, createSimpleExpression(String(index), true))
+    )
+  }
+  return createObjectExpression(props)
 }
 
 function hasForwardedSlots(children: TemplateChildNode[]): boolean {
@@ -378,8 +396,7 @@ function hasForwardedSlots(children: TemplateChildNode[]): boolean {
       case NodeTypes.ELEMENT:
         if (
           child.tagType === ElementTypes.SLOT ||
-          (child.tagType === ElementTypes.ELEMENT &&
-            hasForwardedSlots(child.children))
+          hasForwardedSlots(child.children)
         ) {
           return true
         }
@@ -396,4 +413,12 @@ function hasForwardedSlots(children: TemplateChildNode[]): boolean {
     }
   }
   return false
+}
+
+function isNonWhitespaceContent(node: TemplateChildNode): boolean {
+  if (node.type !== NodeTypes.TEXT && node.type !== NodeTypes.TEXT_CALL)
+    return true
+  return node.type === NodeTypes.TEXT
+    ? !!node.content.trim()
+    : isNonWhitespaceContent(node.content)
 }

@@ -12,7 +12,8 @@ import {
   provide,
   inject,
   watch,
-  toRefs
+  toRefs,
+  SetupContext
 } from '@vue/runtime-test'
 import { render as domRender, nextTick } from 'vue'
 
@@ -507,5 +508,110 @@ describe('component props', () => {
     passFoo.value = true
     await nextTick()
     expect(changeSpy).toHaveBeenCalledTimes(1)
+  })
+
+  // #3371
+  test(`avoid double-setting props when casting`, async () => {
+    const Parent = {
+      setup(props: any, { slots }: SetupContext) {
+        const childProps = ref()
+        const registerChildProps = (props: any) => {
+          childProps.value = props
+        }
+        provide('register', registerChildProps)
+
+        return () => {
+          // access the child component's props
+          childProps.value && childProps.value.foo
+          return slots.default!()
+        }
+      }
+    }
+
+    const Child = {
+      props: {
+        foo: {
+          type: Boolean,
+          required: false
+        }
+      },
+      setup(props: { foo: boolean }) {
+        const register = inject('register') as any
+        // 1. change the reactivity data of the parent component
+        // 2. register its own props to the parent component
+        register(props)
+
+        return () => 'foo'
+      }
+    }
+
+    const App = {
+      setup() {
+        return () => h(Parent, () => h(Child as any, { foo: '' }, () => null))
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`foo`)
+  })
+
+  test('support null in required + multiple-type declarations', () => {
+    const Comp = {
+      props: {
+        foo: { type: [Function, null], required: true }
+      },
+      render() {}
+    }
+    const root = nodeOps.createElement('div')
+    expect(() => {
+      render(h(Comp, { foo: () => {} }), root)
+    }).not.toThrow()
+
+    expect(() => {
+      render(h(Comp, { foo: null }), root)
+    }).not.toThrow()
+  })
+
+  // #5016
+  test('handling attr with undefined value', () => {
+    const Comp = {
+      render(this: any) {
+        return JSON.stringify(this.$attrs) + Object.keys(this.$attrs)
+      }
+    }
+    const root = nodeOps.createElement('div')
+
+    let attrs: any = { foo: undefined }
+
+    render(h(Comp, attrs), root)
+    expect(serializeInner(root)).toBe(
+      JSON.stringify(attrs) + Object.keys(attrs)
+    )
+
+    render(h(Comp, (attrs = { foo: 'bar' })), root)
+    expect(serializeInner(root)).toBe(
+      JSON.stringify(attrs) + Object.keys(attrs)
+    )
+  })
+
+  // #691ef
+  test('should not mutate original props long-form definition object', () => {
+    const props = {
+      msg: {
+        type: String
+      }
+    }
+    const Comp = defineComponent({
+      props,
+      render() {}
+    })
+
+    const root = nodeOps.createElement('div')
+
+    render(h(Comp, { msg: 'test' }), root)
+
+    expect(Object.keys(props.msg).length).toBe(1)
   })
 })

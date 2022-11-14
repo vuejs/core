@@ -2,9 +2,9 @@ import {
   extend,
   looseEqual,
   looseIndexOf,
+  looseToNumber,
   NOOP,
-  toDisplayString,
-  toNumber
+  toDisplayString
 } from '@vue/shared'
 import {
   ComponentPublicInstance,
@@ -35,8 +35,9 @@ import {
   legacyresolveScopedSlots
 } from './renderHelpers'
 import { resolveFilter } from '../helpers/resolveAssets'
-import { resolveMergedOptions } from '../componentOptions'
 import { InternalSlots, Slots } from '../componentSlots'
+import { ContextualRenderFn } from '../componentRenderContext'
+import { resolveMergedOptions } from '../componentOptions'
 
 export type LegacyPublicInstance = ComponentPublicInstance &
   LegacyPublicProperties
@@ -106,7 +107,7 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
       const res: InternalSlots = {}
       for (const key in i.slots) {
         const fn = i.slots[key]!
-        if (!(fn as any)._nonScoped) {
+        if (!(fn as ContextualRenderFn)._ns /* non-scoped slot */) {
           res[key] = fn
         }
       }
@@ -127,11 +128,10 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
       // needed by many libs / render fns
       $vnode: i => i.vnode,
 
-      // inject addtional properties into $options for compat
+      // inject additional properties into $options for compat
       // e.g. vuex needs this.$options.parent
       $options: i => {
-        let res = resolveMergedOptions(i)
-        if (res === i.type) res = i.type.__merged = extend({}, res)
+        const res = extend({}, resolveMergedOptions(i))
         res.parent = i.proxy!.$parent
         res.propsData = i.vnode.props
         return res
@@ -148,7 +148,7 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
       $createElement: () => compatH,
       _c: () => compatH,
       _o: () => legacyMarkOnce,
-      _n: () => toNumber,
+      _n: () => looseToNumber,
       _s: () => toDisplayString,
       _l: () => renderList,
       _t: i => legacyRenderSlot.bind(null, i),

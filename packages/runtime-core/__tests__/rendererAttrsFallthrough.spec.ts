@@ -11,7 +11,8 @@ import {
   createBlock,
   FunctionalComponent,
   createCommentVNode,
-  Fragment
+  Fragment,
+  withModifiers
 } from '@vue/runtime-dom'
 import { PatchFlags } from '@vue/shared/src'
 
@@ -301,6 +302,34 @@ describe('attribute fallthrough', () => {
     expect(root.innerHTML).toMatch(`<div>1</div>`)
   })
 
+  // #3741
+  it('should not fallthrough with inheritAttrs: false from mixins', () => {
+    const Parent = {
+      render() {
+        return h(Child, { foo: 1, class: 'parent' })
+      }
+    }
+
+    const mixin = {
+      inheritAttrs: false
+    }
+
+    const Child = defineComponent({
+      mixins: [mixin],
+      props: ['foo'],
+      render() {
+        return h('div', this.foo)
+      }
+    })
+
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    render(h(Parent), root)
+
+    // should not contain class
+    expect(root.innerHTML).toMatch(`<div>1</div>`)
+  })
+
   it('explicit spreading with inheritAttrs: false', () => {
     const Parent = {
       render() {
@@ -353,6 +382,45 @@ describe('attribute fallthrough', () => {
 
     expect(`Extraneous non-props attributes (class)`).toHaveBeenWarned()
     expect(`Extraneous non-emits event listeners`).toHaveBeenWarned()
+  })
+
+  it('should dedupe same listeners when $attrs is used during render', () => {
+    const click = jest.fn()
+    const count = ref(0)
+
+    function inc() {
+      count.value++
+      click()
+    }
+
+    const Parent = {
+      render() {
+        return h(Child, { onClick: inc })
+      }
+    }
+
+    const Child = defineComponent({
+      render() {
+        return h(
+          'div',
+          mergeProps(
+            {
+              onClick: withModifiers(() => {}, ['prevent', 'stop'])
+            },
+            this.$attrs
+          )
+        )
+      }
+    })
+
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    render(h(Parent), root)
+
+    const node = root.children[0] as HTMLElement
+    node.dispatchEvent(new CustomEvent('click'))
+    expect(click).toHaveBeenCalledTimes(1)
+    expect(count.value).toBe(1)
   })
 
   it('should not warn when $attrs is used during render', () => {

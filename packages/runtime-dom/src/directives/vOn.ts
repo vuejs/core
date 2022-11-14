@@ -66,8 +66,7 @@ export const withKeys = (fn: Function, modifiers: string[]) => {
       compatUtils.isCompatEnabled(DeprecationTypes.CONFIG_KEY_CODES, instance)
     ) {
       if (instance) {
-        globalKeyCodes = ((instance.appContext.config as any) as LegacyConfig)
-          .keyCodes
+        globalKeyCodes = (instance.appContext.config as LegacyConfig).keyCodes
       }
     }
     if (__DEV__ && modifiers.some(m => /^\d+$/.test(m))) {

@@ -7,7 +7,8 @@ import {
   nextTick,
   Ref,
   readonly,
-  reactive
+  reactive,
+  defineComponent
 } from '../src/index'
 import { render, nodeOps, serialize } from '@vue/runtime-test'
 
@@ -89,6 +90,34 @@ describe('api: provide/inject', () => {
     const root = nodeOps.createElement('div')
     render(h(Provider), root)
     expect(serialize(root)).toBe(`<div>foobar</div>`)
+  })
+
+  it('bound to instance', () => {
+    const Provider = {
+      setup() {
+        return () => h(Consumer)
+      }
+    }
+
+    const Consumer = defineComponent({
+      name: 'Consumer',
+      inject: {
+        foo: {
+          from: 'foo',
+          default() {
+            return this!.$options.name
+          }
+        }
+      },
+      render() {
+        // @ts-ignore
+        return this.foo
+      }
+    })
+
+    const root = nodeOps.createElement('div')
+    render(h(Provider), root)
+    expect(serialize(root)).toBe(`<div>Consumer</div>`)
   })
 
   it('nested providers', () => {

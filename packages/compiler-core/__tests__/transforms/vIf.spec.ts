@@ -22,6 +22,7 @@ import {
   CREATE_COMMENT,
   FRAGMENT,
   MERGE_PROPS,
+  NORMALIZE_PROPS,
   RENDER_SLOT
 } from '../../src/runtimeHelpers'
 import { createObjectMatcher } from '../testUtils'
@@ -247,7 +248,7 @@ describe('compiler: v-if', () => {
       ])
     })
 
-    test('error on v-else-if missing adjacent v-if', () => {
+    test('error on v-else-if missing adjacent v-if or v-else-if', () => {
       const onError = jest.fn()
 
       const { node: node1 } = parseWithIfTransform(`<div v-else-if="foo"/>`, {
@@ -281,6 +282,21 @@ describe('compiler: v-if', () => {
         {
           code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
           loc: node3.loc
+        }
+      ])
+
+      const {
+        node: { branches }
+      } = parseWithIfTransform(
+        `<div v-if="notOk"/><div v-else/><div v-else-if="ok"/>`,
+        { onError },
+        0
+      )
+
+      expect(onError.mock.calls[3]).toMatchObject([
+        {
+          code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
+          loc: branches[branches.length - 1].loc
         }
       ])
     })
@@ -556,8 +572,14 @@ describe('compiler: v-if', () => {
       const branch1 = codegenNode.consequent as VNodeCall
       expect(branch1.props).toMatchObject({
         type: NodeTypes.JS_CALL_EXPRESSION,
-        callee: MERGE_PROPS,
-        arguments: [createObjectMatcher({ key: `[0]` }), { content: `obj` }]
+        callee: NORMALIZE_PROPS,
+        arguments: [
+          {
+            type: NodeTypes.JS_CALL_EXPRESSION,
+            callee: MERGE_PROPS,
+            arguments: [createObjectMatcher({ key: `[0]` }), { content: `obj` }]
+          }
+        ]
       })
     })
 
@@ -604,6 +626,24 @@ describe('compiler: v-if', () => {
       const branch1 = codegenNode.consequent as VNodeCall
       expect(branch1.directives).not.toBeUndefined()
       expect(branch1.props).toMatchObject(createObjectMatcher({ key: `[0]` }))
+    })
+
+    // #6631
+    test('avoid duplicate keys', () => {
+      const {
+        node: { codegenNode }
+      } = parseWithIfTransform(`<div v-if="ok" key="custom_key" v-bind="obj"/>`)
+      const branch1 = codegenNode.consequent as VNodeCall
+      expect(branch1.props).toMatchObject({
+        type: NodeTypes.JS_CALL_EXPRESSION,
+        callee: MERGE_PROPS,
+        arguments: [
+          createObjectMatcher({
+            key: 'custom_key'
+          }),
+          { content: `obj` }
+        ]
+      })
     })
 
     test('with spaces between branches', () => {
@@ -671,6 +711,27 @@ describe('compiler: v-if', () => {
 
       expect(b1.children[3].type).toBe(NodeTypes.ELEMENT)
       expect((b1.children[3] as ElementNode).tag).toBe(`p`)
+    })
+
+    // #6843
+    test('should parse correctly with comments: true in prod', () => {
+      __DEV__ = false
+      parseWithIfTransform(
+        `
+          <template v-if="ok">
+            <!--comment1-->
+            <div v-if="ok2">
+              <!--comment2-->
+            </div>
+            <!--comment3-->
+            <b v-else/>
+            <!--comment4-->
+            <p/>
+          </template>
+        `,
+        { comments: true }
+      )
+      __DEV__ = true
     })
   })
 

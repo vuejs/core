@@ -9,15 +9,18 @@ import {
 import * as CompilerDOM from '@vue/compiler-dom'
 import { RawSourceMap, SourceMapGenerator } from 'source-map'
 import { TemplateCompiler } from './compileTemplate'
-import { Statement } from '@babel/types'
 import { parseCssVars } from './cssVars'
-import { warnExperimental } from './warn'
+import { createCache } from './cache'
+import { hmrShouldReload, ImportBinding } from './compileScript'
+
+export const DEFAULT_FILENAME = 'anonymous.vue'
 
 export interface SFCParseOptions {
   filename?: string
   sourceMap?: boolean
   sourceRoot?: string
   pad?: boolean | 'line' | 'space'
+  ignoreEmpty?: boolean
   compiler?: TemplateCompiler
 }
 
@@ -40,8 +43,9 @@ export interface SFCScriptBlock extends SFCBlock {
   type: 'script'
   setup?: string | boolean
   bindings?: BindingMetadata
-  scriptAst?: Statement[]
-  scriptSetupAst?: Statement[]
+  imports?: Record<string, ImportBinding>
+  scriptAst?: import('@babel/types').Statement[]
+  scriptSetupAst?: import('@babel/types').Statement[]
 }
 
 export interface SFCStyleBlock extends SFCBlock {
@@ -59,9 +63,21 @@ export interface SFCDescriptor {
   styles: SFCStyleBlock[]
   customBlocks: SFCBlock[]
   cssVars: string[]
-  // whether the SFC uses :slotted() modifier.
-  // this is used as a compiler optimization hint.
+  /**
+   * whether the SFC uses :slotted() modifier.
+   * this is used as a compiler optimization hint.
+   */
   slotted: boolean
+
+  /**
+   * compare with an existing descriptor to determine whether HMR should perform
+   * a reload vs. re-render.
+   *
+   * Note: this comparison assumes the prev/next script are already identical,
+   * and only checks the special case where <script setup lang="ts"> unused import
+   * pruning result changes due to template changes.
+   */
+  shouldForceReload: (prevImports: Record<string, ImportBinding>) => boolean
 }
 
 export interface SFCParseResult {
@@ -69,22 +85,16 @@ export interface SFCParseResult {
   errors: (CompilerError | SyntaxError)[]
 }
 
-const SFC_CACHE_MAX_SIZE = 500
-const sourceToSFC =
-  __GLOBAL__ || __ESM_BROWSER__
-    ? new Map<string, SFCParseResult>()
-    : (new (require('lru-cache'))(SFC_CACHE_MAX_SIZE) as Map<
-        string,
-        SFCParseResult
-      >)
+const sourceToSFC = createCache<SFCParseResult>()
 
 export function parse(
   source: string,
   {
     sourceMap = true,
-    filename = 'anonymous.vue',
+    filename = DEFAULT_FILENAME,
     sourceRoot = '',
     pad = false,
+    ignoreEmpty = true,
     compiler = CompilerDOM
   }: SFCParseOptions = {}
 ): SFCParseResult {
@@ -104,7 +114,8 @@ export function parse(
     styles: [],
     customBlocks: [],
     cssVars: [],
-    slotted: false
+    slotted: false,
+    shouldForceReload: prevImports => hmrShouldReload(prevImports, descriptor)
   }
 
   const errors: (CompilerError | SyntaxError)[] = []
@@ -138,12 +149,17 @@ export function parse(
       errors.push(e)
     }
   })
-
   ast.children.forEach(node => {
     if (node.type !== NodeTypes.ELEMENT) {
       return
     }
-    if (!node.children.length && !hasSrc(node) && node.tag !== 'template') {
+    // we only want to keep the nodes that are not empty (when the tag is not a template)
+    if (
+      ignoreEmpty &&
+      node.tag !== 'template' &&
+      isEmpty(node) &&
+      !hasSrc(node)
+    ) {
       return
     }
     switch (node.tag) {
@@ -201,7 +217,13 @@ export function parse(
         break
     }
   })
-
+  if (!descriptor.template && !descriptor.script && !descriptor.scriptSetup) {
+    errors.push(
+      new SyntaxError(
+        `At least one <template> or <script> is required in a single file component.`
+      )
+    )
+  }
   if (descriptor.scriptSetup) {
     if (descriptor.scriptSetup.src) {
       errors.push(
@@ -243,9 +265,6 @@ export function parse(
 
   // parse CSS vars
   descriptor.cssVars = parseCssVars(descriptor)
-  if (descriptor.cssVars.length) {
-    warnExperimental(`v-bind() CSS variable injection`, 231)
-  }
 
   // check if the SFC uses :slotted
   const slottedRE = /(?:::v-|:)slotted\(/
@@ -286,6 +305,16 @@ function createBlock(
     start = node.children[0].loc.start
     end = node.children[node.children.length - 1].loc.end
     content = source.slice(start.offset, end.offset)
+  } else {
+    const offset = node.loc.source.indexOf(`</`)
+    if (offset > -1) {
+      start = {
+        line: start.line,
+        column: start.column + offset,
+        offset: start.offset + offset
+      }
+    }
+    end = { ...start }
   }
   const loc = {
     source: content,
@@ -385,4 +414,18 @@ function hasSrc(node: ElementNode) {
     }
     return p.name === 'src'
   })
+}
+
+/**
+ * Returns true if the node has no children
+ * once the empty text nodes (trimmed content) have been filtered out.
+ */
+function isEmpty(node: ElementNode) {
+  for (let i = 0; i < node.children.length; i++) {
+    const child = node.children[i]
+    if (child.type !== NodeTypes.TEXT || child.content.trim() !== '') {
+      return false
+    }
+  }
+  return true
 }

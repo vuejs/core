@@ -9,7 +9,9 @@ import {
   expectType,
   ShallowUnwrapRef,
   FunctionalComponent,
-  ComponentPublicInstance
+  ComponentPublicInstance,
+  toRefs,
+  IsAny
 } from './index'
 
 declare function extractComponentOptions<Props, RawBindings>(
@@ -40,6 +42,28 @@ describe('object props', () => {
     ffff: (a: number, b: string) => { a: boolean }
     validated?: string
     object?: object
+  }
+
+  interface ExpectedRefs {
+    a: Ref<number | undefined>
+    b: Ref<string>
+    e: Ref<Function | undefined>
+    bb: Ref<string>
+    bbb: Ref<string>
+    cc: Ref<string[] | undefined>
+    dd: Ref<{ n: 1 }>
+    ee: Ref<(() => string) | undefined>
+    ff: Ref<((a: number, b: string) => { a: boolean }) | undefined>
+    ccc: Ref<string[] | undefined>
+    ddd: Ref<string[]>
+    eee: Ref<() => { a: string }>
+    fff: Ref<(a: number, b: string) => { a: boolean }>
+    hhh: Ref<boolean>
+    ggg: Ref<'foo' | 'bar'>
+    ffff: Ref<(a: number, b: string) => { a: boolean }>
+    validated: Ref<string | undefined>
+    object: Ref<object | undefined>
+    zzz: any
   }
 
   describe('defineComponent', () => {
@@ -74,7 +98,7 @@ describe('object props', () => {
         ff: Function as PropType<(a: number, b: string) => { a: boolean }>,
         // explicit type casting with constructor
         ccc: Array as () => string[],
-        // required + contructor type casting
+        // required + constructor type casting
         ddd: {
           type: Array as () => string[],
           required: true
@@ -108,15 +132,38 @@ describe('object props', () => {
           // validator requires explicit annotation
           validator: (val: unknown) => val !== ''
         },
-        object: Object as PropType<object>
+        object: Object as PropType<object>,
+        zzz: Object as PropType<any>
       },
       setup(props) {
+        const refs = toRefs(props)
+        expectType<ExpectedRefs['a']>(refs.a)
+        expectType<ExpectedRefs['b']>(refs.b)
+        expectType<ExpectedRefs['e']>(refs.e)
+        expectType<ExpectedRefs['bb']>(refs.bb)
+        expectType<ExpectedRefs['bbb']>(refs.bbb)
+        expectType<ExpectedRefs['cc']>(refs.cc)
+        expectType<ExpectedRefs['dd']>(refs.dd)
+        expectType<ExpectedRefs['ee']>(refs.ee)
+        expectType<ExpectedRefs['ff']>(refs.ff)
+        expectType<ExpectedRefs['ccc']>(refs.ccc)
+        expectType<ExpectedRefs['ddd']>(refs.ddd)
+        expectType<ExpectedRefs['eee']>(refs.eee)
+        expectType<ExpectedRefs['fff']>(refs.fff)
+        expectType<ExpectedRefs['hhh']>(refs.hhh)
+        expectType<ExpectedRefs['ggg']>(refs.ggg)
+        expectType<ExpectedRefs['ffff']>(refs.ffff)
+        expectType<ExpectedRefs['validated']>(refs.validated)
+        expectType<ExpectedRefs['object']>(refs.object)
+        expectType<IsAny<typeof props.zzz>>(true)
+
         return {
           setupA: 1,
           setupB: ref(1),
           setupC: {
             a: ref(2)
           },
+          setupD: undefined as Ref<number> | undefined,
           setupProps: props
         }
       }
@@ -148,7 +195,7 @@ describe('object props', () => {
     expectType<Number>(rawBindings.setupA)
     expectType<Ref<Number>>(rawBindings.setupB)
     expectType<Ref<Number>>(rawBindings.setupC.a)
-    expectType<Number>(rawBindings.setupA)
+    expectType<Ref<Number> | undefined>(rawBindings.setupD)
 
     // raw bindings props
     expectType<ExpectedProps['a']>(rawBindings.setupProps.a)
@@ -173,7 +220,7 @@ describe('object props', () => {
     expectType<Number>(setup.setupA)
     expectType<Number>(setup.setupB)
     expectType<Ref<Number>>(setup.setupC.a)
-    expectType<Number>(setup.setupA)
+    expectType<number | undefined>(setup.setupD)
 
     // raw bindings props
     expectType<ExpectedProps['a']>(setup.setupProps.a)
@@ -197,6 +244,7 @@ describe('object props', () => {
     // instance
     const instance = new MyComponent()
     expectType<number>(instance.setupA)
+    expectType<number | undefined>(instance.setupD)
     // @ts-expect-error
     instance.notExist
   })
@@ -233,7 +281,7 @@ describe('object props', () => {
         ff: Function as PropType<(a: number, b: string) => { a: boolean }>,
         // explicit type casting with constructor
         ccc: Array as () => string[],
-        // required + contructor type casting
+        // required + constructor type casting
         ddd: {
           type: Array as () => string[],
           required: true

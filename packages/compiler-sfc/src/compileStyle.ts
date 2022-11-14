@@ -15,6 +15,7 @@ import {
 } from './stylePreprocessors'
 import { RawSourceMap } from 'source-map'
 import { cssVarsPlugin } from './cssVars'
+import postcssModules from 'postcss-modules'
 
 export interface SFCStyleCompileOptions {
   source: string
@@ -30,7 +31,7 @@ export interface SFCStyleCompileOptions {
   postcssOptions?: any
   postcssPlugins?: any[]
   /**
-   * @deprecated
+   * @deprecated use `inMap` instead.
    */
   map?: RawSourceMap
 }
@@ -47,7 +48,7 @@ export interface CSSModulesOptions {
   hashPrefix?: string
   localsConvention?: 'camelCase' | 'camelCaseOnly' | 'dashes' | 'dashesOnly'
   exportGlobals?: boolean
-  globalModulePaths?: string[]
+  globalModulePaths?: RegExp[]
 }
 
 export interface SFCAsyncStyleCompileOptions extends SFCStyleCompileOptions {
@@ -79,9 +80,10 @@ export function compileStyle(
 export function compileStyleAsync(
   options: SFCAsyncStyleCompileOptions
 ): Promise<SFCStyleCompileResults> {
-  return doCompileStyle({ ...options, isAsync: true }) as Promise<
-    SFCStyleCompileResults
-  >
+  return doCompileStyle({
+    ...options,
+    isAsync: true
+  }) as Promise<SFCStyleCompileResults>
 }
 
 export function doCompileStyle(
@@ -130,7 +132,7 @@ export function doCompileStyle(
       )
     }
     plugins.push(
-      require('postcss-modules')({
+      postcssModules({
         ...modulesOptions,
         getJSON: (_cssFileName: string, json: Record<string, string>) => {
           cssModules = json
@@ -185,7 +187,7 @@ export function doCompileStyle(
       return result
         .then(result => ({
           code: result.css || '',
-          map: result.map && (result.map.toJSON() as any),
+          map: result.map && result.map.toJSON(),
           errors,
           modules: cssModules,
           rawResult: result,
@@ -204,13 +206,13 @@ export function doCompileStyle(
     // force synchronous transform (we know we only have sync plugins)
     code = result.css
     outMap = result.map
-  } catch (e) {
+  } catch (e: any) {
     errors.push(e)
   }
 
   return {
     code: code || ``,
-    map: outMap && (outMap.toJSON() as any),
+    map: outMap && outMap.toJSON(),
     errors,
     rawResult: result,
     dependencies

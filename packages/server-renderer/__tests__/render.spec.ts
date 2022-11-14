@@ -1,3 +1,7 @@
+/**
+ * @jest-environment node
+ */
+
 import {
   createApp,
   h,
@@ -16,14 +20,15 @@ import {
   resolveDynamicComponent,
   renderSlot,
   onErrorCaptured,
-  onServerPrefetch
+  onServerPrefetch,
+  getCurrentInstance
 } from 'vue'
 import { escapeHtml } from '@vue/shared'
 import { renderToString } from '../src/renderToString'
-import { renderToStream as _renderToStream } from '../src/renderToStream'
+import { renderToNodeStream, pipeToNodeWritable } from '../src/renderToStream'
 import { ssrRenderSlot, SSRSlot } from '../src/helpers/ssrRenderSlot'
 import { ssrRenderComponent } from '../src/helpers/ssrRenderComponent'
-import { Readable } from 'stream'
+import { Readable, Transform } from 'stream'
 import { ssrRenderVNode } from '../src'
 
 const promisifyStream = (stream: Readable) => {
@@ -41,12 +46,25 @@ const promisifyStream = (stream: Readable) => {
   })
 }
 
-const renderToStream = (app: any, context?: any) =>
-  promisifyStream(_renderToStream(app, context))
+const renderToStream = (app: any, context?: any) => {
+  return promisifyStream(renderToNodeStream(app, context))
+}
+
+const pipeToWritable = (app: any, context?: any) => {
+  const stream = new Transform({
+    transform(data, _encoding, cb) {
+      this.push(data)
+      cb()
+    }
+  })
+  pipeToNodeWritable(app, context, stream)
+  return promisifyStream(stream)
+}
 
 // we run the same tests twice, once for renderToString, once for renderToStream
 testRender(`renderToString`, renderToString)
-testRender(`renderToStream`, renderToStream)
+testRender(`renderToNodeStream`, renderToStream)
+testRender(`pipeToNodeWritable`, pipeToWritable)
 
 function testRender(type: string, render: typeof renderToString) {
   describe(`ssr: ${type}`, () => {
@@ -111,14 +129,14 @@ function testRender(type: string, render: typeof renderToString) {
           await render(
             createApp(
               defineComponent({
-                extends: {
+                extends: defineComponent({
                   data() {
                     return { msg: 'hello' }
                   },
-                  render(this: any) {
+                  render() {
                     return h('div', this.msg)
                   }
-                }
+                })
               })
             )
           )
@@ -131,14 +149,14 @@ function testRender(type: string, render: typeof renderToString) {
             createApp(
               defineComponent({
                 mixins: [
-                  {
+                  defineComponent({
                     data() {
                       return { msg: 'hello' }
                     },
-                    render(this: any) {
+                    render() {
                       return h('div', this.msg)
                     }
-                  }
+                  })
                 ]
               })
             )
@@ -658,9 +676,7 @@ function testRender(type: string, render: typeof renderToString) {
         const MyComp = {
           render: () => h('p', 'hello')
         }
-        expect(await render(h(KeepAlive, () => h(MyComp)))).toBe(
-          `<!--[--><p>hello</p><!--]-->`
-        )
+        expect(await render(h(KeepAlive, () => h(MyComp)))).toBe(`<p>hello</p>`)
       })
 
       test('Transition', async () => {
@@ -717,7 +733,7 @@ function testRender(type: string, render: typeof renderToString) {
       test('with client-compiled vnode slots', async () => {
         const Child = {
           __scopeId: 'data-v-child',
-          render: function(this: any) {
+          render: function (this: any) {
             return h('div', null, [renderSlot(this.$slots, 'default')])
           }
         }
@@ -756,13 +772,30 @@ function testRender(type: string, render: typeof renderToString) {
       test('handle compiler errors', async () => {
         await render(
           // render different content since compilation is cached
-          createApp({ template: `<${type === 'renderToString' ? 'div' : 'p'}` })
+          createApp({ template: `<div>${type}</` })
         )
 
         expect(
           `Template compilation error: Unexpected EOF in tag.`
         ).toHaveBeenWarned()
         expect(`Element is missing end tag`).toHaveBeenWarned()
+      })
+
+      // #6110
+      test('reset current instance after rendering error', async () => {
+        const prev = getCurrentInstance()
+        expect(prev).toBe(null)
+        try {
+          await render(
+            createApp({
+              data() {
+                return { msg: null }
+              },
+              template: `<div>{{ msg.text }}</div>`
+            })
+          )
+        } catch {}
+        expect(getCurrentInstance()).toBe(prev)
       })
     })
 
@@ -821,7 +854,7 @@ function testRender(type: string, render: typeof renderToString) {
       expect(fn2).toBeCalledWith('async child error')
     })
 
-    // https://github.com/vuejs/vue-next/issues/3322
+    // https://github.com/vuejs/core/issues/3322
     test('effect onInvalidate does not error', async () => {
       const noop = () => {}
       const app = createApp({
@@ -1061,11 +1094,11 @@ function testRender(type: string, render: typeof renderToString) {
 
       try {
         await render(app)
-      } catch (e) {
+      } catch (e: any) {
         renderError = e
       }
       expect(renderError).toBe(null)
-      expect(((capturedError as unknown) as Error).message).toBe('An error')
+      expect((capturedError as unknown as Error).message).toBe('An error')
     })
   })
 }

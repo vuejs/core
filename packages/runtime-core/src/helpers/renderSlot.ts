@@ -1,7 +1,12 @@
 import { Data } from '../component'
 import { Slots, RawSlots } from '../componentSlots'
-import { Comment, isVNode } from '../vnode'
 import {
+  ContextualRenderFn,
+  currentRenderingInstance
+} from '../componentRenderContext'
+import {
+  Comment,
+  isVNode,
   VNodeArrayChildren,
   openBlock,
   createBlock,
@@ -10,10 +15,8 @@ import {
 } from '../vnode'
 import { PatchFlags, SlotFlags } from '@vue/shared'
 import { warn } from '../warning'
-
-export let isRenderingCompiledSlot = 0
-export const setCompiledSlotRendering = (n: number) =>
-  (isRenderingCompiledSlot += n)
+import { createVNode } from '@vue/runtime-core'
+import { isAsyncWrapper } from '../apiAsyncComponent'
 
 /**
  * Compiler runtime helper for rendering `<slot/>`
@@ -28,6 +31,16 @@ export function renderSlot(
   fallback?: () => VNodeArrayChildren,
   noSlotted?: boolean
 ): VNode {
+  if (
+    currentRenderingInstance!.isCE ||
+    (currentRenderingInstance!.parent &&
+      isAsyncWrapper(currentRenderingInstance!.parent) &&
+      currentRenderingInstance!.parent.isCE)
+  ) {
+    if (name !== 'default') props.name = name
+    return createVNode('slot', props, fallback && fallback())
+  }
+
   let slot = slots[name]
 
   if (__DEV__ && slot && slot.length > 1) {
@@ -43,12 +56,21 @@ export function renderSlot(
   // invocation interfering with template-based block tracking, but in
   // `renderSlot` we can be sure that it's template-based so we can force
   // enable it.
-  isRenderingCompiledSlot++
+  if (slot && (slot as ContextualRenderFn)._c) {
+    ;(slot as ContextualRenderFn)._d = false
+  }
   openBlock()
   const validSlotContent = slot && ensureValidVNode(slot(props))
   const rendered = createBlock(
     Fragment,
-    { key: props.key || `_${name}` },
+    {
+      key:
+        props.key ||
+        // slot content array of a dynamic conditional slot may have a branch
+        // key attached in the `createSlots` helper, respect that
+        (validSlotContent && (validSlotContent as any).key) ||
+        `_${name}`
+    },
     validSlotContent || (fallback ? fallback() : []),
     validSlotContent && (slots as RawSlots)._ === SlotFlags.STABLE
       ? PatchFlags.STABLE_FRAGMENT
@@ -57,7 +79,9 @@ export function renderSlot(
   if (!noSlotted && rendered.scopeId) {
     rendered.slotScopeIds = [rendered.scopeId + '-s']
   }
-  isRenderingCompiledSlot--
+  if (slot && (slot as ContextualRenderFn)._c) {
+    ;(slot as ContextualRenderFn)._d = true
+  }
   return rendered
 }
 

@@ -1,4 +1,9 @@
-import { isSpecialBooleanAttr, makeMap, NOOP } from '@vue/shared'
+import {
+  includeBooleanAttr,
+  isSpecialBooleanAttr,
+  makeMap,
+  NOOP
+} from '@vue/shared'
 import {
   compatUtils,
   ComponentInternalInstance,
@@ -28,7 +33,7 @@ export function patchAttr(
     // note we are only checking boolean attributes that don't have a
     // corresponding dom prop of the same name here.
     const isBoolean = isSpecialBooleanAttr(key)
-    if (value == null || (isBoolean && value === false)) {
+    if (value == null || (isBoolean && !includeBooleanAttr(value))) {
       el.removeAttribute(key)
     } else {
       el.setAttribute(key, isBoolean ? '' : value)
@@ -48,23 +53,23 @@ export function compatCoerceAttr(
   instance: ComponentInternalInstance | null = null
 ): boolean {
   if (isEnumeratedAttr(key)) {
-    const v2CocercedValue =
+    const v2CoercedValue =
       value === null
         ? 'false'
         : typeof value !== 'boolean' && value !== undefined
-          ? 'true'
-          : null
+        ? 'true'
+        : null
     if (
-      v2CocercedValue &&
+      v2CoercedValue &&
       compatUtils.softAssertCompatEnabled(
-        DeprecationTypes.ATTR_ENUMERATED_COERSION,
+        DeprecationTypes.ATTR_ENUMERATED_COERCION,
         instance,
         key,
         value,
-        v2CocercedValue
+        v2CoercedValue
       )
     ) {
-      el.setAttribute(key, v2CocercedValue)
+      el.setAttribute(key, v2CoercedValue)
       return true
     }
   } else if (

@@ -35,3 +35,29 @@ exports[`compiler: codeframe multi-line highlights 1`] = `
 4  |  \\">
    |  ^"
 `;
+
+exports[`compiler: codeframe newline sequences - unix 1`] = `
+"8  |          <input name=\\"email\\" type=\\"text\\"/>
+9  |        </div>
+10 |        <div id=\\"hook\\">
+   |        ^^^^^^^^^^^^^^^
+11 |          <label for=\\"password\\">Password</label>
+   |  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+12 |          <input name=\\"password\\" type=\\"password\\"/>
+   |  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+13 |        </div>
+   |  ^^^^^^^^^^^^"
+`;
+
+exports[`compiler: codeframe newline sequences - windows 1`] = `
+"8  |          <input name=\\"email\\" type=\\"text\\"/>
+9  |        </div>
+10 |        <div id=\\"hook\\">
+   |        ^^^^^^^^^^^^^^^
+11 |          <label for=\\"password\\">Password</label>
+   |  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+12 |          <input name=\\"password\\" type=\\"password\\"/>
+   |  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+13 |        </div>
+   |  ^^^^^^^^^^^^"
+`;
