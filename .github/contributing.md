@@ -47,6 +47,7 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 - Consider the performance / size impact of the changes, and whether the bug being fixes justifies the cost. If the bug being fixed is a very niche edge case, we should try to minimize the size / perf cost to make it worthwhile.
 
   - Is the code perf-sensitive (e.g. in "hot paths" like component updates or the vdom patch function?)
+
     - If the branch is dev-only, performance is less of a concern.
 
   - Check how much extra bundle size the change introduces.
@@ -76,6 +77,8 @@ A high level overview of tools used:
 ## Scripts
 
 **The examples below will be using the `nr` command from the [ni](https://github.com/antfu/ni) package.** You can also use plain `npm run`, but you will need to pass all additional arguments after the command after an extra `--`. For example, `nr build runtime --all` is equivalent to `npm run build -- runtime --all`.
+
+The `run-s` and `run-p` commands found in some scripts are from [npm-run-all](https://github.com/mysticatea/npm-run-all) for orchestrating multiple scripts. `run-s` means "run in sequence" while `run-p` means "run in parallel".
 
 ### `nr build`
 
@@ -152,9 +155,17 @@ $ nr dev
 
 - The `dev` script supports the `-i` flag for inlining all deps. This is useful when debugging `esm-bundler` builds which externalizes deps by default.
 
+### `nr dev-sfc`
+
+Shortcut for starting the SFC Playground in local dev mode. This provides the fastest feedback loop when debugging issues that can be reproduced in the SFC Playground.
+
+### `nr dev-esm`
+
+Builds and watches `vue/dist/vue-runtime.esm-bundler.js` with all deps inlined using esbuild. This is useful when debugging the ESM build in a reproductions that require real build setups: link `packages/vue` globally, then link it into the project being debugged.
+
 ### `nr dev-compiler`
 
-The `dev-compiler` script builds, watches and serves the [Template Explorer](https://github.com/vuejs/core/tree/main/packages/template-explorer) at `http://localhost:5000`. This is extremely useful when working on the compiler.
+The `dev-compiler` script builds, watches and serves the [Template Explorer](https://github.com/vuejs/core/tree/main/packages/template-explorer) at `http://localhost:5000`. This is useful when working on pure compiler issues.
 
 ### `nr test`
 
@@ -231,18 +242,18 @@ This is made possible via several configurations:
     runtime-dom["@vue/runtime-dom"]
     runtime-core["@vue/runtime-core"]
     reactivity["@vue/reactivity"]
-    
+
     subgraph "Runtime Packages"
       runtime-dom --> runtime-core
       runtime-core --> reactivity
     end
-    
+
     subgraph "Compiler Packages"
       compiler-sfc --> compiler-core
       compiler-sfc --> compiler-dom
       compiler-dom --> compiler-core
     end
-    
+
     vue ---> compiler-dom
     vue --> runtime-dom
 ```
