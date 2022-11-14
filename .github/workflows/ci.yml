@@ -46,6 +46,12 @@ jobs:
 
       - run: pnpm install
 
+      - name: Setup cache for Chromium binary
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/puppeteer/chrome
+          key: chromium-${{ hashFiles('pnpm-lock.yaml') }}
+
       - name: Run e2e tests
         run: pnpm run test-e2e
 
@@ -69,7 +75,7 @@ jobs:
         run: pnpm run lint
 
       # - name: Run prettier
-        # run: pnpm run format-check
+      # run: pnpm run format-check
 
       - name: Run type declaration tests
         run: pnpm run test-dts
