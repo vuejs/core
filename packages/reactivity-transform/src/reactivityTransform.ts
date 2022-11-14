@@ -548,7 +548,7 @@ export function transformAST(
       if (binding) {
         if (
           binding.isConst &&
-          (parent.type === 'AssignmentExpression' ||
+          ((parent.type === 'AssignmentExpression' && id === parent.left) ||
             parent.type === 'UpdateExpression')
         ) {
           error(`Assignment to constant variable.`, id)
