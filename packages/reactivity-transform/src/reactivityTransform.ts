@@ -37,7 +37,11 @@ export function shouldTransform(src: string): boolean {
   return transformCheckRE.test(src)
 }
 
-type Scope = Record<string, boolean | 'prop'>
+interface Binding {
+  isConst?: boolean
+  isProp?: boolean
+}
+type Scope = Record<string, Binding | false>
 
 export interface RefTransformOptions {
   filename?: string
@@ -118,6 +122,7 @@ export function transformAST(
     {
       local: string // local identifier, may be different
       default?: any
+      isConst?: boolean
     }
   >
 ): {
@@ -168,17 +173,20 @@ export function transformAST(
   let escapeScope: CallExpression | undefined // inside $$()
   const excludedIds = new WeakSet<Identifier>()
   const parentStack: Node[] = []
-  const propsLocalToPublicMap = Object.create(null)
+  const propsLocalToPublicMap: Record<string, string> = Object.create(null)
 
   if (knownRefs) {
     for (const key of knownRefs) {
-      rootScope[key] = true
+      rootScope[key] = {}
     }
   }
   if (knownProps) {
     for (const key in knownProps) {
-      const { local } = knownProps[key]
-      rootScope[local] = 'prop'
+      const { local, isConst } = knownProps[key]
+      rootScope[local] = {
+        isProp: true,
+        isConst: !!isConst
+      }
       propsLocalToPublicMap[local] = key
     }
   }
@@ -218,7 +226,7 @@ export function transformAST(
     return false
   }
 
-  function error(msg: string, node: Node) {
+  function error(msg: string, node: Node): never {
     const e = new Error(msg)
     ;(e as any).node = node
     throw e
@@ -229,10 +237,10 @@ export function transformAST(
     return `_${msg}`
   }
 
-  function registerBinding(id: Identifier, isRef = false) {
+  function registerBinding(id: Identifier, binding?: Binding) {
     excludedIds.add(id)
     if (currentScope) {
-      currentScope[id.name] = isRef
+      currentScope[id.name] = binding ? binding : false
     } else {
       error(
         'registerBinding called without active scope, something is wrong.',
@@ -241,7 +249,8 @@ export function transformAST(
     }
   }
 
-  const registerRefBinding = (id: Identifier) => registerBinding(id, true)
+  const registerRefBinding = (id: Identifier, isConst = false) =>
+    registerBinding(id, { isConst })
 
   let tempVarCount = 0
   function genTempVar() {
@@ -296,7 +305,12 @@ export function transformAST(
         isCall &&
         (refCall = isRefCreationCall((decl as any).init.callee.name))
       ) {
-        processRefDeclaration(refCall, decl.id, decl.init as CallExpression)
+        processRefDeclaration(
+          refCall,
+          decl.id,
+          decl.init as CallExpression,
+          stmt.kind === 'const'
+        )
       } else {
         const isProps =
           isRoot && isCall && (decl as any).init.callee.name === 'defineProps'
@@ -316,7 +330,8 @@ export function transformAST(
   function processRefDeclaration(
     method: string,
     id: VariableDeclarator['id'],
-    call: CallExpression
+    call: CallExpression,
+    isConst: boolean
   ) {
     excludedIds.add(call.callee as Identifier)
     if (method === convertSymbol) {
@@ -325,16 +340,16 @@ export function transformAST(
       s.remove(call.callee.start! + offset, call.callee.end! + offset)
       if (id.type === 'Identifier') {
         // single variable
-        registerRefBinding(id)
+        registerRefBinding(id, isConst)
       } else if (id.type === 'ObjectPattern') {
-        processRefObjectPattern(id, call)
+        processRefObjectPattern(id, call, isConst)
       } else if (id.type === 'ArrayPattern') {
-        processRefArrayPattern(id, call)
+        processRefArrayPattern(id, call, isConst)
       }
     } else {
       // shorthands
       if (id.type === 'Identifier') {
-        registerRefBinding(id)
+        registerRefBinding(id, isConst)
         // replace call
         s.overwrite(
           call.start! + offset,
@@ -350,6 +365,7 @@ export function transformAST(
   function processRefObjectPattern(
     pattern: ObjectPattern,
     call: CallExpression,
+    isConst: boolean,
     tempVar?: string,
     path: PathSegment[] = []
   ) {
@@ -384,21 +400,27 @@ export function transformAST(
             // { foo: bar }
             nameId = p.value
           } else if (p.value.type === 'ObjectPattern') {
-            processRefObjectPattern(p.value, call, tempVar, [...path, key])
+            processRefObjectPattern(p.value, call, isConst, tempVar, [
+              ...path,
+              key
+            ])
           } else if (p.value.type === 'ArrayPattern') {
-            processRefArrayPattern(p.value, call, tempVar, [...path, key])
+            processRefArrayPattern(p.value, call, isConst, tempVar, [
+              ...path,
+              key
+            ])
           } else if (p.value.type === 'AssignmentPattern') {
             if (p.value.left.type === 'Identifier') {
               // { foo: bar = 1 }
               nameId = p.value.left
               defaultValue = p.value.right
             } else if (p.value.left.type === 'ObjectPattern') {
-              processRefObjectPattern(p.value.left, call, tempVar, [
+              processRefObjectPattern(p.value.left, call, isConst, tempVar, [
                 ...path,
                 [key, p.value.right]
               ])
             } else if (p.value.left.type === 'ArrayPattern') {
-              processRefArrayPattern(p.value.left, call, tempVar, [
+              processRefArrayPattern(p.value.left, call, isConst, tempVar, [
                 ...path,
                 [key, p.value.right]
               ])
@@ -412,7 +434,7 @@ export function transformAST(
         error(`reactivity destructure does not support rest elements.`, p)
       }
       if (nameId) {
-        registerRefBinding(nameId)
+        registerRefBinding(nameId, isConst)
         // inject toRef() after original replaced pattern
         const source = pathToString(tempVar, path)
         const keyStr = isString(key)
@@ -437,6 +459,7 @@ export function transformAST(
   function processRefArrayPattern(
     pattern: ArrayPattern,
     call: CallExpression,
+    isConst: boolean,
     tempVar?: string,
     path: PathSegment[] = []
   ) {
@@ -462,12 +485,12 @@ export function transformAST(
         // [...a]
         error(`reactivity destructure does not support rest elements.`, e)
       } else if (e.type === 'ObjectPattern') {
-        processRefObjectPattern(e, call, tempVar, [...path, i])
+        processRefObjectPattern(e, call, isConst, tempVar, [...path, i])
       } else if (e.type === 'ArrayPattern') {
-        processRefArrayPattern(e, call, tempVar, [...path, i])
+        processRefArrayPattern(e, call, isConst, tempVar, [...path, i])
       }
       if (nameId) {
-        registerRefBinding(nameId)
+        registerRefBinding(nameId, isConst)
         // inject toRef() after original replaced pattern
         const source = pathToString(tempVar, path)
         const defaultStr = defaultValue ? `, ${snip(defaultValue)}` : ``
@@ -520,9 +543,18 @@ export function transformAST(
     parentStack: Node[]
   ): boolean {
     if (hasOwn(scope, id.name)) {
-      const bindingType = scope[id.name]
-      if (bindingType) {
-        const isProp = bindingType === 'prop'
+      const binding = scope[id.name]
+
+      if (binding) {
+        if (
+          binding.isConst &&
+          ((parent.type === 'AssignmentExpression' && id === parent.left) ||
+            parent.type === 'UpdateExpression')
+        ) {
+          error(`Assignment to constant variable.`, id)
+        }
+
+        const { isProp } = binding
         if (isStaticProperty(parent) && parent.shorthand) {
           // let binding used in a property shorthand
           // skip for destructure patterns
@@ -638,18 +670,20 @@ export function transformAST(
         return this.skip()
       }
 
-      if (
-        node.type === 'Identifier' &&
-        // if inside $$(), skip unless this is a destructured prop binding
-        !(escapeScope && rootScope[node.name] !== 'prop') &&
-        isReferencedIdentifier(node, parent!, parentStack) &&
-        !excludedIds.has(node)
-      ) {
-        // walk up the scope chain to check if id should be appended .value
-        let i = scopeStack.length
-        while (i--) {
-          if (rewriteId(scopeStack[i], node, parent!, parentStack)) {
-            return
+      if (node.type === 'Identifier') {
+        const binding = rootScope[node.name]
+        if (
+          // if inside $$(), skip unless this is a destructured prop binding
+          !(escapeScope && (!binding || !binding.isProp)) &&
+          isReferencedIdentifier(node, parent!, parentStack) &&
+          !excludedIds.has(node)
+        ) {
+          // walk up the scope chain to check if id should be appended .value
+          let i = scopeStack.length
+          while (i--) {
+            if (rewriteId(scopeStack[i], node, parent!, parentStack)) {
+              return
+            }
           }
         }
       }
@@ -729,7 +763,10 @@ export function transformAST(
   })
 
   return {
-    rootRefs: Object.keys(rootScope).filter(key => rootScope[key] === true),
+    rootRefs: Object.keys(rootScope).filter(key => {
+      const binding = rootScope[key]
+      return binding && !binding.isProp
+    }),
     importedHelpers: [...importedHelpers]
   }
 }

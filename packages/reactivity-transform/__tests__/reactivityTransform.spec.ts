@@ -531,4 +531,34 @@ describe('errors', () => {
       `does not support rest element`
     )
   })
+
+  test('assignment to constant variable', () => {
+    expect(() =>
+      transform(`
+        const foo = $ref(0)
+        foo = 1
+      `)
+    ).toThrow(`Assignment to constant variable.`)
+
+    expect(() =>
+      transform(`
+        const [a, b] = $([1, 2])
+        a = 1
+      `)
+    ).toThrow(`Assignment to constant variable.`)
+
+    expect(() =>
+      transform(`
+        const foo = $ref(0)
+        foo++
+      `)
+    ).toThrow(`Assignment to constant variable.`)
+
+    expect(() =>
+      transform(`
+      const foo = $ref(0)
+      bar = foo
+      `)
+    ).not.toThrow()
+  })
 })
