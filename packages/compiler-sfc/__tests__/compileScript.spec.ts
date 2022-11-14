@@ -1144,6 +1144,35 @@ const emit = defineEmits(['a', 'b'])
       )
     })
 
+    // #7111
+    test('withDefaults (dynamic) w/ production mode', () => {
+      const { content } = compile(
+        `
+      <script setup lang="ts">
+      import { defaults } from './foo'
+      const props = withDefaults(defineProps<{
+        foo: () => void
+        bar: boolean
+        baz: boolean | (() => void)
+        qux: string | number
+      }>(), { ...defaults })
+      </script>
+      `,
+        { isProd: true }
+      )
+      assertCode(content)
+      expect(content).toMatch(`import { mergeDefaults as _mergeDefaults`)
+      expect(content).toMatch(
+        `
+  _mergeDefaults({
+    foo: { type: Function },
+    bar: { type: Boolean },
+    baz: { type: [Boolean, Function] },
+    qux: null
+  }, { ...defaults })`.trim()
+      )
+    })
+
     test('defineEmits w/ type', () => {
       const { content } = compile(`
       <script setup lang="ts">
