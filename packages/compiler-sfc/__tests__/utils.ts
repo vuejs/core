@@ -1,14 +1,19 @@
-import { parse, SFCScriptCompileOptions, compileScript } from '../src'
+import {
+  parse,
+  SFCScriptCompileOptions,
+  compileScript,
+  SFCParseOptions
+} from '../src'
 import { parse as babelParse } from '@babel/parser'
-import { babelParserDefaultPlugins } from '@vue/shared'
 
 export const mockId = 'xxxxxxxx'
 
 export function compileSFCScript(
   src: string,
-  options?: Partial<SFCScriptCompileOptions>
+  options?: Partial<SFCScriptCompileOptions>,
+  parseOptions?: SFCParseOptions
 ) {
-  const { descriptor } = parse(src)
+  const { descriptor } = parse(src, parseOptions)
   return compileScript(descriptor, {
     ...options,
     id: mockId
@@ -20,9 +25,9 @@ export function assertCode(code: string) {
   try {
     babelParse(code, {
       sourceType: 'module',
-      plugins: [...babelParserDefaultPlugins, 'typescript']
+      plugins: ['typescript']
     })
-  } catch (e) {
+  } catch (e: any) {
     console.log(code)
     throw e
   }

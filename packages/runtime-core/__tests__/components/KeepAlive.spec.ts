@@ -15,9 +15,19 @@ import {
   Ref,
   cloneVNode,
   provide,
-  withScopeId
+  defineAsyncComponent,
+  Component,
+  createApp,
+  onActivated,
+  onUnmounted,
+  onMounted,
+  reactive,
+  shallowRef,
+  onDeactivated
 } from '@vue/runtime-test'
 import { KeepAliveProps } from '../../src/components/KeepAlive'
+
+const timeout = (n: number = 0) => new Promise(r => setTimeout(r, n))
 
 describe('KeepAlive', () => {
   let one: ComponentOptions
@@ -804,14 +814,13 @@ describe('KeepAlive', () => {
   test('should work with cloned root due to scopeId / fallthrough attrs', async () => {
     const viewRef = ref('one')
     const instanceRef = ref<any>(null)
-    const withId = withScopeId('foo')
     const App = {
       __scopeId: 'foo',
-      render: withId(() => {
+      render: () => {
         return h(KeepAlive, null, {
           default: () => h(views[viewRef.value], { ref: instanceRef })
         })
-      })
+      }
     }
     render(h(App), root)
     expect(serializeInner(root)).toBe(`<div foo>one</div>`)
@@ -824,5 +833,148 @@ describe('KeepAlive', () => {
     viewRef.value = 'one'
     await nextTick()
     expect(serializeInner(root)).toBe(`<div foo>changed</div>`)
+  })
+
+  test('should work with async component', async () => {
+    let resolve: (comp: Component) => void
+    const AsyncComp = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r as any
+        })
+    )
+
+    const toggle = ref(true)
+    const instanceRef = ref<any>(null)
+    const App = {
+      render: () => {
+        return h(KeepAlive, { include: 'Foo' }, () =>
+          toggle.value ? h(AsyncComp, { ref: instanceRef }) : null
+        )
+      }
+    }
+
+    render(h(App), root)
+    // async component has not been resolved
+    expect(serializeInner(root)).toBe('<!---->')
+
+    resolve!({
+      name: 'Foo',
+      data: () => ({ count: 0 }),
+      render() {
+        return h('p', this.count)
+      }
+    })
+
+    await timeout()
+    // resolved
+    expect(serializeInner(root)).toBe('<p>0</p>')
+
+    // change state + toggle out
+    instanceRef.value.count++
+    toggle.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe('<!---->')
+
+    // toggle in, state should be maintained
+    toggle.value = true
+    await nextTick()
+    expect(serializeInner(root)).toBe('<p>1</p>')
+  })
+
+  // #4976
+  test('handle error in async onActivated', async () => {
+    const err = new Error('foo')
+    const handler = jest.fn()
+
+    const app = createApp({
+      setup() {
+        return () => h(KeepAlive, null, () => h(Child))
+      }
+    })
+
+    const Child = {
+      setup() {
+        onActivated(async () => {
+          throw err
+        })
+      },
+      render() {}
+    }
+
+    app.config.errorHandler = handler
+    app.mount(nodeOps.createElement('div'))
+
+    await nextTick()
+    expect(handler).toHaveBeenCalledWith(err, {}, 'activated hook')
+  })
+
+  // #3648
+  test('should avoid unmount later included components', async () => {
+    const unmountedA = jest.fn()
+    const mountedA = jest.fn()
+    const activatedA = jest.fn()
+    const deactivatedA = jest.fn()
+    const unmountedB = jest.fn()
+    const mountedB = jest.fn()
+
+    const A = {
+      name: 'A',
+      setup() {
+        onMounted(mountedA)
+        onUnmounted(unmountedA)
+        onActivated(activatedA)
+        onDeactivated(deactivatedA)
+        return () => 'A'
+      }
+    }
+    const B = {
+      name: 'B',
+      setup() {
+        onMounted(mountedB)
+        onUnmounted(unmountedB)
+        return () => 'B'
+      }
+    }
+
+    const include = reactive<string[]>([])
+    const current = shallowRef(A)
+    const app = createApp({
+      setup() {
+        return () => {
+          return [
+            h(
+              KeepAlive,
+              {
+                include
+              },
+              h(current.value)
+            )
+          ]
+        }
+      }
+    })
+
+    app.mount(root)
+
+    expect(serializeInner(root)).toBe(`A`)
+    expect(mountedA).toHaveBeenCalledTimes(1)
+    expect(unmountedA).toHaveBeenCalledTimes(0)
+    expect(activatedA).toHaveBeenCalledTimes(0)
+    expect(deactivatedA).toHaveBeenCalledTimes(0)
+    expect(mountedB).toHaveBeenCalledTimes(0)
+    expect(unmountedB).toHaveBeenCalledTimes(0)
+
+    include.push('A') // cache A
+    await nextTick()
+    current.value = B // toggle to B
+    await nextTick()
+    expect(serializeInner(root)).toBe(`B`)
+    expect(mountedA).toHaveBeenCalledTimes(1)
+    expect(unmountedA).toHaveBeenCalledTimes(0)
+    expect(activatedA).toHaveBeenCalledTimes(0)
+    expect(deactivatedA).toHaveBeenCalledTimes(1)
+    expect(mountedB).toHaveBeenCalledTimes(1)
+    expect(unmountedB).toHaveBeenCalledTimes(0)
   })
 })

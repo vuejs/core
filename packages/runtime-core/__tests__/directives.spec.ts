@@ -7,7 +7,8 @@ import {
   DirectiveHook,
   VNode,
   DirectiveBinding,
-  nextTick
+  nextTick,
+  defineComponent
 } from '@vue/runtime-test'
 import { currentInstance, ComponentInternalInstance } from '../src/component'
 
@@ -241,7 +242,7 @@ describe('directives', () => {
       expect(root.children[0]).toBe(el)
 
       // node should not have been updated yet
-      // expect(el.children[0].text).toBe(`${count.value - 1}`)
+      expect(el.children[0].text).toBe(`${count.value - 1}`)
 
       assertBindings(binding)
 
@@ -366,5 +367,75 @@ describe('directives', () => {
     render(h(App), root)
     expect(d1.mounted).toHaveBeenCalled()
     expect(d2.mounted).toHaveBeenCalled()
+  })
+
+  test('should disable tracking inside directive lifecycle hooks', async () => {
+    const count = ref(0)
+    const text = ref('')
+    const beforeUpdate = jest.fn(() => count.value++)
+
+    const App = {
+      render() {
+        return withDirectives(h('p', text.value), [
+          [
+            {
+              beforeUpdate
+            }
+          ]
+        ])
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(beforeUpdate).toHaveBeenCalledTimes(0)
+    expect(count.value).toBe(0)
+
+    text.value = 'foo'
+    await nextTick()
+    expect(beforeUpdate).toHaveBeenCalledTimes(1)
+    expect(count.value).toBe(1)
+  })
+
+  test('should receive exposeProxy for closed instances', async () => {
+    let res: string
+    const App = defineComponent({
+      setup(_, { expose }) {
+        expose({
+          msg: 'Test'
+        })
+
+        return () =>
+          withDirectives(h('p', 'Lore Ipsum'), [
+            [
+              {
+                mounted(el, { instance }) {
+                  res = (instance as any).msg as string
+                }
+              }
+            ]
+          ])
+      }
+    })
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(res!).toBe('Test')
+  })
+
+  test('should not throw with unknown directive', async () => {
+    const d1 = {
+      mounted: jest.fn()
+    }
+    const App = {
+      name: 'App',
+      render() {
+        // simulates the code generated on an unknown directive
+        return withDirectives(h('div'), [[undefined], [d1]])
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(d1.mounted).toHaveBeenCalled()
   })
 })

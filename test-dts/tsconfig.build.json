@@ -1,22 +1,11 @@
 {
-  "extends": "./tsconfig.json",
   "compilerOptions": {
-    "noEmit": false,
-    "paths": {
-      "@vue/*": ["../packages/*/dist"],
-      "vue": ["../packages/vue/dist"]
-    }
+    "noEmit": true,
+    "jsx": "preserve",
+    "module": "esnext",
+    "strict": true,
+    "moduleResolution": "node",
+    "lib": ["esnext", "dom"]
   },
-  "exclude": [
-    "../packages/*/__tests__",
-    "../packages/*/src",
-    "../packages/template-explorer"
-  ],
-  "include": [
-    "../packages/global.d.ts",
-    "../packages/*/dist",
-    "../packages/runtime-dom/types/jsx.d.ts",
-    "../packages/*/__tests__",
-    "../test-dts"
-  ]
+  "include": ["./*"]
 }

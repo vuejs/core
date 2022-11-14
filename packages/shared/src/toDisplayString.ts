@@ -1,19 +1,35 @@
-import { isArray, isMap, isObject, isPlainObject, isSet } from './index'
+import {
+  isArray,
+  isMap,
+  isObject,
+  isFunction,
+  isPlainObject,
+  isSet,
+  objectToString,
+  isString
+} from './index'
 
 /**
  * For converting {{ interpolation }} values to displayed strings.
  * @private
  */
 export const toDisplayString = (val: unknown): string => {
-  return val == null
+  return isString(val)
+    ? val
+    : val == null
     ? ''
-    : isObject(val)
-      ? JSON.stringify(val, replacer, 2)
-      : String(val)
+    : isArray(val) ||
+      (isObject(val) &&
+        (val.toString === objectToString || !isFunction(val.toString)))
+    ? JSON.stringify(val, replacer, 2)
+    : String(val)
 }
 
-const replacer = (_key: string, val: any) => {
-  if (isMap(val)) {
+const replacer = (_key: string, val: any): any => {
+  // can't use isRef here since @vue/shared has no deps
+  if (val && val.__v_isRef) {
+    return replacer(_key, val.value)
+  } else if (isMap(val)) {
     return {
       [`Map(${val.size})`]: [...val.entries()].reduce((entries, [key, val]) => {
         ;(entries as any)[`${key} =>`] = val

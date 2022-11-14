@@ -1,4 +1,6 @@
 import {
+  h,
+  Text,
   FunctionalComponent,
   expectError,
   expectType,
@@ -6,7 +8,7 @@ import {
 } from './index'
 
 // simple function signature
-const Foo = (props: { foo: number }) => props.foo
+const Foo = (props: { foo: number }) => h(Text, null, props.foo)
 
 // TSX
 expectType<JSX.Element>(<Foo foo={1} />)

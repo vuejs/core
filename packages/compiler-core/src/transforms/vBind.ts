@@ -1,5 +1,10 @@
 import { DirectiveTransform } from '../transform'
-import { createObjectProperty, createSimpleExpression, NodeTypes } from '../ast'
+import {
+  createObjectProperty,
+  createSimpleExpression,
+  ExpressionNode,
+  NodeTypes
+} from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { camelize } from '@vue/shared'
 import { CAMELIZE } from '../runtimeHelpers'
@@ -7,7 +12,7 @@ import { CAMELIZE } from '../runtimeHelpers'
 // v-bind without arg is handled directly in ./transformElements.ts due to it affecting
 // codegen for the entire props object. This transform here is only for v-bind
 // *with* args.
-export const transformBind: DirectiveTransform = (dir, node, context) => {
+export const transformBind: DirectiveTransform = (dir, _node, context) => {
   const { exp, modifiers, loc } = dir
   const arg = dir.arg!
 
@@ -18,7 +23,6 @@ export const transformBind: DirectiveTransform = (dir, node, context) => {
     arg.content = `${arg.content} || ""`
   }
 
-  // .prop is no longer necessary due to new patch behavior
   // .sync is replaced by v-model:arg
   if (modifiers.includes('camel')) {
     if (arg.type === NodeTypes.SIMPLE_EXPRESSION) {
@@ -33,17 +37,39 @@ export const transformBind: DirectiveTransform = (dir, node, context) => {
     }
   }
 
+  if (!context.inSSR) {
+    if (modifiers.includes('prop')) {
+      injectPrefix(arg, '.')
+    }
+    if (modifiers.includes('attr')) {
+      injectPrefix(arg, '^')
+    }
+  }
+
   if (
     !exp ||
     (exp.type === NodeTypes.SIMPLE_EXPRESSION && !exp.content.trim())
   ) {
     context.onError(createCompilerError(ErrorCodes.X_V_BIND_NO_EXPRESSION, loc))
     return {
-      props: [createObjectProperty(arg!, createSimpleExpression('', true, loc))]
+      props: [createObjectProperty(arg, createSimpleExpression('', true, loc))]
     }
   }
 
   return {
-    props: [createObjectProperty(arg!, exp)]
+    props: [createObjectProperty(arg, exp)]
+  }
+}
+
+const injectPrefix = (arg: ExpressionNode, prefix: string) => {
+  if (arg.type === NodeTypes.SIMPLE_EXPRESSION) {
+    if (arg.isStatic) {
+      arg.content = prefix + arg.content
+    } else {
+      arg.content = `\`${prefix}\${${arg.content}}\``
+    }
+  } else {
+    arg.children.unshift(`'${prefix}' + (`)
+    arg.children.push(`)`)
   }
 }

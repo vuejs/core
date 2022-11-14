@@ -5,10 +5,10 @@ exports[`compiler: v-for codegen basic v-for 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, createVNode: _createVNode } = _Vue
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
-    return (_openBlock(true), _createBlock(_Fragment, null, _renderList(items, (item) => {
-      return (_openBlock(), _createBlock(\\"span\\"))
+    return (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(items, (item) => {
+      return (_openBlock(), _createElementBlock(\\"span\\"))
     }), 256 /* UNKEYED_FRAGMENT */))
   }
 }"
@@ -19,12 +19,12 @@ exports[`compiler: v-for codegen keyed template v-for 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, createVNode: _createVNode } = _Vue
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock, createElementVNode: _createElementVNode } = _Vue
 
-    return (_openBlock(true), _createBlock(_Fragment, null, _renderList(items, (item) => {
-      return (_openBlock(), _createBlock(_Fragment, { key: item }, [
+    return (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(items, (item) => {
+      return (_openBlock(), _createElementBlock(_Fragment, { key: item }, [
         \\"hello\\",
-        _createVNode(\\"span\\")
+        _createElementVNode(\\"span\\")
       ], 64 /* STABLE_FRAGMENT */))
     }), 128 /* KEYED_FRAGMENT */))
   }
@@ -36,10 +36,10 @@ exports[`compiler: v-for codegen keyed v-for 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
-    return (_openBlock(true), _createBlock(_Fragment, null, _renderList(items, (item) => {
-      return (_openBlock(), _createBlock(\\"span\\", { key: item }))
+    return (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(items, (item) => {
+      return (_openBlock(), _createElementBlock(\\"span\\", { key: item }))
     }), 128 /* KEYED_FRAGMENT */))
   }
 }"
@@ -50,10 +50,10 @@ exports[`compiler: v-for codegen skipped key 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, createVNode: _createVNode } = _Vue
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
-    return (_openBlock(true), _createBlock(_Fragment, null, _renderList(items, (item, __, index) => {
-      return (_openBlock(), _createBlock(\\"span\\"))
+    return (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(items, (item, __, index) => {
+      return (_openBlock(), _createElementBlock(\\"span\\"))
     }), 256 /* UNKEYED_FRAGMENT */))
   }
 }"
@@ -64,10 +64,10 @@ exports[`compiler: v-for codegen skipped value & key 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, createVNode: _createVNode } = _Vue
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
-    return (_openBlock(true), _createBlock(_Fragment, null, _renderList(items, (_, __, index) => {
-      return (_openBlock(), _createBlock(\\"span\\"))
+    return (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(items, (_, __, index) => {
+      return (_openBlock(), _createElementBlock(\\"span\\"))
     }), 256 /* UNKEYED_FRAGMENT */))
   }
 }"
@@ -78,10 +78,10 @@ exports[`compiler: v-for codegen skipped value 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, createVNode: _createVNode } = _Vue
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
-    return (_openBlock(true), _createBlock(_Fragment, null, _renderList(items, (_, key, index) => {
-      return (_openBlock(), _createBlock(\\"span\\"))
+    return (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(items, (_, key, index) => {
+      return (_openBlock(), _createElementBlock(\\"span\\"))
     }), 256 /* UNKEYED_FRAGMENT */))
   }
 }"
@@ -92,12 +92,12 @@ exports[`compiler: v-for codegen template v-for 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, createVNode: _createVNode } = _Vue
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock, createElementVNode: _createElementVNode } = _Vue
 
-    return (_openBlock(true), _createBlock(_Fragment, null, _renderList(items, (item) => {
-      return (_openBlock(), _createBlock(_Fragment, null, [
+    return (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(items, (item) => {
+      return (_openBlock(), _createElementBlock(_Fragment, null, [
         \\"hello\\",
-        _createVNode(\\"span\\")
+        _createElementVNode(\\"span\\")
       ], 64 /* STABLE_FRAGMENT */))
     }), 256 /* UNKEYED_FRAGMENT */))
   }
@@ -109,10 +109,10 @@ exports[`compiler: v-for codegen template v-for key injection with single child 
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, createVNode: _createVNode } = _Vue
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
-    return (_openBlock(true), _createBlock(_Fragment, null, _renderList(items, (item) => {
-      return (_openBlock(), _createBlock(\\"span\\", {
+    return (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(items, (item) => {
+      return (_openBlock(), _createElementBlock(\\"span\\", {
         key: item.id,
         id: item.id
       }, null, 8 /* PROPS */, [\\"id\\"]))
@@ -126,9 +126,9 @@ exports[`compiler: v-for codegen template v-for w/ <slot/> 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, renderSlot: _renderSlot } = _Vue
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock, renderSlot: _renderSlot } = _Vue
 
-    return (_openBlock(true), _createBlock(_Fragment, null, _renderList(items, (item) => {
+    return (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(items, (item) => {
       return _renderSlot($slots, \\"default\\")
     }), 256 /* UNKEYED_FRAGMENT */))
   }
@@ -140,9 +140,9 @@ exports[`compiler: v-for codegen v-for on <slot/> 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, renderSlot: _renderSlot } = _Vue
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock, renderSlot: _renderSlot } = _Vue
 
-    return (_openBlock(true), _createBlock(_Fragment, null, _renderList(items, (item) => {
+    return (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(items, (item) => {
       return _renderSlot($slots, \\"default\\")
     }), 256 /* UNKEYED_FRAGMENT */))
   }
@@ -154,12 +154,12 @@ exports[`compiler: v-for codegen v-for on element with custom directive 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, resolveDirective: _resolveDirective, createVNode: _createVNode, withDirectives: _withDirectives } = _Vue
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock, resolveDirective: _resolveDirective, withDirectives: _withDirectives } = _Vue
 
     const _directive_foo = _resolveDirective(\\"foo\\")
 
-    return (_openBlock(true), _createBlock(_Fragment, null, _renderList(list, (i) => {
-      return _withDirectives((_openBlock(), _createBlock(\\"div\\", null, null, 512 /* NEED_PATCH */)), [
+    return (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(list, (i) => {
+      return _withDirectives((_openBlock(), _createElementBlock(\\"div\\", null, null, 512 /* NEED_PATCH */)), [
         [_directive_foo]
       ])
     }), 256 /* UNKEYED_FRAGMENT */))
@@ -172,10 +172,10 @@ exports[`compiler: v-for codegen v-for with constant expression 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, toDisplayString: _toDisplayString, createVNode: _createVNode } = _Vue
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock, toDisplayString: _toDisplayString, createElementVNode: _createElementVNode } = _Vue
 
-    return (_openBlock(), _createBlock(_Fragment, null, _renderList(10, (item) => {
-      return _createVNode(\\"p\\", null, _toDisplayString(item), 1 /* TEXT */)
+    return (_openBlock(), _createElementBlock(_Fragment, null, _renderList(10, (item) => {
+      return _createElementVNode(\\"p\\", null, _toDisplayString(item), 1 /* TEXT */)
     }), 64 /* STABLE_FRAGMENT */))
   }
 }"
@@ -186,11 +186,11 @@ exports[`compiler: v-for codegen v-if + v-for 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, createVNode: _createVNode, createCommentVNode: _createCommentVNode } = _Vue
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode } = _Vue
 
     return ok
-      ? (_openBlock(true), _createBlock(_Fragment, { key: 0 }, _renderList(list, (i) => {
-          return (_openBlock(), _createBlock(\\"div\\"))
+      ? (_openBlock(true), _createElementBlock(_Fragment, { key: 0 }, _renderList(list, (i) => {
+          return (_openBlock(), _createElementBlock(\\"div\\"))
         }), 256 /* UNKEYED_FRAGMENT */))
       : _createCommentVNode(\\"v-if\\", true)
   }
@@ -202,11 +202,11 @@ exports[`compiler: v-for codegen v-if + v-for on <template> 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, createCommentVNode: _createCommentVNode } = _Vue
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode } = _Vue
 
     return ok
-      ? (_openBlock(true), _createBlock(_Fragment, { key: 0 }, _renderList(list, (i) => {
-          return (_openBlock(), _createBlock(_Fragment, null, [], 64 /* STABLE_FRAGMENT */))
+      ? (_openBlock(true), _createElementBlock(_Fragment, { key: 0 }, _renderList(list, (i) => {
+          return (_openBlock(), _createElementBlock(_Fragment, null, [], 64 /* STABLE_FRAGMENT */))
         }), 256 /* UNKEYED_FRAGMENT */))
       : _createCommentVNode(\\"v-if\\", true)
   }
@@ -218,10 +218,10 @@ exports[`compiler: v-for codegen value + key + index 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, createVNode: _createVNode } = _Vue
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
-    return (_openBlock(true), _createBlock(_Fragment, null, _renderList(items, (item, key, index) => {
-      return (_openBlock(), _createBlock(\\"span\\"))
+    return (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(items, (item, key, index) => {
+      return (_openBlock(), _createElementBlock(\\"span\\"))
     }), 256 /* UNKEYED_FRAGMENT */))
   }
 }"

@@ -2,11 +2,14 @@ import {
   ref,
   render,
   useCssVars,
+  createStaticVNode,
   h,
   reactive,
   nextTick,
   ComponentOptions,
-  Suspense
+  Suspense,
+  Teleport,
+  FunctionalComponent
 } from '@vue/runtime-dom'
 
 describe('useCssVars', () => {
@@ -137,6 +140,138 @@ describe('useCssVars', () => {
     value.value = false
     await nextTick()
     for (const c of [].slice.call(root.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+    }
+  })
+
+  // #3894
+  test('with subTree change inside HOC', async () => {
+    const state = reactive({ color: 'red' })
+    const value = ref(true)
+    const root = document.createElement('div')
+
+    const Child: FunctionalComponent = (_, { slots }) => slots.default!()
+
+    const App = {
+      setup() {
+        useCssVars(() => state)
+        return () =>
+          h(Child, null, () =>
+            value.value ? [h('div')] : [h('div'), h('div')]
+          )
+      }
+    }
+
+    render(h(App), root)
+    await nextTick()
+    // css vars use with fallback tree
+    for (const c of [].slice.call(root.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe(`red`)
+    }
+
+    value.value = false
+    await nextTick()
+    for (const c of [].slice.call(root.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+    }
+  })
+
+  test('with createStaticVNode', async () => {
+    const state = reactive({ color: 'red' })
+    const root = document.createElement('div')
+
+    const App = {
+      setup() {
+        useCssVars(() => state)
+        return () => [
+          h('div'),
+          createStaticVNode('<div>1</div><div><span>2</span></div>', 2),
+          h('div')
+        ]
+      }
+    }
+
+    render(h(App), root)
+    await nextTick()
+    for (const c of [].slice.call(root.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+    }
+  })
+
+  test('with teleport', async () => {
+    document.body.innerHTML = ''
+    const state = reactive({ color: 'red' })
+    const root = document.createElement('div')
+    const target = document.body
+
+    const App = {
+      setup() {
+        useCssVars(() => state)
+        return () => [h(Teleport, { to: target }, [h('div')])]
+      }
+    }
+
+    render(h(App), root)
+    await nextTick()
+    for (const c of [].slice.call(target.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+    }
+  })
+
+  test('with teleport in child slot', async () => {
+    document.body.innerHTML = ''
+    const state = reactive({ color: 'red' })
+    const root = document.createElement('div')
+    const target = document.body
+
+    const Child: FunctionalComponent = (_, { slots }) => {
+      return h('div', slots.default && slots.default())
+    }
+
+    const App = {
+      setup() {
+        useCssVars(() => state)
+        return () => h(Child, () => [h(Teleport, { to: target }, [h('div')])])
+      }
+    }
+
+    render(h(App), root)
+    await nextTick()
+    for (const c of [].slice.call(target.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+    }
+  })
+
+  test('with teleport(change subTree)', async () => {
+    document.body.innerHTML = ''
+    const state = reactive({ color: 'red' })
+    const root = document.createElement('div')
+    const target = document.body
+    const toggle = ref(false)
+
+    const App = {
+      setup() {
+        useCssVars(() => state)
+        return () => [
+          h(Teleport, { to: target }, [
+            h('div'),
+            toggle.value ? h('div') : null
+          ])
+        ]
+      }
+    }
+
+    render(h(App), root)
+    await nextTick()
+    expect(target.children.length).toBe(1)
+    for (const c of [].slice.call(target.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+    }
+
+    toggle.value = true
+    await nextTick()
+    expect(target.children.length).toBe(2)
+    for (const c of [].slice.call(target.children as any)) {
       expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
     }
   })

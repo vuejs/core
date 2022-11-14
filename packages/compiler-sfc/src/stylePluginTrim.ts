@@ -1,10 +1,18 @@
-import postcss, { Root } from 'postcss'
+import { PluginCreator } from 'postcss'
 
-export default postcss.plugin('trim', () => (css: Root) => {
-  css.walk(({ type, raws }) => {
-    if (type === 'rule' || type === 'atrule') {
-      if (raws.before) raws.before = '\n'
-      if (raws.after) raws.after = '\n'
+const trimPlugin: PluginCreator<{}> = () => {
+  return {
+    postcssPlugin: 'vue-sfc-trim',
+    Once(root) {
+      root.walk(({ type, raws }) => {
+        if (type === 'rule' || type === 'atrule') {
+          if (raws.before) raws.before = '\n'
+          if ('after' in raws && raws.after) raws.after = '\n'
+        }
+      })
     }
-  })
-})
+  }
+}
+
+trimPlugin.postcss = true
+export default trimPlugin

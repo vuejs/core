@@ -75,39 +75,6 @@ describe('api: setup context', () => {
     expect(dummy).toBe(1)
   })
 
-  it('setup props should resolve the correct types from props object', async () => {
-    const count = ref(0)
-    let dummy
-
-    const Parent = {
-      render: () => h(Child, { count: count.value })
-    }
-
-    const Child = defineComponent({
-      props: {
-        count: Number
-      },
-
-      setup(props) {
-        watchEffect(() => {
-          dummy = props.count
-        })
-        return () => h('div', props.count)
-      }
-    })
-
-    const root = nodeOps.createElement('div')
-    render(h(Parent), root)
-    expect(serializeInner(root)).toMatch(`<div>0</div>`)
-    expect(dummy).toBe(0)
-
-    // props should be reactive
-    count.value++
-    await nextTick()
-    expect(serializeInner(root)).toMatch(`<div>1</div>`)
-    expect(dummy).toBe(1)
-  })
-
   it('context.attrs', async () => {
     const toggle = ref(true)
 
@@ -122,6 +89,44 @@ describe('api: setup context', () => {
       inheritAttrs: false,
       setup(props: any, { attrs }: any) {
         return () => h('div', attrs)
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Parent), root)
+    expect(serializeInner(root)).toMatch(`<div id="foo"></div>`)
+
+    // should update even though it's not reactive
+    toggle.value = false
+    await nextTick()
+    expect(serializeInner(root)).toMatch(`<div class="baz"></div>`)
+  })
+
+  // #4161
+  it('context.attrs in child component slots', async () => {
+    const toggle = ref(true)
+
+    const Parent = {
+      render: () => h(Child, toggle.value ? { id: 'foo' } : { class: 'baz' })
+    }
+
+    const Wrapper = {
+      render(this: any) {
+        return this.$slots.default()
+      }
+    }
+
+    const Child = {
+      inheritAttrs: false,
+      setup(_: any, { attrs }: any) {
+        return () => {
+          const vnode = h(Wrapper, null, {
+            default: () => [h('div', attrs)],
+            _: 1 // mark stable slots
+          })
+          vnode.dynamicChildren = [] // force optimized mode
+          return vnode
+        }
       }
     }
 

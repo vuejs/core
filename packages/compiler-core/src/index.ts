@@ -31,6 +31,7 @@ export {
 
 export * from './ast'
 export * from './utils'
+export * from './babelUtils'
 export * from './runtimeHelpers'
 
 export { getBaseTransformPreset, TransformPreset } from './compile'
@@ -42,7 +43,8 @@ export { processIf } from './transforms/vIf'
 export { processFor, createForLoopParams } from './transforms/vFor'
 export {
   transformExpression,
-  processExpression
+  processExpression,
+  stringifyExpression
 } from './transforms/transformExpression'
 export {
   buildSlots,
@@ -53,7 +55,17 @@ export {
 export {
   transformElement,
   resolveComponentType,
-  buildProps
+  buildProps,
+  buildDirectiveArgs,
+  PropsExpression
 } from './transforms/transformElement'
 export { processSlotOutlet } from './transforms/transformSlotOutlet'
+export { getConstantType } from './transforms/hoistStatic'
 export { generateCodeFrame } from '@vue/shared'
+
+// v2 compat only
+export {
+  checkCompatEnabled,
+  warnDeprecation,
+  CompilerDeprecationTypes
+} from './compat/compatConfig'

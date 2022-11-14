@@ -11,6 +11,7 @@ import {
 import { VNode, VNodeArrayChildren, VNodeProps } from '../vnode'
 import { isString, ShapeFlags } from '@vue/shared'
 import { warn } from '../warning'
+import { isHmrUpdating } from '../hmr'
 
 export type TeleportVNode = VNode<RendererNode, RendererElement, TeleportProps>
 
@@ -21,7 +22,7 @@ export interface TeleportProps {
 
 export const isTeleport = (type: any): boolean => type.__isTeleport
 
-export const isTeleportDisabled = (props: VNode['props']): boolean =>
+const isTeleportDisabled = (props: VNode['props']): boolean =>
   props && (props.disabled || props.disabled === '')
 
 const isTargetSVG = (target: RendererElement): boolean =>
@@ -51,13 +52,13 @@ const resolveTarget = <T = RendererElement>(
               `ideally should be outside of the entire Vue component tree.`
           )
       }
-      return target as any
+      return target as T
     }
   } else {
     if (__DEV__ && !targetSelector && !isTeleportDisabled(props)) {
       warn(`Invalid Teleport target: ${targetSelector}`)
     }
-    return targetSelector as any
+    return targetSelector as T
   }
 }
 
@@ -71,6 +72,7 @@ export const TeleportImpl = {
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
     isSVG: boolean,
+    slotScopeIds: string[] | null,
     optimized: boolean,
     internals: RendererInternals
   ) {
@@ -82,7 +84,14 @@ export const TeleportImpl = {
     } = internals
 
     const disabled = isTeleportDisabled(n2.props)
-    const { shapeFlag, children } = n2
+    let { shapeFlag, children, dynamicChildren } = n2
+
+    // #3302
+    // HMR updated, force full diff
+    if (__DEV__ && isHmrUpdating) {
+      optimized = false
+      dynamicChildren = null
+    }
 
     if (n1 == null) {
       // insert anchors in the main view
@@ -115,6 +124,7 @@ export const TeleportImpl = {
             parentComponent,
             parentSuspense,
             isSVG,
+            slotScopeIds,
             optimized
           )
         }
@@ -136,15 +146,16 @@ export const TeleportImpl = {
       const currentAnchor = wasDisabled ? mainAnchor : targetAnchor
       isSVG = isSVG || isTargetSVG(target)
 
-      if (n2.dynamicChildren) {
+      if (dynamicChildren) {
         // fast path when the teleport happens to be a block root
         patchBlockChildren(
           n1.dynamicChildren!,
-          n2.dynamicChildren,
+          dynamicChildren,
           currentContainer,
           parentComponent,
           parentSuspense,
-          isSVG
+          isSVG,
+          slotScopeIds
         )
         // even in block tree mode we need to make sure all root-level nodes
         // in the teleport inherit previous DOM references so that they can
@@ -158,7 +169,9 @@ export const TeleportImpl = {
           currentAnchor,
           parentComponent,
           parentSuspense,
-          isSVG
+          isSVG,
+          slotScopeIds,
+          false
         )
       }
 
@@ -209,17 +222,38 @@ export const TeleportImpl = {
         }
       }
     }
+
+    updateCssVars(n2)
   },
 
   remove(
     vnode: VNode,
-    { r: remove, o: { remove: hostRemove } }: RendererInternals
+    parentComponent: ComponentInternalInstance | null,
+    parentSuspense: SuspenseBoundary | null,
+    optimized: boolean,
+    { um: unmount, o: { remove: hostRemove } }: RendererInternals,
+    doRemove: Boolean
   ) {
-    const { shapeFlag, children, anchor } = vnode
-    hostRemove(anchor!)
-    if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-      for (let i = 0; i < (children as VNode[]).length; i++) {
-        remove((children as VNode[])[i])
+    const { shapeFlag, children, anchor, targetAnchor, target, props } = vnode
+
+    if (target) {
+      hostRemove(targetAnchor!)
+    }
+
+    // an unmounted teleport should always remove its children if not disabled
+    if (doRemove || !isTeleportDisabled(props)) {
+      hostRemove(anchor!)
+      if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        for (let i = 0; i < (children as VNode[]).length; i++) {
+          const child = (children as VNode[])[i]
+          unmount(
+            child,
+            parentComponent,
+            parentSuspense,
+            true,
+            !!child.dynamicChildren
+          )
+        }
       }
     }
   },
@@ -283,6 +317,7 @@ function hydrateTeleport(
   vnode: TeleportVNode,
   parentComponent: ComponentInternalInstance | null,
   parentSuspense: SuspenseBoundary | null,
+  slotScopeIds: string[] | null,
   optimized: boolean,
   {
     o: { nextSibling, parentNode, querySelector }
@@ -293,6 +328,7 @@ function hydrateTeleport(
     container: Element,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
+    slotScopeIds: string[] | null,
     optimized: boolean
   ) => Node | null
 ): Node | null {
@@ -313,29 +349,63 @@ function hydrateTeleport(
           parentNode(node)!,
           parentComponent,
           parentSuspense,
+          slotScopeIds,
           optimized
         )
         vnode.targetAnchor = targetNode
       } else {
         vnode.anchor = nextSibling(node)
-        vnode.targetAnchor = hydrateChildren(
+
+        // lookahead until we find the target anchor
+        // we cannot rely on return value of hydrateChildren() because there
+        // could be nested teleports
+        let targetAnchor = targetNode
+        while (targetAnchor) {
+          targetAnchor = nextSibling(targetAnchor)
+          if (
+            targetAnchor &&
+            targetAnchor.nodeType === 8 &&
+            (targetAnchor as Comment).data === 'teleport anchor'
+          ) {
+            vnode.targetAnchor = targetAnchor
+            ;(target as TeleportTargetElement)._lpa =
+              vnode.targetAnchor && nextSibling(vnode.targetAnchor as Node)
+            break
+          }
+        }
+
+        hydrateChildren(
           targetNode,
           vnode,
           target,
           parentComponent,
           parentSuspense,
+          slotScopeIds,
           optimized
         )
       }
-      ;(target as TeleportTargetElement)._lpa =
-        vnode.targetAnchor && nextSibling(vnode.targetAnchor as Node)
     }
+    updateCssVars(vnode)
   }
   return vnode.anchor && nextSibling(vnode.anchor as Node)
 }
 
 // Force-casted public typing for h and TSX props inference
-export const Teleport = (TeleportImpl as any) as {
+export const Teleport = TeleportImpl as unknown as {
   __isTeleport: true
   new (): { $props: VNodeProps & TeleportProps }
+}
+
+function updateCssVars(vnode: VNode) {
+  // presence of .ut method indicates owner component uses css vars.
+  // code path here can assume browser environment.
+  const ctx = vnode.ctx
+  if (ctx && ctx.ut) {
+    let node = (vnode.children as VNode[])[0].el!
+    while (node !== vnode.targetAnchor) {
+      if (node.nodeType === 1) node.setAttribute('data-v-owner', ctx.uid)
+      node = node.nextSibling
+    }
+    ctx.ut()
+  }
 }

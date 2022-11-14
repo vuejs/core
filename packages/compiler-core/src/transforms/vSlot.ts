@@ -129,11 +129,6 @@ export function buildSlots(
   const slotsProperties: Property[] = []
   const dynamicSlots: (ConditionalExpression | CallExpression)[] = []
 
-  const buildDefaultSlotProperty = (
-    props: ExpressionNode | undefined,
-    children: TemplateChildNode[]
-  ) => createObjectProperty(`default`, buildSlotFn(props, children, loc))
-
   // If the slot is inside a v-for or another v-slot, force it to be dynamic
   // since it likely uses a scope variable.
   let hasDynamicSlots = context.scopes.vSlot > 0 || context.scopes.vFor > 0
@@ -165,6 +160,7 @@ export function buildSlots(
   let hasNamedDefaultSlot = false
   const implicitDefaultChildren: TemplateChildNode[] = []
   const seenSlotNames = new Set<string>()
+  let conditionalBranchIndex = 0
 
   for (let i = 0; i < children.length; i++) {
     const slotElement = children[i]
@@ -215,7 +211,7 @@ export function buildSlots(
       dynamicSlots.push(
         createConditionalExpression(
           vIf.exp!,
-          buildDynamicSlot(slotName, slotFunction),
+          buildDynamicSlot(slotName, slotFunction, conditionalBranchIndex++),
           defaultFallback
         )
       )
@@ -248,10 +244,14 @@ export function buildSlots(
         conditional.alternate = vElse.exp
           ? createConditionalExpression(
               vElse.exp,
-              buildDynamicSlot(slotName, slotFunction),
+              buildDynamicSlot(
+                slotName,
+                slotFunction,
+                conditionalBranchIndex++
+              ),
               defaultFallback
             )
-          : buildDynamicSlot(slotName, slotFunction)
+          : buildDynamicSlot(slotName, slotFunction, conditionalBranchIndex++)
       } else {
         context.onError(
           createCompilerError(ErrorCodes.X_V_ELSE_NO_ADJACENT_IF, vElse.loc)
@@ -302,10 +302,27 @@ export function buildSlots(
   }
 
   if (!onComponentSlot) {
+    const buildDefaultSlotProperty = (
+      props: ExpressionNode | undefined,
+      children: TemplateChildNode[]
+    ) => {
+      const fn = buildSlotFn(props, children, loc)
+      if (__COMPAT__ && context.compatConfig) {
+        fn.isNonScopedSlot = true
+      }
+      return createObjectProperty(`default`, fn)
+    }
+
     if (!hasTemplateSlots) {
       // implicit default slot (on component)
       slotsProperties.push(buildDefaultSlotProperty(undefined, children))
-    } else if (implicitDefaultChildren.length) {
+    } else if (
+      implicitDefaultChildren.length &&
+      // #3766
+      // with whitespace: 'preserve', whitespaces between slots will end up in
+      // implicitDefaultChildren. Ignore if all implicit children are whitespaces.
+      implicitDefaultChildren.some(node => isNonWhitespaceContent(node))
+    ) {
       // implicit default slot (mixed with named slots)
       if (hasNamedDefaultSlot) {
         context.onError(
@@ -325,8 +342,8 @@ export function buildSlots(
   const slotFlag = hasDynamicSlots
     ? SlotFlags.DYNAMIC
     : hasForwardedSlots(node.children)
-      ? SlotFlags.FORWARDED
-      : SlotFlags.STABLE
+    ? SlotFlags.FORWARDED
+    : SlotFlags.STABLE
 
   let slots = createObjectExpression(
     slotsProperties.concat(
@@ -357,26 +374,51 @@ export function buildSlots(
 
 function buildDynamicSlot(
   name: ExpressionNode,
-  fn: FunctionExpression
+  fn: FunctionExpression,
+  index?: number
 ): ObjectExpression {
-  return createObjectExpression([
+  const props = [
     createObjectProperty(`name`, name),
     createObjectProperty(`fn`, fn)
-  ])
+  ]
+  if (index != null) {
+    props.push(
+      createObjectProperty(`key`, createSimpleExpression(String(index), true))
+    )
+  }
+  return createObjectExpression(props)
 }
 
 function hasForwardedSlots(children: TemplateChildNode[]): boolean {
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
-    if (child.type === NodeTypes.ELEMENT) {
-      if (
-        child.tagType === ElementTypes.SLOT ||
-        (child.tagType === ElementTypes.ELEMENT &&
-          hasForwardedSlots(child.children))
-      ) {
-        return true
-      }
+    switch (child.type) {
+      case NodeTypes.ELEMENT:
+        if (
+          child.tagType === ElementTypes.SLOT ||
+          hasForwardedSlots(child.children)
+        ) {
+          return true
+        }
+        break
+      case NodeTypes.IF:
+        if (hasForwardedSlots(child.branches)) return true
+        break
+      case NodeTypes.IF_BRANCH:
+      case NodeTypes.FOR:
+        if (hasForwardedSlots(child.children)) return true
+        break
+      default:
+        break
     }
   }
   return false
+}
+
+function isNonWhitespaceContent(node: TemplateChildNode): boolean {
+  if (node.type !== NodeTypes.TEXT && node.type !== NodeTypes.TEXT_CALL)
+    return true
+  return node.type === NodeTypes.TEXT
+    ? !!node.content.trim()
+    : isNonWhitespaceContent(node.content)
 }

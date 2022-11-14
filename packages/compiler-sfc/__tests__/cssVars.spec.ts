@@ -1,4 +1,4 @@
-import { compileStyle } from '../src'
+import { compileStyle, parse } from '../src'
 import { mockId, compileSFCScript, assertCode } from './utils'
 
 describe('CSS vars injection', () => {
@@ -12,8 +12,32 @@ describe('CSS vars injection', () => {
     )
     expect(content).toMatch(`_useCssVars(_ctx => ({
   "${mockId}-color": (_ctx.color),
-  "${mockId}-font_size": (_ctx.font.size)
+  "${mockId}-font\\.size": (_ctx.font.size)
 })`)
+    assertCode(content)
+  })
+
+  test('w/ normal <script> binding analysis', () => {
+    const { content } = compileSFCScript(
+      `<script>
+      export default {
+        setup() {
+          return {
+            size: ref('100px')
+          }
+        }
+      }
+      </script>\n` +
+        `<style>
+          div {
+            font-size: v-bind(size);
+          }
+        </style>`
+    )
+    expect(content).toMatch(`_useCssVars(_ctx => ({
+  "${mockId}-size": (_ctx.size)
+})`)
+    expect(content).toMatch(`import { useCssVars as _useCssVars } from 'vue'`)
     assertCode(content)
   })
 
@@ -55,6 +79,10 @@ describe('CSS vars injection', () => {
       source: `.foo {
         color: v-bind(color);
         font-size: v-bind('font.size');
+
+        font-weight: v-bind(_φ);
+        font-size: v-bind(1-字号);
+        font-family: v-bind(フォント);
       }`,
       filename: 'test.css',
       id: 'data-v-test'
@@ -62,7 +90,11 @@ describe('CSS vars injection', () => {
     expect(code).toMatchInlineSnapshot(`
       ".foo {
               color: var(--test-color);
-              font-size: var(--test-font_size);
+              font-size: var(--test-font\\\\.size);
+
+              font-weight: var(--test-_φ);
+              font-size: var(--test-1-字号);
+              font-family: var(--test-フォント);
       }"
     `)
   })
@@ -135,6 +167,93 @@ describe('CSS vars injection', () => {
             `<style>div{ color: v-bind(color); }</style>`
         ).content
       )
+    })
+
+    //#4185
+    test('should ignore comments', () => {
+      const { content } = compileSFCScript(
+        `<script setup>const color = 'red';const width = 100</script>\n` +
+          `<style>
+            /* comment **/
+            div{ /* color: v-bind(color); */ width:20; }
+            div{ width: v-bind(width); }
+            /* comment */
+          </style>`
+      )
+
+      expect(content).not.toMatch(`"${mockId}-color": (color)`)
+      expect(content).toMatch(`"${mockId}-width": (width)`)
+      assertCode(content)
+    })
+
+    test('w/ <script setup> using the same var multiple times', () => {
+      const { content } = compileSFCScript(
+        `<script setup>
+        const color = 'red'
+        </script>\n` +
+          `<style>
+          div {
+            color: v-bind(color);
+          }
+          p {
+            color: v-bind(color);
+          }
+        </style>`
+      )
+      // color should only be injected once, even if it is twice in style
+      expect(content).toMatch(`_useCssVars(_ctx => ({
+  "${mockId}-color": (color)
+})`)
+      assertCode(content)
+    })
+
+    test('should work with w/ complex expression', () => {
+      const { content } = compileSFCScript(
+        `<script setup>
+        let a = 100
+        let b = 200
+        let foo = 300
+        </script>\n` +
+          `<style>
+          p{
+            width: calc(v-bind(foo) - 3px);
+            height: calc(v-bind('foo') - 3px);
+            top: calc(v-bind(foo + 'px') - 3px);
+          }
+          div {
+            color: v-bind((a + b) / 2 + 'px' );
+          }
+          div {
+            color: v-bind    ((a + b) / 2 + 'px' );
+          }
+          p {
+            color: v-bind(((a + b)) / (2 * a));
+          }
+        </style>`
+      )
+      expect(content).toMatch(`_useCssVars(_ctx => ({
+  "${mockId}-foo": (_unref(foo)),
+  "${mockId}-foo\\ \\+\\ \\'px\\'": (_unref(foo) + 'px'),
+  "${mockId}-\\(a\\ \\+\\ b\\)\\ \\/\\ 2\\ \\+\\ \\'px\\'": ((_unref(a) + _unref(b)) / 2 + 'px'),
+  "${mockId}-\\(\\(a\\ \\+\\ b\\)\\)\\ \\/\\ \\(2\\ \\*\\ a\\)": (((_unref(a) + _unref(b))) / (2 * _unref(a)))
+}))`)
+      assertCode(content)
+    })
+
+    // #6022
+    test('should be able to parse incomplete expressions', () => {
+      const {
+        descriptor: { cssVars }
+      } = parse(
+        `<script setup>let xxx = 1</script>
+        <style scoped>
+        label {
+          font-weight: v-bind("count.toString(");
+          font-weight: v-bind(xxx);
+        }
+        </style>`
+      )
+      expect(cssVars).toMatchObject([`count.toString(`, `xxx`])
     })
   })
 })

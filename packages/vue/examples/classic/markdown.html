@@ -8,21 +8,19 @@
 </div>
 
 <script>
-const delay = window.location.hash === '#test' ? 50 : 300
-
 Vue.createApp({
   data: () => ({
     input: '# hello'
   }),
   computed: {
     compiledMarkdown() {
-      return marked(this.input, { sanitize: true })
+      return marked.marked(this.input, { sanitize: true })
     }
   },
   methods: {
     update: _.debounce(function (e) {
       this.input = e.target.value
-    }, delay)
+    }, 50)
   }
 }).mount('#editor')
 </script>

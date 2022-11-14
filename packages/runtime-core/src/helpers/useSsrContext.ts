@@ -7,13 +7,14 @@ export const useSSRContext = <T = Record<string, any>>() => {
   if (!__GLOBAL__) {
     const ctx = inject<T>(ssrContextKey)
     if (!ctx) {
-      warn(
-        `Server rendering context not provided. Make sure to only call ` +
-          `useSsrContext() conditionally in the server build.`
-      )
+      __DEV__ &&
+        warn(
+          `Server rendering context not provided. Make sure to only call ` +
+            `useSSRContext() conditionally in the server build.`
+        )
     }
     return ctx
   } else if (__DEV__) {
-    warn(`useSsrContext() is not supported in the global build.`)
+    warn(`useSSRContext() is not supported in the global build.`)
   }
 }

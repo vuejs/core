@@ -4,7 +4,8 @@ import {
   transform,
   NodeTypes,
   generate,
-  ForNode
+  ForNode,
+  ElementNode
 } from '../../src'
 import { transformFor } from '../../src/transforms/vFor'
 import { transformText } from '../../src/transforms/transformText'
@@ -20,8 +21,8 @@ function transformWithTextOpt(template: string, options: CompilerOptions = {}) {
     nodeTransforms: [
       transformFor,
       ...(options.prefixIdentifiers ? [transformExpression] : []),
-      transformText,
-      transformElement
+      transformElement,
+      transformText
     ],
     ...options
   })
@@ -192,5 +193,30 @@ describe('compiler: transform text', () => {
         prefixIdentifiers: true
       }).code
     ).toMatchSnapshot()
+  })
+
+  // #3756
+  test('element with custom directives and only one text child node', () => {
+    const root = transformWithTextOpt(`<p v-foo>{{ foo }}</p>`)
+    expect(root.children.length).toBe(1)
+    expect(root.children[0].type).toBe(NodeTypes.ELEMENT)
+    expect((root.children[0] as ElementNode).children[0]).toMatchObject({
+      type: NodeTypes.TEXT_CALL,
+      codegenNode: {
+        type: NodeTypes.JS_CALL_EXPRESSION,
+        callee: CREATE_TEXT,
+        arguments: [
+          {
+            type: NodeTypes.INTERPOLATION,
+            content: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'foo'
+            }
+          },
+          genFlagText(PatchFlags.TEXT)
+        ]
+      }
+    })
+    expect(generate(root).code).toMatchSnapshot()
   })
 })

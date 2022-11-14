@@ -10,11 +10,30 @@ describe('runtime-dom: attrs patching', () => {
     expect(el.getAttributeNS(xlinkNS, 'href')).toBe(null)
   })
 
+  test('textContent attributes /w svg', () => {
+    const el = document.createElementNS('http://www.w3.org/2000/svg', 'use')
+    patchProp(el, 'textContent', null, 'foo', true)
+    expect(el.attributes.length).toBe(0)
+    expect(el.innerHTML).toBe('foo')
+  })
+
   test('boolean attributes', () => {
     const el = document.createElement('input')
     patchProp(el, 'readonly', null, true)
     expect(el.getAttribute('readonly')).toBe('')
     patchProp(el, 'readonly', true, false)
+    expect(el.getAttribute('readonly')).toBe(null)
+    patchProp(el, 'readonly', false, '')
+    expect(el.getAttribute('readonly')).toBe('')
+    patchProp(el, 'readonly', '', 0)
+    expect(el.getAttribute('readonly')).toBe(null)
+    patchProp(el, 'readonly', 0, '0')
+    expect(el.getAttribute('readonly')).toBe('')
+    patchProp(el, 'readonly', '0', false)
+    expect(el.getAttribute('readonly')).toBe(null)
+    patchProp(el, 'readonly', false, 1)
+    expect(el.getAttribute('readonly')).toBe('')
+    patchProp(el, 'readonly', 1, undefined)
     expect(el.getAttribute('readonly')).toBe(null)
   })
 

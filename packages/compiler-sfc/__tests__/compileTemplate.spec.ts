@@ -22,6 +22,22 @@ test('should work', () => {
   expect(result.code).toMatch(`export function render(`)
 })
 
+// #6807
+test('should work with style comment', () => {
+  const source = `
+  <div style="
+    /* nothing */
+    width: 300px;
+    height: 100px/* nothing */
+    ">{{ render }}</div>
+  `
+
+  const result = compile({ filename: 'example.vue', source })
+  expect(result.errors.length).toBe(0)
+  expect(result.source).toBe(source)
+  expect(result.code).toMatch(`{"width":"300px","height":"100px"}`)
+})
+
 test('preprocess pug', () => {
   const template = parse(
     `
@@ -136,4 +152,50 @@ test('preprocessor errors', () => {
   expect(message).toMatch(
     `The end of the string reached with no closing bracket ) found.`
   )
+})
+
+// #3447
+test('should generate the correct imports expression', () => {
+  const { code } = compile({
+    filename: 'example.vue',
+    source: `
+      <img src="./foo.svg"/>
+      <Comp>
+        <img src="./bar.svg"/>
+      </Comp>
+    `,
+    ssr: true
+  })
+  expect(code).toMatch(`_ssrRenderAttr(\"src\", _imports_1)`)
+  expect(code).toMatch(`_createVNode(\"img\", { src: _imports_1 })`)
+})
+
+// #3874
+test('should not hoist srcset URLs in SSR mode', () => {
+  const { code } = compile({
+    filename: 'example.vue',
+    source: `
+    <picture>
+      <source srcset="./img/foo.svg"/>
+      <img src="./img/foo.svg"/>
+    </picture>
+    <router-link>
+      <picture>
+        <source srcset="./img/bar.svg"/>
+        <img src="./img/bar.svg"/>
+      </picture>
+    </router-link>
+    `,
+    ssr: true
+  })
+  expect(code).toMatchSnapshot()
+})
+
+// #6742
+test('dynamic v-on + static v-on should merged', () => {
+  const source = `<input @blur="onBlur" @[validateEvent]="onValidateEvent">`
+
+  const result = compile({ filename: 'example.vue', source })
+
+  expect(result.code).toMatchSnapshot()
 })

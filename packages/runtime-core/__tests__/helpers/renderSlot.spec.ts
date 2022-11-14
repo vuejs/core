@@ -6,11 +6,21 @@ import {
   openBlock,
   createBlock,
   Fragment,
-  createCommentVNode
+  createCommentVNode,
+  Slot
 } from '../../src'
-import { PatchFlags } from '@vue/shared/src'
+import { PatchFlags } from '@vue/shared'
+import { setCurrentRenderingInstance } from '../../src/componentRenderContext'
 
 describe('renderSlot', () => {
+  beforeEach(() => {
+    setCurrentRenderingInstance({ type: {} } as any)
+  })
+
+  afterEach(() => {
+    setCurrentRenderingInstance(null)
+  })
+
   it('should render slot', () => {
     let child
     const vnode = renderSlot(
@@ -37,8 +47,8 @@ describe('renderSlot', () => {
         return [createVNode('div', null, 'foo', PatchFlags.TEXT)]
       },
       // mock instance
-      {} as any
-    )
+      { type: {}, appContext: {} } as any
+    ) as Slot
 
     // manual invocation should not track
     const manual = (openBlock(), createBlock(Fragment, null, slot()))

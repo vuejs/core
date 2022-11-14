@@ -19,13 +19,20 @@ function mount(
   withKeepAlive = false
 ) {
   const root = nodeOps.createElement('div')
-  render(
-    h(BaseTransition, props, () => {
-      return withKeepAlive ? h(KeepAlive, null, slot()) : slot()
-    }),
-    root
-  )
-  return root
+  const show = ref(true)
+  const unmount = () => (show.value = false)
+  const App = {
+    render() {
+      return show.value
+        ? h(BaseTransition, props, () => {
+            return withKeepAlive ? h(KeepAlive, null, slot()) : slot()
+          })
+        : null
+    }
+  }
+  render(h(App), root)
+
+  return { root, unmount }
 }
 
 function mockProps(extra: BaseTransitionProps = {}, withKeepAlive = false) {
@@ -247,17 +254,19 @@ describe('BaseTransition', () => {
   })
 
   describe('toggle on-off', () => {
-    async function testToggleOnOff({
-      trueBranch,
-      trueSerialized,
-      falseBranch,
-      falseSerialized
-    }: ToggleOptions) {
+    async function testToggleOnOff(
+      {
+        trueBranch,
+        trueSerialized,
+        falseBranch,
+        falseSerialized
+      }: ToggleOptions,
+      mode?: BaseTransitionProps['mode']
+    ) {
       const toggle = ref(true)
-      const { props, cbs } = mockProps()
-      const root = mount(
-        props,
-        () => (toggle.value ? trueBranch() : falseBranch())
+      const { props, cbs } = mockProps({ mode })
+      const { root } = mount(props, () =>
+        toggle.value ? trueBranch() : falseBranch()
       )
 
       // without appear: true, enter hooks should not be called on mount
@@ -322,6 +331,18 @@ describe('BaseTransition', () => {
         falseSerialized: `<!---->`
       })
     })
+
+    test('w/ mode: "in-out', async () => {
+      await testToggleOnOff(
+        {
+          trueBranch: () => h('div'),
+          trueSerialized: `<div></div>`,
+          falseBranch: () => null,
+          falseSerialized: `<!---->`
+        },
+        'in-out'
+      )
+    })
   })
 
   describe('toggle on-off before finish', () => {
@@ -333,9 +354,8 @@ describe('BaseTransition', () => {
     }: ToggleOptions) {
       const toggle = ref(false)
       const { props, cbs } = mockProps()
-      const root = mount(
-        props,
-        () => (toggle.value ? trueBranch() : falseBranch())
+      const { root } = mount(props, () =>
+        toggle.value ? trueBranch() : falseBranch()
       )
 
       // start enter
@@ -418,7 +438,7 @@ describe('BaseTransition', () => {
     ) {
       const toggle = ref(true)
       const { props, cbs } = mockProps({}, withKeepAlive)
-      const root = mount(
+      const { root } = mount(
         props,
         () => (toggle.value ? trueBranch() : falseBranch()),
         withKeepAlive
@@ -524,7 +544,7 @@ describe('BaseTransition', () => {
     ) {
       const toggle = ref(true)
       const { props, cbs } = mockProps({}, withKeepAlive)
-      const root = mount(
+      const { root } = mount(
         props,
         () => (toggle.value ? trueBranch() : falseBranch()),
         withKeepAlive
@@ -657,7 +677,7 @@ describe('BaseTransition', () => {
     ) {
       const toggle = ref(true)
       const { props, cbs } = mockProps({ mode: 'out-in' }, withKeepAlive)
-      const root = mount(
+      const { root } = mount(
         props,
         () => (toggle.value ? trueBranch() : falseBranch()),
         withKeepAlive
@@ -750,6 +770,89 @@ describe('BaseTransition', () => {
     })
   })
 
+
+  // #6835
+  describe('mode: "out-in" toggle again after unmounted', () => {
+    async function testOutIn(
+      {
+        trueBranch,
+        falseBranch,
+        trueSerialized,
+        falseSerialized
+      }: ToggleOptions,
+      withKeepAlive = false
+    ) {
+      const toggle = ref(true)
+      const { props, cbs } = mockProps({ mode: 'out-in' }, withKeepAlive)
+      const { root, unmount } = mount(
+        props,
+        () => (toggle.value ? trueBranch() : falseBranch()),
+        withKeepAlive
+      )
+
+      // trigger toggle
+      toggle.value = false
+      await nextTick()
+      // a placeholder is injected until the leave finishes
+      expect(serializeInner(root)).toBe(`${trueSerialized}<!---->`)
+      expect(props.onBeforeLeave).toHaveBeenCalledTimes(1)
+      assertCalledWithEl(props.onBeforeLeave, trueSerialized)
+      expect(props.onLeave).toHaveBeenCalledTimes(1)
+      assertCalledWithEl(props.onLeave, trueSerialized)
+      expect(props.onAfterLeave).not.toHaveBeenCalled()
+      // enter should not have started
+      expect(props.onBeforeEnter).not.toHaveBeenCalled()
+      expect(props.onEnter).not.toHaveBeenCalled()
+      expect(props.onAfterEnter).not.toHaveBeenCalled()
+
+      cbs.doneLeave[trueSerialized]()
+      expect(props.onAfterLeave).toHaveBeenCalledTimes(1)
+      assertCalledWithEl(props.onAfterLeave, trueSerialized)
+      // have to wait for a tick because this triggers an update
+      await nextTick()
+      expect(serializeInner(root)).toBe(falseSerialized)
+      // enter should start
+      expect(props.onBeforeEnter).toHaveBeenCalledTimes(1)
+      assertCalledWithEl(props.onBeforeEnter, falseSerialized)
+      expect(props.onEnter).toHaveBeenCalledTimes(1)
+      assertCalledWithEl(props.onEnter, falseSerialized)
+      expect(props.onAfterEnter).not.toHaveBeenCalled()
+      // finish enter
+      cbs.doneEnter[falseSerialized]()
+      expect(props.onAfterEnter).toHaveBeenCalledTimes(1)
+      assertCalledWithEl(props.onAfterEnter, falseSerialized)
+
+      unmount()
+      // toggle again after unmounted should not throw error
+      toggle.value = true
+      await nextTick()
+      expect(serializeInner(root)).toBe(`<!---->`)
+
+      assertCalls(props, {
+        onBeforeEnter: 1,
+        onEnter: 1,
+        onAfterEnter: 1,
+        onEnterCancelled: 0,
+        onBeforeLeave: 1,
+        onLeave: 1,
+        onAfterLeave: 1,
+        onLeaveCancelled: 0
+      })
+    }
+
+    test('w/ elements', async () => {
+      await runTestWithElements(testOutIn)
+    })
+
+    test('w/ components', async () => {
+      await runTestWithComponents(testOutIn)
+    })
+
+    test('w/ KeepAlive', async () => {
+      await runTestWithKeepAlive(testOutIn)
+    })
+  })
+
   describe('mode: "out-in" toggle before finish', () => {
     async function testOutInBeforeFinish(
       { trueBranch, falseBranch, trueSerialized }: ToggleOptions,
@@ -757,7 +860,7 @@ describe('BaseTransition', () => {
     ) {
       const toggle = ref(true)
       const { props, cbs } = mockProps({ mode: 'out-in' }, withKeepAlive)
-      const root = mount(
+      const { root } = mount(
         props,
         () => (toggle.value ? trueBranch() : falseBranch()),
         withKeepAlive
@@ -834,7 +937,7 @@ describe('BaseTransition', () => {
     ) {
       const toggle = ref(true)
       const { props, cbs } = mockProps({ mode: 'out-in' }, withKeepAlive)
-      const root = mount(
+      const { root } = mount(
         props,
         () => (toggle.value ? trueBranch() : falseBranch()),
         withKeepAlive
@@ -912,7 +1015,7 @@ describe('BaseTransition', () => {
     ) {
       const toggle = ref(true)
       const { props, cbs } = mockProps({ mode: 'in-out' }, withKeepAlive)
-      const root = mount(
+      const { root } = mount(
         props,
         () => (toggle.value ? trueBranch() : falseBranch()),
         withKeepAlive
@@ -1016,7 +1119,7 @@ describe('BaseTransition', () => {
     ) {
       const toggle = ref(true)
       const { props, cbs } = mockProps({ mode: 'in-out' }, withKeepAlive)
-      const root = mount(
+      const { root } = mount(
         props,
         () => (toggle.value ? trueBranch() : falseBranch()),
         withKeepAlive

@@ -1,20 +1,7 @@
-import {
-  computed as _computed,
-  ComputedRef,
-  WritableComputedOptions,
-  WritableComputedRef,
-  ComputedGetter
-} from '@vue/reactivity'
-import { recordInstanceBoundEffect } from './component'
+import { computed as _computed } from '@vue/reactivity'
+import { isInSSRComponentSetup } from './component'
 
-export function computed<T>(getter: ComputedGetter<T>): ComputedRef<T>
-export function computed<T>(
-  options: WritableComputedOptions<T>
-): WritableComputedRef<T>
-export function computed<T>(
-  getterOrOptions: ComputedGetter<T> | WritableComputedOptions<T>
-) {
-  const c = _computed(getterOrOptions as any)
-  recordInstanceBoundEffect(c.effect)
-  return c
-}
+export const computed = ((getterOrOptions: any, debugOptions?: any) => {
+  // @ts-ignore
+  return _computed(getterOrOptions, debugOptions, isInSSRComponentSetup)
+}) as typeof _computed

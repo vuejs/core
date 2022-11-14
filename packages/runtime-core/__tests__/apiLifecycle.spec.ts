@@ -231,6 +231,7 @@ describe('api: lifecycle hooks', () => {
     }
 
     const Mid = {
+      props: ['count'],
       setup(props: any) {
         onBeforeMount(() => calls.push('mid onBeforeMount'))
         onMounted(() => calls.push('mid onMounted'))
@@ -243,6 +244,7 @@ describe('api: lifecycle hooks', () => {
     }
 
     const Child = {
+      props: ['count'],
       setup(props: any) {
         onBeforeMount(() => calls.push('child onBeforeMount'))
         onMounted(() => calls.push('child onMounted'))
@@ -334,7 +336,10 @@ describe('api: lifecycle hooks', () => {
     const onTrigger = jest.fn((e: DebuggerEvent) => {
       events.push(e)
     })
-    const obj = reactive({ foo: 1, bar: 2 })
+    const obj = reactive<{
+      foo: number
+      bar?: number
+    }>({ foo: 1, bar: 2 })
 
     const Comp = {
       setup() {
@@ -356,7 +361,6 @@ describe('api: lifecycle hooks', () => {
       newValue: 2
     })
 
-    // @ts-ignore
     delete obj.bar
     await nextTick()
     expect(onTrigger).toHaveBeenCalledTimes(2)
@@ -373,5 +377,28 @@ describe('api: lifecycle hooks', () => {
       key: 'baz',
       newValue: 3
     })
+  })
+
+  it('runs shared hook fn for each instance', async () => {
+    const fn = jest.fn()
+    const toggle = ref(true)
+    const Comp = {
+      setup() {
+        return () => (toggle.value ? [h(Child), h(Child)] : null)
+      }
+    }
+    const Child = {
+      setup() {
+        onMounted(fn)
+        onBeforeUnmount(fn)
+        return () => h('div')
+      }
+    }
+
+    render(h(Comp), nodeOps.createElement('div'))
+    expect(fn).toHaveBeenCalledTimes(2)
+    toggle.value = false
+    await nextTick()
+    expect(fn).toHaveBeenCalledTimes(4)
   })
 })

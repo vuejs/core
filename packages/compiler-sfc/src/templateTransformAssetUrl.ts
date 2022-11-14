@@ -5,6 +5,7 @@ import {
   ExpressionNode,
   NodeTransform,
   NodeTypes,
+  SimpleExpressionNode,
   SourceLocation,
   TransformContext
 } from '@vue/compiler-core'
@@ -113,26 +114,20 @@ export const transformAssetUrl: NodeTransform = (
       }
 
       const url = parseUrl(attr.value.content)
-      if (options.base) {
-        // explicit base - directly rewrite the url into absolute url
-        // does not apply to absolute urls or urls that start with `@`
-        // since they are aliases
-        if (
-          attr.value.content[0] !== '@' &&
-          isRelativeUrl(attr.value.content)
-        ) {
-          // Allow for full hostnames provided in options.base
-          const base = parseUrl(options.base)
-          const protocol = base.protocol || ''
-          const host = base.host ? protocol + '//' + base.host : ''
-          const basePath = base.path || '/'
+      if (options.base && attr.value.content[0] === '.') {
+        // explicit base - directly rewrite relative urls into absolute url
+        // to avoid generating extra imports
+        // Allow for full hostnames provided in options.base
+        const base = parseUrl(options.base)
+        const protocol = base.protocol || ''
+        const host = base.host ? protocol + '//' + base.host : ''
+        const basePath = base.path || '/'
 
-          // when packaged in the browser, path will be using the posix-
-          // only version provided by rollup-plugin-node-builtins.
-          attr.value.content =
-            host +
-            (path.posix || path).join(basePath, url.path + (url.hash || ''))
-        }
+        // when packaged in the browser, path will be using the posix-
+        // only version provided by rollup-plugin-node-builtins.
+        attr.value.content =
+          host +
+          (path.posix || path).join(basePath, url.path + (url.hash || ''))
         return
       }
 
@@ -159,32 +154,57 @@ function getImportsExpressionExp(
   context: TransformContext
 ): ExpressionNode {
   if (path) {
-    const importsArray = Array.from(context.imports)
-    const existing = importsArray.find(i => i.path === path)
-    if (existing) {
-      return existing.exp as ExpressionNode
-    }
-    const name = `_imports_${importsArray.length}`
-    const exp = createSimpleExpression(
-      name,
-      false,
-      loc,
-      ConstantTypes.CAN_HOIST
-    )
-    context.imports.add({ exp, path })
-    if (hash && path) {
-      return context.hoist(
-        createSimpleExpression(
-          `${name} + '${hash}'`,
-          false,
-          loc,
-          ConstantTypes.CAN_HOIST
-        )
-      )
+    let name: string
+    let exp: SimpleExpressionNode
+    const existingIndex = context.imports.findIndex(i => i.path === path)
+    if (existingIndex > -1) {
+      name = `_imports_${existingIndex}`
+      exp = context.imports[existingIndex].exp as SimpleExpressionNode
     } else {
+      name = `_imports_${context.imports.length}`
+      exp = createSimpleExpression(
+        name,
+        false,
+        loc,
+        ConstantTypes.CAN_STRINGIFY
+      )
+      context.imports.push({ exp, path })
+    }
+
+    if (!hash) {
       return exp
     }
+
+    const hashExp = `${name} + '${hash}'`
+    const finalExp = createSimpleExpression(
+      hashExp,
+      false,
+      loc,
+      ConstantTypes.CAN_STRINGIFY
+    )
+
+    if (!context.hoistStatic) {
+      return finalExp
+    }
+
+    const existingHoistIndex = context.hoists.findIndex(h => {
+      return (
+        h &&
+        h.type === NodeTypes.SIMPLE_EXPRESSION &&
+        !h.isStatic &&
+        h.content === hashExp
+      )
+    })
+    if (existingHoistIndex > -1) {
+      return createSimpleExpression(
+        `_hoisted_${existingHoistIndex + 1}`,
+        false,
+        loc,
+        ConstantTypes.CAN_STRINGIFY
+      )
+    }
+    return context.hoist(finalExp)
   } else {
-    return createSimpleExpression(`''`, false, loc, ConstantTypes.CAN_HOIST)
+    return createSimpleExpression(`''`, false, loc, ConstantTypes.CAN_STRINGIFY)
   }
 }
