@@ -160,6 +160,9 @@ describe(`runtime-dom: events patching`, () => {
       childFn()
       patchProp(el, 'onClick', null, parentFn)
     })
+
+    // avoid dispatchEvent and bindEvent in the same loop
+    await timeout()
     child.dispatchEvent(new Event('click', { bubbles: true }))
 
     await timeout()
