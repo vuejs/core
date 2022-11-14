@@ -1561,7 +1561,7 @@ export function compileScript(
       // avoid duplicated unref import
       // as this may get injected by the render function preamble OR the
       // css vars codegen
-      if (ast && ast.helpers.includes(UNREF)) {
+      if (ast && ast.helpers.has(UNREF)) {
         helperImports.delete('unref')
       }
       returned = code
