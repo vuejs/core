@@ -473,7 +473,10 @@ function emptyPlaceholder(vnode: VNode): VNode | undefined {
 
 function getKeepAliveChild(vnode: VNode): VNode | undefined {
   return isKeepAlive(vnode)
-    ? vnode.children
+    ? // #7121 avoid the result is expired during HMR
+      vnode.component
+      ? vnode.component.subTree
+      : vnode.children
       ? ((vnode.children as VNodeArrayChildren)[0] as VNode)
       : undefined
     : vnode
