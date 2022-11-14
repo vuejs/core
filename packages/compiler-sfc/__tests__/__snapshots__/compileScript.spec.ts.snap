@@ -1789,3 +1789,26 @@ return { props }
 
 })"
 `;
+
+exports[`SFC compile <script setup> with TypeScript withDefaults (static) w/ production mode 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  props: {
+    foo: null,
+    bar: { type: Boolean },
+    baz: { type: [Boolean, Function], default: true },
+    qux: { default: 'hi' }
+  },
+  setup(__props: any, { expose }) {
+  expose();
+
+const props = __props as { foo: () => void, bar: boolean, baz: boolean | (() => void), qux: string | number };
+
+      
+      
+return { props }
+}
+
+})"
+`;
