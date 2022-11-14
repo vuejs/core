@@ -21,7 +21,7 @@ return () => {}
 `;
 
 exports[`sfc props transform aliasing 1`] = `
-"import { toDisplayString as _toDisplayString } from \\"vue\\"
+"import { toDisplayString as _toDisplayString } from "vue"
 
 
 export default {
@@ -41,7 +41,7 @@ return (_ctx, _cache) => {
 `;
 
 exports[`sfc props transform basic usage 1`] = `
-"import { toDisplayString as _toDisplayString } from \\"vue\\"
+"import { toDisplayString as _toDisplayString } from "vue"
 
 
 export default {
@@ -60,7 +60,7 @@ return (_ctx, _cache) => {
 `;
 
 exports[`sfc props transform computed static key 1`] = `
-"import { toDisplayString as _toDisplayString } from \\"vue\\"
+"import { toDisplayString as _toDisplayString } from "vue"
 
 
 export default {
@@ -154,7 +154,7 @@ return () => {}
 `;
 
 exports[`sfc props transform non-identifier prop names 1`] = `
-"import { toDisplayString as _toDisplayString } from \\"vue\\"
+"import { toDisplayString as _toDisplayString } from "vue"
 
 
 export default {
@@ -162,10 +162,10 @@ export default {
   setup(__props) {
 
       
-      let x = __props[\\"foo.bar\\"]
+      let x = __props["foo.bar"]
       
 return (_ctx, _cache) => {
-  return _toDisplayString(__props[\\"foo.bar\\"])
+  return _toDisplayString(__props["foo.bar"])
 }
 }
 
@@ -179,7 +179,7 @@ export default {
   props: ['foo', 'bar', 'baz'],
   setup(__props) {
 
-const rest = _createPropsRestProxy(__props, [\\"foo\\",\\"bar\\"]);
+const rest = _createPropsRestProxy(__props, ["foo","bar"]);
 
       
       
