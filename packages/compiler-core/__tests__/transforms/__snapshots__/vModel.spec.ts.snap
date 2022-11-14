@@ -83,9 +83,9 @@ return function render(_ctx, _cache) {
     const { openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return (_openBlock(), _createElementBlock(\\"input\\", {
-      value: model,
-      \\"onUpdate:value\\": $event => ((model) = $event)
-    }, null, 40 /* PROPS, HYDRATE_EVENTS */, [\\"value\\", \\"onUpdate:value\\"]))
+      \\"foo-value\\": model,
+      \\"onUpdate:fooValue\\": $event => ((model) = $event)
+    }, null, 40 /* PROPS, HYDRATE_EVENTS */, [\\"foo-value\\", \\"onUpdate:fooValue\\"]))
   }
 }"
 `;
