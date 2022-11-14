@@ -8,7 +8,6 @@ import {
   TriggerOpTypes,
   DebuggerEvent,
   markRaw,
-  ref,
   shallowReactive,
   readonly,
   ReactiveEffectRunner
