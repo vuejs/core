@@ -2,7 +2,7 @@ import {
   BaseTransition,
   BaseTransitionProps,
   h,
-  warn,
+  assertNumber,
   FunctionalComponent,
   compatUtils,
   DeprecationTypes
@@ -283,22 +283,8 @@ function normalizeDuration(
 
 function NumberOf(val: unknown): number {
   const res = toNumber(val)
-  if (__DEV__) validateDuration(res)
+  if (__DEV__) assertNumber(res, '<transition> explicit duration')
   return res
-}
-
-function validateDuration(val: unknown) {
-  if (typeof val !== 'number') {
-    warn(
-      `<transition> explicit duration is not a valid number - ` +
-        `got ${JSON.stringify(val)}.`
-    )
-  } else if (isNaN(val)) {
-    warn(
-      `<transition> explicit duration is NaN - ` +
-        'the duration expression might be incorrect.'
-    )
-  }
 }
 
 export function addTransitionClass(el: Element, cls: string) {
