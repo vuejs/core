@@ -83,7 +83,7 @@ describe('sfc props transform', () => {
     const { content } = compile(
       `
       <script setup lang="ts">
-      const { foo = 1, bar = {}, func = () => {} } = defineProps<{ foo?: number, bar?: object, baz?: any, boola?: boolean, boolb?: boolean | number, func?: Function }>()
+      const { foo = 1, bar = {}} = defineProps<{ foo?: number, bar?: object, baz?: any, boola?: boolean, boolb?: boolean | number}>()
       </script>
     `,
       { isProd: true }
@@ -95,8 +95,25 @@ describe('sfc props transform', () => {
     bar: { default: () => ({}) },
     baz: null,
     boola: { type: Boolean },
-    boolb: { type: [Boolean, Number] },
-    func: { type: Function, default: () => (() => {}) }
+    boolb: { type: [Boolean, Number] }
+  }`)
+    assertCode(content)
+  })
+
+  test('default values about function props', () => {
+    const { content } = compile(
+      `
+      <script setup lang="ts">
+      const { func = () => {}, func2 = function (){} } = defineProps<{ func?: Function, func2?: Function}>()
+      </script>
+    `,
+      { isProd: true }
+    )
+    // literals can be used as-is, non-literals are always returned from a
+    // function
+    expect(content).toMatch(`props: {
+    func: { type: Function, default: () => {} },
+    func2: { type: Function, default: function (){} }
   }`)
     assertCode(content)
   })
