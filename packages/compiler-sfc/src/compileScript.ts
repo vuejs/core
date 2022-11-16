@@ -868,13 +868,10 @@ export function compileScript(
   function genDestructuredDefaultValue(key: string): string | undefined {
     const destructured = propsDestructuredBindings[key]
     if (destructured && destructured.default) {
-      const value = scriptSetup!.content.slice(
+      return scriptSetup!.content.slice(
         destructured.default.start!,
         destructured.default.end!
       )
-      const isLiteral = destructured.default.type.endsWith('Literal')
-      const isFunction = destructured.default.type.includes('Function')
-      return isLiteral || isFunction ? value : `() => (${value})`
     }
   }
 
