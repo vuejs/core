@@ -990,11 +990,11 @@ export function formatComponentName(
   if (!name && Component.__file) {
     const match = Component.__file.match(/(\/(\w+))?(\/(\w+))\.\w+$/)
     if (match) {
-      if(match?.length == 5 && match?.at(4) === "Index"){
+      if(match?.at(4) === "Index"){
         const dirName = match?.at(2)
         name = dirName.charAt(0).toUpperCase() + dirName.slice(1)
-      }else{
-        name = match[2]
+      } else {
+        name = match?.at(4)
       }
     }
   }
