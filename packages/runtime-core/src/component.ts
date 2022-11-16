@@ -46,6 +46,7 @@ import {
   normalizeEmitsOptions
 } from './componentEmits'
 import {
+  capitalize,
   EMPTY_OBJ,
   isFunction,
   NOOP,
@@ -988,9 +989,14 @@ export function formatComponentName(
 ): string {
   let name = getComponentName(Component)
   if (!name && Component.__file) {
-    const match = Component.__file.match(/([^/\\]+)\.\w+$/)
+    const match = Component.__file.match(/([/\\](\w+))?([/\\](\w+))\.\w+$/)
     if (match) {
-      name = match[1]
+        if (capitalize(match[4]) === "Index") {
+            const dirName = match[2]
+            name = capitalize(dirName)
+        } else {
+            name = match[4]
+        }
     }
   }
 
