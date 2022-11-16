@@ -20,7 +20,11 @@ describe('SFC compile <script setup>', () => {
       class dd {}
       </script>
       `)
-    expect(content).toMatch('return { aa, bb, cc, dd, a, b, c, d, xx, x }')
+    expect(content).toMatch(
+      `return { get aa() { return aa }, set aa(v) { aa = v }, ` +
+        `bb, cc, dd, get a() { return a }, set a(v) { a = v }, b, c, d, ` +
+        `get xx() { return xx }, get x() { return x } }`
+    )
     expect(bindings).toStrictEqual({
       x: BindingTypes.SETUP_MAYBE_REF,
       a: BindingTypes.SETUP_LET,
@@ -429,7 +433,10 @@ defineExpose({ foo: 123 })
       // FooBaz: used as PascalCase component
       // FooQux: used as kebab-case component
       // foo: lowercase component
-      expect(content).toMatch(`return { fooBar, FooBaz, FooQux, foo }`)
+      expect(content).toMatch(
+        `return { fooBar, get FooBaz() { return FooBaz }, ` +
+          `get FooQux() { return FooQux }, get foo() { return foo } }`
+      )
       assertCode(content)
     })
 
@@ -442,7 +449,7 @@ defineExpose({ foo: 123 })
           <div v-my-dir></div>
         </template>
         `)
-      expect(content).toMatch(`return { vMyDir }`)
+      expect(content).toMatch(`return { get vMyDir() { return vMyDir } }`)
       assertCode(content)
     })
 
@@ -457,7 +464,9 @@ defineExpose({ foo: 123 })
           <div :class="[cond ? '' : bar(), 'default']" :style="baz"></div>
         </template>
         `)
-      expect(content).toMatch(`return { cond, bar, baz }`)
+      expect(content).toMatch(
+        `return { cond, get bar() { return bar }, get baz() { return baz } }`
+      )
       assertCode(content)
     })
 
@@ -473,7 +482,9 @@ defineExpose({ foo: 123 })
       // x: used in interpolation
       // y: should not be matched by {{ yy }} or 'y' in binding exps
       // x$y: #4274 should escape special chars when creating Regex
-      expect(content).toMatch(`return { x, z, x$y }`)
+      expect(content).toMatch(
+        `return { get x() { return x }, get z() { return z }, get x$y() { return x$y } }`
+      )
       assertCode(content)
     })
 
@@ -488,7 +499,9 @@ defineExpose({ foo: 123 })
         </template>
         `)
       // VAR2 should not be matched
-      expect(content).toMatch(`return { VAR, VAR3 }`)
+      expect(content).toMatch(
+        `return { get VAR() { return VAR }, get VAR3() { return VAR3 } }`
+      )
       assertCode(content)
     })
 
@@ -503,7 +516,9 @@ defineExpose({ foo: 123 })
           <Last/>
         </template>
         `)
-      expect(content).toMatch(`return { FooBaz, Last }`)
+      expect(content).toMatch(
+        `return { get FooBaz() { return FooBaz }, get Last() { return Last } }`
+      )
       assertCode(content)
     })
 
@@ -522,7 +537,7 @@ defineExpose({ foo: 123 })
           <div v-for="{ z = x as Qux } in list as Fred"/>
         </template>
         `)
-      expect(content).toMatch(`return { a, b, Baz }`)
+      expect(content).toMatch(`return { a, b, get Baz() { return Baz } }`)
       assertCode(content)
     })
 
@@ -671,6 +686,26 @@ defineExpose({ foo: 123 })
         `_isRef(lett) ? (lett).value = $event : lett = $event`
       )
       assertCode(content)
+    })
+
+    test('v-model should not generate ref assignment code for non-setup bindings', () => {
+      const { content } = compile(
+        `<script setup>
+        import { ref } from 'vue'
+        const count = ref(0)
+        </script>
+        <script>
+        export default {
+          data() { return { foo: 123 } }
+        }
+        </script>
+        <template>
+          <input v-model="foo">
+        </template>
+        `,
+        { inlineTemplate: true }
+      )
+      expect(content).not.toMatch(`_isRef(foo)`)
     })
 
     test('template assignment expression codegen', () => {
@@ -1086,6 +1121,36 @@ const emit = defineEmits(['a', 'b'])
       })
     })
 
+    // #7111
+    test('withDefaults (static) w/ production mode', () => {
+      const { content } = compile(
+        `
+      <script setup lang="ts">
+      const props = withDefaults(defineProps<{
+        foo: () => void
+        bar: boolean
+        baz: boolean | (() => void)
+        qux: string | number
+      }>(), {
+        baz: true,
+        qux: 'hi'
+      })
+      </script>
+      `,
+        { isProd: true }
+      )
+      assertCode(content)
+      expect(content).toMatch(`const props = __props`)
+
+      // foo has no default value, the Function can be dropped
+      expect(content).toMatch(`foo: null`)
+      expect(content).toMatch(`bar: { type: Boolean }`)
+      expect(content).toMatch(
+        `baz: { type: [Boolean, Function], default: true }`
+      )
+      expect(content).toMatch(`qux: { default: 'hi' }`)
+    })
+
     test('withDefaults (dynamic)', () => {
       const { content } = compile(`
       <script setup lang="ts">
@@ -1105,6 +1170,35 @@ const emit = defineEmits(['a', 'b'])
     foo: { type: String, required: false },
     bar: { type: Number, required: false },
     baz: { type: Boolean, required: true }
+  }, { ...defaults })`.trim()
+      )
+    })
+
+    // #7111
+    test('withDefaults (dynamic) w/ production mode', () => {
+      const { content } = compile(
+        `
+      <script setup lang="ts">
+      import { defaults } from './foo'
+      const props = withDefaults(defineProps<{
+        foo: () => void
+        bar: boolean
+        baz: boolean | (() => void)
+        qux: string | number
+      }>(), { ...defaults })
+      </script>
+      `,
+        { isProd: true }
+      )
+      assertCode(content)
+      expect(content).toMatch(`import { mergeDefaults as _mergeDefaults`)
+      expect(content).toMatch(
+        `
+  _mergeDefaults({
+    foo: { type: Function },
+    bar: { type: Boolean },
+    baz: { type: [Boolean, Function] },
+    qux: null
   }, { ...defaults })`.trim()
       )
     })
@@ -1279,7 +1373,7 @@ const emit = defineEmits(['a', 'b'])
         import { type Bar, Baz } from './main.ts'
         </script>`
       )
-      expect(content).toMatch(`return { Baz }`)
+      expect(content).toMatch(`return { get Baz() { return Baz } }`)
       assertCode(content)
     })
   })

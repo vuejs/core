@@ -10,8 +10,8 @@ import {
   isObject,
   isString,
   isOn,
-  toNumber,
-  UnionToIntersection
+  UnionToIntersection,
+  looseToNumber
 } from '@vue/shared'
 import {
   ComponentInternalInstance,
@@ -126,7 +126,7 @@ export function emit(
       args = rawArgs.map(a => (isString(a) ? a.trim() : a))
     }
     if (number) {
-      args = rawArgs.map(toNumber)
+      args = rawArgs.map(looseToNumber)
     }
   }
 

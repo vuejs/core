@@ -30,7 +30,7 @@ export function setupPuppeteer() {
 
   beforeAll(async () => {
     browser = await puppeteer.launch(puppeteerOptions)
-  })
+  }, 20000)
 
   beforeEach(async () => {
     page = await browser.newPage()
@@ -44,7 +44,7 @@ export function setupPuppeteer() {
         const err = e.args()[0]
         console.error(
           `Error from Puppeteer-loaded page:\n`,
-          err._remoteObject.description
+          err.remoteObject().description
         )
       }
     })

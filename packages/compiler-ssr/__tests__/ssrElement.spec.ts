@@ -56,16 +56,16 @@ describe('ssr: element', () => {
     test('<textarea> with dynamic v-bind', () => {
       expect(compile(`<textarea v-bind="obj">fallback</textarea>`).code)
         .toMatchInlineSnapshot(`
-        "const { mergeProps: _mergeProps } = require(\\"vue\\")
-        const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require(\\"vue/server-renderer\\")
+        "const { mergeProps: _mergeProps } = require("vue")
+        const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require("vue/server-renderer")
 
         return function ssrRender(_ctx, _push, _parent, _attrs) {
           let _temp0
 
           _push(\`<textarea\${
-            _ssrRenderAttrs(_temp0 = _mergeProps(_ctx.obj, _attrs), \\"textarea\\")
+            _ssrRenderAttrs(_temp0 = _mergeProps(_ctx.obj, _attrs), "textarea")
           }>\${
-            _ssrInterpolate((\\"value\\" in _temp0) ? _temp0.value : \\"fallback\\")
+            _ssrInterpolate(("value" in _temp0) ? _temp0.value : "fallback")
           }</textarea>\`)
         }"
       `)
@@ -75,7 +75,7 @@ describe('ssr: element', () => {
       expect(
         compile(`<div>{{ hello }}<textarea v-bind="a"></textarea></div>`).code
       ).toMatchInlineSnapshot(`
-        "const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require(\\"vue/server-renderer\\")
+        "const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require("vue/server-renderer")
 
         return function ssrRender(_ctx, _push, _parent, _attrs) {
           let _temp0
@@ -85,9 +85,9 @@ describe('ssr: element', () => {
           }>\${
             _ssrInterpolate(_ctx.hello)
           }<textarea\${
-            _ssrRenderAttrs(_temp0 = _ctx.a, \\"textarea\\")
+            _ssrRenderAttrs(_temp0 = _ctx.a, "textarea")
           }>\${
-            _ssrInterpolate((\\"value\\" in _temp0) ? _temp0.value : \\"\\")
+            _ssrInterpolate(("value" in _temp0) ? _temp0.value : "")
           }</textarea></div>\`)
         }"
       `)
@@ -99,11 +99,11 @@ describe('ssr: element', () => {
           isCustomElement: () => true
         }).code
       ).toMatchInlineSnapshot(`
-        "const { mergeProps: _mergeProps } = require(\\"vue\\")
-        const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
+        "const { mergeProps: _mergeProps } = require("vue")
+        const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
         return function ssrRender(_ctx, _push, _parent, _attrs) {
-          _push(\`<my-foo\${_ssrRenderAttrs(_mergeProps(_ctx.obj, _attrs), \\"my-foo\\")}></my-foo>\`)
+          _push(\`<my-foo\${_ssrRenderAttrs(_mergeProps(_ctx.obj, _attrs), "my-foo")}></my-foo>\`)
         }"
       `)
     })
@@ -113,7 +113,7 @@ describe('ssr: element', () => {
     test('static attrs', () => {
       expect(
         getCompiledString(`<div id="foo" class="bar"></div>`)
-      ).toMatchInlineSnapshot(`"\`<div id=\\"foo\\" class=\\"bar\\"></div>\`"`)
+      ).toMatchInlineSnapshot(`"\`<div id="foo" class="bar"></div>\`"`)
     })
 
     test('ignore static key/ref', () => {
@@ -131,53 +131,53 @@ describe('ssr: element', () => {
     test('v-bind:class', () => {
       expect(getCompiledString(`<div id="foo" :class="bar"></div>`))
         .toMatchInlineSnapshot(`
-        "\`<div id=\\"foo\\" class=\\"\${
+        "\`<div id="foo" class="\${
             _ssrRenderClass(_ctx.bar)
-          }\\"></div>\`"
+          }"></div>\`"
       `)
     })
 
     test('static class + v-bind:class', () => {
       expect(getCompiledString(`<div class="foo" :class="bar"></div>`))
         .toMatchInlineSnapshot(`
-        "\`<div class=\\"\${
-            _ssrRenderClass([_ctx.bar, \\"foo\\"])
-          }\\"></div>\`"
+        "\`<div class="\${
+            _ssrRenderClass([_ctx.bar, "foo"])
+          }"></div>\`"
       `)
     })
 
     test('v-bind:class + static class', () => {
       expect(getCompiledString(`<div :class="bar" class="foo"></div>`))
         .toMatchInlineSnapshot(`
-        "\`<div class=\\"\${
-            _ssrRenderClass([_ctx.bar, \\"foo\\"])
-          }\\"></div>\`"
+        "\`<div class="\${
+            _ssrRenderClass([_ctx.bar, "foo"])
+          }"></div>\`"
       `)
     })
 
     test('v-bind:style', () => {
       expect(getCompiledString(`<div id="foo" :style="bar"></div>`))
         .toMatchInlineSnapshot(`
-        "\`<div id=\\"foo\\" style=\\"\${
+        "\`<div id="foo" style="\${
             _ssrRenderStyle(_ctx.bar)
-          }\\"></div>\`"
+          }"></div>\`"
       `)
     })
 
     test('static style + v-bind:style', () => {
       expect(getCompiledString(`<div style="color:red;" :style="bar"></div>`))
         .toMatchInlineSnapshot(`
-        "\`<div style=\\"\${
-            _ssrRenderStyle([{\\"color\\":\\"red\\"}, _ctx.bar])
-          }\\"></div>\`"
+        "\`<div style="\${
+            _ssrRenderStyle([{"color":"red"}, _ctx.bar])
+          }"></div>\`"
       `)
     })
 
     test('v-bind:arg (boolean)', () => {
       expect(getCompiledString(`<input type="checkbox" :checked="checked">`))
         .toMatchInlineSnapshot(`
-        "\`<input type=\\"checkbox\\"\${
-            (_ssrIncludeBooleanAttr(_ctx.checked)) ? \\" checked\\" : \\"\\"
+        "\`<input type="checkbox"\${
+            (_ssrIncludeBooleanAttr(_ctx.checked)) ? " checked" : ""
           }>\`"
       `)
     })
@@ -186,8 +186,8 @@ describe('ssr: element', () => {
       expect(getCompiledString(`<div :id="id" class="bar"></div>`))
         .toMatchInlineSnapshot(`
         "\`<div\${
-            _ssrRenderAttr(\\"id\\", _ctx.id)
-          } class=\\"bar\\"></div>\`"
+            _ssrRenderAttr("id", _ctx.id)
+          } class="bar"></div>\`"
       `)
     })
 
@@ -195,7 +195,7 @@ describe('ssr: element', () => {
       expect(getCompiledString(`<div v-bind:[key]="value"></div>`))
         .toMatchInlineSnapshot(`
         "\`<div\${
-            _ssrRenderAttrs({ [_ctx.key || \\"\\"]: _ctx.value })
+            _ssrRenderAttrs({ [_ctx.key || ""]: _ctx.value })
           }></div>\`"
       `)
 
@@ -203,8 +203,8 @@ describe('ssr: element', () => {
         .toMatchInlineSnapshot(`
         "\`<div\${
             _ssrRenderAttrs({
-              class: \\"foo\\",
-              [_ctx.key || \\"\\"]: _ctx.value
+              class: "foo",
+              [_ctx.key || ""]: _ctx.value
             })
           }></div>\`"
       `)
@@ -214,7 +214,7 @@ describe('ssr: element', () => {
         "\`<div\${
             _ssrRenderAttrs({
               id: _ctx.id,
-              [_ctx.key || \\"\\"]: _ctx.value
+              [_ctx.key || ""]: _ctx.value
             })
           }></div>\`"
       `)
@@ -231,7 +231,7 @@ describe('ssr: element', () => {
       expect(getCompiledString(`<div class="foo" v-bind="obj"></div>`))
         .toMatchInlineSnapshot(`
         "\`<div\${
-            _ssrRenderAttrs(_mergeProps({ class: \\"foo\\" }, _ctx.obj))
+            _ssrRenderAttrs(_mergeProps({ class: "foo" }, _ctx.obj))
           }></div>\`"
       `)
 
@@ -246,7 +246,7 @@ describe('ssr: element', () => {
       expect(getCompiledString(`<div :[key]="id" v-bind="obj"></div>`))
         .toMatchInlineSnapshot(`
         "\`<div\${
-            _ssrRenderAttrs(_mergeProps({ [_ctx.key || \\"\\"]: _ctx.id }, _ctx.obj))
+            _ssrRenderAttrs(_mergeProps({ [_ctx.key || ""]: _ctx.id }, _ctx.obj))
           }></div>\`"
       `)
 
@@ -255,7 +255,7 @@ describe('ssr: element', () => {
         .toMatchInlineSnapshot(`
         "\`<div\${
             _ssrRenderAttrs(_mergeProps({
-              class: [\\"a\\", _ctx.b]
+              class: ["a", _ctx.b]
             }, _ctx.obj))
           }></div>\`"
       `)
@@ -268,7 +268,7 @@ describe('ssr: element', () => {
       ).toMatchInlineSnapshot(`
         "\`<div\${
             _ssrRenderAttrs(_mergeProps({
-              style: [{\\"color\\":\\"red\\"}, _ctx.b]
+              style: [{"color":"red"}, _ctx.b]
             }, _ctx.obj))
           }></div>\`"
       `)
@@ -277,10 +277,10 @@ describe('ssr: element', () => {
     test('should ignore v-on', () => {
       expect(
         getCompiledString(`<div id="foo" @click="bar"/>`)
-      ).toMatchInlineSnapshot(`"\`<div id=\\"foo\\"></div>\`"`)
+      ).toMatchInlineSnapshot(`"\`<div id="foo"></div>\`"`)
       expect(
         getCompiledString(`<div id="foo" v-on="bar"/>`)
-      ).toMatchInlineSnapshot(`"\`<div id=\\"foo\\"></div>\`"`)
+      ).toMatchInlineSnapshot(`"\`<div id="foo"></div>\`"`)
       expect(getCompiledString(`<div v-bind="foo" v-on="bar"/>`))
         .toMatchInlineSnapshot(`
         "\`<div\${
@@ -292,7 +292,7 @@ describe('ssr: element', () => {
     test('custom dir', () => {
       expect(getCompiledString(`<div v-xxx:x.y="z" />`)).toMatchInlineSnapshot(`
         "\`<div\${
-            _ssrRenderAttrs(_ssrGetDirectiveProps(_ctx, _directive_xxx, _ctx.z, \\"x\\", { y: true }))
+            _ssrRenderAttrs(_ssrGetDirectiveProps(_ctx, _directive_xxx, _ctx.z, "x", { y: true }))
           }></div>\`"
       `)
     })
@@ -301,7 +301,7 @@ describe('ssr: element', () => {
       expect(getCompiledString(`<div class="foo" v-xxx />`))
         .toMatchInlineSnapshot(`
         "\`<div\${
-            _ssrRenderAttrs(_mergeProps({ class: \\"foo\\" }, _ssrGetDirectiveProps(_ctx, _directive_xxx)))
+            _ssrRenderAttrs(_mergeProps({ class: "foo" }, _ssrGetDirectiveProps(_ctx, _directive_xxx)))
           }></div>\`"
       `)
     })
@@ -333,8 +333,8 @@ describe('ssr: element', () => {
       ).toMatchInlineSnapshot(`
         "\`<div\${
             _ssrRenderAttrs(_mergeProps(_ctx.x, {
-              class: \\"foo\\",
-              title: \\"bar\\"
+              class: "foo",
+              title: "bar"
             }, _ssrGetDirectiveProps(_ctx, _directive_xxx)))
           }></div>\`"
       `)
