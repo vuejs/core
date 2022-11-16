@@ -18,8 +18,7 @@ const fs = require('fs-extra')
 const path = require('path')
 const chalk = require('chalk')
 const execa = require('execa')
-const { gzipSync } = require('zlib')
-const { compress } = require('brotli')
+const { brotliCompressSync, gzipSync } = require('zlib')
 const { targets: allTargets, fuzzyMatchTarget } = require('./utils')
 
 const args = require('minimist')(process.argv.slice(2))
@@ -181,7 +180,7 @@ function checkFileSize(filePath) {
   const minSize = (file.length / 1024).toFixed(2) + 'kb'
   const gzipped = gzipSync(file)
   const gzippedSize = (gzipped.length / 1024).toFixed(2) + 'kb'
-  const compressed = compress(file)
+  const compressed = brotliCompressSync(file)
   const compressedSize = (compressed.length / 1024).toFixed(2) + 'kb'
   console.log(
     `${chalk.gray(
