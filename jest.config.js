@@ -2,6 +2,17 @@ module.exports = {
   testEnvironment: 'jsdom',
   preset: 'ts-jest',
   setupFilesAfterEnv: ['./scripts/setupJestEnv.ts'],
+  transform: {
+    '^.+\\.tsx?$': [
+      'ts-jest',
+      {
+        tsconfig: {
+          target: 'esnext',
+          sourceMap: true
+        }
+      }
+    ]
+  },
   globals: {
     __DEV__: true,
     __TEST__: true,
@@ -15,13 +26,7 @@ module.exports = {
     __FEATURE_OPTIONS_API__: true,
     __FEATURE_SUSPENSE__: true,
     __FEATURE_PROD_DEVTOOLS__: false,
-    __COMPAT__: true,
-    'ts-jest': {
-      tsconfig: {
-        target: 'esnext',
-        sourceMap: true
-      }
-    }
+    __COMPAT__: true
   },
   coverageDirectory: 'coverage',
   coverageReporters: ['html', 'lcov', 'text'],

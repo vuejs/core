@@ -18,6 +18,7 @@ import {
 } from '../utils'
 import { IS_REF } from '../runtimeHelpers'
 import { BindingTypes } from '../options'
+import { camelize } from '@vue/shared'
 
 export const transformModel: DirectiveTransform = (dir, node, context) => {
   const { exp, arg } = dir
@@ -77,7 +78,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
   const propName = arg ? arg : createSimpleExpression('modelValue', true)
   const eventName = arg
     ? isStaticExp(arg)
-      ? `onUpdate:${arg.content}`
+      ? `onUpdate:${camelize(arg.content)}`
       : createCompoundExpression(['"onUpdate:" + ', arg])
     : `onUpdate:modelValue`
 

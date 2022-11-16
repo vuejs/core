@@ -22,7 +22,12 @@ import {
 } from '../renderer'
 import { queuePostFlushCb } from '../scheduler'
 import { filterSingleRoot, updateHOCHostEl } from '../componentRenderUtils'
-import { pushWarningContext, popWarningContext, warn } from '../warning'
+import {
+  pushWarningContext,
+  popWarningContext,
+  warn,
+  assertNumber
+} from '../warning'
 import { handleError, ErrorCodes } from '../errorHandling'
 
 export interface SuspenseProps {
@@ -418,7 +423,11 @@ function createSuspenseBoundary(
     o: { parentNode, remove }
   } = rendererInternals
 
-  const timeout = toNumber(vnode.props && vnode.props.timeout)
+  const timeout = vnode.props ? toNumber(vnode.props.timeout) : undefined
+  if (__DEV__) {
+    assertNumber(timeout, `Suspense timeout`)
+  }
+
   const suspense: SuspenseBoundary = {
     vnode,
     parent,

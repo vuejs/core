@@ -158,7 +158,7 @@ export const errorMessages: Record<ErrorCodes, string> = {
   [ErrorCodes.X_V_ON_NO_EXPRESSION]: `v-on is missing expression.`,
   [ErrorCodes.X_V_SLOT_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET]: `Unexpected custom directive on <slot> outlet.`,
   [ErrorCodes.X_V_SLOT_MIXED_SLOT_USAGE]:
-    `Mixed v-slot usage on both the component and nested <template>.` +
+    `Mixed v-slot usage on both the component and nested <template>. ` +
     `When there are multiple named slots, all slots should use <template> ` +
     `syntax to avoid scope ambiguity.`,
   [ErrorCodes.X_V_SLOT_DUPLICATE_SLOT_NAMES]: `Duplicate slot names found. `,
