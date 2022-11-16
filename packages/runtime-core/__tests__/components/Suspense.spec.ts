@@ -12,7 +12,7 @@ import {
   watchEffect,
   onUnmounted,
   onErrorCaptured,
-  shallowRef
+  shallowRef, renderSlot, ComponentPublicInstance
 } from '@vue/runtime-test'
 import { createApp } from 'vue'
 
@@ -1252,5 +1252,47 @@ describe('Suspense', () => {
     expect(
       `A component with async setup() must be nested in a <Suspense>`
     ).toHaveBeenWarned()
+  })
+
+  // #5247
+  test('In nested slots suspense should return to pending state', async () => {
+    const id = ref('1')
+    const Async = defineAsyncComponent({
+      render() {
+        return h('div', `async`)
+      }
+    })
+
+    const wrapper = {
+      setup() {
+        return (ctx: ComponentPublicInstance) =>
+          h(Suspense, null, {
+            default: ()=>[renderSlot(ctx.$slots!,'default')],
+            fallback: ()=>h('div', 'fallback')
+          })
+      }
+    }
+
+    const Parent = {
+      setup() {
+        return () => h(wrapper, null,
+          {
+            default: ()=>h(Async, {id: id.value}),
+          })
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Parent), root)
+
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+    console.log(deps.length)
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div id="1">async</div>`)
+    id.value = '2'
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div id="2">async</div>`)
   })
 })

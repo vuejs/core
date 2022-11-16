@@ -8,7 +8,7 @@ import {
   currentBlock,
   Comment,
   createVNode,
-  isBlockTreeEnabled
+  isBlockTreeEnabled, // Fragment
 } from '../vnode'
 import { isFunction, isArray, ShapeFlags, toNumber } from '@vue/shared'
 import { ComponentInternalInstance, handleSetupResult } from '../component'
@@ -24,7 +24,6 @@ import { queuePostFlushCb } from '../scheduler'
 import { filterSingleRoot, updateHOCHostEl } from '../componentRenderUtils'
 import { pushWarningContext, popWarningContext, warn } from '../warning'
 import { handleError, ErrorCodes } from '../errorHandling'
-
 export interface SuspenseProps {
   onResolve?: () => void
   onPending?: () => void
@@ -303,7 +302,11 @@ function patchSuspense(
       }
     }
   } else {
-    if (activeBranch && isSameVNodeType(newBranch, activeBranch)) {
+    if (activeBranch && isSameVNodeType(newBranch, activeBranch)
+      // #5247 In the nested slot, the slot will be compiled into a fragment,
+      // and the suspense should return to the pending state at this time
+      // && !(newBranch.type === Fragment && activeBranch.type === Fragment)
+    ) {
       // root did not change, just normal patch
       patch(
         activeBranch,
