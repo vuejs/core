@@ -12,7 +12,9 @@ import {
   watchEffect,
   onUnmounted,
   onErrorCaptured,
-  shallowRef, renderSlot, ComponentPublicInstance
+  shallowRef,
+  renderSlot,
+  ComponentPublicInstance
 } from '@vue/runtime-test'
 import { createApp } from 'vue'
 
@@ -1262,22 +1264,26 @@ describe('Suspense', () => {
         return h('div', `async`)
       }
     })
-
+    const onPending = jest.fn()
     const wrapper = {
       setup() {
         return (ctx: ComponentPublicInstance) =>
-          h(Suspense, null, {
-            default: ()=>[renderSlot(ctx.$slots!,'default')],
-            fallback: ()=>h('div', 'fallback')
-          })
+          h(
+            Suspense,
+            { onPending },
+            {
+              default: () => [renderSlot(ctx.$slots!, 'default')],
+              fallback: () => h('div', 'fallback')
+            }
+          )
       }
     }
 
     const Parent = {
       setup() {
-        return () => h(wrapper, null,
-          {
-            default: ()=>h(Async, {id: id.value}),
+        return () =>
+          h(wrapper, null, {
+            default: () => h(Async, { id: id.value })
           })
       }
     }
@@ -1286,13 +1292,16 @@ describe('Suspense', () => {
     render(h(Parent), root)
 
     expect(serializeInner(root)).toBe(`<div>fallback</div>`)
-    console.log(deps.length)
     await Promise.all(deps)
     await nextTick()
     expect(serializeInner(root)).toBe(`<div id="1">async</div>`)
+    expect(onPending).toHaveBeenCalledTimes(1)
+
     id.value = '2'
+    await nextTick()
     await Promise.all(deps)
     await nextTick()
     expect(serializeInner(root)).toBe(`<div id="2">async</div>`)
+    expect(onPending).toHaveBeenCalledTimes(2)
   })
 })
