@@ -872,7 +872,9 @@ export function compileScript(
         destructured.default.start!,
         destructured.default.end!
       )
-      const isLiteral = destructured.default.type.endsWith('Literal')
+      const isLiteral =
+        destructured.default.type.endsWith('Literal') ||
+        destructured.default.type.startsWith('ArrowFunction')
       return isLiteral ? value : `() => (${value})`
     }
   }
