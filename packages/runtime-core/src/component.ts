@@ -988,9 +988,14 @@ export function formatComponentName(
 ): string {
   let name = getComponentName(Component)
   if (!name && Component.__file) {
-    const match = Component.__file.match(/([^/\\]+)\.\w+$/)
+    const match = Component.__file.match(/(\/(\w+))?(\/(\w+))\.\w+$/)
     if (match) {
-      name = match[1]
+      if(match?.length == 5 && match?.at(4) === "Index"){
+        const dirName = match?.at(2)
+        name = dirName.charAt(0).toUpperCase() + dirName.slice(1)
+      }else{
+        name = match[2]
+      }
     }
   }
 
