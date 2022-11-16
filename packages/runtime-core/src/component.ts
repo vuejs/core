@@ -992,7 +992,7 @@ export function formatComponentName(
     if (match) {
       if(match?.at(4) === "Index"){
         const dirName = match?.at(2)
-        name = dirName?.charAt(0)?.toUpperCase() + dirName?.slice(1)
+        name = dirName!!.charAt(0).toUpperCase() + dirName!!.slice(1)
       } else {
         name = match?.at(4)
       }
