@@ -7,7 +7,7 @@ export class EffectScope {
   /**
    * @internal
    */
-  active = true
+  private _active = true
   /**
    * @internal
    */
@@ -44,8 +44,12 @@ export class EffectScope {
     }
   }
 
+  get active() {
+    return this._active
+  }
+
   run<T>(fn: () => T): T | undefined {
-    if (this.active) {
+    if (this._active) {
       const currentEffectScope = activeEffectScope
       try {
         activeEffectScope = this
@@ -75,7 +79,7 @@ export class EffectScope {
   }
 
   stop(fromParent?: boolean) {
-    if (this.active) {
+    if (this._active) {
       let i, l
       for (i = 0, l = this.effects.length; i < l; i++) {
         this.effects[i].stop()
@@ -98,7 +102,7 @@ export class EffectScope {
         }
       }
       this.parent = undefined
-      this.active = false
+      this._active = false
     }
   }
 }
