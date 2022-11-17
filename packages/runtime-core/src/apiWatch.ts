@@ -93,9 +93,7 @@ export function watchPostEffect(
   return doWatch(
     effect,
     null,
-    (__DEV__
-      ? { ...options, flush: 'post' }
-      : { flush: 'post' }) as WatchOptionsBase
+    __DEV__ ? { ...options, flush: 'post' } : { flush: 'post' }
   )
 }
 
@@ -106,9 +104,7 @@ export function watchSyncEffect(
   return doWatch(
     effect,
     null,
-    (__DEV__
-      ? { ...options, flush: 'sync' }
-      : { flush: 'sync' }) as WatchOptionsBase
+    __DEV__ ? { ...options, flush: 'sync' } : { flush: 'sync' }
   )
 }
 
@@ -333,10 +329,11 @@ function doWatch(
         callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
           newValue,
           // pass undefined as the old value when it's changed for the first time
-          oldValue === INITIAL_WATCHER_VALUE ||
-          (isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE)
+          oldValue === INITIAL_WATCHER_VALUE 
             ? undefined
-            : oldValue,
+            : (isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE)
+              ? []
+              : oldValue,
           onCleanup
         ])
         oldValue = newValue

@@ -11,7 +11,9 @@ import {
   FunctionalComponent,
   ComponentPublicInstance,
   toRefs,
-  IsAny
+  IsAny,
+  SetupContext,
+  expectAssignable
 } from './index'
 
 declare function extractComponentOptions<Props, RawBindings>(
@@ -475,4 +477,12 @@ describe('class', () => {
   const { props } = extractComponentOptions(MyComponent)
 
   expectType<number>(props.foo)
+})
+
+describe('SetupContext', () => {
+  describe('can assign', () => {
+    const wider: SetupContext<{ a: () => true; b: () => true }> = {} as any
+
+    expectAssignable<SetupContext<{ b: () => true }>>(wider)
+  })
 })

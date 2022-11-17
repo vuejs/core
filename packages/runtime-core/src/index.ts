@@ -104,7 +104,7 @@ export { useSSRContext, ssrContextKey } from './helpers/useSsrContext'
 
 export { createRenderer, createHydrationRenderer } from './renderer'
 export { queuePostFlushCb } from './scheduler'
-export { warn } from './warning'
+export { warn, assertNumber } from './warning'
 export {
   handleError,
   callWithErrorHandling,

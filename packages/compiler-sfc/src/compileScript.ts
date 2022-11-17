@@ -41,7 +41,8 @@ import {
   Program,
   ObjectMethod,
   LVal,
-  Expression
+  Expression,
+  VariableDeclaration
 } from '@babel/types'
 import { walk } from 'estree-walker'
 import { RawSourceMap } from 'source-map'
@@ -310,6 +311,7 @@ export function compileScript(
     {
       local: string // local identifier, may be different
       default?: Expression
+      isConst: boolean
     }
   > = Object.create(null)
 
@@ -404,7 +406,11 @@ export function compileScript(
     }
   }
 
-  function processDefineProps(node: Node, declId?: LVal): boolean {
+  function processDefineProps(
+    node: Node,
+    declId?: LVal,
+    declKind?: VariableDeclaration['kind']
+  ): boolean {
     if (!isCallOf(node, DEFINE_PROPS)) {
       return false
     }
@@ -442,22 +448,20 @@ export function compileScript(
     }
 
     if (declId) {
+      const isConst = declKind === 'const'
       if (enablePropsTransform && declId.type === 'ObjectPattern') {
         propsDestructureDecl = declId
         // props destructure - handle compilation sugar
         for (const prop of declId.properties) {
           if (prop.type === 'ObjectProperty') {
-            if (prop.computed) {
+            const propKey = resolveObjectKey(prop.key, prop.computed)
+
+            if (!propKey) {
               error(
                 `${DEFINE_PROPS}() destructure cannot use computed key.`,
                 prop.key
               )
             }
-
-            const propKey =
-              prop.key.type === 'StringLiteral'
-                ? prop.key.value
-                : (prop.key as Identifier).name
 
             if (prop.value.type === 'AssignmentPattern') {
               // default value { foo = 123 }
@@ -471,12 +475,14 @@ export function compileScript(
               // store default value
               propsDestructuredBindings[propKey] = {
                 local: left.name,
-                default: right
+                default: right,
+                isConst
               }
             } else if (prop.value.type === 'Identifier') {
               // simple destructure
               propsDestructuredBindings[propKey] = {
-                local: prop.value.name
+                local: prop.value.name,
+                isConst
               }
             } else {
               error(
@@ -497,11 +503,15 @@ export function compileScript(
     return true
   }
 
-  function processWithDefaults(node: Node, declId?: LVal): boolean {
+  function processWithDefaults(
+    node: Node,
+    declId?: LVal,
+    declKind?: VariableDeclaration['kind']
+  ): boolean {
     if (!isCallOf(node, WITH_DEFAULTS)) {
       return false
     }
-    if (processDefineProps(node.arguments[0], declId)) {
+    if (processDefineProps(node.arguments[0], declId, declKind)) {
       if (propsRuntimeDecl) {
         error(
           `${WITH_DEFAULTS} can only be used with type-based ` +
@@ -774,7 +784,8 @@ export function compileScript(
       propsRuntimeDefaults.type === 'ObjectExpression' &&
       propsRuntimeDefaults.properties.every(
         node =>
-          (node.type === 'ObjectProperty' && !node.computed) ||
+          (node.type === 'ObjectProperty' &&
+            (!node.computed || node.key.type.endsWith('Literal'))) ||
           node.type === 'ObjectMethod'
       )
     )
@@ -795,9 +806,10 @@ export function compileScript(
         if (destructured) {
           defaultString = `default: ${destructured}`
         } else if (hasStaticDefaults) {
-          const prop = propsRuntimeDefaults!.properties.find(
-            (node: any) => node.key.name === key
-          ) as ObjectProperty | ObjectMethod
+          const prop = propsRuntimeDefaults!.properties.find(node => {
+            if (node.type === 'SpreadElement') return false
+            return resolveObjectKey(node.key, node.computed) === key
+          }) as ObjectProperty | ObjectMethod
           if (prop) {
             if (prop.type === 'ObjectProperty') {
               // prop has corresponding static default value
@@ -806,7 +818,9 @@ export function compileScript(
                 prop.value.end!
               )}`
             } else {
-              defaultString = `default() ${scriptSetupSource.slice(
+              defaultString = `${prop.async ? 'async ' : ''}${
+                prop.kind !== 'method' ? `${prop.kind} ` : ''
+              }default() ${scriptSetupSource.slice(
                 prop.body.start!,
                 prop.body.end!
               )}`
@@ -823,10 +837,14 @@ export function compileScript(
           } }`
         } else if (
           type.some(
-            el => el === 'Boolean' || (defaultString && el === 'Function')
+            el =>
+              el === 'Boolean' ||
+              ((!hasStaticDefaults || defaultString) && el === 'Function')
           )
         ) {
-          // #4783 production: if boolean or defaultString and function exists, should keep the type.
+          // #4783 for boolean, should keep the type
+          // #7111 for function, if default value exists or it's not static, should keep it
+          // in production
           return `${key}: { type: ${toRuntimeTypeString(type)}${
             defaultString ? `, ${defaultString}` : ``
           } }`
@@ -874,9 +892,13 @@ export function compileScript(
           m.key.type === 'Identifier'
         ) {
           if (
-            propsRuntimeDefaults!.properties.some(
-              (p: any) => p.key.name === (m.key as Identifier).name
-            )
+            propsRuntimeDefaults!.properties.some(p => {
+              if (p.type === 'SpreadElement') return false
+              return (
+                resolveObjectKey(p.key, p.computed) ===
+                (m.key as Identifier).name
+              )
+            })
           ) {
             res +=
               m.key.name +
@@ -1188,8 +1210,8 @@ export function compileScript(
         if (decl.init) {
           // defineProps / defineEmits
           const isDefineProps =
-            processDefineProps(decl.init, decl.id) ||
-            processWithDefaults(decl.init, decl.id)
+            processDefineProps(decl.init, decl.id, node.kind) ||
+            processWithDefaults(decl.init, decl.id, node.kind)
           const isDefineEmits = processDefineEmits(decl.init, decl.id)
           if (isDefineProps || isDefineEmits) {
             if (left === 1) {
@@ -1479,7 +1501,27 @@ export function compileScript(
         allBindings[key] = true
       }
     }
-    returned = `{ ${Object.keys(allBindings).join(', ')} }`
+    returned = `{ `
+    for (const key in allBindings) {
+      if (
+        allBindings[key] === true &&
+        userImports[key].source !== 'vue' &&
+        !userImports[key].source.endsWith('.vue')
+      ) {
+        // generate getter for import bindings
+        // skip vue imports since we know they will never change
+        returned += `get ${key}() { return ${key} }, `
+      } else if (bindingMetadata[key] === BindingTypes.SETUP_LET) {
+        // local let binding, also add setter
+        const setArg = key === 'v' ? `_v` : `v`
+        returned +=
+          `get ${key}() { return ${key} }, ` +
+          `set ${key}(${setArg}) { ${key} = ${setArg} }, `
+      } else {
+        returned += `${key}, `
+      }
+    }
+    returned = returned.replace(/, $/, '') + ` }`
   } else {
     // inline mode
     if (sfc.template && !sfc.template.src) {
@@ -1532,7 +1574,7 @@ export function compileScript(
       // avoid duplicated unref import
       // as this may get injected by the render function preamble OR the
       // css vars codegen
-      if (ast && ast.helpers.includes(UNREF)) {
+      if (ast && ast.helpers.has(UNREF)) {
         helperImports.delete('unref')
       }
       returned = code
@@ -2139,16 +2181,9 @@ function analyzeBindingsFromOptions(node: ObjectExpression): BindingMetadata {
 function getObjectExpressionKeys(node: ObjectExpression): string[] {
   const keys = []
   for (const prop of node.properties) {
-    if (
-      (prop.type === 'ObjectProperty' || prop.type === 'ObjectMethod') &&
-      !prop.computed
-    ) {
-      if (prop.key.type === 'Identifier') {
-        keys.push(prop.key.name)
-      } else if (prop.key.type === 'StringLiteral') {
-        keys.push(prop.key.value)
-      }
-    }
+    if (prop.type === 'SpreadElement') continue
+    const key = resolveObjectKey(prop.key, prop.computed)
+    if (key) keys.push(String(key))
   }
   return keys
 }
@@ -2296,4 +2331,15 @@ export function hmrShouldReload(
   }
 
   return false
+}
+
+export function resolveObjectKey(node: Node, computed: boolean) {
+  switch (node.type) {
+    case 'StringLiteral':
+    case 'NumericLiteral':
+      return node.value
+    case 'Identifier':
+      if (!computed) return node.name
+  }
+  return undefined
 }
