@@ -1150,4 +1150,26 @@ describe('api: watch', () => {
     // own update effect
     expect(instance!.scope.effects.length).toBe(1)
   })
+
+  // #7160
+  test('when using the deep mode of watch, watchCallBack wont be triggered if the value does not change', async () => {
+    const msg = ref('hi')
+    const msgTrim = computed(() => msg.value.trim())
+
+    let changeCounter = 0
+    let deepChangeCounter = 0
+
+    watch(msgTrim, () => ++changeCounter)
+    watch(msgTrim, () => ++deepChangeCounter, { deep: true })
+
+    msg.value = 'hi!'
+    await nextTick()
+    expect(changeCounter).toBe(1)
+    expect(deepChangeCounter).toBe(1)
+
+    msg.value = 'hi! '
+    await nextTick()
+    expect(changeCounter).toBe(1)
+    expect(deepChangeCounter).toBe(1)
+  })
 })
