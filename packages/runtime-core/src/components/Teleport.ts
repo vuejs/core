@@ -9,9 +9,8 @@ import {
   traverseStaticChildren
 } from '../renderer'
 import { VNode, VNodeArrayChildren, VNodeProps } from '../vnode'
-import { isString, ShapeFlags } from '@vue/shared'
+import { isHmrUpdating, isString, ShapeFlags } from '@vue/shared'
 import { warn } from '../warning'
-import { isHmrUpdating } from '../hmr'
 
 export type TeleportVNode = VNode<RendererNode, RendererElement, TeleportProps>
 

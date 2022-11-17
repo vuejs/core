@@ -35,7 +35,8 @@ import {
   NOOP,
   invokeArrayFns,
   isArray,
-  getGlobalThis
+  getGlobalThis,
+  isHmrUpdating
 } from '@vue/shared'
 import {
   queueJob,
@@ -58,7 +59,7 @@ import {
 } from './components/Suspense'
 import { TeleportImpl, TeleportVNode } from './components/Teleport'
 import { isKeepAlive, KeepAliveContext } from './components/KeepAlive'
-import { registerHMR, unregisterHMR, isHmrUpdating } from './hmr'
+import { registerHMR, unregisterHMR } from './hmr'
 import { createHydrationFunctions, RootHydrateFunction } from './hydration'
 import { invokeDirectiveHook } from './directives'
 import { startMeasure, endMeasure } from './profiling'

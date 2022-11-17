@@ -1,6 +1,6 @@
 import { DebuggerOptions, ReactiveEffect } from './effect'
 import { Ref, trackRefValue, triggerRefValue } from './ref'
-import { isFunction, NOOP } from '@vue/shared'
+import { isFunction, isHmrUpdating, NOOP } from '@vue/shared'
 import { ReactiveFlags, toRaw } from './reactive'
 import { Dep } from './dep'
 
@@ -56,7 +56,11 @@ export class ComputedRefImpl<T> {
     // the computed ref may get wrapped by other proxies e.g. readonly() #3376
     const self = toRaw(this)
     trackRefValue(self)
-    if (self._dirty || !self._cacheable) {
+    // #7155 - should return the latest value during HMR to avoid the page not updating.
+    if (__DEV__ && isHmrUpdating) {
+      self._dirty = false
+      self._value = self.effect.run()!
+    } else if (self._dirty || !self._cacheable) {
       self._dirty = false
       self._value = self.effect.run()!
     }

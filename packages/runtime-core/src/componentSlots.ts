@@ -13,12 +13,12 @@ import {
   ShapeFlags,
   extend,
   def,
-  SlotFlags
+  SlotFlags,
+  isHmrUpdating
 } from '@vue/shared'
 import { warn } from './warning'
 import { isKeepAlive } from './components/KeepAlive'
 import { ContextualRenderFn, withCtx } from './componentRenderContext'
-import { isHmrUpdating } from './hmr'
 import { DeprecationTypes, isCompatEnabled } from './compat/compatConfig'
 import { toRaw } from '@vue/reactivity'
 

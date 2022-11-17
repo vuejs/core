@@ -13,6 +13,7 @@ export * from './escapeHtml'
 export * from './looseEqual'
 export * from './toDisplayString'
 export * from './typeUtils'
+export * from './hmr'
 
 export const EMPTY_OBJ: { readonly [key: string]: any } = __DEV__
   ? Object.freeze({})

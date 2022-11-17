@@ -8,11 +8,9 @@ import {
   isClassComponent
 } from './component'
 import { queueJob, queuePostFlushCb } from './scheduler'
-import { extend, getGlobalThis } from '@vue/shared'
+import { extend, getGlobalThis, setHmrUpdating } from '@vue/shared'
 
 type HMRComponent = ComponentOptions | ClassComponent
-
-export let isHmrUpdating = false
 
 export const hmrDirtyComponents = new Set<ConcreteComponent>()
 
@@ -92,9 +90,9 @@ function rerender(id: string, newRender?: Function) {
     }
     instance.renderCache = []
     // this flag forces child components with slot content to update
-    isHmrUpdating = true
+    setHmrUpdating(true)
     instance.update()
-    isHmrUpdating = false
+    setHmrUpdating(false)
   })
 }
 
