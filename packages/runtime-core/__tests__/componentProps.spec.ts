@@ -13,7 +13,8 @@ import {
   inject,
   watch,
   toRefs,
-  SetupContext
+  SetupContext,
+  isProxy
 } from '@vue/runtime-test'
 import { render as domRender, nextTick } from 'vue'
 
@@ -105,10 +106,12 @@ describe('component props', () => {
     render(h(Comp, { foo: 2, bar: 3, baz: 4 }), root)
     expect(props).toEqual({ foo: 2 })
     expect(attrs).toEqual({ bar: 3, baz: 4 })
+    expect(isProxy(props)).toBe(false)
 
     render(h(Comp, { qux: 5 }), root)
     expect(props).toEqual({})
     expect(attrs).toEqual({ qux: 5 })
+    expect(isProxy(props)).toBe(false)
   })
 
   test('functional without declaration', () => {
@@ -124,11 +127,13 @@ describe('component props', () => {
     expect(props).toEqual({ foo: 1 })
     expect(attrs).toEqual({ foo: 1 })
     expect(props).toBe(attrs)
+    expect(isProxy(props)).toBe(false)
 
     render(h(Comp, { bar: 2 }), root)
     expect(props).toEqual({ bar: 2 })
     expect(attrs).toEqual({ bar: 2 })
     expect(props).toBe(attrs)
+    expect(isProxy(props)).toBe(false)
   })
 
   test('boolean casting', () => {
