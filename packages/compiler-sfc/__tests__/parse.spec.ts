@@ -319,11 +319,57 @@ h1 { color: red }
         `At least one <template> or <script> is required in a single file component`
       )
     })
+  })
+
+  describe('default script lang', () => {
+    test('default script lang', () => {
+      const { descriptor, errors } = parse(
+        `<script>console.log(0x0f)</script>`,
+        {
+          defaultScriptLang: 'ts'
+        }
+      )
+      expect(errors.length).toBe(0)
+      expect(descriptor.script?.lang).toBe('ts')
+    })
+
+    test('default script setup lang without default script lang', () => {
+      const { descriptor, errors } = parse(
+        `<script>console.log(0x02)</script>`,
+        {
+          defaultScriptSetupLang: 'ts'
+        }
+      )
+      expect(errors.length).toBe(0)
+      expect(descriptor.script?.lang).toBeUndefined()
+    })
+
+    test('default script setup lang', () => {
+      const { descriptor, errors } = parse(
+        `<script setup>console.log(0x03)</script>`,
+        {
+          defaultScriptLang: 'ts'
+        }
+      )
+      expect(errors.length).toBe(0)
+      expect(descriptor.scriptSetup?.lang).toBe('ts')
+    })
+
+    test('default script setup lang by `defaultScriptSetupLang`', () => {
+      const { descriptor, errors } = parse(
+        `<script setup>console.log(0x04)</script>`,
+        {
+          defaultScriptSetupLang: 'tsx'
+        }
+      )
+      expect(errors.length).toBe(0)
+      expect(descriptor.scriptSetup?.lang).toBe('tsx')
+    })
 
     test('different default lang for script & script setup', () => {
       const { descriptor, errors } = parse(
         `<script setup>const foo: string = 'bar'</script>
-        <script>console.log(1)</script>`,
+        <script>console.log(0x05)</script>`,
         {
           defaultScriptLang: 'ts',
           defaultScriptSetupLang: 'tsx'
@@ -336,8 +382,10 @@ h1 { color: red }
 
     test('the same default lang for script & script setup', () => {
       const { descriptor, errors } = parse(
-        `<script setup>const foo: string = 'bar'</script>
-        <script>console.log(1)</script>`,
+        `
+        <script>console.log(0x06)</script>
+        <script setup>console.log(0x07)</script>
+        `,
         {
           defaultScriptLang: 'ts'
         }
