@@ -22,6 +22,9 @@ export interface SFCParseOptions {
   pad?: boolean | 'line' | 'space'
   ignoreEmpty?: boolean
   compiler?: TemplateCompiler
+
+  defaultScriptLang?: string
+  defaultScriptSetupLang?: string
 }
 
 export interface SFCBlock {
@@ -95,7 +98,9 @@ export function parse(
     sourceRoot = '',
     pad = false,
     ignoreEmpty = true,
-    compiler = CompilerDOM
+    compiler = CompilerDOM,
+    defaultScriptLang,
+    defaultScriptSetupLang
   }: SFCParseOptions = {}
 ): SFCParseResult {
   const sourceKey =
@@ -190,6 +195,14 @@ export function parse(
       case 'script':
         const scriptBlock = createBlock(node, source, pad) as SFCScriptBlock
         const isSetup = !!scriptBlock.attrs.setup
+        if (isSetup && defaultScriptSetupLang) {
+          scriptBlock.lang ??= defaultScriptSetupLang
+        }
+
+        if (defaultScriptLang) {
+          scriptBlock.lang ??= defaultScriptLang
+        }
+
         if (isSetup && !descriptor.scriptSetup) {
           descriptor.scriptSetup = scriptBlock
           break
