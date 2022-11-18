@@ -322,7 +322,7 @@ h1 { color: red }
   })
 
   describe('default script lang', () => {
-    test('default script lang', () => {
+    test('default lang for script', () => {
       const { descriptor, errors } = parse(
         `<script>console.log(0x0f)</script>`,
         {
@@ -333,18 +333,7 @@ h1 { color: red }
       expect(descriptor.script?.lang).toBe('ts')
     })
 
-    test('default script setup lang without default script lang', () => {
-      const { descriptor, errors } = parse(
-        `<script>console.log(0x02)</script>`,
-        {
-          defaultScriptSetupLang: 'ts'
-        }
-      )
-      expect(errors.length).toBe(0)
-      expect(descriptor.script?.lang).toBeUndefined()
-    })
-
-    test('default script setup lang', () => {
+    test('default lang for script setup', () => {
       const { descriptor, errors } = parse(
         `<script setup>console.log(0x03)</script>`,
         {
@@ -355,32 +344,7 @@ h1 { color: red }
       expect(descriptor.scriptSetup?.lang).toBe('ts')
     })
 
-    test('default script setup lang by `defaultScriptSetupLang`', () => {
-      const { descriptor, errors } = parse(
-        `<script setup>console.log(0x04)</script>`,
-        {
-          defaultScriptSetupLang: 'tsx'
-        }
-      )
-      expect(errors.length).toBe(0)
-      expect(descriptor.scriptSetup?.lang).toBe('tsx')
-    })
-
-    test('different default lang for script & script setup', () => {
-      const { descriptor, errors } = parse(
-        `<script setup>const foo: string = 'bar'</script>
-        <script>console.log(0x05)</script>`,
-        {
-          defaultScriptLang: 'ts',
-          defaultScriptSetupLang: 'tsx'
-        }
-      )
-      expect(errors.length).toBe(0)
-      expect(descriptor.script?.lang).toBe('ts')
-      expect(descriptor.scriptSetup?.lang).toBe('tsx')
-    })
-
-    test('the same default lang for script & script setup', () => {
+    test('default lang for script & script setup', () => {
       const { descriptor, errors } = parse(
         `
         <script>console.log(0x06)</script>
