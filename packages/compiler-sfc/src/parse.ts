@@ -101,7 +101,13 @@ export function parse(
   }: SFCParseOptions = {}
 ): SFCParseResult {
   const sourceKey =
-    source + sourceMap + filename + sourceRoot + pad + compiler.parse
+    source +
+    sourceMap +
+    filename +
+    sourceRoot +
+    pad +
+    compiler.parse +
+    (defaultScriptLang ?? '')
   const cache = sourceToSFC.get(sourceKey)
   if (cache) {
     return cache
