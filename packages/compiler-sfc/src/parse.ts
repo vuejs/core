@@ -195,19 +195,14 @@ export function parse(
       case 'script':
         const scriptBlock = createBlock(node, source, pad) as SFCScriptBlock
         const isSetup = !!scriptBlock.attrs.setup
-        if (isSetup && defaultScriptSetupLang) {
-          scriptBlock.lang ??= defaultScriptSetupLang
-        }
-
-        if (defaultScriptLang) {
-          scriptBlock.lang ??= defaultScriptLang
-        }
 
         if (isSetup && !descriptor.scriptSetup) {
+          scriptBlock.lang ??= defaultScriptSetupLang ?? defaultScriptLang
           descriptor.scriptSetup = scriptBlock
           break
         }
         if (!isSetup && !descriptor.script) {
+          scriptBlock.lang ??= defaultScriptLang
           descriptor.script = scriptBlock
           break
         }
