@@ -358,5 +358,20 @@ h1 { color: red }
       expect(descriptor.script?.lang).toBe('ts')
       expect(descriptor.scriptSetup?.lang).toBe('ts')
     })
+
+    test('source cache key', () => {
+      const { descriptor, errors } = parse(
+        `
+        <script>console.log(0x06)</script>
+        <script setup>console.log(0x07)</script>
+        `,
+        {
+          defaultScriptLang: 'tsx'
+        }
+      )
+      expect(errors.length).toBe(0)
+      expect(descriptor.script?.lang).toBe('tsx')
+      expect(descriptor.scriptSetup?.lang).toBe('tsx')
+    })
   })
 })
