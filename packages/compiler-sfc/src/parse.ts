@@ -107,7 +107,7 @@ export function parse(
     sourceRoot +
     pad +
     compiler.parse +
-    (defaultScriptLang ?? '')
+    (defaultScriptLang || '')
   const cache = sourceToSFC.get(sourceKey)
   if (cache) {
     return cache
@@ -199,12 +199,12 @@ export function parse(
         const scriptBlock = createBlock(node, source, pad) as SFCScriptBlock
         const isSetup = !!scriptBlock.attrs.setup
         if (isSetup && !descriptor.scriptSetup) {
-          scriptBlock.lang ??= defaultScriptLang
+          if (!scriptBlock.lang) scriptBlock.lang = defaultScriptLang
           descriptor.scriptSetup = scriptBlock
           break
         }
         if (!isSetup && !descriptor.script) {
-          scriptBlock.lang ??= defaultScriptLang
+          if (!scriptBlock.lang) scriptBlock.lang = defaultScriptLang
           descriptor.script = scriptBlock
           break
         }
