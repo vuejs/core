@@ -359,7 +359,9 @@ h1 { color: red }
       expect(descriptor.scriptSetup?.lang).toBe('ts')
     })
 
+    // This only tests if the "source to sfc" cache has "defaultScriptLang" as part of the cache key.
     test('source cache key', () => {
+      // The same SFC as previous test
       const { descriptor, errors } = parse(
         `
         <script>console.log(0x06)</script>
