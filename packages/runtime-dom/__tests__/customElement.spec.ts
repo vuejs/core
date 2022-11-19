@@ -1,5 +1,6 @@
 import {
   defineAsyncComponent,
+  defineComponent,
   defineCustomElement,
   h,
   inject,
@@ -71,6 +72,18 @@ describe('defineCustomElement', () => {
       expect(e._instance).toBe(i)
       expect(e.shadowRoot!.innerHTML).toBe('<div>hello</div>')
     })
+
+    test('remove then insert again', async () => {
+      container.innerHTML = `<my-element></my-element>`
+      const e = container.childNodes[0] as VueElement
+      container.removeChild(e)
+      await nextTick()
+      expect(e._instance).toBe(null)
+      expect(e.shadowRoot!.innerHTML).toBe('')
+      container.appendChild(e)
+      expect(e._instance).toBeTruthy()
+      expect(e.shadowRoot!.innerHTML).toBe('<div>hello</div>')
+    })
   })
 
   describe('props', () => {
@@ -135,14 +148,14 @@ describe('defineCustomElement', () => {
     test('attribute -> prop type casting', async () => {
       const E = defineCustomElement({
         props: {
-          foo: Number,
+          fooBar: Number, // test casting of camelCase prop names
           bar: Boolean,
           baz: String
         },
         render() {
           return [
-            this.foo,
-            typeof this.foo,
+            this.fooBar,
+            typeof this.fooBar,
             this.bar,
             typeof this.bar,
             this.baz,
@@ -151,7 +164,7 @@ describe('defineCustomElement', () => {
         }
       })
       customElements.define('my-el-props-cast', E)
-      container.innerHTML = `<my-el-props-cast foo="1" baz="12345"></my-el-props-cast>`
+      container.innerHTML = `<my-el-props-cast foo-bar="1" baz="12345"></my-el-props-cast>`
       const e = container.childNodes[0] as VueElement
       expect(e.shadowRoot!.innerHTML).toBe(
         `1 number false boolean 12345 string`
@@ -161,7 +174,7 @@ describe('defineCustomElement', () => {
       await nextTick()
       expect(e.shadowRoot!.innerHTML).toBe(`1 number true boolean 12345 string`)
 
-      e.setAttribute('foo', '2e1')
+      e.setAttribute('foo-bar', '2e1')
       await nextTick()
       expect(e.shadowRoot!.innerHTML).toBe(
         `20 number true boolean 12345 string`
@@ -200,28 +213,121 @@ describe('defineCustomElement', () => {
           expect(props.dataAge).toBe(5)
         },
         render() {
-          return `foo: ${this.foo}`
+          return h('div', `foo: ${this.foo}`)
         }
       })
       const el = document.createElement('my-el-upgrade') as any
       el.foo = 'hello'
       el.dataset.age = 5
+      el.notProp = 1
       container.appendChild(el)
       customElements.define('my-el-upgrade', E)
-      expect(el.shadowRoot.innerHTML).toBe(`foo: hello`)
+      expect(el.shadowRoot.firstChild.innerHTML).toBe(`foo: hello`)
+      // should not reflect if not declared as a prop
+      expect(el.hasAttribute('not-prop')).toBe(false)
+    })
+
+    test('handle properties set before connecting', () => {
+      const obj = { a: 1 }
+      const E = defineCustomElement({
+        props: {
+          foo: String,
+          post: Object
+        },
+        setup(props) {
+          expect(props.foo).toBe('hello')
+          expect(props.post).toBe(obj)
+        },
+        render() {
+          return JSON.stringify(this.post)
+        }
+      })
+      customElements.define('my-el-preconnect', E)
+      const el = document.createElement('my-el-preconnect') as any
+      el.foo = 'hello'
+      el.post = obj
+
+      container.appendChild(el)
+      expect(el.shadowRoot.innerHTML).toBe(JSON.stringify(obj))
+    })
+
+    // https://github.com/vuejs/core/issues/6163
+    test('handle components with no props', async () => {
+      const E = defineCustomElement({
+        render() {
+          return h('div', 'foo')
+        }
+      })
+      customElements.define('my-element-noprops', E)
+      const el = document.createElement('my-element-noprops')
+      container.appendChild(el)
+      await nextTick()
+      expect(el.shadowRoot!.innerHTML).toMatchInlineSnapshot('"<div>foo</div>"')
+    })
+
+    // # 5793
+    test('set number value in dom property', () => {
+      const E = defineCustomElement({
+        props: {
+          'max-age': Number
+        },
+        render() {
+          // @ts-ignore
+          return `max age: ${this.maxAge}/type: ${typeof this.maxAge}`
+        }
+      })
+      customElements.define('my-element-number-property', E)
+      const el = document.createElement('my-element-number-property') as any
+      container.appendChild(el)
+      el.maxAge = 50
+      expect(el.maxAge).toBe(50)
+      expect(el.shadowRoot.innerHTML).toBe('max age: 50/type: number')
+    })
+  })
+
+  describe('attrs', () => {
+    const E = defineCustomElement({
+      render() {
+        return [h('div', null, this.$attrs.foo as string)]
+      }
+    })
+    customElements.define('my-el-attrs', E)
+
+    test('attrs via attribute', async () => {
+      container.innerHTML = `<my-el-attrs foo="hello"></my-el-attrs>`
+      const e = container.childNodes[0] as VueElement
+      expect(e.shadowRoot!.innerHTML).toBe('<div>hello</div>')
+
+      e.setAttribute('foo', 'changed')
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe('<div>changed</div>')
+    })
+
+    test('non-declared properties should not show up in $attrs', () => {
+      const e = new E()
+      // @ts-ignore
+      e.foo = '123'
+      container.appendChild(e)
+      expect(e.shadowRoot!.innerHTML).toBe('<div></div>')
     })
   })
 
   describe('emits', () => {
-    const E = defineCustomElement({
+    const CompDef = defineComponent({
       setup(_, { emit }) {
         emit('created')
         return () =>
           h('div', {
-            onClick: () => emit('my-click', 1)
+            onClick: () => {
+              emit('my-click', 1)
+            },
+            onMousedown: () => {
+              emit('myEvent', 1) // validate hypenization
+            }
           })
       }
     })
+    const E = defineCustomElement(CompDef)
     customElements.define('my-el-emits', E)
 
     test('emit on connect', () => {
@@ -237,6 +343,41 @@ describe('defineCustomElement', () => {
       const e = container.childNodes[0] as VueElement
       const spy = jest.fn()
       e.addEventListener('my-click', spy)
+      e.shadowRoot!.childNodes[0].dispatchEvent(new CustomEvent('click'))
+      expect(spy).toHaveBeenCalledTimes(1)
+      expect(spy.mock.calls[0][0]).toMatchObject({
+        detail: [1]
+      })
+    })
+
+    // #5373
+    test('case transform for camelCase event', () => {
+      container.innerHTML = `<my-el-emits></my-el-emits>`
+      const e = container.childNodes[0] as VueElement
+      const spy1 = jest.fn()
+      e.addEventListener('myEvent', spy1)
+      const spy2 = jest.fn()
+      // emitting myEvent, but listening for my-event. This happens when
+      // using the custom element in a Vue template
+      e.addEventListener('my-event', spy2)
+      e.shadowRoot!.childNodes[0].dispatchEvent(new CustomEvent('mousedown'))
+      expect(spy1).toHaveBeenCalledTimes(1)
+      expect(spy2).toHaveBeenCalledTimes(1)
+    })
+
+    test('emit from within async component wrapper', async () => {
+      const E = defineCustomElement(
+        defineAsyncComponent(
+          () => new Promise<typeof CompDef>(res => res(CompDef as any))
+        )
+      )
+      customElements.define('my-async-el-emits', E)
+      container.innerHTML = `<my-async-el-emits></my-async-el-emits>`
+      const e = container.childNodes[0] as VueElement
+      const spy = jest.fn()
+      e.addEventListener('my-click', spy)
+      // this feels brittle but seems necessary to reach the node in the DOM.
+      await customElements.whenDefined('my-async-el-emits')
       e.shadowRoot!.childNodes[0].dispatchEvent(new CustomEvent('click'))
       expect(spy).toHaveBeenCalled()
       expect(spy.mock.calls[0][0]).toMatchObject({
@@ -322,6 +463,52 @@ describe('defineCustomElement', () => {
       foo.value = 'changed!'
       await nextTick()
       expect(consumer.shadowRoot!.innerHTML).toBe(`<div>changed!</div>`)
+    })
+
+    test('inherited from ancestors', async () => {
+      const fooA = ref('FooA!')
+      const fooB = ref('FooB!')
+      const ProviderA = defineCustomElement({
+        provide: {
+          fooA
+        },
+        render() {
+          return h('provider-b')
+        }
+      })
+      const ProviderB = defineCustomElement({
+        provide: {
+          fooB
+        },
+        render() {
+          return h('my-multi-consumer')
+        }
+      })
+
+      const Consumer = defineCustomElement({
+        setup() {
+          const fooA = inject<Ref>('fooA')!
+          const fooB = inject<Ref>('fooB')!
+          return () => h('div', `${fooA.value} ${fooB.value}`)
+        }
+      })
+
+      customElements.define('provider-a', ProviderA)
+      customElements.define('provider-b', ProviderB)
+      customElements.define('my-multi-consumer', Consumer)
+      container.innerHTML = `<provider-a><provider-a>`
+      const providerA = container.childNodes[0] as VueElement
+      const providerB = providerA.shadowRoot!.childNodes[0] as VueElement
+      const consumer = providerB.shadowRoot!.childNodes[0] as VueElement
+
+      expect(consumer.shadowRoot!.innerHTML).toBe(`<div>FooA! FooB!</div>`)
+
+      fooA.value = 'changedA!'
+      fooB.value = 'changedB!'
+      await nextTick()
+      expect(consumer.shadowRoot!.innerHTML).toBe(
+        `<div>changedA! changedB!</div>`
+      )
     })
   })
 

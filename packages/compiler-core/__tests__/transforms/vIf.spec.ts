@@ -628,6 +628,24 @@ describe('compiler: v-if', () => {
       expect(branch1.props).toMatchObject(createObjectMatcher({ key: `[0]` }))
     })
 
+    // #6631
+    test('avoid duplicate keys', () => {
+      const {
+        node: { codegenNode }
+      } = parseWithIfTransform(`<div v-if="ok" key="custom_key" v-bind="obj"/>`)
+      const branch1 = codegenNode.consequent as VNodeCall
+      expect(branch1.props).toMatchObject({
+        type: NodeTypes.JS_CALL_EXPRESSION,
+        callee: MERGE_PROPS,
+        arguments: [
+          createObjectMatcher({
+            key: 'custom_key'
+          }),
+          { content: `obj` }
+        ]
+      })
+    })
+
     test('with spaces between branches', () => {
       const {
         node: { codegenNode }
@@ -693,6 +711,27 @@ describe('compiler: v-if', () => {
 
       expect(b1.children[3].type).toBe(NodeTypes.ELEMENT)
       expect((b1.children[3] as ElementNode).tag).toBe(`p`)
+    })
+
+    // #6843
+    test('should parse correctly with comments: true in prod', () => {
+      __DEV__ = false
+      parseWithIfTransform(
+        `
+          <template v-if="ok">
+            <!--comment1-->
+            <div v-if="ok2">
+              <!--comment2-->
+            </div>
+            <!--comment3-->
+            <b v-else/>
+            <!--comment4-->
+            <p/>
+          </template>
+        `,
+        { comments: true }
+      )
+      __DEV__ = true
     })
   })
 

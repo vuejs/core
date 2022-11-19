@@ -87,6 +87,25 @@ describe(`runtime-dom: style patching`, () => {
     expect(el.style.cssText).toBe('')
   })
 
+  it('should warn for trailing semicolons', () => {
+    const el = document.createElement('div')
+    patchProp(el, 'style', null, { color: 'red;' })
+    expect(
+      `Unexpected semicolon at the end of 'color' style value: 'red;'`
+    ).toHaveBeenWarned()
+
+    patchProp(el, 'style', null, { '--custom': '100; ' })
+    expect(
+      `Unexpected semicolon at the end of '--custom' style value: '100; '`
+    ).toHaveBeenWarned()
+  })
+
+  it('should not warn for escaped trailing semicolons', () => {
+    const el = document.createElement('div')
+    patchProp(el, 'style', null, { '--custom': '100\\;' })
+    expect(el.style.getPropertyValue('--custom')).toBe('100\\;')
+  })
+
   // JSDOM doesn't support custom properties on style object so we have to
   // mock it here.
   function mockElementWithStyle() {
