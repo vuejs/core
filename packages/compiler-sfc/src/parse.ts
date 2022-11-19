@@ -107,7 +107,7 @@ export function parse(
     sourceRoot +
     pad +
     compiler.parse +
-    (defaultScriptLang || '')
+    (defaultScriptLang ? '@' + defaultScriptLang : '')
   const cache = sourceToSFC.get(sourceKey)
   if (cache) {
     return cache
