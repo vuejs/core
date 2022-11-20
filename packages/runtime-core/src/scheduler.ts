@@ -25,9 +25,9 @@ export interface SchedulerJob extends Function {
    */
   allowRecurse?: boolean
   /**
-   * 1. Attached by renderer.ts when setting up a component's render effect
-   * Used to obtain component information when reporting max recursive updates in dev.
-   * 2. Attached by apiWatch.ts when use a pre watcher
+   * Attached by renderer.ts when setting up a component's render effect
+   * Used to obtain component information when reporting max recursive updates.
+   * dev only.
    */
   ownerInstance?: ComponentInternalInstance
 }

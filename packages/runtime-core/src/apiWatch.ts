@@ -357,10 +357,7 @@ function doWatch(
   } else {
     // default: 'pre'
     job.pre = true
-    if (instance) {
-      job.id = instance.uid
-      job.ownerInstance = instance
-    }
+    if (instance) job.id = instance.uid
     scheduler = () => queueJob(job)
   }
 
