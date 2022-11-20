@@ -148,7 +148,7 @@ export function flushPreFlushCbs(
       if (__DEV__ && checkRecursiveUpdates(seen!, cb)) {
         continue
       }
-      if (instance && instance !== cb.ownerInstance) {
+      if (instance && cb.id !== instance.uid) {
         continue
       }
       queue.splice(i, 1)
