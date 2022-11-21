@@ -36,7 +36,7 @@ export function ssrTransformSuspense(
         wipSlots: []
       }
       wipMap.set(node, wipEntry)
-      wipEntry.slotsExp = buildSlots(node, context, (_props, children, loc) => {
+      wipEntry.slotsExp = buildSlots(node, context, (_props, _vFor, children, loc) => {
         const fn = createFunctionExpression(
           [],
           undefined, // no return, assign body later

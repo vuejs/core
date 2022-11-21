@@ -201,7 +201,7 @@ describe('ssr: components', () => {
                     _push(\`\${_ssrInterpolate(msg + key + _ctx.bar)}\`)
                   } else {
                     return [
-                      _createTextVNode(_toDisplayString(msg + _ctx.key + _ctx.bar), 1 /* TEXT */)
+                      _createTextVNode(_toDisplayString(msg + key + _ctx.bar), 1 /* TEXT */)
                     ]
                   }
                 })

@@ -125,8 +125,8 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
     // fallback in case the child is render-fn based). Store them in an array
     // for later use.
     if (clonedNode.children.length) {
-      buildSlots(clonedNode, context, (props, children) => {
-        vnodeBranches.push(createVNodeSlotBranch(props, children, context))
+      buildSlots(clonedNode, context, (props, vFor, children) => {
+        vnodeBranches.push(createVNodeSlotBranch(props, vFor, children, context))
         return createFunctionExpression(undefined)
       })
     }
@@ -150,7 +150,7 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
     const wipEntries: WIPSlotEntry[] = []
     wipMap.set(node, wipEntries)
 
-    const buildSSRSlotFn: SlotFnBuilder = (props, children, loc) => {
+    const buildSSRSlotFn: SlotFnBuilder = (props, _vFor, children, loc) => {
       const param0 = (props && stringifyExpression(props)) || `_`
       const fn = createFunctionExpression(
         [param0, `_push`, `_parent`, `_scopeId`],
@@ -277,6 +277,7 @@ const vnodeDirectiveTransforms = {
 
 function createVNodeSlotBranch(
   props: ExpressionNode | undefined,
+  vFor: ExpressionNode | undefined,
   children: TemplateChildNode[],
   parentContext: TransformContext
 ): ReturnStatement {
@@ -303,13 +304,21 @@ function createVNodeSlotBranch(
     tag: 'template',
     tagType: ElementTypes.TEMPLATE,
     isSelfClosing: false,
-    // important: provide v-slot="props" on the wrapper for proper
+    // important: provide v-slot="props" and v-for="exp" on the wrapper for proper
     // scope analysis
     props: [
       {
         type: NodeTypes.DIRECTIVE,
         name: 'slot',
         exp: props,
+        arg: undefined,
+        modifiers: [],
+        loc: locStub
+      },
+      {
+        type: NodeTypes.DIRECTIVE,
+        name: 'for',
+        exp: vFor,
         arg: undefined,
         modifiers: [],
         loc: locStub
