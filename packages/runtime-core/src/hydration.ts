@@ -576,9 +576,9 @@ export function createHydrationFunctions(
     __DEV__ &&
       warn(
         `Hydration node mismatch:\n- Client vnode:`,
-        vnode.type,
-        `\n- Server rendered DOM:`,
         node,
+        `\n- Server rendered DOM:`,
+        vnode.type,
         node.nodeType === DOMNodeTypes.TEXT
           ? `(text)`
           : isComment(node) && node.data === '['
