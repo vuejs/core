@@ -558,10 +558,11 @@ function validatePropName(key: string) {
 // so that it works across vms / iframes.
 function getType(ctor: Prop<any>): string {
   const ctorStr = ctor && ctor.toString()
-  let match: RegExpMatchArray | null
-  if (ctorStr.startsWith('class')) {
+  let match: RegExpMatchArray | null = null
+  if (ctorStr && ctorStr.startsWith('class')) {
     match = ctor && ctor.toString().match(/^\s*class (\w+)/)
-  } else {
+  }
+  if (ctorStr && ctorStr.startsWith('function')) {
     match = ctor && ctor.toString().match(/^\s*function (\w+)/)
   }
   return match ? match[1] : ctor === null ? 'null' : ''
