@@ -557,15 +557,8 @@ function validatePropName(key: string) {
 // use function string name to check type constructors
 // so that it works across vms / iframes.
 function getType(ctor: Prop<any>): string {
-  const ctorStr = ctor && ctor.toString()
-  let match: RegExpMatchArray | null = null
-  if (ctorStr && ctorStr.startsWith('class')) {
-    match = ctor && ctor.toString().match(/^\s*class (\w+)/)
-  }
-  if (ctorStr && ctorStr.startsWith('function')) {
-    match = ctor && ctor.toString().match(/^\s*function (\w+)/)
-  }
-  return match ? match[1] : ctor === null ? 'null' : ''
+  const match = ctor && ctor.toString().match(/^\s*(function|class) (\w+)/)
+  return match ? match[2] : ctor === null ? 'null' : ''
 }
 
 function isSameType(a: Prop<any>, b: Prop<any>): boolean {
