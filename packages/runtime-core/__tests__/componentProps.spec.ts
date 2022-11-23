@@ -321,6 +321,42 @@ describe('component props', () => {
     expect(`Missing required prop: "num"`).toHaveBeenWarned()
   })
 
+  test('warn on type mismatch', () => {
+    class MyClass {
+
+    }
+    const Comp = {
+      props: {
+        bool: { type: Boolean },
+        str: { type: String },
+        num: { type: Number },
+        arr: { type: Array },
+        obj: { type: Object },
+        cls: { type: MyClass },
+        fn: { type: Function },
+      },
+      setup() {
+        return () => null
+      }
+    }
+    render(h(Comp, {
+        bool: 'true',
+        str: 100,
+        num: '100',
+        arr: {},
+        obj: 'false',
+        cls: {},
+        fn: true,
+    }), nodeOps.createElement('div'))
+    expect(`Invalid prop: type check failed for prop "bool". Expected Boolean, got String`).toHaveBeenWarned()
+    expect(`Invalid prop: type check failed for prop "str". Expected String with value "100", got Number with value 100.`).toHaveBeenWarned()
+    expect(`Invalid prop: type check failed for prop "num". Expected Number with value 100, got String with value "100".`).toHaveBeenWarned()
+    expect(`Invalid prop: type check failed for prop "arr". Expected Array, got Object`).toHaveBeenWarned()
+    expect(`Invalid prop: type check failed for prop "obj". Expected Object, got String with value "false"`).toHaveBeenWarned()
+    expect(`Invalid prop: type check failed for prop "fn". Expected Function, got Boolean with value true.`).toHaveBeenWarned()
+    expect(`Invalid prop: type check failed for prop "cls". Expected MyClass, got Object`).toHaveBeenWarned()
+  })
+
   // #3495
   test('should not warn required props using kebab-case', async () => {
     const Comp = {
