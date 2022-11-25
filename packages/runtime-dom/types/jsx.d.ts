@@ -1301,21 +1301,23 @@ export interface Events {
 }
 
 type EventHandlers<E> = {
-  [K in keyof E]?: E[K] extends (...args: any) => any ? E[K] : (payload: E[K]) => void
+  [K in keyof E]?: E[K] extends (...args: any) => any
+    ? E[K]
+    : (payload: E[K]) => void
 }
 
 // use namespace import to avoid collision with generated types which use
 // named imports.
 import * as RuntimeCore from '@vue/runtime-core'
 
-type ReservedProps = {
+export interface ReservedProps {
   key?: string | number | symbol
   ref?: RuntimeCore.VNodeRef
   ref_for?: boolean
   ref_key?: string
 }
 
-type ElementAttrs<T> = T & ReservedProps
+export type ElementAttrs<T> = T & ReservedProps
 
 type NativeElements = {
   [K in keyof IntrinsicElementAttributes]: ElementAttrs<
