@@ -42,7 +42,7 @@ import {
   WITH_MEMO,
   OPEN_BLOCK
 } from './runtimeHelpers'
-import { isString, isObject, hyphenate, extend, NOOP } from '@vue/shared'
+import { isString, isObject, hyphenate, extend, NOOP, isSymbol } from '@vue/shared'
 import { PropsExpression } from './transforms/transformElement'
 import { parseExpression } from '@babel/parser'
 import { Expression } from '@babel/types'
@@ -351,7 +351,7 @@ function getUnnormalizedProps(
     props.type === NodeTypes.JS_CALL_EXPRESSION
   ) {
     const callee = props.callee
-    if (!isString(callee) && propsHelperSet.has(callee)) {
+    if (isSymbol(callee) && propsHelperSet.has(callee)) {
       return getUnnormalizedProps(
         props.arguments[0] as PropsExpression,
         callPath.concat(props)

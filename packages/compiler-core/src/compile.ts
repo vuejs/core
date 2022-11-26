@@ -18,6 +18,7 @@ import { transformModel } from './transforms/vModel'
 import { transformFilter } from './compat/transformFilter'
 import { defaultOnError, createCompilerError, ErrorCodes } from './errors'
 import { transformMemo } from './transforms/vMemo'
+import { trackVLetScopes, transformLet } from './transforms/vLet'
 
 export type TransformPreset = [
   NodeTransform[],
@@ -32,6 +33,7 @@ export function getBaseTransformPreset(
       transformOnce,
       transformIf,
       transformMemo,
+      transformLet,
       transformFor,
       ...(__COMPAT__ ? [transformFilter] : []),
       ...(!__BROWSER__ && prefixIdentifiers
@@ -46,6 +48,7 @@ export function getBaseTransformPreset(
       transformSlotOutlet,
       transformElement,
       trackSlotScopes,
+      trackVLetScopes,
       transformText
     ],
     {

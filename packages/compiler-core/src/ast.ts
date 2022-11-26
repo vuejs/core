@@ -137,6 +137,7 @@ export interface PlainElementNode extends BaseElementNode {
     | SimpleExpressionNode // when hoisted
     | CacheExpression // when cached by v-once
     | MemoExpression // when cached by v-memo
+    | CallExpression
     | undefined
   ssrCodegenNode?: TemplateLiteral
 }
@@ -323,7 +324,7 @@ export type JSChildNode =
 
 export interface CallExpression extends Node {
   type: NodeTypes.JS_CALL_EXPRESSION
-  callee: string | symbol
+  callee: string | symbol | FunctionExpression
   arguments: (
     | string
     | symbol
