@@ -1,12 +1,12 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`compiler: v-let transform complex expression 1`] = `
-"import { toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, createElementVNode as _createElementVNode, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
+"import { toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, createElementVNode as _createElementVNode, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
 
 export function render(_ctx, _cache) {
-  return (_openBlock(), _createElementBlock(\\"div\\", null, [
-    ((a=_ctx.foo+_ctx.bar) => _createElementVNode(\\"div\\", null, [
-      ((b=a+_ctx.baz) => _createElementVNode(\\"span\\", null, [
+  return (_openBlock(), _createElementBlock("div", null, [
+    ((a=_ctx.foo+_ctx.bar) => _createElementVNode("div", null, [
+      ((b=a+_ctx.baz) => _createElementVNode("span", null, [
         _createTextVNode(_toDisplayString(b), 1 /* TEXT */)
       ]))()
     ]))()
@@ -15,24 +15,24 @@ export function render(_ctx, _cache) {
 `;
 
 exports[`compiler: v-let transform multiple declare 1`] = `
-"import { toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, createElementVNode as _createElementVNode, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
+"import { toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, createElementVNode as _createElementVNode, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
 
 export function render(_ctx, _cache) {
-  return (_openBlock(), _createElementBlock(\\"div\\", null, [
-    ((a=1,  b=2) => _createElementVNode(\\"div\\", null, [
-      _createTextVNode(_toDisplayString(a) + \\" \\" + _toDisplayString(b), 1 /* TEXT */)
+  return (_openBlock(), _createElementBlock("div", null, [
+    ((a=1,  b=2) => _createElementVNode("div", null, [
+      _createTextVNode(_toDisplayString(a) + " " + _toDisplayString(b), 1 /* TEXT */)
     ]))()
   ]))
 }"
 `;
 
 exports[`compiler: v-let transform nested v-let 1`] = `
-"import { toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, createElementVNode as _createElementVNode, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
+"import { toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, createElementVNode as _createElementVNode, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
 
 export function render(_ctx, _cache) {
-  return (_openBlock(), _createElementBlock(\\"div\\", null, [
-    ((a=1) => _createElementVNode(\\"div\\", null, [
-      ((b=1) => _createElementVNode(\\"span\\", null, [
+  return (_openBlock(), _createElementBlock("div", null, [
+    ((a=1) => _createElementVNode("div", null, [
+      ((b=1) => _createElementVNode("span", null, [
         _createTextVNode(_toDisplayString(a) + _toDisplayString(b), 1 /* TEXT */)
       ]))()
     ]))()
@@ -41,11 +41,11 @@ export function render(_ctx, _cache) {
 `;
 
 exports[`compiler: v-let transform should work 1`] = `
-"import { toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, createElementVNode as _createElementVNode, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
+"import { toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, createElementVNode as _createElementVNode, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
 
 export function render(_ctx, _cache) {
-  return (_openBlock(), _createElementBlock(\\"div\\", null, [
-    ((a=1) => _createElementVNode(\\"div\\", null, [
+  return (_openBlock(), _createElementBlock("div", null, [
+    ((a=1) => _createElementVNode("div", null, [
       _createTextVNode(_toDisplayString(a), 1 /* TEXT */)
     ]))()
   ]))
@@ -53,12 +53,12 @@ export function render(_ctx, _cache) {
 `;
 
 exports[`compiler: v-let transform work with variable 1`] = `
-"import { toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, createElementVNode as _createElementVNode, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
+"import { toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, createElementVNode as _createElementVNode, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
 
 export function render(_ctx, _cache) {
-  return (_openBlock(), _createElementBlock(\\"div\\", null, [
-    ((a=_ctx.msg) => _createElementVNode(\\"div\\", null, [
-      ((b=a) => _createElementVNode(\\"span\\", null, [
+  return (_openBlock(), _createElementBlock("div", null, [
+    ((a=_ctx.msg) => _createElementVNode("div", null, [
+      ((b=a) => _createElementVNode("span", null, [
         _createTextVNode(_toDisplayString(b), 1 /* TEXT */)
       ]))()
     ]))()
