@@ -23,7 +23,10 @@ import {
   locStub,
   CacheExpression,
   ConstantTypes,
-  MemoExpression
+  MemoExpression,
+  VNodeCall,
+  CallExpression,
+  FunctionExpression
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
@@ -298,7 +301,12 @@ function createChildrenCodegenNode(
     const ret = (firstChild as ElementNode).codegenNode as
       | BlockCodegenNode
       | MemoExpression
-    const vnodeCall = getMemoedVNodeCall(ret)
+
+    const vnodeCall = findDir(firstChild, 'let')
+      ? (((ret as CallExpression).callee as FunctionExpression)
+          .returns as VNodeCall)
+      : getMemoedVNodeCall(ret)
+
     // Change createVNode to createBlock.
     if (vnodeCall.type === NodeTypes.VNODE_CALL) {
       makeBlock(vnodeCall, context)

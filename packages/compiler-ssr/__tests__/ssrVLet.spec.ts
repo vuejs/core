@@ -38,4 +38,28 @@ describe('ssr: v-let', () => {
       }"
     `)
   })
+
+  test('ok v-if', () => {
+    expect(
+      compile(`
+      <div v-if="ok" v-let="a=true" >
+        {{ a }}
+      </div>
+    `).code
+    ).toMatchInlineSnapshot(`
+      "const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        if (_ctx.ok) {
+          _push(\`<div\${_ssrRenderAttrs(_attrs)}>\`)
+          ;((a=true) => {
+            _push(\`\${_ssrInterpolate(a)}\`)
+          })()
+          _push(\`</div>\`)
+        } else {
+          _push(\`<!---->\`)
+        }
+      }"
+    `)
+  })
 })

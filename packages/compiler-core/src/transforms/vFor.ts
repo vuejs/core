@@ -61,6 +61,7 @@ export const transformFor = createStructuralDirectiveTransform(
       ]) as ForRenderListExpression
       const isTemplate = isTemplateNode(node)
       const memo = findDir(node, 'memo')
+      const vLet = findDir(node, 'let')
       const keyProp = findProp(node, `key`)
       const keyExp =
         keyProp &&
@@ -228,10 +229,19 @@ export const transformFor = createStructuralDirectiveTransform(
             createSimpleExpression(String(context.cached++))
           )
         } else {
+          let child
+          if (vLet) {
+            child = createCallExpression(
+              createFunctionExpression([vLet.exp!], childBlock)
+            )
+          } else {
+            child = childBlock
+          }
+
           renderExp.arguments.push(
             createFunctionExpression(
               createForLoopParams(forNode.parseResult),
-              childBlock,
+              child,
               true /* force newline */
             ) as ForIteratorExpression
           )
