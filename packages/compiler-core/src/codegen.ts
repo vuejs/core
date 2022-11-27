@@ -781,13 +781,14 @@ function genNullableArgs(args: any[]): CallExpression['arguments'] {
 // JavaScript
 function genCallExpression(node: CallExpression, context: CodegenContext) {
   const { push, helper, pure } = context
-  let callee 
+  let callee
   if (isString(node.callee)) {
-    callee = node.callee 
+    callee = node.callee
   } else if (isSymbol(node.callee)) {
     callee = helper(node.callee)
   } else {
     // anonymous function.
+    if (context.inSSR) push(';')
     push(`(`)
     genNode(node.callee, context)
     push(`)`)

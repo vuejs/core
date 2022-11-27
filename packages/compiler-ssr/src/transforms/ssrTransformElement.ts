@@ -29,7 +29,9 @@ import {
   AttributeNode,
   buildDirectiveArgs,
   TransformContext,
-  PropsExpression
+  PropsExpression,
+  findDir,
+  createFunctionExpression
 } from '@vue/compiler-dom'
 import {
   escapeHtml,
@@ -51,7 +53,11 @@ import {
   SSR_INCLUDE_BOOLEAN_ATTR,
   SSR_GET_DIRECTIVE_PROPS
 } from '../runtimeHelpers'
-import { SSRTransformContext, processChildren } from '../ssrCodegenTransform'
+import {
+  SSRTransformContext,
+  processChildren,
+  processChildrenAsStatement
+} from '../ssrCodegenTransform'
 
 // for directives with children overwrite (e.g. v-html & v-text), we need to
 // store the raw children so that they can be added in the 2nd pass.
@@ -428,7 +434,15 @@ export function ssrProcessElement(
   if (rawChildren) {
     context.pushStringPart(rawChildren)
   } else if (node.children.length) {
-    processChildren(node, context)
+    // process v-let
+    const dir = findDir(node, 'let')
+    if (dir) {
+      const letFn = createFunctionExpression(dir.exp!)
+      letFn.body = processChildrenAsStatement(node, context)
+      context.pushStatement(createCallExpression(letFn))
+    } else {
+      processChildren(node, context)
+    }
   }
 
   if (!isVoidTag(node.tag)) {
