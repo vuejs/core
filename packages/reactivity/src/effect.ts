@@ -323,11 +323,7 @@ export function trigger(
 
   if (deps.length === 1) {
     if (deps[0]) {
-      if (__DEV__) {
-        triggerEffects(deps[0], eventInfo)
-      } else {
-        triggerEffects(deps[0])
-      }
+      triggerEffects(deps[0], eventInfo)
     }
   } else {
     const effects: ReactiveEffect[] = []
@@ -336,11 +332,7 @@ export function trigger(
         effects.push(...dep)
       }
     }
-    if (__DEV__) {
-      triggerEffects(createDep(effects), eventInfo)
-    } else {
-      triggerEffects(createDep(effects))
-    }
+    triggerEffects(createDep(effects), eventInfo)
   }
 }
 
