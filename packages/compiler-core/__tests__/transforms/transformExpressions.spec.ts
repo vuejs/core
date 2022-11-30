@@ -531,5 +531,29 @@ describe('compiler: expression transform', () => {
       expect(code).toMatch(`_ctx.options`)
       expect(code).toMatchSnapshot()
     })
+
+    test('should not prefix temp variable of for...in', () => {
+      const { code } = compileWithBindingMetadata(
+        `<div @click="() => {
+          for (const x in list) {
+            log(x)
+          }         
+        }"/>`
+      )
+      expect(code).not.toMatch(`_ctx.x`)
+      expect(code).toMatchSnapshot()
+    })
+
+    test('should not prefix temp variable of for...of', () => {
+      const { code } = compileWithBindingMetadata(
+        `<div @click="() => {
+          for (const x of list) {
+            log(x)
+          }         
+        }"/>`
+      )
+      expect(code).not.toMatch(`_ctx.x`)
+      expect(code).toMatchSnapshot()
+    })
   })
 })
