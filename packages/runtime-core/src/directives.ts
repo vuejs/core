@@ -11,7 +11,7 @@ return withDirectives(h(comp), [
 ])
 */
 
-import { VNode } from './vnode'
+import { mergeProps, VNode } from './vnode'
 import { isFunction, EMPTY_OBJ, isBuiltInDirective } from '@vue/shared'
 import { warn } from './warning'
 import { ComponentInternalInstance, Data, getExposeProxy } from './component'
@@ -105,14 +105,21 @@ export function withDirectives<T extends VNode>(
       if (dir.deep) {
         traverse(value)
       }
-      bindings.push({
+      const binding = {
         dir,
         instance,
         value,
         oldValue: void 0,
         arg,
         modifiers
-      })
+      }
+      if (dir.getSSRProps) {
+        vnode.props = mergeProps(
+          vnode.props || {},
+          dir.getSSRProps(binding, vnode) || {}
+        )
+      }
+      bindings.push(binding)
     }
   }
   return vnode
