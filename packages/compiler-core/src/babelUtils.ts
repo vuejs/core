@@ -167,6 +167,17 @@ export function walkBlockDeclarations(
     ) {
       if (stmt.declare || !stmt.id) continue
       onIdent(stmt.id)
+    } else if (
+      stmt.type === 'ForOfStatement' ||
+      stmt.type === 'ForInStatement'
+    ) {
+      if (stmt.left.type === 'VariableDeclaration') {
+        for (const decl of stmt.left.declarations) {
+          for (const id of extractIdentifiers(decl.id)) {
+            onIdent(id)
+          }
+        }
+      }
     }
   }
 }
