@@ -113,6 +113,9 @@ export function withDirectives<T extends VNode>(
         arg,
         modifiers
       }
+
+      // #6123
+      // apply ssr props to the the fallback vnode-based branch in ssr
       if (dir.getSSRProps) {
         vnode.props = mergeProps(
           vnode.props || {},
