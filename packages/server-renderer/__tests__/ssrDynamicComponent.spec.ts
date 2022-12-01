@@ -21,6 +21,23 @@ describe('ssr: dynamic component', () => {
     ).toBe(`<div><!--[--><span>slot</span><!--]--></div>`)
   })
 
+  test('resolved to component with v-show', async () => {
+    expect(
+      await renderToString(
+        createApp({
+          components: {
+            one: {
+              template: `<component is="div"><slot/></component>`
+            }
+          },
+          template: `<one><one v-show="false">hi</one></one>`
+        })
+      )
+    ).toBe(
+      `<div><!--[--><div style=\"display:none;\"><!--[-->hi<!--]--></div><!--]--></div>`
+    )
+  })
+
   test('resolve to element', async () => {
     expect(
       await renderToString(
