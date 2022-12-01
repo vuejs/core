@@ -16,6 +16,23 @@ const activeVersion = ref(`@${currentCommit}`)
 const publishedVersions = ref<string[]>()
 const expanded = ref(false)
 
+if (location.search) {
+  const search = location.search.slice(1).split('&').reduce((serch, unit) => {
+    if (unit) {
+      const [key, value] = unit.split('=')
+      serch[key] = value
+    }
+    return serch
+  }, {} as Record<string, string>)
+
+  if (search.v) {
+    activeVersion.value = `loading...`
+    setVueVersion(search.v).then(() => {
+      activeVersion.value = `v${search.v}`
+    })
+  }
+}
+
 async function toggle() {
   expanded.value = !expanded.value
   if (!publishedVersions.value) {
@@ -28,6 +45,7 @@ async function setVueVersion(v: string) {
   await store.setVueVersion(v)
   activeVersion.value = `v${v}`
   expanded.value = false
+  history.replaceState({}, '', `?v=${v}${location.hash}`)
 }
 
 function resetVueVersion() {
