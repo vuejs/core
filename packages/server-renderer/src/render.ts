@@ -218,7 +218,10 @@ export function renderVNode(
   parentComponent: ComponentInternalInstance,
   slotScopeId?: string
 ) {
-  const { type, shapeFlag, children } = vnode
+  const { type, shapeFlag, children, dirs, props } = vnode
+  if (dirs) {
+    vnode.props = applySSRDirectives(vnode, props, dirs)
+  }
   switch (type) {
     case Text:
       push(escapeHtml(children as string))
