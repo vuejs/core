@@ -1,4 +1,4 @@
-import { ReactiveEffect } from './effect'
+import { pauseTracking, ReactiveEffect, resetTracking } from './effect'
 import { warn } from './warning'
 
 let activeEffectScope: EffectScope | undefined
@@ -126,7 +126,11 @@ export function getCurrentScope() {
 
 export function onScopeDispose(fn: () => void) {
   if (activeEffectScope) {
-    activeEffectScope.cleanups.push(fn)
+    activeEffectScope.cleanups.push(() => {
+      pauseTracking()
+      fn()
+      resetTracking()
+    })
   } else if (__DEV__) {
     warn(
       `onScopeDispose() is called when there is no active effect scope` +
