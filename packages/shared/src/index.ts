@@ -153,8 +153,21 @@ export const def = (obj: object, key: string | symbol, value: any) => {
   })
 }
 
-export const toNumber = (val: any): any => {
+/**
+ * "123-foo" will be parsed to 123
+ * This is used for the .number modifier in v-model
+ */
+export const looseToNumber = (val: any): any => {
   const n = parseFloat(val)
+  return isNaN(n) ? val : n
+}
+
+/**
+ * Only conerces number-like strings
+ * "123-foo" will be returned as-is
+ */
+export const toNumber = (val: any): any => {
+  const n = isString(val) ? Number(val) : NaN
   return isNaN(n) ? val : n
 }
 

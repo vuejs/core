@@ -30,7 +30,7 @@ describe('normalizeClass', () => {
         white 0.75em
       );`)
     ).toMatchInlineSnapshot(`
-      Object {
+      {
         "background": "linear-gradient(white, white) padding-box,
             repeating-linear-gradient(
               -45deg,

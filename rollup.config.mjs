@@ -9,7 +9,7 @@ import chalk from 'chalk'
 import commonJS from '@rollup/plugin-commonjs'
 import polyfillNode from 'rollup-plugin-polyfill-node'
 import { nodeResolve } from '@rollup/plugin-node-resolve'
-import { terser } from 'rollup-plugin-terser'
+import terser from '@rollup/plugin-terser'
 
 if (!process.env.TARGET) {
   throw new Error('TARGET package must be specified via --environment flag.')
@@ -145,12 +145,13 @@ function createConfig(format, output, plugins = []) {
   }
 
   let external = []
+  const treeShakenDeps = ['source-map', '@babel/parser', 'estree-walker']
 
   if (isGlobalBuild || isBrowserESMBuild || isCompatPackage) {
     if (!packageOptions.enableNonBrowserBranches) {
       // normal browser builds - non-browser only imports are tree-shaken,
       // they are only listed here to suppress warnings.
-      external = ['source-map', '@babel/parser', 'estree-walker']
+      external = treeShakenDeps
     }
   } else {
     // Node / esm-bundler builds.
@@ -158,7 +159,10 @@ function createConfig(format, output, plugins = []) {
     external = [
       ...Object.keys(pkg.dependencies || {}),
       ...Object.keys(pkg.peerDependencies || {}),
-      ...['path', 'url', 'stream'] // for @vue/compiler-sfc / server-renderer
+      // for @vue/compiler-sfc / server-renderer
+      ...['path', 'url', 'stream'],
+      // somehow these throw warnings for runtime-* package builds
+      ...treeShakenDeps
     ]
   }
 

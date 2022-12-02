@@ -247,5 +247,16 @@ describe('sfc props transform', () => {
         )
       ).toThrow(`cannot reference locally declared variables`)
     })
+
+    test('should error if assignment to constant variable', () => {
+      expect(() =>
+        compile(
+          `<script setup>
+          const { foo } = defineProps(['foo'])
+          foo = 'bar'
+          </script>`
+        )
+      ).toThrow(`Assignment to constant variable.`)
+    })
   })
 })
