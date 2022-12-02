@@ -23,7 +23,8 @@ import {
   createApp,
   FunctionalComponent,
   renderList,
-  onUnmounted
+  onUnmounted,
+  createElementBlock
 } from '@vue/runtime-test'
 import { PatchFlags, SlotFlags } from '@vue/shared'
 import { SuspenseImpl } from '../src/components/Suspense'
@@ -932,5 +933,61 @@ describe('renderer: optimized mode', () => {
     await nextTick()
     // should successfully unmount without error
     expect(inner(root)).toBe(`<!---->`)
+  })
+
+  // #7256
+  test('When both the old and new dynamic node arrays are empty, turn off optimization and fully diff', async () => {
+    const show = ref(false)
+
+    const Child = {
+      setup(props: any, { slots }: SetupContext) {
+        return () => {
+          return renderSlot(slots, 'default', {}, () => [
+            !show.value
+              ? (openBlock(),
+                createElementBlock('div', { key: 0 }, 'Fallback Content'))
+              : createCommentVNode('v-if', true)
+          ])
+        }
+      }
+    }
+
+    const Parent = {
+      setup() {
+        return () => {
+          return (
+            openBlock(),
+            createBlock(Child, null, {
+              default: withCtx(() => [
+                show.value
+                  ? (openBlock(),
+                    createElementBlock('div', { key: 0 }, 'Provided Content'))
+                  : createCommentVNode('v-if', true)
+              ]),
+              _: 1 /* STABLE */
+            })
+          )
+        }
+      }
+    }
+
+    const app = createApp({
+      setup() {
+        return () => {
+          return h(Parent)
+        }
+      }
+    })
+    app.mount(root)
+    await nextTick()
+    expect(inner(root)).toBe(`<div>Fallback Content</div>`)
+
+    show.value = true
+    await nextTick()
+    expect(inner(root)).toBe(`<div>Provided Content</div>`)
+
+    show.value = false
+    await nextTick()
+    expect(inner(root)).toBe(`<div>Fallback Content</div>`)
   })
 })
