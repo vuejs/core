@@ -796,6 +796,7 @@ function baseCreateRenderer(
   ) => {
     const el = (n2.el = n1.el!)
     let { patchFlag, dynamicChildren, dirs } = n2
+    let { dynamicChildren: prevDynamicChildren } = n1
     // #1426 take the old vnode's patch flag into account since user may clone a
     // compiler-generated vnode, which de-opts to FULL_PROPS
     patchFlag |= n1.patchFlag & PatchFlags.FULL_PROPS
@@ -813,7 +814,13 @@ function baseCreateRenderer(
     }
     parentComponent && toggleRecurse(parentComponent, true)
 
-    if (__DEV__ && isHmrUpdating) {
+    if (
+      (__DEV__ && isHmrUpdating) ||
+      (dynamicChildren &&
+        prevDynamicChildren &&
+        dynamicChildren.length === 0 &&
+        prevDynamicChildren.length === 0)
+    ) {
       // HMR updated, force full diff
       patchFlag = 0
       optimized = false
