@@ -17,18 +17,13 @@ const publishedVersions = ref<string[]>()
 const expanded = ref(false)
 
 if (location.search) {
-  const search = location.search.slice(1).split('&').reduce((serch, unit) => {
-    if (unit) {
-      const [key, value] = unit.split('=')
-      serch[key] = value
-    }
-    return serch
-  }, {} as Record<string, string>)
+  const search = new URLSearchParams(location.search)
+  const version = search.get('v')
 
-  if (search.v) {
+  if (version) {
     activeVersion.value = `loading...`
-    setVueVersion(search.v).then(() => {
-      activeVersion.value = `v${search.v}`
+    setVueVersion(version).then(() => {
+      activeVersion.value = `v${version}`
     })
   }
 }
