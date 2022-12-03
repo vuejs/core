@@ -38,6 +38,23 @@ test('should work with style comment', () => {
   expect(result.code).toMatch(`{"width":"300px","height":"100px"}`)
 })
 
+// #7267
+test('should work with style comment', () => {
+  const source = `
+  <div style="
+    /* noth
+    ing */
+    width: 300px;
+    height: 100px/* nothing */
+    ">{{ render }}</div>
+  `
+
+  const result = compile({ filename: 'example.vue', source })
+  expect(result.errors.length).toBe(0)
+  expect(result.source).toBe(source)
+  expect(result.code).toMatch(`{"width":"300px","height":"100px"}`)
+})
+
 test('preprocess pug', () => {
   const template = parse(
     `
