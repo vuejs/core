@@ -94,7 +94,7 @@ export const isReservedProp = /*#__PURE__*/ makeMap(
 )
 
 export const isBuiltInDirective = /*#__PURE__*/ makeMap(
-  'bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,slot,text,memo,let'
+  'bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,slot,text,memo,scope'
 )
 
 const cacheStringFunction = <T extends (str: string) => string>(fn: T): T => {

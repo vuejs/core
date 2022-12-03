@@ -1,6 +1,6 @@
 import { baseCompile, CompilerOptions } from '../../src'
 
-describe('compiler: v-let transform', () => {
+describe('compiler: v-scope transform', () => {
   function compile(content: string, options: CompilerOptions = {}) {
     return baseCompile(`<div>${content}</div>`, {
       mode: 'module',
@@ -10,24 +10,20 @@ describe('compiler: v-let transform', () => {
   }
 
   test('should work', () => {
-    expect(compile(`<div v-let="a=1">{{a}}</div>`)).toMatchSnapshot()
-  })
-
-  test('multiple declare', () => {
     expect(
       compile(
-        `<div v-let="a=1,  b=2">
+        `<div v-scope="{ a:1, b:2 }">
         {{a}} {{b}}
       </div>`
       )
     ).toMatchSnapshot()
   })
 
-  test('nested v-let', () => {
+  test('nested v-scope', () => {
     expect(
       compile(
-        `<div v-let="a=1">
-        <span v-let="b=1">{{a}}{{b}}</span>
+        `<div v-scope="{ a:1 }">
+        <span v-scope="{ b:1 }">{{ a }}{{ b }}</span>
       </div>`
       )
     ).toMatchSnapshot()
@@ -36,8 +32,8 @@ describe('compiler: v-let transform', () => {
   test('work with variable', () => {
     expect(
       compile(
-        `<div v-let="a=msg">
-        <span v-let="b=a">{{b}}</span>
+        `<div v-scope="{ a:msg }">
+        <span v-scope="{ b:a }">{{ b }}</span>
       </div>`
       )
     ).toMatchSnapshot()
@@ -46,11 +42,10 @@ describe('compiler: v-let transform', () => {
   test('complex expression', () => {
     expect(
       compile(`
-        <div v-let="a=foo+bar">
-          <span v-let="b=a+baz">{{b}}</span>
+        <div v-scope="{ a:foo + bar }">
+          <span v-scope="{ b:a + baz }">{{ b }}</span>
         </div>
-        <div v-let="x=y=z">{{x}}{{y}}{{z}}</div>
-        <div v-let="exp=getExp()">{{exp}}</div>
+        <div v-scope="{ exp:getExp() }">{{ exp }}</div>
         `)
     ).toMatchSnapshot()
   })
@@ -58,7 +53,7 @@ describe('compiler: v-let transform', () => {
   test('on v-for', () => {
     expect(
       compile(`
-      <div v-for="i in [1,2,3]" v-let="a=i+1">
+      <div v-for="i in [1,2,3]" v-scope="{ a:i+1 }">
         {{ a }}
       </div>
     `)
@@ -68,7 +63,7 @@ describe('compiler: v-let transform', () => {
   test('ok v-if', () => {
     expect(
       compile(`
-      <div v-if="ok" v-let="a=true" >
+      <div v-if="ok" v-scope="{ a:true }" >
         {{ a }}
       </div>
     `)
@@ -77,11 +72,11 @@ describe('compiler: v-let transform', () => {
 
   test('error', () => {
     const onError = jest.fn()
-    expect(compile(`<div v-let="a=,b=1">{{a}}</div>`, { onError }))
+    expect(compile(`<div v-scope="{ a:, b:1 }">{{ a }}</div>`, { onError }))
     expect(onError.mock.calls).toMatchInlineSnapshot(`
       [
         [
-          [SyntaxError: Error parsing JavaScript expression: Unexpected token (1:3)],
+          [SyntaxError: Error parsing JavaScript expression: Unexpected token (1:5)],
         ],
       ]
     `)

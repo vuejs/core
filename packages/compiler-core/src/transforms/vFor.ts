@@ -48,6 +48,7 @@ import {
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
 import { PatchFlags, PatchFlagNames } from '@vue/shared'
+import { transformScopeExpression } from './vScope'
 
 export const transformFor = createStructuralDirectiveTransform(
   'for',
@@ -61,7 +62,7 @@ export const transformFor = createStructuralDirectiveTransform(
       ]) as ForRenderListExpression
       const isTemplate = isTemplateNode(node)
       const memo = findDir(node, 'memo')
-      const vLet = findDir(node, 'let')
+      const vScope = findDir(node, 'scope')
       const keyProp = findProp(node, `key`)
       const keyExp =
         keyProp &&
@@ -230,9 +231,12 @@ export const transformFor = createStructuralDirectiveTransform(
           )
         } else {
           let child
-          if (vLet) {
+          if (vScope) {
             child = createCallExpression(
-              createFunctionExpression([vLet.exp!], childBlock)
+              createFunctionExpression(
+                transformScopeExpression(vScope.exp!),
+                childBlock
+              )
             )
           } else {
             child = childBlock

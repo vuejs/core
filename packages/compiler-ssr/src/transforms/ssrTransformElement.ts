@@ -31,7 +31,8 @@ import {
   TransformContext,
   PropsExpression,
   findDir,
-  createFunctionExpression
+  createFunctionExpression,
+  transformScopeExpression
 } from '@vue/compiler-dom'
 import {
   escapeHtml,
@@ -434,10 +435,10 @@ export function ssrProcessElement(
   if (rawChildren) {
     context.pushStringPart(rawChildren)
   } else if (node.children.length) {
-    // process v-let
-    const dir = findDir(node, 'let')
+    // process v-scope
+    const dir = findDir(node, 'scope')
     if (dir) {
-      const letFn = createFunctionExpression(dir.exp!)
+      const letFn = createFunctionExpression(transformScopeExpression(dir.exp!))
       letFn.body = processChildrenAsStatement(node, context)
       context.pushStatement(createCallExpression(letFn))
     } else {

@@ -302,7 +302,7 @@ function createChildrenCodegenNode(
       | BlockCodegenNode
       | MemoExpression
 
-    const vnodeCall = findDir(firstChild, 'let')
+    const vnodeCall = findDir(firstChild, 'scope')
       ? (((ret as CallExpression).callee as FunctionExpression)
           .returns as VNodeCall)
       : getMemoedVNodeCall(ret)

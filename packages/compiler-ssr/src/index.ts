@@ -12,7 +12,7 @@ import {
   transformBind,
   transformStyle,
   transformOn,
-  trackVLetScopes
+  trackVScopeScopes
 } from '@vue/compiler-dom'
 import { ssrCodegenTransform } from './ssrCodegenTransform'
 import { ssrTransformElement } from './transforms/ssrTransformElement'
@@ -66,7 +66,7 @@ export function compile(
       ssrTransformElement,
       ssrTransformComponent,
       trackSlotScopes,
-      trackVLetScopes,
+      trackVScopeScopes,
       transformStyle,
       ...(options.nodeTransforms || []) // user transforms
     ],

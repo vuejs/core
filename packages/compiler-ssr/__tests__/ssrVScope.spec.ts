@@ -1,8 +1,9 @@
 import { compile } from '../src'
 
-describe('ssr: v-let', () => {
+describe('ssr: v-scope', () => {
   test('basic', () => {
-    expect(compile(`<div v-let="a=1">{{a}}</div>`).code).toMatchInlineSnapshot(`
+    expect(compile(`<div v-scope="{ a:1 }">{{a}}</div>`).code)
+      .toMatchInlineSnapshot(`
       "const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
@@ -18,8 +19,8 @@ describe('ssr: v-let', () => {
   test('nested', () => {
     expect(
       compile(
-        `<div v-let="a=1">
-            <div v-let="b=2">{{a}} {{b}}</div>
+        `<div v-scope="{ a:1 }">
+            <div v-scope="{ b:2 }">{{a}} {{b}}</div>
         </div>`
       ).code
     ).toMatchInlineSnapshot(`
@@ -42,7 +43,7 @@ describe('ssr: v-let', () => {
   test('ok v-if', () => {
     expect(
       compile(`
-      <div v-if="ok" v-let="a=true" >
+      <div v-if="ok" v-scope="{ a:true }" >
         {{ a }}
       </div>
     `).code

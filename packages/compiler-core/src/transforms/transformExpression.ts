@@ -69,8 +69,8 @@ export const transformExpression: NodeTransform = (node, context) => {
           dir.exp = processExpression(
             exp,
             context,
-            // slot and let args must be processed as function params
-            dir.name === 'slot' || dir.name === 'let' 
+            // slot args must be processed as function params
+            dir.name === 'slot'
           )
         }
         if (arg && arg.type === NodeTypes.SIMPLE_EXPRESSION && !arg.isStatic) {

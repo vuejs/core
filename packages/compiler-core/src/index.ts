@@ -52,7 +52,11 @@ export {
   trackVForSlotScopes,
   trackSlotScopes
 } from './transforms/vSlot'
-export { transformLet, trackVLetScopes } from './transforms/vLet'
+export {
+  transformScope,
+  trackVScopeScopes,
+  transformScopeExpression
+} from './transforms/vScope'
 export {
   transformElement,
   resolveComponentType,
