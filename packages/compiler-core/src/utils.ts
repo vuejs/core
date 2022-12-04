@@ -56,11 +56,14 @@ export const isBuiltInType = (tag: string, expected: string): boolean =>
 export function isCoreComponent(tag: string): symbol | void {
   if (isBuiltInType(tag, 'Teleport')) {
     return TELEPORT
-  } else if (isBuiltInType(tag, 'Suspense')) {
+  }
+  if (isBuiltInType(tag, 'Suspense')) {
     return SUSPENSE
-  } else if (isBuiltInType(tag, 'KeepAlive')) {
+  } 
+  if (isBuiltInType(tag, 'KeepAlive')) {
     return KEEP_ALIVE
-  } else if (isBuiltInType(tag, 'BaseTransition')) {
+  } 
+  if (isBuiltInType(tag, 'BaseTransition')) {
     return BASE_TRANSITION
   }
 }
@@ -103,7 +106,7 @@ export const isMemberExpressionBrowser = (path: string): boolean => {
         if (char === '[') {
           stateStack.push(state)
           state = MemberExpLexState.inBrackets
-          currentOpenBracketCount++
+          currentOpenBracketCount++  
         } else if (char === '(') {
           stateStack.push(state)
           state = MemberExpLexState.inParens
@@ -121,10 +124,8 @@ export const isMemberExpressionBrowser = (path: string): boolean => {
           currentStringType = char
         } else if (char === `[`) {
           currentOpenBracketCount++
-        } else if (char === `]`) {
-          if (!--currentOpenBracketCount) {
-            state = stateStack.pop()!
-          }
+        } else if (char === `]` && !--currentOpenBracketCount) {
+          state = stateStack.pop()!
         }
         break
       case MemberExpLexState.inParens:
