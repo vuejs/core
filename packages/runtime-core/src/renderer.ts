@@ -1447,6 +1447,29 @@ function baseCreateRenderer(
         // #2458: deference mount-only object parameters to prevent memleaks
         initialVNode = container = anchor = null as any
       } else {
+        // we are trying to update some async comp before hydration
+        // this will cause crash because we don't know the root node yet
+        if (
+          __FEATURE_SUSPENSE__ &&
+          instance.subTree.shapeFlag & ShapeFlags.COMPONENT &&
+          // this happens only during hydration
+          instance.subTree.component?.subTree == null &&
+          // we don't know the subTree yet because we haven't resolve it
+          instance.subTree.component?.asyncResolved === false
+        ) {
+          // only sync the properties and abort the rest of operations
+          let { next, vnode } = instance
+          if (next) {
+            next.el = vnode.el
+            updateComponentPreRender(instance, next, optimized)
+          }
+          // and continue the rest of operations once the deps are resolved
+          instance.subTree.component?.asyncDep?.then(() => {
+            componentUpdateFn()
+          })
+          return
+        }
+
         // updateComponent
         // This is triggered by mutation of component's own state (next: null)
         // OR parent calling processComponent (next: VNode)
