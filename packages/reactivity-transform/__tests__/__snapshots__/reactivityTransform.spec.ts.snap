@@ -159,11 +159,13 @@ exports[`nested destructure 1`] = `
 "import { toRef as _toRef } from 'vue'
 
     let __$temp_1 = (useFoo()),
-  b = _toRef(__$temp_1[0].a, 'b');
+  b = _toRef(__$temp_1[0].a, 'b'),
+  n = _toRef(__$temp_1[0].z, 'n');
     let __$temp_2 = (useBar()),
   d = _toRef(__$temp_2.c, 0),
-  e = _toRef(__$temp_2.c, 1);
-    console.log(b.value, d.value, e.value)
+  e = _toRef(__$temp_2.c, 1),
+  h = _toRef(__$temp_2.f, 0);
+    console.log(b.value, d.value, e.value, h.value, n.value)
     "
 `;
 

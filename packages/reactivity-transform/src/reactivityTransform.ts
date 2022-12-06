@@ -343,8 +343,10 @@ export function transformAST(
         registerRefBinding(id, isConst)
       } else if (id.type === 'ObjectPattern') {
         processRefObjectPattern(id, call, isConst)
+        s.appendLeft(call.end! + offset, ';')
       } else if (id.type === 'ArrayPattern') {
         processRefArrayPattern(id, call, isConst)
+        s.appendLeft(call.end! + offset, ';')
       }
     } else {
       // shorthands
@@ -451,9 +453,6 @@ export function transformAST(
         )
       }
     }
-    if (nameId) {
-      s.appendLeft(call.end! + offset, ';')
-    }
   }
 
   function processRefArrayPattern(
@@ -501,9 +500,6 @@ export function transformAST(
           )}(${source}, ${i}${defaultStr})`
         )
       }
-    }
-    if (nameId) {
-      s.appendLeft(call.end! + offset, ';')
     }
   }
 

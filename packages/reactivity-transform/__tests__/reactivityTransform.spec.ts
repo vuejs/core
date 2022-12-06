@@ -281,14 +281,16 @@ test('array destructure', () => {
 
 test('nested destructure', () => {
   const { code, rootRefs } = transform(`
-    let [{ a: { b }}] = $(useFoo())
-    let { c: [d, e] } = $(useBar())
-    console.log(b, d, e)
+    let [{ a: { b }, z: { n }}] = $(useFoo())
+    let { c: [d, e], f: [h] } = $(useBar())
+    console.log(b, d, e, h, n)
     `)
   expect(code).toMatch(`b = _toRef(__$temp_1[0].a, 'b')`)
+  expect(code).toMatch(`n = _toRef(__$temp_1[0].z, 'n')`)
   expect(code).toMatch(`d = _toRef(__$temp_2.c, 0)`)
   expect(code).toMatch(`e = _toRef(__$temp_2.c, 1)`)
-  expect(rootRefs).toStrictEqual(['b', 'd', 'e'])
+  expect(code).toMatch(`h = _toRef(__$temp_2.f, 0)`)
+  expect(rootRefs).toStrictEqual(['b', 'n', 'd', 'e', 'h'])
   assertCode(code)
 })
 
