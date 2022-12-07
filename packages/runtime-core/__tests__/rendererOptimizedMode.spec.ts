@@ -964,7 +964,7 @@ describe('renderer: optimized mode', () => {
                     createElementBlock('div', { key: 0 }, 'Provided Content'))
                   : createCommentVNode('v-if', true)
               ]),
-              _: 1 /* STABLE */
+              _: 3 /* FORWARDED */
             })
           )
         }
