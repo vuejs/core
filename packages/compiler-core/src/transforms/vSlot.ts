@@ -389,24 +389,32 @@ function buildDynamicSlot(
   return createObjectExpression(props)
 }
 
-function hasForwardedSlots(children: TemplateChildNode[]): boolean {
+function hasForwardedSlots(
+  children: TemplateChildNode[],
+  hasBranches = false
+): boolean {
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
     switch (child.type) {
       case NodeTypes.ELEMENT:
         if (
           child.tagType === ElementTypes.SLOT ||
-          hasForwardedSlots(child.children)
+          (child.tagType === ElementTypes.ELEMENT && hasBranches) ||
+          hasForwardedSlots(child.children, hasBranches)
         ) {
           return true
         }
         break
       case NodeTypes.IF:
-        if (hasForwardedSlots(child.branches)) return true
+        hasBranches = true
+        if (hasForwardedSlots(child.branches, hasBranches)) return true
         break
       case NodeTypes.IF_BRANCH:
+        hasBranches = true
+        if (hasForwardedSlots(child.children, hasBranches)) return true
+        break
       case NodeTypes.FOR:
-        if (hasForwardedSlots(child.children)) return true
+        if (hasForwardedSlots(child.children, hasBranches)) return true
         break
       default:
         break

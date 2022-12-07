@@ -821,7 +821,7 @@ function baseCreateRenderer(
     }
 
     const areChildrenSVG = isSVG && n2.type !== 'foreignObject'
-    if (dynamicChildren) {
+    if (dynamicChildren && dynamicChildren.length > 0) {
       patchBlockChildren(
         n1.dynamicChildren!,
         dynamicChildren,
