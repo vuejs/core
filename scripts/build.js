@@ -38,7 +38,7 @@ const prodOnly = !devOnly && (args.prodOnly || args.p)
 const sourceMap = args.sourcemap || args.s
 const isRelease = args.release
 const buildAllMatching = args.all || args.a
-const commit = execa.sync('git', ['rev-parse', 'HEAD']).stdout.slice(0, 7)
+const commit = execa.sync('git', ['rev-parse', '--short', 'HEAD']).stdout
 
 run()
 
