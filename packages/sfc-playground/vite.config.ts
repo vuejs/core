@@ -4,7 +4,7 @@ import { defineConfig, Plugin } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { execaSync } from 'execa'
 
-const commit = execaSync('git', ['rev-parse', 'HEAD']).stdout.slice(0, 7)
+const commit = execaSync('git', ['rev-parse', '--short=7', 'HEAD']).stdout
 
 export default defineConfig({
   plugins: [
