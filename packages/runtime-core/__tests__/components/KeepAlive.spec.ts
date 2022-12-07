@@ -883,6 +883,42 @@ describe('KeepAlive', () => {
     expect(serializeInner(root)).toBe('<p>1</p>')
   })
 
+  // #7276
+  test('should invoke onActivated of child on initial mount', async () => {
+    let parentCount = 0
+    let childCount = 0
+    const Child = defineComponent({
+      name: 'Child',
+      setup() {
+        onActivated(() => {
+          childCount++
+        })
+        return () => 'child'
+      }
+    })
+    const Parent = defineComponent({
+      setup() {
+        onActivated(() => {
+          parentCount++
+        })
+        return () => h(Child)
+      }
+    })
+    const AsyncComp = defineAsyncComponent(() => Promise.resolve(Parent))
+
+    const App = {
+      render: () => {
+        return h(KeepAlive, null, () => h(AsyncComp))
+      }
+    }
+
+    render(h(App), root)
+    await timeout()
+    expect(serializeInner(root)).toBe('child')
+    expect(parentCount).toBe(1)
+    expect(childCount).toBe(1)
+  })
+
   // #4976
   test('handle error in async onActivated', async () => {
     const err = new Error('foo')
