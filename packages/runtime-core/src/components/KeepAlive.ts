@@ -402,18 +402,10 @@ function registerKeepAliveHook(
   // arrays.
   if (target) {
     let current = target.parent
-    let child = target
     while (current && current.parent) {
       if (isKeepAlive(current.parent.vnode)) {
-        injectToKeepAliveRoot(
-          wrappedHook,
-          type,
-          target,
-          // #7276
-          isAsyncWrapper(current) ? child : current
-        )
+        injectToKeepAliveRoot(wrappedHook, type, target, current)
       }
-      child = current
       current = current.parent
     }
   }

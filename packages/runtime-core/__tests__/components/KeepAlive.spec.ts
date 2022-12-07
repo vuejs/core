@@ -887,6 +887,7 @@ describe('KeepAlive', () => {
   test('should invoke onActivated of child on initial mount', async () => {
     let parentCount = 0
     let childCount = 0
+    const toggle = ref(true)
     const Child = defineComponent({
       name: 'Child',
       setup() {
@@ -908,7 +909,7 @@ describe('KeepAlive', () => {
 
     const App = {
       render: () => {
-        return h(KeepAlive, null, () => h(AsyncComp))
+        return h(KeepAlive, null, () => (toggle.value ? h(AsyncComp) : null))
       }
     }
 
@@ -917,6 +918,13 @@ describe('KeepAlive', () => {
     expect(serializeInner(root)).toBe('child')
     expect(parentCount).toBe(1)
     expect(childCount).toBe(1)
+
+    toggle.value = false
+    await timeout()
+    toggle.value = true
+    await timeout()
+    expect(parentCount).toBe(2)
+    expect(childCount).toBe(2)
   })
 
   // #4976
