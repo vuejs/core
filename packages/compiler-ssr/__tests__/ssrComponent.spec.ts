@@ -280,7 +280,7 @@ describe('ssr: components', () => {
                 ]
               }
             }),
-            _: 1 /* STABLE */
+            _: 3 /* FORWARDED */
           }, _parent))
         }"
       `)
@@ -341,12 +341,12 @@ describe('ssr: components', () => {
                           ? (_openBlock(), _createBlock("div", { key: 0 }))
                           : _createCommentVNode("v-if", true)
                       ]),
-                      _: 1 /* STABLE */
+                      _: 3 /* FORWARDED */
                     })
                   ]
                 }
               }),
-              _: 1 /* STABLE */
+              _: 3 /* FORWARDED */
             }, _parent))
           }"
         `)
