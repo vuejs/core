@@ -236,7 +236,7 @@ export function isProxy(value: unknown): boolean {
   return isReactive(value) || isReadonly(value)
 }
 
-export function toRaw<T>(observed: T): T {
+export function toRaw<T>(observed: T): Raw<T> {
   const raw = observed && (observed as Target)[ReactiveFlags.RAW]
   return raw ? toRaw(raw) : observed
 }
@@ -251,5 +251,9 @@ export function markRaw<T extends object>(value: T): Raw<T> {
 export const toReactive = <T extends unknown>(value: T): T =>
   isObject(value) ? reactive(value) : value
 
-export const toReadonly = <T extends unknown>(value: T): T =>
-  isObject(value) ? readonly(value as Record<any, any>) : value
+export function toReadonly<T extends unknown>(
+  value: T
+): T extends Record<any, any> ? DeepReadonly<UnwrapNestedRefs<T>> : T
+export function toReadonly<T extends unknown>(value: T) {
+  return isObject(value) ? readonly(value) : value
+}

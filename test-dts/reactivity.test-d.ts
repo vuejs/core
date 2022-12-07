@@ -71,3 +71,14 @@ describe('should unwrap tuple correctly', () => {
   const reactiveTuple = reactive(tuple)
   expectType<Ref<number>>(reactiveTuple[0])
 })
+
+// export checks
+export default {
+  a: reactive({}),
+  b: shallowReadonly({}),
+  c: markRaw({ a: 1 }),
+
+  d: <T extends object>(a: T) => reactive(a),
+
+  e: () => reactive({ test: markRaw({ a: 1 }) })
+}
