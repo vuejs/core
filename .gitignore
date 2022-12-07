@@ -8,3 +8,4 @@ TODOs.md
 *.log
 .idea
 .eslintcache
+.types

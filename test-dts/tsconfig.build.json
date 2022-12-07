@@ -1,6 +1,8 @@
 {
   "compilerOptions": {
-    "noEmit": true,
+    "emitDeclarationOnly": true,
+    "declaration": true,
+    "declarationDir": "./.types",
     "jsx": "preserve",
     "module": "esnext",
     "strict": true,

@@ -319,3 +319,20 @@ describe('reactive in shallow ref', () => {
 
   expectType<number>(x.value.a.b)
 })
+
+// export checks
+export default {
+  // regular ref
+  a: ref(1),
+  // shallow
+  b: shallowRef(1),
+
+  // Generic Ref
+  c: <T>(a: T) => ref(a),
+
+  // #7278
+  d: function useFilter<T>() {
+    const data = ref<T[]>([])
+    return { data }
+  }
+}
