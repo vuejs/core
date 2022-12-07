@@ -1459,13 +1459,18 @@ function baseCreateRenderer(
         ) {
           // only sync the properties and abort the rest of operations
           let { next, vnode } = instance
+          toggleRecurse(instance, false)
           if (next) {
             next.el = vnode.el
             updateComponentPreRender(instance, next, optimized)
           }
+          toggleRecurse(instance, true)
           // and continue the rest of operations once the deps are resolved
           instance.subTree.component?.asyncDep?.then(() => {
-            componentUpdateFn()
+            // the instance may be destroyed during the time period
+            if (!instance.isUnmounted) {
+              componentUpdateFn()
+            }
           })
           return
         }
