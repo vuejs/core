@@ -935,6 +935,23 @@ describe('SSR hydration', () => {
     expect((container.firstChild!.firstChild as any)._value).toBe(true)
   })
 
+  test('hydrate custom element with vue bindings', () => {
+    class MyElement extends HTMLElement {
+      foo = ''
+      constructor() {
+        super()
+      }
+    }
+    customElements.define('my-element', MyElement)
+    const msg = ref('bar')
+    const { container } = mountWithHydration(
+      '<my-element :foo="msg"></my-element>',
+      () => h('my-element', { foo: msg.value })
+    )
+    console.log(container.firstChild)
+    expect((container.firstChild as any).foo).toBe(msg.value)
+  })
+
   // #5728
   test('empty text node in slot', () => {
     const Comp = {

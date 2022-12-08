@@ -327,7 +327,8 @@ export function createHydrationFunctions(
           for (const key in props) {
             if (
               (forcePatchValue && key.endsWith('value')) ||
-              (isOn(key) && !isReservedProp(key))
+              (isOn(key) && !isReservedProp(key)) ||
+              customElements.get(el.localName) // If the element is a custom element, apply vue props during hydration - See #7203
             ) {
               patchProp(
                 el,
