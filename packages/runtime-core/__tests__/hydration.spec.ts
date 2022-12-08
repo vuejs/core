@@ -136,6 +136,15 @@ describe('SSR hydration', () => {
     expect(container.innerHTML).toBe(`<div class="bar">bar</div>`)
   })
 
+  // #7285
+  test('element with multiple continuous text vnodes', async () => {
+    // should no mismatch warning
+    const { container } = mountWithHydration('<div>foo</div>', () =>
+      h('div', ['fo', 'o'])
+    )
+    expect(container.textContent).toBe('foo')
+  })
+
   test('element with elements children', async () => {
     const msg = ref('foo')
     const fn = vi.fn()
@@ -222,6 +231,16 @@ describe('SSR hydration', () => {
     expect(vnode.el.innerHTML).toBe(
       `<!--[--><span>bar</span><!--[--><span class="bar"></span><!--]--><!--]-->`
     )
+  })
+
+  // #7285
+  test('Fragment (multiple continuous text vnodes)', async () => {
+    // should no mismatch warning
+    const { container } = mountWithHydration('<!--[-->foo<!--]-->', () => [
+      'fo',
+      'o'
+    ])
+    expect(container.textContent).toBe('foo')
   })
 
   test('Teleport', async () => {

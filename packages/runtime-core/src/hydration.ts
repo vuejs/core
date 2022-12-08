@@ -428,11 +428,78 @@ export function createHydrationFunctions(
     optimized = optimized || !!parentVNode.dynamicChildren
     const children = parentVNode.children as VNode[]
     const l = children.length
+    const continuousTextVnodes = []
+    const getVnode = (i: number) =>
+      optimized ? children[i] : (children[i] = normalizeVNode(children[i]))
     let hasWarned = false
     for (let i = 0; i < l; i++) {
-      const vnode = optimized
-        ? children[i]
-        : (children[i] = normalizeVNode(children[i]))
+      let vnode = getVnode(i)
+
+      // #7285 - multiple continuous text vnodes in children can cause hydration
+      // failure because the server rendered HTML just contain one text node
+      if (
+        vnode.type === Text &&
+        node &&
+        node.nodeType === DOMNodeTypes.TEXT &&
+        vnode.children !== (node as Text).data
+      ) {
+        const nextVnode = getVnode(i + 1)
+        // for final merging into one text
+        continuousTextVnodes.push(vnode)
+        // if the next vnode is also text, it means the children has multiple continuous
+        // text vnodes, we need to merge them into one text to avoid hydration failure
+        if (nextVnode.type === Text) {
+          patch(
+            null,
+            vnode,
+            container,
+            node,
+            parentComponent,
+            parentSuspense,
+            isSVGContainer(container),
+            slotScopeIds
+          )
+          continue
+        } else if (continuousTextVnodes.length > 1) {
+          const text = continuousTextVnodes.map(v => v.children).join('')
+          if ((node as Text).data !== text) {
+            hasMismatch = true
+            __DEV__ &&
+              warn(
+                `Hydration text mismatch:` +
+                  `\n- Client: ${JSON.stringify((node as Text).data)}` +
+                  `\n- Server: ${text}`
+              )
+          }
+          // insert the last text vnode to the container
+          patch(
+            null,
+            vnode,
+            container,
+            node,
+            parentComponent,
+            parentSuspense,
+            isSVGContainer(container),
+            slotScopeIds
+          )
+
+          const nextNode = nextSibling(node)
+          // because the node's text has been inserted to the container,
+          // so we need to remove it
+          remove(node)
+          node = nextNode
+          vnode = nextVnode
+          continuousTextVnodes.length = 0
+          i++
+          if (i === l) {
+            continue
+          }
+        } else {
+          // if only one text vnode, do nothing
+          continuousTextVnodes.length = 0
+        }
+      }
+
       if (node) {
         node = hydrateNode(
           node,
