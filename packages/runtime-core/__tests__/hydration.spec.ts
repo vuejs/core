@@ -948,7 +948,6 @@ describe('SSR hydration', () => {
       '<my-element :foo="msg"></my-element>',
       () => h('my-element', { foo: msg.value })
     )
-    console.log(container.firstChild)
     expect((container.firstChild as any).foo).toBe(msg.value)
   })
 
