@@ -128,6 +128,7 @@ async function fetchVersions(): Promise<string[]> {
         <span>{{ dev ? 'DEV' : 'PROD' }}</span>
       </button>
       <button
+        v-if="ssr != null"
         title="Toggle server rendering mode"
         class="toggle-ssr"
         :class="{ enabled: ssr }"
@@ -143,6 +144,7 @@ async function fetchVersions(): Promise<string[]> {
         <Share />
       </button>
       <button
+        v-if="!store.state.mainFile.endsWith('.html')"
         title="Download project files"
         class="download"
         @click="downloadProject(store)"

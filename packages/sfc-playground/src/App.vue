@@ -10,7 +10,7 @@ window.addEventListener('resize', setVH)
 setVH()
 
 const useDevMode = ref(false)
-const useSSRMode = ref(false)
+const useSSRMode = ref<boolean | null>(false)
 
 let hash = location.hash.slice(1)
 if (hash.startsWith('__DEV__')) {
@@ -31,6 +31,20 @@ const store = new ReplStore({
     ? `${location.origin}/server-renderer.esm-browser.js`
     : `${location.origin}/src/vue-server-renderer-dev-proxy`
 })
+
+let { mainFile } = store.state
+
+if (mainFile === 'App.vue') {
+  const firstFile = Object.keys(store.getFiles())[0]
+  if (['index.html', 'main.js', 'main.ts'].includes(firstFile)) {
+    mainFile = firstFile
+    store.setFiles(store.getFiles(), mainFile)
+  }
+}
+
+if (!mainFile.endsWith('.vue')) {
+  useSSRMode.value = null
+}
 
 // enable experimental features
 const sfcOptions = {
@@ -63,12 +77,12 @@ function toggleDevMode() {
     sfcOptions.template.isProd =
     sfcOptions.style.isProd =
       !dev
-  store.setFiles(store.getFiles())
+  store.setFiles(store.getFiles(), store.state.mainFile)
 }
 
 function toggleSSR() {
   useSSRMode.value = !useSSRMode.value
-  store.setFiles(store.getFiles())
+  store.setFiles(store.getFiles(), store.state.mainFile)
 }
 </script>
 
@@ -83,7 +97,7 @@ function toggleSSR() {
   <Repl
     @keydown.ctrl.s.prevent
     @keydown.meta.s.prevent
-    :ssr="useSSRMode"
+    :ssr="useSSRMode === true"
     :store="store"
     :showCompileOutput="true"
     :autoResize="true"
