@@ -222,6 +222,23 @@ describe('sfc props transform', () => {
     })
   })
 
+  test('unwrap TS node', () => {
+    const { content, bindings } = compile(`
+      <script setup lang="ts">
+      const { foo } = defineProps(['foo'])! as any
+      console.log(foo)
+      </script>
+      <template>{{ foo }}</template>
+    `)
+    expect(content).not.toMatch(`const { foo } =`)
+    expect(content).toMatch(`console.log(__props.foo)`)
+    expect(content).toMatch(`_toDisplayString(__props.foo)`)
+    assertCode(content)
+    expect(bindings).toStrictEqual({
+      foo: BindingTypes.PROPS
+    })
+  })
+
   describe('errors', () => {
     test('should error on deep destructure', () => {
       expect(() =>

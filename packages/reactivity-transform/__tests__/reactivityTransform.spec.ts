@@ -489,6 +489,19 @@ test('should not overwrite current scope', () => {
   assertCode(code)
 })
 
+test('should unwrap TS node', () => {
+  const { code } = transform(
+    `
+    const bar = $(ref(1))! as number
+    const baz = $$(bar)! as Ref<number>
+    const qux = (<number>$ref(10)!)
+    const { a, b } = $({ a: 'a', b: 'b' })! as any
+    `,
+    { filename: 'foo.ts' }
+  )
+  assertCode(code)
+})
+
 describe('errors', () => {
   test('$ref w/ destructure', () => {
     expect(() => transform(`let { a } = $ref(1)`)).toThrow(
