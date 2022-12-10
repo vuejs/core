@@ -224,6 +224,7 @@ describe('reactivity/effect/scope', () => {
   // #6538
   it('should not track effect in onScopeDispose', () => {
     const counter = ref(0)
+    const num = ref(0)
     const spy = jest.fn()
 
     const scope = new EffectScope()
@@ -235,6 +236,7 @@ describe('reactivity/effect/scope', () => {
     effect(
       () => {
         scope.stop()
+        num.value
       },
       {
         scheduler: spy
@@ -243,6 +245,8 @@ describe('reactivity/effect/scope', () => {
 
     counter.value = 1
     expect(spy).toHaveBeenCalledTimes(0)
+    num.value = 1
+    expect(spy).toHaveBeenCalledTimes(1)
   })
 
   it('should dereference child scope from parent scope after stopping child scope (no memleaks)', () => {
