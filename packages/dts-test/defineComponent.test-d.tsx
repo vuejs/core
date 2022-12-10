@@ -350,6 +350,25 @@ describe('type inference w/ optional props declaration', () => {
   ;<MyComponent msg="1" />
 })
 
+// #5731
+describe('type inference w/ optional props declaration', () => {
+  type Props = {
+    reset: () => number
+  }
+  const MyComponent = defineComponent<Props>({
+    setup(props) {
+      expectType<() => number>(props.reset)
+      return {
+        b: 1
+      }
+    }
+  })
+
+  expectType<JSX.Element>(<MyComponent reset={() => 1} />)
+  // @ts-expect-error
+  expectError(<MyComponent />)
+})
+
 describe('type inference w/ direct setup function', () => {
   const MyComponent = defineComponent((_props: { msg: string }) => {})
   expectType<JSX.Element>(<MyComponent msg="foo" />)
@@ -1040,7 +1059,7 @@ describe('inject', () => {
       expectType<unknown>(this.foo)
       expectType<unknown>(this.bar)
       //  @ts-expect-error
-      this.foobar = 1
+      expectError((this.foobar = 1))
     }
   })
 
@@ -1052,7 +1071,7 @@ describe('inject', () => {
       expectType<unknown>(this.foo)
       expectType<unknown>(this.bar)
       //  @ts-expect-error
-      this.foobar = 1
+      expectError((this.foobar = 1))
     }
   })
 
@@ -1072,7 +1091,7 @@ describe('inject', () => {
       expectType<unknown>(this.foo)
       expectType<unknown>(this.bar)
       //  @ts-expect-error
-      this.foobar = 1
+      expectError((this.foobar = 1))
     }
   })
 
@@ -1081,9 +1100,9 @@ describe('inject', () => {
     props: ['a', 'b'],
     created() {
       //  @ts-expect-error
-      this.foo = 1
+      expectError((this.foo = 1))
       //  @ts-expect-error
-      this.bar = 1
+      expectError((this.bar = 1))
     }
   })
 })

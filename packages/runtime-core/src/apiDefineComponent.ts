@@ -122,7 +122,19 @@ export function defineComponent<
     I,
     II
   >
-): DefineComponent<Props, RawBindings, D, C, M, Mixin, Extends, E, EE>
+): DefineComponent<
+  Props,
+  RawBindings,
+  D,
+  C,
+  M,
+  Mixin,
+  Extends,
+  E,
+  EE,
+  PublicProps,
+  Readonly<Props> & ({} extends E ? {} : EmitsToProps<E>)
+>
 
 // overload 3: object format with array props declaration
 // props inferred as { [key in PropNames]?: any }
