@@ -7,7 +7,8 @@ import {
   isReactive,
   ReactiveFlags,
   EffectScheduler,
-  DebuggerOptions
+  DebuggerOptions,
+  getCurrentScope,
 } from '@vue/reactivity'
 import { SchedulerJob, queueJob } from './scheduler'
 import {
@@ -197,7 +198,8 @@ function doWatch(
     )
   }
 
-  const instance = currentInstance
+  const instance = getCurrentScope() === currentInstance?.scope ?  currentInstance : null
+  // const instance = currentInstance
   let getter: () => any
   let forceTrigger = false
   let isMultiSource = false

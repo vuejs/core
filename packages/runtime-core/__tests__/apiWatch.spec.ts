@@ -1150,4 +1150,37 @@ describe('api: watch', () => {
     // own update effect
     expect(instance!.scope.effects.length).toBe(1)
   })
+
+  test('watchEffect should keep running if created in a detatched scope', async () => {
+    const trigger = ref(0)
+    let count = 0
+    const Comp = {
+      setup() {
+        effectScope(true).run(() => {
+          watchEffect(
+            () => {
+              trigger.value
+              count++
+            },
+          )
+          watch(
+            trigger,
+            () => count++
+          )
+        })
+        return () => ''
+      }
+    }
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(count).toBe(1) // only watchEffect as ran so far
+    trigger.value++
+    await nextTick()
+    expect(count).toBe(3) // both watchers run while component is mounted
+    render(null, root)
+    await nextTick()
+    trigger.value++
+    await nextTick()
+    expect(count).toBe(5) // both watchers run again event though component has been unmounted
+  })
 })
