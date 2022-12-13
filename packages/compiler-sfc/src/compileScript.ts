@@ -2057,11 +2057,26 @@ function inferRuntimeType(
           case 'Readonly':
           case 'Pick':
           case 'Omit':
-          case 'Exclude':
-          case 'Extract':
           case 'Required':
           case 'InstanceType':
             return ['Object']
+
+          case 'Extract':
+            if (node.typeParameters && node.typeParameters.params[1]) {
+              return inferRuntimeType(
+                node.typeParameters.params[1],
+                declaredTypes
+              )
+            }
+            return ['null']
+          case 'Exclude':
+            if (node.typeParameters && node.typeParameters.params[0]) {
+              return inferRuntimeType(
+                node.typeParameters.params[0],
+                declaredTypes
+              )
+            }
+            return ['null']
         }
       }
       return [`null`]
