@@ -1346,22 +1346,20 @@ describe('function syntax w/ runtime props', () => {
     <T extends string>(_props: { msg: T }) => {
       return () => {}
     },
-    {
-      props: {
-        msg: String
+    setup(props) {
+      expectType<SizeType>(props.size)
+      return {
+        size: 1
       }
     }
-  )
+  })
+  type CompInstance = InstanceType<typeof Comp>
 
-  // @ts-expect-error string prop names don't match
-  defineComponent(
-    (_props: { msg: string }) => {
-      return () => {}
-    },
-    {
-      props: ['bar']
-    }
-  )
+  const CompA = {} as CompInstance
+  expectType<ComponentPublicInstance>(CompA)
+  expectType<number>(CompA.size)
+  expectType<SizeType>(CompA.$props.size)
+})
 
   defineComponent(
     (_props: { msg: string }) => {
@@ -1372,21 +1370,20 @@ describe('function syntax w/ runtime props', () => {
         // @ts-expect-error prop type mismatch
         msg: Number
       }
-    }
-  )
-
-  // @ts-expect-error prop keys don't match
-  defineComponent(
-    (_props: { msg: string }, ctx) => {
-      return () => {}
     },
-    {
-      props: {
-        msg: String,
-        bar: String
+    setup(props) {
+      expectType<SizeType>(props.size)
+      return {
+        size: 1
       }
     }
-  )
+  })
+  type CompInstance = InstanceType<typeof Comp>
+
+  const CompA = {} as CompInstance
+  expectType<ComponentPublicInstance>(CompA)
+  expectType<number>(CompA.size)
+  expectType<SizeType>(CompA.$props.size)
 })
 
 // check if defineComponent can be exported
@@ -1470,6 +1467,31 @@ describe('slots', () => {
     }
   })
   expectType<Slots | undefined>(new comp2().$slots)
+})
+
+// #5885
+describe('should work when props type is incompatible with setup returned type ', () => {
+  type SizeType = 'small' | 'big'
+  const Comp = defineComponent({
+    props: {
+      size: {
+        type: String as PropType<SizeType>,
+        required: true
+      }
+    },
+    setup(props) {
+      expectType<SizeType>(props.size)
+      return {
+        size: 1
+      }
+    }
+  })
+  type CompInstance = InstanceType<typeof Comp>
+
+  const CompA = {} as CompInstance
+  expectType<ComponentPublicInstance>(CompA)
+  expectType<number>(CompA.size)
+  expectType<SizeType>(CompA.$props.size)
 })
 
 import {
