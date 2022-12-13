@@ -1619,6 +1619,8 @@ export default /*#__PURE__*/_defineComponent({
     alias: { type: Array, required: true },
     method: { type: Function, required: true },
     symbol: { type: Symbol, required: true },
+    extract: { type: Number, required: true },
+    exclude: { type: [Number, Boolean], required: true },
     objectOrFn: { type: [Function, Object], required: true },
     union: { type: [String, Number], required: true },
     literalUnion: { type: String, required: true },

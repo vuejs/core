@@ -960,6 +960,8 @@ const emit = defineEmits(['a', 'b'])
         alias: Alias
         method(): void
         symbol: symbol
+        extract: Extract<1 | 2 | boolean, 2>
+        exclude: Exclude<1 | 2 | boolean, 2>
         objectOrFn: {
           (): void
           foo: string
@@ -997,6 +999,10 @@ const emit = defineEmits(['a', 'b'])
       expect(content).toMatch(
         `objectOrFn: { type: [Function, Object], required: true },`
       )
+      expect(content).toMatch(`extract: { type: Number, required: true }`)
+      expect(content).toMatch(
+        `exclude: { type: [Number, Boolean], required: true }`
+      )
       expect(content).toMatch(
         `union: { type: [String, Number], required: true }`
       )
@@ -1031,6 +1037,8 @@ const emit = defineEmits(['a', 'b'])
         method: BindingTypes.PROPS,
         symbol: BindingTypes.PROPS,
         objectOrFn: BindingTypes.PROPS,
+        extract: BindingTypes.PROPS,
+        exclude: BindingTypes.PROPS,
         union: BindingTypes.PROPS,
         literalUnion: BindingTypes.PROPS,
         literalUnionNumber: BindingTypes.PROPS,
