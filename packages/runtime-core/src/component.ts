@@ -186,7 +186,7 @@ export type SetupContext<E = EmitsOptions> = E extends any
       attrs: Data
       slots: Slots
       emit: EmitFn<E>
-      expose: (exposed?: Record<string, any>) => void
+      expose: <T extends Record<string, any> = {}>(exposed?: T) => void
     }
   : never
 
