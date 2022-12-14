@@ -402,7 +402,7 @@ export function updateCssVars(vnode: VNode) {
   const ctx = vnode.ctx
   if (ctx && ctx.ut) {
     let node = (vnode.children as VNode[])[0].el!
-    while (node !== vnode.targetAnchor) {
+    while (node && node !== vnode.targetAnchor) {
       if (node.nodeType === 1) node.setAttribute('data-v-owner', ctx.uid)
       node = node.nextSibling
     }
