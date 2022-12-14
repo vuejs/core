@@ -222,9 +222,7 @@ export const TeleportImpl = {
         }
       }
     }
-    if (!disabled) {
-      updateCssVars(n2)
-    }
+    updateCssVars(n2)
   },
 
   remove(
@@ -337,14 +335,13 @@ function hydrateTeleport(
     vnode.props,
     querySelector
   ))
-  const isDisabled = isTeleportDisabled(vnode.props)
   if (target) {
     // if multiple teleports rendered to the same target element, we need to
     // pick up from where the last teleport finished instead of the first node
     const targetNode =
       (target as TeleportTargetElement)._lpa || target.firstChild
     if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-      if (isDisabled) {
+      if (isTeleportDisabled(vnode.props)) {
         vnode.anchor = hydrateChildren(
           nextSibling(node),
           vnode,
@@ -387,9 +384,7 @@ function hydrateTeleport(
         )
       }
     }
-    if (!isDisabled) {
-      updateCssVars(vnode)
-    }
+    updateCssVars(vnode)
   }
   return vnode.anchor && nextSibling(vnode.anchor as Node)
 }
@@ -406,7 +401,7 @@ function updateCssVars(vnode: VNode) {
   const ctx = vnode.ctx
   if (ctx && ctx.ut) {
     let node = (vnode.children as VNode[])[0].el!
-    while (node !== vnode.targetAnchor) {
+    while (node && node !== vnode.targetAnchor) {
       if (node.nodeType === 1) node.setAttribute('data-v-owner', ctx.uid)
       node = node.nextSibling
     }
