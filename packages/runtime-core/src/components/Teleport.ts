@@ -222,8 +222,9 @@ export const TeleportImpl = {
         }
       }
     }
-
-    updateCssVars(n2)
+    if (!disabled) {
+      updateCssVars(n2)
+    }
   },
 
   remove(
@@ -336,13 +337,14 @@ function hydrateTeleport(
     vnode.props,
     querySelector
   ))
+  const isDisabled = isTeleportDisabled(vnode.props)
   if (target) {
     // if multiple teleports rendered to the same target element, we need to
     // pick up from where the last teleport finished instead of the first node
     const targetNode =
       (target as TeleportTargetElement)._lpa || target.firstChild
     if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-      if (isTeleportDisabled(vnode.props)) {
+      if (isDisabled) {
         vnode.anchor = hydrateChildren(
           nextSibling(node),
           vnode,
@@ -385,7 +387,9 @@ function hydrateTeleport(
         )
       }
     }
-    updateCssVars(vnode)
+    if (!isDisabled) {
+      updateCssVars(vnode)
+    }
   }
   return vnode.anchor && nextSibling(vnode.anchor as Node)
 }
