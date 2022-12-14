@@ -222,6 +222,7 @@ export const TeleportImpl = {
         }
       }
     }
+    
     updateCssVars(n2)
   },
 
