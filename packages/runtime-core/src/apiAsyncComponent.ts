@@ -38,7 +38,7 @@ export interface AsyncComponentOptions<T = any> {
 }
 
 export const isAsyncWrapper = (i: ComponentInternalInstance | VNode): boolean =>
-  i && i.type ? !!(i.type as ComponentOptions).__asyncLoader : false
+  !!(i && i.type && (i.type as ComponentOptions).__asyncLoader)
 
 export function defineAsyncComponent<
   T extends Component = { new (): ComponentPublicInstance }
