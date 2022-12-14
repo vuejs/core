@@ -28,7 +28,7 @@ const isTeleportDisabled = (props: VNode['props']): boolean =>
 const isTargetSVG = (target: RendererElement): boolean =>
   typeof SVGElement !== 'undefined' && target instanceof SVGElement
 
-const resolveTarget = <T = RendererElement>(
+export const resolveTarget = <T = RendererElement>(
   props: TeleportProps | null,
   select: RendererOptions['querySelector']
 ): T | null => {
@@ -396,7 +396,7 @@ export const Teleport = TeleportImpl as unknown as {
   new (): { $props: VNodeProps & TeleportProps }
 }
 
-function updateCssVars(vnode: VNode) {
+export function updateCssVars(vnode: VNode) {
   // presence of .ut method indicates owner component uses css vars.
   // code path here can assume browser environment.
   const ctx = vnode.ctx

@@ -6,10 +6,13 @@ import {
   Static,
   watchPostEffect,
   onMounted,
-  onUnmounted
+  onUnmounted,
+  resolveTarget,
+  TeleportProps,
+  updateCssVars
 } from '@vue/runtime-core'
-import { ShapeFlags } from '@vue/shared'
-
+import { ShapeFlags, isArray } from '@vue/shared'
+import { nodeOps } from '../nodeOps'
 /**
  * Runtime helper for SFC's CSS variable injection feature.
  * @private
@@ -40,10 +43,30 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>) {
   watchPostEffect(setVars)
 
   onMounted(() => {
-    const ob = new MutationObserver(setVars)
-    ob.observe(instance.subTree.el!.parentNode, { childList: true })
-    onUnmounted(() => ob.disconnect())
+    const obs = [onSubTreeChange(instance.subTree.el!.parentNode, setVars)]
+    const observeTeleportTarget = (vnode: VNode) => {
+      if (vnode.shapeFlag & ShapeFlags.TELEPORT) {
+        const target = resolveTarget(
+          vnode.props as TeleportProps,
+          nodeOps.querySelector
+        ) as Node
+        if (target) {
+          obs.push(onSubTreeChange(target, () => updateCssVars(vnode)))
+        }
+      }
+      if (isArray(vnode.children)) {
+        vnode.children.forEach(n => observeTeleportTarget(n as VNode))
+      }
+    }
+    observeTeleportTarget(instance.subTree)
+    onUnmounted(() => obs.forEach(ob => ob.disconnect()))
   })
+}
+
+function onSubTreeChange(target: Node, cb: () => void): MutationObserver {
+  const ob = new MutationObserver(cb)
+  ob.observe(target, { childList: true })
+  return ob
 }
 
 function setVarsOnVNode(vnode: VNode, vars: Record<string, string>) {
