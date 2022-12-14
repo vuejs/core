@@ -1447,32 +1447,48 @@ function baseCreateRenderer(
         // #2458: deference mount-only object parameters to prevent memleaks
         initialVNode = container = anchor = null as any
       } else {
-        // we are trying to update some async comp before hydration
-        // this will cause crash because we don't know the root node yet
-        if (
-          __FEATURE_SUSPENSE__ &&
-          instance.subTree.shapeFlag & ShapeFlags.COMPONENT &&
-          // this happens only during hydration
-          instance.subTree.component?.subTree == null &&
-          // we don't know the subTree yet because we haven't resolve it
-          instance.subTree.component?.asyncResolved === false
-        ) {
-          // only sync the properties and abort the rest of operations
-          let { next, vnode } = instance
-          toggleRecurse(instance, false)
-          if (next) {
-            next.el = vnode.el
-            updateComponentPreRender(instance, next, optimized)
-          }
-          toggleRecurse(instance, true)
-          // and continue the rest of operations once the deps are resolved
-          instance.subTree.component?.asyncDep?.then(() => {
-            // the instance may be destroyed during the time period
-            if (!instance.isUnmounted) {
-              componentUpdateFn()
+        if (__FEATURE_SUSPENSE__) {
+          const locateNonHydratedAsyncRoot = (
+            instance: ComponentInternalInstance
+          ): ComponentInternalInstance | null => {
+            if (instance.subTree.shapeFlag & ShapeFlags.COMPONENT) {
+              if (
+                // this happens only during hydration
+                instance.subTree.component?.subTree == null &&
+                // we don't know the subTree yet because we haven't resolve it
+                instance.subTree.component?.asyncResolved === false
+              ) {
+                return instance.subTree.component!
+              } else {
+                return locateNonHydratedAsyncRoot(instance.subTree.component!)
+              }
+            } else {
+              return null
             }
-          })
-          return
+          }
+
+          const nonHydratedAsyncRoot = locateNonHydratedAsyncRoot(instance)
+
+          // we are trying to update some async comp before hydration
+          // this will cause crash because we don't know the root node yet
+          if (nonHydratedAsyncRoot != null) {
+            // only sync the properties and abort the rest of operations
+            let { next, vnode } = instance
+            toggleRecurse(instance, false)
+            if (next) {
+              next.el = vnode.el
+              updateComponentPreRender(instance, next, optimized)
+            }
+            toggleRecurse(instance, true)
+            // and continue the rest of operations once the deps are resolved
+            nonHydratedAsyncRoot.asyncDep?.then(() => {
+              // the instance may be destroyed during the time period
+              if (!instance.isUnmounted) {
+                componentUpdateFn()
+              }
+            })
+            return
+          }
         }
 
         // updateComponent
