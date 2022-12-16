@@ -25,8 +25,13 @@ export const teleportUTMap: Record<
 > = {}
 
 export const isTeleport = (type: any): boolean => type.__isTeleport
-
-export const setTeleportOwnerAttr = (
+/**
+ * Before the element is unloaded, if it contains
+ * the attribute `data-v-owner` from teleport injection,
+ * then store it on the parent component instance
+ * @private
+ */
+export const cacheTeleportOwnerAttr = (
   n1: VNode,
   parentComponent: ComponentInternalInstance | null
 ) => {
@@ -38,6 +43,47 @@ export const setTeleportOwnerAttr = (
     parentComponent
   ) {
     parentComponent.utOwner = el.getAttribute('data-v-owner')
+  }
+}
+/**
+ * If the element's parent component attribute `utOwner` has a value,
+ * it means that the element has been marked by teleport
+ * as `data-v-owner` before the element is updated,
+ * then the element needs to be reset before mounting
+ * @private
+ */
+export const setTeleportOwnerAttrToEl = (
+  props: (VNodeProps & { [key: string]: any }) | null,
+  parentComponent: ComponentInternalInstance | null
+) => {
+  const dataVOwner = parentComponent ? parentComponent.utOwner : null
+  if (dataVOwner) {
+    if (!props) {
+      props = {}
+    }
+    props['data-v-owner'] = dataVOwner
+  }
+  return props
+}
+/**
+ * In the fast path, sometimes element updates will not re-update `teleport`
+ * E.g
+ * <teleport to="body">
+ *     <Comp>
+ *        <div class="text" v-if="showThing">
+ *         test
+ *       </div>
+ *     </Comp>
+ *   </teleport>
+ * so here you need to execute `instance.ut` according to `utOwner`
+ * @private
+ */
+export const updateTeleportsCssVarsFast = (
+  parentComponent: ComponentInternalInstance | null
+) => {
+  const dataVOwner = parentComponent ? parentComponent.utOwner : null
+  if (dataVOwner && teleportUTMap[dataVOwner as number]) {
+    teleportUTMap[dataVOwner as number]!()
   }
 }
 

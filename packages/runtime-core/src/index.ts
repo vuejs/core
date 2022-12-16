@@ -92,7 +92,7 @@ export {
   Teleport,
   TeleportProps,
   teleportUTMap,
-  setTeleportOwnerAttr
+  cacheTeleportOwnerAttr
 } from './components/Teleport'
 export { Suspense, SuspenseProps } from './components/Suspense'
 export { KeepAlive, KeepAliveProps } from './components/KeepAlive'
