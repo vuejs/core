@@ -16,7 +16,8 @@ import {
   createElementBlock,
   createCommentVNode,
   createVNode,
-  Transition
+  Transition,
+  createBlock
 } from '@vue/runtime-dom'
 
 describe('useCssVars', () => {
@@ -309,8 +310,7 @@ describe('useCssVars', () => {
                       createElementBlock(
                         'div',
                         {
-                          key: 0,
-                          class: 'text'
+                          key: 0
                         },
                         ' test '
                       ))
@@ -360,8 +360,7 @@ describe('useCssVars', () => {
                     createElementBlock(
                       'div',
                       {
-                        key: 0,
-                        class: 'text'
+                        key: 0
                       },
                       'test'
                     ))
@@ -386,6 +385,72 @@ describe('useCssVars', () => {
     toggle.value = true
     await nextTick()
     expect(target.children.length).toBe(1)
+    for (const c of [].slice.call(target.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+    }
+  })
+
+  test('with teleport(transition & v-if element)', async () => {
+    document.body.innerHTML = ''
+    const state = reactive({ color: 'red' })
+    const root = document.createElement('div')
+    const target = document.body
+    const toggle = ref(true)
+
+    const App = {
+      setup() {
+        useCssVars(() => state)
+        return () => [
+          (openBlock(),
+          createBlock(Teleport, { to: target }, [
+            createVNode(
+              Transition,
+              {},
+              {
+                default: withCtx(() => [
+                  toggle.value
+                    ? (openBlock(),
+                      createElementBlock(
+                        'div',
+                        {
+                          key: 0
+                        },
+                        'test'
+                      ))
+                    : createCommentVNode('v-if', true)
+                ]),
+                _: 1 /* STABLE */
+              }
+            )
+          ])),
+          (openBlock(),
+          createBlock(Teleport, { to: target }, [
+            toggle.value
+              ? (openBlock(),
+                createElementBlock(
+                  'div',
+                  {
+                    key: 0
+                  },
+                  'element'
+                ))
+              : createCommentVNode('v-if', true)
+          ]))
+        ]
+      }
+    }
+
+    render(h(App), root)
+    await nextTick()
+    expect(target.children.length).toBe(2)
+    for (const c of [].slice.call(target.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+    }
+    toggle.value = false
+    await nextTick()
+    toggle.value = true
+    await nextTick()
+    expect(target.children.length).toBe(2)
     for (const c of [].slice.call(target.children as any)) {
       expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
     }

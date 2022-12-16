@@ -467,6 +467,11 @@ export interface ComponentInternalInstance {
    * @internal
    */
   ut?: (vars?: Record<string, string>) => void
+  /**
+   *
+   * @internal
+   */
+  utOwner?: number
 }
 
 const emptyAppContext = createAppContext()

@@ -91,8 +91,8 @@ export { Fragment, Text, Comment, Static, VNodeRef } from './vnode'
 export {
   Teleport,
   TeleportProps,
-  resolveTarget,
-  updateCssVars
+  teleportUTMap,
+  setTeleportOwnerAttr
 } from './components/Teleport'
 export { Suspense, SuspenseProps } from './components/Suspense'
 export { KeepAlive, KeepAliveProps } from './components/KeepAlive'

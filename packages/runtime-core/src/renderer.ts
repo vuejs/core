@@ -56,7 +56,12 @@ import {
   queueEffectWithSuspense,
   SuspenseImpl
 } from './components/Suspense'
-import { TeleportImpl, TeleportVNode } from './components/Teleport'
+import {
+  setTeleportOwnerAttr,
+  TeleportImpl,
+  TeleportVNode,
+  teleportUTMap
+} from './components/Teleport'
 import { isKeepAlive, KeepAliveContext } from './components/KeepAlive'
 import { registerHMR, unregisterHMR, isHmrUpdating } from './hmr'
 import { createHydrationFunctions, RootHydrateFunction } from './hydration'
@@ -367,6 +372,7 @@ function baseCreateRenderer(
 
     // patching & not same type, unmount old tree
     if (n1 && !isSameVNodeType(n1, n2)) {
+      setTeleportOwnerAttr(n1, parentComponent)
       anchor = getNextHostNode(n1)
       unmount(n1, parentComponent, parentSuspense, true)
       n1 = null
@@ -617,8 +623,15 @@ function baseCreateRenderer(
   ) => {
     let el: RendererElement
     let vnodeHook: VNodeHook | undefined | null
-    const { type, props, shapeFlag, transition, dirs } = vnode
-
+    const { type, shapeFlag, transition, dirs } = vnode
+    let props = vnode.props
+    const dataVOwner = parentComponent ? parentComponent.utOwner : null
+    if (dataVOwner) {
+      if (!props) {
+        props = {}
+      }
+      props['data-v-owner'] = dataVOwner
+    }
     el = vnode.el = hostCreateElement(
       vnode.type as string,
       isSVG,
@@ -705,6 +718,11 @@ function baseCreateRenderer(
       transition!.beforeEnter(el)
     }
     hostInsert(el, container, anchor)
+
+    if (dataVOwner && teleportUTMap[dataVOwner as number]) {
+      teleportUTMap[dataVOwner as number]!()
+    }
+
     if (
       (vnodeHook = props && props.onVnodeMounted) ||
       needCallTransitionHooks ||
@@ -1852,6 +1870,7 @@ function baseCreateRenderer(
     // i = 0, e1 = 0, e2 = -1
     else if (i > e2) {
       while (i <= e1) {
+        setTeleportOwnerAttr(c1[i], parentComponent)
         unmount(c1[i], parentComponent, parentSuspense, true)
         i++
       }
@@ -1902,6 +1921,7 @@ function baseCreateRenderer(
       for (i = s1; i <= e1; i++) {
         const prevChild = c1[i]
         if (patched >= toBePatched) {
+          setTeleportOwnerAttr(prevChild, parentComponent)
           // all new children have been patched so this can only be a removal
           unmount(prevChild, parentComponent, parentSuspense, true)
           continue
@@ -1922,6 +1942,7 @@ function baseCreateRenderer(
           }
         }
         if (newIndex === undefined) {
+          setTeleportOwnerAttr(prevChild, parentComponent)
           unmount(prevChild, parentComponent, parentSuspense, true)
         } else {
           newIndexToOldIndexMap[newIndex - s2] = i + 1
@@ -2246,6 +2267,7 @@ function baseCreateRenderer(
     if (update) {
       // so that scheduler will no longer invoke it
       update.active = false
+      setTeleportOwnerAttr(subTree, instance)
       unmount(subTree, instance, parentSuspense, doRemove)
     }
     // unmounted hook
@@ -2297,6 +2319,7 @@ function baseCreateRenderer(
     start = 0
   ) => {
     for (let i = start; i < children.length; i++) {
+      setTeleportOwnerAttr(children[i], parentComponent)
       unmount(children[i], parentComponent, parentSuspense, doRemove, optimized)
     }
   }

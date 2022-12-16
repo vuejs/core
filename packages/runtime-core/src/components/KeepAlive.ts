@@ -44,6 +44,7 @@ import { ComponentRenderContext } from '../componentPublicInstance'
 import { devtoolsComponentAdded } from '../devtools'
 import { isAsyncWrapper } from '../apiAsyncComponent'
 import { isSuspense } from './Suspense'
+import { setTeleportOwnerAttr } from '@vue/runtime-core'
 
 type MatchPattern = string | RegExp | (string | RegExp)[]
 
@@ -179,6 +180,7 @@ const KeepAliveImpl: ComponentOptions = {
     function unmount(vnode: VNode) {
       // reset the shapeFlag so it can be properly unmounted
       resetShapeFlag(vnode)
+      setTeleportOwnerAttr(vnode, instance)
       _unmount(vnode, instance, parentSuspense, true)
     }
 

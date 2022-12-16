@@ -29,6 +29,7 @@ import {
   assertNumber
 } from '../warning'
 import { handleError, ErrorCodes } from '../errorHandling'
+import { setTeleportOwnerAttr } from '@vue/runtime-core'
 
 export interface SuspenseProps {
   onResolve?: () => void
@@ -490,6 +491,7 @@ function createSuspenseBoundary(
           // if the fallback tree was mounted, it may have been moved
           // as part of a parent suspense. get the latest anchor for insertion
           anchor = next(activeBranch)
+          setTeleportOwnerAttr(activeBranch, parentComponent)
           unmount(activeBranch, parentComponent, suspense, true)
         }
         if (!delayEnter) {

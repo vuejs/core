@@ -19,8 +19,27 @@ export interface TeleportProps {
   to: string | RendererElement | null | undefined
   disabled?: boolean
 }
+export const teleportUTMap: Record<
+  number,
+  ((vars?: Record<string, string>) => void) | null
+> = {}
 
 export const isTeleport = (type: any): boolean => type.__isTeleport
+
+export const setTeleportOwnerAttr = (
+  n1: VNode,
+  parentComponent: ComponentInternalInstance | null
+) => {
+  const { el } = n1
+  if (
+    el &&
+    el.getAttribute &&
+    el.getAttribute('data-v-owner') &&
+    parentComponent
+  ) {
+    parentComponent.utOwner = el.getAttribute('data-v-owner')
+  }
+}
 
 const isTeleportDisabled = (props: VNode['props']): boolean =>
   props && (props.disabled || props.disabled === '')
@@ -28,7 +47,7 @@ const isTeleportDisabled = (props: VNode['props']): boolean =>
 const isTargetSVG = (target: RendererElement): boolean =>
   typeof SVGElement !== 'undefined' && target instanceof SVGElement
 
-export const resolveTarget = <T = RendererElement>(
+const resolveTarget = <T = RendererElement>(
   props: TeleportProps | null,
   select: RendererOptions['querySelector']
 ): T | null => {
@@ -396,13 +415,13 @@ export const Teleport = TeleportImpl as unknown as {
   new (): { $props: VNodeProps & TeleportProps }
 }
 
-export function updateCssVars(vnode: VNode) {
+function updateCssVars(vnode: VNode) {
   // presence of .ut method indicates owner component uses css vars.
   // code path here can assume browser environment.
   const ctx = vnode.ctx
   if (ctx && ctx.ut) {
     let node = (vnode.children as VNode[])[0].el!
-    while (node && node !== vnode.targetAnchor) {
+    while (node !== vnode.targetAnchor) {
       if (node.nodeType === 1) node.setAttribute('data-v-owner', ctx.uid)
       node = node.nextSibling
     }
