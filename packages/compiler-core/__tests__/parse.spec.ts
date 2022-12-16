@@ -1990,7 +1990,7 @@ foo
       })
       expect(ast.children[2].type).toBe(NodeTypes.INTERPOLATION)
     })
-    
+
     it('should NOT remove whitespaces w/o newline between elements', () => {
       const ast = parse(`<div/> <div/> <div/>`)
       expect(ast.children.length).toBe(5)
@@ -2131,7 +2131,8 @@ foo
     const patterns: {
       [key: string]: Array<{
         code: string
-        errors: Array<{ type: ErrorCodes; loc: Position }>
+        errors?: Array<{ type: ErrorCodes; loc: Position }>
+        warnings?: Array<{ type: ErrorCodes; loc: Position }>
         options?: Partial<ParserOptions>
       }>
     } = {
@@ -3022,19 +3023,33 @@ foo
             }
           ]
         }
+      ],
+      X_COLON_BEFORE_DIRECTIVE: [
+        {
+          code: `<div :v-foo="obj" />`,
+          warnings: [
+            {
+              type: ErrorCodes.X_COLON_BEFORE_DIRECTIVE,
+              loc: { offset: 5, line: 1, column: 6 }
+            }
+          ]
+        }
       ]
     }
 
     for (const key of Object.keys(patterns) as (keyof typeof patterns)[]) {
       describe(key, () => {
-        for (const { code, errors, options } of patterns[key]) {
+        for (const { code, errors = [], warnings = [], options } of patterns[
+          key
+        ]) {
           test(
             code.replace(
               /[\r\n]/g,
               c => `\\x0${c.codePointAt(0)!.toString(16)};`
             ),
             () => {
-              const spy = jest.fn()
+              const errorSpy = jest.fn()
+              const warnSpy = jest.fn()
               const ast = baseParse(code, {
                 getNamespace: (tag, parent) => {
                   const ns = parent ? parent.ns : Namespaces.HTML
@@ -3055,15 +3070,22 @@ foo
                   return TextModes.DATA
                 },
                 ...options,
-                onError: spy
+                onError: errorSpy,
+                onWarn: warnSpy
               })
 
               expect(
-                spy.mock.calls.map(([err]) => ({
+                errorSpy.mock.calls.map(([err]) => ({
                   type: err.code,
                   loc: err.loc.start
                 }))
               ).toMatchObject(errors)
+              expect(
+                warnSpy.mock.calls.map(([err]) => ({
+                  type: err.code,
+                  loc: err.loc.start
+                }))
+              ).toMatchObject(warnings)
               expect(ast).toMatchSnapshot()
             }
           )

@@ -273,10 +273,10 @@ function parseChildren(
               (shouldCondense &&
                 ((prev.type === NodeTypes.COMMENT &&
                   next.type === NodeTypes.COMMENT) ||
-                  (prev.type === NodeTypes.COMMENT && 
-                  next.type === NodeTypes.ELEMENT) ||
+                  (prev.type === NodeTypes.COMMENT &&
+                    next.type === NodeTypes.ELEMENT) ||
                   (prev.type === NodeTypes.ELEMENT &&
-                  next.type === NodeTypes.COMMENT) ||
+                    next.type === NodeTypes.COMMENT) ||
                   (prev.type === NodeTypes.ELEMENT &&
                     next.type === NodeTypes.ELEMENT &&
                     /[\r\n]/.test(node.content))))
@@ -813,6 +813,22 @@ function parseAttribute(
         : startsWith(name, '@')
         ? 'on'
         : 'slot')
+
+    if (__DEV__) {
+      if (name.startsWith(':v-')) {
+        context.options.onWarn(
+          createCompilerError(
+            ErrorCodes.X_COLON_BEFORE_DIRECTIVE,
+            loc,
+            undefined,
+            `the attribute name ${name} is probably a mistake. Did you mean ${name.slice(
+              1
+            )} instead?`
+          )
+        )
+      }
+    }
+
     let arg: ExpressionNode | undefined
 
     if (match[2]) {
