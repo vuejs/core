@@ -273,10 +273,10 @@ function parseChildren(
               (shouldCondense &&
                 ((prev.type === NodeTypes.COMMENT &&
                   next.type === NodeTypes.COMMENT) ||
-                  (prev.type === NodeTypes.COMMENT && 
-                  next.type === NodeTypes.ELEMENT) ||
+                  (prev.type === NodeTypes.COMMENT &&
+                    next.type === NodeTypes.ELEMENT) ||
                   (prev.type === NodeTypes.ELEMENT &&
-                  next.type === NodeTypes.COMMENT) ||
+                    next.type === NodeTypes.COMMENT) ||
                   (prev.type === NodeTypes.ELEMENT &&
                     next.type === NodeTypes.ELEMENT &&
                     /[\r\n]/.test(node.content))))
@@ -813,6 +813,20 @@ function parseAttribute(
         : startsWith(name, '@')
         ? 'on'
         : 'slot')
+
+    if (__DEV__) {
+      if (name.length === 1) {
+        context.options.onWarn(
+          createCompilerError(
+            ErrorCodes.X_DIRECTIVE_SHORTHAND_NO_ARGUMENT,
+            loc,
+            undefined,
+            `the directive shorthand '${name}' cannot be used without an argument. Use v-${dirName} instead or provide an argument.`
+          )
+        )
+      }
+    }
+
     let arg: ExpressionNode | undefined
 
     if (match[2]) {
