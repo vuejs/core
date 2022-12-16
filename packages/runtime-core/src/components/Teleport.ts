@@ -9,7 +9,7 @@ import {
   traverseStaticChildren
 } from '../renderer'
 import { VNode, VNodeArrayChildren, VNodeProps } from '../vnode'
-import { isString, ShapeFlags } from '@vue/shared'
+import { isArray, isString, ShapeFlags } from '@vue/shared'
 import { warn } from '../warning'
 import { isHmrUpdating } from '../hmr'
 
@@ -26,42 +26,19 @@ export const teleportUTMap: Record<
 
 export const isTeleport = (type: any): boolean => type.__isTeleport
 /**
- * Before the element is unloaded, if it contains
- * the attribute `data-v-owner` from teleport injection,
- * then store it on the parent component instance
- * @private
- */
-export const cacheTeleportOwnerAttr = (
-  n1: VNode,
-  parentComponent: ComponentInternalInstance | null
-) => {
-  const { el } = n1
-  if (
-    el &&
-    el.getAttribute &&
-    el.getAttribute('data-v-owner') &&
-    parentComponent
-  ) {
-    parentComponent.utOwner = el.getAttribute('data-v-owner')
-  }
-}
-/**
- * If the element's parent component attribute `utOwner` has a value,
- * it means that the element has been marked by teleport
- * as `data-v-owner` before the element is updated,
- * then the element needs to be reset before mounting
+ * TODO: comment
  * @private
  */
 export const setTeleportOwnerAttrToEl = (
   props: (VNodeProps & { [key: string]: any }) | null,
-  parentComponent: ComponentInternalInstance | null
+  vnode: VNode
 ) => {
-  const dataVOwner = parentComponent ? parentComponent.utOwner : null
-  if (dataVOwner) {
+  const teleportIds = vnode.teleportIds
+  if (teleportIds !== null && teleportIds !== undefined) {
     if (!props) {
       props = {}
     }
-    props['data-v-owner'] = dataVOwner
+    props['data-v-owner'] = teleportIds[teleportIds.length - 1]
   }
   return props
 }
@@ -75,18 +52,32 @@ export const setTeleportOwnerAttrToEl = (
  *       </div>
  *     </Comp>
  *   </teleport>
- * so here you need to execute `instance.ut` according to `utOwner`
+ * TODO: comment
  * @private
  */
-export const updateTeleportsCssVarsFast = (
-  parentComponent: ComponentInternalInstance | null
-) => {
-  const dataVOwner = parentComponent ? parentComponent.utOwner : null
-  if (dataVOwner && teleportUTMap[dataVOwner as number]) {
-    teleportUTMap[dataVOwner as number]!()
+export const updateTeleportsCssVarsFast = (vnode: VNode) => {
+  const teleportIds = vnode.teleportIds
+  if (teleportIds !== null && teleportIds !== undefined) {
+    teleportIds.forEach((id: number) => {
+      if (teleportUTMap[id]) {
+        teleportUTMap[id]!()
+      }
+    })
   }
 }
-
+export const setTeleportIdTOVNode = (
+  vnode: VNode,
+  parentComponent: ComponentInternalInstance | null
+) => {
+  if (parentComponent) {
+    if (
+      parentComponent.vnode.teleportIds !== null &&
+      parentComponent.vnode.teleportIds !== undefined
+    ) {
+      vnode.teleportIds = parentComponent.vnode.teleportIds
+    }
+  }
+}
 const isTeleportDisabled = (props: VNode['props']): boolean =>
   props && (props.disabled || props.disabled === '')
 
@@ -170,6 +161,9 @@ export const TeleportImpl = {
       insert(mainAnchor, container, anchor)
       const target = (n2.target = resolveTarget(n2.props, querySelector))
       const targetAnchor = (n2.targetAnchor = createText(''))
+
+      initTeleportIds(children as VNode[], n2)
+
       if (target) {
         insert(targetAnchor, target)
         // #2652 we could be teleporting from a non-SVG tree into an SVG tree
@@ -472,5 +466,18 @@ function updateCssVars(vnode: VNode) {
       node = node.nextSibling
     }
     ctx.ut()
+  }
+}
+
+function initTeleportIds(children: VNode[], vnode: VNode) {
+  if (!children) return
+  const ctx = vnode.ctx
+  if (children && isArray(children)) {
+    children.forEach((c: VNode) => {
+      if (c.__v_isVNode && ctx && (ctx.uid || ctx.uid === 0)) {
+        if (!c.teleportIds) c.teleportIds = []
+        c.teleportIds.push(ctx.uid)
+      }
+    })
   }
 }

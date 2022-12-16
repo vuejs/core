@@ -88,12 +88,7 @@ export { createVNode, cloneVNode, mergeProps, isVNode } from './vnode'
 // VNode types
 export { Fragment, Text, Comment, Static, VNodeRef } from './vnode'
 // Built-in components
-export {
-  Teleport,
-  TeleportProps,
-  teleportUTMap,
-  cacheTeleportOwnerAttr
-} from './components/Teleport'
+export { Teleport, TeleportProps, teleportUTMap } from './components/Teleport'
 export { Suspense, SuspenseProps } from './components/Suspense'
 export { KeepAlive, KeepAliveProps } from './components/KeepAlive'
 export {
