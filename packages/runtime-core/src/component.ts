@@ -461,12 +461,6 @@ export interface ComponentInternalInstance {
    * @internal
    */
   n?: () => Promise<void>
-  /**
-   * `updateTeleportCssVars`
-   * For updating css vars on contained teleports
-   * @internal
-   */
-  ut?: (vars?: Record<string, string>) => void
 }
 
 const emptyAppContext = createAppContext()
