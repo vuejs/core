@@ -34,13 +34,7 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>) {
     obs.set(container, ob)
   }
 
-  const disConnect = () => {
-    obs.forEach(ob => ob.disconnect())
-    obs.clear()
-  }
-
   const setVars = () => {
-    disConnect()
     const vars = getter(instance.proxy)
     setVarsOnVNode(instance.subTree, vars, createObserve)
   }
@@ -49,7 +43,10 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>) {
 
   onMounted(() => {
     createObserve(instance.subTree.el!.parentNode)
-    onUnmounted(disConnect)
+    onUnmounted(() => {
+      obs.forEach(ob => ob.disconnect())
+      obs.clear()
+    })
   })
 }
 
