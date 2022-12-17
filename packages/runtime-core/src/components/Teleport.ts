@@ -8,7 +8,12 @@ import {
   RendererOptions,
   traverseStaticChildren
 } from '../renderer'
-import { VNode, VNodeArrayChildren, VNodeProps } from '../vnode'
+import {
+  VNode,
+  VNodeArrayChildren,
+  VNodeNormalizedChildren,
+  VNodeProps
+} from '../vnode'
 import { isArray, isString, ShapeFlags } from '@vue/shared'
 import { warn } from '../warning'
 import { isHmrUpdating } from '../hmr'
@@ -162,7 +167,7 @@ export const TeleportImpl = {
       const target = (n2.target = resolveTarget(n2.props, querySelector))
       const targetAnchor = (n2.targetAnchor = createText(''))
 
-      initTeleportIds(children as VNode[], n2)
+      initTeleportIds(children, n2)
 
       if (target) {
         insert(targetAnchor, target)
@@ -469,12 +474,12 @@ function updateCssVars(vnode: VNode) {
   }
 }
 
-function initTeleportIds(children: VNode[], vnode: VNode) {
+function initTeleportIds(children: VNodeNormalizedChildren, vnode: VNode) {
   if (!children) return
   const ctx = vnode.ctx
   if (children && isArray(children)) {
-    children.forEach((c: VNode) => {
-      if (c.__v_isVNode && ctx && (ctx.uid || ctx.uid === 0)) {
+    ;(children as VNode[]).forEach((c: VNode | null) => {
+      if (c && c.__v_isVNode && ctx && ctx.ut && (ctx.uid || ctx.uid === 0)) {
         if (!c.teleportIds) c.teleportIds = []
         c.teleportIds.push(ctx.uid)
       }
