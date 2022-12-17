@@ -284,12 +284,12 @@ describe('useCssVars', () => {
     }
   })
 
-  test('with teleport(component & v-if slot)', async () => {
+  test('with teleport(component & v-if)', async () => {
     document.body.innerHTML = ''
     const state = reactive({ color: 'red' })
     const root = document.createElement('div')
     const target = document.body
-    const toggle = ref(true)
+    const toggle = ref(false)
     const comp = {
       render(ctx: any) {
         return renderSlot(ctx.$slots, 'default')
@@ -326,13 +326,16 @@ describe('useCssVars', () => {
 
     render(h(App), root)
     await nextTick()
+    expect(target.children.length).toBe(0)
+    toggle.value = true
+    await nextTick()
     expect(target.children.length).toBe(1)
     for (const c of [].slice.call(target.children as any)) {
       expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
     }
-
     toggle.value = false
     await nextTick()
+    expect(target.children.length).toBe(0)
     toggle.value = true
     await nextTick()
     expect(target.children.length).toBe(1)
@@ -346,13 +349,14 @@ describe('useCssVars', () => {
     const state = reactive({ color: 'red' })
     const root = document.createElement('div')
     const target = document.body
-    const toggle = ref(true)
+    const toggle = ref(false)
 
     const App = {
       setup() {
         useCssVars(() => state)
         return () => [
-          h(Teleport, { to: target }, [
+          (openBlock(),
+          createBlock(Teleport, { to: target }, [
             createVNode(Transition, null, {
               default: withCtx(() => [
                 toggle.value
@@ -368,73 +372,6 @@ describe('useCssVars', () => {
               ]),
               _: 1 /* STABLE */
             })
-          ])
-        ]
-      }
-    }
-
-    render(h(App), root)
-    await nextTick()
-    expect(target.children.length).toBe(1)
-    for (const c of [].slice.call(target.children as any)) {
-      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
-    }
-
-    toggle.value = false
-    await nextTick()
-    toggle.value = true
-    await nextTick()
-    expect(target.children.length).toBe(1)
-    for (const c of [].slice.call(target.children as any)) {
-      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
-    }
-  })
-
-  test('with teleport(transition & v-if element)', async () => {
-    document.body.innerHTML = ''
-    const state = reactive({ color: 'red' })
-    const root = document.createElement('div')
-    const target = document.body
-    const toggle = ref(true)
-
-    const App = {
-      setup() {
-        useCssVars(() => state)
-        return () => [
-          (openBlock(),
-          createBlock(Teleport, { to: target }, [
-            createVNode(
-              Transition,
-              {},
-              {
-                default: withCtx(() => [
-                  toggle.value
-                    ? (openBlock(),
-                      createElementBlock(
-                        'div',
-                        {
-                          key: 0
-                        },
-                        'test'
-                      ))
-                    : createCommentVNode('v-if', true)
-                ]),
-                _: 1 /* STABLE */
-              }
-            )
-          ])),
-          (openBlock(),
-          createBlock(Teleport, { to: target }, [
-            toggle.value
-              ? (openBlock(),
-                createElementBlock(
-                  'div',
-                  {
-                    key: 0
-                  },
-                  'element'
-                ))
-              : createCommentVNode('v-if', true)
           ]))
         ]
       }
@@ -442,7 +379,10 @@ describe('useCssVars', () => {
 
     render(h(App), root)
     await nextTick()
-    expect(target.children.length).toBe(2)
+    expect(target.children.length).toBe(0)
+    toggle.value = true
+    await nextTick()
+    expect(target.children.length).toBe(1)
     for (const c of [].slice.call(target.children as any)) {
       expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
     }
@@ -450,7 +390,7 @@ describe('useCssVars', () => {
     await nextTick()
     toggle.value = true
     await nextTick()
-    expect(target.children.length).toBe(2)
+    expect(target.children.length).toBe(1)
     for (const c of [].slice.call(target.children as any)) {
       expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
     }

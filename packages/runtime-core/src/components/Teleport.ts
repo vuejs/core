@@ -6,7 +6,8 @@ import {
   RendererElement,
   RendererNode,
   RendererOptions,
-  traverseStaticChildren
+  traverseStaticChildren,
+  queuePostRenderEffect
 } from '../renderer'
 import {
   VNode,
@@ -60,15 +61,20 @@ export const setTeleportOwnerAttrToEl = (
  * TODO: comment
  * @private
  */
-export const updateTeleportsCssVarsFast = (vnode: VNode) => {
-  const teleportIds = vnode.teleportIds
-  if (teleportIds !== null && teleportIds !== undefined) {
-    teleportIds.forEach((id: number) => {
-      if (teleportUTMap[id]) {
-        teleportUTMap[id]!()
-      }
-    })
-  }
+export const updateTeleportsCssVarsFast = (
+  vnode: VNode,
+  parentSuspense: SuspenseBoundary | null
+) => {
+  queuePostRenderEffect(() => {
+    const teleportIds = vnode.teleportIds
+    if (teleportIds !== null && teleportIds !== undefined) {
+      teleportIds.forEach((id: number) => {
+        if (teleportUTMap[id]) {
+          teleportUTMap[id]!()
+        }
+      })
+    }
+  }, parentSuspense)
 }
 export const setTeleportIdTOVNode = (
   vnode: VNode,
@@ -437,7 +443,6 @@ function hydrateTeleport(
             break
           }
         }
-
         hydrateChildren(
           targetNode,
           vnode,
@@ -474,6 +479,7 @@ function updateCssVars(vnode: VNode) {
   }
 }
 
+// @ts-ignore
 function initTeleportIds(children: VNodeNormalizedChildren, vnode: VNode) {
   if (!children) return
   const ctx = vnode.ctx
@@ -482,6 +488,13 @@ function initTeleportIds(children: VNodeNormalizedChildren, vnode: VNode) {
       if (c && c.__v_isVNode && ctx && ctx.ut && (ctx.uid || ctx.uid === 0)) {
         if (!c.teleportIds) c.teleportIds = []
         c.teleportIds.push(ctx.uid)
+
+        if (c.ssContent && !c.ssContent.teleportIds) {
+          if (!c.ssContent.teleportIds) {
+            c.ssContent.teleportIds = []
+          }
+          c.ssContent.teleportIds.push(ctx.uid)
+        }
       }
     })
   }

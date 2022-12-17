@@ -716,7 +716,7 @@ function baseCreateRenderer(
     }
     hostInsert(el, container, anchor)
 
-    updateTeleportsCssVarsFast(vnode)
+    updateTeleportsCssVarsFast(vnode, parentSuspense)
 
     if (
       (vnodeHook = props && props.onVnodeMounted) ||

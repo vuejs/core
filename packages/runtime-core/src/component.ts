@@ -467,13 +467,6 @@ export interface ComponentInternalInstance {
    * @internal
    */
   ut?: (vars?: Record<string, string>) => void
-  /**
-   * Stores the element's `data-v-owner` attribute value before the element `unmount`,
-   * it is set to the element by the `updateCssVars` function,
-   * and will be set to the element attribute again when the element is updated
-   * @internal
-   */
-  utOwner?: number
 }
 
 const emptyAppContext = createAppContext()
