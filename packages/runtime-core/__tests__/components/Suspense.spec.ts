@@ -12,9 +12,13 @@ import {
   watchEffect,
   onUnmounted,
   onErrorCaptured,
-  shallowRef
+  shallowRef,
+  reactive,
+  Teleport,
+  withCtx
 } from '@vue/runtime-test'
-import { createApp } from 'vue'
+import { render as runtimeRender } from '@vue/runtime-dom'
+import { createApp, useCssVars } from 'vue'
 
 describe('Suspense', () => {
   const deps: Promise<any>[] = []
@@ -1252,5 +1256,46 @@ describe('Suspense', () => {
     expect(
       `A component with async setup() must be nested in a <Suspense>`
     ).toHaveBeenWarned()
+  })
+
+  test('suspense can render CssVars correctly in teleport', async () => {
+    document.body.innerHTML = ''
+    const state = reactive({ color: 'red' })
+    const root = document.createElement('div')
+    const target = document.body
+    const Async = defineAsyncComponent({
+      render() {
+        return h('div', 'async')
+      }
+    })
+
+    const Comp = {
+      setup() {
+        useCssVars(() => state)
+        return () =>
+          h(Teleport, { to: target }, [
+            h(Suspense, null, {
+              default: withCtx(() => h(Async)),
+              fallback: withCtx(() => h('div', 'fallback'))
+            })
+          ])
+      }
+    }
+
+    runtimeRender(h(Comp), root)
+    await nextTick()
+    expect(target.children.length).toBe(1)
+    for (const c of [].slice.call(target.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+    }
+    expect(target.children[0].innerHTML).toBe('fallback')
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(target.children.length).toBe(1)
+    for (const c of [].slice.call(target.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+    }
+    expect(target.children[0].innerHTML).toBe('async')
   })
 })

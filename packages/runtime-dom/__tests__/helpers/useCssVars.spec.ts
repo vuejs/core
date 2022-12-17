@@ -344,7 +344,7 @@ describe('useCssVars', () => {
     }
   })
 
-  test('with teleport(transition & v-if slot)', async () => {
+  test('with teleport(transition & v-if)', async () => {
     document.body.innerHTML = ''
     const state = reactive({ color: 'red' })
     const root = document.createElement('div')
