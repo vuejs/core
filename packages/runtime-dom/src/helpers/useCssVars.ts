@@ -71,8 +71,8 @@ function setVarsOnVNode(
     vnode = vnode.component.subTree
   }
 
-  if (vnode.shapeFlag & ShapeFlags.ELEMENT && vnode.el) {
-    if (!flag) {
+  if (vnode.shapeFlag & ShapeFlags.ELEMENT) {
+    if (!flag && vnode.el) {
       setVarsOnNode(vnode.el as Node, vars)
     }
     if (isArray(vnode.children)) {

@@ -222,6 +222,8 @@ export const TeleportImpl = {
         }
       }
     }
+
+    updateCssVars(n2)
   },
 
   remove(
@@ -383,6 +385,7 @@ function hydrateTeleport(
         )
       }
     }
+    updateCssVars(vnode)
   }
   return vnode.anchor && nextSibling(vnode.anchor as Node)
 }
@@ -391,4 +394,13 @@ function hydrateTeleport(
 export const Teleport = TeleportImpl as unknown as {
   __isTeleport: true
   new (): { $props: VNodeProps & TeleportProps }
+}
+
+function updateCssVars(vnode: VNode) {
+  // presence of .ut method indicates owner component uses css vars.
+  let ctx = vnode.ctx;
+  while (ctx) {
+      ctx.ut?.()
+      ctx = ctx.parent
+  }
 }
