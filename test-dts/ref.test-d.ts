@@ -230,7 +230,6 @@ expectType<Ref<string>>(p2.obj.k)
   expectType<Ref<any>>(foo)
 }
 
-// toRef default value
 {
   const obj: { x?: number } = {}
   const x = toRef(obj, 'x', 1)
