@@ -167,6 +167,34 @@ describe('component: slots', () => {
     expect(instance.slots.footer()).toMatchObject([normalizeVNode('footer')])
   })
 
+  test('updateSlots: instance.slots should be updated correctly (when slotType becomes null)', async () => {
+    const flag1 = ref(true)
+
+    let instance: any
+    const Child = () => {
+      instance = getCurrentInstance()
+      return 'child'
+    }
+
+    const Comp = {
+      setup() {
+        return () => [
+          h(Child, null, {
+            default: flag1.value ? () => 'default' : null
+          })
+        ]
+      }
+    }
+    render(h(Comp), nodeOps.createElement('div'))
+
+    expect(instance.slots).toHaveProperty('default')
+
+    flag1.value = false
+    await nextTick()
+
+    expect(instance.slots).not.toHaveProperty('default')
+  })
+
   test('updateSlots: instance.slots should be update correctly (when vnode.shapeFlag is not SLOTS_CHILDREN)', async () => {
     const flag1 = ref(true)
 
