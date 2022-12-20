@@ -32,7 +32,7 @@
   },
   "homepage": "https://github.com/vuejs/core/tree/main/packages/compiler-sfc#readme",
   "dependencies": {
-    "@babel/parser": "^7.20.3",
+    "@babel/parser": "^7.20.5",
     "@vue/compiler-core": "3.2.45",
     "@vue/compiler-dom": "3.2.45",
     "@vue/compiler-ssr": "3.2.45",
@@ -44,7 +44,7 @@
     "source-map": "^0.6.1"
   },
   "devDependencies": {
-    "@babel/types": "^7.20.2",
+    "@babel/types": "^7.20.5",
     "@types/estree": "^0.0.48",
     "@types/lru-cache": "^5.1.0",
     "@vue/consolidate": "^0.17.3",
