@@ -111,6 +111,7 @@ export function defineAsyncComponent<
     )
   }
 
+  // 增加注释
   return defineComponent({
     name: 'AsyncComponentWrapper',
 
