@@ -2163,9 +2163,7 @@ function baseCreateRenderer(
       if (
         __DEV__ &&
         vnode.patchFlag > 0 &&
-        vnode.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT &&
-        transition &&
-        !transition.persisted
+        vnode.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
       ) {
         ;(vnode.children as VNode[]).forEach(child => {
           if (child.type === Comment) {

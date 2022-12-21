@@ -19,6 +19,7 @@ import { callWithAsyncErrorHandling, ErrorCodes } from '../errorHandling'
 import { ShapeFlags, PatchFlags, isArray } from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import { RendererElement } from '../renderer'
+import { filterSingleRoot } from '../componentRenderUtils'
 
 type Hook<T = () => void> = T | T[]
 
@@ -479,6 +480,14 @@ export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks) {
   } else if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
     vnode.ssContent!.transition = hooks.clone(vnode.ssContent!)
     vnode.ssFallback!.transition = hooks.clone(vnode.ssFallback!)
+  } else if (
+    __DEV__ &&
+    vnode.patchFlag > 0 &&
+    vnode.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
+  ) {
+    // #7334
+    vnode = filterSingleRoot(vnode.children as VNodeArrayChildren) || vnode
+    vnode.transition = hooks
   } else {
     vnode.transition = hooks
   }
