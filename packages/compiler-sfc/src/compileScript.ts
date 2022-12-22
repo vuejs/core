@@ -2069,6 +2069,7 @@ function inferRuntimeType(
     case 'TSParenthesizedType':
       return inferRuntimeType(node.typeAnnotation, declaredTypes)
     case 'TSUnionType':
+    case 'TSIntersectionType':
       return [
         ...new Set(
           [].concat(
@@ -2076,8 +2077,6 @@ function inferRuntimeType(
           )
         )
       ]
-    case 'TSIntersectionType':
-      return ['Object']
 
     case 'TSSymbolKeyword':
       return ['Symbol']
