@@ -1277,6 +1277,21 @@ return () => {}
 }"
 `;
 
+exports[`SFC compile <script setup> > should compile JS syntax 1`] = `
+"const a = 1
+      const b = 2
+      
+export default {
+  setup(__props, { expose }) {
+  expose();
+
+      
+return { a, b }
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> > should expose top level declarations 1`] = `
 "import { x } from './x'
       
