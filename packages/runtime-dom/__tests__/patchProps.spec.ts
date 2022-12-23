@@ -140,6 +140,44 @@ describe('runtime-dom: props patching', () => {
     expect(fn).toHaveBeenCalled()
   })
 
+  test('kebap-case vs. camelCase props', async () => {
+    const el = document.createElement('div')
+    let _fooBar: string | undefined = undefined
+    Object.defineProperty(el, 'fooBar', {
+      get() {
+        return _fooBar
+      },
+      set(v: string | undefined) {
+        _fooBar = v
+      }
+    })
+    Object.defineProperty(el, 'fooBaz', {
+      get() {
+        return _fooBar
+      },
+      set(v: string | undefined) {
+        _fooBar = v
+      }
+    })
+    // existing DOMprops
+    patchProp(el, 'fooBar', null, 'foo')
+    expect(el.getAttribute('foobar')).toBe(null)
+    expect((el as any).fooBar).toBe('foo')
+    patchProp(el, 'foo-baz', null, 'baz')
+    expect(el.getAttribute('foobaz')).toBe(null)
+    expect((el as any).fooBar).toBe('baz')
+
+    // missing DOMProp
+    patchProp(el, 'ariaControls', null, 'someId')
+    expect('ariaControls' in el).toBe(false)
+    expect('aria-controls' in el).toBe(false)
+    expect(el.getAttribute('aria-controls')!).toBe('someId')
+    patchProp(el, 'aria-label', null, 'someId')
+    expect('aria-label' in el).toBe(false)
+    expect('ariaLabel' in el).toBe(false)
+    expect(el.getAttribute('aria-label')!).toBe('someId')
+  })
+
   // #1049
   test('set value as-is for non string-value props', () => {
     const el = document.createElement('video')

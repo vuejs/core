@@ -3,7 +3,13 @@ import { patchStyle } from './modules/style'
 import { patchAttr } from './modules/attrs'
 import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
-import { isOn, isString, isFunction, isModelListener } from '@vue/shared'
+import {
+  isOn,
+  isString,
+  isFunction,
+  isModelListener,
+  camelize
+} from '@vue/shared'
 import { RendererOptions } from '@vue/runtime-core'
 
 const nativeOnRE = /^on[a-z]/
@@ -62,10 +68,11 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
 
 function shouldSetAsProp(
   el: Element,
-  key: string,
+  key: string, // always camelized
   value: unknown,
   isSVG: boolean
 ) {
+  key = key.includes('-') ? camelize(key) : key
   if (isSVG) {
     // most keys must be set as attribute on svg elements to work
     // ...except innerHTML & textContent

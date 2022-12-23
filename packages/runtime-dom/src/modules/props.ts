@@ -3,7 +3,7 @@
 // This can come from explicit usage of v-html or innerHTML as a prop in render
 
 import { warn, DeprecationTypes, compatUtils } from '@vue/runtime-core'
-import { includeBooleanAttr } from '@vue/shared'
+import { camelize, includeBooleanAttr } from '@vue/shared'
 
 // functions. The user is responsible for using them with only trusted content.
 export function patchDOMProp(
@@ -18,6 +18,7 @@ export function patchDOMProp(
   parentSuspense: any,
   unmountChildren: any
 ) {
+  key = camelize(key)
   if (key === 'innerHTML' || key === 'textContent') {
     if (prevChildren) {
       unmountChildren(prevChildren, parentComponent, parentSuspense)

@@ -1,4 +1,5 @@
 import {
+  hyphenate,
   includeBooleanAttr,
   isSpecialBooleanAttr,
   makeMap,
@@ -33,6 +34,7 @@ export function patchAttr(
     // note we are only checking boolean attributes that don't have a
     // corresponding dom prop of the same name here.
     const isBoolean = isSpecialBooleanAttr(key)
+    key = isSVG ? key : hyphenate(key)
     if (value == null || (isBoolean && !includeBooleanAttr(value))) {
       el.removeAttribute(key)
     } else {
