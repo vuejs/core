@@ -672,7 +672,8 @@ export function cloneVNode<T, U>(
     ssFallback: vnode.ssFallback && cloneVNode(vnode.ssFallback),
     el: vnode.el,
     anchor: vnode.anchor,
-    ctx: vnode.ctx
+    ctx: vnode.ctx,
+    ce: vnode.ce
   }
   if (__COMPAT__) {
     defineLegacyVNodeProperties(cloned as VNode)
