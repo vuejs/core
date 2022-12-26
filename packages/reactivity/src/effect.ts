@@ -376,7 +376,7 @@ export function triggerEffects(
   for (const effect of isArray(dep) ? dep : [...dep]) {
     // 这里就是触发了effect里面的fn或者scheduler
 
-    // effect == activeEffect 说明当前effect正在触发，不需要重复触发
+    // effect == activeEffect 说明当前effect正在触发，不需要重复触发,避免嵌套循环
     if (effect !== activeEffect || effect.allowRecurse) {
       if (__DEV__ && effect.onTrigger) {
         effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
