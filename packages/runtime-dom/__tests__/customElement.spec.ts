@@ -384,6 +384,25 @@ describe('defineCustomElement', () => {
         detail: [1]
       })
     })
+    // #7293
+    test('emit in an async component wrapper with properties bound', async () => {
+      const E = defineCustomElement(
+        defineAsyncComponent(
+          () => new Promise<typeof CompDef>(res => res(CompDef as any))
+        )
+      )
+      customElements.define('my-async-el-props-emits', E)
+      container.innerHTML = `<my-async-el-props-emits id="my_async_el_props_emits"></my-async-el-props-emits>`
+      const e = container.childNodes[0] as VueElement
+      const spy = jest.fn()
+      e.addEventListener('my-click', spy)
+      await customElements.whenDefined('my-async-el-props-emits')
+      e.shadowRoot!.childNodes[0].dispatchEvent(new CustomEvent('click'))
+      expect(spy).toHaveBeenCalled()
+      expect(spy.mock.calls[0][0]).toMatchObject({
+        detail: [1]
+      })
+    })
   })
 
   describe('slots', () => {
