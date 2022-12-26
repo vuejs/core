@@ -44,15 +44,15 @@ return { a }
 `;
 
 exports[`SFC compile <script setup> <script> after <script setup> the script content not end with \`\\n\` 1`] = `
-"const n = 1
-import { x } from './x'
-    
+"import { x } from './x'
+    const n = 1
+
 export default {
   setup(__props, { expose }) {
   expose();
 
     
-return { n, x }
+return { n, get x() { return x } }
 }
 
 }"
@@ -71,25 +71,26 @@ export default /*#__PURE__*/Object.assign(__default__, {
 
       x()
       
-return { n, x }
+return { n, get x() { return x } }
 }
 
 })"
 `;
 
 exports[`SFC compile <script setup> <script> and <script setup> co-usage script setup first 1`] = `
-"export const n = 1
+"import { x } from './x'
+      
+      export const n = 1
       const __default__ = {}
       
-import { x } from './x'
-      
+
 export default /*#__PURE__*/Object.assign(__default__, {
   setup(__props, { expose }) {
   expose();
 
       x()
       
-return { n, x }
+return { n, get x() { return x } }
 }
 
 })"
@@ -97,13 +98,13 @@ return { n, x }
 
 exports[`SFC compile <script setup> <script> and <script setup> co-usage script setup first, lang="ts", script block content export default 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
-
-      const __default__ = {
-        name: \\"test\\"
-      }
-      
 import { x } from './x'
       
+      const __default__ = {
+        name: "test"
+      }
+      
+
 export default /*#__PURE__*/_defineComponent({
   ...__default__,
   setup(__props, { expose }) {
@@ -111,28 +112,29 @@ export default /*#__PURE__*/_defineComponent({
 
       x()
       
-return { x }
+return { get x() { return x } }
 }
 
 })"
 `;
 
 exports[`SFC compile <script setup> <script> and <script setup> co-usage script setup first, named default export 1`] = `
-"export const n = 1
+"import { x } from './x'
+      
+      export const n = 1
       const def = {}
       
       
 const __default__ = def
 
-import { x } from './x'
-      
+
 export default /*#__PURE__*/Object.assign(__default__, {
   setup(__props, { expose }) {
   expose();
 
       x()
       
-return { n, def, x }
+return { n, def, get x() { return x } }
 }
 
 })"
@@ -152,7 +154,7 @@ export default /*#__PURE__*/Object.assign(__default__, {
 
         x()
         
-return { n, x }
+return { n, get x() { return x } }
 }
 
 })"
@@ -172,7 +174,7 @@ export default /*#__PURE__*/Object.assign(__default__, {
 
         x()
         
-return { n, x }
+return { n, get x() { return x } }
 }
 
 })"
@@ -640,11 +642,11 @@ export default {
   setup(__props, { expose }) {
   expose();
 
-const props = __props
+const props = __props;
 
     
     
-return { props, propsModel }
+return { props, get propsModel() { return propsModel } }
 }
 
 }"
@@ -658,10 +660,10 @@ export default {
   setup(__props, { expose }) {
   expose();
 
-const props = __props
+const props = __props;
 
     
-return { props, x }
+return { props, get x() { return x } }
 }
 
 }"
@@ -675,7 +677,7 @@ exports[`SFC compile <script setup> defineProps() 1`] = `
   setup(__props, { expose }) {
   expose();
 
-const props = __props
+const props = __props;
 
 
 const bar = 1
@@ -693,7 +695,7 @@ exports[`SFC compile <script setup> defineProps/defineEmits in multi-variable de
   setup(__props, { expose, emit }) {
   expose();
 
-const props = __props
+const props = __props;
 
     
     
@@ -710,11 +712,28 @@ exports[`SFC compile <script setup> defineProps/defineEmits in multi-variable de
   setup(__props, { expose, emit }) {
   expose();
 
-const props = __props
+const props = __props;
 
     const a = 1;
     
 return { props, a, emit }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> defineProps/defineEmits in multi-variable declaration fix #6757  1`] = `
+"export default {
+  props: ['item'],
+  emits: ['a'],
+  setup(__props, { expose, emit }) {
+  expose();
+
+const props = __props;
+
+    const a = 1;
+    
+return { a, props, emit }
 }
 
 }"
@@ -731,7 +750,7 @@ export default /*#__PURE__*/_defineComponent({
         const a = 1
         function b() {}
         
-return { a, b, Baz }
+return { a, b, get Baz() { return Baz } }
 }
 
 })"
@@ -747,7 +766,7 @@ export default /*#__PURE__*/_defineComponent({
 
         const cond = true
         
-return { cond, bar, baz }
+return { cond, get bar() { return bar }, get baz() { return baz } }
 }
 
 })"
@@ -763,7 +782,7 @@ export default /*#__PURE__*/_defineComponent({
 
         const fooBar: FooBar = 1
         
-return { fooBar, FooBaz, FooQux, foo }
+return { fooBar, get FooBaz() { return FooBaz }, get FooQux() { return FooQux }, get foo() { return foo } }
 }
 
 })"
@@ -778,7 +797,7 @@ export default /*#__PURE__*/_defineComponent({
   expose();
 
         
-return { vMyDir }
+return { get vMyDir() { return vMyDir } }
 }
 
 })"
@@ -793,7 +812,7 @@ export default /*#__PURE__*/_defineComponent({
   expose();
 
         
-return { VAR, VAR3 }
+return { get VAR() { return VAR }, get VAR3() { return VAR3 } }
 }
 
 })"
@@ -808,7 +827,7 @@ export default /*#__PURE__*/_defineComponent({
   expose();
 
         
-return { FooBaz, Last }
+return { get FooBaz() { return FooBaz }, get Last() { return Last } }
 }
 
 })"
@@ -823,7 +842,7 @@ export default /*#__PURE__*/_defineComponent({
   expose();
 
       
-return { x, z, x$y }
+return { get x() { return x }, get z() { return z }, get x$y() { return x$y } }
 }
 
 })"
@@ -847,7 +866,7 @@ export default {
         
         
         
-return { bar }
+return { get bar() { return bar } }
 }
 
 }"
@@ -901,7 +920,7 @@ export default {
 
         x()
         
-return { x }
+return { get x() { return x } }
 }
 
 }"
@@ -935,7 +954,7 @@ export default {
   expose();
 
         
-return { a, b }
+return { get a() { return a }, get b() { return b } }
 }
 
 }"
@@ -957,7 +976,7 @@ return { ref }
 `;
 
 exports[`SFC compile <script setup> inlineTemplate mode avoid unref() when necessary 1`] = `
-"import { unref as _unref, toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, withCtx as _withCtx, createVNode as _createVNode, createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
+"import { unref as _unref, toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, withCtx as _withCtx, createVNode as _createVNode, createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
 
 import { ref } from 'vue'
         import Foo, { bar } from './Foo.vue'
@@ -981,8 +1000,8 @@ return (_ctx, _cache) => {
       ]),
       _: 1 /* STABLE */
     }),
-    _createElementVNode(\\"div\\", { onClick: fn }, _toDisplayString(count.value) + \\" \\" + _toDisplayString(constant) + \\" \\" + _toDisplayString(_unref(maybe)) + \\" \\" + _toDisplayString(_unref(lett)) + \\" \\" + _toDisplayString(_unref(other)), 1 /* TEXT */),
-    _createTextVNode(\\" \\" + _toDisplayString(tree.foo()), 1 /* TEXT */)
+    _createElementVNode("div", { onClick: fn }, _toDisplayString(count.value) + " " + _toDisplayString(constant) + " " + _toDisplayString(_unref(maybe)) + " " + _toDisplayString(_unref(lett)) + " " + _toDisplayString(_unref(other)), 1 /* TEXT */),
+    _createTextVNode(" " + _toDisplayString(tree.foo()), 1 /* TEXT */)
   ], 64 /* STABLE_FRAGMENT */))
 }
 }
@@ -991,7 +1010,7 @@ return (_ctx, _cache) => {
 `;
 
 exports[`SFC compile <script setup> inlineTemplate mode referencing scope components and directives 1`] = `
-"import { unref as _unref, createElementVNode as _createElementVNode, withDirectives as _withDirectives, createVNode as _createVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
+"import { unref as _unref, createElementVNode as _createElementVNode, withDirectives as _withDirectives, createVNode as _createVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
 
 import ChildComp from './Child.vue'
         import SomeOtherComp from './Other.vue'
@@ -1003,7 +1022,7 @@ export default {
         
 return (_ctx, _cache) => {
   return (_openBlock(), _createElementBlock(_Fragment, null, [
-    _withDirectives(_createElementVNode(\\"div\\", null, null, 512 /* NEED_PATCH */), [
+    _withDirectives(_createElementVNode("div", null, null, 512 /* NEED_PATCH */), [
       [_unref(vMyDir)]
     ]),
     _createVNode(ChildComp),
@@ -1016,9 +1035,9 @@ return (_ctx, _cache) => {
 `;
 
 exports[`SFC compile <script setup> inlineTemplate mode should work 1`] = `
-"import { toDisplayString as _toDisplayString, createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
+"import { toDisplayString as _toDisplayString, createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
 
-const _hoisted_1 = /*#__PURE__*/_createElementVNode(\\"div\\", null, \\"static\\", -1 /* HOISTED */)
+const _hoisted_1 = /*#__PURE__*/_createElementVNode("div", null, "static", -1 /* HOISTED */)
 
 import { ref } from 'vue'
         
@@ -1029,7 +1048,7 @@ export default {
         
 return (_ctx, _cache) => {
   return (_openBlock(), _createElementBlock(_Fragment, null, [
-    _createElementVNode(\\"div\\", null, _toDisplayString(count.value), 1 /* TEXT */),
+    _createElementVNode("div", null, _toDisplayString(count.value), 1 /* TEXT */),
     _hoisted_1
   ], 64 /* STABLE_FRAGMENT */))
 }
@@ -1039,7 +1058,7 @@ return (_ctx, _cache) => {
 `;
 
 exports[`SFC compile <script setup> inlineTemplate mode ssr codegen 1`] = `
-"import { ssrRenderAttrs as _ssrRenderAttrs, ssrInterpolate as _ssrInterpolate } from \\"vue/server-renderer\\"
+"import { ssrRenderAttrs as _ssrRenderAttrs, ssrInterpolate as _ssrInterpolate } from "vue/server-renderer"
 
 import { ref } from 'vue'
         
@@ -1051,7 +1070,7 @@ export default {
         
 return (_ctx, _push, _parent, _attrs) => {
   const _cssVars = { style: {
-  \\"--xxxxxxxx-count\\": (count.value)
+  "--xxxxxxxx-count": (count.value)
 }}
   _push(\`<!--[--><div\${
     _ssrRenderAttrs(_cssVars)
@@ -1067,7 +1086,7 @@ return (_ctx, _push, _parent, _attrs) => {
 `;
 
 exports[`SFC compile <script setup> inlineTemplate mode template assignment expression codegen 1`] = `
-"import { createElementVNode as _createElementVNode, isRef as _isRef, unref as _unref, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
+"import { createElementVNode as _createElementVNode, isRef as _isRef, unref as _unref, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
 
 import { ref } from 'vue'
         
@@ -1081,28 +1100,28 @@ export default {
         
 return (_ctx, _cache) => {
   return (_openBlock(), _createElementBlock(_Fragment, null, [
-    _createElementVNode(\\"div\\", {
+    _createElementVNode("div", {
       onClick: _cache[0] || (_cache[0] = $event => (count.value = 1))
     }),
-    _createElementVNode(\\"div\\", {
+    _createElementVNode("div", {
       onClick: _cache[1] || (_cache[1] = $event => (maybe.value = count.value))
     }),
-    _createElementVNode(\\"div\\", {
+    _createElementVNode("div", {
       onClick: _cache[2] || (_cache[2] = $event => (_isRef(lett) ? lett.value = count.value : lett = count.value))
     }),
-    _createElementVNode(\\"div\\", {
+    _createElementVNode("div", {
       onClick: _cache[3] || (_cache[3] = $event => (_isRef(v) ? v.value += 1 : v += 1))
     }),
-    _createElementVNode(\\"div\\", {
+    _createElementVNode("div", {
       onClick: _cache[4] || (_cache[4] = $event => (_isRef(v) ? v.value -= 1 : v -= 1))
     }),
-    _createElementVNode(\\"div\\", {
+    _createElementVNode("div", {
       onClick: _cache[5] || (_cache[5] = () => {
               let a = '' + _unref(lett)
               _isRef(v) ? v.value = a : v = a
            })
     }),
-    _createElementVNode(\\"div\\", {
+    _createElementVNode("div", {
       onClick: _cache[6] || (_cache[6] = () => {
               // nested scopes
               (()=>{
@@ -1124,7 +1143,7 @@ return (_ctx, _cache) => {
 `;
 
 exports[`SFC compile <script setup> inlineTemplate mode template destructure assignment codegen 1`] = `
-"import { createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
+"import { createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
 
 import { ref } from 'vue'
         
@@ -1138,13 +1157,13 @@ export default {
         
 return (_ctx, _cache) => {
   return (_openBlock(), _createElementBlock(_Fragment, null, [
-    _createElementVNode(\\"div\\", {
+    _createElementVNode("div", {
       onClick: _cache[0] || (_cache[0] = $event => (({ count: count.value } = val)))
     }),
-    _createElementVNode(\\"div\\", {
+    _createElementVNode("div", {
       onClick: _cache[1] || (_cache[1] = $event => ([maybe.value] = val))
     }),
-    _createElementVNode(\\"div\\", {
+    _createElementVNode("div", {
       onClick: _cache[2] || (_cache[2] = $event => (({ lett: lett } = val)))
     })
   ], 64 /* STABLE_FRAGMENT */))
@@ -1155,7 +1174,7 @@ return (_ctx, _cache) => {
 `;
 
 exports[`SFC compile <script setup> inlineTemplate mode template update expression codegen 1`] = `
-"import { createElementVNode as _createElementVNode, isRef as _isRef, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
+"import { createElementVNode as _createElementVNode, isRef as _isRef, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
 
 import { ref } from 'vue'
         
@@ -1168,22 +1187,22 @@ export default {
         
 return (_ctx, _cache) => {
   return (_openBlock(), _createElementBlock(_Fragment, null, [
-    _createElementVNode(\\"div\\", {
+    _createElementVNode("div", {
       onClick: _cache[0] || (_cache[0] = $event => (count.value++))
     }),
-    _createElementVNode(\\"div\\", {
+    _createElementVNode("div", {
       onClick: _cache[1] || (_cache[1] = $event => (--count.value))
     }),
-    _createElementVNode(\\"div\\", {
+    _createElementVNode("div", {
       onClick: _cache[2] || (_cache[2] = $event => (maybe.value++))
     }),
-    _createElementVNode(\\"div\\", {
+    _createElementVNode("div", {
       onClick: _cache[3] || (_cache[3] = $event => (--maybe.value))
     }),
-    _createElementVNode(\\"div\\", {
+    _createElementVNode("div", {
       onClick: _cache[4] || (_cache[4] = $event => (_isRef(lett) ? lett.value++ : lett++))
     }),
-    _createElementVNode(\\"div\\", {
+    _createElementVNode("div", {
       onClick: _cache[5] || (_cache[5] = $event => (_isRef(lett) ? --lett.value : --lett))
     })
   ], 64 /* STABLE_FRAGMENT */))
@@ -1194,7 +1213,7 @@ return (_ctx, _cache) => {
 `;
 
 exports[`SFC compile <script setup> inlineTemplate mode v-model codegen 1`] = `
-"import { vModelText as _vModelText, createElementVNode as _createElementVNode, withDirectives as _withDirectives, unref as _unref, isRef as _isRef, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
+"import { vModelText as _vModelText, createElementVNode as _createElementVNode, withDirectives as _withDirectives, unref as _unref, isRef as _isRef, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
 
 import { ref } from 'vue'
         
@@ -1207,18 +1226,18 @@ export default {
         
 return (_ctx, _cache) => {
   return (_openBlock(), _createElementBlock(_Fragment, null, [
-    _withDirectives(_createElementVNode(\\"input\\", {
-      \\"onUpdate:modelValue\\": _cache[0] || (_cache[0] = $event => ((count).value = $event))
+    _withDirectives(_createElementVNode("input", {
+      "onUpdate:modelValue": _cache[0] || (_cache[0] = $event => ((count).value = $event))
     }, null, 512 /* NEED_PATCH */), [
       [_vModelText, count.value]
     ]),
-    _withDirectives(_createElementVNode(\\"input\\", {
-      \\"onUpdate:modelValue\\": _cache[1] || (_cache[1] = $event => (_isRef(maybe) ? (maybe).value = $event : null))
+    _withDirectives(_createElementVNode("input", {
+      "onUpdate:modelValue": _cache[1] || (_cache[1] = $event => (_isRef(maybe) ? (maybe).value = $event : null))
     }, null, 512 /* NEED_PATCH */), [
       [_vModelText, _unref(maybe)]
     ]),
-    _withDirectives(_createElementVNode(\\"input\\", {
-      \\"onUpdate:modelValue\\": _cache[2] || (_cache[2] = $event => (_isRef(lett) ? (lett).value = $event : lett = $event))
+    _withDirectives(_createElementVNode("input", {
+      "onUpdate:modelValue": _cache[2] || (_cache[2] = $event => (_isRef(lett) ? (lett).value = $event : lett = $event))
     }, null, 512 /* NEED_PATCH */), [
       [_vModelText, _unref(lett)]
     ])
@@ -1243,14 +1262,15 @@ return () => {}
 `;
 
 exports[`SFC compile <script setup> should expose top level declarations 1`] = `
-"import { xx } from './x'
+"import { x } from './x'
+      
+      import { xx } from './x'
       let aa = 1
       const bb = 2
       function cc() {}
       class dd {}
       
-import { x } from './x'
-      
+
 export default {
   setup(__props, { expose }) {
   expose();
@@ -1260,7 +1280,7 @@ export default {
       function c() {}
       class d {}
       
-return { aa, bb, cc, dd, a, b, c, d, xx, x }
+return { get aa() { return aa }, set aa(v) { aa = v }, bb, cc, dd, get a() { return a }, set a(v) { a = v }, b, c, d, get xx() { return xx }, get x() { return x } }
 }
 
 }"
@@ -1286,7 +1306,7 @@ exports[`SFC compile <script setup> with TypeScript defineEmits w/ type (exporte
 export interface Emits { (e: 'foo' | 'bar'): void }
       
 export default /*#__PURE__*/_defineComponent({
-  emits: [\\"foo\\", \\"bar\\"],
+  emits: ["foo", "bar"],
   setup(__props, { expose, emit }: { emit: ({ (e: 'foo' | 'bar'): void }), expose: any, slots: any, attrs: any }) {
   expose();
 
@@ -1303,8 +1323,25 @@ exports[`SFC compile <script setup> with TypeScript defineEmits w/ type (exporte
 export type Emits = { (e: 'foo' | 'bar'): void }
       
 export default /*#__PURE__*/_defineComponent({
-  emits: [\\"foo\\", \\"bar\\"],
+  emits: ["foo", "bar"],
   setup(__props, { expose, emit }: { emit: ({ (e: 'foo' | 'bar'): void }), expose: any, slots: any, attrs: any }) {
+  expose();
+
+      
+      
+return { emit }
+}
+
+})"
+`;
+
+exports[`SFC compile <script setup> with TypeScript defineEmits w/ type (interface ts type) 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+interface Emits { (e: 'foo'): void }
+      
+export default /*#__PURE__*/_defineComponent({
+  emits: ['foo'],
+  setup(__props, { expose, emit }) {
   expose();
 
       
@@ -1320,7 +1357,7 @@ exports[`SFC compile <script setup> with TypeScript defineEmits w/ type (interfa
 interface Emits { (e: 'foo' | 'bar'): void }
       
 export default /*#__PURE__*/_defineComponent({
-  emits: [\\"foo\\", \\"bar\\"],
+  emits: ["foo", "bar"],
   setup(__props, { expose, emit }: { emit: ({ (e: 'foo' | 'bar'): void }), expose: any, slots: any, attrs: any }) {
   expose();
 
@@ -1337,7 +1374,7 @@ exports[`SFC compile <script setup> with TypeScript defineEmits w/ type (referen
 export type Emits = (e: 'foo' | 'bar') => void
       
 export default /*#__PURE__*/_defineComponent({
-  emits: [\\"foo\\", \\"bar\\"],
+  emits: ["foo", "bar"],
   setup(__props, { expose, emit }: { emit: ((e: 'foo' | 'bar') => void), expose: any, slots: any, attrs: any }) {
   expose();
 
@@ -1354,7 +1391,7 @@ exports[`SFC compile <script setup> with TypeScript defineEmits w/ type (referen
 type Emits = (e: 'foo' | 'bar') => void
       
 export default /*#__PURE__*/_defineComponent({
-  emits: [\\"foo\\", \\"bar\\"],
+  emits: ["foo", "bar"],
   setup(__props, { expose, emit }: { emit: ((e: 'foo' | 'bar') => void), expose: any, slots: any, attrs: any }) {
   expose();
 
@@ -1371,7 +1408,7 @@ exports[`SFC compile <script setup> with TypeScript defineEmits w/ type (type al
 type Emits = { (e: 'foo' | 'bar'): void }
       
 export default /*#__PURE__*/_defineComponent({
-  emits: [\\"foo\\", \\"bar\\"],
+  emits: ["foo", "bar"],
   setup(__props, { expose, emit }: { emit: ({ (e: 'foo' | 'bar'): void }), expose: any, slots: any, attrs: any }) {
   expose();
 
@@ -1387,7 +1424,7 @@ exports[`SFC compile <script setup> with TypeScript defineEmits w/ type (type li
 "import { defineComponent as _defineComponent } from 'vue'
 
 export default /*#__PURE__*/_defineComponent({
-  emits: [\\"foo\\", \\"bar\\", \\"baz\\"],
+  emits: ["foo", "bar", "baz"],
   setup(__props, { expose, emit }: { emit: ({(e: 'foo' | 'bar'): void; (e: 'baz', id: number): void;}), expose: any, slots: any, attrs: any }) {
   expose();
 
@@ -1403,7 +1440,7 @@ exports[`SFC compile <script setup> with TypeScript defineEmits w/ type 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
 export default /*#__PURE__*/_defineComponent({
-  emits: [\\"foo\\", \\"bar\\"],
+  emits: ["foo", "bar"],
   setup(__props, { expose, emit }: { emit: ((e: 'foo' | 'bar') => void), expose: any, slots: any, attrs: any }) {
   expose();
 
@@ -1466,6 +1503,33 @@ export default /*#__PURE__*/_defineComponent({
   expose();
 
       
+      
+return {  }
+}
+
+})"
+`;
+
+exports[`SFC compile <script setup> with TypeScript defineProps w/ extends interface 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+interface Bar extends Foo { y?: number }
+        interface Props extends Bar {
+          z: number
+          y: string
+        }
+        
+        interface Foo { x?: number }
+      
+export default /*#__PURE__*/_defineComponent({
+  props: {
+    z: { type: Number, required: true },
+    y: { type: String, required: true },
+    x: { type: Number, required: false }
+  },
+  setup(__props: any, { expose }) {
+  expose();
+
+        
       
 return {  }
 }
@@ -1567,7 +1631,7 @@ export default /*#__PURE__*/_defineComponent({
   setup(__props, { expose, emit }) {
   expose();
 
-const props = __props
+const props = __props;
 
 
 
@@ -1604,7 +1668,7 @@ export default /*#__PURE__*/_defineComponent({
   expose();
 
         
-return { Baz }
+return { get Baz() { return Baz } }
 }
 
 })"
@@ -1629,9 +1693,9 @@ exports[`SFC compile <script setup> with TypeScript runtime Enum in normal scrip
 "import { defineComponent as _defineComponent } from 'vue'
 enum Foo { A = 123 }
         
-          export enum D { D = \\"D\\" }
-          const enum C { C = \\"C\\" }
-          enum B { B = \\"B\\" }
+          export enum D { D = "D" }
+          const enum C { C = "C" }
+          enum B { B = "B" }
         
 export default /*#__PURE__*/_defineComponent({
   setup(__props, { expose }) {
@@ -1661,11 +1725,40 @@ const props = __props as {
         foo?: string
         bar?: number
         baz: boolean
-      }
+      };
 
       
       
-return { props, defaults }
+return { props, get defaults() { return defaults } }
+}
+
+})"
+`;
+
+exports[`SFC compile <script setup> with TypeScript withDefaults (dynamic) w/ production mode 1`] = `
+"import { mergeDefaults as _mergeDefaults, defineComponent as _defineComponent } from 'vue'
+import { defaults } from './foo'
+      
+export default /*#__PURE__*/_defineComponent({
+  props: _mergeDefaults({
+    foo: { type: Function },
+    bar: { type: Boolean },
+    baz: { type: [Boolean, Function] },
+    qux: null
+  }, { ...defaults }),
+  setup(__props: any, { expose }) {
+  expose();
+
+const props = __props as {
+        foo: () => void
+        bar: boolean
+        baz: boolean | (() => void)
+        qux: string | number
+      };
+
+      
+      
+return { props, get defaults() { return defaults } }
 }
 
 })"
@@ -1679,12 +1772,38 @@ export default /*#__PURE__*/_defineComponent({
     foo: { type: String, required: false, default: 'hi' },
     bar: { type: Number, required: false },
     baz: { type: Boolean, required: true },
-    qux: { type: Function, required: false, default() { return 1 } }
+    qux: { type: Function, required: false, default() { return 1 } },
+    quux: { type: Function, required: false, default() { } },
+    quuxx: { type: Promise, required: false, async default() { return await Promise.resolve('hi') } },
+    fred: { type: String, required: false, get default() { return 'fred' } }
   },
   setup(__props: any, { expose }) {
   expose();
 
-const props = __props as { foo: string, bar?: number, baz: boolean, qux(): number }
+const props = __props as { foo: string, bar?: number, baz: boolean, qux(): number, quux(): void, quuxx: Promise<string>, fred: string };
+
+      
+      
+return { props }
+}
+
+})"
+`;
+
+exports[`SFC compile <script setup> with TypeScript withDefaults (static) w/ production mode 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  props: {
+    foo: null,
+    bar: { type: Boolean },
+    baz: { type: [Boolean, Function], default: true },
+    qux: { default: 'hi' }
+  },
+  setup(__props: any, { expose }) {
+  expose();
+
+const props = __props as { foo: () => void, bar: boolean, baz: boolean | (() => void), qux: string | number };
 
       
       

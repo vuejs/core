@@ -522,7 +522,7 @@ export function normalizePropsOptions(
       if (validatePropName(normalizedKey)) {
         const opt = raw[key]
         const prop: NormalizedProp = (normalized[normalizedKey] =
-          isArray(opt) || isFunction(opt) ? { type: opt } : opt)
+          isArray(opt) || isFunction(opt) ? { type: opt } : { ...opt })
         if (prop) {
           const booleanIndex = getTypeIndex(Boolean, prop.type)
           const stringIndex = getTypeIndex(String, prop.type)
@@ -557,8 +557,8 @@ function validatePropName(key: string) {
 // use function string name to check type constructors
 // so that it works across vms / iframes.
 function getType(ctor: Prop<any>): string {
-  const match = ctor && ctor.toString().match(/^\s*function (\w+)/)
-  return match ? match[1] : ctor === null ? 'null' : ''
+  const match = ctor && ctor.toString().match(/^\s*(function|class) (\w+)/)
+  return match ? match[2] : ctor === null ? 'null' : ''
 }
 
 function isSameType(a: Prop<any>, b: Prop<any>): boolean {
