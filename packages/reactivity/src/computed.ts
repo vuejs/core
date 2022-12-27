@@ -57,11 +57,11 @@ class ComputedRefImpl<T> {
     // the computed ref may get wrapped by other proxies e.g. readonly() #3376
     const self = toRaw(this)
     debugger
-    // 直接收集自身的reactiveEffect，用
+    // 手动追踪computed内部的effect，因为computed内部需要自己添加监听
     trackRefValue(self)
     if (self._dirty) {
       self._dirty = false
-      self._value = self.effect.run()!
+      self._value = self.effect.run()! // computed函数是拿返回值，effect里面的的run()就是返回执行函数的值
     }
     return self._value
   }

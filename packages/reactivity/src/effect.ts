@@ -381,7 +381,7 @@ export function triggerEffects(
       if (__DEV__ && effect.onTrigger) {
         effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
       }
-      if (effect.scheduler) {
+      if (effect.scheduler) { // 有调度实际上也是执行componentUpdateFn
         // class里面声明了这个属性
         // ReactiveEffect(scheduler)
         effect.scheduler()
