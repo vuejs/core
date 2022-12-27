@@ -478,6 +478,26 @@ describe('type inference w/ options API', () => {
   })
 })
 
+// #4051
+describe('type inference w/ empty prop object', () => {
+  const MyComponent = defineComponent({
+    props: {},
+    setup(props) {
+      return {}
+    },
+    render() {}
+  })
+  expectType<JSX.Element>(<MyComponent />)
+  // AllowedComponentProps
+  expectType<JSX.Element>(<MyComponent class={'foo'} />)
+  // ComponentCustomProps
+  expectType<JSX.Element>(<MyComponent custom={1} />)
+  // VNodeProps
+  expectType<JSX.Element>(<MyComponent key="1" />)
+  // @ts-expect-error
+  expectError(<MyComponent other="other" />)
+})
+
 describe('with mixins', () => {
   const MixinA = defineComponent({
     emits: ['bar'],
@@ -1043,7 +1063,7 @@ describe('inject', () => {
       expectType<unknown>(this.foo)
       expectType<unknown>(this.bar)
       //  @ts-expect-error
-      this.foobar = 1
+      expectError((this.foobar = 1))
     }
   })
 
@@ -1055,7 +1075,7 @@ describe('inject', () => {
       expectType<unknown>(this.foo)
       expectType<unknown>(this.bar)
       //  @ts-expect-error
-      this.foobar = 1
+      expectError((this.foobar = 1))
     }
   })
 
@@ -1075,7 +1095,7 @@ describe('inject', () => {
       expectType<unknown>(this.foo)
       expectType<unknown>(this.bar)
       //  @ts-expect-error
-      this.foobar = 1
+      expectError((this.foobar = 1))
     }
   })
 
@@ -1084,9 +1104,9 @@ describe('inject', () => {
     props: ['a', 'b'],
     created() {
       //  @ts-expect-error
-      this.foo = 1
+      expectError((this.foo = 1))
       //  @ts-expect-error
-      this.bar = 1
+      expectError((this.bar = 1))
     }
   })
 })
