@@ -1272,12 +1272,12 @@ export function compileScript(
             } else {
               let start = decl.start! + startOffset
               let end = decl.end! + startOffset
-              if (i === 0) {
-                // first one, locate the start of the next
-                end = node.declarations[i + 1].start! + startOffset
-              } else {
-                // not first one, locate the end of the prev
+              if (i === total - 1) {
+                // last one, locate the end of the prev
                 start = node.declarations[i - 1].end! + startOffset
+              } else {
+                // not last one, locate the start of the next
+                end = node.declarations[i + 1].start! + startOffset
               }
               s.remove(start, end)
               left--
