@@ -1283,7 +1283,7 @@ export function compileScript(
                 // last one, locate the end of the prev
                 start = node.declarations[getLastIndex(i)].end! + startOffset
               } else {
-                // not last one, locate the start of the next
+                // not the last one, locate the start of the next
                 end = node.declarations[i + 1].start! + startOffset
               }
               s.remove(start, end)
