@@ -1251,6 +1251,13 @@ export function compileScript(
     if (node.type === 'VariableDeclaration' && !node.declare) {
       const total = node.declarations.length
       let left = total
+      const removed = new Set()
+
+      function getLastIndex(i: number) {
+        while (removed.has(--i)) {}
+        return i
+      }
+
       for (let i = 0; i < total; i++) {
         const decl = node.declarations[i]
         if (decl.init) {
@@ -1274,7 +1281,7 @@ export function compileScript(
               let end = decl.end! + startOffset
               if (i === total - 1) {
                 // last one, locate the end of the prev
-                start = node.declarations[i - 1].end! + startOffset
+                start = node.declarations[getLastIndex(i)].end! + startOffset
               } else {
                 // not last one, locate the start of the next
                 end = node.declarations[i + 1].start! + startOffset
@@ -1282,6 +1289,7 @@ export function compileScript(
               s.remove(start, end)
               left--
             }
+            removed.add(i)
           }
         }
       }
