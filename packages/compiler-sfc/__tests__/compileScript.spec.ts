@@ -708,6 +708,21 @@ defineExpose({ foo: 123 })
       expect(content).not.toMatch(`_isRef(foo)`)
     })
 
+    test('v-model should generate ref assignment code for setup-reactive-const bindings', () => {
+      const { content } = compile(
+        `<script setup>
+        import { reactive } from 'vue'
+        const foo = reactive(12)
+        </script>
+        <template>
+            <input v-model="foo" />
+        </template>
+        `,
+        { inlineTemplate: true }
+      )
+      expect(content).toMatch(`_isRef(foo)`)
+    })
+
     test('template assignment expression codegen', () => {
       const { content } = compile(
         `<script setup>

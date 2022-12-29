@@ -51,7 +51,8 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
     context.inline &&
     (bindingType === BindingTypes.SETUP_LET ||
       bindingType === BindingTypes.SETUP_REF ||
-      bindingType === BindingTypes.SETUP_MAYBE_REF)
+      bindingType === BindingTypes.SETUP_MAYBE_REF ||
+      bindingType === BindingTypes.SETUP_REACTIVE_CONST)
 
   if (
     !expString.trim() ||
