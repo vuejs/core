@@ -18,6 +18,7 @@ import MagicString, { SourceMap } from 'magic-string'
 import { walk } from 'estree-walker'
 import {
   extractIdentifiers,
+  getImportedName,
   isFunctionType,
   isInDestructureAssignment,
   isReferencedIdentifier,
@@ -198,11 +199,7 @@ export function transformAST(
 
     for (const specifier of node.specifiers) {
       const local = specifier.local.name
-      const imported =
-        (specifier.type === 'ImportSpecifier' &&
-          specifier.imported.type === 'Identifier' &&
-          specifier.imported.name) ||
-        'default'
+      const imported = getImportedName(specifier)
       userImports[local] = {
         source,
         local,

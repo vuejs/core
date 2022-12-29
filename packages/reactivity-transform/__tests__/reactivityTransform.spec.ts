@@ -460,6 +460,22 @@ test('macro import alias and removal', () => {
   assertCode(code)
 })
 
+test('should support module string names syntax', () => {
+  const { code } = transform(
+    `
+    import { "$" as fromRefs, "$$" as escapeRefs } from 'vue/macros'
+
+    let a = fromRefs(ref(0));
+    console.log(escapeRefs(a))
+    `
+  )
+  // should remove imports
+  expect(code).not.toMatch(`from 'vue/macros'`)
+  expect(code).toMatch(`let a = (ref(0))`)
+  expect(code).toMatch(`console.log((a))`)
+  assertCode(code)
+})
+
 // #6838
 test('should not overwrite importing', () => {
   const { code } = transform(

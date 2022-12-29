@@ -280,6 +280,15 @@ const props = defineProps<{msg: string; ids?: string[]}>()
         let ids = _ref([])"
 `;
 
+exports[`should support module string names syntax 1`] = `
+"
+    
+
+    let a = (ref(0));
+    console.log((a))
+    "
+`;
+
 exports[`using ref binding in property shorthand 1`] = `
 "import { ref as _ref } from 'vue'
 
