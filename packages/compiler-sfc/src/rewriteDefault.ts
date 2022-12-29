@@ -43,7 +43,16 @@ export function rewriteDefault(
   ast.forEach(node => {
     if (node.type === 'ExportDefaultDeclaration') {
       if (node.declaration.type === 'ClassDeclaration') {
-        s.overwrite(node.start!, node.declaration.id.start!, `class `)
+        if (node.declaration.decorators) {
+          s.overwrite(
+            node.declaration.decorators[node.declaration.decorators.length - 1]
+              .end!,
+            node.declaration.id.start!,
+            `class `
+          )
+        } else {
+          s.overwrite(node.start!, node.declaration.start!, ``)
+        }
         s.append(`\nconst ${as} = ${node.declaration.id.name}`)
       } else {
         s.overwrite(node.start!, node.declaration.start!, `const ${as} = `)
@@ -58,7 +67,7 @@ export function rewriteDefault(
         ) {
           if (node.source) {
             if (specifier.local.name === 'default') {
-              const end = specifierEnd(input, specifier.local.end!, node.end)
+              const end = specifierEnd(input, specifier.local.end!, node.end!)
               s.prepend(
                 `import { default as __VUE_DEFAULT__ } from '${node.source.value}'\n`
               )
@@ -66,7 +75,11 @@ export function rewriteDefault(
               s.append(`\nconst ${as} = __VUE_DEFAULT__`)
               continue
             } else {
-              const end = specifierEnd(input, specifier.exported.end!, node.end)
+              const end = specifierEnd(
+                input,
+                specifier.exported.end!,
+                node.end!
+              )
               s.prepend(
                 `import { ${input.slice(
                   specifier.local.start!,
@@ -78,7 +91,7 @@ export function rewriteDefault(
               continue
             }
           }
-          const end = specifierEnd(input, specifier.end!, node.end)
+          const end = specifierEnd(input, specifier.end!, node.end!)
           s.overwrite(specifier.start!, end, ``)
           s.append(`\nconst ${as} = ${specifier.local.name}`)
         }
