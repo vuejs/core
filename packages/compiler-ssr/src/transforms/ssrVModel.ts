@@ -18,8 +18,7 @@ import {
 import {
   SSR_LOOSE_EQUAL,
   SSR_LOOSE_CONTAIN,
-  SSR_RENDER_DYNAMIC_MODEL,
-  SSR_INCLUDE_BOOLEAN_ATTR
+  SSR_RENDER_DYNAMIC_MODEL
 } from '../runtimeHelpers'
 import { DirectiveTransformResult } from 'packages/compiler-core/src/transform'
 
@@ -143,15 +142,10 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
                     model,
                     value
                   ]),
-                  createCallExpression(
-                    context.helper(SSR_INCLUDE_BOOLEAN_ATTR),
-                    [
-                      createCallExpression(context.helper(SSR_LOOSE_EQUAL), [
-                        model,
-                        value
-                      ])
-                    ]
-                  )
+                  createCallExpression(context.helper(SSR_LOOSE_EQUAL), [
+                    model,
+                    value
+                  ])
                 ),
                 createSimpleExpression(' selected', true),
                 createSimpleExpression('', true),
