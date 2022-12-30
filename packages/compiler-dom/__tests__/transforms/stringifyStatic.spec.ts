@@ -477,4 +477,17 @@ describe('stringify static html', () => {
     expect(code).toMatch(`<code>&lt;span&gt;show-it &lt;/span&gt;</code>`)
     expect(code).toMatchSnapshot()
   })
+
+  // #6568
+  test('Select elements can preserve data types when stringified', () => {
+    const { code } = compileWithStringify(`
+        <option :value="'string'">string</option>
+        <option :value="false">boolean</option>
+        <option :value="1">number 1</option>
+        <option :value="2">number 2</option>
+        <option :value="null">null</option>
+    `)
+
+    expect(code).toMatchSnapshot()
+  })
 })

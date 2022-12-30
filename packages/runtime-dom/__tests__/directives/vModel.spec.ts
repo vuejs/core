@@ -6,7 +6,8 @@ import {
   vModelDynamic,
   withDirectives,
   VNode,
-  ref
+  ref,
+  createStaticVNode
 } from '@vue/runtime-dom'
 
 const triggerEvent = (type: string, el: Element) => {
@@ -1171,5 +1172,62 @@ describe('vModel', () => {
     triggerEvent('compositionend', input)
     await nextTick()
     expect(data.value).toEqual('使用拼音输入')
+  })
+
+  it(`After the select tag is stringified, 
+      v-model can get the correct type`, async () => {
+    const hoist = createStaticVNode(
+      "<option value=\"string\" v-stringify-type='string'>string</option><option value=\"false\" v-stringify-type='boolean'>bool</option><option value=\"1\" v-stringify-type='number'>number</option><option value=\"2\" v-stringify-type='number'>number</option><option v-stringify-type='null'>null</option>",
+      5
+    )
+    const component = defineComponent({
+      data() {
+        return { value: '' }
+      },
+      render() {
+        return [
+          withVModel(
+            h(
+              'select',
+              {
+                value: null,
+                'onUpdate:modelValue': setValue.bind(this)
+              },
+              [hoist]
+            ),
+            this.value
+          )
+        ]
+      }
+    })
+    render(h(component), root)
+
+    await nextTick()
+    const input = root.querySelector('select')
+    const optionList = root.querySelectorAll('option')
+    const data = root._vnode.component.data
+
+    optionList[0].selected = true
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toBe('string')
+
+    optionList[0].selected = false
+    optionList[1].selected = true
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toBe(false)
+
+    optionList[1].selected = false
+    optionList[2].selected = true
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toBe(1)
+
+    optionList[2].selected = false
+    optionList[4].selected = true
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toBe(null)
   })
 })

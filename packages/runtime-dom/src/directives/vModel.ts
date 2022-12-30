@@ -243,7 +243,18 @@ function setSelected(el: HTMLSelectElement, value: any) {
 
 // retrieve raw value set via :value bindings
 function getValue(el: HTMLOptionElement | HTMLInputElement) {
-  return '_value' in el ? (el as any)._value : el.value
+  let value = '_value' in el ? (el as any)._value : el.value
+  let stringifyType = el.getAttribute('v-stringify-type')
+  if (stringifyType === 'number') {
+    return Number(value)
+  }
+  if (stringifyType === 'boolean') {
+    return value !== 'false'
+  }
+  if (stringifyType === 'null') {
+    return null
+  }
+  return value
 }
 
 // retrieve raw value for true-value and false-value set via :true-value or :false-value bindings

@@ -318,6 +318,12 @@ function stringifyElement(
           res += ` ${(p.arg as SimpleExpressionNode).content}="${escapeHtml(
             evaluated
           )}"`
+          if (typeof evaluated !== 'object' && node.tag === 'option') {
+            res += ` v-stringify-type='${typeof evaluated}'`
+          }
+        }
+        if (evaluated === null && node.tag === 'option') {
+          res += ` v-stringify-type='${'null'}'`
         }
       } else if (p.name === 'html') {
         // #5439 v-html with constant value
