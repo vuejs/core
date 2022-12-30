@@ -43,16 +43,6 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`stringify static html stringify #6568 1`] = `
-"const { createElementVNode: _createElementVNode, createStaticVNode: _createStaticVNode } = Vue
-
-const _hoisted_1 = /*#__PURE__*/_createStaticVNode("<option value=\\"string\\" v-stringify-type='string'>string</option><option value=\\"false\\" v-stringify-type='boolean'>boolean</option><option value=\\"1\\" v-stringify-type='number'>number 1</option><option value=\\"2\\" v-stringify-type='number'>number 2</option><option v-stringify-type='null'>null</option>", 5)
-
-return function render(_ctx, _cache) {
-  return _hoisted_1
-}"
-`;
-
 exports[`stringify static html stringify v-html 1`] = `
 "const { createElementVNode: _createElementVNode, createStaticVNode: _createStaticVNode } = Vue
 
