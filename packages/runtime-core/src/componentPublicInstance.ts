@@ -1,4 +1,5 @@
 import {
+  AllowedComponentProps,
   ComponentInternalInstance,
   Data,
   getExposeProxy,
@@ -37,7 +38,9 @@ import {
   shouldCacheAccess,
   MergedComponentOptionsOverride,
   InjectToObject,
-  ComponentInjectOptions
+  ComponentInjectOptions,
+  AttrsType,
+  UnwrapAttrsType
 } from './componentOptions'
 import { EmitsOptions, EmitFn } from './componentEmits'
 import { SlotsType, UnwrapSlotsType } from './componentSlots'
@@ -149,6 +152,7 @@ export type CreateComponentPublicInstance<
   MakeDefaultsOptional extends boolean = false,
   I extends ComponentInjectOptions = {},
   S extends SlotsType = {},
+  Attrs extends AttrsType = {},
   PublicMixin = IntersectionMixin<Mixin> & IntersectionMixin<Extends>,
   PublicP = UnwrapMixinsType<PublicMixin, 'P'> & EnsureNonVoid<P>,
   PublicB = UnwrapMixinsType<PublicMixin, 'B'> & EnsureNonVoid<B>,
@@ -182,10 +186,12 @@ export type CreateComponentPublicInstance<
     Defaults,
     {},
     string,
-    S
+    S,
+    Attrs
   >,
   I,
-  S
+  S,
+  Attrs
 >
 
 // public properties exposed on the proxy, which is used as the render context
@@ -202,14 +208,17 @@ export type ComponentPublicInstance<
   MakeDefaultsOptional extends boolean = false,
   Options = ComponentOptionsBase<any, any, any, any, any, any, any, any, any>,
   I extends ComponentInjectOptions = {},
-  S extends SlotsType = {}
+  S extends SlotsType = {},
+  Attrs extends AttrsType = {}
 > = {
   $: ComponentInternalInstance
   $data: D
-  $props: MakeDefaultsOptional extends true
-    ? Partial<Defaults> & Omit<Prettify<P> & PublicProps, keyof Defaults>
-    : Prettify<P> & PublicProps
-  $attrs: Data
+  $props: Prettify<
+    MakeDefaultsOptional extends true
+      ? Partial<Defaults> & Omit<P & PublicProps, keyof Defaults> & Omit<UnwrapAttrsType<Attrs>, keyof (P & PublicProps)>
+      : P & PublicProps & Omit<UnwrapAttrsType<Attrs>, keyof (P & PublicProps)>
+  >
+  $attrs: Omit<UnwrapAttrsType<Attrs>, keyof (P & PublicProps)> & AllowedComponentProps
   $refs: Data
   $slots: UnwrapSlotsType<S>
   $root: ComponentPublicInstance | null

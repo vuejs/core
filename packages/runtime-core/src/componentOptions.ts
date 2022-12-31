@@ -111,7 +111,8 @@ export interface ComponentOptionsBase<
   Defaults = {},
   I extends ComponentInjectOptions = {},
   II extends string = string,
-  S extends SlotsType = {}
+  S extends SlotsType = {},
+  Attrs extends AttrsType = {}
 > extends LegacyOptions<Props, D, C, M, Mixin, Extends, I, II>,
     ComponentInternalOptions,
     ComponentCustomOptions {
@@ -141,6 +142,7 @@ export interface ComponentOptionsBase<
   inheritAttrs?: boolean
   emits?: (E | EE[]) & ThisType<void>
   slots?: S
+  attrs?: Attrs
   // TODO infer public instance type based on exposed keys
   expose?: string[]
   serverPrefetch?(): void | Promise<any>
@@ -224,6 +226,7 @@ export type ComponentOptionsWithoutProps<
   I extends ComponentInjectOptions = {},
   II extends string = string,
   S extends SlotsType = {},
+  Attrs extends AttrsType = {},
   PE = Props & EmitsToProps<E>
 > = ComponentOptionsBase<
   PE,
@@ -238,7 +241,8 @@ export type ComponentOptionsWithoutProps<
   {},
   I,
   II,
-  S
+  S,
+  Attrs
 > & {
   props?: undefined
 } & ThisType<
@@ -255,7 +259,8 @@ export type ComponentOptionsWithoutProps<
       {},
       false,
       I,
-      S
+      S,
+      Attrs
     >
   >
 
@@ -272,6 +277,7 @@ export type ComponentOptionsWithArrayProps<
   I extends ComponentInjectOptions = {},
   II extends string = string,
   S extends SlotsType = {},
+  Attrs extends AttrsType = {},
   Props = Prettify<Readonly<{ [key in PropNames]?: any } & EmitsToProps<E>>>
 > = ComponentOptionsBase<
   Props,
@@ -286,7 +292,8 @@ export type ComponentOptionsWithArrayProps<
   {},
   I,
   II,
-  S
+  S,
+  Attrs
 > & {
   props: PropNames[]
 } & ThisType<
@@ -303,7 +310,8 @@ export type ComponentOptionsWithArrayProps<
       {},
       false,
       I,
-      S
+      S,
+      Attrs
     >
   >
 
@@ -320,6 +328,7 @@ export type ComponentOptionsWithObjectProps<
   I extends ComponentInjectOptions = {},
   II extends string = string,
   S extends SlotsType = {},
+  Attrs extends AttrsType = {},
   Props = Prettify<Readonly<ExtractPropTypes<PropsOptions> & EmitsToProps<E>>>,
   Defaults = ExtractDefaultPropTypes<PropsOptions>
 > = ComponentOptionsBase<
@@ -335,7 +344,8 @@ export type ComponentOptionsWithObjectProps<
   Defaults,
   I,
   II,
-  S
+  S,
+  Attrs
 > & {
   props: PropsOptions & ThisType<void>
 } & ThisType<
@@ -352,7 +362,8 @@ export type ComponentOptionsWithObjectProps<
       Defaults,
       false,
       I,
-      S
+      S,
+      Attrs
     >
   >
 
@@ -405,6 +416,23 @@ export type ComponentOptionsMixin = ComponentOptionsBase<
   any,
   any
 >
+
+declare const AttrSymbol: unique symbol
+export type AttrsType<T extends Record<string, any> = Record<string, any>> = {
+  [AttrSymbol]?: T
+}
+export type UnwrapAttrsType<
+  S extends AttrsType,
+  T = NonNullable<S[typeof AttrSymbol]>
+> = [keyof S] extends [never]
+  ? Data
+  : Readonly<
+      Prettify<{
+        [K in keyof T]: NonNullable<T[K]> extends (...args: any[]) => any
+          ? T[K]
+          : T[K]
+      }>
+    >
 
 export type ComputedOptions = Record<
   string,

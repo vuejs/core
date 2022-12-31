@@ -10,6 +10,7 @@ import {
   SetupContext,
   h,
   SlotsType,
+  AttrsType,
   Slots,
   VNode
 } from 'vue'
@@ -1043,7 +1044,7 @@ describe('inject', () => {
       expectType<unknown>(this.foo)
       expectType<unknown>(this.bar)
       //  @ts-expect-error
-      this.foobar = 1
+      expectError((this.foobar = 1))
     }
   })
 
@@ -1055,7 +1056,7 @@ describe('inject', () => {
       expectType<unknown>(this.foo)
       expectType<unknown>(this.bar)
       //  @ts-expect-error
-      this.foobar = 1
+      expectError((this.foobar = 1))
     }
   })
 
@@ -1075,7 +1076,7 @@ describe('inject', () => {
       expectType<unknown>(this.foo)
       expectType<unknown>(this.bar)
       //  @ts-expect-error
-      this.foobar = 1
+      expectError((this.foobar = 1))
     }
   })
 
@@ -1084,9 +1085,9 @@ describe('inject', () => {
     props: ['a', 'b'],
     created() {
       //  @ts-expect-error
-      this.foo = 1
+      expectError((this.foo = 1))
       //  @ts-expect-error
-      this.bar = 1
+      expectError((this.bar = 1))
     }
   })
 })
@@ -1186,6 +1187,118 @@ describe('async setup', () => {
 
   // setup context properties should be mutable
   vm.a = 2
+})
+
+describe('define attrs', () => {
+  test('define attrs w/ object props', () => {
+    type CompAttrs = {
+      bar: number
+      baz?: string
+    }
+    const MyComp = defineComponent(
+      {
+        props: {
+          foo: String
+        },
+        attrs: Object as AttrsType<CompAttrs>,
+        created() {
+          expectType<CompAttrs['bar']>(this.$attrs.bar)
+          expectType<CompAttrs['baz']>(this.$attrs.baz)
+        }
+      }
+    )
+    expectType<JSX.Element>(<MyComp foo="1" bar={1} />)
+  })
+
+  test('define attrs w/ array props', () => {
+    type CompAttrs = {
+      bar: number
+      baz?: string
+    }
+    const MyComp = defineComponent(
+      {
+        props: ['foo'],
+        attrs: Object as AttrsType<CompAttrs>,
+        created() {
+          expectType<CompAttrs['bar']>(this.$attrs.bar)
+          expectType<CompAttrs['baz']>(this.$attrs.baz)
+        }
+      }
+    )
+    expectType<JSX.Element>(<MyComp foo="1" bar={1} />)
+  })
+
+  test('define attrs w/ no props', () => {
+    type CompAttrs = {
+      bar: number
+      baz?: string
+    }
+    const MyComp = defineComponent(
+      {
+        attrs: Object as AttrsType<CompAttrs>,
+        created() {
+          expectType<CompAttrs['bar']>(this.$attrs.bar)
+          expectType<CompAttrs['baz']>(this.$attrs.baz)
+        }
+      }
+    )
+    expectType<JSX.Element>(<MyComp bar={1} />)
+  })
+
+  test('define attrs w/ function component', () => {
+    type CompAttrs = {
+      bar: number
+      baz?: string
+    }
+    const MyComp = defineComponent(
+      (props: { foo: string }, ctx) => {
+        expectType<number>(ctx.attrs.bar)
+        expectType<CompAttrs['bar']>(ctx.attrs.bar)
+        expectType<CompAttrs['baz']>(ctx.attrs.baz)
+        return () => (
+          // return a render function (both JSX and h() works)
+          <div>
+            {props.foo}
+          </div>
+        )
+      }, {
+        attrs: Object as AttrsType<CompAttrs>
+      }
+    )
+    expectType<JSX.Element>(<MyComp foo={'1'} bar={1} />)
+  })
+
+  test('define attrs as low priority', () => {
+    type CompAttrs = {
+      foo: number
+    }
+    const MyComp = defineComponent(
+      {
+        props: {
+          foo: String
+        },
+        attrs: Object as AttrsType<CompAttrs>,
+        created() {
+          // @ts-expect-error
+          console.log(this.$attrs.foo)
+        }
+      }
+    )
+    expectType<JSX.Element>(<MyComp foo="1" />)
+  })
+
+  test('define attrs w/ default attrs such as class, style', () => {
+    const MyComp = defineComponent({
+      props: {
+        foo: String
+      },
+      created() {
+        expectType<unknown>(this.$attrs.class)
+        expectType<unknown>(this.$attrs.style)
+      }
+    })
+    expectType<JSX.Element>(<MyComp class="1" style={1} />)
+  })
 })
 
 // #5948

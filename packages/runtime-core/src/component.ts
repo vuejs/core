@@ -40,10 +40,12 @@ import { AppContext, createAppContext, AppConfig } from './apiCreateApp'
 import { Directive, validateDirectiveName } from './directives'
 import {
   applyOptions,
+  AttrsType,
   ComponentOptions,
   ComputedOptions,
   MethodOptions,
-  resolveMergedOptions
+  resolveMergedOptions,
+  UnwrapAttrsType
 } from './componentOptions'
 import {
   EmitsOptions,
@@ -184,10 +186,11 @@ type LifecycleHook<TFn = Function> = TFn[] | null
 // use `E extends any` to force evaluating type to fix #2362
 export type SetupContext<
   E = EmitsOptions,
-  S extends SlotsType = {}
+  S extends SlotsType = {},
+  Attrs extends AttrsType = {}
 > = E extends any
   ? {
-      attrs: Data
+      attrs: UnwrapAttrsType<Attrs>,
       slots: UnwrapSlotsType<S>
       emit: EmitFn<E>
       expose: (exposed?: Record<string, any>) => void
