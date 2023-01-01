@@ -286,11 +286,14 @@ describe('defineCustomElement', () => {
   })
 
   describe('attrs', () => {
-    const E = defineCustomElement({
-      render() {
-        return [h('div', null, this.$attrs.foo as string)]
-      }
-    })
+    const E = defineCustomElement(
+      {
+        render() {
+          return [h('div', null, this.$attrs.foo)]
+        }
+      },
+      { attrs: {} as { foo: string } }
+    )
     customElements.define('my-el-attrs', E)
 
     test('attrs via attribute', async () => {

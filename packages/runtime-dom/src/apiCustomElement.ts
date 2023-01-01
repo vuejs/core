@@ -34,10 +34,10 @@ export type VueElementConstructor<P = {}> = {
 // so most of the following overloads should be kept in sync w/ defineComponent.
 
 // overload 1: direct setup function
-export function defineCustomElement<Props, RawBindings = object>(
+export function defineCustomElement<Props, RawBindings = object, Attrs = {}>(
   setup: (
     props: Readonly<Props>,
-    ctx: SetupContext
+    ctx: SetupContext<{}, Attrs>
   ) => RawBindings | RenderFunction
 ): VueElementConstructor<Props>
 
@@ -56,7 +56,7 @@ export function defineCustomElement<
   II extends string = string,
   S extends SlotsType = {}
 >(
-  options: ComponentOptionsWithoutProps<
+  comp: ComponentOptionsWithoutProps<
     Props,
     RawBindings,
     D,
@@ -87,7 +87,7 @@ export function defineCustomElement<
   II extends string = string,
   S extends SlotsType = {}
 >(
-  options: ComponentOptionsWithArrayProps<
+  comp: ComponentOptionsWithArrayProps<
     PropNames,
     RawBindings,
     D,
@@ -118,7 +118,7 @@ export function defineCustomElement<
   II extends string = string,
   S extends SlotsType = {}
 >(
-  options: ComponentOptionsWithObjectProps<
+  comp: ComponentOptionsWithObjectProps<
     PropsOptions,
     RawBindings,
     D,
@@ -142,14 +142,17 @@ export function defineCustomElement(options: {
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function defineCustomElement(
-  options: any,
-  hydrate?: RootHydrateFunction
+  comp: any,
+  options?: {
+    hydrate?: RootHydrateFunction
+    attrs?: any
+  }
 ): VueElementConstructor {
   const Comp = defineComponent(options) as any
   class VueCustomElement extends VueElement {
     static def = Comp
     constructor(initialProps?: Record<string, any>) {
-      super(Comp, initialProps, hydrate)
+      super(Comp, initialProps, options?.hydrate)
     }
   }
 
@@ -159,7 +162,7 @@ export function defineCustomElement(
 /*! #__NO_SIDE_EFFECTS__ */
 export const defineSSRCustomElement = ((options: any) => {
   // @ts-ignore
-  return defineCustomElement(options, hydrate)
+  return defineCustomElement(options, { hydrate })
 }) as typeof defineCustomElement
 
 const BaseClass = (
