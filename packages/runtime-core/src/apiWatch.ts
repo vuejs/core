@@ -311,13 +311,13 @@ function doWatch(
       // watch(source, cb)
       const newValue = effect.run()
       if (
-        deep ||
         forceTrigger ||
         (isMultiSource
-          ? (newValue as any[]).some((v, i) =>
-              hasChanged(v, (oldValue as any[])[i])
+          ? (newValue as any[]).some(
+              (v, i) =>
+                (deep && isObject(v)) || hasChanged(v, (oldValue as any[])[i])
             )
-          : hasChanged(newValue, oldValue)) ||
+          : (deep && isObject(newValue)) || hasChanged(newValue, oldValue)) ||
         (__COMPAT__ &&
           isArray(newValue) &&
           isCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance))
@@ -329,11 +329,11 @@ function doWatch(
         callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
           newValue,
           // pass undefined as the old value when it's changed for the first time
-          oldValue === INITIAL_WATCHER_VALUE 
+          oldValue === INITIAL_WATCHER_VALUE
             ? undefined
-            : (isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE)
-              ? []
-              : oldValue,
+            : isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE
+            ? []
+            : oldValue,
           onCleanup
         ])
         oldValue = newValue
