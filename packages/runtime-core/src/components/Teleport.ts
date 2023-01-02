@@ -52,13 +52,13 @@ const resolveTarget = <T = RendererElement>(
               `ideally should be outside of the entire Vue component tree.`
           )
       }
-      return target as any
+      return target as T
     }
   } else {
     if (__DEV__ && !targetSelector && !isTeleportDisabled(props)) {
       warn(`Invalid Teleport target: ${targetSelector}`)
     }
-    return targetSelector as any
+    return targetSelector as T
   }
 }
 
@@ -222,6 +222,8 @@ export const TeleportImpl = {
         }
       }
     }
+
+    updateCssVars(n2)
   },
 
   remove(
@@ -383,12 +385,27 @@ function hydrateTeleport(
         )
       }
     }
+    updateCssVars(vnode)
   }
   return vnode.anchor && nextSibling(vnode.anchor as Node)
 }
 
 // Force-casted public typing for h and TSX props inference
-export const Teleport = TeleportImpl as any as {
+export const Teleport = TeleportImpl as unknown as {
   __isTeleport: true
   new (): { $props: VNodeProps & TeleportProps }
+}
+
+function updateCssVars(vnode: VNode) {
+  // presence of .ut method indicates owner component uses css vars.
+  // code path here can assume browser environment.
+  const ctx = vnode.ctx
+  if (ctx && ctx.ut) {
+    let node = (vnode.children as VNode[])[0].el!
+    while (node !== vnode.targetAnchor) {
+      if (node.nodeType === 1) node.setAttribute('data-v-owner', ctx.uid)
+      node = node.nextSibling
+    }
+    ctx.ut()
+  }
 }

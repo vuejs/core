@@ -8,7 +8,11 @@ import {
   Program,
   VariableDeclarator,
   Expression,
-  VariableDeclaration
+  VariableDeclaration,
+  ImportDeclaration,
+  ImportSpecifier,
+  ImportDefaultSpecifier,
+  ImportNamespaceSpecifier
 } from '@babel/types'
 import MagicString, { SourceMap } from 'magic-string'
 import { walk } from 'estree-walker'
@@ -25,6 +29,7 @@ import { hasOwn, isArray, isString, genPropsAccessExp } from '@vue/shared'
 
 const CONVERT_SYMBOL = '$'
 const ESCAPE_SYMBOL = '$$'
+const IMPORT_SOURCE = 'vue/macros'
 const shorthands = ['ref', 'computed', 'shallowRef', 'toRef', 'customRef']
 const transformCheckRE = /[^\w]\$(?:\$|ref|computed|shallowRef)?\s*(\(|\<)/
 
@@ -32,7 +37,11 @@ export function shouldTransform(src: string): boolean {
   return transformCheckRE.test(src)
 }
 
-type Scope = Record<string, boolean | 'prop'>
+interface Binding {
+  isConst?: boolean
+  isProp?: boolean
+}
+type Scope = Record<string, Binding | false>
 
 export interface RefTransformOptions {
   filename?: string
@@ -46,6 +55,13 @@ export interface RefTransformResults {
   map: SourceMap | null
   rootRefs: string[]
   importedHelpers: string[]
+}
+
+export interface ImportBinding {
+  local: string
+  imported: string
+  source: string
+  specifier: ImportSpecifier | ImportDefaultSpecifier | ImportNamespaceSpecifier
 }
 
 export function transform(
@@ -106,6 +122,7 @@ export function transformAST(
     {
       local: string // local identifier, may be different
       default?: any
+      isConst?: boolean
     }
   >
 ): {
@@ -115,37 +132,38 @@ export function transformAST(
   // TODO remove when out of experimental
   warnExperimental()
 
-  let convertSymbol = CONVERT_SYMBOL
-  let escapeSymbol = ESCAPE_SYMBOL
+  const userImports: Record<string, ImportBinding> = Object.create(null)
+  for (const node of ast.body) {
+    if (node.type !== 'ImportDeclaration') continue
+    walkImportDeclaration(node)
+  }
 
   // macro import handling
-  for (const node of ast.body) {
-    if (
-      node.type === 'ImportDeclaration' &&
-      node.source.value === 'vue/macros'
-    ) {
-      // remove macro imports
-      s.remove(node.start! + offset, node.end! + offset)
-      // check aliasing
-      for (const specifier of node.specifiers) {
-        if (specifier.type === 'ImportSpecifier') {
-          const imported = (specifier.imported as Identifier).name
-          const local = specifier.local.name
-          if (local !== imported) {
-            if (imported === ESCAPE_SYMBOL) {
-              escapeSymbol = local
-            } else if (imported === CONVERT_SYMBOL) {
-              convertSymbol = local
-            } else {
-              error(
-                `macro imports for ref-creating methods do not support aliasing.`,
-                specifier
-              )
-            }
-          }
-        }
+  let convertSymbol: string | undefined
+  let escapeSymbol: string | undefined
+  for (const { local, imported, source, specifier } of Object.values(
+    userImports
+  )) {
+    if (source === IMPORT_SOURCE) {
+      if (imported === ESCAPE_SYMBOL) {
+        escapeSymbol = local
+      } else if (imported === CONVERT_SYMBOL) {
+        convertSymbol = local
+      } else if (imported !== local) {
+        error(
+          `macro imports for ref-creating methods do not support aliasing.`,
+          specifier
+        )
       }
     }
+  }
+
+  // default symbol
+  if (!convertSymbol && !userImports[CONVERT_SYMBOL]) {
+    convertSymbol = CONVERT_SYMBOL
+  }
+  if (!escapeSymbol && !userImports[ESCAPE_SYMBOL]) {
+    escapeSymbol = ESCAPE_SYMBOL
   }
 
   const importedHelpers = new Set<string>()
@@ -155,22 +173,50 @@ export function transformAST(
   let escapeScope: CallExpression | undefined // inside $$()
   const excludedIds = new WeakSet<Identifier>()
   const parentStack: Node[] = []
-  const propsLocalToPublicMap = Object.create(null)
+  const propsLocalToPublicMap: Record<string, string> = Object.create(null)
 
   if (knownRefs) {
     for (const key of knownRefs) {
-      rootScope[key] = true
+      rootScope[key] = {}
     }
   }
   if (knownProps) {
     for (const key in knownProps) {
-      const { local } = knownProps[key]
-      rootScope[local] = 'prop'
+      const { local, isConst } = knownProps[key]
+      rootScope[local] = {
+        isProp: true,
+        isConst: !!isConst
+      }
       propsLocalToPublicMap[local] = key
     }
   }
 
+  function walkImportDeclaration(node: ImportDeclaration) {
+    const source = node.source.value
+    if (source === IMPORT_SOURCE) {
+      s.remove(node.start! + offset, node.end! + offset)
+    }
+
+    for (const specifier of node.specifiers) {
+      const local = specifier.local.name
+      const imported =
+        (specifier.type === 'ImportSpecifier' &&
+          specifier.imported.type === 'Identifier' &&
+          specifier.imported.name) ||
+        'default'
+      userImports[local] = {
+        source,
+        local,
+        imported,
+        specifier
+      }
+    }
+  }
+
   function isRefCreationCall(callee: string): string | false {
+    if (!convertSymbol || currentScope[convertSymbol] !== undefined) {
+      return false
+    }
     if (callee === convertSymbol) {
       return convertSymbol
     }
@@ -180,7 +226,7 @@ export function transformAST(
     return false
   }
 
-  function error(msg: string, node: Node) {
+  function error(msg: string, node: Node): never {
     const e = new Error(msg)
     ;(e as any).node = node
     throw e
@@ -191,10 +237,10 @@ export function transformAST(
     return `_${msg}`
   }
 
-  function registerBinding(id: Identifier, isRef = false) {
+  function registerBinding(id: Identifier, binding?: Binding) {
     excludedIds.add(id)
     if (currentScope) {
-      currentScope[id.name] = isRef
+      currentScope[id.name] = binding ? binding : false
     } else {
       error(
         'registerBinding called without active scope, something is wrong.',
@@ -203,7 +249,8 @@ export function transformAST(
     }
   }
 
-  const registerRefBinding = (id: Identifier) => registerBinding(id, true)
+  const registerRefBinding = (id: Identifier, isConst = false) =>
+    registerBinding(id, { isConst })
 
   let tempVarCount = 0
   function genTempVar() {
@@ -258,7 +305,12 @@ export function transformAST(
         isCall &&
         (refCall = isRefCreationCall((decl as any).init.callee.name))
       ) {
-        processRefDeclaration(refCall, decl.id, decl.init as CallExpression)
+        processRefDeclaration(
+          refCall,
+          decl.id,
+          decl.init as CallExpression,
+          stmt.kind === 'const'
+        )
       } else {
         const isProps =
           isRoot && isCall && (decl as any).init.callee.name === 'defineProps'
@@ -278,7 +330,8 @@ export function transformAST(
   function processRefDeclaration(
     method: string,
     id: VariableDeclarator['id'],
-    call: CallExpression
+    call: CallExpression,
+    isConst: boolean
   ) {
     excludedIds.add(call.callee as Identifier)
     if (method === convertSymbol) {
@@ -287,16 +340,16 @@ export function transformAST(
       s.remove(call.callee.start! + offset, call.callee.end! + offset)
       if (id.type === 'Identifier') {
         // single variable
-        registerRefBinding(id)
+        registerRefBinding(id, isConst)
       } else if (id.type === 'ObjectPattern') {
-        processRefObjectPattern(id, call)
+        processRefObjectPattern(id, call, isConst)
       } else if (id.type === 'ArrayPattern') {
-        processRefArrayPattern(id, call)
+        processRefArrayPattern(id, call, isConst)
       }
     } else {
       // shorthands
       if (id.type === 'Identifier') {
-        registerRefBinding(id)
+        registerRefBinding(id, isConst)
         // replace call
         s.overwrite(
           call.start! + offset,
@@ -312,6 +365,7 @@ export function transformAST(
   function processRefObjectPattern(
     pattern: ObjectPattern,
     call: CallExpression,
+    isConst: boolean,
     tempVar?: string,
     path: PathSegment[] = []
   ) {
@@ -321,8 +375,8 @@ export function transformAST(
       s.overwrite(pattern.start! + offset, pattern.end! + offset, tempVar)
     }
 
+    let nameId: Identifier | undefined
     for (const p of pattern.properties) {
-      let nameId: Identifier | undefined
       let key: Expression | string | undefined
       let defaultValue: Expression | undefined
       if (p.type === 'ObjectProperty') {
@@ -346,21 +400,27 @@ export function transformAST(
             // { foo: bar }
             nameId = p.value
           } else if (p.value.type === 'ObjectPattern') {
-            processRefObjectPattern(p.value, call, tempVar, [...path, key])
+            processRefObjectPattern(p.value, call, isConst, tempVar, [
+              ...path,
+              key
+            ])
           } else if (p.value.type === 'ArrayPattern') {
-            processRefArrayPattern(p.value, call, tempVar, [...path, key])
+            processRefArrayPattern(p.value, call, isConst, tempVar, [
+              ...path,
+              key
+            ])
           } else if (p.value.type === 'AssignmentPattern') {
             if (p.value.left.type === 'Identifier') {
               // { foo: bar = 1 }
               nameId = p.value.left
               defaultValue = p.value.right
             } else if (p.value.left.type === 'ObjectPattern') {
-              processRefObjectPattern(p.value.left, call, tempVar, [
+              processRefObjectPattern(p.value.left, call, isConst, tempVar, [
                 ...path,
                 [key, p.value.right]
               ])
             } else if (p.value.left.type === 'ArrayPattern') {
-              processRefArrayPattern(p.value.left, call, tempVar, [
+              processRefArrayPattern(p.value.left, call, isConst, tempVar, [
                 ...path,
                 [key, p.value.right]
               ])
@@ -374,7 +434,7 @@ export function transformAST(
         error(`reactivity destructure does not support rest elements.`, p)
       }
       if (nameId) {
-        registerRefBinding(nameId)
+        registerRefBinding(nameId, isConst)
         // inject toRef() after original replaced pattern
         const source = pathToString(tempVar, path)
         const keyStr = isString(key)
@@ -391,11 +451,15 @@ export function transformAST(
         )
       }
     }
+    if (nameId) {
+      s.appendLeft(call.end! + offset, ';')
+    }
   }
 
   function processRefArrayPattern(
     pattern: ArrayPattern,
     call: CallExpression,
+    isConst: boolean,
     tempVar?: string,
     path: PathSegment[] = []
   ) {
@@ -405,10 +469,10 @@ export function transformAST(
       s.overwrite(pattern.start! + offset, pattern.end! + offset, tempVar)
     }
 
+    let nameId: Identifier | undefined
     for (let i = 0; i < pattern.elements.length; i++) {
       const e = pattern.elements[i]
       if (!e) continue
-      let nameId: Identifier | undefined
       let defaultValue: Expression | undefined
       if (e.type === 'Identifier') {
         // [a] --> [__a]
@@ -421,12 +485,12 @@ export function transformAST(
         // [...a]
         error(`reactivity destructure does not support rest elements.`, e)
       } else if (e.type === 'ObjectPattern') {
-        processRefObjectPattern(e, call, tempVar, [...path, i])
+        processRefObjectPattern(e, call, isConst, tempVar, [...path, i])
       } else if (e.type === 'ArrayPattern') {
-        processRefArrayPattern(e, call, tempVar, [...path, i])
+        processRefArrayPattern(e, call, isConst, tempVar, [...path, i])
       }
       if (nameId) {
-        registerRefBinding(nameId)
+        registerRefBinding(nameId, isConst)
         // inject toRef() after original replaced pattern
         const source = pathToString(tempVar, path)
         const defaultStr = defaultValue ? `, ${snip(defaultValue)}` : ``
@@ -437,6 +501,9 @@ export function transformAST(
           )}(${source}, ${i}${defaultStr})`
         )
       }
+    }
+    if (nameId) {
+      s.appendLeft(call.end! + offset, ';')
     }
   }
 
@@ -476,9 +543,18 @@ export function transformAST(
     parentStack: Node[]
   ): boolean {
     if (hasOwn(scope, id.name)) {
-      const bindingType = scope[id.name]
-      if (bindingType) {
-        const isProp = bindingType === 'prop'
+      const binding = scope[id.name]
+
+      if (binding) {
+        if (
+          binding.isConst &&
+          ((parent.type === 'AssignmentExpression' && id === parent.left) ||
+            parent.type === 'UpdateExpression')
+        ) {
+          error(`Assignment to constant variable.`, id)
+        }
+
+        const { isProp } = binding
         if (isStaticProperty(parent) && parent.shorthand) {
           // let binding used in a property shorthand
           // skip for destructure patterns
@@ -545,7 +621,7 @@ export function transformAST(
         offset,
         `const __props_${publicKey} = ${helper(
           `toRef`
-        )}(__props, '${publicKey}')\n`
+        )}(__props, '${publicKey}');\n`
       )
     }
   }
@@ -594,18 +670,20 @@ export function transformAST(
         return this.skip()
       }
 
-      if (
-        node.type === 'Identifier' &&
-        // if inside $$(), skip unless this is a destructured prop binding
-        !(escapeScope && rootScope[node.name] !== 'prop') &&
-        isReferencedIdentifier(node, parent!, parentStack) &&
-        !excludedIds.has(node)
-      ) {
-        // walk up the scope chain to check if id should be appended .value
-        let i = scopeStack.length
-        while (i--) {
-          if (rewriteId(scopeStack[i], node, parent!, parentStack)) {
-            return
+      if (node.type === 'Identifier') {
+        const binding = rootScope[node.name]
+        if (
+          // if inside $$(), skip unless this is a destructured prop binding
+          !(escapeScope && (!binding || !binding.isProp)) &&
+          isReferencedIdentifier(node, parent!, parentStack) &&
+          !excludedIds.has(node)
+        ) {
+          // walk up the scope chain to check if id should be appended .value
+          let i = scopeStack.length
+          while (i--) {
+            if (rewriteId(scopeStack[i], node, parent!, parentStack)) {
+              return
+            }
           }
         }
       }
@@ -622,9 +700,34 @@ export function transformAST(
           )
         }
 
-        if (callee === escapeSymbol) {
-          s.remove(node.callee.start! + offset, node.callee.end! + offset)
+        if (
+          escapeSymbol &&
+          currentScope[escapeSymbol] === undefined &&
+          callee === escapeSymbol
+        ) {
           escapeScope = node
+          s.remove(node.callee.start! + offset, node.callee.end! + offset)
+
+          if (parent?.type === 'ExpressionStatement') {
+            // edge case where the call expression is an expression statement
+            // if its own - prepend semicolon to avoid it being parsed as
+            // function invocation of previous line
+            let i =
+              (node.leadingComments
+                ? node.leadingComments[0].start
+                : node.start)! + offset
+            while (i--) {
+              const char = s.original.charAt(i)
+              if (char === '\n') {
+                // only insert semi if it's actually the fisrt thign after
+                // newline
+                s.prependRight(node.start! + offset, ';')
+                break
+              } else if (!/\s/.test(char)) {
+                break
+              }
+            }
+          }
         }
 
         // TODO remove when out of experimental
@@ -660,7 +763,10 @@ export function transformAST(
   })
 
   return {
-    rootRefs: Object.keys(rootScope).filter(key => rootScope[key] === true),
+    rootRefs: Object.keys(rootScope).filter(key => {
+      const binding = rootScope[key]
+      return binding && !binding.isProp
+    }),
     importedHelpers: [...importedHelpers]
   }
 }

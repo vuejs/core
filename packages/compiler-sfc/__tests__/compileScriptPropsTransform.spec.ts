@@ -184,6 +184,24 @@ describe('sfc props transform', () => {
     assertCode(content)
   })
 
+  // #6960
+  test('computed static key', () => {
+    const { content, bindings } = compile(`
+    <script setup>
+    const { ['foo']: foo } = defineProps(['foo'])
+    console.log(foo)
+    </script>
+    <template>{{ foo }}</template>
+  `)
+    expect(content).not.toMatch(`const { foo } =`)
+    expect(content).toMatch(`console.log(__props.foo)`)
+    expect(content).toMatch(`_toDisplayString(__props.foo)`)
+    assertCode(content)
+    expect(bindings).toStrictEqual({
+      foo: BindingTypes.PROPS
+    })
+  })
+
   describe('errors', () => {
     test('should error on deep destructure', () => {
       expect(() =>
@@ -228,6 +246,17 @@ describe('sfc props transform', () => {
           </script>`
         )
       ).toThrow(`cannot reference locally declared variables`)
+    })
+
+    test('should error if assignment to constant variable', () => {
+      expect(() =>
+        compile(
+          `<script setup>
+          const { foo } = defineProps(['foo'])
+          foo = 'bar'
+          </script>`
+        )
+      ).toThrow(`Assignment to constant variable.`)
     })
   })
 })

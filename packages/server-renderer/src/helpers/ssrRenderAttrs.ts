@@ -1,4 +1,4 @@
-import { escapeHtml, stringifyStyle } from '@vue/shared'
+import { escapeHtml, isSVGTag, stringifyStyle } from '@vue/shared'
 import {
   normalizeClass,
   normalizeStyle,
@@ -51,8 +51,8 @@ export function ssrRenderDynamicAttr(
     return ``
   }
   const attrKey =
-    tag && tag.indexOf('-') > 0
-      ? key // preserve raw name on custom elements
+    tag && (tag.indexOf('-') > 0 || isSVGTag(tag))
+      ? key // preserve raw name on custom elements and svg
       : propsToAttrMap[key] || key.toLowerCase()
   if (isBooleanAttr(attrKey)) {
     return includeBooleanAttr(value) ? ` ${attrKey}` : ``

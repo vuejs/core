@@ -922,6 +922,22 @@ describe('reactivity/effect', () => {
     expect(fnSpy2).toHaveBeenCalledTimes(1)
   })
 
+  it('should be triggered when set length with string', () => {
+    let ret1 = 'idle'
+    let ret2 = 'idle'
+    const arr1 = reactive(new Array(11).fill(0))
+    const arr2 = reactive(new Array(11).fill(0))
+    effect(() => {
+      ret1 = arr1[10] === undefined ? 'arr[10] is set to empty' : 'idle'
+    })
+    effect(() => {
+      ret2 = arr2[10] === undefined ? 'arr[10] is set to empty' : 'idle'
+    })
+    arr1.length = 2
+    arr2.length = '2' as any
+    expect(ret1).toBe(ret2)
+  })
+
   describe('readonly + reactive for Map', () => {
     test('should work with readonly(reactive(Map))', () => {
       const m = reactive(new Map())
@@ -947,6 +963,32 @@ describe('reactivity/effect', () => {
       expect(fnSpy).toHaveBeenCalledTimes(1)
       m.set(key, 2)
       expect(fnSpy).toHaveBeenCalledTimes(2)
+    })
+
+    test('should track hasOwnProperty', () => {
+      const obj: any = reactive({})
+      let has = false
+      const fnSpy = jest.fn()
+
+      effect(() => {
+        fnSpy()
+        has = obj.hasOwnProperty('foo')
+      })
+      expect(fnSpy).toHaveBeenCalledTimes(1)
+      expect(has).toBe(false)
+
+      obj.foo = 1
+      expect(fnSpy).toHaveBeenCalledTimes(2)
+      expect(has).toBe(true)
+
+      delete obj.foo
+      expect(fnSpy).toHaveBeenCalledTimes(3)
+      expect(has).toBe(false)
+
+      // should not trigger on unrelated key
+      obj.bar = 2
+      expect(fnSpy).toHaveBeenCalledTimes(3)
+      expect(has).toBe(false)
     })
   })
 })

@@ -177,6 +177,23 @@ describe('api: watch', () => {
     ])
   })
 
+  it('watching multiple sources: undefined initial values and immediate: true', async () => {
+    const a = ref()
+    const b = ref()
+    let called = false
+    watch(
+      [a, b],
+      ([newA, newB], [oldA, oldB]) => {
+        called = true
+        expect([newA, newB]).toMatchObject([undefined, undefined])
+        expect([oldA, oldB]).toMatchObject([undefined, undefined])
+      },
+      { immediate: true }
+    )
+    await nextTick()
+    expect(called).toBe(true)
+  })
+
   it('watching multiple sources: readonly array', async () => {
     const state = reactive({ count: 1 })
     const status = ref(false)
@@ -509,7 +526,8 @@ describe('api: watch', () => {
     expect(cb).not.toHaveBeenCalled()
   })
 
-  it('should fire on component unmount w/ flush: pre', async () => {
+  // #2291
+  it('should not fire on component unmount w/ flush: pre', async () => {
     const toggle = ref(true)
     const cb = jest.fn()
     const Comp = {
@@ -527,7 +545,7 @@ describe('api: watch', () => {
     expect(cb).not.toHaveBeenCalled()
     toggle.value = false
     await nextTick()
-    expect(cb).toHaveBeenCalledTimes(1)
+    expect(cb).not.toHaveBeenCalled()
   })
 
   // #1763
@@ -727,7 +745,7 @@ describe('api: watch', () => {
     const state = ref()
     const spy = jest.fn()
     watch(() => state.value, spy, { immediate: true })
-    expect(spy).toHaveBeenCalled()
+    expect(spy).toHaveBeenCalledWith(undefined, undefined, expect.any(Function))
     state.value = 3
     await nextTick()
     expect(spy).toHaveBeenCalledTimes(2)

@@ -6,22 +6,26 @@ on:
   pull_request:
     branches:
       - main
+
+permissions:
+  contents: read # to fetch code (actions/checkout)
+
 jobs:
   unit-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2
 
-      - name: Set node version to 16
-        uses: actions/setup-node@v2
+      - name: Set node version to 18
+        uses: actions/setup-node@v3
         with:
-          node-version: 16
+          node-version: 18
           cache: 'pnpm'
 
-      - run: pnpm install
+      - run: PUPPETEER_SKIP_DOWNLOAD=1 pnpm install
 
       - name: Run unit tests
         run: pnpm run test-unit
@@ -29,15 +33,21 @@ jobs:
   e2e-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+
+      - name: Setup cache for Chromium binary
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/puppeteer/chrome
+          key: chromium-${{ hashFiles('pnpm-lock.yaml') }}
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2
 
-      - name: Set node version to 16
-        uses: actions/setup-node@v2
+      - name: Set node version to 18
+        uses: actions/setup-node@v3
         with:
-          node-version: 16
+          node-version: 18
           cache: 'pnpm'
 
       - run: pnpm install
@@ -48,21 +58,24 @@ jobs:
   lint-and-test-dts:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2
 
-      - name: Set node version to 16
-        uses: actions/setup-node@v2
+      - name: Set node version to 18
+        uses: actions/setup-node@v3
         with:
-          node-version: 16
+          node-version: 18
           cache: 'pnpm'
 
-      - run: pnpm install
+      - run: PUPPETEER_SKIP_DOWNLOAD=1 pnpm install
 
       - name: Run eslint
         run: pnpm run lint
+
+      # - name: Run prettier
+      # run: pnpm run format-check
 
       - name: Run type declaration tests
         run: pnpm run test-dts
@@ -72,18 +85,18 @@ jobs:
     env:
       CI_JOB_NUMBER: 1
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2
 
-      - name: Set node version to 16
-        uses: actions/setup-node@v2
+      - name: Set node version to 18
+        uses: actions/setup-node@v3
         with:
-          node-version: 16
+          node-version: 18
           cache: 'pnpm'
 
-      - run: pnpm install
+      - run: PUPPETEER_SKIP_DOWNLOAD=1 pnpm install
       - run: pnpm run size
 
       # - name: Check build size

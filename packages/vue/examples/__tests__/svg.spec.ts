@@ -22,7 +22,7 @@ describe('e2e: svg', () => {
   async function assertPolygon(total: number) {
     expect(
       await page().evaluate(
-        total => {
+        ([total]) => {
           const points = globalStats
             .map((stat, i) => {
               const point = valueToPoint(stat.value, i, total)
@@ -41,7 +41,7 @@ describe('e2e: svg', () => {
   // assert the position of each label is correct
   async function assertLabels(total: number) {
     const positions = await page().evaluate(
-      total => {
+      ([total]) => {
         return globalStats.map((stat, i) => {
           const point = valueToPoint(+stat.value + 10, i, total)
           return [point.x, point.y]
