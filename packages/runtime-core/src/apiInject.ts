@@ -1,6 +1,7 @@
 import { isFunction } from '@vue/shared'
 import { currentInstance } from './component'
 import { currentRenderingInstance } from './componentRenderContext'
+import { App, currentApp } from './apiCreateApp'
 import { warn } from './warning'
 
 export interface InjectionKey<T> extends Symbol {}
@@ -44,14 +45,17 @@ export function inject(
   treatDefaultAsFactory = false
 ) {
   // fallback to `currentRenderingInstance` so that this can be called in
-  // a functional component
-  const instance = currentInstance || currentRenderingInstance
+  // a functional component and to currentApp so it can be called within `app.runWithContext()`
+  const instance = currentInstance || currentRenderingInstance || currentApp
+
   if (instance) {
     // #2400
     // to support `app.use` plugins,
     // fallback to appContext's `provides` if the instance is at root
     const provides =
-      instance.parent == null
+      'mount' in instance // checks if instance is an App
+        ? instance._context.provides
+        : instance.parent == null
         ? instance.vnode.appContext && instance.vnode.appContext.provides
         : instance.parent.provides
 
@@ -60,7 +64,7 @@ export function inject(
       return provides[key as string]
     } else if (arguments.length > 1) {
       return treatDefaultAsFactory && isFunction(defaultValue)
-        ? defaultValue.call(instance.proxy)
+        ? defaultValue.call((instance as App & { proxy: undefined }).proxy)
         : defaultValue
     } else if (__DEV__) {
       warn(`injection "${String(key)}" not found.`)
