@@ -1,7 +1,6 @@
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import { Awaited, isArray, NOOP } from '@vue/shared'
 import { ComponentInternalInstance, getComponentName } from './component'
-import { warn } from './warning'
 
 export interface SchedulerJob extends Function {
   id?: number
@@ -271,7 +270,7 @@ function checkRecursiveUpdates(seen: CountMap, fn: SchedulerJob) {
     if (count > RECURSION_LIMIT) {
       const instance = fn.ownerInstance
       const componentName = instance && getComponentName(instance.type)
-      warn(
+      throw new Error(
         `Maximum recursive updates exceeded${
           componentName ? ` in component <${componentName}>` : ``
         }. ` +
