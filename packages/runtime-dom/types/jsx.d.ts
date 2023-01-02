@@ -309,6 +309,17 @@ export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
   is?: string
 }
 
+type HTMLAttributeReferrerPolicy =
+        | ''
+        | 'no-referrer'
+        | 'no-referrer-when-downgrade'
+        | 'origin'
+        | 'origin-when-cross-origin'
+        | 'same-origin'
+        | 'strict-origin'
+        | 'strict-origin-when-cross-origin'
+        | 'unsafe-url'
+
 export interface AnchorHTMLAttributes extends HTMLAttributes {
   download?: any
   href?: string
@@ -318,7 +329,7 @@ export interface AnchorHTMLAttributes extends HTMLAttributes {
   rel?: string
   target?: string
   type?: string
-  referrerpolicy?: string
+  referrerpolicy?: HTMLAttributeReferrerPolicy
 }
 
 export interface AreaHTMLAttributes extends HTMLAttributes {
@@ -328,6 +339,7 @@ export interface AreaHTMLAttributes extends HTMLAttributes {
   href?: string
   hreflang?: string
   media?: string
+  referrerpolicy?: HTMLAttributeReferrerPolicy
   rel?: string
   shape?: string
   target?: string
@@ -426,7 +438,7 @@ export interface IframeHTMLAttributes extends HTMLAttributes {
   marginheight?: Numberish
   marginwidth?: Numberish
   name?: string
-  referrerpolicy?: string
+  referrerpolicy?: HTMLAttributeReferrerPolicy
   sandbox?: string
   scrolling?: string
   seamless?: Booleanish
@@ -440,6 +452,7 @@ export interface ImgHTMLAttributes extends HTMLAttributes {
   crossorigin?: 'anonymous' | 'use-credentials' | ''
   decoding?: 'async' | 'auto' | 'sync'
   height?: Numberish
+  referrerpolicy?: HTMLAttributeReferrerPolicy
   sizes?: string
   src?: string
   srcset?: string
@@ -514,6 +527,7 @@ export interface LinkHTMLAttributes extends HTMLAttributes {
   hreflang?: string
   integrity?: string
   media?: string
+  referrerpolicy?: HTMLAttributeReferrerPolicy
   rel?: string
   sizes?: string
   type?: string
@@ -614,6 +628,7 @@ export interface ScriptHTMLAttributes extends HTMLAttributes {
   defer?: Booleanish
   integrity?: string
   nomodule?: Booleanish
+  referrerpolicy?: HTMLAttributeReferrerPolicy
   nonce?: string
   src?: string
   type?: string
