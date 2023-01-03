@@ -1245,7 +1245,33 @@ describe('define attrs', () => {
     expectType<JSX.Element>(<MyComp bar={1} />)
   })
 
-  test('define attrs w/ function component', () => {
+  test('define attrs w/ composition api', () => {
+    type CompAttrs = {
+      bar: number
+      baz?: string
+    }
+    const MyComp = defineComponent(
+      {
+        props: {
+          foo: {
+            type: String,
+            required: true
+          }
+        },
+        setup(props, { attrs }) {
+          expectType<string>(props.foo)
+          expectType<number>(attrs.bar)
+          expectType<string | undefined>(attrs.baz)
+        }
+      },
+      {
+        attrs: {} as CompAttrs
+      }
+    )
+    expectType<JSX.Element>(<MyComp foo="1" bar={1} />)
+  })
+
+  test('define attrs w/ functional component', () => {
     type CompAttrs = {
       bar: number
       baz?: string
