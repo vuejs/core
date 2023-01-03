@@ -526,7 +526,7 @@ export function normalizePropsOptions(
         if (prop) {
           const booleanIndex = getTypeIndex(Boolean, prop.type)
           const stringIndex = getTypeIndex(String, prop.type)
-          prop[BooleanFlags.shouldCast] = booleanIndex > -1
+          prop[BooleanFlags.shouldCast] = booleanIndex > -1 && stringIndex < 0
           prop[BooleanFlags.shouldCastTrue] =
             stringIndex < 0 || booleanIndex < stringIndex
           // if the prop needs boolean casting or default value
