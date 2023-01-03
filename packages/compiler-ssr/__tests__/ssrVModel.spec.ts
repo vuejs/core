@@ -39,15 +39,15 @@ describe('ssr: v-model', () => {
         `<select v-model="model"><option value="1"></option></select>`
       ).code
     ).toMatchInlineSnapshot(`
-      "const { ssrLooseContain: _ssrLooseContain, ssrLooseEqual: _ssrLooseEqual, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+      "const { ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrLooseContain: _ssrLooseContain, ssrLooseEqual: _ssrLooseEqual, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<div\${
           _ssrRenderAttrs(_attrs)
         }><select><option value="1"\${
-          ((Array.isArray(_ctx.model))
+          (_ssrIncludeBooleanAttr((Array.isArray(_ctx.model))
             ? _ssrLooseContain(_ctx.model, "1")
-            : _ssrLooseEqual(_ctx.model, "1")) ? " selected" : ""
+            : _ssrLooseEqual(_ctx.model, "1"))) ? " selected" : ""
         }></option></select></div>\`)
       }"
     `)
@@ -57,15 +57,15 @@ describe('ssr: v-model', () => {
         `<select multiple v-model="model"><option value="1" selected></option><option value="2"></option></select>`
       ).code
     ).toMatchInlineSnapshot(`
-      "const { ssrLooseContain: _ssrLooseContain, ssrLooseEqual: _ssrLooseEqual, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+      "const { ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrLooseContain: _ssrLooseContain, ssrLooseEqual: _ssrLooseEqual, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<div\${
           _ssrRenderAttrs(_attrs)
         }><select multiple><option value="1" selected></option><option value="2"\${
-          ((Array.isArray(_ctx.model))
+          (_ssrIncludeBooleanAttr((Array.isArray(_ctx.model))
             ? _ssrLooseContain(_ctx.model, "2")
-            : _ssrLooseEqual(_ctx.model, "2")) ? " selected" : ""
+            : _ssrLooseEqual(_ctx.model, "2"))) ? " selected" : ""
         }></option></select></div>\`)
       }"
     `)

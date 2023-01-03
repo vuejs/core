@@ -18,7 +18,8 @@ import {
 import {
   SSR_LOOSE_EQUAL,
   SSR_LOOSE_CONTAIN,
-  SSR_RENDER_DYNAMIC_MODEL
+  SSR_RENDER_DYNAMIC_MODEL,
+  SSR_INCLUDE_BOOLEAN_ATTR
 } from '../runtimeHelpers'
 import { DirectiveTransformResult } from 'packages/compiler-core/src/transform'
 
@@ -136,17 +137,19 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
             const value = findValueBinding(plainNode)
             plainNode.ssrCodegenNode!.elements.push(
               createConditionalExpression(
-                createConditionalExpression(
-                  createCallExpression(`Array.isArray`, [model]),
-                  createCallExpression(context.helper(SSR_LOOSE_CONTAIN), [
-                    model,
-                    value
-                  ]),
-                  createCallExpression(context.helper(SSR_LOOSE_EQUAL), [
-                    model,
-                    value
-                  ])
-                ),
+                createCallExpression(context.helper(SSR_INCLUDE_BOOLEAN_ATTR), [
+                  createConditionalExpression(
+                    createCallExpression(`Array.isArray`, [model]),
+                    createCallExpression(context.helper(SSR_LOOSE_CONTAIN), [
+                      model,
+                      value
+                    ]),
+                    createCallExpression(context.helper(SSR_LOOSE_EQUAL), [
+                      model,
+                      value
+                    ])
+                  )
+                ]),
                 createSimpleExpression(' selected', true),
                 createSimpleExpression('', true),
                 false /* no newline */
