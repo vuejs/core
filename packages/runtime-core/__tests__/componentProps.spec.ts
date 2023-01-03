@@ -322,9 +322,7 @@ describe('component props', () => {
   })
 
   test('warn on type mismatch', () => {
-    class MyClass {
-
-    }
+    class MyClass {}
     const Comp = {
       props: {
         bool: { type: Boolean },
@@ -333,28 +331,45 @@ describe('component props', () => {
         arr: { type: Array },
         obj: { type: Object },
         cls: { type: MyClass },
-        fn: { type: Function },
+        fn: { type: Function }
       },
       setup() {
         return () => null
       }
     }
-    render(h(Comp, {
+    render(
+      h(Comp, {
         bool: 'true',
         str: 100,
         num: '100',
         arr: {},
         obj: 'false',
         cls: {},
-        fn: true,
-    }), nodeOps.createElement('div'))
-    expect(`Invalid prop: type check failed for prop "bool". Expected Boolean, got String`).toHaveBeenWarned()
-    expect(`Invalid prop: type check failed for prop "str". Expected String with value "100", got Number with value 100.`).toHaveBeenWarned()
-    expect(`Invalid prop: type check failed for prop "num". Expected Number with value 100, got String with value "100".`).toHaveBeenWarned()
-    expect(`Invalid prop: type check failed for prop "arr". Expected Array, got Object`).toHaveBeenWarned()
-    expect(`Invalid prop: type check failed for prop "obj". Expected Object, got String with value "false"`).toHaveBeenWarned()
-    expect(`Invalid prop: type check failed for prop "fn". Expected Function, got Boolean with value true.`).toHaveBeenWarned()
-    expect(`Invalid prop: type check failed for prop "cls". Expected MyClass, got Object`).toHaveBeenWarned()
+        fn: true
+      }),
+      nodeOps.createElement('div')
+    )
+    expect(
+      `Invalid prop: type check failed for prop "bool". Expected Boolean, got String`
+    ).toHaveBeenWarned()
+    expect(
+      `Invalid prop: type check failed for prop "str". Expected String with value "100", got Number with value 100.`
+    ).toHaveBeenWarned()
+    expect(
+      `Invalid prop: type check failed for prop "num". Expected Number with value 100, got String with value "100".`
+    ).toHaveBeenWarned()
+    expect(
+      `Invalid prop: type check failed for prop "arr". Expected Array, got Object`
+    ).toHaveBeenWarned()
+    expect(
+      `Invalid prop: type check failed for prop "obj". Expected Object, got String with value "false"`
+    ).toHaveBeenWarned()
+    expect(
+      `Invalid prop: type check failed for prop "fn". Expected Function, got Boolean with value true.`
+    ).toHaveBeenWarned()
+    expect(
+      `Invalid prop: type check failed for prop "cls". Expected MyClass, got Object`
+    ).toHaveBeenWarned()
   })
 
   // #3495
@@ -649,5 +664,32 @@ describe('component props', () => {
     render(h(Comp, { msg: 'test' }), root)
 
     expect(Object.keys(props.msg).length).toBe(1)
+  })
+
+  // # #7456
+  test('Boolean type conflicts with string type during props normalization process', () => {
+    const props = {
+      foo: {
+        type: [String, Boolean]
+      },
+      bar: {
+        type: [Boolean, String]
+      }
+    }
+    let propsVal = {} as any
+    const Comp = defineComponent({
+      props,
+      setup(props) {
+        propsVal = props
+      },
+      render() {}
+    })
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp, { foo: '', bar: '' }), root)
+    expect(propsVal.foo).toBe('')
+    expect(typeof propsVal.foo).toBe('string')
+    expect(propsVal.bar).toBe('')
+    expect(typeof propsVal.bar).toBe('string')
   })
 })
