@@ -2155,7 +2155,7 @@ function baseCreateRenderer(
     const { type, el, anchor, transition } = vnode
     const isFragment = type === Fragment
 
-    if (!transition && isFragment) {
+    if ((!__DEV__ || !transition) && isFragment) {
       removeFragment(el!, anchor!)
       return
     }
@@ -2173,15 +2173,16 @@ function baseCreateRenderer(
     }
 
     if (
+      (isFragment || vnode.shapeFlag & ShapeFlags.ELEMENT) &&
       transition &&
-      !transition.persisted &&
-      (vnode.shapeFlag & ShapeFlags.ELEMENT || isFragment)
+      !transition.persisted
     ) {
       const { leave, delayLeave } = transition
-      const effectiveEl = isFragment ? getFirstElement(el!, anchor!) : el!
+      const effectiveEl =
+        __DEV__ && !isFragment ? el! : getFirstElement(el!, anchor!)
       const performLeave = () => leave(effectiveEl, performRemove)
       if (delayLeave) {
-        delayLeave(vnode.el!, performRemove, performLeave)
+        delayLeave(el!, performRemove, performLeave)
       } else {
         performLeave()
       }
