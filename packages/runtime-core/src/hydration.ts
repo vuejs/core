@@ -108,7 +108,7 @@ export function createHydrationFunctions(
       )
 
     const { type, ref, shapeFlag, patchFlag } = vnode
-    const domType = node.nodeType
+    let domType = node.nodeType
     vnode.el = node
 
     if (patchFlag === PatchFlags.BAIL) {
@@ -150,9 +150,12 @@ export function createHydrationFunctions(
         }
         break
       case Static:
-        if (domType !== DOMNodeTypes.ELEMENT && domType !== DOMNodeTypes.TEXT) {
-          nextNode = onMismatch()
-        } else {
+        if (isFragmentStart) {
+          // entire template is static but SSRed as a fragment
+          node = nextSibling(node)!
+          domType = node.nodeType
+        }
+        if (domType === DOMNodeTypes.ELEMENT || domType === DOMNodeTypes.TEXT) {
           // determine anchor, adopt content
           nextNode = node
           // if the static vnode has its content stripped during build,
@@ -169,7 +172,9 @@ export function createHydrationFunctions(
             }
             nextNode = nextSibling(nextNode)!
           }
-          return nextNode
+          return isFragmentStart ? nextSibling(nextNode) : nextNode
+        } else {
+          onMismatch()
         }
         break
       case Fragment:

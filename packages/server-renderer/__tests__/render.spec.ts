@@ -20,7 +20,8 @@ import {
   resolveDynamicComponent,
   renderSlot,
   onErrorCaptured,
-  onServerPrefetch
+  onServerPrefetch,
+  getCurrentInstance
 } from 'vue'
 import { escapeHtml } from '@vue/shared'
 import { renderToString } from '../src/renderToString'
@@ -778,6 +779,23 @@ function testRender(type: string, render: typeof renderToString) {
           `Template compilation error: Unexpected EOF in tag.`
         ).toHaveBeenWarned()
         expect(`Element is missing end tag`).toHaveBeenWarned()
+      })
+
+      // #6110
+      test('reset current instance after rendering error', async () => {
+        const prev = getCurrentInstance()
+        expect(prev).toBe(null)
+        try {
+          await render(
+            createApp({
+              data() {
+                return { msg: null }
+              },
+              template: `<div>{{ msg.text }}</div>`
+            })
+          )
+        } catch {}
+        expect(getCurrentInstance()).toBe(prev)
       })
     })
 

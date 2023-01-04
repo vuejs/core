@@ -6,7 +6,7 @@ declare module '@vue/runtime-core' {
   }
 
   interface ComponentCustomProperties {
-    state: 'stopped' | 'running'
+    state?: 'stopped' | 'running'
   }
 
   interface ComponentCustomProps {
@@ -35,6 +35,14 @@ export const Custom = defineComponent({
       expectError(this.notExisting)
       this.counter++
       this.state = 'running'
+
+      this.$.appContext.config.globalProperties.state = 'running'
+
+      expectError(
+        // @ts-expect-error
+        (this.$.appContext.config.globalProperties.state = 'not valid')
+      )
+
       // @ts-expect-error
       expectError((this.state = 'not valid'))
     }

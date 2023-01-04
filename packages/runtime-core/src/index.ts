@@ -104,7 +104,7 @@ export { useSSRContext, ssrContextKey } from './helpers/useSsrContext'
 
 export { createRenderer, createHydrationRenderer } from './renderer'
 export { queuePostFlushCb } from './scheduler'
-export { warn } from './warning'
+export { warn, assertNumber } from './warning'
 export {
   handleError,
   callWithErrorHandling,
@@ -172,7 +172,8 @@ export {
   DebuggerEvent,
   DebuggerEventExtraInfo,
   TrackOpTypes,
-  TriggerOpTypes
+  TriggerOpTypes,
+  Raw
 } from '@vue/reactivity'
 export {
   WatchEffect,
@@ -221,7 +222,8 @@ export {
   RenderFunction,
   MethodOptions,
   ComputedOptions,
-  RuntimeCompilerOptions
+  RuntimeCompilerOptions,
+  ComponentInjectOptions
 } from './componentOptions'
 export { EmitsOptions, ObjectEmitsOptions } from './componentEmits'
 export {

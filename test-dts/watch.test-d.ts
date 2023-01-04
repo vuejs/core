@@ -1,4 +1,4 @@
-import { ref, computed, watch, expectType } from './index'
+import { ref, computed, watch, expectType, defineComponent } from './index'
 
 const source = ref('foo')
 const source2 = computed(() => source.value)
@@ -74,4 +74,20 @@ watch([someRef, otherRef], values => {
   const value2 = values[1]
   // no type error
   console.log(value2.a)
+})
+
+// #6135
+defineComponent({
+  data() {
+    return { a: 1 }
+  },
+  created() {
+    this.$watch(
+      () => this.a,
+      (v, ov) => {
+        expectType<number>(v)
+        expectType<number>(ov)
+      }
+    )
+  }
 })

@@ -378,4 +378,27 @@ describe('api: lifecycle hooks', () => {
       newValue: 3
     })
   })
+
+  it('runs shared hook fn for each instance', async () => {
+    const fn = jest.fn()
+    const toggle = ref(true)
+    const Comp = {
+      setup() {
+        return () => (toggle.value ? [h(Child), h(Child)] : null)
+      }
+    }
+    const Child = {
+      setup() {
+        onMounted(fn)
+        onBeforeUnmount(fn)
+        return () => h('div')
+      }
+    }
+
+    render(h(Comp), nodeOps.createElement('div'))
+    expect(fn).toHaveBeenCalledTimes(2)
+    toggle.value = false
+    await nextTick()
+    expect(fn).toHaveBeenCalledTimes(4)
+  })
 })

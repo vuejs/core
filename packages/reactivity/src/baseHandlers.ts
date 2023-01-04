@@ -85,6 +85,13 @@ function createArrayInstrumentations() {
   return instrumentations
 }
 
+function hasOwnProperty(key: string) {
+  // @ts-ignore
+  const obj = toRaw(this)
+  track(obj, TrackOpTypes.HAS, key)
+  return obj.hasOwnProperty(key)
+}
+
 function createGetter(isReadonly = false, shallow = false) {
   return function get(target: Target, key: string | symbol, receiver: object) {
     if (key === ReactiveFlags.IS_REACTIVE) {
@@ -110,8 +117,13 @@ function createGetter(isReadonly = false, shallow = false) {
 
     const targetIsArray = isArray(target)
 
-    if (!isReadonly && targetIsArray && hasOwn(arrayInstrumentations, key)) {
-      return Reflect.get(arrayInstrumentations, key, receiver)
+    if (!isReadonly) {
+      if (targetIsArray && hasOwn(arrayInstrumentations, key)) {
+        return Reflect.get(arrayInstrumentations, key, receiver)
+      }
+      if (key === 'hasOwnProperty') {
+        return hasOwnProperty
+      }
     }
 
     const res = Reflect.get(target, key, receiver)
@@ -158,10 +170,10 @@ function createSetter(shallow = false) {
     if (isReadonly(oldValue) && isRef(oldValue) && !isRef(value)) {
       return false
     }
-    if (!shallow && !isReadonly(value)) {
-      if (!isShallow(value)) {
-        value = toRaw(value)
+    if (!shallow) {
+      if (!isShallow(value) && !isReadonly(value)) {
         oldValue = toRaw(oldValue)
+        value = toRaw(value)
       }
       if (!isArray(target) && isRef(oldValue) && !isRef(value)) {
         oldValue.value = value

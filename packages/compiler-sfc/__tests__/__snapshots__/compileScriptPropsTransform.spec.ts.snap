@@ -6,13 +6,13 @@ exports[`sfc props transform $$() escape 1`] = `
 export default {
   props: ['foo'],
   setup(__props) {
-const __props_bar = _toRef(__props, 'bar')
-const __props_foo = _toRef(__props, 'foo')
+const __props_bar = _toRef(__props, 'bar');
+const __props_foo = _toRef(__props, 'foo');
 
       
       console.log((__props_foo))
       console.log((__props_bar))
-      ({ foo: __props_foo, baz: __props_bar })
+      ;({ foo: __props_foo, baz: __props_bar })
       
 return () => {}
 }
@@ -21,7 +21,7 @@ return () => {}
 `;
 
 exports[`sfc props transform aliasing 1`] = `
-"import { toDisplayString as _toDisplayString } from \\"vue\\"
+"import { toDisplayString as _toDisplayString } from "vue"
 
 
 export default {
@@ -41,7 +41,7 @@ return (_ctx, _cache) => {
 `;
 
 exports[`sfc props transform basic usage 1`] = `
-"import { toDisplayString as _toDisplayString } from \\"vue\\"
+"import { toDisplayString as _toDisplayString } from "vue"
 
 
 export default {
@@ -51,6 +51,25 @@ export default {
       
       console.log(__props.foo)
       
+return (_ctx, _cache) => {
+  return _toDisplayString(__props.foo)
+}
+}
+
+}"
+`;
+
+exports[`sfc props transform computed static key 1`] = `
+"import { toDisplayString as _toDisplayString } from "vue"
+
+
+export default {
+  props: ['foo'],
+  setup(__props) {
+
+    
+    console.log(__props.foo)
+    
 return (_ctx, _cache) => {
   return _toDisplayString(__props.foo)
 }
@@ -135,7 +154,7 @@ return () => {}
 `;
 
 exports[`sfc props transform non-identifier prop names 1`] = `
-"import { toDisplayString as _toDisplayString } from \\"vue\\"
+"import { toDisplayString as _toDisplayString } from "vue"
 
 
 export default {
@@ -143,10 +162,10 @@ export default {
   setup(__props) {
 
       
-      let x = __props[\\"foo.bar\\"]
+      let x = __props["foo.bar"]
       
 return (_ctx, _cache) => {
-  return _toDisplayString(__props[\\"foo.bar\\"])
+  return _toDisplayString(__props["foo.bar"])
 }
 }
 
@@ -160,7 +179,7 @@ export default {
   props: ['foo', 'bar', 'baz'],
   setup(__props) {
 
-const rest = _createPropsRestProxy(__props, [\\"foo\\",\\"bar\\"])
+const rest = _createPropsRestProxy(__props, ["foo","bar"]);
 
       
       

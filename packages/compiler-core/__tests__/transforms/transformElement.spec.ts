@@ -328,6 +328,37 @@ describe('compiler: element transform', () => {
             {
               type: NodeTypes.SIMPLE_EXPRESSION,
               content: `obj`
+            },
+            `true`
+          ]
+        },
+        createObjectMatcher({
+          class: 'bar'
+        })
+      ]
+    })
+  })
+
+  test('v-on="obj" on component', () => {
+    const { root, node } = parseWithElementTransform(
+      `<Foo id="foo" v-on="obj" class="bar" />`
+    )
+    expect(root.helpers).toContain(MERGE_PROPS)
+
+    expect(node.props).toMatchObject({
+      type: NodeTypes.JS_CALL_EXPRESSION,
+      callee: MERGE_PROPS,
+      arguments: [
+        createObjectMatcher({
+          id: 'foo'
+        }),
+        {
+          type: NodeTypes.JS_CALL_EXPRESSION,
+          callee: TO_HANDLERS,
+          arguments: [
+            {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: `obj`
             }
           ]
         },
@@ -358,7 +389,8 @@ describe('compiler: element transform', () => {
             {
               type: NodeTypes.SIMPLE_EXPRESSION,
               content: `handlers`
-            }
+            },
+            `true`
           ]
         },
         {
@@ -1024,6 +1056,32 @@ describe('compiler: element transform', () => {
             },
             value: {
               content: 'input',
+              isStatic: true
+            }
+          }
+        ]
+      })
+    })
+
+    test('script setup inline mode template ref (binding does not exist but props with the same name exist)', () => {
+      const { node } = parseWithElementTransform(`<input ref="msg"/>`, {
+        inline: true,
+        bindingMetadata: {
+          msg: BindingTypes.PROPS,
+          ref: BindingTypes.SETUP_CONST
+        }
+      })
+      expect(node.props).toMatchObject({
+        type: NodeTypes.JS_OBJECT_EXPRESSION,
+        properties: [
+          {
+            type: NodeTypes.JS_PROPERTY,
+            key: {
+              content: 'ref',
+              isStatic: true
+            },
+            value: {
+              content: 'msg',
               isStatic: true
             }
           }
