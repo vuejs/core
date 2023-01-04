@@ -283,12 +283,26 @@ test('nested destructure', () => {
   const { code, rootRefs } = transform(`
     let [{ a: { b }}] = $(useFoo())
     let { c: [d, e] } = $(useBar())
-    console.log(b, d, e)
+    let [f, { g }, [ , h ]] = $(useBaz())
+    console.log(b, d, e, f, g, h)
     `)
   expect(code).toMatch(`b = _toRef(__$temp_1[0].a, 'b')`)
   expect(code).toMatch(`d = _toRef(__$temp_2.c, 0)`)
   expect(code).toMatch(`e = _toRef(__$temp_2.c, 1)`)
-  expect(rootRefs).toStrictEqual(['b', 'd', 'e'])
+  expect(code).toMatch(`f = _toRef(__$temp_3, 0)`)
+  expect(code).toMatch(`g = _toRef(__$temp_3[1], 'g')`)
+  expect(code).toMatch(`h = _toRef(__$temp_3[2], 1)`)
+  expect(rootRefs).toStrictEqual(['b', 'd', 'e', 'f', 'g', 'h'])
+  assertCode(code)
+})
+
+test('nested destructure w/ mid-path default values', () => {
+  const { code, rootRefs } = transform(`
+    let [{ a: { b } = { b: 123 }}] = $(useFoo())
+    console.log(b)
+    `)
+  expect(code).toMatch(`b = _toRef((__$temp_1[0].a || { b: 123 }), 'b')`)
+  expect(rootRefs).toStrictEqual(['b'])
   assertCode(code)
 })
 

@@ -163,7 +163,20 @@ exports[`nested destructure 1`] = `
     let __$temp_2 = (useBar()),
   d = _toRef(__$temp_2.c, 0),
   e = _toRef(__$temp_2.c, 1);
-    console.log(b.value, d.value, e.value)
+    let __$temp_3 = (useBaz()),
+  f = _toRef(__$temp_3, 0),
+  g = _toRef(__$temp_3[1], 'g'),
+  h = _toRef(__$temp_3[2], 1);
+    console.log(b.value, d.value, e.value, f.value, g.value, h.value)
+    "
+`;
+
+exports[`nested destructure w/ mid-path default values 1`] = `
+"import { toRef as _toRef } from 'vue'
+
+    let __$temp_1 = (useFoo()),
+  b = _toRef((__$temp_1[0].a || { b: 123 }), 'b');
+    console.log(b.value)
     "
 `;
 

@@ -368,15 +368,16 @@ export function transformAST(
     isConst: boolean,
     tempVar?: string,
     path: PathSegment[] = []
-  ) {
+  ): boolean {
     if (!tempVar) {
       tempVar = genTempVar()
       // const { x } = $(useFoo()) --> const __$temp_1 = useFoo()
       s.overwrite(pattern.start! + offset, pattern.end! + offset, tempVar)
     }
 
-    let nameId: Identifier | undefined
+    let didBind = false
     for (const p of pattern.properties) {
+      let nameId: Identifier | undefined
       let key: Expression | string | undefined
       let defaultValue: Expression | undefined
       if (p.type === 'ObjectProperty') {
@@ -400,30 +401,34 @@ export function transformAST(
             // { foo: bar }
             nameId = p.value
           } else if (p.value.type === 'ObjectPattern') {
-            processRefObjectPattern(p.value, call, isConst, tempVar, [
-              ...path,
-              key
-            ])
+            didBind =
+              processRefObjectPattern(p.value, call, isConst, tempVar, [
+                ...path,
+                key
+              ]) || didBind
           } else if (p.value.type === 'ArrayPattern') {
-            processRefArrayPattern(p.value, call, isConst, tempVar, [
-              ...path,
-              key
-            ])
+            didBind =
+              processRefArrayPattern(p.value, call, isConst, tempVar, [
+                ...path,
+                key
+              ]) || didBind
           } else if (p.value.type === 'AssignmentPattern') {
             if (p.value.left.type === 'Identifier') {
               // { foo: bar = 1 }
               nameId = p.value.left
               defaultValue = p.value.right
             } else if (p.value.left.type === 'ObjectPattern') {
-              processRefObjectPattern(p.value.left, call, isConst, tempVar, [
-                ...path,
-                [key, p.value.right]
-              ])
+              didBind =
+                processRefObjectPattern(p.value.left, call, isConst, tempVar, [
+                  ...path,
+                  [key, p.value.right]
+                ]) || didBind
             } else if (p.value.left.type === 'ArrayPattern') {
-              processRefArrayPattern(p.value.left, call, isConst, tempVar, [
-                ...path,
-                [key, p.value.right]
-              ])
+              didBind =
+                processRefArrayPattern(p.value.left, call, isConst, tempVar, [
+                  ...path,
+                  [key, p.value.right]
+                ]) || didBind
             } else {
               // MemberExpression case is not possible here, ignore
             }
@@ -449,11 +454,14 @@ export function transformAST(
             'toRef'
           )}(${source}, ${keyStr}${defaultStr})`
         )
+
+        didBind = true
       }
     }
-    if (nameId) {
+    if (didBind && path.length === 0) {
       s.appendLeft(call.end! + offset, ';')
     }
+    return didBind
   }
 
   function processRefArrayPattern(
@@ -462,17 +470,19 @@ export function transformAST(
     isConst: boolean,
     tempVar?: string,
     path: PathSegment[] = []
-  ) {
+  ): boolean {
     if (!tempVar) {
       // const [x] = $(useFoo()) --> const __$temp_1 = useFoo()
       tempVar = genTempVar()
       s.overwrite(pattern.start! + offset, pattern.end! + offset, tempVar)
     }
 
-    let nameId: Identifier | undefined
+    let didBind = false
     for (let i = 0; i < pattern.elements.length; i++) {
       const e = pattern.elements[i]
       if (!e) continue
+
+      let nameId: Identifier | undefined
       let defaultValue: Expression | undefined
       if (e.type === 'Identifier') {
         // [a] --> [__a]
@@ -485,9 +495,13 @@ export function transformAST(
         // [...a]
         error(`reactivity destructure does not support rest elements.`, e)
       } else if (e.type === 'ObjectPattern') {
-        processRefObjectPattern(e, call, isConst, tempVar, [...path, i])
+        didBind =
+          processRefObjectPattern(e, call, isConst, tempVar, [...path, i]) ||
+          didBind
       } else if (e.type === 'ArrayPattern') {
-        processRefArrayPattern(e, call, isConst, tempVar, [...path, i])
+        didBind =
+          processRefArrayPattern(e, call, isConst, tempVar, [...path, i]) ||
+          didBind
       }
       if (nameId) {
         registerRefBinding(nameId, isConst)
@@ -500,11 +514,14 @@ export function transformAST(
             'toRef'
           )}(${source}, ${i}${defaultStr})`
         )
+
+        didBind = true
       }
     }
-    if (nameId) {
+    if (didBind && path.length === 0) {
       s.appendLeft(call.end! + offset, ';')
     }
+    return didBind
   }
 
   type PathSegmentAtom = Expression | string | number
