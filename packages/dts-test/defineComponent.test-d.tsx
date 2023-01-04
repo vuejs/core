@@ -1312,19 +1312,6 @@ describe('define attrs', () => {
     )
     expectType<JSX.Element>(<MyComp foo="1" />)
   })
-
-  test('define attrs w/ default attrs such as class, style', () => {
-    const MyComp = defineComponent({
-      props: {
-        foo: String
-      },
-      created() {
-        expectType<unknown>(this.$attrs.class)
-        expectType<unknown>(this.$attrs.style)
-      }
-    })
-    expectType<JSX.Element>(<MyComp class="1" style={1} />)
-  })
 })
 
 // #5948

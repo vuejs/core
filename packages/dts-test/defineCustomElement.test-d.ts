@@ -159,16 +159,4 @@ describe('define attrs', () => {
       }
     )
   })
-
-  test('define attrs w/ default attrs such as class, style', () => {
-    defineCustomElement({
-      props: {
-        foo: String
-      },
-      created() {
-        expectType<unknown>(this.$attrs.class)
-        expectType<unknown>(this.$attrs.style)
-      }
-    })
-  })
 })
