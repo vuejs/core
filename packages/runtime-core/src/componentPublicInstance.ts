@@ -1,5 +1,4 @@
 import {
-  AllowedComponentProps,
   ComponentInternalInstance,
   Data,
   getExposeProxy,
