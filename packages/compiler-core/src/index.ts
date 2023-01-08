@@ -19,7 +19,8 @@ export {
   createStructuralDirectiveTransform,
   NodeTransform,
   StructuralDirectiveTransform,
-  DirectiveTransform
+  DirectiveTransform,
+  RawChildrenMap
 } from './transform'
 export { generate, CodegenContext, CodegenResult } from './codegen'
 export {
