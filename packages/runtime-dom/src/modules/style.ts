@@ -7,15 +7,19 @@ export function patchStyle(el: Element, prev: Style, next: Style) {
   const style = (el as HTMLElement).style
   const isCssString = isString(next)
   if (next && !isCssString) {
-    for (const key in next) {
-      setStyle(style, key, next[key])
-    }
-    if (prev && !isString(prev)) {
-      for (const key in prev) {
-        if (next[key] == null) {
-          setStyle(style, key, '')
+    if (prev) {
+      if (isString(prev)) {
+        style.cssText = ''
+      } else {
+        for (const key in prev) {
+          if (next[key] == null) {
+            setStyle(style, key, '');
+          }
         }
       }
+    }
+    for (const key in next) {
+      setStyle(style, key, next[key])
     }
   } else {
     const currentDisplay = style.display
