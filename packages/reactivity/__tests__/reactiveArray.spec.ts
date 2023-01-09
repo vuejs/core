@@ -150,8 +150,7 @@ describe('reactivity/reactive/Array', () => {
 
     // read + copy
     test('read only copy methods', () => {
-      const res = original.concat([3, ref(4)])
-      const raw = toRaw(res)
+      const raw = original.concat([3, ref(4)])
       expect(isRef(raw[1])).toBe(true)
       expect(isRef(raw[3])).toBe(true)
     })
