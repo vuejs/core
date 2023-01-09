@@ -136,6 +136,24 @@ return () => {}
 })"
 `;
 
+exports[`sfc props transform multiple variable declarations 1`] = `
+"import { toDisplayString as _toDisplayString, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
+
+
+export default {
+  props: ['foo'],
+  setup(__props) {
+
+      const bar = 'fish', hello = 'world'
+      
+return (_ctx, _cache) => {
+  return (_openBlock(), _createElementBlock("div", null, _toDisplayString(__props.foo) + " " + _toDisplayString(hello) + " " + _toDisplayString(bar), 1 /* TEXT */))
+}
+}
+
+}"
+`;
+
 exports[`sfc props transform nested scope 1`] = `
 "export default {
   props: ['foo', 'bar'],
