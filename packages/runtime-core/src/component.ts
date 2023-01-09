@@ -1,5 +1,6 @@
 import { VNode, VNodeChild, isVNode } from './vnode'
 import {
+  isRef,
   pauseTracking,
   resetTracking,
   shallowReadonly,
@@ -47,6 +48,7 @@ import {
 } from './componentEmits'
 import {
   EMPTY_OBJ,
+  isArray,
   isFunction,
   NOOP,
   isObject,
@@ -913,8 +915,25 @@ export function createSetupContext(
   instance: ComponentInternalInstance
 ): SetupContext {
   const expose: SetupContext['expose'] = exposed => {
-    if (__DEV__ && instance.exposed) {
-      warn(`expose() should be called only once per setup().`)
+    if (__DEV__) {
+      if (instance.exposed) {
+        warn(`expose() should be called only once per setup().`)
+      }
+      if (exposed != null) {
+        let exposedType: string = typeof exposed
+        if (exposedType === 'object') {
+          if (isArray(exposed)) {
+            exposedType = 'array'
+          } else if (isRef(exposed)) {
+            exposedType = 'ref'
+          }
+        }
+        if (exposedType !== 'object') {
+          warn(
+            `expose() should be passed a plain object, received ${exposedType}.`
+          )
+        }
+      }
     }
     instance.exposed = exposed || {}
   }
