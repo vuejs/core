@@ -85,8 +85,7 @@ function createArrayInstrumentations() {
   return instrumentations
 }
 
-function hasOwnProperty(key: string) {
-  // @ts-ignore
+function hasOwnProperty(this: object, key: string) {
   const obj = toRaw(this)
   track(obj, TrackOpTypes.HAS, key)
   return obj.hasOwnProperty(key)
