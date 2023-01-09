@@ -1758,8 +1758,7 @@ function walkDeclaration(
         registerBinding(bindings, id, bindingType)
       } else {
         if (isCallOf(init, DEFINE_PROPS)) {
-          // skip walking props destructure
-          return
+          continue
         }
         if (id.type === 'ObjectPattern') {
           walkObjectPattern(id, bindings, isConst, isDefineCall)

@@ -106,6 +106,18 @@ describe(`runtime-dom: style patching`, () => {
     expect(el.style.getPropertyValue('--custom')).toBe('100\\;')
   })
 
+  it('shorthand properties', () => {
+    const el = document.createElement('div')
+    patchProp(
+      el as any,
+      'style',
+      { borderBottom: '1px solid red' },
+      { border: '1px solid green' }
+    )
+    expect(el.style.border).toBe('1px solid green')
+    expect(el.style.borderBottom).toBe('1px solid green')
+  })
+
   // JSDOM doesn't support custom properties on style object so we have to
   // mock it here.
   function mockElementWithStyle() {
