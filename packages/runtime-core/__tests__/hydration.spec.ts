@@ -935,7 +935,7 @@ describe('SSR hydration', () => {
     expect((container.firstChild!.firstChild as any)._value).toBe(true)
   })
 
-  test('force hydrate prop with `.prop` modifiers', () => {
+  test('force hydrate prop with `.prop` modifier', () => {
     const { container } = mountWithHydration(
       '<input type="checkbox" :indeterminate.prop="true">',
       () =>
@@ -947,7 +947,7 @@ describe('SSR hydration', () => {
     expect((container.firstChild! as any).indeterminate).toBe(true)
   })
 
-  test('force hydrate prop with `.attr` modifiers', () => {
+  test('force hydrate prop with `.attr` modifier', () => {
     const { container } = mountWithHydration(
       '<input type="checkbox" :x.attr="1">',
       () =>
