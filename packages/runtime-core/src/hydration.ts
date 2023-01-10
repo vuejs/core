@@ -327,7 +327,10 @@ export function createHydrationFunctions(
           for (const key in props) {
             if (
               (forcePatchValue && key.endsWith('value')) ||
-              (isOn(key) && !isReservedProp(key))
+              (isOn(key) && !isReservedProp(key)) ||
+              // support .prop & .attr modifiers
+              key[0] === '.' ||
+              key[0] === '^'
             ) {
               patchProp(
                 el,

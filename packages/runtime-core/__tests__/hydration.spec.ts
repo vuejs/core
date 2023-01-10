@@ -935,6 +935,30 @@ describe('SSR hydration', () => {
     expect((container.firstChild!.firstChild as any)._value).toBe(true)
   })
 
+  test('force hydrate prop with `.prop` modifiers', () => {
+    const { container } = mountWithHydration(
+      '<input type="checkbox" :indeterminate.prop="true">',
+      () =>
+        h('input', {
+          type: 'checkbox',
+          '.indeterminate': true
+        })
+    )
+    expect((container.firstChild! as any).indeterminate).toBe(true)
+  })
+
+  test('force hydrate attr with `.attr` modifiers', () => {
+    const { container } = mountWithHydration(
+      '<input type="checkbox" :x^prop="1">',
+      () =>
+        h('input', {
+          type: 'checkbox',
+          '^x': 1
+        })
+    )
+    expect((container.firstChild! as any).getAttribute('x')).toBe('1')
+  })
+
   // #5728
   test('empty text node in slot', () => {
     const Comp = {
