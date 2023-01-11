@@ -36,21 +36,25 @@ export class ComputedRefImpl<T> {
   public _computedsToAskDirty: ComputedRefImpl<any>[] = []
   public _cacheable: boolean
 
+  private _triggeredAfterLastEffect = false
+
   constructor(
     getter: ComputedGetter<T>,
     private readonly _setter: ComputedSetter<T>,
     isReadonly: boolean,
     isSSR: boolean
   ) {
-    this.effect = new ReactiveEffect(getter, (_c) => {
+    this.effect = new ReactiveEffect(getter, _c => {
       if (!this._dirty) {
         if (_c) {
           this._computedsToAskDirty.push(_c)
-        }
-        else {
+        } else {
           this._dirty = true
         }
-        triggerRefValue(this, this)
+        if (!this._triggeredAfterLastEffect) {
+          this._triggeredAfterLastEffect = true
+          triggerRefValue(this, this)
+        }
       }
     })
     this.effect.computed = this
@@ -77,6 +81,7 @@ export class ComputedRefImpl<T> {
       }
       self._value = newValue
       self._dirty = false
+      self._triggeredAfterLastEffect = false
     }
     self._computedsToAskDirty.length = 0
     return self._value
