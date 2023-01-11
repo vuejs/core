@@ -214,7 +214,7 @@ export function transformAST(
   }
 
   function isRefCreationCall(callee: string): string | false {
-    if (!convertSymbol || currentScope[convertSymbol] !== undefined) {
+    if (!convertSymbol || getCurrentScope()[convertSymbol] !== undefined) {
       return false
     }
     if (callee === convertSymbol) {
@@ -235,6 +235,10 @@ export function transformAST(
   function helper(msg: string) {
     importedHelpers.add(msg)
     return `_${msg}`
+  }
+
+  function getCurrentScope() {
+    return scopeStack.reduce((prev, curr) => ({ ...prev, ...curr }), {})
   }
 
   function registerBinding(id: Identifier, binding?: Binding) {
@@ -702,7 +706,7 @@ export function transformAST(
 
         if (
           escapeSymbol &&
-          currentScope[escapeSymbol] === undefined &&
+          getCurrentScope()[escapeSymbol] === undefined &&
           callee === escapeSymbol
         ) {
           escapeScope = node
