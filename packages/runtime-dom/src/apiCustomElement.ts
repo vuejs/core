@@ -20,11 +20,12 @@ import {
   warn,
   ConcreteComponent,
   ComponentOptions,
-  ComponentInjectOptions
+  ComponentInjectOptions,
+  toHandlerKey
 } from '@vue/runtime-core'
 import { camelize, extend, hyphenate, isArray, toNumber } from '@vue/shared'
 import { hydrate, render } from '.'
-
+import { emit } from '../../runtime-core/src/componentEmits'
 export type VueElementConstructor<P = {}> = {
   new (initialProps?: Record<string, any>): VueElement & P
 }
@@ -164,6 +165,8 @@ export class VueElement extends BaseClass {
    * @internal
    */
   _instance: ComponentInternalInstance | null = null
+  'onUpdate:modelValue': Function | null = null
+  _isCE = true
 
   private _connected = false
   private _resolved = false
@@ -189,6 +192,7 @@ export class VueElement extends BaseClass {
       if (!(this._def as ComponentOptions).__asyncLoader) {
         // for sync component defs we can immediately resolve props
         this._resolveProps(this._def)
+        this._resolveVModelEmits(this._def)
       }
     }
   }
@@ -270,6 +274,24 @@ export class VueElement extends BaseClass {
       asyncDef().then(def => resolve(def, true))
     } else {
       resolve(this._def)
+    }
+  }
+
+  private _resolveVModelEmits(def: InnerComponentDef) {
+    const { emits } = def
+    const declaredEmitKeys = isArray(emits) ? emits : Object.keys(emits || {})
+    for (let key of declaredEmitKeys.map(camelize)) {
+      key = toHandlerKey(key)
+      if (key === 'onUpdate:modelValue') {
+        Object.defineProperty(this, key, {
+          get() {
+            return this._getProp(key)
+          },
+          set(val) {
+            this._setProp(key, val)
+          }
+        })
+      }
     }
   }
 
@@ -374,6 +396,11 @@ export class VueElement extends BaseClass {
 
         // intercept emit
         instance.emit = (event: string, ...args: any[]) => {
+          // emit v-model
+          if (event === 'update:modelValue') {
+            emit(instance, event, ...args)
+            return
+          }
           // dispatch both the raw and hyphenated versions of an event
           // to match Vue behavior
           dispatch(event, args)

@@ -5,6 +5,7 @@ import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
 import { isOn, isString, isFunction, isModelListener } from '@vue/shared'
 import { RendererOptions } from '@vue/runtime-core'
+import type { VueElement } from './apiCustomElement'
 
 const nativeOnRE = /^on[a-z]/
 
@@ -29,6 +30,11 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
     // ignore v-model listeners
     if (!isModelListener(key)) {
       patchEvent(el, key, prevValue, nextValue, parentComponent)
+    }
+
+    // customElement v-model listeners
+    if (isModelListener(key) && (el as VueElement)._isCE) {
+      ;(el as VueElement)['onUpdate:modelValue'] = nextValue
     }
   } else if (
     key[0] === '.'
