@@ -28,7 +28,7 @@ import {
 import { ssrRenderAttrs } from './helpers/ssrRenderAttrs'
 import { ssrCompile } from './helpers/ssrCompile'
 import { ssrRenderTeleport } from './helpers/ssrRenderTeleport'
-import { getExposeProxy } from '@vue/runtime-dom'
+import { getExposeProxy } from '../../runtime-core/src/component'
 const {
   createComponentInstance,
   setCurrentRenderingInstance,
