@@ -472,6 +472,20 @@ test('should not overwrite importing', () => {
   assertCode(code)
 })
 
+test('should not overwrite existing variables', () => {
+  const { code } = transform(
+    `
+    const $ = () => undefined
+    {
+      const $$ = () => undefined
+      $('foo')
+      $$('bar')
+    }
+    `
+  )
+  assertCode(code)
+})
+
 // #6838
 test('should not overwrite current scope', () => {
   const { code } = transform(

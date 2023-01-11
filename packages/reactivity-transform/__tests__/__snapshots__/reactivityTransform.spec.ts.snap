@@ -241,6 +241,17 @@ exports[`should not overwrite current scope 1`] = `
     "
 `;
 
+exports[`should not overwrite existing variables 1`] = `
+"
+    const $ = () => undefined
+    {
+      const $$ = () => undefined
+      $('foo')
+      $$('bar')
+    }
+    "
+`;
+
 exports[`should not overwrite importing 1`] = `
 "
     import { $, $$ } from './foo'
