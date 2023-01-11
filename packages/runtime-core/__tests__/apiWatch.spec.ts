@@ -29,7 +29,8 @@ import {
   triggerRef,
   shallowRef,
   Ref,
-  effectScope
+  effectScope,
+  toRef
 } from '@vue/reactivity'
 
 // reference: https://vue-composition-api-rfc.netlify.com/api.html#watch
@@ -925,6 +926,25 @@ describe('api: watch', () => {
     expect(spy).toHaveBeenCalledTimes(1)
   })
 
+  test('should force trigger on triggerRef with toRef from reactive', async () => {
+    const foo = reactive({ bar: 1 })
+    const bar = toRef(foo, 'bar')
+    const spy = jest.fn()
+
+    watchEffect(() => {
+      bar.value
+      spy()
+    })
+
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    triggerRef(bar)
+
+    await nextTick()
+    // should trigger now
+    expect(spy).toHaveBeenCalledTimes(2)
+  })
+
   // #2125
   test('watchEffect should not recursively trigger itself', async () => {
     const spy = jest.fn()
@@ -1158,23 +1178,18 @@ describe('api: watch', () => {
     const Comp = {
       setup() {
         effectScope(true).run(() => {
-          watchEffect(
-            () => {
-              trigger.value
-              countWE++
-            },
-          )
-          watch(
-            trigger,
-            () => countW++
-          )
+          watchEffect(() => {
+            trigger.value
+            countWE++
+          })
+          watch(trigger, () => countW++)
         })
         return () => ''
       }
     }
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
-     // only watchEffect as ran so far
+    // only watchEffect as ran so far
     expect(countWE).toBe(1)
     expect(countW).toBe(0)
     trigger.value++
@@ -1186,7 +1201,7 @@ describe('api: watch', () => {
     await nextTick()
     trigger.value++
     await nextTick()
-     // both watchers run again event though component has been unmounted
+    // both watchers run again event though component has been unmounted
     expect(countWE).toBe(3)
     expect(countW).toBe(2)
   })

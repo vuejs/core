@@ -1,6 +1,7 @@
 import {
   activeEffect,
   shouldTrack,
+  targetMap,
   trackEffects,
   triggerEffects
 } from './effect'
@@ -227,6 +228,10 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
 
   set value(newVal) {
     this._object[this._key] = newVal
+  }
+
+  get dep(): Dep | undefined {
+    return targetMap.get(toRaw(this._object))?.get(this._key)
   }
 }
 
