@@ -13,7 +13,8 @@ import {
   cloneVNode,
   isVNode,
   VNodeProps,
-  invokeVNodeHook
+  invokeVNodeHook,
+  isSameVNodeType
 } from '../vnode'
 import { warn } from '../warning'
 import {
@@ -193,7 +194,7 @@ const KeepAliveImpl: ComponentOptions = {
 
     function pruneCacheEntry(key: CacheKey) {
       const cached = cache.get(key) as VNode
-      if (!current || cached.type !== current.type) {
+      if (!current || !isSameVNodeType(cached, current)) {
         unmount(cached)
       } else if (current) {
         // current active instance should no longer be kept-alive.
