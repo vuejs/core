@@ -286,7 +286,7 @@ describe('SSR hydration', () => {
 
     const teleportHtml = ctx.teleports!['#teleport2']
     expect(teleportHtml).toMatchInlineSnapshot(
-      `"<span>foo</span><span class=\\"foo\\"></span><!--teleport anchor--><span>foo2</span><span class=\\"foo2\\"></span><!--teleport anchor-->"`
+      `"<span>foo</span><span class="foo"></span><!--teleport anchor--><span>foo2</span><span class="foo2"></span><!--teleport anchor-->"`
     )
 
     teleportContainer.innerHTML = teleportHtml
@@ -323,7 +323,7 @@ describe('SSR hydration', () => {
     msg.value = 'bar'
     await nextTick()
     expect(teleportContainer.innerHTML).toMatchInlineSnapshot(
-      `"<span>bar</span><span class=\\"bar\\"></span><!--teleport anchor--><span>bar2</span><span class=\\"bar2\\"></span><!--teleport anchor-->"`
+      `"<span>bar</span><span class="bar"></span><!--teleport anchor--><span>bar2</span><span class="bar2"></span><!--teleport anchor-->"`
     )
   })
 
@@ -346,7 +346,7 @@ describe('SSR hydration', () => {
     const ctx: SSRContext = {}
     const mainHtml = await renderToString(h(Comp), ctx)
     expect(mainHtml).toMatchInlineSnapshot(
-      `"<!--[--><div>foo</div><!--teleport start--><span>foo</span><span class=\\"foo\\"></span><!--teleport end--><div class=\\"foo2\\">bar</div><!--]-->"`
+      `"<!--[--><div>foo</div><!--teleport start--><span>foo</span><span class="foo"></span><!--teleport end--><div class="foo2">bar</div><!--]-->"`
     )
 
     const teleportHtml = ctx.teleports!['#teleport3']
@@ -385,7 +385,7 @@ describe('SSR hydration', () => {
     msg.value = 'bar'
     await nextTick()
     expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<!--[--><div>foo</div><!--teleport start--><span>bar</span><span class=\\"bar\\"></span><!--teleport end--><div class=\\"bar2\\">bar</div><!--]-->"`
+      `"<!--[--><div>foo</div><!--teleport start--><span>bar</span><span class="bar"></span><!--teleport end--><div class="bar2">bar</div><!--]-->"`
     )
   })
 

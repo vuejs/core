@@ -7,7 +7,8 @@ import {
   isReactive,
   ReactiveFlags,
   EffectScheduler,
-  DebuggerOptions
+  DebuggerOptions,
+  getCurrentScope,
 } from '@vue/reactivity'
 import { SchedulerJob, queueJob } from './scheduler'
 import {
@@ -93,9 +94,7 @@ export function watchPostEffect(
   return doWatch(
     effect,
     null,
-    (__DEV__
-      ? { ...options, flush: 'post' }
-      : { flush: 'post' }) as WatchOptionsBase
+    __DEV__ ? { ...options, flush: 'post' } : { flush: 'post' }
   )
 }
 
@@ -106,9 +105,7 @@ export function watchSyncEffect(
   return doWatch(
     effect,
     null,
-    (__DEV__
-      ? { ...options, flush: 'sync' }
-      : { flush: 'sync' }) as WatchOptionsBase
+    __DEV__ ? { ...options, flush: 'sync' } : { flush: 'sync' }
   )
 }
 
@@ -201,7 +198,8 @@ function doWatch(
     )
   }
 
-  const instance = currentInstance
+  const instance = getCurrentScope() === currentInstance?.scope ?  currentInstance : null
+  // const instance = currentInstance
   let getter: () => any
   let forceTrigger = false
   let isMultiSource = false

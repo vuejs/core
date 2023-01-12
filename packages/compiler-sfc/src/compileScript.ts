@@ -41,7 +41,8 @@ import {
   Program,
   ObjectMethod,
   LVal,
-  Expression
+  Expression,
+  VariableDeclaration
 } from '@babel/types'
 import { walk } from 'estree-walker'
 import { RawSourceMap } from 'source-map'
@@ -310,6 +311,7 @@ export function compileScript(
     {
       local: string // local identifier, may be different
       default?: Expression
+      isConst: boolean
     }
   > = Object.create(null)
 
@@ -404,7 +406,11 @@ export function compileScript(
     }
   }
 
-  function processDefineProps(node: Node, declId?: LVal): boolean {
+  function processDefineProps(
+    node: Node,
+    declId?: LVal,
+    declKind?: VariableDeclaration['kind']
+  ): boolean {
     if (!isCallOf(node, DEFINE_PROPS)) {
       return false
     }
@@ -442,6 +448,7 @@ export function compileScript(
     }
 
     if (declId) {
+      const isConst = declKind === 'const'
       if (enablePropsTransform && declId.type === 'ObjectPattern') {
         propsDestructureDecl = declId
         // props destructure - handle compilation sugar
@@ -468,12 +475,14 @@ export function compileScript(
               // store default value
               propsDestructuredBindings[propKey] = {
                 local: left.name,
-                default: right
+                default: right,
+                isConst
               }
             } else if (prop.value.type === 'Identifier') {
               // simple destructure
               propsDestructuredBindings[propKey] = {
-                local: prop.value.name
+                local: prop.value.name,
+                isConst
               }
             } else {
               error(
@@ -494,11 +503,15 @@ export function compileScript(
     return true
   }
 
-  function processWithDefaults(node: Node, declId?: LVal): boolean {
+  function processWithDefaults(
+    node: Node,
+    declId?: LVal,
+    declKind?: VariableDeclaration['kind']
+  ): boolean {
     if (!isCallOf(node, WITH_DEFAULTS)) {
       return false
     }
-    if (processDefineProps(node.arguments[0], declId)) {
+    if (processDefineProps(node.arguments[0], declId, declKind)) {
       if (propsRuntimeDecl) {
         error(
           `${WITH_DEFAULTS} can only be used with type-based ` +
@@ -824,10 +837,14 @@ export function compileScript(
           } }`
         } else if (
           type.some(
-            el => el === 'Boolean' || (defaultString && el === 'Function')
+            el =>
+              el === 'Boolean' ||
+              ((!hasStaticDefaults || defaultString) && el === 'Function')
           )
         ) {
-          // #4783 production: if boolean or defaultString and function exists, should keep the type.
+          // #4783 for boolean, should keep the type
+          // #7111 for function, if default value exists or it's not static, should keep it
+          // in production
           return `${key}: { type: ${toRuntimeTypeString(type)}${
             defaultString ? `, ${defaultString}` : ``
           } }`
@@ -1193,8 +1210,8 @@ export function compileScript(
         if (decl.init) {
           // defineProps / defineEmits
           const isDefineProps =
-            processDefineProps(decl.init, decl.id) ||
-            processWithDefaults(decl.init, decl.id)
+            processDefineProps(decl.init, decl.id, node.kind) ||
+            processWithDefaults(decl.init, decl.id, node.kind)
           const isDefineEmits = processDefineEmits(decl.init, decl.id)
           if (isDefineProps || isDefineEmits) {
             if (left === 1) {
@@ -1557,7 +1574,7 @@ export function compileScript(
       // avoid duplicated unref import
       // as this may get injected by the render function preamble OR the
       // css vars codegen
-      if (ast && ast.helpers.includes(UNREF)) {
+      if (ast && ast.helpers.has(UNREF)) {
         helperImports.delete('unref')
       }
       returned = code
@@ -1741,8 +1758,7 @@ function walkDeclaration(
         registerBinding(bindings, id, bindingType)
       } else {
         if (isCallOf(init, DEFINE_PROPS)) {
-          // skip walking props destructure
-          return
+          continue
         }
         if (id.type === 'ObjectPattern') {
           walkObjectPattern(id, bindings, isConst, isDefineCall)

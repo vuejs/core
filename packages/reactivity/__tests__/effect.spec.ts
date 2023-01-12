@@ -964,5 +964,31 @@ describe('reactivity/effect', () => {
       m.set(key, 2)
       expect(fnSpy).toHaveBeenCalledTimes(2)
     })
+
+    test('should track hasOwnProperty', () => {
+      const obj: any = reactive({})
+      let has = false
+      const fnSpy = jest.fn()
+
+      effect(() => {
+        fnSpy()
+        has = obj.hasOwnProperty('foo')
+      })
+      expect(fnSpy).toHaveBeenCalledTimes(1)
+      expect(has).toBe(false)
+
+      obj.foo = 1
+      expect(fnSpy).toHaveBeenCalledTimes(2)
+      expect(has).toBe(true)
+
+      delete obj.foo
+      expect(fnSpy).toHaveBeenCalledTimes(3)
+      expect(has).toBe(false)
+
+      // should not trigger on unrelated key
+      obj.bar = 2
+      expect(fnSpy).toHaveBeenCalledTimes(3)
+      expect(has).toBe(false)
+    })
   })
 })

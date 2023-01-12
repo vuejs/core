@@ -49,7 +49,7 @@ export function ssrCodegenTransform(ast: RootNode, options: CompilerOptions) {
       createCompoundExpression([`const _cssVars = { style: `, varsExp, `}`])
     )
     Array.from(cssContext.helpers.keys()).forEach(helper => {
-      if (!ast.helpers.includes(helper)) ast.helpers.push(helper)
+      ast.helpers.add(helper)
     })
   }
 
@@ -61,10 +61,13 @@ export function ssrCodegenTransform(ast: RootNode, options: CompilerOptions) {
   // Finalize helpers.
   // We need to separate helpers imported from 'vue' vs. '@vue/server-renderer'
   ast.ssrHelpers = Array.from(
-    new Set([...ast.helpers.filter(h => h in ssrHelpers), ...context.helpers])
+    new Set([
+      ...Array.from(ast.helpers).filter(h => h in ssrHelpers),
+      ...context.helpers
+    ])
   )
 
-  ast.helpers = ast.helpers.filter(h => !(h in ssrHelpers))
+  ast.helpers = new Set(Array.from(ast.helpers).filter(h => !(h in ssrHelpers)))
 }
 
 export type SSRTransformContext = ReturnType<typeof createSSRTransformContext>

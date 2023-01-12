@@ -646,6 +646,8 @@ function baseCreateRenderer(
     if (dirs) {
       invokeDirectiveHook(vnode, null, parentComponent, 'created')
     }
+    // scopeId
+    setScopeId(el, vnode, vnode.scopeId, slotScopeIds, parentComponent)
     // props
     if (props) {
       for (const key in props) {
@@ -679,8 +681,6 @@ function baseCreateRenderer(
         invokeVNodeHook(vnodeHook, parentComponent, vnode)
       }
     }
-    // scopeId
-    setScopeId(el, vnode, vnode.scopeId, slotScopeIds, parentComponent)
 
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
       Object.defineProperty(el, '__vnode', {

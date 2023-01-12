@@ -28,6 +28,26 @@ describe('sfc props transform', () => {
     })
   })
 
+  test('multiple variable declarations', () => {
+    const { content, bindings } = compile(`
+      <script setup>
+      const bar = 'fish', { foo } = defineProps(['foo']), hello = 'world'
+      </script>
+      <template><div>{{ foo }} {{ hello }} {{ bar }}</div></template>
+    `)
+    expect(content).not.toMatch(`const { foo } =`)
+    expect(content).toMatch(`const bar = 'fish', hello = 'world'`)
+    expect(content).toMatch(`_toDisplayString(hello)`)
+    expect(content).toMatch(`_toDisplayString(bar)`)
+    expect(content).toMatch(`_toDisplayString(__props.foo)`)
+    assertCode(content)
+    expect(bindings).toStrictEqual({
+      foo: BindingTypes.PROPS,
+      bar: BindingTypes.SETUP_CONST,
+      hello: BindingTypes.SETUP_CONST
+    })
+  })
+
   test('nested scope', () => {
     const { content, bindings } = compile(`
       <script setup>
@@ -246,6 +266,17 @@ describe('sfc props transform', () => {
           </script>`
         )
       ).toThrow(`cannot reference locally declared variables`)
+    })
+
+    test('should error if assignment to constant variable', () => {
+      expect(() =>
+        compile(
+          `<script setup>
+          const { foo } = defineProps(['foo'])
+          foo = 'bar'
+          </script>`
+        )
+      ).toThrow(`Assignment to constant variable.`)
     })
   })
 })
