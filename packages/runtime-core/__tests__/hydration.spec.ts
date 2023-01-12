@@ -121,15 +121,14 @@ describe('SSR hydration', () => {
 
   test('element with text children', async () => {
     const msg = ref('foo')
-    const { vnode, container } = mountWithHydration(
-      '<div class="foo">foo</div>',
-      () => h('div', { class: msg.value }, msg.value)
+    const app = mountWithHydration('<div class="foo">foo</div>', () =>
+      h('div', { class: msg.value }, msg.value)
     )
-    expect(vnode.el).toBe(container.firstChild)
-    expect(container.firstChild!.textContent).toBe('foo')
+    expect(app.vnode.el).toBe(app.container.firstChild)
+    expect(app.container.firstChild!.textContent).toBe('foo')
     msg.value = 'bar'
     await nextTick()
-    expect(container.innerHTML).toBe(`<div class="bar">bar</div>`)
+    expect(app.container.innerHTML).toBe(`<div class="bar">bar</div>`)
   })
 
   test('element with elements children', async () => {
@@ -943,12 +942,19 @@ describe('SSR hydration', () => {
       }
     }
     customElements.define('my-element', MyElement)
+
     const msg = ref('bar')
-    const { container } = mountWithHydration(
-      '<my-element :foo="msg"></my-element>',
-      () => h('my-element', { foo: msg.value })
-    )
-    expect((container.firstChild as any).foo).toBe(msg.value)
+    const container = document.createElement('div')
+    container.innerHTML = '<my-element :foo="msg"></my-element>'
+    const app = createSSRApp({
+      render: () => h('my-element', { foo: msg.value })
+    })
+    // isCustomElement MUST be set at runtime
+    app.config.compilerOptions.isCustomElement = tag => tag.startsWith('my-')
+    const vnode = app.mount(container).$.subTree as VNode<Node, Element> & {
+      el: Element
+    }
+    expect((vnode.el as any).foo).toBe(msg.value)
   })
 
   // #5728

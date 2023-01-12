@@ -311,6 +311,11 @@ export function createHydrationFunctions(
     // #4006 for form elements with non-string v-model value bindings
     // e.g. <option :value="obj">, <input type="checkbox" :true-value="1">
     const forcePatchValue = (type === 'input' && dirs) || type === 'option'
+    // #7203 elements registered as custom elements should have all properties bound
+    const isCustomElement =
+      parentComponent?.appContext.config.compilerOptions.isCustomElement?.(
+        el.localName
+      )
     // skip props & children if this is hoisted static nodes
     // #5405 in dev, always hydrate children for HMR
     if (__DEV__ || forcePatchValue || patchFlag !== PatchFlags.HOISTED) {
@@ -328,7 +333,7 @@ export function createHydrationFunctions(
             if (
               (forcePatchValue && key.endsWith('value')) ||
               (isOn(key) && !isReservedProp(key)) ||
-              customElements.get(el.localName) // If the element is a custom element, apply vue props during hydration - See #7203
+              isCustomElement
             ) {
               patchProp(
                 el,
