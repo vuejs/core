@@ -1,7 +1,7 @@
 import {
   activeEffect,
+  getDepFromReactive,
   shouldTrack,
-  targetMap,
   trackEffects,
   triggerEffects
 } from './effect'
@@ -54,16 +54,17 @@ export function trackRefValue(ref: RefBase<any>) {
 
 export function triggerRefValue(ref: RefBase<any>, newVal?: any) {
   ref = toRaw(ref)
-  if (ref.dep) {
+  const dep = ref.dep
+  if (dep) {
     if (__DEV__) {
-      triggerEffects(ref.dep, {
+      triggerEffects(dep, {
         target: ref,
         type: TriggerOpTypes.SET,
         key: 'value',
         newValue: newVal
       })
     } else {
-      triggerEffects(ref.dep)
+      triggerEffects(dep)
     }
   }
 }
@@ -231,7 +232,7 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
   }
 
   get dep(): Dep | undefined {
-    return targetMap.get(toRaw(this._object))?.get(this._key)
+    return getDepFromReactive(toRaw(this._object), this._key)
   }
 }
 
