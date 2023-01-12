@@ -75,6 +75,10 @@ export function emit(
   event: string,
   ...rawArgs: any[]
 ) {
+  if(rawArgs[0] === 'update'){
+    debugger
+  }
+
   if (instance.isUnmounted) return
   const props = instance.vnode.props || EMPTY_OBJ
 
@@ -114,7 +118,7 @@ export function emit(
 
   let args = rawArgs
   const isModelListener = event.startsWith('update:')
-  debugger
+
   // for v-model update:xxx events, apply modifiers on args
   const modelArg = isModelListener && event.slice(7)
   if (modelArg && modelArg in props) {

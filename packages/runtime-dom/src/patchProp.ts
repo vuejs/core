@@ -22,18 +22,18 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
   parentSuspense,
   unmountChildren
 ) => {
-  if(key === 'barPropModifiers'){
+  /*if(key === 'barPropModifiers'){
     debugger
 
-  }
+  }*/
   if (key === 'class') {
     patchClass(el, nextValue, isSVG)
   } else if (key === 'style') {
     patchStyle(el, prevValue, nextValue)
-  } /*else if(key === 'barPropModifiers'){
+  } else if(key === 'barPropModifiers' && (el as VueElement)._isCE){
     debugger
       ;(el as VueElement)._VModelEmits[key] = nextValue
-  }*/
+  }
   else if (isOn(key)) {
     // ignore v-model listeners
     if (!isModelListener(key)) {
