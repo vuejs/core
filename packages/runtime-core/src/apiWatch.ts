@@ -7,7 +7,8 @@ import {
   isReactive,
   ReactiveFlags,
   EffectScheduler,
-  DebuggerOptions
+  DebuggerOptions,
+  getCurrentScope
 } from '@vue/reactivity'
 import { SchedulerJob, queueJob } from './scheduler'
 import {
@@ -40,6 +41,8 @@ import { warn } from './warning'
 import { DeprecationTypes } from './compat/compatConfig'
 import { checkCompatEnabled, isCompatEnabled } from './compat/compatConfig'
 import { ObjectWatchOptionItem } from './componentOptions'
+import { useSSRContext } from '@vue/runtime-core'
+import { SSRContext } from '@vue/server-renderer'
 
 export type WatchEffect = (onCleanup: OnCleanup) => void
 
@@ -91,9 +94,7 @@ export function watchPostEffect(
   return doWatch(
     effect,
     null,
-    (__DEV__
-      ? { ...options, flush: 'post' }
-      : { flush: 'post' }) as WatchOptionsBase
+    __DEV__ ? { ...options, flush: 'post' } : { flush: 'post' }
   )
 }
 
@@ -104,9 +105,7 @@ export function watchSyncEffect(
   return doWatch(
     effect,
     null,
-    (__DEV__
-      ? { ...options, flush: 'sync' }
-      : { flush: 'sync' }) as WatchOptionsBase
+    __DEV__ ? { ...options, flush: 'sync' } : { flush: 'sync' }
   )
 }
 
@@ -199,7 +198,9 @@ function doWatch(
     )
   }
 
-  const instance = currentInstance
+  const instance =
+    getCurrentScope() === currentInstance?.scope ? currentInstance : null
+  // const instance = currentInstance
   let getter: () => any
   let forceTrigger = false
   let isMultiSource = false
@@ -280,7 +281,8 @@ function doWatch(
   }
 
   // in SSR there is no need to setup an actual effect, and it should be noop
-  // unless it's eager
+  // unless it's eager or sync flush
+  let ssrCleanup: (() => void)[] | undefined
   if (__SSR__ && isInSSRComponentSetup) {
     // we will also not call the invalidate callback (+ runner is not set up)
     onCleanup = NOOP
@@ -293,10 +295,17 @@ function doWatch(
         onCleanup
       ])
     }
-    return NOOP
+    if (flush === 'sync') {
+      const ctx = useSSRContext() as SSRContext
+      ssrCleanup = ctx.__watcherHandles || (ctx.__watcherHandles = [])
+    } else {
+      return NOOP
+    }
   }
 
-  let oldValue = isMultiSource ? [] : INITIAL_WATCHER_VALUE
+  let oldValue: any = isMultiSource
+    ? new Array((source as []).length).fill(INITIAL_WATCHER_VALUE)
+    : INITIAL_WATCHER_VALUE
   const job: SchedulerJob = () => {
     if (!effect.active) {
       return
@@ -323,7 +332,11 @@ function doWatch(
         callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
           newValue,
           // pass undefined as the old value when it's changed for the first time
-          oldValue === INITIAL_WATCHER_VALUE ? undefined : oldValue,
+          oldValue === INITIAL_WATCHER_VALUE
+            ? undefined
+            : isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE
+            ? []
+            : oldValue,
           onCleanup
         ])
         oldValue = newValue
@@ -373,12 +386,15 @@ function doWatch(
     effect.run()
   }
 
-  return () => {
+  const unwatch = () => {
     effect.stop()
     if (instance && instance.scope) {
       remove(instance.scope.effects!, effect)
     }
   }
+
+  if (__SSR__ && ssrCleanup) ssrCleanup.push(unwatch)
+  return unwatch
 }
 
 // this.$watch

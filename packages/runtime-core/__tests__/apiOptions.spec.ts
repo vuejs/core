@@ -1048,7 +1048,6 @@ describe('api: options', () => {
     expect(root.innerHTML).toBe(`<h1>Foo</h1>`)
   })
 
-
   test('options defined in component have higher priority', async () => {
     const Mixin = {
       msg1: 'base'

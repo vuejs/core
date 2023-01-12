@@ -177,6 +177,23 @@ describe('api: watch', () => {
     ])
   })
 
+  it('watching multiple sources: undefined initial values and immediate: true', async () => {
+    const a = ref()
+    const b = ref()
+    let called = false
+    watch(
+      [a, b],
+      ([newA, newB], [oldA, oldB]) => {
+        called = true
+        expect([newA, newB]).toMatchObject([undefined, undefined])
+        expect([oldA, oldB]).toMatchObject([undefined, undefined])
+      },
+      { immediate: true }
+    )
+    await nextTick()
+    expect(called).toBe(true)
+  })
+
   it('watching multiple sources: readonly array', async () => {
     const state = reactive({ count: 1 })
     const status = ref(false)
@@ -728,7 +745,7 @@ describe('api: watch', () => {
     const state = ref()
     const spy = jest.fn()
     watch(() => state.value, spy, { immediate: true })
-    expect(spy).toHaveBeenCalled()
+    expect(spy).toHaveBeenCalledWith(undefined, undefined, expect.any(Function))
     state.value = 3
     await nextTick()
     expect(spy).toHaveBeenCalledTimes(2)
@@ -1132,5 +1149,40 @@ describe('api: watch', () => {
     // should not record watcher in detached scope and only the instance's
     // own update effect
     expect(instance!.scope.effects.length).toBe(1)
+  })
+
+  test('watchEffect should keep running if created in a detatched scope', async () => {
+    const trigger = ref(0)
+    let countWE = 0
+    let countW = 0
+    const Comp = {
+      setup() {
+        effectScope(true).run(() => {
+          watchEffect(() => {
+            trigger.value
+            countWE++
+          })
+          watch(trigger, () => countW++)
+        })
+        return () => ''
+      }
+    }
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    // only watchEffect as ran so far
+    expect(countWE).toBe(1)
+    expect(countW).toBe(0)
+    trigger.value++
+    await nextTick()
+    // both watchers run while component is mounted
+    expect(countWE).toBe(2)
+    expect(countW).toBe(1)
+    render(null, root) // unmount
+    await nextTick()
+    trigger.value++
+    await nextTick()
+    // both watchers run again event though component has been unmounted
+    expect(countWE).toBe(3)
+    expect(countW).toBe(2)
   })
 })

@@ -151,6 +151,73 @@ describe('hot module replacement', () => {
     expect(mountSpy).toHaveBeenCalledTimes(1)
   })
 
+  // #7042
+  test('reload KeepAlive slot', async () => {
+    const root = nodeOps.createElement('div')
+    const childId = 'test-child-keep-alive'
+    const unmountSpy = jest.fn()
+    const mountSpy = jest.fn()
+    const activeSpy = jest.fn()
+    const deactiveSpy = jest.fn()
+
+    const Child: ComponentOptions = {
+      __hmrId: childId,
+      data() {
+        return { count: 0 }
+      },
+      unmounted: unmountSpy,
+      render: compileToFunction(`<div>{{ count }}</div>`)
+    }
+    createRecord(childId, Child)
+
+    const Parent: ComponentOptions = {
+      components: { Child },
+      data() {
+        return { toggle: true }
+      },
+      render: compileToFunction(
+        `<button @click="toggle = !toggle"></button><KeepAlive><Child v-if="toggle" /></KeepAlive>`
+      )
+    }
+
+    render(h(Parent), root)
+    expect(serializeInner(root)).toBe(`<button></button><div>0</div>`)
+
+    reload(childId, {
+      __hmrId: childId,
+      data() {
+        return { count: 1 }
+      },
+      mounted: mountSpy,
+      unmounted: unmountSpy,
+      activated: activeSpy,
+      deactivated: deactiveSpy,
+      render: compileToFunction(`<div>{{ count }}</div>`)
+    })
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<button></button><div>1</div>`)
+    expect(unmountSpy).toHaveBeenCalledTimes(1)
+    expect(mountSpy).toHaveBeenCalledTimes(1)
+    expect(activeSpy).toHaveBeenCalledTimes(1)
+    expect(deactiveSpy).toHaveBeenCalledTimes(0)
+
+    // should not unmount when toggling
+    triggerEvent(root.children[1] as TestElement, 'click')
+    await nextTick()
+    expect(unmountSpy).toHaveBeenCalledTimes(1)
+    expect(mountSpy).toHaveBeenCalledTimes(1)
+    expect(activeSpy).toHaveBeenCalledTimes(1)
+    expect(deactiveSpy).toHaveBeenCalledTimes(1)
+
+    // should not mount when toggling
+    triggerEvent(root.children[1] as TestElement, 'click')
+    await nextTick()
+    expect(unmountSpy).toHaveBeenCalledTimes(1)
+    expect(mountSpy).toHaveBeenCalledTimes(1)
+    expect(activeSpy).toHaveBeenCalledTimes(2)
+    expect(deactiveSpy).toHaveBeenCalledTimes(1)
+  })
+
   test('reload class component', async () => {
     const root = nodeOps.createElement('div')
     const childId = 'test4-child'
