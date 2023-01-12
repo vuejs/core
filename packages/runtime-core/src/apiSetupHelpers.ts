@@ -64,7 +64,7 @@ export function defineProps<TypeProps>(): Readonly<
   {
     [K in keyof TypeProps as TypeProps[K] extends boolean | undefined
       ? K
-      : never]-?: TypeProps[K]
+      : never]-?: NotUndefined<TypeProps[K]>
   } & {
     [K in keyof TypeProps as TypeProps[K] extends boolean | undefined
       ? never
