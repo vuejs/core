@@ -121,14 +121,15 @@ describe('SSR hydration', () => {
 
   test('element with text children', async () => {
     const msg = ref('foo')
-    const app = mountWithHydration('<div class="foo">foo</div>', () =>
-      h('div', { class: msg.value }, msg.value)
+    const { vnode, container } = mountWithHydration(
+      '<div class="foo">foo</div>',
+      () => h('div', { class: msg.value }, msg.value)
     )
-    expect(app.vnode.el).toBe(app.container.firstChild)
-    expect(app.container.firstChild!.textContent).toBe('foo')
+    expect(vnode.el).toBe(container.firstChild)
+    expect(container.firstChild!.textContent).toBe('foo')
     msg.value = 'bar'
     await nextTick()
-    expect(app.container.innerHTML).toBe(`<div class="bar">bar</div>`)
+    expect(container.innerHTML).toBe(`<div class="bar">bar</div>`)
   })
 
   test('element with elements children', async () => {
