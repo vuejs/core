@@ -23,7 +23,14 @@ import {
   ComponentInjectOptions,
   toHandlerKey
 } from '@vue/runtime-core'
-import {camelize, extend, hyphenate, isArray, isModelListener, toNumber} from '@vue/shared'
+import {
+  camelize,
+  extend,
+  hyphenate,
+  isArray,
+  isModelListener,
+  toNumber
+} from '@vue/shared'
 import { hydrate, render } from '.'
 import { emit } from '../../runtime-core/src/componentEmits'
 export type VueElementConstructor<P = {}> = {
@@ -192,7 +199,6 @@ export class VueElement extends BaseClass {
       if (!(this._def as ComponentOptions).__asyncLoader) {
         // for sync component defs we can immediately resolve props
         this._resolveProps(this._def)
-        // this._resolveVModelEmits(this._def)
       }
     }
   }
@@ -277,25 +283,6 @@ export class VueElement extends BaseClass {
     }
   }
 
-  /*private _resolveVModelEmits(def: InnerComponentDef) {
-    const { emits } = def
-    const declaredEmitKeys = isArray(emits) ? emits : Object.keys(emits || {})
-    const ctx = this
-    for (let key of declaredEmitKeys.map(camelize)) {
-      key = toHandlerKey(key)
-      if (isModelListener(key)) {
-        Object.defineProperty(this._VModelEmits, key, {
-          get() {
-            return ctx._getProp(key)
-          },
-          set(val) {
-            ctx._setProp(key, val)
-          }
-        })
-      }
-    }
-  }*/
-
   private _resolveProps(def: InnerComponentDef) {
     const { props } = def
     const declaredPropKeys = isArray(props) ? props : Object.keys(props || {})
@@ -368,7 +355,10 @@ export class VueElement extends BaseClass {
   }
 
   private _createVNode(): VNode<any, any> {
-    const vnode = createVNode(this._def, extend({}, this._props, this._VModelEmits))
+    const vnode = createVNode(
+      this._def,
+      extend({}, this._props, this._VModelEmits)
+    )
     if (!this._instance) {
       vnode.ce = instance => {
         this._instance = instance

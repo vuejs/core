@@ -1,4 +1,5 @@
 import { makeMap } from './makeMap'
+import { VueElement } from '@vue/runtime-dom'
 
 export { makeMap }
 export * from './patchFlags'
@@ -30,6 +31,9 @@ const onRE = /^on[^a-z]/
 export const isOn = (key: string) => onRE.test(key)
 
 export const isModelListener = (key: string) => key.startsWith('onUpdate:')
+
+export const isCEModifiers = (el: Element, key: string) =>
+  key.endsWith('Modifiers') && !isOn(key) && (el as VueElement)._isCE
 
 export const extend = Object.assign
 

@@ -75,10 +75,6 @@ export function emit(
   event: string,
   ...rawArgs: any[]
 ) {
-  if(rawArgs[0] === 'update'){
-    debugger
-  }
-
   if (instance.isUnmounted) return
   const props = instance.vnode.props || EMPTY_OBJ
 

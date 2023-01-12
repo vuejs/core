@@ -3,7 +3,13 @@ import { patchStyle } from './modules/style'
 import { patchAttr } from './modules/attrs'
 import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
-import { isOn, isString, isFunction, isModelListener } from '@vue/shared'
+import {
+  isOn,
+  isString,
+  isFunction,
+  isModelListener,
+  isCEModifiers
+} from '@vue/shared'
 import { RendererOptions } from '@vue/runtime-core'
 import type { VueElement } from './apiCustomElement'
 
@@ -22,25 +28,20 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
   parentSuspense,
   unmountChildren
 ) => {
-  /*if(key === 'barPropModifiers'){
-    debugger
-
-  }*/
   if (key === 'class') {
     patchClass(el, nextValue, isSVG)
   } else if (key === 'style') {
     patchStyle(el, prevValue, nextValue)
-  } else if(key === 'barPropModifiers' && (el as VueElement)._isCE){
-    debugger
-      ;(el as VueElement)._VModelEmits[key] = nextValue
-  }
-  else if (isOn(key)) {
+  } else if (isCEModifiers(el, key)) {
+    // custom element v-model modifiers
+    ;(el as VueElement)._VModelEmits[key] = nextValue
+  } else if (isOn(key)) {
     // ignore v-model listeners
     if (!isModelListener(key)) {
       patchEvent(el, key, prevValue, nextValue, parentComponent)
     }
 
-    // customElement v-model listeners
+    // custom element v-model listeners
     if (isModelListener(key) && (el as VueElement)._isCE) {
       ;(el as VueElement)._VModelEmits[key] = nextValue
     }
