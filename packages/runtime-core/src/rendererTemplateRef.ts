@@ -68,7 +68,7 @@ export function setRef(
   if (oldRef != null && oldRef !== ref) {
     if (isString(oldRef)) {
       refs[oldRef] = null
-      if (hasOwn(setupState, oldRef)) {
+      if (hasOwn(setupState, oldRef) && isRef(setupState[oldRef])) {
         setupState[oldRef] = null
       }
     } else if (isRef(oldRef)) {
@@ -85,7 +85,7 @@ export function setRef(
       const doSet = () => {
         if (rawRef.f) {
           const existing = _isString
-            ? hasOwn(setupState, ref)
+            ? hasOwn(setupState, ref) && isRef(setupState[ref])
               ? setupState[ref]
               : refs[ref]
             : ref.value
@@ -95,7 +95,7 @@ export function setRef(
             if (!isArray(existing)) {
               if (_isString) {
                 refs[ref] = [refValue]
-                if (hasOwn(setupState, ref)) {
+                if (hasOwn(setupState, ref) && isRef(setupState[ref])) {
                   setupState[ref] = refs[ref]
                 }
               } else {
@@ -108,7 +108,7 @@ export function setRef(
           }
         } else if (_isString) {
           refs[ref] = value
-          if (hasOwn(setupState, ref)) {
+          if (hasOwn(setupState, ref) && isRef(setupState[ref])) {
             setupState[ref] = value
           }
         } else if (_isRef) {
