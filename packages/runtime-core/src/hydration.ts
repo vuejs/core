@@ -318,7 +318,12 @@ export function createHydrationFunctions(
       )
     // skip props & children if this is hoisted static nodes
     // #5405 in dev, always hydrate children for HMR
-    if (__DEV__ || forcePatchValue || patchFlag !== PatchFlags.HOISTED) {
+    if (
+      __DEV__ ||
+      forcePatchValue ||
+      patchFlag !== PatchFlags.HOISTED ||
+      isCustomElement
+    ) {
       if (dirs) {
         invokeDirectiveHook(vnode, null, parentComponent, 'created')
       }
