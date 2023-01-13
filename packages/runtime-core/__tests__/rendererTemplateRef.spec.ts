@@ -203,25 +203,6 @@ describe('api: template refs', () => {
     expect(spy).toHaveBeenCalledWith('div')
   })
 
-  // #7518 - named ref, Non-ref data should not be contaminated
-  // it('should work with direct reactive property', () => {
-  //   const root = nodeOps.createElement('div')
-  //   const state = reactive({
-  //     refKey: null
-  //   })
-
-  //   const Comp = {
-  //     setup() {
-  //       return state
-  //     },
-  //     render() {
-  //       return h('div', { ref: 'refKey' })
-  //     }
-  //   }
-  //   render(h(Comp), root)
-  //   expect(state.refKey).toBe(root.children[0])
-  // })
-
   test('multiple root refs', () => {
     const root = nodeOps.createElement('div')
     const refKey1 = ref(null)
