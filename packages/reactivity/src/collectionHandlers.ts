@@ -228,7 +228,7 @@ function createReadonlyMethod(type: TriggerOpTypes): Function {
 }
 
 function createInstrumentations() {
-  const mutableInstrumentations: Record<string, Function> = {
+  const mutableInstrumentations: Record<string | symbol, Function> = {
     get(this: MapTypes, key: unknown) {
       return get(this, key)
     },
@@ -243,7 +243,7 @@ function createInstrumentations() {
     forEach: createForEach(false, false)
   }
 
-  const shallowInstrumentations: Record<string, Function> = {
+  const shallowInstrumentations: Record<string | symbol, Function> = {
     get(this: MapTypes, key: unknown) {
       return get(this, key, false, true)
     },
@@ -258,7 +258,7 @@ function createInstrumentations() {
     forEach: createForEach(false, true)
   }
 
-  const readonlyInstrumentations: Record<string, Function> = {
+  const readonlyInstrumentations: Record<string | symbol, Function> = {
     get(this: MapTypes, key: unknown) {
       return get(this, key, true)
     },
@@ -275,7 +275,7 @@ function createInstrumentations() {
     forEach: createForEach(true, false)
   }
 
-  const shallowReadonlyInstrumentations: Record<string, Function> = {
+  const shallowReadonlyInstrumentations: Record<string | symbol, Function> = {
     get(this: MapTypes, key: unknown) {
       return get(this, key, true, true)
     },
@@ -294,22 +294,10 @@ function createInstrumentations() {
 
   const iteratorMethods = ['keys', 'values', 'entries', Symbol.iterator]
   iteratorMethods.forEach(method => {
-    mutableInstrumentations[method as string] = createIterableMethod(
-      method,
-      false,
-      false
-    )
-    readonlyInstrumentations[method as string] = createIterableMethod(
-      method,
-      true,
-      false
-    )
-    shallowInstrumentations[method as string] = createIterableMethod(
-      method,
-      false,
-      true
-    )
-    shallowReadonlyInstrumentations[method as string] = createIterableMethod(
+    mutableInstrumentations[method] = createIterableMethod(method, false, false)
+    readonlyInstrumentations[method] = createIterableMethod(method, true, false)
+    shallowInstrumentations[method] = createIterableMethod(method, false, true)
+    shallowReadonlyInstrumentations[method] = createIterableMethod(
       method,
       true,
       true
