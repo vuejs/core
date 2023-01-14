@@ -1990,7 +1990,7 @@ foo
       })
       expect(ast.children[2].type).toBe(NodeTypes.INTERPOLATION)
     })
-    
+
     it('should NOT remove whitespaces w/o newline between elements', () => {
       const ast = parse(`<div/> <div/> <div/>`)
       expect(ast.children.length).toBe(5)
