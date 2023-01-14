@@ -1991,7 +1991,17 @@ function baseCreateRenderer(
     moveType,
     parentSuspense = null
   ) => {
-    const { el, type, transition, children, shapeFlag } = vnode
+    const { el, type, transition, children, shapeFlag, patchFlag } = vnode
+
+    if (
+      __DEV__ &&
+      patchFlag > 0 &&
+      patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
+    ) {
+      const root = filterSingleRoot(children as VNodeArrayChildren)
+      root && (root.transition = transition)
+    }
+
     if (shapeFlag & ShapeFlags.COMPONENT) {
       move(vnode.component!.subTree, container, anchor, moveType)
       return
