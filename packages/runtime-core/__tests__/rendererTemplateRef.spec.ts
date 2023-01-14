@@ -522,7 +522,7 @@ describe('api: template refs', () => {
     )
   })
 
-  // #7518
+  // #7529
   test('named ref, Non-ref data should not be contaminated', async () => {
     const root = nodeOps.createElement('div')
 
