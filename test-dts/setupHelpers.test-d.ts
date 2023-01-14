@@ -70,7 +70,7 @@ describe('defineProps w/ union type declaration + withDefaults', () => {
       union1: 123,
       union2: () => [123],
       union3: () => ({ x: 123 }),
-      union4: () => 123,
+      union4: () => 123
     }
   )
 })

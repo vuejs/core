@@ -6,7 +6,7 @@ module.exports = {
   parserOptions: {
     sourceType: 'module'
   },
-  plugins: ["jest"],
+  plugins: ['jest'],
   rules: {
     'no-debugger': 'error',
     'no-unused-vars': [
@@ -72,7 +72,12 @@ module.exports = {
     },
     // Node scripts
     {
-      files: ['scripts/**', './*.js', 'packages/**/index.js', 'packages/size-check/**'],
+      files: [
+        'scripts/**',
+        './*.js',
+        'packages/**/index.js',
+        'packages/size-check/**'
+      ],
       rules: {
         'no-restricted-globals': 'off',
         'no-restricted-syntax': 'off'

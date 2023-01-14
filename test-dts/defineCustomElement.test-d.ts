@@ -8,13 +8,13 @@ describe('inject', () => {
     },
     inject: {
       foo: 'foo',
-      bar: 'bar',
+      bar: 'bar'
     },
     created() {
       expectType<unknown>(this.foo)
       expectType<unknown>(this.bar)
       //  @ts-expect-error
-      expectError(this.foobar = 1)
+      expectError((this.foobar = 1))
     }
   })
 
@@ -26,7 +26,7 @@ describe('inject', () => {
       expectType<unknown>(this.foo)
       expectType<unknown>(this.bar)
       //  @ts-expect-error
-      expectError(this.foobar = 1)
+      expectError((this.foobar = 1))
     }
   })
 
@@ -40,13 +40,13 @@ describe('inject', () => {
       bar: {
         from: 'pfoo',
         default: 'bar'
-      },
+      }
     },
     created() {
       expectType<unknown>(this.foo)
       expectType<unknown>(this.bar)
       //  @ts-expect-error
-      expectError(this.foobar = 1)
+      expectError((this.foobar = 1))
     }
   })
 
@@ -55,9 +55,9 @@ describe('inject', () => {
     props: ['a', 'b'],
     created() {
       //  @ts-expect-error
-      expectError(this.foo = 1)
+      expectError((this.foo = 1))
       //  @ts-expect-error
-      expectError(this.bar = 1)
+      expectError((this.bar = 1))
     }
   })
 })
