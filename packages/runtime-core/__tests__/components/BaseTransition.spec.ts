@@ -770,7 +770,6 @@ describe('BaseTransition', () => {
     })
   })
 
-
   // #6835
   describe('mode: "out-in" toggle again after unmounted', () => {
     async function testOutIn(
