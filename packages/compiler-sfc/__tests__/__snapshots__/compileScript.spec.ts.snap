@@ -59,6 +59,24 @@ return { n, get x() { return x } }
 }"
 `;
 
+exports[`SFC compile <script setup> > <script> and <script setup> co-usage > export call expression as default 1`] = `
+"function fn() {
+        return \\"hello, world\\";
+      }
+      const __default__ = fn();
+      
+export default /*#__PURE__*/Object.assign(__default__, {
+  setup(__props, { expose }) {
+  expose();
+
+      console.log('foo')
+      
+return { fn }
+}
+
+})"
+`;
+
 exports[`SFC compile <script setup> > <script> and <script setup> co-usage > script first 1`] = `
 "import { x } from './x'
       
