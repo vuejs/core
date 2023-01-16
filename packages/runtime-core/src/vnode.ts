@@ -431,7 +431,7 @@ function createBaseVNode(
     key: props && normalizeKey(props),
     ref: props && normalizeRef(props),
     scopeId: currentScopeId,
-    slotScopeIds: null,
+    slotScopeIds: props && props.slotScopeIds,
     children,
     component: null,
     suspense: null,
