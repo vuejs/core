@@ -1458,7 +1458,7 @@ exports[`SFC compile <script setup> with TypeScript defineEmits w/ type from nor
         export interface Emits { (e: 'foo' | 'bar'): void }
       
 export default /*#__PURE__*/_defineComponent({
-  emits: [\\"foo\\", \\"bar\\"],
+  emits: ["foo", "bar"],
   setup(__props, { expose, emit }: { emit: ({ (e: 'foo' | 'bar'): void }), expose: any, slots: any, attrs: any }) {
   expose();
 
@@ -1791,12 +1791,12 @@ exports[`SFC compile <script setup> with TypeScript withDefaults (static) + norm
       
 export default /*#__PURE__*/_defineComponent({
   props: {
-    a: { type: String, required: false, default: \\"a\\" }
+    a: { type: String, required: false, default: "a" }
   },
   setup(__props: any, { expose }) {
   expose();
 
-const props = __props as { a: string }
+const props = __props as { a: string };
 
         
       

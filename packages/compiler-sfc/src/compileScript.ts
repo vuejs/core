@@ -136,11 +136,11 @@ export interface ImportBinding {
   isUsedInTemplate: boolean
 }
 
-type FromNormalScript = { __fromNormalScript?: boolean }
-
-type PropsDeclType = (TSTypeLiteral | TSInterfaceBody) & FromNormalScript
-
-type EmitsDeclType = (TSFunctionType | TSTypeLiteral | TSInterfaceBody) & FromNormalScript
+type FromNormalScript<T> = T & { __fromNormalScript?: boolean | null }
+type PropsDeclType = FromNormalScript<TSTypeLiteral | TSInterfaceBody>
+type EmitsDeclType = FromNormalScript<
+  TSFunctionType | TSTypeLiteral | TSInterfaceBody
+>
 
 /**
  * Compile `<script setup>`
@@ -669,7 +669,7 @@ export function compileScript(
   function resolveQualifiedType(
     node: Node,
     qualifier: (node: Node) => boolean
-  ): (Node & FromNormalScript)| undefined {
+  ): Node | undefined {
     if (qualifier(node)) {
       return node
     }
@@ -693,7 +693,7 @@ export function compileScript(
             filterExtendsType(extendsTypes, bodies)
             qualified.body = bodies
           }
-          ;(qualified as Node & FromNormalScript).__fromNormalScript =
+          ;(qualified as FromNormalScript<Node>).__fromNormalScript =
             scriptAst && i >= scriptSetupAst.body.length
           return qualified
         }
@@ -1486,7 +1486,9 @@ export function compileScript(
   if (destructureElements.length) {
     args += `, { ${destructureElements.join(', ')} }`
     if (emitsTypeDecl) {
-      const content = emitsTypeDecl.__fromNormalScript ? script!.content : scriptSetup.content
+      const content = emitsTypeDecl.__fromNormalScript
+        ? script!.content
+        : scriptSetup.content
       args += `: { emit: (${content.slice(
         emitsTypeDecl.start!,
         emitsTypeDecl.end!
