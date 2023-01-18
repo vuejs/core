@@ -22,6 +22,22 @@ test('should work', () => {
   expect(result.code).toMatch(`export function render(`)
 })
 
+// #6807
+test('should work with style comment', () => {
+  const source = `
+  <div style="
+    /* nothing */
+    width: 300px;
+    height: 100px/* nothing */
+    ">{{ render }}</div>
+  `
+
+  const result = compile({ filename: 'example.vue', source })
+  expect(result.errors.length).toBe(0)
+  expect(result.source).toBe(source)
+  expect(result.code).toMatch(`{"width":"300px","height":"100px"}`)
+})
+
 test('preprocess pug', () => {
   const template = parse(
     `

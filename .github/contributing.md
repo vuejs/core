@@ -36,9 +36,9 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 
 - Make sure tests pass!
 
-- Commit messages must follow the [commit message convention](./commit-convention.md) so that changelogs can be automatically generated. Commit messages are automatically validated before commit (by invoking [Git Hooks](https://git-scm.com/docs/githooks) via [yorkie](https://github.com/yyx990803/yorkie)).
+- Commit messages must follow the [commit message convention](./commit-convention.md) so that changelogs can be automatically generated. Commit messages are automatically validated before commit (by invoking [Git Hooks](https://git-scm.com/docs/githooks) via [simple-git-hooks](https://github.com/toplenboren/simple-git-hooks)).
 
-- No need to worry about code style as long as you have installed the dev dependencies - modified files are automatically formatted with Prettier on commit (by invoking [Git Hooks](https://git-scm.com/docs/githooks) via [yorkie](https://github.com/yyx990803/yorkie)).
+- No need to worry about code style as long as you have installed the dev dependencies - modified files are automatically formatted with Prettier on commit (by invoking [Git Hooks](https://git-scm.com/docs/githooks) via [simple-git-hooks](https://github.com/toplenboren/simple-git-hooks)).
 
 ### Advanced Pull Request Tips
 
@@ -47,6 +47,7 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 - Consider the performance / size impact of the changes, and whether the bug being fixes justifies the cost. If the bug being fixed is a very niche edge case, we should try to minimize the size / perf cost to make it worthwhile.
 
   - Is the code perf-sensitive (e.g. in "hot paths" like component updates or the vdom patch function?)
+
     - If the branch is dev-only, performance is less of a concern.
 
   - Check how much extra bundle size the change introduces.
@@ -76,6 +77,8 @@ A high level overview of tools used:
 ## Scripts
 
 **The examples below will be using the `nr` command from the [ni](https://github.com/antfu/ni) package.** You can also use plain `npm run`, but you will need to pass all additional arguments after the command after an extra `--`. For example, `nr build runtime --all` is equivalent to `npm run build -- runtime --all`.
+
+The `run-s` and `run-p` commands found in some scripts are from [npm-run-all](https://github.com/mysticatea/npm-run-all) for orchestrating multiple scripts. `run-s` means "run in sequence" while `run-p` means "run in parallel".
 
 ### `nr build`
 
@@ -152,9 +155,17 @@ $ nr dev
 
 - The `dev` script supports the `-i` flag for inlining all deps. This is useful when debugging `esm-bundler` builds which externalizes deps by default.
 
+### `nr dev-sfc`
+
+Shortcut for starting the SFC Playground in local dev mode. This provides the fastest feedback loop when debugging issues that can be reproduced in the SFC Playground.
+
+### `nr dev-esm`
+
+Builds and watches `vue/dist/vue-runtime.esm-bundler.js` with all deps inlined using esbuild. This is useful when debugging the ESM build in a reproductions that require real build setups: link `packages/vue` globally, then link it into the project being debugged.
+
 ### `nr dev-compiler`
 
-The `dev-compiler` script builds, watches and serves the [Template Explorer](https://github.com/vuejs/core/tree/main/packages/template-explorer) at `http://localhost:5000`. This is extremely useful when working on the compiler.
+The `dev-compiler` script builds, watches and serves the [Template Explorer](https://github.com/vuejs/core/tree/main/packages/template-explorer) at `http://localhost:5000`. This is useful when working on pure compiler issues.
 
 ### `nr test`
 
@@ -222,27 +233,29 @@ This is made possible via several configurations:
 
 ### Package Dependencies
 
-```
-                                    +---------------------+
-                                    |                     |
-                                    |  @vue/compiler-sfc  |
-                                    |                     |
-                                    +-----+--------+------+
-                                          |        |
-                                          v        v
-                      +---------------------+    +----------------------+
-                      |                     |    |                      |
-        +------------>|  @vue/compiler-dom  +--->|  @vue/compiler-core  |
-        |             |                     |    |                      |
-   +----+----+        +---------------------+    +----------------------+
-   |         |
-   |   vue   |
-   |         |
-   +----+----+        +---------------------+    +----------------------+    +-------------------+
-        |             |                     |    |                      |    |                   |
-        +------------>|  @vue/runtime-dom   +--->|  @vue/runtime-core   +--->|  @vue/reactivity  |
-                      |                     |    |                      |    |                   |
-                      +---------------------+    +----------------------+    +-------------------+
+```mermaid
+  flowchart LR
+    compiler-sfc["@vue/compiler-sfc"]
+    compiler-dom["@vue/compiler-dom"]
+    compiler-core["@vue/compiler-core"]
+    vue["vue"]
+    runtime-dom["@vue/runtime-dom"]
+    runtime-core["@vue/runtime-core"]
+    reactivity["@vue/reactivity"]
+
+    subgraph "Runtime Packages"
+      runtime-dom --> runtime-core
+      runtime-core --> reactivity
+    end
+
+    subgraph "Compiler Packages"
+      compiler-sfc --> compiler-core
+      compiler-sfc --> compiler-dom
+      compiler-dom --> compiler-core
+    end
+
+    vue ---> compiler-dom
+    vue --> runtime-dom
 ```
 
 There are some rules to follow when importing across package boundaries:
@@ -266,8 +279,6 @@ Unit tests are collocated with the code being tested in each package, inside dir
 Test coverage is continuously deployed at https://vue-next-coverage.netlify.app/. PRs that improve test coverage are welcome, but in general the test coverage should be used as a guidance for finding API use cases that are not covered by tests. We don't recommend adding tests that only improve coverage but not actually test a meaning use case.
 
 ### Testing Type Definition Correctness
-
-This project uses [tsd](https://github.com/SamVerschueren/tsd) to test the built definition files (`*.d.ts`).
 
 Type tests are located in the `test-dts` directory. To run the dts tests, run `nr test-dts`. Note that the type test requires all relevant `*.d.ts` files to be built first (and the script does it for you). Once the `d.ts` files are built and up-to-date, the tests can be re-run by simply running `nr test-dts`.
 

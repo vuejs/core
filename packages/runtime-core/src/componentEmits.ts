@@ -10,8 +10,8 @@ import {
   isObject,
   isString,
   isOn,
-  toNumber,
-  UnionToIntersection
+  UnionToIntersection,
+  looseToNumber
 } from '@vue/shared'
 import {
   ComponentInternalInstance,
@@ -123,10 +123,10 @@ export function emit(
     }Modifiers`
     const { number, trim } = props[modifiersKey] || EMPTY_OBJ
     if (trim) {
-      args = rawArgs.map(a => isString(a) ? a.trim() : a)
+      args = rawArgs.map(a => (isString(a) ? a.trim() : a))
     }
     if (number) {
-      args = rawArgs.map(toNumber)
+      args = rawArgs.map(looseToNumber)
     }
   }
 
