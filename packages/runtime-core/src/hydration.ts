@@ -354,6 +354,16 @@ export function createHydrationFunctions(
           )
         }
       }
+      if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+        Object.defineProperty(el, '__vnode', {
+          value: vnode,
+          enumerable: false
+        })
+        Object.defineProperty(el, '__vueParentComponent', {
+          value: parentComponent,
+          enumerable: false
+        })
+      }
       // vnode / directive hooks
       let vnodeHooks: VNodeHook | null | undefined
       if ((vnodeHooks = props && props.onVnodeBeforeMount)) {
