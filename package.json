@@ -89,7 +89,7 @@
     "prettier": "^2.7.1",
     "pug": "^3.0.1",
     "puppeteer": "^19.2.2",
-    "rollup": "~3.2.3",
+    "rollup": "~3.10.0",
     "rollup-plugin-node-builtins": "^2.1.2",
     "rollup-plugin-node-globals": "^1.4.0",
     "rollup-plugin-polyfill-node": "^0.11.0",
