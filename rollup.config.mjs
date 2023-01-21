@@ -368,7 +368,7 @@ function cjsReExportsPatchPlugin() {
         return code.replace(matcher, (_, r1, r2, r3) => {
           return `Object.keys(${r1}).forEach(function(k) {${r2}${r3}});`
         })
-      } else if (options.file.endsWith('/vue.cjs.js')) {
+      } else if (options.file.endsWith('packages/vue/dist/vue.cjs.js')) {
         // make sure we don't accidentally miss the rewrite in case Rollup
         // changes the output again.
         throw new Error('cjs build re-exports rewrite failed.')
