@@ -1,11 +1,19 @@
 // create package.json, README, etc. for packages that don't have them yet
+// @ts-check
+import minimist from 'minimist'
+import fs from 'node:fs'
+import path from 'node:path'
+import { createRequire } from 'node:module'
+import { fileURLToPath } from 'url'
 
-const args = require('minimist')(process.argv.slice(2))
-const fs = require('fs')
-const path = require('path')
+const args = minimist(process.argv.slice(2))
+const require = createRequire(import.meta.url)
 const version = require('../package.json').version
 
-const packagesDir = path.resolve(__dirname, '../packages')
+const packagesDir = path.resolve(
+  fileURLToPath(import.meta.url),
+  '../../packages'
+)
 const files = fs.readdirSync(packagesDir)
 
 files.forEach(shortName => {

@@ -14,15 +14,23 @@ nr build core --formats cjs
 ```
 */
 
-const fs = require('fs-extra')
-const path = require('path')
-const chalk = require('chalk')
-const execa = require('execa')
-const { gzipSync } = require('zlib')
-const { compress } = require('brotli')
-const { targets: allTargets, fuzzyMatchTarget } = require('./utils')
+// @ts-check
+import fs from 'node:fs/promises'
+import { existsSync, readFileSync } from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import minimist from 'minimist'
+import { gzipSync } from 'node:zlib'
+import { compress } from 'brotli'
+import chalk from 'chalk'
+import execa from 'execa'
+import { cpus } from 'node:os'
+import { createRequire } from 'node:module'
+import { targets as allTargets, fuzzyMatchTarget } from './utils.mjs'
 
-const args = require('minimist')(process.argv.slice(2))
+const require = createRequire(import.meta.url)
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const args = minimist(process.argv.slice(2))
 const targets = args._
 const formats = args.formats || args.f
 const devOnly = args.devOnly || args.d
@@ -38,7 +46,9 @@ run()
 async function run() {
   if (isRelease) {
     // remove build cache for release builds to avoid outdated enum values
-    await fs.remove(path.resolve(__dirname, '../node_modules/.rts2_cache'))
+    await fs.rm(path.resolve(__dirname, '../node_modules/.rts2_cache'), {
+      recursive: true
+    })
   }
   if (!targets.length) {
     await buildAll(allTargets)
@@ -50,7 +60,7 @@ async function run() {
 }
 
 async function buildAll(targets) {
-  await runParallel(require('os').cpus().length, targets, build)
+  await runParallel(cpus().length, targets, build)
 }
 
 async function runParallel(maxConcurrency, source, iteratorFn) {
@@ -82,7 +92,7 @@ async function build(target) {
 
   // if building a specific format, do not remove dist.
   if (!formats) {
-    await fs.remove(`${pkgDir}/dist`)
+    await fs.rm(`${pkgDir}/dist`, { recursive: true })
   }
 
   const env =
@@ -128,7 +138,7 @@ async function build(target) {
     if (extractorResult.succeeded) {
       // concat additional d.ts to rolled-up dts
       const typesDir = path.resolve(pkgDir, 'types')
-      if (await fs.exists(typesDir)) {
+      if (existsSync(typesDir)) {
         const dtsPath = path.resolve(pkgDir, pkg.types)
         const existing = await fs.readFile(dtsPath, 'utf-8')
         const typeFiles = await fs.readdir(typesDir)
@@ -150,7 +160,7 @@ async function build(target) {
       process.exitCode = 1
     }
 
-    await fs.remove(`${pkgDir}/dist/packages`)
+    await fs.rm(`${pkgDir}/dist/packages`, { recursive: true })
   }
 }
 
@@ -174,10 +184,10 @@ function checkSize(target) {
 }
 
 function checkFileSize(filePath) {
-  if (!fs.existsSync(filePath)) {
+  if (!existsSync(filePath)) {
     return
   }
-  const file = fs.readFileSync(filePath)
+  const file = readFileSync(filePath)
   const minSize = (file.length / 1024).toFixed(2) + 'kb'
   const gzipped = gzipSync(file)
   const gzippedSize = (gzipped.length / 1024).toFixed(2) + 'kb'

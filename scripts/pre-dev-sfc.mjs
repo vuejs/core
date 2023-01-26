@@ -1,5 +1,4 @@
-const fs = require('fs')
-const path = require('path')
+import fs from 'node:fs'
 
 const packagesToCheck = [
   'compiler-sfc',
@@ -15,7 +14,7 @@ let allFilesPresent = true
 for (const pkg of packagesToCheck) {
   if (
     !fs.existsSync(
-      path.resolve(__dirname, `../packages/${pkg}/dist/${pkg}.cjs.js`)
+      new URL(`../packages/${pkg}/dist/${pkg}.cjs.js`, import.meta.url)
     )
   ) {
     allFilesPresent = false
