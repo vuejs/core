@@ -1,3 +1,6 @@
+/**
+ * @vitest-environment jsdom
+ */
 import { computed, ref } from '@vue/reactivity'
 import { toDisplayString } from '../src'
 
@@ -86,10 +89,10 @@ describe('toDisplayString', () => {
 
   test('native objects', () => {
     const div = document.createElement('div')
-    expect(toDisplayString(div)).toBe('[object HTMLDivElement]')
+    expect(toDisplayString(div)).toMatch('[object HTMLDivElement]')
     expect(toDisplayString({ div })).toMatchInlineSnapshot(`
       "{
-        "div": "[object HTMLDivElement]"
+        \\"div\\": \\"[object HTMLDivElement]\\"
       }"
     `)
   })
@@ -103,28 +106,28 @@ describe('toDisplayString', () => {
 
     expect(toDisplayString(m)).toMatchInlineSnapshot(`
       "{
-        "Map(2)": {
-          "1 =>": "foo",
-          "[object Object] =>": {
-            "foo": "bar",
-            "qux": 2
+        \\"Map(2)\\": {
+          \\"1 =>\\": \\"foo\\",
+          \\"[object Object] =>\\": {
+            \\"foo\\": \\"bar\\",
+            \\"qux\\": 2
           }
         }
       }"
     `)
     expect(toDisplayString(s)).toMatchInlineSnapshot(`
       "{
-        "Set(3)": [
+        \\"Set(3)\\": [
           1,
           {
-            "foo": "bar"
+            \\"foo\\": \\"bar\\"
           },
           {
-            "Map(2)": {
-              "1 =>": "foo",
-              "[object Object] =>": {
-                "foo": "bar",
-                "qux": 2
+            \\"Map(2)\\": {
+              \\"1 =>\\": \\"foo\\",
+              \\"[object Object] =>\\": {
+                \\"foo\\": \\"bar\\",
+                \\"qux\\": 2
               }
             }
           }
@@ -139,27 +142,27 @@ describe('toDisplayString', () => {
       })
     ).toMatchInlineSnapshot(`
       "{
-        "m": {
-          "Map(2)": {
-            "1 =>": "foo",
-            "[object Object] =>": {
-              "foo": "bar",
-              "qux": 2
+        \\"m\\": {
+          \\"Map(2)\\": {
+            \\"1 =>\\": \\"foo\\",
+            \\"[object Object] =>\\": {
+              \\"foo\\": \\"bar\\",
+              \\"qux\\": 2
             }
           }
         },
-        "s": {
-          "Set(3)": [
+        \\"s\\": {
+          \\"Set(3)\\": [
             1,
             {
-              "foo": "bar"
+              \\"foo\\": \\"bar\\"
             },
             {
-              "Map(2)": {
-                "1 =>": "foo",
-                "[object Object] =>": {
-                  "foo": "bar",
-                  "qux": 2
+              \\"Map(2)\\": {
+                \\"1 =>\\": \\"foo\\",
+                \\"[object Object] =>\\": {
+                  \\"foo\\": \\"bar\\",
+                  \\"qux\\": 2
                 }
               }
             }
