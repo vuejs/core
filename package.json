@@ -12,7 +12,7 @@
     "format": "prettier --write --cache --parser typescript \"**/*.[tj]s?(x)\"",
     "format-check": "prettier --check --cache --parser typescript \"**/*.[tj]s?(x)\"",
     "test": "run-s \"test-unit {@}\" \"test-e2e {@}\"",
-    "test-unit": "jest --filter ./scripts/filter-unit.mjs",
+    "test-unit": "jest --filter ./scripts/filter-unit.js",
     "test-e2e": "node scripts/build.mjs vue -f global -d && jest --filter ./scripts/filter-e2e.js --runInBand",
     "test-dts": "node scripts/build.mjs shared reactivity runtime-core runtime-dom -dt -f esm-bundler && npm run test-dts-only",
     "test-dts-only": "tsc -p ./test-dts/tsconfig.json && tsc -p ./test-dts/tsconfig.build.mjson",
