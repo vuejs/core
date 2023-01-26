@@ -8,7 +8,7 @@ describe('transition-group', () => {
       compile(`<transition-group><div v-for="i in list"/></transition-group>`)
         .code
     ).toMatchInlineSnapshot(`
-      "const { ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
+      "const { ssrRenderList: _ssrRenderList } = require(\\"vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<!--[-->\`)
@@ -26,7 +26,7 @@ describe('transition-group', () => {
         `<transition-group tag="ul"><div v-for="i in list"/></transition-group>`
       ).code
     ).toMatchInlineSnapshot(`
-      "const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
+      "const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderList: _ssrRenderList } = require(\\"vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<ul\${_ssrRenderAttrs(_attrs)}>\`)
@@ -44,7 +44,7 @@ describe('transition-group', () => {
         `<transition-group :tag="someTag"><div v-for="i in list"/></transition-group>`
       ).code
     ).toMatchInlineSnapshot(`
-      "const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
+      "const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderList: _ssrRenderList } = require(\\"vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<\${
@@ -70,7 +70,7 @@ describe('transition-group', () => {
             </transition-group>`
       ).code
     ).toMatchInlineSnapshot(`
-      "const { ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
+      "const { ssrRenderList: _ssrRenderList } = require(\\"vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<!--[-->\`)
@@ -97,13 +97,13 @@ describe('transition-group', () => {
         </transition-group>`
       ).code
     ).toMatchInlineSnapshot(`
-      "const { mergeProps: _mergeProps } = require("vue")
-      const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+      "const { mergeProps: _mergeProps } = require(\\"vue\\")
+      const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<ul\${_ssrRenderAttrs(_mergeProps({
-          class: "red",
-          id: "ok"
+          class: \\"red\\",
+          id: \\"ok\\"
         }, _attrs))}></ul>\`)
       }"
     `)
