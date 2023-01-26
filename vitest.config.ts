@@ -4,11 +4,21 @@ import { fileURLToPath } from 'node:url'
 import { readdirSync } from 'node:fs'
 
 const resolve = p =>
-  path.resolve(fileURLToPath(import.meta.url), `../packages/${p}/src`)
+  path.resolve(fileURLToPath(import.meta.url), `../packages/${p}/src/index.ts`)
 const dirs = readdirSync(new URL('./packages', import.meta.url))
-const alias = {}
+
+const alias = {
+  vue: resolve('vue'),
+  'vue/compiler-sfc': resolve('compiler-sfc'),
+  'vue/server-renderer': resolve('server-renderer'),
+  '@vue/compat': resolve('vue-compat')
+}
+
 for (const dir of dirs) {
-  alias[`@vue/${dir}`] = resolve(dir)
+  const key = `@vue/${dir}`
+  if (dir !== 'vue' && !(key in alias)) {
+    alias[key] = resolve(dir)
+  }
 }
 
 export default defineConfig({
@@ -28,13 +38,7 @@ export default defineConfig({
     __COMPAT__: true
   },
   resolve: {
-    alias: {
-      ...alias,
-      vue: resolve('vue'),
-      'vue/compiler-sfc': resolve('compiler-sfc'),
-      'vue/server-renderer': resolve('server-renderer'),
-      '@vue/compat': resolve('vue-compat')
-    }
+    alias
   },
   test: {
     globals: true,

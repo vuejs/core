@@ -5,8 +5,7 @@ import {
   ComponentInternalOptions,
   Component,
   ConcreteComponent,
-  InternalRenderFunction,
-  LifecycleHooks
+  InternalRenderFunction
 } from './component'
 import {
   isFunction,
@@ -72,6 +71,7 @@ import {
   softAssertCompatEnabled
 } from './compat/compatConfig'
 import { OptionMergeFunction } from './apiCreateApp'
+import { LifecycleHooks } from './enums'
 
 /**
  * Interface for declaring custom options.
