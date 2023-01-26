@@ -85,15 +85,14 @@ describe(`runtime-dom: events patching`, () => {
     const el = document.createElement('div')
 
     // string should be set as attribute
-    const fn = ((window as any).__globalSpy = vi.fn())
-    patchProp(el, 'onclick', null, '__globalSpy(1)')
+    const fn = ((el as any).spy = vi.fn())
+    patchProp(el, 'onclick', null, 'this.spy(1)')
     el.dispatchEvent(new Event('click'))
     await timeout()
-    delete (window as any).__globalSpy
     expect(fn).toHaveBeenCalledWith(1)
 
     const fn2 = vi.fn()
-    patchProp(el, 'onclick', '__globalSpy(1)', fn2)
+    patchProp(el, 'onclick', 'this.spy(1)', fn2)
     const event = new Event('click')
     el.dispatchEvent(event)
     await timeout()

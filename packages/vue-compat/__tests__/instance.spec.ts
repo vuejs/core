@@ -1,6 +1,3 @@
-/**
- * @vitest-environment jsdom
- */
 import { vi, Mock } from 'vitest'
 import Vue from '@vue/compat'
 import { Slots } from '../../runtime-core/src/componentSlots'

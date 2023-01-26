@@ -367,11 +367,8 @@ describe('defineCustomElement', () => {
     })
 
     test('emit from within async component wrapper', async () => {
-      const E = defineCustomElement(
-        defineAsyncComponent(
-          () => new Promise<typeof CompDef>(res => res(CompDef as any))
-        )
-      )
+      const p = new Promise<typeof CompDef>(res => res(CompDef as any))
+      const E = defineCustomElement(defineAsyncComponent(() => p))
       customElements.define('my-async-el-emits', E)
       container.innerHTML = `<my-async-el-emits></my-async-el-emits>`
       const e = container.childNodes[0] as VueElement
@@ -379,6 +376,8 @@ describe('defineCustomElement', () => {
       e.addEventListener('my-click', spy)
       // this feels brittle but seems necessary to reach the node in the DOM.
       await customElements.whenDefined('my-async-el-emits')
+      await nextTick()
+      await nextTick()
       e.shadowRoot!.childNodes[0].dispatchEvent(new CustomEvent('click'))
       expect(spy).toHaveBeenCalled()
       expect(spy.mock.calls[0][0]).toMatchObject({
@@ -398,6 +397,8 @@ describe('defineCustomElement', () => {
       const spy = vi.fn()
       e.addEventListener('my-click', spy)
       await customElements.whenDefined('my-async-el-props-emits')
+      await nextTick()
+      await nextTick()
       e.shadowRoot!.childNodes[0].dispatchEvent(new CustomEvent('click'))
       expect(spy).toHaveBeenCalled()
       expect(spy.mock.calls[0][0]).toMatchObject({

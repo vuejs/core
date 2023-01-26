@@ -1,6 +1,3 @@
-/**
- * @vitest-environment jsdom
- */
 import Vue from '@vue/compat'
 import { CompilerDeprecationTypes } from '../../compiler-core/src'
 import {
