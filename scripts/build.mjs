@@ -91,7 +91,7 @@ async function build(target) {
   }
 
   // if building a specific format, do not remove dist.
-  if (!formats) {
+  if (!formats && existsSync(`${pkgDir}/dist`)) {
     await fs.rm(`${pkgDir}/dist`, { recursive: true })
   }
 
@@ -192,7 +192,7 @@ function checkFileSize(filePath) {
   const gzipped = gzipSync(file)
   const gzippedSize = (gzipped.length / 1024).toFixed(2) + 'kb'
   const compressed = compress(file)
-  const compressedSize = (compressed.length / 1024).toFixed(2) + 'kb'
+  const compressedSize = (compressed?.length || 0 / 1024).toFixed(2) + 'kb'
   console.log(
     `${chalk.gray(
       chalk.bold(path.basename(filePath))
