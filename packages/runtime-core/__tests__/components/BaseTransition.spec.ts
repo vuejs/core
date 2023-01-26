@@ -87,7 +87,7 @@ function assertCalls(
 }
 
 function assertCalledWithEl(fn: any, expected: string, callIndex = 0) {
-  expect(serialize((fn as vi.Mock).mock.calls[callIndex][0])).toBe(expected)
+  expect(serialize(fn.mock.calls[callIndex][0])).toBe(expected)
 }
 
 interface ToggleOptions {

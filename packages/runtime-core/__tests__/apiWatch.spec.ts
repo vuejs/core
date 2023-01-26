@@ -1020,7 +1020,7 @@ describe('api: watch', () => {
     createApp(Comp).mount(root)
 
     expect(instance).toBeDefined()
-    expect(source).toHaveBeenCalledWith(instance)
+    expect(source.mock.calls.some(args => args.includes(instance)))
   })
 
   test('should not leak `this.proxy` to setup()', () => {

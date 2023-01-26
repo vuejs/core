@@ -271,7 +271,8 @@ export const enum MoveType {
 }
 
 export const queuePostRenderEffect = __FEATURE_SUSPENSE__
-  ? queueEffectWithSuspense
+  ? (fn: Function | Function[], suspense: SuspenseBoundary | null) =>
+      queueEffectWithSuspense(fn, suspense)
   : queuePostFlushCb
 
 /**

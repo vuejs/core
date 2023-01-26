@@ -1,3 +1,6 @@
+/**
+ * @vitest-environment jsdom
+ */
 // using DOM renderer because this case is mostly DOM-specific
 import { vi } from 'vitest'
 import {
@@ -15,7 +18,7 @@ import {
   Fragment,
   withModifiers
 } from '@vue/runtime-dom'
-import { PatchFlags } from '@vue/shared/src'
+import { PatchFlags } from '@vue/shared'
 
 describe('attribute fallthrough', () => {
   it('should allow attrs to fallthrough', async () => {

@@ -1,4 +1,7 @@
-import { vi } from 'vitest'
+/**
+ * @vitest-environment jsdom
+ */
+import { vi, type Mock } from 'vitest'
 import {
   h,
   nodeOps,
@@ -187,9 +190,9 @@ describe('api: options', () => {
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
 
-    function assertCall(spy: vi.Mock, callIndex: number, args: any[]) {
+    function assertCall(spy: Mock, callIndex: number, args: any[]) {
       expect(spy.mock.calls[callIndex].slice(0, 2)).toMatchObject(args)
-      expect(spy).toHaveReturnedWith(ctx)
+      expect(spy.mock.results[callIndex].value).toBe(ctx)
     }
 
     ctx.foo++
@@ -260,9 +263,9 @@ describe('api: options', () => {
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
 
-    function assertCall(spy: vi.Mock, callIndex: number, args: any[]) {
+    function assertCall(spy: Mock, callIndex: number, args: any[]) {
       expect(spy.mock.calls[callIndex].slice(0, 2)).toMatchObject(args)
-      expect(spy).toHaveReturnedWith(ctx)
+      expect(spy.mock.results[callIndex].value).toBe(ctx)
     }
 
     ctx.foo++
