@@ -102,6 +102,7 @@
     "tslib": "^2.4.0",
     "typescript": "^4.8.0",
     "vite": "^4.0.4",
+    "vitest": "^0.28.2",
     "vue": "workspace:*"
   }
 }

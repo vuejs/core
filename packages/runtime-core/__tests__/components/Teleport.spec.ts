@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import {
   nodeOps,
   serializeInner,
@@ -440,8 +441,8 @@ describe('renderer: teleport', () => {
     const root = nodeOps.createElement('div')
     const toggle = ref(true)
     const dir = {
-      mounted: jest.fn(),
-      unmounted: jest.fn()
+      mounted: vi.fn(),
+      unmounted: vi.fn()
     }
 
     const app = createApp({

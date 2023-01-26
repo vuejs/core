@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import { patchProp } from '../src/patchProp'
 import { render, h } from '../src'
 
@@ -95,7 +96,7 @@ describe('runtime-dom: props patching', () => {
   })
 
   test('innerHTML unmount prev children', () => {
-    const fn = jest.fn()
+    const fn = vi.fn()
     const comp = {
       render: () => 'foo',
       unmounted: fn
@@ -111,7 +112,7 @@ describe('runtime-dom: props patching', () => {
 
   // #954
   test('(svg) innerHTML unmount prev children', () => {
-    const fn = jest.fn()
+    const fn = vi.fn()
     const comp = {
       render: () => 'foo',
       unmounted: fn
@@ -126,7 +127,7 @@ describe('runtime-dom: props patching', () => {
   })
 
   test('textContent unmount prev children', () => {
-    const fn = jest.fn()
+    const fn = vi.fn()
     const comp = {
       render: () => 'foo',
       unmounted: fn

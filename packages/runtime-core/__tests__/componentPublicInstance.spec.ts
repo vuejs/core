@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import {
   h,
   render,
@@ -306,7 +307,7 @@ describe('component: proxy', () => {
 
     // attaching jest spy, triggers the getter once, cache it and override the property.
     // also uses Object.defineProperty
-    const spy = jest.spyOn(instanceProxy, 'toggle')
+    const spy = vi.spyOn(instanceProxy, 'toggle')
     expect(getCalledTimes).toEqual(3)
 
     // expect getter to not evaluate the jest spy caches its value

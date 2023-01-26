@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import {
   watch,
   watchEffect,
@@ -85,7 +86,7 @@ describe('api: watch', () => {
 
   it('watching single source: array', async () => {
     const array = reactive([] as number[])
-    const spy = jest.fn()
+    const spy = vi.fn()
     watch(array, spy)
     array.push(1)
     await nextTick()
@@ -94,7 +95,7 @@ describe('api: watch', () => {
   })
 
   it('should not fire if watched getter result did not change', async () => {
-    const spy = jest.fn()
+    const spy = vi.fn()
     const n = ref(0)
     watch(() => n.value % 2, spy)
 
@@ -279,7 +280,7 @@ describe('api: watch', () => {
 
   it('cleanup registration (effect)', async () => {
     const state = reactive({ count: 0 })
-    const cleanup = jest.fn()
+    const cleanup = vi.fn()
     let dummy
     const stop = watchEffect(onCleanup => {
       onCleanup(cleanup)
@@ -298,7 +299,7 @@ describe('api: watch', () => {
 
   it('cleanup registration (with source)', async () => {
     const count = ref(0)
-    const cleanup = jest.fn()
+    const cleanup = vi.fn()
     let dummy
     const stop = watch(count, (count, prevCount, onCleanup) => {
       onCleanup(cleanup)
@@ -326,7 +327,7 @@ describe('api: watch', () => {
     let callCount = 0
     let result1
     let result2
-    const assertion = jest.fn((count, count2Value) => {
+    const assertion = vi.fn((count, count2Value) => {
       callCount++
       // on mount, the watcher callback should be called before DOM render
       // on update, should be called before the count is updated
@@ -364,7 +365,7 @@ describe('api: watch', () => {
   it('flush timing: post', async () => {
     const count = ref(0)
     let result
-    const assertion = jest.fn(count => {
+    const assertion = vi.fn(count => {
       result = serializeInner(root) === `${count}`
     })
 
@@ -393,7 +394,7 @@ describe('api: watch', () => {
   it('watchPostEffect', async () => {
     const count = ref(0)
     let result
-    const assertion = jest.fn(count => {
+    const assertion = vi.fn(count => {
       result = serializeInner(root) === `${count}`
     })
 
@@ -423,7 +424,7 @@ describe('api: watch', () => {
     let callCount = 0
     let result1
     let result2
-    const assertion = jest.fn(count => {
+    const assertion = vi.fn(count => {
       callCount++
       // on mount, the watcher callback should be called before DOM render
       // on update, should be called before the count is updated
@@ -470,7 +471,7 @@ describe('api: watch', () => {
     let callCount = 0
     let result1
     let result2
-    const assertion = jest.fn(count => {
+    const assertion = vi.fn(count => {
       callCount++
       // on mount, the watcher callback should be called before DOM render
       // on update, should be called before the count is updated
@@ -507,7 +508,7 @@ describe('api: watch', () => {
 
   it('should not fire on component unmount w/ flush: post', async () => {
     const toggle = ref(true)
-    const cb = jest.fn()
+    const cb = vi.fn()
     const Comp = {
       setup() {
         watch(toggle, cb, { flush: 'post' })
@@ -529,7 +530,7 @@ describe('api: watch', () => {
   // #2291
   it('should not fire on component unmount w/ flush: pre', async () => {
     const toggle = ref(true)
-    const cb = jest.fn()
+    const cb = vi.fn()
     const Comp = {
       setup() {
         watch(toggle, cb, { flush: 'pre' })
@@ -726,7 +727,7 @@ describe('api: watch', () => {
 
   it('immediate', async () => {
     const count = ref(0)
-    const cb = jest.fn()
+    const cb = vi.fn()
     watch(count, cb, { immediate: true })
     expect(cb).toHaveBeenCalledTimes(1)
     count.value++
@@ -736,14 +737,14 @@ describe('api: watch', () => {
 
   it('immediate: triggers when initial value is null', async () => {
     const state = ref(null)
-    const spy = jest.fn()
+    const spy = vi.fn()
     watch(() => state.value, spy, { immediate: true })
     expect(spy).toHaveBeenCalled()
   })
 
   it('immediate: triggers when initial value is undefined', async () => {
     const state = ref()
-    const spy = jest.fn()
+    const spy = vi.fn()
     watch(() => state.value, spy, { immediate: true })
     expect(spy).toHaveBeenCalledWith(undefined, undefined, expect.any(Function))
     state.value = 3
@@ -779,7 +780,7 @@ describe('api: watch', () => {
 
   it('warn and not respect deep option when using effect', async () => {
     const arr = ref([1, [2]])
-    const spy = jest.fn()
+    const spy = vi.fn()
     watchEffect(
       () => {
         spy()
@@ -798,7 +799,7 @@ describe('api: watch', () => {
   it('onTrack', async () => {
     const events: DebuggerEvent[] = []
     let dummy
-    const onTrack = jest.fn((e: DebuggerEvent) => {
+    const onTrack = vi.fn((e: DebuggerEvent) => {
       events.push(e)
     })
     const obj = reactive({ foo: 1, bar: 2 })
@@ -833,7 +834,7 @@ describe('api: watch', () => {
   it('onTrigger', async () => {
     const events: DebuggerEvent[] = []
     let dummy
-    const onTrigger = jest.fn((e: DebuggerEvent) => {
+    const onTrigger = vi.fn((e: DebuggerEvent) => {
       events.push(e)
     })
     const obj = reactive<{ foo?: number }>({ foo: 1 })
@@ -912,7 +913,7 @@ describe('api: watch', () => {
 
   test('should force trigger on triggerRef when watching multiple sources: shallow ref array', async () => {
     const v = shallowRef([] as any)
-    const spy = jest.fn()
+    const spy = vi.fn()
     watch([v], () => {
       spy()
     })
@@ -927,7 +928,7 @@ describe('api: watch', () => {
 
   // #2125
   test('watchEffect should not recursively trigger itself', async () => {
-    const spy = jest.fn()
+    const spy = vi.fn()
     const price = ref(10)
     const history = ref<number[]>([])
     watchEffect(() => {
@@ -940,7 +941,7 @@ describe('api: watch', () => {
 
   // #2231
   test('computed refs should not trigger watch if value has no change', async () => {
-    const spy = jest.fn()
+    const spy = vi.fn()
     const source = ref(0)
     const price = computed(() => source.value === 0)
     watch(price, spy)
@@ -1005,7 +1006,7 @@ describe('api: watch', () => {
 
   test('this.$watch should pass `this.proxy` to watch source as the first argument ', () => {
     let instance: any
-    const source = jest.fn()
+    const source = vi.fn()
 
     const Comp = defineComponent({
       render() {},
@@ -1023,7 +1024,7 @@ describe('api: watch', () => {
   })
 
   test('should not leak `this.proxy` to setup()', () => {
-    const source = jest.fn()
+    const source = vi.fn()
 
     const Comp = defineComponent({
       render() {},
@@ -1042,7 +1043,7 @@ describe('api: watch', () => {
   test('pre watcher callbacks should not track dependencies', async () => {
     const a = ref(0)
     const b = ref(0)
-    const updated = jest.fn()
+    const updated = vi.fn()
 
     const Child = defineComponent({
       props: ['a'],
@@ -1077,7 +1078,7 @@ describe('api: watch', () => {
   })
 
   test('watching keypath', async () => {
-    const spy = jest.fn()
+    const spy = vi.fn()
     const Comp = defineComponent({
       render() {},
       data() {
@@ -1107,7 +1108,7 @@ describe('api: watch', () => {
 
   it('watching sources: ref<any[]>', async () => {
     const foo = ref([1])
-    const spy = jest.fn()
+    const spy = vi.fn()
     watch(foo, () => {
       spy()
     })

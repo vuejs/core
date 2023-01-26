@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import {
   nodeOps,
   render,
@@ -44,28 +45,28 @@ function mockProps(extra: BaseTransitionProps = {}, withKeepAlive = false) {
     doneLeave: {}
   }
   const props: BaseTransitionProps = {
-    onBeforeEnter: jest.fn(el => {
+    onBeforeEnter: vi.fn(el => {
       if (!extra.persisted && !withKeepAlive) {
         expect(el.parentNode).toBeNull()
       }
     }),
-    onEnter: jest.fn((el, done) => {
+    onEnter: vi.fn((el, done) => {
       cbs.doneEnter[serialize(el as TestElement)] = done
     }),
-    onAfterEnter: jest.fn(),
-    onEnterCancelled: jest.fn(),
-    onBeforeLeave: jest.fn(),
-    onLeave: jest.fn((el, done) => {
+    onAfterEnter: vi.fn(),
+    onEnterCancelled: vi.fn(),
+    onBeforeLeave: vi.fn(),
+    onLeave: vi.fn((el, done) => {
       cbs.doneLeave[serialize(el as TestElement)] = done
     }),
-    onAfterLeave: jest.fn(),
-    onLeaveCancelled: jest.fn(),
-    onBeforeAppear: jest.fn(),
-    onAppear: jest.fn((el, done) => {
+    onAfterLeave: vi.fn(),
+    onLeaveCancelled: vi.fn(),
+    onBeforeAppear: vi.fn(),
+    onAppear: vi.fn((el, done) => {
       cbs.doneEnter[serialize(el as TestElement)] = done
     }),
-    onAfterAppear: jest.fn(),
-    onAppearCancelled: jest.fn(),
+    onAfterAppear: vi.fn(),
+    onAppearCancelled: vi.fn(),
     ...extra
   }
   return {
@@ -86,7 +87,7 @@ function assertCalls(
 }
 
 function assertCalledWithEl(fn: any, expected: string, callIndex = 0) {
-  expect(serialize((fn as jest.Mock).mock.calls[callIndex][0])).toBe(expected)
+  expect(serialize((fn as vi.Mock).mock.calls[callIndex][0])).toBe(expected)
 }
 
 interface ToggleOptions {
