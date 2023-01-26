@@ -271,8 +271,11 @@ export const enum MoveType {
 }
 
 export const queuePostRenderEffect = __FEATURE_SUSPENSE__
-  ? (fn: Function | Function[], suspense: SuspenseBoundary | null) =>
-      queueEffectWithSuspense(fn, suspense)
+  ? __TEST__
+    ? // vitest can't seem to handle eager circular dependency
+      (fn: Function | Function[], suspense: SuspenseBoundary | null) =>
+        queueEffectWithSuspense(fn, suspense)
+    : queueEffectWithSuspense
   : queuePostFlushCb
 
 /**
