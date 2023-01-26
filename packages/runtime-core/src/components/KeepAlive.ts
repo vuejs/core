@@ -3,7 +3,6 @@ import {
   getCurrentInstance,
   SetupContext,
   ComponentInternalInstance,
-  LifecycleHooks,
   currentInstance,
   getComponentName,
   ComponentOptions
@@ -44,6 +43,7 @@ import { ComponentRenderContext } from '../componentPublicInstance'
 import { devtoolsComponentAdded } from '../devtools'
 import { isAsyncWrapper } from '../apiAsyncComponent'
 import { isSuspense } from './Suspense'
+import { LifecycleHooks } from '../enums'
 
 type MatchPattern = string | RegExp | (string | RegExp)[]
 
