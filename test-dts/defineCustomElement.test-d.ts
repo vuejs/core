@@ -1,4 +1,4 @@
-import { defineCustomElement, expectType, expectError } from './index'
+import { defineCustomElement, expectType, expectError, describe } from './index'
 
 describe('inject', () => {
   // with object inject

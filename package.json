@@ -15,7 +15,7 @@
     "test-unit": "vitest -c vitest.unit.config.ts",
     "test-e2e": "node scripts/build.mjs vue -f global -d && vitest -c vitest.e2e.config.ts",
     "test-dts": "node scripts/build.mjs shared reactivity runtime-core runtime-dom -dt -f esm-bundler && npm run test-dts-only",
-    "test-dts-only": "tsc -p ./test-dts/tsconfig.json && tsc -p ./test-dts/tsconfig.build.mjson",
+    "test-dts-only": "tsc -p ./test-dts/tsconfig.json && tsc -p ./test-dts/tsconfig.build.json",
     "test-coverage": "vitest -c vitest.unit.config.ts --coverage",
     "release": "node scripts/release.mjs",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s",
