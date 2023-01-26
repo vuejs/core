@@ -1,6 +1,3 @@
-/**
- * @vitest-environment jsdom
- */
 import Vue from '@vue/compat'
 import { ComponentOptions } from '../../runtime-core/src/component'
 import { nextTick } from '../../runtime-core/src/scheduler'
