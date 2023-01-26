@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config'
+import { configDefaults, defineConfig, UserConfig } from 'vitest/config'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { readdirSync } from 'node:fs'
@@ -45,6 +45,17 @@ export default defineConfig({
     setupFiles: 'scripts/setupVitest.ts',
     environmentMatchGlobs: [
       ['packages/{vue,vue-compat,runtime-dom}/**', 'jsdom']
-    ]
+    ],
+    coverage: {
+      provider: 'istanbul',
+      reporter: ['text', 'html'],
+      exclude: [
+        ...configDefaults.coverage.exclude!,
+        // DOM transitions are tested via e2e so no coverage is collected
+        'packages/runtime-dom/src/components/Transition*',
+        // mostly entries
+        'packages/vue-compat/**'
+      ]
+    }
   }
-})
+}) as UserConfig
