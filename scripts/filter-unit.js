@@ -1,3 +1,4 @@
+// jest only supports cjs filter files
 const { e2eTests } = require('./filter-e2e')
 
 module.exports = list => {

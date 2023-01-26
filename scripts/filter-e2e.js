@@ -1,3 +1,4 @@
+// jest only supports cjs filter files
 const path = require('path')
 
 const e2eTests = [
