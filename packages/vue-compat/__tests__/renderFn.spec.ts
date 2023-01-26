@@ -1,3 +1,6 @@
+/**
+ * @vitest-environment jsdom
+ */
 import { ShapeFlags } from '@vue/shared'
 import Vue from '@vue/compat'
 import { createComponentInstance } from '../../runtime-core/src/component'

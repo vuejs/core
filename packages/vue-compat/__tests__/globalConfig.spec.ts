@@ -1,3 +1,6 @@
+/**
+ * @vitest-environment jsdom
+ */
 import { vi } from 'vitest'
 import Vue from '@vue/compat'
 import {

@@ -1,4 +1,7 @@
-import { vi } from 'vitest'
+/**
+ * @vitest-environment jsdom
+ */
+import { vi, Mock } from 'vitest'
 import Vue from '@vue/compat'
 import { Slots } from '../../runtime-core/src/componentSlots'
 import { Text } from '../../runtime-core/src/vnode'
@@ -50,7 +53,7 @@ test('INSTANCE_DESTROY', () => {
 // https://github.com/vuejs/vue/blob/dev/test/unit/features/instance/methods-events.spec.js
 describe('INSTANCE_EVENT_EMITTER', () => {
   let vm: LegacyPublicInstance
-  let spy: vi.Mock
+  let spy: Mock
 
   beforeEach(() => {
     vm = new Vue()
@@ -61,7 +64,7 @@ describe('INSTANCE_EVENT_EMITTER', () => {
     vm.$on('test', function (this: any) {
       // expect correct context
       expect(this).toBe(vm)
-      spy.apply(this, arguments)
+      spy.apply(this, arguments as unknown as any[])
     })
     vm.$emit('test', 1, 2, 3, 4)
     expect(spy).toHaveBeenCalledTimes(1)
@@ -74,7 +77,7 @@ describe('INSTANCE_EVENT_EMITTER', () => {
   it('$on multi event', () => {
     vm.$on(['test1', 'test2'], function (this: any) {
       expect(this).toBe(vm)
-      spy.apply(this, arguments)
+      spy.apply(this, arguments as unknown as any[])
     })
     vm.$emit('test1', 1, 2, 3, 4)
     expect(spy).toHaveBeenCalledTimes(1)
