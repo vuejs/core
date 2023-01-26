@@ -1,5 +1,5 @@
 import path from 'path'
-import { setupPuppeteer, E2E_TIMEOUT } from '../../__tests__/e2eUtils'
+import { setupPuppeteer, E2E_TIMEOUT } from './e2eUtils'
 
 describe('e2e: tree', () => {
   const { page, click, count, text, children, isVisible } = setupPuppeteer()
@@ -7,7 +7,7 @@ describe('e2e: tree', () => {
   async function testTree(apiType: 'classic' | 'composition') {
     const baseUrl = `file://${path.resolve(
       __dirname,
-      `../${apiType}/tree.html`
+      `../../examples/${apiType}/tree.html`
     )}`
 
     await page().goto(baseUrl)

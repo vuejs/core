@@ -20,12 +20,25 @@ describe('e2e: TransitionGroup', () => {
 
   const transitionFinish = (time = duration) => timeout(time + buffer)
 
-  beforeEach(async () => {
-    await page().goto(baseUrl)
-    await page().waitForSelector('#app')
-  })
+  // beforeEach(async () => {
+  //   await page().goto(baseUrl)
+  //   await page().waitForSelector('#app')
+  // })
 
-  test(
+  // workaround for https://github.com/vitest-dev/vitest/issues/2756
+  function runTest(desc: string, runner: any, timeout?: number) {
+    test(
+      desc,
+      async () => {
+        await page().goto(baseUrl)
+        await page().waitForSelector('#app')
+        await runner()
+      },
+      timeout
+    )
+  }
+
+  runTest(
     'enter',
     async () => {
       await page().evaluate(() => {
@@ -79,7 +92,7 @@ describe('e2e: TransitionGroup', () => {
     E2E_TIMEOUT
   )
 
-  test(
+  runTest(
     'leave',
     async () => {
       await page().evaluate(() => {
@@ -123,7 +136,7 @@ describe('e2e: TransitionGroup', () => {
     E2E_TIMEOUT
   )
 
-  test(
+  runTest(
     'enter + leave',
     async () => {
       await page().evaluate(() => {
@@ -173,7 +186,7 @@ describe('e2e: TransitionGroup', () => {
     E2E_TIMEOUT
   )
 
-  test(
+  runTest(
     'appear',
     async () => {
       const appearHtml = await page().evaluate(() => {
@@ -248,7 +261,7 @@ describe('e2e: TransitionGroup', () => {
     E2E_TIMEOUT
   )
 
-  test(
+  runTest(
     'move',
     async () => {
       await page().evaluate(() => {
@@ -298,7 +311,7 @@ describe('e2e: TransitionGroup', () => {
     E2E_TIMEOUT
   )
 
-  test(
+  runTest(
     'dynamic name',
     async () => {
       await page().evaluate(() => {
@@ -357,7 +370,7 @@ describe('e2e: TransitionGroup', () => {
     E2E_TIMEOUT
   )
 
-  test(
+  runTest(
     'events',
     async () => {
       const onLeaveSpy = vi.fn()
@@ -494,7 +507,7 @@ describe('e2e: TransitionGroup', () => {
     E2E_TIMEOUT
   )
 
-  test('warn unkeyed children', () => {
+  runTest('warn unkeyed children', () => {
     createApp({
       template: `
         <transition-group name="test">

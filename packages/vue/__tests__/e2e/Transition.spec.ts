@@ -21,15 +21,30 @@ describe('e2e: Transition', () => {
       })
     })
 
-  beforeEach(async () => {
-    await page().goto(baseUrl)
-    await page().waitForSelector('#app')
-  })
+  // beforeEach(async () => {
+  // await page().goto(baseUrl)
+  // await page().waitForSelector('#app')
+  // })
+
+  // workaround for https://github.com/vitest-dev/vitest/issues/2756
+  function runTest(desc: string, runner: any, timeout?: number) {
+    test(
+      desc,
+      async () => {
+        await page().goto(baseUrl)
+        await page().waitForSelector('#app')
+        await runner()
+      },
+      timeout
+    )
+  }
 
   describe('transition with v-if', () => {
-    test(
+    runTest(
       'basic transition',
       async () => {
+        await page().goto(baseUrl)
+        await page().waitForSelector('#app')
         await page().evaluate(() => {
           const { createApp, ref } = (window as any).Vue
           createApp({
@@ -83,7 +98,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    test(
+    runTest(
       'named transition',
       async () => {
         await page().evaluate(() => {
@@ -139,7 +154,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    test(
+    runTest(
       'custom transition classes',
       async () => {
         await page().evaluate(() => {
@@ -200,7 +215,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    test(
+    runTest(
       'transition with dynamic name',
       async () => {
         await page().evaluate(() => {
@@ -262,7 +277,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    test(
+    runTest(
       'transition events without appear',
       async () => {
         const beforeLeaveSpy = vi.fn()
@@ -366,7 +381,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    test(
+    runTest(
       'events with arguments',
       async () => {
         const beforeLeaveSpy = vi.fn()
@@ -482,7 +497,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    test('onEnterCancelled', async () => {
+    runTest('onEnterCancelled', async () => {
       const enterCancelledSpy = vi.fn()
 
       await page().exposeFunction('enterCancelledSpy', enterCancelledSpy)
@@ -544,7 +559,7 @@ describe('e2e: Transition', () => {
       expect(await html('#container')).toBe('<!--v-if-->')
     })
 
-    test(
+    runTest(
       'transition on appear',
       async () => {
         const appearClass = await page().evaluate(async () => {
@@ -620,7 +635,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    test(
+    runTest(
       'transition events with appear',
       async () => {
         const onLeaveSpy = vi.fn()
@@ -768,7 +783,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    test(
+    runTest(
       'css: false',
       async () => {
         const onBeforeEnterSpy = vi.fn()
@@ -846,7 +861,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    test(
+    runTest(
       'no transition detected',
       async () => {
         await page().evaluate(() => {
@@ -888,7 +903,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    test(
+    runTest(
       'animations',
       async () => {
         await page().evaluate(() => {
@@ -940,7 +955,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    test(
+    runTest(
       'explicit transition type',
       async () => {
         await page().evaluate(() => {
@@ -1010,7 +1025,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    test(
+    runTest(
       'transition on SVG elements',
       async () => {
         await page().evaluate(() => {
@@ -1081,7 +1096,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    test(
+    runTest(
       'custom transition higher-order component',
       async () => {
         await page().evaluate(() => {
@@ -1138,7 +1153,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    test(
+    runTest(
       'transition on child components with empty root node',
       async () => {
         await page().evaluate(() => {
@@ -1217,7 +1232,7 @@ describe('e2e: Transition', () => {
 
   describe('transition with Suspense', () => {
     // #1583
-    test(
+    runTest(
       'async component transition inside Suspense',
       async () => {
         const onLeaveSpy = vi.fn()
@@ -1311,7 +1326,7 @@ describe('e2e: Transition', () => {
     )
 
     // #1689
-    test(
+    runTest(
       'static node transition inside Suspense',
       async () => {
         await page().evaluate(() => {
@@ -1369,7 +1384,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    test(
+    runTest(
       'out-in mode with Suspense',
       async () => {
         const onLeaveSpy = vi.fn()
@@ -1436,7 +1451,7 @@ describe('e2e: Transition', () => {
     )
 
     // #3963
-    test(
+    runTest(
       'Suspense fallback should work with transition',
       async () => {
         await page().evaluate(() => {
@@ -1500,7 +1515,7 @@ describe('e2e: Transition', () => {
   })
 
   describe('transition with v-show', () => {
-    test(
+    runTest(
       'named transition with v-show',
       async () => {
         await page().evaluate(() => {
@@ -1559,7 +1574,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    test(
+    runTest(
       'transition events with v-show',
       async () => {
         const beforeLeaveSpy = vi.fn()
@@ -1665,7 +1680,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    test(
+    runTest(
       'onLeaveCancelled (v-show only)',
       async () => {
         const onLeaveCancelledSpy = vi.fn()
@@ -1727,7 +1742,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    test(
+    runTest(
       'transition on appear with v-show',
       async () => {
         const beforeEnterSpy = vi.fn()
@@ -1833,7 +1848,7 @@ describe('e2e: Transition', () => {
     )
 
     // #4845
-    test(
+    runTest(
       'transition events should not call onEnter with v-show false',
       async () => {
         const beforeEnterSpy = vi.fn()
@@ -1907,7 +1922,7 @@ describe('e2e: Transition', () => {
   })
 
   describe('explicit durations', () => {
-    test(
+    runTest(
       'single value',
       async () => {
         await page().evaluate(duration => {
@@ -1963,7 +1978,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    test(
+    runTest(
       'enter with explicit durations',
       async () => {
         await page().evaluate(duration => {
@@ -2019,7 +2034,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    test(
+    runTest(
       'leave with explicit durations',
       async () => {
         await page().evaluate(duration => {
@@ -2075,7 +2090,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    test(
+    runTest(
       'separate enter and leave',
       async () => {
         await page().evaluate(duration => {
@@ -2134,7 +2149,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    test(
+    runTest(
       'warn invalid durations',
       async () => {
         createApp({
@@ -2172,7 +2187,7 @@ describe('e2e: Transition', () => {
     )
   })
 
-  test('warn when used on multiple elements', async () => {
+  runTest('warn when used on multiple elements', async () => {
     createApp({
       render() {
         return h(Transition, null, {
@@ -2185,7 +2200,7 @@ describe('e2e: Transition', () => {
     ).toHaveBeenWarned()
   })
 
-  test('warn when invalid transition mode', () => {
+  runTest('warn when invalid transition mode', () => {
     createApp({
       template: `
         <div id="container">
@@ -2199,7 +2214,7 @@ describe('e2e: Transition', () => {
   })
 
   // #3227
-  test(`HOC w/ merged hooks`, async () => {
+  runTest(`HOC w/ merged hooks`, async () => {
     const innerSpy = vi.fn()
     const outerSpy = vi.fn()
 
@@ -2238,7 +2253,7 @@ describe('e2e: Transition', () => {
     expect(root.innerHTML).toBe(`<!---->`)
   })
 
-  test(
+  runTest(
     'should work with dev root fragment',
     async () => {
       await page().evaluate(() => {
