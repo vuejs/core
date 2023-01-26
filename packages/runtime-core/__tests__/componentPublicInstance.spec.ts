@@ -259,7 +259,7 @@ describe('component: proxy', () => {
     expect(instanceProxy.isDisplayed).toBe(true)
   })
 
-  test('allow jest spying on proxy methods with Object.defineProperty', () => {
+  test('allow test runner spying on proxy methods with Object.defineProperty', () => {
     // #5417
     let instanceProxy: any
     const Comp = {
@@ -305,16 +305,16 @@ describe('component: proxy', () => {
     instanceProxy.toggle()
     expect(getCalledTimes).toEqual(2)
 
-    // attaching jest spy, triggers the getter once, cache it and override the property.
+    // attaching spy, triggers the getter once, and override the property.
     // also uses Object.defineProperty
     const spy = vi.spyOn(instanceProxy, 'toggle')
     expect(getCalledTimes).toEqual(3)
 
-    // expect getter to not evaluate the jest spy caches its value
+    // vitest does not cache the spy like jest do
     const v3 = instanceProxy.toggle()
     expect(v3).toEqual('b')
     expect(spy).toHaveBeenCalled()
-    expect(getCalledTimes).toEqual(3)
+    expect(getCalledTimes).toEqual(4)
   })
 
   test('defineProperty on proxy property with value descriptor', () => {

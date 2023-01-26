@@ -122,7 +122,7 @@ describe('SFC <script setup> helpers', () => {
     })
   })
 
-  describe('createPropsRestProxy', () => {
+  test('createPropsRestProxy', () => {
     const original = shallowReactive({
       foo: 1,
       bar: 2,
