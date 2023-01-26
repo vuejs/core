@@ -183,7 +183,8 @@ type MountChildrenFn = (
   isSVG: boolean,
   slotScopeIds: string[] | null,
   optimized: boolean,
-  start?: number
+  start?: number,
+  end?: number
 ) => void
 
 type PatchChildrenFn = (
@@ -765,9 +766,10 @@ function baseCreateRenderer(
     isSVG,
     slotScopeIds,
     optimized,
-    start = 0
+    start = 0,
+    end = children.length
   ) => {
-    for (let i = start; i < children.length; i++) {
+    for (let i = start; i < end; i++) {
       const child = (children[i] = optimized
         ? cloneIfMounted(children[i] as VNode)
         : normalizeVNode(children[i]))
@@ -1824,22 +1826,18 @@ function baseCreateRenderer(
       if (i <= e2) {
         const nextPos = e2 + 1
         const anchor = nextPos < l2 ? (c2[nextPos] as VNode).el : parentAnchor
-        while (i <= e2) {
-          patch(
-            null,
-            (c2[i] = optimized
-              ? cloneIfMounted(c2[i] as VNode)
-              : normalizeVNode(c2[i])),
-            container,
-            anchor,
-            parentComponent,
-            parentSuspense,
-            isSVG,
-            slotScopeIds,
-            optimized
-          )
-          i++
-        }
+        mountChildren(
+          c2,
+          container,
+          anchor,
+          parentComponent,
+          parentSuspense,
+          isSVG,
+          slotScopeIds,
+          optimized,
+          i,
+          e2
+        )
       }
     }
 
