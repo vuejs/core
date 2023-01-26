@@ -1836,7 +1836,7 @@ function baseCreateRenderer(
           slotScopeIds,
           optimized,
           i,
-          e2
+          nextPos
         )
       }
     }
