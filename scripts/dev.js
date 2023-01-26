@@ -3,7 +3,7 @@
 // smaller files w/ better tree-shaking.
 
 // @ts-check
-const { build } = require('esbuild')
+const { context } = require('esbuild')
 const nodePolyfills = require('@esbuild-plugins/node-modules-polyfill')
 const { resolve, relative } = require('path')
 const args = require('minimist')(process.argv.slice(2))
@@ -68,7 +68,22 @@ if (!inlineDeps) {
   }
 }
 
-build({
+const plugins = [
+  {
+    name: 'log-rebuild',
+    setup(build) {
+      build.onEnd(() => {
+        console.log(`built: ${relativeOutfile}`)
+      })
+    }
+  }
+]
+
+if (format === 'cjs' || pkg.buildOptions?.enableNonBrowserBranches) {
+  plugins.push(nodePolyfills.default())
+}
+
+context({
   entryPoints: [resolve(__dirname, `../packages/${target}/src/index.ts`)],
   outfile,
   bundle: true,
@@ -77,10 +92,7 @@ build({
   format: outputFormat,
   globalName: pkg.buildOptions?.name,
   platform: format === 'cjs' ? 'node' : 'browser',
-  plugins:
-    format === 'cjs' || pkg.buildOptions?.enableNonBrowserBranches
-      ? [nodePolyfills.default()]
-      : undefined,
+  plugins,
   define: {
     __COMMIT__: `"dev"`,
     __VERSION__: `"${pkg.version}"`,
@@ -98,12 +110,5 @@ build({
     __FEATURE_SUSPENSE__: `true`,
     __FEATURE_OPTIONS_API__: `true`,
     __FEATURE_PROD_DEVTOOLS__: `false`
-  },
-  watch: {
-    onRebuild(error) {
-      if (!error) console.log(`rebuilt: ${relativeOutfile}`)
-    }
   }
-}).then(() => {
-  console.log(`watching: ${relativeOutfile}`)
-})
+}).then(ctx => ctx.watch())
