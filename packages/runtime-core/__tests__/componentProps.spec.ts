@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import {
   ComponentInternalInstance,
   getCurrentInstance,
@@ -163,8 +164,8 @@ describe('component props', () => {
 
   test('default value', () => {
     let proxy: any
-    const defaultFn = jest.fn(() => ({ a: 1 }))
-    const defaultBaz = jest.fn(() => ({ b: 1 }))
+    const defaultFn = vi.fn(() => ({ a: 1 }))
+    const defaultBaz = vi.fn(() => ({ b: 1 }))
 
     const Comp = {
       props: {
@@ -536,7 +537,7 @@ describe('component props', () => {
   // #3288
   test('declared prop key should be present even if not passed', async () => {
     let initialKeys: string[] = []
-    const changeSpy = jest.fn()
+    const changeSpy = vi.fn()
     const passFoo = ref(false)
 
     const Comp = {

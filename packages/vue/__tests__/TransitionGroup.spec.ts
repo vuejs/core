@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import { E2E_TIMEOUT, setupPuppeteer } from './e2eUtils'
 import path from 'path'
 import { createApp, ref } from 'vue'
@@ -359,15 +360,15 @@ describe('e2e: TransitionGroup', () => {
   test(
     'events',
     async () => {
-      const onLeaveSpy = jest.fn()
-      const onEnterSpy = jest.fn()
-      const onAppearSpy = jest.fn()
-      const beforeLeaveSpy = jest.fn()
-      const beforeEnterSpy = jest.fn()
-      const beforeAppearSpy = jest.fn()
-      const afterLeaveSpy = jest.fn()
-      const afterEnterSpy = jest.fn()
-      const afterAppearSpy = jest.fn()
+      const onLeaveSpy = vi.fn()
+      const onEnterSpy = vi.fn()
+      const onAppearSpy = vi.fn()
+      const beforeLeaveSpy = vi.fn()
+      const beforeEnterSpy = vi.fn()
+      const beforeAppearSpy = vi.fn()
+      const afterLeaveSpy = vi.fn()
+      const afterEnterSpy = vi.fn()
+      const afterAppearSpy = vi.fn()
 
       await page().exposeFunction('onLeaveSpy', onLeaveSpy)
       await page().exposeFunction('onEnterSpy', onEnterSpy)

@@ -2,6 +2,7 @@
  * @jest-environment node
  */
 
+import { vi } from 'vitest'
 import {
   createApp,
   h,
@@ -820,8 +821,8 @@ function testRender(type: string, render: typeof renderToString) {
 
     // #2763
     test('error handling w/ async setup', async () => {
-      const fn = jest.fn()
-      const fn2 = jest.fn()
+      const fn = vi.fn()
+      const fn2 = vi.fn()
 
       const asyncChildren = defineComponent({
         async setup() {
@@ -948,8 +949,8 @@ function testRender(type: string, render: typeof renderToString) {
     })
 
     test('onServerPrefetch are run in parallel', async () => {
-      const first = jest.fn(() => Promise.resolve())
-      const second = jest.fn(() => Promise.resolve())
+      const first = vi.fn(() => Promise.resolve())
+      const second = vi.fn(() => Promise.resolve())
       let checkOther = [false, false]
       let done = [false, false]
       const app = createApp({

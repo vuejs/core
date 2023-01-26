@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import {
   createSSRApp,
   h,
@@ -134,7 +135,7 @@ describe('SSR hydration', () => {
 
   test('element with elements children', async () => {
     const msg = ref('foo')
-    const fn = jest.fn()
+    const fn = vi.fn()
     const { vnode, container } = mountWithHydration(
       '<div><span>foo</span><span class="foo"></span></div>',
       () =>
@@ -171,7 +172,7 @@ describe('SSR hydration', () => {
 
   test('Fragment', async () => {
     const msg = ref('foo')
-    const fn = jest.fn()
+    const fn = vi.fn()
     const { vnode, container } = mountWithHydration(
       '<div><!--[--><span>foo</span><!--[--><span class="foo"></span><!--]--><!--]--></div>',
       () =>
@@ -222,7 +223,7 @@ describe('SSR hydration', () => {
 
   test('Teleport', async () => {
     const msg = ref('foo')
-    const fn = jest.fn()
+    const fn = vi.fn()
     const teleportContainer = document.createElement('div')
     teleportContainer.id = 'teleport'
     teleportContainer.innerHTML = `<span>foo</span><span class="foo"></span><!--teleport anchor-->`
@@ -262,8 +263,8 @@ describe('SSR hydration', () => {
 
   test('Teleport (multiple + integration)', async () => {
     const msg = ref('foo')
-    const fn1 = jest.fn()
-    const fn2 = jest.fn()
+    const fn1 = vi.fn()
+    const fn2 = vi.fn()
 
     const Comp = () => [
       h(Teleport, { to: '#teleport2' }, [
@@ -329,8 +330,8 @@ describe('SSR hydration', () => {
 
   test('Teleport (disabled)', async () => {
     const msg = ref('foo')
-    const fn1 = jest.fn()
-    const fn2 = jest.fn()
+    const fn1 = vi.fn()
+    const fn2 = vi.fn()
 
     const Comp = () => [
       h('div', 'foo'),
@@ -453,7 +454,7 @@ describe('SSR hydration', () => {
   // compile SSR + client render fn from the same template & hydrate
   test('full compiler integration', async () => {
     const mounted: string[] = []
-    const log = jest.fn()
+    const log = vi.fn()
     const toggle = ref(true)
 
     const Child = {
@@ -564,7 +565,7 @@ describe('SSR hydration', () => {
     container.innerHTML = await renderToString(h(App))
     // hydrate
     const app = createSSRApp(App)
-    const handler = (app.config.errorHandler = jest.fn())
+    const handler = (app.config.errorHandler = vi.fn())
     app.mount(container)
     // assert interactions
     // parent button click
@@ -591,7 +592,7 @@ describe('SSR hydration', () => {
     container.innerHTML = await renderToString(h(App))
     // hydrate
     const app = createSSRApp(App)
-    const handler = (app.config.errorHandler = jest.fn())
+    const handler = (app.config.errorHandler = vi.fn())
     app.mount(container)
     // assert interactions
     // parent blur event
@@ -653,7 +654,7 @@ describe('SSR hydration', () => {
       }
     })
 
-    const done = jest.fn()
+    const done = vi.fn()
     const App = {
       template: `
       <Suspense @resolve="done">
@@ -710,7 +711,7 @@ describe('SSR hydration', () => {
   })
 
   test('async component', async () => {
-    const spy = jest.fn()
+    const spy = vi.fn()
     const Comp = () =>
       h(
         'button',
