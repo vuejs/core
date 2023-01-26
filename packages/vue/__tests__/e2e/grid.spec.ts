@@ -1,5 +1,5 @@
 import path from 'path'
-import { setupPuppeteer, E2E_TIMEOUT } from '../../__tests__/e2eUtils'
+import { setupPuppeteer, E2E_TIMEOUT } from './e2eUtils'
 
 interface TableData {
   name: string
@@ -24,7 +24,7 @@ describe('e2e: grid', () => {
   async function testGrid(apiType: 'classic' | 'composition') {
     const baseUrl = `file://${path.resolve(
       __dirname,
-      `../${apiType}/grid.html`
+      `../../examples/${apiType}/grid.html`
     )}`
 
     await page().goto(baseUrl)

@@ -1,5 +1,5 @@
 import path from 'path'
-import { setupPuppeteer, E2E_TIMEOUT } from '../../__tests__/e2eUtils'
+import { setupPuppeteer, E2E_TIMEOUT } from './e2eUtils'
 
 declare const globalStats: {
   label: string
@@ -73,7 +73,7 @@ describe('e2e: svg', () => {
   async function testSvg(apiType: 'classic' | 'composition') {
     const baseUrl = `file://${path.resolve(
       __dirname,
-      `../${apiType}/svg.html`
+      `../../examples/${apiType}/svg.html`
     )}`
 
     await page().goto(baseUrl)
