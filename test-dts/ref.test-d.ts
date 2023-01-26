@@ -11,7 +11,8 @@ import {
   toRefs,
   ToRefs,
   shallowReactive,
-  readonly
+  readonly,
+  describe
 } from './index'
 
 function plainType(arg: number | Ref<number>) {
