@@ -1,3 +1,6 @@
+/**
+ * @vitest-environment jsdom
+ */
 import Vue from '@vue/compat'
 import {
   DeprecationTypes,
