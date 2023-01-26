@@ -117,10 +117,10 @@ For example, to build `runtime-core` with the global build only:
 nr build runtime-core -f global
 ```
 
-Multiple formats can be specified as a comma-separated list:
+Multiple formats can be specified as a `#` separated list:
 
 ```bash
-nr build runtime-core -f esm-browser,cjs
+nr build runtime-core -f esm-browser#cjs
 ```
 
 #### Build with Source Maps

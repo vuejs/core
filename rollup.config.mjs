@@ -65,7 +65,7 @@ const outputConfigs = {
 }
 
 const defaultFormats = ['esm-bundler', 'cjs']
-const inlineFormats = process.env.FORMATS && process.env.FORMATS.split(',')
+const inlineFormats = process.env.FORMATS && process.env.FORMATS.split('#')
 const packageFormats = inlineFormats || packageOptions.formats || defaultFormats
 const packageConfigs = process.env.PROD_ONLY
   ? []
