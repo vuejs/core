@@ -57,6 +57,9 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
                 )}`
               }
             }
+            if (prop.type === NodeTypes.ATTRIBUTE && prop.name === 'ref') {
+              code += `,${prop.value?.content || ''}`
+            }
           }
         } else if (node.type === NodeTypes.INTERPOLATION) {
           code += `,${processExp(
