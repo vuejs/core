@@ -45,8 +45,8 @@ import {
 } from './apiLifecycle'
 import {
   reactive,
-  ComputedGetter,
-  WritableComputedOptions
+  ComputedGetterWithInstance,
+  WritableComputedOptionsWithInstance
 } from '@vue/reactivity'
 import {
   ComponentObjectPropsOptions,
@@ -392,7 +392,7 @@ export type ComponentOptionsMixin = ComponentOptionsBase<
 
 export type ComputedOptions = Record<
   string,
-  ComputedGetter<any> | WritableComputedOptions<any>
+  ComputedGetterWithInstance<any> | WritableComputedOptionsWithInstance<any>
 >
 
 export interface MethodOptions {
