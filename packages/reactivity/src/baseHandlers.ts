@@ -186,7 +186,8 @@ function createSetter(shallow = false) {
       isArray(target) && isIntegerKey(key)
         ? Number(key) < target.length
         : hasOwn(target, key)
-    const result = Reflect.set(target, key, value, receiver)
+    // dont't let the proxy object receive the `defineProperty` trap
+    const result = Reflect.set(target, key, value /* receiver */)
     // don't trigger if target is something up in the prototype chain of original
     if (target === toRaw(receiver)) {
       if (!hadKey) {
@@ -212,16 +213,21 @@ function deleteProperty(target: object, key: string | symbol): boolean {
 function defineProperty(
   target: object,
   key: string | symbol,
-  descriptor: PropertyDescriptor
+  descriptor: PropertyDescriptor & ThisType<any>
 ): boolean {
   const hadKey = hasOwn(target, key)
   const oldValue = (target as any)[key]
-  const newValue = Reflect.has(descriptor, 'value')
+  const newValue = hasOwn(descriptor, 'value')
     ? descriptor.value
     : descriptor.get?.()
+
   const result = Reflect.defineProperty(target, key, descriptor)
-  if (result && hadKey) {
-    trigger(target, TriggerOpTypes.SET, key, newValue, oldValue)
+  if (result) {
+    if (!hadKey) {
+      trigger(target, TriggerOpTypes.ADD, key, newValue)
+    } else {
+      trigger(target, TriggerOpTypes.SET, key, newValue, oldValue)
+    }
   }
   return result
 }
