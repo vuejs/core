@@ -242,7 +242,7 @@ export function resetTracking() {
  *
  * @param target Object holding the reactive property.
  * @param type Defines the type of access to the reactive property.
- * @param key Identifier of the reactive property.
+ * @param key Identifier of the reactive property to track.
  */
 export function track(target: object, type: TrackOpTypes, key: unknown) {
   if (shouldTrack && activeEffect) {
