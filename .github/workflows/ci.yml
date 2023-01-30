@@ -28,7 +28,10 @@ jobs:
       - run: PUPPETEER_SKIP_DOWNLOAD=1 pnpm install
 
       - name: Run unit tests
-        run: pnpm run test-unit
+        run: pnpm run test-coverage
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v3
 
   e2e-test:
     runs-on: ubuntu-latest

@@ -51,7 +51,7 @@ export default defineConfig({
     },
     coverage: {
       provider: 'istanbul',
-      reporter: ['text', 'html'],
+      reporter: ['text', 'html', 'cobertura'],
       exclude: [
         ...configDefaults.coverage.exclude!,
         // DOM transitions are tested via e2e so no coverage is collected
