@@ -97,6 +97,14 @@ describe(`runtime-dom: style patching`, () => {
     expect(el.style.getPropertyValue('left')).toBe('20px')
   })
   
+  it('clearing the border should not causes other border-related style update errors', () => {
+    const el = document.createElement('div')
+		patchProp(el, 'style', {}, {  border: '10px solid red','border-bottom': '10px solid blue' })
+		expect(el.style.borderBottom).toBe('10px solid blue')
+		patchProp(el, 'style', {  border: '10px solid red','border-bottom': '10px solid blue' }, {  'border-right': '10px solid red','border-bottom': '10px solid blue' })
+		expect(el.style.borderBottom).toBe('10px solid blue')
+  })
+
   it('should warn for trailing semicolons', () => {
     const el = document.createElement('div')
     patchProp(el, 'style', null, { color: 'red;' })
