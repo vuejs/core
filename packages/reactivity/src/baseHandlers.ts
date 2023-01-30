@@ -159,8 +159,8 @@ const set = /*#__PURE__*/ createSetter()
 const shallowSet = /*#__PURE__*/ createSetter(true)
 
 // `set` trap will always trigger `defineProperty` trap,
-// so this flag helps `defineProperty` trap to ignore it
-// and only triggers on `Object.defineProperty`.
+// this flag helps `defineProperty` trap to ignore it,
+// and only trigger effects on `Object.defineProperty` call.
 let insideSetTrap = false
 function createSetter(shallow = false) {
   return function set(
