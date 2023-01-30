@@ -91,7 +91,6 @@ const plugins = [
 ]
 
 if (format === 'cjs' || pkg.buildOptions?.enableNonBrowserBranches) {
-  console.log(nodePolyfills)
   plugins.push(nodePolyfills())
 }
 
