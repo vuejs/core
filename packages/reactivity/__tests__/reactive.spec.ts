@@ -280,12 +280,32 @@ describe('reactivity/reactive', () => {
     effect(trigger)
     expect(trigger).toHaveBeenCalledTimes(1)
 
+    // using value
+    Object.defineProperty(foo, 'bar', {
+      value: 123,
+      configurable: true
+    })
+
+    expect(trigger).toHaveBeenCalledTimes(2)
+    expect(foo.bar).toBe(123)
+
+    // using getter
     Object.defineProperty(foo, 'bar', {
       get() {
-        return 666
-      }
+        return 456
+      },
+      configurable: true
     })
-    expect(trigger).toHaveBeenCalledTimes(2)
-    expect(foo.bar).toBe(666)
+    expect(trigger).toHaveBeenCalledTimes(3)
+    expect(foo.bar).toBe(456)
+
+    // should not trigger on same value
+    Object.defineProperty(foo, 'bar', {
+      get() {
+        return 400 + 56
+      },
+      configurable: true
+    })
+    expect(trigger).toHaveBeenCalledTimes(3)
   })
 })

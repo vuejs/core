@@ -226,7 +226,8 @@ function defineProperty(
     if (!hadKey) {
       trigger(target, TriggerOpTypes.ADD, key, newValue)
     } else {
-      trigger(target, TriggerOpTypes.SET, key, newValue, oldValue)
+      oldValue !== newValue &&
+        trigger(target, TriggerOpTypes.SET, key, newValue, oldValue)
     }
   }
   return result
