@@ -108,8 +108,9 @@ export class EffectScope {
 }
 
 /**
- * Creates a new effect scope that allows automatic collection and disposal of
- * a group of effects.
+ * Creates an effect scope object which can capture the reactive effects
+ * (i.e. computed and watchers) created within it so that these effects
+ * can be disposed of together.
  *
  * @see {@link https://github.com/vuejs/rfcs/pull/212}
  * @param detached Can be used to create a "detached" effect scope.
