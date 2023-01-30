@@ -158,6 +158,10 @@ function createGetter(isReadonly = false, shallow = false) {
 const set = /*#__PURE__*/ createSetter()
 const shallowSet = /*#__PURE__*/ createSetter(true)
 
+// `set` trap will always trigger `defineProperty` trap,
+// so this flag helps `defineProperty` trap to ignore it
+// and only triggers on `Object.defineProperty`.
+let insideSetTrap = false
 function createSetter(shallow = false) {
   return function set(
     target: object,
@@ -165,6 +169,8 @@ function createSetter(shallow = false) {
     value: unknown,
     receiver: object
   ): boolean {
+    insideSetTrap = true
+
     let oldValue = (target as any)[key]
     if (isReadonly(oldValue) && isRef(oldValue) && !isRef(value)) {
       return false
@@ -186,8 +192,7 @@ function createSetter(shallow = false) {
       isArray(target) && isIntegerKey(key)
         ? Number(key) < target.length
         : hasOwn(target, key)
-    // dont't let the proxy object receive the `defineProperty` trap
-    const result = Reflect.set(target, key, value /* receiver */)
+    const result = Reflect.set(target, key, value, receiver)
     // don't trigger if target is something up in the prototype chain of original
     if (target === toRaw(receiver)) {
       if (!hadKey) {
@@ -196,6 +201,9 @@ function createSetter(shallow = false) {
         trigger(target, TriggerOpTypes.SET, key, value, oldValue)
       }
     }
+
+    insideSetTrap = false
+
     return result
   }
 }
@@ -217,17 +225,15 @@ function defineProperty(
 ): boolean {
   const hadKey = hasOwn(target, key)
   const oldValue = (target as any)[key]
-  const newValue = hasOwn(descriptor, 'value')
-    ? descriptor.value
-    : descriptor.get?.()
-
   const result = Reflect.defineProperty(target, key, descriptor)
-  if (result) {
+
+  if (result && !insideSetTrap) {
+    const newValue = (target as any)[key]
+
     if (!hadKey) {
       trigger(target, TriggerOpTypes.ADD, key, newValue)
-    } else {
-      oldValue !== newValue &&
-        trigger(target, TriggerOpTypes.SET, key, newValue, oldValue)
+    } else if (hasChanged(newValue, oldValue)) {
+      trigger(target, TriggerOpTypes.SET, key, newValue, oldValue)
     }
   }
   return result
