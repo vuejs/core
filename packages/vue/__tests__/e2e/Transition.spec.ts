@@ -21,26 +21,13 @@ describe('e2e: Transition', () => {
       })
     })
 
-  // beforeEach(async () => {
-  // await page().goto(baseUrl)
-  // await page().waitForSelector('#app')
-  // })
-
-  // workaround for https://github.com/vitest-dev/vitest/issues/2756
-  function runTest(desc: string, runner: any, timeout?: number) {
-    test(
-      desc,
-      async () => {
-        await page().goto(baseUrl)
-        await page().waitForSelector('#app')
-        await runner()
-      },
-      timeout
-    )
-  }
+  beforeEach(async () => {
+    await page().goto(baseUrl)
+    await page().waitForSelector('#app')
+  })
 
   describe('transition with v-if', () => {
-    runTest(
+    test(
       'basic transition',
       async () => {
         await page().goto(baseUrl)
@@ -98,7 +85,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    runTest(
+    test(
       'named transition',
       async () => {
         await page().evaluate(() => {
@@ -154,7 +141,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    runTest(
+    test(
       'custom transition classes',
       async () => {
         await page().evaluate(() => {
@@ -215,7 +202,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    runTest(
+    test(
       'transition with dynamic name',
       async () => {
         await page().evaluate(() => {
@@ -277,7 +264,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    runTest(
+    test(
       'transition events without appear',
       async () => {
         const beforeLeaveSpy = vi.fn()
@@ -381,7 +368,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    runTest(
+    test(
       'events with arguments',
       async () => {
         const beforeLeaveSpy = vi.fn()
@@ -497,7 +484,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    runTest('onEnterCancelled', async () => {
+    test('onEnterCancelled', async () => {
       const enterCancelledSpy = vi.fn()
 
       await page().exposeFunction('enterCancelledSpy', enterCancelledSpy)
@@ -559,7 +546,7 @@ describe('e2e: Transition', () => {
       expect(await html('#container')).toBe('<!--v-if-->')
     })
 
-    runTest(
+    test(
       'transition on appear',
       async () => {
         const appearClass = await page().evaluate(async () => {
@@ -635,7 +622,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    runTest(
+    test(
       'transition events with appear',
       async () => {
         const onLeaveSpy = vi.fn()
@@ -783,7 +770,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    runTest(
+    test(
       'css: false',
       async () => {
         const onBeforeEnterSpy = vi.fn()
@@ -861,7 +848,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    runTest(
+    test(
       'no transition detected',
       async () => {
         await page().evaluate(() => {
@@ -903,7 +890,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    runTest(
+    test(
       'animations',
       async () => {
         await page().evaluate(() => {
@@ -955,7 +942,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    runTest(
+    test(
       'explicit transition type',
       async () => {
         await page().evaluate(() => {
@@ -1025,7 +1012,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    runTest(
+    test(
       'transition on SVG elements',
       async () => {
         await page().evaluate(() => {
@@ -1096,7 +1083,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    runTest(
+    test(
       'custom transition higher-order component',
       async () => {
         await page().evaluate(() => {
@@ -1153,7 +1140,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    runTest(
+    test(
       'transition on child components with empty root node',
       async () => {
         await page().evaluate(() => {
@@ -1232,7 +1219,7 @@ describe('e2e: Transition', () => {
 
   describe('transition with Suspense', () => {
     // #1583
-    runTest(
+    test(
       'async component transition inside Suspense',
       async () => {
         const onLeaveSpy = vi.fn()
@@ -1326,7 +1313,7 @@ describe('e2e: Transition', () => {
     )
 
     // #1689
-    runTest(
+    test(
       'static node transition inside Suspense',
       async () => {
         await page().evaluate(() => {
@@ -1384,7 +1371,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    runTest(
+    test(
       'out-in mode with Suspense',
       async () => {
         const onLeaveSpy = vi.fn()
@@ -1451,7 +1438,7 @@ describe('e2e: Transition', () => {
     )
 
     // #3963
-    runTest(
+    test(
       'Suspense fallback should work with transition',
       async () => {
         await page().evaluate(() => {
@@ -1515,7 +1502,7 @@ describe('e2e: Transition', () => {
   })
 
   describe('transition with v-show', () => {
-    runTest(
+    test(
       'named transition with v-show',
       async () => {
         await page().evaluate(() => {
@@ -1574,7 +1561,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    runTest(
+    test(
       'transition events with v-show',
       async () => {
         const beforeLeaveSpy = vi.fn()
@@ -1680,7 +1667,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    runTest(
+    test(
       'onLeaveCancelled (v-show only)',
       async () => {
         const onLeaveCancelledSpy = vi.fn()
@@ -1742,7 +1729,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    runTest(
+    test(
       'transition on appear with v-show',
       async () => {
         const beforeEnterSpy = vi.fn()
@@ -1848,7 +1835,7 @@ describe('e2e: Transition', () => {
     )
 
     // #4845
-    runTest(
+    test(
       'transition events should not call onEnter with v-show false',
       async () => {
         const beforeEnterSpy = vi.fn()
@@ -1922,7 +1909,7 @@ describe('e2e: Transition', () => {
   })
 
   describe('explicit durations', () => {
-    runTest(
+    test(
       'single value',
       async () => {
         await page().evaluate(duration => {
@@ -1978,7 +1965,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    runTest(
+    test(
       'enter with explicit durations',
       async () => {
         await page().evaluate(duration => {
@@ -2034,7 +2021,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    runTest(
+    test(
       'leave with explicit durations',
       async () => {
         await page().evaluate(duration => {
@@ -2090,7 +2077,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    runTest(
+    test(
       'separate enter and leave',
       async () => {
         await page().evaluate(duration => {
@@ -2149,7 +2136,7 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    runTest(
+    test(
       'warn invalid durations',
       async () => {
         createApp({
@@ -2187,7 +2174,7 @@ describe('e2e: Transition', () => {
     )
   })
 
-  runTest('warn when used on multiple elements', async () => {
+  test('warn when used on multiple elements', async () => {
     createApp({
       render() {
         return h(Transition, null, {
@@ -2200,7 +2187,7 @@ describe('e2e: Transition', () => {
     ).toHaveBeenWarned()
   })
 
-  runTest('warn when invalid transition mode', () => {
+  test('warn when invalid transition mode', () => {
     createApp({
       template: `
         <div id="container">
@@ -2214,7 +2201,7 @@ describe('e2e: Transition', () => {
   })
 
   // #3227
-  runTest(`HOC w/ merged hooks`, async () => {
+  test(`HOC w/ merged hooks`, async () => {
     const innerSpy = vi.fn()
     const outerSpy = vi.fn()
 
@@ -2253,7 +2240,7 @@ describe('e2e: Transition', () => {
     expect(root.innerHTML).toBe(`<!---->`)
   })
 
-  runTest(
+  test(
     'should work with dev root fragment',
     async () => {
       await page().evaluate(() => {

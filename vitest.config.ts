@@ -46,6 +46,9 @@ export default defineConfig({
     environmentMatchGlobs: [
       ['packages/{vue,vue-compat,runtime-dom}/**', 'jsdom']
     ],
+    sequence: {
+      hooks: 'list'
+    },
     coverage: {
       provider: 'istanbul',
       reporter: ['text', 'html'],

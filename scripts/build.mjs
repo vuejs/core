@@ -47,6 +47,7 @@ async function run() {
   if (isRelease) {
     // remove build cache for release builds to avoid outdated enum values
     await fs.rm(path.resolve(__dirname, '../node_modules/.rts2_cache'), {
+      force: true,
       recursive: true
     })
   }
