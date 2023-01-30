@@ -209,6 +209,23 @@ function deleteProperty(target: object, key: string | symbol): boolean {
   return result
 }
 
+function defineProperty(
+  target: object,
+  key: string | symbol,
+  descriptor: PropertyDescriptor
+): boolean {
+  const hadKey = hasOwn(target, key)
+  const oldValue = (target as any)[key]
+  const newValue = Reflect.has(descriptor, 'value')
+    ? descriptor.value
+    : descriptor.get?.()
+  const result = Reflect.defineProperty(target, key, descriptor)
+  if (result && hadKey) {
+    trigger(target, TriggerOpTypes.SET, key, newValue, oldValue)
+  }
+  return result
+}
+
 function has(target: object, key: string | symbol): boolean {
   const result = Reflect.has(target, key)
   if (!isSymbol(key) || !builtInSymbols.has(key)) {
@@ -226,6 +243,7 @@ export const mutableHandlers: ProxyHandler<object> = {
   get,
   set,
   deleteProperty,
+  defineProperty,
   has,
   ownKeys
 }

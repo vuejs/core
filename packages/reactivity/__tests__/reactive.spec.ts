@@ -272,4 +272,20 @@ describe('reactivity/reactive', () => {
     const observed = reactive(original)
     expect(isReactive(observed)).toBe(false)
   })
+  test('should observe redefined property', () => {
+    const foo = reactive({ bar: 0 })
+    const trigger = vi.fn(() => {
+      foo.bar
+    })
+    effect(trigger)
+    expect(trigger).toHaveBeenCalledTimes(1)
+
+    Object.defineProperty(foo, 'bar', {
+      get() {
+        return 666
+      }
+    })
+    expect(trigger).toHaveBeenCalledTimes(2)
+    expect(foo.bar).toBe(666)
+  })
 })
