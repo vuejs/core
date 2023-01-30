@@ -332,7 +332,7 @@ describe('api: defineAsyncComponent', () => {
 
     await timeout(1)
     expect(handler).toHaveBeenCalled()
-    expect(handler.mock.calls[0][0].message).toMatch(
+    expect((handler.mock.calls[0][0] as any).message).toMatch(
       `Async component timed out after 1ms.`
     )
     expect(serializeInner(root)).toBe('<!---->')
@@ -430,7 +430,7 @@ describe('api: defineAsyncComponent', () => {
 
     await timeout(16)
     expect(handler).toHaveBeenCalled()
-    expect(handler.mock.calls[0][0].message).toMatch(
+    expect((handler.mock.calls[0][0] as any).message).toMatch(
       `Async component timed out after 16ms.`
     )
     // should still display loading
