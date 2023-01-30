@@ -125,7 +125,7 @@ export type ShallowRef<T = any> = Ref<T> & { [ShallowRefMarker]?: true }
  * isReactive(foo.value) // false
  * ```
  *
- * @see {@link https://v3.vuejs.org/guide/reactivity-fundamentals.html#creating-standalone-reactive-values-as-refs}
+ * @see {@link https://vuejs.org/guide/essentials/reactivity-fundamentals.html}
  *
  * @param value The "inner value" for the shallow ref.
  */
