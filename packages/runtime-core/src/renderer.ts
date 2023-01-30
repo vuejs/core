@@ -183,7 +183,8 @@ type MountChildrenFn = (
   isSVG: boolean,
   slotScopeIds: string[] | null,
   optimized: boolean,
-  start?: number
+  start?: number,
+  end?: number
 ) => void
 
 type PatchChildrenFn = (
@@ -234,7 +235,8 @@ type UnmountChildrenFn = (
   parentSuspense: SuspenseBoundary | null,
   doRemove?: boolean,
   optimized?: boolean,
-  start?: number
+  start?: number,
+  end?: number
 ) => void
 
 export type MountComponentFn = (
@@ -769,9 +771,10 @@ function baseCreateRenderer(
     isSVG,
     slotScopeIds,
     optimized,
-    start = 0
+    start = 0,
+    end = children.length
   ) => {
-    for (let i = start; i < children.length; i++) {
+    for (let i = start; i < end; i++) {
       const child = (children[i] = optimized
         ? cloneIfMounted(children[i] as VNode)
         : normalizeVNode(children[i]))
@@ -1828,22 +1831,18 @@ function baseCreateRenderer(
       if (i <= e2) {
         const nextPos = e2 + 1
         const anchor = nextPos < l2 ? (c2[nextPos] as VNode).el : parentAnchor
-        while (i <= e2) {
-          patch(
-            null,
-            (c2[i] = optimized
-              ? cloneIfMounted(c2[i] as VNode)
-              : normalizeVNode(c2[i])),
-            container,
-            anchor,
-            parentComponent,
-            parentSuspense,
-            isSVG,
-            slotScopeIds,
-            optimized
-          )
-          i++
-        }
+        mountChildren(
+          c2,
+          container,
+          anchor,
+          parentComponent,
+          parentSuspense,
+          isSVG,
+          slotScopeIds,
+          optimized,
+          i,
+          nextPos
+        )
       }
     }
 
@@ -1855,10 +1854,15 @@ function baseCreateRenderer(
     // (b c)
     // i = 0, e1 = 0, e2 = -1
     else if (i > e2) {
-      while (i <= e1) {
-        unmount(c1[i], parentComponent, parentSuspense, true)
-        i++
-      }
+      unmountChildren(
+        c1,
+        parentComponent,
+        parentSuspense,
+        true,
+        false,
+        i,
+        e1 + 1
+      )
     }
 
     // 5. unknown sequence
@@ -1907,8 +1911,16 @@ function baseCreateRenderer(
         const prevChild = c1[i]
         if (patched >= toBePatched) {
           // all new children have been patched so this can only be a removal
-          unmount(prevChild, parentComponent, parentSuspense, true)
-          continue
+          unmountChildren(
+            c1,
+            parentComponent,
+            parentSuspense,
+            true,
+            false,
+            i,
+            e1 + 1
+          )
+          break
         }
         let newIndex
         if (prevChild.key != null) {
@@ -2298,9 +2310,10 @@ function baseCreateRenderer(
     parentSuspense,
     doRemove = false,
     optimized = false,
-    start = 0
+    start = 0,
+    end = children.length
   ) => {
-    for (let i = start; i < children.length; i++) {
+    for (let i = start; i < end; i++) {
       unmount(children[i], parentComponent, parentSuspense, doRemove, optimized)
     }
   }
