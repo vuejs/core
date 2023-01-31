@@ -1,7 +1,10 @@
-const fs = require('fs')
-const chalk = require('chalk')
+import fs from 'node:fs'
+import chalk from 'chalk'
+import { createRequire } from 'node:module'
 
-const targets = (exports.targets = fs.readdirSync('packages').filter(f => {
+const require = createRequire(import.meta.url)
+
+export const targets = fs.readdirSync('packages').filter(f => {
   if (!fs.statSync(`packages/${f}`).isDirectory()) {
     return false
   }
@@ -10,9 +13,9 @@ const targets = (exports.targets = fs.readdirSync('packages').filter(f => {
     return false
   }
   return true
-}))
+})
 
-exports.fuzzyMatchTarget = (partialTargets, includeAllMatching) => {
+export function fuzzyMatchTarget(partialTargets, includeAllMatching) {
   const matched = []
   partialTargets.forEach(partialTarget => {
     for (const target of targets) {

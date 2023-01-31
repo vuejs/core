@@ -1,3 +1,7 @@
+/**
+ * @vitest-environment jsdom
+ */
+import { vi, type Mock } from 'vitest'
 import {
   h,
   nodeOps,
@@ -140,11 +144,11 @@ describe('api: options', () => {
     function returnThis(this: any) {
       return this
     }
-    const spyA = jest.fn(returnThis)
-    const spyB = jest.fn(returnThis)
-    const spyC = jest.fn(returnThis)
-    const spyD = jest.fn(returnThis)
-    const spyE = jest.fn(returnThis)
+    const spyA = vi.fn(returnThis)
+    const spyB = vi.fn(returnThis)
+    const spyC = vi.fn(returnThis)
+    const spyD = vi.fn(returnThis)
+    const spyE = vi.fn(returnThis)
 
     let ctx: any
     const Comp = {
@@ -186,9 +190,9 @@ describe('api: options', () => {
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
 
-    function assertCall(spy: jest.Mock, callIndex: number, args: any[]) {
+    function assertCall(spy: Mock, callIndex: number, args: any[]) {
       expect(spy.mock.calls[callIndex].slice(0, 2)).toMatchObject(args)
-      expect(spy).toHaveReturnedWith(ctx)
+      expect(spy.mock.results[callIndex].value).toBe(ctx)
     }
 
     ctx.foo++
@@ -222,9 +226,9 @@ describe('api: options', () => {
     function returnThis(this: any) {
       return this
     }
-    const spyA = jest.fn(returnThis)
-    const spyB = jest.fn(returnThis)
-    const spyC = jest.fn(returnThis)
+    const spyA = vi.fn(returnThis)
+    const spyB = vi.fn(returnThis)
+    const spyC = vi.fn(returnThis)
 
     let ctx: any
     const Comp = {
@@ -259,9 +263,9 @@ describe('api: options', () => {
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
 
-    function assertCall(spy: jest.Mock, callIndex: number, args: any[]) {
+    function assertCall(spy: Mock, callIndex: number, args: any[]) {
       expect(spy.mock.calls[callIndex].slice(0, 2)).toMatchObject(args)
-      expect(spy).toHaveReturnedWith(ctx)
+      expect(spy.mock.results[callIndex].value).toBe(ctx)
     }
 
     ctx.foo++
@@ -1120,7 +1124,7 @@ describe('api: options', () => {
       methods: {}
     }
 
-    const watchSpy = jest.fn()
+    const watchSpy = vi.fn()
     const mixin2 = {
       watch: {
         mixin3Data: watchSpy

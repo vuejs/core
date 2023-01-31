@@ -7,7 +7,8 @@ import {
   isReactive,
   ReactiveFlags,
   EffectScheduler,
-  DebuggerOptions
+  DebuggerOptions,
+  getCurrentScope
 } from '@vue/reactivity'
 import { SchedulerJob, queueJob } from './scheduler'
 import {
@@ -197,7 +198,9 @@ function doWatch(
     )
   }
 
-  const instance = currentInstance
+  const instance =
+    getCurrentScope() === currentInstance?.scope ? currentInstance : null
+  // const instance = currentInstance
   let getter: () => any
   let forceTrigger = false
   let isMultiSource = false
@@ -329,11 +332,11 @@ function doWatch(
         callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
           newValue,
           // pass undefined as the old value when it's changed for the first time
-          oldValue === INITIAL_WATCHER_VALUE 
+          oldValue === INITIAL_WATCHER_VALUE
             ? undefined
-            : (isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE)
-              ? []
-              : oldValue,
+            : isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE
+            ? []
+            : oldValue,
           onCleanup
         ])
         oldValue = newValue

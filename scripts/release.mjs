@@ -1,15 +1,19 @@
-const args = require('minimist')(process.argv.slice(2))
-const fs = require('fs')
-const path = require('path')
-const chalk = require('chalk')
-const semver = require('semver')
-const currentVersion = require('../package.json').version
-const { prompt } = require('enquirer')
-const execa = require('execa')
+// @ts-check
+import minimist from 'minimist'
+import fs from 'node:fs'
+import path from 'node:path'
+import chalk from 'chalk'
+import semver from 'semver'
+import enquirer from 'enquirer'
+import execa from 'execa'
+import { createRequire } from 'node:module'
+import { fileURLToPath } from 'node:url'
 
-const preId =
-  args.preid ||
-  (semver.prerelease(currentVersion) && semver.prerelease(currentVersion)[0])
+const { prompt } = enquirer
+const currentVersion = createRequire(import.meta.url)('../package.json').version
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const args = minimist(process.argv.slice(2))
+const preId = args.preid || semver.prerelease(currentVersion)?.[0]
 const isDryRun = args.dry
 const skipTests = args.skipTests
 const skipBuild = args.skipBuild
@@ -41,6 +45,7 @@ async function main() {
 
   if (!targetVersion) {
     // no explicit version, offer suggestions
+    // @ts-ignore
     const { release } = await prompt({
       type: 'select',
       name: 'release',
@@ -49,14 +54,14 @@ async function main() {
     })
 
     if (release === 'custom') {
-      targetVersion = (
-        await prompt({
-          type: 'input',
-          name: 'version',
-          message: 'Input custom version',
-          initial: currentVersion
-        })
-      ).version
+      const result = await prompt({
+        type: 'input',
+        name: 'version',
+        message: 'Input custom version',
+        initial: currentVersion
+      })
+      // @ts-ignore
+      targetVersion = result.version
     } else {
       targetVersion = release.match(/\((.*)\)/)[1]
     }
@@ -66,6 +71,7 @@ async function main() {
     throw new Error(`invalid target version: ${targetVersion}`)
   }
 
+  // @ts-ignore
   const { yes } = await prompt({
     type: 'confirm',
     name: 'yes',
