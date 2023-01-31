@@ -163,14 +163,12 @@ const shallowSet = /*#__PURE__*/ createSetter(true)
 // and only trigger effects on `Object.defineProperty` call.
 let insideSetTrap = false
 function createSetter(shallow = false) {
-  return function set(
+  function set(
     target: object,
     key: string | symbol,
     value: unknown,
     receiver: object
   ): boolean {
-    insideSetTrap = true
-
     let oldValue = (target as any)[key]
     if (isReadonly(oldValue) && isRef(oldValue) && !isRef(value)) {
       return false
@@ -201,9 +199,13 @@ function createSetter(shallow = false) {
         trigger(target, TriggerOpTypes.SET, key, value, oldValue)
       }
     }
+    return result
+  }
 
+  return (...args: Parameters<typeof set>) => {
+    insideSetTrap = true
+    const result = set(...args)
     insideSetTrap = false
-
     return result
   }
 }
