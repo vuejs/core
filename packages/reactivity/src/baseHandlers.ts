@@ -225,6 +225,19 @@ function defineProperty(
   key: string | symbol,
   descriptor: PropertyDescriptor & ThisType<any>
 ): boolean {
+   if (
+    (Reflect.has(descriptor, 'set') || Reflect.has(descriptor, 'value')) &&
+    (readonlyMap.has(target) || shallowReadonlyMap.has(target))
+  ) {
+    if (__DEV__) {
+      warn(
+        `Set operation on key "${String(key)}" failed: target is readonly.`,
+        target
+      )
+    }
+    return true
+  }
+    
   const hadKey = hasOwn(target, key)
   const oldValue = (target as any)[key]
   const result = Reflect.defineProperty(target, key, descriptor)
