@@ -1,5 +1,5 @@
 import { ref, isRef } from '../src/ref'
-import { reactive, isReactive, toRaw, markRaw } from '../src/reactive'
+import { reactive, isReactive, toRaw, markRaw, readonly } from '../src/reactive'
 import { computed } from '../src/computed'
 import { effect } from '../src/effect'
 
@@ -271,5 +271,80 @@ describe('reactivity/reactive', () => {
     }
     const observed = reactive(original)
     expect(isReactive(observed)).toBe(false)
+  })
+
+  test('should observe redefined property', () => {
+    const foo = reactive({ bar: 0 })
+    const trigger = vi.fn(() => {
+      foo.bar
+    })
+    effect(trigger)
+    expect(trigger).toHaveBeenCalledTimes(1)
+
+    // using value
+    Object.defineProperty(foo, 'bar', {
+      value: 123,
+      configurable: true
+    })
+
+    expect(trigger).toHaveBeenCalledTimes(2)
+    expect(foo.bar).toBe(123)
+
+    // using getter
+    Object.defineProperty(foo, 'bar', {
+      get() {
+        return 456
+      },
+      configurable: true
+    })
+    expect(trigger).toHaveBeenCalledTimes(3)
+    expect(foo.bar).toBe(456)
+
+    // should not trigger on same value
+    Object.defineProperty(foo, 'bar', {
+      get() {
+        return 400 + 56
+      },
+      configurable: true
+    })
+    expect(trigger).toHaveBeenCalledTimes(3)
+  })
+
+  test('should not change value of redefined property of readonly', () => {
+    const original = { bar: 0, cat: 0 }
+    const foo = readonly(original)
+    const trigger = vi.fn(() => {
+      foo.bar
+      foo.cat
+    })
+
+    effect(trigger)
+    expect(trigger).toHaveBeenCalledTimes(1)
+
+    // using value
+    Object.defineProperty(foo, 'bar', {
+      value: 1
+    })
+
+    expect(
+      '[Vue warn] Set operation on key "bar" failed: target is readonly.'
+    ).toHaveBeenWarned()
+
+    expect(trigger).toHaveBeenCalledTimes(1)
+    expect(foo.bar).toBe(0)
+
+    // using setter
+    Object.defineProperty(foo, 'cat', {
+      set() {
+        original.cat = 2
+      }
+    })
+
+    expect(
+      '[Vue warn] Set operation on key "cat" failed: target is readonly.'
+    ).toHaveBeenWarned()
+
+    expect(trigger).toHaveBeenCalledTimes(1)
+    expect(foo.cat).toBe(0)
   })
 })
