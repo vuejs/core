@@ -308,4 +308,40 @@ describe('reactivity/reactive', () => {
     })
     expect(trigger).toHaveBeenCalledTimes(3)
   })
+  
+  test('should not change value of redefined property of readonly', () => {
+    const original = { bar: 0, cat: 0 }
+    const foo = readonly(original)
+    const trigger = vi.fn(() => {
+      foo.bar
+      foo.cat
+    })
+
+    effect(trigger)
+    expect(trigger).toHaveBeenCalledTimes(1)
+
+    // using value
+    Object.defineProperty(foo, 'bar', {
+      value: 1
+    })
+
+    expect(
+      '[Vue warn] Set operation on key "bar" failed: target is readonly.'
+    ).toHaveBeenWarned()
+    expect(trigger).toHaveBeenCalledTimes(1)
+    expect(foo.bar).toBe(0)
+
+    // using setter
+    Object.defineProperty(foo, 'cat', {
+      set() {
+        original.cat = 2
+      }
+    })
+
+    expect(
+      '[Vue warn] Set operation on key "cat" failed: target is readonly.'
+    ).toHaveBeenWarned()
+    expect(trigger).toHaveBeenCalledTimes(1)
+    expect(foo.cat).toBe(0)
+  }) 
 })
