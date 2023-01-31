@@ -329,7 +329,6 @@ describe('reactivity/reactive', () => {
     expect(
       '[Vue warn] Set operation on key "bar" failed: target is readonly.'
     ).toHaveBeenWarned()
-
     expect(trigger).toHaveBeenCalledTimes(1)
     expect(foo.bar).toBe(0)
 
@@ -343,7 +342,6 @@ describe('reactivity/reactive', () => {
     expect(
       '[Vue warn] Set operation on key "cat" failed: target is readonly.'
     ).toHaveBeenWarned()
-
     expect(trigger).toHaveBeenCalledTimes(1)
     expect(foo.cat).toBe(0)
   })
