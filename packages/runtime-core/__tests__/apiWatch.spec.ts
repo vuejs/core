@@ -930,7 +930,7 @@ describe('api: watch', () => {
   test('should force trigger on triggerRef with toRef from reactive', async () => {
     const foo = reactive({ bar: 1 })
     const bar = toRef(foo, 'bar')
-    const spy = jest.fn()
+    const spy = vi.fn()
 
     watchEffect(() => {
       bar.value
