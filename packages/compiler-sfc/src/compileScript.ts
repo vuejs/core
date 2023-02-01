@@ -136,6 +136,12 @@ export interface ImportBinding {
   isUsedInTemplate: boolean
 }
 
+type FromNormalScript<T> = T & { __fromNormalScript?: boolean | null }
+type PropsDeclType = FromNormalScript<TSTypeLiteral | TSInterfaceBody>
+type EmitsDeclType = FromNormalScript<
+  TSFunctionType | TSTypeLiteral | TSInterfaceBody
+>
+
 /**
  * Compile `<script setup>`
  * It requires the whole SFC descriptor because we need to handle and merge
@@ -287,15 +293,11 @@ export function compileScript(
   let propsRuntimeDefaults: ObjectExpression | undefined
   let propsDestructureDecl: Node | undefined
   let propsDestructureRestId: string | undefined
-  let propsTypeDecl: TSTypeLiteral | TSInterfaceBody | undefined
+  let propsTypeDecl: PropsDeclType | undefined
   let propsTypeDeclRaw: Node | undefined
   let propsIdentifier: string | undefined
   let emitsRuntimeDecl: Node | undefined
-  let emitsTypeDecl:
-    | TSFunctionType
-    | TSTypeLiteral
-    | TSInterfaceBody
-    | undefined
+  let emitsTypeDecl: EmitsDeclType | undefined
   let emitsTypeDeclRaw: Node | undefined
   let emitIdentifier: string | undefined
   let hasAwait = false
@@ -436,7 +438,7 @@ export function compileScript(
       propsTypeDecl = resolveQualifiedType(
         propsTypeDeclRaw,
         node => node.type === 'TSTypeLiteral'
-      ) as TSTypeLiteral | TSInterfaceBody | undefined
+      ) as PropsDeclType | undefined
 
       if (!propsTypeDecl) {
         error(
@@ -567,7 +569,7 @@ export function compileScript(
       emitsTypeDecl = resolveQualifiedType(
         emitsTypeDeclRaw,
         node => node.type === 'TSFunctionType' || node.type === 'TSTypeLiteral'
-      ) as TSFunctionType | TSTypeLiteral | TSInterfaceBody | undefined
+      ) as EmitsDeclType | undefined
 
       if (!emitsTypeDecl) {
         error(
@@ -667,7 +669,7 @@ export function compileScript(
   function resolveQualifiedType(
     node: Node,
     qualifier: (node: Node) => boolean
-  ) {
+  ): Node | undefined {
     if (qualifier(node)) {
       return node
     }
@@ -677,7 +679,8 @@ export function compileScript(
     ) {
       const refName = node.typeName.name
       const body = getAstBody()
-      for (const node of body) {
+      for (let i = 0; i < body.length; i++) {
+        const node = body[i]
         let qualified = isQualifiedType(
           node,
           qualifier,
@@ -690,6 +693,8 @@ export function compileScript(
             filterExtendsType(extendsTypes, bodies)
             qualified.body = bodies
           }
+          ;(qualified as FromNormalScript<Node>).__fromNormalScript =
+            scriptAst && i >= scriptSetupAst.body.length
           return qualified
         }
       }
@@ -877,8 +882,10 @@ export function compileScript(
     }
   }
 
-  function genSetupPropsType(node: TSTypeLiteral | TSInterfaceBody) {
-    const scriptSetupSource = scriptSetup!.content
+  function genSetupPropsType(node: PropsDeclType) {
+    const scriptSource = node.__fromNormalScript
+      ? script!.content
+      : scriptSetup!.content
     if (hasStaticWithDefaults()) {
       // if withDefaults() is used, we need to remove the optional flags
       // on props that have default values
@@ -903,20 +910,19 @@ export function compileScript(
             res +=
               m.key.name +
               (m.type === 'TSMethodSignature' ? '()' : '') +
-              scriptSetupSource.slice(
+              scriptSource.slice(
                 m.typeAnnotation.start!,
                 m.typeAnnotation.end!
               ) +
               ', '
           } else {
-            res +=
-              scriptSetupSource.slice(m.start!, m.typeAnnotation.end!) + `, `
+            res += scriptSource.slice(m.start!, m.typeAnnotation.end!) + `, `
           }
         }
       }
       return (res.length ? res.slice(0, -2) : res) + ` }`
     } else {
-      return scriptSetupSource.slice(node.start!, node.end!)
+      return scriptSource.slice(node.start!, node.end!)
     }
   }
 
@@ -1480,7 +1486,10 @@ export function compileScript(
   if (destructureElements.length) {
     args += `, { ${destructureElements.join(', ')} }`
     if (emitsTypeDecl) {
-      args += `: { emit: (${scriptSetup.content.slice(
+      const content = emitsTypeDecl.__fromNormalScript
+        ? script!.content
+        : scriptSetup.content
+      args += `: { emit: (${content.slice(
         emitsTypeDecl.start!,
         emitsTypeDecl.end!
       )}), expose: any, slots: any, attrs: any }`
