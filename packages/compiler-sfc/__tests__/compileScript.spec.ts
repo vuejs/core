@@ -1121,6 +1121,22 @@ const emit = defineEmits(['a', 'b'])
       })
     })
 
+    test('withDefaults (static) + normal script', () => {
+      const { content } = compile(`
+      <script lang="ts">
+        interface Props {
+          a?: string;
+        }
+      </script>
+      <script setup lang="ts">
+        const props = withDefaults(defineProps<Props>(), {
+          a: "a",
+        });
+      </script>
+      `)
+      assertCode(content)
+    })
+    
     // #7111
     test('withDefaults (static) w/ production mode', () => {
       const { content } = compile(
@@ -1253,6 +1269,21 @@ const emit = defineEmits(['a', 'b'])
       const { content } = compile(`
       <script setup lang="ts">
       export interface Emits { (e: 'foo' | 'bar'): void }
+      const emit = defineEmits<Emits>()
+      </script>
+      `)
+      assertCode(content)
+      expect(content).toMatch(`emit: ({ (e: 'foo' | 'bar'): void }),`)
+      expect(content).toMatch(`emits: ["foo", "bar"]`)
+    })
+
+    
+    test('defineEmits w/ type from normal script', () => {
+      const { content } = compile(`
+      <script lang="ts">
+        export interface Emits { (e: 'foo' | 'bar'): void }
+      </script>
+      <script setup lang="ts">
       const emit = defineEmits<Emits>()
       </script>
       `)
