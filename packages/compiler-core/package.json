@@ -32,12 +32,12 @@
   },
   "homepage": "https://github.com/vuejs/core/tree/main/packages/compiler-core#readme",
   "dependencies": {
-    "@babel/parser": "^7.20.5",
+    "@babel/parser": "^7.20.13",
     "@vue/shared": "3.2.45",
     "estree-walker": "^2.0.2",
     "source-map": "^0.6.1"
   },
   "devDependencies": {
-    "@babel/types": "^7.20.5"
+    "@babel/types": "^7.20.7"
   }
 }
