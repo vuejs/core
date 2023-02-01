@@ -1,5 +1,5 @@
 import path from 'path'
-import { setupPuppeteer, E2E_TIMEOUT } from '../../__tests__/e2eUtils'
+import { setupPuppeteer, E2E_TIMEOUT } from './e2eUtils'
 import mocks from './commits.mock'
 
 describe('e2e: commits', () => {
@@ -8,7 +8,7 @@ describe('e2e: commits', () => {
   async function testCommits(apiType: 'classic' | 'composition') {
     const baseUrl = `file://${path.resolve(
       __dirname,
-      `../${apiType}/commits.html`
+      `../../examples/${apiType}/commits.html`
     )}`
 
     // intercept and mock the response to avoid hitting the actual API

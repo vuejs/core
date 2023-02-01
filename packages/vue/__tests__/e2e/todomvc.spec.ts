@@ -1,5 +1,5 @@
 import path from 'path'
-import { setupPuppeteer, E2E_TIMEOUT } from '../../__tests__/e2eUtils'
+import { setupPuppeteer, E2E_TIMEOUT } from './e2eUtils'
 
 describe('e2e: todomvc', () => {
   const {
@@ -26,7 +26,7 @@ describe('e2e: todomvc', () => {
   async function testTodomvc(apiType: 'classic' | 'composition') {
     const baseUrl = `file://${path.resolve(
       __dirname,
-      `../${apiType}/todomvc.html`
+      `../../examples/${apiType}/todomvc.html`
     )}`
 
     await page().goto(baseUrl)

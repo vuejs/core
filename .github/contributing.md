@@ -109,7 +109,7 @@ Additional formats that only apply to the main `vue` package:
 - **`esm-bundler-runtime`**
 - **`esm-browser-runtime`**
 
-More details about each of these formats can be found in the [`vue` package README](https://github.com/vuejs/core/blob/main/packages/vue/README.md#which-dist-file-to-use) and the [Rollup config file](https://github.com/vuejs/core/blob/main/rollup.config.js).
+More details about each of these formats can be found in the [`vue` package README](https://github.com/vuejs/core/blob/main/packages/vue/README.md#which-dist-file-to-use) and the [Rollup config file](https://github.com/vuejs/core/blob/main/rollup.config.mjs).
 
 For example, to build `runtime-core` with the global build only:
 

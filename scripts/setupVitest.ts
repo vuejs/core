@@ -1,3 +1,5 @@
+import { vi } from 'vitest'
+
 expect.extend({
   toHaveBeenWarned(received: string) {
     asserted.add(received)
@@ -63,12 +65,12 @@ expect.extend({
   }
 })
 
-let warn: jest.SpyInstance
+let warn
 const asserted: Set<string> = new Set()
 
 beforeEach(() => {
   asserted.clear()
-  warn = jest.spyOn(console, 'warn')
+  warn = vi.spyOn(console, 'warn')
   warn.mockImplementation(() => {})
 })
 

@@ -1,9 +1,5 @@
 import path from 'path'
-import {
-  setupPuppeteer,
-  expectByPolling,
-  E2E_TIMEOUT
-} from '../../__tests__/e2eUtils'
+import { setupPuppeteer, expectByPolling, E2E_TIMEOUT } from './e2eUtils'
 
 describe('e2e: markdown', () => {
   const { page, isVisible, value, html } = setupPuppeteer()
@@ -11,7 +7,7 @@ describe('e2e: markdown', () => {
   async function testMarkdown(apiType: 'classic' | 'composition') {
     const baseUrl = `file://${path.resolve(
       __dirname,
-      `../${apiType}/markdown.html#test`
+      `../../examples/${apiType}/markdown.html#test`
     )}`
 
     await page().goto(baseUrl)
