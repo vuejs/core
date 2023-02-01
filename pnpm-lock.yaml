@@ -1890,7 +1890,7 @@ packages:
     engines: {node: ^6 || ^7 || ^8 || ^9 || ^10 || ^11 || ^12 || >=13.7}
     hasBin: true
     dependencies:
-      caniuse-lite: 1.0.30001286
+      caniuse-lite: 1.0.30001450
       electron-to-chromium: 1.4.16
       escalade: 3.1.1
       node-releases: 2.0.1
@@ -1966,8 +1966,8 @@ packages:
     engines: {node: '>=6'}
     dev: true
 
-  /caniuse-lite/1.0.30001286:
-    resolution: {integrity: sha512-zaEMRH6xg8ESMi2eQ3R4eZ5qw/hJiVsO/HlLwniIwErij0JDr9P+8V4dtx1l+kLq6j3yy8l8W4fst1lBnat5wQ==}
+  /caniuse-lite/1.0.30001450:
+    resolution: {integrity: sha512-qMBmvmQmFXaSxexkjjfMvD5rnDL0+m+dUMZKoDYsGG8iZN29RuYh9eRoMvKsT6uMAWlyUUGDEQGJJYjzCIO9ew==}
     dev: true
 
   /chai/4.3.7:
