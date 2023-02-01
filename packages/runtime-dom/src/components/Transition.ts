@@ -194,11 +194,13 @@ export function resolveTransitionProps(
       callHook(hook, [el, resolve])
       nextFrame(() => {
         removeTransitionClass(el, isAppear ? appearFromClass : enterFromClass)
-        if (__COMPAT__ && legacyClassEnabled && legacyAppearFromClass && legacyEnterFromClass) {
-          removeTransitionClass(
-            el,
-            isAppear ? legacyAppearFromClass : legacyEnterFromClass
-          )
+        if (__COMPAT__ && legacyClassEnabled) {
+          const legacyClass = isAppear
+            ? legacyAppearFromClass
+            : legacyEnterFromClass
+          if (legacyClass) {
+            removeTransitionClass(el, legacyClass)
+          }
         }
         addTransitionClass(el, isAppear ? appearToClass : enterToClass)
         if (!hasExplicitCallback(hook)) {
