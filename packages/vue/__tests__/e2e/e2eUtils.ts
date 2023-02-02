@@ -1,4 +1,4 @@
-import puppeteer from 'puppeteer'
+import puppeteer, { Browser, Page, ClickOptions } from 'puppeteer'
 
 export const E2E_TIMEOUT = 30 * 1000
 
@@ -25,8 +25,8 @@ export async function expectByPolling(
 }
 
 export function setupPuppeteer() {
-  let browser: puppeteer.Browser
-  let page: puppeteer.Page
+  let browser: Browser
+  let page: Page
 
   beforeAll(async () => {
     browser = await puppeteer.launch(puppeteerOptions)
@@ -58,7 +58,7 @@ export function setupPuppeteer() {
     await browser.close()
   })
 
-  async function click(selector: string, options?: puppeteer.ClickOptions) {
+  async function click(selector: string, options?: ClickOptions) {
     await page.click(selector, options)
   }
 

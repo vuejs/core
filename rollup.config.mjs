@@ -2,7 +2,6 @@
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
-import { readdirSync } from 'node:fs'
 import replace from '@rollup/plugin-replace'
 import json from '@rollup/plugin-json'
 import chalk from 'chalk'

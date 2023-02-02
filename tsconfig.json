@@ -14,6 +14,7 @@
     "experimentalDecorators": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
+    "skipLibCheck": true,
     "esModuleInterop": true,
     "removeComments": false,
     "jsx": "preserve",

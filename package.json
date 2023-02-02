@@ -54,7 +54,7 @@
     "node": ">=16.11.0"
   },
   "devDependencies": {
-    "@babel/types": "^7.12.0",
+    "@babel/types": "^7.20.7",
     "@esbuild-plugins/node-modules-polyfill": "^0.1.4",
     "@microsoft/api-extractor": "~7.20.0",
     "@rollup/plugin-alias": "^4.0.3",
@@ -100,7 +100,7 @@
     "terser": "^5.15.1",
     "todomvc-app-css": "^2.3.0",
     "tslib": "^2.4.0",
-    "typescript": "^4.8.0",
+    "typescript": "^4.9.0",
     "vite": "^4.0.4",
     "vitest": "^0.28.2",
     "vue": "workspace:*"
