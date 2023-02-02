@@ -1,0 +1,67 @@
+coverage:
+  status:
+    project:
+      default:
+        # Status checks are set to be non-blocking
+        informational: true
+    patch:
+      default:
+        # Status checks are set to be non-blocking
+        informational: true
+
+comment:
+  layout: "header, diff, flags, components"
+
+component_management:
+  individual_components:
+    - component_id: packages
+      paths:
+        - packages/
+    - component_id: compiler-core
+      paths:
+        - packages/compiler-core/
+    - component_id: compiler-dom
+      paths:
+        - packages/compiler-dom/
+    - component_id: compiler-sfc
+      paths:
+        - packages/compiler-sfc/
+    - component_id: compiler-sfc
+      paths:
+        - packages/compiler-sfc/
+    - component_id: reactivity
+      paths:
+        - packages/reactivity/
+    - component_id: reactivity-transform
+      paths:
+        - packages/reactivity-transform/
+    - component_id: runtime-core
+      paths:
+        - packages/runtime-core/
+    - component_id: runtime-dom
+      paths:
+        - packages/runtime-dom/
+    - component_id: runtime-test
+      paths:
+        - packages/runtime-test/
+    - component_id: server-renderer
+      paths:
+        - packages/server-renderer/
+    - component_id: sfc-playground
+      paths:
+        - packages/sfc-playground/
+    - component_id: shared
+      paths:
+        - packages/shared/
+    - component_id: size-check
+      paths:
+        - packages/size-check/
+    - component_id: template-explorer
+      paths:
+        - packages/template-explorer/
+    - component_id: vue
+      paths:
+        - packages/vue/
+    - component_id: vue-compat
+      paths:
+        - packages/vue-compat/
