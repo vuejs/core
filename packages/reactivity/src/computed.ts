@@ -38,9 +38,9 @@ export class ComputedRefImpl<T> {
   public readonly [ReactiveFlags.IS_READONLY]: boolean = false
 
   public _dirty = true
-  public _computedsToAskDirty: ComputedRefImpl<any>[] = []
   public _cacheable: boolean
 
+  private _computedsToAskDirty: ComputedRefImpl<any>[] = []
   private _triggeredAfterLastEffect = false
 
   constructor(
