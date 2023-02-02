@@ -325,7 +325,8 @@ describe('api: defineAsyncComponent', () => {
       render: () => h(Foo)
     })
 
-    const handler = (app.config.errorHandler = vi.fn())
+    const handler = vi.fn()
+    app.config.errorHandler = handler
 
     app.mount(root)
     expect(serializeInner(root)).toBe('<!---->')
@@ -422,7 +423,8 @@ describe('api: defineAsyncComponent', () => {
     const app = createApp({
       render: () => h(Foo)
     })
-    const handler = (app.config.errorHandler = vi.fn())
+    const handler = vi.fn()
+    app.config.errorHandler = handler
     app.mount(root)
     expect(serializeInner(root)).toBe('<!---->')
     await timeout(1)
