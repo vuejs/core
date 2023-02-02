@@ -42,6 +42,7 @@ export default defineConfig({
   },
   test: {
     globals: true,
+    threads: false,
     setupFiles: 'scripts/setupVitest.ts',
     environmentMatchGlobs: [
       ['packages/{vue,vue-compat,runtime-dom}/**', 'jsdom']
