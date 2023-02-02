@@ -13,6 +13,7 @@
     "noUnusedLocals": true,
     "experimentalDecorators": true,
     "resolveJsonModule": true,
+    "isolatedModules": true,
     "esModuleInterop": true,
     "removeComments": false,
     "jsx": "preserve",

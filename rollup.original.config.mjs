@@ -1,8 +1,8 @@
 // @ts-check
-import { createRequire } from 'node:module'
-import { fileURLToPath } from 'node:url'
-import path from 'node:path'
-import { readdirSync } from 'node:fs'
+import { createRequire } from 'module'
+import { fileURLToPath } from 'url'
+import path from 'path'
+import ts from 'rollup-plugin-typescript2'
 import replace from '@rollup/plugin-replace'
 import json from '@rollup/plugin-json'
 import chalk from 'chalk'
@@ -10,8 +10,6 @@ import commonJS from '@rollup/plugin-commonjs'
 import polyfillNode from 'rollup-plugin-polyfill-node'
 import { nodeResolve } from '@rollup/plugin-node-resolve'
 import terser from '@rollup/plugin-terser'
-import esbuild from 'rollup-plugin-esbuild'
-import alias from '@rollup/plugin-alias'
 
 if (!process.env.TARGET) {
   throw new Error('TARGET package must be specified via --environment flag.')
@@ -106,9 +104,7 @@ function createConfig(format, output, plugins = []) {
   const isCompatBuild = !!packageOptions.compat
 
   output.exports = isCompatPackage ? 'auto' : 'named'
-  if (isNodeBuild) {
-    output.esModule = true
-  }
+  output.esModule = true
   output.sourcemap = !!process.env.SOURCE_MAP
   output.externalLiveBindings = false
 
@@ -116,37 +112,23 @@ function createConfig(format, output, plugins = []) {
     output.name = packageOptions.name
   }
 
-  // package aliases
-  // TODO reuse between rollup and vitest
-  const resolveEntryForPkg = p =>
-    path.resolve(
-      fileURLToPath(import.meta.url),
-      `../packages/${p}/src/index.ts`
-    )
-  const dirs = readdirSync(new URL('./packages', import.meta.url))
-  const entries = {
-    vue: resolveEntryForPkg('vue'),
-    'vue/compiler-sfc': resolveEntryForPkg('compiler-sfc'),
-    'vue/server-renderer': resolveEntryForPkg('server-renderer'),
-    '@vue/compat': resolveEntryForPkg('vue-compat')
-  }
-  for (const dir of dirs) {
-    const key = `@vue/${dir}`
-    if (dir !== 'vue' && !(key in entries)) {
-      entries[key] = resolveEntryForPkg(dir)
-    }
-  }
-  const aliasPlugin = alias({
-    entries
-  })
+  const shouldEmitDeclarations =
+    pkg.types && process.env.TYPES != null && !hasTSChecked
 
-  const tsPlugin = esbuild({
+  const tsPlugin = ts({
+    check: process.env.NODE_ENV === 'production' && !hasTSChecked,
     tsconfig: path.resolve(__dirname, 'tsconfig.json'),
-    sourceMap: output.sourcemap,
-    minify: false,
-    target: isServerRenderer || isNodeBuild ? 'es2019' : 'es2015'
+    cacheRoot: path.resolve(__dirname, 'node_modules/.rts2_cache'),
+    tsconfigOverride: {
+      compilerOptions: {
+        target: isServerRenderer || isNodeBuild ? 'es2019' : 'es2015',
+        sourceMap: output.sourcemap,
+        declaration: shouldEmitDeclarations,
+        declarationMap: shouldEmitDeclarations
+      },
+      exclude: ['**/__tests__', 'test-dts']
+    }
   })
-
   // we only need to check TS and generate declarations once for each build.
   // it also seems to run into weird issues when checking multiple times
   // during a single build.
@@ -227,7 +209,6 @@ function createConfig(format, output, plugins = []) {
       json({
         namedExports: false
       }),
-      aliasPlugin,
       tsPlugin,
       createReplacePlugin(
         isProductionBuild,
@@ -256,15 +237,7 @@ function createConfig(format, output, plugins = []) {
   }
 }
 
-function createReplacePlugin(...args) {
-  return replace({
-    // @ts-ignore
-    values: createReplacements(...args),
-    preventAssignment: true
-  })
-}
-
-function createReplacements(
+function createReplacePlugin(
   isProduction,
   isBundlerESMBuild,
   isBrowserESMBuild,
@@ -281,9 +254,9 @@ function createReplacements(
       ? // preserve to be handled by bundlers
         `(process.env.NODE_ENV !== 'production')`
       : // hard coded dev/prod builds
-        String(!isProduction),
+        !isProduction,
     // this is only used during Vue's internal tests
-    __TEST__: `false`,
+    __TEST__: false,
     // If the build is expected to run directly in the browser (global / esm builds)
     __BROWSER__: isBrowserBuild,
     __GLOBAL__: isGlobalBuild,
@@ -307,11 +280,11 @@ function createReplacements(
     __COMPAT__: isCompatBuild,
 
     // feature flags
-    __FEATURE_SUSPENSE__: `true`,
-    __FEATURE_OPTIONS_API__: isBundlerESMBuild ? `__VUE_OPTIONS_API__` : `true`,
+    __FEATURE_SUSPENSE__: true,
+    __FEATURE_OPTIONS_API__: isBundlerESMBuild ? `__VUE_OPTIONS_API__` : true,
     __FEATURE_PROD_DEVTOOLS__: isBundlerESMBuild
       ? `__VUE_PROD_DEVTOOLS__`
-      : `false`,
+      : false,
     ...(isProduction && isBrowserBuild
       ? {
           'context.onError(': `/*#__PURE__*/ context.onError(`,
@@ -322,13 +295,17 @@ function createReplacements(
       : {})
   }
   // allow inline overrides like
-  //__RUNTIME_COMPILE__=true pnpm build runtime-core
+  //__RUNTIME_COMPILE__=true yarn build runtime-core
   Object.keys(replacements).forEach(key => {
     if (key in process.env) {
       replacements[key] = process.env[key]
     }
   })
-  return replacements
+  return replace({
+    // @ts-ignore
+    values: replacements,
+    preventAssignment: true
+  })
 }
 
 function createProductionConfig(format) {
