@@ -1,3 +1,12 @@
+## [3.2.47](https://github.com/vuejs/core/compare/v3.2.46...v3.2.47) (2023-02-02)
+
+
+### Bug Fixes
+
+* **build:** enforce __esModule interop for cjs builds ([4b70366](https://github.com/vuejs/core/commit/4b7036653e5dfd7be95e6efe8c79621b52dcccb7))
+
+
+
 ## [3.2.46](https://github.com/vuejs/core/compare/v3.2.45...v3.2.46) (2023-02-02)
 
 
