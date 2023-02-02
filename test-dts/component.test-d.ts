@@ -11,7 +11,9 @@ import {
   FunctionalComponent,
   ComponentPublicInstance,
   toRefs,
-  IsAny
+  IsAny,
+  SetupContext,
+  expectAssignable
 } from './index'
 
 declare function extractComponentOptions<Props, RawBindings>(
@@ -98,7 +100,7 @@ describe('object props', () => {
         ff: Function as PropType<(a: number, b: string) => { a: boolean }>,
         // explicit type casting with constructor
         ccc: Array as () => string[],
-        // required + contructor type casting
+        // required + constructor type casting
         ddd: {
           type: Array as () => string[],
           required: true
@@ -281,7 +283,7 @@ describe('object props', () => {
         ff: Function as PropType<(a: number, b: string) => { a: boolean }>,
         // explicit type casting with constructor
         ccc: Array as () => string[],
-        // required + contructor type casting
+        // required + constructor type casting
         ddd: {
           type: Array as () => string[],
           required: true
@@ -475,4 +477,12 @@ describe('class', () => {
   const { props } = extractComponentOptions(MyComponent)
 
   expectType<number>(props.foo)
+})
+
+describe('SetupContext', () => {
+  describe('can assign', () => {
+    const wider: SetupContext<{ a: () => true; b: () => true }> = {} as any
+
+    expectAssignable<SetupContext<{ b: () => true }>>(wider)
+  })
 })

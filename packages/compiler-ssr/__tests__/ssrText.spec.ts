@@ -8,7 +8,7 @@ describe('ssr: text', () => {
 
   test('static text with template string special chars', () => {
     expect(getCompiledString(`\`\${foo}\``)).toMatchInlineSnapshot(
-      `"\`\\\\\`\\\\\${foo}\\\\\`\`"`
+      '"`\\\\`\\\\${foo}\\\\``"'
     )
   })
 
@@ -17,7 +17,7 @@ describe('ssr: text', () => {
     // snapshot -> inline snapshot goes through two escapes
     // so that makes a total of 3 * 2 * 2 = 12 back slashes
     expect(getCompiledString(`\\$foo`)).toMatchInlineSnapshot(
-      `"\`\\\\\\\\\\\\$foo\`"`
+      '"`\\\\\\\\\\\\$foo`"'
     )
   })
 

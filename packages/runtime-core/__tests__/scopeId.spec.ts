@@ -126,7 +126,7 @@ describe('scopeId runtime support', () => {
     const root = nodeOps.createElement('div')
     render(h(Root), root)
     expect(serializeInner(root)).toBe(
-      `<div class="wrapper" wrapper slotted root>` +
+      `<div wrapper slotted root class="wrapper">` +
         `<div root slotted-s>hoisted</div>` +
         `<div root slotted-s>dynamic</div>` +
         `</div>`
@@ -152,8 +152,8 @@ describe('scopeId runtime support', () => {
     const root2 = nodeOps.createElement('div')
     render(h(Root2), root2)
     expect(serializeInner(root2)).toBe(
-      `<div class="wrapper" wrapper slotted root>` +
-        `<div class="wrapper" wrapper root slotted-s>` +
+      `<div wrapper slotted root class="wrapper">` +
+        `<div wrapper root slotted-s class="wrapper">` +
         `<div root>hoisted</div>` +
         `<div root>dynamic</div>` +
         `</div>` +

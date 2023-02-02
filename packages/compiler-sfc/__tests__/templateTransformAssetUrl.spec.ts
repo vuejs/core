@@ -54,9 +54,12 @@ describe('compiler sfc: transform asset url', () => {
   test('support uri fragment', () => {
     const result = compileWithAssetUrls(
       '<use href="~@svg/file.svg#fragment"></use>' +
-        '<use href="~@svg/file.svg#fragment"></use>'
+        '<use href="~@svg/file.svg#fragment"></use>',
+      {},
+      {
+        hoistStatic: true
+      }
     )
-
     expect(result.code).toMatchSnapshot()
   })
 

@@ -14,18 +14,21 @@ export {
   UnwrapRef,
   ShallowRef,
   ShallowUnwrapRef,
-  RefUnwrapBailTypes
+  RefUnwrapBailTypes,
+  CustomRefFactory
 } from './ref'
 export {
   reactive,
   readonly,
   isReactive,
   isReadonly,
+  isShallow,
   isProxy,
   shallowReactive,
   shallowReadonly,
   markRaw,
   toRaw,
+  Raw,
   ReactiveFlags,
   DeepReadonly,
   ShallowReactive,

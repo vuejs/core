@@ -2,7 +2,7 @@
 
 Hi! I'm really excited that you are interested in contributing to Vue.js. Before submitting your contribution, please make sure to take a moment and read through the following guidelines:
 
-- [Code of Conduct](https://github.com/vuejs/vue/blob/dev/.github/CODE_OF_CONDUCT.md)
+- [Code of Conduct](https://vuejs.org/about/coc.html)
 - [Issue Reporting Guidelines](#issue-reporting-guidelines)
 - [Pull Request Guidelines](#pull-request-guidelines)
 - [Development Setup](#development-setup)
@@ -17,7 +17,9 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 
 ## Pull Request Guidelines
 
-- Checkout a topic branch from a base branch, e.g. `master`, and merge back against that branch.
+- Checkout a topic branch from a base branch, e.g. `main`, and merge back against that branch.
+
+- [Make sure to tick the "Allow edits from maintainers" box](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/allowing-changes-to-a-pull-request-branch-created-from-a-fork). This allows us to directly make minor edits / refactors and saves a lot of time.
 
 - If adding a new feature:
 
@@ -34,13 +36,28 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 
 - Make sure tests pass!
 
-- Commit messages must follow the [commit message convention](./commit-convention.md) so that changelogs can be automatically generated. Commit messages are automatically validated before commit (by invoking [Git Hooks](https://git-scm.com/docs/githooks) via [yorkie](https://github.com/yyx990803/yorkie)).
+- Commit messages must follow the [commit message convention](./commit-convention.md) so that changelogs can be automatically generated. Commit messages are automatically validated before commit (by invoking [Git Hooks](https://git-scm.com/docs/githooks) via [simple-git-hooks](https://github.com/toplenboren/simple-git-hooks)).
 
-- No need to worry about code style as long as you have installed the dev dependencies - modified files are automatically formatted with Prettier on commit (by invoking [Git Hooks](https://git-scm.com/docs/githooks) via [yorkie](https://github.com/yyx990803/yorkie)).
+- No need to worry about code style as long as you have installed the dev dependencies - modified files are automatically formatted with Prettier on commit (by invoking [Git Hooks](https://git-scm.com/docs/githooks) via [simple-git-hooks](https://github.com/toplenboren/simple-git-hooks)).
+
+### Advanced Pull Request Tips
+
+- The PR should fix the intended bug **only** and not introduce unrelated changes. This includes unnecessary refactors - a PR should focus on the fix and not code style, this makes it easier to trace changes in the future.
+
+- Consider the performance / size impact of the changes, and whether the bug being fixes justifies the cost. If the bug being fixed is a very niche edge case, we should try to minimize the size / perf cost to make it worthwhile.
+
+  - Is the code perf-sensitive (e.g. in "hot paths" like component updates or the vdom patch function?)
+
+    - If the branch is dev-only, performance is less of a concern.
+
+  - Check how much extra bundle size the change introduces.
+    - Make sure to put dev-only code in `__DEV__` branches so they are tree-shakable.
+    - Runtime code is more sensitive to size increase than compiler code.
+    - Make sure it doesn't accidentally cause dev-only or compiler-only code branches to be included in the runtime build. Notable case is that some functions in `@vue/shared` are compiler-only and should not be used in runtime code, e.g. `isHTMLTag` and `isSVGTag`.
 
 ## Development Setup
 
-You will need [Node.js](https://nodejs.org) **version 10+**, and [PNPM](https://pnpm.io).
+You will need [Node.js](https://nodejs.org) **version 16+**, and [PNPM](https://pnpm.io) **version 7+**.
 
 We also recommend installing [ni](https://github.com/antfu/ni) to help switching between repos using different package managers. `ni` also provides the handy `nr` command which running npm scripts easier.
 
@@ -60,6 +77,8 @@ A high level overview of tools used:
 ## Scripts
 
 **The examples below will be using the `nr` command from the [ni](https://github.com/antfu/ni) package.** You can also use plain `npm run`, but you will need to pass all additional arguments after the command after an extra `--`. For example, `nr build runtime --all` is equivalent to `npm run build -- runtime --all`.
+
+The `run-s` and `run-p` commands found in some scripts are from [npm-run-all](https://github.com/mysticatea/npm-run-all) for orchestrating multiple scripts. `run-s` means "run in sequence" while `run-p` means "run in parallel".
 
 ### `nr build`
 
@@ -90,7 +109,7 @@ Additional formats that only apply to the main `vue` package:
 - **`esm-bundler-runtime`**
 - **`esm-browser-runtime`**
 
-More details about each of these formats can be found in the [`vue` package README](https://github.com/vuejs/vue-next/blob/master/packages/vue/README.md#which-dist-file-to-use) and the [Rollup config file](https://github.com/vuejs/vue-next/blob/master/rollup.config.js).
+More details about each of these formats can be found in the [`vue` package README](https://github.com/vuejs/core/blob/main/packages/vue/README.md#which-dist-file-to-use) and the [Rollup config file](https://github.com/vuejs/core/blob/main/rollup.config.mjs).
 
 For example, to build `runtime-core` with the global build only:
 
@@ -123,19 +142,30 @@ The `dev` script bundles a target package (default: `vue`) in a specified format
 ```bash
 $ nr dev
 
-> rollup v1.19.4
-> bundles packages/vue/src/index.ts → packages/vue/dist/vue.global.js...
+> watching: packages/vue/dist/vue.global.js
 ```
 
-- The `dev` script also supports fuzzy match for the target package, but will only match the first package matched.
+- **Important:** output of the `dev` script is for development and debugging only. While it has the same runtime behavior, the generated code should never be published to npm.
+
+- The `dev` script does not support fuzzy match - you must specify the full package name, e.g. `nr dev runtime-core`.
 
 - The `dev` script supports specifying build format via the `-f` flag just like the `build` script.
 
 - The `dev` script also supports the `-s` flag for generating source maps, but it will make rebuilds slower.
 
+- The `dev` script supports the `-i` flag for inlining all deps. This is useful when debugging `esm-bundler` builds which externalizes deps by default.
+
+### `nr dev-sfc`
+
+Shortcut for starting the SFC Playground in local dev mode. This provides the fastest feedback loop when debugging issues that can be reproduced in the SFC Playground.
+
+### `nr dev-esm`
+
+Builds and watches `vue/dist/vue-runtime.esm-bundler.js` with all deps inlined using esbuild. This is useful when debugging the ESM build in a reproductions that require real build setups: link `packages/vue` globally, then link it into the project being debugged.
+
 ### `nr dev-compiler`
 
-The `dev-compiler` script builds, watches and serves the [Template Explorer](https://github.com/vuejs/vue-next/tree/master/packages/template-explorer) at `http://localhost:5000`. This is extremely useful when working on the compiler.
+The `dev-compiler` script builds, watches and serves the [Template Explorer](https://github.com/vuejs/core/tree/main/packages/template-explorer) at `http://localhost:5000`. This is useful when working on pure compiler issues.
 
 ### `nr test`
 
@@ -175,6 +205,8 @@ This repository employs a [monorepo](https://en.wikipedia.org/wiki/Monorepo) set
 
 - `compiler-dom`: Compiler with additional plugins specifically targeting the browser.
 
+- `compiler-sfc`: Lower level utilities for compiling Vue Single File Components.
+
 - `compiler-ssr`: Compiler that produces render functions optimized for server-side rendering.
 
 - `template-explorer`: A development tool for debugging compiler output. You can run `nr dev template-explorer` and open its `index.html` to get a repl of template compilation based on current source code.
@@ -201,27 +233,29 @@ This is made possible via several configurations:
 
 ### Package Dependencies
 
-```
-                                    +---------------------+
-                                    |                     |
-                                    |  @vue/compiler-sfc  |
-                                    |                     |
-                                    +-----+--------+------+
-                                          |        |
-                                          v        v
-                      +---------------------+    +----------------------+
-                      |                     |    |                      |
-        +------------>|  @vue/compiler-dom  +--->|  @vue/compiler-core  |
-        |             |                     |    |                      |
-   +----+----+        +---------------------+    +----------------------+
-   |         |
-   |   vue   |
-   |         |
-   +----+----+        +---------------------+    +----------------------+    +-------------------+
-        |             |                     |    |                      |    |                   |
-        +------------>|  @vue/runtime-dom   +--->|  @vue/runtime-core   +--->|  @vue/reactivity  |
-                      |                     |    |                      |    |                   |
-                      +---------------------+    +----------------------+    +-------------------+
+```mermaid
+  flowchart LR
+    compiler-sfc["@vue/compiler-sfc"]
+    compiler-dom["@vue/compiler-dom"]
+    compiler-core["@vue/compiler-core"]
+    vue["vue"]
+    runtime-dom["@vue/runtime-dom"]
+    runtime-core["@vue/runtime-core"]
+    reactivity["@vue/reactivity"]
+
+    subgraph "Runtime Packages"
+      runtime-dom --> runtime-core
+      runtime-core --> reactivity
+    end
+
+    subgraph "Compiler Packages"
+      compiler-sfc --> compiler-core
+      compiler-sfc --> compiler-dom
+      compiler-dom --> compiler-core
+    end
+
+    vue ---> compiler-dom
+    vue --> runtime-dom
 ```
 
 There are some rules to follow when importing across package boundaries:
@@ -245,8 +279,6 @@ Unit tests are collocated with the code being tested in each package, inside dir
 Test coverage is continuously deployed at https://vue-next-coverage.netlify.app/. PRs that improve test coverage are welcome, but in general the test coverage should be used as a guidance for finding API use cases that are not covered by tests. We don't recommend adding tests that only improve coverage but not actually test a meaning use case.
 
 ### Testing Type Definition Correctness
-
-This project uses [tsd](https://github.com/SamVerschueren/tsd) to test the built definition files (`*.d.ts`).
 
 Type tests are located in the `test-dts` directory. To run the dts tests, run `nr test-dts`. Note that the type test requires all relevant `*.d.ts` files to be built first (and the script does it for you). Once the `d.ts` files are built and up-to-date, the tests can be re-run by simply running `nr test-dts`.
 

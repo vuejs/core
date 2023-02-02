@@ -1,15 +1,6 @@
 import { nodeOps, svgNS } from '../src/nodeOps'
 
 describe('runtime-dom: node-ops', () => {
-  test('the _value property should be cloned', () => {
-    const el = nodeOps.createElement('input') as HTMLDivElement & {
-      _value: any
-    }
-    el._value = 1
-    const cloned = nodeOps.cloneNode!(el) as HTMLDivElement & { _value: any }
-    expect(cloned._value).toBe(1)
-  })
-
   test("the <select>'s multiple attr should be set in createElement", () => {
     const el = nodeOps.createElement('select', false, undefined, {
       multiple: ''
@@ -81,6 +72,29 @@ describe('runtime-dom: node-ops', () => {
       expect(last).toBe(parent.childNodes[parent.childNodes.length - 2])
       expect((first as Element).namespaceURI).toMatch('svg')
       expect((last as Element).namespaceURI).toMatch('svg')
+    })
+
+    test('cached insertion', () => {
+      const content = `<div>one</div><div>two</div>three`
+      const existing = `<div>existing</div>`
+      const parent = document.createElement('div')
+      parent.innerHTML = existing
+      const anchor = parent.firstChild
+
+      const cached = document.createElement('div')
+      cached.innerHTML = content
+
+      const nodes = nodeOps.insertStaticContent!(
+        content,
+        parent,
+        anchor,
+        false,
+        cached.firstChild,
+        cached.lastChild
+      )
+      expect(parent.innerHTML).toBe(content + existing)
+      expect(nodes[0]).toBe(parent.firstChild)
+      expect(nodes[1]).toBe(parent.childNodes[parent.childNodes.length - 2])
     })
   })
 })

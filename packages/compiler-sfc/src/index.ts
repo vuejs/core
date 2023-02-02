@@ -8,7 +8,7 @@ export {
   shouldTransform as shouldTransformRef,
   transform as transformRef,
   transformAST as transformRefAST
-} from '@vue/ref-transform'
+} from '@vue/reactivity-transform'
 
 // Utilities
 export { parse as babelParse } from '@babel/parser'
@@ -29,6 +29,7 @@ export {
 // Types
 export {
   SFCParseOptions,
+  SFCParseResult,
   SFCDescriptor,
   SFCBlock,
   SFCTemplateBlock,
@@ -46,6 +47,7 @@ export {
   SFCStyleCompileResults
 } from './compileStyle'
 export { SFCScriptCompileOptions } from './compileScript'
+export { AssetURLOptions, AssetURLTagConfig } from './templateTransformAssetUrl'
 export {
   CompilerOptions,
   CompilerError,

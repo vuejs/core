@@ -31,7 +31,7 @@ declare module '@vue/reactivity' {
   }
 }
 
-const rendererOptions = extend({ patchProp }, nodeOps)
+const rendererOptions = /*#__PURE__*/ extend({ patchProp }, nodeOps)
 
 // lazy create the renderer - this makes core renderer logic tree-shakable
 // in case the user only imports reactivity utilities from Vue.

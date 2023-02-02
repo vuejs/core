@@ -3,7 +3,6 @@
 export const version = __VERSION__
 export {
   // core
-  computed,
   reactive,
   ref,
   readonly,
@@ -16,6 +15,7 @@ export {
   isProxy,
   isReactive,
   isReadonly,
+  isShallow,
   // advanced
   customRef,
   triggerRef,
@@ -34,6 +34,7 @@ export {
   getCurrentScope,
   onScopeDispose
 } from '@vue/reactivity'
+export { computed } from './apiComputed'
 export {
   watch,
   watchEffect,
@@ -85,7 +86,7 @@ export { h } from './h'
 // Advanced render function utilities
 export { createVNode, cloneVNode, mergeProps, isVNode } from './vnode'
 // VNode types
-export { Fragment, Text, Comment, Static } from './vnode'
+export { Fragment, Text, Comment, Static, VNodeRef } from './vnode'
 // Built-in components
 export { Teleport, TeleportProps } from './components/Teleport'
 export { Suspense, SuspenseProps } from './components/Suspense'
@@ -103,7 +104,7 @@ export { useSSRContext, ssrContextKey } from './helpers/useSsrContext'
 
 export { createRenderer, createHydrationRenderer } from './renderer'
 export { queuePostFlushCb } from './scheduler'
-export { warn } from './warning'
+export { warn, assertNumber } from './warning'
 export {
   handleError,
   callWithErrorHandling,
@@ -151,18 +152,28 @@ export {
   Ref,
   ToRef,
   ToRefs,
-  ReactiveEffectOptions,
-  DebuggerEvent,
-  DebuggerOptions,
-  TrackOpTypes,
-  TriggerOpTypes,
+  UnwrapRef,
+  ShallowRef,
+  ShallowUnwrapRef,
+  CustomRefFactory,
+  ReactiveFlags,
+  DeepReadonly,
+  ShallowReactive,
+  UnwrapNestedRefs,
   ComputedRef,
   WritableComputedRef,
-  UnwrapRef,
-  ShallowUnwrapRef,
   WritableComputedOptions,
-  DeepReadonly,
-  ShallowReactive
+  ComputedGetter,
+  ComputedSetter,
+  ReactiveEffectRunner,
+  ReactiveEffectOptions,
+  EffectScheduler,
+  DebuggerOptions,
+  DebuggerEvent,
+  DebuggerEventExtraInfo,
+  TrackOpTypes,
+  TriggerOpTypes,
+  Raw
 } from '@vue/reactivity'
 export {
   WatchEffect,
@@ -207,10 +218,12 @@ export {
   ComponentOptionsWithArrayProps,
   ComponentCustomOptions,
   ComponentOptionsBase,
+  ComponentProvideOptions,
   RenderFunction,
   MethodOptions,
   ComputedOptions,
-  RuntimeCompilerOptions
+  RuntimeCompilerOptions,
+  ComponentInjectOptions
 } from './componentOptions'
 export { EmitsOptions, ObjectEmitsOptions } from './componentEmits'
 export {
@@ -314,7 +327,7 @@ const _ssrUtils = {
 }
 
 /**
- * SSR utils for \@vue/server-renderer. Only exposed in cjs builds.
+ * SSR utils for \@vue/server-renderer. Only exposed in ssr-possible builds.
  * @internal
  */
 export const ssrUtils = (__SSR__ ? _ssrUtils : null) as typeof _ssrUtils

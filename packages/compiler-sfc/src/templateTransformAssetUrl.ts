@@ -176,6 +176,17 @@ function getImportsExpressionExp(
     }
 
     const hashExp = `${name} + '${hash}'`
+    const finalExp = createSimpleExpression(
+      hashExp,
+      false,
+      loc,
+      ConstantTypes.CAN_STRINGIFY
+    )
+
+    if (!context.hoistStatic) {
+      return finalExp
+    }
+
     const existingHoistIndex = context.hoists.findIndex(h => {
       return (
         h &&
@@ -192,9 +203,7 @@ function getImportsExpressionExp(
         ConstantTypes.CAN_STRINGIFY
       )
     }
-    return context.hoist(
-      createSimpleExpression(hashExp, false, loc, ConstantTypes.CAN_STRINGIFY)
-    )
+    return context.hoist(finalExp)
   } else {
     return createSimpleExpression(`''`, false, loc, ConstantTypes.CAN_STRINGIFY)
   }
