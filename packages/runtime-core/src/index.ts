@@ -93,7 +93,8 @@ export { Suspense, SuspenseProps } from './components/Suspense'
 export { KeepAlive, KeepAliveProps } from './components/KeepAlive'
 export {
   BaseTransition,
-  BaseTransitionProps
+  BaseTransitionPropsValidators,
+  type BaseTransitionProps
 } from './components/BaseTransition'
 // For using custom directives
 export { withDirectives } from './directives'
