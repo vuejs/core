@@ -1,6 +1,7 @@
 import {
   BaseTransition,
   BaseTransitionProps,
+  BaseTransitionPropsValidators,
   h,
   assertNumber,
   FunctionalComponent,
@@ -74,7 +75,7 @@ const DOMTransitionPropsValidators = {
 export const TransitionPropsValidators = (Transition.props =
   /*#__PURE__*/ extend(
     {},
-    (BaseTransition as any).props,
+    BaseTransitionPropsValidators as any,
     DOMTransitionPropsValidators
   ))
 
