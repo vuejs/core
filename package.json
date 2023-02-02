@@ -8,6 +8,7 @@
     "size": "run-s size-global size-baseline",
     "size-global": "node scripts/build.mjs vue runtime-dom -f global -p",
     "size-baseline": "node scripts/build.mjs runtime-dom runtime-core reactivity shared -f esm-bundler && cd packages/size-check && vite build && node brotli",
+    "check": "tsc --incremental --noEmit",
     "lint": "eslint --cache --ext .ts packages/*/{src,__tests__}/**.ts",
     "format": "prettier --write --cache --parser typescript \"**/*.[tj]s?(x)\"",
     "format-check": "prettier --check --cache --parser typescript \"**/*.[tj]s?(x)\"",
@@ -37,7 +38,7 @@
   },
   "types": "test-dts/index.d.ts",
   "simple-git-hooks": {
-    "pre-commit": "pnpm lint-staged",
+    "pre-commit": "pnpm lint-staged && pnpm check",
     "commit-msg": "node scripts/verifyCommit.mjs"
   },
   "lint-staged": {
