@@ -104,7 +104,9 @@ function createConfig(format, output, plugins = []) {
   const isCompatBuild = !!packageOptions.compat
 
   output.exports = isCompatPackage ? 'auto' : 'named'
-  output.esModule = true
+  if (isNodeBuild) {
+    output.esModule = true
+  }
   output.sourcemap = !!process.env.SOURCE_MAP
   output.externalLiveBindings = false
 
