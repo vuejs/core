@@ -1,3 +1,39 @@
+## [3.2.46](https://github.com/vuejs/core/compare/v3.2.45...v3.2.46) (2023-02-02)
+
+
+### Bug Fixes
+
+* **build:** ensure cjs re-exports can be properly detected when imported from esm ([fb6ff3e](https://github.com/vuejs/core/commit/fb6ff3e99689022d963ea7257b03f73ff514c0c4))
+* **build:** ensure type exports is first ([957722c](https://github.com/vuejs/core/commit/957722c4185ea87aabc711f6f8997e528dd3ba1b))
+* **build:** fix cjs re-exports check for compat build ([ce064a1](https://github.com/vuejs/core/commit/ce064a172b3b5bcb096b4984fe0c1a54177ac9c0))
+* **compat:** fix custom transition classes in compat mode ([#7435](https://github.com/vuejs/core/issues/7435)) ([efe2efd](https://github.com/vuejs/core/commit/efe2efd210f500311e5b603345cb0d353886bd7a)), closes [#6253](https://github.com/vuejs/core/issues/6253)
+* **compiler-core:** typeof should be allowed in browser expression validation ([#7037](https://github.com/vuejs/core/issues/7037)) ([3783866](https://github.com/vuejs/core/commit/378386694be6dd43da71f1fa08ee9c5705c13f86))
+* **compiler-sfc:** allow declaring variables after defineProps ([#7461](https://github.com/vuejs/core/issues/7461)) ([686c829](https://github.com/vuejs/core/commit/686c829fec9137cdfe6e51af34f2af01a575f7c6))
+* **compiler-sfc:** always generate runtime prop type for Function ([#7112](https://github.com/vuejs/core/issues/7112)) ([584eae6](https://github.com/vuejs/core/commit/584eae60d1abe80d15b317ec80b7556712df8e5a)), closes [#7111](https://github.com/vuejs/core/issues/7111)
+* **compiler-sfc:** support resolving type declaration from normal script ([#5831](https://github.com/vuejs/core/issues/5831)) ([30399d4](https://github.com/vuejs/core/commit/30399d46b15f890056e7a5d076cd588b3806cc15)), closes [#5830](https://github.com/vuejs/core/issues/5830)
+* **compiler:** add `hgroup` to supported `HTML_TAGS` ([#6321](https://github.com/vuejs/core/issues/6321)) ([7443174](https://github.com/vuejs/core/commit/7443174e2aa9244bc08c63b4d6c78acc6ff89767)), closes [#6313](https://github.com/vuejs/core/issues/6313)
+* **custom-elements:** use strict number casting ([7d0c63f](https://github.com/vuejs/core/commit/7d0c63ff4361e59e820441a24bf4fb2a93335a1e)), closes [#4946](https://github.com/vuejs/core/issues/4946) [#2598](https://github.com/vuejs/core/issues/2598) [#2604](https://github.com/vuejs/core/issues/2604)
+* **customElement:** customElement can emit event ([#7296](https://github.com/vuejs/core/issues/7296)) ([c6e5bda](https://github.com/vuejs/core/commit/c6e5bda27d13554675d68dbe33b07f3474467aa6))
+* **reactivity-transform:** fix $$ escape edge cases ([e06d3b6](https://github.com/vuejs/core/commit/e06d3b614ea518e9cdf83fca9200fc816eb4e5a1)), closes [#6312](https://github.com/vuejs/core/issues/6312) [#6944](https://github.com/vuejs/core/issues/6944)
+* **reactivity-transform:** prohibit const assignment at compile time ([#6993](https://github.com/vuejs/core/issues/6993)) ([3427052](https://github.com/vuejs/core/commit/3427052229db3448252d938292a40e960a0f4b9c)), closes [#6992](https://github.com/vuejs/core/issues/6992)
+* **reactivity:** `triggerRef` working with `toRef` from reactive ([#7507](https://github.com/vuejs/core/issues/7507)) ([e64c9ae](https://github.com/vuejs/core/commit/e64c9ae957aa2606b55e8652bbde30a6ada59fb0))
+* **reactivity:** ensure watch(Effect) can run independent of unmounted instance if created in a detatched effectScope (fix [#7319](https://github.com/vuejs/core/issues/7319)) ([#7330](https://github.com/vuejs/core/issues/7330)) ([cd7c887](https://github.com/vuejs/core/commit/cd7c887b755810aedf83f3d458cb956d5b147f6f))
+* **reactivity:** track hasOwnProperty ([588bd44](https://github.com/vuejs/core/commit/588bd44f036b79d7dee5d23661aa7244f70e6beb)), closes [#2619](https://github.com/vuejs/core/issues/2619) [#2621](https://github.com/vuejs/core/issues/2621)
+* **runtime-core:** ensure prop type validation warning shows custom class names  ([#7198](https://github.com/vuejs/core/issues/7198)) ([620327d](https://github.com/vuejs/core/commit/620327d527593c6263a21500baddbae1ebc30db8))
+* **runtime-core:** fix keep-alive cache prune logic on vnodes with same type but different keys ([#7510](https://github.com/vuejs/core/issues/7510)) ([1fde49c](https://github.com/vuejs/core/commit/1fde49c0f57cc50fedf91366a274c9759d1d9a39)), closes [#7355](https://github.com/vuejs/core/issues/7355)
+* **runtime-core:** set scope id before props ([#6948](https://github.com/vuejs/core/issues/6948)) ([da2ced1](https://github.com/vuejs/core/commit/da2ced15339b6fdb7a1459fa359bb79346a82bc2)), closes [#6923](https://github.com/vuejs/core/issues/6923)
+* **runtime-dom:** style update error when component use shorthand properties ([#7425](https://github.com/vuejs/core/issues/7425)) ([b7cfa6f](https://github.com/vuejs/core/commit/b7cfa6f53952daced312862fbb3a88c86e42a77e))
+* **shared:** `feDistanceLight` changed to `feDistantLight` ([#7540](https://github.com/vuejs/core/issues/7540)) ([bef85e7](https://github.com/vuejs/core/commit/bef85e7975084b05af00b60ecd171c83f251c6d5))
+* **shared:** toNumber should only coerce strings ([b55846f](https://github.com/vuejs/core/commit/b55846f05c4a3b163be2ed70ce64014feec29fac))
+* **types/effectScope:** re-expose `active` as readonly property ([#6187](https://github.com/vuejs/core/issues/6187)) ([59ffe5e](https://github.com/vuejs/core/commit/59ffe5ee1f1618be119875313970c72050b37b03)), closes [#6186](https://github.com/vuejs/core/issues/6186)
+* **types:** accept sync `serverPrefetch()` ([#7000](https://github.com/vuejs/core/issues/7000)) ([5f1883e](https://github.com/vuejs/core/commit/5f1883ec53547d0847e1270f5a8fb0c46396fb07))
+* **types:** add or update referrerpolicy ([#7199](https://github.com/vuejs/core/issues/7199)) ([1fa3d95](https://github.com/vuejs/core/commit/1fa3d9573051f549e6d381a5e88ec8d5d855e4c9))
+* **types:** allow assigning wider SetupContext type ([#2818](https://github.com/vuejs/core/issues/2818)) ([eb2a832](https://github.com/vuejs/core/commit/eb2a83283caa9de0a45881d860a3cbd9d0bdd279)), closes [#2362](https://github.com/vuejs/core/issues/2362)
+* **types:** optional boolean props should have boolean type in return type of defineProps ([#7619](https://github.com/vuejs/core/issues/7619)) ([a0a010d](https://github.com/vuejs/core/commit/a0a010ddc9ba8ef3e883454c73997bf6fb40b385)), closes [#7116](https://github.com/vuejs/core/issues/7116) [#5847](https://github.com/vuejs/core/issues/5847) [#7487](https://github.com/vuejs/core/issues/7487)
+* **v-model:** ensure v-model listener casing is consistent with manual v-on listener ([#7067](https://github.com/vuejs/core/issues/7067)) ([87c72ae](https://github.com/vuejs/core/commit/87c72ae49a315a5464dd0c6b00f07163d1cb39e9)), closes [#7066](https://github.com/vuejs/core/issues/7066)
+
+
+
 ## [3.2.45](https://github.com/vuejs/core/compare/v3.2.44...v3.2.45) (2022-11-11)
 
 
