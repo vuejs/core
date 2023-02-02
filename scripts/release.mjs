@@ -15,7 +15,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const args = minimist(process.argv.slice(2))
 const preId = args.preid || semver.prerelease(currentVersion)?.[0]
 const isDryRun = args.dry
-const skipTests = args.skipTests
+let skipTests = args.skipTests
 const skipBuild = args.skipBuild
 const packages = fs
   .readdirSync(path.resolve(__dirname, '../packages'))
@@ -31,7 +31,6 @@ const versionIncrements = [
 ]
 
 const inc = i => semver.inc(currentVersion, i, preId)
-const bin = name => path.resolve(__dirname, '../node_modules/.bin/' + name)
 const run = (bin, args, opts = {}) =>
   execa(bin, args, { stdio: 'inherit', ...opts })
 const dryRun = (bin, args, opts = {}) =>
@@ -72,23 +71,52 @@ async function main() {
   }
 
   // @ts-ignore
-  const { yes } = await prompt({
+  const { yes: confirmRelease } = await prompt({
     type: 'confirm',
     name: 'yes',
     message: `Releasing v${targetVersion}. Confirm?`
   })
 
-  if (!yes) {
+  if (!confirmRelease) {
     return
   }
 
-  // run tests before release
-  step('\nRunning tests...')
-  if (!skipTests && !isDryRun) {
-    await run(bin('jest'), ['--clearCache'])
-    await run('pnpm', ['test', '--bail'])
+  step('Checking CI status for HEAD...')
+  let isCIPassed = true
+  try {
+    const { stdout: sha } = await execa('git', ['rev-parse', 'HEAD'])
+    const res = await fetch(
+      `https://api.github.com/repos/vuejs/core/actions/runs?head_sha=${sha}` +
+        `&status=success&exclude_pull_requests=true`
+    )
+    const data = await res.json()
+    isCIPassed = data.workflow_runs.length > 0
+  } catch (e) {
+    isCIPassed = false
+  }
+
+  if (isCIPassed) {
+    // @ts-ignore
+    const { yes: promptSkipTests } = await prompt({
+      type: 'confirm',
+      name: 'yes',
+      message: `CI for this commit passed. Skip local tests?`
+    })
+    if (promptSkipTests) {
+      skipTests = true
+    }
+  }
+
+  if (!skipTests) {
+    step('\nRunning tests...')
+    if (!isDryRun) {
+      await run('pnpm', ['test'])
+      await run('pnpm', ['test-dts'])
+    } else {
+      console.log(`Skipped (dry run)`)
+    }
   } else {
-    console.log(`(skipped)`)
+    step('Tests skipped.')
   }
 
   // update all package versions and inter-dependencies
