@@ -144,6 +144,7 @@ describe('scheduler', () => {
         queueJob(job1)
         // cb2 should execute before the job
         queueJob(cb2)
+        queueJob(cb3)
       }
       cb1.pre = true
 
@@ -153,9 +154,15 @@ describe('scheduler', () => {
       cb2.pre = true
       cb2.id = 1
 
+      const cb3 = () => {
+        calls.push('cb3')
+      }
+      cb3.pre = true
+      cb3.id = 1
+
       queueJob(cb1)
       await nextTick()
-      expect(calls).toEqual(['cb1', 'cb2', 'job1'])
+      expect(calls).toEqual(['cb1', 'cb2', 'cb3', 'job1'])
     })
 
     it('preFlushCb inside queueJob', async () => {

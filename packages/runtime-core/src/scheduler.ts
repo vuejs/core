@@ -62,15 +62,30 @@ export function nextTick<T = void>(
 // Use binary-search to find a suitable position in the queue,
 // so that the queue maintains the increasing order of job's id,
 // which can prevent the job from being skipped and also can avoid repeated patching.
-function findInsertionIndex(id: number) {
+function findInsertionIndex(job: SchedulerJob) {
   // the start index should be `flushIndex + 1`
   let start = flushIndex + 1
   let end = queue.length
-
+  const id = getId(job)
+  const pre = job.pre
+  let middle
   while (start < end) {
-    const middle = (start + end) >>> 1
+    middle = (start + end) >>> 1
     const middleJobId = getId(queue[middle])
-    middleJobId < id ? (start = middle + 1) : (end = middle)
+    if (middleJobId === id) {
+      while (
+        queue[middle] &&
+        getId(queue[middle]) === id &&
+        (pre ? queue[middle].pre : true)
+      ) {
+        pre ? middle++ : middle--
+      }
+      return middle
+    } else if (middleJobId < id!) {
+      start = middle + 1
+    } else {
+      end = middle
+    }
   }
 
   return start
@@ -93,7 +108,7 @@ export function queueJob(job: SchedulerJob) {
     if (job.id == null) {
       queue.push(job)
     } else {
-      queue.splice(findInsertionIndex(job.id), 0, job)
+      queue.splice(findInsertionIndex(job), 0, job)
     }
     queueFlush()
   }
