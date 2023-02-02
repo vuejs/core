@@ -292,8 +292,8 @@ describe('reactivity/computed', () => {
   })
 
   it('chained computed value on-demand trigger', () => {
-    const c1Spy = jest.fn()
-    const c2Spy = jest.fn()
+    const c1Spy = vi.fn()
+    const c2Spy = vi.fn()
 
     const src = ref(0)
     const c1 = computed(() => {
