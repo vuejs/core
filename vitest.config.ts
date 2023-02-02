@@ -1,25 +1,5 @@
 import { configDefaults, defineConfig, UserConfig } from 'vitest/config'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { readdirSync } from 'node:fs'
-
-const resolve = p =>
-  path.resolve(fileURLToPath(import.meta.url), `../packages/${p}/src/index.ts`)
-const dirs = readdirSync(new URL('./packages', import.meta.url))
-
-const alias = {
-  vue: resolve('vue'),
-  'vue/compiler-sfc': resolve('compiler-sfc'),
-  'vue/server-renderer': resolve('server-renderer'),
-  '@vue/compat': resolve('vue-compat')
-}
-
-for (const dir of dirs) {
-  const key = `@vue/${dir}`
-  if (dir !== 'vue' && !(key in alias)) {
-    alias[key] = resolve(dir)
-  }
-}
+import { entries } from './scripts/aliases.mjs'
 
 export default defineConfig({
   define: {
@@ -38,7 +18,7 @@ export default defineConfig({
     __COMPAT__: true
   },
   resolve: {
-    alias
+    alias: entries
   },
   test: {
     globals: true,

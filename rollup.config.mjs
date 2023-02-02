@@ -12,6 +12,7 @@ import { nodeResolve } from '@rollup/plugin-node-resolve'
 import terser from '@rollup/plugin-terser'
 import esbuild from 'rollup-plugin-esbuild'
 import alias from '@rollup/plugin-alias'
+import { entries } from './scripts/aliases.mjs'
 
 if (!process.env.TARGET) {
   throw new Error('TARGET package must be specified via --environment flag.')
@@ -30,9 +31,6 @@ const resolve = p => path.resolve(packageDir, p)
 const pkg = require(resolve(`package.json`))
 const packageOptions = pkg.buildOptions || {}
 const name = packageOptions.filename || path.basename(packageDir)
-
-// ensure TS checks only once for each build
-let hasTSChecked = false
 
 const outputConfigs = {
   'esm-bundler': {
@@ -104,6 +102,9 @@ function createConfig(format, output, plugins = []) {
   const isGlobalBuild = /global/.test(format)
   const isCompatPackage = pkg.name === '@vue/compat'
   const isCompatBuild = !!packageOptions.compat
+  const isBrowserBuild =
+    (isGlobalBuild || isBrowserESMBuild || isBundlerESMBuild) &&
+    !packageOptions.enableNonBrowserBranches
 
   output.exports = isCompatPackage ? 'auto' : 'named'
   if (isNodeBuild) {
@@ -116,42 +117,6 @@ function createConfig(format, output, plugins = []) {
     output.name = packageOptions.name
   }
 
-  // package aliases
-  // TODO reuse between rollup and vitest
-  const resolveEntryForPkg = p =>
-    path.resolve(
-      fileURLToPath(import.meta.url),
-      `../packages/${p}/src/index.ts`
-    )
-  const dirs = readdirSync(new URL('./packages', import.meta.url))
-  const entries = {
-    vue: resolveEntryForPkg('vue'),
-    'vue/compiler-sfc': resolveEntryForPkg('compiler-sfc'),
-    'vue/server-renderer': resolveEntryForPkg('server-renderer'),
-    '@vue/compat': resolveEntryForPkg('vue-compat')
-  }
-  for (const dir of dirs) {
-    const key = `@vue/${dir}`
-    if (dir !== 'vue' && !(key in entries)) {
-      entries[key] = resolveEntryForPkg(dir)
-    }
-  }
-  const aliasPlugin = alias({
-    entries
-  })
-
-  const tsPlugin = esbuild({
-    tsconfig: path.resolve(__dirname, 'tsconfig.json'),
-    sourceMap: output.sourcemap,
-    minify: false,
-    target: isServerRenderer || isNodeBuild ? 'es2019' : 'es2015'
-  })
-
-  // we only need to check TS and generate declarations once for each build.
-  // it also seems to run into weird issues when checking multiple times
-  // during a single build.
-  hasTSChecked = true
-
   let entryFile = /runtime$/.test(format) ? `src/runtime.ts` : `src/index.ts`
 
   // the compat build needs both default AND named exports. This will cause
@@ -163,85 +128,170 @@ function createConfig(format, output, plugins = []) {
       : `src/esm-index.ts`
   }
 
-  let external = []
-  const treeShakenDeps = ['source-map', '@babel/parser', 'estree-walker']
+  function resolveDefine() {
+    const replacements = {
+      __COMMIT__: `"${process.env.COMMIT}"`,
+      __VERSION__: `"${masterVersion}"`,
+      // this is only used during Vue's internal tests
+      __TEST__: `false`,
+      // If the build is expected to run directly in the browser (global / esm builds)
+      __BROWSER__: String(isBrowserBuild),
+      __GLOBAL__: String(isGlobalBuild),
+      __ESM_BUNDLER__: String(isBundlerESMBuild),
+      __ESM_BROWSER__: String(isBrowserESMBuild),
+      // is targeting Node (SSR)?
+      __NODE_JS__: String(isNodeBuild),
+      // need SSR-specific branches?
+      __SSR__: String(isNodeBuild || isBundlerESMBuild || isServerRenderer),
 
-  if (isGlobalBuild || isBrowserESMBuild || isCompatPackage) {
-    if (!packageOptions.enableNonBrowserBranches) {
-      // normal browser builds - non-browser only imports are tree-shaken,
-      // they are only listed here to suppress warnings.
-      external = treeShakenDeps
+      // 2.x compat build
+      __COMPAT__: String(isCompatBuild),
+
+      // feature flags
+      __FEATURE_SUSPENSE__: `true`,
+      __FEATURE_OPTIONS_API__: isBundlerESMBuild
+        ? `__VUE_OPTIONS_API__`
+        : `true`,
+      __FEATURE_PROD_DEVTOOLS__: isBundlerESMBuild
+        ? `__VUE_PROD_DEVTOOLS__`
+        : `false`
     }
-  } else {
-    // Node / esm-bundler builds.
-    // externalize all direct deps unless it's the compat build.
-    external = [
-      ...Object.keys(pkg.dependencies || {}),
-      ...Object.keys(pkg.peerDependencies || {}),
-      // for @vue/compiler-sfc / server-renderer
-      ...['path', 'url', 'stream'],
-      // somehow these throw warnings for runtime-* package builds
-      ...treeShakenDeps
-    ]
+
+    if (!isBundlerESMBuild) {
+      // hard coded dev/prod builds
+      // @ts-ignore
+      replacements.__DEV__ = String(!isProductionBuild)
+    }
+
+    // allow inline overrides like
+    //__RUNTIME_COMPILE__=true pnpm build runtime-core
+    Object.keys(replacements).forEach(key => {
+      if (key in process.env) {
+        replacements[key] = process.env[key]
+      }
+    })
+    return replacements
   }
 
-  // we are bundling forked consolidate.js in compiler-sfc which dynamically
-  // requires a ton of template engines which should be ignored.
-  let cjsIgnores = []
-  if (pkg.name === '@vue/compiler-sfc') {
-    cjsIgnores = [
-      ...Object.keys(consolidatePkg.devDependencies),
-      'vm',
-      'crypto',
-      'react-dom/server',
-      'teacup/lib/express',
-      'arc-templates/dist/es5',
-      'then-pug',
-      'then-jade'
-    ]
+  // esbuild define is a bit strict and only allows literal json or identifiers
+  // so we still need replace plugin in some cases
+  function resolveReplace() {
+    const replacements = {}
+
+    if (isProductionBuild && isBrowserBuild) {
+      Object.assign(replacements, {
+        'context.onError(': `/*#__PURE__*/ context.onError(`,
+        'emitError(': `/*#__PURE__*/ emitError(`,
+        'createCompilerError(': `/*#__PURE__*/ createCompilerError(`,
+        'createDOMCompilerError(': `/*#__PURE__*/ createDOMCompilerError(`
+      })
+    }
+
+    if (isBundlerESMBuild) {
+      Object.assign(replacements, {
+        // preserve to be handled by bundlers
+        __DEV__: `(process.env.NODE_ENV !== 'production')`
+      })
+    }
+
+    // for compiler-sfc browser build inlined deps
+    if (isBrowserESMBuild) {
+      Object.assign(replacements, {
+        'process.env': '({})',
+        'process.platform': '""',
+        'process.stdout': 'null'
+      })
+    }
+
+    if (Object.keys(replacements).length) {
+      // @ts-ignore
+      return [replace({ values: replacements, preventAssignment: true })]
+    } else {
+      return []
+    }
   }
 
-  const nodePlugins =
-    (format === 'cjs' && Object.keys(pkg.devDependencies || {}).length) ||
-    packageOptions.enableNonBrowserBranches
-      ? [
-          commonJS({
-            sourceMap: false,
-            ignore: cjsIgnores
-          }),
-          ...(format === 'cjs' ? [] : [polyfillNode()]),
-          nodeResolve()
-        ]
-      : []
+  function resolveExternal() {
+    const treeShakenDeps = ['source-map', '@babel/parser', 'estree-walker']
 
-  if (format === 'cjs') {
-    nodePlugins.push(cjsReExportsPatchPlugin())
+    if (isGlobalBuild || isBrowserESMBuild || isCompatPackage) {
+      if (!packageOptions.enableNonBrowserBranches) {
+        // normal browser builds - non-browser only imports are tree-shaken,
+        // they are only listed here to suppress warnings.
+        return treeShakenDeps
+      }
+    } else {
+      // Node / esm-bundler builds.
+      // externalize all direct deps unless it's the compat build.
+      return [
+        ...Object.keys(pkg.dependencies || {}),
+        ...Object.keys(pkg.peerDependencies || {}),
+        // for @vue/compiler-sfc / server-renderer
+        ...['path', 'url', 'stream'],
+        // somehow these throw warnings for runtime-* package builds
+        ...treeShakenDeps
+      ]
+    }
+  }
+
+  function resolveNodePlugins() {
+    // we are bundling forked consolidate.js in compiler-sfc which dynamically
+    // requires a ton of template engines which should be ignored.
+    let cjsIgnores = []
+    if (pkg.name === '@vue/compiler-sfc') {
+      cjsIgnores = [
+        ...Object.keys(consolidatePkg.devDependencies),
+        'vm',
+        'crypto',
+        'react-dom/server',
+        'teacup/lib/express',
+        'arc-templates/dist/es5',
+        'then-pug',
+        'then-jade'
+      ]
+    }
+
+    const nodePlugins =
+      (format === 'cjs' && Object.keys(pkg.devDependencies || {}).length) ||
+      packageOptions.enableNonBrowserBranches
+        ? [
+            commonJS({
+              sourceMap: false,
+              ignore: cjsIgnores
+            }),
+            ...(format === 'cjs' ? [] : [polyfillNode()]),
+            nodeResolve()
+          ]
+        : []
+
+    if (format === 'cjs') {
+      nodePlugins.push(cjsReExportsPatchPlugin())
+    }
+
+    return nodePlugins
   }
 
   return {
     input: resolve(entryFile),
     // Global and Browser ESM builds inlines everything so that they can be
     // used alone.
-    external,
+    external: resolveExternal(),
     plugins: [
       json({
         namedExports: false
       }),
-      aliasPlugin,
-      tsPlugin,
-      createReplacePlugin(
-        isProductionBuild,
-        isBundlerESMBuild,
-        isBrowserESMBuild,
-        // isBrowserBuild?
-        (isGlobalBuild || isBrowserESMBuild || isBundlerESMBuild) &&
-          !packageOptions.enableNonBrowserBranches,
-        isGlobalBuild,
-        isNodeBuild,
-        isCompatBuild,
-        isServerRenderer
-      ),
-      ...nodePlugins,
+      alias({
+        entries
+      }),
+      ...resolveReplace(),
+      esbuild({
+        tsconfig: path.resolve(__dirname, 'tsconfig.json'),
+        sourceMap: output.sourcemap,
+        minify: false,
+        target: isServerRenderer || isNodeBuild ? 'es2019' : 'es2015',
+        define: resolveDefine()
+      }),
+      ...resolveNodePlugins(),
       ...plugins
     ],
     output,
@@ -254,81 +304,6 @@ function createConfig(format, output, plugins = []) {
       moduleSideEffects: false
     }
   }
-}
-
-function createReplacePlugin(...args) {
-  return replace({
-    // @ts-ignore
-    values: createReplacements(...args),
-    preventAssignment: true
-  })
-}
-
-function createReplacements(
-  isProduction,
-  isBundlerESMBuild,
-  isBrowserESMBuild,
-  isBrowserBuild,
-  isGlobalBuild,
-  isNodeBuild,
-  isCompatBuild,
-  isServerRenderer
-) {
-  const replacements = {
-    __COMMIT__: `"${process.env.COMMIT}"`,
-    __VERSION__: `"${masterVersion}"`,
-    __DEV__: isBundlerESMBuild
-      ? // preserve to be handled by bundlers
-        `(process.env.NODE_ENV !== 'production')`
-      : // hard coded dev/prod builds
-        String(!isProduction),
-    // this is only used during Vue's internal tests
-    __TEST__: `false`,
-    // If the build is expected to run directly in the browser (global / esm builds)
-    __BROWSER__: isBrowserBuild,
-    __GLOBAL__: isGlobalBuild,
-    __ESM_BUNDLER__: isBundlerESMBuild,
-    __ESM_BROWSER__: isBrowserESMBuild,
-    // is targeting Node (SSR)?
-    __NODE_JS__: isNodeBuild,
-    // need SSR-specific branches?
-    __SSR__: isNodeBuild || isBundlerESMBuild || isServerRenderer,
-
-    // for compiler-sfc browser build inlined deps
-    ...(isBrowserESMBuild
-      ? {
-          'process.env': '({})',
-          'process.platform': '""',
-          'process.stdout': 'null'
-        }
-      : {}),
-
-    // 2.x compat build
-    __COMPAT__: isCompatBuild,
-
-    // feature flags
-    __FEATURE_SUSPENSE__: `true`,
-    __FEATURE_OPTIONS_API__: isBundlerESMBuild ? `__VUE_OPTIONS_API__` : `true`,
-    __FEATURE_PROD_DEVTOOLS__: isBundlerESMBuild
-      ? `__VUE_PROD_DEVTOOLS__`
-      : `false`,
-    ...(isProduction && isBrowserBuild
-      ? {
-          'context.onError(': `/*#__PURE__*/ context.onError(`,
-          'emitError(': `/*#__PURE__*/ emitError(`,
-          'createCompilerError(': `/*#__PURE__*/ createCompilerError(`,
-          'createDOMCompilerError(': `/*#__PURE__*/ createDOMCompilerError(`
-        }
-      : {})
-  }
-  // allow inline overrides like
-  //__RUNTIME_COMPILE__=true pnpm build runtime-core
-  Object.keys(replacements).forEach(key => {
-    if (key in process.env) {
-      replacements[key] = process.env[key]
-    }
-  })
-  return replacements
 }
 
 function createProductionConfig(format) {
