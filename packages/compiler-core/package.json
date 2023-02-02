@@ -33,7 +33,7 @@
   "homepage": "https://github.com/vuejs/core/tree/main/packages/compiler-core#readme",
   "dependencies": {
     "@vue/shared": "3.2.47",
-    "@babel/parser": "^7.16.4",
+    "@babel/parser": "^7.20.15",
     "estree-walker": "^2.0.2",
     "source-map": "^0.6.1"
   },
