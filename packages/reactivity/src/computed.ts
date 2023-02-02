@@ -1,4 +1,9 @@
-import { DebuggerOptions, ReactiveEffect } from './effect'
+import {
+  DebuggerOptions,
+  pauseTracking,
+  ReactiveEffect,
+  resetTracking
+} from './effect'
 import { Ref, trackRefValue, triggerRefValue } from './ref'
 import { hasChanged, isFunction, NOOP } from '@vue/shared'
 import { ReactiveFlags, toRaw } from './reactive'
@@ -65,19 +70,21 @@ export class ComputedRefImpl<T> {
   get value() {
     // the computed ref may get wrapped by other proxies e.g. readonly() #3376
     const self = toRaw(this)
-    if (!self._dirty) {
+    if (!self._dirty && self._computedsToAskDirty.length) {
+      pauseTracking()
       for (const computedToAskDirty of self._computedsToAskDirty) {
         computedToAskDirty.value
         if (self._dirty) {
           break
         }
       }
+      resetTracking()
     }
     trackRefValue(self)
     if (self._dirty || !self._cacheable) {
       const newValue = self.effect.run()!
       if (hasChanged(self._value, newValue)) {
-        triggerRefValue(this, undefined)
+        triggerRefValue(self, undefined)
       }
       self._value = newValue
       self._dirty = false
