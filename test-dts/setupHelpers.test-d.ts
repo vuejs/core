@@ -13,11 +13,16 @@ describe('defineProps w/ type declaration', () => {
   // type declaration
   const props = defineProps<{
     foo: string
+    bool?: boolean
+    boolAndUndefined: boolean | undefined
   }>()
   // explicitly declared type should be refined
   expectType<string>(props.foo)
   // @ts-expect-error
   props.bar
+
+  expectType<boolean>(props.bool)
+  expectType<boolean>(props.boolAndUndefined)
 })
 
 describe('defineProps w/ type declaration + withDefaults', () => {
@@ -31,6 +36,8 @@ describe('defineProps w/ type declaration + withDefaults', () => {
       x?: string
       y?: string
       z?: string
+      bool?: boolean
+      boolAndUndefined: boolean | undefined
     }>(),
     {
       number: 123,
@@ -56,6 +63,9 @@ describe('defineProps w/ type declaration + withDefaults', () => {
   expectType<string | undefined>(res.x)
   expectType<string | undefined>(res.y)
   expectType<string>(res.z)
+
+  expectType<boolean>(res.bool)
+  expectType<boolean>(res.boolAndUndefined)
 })
 
 describe('defineProps w/ union type declaration + withDefaults', () => {
