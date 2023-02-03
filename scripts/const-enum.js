@@ -112,9 +112,17 @@ export async function constEnum() {
             }
 
             if (init.type === 'UnaryExpression') {
-              // @ts-ignore assume all operands are literals
-              const exp = `${init.operator}${init.argument.value}`
-              value = evaluate(exp)
+              if (
+                init.argument.type === 'StringLiteral' ||
+                init.argument.type === 'NumericLiteral'
+              ) {
+                const exp = `${init.operator}${init.argument.value}`
+                value = evaluate(exp)
+              } else {
+                throw new Error(
+                  `unhandled UnaryExpression argument type ${init.argument.type} in ${file}`
+                )
+              }
             }
 
             if (value === undefined) {
