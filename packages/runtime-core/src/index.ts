@@ -136,7 +136,6 @@ import { VNode } from './vnode'
 import { ComponentInternalInstance } from './component'
 
 // Augment Ref unwrap bail types.
-// Note: if updating this, also update `types/refBail.d.ts`.
 declare module '@vue/reactivity' {
   export interface RefUnwrapBailTypes {
     runtimeCoreBailTypes:
@@ -148,6 +147,7 @@ declare module '@vue/reactivity' {
         }
   }
 }
+
 export { TrackOpTypes, TriggerOpTypes } from '@vue/reactivity'
 export type {
   Ref,

@@ -58,7 +58,6 @@
     "@babel/parser": "^7.20.15",
     "@babel/types": "^7.20.7",
     "@esbuild-plugins/node-modules-polyfill": "^0.1.4",
-    "@microsoft/api-extractor": "~7.34.2",
     "@rollup/plugin-alias": "^4.0.3",
     "@rollup/plugin-commonjs": "^23.0.2",
     "@rollup/plugin-json": "^5.0.1",

@@ -127,6 +127,7 @@ async function main() {
   step('\nBuilding all packages...')
   if (!skipBuild && !isDryRun) {
     await run('pnpm', ['run', 'build', '--release'])
+    await run('pnpm', ['run', 'build-dts'])
     // test generated dts files
     step('\nVerifying type declarations...')
     await run('pnpm', ['run', 'test-dts-only'])

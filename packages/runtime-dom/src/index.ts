@@ -26,7 +26,6 @@ import {
 
 declare module '@vue/reactivity' {
   export interface RefUnwrapBailTypes {
-    // Note: if updating this, also update `types/refBail.d.ts`.
     runtimeDOMBailTypes: Node | Window
   }
 }
