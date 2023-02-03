@@ -28,7 +28,7 @@ export {
   shallowReadonly,
   markRaw,
   toRaw,
-  ReactiveFlags,
+  ReactiveFlags /* @remove */,
   type Raw,
   type DeepReadonly,
   type ShallowReactive,
@@ -66,4 +66,7 @@ export {
   getCurrentScope,
   onScopeDispose
 } from './effectScope'
-export { TrackOpTypes, TriggerOpTypes } from './operations'
+export {
+  TrackOpTypes /* @remove */,
+  TriggerOpTypes /* @remove */
+} from './operations'

@@ -12,6 +12,8 @@ import terser from '@rollup/plugin-terser'
 import esbuild from 'rollup-plugin-esbuild'
 import alias from '@rollup/plugin-alias'
 import { entries } from './scripts/aliases.mjs'
+import { constEnum } from './scripts/const-enum.mjs'
+import { writeFileSync } from 'node:fs'
 
 if (!process.env.TARGET) {
   throw new Error('TARGET package must be specified via --environment flag.')
@@ -30,6 +32,8 @@ const resolve = p => path.resolve(packageDir, p)
 const pkg = require(resolve(`package.json`))
 const packageOptions = pkg.buildOptions || {}
 const name = packageOptions.filename || path.basename(packageDir)
+
+const [enumPlugin, enumDefines] = await constEnum()
 
 const outputConfigs = {
   'esm-bundler': {
@@ -175,7 +179,7 @@ function createConfig(format, output, plugins = []) {
   // esbuild define is a bit strict and only allows literal json or identifiers
   // so we still need replace plugin in some cases
   function resolveReplace() {
-    const replacements = {}
+    const replacements = { ...enumDefines }
 
     if (isProductionBuild && isBrowserBuild) {
       Object.assign(replacements, {
@@ -282,6 +286,7 @@ function createConfig(format, output, plugins = []) {
       alias({
         entries
       }),
+      enumPlugin,
       ...resolveReplace(),
       esbuild({
         tsconfig: path.resolve(__dirname, 'tsconfig.json'),
