@@ -76,6 +76,14 @@ A high level overview of tools used:
 - [Prettier](https://prettier.io/) for code formatting
 - [ESLint](https://eslint.org/) for static error prevention (outside of types)
 
+## Git Hooks
+
+The project uses [simple-git-hooks](https://github.com/toplenboren/simple-git-hooks) to enforce the following on each commit:
+
+- Type check the entire project
+- Automatically format changed files using Prettier
+- Verify commit message format (logic in `scripts/verifyCommit.mjs`)
+
 ## Scripts
 
 **The examples below will be using the `nr` command from the [ni](https://github.com/antfu/ni) package.** You can also use plain `npm run`, but you will need to pass all additional arguments after the command after an extra `--`. For example, `nr build runtime --all` is equivalent to `npm run build -- runtime --all`.
@@ -106,7 +114,7 @@ nr build runtime-core
 nr build runtime --all
 ```
 
-Note that `nr build` uses `rollup-plugin-esbuild` for transpiling typescript and **does not perform type checking**. To run type check on the entire codebase, run `nr check`.
+Note that `nr build` uses `rollup-plugin-esbuild` for transpiling typescript and **does not perform type checking**. To run type check on the entire codebase, run `nr check`. Type checks are also automatically run on each commit.
 
 #### Build Formats
 
