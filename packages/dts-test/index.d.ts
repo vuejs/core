@@ -1,7 +1,7 @@
 // This directory contains a number of d.ts assertions
 // use \@ts-expect-error where errors are expected.
 
-export * from '@vue/runtime-dom'
+export * from 'vue'
 
 export function describe(_name: string, _fn: () => void): void
 export function test(_name: string, _fn: () => any): void

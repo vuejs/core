@@ -1,4 +1,3 @@
-import { ComponentPropsOptions } from '@vue/runtime-core'
 import { isArray, isPromise, isFunction } from '@vue/shared'
 import {
   getCurrentInstance,
@@ -8,7 +7,11 @@ import {
   unsetCurrentInstance
 } from './component'
 import { EmitFn, EmitsOptions } from './componentEmits'
-import { ComponentObjectPropsOptions, ExtractPropTypes } from './componentProps'
+import {
+  ComponentPropsOptions,
+  ComponentObjectPropsOptions,
+  ExtractPropTypes
+} from './componentProps'
 import { warn } from './warning'
 
 // dev only

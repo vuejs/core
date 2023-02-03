@@ -18,9 +18,6 @@ importers:
       '@typescript-eslint/parser': ^5.23.0
       '@vitest/coverage-istanbul': ^0.28.2
       '@vue/consolidate': 0.17.3
-      '@vue/reactivity': workspace:*
-      '@vue/runtime-core': workspace:*
-      '@vue/runtime-dom': workspace:*
       brotli: ^1.3.2
       chalk: ^4.1.0
       conventional-changelog-cli: ^2.0.31
@@ -55,7 +52,6 @@ importers:
       typescript: ^4.9.0
       vite: ^4.0.4
       vitest: ^0.28.2
-      vue: workspace:*
     devDependencies:
       '@babel/parser': 7.20.15
       '@babel/types': 7.20.7
@@ -71,9 +67,6 @@ importers:
       '@typescript-eslint/parser': 5.50.0_jofidmxrjzhj7l6vknpw5ecvfe
       '@vitest/coverage-istanbul': 0.28.3_jsdom@21.1.0+terser@5.16.2
       '@vue/consolidate': 0.17.3
-      '@vue/reactivity': link:packages/reactivity
-      '@vue/runtime-core': link:packages/runtime-core
-      '@vue/runtime-dom': link:packages/runtime-dom
       brotli: 1.3.3
       chalk: 4.1.2
       conventional-changelog-cli: 2.2.2
@@ -108,7 +101,6 @@ importers:
       typescript: 4.9.5
       vite: 4.1.1_ghge5pqdvzsmxto52quo4r2say
       vitest: 0.28.3_jsdom@21.1.0+terser@5.16.2
-      vue: link:packages/vue
 
   packages/compiler-core:
     specifiers:
@@ -187,6 +179,18 @@ importers:
     dependencies:
       '@vue/compiler-dom': link:../compiler-dom
       '@vue/shared': link:../shared
+
+  packages/dts-test:
+    specifiers:
+      '@vue/reactivity': workspace:*
+      '@vue/runtime-core': workspace:*
+      '@vue/runtime-dom': workspace:*
+      vue: workspace:*
+    dependencies:
+      '@vue/reactivity': link:../reactivity
+      '@vue/runtime-core': link:../runtime-core
+      '@vue/runtime-dom': link:../runtime-dom
+      vue: link:../vue
 
   packages/reactivity:
     specifiers:

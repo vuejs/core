@@ -32,7 +32,7 @@ module.exports = {
   overrides: [
     // tests, no restrictions (runs in Node / jest with jsdom)
     {
-      files: ['**/__tests__/**', 'test-dts/**'],
+      files: ['**/__tests__/**', 'packages/dts-test/**'],
       rules: {
         'no-restricted-globals': 'off',
         'no-restricted-syntax': 'off',

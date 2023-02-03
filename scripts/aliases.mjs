@@ -22,7 +22,8 @@ const entries = {
 const nonSrcPackages = [
   'sfc-playground',
   'size-check',
-  'template-explorer'
+  'template-explorer',
+  'dts-test'
 ]
 
 for (const dir of dirs) {
