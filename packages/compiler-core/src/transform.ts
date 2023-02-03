@@ -82,9 +82,7 @@ export interface ImportItem {
 }
 
 export interface TransformContext
-  extends Required<
-      Omit<TransformOptions, 'filename' | keyof CompilerCompatOptions>
-    >,
+  extends Required<Omit<TransformOptions, keyof CompilerCompatOptions>>,
     CompilerCompatOptions {
   selfName: string | null
   root: RootNode
@@ -152,6 +150,7 @@ export function createTransformContext(
   const context: TransformContext = {
     // options
     selfName: nameMatch && capitalize(camelize(nameMatch[1])),
+    filename,
     prefixIdentifiers,
     hoistStatic,
     cacheHandlers,

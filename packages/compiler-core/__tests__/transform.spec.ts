@@ -35,7 +35,8 @@ describe('compiler: transform', () => {
     }
 
     transform(ast, {
-      nodeTransforms: [plugin]
+      nodeTransforms: [plugin],
+      filename: 'example.vue'
     })
 
     const div = ast.children[0] as ElementNode
@@ -43,6 +44,7 @@ describe('compiler: transform', () => {
     expect(calls[0]).toMatchObject([
       ast,
       {
+        filename: 'example.vue',
         parent: null,
         currentNode: ast
       }
