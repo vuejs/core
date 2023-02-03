@@ -1,3 +1,4 @@
+// @ts-check
 import fs from 'node:fs'
 import chalk from 'chalk'
 import { createRequire } from 'node:module'
