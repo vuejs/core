@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "baseUrl": ".",
-    "outDir": "dist",
+    "outDir": "temp",
     "sourceMap": false,
     "target": "es2016",
     "newLine": "LF",
