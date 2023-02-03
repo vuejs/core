@@ -1,4 +1,5 @@
-import { provide, inject, InjectionKey, expectType } from './index'
+import { provide, inject, InjectionKey } from 'vue'
+import { expectType } from './utils'
 
 const key: InjectionKey<number> = Symbol()
 

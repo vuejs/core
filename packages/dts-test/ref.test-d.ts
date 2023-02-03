@@ -5,15 +5,14 @@ import {
   isRef,
   unref,
   reactive,
-  expectType,
   proxyRefs,
   toRef,
   toRefs,
   ToRefs,
   shallowReactive,
-  readonly,
-  describe
-} from './index'
+  readonly
+} from 'vue'
+import { expectType, describe } from './utils'
 
 function plainType(arg: number | Ref<number>) {
   // ref coercing

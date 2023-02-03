@@ -2,9 +2,6 @@
   "name": "dts-test",
   "private": true,
   "dependencies": {
-    "vue": "workspace:*",
-    "@vue/runtime-core": "workspace:*",
-    "@vue/runtime-dom": "workspace:*",
-    "@vue/reactivity": "workspace:*"
+    "vue": "workspace:*"
   }
 }

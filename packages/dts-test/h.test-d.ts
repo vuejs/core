@@ -1,5 +1,4 @@
 import {
-  describe,
   h,
   defineComponent,
   ref,
@@ -7,29 +6,28 @@ import {
   Teleport,
   Suspense,
   Component,
-  expectError,
-  expectAssignable,
   resolveComponent
-} from './index'
+} from 'vue'
+import { describe, expectAssignable } from './utils'
 
 describe('h inference w/ element', () => {
   // key
   h('div', { key: 1 })
   h('div', { key: 'foo' })
   //  @ts-expect-error
-  expectError(h('div', { key: [] }))
+  h('div', { key: [] })
   //  @ts-expect-error
-  expectError(h('div', { key: {} }))
+  h('div', { key: {} })
   // ref
   h('div', { ref: 'foo' })
   h('div', { ref: ref(null) })
   h('div', { ref: _el => {} })
   //  @ts-expect-error
-  expectError(h('div', { ref: [] }))
+  h('div', { ref: [] })
   //  @ts-expect-error
-  expectError(h('div', { ref: {} }))
+  h('div', { ref: {} })
   //  @ts-expect-error
-  expectError(h('div', { ref: 123 }))
+  h('div', { ref: 123 })
   // slots
   const slots = { default: () => {} } // RawSlots
   h('div', {}, slots)
@@ -40,20 +38,20 @@ describe('h inference w/ Fragment', () => {
   h(Fragment, ['hello'])
   h(Fragment, { key: 123 }, ['hello'])
   // @ts-expect-error
-  expectError(h(Fragment, 'foo'))
+  h(Fragment, 'foo')
   //  @ts-expect-error
-  expectError(h(Fragment, { key: 123 }, 'bar'))
+  h(Fragment, { key: 123 }, 'bar')
 })
 
 describe('h inference w/ Teleport', () => {
   h(Teleport, { to: '#foo' }, 'hello')
   h(Teleport, { to: '#foo' }, { default() {} })
   // @ts-expect-error
-  expectError(h(Teleport))
+  h(Teleport)
   // @ts-expect-error
-  expectError(h(Teleport, {}))
+  h(Teleport, {})
   // @ts-expect-error
-  expectError(h(Teleport, { to: '#foo' }))
+  h(Teleport, { to: '#foo' })
 })
 
 describe('h inference w/ Suspense', () => {
@@ -64,7 +62,7 @@ describe('h inference w/ Suspense', () => {
     default: () => 'foo'
   })
   //  @ts-expect-error
-  expectError(h(Suspense, { onResolve: 1 }))
+  h(Suspense, { onResolve: 1 })
 })
 
 describe('h inference w/ functional component', () => {
@@ -72,11 +70,11 @@ describe('h inference w/ functional component', () => {
   h(Func, { foo: 'hello' })
   h(Func, { foo: 'hello', bar: 123 })
   //  @ts-expect-error
-  expectError(h(Func, { foo: 123 }))
+  h(Func, { foo: 123 })
   //  @ts-expect-error
-  expectError(h(Func, {}))
+  h(Func, {})
   //  @ts-expect-error
-  expectError(h(Func, { bar: 123 }))
+  h(Func, { bar: 123 })
 })
 
 describe('h support w/ plain object component', () => {
@@ -106,11 +104,11 @@ describe('h inference w/ defineComponent', () => {
   // should allow extraneous props (attrs fallthrough)
   h(Foo, { bar: 1, foo: 'ok', class: 'extra' })
   // @ts-expect-error should fail on missing required prop
-  expectError(h(Foo, {}))
+  h(Foo, {})
   //  @ts-expect-error
-  expectError(h(Foo, { foo: 'ok' }))
+  h(Foo, { foo: 'ok' })
   // @ts-expect-error should fail on wrong type
-  expectError(h(Foo, { bar: 1, foo: 1 }))
+  h(Foo, { bar: 1, foo: 1 })
 })
 
 // describe('h inference w/ defineComponent + optional props', () => {
@@ -123,11 +121,11 @@ describe('h inference w/ defineComponent', () => {
 //   // should allow extraneous props (attrs fallthrough)
 //   h(Foo, { bar: 1, foo: 'ok', class: 'extra' })
 //   // @ts-expect-error should fail on missing required prop
-//   expectError(h(Foo, {}))
+//   h(Foo, {})
 //   // @ts-expect-error
-//   expectError(h(Foo, { foo: 'ok' }))
+//   h(Foo, { foo: 'ok' })
 //   // @ts-expect-error should fail on wrong type
-//   expectError(h(Foo, { bar: 1, foo: 1 }))
+//   h(Foo, { bar: 1, foo: 1 })
 // })
 
 // describe('h inference w/ defineComponent + direct function', () => {
@@ -138,11 +136,11 @@ describe('h inference w/ defineComponent', () => {
 //   // should allow extraneous props (attrs fallthrough)
 //   h(Foo, { bar: 1, foo: 'ok', class: 'extra' })
 //   // @ts-expect-error should fail on missing required prop
-//   expectError(h(Foo, {}))
+//   h(Foo, {})
 //   //  @ts-expect-error
-//   expectError(h(Foo, { foo: 'ok' }))
+//   h(Foo, { foo: 'ok' })
 //   // @ts-expect-error should fail on wrong type
-//   expectError(h(Foo, { bar: 1, foo: 1 }))
+//   h(Foo, { bar: 1, foo: 1 })
 // })
 
 // #922 and #3218
@@ -223,7 +221,7 @@ describe('Boolean prop implicit false', () => {
     visible: true
   })
   // @ts-expect-error
-  expectError(h(RequiredComponent, {}))
+  h(RequiredComponent, {})
 })
 
 // #2357

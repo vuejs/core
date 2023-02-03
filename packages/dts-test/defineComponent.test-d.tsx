@@ -1,20 +1,16 @@
 import {
-  describe,
-  test,
   Component,
   defineComponent,
   PropType,
   ref,
   reactive,
   createApp,
-  expectError,
-  expectType,
   ComponentPublicInstance,
   ComponentOptions,
   SetupContext,
-  IsUnion,
   h
-} from './index'
+} from 'vue'
+import { describe, expectType, IsUnion } from './utils'
 
 describe('with object props', () => {
   interface ExpectedProps {
@@ -178,7 +174,7 @@ describe('with object props', () => {
       expectType<ExpectedProps['lll']>(props.lll)
 
       // @ts-expect-error props should be readonly
-      expectError((props.a = 1))
+      props.a = 1
 
       // setup context
       return {
@@ -220,7 +216,7 @@ describe('with object props', () => {
       expectType<ExpectedProps['kkk']>(props.kkk)
 
       // @ts-expect-error props should be readonly
-      expectError((props.a = 1))
+      props.a = 1
 
       // should also expose declared props on `this`
       expectType<ExpectedProps['a']>(this.a)
@@ -248,7 +244,7 @@ describe('with object props', () => {
       expectType<ExpectedProps['kkk']>(this.kkk)
 
       // @ts-expect-error props on `this` should be readonly
-      expectError((this.a = 1))
+      this.a = 1
 
       // assert setup context unwrapping
       expectType<number>(this.c)
@@ -305,18 +301,14 @@ describe('with object props', () => {
   )
 
   // @ts-expect-error missing required props
-  expectError(<MyComponent />)
+  let c = <MyComponent />
+  // @ts-expect-error wrong prop types
+  c = <MyComponent a={'wrong type'} b="foo" dd={{ n: 1 }} ddd={['foo']} />
+  // @ts-expect-error wrong prop types
+  c = <MyComponent ggg="baz" />
 
-  expectError(
-    // @ts-expect-error wrong prop types
-    <MyComponent a={'wrong type'} b="foo" dd={{ n: 1 }} ddd={['foo']} />
-  )
-  expectError(
-    // @ts-expect-error wrong prop types
-    <MyComponent ggg="baz" />
-  )
   // @ts-expect-error
-  expectError(<MyComponent b="foo" dd={{ n: 'string' }} ddd={['foo']} />)
+  ;<MyComponent b="foo" dd={{ n: 'string' }} ddd={['foo']} />
 
   // `this` should be void inside of prop validators and prop default factories
   defineComponent({
@@ -353,17 +345,18 @@ describe('type inference w/ optional props declaration', () => {
 
   expectType<JSX.Element>(<MyComponent msg="1" a={['1']} />)
   // @ts-expect-error
-  expectError(<MyComponent />)
+  ;<MyComponent />
   // @ts-expect-error
-  expectError(<MyComponent msg="1" />)
+  ;<MyComponent msg="1" />
 })
 
 describe('type inference w/ direct setup function', () => {
   const MyComponent = defineComponent((_props: { msg: string }) => {})
   expectType<JSX.Element>(<MyComponent msg="foo" />)
   // @ts-expect-error
-  expectError(<MyComponent />)
-  expectError(<MyComponent msg="1" />)
+  ;<MyComponent />
+  // @ts-expect-error
+  ;<MyComponent msg={1} />
 })
 
 describe('type inference w/ array props declaration', () => {
@@ -371,7 +364,7 @@ describe('type inference w/ array props declaration', () => {
     props: ['a', 'b'],
     setup(props) {
       // @ts-expect-error props should be readonly
-      expectError((props.a = 1))
+      props.a = 1
       expectType<any>(props.a)
       expectType<any>(props.b)
       return {
@@ -382,7 +375,7 @@ describe('type inference w/ array props declaration', () => {
       expectType<any>(this.$props.a)
       expectType<any>(this.$props.b)
       // @ts-expect-error
-      expectError((this.$props.a = 1))
+      this.$props.a = 1
       expectType<any>(this.a)
       expectType<any>(this.b)
       expectType<number>(this.c)
@@ -390,7 +383,7 @@ describe('type inference w/ array props declaration', () => {
   })
   expectType<JSX.Element>(<MyComponent a={[1, 2]} b="b" />)
   // @ts-expect-error
-  expectError(<MyComponent other="other" />)
+  ;<MyComponent other="other" />
 })
 
 describe('type inference w/ options API', () => {
@@ -609,17 +602,17 @@ describe('with mixins', () => {
 
       // props should be readonly
       // @ts-expect-error
-      expectError((this.aP1 = 'new'))
+      this.aP1 = 'new'
       // @ts-expect-error
-      expectError((this.z = 1))
+      this.z = 1
 
       // props on `this` should be readonly
       // @ts-expect-error
-      expectError((this.bP1 = 1))
+      this.bP1 = 1
 
       // string value can not assigned to number type value
       // @ts-expect-error
-      expectError((this.c = '1'))
+      this.c = '1'
 
       // setup context properties should be mutable
       this.d = 5
@@ -635,13 +628,13 @@ describe('with mixins', () => {
 
   // missing required props
   // @ts-expect-error
-  expectError(<MyComponent />)
+  ;<MyComponent />
 
   // wrong prop types
   // @ts-expect-error
-  expectError(<MyComponent aP1="ap" aP2={'wrong type'} bP1="b" z={'z'} />)
+  ;<MyComponent aP1="ap" aP2={'wrong type'} bP1="b" z={'z'} />
   // @ts-expect-error
-  expectError(<MyComponent aP1={1} bP2={[1]} />)
+  ;<MyComponent aP1={1} bP2={[1]} />
 })
 
 describe('with extends', () => {
@@ -700,13 +693,13 @@ describe('with extends', () => {
 
   // missing required props
   // @ts-expect-error
-  expectError(<MyComponent />)
+  ;<MyComponent />
 
   // wrong prop types
   // @ts-expect-error
-  expectError(<MyComponent aP2={'wrong type'} z={'z'} />)
+  ;<MyComponent aP2={'wrong type'} z={'z'} />
   // @ts-expect-error
-  expectError(<MyComponent aP1={3} />)
+  ;<MyComponent aP1={3} />
 })
 
 describe('extends with mixins', () => {
@@ -805,19 +798,19 @@ describe('extends with mixins', () => {
 
   // missing required props
   // @ts-expect-error
-  expectError(<MyComponent mP3 p3 /* z='z' */ />)
+  ;<MyComponent mP3 p3 /* z='z' */ />
   // missing required props from mixin
   // @ts-expect-error
-  expectError(<MyComponent /* mP3 */ p3 z="z" />)
+  ;<MyComponent /* mP3 */ p3 z="z" />
   // missing required props from extends
   // @ts-expect-error
-  expectError(<MyComponent mP3 /* p3 */ z="z" />)
+  ;<MyComponent mP3 /* p3 */ z="z" />
 
   // wrong prop types
   // @ts-expect-error
-  expectError(<MyComponent p2={'wrong type'} z={'z'} />)
+  ;<MyComponent p2={'wrong type'} z={'z'} />
   // @ts-expect-error
-  expectError(<MyComponent mP1={3} />)
+  ;<MyComponent mP1={3} />
 
   // #3468
   const CompWithD = defineComponent({
@@ -875,14 +868,14 @@ describe('compatibility w/ createApp', () => {
 })
 
 describe('defineComponent', () => {
-  test('should accept components defined with defineComponent', () => {
+  describe('should accept components defined with defineComponent', () => {
     const comp = defineComponent({})
     defineComponent({
       components: { comp }
     })
   })
 
-  test('should accept class components with receiving constructor arguments', () => {
+  describe('should accept class components with receiving constructor arguments', () => {
     class Comp {
       static __vccOpts = {}
       constructor(_props: { foo: string }) {}
@@ -915,29 +908,29 @@ describe('emits', () => {
       emit('click', 1)
       emit('input', 'foo')
       //  @ts-expect-error
-      expectError(emit('nope'))
+      emit('nope')
       //  @ts-expect-error
-      expectError(emit('click'))
+      emit('click')
       //  @ts-expect-error
-      expectError(emit('click', 'foo'))
+      emit('click', 'foo')
       //  @ts-expect-error
-      expectError(emit('input'))
+      emit('input')
       //  @ts-expect-error
-      expectError(emit('input', 1))
+      emit('input', 1)
     },
     created() {
       this.$emit('click', 1)
       this.$emit('input', 'foo')
       //  @ts-expect-error
-      expectError(this.$emit('nope'))
+      this.$emit('nope')
       //  @ts-expect-error
-      expectError(this.$emit('click'))
+      this.$emit('click')
       //  @ts-expect-error
-      expectError(this.$emit('click', 'foo'))
+      this.$emit('click', 'foo')
       //  @ts-expect-error
-      expectError(this.$emit('input'))
+      this.$emit('input')
       //  @ts-expect-error
-      expectError(this.$emit('input', 1))
+      this.$emit('input', 1)
     },
     mounted() {
       // #3599
@@ -947,15 +940,15 @@ describe('emits', () => {
         this.$emit('click', 1)
         this.$emit('input', 'foo')
         //  @ts-expect-error
-        expectError(this.$emit('nope'))
+        this.$emit('nope')
         //  @ts-expect-error
-        expectError(this.$emit('click'))
+        this.$emit('click')
         //  @ts-expect-error
-        expectError(this.$emit('click', 'foo'))
+        this.$emit('click', 'foo')
         //  @ts-expect-error
-        expectError(this.$emit('input'))
+        this.$emit('input')
         //  @ts-expect-error
-        expectError(this.$emit('input', 1))
+        this.$emit('input', 1)
       })
     }
   })
@@ -970,14 +963,14 @@ describe('emits', () => {
       emit('foo', 123)
       emit('bar')
       //  @ts-expect-error
-      expectError(emit('nope'))
+      emit('nope')
     },
     created() {
       this.$emit('foo')
       this.$emit('foo', 123)
       this.$emit('bar')
       //  @ts-expect-error
-      expectError(this.$emit('nope'))
+      this.$emit('nope')
     }
   })
 
@@ -990,9 +983,9 @@ describe('emits', () => {
       expectType<((n: number) => any) | undefined>(props.onClick)
       emit('click', 1)
       //  @ts-expect-error
-      expectError(emit('click'))
+      emit('click')
       //  @ts-expect-error
-      expectError(emit('click', 'foo'))
+      emit('click', 'foo')
     }
   })
 
@@ -1047,7 +1040,7 @@ describe('inject', () => {
       expectType<unknown>(this.foo)
       expectType<unknown>(this.bar)
       //  @ts-expect-error
-      expectError((this.foobar = 1))
+      this.foobar = 1
     }
   })
 
@@ -1059,7 +1052,7 @@ describe('inject', () => {
       expectType<unknown>(this.foo)
       expectType<unknown>(this.bar)
       //  @ts-expect-error
-      expectError((this.foobar = 1))
+      this.foobar = 1
     }
   })
 
@@ -1079,7 +1072,7 @@ describe('inject', () => {
       expectType<unknown>(this.foo)
       expectType<unknown>(this.bar)
       //  @ts-expect-error
-      expectError((this.foobar = 1))
+      this.foobar = 1
     }
   })
 
@@ -1088,9 +1081,9 @@ describe('inject', () => {
     props: ['a', 'b'],
     created() {
       //  @ts-expect-error
-      expectError((this.foo = 1))
+      this.foo = 1
       //  @ts-expect-error
-      expectError((this.bar = 1))
+      this.bar = 1
     }
   })
 })
@@ -1145,15 +1138,15 @@ describe('extract instance type', () => {
   expectType<number>(compA.baseA)
 
   //  @ts-expect-error
-  expectError((compA.a = true))
+  compA.a = true
   //  @ts-expect-error
-  expectError((compA.b = 'foo'))
+  compA.b = 'foo'
   //  @ts-expect-error
-  expectError((compA.c = 1))
+  compA.c = 1
   //  @ts-expect-error
-  expectError((compA.mA = 'foo'))
+  compA.mA = 'foo'
   //  @ts-expect-error
-  expectError((compA.baseA = 1))
+  compA.baseA = 1
 })
 
 describe('async setup', () => {
@@ -1285,7 +1278,7 @@ import {
   AllowedComponentProps,
   ComponentCustomProps,
   ExtractPropTypes
-} from './index'
+} from 'vue'
 
 // code generated by tsc / vue-tsc, make sure this continues to work
 // so we don't accidentally change the args order of DefineComponent

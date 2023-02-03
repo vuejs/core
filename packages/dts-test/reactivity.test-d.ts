@@ -1,21 +1,12 @@
-import {
-  ref,
-  readonly,
-  shallowReadonly,
-  describe,
-  expectError,
-  expectType,
-  Ref,
-  reactive,
-  markRaw
-} from './index'
+import { ref, readonly, shallowReadonly, Ref, reactive, markRaw } from 'vue'
+import { describe, expectType } from './utils'
 
 describe('should support DeepReadonly', () => {
   const r = readonly({ obj: { k: 'v' } })
   // @ts-expect-error
-  expectError((r.obj = {}))
+  r.obj = {}
   // @ts-expect-error
-  expectError((r.obj.k = 'x'))
+  r.obj.k = 'x'
 })
 
 // #4180

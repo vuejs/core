@@ -1,5 +1,4 @@
 import {
-  expectType,
   createBlock,
   VNode,
   Teleport,
@@ -9,7 +8,8 @@ import {
   Fragment,
   Suspense,
   defineComponent
-} from './index'
+} from 'vue'
+import { expectType } from './utils'
 
 expectType<VNode>(createBlock(Teleport))
 expectType<VNode>(createBlock(Text))

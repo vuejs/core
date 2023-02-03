@@ -1,4 +1,4 @@
-import { createApp, App, Plugin } from './index'
+import { createApp, App, Plugin } from 'vue'
 
 const app = createApp({})
 
