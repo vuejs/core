@@ -54,6 +54,7 @@
     "node": ">=16.11.0"
   },
   "devDependencies": {
+    "@babel/parser": "^7.20.15",
     "@babel/types": "^7.20.7",
     "@esbuild-plugins/node-modules-polyfill": "^0.1.4",
     "@microsoft/api-extractor": "~7.20.0",
@@ -83,6 +84,7 @@
     "jsdom": "^21.1.0",
     "lint-staged": "^10.2.10",
     "lodash": "^4.17.15",
+    "magic-string": "^0.27.0",
     "marked": "^4.0.10",
     "minimist": "^1.2.0",
     "npm-run-all": "^4.1.5",
