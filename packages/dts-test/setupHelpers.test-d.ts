@@ -1,13 +1,12 @@
 import {
-  expectType,
   defineProps,
   defineEmits,
   useAttrs,
   useSlots,
   withDefaults,
-  Slots,
-  describe
-} from './index'
+  Slots
+} from 'vue'
+import { describe, expectType } from './utils'
 
 describe('defineProps w/ type declaration', () => {
   // type declaration

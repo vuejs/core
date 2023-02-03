@@ -1,11 +1,5 @@
-import {
-  h,
-  Text,
-  FunctionalComponent,
-  expectError,
-  expectType,
-  Component
-} from './index'
+import { h, Text, FunctionalComponent, Component } from 'vue'
+import { expectType } from './utils'
 
 // simple function signature
 const Foo = (props: { foo: number }) => h(Text, null, props.foo)
@@ -15,11 +9,11 @@ expectType<JSX.Element>(<Foo foo={1} />)
 expectType<JSX.Element>(<Foo foo={1} key="1" />)
 expectType<JSX.Element>(<Foo foo={1} ref="ref" />)
 // @ts-expect-error
-expectError(<Foo />)
+;<Foo />
 //  @ts-expect-error
-expectError(<Foo foo="bar" />)
+;<Foo foo="bar" />
 //  @ts-expect-error
-expectError(<Foo baz="bar" />)
+;<Foo baz="bar" />
 
 // Explicit signature with props + emits
 const Bar: FunctionalComponent<
@@ -30,11 +24,11 @@ const Bar: FunctionalComponent<
 
   emit('update', 123)
   //  @ts-expect-error
-  expectError(emit('nope'))
+  emit('nope')
   //  @ts-expect-error
-  expectError(emit('update'))
+  emit('update')
   //  @ts-expect-error
-  expectError(emit('update', 'nope'))
+  emit('update', 'nope')
 }
 
 // assigning runtime options
@@ -42,22 +36,22 @@ Bar.props = {
   foo: Number
 }
 //  @ts-expect-error
-expectError((Bar.props = { foo: String }))
+Bar.props = { foo: String }
 
 Bar.emits = {
   update: value => value > 1
 }
 //  @ts-expect-error
-expectError((Bar.emits = { baz: () => void 0 }))
+Bar.emits = { baz: () => void 0 }
 
 // TSX
 expectType<JSX.Element>(<Bar foo={1} />)
 //  @ts-expect-error
-expectError(<Foo />)
+;<Foo />
 //  @ts-expect-error
-expectError(<Bar foo="bar" />)
+;<Bar foo="bar" />
 //  @ts-expect-error
-expectError(<Foo baz="bar" />)
+;<Foo baz="bar" />
 
 const Baz: FunctionalComponent<{}, string[]> = (props, { emit }) => {
   expectType<{}>(props)

@@ -1,13 +1,6 @@
 // TSX w/ defineComponent is tested in defineComponent.test-d.tsx
-import {
-  KeepAlive,
-  Suspense,
-  Fragment,
-  Teleport,
-  expectError,
-  expectType,
-  VNode
-} from './index'
+import { KeepAlive, Suspense, Fragment, Teleport, VNode } from 'vue'
+import { expectType } from './utils'
 
 expectType<VNode>(<div />)
 expectType<JSX.Element>(<div />)
@@ -15,7 +8,7 @@ expectType<JSX.Element>(<div id="foo" />)
 expectType<JSX.Element>(<input value="foo" />)
 
 // @ts-expect-error style css property validation
-expectError(<div style={{ unknown: 123 }} />)
+;<div style={{ unknown: 123 }} />
 
 // allow array styles and nested array styles
 expectType<JSX.Element>(<div style={[{ color: 'red' }]} />)
@@ -24,7 +17,7 @@ expectType<JSX.Element>(
 )
 
 // @ts-expect-error unknown prop
-expectError(<div foo="bar" />)
+;<div foo="bar" />
 
 // allow key/ref on arbitrary element
 expectType<JSX.Element>(<div key="foo" />)
@@ -47,15 +40,15 @@ expectType<JSX.Element>(<Teleport to="#foo" />)
 expectType<JSX.Element>(<Teleport to="#foo" key="1" />)
 
 // @ts-expect-error
-expectError(<Teleport />)
+;<Teleport />
 // @ts-expect-error
-expectError(<Teleport to={1} />)
+;<Teleport to={1} />
 
 // KeepAlive
 expectType<JSX.Element>(<KeepAlive include="foo" exclude={['a']} />)
 expectType<JSX.Element>(<KeepAlive key="1" />)
 // @ts-expect-error
-expectError(<KeepAlive include={123} />)
+;<KeepAlive include={123} />
 
 // Suspense
 expectType<JSX.Element>(<Suspense />)
@@ -64,4 +57,4 @@ expectType<JSX.Element>(
   <Suspense onResolve={() => {}} onFallback={() => {}} onPending={() => {}} />
 )
 // @ts-expect-error
-expectError(<Suspense onResolve={123} />)
+;<Suspense onResolve={123} />

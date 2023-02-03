@@ -1,4 +1,5 @@
-import { ref, computed, watch, expectType, defineComponent } from './index'
+import { ref, computed, watch, defineComponent } from 'vue'
+import { expectType } from './utils'
 
 const source = ref('foo')
 const source2 = computed(() => source.value)

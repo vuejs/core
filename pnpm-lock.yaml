@@ -182,14 +182,8 @@ importers:
 
   packages/dts-test:
     specifiers:
-      '@vue/reactivity': workspace:*
-      '@vue/runtime-core': workspace:*
-      '@vue/runtime-dom': workspace:*
       vue: workspace:*
     dependencies:
-      '@vue/reactivity': link:../reactivity
-      '@vue/runtime-core': link:../runtime-core
-      '@vue/runtime-dom': link:../runtime-dom
       vue: link:../vue
 
   packages/reactivity:

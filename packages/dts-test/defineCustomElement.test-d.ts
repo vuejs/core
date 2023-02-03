@@ -1,4 +1,5 @@
-import { defineCustomElement, expectType, expectError, describe } from './index'
+import { defineCustomElement } from 'vue'
+import { expectType, describe } from './utils'
 
 describe('inject', () => {
   // with object inject
@@ -14,7 +15,7 @@ describe('inject', () => {
       expectType<unknown>(this.foo)
       expectType<unknown>(this.bar)
       //  @ts-expect-error
-      expectError((this.foobar = 1))
+      this.foobar = 1
     }
   })
 
@@ -26,7 +27,7 @@ describe('inject', () => {
       expectType<unknown>(this.foo)
       expectType<unknown>(this.bar)
       //  @ts-expect-error
-      expectError((this.foobar = 1))
+      this.foobar = 1
     }
   })
 
@@ -46,7 +47,7 @@ describe('inject', () => {
       expectType<unknown>(this.foo)
       expectType<unknown>(this.bar)
       //  @ts-expect-error
-      expectError((this.foobar = 1))
+      this.foobar = 1
     }
   })
 
@@ -55,9 +56,9 @@ describe('inject', () => {
     props: ['a', 'b'],
     created() {
       //  @ts-expect-error
-      expectError((this.foo = 1))
+      this.foo = 1
       //  @ts-expect-error
-      expectError((this.bar = 1))
+      this.bar = 1
     }
   })
 })

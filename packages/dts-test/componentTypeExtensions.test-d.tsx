@@ -1,6 +1,7 @@
-import { defineComponent, expectError, expectType } from './index'
+import { defineComponent } from 'vue'
+import { expectType } from './utils'
 
-declare module '@vue/runtime-core' {
+declare module 'vue' {
   interface ComponentCustomOptions {
     test?(n: number): void
   }
@@ -31,20 +32,16 @@ export const Custom = defineComponent({
 
   methods: {
     aMethod() {
-      // @ts-expect-error
-      expectError(this.notExisting)
       this.counter++
       this.state = 'running'
-
       this.$.appContext.config.globalProperties.state = 'running'
 
-      expectError(
-        // @ts-expect-error
-        (this.$.appContext.config.globalProperties.state = 'not valid')
-      )
-
       // @ts-expect-error
-      expectError((this.state = 'not valid'))
+      this.notExisting
+      // @ts-expect-error
+      this.state = 'not valid'
+      // @ts-expect-error
+      this.$.appContext.config.globalProperties.state = 'not valid'
     }
   }
 })
@@ -57,10 +54,10 @@ expectType<JSX.Element>(<Custom ref={''} bar="bar" baz={1} />)
 // @ts-expect-error
 expectType<JSX.Element>(<Custom />)
 // @ts-expect-error
-expectError(<Custom bar="bar" />)
+;<Custom bar="bar" />
 // @ts-expect-error
-expectError(<Custom baz="baz" />)
+;<Custom baz="baz" />
 // @ts-expect-error
-expectError(<Custom baz={1} notExist={1} />)
+;<Custom baz={1} notExist={1} />
 // @ts-expect-error
-expectError(<Custom baz={1} custom="custom" />)
+;<Custom baz={1} custom="custom" />

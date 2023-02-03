@@ -1,20 +1,16 @@
 import {
-  describe,
   Component,
   defineComponent,
   PropType,
   ref,
   Ref,
-  expectError,
-  expectType,
   ShallowUnwrapRef,
   FunctionalComponent,
   ComponentPublicInstance,
   toRefs,
-  IsAny,
-  SetupContext,
-  expectAssignable
-} from './index'
+  SetupContext
+} from 'vue'
+import { describe, expectAssignable, expectType, IsAny } from './utils'
 
 declare function extractComponentOptions<Props, RawBindings>(
   obj: Component<Props, RawBindings>
@@ -371,7 +367,7 @@ describe('array props', () => {
     const { props, rawBindings, setup } = extractComponentOptions(MyComponent)
 
     // @ts-expect-error props should be readonly
-    expectError((props.a = 1))
+    props.a = 1
     expectType<any>(props.a)
     expectType<any>(props.b)
 
@@ -392,7 +388,7 @@ describe('array props', () => {
     const { props, rawBindings, setup } = extractComponentOptions(MyComponent)
 
     // @ts-expect-error props should be readonly
-    expectError((props.a = 1))
+    props.a = 1
 
     // TODO infer the correct keys
     // expectType<any>(props.a)
