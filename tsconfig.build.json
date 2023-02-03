@@ -10,6 +10,6 @@
     "packages/template-explorer",
     "packages/sfc-playground",
     "packages/size-check",
-    "test-dts"
+    "packages/dts-test"
   ]
 }
