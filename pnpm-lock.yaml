@@ -142,7 +142,7 @@ importers:
       estree-walker: ^2.0.2
       hash-sum: ^2.0.0
       lru-cache: ^5.1.1
-      magic-string: ^0.25.7
+      magic-string: ^0.27.0
       merge-source-map: ^1.1.0
       postcss: ^8.1.10
       postcss-modules: ^4.0.0
@@ -158,7 +158,7 @@ importers:
       '@vue/reactivity-transform': link:../reactivity-transform
       '@vue/shared': link:../shared
       estree-walker: 2.0.2
-      magic-string: 0.25.7
+      magic-string: 0.27.0
       postcss: 8.4.4
       source-map: 0.6.1
     devDependencies:
@@ -196,13 +196,13 @@ importers:
       '@vue/compiler-core': 3.2.47
       '@vue/shared': 3.2.47
       estree-walker: ^2.0.2
-      magic-string: ^0.25.7
+      magic-string: ^0.27.0
     dependencies:
       '@babel/parser': 7.16.4
       '@vue/compiler-core': link:../compiler-core
       '@vue/shared': link:../shared
       estree-walker: 2.0.2
-      magic-string: 0.25.7
+      magic-string: 0.27.0
     devDependencies:
       '@babel/core': 7.16.0
       '@babel/types': 7.16.0
@@ -1013,7 +1013,6 @@ packages:
 
   /@jridgewell/sourcemap-codec/1.4.14:
     resolution: {integrity: sha512-XPSJHWmi394fuUuzDnGz1wiKqWfo1yXecHQMRf2l6hztTO+nPru658AyDngaBe7isIxEkRsPR3FZh+s7iVa4Uw==}
-    dev: true
 
   /@jridgewell/trace-mapping/0.3.17:
     resolution: {integrity: sha512-MCNzAp77qzKca9+W/+I0+sEpaUnZoeasnghNeVc41VZCEKaCH73Vq3BZZ/SzWIgrqE4H4ceI+p+b6C0mHf9T4g==}
@@ -4349,6 +4348,7 @@ packages:
     resolution: {integrity: sha512-4CrMT5DOHTDk4HYDlzmwu4FVCcIYI8gauveasrdCu2IKIFOJ3f0v/8MDGJCDL9oD2ppz/Av1b0Nj345H9M+XIA==}
     dependencies:
       sourcemap-codec: 1.4.8
+    dev: true
 
   /magic-string/0.26.7:
     resolution: {integrity: sha512-hX9XH3ziStPoPhJxLq1syWuZMxbDvGNbVchfrdCtanC7D13888bMFow61x8axrx+GfHLtVeAx2kxL7tTGRl+Ow==}
@@ -4356,6 +4356,13 @@ packages:
     dependencies:
       sourcemap-codec: 1.4.8
     dev: true
+
+  /magic-string/0.27.0:
+    resolution: {integrity: sha512-8UnnX2PeRAPZuN12svgR9j7M1uWMovg/CEnIwIG0LFkXSJJe4PdfUGiTGl8V9bsBHFUtfVINcSyYxd7q+kx9fA==}
+    engines: {node: '>=12'}
+    dependencies:
+      '@jridgewell/sourcemap-codec': 1.4.14
+    dev: false
 
   /make-dir/3.1.0:
     resolution: {integrity: sha512-g3FeP20LNwhALb/6Cz6Dd4F2ngze0jz7tbzrD2wAV+o9FeNHe4rL+yK2md0J/fiSf1sa1ADhXqi5+oVwOM/eGw==}
@@ -5789,6 +5796,7 @@ packages:
 
   /sourcemap-codec/1.4.8:
     resolution: {integrity: sha512-9NykojV5Uih4lgo5So5dtw+f0JgJX30KCNI8gwhz2J9A15wD0Ml6tjHKwf6fTSa6fAdVBdZeNOs9eJ71qCk8vA==}
+    dev: true
 
   /spdx-correct/3.1.1:
     resolution: {integrity: sha512-cOYcUWwhCuHCXi49RhFRCyJEK3iPj1Ziz9DpViV3tbZOwXD49QzIN3MpOLJNxh2qwq2lJJZaKMVw9qNi4jTC0w==}
