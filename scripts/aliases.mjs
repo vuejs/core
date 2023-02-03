@@ -1,11 +1,14 @@
 // @ts-check
 // these aliases are shared between vitest and rollup
-import { readdirSync } from 'node:fs'
+import { readdirSync, statSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const resolveEntryForPkg = p =>
-  path.resolve(fileURLToPath(import.meta.url), `../../packages/${p}/src/index.ts`)
+  path.resolve(
+    fileURLToPath(import.meta.url),
+    `../../packages/${p}/src/index.ts`
+  )
 
 const dirs = readdirSync(new URL('../packages', import.meta.url))
 
@@ -15,9 +18,21 @@ const entries = {
   'vue/server-renderer': resolveEntryForPkg('server-renderer'),
   '@vue/compat': resolveEntryForPkg('vue-compat')
 }
+
+const nonSrcPackages = [
+  'sfc-playground',
+  'size-check',
+  'template-explorer'
+]
+
 for (const dir of dirs) {
   const key = `@vue/${dir}`
-  if (dir !== 'vue' && !(key in entries)) {
+  if (
+    dir !== 'vue' &&
+    !nonSrcPackages.includes(dir) &&
+    !(key in entries) &&
+    statSync(new URL(`../packages/${dir}`, import.meta.url)).isDirectory()
+  ) {
     entries[key] = resolveEntryForPkg(dir)
   }
 }
