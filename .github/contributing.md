@@ -82,7 +82,7 @@ The project uses [simple-git-hooks](https://github.com/toplenboren/simple-git-ho
 
 - Type check the entire project
 - Automatically format changed files using Prettier
-- Verify commit message format (logic in `scripts/verifyCommit.mjs`)
+- Verify commit message format (logic in `scripts/verifyCommit.js`)
 
 ## Scripts
 
@@ -131,7 +131,7 @@ Additional formats that only apply to the main `vue` package:
 - **`esm-bundler-runtime`**
 - **`esm-browser-runtime`**
 
-More details about each of these formats can be found in the [`vue` package README](https://github.com/vuejs/core/blob/main/packages/vue/README.md#which-dist-file-to-use) and the [Rollup config file](https://github.com/vuejs/core/blob/main/rollup.config.mjs).
+More details about each of these formats can be found in the [`vue` package README](https://github.com/vuejs/core/blob/main/packages/vue/README.md#which-dist-file-to-use) and the [Rollup config file](https://github.com/vuejs/core/blob/main/rollup.config.js).
 
 For example, to build `runtime-core` with the global build only:
 
@@ -261,7 +261,7 @@ import { h } from '@vue/runtime-core'
 This is made possible via several configurations:
 
 - For TypeScript, `compilerOptions.paths` in `tsconfig.json`
-- Vitest and Rollup share the sae set of aliases from `scripts/aliases.mjs`
+- Vitest and Rollup share the sae set of aliases from `scripts/aliases.js`
 - For plain Node.js, they are linked using [PNPM Workspaces](https://pnpm.io/workspaces).
 
 ### Package Dependencies

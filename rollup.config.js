@@ -11,9 +11,8 @@ import { nodeResolve } from '@rollup/plugin-node-resolve'
 import terser from '@rollup/plugin-terser'
 import esbuild from 'rollup-plugin-esbuild'
 import alias from '@rollup/plugin-alias'
-import { entries } from './scripts/aliases.mjs'
-import { constEnum } from './scripts/const-enum.mjs'
-import { writeFileSync } from 'node:fs'
+import { entries } from './scripts/aliases.js'
+import { constEnum } from './scripts/const-enum.js'
 
 if (!process.env.TARGET) {
   throw new Error('TARGET package must be specified via --environment flag.')
