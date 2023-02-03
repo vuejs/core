@@ -85,8 +85,29 @@ export async function constEnum() {
 
             // e.g. 1 << 2
             if (init.type === 'BinaryExpression') {
-              // @ts-ignore assume all operands are literals
-              const exp = `${init.left.value}${init.operator}${init.right.value}`
+              const resolveValue = node => {
+                if (
+                  node.type === 'NumericLiteral' ||
+                  node.type === 'StringLiteral'
+                ) {
+                  return node.value
+                } else if (node.type === 'MemberExpression') {
+                  const exp = content.slice(node.start, node.end)
+                  if (!(exp in enumData.defines)) {
+                    throw new Error(
+                      `unhandled enum initialization expression ${exp} in ${file}`
+                    )
+                  }
+                  return enumData.defines[exp]
+                } else {
+                  throw new Error(
+                    `unhandled BinaryExpression operand type ${node.type} in ${file}`
+                  )
+                }
+              }
+              const exp = `${resolveValue(init.left)}${
+                init.operator
+              }${resolveValue(init.right)}`
               value = evaluate(exp)
             }
 
