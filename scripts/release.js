@@ -200,6 +200,9 @@ function updateDeps(pkg, depType, version) {
   const deps = pkg[depType]
   if (!deps) return
   Object.keys(deps).forEach(dep => {
+    if (deps[dep] === 'workspace:*') {
+      return
+    }
     if (
       dep === 'vue' ||
       (dep.startsWith('@vue') && packages.includes(dep.replace(/^@vue\//, '')))
