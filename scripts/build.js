@@ -1,3 +1,5 @@
+// @ts-check
+
 /*
 Produces production builds and stitches together d.ts files.
 
@@ -14,11 +16,9 @@ nr build core --formats cjs
 ```
 */
 
-// @ts-check
 import fs from 'node:fs/promises'
 import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 import minimist from 'minimist'
 import { gzipSync } from 'node:zlib'
 import { compress } from 'brotli'
