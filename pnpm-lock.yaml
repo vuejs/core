@@ -272,7 +272,10 @@ importers:
     specifiers: {}
 
   packages/size-check:
-    specifiers: {}
+    specifiers:
+      vue: workspace:*
+    dependencies:
+      vue: link:../vue
 
   packages/template-explorer:
     specifiers:

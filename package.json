@@ -8,7 +8,7 @@
     "build-dts": "tsc -p tsconfig.build.json && rollup -c rollup.dts.config.mjs",
     "size": "run-s size-global size-baseline",
     "size-global": "node scripts/build.mjs vue runtime-dom -f global -p",
-    "size-baseline": "node scripts/build.mjs runtime-dom runtime-core reactivity shared -f esm-bundler && cd packages/size-check && vite build && node brotli",
+    "size-baseline": "node scripts/build.mjs vue -f esm-bundler-runtime && node scripts/build.mjs runtime-dom runtime-core reactivity shared -f esm-bundler && cd packages/size-check && vite build && node brotli",
     "check": "tsc --incremental --noEmit",
     "lint": "eslint --cache --ext .ts packages/*/{src,__tests__}/**.ts",
     "format": "prettier --write --cache --parser typescript \"**/*.[tj]s?(x)\"",
