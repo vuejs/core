@@ -30,7 +30,7 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 
   - If you are resolving a special issue, add `(fix #xxxx[,#xxxx])` (#xxxx is the issue id) in your PR title for a better release log, e.g. `update entities encoding/decoding (fix #3899)`.
   - Provide a detailed description of the bug in the PR. Live demo preferred.
-  - Add appropriate test coverage if applicable. You can check the coverage of your code addition by running `npm test -- --coverage`.
+  - Add appropriate test coverage if applicable. You can check the coverage of your code addition by running `nr test-coverage`.
 
 - It's OK to have multiple small commits as you work on the PR - GitHub can automatically squash them before merging.
 
@@ -70,15 +70,27 @@ $ pnpm i # install the dependencies of the project
 A high level overview of tools used:
 
 - [TypeScript](https://www.typescriptlang.org/) as the development language
-- [Rollup](https://rollupjs.org) for bundling
-- [Jest](https://jestjs.io/) for unit testing
+- [Vite](https://vitejs.dev/) and [ESBuild](https://esbuild.github.io/) for development bundling
+- [Rollup](https://rollupjs.org) for production bundling
+- [Vitest](https://vitest.dev/) for unit testing
 - [Prettier](https://prettier.io/) for code formatting
+- [ESLint](https://eslint.org/) for static error prevention (outside of types)
 
 ## Scripts
 
 **The examples below will be using the `nr` command from the [ni](https://github.com/antfu/ni) package.** You can also use plain `npm run`, but you will need to pass all additional arguments after the command after an extra `--`. For example, `nr build runtime --all` is equivalent to `npm run build -- runtime --all`.
 
 The `run-s` and `run-p` commands found in some scripts are from [npm-run-all](https://github.com/mysticatea/npm-run-all) for orchestrating multiple scripts. `run-s` means "run in sequence" while `run-p` means "run in parallel".
+
+- [`nr build`](#nr-build)
+- [`nr build-dts`](#nr-build-dts)
+- [`nr check`](#nr-check)
+- [`nr dev`](#nr-dev)
+- [`nr dev-sfc`](#nr-dev-sfc)
+- [`nr dev-esm`](#nr-dev-esm)
+- [`nr dev-compiler`](#nr-dev-compiler)
+- [`nr test`](#nr-test)
+- [`nr test-dts`](#nr-test-dts)
 
 ### `nr build`
 
@@ -93,6 +105,8 @@ nr build runtime-core
 # build all packages matching "runtime"
 nr build runtime --all
 ```
+
+Note that `nr build` uses `rollup-plugin-esbuild` for transpiling typescript and **does not perform type checking**. To run type check on the entire codebase, run `nr check`.
 
 #### Build Formats
 
@@ -127,13 +141,11 @@ nr build runtime-core -f esm-browser,cjs
 
 Use the `--sourcemap` or `-s` flag to build with source maps. Note this will make the build much slower.
 
-#### Build with Type Declarations
+### `nr build-dts`
 
-The `--types` or `-t` flag will generate type declarations during the build and in addition:
+This command builds the type declarations for all packages. It first generates the raw `.d.ts` files in the `temp` directory, then uses [rollup-plugin-dts](https://github.com/Swatinem/rollup-plugin-dts) to roll the types into a single `.d.ts` file for each package.
 
-- Roll the declarations into a single `.d.ts` file for each package;
-- Generate an API report in `<projectRoot>/temp/<packageName>.api.md`. This report contains potential warnings emitted by [api-extractor](https://api-extractor.com/).
-- Generate an API model json in `<projectRoot>/temp/<packageName>.api.json`. This file can be used to generate a Markdown version of the exported APIs.
+### `nr check`
 
 ### `nr dev`
 
@@ -142,7 +154,7 @@ The `dev` script bundles a target package (default: `vue`) in a specified format
 ```bash
 $ nr dev
 
-> watching: packages/vue/dist/vue.global.js
+> built: packages/vue/dist/vue.global.js
 ```
 
 - **Important:** output of the `dev` script is for development and debugging only. While it has the same runtime behavior, the generated code should never be published to npm.
@@ -169,23 +181,30 @@ The `dev-compiler` script builds, watches and serves the [Template Explorer](htt
 
 ### `nr test`
 
-The `test` script simply calls the `jest` binary, so all [Jest CLI Options](https://jestjs.io/docs/en/cli) can be used. Some examples:
+The `test` script simply calls the `vitest` binary, so all [Vitest CLI Options](https://vitest.dev/guide/cli.html#options) can be used. Some examples:
 
 ```bash
-# run all tests
+# run all tests in watch mode
 $ nr test
+
+# run once and exit (equivalent to `vitest run`)
+$ nr test run
 
 # run all tests under the runtime-core package
 $ nr test runtime-core
 
-# run tests in a specific file
-$ nr test fileName
+# run tests in files matching the pattern
+$ nr test <fileNamePattern>
 
-# run a specific test in a specific file
-$ nr test fileName -t 'test name'
+# run a specific test in specific files
+$ nr test <fileNamePattern> -t 'test name'
 ```
 
-The default `test` script includes the `--runInBand` jest flag to improve test stability, especially for the CSS transition related tests. When you are testing specific test specs, you can also run `npx jest` with flags directly to speed up tests (jest runs them in parallel by default).
+Tests that test against source code are grouped under `nr test-unit`, while tests that test against built files that run in real browsers are grouped under `nr test-e2e`.
+
+### `nr test-dts`
+
+Runs `nr build-dts` first, then verify the type tests in `packages/dts-test` are working correctly against the actual built type declarations.
 
 ## Project Structure
 
@@ -209,13 +228,19 @@ This repository employs a [monorepo](https://en.wikipedia.org/wiki/Monorepo) set
 
 - `compiler-ssr`: Compiler that produces render functions optimized for server-side rendering.
 
-- `template-explorer`: A development tool for debugging compiler output. You can run `nr dev template-explorer` and open its `index.html` to get a repl of template compilation based on current source code.
-
-  A [live version](https://vue-next-template-explorer.netlify.com) of the template explorer is also available, which can be used for providing reproductions for compiler bugs. You can also pick the deployment for a specific commit from the [deploy logs](https://app.netlify.com/sites/vue-next-template-explorer/deploys).
-
 - `shared`: Internal utilities shared across multiple packages (especially environment-agnostic utils used by both runtime and compiler packages).
 
 - `vue`: The public facing "full build" which includes both the runtime AND the compiler.
+
+- Private utility packages:
+
+  - `dts-test`: Contains type-only tests against generated dts files.
+
+  - `sfc-playground`: The playground continuously deployed at https://sfc.vuejs.org. To run the playground locally, use [`nr dev-sfc`](#nr-dev-sfc).
+
+  - `template-explorer`: A development tool for debugging compiler output, continuously deployed at https://template-explorer.vuejs.org/. To run it locally, run [`nr dev-compiler`](#nr-dev-compiler).
+
+  - `size-check`: Used for checking built bundle sizes on CI.
 
 ### Importing Packages
 
@@ -228,7 +253,7 @@ import { h } from '@vue/runtime-core'
 This is made possible via several configurations:
 
 - For TypeScript, `compilerOptions.paths` in `tsconfig.json`
-- For Jest, `moduleNameMapper` in `jest.config.js`
+- Vitest and Rollup share the sae set of aliases from `scripts/aliases.mjs`
 - For plain Node.js, they are linked using [PNPM Workspaces](https://pnpm.io/workspaces).
 
 ### Package Dependencies
@@ -268,7 +293,7 @@ There are some rules to follow when importing across package boundaries:
 
 ## Contributing Tests
 
-Unit tests are collocated with the code being tested in each package, inside directories named `__tests__`. Consult the [Jest docs](https://jestjs.io/docs/en/using-matchers) and existing test cases for how to write new test specs. Here are some additional guidelines:
+Unit tests are collocated with the code being tested in each package, inside directories named `__tests__`. Consult the [Vitest docs](https://vitest.dev/api/) and existing test cases for how to write new test specs. Here are some additional guidelines:
 
 - Use the minimal API needed for a test case. For example, if a test can be written without involving the reactivity system or a component, it should be written so. This limits the test's exposure to changes in unrelated parts and makes it more stable.
 
@@ -276,11 +301,11 @@ Unit tests are collocated with the code being tested in each package, inside dir
 
 - Only use platform-specific runtimes if the test is asserting platform-specific behavior.
 
-Test coverage is continuously deployed at https://vue-next-coverage.netlify.app/. PRs that improve test coverage are welcome, but in general the test coverage should be used as a guidance for finding API use cases that are not covered by tests. We don't recommend adding tests that only improve coverage but not actually test a meaning use case.
+Test coverage is continuously deployed at https://coverage.vuejs.org. PRs that improve test coverage are welcome, but in general the test coverage should be used as a guidance for finding API use cases that are not covered by tests. We don't recommend adding tests that only improve coverage but not actually test a meaning use case.
 
 ### Testing Type Definition Correctness
 
-Type tests are located in the `test-dts` directory. To run the dts tests, run `nr test-dts`. Note that the type test requires all relevant `*.d.ts` files to be built first (and the script does it for you). Once the `d.ts` files are built and up-to-date, the tests can be re-run by simply running `nr test-dts`.
+Type tests are located in the `packages/dts-test` directory. To run the dts tests, run `nr test-dts`. Note that the type test requires all relevant `*.d.ts` files to be built first (and the script does it for you). Once the `d.ts` files are built and up-to-date, the tests can be re-run by running `nr test-dts-only`.
 
 ## Financial Contribution
 
