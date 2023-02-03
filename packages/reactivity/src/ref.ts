@@ -277,10 +277,6 @@ type BaseTypes = string | number | boolean
  *   }
  * }
  * ```
- *
- * Note that api-extractor somehow refuses to include `declare module`
- * augmentations in its generated d.ts, so we have to manually append them
- * to the final generated d.ts in our build process.
  */
 export interface RefUnwrapBailTypes {}
 
