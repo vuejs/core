@@ -192,15 +192,15 @@ export async function constEnum() {
                 spec.exportKind !== 'type' &&
                 knowEnums.has(spec.local.name)
               ) {
-                if (i === 0) {
-                  // first
-                  const next = node.specifiers[i + 1]
+                const next = node.specifiers[i + 1]
+                if (next) {
                   // @ts-ignore
-                  s.remove(spec.start, next ? next.start : spec.end)
+                  s.remove(spec.start, next.start)
                 } else {
-                  // locate the end of prev
+                  // last one
+                  const prev = node.specifiers[i - 1]
                   // @ts-ignore
-                  s.remove(node.specifiers[i - 1].end, spec.end)
+                  s.remove(prev ? prev.end : spec.start, spec.end)
                 }
               }
             }

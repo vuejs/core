@@ -26,6 +26,7 @@ importers:
       esbuild: ^0.17.4
       eslint: ^8.33.0
       eslint-plugin-jest: ^27.2.1
+      estree-walker: ^2.0.2
       execa: ^4.0.2
       jsdom: ^21.1.0
       lint-staged: ^10.2.10
@@ -75,6 +76,7 @@ importers:
       esbuild: 0.17.5
       eslint: 8.33.0
       eslint-plugin-jest: 27.2.1_4vsywjlpuriuw3tl5oq6zy5a64
+      estree-walker: 2.0.2
       execa: 4.1.0
       jsdom: 21.1.0
       lint-staged: 10.5.4
