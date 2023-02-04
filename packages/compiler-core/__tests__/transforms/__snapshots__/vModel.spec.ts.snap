@@ -34,15 +34,15 @@ return function render(_ctx, _cache) {
     const { openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return (_openBlock(), _createElementBlock(\\"input\\", {
-      modelValue:
+      modelValue: 
  model
 .
-foo
+foo 
 ,
       \\"onUpdate:modelValue\\": $event => ((
  model
 .
-foo
+foo 
 ) = $event)
     }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"]))
   }
