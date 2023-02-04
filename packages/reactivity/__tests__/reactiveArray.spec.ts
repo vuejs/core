@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import { reactive, isReactive, toRaw } from '../src/reactive'
 import { ref, isRef } from '../src/ref'
 import { effect } from '../src/effect'
@@ -90,7 +91,7 @@ describe('reactivity/reactive/Array', () => {
 
   test('delete on Array should not trigger length dependency', () => {
     const arr = reactive([1, 2, 3])
-    const fn = jest.fn()
+    const fn = vi.fn()
     effect(() => {
       fn(arr.length)
     })
@@ -102,7 +103,7 @@ describe('reactivity/reactive/Array', () => {
   test('add existing index on Array should not trigger length dependency', () => {
     const array = new Array(3)
     const observed = reactive(array)
-    const fn = jest.fn()
+    const fn = vi.fn()
     effect(() => {
       fn(observed.length)
     })
@@ -114,7 +115,7 @@ describe('reactivity/reactive/Array', () => {
   test('add non-integer prop on Array should not trigger length dependency', () => {
     const array: any[] & { x?: string } = new Array(3)
     const observed = reactive(array)
-    const fn = jest.fn()
+    const fn = vi.fn()
     effect(() => {
       fn(observed.length)
     })

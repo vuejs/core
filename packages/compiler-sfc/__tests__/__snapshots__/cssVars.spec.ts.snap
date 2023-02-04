@@ -1,11 +1,11 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1
 
-exports[`CSS vars injection codegen <script> w/ default export 1`] = `
+exports[`CSS vars injection > codegen > <script> w/ default export 1`] = `
 "const __default__ = { setup() {} }
 import { useCssVars as _useCssVars } from 'vue'
 const __injectCSSVars__ = () => {
 _useCssVars(_ctx => ({
-  "xxxxxxxx-color": (_ctx.color)
+  \\"xxxxxxxx-color\\": (_ctx.color)
 }))}
 const __setup__ = __default__.setup
 __default__.setup = __setup__
@@ -15,7 +15,7 @@ __default__.setup = __setup__
 export default __default__"
 `;
 
-exports[`CSS vars injection codegen <script> w/ default export in strings/comments 1`] = `
+exports[`CSS vars injection > codegen > <script> w/ default export in strings/comments 1`] = `
 "
           // export default {}
           const __default__ = {}
@@ -23,7 +23,7 @@ exports[`CSS vars injection codegen <script> w/ default export in strings/commen
 import { useCssVars as _useCssVars } from 'vue'
 const __injectCSSVars__ = () => {
 _useCssVars(_ctx => ({
-  "xxxxxxxx-color": (_ctx.color)
+  \\"xxxxxxxx-color\\": (_ctx.color)
 }))}
 const __setup__ = __default__.setup
 __default__.setup = __setup__
@@ -33,13 +33,13 @@ __default__.setup = __setup__
 export default __default__"
 `;
 
-exports[`CSS vars injection codegen <script> w/ no default export 1`] = `
+exports[`CSS vars injection > codegen > <script> w/ no default export 1`] = `
 "const a = 1
 const __default__ = {}
 import { useCssVars as _useCssVars } from 'vue'
 const __injectCSSVars__ = () => {
 _useCssVars(_ctx => ({
-  "xxxxxxxx-color": (_ctx.color)
+  \\"xxxxxxxx-color\\": (_ctx.color)
 }))}
 const __setup__ = __default__.setup
 __default__.setup = __setup__
@@ -49,7 +49,7 @@ __default__.setup = __setup__
 export default __default__"
 `;
 
-exports[`CSS vars injection codegen should ignore comments 1`] = `
+exports[`CSS vars injection > codegen > should ignore comments 1`] = `
 "import { useCssVars as _useCssVars, unref as _unref } from 'vue'
 
 export default {
@@ -57,7 +57,7 @@ export default {
   expose();
 
 _useCssVars(_ctx => ({
-  "xxxxxxxx-width": (width)
+  \\"xxxxxxxx-width\\": (width)
 }))
 const color = 'red';const width = 100
 return { color, width }
@@ -66,7 +66,7 @@ return { color, width }
 }"
 `;
 
-exports[`CSS vars injection codegen should work with w/ complex expression 1`] = `
+exports[`CSS vars injection > codegen > should work with w/ complex expression 1`] = `
 "import { useCssVars as _useCssVars, unref as _unref } from 'vue'
 
 export default {
@@ -74,10 +74,10 @@ export default {
   expose();
 
 _useCssVars(_ctx => ({
-  "xxxxxxxx-foo": (_unref(foo)),
-  "xxxxxxxx-foo\\ \\+\\ \\'px\\'": (_unref(foo) + 'px'),
-  "xxxxxxxx-\\(a\\ \\+\\ b\\)\\ \\/\\ 2\\ \\+\\ \\'px\\'": ((_unref(a) + _unref(b)) / 2 + 'px'),
-  "xxxxxxxx-\\(\\(a\\ \\+\\ b\\)\\)\\ \\/\\ \\(2\\ \\*\\ a\\)": (((_unref(a) + _unref(b))) / (2 * _unref(a)))
+  \\"xxxxxxxx-foo\\": (_unref(foo)),
+  \\"xxxxxxxx-foo\\\\ \\\\+\\\\ \\\\'px\\\\'\\": (_unref(foo) + 'px'),
+  \\"xxxxxxxx-\\\\(a\\\\ \\\\+\\\\ b\\\\)\\\\ \\\\/\\\\ 2\\\\ \\\\+\\\\ \\\\'px\\\\'\\": ((_unref(a) + _unref(b)) / 2 + 'px'),
+  \\"xxxxxxxx-\\\\(\\\\(a\\\\ \\\\+\\\\ b\\\\)\\\\)\\\\ \\\\/\\\\ \\\\(2\\\\ \\\\*\\\\ a\\\\)\\": (((_unref(a) + _unref(b))) / (2 * _unref(a)))
 }))
 
         let a = 100
@@ -90,7 +90,7 @@ return { get a() { return a }, set a(v) { a = v }, get b() { return b }, set b(v
 }"
 `;
 
-exports[`CSS vars injection codegen w/ <script setup> 1`] = `
+exports[`CSS vars injection > codegen > w/ <script setup> 1`] = `
 "import { useCssVars as _useCssVars, unref as _unref } from 'vue'
 
 export default {
@@ -98,7 +98,7 @@ export default {
   expose();
 
 _useCssVars(_ctx => ({
-  "xxxxxxxx-color": (color)
+  \\"xxxxxxxx-color\\": (color)
 }))
 const color = 'red'
 return { color }
@@ -107,7 +107,7 @@ return { color }
 }"
 `;
 
-exports[`CSS vars injection codegen w/ <script setup> using the same var multiple times 1`] = `
+exports[`CSS vars injection > codegen > w/ <script setup> using the same var multiple times 1`] = `
 "import { useCssVars as _useCssVars, unref as _unref } from 'vue'
 
 export default {
@@ -115,7 +115,7 @@ export default {
   expose();
 
 _useCssVars(_ctx => ({
-  "xxxxxxxx-color": (color)
+  \\"xxxxxxxx-color\\": (color)
 }))
 
         const color = 'red'
@@ -126,14 +126,14 @@ return { color }
 }"
 `;
 
-exports[`CSS vars injection generating correct code for nested paths 1`] = `
+exports[`CSS vars injection > generating correct code for nested paths 1`] = `
 "const a = 1
 const __default__ = {}
 import { useCssVars as _useCssVars } from 'vue'
 const __injectCSSVars__ = () => {
 _useCssVars(_ctx => ({
-  "xxxxxxxx-color": (_ctx.color),
-  "xxxxxxxx-font\\.size": (_ctx.font.size)
+  \\"xxxxxxxx-color\\": (_ctx.color),
+  \\"xxxxxxxx-font\\\\.size\\": (_ctx.font.size)
 }))}
 const __setup__ = __default__.setup
 __default__.setup = __setup__
@@ -143,7 +143,7 @@ __default__.setup = __setup__
 export default __default__"
 `;
 
-exports[`CSS vars injection w/ <script setup> binding analysis 1`] = `
+exports[`CSS vars injection > w/ <script setup> binding analysis 1`] = `
 "import { useCssVars as _useCssVars, unref as _unref } from 'vue'
 import { ref } from 'vue'
         
@@ -155,9 +155,9 @@ export default {
   expose();
 
 _useCssVars(_ctx => ({
-  "xxxxxxxx-color": (color),
-  "xxxxxxxx-size": (size.value),
-  "xxxxxxxx-foo": (__props.foo)
+  \\"xxxxxxxx-color\\": (color),
+  \\"xxxxxxxx-size\\": (size.value),
+  \\"xxxxxxxx-foo\\": (__props.foo)
 }))
 
         const color = 'red'
@@ -170,7 +170,7 @@ return { color, size, ref }
 }"
 `;
 
-exports[`CSS vars injection w/ normal <script> binding analysis 1`] = `
+exports[`CSS vars injection > w/ normal <script> binding analysis 1`] = `
 "
       const __default__ = {
         setup() {
@@ -183,7 +183,7 @@ exports[`CSS vars injection w/ normal <script> binding analysis 1`] = `
 import { useCssVars as _useCssVars } from 'vue'
 const __injectCSSVars__ = () => {
 _useCssVars(_ctx => ({
-  "xxxxxxxx-size": (_ctx.size)
+  \\"xxxxxxxx-size\\": (_ctx.size)
 }))}
 const __setup__ = __default__.setup
 __default__.setup = __setup__
