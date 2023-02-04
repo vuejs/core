@@ -2,31 +2,31 @@ export { baseCompile } from './compile'
 
 // Also expose lower level APIs & types
 export {
-  CompilerOptions,
-  ParserOptions,
-  TransformOptions,
-  CodegenOptions,
-  HoistTransform,
-  BindingMetadata,
+  type CompilerOptions,
+  type ParserOptions,
+  type TransformOptions,
+  type CodegenOptions,
+  type HoistTransform,
+  type BindingMetadata,
   BindingTypes
 } from './options'
 export { baseParse, TextModes } from './parse'
 export {
   transform,
-  TransformContext,
+  type TransformContext,
   createTransformContext,
   traverseNode,
   createStructuralDirectiveTransform,
-  NodeTransform,
-  StructuralDirectiveTransform,
-  DirectiveTransform
+  type NodeTransform,
+  type StructuralDirectiveTransform,
+  type DirectiveTransform
 } from './transform'
-export { generate, CodegenContext, CodegenResult } from './codegen'
+export { generate, type CodegenContext, type CodegenResult } from './codegen'
 export {
   ErrorCodes,
-  CoreCompilerError,
-  CompilerError,
-  createCompilerError
+  createCompilerError,
+  type CoreCompilerError,
+  type CompilerError
 } from './errors'
 
 export * from './ast'
@@ -34,7 +34,7 @@ export * from './utils'
 export * from './babelUtils'
 export * from './runtimeHelpers'
 
-export { getBaseTransformPreset, TransformPreset } from './compile'
+export { getBaseTransformPreset, type TransformPreset } from './compile'
 export { transformModel } from './transforms/vModel'
 export { transformOn } from './transforms/vOn'
 export { transformBind } from './transforms/vBind'
@@ -48,7 +48,7 @@ export {
 } from './transforms/transformExpression'
 export {
   buildSlots,
-  SlotFnBuilder,
+  type SlotFnBuilder,
   trackVForSlotScopes,
   trackSlotScopes
 } from './transforms/vSlot'
@@ -57,7 +57,7 @@ export {
   resolveComponentType,
   buildProps,
   buildDirectiveArgs,
-  PropsExpression
+  type PropsExpression
 } from './transforms/transformElement'
 export { processSlotOutlet } from './transforms/transformSlotOutlet'
 export { getConstantType } from './transforms/hoistStatic'
