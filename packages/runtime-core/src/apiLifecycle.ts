@@ -2,7 +2,6 @@ import {
   ComponentInternalInstance,
   currentInstance,
   isInSSRComponentSetup,
-  LifecycleHooks,
   setCurrentInstance,
   unsetCurrentInstance
 } from './component'
@@ -11,6 +10,7 @@ import { callWithAsyncErrorHandling, ErrorTypeStrings } from './errorHandling'
 import { warn } from './warning'
 import { toHandlerKey } from '@vue/shared'
 import { DebuggerEvent, pauseTracking, resetTracking } from '@vue/reactivity'
+import { LifecycleHooks } from './enums'
 
 export { onActivated, onDeactivated } from './components/KeepAlive'
 
