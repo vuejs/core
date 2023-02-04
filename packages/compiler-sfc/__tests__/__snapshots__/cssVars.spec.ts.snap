@@ -19,7 +19,7 @@ exports[`CSS vars injection > codegen > <script> w/ default export in strings/co
 "
           // export default {}
           const __default__ = {}
-
+        
 import { useCssVars as _useCssVars } from 'vue'
 const __injectCSSVars__ = () => {
 _useCssVars(_ctx => ({
@@ -83,7 +83,7 @@ _useCssVars(_ctx => ({
         let a = 100
         let b = 200
         let foo = 300
-
+        
 return { get a() { return a }, set a(v) { a = v }, get b() { return b }, set b(v) { b = v }, get foo() { return foo }, set foo(v) { foo = v } }
 }
 
@@ -119,7 +119,7 @@ _useCssVars(_ctx => ({
 }))
 
         const color = 'red'
-
+        
 return { color }
 }
 
@@ -146,7 +146,7 @@ export default __default__"
 exports[`CSS vars injection > w/ <script setup> binding analysis 1`] = `
 "import { useCssVars as _useCssVars, unref as _unref } from 'vue'
 import { ref } from 'vue'
-
+        
 export default {
   props: {
           foo: String
@@ -162,8 +162,8 @@ _useCssVars(_ctx => ({
 
         const color = 'red'
         const size = ref('10px')
-
-
+        
+        
 return { color, size, ref }
 }
 
@@ -179,7 +179,7 @@ exports[`CSS vars injection > w/ normal <script> binding analysis 1`] = `
           }
         }
       }
-
+      
 import { useCssVars as _useCssVars } from 'vue'
 const __injectCSSVars__ = () => {
 _useCssVars(_ctx => ({

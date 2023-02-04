@@ -1,5 +1,15 @@
 // Vitest Snapshot v1
 
+exports[`stringify static html > Select elements can preserve data types when stringified 1`] = `
+"const { createElementVNode: _createElementVNode, createStaticVNode: _createStaticVNode } = Vue
+
+const _hoisted_1 = /*#__PURE__*/_createStaticVNode(\\"<option value=\\\\\\"string\\\\\\" v-stringify-type='string'>string</option><option value=\\\\\\"false\\\\\\" v-stringify-type='boolean'>boolean</option><option value=\\\\\\"1\\\\\\" v-stringify-type='number'>number 1</option><option value=\\\\\\"2\\\\\\" v-stringify-type='number'>number 2</option><option v-stringify-type='null'>null</option>\\", 5)
+
+return function render(_ctx, _cache) {
+  return _hoisted_1
+}"
+`;
+
 exports[`stringify static html > should bail on bindings that are hoisted but not stringifiable 1`] = `
 "const { createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
 

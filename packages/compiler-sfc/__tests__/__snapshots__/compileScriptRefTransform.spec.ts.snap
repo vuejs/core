@@ -2,7 +2,7 @@
 
 exports[`sfc ref transform > $ unwrapping 1`] = `
 "import { ref, shallowRef } from 'vue'
-
+    
 export default {
   setup(__props, { expose }) {
   expose();
@@ -14,7 +14,7 @@ export default {
     }))
     let c = () => {}
     let d
-
+    
 return { foo, a, b, get c() { return c }, set c(v) { c = v }, get d() { return d }, set d(v) { d = v }, ref, shallowRef }
 }
 
@@ -35,7 +35,7 @@ export default {
     })
     let c = () => {}
     let d
-
+    
 return { foo, a, b, get c() { return c }, set c(v) { c = v }, get d() { return d }, set d(v) { d = v } }
 }
 
@@ -51,7 +51,7 @@ export default /*#__PURE__*/_defineComponent({
 
         let msg = _ref<string | number>('foo');
         let bar = _ref <string | number>('bar');
-
+      
 return { msg, bar }
 }
 
@@ -75,13 +75,13 @@ exports[`sfc ref transform > usage with normal <script> (has macro usage) + <scr
 "import { ref as _ref } from 'vue'
 
     let data = _ref()
-
+    
 export default {
   setup(__props, { expose }) {
   expose();
 
     console.log(data.value)
-
+    
 return { data }
 }
 
@@ -93,7 +93,7 @@ exports[`sfc ref transform > usage with normal <script> + <script setup> 1`] = `
 
     let a = _ref(0)
     let c = _ref(0)
-
+    
 export default {
   setup(__props, { expose }) {
   expose();
@@ -105,7 +105,7 @@ export default {
       b.value++
       c++
     }
-
+    
 return { a, c, b, change }
 }
 
