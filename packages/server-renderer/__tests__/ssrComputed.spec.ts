@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import { createSSRApp, defineComponent, h, computed, reactive } from 'vue'
 import { renderToString } from '../src/renderToString'
 
@@ -20,7 +21,7 @@ test('computed reactivity during SSR', async () => {
     }
   }
 
-  const getterSpy = jest.fn()
+  const getterSpy = vi.fn()
 
   const App = defineComponent(async () => {
     const msg = computed(() => {

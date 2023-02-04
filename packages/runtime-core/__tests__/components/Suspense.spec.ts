@@ -1,3 +1,7 @@
+/**
+ * @vitest-environment jsdom
+ */
+import { vi } from 'vitest'
 import {
   h,
   ref,
@@ -80,9 +84,9 @@ describe('Suspense', () => {
       }
     })
 
-    const onFallback = jest.fn()
-    const onResolve = jest.fn()
-    const onPending = jest.fn()
+    const onFallback = vi.fn()
+    const onResolve = vi.fn()
+    const onPending = vi.fn()
 
     const show = ref(true)
     const Comp = {
@@ -194,7 +198,7 @@ describe('Suspense', () => {
       }
     })
 
-    const onResolve = jest.fn()
+    const onResolve = vi.fn()
 
     const Comp = {
       setup() {
@@ -455,7 +459,7 @@ describe('Suspense', () => {
 
   test('unmount suspense after resolve', async () => {
     const toggle = ref(true)
-    const unmounted = jest.fn()
+    const unmounted = vi.fn()
 
     const Async = defineAsyncComponent({
       setup() {
@@ -493,8 +497,8 @@ describe('Suspense', () => {
 
   test('unmount suspense before resolve', async () => {
     const toggle = ref(true)
-    const mounted = jest.fn()
-    const unmounted = jest.fn()
+    const mounted = vi.fn()
+    const unmounted = vi.fn()
 
     const Async = defineAsyncComponent({
       setup() {
