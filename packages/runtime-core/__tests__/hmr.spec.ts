@@ -222,10 +222,10 @@ describe('hot module replacement', () => {
   test('reload KeepAlive slot in Transition', async () => {
     const root = nodeOps.createElement('div')
     const childId = 'test-transition-keep-alive-reload'
-    const unmountSpy = jest.fn()
-    const mountSpy = jest.fn()
-    const activeSpy = jest.fn()
-    const deactiveSpy = jest.fn()
+    const unmountSpy = vi.fn()
+    const mountSpy = vi.fn()
+    const activeSpy = vi.fn()
+    const deactiveSpy = vi.fn()
 
     const Child: ComponentOptions = {
       __hmrId: childId,
