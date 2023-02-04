@@ -300,7 +300,7 @@ describe('ssr: element', () => {
     test('custom dir when exp is ""', () => {
       expect(getCompiledString(`<div v-xxx:x="" />`)).toMatchInlineSnapshot(`
         "\`<div\${
-            _ssrRenderAttrs(_ssrGetDirectiveProps(_ctx, _directive_xxx, undefined, "x"))
+            _ssrRenderAttrs(_ssrGetDirectiveProps(_ctx, _directive_xxx, undefined, \\"x\\"))
           }></div>\`"
       `)
 
