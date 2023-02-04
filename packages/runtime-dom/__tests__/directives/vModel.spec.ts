@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import {
   h,
   render,
@@ -30,7 +31,7 @@ beforeEach(() => {
 
 describe('vModel', () => {
   it('should work with text input', async () => {
-    const manualListener = jest.fn()
+    const manualListener = vi.fn()
     const component = defineComponent({
       data() {
         return { value: null }
@@ -103,7 +104,7 @@ describe('vModel', () => {
   })
 
   it('should work with multiple listeners', async () => {
-    const spy = jest.fn()
+    const spy = vi.fn()
     const component = defineComponent({
       data() {
         return { value: null }
@@ -132,8 +133,8 @@ describe('vModel', () => {
   })
 
   it('should work with updated listeners', async () => {
-    const spy1 = jest.fn()
-    const spy2 = jest.fn()
+    const spy1 = vi.fn()
+    const spy2 = vi.fn()
     const toggle = ref(true)
 
     const component = defineComponent({
