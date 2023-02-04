@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import {
   CompilerOptions,
   baseParse as parse,
@@ -531,7 +532,7 @@ describe('compiler: element transform', () => {
   })
 
   test('error on v-bind with no argument', () => {
-    const onError = jest.fn()
+    const onError = vi.fn()
     parseWithElementTransform(`<div v-bind/>`, { onError })
     expect(onError.mock.calls[0]).toMatchObject([
       {

@@ -1,7 +1,3 @@
-/**
- * @jest-environment node
- */
-
 import { createApp, h, Teleport } from 'vue'
 import { renderToString } from '../src/renderToString'
 import { renderToSimpleStream } from '../src/renderToStream'

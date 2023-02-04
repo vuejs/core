@@ -1,9 +1,9 @@
 import { hyphenate, isArray } from '@vue/shared'
 import {
+  ErrorCodes,
   ComponentInternalInstance,
   callWithAsyncErrorHandling
 } from '@vue/runtime-core'
-import { ErrorCodes } from 'packages/runtime-core/src/errorHandling'
 
 interface Invoker extends EventListener {
   value: EventValue
