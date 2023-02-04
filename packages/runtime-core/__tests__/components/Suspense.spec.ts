@@ -1268,7 +1268,7 @@ describe('Suspense', () => {
         return h('div', `async`)
       }
     })
-    const onPending = jest.fn()
+    const onPending = vi.fn()
     const wrapper = {
       setup() {
         return (ctx: ComponentPublicInstance) =>
