@@ -90,7 +90,7 @@ describe('CSS vars injection', () => {
     expect(code).toMatchInlineSnapshot(`
       ".foo {
               color: var(--test-color);
-              font-size: var(--test-font\\.size);
+              font-size: var(--test-font\\\\.size);
 
               font-weight: var(--test-_φ);
               font-size: var(--test-1-字号);
