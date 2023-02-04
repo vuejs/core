@@ -10,7 +10,7 @@ describe('ssr: v-model', () => {
       .toMatchInlineSnapshot(`
         "const { ssrRenderAttr: _ssrRenderAttr, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent, _attrs) {
+        return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
           _push(\`<div\${
             _ssrRenderAttrs(_attrs)
           }><input\${
@@ -23,7 +23,7 @@ describe('ssr: v-model', () => {
       .toMatchInlineSnapshot(`
         "const { ssrRenderAttr: _ssrRenderAttr, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent, _attrs) {
+        return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
           _push(\`<div\${
             _ssrRenderAttrs(_attrs)
           }><input type=\\"email\\"\${
@@ -39,7 +39,7 @@ describe('ssr: v-model', () => {
     ).toMatchInlineSnapshot(`
       "const { ssrLooseEqual: _ssrLooseEqual, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         _push(\`<div\${
           _ssrRenderAttrs(_attrs)
         }><input type=\\"radio\\" value=\\"foo\\"\${
@@ -54,7 +54,7 @@ describe('ssr: v-model', () => {
       .toMatchInlineSnapshot(`
         "const { ssrLooseContain: _ssrLooseContain, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent, _attrs) {
+        return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
           _push(\`<div\${
             _ssrRenderAttrs(_attrs)
           }><input type=\\"checkbox\\"\${
@@ -71,7 +71,7 @@ describe('ssr: v-model', () => {
     ).toMatchInlineSnapshot(`
       "const { ssrLooseContain: _ssrLooseContain, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         _push(\`<div\${
           _ssrRenderAttrs(_attrs)
         }><input type=\\"checkbox\\" value=\\"foo\\"\${
@@ -89,7 +89,7 @@ describe('ssr: v-model', () => {
     ).toMatchInlineSnapshot(`
       "const { ssrLooseEqual: _ssrLooseEqual, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         _push(\`<div\${
           _ssrRenderAttrs(_attrs)
         }><input type=\\"checkbox\\"\${
@@ -105,7 +105,7 @@ describe('ssr: v-model', () => {
     ).toMatchInlineSnapshot(`
       "const { ssrLooseEqual: _ssrLooseEqual, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         _push(\`<div\${
           _ssrRenderAttrs(_attrs)
         }><input type=\\"checkbox\\"\${
@@ -120,7 +120,7 @@ describe('ssr: v-model', () => {
       .toMatchInlineSnapshot(`
         "const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require(\\"vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent, _attrs) {
+        return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
           _push(\`<div\${
             _ssrRenderAttrs(_attrs)
           }><textarea>\${
@@ -135,7 +135,7 @@ describe('ssr: v-model', () => {
       .toMatchInlineSnapshot(`
         "const { ssrRenderAttr: _ssrRenderAttr, ssrRenderDynamicModel: _ssrRenderDynamicModel, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent, _attrs) {
+        return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
           _push(\`<div\${
             _ssrRenderAttrs(_attrs)
           }><input\${
@@ -151,7 +151,7 @@ describe('ssr: v-model', () => {
     ).toMatchInlineSnapshot(`
       "const { ssrRenderAttr: _ssrRenderAttr, ssrRenderDynamicModel: _ssrRenderDynamicModel, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         _push(\`<div\${
           _ssrRenderAttrs(_attrs)
         }><input\${
@@ -167,7 +167,7 @@ describe('ssr: v-model', () => {
     ).toMatchInlineSnapshot(`
       "const { ssrRenderAttr: _ssrRenderAttr, ssrRenderDynamicModel: _ssrRenderDynamicModel, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         _push(\`<div\${
           _ssrRenderAttrs(_attrs)
         }><input\${
@@ -187,7 +187,7 @@ describe('ssr: v-model', () => {
         "const { mergeProps: _mergeProps } = require(\\"vue\\")
         const { ssrRenderAttrs: _ssrRenderAttrs, ssrGetDynamicModelProps: _ssrGetDynamicModelProps } = require(\\"vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent, _attrs) {
+        return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
           let _temp0
 
           _push(\`<div\${
@@ -205,7 +205,7 @@ describe('ssr: v-model', () => {
       "const { mergeProps: _mergeProps } = require(\\"vue\\")
       const { ssrRenderAttrs: _ssrRenderAttrs, ssrGetDynamicModelProps: _ssrGetDynamicModelProps } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         let _temp0
 
         _push(\`<div\${

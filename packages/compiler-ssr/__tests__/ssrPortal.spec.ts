@@ -6,7 +6,7 @@ describe('ssr compile: teleport', () => {
       .toMatchInlineSnapshot(`
         "const { ssrRenderTeleport: _ssrRenderTeleport } = require(\\"vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent, _attrs) {
+        return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
           _ssrRenderTeleport(_push, (_push) => {
             _push(\`<div></div>\`)
           }, _ctx.target, false, _parent)
@@ -19,7 +19,7 @@ describe('ssr compile: teleport', () => {
       .toMatchInlineSnapshot(`
         "const { ssrRenderTeleport: _ssrRenderTeleport } = require(\\"vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent, _attrs) {
+        return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
           _ssrRenderTeleport(_push, (_push) => {
             _push(\`<div></div>\`)
           }, _ctx.target, true, _parent)
@@ -31,7 +31,7 @@ describe('ssr compile: teleport', () => {
     ).toMatchInlineSnapshot(`
       "const { ssrRenderTeleport: _ssrRenderTeleport } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         _ssrRenderTeleport(_push, (_push) => {
           _push(\`<div></div>\`)
         }, _ctx.target, _ctx.foo, _parent)

@@ -5,7 +5,7 @@ describe('ssr: v-if', () => {
     expect(compile(`<div v-if="foo"></div>`).code).toMatchInlineSnapshot(`
       "const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         if (_ctx.foo) {
           _push(\`<div\${_ssrRenderAttrs(_attrs)}></div>\`)
         } else {
@@ -20,7 +20,7 @@ describe('ssr: v-if', () => {
       .toMatchInlineSnapshot(`
         "const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent, _attrs) {
+        return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
           if (_ctx.foo) {
             _push(\`<div\${_ssrRenderAttrs(_attrs)}>hello<span>ok</span></div>\`)
           } else {
@@ -35,7 +35,7 @@ describe('ssr: v-if', () => {
       .toMatchInlineSnapshot(`
         "const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent, _attrs) {
+        return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
           if (_ctx.foo) {
             _push(\`<div\${_ssrRenderAttrs(_attrs)}></div>\`)
           } else {
@@ -50,7 +50,7 @@ describe('ssr: v-if', () => {
       .toMatchInlineSnapshot(`
         "const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent, _attrs) {
+        return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
           if (_ctx.foo) {
             _push(\`<div\${_ssrRenderAttrs(_attrs)}></div>\`)
           } else if (_ctx.bar) {
@@ -67,7 +67,7 @@ describe('ssr: v-if', () => {
       .toMatchInlineSnapshot(`
         "const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent, _attrs) {
+        return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
           if (_ctx.foo) {
             _push(\`<div\${_ssrRenderAttrs(_attrs)}></div>\`)
           } else if (_ctx.bar) {
@@ -82,15 +82,15 @@ describe('ssr: v-if', () => {
   test('<template v-if> (text)', () => {
     expect(compile(`<template v-if="foo">hello</template>`).code)
       .toMatchInlineSnapshot(`
-      "
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
-        if (_ctx.foo) {
-          _push(\`<!--[-->hello<!--]-->\`)
-        } else {
-          _push(\`<!---->\`)
-        }
-      }"
-    `)
+        "
+        return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
+          if (_ctx.foo) {
+            _push(\`<!--[-->hello<!--]-->\`)
+          } else {
+            _push(\`<!---->\`)
+          }
+        }"
+      `)
   })
 
   test('<template v-if> (single element)', () => {
@@ -99,7 +99,7 @@ describe('ssr: v-if', () => {
       .toMatchInlineSnapshot(`
         "const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent, _attrs) {
+        return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
           if (_ctx.foo) {
             _push(\`<div\${_ssrRenderAttrs(_attrs)}>hi</div>\`)
           } else {
@@ -114,7 +114,7 @@ describe('ssr: v-if', () => {
       compile(`<template v-if="foo"><div>hi</div><div>ho</div></template>`).code
     ).toMatchInlineSnapshot(`
       "
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         if (_ctx.foo) {
           _push(\`<!--[--><div>hi</div><div>ho</div><!--]-->\`)
         } else {
@@ -130,7 +130,7 @@ describe('ssr: v-if', () => {
     ).toMatchInlineSnapshot(`
       "const { ssrRenderList: _ssrRenderList } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         if (_ctx.foo) {
           _push(\`<!--[-->\`)
           _ssrRenderList(_ctx.list, (i) => {
@@ -152,7 +152,7 @@ describe('ssr: v-if', () => {
     ).toMatchInlineSnapshot(`
       "const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         if (_ctx.foo) {
           _push(\`<!--[--><div>hi</div><div>ho</div><!--]-->\`)
         } else {

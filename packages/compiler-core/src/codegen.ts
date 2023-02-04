@@ -227,7 +227,9 @@ export function generate(
   }
   // enter render function
   const functionName = ssr ? `ssrRender` : `render`
-  const args = ssr ? ['_ctx', '_push', '_parent', '_attrs'] : ['_ctx', '_cache']
+  const args = ssr
+    ? ['_ctx', '_push', '_parent', '_attrs', '_cache']
+    : ['_ctx', '_cache']
   if (!__BROWSER__ && options.bindingMetadata && !options.inline) {
     // binding optimization args
     args.push('$props', '$setup', '$data', '$options')

@@ -5,7 +5,7 @@ describe('ssr: attrs fallthrough', () => {
     expect(compile(`<div/>`).code).toMatchInlineSnapshot(`
       "const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         _push(\`<div\${_ssrRenderAttrs(_attrs)}></div>\`)
       }"
     `)
@@ -15,7 +15,7 @@ describe('ssr: attrs fallthrough', () => {
     expect(compile(`<!--!--><div/>`).code).toMatchInlineSnapshot(`
       "const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         _push(\`<!--[--><!--!--><div\${_ssrRenderAttrs(_attrs)}></div><!--]-->\`)
       }"
     `)
@@ -25,7 +25,7 @@ describe('ssr: attrs fallthrough', () => {
   test('should not inject to non-single-root if branches', () => {
     expect(compile(`<div v-if="true"/><div/>`).code).toMatchInlineSnapshot(`
       "
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         _push(\`<!--[-->\`)
         if (true) {
           _push(\`<div></div>\`)
@@ -42,7 +42,7 @@ describe('ssr: attrs fallthrough', () => {
       .toMatchInlineSnapshot(`
         "const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent, _attrs) {
+        return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
           _push(\`<!--[--><!--root--><div\${_ssrRenderAttrs(_attrs)}></div><!--]-->\`)
         }"
       `)
@@ -51,10 +51,10 @@ describe('ssr: attrs fallthrough', () => {
   test('should not inject to fallthrough component content if not root', () => {
     expect(compile(`<div/><transition><div/></transition>`).code)
       .toMatchInlineSnapshot(`
-              "
-              return function ssrRender(_ctx, _push, _parent, _attrs) {
-                _push(\`<!--[--><div></div><div></div><!--]-->\`)
-              }"
-          `)
+        "
+        return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
+          _push(\`<!--[--><div></div><div></div><!--]-->\`)
+        }"
+      `)
   })
 })

@@ -11,7 +11,7 @@ describe('ssr: inject <style vars>', () => {
       "const { mergeProps: _mergeProps } = require(\\"vue\\")
       const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         const _cssVars = { style: { color: _ctx.color }}
         _push(\`<div\${_ssrRenderAttrs(_mergeProps(_attrs, _cssVars))}></div>\`)
       }"
@@ -26,7 +26,7 @@ describe('ssr: inject <style vars>', () => {
     ).toMatchInlineSnapshot(`
       "const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         const _cssVars = { style: { color: _ctx.color }}
         _push(\`<!--[--><div\${
           _ssrRenderAttrs(_cssVars)
@@ -46,7 +46,7 @@ describe('ssr: inject <style vars>', () => {
       "const { resolveComponent: _resolveComponent } = require(\\"vue\\")
       const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderComponent: _ssrRenderComponent } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         const _component_foo = _resolveComponent(\\"foo\\")
 
         const _cssVars = { style: { color: _ctx.color }}
@@ -66,7 +66,7 @@ describe('ssr: inject <style vars>', () => {
       "const { mergeProps: _mergeProps } = require(\\"vue\\")
       const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         const _cssVars = { style: { color: _ctx.color }}
         if (_ctx.ok) {
           _push(\`<div\${_ssrRenderAttrs(_mergeProps(_attrs, _cssVars))}></div>\`)
@@ -98,7 +98,7 @@ describe('ssr: inject <style vars>', () => {
       "const { withCtx: _withCtx } = require(\\"vue\\")
       const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderSuspense: _ssrRenderSuspense } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         const _cssVars = { style: { color: _ctx.color }}
         _ssrRenderSuspense(_push, {
           fallback: () => {
@@ -121,7 +121,7 @@ describe('ssr: inject <style vars>', () => {
     })
 
     expect(result.code).toMatchInlineSnapshot(`
-      "(_ctx, _push, _parent, _attrs) => {
+      "(_ctx, _push, _parent, _attrs, _cache) => {
         const _cssVars = { style: { \\"--hash\\": (_unref(dynamic)) }}
         _push(\`<div\${_ssrRenderAttrs(_mergeProps(_attrs, _cssVars))}></div>\`)
       }"

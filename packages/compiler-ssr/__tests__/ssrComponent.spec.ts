@@ -6,7 +6,7 @@ describe('ssr: components', () => {
       "const { resolveComponent: _resolveComponent, mergeProps: _mergeProps } = require(\\"vue\\")
       const { ssrRenderComponent: _ssrRenderComponent } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         const _component_foo = _resolveComponent(\\"foo\\")
 
         _push(_ssrRenderComponent(_component_foo, _mergeProps({
@@ -23,7 +23,7 @@ describe('ssr: components', () => {
       "const { resolveComponent: _resolveComponent, mergeProps: _mergeProps } = require(\\"vue\\")
       const { ssrRenderComponent: _ssrRenderComponent } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         const _component_foo = _resolveComponent(\\"foo\\")
 
         _push(_ssrRenderComponent(_component_foo, _mergeProps({ onClick: _ctx.bar }, _attrs), null, _parent))
@@ -37,7 +37,7 @@ describe('ssr: components', () => {
         "const { resolveDynamicComponent: _resolveDynamicComponent, mergeProps: _mergeProps, createVNode: _createVNode } = require(\\"vue\\")
         const { ssrRenderVNode: _ssrRenderVNode } = require(\\"vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent, _attrs) {
+        return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
           _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent(\\"foo\\"), _mergeProps({ prop: \\"b\\" }, _attrs), null), _parent)
         }"
       `)
@@ -47,7 +47,7 @@ describe('ssr: components', () => {
         "const { resolveDynamicComponent: _resolveDynamicComponent, mergeProps: _mergeProps, createVNode: _createVNode } = require(\\"vue\\")
         const { ssrRenderVNode: _ssrRenderVNode } = require(\\"vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent, _attrs) {
+        return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
           _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent(_ctx.foo), _mergeProps({ prop: \\"b\\" }, _attrs), null), _parent)
         }"
       `)
@@ -59,7 +59,7 @@ describe('ssr: components', () => {
         "const { resolveComponent: _resolveComponent, withCtx: _withCtx, createVNode: _createVNode, createTextVNode: _createTextVNode } = require(\\"vue\\")
         const { ssrRenderComponent: _ssrRenderComponent } = require(\\"vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent, _attrs) {
+        return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
           const _component_foo = _resolveComponent(\\"foo\\")
 
           _push(_ssrRenderComponent(_component_foo, _attrs, {
@@ -85,7 +85,7 @@ describe('ssr: components', () => {
           "const { resolveComponent: _resolveComponent, withCtx: _withCtx, toDisplayString: _toDisplayString, createTextVNode: _createTextVNode } = require(\\"vue\\")
           const { ssrRenderComponent: _ssrRenderComponent, ssrInterpolate: _ssrInterpolate } = require(\\"vue/server-renderer\\")
 
-          return function ssrRender(_ctx, _push, _parent, _attrs) {
+          return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
             const _component_foo = _resolveComponent(\\"foo\\")
 
             _push(_ssrRenderComponent(_component_foo, _attrs, {
@@ -119,7 +119,7 @@ describe('ssr: components', () => {
         "const { resolveComponent: _resolveComponent, withCtx: _withCtx, createTextVNode: _createTextVNode } = require(\\"vue\\")
         const { ssrRenderComponent: _ssrRenderComponent } = require(\\"vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent, _attrs) {
+        return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
           const _component_foo = _resolveComponent(\\"foo\\")
 
           _push(_ssrRenderComponent(_component_foo, _attrs, {
@@ -156,7 +156,7 @@ describe('ssr: components', () => {
         "const { resolveComponent: _resolveComponent, withCtx: _withCtx, createTextVNode: _createTextVNode, createSlots: _createSlots } = require(\\"vue\\")
         const { ssrRenderComponent: _ssrRenderComponent } = require(\\"vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent, _attrs) {
+        return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
           const _component_foo = _resolveComponent(\\"foo\\")
 
           _push(_ssrRenderComponent(_component_foo, _attrs, _createSlots({ _: 2 /* DYNAMIC */ }, [
@@ -189,7 +189,7 @@ describe('ssr: components', () => {
         "const { resolveComponent: _resolveComponent, withCtx: _withCtx, toDisplayString: _toDisplayString, createTextVNode: _createTextVNode, renderList: _renderList, createSlots: _createSlots } = require(\\"vue\\")
         const { ssrRenderComponent: _ssrRenderComponent, ssrInterpolate: _ssrInterpolate } = require(\\"vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent, _attrs) {
+        return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
           const _component_foo = _resolveComponent(\\"foo\\")
 
           _push(_ssrRenderComponent(_component_foo, _attrs, _createSlots({ _: 2 /* DYNAMIC */ }, [
@@ -230,7 +230,7 @@ describe('ssr: components', () => {
         "const { resolveComponent: _resolveComponent, withCtx: _withCtx, renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, createCommentVNode: _createCommentVNode } = require(\\"vue\\")
         const { ssrRenderComponent: _ssrRenderComponent, ssrRenderList: _ssrRenderList } = require(\\"vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent, _attrs) {
+        return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
           const _component_foo = _resolveComponent(\\"foo\\")
 
           _push(_ssrRenderComponent(_component_foo, _attrs, {
@@ -292,7 +292,7 @@ describe('ssr: components', () => {
           .toMatchInlineSnapshot(`
             "const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
-            return function ssrRender(_ctx, _push, _parent, _attrs) {
+            return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
               _push(\`<div\${_ssrRenderAttrs(_attrs)}></div>\`)
             }"
           `)
@@ -304,7 +304,7 @@ describe('ssr: components', () => {
             "const { resolveComponent: _resolveComponent } = require(\\"vue\\")
             const { ssrRenderComponent: _ssrRenderComponent } = require(\\"vue/server-renderer\\")
 
-            return function ssrRender(_ctx, _push, _parent, _attrs) {
+            return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
               const _component_foo = _resolveComponent(\\"foo\\")
 
               _push(_ssrRenderComponent(_component_foo, _attrs, null, _parent))
@@ -321,7 +321,7 @@ describe('ssr: components', () => {
           "const { resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock, createCommentVNode: _createCommentVNode, Transition: _Transition, createVNode: _createVNode } = require(\\"vue\\")
           const { ssrRenderComponent: _ssrRenderComponent } = require(\\"vue/server-renderer\\")
 
-          return function ssrRender(_ctx, _push, _parent, _attrs) {
+          return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
             const _component_foo = _resolveComponent(\\"foo\\")
 
             _push(_ssrRenderComponent(_component_foo, _attrs, {
@@ -360,7 +360,7 @@ describe('ssr: components', () => {
         "const { resolveComponent: _resolveComponent, resolveDirective: _resolveDirective, mergeProps: _mergeProps } = require(\\"vue\\")
         const { ssrGetDirectiveProps: _ssrGetDirectiveProps, ssrRenderComponent: _ssrRenderComponent } = require(\\"vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent, _attrs) {
+        return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
           const _component_foo = _resolveComponent(\\"foo\\")
           const _directive_xxx = _resolveDirective(\\"xxx\\")
 

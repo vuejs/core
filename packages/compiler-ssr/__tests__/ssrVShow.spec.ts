@@ -10,7 +10,7 @@ describe('ssr: v-show', () => {
       "const { mergeProps: _mergeProps } = require(\\"vue\\")
       const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         _push(\`<div\${_ssrRenderAttrs(_mergeProps({
           style: (_ctx.foo) ? null : { display: \\"none\\" }
         }, _attrs))}></div>\`)
@@ -23,7 +23,7 @@ describe('ssr: v-show', () => {
       .toMatchInlineSnapshot(`
         "const { ssrRenderStyle: _ssrRenderStyle, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent, _attrs) {
+        return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
           _push(\`<div\${
             _ssrRenderAttrs(_attrs)
           }><div style=\\"\${
@@ -38,7 +38,7 @@ describe('ssr: v-show', () => {
       .toMatchInlineSnapshot(`
         "const { ssrRenderStyle: _ssrRenderStyle, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent, _attrs) {
+        return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
           _push(\`<div\${
             _ssrRenderAttrs(_attrs)
           }><div style=\\"\${
@@ -57,7 +57,7 @@ describe('ssr: v-show', () => {
     ).toMatchInlineSnapshot(`
       "const { ssrRenderStyle: _ssrRenderStyle, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         _push(\`<div\${
           _ssrRenderAttrs(_attrs)
         }><div style=\\"\${
@@ -78,7 +78,7 @@ describe('ssr: v-show', () => {
     ).toMatchInlineSnapshot(`
       "const { ssrRenderStyle: _ssrRenderStyle, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         _push(\`<div\${
           _ssrRenderAttrs(_attrs)
         }><div style=\\"\${
@@ -101,7 +101,7 @@ describe('ssr: v-show', () => {
       "const { mergeProps: _mergeProps } = require(\\"vue\\")
       const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         _push(\`<div\${
           _ssrRenderAttrs(_attrs)
         }><div\${

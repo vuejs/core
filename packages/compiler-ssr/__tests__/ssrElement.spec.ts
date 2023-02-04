@@ -59,7 +59,7 @@ describe('ssr: element', () => {
           "const { mergeProps: _mergeProps } = require(\\"vue\\")
           const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require(\\"vue/server-renderer\\")
 
-          return function ssrRender(_ctx, _push, _parent, _attrs) {
+          return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
             let _temp0
 
             _push(\`<textarea\${
@@ -77,7 +77,7 @@ describe('ssr: element', () => {
       ).toMatchInlineSnapshot(`
         "const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require(\\"vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent, _attrs) {
+        return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
           let _temp0
 
           _push(\`<div\${
@@ -102,7 +102,7 @@ describe('ssr: element', () => {
         "const { mergeProps: _mergeProps } = require(\\"vue\\")
         const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent, _attrs) {
+        return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
           _push(\`<my-foo\${_ssrRenderAttrs(_mergeProps(_ctx.obj, _attrs), \\"my-foo\\")}></my-foo>\`)
         }"
       `)

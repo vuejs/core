@@ -19,7 +19,7 @@ import _imports_0 from './img/foo.svg'
 import _imports_1 from './img/bar.svg'
 
 
-export function ssrRender(_ctx, _push, _parent, _attrs) {
+export function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
   const _component_router_link = _resolveComponent(\\"router-link\\")
 
   _push(\`<!--[--><picture><source\${

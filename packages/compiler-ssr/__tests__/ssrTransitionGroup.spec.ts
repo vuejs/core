@@ -10,7 +10,7 @@ describe('transition-group', () => {
     ).toMatchInlineSnapshot(`
       "const { ssrRenderList: _ssrRenderList } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         _push(\`<!--[-->\`)
         _ssrRenderList(_ctx.list, (i) => {
           _push(\`<div></div>\`)
@@ -28,7 +28,7 @@ describe('transition-group', () => {
     ).toMatchInlineSnapshot(`
       "const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderList: _ssrRenderList } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         _push(\`<ul\${_ssrRenderAttrs(_attrs)}>\`)
         _ssrRenderList(_ctx.list, (i) => {
           _push(\`<div></div>\`)
@@ -46,7 +46,7 @@ describe('transition-group', () => {
     ).toMatchInlineSnapshot(`
       "const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderList: _ssrRenderList } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         _push(\`<\${
           _ctx.someTag
         }\${
@@ -72,7 +72,7 @@ describe('transition-group', () => {
     ).toMatchInlineSnapshot(`
       "const { ssrRenderList: _ssrRenderList } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         _push(\`<!--[-->\`)
         _ssrRenderList(10, (i) => {
           _push(\`<div></div>\`)
@@ -100,7 +100,7 @@ describe('transition-group', () => {
       "const { mergeProps: _mergeProps } = require(\\"vue\\")
       const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         _push(\`<ul\${_ssrRenderAttrs(_mergeProps({
           class: \\"red\\",
           id: \\"ok\\"

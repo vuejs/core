@@ -6,7 +6,7 @@ describe('ssr: <slot>', () => {
     expect(compile(`<slot/>`).code).toMatchInlineSnapshot(`
       "const { ssrRenderSlot: _ssrRenderSlot } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         _ssrRenderSlot(_ctx.$slots, \\"default\\", {}, null, _push, _parent)
       }"
     `)
@@ -16,7 +16,7 @@ describe('ssr: <slot>', () => {
     expect(compile(`<slot name="foo" />`).code).toMatchInlineSnapshot(`
       "const { ssrRenderSlot: _ssrRenderSlot } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         _ssrRenderSlot(_ctx.$slots, \\"foo\\", {}, null, _push, _parent)
       }"
     `)
@@ -26,7 +26,7 @@ describe('ssr: <slot>', () => {
     expect(compile(`<slot :name="bar.baz" />`).code).toMatchInlineSnapshot(`
       "const { ssrRenderSlot: _ssrRenderSlot } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         _ssrRenderSlot(_ctx.$slots, _ctx.bar.baz, {}, null, _push, _parent)
       }"
     `)
@@ -37,7 +37,7 @@ describe('ssr: <slot>', () => {
       .toMatchInlineSnapshot(`
         "const { ssrRenderSlot: _ssrRenderSlot } = require(\\"vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent, _attrs) {
+        return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
           _ssrRenderSlot(_ctx.$slots, \\"foo\\", {
             p: 1,
             bar: \\"2\\"
@@ -51,7 +51,7 @@ describe('ssr: <slot>', () => {
       .toMatchInlineSnapshot(`
         "const { ssrRenderSlot: _ssrRenderSlot, ssrInterpolate: _ssrInterpolate } = require(\\"vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent, _attrs) {
+        return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
           _ssrRenderSlot(_ctx.$slots, \\"default\\", {}, () => {
             _push(\`some \${_ssrInterpolate(_ctx.fallback)} content\`)
           }, _push, _parent)
@@ -67,7 +67,7 @@ describe('ssr: <slot>', () => {
     ).toMatchInlineSnapshot(`
       "const { ssrRenderSlot: _ssrRenderSlot } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         _ssrRenderSlot(_ctx.$slots, \\"default\\", {}, null, _push, _parent, \\"hello-s\\")
       }"
     `)
@@ -82,7 +82,7 @@ describe('ssr: <slot>', () => {
     ).toMatchInlineSnapshot(`
       "const { ssrRenderSlot: _ssrRenderSlot } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         _ssrRenderSlot(_ctx.$slots, \\"default\\", {}, null, _push, _parent)
       }"
     `)
@@ -97,7 +97,7 @@ describe('ssr: <slot>', () => {
       "const { resolveComponent: _resolveComponent, withCtx: _withCtx, renderSlot: _renderSlot } = require(\\"vue\\")
       const { ssrRenderSlot: _ssrRenderSlot, ssrRenderComponent: _ssrRenderComponent } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         const _component_Comp = _resolveComponent(\\"Comp\\")
 
         _push(_ssrRenderComponent(_component_Comp, _attrs, {
@@ -122,7 +122,7 @@ describe('ssr: <slot>', () => {
     expect(code).toMatchInlineSnapshot(`
       "const { ssrRenderSlotInner: _ssrRenderSlotInner } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         _ssrRenderSlotInner(_ctx.$slots, \\"default\\", {}, null, _push, _parent, null, true)
       }"
     `)

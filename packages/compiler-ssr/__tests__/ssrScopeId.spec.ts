@@ -12,7 +12,7 @@ describe('ssr: scopeId', () => {
     ).toMatchInlineSnapshot(`
       "import { ssrRenderAttrs as _ssrRenderAttrs } from \\"vue/server-renderer\\"
 
-      export function ssrRender(_ctx, _push, _parent, _attrs) {
+      export function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         _push(\`<div\${_ssrRenderAttrs(_attrs)} data-v-xxxxxxx><span data-v-xxxxxxx>hello</span></div>\`)
       }"
     `)
@@ -29,7 +29,7 @@ describe('ssr: scopeId', () => {
       "import { resolveComponent as _resolveComponent, withCtx as _withCtx, createTextVNode as _createTextVNode } from \\"vue\\"
       import { ssrRenderComponent as _ssrRenderComponent } from \\"vue/server-renderer\\"
 
-      export function ssrRender(_ctx, _push, _parent, _attrs) {
+      export function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         const _component_foo = _resolveComponent(\\"foo\\")
 
         _push(_ssrRenderComponent(_component_foo, _attrs, {
@@ -58,7 +58,7 @@ describe('ssr: scopeId', () => {
       "import { resolveComponent as _resolveComponent, withCtx as _withCtx, createVNode as _createVNode } from \\"vue\\"
       import { ssrRenderComponent as _ssrRenderComponent } from \\"vue/server-renderer\\"
 
-      export function ssrRender(_ctx, _push, _parent, _attrs) {
+      export function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         const _component_foo = _resolveComponent(\\"foo\\")
 
         _push(_ssrRenderComponent(_component_foo, _attrs, {
@@ -87,7 +87,7 @@ describe('ssr: scopeId', () => {
       "import { resolveComponent as _resolveComponent, withCtx as _withCtx, createVNode as _createVNode } from \\"vue\\"
       import { ssrRenderComponent as _ssrRenderComponent } from \\"vue/server-renderer\\"
 
-      export function ssrRender(_ctx, _push, _parent, _attrs) {
+      export function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         const _component_foo = _resolveComponent(\\"foo\\")
         const _component_bar = _resolveComponent(\\"bar\\")
 

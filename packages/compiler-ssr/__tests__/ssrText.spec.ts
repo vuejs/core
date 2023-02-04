@@ -45,7 +45,7 @@ describe('ssr: text', () => {
     expect(compile(`foo {{ bar }} baz`).code).toMatchInlineSnapshot(`
       "const { ssrInterpolate: _ssrInterpolate } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         _push(\`foo \${_ssrInterpolate(_ctx.bar)} baz\`)
       }"
     `)
@@ -58,7 +58,7 @@ describe('ssr: text', () => {
     ).toMatchInlineSnapshot(`
       "const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
+      return function ssrRender(_ctx, _push, _parent, _attrs, _cache) {
         _push(\`<div\${
           _ssrRenderAttrs(_attrs)
         }><span>\${
