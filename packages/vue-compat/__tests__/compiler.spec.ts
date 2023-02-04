@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import Vue from '@vue/compat'
 import { nextTick } from '@vue/runtime-core'
 import { CompilerDeprecationTypes } from '../../compiler-core/src'
@@ -98,7 +99,7 @@ test('COMPILER_V_BIND_OBJECT_ORDER', () => {
 })
 
 test('COMPILER_V_ON_NATIVE', () => {
-  const spy = jest.fn()
+  const spy = vi.fn()
   const vm = new Vue({
     template: `<child @click="spy" @click.native="spy" />`,
     components: {
