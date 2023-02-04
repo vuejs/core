@@ -267,8 +267,8 @@ describe('hot module replacement', () => {
   test('reload: avoid infinite recursion', async () => {
     const root = nodeOps.createElement('div')
     const childId = 'test-child-6930'
-    const unmountSpy = jest.fn()
-    const mountSpy = jest.fn()
+    const unmountSpy = vi.fn()
+    const mountSpy = vi.fn()
 
     const Child: ComponentOptions = {
       __hmrId: childId,
