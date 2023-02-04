@@ -568,8 +568,8 @@ describe('defineCustomElement', () => {
       const E = defineCustomElement(Comp)
       customElements.define('my-el-v-model-number', E)
 
-      const fn1 = jest.fn()
-      const fn2 = jest.fn()
+      const fn1 = vi.fn()
+      const fn2 = vi.fn()
       const app = createApp(
         defineComponent({
           components: {
@@ -612,8 +612,8 @@ describe('defineCustomElement', () => {
       const E = defineCustomElement(Comp)
       customElements.define('my-el-v-model-trim', E)
 
-      const fn1 = jest.fn()
-      const fn2 = jest.fn()
+      const fn1 = vi.fn()
+      const fn2 = vi.fn()
       const app = createApp(
         defineComponent({
           components: {
@@ -656,8 +656,8 @@ describe('defineCustomElement', () => {
       const E = defineCustomElement(Comp)
       customElements.define('my-el-v-model-trim-num', E)
 
-      const fn1 = jest.fn()
-      const fn2 = jest.fn()
+      const fn1 = vi.fn()
+      const fn2 = vi.fn()
       const app = createApp(
         defineComponent({
           components: {
@@ -699,7 +699,7 @@ describe('defineCustomElement', () => {
       const E = defineCustomElement(Comp)
       customElements.define('my-el-v-model-trim-only', E)
 
-      const fn = jest.fn()
+      const fn = vi.fn()
       const app = createApp(
         defineComponent({
           components: {
