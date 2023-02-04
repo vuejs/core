@@ -1,4 +1,4 @@
-import { h, createApp } from '@vue/runtime-dom'
+import { h, createApp } from 'vue'
 
 // The bare minimum code required for rendering something to the screen
 createApp({
