@@ -136,13 +136,12 @@ describe('ssr: scopeId', () => {
         }
       ).code
     ).toMatchInlineSnapshot(`
-      "import { mergeProps as _mergeProps } from "vue"
-      import { ssrRenderAttrs as _ssrRenderAttrs } from "vue/server-renderer"
-
+      "import { mergeProps as _mergeProps } from \\"vue\\"
+      import { ssrRenderAttrs as _ssrRenderAttrs } from \\"vue/server-renderer\\"
+      
       export function ssrRender(_ctx, _push, _parent, _attrs) {
-        _push(\`<div\${_ssrRenderAttrs(_mergeProps({ class: "red" }, _attrs))}data-v-xxxxxxx><span data-v-xxxxxxx>hello</span></div>\`)
-      }"
-    `)
+        _push(\`<div\${_ssrRenderAttrs(_mergeProps({ class: \\"red\\" }, _attrs))}data-v-xxxxxxx><span data-v-xxxxxxx>hello</span></div>\`)
+      }"`)
 
     // with dynamic tag
     expect(
@@ -154,14 +153,14 @@ describe('ssr: scopeId', () => {
         }
       ).code
     ).toMatchInlineSnapshot(`
-      "import { mergeProps as _mergeProps } from "vue"
-      import { ssrRenderAttrs as _ssrRenderAttrs } from "vue/server-renderer"
+      "import { mergeProps as _mergeProps } from \\"vue\\"
+      import { ssrRenderAttrs as _ssrRenderAttrs } from \\"vue/server-renderer\\"
 
       export function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<\${
           _ctx.someTag
         }\${
-          _ssrRenderAttrs(_mergeProps({ class: "red" }, _attrs))
+          _ssrRenderAttrs(_mergeProps({ class: \\"red\\" }, _attrs))
         }data-v-xxxxxxx><span data-v-xxxxxxx>hello</span></\${
           _ctx.someTag
         }>\`)
