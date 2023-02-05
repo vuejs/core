@@ -199,9 +199,9 @@ describe('compiler sfc: rewriteDefault', () => {
   test('export default class', async () => {
     expect(rewriteDefault(`export default class Foo {}`, 'script'))
       .toMatchInlineSnapshot(`
-      "class Foo {}
-      const script = Foo"
-    `)
+        " class Foo {}
+        const script = Foo"
+      `)
   })
 
   test('export default class w/ comments', async () => {
@@ -209,7 +209,7 @@ describe('compiler sfc: rewriteDefault', () => {
       rewriteDefault(`// export default\nexport default class Foo {}`, 'script')
     ).toMatchInlineSnapshot(`
       "// export default
-      class Foo {}
+       class Foo {}
       const script = Foo"
     `)
   })
@@ -235,7 +235,7 @@ describe('compiler sfc: rewriteDefault', () => {
     ).toMatchInlineSnapshot(`
       "/*
       export default class Foo {}*/
-      class Bar {}
+       class Bar {}
       const script = Bar"
     `)
   })
@@ -246,7 +246,7 @@ describe('compiler sfc: rewriteDefault', () => {
         'decorators-legacy'
       ])
     ).toMatchInlineSnapshot(`
-      "class Foo {}
+      "@Component class Foo {}
       const script = Foo"
     `)
   })
@@ -260,7 +260,7 @@ describe('compiler sfc: rewriteDefault', () => {
       )
     ).toMatchInlineSnapshot(`
       "// export default
-      class Foo {}
+      @Component class Foo {}
       const script = Foo"
     `)
   })
@@ -289,7 +289,7 @@ describe('compiler sfc: rewriteDefault', () => {
       "/*
       @Component
       export default class Foo {}*/
-      class Bar {}
+       class Bar {}
       const script = Bar"
     `)
   })
