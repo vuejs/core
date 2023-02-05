@@ -1,3 +1,12 @@
+# [3.3.0-alpha.1](https://github.com/vuejs/core/compare/v3.2.47...v3.3.0-alpha.1) (2023-02-05)
+
+
+### Bug Fixes
+
+* **build:** ensure BaseTransition functions can be tree-shaken ([3a6f5eb](https://github.com/vuejs/core/commit/3a6f5eb0f7d60dc87d17a69c66e88ae5688b11a5))
+
+
+
 ## [3.2.47](https://github.com/vuejs/core/compare/v3.2.46...v3.2.47) (2023-02-02)
 
 
