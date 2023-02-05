@@ -1,3 +1,12 @@
+# [3.3.0-alpha.2](https://github.com/vuejs/core/compare/v3.3.0-alpha.1...v3.3.0-alpha.2) (2023-02-05)
+
+
+### Bug Fixes
+
+* **build:** fix dev flag replacement in esm-bundler builds ([5851eaa](https://github.com/vuejs/core/commit/5851eaa9339364d41860a277a99f2352de2a3834))
+
+
+
 # [3.3.0-alpha.1](https://github.com/vuejs/core/compare/v3.2.47...v3.3.0-alpha.1) (2023-02-05)
 
 
