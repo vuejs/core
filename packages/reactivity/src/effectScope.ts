@@ -139,9 +139,8 @@ export function getCurrentScope() {
 }
 
 /**
- * Allows to add a callback to the current effect scope's cleanup.
- *
- * If there is no active effect scope at the moment, this will do nothing.
+ * Allows to add a callback to the current effect scope's cleanup. If there is
+ * no active effect scope at the moment, this will do nothing.
  *
  * @param fn The callback function to attach to the scope's cleanup.
  */
