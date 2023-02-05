@@ -198,7 +198,10 @@ class RefImpl<T> {
 }
 
 /**
- * Execute any effects tied to a shallow ref manually.
+ * Force trigger effects that depends on a shallow ref.
+ *
+ * This is typically used after making deep mutations to the inner value of a
+ * shallow ref.
  *
  * @example
  * ```js
@@ -361,7 +364,9 @@ export type ToRefs<T = any> = {
 }
 
 /**
- * Creates an object of refs pointing to the given reactive object's properties.
+ * Converts a reactive object to a plain object where each property of the
+ * resulting object is a ref pointing to the corresponding property of the
+ * original object. Each individual ref is created using toRef().
  *
  * @example
  * ```js
@@ -413,7 +418,10 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
 export type ToRef<T> = IfAny<T, Ref<T>, [T] extends [Ref] ? T : Ref<T>>
 
 /**
- * Creates a linked ref from a reactive object's property.
+ * Can be used to create a ref for a property on a source reactive object.
+ *
+ * The created ref is synced with its source property: mutating the source
+ * property will update the ref, and vice-versa.
  *
  * @example
  * ```js
