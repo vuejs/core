@@ -246,8 +246,7 @@ describe('compiler sfc: rewriteDefault', () => {
         'decorators-legacy'
       ])
     ).toMatchInlineSnapshot(`
-      "@Component
-      class Foo {}
+      "class Foo {}
       const script = Foo"
     `)
   })
@@ -261,7 +260,6 @@ describe('compiler sfc: rewriteDefault', () => {
       )
     ).toMatchInlineSnapshot(`
       "// export default
-      @Component
       class Foo {}
       const script = Foo"
     `)
