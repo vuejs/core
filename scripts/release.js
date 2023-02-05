@@ -110,8 +110,7 @@ async function main() {
   if (!skipTests) {
     step('\nRunning tests...')
     if (!isDryRun) {
-      await run('pnpm', ['test'])
-      await run('pnpm', ['test-dts'])
+      await run('pnpm', ['test', 'run'])
     } else {
       console.log(`Skipped (dry run)`)
     }
@@ -126,11 +125,9 @@ async function main() {
   // build all packages with types
   step('\nBuilding all packages...')
   if (!skipBuild && !isDryRun) {
-    await run('pnpm', ['run', 'build', '--release'])
-    await run('pnpm', ['run', 'build-dts'])
-    // test generated dts files
-    step('\nVerifying type declarations...')
-    await run('pnpm', ['run', 'test-dts-only'])
+    await run('pnpm', ['run', 'build'])
+    step('\nBuilding and testing types...')
+    await run('pnpm', ['test-dts'])
   } else {
     console.log(`(skipped)`)
   }
