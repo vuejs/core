@@ -3,5 +3,6 @@
   "private": true,
   "dependencies": {
     "vue": "workspace:*"
-  }
+  },
+  "version": "3.3.0-alpha.1"
 }
