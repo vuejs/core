@@ -17,9 +17,9 @@
 import execa from 'execa'
 import {
   existsSync,
+  mkdirSync,
   readFileSync,
   rmSync,
-  writeFile,
   writeFileSync
 } from 'node:fs'
 import { parse } from '@babel/parser'
@@ -164,6 +164,7 @@ export function scanEnums() {
   }
 
   // 3. save cache
+  if (!existsSync('temp')) mkdirSync('temp')
   writeFileSync(ENUM_CACHE_PATH, JSON.stringify(enumData))
 
   return () => {
