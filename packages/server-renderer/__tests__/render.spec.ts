@@ -883,7 +883,7 @@ function testRender(type: string, render: typeof renderToString) {
 
       expect(caughtError).not.toBe(null)
       expect(caughtError.message).toBe(
-        "Cannot read property 'value' of undefined"
+        "Cannot read properties of undefined (reading 'value')"
       )
 
       expect(
