@@ -1,3 +1,12 @@
+# [3.3.0-alpha.3](https://github.com/vuejs/core/compare/v3.3.0-alpha.2...v3.3.0-alpha.3) (2023-02-06)
+
+
+### Bug Fixes
+
+* **build:** avoid const enum conflicts ([d1181ad](https://github.com/vuejs/core/commit/d1181ad692861c140e687372efbc67a1d65d642a))
+
+
+
 # [3.3.0-alpha.2](https://github.com/vuejs/core/compare/v3.3.0-alpha.1...v3.3.0-alpha.2) (2023-02-05)
 
 
