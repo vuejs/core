@@ -32,7 +32,7 @@ const pkg = require(resolve(`package.json`))
 const packageOptions = pkg.buildOptions || {}
 const name = packageOptions.filename || path.basename(packageDir)
 
-const [enumPlugin, enumDefines] = await constEnum()
+const [enumPlugin, enumDefines] = constEnum()
 
 const outputConfigs = {
   'esm-bundler': {
@@ -192,7 +192,7 @@ function createConfig(format, output, plugins = []) {
     if (isBundlerESMBuild) {
       Object.assign(replacements, {
         // preserve to be handled by bundlers
-        __DEV__: `(process.env.NODE_ENV !== 'production')`
+        __DEV__: `process.env.NODE_ENV !== 'production'`
       })
     }
 
