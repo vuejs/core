@@ -107,7 +107,7 @@ export function renderComponentVNode(
         // Note: error display is already done by the wrapped lifecycle hook function.
         .catch(() => {})
     }
-    const renderPromise = p.then(() => renderComponentSubTree(instance, slotScopeId))
+   const renderPromise = p.then(() => renderComponentSubTree(instance, slotScopeId))
      // Note: error display is already done by the wrapped lifecycle hook function. But we must add a catch here to avoid unhandled promise rejection.
     renderPromise.catch(() => {})
 
