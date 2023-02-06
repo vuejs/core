@@ -22,7 +22,8 @@ import {
   remove,
   isMap,
   isSet,
-  isPlainObject
+  isPlainObject,
+  extend
 } from '@vue/shared'
 import {
   currentInstance,
@@ -94,7 +95,7 @@ export function watchPostEffect(
   return doWatch(
     effect,
     null,
-    __DEV__ ? { ...options, flush: 'post' } : { flush: 'post' }
+    __DEV__ ? extend({}, options as any, { flush: 'post' }) : { flush: 'post' }
   )
 }
 
@@ -105,7 +106,7 @@ export function watchSyncEffect(
   return doWatch(
     effect,
     null,
-    __DEV__ ? { ...options, flush: 'sync' } : { flush: 'sync' }
+    __DEV__ ? extend({}, options as any, { flush: 'sync' }) : { flush: 'sync' }
   )
 }
 

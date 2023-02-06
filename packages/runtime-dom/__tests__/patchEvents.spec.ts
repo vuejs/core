@@ -160,9 +160,10 @@ describe(`runtime-dom: events patching`, () => {
       childFn()
       patchProp(el, 'onClick', null, parentFn)
     })
-    child.dispatchEvent(new Event('click', { bubbles: true }))
 
     await timeout()
+    child.dispatchEvent(new Event('click', { bubbles: true }))
+
     expect(childFn).toHaveBeenCalled()
     expect(parentFn).not.toHaveBeenCalled()
   })
