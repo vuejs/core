@@ -149,10 +149,9 @@ export function scanEnums() {
           } else {
             if (lastInitialized === undefined) {
               // first initialized
-              saveValue(`0`)
-              lastInitialized = 0
+              saveValue((lastInitialized = 0))
             } else if (typeof lastInitialized === 'number') {
-              saveValue(String(++lastInitialized))
+              saveValue(++lastInitialized)
             } else {
               // should not happen
               throw new Error(`wrong enum initialization sequence in ${file}`)
