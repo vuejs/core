@@ -143,6 +143,17 @@ function patchTypes(pkg) {
               spec.type === 'ExportSpecifier' &&
               shouldRemoveExport.has(spec.local.name)
             ) {
+              // @ts-ignore
+              const exported = spec.exported.name
+              if (exported !== spec.local.name) {
+                // this only happens if we have something like
+                //   type Foo
+                //   export { Foo as Bar }
+                // there are no such cases atm, so it is unhandled for now.
+                throw new Error(
+                  `removed export ${exported} has different local name: ${spec.local.name}`
+                )
+              }
               const next = node.specifiers[i + 1]
               if (next) {
                 // @ts-ignore
