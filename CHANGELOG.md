@@ -1,3 +1,12 @@
+# [3.3.0-alpha.4](https://github.com/vuejs/core/compare/v3.3.0-alpha.3...v3.3.0-alpha.4) (2023-02-06)
+
+
+### Bug Fixes
+
+* **build:** fix const enum w/ number values ([92bb189](https://github.com/vuejs/core/commit/92bb189ca7ecae221ebf5411da87c715780d2de3))
+
+
+
 # [3.3.0-alpha.3](https://github.com/vuejs/core/compare/v3.3.0-alpha.2...v3.3.0-alpha.3) (2023-02-06)
 
 
