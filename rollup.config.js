@@ -32,7 +32,7 @@ const pkg = require(resolve(`package.json`))
 const packageOptions = pkg.buildOptions || {}
 const name = packageOptions.filename || path.basename(packageDir)
 
-const [enumPlugin, enumDefines] = await constEnum()
+const [enumPlugin, enumDefines] = constEnum()
 
 const outputConfigs = {
   'esm-bundler': {

@@ -15,31 +15,37 @@
  */
 
 import execa from 'execa'
-import { readFileSync } from 'node:fs'
+import {
+  existsSync,
+  readFileSync,
+  rmSync,
+  writeFile,
+  writeFileSync
+} from 'node:fs'
 import { parse } from '@babel/parser'
 import path from 'node:path'
 import MagicString from 'magic-string'
+
+const ENUM_CACHE_PATH = 'temp/enum.json'
 
 function evaluate(exp) {
   return new Function(`return ${exp}`)()
 }
 
-/**
- * @returns {Promise<[import('rollup').Plugin, Record<string, string>]>}
- */
-export async function constEnum() {
+// this is called in the build script entry once
+// so the data can be shared across concurrent Rollup processes
+export function scanEnums() {
   /**
-   * @type {{ ranges: Record<string, [number, number][]>, defines: Record<string, string> }}
+   * @type {{ ranges: Record<string, [number, number][]>, defines: Record<string, string>, ids: string[] }}
    */
   const enumData = {
     ranges: {},
-    defines: {}
+    defines: {},
+    ids: []
   }
 
-  const knowEnums = new Set()
-
   // 1. grep for files with exported const enum
-  const { stdout } = await execa('git', ['grep', `export const enum`])
+  const { stdout } = execa.sync('git', ['grep', `export const enum`])
   const files = [...new Set(stdout.split('\n').map(line => line.split(':')[0]))]
 
   // 2. parse matched files to collect enum info
@@ -70,7 +76,9 @@ export async function constEnum() {
         for (let i = 0; i < decl.members.length; i++) {
           const e = decl.members[i]
           const id = decl.id.name
-          knowEnums.add(id)
+          if (!enumData.ids.includes(id)) {
+            enumData.ids.push(id)
+          }
           const key = e.id.type === 'Identifier' ? e.id.name : e.id.value
           const fullKey = `${id}.${key}`
           const init = e.initializer
@@ -149,9 +157,29 @@ export async function constEnum() {
     }
   }
 
+  // 3. save cache
+  writeFileSync(ENUM_CACHE_PATH, JSON.stringify(enumData))
+
+  return () => {
+    rmSync(ENUM_CACHE_PATH, { force: true })
+  }
+}
+
+/**
+ * @returns {[import('rollup').Plugin, Record<string, string>]}
+ */
+export function constEnum() {
+  if (!existsSync(ENUM_CACHE_PATH)) {
+    throw new Error('enum cache needs to be initialized before creating plugin')
+  }
+  /**
+   * @type {{ ranges: Record<string, [number, number][]>, defines: Record<string, string>, ids: string[] }}
+   */
+  const enumData = JSON.parse(readFileSync(ENUM_CACHE_PATH, 'utf-8'))
+
   // construct a regex for matching re-exports of known const enums
   const reExportsRE = new RegExp(
-    `export {[^}]*?\\b(${[...knowEnums].join('|')})\\b[^]*?}`
+    `export {[^}]*?\\b(${enumData.ids.join('|')})\\b[^]*?}`
   )
 
   // 3. during transform:
@@ -190,7 +218,7 @@ export async function constEnum() {
               if (
                 spec.type === 'ExportSpecifier' &&
                 spec.exportKind !== 'type' &&
-                knowEnums.has(spec.local.name)
+                enumData.ids.includes(spec.local.name)
               ) {
                 const next = node.specifiers[i + 1]
                 if (next) {

@@ -17,7 +17,7 @@ nr build core --formats cjs
 */
 
 import fs from 'node:fs/promises'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, rmSync } from 'node:fs'
 import path from 'node:path'
 import minimist from 'minimist'
 import { gzipSync } from 'node:zlib'
@@ -27,6 +27,7 @@ import execa from 'execa'
 import { cpus } from 'node:os'
 import { createRequire } from 'node:module'
 import { targets as allTargets, fuzzyMatchTarget } from './utils.js'
+import { scanEnums } from './const-enum.js'
 
 const require = createRequire(import.meta.url)
 const args = minimist(process.argv.slice(2))
@@ -42,12 +43,17 @@ const commit = execa.sync('git', ['rev-parse', 'HEAD']).stdout.slice(0, 7)
 run()
 
 async function run() {
-  if (!targets.length) {
-    await buildAll(allTargets)
-    checkAllSizes(allTargets)
-  } else {
-    await buildAll(fuzzyMatchTarget(targets, buildAllMatching))
-    checkAllSizes(fuzzyMatchTarget(targets, buildAllMatching))
+  const removeCache = scanEnums()
+  try {
+    if (!targets.length) {
+      await buildAll(allTargets)
+      checkAllSizes(allTargets)
+    } else {
+      await buildAll(fuzzyMatchTarget(targets, buildAllMatching))
+      checkAllSizes(fuzzyMatchTarget(targets, buildAllMatching))
+    }
+  } finally {
+    removeCache()
   }
 }
 
