@@ -81,6 +81,12 @@ export function scanEnums() {
           }
           const key = e.id.type === 'Identifier' ? e.id.name : e.id.value
           const fullKey = `${id}.${key}`
+          const saveValue = value => {
+            if (fullKey in enumData.defines) {
+              throw new Error(`name conflict for enum ${id} in ${file}`)
+            }
+            enumData.defines[fullKey] = JSON.stringify(value)
+          }
           const init = e.initializer
           if (init) {
             let value
@@ -138,15 +144,15 @@ export function scanEnums() {
                 `unhandled initializer type ${init.type} for ${fullKey} in ${file}`
               )
             }
-            enumData.defines[fullKey] = JSON.stringify(value)
+            saveValue(value)
             lastInitialized = value
           } else {
             if (lastInitialized === undefined) {
               // first initialized
-              enumData.defines[fullKey] = `0`
+              saveValue(`0`)
               lastInitialized = 0
             } else if (typeof lastInitialized === 'number') {
-              enumData.defines[fullKey] = String(++lastInitialized)
+              saveValue(String(++lastInitialized))
             } else {
               // should not happen
               throw new Error(`wrong enum initialization sequence in ${file}`)
