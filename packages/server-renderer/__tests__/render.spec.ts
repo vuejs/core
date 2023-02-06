@@ -886,6 +886,9 @@ function testRender(type: string, render: typeof renderToString) {
         "Cannot read properties of undefined (reading 'value')"
       )
 
+      expect(fn).toHaveBeenCalledTimes(0)
+      expect(fn2).toHaveBeenCalledTimes(0)
+
       expect(
         `Property "notDefined" was accessed during render but is not defined on instance`
       ).toHaveBeenWarnedTimes(2)
