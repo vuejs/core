@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import { nextTick, watch, watchEffect } from '@vue/runtime-core'
 import {
   reactive,
@@ -12,7 +13,7 @@ import {
 
 describe('reactivity/effect/scope', () => {
   it('should run', () => {
-    const fnSpy = jest.fn(() => {})
+    const fnSpy = vi.fn(() => {})
     new EffectScope().run(fnSpy)
     expect(fnSpy).toHaveBeenCalledTimes(1)
   })
@@ -202,7 +203,7 @@ describe('reactivity/effect/scope', () => {
   })
 
   it('should warn onScopeDispose() is called when there is no active effect scope', () => {
-    const spy = jest.fn()
+    const spy = vi.fn()
     const scope = new EffectScope()
     scope.run(() => {
       onScopeDispose(spy)
@@ -231,9 +232,9 @@ describe('reactivity/effect/scope', () => {
   it('test with higher level APIs', async () => {
     const r = ref(1)
 
-    const computedSpy = jest.fn()
-    const watchSpy = jest.fn()
-    const watchEffectSpy = jest.fn()
+    const computedSpy = vi.fn()
+    const watchSpy = vi.fn()
+    const watchEffectSpy = vi.fn()
 
     let c: ComputedRef
     const scope = new EffectScope()

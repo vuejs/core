@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import { ParserOptions } from '../src/options'
 import { baseParse, TextModes } from '../src/parse'
 import { ErrorCodes } from '../src/errors'
@@ -31,7 +32,7 @@ describe('compiler: parse', () => {
     })
 
     test('simple text with invalid end tag', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       const ast = baseParse('some text</div>', {
         onError
       })
@@ -1844,7 +1845,7 @@ describe('compiler: parse', () => {
       baseParse(`<div>\n<span>\n</div>\n</span>`)
     }).toThrow('Element is missing end tag.')
 
-    const spy = jest.fn()
+    const spy = vi.fn()
     const ast = baseParse(`<div>\n<span>\n</div>\n</span>`, {
       onError: spy
     })
@@ -3064,7 +3065,7 @@ foo
       ]
     }
 
-    for (const key of Object.keys(patterns) as (keyof typeof patterns)[]) {
+    for (const key of Object.keys(patterns)) {
       describe(key, () => {
         for (const { code, errors = [], warnings = [], options } of patterns[
           key
@@ -3075,8 +3076,8 @@ foo
               c => `\\x0${c.codePointAt(0)!.toString(16)};`
             ),
             () => {
-              const errorSpy = jest.fn()
-              const warnSpy = jest.fn()
+              const errorSpy = vi.fn()
+              const warnSpy = vi.fn()
               const ast = baseParse(code, {
                 getNamespace: (tag, parent) => {
                   const ns = parent ? parent.ns : Namespaces.HTML
