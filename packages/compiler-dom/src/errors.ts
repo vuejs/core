@@ -21,7 +21,7 @@ export function createDOMCompilerError(
 }
 
 export const enum DOMErrorCodes {
-  X_V_HTML_NO_EXPRESSION = 51 /* ErrorCodes.__EXTEND_POINT__ */,
+  X_V_HTML_NO_EXPRESSION = 52 /* ErrorCodes.__EXTEND_POINT__ */,
   X_V_HTML_WITH_CHILDREN,
   X_V_TEXT_NO_EXPRESSION,
   X_V_TEXT_WITH_CHILDREN,
