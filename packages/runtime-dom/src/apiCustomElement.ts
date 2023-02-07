@@ -367,7 +367,7 @@ export class VueElement extends BaseClass {
         const dispatch = (event: string, args: any[]) => {
           this.dispatchEvent(
             new CustomEvent(event, {
-              detail: args
+              detail: args.length === 1 ? args[0] : args
             })
           )
         }

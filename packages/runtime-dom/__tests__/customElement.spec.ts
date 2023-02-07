@@ -347,7 +347,7 @@ describe('defineCustomElement', () => {
       e.shadowRoot!.childNodes[0].dispatchEvent(new CustomEvent('click'))
       expect(spy).toHaveBeenCalledTimes(1)
       expect(spy.mock.calls[0][0]).toMatchObject({
-        detail: [1]
+        detail: 1
       })
     })
 
@@ -381,7 +381,7 @@ describe('defineCustomElement', () => {
       e.shadowRoot!.childNodes[0].dispatchEvent(new CustomEvent('click'))
       expect(spy).toHaveBeenCalled()
       expect(spy.mock.calls[0][0]).toMatchObject({
-        detail: [1]
+        detail: 1
       })
     })
     // #7293
@@ -402,7 +402,7 @@ describe('defineCustomElement', () => {
       e.shadowRoot!.childNodes[0].dispatchEvent(new CustomEvent('click'))
       expect(spy).toHaveBeenCalled()
       expect(spy.mock.calls[0][0]).toMatchObject({
-        detail: [1]
+        detail: 1
       })
     })
   })
