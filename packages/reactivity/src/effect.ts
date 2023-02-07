@@ -170,9 +170,9 @@ export interface ReactiveEffectRunner<T = any> {
 export function effect<T = any>(
   fn: () => T,
   options?: ReactiveEffectOptions
-): ReactiveEffectRunner {
-  if ((fn as ReactiveEffectRunner).effect) {
-    fn = (fn as ReactiveEffectRunner).effect.fn
+): ReactiveEffectRunner<T> {
+  if ((fn as ReactiveEffectRunner<T>).effect) {
+    fn = (fn as ReactiveEffectRunner<T>).effect.fn
   }
 
   const _effect = new ReactiveEffect(fn)
@@ -183,7 +183,7 @@ export function effect<T = any>(
   if (!options || !options.lazy) {
     _effect.run()
   }
-  const runner = _effect.run.bind(_effect) as ReactiveEffectRunner
+  const runner = _effect.run.bind(_effect) as ReactiveEffectRunner<T>
   runner.effect = _effect
   return runner
 }
