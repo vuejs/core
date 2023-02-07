@@ -395,7 +395,7 @@ export function transformAST(
             defaultValue = p.value.right
           }
         } else {
-          key = p.computed ? p.key : (p.key as Identifier).name
+          key = p.computed ? (p.key as Expression) : (p.key as Identifier).name
           if (p.value.type === 'Identifier') {
             // { foo: bar }
             nameId = p.value
