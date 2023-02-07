@@ -1,8 +1,8 @@
-import { vi } from 'vitest'
+import { vi, SpyInstance } from 'vitest'
 import { render, h } from '@vue/runtime-dom'
 
 describe('customized built-in elements support', () => {
-  let createElement: vi.SpyInstance
+  let createElement: SpyInstance
   afterEach(() => {
     createElement.mockRestore()
   })

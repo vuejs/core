@@ -30,7 +30,8 @@ import {
   triggerRef,
   shallowRef,
   Ref,
-  effectScope
+  effectScope,
+  toRef
 } from '@vue/reactivity'
 
 // reference: https://vue-composition-api-rfc.netlify.com/api.html#watch
@@ -924,6 +925,25 @@ describe('api: watch', () => {
     await nextTick()
     // should trigger now
     expect(spy).toHaveBeenCalledTimes(1)
+  })
+
+  test('should force trigger on triggerRef with toRef from reactive', async () => {
+    const foo = reactive({ bar: 1 })
+    const bar = toRef(foo, 'bar')
+    const spy = vi.fn()
+
+    watchEffect(() => {
+      bar.value
+      spy()
+    })
+
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    triggerRef(bar)
+
+    await nextTick()
+    // should trigger now
+    expect(spy).toHaveBeenCalledTimes(2)
   })
 
   // #2125

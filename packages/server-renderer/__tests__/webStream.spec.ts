@@ -3,6 +3,7 @@ import { ReadableStream, TransformStream } from 'stream/web'
 import { pipeToWebWritable, renderToWebStream } from '../src'
 
 beforeEach(() => {
+  // @ts-ignore
   global.ReadableStream = ReadableStream
 })
 
