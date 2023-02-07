@@ -1,7 +1,3 @@
-/**
- * @jest-environment node
- */
-
 import { renderToString } from '../src/renderToString'
 import {
   createApp,

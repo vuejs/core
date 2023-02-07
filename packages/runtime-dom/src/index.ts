@@ -26,7 +26,6 @@ import {
 
 declare module '@vue/reactivity' {
   export interface RefUnwrapBailTypes {
-    // Note: if updating this, also update `types/refBail.d.ts`.
     runtimeDOMBailTypes: Node | Window
   }
 }
@@ -207,7 +206,7 @@ export {
   defineCustomElement,
   defineSSRCustomElement,
   VueElement,
-  VueElementConstructor
+  type VueElementConstructor
 } from './apiCustomElement'
 
 // SFC CSS utilities
@@ -215,10 +214,10 @@ export { useCssModule } from './helpers/useCssModule'
 export { useCssVars } from './helpers/useCssVars'
 
 // DOM-only components
-export { Transition, TransitionProps } from './components/Transition'
+export { Transition, type TransitionProps } from './components/Transition'
 export {
   TransitionGroup,
-  TransitionGroupProps
+  type TransitionGroupProps
 } from './components/TransitionGroup'
 
 // **Internal** DOM-only runtime directive helpers

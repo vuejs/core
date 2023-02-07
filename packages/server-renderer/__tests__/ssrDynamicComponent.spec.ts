@@ -1,7 +1,3 @@
-/**
- * @jest-environment node
- */
-
 import { createApp, createVNode } from 'vue'
 import { renderToString } from '../src/renderToString'
 
