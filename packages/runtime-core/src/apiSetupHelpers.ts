@@ -1,4 +1,3 @@
-import { ComponentPropsOptions } from '@vue/runtime-core'
 import { isArray, isPromise, isFunction } from '@vue/shared'
 import {
   getCurrentInstance,
@@ -8,7 +7,11 @@ import {
   unsetCurrentInstance
 } from './component'
 import { EmitFn, EmitsOptions } from './componentEmits'
-import { ComponentObjectPropsOptions, ExtractPropTypes } from './componentProps'
+import {
+  ComponentPropsOptions,
+  ComponentObjectPropsOptions,
+  ExtractPropTypes
+} from './componentProps'
 import { warn } from './warning'
 
 // dev only
@@ -58,7 +61,13 @@ export function defineProps<
   PP extends ComponentObjectPropsOptions = ComponentObjectPropsOptions
 >(props: PP): Readonly<ExtractPropTypes<PP>>
 // overload 3: typed-based declaration
-export function defineProps<TypeProps>(): Readonly<TypeProps>
+export function defineProps<TypeProps>(): Readonly<
+  Omit<TypeProps, BooleanKey<TypeProps>> & {
+    [K in keyof Pick<TypeProps, BooleanKey<TypeProps>>]-?: NotUndefined<
+      TypeProps[K]
+    >
+  }
+>
 // implementation
 export function defineProps() {
   if (__DEV__) {
@@ -128,6 +137,12 @@ export function defineExpose<
 
 type NotUndefined<T> = T extends undefined ? never : T
 
+type BooleanKey<T, K extends keyof T = keyof T> = K extends any
+  ? [T[K]] extends [boolean | undefined]
+    ? K
+    : never
+  : never
+
 type InferDefaults<T> = {
   [K in keyof T]?: InferDefault<T, NotUndefined<T[K]>>
 }
@@ -149,7 +164,6 @@ type PropsWithDefaults<Base, Defaults> = Base & {
       : NotUndefined<Base[K]>
     : never
 }
-
 /**
  * Vue `<script setup>` compiler macro for providing props default values when
  * using type-based `defineProps` declaration.

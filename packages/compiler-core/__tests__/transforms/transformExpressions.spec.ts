@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import {
   baseParse as parse,
   transform,
@@ -395,7 +396,7 @@ describe('compiler: expression transform', () => {
   })
 
   test('should handle parse error', () => {
-    const onError = jest.fn()
+    const onError = vi.fn()
     parseWithExpressionTransform(`{{ a( }}`, { onError })
     expect(onError.mock.calls[0][0].message).toMatch(
       `Error parsing JavaScript expression: Unexpected token`

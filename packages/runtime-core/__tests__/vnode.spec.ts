@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import {
   createBlock,
   createVNode,
@@ -120,7 +121,7 @@ describe('vnode', () => {
   })
 
   describe('children normalization', () => {
-    const nop = jest.fn
+    const nop = vi.fn
 
     test('null', () => {
       const vnode = createVNode('p', null, null)
