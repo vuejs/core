@@ -132,30 +132,7 @@ export type ShallowRef<T = any> = Ref<T> & { [ShallowRefMarker]?: true }
 export function shallowRef<T extends object>(
   value: T
 ): T extends Ref ? T : ShallowRef<T>
-/**
- * Creates a ref that tracks mutations on its own `value` but doesn't make its
- * value reactive.
- *
- * @example
- * ```js
- * const foo = shallowRef({})
- * // mutating the ref's value is reactive
- * foo.value = {}
- * // but the value will not be converted.
- * isReactive(foo.value) // false
- * ```
- *
- * @see {@link https://v3.vuejs.org/guide/reactivity-fundamentals.html#creating-standalone-reactive-values-as-refs}
- *
- * @param value The "inner value" for the shallow ref.
- */
 export function shallowRef<T>(value: T): ShallowRef<T>
-/**
- * Creates a ref that tracks mutations on its own `value` but doesn't make its
- * value reactive.
- *
- * @see {@link https://v3.vuejs.org/guide/reactivity-fundamentals.html#creating-standalone-reactive-values-as-refs}
- */
 export function shallowRef<T = any>(): ShallowRef<T | undefined>
 export function shallowRef(value?: unknown) {
   return createRef(value, true)
