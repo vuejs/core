@@ -213,6 +213,8 @@ const BaseTransitionImpl: ComponentOptions = {
       if (
         oldInnerChild &&
         oldInnerChild.type !== Comment &&
+        instance.vnode.el &&
+        instance.vnode.el.nodeName !== '#comment' &&
         !isSameVNodeType(innerChild, oldInnerChild)
       ) {
         const leavingHooks = resolveTransitionHooks(
