@@ -1147,7 +1147,7 @@ describe('e2e: Transition', () => {
           createApp({
             template: `
               <div id="container">
-                <transition name="test">
+                <transition name="test" mode="out-in">
                   <component class="test" :is="view"></component>
                 </transition>
               </div>
