@@ -119,7 +119,7 @@ export const transformFor = createStructuralDirectiveTransform(
 
         // check <template v-for> key placement
         if ((__DEV__ || !__BROWSER__) && isTemplate) {
-          node.children.some(c => {
+          node.children.forEach(c => {
             if (c.type === NodeTypes.ELEMENT) {
               const key = findProp(c, 'key')
               if (key) {
@@ -129,7 +129,6 @@ export const transformFor = createStructuralDirectiveTransform(
                     key.loc
                   )
                 )
-                return true
               }
             }
           })
