@@ -405,20 +405,20 @@ describe('vModel', () => {
     input.checked = true
     triggerEvent('change', input)
     await nextTick()
-    expect(data.value).toEqual(true)
+    expect(data.value).toBe(true)
 
     data.value = false
     await nextTick()
-    expect(input.checked).toEqual(false)
+    expect(input.checked).toBe(false)
 
     data.value = true
     await nextTick()
-    expect(input.checked).toEqual(true)
+    expect(input.checked).toBe(true)
 
     input.checked = false
     triggerEvent('change', input)
     await nextTick()
-    expect(data.value).toEqual(false)
+    expect(data.value).toBe(false)
   })
 
   it('should work with checkbox and true-value/false-value', async () => {
@@ -446,7 +446,7 @@ describe('vModel', () => {
     const data = root._vnode.component.data
 
     // DOM checked state should respect initial true-value/false-value
-    expect(input.checked).toEqual(true)
+    expect(input.checked).toBe(true)
 
     input.checked = false
     triggerEvent('change', input)
@@ -455,11 +455,11 @@ describe('vModel', () => {
 
     data.value = 'yes'
     await nextTick()
-    expect(input.checked).toEqual(true)
+    expect(input.checked).toBe(true)
 
     data.value = 'no'
     await nextTick()
-    expect(input.checked).toEqual(false)
+    expect(input.checked).toBe(false)
 
     input.checked = true
     triggerEvent('change', input)
@@ -498,11 +498,11 @@ describe('vModel', () => {
 
     data.value = { no: 'no' }
     await nextTick()
-    expect(input.checked).toEqual(false)
+    expect(input.checked).toBe(false)
 
     data.value = { yes: 'yes' }
     await nextTick()
-    expect(input.checked).toEqual(true)
+    expect(input.checked).toBe(true)
 
     input.checked = false
     triggerEvent('change', input)
@@ -566,18 +566,18 @@ describe('vModel', () => {
 
     data.value = ['foo']
     await nextTick()
-    expect(bar.checked).toEqual(false)
-    expect(foo.checked).toEqual(true)
+    expect(bar.checked).toBe(false)
+    expect(foo.checked).toBe(true)
 
     data.value = ['bar']
     await nextTick()
-    expect(foo.checked).toEqual(false)
-    expect(bar.checked).toEqual(true)
+    expect(foo.checked).toBe(false)
+    expect(bar.checked).toBe(true)
 
     data.value = []
     await nextTick()
-    expect(foo.checked).toEqual(false)
-    expect(bar.checked).toEqual(false)
+    expect(foo.checked).toBe(false)
+    expect(bar.checked).toBe(false)
   })
 
   it(`should support Set as a checkbox model`, async () => {
@@ -636,18 +636,18 @@ describe('vModel', () => {
 
     data.value = new Set(['foo'])
     await nextTick()
-    expect(bar.checked).toEqual(false)
-    expect(foo.checked).toEqual(true)
+    expect(bar.checked).toBe(false)
+    expect(foo.checked).toBe(true)
 
     data.value = new Set(['bar'])
     await nextTick()
-    expect(foo.checked).toEqual(false)
-    expect(bar.checked).toEqual(true)
+    expect(foo.checked).toBe(false)
+    expect(bar.checked).toBe(true)
 
     data.value = new Set()
     await nextTick()
-    expect(foo.checked).toEqual(false)
-    expect(bar.checked).toEqual(false)
+    expect(foo.checked).toBe(false)
+    expect(bar.checked).toBe(false)
   })
 
   it('should work with radio', async () => {
@@ -696,18 +696,18 @@ describe('vModel', () => {
 
     data.value = null
     await nextTick()
-    expect(foo.checked).toEqual(false)
-    expect(bar.checked).toEqual(false)
+    expect(foo.checked).toBe(false)
+    expect(bar.checked).toBe(false)
 
     data.value = 'foo'
     await nextTick()
-    expect(foo.checked).toEqual(true)
-    expect(bar.checked).toEqual(false)
+    expect(foo.checked).toBe(true)
+    expect(bar.checked).toBe(false)
 
     data.value = 'bar'
     await nextTick()
-    expect(foo.checked).toEqual(false)
-    expect(bar.checked).toEqual(true)
+    expect(foo.checked).toBe(false)
+    expect(bar.checked).toBe(true)
   })
 
   it('should work with single select', async () => {
@@ -754,16 +754,16 @@ describe('vModel', () => {
     data.value = 'foo'
     await nextTick()
     expect(input.value).toEqual('foo')
-    expect(foo.selected).toEqual(true)
-    expect(bar.selected).toEqual(false)
+    expect(foo.selected).toBe(true)
+    expect(bar.selected).toBe(false)
 
     foo.selected = true
     bar.selected = false
     data.value = 'bar'
     await nextTick()
     expect(input.value).toEqual('bar')
-    expect(foo.selected).toEqual(false)
-    expect(bar.selected).toEqual(true)
+    expect(foo.selected).toBe(false)
+    expect(bar.selected).toBe(true)
   })
 
   it('multiple select (model is Array)', async () => {
@@ -817,15 +817,15 @@ describe('vModel', () => {
     data.value = ['foo']
     await nextTick()
     expect(input.value).toEqual('foo')
-    expect(foo.selected).toEqual(true)
-    expect(bar.selected).toEqual(false)
+    expect(foo.selected).toBe(true)
+    expect(bar.selected).toBe(false)
 
     foo.selected = false
     bar.selected = false
     data.value = ['foo', 'bar']
     await nextTick()
-    expect(foo.selected).toEqual(true)
-    expect(bar.selected).toEqual(true)
+    expect(foo.selected).toBe(true)
+    expect(bar.selected).toBe(true)
   })
 
   it('v-model.number should work with select tag', async () => {
@@ -919,15 +919,15 @@ describe('vModel', () => {
     two.selected = false
     data.value = [1]
     await nextTick()
-    expect(one.selected).toEqual(true)
-    expect(two.selected).toEqual(false)
+    expect(one.selected).toBe(true)
+    expect(two.selected).toBe(false)
 
     one.selected = false
     two.selected = false
     data.value = [1, 2]
     await nextTick()
-    expect(one.selected).toEqual(true)
-    expect(two.selected).toEqual(true)
+    expect(one.selected).toBe(true)
+    expect(two.selected).toBe(true)
   })
 
   it('multiple select (model is Array, option value is object)', async () => {
@@ -987,16 +987,16 @@ describe('vModel', () => {
     bar.selected = false
     data.value = [fooValue, barValue]
     await nextTick()
-    expect(foo.selected).toEqual(true)
-    expect(bar.selected).toEqual(true)
+    expect(foo.selected).toBe(true)
+    expect(bar.selected).toBe(true)
 
     foo.selected = false
     bar.selected = false
     data.value = [{ foo: 1 }, { bar: 1 }]
     await nextTick()
     // looseEqual
-    expect(foo.selected).toEqual(true)
-    expect(bar.selected).toEqual(true)
+    expect(foo.selected).toBe(true)
+    expect(bar.selected).toBe(true)
   })
 
   it('multiple select (model is Set)', async () => {
@@ -1053,15 +1053,15 @@ describe('vModel', () => {
     data.value = new Set(['foo'])
     await nextTick()
     expect(input.value).toEqual('foo')
-    expect(foo.selected).toEqual(true)
-    expect(bar.selected).toEqual(false)
+    expect(foo.selected).toBe(true)
+    expect(bar.selected).toBe(false)
 
     foo.selected = false
     bar.selected = false
     data.value = new Set(['foo', 'bar'])
     await nextTick()
-    expect(foo.selected).toEqual(true)
-    expect(bar.selected).toEqual(true)
+    expect(foo.selected).toBe(true)
+    expect(bar.selected).toBe(true)
   })
 
   it('multiple select (model is Set, option value is object)', async () => {
@@ -1121,16 +1121,16 @@ describe('vModel', () => {
     bar.selected = false
     data.value = new Set([fooValue, barValue])
     await nextTick()
-    expect(foo.selected).toEqual(true)
-    expect(bar.selected).toEqual(true)
+    expect(foo.selected).toBe(true)
+    expect(bar.selected).toBe(true)
 
     foo.selected = false
     bar.selected = false
     data.value = new Set([{ foo: 1 }, { bar: 1 }])
     await nextTick()
     // without looseEqual, here is different from Array
-    expect(foo.selected).toEqual(false)
-    expect(bar.selected).toEqual(false)
+    expect(foo.selected).toBe(false)
+    expect(bar.selected).toBe(false)
   })
 
   it('should work with composition session', async () => {
