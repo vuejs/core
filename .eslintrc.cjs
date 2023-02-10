@@ -76,7 +76,7 @@ module.exports = {
     {
       files: [
         'scripts/**',
-        './*.js',
+        '*.{cjs,js,ts}',
         'packages/**/index.js',
         'packages/size-check/**'
       ],
