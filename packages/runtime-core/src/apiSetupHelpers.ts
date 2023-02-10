@@ -155,7 +155,7 @@ type InferDefault<P, T> = T extends
   | symbol
   | Function
   ? T | (T extends boolean ? (props: P) => boolean : (props: P) => T)
-  : (props: P) => T;
+  : (props: P) => T
 
 type PropsWithDefaults<Base, Defaults> = Base & {
   [K in keyof Defaults]: K extends keyof Base
