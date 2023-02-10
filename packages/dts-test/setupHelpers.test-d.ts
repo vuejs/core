@@ -36,7 +36,8 @@ describe('defineProps w/ type declaration + withDefaults', () => {
       y?: string
       z?: string
       bool?: boolean
-      boolAndUndefined: boolean | undefined
+      boolAndUndefined: boolean | undefined,
+      boolFn?: boolean
     }>(),
     {
       number: 123,
@@ -45,7 +46,8 @@ describe('defineProps w/ type declaration + withDefaults', () => {
       fn: () => {},
       genStr: () => '',
       y: undefined,
-      z: 'string'
+      z: 'string',
+      boolFn: () => (Math.random() > 0.5)
     }
   )
 
