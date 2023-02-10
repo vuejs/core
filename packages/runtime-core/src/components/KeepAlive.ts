@@ -376,7 +376,7 @@ export function onDeactivated(
 function registerKeepAliveHook(
   hook: Function & { __wdc?: Function },
   type: LifecycleHooks,
-  target: ComponentInternalInstance | null = currentInstance
+  target: ComponentInternalInstance | null = currentInstance.value
 ) {
   // cache the deactivate branch check wrapper for injected hooks so the same
   // hook can be properly deduped by the scheduler. "__wdc" stands for "with

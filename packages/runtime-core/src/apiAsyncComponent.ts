@@ -121,7 +121,7 @@ export function defineAsyncComponent<
     },
 
     setup() {
-      const instance = currentInstance!
+      const instance = currentInstance.value!
 
       // already resolved
       if (resolvedComp) {

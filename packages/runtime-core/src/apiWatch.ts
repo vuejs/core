@@ -200,8 +200,9 @@ function doWatch(
   }
 
   const instance =
-    getCurrentScope() === currentInstance?.scope ? currentInstance : null
-  // const instance = currentInstance
+    getCurrentScope() === currentInstance.value?.scope
+      ? currentInstance.value
+      : null
   let getter: () => any
   let forceTrigger = false
   let isMultiSource = false
@@ -418,7 +419,7 @@ export function instanceWatch(
     cb = value.handler as Function
     options = value
   }
-  const cur = currentInstance
+  const cur = currentInstance.value
   setCurrentInstance(this)
   const res = doWatch(getter, cb.bind(publicThis), options)
   if (cur) {

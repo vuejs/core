@@ -68,7 +68,7 @@ const normalizeSlot = (
     return rawSlot as Slot
   }
   const normalized = withCtx((...args: any[]) => {
-    if (__DEV__ && currentInstance) {
+    if (__DEV__ && currentInstance.value) {
       warn(
         `Slot "${key}" invoked outside of the render function: ` +
           `this will not track dependencies used in the slot. ` +

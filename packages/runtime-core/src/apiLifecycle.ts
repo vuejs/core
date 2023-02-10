@@ -17,7 +17,7 @@ export { onActivated, onDeactivated } from './components/KeepAlive'
 export function injectHook(
   type: LifecycleHooks,
   hook: Function & { __weh?: Function },
-  target: ComponentInternalInstance | null = currentInstance,
+  target: ComponentInternalInstance | null = currentInstance.value,
   prepend: boolean = false
 ): Function | undefined {
   if (target) {
@@ -65,7 +65,7 @@ export function injectHook(
 
 export const createHook =
   <T extends Function = () => any>(lifecycle: LifecycleHooks) =>
-  (hook: T, target: ComponentInternalInstance | null = currentInstance) =>
+  (hook: T, target: ComponentInternalInstance | null = currentInstance.value) =>
     // post-create lifecycle registrations are noops during SSR (except for serverPrefetch)
     (!isInSSRComponentSetup || lifecycle === LifecycleHooks.SERVER_PREFETCH) &&
     injectHook(lifecycle, (...args: unknown[]) => hook(...args), target)
@@ -94,7 +94,7 @@ export type ErrorCapturedHook<TError = unknown> = (
 
 export function onErrorCaptured<TError = Error>(
   hook: ErrorCapturedHook<TError>,
-  target: ComponentInternalInstance | null = currentInstance
+  target: ComponentInternalInstance | null = currentInstance.value
 ) {
   injectHook(LifecycleHooks.ERROR_CAPTURED, hook, target)
 }

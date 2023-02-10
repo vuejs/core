@@ -56,7 +56,8 @@ import {
   makeMap,
   isPromise,
   ShapeFlags,
-  extend
+  extend,
+  getGlobalThis
 } from '@vue/shared'
 import { SuspenseBoundary } from './components/Suspense'
 import { CompilerOptions } from '@vue/compiler-core'
@@ -560,19 +561,23 @@ export function createComponentInstance(
   return instance
 }
 
-export let currentInstance: ComponentInternalInstance | null = null
+export const currentInstance =
+  getGlobalThis().__vue_ctx__ ||
+  ({ value: null } as {
+    value: ComponentInternalInstance | null
+  })
 
 export const getCurrentInstance: () => ComponentInternalInstance | null = () =>
-  currentInstance || currentRenderingInstance
+  currentInstance.value || currentRenderingInstance
 
 export const setCurrentInstance = (instance: ComponentInternalInstance) => {
-  currentInstance = instance
+  currentInstance.value = instance
   instance.scope.on()
 }
 
 export const unsetCurrentInstance = () => {
-  currentInstance && currentInstance.scope.off()
-  currentInstance = null
+  currentInstance.value && currentInstance.value.scope.off()
+  currentInstance.value = null
 }
 
 const isBuiltInTag = /*#__PURE__*/ makeMap('slot,component')

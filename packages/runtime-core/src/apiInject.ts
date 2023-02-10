@@ -6,21 +6,21 @@ import { warn } from './warning'
 export interface InjectionKey<T> extends Symbol {}
 
 export function provide<T>(key: InjectionKey<T> | string | number, value: T) {
-  if (!currentInstance) {
+  if (!currentInstance.value) {
     if (__DEV__) {
       warn(`provide() can only be used inside setup().`)
     }
   } else {
-    let provides = currentInstance.provides
+    let provides = currentInstance.value.provides
     // by default an instance inherits its parent's provides object
     // but when it needs to provide values of its own, it creates its
     // own provides object using parent provides object as prototype.
     // this way in `inject` we can simply look up injections from direct
     // parent and let the prototype chain do the work.
     const parentProvides =
-      currentInstance.parent && currentInstance.parent.provides
+      currentInstance.value.parent && currentInstance.value.parent.provides
     if (parentProvides === provides) {
-      provides = currentInstance.provides = Object.create(parentProvides)
+      provides = currentInstance.value.provides = Object.create(parentProvides)
     }
     // TS doesn't allow symbol as index type
     provides[key as string] = value
@@ -45,7 +45,7 @@ export function inject(
 ) {
   // fallback to `currentRenderingInstance` so that this can be called in
   // a functional component
-  const instance = currentInstance || currentRenderingInstance
+  const instance = currentInstance.value || currentRenderingInstance
   if (instance) {
     // #2400
     // to support `app.use` plugins,

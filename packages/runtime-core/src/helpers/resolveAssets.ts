@@ -80,7 +80,7 @@ function resolveAsset(
   warnMissing = true,
   maybeSelfReference = false
 ) {
-  const instance = currentRenderingInstance || currentInstance
+  const instance = currentRenderingInstance || currentInstance.value
   if (instance) {
     const Component = instance.type
 

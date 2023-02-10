@@ -114,7 +114,7 @@ describe('directives', () => {
     let _prevVnode: VNode | null = null
     const Comp = {
       setup() {
-        _instance = currentInstance
+        _instance = currentInstance.value
       },
       render() {
         _prevVnode = _vnode
@@ -174,7 +174,7 @@ describe('directives', () => {
     let _prevVnode: VNode | null = null
     const Comp = {
       setup() {
-        _instance = currentInstance
+        _instance = currentInstance.value
       },
       render() {
         _prevVnode = _vnode
@@ -310,7 +310,7 @@ describe('directives', () => {
 
     const Comp = {
       setup() {
-        _instance = currentInstance
+        _instance = currentInstance.value
       },
       render() {
         return withDirectives(h(Child, { count: count.value }), [
