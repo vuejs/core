@@ -386,7 +386,8 @@ export interface SuspenseBoundary {
   next(): RendererNode | null
   registerDep(
     instance: ComponentInternalInstance,
-    setupRenderEffect: SetupRenderEffectFn
+    setupRenderEffect: SetupRenderEffectFn,
+    optimized: boolean
   ): void
   unmount(parentSuspense: SuspenseBoundary | null, doRemove?: boolean): void
 }
@@ -587,7 +588,7 @@ function createSuspenseBoundary(
       return suspense.activeBranch && next(suspense.activeBranch)
     },
 
-    registerDep(instance, setupRenderEffect) {
+    registerDep(instance, setupRenderEffect, optimized = false) {
       const isInPendingSuspense = !!suspense.pendingBranch
       if (isInPendingSuspense) {
         suspense.deps++
