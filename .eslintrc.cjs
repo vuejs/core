@@ -76,10 +76,13 @@ module.exports = {
     {
       files: [
         'scripts/**',
-        './*.js',
+        './*.{cjs,js,ts}',
         'packages/**/index.js',
         'packages/size-check/**'
       ],
+      env: {
+        node: true
+      },
       rules: {
         'no-restricted-globals': 'off',
         'no-restricted-syntax': 'off'
