@@ -189,7 +189,7 @@ export function constEnum() {
   )
 
   // 3. during transform:
-  //    3.1 files w/ const enum declaration: remove delcaration
+  //    3.1 files w/ const enum declaration: remove declaration
   //    3.2 files using const enum: inject into esbuild define
   /**
    * @type {import('rollup').Plugin}
