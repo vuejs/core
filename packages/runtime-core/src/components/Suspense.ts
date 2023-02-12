@@ -588,7 +588,7 @@ function createSuspenseBoundary(
       return suspense.activeBranch && next(suspense.activeBranch)
     },
 
-    registerDep(instance, setupRenderEffect, optimized = false) {
+    registerDep(instance, setupRenderEffect, optimized) {
       const isInPendingSuspense = !!suspense.pendingBranch
       if (isInPendingSuspense) {
         suspense.deps++
