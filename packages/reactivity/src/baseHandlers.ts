@@ -158,8 +158,12 @@ function createGetter(isReadonly = false, shallow = false) {
 const set = /*#__PURE__*/ createSetter()
 const shallowSet = /*#__PURE__*/ createSetter(true)
 
+// `set` trap will always trigger `defineProperty` trap,
+// this flag helps `defineProperty` trap to ignore it,
+// and only trigger effects on `Object.defineProperty` call.
+let insideSetTrap = false
 function createSetter(shallow = false) {
-  return function set(
+  function set(
     target: object,
     key: string | symbol,
     value: unknown,
@@ -197,6 +201,13 @@ function createSetter(shallow = false) {
     }
     return result
   }
+
+  return (...args: Parameters<typeof set>) => {
+    insideSetTrap = true
+    const result = set(...args)
+    insideSetTrap = false
+    return result
+  }
 }
 
 function deleteProperty(target: object, key: string | symbol): boolean {
@@ -205,6 +216,45 @@ function deleteProperty(target: object, key: string | symbol): boolean {
   const result = Reflect.deleteProperty(target, key)
   if (result && hadKey) {
     trigger(target, TriggerOpTypes.DELETE, key, undefined, oldValue)
+  }
+  return result
+}
+
+function defineProperty(
+  target: object,
+  key: string | symbol,
+  descriptor: PropertyDescriptor & ThisType<any>
+): boolean {
+  const hadKey = hasOwn(target, key)
+  let oldValue = (target as any)[key]
+  let value
+
+  if (descriptor.value) {
+    value = descriptor.value
+    if (isReadonly(oldValue) && isRef(oldValue) && !isRef(value)) {
+      return false
+    }
+    if (!shallowReadonlyMap.get(target) && !shallowReactiveMap.get(target)) {
+      if (!isShallow(value) && !isReadonly(value)) {
+        oldValue = toRaw(oldValue)
+        value = toRaw(value)
+      }
+      if (!isArray(target) && isRef(oldValue) && !isRef(value)) {
+        oldValue.value = value
+        return true
+      }
+    } else {
+    }
+    descriptor.value = value
+  }
+
+  const result = Reflect.defineProperty(target, key, descriptor)
+  if (value && result && !insideSetTrap) {
+    if (!hadKey) {
+      trigger(target, TriggerOpTypes.ADD, key, value)
+    } else if (hasChanged(value, oldValue)) {
+      trigger(target, TriggerOpTypes.SET, key, value, oldValue)
+    }
   }
   return result
 }
@@ -226,6 +276,7 @@ export const mutableHandlers: ProxyHandler<object> = {
   get,
   set,
   deleteProperty,
+  defineProperty,
   has,
   ownKeys
 }
@@ -245,6 +296,17 @@ export const readonlyHandlers: ProxyHandler<object> = {
     if (__DEV__) {
       warn(
         `Delete operation on key "${String(key)}" failed: target is readonly.`,
+        target
+      )
+    }
+    return true
+  },
+  defineProperty(target, key) {
+    if (__DEV__) {
+      warn(
+        `DefineProperty operation on key "${String(
+          key
+        )}" failed: target is readonly.`,
         target
       )
     }
