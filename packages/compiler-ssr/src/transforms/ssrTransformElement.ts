@@ -438,9 +438,11 @@ export function ssrProcessElement(
     // process v-scope
     const dir = findDir(node, 'scope')
     if (dir) {
-      const letFn = createFunctionExpression(transformScopeExpression(dir.exp!))
-      letFn.body = processChildrenAsStatement(node, context)
-      context.pushStatement(createCallExpression(letFn))
+      const scopeFn = createFunctionExpression(
+        transformScopeExpression(dir.exp!)
+      )
+      scopeFn.body = processChildrenAsStatement(node, context)
+      context.pushStatement(createCallExpression(scopeFn))
     } else {
       processChildren(node, context)
     }
