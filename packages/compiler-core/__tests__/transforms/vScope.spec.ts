@@ -71,7 +71,7 @@ describe('compiler: v-scope transform', () => {
   })
 
   test('error', () => {
-    const onError = jest.fn()
+    const onError = vi.fn()
     expect(compile(`<div v-scope="{ a:, b:1 }">{{ a }}</div>`, { onError }))
     expect(onError.mock.calls).toMatchInlineSnapshot(`
       [
