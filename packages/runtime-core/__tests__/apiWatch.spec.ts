@@ -1126,6 +1126,33 @@ describe('api: watch', () => {
     expect(spy).toHaveBeenCalledTimes(2)
   })
 
+  test('handle nested watcher stop properly', () => {
+    let instance: ComponentInternalInstance
+    const Comp = {
+      setup() {
+        instance = getCurrentInstance()!
+        watch(
+          () => 1,
+          (val, oldVal, onCleanup) => {
+            const stop = watch(
+              () => 2,
+              () => {}
+            )
+            onCleanup(stop)
+          },
+          { immediate: true }
+        )
+        return () => ''
+      }
+    }
+    const root = nodeOps.createElement('div')
+    createApp(Comp).mount(root)
+    expect(instance!.scope.effects.length).toBe(3)
+
+    instance!.scope.stop()
+    expect(instance!.scope.effects[0].active).toBe(false)
+  })
+
   it('watching sources: ref<any[]>', async () => {
     const foo = ref([1])
     const spy = vi.fn()
