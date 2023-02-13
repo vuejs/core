@@ -51,11 +51,11 @@ export function transformScopeExpression(
 
 export const trackVScopeScopes: NodeTransform = (node, context) => {
   if (node.type === NodeTypes.ELEMENT) {
-    const vLet = findDir(node, 'scope')
-    if (vLet) {
+    const vScope = findDir(node, 'scope')
+    if (vScope) {
       const keys: string[] = []
       let match
-      while ((match = extractKeyValueRE.exec(vLet.exp!.loc.source))) {
+      while ((match = extractKeyValueRE.exec(vScope.exp!.loc.source))) {
         keys.push(match[1])
       }
       if (!__BROWSER__ && context.prefixIdentifiers) {
