@@ -84,5 +84,12 @@ describe('renderSlot', () => {
       expect(vnode.children).toEqual([fallback])
       expect(vnode.patchFlag).toBe(PatchFlags.BAIL)
     })
+
+    // #7713
+    it('no error should be reported when v-bind value is null', () => {
+      expect(
+        renderSlot({ default: (_a, _b, _c) => [h('child')] }, 'title', null!)
+      ).not.toThrow()
+    })
   })
 })

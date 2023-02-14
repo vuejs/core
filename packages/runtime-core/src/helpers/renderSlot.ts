@@ -31,7 +31,8 @@ export function renderSlot(
   fallback?: () => VNodeArrayChildren,
   noSlotted?: boolean
 ): VNode {
-  if (props === null) {
+  // #7713 v-bind can cause props to be null
+  if (!props) {
     props = {}
   }
   if (
