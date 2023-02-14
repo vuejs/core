@@ -719,7 +719,7 @@ export function transformAST(
             while (i--) {
               const char = s.original.charAt(i)
               if (char === '\n') {
-                // only insert semi if it's actually the fisrt thign after
+                // only insert semi if it's actually the first thing after
                 // newline
                 s.prependRight(node.start! + offset, ';')
                 break
