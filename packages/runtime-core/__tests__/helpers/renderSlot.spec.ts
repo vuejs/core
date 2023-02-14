@@ -11,6 +11,7 @@ import {
 } from '../../src'
 import { PatchFlags } from '@vue/shared'
 import { setCurrentRenderingInstance } from '../../src/componentRenderContext'
+import { normalizeProps, guardReactiveProps } from '../../src'
 
 describe('renderSlot', () => {
   beforeEach(() => {
@@ -86,9 +87,74 @@ describe('renderSlot', () => {
     })
 
     // #7713
-    it('no error should be reported when v-bind value is null', () => {
+    it('no error should be reported when v-bind value is not object/undefined ', () => {
       expect(() =>
-        renderSlot({ default: (_a, _b, _c) => [h('child')] }, 'title', null!)
+        // @ts-ignore
+        renderSlot(
+          { default: () => [h('div')] },
+          'title',
+          // @ts-ignore
+          normalizeProps(guardReactiveProps(undefined))
+        )
+      ).not.toThrow()
+
+      expect(() =>
+        // @ts-ignore
+        renderSlot(
+          { default: () => [h('div')] },
+          'title',
+          // @ts-ignore
+          normalizeProps(guardReactiveProps([]))
+        )
+      ).not.toThrow()
+
+      expect(() =>
+        // @ts-ignore
+        renderSlot(
+          { default: () => [h('div')] },
+          'title',
+          // @ts-ignore
+          normalizeProps(guardReactiveProps(null))
+        )
+      ).not.toThrow()
+
+      expect(() =>
+        // @ts-ignore
+        renderSlot(
+          { default: () => [h('div')] },
+          'title',
+          // @ts-ignore
+          normalizeProps(guardReactiveProps(1))
+        )
+      ).not.toThrow()
+
+      expect(() =>
+        // @ts-ignore
+        renderSlot(
+          { default: () => [h('div')] },
+          'title',
+          // @ts-ignore
+          normalizeProps(guardReactiveProps(''))
+        )
+      ).not.toThrow()
+
+      expect(() =>
+        renderSlot(
+          { default: () => [h('div')] },
+          'title',
+          // @ts-ignore
+          normalizeProps(guardReactiveProps(1n))
+        )
+      ).not.toThrow()
+
+      expect(() =>
+        // @ts-ignore
+        renderSlot(
+          { default: () => [h('div')] },
+          'title',
+          // @ts-ignore
+          normalizeProps(guardReactiveProps(true))
+        )
       ).not.toThrow()
     })
   })
