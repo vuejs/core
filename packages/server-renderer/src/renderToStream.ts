@@ -76,6 +76,13 @@ export function renderToSimpleStream<T extends SimpleReadable>(
   Promise.resolve(renderComponentVNode(vnode))
     .then(buffer => unrollBuffer(buffer, stream))
     .then(() => resolveTeleports(context))
+    .then(() => {
+      if (context.__watcherHandles) {
+        for (const unwatch of context.__watcherHandles) {
+          unwatch()
+        }
+      }
+    })
     .then(() => stream.push(null))
     .catch(error => {
       stream.destroy(error)
