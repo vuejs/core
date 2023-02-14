@@ -87,7 +87,7 @@ describe('renderSlot', () => {
 
     // #7713
     it('no error should be reported when v-bind value is null', () => {
-      expect(
+      expect(() =>
         renderSlot({ default: (_a, _b, _c) => [h('child')] }, 'title', null!)
       ).not.toThrow()
     })
