@@ -124,6 +124,11 @@ export function compileTemplate(
       : consolidate[preprocessLang as keyof typeof consolidate]
     : false
   if (preprocessor) {
+    if (preprocessLang && ['pug', 'jade'].includes(preprocessLang)) {
+      // The pug compiler fails if the top level is indented, so we need to dedent it.
+      options.source = dedent(options.source)
+    }
+
     try {
       return doCompileTemplate({
         ...options,
@@ -312,4 +317,25 @@ function patchErrors(
       }
     }
   })
+}
+
+/**
+ * Dedent a string.
+ *
+ * This removes any whitespace that is common to all lines in the string from each line in the string.
+ */
+function dedent(s: string): string {
+  const lines = s.split('\n')
+  const minIndent = lines.reduce(function (minIndent, line) {
+    if (line.trim() === '') {
+      return minIndent
+    }
+    const indent = line.match(/^\s*/)?.[0]?.length || 0
+    return Math.min(indent, minIndent)
+  }, Infinity)
+  return lines
+    .map(function (line) {
+      return line.slice(minIndent)
+    })
+    .join('\n')
 }
