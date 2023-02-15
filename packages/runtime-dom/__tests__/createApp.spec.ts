@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import { createApp, h } from '../src'
 
 describe('createApp for dom', () => {
@@ -23,7 +24,7 @@ describe('createApp for dom', () => {
       }
     }
 
-    const handler = jest.fn(msg => {
+    const handler = vi.fn(msg => {
       expect(msg).toMatch(`Component is missing template or render function`)
     })
 
