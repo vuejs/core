@@ -294,6 +294,7 @@ h1 img {
   color: var(--btn);
 }
 
+.links .github:hover,
 .links button:hover,
 .links button:hover a {
   color: var(--highlight);
@@ -302,10 +303,6 @@ h1 img {
 .links .github {
   color: var(--btn);
   padding: 1px 6px;
-}
-
-.links .github:hover {
-  color: var(--highlight);
 }
 
 .version:hover .active-version::after {
