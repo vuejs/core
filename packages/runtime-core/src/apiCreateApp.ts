@@ -36,7 +36,7 @@ export interface App<HostElement = any> {
     plugin: Plugin<Options>,
     ...options: Options
   ): this
-  use<Options>(plugin: Plugin<Options>, options: Options): this
+  use<Options>(plugin: Plugin<Options>, options?: Options): this
 
   mixin(mixin: ComponentOptions): this
   component(name: string): Component | undefined
