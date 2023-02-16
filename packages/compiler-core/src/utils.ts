@@ -23,7 +23,8 @@ import {
   VNodeCall,
   SimpleExpressionNode,
   BlockCodegenNode,
-  MemoExpression
+  MemoExpression,
+  CacheExpression
 } from './ast'
 import { TransformContext } from './transform'
 import {
@@ -529,10 +530,14 @@ export function getMemoedVNodeCall(node: BlockCodegenNode | MemoExpression) {
   if (node.type === NodeTypes.JS_CALL_EXPRESSION && node.callee === WITH_MEMO) {
     return node.arguments[1].returns as VNodeCall
   } else {
-    return node
+    return getOnceVNodeCall(node)
   }
 }
-
+export function getOnceVNodeCall(node: BlockCodegenNode | CacheExpression) {
+  return node.type === NodeTypes.JS_CACHE_EXPRESSION
+    ? (node.value as VNodeCall)
+    : (node as VNodeCall)
+}
 export function makeBlock(
   node: VNodeCall,
   { helper, removeHelper, inSSR }: TransformContext
