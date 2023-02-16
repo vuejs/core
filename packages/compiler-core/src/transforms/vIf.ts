@@ -37,7 +37,7 @@ import {
   makeBlock
 } from '../utils'
 import { PatchFlags, PatchFlagNames } from '@vue/shared'
-import { getMemoedVNodeCall } from '..'
+import { getMemoedOrOnceVNodeCall } from '..'
 
 export const transformIf = createStructuralDirectiveTransform(
   /^(if|else|else-if)$/,
@@ -298,7 +298,7 @@ function createChildrenCodegenNode(
     const ret = (firstChild as ElementNode).codegenNode as
       | BlockCodegenNode
       | MemoExpression
-    const vnodeCall = getMemoedVNodeCall(ret)
+    const vnodeCall = getMemoedOrOnceVNodeCall(ret)
     // Change createVNode to createBlock.
     if (vnodeCall.type === NodeTypes.VNODE_CALL) {
       makeBlock(vnodeCall, context)
