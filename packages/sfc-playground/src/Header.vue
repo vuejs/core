@@ -149,14 +149,14 @@ async function fetchVersions(): Promise<string[]> {
       >
         <Download />
       </button>
-      <button title="View on GitHub" class="github">
-        <a
-          href="https://github.com/vuejs/core/tree/main/packages/sfc-playground"
-          target="_blank"
-        >
-          <GitHub />
-        </a>
-      </button>
+      <a
+        href="https://github.com/vuejs/core/tree/main/packages/sfc-playground"
+        target="_blank"
+        title="View on GitHub"
+        class="github"
+      >
+        <GitHub />
+      </a>
     </div>
   </nav>
 </template>
@@ -296,6 +296,15 @@ h1 img {
 
 .links button:hover,
 .links button:hover a {
+  color: var(--highlight);
+}
+
+.links .github {
+  color: var(--btn);
+  padding: 1px 6px;
+}
+
+.links .github:hover {
   color: var(--highlight);
 }
 
