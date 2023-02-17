@@ -360,31 +360,59 @@ describe('scheduler', () => {
     })
   })
 
-  test('invalidateJob', async () => {
-    const calls: string[] = []
-    const job1 = () => {
-      calls.push('job1')
-      invalidateJob(job2)
-      job2()
-    }
-    const job2 = () => {
-      calls.push('job2')
-    }
-    const job3 = () => {
-      calls.push('job3')
-    }
-    const job4 = () => {
-      calls.push('job4')
-    }
-    // queue all jobs
-    queueJob(job1)
-    queueJob(job2)
-    queueJob(job3)
-    queuePostFlushCb(job4)
-    expect(calls).toEqual([])
-    await nextTick()
-    // job2 should be called only once
-    expect(calls).toEqual(['job1', 'job2', 'job3', 'job4'])
+  describe('invalidateJob', () => {
+    test('invalidateJob', async () => {
+      const calls: string[] = []
+      const job1 = () => {
+        calls.push('job1')
+        invalidateJob(job2)
+        job2()
+      }
+      const job2 = () => {
+        calls.push('job2')
+      }
+      const job3 = () => {
+        calls.push('job3')
+      }
+      const job4 = () => {
+        calls.push('job4')
+      }
+      // queue all jobs
+      queueJob(job1)
+      queueJob(job2)
+      queueJob(job3)
+      queuePostFlushCb(job4)
+      expect(calls).toEqual([])
+      await nextTick()
+      // job2 should be called only once
+      expect(calls).toEqual(['job1', 'job2', 'job3', 'job4'])
+    })
+
+    test('correct job is invalidated when a job is duplicated', async () => {
+      const calls: string[] = []
+      let first = true
+      const job1 = () => {
+        calls.push('job1')
+        // We only trigger the child the first time we 'render'
+        if (first) {
+          first = false
+          queueJob(job2)
+        }
+      }
+      const job2 = () => {
+        calls.push('job2')
+        queueJob(job1)
+        // The important thing here is that job1 is in the queue twice by this
+        // point, so we need to invalidate the second job, not the first
+        invalidateJob(job1)
+        job1()
+      }
+      queueJob(job1)
+      expect(calls).toEqual([])
+      await nextTick()
+      // job1 should be called twice, not three times
+      expect(calls).toEqual(['job1', 'job2', 'job1'])
+    })
   })
 
   test('sort job based on id', async () => {
