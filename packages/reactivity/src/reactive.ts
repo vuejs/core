@@ -65,7 +65,7 @@ function getTargetType(value: Target) {
 export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRefSimple<T>
 
 /**
- * Creates a deeply-reactive copy of the original object.
+ * Returns a reactive proxy of the object.
  *
  * All (deep) refs within the object will be unwrapped, while maintaining the
  * ref's reactivity. This is also done for refs that are assigned after creation
