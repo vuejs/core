@@ -793,6 +793,47 @@ function testRender(type: string, render: typeof renderToString) {
         } catch {}
         expect(getCurrentInstance()).toBe(prev)
       })
+
+      // #7733
+      test('reset current instance after error in data', async () => {
+        const prev = getCurrentInstance()
+        expect(prev).toBe(null)
+        try {
+          await render(
+            createApp({
+              data() {
+                throw new Error()
+              },
+              template: `<div>hello</div>`
+            })
+          )
+        } catch {}
+        expect(getCurrentInstance()).toBe(null)
+      })
+    })
+
+    // #7733
+    test('reset current instance after error in errorCaptured', async () => {
+      const prev = getCurrentInstance()
+
+      expect(prev).toBe(null)
+      try {
+        await render(
+          createApp({
+            errorCaptured() {
+              throw new Error()
+            },
+            template: `<div>hello</div>`,
+            created() {
+              throw new Error()
+            }
+          })
+        )
+      } catch {}
+      expect(
+        'Unhandled error during execution of created hook'
+      ).toHaveBeenWarned()
+      expect(getCurrentInstance()).toBe(null)
     })
 
     test('serverPrefetch', async () => {
