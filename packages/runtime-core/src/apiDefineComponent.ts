@@ -41,6 +41,8 @@ export type DefineComponent<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = {},
   EE extends string = string,
+  I extends ComponentInjectOptions = {},
+  II extends string = string,
   PP = PublicProps,
   Props = Readonly<
     PropsOrPropOptions extends ComponentPropsOptions
@@ -61,7 +63,8 @@ export type DefineComponent<
     E,
     PP & Props,
     Defaults,
-    true
+    true,
+    I
   > &
     Props
 > &
@@ -75,7 +78,9 @@ export type DefineComponent<
     Extends,
     E,
     EE,
-    Defaults
+    Defaults,
+    I,
+    II
   > &
   PP
 
@@ -122,7 +127,7 @@ export function defineComponent<
     I,
     II
   >
-): DefineComponent<Props, RawBindings, D, C, M, Mixin, Extends, E, EE>
+): DefineComponent<Props, RawBindings, D, C, M, Mixin, Extends, E, EE, I, II>
 
 // overload 3: object format with array props declaration
 // props inferred as { [key in PropNames]?: any }
@@ -162,7 +167,9 @@ export function defineComponent<
   Mixin,
   Extends,
   E,
-  EE
+  EE,
+  I,
+  II
 >
 
 // overload 4: object format with object props declaration
@@ -195,7 +202,19 @@ export function defineComponent<
     I,
     II
   >
-): DefineComponent<PropsOptions, RawBindings, D, C, M, Mixin, Extends, E, EE>
+): DefineComponent<
+  PropsOptions,
+  RawBindings,
+  D,
+  C,
+  M,
+  Mixin,
+  Extends,
+  E,
+  EE,
+  I,
+  II
+>
 
 // implementation, close to no-op
 export function defineComponent(options: unknown) {

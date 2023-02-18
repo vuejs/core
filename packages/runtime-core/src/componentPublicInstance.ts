@@ -88,9 +88,19 @@ type MixinToOptionTypes<T> = T extends ComponentOptionsBase<
   infer Extends,
   any,
   any,
-  infer Defaults
+  infer Defaults,
+  infer Inject,
+  any
 >
-  ? OptionTypesType<P & {}, B & {}, D & {}, C & {}, M & {}, Defaults & {}> &
+  ? OptionTypesType<
+      P & {},
+      B & {},
+      D & {},
+      C & {},
+      M & {},
+      Defaults & {},
+      Inject & {}
+    > &
       IntersectionMixin<Mixin> &
       IntersectionMixin<Extends>
   : never
@@ -153,7 +163,12 @@ export type CreateComponentPublicInstance<
   PublicM extends MethodOptions = UnwrapMixinsType<PublicMixin, 'M'> &
     EnsureNonVoid<M>,
   PublicDefaults = UnwrapMixinsType<PublicMixin, 'Defaults'> &
-    EnsureNonVoid<Defaults>
+    EnsureNonVoid<Defaults>,
+  PublicInject extends ComponentInjectOptions = UnwrapMixinsType<
+    PublicMixin,
+    'Inject'
+  > &
+    EnsureNonVoid<I>
 > = ComponentPublicInstance<
   PublicP,
   PublicB,
@@ -165,7 +180,7 @@ export type CreateComponentPublicInstance<
   PublicDefaults,
   MakeDefaultsOptional,
   ComponentOptionsBase<P, B, D, C, M, Mixin, Extends, E, string, Defaults>,
-  I
+  PublicInject
 >
 
 // public properties exposed on the proxy, which is used as the render context
