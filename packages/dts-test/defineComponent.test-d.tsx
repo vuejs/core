@@ -10,7 +10,7 @@ import {
   SetupContext,
   h
 } from 'vue'
-import { describe, expectType, IsUnion } from './utils'
+import { describe, expectType, IsUnion, test } from './utils'
 
 describe('with object props', () => {
   interface ExpectedProps {
@@ -1027,64 +1027,68 @@ describe('emits', () => {
 })
 
 describe('inject', () => {
-  // with object inject
-  defineComponent({
-    props: {
-      a: String
-    },
-    inject: {
-      foo: 'foo',
-      bar: 'bar'
-    },
-    created() {
-      expectType<unknown>(this.foo)
-      expectType<unknown>(this.bar)
-      //  @ts-expect-error
-      this.foobar = 1
-    }
-  })
-
-  // with array inject
-  defineComponent({
-    props: ['a', 'b'],
-    inject: ['foo', 'bar'],
-    created() {
-      expectType<unknown>(this.foo)
-      expectType<unknown>(this.bar)
-      //  @ts-expect-error
-      this.foobar = 1
-    }
-  })
-
-  // with no props
-  defineComponent({
-    inject: {
-      foo: {
-        from: 'pfoo',
-        default: 'foo'
+  test('with object inject', () => {
+    defineComponent({
+      props: {
+        a: String
       },
-      bar: {
-        from: 'pbar',
-        default: 'bar'
+      inject: {
+        foo: 'foo',
+        bar: 'bar'
+      },
+      created() {
+        expectType<unknown>(this.foo)
+        expectType<unknown>(this.bar)
+        //  @ts-expect-error
+        this.foobar = 1
       }
-    },
-    created() {
-      expectType<unknown>(this.foo)
-      expectType<unknown>(this.bar)
-      //  @ts-expect-error
-      this.foobar = 1
-    }
+    })
   })
 
-  // without inject
-  defineComponent({
-    props: ['a', 'b'],
-    created() {
-      //  @ts-expect-error
-      this.foo = 1
-      //  @ts-expect-error
-      this.bar = 1
-    }
+  test('with array inject', () => {
+    defineComponent({
+      props: ['a', 'b'],
+      inject: ['foo', 'bar'],
+      created() {
+        expectType<unknown>(this.foo)
+        expectType<unknown>(this.bar)
+        //  @ts-expect-error
+        this.foobar = 1
+      }
+    })
+  })
+
+  test('with no props', () => {
+    defineComponent({
+      inject: {
+        foo: {
+          from: 'pfoo',
+          default: 'foo'
+        },
+        bar: {
+          from: 'pbar',
+          default: 'bar'
+        }
+      },
+      created() {
+        expectType<unknown>(this.foo)
+        expectType<unknown>(this.bar)
+        //  @ts-expect-error
+        this.foobar = 1
+      }
+    })
+  })
+
+  test('without inject', () => {
+    defineComponent({
+      props: ['a', 'b'],
+      created() {
+        //  @ts-expect-error
+        this.foo = 1
+        //  @ts-expect-error
+        this.bar = 1
+      }
+    })
   })
 })
 
