@@ -108,12 +108,13 @@ export class EffectScope {
 }
 
 /**
- * Creates an effect scope object which can capture the reactive effects
- * (i.e. computed and watchers) created within it so that these effects
- * can be disposed of together.
+ * Creates an effect scope object which can capture the reactive effects (i.e.
+ * computed and watchers) created within it so that these effects can be
+ * disposed together. For detailed use cases of this API, please consult its
+ * corresponding {@link https://github.com/vuejs/rfcs/blob/master/active-rfcs/0041-reactivity-effect-scope.md | RFC}.
  *
- * @see {@link https://github.com/vuejs/rfcs/pull/212}
  * @param detached Can be used to create a "detached" effect scope.
+ * @see {@link https://vuejs.org/api/reactivity-advanced.html#effectscope}
  */
 export function effectScope(detached?: boolean) {
   return new EffectScope(detached)
@@ -129,20 +130,20 @@ export function recordEffectScope(
 }
 
 /**
- * Provides access to the current effect scope.
+ * Returns the current active effect scope if there is one.
  *
- * This may be undefined at times when there's no effect active effect scope at
- * this very moment.
+ * @see {@link https://vuejs.org/api/reactivity-advanced.html#getcurrentscope}
  */
 export function getCurrentScope() {
   return activeEffectScope
 }
 
 /**
- * Allows to add a callback to the current effect scope's cleanup. If there is
- * no active effect scope at the moment, this will do nothing.
+ * Registers a dispose callback on the current active effect scope. The
+ * callback will be invoked when the associated effect scope is stopped.
  *
  * @param fn The callback function to attach to the scope's cleanup.
+ * @see {@link https://vuejs.org/api/reactivity-advanced.html#onscopedispose}
  */
 export function onScopeDispose(fn: () => void) {
   if (activeEffectScope) {

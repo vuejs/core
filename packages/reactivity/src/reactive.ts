@@ -65,33 +65,19 @@ function getTargetType(value: Target) {
 export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRefSimple<T>
 
 /**
- * Returns a reactive proxy of the object.
+ * Creates a deeply-reactive copy of the original object.
  *
- * All (deep) refs within the object will be unwrapped, while maintaining the
- * ref's reactivity. This is also done for refs that are assigned after creation
- * of the proxy object.
- *
- * Note that the proxy object is not equal to the original object in the ES2015
- * Proxy-based implementation. It is **strongly** recommended to work
- * exclusively with the reactive proxy and avoid relying on the original object.
+ * The reactive conversion is "deep": it affects all nested properties. A
+ * reactive object also deeply unwraps any properties that are refs while
+ * maintaining reactivity.
  *
  * @example
  * ```js
- * const count = ref(1)
- * const obj = reactive({ count })
- *
- * console.log(obj.count) // 1 (ref is unwrapped, no need for .value)
- *
- * // updating the ref will update `obj.count`
- * count.value++
- * console.log(obj.count) // 2
- *
- * // updating the reactive property will update the ref, too
- * obj.count++
- * console.log(count.value) // 3
+ * const obj = reactive({ count: 0 })
  * ```
  *
  * @param target The source object.
+ * @see {@link https://vuejs.org/api/reactivity-core.html#reactive}
  */
 export function reactive<T extends object>(target: T): UnwrapNestedRefs<T>
 export function reactive(target: object) {
@@ -113,19 +99,34 @@ export declare const ShallowReactiveMarker: unique symbol
 export type ShallowReactive<T> = T & { [ShallowReactiveMarker]?: true }
 
 /**
- * Creates a shallowly-reactive copy of the original object.
+ * Shallow version of {@link reactive()}.
  *
- * Does **not** unwrap any nested refs. All nested values are presented "raw".
+ * Unlike {@link reactive()}, there is no deep conversion: only root-level
+ * properties are reactive for a shallow reactive object. Property values are
+ * stored and exposed as-is - this also means properties with ref values will
+ * not be automatically unwrapped.
  *
  * @example
  * ```js
- * const count = ref(1)
- * const obj = shallowReactive({ count })
+ * const state = shallowReactive({
+ *   foo: 1,
+ *   nested: {
+ *     bar: 2
+ *   }
+ * })
  *
- * console.log(obj.count.value) // 1 (not unwrapped)
+ * // mutating state's own properties is reactive
+ * state.foo++
+ *
+ * // ...but does not convert nested objects
+ * isReactive(state.nested) // false
+ *
+ * // NOT reactive
+ * state.nested.bar++
  * ```
  *
  * @param target The source object.
+ * @see {@link https://vuejs.org/api/reactivity-advanced.html#shallowreactive}
  */
 export function shallowReactive<T extends object>(
   target: T
@@ -164,12 +165,12 @@ export type DeepReadonly<T> = T extends Builtin
   : Readonly<T>
 
 /**
- * Creates a readonly copy of the original object.
+ * Takes an object (reactive or plain) or a ref and returns a readonly proxy to
+ * the original.
  *
- * All (deep) properties within the proxy object will be readonly, too. As with
- * `reactive`, all (deep) refs will be unwrapped. The returned object will not
- * be reactive by default, but already-reactive objects can be passed to
- * `readonly`.
+ * A readonly proxy is deep: any nested property accessed will be readonly as
+ * well. It also has the same ref-unwrapping behavior as {@link reactive()},
+ * except the unwrapped values will also be made readonly.
  *
  * @example
  * ```js
@@ -190,6 +191,7 @@ export type DeepReadonly<T> = T extends Builtin
  * ```
  *
  * @param target The source object.
+ * @see {@link https://vuejs.org/api/reactivity-core.html#readonly}
  */
 export function readonly<T extends object>(
   target: T
@@ -204,10 +206,12 @@ export function readonly<T extends object>(
 }
 
 /**
- * Returns a shallowly-reactive readonly copy of the original object.
+ * Shallow version of {@link readonly()}.
  *
- * All nested values are presented "raw". This means that **neither** nested
- * values are made readonly **nor** nested refs are unwrapped.
+ * Unlike {@link readonly()}, there is no deep conversion: only root-level
+ * properties are made readonly. Property values are stored and exposed as-is -
+ * this also means properties with ref values will not be automatically
+ * unwrapped.
  *
  * @example
  * ```js
@@ -220,14 +224,16 @@ export function readonly<T extends object>(
  *
  * // mutating state's own properties will fail
  * state.foo++
+ *
  * // ...but works on nested objects
  * isReadonly(state.nested) // false
- * state.nested.bar++ // works
+ *
+ * // works
+ * state.nested.bar++
  * ```
  *
- * @remarks This is used for creating the props proxy object for stateful components.
- *
  * @param target The source object.
+ * @see {@link https://vuejs.org/api/reactivity-advanced.html#shallowreadonly}
  */
 export function shallowReadonly<T extends object>(target: T): Readonly<T> {
   return createReactiveObject(
@@ -279,12 +285,22 @@ function createReactiveObject(
 }
 
 /**
- * Checks if an object is a reactive proxy created by `reactive`.
+ * Checks if an object is a proxy created by {@link reactive()} or
+ * {@link shallowReactive()} (or {@link ref()} in some cases).
  *
- * It also returns `true` if the given object was created by `readonly`, but is
- * wrapping another proxy created by `reactive`.
+ * @example
+ * ```js
+ * isReactive(reactive({}))            // => true
+ * isReactive(readonly(reactive({})))  // => true
+ * isReactive(ref({}).value)           // => true
+ * isReactive(readonly(ref({})).value) // => true
+ * isReactive(ref(true))               // => false
+ * isReactive(shallowRef({}).value)    // => false
+ * isReactive(shallowReactive({}))     // => true
+ * ```
  *
  * @param value The value to check.
+ * @see {@link https://vuejs.org/api/reactivity-utilities.html#isreactive}
  */
 export function isReactive(value: unknown): boolean {
   if (isReadonly(value)) {
@@ -294,9 +310,15 @@ export function isReactive(value: unknown): boolean {
 }
 
 /**
- * Checks if an object is a readonly proxy created by `readonly`.
+ * Checks whether the passed value is a readonly object. The properties of a
+ * readonly object can change, but they can't be assigned directly via the
+ * passed object.
+ *
+ * The proxies created by {@link readonly()} and {@link shallowReadonly()} are
+ * both considered readonly, as is a computed ref without a set function.
  *
  * @param value The value to check.
+ * @see {@link https://vuejs.org/api/reactivity-utilities.html#isreadonly}
  */
 export function isReadonly(value: unknown): boolean {
   return !!(value && (value as Target)[ReactiveFlags.IS_READONLY])
@@ -307,21 +329,27 @@ export function isShallow(value: unknown): boolean {
 }
 
 /**
- * Checks if an object is a proxy created by `reactive` or `readonly`.
+ * Checks if an object is a proxy created by {@link reactive},
+ * {@link readonly}, {@link shallowReactive} or {@link shallowReadonly()}.
  *
  * @param value The value to check.
+ * @see {@link https://vuejs.org/api/reactivity-utilities.html#isproxy}
  */
 export function isProxy(value: unknown): boolean {
   return isReactive(value) || isReadonly(value)
 }
 
 /**
- * Returns the raw, original object of a reactive or readonly proxy.
+ * Returns the raw, original object of a Vue-created proxy.
+ *
+ * `toRaw()` can return the original object from proxies created by
+ * {@link reactive()}, {@link readonly()}, {@link shallowReactive()} or
+ * {@link shallowReadonly()}.
  *
  * This is an escape hatch that can be used to temporarily read without
- * incurring proxy access/tracking overhead or write without triggering changes.
- * It is **not** recommended to hold a persistent reference to the original
- * object. Use with caution.
+ * incurring proxy access / tracking overhead or write without triggering
+ * changes. It is **not** recommended to hold a persistent reference to the
+ * original object. Use with caution.
  *
  * @example
  * ```js
@@ -332,6 +360,7 @@ export function isProxy(value: unknown): boolean {
  * ```
  *
  * @param observed The object for which the "raw" value is requested.
+ * @see {@link https://vuejs.org/api/reactivity-advanced.html#toraw}
  */
 export function toRaw<T>(observed: T): T {
   const raw = observed && (observed as Target)[ReactiveFlags.RAW]
@@ -341,14 +370,8 @@ export function toRaw<T>(observed: T): T {
 export type Raw<T> = T & { [RawSymbol]?: true }
 
 /**
- * Marks an object so that it will never be converted to a proxy.
- *
- * **Warning:** This together with the `shallowXXX` APIs allow you to opt-out of
- * the default deep reactive/readonly conversion. This has its uses but must be
- * used in caution or you might end up with in raw, non-proxied objects in
- * places where you might not expect them.
- *
- * Returns the original object itself.
+ * Marks an object so that it will never be converted to a proxy. Returns the
+ * object itself.
  *
  * @example
  * ```js
@@ -360,7 +383,13 @@ export type Raw<T> = T & { [RawSymbol]?: true }
  * console.log(isReactive(bar.foo)) // false
  * ```
  *
+ * **Warning:** `markRaw()` together with the shallow APIs such as
+ * {@link shallowReactive()} allow you to selectively opt-out of the default
+ * deep reactive/readonly conversion and embed raw, non-proxied objects in your
+ * state graph.
+ *
  * @param value The object to be marked as "raw".
+ * @see {@link https://vuejs.org/api/reactivity-advanced.html#markraw}
  */
 export function markRaw<T extends object>(value: T): Raw<T> {
   def(value, ReactiveFlags.SKIP, true)
