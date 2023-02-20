@@ -69,8 +69,13 @@ function findInsertionIndex(id: number) {
 
   while (start < end) {
     const middle = (start + end) >>> 1
-    const middleJobId = getId(queue[middle])
-    middleJobId < id ? (start = middle + 1) : (end = middle)
+    const middleJob = queue[middle]
+    const middleJobId = getId(middleJob)
+    if (middleJobId < id || (middleJobId === id && middleJob.pre)) {
+      start = middle + 1
+    } else {
+      end = middle
+    }
   }
 
   return start
@@ -90,10 +95,11 @@ export function queueJob(job: SchedulerJob) {
       isFlushing && job.allowRecurse ? flushIndex + 1 : flushIndex
     )
   ) {
-    if (job.id == null) {
+    const jobId = getId(job)
+    if (jobId === Infinity) {
       queue.push(job)
     } else {
-      queue.splice(findInsertionIndex(job.id), 0, job)
+      queue.splice(findInsertionIndex(jobId), 0, job)
     }
     queueFlush()
   }

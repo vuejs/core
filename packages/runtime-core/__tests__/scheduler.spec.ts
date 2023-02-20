@@ -186,6 +186,37 @@ describe('scheduler', () => {
       expect(calls).toEqual(['cb1', 'cb2', 'job1'])
     })
 
+    it('should insert pre jobs without ids first during flushing', async () => {
+      const calls: string[] = []
+      const job1 = () => {
+        calls.push('job1')
+        queueJob(job3)
+        queueJob(job4)
+      }
+      // job1 has no id
+      job1.pre = true
+      const job2 = () => {
+        calls.push('job2')
+      }
+      job2.id = 1
+      job2.pre = true
+      const job3 = () => {
+        calls.push('job3')
+      }
+      // job3 has no id
+      job3.pre = true
+      const job4 = () => {
+        calls.push('job4')
+      }
+      // job4 has no id
+      job4.pre = true
+
+      queueJob(job1)
+      queueJob(job2)
+      await nextTick()
+      expect(calls).toEqual(['job1', 'job3', 'job4', 'job2'])
+    })
+
     // #3806
     it('queue preFlushCb inside postFlushCb', async () => {
       const spy = vi.fn()
