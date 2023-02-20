@@ -255,5 +255,28 @@ describe('CSS vars injection', () => {
       )
       expect(cssVars).toMatchObject([`count.toString(`, `xxx`])
     })
+
+    // #7759
+    test('It should correctly parse the case where there is no space after the script tag', () => {
+      const { content } = compileSFCScript(
+        `<script setup>import { ref as _ref } from 'vue';
+let background = _ref('red')
+</script>
+<style>
+label {
+  background: v-bind(background);
+}
+</style>`
+      )
+      console.log(content)
+      expect(content).toMatch(`export default {
+  setup(__props, { expose }) {
+  expose();
+
+_useCssVars(_ctx => ({
+  "xxxxxxxx-background": (_unref(background))
+}))
+`)
+    })
   })
 })
