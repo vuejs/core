@@ -1136,7 +1136,7 @@ const emit = defineEmits(['a', 'b'])
       `)
       assertCode(content)
     })
-
+    
     // #7111
     test('withDefaults (static) w/ production mode', () => {
       const { content } = compile(
@@ -1276,8 +1276,7 @@ const emit = defineEmits(['a', 'b'])
       expect(content).toMatch(`emit: ({ (e: 'foo' | 'bar'): void }),`)
       expect(content).toMatch(`emits: ["foo", "bar"]`)
     })
-
-
+    
     test('defineEmits w/ type from normal script', () => {
       const { content } = compile(`
       <script lang="ts">
