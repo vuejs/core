@@ -1277,6 +1277,7 @@ const emit = defineEmits(['a', 'b'])
       expect(content).toMatch(`emits: ["foo", "bar"]`)
     })
     
+    
     test('defineEmits w/ type from normal script', () => {
       const { content } = compile(`
       <script lang="ts">
