@@ -51,7 +51,7 @@ describe('with object props', () => {
     // required should make property non-void
     b: {
       type: String,
-      required: true
+      required: true as true
     },
     e: Function,
     h: Boolean,
@@ -78,7 +78,7 @@ describe('with object props', () => {
     // required + type casting
     dd: {
       type: Object as PropType<{ n: 1 }>,
-      required: true
+      required: true as true
     },
     // return type
     ee: Function as PropType<() => string>,
@@ -89,21 +89,21 @@ describe('with object props', () => {
     // required + contructor type casting
     ddd: {
       type: Array as () => string[],
-      required: true
+      required: true as true
     },
     // required + object return
     eee: {
       type: Function as PropType<() => { a: string }>,
-      required: true
+      required: true as true
     },
     // required + arguments + object return
     fff: {
       type: Function as PropType<(a: number, b: string) => { a: boolean }>,
-      required: true
+      required: true as true
     },
     hhh: {
       type: Boolean,
-      required: true
+      required: true as true
     },
     // default + type casting
     ggg: {
@@ -122,7 +122,7 @@ describe('with object props', () => {
       type: Function as PropType<
         ((arg1: string) => string) | ((arg1: string, arg2: string) => string)
       >,
-      required: true
+      required: true as true
     },
     kkk: null,
     validated: {
