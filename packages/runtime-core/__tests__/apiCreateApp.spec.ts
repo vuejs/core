@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import {
   createApp,
   h,
@@ -30,6 +31,11 @@ describe('api: createApp', () => {
     const root1 = nodeOps.createElement('div')
     createApp(Comp).mount(root1)
     expect(serializeInner(root1)).toBe(`0`)
+    //#5571 mount multiple apps to the same host element
+    createApp(Comp).mount(root1)
+    expect(
+      `There is already an app instance mounted on the host container`
+    ).toHaveBeenWarned()
 
     // mount with props
     const root2 = nodeOps.createElement('div')
@@ -84,7 +90,7 @@ describe('api: createApp', () => {
         const bar = inject('bar')
         try {
           inject('__proto__')
-        } catch (e) {}
+        } catch (e: any) {}
         return () => `${foo},${bar}`
       }
     }
@@ -140,9 +146,9 @@ describe('api: createApp', () => {
   })
 
   test('directive', () => {
-    const spy1 = jest.fn()
-    const spy2 = jest.fn()
-    const spy3 = jest.fn()
+    const spy1 = vi.fn()
+    const spy2 = vi.fn()
+    const spy3 = vi.fn()
 
     const Root = {
       // local override
@@ -317,7 +323,7 @@ describe('api: createApp', () => {
     const error = new Error()
     const count = ref(0)
 
-    const handler = jest.fn((err, instance, info) => {
+    const handler = vi.fn((err, instance, info) => {
       expect(err).toBe(error)
       expect((instance as any).count).toBe(count.value)
       expect(info).toBe(`render function`)
@@ -343,7 +349,7 @@ describe('api: createApp', () => {
 
   test('config.warnHandler', () => {
     let ctx: any
-    const handler = jest.fn((msg, instance, trace) => {
+    const handler = vi.fn((msg, instance, trace) => {
       expect(msg).toMatch(`Component is missing template or render function`)
       expect(instance).toBe(ctx.proxy)
       expect(trace).toMatch(`Hello`)
@@ -363,7 +369,7 @@ describe('api: createApp', () => {
   })
 
   describe('config.isNativeTag', () => {
-    const isNativeTag = jest.fn(tag => tag === 'div')
+    const isNativeTag = vi.fn(tag => tag === 'div')
 
     test('Component.name', () => {
       const Root = {
@@ -480,6 +486,54 @@ describe('api: createApp', () => {
     const root = nodeOps.createElement('div')
     app.mount(root)
     expect(serializeInner(root)).toBe('hello')
+  })
+
+  test('return property "_" should not overwrite "ctx._", __isScriptSetup: false', () => {
+    const Comp = defineComponent({
+      setup() {
+        return {
+          _: ref(0) // return property "_" should not overwrite "ctx._"
+        }
+      },
+      render() {
+        return h('input', {
+          ref: 'input'
+        })
+      }
+    })
+
+    const root1 = nodeOps.createElement('div')
+    createApp(Comp).mount(root1)
+
+    expect(
+      `setup() return property "_" should not start with "$" or "_" which are reserved prefixes for Vue internals.`
+    ).toHaveBeenWarned()
+  })
+
+  test('return property "_" should not overwrite "ctx._", __isScriptSetup: true', () => {
+    const Comp = defineComponent({
+      setup() {
+        return {
+          _: ref(0), // return property "_" should not overwrite "ctx._"
+          __isScriptSetup: true // mock __isScriptSetup = true
+        }
+      },
+      render() {
+        return h('input', {
+          ref: 'input'
+        })
+      }
+    })
+
+    const root1 = nodeOps.createElement('div')
+    const app = createApp(Comp).mount(root1)
+
+    // trigger
+    app.$refs.input
+
+    expect(
+      `TypeError: Cannot read property '__isScriptSetup' of undefined`
+    ).not.toHaveBeenWarned()
   })
 
   // config.compilerOptions is tested in packages/vue since it is only

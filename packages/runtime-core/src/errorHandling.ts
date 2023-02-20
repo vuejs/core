@@ -1,7 +1,8 @@
 import { VNode } from './vnode'
-import { ComponentInternalInstance, LifecycleHooks } from './component'
+import { ComponentInternalInstance } from './component'
 import { warn, pushWarningContext, popWarningContext } from './warning'
 import { isPromise, isFunction } from '@vue/shared'
+import { LifecycleHooks } from './enums'
 
 // contexts where user provided function may be executed, in addition to
 // lifecycle hooks.
@@ -23,7 +24,7 @@ export const enum ErrorCodes {
   SCHEDULER
 }
 
-export const ErrorTypeStrings: Record<number | string, string> = {
+export const ErrorTypeStrings: Record<LifecycleHooks | ErrorCodes, string> = {
   [LifecycleHooks.SERVER_PREFETCH]: 'serverPrefetch hook',
   [LifecycleHooks.BEFORE_CREATE]: 'beforeCreate hook',
   [LifecycleHooks.CREATED]: 'created hook',
@@ -54,7 +55,7 @@ export const ErrorTypeStrings: Record<number | string, string> = {
   [ErrorCodes.ASYNC_COMPONENT_LOADER]: 'async component loader',
   [ErrorCodes.SCHEDULER]:
     'scheduler flush. This is likely a Vue internals bug. ' +
-    'Please open an issue at https://new-issue.vuejs.org/?repo=vuejs/vue-next'
+    'Please open an issue at https://new-issue.vuejs.org/?repo=vuejs/core'
 }
 
 export type ErrorTypes = LifecycleHooks | ErrorCodes

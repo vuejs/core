@@ -67,6 +67,7 @@ export const enum ErrorCodes {
   X_INVALID_END_TAG,
   X_MISSING_END_TAG,
   X_MISSING_INTERPOLATION_END,
+  X_MISSING_DIRECTIVE_NAME,
   X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END,
 
   // transform errors
@@ -86,6 +87,7 @@ export const enum ErrorCodes {
   X_V_MODEL_NO_EXPRESSION,
   X_V_MODEL_MALFORMED_EXPRESSION,
   X_V_MODEL_ON_SCOPE_VARIABLE,
+  X_V_MODEL_ON_PROPS,
   X_INVALID_EXPRESSION,
   X_KEEP_ALIVE_INVALID_CHILDREN,
 
@@ -132,7 +134,7 @@ export const errorMessages: Record<ErrorCodes, string> = {
     "Attribute name cannot start with '='.",
   [ErrorCodes.UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME]:
     "'<?' is allowed only in XML context.",
-  [ErrorCodes.UNEXPECTED_NULL_CHARACTER]: `Unexpected null cahracter.`,
+  [ErrorCodes.UNEXPECTED_NULL_CHARACTER]: `Unexpected null character.`,
   [ErrorCodes.UNEXPECTED_SOLIDUS_IN_TAG]: "Illegal '/' in tags.",
 
   // Vue-specific parse errors
@@ -143,11 +145,12 @@ export const errorMessages: Record<ErrorCodes, string> = {
   [ErrorCodes.X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END]:
     'End bracket for dynamic directive argument was not found. ' +
     'Note that dynamic directive argument cannot contain spaces.',
+  [ErrorCodes.X_MISSING_DIRECTIVE_NAME]: 'Legal directive name was expected.',
 
   // transform errors
   [ErrorCodes.X_V_IF_NO_EXPRESSION]: `v-if/v-else-if is missing expression.`,
   [ErrorCodes.X_V_IF_SAME_KEY]: `v-if/else branches must use unique keys.`,
-  [ErrorCodes.X_V_ELSE_NO_ADJACENT_IF]: `v-else/v-else-if has no adjacent v-if.`,
+  [ErrorCodes.X_V_ELSE_NO_ADJACENT_IF]: `v-else/v-else-if has no adjacent v-if or v-else-if.`,
   [ErrorCodes.X_V_FOR_NO_EXPRESSION]: `v-for is missing expression.`,
   [ErrorCodes.X_V_FOR_MALFORMED_EXPRESSION]: `v-for has invalid expression.`,
   [ErrorCodes.X_V_FOR_TEMPLATE_KEY_PLACEMENT]: `<template v-for> key should be placed on the <template> tag.`,
@@ -155,7 +158,7 @@ export const errorMessages: Record<ErrorCodes, string> = {
   [ErrorCodes.X_V_ON_NO_EXPRESSION]: `v-on is missing expression.`,
   [ErrorCodes.X_V_SLOT_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET]: `Unexpected custom directive on <slot> outlet.`,
   [ErrorCodes.X_V_SLOT_MIXED_SLOT_USAGE]:
-    `Mixed v-slot usage on both the component and nested <template>.` +
+    `Mixed v-slot usage on both the component and nested <template>. ` +
     `When there are multiple named slots, all slots should use <template> ` +
     `syntax to avoid scope ambiguity.`,
   [ErrorCodes.X_V_SLOT_DUPLICATE_SLOT_NAMES]: `Duplicate slot names found. `,
@@ -166,6 +169,7 @@ export const errorMessages: Record<ErrorCodes, string> = {
   [ErrorCodes.X_V_MODEL_NO_EXPRESSION]: `v-model is missing expression.`,
   [ErrorCodes.X_V_MODEL_MALFORMED_EXPRESSION]: `v-model value must be a valid JavaScript member expression.`,
   [ErrorCodes.X_V_MODEL_ON_SCOPE_VARIABLE]: `v-model cannot be used on v-for or v-slot scope variables because they are not writable.`,
+  [ErrorCodes.X_V_MODEL_ON_PROPS]: `v-model cannot be used on a prop, because local prop bindings are not writable.\nUse a v-bind binding combined with a v-on listener that emits update:x event instead.`,
   [ErrorCodes.X_INVALID_EXPRESSION]: `Error parsing JavaScript expression: `,
   [ErrorCodes.X_KEEP_ALIVE_INVALID_CHILDREN]: `<KeepAlive> expects exactly one child component.`,
 
@@ -175,6 +179,6 @@ export const errorMessages: Record<ErrorCodes, string> = {
   [ErrorCodes.X_CACHE_HANDLER_NOT_SUPPORTED]: `"cacheHandlers" option is only supported when the "prefixIdentifiers" option is enabled.`,
   [ErrorCodes.X_SCOPE_ID_NOT_SUPPORTED]: `"scopeId" option is only supported in module mode.`,
 
-  // just to fullfill types
+  // just to fulfill types
   [ErrorCodes.__EXTEND_POINT__]: ``
 }

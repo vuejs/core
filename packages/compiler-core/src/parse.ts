@@ -11,7 +11,7 @@ import {
   advancePositionWithMutation,
   advancePositionWithClone,
   isCoreComponent,
-  isBindKey
+  isStaticArgOf
 } from './utils'
 import {
   Namespaces,
@@ -257,34 +257,46 @@ function parseChildren(
     const shouldCondense = context.options.whitespace !== 'preserve'
     for (let i = 0; i < nodes.length; i++) {
       const node = nodes[i]
-      if (!context.inPre && node.type === NodeTypes.TEXT) {
-        if (!/[^\t\r\n\f ]/.test(node.content)) {
-          const prev = nodes[i - 1]
-          const next = nodes[i + 1]
-          // Remove if:
-          // - the whitespace is the first or last node, or:
-          // - (condense mode) the whitespace is adjacent to a comment, or:
-          // - (condense mode) the whitespace is between two elements AND contains newline
-          if (
-            !prev ||
-            !next ||
-            (shouldCondense &&
-              (prev.type === NodeTypes.COMMENT ||
-                next.type === NodeTypes.COMMENT ||
-                (prev.type === NodeTypes.ELEMENT &&
-                  next.type === NodeTypes.ELEMENT &&
-                  /[\r\n]/.test(node.content))))
-          ) {
-            removedWhitespace = true
-            nodes[i] = null as any
-          } else {
-            // Otherwise, the whitespace is condensed into a single space
-            node.content = ' '
+      if (node.type === NodeTypes.TEXT) {
+        if (!context.inPre) {
+          if (!/[^\t\r\n\f ]/.test(node.content)) {
+            const prev = nodes[i - 1]
+            const next = nodes[i + 1]
+            // Remove if:
+            // - the whitespace is the first or last node, or:
+            // - (condense mode) the whitespace is between twos comments, or:
+            // - (condense mode) the whitespace is between comment and element, or:
+            // - (condense mode) the whitespace is between two elements AND contains newline
+            if (
+              !prev ||
+              !next ||
+              (shouldCondense &&
+                ((prev.type === NodeTypes.COMMENT &&
+                  next.type === NodeTypes.COMMENT) ||
+                  (prev.type === NodeTypes.COMMENT &&
+                    next.type === NodeTypes.ELEMENT) ||
+                  (prev.type === NodeTypes.ELEMENT &&
+                    next.type === NodeTypes.COMMENT) ||
+                  (prev.type === NodeTypes.ELEMENT &&
+                    next.type === NodeTypes.ELEMENT &&
+                    /[\r\n]/.test(node.content))))
+            ) {
+              removedWhitespace = true
+              nodes[i] = null as any
+            } else {
+              // Otherwise, the whitespace is condensed into a single space
+              node.content = ' '
+            }
+          } else if (shouldCondense) {
+            // in condense mode, consecutive whitespaces in text are condensed
+            // down to a single space.
+            node.content = node.content.replace(/[\t\r\n\f ]+/g, ' ')
           }
-        } else if (shouldCondense) {
-          // in condense mode, consecutive whitespaces in text are condensed
-          // down to a single space.
-          node.content = node.content.replace(/[\t\r\n\f ]+/g, ' ')
+        } else {
+          // #6410 normalize windows newlines in <pre>:
+          // in SSR, browsers normalize server-rendered \r\n into a single \n
+          // in the DOM
+          node.content = node.content.replace(/\r\n/g, '\n')
         }
       }
       // Remove comment nodes if desired by configuration.
@@ -600,6 +612,7 @@ function parseTag(
           context,
           getSelection(context, start)
         )
+        break
       }
     }
   }
@@ -680,7 +693,7 @@ function isComponent(
       } else if (
         // :is on plain element - only treat as component in compat mode
         p.name === 'bind' &&
-        isBindKey(p.arg, 'is') &&
+        isStaticArgOf(p.arg, 'is') &&
         __COMPAT__ &&
         checkCompatEnabled(
           CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT,
@@ -716,6 +729,17 @@ function parseAttributes(
     }
 
     const attr = parseAttribute(context, attributeNames)
+
+    // Trim whitespace between class
+    // https://github.com/vuejs/core/issues/4251
+    if (
+      attr.type === NodeTypes.ATTRIBUTE &&
+      attr.value &&
+      attr.name === 'class'
+    ) {
+      attr.value.content = attr.value.content.replace(/\s+/g, ' ').trim()
+    }
+
     if (type === TagType.Start) {
       props.push(attr)
     }
@@ -775,7 +799,7 @@ function parseAttribute(
   }
   const loc = getSelection(context, start)
 
-  if (!context.inVPre && /^(v-|:|\.|@|#)/.test(name)) {
+  if (!context.inVPre && /^(v-[A-Za-z0-9-]|:|\.|@|#)/.test(name)) {
     const match =
       /(?:^v-([a-z0-9-]+))?(?:(?::|^\.|^@|^#)(\[[^\]]+\]|[^\.]+))?(.+)?$/i.exec(
         name
@@ -814,9 +838,10 @@ function parseAttribute(
             context,
             ErrorCodes.X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END
           )
+          content = content.slice(1)
+        } else {
+          content = content.slice(1, content.length - 1)
         }
-
-        content = content.substr(1, content.length - 2)
       } else if (isSlot) {
         // #1241 special case for v-slot: vuetify relies extensively on slot
         // names containing dots. v-slot doesn't have any modifiers and Vue 2.x
@@ -843,7 +868,7 @@ function parseAttribute(
       valueLoc.source = valueLoc.source.slice(1, -1)
     }
 
-    const modifiers = match[3] ? match[3].substr(1).split('.') : []
+    const modifiers = match[3] ? match[3].slice(1).split('.') : []
     if (isPropShorthand) modifiers.push('prop')
 
     // 2.x compat v-bind:foo.sync -> v-model:foo
@@ -886,6 +911,11 @@ function parseAttribute(
       modifiers,
       loc
     }
+  }
+
+  // missing directive name or illegal directive name
+  if (!context.inVPre && startsWith(name, 'v-')) {
+    emitError(context, ErrorCodes.X_MISSING_DIRECTIVE_NAME)
   }
 
   return {
@@ -989,10 +1019,8 @@ function parseInterpolation(
 function parseText(context: ParserContext, mode: TextModes): TextNode {
   __TEST__ && assert(context.source.length > 0)
 
-  const endTokens = ['<', context.options.delimiters[0]]
-  if (mode === TextModes.CDATA) {
-    endTokens.push(']]>')
-  }
+  const endTokens =
+    mode === TextModes.CDATA ? [']]>'] : ['<', context.options.delimiters[0]]
 
   let endIndex = context.source.length
   for (let i = 0; i < endTokens.length; i++) {
@@ -1028,7 +1056,7 @@ function parseTextData(
   if (
     mode === TextModes.RAWTEXT ||
     mode === TextModes.CDATA ||
-    rawText.indexOf('&') === -1
+    !rawText.includes('&')
   ) {
     return rawText
   } else {
@@ -1152,7 +1180,7 @@ function isEnd(
 function startsWithEndTagOpen(source: string, tag: string): boolean {
   return (
     startsWith(source, '</') &&
-    source.substr(2, tag.length).toLowerCase() === tag.toLowerCase() &&
+    source.slice(2, 2 + tag.length).toLowerCase() === tag.toLowerCase() &&
     /[\t\r\n\f />]/.test(source[2 + tag.length] || '>')
   )
 }

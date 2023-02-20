@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import { EMPTY_ARR } from '@vue/shared'
 import { createApp, ref, nextTick, reactive } from '../src'
 
@@ -21,11 +22,11 @@ describe('compiler + runtime integration', () => {
     const one = {
       name: 'one',
       template: 'one',
-      created: jest.fn(),
-      mounted: jest.fn(),
-      activated: jest.fn(),
-      deactivated: jest.fn(),
-      unmounted: jest.fn()
+      created: vi.fn(),
+      mounted: vi.fn(),
+      activated: vi.fn(),
+      deactivated: vi.fn(),
+      unmounted: vi.fn()
     }
 
     const toggle = ref(true)
@@ -131,12 +132,22 @@ describe('compiler + runtime integration', () => {
     ).toHaveBeenWarned()
   })
 
-  it('should support custom element', () => {
+  it('should support custom element via config.isCustomElement (deprecated)', () => {
     const app = createApp({
       template: '<custom></custom>'
     })
     const container = document.createElement('div')
     app.config.isCustomElement = tag => tag === 'custom'
+    app.mount(container)
+    expect(container.innerHTML).toBe('<custom></custom>')
+  })
+
+  it('should support custom element via config.compilerOptions.isCustomElement', () => {
+    const app = createApp({
+      template: '<custom></custom>'
+    })
+    const container = document.createElement('div')
+    app.config.compilerOptions.isCustomElement = tag => tag === 'custom'
     app.mount(container)
     expect(container.innerHTML).toBe('<custom></custom>')
   })
@@ -156,7 +167,7 @@ describe('compiler + runtime integration', () => {
   it('should support selector of rootContainer', () => {
     const container = document.createElement('div')
     const origin = document.querySelector
-    document.querySelector = jest.fn().mockReturnValue(container)
+    document.querySelector = vi.fn().mockReturnValue(container)
 
     const App = {
       template: `{{ count }}`,
@@ -193,7 +204,7 @@ describe('compiler + runtime integration', () => {
 
   it('should warn when container is not found', () => {
     const origin = document.querySelector
-    document.querySelector = jest.fn().mockReturnValue(null)
+    document.querySelector = vi.fn().mockReturnValue(null)
     const App = {
       template: `{{ count }}`,
       data() {
@@ -216,7 +227,7 @@ describe('compiler + runtime integration', () => {
     const target = document.createElement('div')
     const count = ref(0)
     const origin = document.querySelector
-    document.querySelector = jest.fn().mockReturnValue(target)
+    document.querySelector = vi.fn().mockReturnValue(target)
 
     const App = {
       template: `

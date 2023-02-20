@@ -1,5 +1,6 @@
 import { VNode, VNodeChild, isVNode } from './vnode'
 import {
+  isRef,
   pauseTracking,
   resetTracking,
   shallowReadonly,
@@ -7,7 +8,8 @@ import {
   EffectScope,
   markRaw,
   track,
-  TrackOpTypes
+  TrackOpTypes,
+  ReactiveEffect
 } from '@vue/reactivity'
 import {
   ComponentPublicInstance,
@@ -34,7 +36,8 @@ import {
   applyOptions,
   ComponentOptions,
   ComputedOptions,
-  MethodOptions
+  MethodOptions,
+  resolveMergedOptions
 } from './componentOptions'
 import {
   EmitsOptions,
@@ -45,6 +48,7 @@ import {
 } from './componentEmits'
 import {
   EMPTY_OBJ,
+  isArray,
   isFunction,
   NOOP,
   isObject,
@@ -60,8 +64,13 @@ import { markAttrsAccessed } from './componentRenderUtils'
 import { currentRenderingInstance } from './componentRenderContext'
 import { startMeasure, endMeasure } from './profiling'
 import { convertLegacyRenderFn } from './compat/renderFn'
-import { globalCompatConfig, validateCompatConfig } from './compat/compatConfig'
+import {
+  CompatConfig,
+  globalCompatConfig,
+  validateCompatConfig
+} from './compat/compatConfig'
 import { SchedulerJob } from './scheduler'
+import { LifecycleHooks } from './enums'
 
 export type Data = Record<string, unknown>
 
@@ -101,6 +110,10 @@ export interface ComponentInternalOptions {
    * This one should be exposed so that devtools can make use of it
    */
   __file?: string
+  /**
+   * name inferred from filename
+   */
+  __name?: string
 }
 
 export interface FunctionalComponent<
@@ -114,6 +127,7 @@ export interface FunctionalComponent<
   emits?: E | (keyof E)[]
   inheritAttrs?: boolean
   displayName?: string
+  compatConfig?: CompatConfig
 }
 
 export interface ClassComponent {
@@ -151,33 +165,19 @@ export type Component<
   | ConcreteComponent<Props, RawBindings, D, C, M>
   | ComponentPublicInstanceConstructor<Props>
 
-export { ComponentOptions }
+export type { ComponentOptions }
 
 type LifecycleHook<TFn = Function> = TFn[] | null
 
-export const enum LifecycleHooks {
-  BEFORE_CREATE = 'bc',
-  CREATED = 'c',
-  BEFORE_MOUNT = 'bm',
-  MOUNTED = 'm',
-  BEFORE_UPDATE = 'bu',
-  UPDATED = 'u',
-  BEFORE_UNMOUNT = 'bum',
-  UNMOUNTED = 'um',
-  DEACTIVATED = 'da',
-  ACTIVATED = 'a',
-  RENDER_TRIGGERED = 'rtg',
-  RENDER_TRACKED = 'rtc',
-  ERROR_CAPTURED = 'ec',
-  SERVER_PREFETCH = 'sp'
-}
-
-export interface SetupContext<E = EmitsOptions, S extends Slots = Slots> {
-  attrs: Data
-  slots: S
-  emit: EmitFn<E>
-  expose: (exposed?: Record<string, any>) => void
-}
+// use `E extends any` to force evaluating type to fix #2362
+export type SetupContext<E = EmitsOptions, S extends Slots = Slots> = E extends any
+  ? {
+      attrs: Data
+      slots: S
+      emit: EmitFn<E>
+      expose: (exposed?: Record<string, any>) => void
+    }
+  : never
 
 /**
  * @internal
@@ -222,6 +222,10 @@ export interface ComponentInternalInstance {
    * Root vnode of this component's own vdom tree
    */
   subTree: VNode
+  /**
+   * Render effect instance
+   */
+  effect: ReactiveEffect
   /**
    * Bound effect runner to be passed to schedulers
    */
@@ -291,10 +295,12 @@ export interface ComponentInternalInstance {
   inheritAttrs?: boolean
   /**
    * is custom element?
+   * @internal
    */
   isCE?: boolean
   /**
    * custom element specific HMR method
+   * @internal
    */
   ceReload?: (newStyles?: string[]) => void
 
@@ -433,6 +439,23 @@ export interface ComponentInternalInstance {
    * @internal
    */
   [LifecycleHooks.SERVER_PREFETCH]: LifecycleHook<() => Promise<unknown>>
+
+  /**
+   * For caching bound $forceUpdate on public proxy access
+   * @internal
+   */
+  f?: () => void
+  /**
+   * For caching bound $nextTick on public proxy access
+   * @internal
+   */
+  n?: () => Promise<void>
+  /**
+   * `updateTeleportCssVars`
+   * For updating css vars on contained teleports
+   * @internal
+   */
+  ut?: (vars?: Record<string, string>) => void
 }
 
 const emptyAppContext = createAppContext()
@@ -458,6 +481,7 @@ export function createComponentInstance(
     root: null!, // to be immediately set
     next: null,
     subTree: null!, // will be set synchronously right after creation
+    effect: null!,
     update: null!, // will be set synchronously right after creation
     scope: new EffectScope(true /* detached */),
     render: null,
@@ -469,7 +493,7 @@ export function createComponentInstance(
     accessCache: null!,
     renderCache: [],
 
-    // local resovled assets
+    // local resolved assets
     components: null,
     directives: null,
 
@@ -646,7 +670,6 @@ function setupStatefulComponent(
 
     if (isPromise(setupResult)) {
       setupResult.then(unsetCurrentInstance, unsetCurrentInstance)
-
       if (isSSR) {
         // return the promise so server-renderer can wait on it
         return setupResult
@@ -660,6 +683,15 @@ function setupStatefulComponent(
         // async setup returned Promise.
         // bail here and wait for re-entry.
         instance.asyncDep = setupResult
+        if (__DEV__ && !instance.suspense) {
+          const name = Component.name ?? 'Anonymous'
+          warn(
+            `Component <${name}>: setup function returned a promise, but no ` +
+              `<Suspense> boundary was found in the parent component tree. ` +
+              `A component with async setup() must be nested in a <Suspense> ` +
+              `in order to be rendered.`
+          )
+        }
       } else if (__DEV__) {
         warn(
           `setup() returned a Promise, but the version of Vue you are using ` +
@@ -681,7 +713,7 @@ export function handleSetupResult(
 ) {
   if (isFunction(setupResult)) {
     // setup returned an inline render function
-    if (__NODE_JS__ && (instance.type as ComponentOptions).__ssrInlineRender) {
+    if (__SSR__ && (instance.type as ComponentOptions).__ssrInlineRender) {
       // when the function's name is `ssrRender` (compiled by SFC inline mode),
       // set it as ssrRender instead.
       instance.ssrRender = setupResult
@@ -754,23 +786,17 @@ export function finishComponentSetup(
   }
 
   // template / render function normalization
-  if (__NODE_JS__ && isSSR) {
-    // 1. the render function may already exist, returned by `setup`
-    // 2. otherwise try to use the `Component.render`
-    // 3. if the component doesn't have a render function,
-    //    set `instance.render` to NOOP so that it can inherit the render
-    //    function from mixins/extend
-    instance.render = (instance.render ||
-      Component.render ||
-      NOOP) as InternalRenderFunction
-  } else if (!instance.render) {
-    // could be set from setup()
-    if (compile && !Component.render) {
+  // could be already set when returned from setup()
+  if (!instance.render) {
+    // only do on-the-fly compile if not in SSR - SSR on-the-fly compilation
+    // is done by server-renderer
+    if (!isSSR && compile && !Component.render) {
       const template =
         (__COMPAT__ &&
           instance.vnode.props &&
           instance.vnode.props['inline-template']) ||
-        Component.template
+        Component.template ||
+        resolveMergedOptions(instance).template
       if (template) {
         if (__DEV__) {
           startMeasure(instance, `compile`)
@@ -792,6 +818,7 @@ export function finishComponentSetup(
           // pass runtime compat config into the compiler
           finalCompilerOptions.compatConfig = Object.create(globalCompatConfig)
           if (Component.compatConfig) {
+            // @ts-expect-error types are not compatible
             extend(finalCompilerOptions.compatConfig, Component.compatConfig)
           }
         }
@@ -875,8 +902,25 @@ export function createSetupContext(
   instance: ComponentInternalInstance
 ): SetupContext {
   const expose: SetupContext['expose'] = exposed => {
-    if (__DEV__ && instance.exposed) {
-      warn(`expose() should be called only once per setup().`)
+    if (__DEV__) {
+      if (instance.exposed) {
+        warn(`expose() should be called only once per setup().`)
+      }
+      if (exposed != null) {
+        let exposedType: string = typeof exposed
+        if (exposedType === 'object') {
+          if (isArray(exposed)) {
+            exposedType = 'array'
+          } else if (isRef(exposed)) {
+            exposedType = 'ref'
+          }
+        }
+        if (exposedType !== 'object') {
+          warn(
+            `expose() should be passed a plain object, received ${exposedType}.`
+          )
+        }
+      }
     }
     instance.exposed = exposed || {}
   }
@@ -920,6 +964,9 @@ export function getExposeProxy(instance: ComponentInternalInstance) {
           } else if (key in publicPropertiesMap) {
             return publicPropertiesMap[key](instance)
           }
+        },
+        has(target, key: string) {
+          return key in target || key in publicPropertiesMap
         }
       }))
     )
@@ -931,11 +978,12 @@ const classify = (str: string): string =>
   str.replace(classifyRE, c => c.toUpperCase()).replace(/[-_]/g, '')
 
 export function getComponentName(
-  Component: ConcreteComponent
-): string | undefined {
+  Component: ConcreteComponent,
+  includeInferred = true
+): string | false | undefined {
   return isFunction(Component)
     ? Component.displayName || Component.name
-    : Component.name
+    : Component.name || (includeInferred && Component.__name)
 }
 
 /* istanbul ignore next */

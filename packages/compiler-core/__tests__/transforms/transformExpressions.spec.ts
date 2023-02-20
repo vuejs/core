@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import {
   baseParse as parse,
   transform,
@@ -395,11 +396,38 @@ describe('compiler: expression transform', () => {
   })
 
   test('should handle parse error', () => {
-    const onError = jest.fn()
+    const onError = vi.fn()
     parseWithExpressionTransform(`{{ a( }}`, { onError })
     expect(onError.mock.calls[0][0].message).toMatch(
       `Error parsing JavaScript expression: Unexpected token`
     )
+  })
+
+  test('should prefix in assignment', () => {
+    const node = parseWithExpressionTransform(
+      `{{ x = 1 }}`
+    ) as InterpolationNode
+    expect(node.content).toMatchObject({
+      type: NodeTypes.COMPOUND_EXPRESSION,
+      children: [{ content: `_ctx.x` }, ` = 1`]
+    })
+  })
+
+  test('should prefix in assignment pattern', () => {
+    const node = parseWithExpressionTransform(
+      `{{ { x, y: [z] } = obj }}`
+    ) as InterpolationNode
+    expect(node.content).toMatchObject({
+      type: NodeTypes.COMPOUND_EXPRESSION,
+      children: [
+        `{ x: `,
+        { content: `_ctx.x` },
+        `, y: [`,
+        { content: `_ctx.z` },
+        `] } = `,
+        { content: `_ctx.obj` }
+      ]
+    })
   })
 
   describe('ES Proposals support', () => {

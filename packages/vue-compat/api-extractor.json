@@ -1,7 +1,0 @@
-{
-  "extends": "../../api-extractor.json",
-  "mainEntryPointFilePath": "./dist/packages/vue-compat/src/index.d.ts",
-  "dtsRollup": {
-    "publicTrimmedFilePath": "./dist/vue.d.ts"
-  }
-}

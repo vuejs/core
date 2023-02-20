@@ -29,7 +29,9 @@
 import { VNode } from '@vue/runtime-core'
 import * as CSS from 'csstype'
 
-export interface CSSProperties extends CSS.Properties<string | number> {
+export interface CSSProperties
+  extends CSS.Properties<string | number>,
+    CSS.PropertiesHyphen<string | number> {
   /**
    * The index signature was removed to enable closed typing for style
    * using CSSType. You're able to use type assertion or module augmentation
@@ -38,6 +40,7 @@ export interface CSSProperties extends CSS.Properties<string | number> {
    * For examples and more information, visit:
    * https://github.com/frenic/csstype#what-should-i-do-when-i-get-type-errors
    */
+  [v: `--${string}`]: string | number | undefined
 }
 
 type Booleanish = boolean | 'true' | 'false'
@@ -274,7 +277,7 @@ export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
   // Non-standard Attributes
   autocapitalize?: string
   autocorrect?: string
-  autocave?: string
+  autosave?: string
   color?: string
   itemprop?: string
   itemscope?: Booleanish
@@ -306,6 +309,17 @@ export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
   is?: string
 }
 
+type HTMLAttributeReferrerPolicy =
+  | ''
+  | 'no-referrer'
+  | 'no-referrer-when-downgrade'
+  | 'origin'
+  | 'origin-when-cross-origin'
+  | 'same-origin'
+  | 'strict-origin'
+  | 'strict-origin-when-cross-origin'
+  | 'unsafe-url'
+
 export interface AnchorHTMLAttributes extends HTMLAttributes {
   download?: any
   href?: string
@@ -315,7 +329,7 @@ export interface AnchorHTMLAttributes extends HTMLAttributes {
   rel?: string
   target?: string
   type?: string
-  referrerpolicy?: string
+  referrerpolicy?: HTMLAttributeReferrerPolicy
 }
 
 export interface AreaHTMLAttributes extends HTMLAttributes {
@@ -325,6 +339,7 @@ export interface AreaHTMLAttributes extends HTMLAttributes {
   href?: string
   hreflang?: string
   media?: string
+  referrerpolicy?: HTMLAttributeReferrerPolicy
   rel?: string
   shape?: string
   target?: string
@@ -423,7 +438,7 @@ export interface IframeHTMLAttributes extends HTMLAttributes {
   marginheight?: Numberish
   marginwidth?: Numberish
   name?: string
-  referrerpolicy?: string
+  referrerpolicy?: HTMLAttributeReferrerPolicy
   sandbox?: string
   scrolling?: string
   seamless?: Booleanish
@@ -437,6 +452,7 @@ export interface ImgHTMLAttributes extends HTMLAttributes {
   crossorigin?: 'anonymous' | 'use-credentials' | ''
   decoding?: 'async' | 'auto' | 'sync'
   height?: Numberish
+  referrerpolicy?: HTMLAttributeReferrerPolicy
   sizes?: string
   src?: string
   srcset?: string
@@ -455,7 +471,7 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   autocomplete?: string
   autofocus?: Booleanish
   capture?: boolean | 'user' | 'environment' // https://www.w3.org/tr/html-media-capture/#the-capture-attribute
-  checked?: Booleanish | any[] // for IDE v-model multi-checkbox support
+  checked?: Booleanish | any[] | Set<any> // for IDE v-model multi-checkbox support
   crossorigin?: string
   disabled?: Booleanish
   form?: string
@@ -465,6 +481,7 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   formnovalidate?: Booleanish
   formtarget?: string
   height?: Numberish
+  indeterminate?: boolean
   list?: string
   max?: Numberish
   maxlength?: Numberish
@@ -510,6 +527,7 @@ export interface LinkHTMLAttributes extends HTMLAttributes {
   hreflang?: string
   integrity?: string
   media?: string
+  referrerpolicy?: HTMLAttributeReferrerPolicy
   rel?: string
   sizes?: string
   type?: string
@@ -584,7 +602,7 @@ export interface OptionHTMLAttributes extends HTMLAttributes {
   disabled?: Booleanish
   label?: string
   selected?: Booleanish
-  value?: string | string[] | number
+  value?: any // we support :value to be bound to anything w/ v-model
 }
 
 export interface OutputHTMLAttributes extends HTMLAttributes {
@@ -610,6 +628,7 @@ export interface ScriptHTMLAttributes extends HTMLAttributes {
   defer?: Booleanish
   integrity?: string
   nomodule?: Booleanish
+  referrerpolicy?: HTMLAttributeReferrerPolicy
   nonce?: string
   src?: string
   type?: string
@@ -624,7 +643,7 @@ export interface SelectHTMLAttributes extends HTMLAttributes {
   name?: string
   required?: Booleanish
   size?: Numberish
-  value?: string | string[] | number
+  value?: any // we support :value to be bound to anything w/ v-model
 }
 
 export interface SourceHTMLAttributes extends HTMLAttributes {
@@ -1297,7 +1316,9 @@ export interface Events {
 }
 
 type EventHandlers<E> = {
-  [K in keyof E]?: E[K] extends Function ? E[K] : (payload: E[K]) => void
+  [K in keyof E]?: E[K] extends (...args: any) => any
+    ? E[K]
+    : (payload: E[K]) => void
 }
 
 // use namespace import to avoid collision with generated types which use
@@ -1306,10 +1327,9 @@ import * as RuntimeCore from '@vue/runtime-core'
 
 type ReservedProps = {
   key?: string | number | symbol
-  ref?:
-    | string
-    | RuntimeCore.Ref
-    | ((ref: Element | RuntimeCore.ComponentPublicInstance | null) => void)
+  ref?: RuntimeCore.VNodeRef
+  ref_for?: boolean
+  ref_key?: string
 }
 
 type ElementAttrs<T> = T & ReservedProps

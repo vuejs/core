@@ -5,8 +5,7 @@ import {
   ComponentInternalOptions,
   Component,
   ConcreteComponent,
-  InternalRenderFunction,
-  LifecycleHooks
+  InternalRenderFunction
 } from './component'
 import {
   isFunction,
@@ -15,9 +14,12 @@ import {
   isObject,
   isArray,
   NOOP,
-  isPromise
+  isPromise,
+  LooseRequired,
+  UnionToIntersection
 } from '@vue/shared'
-import { computed, isRef, Ref } from '@vue/reactivity'
+import { isRef, Ref } from '@vue/reactivity'
+import { computed } from './apiComputed'
 import {
   watch,
   WatchOptions,
@@ -55,12 +57,12 @@ import { EmitsOptions, EmitsToProps } from './componentEmits'
 import { Directive } from './directives'
 import {
   CreateComponentPublicInstance,
-  ComponentPublicInstance
+  ComponentPublicInstance,
+  isReservedPrefix
 } from './componentPublicInstance'
 import { warn } from './warning'
 import { VNodeChild } from './vnode'
 import { callWithAsyncErrorHandling } from './errorHandling'
-import { LooseRequired, UnionToIntersection } from './helpers/typeUtils'
 import { deepMergeData } from './compat/data'
 import { DeprecationTypes } from './compat/compatConfig'
 import {
@@ -70,6 +72,7 @@ import {
 } from './compat/compatConfig'
 import { OptionMergeFunction } from './apiCreateApp'
 import { Slots } from './componentSlots'
+import { LifecycleHooks } from './enums'
 
 /**
  * Interface for declaring custom options.
@@ -117,8 +120,10 @@ export interface ComponentOptionsBase<
   E extends EmitsOptions,
   EE extends string = string,
   S = any,
-  Defaults = {}
-> extends LegacyOptions<Props, D, C, M, Mixin, Extends>,
+  Defaults = {},
+  I extends ComponentInjectOptions = {},
+  II extends string = string
+> extends LegacyOptions<Props, D, C, M, Mixin, Extends, I, II>,
     ComponentInternalOptions,
     ComponentCustomOptions {
   setup?: (
@@ -146,7 +151,7 @@ export interface ComponentOptionsBase<
   emits?: (E | EE[]) & ThisType<void>
   // TODO infer public instance type based on exposed keys
   expose?: string[]
-  serverPrefetch?(): Promise<any>
+  serverPrefetch?(): void | Promise<any>
 
   // Runtime compiler only -----------------------------------------------------
   compilerOptions?: RuntimeCompilerOptions
@@ -227,6 +232,8 @@ export type ComponentOptionsWithoutProps<
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
   S = any,
+  I extends ComponentInjectOptions = {},
+  II extends string = string,
   PE = Props & EmitsToProps<E>
 > = ComponentOptionsBase<
   PE,
@@ -239,7 +246,9 @@ export type ComponentOptionsWithoutProps<
   E,
   EE,
   S,
-  {}
+  {},
+  I,
+  II
 > & {
   props?: undefined
 } & ThisType<
@@ -252,7 +261,11 @@ export type ComponentOptionsWithoutProps<
       Mixin,
       Extends,
       E,
-      S
+      S,
+      PE,
+      {},
+      false,
+      I
     >
   >
 
@@ -267,6 +280,8 @@ export type ComponentOptionsWithArrayProps<
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
   S = any,
+  I extends ComponentInjectOptions = {},
+  II extends string = string,
   Props = Readonly<{ [key in PropNames]?: any }> & EmitsToProps<E>
 > = ComponentOptionsBase<
   Props,
@@ -279,7 +294,9 @@ export type ComponentOptionsWithArrayProps<
   E,
   EE,
   S,
-  {}
+  {},
+  I,
+  II
 > & {
   props: PropNames[]
 } & ThisType<
@@ -292,7 +309,11 @@ export type ComponentOptionsWithArrayProps<
       Mixin,
       Extends,
       E,
-      S
+      S,
+      Props,
+      {},
+      false,
+      I
     >
   >
 
@@ -307,6 +328,8 @@ export type ComponentOptionsWithObjectProps<
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
   S = any,
+  I extends ComponentInjectOptions = {},
+  II extends string = string,
   Props = Readonly<ExtractPropTypes<PropsOptions>> & EmitsToProps<E>,
   Defaults = ExtractDefaultPropTypes<PropsOptions>
 > = ComponentOptionsBase<
@@ -320,7 +343,9 @@ export type ComponentOptionsWithObjectProps<
   E,
   EE,
   S,
-  Defaults
+  Defaults,
+  I,
+  II
 > & {
   props: PropsOptions & ThisType<void>
 } & ThisType<
@@ -336,7 +361,8 @@ export type ComponentOptionsWithObjectProps<
       S,
       Props,
       Defaults,
-      false
+      false,
+      I
     >
   >
 
@@ -404,12 +430,27 @@ type ComponentWatchOptionItem = WatchOptionItem | WatchOptionItem[]
 
 type ComponentWatchOptions = Record<string, ComponentWatchOptionItem>
 
-type ComponentInjectOptions = string[] | ObjectInjectOptions
+export type ComponentProvideOptions = ObjectProvideOptions | Function
+
+type ObjectProvideOptions = Record<string | symbol, unknown>
+
+export type ComponentInjectOptions = string[] | ObjectInjectOptions
 
 type ObjectInjectOptions = Record<
   string | symbol,
   string | symbol | { from?: string | symbol; default?: unknown }
 >
+
+export type InjectToObject<T extends ComponentInjectOptions> =
+  T extends string[]
+    ? {
+        [K in T[number]]?: unknown
+      }
+    : T extends ObjectInjectOptions
+    ? {
+        [K in keyof T]?: unknown
+      }
+    : never
 
 interface LegacyOptions<
   Props,
@@ -417,7 +458,9 @@ interface LegacyOptions<
   C extends ComputedOptions,
   M extends MethodOptions,
   Mixin extends ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin
+  Extends extends ComponentOptionsMixin,
+  I extends ComponentInjectOptions,
+  II extends string
 > {
   compatConfig?: CompatConfig
 
@@ -451,8 +494,8 @@ interface LegacyOptions<
   computed?: C
   methods?: M
   watch?: ComponentWatchOptions
-  provide?: Data | Function
-  inject?: ComponentInjectOptions
+  provide?: ComponentProvideOptions
+  inject?: I | II[]
 
   // assets
   filters?: Record<string, Function>
@@ -491,8 +534,8 @@ interface LegacyOptions<
    *
    * type-only, used to assist Mixin's type inference,
    * typescript will try to simplify the inferred `Mixin` type,
-   * with the `__differenciator`, typescript won't be able to combine different mixins,
-   * because the `__differenciator` will be different
+   * with the `__differentiator`, typescript won't be able to combine different mixins,
+   * because the `__differentiator` will be different
    */
   __differentiator?: keyof D | keyof C | keyof M
 }
@@ -689,7 +732,7 @@ export function applyOptions(instance: ComponentInternalInstance) {
         for (const key in data) {
           checkDuplicateProperties!(OptionTypes.DATA, key)
           // expose data on ctx during dev
-          if (key[0] !== '$' && key[0] !== '_') {
+          if (!isReservedPrefix(key[0])) {
             Object.defineProperty(ctx, key, {
               configurable: true,
               enumerable: true,
@@ -981,8 +1024,9 @@ export function resolveMergedOptions(
     }
     mergeOptions(resolved, base, optionMergeStrategies)
   }
-
-  cache.set(base, resolved)
+  if (isObject(base)) {
+    cache.set(base, resolved)
+  }
   return resolved
 }
 
@@ -1037,7 +1081,9 @@ export const internalOptionMergeStrats: Record<string, Function> = {
   beforeUpdate: mergeAsArray,
   updated: mergeAsArray,
   beforeDestroy: mergeAsArray,
+  beforeUnmount: mergeAsArray,
   destroyed: mergeAsArray,
+  unmounted: mergeAsArray,
   activated: mergeAsArray,
   deactivated: mergeAsArray,
   errorCaptured: mergeAsArray,

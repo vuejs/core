@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import { ParserOptions } from '../src/options'
 import { baseParse, TextModes } from '../src/parse'
 import { ErrorCodes } from '../src/errors'
@@ -31,7 +32,7 @@ describe('compiler: parse', () => {
     })
 
     test('simple text with invalid end tag', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       const ast = baseParse('some text</div>', {
         onError
       })
@@ -1015,6 +1016,71 @@ describe('compiler: parse', () => {
       })
     })
 
+    // https://github.com/vuejs/core/issues/4251
+    test('class attribute should ignore whitespace when parsed', () => {
+      const ast = baseParse('<div class=" \n\t c \t\n "></div>')
+      const element = ast.children[0] as ElementNode
+
+      expect(element).toStrictEqual({
+        children: [],
+        codegenNode: undefined,
+        isSelfClosing: false,
+        loc: {
+          end: {
+            column: 10,
+            line: 3,
+            offset: 29
+          },
+          source: '<div class=" \n\t c \t\n "></div>',
+          start: {
+            column: 1,
+            line: 1,
+            offset: 0
+          }
+        },
+        ns: Namespaces.HTML,
+        props: [
+          {
+            loc: {
+              end: {
+                column: 3,
+                line: 3,
+                offset: 22
+              },
+              source: 'class=" \n\t c \t\n "',
+              start: {
+                column: 6,
+                line: 1,
+                offset: 5
+              }
+            },
+            name: 'class',
+            type: NodeTypes.ATTRIBUTE,
+            value: {
+              content: 'c',
+              loc: {
+                end: {
+                  column: 3,
+                  line: 3,
+                  offset: 22
+                },
+                source: '" \n\t c \t\n "',
+                start: {
+                  column: 12,
+                  line: 1,
+                  offset: 11
+                }
+              },
+              type: NodeTypes.TEXT
+            }
+          }
+        ],
+        tag: 'div',
+        tagType: ElementTypes.ELEMENT,
+        type: NodeTypes.ELEMENT
+      })
+    })
+
     test('directive with no value', () => {
       const ast = baseParse('<div v-if/>')
       const directive = (ast.children[0] as ElementNode).props[0]
@@ -1241,6 +1307,27 @@ describe('compiler: parse', () => {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 21, line: 1, column: 22 },
           source: 'v-on:[a.b].camel'
+        }
+      })
+    })
+    test('directive with no name', () => {
+      let errorCode = -1
+      const ast = baseParse('<div v-/>', {
+        onError: err => {
+          errorCode = err.code as number
+        }
+      })
+      const directive = (ast.children[0] as ElementNode).props[0]
+
+      expect(errorCode).toBe(ErrorCodes.X_MISSING_DIRECTIVE_NAME)
+      expect(directive).toStrictEqual({
+        type: NodeTypes.ATTRIBUTE,
+        name: 'v-',
+        value: undefined,
+        loc: {
+          start: { offset: 5, line: 1, column: 6 },
+          end: { offset: 7, line: 1, column: 8 },
+          source: 'v-'
         }
       })
     })
@@ -1758,7 +1845,7 @@ describe('compiler: parse', () => {
       baseParse(`<div>\n<span>\n</div>\n</span>`)
     }).toThrow('Element is missing end tag.')
 
-    const spy = jest.fn()
+    const spy = vi.fn()
     const ast = baseParse(`<div>\n<span>\n</div>\n</span>`, {
       onError: spy
     })
@@ -1894,6 +1981,17 @@ foo
       expect(ast.children[2].type).toBe(NodeTypes.INTERPOLATION)
     })
 
+    it('should NOT remove whitespaces w/ newline between interpolation and comment', () => {
+      const ast = parse(`<!-- foo --> \n {{msg}}`)
+      expect(ast.children.length).toBe(3)
+      expect(ast.children[0].type).toBe(NodeTypes.COMMENT)
+      expect(ast.children[1]).toMatchObject({
+        type: NodeTypes.TEXT,
+        content: ' '
+      })
+      expect(ast.children[2].type).toBe(NodeTypes.INTERPOLATION)
+    })
+
     it('should NOT remove whitespaces w/o newline between elements', () => {
       const ast = parse(`<div/> <div/> <div/>`)
       expect(ast.children.length).toBe(5)
@@ -1937,7 +2035,7 @@ foo
         isPreTag: tag => tag === 'pre'
       })
       const elementAfterPre = ast.children[1] as ElementNode
-      // should not affect the <span> and condense its whitepsace inside
+      // should not affect the <span> and condense its whitespace inside
       expect((elementAfterPre.children[0] as TextNode).content).toBe(` foo bar`)
     })
 
@@ -2928,7 +3026,7 @@ foo
       ]
     }
 
-    for (const key of Object.keys(patterns) as (keyof typeof patterns)[]) {
+    for (const key of Object.keys(patterns)) {
       describe(key, () => {
         for (const { code, errors, options } of patterns[key]) {
           test(
@@ -2937,7 +3035,7 @@ foo
               c => `\\x0${c.codePointAt(0)!.toString(16)};`
             ),
             () => {
-              const spy = jest.fn()
+              const spy = vi.fn()
               const ast = baseParse(code, {
                 getNamespace: (tag, parent) => {
                   const ns = parent ? parent.ns : Namespaces.HTML

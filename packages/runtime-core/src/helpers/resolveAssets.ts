@@ -86,7 +86,10 @@ function resolveAsset(
 
     // explicit self name has highest priority
     if (type === COMPONENTS) {
-      const selfName = getComponentName(Component)
+      const selfName = getComponentName(
+        Component,
+        false /* do not include inferred name to avoid breaking existing code */
+      )
       if (
         selfName &&
         (selfName === name ||
@@ -110,7 +113,12 @@ function resolveAsset(
     }
 
     if (__DEV__ && warnMissing && !res) {
-      warn(`Failed to resolve ${type.slice(0, -1)}: ${name}`)
+      const extra =
+        type === COMPONENTS
+          ? `\nIf this is a native custom element, make sure to exclude it from ` +
+            `component resolution via compilerOptions.isCustomElement.`
+          : ``
+      warn(`Failed to resolve ${type.slice(0, -1)}: ${name}${extra}`)
     }
 
     return res

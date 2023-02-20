@@ -6,7 +6,8 @@ import {
   ComponentOptionsWithObjectProps,
   ComponentOptionsMixin,
   RenderFunction,
-  ComponentOptionsBase
+  ComponentOptionsBase,
+  ComponentInjectOptions
 } from './componentOptions'
 import {
   SetupContext,
@@ -39,11 +40,16 @@ export type DefineComponent<
   M extends MethodOptions = MethodOptions,
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = Record<string, any>,
+  E extends EmitsOptions = {},
   EE extends string = string,
   S = any,
   PP = PublicProps,
-  Props = Readonly<ExtractPropTypes<PropsOrPropOptions>> & EmitsToProps<E>,
+  Props = Readonly<
+    PropsOrPropOptions extends ComponentPropsOptions
+      ? ExtractPropTypes<PropsOrPropOptions>
+      : PropsOrPropOptions
+  > &
+    ({} extends E ? {} : EmitsToProps<E>),
   Defaults = ExtractDefaultPropTypes<PropsOrPropOptions>
 > = ComponentPublicInstanceConstructor<
   CreateComponentPublicInstance<
@@ -102,9 +108,11 @@ export function defineComponent<
   M extends MethodOptions = {},
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = EmitsOptions,
+  E extends EmitsOptions = {},
   EE extends string = string,
-  S = any
+  S = any,
+  I extends ComponentInjectOptions = {},
+  II extends string = string
 >(
   options: ComponentOptionsWithoutProps<
     Props,
@@ -116,7 +124,9 @@ export function defineComponent<
     Extends,
     E,
     EE,
-    S
+    S,
+    I,
+    II
   >
 ): DefineComponent<Props, RawBindings, D, C, M, Mixin, Extends, E, EE, S>
 
@@ -131,9 +141,11 @@ export function defineComponent<
   M extends MethodOptions = {},
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = Record<string, any>,
+  E extends EmitsOptions = {},
   EE extends string = string,
-  S = any
+  S = any,
+  I extends ComponentInjectOptions = {},
+  II extends string = string
 >(
   options: ComponentOptionsWithArrayProps<
     PropNames,
@@ -145,7 +157,9 @@ export function defineComponent<
     Extends,
     E,
     EE,
-    S
+	S,
+    I,
+    II
   >
 ): DefineComponent<
   Readonly<{ [key in PropNames]?: any }>,
@@ -172,9 +186,11 @@ export function defineComponent<
   M extends MethodOptions = {},
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = Record<string, any>,
+  E extends EmitsOptions = {},
   EE extends string = string,
-  S = any
+  S = any,
+  I extends ComponentInjectOptions = {},
+  II extends string = string
 >(
   options: ComponentOptionsWithObjectProps<
     PropsOptions,
@@ -186,7 +202,9 @@ export function defineComponent<
     Extends,
     E,
     EE,
-    S
+    S,
+    I,
+    II
   >
 ): DefineComponent<PropsOptions, RawBindings, D, C, M, Mixin, Extends, E, EE>
 

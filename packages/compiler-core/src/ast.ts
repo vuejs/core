@@ -100,7 +100,7 @@ export type TemplateChildNode =
 export interface RootNode extends Node {
   type: NodeTypes.ROOT
   children: TemplateChildNode[]
-  helpers: symbol[]
+  helpers: Set<symbol>
   components: string[]
   directives: string[]
   hoists: (JSChildNode | null)[]
@@ -259,6 +259,7 @@ export interface IfBranchNode extends Node {
   condition: ExpressionNode | undefined // else
   children: TemplateChildNode[]
   userKey?: AttributeNode | DirectiveNode
+  isTemplateIf?: boolean
 }
 
 export interface ForNode extends Node {
@@ -555,7 +556,7 @@ export function createRoot(
   return {
     type: NodeTypes.ROOT,
     children,
-    helpers: [],
+    helpers: new Set(),
     components: [],
     directives: [],
     hoists: [],

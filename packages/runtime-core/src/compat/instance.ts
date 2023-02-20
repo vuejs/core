@@ -2,9 +2,9 @@ import {
   extend,
   looseEqual,
   looseIndexOf,
+  looseToNumber,
   NOOP,
-  toDisplayString,
-  toNumber
+  toDisplayString
 } from '@vue/shared'
 import {
   ComponentPublicInstance,
@@ -128,7 +128,7 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
       // needed by many libs / render fns
       $vnode: i => i.vnode,
 
-      // inject addtional properties into $options for compat
+      // inject additional properties into $options for compat
       // e.g. vuex needs this.$options.parent
       $options: i => {
         const res = extend({}, resolveMergedOptions(i))
@@ -148,7 +148,7 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
       $createElement: () => compatH,
       _c: () => compatH,
       _o: () => legacyMarkOnce,
-      _n: () => toNumber,
+      _n: () => looseToNumber,
       _s: () => toDisplayString,
       _l: () => renderList,
       _t: i => legacyRenderSlot.bind(null, i),

@@ -15,6 +15,7 @@ import {
 } from './stylePreprocessors'
 import { RawSourceMap } from 'source-map'
 import { cssVarsPlugin } from './cssVars'
+import postcssModules from 'postcss-modules'
 
 export interface SFCStyleCompileOptions {
   source: string
@@ -30,7 +31,7 @@ export interface SFCStyleCompileOptions {
   postcssOptions?: any
   postcssPlugins?: any[]
   /**
-   * @deprecated
+   * @deprecated use `inMap` instead.
    */
   map?: RawSourceMap
 }
@@ -47,7 +48,7 @@ export interface CSSModulesOptions {
   hashPrefix?: string
   localsConvention?: 'camelCase' | 'camelCaseOnly' | 'dashes' | 'dashesOnly'
   exportGlobals?: boolean
-  globalModulePaths?: string[]
+  globalModulePaths?: RegExp[]
 }
 
 export interface SFCAsyncStyleCompileOptions extends SFCStyleCompileOptions {
@@ -131,7 +132,7 @@ export function doCompileStyle(
       )
     }
     plugins.push(
-      require('postcss-modules')({
+      postcssModules({
         ...modulesOptions,
         getJSON: (_cssFileName: string, json: Record<string, string>) => {
           cssModules = json
@@ -205,7 +206,7 @@ export function doCompileStyle(
     // force synchronous transform (we know we only have sync plugins)
     code = result.css
     outMap = result.map
-  } catch (e) {
+  } catch (e: any) {
     errors.push(e)
   }
 
