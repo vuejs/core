@@ -1437,7 +1437,7 @@ export function compileScript(
   ) {
     helperImports.add(CSS_VARS_HELPER)
     helperImports.add('unref')
-    s.prependRight(
+    s.prependLeft(
       startOffset,
       `\n${genCssVarsCode(cssVars, bindingMetadata, scopeId, isProd)}\n`
     )
