@@ -56,7 +56,8 @@ import {
   makeMap,
   isPromise,
   ShapeFlags,
-  extend
+  extend,
+  getGlobalThis
 } from '@vue/shared'
 import { SuspenseBoundary } from './components/Suspense'
 import { CompilerOptions } from '@vue/compiler-core'
@@ -565,14 +566,73 @@ export let currentInstance: ComponentInternalInstance | null = null
 export const getCurrentInstance: () => ComponentInternalInstance | null = () =>
   currentInstance || currentRenderingInstance
 
+type GlobalInstanceSetter = ((
+  instance: ComponentInternalInstance | null
+) => void) & { version?: string }
+
+let globalCurrentInstanceSetters: GlobalInstanceSetter[]
+let internalSetCurrentInstance: GlobalInstanceSetter
+let hasWarnedDuplicatedVue = false
+
+/**
+ * The following makes getCurrentInstance() usage across multiple copies of Vue
+ * work. Some cases of how this can happen are summarized in #7590. In principle
+ * the duplication should be avoided, but in practice there are often cases
+ * where the user is unable to resolve on their own, especially in complicated
+ * SSR setups.
+ *
+ * Note this fix is technically incomplete, as we still rely on other singletons
+ * for effectScope and global reactive dependency maps. However, it does make
+ * some of the most common cases work. It also warns if the duplication is
+ * found during browser execution.
+ */
+if (__SSR__) {
+  const settersKey = '__VUE_INSTANCE_SETTERS__'
+  if (!(globalCurrentInstanceSetters = getGlobalThis()[settersKey])) {
+    globalCurrentInstanceSetters = getGlobalThis()[settersKey] = []
+  }
+  globalCurrentInstanceSetters.push(i => (currentInstance = i))
+
+  if (__DEV__) {
+    globalCurrentInstanceSetters[
+      globalCurrentInstanceSetters.length - 1
+    ].version = __VERSION__
+  }
+
+  internalSetCurrentInstance = instance => {
+    if (globalCurrentInstanceSetters.length > 1) {
+      // eslint-disable-next-line no-restricted-globals
+      if (__DEV__ && !hasWarnedDuplicatedVue && typeof window !== 'undefined') {
+        warn(
+          `Mixed usage of duplicated Vue runtimes detected: ${globalCurrentInstanceSetters
+            .map(fn => fn.version)
+            .join(', ')}.\n` +
+            `This likely means there are multiple versions of Vue ` +
+            `duplicated in your dependency tree, and could lead to errors. ` +
+            `To avoid this warning, ensure that the all imports of Vue are resolving to ` +
+            `the same location on disk.`
+        )
+        hasWarnedDuplicatedVue = true
+      }
+      globalCurrentInstanceSetters.forEach(s => s(instance))
+    } else {
+      globalCurrentInstanceSetters[0](instance)
+    }
+  }
+} else {
+  internalSetCurrentInstance = i => {
+    currentInstance = i
+  }
+}
+
 export const setCurrentInstance = (instance: ComponentInternalInstance) => {
-  currentInstance = instance
+  internalSetCurrentInstance(instance)
   instance.scope.on()
 }
 
 export const unsetCurrentInstance = () => {
   currentInstance && currentInstance.scope.off()
-  currentInstance = null
+  internalSetCurrentInstance(null)
 }
 
 const isBuiltInTag = /*#__PURE__*/ makeMap('slot,component')
