@@ -22,8 +22,6 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    // if not using threads, Netlify goes OOM when generating coverage report
-    threads: process.env.NETLIFY ? true : false,
     setupFiles: 'scripts/setupVitest.ts',
     environmentMatchGlobs: [
       ['packages/{vue,vue-compat,runtime-dom}/**', 'jsdom']
