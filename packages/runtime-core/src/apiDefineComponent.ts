@@ -42,7 +42,7 @@ export type DefineComponent<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = {},
   EE extends string = string,
-  S = any,
+  S = {},
   PP = PublicProps,
   Props = Readonly<
     PropsOrPropOptions extends ComponentPropsOptions
@@ -95,7 +95,18 @@ export function defineComponent<Props, RawBindings = object, S = {}>(
     props: Readonly<Props>,
     ctx: SetupContext<EmitsOptions, Slots<S>>
   ) => RawBindings | RenderFunction
-): DefineComponent<Props, RawBindings, {}, any, any, any, any, any, string, S>
+): DefineComponent<
+  Props,
+  RawBindings,
+  {},
+  ComputedOptions,
+  MethodOptions,
+  ComponentOptionsMixin,
+  ComponentOptionsMixin,
+  {},
+  string,
+  S
+>
 
 // overload 2: object format with no props
 // (uses user defined props interface)
@@ -157,7 +168,7 @@ export function defineComponent<
     Extends,
     E,
     EE,
-	S,
+    S,
     I,
     II
   >
