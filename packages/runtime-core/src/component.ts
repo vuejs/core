@@ -570,9 +570,9 @@ type GlobalInstanceSetter = ((
   instance: ComponentInternalInstance | null
 ) => void) & { version?: string }
 
-let globalCurrentInstanceSetters: GlobalInstanceSetter[]
 let internalSetCurrentInstance: GlobalInstanceSetter
-let hasWarnedDuplicatedVue = false
+let globalCurrentInstanceSetters: GlobalInstanceSetter[]
+let settersKey = '__VUE_INSTANCE_SETTERS__'
 
 /**
  * The following makes getCurrentInstance() usage across multiple copies of Vue
@@ -587,33 +587,12 @@ let hasWarnedDuplicatedVue = false
  * found during browser execution.
  */
 if (__SSR__) {
-  const settersKey = '__VUE_INSTANCE_SETTERS__'
   if (!(globalCurrentInstanceSetters = getGlobalThis()[settersKey])) {
     globalCurrentInstanceSetters = getGlobalThis()[settersKey] = []
   }
   globalCurrentInstanceSetters.push(i => (currentInstance = i))
-
-  if (__DEV__) {
-    globalCurrentInstanceSetters[
-      globalCurrentInstanceSetters.length - 1
-    ].version = __VERSION__
-  }
-
   internalSetCurrentInstance = instance => {
     if (globalCurrentInstanceSetters.length > 1) {
-      // eslint-disable-next-line no-restricted-globals
-      if (__DEV__ && !hasWarnedDuplicatedVue && typeof window !== 'undefined') {
-        warn(
-          `Mixed usage of duplicated Vue runtimes detected: ${globalCurrentInstanceSetters
-            .map(fn => fn.version)
-            .join(', ')}.\n` +
-            `This likely means there are multiple versions of Vue ` +
-            `duplicated in your dependency tree, and could lead to errors. ` +
-            `To avoid this warning, ensure that the all imports of Vue are resolving to ` +
-            `the same location on disk.`
-        )
-        hasWarnedDuplicatedVue = true
-      }
       globalCurrentInstanceSetters.forEach(s => s(instance))
     } else {
       globalCurrentInstanceSetters[0](instance)
