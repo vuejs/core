@@ -72,7 +72,10 @@ interface Constructor<P = any, S = any> {
   __isFragment?: never
   __isTeleport?: never
   __isSuspense?: never
-  new (...args: any[]): { $props: P; $slots?: S }
+  new (...args: any[]): {
+    $props: P
+    $slots?: S
+  }
 }
 
 // The following is a series of overloads for providing props validation of
@@ -159,7 +162,13 @@ export function h(type: Constructor, children?: RawChildren): VNode
 export function h<P, S>(
   type: Constructor<P, S>,
   props?: (RawProps & P) | ({} extends P ? null : never),
-  children?: (RawChildren & S) | ({} extends S ? RawSlots : S)
+  children?: (RawChildren & S) | ({} extends S ? RawSlots : Partial<S>)
+): VNode
+// for the string array slot declaration
+export function h<P, S>(
+  type: Constructor<P, S>,
+  props?: (RawProps & P) | ({} extends P ? null : never),
+  children?: RawChildren & Partial<S>
 ): VNode
 
 // fake constructor type returned by `defineComponent`

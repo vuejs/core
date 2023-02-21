@@ -119,7 +119,7 @@ export interface ComponentOptionsBase<
   Extends extends ComponentOptionsMixin,
   E extends EmitsOptions,
   EE extends string = string,
-  S = any,
+  S = {},
   Defaults = {},
   I extends ComponentInjectOptions = {},
   II extends string = string
@@ -231,7 +231,7 @@ export type ComponentOptionsWithoutProps<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
-  S = any,
+  S = {},
   I extends ComponentInjectOptions = {},
   II extends string = string,
   PE = Props & EmitsToProps<E>
@@ -279,7 +279,7 @@ export type ComponentOptionsWithArrayProps<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
-  S = any,
+  S = {},
   I extends ComponentInjectOptions = {},
   II extends string = string,
   Props = Readonly<{ [key in PropNames]?: any }> & EmitsToProps<E>
@@ -327,7 +327,7 @@ export type ComponentOptionsWithObjectProps<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
-  S = any,
+  S = {},
   I extends ComponentInjectOptions = {},
   II extends string = string,
   Props = Readonly<ExtractPropTypes<PropsOptions>> & EmitsToProps<E>,

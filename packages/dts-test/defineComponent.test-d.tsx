@@ -86,7 +86,7 @@ describe('with object props', () => {
     ff: Function as PropType<(a: number, b: string) => { a: boolean }>,
     // explicit type casting with constructor
     ccc: Array as () => string[],
-    // required + contructor type casting
+    // required + constructor type casting
     ddd: {
       type: Array as () => string[],
       required: true as true
@@ -1251,71 +1251,105 @@ describe('prop starting with `on*` is broken', () => {
 })
 
 describe('typed slots', () => {
-  const Comp = defineComponent({
-    slots: {
-      test: null,
-      item: Object as () => { item: { value: number }; i: number }
-    },
+  describe('Object declaration', () => {
+    const Comp = defineComponent({
+      slots: {
+        test: null,
+        item: Object as () => { item: { value: number }; i: number }
+      },
 
-    setup(_, { slots }) {
-      slots.test!()
-      slots.item!({
-        i: 22,
-        item: {
-          value: 22
+      setup(_, { slots }) {
+        slots.test!()
+        slots.item!({
+          i: 22,
+          item: {
+            value: 22
+          }
+        })
+        // @ts-expect-error missing item prop
+        expectError(slots.item!({ i: 22 }))
+      }
+    })
+
+    h(
+      Comp,
+      {},
+      {
+        // @ts-expect-error no argument expected
+        test(x) {},
+        item(s) {
+          expectType<number>(s.i)
+          expectType<{ value: number }>(s.item)
         }
-      })
-      // @ts-expect-error missing item prop
-      expectError(slots.item!({ i: 22 }))
-    }
+      }
+    )
+
+    h(Comp, {}, {})
   })
 
-  h(
-    Comp,
-    {},
-    {
-      // @ts-expect-error no argument expected
-      test(x) {},
-      item(s) {
-        expectType<number>(s.i)
-        expectType<{ value: number }>(s.item)
+  describe('Type API', () => {
+    const Comp = defineComponent({
+      slots: {} as {
+        test: null
+        item: { item: { value: number }; i: number }
+      },
+
+      setup(_, { slots }) {
+        slots.test!()
+        slots.item!({
+          i: 22,
+          item: {
+            value: 22
+          }
+        })
+        // @ts-expect-error missing item prop
+        slots.item!({ i: 22 })
       }
-    }
-  )
-})
+    })
 
-describe('typed slots just type', () => {
-  const Comp = defineComponent({
-    slots: {} as {
-      test: null
-      item: { item: { value: number }; i: number }
-    },
+    h(
+      Comp,
+      {},
+      {
+        item() {},
+        test() {}
+      }
+    )
 
-    setup(_, { slots }) {
-      slots.test!()
-      slots.item!({
-        i: 22,
-        item: {
-          value: 22
+    h(
+      Comp,
+      {},
+      {
+        // @ts-expect-error no argument expected
+        test(x) {},
+        item(s) {
+          expectType<number>(s.i)
+          expectType<{ value: number }>(s.item)
         }
-      })
-      // @ts-expect-error missing item prop
-      expectError(slots.item!({ i: 22 }))
-    }
+      }
+    )
+    h(Comp, {}, {})
   })
 
-  h(
-    Comp,
-    {},
-    {
-      // @ts-expect-error no argument expected
-      test(x) {},
-      item(s) {
-        expectType<number>(s.i)
-        expectType<{ value: number }>(s.item)
+  describe('string Array', () => {
+    const Comp = defineComponent({
+      slots: ['test', 'item'] as const,
+
+      setup(_, { slots }) {
+        slots.test!()
+        slots.item!({
+          i: 22,
+          item: {
+            value: 22
+          }
+        })
+        // @ts-expect-error not a valid slot
+        slots.other!({ i: 22 })
       }
-    }
-  )
+    })
+
+    h(Comp, {}, {})
+  })
 })
 
 // check if defineComponent can be exported

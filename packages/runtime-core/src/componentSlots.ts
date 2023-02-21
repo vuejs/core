@@ -31,7 +31,7 @@ export type InternalSlots<T = any> = {
 }
 
 export type SlotsObject<T = any> = InternalSlots<T>
-export type SlotArray<V = PropertyKey> = V extends PropertyKey
+export type SlotArray<V = PropertyKey> = [V] extends [PropertyKey]
   ? Record<V, Slot>
   : Record<string, Slot>
 
@@ -39,6 +39,8 @@ export type Slots<T = any> = RenderSlot &
   (unknown extends T
     ? Readonly<Partial<Record<string, Slot>>>
     : T extends Array<infer V>
+    ? Readonly<SlotArray<V>>
+    : T extends ReadonlyArray<infer V>
     ? Readonly<SlotArray<V>>
     : Readonly<SlotsObject<T>>)
 

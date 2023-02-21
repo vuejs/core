@@ -121,7 +121,7 @@ export function defineComponent<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = {},
   EE extends string = string,
-  S = any,
+  S = {},
   I extends ComponentInjectOptions = {},
   II extends string = string
 >(
@@ -154,7 +154,7 @@ export function defineComponent<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = {},
   EE extends string = string,
-  S = any,
+  S = {},
   I extends ComponentInjectOptions = {},
   II extends string = string
 >(
@@ -199,7 +199,7 @@ export function defineComponent<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = {},
   EE extends string = string,
-  S = any,
+  S = {},
   I extends ComponentInjectOptions = {},
   II extends string = string
 >(
