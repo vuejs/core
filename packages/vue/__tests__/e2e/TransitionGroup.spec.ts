@@ -306,10 +306,10 @@ describe('e2e: TransitionGroup', () => {
         createApp({
           template: `
               <div id="container">
-								<transition-group name="group">
-									<div v-for="item in items" :key="item" ref="itemRef" class="test">{{item}}</div>
-								</transition-group>
-							</div>
+                <transition-group name="group">
+                  <div v-for="item in items" :key="item" ref="itemRef" class="test">{{item}}</div>
+                </transition-group>
+              </div>
               <button id="toggleBtn" @click="click">button</button>
             `,
           setup: () => {
