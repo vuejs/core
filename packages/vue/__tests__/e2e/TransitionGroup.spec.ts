@@ -320,7 +320,6 @@ describe('e2e: TransitionGroup', () => {
           }
         }).mount('#app')
       })
-
       expect(await html('#container')).toBe(
         `<div class="test">a</div>` +
           `<div class="test">b</div>` +
@@ -347,7 +346,6 @@ describe('e2e: TransitionGroup', () => {
           `<div class="test" style="">a</div>`
       )
     },
-
     E2E_TIMEOUT
   )
 
