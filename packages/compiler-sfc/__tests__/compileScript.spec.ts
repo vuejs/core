@@ -172,8 +172,6 @@ const myEmit = defineEmits(['foo', 'bar'])
     expect(content).toMatch(`emits: ['a'],`)
   })
 
-  // ss
-
   test('defineSlots()', () => {
     const { content, bindings } = compile(`
 <script setup>
