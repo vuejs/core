@@ -1147,6 +1147,83 @@ describe('e2e: Transition', () => {
           createApp({
             template: `
               <div id="container">
+                <transition name="test">
+                  <component class="test" :is="view"></component>
+                </transition>
+              </div>
+              <button id="toggleBtn" @click="click">button</button>
+              <button id="changeViewBtn" @click="change">button</button>
+            `,
+            components: {
+              one: {
+                template: '<div v-if="false">one</div>'
+              },
+              two: {
+                template: '<div>two</div>'
+              }
+            },
+            setup: () => {
+              const toggle = ref(true)
+              const view = ref('one')
+              const click = () => (toggle.value = !toggle.value)
+              const change = () =>
+                (view.value = view.value === 'one' ? 'two' : 'one')
+              return { toggle, click, change, view }
+            }
+          }).mount('#app')
+        })
+        expect(await html('#container')).toBe('<!--v-if-->')
+
+        // change view -> 'two'
+        await page().evaluate(() => {
+          ;(document.querySelector('#changeViewBtn') as any)!.click()
+        })
+        // enter
+        expect(await classWhenTransitionStart()).toStrictEqual([
+          'test',
+          'test-enter-from',
+          'test-enter-active'
+        ])
+        await nextFrame()
+        expect(await classList('.test')).toStrictEqual([
+          'test',
+          'test-enter-active',
+          'test-enter-to'
+        ])
+        await transitionFinish()
+        expect(await html('#container')).toBe('<div class="test">two</div>')
+
+        // change view -> 'one'
+        await page().evaluate(() => {
+          ;(document.querySelector('#changeViewBtn') as any)!.click()
+        })
+        // leave
+        expect(await classWhenTransitionStart()).toStrictEqual([
+          'test',
+          'test-leave-from',
+          'test-leave-active'
+        ])
+        await nextFrame()
+        expect(await classList('.test')).toStrictEqual([
+          'test',
+          'test-leave-active',
+          'test-leave-to'
+        ])
+        await transitionFinish()
+        expect(await html('#container')).toBe('<!--v-if-->')
+      },
+      E2E_TIMEOUT
+    )
+
+    // issue https://github.com/vuejs/core/issues/7649
+    test(
+      'transition with v-if at component root-level',
+      async () => {
+        await page().evaluate(() => {
+          const { createApp, ref } = (window as any).Vue
+          createApp({
+            template: `
+              <div id="container">
                 <transition name="test" mode="out-in">
                   <component class="test" :is="view"></component>
                 </transition>
