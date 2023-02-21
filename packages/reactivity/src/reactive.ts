@@ -76,7 +76,7 @@ export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRefSimple<T>
  * const obj = reactive({ count: 0 })
  * ```
  *
- * @param target The source object.
+ * @param target - The source object.
  * @see {@link https://vuejs.org/api/reactivity-core.html#reactive}
  */
 export function reactive<T extends object>(target: T): UnwrapNestedRefs<T>
@@ -125,7 +125,7 @@ export type ShallowReactive<T> = T & { [ShallowReactiveMarker]?: true }
  * state.nested.bar++
  * ```
  *
- * @param target The source object.
+ * @param target - The source object.
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#shallowreactive}
  */
 export function shallowReactive<T extends object>(
@@ -190,7 +190,7 @@ export type DeepReadonly<T> = T extends Builtin
  * copy.count++ // warning!
  * ```
  *
- * @param target The source object.
+ * @param target - The source object.
  * @see {@link https://vuejs.org/api/reactivity-core.html#readonly}
  */
 export function readonly<T extends object>(
@@ -232,7 +232,7 @@ export function readonly<T extends object>(
  * state.nested.bar++
  * ```
  *
- * @param target The source object.
+ * @param target - The source object.
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#shallowreadonly}
  */
 export function shallowReadonly<T extends object>(target: T): Readonly<T> {
@@ -299,7 +299,7 @@ function createReactiveObject(
  * isReactive(shallowReactive({}))     // => true
  * ```
  *
- * @param value The value to check.
+ * @param value - The value to check.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#isreactive}
  */
 export function isReactive(value: unknown): boolean {
@@ -317,7 +317,7 @@ export function isReactive(value: unknown): boolean {
  * The proxies created by {@link readonly()} and {@link shallowReadonly()} are
  * both considered readonly, as is a computed ref without a set function.
  *
- * @param value The value to check.
+ * @param value - The value to check.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#isreadonly}
  */
 export function isReadonly(value: unknown): boolean {
@@ -332,7 +332,7 @@ export function isShallow(value: unknown): boolean {
  * Checks if an object is a proxy created by {@link reactive},
  * {@link readonly}, {@link shallowReactive} or {@link shallowReadonly()}.
  *
- * @param value The value to check.
+ * @param value - The value to check.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#isproxy}
  */
 export function isProxy(value: unknown): boolean {
@@ -359,7 +359,7 @@ export function isProxy(value: unknown): boolean {
  * console.log(toRaw(reactiveFoo) === foo) // true
  * ```
  *
- * @param observed The object for which the "raw" value is requested.
+ * @param observed - The object for which the "raw" value is requested.
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#toraw}
  */
 export function toRaw<T>(observed: T): T {
@@ -388,7 +388,7 @@ export type Raw<T> = T & { [RawSymbol]?: true }
  * deep reactive/readonly conversion and embed raw, non-proxied objects in your
  * state graph.
  *
- * @param value The object to be marked as "raw".
+ * @param value - The object to be marked as "raw".
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#markraw}
  */
 export function markRaw<T extends object>(value: T): Raw<T> {
@@ -401,7 +401,7 @@ export function markRaw<T extends object>(value: T): Raw<T> {
  *
  * If the given value is not an object, the original value itself is returned.
  *
- * @param value The value for which a reactive proxy shall be created.
+ * @param value - The value for which a reactive proxy shall be created.
  */
 export const toReactive = <T extends unknown>(value: T): T =>
   isObject(value) ? reactive(value) : value
@@ -411,7 +411,7 @@ export const toReactive = <T extends unknown>(value: T): T =>
  *
  * If the given value is not an object, the original value itself is returned.
  *
- * @param value The value for which a readonly proxy shall be created.
+ * @param value - The value for which a readonly proxy shall be created.
  */
 export const toReadonly = <T extends unknown>(value: T): T =>
   isObject(value) ? readonly(value as Record<any, any>) : value

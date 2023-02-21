@@ -97,8 +97,8 @@ export class ComputedRefImpl<T> {
  * console.log(count.value) // 0
  * ```
  *
- * @param getter Function that produces the next value.
- * @param debugOptions For debugging. See {@link https://vuejs.org/guide/extras/reactivity-in-depth.html#computed-debugging}.
+ * @param getter - Function that produces the next value.
+ * @param debugOptions - For debugging. See {@link https://vuejs.org/guide/extras/reactivity-in-depth.html#computed-debugging}.
  * @see {@link https://vuejs.org/api/reactivity-core.html#computed}
  */
 export function computed<T>(

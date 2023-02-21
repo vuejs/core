@@ -173,8 +173,8 @@ export interface ReactiveEffectRunner<T = any> {
  * The given function will be run once immediately. Every time any reactive
  * property that's accessed within it gets updated, the function will run again.
  *
- * @param fn The function that will track reactive updates.
- * @param options Allows to control the effect's behaviour.
+ * @param fn - The function that will track reactive updates.
+ * @param options - Allows to control the effect's behaviour.
  * @returns A runner that can be used to control the effect after creation.
  */
 export function effect<T = any>(
@@ -201,7 +201,7 @@ export function effect<T = any>(
 /**
  * Stops the effect associated with the given runner.
  *
- * @param runner Association with the effect to stop tracking.
+ * @param runner - Association with the effect to stop tracking.
  */
 export function stop(runner: ReactiveEffectRunner) {
   runner.effect.stop()
@@ -240,9 +240,9 @@ export function resetTracking() {
  * This will check which effect is running at the moment and record it as dep
  * which records all effects that depend on the reactive property.
  *
- * @param target Object holding the reactive property.
- * @param type Defines the type of access to the reactive property.
- * @param key Identifier of the reactive property to track.
+ * @param target - Object holding the reactive property.
+ * @param type - Defines the type of access to the reactive property.
+ * @param key - Identifier of the reactive property to track.
  */
 export function track(target: object, type: TrackOpTypes, key: unknown) {
   if (shouldTrack && activeEffect) {
@@ -298,9 +298,9 @@ export function trackEffects(
  * Finds all deps associated with the target (or a specific property) and
  * triggers the effects stored within.
  *
- * @param target The reactive object.
- * @param type Defines the type of the operation that needs to trigger effects.
- * @param key Can be used to target a specific reactive property in the target object.
+ * @param target - The reactive object.
+ * @param type - Defines the type of the operation that needs to trigger effects.
+ * @param key - Can be used to target a specific reactive property in the target object.
  */
 export function trigger(
   target: object,
