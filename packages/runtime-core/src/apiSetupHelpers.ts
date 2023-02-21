@@ -7,6 +7,7 @@ import {
   unsetCurrentInstance
 } from './component'
 import { EmitFn, EmitsOptions } from './componentEmits'
+import { Slots } from './componentSlots'
 import {
   ComponentPropsOptions,
   ComponentObjectPropsOptions,
@@ -111,6 +112,39 @@ export function defineEmits<TypeEmit>(): TypeEmit
 export function defineEmits() {
   if (__DEV__) {
     warnRuntimeUsage(`defineEmits`)
+  }
+  return null as any
+}
+
+/**
+ * Vue `<script setup>` compiler macro for declaring a component's available
+ * slots. The expected argument is the same as the component `slots` option.
+ *
+ * Example runtime declaration:
+ * ```js
+ * const slots = defineSlots(['item'])
+ * ```
+ *
+ * Example type-based declaration:
+ * ```ts
+ * const slots = defineSlots<{
+ *   item: { value: string }
+ * }>()
+ *
+ * <slot name='item' value="test"></slot>
+ * ```
+ *
+ * This is only usable inside `<script setup>`, is compiled away in the
+ * output and should **not** be actually called at runtime.
+ */
+// overload 1: runtime slots w/ array
+export function defineSlots<SS extends string = string>(slots: SS[]): Slots<SS>
+export function defineSlots<S>(slots: S): Slots<S>
+export function defineSlots<S>(): Slots<S>
+// implementation
+export function defineSlots() {
+  if (__DEV__) {
+    warnRuntimeUsage(`defineSlots`)
   }
   return null as any
 }

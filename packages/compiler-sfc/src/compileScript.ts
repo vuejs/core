@@ -60,6 +60,7 @@ import { shouldTransform, transformAST } from '@vue/reactivity-transform'
 // Special compiler macros
 const DEFINE_PROPS = 'defineProps'
 const DEFINE_EMITS = 'defineEmits'
+const DEFINE_SLOTS = 'defineSlots'
 const DEFINE_EXPOSE = 'defineExpose'
 const WITH_DEFAULTS = 'withDefaults'
 
@@ -139,6 +140,9 @@ export interface ImportBinding {
 type FromNormalScript<T> = T & { __fromNormalScript?: boolean | null }
 type PropsDeclType = FromNormalScript<TSTypeLiteral | TSInterfaceBody>
 type EmitsDeclType = FromNormalScript<
+  TSFunctionType | TSTypeLiteral | TSInterfaceBody
+>
+type SlotsDeclType = FromNormalScript<
   TSFunctionType | TSTypeLiteral | TSInterfaceBody
 >
 
@@ -286,6 +290,7 @@ export function compileScript(
   let defaultExport: Node | undefined
   let hasDefinePropsCall = false
   let hasDefineEmitCall = false
+  let hasDefineSlotCall = false
   let hasDefineExposeCall = false
   let hasDefaultExportName = false
   let hasDefaultExportRender = false
@@ -300,11 +305,16 @@ export function compileScript(
   let emitsTypeDecl: EmitsDeclType | undefined
   let emitsTypeDeclRaw: Node | undefined
   let emitIdentifier: string | undefined
+  let slotsRuntimeDecl: Node | undefined
+  let slotsTypeDecl: EmitsDeclType | undefined
+  let slotsTypeDeclRaw: Node | undefined
+  let slotsIdentifier: string | undefined
   let hasAwait = false
   let hasInlinedSsrRenderFn = false
   // props/emits declared via types
   const typeDeclaredProps: Record<string, PropTypeData> = {}
   const typeDeclaredEmits: Set<string> = new Set()
+  const typeDeclaredSlots: Set<string> = new Set()
   // record declared types for runtime props type generation
   const declaredTypes: Record<string, string[]> = {}
   // props destructure data
@@ -590,6 +600,48 @@ export function compileScript(
     return true
   }
 
+  function processDefineSlots(node: Node, declId?: LVal): boolean {
+    if (!isCallOf(node, DEFINE_SLOTS)) {
+      return false
+    }
+    if (hasDefineSlotCall) {
+      error(`duplicate ${DEFINE_SLOTS}() call`, node)
+    }
+    hasDefineSlotCall = true
+    slotsRuntimeDecl = node.arguments[0]
+    if (node.typeParameters) {
+      if (slotsRuntimeDecl) {
+        error(
+          `${DEFINE_SLOTS}() cannot accept both type and non-type arguments ` +
+            `at the same time. Use one or the other.`,
+          node
+        )
+      }
+
+      slotsTypeDeclRaw = node.typeParameters.params[0]
+      slotsTypeDecl = resolveQualifiedType(
+        slotsTypeDeclRaw,
+        node => node.type === 'TSFunctionType' || node.type === 'TSTypeLiteral'
+      ) as SlotsDeclType | undefined
+
+      if (!slotsTypeDecl) {
+        error(
+          `type argument passed to ${DEFINE_SLOTS}() must be a function type, ` +
+            `a literal type with call signatures, or a reference to the above types.`,
+          slotsTypeDeclRaw
+        )
+      }
+    }
+
+    if (declId) {
+      slotsIdentifier =
+        declId.type === 'Identifier'
+          ? declId.name
+          : scriptSetup!.content.slice(declId.start!, declId.end!)
+    }
+
+    return true
+  }
   function getAstBody(): Statement[] {
     return scriptAst
       ? [...scriptSetupAst.body, ...scriptAst.body]
@@ -1194,6 +1246,7 @@ export function compileScript(
       if (
         processDefineProps(node.expression) ||
         processDefineEmits(node.expression) ||
+        processDefineSlots(node.expression) ||
         processWithDefaults(node.expression)
       ) {
         s.remove(node.start! + startOffset, node.end! + startOffset)
@@ -1219,7 +1272,8 @@ export function compileScript(
             processDefineProps(decl.init, decl.id, node.kind) ||
             processWithDefaults(decl.init, decl.id, node.kind)
           const isDefineEmits = processDefineEmits(decl.init, decl.id)
-          if (isDefineProps || isDefineEmits) {
+          const isDefineSlots = processDefineSlots(decl.init, decl.id)
+          if (isDefineProps || isDefineEmits || isDefineSlots) {
             if (left === 1) {
               s.remove(node.start! + startOffset, node.end! + startOffset)
             } else {
@@ -1344,12 +1398,15 @@ export function compileScript(
     }
   }
 
-  // 4. extract runtime props/emits code from setup context type
+  // 4. extract runtime props/emits/slots code from setup context type
   if (propsTypeDecl) {
     extractRuntimeProps(propsTypeDecl, typeDeclaredProps, declaredTypes, isProd)
   }
   if (emitsTypeDecl) {
     extractRuntimeEmits(emitsTypeDecl, typeDeclaredEmits)
+  }
+  if (slotsTypeDecl) {
+    extractRuntimeSlots(slotsTypeDecl, typeDeclaredSlots)
   }
 
   // 5. check useOptions args to make sure it doesn't reference setup scope
@@ -1358,6 +1415,7 @@ export function compileScript(
   checkInvalidScopeReference(propsRuntimeDefaults, DEFINE_PROPS)
   checkInvalidScopeReference(propsDestructureDecl, DEFINE_PROPS)
   checkInvalidScopeReference(emitsRuntimeDecl, DEFINE_EMITS)
+  checkInvalidScopeReference(slotsRuntimeDecl, DEFINE_SLOTS)
 
   // 6. remove non-script content
   if (script) {
@@ -1483,6 +1541,11 @@ export function compileScript(
       emitIdentifier === `emit` ? `emit` : `emit: ${emitIdentifier}`
     )
   }
+  if (slotsIdentifier) {
+    destructureElements.push(
+      slotsIdentifier === `slots` ? `slots` : `slots: ${slotsIdentifier}`
+    )
+  }
   if (destructureElements.length) {
     args += `, { ${destructureElements.join(', ')} }`
     if (emitsTypeDecl) {
@@ -1493,6 +1556,17 @@ export function compileScript(
         emitsTypeDecl.start!,
         emitsTypeDecl.end!
       )}), expose: any, slots: any, attrs: any }`
+    }
+
+    // TODO review this part
+    if (slotsTypeDecl) {
+      const content = slotsTypeDecl.__fromNormalScript
+        ? script!.content
+        : scriptSetup.content
+      args += `: { slots: (${content.slice(
+        slotsTypeDecl.start!,
+        slotsTypeDecl.end!
+      )}), expose: any, emit: any, attrs: any }`
     }
   }
 
@@ -1644,7 +1718,13 @@ export function compileScript(
   } else if (emitsTypeDecl) {
     runtimeOptions += genRuntimeEmits(typeDeclaredEmits)
   }
-
+  if (slotsRuntimeDecl) {
+    runtimeOptions += `\n  slots: ${scriptSetup.content
+      .slice(slotsRuntimeDecl.start!, slotsRuntimeDecl.end!)
+      .trim()},`
+  } else if (slotsTypeDecl) {
+    runtimeOptions += genRuntimeSlots(typeDeclaredSlots)
+  }
   // <script setup> components are closed by default. If the user did not
   // explicitly call `defineExpose`, call expose() with no args.
   const exposeCall =
@@ -2015,6 +2095,23 @@ function extractRuntimeEmits(
   }
 }
 
+function extractRuntimeSlots(
+  node: TSFunctionType | TSTypeLiteral | TSInterfaceBody,
+  slots: Set<string>
+) {
+  if (node.type === 'TSTypeLiteral' || node.type === 'TSInterfaceBody') {
+    const members = node.type === 'TSTypeLiteral' ? node.members : node.body
+    for (let t of members) {
+      if (t.type === 'TSCallSignatureDeclaration') {
+        extractEventNames(t.parameters[0], slots)
+      }
+    }
+    return
+  } else {
+    extractEventNames(node.parameters[0], slots)
+  }
+}
+
 function extractEventNames(
   eventName: Identifier | RestElement,
   emits: Set<string>
@@ -2049,6 +2146,14 @@ function extractEventNames(
 function genRuntimeEmits(emits: Set<string>) {
   return emits.size
     ? `\n  emits: [${Array.from(emits)
+        .map(p => JSON.stringify(p))
+        .join(', ')}],`
+    : ``
+}
+
+function genRuntimeSlots(slots: Set<string>) {
+  return slots.size
+    ? `\n  slots: [${Array.from(slots)
         .map(p => JSON.stringify(p))
         .join(', ')}],`
     : ``

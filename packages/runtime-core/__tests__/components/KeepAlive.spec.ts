@@ -740,6 +740,11 @@ describe('KeepAlive', () => {
     const spyUnmounted = vi.fn()
 
     const RouterView = defineComponent({
+      slots: null as unknown as {
+        default: {
+          Component: ComponentPublicInstance
+        }
+      },
       setup(_, { slots }) {
         const Component = inject<Ref<ComponentPublicInstance>>('component')
         const refView = ref()

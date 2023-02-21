@@ -223,3 +223,17 @@ export function defineComponent<
 export function defineComponent(options: unknown) {
   return isFunction(options) ? { setup: options, name: options.name } : options
 }
+
+defineComponent({
+  slots: null as unknown as {
+    item: {
+      value: string
+    }
+  },
+
+  setup(_, { slots }) {
+    slots.item?.({
+      value: '1'
+    })
+  }
+})

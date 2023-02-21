@@ -17,6 +17,7 @@ import {
 } from '@vue/runtime-test'
 import {
   defineEmits,
+  defineSlots,
   defineProps,
   defineExpose,
   withDefaults,
@@ -34,6 +35,9 @@ describe('SFC <script setup> helpers', () => {
 
     defineEmits()
     expect(`defineEmits() is a compiler-hint`).toHaveBeenWarned()
+
+    defineSlots()
+    expect(`defineSlots() is a compiler-hint`).toHaveBeenWarned()
 
     defineExpose()
     expect(`defineExpose() is a compiler-hint`).toHaveBeenWarned()

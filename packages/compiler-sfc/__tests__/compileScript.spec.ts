@@ -172,6 +172,67 @@ const myEmit = defineEmits(['foo', 'bar'])
     expect(content).toMatch(`emits: ['a'],`)
   })
 
+  // ss
+
+  test('defineSlots()', () => {
+    const { content, bindings } = compile(`
+<script setup>
+const mySlots = defineSlots(['foo', 'bar'])
+</script>
+  `)
+    assertCode(content)
+    expect(bindings).toStrictEqual({
+      mySlots: BindingTypes.SETUP_CONST
+    })
+    // should remove defineOptions import and call
+    expect(content).not.toMatch('defineSlots')
+    // should generate correct setup signature
+    expect(content).toMatch(`setup(__props, { expose, slots: mySlots }) {`)
+    // should include context options in default export
+    expect(content).toMatch(`export default {
+  slots: ['foo', 'bar'],`)
+  })
+
+  test('defineProps/defineSlots in multi-variable declaration', () => {
+    const { content } = compile(`
+    <script setup>
+    const props = defineProps(['item']),
+      a = 1,
+      slots = defineSlots(['a']);
+    </script>
+  `)
+    assertCode(content)
+    expect(content).toMatch(`const a = 1;`) // test correct removal
+    expect(content).toMatch(`props: ['item'],`)
+    expect(content).toMatch(`slots: ['a'],`)
+  })
+
+  test('defineProps/defineSlots in multi-variable declaration fix #6757 ', () => {
+    const { content } = compile(`
+    <script setup>
+    const a = 1,
+          props = defineProps(['item']),
+          slots = defineSlots(['a']);
+    </script>
+  `)
+    assertCode(content)
+    expect(content).toMatch(`const a = 1;`) // test correct removal
+    expect(content).toMatch(`props: ['item'],`)
+    expect(content).toMatch(`slots: ['a'],`)
+  })
+
+  test('defineProps/defineSlots in multi-variable declaration (full removal)', () => {
+    const { content } = compile(`
+    <script setup>
+    const props = defineProps(['item']),
+          slots = defineSlots(['a']);
+    </script>
+  `)
+    assertCode(content)
+    expect(content).toMatch(`props: ['item'],`)
+    expect(content).toMatch(`slots: ['a'],`)
+  })
+
   test('defineExpose()', () => {
     const { content } = compile(`
 <script setup>
@@ -1136,7 +1197,7 @@ const emit = defineEmits(['a', 'b'])
       `)
       assertCode(content)
     })
-    
+
     // #7111
     test('withDefaults (static) w/ production mode', () => {
       const { content } = compile(
@@ -1277,7 +1338,6 @@ const emit = defineEmits(['a', 'b'])
       expect(content).toMatch(`emits: ["foo", "bar"]`)
     })
 
-    
     test('defineEmits w/ type from normal script', () => {
       const { content } = compile(`
       <script lang="ts">

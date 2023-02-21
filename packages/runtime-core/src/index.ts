@@ -67,6 +67,7 @@ export {
   // macros runtime, for typing and warnings only
   defineProps,
   defineEmits,
+  defineSlots,
   defineExpose,
   withDefaults,
   // internal
