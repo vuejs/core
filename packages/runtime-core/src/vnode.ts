@@ -604,7 +604,12 @@ function _createVNode(
 }
 
 export function guardReactiveProps(props: (Data & VNodeProps) | null) {
-  if (!props || !isObject(props)) return null
+  if (!props || !isObject(props)) {
+    if (__DEV__) {
+      warn(`v-bind must pass in an object`)
+    }
+    return null
+  }
   return isProxy(props) || InternalObjectKey in props
     ? extend({}, props)
     : props
