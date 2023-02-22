@@ -1,6 +1,3 @@
-// This entry exports the runtime only, and is built as
-// `dist/vue.esm-bundler.js` which is used by default for bundlers.
-import { initDev } from './dev'
 import {
   compatUtils,
   createApp,
@@ -12,10 +9,6 @@ import {
   vModelDynamic
 } from '@vue/runtime-dom'
 import { extend } from '@vue/shared'
-
-if (__DEV__) {
-  initDev()
-}
 
 import * as runtimeDom from '@vue/runtime-dom'
 

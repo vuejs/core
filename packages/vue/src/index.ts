@@ -6,6 +6,10 @@ import { registerRuntimeCompiler, RenderFunction, warn } from '@vue/runtime-dom'
 import * as runtimeDom from '@vue/runtime-dom'
 import { isString, NOOP, generateCodeFrame, extend } from '@vue/shared'
 import { InternalRenderFunction } from 'packages/runtime-core/src/component'
+import {
+  DeprecationTypes,
+  warnDeprecation
+} from '../../runtime-core/src/compat/compatConfig'
 
 if (__DEV__) {
   initDev()
@@ -44,9 +48,14 @@ function compileToFunction(
     template = el ? el.innerHTML : ``
   }
 
+  if (__COMPAT__ && __DEV__ && !__TEST__ && (!options || !options.whitespace)) {
+    warnDeprecation(DeprecationTypes.CONFIG_WHITESPACE, null)
+  }
+
   const opts = extend(
     {
       hoistStatic: true,
+      whitespace: __COMPAT__ && !__TEST__ ? 'preserve' : undefined,
       onError: __DEV__ ? onError : undefined,
       onWarn: __DEV__ ? e => onError(e, true) : NOOP
     } as CompilerOptions,

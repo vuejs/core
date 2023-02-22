@@ -300,10 +300,12 @@ importers:
       '@babel/parser': ^7.16.4
       estree-walker: ^2.0.2
       source-map: ^0.6.1
+      vue: 3.3.0-alpha.4
     dependencies:
       '@babel/parser': 7.20.15
       estree-walker: 2.0.2
       source-map: 0.6.1
+      vue: link:../vue
 
 packages:
 

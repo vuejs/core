@@ -40,7 +40,8 @@
   "dependencies": {
     "@babel/parser": "^7.16.4",
     "estree-walker": "^2.0.2",
-    "source-map": "^0.6.1"
+    "source-map": "^0.6.1",
+    "vue": "3.3.0-alpha.4"
   },
   "peerDependencies": {
     "vue": "3.3.0-alpha.4"

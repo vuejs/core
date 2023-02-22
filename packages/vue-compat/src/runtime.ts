@@ -1,7 +1,12 @@
 // This entry exports the runtime only, and is built as
 // `dist/vue.esm-bundler.js` which is used by default for bundlers.
+import { initDev } from './dev'
 import { createCompatVue } from './createCompatVue'
 import { warn } from '@vue/runtime-core'
+
+if (__DEV__) {
+  initDev()
+}
 
 const Vue = createCompatVue()
 

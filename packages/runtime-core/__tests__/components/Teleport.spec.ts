@@ -64,7 +64,7 @@ describe('renderer: teleport', () => {
     await nextTick()
 
     expect(root.innerHTML).toMatchInlineSnapshot(
-      `"<svg><circle></circle></svg><!--teleport start--><!--teleport end-->"`
+      '"<svg><circle></circle></svg><!--teleport start--><!--teleport end-->"'
     )
 
     expect(svg.value.namespaceURI).toBe('http://www.w3.org/2000/svg')
@@ -414,7 +414,7 @@ describe('renderer: teleport', () => {
     }
     render(h(App), root)
     expect(serializeInner(root)).toMatchInlineSnapshot(
-      `"<!--teleport start--><!--teleport end--><div>root</div>"`
+      '"<!--teleport start--><!--teleport end--><div>root</div>"'
     )
     expect(serializeInner(target)).toMatchInlineSnapshot(
       `"<div>teleported</div><span>false</span><!--v-if-->"`
@@ -423,7 +423,7 @@ describe('renderer: teleport', () => {
     disabled.value = true
     await nextTick()
     expect(serializeInner(root)).toMatchInlineSnapshot(
-      `"<!--teleport start--><div>teleported</div><span>true</span><span></span><!--teleport end--><div>root</div>"`
+      '"<!--teleport start--><div>teleported</div><span>true</span><span></span><!--teleport end--><div>root</div>"'
     )
     expect(serializeInner(target)).toBe(``)
 
@@ -431,7 +431,7 @@ describe('renderer: teleport', () => {
     disabled.value = false
     await nextTick()
     expect(serializeInner(root)).toMatchInlineSnapshot(
-      `"<!--teleport start--><!--teleport end--><div>root</div>"`
+      '"<!--teleport start--><!--teleport end--><div>root</div>"'
     )
     expect(serializeInner(target)).toMatchInlineSnapshot(
       `"<div>teleported</div><span>false</span><!--v-if-->"`
