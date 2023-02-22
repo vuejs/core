@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import {
   CompilerOptions,
   baseParse as parse,
@@ -843,7 +844,7 @@ describe('compiler: transform component slots', () => {
 
   describe('errors', () => {
     test('error on extraneous children w/ named default slot', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       const source = `<Comp><template #default>foo</template>bar</Comp>`
       parseWithSlots(source, { onError })
       const index = source.indexOf('bar')
@@ -866,7 +867,7 @@ describe('compiler: transform component slots', () => {
     })
 
     test('error on duplicated slot names', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       const source = `<Comp><template #foo></template><template #foo></template></Comp>`
       parseWithSlots(source, { onError })
       const index = source.lastIndexOf('#foo')
@@ -889,7 +890,7 @@ describe('compiler: transform component slots', () => {
     })
 
     test('error on invalid mixed slot usage', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       const source = `<Comp v-slot="foo"><template #foo></template></Comp>`
       parseWithSlots(source, { onError })
       const index = source.lastIndexOf('#foo')
@@ -912,7 +913,7 @@ describe('compiler: transform component slots', () => {
     })
 
     test('error on v-slot usage on plain elements', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       const source = `<div v-slot/>`
       parseWithSlots(source, { onError })
       const index = source.indexOf('v-slot')

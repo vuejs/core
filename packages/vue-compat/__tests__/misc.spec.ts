@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import Vue from '@vue/compat'
 import { nextTick } from '../../runtime-core/src/scheduler'
 import {
@@ -47,7 +48,7 @@ test('mode as function', () => {
 })
 
 test('WATCH_ARRAY', async () => {
-  const spy = jest.fn()
+  const spy = vi.fn()
   const vm = new Vue({
     data() {
       return {
@@ -114,7 +115,7 @@ test('PROPS_DEFAULT_THIS', () => {
 })
 
 test('V_ON_KEYCODE_MODIFIER', () => {
-  const spy = jest.fn()
+  const spy = vi.fn()
   const vm = new Vue({
     template: `<input @keyup.1="spy">`,
     methods: { spy }
@@ -131,11 +132,11 @@ test('V_ON_KEYCODE_MODIFIER', () => {
 
 test('CUSTOM_DIR', async () => {
   const myDir = {
-    bind: jest.fn(),
-    inserted: jest.fn(),
-    update: jest.fn(),
-    componentUpdated: jest.fn(),
-    unbind: jest.fn()
+    bind: vi.fn(),
+    inserted: vi.fn(),
+    update: vi.fn(),
+    componentUpdated: vi.fn(),
+    unbind: vi.fn()
   } as any
 
   const getCalls = () =>

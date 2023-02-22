@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import { HMRRuntime } from '../src/hmr'
 import '../src/hmr'
 import { ComponentOptions, InternalRenderFunction } from '../src/component'
@@ -117,8 +118,8 @@ describe('hot module replacement', () => {
   test('reload', async () => {
     const root = nodeOps.createElement('div')
     const childId = 'test3-child'
-    const unmountSpy = jest.fn()
-    const mountSpy = jest.fn()
+    const unmountSpy = vi.fn()
+    const mountSpy = vi.fn()
 
     const Child: ComponentOptions = {
       __hmrId: childId,
@@ -155,10 +156,10 @@ describe('hot module replacement', () => {
   test('reload KeepAlive slot', async () => {
     const root = nodeOps.createElement('div')
     const childId = 'test-child-keep-alive'
-    const unmountSpy = jest.fn()
-    const mountSpy = jest.fn()
-    const activeSpy = jest.fn()
-    const deactiveSpy = jest.fn()
+    const unmountSpy = vi.fn()
+    const mountSpy = vi.fn()
+    const activeSpy = vi.fn()
+    const deactiveSpy = vi.fn()
 
     const Child: ComponentOptions = {
       __hmrId: childId,
@@ -221,8 +222,8 @@ describe('hot module replacement', () => {
   test('reload class component', async () => {
     const root = nodeOps.createElement('div')
     const childId = 'test4-child'
-    const unmountSpy = jest.fn()
-    const mountSpy = jest.fn()
+    const unmountSpy = vi.fn()
+    const mountSpy = vi.fn()
 
     class Child {
       static __vccOpts: ComponentOptions = {
@@ -467,8 +468,8 @@ describe('hot module replacement', () => {
   // #4174
   test('with global mixins', async () => {
     const childId = 'hmr-global-mixin'
-    const createSpy1 = jest.fn()
-    const createSpy2 = jest.fn()
+    const createSpy1 = vi.fn()
+    const createSpy2 = vi.fn()
 
     const Child: ComponentOptions = {
       __hmrId: childId,
