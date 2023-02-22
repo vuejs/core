@@ -14,7 +14,13 @@ import { flushPostFlushCbs } from './scheduler'
 import { ComponentInternalInstance } from './component'
 import { invokeDirectiveHook } from './directives'
 import { warn } from './warning'
-import { PatchFlags, ShapeFlags, isReservedProp, isOn } from '@vue/shared'
+import {
+  PatchFlags,
+  ShapeFlags,
+  isReservedProp,
+  isOn,
+  escapeHtml
+} from '@vue/shared'
 import { RendererInternals } from './renderer'
 import { setRef } from './rendererTemplateRef'
 import {
@@ -129,7 +135,7 @@ export function createHydrationFunctions(
             nextNode = onMismatch()
           }
         } else {
-          if ((node as Text).data !== vnode.children) {
+          if ((node as Text).data !== escapeHtml(vnode.children)) {
             hasMismatch = true
             __DEV__ &&
               warn(
