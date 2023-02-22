@@ -1009,6 +1009,15 @@ describe('SSR hydration', () => {
       expect(`Hydration text content mismatch in <div>`).toHaveBeenWarned()
     })
 
+    // #s7775
+    test('use decodeHTML when vnode is of text type', () => {
+      const { container } = mountWithHydration(`<p>&quot;test&quot;</p>`, () =>
+        h('p', '"test"')
+      )
+      expect(container.innerHTML).toBe('<p>"test"</p>')
+      expect(`Hydration text mismatch`).not.toHaveBeenWarned()
+    })
+
     test('not enough children', () => {
       const { container } = mountWithHydration(`<div></div>`, () =>
         h('div', [h('span', 'foo'), h('span', 'bar')])

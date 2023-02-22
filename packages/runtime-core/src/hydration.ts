@@ -19,7 +19,7 @@ import {
   ShapeFlags,
   isReservedProp,
   isOn,
-  escapeHtml
+  decodeHtml
 } from '@vue/shared'
 import { RendererInternals } from './renderer'
 import { setRef } from './rendererTemplateRef'
@@ -135,7 +135,10 @@ export function createHydrationFunctions(
             nextNode = onMismatch()
           }
         } else {
-          if ((node as Text).data !== escapeHtml(vnode.children)) {
+          if (
+            decodeHtml((node as Text).data) !==
+            decodeHtml(vnode.children as string)
+          ) {
             hasMismatch = true
             __DEV__ &&
               warn(
