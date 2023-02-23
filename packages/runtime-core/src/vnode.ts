@@ -606,7 +606,7 @@ function _createVNode(
 export function guardReactiveProps(props: (Data & VNodeProps) | null) {
   if (!props || !isObject(props)) {
     if (__DEV__) {
-      warn(`v-bind must pass in an object`)
+      warn(`Invalid binding value: v-bind must pass in an object`)
     }
     return null
   }

@@ -87,75 +87,82 @@ describe('renderSlot', () => {
     })
 
     // #7713
-    it('no error should be reported when v-bind value is not object/undefined ', () => {
-      expect(() =>
+    it('v-bind value cannot be undefined on slot', () => {
+      // @ts-ignore
+      renderSlot(
+        { default: () => [h('div')] },
+        'title',
         // @ts-ignore
-        renderSlot(
-          { default: () => [h('div')] },
-          'title',
-          // @ts-ignore
-          normalizeProps(guardReactiveProps(undefined))
-        )
-      ).not.toThrow()
+        normalizeProps(guardReactiveProps(undefined))
+      )
+      expect(
+        'Invalid binding value: v-bind must pass in an object'
+      ).toHaveBeenWarned()
+    })
 
-      expect(() =>
+    it('v-bind value cannot be null on slot', () => {
+      // @ts-ignore
+      renderSlot(
+        { default: () => [h('div')] },
+        'title',
         // @ts-ignore
-        renderSlot(
-          { default: () => [h('div')] },
-          'title',
-          // @ts-ignore
-          normalizeProps(guardReactiveProps([]))
-        )
-      ).not.toThrow()
+        normalizeProps(guardReactiveProps(null))
+      )
+      expect(
+        'Invalid binding value: v-bind must pass in an object'
+      ).toHaveBeenWarned()
+    })
 
-      expect(() =>
+    it('v-bind value cannot be number on slot', () => {
+      // @ts-ignore
+      renderSlot(
+        { default: () => [h('div')] },
+        'title',
         // @ts-ignore
-        renderSlot(
-          { default: () => [h('div')] },
-          'title',
-          // @ts-ignore
-          normalizeProps(guardReactiveProps(null))
-        )
-      ).not.toThrow()
+        normalizeProps(guardReactiveProps(1))
+      )
+      expect(
+        'Invalid binding value: v-bind must pass in an object'
+      ).toHaveBeenWarned()
+    })
 
-      expect(() =>
+    it('v-bind value cannot be string on slot', () => {
+      // @ts-ignore
+      renderSlot(
+        { default: () => [h('div')] },
+        'title',
         // @ts-ignore
-        renderSlot(
-          { default: () => [h('div')] },
-          'title',
-          // @ts-ignore
-          normalizeProps(guardReactiveProps(1))
-        )
-      ).not.toThrow()
+        normalizeProps(guardReactiveProps(''))
+      )
+      expect(
+        'Invalid binding value: v-bind must pass in an object'
+      ).toHaveBeenWarned()
+    })
 
-      expect(() =>
+    it('v-bind value cannot be bigint on slot', () => {
+      // @ts-ignore
+      renderSlot(
+        { default: () => [h('div')] },
+        'title',
         // @ts-ignore
-        renderSlot(
-          { default: () => [h('div')] },
-          'title',
-          // @ts-ignore
-          normalizeProps(guardReactiveProps(''))
-        )
-      ).not.toThrow()
+        normalizeProps(guardReactiveProps(1n))
+      )
+      expect(
+        'Invalid binding value: v-bind must pass in an object'
+      ).toHaveBeenWarned()
+    })
 
-      expect(() =>
-        renderSlot(
-          { default: () => [h('div')] },
-          'title',
-          // @ts-ignore
-          normalizeProps(guardReactiveProps(1n))
-        )
-      ).not.toThrow()
-
-      expect(() =>
+    it('v-bind value cannot be bool on slot', () => {
+      // @ts-ignore
+      renderSlot(
+        { default: () => [h('div')] },
+        'title',
         // @ts-ignore
-        renderSlot(
-          { default: () => [h('div')] },
-          'title',
-          // @ts-ignore
-          normalizeProps(guardReactiveProps(true))
-        )
-      ).not.toThrow()
+        normalizeProps(guardReactiveProps(true))
+      )
+      expect(
+        'Invalid binding value: v-bind must pass in an object'
+      ).toHaveBeenWarned()
     })
   })
 })
