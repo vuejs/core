@@ -119,10 +119,7 @@ export function setRef(
         }
       }
 
-      if (
-        value ||
-        (!value && vnode.transition && !vnode.transition.persisted)
-      ) {
+      if (value || (vnode.transition && !vnode.transition.persisted)) {
         // #1789: for non-null values, set them after render
         // null values means this is unmount and it should not overwrite another
         // ref with the same key
