@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import {
   ref,
   effect,
@@ -10,7 +11,7 @@ import {
 } from '../src/index'
 import { computed } from '@vue/runtime-dom'
 import { shallowRef, unref, customRef, triggerRef } from '../src/ref'
-import { isShallow } from '../src/reactive'
+import { isShallow, readonly, shallowReactive } from '../src/reactive'
 
 describe('reactivity/ref', () => {
   it('should hold a value', () => {
@@ -385,7 +386,7 @@ describe('reactivity/ref', () => {
     const obj = reactive({ count: 0 })
 
     const a = ref(obj)
-    const spy1 = jest.fn(() => a.value)
+    const spy1 = vi.fn(() => a.value)
 
     effect(spy1)
 
@@ -393,11 +394,29 @@ describe('reactivity/ref', () => {
     expect(spy1).toBeCalledTimes(1)
 
     const b = shallowRef(obj)
-    const spy2 = jest.fn(() => b.value)
+    const spy2 = vi.fn(() => b.value)
 
     effect(spy2)
 
     b.value = obj
     expect(spy2).toBeCalledTimes(1)
+  })
+
+  test('ref should preserve value shallow/readonly-ness', () => {
+    const original = {}
+    const r = reactive(original)
+    const s = shallowReactive(original)
+    const rr = readonly(original)
+    const a = ref(original)
+
+    expect(a.value).toBe(r)
+
+    a.value = s
+    expect(a.value).toBe(s)
+    expect(a.value).not.toBe(r)
+
+    a.value = rr
+    expect(a.value).toBe(rr)
+    expect(a.value).not.toBe(r)
   })
 })

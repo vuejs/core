@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import Vue from '@vue/compat'
 import {
   DeprecationTypes,
@@ -24,8 +25,8 @@ test('GLOBAL_KEY_CODES', () => {
     bar: [38, 87]
   }
 
-  const onFoo = jest.fn()
-  const onBar = jest.fn()
+  const onFoo = vi.fn()
+  const onBar = vi.fn()
 
   const el = document.createElement('div')
   new Vue({

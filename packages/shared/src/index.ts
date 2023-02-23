@@ -52,7 +52,10 @@ export const isMap = (val: unknown): val is Map<any, any> =>
 export const isSet = (val: unknown): val is Set<any> =>
   toTypeString(val) === '[object Set]'
 
-export const isDate = (val: unknown): val is Date => toTypeString(val) === '[object Date]'
+export const isDate = (val: unknown): val is Date =>
+  toTypeString(val) === '[object Date]'
+export const isRegExp = (val: unknown): val is RegExp =>
+  toTypeString(val) === '[object RegExp]'
 export const isFunction = (val: unknown): val is Function =>
   typeof val === 'function'
 export const isString = (val: unknown): val is string => typeof val === 'string'
@@ -99,7 +102,7 @@ const cacheStringFunction = <T extends (str: string) => string>(fn: T): T => {
   return ((str: string) => {
     const hit = cache[str]
     return hit || (cache[str] = fn(str))
-  }) as any
+  }) as T
 }
 
 const camelizeRE = /-(\w)/g
@@ -150,8 +153,21 @@ export const def = (obj: object, key: string | symbol, value: any) => {
   })
 }
 
-export const toNumber = (val: any): any => {
+/**
+ * "123-foo" will be parsed to 123
+ * This is used for the .number modifier in v-model
+ */
+export const looseToNumber = (val: any): any => {
   const n = parseFloat(val)
+  return isNaN(n) ? val : n
+}
+
+/**
+ * Only conerces number-like strings
+ * "123-foo" will be returned as-is
+ */
+export const toNumber = (val: any): any => {
+  const n = isString(val) ? Number(val) : NaN
   return isNaN(n) ? val : n
 }
 

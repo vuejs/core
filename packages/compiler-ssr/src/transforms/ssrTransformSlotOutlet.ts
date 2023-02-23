@@ -50,6 +50,10 @@ export const ssrTransformSlotOutlet: NodeTransform = (node, context) => {
       parent.children.filter(c => c.type === NodeTypes.ELEMENT).length === 1
     ) {
       method = SSR_RENDER_SLOT_INNER
+      if (!(context.scopeId && context.slotted !== false)) {
+        args.push('null')
+      }
+      args.push('true')
     }
 
     node.ssrCodegenNode = createCallExpression(context.helper(method), args)

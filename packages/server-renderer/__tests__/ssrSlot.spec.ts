@@ -1,7 +1,3 @@
-/**
- * @jest-environment node
- */
-
 import { createApp } from 'vue'
 import { renderToString } from '../src/renderToString'
 
@@ -112,5 +108,33 @@ describe('ssr: slot', () => {
     ).toBe(
       `<div><!--[--><!--[--><div>one</div><div>two</div><!--]--><!--]--></div>`
     )
+  })
+
+  test('transition slot', async () => {
+    expect(
+      await renderToString(
+        createApp({
+          components: {
+            one: {
+              template: `<transition><slot/></transition>`
+            }
+          },
+          template: `<one><div v-if="false">foo</div></one>`
+        })
+      )
+    ).toBe(`<!---->`)
+
+    expect(
+      await renderToString(
+        createApp({
+          components: {
+            one: {
+              template: `<transition><slot/></transition>`
+            }
+          },
+          template: `<one><div v-if="true">foo</div></one>`
+        })
+      )
+    ).toBe(`<div>foo</div>`)
   })
 })

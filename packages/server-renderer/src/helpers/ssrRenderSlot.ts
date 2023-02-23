@@ -40,7 +40,8 @@ export function ssrRenderSlotInner(
   fallbackRenderFn: (() => void) | null,
   push: PushFn,
   parentComponent: ComponentInternalInstance,
-  slotScopeId?: string
+  slotScopeId?: string,
+  transition?: boolean
 ) {
   const slotFn = slots[slotName]
   if (slotFn) {
@@ -61,10 +62,14 @@ export function ssrRenderSlotInner(
       // ssr slot.
       // check if the slot renders all comments, in which case use the fallback
       let isEmptySlot = true
-      for (let i = 0; i < slotBuffer.length; i++) {
-        if (!isComment(slotBuffer[i])) {
-          isEmptySlot = false
-          break
+      if (transition) {
+        isEmptySlot = false
+      } else {
+        for (let i = 0; i < slotBuffer.length; i++) {
+          if (!isComment(slotBuffer[i])) {
+            isEmptySlot = false
+            break
+          }
         }
       }
       if (isEmptySlot) {
@@ -82,11 +87,11 @@ export function ssrRenderSlotInner(
   }
 }
 
+const commentTestRE = /^<!--.*-->$/s
 const commentRE = /<!--[^]*?-->/gm
 function isComment(item: SSRBufferItem) {
-  return (
-    typeof item === 'string' &&
-    commentRE.test(item) &&
-    !item.replace(commentRE, '').trim()
-  )
+  if (typeof item !== 'string' || !commentTestRE.test(item)) return false
+  // if item is '<!---->' or '<!--[-->' or '<!--]-->', return true directly
+  if (item.length <= 8) return true
+  return !item.replace(commentRE, '').trim()
 }

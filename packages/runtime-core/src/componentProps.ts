@@ -192,6 +192,13 @@ export function initProps(
   instance.attrs = attrs
 }
 
+function isInHmrContext(instance: ComponentInternalInstance | null) {
+  while (instance) {
+    if (instance.type.__hmrId) return true
+    instance = instance.parent
+  }
+}
+
 export function updateProps(
   instance: ComponentInternalInstance,
   rawProps: Data | null,
@@ -211,11 +218,7 @@ export function updateProps(
     // always force full diff in dev
     // - #1942 if hmr is enabled with sfc component
     // - vite#872 non-sfc component used by sfc component
-    !(
-      __DEV__ &&
-      (instance.type.__hmrId ||
-        (instance.parent && instance.parent.type.__hmrId))
-    ) &&
+    !(__DEV__ && isInHmrContext(instance)) &&
     (optimized || patchFlag > 0) &&
     !(patchFlag & PatchFlags.FULL_PROPS)
   ) {
@@ -494,7 +497,9 @@ export function normalizePropsOptions(
   }
 
   if (!raw && !hasExtends) {
-    cache.set(comp, EMPTY_ARR as any)
+    if (isObject(comp)) {
+      cache.set(comp, EMPTY_ARR as any)
+    }
     return EMPTY_ARR as any
   }
 
@@ -517,7 +522,7 @@ export function normalizePropsOptions(
       if (validatePropName(normalizedKey)) {
         const opt = raw[key]
         const prop: NormalizedProp = (normalized[normalizedKey] =
-          isArray(opt) || isFunction(opt) ? { type: opt } : opt)
+          isArray(opt) || isFunction(opt) ? { type: opt } : extend({}, opt))
         if (prop) {
           const booleanIndex = getTypeIndex(Boolean, prop.type)
           const stringIndex = getTypeIndex(String, prop.type)
@@ -534,7 +539,9 @@ export function normalizePropsOptions(
   }
 
   const res: NormalizedPropsOptions = [normalized, needCastKeys]
-  cache.set(comp, res)
+  if (isObject(comp)) {
+    cache.set(comp, res)
+  }
   return res
 }
 
@@ -550,8 +557,8 @@ function validatePropName(key: string) {
 // use function string name to check type constructors
 // so that it works across vms / iframes.
 function getType(ctor: Prop<any>): string {
-  const match = ctor && ctor.toString().match(/^\s*function (\w+)/)
-  return match ? match[1] : ctor === null ? 'null' : ''
+  const match = ctor && ctor.toString().match(/^\s*(function|class) (\w+)/)
+  return match ? match[2] : ctor === null ? 'null' : ''
 }
 
 function isSameType(a: Prop<any>, b: Prop<any>): boolean {

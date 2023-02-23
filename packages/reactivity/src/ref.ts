@@ -1,12 +1,20 @@
 import {
   activeEffect,
+  getDepFromReactive,
   shouldTrack,
   trackEffects,
   triggerEffects
 } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { isArray, hasChanged, IfAny } from '@vue/shared'
-import { isProxy, toRaw, isReactive, toReactive } from './reactive'
+import {
+  isProxy,
+  toRaw,
+  isReactive,
+  toReactive,
+  isReadonly,
+  isShallow
+} from './reactive'
 import type { ShallowReactiveMarker } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
 import { createDep, Dep } from './dep'
@@ -46,16 +54,17 @@ export function trackRefValue(ref: RefBase<any>) {
 
 export function triggerRefValue(ref: RefBase<any>, newVal?: any) {
   ref = toRaw(ref)
-  if (ref.dep) {
+  const dep = ref.dep
+  if (dep) {
     if (__DEV__) {
-      triggerEffects(ref.dep, {
+      triggerEffects(dep, {
         target: ref,
         type: TriggerOpTypes.SET,
         key: 'value',
         newValue: newVal
       })
     } else {
-      triggerEffects(ref.dep)
+      triggerEffects(dep)
     }
   }
 }
@@ -112,10 +121,12 @@ class RefImpl<T> {
   }
 
   set value(newVal) {
-    newVal = this.__v_isShallow ? newVal : toRaw(newVal)
+    const useDirectValue =
+      this.__v_isShallow || isShallow(newVal) || isReadonly(newVal)
+    newVal = useDirectValue ? newVal : toRaw(newVal)
     if (hasChanged(newVal, this._rawValue)) {
       this._rawValue = newVal
-      this._value = this.__v_isShallow ? newVal : toReactive(newVal)
+      this._value = useDirectValue ? newVal : toReactive(newVal)
       triggerRefValue(this, newVal)
     }
   }
@@ -219,6 +230,10 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
   set value(newVal) {
     this._object[this._key] = newVal
   }
+
+  get dep(): Dep | undefined {
+    return getDepFromReactive(toRaw(this._object), this._key)
+  }
 }
 
 export type ToRef<T> = IfAny<T, Ref<T>, [T] extends [Ref] ? T : Ref<T>>
@@ -262,18 +277,13 @@ type BaseTypes = string | number | boolean
  *   }
  * }
  * ```
- *
- * Note that api-extractor somehow refuses to include `declare module`
- * augmentations in its generated d.ts, so we have to manually append them
- * to the final generated d.ts in our build process.
  */
 export interface RefUnwrapBailTypes {}
 
 export type ShallowUnwrapRef<T> = {
   [K in keyof T]: T[K] extends Ref<infer V>
-    ? V
-    : // if `V` is `unknown` that means it does not extend `Ref` and is undefined
-    T[K] extends Ref<infer V> | undefined
+    ? V // if `V` is `unknown` that means it does not extend `Ref` and is undefined
+    : T[K] extends Ref<infer V> | undefined
     ? unknown extends V
       ? undefined
       : V | undefined
@@ -294,7 +304,7 @@ export type UnwrapRefSimple<T> = T extends
   | RefUnwrapBailTypes[keyof RefUnwrapBailTypes]
   | { [RawSymbol]?: true }
   ? T
-  : T extends Array<any>
+  : T extends ReadonlyArray<any>
   ? { [K in keyof T]: UnwrapRefSimple<T[K]> }
   : T extends object & { [ShallowReactiveMarker]?: never }
   ? {

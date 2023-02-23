@@ -24,6 +24,7 @@ import { RawSlots } from './componentSlots'
 import { isProxy, Ref, toRaw, ReactiveFlags, isRef } from '@vue/reactivity'
 import { AppContext } from './apiCreateApp'
 import {
+  Suspense,
   SuspenseImpl,
   isSuspense,
   SuspenseBoundary
@@ -31,7 +32,7 @@ import {
 import { DirectiveBinding } from './directives'
 import { TransitionHooks } from './components/BaseTransition'
 import { warn } from './warning'
-import { TeleportImpl, isTeleport } from './components/Teleport'
+import { Teleport, TeleportImpl, isTeleport } from './components/Teleport'
 import {
   currentRenderingInstance,
   currentScopeId
@@ -45,15 +46,15 @@ import { defineLegacyVNodeProperties } from './compat/renderFn'
 import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
 import { ComponentPublicInstance } from './componentPublicInstance'
 
-export const Fragment = Symbol(__DEV__ ? 'Fragment' : undefined) as any as {
+export const Fragment = Symbol.for('v-fgt') as any as {
   __isFragment: true
   new (): {
     $props: VNodeProps
   }
 }
-export const Text = Symbol(__DEV__ ? 'Text' : undefined)
-export const Comment = Symbol(__DEV__ ? 'Comment' : undefined)
-export const Static = Symbol(__DEV__ ? 'Static' : undefined)
+export const Text = Symbol.for('v-txt')
+export const Comment = Symbol.for('v-cmt')
+export const Static = Symbol.for('v-stc')
 
 export type VNodeTypes =
   | string
@@ -63,7 +64,9 @@ export type VNodeTypes =
   | typeof Static
   | typeof Comment
   | typeof Fragment
+  | typeof Teleport
   | typeof TeleportImpl
+  | typeof Suspense
   | typeof SuspenseImpl
 
 export type VNodeRef =
@@ -201,6 +204,11 @@ export interface VNode<
 
   // application root node only
   appContext: AppContext | null
+
+  /**
+   * @internal lexical scope owner instance
+   */
+  ctx: ComponentInternalInstance | null
 
   /**
    * @internal attached by v-memo
@@ -349,6 +357,10 @@ export function isSameVNodeType(n1: VNode, n2: VNode): boolean {
     n2.shapeFlag & ShapeFlags.COMPONENT &&
     hmrDirtyComponents.has(n2.type as ConcreteComponent)
   ) {
+    // #7042, ensure the vnode being unmounted during HMR
+    // bitwise operations to remove keep alive flags
+    n1.shapeFlag &= ~ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+    n2.shapeFlag &= ~ShapeFlags.COMPONENT_KEPT_ALIVE
     // HMR only: if the component has been hot-updated, force a reload.
     return false
   }
@@ -436,7 +448,8 @@ function createBaseVNode(
     patchFlag,
     dynamicProps,
     dynamicChildren: null,
-    appContext: null
+    appContext: null,
+    ctx: currentRenderingInstance
   } as VNode
 
   if (needFullChildrenNormalization) {
@@ -606,7 +619,7 @@ export function cloneVNode<T, U>(
   // key enumeration cost.
   const { props, ref, patchFlag, children } = vnode
   const mergedProps = extraProps ? mergeProps(props || {}, extraProps) : props
-  const cloned: VNode = {
+  const cloned: VNode<T, U> = {
     __v_isVNode: true,
     __v_skip: true,
     type: vnode.type,
@@ -658,10 +671,12 @@ export function cloneVNode<T, U>(
     ssContent: vnode.ssContent && cloneVNode(vnode.ssContent),
     ssFallback: vnode.ssFallback && cloneVNode(vnode.ssFallback),
     el: vnode.el,
-    anchor: vnode.anchor
+    anchor: vnode.anchor,
+    ctx: vnode.ctx,
+    ce: vnode.ce
   }
   if (__COMPAT__) {
-    defineLegacyVNodeProperties(cloned)
+    defineLegacyVNodeProperties(cloned as VNode)
   }
   return cloned as any
 }
@@ -737,7 +752,10 @@ export function normalizeVNode(child: VNodeChild): VNode {
 
 // optimized normalization for template-compiled render fns
 export function cloneIfMounted(child: VNode): VNode {
-  return child.el === null || child.memo ? child : cloneVNode(child)
+  return (child.el === null && child.patchFlag !== PatchFlags.HOISTED) ||
+    child.memo
+    ? child
+    : cloneVNode(child)
 }
 
 export function normalizeChildren(vnode: VNode, children: unknown) {

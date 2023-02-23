@@ -52,7 +52,7 @@ describe('COMPONENT_FUNCTIONAL', () => {
     expect(vm.$el.querySelector('.inject').textContent).toBe('123')
     expect(vm.$el.querySelector('.slot').textContent).toBe('hello')
     expect(vm.$el.outerHTML).toMatchInlineSnapshot(
-      `"<div id=\\"foo\\" class=\\"foo\\"><div class=\\"inject\\">123</div><div class=\\"slot\\">hello</div></div>"`
+      '"<div id=\\"foo\\" class=\\"foo\\"><div class=\\"inject\\">123</div><div class=\\"slot\\">hello</div></div>"'
     )
 
     expect(

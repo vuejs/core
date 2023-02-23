@@ -245,9 +245,9 @@ export function toRaw<T>(observed: T): T {
   return raw ? toRaw(raw) : observed
 }
 
-export function markRaw<T extends object>(
-  value: T
-): T & { [RawSymbol]?: true } {
+export type Raw<T> = T & { [RawSymbol]?: true }
+
+export function markRaw<T extends object>(value: T): Raw<T> {
   def(value, ReactiveFlags.SKIP, true)
   return value
 }
