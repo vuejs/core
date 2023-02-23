@@ -145,10 +145,10 @@ export function flushPreFlushCbs(
   for (; i < queue.length; i++) {
     const cb = queue[i]
     if (cb && cb.pre) {
-      if (__DEV__ && checkRecursiveUpdates(seen!, cb)) {
+      if (instance && cb.id !== instance.uid) {
         continue
       }
-      if (instance && cb.id !== instance.uid) {
+      if (__DEV__ && checkRecursiveUpdates(seen!, cb)) {
         continue
       }
       queue.splice(i, 1)

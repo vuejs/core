@@ -552,7 +552,7 @@ describe('api: watch', () => {
   // #7030
   it('should not fire on child component unmount w/ flush: pre', async () => {
     const visible = ref(true)
-    const cb = jest.fn()
+    const cb = vi.fn()
     const Parent = defineComponent({
       props: ['visible'],
       render() {
