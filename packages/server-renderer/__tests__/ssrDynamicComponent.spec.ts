@@ -1,5 +1,5 @@
 import { createApp, createVNode } from 'vue'
-import { renderToString } from '../src/renderToString'
+import { renderToString } from '../src'
 
 describe('ssr: dynamic component', () => {
   test('resolved to component', async () => {
