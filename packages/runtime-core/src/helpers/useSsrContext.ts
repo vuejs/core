@@ -1,7 +1,7 @@
 import { inject } from '../apiInject'
 import { warn } from '../warning'
 
-export const ssrContextKey = Symbol(__DEV__ ? `ssrContext` : ``)
+export const ssrContextKey = Symbol.for('v-scx')
 
 export const useSSRContext = <T = Record<string, any>>() => {
   if (!__GLOBAL__) {

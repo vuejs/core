@@ -58,7 +58,7 @@ export function rewriteDefault(
         ) {
           if (node.source) {
             if (specifier.local.name === 'default') {
-              const end = specifierEnd(input, specifier.local.end!, node.end)
+              const end = specifierEnd(input, specifier.local.end!, node.end!)
               s.prepend(
                 `import { default as __VUE_DEFAULT__ } from '${node.source.value}'\n`
               )
@@ -66,7 +66,11 @@ export function rewriteDefault(
               s.append(`\nconst ${as} = __VUE_DEFAULT__`)
               continue
             } else {
-              const end = specifierEnd(input, specifier.exported.end!, node.end)
+              const end = specifierEnd(
+                input,
+                specifier.exported.end!,
+                node.end!
+              )
               s.prepend(
                 `import { ${input.slice(
                   specifier.local.start!,
@@ -78,7 +82,7 @@ export function rewriteDefault(
               continue
             }
           }
-          const end = specifierEnd(input, specifier.end!, node.end)
+          const end = specifierEnd(input, specifier.end!, node.end!)
           s.overwrite(specifier.start!, end, ``)
           s.append(`\nconst ${as} = ${specifier.local.name}`)
         }
