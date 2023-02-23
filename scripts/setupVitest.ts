@@ -1,4 +1,4 @@
-import { vi } from 'vitest'
+/// <reference types="vitest/globals" />
 
 expect.extend({
   toHaveBeenWarned(received: string) {
