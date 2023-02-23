@@ -86,14 +86,15 @@ export { h } from './h'
 // Advanced render function utilities
 export { createVNode, cloneVNode, mergeProps, isVNode } from './vnode'
 // VNode types
-export { Fragment, Text, Comment, Static, VNodeRef } from './vnode'
+export { Fragment, Text, Comment, Static, type VNodeRef } from './vnode'
 // Built-in components
-export { Teleport, TeleportProps } from './components/Teleport'
-export { Suspense, SuspenseProps } from './components/Suspense'
-export { KeepAlive, KeepAliveProps } from './components/KeepAlive'
+export { Teleport, type TeleportProps } from './components/Teleport'
+export { Suspense, type SuspenseProps } from './components/Suspense'
+export { KeepAlive, type KeepAliveProps } from './components/KeepAlive'
 export {
   BaseTransition,
-  BaseTransitionProps
+  BaseTransitionPropsValidators,
+  type BaseTransitionProps
 } from './components/BaseTransition'
 // For using custom directives
 export { withDirectives } from './directives'
@@ -135,7 +136,6 @@ import { VNode } from './vnode'
 import { ComponentInternalInstance } from './component'
 
 // Augment Ref unwrap bail types.
-// Note: if updating this, also update `types/refBail.d.ts`.
 declare module '@vue/reactivity' {
   export interface RefUnwrapBailTypes {
     runtimeCoreBailTypes:
@@ -148,7 +148,8 @@ declare module '@vue/reactivity' {
   }
 }
 
-export {
+export { TrackOpTypes, TriggerOpTypes } from '@vue/reactivity'
+export type {
   Ref,
   ToRef,
   ToRefs,
@@ -171,11 +172,9 @@ export {
   DebuggerOptions,
   DebuggerEvent,
   DebuggerEventExtraInfo,
-  TrackOpTypes,
-  TriggerOpTypes,
   Raw
 } from '@vue/reactivity'
-export {
+export type {
   WatchEffect,
   WatchOptions,
   WatchOptionsBase,
@@ -183,8 +182,8 @@ export {
   WatchSource,
   WatchStopHandle
 } from './apiWatch'
-export { InjectionKey } from './apiInject'
-export {
+export type { InjectionKey } from './apiInject'
+export type {
   App,
   AppConfig,
   AppContext,
@@ -192,7 +191,7 @@ export {
   CreateAppFunction,
   OptionMergeFunction
 } from './apiCreateApp'
-export {
+export type {
   VNode,
   VNodeChild,
   VNodeTypes,
@@ -200,7 +199,7 @@ export {
   VNodeArrayChildren,
   VNodeNormalizedChildren
 } from './vnode'
-export {
+export type {
   Component,
   ConcreteComponent,
   FunctionalComponent,
@@ -209,8 +208,8 @@ export {
   ComponentCustomProps,
   AllowedComponentProps
 } from './component'
-export { DefineComponent } from './apiDefineComponent'
-export {
+export type { DefineComponent } from './apiDefineComponent'
+export type {
   ComponentOptions,
   ComponentOptionsMixin,
   ComponentOptionsWithoutProps,
@@ -225,13 +224,13 @@ export {
   RuntimeCompilerOptions,
   ComponentInjectOptions
 } from './componentOptions'
-export { EmitsOptions, ObjectEmitsOptions } from './componentEmits'
-export {
+export type { EmitsOptions, ObjectEmitsOptions } from './componentEmits'
+export type {
   ComponentPublicInstance,
   ComponentCustomProperties,
   CreateComponentPublicInstance
 } from './componentPublicInstance'
-export {
+export type {
   Renderer,
   RendererNode,
   RendererElement,
@@ -239,9 +238,9 @@ export {
   RendererOptions,
   RootRenderFunction
 } from './renderer'
-export { RootHydrateFunction } from './hydration'
-export { Slot, Slots } from './componentSlots'
-export {
+export type { RootHydrateFunction } from './hydration'
+export type { Slot, Slots } from './componentSlots'
+export type {
   Prop,
   PropType,
   ComponentPropsOptions,
@@ -249,7 +248,7 @@ export {
   ExtractPropTypes,
   ExtractDefaultPropTypes
 } from './componentProps'
-export {
+export type {
   Directive,
   DirectiveBinding,
   DirectiveHook,
@@ -257,13 +256,16 @@ export {
   FunctionDirective,
   DirectiveArguments
 } from './directives'
-export { SuspenseBoundary } from './components/Suspense'
-export { TransitionState, TransitionHooks } from './components/BaseTransition'
-export {
+export type { SuspenseBoundary } from './components/Suspense'
+export type {
+  TransitionState,
+  TransitionHooks
+} from './components/BaseTransition'
+export type {
   AsyncComponentOptions,
   AsyncComponentLoader
 } from './apiAsyncComponent'
-export { HMRRuntime } from './hmr'
+export type { HMRRuntime } from './hmr'
 
 // Internal API ----------------------------------------------------------------
 
@@ -335,8 +337,8 @@ export const ssrUtils = (__SSR__ ? _ssrUtils : null) as typeof _ssrUtils
 // 2.x COMPAT ------------------------------------------------------------------
 
 export { DeprecationTypes } from './compat/compatConfig'
-export { CompatVue } from './compat/global'
-export { LegacyConfig } from './compat/globalConfig'
+export type { CompatVue } from './compat/global'
+export type { LegacyConfig } from './compat/globalConfig'
 
 import { warnDeprecation } from './compat/compatConfig'
 import { createCompatVue } from './compat/global'
