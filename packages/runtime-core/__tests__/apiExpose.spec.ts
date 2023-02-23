@@ -225,4 +225,43 @@ describe('api: expose', () => {
     expect(grandChildRef.value.$parent).toBe(childRef.value)
     expect(grandChildRef.value.$parent.$parent).toBe(grandChildRef.value.$root)
   })
+
+  test('warning for ref', () => {
+    const Comp = defineComponent({
+      setup(_, { expose }) {
+        expose(ref(1))
+        return () => null
+      }
+    })
+    render(h(Comp), nodeOps.createElement('div'))
+    expect(
+      'expose() should be passed a plain object, received ref'
+    ).toHaveBeenWarned()
+  })
+
+  test('warning for array', () => {
+    const Comp = defineComponent({
+      setup(_, { expose }) {
+        expose(['focus'])
+        return () => null
+      }
+    })
+    render(h(Comp), nodeOps.createElement('div'))
+    expect(
+      'expose() should be passed a plain object, received array'
+    ).toHaveBeenWarned()
+  })
+
+  test('warning for function', () => {
+    const Comp = defineComponent({
+      setup(_, { expose }) {
+        expose(() => null)
+        return () => null
+      }
+    })
+    render(h(Comp), nodeOps.createElement('div'))
+    expect(
+      'expose() should be passed a plain object, received function'
+    ).toHaveBeenWarned()
+  })
 })

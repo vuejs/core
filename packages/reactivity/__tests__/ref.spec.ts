@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import {
   ref,
   effect,
@@ -385,7 +386,7 @@ describe('reactivity/ref', () => {
     const obj = reactive({ count: 0 })
 
     const a = ref(obj)
-    const spy1 = jest.fn(() => a.value)
+    const spy1 = vi.fn(() => a.value)
 
     effect(spy1)
 
@@ -393,7 +394,7 @@ describe('reactivity/ref', () => {
     expect(spy1).toBeCalledTimes(1)
 
     const b = shallowRef(obj)
-    const spy2 = jest.fn(() => b.value)
+    const spy2 = vi.fn(() => b.value)
 
     effect(spy2)
 
