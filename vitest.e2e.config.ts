@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-syntax */
 import { UserConfig } from 'vitest/config'
 import config from './vitest.config'
 

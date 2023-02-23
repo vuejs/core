@@ -65,12 +65,11 @@ expect.extend({
   }
 })
 
-let warn
+const warn = vi.spyOn(console, 'warn')
 const asserted: Set<string> = new Set()
 
 beforeEach(() => {
   asserted.clear()
-  warn = vi.spyOn(console, 'warn')
   warn.mockImplementation(() => {})
 })
 
