@@ -102,8 +102,8 @@ describe('reactivity/reactive/Array', () => {
   //#6018
   test('edge case: avoid trigger effect in deleteProperty when array length-decrease mutation methods called', () => {
     const arr = ref([1])
-    const fn1 = jest.fn()
-    const fn2 = jest.fn()
+    const fn1 = vi.fn()
+    const fn2 = vi.fn()
     effect(() => {
       fn1()
       if (arr.value.length > 0) {
