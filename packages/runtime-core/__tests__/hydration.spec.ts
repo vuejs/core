@@ -1009,13 +1009,21 @@ describe('SSR hydration', () => {
       expect(`Hydration text content mismatch in <div>`).toHaveBeenWarned()
     })
 
-    // #s7775
+    // #7775
     test('use decodeHTML when vnode is of text type', () => {
-      const { container } = mountWithHydration(`<p>&quot;test&quot;</p>`, () =>
-        h('p', '"test"')
+      const { container: styleContainer } = mountWithHydration(
+        `<style>&quot;test&quot;</style>`,
+        () => h('style', '"test"')
       )
-      expect(container.innerHTML).toBe('<p>"test"</p>')
-      expect(`Hydration text mismatch`).not.toHaveBeenWarned()
+      expect(styleContainer.innerHTML).toBe('<style>"test"</style>')
+      expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
+
+      const { container: pContainer } = mountWithHydration(
+        `<p>&quot;test&quot;</p>`,
+        () => h('p', '"test"')
+      )
+      expect(pContainer.innerHTML).toBe('<p>"test"</p>')
+      expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
     })
 
     test('not enough children', () => {

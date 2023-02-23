@@ -135,19 +135,21 @@ export function createHydrationFunctions(
             nextNode = onMismatch()
           }
         } else {
-          if (
-            decodeHtml((node as Text).data) !==
-            decodeHtml(vnode.children as string)
-          ) {
-            hasMismatch = true
-            __DEV__ &&
-              warn(
-                `Hydration text mismatch:` +
-                  `\n- Client: ${JSON.stringify((node as Text).data)}` +
-                  `\n- Server: ${JSON.stringify(vnode.children)}`
-              )
-            ;(node as Text).data = vnode.children as string
+          if ((node as Text).data !== vnode.children) {
+            if (
+              decodeHtml((node as Text).data) !==
+              decodeHtml(vnode.children as string)
+            ) {
+              hasMismatch = true
+              __DEV__ &&
+                warn(
+                  `Hydration text mismatch:` +
+                    `\n- Client: ${JSON.stringify((node as Text).data)}` +
+                    `\n- Server: ${JSON.stringify(vnode.children)}`
+                )
+            }
           }
+          ;(node as Text).data = vnode.children as string
           nextNode = nextSibling(node)
         }
         break
@@ -409,15 +411,20 @@ export function createHydrationFunctions(
         }
       } else if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
         if (el.textContent !== vnode.children) {
-          hasMismatch = true
-          __DEV__ &&
-            warn(
-              `Hydration text content mismatch in <${
-                vnode.type as string
-              }>:\n` +
-                `- Client: ${el.textContent}\n` +
-                `- Server: ${vnode.children as string}`
-            )
+          if (
+            decodeHtml(el.textContent as string) !==
+            decodeHtml(vnode.children as string)
+          ) {
+            hasMismatch = true
+            __DEV__ &&
+              warn(
+                `Hydration text content mismatch in <${
+                  vnode.type as string
+                }>:\n` +
+                  `- Client: ${el.textContent}\n` +
+                  `- Server: ${vnode.children as string}`
+              )
+          }
           el.textContent = vnode.children as string
         }
       }
