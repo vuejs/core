@@ -14,30 +14,30 @@ return function render(_ctx, _cache, $props, $setup, $data, $options) {
 }"
 `;
 
-exports[`compiler: expression transform bindingMetadata should not prefix temp variable of for...in 1`] = `
+exports[`compiler: expression transform > bindingMetadata > should not prefix temp variable of for...in 1`] = `
 "const { openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
 
 return function render(_ctx, _cache, $props, $setup, $data, $options) {
-  return (_openBlock(), _createElementBlock("div", {
+  return (_openBlock(), _createElementBlock(\\"div\\", {
     onClick: () => {
           for (const x in _ctx.list) {
             _ctx.log(x)
           }         
         }
-  }, null, 8 /* PROPS */, ["onClick"]))
+  }, null, 8 /* PROPS */, [\\"onClick\\"]))
 }"
 `;
 
-exports[`compiler: expression transform bindingMetadata should not prefix temp variable of for...of 1`] = `
+exports[`compiler: expression transform > bindingMetadata > should not prefix temp variable of for...of 1`] = `
 "const { openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
 
 return function render(_ctx, _cache, $props, $setup, $data, $options) {
-  return (_openBlock(), _createElementBlock("div", {
+  return (_openBlock(), _createElementBlock(\\"div\\", {
     onClick: () => {
           for (const x of _ctx.list) {
             _ctx.log(x)
           }         
         }
-  }, null, 8 /* PROPS */, ["onClick"]))
+  }, null, 8 /* PROPS */, [\\"onClick\\"]))
 }"
 `;
