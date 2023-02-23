@@ -17,7 +17,7 @@ import { hasScopeRef, isMemberExpression } from '../utils'
 import { TO_HANDLER_KEY } from '../runtimeHelpers'
 
 const fnExpRE =
-  /^\s*([\w$_]+|(async\s*)?\([^)]*?\))\s*=>|^\s*(async\s+)?function(?:\s+[\w$]+)?\s*\(/
+  /^\s*([\w$_]+|(async\s*)?\([^)]*?\))\s*(:[^=]+)?=>|^\s*(async\s+)?function(?:\s+[\w$]+)?\s*\(/
 
 export interface VOnDirectiveNode extends DirectiveNode {
   // v-on without arg is handled directly in ./transformElements.ts due to it affecting
@@ -48,15 +48,15 @@ export const transformOn: DirectiveTransform = (
         rawName = `vnode-${rawName.slice(4)}`
       }
       const eventString =
-        node.tagType === ElementTypes.COMPONENT ||
+        node.tagType !== ElementTypes.ELEMENT ||
         rawName.startsWith('vnode') ||
         !/[A-Z]/.test(rawName)
-          ? // for component and vnode lifecycle event listeners, auto convert
+          ? // for non-element and vnode lifecycle event listeners, auto convert
             // it to camelCase. See issue #2249
             toHandlerKey(camelize(rawName))
-            // preserve case for plain element listeners that have uppercase
+          : // preserve case for plain element listeners that have uppercase
             // letters, as these may be custom elements' custom events
-          : `on:${rawName}`
+            `on:${rawName}`
       eventName = createSimpleExpression(eventString, true, arg.loc)
     } else {
       // #2388

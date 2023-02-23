@@ -1,3 +1,6 @@
+/**
+ * @vitest-environment jsdom
+ */
 import { looseEqual } from '../src'
 
 describe('utils/looseEqual', () => {

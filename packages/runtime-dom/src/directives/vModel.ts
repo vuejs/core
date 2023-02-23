@@ -11,7 +11,7 @@ import {
   looseEqual,
   looseIndexOf,
   invokeArrayFns,
-  toNumber,
+  looseToNumber,
   isSet
 } from '@vue/shared'
 
@@ -54,7 +54,7 @@ export const vModelText: ModelDirective<
         domValue = domValue.trim()
       }
       if (castToNumber) {
-        domValue = toNumber(domValue)
+        domValue = looseToNumber(domValue)
       }
       el._assign(domValue)
     })
@@ -88,7 +88,10 @@ export const vModelText: ModelDirective<
       if (trim && el.value.trim() === value) {
         return
       }
-      if ((number || el.type === 'number') && toNumber(el.value) === value) {
+      if (
+        (number || el.type === 'number') &&
+        looseToNumber(el.value) === value
+      ) {
         return
       }
     }
@@ -182,7 +185,7 @@ export const vModelSelect: ModelDirective<HTMLSelectElement> = {
       const selectedVal = Array.prototype.filter
         .call(el.options, (o: HTMLOptionElement) => o.selected)
         .map((o: HTMLOptionElement) =>
-          number ? toNumber(getValue(o)) : getValue(o)
+          number ? looseToNumber(getValue(o)) : getValue(o)
         )
       el._assign(
         el.multiple

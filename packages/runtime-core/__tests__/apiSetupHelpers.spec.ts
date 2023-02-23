@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import {
   ComponentInternalInstance,
   createApp,
@@ -121,7 +122,7 @@ describe('SFC <script setup> helpers', () => {
     })
   })
 
-  describe('createPropsRestProxy', () => {
+  test('createPropsRestProxy', () => {
     const original = shallowReactive({
       foo: 1,
       bar: 2,
@@ -149,7 +150,7 @@ describe('SFC <script setup> helpers', () => {
     })
 
     test('basic', async () => {
-      const spy = jest.fn()
+      const spy = vi.fn()
 
       let beforeInstance: ComponentInternalInstance | null = null
       let afterInstance: ComponentInternalInstance | null = null
@@ -197,7 +198,7 @@ describe('SFC <script setup> helpers', () => {
     })
 
     test('error handling', async () => {
-      const spy = jest.fn()
+      const spy = vi.fn()
 
       let beforeInstance: ComponentInternalInstance | null = null
       let afterInstance: ComponentInternalInstance | null = null

@@ -211,13 +211,16 @@ export function defineAsyncComponent<
 
 function createInnerComp(
   comp: ConcreteComponent,
-  {
-    vnode: { ref, props, children, shapeFlag },
-    parent
-  }: ComponentInternalInstance
+  parent: ComponentInternalInstance
 ) {
+  const { ref, props, children, ce } = parent.vnode
   const vnode = createVNode(comp, props, children)
   // ensure inner component inherits the async wrapper's ref owner
   vnode.ref = ref
+  // pass the custom element callback on to the inner comp
+  // and remove it from the async wrapper
+  vnode.ce = ce
+  delete parent.vnode.ce
+
   return vnode
 }

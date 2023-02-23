@@ -1,7 +1,3 @@
-/**
- * @jest-environment node
- */
-
 import { createApp, h, mergeProps, withCtx } from 'vue'
 import { renderToString } from '../src/renderToString'
 import { ssrRenderComponent, ssrRenderAttrs, ssrRenderSlot } from '../src'

@@ -35,28 +35,28 @@ describe('ssr: <slot>', () => {
   test('with props', () => {
     expect(compile(`<slot name="foo" :p="1" bar="2" />`).code)
       .toMatchInlineSnapshot(`
-      "const { ssrRenderSlot: _ssrRenderSlot } = require(\\"vue/server-renderer\\")
+        "const { ssrRenderSlot: _ssrRenderSlot } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _ssrRenderSlot(_ctx.$slots, \\"foo\\", {
-          p: 1,
-          bar: \\"2\\"
-        }, null, _push, _parent)
-      }"
-    `)
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
+          _ssrRenderSlot(_ctx.$slots, \\"foo\\", {
+            p: 1,
+            bar: \\"2\\"
+          }, null, _push, _parent)
+        }"
+      `)
   })
 
   test('with fallback', () => {
     expect(compile(`<slot>some {{ fallback }} content</slot>`).code)
       .toMatchInlineSnapshot(`
-      "const { ssrRenderSlot: _ssrRenderSlot, ssrInterpolate: _ssrInterpolate } = require(\\"vue/server-renderer\\")
+        "const { ssrRenderSlot: _ssrRenderSlot, ssrInterpolate: _ssrInterpolate } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _ssrRenderSlot(_ctx.$slots, \\"default\\", {}, () => {
-          _push(\`some \${_ssrInterpolate(_ctx.fallback)} content\`)
-        }, _push, _parent)
-      }"
-    `)
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
+          _ssrRenderSlot(_ctx.$slots, \\"default\\", {}, () => {
+            _push(\`some \${_ssrInterpolate(_ctx.fallback)} content\`)
+          }, _push, _parent)
+        }"
+      `)
   })
 
   test('with scopeId', async () => {

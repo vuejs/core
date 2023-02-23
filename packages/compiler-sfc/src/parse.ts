@@ -44,14 +44,8 @@ export interface SFCScriptBlock extends SFCBlock {
   setup?: string | boolean
   bindings?: BindingMetadata
   imports?: Record<string, ImportBinding>
-  /**
-   * import('\@babel/types').Statement
-   */
-  scriptAst?: any[]
-  /**
-   * import('\@babel/types').Statement
-   */
-  scriptSetupAst?: any[]
+  scriptAst?: import('@babel/types').Statement[]
+  scriptSetupAst?: import('@babel/types').Statement[]
 }
 
 export interface SFCStyleBlock extends SFCBlock {
@@ -155,7 +149,6 @@ export function parse(
       errors.push(e)
     }
   })
-
   ast.children.forEach(node => {
     if (node.type !== NodeTypes.ELEMENT) {
       return
@@ -224,7 +217,13 @@ export function parse(
         break
     }
   })
-
+  if (!descriptor.template && !descriptor.script && !descriptor.scriptSetup) {
+    errors.push(
+      new SyntaxError(
+        `At least one <template> or <script> is required in a single file component.`
+      )
+    )
+  }
   if (descriptor.scriptSetup) {
     if (descriptor.scriptSetup.src) {
       errors.push(

@@ -21,34 +21,34 @@ describe('ssr: v-show', () => {
   test('basic', () => {
     expect(compileWithWrapper(`<div v-show="foo"/>`).code)
       .toMatchInlineSnapshot(`
-      "const { ssrRenderStyle: _ssrRenderStyle, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
+        "const { ssrRenderStyle: _ssrRenderStyle, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _push(\`<div\${
-          _ssrRenderAttrs(_attrs)
-        }><div style=\\"\${
-          _ssrRenderStyle((_ctx.foo) ? null : { display: \\"none\\" })
-        }\\"></div></div>\`)
-      }"
-    `)
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
+          _push(\`<div\${
+            _ssrRenderAttrs(_attrs)
+          }><div style=\\"\${
+            _ssrRenderStyle((_ctx.foo) ? null : { display: \\"none\\" })
+          }\\"></div></div>\`)
+        }"
+      `)
   })
 
   test('with static style', () => {
     expect(compileWithWrapper(`<div style="color:red" v-show="foo"/>`).code)
       .toMatchInlineSnapshot(`
-      "const { ssrRenderStyle: _ssrRenderStyle, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
+        "const { ssrRenderStyle: _ssrRenderStyle, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _push(\`<div\${
-          _ssrRenderAttrs(_attrs)
-        }><div style=\\"\${
-          _ssrRenderStyle([
-            {\\"color\\":\\"red\\"},
-            (_ctx.foo) ? null : { display: \\"none\\" }
-          ])
-        }\\"></div></div>\`)
-      }"
-    `)
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
+          _push(\`<div\${
+            _ssrRenderAttrs(_attrs)
+          }><div style=\\"\${
+            _ssrRenderStyle([
+              {\\"color\\":\\"red\\"},
+              (_ctx.foo) ? null : { display: \\"none\\" }
+            ])
+          }\\"></div></div>\`)
+        }"
+      `)
   })
 
   test('with dynamic style', () => {

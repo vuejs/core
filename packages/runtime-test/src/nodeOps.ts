@@ -1,6 +1,6 @@
 import { markRaw } from '@vue/reactivity'
 
-export const enum NodeTypes {
+export const enum TestNodeTypes {
   TEXT = 'text',
   ELEMENT = 'element',
   COMMENT = 'comment'
@@ -17,7 +17,7 @@ export const enum NodeOpTypes {
 
 export interface TestElement {
   id: number
-  type: NodeTypes.ELEMENT
+  type: TestNodeTypes.ELEMENT
   parentNode: TestElement | null
   tag: string
   children: TestNode[]
@@ -27,14 +27,14 @@ export interface TestElement {
 
 export interface TestText {
   id: number
-  type: NodeTypes.TEXT
+  type: TestNodeTypes.TEXT
   parentNode: TestElement | null
   text: string
 }
 
 export interface TestComment {
   id: number
-  type: NodeTypes.COMMENT
+  type: TestNodeTypes.COMMENT
   parentNode: TestElement | null
   text: string
 }
@@ -43,7 +43,7 @@ export type TestNode = TestElement | TestText | TestComment
 
 export interface NodeOp {
   type: NodeOpTypes
-  nodeType?: NodeTypes
+  nodeType?: TestNodeTypes
   tag?: string
   text?: string
   targetNode?: TestNode
@@ -74,7 +74,7 @@ export function dumpOps(): NodeOp[] {
 function createElement(tag: string): TestElement {
   const node: TestElement = {
     id: nodeId++,
-    type: NodeTypes.ELEMENT,
+    type: TestNodeTypes.ELEMENT,
     tag,
     children: [],
     props: {},
@@ -83,7 +83,7 @@ function createElement(tag: string): TestElement {
   }
   logNodeOp({
     type: NodeOpTypes.CREATE,
-    nodeType: NodeTypes.ELEMENT,
+    nodeType: TestNodeTypes.ELEMENT,
     targetNode: node,
     tag
   })
@@ -95,13 +95,13 @@ function createElement(tag: string): TestElement {
 function createText(text: string): TestText {
   const node: TestText = {
     id: nodeId++,
-    type: NodeTypes.TEXT,
+    type: TestNodeTypes.TEXT,
     text,
     parentNode: null
   }
   logNodeOp({
     type: NodeOpTypes.CREATE,
-    nodeType: NodeTypes.TEXT,
+    nodeType: TestNodeTypes.TEXT,
     targetNode: node,
     text
   })
@@ -113,13 +113,13 @@ function createText(text: string): TestText {
 function createComment(text: string): TestComment {
   const node: TestComment = {
     id: nodeId++,
-    type: NodeTypes.COMMENT,
+    type: TestNodeTypes.COMMENT,
     text,
     parentNode: null
   }
   logNodeOp({
     type: NodeOpTypes.CREATE,
-    nodeType: NodeTypes.COMMENT,
+    nodeType: TestNodeTypes.COMMENT,
     targetNode: node,
     text
   })
@@ -203,7 +203,7 @@ function setElementText(el: TestElement, text: string) {
     el.children = [
       {
         id: nodeId++,
-        type: NodeTypes.TEXT,
+        type: TestNodeTypes.TEXT,
         text,
         parentNode: el
       }

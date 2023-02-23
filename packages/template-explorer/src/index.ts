@@ -275,5 +275,5 @@ function debounce<T extends (...args: any[]) => any>(
       fn(...args)
       prevTimer = null
     }, delay)
-  }) as any
+  }) as T
 }

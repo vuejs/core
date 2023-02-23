@@ -1,8 +1,9 @@
+import { vi } from 'vitest'
 import { reactive, effect, isReactive, toRaw } from '../../src'
 
 describe('reactivity/collections', () => {
   function coverCollectionFn(collection: Set<any>, fnName: string) {
-    const spy = jest.fn()
+    const spy = vi.fn()
     let proxy = reactive(collection)
     ;(collection as any)[fnName] = spy
     return [proxy as any, spy]
@@ -182,7 +183,7 @@ describe('reactivity/collections', () => {
     it('should not observe non value changing mutations', () => {
       let dummy
       const set = reactive(new Set())
-      const setSpy = jest.fn(() => (dummy = set.has('value')))
+      const setSpy = vi.fn(() => (dummy = set.has('value')))
       effect(setSpy)
 
       expect(dummy).toBe(false)
@@ -283,7 +284,7 @@ describe('reactivity/collections', () => {
       let dummy
       const key = {}
       const set = reactive(new Set())
-      const setSpy = jest.fn(() => (dummy = set.has(key)))
+      const setSpy = vi.fn(() => (dummy = set.has(key)))
       effect(setSpy)
 
       expect(dummy).toBe(false)

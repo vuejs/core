@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import {
   CompilerOptions,
   baseParse as parse,
@@ -531,7 +532,7 @@ describe('compiler: element transform', () => {
   })
 
   test('error on v-bind with no argument', () => {
-    const onError = jest.fn()
+    const onError = vi.fn()
     parseWithElementTransform(`<div v-bind/>`, { onError })
     expect(onError.mock.calls[0]).toMatchObject([
       {
@@ -1056,6 +1057,32 @@ describe('compiler: element transform', () => {
             },
             value: {
               content: 'input',
+              isStatic: true
+            }
+          }
+        ]
+      })
+    })
+
+    test('script setup inline mode template ref (binding does not exist but props with the same name exist)', () => {
+      const { node } = parseWithElementTransform(`<input ref="msg"/>`, {
+        inline: true,
+        bindingMetadata: {
+          msg: BindingTypes.PROPS,
+          ref: BindingTypes.SETUP_CONST
+        }
+      })
+      expect(node.props).toMatchObject({
+        type: NodeTypes.JS_OBJECT_EXPRESSION,
+        properties: [
+          {
+            type: NodeTypes.JS_PROPERTY,
+            key: {
+              content: 'ref',
+              isStatic: true
+            },
+            value: {
+              content: 'msg',
               isStatic: true
             }
           }

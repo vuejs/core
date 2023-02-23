@@ -36,7 +36,14 @@ const store = new ReplStore({
 const sfcOptions = {
   script: {
     inlineTemplate: !useDevMode.value,
+    isProd: !useDevMode.value,
     reactivityTransform: true
+  },
+  style: {
+    isProd: !useDevMode.value
+  },
+  template: {
+    isProd: !useDevMode.value
   }
 }
 
@@ -51,7 +58,11 @@ watchEffect(() => {
 
 function toggleDevMode() {
   const dev = (useDevMode.value = !useDevMode.value)
-  sfcOptions.script.inlineTemplate = !dev
+  sfcOptions.script.inlineTemplate =
+    sfcOptions.script.isProd =
+    sfcOptions.template.isProd =
+    sfcOptions.style.isProd =
+      !dev
   store.setFiles(store.getFiles())
 }
 

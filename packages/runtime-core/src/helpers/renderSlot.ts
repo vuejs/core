@@ -37,11 +37,8 @@ export function renderSlot(
       isAsyncWrapper(currentRenderingInstance!.parent) &&
       currentRenderingInstance!.parent.isCE)
   ) {
-    return createVNode(
-      'slot',
-      name === 'default' ? null : { name },
-      fallback && fallback()
-    )
+    if (name !== 'default') props.name = name
+    return createVNode('slot', props, fallback && fallback())
   }
 
   let slot = slots[name]

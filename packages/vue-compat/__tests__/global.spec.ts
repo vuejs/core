@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import Vue from '@vue/compat'
 import { effect, isReactive } from '@vue/reactivity'
 import { h, nextTick } from '@vue/runtime-core'
@@ -145,10 +146,10 @@ describe('GLOBAL_EXTEND', () => {
   })
 
   it('should not merge nested mixins created with Vue.extend', () => {
-    const a = jest.fn()
-    const b = jest.fn()
-    const c = jest.fn()
-    const d = jest.fn()
+    const a = vi.fn()
+    const b = vi.fn()
+    const c = vi.fn()
+    const d = vi.fn()
     const A = Vue.extend({
       created: a
     })
@@ -475,7 +476,7 @@ test('local app-level mixin registration should not affect other local apps', ()
   const app1 = createApp({ render: () => h('div') })
   const app2 = createApp({})
 
-  const mixin = { created: jest.fn() }
+  const mixin = { created: vi.fn() }
   app1.mixin(mixin)
   app2.mixin(mixin)
 

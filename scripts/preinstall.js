@@ -1,3 +1,4 @@
+// @ts-check
 if (!/pnpm/.test(process.env.npm_execpath || '')) {
   console.warn(
     `\u001b[33mThis repository requires using pnpm as the package manager ` +

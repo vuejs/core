@@ -67,6 +67,12 @@ export async function renderToString(
 
   await resolveTeleports(context)
 
+  if (context.__watcherHandles) {
+    for (const unwatch of context.__watcherHandles) {
+      unwatch()
+    }
+  }
+
   return result
 }
 

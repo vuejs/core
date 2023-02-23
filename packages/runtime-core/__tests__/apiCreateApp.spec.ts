@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import {
   createApp,
   h,
@@ -145,9 +146,9 @@ describe('api: createApp', () => {
   })
 
   test('directive', () => {
-    const spy1 = jest.fn()
-    const spy2 = jest.fn()
-    const spy3 = jest.fn()
+    const spy1 = vi.fn()
+    const spy2 = vi.fn()
+    const spy3 = vi.fn()
 
     const Root = {
       // local override
@@ -322,7 +323,7 @@ describe('api: createApp', () => {
     const error = new Error()
     const count = ref(0)
 
-    const handler = jest.fn((err, instance, info) => {
+    const handler = vi.fn((err, instance, info) => {
       expect(err).toBe(error)
       expect((instance as any).count).toBe(count.value)
       expect(info).toBe(`render function`)
@@ -348,7 +349,7 @@ describe('api: createApp', () => {
 
   test('config.warnHandler', () => {
     let ctx: any
-    const handler = jest.fn((msg, instance, trace) => {
+    const handler = vi.fn((msg, instance, trace) => {
       expect(msg).toMatch(`Component is missing template or render function`)
       expect(instance).toBe(ctx.proxy)
       expect(trace).toMatch(`Hello`)
@@ -368,7 +369,7 @@ describe('api: createApp', () => {
   })
 
   describe('config.isNativeTag', () => {
-    const isNativeTag = jest.fn(tag => tag === 'div')
+    const isNativeTag = vi.fn(tag => tag === 'div')
 
     test('Component.name', () => {
       const Root = {

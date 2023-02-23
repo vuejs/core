@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import {
   ref,
   render,
@@ -200,7 +201,7 @@ describe('component: slots', () => {
   test('should respect $stable flag', async () => {
     const flag1 = ref(1)
     const flag2 = ref(2)
-    const spy = jest.fn()
+    const spy = vi.fn()
 
     const Child = () => {
       spy()

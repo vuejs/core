@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import {
   baseParse as parse,
   transform,
@@ -42,7 +43,7 @@ describe('compiler: v-text transform', () => {
   })
 
   it('should raise error and ignore children when v-text is present', () => {
-    const onError = jest.fn()
+    const onError = vi.fn()
     const ast = transformWithVText(`<div v-text="test">hello</div>`, {
       onError
     })
@@ -63,7 +64,7 @@ describe('compiler: v-text transform', () => {
   })
 
   it('should raise error if has no expression', () => {
-    const onError = jest.fn()
+    const onError = vi.fn()
     transformWithVText(`<div v-text></div>`, {
       onError
     })

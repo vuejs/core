@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "declaration": true,
+    "emitDeclarationOnly": true
+  },
+  "exclude": [
+    "packages/*/__tests__",
+    "packages/runtime-test",
+    "packages/template-explorer",
+    "packages/sfc-playground",
+    "packages/size-check",
+    "packages/dts-test"
+  ]
+}

@@ -87,6 +87,7 @@ export const enum ErrorCodes {
   X_V_MODEL_NO_EXPRESSION,
   X_V_MODEL_MALFORMED_EXPRESSION,
   X_V_MODEL_ON_SCOPE_VARIABLE,
+  X_V_MODEL_ON_PROPS,
   X_INVALID_EXPRESSION,
   X_KEEP_ALIVE_INVALID_CHILDREN,
 
@@ -157,7 +158,7 @@ export const errorMessages: Record<ErrorCodes, string> = {
   [ErrorCodes.X_V_ON_NO_EXPRESSION]: `v-on is missing expression.`,
   [ErrorCodes.X_V_SLOT_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET]: `Unexpected custom directive on <slot> outlet.`,
   [ErrorCodes.X_V_SLOT_MIXED_SLOT_USAGE]:
-    `Mixed v-slot usage on both the component and nested <template>.` +
+    `Mixed v-slot usage on both the component and nested <template>. ` +
     `When there are multiple named slots, all slots should use <template> ` +
     `syntax to avoid scope ambiguity.`,
   [ErrorCodes.X_V_SLOT_DUPLICATE_SLOT_NAMES]: `Duplicate slot names found. `,
@@ -168,6 +169,7 @@ export const errorMessages: Record<ErrorCodes, string> = {
   [ErrorCodes.X_V_MODEL_NO_EXPRESSION]: `v-model is missing expression.`,
   [ErrorCodes.X_V_MODEL_MALFORMED_EXPRESSION]: `v-model value must be a valid JavaScript member expression.`,
   [ErrorCodes.X_V_MODEL_ON_SCOPE_VARIABLE]: `v-model cannot be used on v-for or v-slot scope variables because they are not writable.`,
+  [ErrorCodes.X_V_MODEL_ON_PROPS]: `v-model cannot be used on a prop, because local prop bindings are not writable.\nUse a v-bind binding combined with a v-on listener that emits update:x event instead.`,
   [ErrorCodes.X_INVALID_EXPRESSION]: `Error parsing JavaScript expression: `,
   [ErrorCodes.X_KEEP_ALIVE_INVALID_CHILDREN]: `<KeepAlive> expects exactly one child component.`,
 

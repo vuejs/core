@@ -1,9 +1,10 @@
 {
   "compilerOptions": {
     "baseUrl": ".",
-    "outDir": "dist",
+    "outDir": "temp",
     "sourceMap": false,
     "target": "es2016",
+    "newLine": "LF",
     "useDefineForClassFields": false,
     "module": "esnext",
     "moduleResolution": "node",
@@ -12,11 +13,13 @@
     "noUnusedLocals": true,
     "experimentalDecorators": true,
     "resolveJsonModule": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
     "esModuleInterop": true,
     "removeComments": false,
     "jsx": "preserve",
     "lib": ["esnext", "dom"],
-    "types": ["jest", "puppeteer", "node"],
+    "types": ["vitest/globals", "puppeteer", "node"],
     "rootDir": ".",
     "paths": {
       "@vue/compat": ["packages/vue-compat/src"],
@@ -29,6 +32,6 @@
     "packages/*/src",
     "packages/runtime-dom/types/jsx.d.ts",
     "packages/*/__tests__",
-    "test-dts"
+    "packages/dts-test"
   ]
 }

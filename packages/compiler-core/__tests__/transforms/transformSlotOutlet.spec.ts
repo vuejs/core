@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import {
   CompilerOptions,
   baseParse as parse,
@@ -369,7 +370,7 @@ describe('compiler: transform <slot> outlets', () => {
   })
 
   test(`error on unexpected custom directive on <slot>`, () => {
-    const onError = jest.fn()
+    const onError = vi.fn()
     const source = `<slot v-foo />`
     parseWithSlots(source, { onError })
     const index = source.indexOf('v-foo')
