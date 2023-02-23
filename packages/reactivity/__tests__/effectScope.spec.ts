@@ -225,7 +225,7 @@ describe('reactivity/effect/scope', () => {
   it('should not track effect in onScopeDispose', () => {
     const counter = ref(0)
     const num = ref(0)
-    const spy = jest.fn()
+    const spy = vi.fn()
 
     const scope = new EffectScope()
     scope.run(() => {
