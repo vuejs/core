@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import { reactive, isReactive, effect, toRaw } from '../../src'
 
 describe('reactivity/collections', () => {
@@ -50,7 +51,7 @@ describe('reactivity/collections', () => {
       let dummy
       const value = {}
       const set = reactive(new WeakSet())
-      const setSpy = jest.fn(() => (dummy = set.has(value)))
+      const setSpy = vi.fn(() => (dummy = set.has(value)))
       effect(setSpy)
 
       expect(dummy).toBe(false)

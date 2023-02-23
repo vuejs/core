@@ -1,4 +1,8 @@
+/**
+ * @vitest-environment jsdom
+ */
 // using DOM renderer because this case is mostly DOM-specific
+import { vi } from 'vitest'
 import {
   h,
   render,
@@ -16,12 +20,12 @@ import {
   Fragment,
   withModifiers
 } from '@vue/runtime-dom'
-import { PatchFlags } from '@vue/shared/src'
+import { PatchFlags } from '@vue/shared'
 
 describe('attribute fallthrough', () => {
   it('should allow attrs to fallthrough', async () => {
-    const click = jest.fn()
-    const childUpdated = jest.fn()
+    const click = vi.fn()
+    const childUpdated = vi.fn()
 
     const Hello = {
       setup() {
@@ -85,8 +89,8 @@ describe('attribute fallthrough', () => {
   })
 
   it('should only allow whitelisted fallthrough on functional component with optional props', async () => {
-    const click = jest.fn()
-    const childUpdated = jest.fn()
+    const click = vi.fn()
+    const childUpdated = vi.fn()
 
     const count = ref(0)
 
@@ -143,8 +147,8 @@ describe('attribute fallthrough', () => {
   })
 
   it('should allow all attrs on functional component with declared props', async () => {
-    const click = jest.fn()
-    const childUpdated = jest.fn()
+    const click = vi.fn()
+    const childUpdated = vi.fn()
 
     const count = ref(0)
 
@@ -199,9 +203,9 @@ describe('attribute fallthrough', () => {
   })
 
   it('should fallthrough for nested components', async () => {
-    const click = jest.fn()
-    const childUpdated = jest.fn()
-    const grandChildUpdated = jest.fn()
+    const click = vi.fn()
+    const childUpdated = vi.fn()
+    const grandChildUpdated = vi.fn()
 
     const Hello = {
       setup() {
@@ -387,7 +391,7 @@ describe('attribute fallthrough', () => {
   })
 
   it('should dedupe same listeners when $attrs is used during render', () => {
-    const click = jest.fn()
+    const click = vi.fn()
     const count = ref(0)
 
     function inc() {
@@ -582,7 +586,7 @@ describe('attribute fallthrough', () => {
       }
     })
 
-    const onClick = jest.fn()
+    const onClick = vi.fn()
     const App = {
       render() {
         return h(Child, {
@@ -613,7 +617,7 @@ describe('attribute fallthrough', () => {
     }
     Child.emits = ['click']
 
-    const onClick = jest.fn()
+    const onClick = vi.fn()
     const App = {
       render() {
         return h(Child, {
@@ -633,7 +637,7 @@ describe('attribute fallthrough', () => {
   })
 
   it('should support fallthrough for fragments with single element + comments', () => {
-    const click = jest.fn()
+    const click = vi.fn()
 
     const Hello = {
       setup() {
@@ -727,7 +731,7 @@ describe('attribute fallthrough', () => {
   it('should not fallthrough v-model listeners with corresponding declared prop', () => {
     let textFoo = ''
     let textBar = ''
-    const click = jest.fn()
+    const click = vi.fn()
 
     const App = defineComponent({
       setup() {

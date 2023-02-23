@@ -268,7 +268,9 @@ h1 { color: red }
   })
 
   test('treat custom blocks as raw text', () => {
-    const { errors, descriptor } = parse(`<foo> <-& </foo>`)
+    const { errors, descriptor } = parse(
+      `<template><input></template><foo> <-& </foo>`
+    )
     expect(errors.length).toBe(0)
     expect(descriptor.customBlocks[0].content).toBe(` <-& `)
   })
@@ -308,6 +310,14 @@ h1 { color: red }
           `<script setup>console.log(1)</script><script>console.log(1)</script>`
         ).errors.length
       ).toBe(0)
+    })
+
+    // # 6676
+    test('should throw error if no <template> or <script> is present', () => {
+      assertWarning(
+        parse(`import { ref } from 'vue'`).errors,
+        `At least one <template> or <script> is required in a single file component`
+      )
     })
   })
 })

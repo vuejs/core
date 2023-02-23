@@ -400,7 +400,7 @@ function isReferenced(node: Node, parent: Node, grandparent?: Node): boolean {
     case 'MetaProperty':
       return false
 
-    // yes: type X = { somePropert: NODE }
+    // yes: type X = { someProperty: NODE }
     // no: type X = { NODE: OtherType }
     case 'ObjectTypeProperty':
       return parent.key !== node
