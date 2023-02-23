@@ -937,7 +937,7 @@ describe('renderer: optimized mode', () => {
 
   test('should not take unmount children fast path if dynamicChildren is empty', async () => {
     const show = ref(true)
-    const spyUnmounted = jest.fn()
+    const spyUnmounted = vi.fn()
 
     const Child = {
       setup() {
