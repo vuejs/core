@@ -1,5 +1,5 @@
 import { TrackOpTypes, TriggerOpTypes } from './operations'
-import { extend, isArray, isIntegerKey, isMap, toNumber } from '@vue/shared'
+import { extend, isArray, isIntegerKey, isMap } from '@vue/shared'
 import { EffectScope, recordEffectScope } from './effectScope'
 import {
   createDep,
@@ -248,10 +248,14 @@ export function trackEffects(
     dep.add(activeEffect!)
     activeEffect!.deps.push(dep)
     if (__DEV__ && activeEffect!.onTrack) {
-      activeEffect!.onTrack({
-        effect: activeEffect!,
-        ...debuggerEventExtraInfo!
-      })
+      activeEffect!.onTrack(
+        extend(
+          {
+            effect: activeEffect!
+          },
+          debuggerEventExtraInfo!
+        )
+      )
     }
   }
 }
@@ -276,7 +280,7 @@ export function trigger(
     // trigger all effects for target
     deps = [...depsMap.values()]
   } else if (key === 'length' && isArray(target)) {
-    const newLength = toNumber(newValue)
+    const newLength = Number(newValue)
     depsMap.forEach((dep, key) => {
       if (key === 'length' || key >= newLength) {
         deps.push(dep)
@@ -376,4 +380,8 @@ function triggerEffect(
       effect.run()
     }
   }
+}
+
+export function getDepFromReactive(object: any, key: string | number | symbol) {
+  return targetMap.get(object)?.get(key)
 }

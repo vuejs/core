@@ -22,7 +22,7 @@ import { warn } from './warning'
 import { createVNode, cloneVNode, VNode } from './vnode'
 import { RootHydrateFunction } from './hydration'
 import { devtoolsInitApp, devtoolsUnmountApp } from './devtools'
-import { isFunction, NO, isObject } from '@vue/shared'
+import { isFunction, NO, isObject, extend } from '@vue/shared'
 import { version } from '.'
 import { installAppCompatProperties } from './compat/global'
 import { NormalizedPropsOptions } from './componentProps'
@@ -31,7 +31,13 @@ import { ObjectEmitsOptions } from './componentEmits'
 export interface App<HostElement = any> {
   version: string
   config: AppConfig
-  use(plugin: Plugin, ...options: any[]): this
+
+  use<Options extends unknown[]>(
+    plugin: Plugin<Options>,
+    ...options: Options
+  ): this
+  use<Options>(plugin: Plugin<Options>, options: Options): this
+
   mixin(mixin: ComponentOptions): this
   component(name: string): Component | undefined
   component(name: string, component: Component): this
@@ -140,12 +146,16 @@ export interface AppContext {
   filters?: Record<string, Function>
 }
 
-type PluginInstallFunction = (app: App, ...options: any[]) => any
+type PluginInstallFunction<Options> = Options extends unknown[]
+  ? (app: App, ...options: Options) => any
+  : (app: App, options: Options) => any
 
-export type Plugin =
-  | (PluginInstallFunction & { install?: PluginInstallFunction })
+export type Plugin<Options = any[]> =
+  | (PluginInstallFunction<Options> & {
+      install?: PluginInstallFunction<Options>
+    })
   | {
-      install: PluginInstallFunction
+      install: PluginInstallFunction<Options>
     }
 
 export function createAppContext(): AppContext {
@@ -183,7 +193,7 @@ export function createAppAPI<HostElement>(
 ): CreateAppFunction<HostElement> {
   return function createApp(rootComponent, rootProps = null) {
     if (!isFunction(rootComponent)) {
-      rootComponent = { ...rootComponent }
+      rootComponent = extend({}, rootComponent)
     }
 
     if (rootProps != null && !isObject(rootProps)) {

@@ -46,15 +46,15 @@ import { defineLegacyVNodeProperties } from './compat/renderFn'
 import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
 import { ComponentPublicInstance } from './componentPublicInstance'
 
-export const Fragment = Symbol(__DEV__ ? 'Fragment' : undefined) as any as {
+export const Fragment = Symbol.for('v-fgt') as any as {
   __isFragment: true
   new (): {
     $props: VNodeProps
   }
 }
-export const Text = Symbol(__DEV__ ? 'Text' : undefined)
-export const Comment = Symbol(__DEV__ ? 'Comment' : undefined)
-export const Static = Symbol(__DEV__ ? 'Static' : undefined)
+export const Text = Symbol.for('v-txt')
+export const Comment = Symbol.for('v-cmt')
+export const Static = Symbol.for('v-stc')
 
 export type VNodeTypes =
   | string
@@ -206,6 +206,11 @@ export interface VNode<
   appContext: AppContext | null
 
   /**
+   * @internal lexical scope owner instance
+   */
+  ctx: ComponentInternalInstance | null
+
+  /**
    * @internal attached by v-memo
    */
   memo?: any[]
@@ -352,6 +357,10 @@ export function isSameVNodeType(n1: VNode, n2: VNode): boolean {
     n2.shapeFlag & ShapeFlags.COMPONENT &&
     hmrDirtyComponents.has(n2.type as ConcreteComponent)
   ) {
+    // #7042, ensure the vnode being unmounted during HMR
+    // bitwise operations to remove keep alive flags
+    n1.shapeFlag &= ~ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+    n2.shapeFlag &= ~ShapeFlags.COMPONENT_KEPT_ALIVE
     // HMR only: if the component has been hot-updated, force a reload.
     return false
   }
@@ -439,7 +448,8 @@ function createBaseVNode(
     patchFlag,
     dynamicProps,
     dynamicChildren: null,
-    appContext: null
+    appContext: null,
+    ctx: currentRenderingInstance
   } as VNode
 
   if (needFullChildrenNormalization) {
@@ -661,7 +671,9 @@ export function cloneVNode<T, U>(
     ssContent: vnode.ssContent && cloneVNode(vnode.ssContent),
     ssFallback: vnode.ssFallback && cloneVNode(vnode.ssFallback),
     el: vnode.el,
-    anchor: vnode.anchor
+    anchor: vnode.anchor,
+    ctx: vnode.ctx,
+    ce: vnode.ce
   }
   if (__COMPAT__) {
     defineLegacyVNodeProperties(cloned as VNode)
