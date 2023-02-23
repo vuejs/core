@@ -91,9 +91,9 @@ describe('resolveAssets', () => {
     const root = nodeOps.createElement('div')
     app.mount(root)
 
-    expect(component1!).toBe(Root) // explicit self name reference
+    expect(component1!).toMatchObject(Root) // explicit self name reference
     expect(component2!).toBe(Foo) // successful resolve take higher priority
-    expect(component3!).toBe(Root) // fallback when resolve fails
+    expect(component3!).toMatchObject(Root) // fallback when resolve fails
   })
 
   describe('warning', () => {

@@ -66,8 +66,8 @@ export function ssrProcessSuspense(
   }
   const { slotsExp, wipSlots } = wipEntry
   for (let i = 0; i < wipSlots.length; i++) {
-    const { fn, children } = wipSlots[i]
-    fn.body = processChildrenAsStatement(children, context)
+    const slot = wipSlots[i]
+    slot.fn.body = processChildrenAsStatement(slot, context)
   }
   // _push(ssrRenderSuspense(slots))
   context.pushStatement(

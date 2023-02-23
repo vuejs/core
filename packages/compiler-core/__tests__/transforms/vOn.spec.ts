@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import {
   baseParse as parse,
   CompilerOptions,
@@ -271,6 +272,21 @@ describe('compiler: transform v-on', () => {
     })
   })
 
+  test('should NOT wrap as function if expression is already function expression (with Typescript)', () => {
+    const { node } = parseWithVOn(`<div @click="(e: any): any => foo(e)"/>`)
+    expect((node.codegenNode as VNodeCall).props).toMatchObject({
+      properties: [
+        {
+          key: { content: `onClick` },
+          value: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: `(e: any): any => foo(e)`
+          }
+        }
+      ]
+    })
+  })
+
   test('should NOT wrap as function if expression is already function expression (with newlines)', () => {
     const { node } = parseWithVOn(
       `<div @click="
@@ -383,7 +399,7 @@ describe('compiler: transform v-on', () => {
   })
 
   test('should error if no expression AND no modifier', () => {
-    const onError = jest.fn()
+    const onError = vi.fn()
     parseWithVOn(`<div v-on:click />`, { onError })
     expect(onError.mock.calls[0][0]).toMatchObject({
       code: ErrorCodes.X_V_ON_NO_EXPRESSION,
@@ -401,7 +417,7 @@ describe('compiler: transform v-on', () => {
   })
 
   test('should NOT error if no expression but has modifier', () => {
-    const onError = jest.fn()
+    const onError = vi.fn()
     parseWithVOn(`<div v-on:click.prevent />`, { onError })
     expect(onError).not.toHaveBeenCalled()
   })

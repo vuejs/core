@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import { reactive, isReactive, toRaw } from '../src/reactive'
 import { ref, isRef } from '../src/ref'
 import { effect } from '../src/effect'
@@ -90,7 +91,7 @@ describe('reactivity/reactive/Array', () => {
 
   test('delete on Array should not trigger length dependency', () => {
     const arr = reactive([1, 2, 3])
-    const fn = jest.fn()
+    const fn = vi.fn()
     effect(() => {
       fn(arr.length)
     })
@@ -102,7 +103,7 @@ describe('reactivity/reactive/Array', () => {
   test('add existing index on Array should not trigger length dependency', () => {
     const array = new Array(3)
     const observed = reactive(array)
-    const fn = jest.fn()
+    const fn = vi.fn()
     effect(() => {
       fn(observed.length)
     })
@@ -112,14 +113,13 @@ describe('reactivity/reactive/Array', () => {
   })
 
   test('add non-integer prop on Array should not trigger length dependency', () => {
-    const array = new Array(3)
+    const array: any[] & { x?: string } = new Array(3)
     const observed = reactive(array)
-    const fn = jest.fn()
+    const fn = vi.fn()
     effect(() => {
       fn(observed.length)
     })
     expect(fn).toHaveBeenCalledTimes(1)
-    // @ts-ignore
     observed.x = 'x'
     expect(fn).toHaveBeenCalledTimes(1)
     observed[-1] = 'x'
@@ -151,8 +151,7 @@ describe('reactivity/reactive/Array', () => {
 
     // read + copy
     test('read only copy methods', () => {
-      const res = original.concat([3, ref(4)])
-      const raw = toRaw(res)
+      const raw = original.concat([3, ref(4)])
       expect(isRef(raw[1])).toBe(true)
       expect(isRef(raw[3])).toBe(true)
     })

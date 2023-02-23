@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1
 
-exports[`compiler sfc: transform asset url should allow for full base URLs, with paths 1`] = `
+exports[`compiler sfc: transform asset url > should allow for full base URLs, with paths 1`] = `
 "import { openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 
 export function render(_ctx, _cache) {
@@ -8,7 +8,7 @@ export function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler sfc: transform asset url should allow for full base URLs, without paths 1`] = `
+exports[`compiler sfc: transform asset url > should allow for full base URLs, without paths 1`] = `
 "import { openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 
 export function render(_ctx, _cache) {
@@ -16,7 +16,7 @@ export function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler sfc: transform asset url should allow for full base URLs, without port 1`] = `
+exports[`compiler sfc: transform asset url > should allow for full base URLs, without port 1`] = `
 "import { openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 
 export function render(_ctx, _cache) {
@@ -24,7 +24,7 @@ export function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler sfc: transform asset url should allow for full base URLs, without protocol 1`] = `
+exports[`compiler sfc: transform asset url > should allow for full base URLs, without protocol 1`] = `
 "import { openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 
 export function render(_ctx, _cache) {
@@ -32,22 +32,24 @@ export function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler sfc: transform asset url support uri fragment 1`] = `
+exports[`compiler sfc: transform asset url > support uri fragment 1`] = `
 "import { createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 import _imports_0 from '@svg/file.svg'
 
 
 const _hoisted_1 = _imports_0 + '#fragment'
+const _hoisted_2 = /*#__PURE__*/_createElementVNode(\\"use\\", { href: _hoisted_1 }, null, -1 /* HOISTED */)
+const _hoisted_3 = /*#__PURE__*/_createElementVNode(\\"use\\", { href: _hoisted_1 }, null, -1 /* HOISTED */)
 
 export function render(_ctx, _cache) {
   return (_openBlock(), _createElementBlock(_Fragment, null, [
-    _createElementVNode(\\"use\\", { href: _hoisted_1 }),
-    _createElementVNode(\\"use\\", { href: _hoisted_1 })
+    _hoisted_2,
+    _hoisted_3
   ], 64 /* STABLE_FRAGMENT */))
 }"
 `;
 
-exports[`compiler sfc: transform asset url support uri is empty 1`] = `
+exports[`compiler sfc: transform asset url > support uri is empty 1`] = `
 "import { openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 
 export function render(_ctx, _cache) {
@@ -55,7 +57,7 @@ export function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler sfc: transform asset url transform assetUrls 1`] = `
+exports[`compiler sfc: transform asset url > transform assetUrls 1`] = `
 "import { createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 import _imports_0 from './logo.png'
 import _imports_1 from 'fixtures/logo.png'
@@ -74,7 +76,7 @@ export function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler sfc: transform asset url transform with stringify 1`] = `
+exports[`compiler sfc: transform asset url > transform with stringify 1`] = `
 "import { createElementVNode as _createElementVNode, createStaticVNode as _createStaticVNode, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 import _imports_0 from './bar.png'
 import _imports_1 from '/bar.png'
@@ -90,7 +92,7 @@ export function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler sfc: transform asset url with explicit base 1`] = `
+exports[`compiler sfc: transform asset url > with explicit base 1`] = `
 "import { createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 import _imports_0 from 'bar.png'
 import _imports_1 from '@theme/bar.png'
@@ -106,7 +108,7 @@ export function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler sfc: transform asset url with includeAbsolute: true 1`] = `
+exports[`compiler sfc: transform asset url > with includeAbsolute: true 1`] = `
 "import { createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 import _imports_0 from './bar.png'
 import _imports_1 from '/bar.png'
