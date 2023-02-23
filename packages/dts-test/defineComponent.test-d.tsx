@@ -1436,10 +1436,10 @@ declare const MyButton: DefineComponent<
   ComponentOptionsMixin,
   EmitsOptions,
   string,
-  {},
-  string,
   VNodeProps & AllowedComponentProps & ComponentCustomProps,
   Readonly<ExtractPropTypes<{}>>,
-  {}
+  {},
+  {},
+  string
 >
 ;<MyButton class="x" />

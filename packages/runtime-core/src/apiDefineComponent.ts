@@ -31,6 +31,16 @@ export type PublicProps = VNodeProps &
   AllowedComponentProps &
   ComponentCustomProps
 
+type PropsEmits<
+  PropsOrPropOptions = {},
+  Emits extends EmitsOptions = {}
+> = Readonly<
+  PropsOrPropOptions extends ComponentPropsOptions
+    ? ExtractPropTypes<PropsOrPropOptions>
+    : PropsOrPropOptions
+> &
+  ({} extends Emits ? {} : EmitsToProps<Emits>)
+
 export type DefineComponent<
   PropsOrPropOptions = {},
   RawBindings = {},
@@ -41,16 +51,11 @@ export type DefineComponent<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = {},
   EE extends string = string,
-  I extends ComponentInjectOptions = {},
-  II extends string = string,
   PP = PublicProps,
-  Props = Readonly<
-    PropsOrPropOptions extends ComponentPropsOptions
-      ? ExtractPropTypes<PropsOrPropOptions>
-      : PropsOrPropOptions
-  > &
-    ({} extends E ? {} : EmitsToProps<E>),
-  Defaults = ExtractDefaultPropTypes<PropsOrPropOptions>
+  Props = PropsEmits<PropsOrPropOptions, E>,
+  Defaults = ExtractDefaultPropTypes<PropsOrPropOptions>,
+  I extends ComponentInjectOptions = {},
+  II extends string = string
 > = ComponentPublicInstanceConstructor<
   CreateComponentPublicInstance<
     Props,
@@ -127,7 +132,22 @@ export function defineComponent<
     I,
     II
   >
-): DefineComponent<Props, RawBindings, D, C, M, Mixin, Extends, E, EE, I, II>
+): DefineComponent<
+  Props,
+  RawBindings,
+  D,
+  C,
+  M,
+  Mixin,
+  Extends,
+  E,
+  EE,
+  PublicProps,
+  PropsEmits<Props, E>,
+  ExtractDefaultPropTypes<Props>,
+  I,
+  II
+>
 
 // overload 3: object format with array props declaration
 // props inferred as { [key in PropNames]?: any }
@@ -168,6 +188,9 @@ export function defineComponent<
   Extends,
   E,
   EE,
+  PublicProps,
+  PropsEmits<Readonly<{ [key in PropNames]?: any }>, E>,
+  ExtractDefaultPropTypes<Readonly<{ [key in PropNames]?: any }>>,
   I,
   II
 >
@@ -212,6 +235,9 @@ export function defineComponent<
   Extends,
   E,
   EE,
+  PublicProps,
+  PropsEmits<PropsOptions, E>,
+  ExtractDefaultPropTypes<PropsOptions>,
   I,
   II
 >
