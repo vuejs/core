@@ -1217,6 +1217,89 @@ describe('e2e: Transition', () => {
     )
   })
 
+  //#4933
+  test(
+    '(out-in mode) transition on child components with empty root node',
+    async () => {
+      await page().evaluate(() => {
+        const { createApp, ref, computed } = (window as any).Vue
+        createApp({
+          template: `
+              <div id="container">
+                <transition name="test" mode="out-in">
+                  <component class="test" :is="view" :key="key"></component>
+                </transition>
+              </div>
+              <button id="toggleBtn" @click="change">button</button>
+            `,
+          components: {
+            one: {
+              template: '<div v-if="false">one</div>'
+            },
+            two: {
+              template: '<div v-if="true">two</div>'
+            }
+          },
+          setup: () => {
+            const toggle = ref(true)
+            const view = ref('two')
+            const key = computed(() => (view.value === 'one' ? 'one' : 'two'))
+            const change = () =>
+              (view.value = view.value === 'one' ? 'two' : 'one')
+            return { toggle, change, view, key }
+          }
+        }).mount('#app')
+      })
+      expect(await html('#container')).toBe('<div class="test">two</div>')
+
+      // two -> one
+      expect(await classWhenTransitionStart()).toStrictEqual([
+        'test',
+        'test-leave-from',
+        'test-leave-active'
+      ])
+      await nextFrame()
+      expect(await classList('.test')).toStrictEqual([
+        'test',
+        'test-leave-active',
+        'test-leave-to'
+      ])
+      await transitionFinish()
+      expect(await html('#container')).toBe('<!--v-if-->')
+
+      // one -> two
+      expect(await classWhenTransitionStart()).toStrictEqual([
+        'test',
+        'test-enter-from',
+        'test-enter-active'
+      ])
+      await nextFrame()
+      expect(await classList('.test')).toStrictEqual([
+        'test',
+        'test-enter-active',
+        'test-enter-to'
+      ])
+      await transitionFinish()
+      expect(await html('#container')).toBe('<div class="test">two</div>')
+
+      // two -> one again
+      expect(await classWhenTransitionStart()).toStrictEqual([
+        'test',
+        'test-leave-from',
+        'test-leave-active'
+      ])
+      await nextFrame()
+      expect(await classList('.test')).toStrictEqual([
+        'test',
+        'test-leave-active',
+        'test-leave-to'
+      ])
+      await transitionFinish()
+      expect(await html('#container')).toBe('<!--v-if-->')
+    },
+    E2E_TIMEOUT
+  )
+
   describe('transition with Suspense', () => {
     // #1583
     test(

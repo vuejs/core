@@ -19,6 +19,7 @@ import { callWithAsyncErrorHandling, ErrorCodes } from '../errorHandling'
 import { ShapeFlags, PatchFlags, isArray } from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import { RendererElement } from '../renderer'
+import { queueJob } from '../scheduler'
 
 type Hook<T = () => void> = T | T[]
 
@@ -243,7 +244,7 @@ const BaseTransitionImpl: ComponentOptions = {
             // #6835
             // it also needs to be updated when active is undefined
             if (instance.update.active !== false) {
-              instance.update()
+              queueJob(instance.update)
             }
           }
           return emptyPlaceholder(child)
