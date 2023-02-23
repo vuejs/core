@@ -133,7 +133,11 @@ export function queuePostFlushCb(cb: SchedulerJobs) {
   queueFlush()
 }
 
-export function flushPreFlushCbs(seen?: CountMap, i = flushIndex) {
+export function flushPreFlushCbs(
+  seen?: CountMap,
+  // if currently flushing, skip the current job itself
+  i = isFlushing ? flushIndex + 1 : 0
+) {
   if (__DEV__) {
     seen = seen || new Map()
   }

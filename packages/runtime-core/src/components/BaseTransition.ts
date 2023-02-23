@@ -53,9 +53,7 @@ export interface BaseTransitionProps<HostElement = RendererElement> {
   onAppearCancelled?: Hook<(el: HostElement) => void>
 }
 
-export interface TransitionHooks<
-  HostElement extends RendererElement = RendererElement
-> {
+export interface TransitionHooks<HostElement = RendererElement> {
   mode: BaseTransitionProps['mode']
   persisted: boolean
   beforeEnter(el: HostElement): void
@@ -114,29 +112,31 @@ export function useTransitionState(): TransitionState {
 
 const TransitionHookValidator = [Function, Array]
 
+export const BaseTransitionPropsValidators = {
+  mode: String,
+  appear: Boolean,
+  persisted: Boolean,
+  // enter
+  onBeforeEnter: TransitionHookValidator,
+  onEnter: TransitionHookValidator,
+  onAfterEnter: TransitionHookValidator,
+  onEnterCancelled: TransitionHookValidator,
+  // leave
+  onBeforeLeave: TransitionHookValidator,
+  onLeave: TransitionHookValidator,
+  onAfterLeave: TransitionHookValidator,
+  onLeaveCancelled: TransitionHookValidator,
+  // appear
+  onBeforeAppear: TransitionHookValidator,
+  onAppear: TransitionHookValidator,
+  onAfterAppear: TransitionHookValidator,
+  onAppearCancelled: TransitionHookValidator
+}
+
 const BaseTransitionImpl: ComponentOptions = {
   name: `BaseTransition`,
 
-  props: {
-    mode: String,
-    appear: Boolean,
-    persisted: Boolean,
-    // enter
-    onBeforeEnter: TransitionHookValidator,
-    onEnter: TransitionHookValidator,
-    onAfterEnter: TransitionHookValidator,
-    onEnterCancelled: TransitionHookValidator,
-    // leave
-    onBeforeLeave: TransitionHookValidator,
-    onLeave: TransitionHookValidator,
-    onAfterLeave: TransitionHookValidator,
-    onLeaveCancelled: TransitionHookValidator,
-    // appear
-    onBeforeAppear: TransitionHookValidator,
-    onAppear: TransitionHookValidator,
-    onAfterAppear: TransitionHookValidator,
-    onAppearCancelled: TransitionHookValidator
-  },
+  props: BaseTransitionPropsValidators,
 
   setup(props: BaseTransitionProps, { slots }: SetupContext) {
     const instance = getCurrentInstance()!
@@ -222,7 +222,11 @@ const BaseTransitionImpl: ComponentOptions = {
           // return placeholder node and queue update when leave finishes
           leavingHooks.afterLeave = () => {
             state.isLeaving = false
-            instance.update()
+            // #6835
+            // it also needs to be updated when active is undefined
+            if (instance.update.active !== false) {
+              instance.update()
+            }
           }
           return emptyPlaceholder(child)
         } else if (mode === 'in-out' && innerChild.type !== Comment) {
@@ -282,7 +286,7 @@ function findNonCommentChild(children: VNode[]): VNode {
 
 // export the public type for h/tsx inference
 // also to avoid inline import() in generated d.ts files
-export const BaseTransition = BaseTransitionImpl as any as {
+export const BaseTransition = BaseTransitionImpl as unknown as {
   new (): {
     $props: BaseTransitionProps<any>
   }

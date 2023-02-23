@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import {
   createBlock,
   createVNode,
@@ -8,11 +9,12 @@ import {
   cloneVNode,
   mergeProps,
   normalizeVNode,
-  transformVNodeArgs
+  transformVNodeArgs,
+  isBlockTreeEnabled
 } from '../src/vnode'
 import { Data } from '../src/component'
 import { ShapeFlags, PatchFlags } from '@vue/shared'
-import { h, reactive, isReactive, setBlockTracking, ref } from '../src'
+import { h, reactive, isReactive, setBlockTracking, ref, withCtx } from '../src'
 import { createApp, nodeOps, serializeInner } from '@vue/runtime-test'
 import { setCurrentRenderingInstance } from '../src/componentRenderContext'
 
@@ -119,7 +121,7 @@ describe('vnode', () => {
   })
 
   describe('children normalization', () => {
-    const nop = jest.fn
+    const nop = vi.fn
 
     test('null', () => {
       const vnode = createVNode('p', null, null)
@@ -613,6 +615,29 @@ describe('vnode', () => {
           vnode1
         ]))
       expect(vnode.dynamicChildren).toStrictEqual([])
+    })
+    // #5657
+    test('error of slot function execution should not affect block tracking', () => {
+      expect(isBlockTreeEnabled).toStrictEqual(1)
+      const slotFn = withCtx(
+        () => {
+          throw new Error('slot execution error')
+        },
+        { type: {}, appContext: {} } as any
+      )
+      const Parent = {
+        setup(_: any, { slots }: any) {
+          return () => {
+            try {
+              slots.default()
+            } catch (e) {}
+          }
+        }
+      }
+      const vnode =
+        (openBlock(), createBlock(Parent, null, { default: slotFn }))
+      createApp(vnode).mount(nodeOps.createElement('div'))
+      expect(isBlockTreeEnabled).toStrictEqual(1)
     })
   })
 

@@ -41,7 +41,7 @@ function createRoot(options: Partial<RootNode> = {}): RootNode {
   return {
     type: NodeTypes.ROOT,
     children: [],
-    helpers: [],
+    helpers: new Set(),
     components: [],
     directives: [],
     imports: [],
@@ -57,7 +57,7 @@ function createRoot(options: Partial<RootNode> = {}): RootNode {
 describe('compiler: codegen', () => {
   test('module mode preamble', () => {
     const root = createRoot({
-      helpers: [CREATE_VNODE, RESOLVE_DIRECTIVE]
+      helpers: new Set([CREATE_VNODE, RESOLVE_DIRECTIVE])
     })
     const { code } = generate(root, { mode: 'module' })
     expect(code).toMatch(
@@ -68,7 +68,7 @@ describe('compiler: codegen', () => {
 
   test('module mode preamble w/ optimizeImports: true', () => {
     const root = createRoot({
-      helpers: [CREATE_VNODE, RESOLVE_DIRECTIVE]
+      helpers: new Set([CREATE_VNODE, RESOLVE_DIRECTIVE])
     })
     const { code } = generate(root, { mode: 'module', optimizeImports: true })
     expect(code).toMatch(
@@ -82,7 +82,7 @@ describe('compiler: codegen', () => {
 
   test('function mode preamble', () => {
     const root = createRoot({
-      helpers: [CREATE_VNODE, RESOLVE_DIRECTIVE]
+      helpers: new Set([CREATE_VNODE, RESOLVE_DIRECTIVE])
     })
     const { code } = generate(root, { mode: 'function' })
     expect(code).toMatch(`const _Vue = Vue`)
@@ -94,7 +94,7 @@ describe('compiler: codegen', () => {
 
   test('function mode preamble w/ prefixIdentifiers: true', () => {
     const root = createRoot({
-      helpers: [CREATE_VNODE, RESOLVE_DIRECTIVE]
+      helpers: new Set([CREATE_VNODE, RESOLVE_DIRECTIVE])
     })
     const { code } = generate(root, {
       mode: 'function',
@@ -631,9 +631,9 @@ describe('compiler: codegen', () => {
 
     test('tag only', () => {
       expect(genCode(createVNodeCall(null, `"div"`))).toMatchInlineSnapshot(`
-              "return _createElementVNode(\\"div\\")
-               "
-          `)
+        "return _createElementVNode(\\"div\\")
+         "
+      `)
       expect(genCode(createVNodeCall(null, FRAGMENT))).toMatchInlineSnapshot(`
               "return _createElementVNode(_Fragment)
                "
@@ -643,33 +643,33 @@ describe('compiler: codegen', () => {
     test('with props', () => {
       expect(genCode(createVNodeCall(null, `"div"`, mockProps)))
         .toMatchInlineSnapshot(`
-              "return _createElementVNode(\\"div\\", { foo: \\"bar\\" })
-               "
-          `)
+          "return _createElementVNode(\\"div\\", { foo: \\"bar\\" })
+           "
+        `)
     })
 
     test('with children, no props', () => {
       expect(genCode(createVNodeCall(null, `"div"`, undefined, mockChildren)))
         .toMatchInlineSnapshot(`
-        "return _createElementVNode(\\"div\\", null, children)
-         "
-      `)
+          "return _createElementVNode(\\"div\\", null, children)
+           "
+        `)
     })
 
     test('with children + props', () => {
       expect(genCode(createVNodeCall(null, `"div"`, mockProps, mockChildren)))
         .toMatchInlineSnapshot(`
-        "return _createElementVNode(\\"div\\", { foo: \\"bar\\" }, children)
-         "
-      `)
+          "return _createElementVNode(\\"div\\", { foo: \\"bar\\" }, children)
+           "
+        `)
     })
 
     test('with patchFlag and no children/props', () => {
       expect(genCode(createVNodeCall(null, `"div"`, undefined, undefined, '1')))
         .toMatchInlineSnapshot(`
-        "return _createElementVNode(\\"div\\", null, null, 1)
-         "
-      `)
+          "return _createElementVNode(\\"div\\", null, null, 1)
+           "
+        `)
     })
 
     test('as block', () => {

@@ -1,5 +1,6 @@
 import { VNode, VNodeChild, isVNode } from './vnode'
 import {
+  isRef,
   pauseTracking,
   resetTracking,
   shallowReadonly,
@@ -35,7 +36,8 @@ import {
   applyOptions,
   ComponentOptions,
   ComputedOptions,
-  MethodOptions
+  MethodOptions,
+  resolveMergedOptions
 } from './componentOptions'
 import {
   EmitsOptions,
@@ -46,6 +48,7 @@ import {
 } from './componentEmits'
 import {
   EMPTY_OBJ,
+  isArray,
   isFunction,
   NOOP,
   isObject,
@@ -53,7 +56,8 @@ import {
   makeMap,
   isPromise,
   ShapeFlags,
-  extend
+  extend,
+  getGlobalThis
 } from '@vue/shared'
 import { SuspenseBoundary } from './components/Suspense'
 import { CompilerOptions } from '@vue/compiler-core'
@@ -67,6 +71,7 @@ import {
   validateCompatConfig
 } from './compat/compatConfig'
 import { SchedulerJob } from './scheduler'
+import { LifecycleHooks } from './enums'
 
 export type Data = Record<string, unknown>
 
@@ -158,33 +163,19 @@ export type Component<
   | ConcreteComponent<Props, RawBindings, D, C, M>
   | ComponentPublicInstanceConstructor<Props>
 
-export { ComponentOptions }
+export type { ComponentOptions }
 
 type LifecycleHook<TFn = Function> = TFn[] | null
 
-export const enum LifecycleHooks {
-  BEFORE_CREATE = 'bc',
-  CREATED = 'c',
-  BEFORE_MOUNT = 'bm',
-  MOUNTED = 'm',
-  BEFORE_UPDATE = 'bu',
-  UPDATED = 'u',
-  BEFORE_UNMOUNT = 'bum',
-  UNMOUNTED = 'um',
-  DEACTIVATED = 'da',
-  ACTIVATED = 'a',
-  RENDER_TRIGGERED = 'rtg',
-  RENDER_TRACKED = 'rtc',
-  ERROR_CAPTURED = 'ec',
-  SERVER_PREFETCH = 'sp'
-}
-
-export interface SetupContext<E = EmitsOptions> {
-  attrs: Data
-  slots: Slots
-  emit: EmitFn<E>
-  expose: (exposed?: Record<string, any>) => void
-}
+// use `E extends any` to force evaluating type to fix #2362
+export type SetupContext<E = EmitsOptions> = E extends any
+  ? {
+      attrs: Data
+      slots: Slots
+      emit: EmitFn<E>
+      expose: (exposed?: Record<string, any>) => void
+    }
+  : never
 
 /**
  * @internal
@@ -302,10 +293,12 @@ export interface ComponentInternalInstance {
   inheritAttrs?: boolean
   /**
    * is custom element?
+   * @internal
    */
   isCE?: boolean
   /**
    * custom element specific HMR method
+   * @internal
    */
   ceReload?: (newStyles?: string[]) => void
 
@@ -447,12 +440,20 @@ export interface ComponentInternalInstance {
 
   /**
    * For caching bound $forceUpdate on public proxy access
+   * @internal
    */
   f?: () => void
   /**
    * For caching bound $nextTick on public proxy access
+   * @internal
    */
   n?: () => Promise<void>
+  /**
+   * `updateTeleportCssVars`
+   * For updating css vars on contained teleports
+   * @internal
+   */
+  ut?: (vars?: Record<string, string>) => void
 }
 
 const emptyAppContext = createAppContext()
@@ -565,14 +566,52 @@ export let currentInstance: ComponentInternalInstance | null = null
 export const getCurrentInstance: () => ComponentInternalInstance | null = () =>
   currentInstance || currentRenderingInstance
 
+type GlobalInstanceSetter = ((
+  instance: ComponentInternalInstance | null
+) => void) & { version?: string }
+
+let internalSetCurrentInstance: GlobalInstanceSetter
+let globalCurrentInstanceSetters: GlobalInstanceSetter[]
+let settersKey = '__VUE_INSTANCE_SETTERS__'
+
+/**
+ * The following makes getCurrentInstance() usage across multiple copies of Vue
+ * work. Some cases of how this can happen are summarized in #7590. In principle
+ * the duplication should be avoided, but in practice there are often cases
+ * where the user is unable to resolve on their own, especially in complicated
+ * SSR setups.
+ *
+ * Note this fix is technically incomplete, as we still rely on other singletons
+ * for effectScope and global reactive dependency maps. However, it does make
+ * some of the most common cases work. It also warns if the duplication is
+ * found during browser execution.
+ */
+if (__SSR__) {
+  if (!(globalCurrentInstanceSetters = getGlobalThis()[settersKey])) {
+    globalCurrentInstanceSetters = getGlobalThis()[settersKey] = []
+  }
+  globalCurrentInstanceSetters.push(i => (currentInstance = i))
+  internalSetCurrentInstance = instance => {
+    if (globalCurrentInstanceSetters.length > 1) {
+      globalCurrentInstanceSetters.forEach(s => s(instance))
+    } else {
+      globalCurrentInstanceSetters[0](instance)
+    }
+  }
+} else {
+  internalSetCurrentInstance = i => {
+    currentInstance = i
+  }
+}
+
 export const setCurrentInstance = (instance: ComponentInternalInstance) => {
-  currentInstance = instance
+  internalSetCurrentInstance(instance)
   instance.scope.on()
 }
 
 export const unsetCurrentInstance = () => {
   currentInstance && currentInstance.scope.off()
-  currentInstance = null
+  internalSetCurrentInstance(null)
 }
 
 const isBuiltInTag = /*#__PURE__*/ makeMap('slot,component')
@@ -792,7 +831,8 @@ export function finishComponentSetup(
         (__COMPAT__ &&
           instance.vnode.props &&
           instance.vnode.props['inline-template']) ||
-        Component.template
+        Component.template ||
+        resolveMergedOptions(instance).template
       if (template) {
         if (__DEV__) {
           startMeasure(instance, `compile`)
@@ -898,8 +938,25 @@ export function createSetupContext(
   instance: ComponentInternalInstance
 ): SetupContext {
   const expose: SetupContext['expose'] = exposed => {
-    if (__DEV__ && instance.exposed) {
-      warn(`expose() should be called only once per setup().`)
+    if (__DEV__) {
+      if (instance.exposed) {
+        warn(`expose() should be called only once per setup().`)
+      }
+      if (exposed != null) {
+        let exposedType: string = typeof exposed
+        if (exposedType === 'object') {
+          if (isArray(exposed)) {
+            exposedType = 'array'
+          } else if (isRef(exposed)) {
+            exposedType = 'ref'
+          }
+        }
+        if (exposedType !== 'object') {
+          warn(
+            `expose() should be passed a plain object, received ${exposedType}.`
+          )
+        }
+      }
     }
     instance.exposed = exposed || {}
   }
@@ -943,6 +1000,9 @@ export function getExposeProxy(instance: ComponentInternalInstance) {
           } else if (key in publicPropertiesMap) {
             return publicPropertiesMap[key](instance)
           }
+        },
+        has(target, key: string) {
+          return key in target || key in publicPropertiesMap
         }
       }))
     )
