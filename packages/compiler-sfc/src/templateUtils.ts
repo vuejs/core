@@ -6,7 +6,7 @@ export function isRelativeUrl(url: string): boolean {
   return firstChar === '.' || firstChar === '~' || firstChar === '@'
 }
 
-const externalRE = /^https?:\/\//
+const externalRE = /^(https?:)?\/\//
 export function isExternalUrl(url: string): boolean {
   return externalRE.test(url)
 }

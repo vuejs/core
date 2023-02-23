@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import {
   CompilerOptions,
   baseParse as parse,
@@ -5,7 +6,8 @@ import {
   ErrorCodes,
   BindingTypes,
   NodeTransform,
-  transformExpression
+  transformExpression,
+  baseCompile
 } from '../../src'
 import {
   RESOLVE_COMPONENT,
@@ -66,6 +68,7 @@ function parseWithBind(template: string, options?: CompilerOptions) {
   return parseWithElementTransform(template, {
     ...options,
     directiveTransforms: {
+      ...options?.directiveTransforms,
       bind: transformBind
     }
   })
@@ -78,7 +81,7 @@ describe('compiler: element transform', () => {
     expect(root.components).toContain(`Foo`)
   })
 
-  test('resolve implcitly self-referencing component', () => {
+  test('resolve implicitly self-referencing component', () => {
     const { root } = parseWithElementTransform(`<Example/>`, {
       filename: `/foo/bar/Example.vue?vue&type=template`
     })
@@ -326,6 +329,37 @@ describe('compiler: element transform', () => {
             {
               type: NodeTypes.SIMPLE_EXPRESSION,
               content: `obj`
+            },
+            `true`
+          ]
+        },
+        createObjectMatcher({
+          class: 'bar'
+        })
+      ]
+    })
+  })
+
+  test('v-on="obj" on component', () => {
+    const { root, node } = parseWithElementTransform(
+      `<Foo id="foo" v-on="obj" class="bar" />`
+    )
+    expect(root.helpers).toContain(MERGE_PROPS)
+
+    expect(node.props).toMatchObject({
+      type: NodeTypes.JS_CALL_EXPRESSION,
+      callee: MERGE_PROPS,
+      arguments: [
+        createObjectMatcher({
+          id: 'foo'
+        }),
+        {
+          type: NodeTypes.JS_CALL_EXPRESSION,
+          callee: TO_HANDLERS,
+          arguments: [
+            {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: `obj`
             }
           ]
         },
@@ -356,7 +390,8 @@ describe('compiler: element transform', () => {
             {
               type: NodeTypes.SIMPLE_EXPRESSION,
               content: `handlers`
-            }
+            },
+            `true`
           ]
         },
         {
@@ -497,7 +532,7 @@ describe('compiler: element transform', () => {
   })
 
   test('error on v-bind with no argument', () => {
-    const onError = jest.fn()
+    const onError = vi.fn()
     parseWithElementTransform(`<div v-bind/>`, { onError })
     expect(onError.mock.calls[0]).toMatchObject([
       {
@@ -805,6 +840,37 @@ describe('compiler: element transform', () => {
     })
   })
 
+  test(':style with array literal', () => {
+    const { node, root } = parseWithElementTransform(
+      `<div :style="[{ color: 'red' }]" />`,
+      {
+        nodeTransforms: [transformExpression, transformStyle, transformElement],
+        directiveTransforms: {
+          bind: transformBind
+        },
+        prefixIdentifiers: true
+      }
+    )
+    expect(root.helpers).toContain(NORMALIZE_STYLE)
+    expect(node.props).toMatchObject({
+      type: NodeTypes.JS_OBJECT_EXPRESSION,
+      properties: [
+        {
+          type: NodeTypes.JS_PROPERTY,
+          key: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: `style`,
+            isStatic: true
+          },
+          value: {
+            type: NodeTypes.JS_CALL_EXPRESSION,
+            callee: NORMALIZE_STYLE
+          }
+        }
+      ]
+    })
+  })
+
   test(`props merging: class`, () => {
     const { node, root } = parseWithElementTransform(
       `<div class="foo" :class="{ bar: isBar }" />`,
@@ -932,11 +998,15 @@ describe('compiler: element transform', () => {
     })
 
     test('NEED_PATCH (vnode hooks)', () => {
-      const { node } = parseWithBind(`<div @vnodeUpdated="foo" />`)
+      const root = baseCompile(`<div @vnodeUpdated="foo" />`, {
+        prefixIdentifiers: true,
+        cacheHandlers: true
+      }).ast
+      const node = (root as any).children[0].codegenNode
       expect(node.patchFlag).toBe(genFlagText(PatchFlags.NEED_PATCH))
     })
 
-    test('the binding exists (inline ref input)', () => {
+    test('script setup inline mode template ref (binding exists)', () => {
       const { node } = parseWithElementTransform(`<input ref="input"/>`, {
         inline: true,
         bindingMetadata: {
@@ -949,31 +1019,30 @@ describe('compiler: element transform', () => {
           {
             type: NodeTypes.JS_PROPERTY,
             key: {
-              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'ref_key',
+              isStatic: true
+            },
+            value: {
+              content: 'input',
+              isStatic: true
+            }
+          },
+          {
+            type: NodeTypes.JS_PROPERTY,
+            key: {
               content: 'ref',
               isStatic: true
             },
             value: {
-              type: NodeTypes.JS_FUNCTION_EXPRESSION,
-              params: ['_value', '_refs'],
-              body: {
-                type: NodeTypes.JS_BLOCK_STATEMENT,
-                body: [
-                  {
-                    content: `_refs['input'] = _value`
-                  },
-                  {
-                    content: 'input.value = _value'
-                  }
-                ]
-              }
+              content: 'input',
+              isStatic: false
             }
           }
         ]
       })
     })
 
-    test('the binding not exists (inline ref input)', () => {
+    test('script setup inline mode template ref (binding does not exist)', () => {
       const { node } = parseWithElementTransform(`<input ref="input"/>`, {
         inline: true
       })
@@ -983,32 +1052,24 @@ describe('compiler: element transform', () => {
           {
             type: NodeTypes.JS_PROPERTY,
             key: {
-              type: NodeTypes.SIMPLE_EXPRESSION,
               content: 'ref',
               isStatic: true
             },
             value: {
-              type: NodeTypes.JS_FUNCTION_EXPRESSION,
-              params: ['_value', '_refs'],
-              body: {
-                type: NodeTypes.JS_BLOCK_STATEMENT,
-                body: [
-                  {
-                    content: `_refs['input'] = _value`
-                  }
-                ]
-              }
+              content: 'input',
+              isStatic: true
             }
           }
         ]
       })
     })
 
-    test('the binding not exists (inline maybe ref input)', () => {
-      const { node } = parseWithElementTransform(`<input ref="input"/>`, {
+    test('script setup inline mode template ref (binding does not exist but props with the same name exist)', () => {
+      const { node } = parseWithElementTransform(`<input ref="msg"/>`, {
         inline: true,
         bindingMetadata: {
-          input: BindingTypes.SETUP_MAYBE_REF
+          msg: BindingTypes.PROPS,
+          ref: BindingTypes.SETUP_CONST
         }
       })
       expect(node.props).toMatchObject({
@@ -1017,62 +1078,12 @@ describe('compiler: element transform', () => {
           {
             type: NodeTypes.JS_PROPERTY,
             key: {
-              type: NodeTypes.SIMPLE_EXPRESSION,
               content: 'ref',
               isStatic: true
             },
             value: {
-              type: NodeTypes.JS_FUNCTION_EXPRESSION,
-              params: ['_value', '_refs'],
-              body: {
-                type: NodeTypes.JS_BLOCK_STATEMENT,
-                body: [
-                  {
-                    content: `_refs['input'] = _value`
-                  },
-                  {
-                    content: '_isRef(input) && (input.value = _value)'
-                  }
-                ]
-              }
-            }
-          }
-        ]
-      })
-    })
-
-    test('the binding not exists (inline let ref input)', () => {
-      const { node } = parseWithElementTransform(`<input ref="input"/>`, {
-        inline: true,
-        bindingMetadata: {
-          input: BindingTypes.SETUP_LET
-        }
-      })
-      expect(node.props).toMatchObject({
-        type: NodeTypes.JS_OBJECT_EXPRESSION,
-        properties: [
-          {
-            type: NodeTypes.JS_PROPERTY,
-            key: {
-              type: NodeTypes.SIMPLE_EXPRESSION,
-              content: 'ref',
+              content: 'msg',
               isStatic: true
-            },
-            value: {
-              type: NodeTypes.JS_FUNCTION_EXPRESSION,
-              params: ['_value', '_refs'],
-              body: {
-                type: NodeTypes.JS_BLOCK_STATEMENT,
-                body: [
-                  {
-                    content: `_refs['input'] = _value`
-                  },
-                  {
-                    content:
-                      '_isRef(input) ? input.value = _value : input = _value'
-                  }
-                ]
-              }
             }
           }
         ]
@@ -1098,6 +1109,21 @@ describe('compiler: element transform', () => {
         }
       )
       expect(node2.patchFlag).toBe(
+        genFlagText([PatchFlags.PROPS, PatchFlags.HYDRATE_EVENTS])
+      )
+    })
+
+    // #5870
+    test('HYDRATE_EVENTS on dynamic component', () => {
+      const { node } = parseWithElementTransform(
+        `<component :is="foo" @input="foo" />`,
+        {
+          directiveTransforms: {
+            on: transformOn
+          }
+        }
+      )
+      expect(node.patchFlag).toBe(
         genFlagText([PatchFlags.PROPS, PatchFlags.HYDRATE_EVENTS])
       )
     })
@@ -1200,6 +1226,18 @@ describe('compiler: element transform', () => {
       tag: `"svg"`,
       isBlock: true
     })
+  })
+
+  test('force block for runtime custom directive w/ children', () => {
+    const { node } = parseWithElementTransform(`<div v-foo>hello</div>`)
+    expect(node.isBlock).toBe(true)
+  })
+
+  test('force block for inline before-update handlers w/ children', () => {
+    expect(
+      parseWithElementTransform(`<div @vue:before-update>hello</div>`).node
+        .isBlock
+    ).toBe(true)
   })
 
   // #938

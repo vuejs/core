@@ -181,8 +181,8 @@ describe('stringify static html', () => {
     ])
   })
 
-  test('should bail on runtime constant v-bind bindings', () => {
-    const { ast } = compile(
+  test('should bail on bindings that are hoisted but not stringifiable', () => {
+    const { ast, code } = compile(
       `<div><div>${repeat(
         `<span class="foo">foo</span>`,
         StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
@@ -216,13 +216,62 @@ describe('stringify static html', () => {
     expect(ast.hoists).toMatchObject([
       {
         // the expression and the tree are still hoistable
-        // but if it's stringified it will be NodeTypes.CALL_EXPRESSION
+        // but should stay NodeTypes.VNODE_CALL
+        // if it's stringified it will be NodeTypes.JS_CALL_EXPRESSION
         type: NodeTypes.VNODE_CALL
       },
       {
         type: NodeTypes.JS_ARRAY_EXPRESSION
       }
     ])
+    expect(code).toMatchSnapshot()
+  })
+
+  test('should work with bindings that are non-static but stringifiable', () => {
+    // if a binding is non-static but marked as CAN_STRINGIFY, it means it's
+    // a known reference to a constant string.
+    const { ast, code } = compile(
+      `<div><div>${repeat(
+        `<span class="foo">foo</span>`,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+      )}<img src="./foo" /></div></div>`,
+      {
+        hoistStatic: true,
+        prefixIdentifiers: true,
+        transformHoist: stringifyStatic,
+        nodeTransforms: [
+          node => {
+            if (node.type === NodeTypes.ELEMENT && node.tag === 'img') {
+              const exp = createSimpleExpression(
+                '_imports_0_',
+                false,
+                node.loc,
+                ConstantTypes.CAN_STRINGIFY
+              )
+              node.props[0] = {
+                type: NodeTypes.DIRECTIVE,
+                name: 'bind',
+                arg: createSimpleExpression('src', true),
+                exp,
+                modifiers: [],
+                loc: node.loc
+              }
+            }
+          }
+        ]
+      }
+    )
+    expect(ast.hoists).toMatchObject([
+      {
+        // the hoisted node should be NodeTypes.JS_CALL_EXPRESSION
+        // of `createStaticVNode()` instead of dynamic NodeTypes.VNODE_CALL
+        type: NodeTypes.JS_CALL_EXPRESSION
+      },
+      {
+        type: NodeTypes.JS_ARRAY_EXPRESSION
+      }
+    ])
+    expect(code).toMatchSnapshot()
   })
 
   // #1128
@@ -361,6 +410,29 @@ describe('stringify static html', () => {
     })
   })
 
+  // #6617
+  test('should remove boolean attribute for `false`', () => {
+    const { ast } = compileWithStringify(
+      `<button :disabled="false">enable</button>${repeat(
+        `<div></div>`,
+        StringifyThresholds.NODE_COUNT
+      )}`
+    )
+    expect(ast.hoists[0]).toMatchObject({
+      type: NodeTypes.JS_CALL_EXPRESSION,
+      callee: CREATE_STATIC,
+      arguments: [
+        JSON.stringify(
+          `<button>enable</button>${repeat(
+            `<div></div>`,
+            StringifyThresholds.NODE_COUNT
+          )}`
+        ),
+        '21'
+      ]
+    })
+  })
+
   test('should stringify svg', () => {
     const svg = `<svg width="50" height="50" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">`
     const repeated = `<rect width="50" height="50" fill="#C4C4C4"></rect>`
@@ -383,5 +455,26 @@ describe('stringify static html', () => {
         '1'
       ]
     })
+  })
+
+  // #5439
+  test('stringify v-html', () => {
+    const { code } = compileWithStringify(`
+      <pre  data-type="js"><code v-html="'&lt;span&gt;show-it &lt;/span&gt;'"></code></pre>
+      <div class>
+        <span class>1</span><span class>2</span>
+      </div>`)
+    expect(code).toMatch(`<code><span>show-it </span></code>`)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('stringify v-text', () => {
+    const { code } = compileWithStringify(`
+      <pre  data-type="js"><code v-text="'&lt;span&gt;show-it &lt;/span&gt;'"></code></pre>
+      <div class>
+        <span class>1</span><span class>2</span>
+      </div>`)
+    expect(code).toMatch(`<code>&lt;span&gt;show-it &lt;/span&gt;</code>`)
+    expect(code).toMatchSnapshot()
   })
 })

@@ -33,15 +33,16 @@ declare module 'file-saver' {
   export function saveAs(blob: any, name: any): void
 }
 
-declare module 'stream/web' {
-  const r: typeof ReadableStream
-  const t: typeof TransformStream
-  export { r as ReadableStream, t as TransformStream }
-}
-
 declare module '@vue/repl' {
   import { ComponentOptions } from '@vue/runtime-core'
   const Repl: ComponentOptions
   const ReplStore: any
   export { Repl, ReplStore }
+}
+
+declare interface String {
+  /**
+   * @deprecated Please use String.prototype.slice instead of String.prototype.substring in the repository.
+   */
+  substring(start: number, end?: number): string
 }

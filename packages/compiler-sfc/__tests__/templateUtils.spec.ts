@@ -36,6 +36,12 @@ describe('compiler sfc:templateUtils isExternalUrl', () => {
     const result = isExternalUrl(url)
     expect(result).toBe(true)
   })
+
+  test('should return true when String starts with //', () => {
+    const url = '//vuejs.org/'
+    const result = isExternalUrl(url)
+    expect(result).toBe(true)
+  })
 })
 
 describe('compiler sfc:templateUtils isDataUrl', () => {

@@ -162,7 +162,12 @@ function getImportsExpressionExp(
       exp = context.imports[existingIndex].exp as SimpleExpressionNode
     } else {
       name = `_imports_${context.imports.length}`
-      exp = createSimpleExpression(name, false, loc, ConstantTypes.CAN_HOIST)
+      exp = createSimpleExpression(
+        name,
+        false,
+        loc,
+        ConstantTypes.CAN_STRINGIFY
+      )
       context.imports.push({ exp, path })
     }
 
@@ -171,6 +176,17 @@ function getImportsExpressionExp(
     }
 
     const hashExp = `${name} + '${hash}'`
+    const finalExp = createSimpleExpression(
+      hashExp,
+      false,
+      loc,
+      ConstantTypes.CAN_STRINGIFY
+    )
+
+    if (!context.hoistStatic) {
+      return finalExp
+    }
+
     const existingHoistIndex = context.hoists.findIndex(h => {
       return (
         h &&
@@ -184,13 +200,11 @@ function getImportsExpressionExp(
         `_hoisted_${existingHoistIndex + 1}`,
         false,
         loc,
-        ConstantTypes.CAN_HOIST
+        ConstantTypes.CAN_STRINGIFY
       )
     }
-    return context.hoist(
-      createSimpleExpression(hashExp, false, loc, ConstantTypes.CAN_HOIST)
-    )
+    return context.hoist(finalExp)
   } else {
-    return createSimpleExpression(`''`, false, loc, ConstantTypes.CAN_HOIST)
+    return createSimpleExpression(`''`, false, loc, ConstantTypes.CAN_STRINGIFY)
   }
 }
