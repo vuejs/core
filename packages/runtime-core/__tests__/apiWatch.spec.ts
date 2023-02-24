@@ -601,7 +601,7 @@ describe('api: watch', () => {
     }
 
     const Parent = {
-      porps: ['a'],
+      props: ['a'],
       setup() {
         watch(
           () => b.value,
