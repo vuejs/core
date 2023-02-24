@@ -3,6 +3,7 @@ import {
   defineAsyncComponent,
   defineComponent,
   defineCustomElement,
+  defineStandardCustomElement,
   h,
   inject,
   nextTick,
@@ -692,6 +693,85 @@ describe('defineCustomElement', () => {
       expect(e.shadowRoot!.innerHTML).toBe(
         `<div><slot><div>fallback</div></slot></div><div><slot name="named"></slot></div>`
       )
+    })
+  })
+
+  describe('standard custom element', () => {
+    test('emit on interaction', () => {
+      const CompDef = defineComponent({
+        setup(_, { emit }) {
+          emit('created')
+          return () =>
+            h('div', {
+              onClick: () => {
+                emit('my-click', { detail: 1 })
+              }
+            })
+        }
+      })
+      const E = defineStandardCustomElement(CompDef)
+      customElements.define('my-standard-el-emits', E)
+
+      container.innerHTML = `<my-standard-el-emits></my-standard-el-emits>`
+      const e = container.childNodes[0] as VueElement
+      const spy = vi.fn()
+      e.addEventListener('my-click', spy)
+      e.shadowRoot!.childNodes[0].dispatchEvent(new CustomEvent('click'))
+      expect(spy).toHaveBeenCalledTimes(1)
+      expect(spy.mock.calls[0][0]).toMatchObject({
+        detail: 1
+      })
+    })
+
+    test('emit without bubble', () => {
+      const CompDef = defineComponent({
+        setup(_, { emit }) {
+          emit('created')
+          return () =>
+            h('div', {
+              onClick: () => {
+                emit('my-click', { detail: 1 })
+              }
+            })
+        }
+      })
+      const E = defineStandardCustomElement(CompDef)
+      customElements.define('my-standard-el-no-bubbles', E)
+
+      container.innerHTML = `<div><my-standard-el-no-bubbles></my-standard-el-no-bubbles></div>`
+      const parent = container.childNodes[0] as HTMLDivElement
+      const spy = vi.fn()
+      parent.addEventListener('my-click', spy)
+      const e = parent.childNodes[0] as VueElement
+      e.shadowRoot!.childNodes[0].dispatchEvent(new CustomEvent('click'))
+      expect(spy).toHaveBeenCalledTimes(0)
+    })
+
+    test('emit with bubble', () => {
+      const CompDef = defineComponent({
+        setup(_, { emit }) {
+          emit('created')
+          return () =>
+            h('div', {
+              onClick: () => {
+                emit('my-click', { detail: 1, bubbles: true })
+              }
+            })
+        }
+      })
+      const E = defineStandardCustomElement(CompDef)
+      customElements.define('my-standard-el-bubbles', E)
+
+      container.innerHTML = `<div><my-standard-el-bubbles></my-standard-el-bubbles></div>`
+      const parent = container.childNodes[0] as HTMLDivElement
+      const spy = vi.fn()
+      parent.addEventListener('my-click', spy)
+      const e = parent.childNodes[0] as VueElement
+      e.shadowRoot!.childNodes[0].dispatchEvent(new CustomEvent('click'))
+      expect(spy).toHaveBeenCalledTimes(1)
+      expect(spy.mock.calls[0][0]).toMatchObject({
+        detail: 1
+      })
     })
   })
 })

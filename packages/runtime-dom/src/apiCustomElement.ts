@@ -135,13 +135,14 @@ export function defineCustomElement(options: {
 
 export function defineCustomElement(
   options: any,
-  hydrate?: RootHydrateFunction
+  hydrate?: RootHydrateFunction,
+  standard?: boolean
 ): VueElementConstructor {
   const Comp = defineComponent(options as any)
   class VueCustomElement extends VueElement {
     static def = Comp
     constructor(initialProps?: Record<string, any>) {
-      super(Comp, initialProps, hydrate)
+      super(Comp, initialProps, hydrate, standard)
     }
   }
 
@@ -151,6 +152,16 @@ export function defineCustomElement(
 export const defineSSRCustomElement = ((options: any) => {
   // @ts-ignore
   return defineCustomElement(options, hydrate)
+}) as typeof defineCustomElement
+
+/**
+ * With defineStandardCustomElement, the second argument of `this.$emit` or `setup emit`
+ * will be exported as the second parameter of CustomEvent. It intends to match the standard
+ * of web component.
+ */
+export const defineStandardCustomElement = ((options: any) => {
+  // @ts-ignore
+  return defineCustomElement(options, hydrate, true)
 }) as typeof defineCustomElement
 
 const BaseClass = (
@@ -169,11 +180,13 @@ export class VueElement extends BaseClass {
   private _resolved = false
   private _numberProps: Record<string, true> | null = null
   private _styles?: HTMLStyleElement[]
+  private _standard = false
 
   constructor(
     private _def: InnerComponentDef,
     private _props: Record<string, any> = {},
-    hydrate?: RootHydrateFunction
+    hydrate?: RootHydrateFunction,
+    standard?: boolean
   ) {
     super()
     if (this.shadowRoot && hydrate) {
@@ -190,6 +203,9 @@ export class VueElement extends BaseClass {
         // for sync component defs we can immediately resolve props
         this._resolveProps(this._def)
       }
+    }
+    if (standard) {
+      this._standard = true
     }
   }
 
@@ -365,11 +381,15 @@ export class VueElement extends BaseClass {
         }
 
         const dispatch = (event: string, args: any[]) => {
-          this.dispatchEvent(
-            new CustomEvent(event, {
-              detail: args
-            })
-          )
+          if (this._standard) {
+            this.dispatchEvent(new CustomEvent(event, args[0]))
+          } else {
+            this.dispatchEvent(
+              new CustomEvent(event, {
+                detail: args
+              })
+            )
+          }
         }
 
         // intercept emit
