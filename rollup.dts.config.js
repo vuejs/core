@@ -1,6 +1,6 @@
 // @ts-check
 import { parse } from '@babel/parser'
-import { existsSync, readdirSync, readFileSync } from 'fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import MagicString from 'magic-string'
 import dts from 'rollup-plugin-dts'
 import { walk } from 'estree-walker'

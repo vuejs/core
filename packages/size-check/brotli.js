@@ -1,4 +1,4 @@
-const { compress } = require('brotli')
+const { compress } = require('node:brotli')
 
 const file = require('fs').readFileSync('dist/index.js')
 const compressed = compress(file)
