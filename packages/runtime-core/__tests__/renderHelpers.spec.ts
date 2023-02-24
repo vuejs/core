@@ -21,10 +21,6 @@ afterEach(() => {
   Vue.configureCompat({ MODE: 3 })
 })
 
-test('failling test', () => {
-  expect(1 + 2).toBe(3)
-})
-
 test('legacyMarkOnce returns tree', () => {
   const emptyNode = createVNode(NULL_DYNAMIC_COMPONENT)
   expect(legacyMarkOnce(emptyNode)).toBe(emptyNode)
