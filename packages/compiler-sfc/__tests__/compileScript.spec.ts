@@ -1023,6 +1023,21 @@ const emit = defineEmits(['a', 'b'])
       })
     })
 
+    test('defineProps w/ exported extends interface', () => {
+      const { content, bindings } = compile(`
+      <script setup lang="ts">
+      export interface Props { x?: number }
+      export interface ExtendProps extends Props {}
+      defineProps<ExtendProps>()
+      </script>
+      `)
+      assertCode(content)
+      expect(content).toMatch(`x: { type: Number, required: false }`)
+      expect(bindings).toStrictEqual({
+        x: BindingTypes.PROPS
+      })
+    })
+
     test('defineProps w/ exported interface in normal script', () => {
       const { content, bindings } = compile(`
       <script lang="ts">
@@ -1136,7 +1151,7 @@ const emit = defineEmits(['a', 'b'])
       `)
       assertCode(content)
     })
-    
+
     // #7111
     test('withDefaults (static) w/ production mode', () => {
       const { content } = compile(
@@ -1277,7 +1292,6 @@ const emit = defineEmits(['a', 'b'])
       expect(content).toMatch(`emits: ["foo", "bar"]`)
     })
 
-    
     test('defineEmits w/ type from normal script', () => {
       const { content } = compile(`
       <script lang="ts">

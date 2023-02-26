@@ -622,6 +622,8 @@ export function compileScript(
           }
         }
       })
+    } else if (node.type === 'ExportNamedDeclaration' && node.declaration) {
+      return resolveExtendsType(node.declaration, qualifier, cache)
     }
     return cache
   }

@@ -1470,6 +1470,43 @@ return { emit }
 })"
 `;
 
+exports[`SFC compile <script setup> > with TypeScript > defineProps w/ exported extend interface 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+export interface Props { x?: number }
+      export interface ExtendProps {}
+      
+export default /*#__PURE__*/_defineComponent({
+  setup(__props: any, { expose }) {
+  expose();
+
+      
+      
+return {  }
+}
+
+})"
+`;
+
+exports[`SFC compile <script setup> > with TypeScript > defineProps w/ exported extends interface 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+export interface Props { x?: number }
+      export interface ExtendProps extends Props {}
+      
+export default /*#__PURE__*/_defineComponent({
+  props: {
+    x: { type: Number, required: false }
+  },
+  setup(__props: any, { expose }) {
+  expose();
+
+      
+      
+return {  }
+}
+
+})"
+`;
+
 exports[`SFC compile <script setup> > with TypeScript > defineProps w/ exported interface 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 export interface Props { x?: number }
