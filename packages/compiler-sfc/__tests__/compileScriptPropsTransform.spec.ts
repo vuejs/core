@@ -106,7 +106,7 @@ describe('sfc props transform', () => {
       </script>
     `)
     expect(content).toMatch(`props: {
-    "foo": { type: Number, required: false, default: 1 }
+    "\\foo\\": { type: Number, required: false, default: 1 }
   }`)
     assertCode(content)
   })
