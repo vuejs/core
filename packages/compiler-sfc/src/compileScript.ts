@@ -871,7 +871,8 @@ export function compileScript(
   }
 
   function genDestructuredDefaultValue(key: string): string | undefined {
-    const destructured = propsDestructuredBindings[key]
+    const rawKey = key.startsWith('"') && key.endsWith('"') ? key.split('"')[1] : key
+    const destructured = propsDestructuredBindings[rawKey]
     if (destructured && destructured.default) {
       const value = scriptSetup!.content.slice(
         destructured.default.start!,
@@ -1889,17 +1890,22 @@ function extractRuntimeProps(
   const members = node.type === 'TSTypeLiteral' ? node.members : node.body
   for (const m of members) {
     if (
-      (m.type === 'TSPropertySignature' || m.type === 'TSMethodSignature') &&
-      m.key.type === 'Identifier'
+        (m.type === 'TSPropertySignature' || m.type === 'TSMethodSignature') &&
+        (m.key.type === 'Identifier' || m.key.type === 'StringLiteral')
     ) {
-      let type
+      let type, keyName;
+      if(m.key.type === 'StringLiteral'){
+        keyName = `"${m.key.value}"`
+      } else {
+        keyName = m.key.name
+      }
       if (m.type === 'TSMethodSignature') {
         type = ['Function']
       } else if (m.typeAnnotation) {
         type = inferRuntimeType(m.typeAnnotation.typeAnnotation, declaredTypes)
       }
-      props[m.key.name] = {
-        key: m.key.name,
+      props[keyName] = {
+        key: keyName,
         required: !m.optional,
         type: type || [`null`]
       }
