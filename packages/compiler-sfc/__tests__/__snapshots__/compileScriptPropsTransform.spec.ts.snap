@@ -96,6 +96,23 @@ return () => {}
 }"
 `;
 
+exports[`sfc props transform > default values w/ type declaration & key is string 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  props: {
+    \\"foo\\": { type: Number, required: true, default: 1 }
+  },
+  setup(__props: any) {
+
+      
+      
+return () => {}
+}
+
+})"
+`;
+
 exports[`sfc props transform > default values w/ type declaration 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 

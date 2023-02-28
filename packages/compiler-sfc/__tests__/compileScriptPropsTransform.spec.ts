@@ -102,11 +102,11 @@ describe('sfc props transform', () => {
   test('default values w/ type declaration & key is string', () => {
     const { content } = compile(`
       <script setup lang="ts">
-      const { foo = 1 } = defineProps<{ "foo": number }>()
+      const { foo = 1 } = defineProps<{ foo: number }>()
       </script>
     `)
     expect(content).toMatch(`props: {
-    "foo": { type: Number, required: false, default: 1 },
+    "foo": { type: Number, required: false, default: 1 }
   }`)
     assertCode(content)
   })
