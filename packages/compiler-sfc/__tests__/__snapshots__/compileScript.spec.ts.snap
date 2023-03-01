@@ -705,6 +705,24 @@ return { props, emit }
 }"
 `;
 
+exports[`SFC compile <script setup> > defineProps/defineEmits in multi-variable declaration (full removal) and the following begins with [,(,{ 1`] = `
+"export default {
+  props: ['item'],
+  emits: ['a'],
+  setup(__props, { expose, emit }) {
+  expose();
+
+const props = __props;
+
+    
+    ;(function(){})()
+    
+return { props, emit }
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> > defineProps/defineEmits in multi-variable declaration 1`] = `
 "export default {
   props: ['item'],

@@ -172,6 +172,19 @@ const myEmit = defineEmits(['foo', 'bar'])
     expect(content).toMatch(`emits: ['a'],`)
   })
 
+  test('defineProps/defineEmits in multi-variable declaration (full removal) and the following begins with [,(,{', () => {
+    const { content } = compile(`
+    <script setup>
+    const props = defineProps(['item']),
+          emit = defineEmits(['a']);
+    ;(function(){})()
+    </script>
+  `)
+    assertCode(content)
+    expect(content).toMatch(`props: ['item'],`)
+    expect(content).toMatch(`emits: ['a'],`)
+  })
+
   test('defineExpose()', () => {
     const { content } = compile(`
 <script setup>
@@ -1136,7 +1149,7 @@ const emit = defineEmits(['a', 'b'])
       `)
       assertCode(content)
     })
-    
+
     // #7111
     test('withDefaults (static) w/ production mode', () => {
       const { content } = compile(
@@ -1277,7 +1290,6 @@ const emit = defineEmits(['a', 'b'])
       expect(content).toMatch(`emits: ["foo", "bar"]`)
     })
 
-    
     test('defineEmits w/ type from normal script', () => {
       const { content } = compile(`
       <script lang="ts">

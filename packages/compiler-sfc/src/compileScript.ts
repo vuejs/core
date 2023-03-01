@@ -1221,7 +1221,18 @@ export function compileScript(
           const isDefineEmits = processDefineEmits(decl.init, decl.id)
           if (isDefineProps || isDefineEmits) {
             if (left === 1) {
-              s.remove(node.start! + startOffset, node.end! + startOffset)
+              const index = scriptSetupAst.body.indexOf(node)
+              let semi = 0
+              if (index < scriptSetupAst.body.length - 1) {
+                const nextNode = scriptSetupAst.body[index + 1]
+                if (nextNode.start! === node.end!) {
+                  semi = -1
+                }
+              }
+              s.remove(
+                node.start! + startOffset,
+                node.end! + startOffset + semi
+              )
             } else {
               let start = decl.start! + startOffset
               let end = decl.end! + startOffset
