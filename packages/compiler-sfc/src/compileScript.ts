@@ -871,8 +871,7 @@ export function compileScript(
   }
 
   function genDestructuredDefaultValue(key: string): string | undefined {
-    const rawKey = key.startsWith('"') && key.endsWith('"') ? key.split('"')[1] : key
-    const destructured = propsDestructuredBindings[rawKey]
+    const destructured = propsDestructuredBindings[key]
     if (destructured && destructured.default) {
       const value = scriptSetup!.content.slice(
         destructured.default.start!,
@@ -1895,7 +1894,7 @@ function extractRuntimeProps(
     ) {
       let type, keyName;
       if(m.key.type === 'StringLiteral'){
-        keyName = `"${m.key.value}"`
+        keyName = m.key.value
       } else {
         keyName = m.key.name
       }
