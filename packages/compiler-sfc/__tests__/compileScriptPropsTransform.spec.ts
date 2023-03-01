@@ -100,11 +100,12 @@ describe('sfc props transform', () => {
   })
 
   test('default values w/ type declaration & key is string', () => {
-    const { content } = compile(`
+    const { content , bindings} = compile(`
       <script setup lang="ts">
       const { foo = 1 } = defineProps<{ "foo": number }>()
       </script>
     `)
+    expect(bindings).toMatchObject({foo:'props'})
     expect(content).toMatch(`
   props: {
     foo: { type: Number, required: true, default: 1 }
