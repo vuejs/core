@@ -83,6 +83,28 @@ describe('sfc props transform', () => {
 })`)
     assertCode(content)
   })
+  test('default values w/ runtime declaration & key is string', () => {
+    const { content, bindings } = compile(`
+      <script setup>
+      const { foo = 1, 'foo:bar':fooBar = 'foo-bar' } = defineProps(['foo', 'foo:bar'])
+      </script>
+    `)
+    expect(bindings).toStrictEqual({
+      __propsAliases: {
+        fooBar: 'foo:bar'
+      },
+      foo: BindingTypes.PROPS,
+      'foo:bar': BindingTypes.PROPS,
+      fooBar: BindingTypes.PROPS_ALIASED
+    })
+
+    expect(content).toMatch(`
+  props: _mergeDefaults(['foo', 'foo:bar'], {
+  foo: 1,
+  "foo:bar": 'foo-bar'
+}),`)
+    assertCode(content)
+  })
 
   test('default values w/ type declaration', () => {
     const { content } = compile(`

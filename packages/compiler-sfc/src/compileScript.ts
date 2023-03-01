@@ -834,9 +834,7 @@ export function compileScript(
         }
 
         const { type, required } = props[key]
-        // key may contain symbols such
-        // e.g. onUpdate:modelValue -> "onUpdate:modelValue"
-        const finalKey = /^[a-z0-9]+$/i.test(key) ? key : `"${key}"`
+        const finalKey = getFinalPropsKey(key)
         if (!isProd) {
           return `${finalKey}: { type: ${toRuntimeTypeString(
             type
@@ -1630,7 +1628,7 @@ export function compileScript(
       const defaults: string[] = []
       for (const key in propsDestructuredBindings) {
         const d = genDestructuredDefaultValue(key)
-        if (d) defaults.push(`${key}: ${d}`)
+        if (d) defaults.push(`${getFinalPropsKey(key)}: ${d}`)
       }
       if (defaults.length) {
         declCode = `${helper(
@@ -2360,4 +2358,12 @@ export function resolveObjectKey(node: Node, computed: boolean) {
       if (!computed) return node.name
   }
   return undefined
+}
+
+/**
+ * key may contain symbols such
+ * e.g. onUpdate:modelValue -> "onUpdate:modelValue"
+ */
+function getFinalPropsKey(key: string) {
+  return /^[a-z0-9]+$/i.test(key) ? key : `"${key}"`
 }
