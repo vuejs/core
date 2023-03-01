@@ -1197,6 +1197,7 @@ export function compileScript(
         processWithDefaults(node.expression)
       ) {
         s.remove(node.start! + startOffset, node.end! + startOffset)
+        s.prependLeft(node.start! + startOffset, ';')
       } else if (processDefineExpose(node.expression)) {
         // defineExpose({}) -> expose({})
         const callee = (node.expression as CallExpression).callee
@@ -1221,18 +1222,8 @@ export function compileScript(
           const isDefineEmits = processDefineEmits(decl.init, decl.id)
           if (isDefineProps || isDefineEmits) {
             if (left === 1) {
-              const index = scriptSetupAst.body.indexOf(node)
-              let semi = 0
-              if (index < scriptSetupAst.body.length - 1) {
-                const nextNode = scriptSetupAst.body[index + 1]
-                if (nextNode.start! === node.end!) {
-                  semi = -1
-                }
-              }
-              s.remove(
-                node.start! + startOffset,
-                node.end! + startOffset + semi
-              )
+              s.remove(node.start! + startOffset, node.end! + startOffset)
+              s.prependLeft(node.start! + startOffset, ';')
             } else {
               let start = decl.start! + startOffset
               let end = decl.end! + startOffset
