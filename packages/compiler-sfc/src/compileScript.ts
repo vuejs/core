@@ -834,8 +834,11 @@ export function compileScript(
         }
 
         const { type, required } = props[key]
+        // key may contain symbols such
+        // e.g. onUpdate:modelValue -> "onUpdate:modelValue"
+        const finalKey = /^[a-z0-9]+$/i.test(key) ? key : `"${key}"`
         if (!isProd) {
-          return `${key}: { type: ${toRuntimeTypeString(
+          return `${finalKey}: { type: ${toRuntimeTypeString(
             type
           )}, required: ${required}${
             defaultString ? `, ${defaultString}` : ``
@@ -850,12 +853,14 @@ export function compileScript(
           // #4783 for boolean, should keep the type
           // #7111 for function, if default value exists or it's not static, should keep it
           // in production
-          return `${key}: { type: ${toRuntimeTypeString(type)}${
+          return `${finalKey}: { type: ${toRuntimeTypeString(type)}${
             defaultString ? `, ${defaultString}` : ``
           } }`
         } else {
           // production: checks are useless
-          return `${key}: ${defaultString ? `{ ${defaultString} }` : 'null'}`
+          return `${finalKey}: ${
+            defaultString ? `{ ${defaultString} }` : 'null'
+          }`
         }
       })
       .join(',\n    ')}\n  }`
@@ -1893,13 +1898,7 @@ function extractRuntimeProps(
       (m.key.type === 'Identifier' || m.key.type === 'StringLiteral')
     ) {
       let type, keyName
-      if (m.key.type === 'StringLiteral') {
-        keyName = /^[a-z0-9]+$/i.test(m.key.value)
-          ? m.key.value
-          : `'${m.key.value}'`
-      } else {
-        keyName = m.key.name
-      }
+      keyName = m.key.type === 'StringLiteral' ? m.key.value : m.key.name
       if (m.type === 'TSMethodSignature') {
         type = ['Function']
       } else if (m.typeAnnotation) {

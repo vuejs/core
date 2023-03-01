@@ -103,8 +103,8 @@ export default /*#__PURE__*/_defineComponent({
   props: {
     foo: { type: Number, required: true, default: 1 },
     bar: { type: Number, required: true, default: 2 },
-    'foo:bar': { type: String, required: true },
-    'onUpdate:modelValue': { type: Function, required: true }
+    \\"foo:bar\\": { type: String, required: true, default: 'foo-bar' },
+    \\"onUpdate:modelValue\\": { type: Function, required: true }
   },
   setup(__props: any) {
 
