@@ -1197,6 +1197,7 @@ export function compileScript(
         processWithDefaults(node.expression)
       ) {
         s.remove(node.start! + startOffset, node.end! + startOffset)
+        s.prependLeft(node.start! + startOffset, ';')
       } else if (processDefineExpose(node.expression)) {
         // defineExpose({}) -> expose({})
         const callee = (node.expression as CallExpression).callee
@@ -1222,6 +1223,7 @@ export function compileScript(
           if (isDefineProps || isDefineEmits) {
             if (left === 1) {
               s.remove(node.start! + startOffset, node.end! + startOffset)
+              s.prependLeft(node.start! + startOffset, ';')
             } else {
               let start = decl.start! + startOffset
               let end = decl.end! + startOffset
