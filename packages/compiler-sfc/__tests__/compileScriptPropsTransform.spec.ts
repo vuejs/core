@@ -100,15 +100,28 @@ describe('sfc props transform', () => {
   })
 
   test('default values w/ type declaration & key is string', () => {
-    const { content , bindings} = compile(`
+    const { content, bindings } = compile(`
       <script setup lang="ts">
-      const { foo = 1 } = defineProps<{ "foo": number }>()
+      const { foo = 1, bar = 2 } = defineProps<{ 
+          "foo": number // double-quoted string
+          "bar": number // single-quoted string
+          'foo:bar': string // single-quoted string containing symbols
+          "onUpdate:modelValue": (val: number)=>void } // double-quoted string containing symbols
+          >()
       </script>
     `)
-    expect(bindings).toMatchObject({foo:'props'})
+    expect(bindings).toStrictEqual({
+      foo: BindingTypes.PROPS,
+      bar: BindingTypes.PROPS,
+      "'foo:bar'": BindingTypes.PROPS,
+      "'onUpdate:modelValue'": BindingTypes.PROPS
+    })
     expect(content).toMatch(`
   props: {
-    foo: { type: Number, required: true, default: 1 }
+    foo: { type: Number, required: true, default: 1 },
+    bar: { type: Number, required: true, default: 2 },
+    'foo:bar': { type: String, required: true },
+    'onUpdate:modelValue': { type: Function, required: true }
   },`)
     assertCode(content)
   })

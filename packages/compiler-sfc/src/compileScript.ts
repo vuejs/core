@@ -1889,12 +1889,14 @@ function extractRuntimeProps(
   const members = node.type === 'TSTypeLiteral' ? node.members : node.body
   for (const m of members) {
     if (
-        (m.type === 'TSPropertySignature' || m.type === 'TSMethodSignature') &&
-        (m.key.type === 'Identifier' || m.key.type === 'StringLiteral')
+      (m.type === 'TSPropertySignature' || m.type === 'TSMethodSignature') &&
+      (m.key.type === 'Identifier' || m.key.type === 'StringLiteral')
     ) {
-      let type, keyName;
-      if(m.key.type === 'StringLiteral'){
-        keyName = m.key.value
+      let type, keyName
+      if (m.key.type === 'StringLiteral') {
+        keyName = /^[a-z0-9]+$/i.test(m.key.value)
+          ? m.key.value
+          : `'${m.key.value}'`
       } else {
         keyName = m.key.name
       }
