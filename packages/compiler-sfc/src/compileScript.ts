@@ -1189,6 +1189,25 @@ export function compileScript(
       )
     }
 
+    function needSaveSemi() {
+      const reg = /^[\[\{\(\+\-\/]/g
+      const index = scriptSetupAst.body.indexOf(node)
+      const nextNode = scriptSetupAst.body[index + 1]
+      if (
+        reg.test(
+          s.slice(nextNode?.start! + startOffset, nextNode?.end! + startOffset)
+        )
+      ) {
+        return {
+          need: true,
+          start: nextNode?.start! + startOffset
+        }
+      }
+      return {
+        need: false
+      }
+    }
+
     if (node.type === 'ExpressionStatement') {
       // process `defineProps` and `defineEmit(s)` calls
       if (
@@ -1197,6 +1216,10 @@ export function compileScript(
         processWithDefaults(node.expression)
       ) {
         s.remove(node.start! + startOffset, node.end! + startOffset)
+        const { need, start } = needSaveSemi()
+        if (need) {
+          s.appendLeft(start!, ';')
+        }
       } else if (processDefineExpose(node.expression)) {
         // defineExpose({}) -> expose({})
         const callee = (node.expression as CallExpression).callee
@@ -1222,6 +1245,10 @@ export function compileScript(
           if (isDefineProps || isDefineEmits) {
             if (left === 1) {
               s.remove(node.start! + startOffset, node.end! + startOffset)
+              const { need, start } = needSaveSemi()
+              if (need) {
+                s.appendLeft(start!, ';')
+              }
             } else {
               let start = decl.start! + startOffset
               let end = decl.end! + startOffset

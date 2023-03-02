@@ -160,6 +160,21 @@ const myEmit = defineEmits(['foo', 'bar'])
     expect(content).toMatch(`emits: ['a'],`)
   })
 
+  // #7805
+  test('preserve semi when completely removing macro definitions', () => {
+    const { content } = compile(`
+    <script setup>
+    console.log('test')
+    const props = defineProps(['item']);
+    (function () {})()
+    </script>
+  `)
+    assertCode(content)
+    expect(content).toMatch(`console.log('test')`)
+    expect(content).toMatch(`props: ['item'],`)
+    expect(content).toMatch(`;(function () {})()`)
+  })
+
   test('defineProps/defineEmits in multi-variable declaration (full removal)', () => {
     const { content } = compile(`
     <script setup>

@@ -1261,6 +1261,24 @@ return () => {}
 }"
 `;
 
+exports[`SFC compile <script setup> > preserve semi when completely removing macro definitions 1`] = `
+"export default {
+  props: ['item'],
+  setup(__props, { expose }) {
+  expose();
+
+const props = __props;
+
+    console.log('test')
+    
+    ;(function () {})()
+    
+return { props }
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> > should expose top level declarations 1`] = `
 "import { x } from './x'
       
