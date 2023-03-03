@@ -125,7 +125,7 @@ export function queuePostFlushCb(cb: SchedulerJobs) {
       pendingPostFlushCbs.push(cb)
     }
   } else {
-    // if cb is an array, it is a aonent lifecycle hook which can only be
+    // if cb is an array, it is a component lifecycle hook which can only be
     // triggered by a job, which is already deduped in the main queue, so
     // we can skip duplicate check here to improve perf
     pendingPostFlushCbs.push(...cb)
@@ -194,8 +194,8 @@ const getId = (job: SchedulerJob): number =>
   job.id == null ? Infinity : job.id
 
 const comparator = (a: SchedulerJob, b: SchedulerJob): number => {
-  const diff = getId(a) === getId(b)
-  if (diff) {
+  const diff = getId(a) - getId(b)
+  if (diff === 0) {
     if (a.pre && !b.pre) return -1
     if (b.pre && !a.pre) return 1
     return -1
