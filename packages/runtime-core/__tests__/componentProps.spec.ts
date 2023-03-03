@@ -63,6 +63,19 @@ describe('component props', () => {
     expect(attrs).toEqual({ qux: 5 })
   })
 
+  // #7817
+  test('onUpdate:xxx will not inherit the child element', () => {
+    let attrs: any
+    const Comp = defineComponent({
+      render() {
+        attrs = this.$attrs
+      }
+    })
+    const root = nodeOps.createElement('div')
+    render(h(Comp, { 'onUpdate:modelValue': () => {} }), root)
+    expect(attrs['onUpdate:modelValue']).toEqual(undefined)
+  })
+
   test('stateful with setup', () => {
     let props: any
     let attrs: any
