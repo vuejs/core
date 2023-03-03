@@ -503,7 +503,9 @@ function installCompatMount(
         container = selectorOrEl || document.createElement('div')
       }
 
-      const isSVG = container instanceof SVGElement
+      let namespace: 'svg' | 'mathml' | undefined
+      if (container instanceof SVGElement) namespace = 'svg'
+      if (container instanceof MathMLElement) namespace = 'mathml'
 
       // HMR root reload
       if (__DEV__) {
@@ -511,7 +513,7 @@ function installCompatMount(
           const cloned = cloneVNode(vnode)
           // compat mode will use instance if not reset to null
           cloned.component = null
-          render(cloned, container, isSVG)
+          render(cloned, container, namespace)
         }
       }
 
@@ -538,7 +540,7 @@ function installCompatMount(
       container.innerHTML = ''
 
       // TODO hydration
-      render(vnode, container, isSVG)
+      render(vnode, container, namespace)
 
       if (container instanceof Element) {
         container.removeAttribute('v-cloak')

@@ -41,6 +41,15 @@ let hasMismatch = false
 const isSVGContainer = (container: Element) =>
   /svg/.test(container.namespaceURI!) && container.tagName !== 'foreignObject'
 
+const isMathMLContainer = (container: Element) =>
+  /MathML/.test(container.namespaceURI!)
+
+const getContainerType = (container: Element): 'svg' | 'mathml' | undefined => {
+  if (isSVGContainer(container)) return 'svg'
+  if (isMathMLContainer(container)) return 'mathml'
+  return undefined
+}
+
 const isComment = (node: Node): node is Comment =>
   node.nodeType === DOMNodeTypes.COMMENT
 
@@ -263,7 +272,7 @@ export function createHydrationFunctions(
             null,
             parentComponent,
             parentSuspense,
-            isSVGContainer(container),
+            getContainerType(container),
             optimized
           )
 
@@ -306,7 +315,7 @@ export function createHydrationFunctions(
             vnode,
             parentComponent,
             parentSuspense,
-            isSVGContainer(parentNode(node)!),
+            getContainerType(parentNode(node)!),
             slotScopeIds,
             optimized,
             rendererInternals,
@@ -364,7 +373,7 @@ export function createHydrationFunctions(
                 key,
                 null,
                 props[key],
-                false,
+                undefined,
                 undefined,
                 parentComponent
               )
@@ -378,7 +387,7 @@ export function createHydrationFunctions(
             'onClick',
             null,
             props.onClick,
-            false,
+            undefined,
             undefined,
             parentComponent
           )
@@ -519,7 +528,7 @@ export function createHydrationFunctions(
           null,
           parentComponent,
           parentSuspense,
-          isSVGContainer(container),
+          getContainerType(container),
           slotScopeIds
         )
       }
@@ -611,7 +620,7 @@ export function createHydrationFunctions(
       next,
       parentComponent,
       parentSuspense,
-      isSVGContainer(container),
+      getContainerType(container),
       slotScopeIds
     )
     return next

@@ -1,12 +1,12 @@
 import { ParserOptions, NodeTypes, Namespaces } from '@vue/compiler-core'
-import { isVoidTag, isHTMLTag, isSVGTag } from '@vue/shared'
+import { isVoidTag, isHTMLTag, isSVGTag, isMathMLTag } from '@vue/shared'
 import { TRANSITION, TRANSITION_GROUP } from './runtimeHelpers'
 import { decodeHtmlBrowser } from './decodeHtmlBrowser'
 
 export const parserOptions: ParserOptions = {
   parseMode: 'html',
   isVoidTag,
-  isNativeTag: tag => isHTMLTag(tag) || isSVGTag(tag),
+  isNativeTag: tag => isHTMLTag(tag) || isSVGTag(tag) || isMathMLTag(tag),
   isPreTag: tag => tag === 'pre',
   decodeEntities: __BROWSER__ ? decodeHtmlBrowser : undefined,
 

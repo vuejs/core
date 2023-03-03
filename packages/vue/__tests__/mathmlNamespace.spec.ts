@@ -5,34 +5,43 @@
 // - runtime-core/src/renderer.ts
 // - compiler-core/src/transforms/transformElement.ts
 
-import { vtcKey } from '../../runtime-dom/src/components/Transition'
 import { render, h, ref, nextTick } from '../src'
 
-describe('SVG support', () => {
+describe('MathML support', () => {
   test('should mount elements with correct html namespace', () => {
     const root = document.createElement('div')
     document.body.appendChild(root)
     const App = {
       template: `
-        <div id="e0">
-          <svg id="e1">
-            <foreignObject id="e2">
-              <div id="e3"/>
-              <svg id="e4"/>
-              <math id="e5"/>
-            </foreignObject>
-          </svg>
-        </div>
+      <math display="block" id="e0">
+        <semantics id="e1">
+          <mrow id="e2">
+            <msup>
+              <mi>x</mi>
+              <mn>2</mn>
+            </msup>
+            <mo>+</mo>
+            <mi>y</mi>
+          </mrow>
+      
+      
+          <!-- Annotate with a PNG image of the formula. -->
+          <annotation encoding="text/html" id="e3">
+            <div id="e4" />
+            <svg id="e5" />
+          </annotation>
+        </semantics>
+      </math>
       `
     }
     render(h(App), root)
     const e0 = document.getElementById('e0')!
-    expect(e0.namespaceURI).toMatch('xhtml')
-    expect(e0.querySelector('#e1')!.namespaceURI).toMatch('svg')
-    expect(e0.querySelector('#e2')!.namespaceURI).toMatch('svg')
-    expect(e0.querySelector('#e3')!.namespaceURI).toMatch('xhtml')
-    expect(e0.querySelector('#e4')!.namespaceURI).toMatch('svg')
-    expect(e0.querySelector('#e5')!.namespaceURI).toMatch('Math')
+    expect(e0.namespaceURI).toMatch('Math')
+    expect(e0.querySelector('#e1')!.namespaceURI).toMatch('Math')
+    expect(e0.querySelector('#e2')!.namespaceURI).toMatch('Math')
+    expect(e0.querySelector('#e3')!.namespaceURI).toMatch('Math')
+    expect(e0.querySelector('#e4')!.namespaceURI).toMatch('xhtml')
+    expect(e0.querySelector('#e5')!.namespaceURI).toMatch('svg')
   })
 
   test('should patch elements with correct namespaces', async () => {
@@ -43,11 +52,11 @@ describe('SVG support', () => {
       setup: () => ({ cls }),
       template: `
         <div>
-          <svg id="f1" :class="cls">
-            <foreignObject>
+          <math id="f1" :class="cls">
+            <annotation encoding="text/html">
               <div id="f2" :class="cls"/>
-            </foreignObject>
-          </svg>
+            </annotation>
+          </math>
         </div>
       `
     }
@@ -56,10 +65,7 @@ describe('SVG support', () => {
     const f2 = document.querySelector('#f2')!
     expect(f1.getAttribute('class')).toBe('foo')
     expect(f2.className).toBe('foo')
-
-    // set a transition class on the <div> - which is only respected on non-svg
-    // patches
-    ;(f2 as any)[vtcKey] = ['baz']
+    ;(f2 as any)._vtc = ['baz']
     cls.value = 'bar'
     await nextTick()
     expect(f1.getAttribute('class')).toBe('bar')

@@ -20,14 +20,14 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
   key,
   prevValue,
   nextValue,
-  isSVG = false,
+  namespace = undefined,
   prevChildren,
   parentComponent,
   parentSuspense,
   unmountChildren
 ) => {
   if (key === 'class') {
-    patchClass(el, nextValue, isSVG)
+    patchClass(el, nextValue, namespace)
   } else if (key === 'style') {
     patchStyle(el, prevValue, nextValue)
   } else if (isOn(key)) {
@@ -40,7 +40,7 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
       ? ((key = key.slice(1)), true)
       : key[0] === '^'
         ? ((key = key.slice(1)), false)
-        : shouldSetAsProp(el, key, nextValue, isSVG)
+        : shouldSetAsProp(el, key, nextValue, namespace)
   ) {
     patchDOMProp(
       el,
@@ -61,7 +61,7 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
     } else if (key === 'false-value') {
       ;(el as any)._falseValue = nextValue
     }
-    patchAttr(el, key, nextValue, isSVG, parentComponent)
+    patchAttr(el, key, nextValue, namespace, parentComponent)
   }
 }
 
@@ -69,9 +69,9 @@ function shouldSetAsProp(
   el: Element,
   key: string,
   value: unknown,
-  isSVG: boolean
+  namespace?: 'svg' | 'mathml'
 ) {
-  if (isSVG) {
+  if (namespace === 'svg') {
     // most keys must be set as attribute on svg elements to work
     // ...except innerHTML & textContent
     if (key === 'innerHTML' || key === 'textContent') {

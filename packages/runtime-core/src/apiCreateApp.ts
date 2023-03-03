@@ -47,7 +47,7 @@ export interface App<HostElement = any> {
   mount(
     rootContainer: HostElement | string,
     isHydrate?: boolean,
-    isSVG?: boolean
+    namespace?: 'svg' | 'mathml'
   ): ComponentPublicInstance
   unmount(): void
   provide<T>(key: InjectionKey<T> | string, value: T): this
@@ -297,7 +297,7 @@ export function createAppAPI<HostElement>(
       mount(
         rootContainer: HostElement,
         isHydrate?: boolean,
-        isSVG?: boolean
+        namespace?: 'svg' | 'mathml'
       ): any {
         if (!isMounted) {
           // #5571
@@ -316,14 +316,14 @@ export function createAppAPI<HostElement>(
           // HMR root reload
           if (__DEV__) {
             context.reload = () => {
-              render(cloneVNode(vnode), rootContainer, isSVG)
+              render(cloneVNode(vnode), rootContainer, namespace)
             }
           }
 
           if (isHydrate && hydrate) {
             hydrate(vnode as VNode<Node, Element>, rootContainer as any)
           } else {
-            render(vnode, rootContainer, isSVG)
+            render(vnode, rootContainer, namespace)
           }
           isMounted = true
           app._container = rootContainer

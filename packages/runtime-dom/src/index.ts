@@ -21,7 +21,8 @@ import {
   isHTMLTag,
   isSVGTag,
   extend,
-  NOOP
+  NOOP,
+  isMathMLTag
 } from '@vue/shared'
 
 declare module '@vue/reactivity' {
@@ -99,7 +100,10 @@ export const createApp = ((...args) => {
 
     // clear content before mounting
     container.innerHTML = ''
-    const proxy = mount(container, false, container instanceof SVGElement)
+    let namespace: 'svg' | 'mathml' | undefined
+    if (container instanceof SVGElement) namespace = 'svg'
+    if (container instanceof MathMLElement) namespace = 'mathml'
+    const proxy = mount(container, false, namespace)
     if (container instanceof Element) {
       container.removeAttribute('v-cloak')
       container.setAttribute('data-v-app', '')
@@ -122,7 +126,10 @@ export const createSSRApp = ((...args) => {
   app.mount = (containerOrSelector: Element | ShadowRoot | string): any => {
     const container = normalizeContainer(containerOrSelector)
     if (container) {
-      return mount(container, true, container instanceof SVGElement)
+      let namespace: 'svg' | 'mathml' | undefined
+      if (container instanceof SVGElement) namespace = 'svg'
+      if (container instanceof MathMLElement) namespace = 'mathml'
+      return mount(container, true, namespace)
     }
   }
 
@@ -133,7 +140,7 @@ function injectNativeTagCheck(app: App) {
   // Inject `isNativeTag`
   // this is used for component name validation (dev only)
   Object.defineProperty(app.config, 'isNativeTag', {
-    value: (tag: string) => isHTMLTag(tag) || isSVGTag(tag),
+    value: (tag: string) => isHTMLTag(tag) || isSVGTag(tag) || isMathMLTag(tag),
     writable: false
   })
 }

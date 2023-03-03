@@ -25,7 +25,7 @@ describe('runtime-dom: class patching', () => {
 
   test('svg', () => {
     const el = document.createElementNS(svgNS, 'svg')
-    patchProp(el, 'class', null, 'foo', true)
+    patchProp(el, 'class', null, 'foo', 'svg')
     expect(el.getAttribute('class')).toBe('foo')
   })
 })

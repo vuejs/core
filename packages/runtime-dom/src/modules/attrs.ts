@@ -16,10 +16,10 @@ export function patchAttr(
   el: Element,
   key: string,
   value: any,
-  isSVG: boolean,
+  namespace?: 'svg' | 'mathml',
   instance?: ComponentInternalInstance | null
 ) {
-  if (isSVG && key.startsWith('xlink:')) {
+  if (namespace === 'svg' && key.startsWith('xlink:')) {
     if (value == null) {
       el.removeAttributeNS(xlinkNS, key.slice(6, key.length))
     } else {
