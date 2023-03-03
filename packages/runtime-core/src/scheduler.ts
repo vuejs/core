@@ -194,12 +194,11 @@ const getId = (job: SchedulerJob): number =>
   job.id == null ? Infinity : job.id
 
 const comparator = (a: SchedulerJob, b: SchedulerJob): number => {
-  const diff = getId(a) - getId(b)
-  if (diff === 0) {
+  if (getId(a) === getId(b)) {
     if (a.pre && !b.pre) return -1
     if (b.pre && !a.pre) return 1
   }
-  return diff
+  return -1
 }
 
 function flushJobs(seen?: CountMap) {
