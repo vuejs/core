@@ -22,7 +22,8 @@ import {
   def,
   extend,
   isOn,
-  IfAny
+  IfAny,
+  isModelListener
 } from '@vue/shared'
 import { warn } from './warning'
 import {
@@ -345,7 +346,7 @@ function setFullProps(
   if (rawProps) {
     for (let key in rawProps) {
       // key, ref are reserved and never passed down
-      if (isReservedProp(key) || key.startsWith('onUpdate:')) {
+      if (isReservedProp(key) || isModelListener(key)) {
         continue
       }
 
