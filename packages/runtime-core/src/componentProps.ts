@@ -345,7 +345,7 @@ function setFullProps(
   if (rawProps) {
     for (let key in rawProps) {
       // key, ref are reserved and never passed down
-      if (isReservedProp(key)) {
+      if (isReservedProp(key) || key.startsWith('onUpdate:xxx')) {
         continue
       }
 
