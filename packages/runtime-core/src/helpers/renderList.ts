@@ -56,12 +56,11 @@ export function renderList(
   cache?: any[],
   index?: number
 ): VNodeChild[] {
-  let ret: VNodeChild[]
+  let ret: VNodeChild[] = []
   const cached = (cache && cache[index!]) as VNode[] | undefined
 
   if (isArray(source) || isString(source)) {
     const len = source.length
-    ret = new Array(len)
     for (let i = 0; i < len; i++) {
       ret[i] = renderItem(source[i], i, undefined, cached && cached[i])
     }
@@ -69,7 +68,6 @@ export function renderList(
     if (__DEV__ && !Number.isInteger(source)) {
       warn(`The v-for range expect an integer value but got ${source}.`)
     }
-    ret = new Array(source)
     for (let i = 0; i < source; i++) {
       ret[i] = renderItem(i + 1, i, undefined, cached && cached[i])
     }
@@ -80,14 +78,11 @@ export function renderList(
       )
     } else {
       const keys = Object.keys(source)
-      ret = new Array(keys.length)
       for (let i = 0, l = keys.length; i < l; i++) {
         const key = keys[i]
         ret[i] = renderItem(source[key], key, i, cached && cached[i])
       }
     }
-  } else {
-    ret = []
   }
 
   if (cache) {
