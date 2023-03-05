@@ -60,8 +60,9 @@ export function renderList(
   const cached = (cache && cache[index!]) as VNode[] | undefined
 
   if (isArray(source) || isString(source)) {
-    ret = new Array(source.length)
-    for (let i = 0, l = source.length; i < l; i++) {
+    const len = source.length
+    ret = new Array(len)
+    for (let i = 0; i < len; i++) {
       ret[i] = renderItem(source[i], i, undefined, cached && cached[i])
     }
   } else if (typeof source === 'number') {
