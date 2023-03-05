@@ -2011,7 +2011,7 @@ foo
 
     it('should condense consecutive whitespaces in texts full of whitespaces', () => {
       const ast = parse(`          `)
-      expect((ast.children[0] as TextNode).content).toBe(` `)
+      expect(ast.children.length).toBe(0)
     })
 
     it('should remove leading newline character immediately following the pre element start tag', () => {
