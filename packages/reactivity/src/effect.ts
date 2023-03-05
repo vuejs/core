@@ -143,9 +143,20 @@ function cleanupEffect(effect: ReactiveEffect) {
   const { deps } = effect
   if (deps.length) {
     for (let i = 0; i < deps.length; i++) {
-      deps[i].delete(effect)
+      removeEffectFromDep(deps[i], effect)
     }
     deps.length = 0
+  }
+}
+
+export function removeEffectFromDep(dep: Dep, effect: ReactiveEffect) {
+  dep.delete(effect)
+  if (dep.target && dep.size === 0) {
+    const depsMap = targetMap.get(dep.target)
+    if (depsMap) {
+      depsMap.delete(dep.key)
+    }
+    dep.target = dep.key = null
   }
 }
 
@@ -252,7 +263,7 @@ export function track(target: object, type: TrackOpTypes, key: unknown) {
     }
     let dep = depsMap.get(key)
     if (!dep) {
-      depsMap.set(key, (dep = createDep()))
+      depsMap.set(key, (dep = createDep(target, key)))
     }
 
     const eventInfo = __DEV__
@@ -383,19 +394,19 @@ export function trigger(
       }
     }
     if (__DEV__) {
-      triggerEffects(createDep(effects), eventInfo)
+      triggerEffects(new Set(effects), eventInfo)
     } else {
-      triggerEffects(createDep(effects))
+      triggerEffects(new Set(effects))
     }
   }
 }
 
 export function triggerEffects(
-  dep: Dep | ReactiveEffect[],
+  dep: Set<ReactiveEffect>,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
   // spread into array for stabilization
-  const effects = isArray(dep) ? dep : [...dep]
+  const effects = [...dep]
   for (const effect of effects) {
     if (effect.computed) {
       triggerEffect(effect, debuggerEventExtraInfo)

@@ -1,6 +1,10 @@
-import { ReactiveEffect, trackOpBit } from './effect'
+import { ReactiveEffect, removeEffectFromDep, trackOpBit } from './effect'
 
-export type Dep = Set<ReactiveEffect> & TrackedMarkers
+export type Dep = Set<ReactiveEffect> &
+  TrackedMarkers & {
+    target?: unknown
+    key?: unknown
+  }
 
 /**
  * wasTracked and newTracked maintain the status for several levels of effect
@@ -18,10 +22,16 @@ type TrackedMarkers = {
   n: number
 }
 
-export const createDep = (effects?: ReactiveEffect[]): Dep => {
-  const dep = new Set<ReactiveEffect>(effects) as Dep
+export function createDep(): Dep
+export function createDep(target: unknown, key: unknown): Dep
+export function createDep(target?: unknown, key?: unknown): Dep {
+  const dep = new Set<ReactiveEffect>() as Dep
   dep.w = 0
   dep.n = 0
+  if (target) {
+    dep.target = target
+    dep.key = key
+  }
   return dep
 }
 
@@ -44,7 +54,7 @@ export const finalizeDepMarkers = (effect: ReactiveEffect) => {
     for (let i = 0; i < deps.length; i++) {
       const dep = deps[i]
       if (wasTracked(dep) && !newTracked(dep)) {
-        dep.delete(effect)
+        removeEffectFromDep(dep, effect)
       } else {
         deps[ptr++] = dep
       }

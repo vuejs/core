@@ -12,7 +12,7 @@ import {
   readonly,
   ReactiveEffectRunner
 } from '../src/index'
-import { ITERATE_KEY } from '../src/effect'
+import { getDepFromReactive, ITERATE_KEY } from '../src/effect'
 
 describe('reactivity/effect', () => {
   it('should run the passed function once (wrapped by a effect)', () => {
@@ -997,6 +997,70 @@ describe('reactivity/effect', () => {
       obj.bar = 2
       expect(fnSpy).toHaveBeenCalledTimes(3)
       expect(has).toBe(false)
+    })
+  })
+
+  describe('empty dep cleanup', () => {
+    it('should remove the dep when the effect is stopped', () => {
+      const obj = reactive({ prop: 1 })
+      expect(getDepFromReactive(toRaw(obj), 'prop')).toBeUndefined()
+      const runner = effect(() => obj.prop)
+      const dep = getDepFromReactive(toRaw(obj), 'prop')
+      expect(dep).toHaveLength(1)
+      obj.prop = 2
+      expect(getDepFromReactive(toRaw(obj), 'prop')).toBe(dep)
+      expect(dep).toHaveLength(1)
+      stop(runner)
+      expect(getDepFromReactive(toRaw(obj), 'prop')).toBeUndefined()
+      obj.prop = 3
+      runner()
+      expect(getDepFromReactive(toRaw(obj), 'prop')).toBeUndefined()
+    })
+
+    it('should only remove the dep when the last effect is stopped', () => {
+      const obj = reactive({ prop: 1 })
+      expect(getDepFromReactive(toRaw(obj), 'prop')).toBeUndefined()
+      const runner1 = effect(() => obj.prop)
+      const dep = getDepFromReactive(toRaw(obj), 'prop')
+      expect(dep).toHaveLength(1)
+      const runner2 = effect(() => obj.prop)
+      expect(getDepFromReactive(toRaw(obj), 'prop')).toBe(dep)
+      expect(dep).toHaveLength(2)
+      obj.prop = 2
+      expect(getDepFromReactive(toRaw(obj), 'prop')).toBe(dep)
+      expect(dep).toHaveLength(2)
+      stop(runner1)
+      expect(getDepFromReactive(toRaw(obj), 'prop')).toBe(dep)
+      expect(dep).toHaveLength(1)
+      obj.prop = 3
+      expect(getDepFromReactive(toRaw(obj), 'prop')).toBe(dep)
+      expect(dep).toHaveLength(1)
+      stop(runner2)
+      expect(getDepFromReactive(toRaw(obj), 'prop')).toBeUndefined()
+      obj.prop = 4
+      runner1()
+      runner2()
+      expect(getDepFromReactive(toRaw(obj), 'prop')).toBeUndefined()
+    })
+
+    it('should remove the dep when it is no longer used by the effect', () => {
+      const obj = reactive<{ a: number; b: number; c: 'a' | 'b' }>({
+        a: 1,
+        b: 2,
+        c: 'a'
+      })
+      expect(getDepFromReactive(toRaw(obj), 'prop')).toBeUndefined()
+      effect(() => obj[obj.c])
+      const depC = getDepFromReactive(toRaw(obj), 'c')
+      expect(getDepFromReactive(toRaw(obj), 'a')).toHaveLength(1)
+      expect(getDepFromReactive(toRaw(obj), 'b')).toBeUndefined()
+      expect(depC).toHaveLength(1)
+      obj.c = 'b'
+      obj.a = 4
+      expect(getDepFromReactive(toRaw(obj), 'a')).toBeUndefined()
+      expect(getDepFromReactive(toRaw(obj), 'b')).toHaveLength(1)
+      expect(getDepFromReactive(toRaw(obj), 'c')).toBe(depC)
+      expect(depC).toHaveLength(1)
     })
   })
 })
