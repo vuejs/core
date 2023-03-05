@@ -56,7 +56,7 @@ export function renderList(
   cache?: any[],
   index?: number
 ): VNodeChild[] {
-  let ret: VNodeChild[] = []
+  const ret: VNodeChild[] = []
   const cached = (cache && cache[index!]) as VNode[] | undefined
 
   if (isArray(source) || isString(source)) {
