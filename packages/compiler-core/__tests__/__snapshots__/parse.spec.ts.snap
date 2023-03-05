@@ -6658,7 +6658,26 @@ exports[`compiler: parse > invalid html 1`] = `
     {
       "children": [
         {
-          "children": [],
+          "children": [
+            {
+              "content": " ",
+              "loc": {
+                "end": {
+                  "column": 1,
+                  "line": 3,
+                  "offset": 13,
+                },
+                "source": "
+",
+                "start": {
+                  "column": 7,
+                  "line": 2,
+                  "offset": 12,
+                },
+              },
+              "type": 2,
+            },
+          ],
           "codegenNode": undefined,
           "isSelfClosing": false,
           "loc": {

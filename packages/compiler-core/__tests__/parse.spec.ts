@@ -2009,6 +2009,11 @@ foo
       expect((ast.children[0] as TextNode).content).toBe(` foo bar baz `)
     })
 
+    it('should condense consecutive whitespaces in texts full of whitespaces', () => {
+      const ast = parse(`          `)
+      expect((ast.children[0] as TextNode).content).toBe(` `)
+    })
+
     it('should remove leading newline character immediately following the pre element start tag', () => {
       const ast = baseParse(`<pre>\n  foo  bar  </pre>`, {
         isPreTag: tag => tag === 'pre'
@@ -2125,6 +2130,14 @@ foo
       const content = `   foo  \n    bar     baz     `
       const ast = parse(content)
       expect((ast.children[0] as TextNode).content).toBe(content)
+    })
+
+    it('should preserve consecutive whitespaces in texts full of whitespaces', () => {
+      const whitespaces = '    '
+      const content = `<span>${whitespaces}</span>`
+      const ast = parse(content)
+      const element = ast.children[0] as ElementNode
+      expect((element.children[0] as TextNode).content).toBe(whitespaces)
     })
   })
 

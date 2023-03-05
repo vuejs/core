@@ -259,7 +259,7 @@ function parseChildren(
       const node = nodes[i]
       if (node.type === NodeTypes.TEXT) {
         if (!context.inPre) {
-          if (!/[^\t\r\n\f ]/.test(node.content)) {
+          if (!/[^\t\r\n\f ]/.test(node.content) && nodes.length > 1) {
             const prev = nodes[i - 1]
             const next = nodes[i + 1]
             // Remove if:
