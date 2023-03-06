@@ -2132,7 +2132,7 @@ foo
       expect((ast.children[0] as TextNode).content).toBe(content)
     })
 
-    it('should condense consecutive whitespaces in texts full of whitespaces', () => {
+    it('should preserve consecutive whitespaces in texts full of whitespaces', () => {
       const whitespaces = '           '
       const ast = parse(`${whitespaces}`)
       expect((ast.children[0] as TextNode).content).toBe(whitespaces)
