@@ -2364,6 +2364,6 @@ export function resolveObjectKey(node: Node, computed: boolean) {
  * key may contain symbols such
  * e.g. onUpdate:modelValue -> "onUpdate:modelValue"
  */
-function getFinalPropsKey(key: string) {
+function getEscapedKey(key: string) {
   return /^[a-z0-9]+$/i.test(key) ? key : `"${key}"`
 }
