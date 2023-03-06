@@ -86,7 +86,7 @@ describe('sfc props transform', () => {
   test('default values w/ runtime declaration & key is string', () => {
     const { content, bindings } = compile(`
       <script setup>
-      const { foo = 1, 'foo:bar':fooBar = 'foo-bar' } = defineProps(['foo', 'foo:bar'])
+      const { foo = 1, 'foo:bar': fooBar = 'foo-bar' } = defineProps(['foo', 'foo:bar'])
       </script>
     `)
     expect(bindings).toStrictEqual({
@@ -125,11 +125,11 @@ describe('sfc props transform', () => {
     const { content, bindings } = compile(`
       <script setup lang="ts">
       const { foo = 1, bar = 2, 'foo:bar': fooBar = 'foo-bar' } = defineProps<{ 
-          "foo": number // double-quoted string
-          'bar': number // single-quoted string
-          'foo:bar': string // single-quoted string containing symbols
-          "onUpdate:modelValue": (val: number)=>void } // double-quoted string containing symbols
-          >()
+        "foo": number // double-quoted string
+        'bar': number // single-quoted string
+        'foo:bar': string // single-quoted string containing symbols
+        "onUpdate:modelValue": (val: number) => void  // double-quoted string containing symbols
+      }>()
       </script>
     `)
     expect(bindings).toStrictEqual({
