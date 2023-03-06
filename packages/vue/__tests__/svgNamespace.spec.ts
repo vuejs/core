@@ -9,6 +9,10 @@ import { vtcKey } from '../../runtime-dom/src/components/Transition'
 import { render, h, ref, nextTick } from '../src'
 
 describe('SVG support', () => {
+  afterEach(() => {
+    document.body.innerHTML = ''
+  })
+
   test('should mount elements with correct html namespace', () => {
     const root = document.createElement('div')
     document.body.appendChild(root)

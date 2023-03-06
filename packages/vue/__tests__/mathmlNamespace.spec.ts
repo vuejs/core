@@ -8,6 +8,10 @@
 import { render, h, ref, nextTick } from '../src'
 
 describe('MathML support', () => {
+  afterEach(() => {
+    document.body.innerHTML = ''
+  })
+
   test('should mount elements with correct html namespace', () => {
     const root = document.createElement('div')
     document.body.appendChild(root)
