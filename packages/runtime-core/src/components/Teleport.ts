@@ -186,6 +186,13 @@ export const TeleportImpl = {
             internals,
             TeleportMoveTypes.TOGGLE
           )
+        } else {
+          // #7835
+          // When `teleport` is disabled, `to` may change, making it always old,
+          // to ensure the correct `to` when enabled
+          if (n2.props && n1.props && n2.props.to !== n1.props.to) {
+            n2.props.to = n1.props.to
+          }
         }
       } else {
         // target changed
