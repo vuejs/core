@@ -1895,8 +1895,8 @@ function extractRuntimeProps(
       (m.type === 'TSPropertySignature' || m.type === 'TSMethodSignature') &&
       (m.key.type === 'Identifier' || m.key.type === 'StringLiteral')
     ) {
-      let type, keyName
-      keyName = m.key.type === 'StringLiteral' ? m.key.value : m.key.name
+      let type
+      const keyName = m.key.type === 'StringLiteral' ? m.key.value : m.key.name
       if (m.type === 'TSMethodSignature') {
         type = ['Function']
       } else if (m.typeAnnotation) {
